@@ -1,8 +1,13 @@
 import { basicSetup } from 'codemirror';
-import { Annotation, EditorSelection, StateEffect, StateField, type ChangeSet, type ChangeSpec } from '@codemirror/state';
+import { LanguageSupport } from '@codemirror/language';
+import { setDiagnostics } from '@codemirror/lint';
+import { Annotation, EditorSelection, StateEffect, StateField, type ChangeSet, type ChangeSpec, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
-import { typst_lezer } from 'codemirror-lang-typst/lezer';
+import { typst_lezer, typstLezerLinter } from 'codemirror-lang-typst/lezer';
 import type { TextChange, TypstDocument } from '../document/typst-document';
+import { toLintDiagnostics, type SourceDiagnostic } from './lint';
+
+export type { SourceDiagnostic } from './lint';
 
 /** Marks transactions that mirror a document change, so they are not sent back. */
 const fromDocument = Annotation.define<boolean>();
@@ -43,7 +48,7 @@ export class SourceView {
       doc: document.text,
       extensions: [
         basicSetup,
-        typst_lezer(),
+        typstLanguage(),
         EditorView.lineWrapping,
         highlightField,
         EditorView.updateListener.of((update) => {
@@ -72,6 +77,15 @@ export class SourceView {
     this.view.focus();
   }
 
+  /**
+   * Shows compiler diagnostics for the current text (underline + hover with
+   * hints), replacing the previous ones. They follow later edits.
+   */
+  setDiagnostics(diagnostics: SourceDiagnostic[]): void {
+    const { state } = this.view;
+    this.view.dispatch(setDiagnostics(state, toLintDiagnostics(diagnostics, state.doc.length)));
+  }
+
   destroy(): void {
     this.unsubscribe();
     this.view.destroy();
@@ -83,4 +97,14 @@ function toTextChanges(changes: ChangeSet): TextChange[] {
   // eslint-disable-next-line max-params -- callback signature is fixed by CodeMirror
   changes.iterChanges((from, to, _fromB, _toB, inserted) => result.push({ from, to, insert: inserted.toString() }));
   return result;
+}
+
+/**
+ * Typst language support without the Lezer syntax linter: the compiler's
+ * diagnostics are the single source of errors, so nothing is reported twice.
+ */
+function typstLanguage(): LanguageSupport {
+  const lezer = typst_lezer();
+  const support = (lezer.support as readonly Extension[]).filter((extension) => extension !== typstLezerLinter);
+  return new LanguageSupport(lezer.language, support);
 }

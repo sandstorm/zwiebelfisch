@@ -3,6 +3,8 @@ import { Preview } from '../preview/preview';
 import { SourceView } from '../source-view/source-view';
 import { VisualView } from '../visual-view/visual-view';
 import proseMirrorStyles from 'prosemirror-view/style/prosemirror.css?inline';
+import { DiagnosticsStatus } from './diagnostics-status';
+import { summarizeDiagnostics } from './diagnostics-summary';
 import styles from './styles.css?inline';
 
 const MAIN = '/main.typ';
@@ -27,7 +29,8 @@ export interface TypstEditor {
 /**
  * Mounts the editor widget into `host`: an editing view on the left and the
  * live preview on the right. Clicking the preview reveals the source; moving
- * the cursor reveals the spot in the preview.
+ * the cursor reveals the spot in the preview. Compiler errors are underlined in
+ * the source and counted in a status bar that jumps to the first one.
  */
 export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions): TypstEditor {
   injectStyles(host.ownerDocument);
@@ -38,8 +41,14 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
   host.classList.add('typst-editor');
   host.append(left, right);
 
+  const status = new DiagnosticsStatus(host, (from, to) => source.reveal(from, to));
   const preview = new Preview(right, {
     onJump: (jump) => (mode === 'visual' ? visual : source).reveal(jump.from, jump.to),
+    onDiagnostics: (diagnostics) => {
+      const summary = summarizeDiagnostics(diagnostics, MAIN);
+      source.setDiagnostics(summary.inMain);
+      status.show(summary);
+    },
   });
   const panes = createPanes(left);
   const visual = new VisualView(panes.visual, document);
@@ -66,6 +75,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
       source.destroy();
       visual.destroy();
       preview.destroy();
+      status.destroy();
       host.classList.remove('typst-editor');
       left.remove();
       right.remove();

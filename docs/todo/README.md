@@ -33,7 +33,7 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 |---|---|
 | [engine-wasm-size](engine-wasm-size.md) | done (21 MB raw / 8 MB gzip; rest is typst-library) |
 | [visual-view-projection](visual-view-projection.md) | done |
-| [diagnostics-ui](diagnostics-ui.md) | open |
+| [diagnostics-ui](diagnostics-ui.md) | done |
 | [web-component-and-library-build](web-component-and-library-build.md) | open |
 | [multi-file-assets-packages](multi-file-assets-packages.md) | open |
 | [visual-view-toolbar-and-raw-editing](visual-view-toolbar-and-raw-editing.md) | open (after projection) |

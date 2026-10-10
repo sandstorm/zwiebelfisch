@@ -27,3 +27,31 @@ test('clicking text in the preview selects its source', async ({ page }) => {
   await svg.locator('use').first().click();
   await expect(page.getByTestId('typst-source').locator('.typst-source__jump')).toHaveText('Hello Typst');
 });
+
+test('shows compiler errors in the source and the status, and clears them when fixed', async ({ page }) => {
+  const source = page.getByTestId('typst-source');
+  const status = page.getByTestId('typst-status');
+  const preview = page.getByTestId('typst-preview');
+  await expect(status).toHaveText(/✓ compiled/);
+  await source.locator('.cm-content').click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.type('\n#unknown');
+  await expect(source.locator('.cm-lintRange-error')).toHaveCount(1);
+  await expect(status).toHaveText(/1 error/);
+  await expect(preview).toHaveClass(/typst-preview--stale/);
+
+  await page.keyboard.press('Shift+Home');
+  await page.keyboard.press('Backspace');
+  await expect(source.locator('.cm-lintRange-error')).toHaveCount(0);
+  await expect(status).toHaveText(/✓ compiled/);
+  await expect(preview).not.toHaveClass(/typst-preview--stale/);
+});
+
+test('clicking the error count selects the first error in the source', async ({ page }) => {
+  const source = page.getByTestId('typst-source');
+  await source.locator('.cm-content').click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.type('\n#unknown');
+  await page.getByTestId('typst-status').getByRole('button', { name: /1 error/ }).click();
+  await expect(source.locator('.typst-source__jump')).toHaveText('unknown');
+});

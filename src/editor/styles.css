@@ -5,6 +5,7 @@
   --te-jump: rgba(47, 111, 235, 0.25);
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
   height: 100%;
   min-height: 0;
   border: 1px solid var(--te-border);
@@ -102,3 +103,29 @@
   font: 0.8em ui-monospace, monospace;
 }
 .typst-visual .ProseMirror-selectednode { outline: 2px solid var(--te-accent); }
+.typst-preview--stale { opacity: 0.45; filter: grayscale(0.6); transition: opacity 0.2s; }
+.typst-status {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 4px 8px;
+  border-top: 1px solid var(--te-border);
+  font-size: 12px;
+}
+.typst-status__summary {
+  font: inherit;
+  border: 0;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: none;
+  color: #1a7f37;
+  cursor: pointer;
+}
+.typst-status__summary:disabled { cursor: default; }
+.typst-status[data-severity='warning'] .typst-status__summary { color: #9a6700; }
+.typst-status[data-severity='error'] .typst-status__summary { color: #cf222e; font-weight: 600; }
+.typst-status__elsewhere { display: contents; list-style: none; }
+.typst-status__elsewhere > li { color: #57606a; }
+.typst-status__elsewhere > li[data-severity='error'] { color: #cf222e; }

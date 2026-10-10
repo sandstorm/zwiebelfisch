@@ -1,6 +1,6 @@
 # Diagnostics UI
 
-Status: open
+Status: done (branch task/diagnostics-ui)
 Depends on: nothing
 Touches: src/source-view/**, src/editor/**, src/preview/preview.ts (only if needed), tests/e2e/**
 

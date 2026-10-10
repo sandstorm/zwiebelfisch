@@ -18,7 +18,7 @@ src/
     engine.worker.ts        hosts the engine off the main thread
     protocol.ts             request/response messages main ↔ worker
   visual-view/              VisualView — ProseMirror projection (schema, projection, view)
-  editor/                   createTypstEditor() — composes the widget, Visual/Source tabs, scoped CSS
+  editor/                   createTypstEditor() — composes the widget, Visual/Source tabs, status bar, scoped CSS
   index.ts                  public API of the package
 demo/                       dev/demo page (vite root)
 tests/e2e/                  Playwright specs (run against the static build)
@@ -74,12 +74,15 @@ new TypstDocument(text)
 ```ts
 new SourceView(parent, document, { onCursor? })
 .reveal(from, to)    // select, scroll to center, highlight
+.setDiagnostics([{severity, message, hints, from, to}])   // underline + hover; replaces previous
 .destroy()
 ```
 
 - **Hidden:** CodeMirror and its extensions, and the Typst language support
   (`codemirror-lang-typst/lezer`: a pure-JS Lezer parser using typst-syntax node names, plus
-  completion and folding). Also hidden: translating ChangeSets to and from `TextChange[]`, and the
+  completion and folding; its Lezer syntax linter is left out so that compiler diagnostics are the
+  only error source). Also hidden: `@codemirror/lint`, which maps shown diagnostics through later
+  edits. Also hidden: translating ChangeSets to and from `TextChange[]`, and the
   annotation that stops document-originated transactions from being written back.
 
 ### `Preview` (`src/preview`)
@@ -96,9 +99,20 @@ new Preview(container, { onJump?, onDiagnostics? })
 - **Incremental DOM:** every page carries its content `hash`. Only pages whose hash changed get new
   SVG markup. An edit on page 7 does not touch pages 1–6 in the DOM.
 - **Errors keep the last good pages.** When a compilation fails, the preview keeps showing the
-  previous pages and reports diagnostics through `onDiagnostics`.
+  previous pages, dimmed (`typst-preview--stale`), and reports diagnostics through `onDiagnostics`.
+- **Diagnostics are never stale.** `onDiagnostics` is only called when no newer `update()` is
+  waiting, so its offsets always refer to the text last passed in.
 - **Coordinates:** the SVG is scaled to the pane width. Clicks are converted with
   `pt = (clientX − pageRect.left) × page.width / pageRect.width`.
+
+### Diagnostics in the widget (`src/editor`)
+
+`summarizeDiagnostics(diagnostics, main)` (pure, unit-tested) splits a compile's diagnostics into
+those of the main file (sent to `SourceView.setDiagnostics`) and those elsewhere (other files or
+no location: only listed), and computes the status label ("✓ compiled" / "1 error, 2 warnings")
+and the jump target (earliest error in the main file, else earliest warning).
+`DiagnosticsStatus` renders it as a status bar below both panes; clicking the label reveals the
+target in the source.
 
 ### `typst-engine` (Rust crate + `src/engine`)
 
@@ -237,4 +251,4 @@ The interesting part is `projection.ts`, which exports two functions plus two sy
   data on first use (compile, see which fonts were missing, fetch, recompile).
 - **Single file only.** Multi-file projects, images and `@preview` packages need `setBinary` wiring
   and a package fetcher.
-- **No diagnostics UI yet.** `onDiagnostics` exists, but nothing renders it.
+- **No error display in the visual view** yet (diagnostics only reach the source view).
