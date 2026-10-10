@@ -6,7 +6,7 @@ import { EditorView as CodeView, keymap, type KeyBinding } from '@codemirror/vie
 import { Extension, type Editor } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, Selection } from '@tiptap/pm/state';
-import type { Decoration, EditorView, NodeView } from '@tiptap/pm/view';
+import type { Decoration, EditorView, NodeView, NodeViewConstructor } from '@tiptap/pm/view';
 import { minimalChange } from '../../../core/typst-document/typst-document';
 import { setBoxDecorations, type BoxAction, type BoxRenderer, type BoxTools, type BoxToolsHost, type CodeBoxSpec, type VisualViewContext } from '../visual-view';
 import { nodeGrammar, posToSource } from '../../projection/projection';
@@ -18,7 +18,7 @@ type Side = -1 | 1;
 /** The open raw boxes by their DOM, so arrow keys in the outer editor can move into them. */
 const boxes = new WeakMap<globalThis.Node, RawBox>();
 
-/** What the raw boxes of one view get from the contributions (see `setBoxes`). */
+/** What the raw boxes of one view get from the contributions. */
 export interface Boxes {
   readonly view: VisualViewContext;
   /** Draw boxes instead of their code; the first that `renders` a box draws it. */
@@ -29,26 +29,6 @@ export interface Boxes {
   readonly actions: readonly BoxAction[];
   /** What a box of a node type shows besides its code, by type name. */
   readonly specs: ReadonlyMap<string, CodeBoxSpec>;
-}
-
-/** What the boxes of an editor get (see `setBoxes`). */
-const boxesOf = new WeakMap<Editor, Boxes>();
-
-/** Gives the raw boxes of `editor` what contributions add to them. Set it before the boxes are created. */
-export function setBoxes(editor: Editor, contributed: Boxes): void {
-  boxesOf.set(editor, contributed);
-}
-
-/** What contributions add to a box of `node` in `editor`: its spec's heading and tools, code extensions, the renderer drawing it. */
-function contributionsFor(
-  editor: Editor,
-  node: Node,
-): Partial<Pick<Boxes, 'view'>> & { spec?: CodeBoxSpec; codeExtensions: readonly CodeExtension[]; renderer?: BoxRenderer; actions: readonly BoxAction[] } {
-  const contributed = boxesOf.get(editor);
-  if (!contributed) return { codeExtensions: [], actions: [] };
-  const renderer = contributed.renderers.find((candidate) => candidate.renders(node));
-  const { codeExtensions, actions, view } = contributed;
-  return { spec: contributed.specs.get(node.type.name), codeExtensions, renderer, view, actions };
 }
 
 /** Whether `node` shows as a raw box (its spec asks for a code box). */
@@ -102,10 +82,18 @@ class RawBox implements NodeView {
   private readonly actionBar: BoxActionBar | null;
   /** Set while mirroring `src` into the box, so that change is not sent back. */
   private mirroring = false;
+  private readonly editor: Editor;
 
-  constructor(private node: Node, private readonly editor: Editor, private readonly getPos: () => number | undefined, decorations: readonly Decoration[]) {
+  constructor(
+    private node: Node,
+    private readonly getPos: () => number | undefined,
+    decorations: readonly Decoration[],
+    { editor, boxes: { view, renderers, codeExtensions, actions, specs } }: { editor: Editor; boxes: Boxes },
+  ) {
+    this.editor = editor;
     const inline = node.isInline;
-    const { spec, codeExtensions, renderer, view, actions } = contributionsFor(editor, node);
+    const spec = specs.get(node.type.name);
+    const renderer = renderers.find((candidate) => candidate.renders(node));
     this.spec = spec;
     this.dom = editor.view.dom.ownerDocument.createElement(inline ? 'span' : 'div');
     this.dom.className = inline ? 'typst-visual__raw-inline' : 'typst-visual__raw-block';
@@ -116,8 +104,8 @@ class RawBox implements NodeView {
     boxes.set(this.dom, this);
     this.showDecorations(decorations);
     this.rendered = renderer ? this.createRendered(wrapper, renderer) : null;
-    this.actionBar = view && actions.length > 0 ? new BoxActionBar(this.dom.ownerDocument, actions, view, node) : null;
-    this.tools = view && spec?.tools ? spec.tools(this.toolsHost(wrapper, view), node) : null;
+    this.actionBar = actions.length > 0 ? new BoxActionBar(this.dom.ownerDocument, actions, view, node) : null;
+    this.tools = spec?.tools ? spec.tools(this.toolsHost(wrapper, view), node) : null;
     this.placeActionBar(wrapper);
   }
 
@@ -288,9 +276,9 @@ class RawBox implements NodeView {
   }
 }
 
-/** The node view of a raw box in `editor`. */
-export function rawBoxView(node: Node, editor: Editor, getPos: () => number | undefined, decorations: readonly Decoration[]): NodeView {
-  return new RawBox(node, editor, getPos, decorations);
+/** The node views of raw boxes in `editor`, with what `boxes` contribute to them. */
+export function rawBoxViews(editor: Editor, boxes: Boxes): NodeViewConstructor {
+  return (node, _view, getPos, decorations) => new RawBox(node, getPos, decorations, { editor, boxes });
 }
 
 /** The raw box at `pos` in the outer editor, if one is shown there. */

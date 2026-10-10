@@ -14,7 +14,7 @@ import { nodeGrammar, onDidChangeGrammar, posToSource, print, project, sourceToP
 import type { Anchor } from '../../ui/floating-bar/floating-bar';
 import { highlights, setHighlights } from './highlights';
 import { attachSpecs, editorExtensions } from './nodes/nodes';
-import { setBoxes } from './nodes/raw-box';
+import type { Boxes } from './nodes/raw-box';
 import { Toolbar } from './toolbar/toolbar';
 
 /** Marks transactions that mirror a document change, so they are not written back. */
@@ -52,7 +52,7 @@ export class VisualView {
     this.editor = new Editor({
       element: body,
       extensions: [
-        ...editorExtensions(contributed.nodes, contributed.marks),
+        ...editorExtensions(contributed.nodes, contributed.marks, boxes(view, contributed)),
         highlights,
         ...contributed.editorExtensions.flatMap((provider) => provider(view)),
       ],
@@ -65,7 +65,6 @@ export class VisualView {
     });
     const { schema } = this.editor;
     attachSpecs(schema, contributed.nodes, contributed.marks);
-    setBoxes(this.editor, boxes(view, contributed));
     this.gutters = contributed.gutters.map((provider) => provider(view, body));
     // Load the projection itself (not a JSON copy): its node identities are what marks blocks as untouched.
     this.editor.view.updateState(
@@ -142,7 +141,7 @@ function isBox(node: Node): boolean {
 }
 
 /** What the raw boxes of `view` get from the contributions. */
-function boxes(view: VisualViewContext, contributed: Contributed) {
+function boxes(view: VisualViewContext, contributed: Contributed): Boxes {
   return {
     view,
     renderers: contributed.boxRenderers.map((provider) => provider(view)).filter((renderer) => renderer !== null),
@@ -578,7 +577,7 @@ export type ToolbarItem =
 
 /** A schema of `nodes` and `marks` with its grammar attached (an `Editor` builds an equal but distinct instance). */
 export function createSchema(nodes: readonly NodeGrammar[], marks: readonly MarkGrammar[]): Schema {
-  const schema = getSchema(editorExtensions(nodes, marks));
+  const schema = getSchema(editorExtensions(nodes, marks, null));
   attachSpecs(schema, nodes, marks);
   return schema;
 }
