@@ -970,7 +970,7 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
     in one `requestAnimationFrame` after a doc change, an active-note change, typing in a card,
     or a resize of the body or the text (`ResizeObserver`, which also covers loaded images; plus
     captured `load` events). No measuring in the projection.
-  - Narrow (body narrower than 640px): no column; only the active note's card shows, as a
+  - Narrow (body narrower than 560px): no column; only the active note's card shows, as a
     popover below its anchor.
   - `editNote(offset)` finds the note in the document: a point note whose call holds `offset`, or
     among range notes whose text ends at the same place (nested) the one whose `][note]` holds it,

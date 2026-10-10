@@ -367,6 +367,23 @@ describe('the notes gutter', () => {
     }
   });
 
+  it('keeps the column beside the text in half of a desktop window, and collapses it on a narrower pane', async () => {
+    // half of a 1280px window, next to the side panels' rail: about 620px
+    const width = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(600);
+    try {
+      const { doc, parent } = setup('A #margin-note[a][1] b\n');
+      const narrow = () => parent.querySelector('.typst-visual__body')!.classList.contains('typst-visual__body--narrow');
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      expect(narrow()).toBe(false);
+      width.mockReturnValue(500);
+      doc.setText('A #margin-note[a][2] b\n', 'source');
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      expect(narrow()).toBe(true);
+    } finally {
+      width.mockRestore();
+    }
+  });
+
   describe('editNote', () => {
     /** The messages of the card whose reply box has the focus. */
     const focusedThread = () => [...(document.activeElement?.closest('[data-testid="typst-note-card"]')?.querySelectorAll('.typst-note-card__text') ?? [])]
