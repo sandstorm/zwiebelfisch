@@ -106,3 +106,54 @@ describe('table header row', () => {
     expect(doc.text).toBe(source);
   });
 });
+
+describe('task lists', () => {
+  const PREAMBLE = '#import "@preview/cheq:0.4.0": checklist\n#show: checklist\n\n';
+
+  it('"Task list" turns the paragraph into a task and adds cheq once', () => {
+    const { doc, view, button, editor } = setup('= Todo\n\nBuy milk\n');
+    view.reveal(16, 16);
+    button('Task list').click();
+    expect(doc.text).toBe(`${PREAMBLE}= Todo\n\n- [ ] Buy milk\n`);
+    expect(button('Task list').getAttribute('aria-pressed')).toBe('true');
+    editor.commands.splitListItem('taskItem');
+    type(editor, 'Eggs');
+    expect(doc.text).toBe(`${PREAMBLE}= Todo\n\n- [ ] Buy milk\n- [ ] Eggs\n`);
+  });
+
+  it('one undo removes the task list and the preamble it brought', () => {
+    const { doc, view, button } = setup('Buy milk\n');
+    view.reveal(1, 1);
+    button('Task list').click();
+    expect(doc.text).toBe(`${PREAMBLE}- [ ] Buy milk\n`);
+    button('Undo').click();
+    expect(doc.text).toBe('Buy milk\n');
+  });
+
+  it('"[ ] " at the start of a paragraph starts a task list', () => {
+    const { doc, view, editor } = setup(`${PREAMBLE}Hello\n`);
+    view.reveal(PREAMBLE.length + 5, PREAMBLE.length + 5);
+    editor.commands.splitBlock();
+    type(editor, '[x] Done');
+    expect(doc.text).toBe(`${PREAMBLE}Hello\n\n- [x] Done\n`);
+  });
+
+  it('clicking a checkbox toggles [ ] and [x] in the source', () => {
+    const source = `${PREAMBLE}- [ ] todo\n- [x] done\n`;
+    const { doc, parent } = setup(source);
+    const boxes = parent.querySelectorAll<HTMLInputElement>('ul[data-type="taskList"] input[type="checkbox"]');
+    expect([...boxes].map((box) => box.checked)).toEqual([false, true]);
+    boxes[0].checked = true;
+    boxes[0].dispatchEvent(new Event('change', { bubbles: true }));
+    expect(doc.text).toBe(`${PREAMBLE}- [x] todo\n- [x] done\n`);
+    boxes[1].checked = false;
+    boxes[1].dispatchEvent(new Event('change', { bubbles: true }));
+    expect(doc.text).toBe(`${PREAMBLE}- [x] todo\n- [ ] done\n`);
+  });
+
+  it('a task list typed in the source does not add the preamble', () => {
+    const { doc } = setup('Text\n');
+    doc.setText('Text\n\n- [ ] a\n', 'source');
+    expect(doc.text).toBe('Text\n\n- [ ] a\n');
+  });
+});

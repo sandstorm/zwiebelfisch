@@ -5,6 +5,7 @@ import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table
 import StarterKit from '@tiptap/starter-kit';
 import { HorizontalRule } from './nodes/horizontal-rule';
 import { PageBreak } from './nodes/page-break';
+import { ChecklistPreamble, TypstTaskItem, TypstTaskList } from './nodes/task-list';
 import { RawBoxNavigation, rawBoxView } from './raw-box';
 
 /**
@@ -157,6 +158,9 @@ export const extensions = [
   Image,
   PageBreak,
   HorizontalRule,
+  TypstTaskList,
+  TypstTaskItem,
+  ChecklistPreamble,
   TypstDocument,
   TypstListItem,
   SourceAnchors,

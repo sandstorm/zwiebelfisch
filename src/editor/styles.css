@@ -193,6 +193,11 @@
 .typst-visual__rule { padding: 0.4em 0 1.1em; }
 .typst-visual__quote { margin: 0 0 0.7em; padding: 0 0 0 1em; border-left: 3px solid var(--te-border); color: #3d4451; }
 .typst-visual__quote > :last-child { margin-bottom: 0; }
+.typst-visual ul[data-type='taskList'] { list-style: none; padding-left: 0.3em; }
+.typst-visual ul[data-type='taskList'] > li { display: flex; gap: 0.5em; align-items: baseline; }
+.typst-visual ul[data-type='taskList'] > li > label { flex: none; }
+.typst-visual ul[data-type='taskList'] > li > div { flex: 1; min-width: 0; }
+.typst-visual ul[data-type='taskList'] > li > div > p { margin: 0; }
 .typst-visual__rule hr { margin: 0; border: none; border-top: 1px solid #24292f; }
 .typst-popover {
   position: absolute;

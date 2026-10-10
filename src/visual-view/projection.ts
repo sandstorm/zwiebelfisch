@@ -179,12 +179,10 @@ function toBlock(ctx: Context, segment: Segment, sep: string | null): Node {
   const [node] = segment.nodes;
   const src = ctx.source.slice(segment.from, segment.to);
   switch (segment.kind) {
-    case 'heading': {
-      const level = Math.min(6, (node.getChild('HeadingMarker')?.to ?? node.from + 1) - node.from);
-      const markup = node.getChild('Markup');
-      return textblock(ctx, { type: 'heading', attrs: { level, src, sep } }, segment.from, markup ? inline(ctx, children(markup)) : []);
-    }
+    case 'heading':
+      return heading(ctx, node, sep);
     case 'bullet':
+      return taskItem(ctx, node, sep) ?? listItem(ctx, node, sep);
     case 'ordered':
       return listItem(ctx, node, sep);
     case 'run':
@@ -193,6 +191,13 @@ function toBlock(ctx: Context, segment: Segment, sep: string | null): Node {
       }
       return blockCall(ctx, segment, sep) ?? ctx.schema.nodes.rawBlock.create({ src, sep });
   }
+}
+
+function heading(ctx: Context, node: SyntaxNode, sep: string | null): Node {
+  const level = Math.min(6, (node.getChild('HeadingMarker')?.to ?? node.from + 1) - node.from);
+  const markup = node.getChild('Markup');
+  const src = ctx.source.slice(node.from, node.to);
+  return textblock(ctx, { type: 'heading', attrs: { level, src, sep } }, node.from, markup ? inline(ctx, children(markup)) : []);
 }
 
 /** A `link(..)` call, which is prose like a bare URL. */
@@ -375,6 +380,22 @@ function listItem(ctx: Context, node: SyntaxNode, sep: string | null): Node {
   );
 }
 
+/** `- [ ] text` / `- [x] text` (one paragraph, a space after the box): a task item; the box is hidden syntax. */
+function taskItem(ctx: Context, node: SyntaxNode, sep: string | null): Node | null {
+  const markup = node.getChild('Markup');
+  const box = markup ? TASK_BOX.exec(ctx.source.slice(markup.from, markup.to)) : null;
+  if (!markup || !box) return null;
+  const body = children(markup).filter((n) => n.from >= markup.from + box[0].length);
+  if (body.some((n) => n.name === 'Parbreak' || blockKind(n) !== null)) return null;
+  const from = markup.from + box[0].length;
+  const paragraph = textblock(ctx, { type: 'paragraph', attrs: { src: ctx.source.slice(from, markup.to) } }, from, inline(ctx, body));
+  const attrs = { marker: '-', checked: box[1] === 'x', src: ctx.source.slice(node.from, node.to), sep };
+  return pristineNode(ctx, 'taskItem', attrs, [paragraph]);
+}
+
+/** cheq's unchecked and checked boxes; others (`[/]`, `[-]`, …) stay text. */
+const TASK_BOX = /^\[([ x])\](?: |$)/;
+
 /** Wraps consecutive list items of the same kind into one list; the last item's separator moves to the list. */
 function groupLists(ctx: Context, blocks: Node[]): Node[] {
   const result: Node[] = [];
@@ -382,19 +403,24 @@ function groupLists(ctx: Context, blocks: Node[]): Node[] {
   const flush = () => {
     if (items.length === 0) return;
     const last = items.at(-1)!;
-    const listType = isOrdered(items[0]) ? ctx.schema.nodes.orderedList : ctx.schema.nodes.bulletList;
-    items[items.length - 1] = pristineNode(ctx, 'listItem', { ...last.attrs, sep: null }, last.content);
-    result.push(listType.create({ sep: last.attrs.sep }, items));
+    items[items.length - 1] = pristineNode(ctx, last.type.name, { ...last.attrs, sep: null }, last.content);
+    result.push(ctx.schema.nodes[listType(items[0])].create({ sep: last.attrs.sep }, items));
     items = [];
   };
   for (const block of blocks) {
-    const isItem = block.type.name === 'listItem';
-    if (!isItem || (items.length > 0 && isOrdered(items[0]) !== isOrdered(block))) flush();
+    const isItem = block.type.name === 'listItem' || block.type.name === 'taskItem';
+    if (!isItem || (items.length > 0 && listType(items[0]) !== listType(block))) flush();
     if (isItem) items.push(block);
     else result.push(block);
   }
   flush();
   return result;
+}
+
+/** The list a projected item belongs in. */
+function listType(item: Node): string {
+  if (item.type.name === 'taskItem') return 'taskList';
+  return isOrdered(item) ? 'orderedList' : 'bulletList';
 }
 
 function isOrdered(item: Node): boolean {
@@ -710,7 +736,9 @@ const PRINT_BLOCK: Record<string, BlockPrinter> = {
   },
   bulletList: printList,
   orderedList: printList,
+  taskList: printList,
   listItem: (out, item, pos, list) => printListItem(out, item, list, pos),
+  taskItem: (out, item, pos) => printItem(out, item, pos, `- [${item.attrs.checked ? 'x' : ' '}] `),
   table: (out, table, pos) => printTable(out, table, pos),
   blockquote: (out, quote, pos) => printQuote(out, quote, pos),
 };
@@ -762,7 +790,12 @@ function printTextblock(out: Printer, block: Node, pos: number): void {
 function printListItem(out: Printer, item: Node, list: Node, pos: number): void {
   const ordered = list.type.name === 'orderedList';
   const keepMarker = item.attrs.marker !== null && ORDERED_MARKER.test(item.attrs.marker) === ordered;
-  out.hidden(`${keepMarker ? item.attrs.marker : ordered ? '+' : '-'} `);
+  printItem(out, item, pos, `${keepMarker ? item.attrs.marker : ordered ? '+' : '-'} `);
+}
+
+/** `prefix` (the marker), the first child, then further children on following lines, indented. */
+function printItem(out: Printer, item: Node, pos: number, prefix: string): void {
+  out.hidden(prefix);
   item.forEach((child, offset, index) => {
     if (index === 0) return printBlock(out, child, item, pos + 1 + offset);
     out.hidden('\n');

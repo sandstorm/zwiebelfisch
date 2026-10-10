@@ -10,11 +10,13 @@ const ICONS = {
   pageBreak: svg('<path d="M6 3v5h12V3"/><path d="M6 21v-5h12v5"/><path d="M3 12h2M8 12h2M14 12h2M19 12h2"/>'),
   rule: svg('<path d="M3 12h18"/>'),
   headerRow: svg('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M4 7h16" stroke-width="4"/>'),
+  taskList: svg('<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m4.5 8 1 1 2-2"/><rect x="3" y="14" width="6" height="6" rx="1"/><path d="M13 8h8M13 17h8"/>'),
   quote: svg('<path d="M4 6v12"/><path d="M9 7h11M9 12h11M9 17h7"/>'),
 };
 
-/** Block containers: a quote. */
+/** Block containers: a task list (`- [ ] ..`, with cheq's preamble), a quote. */
 export const BLOCKS: Action[] = [
+  { label: 'Task list', shortcut: 'Mod+Shift+9', icon: ICONS.taskList, run: (c) => c.toggleTaskList(), active: (e) => e.isActive('taskList') },
   { label: 'Quote', shortcut: 'Mod+Shift+B', icon: ICONS.quote, run: (c) => c.toggleBlockquote(), active: (e) => e.isActive('blockquote') },
 ];
 
