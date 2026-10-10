@@ -38,6 +38,10 @@ describe('Project', () => {
     expect(p.files()['/logo.png']).toBe(logo);
   });
 
+  it('refuses bytes for the main file, as replace does', () => {
+    expect(() => new Project(path('/main.typ'), { '/main.typ': new Uint8Array([1]) })).toThrow(/must contain text/);
+  });
+
   it('creates the main file when it is missing', () => {
     const p = new Project(path('/main.typ'), {});
     expect(p.paths()).toEqual(['/main.typ']);

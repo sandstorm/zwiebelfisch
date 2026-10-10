@@ -46,7 +46,7 @@ export class Project {
     readonly main: ProjectPath,
     files: ProjectFiles,
   ) {
-    for (const [path, content] of Object.entries(files)) this.add(parseKey(path), content);
+    for (const [path, content] of this.parse(files)) this.add(path, content);
     if (!this.entries.has(main)) this.add(main, '');
   }
 
@@ -117,9 +117,7 @@ export class Project {
    * text as one edit. The main file cannot be deleted: without an entry in `files` it keeps its text.
    */
   replace(files: ProjectFiles): void {
-    const next = new Map(Object.entries(files).map(([key, content]) => [parseKey(key), content]));
-    const main = next.get(this.main);
-    if (main !== undefined && typeof main !== 'string') throw new Error(`The main file ${this.main} must contain text.`);
+    const next = this.parse(files);
     for (const path of [...this.entries.keys()]) {
       if (path !== this.main && !next.has(path)) this.removeAndEmit(path);
     }
@@ -129,6 +127,14 @@ export class Project {
   destroy(): void {
     for (const path of [...this.entries.keys()]) this.remove(path);
     this.changed.dispose();
+  }
+
+  /** Host-given files by path; a key that is no path, or bytes for the main file, is the host's mistake: throws. */
+  private parse(files: ProjectFiles): Map<ProjectPath, FileContent> {
+    const parsed = new Map(Object.entries(files).map(([key, content]) => [parseKey(key), content]));
+    const main = parsed.get(this.main);
+    if (main !== undefined && typeof main !== 'string') throw new Error(`The main file ${this.main} must contain text.`);
+    return parsed;
   }
 
   private checkNew(path: ProjectPath): string | null {

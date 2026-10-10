@@ -338,7 +338,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
   `check(change)` → reason or null, `apply(change)`, `replace(files)`, `onDidChangeFile: Event<FileChange>`
   (structural changes and every document edit as `update`; `replace` reports a `delete`, `create`
   or `update` per file, so subscribers never need to be refreshed by hand). The main file cannot be renamed or
-  deleted; `.typ` files keep their ending.
+  deleted, and is always text (bytes for it throw, in the constructor as in `replace`); `.typ` files keep their ending.
   `FileChange = {kind:'create', path, content} | {kind:'update', path, content} | {kind:'delete', path} | {kind:'rename', from, path}`.
 - **Visual view contributions**: the workbench host has one `VisualViewContributions` (`ExtensionContext.visualView`)
   and makes every document's Visual view from it. The Typst constructs (`markup`, `headings`, `tables`,
