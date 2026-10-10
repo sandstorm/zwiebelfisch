@@ -7,13 +7,16 @@ import type { CollaborationOptions } from '../features/collaboration/collaborati
 import { collaboration } from '../features/collaboration/collaboration-link';
 import { comments } from '../features/comments/comments';
 import { diagnostics } from '../features/diagnostics/diagnostics';
+import { documentLinks } from '../features/document-links/document-links';
 import { assets, fileNavigation, files } from '../features/files/files';
 import fileStyles from '../features/files/files.css?inline';
 import { labels } from '../features/labels/labels';
 import { pdfExport } from '../features/pdf-export/pdf-export';
+import { previewControls } from '../features/preview-controls/preview-controls';
 import { projectRenderings } from '../features/project-renderings/project-renderings';
 import { spreadsheets } from '../features/spreadsheets/spreadsheets';
 import { styles } from '../features/styles/styles';
+import { typstLanguage } from '../features/typst-language/typst-language';
 import { versions } from '../features/versions/versions';
 import proseMirrorStyles from '../features/visual-view/visual-view.css?inline';
 import { type EditorMode, type TypstExtension, WorkbenchHost, workbenchStyles } from '../hosts/workbench/workbench';
@@ -142,7 +145,6 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
   const workbench = new WorkbenchHost(host, project, {
     mode: options.mode,
     theme: options.theme,
-    followCursor: options.followCursor,
     allowFileChange: options.allowFileChange,
     onOpen: options.onOpen,
   });
@@ -186,6 +188,8 @@ function builtinExtensions(options: TypstEditorOptions): TypstExtension[] {
   return [
     labels(),
     styles(),
+    typstLanguage(),
+    documentLinks(),
     ...(options.collaboration ? [collaboration(options.collaboration, options.user)] : []),
     files({ fileList: options.fileList }),
     fileNavigation(),
@@ -195,6 +199,8 @@ function builtinExtensions(options: TypstEditorOptions): TypstExtension[] {
     versions({ user: options.user }),
     comments({ user: options.user }),
     projectRenderings(),
+    // the preview's toolbar in this order: zoom, "Follow cursor", page number, then "Download PDF"
+    previewControls({ followCursor: options.followCursor }),
     pdfExport({ download: options.pdfDownload }),
   ];
 }

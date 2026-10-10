@@ -1,8 +1,18 @@
-// Other users' carets and selections in a CodeMirror editor (also used by the Visual view's raw boxes).
-// See source-view.ts.
+// presence: other users' carets and selections in a CodeMirror editor: the Source views (what they are given as
+// PresenceTarget) and the Visual view's raw boxes. See builtins.ts.
 import { StateEffect, StateField, type EditorState, type Extension, type Range } from '@codemirror/state';
-import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view';
-import { caretElement, type Presence, type PresenceUser } from '../../core/typst-document/typst-document';
+import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet } from '@codemirror/view';
+import { caretElement, type Presence, type PresenceUser } from '../../../core/typst-document/typst-document';
+import type { SourceViewExtension } from '../contribution';
+
+/** Draws the carets and selections a Source view is given (`setPresence`); they follow edits. */
+export const presence: SourceViewExtension = (view) => [
+  remotePresence,
+  ViewPlugin.define((editor) => {
+    const subscription = view.onDidChangePresence((presences) => showPresence(editor, presences));
+    return { destroy: () => subscription.dispose() };
+  }),
+];
 
 const setPresence = StateEffect.define<readonly Presence[]>();
 

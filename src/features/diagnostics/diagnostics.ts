@@ -1,32 +1,46 @@
-// The diagnostics extension: the status bar's error / warning count and the list behind it (DiagnosticsStatus).
-// Entry of features/diagnostics/. See ARCHITECTURE.md, "Diagnostics in the widget".
+// The diagnostics extension: the compile errors and warnings underlined in the Source views (`lint`), and the
+// status bar's error / warning count with the list behind it (DiagnosticsStatus). Entry of features/diagnostics/.
+// See ARCHITECTURE.md, "Diagnostics in the widget".
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import type { Diagnostic } from '../../core/typst-engine/typst-engine';
+import { DiagnosticCollection, describeDiagnostic, lint } from '../../hosts/source-view/source-view';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
-import { describeDiagnostic } from '../source-view/source-view';
 import { inProject, summarizeDiagnostics, type DiagnosticTarget, type DiagnosticsSummary } from './diagnostics-summary';
 
 export { summarizeDiagnostics } from './diagnostics-summary';
 
 /**
- * The compile status in the status bar, for the Typst file shown last (while an image is shown, too). Clicking it,
- * or a message, opens the file and reveals the range in the Source view.
+ * The preview's diagnostics, each document's in a DiagnosticCollection its Source views underline (`lint`), and the
+ * compile status in the status bar, for the Typst file shown last (while an image is shown, too). Clicking the
+ * status, or a message, opens the file and reveals the range in the Source view.
  */
 export function diagnostics(): TypstExtension {
   return {
     id: 'diagnostics',
-    activate({ project, workbench, subscriptions }) {
+    activate({ project, workbench, sourceView, preview, subscriptions }) {
+      const collection = new DiagnosticCollection();
       const status = new DiagnosticsStatus(workbench.ownerDocument, (target) => {
         const path = ProjectPath.parse(target.path);
         if (path && project.document(path)) workbench.open(path, { selection: target, mode: 'source' });
       });
       /** The Typst file shown last: whose diagnostics the status counts. */
       let lastSource = project.main;
+      /** The newest compilation's (null before the first). */
+      let latest: readonly Diagnostic[] | null = null;
       const show = () => {
-        if (workbench.diagnostics) status.show(summarizeDiagnostics([...workbench.diagnostics], lastSource));
+        if (latest) status.show(summarizeDiagnostics([...latest], lastSource));
+      };
+      const compiled = (diagnostics: readonly Diagnostic[]) => {
+        latest = diagnostics;
+        for (const path of project.paths()) {
+          const document = project.document(path);
+          if (document) collection.set(document, diagnostics.filter((d) => d.path === path));
+        }
+        show();
       };
       subscriptions.push(
+        sourceView.registerExtension(lint(collection)),
         workbench.registerStatusBarItem(status.element),
         new Disposable(() => status.destroy()),
         workbench.onDidShowFile((path) => {
@@ -39,7 +53,7 @@ export function diagnostics(): TypstExtension {
           else if (!project.has(lastSource)) lastSource = project.main;
           if (lastSource !== before) show();
         })),
-        workbench.onDidChangeDiagnostics(show),
+        preview.onDidChangeDiagnostics(compiled),
       );
     },
   };

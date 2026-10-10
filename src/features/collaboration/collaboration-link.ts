@@ -5,6 +5,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { PlacedPresence, PresenceTarget } from '../../core/typst-document/typst-document';
+import { presence as sourcePresence } from '../../hosts/source-view/source-view';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 
 declare module '../../hosts/workbench/workbench' {
@@ -29,7 +30,7 @@ export interface CollaborationSession {
 export function collaboration(options: CollaborationOptions, user?: CollaborationUser): TypstExtension {
   return {
     id: 'collaboration',
-    activate({ project, workbench, services, subscriptions }) {
+    activate({ project, workbench, sourceView, services, subscriptions }) {
       const presence = new EventEmitter<readonly PlacedPresence[]>();
       const connected = new EventEmitter<RoomVersions>();
       let versions: RoomVersions | null = null;
@@ -47,6 +48,7 @@ export function collaboration(options: CollaborationOptions, user?: Collaboratio
         link.show(editor?.path ?? null, editor?.views ?? []);
       };
       subscriptions.push(
+        sourceView.registerExtension(sourcePresence),
         new Disposable(() => link.destroy()),
         presence,
         connected,

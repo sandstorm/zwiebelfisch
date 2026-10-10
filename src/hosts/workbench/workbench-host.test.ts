@@ -1,19 +1,28 @@
 // @vitest-environment jsdom
 // Tests for workbench-host.ts: the contribution points as an extension uses them (preview mocked: no worker in jsdom).
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { EditorView } from '@codemirror/view';
+import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { ExtensionContext } from './workbench';
 import { WorkbenchHost, type WorkbenchOptions } from './workbench';
 
-vi.mock('../../features/preview/preview', () => ({
+vi.mock('../preview/preview', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   Preview: class {
     constructor(_parent: HTMLElement, readonly options: object) {}
+    readonly toolbarItems: unknown[] = [];
     update() {}
     reveal() {}
     snippet = async () => null;
-    onRender = () => () => {};
+    onDidRender = () => new Disposable(() => {});
+    onDidChangeDiagnostics = () => new Disposable(() => {});
+    registerToolbarItem(item: unknown) {
+      this.toolbarItems.push(item);
+      return new Disposable(() => this.toolbarItems.splice(this.toolbarItems.indexOf(item), 1));
+    }
     destroy() {}
   },
 }));
@@ -127,15 +136,21 @@ describe('WorkbenchHost', () => {
     expect(provider.mock.calls.map(([document]) => document.text)).toEqual(['= Main\n', 'A\n']);
   });
 
-  it('starts the preview after the extensions, with the PDF source one of them registered', () => {
-    let engine: ExtensionContext['preview']['engine'] | null = null;
-    const pdf = async () => ({ blob: new Blob(), name: 'main.pdf' });
-    setup(({ preview, subscriptions }) => {
-      engine = preview.engine;
-      expect(() => preview.engine.onRender(() => {})).toThrow(/after the extensions/);
-      subscriptions.push(preview.registerPdfSource(pdf));
+  it('applies the Source view contributions to every Source view, and gives the extensions the preview', () => {
+    const item = () => ({ elements: [] });
+    let preview: ExtensionContext['preview'] | null = null;
+    const { host, workbench } = setup((context) => {
+      preview = context.preview;
+      context.subscriptions.push(
+        context.sourceView.registerExtension(EditorView.editorAttributes.of({ class: 'contributed' })),
+        context.preview.registerToolbarItem(item),
+      );
     });
-    expect(engine!.onRender(() => {})).toBeTypeOf('function');
+    workbench.open(path('/a.typ'));
+    expect(host.querySelectorAll('.cm-editor.contributed')).toHaveLength(2);
+    expect((preview as unknown as { toolbarItems: unknown[] }).toolbarItems).toEqual([item]);
+    workbench.destroy();
+    expect((preview as unknown as { toolbarItems: unknown[] }).toolbarItems).toEqual([]);
   });
 
   it('tells whether the user works in the editing area', () => {

@@ -1,5 +1,6 @@
 // Tests for project-renderings.ts.
 import { describe, expect, it, vi } from 'vitest';
+import { Disposable } from '../../core/disposable/disposable';
 import { Project, type FileChange } from '../../core/project/project';
 import { ProjectRenderings } from './project-renderings';
 import { PathReference, ProjectPath } from '../../core/paths/paths';
@@ -15,7 +16,7 @@ function setup(files: Record<string, string | Uint8Array> = {}) {
   const revokeObjectURL = vi.fn();
   Object.assign(URL, { createObjectURL, revokeObjectURL });
   const project = new Project(path('/main.typ'), { '/main.typ': '= Hi\n', '/chapters/one.typ': 'One\n', '/img/logo.png': LOGO, ...files });
-  const preview = { snippet: vi.fn(async () => ({ svg: '<svg/>', width: 1, height: 1, textHeight: 1, padding: 0 })), onRender: vi.fn(() => () => {}) };
+  const preview = { snippet: vi.fn(async () => ({ svg: '<svg/>', width: 1, height: 1, textHeight: 1, padding: 0 })), onDidRender: vi.fn(() => new Disposable(() => {})) };
   const request = vi.fn(async (change: FileChange) => (project.apply(change), null as string | null));
   const renderings = new ProjectRenderings({ project, preview, request });
   const chapter = renderings.forDocument(project.document(path('/chapters/one.typ'))!);

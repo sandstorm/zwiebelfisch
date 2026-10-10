@@ -9,9 +9,8 @@ import type { Event } from '../../core/event-emitter/event-emitter';
 import type { FileKind, ProjectPath } from '../../core/paths/paths';
 import type { FileChange, FileContent, Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
-import type { Diagnostic } from '../../core/typst-engine/typst-engine';
-import type { PdfSource, Preview } from '../../features/preview/preview';
-import type { SourceView } from '../../features/source-view/source-view';
+import type { PreviewContributions } from '../preview/preview';
+import type { SourceView, SourceViewContributions } from '../source-view/source-view';
 import type { VisualView, VisualViewOptions } from '../../features/visual-view/visual-view';
 import type { EditorMode } from './editing-views/editing-views';
 import type { Memory } from './layout/layout';
@@ -31,7 +30,9 @@ export interface ExtensionContext {
   readonly project: Project;
   readonly workbench: Workbench;
   readonly visualView: VisualViewContributions;
+  /** CodeMirror extensions and link providers for every Source view. */
   readonly sourceView: SourceViewContributions;
+  /** Toolbar items, PDF variants and page overlays of the preview; its compile results (diagnostics, snippets, PDFs). */
   readonly preview: PreviewContributions;
   /** What extensions provide each other (instead of importing each other). */
   readonly services: Services;
@@ -111,10 +112,6 @@ export interface Workbench {
   /** A value remembered for the browser session under this widget's key (`name` tells values apart). */
   remember<T>(name: string): Memory<T>;
 
-  /** The errors and warnings of the newest compilation (null before the first). */
-  readonly diagnostics: readonly Diagnostic[] | null;
-  readonly onDidChangeDiagnostics: Event<readonly Diagnostic[]>;
-
   /** INTERIM (until H1 / H2's view contribution points): the shown Typst file and its views; null while another kind of file is shown. */
   readonly activeEditor: ActiveEditor | null;
   /** INTERIM: the selection in a view of a document moved, or its text changed (the views already show the new selection). */
@@ -177,20 +174,6 @@ export interface ActiveEditor {
 export interface VisualViewContributions {
   /** INTERIM: options for the Visual view of each document, merged in registration order, for the views created later. */
   registerDocumentOptions(provider: (document: TypstDocument) => VisualViewOptions): Disposable;
-}
-
-/** PLACEHOLDER — filled in by H2 at merge with the Source view's contribution points. */
-export interface SourceViewContributions {}
-
-/**
- * PLACEHOLDER — filled in by H2 at merge with the preview's contribution points (toolbar items, PDF variants,
- * overlays). Until then interim bridges to today's `Preview`.
- */
-export interface PreviewContributions {
-  /** INTERIM: where "Download PDF" gets its file (`PreviewOptions.pdf`); without one there is no button. One source. */
-  registerPdfSource(source: PdfSource): Disposable;
-  /** INTERIM: the preview's engine (snippets, renders, PDF export); usable once the widget is set up (not during `activate`). */
-  readonly engine: Pick<Preview, 'snippet' | 'onRender' | 'exportPdf'>;
 }
 
 export { WorkbenchHost, type WorkbenchOptions } from './workbench-host';

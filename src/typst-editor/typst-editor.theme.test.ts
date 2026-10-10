@@ -4,13 +4,16 @@ import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createTypstEditor } from './typst-editor';
 
-vi.mock('../features/preview/preview', () => ({
+vi.mock('../hosts/preview/preview', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   Preview: class {
     update() {}
     reveal() {}
-    showPresence() {}
     snippet = async () => null;
-    onRender = () => () => {};
+    onDidRender = () => ({ dispose() {} });
+    onDidChangeDiagnostics = () => ({ dispose() {} });
+    registerToolbarItem = () => ({ dispose() {} });
+    registerPdfVariant = () => ({ dispose() {} });
     destroy() {}
   },
 }));

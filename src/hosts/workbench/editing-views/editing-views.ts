@@ -1,7 +1,7 @@
 // EditingViews: the Visual/Source tabs; lazily one VisualView and SourceView per document. See workbench.ts.
 import type { Highlight, TypstDocument } from '../../../core/typst-document/typst-document';
 import type { DocumentLinkProvider } from '../../../core/document-links/document-links';
-import { describeDiagnostic, SourceView, type SourceDiagnostic } from '../../../features/source-view/source-view';
+import { describeDiagnostic, type SourceDiagnostic, type SourceView, SourceViewHost } from '../../source-view/source-view';
 import { VisualView, type VisualViewOptions } from '../../../features/visual-view/visual-view';
 
 export type EditorMode = 'visual' | 'source';
@@ -15,8 +15,10 @@ export interface EditingViewsOptions {
   onSelection?(document: TypstDocument): void;
   /** Options for the Visual view of `document` (rendered raw boxes, images to insert). */
   visualOptions?(document: TypstDocument): VisualViewOptions;
-  /** Where the file paths in `document` lead (both views open them); default: plain text. */
+  /** Where the file paths in `document` lead in the Visual view; default: plain text. */
   documentLinks?(document: TypstDocument): DocumentLinkProvider;
+  /** Makes the Source views, with what is registered there (language, lint, file links, …); default: plain ones. */
+  sourceViews?: SourceViewHost;
 }
 
 interface Views {
@@ -41,6 +43,7 @@ export class EditingViews {
   private readonly modeActions = new Map<HTMLElement, EditorMode>();
   /** Shown above and below the visible view (see `setFrame`). */
   private frame: { top: HTMLElement; bottom: HTMLElement } | null = null;
+  private readonly sourceViews: SourceViewHost;
 
   constructor(
     private readonly parent: HTMLElement,
@@ -48,6 +51,7 @@ export class EditingViews {
   ) {
     const doc = parent.ownerDocument;
     this.current = options.mode ?? 'visual';
+    this.sourceViews = options.sourceViews ?? new SourceViewHost();
     this.tabs = div(doc, 'typst-editor__tabs');
     this.tabs.setAttribute('role', 'tablist');
     this.buttons = (['visual', 'source'] as const).map((mode) => {
@@ -127,7 +131,7 @@ export class EditingViews {
     views[this.current].reveal(from, to);
   }
 
-  /** Marks `diagnostics` in both views of `document`, now or when they are created. */
+  /** Marks `diagnostics` in the Visual view of `document`, now or when it is created. */
   setDiagnostics(document: TypstDocument, diagnostics: SourceDiagnostic[]): void {
     this.diagnostics.set(document, diagnostics);
     const views = this.views.get(document);
@@ -177,8 +181,7 @@ export class EditingViews {
           this.options.onSelection?.(document);
         },
       }),
-      source: new SourceView(panes.source, document, {
-        documentLinks,
+      source: this.sourceViews.createView(panes.source, document, {
         onCursor: (offset) => this.options.onCursor?.(document, offset),
         onSelection: () => this.options.onSelection?.(document),
       }),
@@ -230,12 +233,11 @@ export class EditingViews {
 }
 
 /**
- * The Source view underlines diagnostics with hover (CodeMirror lint); the
- * Visual view gets highlights with the same text as tooltip. An empty range
- * (e.g. "expected expression" at a point) still marks one character.
+ * The Visual view gets highlights with the diagnostic's text as tooltip (the Source view underlines them
+ * itself: its `lint` contribution). An empty range (e.g. "expected expression" at a point) still marks one
+ * character.
  */
 function markDiagnostics(views: Views, diagnostics: SourceDiagnostic[]): void {
-  views.source.setDiagnostics(diagnostics);
   views.visual.setHighlights('diagnostics', diagnostics.map((d): Highlight => ({
     from: d.from,
     to: Math.max(d.to, d.from + 1),

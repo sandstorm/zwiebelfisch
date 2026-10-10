@@ -5,13 +5,16 @@ import { EditorView } from '@codemirror/view';
 import { defineTypstEditorElement, type TypstEditorChangeDetail, type TypstEditorElement } from './typst-editor-element';
 import type { FileChange } from '../typst-editor/typst-editor';
 
-vi.mock('../features/preview/preview', () => ({
+vi.mock('../hosts/preview/preview', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   Preview: class {
     update() {}
     reveal() {}
-    showPresence() {}
     snippet = async () => null;
-    onRender = () => () => {};
+    onDidRender = () => ({ dispose() {} });
+    onDidChangeDiagnostics = () => ({ dispose() {} });
+    registerToolbarItem = () => ({ dispose() {} });
+    registerPdfVariant = () => ({ dispose() {} });
     destroy() {}
   },
 }));

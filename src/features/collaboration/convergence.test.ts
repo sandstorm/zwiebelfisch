@@ -8,7 +8,7 @@ import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 import { addMarginNote } from '../comments/comments';
 import { Project } from '../../core/project/project';
-import { SourceView } from '../source-view/source-view';
+import { presence, SourceViewHost } from '../../hosts/source-view/source-view';
 import { VisualView } from '../visual-view/visual-view';
 import { Collaboration } from './collaboration';
 import { connect, connectAwareness } from './in-process';
@@ -40,7 +40,9 @@ async function user(name: string, files: Record<string, string>, peer?: { ydoc: 
   const sourceParent = window.document.createElement('div');
   window.document.body.append(visualParent, sourceParent);
   const visual = new VisualView(visualParent, document);
-  const source = new SourceView(sourceParent, document);
+  const sourceViews = new SourceViewHost();
+  sourceViews.registerExtension(presence);
+  const source = sourceViews.createView(sourceParent, document);
   collaboration.showCursors(MAIN, [visual, source]);
   cleanup.push(() => {
     disconnect();

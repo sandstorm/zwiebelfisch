@@ -1,16 +1,20 @@
-// File links in Typst code: paths in #import / #include / image(..) / read(..) / data calls open their file
-// (Mod+click, Alt+Enter, hover tooltip). Used by the Source view and the Visual view's raw boxes. See
-// source-view.ts and ARCHITECTURE.md, "File links".
+// fileLinks: paths in #import / #include / image(..) / read(..) / data calls open their file (Mod+click,
+// Alt+Enter, hover tooltip). In the Source view (from its link providers) and the Visual view's raw boxes. See
+// builtins.ts and ARCHITECTURE.md, "File links".
 import { syntaxTree } from '@codemirror/language';
 import { type EditorState, type Extension, RangeSetBuilder } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, hoverTooltip, keymap, ViewPlugin, type ViewUpdate } from '@codemirror/view';
-import type { DocumentLinkProvider } from '../../core/document-links/document-links';
-import type { PathReference } from '../../core/paths/paths';
+import type { DocumentLinkProvider } from '../../../core/document-links/document-links';
+import type { PathReference } from '../../../core/paths/paths';
+import type { SourceViewExtension } from '../contribution';
 
 const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 /** The modifier that turns a click on a path into "open", as people read it. */
 const MOD_CLICK = MAC ? '⌘+click' : 'Ctrl+click';
 const pathMark = Decoration.mark({ class: 'typst-source__path' });
+
+/** The file paths of a Source view's document as links, from its link providers (none: plain text). */
+export const fileLinks: SourceViewExtension = (view) => (view.documentLinks ? documentLinks(view.documentLinks) : []);
 
 /**
  * Makes the file paths in the code navigable, like IntelliJ: while the

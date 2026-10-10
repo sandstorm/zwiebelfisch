@@ -4,7 +4,7 @@
 import { Disposable } from '../../core/disposable/disposable';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
-import type { Preview } from '../preview/preview';
+import type { PreviewContributions } from '../../hosts/preview/preview';
 import type { VisualViewOptions } from '../visual-view/visual-view';
 import { type FileChange, type FileContent, type Project } from '../../core/project/project';
 import { type PathReference, ProjectPath } from '../../core/paths/paths';
@@ -18,7 +18,7 @@ export function projectRenderings(): TypstExtension {
   return {
     id: 'project-renderings',
     activate({ project, workbench, preview, visualView, subscriptions }) {
-      const renderings = new ProjectRenderings({ project, preview: preview.engine, request: (change) => workbench.applyChange(change) });
+      const renderings = new ProjectRenderings({ project, preview, request: (change) => workbench.applyChange(change) });
       subscriptions.push(
         new Disposable(() => renderings.destroy()),
         visualView.registerDocumentOptions((document) => renderings.forDocument(document)),
@@ -29,7 +29,7 @@ export function projectRenderings(): TypstExtension {
 
 export interface ProjectRenderingsOptions {
   project: Project;
-  preview: Pick<Preview, 'snippet' | 'onRender'>;
+  preview: Pick<PreviewContributions, 'snippet' | 'onDidRender'>;
   /** Applies a change (an uploaded image) if allowed; resolves to the reason it was not, or null. */
   request(change: FileChange): Promise<string | null>;
 }
@@ -61,7 +61,10 @@ export class ProjectRenderings {
           const target = file && ProjectPath.resolve(file, reference);
           return target ? this.imageUrl(target) : null;
         },
-        onChange: (listener) => preview.onRender(listener),
+        onChange: (listener) => {
+          const subscription = preview.onDidRender(listener);
+          return () => subscription.dispose();
+        },
       },
       assets: {
         list: () => {

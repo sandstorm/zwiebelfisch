@@ -3,24 +3,49 @@
 // points (preview mocked: no worker in jsdom).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
+import type { Diagnostic } from '../core/typst-engine/typst-engine';
+import { pageNumber, pdfMenu, type PdfVariant, type PreviewToolbarItem, zoomControls } from '../hosts/preview/preview';
 import { createTypstEditor, type TypstEditorOptions } from './typst-editor';
 
 const exportPdf = vi.fn(async () => ({ pdf: new Uint8Array([37, 80, 68, 70]), diagnostics: [], missingPackages: [] }));
-const previews: { options: { onDiagnostics?(diagnostics: unknown[]): void; pdf?: unknown } }[] = [];
+interface FakePreview {
+  toolbarItems: PreviewToolbarItem[];
+  pdfVariants: PdfVariant[];
+  compiled(diagnostics: Diagnostic[]): void;
+}
+const previews: FakePreview[] = [];
 
-vi.mock('../features/preview/preview', () => ({
-  Preview: class {
-    constructor(_parent: HTMLElement, readonly options: object) {
-      previews.push(this as never);
-    }
-    update() {}
-    reveal() {}
-    snippet = async () => null;
-    onRender = () => () => {};
-    exportPdf = exportPdf;
-    destroy() {}
-  },
-}));
+vi.mock('../hosts/preview/preview', async (importOriginal) => {
+  const { Disposable } = await import('../core/disposable/disposable');
+  const { EventEmitter } = await import('../core/event-emitter/event-emitter');
+  const registry = <T>(list: T[]) => (item: T) => {
+    list.push(item);
+    return new Disposable(() => list.splice(list.indexOf(item), 1));
+  };
+  return {
+    ...(await importOriginal<object>()),
+    Preview: class {
+      readonly toolbarItems: unknown[] = [];
+      readonly pdfVariants: unknown[] = [];
+      readonly #diagnostics = new EventEmitter<readonly Diagnostic[]>();
+      readonly onDidChangeDiagnostics = this.#diagnostics.event;
+      constructor() {
+        previews.push(this as never);
+      }
+      compiled(diagnostics: Diagnostic[]) {
+        this.#diagnostics.fire(diagnostics);
+      }
+      update() {}
+      reveal() {}
+      snippet = async () => null;
+      onDidRender = () => new Disposable(() => {});
+      exportPdf = exportPdf;
+      registerToolbarItem = registry(this.toolbarItems);
+      registerPdfVariant = registry(this.pdfVariants);
+      destroy() {}
+    },
+  };
+});
 
 function setup(options: TypstEditorOptions) {
   const host = document.createElement('div');
@@ -91,20 +116,28 @@ describe('the built-in extensions', () => {
     expect(editor.source).toContain('Hi#margin-note[]');
   });
 
-  it('counts the diagnostics in the status bar', () => {
+  it('counts the diagnostics in the status bar and underlines them in the Source view', async () => {
     const { host, preview } = setup({ source: '= Hi' });
-    preview.options.onDiagnostics!([{ severity: 'error', message: 'oops', hints: [], path: '/main.typ', from: 0, to: 1 }]);
+    preview.compiled([{ severity: 'error', message: 'oops', hints: [], path: '/main.typ', from: 0, to: 1 }]);
     const status = host.querySelector('.typst-editor__status-bar [data-testid=typst-status]')!;
     expect(status.textContent).toContain('1 error');
+    await vi.waitFor(() => expect(host.querySelector('.cm-lintRange-error')).not.toBeNull());
   });
 
-  it('exports the PDF through the pdf-export extension, and offers "Download PDF" unless told not to', async () => {
+  it('fills the preview toolbar: zoom, "Follow cursor", page number, then "Download PDF" unless told not to', () => {
+    const { preview } = setup({ source: '= Hi' });
+    expect(preview.toolbarItems).toHaveLength(4);
+    expect([preview.toolbarItems[0], preview.toolbarItems[2], preview.toolbarItems[3]]).toEqual([zoomControls, pageNumber, pdfMenu]);
+    expect(setup({ source: '= Hi', pdfDownload: false }).preview.toolbarItems).not.toContain(pdfMenu);
+  });
+
+  it('exports the PDF through the pdf-export extension, which offers it without and with comments', async () => {
     const { editor, preview } = setup({ source: '= Hi' });
     const blob = await editor.exportPdf({ comments: true });
     expect(blob.type).toBe('application/pdf');
     expect(exportPdf).toHaveBeenCalledWith('/main.typ', {});
-    expect(preview.options.pdf).toBeTypeOf('function');
-    expect(setup({ source: '= Hi', pdfDownload: false }).preview.options.pdf).toBeUndefined();
+    expect(preview.pdfVariants.map((variant) => variant.label)).toEqual(['Without comments', 'With comments']);
+    expect((await preview.pdfVariants[1].create()).name).toBe('main-with-comments.pdf');
   });
 
   it('removes everything it added on destroy', () => {

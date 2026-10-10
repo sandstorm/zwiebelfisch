@@ -7,7 +7,8 @@ import { ProjectPath, type FileKind } from '../../core/paths/paths';
 import type { FileChange, Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { Diagnostic } from '../../core/typst-engine/typst-engine';
-import { type PdfSource, Preview } from '../../features/preview/preview';
+import { Preview } from '../preview/preview';
+import { SourceViewHost } from '../source-view/source-view';
 import type { VisualViewOptions } from '../../features/visual-view/visual-view';
 import { ColorScheme } from './color-scheme/color-scheme';
 import { Commands } from './commands/commands';
@@ -23,7 +24,6 @@ import type {
   CommandResult,
   FileViewProvider,
   OpenOptions,
-  PreviewContributions,
   SidePanel,
   SidePanelOptions,
   TypstExtension,
@@ -36,8 +36,6 @@ export interface WorkbenchOptions {
   mode?: EditorMode;
   /** Light or dark colors, or as the OS; default: as the page (see ARCHITECTURE.md, "Dark mode"). */
   theme?: 'light' | 'dark' | 'auto';
-  /** Whether the preview starts following the cursor; default: what this viewer chose last, else on. */
-  followCursor?: boolean;
   /** The host's veto on a change someone asked for (`applyChange`); default: all may happen. */
   allowFileChange?(change: FileChange): boolean | Promise<boolean>;
   /** Another file is shown in the editing area. */
@@ -47,12 +45,12 @@ export interface WorkbenchOptions {
 /**
  * The frame of the widget on `host`: shows the project's files (Typst files in the Visual / Source tabs, others in
  * the file views extensions register), keeps the preview compiling the main file and in step with the cursor,
- * and runs the extensions. `activate` starts it: extensions first (their contributions are in place before any
- * view exists), then the preview and the main file.
+ * and runs the extensions. The Source views and the preview are its hosts (`ExtensionContext.sourceView` /
+ * `preview`). `activate` starts it: extensions first (their contributions are in place before any view exists),
+ * then the main file is shown and compiled.
  */
 export class WorkbenchHost implements Workbench {
   #active: ProjectPath;
-  #diagnostics: readonly Diagnostic[] | null = null;
   readonly #layout: Layout;
   readonly #views: EditingViews;
   readonly #fileViews: FileViews;
@@ -60,17 +58,15 @@ export class WorkbenchHost implements Workbench {
   readonly #drops: FileDrops;
   readonly #scheme: ColorScheme;
   readonly #extensions: ExtensionHost;
-  #preview: Preview | null = null;
-  #pdfSource: PdfSource | null = null;
+  readonly #sourceViews = new SourceViewHost();
+  readonly #preview: Preview;
   #hasFrame = false;
   readonly #visualOptions: ((document: TypstDocument) => VisualViewOptions)[] = [];
   readonly #shown = new EventEmitter<ProjectPath>();
-  readonly #diagnosticsChanged = new EventEmitter<readonly Diagnostic[]>();
   readonly #selectionChanged = new EventEmitter<TypstDocument>();
   readonly #unsubscribe: () => void;
 
   readonly onDidShowFile = this.#shown.event;
-  readonly onDidChangeDiagnostics = this.#diagnosticsChanged.event;
   readonly onDidChangeEditorSelection = this.#selectionChanged.event;
   readonly onDidDropFiles: Event<File[]>;
 
@@ -89,27 +85,21 @@ export class WorkbenchHost implements Workbench {
     this.onDidDropFiles = this.#drops.onDidDrop;
     this.#views = this.#createViews();
     this.#fileViews = new FileViews(this.#layout.editor);
+    this.#preview = new Preview(this.#layout.preview, { onJump: (jump) => this.#jump(jump) });
+    this.#preview.onDidChangeDiagnostics((diagnostics) => this.#markDiagnostics(diagnostics));
     this.#unsubscribe = project.onChange((change) => this.#changed(change));
     this.#extensions = new ExtensionHost({
       project,
       workbench: this,
       visualView: this.#visualViewContributions(),
-      sourceView: {},
-      preview: this.#previewContributions(),
+      sourceView: this.#sourceViews,
+      preview: this.#preview,
     });
   }
 
   /** Activates `extensions` (in order), then shows the main file and compiles it. Once. */
   activate(extensions: readonly TypstExtension[]): void {
     this.#extensions.activate(extensions);
-    const source = this.#pdfSource;
-    this.#preview = new Preview(this.#layout.preview, {
-      onJump: (jump) => this.#jump(jump),
-      onDiagnostics: (diagnostics) => this.#showDiagnostics(diagnostics),
-      follow: this.options.followCursor ?? rememberedFollow() ?? true,
-      onFollowChange: rememberFollow,
-      pdf: source ?? undefined,
-    });
     this.open(this.project.main);
     this.#compile();
   }
@@ -197,10 +187,6 @@ export class WorkbenchHost implements Workbench {
     return this.#layout.remember<T>(name);
   }
 
-  get diagnostics(): readonly Diagnostic[] | null {
-    return this.#diagnostics;
-  }
-
   get activeEditor(): ActiveEditor | null {
     const shown = this.#views.shown();
     if (!shown) return null;
@@ -219,25 +205,26 @@ export class WorkbenchHost implements Workbench {
     this.#extensions.dispose();
     this.#views.destroy();
     this.#fileViews.dispose();
-    this.#preview?.destroy();
+    this.#preview.destroy();
     this.#commands.dispose();
     this.#drops.dispose();
-    for (const emitter of [this.#shown, this.#diagnosticsChanged, this.#selectionChanged]) emitter.dispose();
+    for (const emitter of [this.#shown, this.#selectionChanged]) emitter.dispose();
     this.host.classList.remove('typst-editor');
     delete this.host.dataset.theme;
     this.#scheme.destroy();
     this.#layout.destroy();
   }
 
-  /** The Visual/Source views of every document, wired to the preview and file links, with the extensions' options. */
+  /** The Visual/Source views of every document, wired to the preview, with the extensions' contributions. */
   #createViews(): EditingViews {
     return new EditingViews(this.#layout.editor, {
       mode: this.options.mode,
+      sourceViews: this.#sourceViews,
       visualOptions: (document) => Object.assign({}, ...this.#visualOptions.map((options) => options(document))),
       documentLinks: (document) => this.#documentLinks(document),
       onCursor: (document, offset) => {
         const path = this.project.pathOf(document);
-        if (path) this.#preview?.reveal(path, offset);
+        if (path) this.#preview.reveal(path, offset);
       },
       // Fired from the editors' own updates: the DOM's selectionchange fires before
       // CodeMirror/ProseMirror read the new selection, so a listener would see the previous one.
@@ -254,27 +241,8 @@ export class WorkbenchHost implements Workbench {
     };
   }
 
-  #previewContributions(): PreviewContributions {
-    const preview = () => {
-      if (!this.#preview) throw new Error('The preview starts after the extensions have activated');
-      return this.#preview;
-    };
-    return {
-      registerPdfSource: (source) => {
-        if (this.#pdfSource) throw new Error('A PDF source is registered already');
-        this.#pdfSource = source;
-        return new Disposable(() => (this.#pdfSource = null));
-      },
-      engine: {
-        snippet: (...args) => preview().snippet(...args),
-        onRender: (listener) => preview().onRender(listener),
-        exportPdf: (...args) => preview().exportPdf(...args),
-      },
-    };
-  }
-
   #compile(): void {
-    this.#preview?.update(this.project.files(), this.project.main);
+    this.#preview.update(this.project.files(), this.project.main);
   }
 
   #changed(change: FileChange): void {
@@ -290,7 +258,7 @@ export class WorkbenchHost implements Workbench {
     else this.open(this.project.has(active) ? active : this.project.main);
   }
 
-  /** The links of `document`: its paths resolve from its current path and open here. */
+  /** INTERIM (until the Visual view's contribution points): the links of `document` in its Visual view; its paths resolve from its current path and open here. The Source view gets them from the document-links extension. */
   #documentLinks(document: TypstDocument): DocumentLinkProvider {
     return new DocumentLinkProvider({
       resolve: (reference) => {
@@ -314,37 +282,15 @@ export class WorkbenchHost implements Workbench {
     this.open(path, { selection: target });
   }
 
-  /** Marks each document's diagnostics in its views and tells the listeners. */
-  #showDiagnostics(diagnostics: Diagnostic[]): void {
-    this.#diagnostics = diagnostics;
+  /** INTERIM (until the Visual view's contribution points): marks each document's diagnostics in its Visual view. The Source view underlines them through the diagnostics extension's `lint`. */
+  #markDiagnostics(diagnostics: readonly Diagnostic[]): void {
     for (const document of this.#documents()) {
       const path = this.project.pathOf(document);
       this.#views.setDiagnostics(document, diagnostics.filter((d) => d.path === path));
     }
-    this.#diagnosticsChanged.fire(diagnostics);
   }
 
   #documents(): TypstDocument[] {
     return this.project.paths().flatMap((path) => this.project.document(path) ?? []);
-  }
-}
-
-const FOLLOW_KEY = 'typst-editor:follow-cursor';
-
-/** The viewer's last "Follow cursor" choice, if storage has one (storage may be unavailable). */
-function rememberedFollow(): boolean | null {
-  try {
-    const stored = localStorage.getItem(FOLLOW_KEY);
-    return stored === null ? null : stored === 'true';
-  } catch {
-    return null;
-  }
-}
-
-function rememberFollow(on: boolean): void {
-  try {
-    localStorage.setItem(FOLLOW_KEY, String(on));
-  } catch {
-    // private window, blocked storage: the choice lasts for this page only
   }
 }

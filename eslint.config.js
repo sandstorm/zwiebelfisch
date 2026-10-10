@@ -31,7 +31,7 @@ export const boundaries = {
     },
     {
       target: 'core/typst-engine/engine-assets.ts',
-      importers: '^src/features/preview/preview\\.ts$',
+      importers: '^src/hosts/preview/preview\\.ts$',
       why: 'asset URLs (wasm, default fonts) for the main thread; in the entry, the worker bundle would emit every asset again',
     },
     {
