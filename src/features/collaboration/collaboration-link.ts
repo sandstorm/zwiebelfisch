@@ -1,7 +1,7 @@
 // CollaborationLink: connects the widget to a Collaboration (loaded on demand). See typst-editor.ts.
-import type { Collaboration, CollaborationOptions, RoomVersions, Shared } from '../features/collaboration/collaboration';
-import type { ProjectPath } from '../core/paths/paths';
-import type { PlacedPresence, PresenceTarget } from '../core/typst-document/typst-document';
+import type { Collaboration, CollaborationOptions, RoomVersions, Shared } from './collaboration';
+import type { ProjectPath } from '../../core/paths/paths';
+import type { PlacedPresence, PresenceTarget } from '../../core/typst-document/typst-document';
 
 /** The editing view the local user works in, and what it has selected. */
 export interface CurrentSelection {
@@ -53,7 +53,7 @@ export class CollaborationLink {
   }
 
   private async start(options: CollaborationOptions, shared: Shared): Promise<void> {
-    const { Collaboration } = await import('../features/collaboration/collaboration');
+    const { Collaboration } = await import('./collaboration');
     const collaboration = await Collaboration.start(options, shared);
     if (this.destroyed) {
       collaboration.destroy();

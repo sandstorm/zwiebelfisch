@@ -17,12 +17,17 @@ export const thresholds = {
 // importing file's path from the repository root.
 export const boundaries = {
   srcRoot: fileURLToPath(new URL('src', import.meta.url)),
-  groupingFolders: ['core', 'features'],
+  groupingFolders: ['core', 'hosts', 'features'],
   exceptions: [
     {
       target: 'features/collaboration/gitlab-protocol.ts',
       importers: '.',
       why: 'import-free room protocol shared with the server and with features/versions (which must not load the lazily loaded collaboration chunk)',
+    },
+    {
+      target: 'features/collaboration/collaboration-link.ts',
+      importers: '^src/typst-editor/typst-editor\\.ts$',
+      why: "the widget's eager side of collaboration; the folder's entry collaboration.ts is the lazily loaded chunk (until the slices wave makes the link the extension's entry)",
     },
     {
       target: 'core/typst-engine/engine-assets.ts',

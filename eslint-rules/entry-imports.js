@@ -3,9 +3,9 @@
 // The layout (ARCHITECTURE.md, "Repository layout"):
 // - Every folder `x/` has one entry file named like it, `x/x.ts` (a stylesheet may be `x/x.css`).
 //   Everything else in the folder is internal: only files inside `x/` may import it.
-// - A folder next to a file of the same name (`typst-editor/` beside `typst-editor.ts`) holds that
-//   file's internals: only `typst-editor.ts` (and files inside the folder) may import from it.
-// - Grouping folders (`core/`, `features/`) have no entry; the rule applies to the folders in them.
+// - No sibling folders: an entry file lives inside its folder (`typst-editor/typst-editor.ts`), never
+//   next to it.
+// - Grouping folders (`core/`, `hosts/`, `features/`) have no entry; the rule applies to the folders in them.
 // - Only TypeScript and CSS sources count. Generated or data files (wasm/, fonts/, fixtures/) are not
 //   modules with an interface.
 // - The few exceptions are the rule's `exceptions` option, listed in eslint.config.js.
@@ -55,10 +55,6 @@ export function boundaryViolation(importer, target, { srcRoot, groupingFolders =
     if (depth === 1 && groupingFolders.includes(parts[0])) continue;
     if (importer.startsWith(folder + path.sep)) continue;
     const name = path.basename(folder);
-    const owner = `${folder}.ts`;
-    if (existsSync(owner)) {
-      return importer === owner ? null : `${path.relative(srcRoot, folder)}/ holds the internals of ${path.relative(srcRoot, owner)}; import that file instead`;
-    }
     const isEntry = path.dirname(target) === folder && path.basename(target).replace(SOURCE, '') === name;
     return isEntry ? null : `import ${path.relative(srcRoot, folder)}/ through its entry file ${path.relative(srcRoot, folder)}/${name}.ts`;
   }

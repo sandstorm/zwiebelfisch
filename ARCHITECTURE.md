@@ -9,16 +9,14 @@ code changes, update this file in the same commit.
 ```
 src/                        the widget (TypeScript); the most important API on top
   index.ts                  public API of the package; registers <typst-editor>
-  typst-editor.ts           createTypstEditor() — composes the widget: Project, layout, editing views, preview, file
-                            panel, status bar, scoped CSS (typst-editor.css)
-  typst-editor-element.ts   <typst-editor> custom element (shadow DOM) around createTypstEditor
-  typst-editor/             what only typst-editor.ts uses: editing-views.ts (Visual/Source tabs, lazily one
-                            VisualView + SourceView per document), project-renderings.ts (what a document's Visual
-                            view renders and inserts: snippets, image URLs, uploads), collaboration-link.ts,
-                            pdf-export.ts (the project's PDF with / without comments), file-navigation.ts
-                            ("← previous file" / "next file →" around an included file)
-                            layout.ts + layout.css (side panels with rail buttons, editing area, preview)
-  typst-editor-element/     inline-source.ts (source written inside the element → text)
+  typst-editor/             typst-editor.ts: createTypstEditor() — composes the widget: Project, the workbench host,
+                            preview, features, scoped CSS (typst-editor.css)
+  typst-editor-element/     typst-editor-element.ts: <typst-editor> custom element (shadow DOM) around
+                            createTypstEditor; inline-source.ts (source written inside the element → text)
+  hosts/                    view hosts: mechanism + contribution points, no feature knowledge
+    workbench/              the widget's frame (workbench.ts): layout/ (layout.ts + layout.css: side panels with rail
+                            buttons, editing area, preview), editing-views/ (Visual/Source tabs, lazily one VisualView +
+                            SourceView per document), color-scheme/ (`data-scheme`)
   stylesheets.test.ts       every .css under src/ parses (lightningcss, no error recovery), no nested style rules,
                             every block closed (an unclosed rule silently nests the rest of the file),
                             hex colors only in the color tokens (dark mode)
@@ -72,11 +70,15 @@ src/                        the widget (TypeScript); the most important API on t
                             (drafting's call: parse, print, validity), note-thread.ts (a note's body as a
                             thread of messages), page-margin.ts, without-notes.ts (the PDF without comments)
     files/                  FilePanel (the file panel: header, prompts, drops; files.css), icons.ts, asset-view.ts,
-                            upload.ts
+                            upload.ts, file-navigation.ts ("← previous file" / "next file →" around an included file)
       tree/                 tree.ts (FileTree: rows, keyboard, drag & drop, presence), tree-model.ts (pure)
     collaboration/          real-time collaboration (loaded on demand): Collaboration, SharedProject, RemoteCursors,
                             RoomVersions + SharedAssets (GitLab rooms); in-process.ts (Y.Doc/awareness wiring for
-                            tests); gitlab-protocol.ts (import-free, shared with the server)
+                            tests); gitlab-protocol.ts (import-free, shared with the server); collaboration-link.ts
+                            (the widget's eager side: loads the rest on demand)
+    pdf-export/             PdfExport: the project's PDF with / without comments
+    project-renderings/     ProjectRenderings: what a document's Visual view renders and inserts (snippets, image URLs,
+                            uploads); one unit until the slices wave splits it into images / rendered-boxes
     versions/               VersionControls: "Save version", commit message, outcome (GitLab rooms)
 crates/typst-engine/        Rust → wasm: Typst compiler, SVG and PDF export, click/cursor jumps
   src/world.rs              in-memory Typst World (files and fonts pushed from JS)
@@ -103,8 +105,8 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
 - **Entry files.** Every folder under `src/` has one entry file named like it (`preview/preview.ts`;
   a stylesheet may be `files/files.css`). Everything else in the folder is internal to it, and
   folders that grow get subfolders named after a concept (`projection/`, `worker/`), never generic
-  ones. A folder beside a file of the same name (`typst-editor/` next to `typst-editor.ts`) holds
-  that file's internals. `core/` and `features/` only group.
+  ones. No sibling folders: an entry file lives inside its folder (`typst-editor/typst-editor.ts`),
+  never next to it. `core/`, `hosts/` and `features/` only group.
 - **Imports from outside a folder go to its entry file**, which re-exports what others need.
   ESLint enforces this (`local/entry-imports`, `eslint-rules/entry-imports.js`); only TypeScript and
   CSS sources count (not the generated `wasm/`, `fonts/` or the `fixtures/`). The exceptions are
@@ -113,6 +115,8 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
     `features/versions` (which must not load the lazily loaded collaboration chunk);
   - `core/typst-engine/engine-assets.ts` — `features/preview/preview.ts`: the asset URLs; in the
     entry, the worker bundle (which imports the entry) would emit every asset a second time;
+  - `features/collaboration/collaboration-link.ts` — `typst-editor/typst-editor.ts`: the eager side of
+    collaboration; the folder's entry is the lazily loaded chunk (until the slices wave);
   - `features/collaboration/in-process.ts` — test files;
   - `features/collaboration/shared-project.ts` — the server's tests.
 - **Top comments.** Every source file starts with a comment: its context, `See <entry file /
@@ -148,7 +152,7 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
 
 ## Modules and their contracts
 
-### `createTypstEditor` / `<typst-editor>` (`src/typst-editor.ts`, `src/typst-editor/`, `src/typst-editor-element.ts`, `src/index.ts`)
+### `createTypstEditor` / `<typst-editor>` (`src/typst-editor/`, `src/typst-editor-element/`, `src/index.ts`)
 
 ```ts
 createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileChange?, onFilesChange?,
@@ -211,7 +215,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   an existing file (`name.png`, `name-2.png`, …) reuses it, a different one gets the first free
   of those names — every pasted screenshot is `image.png`; refusals — not an image Typst shows,
   the host's veto — come back as an error the popover shows).
-- **PDF** (`PdfExport`, `typst-editor/pdf-export.ts`): `exportPdf({comments})` and the preview's
+- **PDF** (`PdfExport`, `features/pdf-export/`): `exportPdf({comments})` and the preview's
   "Download PDF" (`Preview` option `pdf`, unless `pdfDownload: false`). With comments the main
   file is exported as compiled; without, `withoutNotes(project.files(), main)` gives the entry
   and replaced sources (see Comments). No PDF (errors) → an `Error` "The document has n
@@ -850,7 +854,7 @@ typstPath('/budget.ic') → '/budget.ic.gen.typ'
   its test runs the real IronCalc wasm and compiles the result with the Typst engine.
 - Not yet: `.xlsx`, sharing spreadsheet edits in collaboration rooms (binary: the last save wins).
 
-### Layout (`src/typst-editor/layout.ts`)
+### Layout (`src/hosts/workbench/layout/layout.ts`)
 
 ```ts
 new Layout(host, storageKey)   .editor  .preview            // the editing column and the preview column
@@ -873,7 +877,7 @@ new Layout(host, storageKey)   .editor  .preview            // the editing colum
   closed, opens only on the rail button and closes on Escape, a click outside, or `dismiss()`
   (the widget calls it after a file was chosen in the panel).
 
-### Dark mode (`src/typst-editor.css`, `src/features/source-view/code-colors.ts`)
+### Dark mode (`src/typst-editor/typst-editor.css`, `src/features/source-view/code-colors.ts`)
 
 - **Tokens.** Every color of the widget's stylesheets is a custom property on `.typst-editor`
   defined as `light-dark(light, dark)` (`--te-bg`, `--te-surface`, `--te-subtle`, `--te-text`,
@@ -885,7 +889,7 @@ new Layout(host, storageKey)   .editor  .preview            // the editing colum
   with `color-scheme: light dark` gets it dark when the OS is. The `theme` option (`light` | `dark` |
   `auto`; the element's `theme` attribute) sets `data-theme` on the host, which the stylesheet turns
   into its own `color-scheme`. Read once, at creation.
-- **`data-scheme`** (`ColorScheme`, `src/typst-editor/color-scheme.ts`): the scheme the widget's
+- **`data-scheme`** (`ColorScheme`, `src/hosts/workbench/color-scheme/color-scheme.ts`): the scheme the widget's
   colors resolved to (`light` | `dark`, from its computed text color), for what light-dark() cannot
   express. With it dark, the preview shows the pages inverted like dark-mode PDF readers do
   (`filter: invert(1) hue-rotate(180deg)` on `.typst-preview__content`, pictures inside turned

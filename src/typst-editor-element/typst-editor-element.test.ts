@@ -3,9 +3,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import { defineTypstEditorElement, type TypstEditorChangeDetail, type TypstEditorElement } from './typst-editor-element';
-import type { FileChange } from './typst-editor';
+import type { FileChange } from '../typst-editor/typst-editor';
 
-vi.mock('./features/preview/preview', () => ({
+vi.mock('../features/preview/preview', () => ({
   Preview: class {
     update() {}
     reveal() {}

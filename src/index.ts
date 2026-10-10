@@ -1,5 +1,5 @@
 // The package's public API: createTypstEditor and <typst-editor> (registered on import). See ARCHITECTURE.md.
-import { defineTypstEditorElement } from './typst-editor-element';
+import { defineTypstEditorElement } from './typst-editor-element/typst-editor-element';
 
 export {
   createTypstEditor,
@@ -13,13 +13,13 @@ export {
   type ProjectFiles,
   type TypstEditor,
   type TypstEditorOptions,
-} from './typst-editor';
+} from './typst-editor/typst-editor';
 export type { ProjectPath } from './core/paths/paths';
 export {
   TypstEditorElement,
   defineTypstEditorElement,
   type TypstEditorChangeDetail,
-} from './typst-editor-element';
+} from './typst-editor-element/typst-editor-element';
 
 // Importing the package makes <typst-editor> available (no-op without a DOM).
 defineTypstEditorElement();

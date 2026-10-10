@@ -1,9 +1,9 @@
 // <typst-editor>: the editor as a custom element in a shadow root, around createTypstEditor.
 // Why one `options` property: the element must offer every option createTypstEditor has, without listing (and
 // forgetting) them one by one; only what fits an HTML attribute is an attribute as well. See docs/embedding.md.
-import { createTypstEditor, type FileChange, type FileContent, type FileListMode, type PdfExportOptions, type ProjectFiles, type Theme, type TypstEditor, type TypstEditorOptions } from './typst-editor';
-import type { ProjectPath } from './core/paths/paths';
-import { inlineSource } from './typst-editor-element/inline-source';
+import { createTypstEditor, type FileChange, type FileContent, type FileListMode, type PdfExportOptions, type ProjectFiles, type Theme, type TypstEditor, type TypstEditorOptions } from '../typst-editor/typst-editor';
+import type { ProjectPath } from '../core/paths/paths';
+import { inlineSource } from './inline-source';
 
 /**
  * `detail` of the `change` event: what the file at `path` holds after a change. `content` is null when the

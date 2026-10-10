@@ -87,7 +87,7 @@ describe('PdfMenu', () => {
   });
 
   it('keeps the empty status in the page (no display: none), so a screen reader announces the messages put into it', () => {
-    const css = readFileSync(resolve(import.meta.dirname, '../../typst-editor.css'), 'utf8');
+    const css = readFileSync(resolve(import.meta.dirname, '../../typst-editor/typst-editor.css'), 'utf8');
     expect(css).not.toMatch(/\.typst-preview__pdf-status[^{]*\{[^}]*display:\s*none/);
   });
 });

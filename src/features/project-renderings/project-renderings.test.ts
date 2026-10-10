@@ -1,8 +1,8 @@
 // Tests for project-renderings.ts.
 import { describe, expect, it, vi } from 'vitest';
-import { Project, type FileChange } from '../core/project/project';
+import { Project, type FileChange } from '../../core/project/project';
 import { ProjectRenderings } from './project-renderings';
-import { PathReference, ProjectPath } from '../core/paths/paths';
+import { PathReference, ProjectPath } from '../../core/paths/paths';
 
 const path = ProjectPath.of;
 const ref = PathReference.of;

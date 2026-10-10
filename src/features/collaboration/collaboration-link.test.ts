@@ -3,11 +3,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
-import { connect, connectAwareness } from '../features/collaboration/in-process';
-import type { PlacedPresence } from '../core/typst-document/typst-document';
+import { connect, connectAwareness } from './in-process';
+import type { PlacedPresence } from '../../core/typst-document/typst-document';
 import { CollaborationLink } from './collaboration-link';
-import { Project } from '../core/project/project';
-import { ProjectPath } from '../core/paths/paths';
+import { Project } from '../../core/project/project';
+import { ProjectPath } from '../../core/paths/paths';
 
 const path = ProjectPath.of;
 

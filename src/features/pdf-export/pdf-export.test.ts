@@ -1,9 +1,9 @@
 // Tests for pdf-export.ts.
 import { describe, expect, it, vi } from 'vitest';
-import { Project } from '../core/project/project';
-import type { Diagnostic, PdfResult } from '../core/typst-engine/typst-engine';
+import { Project } from '../../core/project/project';
+import type { Diagnostic, PdfResult } from '../../core/typst-engine/typst-engine';
 import { PdfExport } from './pdf-export';
-import { ProjectPath } from '../core/paths/paths';
+import { ProjectPath } from '../../core/paths/paths';
 
 const path = ProjectPath.of;
 

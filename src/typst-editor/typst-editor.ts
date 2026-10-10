@@ -3,35 +3,31 @@
 // Why the API looks like this: a Typst document is a project of files, and the main file is one of them. So the
 // host gives and gets every file through one map (`files`, `onFilesChange`); `source` is only a shortcut for the
 // main file's text, for hosts that edit a single file.
-import type { CollaborationOptions } from './features/collaboration/collaboration';
-import type { Diagnostic } from './core/typst-engine/typst-engine';
-import type { TypstDocument } from './core/typst-document/typst-document';
-import { Preview } from './features/preview/preview';
-import proseMirrorStyles from './features/visual-view/visual-view.css?inline';
-import { AssetView, FilePanel, filesPanelIcon } from './features/files/files';
-import fileStyles from './features/files/files.css?inline';
-import { CommentAction } from './features/comments/comments';
-import { ColorScheme } from './typst-editor/color-scheme';
-import { CollaborationLink } from './typst-editor/collaboration-link';
-import { DiagnosticsStatus, summarizeDiagnostics } from './features/diagnostics/diagnostics';
-import { EditingViews, type EditorMode } from './typst-editor/editing-views';
-import { Layout } from './typst-editor/layout';
-import layoutStyles from './typst-editor/layout.css?inline';
-import { type FileChange, Project, type ProjectFiles } from './core/project/project';
-import { ProjectPath } from './core/paths/paths';
-import { DocumentLinkProvider, neighbours } from './core/document-links/document-links';
-import { FileNavigation } from './typst-editor/file-navigation';
-import { PdfExport } from './typst-editor/pdf-export';
-import { ProjectRenderings } from './typst-editor/project-renderings';
-import { LabelIndex } from './features/labels/labels';
-import { newStyle, StyleIndex } from './features/styles/styles';
-import { SpreadsheetView, typstPath, type WorkbookEdit } from './features/spreadsheets/spreadsheets';
+import type { CollaborationOptions } from '../features/collaboration/collaboration';
+import type { Diagnostic } from '../core/typst-engine/typst-engine';
+import type { TypstDocument } from '../core/typst-document/typst-document';
+import { Preview } from '../features/preview/preview';
+import proseMirrorStyles from '../features/visual-view/visual-view.css?inline';
+import { AssetView, FileNavigation, FilePanel, filesPanelIcon } from '../features/files/files';
+import fileStyles from '../features/files/files.css?inline';
+import { CommentAction } from '../features/comments/comments';
+import { CollaborationLink } from '../features/collaboration/collaboration-link';
+import { DiagnosticsStatus, summarizeDiagnostics } from '../features/diagnostics/diagnostics';
+import { ColorScheme, EditingViews, type EditorMode, Layout, layoutStyles } from '../hosts/workbench/workbench';
+import { type FileChange, Project, type ProjectFiles } from '../core/project/project';
+import { ProjectPath } from '../core/paths/paths';
+import { DocumentLinkProvider, neighbours } from '../core/document-links/document-links';
+import { PdfExport } from '../features/pdf-export/pdf-export';
+import { ProjectRenderings } from '../features/project-renderings/project-renderings';
+import { LabelIndex } from '../features/labels/labels';
+import { newStyle, StyleIndex } from '../features/styles/styles';
+import { SpreadsheetView, typstPath, type WorkbookEdit } from '../features/spreadsheets/spreadsheets';
 import styles from './typst-editor.css?inline';
-import { VersionControls, type Versions } from './features/versions/versions';
+import { VersionControls, type Versions } from '../features/versions/versions';
 
-export type { CollaborationOptions } from './features/collaboration/collaboration';
-export type { EditorMode } from './typst-editor/editing-views';
-export type { FileChange, FileContent, ProjectFiles } from './core/project/project';
+export type { CollaborationOptions } from '../features/collaboration/collaboration';
+export type { EditorMode } from '../hosts/workbench/workbench';
+export type { FileChange, FileContent, ProjectFiles } from '../core/project/project';
 
 /**
  * The file panel: `auto` (default) open while the project has more than one file, collapsed to its rail

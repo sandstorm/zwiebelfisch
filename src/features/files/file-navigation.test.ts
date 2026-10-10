@@ -2,7 +2,7 @@
 // Tests for file-navigation.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { FileNavigation } from './file-navigation';
-import { ProjectPath } from '../core/paths/paths';
+import { ProjectPath } from '../../core/paths/paths';
 
 const path = ProjectPath.of;
 

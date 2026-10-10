@@ -1,11 +1,12 @@
 // ProjectRenderings: what a document's Visual view renders and inserts (snippets, image URLs, uploads).
-// See typst-editor.ts.
-import type { TypstDocument } from '../core/typst-document/typst-document';
-import type { Preview } from '../features/preview/preview';
-import type { VisualViewOptions } from '../features/visual-view/visual-view';
-import { type FileChange, type FileContent, type Project } from '../core/project/project';
-import { type PathReference, ProjectPath } from '../core/paths/paths';
-import { uploadChanges } from '../features/files/files';
+// Kept as one unit for now; the slices wave splits it into the `images` extension (image URLs, uploads)
+// and `rendered-boxes` (snippets). See ARCHITECTURE.md, "createTypstEditor".
+import type { TypstDocument } from '../../core/typst-document/typst-document';
+import type { Preview } from '../preview/preview';
+import type { VisualViewOptions } from '../visual-view/visual-view';
+import { type FileChange, type FileContent, type Project } from '../../core/project/project';
+import { type PathReference, ProjectPath } from '../../core/paths/paths';
+import { uploadChanges } from '../files/files';
 
 export interface ProjectRenderingsOptions {
   project: Project;

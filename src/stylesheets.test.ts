@@ -58,7 +58,7 @@ describe('stylesheets', () => {
   const files = stylesheets(SRC);
 
   it('finds the stylesheets', () => {
-    expect(files.map((path) => relative(SRC, path))).toContain('typst-editor.css');
+    expect(files.map((path) => relative(SRC, path))).toContain('typst-editor/typst-editor.css');
   });
 
   for (const path of files) {

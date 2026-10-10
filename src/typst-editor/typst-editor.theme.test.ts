@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createTypstEditor } from './typst-editor';
 
-vi.mock('./features/preview/preview', () => ({
+vi.mock('../features/preview/preview', () => ({
   Preview: class {
     update() {}
     reveal() {}
@@ -26,7 +26,7 @@ describe('the theme option', () => {
   it('marks the widget with the chosen scheme, which its stylesheet turns into a color-scheme', () => {
     const { host } = mount('dark');
     expect(host.dataset.theme).toBe('dark');
-    const css = readFileSync('src/typst-editor.css', 'utf8');
+    const css = readFileSync('src/typst-editor/typst-editor.css', 'utf8');
     expect(css).toContain(".typst-editor[data-theme='dark'] { color-scheme: dark; }");
   });
 

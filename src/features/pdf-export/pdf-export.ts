@@ -1,9 +1,9 @@
 // PdfExport: the widget's PDF of the project, with or without comments (exportPdf, "Download PDF").
 // See typst-editor.ts and ARCHITECTURE.md, "createTypstEditor".
-import { withoutNotes } from '../features/comments/comments';
-import type { Project } from '../core/project/project';
-import type { Diagnostic, PdfResult } from '../core/typst-engine/typst-engine';
-import type { PdfFile } from '../features/preview/preview';
+import { withoutNotes } from '../comments/comments';
+import type { Project } from '../../core/project/project';
+import type { Diagnostic, PdfResult } from '../../core/typst-engine/typst-engine';
+import type { PdfFile } from '../preview/preview';
 
 /** What makes the PDF: the preview's engine (`Preview.exportPdf`). */
 export interface PdfEngine {
