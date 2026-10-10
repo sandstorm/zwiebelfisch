@@ -20,9 +20,11 @@ export interface Engine {
   /** Where the text at `offset` appears in the last compiled document. */
   jumpFromCursor(path: string, offset: number): Position[];
   /**
-   * Where the text from the given source ranges of `path` is drawn in the last
-   * compiled document: one box per run of glyphs (per line and page). Only
-   * drawn characters count, so empty ranges and markup yield nothing.
+   * Where the given source ranges of `path` are drawn in the last compiled
+   * document: one box per run of glyphs (per line and page) whose character
+   * lies in a range, and one per shape (rule, fraction line, rectangle) or
+   * image whose syntax node starts in one. Empty ranges and code that draws
+   * nothing yield nothing.
    */
   boxesForRanges(path: string, ranges: readonly { from: number; to: number }[]): Box[];
 }

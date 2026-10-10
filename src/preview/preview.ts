@@ -1,4 +1,4 @@
-import type { Box, Diagnostic, Jump, Position } from '../engine/engine';
+import type { Box, Diagnostic, Jump, Page, Position } from '../engine/engine';
 import { changeBars, drawnRanges } from './change-bars';
 import { DEFAULT_FONT_URLS } from '../engine/default-fonts';
 import wasmUrl from '../engine/wasm/typst_engine_bg.wasm?url&no-inline';
@@ -7,11 +7,13 @@ import { isInside, mostVisible, percentOfPage } from './geometry';
 import { LatestOnly } from './latest-only';
 import { PreviewMarkers, type Marker } from './markers';
 import { PageList } from './page-list';
+import { snippet, type Snippet } from './snippet';
 import type { Init, Request, Response } from './protocol';
 import { PreviewToolbar, type ZoomRequest } from './toolbar';
 import { stepZoom, zoomLabel, type Zoom } from './zoom';
 
 export type { Marker } from './markers';
+export type { Snippet } from './snippet';
 
 export interface PreviewOptions {
   /** Called when the user clicks something in the preview that has a source location. */
@@ -60,6 +62,9 @@ export class Preview {
   private readonly sender = new FileSender();
   private readonly markers: PreviewMarkers;
   private frame = 0;
+  /** The files and pages of the last successful compilation. */
+  private compiled: { files: Record<string, FileContent>; pages: Page[] } = { files: {}, pages: [] };
+  private readonly renderListeners = new Set<() => void>();
 
   constructor(
     private readonly container: HTMLElement,
@@ -135,7 +140,31 @@ export class Preview {
     void this.drawChanges();
   }
 
+  /**
+   * How the source range `from`..`to` of `path` looks in the document: its
+   * page cut down to where that range draws text, shapes or images (first page
+   * only). Null when it draws nothing, or when `text` is not what that range
+   * held at the last successful compilation (it was edited, or the document
+   * has errors). Waits for running compilations, so it answers for the newest
+   * text passed to `update()`.
+   */
+  async snippet(path: string, from: number, to: number, text: string): Promise<Snippet | null> {
+    await this.compiles.idle();
+    const { files, pages } = this.compiled;
+    const compiled = files[path];
+    if (typeof compiled !== 'string' || compiled.slice(from, to) !== text) return null;
+    const response = await this.request({ type: 'boxes', path, ranges: [{ from, to }] });
+    return response.type === 'boxes' ? snippet(pages, response.boxes) : null;
+  }
+
+  /** Calls `listener` after every successful compilation (snippets may have changed). Returns the unsubscribe function. */
+  onRender(listener: () => void): () => void {
+    this.renderListeners.add(listener);
+    return () => this.renderListeners.delete(listener);
+  }
+
   destroy(): void {
+    this.renderListeners.clear();
     this.markers.destroy();
     this.worker.terminate();
     this.resizeObserver?.disconnect();
@@ -155,6 +184,8 @@ export class Preview {
       void this.markers.refresh();
       this.scheduleStatus();
       if (!superseded()) void this.drawChanges();
+      this.compiled = { files, pages: response.result.pages };
+      for (const listener of this.renderListeners) listener();
     }
     this.pages.classList.toggle('typst-preview--stale', failed);
     // A newer update is waiting: these diagnostics describe outdated text.
