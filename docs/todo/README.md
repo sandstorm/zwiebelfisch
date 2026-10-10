@@ -31,7 +31,7 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 
 | Task | Status |
 |---|---|
-| [engine-wasm-size](engine-wasm-size.md) | open |
+| [engine-wasm-size](engine-wasm-size.md) | done (branch task/engine-wasm-size) |
 | [visual-view-projection](visual-view-projection.md) | in-progress (main agent) |
 | [diagnostics-ui](diagnostics-ui.md) | open |
 | [web-component-and-library-build](web-component-and-library-build.md) | open |
