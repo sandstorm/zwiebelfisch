@@ -28,6 +28,15 @@ test('clicking text in the preview selects its source', async ({ page }) => {
   await expect(page.getByTestId('typst-source').locator('.typst-source__jump')).toHaveText('Hello Typst');
 });
 
+test('clicking text in the preview selects exactly that text in the visual view', async ({ page }) => {
+  await expect(page.getByTestId('typst-visual')).toBeVisible();
+  const svg = page.getByTestId('typst-preview').locator('.typst-preview__page svg').first();
+  await expect(svg).toBeVisible();
+  // the first glyph on the page is the "H" of the heading "Hello Typst"
+  await svg.locator('use').first().click();
+  await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toBe('Hello Typst');
+});
+
 test('shows compiler errors in the source and the status, and clears them when fixed', async ({ page }) => {
   const source = page.getByTestId('typst-source');
   const status = page.getByTestId('typst-status');

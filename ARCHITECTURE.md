@@ -230,7 +230,7 @@ worker → main   {id, type:'compile', result} | {id, type:'click', jump} | {id,
 
 ```ts
 new VisualView(parent, document)
-.reveal(from, to)    // select the top-level block containing `from`
+.reveal(from, to)    // select exactly what shows source range from..to (caret if empty)
 .destroy()
 ```
 
@@ -268,12 +268,26 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - Editor-created nodes have `sep: null`, which prints the default: `\n\n` between blocks, `\n`
     between list items.
 - **Pristine tracking:**
-  - A module-private `WeakSet` holds the nodes created by `project()`. ProseMirror keeps the
-    identity of unchanged nodes, so membership means "still equal to `attrs.src`".
+  - A module-private `WeakMap` holds the nodes created by `project()` (textblocks with their
+    source layout). ProseMirror keeps the identity of unchanged nodes, so membership means
+    "still equal to `attrs.src`".
   - Pristine nodes print `src`. Edited nodes are printed canonically:
     - text is escaped (`*`, `#`, `$`, `//`, …, and line-start markers);
     - marks become `*x*` / `_x_`, or `#strong[x]` / `#emph[x]` when the span touches a word
       character or whitespace.
+- **Position map:** `sourceToPos(doc, offset, bias?)` / `posToSource(doc, pos)` map between
+  source offsets (UTF-16) and document positions at character precision, for any doc (pristine,
+  edited or synced).
+  - Printing records, for every stretch of the printed source, the document range showing it:
+    plain text maps one to one; atoms (raw nodes, breaks, decoded escapes and shorthands) as a
+    whole; hidden syntax (delimiters, markers, separators, escape backslashes) maps to the next
+    visible position in its block. Pristine textblocks keep the layout of their `src` from
+    `project()` in the pristine map, so their verbatim source maps exactly, too.
+  - The table is private and cached per (immutable) doc. `bias: -1` maps a range end to just
+    after the preceding visible character.
+  - Invariants (unit-tested exhaustively on all fixtures and on edited docs): monotonic both
+    ways; every visible character maps to itself and back; mapping an offset to a position,
+    back and forth again lands on the same position.
 - **Write-back:** `document.setText(print(doc))` applies the single minimal change.
 - **Read-back:** `syncDoc` replaces only the innermost changed range.
   - It diffs copies of both documents with the anchor attributes stripped. Otherwise a changed
