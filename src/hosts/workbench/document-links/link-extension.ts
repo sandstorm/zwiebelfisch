@@ -77,23 +77,18 @@ export function linkExtension(text: LinkedText): Extension {
 }
 
 /**
- * What a (resolved) link offers, as a small piece of DOM: "Open …" for its target (with the Mod+click hint, if
- * `hint`), its tooltip, and a button for its command that shows the error's message when the command rejects. Null
- * when it offers nothing.
+ * What a (resolved) link offers, as a small piece of DOM: "Open …" for its target (with the Mod+click hint), its
+ * tooltip, and a button for its command that shows the error's message when the command rejects. Null when it offers
+ * nothing.
  */
-export function linkInfo(
-  doc: Document,
-  link: DocumentLink,
-  actions: Pick<LinkedText, 'open' | 'executeCommand'>,
-  { hint = true } = {},
-): HTMLElement | null {
+export function linkInfo(doc: Document, link: DocumentLink, actions: Pick<LinkedText, 'open' | 'executeCommand'>): HTMLElement | null {
   const { target, tooltip, command } = link;
   if (!target && !tooltip && !command) return null;
   const info = doc.createElement('span');
   info.className = 'typst-file-link';
   if (target) {
     info.append(button(doc, `Open ${ProjectPath.displayName(target)}`, () => actions.open(target)));
-    if (hint) info.append(note(doc, `(${MOD_CLICK} or Alt+Enter)`));
+    info.append(note(doc, `(${MOD_CLICK} or Alt+Enter)`));
   }
   if (tooltip) info.append(note(doc, tooltip));
   if (command) {
