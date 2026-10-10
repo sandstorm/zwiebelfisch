@@ -268,8 +268,12 @@ Publishing to npm, and React/Vue wrappers.
 
 ### Changes since …
 
-The toggle above the editor compares the main file with a base version and names it: "Changes since
-opened" by default (the text when the editor opened, or in a collaboration room after the first sync;
-off until clicked), "Changes since last saved version" in GitLab rooms (the branch's last commit), or
-what the host gives: `base` + `baseLabel` options, `editor.setBase(text, label)`. `setBase(null)`
-goes back to "since opened".
+The toggle above the editor compares every Typst file of the project with its own base version and
+names that version: "Changes since opened" by default (each file's text when the editor opened, or
+in a collaboration room after the first sync; a file created since is new as a whole; off until
+clicked), "Changes since last saved version" in GitLab rooms (each file at the branch's last
+commit; a file added since is new as a whole), or what the host gives: `base` + `baseLabel`
+options (the main file), `editor.setBase(text, label, path?)` (the main file, or `path`; other
+files keep their bases, the label is shared). `setBase(null)` goes back to "since opened" for
+every file. The Visual and Source views of each file and the preview's change bars (for all
+files at once) follow; accepting a chunk in the Source view moves that file's base.

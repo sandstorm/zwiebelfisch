@@ -17,8 +17,6 @@ Each line names the area; sources are the agents' final reports.
 - Unreachable collab server: tell the user (today the widget silently stays local).
 
 ## Editor
-- "Show changes" only covers the main file → per file. (Comments are margin notes in the text
-  now, so they already work in every `.typ` file.)
 - Toolbar acts on the last main-text selection while the cursor is in a raw box.
 - Text typed into a raw box that is modelled Typst (`= Heading`) stays raw until re-read.
 - "Insert into …" (image) uses the Source-view cursor; use the active view's cursor.

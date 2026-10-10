@@ -43,7 +43,7 @@ src/                        the widget (TypeScript); the most important API on t
                             protocol.ts (messages), project-files.ts (FileSender/FileReceiver)
       pages/                pages.ts: page-list (SVG only near the viewport), geometry, zoom, snippet, change-bars
     diagnostics/            DiagnosticsStatus (status bar), diagnostics-summary.ts
-    changes/                ChangeTracking (base version + "Changes since …"), diff.ts (diffTexts), changes.css
+    changes/                ChangeTracking (a base per Typst file + "Changes since …"), diff.ts (diffTexts), changes.css
     comments/               CommentAction ("Comment" / Ctrl+Alt+M), add-margin-note.ts, margin-note-syntax.ts
                             (drafting's call: parse, print, validity), page-margin.ts
     files/                  FileSwitcher (file bar), asset-view.ts, upload.ts, insert-image.ts
@@ -61,7 +61,7 @@ server/                     collaboration server (Node package, Hocuspocus; Type
                             PlaygroundEndpoints (GET /playground, POST /playground/upstream), readProjectFiles
 demo/                       the playground (vite root; checklist: docs/demo-playground.md); ?example=hello|simple|advanced
                             picks a project from demo/examples/<name>/ (examples.ts: import.meta.glob → file map);
-                            playground.ts (URL ↔ state: example, room → Local/Collaborate/GitLab mode, user, changes),
+                            playground.ts (URL ↔ state: example, room → Local/Collaborate/GitLab mode, user),
                             server-status.ts (probe ws://127.0.0.1:1234, simulate upstream), playground-bar.ts (the bar)
 examples/plain-html/        <typst-editor> loaded from dist/lib without a bundler
 tests/e2e/                  Playwright specs (run against the static build); tests/jsdom-setup.ts (vitest setup file)
@@ -144,7 +144,8 @@ createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileCha
   `FileChange = {kind:'create', path, content} | {kind:'update', path, content} | {kind:'delete', path} | {kind:'rename', from, path}`.
 - **`EditingViews`**: one Visual/Source tab bar; a document's views are created the first time
   it is shown and then only hidden, so cursor and undo history survive switching. The mode is
-  shared. With a single file the DOM is the same as before (tabs + two panes).
+  shared. With a single file the DOM is the same as before (tabs + two panes). `onCreate(document,
+  views)` reports new views (the widget attaches them to `ChangeTracking`).
 - **`FileSwitcher`**: only turns gestures into `FileChange`s (names via `toPath`: one folder
   level, default extension) and shows refusals inline. Hidden unless `fileList` is `show`, or
   `auto` with more than one file. A requested change passes `project.check`, then the host's
@@ -544,7 +545,7 @@ new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scr
 .update(files: Record<path, text | Uint8Array>, main)    // cheap per keystroke
 .reveal(path, offset)                        // cheap per cursor move: scroll only if off-screen (no marker); nothing while not following
 .setFollow(on)                               // "Follow cursor" (toolbar toggle; options follow / onFollowChange); on → goes to the newest reveal
-.showChanges(path, ranges | null)            // change bars in the page margin, redrawn after every compile
+.showChanges(path, ranges | null)            // change bars in the page margin per path (all paths drawn), redrawn after every compile
 .snippet(path, from, to, text) → Promise<{svg, width, height} | null>   // the range as drawn, cut from its page
 .onRender(listener) → unsubscribe            // after every successful compile
 .destroy()
@@ -556,10 +557,11 @@ new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scr
   nothing, or when `text` is not what the range held at the last successful compile (it was
   edited since, or the document has errors), so a snippet never shows other source.
 
-- **Change bars** (`change-bars.ts`): the ranges go to the engine's `boxesForRanges` after every
-  successful compile; boxes on the same or adjacent lines join into one bar (like LaTeX
-  `changebar`). A pure deletion (empty range) takes the characters on either side. Bars are
-  page overlays like the highlights; only the newest request draws.
+- **Change bars** (`change-bars.ts`): each path's ranges go to the engine's `boxesForRanges`
+  (one request per path, boxes merged) after every successful compile and after `showChanges`
+  (coalesced to one draw per microtask); boxes on the same or adjacent lines join into one bar
+  (like LaTeX `changebar`). A pure deletion (empty range) takes the characters on either side.
+  Bars are page overlays like the highlights; only the newest draw wins.
 
 - **Coalescing (`LatestOnly`):** at most one compilation is in flight. Updates that arrive
   meanwhile replace each other, so only the newest gets compiled. Typing never queues a backlog.
@@ -628,6 +630,29 @@ diffTexts(base, current) → [{fromA, toA, fromB, toB}]   // A = base, B = curre
   markup delimiter (`*`, `_`, heading `=`, list markers; Lezer tree of either text) grows to the
   whole construct, so `*bold*` → `_bold_` is one change with unchanged visible text. Grown
   ranges are mapped to the other text through the raw changes and merged when they touch.
+
+```ts
+new ChangeTracking(toolbar, { project, preview(path, ranges | null) }, base?)   // the toggle button goes into toolbar
+.attach(document, views)            // a document's views (created lazily): showChanges(base | null) from now on
+.setBase({text, label} | null, path = main)   // one file's base (label shared); null: every file back to "opened"
+.setBases(label, (path) => text | null)       // every file from one version (GitLab: the last commit; null = new)
+.accept(document, base)             // the Source view accepted a chunk: that file's base moved, label stays
+.resetOpened()                      // a room synced: "opened" = the texts now
+.refresh()   .show(on)   .destroy()
+```
+
+- **Every Typst file has its own base**, kept per `TypstDocument` (so renames keep it): by
+  default its text as opened (a file created since has base `''`, so all of it is new; a
+  collaboration room's first sync → `resetOpened` for all); in GitLab rooms each path's
+  `RoomVersions.base(path)` (null → `''`), looked up lazily so files arriving later get theirs.
+  One toggle, one label for all ("Changes since opened" / "last saved version" / the host's).
+- **Diffs only while shown:** off, nothing is computed; on, an edit re-diffs only the edited
+  file (`Project.onChange` `update`), structural changes re-render all and clear the preview's
+  bars of paths that are gone. Views get `showChanges(base)` when attached and when the base
+  or the toggle changes; they follow edits themselves.
+- Widget wiring: `EditingViews.onCreate` → `attach`; `onBaseChange` → `accept`;
+  `Preview.showChanges(path, …)`; host `setBase(text, label?, path?)`; `VersionControls` →
+  `setBases('last saved version', path => versions.base(path))`.
 
 ### Comments = margin notes (`src/features/comments`, `src/features/visual-view/nodes/margin-notes.ts`, `src/features/visual-view/notes-gutter`)
 
@@ -824,8 +849,8 @@ HTTP             GET /rooms/<room>/files/<path> (Authorization: Bearer <room tok
   fetched from the files endpoint, uploads as bytes; bytes → sha after a commit is not a
   change). `CollaborationLink` passes `versions` to the widget, which mounts `VersionControls`
   (`src/features/versions/versions.ts`): "Save version" + commit-message popover + status line, and
-  `ChangeTracking.setBase(base of main)` on every base change, so "Changes since …" resets for
-  everyone after a save.
+  `ChangeTracking.setBases(…, path → base of path)` on every base change, so "Changes since …"
+  resets for everyone after a save, in every file.
 
 ### Demo playground (`demo/`, `server/src/playground`)
 
@@ -835,8 +860,8 @@ an in-memory `FakeGitLab` holding `demo/examples/advanced`). Checklist with step
 
 - **State is the URL** (`demo/playground.ts`): `example`, `room` (none → Local, `gitlab:…` →
   GitLab, else Collaborate), `user` (put into the URL in a room, default Ann; the bar's second
-  window link uses the next name), `changes` (base = the example as loaded). `editorOptions(state,
-  server)` → `files` / `collaboration` / `base`: GitLab mode passes no local files; no server →
+  window link uses the next name). "Changes since opened" is the widget's own default (no
+  `?changes` any more). `editorOptions(state, server)` → `files` / `collaboration`: GitLab mode passes no local files; no server →
   the local example.
 - **Local mode never contacts a server**, so the static e2e build needs none. The room modes
   first `probeServer()` (`GET /playground` with CORS → `gitlab`; else an opaque `no-cors` request
@@ -898,7 +923,7 @@ an in-memory `FakeGitLab` holding `demo/examples/advanced`). Checklist with step
   also while the Visual view is hidden. Tables with merged cells, `table.cell`, header arguments
   or `columns: (..)` stay raw boxes.
 - **GitLab rooms:** conflicts are reported (status line), not highlighted in the views yet;
-  "Changes since …" covers the main file only; an asset changed on both sides keeps the room's
+  an asset changed on both sides keeps the room's
   version and overwrites upstream on save; GitLab-side renames are seen as delete + create; no
   GitLab sign-in yet (the token check is the stub, the author's name comes from the client); the
   room's main file must exist in the repository (else the widget's empty main is committed).
