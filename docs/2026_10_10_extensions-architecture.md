@@ -52,7 +52,8 @@ Controller: it subscribes views to the model's `onChange` and turns user input i
 1. `core/**` and every `**/model/**`: no DOM globals, no editor-library imports.
 2. `hosts/**` never import `extensions/**` (nor `typst-editor/`). They only offer contribution points.
 3. `extensions/<a>` never imports `extensions/<b>`. Extensions meet through `core` models, or
-   through a service one of them provides on the context (below). No cycles between folders.
+   through a generic contribution point of a host that any extension may use (document links, file
+   decorations, source controls; no services). No cycles between folders.
 4. `typst-editor/` imports hosts and extension entry files only.
 5. The existing rules stay: imports from outside a folder go to its entry file; no `export *`; no
    re-export of another module's API; entry file inside its folder (no sibling folders).
@@ -72,10 +73,9 @@ interface ExtensionContext {
                                                // registerFileView(kind, provider), open(path), …
   readonly visualView: VisualViewContributions;  // registerNode(spec), registerMark(spec),
                                                // registerToolbarItem, registerGutter, registerDecorations
-  readonly sourceView: SourceViewContributions;  // registerExtension(cm), registerLinkProvider, …
-  readonly preview: PreviewContributions;      // registerToolbarItem, registerPdfVariant, overlays
-  readonly services: Services;                 // typed: what one extension provides others
-                                               // (LabelIndex, StyleIndex, the current user, …)
+  readonly sourceView: SourceViewContributions;  // registerExtension(cm)
+  readonly preview: PreviewContributions;      // registerToolbarItem, registerPdfVariant, overlays, reveal,
+                                               // onDidClickPage
 }
 ```
 
@@ -83,9 +83,11 @@ interface ExtensionContext {
   create later (views are created lazily per document), so an extension never tracks views.
 - Configuration (host options such as `user`, `pdfDownload`, `collaboration`) reaches an extension
   as an argument of its factory in the built-in list: `comments({ user })`.
-- Services replace cross-feature imports: `labels` provides `LabelIndex`; the `references`
-  contributions read it from `services`. Typed by a registry interface (declaration merging, as VS
-  Code does), not by strings.
+- No services (decided 2026-10-10): what one extension has for another goes through a generic contribution
+  point of a host, VS Code's shapes: `workbench.registerDocumentLinkProvider` (read by both views and by
+  `images`), `registerFileDecorationProvider` (collaboration's presence, shown by `files`),
+  `registerSourceControl` (the GitLab room, shown by `source-control`). A feature's own contributions get its
+  models directly (`labels` hands its `LabelIndex` to `references`).
 - Not public API at first. Once it holds, `createTypstEditor({ extensions })` can expose it.
 
 ### Priority: who wins when two contributions claim the same thing
@@ -109,10 +111,10 @@ extension API once that is exposed (`createTypstEditor({ extensions })`).
 
 | Host | Mechanism it keeps | Contribution points |
 |---|---|---|
-| `visual-view` | Tiptap editor; the projection **framework**: segmenting source into blocks, source anchors (`src` / `sep` / `lead` / `trail`), print + minimal change back to the document, sync from the document, `posToSource` / `sourceToPos`; the **raw box** (unmodelled Typst, never rewritten, is the host's fallback, not an extension); paragraph + text (the minimum a document needs); selection, presence target | `TypstNodeSpec` / `TypstMarkSpec` registry (schema node, projector for its syntax / call, printer, label + box flags, node view, keymap, input rules); toolbar items and menus; decorations; side gutters; box renderers |
-| `source-view` | CodeMirror bound to a `TypstDocument`, document sync, highlights, presence target | CodeMirror extensions (language, lint, links, colors), link providers |
-| `preview` | engine worker + protocol, coalesced compiles, page list (lazy SVG), hit-testing, scroll / reveal | toolbar items, PDF variants, overlays on pages |
-| `workbench` | layout (side panels with rail buttons, editing area, preview, status bar), the Visual / Source tabs, file views by kind, extension lifecycle, color scheme | side panels, status bar items, file views, commands |
+| `visual-view` | Tiptap editor; the projection **framework**: segmenting source into blocks, source anchors (`src` / `sep` / `lead` / `trail`), print + minimal change back to the document, sync from the document, `posToSource` / `sourceToPos`; the **raw box** (unmodelled Typst, never rewritten, is the host's fallback, not an extension); paragraph + text (the minimum a document needs); selection; the view context's position map | `TypstNodeSpec` / `TypstMarkSpec` registry (schema node, projector for its syntax / call, printer, label + box flags, node view, keymap, input rules); toolbar items and menus; decorations; side gutters; box renderers |
+| `source-view` | CodeMirror bound to a `TypstDocument`, document sync, the reveal highlight | CodeMirror extensions (language, lint, colors, other users' carets) |
+| `preview` | engine worker + protocol, coalesced compiles, page list (lazy SVG), hit-testing (`onDidClickPage`), scroll / `reveal` | toolbar items, PDF variants, overlays on pages |
+| `workbench` | layout (side panels with rail buttons, editing area, preview, status bar), the Visual / Source tabs, file views by kind, extension lifecycle, color scheme; showing document links in the Source views and raw boxes | side panels, status bar items, file views, commands, document link providers, file decoration providers, source controls |
 
 `BLOCK_CALLS`, `PRINT_BLOCK`, `RAW_TYPES`, `LABELLED_BLOCKS` and `callAtomType` are derived from the
 registered specs (review blocker `projection.ts:467`). `projection.ts` imports no feature (blocker
@@ -125,34 +127,35 @@ The result of the slices and the clean-up (2026-10-10). Every extension is `src/
 `<name>.ts`; "CSS" means it has `<name>.css`, imported `?inline` and added with `workbench.registerStyleSheet` on
 activation. The widget's list (`typst-editor/typst-editor.ts`, `builtinExtensions`) carries no order between the
 Visual view's contributions: `priority` decides (task lists 110 over bullet lists, the image box renderer 110 over
-snippets); the order matters only for services (an extension reads those of the extensions before it).
+snippets); the order only places toolbar, tab bar and status bar items.
 
-| Extension (id) | `model/` | Contributions | Services / commands | CSS |
+| Extension (id) | `model/` | Contributions | Commands | CSS |
 |---|---|---|---|---|
 | `typstLanguage()` (`typst-language`) | — | Source: Typst syntax + code colors; Visual: the same in raw boxes (`registerBoxCodeExtension`) | — | — |
-| `documentLinks()` (`document-links`) | (core `document-links`) | Source: file links (`fileLinks`, `pathLinks`); Visual: links in raw boxes (`boxLinks`) | provides `documentLinks` | yes |
-| `collaboration(options, user?)` | `SharedProject`, `SharedAssets`, `RemoteCursors`, `RoomVersions` (lazy chunk; protocol in core `gitlab-protocol`) | Source + Visual: other users' carets and selections (also in raw boxes) | provides `collaboration` | yes |
-| `files()`, `fileNavigation()` (`files`, `file-navigation`) | tree model (uploads: core `uploads`) | Workbench: file panel (side panel), drops; editor frame "← previous / next file →" | reads `collaboration` | yes (`files.css`) |
+| `documentLinks()` (`document-links`) | (core `document-links`: `findFilePaths`) | Workbench: a `DocumentLinkProvider` (the views show its links) | — | — |
+| `collaboration(options, user?)` | `SharedProject`, `SharedAssets`, `RemoteCursors`, `GitLabSourceControl` (lazy chunk; protocol in core `gitlab-protocol`); `presence/` (eager) | Source + Visual: other users' carets and selections (also in raw boxes); Workbench: file decorations, the GitLab room's source control | — | yes |
+| `files()`, `fileNavigation()` (`files`, `file-navigation`) | tree model (uploads: core `uploads`) | Workbench: file panel (side panel, file decorations of any provider), drops; editor frame "← previous / next file →" | — | yes (`files.css`) |
 | `spreadsheets()` | `typst-file` (`name.ic.gen.typ`) | Workbench: `.ic` file view (IronCalc, loaded on demand) | — | yes |
 | `diagnostics()` | `DiagnosticCollection`, summary | Source: lint; Visual: highlights; Workbench: status bar item | — | yes |
-| `versions({ user })` | `versionStatus` | Workbench: "Save version" in the tab bar | reads `collaboration` | — |
+| `sourceControl()` (`source-control`) | — | Workbench: "Save to <label>…" in the tab bar for every registered source control | — | — |
 | `markup` | raw code (code delimiters) | Visual: strong, emphasis, links, inline code, code blocks, block quotes; selection bar, Insert items | — | yes |
 | `headings` | numbering patterns, `HeadingCounter` | Visual: headings, their numbers (editor extension) | — | yes |
 | `tables` | `TableLayout` | Visual: `#table(..)`, Insert table, the table bar | — | yes |
-| `images()` | image call edits, `uploadTarget` | Visual: image boxes + figures, tools, Insert image, drops; box renderer (110); Workbench: `image` / `data` file views | reads `documentLinks` | yes |
+| `images()` | image call edits, `uploadTarget` | Visual: image boxes + figures (the path as its document link), tools, Insert image, drops; box renderer (110); Workbench: `image` / `data` file views | — | yes |
 | `renderedBoxes()` (`rendered-boxes`) | `Snippet`, sizes | Visual: box renderer (compiled snippets from the preview) | — | — |
 | `outline` | — | Visual: `#outline(..)` as a labelled box, Insert table of contents | — | — |
 | `pageLayout` (`page-layout`) | — | Visual: page break, horizontal rule | — | yes |
 | `lists` | cheq's preamble | Visual: bulleted, numbered and task lists (task lists 110), list buttons | — | yes |
 | `alignment` | alignment syntax | Visual: `#align` blocks, justified paragraphs, Align menu | — | — |
 | `comments({ user })` | margin-note syntax, threads, `addMarginNote`, `withoutNotes`, page margin, card layout | Visual: margin notes, notes gutter, Comment action; Workbench: Comment button (Source tab bar), Mod+Alt+M; Preview: PDF variants | commands `comments.addComment`, `comments.exportPdf` | yes |
-| `labels()` | `LabelIndex`, scan, reference syntax, label choices | Visual: reference chips + hints, label tags, `@` list, Add label | provides `labels` | yes |
-| `styles()` | `StyleIndex`, discover, `newStyle` | Visual: styled blocks, text styles, the style menu; "New style…" | provides `styles` | yes |
-| `previewControls({ followCursor })` (`preview-controls`) | zoom | Preview: zoom, Follow cursor, page n / total | — | yes |
+| `labels()` | `LabelIndex`, scan, reference syntax, label choices | Visual: reference chips + hints, label tags, `@` list, Add label | — | yes |
+| `styles()` | `StyleIndex`, discover, `newStyle` | Visual: styled blocks, text styles, the style menu; "New style…" | — | yes |
+| `previewSync({ followCursor })` (`preview-sync`) | — | Preview: Follow cursor (reveal on selection), click → source | — | yes |
+| `previewControls()` (`preview-controls`) | zoom | Preview: zoom, page n / total | — | yes |
 | `pdfExport({ download })` (`pdf-export`) | — | Preview: Download PDF + variants menu | command `pdfExport.export` | yes |
 
-Not extensions: the hosts' minimum (Visual view: paragraphs, text, raw boxes; the hosts' toolbar, highlights,
-presence targets) and its CSS (`typst-editor.css` with the color tokens, `hosts/visual-view/visual-view.css`,
+Not extensions: the hosts' minimum (Visual view: paragraphs, text, raw boxes; the hosts' toolbar, highlights;
+the workbench's document links) and its CSS (`typst-editor.css` with the color tokens, `hosts/visual-view/visual-view.css`,
 `hosts/workbench/layout/layout.css`). Shared code is core: `core/uploads` (files from the computer as `create`
 changes), `core/gitlab-protocol` (import-free, also the server's). Test helpers composing the built-ins live in
 `src/testing/` (only `*.test.ts` import it); hosts import neither `extensions/` nor `testing/`, also not in tests.

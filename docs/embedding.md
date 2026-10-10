@@ -255,7 +255,7 @@ drops the highlighted text of range notes as well. A document that sets
 - the exported types `CommentsData` and `TypstEditorCommentsChangeDetail`;
 - the `comments` map in the collaboration Y.Doc (rooms that still hold one simply ignore it).
 
-`user` stays: it is the name others see when collaborating, the author of saved versions and the
+`user` stays: it is the name others see when collaborating, the author of commits to GitLab and the
 signature of comments (without it, comments are signed "Anonymous").
 Existing `*.comments.json` sidecar files are not migrated.
 
@@ -352,7 +352,7 @@ createTypstEditor(host, {
   file becomes shared text, the other files (images, data) are fetched by the widget from the
   server (`GET /rooms/<room>/files/<path>`, with the token as `Authorization: Bearer`). Pass
   `main` as the repository's main file; `source` / `files` are not needed (the room wins).
-- **Save version:** a "Save version" button appears next to the tabs. It asks for a commit
+- **Save to GitLab:** a "Save to GitLab…" button appears next to the tabs. It asks for a commit
   message (default "Edit via Typst editor") and makes the server commit every change since the
   last commit (edits, new, renamed and deleted files, uploaded images) as **one** commit by the
   saving user.

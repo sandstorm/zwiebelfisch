@@ -20,20 +20,23 @@ src/                        the widget (TypeScript); the most important API on t
                             createTypstEditor; inline-source.ts (source written inside the element → text)
   hosts/                    view hosts: mechanism + contribution points, no feature knowledge
     workbench/              the widget's frame and the extension API (workbench.ts: TypstExtension, ExtensionContext,
-                            Workbench, ServiceRegistry, CommandRegistry); workbench-host.ts (WorkbenchHost: what
-                            createTypstEditor creates); layout/ (layout.ts + layout.css: side panels with rail buttons,
-                            editing area, preview, status bar), editing-views/ (Visual/Source tabs, lazily one VisualView
-                            + SourceView per document), color-scheme/ (`data-scheme`), extension-host/ (activation,
-                            services), commands/ (commands, key bindings), file-views/ (views by file kind),
-                            file-drops/ (files dropped on the widget), style-sheets/ (StyleSheets: the widget's and
-                            the extensions' CSS in its shadow root or head, shared and reference-counted)
-    source-view/            SourceViewHost (registerExtension, registerLinkProvider, createView: what
+                            Workbench, CommandRegistry, DocumentLinkProvider, FileDecorationProvider, SourceControl);
+                            workbench-host.ts (WorkbenchHost: what createTypstEditor creates); layout/ (layout.ts +
+                            layout.css: side panels with rail buttons, editing area, preview, status bar), editing-views/
+                            (Visual/Source tabs, lazily one VisualView + SourceView per document), color-scheme/
+                            (`data-scheme`), extension-host/ (activation), commands/ (commands, key bindings),
+                            file-views/ (views by file kind), file-drops/ (files dropped on the widget), style-sheets/
+                            (StyleSheets: the widget's and the extensions' CSS in its shadow root or head, shared and
+                            reference-counted), document-links/ (DocumentLinks: the providers' links merged by
+                            priority; link-extension.ts: links in a CodeMirror editor, the Source views' and raw
+                            boxes'), file-decorations/ (FileDecorations), source-controls/ (SourceControls)
+    source-view/            SourceViewHost (registerExtension, createView: what
                             `ExtensionContext.sourceView` is) and SourceView (view.ts: CodeMirror 6 bound to a
                             TypstDocument); contribution.ts (the contribution types)
     preview/                Preview — worker-backed live preview + hit-testing, scroll / reveal; what
                             `ExtensionContext.preview` is: toolbar items, PDF variants, page overlays (contribution.ts),
-                            onDidChangeDiagnostics / onDidRender, snippet, exportPdf; latest-only.ts ("only the
-                            newest value" task runner)
+                            reveal / onDidClickPage, onDidChangeDiagnostics / onDidRender, snippet, exportPdf;
+                            latest-only.ts ("only the newest value" task runner)
       worker/               worker.ts (startEngineWorker, main-thread side), engine.worker.ts (the worker),
                             protocol.ts (messages), project-files.ts (FileSender/FileReceiver)
       pages/                pages.ts: page-list (SVG only near the viewport), overlays, geometry, zoom, snippet
@@ -43,8 +46,7 @@ src/                        the widget (TypeScript); the most important API on t
   core/                     the models everything builds on
     typst-document/         TypstDocument — the single source of truth (string or shared Y.Text); TextChange (the
                             one edit format, text-change.ts); Highlight (a styled source range views draw);
-                            Presence / PresenceTarget (other users' carets + selections, the interface both views
-                            implement); calculateImportChange (the change that imports a name from a module, once;
+                            calculateImportChange (the change that imports a name from a module, once;
                             applies nothing: margin notes merge it into their own edit); minimal-change.ts, y-delta.ts
     typst-engine/           typed TS wrapper around the wasm (typst-engine.ts: createEngine), fetch-fonts.ts;
                             engine-assets.ts (wasm + default font URLs for the main thread); packages/ (withPackages,
@@ -54,20 +56,20 @@ src/                        the widget (TypeScript); the most important API on t
                             displayName, extension, imageBlob
     project/                Project: which files a project has and which changes are allowed (one TypstDocument
                             per .typ file, main protected); FileChange, FileContent, ProjectFiles. No re-exports.
-    document-links/         DocumentLinkProvider: the file paths a Typst document names (find-links.ts, Lezer),
-                            where they lead and following them (LinkWorkspace: what it needs from the widget);
-                            reading-order.ts (main file, then its #includes depth first; a file's neighbours)
+    document-links/         Typst syntax only: findFilePaths (the file paths a Typst text names, Lezer), readingOrder
+                            (main file, then its #includes depth first) and neighbours
     uploads/                uploadChanges: files from the computer (picked, dropped) as `create` changes at the top
                             of the project (`.typ` as text, the rest as bytes); used by files and images
     gitlab-protocol/        the rooms' Y.Doc map names (FILES_MAP, ASSETS_MAP, META_MAP) and GitLab rooms' messages
-                            and file URLs: import-free, shared by collaboration, versions and server/
+                            and file URLs: import-free, shared by collaboration and server/
     disposable/             Disposable (VS Code's shape: `new Disposable(fn)` disposes once; `Disposable.from(...)` in
                             reverse order)
     event-emitter/          EventEmitter<T> (`event` to subscribe, `fire`), Event<T>
   ui/                       feature-neutral DOM widgets, one folder each: field-popover/ (FieldPopover: one text field,
-                            Apply / Remove; also used by versions/), toolbar-menu/ (ToolbarMenu: a menu button of
+                            Apply / Remove; also used by source-control/), toolbar-menu/ (ToolbarMenu: a menu button of
                             toolbar buttons), floating-bar/ (FloatingBar: a bar above an anchor in the text),
-                            color-scheme/ (isLightText: light or dark, from a resolved text color)
+                            color-scheme/ (isLightText: light or dark, from a resolved text color; textColorOn: black
+                            or white text on a color)
   extensions/               one vertical slice per concept (docs/2026_10_10_extensions-architecture.md): <name>.ts
                             (the entry: the TypstExtension factory, the controller), model/ (pure, no DOM), and one
                             folder per host it contributes to (workbench/, preview/, visual-view/, …), each entered
@@ -76,27 +78,29 @@ src/                        the widget (TypeScript); the most important API on t
                             extension with styles has its <name>.css, registered with Workbench.registerStyleSheet)
       model/                tree-model.ts (the tree as data, keyboard moves, relocate)
       workbench/            file-panel.ts (FilePanel: header, prompts, uploads), file-navigation.ts ("← previous file"
-                            / "next file →"), tree/ (FileTree: rows, keyboard, drag & drop, presence), icons/ (leaf)
+                            / "next file →"), tree/ (FileTree: rows, keyboard, drag & drop, file decorations as
+                            badges), icons/ (leaf)
     spreadsheets/           spreadsheets: the `.ic` file view; every edit also stores `name.ic.gen.typ`
       model/                typst-file.ts (spreadsheetTypst → name.ic.gen.typ for Typst, typstPath)
       workbench/            spreadsheet-view.ts (SpreadsheetView), workbook.ts (React + IronCalc, loaded on demand)
-    versions/               versions: "Save version" next to the tabs once the `collaboration` service has a GitLab room
-      model/                version-status.ts (versionStatus: the outcome as a status line)
-      workbench/            version-controls.ts (VersionControls: button, commit message, outcome)
+    source-control/         sourceControl(): the UI over the workbench's source controls, next to the tabs
+      workbench/            SourceControlView: "Save to <label>…", commit message, status line
     pdf-export/             pdfExport: the `pdfExport.export` command (PdfExport: the project's PDF, of the main file or
                             of another entry) and the preview's "Download PDF" with the PDF variants others register
       preview/              pdf-menu.ts (pdfMenu: "Download PDF" + menu of the registered PDF variants)
-    preview-controls/       previewControls: the preview toolbar's controls; "Follow cursor" remembered in localStorage
+    preview-controls/       previewControls: the preview toolbar's zoom and page number
       model/                zoom.ts (stepZoom over the presets, zoomText / zoomLabel)
-      preview/              zoom-controls.ts (zoomControls), follow-cursor.ts (followCursor), page-number.ts (pageNumber)
+      preview/              zoom-controls.ts (zoomControls), page-number.ts (pageNumber)
+    preview-sync/           previewSync: the preview follows the cursor ("Follow cursor", remembered in localStorage),
+                            a click in it selects the source; preview/ (followCursor: the switch)
     images/                 images(): image boxes + figures, "Insert image", ProjectImages (object URLs, uploads);
                             model/ (image-call.ts: arguments edited in place; upload.ts: uploadTarget),
-                            visual-view/ (imagesVisualView: specs, tools, insertion, image-path-link),
+                            visual-view/ (imagesVisualView: specs, tools, insertion, image-path-link: the path's
+                            document link),
                             workbench/ (AssetView: images and data files read-only, the `image` / `data` file views)
     rendered-boxes/         renderedBoxes(): raw boxes drawn as snippets from the preview; model/ (Snippet,
                             rendersInPlace, inlinePictureSize, snippetSize), visual-view/ (the box renderer)
-    document-links/         documentLinks(): file paths as links, the `documentLinks` service; source-view/ (fileLinks,
-                            pathLinks, linkInfo), visual-view/ (boxLinks: pathLinks in raw boxes)
+    document-links/         documentLinks(): a DocumentLinkProvider: file paths as links (open, or create a missing .typ)
     typst-language/         typstLanguage(): Typst syntax + code colors in the Source views and raw boxes;
                             source-view/ (typst-syntax.ts, code-colors.ts)
     comments/               comments.ts (comments({ user })); model/ (margin-note-syntax.ts: drafting's call, parse,
@@ -105,11 +109,12 @@ src/                        the widget (TypeScript); the most important API on t
                             visual-view/ (marginNotes: notes in the text + the Comment action; notes-gutter/: the cards);
                             workbench/ (CommentAction, the command comments.addComment, Ctrl+Alt+M); preview/
                             (CommentsPdf: the PDF variants "Without comments" / "With comments", comments.exportPdf)
-    collaboration/          collaboration.ts (eager: the extension, the `collaboration` service), collaboration-link.ts
-                            (CollaborationLink: loads model/ on demand); model/ (the lazily loaded chunk: Collaboration,
-                            SharedProject, SharedAssets, RemoteCursors, RoomVersions (the protocol: core/gitlab-protocol);
-                            in-process.ts, Y.Doc/awareness wiring for tests); source-view/ and
-                            visual-view/ (drawing the other users' carets and selections, also in raw boxes)
+    collaboration/          collaboration.ts (eager: the extension), collaboration-link.ts (CollaborationLink: loads
+                            model/ on demand); presence/ (Presence, PlacedPresence, Presences: everyone's places, eager);
+                            model/ (the lazily loaded chunk: Collaboration, SharedProject, SharedAssets, RemoteCursors,
+                            GitLabSourceControl (the protocol: core/gitlab-protocol); in-process.ts, Y.Doc/awareness
+                            wiring for tests); source-view/ and visual-view/ (drawing the other users' carets and
+                            selections, also in raw boxes); workbench/ (presenceDecorations: who is in which file)
     diagnostics/            diagnostics.ts (the extension); model/ (DiagnosticCollection, describeDiagnostic,
                             diagnosticHighlight, diagnostics-summary.ts); source-view/ (lint); workbench/
                             (DiagnosticsStatus: the status bar item)
@@ -120,11 +125,10 @@ src/                        the widget (TypeScript); the most important API on t
     page-layout/            page breaks and horizontal rules
     alignment/              `#align(..)[..]`, `#par(justify: ..)[..]`, the Align menu (model: alignment syntax)
     outline/                the table of contents (`#outline(..)`)
-    labels/                 labels(): model/ (LabelIndex: the project's labels and reference counts, the `labels`
-                            service; scan.ts (Lezer, .bib); reference syntax, label names, the @ list's choices);
+    labels/                 labels(): model/ (LabelIndex: the project's labels and reference counts; scan.ts (Lezer, .bib); reference syntax, label names, the @ list's choices);
                             visual-view/ (reference chips + hints, label tags, the @ list, "Add label")
     styles/                 styles(): model/ (StyleIndex: the custom styles the project declares (`/// @style …`),
-                            the `styles` service, how a document imports one; discover.ts, new-style.ts);
+                            how a document imports one; discover.ts, new-style.ts);
                             visual-view/ (styled block + style mark, the text style menu); "New style…"
 crates/typst-engine/        Rust → wasm: Typst compiler, SVG and PDF export, click/cursor jumps
   src/world.rs              in-memory Typst World (files and fonts pushed from JS)
@@ -179,22 +183,23 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
 ```
  main thread                                                    worker thread
 ┌──────────────────────────────────────────────────────────┐   ┌────────────────────────┐
-│ createTypstEditor(host, { files })                       │   │ engine.worker.ts       │
+│ createTypstEditor(host, { files })  (preview-sync: the   │   │ engine.worker.ts       │
+│   arrows between the views and the preview)              │   │                        │
 │                                                          │   │                        │
 │  ┌──────────────┐ change(edits, origin) ┌──────────────┐ │   │  ┌──────────────────┐  │
 │  │  SourceView  │──────────────────────►│TypstDocument │ │   │  │  Engine (wasm)   │  │
 │  │ (CodeMirror) │◄──────────────────────│  text        │ │   │  │  MemoryWorld     │  │
 │  └──────┬───────┘   onChange(edits,     └──────┬───────┘ │   │  │  last document   │  │
 │         │ ▲          origin ≠ self)            │         │   │  │  svg cache       │  │
-│ onCursor│ │reveal(from,to)                     │ text    │   │  └──────────────────┘  │
+│ selected│ │reveal(from,to)                     │ text    │   │  └──────────────────┘  │
 │         ▼ │                                    ▼         │   │           ▲            │
 │  ┌──────────────────────────────────────────────────┐    │   │           │            │
 │  │ Preview                                          │ postMessage        │            │
 │  │  update(files) → coalesce → compile ─────────────┼────┼──►│ compile ──┘            │
 │  │  pages ◄── swap only pages whose hash changed ◄──┼────┼───│ {pages, diagnostics}   │
 │  │  click (px→pt) ──────────────────────────────────┼────┼──►│ jumpFromClick          │
-│  │  onJump(from,to) ◄───────────────────────────────┼────┼───│ {kind:'source',…}      │
-│  │  reveal(offset) ─────────────────────────────────┼────┼──►│ jumpFromCursor         │
+│  │  onDidClickPage(from,to) ◄───────────────────────┼────┼───│ {kind:'source',…}      │
+│  │  reveal(path,from,to) ───────────────────────────┼────┼──►│ jumpFromCursor         │
 │  │  scroll to      ◄────────────────────────────────┼────┼───│ [{page,x,y}]           │
 │  └──────────────────────────────────────────────────┘    │   └────────────────────────┘
 └──────────────────────────────────────────────────────────┘
@@ -231,13 +236,14 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   every `FileChange`.
 - **Composition**: a `Project` in a `WorkbenchHost` (`hosts/workbench`, see "Extensions" below) that runs the
   built-in extension list, configured from the options (`builtinExtensions`): `typstLanguage`, `documentLinks`,
-  `collaboration` (with the option), `files` (`fileList`), `fileNavigation`, `spreadsheets`,
-  `diagnostics`, `versions` (`user`); the Visual view's constructs and features: `markup`, `headings` (with
+  `collaboration` (with the option, and `user`), `files` (`fileList`), `fileNavigation`, `spreadsheets`,
+  `diagnostics`, `sourceControl`; the Visual view's constructs and features: `markup`, `headings` (with
   their numbers), `tables`, `images`, `renderedBoxes`, `outline`, `pageLayout`, `lists`, `alignment`, `comments`
-  (`user`), `labels`, `styles`; then `previewControls` (`followCursor`) and `pdfExport` (`pdfDownload`), which
-  also gives the preview toolbar its order. The order matters only for services (an extension reads those of
-  the extensions before it): where the Visual view's contributions compete, `priority` decides (see
-  "VisualView"; tested by projecting every fixture with the built-ins in reverse order). The extension API is not public yet: the
+  (`user`), `labels`, `styles`; then `previewSync` (`followCursor`), `previewControls` and `pdfExport`
+  (`pdfDownload`), which also gives the preview toolbar its order. Extensions never depend on each other, so the
+  order only places toolbar, tab bar and status bar items: where the Visual view's contributions compete, or
+  document links overlap, `priority` decides (see "VisualView"; tested by projecting every fixture with the
+  built-ins in reverse order). The extension API is not public yet: the
   options stay as they are. The preview always compiles `main` with `project.files()`; `exportPdf` runs the
   `comments.exportPdf` command; `onFilesChange` hears a change after the workbench and the extensions.
 - **Diagnostics**: the preview's `onDidChangeDiagnostics` is the one source. The `diagnostics` extension puts
@@ -255,14 +261,14 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   and makes every document's Visual view from it. The Typst constructs (`markup`, `headings`, `tables`,
   `outline`, `pageLayout`, `lists`, `alignment`) are extensions in `extensions/<name>/`; the features activate
   theirs with what they own:
-  `documentLinks` → `boxLinks`, `images` → `imagesVisualView`, `renderedBoxes` → `renderedBoxesVisualView`,
+  `images` → `imagesVisualView`, `renderedBoxes` → `renderedBoxesVisualView`,
   `typstLanguage` → the raw boxes' syntax and colors (`registerBoxCodeExtension`), `comments` → `marginNotes` +
   `notesGutter`, `labels` → `references`, `styles` → `customStyles`. The list's order is the schema's.
 - **`EditingViews`** (`hosts/workbench/editing-views/`): one Visual/Source tab bar; a document's views are
   created the first time it is shown and then only hidden, so cursor and undo history survive switching. The
   mode is shared. With a single file the DOM is the same as before (tabs + two panes). Per document a
   `DocumentEditor` (`Workbench.activeTextEditor`, a `TextEditor`) stands for both views: `selection` and
-  `revealRange` use the current tab, `setPresence` goes to both.
+  `revealRange` use the current tab.
   `setFrame({ top, bottom })` (`Workbench.registerEditorFrame`) keeps two elements first and last in the
   visible pane (they scroll with the file). The `fileNavigation` extension puts `FileNavigation` there: for a
   file the main file `#include`s
@@ -277,11 +283,14 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   left to the browser, which would open the file in place of the page (the workbench prevents that, also
   while nobody listens). Image files dropped into the Visual view's text are taken
   there instead (uploaded and inserted at the drop point).
-- **File links** (see below): the `documentLinks` extension gives each document a `DocumentLinkProvider`
-  (paths resolve from the document's current path; `open` is `Workbench.open`; `create` is a `create` change
-  through `applyChange`, then `open`), as the Source views' link provider, for the paths in the Visual view's
-  raw boxes (`boxLinks`), and as the `documentLinks` service (an image box's path, through `images`).
-- Preview clicks into another project file open it, then reveal. Clicks into packages are ignored.
+- **File links** (see below): the `documentLinks` extension registers one `DocumentLinkProvider` with the
+  workbench (paths resolve from the file's path; a link opens its file with `Workbench.open`; a missing `.typ`
+  file's link offers "Create …": a `create` change through `applyChange`, then `open`). The workbench shows the
+  links of every provider in the Source views and the raw boxes' code; `images` shows an image box's path as its
+  link (`Workbench.provideDocumentLinks` / `resolveDocumentLink`).
+- **Preview sync** (the `previewSync` extension): a click in the preview selects its source (another project
+  file is opened first; clicks into packages are ignored), and while "Follow cursor" is on the preview scrolls to
+  the selection the user moves. Without the extension the preview neither follows nor jumps.
 - **Images and rendered boxes** (`extensions/images`, `extensions/rendered-boxes`): `ProjectImages` (the `images`
   extension) gives every document's Visual view its `ImageUrls` (image files resolved like Typst
   (`ProjectPath.resolve`) and shown as object URLs, made once per content and revoked when replaced; refreshed on
@@ -322,10 +331,9 @@ interface ExtensionContext {
   workbench: Workbench                  // the frame's contribution points (below)
   visualView: VisualViewContributions   // registerNode, registerMark, registerToolbarGroup / Item, registerGutter,
                                         // registerBoxRenderer, registerEditorExtension, … (see "VisualView")
-  sourceView: SourceViewContributions   // registerExtension(cm | context → cm), registerLinkProvider (see "SourceView")
-  preview: PreviewContributions         // registerToolbarItem, registerPdfVariant, createOverlay, onDidChangeDiagnostics,
-                                        // onDidRender, snippet, exportPdf (see "Preview")
-  services: Services                    // provide(id, service) → Disposable, get(id) → service | undefined
+  sourceView: SourceViewContributions   // registerExtension(cm | context → cm) (see "SourceView")
+  preview: PreviewContributions         // registerToolbarItem, registerPdfVariant, createOverlay, reveal, onDidClickPage,
+                                        // onDidChangeDiagnostics, onDidRender, snippet, exportPdf (see "Preview")
 }
 interface Workbench {
   ownerDocument; activeFile; open(path, { selection?, mode? }); onDidShowFile; applyChange(change) → reason | null
@@ -335,12 +343,22 @@ interface Workbench {
   registerFileView(kind, { createFileView(parent) → FileView { show(path, content), hide(), dispose() } })
   registerCommand(id, handler)  executeCommand(id, ...args)  registerKeybinding('Mod+Alt+KeyM', id)
   onDidDropFiles  remember(name) → Memory
+  registerFileDecorationProvider({ provideFileDecoration(path) → FileDecoration | FileDecoration[] | undefined,
+                                   onDidChangeFileDecorations })   getFileDecorations(path)   onDidChangeFileDecorations
+                                    // FileDecoration { badge?, tooltip?, color?, propagate? }
+  registerDocumentLinkProvider({ provideDocumentLinks(document: TextDocument { path, text }) → DocumentLink[],
+                                 resolveDocumentLink?(link) → DocumentLink }, { priority? })
+  provideDocumentLinks(document) → DocumentLink[]   resolveDocumentLink(link) → DocumentLink
+                                    // DocumentLink { range: {from, to}, target?: ProjectPath, tooltip?,
+                                    //                command?: { title, run() → Promise<reason | null> } }
+  registerSourceControl({ id, label, defaultCommitMessage?, state: { busy, status }, onDidChange, commit(message) })
+  sourceControls   onDidChangeSourceControls
   activeTextEditor: TextEditor | null  onDidChangeTextEditorSelection: Event<{ textEditor }>  isEditorFocused()
 }
-interface TextEditor extends PresenceTarget {   // a Typst file's Visual + Source views (one per document)
+interface TextEditor {   // a Typst file's Visual + Source views (one per document)
   document; mode   // the tab the user works in
   selection        // {from, to} in that tab's view
-  revealRange(from, to)   setPresence(presences)   // both views
+  revealRange(from, to)
 }
 new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen?, styleSheet? })
   .activate(extensions)  .destroy()      // + everything of Workbench
@@ -356,15 +374,23 @@ new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen?, sty
   extensions in list order (`ExtensionHost`, ids unique), then the main file is shown and compiled. Views are created later, lazily, with what was registered. `destroy` disposes the
   extensions in reverse list order, each one's subscriptions in reverse (also ones pushed after activation,
   e.g. once a room connected), then the frame.
-- **Services** replace imports between features: `ServiceRegistry` / `CommandRegistry` are empty interfaces
-  that the providing feature extends by declaration merging (`declare module '…/hosts/workbench/workbench' {
-  interface ServiceRegistry { labels: LabelIndex } }`), so `services.get('labels')` and
-  `executeCommand('pdfExport.export', true)` are typed without importing the provider. One provider per id;
-  a service is there for the extensions after its provider in the list. Today: `labels` (`LabelIndex`),
-  `styles` (`StyleIndex`), `collaboration` (`CollaborationSession`: `onDidChangePresence`,
-  `onDidConnectVersions`, read by `files` and `versions`), `documentLinks` (document → `DocumentLinkProvider`);
-  commands `pdfExport.export`,
+- **No services: generic contribution points.** Extensions never depend on each other, also not through a
+  service registry. When one has something for another, a host offers a generic contribution point that any
+  extension may use, and the consumer reads every contribution, not one provider's: document links
+  (`registerDocumentLinkProvider`: the `documentLinks` extension's paths, read by the views and by `images`),
+  file decorations (`registerFileDecorationProvider`: `collaboration`'s presence, shown by `files`), source
+  controls (`registerSourceControl`: `collaboration`'s GitLab room, shown by `sourceControl`). VS Code's shapes.
+  Commands are typed by `CommandRegistry`, extended by declaration merging: `pdfExport.export`,
   `comments.addComment` (bound to `Mod+Alt+KeyM`), `comments.exportPdf`.
+- **Document links** (`DocumentLinks`, `document-links/`): the links of every provider for a `TextDocument`
+  (`{ path, text }`: a whole file's, or a raw box's code with the path of its file); overlapping ones go to the
+  provider of the higher `priority` (default 100; equal: registered first). A link remembers its provider, which
+  `resolveDocumentLink` asks to fill in `target`, `tooltip` and `command` when the link is shown or followed. The
+  workbench registers `linkExtension` with every Source view and every raw box's code (see "File links").
+- **File decorations** (`FileDecorations`): `getFileDecorations(path)` gives every provider's, in registration
+  order; `onDidChangeFileDecorations` fires for any provider's change, and when one comes or goes.
+- **Source controls** (`SourceControls`): registered once per `id`, listed in order; `commit(message)` starts a
+  commit whose outcome shows in `state` (`busy` meanwhile; `status` one line).
 - **File views by kind.** `open(path)` shows a Typst file in the tabs and any other file in the view
   registered for `ProjectPath.kind(path)` (`FileViews`: created on first use, one per provider, shown again
   on every open so a replaced file shows its new content; nothing for a kind without a view). `images`
@@ -385,20 +411,22 @@ new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen?, sty
   while someone listens to `onDidDropFiles`, the drop hint (`typst-editor--dropping`) shows and the files go
   to the listeners. A view inside that stops the drop keeps it.
 - **View contributions by extension:** `typstLanguage` (`typstLanguage()`, `codeColors`; Visual: the same in raw
-  boxes), `documentLinks` (`fileLinks` + a link provider; Visual: `boxLinks`), `collaboration` (`presence`; Visual:
-  its `presence` contribution: an editor extension and a box code extension), `diagnostics` (`lint(collection)`;
+  boxes), `documentLinks` (a `DocumentLinkProvider`), `collaboration` (`sourcePresence`; Visual: `visualPresence`:
+  highlights, an editor extension and a box code extension; Workbench: `presenceDecorations`, the GitLab room's
+  source control), `diagnostics` (`lint(collection)`;
   Visual: highlights); `images` (Visual: `imagesVisualView`; Workbench: the `image` / `data` file views),
   `renderedBoxes` (Visual: `renderedBoxesVisualView`), `comments` (Visual: `marginNotes`, `notesGutter`; Preview:
-  the PDF variants), `labels` (Visual: `references`), `styles` (Visual: `customStyles`); `previewControls`
-  (`zoomControls`, `followCursor`, `pageNumber`), `pdfExport` (`pdfMenu`). The Visual view's constructs
+  the PDF variants), `labels` (Visual: `references`), `styles` (Visual: `customStyles`); `sourceControl`
+  (`SourceControlView` in the tab bar); `previewSync` (`followCursor`; reveal, clicks), `previewControls`
+  (`zoomControls`, `pageNumber`), `pdfExport` (`pdfMenu`). The Visual view's constructs
   (`markup`, `headings`, `tables`, `outline`, `pageLayout`, `lists`, `alignment`) are extensions in
   `extensions/<name>/`: the entry's `activate` registers specs, toolbar groups and items from its `visual-view/`
   folder through `context.visualView`. No host has built-in contributions any more.
 - **The active editor** (`activeTextEditor`, `onDidChangeTextEditorSelection`, VS Code's names): `comments`
   adds a note at its selection (and opens the note's card through its own notes gutter), `collaboration`
-  publishes its selection and draws the others' carets in it (`setPresence`).
+  publishes its selection, `previewSync` has the preview follow it.
 - Every extension lives in `extensions/<name>/` (the entry exports the extension factory, e.g. `images()`, and only
-  what other code needs). An extension imports no other extension: `images` reads the `documentLinks` service.
+  what other code needs). An extension imports no other extension.
   The extensions' Visual-view contributions are also exported for `testing/testing.ts` (a view with
   the built-ins, configured from test options).
 
@@ -525,10 +553,8 @@ Inside the crate:
 new VisualView(parent, document, contributions: VisualViewContributions)
 .reveal(from, to)    // select exactly what shows source range from..to (caret if empty)
 .setHighlights(layer, highlights)   // source ranges → inline decorations (sourceToPos, end with bias -1)
-.setPresence(presences)             // PresenceTarget: handed to the contributions (VisualViewContext.onDidChangePresence)
 .selection() → {from, to}           // posToSource; the end with bias -1
 .onDidChangeSelection: Event<void>  // after the selection moved or the text changed
-.focused() → boolean
 .destroy()
 
 // the contribution points (registered once; applied to every view created afterwards)
@@ -548,8 +574,8 @@ visualView.registerBoxCodeExtension((view) => codeMirrorExtension) → Disposabl
 // the constructs are extensions (extensions/: markup, headings, tables, outline, pageLayout, lists, alignment); the
 // features' contributions, each a VisualViewContribution = { id, activate({ visualView, subscriptions }) } shaped
 // like a TypstExtension, configured by their feature's extension, in extensions/<name>/visual-view/:
-// imagesVisualView({ assets, imageUrls, documentLinks }), renderedBoxesVisualView({ snippets }),
-// boxLinks({ documentLinks }), marginNotes({ comment }), notesGutter({ user }), presence, references({ labels }),
+// imagesVisualView({ assets, imageUrls, imageLinks }), renderedBoxesVisualView({ snippets }),
+// marginNotes({ comment }), notesGutter({ user }), visualPresence(presences, documents), references({ labels }),
 // customStyles({ styles, create })
 ```
 
@@ -569,8 +595,9 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
   framework (segmenting markup into blocks, source anchors, printing with the minimal change back,
   sync, the position map); paragraphs, text, line breaks, escapes and shorthands; raw Typst
   (`rawBlock` / `rawInline` in raw boxes, the fallback for whatever no spec models); the toolbar
-  with undo/redo, the "Insert" menu and the "Selection" bar; highlights; the presence target (it draws no
-  carets itself: the collaboration extension does). Every other
+  with undo/redo, the "Insert" menu and the "Selection" bar; highlights. Other users' carets are the
+  collaboration extension's, drawn through the generic points (highlights, an editor extension, a box code
+  extension, the context's position map). Every other
   construct (headings, lists, tables, …) is an extension (`extensions/<name>/visual-view/`) and every
   feature shown in the view (labels, comments, styles, …) a contribution of its extension, using only the contribution API the host's entry exports (the contribution types, the
   `projection/` toolkit, `starterKitPart`; and for tests `project` / `print` / `syncDoc` / `posToSource` /
@@ -600,8 +627,9 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
   raw box (images' renderer, 110, before compiled snippets). Toolbar items keep `group` + `order`. `attachGrammar` puts the specs on the schema (`schema.cached`), so `project(text,
   schema)` and `print(doc)` find them; `VisualView` attaches them to its editor's schema, tests use
   `createSchema` (the host's tests with their own specs; the built-ins' `schema` of `testing/testing.ts`).
-- **Per view**: providers get a `VisualViewContext` (`document`, `selection()`, `onDidChangePresence`: the
-  presences the view is given as `PresenceTarget`); a toolbar item's
+- **Per view**: providers get a `VisualViewContext` (`document`, `selection()`, `sourceToPos(doc, offset, bias?)` /
+  `posToSource(doc, pos, bias?)`: the position map over a document node of the view, e.g. a transaction's;
+  `isBox(node)`: shown as a box of its own); a toolbar item's
   `create(toolbar)` gets the `ToolbarContext` (the editor, the toolbar's root, `subscriptions`
   disposed with it, `element(group)`, `refresh()`). Contributions are registered once and applied
   to every view created afterwards.
@@ -806,9 +834,9 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
   nested CodeMirror (no own history), plus what contributions add: the spec's
   `codeBox` (a heading, e.g. an outline box's "Table of contents"; tools, e.g. an image box's,
   whose picture click then selects the box), the CodeMirror extensions of
-  `registerBoxCodeExtension` (`typstLanguage`: Typst syntax and code colors, as in the Source view; `boxLinks`:
-  the Source view's `pathLinks` extension, link tooltip on a path, Mod+click opens; no separate "Open …" row: it
-  took too much space; the collaboration extension's carets in the box) and the first `BoxRenderer`
+  `registerBoxCodeExtension` (`typstLanguage`: Typst syntax and code colors, as in the Source view; the
+  workbench's document links, as in the Source view: link tooltip on a path, Mod+click opens; no separate
+  "Open …" row: it took too much space; the collaboration extension's carets in the box) and the first `BoxRenderer`
   (`registerBoxRenderer`) that `renders` the box. A box hands its node's decorations to its code as the CodeMirror
   effect `setBoxDecorations` (when made and on every update), so a box code extension can draw what is marked on
   the box.
@@ -839,7 +867,8 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
     it is created before its box is attached, so it could not find that root itself and would
     read focus and selection from the document.
 - **Image tools** (`extensions/images/visual-view/image-tools.ts`, the image spec's `codeBox.tools`): the "Image: path"
-  heading (with the `documentLinks` service, the path opens the file: `imagePathLink`), a
+  heading (the path is the document link on it, from `Workbench.provideDocumentLinks`: it opens the file, or says
+  the file is missing: `imagePathLink`), a
   frame around the rendered picture sized from the call's `width` (`imageWidthCss`), and,
   while the image is selected (a click on the picture selects it; double-click, Enter or
   "Edit code" open the code): resize handles (corners, sides) and an "Image" toolbar
@@ -867,9 +896,9 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
   removes the numbering arguments. Rules in content blocks, show rules and numbering functions are
   not followed (the preview is exact).
 - **Remote presence** (the collaboration extension's `visual-view/`, Tiptap CollaborationCaret look, but fed from
-  our text sync; the view hands it the presences through `VisualViewContext.onDidChangePresence`):
-  a caret is a widget decoration (bar + name flag, always shown) at `sourceToPos(head)`, so it
-  shows in empty paragraphs too; a selection uses the highlight layers' range decorations. A
+  our text sync; it reads the places from its own `Presences`, the view host knows nothing of them):
+  a caret is a widget decoration (bar + name flag, always shown) at `view.sourceToPos(doc, head, -1)`, so it
+  shows in empty paragraphs too; a selection is a highlight (`registerHighlights('collaboration.selections')`). A
   caret inside a box (block atoms — raw blocks, images, outlines, page breaks, rules — from
   their first character to their line end; inline atoms whose spec has a `box`, `rawInline` /
   `marginNote`, strictly inside) outlines
@@ -888,30 +917,25 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
 ```ts
 interface SourceViewContributions {                          // what ExtensionContext.sourceView offers
   registerExtension(extension: SourceViewExtension): Disposable     // CodeMirror extensions for every view
-  registerLinkProvider(provider: (document) => DocumentLinkProvider | null): Disposable
 }
 type SourceViewExtension = Extension | ((view: SourceViewContext) => Extension)
-interface SourceViewContext { document, documentLinks: DocumentLinkProvider | null,
-                              onDidChangePresence(listener: (presences) => void): Disposable }
+interface SourceViewContext { document }
 
 new SourceViewHost()                         // implements SourceViewContributions
-.createView(parent, document, { onCursor?, onSelection? }) → SourceView
+.createView(parent, document, { onSelection? }) → SourceView
 
 SourceView
 .reveal(from, to)    // select, scroll to center, highlight (the one highlight the host draws itself)
-.setPresence([{id, user: {name, color}, anchor, head}])      // PresenceTarget: handed to onDidChangePresence
 .selection() → {from, to}
 .destroy()
 ```
 
 - **The host keeps the mechanism**: CodeMirror bound to a `TypstDocument` in both directions (`basicSetup`,
-  line wrapping, the reveal highlight), selection and cursor reporting, and the presence target (it draws no
-  carets itself: the collaboration extension's `presence` does). Everything
+  line wrapping, the reveal highlight) and selection reporting. Everything
   else is a contribution. A contribution is registered once and applies to every view, those made before
   (their `Compartment` is reconfigured; state of extensions kept in the new configuration survives, e.g.
   the carets shown) and those made later; disposing it removes it from all of them. A function extension
-  is called per view with its `SourceViewContext`: its document, the links of the first link provider that
-  has some for that document, and the presence handed to the view.
+  is called per view with its `SourceViewContext`: its document.
 - **Contributions from `extensions/`**:
   - `typstLanguage()` (`extensions/typst-language/source-view/typst-syntax.ts`, also in the raw boxes) — the
     Typst language support (`codemirror-lang-typst/lezer`: a pure-JS Lezer parser using typst-syntax node names,
@@ -919,12 +943,14 @@ SourceView
     error source; its indentation service is wrapped so that Enter right after a closed construct like
     `#set page(..)` does not indent, which 0.6.0 gets wrong).
   - `codeColors` (`extensions/typst-language/source-view/code-colors.ts`) — see "Dark mode".
-  - `fileLinks` (`extensions/document-links/source-view/`) — see "File links".
+  - the workbench's document links (`hosts/workbench/document-links/`, the links of every
+    `DocumentLinkProvider`) — see "File links".
   - `lint(diagnostics)` (`extensions/diagnostics/source-view/`, see "Diagnostics in the widget").
-  - `presence` (`extensions/collaboration/source-view/`, y-codemirror style): each caret is a widget (bar + dot,
-    also on empty lines); its name flag shows on hover and for 2.5 s after the caret moved (the widget is re-created
-    only then: `moves` counts in its equality). Selections are tinted marks. Its `remotePresence` field (fed by the
-    `setPresence` effect) also draws the carets in the Visual view's raw boxes.
+  - `sourcePresence(presences)` (`extensions/collaboration/source-view/`, y-codemirror style): each caret is a
+    widget (bar + dot, also on empty lines); its name flag shows on hover and for 2.5 s after the caret moved (the
+    widget is re-created only then: `moves` counts in its equality). Selections are tinted marks. It starts with
+    the places known when the view is made and follows `Presences.onDidChange`; its `remotePresence` field (fed by
+    the `setPresence` effect) also draws the carets in the Visual view's raw boxes.
 - **Hidden:** CodeMirror's view and state, translating ChangeSets to and from `TextChange[]`, and the
   annotation that stops document-originated transactions from being written back.
 
@@ -935,30 +961,33 @@ interface PreviewContributions {                             // what ExtensionCo
   registerToolbarItem(item: (preview: PreviewContext) => { elements, update?(), dispose?() }): Disposable
   registerPdfVariant({ label, create() → Promise<{blob, name}> }): Disposable
   createOverlay(className) → { set(boxes: Box[]), dispose() }   // boxes in pt on their page
+  reveal(path, from, to)                                       // cheap per cursor move: scroll to the range's start, only if off-screen (no marker)
+  onDidClickPage: Event<{ path, from, to }>                    // a click on something with a source location
   onDidChangeDiagnostics: Event<Diagnostic[]>                  // of the newest update(), never stale
   onDidRender: Event<void>                                     // after every successful compile
   snippet(path, from, to, text) → Promise<{svg, width, height, textHeight, padding} | null>   // the range as drawn, cut from its page
   exportPdf(main, sources = {}) → Promise<PdfResult>   // the files of the last update(), sources replacing/adding texts
 }
 interface PreviewContext { ownerDocument, zoom(), setZoom(zoom), scale(), visiblePage() → {index, count},
-                           isFollowing(), setFollowing(on), pdfVariants() }
+                           pdfVariants() }
 
-new Preview(container, { onJump? })          // implements PreviewContributions; renders a toolbar +
+new Preview(container)                       // implements PreviewContributions; renders a toolbar +
                                              // scrolling page area into container
 .update(files: Record<path, text | Uint8Array>, main)    // cheap per keystroke
-.reveal(path, offset)                        // cheap per cursor move: scroll only if off-screen (no marker); nothing while not following
 .destroy()
 ```
 
 - **The host keeps the mechanism**: the engine worker and its protocol, coalesced compiles, the page list,
-  hit-testing (with the click highlight), scrolling and reveal, and the view state toolbar items read and
-  set through `PreviewContext`: zoom, which page is visible, whether `reveal` follows ("Follow cursor";
-  on by default; switching it on goes to the newest reveal). Toolbar items are placed in registration
-  order; their `update()` runs at most once per frame after a scroll, resize, zoom or new pages.
-- **Toolbar items** come from extensions (the host has none of its own): `preview-controls`
+  hit-testing (with the click highlight; `onDidClickPage`), scrolling and `reveal`, and the view state
+  toolbar items read and set through `PreviewContext`: zoom, which page is visible. When to reveal what, and
+  where a click leads, is the `preview-sync` extension's (see "createTypstEditor"). Toolbar items are placed in
+  registration order; their `update()` runs at most once per frame after a scroll, resize, zoom or new pages.
+- **Toolbar items** come from extensions (the host has none of its own): `preview-sync`
+  (`extensions/preview-sync/preview/`) registers `followCursor({ on, onChange })` (a `role=switch`; the choice is
+  remembered in localStorage; switching it on reveals the selection at once); `preview-controls`
   (`extensions/preview-controls/preview/`) registers `zoomControls` (− / + to the neighbouring preset of
-  25 %–400 %, Fit, 100 %, and "Fit · 83%" / "125%"; presets and labels in its `model/zoom.ts`),
-  `followCursor({ on, onChange })` (a `role=switch`) and `pageNumber` ("3 / 12"); `pdf-export`
+  25 %–400 %, Fit, 100 %, and "Fit · 83%" / "125%"; presets and labels in its `model/zoom.ts`)
+  and `pageNumber` ("3 / 12"); `pdf-export`
   (`extensions/pdf-export/preview/`) registers `pdfMenu` (below).
 - **Page overlays** (`createOverlay`, `pages/overlays.ts`): boxes in pt, drawn as children of the page
   elements in percent of the page, so they survive zoom and lazy unmounting; drawn again after every
@@ -1030,7 +1059,7 @@ worker → main   {id, type:'compile', result} | {id, type:'click', jump} | {id,
 ### Labels and references (`src/extensions/labels`)
 
 ```ts
-labels(): TypstExtension     // one LabelIndex (the `labels` service, disposed with the widget) + references({ labels })
+labels(): TypstExtension     // one LabelIndex (disposed with the widget) + references({ labels })
 // model/ (no DOM)
 new LabelIndex(project)        // implements ProjectLabels (what the Visual view reads)
 .labels() → LabelInfo[]        // { name, kind: heading|figure|table|listing|equation|bibliography|null, title, path }
@@ -1088,7 +1117,7 @@ doc comment; the editor never keeps a registry of its own:
 ```
 
 ```ts
-styles(): TypstExtension     // one StyleIndex (the `styles` service, disposed with the widget) + customStyles(..) + "New style…"
+styles(): TypstExtension     // one StyleIndex (disposed with the widget) + customStyles(..) + "New style…"
 // model/ (no DOM)
 scanStyles(text) → [{ name, kind: paragraph|text, label }]   // `///` line + `#let f(body, named: ..)` (one positional parameter)
 new StyleIndex(project)        // implements ProjectStyles (what the Visual view reads)
@@ -1219,8 +1248,8 @@ new Layout(host, storageKey)   .editor  .preview  .statusBar   // the editing co
 ```ts
 files({ fileList? })  fileNavigation(): TypstExtension   // the side panel, the frame links (images / data files: the images extension)
 // workbench/:
-new FilePanel(parent, { onOpen(path), onChange(change) → Promise<reason | null>, memory? }, state)
-.render({ paths, main, active })   .showPresence(placedPresences)   .upload(files)   .destroy()
+new FilePanel(parent, { onOpen(path), onChange(change) → Promise<reason | null>, memory?, decorations?(path) }, state)
+.render({ paths, main, active })   .upload(files)   .destroy()
 // workbench/tree/: new FileTree(parent, { onOpen, onRename, onDelete, onMove(source, folder), onUpload(files, folder), memory? })
 // workbench/icons/: icon(doc, name) — a leaf folder, so the tree and the panel both take it from below
 // model/ (pure): buildTree(paths, emptyFolders), visibleRows(tree, expanded), navigate(rows, current, key),
@@ -1234,8 +1263,9 @@ new FilePanel(parent, { onOpen(path), onChange(change) → Promise<reason | null
 - **Tree**: folders first, then files, both by name (`Intl.Collator`, numeric). `role=tree`, one
   `treeitem` per visible row (`aria-level`, `aria-expanded`, `aria-selected` on the shown file;
   roving tabindex). Open folders are remembered (`memory`, the Layout's session store); the
-  folders around the shown file open when it changes. Presence dots per file, and on a closed
-  folder for the files inside.
+  folders around the shown file open when it changes. The files' decorations (`Workbench.getFileDecorations`, from
+  every `FileDecorationProvider`, e.g. who else is in a file) as badges in their color, and on a closed folder the
+  propagating ones of the files inside (each once); drawn again on `onDidChangeFileDecorations`.
 - **The focused row** (click, keyboard; else the shown file) is what Rename / Delete / F2 /
   Delete act on and where New file, New folder and Upload put things. The main file and a folder
   holding it cannot be renamed, moved or deleted.
@@ -1244,37 +1274,45 @@ new FilePanel(parent, { onOpen(path), onChange(change) → Promise<reason | null
   top level) is relocated there; files from the computer dropped on a row are uploaded into that
   folder (the tree stops the drop, so the widget-wide handler does not upload them again).
 
-### File links (`src/core/document-links/`, `src/extensions/document-links/`)
+### File links (`src/core/document-links/`, `src/hosts/workbench/document-links/`, `src/extensions/document-links/`)
 
 ```ts
-new DocumentLinkProvider(workspace: LinkWorkspace)        // one per document
-  .provideDocumentLinks(text, { tree?, from?, to? }) → DocumentLink[]   // { path, from, to, call }; call: import | include | image | …
-  .documentLinkAt(text, offset, tree?) → DocumentLink | null             // the string holding offset (quotes included)
-  .resolveDocumentLink(reference) → LinkTarget | null                    // { path, name, exists, creatable }; creatable: a missing .typ file
-  .followDocumentLink(target) → Promise<reason | null>                  // open, or create a missing .typ file (and open it)
-interface LinkWorkspace { resolve(reference) → path | null; exists(path); open(path); create(path) → Promise<reason | null> }
-documentLinks(): TypstExtension                    // a provider per document: link provider, `documentLinks` service, boxLinks
-fileLinks: SourceViewExtension (pathLinks of the view's link provider)
-pathLinks(provider) → CodeMirror extension          linkInfo(doc, provider, reference, { hint? }) → "Open …" / "Create …" DOM
+// core/document-links (Typst syntax only)
+findFilePaths(text, { from?, to? }) → PathInSource[]   // { path: PathReference, from, to, call }; call: import | include | image | …
+readingOrder(read, main) → ProjectPath[]              neighbours(read, main, path) → { previous, next } | null
+// the workbench (see "Extensions")
+workbench.registerDocumentLinkProvider({ provideDocumentLinks({ path, text }) → DocumentLink[], resolveDocumentLink?(link) },
+                                       { priority? }) → Disposable
+// DocumentLink { range: {from, to}, target?: ProjectPath, tooltip?, command?: { title, run() → Promise<reason | null> } }
+linkExtension({ path(), provideDocumentLinks, resolveDocumentLink, open(target) }) → CodeMirror extension   // hosts/workbench
+// extensions/document-links
+documentLinks(): TypstExtension                       // one provider: the file paths of a text
 ```
 
-- **One definition** of what a path reference is (Lezer, `codemirror-lang-typst`): the string of
+- **One definition** of what a path reference is (`findFilePaths`; Lezer, `codemirror-lang-typst`): the string of
   `import "…"` / `include "…"` and the first positional string argument of `image`, `read`,
   `json`, `csv`, `yaml`, `toml`, `xml`, `cbor`, `bibliography` (also the strings of a
   bibliography array); escapes decoded; packages (`@…`), empty strings, named arguments, computed
-  paths and methods (`image.decode`) are not references. Callers with a parsed tree (an editor's
-  `syntaxTree`) pass it, and a range to look at the visible part only.
-- **Source view** (`fileLinks`, with the provider from `SourceViewHost.registerLinkProvider`): paths are marked (`typst-source__path`, underlined on hover, a
-  pointer while Ctrl/⌘ is held: `typst-source--mod`); Mod+mousedown on one opens an existing file
-  (else CodeMirror's own Mod+click); Alt+Enter opens the file whose path holds the cursor (F12
-  was avoided: browsers take it for the developer tools); the hover tooltip is `linkInfo`: "Open
-  x (Ctrl+click or Alt+Enter)", or "x is not in the project" + "Create x" for a `.typ` file
-  (showing the host's refusal).
-- **Visual view** (`boxLinks`, `registerBoxCodeExtension`): the nested CodeMirror of every raw box gets `pathLinks`
-  (the same tooltip as the Source view; no "Open …" row); an image box's path is a button (the `images`
-  extension, with the `documentLinks` service).
-- **Workbench**: `open` shows the file (the panel selects it and opens its folders); `create` asks
-  for a `create` change like the panel's New file.
+  paths and methods (`image.decode`) are not references.
+- **Links are VS Code's** (decided 2026-10-10): any extension registers a `DocumentLinkProvider` with the
+  workbench; both views show the links of all of them, merged (overlapping ranges: the higher `priority` wins;
+  equal: registered first). `provideDocumentLinks` is cheap (ranges); `resolveDocumentLink` fills in `target`,
+  `tooltip` and `command` when a link is hovered or followed (the workbench remembers each link's provider).
+- **The `documentLinks` extension** is one provider: a path's link resolves from its file's path; an existing file
+  is its `target`; a missing one gets the tooltip "x is not in the project", and a missing `.typ` file the command
+  "Create x" (a `create` change through `Workbench.applyChange`, then `open`; resolves to the host's refusal); a
+  path leaving the project resolves to nothing (marked, but no hover).
+- **Source view and raw boxes** (`linkExtension`, registered by the workbench host with every Source view and, through
+  `registerBoxCodeExtension`, every raw box's code; the text's path is its file's, a box's text is its code): links
+  are marked (`typst-source__path`, underlined on hover, a pointer while Ctrl/⌘ is held: `typst-source--mod`);
+  Mod+mousedown on one opens its target (else CodeMirror's own Mod+click); Alt+Enter opens the target of the link
+  holding the cursor (F12 was avoided: browsers take it for the developer tools); the hover (`linkInfo`) offers
+  "Open x (Ctrl+click or Alt+Enter)", shows the tooltip, and a button for the command that shows why it failed.
+  The links are computed again on every change of the text.
+- **Image boxes**: the `images` extension shows an image box's path as the first link in its code
+  (`Workbench.provideDocumentLinks` + `resolveDocumentLink`): a button opening the target, or the path marked
+  missing with the link's tooltip.
+- **Workbench**: `open` shows the file (the panel selects it and opens its folders).
 
 ### Diagnostics in the widget (`src/extensions/diagnostics`)
 
@@ -1469,31 +1507,32 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
   `onCommentsChange`, the `comments` getter/setter, the element's `.comments` and
   `commentschange`, and the `CommentsData` / `TypstEditorCommentsChangeDetail` types.
 
-### Collaboration (`src/extensions/collaboration`, `src/extensions/versions`, `server/`)
+### Collaboration (`src/extensions/collaboration`, `src/extensions/source-control`, `server/`)
 
 ```
-collaboration.ts        eager entry: collaboration(options, user?) (the extension), CollaborationSession (the service)
-collaboration-link.ts   CollaborationLink: import()s model/ on demand, publishes the selection, shows the cursors
+collaboration.ts        eager entry: collaboration(options, user?) (the extension)
+collaboration-link.ts   CollaborationLink: import()s model/ on demand, publishes the selection, reports the places
+presence/               eager, pure: Presence, PlacedPresence, PresenceSource, Presences (everyone's places), initials
 model/                  the lazily loaded chunk (Yjs, Hocuspocus; no DOM): Collaboration (model.ts), SharedProject,
-                        SharedAssets, RemoteCursors, RoomVersions (their protocol: core/gitlab-protocol, also the server's)
-source-view/            presence: carets + selections in a CodeMirror editor (remotePresence, setPresence)
-visual-view/            presence: VisualViewContribution (decorations, box outlines; boxPresence for raw boxes' code)
+                        SharedAssets, RemoteCursors, GitLabSourceControl (their protocol: core/gitlab-protocol, also
+                        the server's)
+source-view/            sourcePresence: carets + selections in a CodeMirror editor (remotePresence, setPresence);
+                        caretElement, presenceStyle (the caret's DOM, also the Visual view's)
+visual-view/            visualPresence: selections as highlights, carets and box outlines (an editor extension),
+                        boxPresence for raw boxes' code
+workbench/              presenceDecorations: a FileDecorationProvider (who is in which file)
 ```
 
 ```ts
 createTypstEditor(host, { …, user?: {name, color?},
   collaboration?: { doc: Y.Doc, awareness?: Awareness } | { url, room, token? } })
 
-// the `collaboration` service (for extensions after it in the list; only with the option)
-interface CollaborationSession {
-  onDidChangePresence: Event<readonly PlacedPresence[]>          // everyone else, in every file (the file panel)
-  onDidConnectVersions(listener: (versions: RoomVersions) => void): Disposable  // GitLab rooms; at once when late
-}
-
 Collaboration.start(options, { project, user }) → Promise<Collaboration>   // url: waits for the first sync
-.setCursor(path | null, range?)   .showCursors(path | null, views: PresenceTarget[])   .destroy()
+.setCursor(path | null, range?)   .destroy()
 .onPresence((presences: PlacedPresence[]) => …)   // everyone else, in every file, once per change
-.versions → RoomVersions | null      // GitLab rooms: .save(message, author?), .onMessage(fn)
+.sourceControl → GitLabSourceControl | null   // GitLab rooms: a workbench SourceControl (commit(message), state)
+
+new Presences(pathOf)   .set(placed)   .presencesIn(document)   .presencesAt(path)   .onDidChange
 ```
 
 **Only text is shared** — ProseMirror/Tiptap and CodeMirror never sync directly; they keep
@@ -1504,7 +1543,7 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
 | `files` (`FILES_MAP`): `Y.Map<path, Y.Text>` | the text of every `.typ` file | `SharedProject`; read and merged by `GitLabRoom` |
 | awareness state | `user: {name, color}`, `cursor: {path, anchor, head}` (relative positions) | `RemoteCursors` |
 | `assets`: `Y.Map<path, sha \| Uint8Array>` | GitLab rooms only: the other files (blob sha, or uploaded bytes not committed yet) | `SharedAssets` (clients), `GitLabRoom` (server) |
-| `meta`: `Y.Map` | GitLab rooms only, written by the server: `baseSha`, `base` (path → text), `baseAssets` (path → sha), `lastCommits` (path → commit) | `GitLabRoom`; read by `RoomVersions` |
+| `meta`: `Y.Map` | GitLab rooms only, written by the server: `baseSha`, `base` (path → text), `baseAssets` (path → sha), `lastCommits` (path → commit) | `GitLabRoom`; read by `GitLabSourceControl.isGitLabRoom` |
 
 - **`SharedProject`**: binds each project document to its Y.Text (`TypstDocument.share`) and
   keeps the *set* of files in step: local create / rename / delete (and `sync()` after
@@ -1514,15 +1553,19 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
   rebinds to the winner's Y.Text (one remote change; views survive). A rename is a new
   Y.Text (its Yjs history starts over); the renaming client keeps its document and views.
 - **`RemoteCursors`** owns awareness and the Y relative positions: publishes the local selection
-  and resolves the others' into `Presence`s (`{id: clientID, user: {name, color}, anchor, head}`,
-  source offsets) once per microtask after a change of the shown text or of presence. The shown
-  file's views get them through `PresenceTarget.setPresence`; the views hand them to the extension's own drawing
-  (`source-view/`, `visual-view/`: see SourceView / VisualView); `onPresence` gets everyone in every file (with `path`),
-  only when that changed. Colors: the user's, else a palette entry by name; flag text black or
-  white by WCAG contrast (`flagTextColor`). CSS: `--typst-remote-color`, `--typst-remote-text`.
-- **Widget presence**: the views of the shown file (above) and the file panel
-  (the `collaboration` service's `onDidChangePresence` → `FilePanel.showPresence`: a dot with initials per user on the files they are in). Not the
-  preview (decision 2026-10-10: carets there were noise; the preview is the output).
+  and resolves the others' into `PlacedPresence`s (`{id: clientID, user: {name, color}, anchor, head, path}`,
+  source offsets) once per microtask after any change of the shared texts (Y.Doc `update`) or of presence;
+  `onPresence` gets everyone in every file, only when that changed. Colors: the user's, else a palette entry by
+  name; flag text black or white by WCAG contrast (`textColorOn`, `ui/color-scheme`). CSS: `--typst-remote-color`,
+  `--typst-remote-text`.
+- **Presence out of the hosts** (decided 2026-10-10): the hosts know no presence. The extension keeps everyone's
+  places in its own `Presences` and draws them itself through generic contribution points, in every view of every
+  file (hidden ones too, so a tab switch shows them at once): a CodeMirror extension in the Source views
+  (`sourcePresence`); highlights for selections, an editor extension for carets and box outlines (using the view
+  context's `sourceToPos` / `posToSource` / `isBox`) and a box code extension in the Visual views
+  (`visualPresence`); and a `FileDecorationProvider` (`presenceDecorations`: initials in the user's color, the
+  name as tooltip, propagated to closed folders), which the file panel shows. Not the preview (decision
+  2026-10-10: carets there were noise; the preview is the output).
 - **Why not Tiptap's Collaboration / CollaborationCaret** (decision): they are built on
   y-prosemirror, which makes the ProseMirror document the shared truth (a Y.XmlFragment). Here
   the Typst text is the truth (one Y.Text per file) and the Visual view is a projection of it;
@@ -1530,13 +1573,14 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
   view and preview all follow the text). So the sync stays text-based and only the *look* of the
   carets follows Tiptap / y-codemirror.
 - **The `collaboration` extension (`collaboration.ts` + `CollaborationLink`, outside the chunk)**: registers the
-  presence drawing in both views, provides the `collaboration` service and `import()`s `model/model.ts` on demand
+  presence drawing and decorations, registers a GitLab room's source control once connected, and `import()`s
+  `model/model.ts` on demand
   (own chunk, ~37 kB gzip
   with Yjs and the Hocuspocus provider), publishes the selection when the editing views report a change
   (`Workbench.onDidChangeTextEditorSelection` → `selectionChanged()`, once per microtask, while focus is in the
   editing area (`Workbench.isEditorFocused`);
   not on the DOM's `selectionchange`, which fires before CodeMirror/ProseMirror read the new
-  selection and so published the previous one), and moves the cursors along when another file is shown.
+  selection and so published the previous one).
 - **Server (`server/`)**: `collabConfiguration({ storage?, database?, authenticate?, debounce?, gitlab?, extensions? })`
   → Hocuspocus configuration; `createCollabServer({ port, … })`. Storage keeps every room's Yjs
   state (`onLoadDocument` / `onStoreDocument`; default `@hocuspocus/extension-sqlite`).
@@ -1544,7 +1588,7 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
   `sharedToken(TYPST_COLLAB_TOKEN)` allows all when unset. The server looks inside the Y.Doc
   only in GitLab rooms.
 
-#### GitLab-backed rooms (`server/src/gitlab`, `src/extensions/collaboration/model/room-versions.ts`, `shared-assets.ts`, `src/extensions/versions`)
+#### GitLab-backed rooms (`server/src/gitlab`, `src/extensions/collaboration/model/gitlab-source-control.ts`, `shared-assets.ts`, `src/extensions/source-control`)
 
 A room named `gitlab:<project id or path>@<branch>` is that branch (`parseRoomName`). The server
 config (`gitlab: {url, token, webhookSecret?, authorEmail?, fetch?}`, from `TYPST_GITLAB_*` in
@@ -1584,13 +1628,14 @@ HTTP             GET /rooms/<room>/files/<path> (Authorization: Bearer <room tok
     Assets: upstream wins where the room did not change them.
   - `BlobCache` (shared, LRU by bytes) keeps blob bytes by sha for the files endpoint.
 - **Widget**: `Collaboration` (server mode only) sees `meta.baseSha` after the first sync and adds
-  `RoomVersions` (`save`, `onMessage` over the provider's
-  stateless channel) and `SharedAssets` (assets ↔ project's other files; repository files
+  `GitLabSourceControl` (a workbench `SourceControl`, VS Code's shape: `commit(message)` sends `gitlab:save` as the
+  collaboration `user` over the provider's stateless channel; `state` is `busy` until the answer and `status` the
+  outcome as one line (`commitStatus`: "Saved version 01234567 (Ann)", "Merged new changes from GitLab", …), also for
+  other clients' saves and upstream merges) and `SharedAssets` (assets ↔ project's other files; repository files
   fetched from the files endpoint, uploads as bytes; bytes → sha after a commit is not a
-  change). `CollaborationLink` passes `versions` to the `collaboration` service (`onDidConnectVersions`); the
-  `versions` extension then puts `VersionControls` into the tab bar
-  (`src/extensions/versions/workbench/version-controls.ts`): "Save version" + commit-message popover + status line
-  (its text: `versionStatus` in `model/`).
+  change). The extension registers the source control with `Workbench.registerSourceControl`; the
+  `source-control` extension (only the UI over registered source controls, `SourceControlView`) puts "Save to
+  GitLab…" + commit-message popover + status line (`.typst-editor__source-control-status`) into the tab bar.
 
 ### Demo playground (`demo/`, `server/src/playground`)
 
@@ -1668,11 +1713,10 @@ an in-memory `FakeGitLab` holding `demo/examples/advanced`). Checklist with step
   version and overwrites upstream on save; GitLab-side renames are seen as delete + create; no
   GitLab sign-in yet (the token check is the stub, the author's name comes from the client); the
   room's main file must exist in the repository (else the widget's empty main is committed).
-  `{ doc }` mode has no versions.
+  `{ doc }` mode has no source control.
 - **Collaboration:** images and other non-`.typ` files are not shared (outside GitLab rooms). `{ doc }` mode needs the
   widget and the host on the same Yjs instance (`dist/lib` bundles its own Yjs). In `{ doc }`
   mode the host must pass a synced Y.Doc; with `{ url }` an unreachable server leaves the widget
-  local. Presence in the file panel is re-resolved on presence changes only (not on
-every edit of a file not shown). In the Visual view a caret inside hidden markup (delimiters,
+  local. In the Visual view a caret inside hidden markup (delimiters,
 markers, blank lines) is drawn at the visible spot before it (the end of the line it ends), so a
 caret at the end of a line never jumps to the start of the next one.
