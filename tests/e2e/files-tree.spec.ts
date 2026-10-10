@@ -94,16 +94,18 @@ test('narrow: the panel is an overlay that closes after choosing a file', async 
   await expect(fileRow(page, 'template.typ')).toHaveAttribute('aria-selected', 'true');
 });
 
-test('an included file links the files before and after it in the main file\'s include order', async ({ page }) => {
-  const navigation = (name: string) => page.locator('typst-editor').getByRole('navigation', { name }).filter({ visible: true });
-  await expect(navigation('Previous file')).toHaveCount(0); // the main file has none
+test('an included file links the files before and after it, at its start and its end', async ({ page }) => {
+  const bars = page.locator('nav.typst-editor__file-nav:visible');
+  const link = (where: 'top' | 'bottom', name: string) => page.locator(`nav.typst-editor__file-nav--${where}:visible`).getByRole('button', { name });
+  await expect(bars).toHaveCount(0); // the main file has none
   await openFile(page, 'chapters/method.typ');
-  await expect(navigation('Previous file')).toHaveText('← chapters/introduction.typ');
-  await expect(navigation('Next file')).toHaveText('chapters/results.typ →');
-  await navigation('Next file').getByRole('button').click();
+  for (const where of ['top', 'bottom'] as const) {
+    await expect(page.locator(`nav.typst-editor__file-nav--${where}:visible`).getByRole('button')).toHaveText(['← chapters/introduction.typ', 'chapters/results.typ →']);
+  }
+  await link('bottom', 'chapters/results.typ →').click();
   await expect(fileRow(page, 'chapters/results.typ')).toHaveAttribute('aria-selected', 'true');
-  await expect(navigation('Next file')).toHaveCount(0); // the last one
-  await navigation('Previous file').getByRole('button').click();
+  await expect(page.locator('nav.typst-editor__file-nav--top:visible').getByRole('button')).toHaveText(['← chapters/method.typ']); // the last one
+  await link('top', '← chapters/method.typ').click();
   await expect(fileRow(page, 'chapters/method.typ')).toHaveAttribute('aria-selected', 'true');
 });
 

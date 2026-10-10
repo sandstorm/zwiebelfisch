@@ -3,27 +3,29 @@
 import { describe, expect, it, vi } from 'vitest';
 import { FileNavigation } from './file-navigation';
 
+const texts = (bar: HTMLElement) => [...bar.querySelectorAll('button')].map((b) => b.textContent);
+
 describe('FileNavigation', () => {
-  it('links the previous file at the top and the next file at the bottom; a click opens it', () => {
+  it('links the previous and the next file both at the top and at the bottom; a click opens it', () => {
     const open = vi.fn();
     const navigation = new FileNavigation(document, open);
     navigation.show({ previous: '/chapters/introduction.typ', next: '/chapters/results.typ' });
-    const top = navigation.top.querySelector('button')!;
-    const bottom = navigation.bottom.querySelector('button')!;
-    expect(navigation.top.hidden).toBe(false);
-    expect(top.textContent).toBe('← chapters/introduction.typ');
-    expect(top.title).toBe('Previous file: chapters/introduction.typ');
-    expect(bottom.textContent).toBe('chapters/results.typ →');
-    top.click();
-    expect(open).toHaveBeenLastCalledWith('/chapters/introduction.typ');
-    bottom.click();
+    for (const bar of [navigation.top, navigation.bottom]) {
+      expect(bar.hidden).toBe(false);
+      expect(texts(bar)).toEqual(['← chapters/introduction.typ', 'chapters/results.typ →']);
+    }
+    expect(navigation.top.querySelector('button')!.title).toBe('Previous file: chapters/introduction.typ');
+    navigation.bottom.querySelector<HTMLButtonElement>('button:last-child')!.click();
     expect(open).toHaveBeenLastCalledWith('/chapters/results.typ');
+    navigation.top.querySelector('button')!.click();
+    expect(open).toHaveBeenLastCalledWith('/chapters/introduction.typ');
   });
 
-  it('hides the bottom link after the last file, and both for files outside the reading order', () => {
+  it('has no next link after the last file, and no bars outside the reading order', () => {
     const navigation = new FileNavigation(document, () => {});
     navigation.show({ previous: '/main.typ', next: null });
-    expect([navigation.top.hidden, navigation.bottom.hidden]).toEqual([false, true]);
+    expect(texts(navigation.top)).toEqual(['← main.typ']);
+    expect(texts(navigation.bottom)).toEqual(['← main.typ']);
     navigation.show(null);
     expect([navigation.top.hidden, navigation.bottom.hidden]).toEqual([true, true]);
   });

@@ -166,8 +166,8 @@ createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileCha
   `setFrame(top, bottom)` keeps two elements first and last in the visible pane (they scroll with
   the file). The widget puts `FileNavigation` there: for a file the main file `#include`s
   (`neighbours(files, main, path)` from `reading-order.ts`, recomputed on open and every change),
-  a link to the file read before it at the top and to the one after it at the bottom; nothing
-  for the main file or files outside the include order.
+  links to the file read before it and the one after it, both at the top and at the bottom;
+  nothing for the main file or files outside the include order.
 - **`FilePanel`** (see "File panel" below) lives in the `Layout`'s `files` panel: open by default
   when `fileList` is `show`, or `auto` with more than one file; `hide` removes it with its rail
   button. A requested change passes `project.check`, then the host's `allowFileChange` (async
