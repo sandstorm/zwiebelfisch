@@ -59,9 +59,13 @@ const sharedTheme = {
   '&.cm-focused': { outline: 'none' },
 };
 const blockTheme = CodeView.theme(sharedTheme);
+/**
+ * Inline boxes must stay inline-level: CodeMirror's base theme makes the editor `display: flex !important`,
+ * and a block inside the box's <span> splits it into three lines (before, the editor, after).
+ */
 const inlineTheme = CodeView.theme({
   ...sharedTheme,
-  '&': { display: 'inline-flex', verticalAlign: 'baseline' },
+  '&': { display: 'inline-flex !important', verticalAlign: 'baseline' },
   '.cm-scroller': { ...sharedTheme['.cm-scroller'], overflow: 'visible' },
 });
 
