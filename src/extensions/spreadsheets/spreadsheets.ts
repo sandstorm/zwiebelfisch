@@ -3,8 +3,8 @@
 // See ARCHITECTURE.md, "Spreadsheets".
 // Why the extension stores the Typst file: documents import `name.ic.gen.typ`, never the workbook, so the Typst
 // side needs no spreadsheet engine; the view only reports edits, the extension decides what the project gets.
-import type { Project } from '../../core/project/project';
-import type { ProjectPath } from '../../core/paths/paths';
+import type { FileChange, Project } from '../../core/project/project';
+import { ProjectPath } from '../../core/paths/paths';
 import type { TypstExtension, Workbench } from '../../hosts/workbench/workbench';
 import css from './spreadsheets.css?inline';
 import { typstPath } from './model/model';
@@ -28,10 +28,12 @@ export function spreadsheets(): TypstExtension {
   };
 }
 
-/** Stores an edit of spreadsheet `path`: its bytes, and its Typst file next to it (`typstPath`). */
+/** Stores an edit of spreadsheet `path`: its bytes, and its Typst file next to it (`typstPath`); a refusal is an error message. */
 function save(project: Project, workbench: Workbench, path: ProjectPath, { bytes, typst: content }: WorkbookEdit): void {
-  void workbench.applyChange({ kind: 'update', path, content: bytes });
+  const store = (change: FileChange) =>
+    void workbench.applyChange(change).then((problem) => problem && workbench.showErrorMessage(`${ProjectPath.displayName(change.path)} not saved: ${problem}`));
+  store({ kind: 'update', path, content: bytes });
   const target = typstPath(path);
   if (project.content(target) === content) return;
-  void workbench.applyChange(project.has(target) ? { kind: 'update', path: target, content } : { kind: 'create', path: target, content });
+  store(project.has(target) ? { kind: 'update', path: target, content } : { kind: 'create', path: target, content });
 }

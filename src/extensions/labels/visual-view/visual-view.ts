@@ -4,7 +4,7 @@ import { Extension } from '@tiptap/core';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { guardAfterReference, referenceSyntax, type ProjectLabels } from '../model/model';
 import { svg, type Action, type ToolbarContext, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
-import { canStartNewLabel, labelTags, startNewLabel } from './label-tags';
+import { canStartNewLabel, labelTags, startNewLabel, type LabelPrompts } from './label-tags';
 import { referenceHints } from './reference-hints';
 import { Reference } from './reference-node';
 import { referenceSuggestion } from './reference-suggestion';
@@ -15,6 +15,8 @@ export interface ReferencesOptions {
    * missing), and a label can be renamed with its references in every file (default: label tags only).
    */
   labels?: ProjectLabels;
+  /** Where a label tag asks what to do and for the new name (the workbench's quick pick and input box; default: tags do nothing). */
+  prompts?: LabelPrompts;
 }
 
 /**
@@ -25,13 +27,13 @@ export interface ReferencesOptions {
  * references from. Without `labels`, only the tags (renaming just the label).
  */
 export function references(options: ReferencesOptions = {}): VisualViewContribution {
-  const { labels } = options;
+  const { labels, prompts } = options;
   return {
     id: 'references',
     activate({ visualView, subscriptions }) {
       subscriptions.push(
         visualView.registerNode(REFERENCE),
-        visualView.registerEditorExtension((view) => referencesExtension(labels, view.document)),
+        visualView.registerEditorExtension((view) => referencesExtension(labels, view.document, prompts)),
         visualView.registerToolbarItem({ group: 'insert', order: 80, create: addLabel }),
       );
     },
@@ -55,13 +57,13 @@ const REFERENCE: TypstNodeSpec = {
 };
 
 /** The plugins of one view: label tags, and with `labels` the `@` list and reference hints. */
-function referencesExtension(labels: ProjectLabels | undefined, document: TypstDocument): Extension {
+function referencesExtension(labels: ProjectLabels | undefined, document: TypstDocument, prompts: LabelPrompts | undefined): Extension {
   return Extension.create({
     name: 'typstReferences',
     // before the keymaps: Enter, Tab and Escape go to an open @ list first
     priority: 1000,
     addProseMirrorPlugins() {
-      const tags = labelTags({ labels, document });
+      const tags = labelTags({ labels, document, prompts });
       return labels ? [referenceSuggestion(labels), referenceHints(labels), tags] : [tags];
     },
   });

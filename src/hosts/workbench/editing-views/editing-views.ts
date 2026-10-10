@@ -10,6 +10,8 @@ export interface EditingViewsOptions {
   mode?: EditorMode;
   /** The selection in a view of `editor`'s document moved, or its text changed (the views already show the new selection). */
   onSelection?(editor: DocumentEditor): void;
+  /** The user switched to another tab. */
+  onMode?(mode: EditorMode): void;
   /** What every document's Visual view shows and offers (default: paragraphs and raw Typst only). */
   visualView?: VisualViewContributions;
   /** Makes the Source views, with what is registered there (language, lint, file links, …); default: plain ones. */
@@ -58,8 +60,6 @@ export class EditingViews {
   private readonly views = new Map<TypstDocument, Views>();
   private active: TypstDocument | null = null;
   private current: EditorMode;
-  /** Tab-bar controls that only show in one view. */
-  private readonly modeActions = new Map<HTMLElement, EditorMode>();
   /** Shown above and below the visible view (see `setFrame`). */
   private frame: { top: HTMLElement; bottom: HTMLElement } | null = null;
   private readonly sourceViews: SourceViewHost;
@@ -113,15 +113,9 @@ export class EditingViews {
     return (this.active && this.views.get(this.active)?.editor) ?? null;
   }
 
-  /** Puts a control (e.g. the "Comment" button) at the end of the tab bar; with `mode`, it only shows in that view. Returns its removal. */
-  addTabAction(element: HTMLElement, mode?: EditorMode): () => void {
-    if (mode) this.modeActions.set(element, mode);
+  /** Puts `element` (the editor's actions) at the end of the tab bar. */
+  addTabActions(element: HTMLElement): void {
     this.tabs.append(element);
-    this.layout();
-    return () => {
-      this.modeActions.delete(element);
-      element.remove();
-    };
   }
 
   /**
@@ -197,13 +191,14 @@ export class EditingViews {
   }
 
   private switchTo(mode: EditorMode): void {
+    const changed = mode !== this.current;
     this.current = mode;
     this.layout();
+    if (changed) this.options.onMode?.(mode);
   }
 
   private layout(): void {
     for (const button of this.buttons) button.setAttribute('aria-selected', String(button.dataset.mode === this.current));
-    for (const [element, mode] of this.modeActions) element.hidden = mode !== this.current;
     for (const [document, { panes }] of this.views) {
       panes.visual.hidden = document !== this.active || this.current !== 'visual';
       panes.source.hidden = document !== this.active || this.current !== 'source';

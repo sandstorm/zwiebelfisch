@@ -1,39 +1,54 @@
-// The source-control extension: the UI over the workbench's source controls: for each, "Save to <label>…" with a
-// commit message and its status, next to the Visual / Source tabs. Entry of extensions/source-control/. See
-// ARCHITECTURE.md, "GitLab-backed rooms".
+// The source-control extension: the UI over the workbench's source controls: "Save to <label>…" in the tab bar
+// (menu `editor/title`), which asks for a commit message and commits, and their outcomes and news as messages.
+// Entry of extensions/source-control/. See ARCHITECTURE.md, "GitLab-backed rooms".
 // Why apart from what commits: a source control (the GitLab branch behind a collaboration room) registers itself with
 // the workbench (`registerSourceControl`), and this extension only shows what is registered; neither knows the other.
 import { Disposable } from '../../core/disposable/disposable';
 import type { SourceControl, TypstExtension } from '../../hosts/workbench/workbench';
-import { SourceControlView } from './workbench/workbench';
+import { commit, commitTitle, tellStatus } from './workbench/workbench';
 
-/** Shows every registered source control in the tab bar, for as long as it is registered. */
+declare module '../../hosts/workbench/workbench' {
+  interface CommandRegistry {
+    /** Asks for a commit message and commits to the registered source control (picked, if several; the source-control extension). */
+    'sourceControl.commit': () => Promise<void>;
+  }
+}
+
+/**
+ * While a source control is registered: the command `sourceControl.commit` as "Save to <label>…" in the tab bar, and
+ * every source control's outcomes and news as messages.
+ */
 export function sourceControl(): TypstExtension {
   return {
     id: 'source-control',
     activate({ workbench, subscriptions }) {
-      const shown = new Map<SourceControl, Disposable>();
-      const show = (control: SourceControl) => {
-        const item = workbench.ownerDocument.createElement('span');
-        item.className = 'typst-editor__tab-actions';
-        const view = new SourceControlView(item, control);
-        return Disposable.from(workbench.registerTabBarItem(item), new Disposable(() => view.destroy()));
+      const followed = new Map<SourceControl, Disposable>();
+      let entry: Disposable | null = null;
+      const showEntry = () => {
+        entry?.dispose();
+        const controls = workbench.sourceControls;
+        entry = controls.length === 0 ? null : workbench.registerMenuItem('editor/title', { command: 'sourceControl.commit', title: commitTitle(controls), group: 'sourceControl' });
       };
       const update = () => {
         const registered = workbench.sourceControls;
-        for (const [control, view] of shown) {
+        for (const [control, subscription] of followed) {
           if (registered.includes(control)) continue;
-          view.dispose();
-          shown.delete(control);
+          subscription.dispose();
+          followed.delete(control);
         }
-        for (const control of registered) if (!shown.has(control)) shown.set(control, show(control));
+        for (const control of registered) {
+          if (!followed.has(control)) followed.set(control, Disposable.from(tellStatus(workbench, control), control.onDidChange(showEntry)));
+        }
+        showEntry();
       };
       update();
       subscriptions.push(
+        workbench.registerCommand('sourceControl.commit', () => commit(workbench)),
         workbench.onDidChangeSourceControls(update),
         new Disposable(() => {
-          for (const view of shown.values()) view.dispose();
-          shown.clear();
+          entry?.dispose();
+          for (const subscription of followed.values()) subscription.dispose();
+          followed.clear();
         }),
       );
     },

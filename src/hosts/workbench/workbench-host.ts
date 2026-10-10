@@ -18,6 +18,9 @@ import { SourceControls } from './source-controls/source-controls';
 import { FileDrops } from './file-drops/file-drops';
 import { FileViews } from './file-views/file-views';
 import { Layout, type Memory } from './layout/layout';
+import { Menus } from './menus/menus';
+import { Notifications } from './notifications/notifications';
+import { QuickInput } from './quick-input/quick-input';
 import { StyleSheets } from './style-sheets/style-sheets';
 import type {
   CommandArguments,
@@ -28,7 +31,13 @@ import type {
   FileDecoration,
   FileDecorationProvider,
   FileViewProvider,
+  InputBoxOptions,
+  MenuContext,
+  MenuItem,
+  MessageItem,
   OpenOptions,
+  QuickPickItem,
+  QuickPickOptions,
   SidePanel,
   SidePanelOptions,
   SourceControl,
@@ -38,6 +47,9 @@ import type {
   TypstExtension,
   Workbench,
 } from './workbench';
+
+/** The menu of the Visual / Source tab bar (VS Code's id). */
+const EDITOR_TITLE = 'editor/title';
 
 export interface WorkbenchOptions {
   /** The editing view shown first (default: visual). */
@@ -69,6 +81,11 @@ export class WorkbenchHost implements Workbench {
   readonly #fileDecorations = new FileDecorations();
   readonly #documentLinks = new DocumentLinks();
   readonly #sourceControls = new SourceControls();
+  readonly #menus = new Menus();
+  readonly #notifications: Notifications;
+  readonly #quickInput: QuickInput;
+  /** The `editor/title` menu, at the end of the tab bar. */
+  readonly #editorActions: HTMLElement;
   readonly #commands: Commands;
   readonly #drops: FileDrops;
   readonly #scheme: ColorScheme;
@@ -88,6 +105,7 @@ export class WorkbenchHost implements Workbench {
   readonly onDidDropFiles: Event<File[]>;
   readonly onDidChangeFileDecorations = this.#fileDecorations.onDidChange;
   readonly onDidChangeSourceControls = this.#sourceControls.onDidChange;
+  readonly onDidChangeMenu = this.#menus.onDidChange;
 
   constructor(
     private readonly host: HTMLElement,
@@ -108,6 +126,9 @@ export class WorkbenchHost implements Workbench {
     this.#drops = new FileDrops(host);
     this.onDidDropFiles = this.#drops.onDidDrop;
     this.#views = this.#createViews();
+    this.#editorActions = this.#createEditorActions();
+    this.#notifications = new Notifications(host);
+    this.#quickInput = new QuickInput(host);
     this.#fileViews = new FileViews(this.#layout.editor);
     this.#preview = new Preview(this.#layout.preview);
     this.#unsubscribe = project.onChange((change) => this.#changed(change));
@@ -145,6 +166,7 @@ export class WorkbenchHost implements Workbench {
     this.#views.show(document ?? null);
     if (document && options.selection) this.#views.reveal(options.selection.from, options.selection.to, options.mode);
     this.#shown.fire(path);
+    this.#showEditorActions();
     if (changed) this.options.onOpen?.(path);
   }
 
@@ -181,10 +203,6 @@ export class WorkbenchHost implements Workbench {
     return new Disposable(() => element.remove());
   }
 
-  registerTabBarItem(element: HTMLElement, options: { mode?: EditorMode } = {}): Disposable {
-    return new Disposable(this.#views.addTabAction(element, options.mode));
-  }
-
   registerEditorFrame(frame: { top: HTMLElement; bottom: HTMLElement }): Disposable {
     if (this.#hasFrame) throw new Error('There is an editor frame already');
     this.#hasFrame = true;
@@ -213,6 +231,36 @@ export class WorkbenchHost implements Workbench {
 
   remember<T>(name: string): Memory<T> {
     return this.#layout.remember<T>(name);
+  }
+
+  showInformationMessage<T extends string | MessageItem>(message: string, ...items: T[]): Promise<T | undefined> {
+    return this.#notifications.show('info', message, items);
+  }
+
+  showWarningMessage<T extends string | MessageItem>(message: string, ...items: T[]): Promise<T | undefined> {
+    return this.#notifications.show('warning', message, items);
+  }
+
+  showErrorMessage<T extends string | MessageItem>(message: string, ...items: T[]): Promise<T | undefined> {
+    return this.#notifications.show('error', message, items);
+  }
+
+  showInputBox(options?: InputBoxOptions): Promise<string | undefined> {
+    return this.#quickInput.showInputBox(options);
+  }
+
+  showQuickPick<T extends string | QuickPickItem>(items: readonly T[] | Promise<readonly T[]>, options: QuickPickOptions & { canPickMany: true }): Promise<T[] | undefined>;
+  showQuickPick<T extends string | QuickPickItem>(items: readonly T[] | Promise<readonly T[]>, options?: QuickPickOptions): Promise<T | undefined>;
+  showQuickPick<T extends string | QuickPickItem>(items: readonly T[] | Promise<readonly T[]>, options?: QuickPickOptions): Promise<T | T[] | undefined> {
+    return this.#quickInput.showQuickPick(items, options);
+  }
+
+  registerMenuItem(menuId: string, item: MenuItem): Disposable {
+    return this.#menus.register(menuId, item);
+  }
+
+  getMenuItems(menuId: string, context?: MenuContext): readonly MenuItem[] {
+    return this.#menus.items(menuId, context);
   }
 
   registerFileDecorationProvider(provider: FileDecorationProvider): Disposable {
@@ -260,6 +308,10 @@ export class WorkbenchHost implements Workbench {
     this.#fileViews.dispose();
     this.#fileDecorations.dispose();
     this.#sourceControls.dispose();
+    this.#quickInput.dispose();
+    this.#notifications.dispose();
+    this.#editorActions.remove();
+    this.#menus.dispose();
     this.#preview.destroy();
     this.#commands.dispose();
     this.#drops.dispose();
@@ -280,7 +332,60 @@ export class WorkbenchHost implements Workbench {
       // Fired from the editors' own updates: the DOM's selectionchange fires before
       // CodeMirror/ProseMirror read the new selection, so a listener would see the previous one.
       onSelection: (textEditor) => this.#selectionChanged.fire({ textEditor }),
+      onMode: () => this.#showEditorActions(),
     });
+  }
+
+  /** The `editor/title` menu as a toolbar at the end of the tab bar, shown again whenever its context or entries change. */
+  #createEditorActions(): HTMLElement {
+    const bar = this.host.ownerDocument.createElement('div');
+    bar.className = 'typst-editor__tab-actions';
+    bar.setAttribute('role', 'toolbar');
+    bar.setAttribute('aria-label', 'Editor actions');
+    // the commands act on the editor's selection: pressing an action keeps the focus there
+    bar.addEventListener('mousedown', (event) => {
+      if ((event.target as Element).closest('button')) event.preventDefault();
+    });
+    this.#views.addTabActions(bar);
+    this.#menus.onDidChange((menuId) => menuId === EDITOR_TITLE && this.#showEditorActions());
+    return bar;
+  }
+
+  #showEditorActions(): void {
+    const context = { editorMode: this.#views.mode, resource: this.#active };
+    const doc = this.host.ownerDocument;
+    this.#editorActions.replaceChildren(
+      ...this.#menus.items(EDITOR_TITLE, context).map((item) => {
+        const button = doc.createElement('button');
+        button.type = 'button';
+        button.className = 'typst-editor__tab-action';
+        button.dataset.command = item.command;
+        const title = item.title ?? item.command;
+        button.title = title;
+        if (item.icon) {
+          const icon = doc.createElement('span');
+          icon.className = 'typst-editor__tab-action-icon';
+          icon.setAttribute('aria-hidden', 'true');
+          icon.innerHTML = item.icon;
+          button.append(icon);
+        }
+        const text = doc.createElement('span');
+        text.textContent = title;
+        button.append(text);
+        button.addEventListener('click', () => this.#run(item.command));
+        return button;
+      }),
+    );
+  }
+
+  /** Runs a menu entry's command; a failure is logged (the command tells the user itself). */
+  #run(command: string): void {
+    try {
+      const result = (this.#commands.execute as (id: string) => unknown).call(this.#commands, command);
+      void Promise.resolve(result).catch((error: unknown) => console.error(error));
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   /** The registered document links in every Source view and in the code of every raw box (paths from its file's). */

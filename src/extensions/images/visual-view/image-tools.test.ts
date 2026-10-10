@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { Disposable } from '../../../core/disposable/disposable';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { resizedPercent } from './image-tools';
-import { createVisualView, type Renderings as BoxRenderer } from '../../../testing/testing';
+import { createVisualView, TestPrompts, type Renderings as BoxRenderer } from '../../../testing/testing';
 
 const renderer: BoxRenderer = {
   snippet: async () => null,
@@ -14,11 +14,11 @@ const renderer: BoxRenderer = {
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-async function setup(text: string) {
+async function setup(text: string, prompts?: TestPrompts) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = createVisualView(parent, doc, { renderer });
+  const view = createVisualView(parent, doc, { renderer, prompts });
   await settle();
   const box = () => parent.querySelector<HTMLElement>('.typst-visual__image')!;
   const tools = () => box().querySelector<HTMLElement>('[role="toolbar"][aria-label="Image"]')!;
@@ -63,13 +63,17 @@ describe('image tools', () => {
     expect(button('Width 75%').getAttribute('aria-pressed')).toBe('true');
   });
 
-  it('sets the alt text in a popover', async () => {
-    const { doc, button, tools } = await setup('#image("cat.png")\n');
+  it('asks for the alt text and sets it; an empty one removes it', async () => {
+    const prompts = new TestPrompts().answer('A cat', '');
+    const { doc, button } = await setup('#image("cat.png")\n', prompts);
     button('Alt text').click();
-    const form = tools().querySelector<HTMLFormElement>('form[aria-label="Alt text"]')!;
-    form.querySelector('input')!.value = 'A cat';
-    form.requestSubmit();
+    await settle();
+    expect(prompts.asked[0].options).toMatchObject({ title: 'Alt text', prompt: 'Alt text', value: '' });
     expect(doc.text).toBe('#image("cat.png", alt: "A cat")\n');
+    button('Alt text').click();
+    await settle();
+    expect(prompts.asked[1].options).toMatchObject({ prompt: 'Alt text (empty removes it)', value: 'A cat' });
+    expect(doc.text).toBe('#image("cat.png")\n');
   });
 
   it('dragging a handle shows the width live and writes it as percent on release', async () => {

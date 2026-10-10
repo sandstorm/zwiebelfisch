@@ -24,6 +24,8 @@ export interface FileTreeOptions {
   onMove(source: ProjectPath, folder: Folder): void;
   /** Files from the computer were dropped onto `folder`. */
   onUpload(files: File[], folder: Folder): void;
+  /** The context menu of a row was asked for: a right click (at its point), Shift+F10 or the context menu key (below the row). */
+  onContextMenu(path: ProjectPath, anchor: { x: number; y: number } | HTMLElement): void;
   memory?: FolderMemory;
 }
 
@@ -45,7 +47,8 @@ const ROW_TYPE = PROJECT_PATH_TYPE;
  * folders first, expandable (open folders are remembered), the main file
  * marked, the shown file selected, the files' decorations as badges. One row has
  * the focus ("current": where new files go, what F2 and Delete act on).
- * Keyboard: arrows, Home/End, Enter, F2, Delete. Rows can be dragged onto
+ * Keyboard: arrows, Home/End, Enter, F2, Delete, Shift+F10 / the context menu
+ * key (its context menu; also a right click). Rows can be dragged onto
  * folders, and files from the computer dropped onto them.
  */
 export class FileTree {
@@ -63,6 +66,7 @@ export class FileTree {
     this.expanded = new Set((options.memory?.load() ?? []).flatMap((folder) => ProjectPath.parse(folder) ?? []));
     this.element.addEventListener('click', (event) => this.click(event));
     this.element.addEventListener('keydown', (event) => this.key(event));
+    this.element.addEventListener('contextmenu', (event) => this.contextMenu(event));
     this.listenToDrags();
     parent.append(this.element);
   }
@@ -159,17 +163,29 @@ export class FileTree {
 
   private key(event: KeyboardEvent): void {
     if (!(event.target as HTMLElement).closest('[role=treeitem]')) return;
-    const handled = this.command(event.key) || this.move(navigate(this.rows, this.current, event.key));
+    const handled = this.command(event) || this.move(navigate(this.rows, this.current, event.key));
     if (handled) event.preventDefault();
   }
 
-  private command(key: string): boolean {
+  private command(event: KeyboardEvent): boolean {
     const current = this.current;
     if (current === null) return false;
-    if (key === 'F2') this.options.onRename(current);
-    else if (key === 'Delete') this.options.onDelete(current);
+    if (event.key === 'F2') this.options.onRename(current);
+    else if (event.key === 'Delete') this.options.onDelete(current);
+    else if (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey)) this.options.onContextMenu(current, this.rowElement(current) ?? this.element);
     else return false;
     return true;
+  }
+
+  /** A right click on a row: it becomes the focused row, and its context menu opens at the click. */
+  private contextMenu(event: MouseEvent): void {
+    const path = ProjectPath.parse((event.target as HTMLElement).closest<HTMLElement>('[data-path]')?.dataset.path ?? '');
+    if (path === null) return;
+    event.preventDefault();
+    this.currentPath = path;
+    this.draw();
+    this.rowElement(path)?.focus();
+    this.options.onContextMenu(path, { x: event.clientX, y: event.clientY });
   }
 
   private move(move: ReturnType<typeof navigate>): boolean {

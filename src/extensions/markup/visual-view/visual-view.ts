@@ -6,7 +6,7 @@ import Code from '@tiptap/extension-code';
 import CodeBlock from '@tiptap/extension-code-block';
 import type { Mark, Node } from '@tiptap/pm/model';
 import { Disposable } from '../../../core/disposable/disposable';
-import { FieldPopover } from '../../../ui/field-popover/field-popover';
+import type { Workbench } from '../../../hosts/workbench/workbench';
 import {
   children, decodeString, isClosedContent, parenthesized, quote, starterKitPart, svg, type Action, type Around, type Call, type Placed,
   type Printer, type ProjectionContext, type ToolbarContext, type TypstMarkSpec, type TypstNodeSpec,
@@ -233,47 +233,35 @@ export const MARK_ACTIONS: Record<'bold' | 'italic' | 'code', Action> = {
 export const INSERT_CODE_BLOCK: Action = { label: 'Code block', icon: ICONS.codeBlock, run: (c) => c.toggleCodeBlock(), active: (e) => e.isActive('codeBlock') };
 export const INSERT_QUOTE: Action = { label: 'Quote', shortcut: 'Mod+Shift+B', icon: ICONS.quote, run: (c) => c.toggleBlockquote(), active: (e) => e.isActive('blockquote') };
 
+/** Where "Link" asks for the URL: the workbench's input box. */
+export type LinkPrompt = Pick<Workbench, 'showInputBox'>;
+
 /**
  * "Link" in the selection's bar, and Mod+K in the text (not in a raw box): asks
- * for the URL in a popover in the bar, which then also shows for a caret.
- * With nothing selected it inserts the URL as linked text; inside a link it
- * edits or removes the whole link.
+ * for the URL in an input box at the selection. With nothing selected it
+ * inserts the URL as linked text; inside a link it edits the whole link, and an
+ * empty URL removes it.
  */
-export function linkAction(toolbar: ToolbarContext): Action {
+export function linkAction(toolbar: ToolbarContext, prompt: LinkPrompt): Action {
   const { editor } = toolbar;
-  let popover: FieldPopover | null = null;
-  /** Set while the bar is placed for a caret outside a link (Mod+K). */
-  let atCaret = false;
-  const bar = () => toolbar.element('selection')!;
-  const ensurePopover = () => {
-    if (popover) return popover;
-    popover = new FieldPopover(bar(), {
-      label: 'Link',
-      field: 'URL',
-      placeholder: 'https://…',
-      apply: (href) => applyLink(editor, href),
-      remove: () => editor.chain().focus().extendMarkRange('link').unsetLink().run(),
+  const ask = async () => {
+    const inLink = editor.isActive('link');
+    const href = await prompt.showInputBox({
+      title: 'Link',
+      prompt: inLink ? 'URL (empty removes the link)' : 'URL',
+      value: editor.getAttributes('link').href ?? '',
+      placeHolder: 'https://…',
     });
-    // Escape in the link popover: back to the text (the popover closed; the bar follows the text again)
-    bar().addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') editor.commands.focus();
-    });
-    const created = popover;
-    toolbar.subscriptions.push(new Disposable(() => created.destroy()));
-    return created;
-  };
-  const open = () => {
-    atCaret = true; // place the bar first, also for a caret outside a link
-    toolbar.refresh();
-    atCaret = false;
-    const button = bar().querySelector<HTMLButtonElement>('button[aria-label="Link"]')!;
-    ensurePopover().open(button, editor.getAttributes('link').href ?? '', editor.isActive('link'));
+    if (href === undefined) return void editor.commands.focus();
+    if (href.trim() !== '') applyLink(editor, href.trim());
+    else if (inLink) editor.chain().focus().extendMarkRange('link').unsetLink().run();
+    else editor.commands.focus();
   };
   const shortcut = (event: KeyboardEvent) => {
     if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey) return;
     if ((event.target as Element).closest?.('.cm-editor')) return; // in a raw box
     event.preventDefault();
-    open();
+    void ask();
   };
   editor.view.dom.addEventListener('keydown', shortcut);
   toolbar.subscriptions.push(new Disposable(() => editor.view.dom.removeEventListener('keydown', shortcut)));
@@ -282,11 +270,9 @@ export function linkAction(toolbar: ToolbarContext): Action {
     shortcut: 'Mod+K',
     icon: ICONS.link,
     run: (c) => c.setLink({ href: 'https://typst.app' }),
-    click: () => (popover?.isOpen ? popover.close() : open()),
+    click: () => void ask(),
     active: (e) => e.isActive('link'),
-    showsBar: (e) => atCaret || (popover?.isOpen ?? false) || e.isActive('link'),
-    // its popover takes the focus from the text: the bar (holding it) stays
-    keepsBar: () => popover?.isOpen ?? false,
+    showsBar: (e) => e.isActive('link'),
   };
 }
 

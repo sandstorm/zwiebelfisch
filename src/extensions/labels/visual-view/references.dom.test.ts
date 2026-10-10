@@ -5,8 +5,9 @@ import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { Project } from '../../../core/project/project';
 import { LabelIndex } from '../model/model';
-import { createVisualView } from '../../../testing/testing';
+import { createVisualView, TestPrompts } from '../../../testing/testing';
 import { ProjectPath } from '../../../core/paths/paths';
+import type { InputBoxOptions } from '../../../hosts/workbench/workbench';
 import { references } from './visual-view';
 
 const path = ProjectPath.of;
@@ -16,7 +17,7 @@ const ADVANCED = 'demo/examples/advanced/';
 const CHAPTERS = ['introduction', 'method', 'results'];
 
 /** The advanced example's chapters, its label index, and a Visual view of the introduction (or `path`). */
-function setup(file = path('/chapters/introduction.typ'), edit?: (files: Record<string, string>) => void) {
+function setup(file = path('/chapters/introduction.typ'), edit?: (files: Record<string, string>) => void, prompts?: TestPrompts) {
   const files = Object.fromEntries(CHAPTERS.map((c) => [`/chapters/${c}.typ`, readFileSync(`${ADVANCED}chapters/${c}.typ`, 'utf8')]));
   edit?.(files);
   const project = new Project(path('/main.typ'), { '/main.typ': '#include "chapters/introduction.typ"\n', ...files });
@@ -24,7 +25,7 @@ function setup(file = path('/chapters/introduction.typ'), edit?: (files: Record<
   const parent = document.createElement('div');
   document.body.append(parent);
   const document_ = project.document(file)!;
-  createVisualView(parent, document_, { contributions: [references({ labels })] });
+  createVisualView(parent, document_, { contributions: [references({ labels, prompts })] });
   const editor = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
   const text = (p: string) => project.document(path(p))!.text;
   return { project, labels, parent, editor, document: document_, text };
@@ -132,44 +133,55 @@ describe('references in the Visual view', () => {
     expect(text(path('/chapters/introduction.typ'))).toContain('one picture. @intro. And \\@nolabel \n');
   });
 
-  it('renaming a label from its tag updates every reference in the project by default (Enter)', () => {
-    const { parent, text } = setup(path('/chapters/results.typ'));
-    const tag = [...parent.querySelectorAll<HTMLElement>('[data-testid="typst-label-tag"]')].find((t) => t.textContent === 'fig:compile-times')!;
-    tag.click();
-    const form = tag.parentElement!.querySelector<HTMLFormElement>('form')!;
-    expect(form.querySelector('button[type="submit"]')!.textContent).toBe('Rename and update 2 references');
-    expect(form.querySelector('[data-action="alternative"]')!.textContent).toBe('Rename without updating references');
-    form.querySelector('input')!.value = 'fig:times';
-    form.requestSubmit();
+  const tagNamed = (parent: HTMLElement, name: string) =>
+    [...parent.querySelectorAll<HTMLElement>('[data-testid="typst-label-tag"]')].find((t) => t.textContent === name)!;
+
+  it('renaming a label from its tag updates every reference in the project (the first choice)', async () => {
+    const prompts = new TestPrompts().answer('Rename…', 'fig:times');
+    const { parent, text } = setup(path('/chapters/results.typ'), undefined, prompts);
+    tagNamed(parent, 'fig:compile-times').click();
+    await tick();
+    const [pick, input] = prompts.asked;
+    expect(pick.items).toMatchObject([
+      { label: 'Rename…', description: 'and update 2 references' },
+      { label: 'Rename without updating references…' },
+      { label: 'Remove label' },
+    ]);
+    expect(input.options).toMatchObject({ title: 'Rename <fig:compile-times> and update 2 references', prompt: 'Label name', value: 'fig:compile-times' });
     expect(text(path('/chapters/results.typ'))).toContain('@fig:times shows the same data');
     expect(text(path('/chapters/results.typ'))).toContain(') <fig:times>');
     expect(text(path('/chapters/introduction.typ'))).toContain('@fig:times sums them up');
   });
 
-  it('"Rename without updating references" renames only the label', () => {
-    const { parent, text } = setup(path('/chapters/results.typ'));
-    const tag = [...parent.querySelectorAll<HTMLElement>('[data-testid="typst-label-tag"]')].find((t) => t.textContent === 'fig:compile-times')!;
-    tag.click();
-    const form = tag.parentElement!.querySelector<HTMLFormElement>('form')!;
-    form.querySelector('input')!.value = 'fig:times';
-    form.querySelector<HTMLButtonElement>('[data-action="alternative"]')!.click();
+  it('"Rename without updating references" renames only the label', async () => {
+    const prompts = new TestPrompts().answer('Rename without updating references…', 'fig:times');
+    const { parent, text } = setup(path('/chapters/results.typ'), undefined, prompts);
+    tagNamed(parent, 'fig:compile-times').click();
+    await tick();
     expect(text(path('/chapters/results.typ'))).toContain(') <fig:times>');
     expect(text(path('/chapters/results.typ'))).toContain('@fig:compile-times shows the same data');
   });
 
-  it('without references, Enter renames the label ("Rename"), and Remove removes it', () => {
-    const { parent, text } = setup();
+  it('without references, Rename renames the label, and Remove removes it', async () => {
+    const prompts = new TestPrompts().answer('Rename…', 'start here', 'Remove label');
+    const { parent, text } = setup(undefined, undefined, prompts);
     const tagOf = () => parent.querySelector<HTMLElement>('h1 [data-testid="typst-label-tag"]');
     tagOf()!.click();
-    let form = tagOf()!.parentElement!.querySelector<HTMLFormElement>('form')!;
-    expect(form.querySelector('[data-action="alternative"]')).toBeNull(); // nothing refers to <intro>
-    form.querySelector('input')!.value = 'start here';
-    form.requestSubmit();
+    await tick();
+    expect(prompts.asked[0].items).toMatchObject([{ label: 'Rename…', description: undefined }, { label: 'Remove label' }]); // nothing refers to <intro>
+    expect((prompts.asked[1].options as InputBoxOptions).validateInput?.('  ')).toBe('Enter a label name.');
     expect(text(path('/chapters/introduction.typ'))).toContain('= Introduction <start-here>\n');
     tagOf()!.click();
-    form = tagOf()!.parentElement!.querySelector<HTMLFormElement>('form')!;
-    form.querySelector<HTMLButtonElement>('[data-action="remove"]')!.click();
+    await tick();
     expect(text(path('/chapters/introduction.typ'))).toContain('= Introduction\n');
     expect(tagOf()).toBeNull();
+  });
+
+  it('a cancelled choice changes nothing', async () => {
+    const { parent, text } = setup(undefined, undefined, new TestPrompts());
+    const before = text(path('/chapters/introduction.typ'));
+    parent.querySelector<HTMLElement>('h1 [data-testid="typst-label-tag"]')!.click();
+    await tick();
+    expect(text(path('/chapters/introduction.typ'))).toBe(before);
   });
 });

@@ -19,10 +19,8 @@ export interface Action {
   enabled?(editor: Editor): boolean;
   /** Toggles show their state (`aria-pressed`); plain actions (undo) do not. */
   active?(editor: Editor): boolean;
-  /** In a floating bar: shows the bar at its anchor also without a selection (a link at the cursor, its open popover). */
+  /** In a floating bar: shows the bar at its anchor also without a selection (a link at the cursor). */
   showsBar?(editor: Editor): boolean;
-  /** In a floating bar: keeps it shown while the focus is elsewhere (in the button's popover). */
-  keepsBar?(): boolean;
 }
 
 /** A toolbar icon: 24×24 outline strokes in the text colour. */

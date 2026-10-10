@@ -33,7 +33,7 @@ export function pdfExport(options: { download?: boolean } = {}): TypstExtension 
       subscriptions.push(workbench.registerStyleSheet(css));
       const pdfs = new PdfExport(project, preview);
       subscriptions.push(workbench.registerCommand('pdfExport.export', (values) => pdfs.blob(values)));
-      if (options.download !== false) subscriptions.push(preview.registerToolbarItem(downloadPdf(pdfs, workbench.remember('pdf-export.options'))));
+      if (options.download !== false) subscriptions.push(preview.registerToolbarItem(downloadPdf(pdfs, workbench.remember('pdf-export.options'), workbench)));
     },
   };
 }

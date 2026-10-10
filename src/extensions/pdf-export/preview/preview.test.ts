@@ -1,11 +1,9 @@
 // @vitest-environment jsdom
 // Tests for preview.ts: "Download PDF" and its options popover.
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PdfExportOption, PreviewContext } from '../../../hosts/preview/preview';
 import type { Memory } from '../../../hosts/workbench/workbench';
-import { downloadPdf, type PdfDownloads } from './preview';
+import { downloadPdf, type PdfDownloads, type PdfMessages } from './preview';
 
 const preview = { ownerDocument: document } as Partial<PreviewContext> as PreviewContext;
 
@@ -36,25 +34,26 @@ describe('downloadPdf', () => {
 
   function setup(options: PdfExportOption[], make: PdfDownloads['file'] = async () => file(), remembered = memory()) {
     const pdfs = { options: () => options, file: vi.fn(make) };
-    const item = downloadPdf(pdfs, remembered)(preview);
+    const errors: string[] = [];
+    const messages = { showErrorMessage: async (message: string) => (errors.push(message), undefined) };
+    const item = downloadPdf(pdfs, remembered, messages as PdfMessages)(preview);
     const [element] = item.elements;
     document.body.append(element);
     const button = (name: string) => [...element.querySelectorAll('button')].find((b) => b.textContent === name)!;
     const popover = () => element.querySelector<HTMLElement>('[role="dialog"]')!;
     const checkbox = (label: string) =>
       [...popover().querySelectorAll('label')].find((l) => l.textContent === label)!.querySelector('input')!;
-    const status = () => element.querySelector('[role="status"]')!.textContent;
-    return { pdfs, item, element, button, popover, checkbox, status, remembered };
+    return { pdfs, item, element, button, popover, checkbox, errors, remembered };
   }
 
   it('downloads at once while no extension offers an option', async () => {
-    const { pdfs, button, popover, status } = setup([]);
+    const { pdfs, button, popover, errors } = setup([]);
     expect(button('Download PDF').hasAttribute('aria-haspopup')).toBe(false);
     button('Download PDF').click();
     await vi.waitFor(() => expect(saved).toEqual([{ name: 'main.pdf', href: 'blob:pdf' }]));
     expect(pdfs.file).toHaveBeenCalledWith({});
     expect(popover().hidden).toBe(true);
-    expect(status()).toBe('');
+    expect(errors).toEqual([]);
   });
 
   it('opens a checkbox per option at its default, and downloads with the values checked', async () => {
@@ -106,31 +105,24 @@ describe('downloadPdf', () => {
     expect(popover().hidden).toBe(true);
   });
 
-  it('tells the user why there is no PDF, and downloads nothing', async () => {
-    const { element, button, status } = setup([], async () => Promise.reject(new Error('The document has 1 error: unknown variable: oops')));
+  it('tells the user why there is no PDF (an error message), and downloads nothing', async () => {
+    const { button, errors } = setup([], async () => Promise.reject(new Error('The document has 1 error: unknown variable: oops')));
     button('Download PDF').click();
-    await vi.waitFor(() => expect(status()).toBe('No PDF: The document has 1 error: unknown variable: oops'));
+    await vi.waitFor(() => expect(errors).toEqual(['No PDF: The document has 1 error: unknown variable: oops']));
     expect(saved).toEqual([]);
     expect(button('Download PDF').disabled).toBe(false);
-    element.querySelector<HTMLElement>('[role="status"]')!.click();
-    expect(status()).toBe('');
   });
 
   it('shows that a PDF is being made and ignores clicks meanwhile', async () => {
     let finish!: () => void;
-    const { pdfs, button, status } = setup([], () => new Promise((resolve) => (finish = () => resolve(file()))));
+    const { pdfs, element, button } = setup([], () => new Promise((resolve) => (finish = () => resolve(file()))));
     button('Download PDF').click();
-    expect(status()).toBe('Making PDF…');
-    expect(button('Download PDF').disabled).toBe(true);
-    button('Download PDF').click();
+    const busy = element.querySelector('button')!;
+    expect([busy.textContent, busy.disabled, busy.getAttribute('aria-busy')]).toEqual(['Making PDF…', true, 'true']);
+    busy.click();
     finish();
     await vi.waitFor(() => expect(saved).toHaveLength(1));
     expect(pdfs.file).toHaveBeenCalledTimes(1);
-    expect(status()).toBe('');
-  });
-
-  it('keeps the empty status in the page (no display: none), so a screen reader announces the messages put into it', () => {
-    const css = readFileSync(resolve(import.meta.dirname, '../pdf-export.css'), 'utf8');
-    expect(css).not.toMatch(/\.typst-preview__pdf-status[^{]*\{[^}]*display:\s*none/);
+    expect([busy.textContent, busy.disabled]).toEqual(['Download PDF', false]);
   });
 });

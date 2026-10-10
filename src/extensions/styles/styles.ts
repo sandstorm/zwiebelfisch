@@ -27,14 +27,25 @@ export function styles(): TypstExtension {
 }
 
 /**
- * "New style…": appends a paragraph style to start from to the file holding most styles (else
- * `/styles.typ`, created when missing) and shows it in the Source view.
+ * "New style…": asks for the style's name, appends a paragraph style of that name to start from to the file holding
+ * most styles (else `/styles.typ`, created when missing; a refusal is an error message) and shows it in the Source
+ * view.
  */
 async function addNewStyle(index: StyleIndex, project: Project, workbench: Workbench): Promise<void> {
+  const label = await workbench.showInputBox({
+    title: 'New style',
+    prompt: 'Name of the paragraph style',
+    value: 'New style',
+    validateInput: (value) => (value.trim() === '' ? 'Enter a name.' : null),
+  });
+  if (label === undefined) return;
   const path = index.homeFile();
   const file = project.document(path);
-  const added = newStyle(file?.text ?? '');
+  const added = newStyle(file?.text ?? '', label.trim());
   if (file) file.change([{ from: file.text.length, to: file.text.length, insert: added.text.slice(file.text.length) }], 'new-style');
-  else if ((await workbench.applyChange({ kind: 'create', path, content: added.text })) !== null) return;
+  else {
+    const problem = await workbench.applyChange({ kind: 'create', path, content: added.text });
+    if (problem !== null) return void workbench.showErrorMessage(`The style was not added: ${problem}`);
+  }
   workbench.open(path, { selection: { from: added.from, to: added.to }, mode: 'source' });
 }

@@ -7,7 +7,7 @@ import { SourceControls } from './source-controls';
 const sourceControl = (id: string): SourceControl => ({
   id,
   label: id,
-  state: { busy: false, status: '' },
+  state: { busy: false, status: null },
   onDidChange: () => new Disposable(() => {}),
   commit() {},
 });

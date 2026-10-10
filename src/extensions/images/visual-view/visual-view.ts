@@ -6,19 +6,21 @@ import { Node } from '@tiptap/core';
 import { Disposable } from '../../../core/disposable/disposable';
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import { PathReference, type ProjectPath } from '../../../core/paths/paths';
-import type { DocumentLink } from '../../../hosts/workbench/workbench';
-import { FieldPopover } from '../../../ui/field-popover/field-popover';
+import type { DocumentLink, QuickPickItem, Workbench } from '../../../hosts/workbench/workbench';
 import {
   parenthesized, svg, type Action, type BoxRenderer, type ToolbarContext, type TypstNodeSpec, type VisualViewContext, type VisualViewContribution,
 } from '../../../hosts/visual-view/visual-view';
 import { Figure, FigureCaption, printFigure, projectFigure } from './figures';
-import { type ImageAssets, ImageChoices } from './image-choices';
 import { imageFileDrops, insertImages } from './image-insertion';
 import { imagePathLink } from './image-path-link';
 import { imagePath } from './image-syntax';
 import { ImageTools } from './image-tools';
+import { imagePicker, uploadImages, type ImageAssets } from './image-uploads';
 
-export type { ImageAssets } from './image-choices';
+export type { ImageAssets } from './image-uploads';
+
+/** Where images ask (an image, a path, alt text) and tell why an upload was refused: the workbench's. */
+export type ImagePrompts = Pick<Workbench, 'showQuickPick' | 'showInputBox' | 'showErrorMessage'>;
 
 /** Where image files are shown from: the host's project files, as URLs. */
 export interface ImageUrls {
@@ -35,6 +37,8 @@ export interface ImagesOptions {
   imageUrls?(document: VisualViewContext['document']): ImageUrls | undefined;
   /** The links on image paths in a document: an image box's path opens its file, or shows it is missing (default: the text). */
   imageLinks?(document: VisualViewContext['document']): ImageLinks | undefined;
+  /** Where "Insert image" and "Alt text" ask, and refused uploads are told (default: they do nothing). */
+  prompts?: ImagePrompts;
 }
 
 /** The document links on the paths of a document's image calls. */
@@ -60,7 +64,7 @@ export function imagesVisualView(options: ImagesOptions = {}): VisualViewContrib
         visualView.registerNode(imageSpec(options)),
         visualView.registerNode(FIGURE),
         visualView.registerNode(FIGURE_CAPTION),
-        visualView.registerToolbarItem({ group: 'insert', order: 10, create: (toolbar) => insertImage(toolbar, options.assets?.(toolbar.document)) }),
+        visualView.registerToolbarItem({ group: 'insert', order: 10, create: (toolbar) => insertImage(toolbar, options.assets?.(toolbar.document), options.prompts) }),
         // image boxes are raw boxes, too: drawn as their image file rather than as a compiled snippet (priority 100)
         visualView.registerBoxRenderer((view) => imageRenderer(options.imageUrls?.(view.document)), { priority: 110 }),
       );
@@ -96,7 +100,7 @@ function imageSpec(options: ImagesOptions): TypstNodeSpec {
       tools: (host, node) => {
         const links = options.imageLinks?.(host.view.document);
         const pathLabel = links && ((path: PathReference, src: string) => imagePathLink(links.linkOf(src), path, host.dom.ownerDocument, (target) => links.open(target)));
-        return new ImageTools({ ...host, pathLabel }, node);
+        return new ImageTools({ ...host, pathLabel, prompts: options.prompts }, node);
       },
     },
     blockCalls: {
@@ -136,52 +140,57 @@ function imageRenderer(urls: ImageUrls | undefined): BoxRenderer | null {
 
 const ICON = svg('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 17-5-5-9 8"/>');
 
+/** An entry of the "Insert image" pick: one of the project's images, or what else to do. */
+type ImageChoice = QuickPickItem & { readonly path?: PathReference };
+
+const UPLOAD: ImageChoice = { label: 'Upload image…' };
+const ENTER_PATH: ImageChoice = { label: 'Enter a path…' };
+
 /**
- * "Insert image" and its popover: a path field, plus the project's images
- * and an upload with `assets`. With them, image files dropped on or pasted
- * into the text are uploaded and inserted too (refusals open the popover),
- * and an image dragged from the file panel is inserted where it is dropped.
+ * "Insert image": with `assets`, a quick pick of the project's images, "Upload image…" and "Enter a path…"; without,
+ * an input box for the path. With `assets`, image files dropped on or pasted into the text are uploaded and inserted
+ * too, and an image dragged from the file panel is inserted where it is dropped; refused uploads are error messages.
  */
-function insertImage(toolbar: ToolbarContext, assets: ImageAssets | undefined): Action {
+function insertImage(toolbar: ToolbarContext, assets: ImageAssets | undefined, prompts: ImagePrompts | undefined): Action {
   const { editor, root } = toolbar;
-  const trigger = () => root.querySelector<HTMLButtonElement>('button[aria-label="Insert"]')!;
-  const choices = assets
-    ? new ImageChoices(root.ownerDocument, assets, (paths, near) => {
-        popover.close();
-        insertImages(editor, paths, near);
-      })
-    : null;
-  const popover = new FieldPopover(root, {
-    label: 'Image',
-    field: 'Image path',
-    placeholder: 'images/figure.png',
-    apply: (path) => insertImages(editor, [PathReference.of(path)]),
-    extra: choices?.element,
-  });
-  toolbar.subscriptions.push(new Disposable(() => popover.destroy()));
-  if (choices) {
+  const upload = async (files: File[], near?: number) => {
+    const { paths, errors } = await uploadImages(assets!, files);
+    if (paths.length > 0) insertImages(editor, paths, near);
+    for (const error of errors) void prompts?.showErrorMessage(error);
+  };
+  const picker = imagePicker(root.ownerDocument, (files) => void upload(files));
+  if (assets) {
+    root.append(picker);
     const drops = imageFileDrops(
-      async (files, near) => {
-        const added = await choices.upload(files, near);
-        if (!added && !popover.isOpen) popover.open(trigger(), '', false);
-      },
+      (files, near) => upload(files, near),
       (path, near) => {
-        const reference = assets!.reference(path);
+        const reference = assets.reference(path);
         if (reference !== null) insertImages(editor, [reference], near);
         return reference !== null;
       },
     );
     editor.registerPlugin(drops);
-    toolbar.subscriptions.push(new Disposable(() => editor.unregisterPlugin(drops.spec.key!)));
+    toolbar.subscriptions.push(new Disposable(() => (editor.unregisterPlugin(drops.spec.key!), picker.remove())));
   }
+  const enterPath = async (ui: ImagePrompts) => {
+    const path = await ui.showInputBox({ title: 'Insert image', prompt: 'Image path', placeHolder: 'images/figure.png' });
+    if (path?.trim()) insertImages(editor, [PathReference.of(path.trim())]);
+    else editor.commands.focus();
+  };
+  const choose = async (ui: ImagePrompts) => {
+    if (!assets) return enterPath(ui);
+    const images: ImageChoice[] = assets.list().map((path) => ({ label: path, path }));
+    const choice = await ui.showQuickPick([...images, UPLOAD, ENTER_PATH], { title: 'Insert image', placeHolder: 'Choose an image, upload one or enter a path' });
+    // the picker opens within the user's gesture (choosing the entry), as browsers require
+    if (choice === UPLOAD) picker.click();
+    else if (choice === ENTER_PATH) await enterPath(ui);
+    else if (choice?.path) insertImages(editor, [choice.path]);
+    else editor.commands.focus();
+  };
   return {
     label: 'Insert image',
     icon: ICON,
     run: (c) => c.insertContent({ type: 'image' }),
-    click: () => {
-      choices?.refresh();
-      if (popover.isOpen) popover.close();
-      else popover.open(trigger(), '', false);
-    },
+    click: () => void (prompts && choose(prompts)),
   };
 }
