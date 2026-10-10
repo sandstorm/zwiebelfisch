@@ -2,7 +2,10 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { EditorState } from '@tiptap/pm/state';
-import { find, schemaWith } from '../../../testing/testing';
+import { find, schemaWith, TestPrompts } from '../../../testing/testing';
+import { Project } from '../../../core/project/project';
+import { ProjectPath } from '../../../core/paths/paths';
+import { LabelIndex } from '../model/label-index';
 import { print, project } from '../../../hosts/projection/projection';
 import { insertReference, renameLabel, setLabel } from './label-edits';
 import { labelName } from '../model/reference-syntax';
@@ -11,7 +14,9 @@ import { references } from './visual-view';
 const introduction = readFileSync(new URL('../../../../demo/examples/advanced/chapters/introduction.typ', import.meta.url), 'utf8');
 const results = readFileSync(new URL('../../../../demo/examples/advanced/chapters/results.typ', import.meta.url), 'utf8');
 
-const schema = schemaWith({ contributions: [references()] });
+/** The labels of a project with one empty file. */
+const noLabels = () => new LabelIndex(new Project(ProjectPath.of('/main.typ'), { '/main.typ': '' }));
+const schema = schemaWith({ contributions: [references({ labels: noLabels(), prompts: new TestPrompts() })] });
 const stateOf = (source: string) => EditorState.create({ doc: project(source, schema) });
 
 describe('label edits', () => {

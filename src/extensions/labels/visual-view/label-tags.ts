@@ -14,13 +14,12 @@ import { labelPrefix, labelTarget } from './add-label';
 /** Where a tag asks what to do with its label, and for the new name. */
 export type LabelPrompts = Pick<Workbench, 'showQuickPick' | 'showInputBox'>;
 
-/** What the tags need besides the document: the project's labels (renaming updates their references by default). */
+/** What the tags need: the project's labels (renaming updates their references by default), the view's document. */
 export interface LabelTagsOptions {
-  labels?: ProjectLabels;
+  labels: ProjectLabels;
   /** The document this view shows: its references are renamed in the view, the other files' by `labels`. */
-  document?: TypstDocument;
-  /** Without them a tag only shows its label. */
-  prompts?: LabelPrompts;
+  document: TypstDocument;
+  prompts: LabelPrompts;
 }
 
 /** The tags drawn, and the block a new label is being typed for (its position), if any. */
@@ -175,8 +174,7 @@ function tagElement(tag: Tag): HTMLElement {
  * any), rename only the label, remove; renaming asks for the new name.
  */
 async function editTag(tag: Tag): Promise<void> {
-  const prompts = tag.options.prompts;
-  if (!prompts) return;
+  const { prompts } = tag.options;
   const references = countedReferences(tag);
   const choice = await prompts.showQuickPick(tagChoices(references), {
     title: `Label <${tag.name}>`,
@@ -189,7 +187,7 @@ async function editTag(tag: Tag): Promise<void> {
 
 /** "2 references" to the tag's label; null for none. */
 function countedReferences({ name, options }: Tag): string | null {
-  const count = options.labels?.referenceCount(name) ?? 0;
+  const count = options.labels.referenceCount(name);
   return count > 0 ? `${count} reference${count === 1 ? '' : 's'}` : null;
 }
 
@@ -219,5 +217,5 @@ async function renameTag({ view, name, block, options }: Tag, prompts: LabelProm
   const pos = block();
   if (next === null || next === name || pos === null) return;
   view.dispatch(renameLabel(view.state, pos, next, references !== null));
-  if (references) options.labels?.renameReferences(name, next, options.document);
+  if (references) options.labels.renameReferences(name, next, options.document);
 }

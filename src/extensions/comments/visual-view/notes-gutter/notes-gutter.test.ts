@@ -14,7 +14,7 @@ function setup(source: string, options: NotesGutterOptions = {}) {
   document.body.append(parent);
   const doc = new TypstDocument(source);
   const notes = notesGutter(options);
-  const view = Object.assign(createVisualView(parent, doc, { contributions: [marginNotes(), notes] }), {
+  const view = Object.assign(createVisualView(parent, doc, { contributions: [marginNotes({ comment: () => {} }), notes] }), {
     editNote: (offset: number) => notes.editNote(doc, offset),
   });
   const cards = () => [...parent.querySelectorAll<HTMLElement>('[data-testid="typst-note-card"]')];

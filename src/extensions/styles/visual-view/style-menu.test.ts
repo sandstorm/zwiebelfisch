@@ -19,7 +19,7 @@ Range.prototype.getBoundingClientRect = () => new DOMRect();
 const NOTE: Style = { name: 'note', kind: 'paragraph', label: 'Note', path: path('/styles.typ') };
 const KEY: Style = { name: 'key', kind: 'text', label: 'Keyword', path: path('/styles.typ') };
 
-function setup(text: string, initial: Style[] = [NOTE, KEY], create?: () => void) {
+function setup(text: string, initial: Style[] = [NOTE, KEY], create = () => {}) {
   let list = initial;
   const changed = new EventEmitter<void>();
   const styles: ProjectStyles = {
@@ -61,8 +61,8 @@ describe('custom styles in the text style menu', () => {
     expect(doc.text).toBe('Hello world\n');
   });
 
-  it('lists the paragraph and the text styles after the headings, and New style… when it can create one', () => {
-    const { menu, labels } = setup('Text\n', [NOTE, KEY], () => {});
+  it('lists the paragraph and the text styles after the headings, and New style…', () => {
+    const { menu, labels } = setup('Text\n', [NOTE, KEY]);
     expect(labels()).toEqual([['Paragraph styles', 'Note'], ['Text styles', 'Keyword']]);
     expect([...menu.options].map((o) => o.value)).toEqual(['paragraph', 'heading-1', 'heading-2', 'heading-3', 'paragraph:note', 'text:key', 'new-style']);
   });

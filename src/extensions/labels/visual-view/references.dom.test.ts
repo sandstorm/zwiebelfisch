@@ -17,7 +17,7 @@ const ADVANCED = 'demo/examples/advanced/';
 const CHAPTERS = ['introduction', 'method', 'results'];
 
 /** The advanced example's chapters, its label index, and a Visual view of the introduction (or `path`). */
-function setup(file = path('/chapters/introduction.typ'), edit?: (files: Record<string, string>) => void, prompts?: TestPrompts) {
+function setup(file = path('/chapters/introduction.typ'), edit?: (files: Record<string, string>) => void, prompts = new TestPrompts()) {
   const files = Object.fromEntries(CHAPTERS.map((c) => [`/chapters/${c}.typ`, readFileSync(`${ADVANCED}chapters/${c}.typ`, 'utf8')]));
   edit?.(files);
   const project = new Project(path('/main.typ'), { '/main.typ': '#include "chapters/introduction.typ"\n', ...files });

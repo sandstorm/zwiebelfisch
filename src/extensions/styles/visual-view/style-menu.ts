@@ -12,8 +12,8 @@ export interface MenuStyles {
   readonly onDidChange: Event<void>;
   /** `style` was just applied (e.g. to import it where it is used). */
   applied(style: Style): void;
-  /** "New style…": absent, no such entry. */
-  create?(): void;
+  /** "New style…". */
+  create(): void;
 }
 
 /** The built-in entries, by `<option>` value. */
@@ -38,26 +38,26 @@ const NEW_STYLE = 'new-style';
 export class StyleMenu {
   readonly element: HTMLSelectElement;
   private shown = '';
-  private readonly subscription: Disposable | undefined;
+  private readonly subscription: Disposable;
 
   constructor(
     doc: Document,
     private readonly editor: Editor,
-    private readonly styles?: MenuStyles,
+    private readonly styles: MenuStyles,
   ) {
     this.element = doc.createElement('select');
     this.element.className = 'typst-toolbar__style';
     this.element.setAttribute('aria-label', 'Text style');
     this.element.title = 'Text style';
     this.element.addEventListener('change', () => this.choose(this.element.value));
-    this.subscription = styles?.onDidChange(() => this.refresh());
+    this.subscription = styles.onDidChange(() => this.refresh());
     this.refresh();
   }
 
   /** Shows the selection's style and what can apply now; rebuilds the custom entries when the styles changed. */
   refresh(): void {
-    const custom = this.styles?.styles() ?? [];
-    const key = JSON.stringify([custom, !!this.styles?.create]);
+    const custom = this.styles.styles();
+    const key = JSON.stringify(custom);
     if (key !== this.shown) this.build(custom);
     this.shown = key;
     for (const option of this.element.options) {
@@ -69,7 +69,7 @@ export class StyleMenu {
   }
 
   destroy(): void {
-    this.subscription?.dispose();
+    this.subscription.dispose();
     this.element.remove();
   }
 
@@ -84,17 +84,17 @@ export class StyleMenu {
       group.append(...styles.map((style) => new Option(style.label, `${kind}:${style.name}`)));
       this.element.append(group);
     }
-    if (this.styles?.create) this.element.append(new Option('New style…', NEW_STYLE));
+    this.element.append(new Option('New style…', NEW_STYLE));
   }
 
   private choose(value: string): void {
     const style = this.custom(value);
-    if (value === NEW_STYLE) this.styles?.create?.();
+    if (value === NEW_STYLE) this.styles.create();
     else if (style) {
       const applied = { name: style.name, label: style.label };
       const chain = this.editor.chain().focus();
       (style.kind === 'paragraph' ? chain.setParagraphStyle(applied) : chain.toggleTextStyle(applied)).run();
-      this.styles?.applied(style);
+      this.styles.applied(style);
     } else BUILT_IN[value]?.run(this.editor.chain().focus(), this.editor).run();
     this.refresh();
   }
@@ -117,6 +117,6 @@ export class StyleMenu {
   /** The custom style an option value stands for. */
   private custom(value: string): Style | undefined {
     const [kind, name] = value.split(':');
-    return this.styles?.styles().find((style) => style.kind === kind && style.name === name);
+    return this.styles.styles().find((style) => style.kind === kind && style.name === name);
   }
 }

@@ -10,8 +10,8 @@ import { svg, type Action, type TypstMarkSpec, type TypstNodeSpec, type VisualVi
 import type { Call, Placed, ProjectionContext } from '../../../hosts/projection/projection';
 
 export interface MarginNotesOptions {
-  /** Adds a comment (margin note) at the selection: the "Comment" button in the toolbar and the selection's bar (none without it). */
-  comment?(): void;
+  /** Adds a comment (margin note) at the selection: the "Comment" button in the toolbar and the selection's bar. */
+  comment(): void;
 }
 
 /**
@@ -30,15 +30,14 @@ export interface MarginNotesOptions {
  * calls stay raw. The notes themselves are shown and edited in the notes
  * gutter (`notes-gutter/`).
  */
-export function marginNotes(options: MarginNotesOptions = {}): VisualViewContribution {
+export function marginNotes(options: MarginNotesOptions): VisualViewContribution {
   return {
     id: 'margin-notes',
     activate({ visualView, subscriptions }) {
-      subscriptions.push(visualView.registerNode(MARGIN_NOTE), visualView.registerMark(NOTE_RANGE));
-      const { comment } = options;
-      if (!comment) return;
-      const action = commentAction(comment);
+      const action = commentAction(options.comment);
       subscriptions.push(
+        visualView.registerNode(MARGIN_NOTE),
+        visualView.registerMark(NOTE_RANGE),
         visualView.registerToolbarGroup({ kind: 'group', id: 'comments', order: 60 }),
         visualView.registerToolbarItem({ group: 'comments', action }),
         visualView.registerToolbarItem({ group: 'selection', order: 50, action }),

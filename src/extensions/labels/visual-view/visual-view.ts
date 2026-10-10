@@ -13,21 +13,20 @@ import { referenceSuggestion } from './reference-suggestion';
 export interface ReferencesOptions {
   /**
    * The project's labels: typing `@` offers them, reference chips show what they point to (or that the label is
-   * missing), and a label can be renamed with its references in every file (default: label tags only).
+   * missing), and a label can be renamed with its references in every file.
    */
-  labels?: ProjectLabels;
-  /** Where a label tag asks what to do and for the new name (the workbench's quick pick and input box; default: tags do nothing). */
-  prompts?: LabelPrompts;
+  labels: ProjectLabels;
+  /** Where a label tag asks what to do and for the new name: the workbench's quick pick and input box. */
+  prompts: LabelPrompts;
 }
 
 /**
- * References (`@key`, `@key[supplement]`) as `reference` chips; a block's
- * label shown as a tag (rename, remove), "Add label" in the Insert menu, and
- * — with the project's `labels` — hints on reference chips (what they point
- * to, or that the label is missing) and the `@` list of labels to insert
- * references from. Without `labels`, only the tags (renaming just the label).
+ * References (`@key`, `@key[supplement]`) as `reference` chips with hints
+ * (what they point to, or that the label is missing); a block's label shown
+ * as a tag (rename, with the references in every file, or remove); the `@`
+ * list of labels to insert references from; "Add label" in the Insert menu.
  */
-export function references(options: ReferencesOptions = {}): VisualViewContribution {
+export function references(options: ReferencesOptions): VisualViewContribution {
   const { labels, prompts } = options;
   return {
     id: 'references',
@@ -57,15 +56,14 @@ const REFERENCE: TypstNodeSpec = {
   escapeAfter: (reference, text) => guardAfterReference(reference.attrs.supplement, text),
 };
 
-/** The plugins of one view: label tags, and with `labels` the `@` list and reference hints. */
-function referencesExtension(labels: ProjectLabels | undefined, document: TypstDocument, prompts: LabelPrompts | undefined): Extension {
+/** The plugins of one view: the `@` list, reference hints, label tags. */
+function referencesExtension(labels: ProjectLabels, document: TypstDocument, prompts: LabelPrompts): Extension {
   return Extension.create({
     name: 'typstReferences',
     // before the keymaps: Enter, Tab and Escape go to an open @ list first
     priority: 1000,
     addProseMirrorPlugins() {
-      const tags = labelTags({ labels, document, prompts });
-      return labels ? [referenceSuggestion(labels), referenceHints(labels), tags] : [tags];
+      return [referenceSuggestion(labels), referenceHints(labels), labelTags({ labels, document, prompts })];
     },
   });
 }

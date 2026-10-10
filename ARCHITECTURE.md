@@ -1270,7 +1270,7 @@ new LabelIndex(project)        // implements ProjectLabels (what the Visual view
 labelChoices(labels, query) / describeLabel(label)   // the @ list's choices, "Section · Method"
 referenceSyntax / labelName / LABEL_CHAR / guardAfterReference(supplement, text)   // Typst's syntax
 // visual-view/
-references({ labels? }): VisualViewContribution   // the `reference` node spec, label tags, the @ list, hints, "Add label"
+references({ labels, prompts }): VisualViewContribution   // the `reference` node spec, label tags, the @ list, hints, "Add label"
 ```
 
 - **Why one extension:** labels and references span files, so the read model follows the whole project
@@ -1302,7 +1302,6 @@ references({ labels? }): VisualViewContribution   // the `reference` node spec, 
   (`labelChoices`: name prefix, then name, then title matches; at most 8) below it, inside `.typst-visual__body`.
   ArrowUp/Down, Enter/Tab or a click insert the chip in place of `@query`; Escape dismisses that `@`. Typing a
   space or punctuation right after the whole name of a label (`@intro `) inserts the chip as well.
-- Without `labels` (tests): tags only (rename and remove of the label itself).
 
 ### Custom styles (`src/extensions/styles`)
 
@@ -1327,7 +1326,7 @@ calculateImportChange(text, { name, matches(module), create(), use? }) → TextC
 calculateNewStyleChange(text, label = 'New style') → { change, definition: { from, to } }   // "New style…"'s stub:
                                // named after the label (`Side box` → `side-box`, `style-2-columns`), numbered if taken
 // visual-view/
-customStyles({ styles?, create? }): VisualViewContribution   // styledBlock + style mark specs, the text style menu
+customStyles({ styles, create }): VisualViewContribution   // styledBlock + style mark specs, the text style menu
 ```
 
 - **Projection:** the specs project the declared styles (`blockCalls['*']`, `inlineCalls`, from
@@ -1666,7 +1665,7 @@ registerIncludeComments(preview, project) → Disposable
                                      // project's files overlaid with the entry's sources; on → the entry as it is
 
 // visual-view/
-marginNotes({ comment? }) → VisualViewContribution  // marginNote + noteRange specs; "Comment" in the toolbar and
+marginNotes({ comment }) → VisualViewContribution    // marginNote + noteRange specs; "Comment" in the toolbar and
                                      // the selection's bar (runs comments.addComment)
 notesGutter({user?}) → { activate, editNote(document, offset) → boolean }   // registers a gutter per Visual view;
                                      // editNote focuses the reply box in the card of the note whose source holds offset
