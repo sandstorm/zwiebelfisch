@@ -20,6 +20,8 @@ export interface ImageToolsHost {
   getPos(): number | undefined;
   /** Shows and focuses the image call's code. */
   editCode(): void;
+  /** The image's path in the heading, e.g. as a link to the file (default: the text). */
+  pathLabel?: ((path: string) => globalThis.Node) | null;
 }
 
 /** Width presets offered as buttons (keyboard-friendly resizing). */
@@ -111,7 +113,8 @@ export class ImageTools {
   /** The image node changed (e.g. its call was edited): heading, width and buttons follow. */
   update(node: Node): void {
     this.node = node;
-    this.label.textContent = `Image: ${imagePath(node.attrs.src) ?? '(no path)'}`;
+    const path = imagePath(node.attrs.src);
+    this.label.replaceChildren('Image: ', path === null ? '(no path)' : (this.host.pathLabel?.(path) ?? path));
     if (this.frame && !this.stopDrag) this.showWidth(imageWidthCss(node.attrs.src));
     this.refresh();
   }

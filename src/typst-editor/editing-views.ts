@@ -1,5 +1,6 @@
 // EditingViews: the Visual/Source tabs; lazily one VisualView and SourceView per document. See typst-editor.ts.
 import type { Highlight, TypstDocument } from '../core/typst-document/typst-document';
+import type { FileLinks } from '../core/project/project';
 import { describeDiagnostic, SourceView, type SourceDiagnostic } from '../features/source-view/source-view';
 import { VisualView, type VisualViewOptions } from '../features/visual-view/visual-view';
 
@@ -14,6 +15,8 @@ export interface EditingViewsOptions {
   onBaseChange?(document: TypstDocument, base: string): void;
   /** Options for the Visual view of `document` (rendered raw boxes, images to insert). */
   visualOptions?(document: TypstDocument): VisualViewOptions;
+  /** Where the file paths in `document` lead (both views open them); default: plain text. */
+  links?(document: TypstDocument): FileLinks;
 }
 
 interface Views {
@@ -136,10 +139,12 @@ export class EditingViews {
     // After the tabs (and any earlier panes): only one pair is ever visible.
     this.parent.insertBefore(panes.visual, this.tabs.nextSibling);
     panes.visual.after(panes.source);
+    const links = this.options.links?.(document);
     const views: Views = {
       panes,
-      visual: new VisualView(panes.visual, document, this.options.visualOptions?.(document)),
+      visual: new VisualView(panes.visual, document, { ...this.options.visualOptions?.(document), links }),
       source: new SourceView(panes.source, document, {
+        links,
         onCursor: (offset) => {
           views.cursor = offset;
           this.options.onCursor?.(document, offset);

@@ -6,11 +6,14 @@ import { getOriginalDoc, unifiedMergeView, updateOriginalDoc } from '@codemirror
 import { Annotation, Compartment, EditorSelection, StateEffect, StateField, Transaction, type ChangeSet, type ChangeSpec } from '@codemirror/state';
 import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
 import { type Highlight, type Presence, type PresenceTarget, REMOTE_ORIGIN, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
+import type { FileLinks } from '../../core/project/project';
+import { fileLinks } from './file-links';
 import { toLintDiagnostics, type SourceDiagnostic } from './lint';
 import { remotePresence, showPresence } from './presence';
 import { typstLanguage } from './typst-language';
 
 export { describeDiagnostic, type SourceDiagnostic } from './lint';
+export { fileLinks, linkInfo } from './file-links';
 export { remotePresence, showPresence } from './presence';
 export { typstLanguage } from './typst-language';
 
@@ -65,6 +68,8 @@ export interface SourceViewOptions {
   onCursor?(offset: number): void;
   /** Called with the new base text when the user accepts a change shown by `showChanges`. */
   onBaseChange?(base: string): void;
+  /** Makes file paths in the code open their file (Mod+click, Alt+Enter, tooltip); default: plain text. */
+  links?: FileLinks;
 }
 
 /**
@@ -88,6 +93,7 @@ export class SourceView implements PresenceTarget {
         highlightField,
         layersField,
         remotePresence,
+        options.links ? fileLinks(options.links) : [],
         this.changes.of([]),
         EditorView.updateListener.of((update) => {
           if (update.transactions.some((tr) => tr.effects.some((effect) => effect.is(updateOriginalDoc)))) {

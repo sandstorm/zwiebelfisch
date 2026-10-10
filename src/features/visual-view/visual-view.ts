@@ -3,8 +3,9 @@
 import { Editor } from '@tiptap/core';
 import { EditorState, TextSelection, type Transaction } from '@tiptap/pm/state';
 import type { Highlight, Presence, PresenceTarget, TypstDocument } from '../../core/typst-document/typst-document';
+import type { FileLinks } from '../../core/project/project';
 import { changesPlugin, setChangesBase } from './change-decorations';
-import { type BoxRenderer, extensions, setBoxRenderer } from './nodes/nodes';
+import { type BoxRenderer, extensions, setBoxLinks, setBoxRenderer } from './nodes/nodes';
 import { highlights, setHighlights } from './highlights';
 import type { ImageAssets } from './images/images';
 import { remotePresence, setPresence } from './presence';
@@ -21,6 +22,8 @@ export interface VisualViewOptions {
   renderer?: BoxRenderer;
   /** Lets "Insert image" offer the project's images and upload new ones (default: it only asks for a path). */
   assets?: ImageAssets;
+  /** Makes file paths in raw boxes open their file ("Open template.typ", clickable image paths). */
+  links?: FileLinks;
 }
 
 /** Marks transactions that mirror a document change, so they are not written back. */
@@ -53,6 +56,7 @@ export class VisualView implements PresenceTarget {
       onTransaction: ({ transaction }) => this.afterTransaction(transaction),
     });
     if (options.renderer) setBoxRenderer(this.editor, options.renderer);
+    if (options.links) setBoxLinks(this.editor, options.links);
     // Load the projection itself (not a JSON copy): its node identities are
     // what marks blocks as untouched.
     this.notes = new NotesGutter(body);

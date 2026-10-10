@@ -2,6 +2,7 @@
 // preview, the file bar, the status bar and the features. See ARCHITECTURE.md, "createTypstEditor".
 import type { CollaborationOptions } from './features/collaboration/collaboration';
 import type { Diagnostic } from './core/typst-engine/typst-engine';
+import type { TypstDocument } from './core/typst-document/typst-document';
 import { Preview } from './features/preview/preview';
 import proseMirrorStyles from './features/visual-view/visual-view.css?inline';
 import { AssetView, FileSwitcher, insertImage } from './features/files/files';
@@ -11,7 +12,7 @@ import { CollaborationLink } from './typst-editor/collaboration-link';
 import changeStyles from './features/changes/changes.css?inline';
 import { DiagnosticsStatus, summarizeDiagnostics } from './features/diagnostics/diagnostics';
 import { EditingViews, type EditorMode } from './typst-editor/editing-views';
-import { type FileChange, Project, type ProjectFiles, referencePath } from './core/project/project';
+import { type FileChange, type FileLinks, Project, type ProjectFiles, referencePath, resolvePath } from './core/project/project';
 import { ProjectRenderings } from './typst-editor/project-renderings';
 import styles from './typst-editor.css?inline';
 import { VersionControls, type Versions } from './features/versions/versions';
@@ -169,6 +170,7 @@ class Widget {
     this.views = new EditingViews(this.left, {
       mode: options.mode,
       visualOptions: (document) => this.renderings.forDocument(document),
+      links: (document) => this.fileLinks(document),
       onCursor: (document, offset) => {
         const path = this.project.pathOf(document);
         if (path) void this.preview.reveal(path, offset);
@@ -321,6 +323,23 @@ class Widget {
     if (late) return late;
     this.project.apply(change);
     return null;
+  }
+
+  /** Where the paths written in `document` lead: resolved from its current path, opened here. */
+  private fileLinks(document: TypstDocument): FileLinks {
+    return {
+      resolve: (reference) => {
+        const file = this.project.pathOf(document);
+        return file ? resolvePath(file, reference) : null;
+      },
+      exists: (path) => this.project.has(path),
+      open: (path) => this.open(path),
+      create: async (path) => {
+        const problem = await this.request({ kind: 'create', path, content: '' });
+        if (problem === null) this.open(path);
+        return problem;
+      },
+    };
   }
 
   /** Opens the file of `target` and reveals the range (in the source view on request). */
