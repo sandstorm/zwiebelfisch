@@ -142,13 +142,16 @@ origin in your Content-Security-Policy (`connect-src`).
 
 ## 4. Comments are margin notes in the source
 
-Users select text (or place the cursor) and press **Comment** (or Ctrl/Cmd+Alt+M). This writes a
+Users select text (or place the cursor) and press **Comment** (in the Visual view's formatting
+toolbar; in the Source view it sits in the tab bar) or Ctrl/Cmd+Alt+M. This writes a
 [`drafting`](https://typst.app/universe/package/drafting/) margin note into the Typst source and
-puts the cursor into it:
+puts the cursor into it. A note is a thread: one list item per message, signed with the
+widget's `user.name` and the local date:
 
 ```typst
 #import "@preview/drafting:0.2.2": margin-note
-This is #margin-note[the selected text][Is this right? — Ada] and a point note.#margin-note[Cite?]
+This is #margin-note[the selected text][- *Ada* (2026-10-10): Is this right?
+- *Bob* (2026-10-11): Yes.] and a point note.#margin-note[Cite?]
 ```
 
 The import is added once at the top of the file (or an existing drafting import is extended).
@@ -156,11 +159,15 @@ The preview shows the notes the compiler draws in the page margin. drafting 0.2.
 margin that is a single length ("type relative length has no method `keys`"), so adding a note
 turns a top-level `#set page(margin: 1.5cm)` into `margin: (right: 4cm, rest: 1.5cm)`. The Visual
 view shows every note as a card in a gutter right of the text, beside the text it belongs to:
-edit the note in the card (Ctrl/Cmd+Enter or leaving the card saves, Escape cancels) or resolve
-(delete) it. On narrow panes the card pops up when you click the highlighted text.
+the thread (name, date and text per message; long threads collapse), a reply box
+(Ctrl/Cmd+Enter sends), a pencil on your own messages (by name: a convenience, not a
+permission) and on hand-written ones, delete on your last message, and "Resolve" (deletes the
+note). A note written by hand without names and dates (`#margin-note[Cite?]`) shows as one
+message and stays as written until someone replies. On narrow panes the card pops up when you
+click the highlighted text.
 There is nothing extra to store or wire up: notes arrive with `onChange` / `change` and travel
-through git, diffs and collaboration like any other text. There are no threads; resolving a note
-means deleting it. To hide all notes in a final build, the document can say
+through git, diffs and collaboration like any other text (two people replying at once give two
+list items). Resolving a note means deleting it. To hide all notes in a final build, the document can say
 `#set-margin-note-defaults(hidden: true)` (drafting's own switch, not a widget option).
 
 **Breaking change.** The earlier sidecar comments are gone. These APIs were removed:
@@ -171,7 +178,8 @@ means deleting it. To hide all notes in a final build, the document can say
 - the exported types `CommentsData` and `TypstEditorCommentsChangeDetail`;
 - the `comments` map in the collaboration Y.Doc (rooms that still hold one simply ignore it).
 
-`user` stays: it is the name others see when collaborating and the author of saved versions.
+`user` stays: it is the name others see when collaborating, the author of saved versions and the
+signature of comments (without it, comments are signed "Anonymous").
 Existing `*.comments.json` sidecar files are not migrated.
 
 ## 5. Real-time collaboration

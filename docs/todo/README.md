@@ -65,5 +65,5 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [demo-playground](demo-playground.md) | done (branch task/demo-playground) |
 | [comments-gutter](comments-gutter.md) | done (branch task/comments-gutter) |
 | [collab-markers](collab-markers.md) | done (branch task/collab-markers) |
-| [comment-replies](comment-replies.md) | open |
+| [comment-replies](comment-replies.md) | done (branch task/comment-replies) |
 | [notes-pdf](notes-pdf.md) | open |

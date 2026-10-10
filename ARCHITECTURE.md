@@ -16,6 +16,8 @@ src/                        the widget (TypeScript); the most important API on t
                             VisualView + SourceView per document), project-renderings.ts (what a document's Visual
                             view renders and inserts: snippets, image URLs, uploads), collaboration-link.ts
   typst-editor-element/     inline-source.ts (source written inside the element → text)
+  stylesheets.test.ts       every .css under src/ parses (lightningcss, no error recovery), no nested style rules,
+                            every block closed (an unclosed rule silently nests the rest of the file)
   core/                     the models everything builds on
     typst-document/         TypstDocument — the single source of truth (string or shared Y.Text); Highlight (a
                             styled source range views draw); Presence / PresenceTarget (other users' carets +
@@ -35,7 +37,8 @@ src/                        the widget (TypeScript); the most important API on t
                             margin-notes
       images/               images.ts: image choices, insertion, image tools (resize, alt, caption), image-call edits
       toolbar/              toolbar.ts, toolbar-action, toolbar-blocks
-      notes-gutter/         notes-gutter.ts (comment cards), note-list, card-layout
+      notes-gutter/         notes-gutter.ts (comment column), note-card (a note's thread + reply box), note-list,
+                            card-layout
     source-view/            SourceView — CodeMirror 6 editing view; typst-language, lint, presence
     preview/                Preview — worker-backed live preview + hit-testing, zoom, page numbers;
                             toolbar.ts, latest-only.ts ("only the newest value" task runner)
@@ -46,7 +49,8 @@ src/                        the widget (TypeScript); the most important API on t
     diagnostics/            DiagnosticsStatus (status bar), diagnostics-summary.ts
     changes/                ChangeTracking (base version + "Show changes"), diff.ts (diffTexts), changes.css
     comments/               CommentAction ("Comment" / Ctrl+Alt+M), add-margin-note.ts, margin-note-syntax.ts
-                            (drafting's call: parse, print, validity), page-margin.ts
+                            (drafting's call: parse, print, validity), note-thread.ts (a note's body as a
+                            thread of messages), page-margin.ts
     files/                  FileSwitcher (file bar), asset-view.ts, upload.ts, insert-image.ts
     collaboration/          real-time collaboration (loaded on demand): Collaboration, SharedProject, RemoteCursors,
                             RoomVersions + SharedAssets (GitLab rooms); in-process.ts (Y.Doc/awareness wiring for
@@ -263,7 +267,7 @@ Inside the crate:
 ### `VisualView` (`src/features/visual-view`)
 
 ```ts
-new VisualView(parent, document, { renderer?, assets? })
+new VisualView(parent, document, { renderer?, assets?, user?: {name}, comment?() })   // user signs replies; comment: the toolbar's "Comment"
 .reveal(from, to)    // select exactly what shows source range from..to (caret if empty)
 .setHighlights(layer, highlights)   // source ranges → inline decorations (sourceToPos, end with bias -1)
 .setPresence(presences)             // other users' carets / selections (PresenceTarget), see Collaboration
@@ -410,8 +414,10 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   bulleted/numbered list, code block, task list, quote, text alignment, insert image, table of
   contents (an `#outline()` block at the cursor), insert table, add/delete row/column, header row,
   insert page break, horizontal rule (the block-node entries live in `toolbar-blocks.ts`; `Action`
-  in `toolbar-action.ts`). Each entry is a row in a table of Tiptap chain commands; after
-  every transaction the buttons show `aria-pressed` and are disabled when `editor.can()` says no.
+  in `toolbar-action.ts`), and "Comment" when the view has a `comment` option (enabled with a
+  caret or selection in text outside code blocks). Each entry is a row in a table of Tiptap chain
+  commands; after every transaction the buttons show `aria-pressed` and are disabled when
+  `editor.can()` (or the action's own `enabled`) says no.
   Mousedown is cancelled, so the text keeps focus and selection.
   - Link (and Mod+K in the text) and insert image ask for a value in a `FieldPopover`
     (`field-popover.ts`: one text field, Apply/Enter, optional Remove, Escape or a click outside
@@ -641,8 +647,9 @@ Comments are [`drafting`](https://typst.app/universe/package/drafting/) margin n
 Typst source itself (`@preview/drafting:0.2.2`): `#margin-note[note]` (point, at a cursor) and
 `#margin-note[text][note]` (range: drafting highlights `text`). There is no other comment store:
 the preview shows what the compiler draws, and git, diffs, undo and collaboration carry notes as
-ordinary text. No threads: a reply is more text in the note, resolving means deleting the call,
-and an author is whatever the note's text says. Hiding notes for the final output
+ordinary text. A thread is a list in the note (one item per message, `*Name* (YYYY-MM-DD): text`,
+below), resolving means deleting the call, and an author is whatever the note's text says (the
+widget's `user.name` when it writes a message). Hiding notes for the final output
 (`#set-margin-note-defaults(hidden: true)`) is up to the author.
 
 ```ts
@@ -653,10 +660,15 @@ noteCallSyntax(source, funcCallNode) → {head, text: ContentBlock | null, note}
 isNoteCallAt(source, from, to) → boolean            // one note call in markup from `#` to exactly `to`
 safeNote(markup) → string | null                    // markup that cannot end or swallow its call
 addMarginNote(text, {from, to}) → {changes: TextChange[], note} | null   // note: offset of the new (empty) body
+// note-thread.ts: the only module that knows the thread format (all on the note's markup)
+readThread(note) → {author, date, text}[]          // author/date null: an anonymous message (markup)
+addReply(note, {author, date, text}) → note        // only an insertion after the last item
+editMessage(note, index, text) → note | null   deleteMessage(note, index) → note | null ('' = the only one)
+localDate(date?) → 'YYYY-MM-DD'
 new CommentAction(root, () => {document, view: {selection(), reveal(), editNote?()}} | null)   .button  .comment()  .destroy()
-VisualView.editNote(offset) → boolean   // focuses the gutter card of the note whose source holds offset
+VisualView.editNote(offset) → boolean   // focuses the reply box in the card of the note whose source holds offset
 // visual-view/notes-gutter: the notes gutter
-new NotesGutter(body)   .plugin (add to the editor state)  .edit(offset) → boolean  .destroy()
+new NotesGutter(body, {user?})   .plugin (add to the editor state)  .edit(offset) → boolean  .destroy()
 layoutCards([{anchor, height}], {gap, active?, top?}) → tops   // pure: cards beside anchors, no overlap
 findNotes(doc) / followNotes(prev, mapping, found, newKey) / setNoteText(tr, note, markup) / removeNote(tr, note)
 noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-list.ts, pure ProseMirror
@@ -684,32 +696,54 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
   4cm (room for drafting's notes), or the next whole cm + 1 when `m` is an absolute length of
   4cm or more (equal sides would be uniform again). `auto`, absent and non-uniform margins,
   variables and spreads are never touched.
-- **`CommentAction`**: the widget's only comment UI — the "Comment" button and Ctrl/Cmd+Alt+M
-  (captured at the widget root). Works on the shown `.typ` file in the current view
-  (`EditingViews.shown()`), applies the edits as one `document.change`, then
-  `VisualView.editNote(note)` focuses the new note's card, or the Source view puts the caret into `[]`.
+- **Threads** (`note-thread.ts`, pure): a note's body is a thread when it is one flat list whose
+  items after the first all start with `*Name* (YYYY-MM-DD): `; the first may lack them (a
+  hand-written note that got a reply). Such messages are escaped plain text (`escapeText`, plus
+  line-start `-`, `+`, `=`, `/ `, `1.`; a line break is `\` + newline, continued 2 spaces deeper
+  than the marker; a blank line a paragraph break). Items without name and date are markup, kept
+  as written. Any other body (plain text, `- a\n- b`) is one anonymous message; it is rewritten
+  only by a reply, which makes it the first item (`- <text>`).
+  - Layout: Typst continues an item on lines deeper than the marker's column, unknown for an
+    item right after `[`. So a single-line first message is inline (`[- *Ann* (…): text]`), a
+    multi-line one uses the block form (`[\n  - …\n]`), and a reply after an inline first item
+    starts its own line at column 0 (`[- … \n- *Bob* (…): …]`). A reply is only an insertion
+    after the last item, so concurrent replies merge into two items (tested with in-process
+    Y.Docs). Only a multi-line edit of an inline first message moves it into the block form.
+- **`CommentAction`**: "Comment" and Ctrl/Cmd+Alt+M (captured at the widget root). The Visual
+  view's toolbar has the button (`VisualViewOptions.comment` calls `CommentAction.comment()`);
+  the tab bar keeps `CommentAction.button` for the Source view only
+  (`EditingViews.addTabAction(element, 'source')` hides it in the Visual view). Works on the
+  shown `.typ` file in the current view (`EditingViews.shown()`), applies the edits as one
+  `document.change`, then `VisualView.editNote(note)` focuses the new note's reply box, or the
+  Source view puts the caret into `[]`.
 - **Visual view, in the text** (`margin-notes.ts`): see `marginNote` / `noteRange` below. A point
   note is a small marker (tooltip: its note), a range note's text is highlighted.
 - **Visual view, notes gutter** (`notes-gutter.ts`, like the comment sidebar of Google Docs or
   Tiptap's comments): a column right of the text (`.typst-visual__body` holds the editor DOM and
-  the gutter; the column only shows while the document has notes) with a card per note, in
-  document order: the highlighted text (range notes), the note's markup in a multi-line text
-  area, and "Resolve note".
-  - Editing: Mod+Enter or leaving the field writes the markup back through `safeNote` (brackets
-    without a partner escaped, or all of it escaped as plain text if the markup would still
-    break the call) as one transaction (one undo step) setting the `note` attribute of the atom
-    or mark; everything else stays as written. Escape restores the field. Mod+Enter and Escape put
-    the text cursor after the note. Resolve deletes a point note's atom, or only the `noteRange`
-    mark of a range note (its text stays), one undo step.
+  the gutter; the column only shows while the document has notes) with a card per note
+  (`note-card.ts`), in document order: the highlighted text (range notes), the thread (name in
+  bold, date muted, text; oldest first; more than 4 messages collapse to the first, "n more" and
+  the last 2), a reply box, and "Resolve note".
+  - Replying: Mod+Enter (or the send button) appends a message signed with `user.name`
+    (default "Anonymous") and `localDate()`; the first message of an empty note is also sent
+    when the box is left (as the old note field saved), replies are not. Own messages (same
+    name: a soft rule, not a boundary) and anonymous ones have a pencil: edit in place, Mod+Enter
+    or leaving saves, Escape cancels; the last message, if own, can be deleted (the only one: the
+    note goes). Every change computes the new note markup (`addReply` / `editMessage` /
+    `deleteMessage`, checked with `safeNote`) and is one transaction (one undo step) setting the
+    `note` attribute of the atom or mark; everything else stays as written. Mod+Enter and Escape
+    put the text cursor after the note. Resolve deletes a point note's atom, or only the
+    `noteRange` mark of a range note (its text stays), one undo step.
   - State: a ProseMirror plugin keeps the notes as a list (`note-list.ts`: `findNotes` on every
     doc change, `followNotes` maps the previous notes through the transaction's mapping to keep
     each note's key; a range note may change at one end). The plugin decorates every anchor with
     `data-note-key` (node decoration on a marker, inline decoration over a range) plus
     `--active` / `--hover` classes. The active note is the one at the cursor (innermost range
     note, or a selected marker), a focused card's, or a clicked marker's; hover comes from the
-    anchor or the card. Cards are DOM outside ProseMirror, reconciled by key: an open card keeps
-    its field and the user's text while the document changes from elsewhere and saves into its
-    own note; a card whose note is gone saves nothing.
+    anchor or the card. Cards are DOM outside ProseMirror, reconciled by key: a card keeps its
+    reply box (and a message being edited) with the user's text while the document changes from
+    elsewhere (a reply arriving re-renders the thread, unless a message is open) and saves into
+    its own note; a card whose note is gone saves nothing.
   - Layout (`card-layout.ts`, pure): cards start at their anchor's top, pushed down below the
     previous card (gap 8px); the active card stays at its anchor and cards above it move up (not
     above the gutter's top). Measuring (anchor rects, card heights; all reads, then writes) runs
@@ -720,8 +754,11 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
     popover below its anchor.
   - `editNote(offset)` finds the note in the document: a point note whose call holds `offset`, or
     among range notes whose text ends at the same place (nested) the one whose `][note]` holds it,
-    makes it active and focuses its card.
+    makes it active and focuses its card's reply box.
 - **Source view**: plain Typst, no extra decoration.
+- Tests: `note-thread.test.ts` (format, round trips, escaping, concurrent replies over Y.Docs),
+  `notes-gutter/notes-gutter.test.ts` (cards and threads in jsdom), engine tests compile both
+  thread layouts against drafting.
 - Engine tests compile both forms against the real package (`src/core/typst-engine/fixtures/drafting-0.2.2`).
 - **Removed** with this design (it replaced the sidecar comments of docs/todo/comments.md):
   `src/comments` (Comments, quote anchors, CommentsPanel, CommentsUI), `SharedComments` and the

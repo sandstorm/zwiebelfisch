@@ -47,7 +47,7 @@ export interface TypstEditorOptions {
   onFilesChange?(change: FileChange): void;
   /** Called whenever the main file's text changes. */
   onChange?(source: string): void;
-  /** Who works here: the name (and cursor color) others see when collaborating, and who saves versions. */
+  /** Who works here: the name (and cursor color) others see when collaborating, who saves versions and signs comments. */
   user?: { name: string; color?: string };
   /**
    * Real-time collaboration on the project's Typst files (margin notes
