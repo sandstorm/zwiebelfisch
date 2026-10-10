@@ -19,9 +19,13 @@ import { documentLinks } from '../extensions/document-links/document-links';
 import { images } from '../extensions/images/images';
 import { renderedBoxes } from '../extensions/rendered-boxes/rendered-boxes';
 import { typstLanguage } from '../extensions/typst-language/typst-language';
-import {
-  alignment, headingNumbers, headings, horizontalRule, lists, markup, outline, pageBreak, tables, taskLists,
-} from '../hosts/visual-view/visual-view';
+import { alignment } from '../extensions/alignment/alignment';
+import { headings } from '../extensions/headings/headings';
+import { lists } from '../extensions/lists/lists';
+import { markup } from '../extensions/markup/markup';
+import { outline } from '../extensions/outline/outline';
+import { pageLayout } from '../extensions/page-layout/page-layout';
+import { tables } from '../extensions/tables/tables';
 import proseMirrorStyles from '../hosts/visual-view/visual-view.css?inline';
 import { type EditorMode, type TypstExtension, WorkbenchHost, workbenchStyles } from '../hosts/workbench/workbench';
 import { type FileChange, Project, type ProjectFiles } from '../core/project/project';
@@ -191,6 +195,12 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
  * The features of the widget and the Typst constructs of the Visual view, in activation order: an extension reads
  * the services of those before it, and the order of the Visual view's contributions is that of its schema (marks
  * nest in it) and of its projectors (the first that takes a piece of syntax gets it).
+ *
+ * The Typst constructs depend on that order: `markup` comes first, so its marks (bold, italic, link, code) nest
+ * outside the features' marks (comments, styles); `tables` before `projectRenderings`, whose figures may hold a
+ * table; images before rendered snippets (the first box renderer that takes a box draws it); within `lists`, task
+ * lists before bullet lists (a task item is a bullet item `- [ ] ..`); `alignment` after the other blocks (its
+ * paragraph spec extends the host's paragraph).
  */
 function builtinExtensions(options: TypstEditorOptions): TypstExtension[] {
   return [
@@ -209,12 +219,8 @@ function builtinExtensions(options: TypstEditorOptions): TypstExtension[] {
     // raw boxes drawn as compiled snippets (after images, whose renderer draws image boxes)
     renderedBoxes(),
     outline,
-    pageBreak,
-    horizontalRule,
-    // before lists: its projector gets bullet items (`- [ ] ..`) first
-    taskLists,
+    pageLayout,
     lists,
-    headingNumbers,
     alignment,
     comments({ user: options.user }),
     labels(),

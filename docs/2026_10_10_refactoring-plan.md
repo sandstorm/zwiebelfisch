@@ -92,6 +92,14 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
   module the layer direction still holds (`model/` imports no view folder, no DOM). Entry names follow
   the folder where that reads well; the lint checks "only through the entry", not the file name.
   Implemented in the rules wave (`eslint-rules/entry-imports.js`).
+- **Re-exports as few as possible** (user, 2026-10-10: "they greatly increase complexity"). A module's
+  entry *defines* its API (the most important code lives in the entry, not behind it); internal files
+  hold the implementation and are not forwarded. `export … from` / `export { x }` of an imported name
+  is allowed only in the package entry `src/index.ts`; anywhere else it is a lint error, with a short,
+  reasoned exception list in `eslint.config.js` that should shrink. If an outside caller needs an
+  internal name, first ask whether the caller or the boundary is wrong (move the code, or the concept
+  is its own module). Implemented in the rules wave; the agents' thin entries (`model/model.ts`, …) and
+  host entries re-exporting built-ins / toolkits go.
 - **No sibling folders**: a module's entry file lives inside its folder (`typst-editor/typst-editor.ts`),
   never next to it. Code that is a feature lives in `features/`, even if only the widget uses it.
 - Tooling: every operation is a mise task; docs go in `docs/YYYY_MM_DD_slug.md`; commit per step on

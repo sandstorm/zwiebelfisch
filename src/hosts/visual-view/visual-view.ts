@@ -24,15 +24,15 @@ export {
   type BlockPrinter, type BlockSyntaxProjector, type Call, type InlineCallProjector, type InlineProjector, type Placed, type Printer,
   type ProjectionContext, type RunProjector,
 } from './projection/projection';
+// the projection framework itself, for tests of the specs: project a source, sync (print and the position maps are above)
+export { project, syncDoc } from './projection/projection';
 export { starterKitPart } from './nodes/nodes';
 // source offsets ↔ positions in a view's document, and the decorations that draw a source range (other users' places)
 export { nodeGrammar } from './projection/projection';
 export { rangeDecorations } from './highlights';
-// the built-in contributions: the constructs are extensions of the widget's built-in list; the rest are activated by
-// the extension of their feature (until extensions/ takes them over)
+// the features' built-in contributions, activated by the extension of their feature (until extensions/ takes them over)
 export {
-  alignment, customStyles, headingNumbers, headings, horizontalRule, lists, markup, outline, pageBreak, references,
-  tables, taskLists, type StyleSource,
+  customStyles, references, type StyleSource,
 } from './builtins/builtins';
 
 /** Marks transactions that mirror a document change, so they are not written back. */

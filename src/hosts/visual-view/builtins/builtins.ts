@@ -1,17 +1,6 @@
-// The built-in contributions to the Visual view: every Typst construct beyond paragraphs and raw Typst, and the
-// Visual-view parts of the widget's features. Entry of visual-view/builtins/. See ARCHITECTURE.md, "VisualView".
-// A construct without configuration is itself an extension in the widget's built-in list; a feature's extension
-// activates the contributions it configures (`references` with its LabelIndex, …). They use only the contribution
-// API, and move into extensions/<name>/visual-view/ with their feature.
-export { alignment } from './alignment/alignment';
-export { headingNumbers } from './heading-numbers/heading-numbers';
-export { headings } from './headings';
-export { horizontalRule } from './horizontal-rule';
-export { lists } from './lists';
-export { markup } from './markup/markup';
-export { outline } from './outline';
-export { pageBreak } from './page-break';
+// The Visual-view parts of the widget's features that have not moved into extensions/ yet. Entry of
+// visual-view/builtins/. See ARCHITECTURE.md, "VisualView". A feature's extension activates the contributions it
+// configures (`references` with its LabelIndex, …). They use only the contribution API, and move into
+// extensions/<name>/visual-view/ with their feature. (The Typst constructs are in extensions/ already.)
 export { references, type ReferencesOptions } from './references/references';
 export { customStyles, type StyleSource, type StylesOptions } from './styles/styles';
-export { tables } from './tables/tables';
-export { taskLists } from './task-lists/task-lists';

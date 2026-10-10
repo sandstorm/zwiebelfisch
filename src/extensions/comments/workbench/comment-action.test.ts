@@ -2,7 +2,8 @@
 // Tests for comment-action.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { markup, VisualView, VisualViewContributions } from '../../../hosts/visual-view/visual-view';
+import { markup } from '../../markup/markup';
+import { VisualView, VisualViewContributions } from '../../../hosts/visual-view/visual-view';
 import { localDate, NOTE_STYLE } from '../model/model';
 import { marginNotes, notesGutter } from '../visual-view/visual-view';
 import { CommentAction, type NoteView } from './comment-action';

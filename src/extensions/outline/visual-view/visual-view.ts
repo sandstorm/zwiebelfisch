@@ -1,0 +1,37 @@
+// What the outline extension contributes to the Visual view: `#outline(..)` as a box headed "Table of contents",
+// and "Insert" → "Table of contents". Entry of outline/visual-view/. See outline.ts.
+import { Node } from '@tiptap/core';
+import { parenthesized, svg, type Action, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+
+const Outline = Node.create({
+  name: 'outline',
+  group: 'block',
+  atom: true,
+  selectable: true,
+  draggable: true,
+  addAttributes() {
+    return { src: { default: '#outline()', rendered: false }, sep: { default: null, rendered: false } };
+  },
+  renderHTML({ node }) {
+    return ['pre', { class: 'typst-visual__outline' }, node.attrs.src];
+  },
+});
+
+/**
+ * A standalone `#outline(..)` call: the table of contents. Its source is kept
+ * and edited like a raw block's; the box is headed "Table of contents" and
+ * shows the compiled outline where a box renderer draws it.
+ */
+export const OUTLINE: TypstNodeSpec = {
+  name: 'outline',
+  extension: Outline,
+  labelled: true,
+  box: 'code',
+  codeBox: { label: { className: 'typst-visual__outline', text: () => 'Table of contents' } },
+  blockCalls: { outline: (p, call, sep) => (parenthesized(call.args) ? p.schema.nodes.outline.create({ src: p.text(call), sep }) : null) },
+};
+
+const ICON = svg('<path d="M4 6h10M7 10h13M7 14h13M4 18h10"/>');
+
+/** "Table of contents" in the Insert menu: an `#outline()` block. */
+export const INSERT_OUTLINE: Action = { label: 'Table of contents', icon: ICON, run: (c) => c.insertContent({ type: 'outline', attrs: { src: '#outline()' } }) };

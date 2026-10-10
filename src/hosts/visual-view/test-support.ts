@@ -10,10 +10,14 @@ import type { DocumentLinkProvider } from '../../core/document-links/document-li
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { ProjectLabels } from '../../features/labels/labels';
 import type { DocumentStyles } from '../../features/styles/styles';
-import {
-  alignment, customStyles, headingNumbers, headings, horizontalRule, lists, markup, outline, pageBreak, references,
-  tables, taskLists,
-} from './builtins/builtins';
+import { alignment } from '../../extensions/alignment/alignment';
+import { headings } from '../../extensions/headings/headings';
+import { lists } from '../../extensions/lists/lists';
+import { markup } from '../../extensions/markup/markup';
+import { outline } from '../../extensions/outline/outline';
+import { pageLayout } from '../../extensions/page-layout/page-layout';
+import { tables } from '../../extensions/tables/tables';
+import { customStyles, references } from './builtins/builtins';
 import { boxLinks } from '../../extensions/document-links/document-links';
 import { imagesVisualView, type ImageAssets, type ImageUrls } from '../../extensions/images/images';
 import { renderedBoxesVisualView, type SnippetSource } from '../../extensions/rendered-boxes/rendered-boxes';
@@ -70,12 +74,8 @@ function contributions(options: TestViewOptions): VisualViewContributions {
     // after images, whose renderer draws image boxes
     renderedBoxesVisualView({ snippets: options.renderer && (() => options.renderer) }),
     outline,
-    pageBreak,
-    horizontalRule,
-    // before lists: its projector gets bullet items (`- [ ] ..`) first
-    taskLists,
+    pageLayout,
     lists,
-    headingNumbers,
     alignment,
     references({ labels: options.labels }),
     customStyles({
