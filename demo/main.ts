@@ -1,30 +1,43 @@
 import { createTypstEditor } from '../src';
-import { EXAMPLES, exampleFiles, exampleFromQuery, exampleQuery, type ExampleName } from './examples';
+import { editorOptions, playgroundFromQuery, userQuery } from './playground';
+import { renderPlaygroundBar } from './playground-bar';
+import { probeServer, simulateUpstream } from './server-status';
+
+// The demo playground (docs/demo-playground.md). Its state is the URL:
+// `?example=hello|simple|advanced`, `?room=<name>` (Collaborate mode) or
+// `?room=gitlab:demo/report@<branch>` (GitLab mode) on the local playground
+// server (`mise run demo`), `&user=<name>`. Without `room` (Local mode, the
+// default and what the static e2e build uses) it never talks to a server.
 
 const params = new URLSearchParams(location.search);
-// `?example=hello|simple|advanced` picks the project (`?files` is the older name for `advanced`).
-const example = exampleFromQuery(params);
-// `?room=<name>` edits together with everyone in that room, through the local
-// collaboration server (`mise run server:dev`); `&user=<name>` sets the name others see.
-const room = params.get('room');
-const user = { name: params.get('user') ?? (room ? `Guest ${Math.floor(Math.random() * 1000)}` : 'Demo user') };
+const state = playgroundFromQuery(params);
+// In a room the name goes into the URL, so a reload stays the same user and the second window is someone else.
+if (state.room !== null && !params.has('user')) {
+  params.set('user', state.user);
+  history.replaceState(null, '', userQuery(state.user, params));
+}
 
-renderSwitcher(document.getElementById('examples')!, example);
-
-const editor = createTypstEditor(document.getElementById('editor')!, {
-  files: exampleFiles(example),
-  user,
-  collaboration: room ? { url: 'ws://127.0.0.1:1234', room } : undefined,
+const bar = renderPlaygroundBar(document.getElementById('playground')!, params, {
+  navigate: (query) => location.assign(query),
+  simulateUpstream: (change) => simulateUpstream(state.room!, change),
 });
-Object.assign(window, { editor });
 
-/** One link per example; switching reloads the page with the other example. */
-function renderSwitcher(nav: HTMLElement, current: ExampleName): void {
-  for (const { name, label } of EXAMPLES) {
-    const link = document.createElement('a');
-    link.textContent = label;
-    link.href = exampleQuery(name, params);
-    if (name === current) link.setAttribute('aria-current', 'page');
-    nav.append(link);
-  }
+void start();
+
+async function start(): Promise<void> {
+  // Local mode does not wait for anything: the editor exists synchronously, as before.
+  const server = state.mode === 'local' ? null : await probeServer();
+  if (server) bar.setServer(server);
+  const editor = createTypstEditor(document.getElementById('editor')!, { ...editorOptions(state, server), user: { name: state.user } });
+  Object.assign(window, { editor });
+  if (server) watchServer(server !== 'offline');
+}
+
+/** Keeps the status current while in a room (`joined`) or after falling back to the local copy. */
+function watchServer(joined: boolean): void {
+  setInterval(async () => {
+    const server = await probeServer();
+    if (joined) bar.setServer(server === 'offline' ? 'lost' : server);
+    else bar.setServer(server === 'offline' ? 'offline' : 'reload');
+  }, 5000);
 }
