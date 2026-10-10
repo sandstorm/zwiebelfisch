@@ -2,6 +2,7 @@ import { basicSetup } from 'codemirror';
 import { setDiagnostics } from '@codemirror/lint';
 import { Annotation, EditorSelection, StateEffect, StateField, type ChangeSet, type ChangeSpec } from '@codemirror/state';
 import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
+import type { Highlight } from '../document/highlight';
 import type { TextChange, TypstDocument } from '../document/typst-document';
 import { toLintDiagnostics, type SourceDiagnostic } from './lint';
 import { typstLanguage } from './typst-language';
@@ -28,6 +29,32 @@ const highlightField = StateField.define<DecorationSet>({
   provide: (field) => EditorView.decorations.from(field),
 });
 
+/** Highlights by layer (one per feature, e.g. comments), each layer replaced as a whole. */
+const setLayer = StateEffect.define<{ layer: string; highlights: readonly Highlight[] }>();
+const layersField = StateField.define<Record<string, DecorationSet>>({
+  create: () => ({}),
+  update(layers, tr) {
+    let next = tr.docChanged ? mapLayers(layers, tr.changes) : layers;
+    for (const effect of tr.effects) {
+      if (effect.is(setLayer)) next = { ...next, [effect.value.layer]: toDecorations(effect.value.highlights, tr.newDoc.length) };
+    }
+    return next;
+  },
+  provide: (field) => EditorView.decorations.computeN([field], (state) => Object.values(state.field(field))),
+});
+
+function mapLayers(layers: Record<string, DecorationSet>, changes: ChangeSet): Record<string, DecorationSet> {
+  return Object.fromEntries(Object.entries(layers).map(([layer, set]) => [layer, set.map(changes)]));
+}
+
+function toDecorations(highlights: readonly Highlight[], length: number): DecorationSet {
+  const ranges = highlights
+    .map((h) => ({ ...h, from: Math.min(h.from, length), to: Math.min(h.to, length) }))
+    .filter((h) => h.from < h.to)
+    .map((h) => Decoration.mark({ class: h.className, attributes: h.attributes }).range(h.from, h.to));
+  return Decoration.set(ranges, true);
+}
+
 export interface SourceViewOptions {
   /** Called with the cursor offset whenever the selection moves. */
   onCursor?(offset: number): void;
@@ -50,6 +77,7 @@ export class SourceView {
         typstLanguage(),
         EditorView.lineWrapping,
         highlightField,
+        layersField,
         EditorView.updateListener.of((update) => {
           if (update.docChanged && !update.transactions.some((tr) => tr.annotation(fromDocument))) {
             document.change(toTextChanges(update.changes), this);
@@ -83,6 +111,17 @@ export class SourceView {
   setDiagnostics(diagnostics: SourceDiagnostic[]): void {
     const { state } = this.view;
     this.view.dispatch(setDiagnostics(state, toLintDiagnostics(diagnostics, state.doc.length)));
+  }
+
+  /** Replaces the highlights of `layer`; they follow edits until set again. */
+  setHighlights(layer: string, highlights: readonly Highlight[]): void {
+    this.view.dispatch({ effects: setLayer.of({ layer, highlights }) });
+  }
+
+  /** The selected source range (the main selection). */
+  selection(): { from: number; to: number } {
+    const { from, to } = this.view.state.selection.main;
+    return { from, to };
   }
 
   destroy(): void {

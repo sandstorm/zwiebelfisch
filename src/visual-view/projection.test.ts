@@ -222,6 +222,15 @@ describe('source offset <-> document position', () => {
     expect(sourceToPos(doc, 0, -1)).toBe(1);
   });
 
+  it('maps a range end back to just after the source of its last visible character', () => {
+    const source = 'An *important* #emph[x] point\n\n= Next';
+    const doc = project(source);
+    expect(posToSource(doc, after(doc, 'important'), -1)).toBe(source.indexOf('important') + 'important'.length);
+    expect(posToSource(doc, after(doc, 'important') + 2, -1)).toBe(source.indexOf(' point'));
+    expect(posToSource(doc, after(doc, 'point'), -1)).toBe(source.indexOf('\n\n'));
+    expect(posToSource(doc, after(doc, 'An'), -1)).toBe(2);
+  });
+
   it('places the end of the source at the end of the last block', () => {
     const doc = project('Text\n\n');
     expect(sourceToPos(doc, 6)).toBe(after(doc, 'Text'));

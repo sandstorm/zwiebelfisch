@@ -41,6 +41,32 @@ describe('VisualView', () => {
     expect(window.getSelection()?.toString()).toBe('bold');
   });
 
+  it('draws highlights given in source offsets over the visible text', () => {
+    const source = '= Title\n\nSome *bold* text.\n';
+    const { view, parent } = setup(source);
+    const from = source.indexOf('bold');
+    view.setHighlights('comments', [{ from: from - 1, to: from + 5, className: 'note', attributes: { 'data-comment-id': 'a' } }]);
+    expect([...parent.querySelectorAll('.note[data-comment-id="a"]')].map((e) => e.textContent).join('')).toBe('bold');
+    view.setHighlights('comments', []);
+    expect(parent.querySelector('.note')).toBeNull();
+  });
+
+  it('keeps highlights on their text through edits from elsewhere', () => {
+    const source = 'Some bold text\n';
+    const { doc, view, parent } = setup(source);
+    view.setHighlights('comments', [{ from: 5, to: 9, className: 'note' }]);
+    doc.setText(`Really. ${source}`, 'source');
+    expect(parent.querySelector('.note')?.textContent).toBe('bold');
+  });
+
+  it('reports the selection as the source range it shows', () => {
+    const source = '= Title\n\nSome *bold* text.\n';
+    const { view } = setup(source);
+    const from = source.indexOf('bold');
+    view.reveal(from, from + 4);
+    expect(view.selection()).toEqual({ from, to: from + 4 });
+  });
+
   it('follows document changes made elsewhere', () => {
     const { doc, parent } = setup('= Title\n\nText\n');
     doc.setText('= Title\n\nText changed\n', 'source');
