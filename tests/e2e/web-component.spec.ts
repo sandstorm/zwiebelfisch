@@ -27,6 +27,7 @@ test('dispatches change with the new value while typing', async ({ page }) => {
   const detail = editor.evaluate(
     (el) => new Promise<string>((resolve) => el.addEventListener('change', (event) => resolve((event as CustomEvent<{ value: string }>).detail.value), { once: true })),
   );
+  await editor.getByRole('tab', { name: 'Source' }).click();
   await editor.getByTestId('typst-source').locator('.cm-content').click();
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.type('More text.');
