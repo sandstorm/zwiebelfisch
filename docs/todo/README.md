@@ -55,3 +55,5 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [fix-image-upload-ui](fix-image-upload-ui.md) | done (branch task/fix-image-upload-ui) |
 | [demo-examples](demo-examples.md) | done (branch task/demo-examples) |
 | [visual-toc-and-code](visual-toc-and-code.md) | done (branch task/visual-toc-and-code) |
+| [concept-custom-styles](concept-custom-styles.md) | done (concept: docs/2026_10_10_custom-styles.md) |
+| [custom-styles-mvp](custom-styles-mvp.md) | open |
