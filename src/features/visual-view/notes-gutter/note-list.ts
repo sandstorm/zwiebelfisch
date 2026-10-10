@@ -1,7 +1,7 @@
 import type { Mark as PMMark, Node as PMNode } from '@tiptap/pm/model';
 import { NodeSelection, type Selection, type Transaction } from '@tiptap/pm/state';
 import type { Mappable } from '@tiptap/pm/transform';
-import { rangeNoteSyntax } from '../../comments/margin-note-syntax';
+import { rangeNoteSyntax } from '../../comments/comments';
 import { posToSource, print, sourceToPos } from '../projection/projection';
 
 /**

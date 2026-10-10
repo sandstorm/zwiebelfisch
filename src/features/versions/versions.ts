@@ -1,5 +1,5 @@
 import { DEFAULT_COMMIT_MESSAGE, type ServerMessage } from '../collaboration/gitlab-protocol';
-import { FieldPopover } from '../visual-view/field-popover';
+import { FieldPopover } from '../visual-view/visual-view';
 
 /** A room's versions (`RoomVersions` in src/collab), as far as the controls use them. */
 export interface Versions {

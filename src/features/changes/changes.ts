@@ -1,6 +1,8 @@
 import { diffTexts } from './diff';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 
+export { diffTexts, type Change } from './diff';
+
 export interface ChangeTargets {
   /** The edited file. */
   document: TypstDocument;

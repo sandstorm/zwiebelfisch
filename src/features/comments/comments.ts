@@ -1,6 +1,9 @@
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import { addMarginNote } from './add-margin-note';
 
+export { addMarginNote } from './add-margin-note';
+export { NOTE_HEAD, noteCallSyntax, printNoteCall, rangeNoteSyntax, safeNote } from './margin-note-syntax';
+
 /** An editing view a note can be added in (source offsets throughout). */
 export interface NoteView {
   selection(): { from: number; to: number };

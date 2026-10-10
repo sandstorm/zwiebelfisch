@@ -1,4 +1,11 @@
+// The engine's static assets as URLs for the main thread: the wasm binary and Typst's default
+// fonts. Kept out of the entry file (typst-engine.ts) on purpose: the worker imports the entry,
+// and a worker bundle that imports these would emit a second copy of every asset. A documented
+// boundary exception (eslint.config.js): features/preview imports this file directly.
 import { fetchFonts } from './fetch-fonts';
+
+/** URL of the engine's wasm binary (pass it to `createEngine`, e.g. in a worker). */
+export { default as ENGINE_WASM_URL } from './wasm/typst_engine_bg.wasm?url&no-inline';
 
 /**
  * Typst's default fonts (Libertinus Serif, New Computer Modern + Math,

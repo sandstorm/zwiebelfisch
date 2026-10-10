@@ -1,10 +1,10 @@
 import type { TypstDocument } from '../core/typst-document/typst-document';
 import type { Preview } from '../features/preview/preview';
 import type { VisualViewOptions } from '../features/visual-view/visual-view';
-import type { FileContent } from '../features/preview/worker/project-files';
-import { extensionOf, fileKind, imageBlob, referencePath, resolvePath } from '../core/project/paths';
+import type { FileContent } from '../core/project/project';
+import { extensionOf, fileKind, imageBlob, referencePath, resolvePath } from '../core/project/project';
 import type { FileChange, Project } from '../core/project/project';
-import { uploadChanges } from '../features/files/upload';
+import { uploadChanges } from '../features/files/files';
 
 export interface ProjectRenderingsOptions {
   project: Project;

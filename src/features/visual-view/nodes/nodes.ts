@@ -17,6 +17,11 @@ import { ChecklistPreamble, TypstTaskItem, TypstTaskList } from './task-list';
 import { RawBoxNavigation, rawBoxView } from './raw-box';
 import { TextAlign } from './text-align';
 
+export { hasHeadingNumbering } from './heading-numbering';
+export { setBoxRenderer } from './raw-box';
+export type { BoxRenderer, Snippet } from './rendered-box';
+export { textAlignAt, type TextAlignment } from './text-align';
+
 /**
  * The Visual view's Tiptap extensions, i.e. its ProseMirror schema plus
  * editing behaviour (keymaps, input rules, list handling, undo).

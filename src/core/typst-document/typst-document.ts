@@ -2,6 +2,19 @@ import type * as Y from 'yjs';
 import { minimalChange } from './minimal-change';
 import { deltaToChanges, type DeltaOp } from './y-delta';
 
+export type { Highlight } from './highlight';
+export { minimalChange } from './minimal-change';
+export {
+  caretElement,
+  flagTextColor,
+  initials,
+  presenceStyle,
+  type PlacedPresence,
+  type Presence,
+  type PresenceTarget,
+  type PresenceUser,
+} from './presence';
+
 /** A replacement of `from..to` (UTF-16 offsets) by `insert`. */
 export interface TextChange {
   from: number;

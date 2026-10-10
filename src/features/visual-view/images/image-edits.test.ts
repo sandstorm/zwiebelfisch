@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EditorState, NodeSelection, type Transaction } from '@tiptap/pm/state';
-import { minimalChange } from '../../../core/typst-document/minimal-change';
+import { minimalChange } from '../../../core/typst-document/typst-document';
 import { schema } from '../nodes/nodes';
 import { addCaption, imageInfo, removeCaption, resizeImage, setImageAlt } from './image-edits';
 import { print, project } from '../projection/projection';

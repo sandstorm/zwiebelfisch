@@ -1,12 +1,11 @@
 // @vitest-environment jsdom
-import '../visual-view/jsdom-setup';
 import { undo as undoSource } from '@codemirror/commands';
 import { EditorView } from '@codemirror/view';
 import type { Editor } from '@tiptap/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
-import { addMarginNote } from '../comments/add-margin-note';
+import { addMarginNote } from '../comments/comments';
 import { Project } from '../../core/project/project';
 import { SourceView } from '../source-view/source-view';
 import { VisualView } from '../visual-view/visual-view';

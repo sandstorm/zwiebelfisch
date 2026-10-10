@@ -1,9 +1,8 @@
 // @vitest-environment jsdom
-import '../jsdom-setup';
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { resizedPercent } from './image-tools';
-import type { BoxRenderer } from '../nodes/rendered-box';
+import type { BoxRenderer } from '../nodes/nodes';
 import { VisualView } from '../visual-view';
 
 const renderer: BoxRenderer = {

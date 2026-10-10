@@ -3,14 +3,16 @@ import { setDiagnostics } from '@codemirror/lint';
 import { getOriginalDoc, unifiedMergeView, updateOriginalDoc } from '@codemirror/merge';
 import { Annotation, Compartment, EditorSelection, StateEffect, StateField, Transaction, type ChangeSet, type ChangeSpec } from '@codemirror/state';
 import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
-import type { Highlight } from '../../core/typst-document/highlight';
-import type { Presence, PresenceTarget } from '../../core/typst-document/presence';
+import type { Highlight } from '../../core/typst-document/typst-document';
+import type { Presence, PresenceTarget } from '../../core/typst-document/typst-document';
 import { REMOTE_ORIGIN, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
 import { toLintDiagnostics, type SourceDiagnostic } from './lint';
 import { remotePresence, showPresence } from './presence';
 import { typstLanguage } from './typst-language';
 
 export { describeDiagnostic, type SourceDiagnostic } from './lint';
+export { remotePresence, showPresence } from './presence';
+export { typstLanguage } from './typst-language';
 
 /** Marks transactions that mirror a document change, so they are not sent back. */
 const fromDocument = Annotation.define<boolean>();

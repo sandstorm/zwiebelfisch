@@ -1,6 +1,6 @@
 import { StateEffect, StateField, type EditorState, type Extension, type Range } from '@codemirror/state';
 import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view';
-import { caretElement, type Presence, type PresenceUser } from '../../core/typst-document/presence';
+import { caretElement, type Presence, type PresenceUser } from '../../core/typst-document/typst-document';
 
 const setPresence = StateEffect.define<readonly Presence[]>();
 

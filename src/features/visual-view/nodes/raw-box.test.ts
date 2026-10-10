@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-import '../jsdom-setup';
 import { EditorView } from '@codemirror/view';
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';

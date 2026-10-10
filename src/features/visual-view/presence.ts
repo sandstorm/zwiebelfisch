@@ -2,7 +2,7 @@ import { Extension } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey, type Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import { caretElement, flagTextColor, type Presence, type PresenceUser } from '../../core/typst-document/presence';
+import { caretElement, flagTextColor, type Presence, type PresenceUser } from '../../core/typst-document/typst-document';
 import { rangeDecorations } from './highlights';
 import { posToSource, sourceToPos } from './projection/projection';
 

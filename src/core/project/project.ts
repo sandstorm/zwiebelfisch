@@ -1,6 +1,10 @@
 import { TypstDocument } from '../typst-document/typst-document';
-import type { FileContent } from '../../features/preview/worker/project-files';
 import { fileKind } from './paths';
+
+export { displayName, extensionOf, fileKind, imageBlob, referencePath, resolvePath, toPath, type FileKind } from './paths';
+
+/** A project file: Typst source text, or bytes (images, data files, …). */
+export type FileContent = string | Uint8Array;
 
 /** Project files by absolute path (`/chapter.typ`, `/img/logo.png`): source text or bytes. */
 export type ProjectFiles = Record<string, FileContent>;

@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-import '../visual-view/jsdom-setup';
 import { describe, expect, it, vi } from 'vitest';
 import { undo } from '@codemirror/commands';
 import { EditorView } from '@codemirror/view';

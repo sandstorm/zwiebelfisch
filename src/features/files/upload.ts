@@ -1,4 +1,4 @@
-import { fileKind } from '../../core/project/paths';
+import { fileKind } from '../../core/project/project';
 import type { FileChange } from '../../core/project/project';
 
 /** The create changes for uploaded files: `.typ` files as text, everything else as bytes. */

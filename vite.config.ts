@@ -7,6 +7,8 @@ export default defineConfig({
   worker: { format: 'es' },
   test: {
     root: '.',
-    include: ['src/**/*.test.ts', 'demo/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'demo/**/*.test.ts', 'eslint-rules/**/*.test.js'],
+    // layout stubs for the jsdom environment (no-op in node)
+    setupFiles: ['tests/jsdom-setup.ts'],
   },
 });

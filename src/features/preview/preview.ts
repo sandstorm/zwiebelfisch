@@ -1,19 +1,19 @@
-import type { PlacedPresence } from '../../core/typst-document/presence';
+import type { PlacedPresence } from '../../core/typst-document/typst-document';
 import type { Box, Diagnostic, Jump, Page, Position } from '../../core/typst-engine/typst-engine';
-import { changeBars, drawnRanges } from './pages/change-bars';
-import { DEFAULT_FONT_URLS } from '../../core/typst-engine/default-fonts';
-import wasmUrl from '../../core/typst-engine/wasm/typst_engine_bg.wasm?url&no-inline';
-import { FileSender, type FileContent } from './worker/project-files';
-import { isInside, mostVisible, percentOfPage } from './pages/geometry';
+import { changeBars, drawnRanges } from './pages/pages';
+import { DEFAULT_FONT_URLS, ENGINE_WASM_URL } from '../../core/typst-engine/engine-assets';
+import type { FileContent } from '../../core/project/project';
+import { FileSender } from './worker/worker';
+import { isInside, mostVisible, percentOfPage } from './pages/pages';
 import { LatestOnly } from './latest-only';
-import { PageList } from './pages/page-list';
-import { presenceMarkers } from './pages/presence-markers';
-import { snippet, type Snippet } from './pages/snippet';
-import type { Init, Request, Response } from './worker/protocol';
+import { PageList } from './pages/pages';
+import { presenceMarkers } from './pages/pages';
+import { snippet, type Snippet } from './pages/pages';
+import { startEngineWorker, type Init, type Request, type Response } from './worker/worker';
 import { PreviewToolbar, type ZoomRequest } from './toolbar';
-import { stepZoom, zoomLabel, type Zoom } from './pages/zoom';
+import { stepZoom, zoomLabel, type Zoom } from './pages/pages';
 
-export type { Snippet } from './pages/snippet';
+export type { Snippet } from './pages/pages';
 
 export interface PreviewOptions {
   /** Called when the user clicks something in the preview that has a source location. */
@@ -45,7 +45,7 @@ const PRESENCE_INTERVAL_MS = 250;
  * mapping for click-to-source and source-to-preview reveal.
  */
 export class Preview {
-  private readonly worker = new Worker(new URL('./worker/engine.worker.ts', import.meta.url), { type: 'module' });
+  private readonly worker = startEngineWorker();
   private readonly pending = new Map<number, (response: Response) => void>();
   private readonly pane: HTMLElement;
   private readonly scroller: HTMLElement;
@@ -99,7 +99,7 @@ export class Preview {
       interval: PRESENCE_INTERVAL_MS,
     });
 
-    this.worker.postMessage({ type: 'init', wasm: wasmUrl, fonts: DEFAULT_FONT_URLS } satisfies Init);
+    this.worker.postMessage({ type: 'init', wasm: ENGINE_WASM_URL, fonts: DEFAULT_FONT_URLS } satisfies Init);
     this.worker.onmessage = (event: MessageEvent<Response>) => {
       this.pending.get(event.data.id)?.(event.data);
       this.pending.delete(event.data.id);

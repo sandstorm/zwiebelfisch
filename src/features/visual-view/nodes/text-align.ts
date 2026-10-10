@@ -3,9 +3,9 @@ import type { Node as PMNode, NodeRange, ResolvedPos } from '@tiptap/pm/model';
 import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state';
 import { liftTarget } from '@tiptap/pm/transform';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import { alignArgs, setRules, withHorizontal, type Horizontal, type TextAlignment } from '../projection/alignment';
+import { alignArgs, setRules, withHorizontal, type Horizontal, type TextAlignment } from '../projection/projection';
 
-export type { TextAlignment } from '../projection/alignment';
+export type { TextAlignment } from '../projection/projection';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {

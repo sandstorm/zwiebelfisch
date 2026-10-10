@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
-import type { PlacedPresence, Presence } from '../../core/typst-document/presence';
+import type { PlacedPresence, Presence } from '../../core/typst-document/typst-document';
 import { connect, connectAwareness } from './in-process';
 import { RemoteCursors } from './remote-cursors';
 

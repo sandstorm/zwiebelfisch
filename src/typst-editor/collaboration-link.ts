@@ -1,5 +1,5 @@
 import type { Collaboration, CollaborationOptions, RoomVersions, Shared } from '../features/collaboration/collaboration';
-import type { PlacedPresence, PresenceTarget } from '../core/typst-document/presence';
+import type { PlacedPresence, PresenceTarget } from '../core/typst-document/typst-document';
 
 /** The editing view the local user works in, and what it has selected. */
 export interface CurrentSelection {

@@ -1,7 +1,11 @@
-import { initials, presenceStyle, type PlacedPresence, type PresenceUser } from '../../core/typst-document/presence';
-import { displayName, extensionOf, fileKind, toPath, type FileKind } from '../../core/project/paths';
+import { initials, presenceStyle, type PlacedPresence, type PresenceUser } from '../../core/typst-document/typst-document';
+import { displayName, extensionOf, fileKind, toPath, type FileKind } from '../../core/project/project';
 import { uploadChanges } from './upload';
 import type { FileChange } from '../../core/project/project';
+
+export { AssetView } from './asset-view';
+export { insertImage } from './insert-image';
+export { uploadChanges } from './upload';
 
 export interface FileSwitcherOptions {
   /** Someone picked a file. */

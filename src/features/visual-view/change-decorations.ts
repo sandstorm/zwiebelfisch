@@ -10,7 +10,7 @@
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import { diffTexts, type Change } from '../changes/diff';
+import { diffTexts, type Change } from '../changes/changes';
 import { print, project, sourceToPos } from './projection/projection';
 
 export type ChangeKind = 'insert' | 'delete' | 'format' | 'changed';

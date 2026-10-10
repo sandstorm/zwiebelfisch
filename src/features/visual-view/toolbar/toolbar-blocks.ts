@@ -1,5 +1,5 @@
 import { findParentNode, type Editor } from '@tiptap/core';
-import { hasHeadingNumbering } from '../nodes/heading-numbering';
+import { hasHeadingNumbering } from '../nodes/nodes';
 import { svg, type Action } from './toolbar-action';
 
 /**

@@ -1,21 +1,22 @@
 import { Editor } from '@tiptap/core';
 import { EditorState, TextSelection, type Transaction } from '@tiptap/pm/state';
-import type { Highlight } from '../../core/typst-document/highlight';
-import type { Presence, PresenceTarget } from '../../core/typst-document/presence';
+import type { Highlight } from '../../core/typst-document/typst-document';
+import type { Presence, PresenceTarget } from '../../core/typst-document/typst-document';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import { changesPlugin, setChangesBase } from './change-decorations';
 import { extensions } from './nodes/nodes';
 import { highlights, setHighlights } from './highlights';
-import type { ImageAssets } from './images/image-choices';
+import type { ImageAssets } from './images/images';
 import { remotePresence, setPresence } from './presence';
 import { posToSource, print, project, sourceToPos, syncDoc } from './projection/projection';
-import { setBoxRenderer } from './nodes/raw-box';
-import type { BoxRenderer } from './nodes/rendered-box';
+import { setBoxRenderer } from './nodes/nodes';
+import type { BoxRenderer } from './nodes/nodes';
 import { NotesGutter } from './notes-gutter/notes-gutter';
 import { Toolbar } from './toolbar/toolbar';
 
-export type { BoxRenderer, Snippet } from './nodes/rendered-box';
-export type { ImageAssets } from './images/image-choices';
+export type { BoxRenderer, Snippet } from './nodes/nodes';
+export type { ImageAssets } from './images/images';
+export { FieldPopover } from './field-popover';
 
 export interface VisualViewOptions {
   /** Shows images and compiled snippets in raw boxes while they are not edited (default: code only). */

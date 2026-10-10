@@ -1,7 +1,5 @@
+import type { FileContent } from '../../../core/project/project';
 import type { Engine } from '../../../core/typst-engine/typst-engine';
-
-/** A project file: Typst source text, or bytes (images, data files, …). */
-export type FileContent = string | Uint8Array;
 
 /**
  * The file map of a compile request. `null` stands for the same bytes as in

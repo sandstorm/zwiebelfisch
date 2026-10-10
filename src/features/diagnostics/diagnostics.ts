@@ -2,6 +2,8 @@ import type { Diagnostic } from '../../core/typst-engine/typst-engine';
 import { describeDiagnostic } from '../source-view/source-view';
 import { inProject, type DiagnosticTarget, type DiagnosticsSummary } from './diagnostics-summary';
 
+export { summarizeDiagnostics } from './diagnostics-summary';
+
 /**
  * The compact compile status of the widget: "✓ compiled" or "2 errors".
  * Clicking it jumps to the summary's target; hovering or focusing it shows the

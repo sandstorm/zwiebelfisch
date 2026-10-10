@@ -1,5 +1,9 @@
 import init, { Engine as WasmEngine, type InitInput } from './wasm/typst_engine';
 
+// Asset URLs (wasm, default fonts) are in engine-assets.ts, not here: the worker imports this file.
+export { fetchFonts } from './fetch-fonts';
+export { fetchPreviewPackage, withPackages, type PackageFetcher, type PackageProject } from './packages/packages';
+
 /**
  * The Typst compiler, SVG renderer and preview hit-testing (Rust → wasm).
  *
@@ -92,7 +96,7 @@ export type FontSource = Uint8Array | Promise<Uint8Array>;
 
 /**
  * Instantiates the engine from the wasm module (URL, bytes or response). The
- * engine embeds no fonts: pass them here (see `defaultFonts()`) or add them later.
+ * engine embeds no fonts: pass them here (see `defaultFonts()` in engine-assets.ts) or add them later.
  */
 export async function createEngine(
   wasm: InitInput | Promise<InitInput>,

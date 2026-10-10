@@ -1,6 +1,6 @@
 import { readdirSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { defaultFonts } from './default-fonts';
+import { defaultFonts } from './engine-assets';
 
 describe('defaultFonts', () => {
   afterEach(() => vi.unstubAllGlobals());

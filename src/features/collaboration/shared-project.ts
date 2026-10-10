@@ -1,7 +1,7 @@
 import * as Y from 'yjs';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { Project } from '../../core/project/project';
-import { fileKind } from '../../core/project/paths';
+import { fileKind } from '../../core/project/project';
 
 /** The Y.Doc's map of shared Typst files: path → text. */
 export const FILES_MAP = 'files';

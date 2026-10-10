@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-import './jsdom-setup';
 import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../core/typst-document/typst-document';

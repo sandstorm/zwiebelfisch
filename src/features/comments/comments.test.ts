@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-import '../visual-view/jsdom-setup';
 import { describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../core/typst-document/typst-document';
 import { VisualView } from '../visual-view/visual-view';

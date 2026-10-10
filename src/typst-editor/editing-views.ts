@@ -1,5 +1,5 @@
 import type { TypstDocument } from '../core/typst-document/typst-document';
-import type { Highlight } from '../core/typst-document/highlight';
+import type { Highlight } from '../core/typst-document/typst-document';
 import { describeDiagnostic, SourceView, type SourceDiagnostic } from '../features/source-view/source-view';
 import { VisualView, type VisualViewOptions } from '../features/visual-view/visual-view';
 
