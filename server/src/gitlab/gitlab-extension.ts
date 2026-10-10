@@ -9,7 +9,7 @@ import type { Authenticate, AuthenticatedUser } from '../auth.ts';
 import { BlobCache } from './blob-cache.ts';
 import { GitLabProject, type GitLabConfig } from './gitlab-api.ts';
 import { GitLabRoom, type Author } from './gitlab-room.ts';
-import { handleHttp, type HttpRequest, type HttpResponse } from './http.ts';
+import { handleHttp, nodeRequest, sendResponse, type HttpRequest, type HttpResponse } from './http.ts';
 
 export interface GitLabOptions extends GitLabConfig {
   /** The secret GitLab sends as `X-Gitlab-Token` with push webhooks (unset: no webhook endpoint). */
@@ -81,15 +81,9 @@ export class GitLabExtension implements Extension {
   }
 
   async onRequest({ request, response }: onRequestPayload): Promise<void> {
-    const result = await this.handle({
-      method: request.method ?? 'GET',
-      url: request.url ?? '/',
-      header: (name) => headerValue(request.headers[name.toLowerCase()]),
-      body: () => readBody(request),
-    });
+    const result = await this.handle(nodeRequest(request));
     if (!result) return;
-    response.writeHead(result.status, result.headers);
-    response.end(result.body);
+    sendResponse(response, result);
     // Hocuspocus' way of saying "answered": no default response, no further hooks.
     throw null;
   }
@@ -133,14 +127,4 @@ function parseMessage(payload: string): ClientMessage | null {
   } catch {
     return null;
   }
-}
-
-function headerValue(value: string | string[] | undefined): string | null {
-  return (Array.isArray(value) ? value[0] : value) ?? null;
-}
-
-async function readBody(request: AsyncIterable<unknown>): Promise<string> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of request) chunks.push(Buffer.from(chunk as Uint8Array));
-  return Buffer.concat(chunks).toString('utf8');
 }
