@@ -373,7 +373,7 @@ class Widget {
     this.showNeighbours(); // an #include may have been added, moved or removed
     if (change.kind !== 'update') this.restructured(change);
     this.options.onFilesChange?.(change);
-    if (change.kind === 'update' && change.path === this.project.main) this.options.onChange?.(change.content);
+    if (change.kind === 'update' && change.path === this.project.main && typeof change.content === 'string') this.options.onChange?.(change.content);
   }
 
   /** Keeps `active` and `lastSource` pointing at existing files after a create / rename / delete. */

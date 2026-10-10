@@ -96,7 +96,17 @@ describe('Project', () => {
     const p = project();
     p.apply({ kind: 'update', path: '/chapter.typ', content: 'new' });
     expect(p.document('/chapter.typ')!.text).toBe('new');
-    expect(p.check({ kind: 'update', path: '/logo.png', content: 'x' })).toMatch(/text/);
+    expect(p.check({ kind: 'update', path: '/chapter.typ', content: new Uint8Array([1]) })).toMatch(/text/);
+  });
+
+  it('replaces the content of other files with an update, and tells listeners', () => {
+    const p = project();
+    const listener = vi.fn();
+    p.onChange(listener);
+    const bytes = new Uint8Array([9, 9]);
+    p.apply({ kind: 'update', path: '/logo.png', content: bytes });
+    expect(p.content('/logo.png')).toBe(bytes);
+    expect(listener).toHaveBeenCalledWith({ kind: 'update', path: '/logo.png', content: bytes });
   });
 
   it('replaces the other files, keeping documents of paths that stay', () => {

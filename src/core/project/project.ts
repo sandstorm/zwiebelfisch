@@ -20,7 +20,8 @@ export type ProjectFiles = Record<string, FileContent>;
 /** One change to the project's files, as the host sees (and may veto) it. */
 export type FileChange =
   | { kind: 'create'; path: string; content: FileContent }
-  | { kind: 'update'; path: string; content: string }
+  /** Text of a Typst file (its document), or the new content of any other file. */
+  | { kind: 'update'; path: string; content: FileContent }
   | { kind: 'delete'; path: string }
   | { kind: 'rename'; path: string; from: string };
 
@@ -91,7 +92,7 @@ export class Project {
     if (!this.entries.has(existing)) return `There is no file ${existing}.`;
     switch (change.kind) {
       case 'update':
-        return this.document(change.path) ? null : `${change.path} is not a text file that can be edited.`;
+        return this.document(change.path) && typeof change.content !== 'string' ? `${change.path} must contain text.` : null;
       case 'delete':
         return change.path === this.main ? 'The main file cannot be deleted.' : null;
       case 'rename':
@@ -104,8 +105,9 @@ export class Project {
     const problem = this.check(change);
     if (problem) throw new Error(problem);
     if (change.kind === 'update') {
-      this.document(change.path)!.setText(change.content, 'api');
-      return;
+      const document = this.document(change.path);
+      if (document) return document.setText(change.content as string, 'api');
+      this.entries.set(change.path, { content: change.content });
     }
     if (change.kind === 'create') this.add(change.path, change.content);
     if (change.kind === 'delete') this.remove(change.path);
