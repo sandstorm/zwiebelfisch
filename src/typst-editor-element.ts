@@ -1,5 +1,5 @@
-import { createTypstEditor, type CollaborationOptions, type FileChange, type FileListMode, type ProjectFiles, type TypstEditor } from '../editor/typst-editor';
-import { inlineSource } from './inline-source';
+import { createTypstEditor, type CollaborationOptions, type FileChange, type FileListMode, type ProjectFiles, type TypstEditor } from './typst-editor';
+import { inlineSource } from './typst-editor-element/inline-source';
 
 /** `detail` of the `change` event the element dispatches after every user edit. */
 export interface TypstEditorChangeDetail {

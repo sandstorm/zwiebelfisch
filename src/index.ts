@@ -1,4 +1,4 @@
-import { defineTypstEditorElement } from './element/typst-editor-element';
+import { defineTypstEditorElement } from './typst-editor-element';
 
 export {
   createTypstEditor,
@@ -9,12 +9,12 @@ export {
   type ProjectFiles,
   type TypstEditor,
   type TypstEditorOptions,
-} from './editor/typst-editor';
+} from './typst-editor';
 export {
   TypstEditorElement,
   defineTypstEditorElement,
   type TypstEditorChangeDetail,
-} from './element/typst-editor-element';
+} from './typst-editor-element';
 
 // Importing the package makes <typst-editor> available (no-op without a DOM).
 defineTypstEditorElement();
