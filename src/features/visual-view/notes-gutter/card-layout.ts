@@ -1,3 +1,4 @@
+// Card layout: where the notes gutter puts its cards, near their anchors without overlap. See notes-gutter.ts.
 /** A card in the notes gutter: where its anchor is and how tall it is (same unit, e.g. px). */
 export interface CardBox {
   anchor: number;

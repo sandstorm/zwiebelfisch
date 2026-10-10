@@ -1,3 +1,4 @@
+// FieldPopover: a small popover with one text field, for links and images. See visual-view.ts.
 /** What a field popover asks for and does with the answer. */
 export interface FieldPopoverOptions {
   /** Accessible name of the popover, e.g. "Link". */

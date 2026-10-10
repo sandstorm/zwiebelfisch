@@ -1,3 +1,4 @@
+// Image choices: the project's images offered in the "Insert image" popover, and uploads. See images.ts.
 /** Where the Visual view gets images to insert from: the host's project files. */
 export interface ImageAssets {
   /** The project's images, as paths to write in `#image(..)` in this document. */

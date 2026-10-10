@@ -1,3 +1,4 @@
+// inlineSource: the Typst source written inside a <typst-editor> element. See typst-editor-element.ts.
 /**
  * Turns Typst source written inside an HTML element into the source itself:
  * drops the newline after the opening tag and the trailing indentation before

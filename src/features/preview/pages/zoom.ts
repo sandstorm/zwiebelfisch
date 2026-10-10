@@ -1,3 +1,4 @@
+// Preview zoom: the zoom value and stepping through its presets. See pages.ts.
 /** Preview zoom: fit the pane width, or a fixed scale where 1 = 100 % (1 pt = 1/72 in). */
 export type Zoom = 'fit' | number;
 

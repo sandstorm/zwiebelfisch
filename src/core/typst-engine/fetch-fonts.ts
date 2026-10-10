@@ -1,3 +1,4 @@
+// fetchFonts: downloads the font files that createEngine takes. See typst-engine.ts.
 /** Starts downloading every font at once; pass the result to `createEngine`. */
 export function fetchFonts(urls: readonly string[]): Promise<Uint8Array>[] {
   return urls.map(fetchFont);

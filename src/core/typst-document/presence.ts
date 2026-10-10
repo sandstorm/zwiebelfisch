@@ -1,3 +1,4 @@
+// Presence: other users' carets and selections as source ranges. See typst-document.ts.
 /** Who another user is, as the views show them. */
 export interface PresenceUser {
   name: string;

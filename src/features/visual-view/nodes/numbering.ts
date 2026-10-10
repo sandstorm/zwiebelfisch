@@ -1,3 +1,4 @@
+// Typst numbering patterns, formatted the way Typst does, for heading numbers. See nodes.ts.
 /**
  * Typst numbering patterns (`"1."`, `"1.a)"`, `"I."`, …), applied as Typst
  * applies them (typst-library `NumberingPattern`): the pattern is a prefix,

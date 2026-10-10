@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 //MISE description="Fail on a source file that does not start with a top comment (context, or See <entry file / ARCHITECTURE.md section>)"
 // Every TypeScript and CSS source file starts with a comment that says what it is for, or where
-// to read about it ("See typst-editor.ts", "Tests for …"). A shebang line may come first.
+// to read about it ("See typst-editor.ts", "Tests for …"). A shebang line may come first. The
+// JSDoc of the first declaration (directly followed by `export …`) does not count.
 // Checks the tracked files in src/, demo/, tests/, server/src/ and eslint-rules/; prints each
 // file without one and exits 1.
 import { execFileSync } from 'node:child_process';
@@ -16,16 +17,40 @@ const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclud
 /** Tool directives that may come first but say nothing to a reader (`// @vitest-environment jsdom`, …). */
 const DIRECTIVE = /^\s*(\/\/\s*@\S+.*|\/\/\/\s*<reference.*|\/\/MISE .*)\n/;
 
-/** Whether `text` starts with a comment, after an optional shebang, directives and blank lines. */
-function hasTopComment(text) {
+/** A line that declares something: a comment right above it documents that declaration, not the file. */
+const DECLARATION = /^(export\s|const\s|let\s|var\s|function[\s*]|async\s|class\s|abstract\s|interface\s|type\s|enum\s|declare\s|@)/;
+
+/**
+ * The first comment of `text` (whether it is a JSDoc comment) (after an optional shebang, directives and blank lines) and what
+ * follows it, or undefined when the file does not start with a comment.
+ */
+function firstComment(text) {
   let body = text.replace(/^#!.*\n/, '');
   while (DIRECTIVE.test(body)) body = body.replace(DIRECTIVE, '');
   body = body.trimStart();
-  return body.startsWith('//') || body.startsWith('/*');
+  if (body.startsWith('/*')) {
+    const end = body.indexOf('*/');
+    if (end === -1) return undefined;
+    return { jsdoc: body.startsWith('/**'), rest: body.slice(end + 2).replace(/^[^\n]*\n?/, '') };
+  }
+  if (!body.startsWith('//')) return undefined;
+  const lines = body.split('\n');
+  let i = 0;
+  while (i < lines.length && lines[i].trimStart().startsWith('//')) i++;
+  return { jsdoc: false, rest: lines.slice(i).join('\n') };
+}
+
+/**
+ * Whether `text` starts with a file comment: a line or block comment, or a JSDoc comment that is not
+ * just the doc of the first declaration (directly followed by `export …`, `interface …`, …).
+ */
+function hasTopComment(text) {
+  const comment = firstComment(text);
+  return comment !== undefined && !(comment.jsdoc && DECLARATION.test(comment.rest));
 }
 
 const missing = files.filter((file) => !hasTopComment(readFileSync(file, 'utf8')));
-for (const file of missing) console.log(`${file}: no top comment (context, or "See <entry file>")`);
+for (const file of missing) console.log(`${file}: no top comment (context, or "See <entry file>"; a declaration's doc comment does not count)`);
 if (missing.length > 0) {
   console.log(`\n${missing.length} of ${files.length} files have no top comment.`);
   process.exit(1);

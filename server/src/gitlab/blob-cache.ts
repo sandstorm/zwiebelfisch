@@ -1,3 +1,4 @@
+// BlobCache: GitLab blob bytes kept in memory for all rooms. See gitlab-extension.ts.
 /**
  * Blob bytes by sha, shared by all rooms: a blob never changes, so a cached
  * one is always right. Least recently used blobs go first once the cache

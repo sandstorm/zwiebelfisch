@@ -1,3 +1,4 @@
+// Highlight: a styled source range that an editing view draws over its text. See typst-document.ts.
 /**
  * A styled stretch of the source (UTF-16 offsets) that an editing view draws
  * over its text, e.g. another user's selection. `attributes` are set on the

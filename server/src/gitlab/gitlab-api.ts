@@ -1,3 +1,4 @@
+// GitLabProject: the GitLab REST calls a room needs (tree, blobs, commits). See gitlab-extension.ts.
 /** A `fetch` (injected, so tests can answer in-process). */
 export type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
 
