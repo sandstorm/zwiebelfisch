@@ -29,11 +29,13 @@ src/                        the widget (TypeScript); the most important API on t
     visual-view/            VisualView — Tiptap editor over the source-anchored projection; visual-view.css
                             (ProseMirror core styles); decorations at the root: highlights, change-decorations,
                             presence; field-popover.ts (also used by versions/)
-      projection/           projection.ts (source ↔ document), raw-code, alignment, call-atoms
+      projection/           projection.ts (source ↔ document), raw-code, alignment, call-atoms, labels (label/ref syntax)
       nodes/                nodes.ts (the schema: Tiptap extensions), raw-box, rendered-box, code-block-view,
                             page-break, horizontal-rule, task-list + checklist-preamble, heading numbers, text-align,
                             margin-notes
       images/               images.ts: image choices, insertion, image tools (resize, alt, caption), image-call edits
+      references/           references.ts: the `reference` node (@key chips), label tags, reference hints, the @ list
+                            (reference-suggestion), label-edits, label-choices
       toolbar/              toolbar.ts, toolbar-action, toolbar-blocks
       notes-gutter/         notes-gutter.ts (comment cards), note-list, card-layout
     source-view/            SourceView — CodeMirror 6 editing view; typst-language, lint, presence
@@ -44,6 +46,7 @@ src/                        the widget (TypeScript); the most important API on t
       pages/                pages.ts: page-list (SVG only near the viewport), geometry, zoom, snippet, change-bars,
                             presence-markers
     diagnostics/            DiagnosticsStatus (status bar), diagnostics-summary.ts
+    labels/                 LabelIndex: the project's labels (kind, title, file) and reference counts; scan.ts (Lezer, .bib)
     changes/                ChangeTracking (base version + "Show changes"), diff.ts (diffTexts), changes.css
     comments/               CommentAction ("Comment" / Ctrl+Alt+M), add-margin-note.ts, margin-note-syntax.ts
                             (drafting's call: parse, print, validity), page-margin.ts
@@ -263,7 +266,7 @@ Inside the crate:
 ### `VisualView` (`src/features/visual-view`)
 
 ```ts
-new VisualView(parent, document, { renderer?, assets? })
+new VisualView(parent, document, { renderer?, assets?, labels? })   // labels: ProjectLabels (features/labels)
 .reveal(from, to)    // select exactly what shows source range from..to (caret if empty)
 .setHighlights(layer, highlights)   // source ranges → inline decorations (sourceToPos, end with bias -1)
 .setPresence(presences)             // other users' carets / selections (PresenceTarget), see Collaboration
@@ -308,7 +311,12 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     `#par(justify: ..)[text]`.
   - **Inline:** text with `bold` / `italic` / `link` (Tiptap's link mark, `href`) / `code`
     (Tiptap's, extended: combines with other marks; `fence` and `lang` remember ```lang …```) marks;
-    `softBreak` (a source newline that renders as a space); `hardBreak` (`\`); `rawInline`.
+    `softBreak` (a source newline that renders as a space); `hardBreak` (`\`); `rawInline`;
+    `reference` (inline atom, `target` + `supplement` as written: `@key` / `@key[..]`, a chip).
+  - **Labels:** a global `label` attribute (`{ name, gap }` or null) on every block a markup
+    segment can become (paragraph, heading, code block, raw block, image, outline, figure, table,
+    quote, alignment, page break, rule). It is printed after the block (`gap` + `<name>`), maps to
+    the block's end, and is compared like an anchor in `syncDoc` (a renamed label updates in place).
   - **Margin notes:** `marginNote` (inline atom) and the `noteRange` mark over the highlighted
     text, both with `head` (source before the first `[`) and `note` (the note's markup), printed
     by `margin-note-syntax`. `noteRange` also has an unprinted `id`, the note's number in its
@@ -319,6 +327,11 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     must come from that instance.
 - **Segmentation:**
   - Headings and list items are blocks of their own.
+  - A label right after a heading (same line or the next, only spaces between, followed by a
+    paragraph break, the end or a block) is the heading's `label`; a label ending a run (after
+    content that is not itself a label) is the label of the block the run becomes (a paragraph,
+    `#figure(..) <fig:x>`, `$ .. $ <eq:x>`, a code block, a table). Other labels (`= A <a> text`,
+    mid-paragraph, in list items) stay `rawInline`. A `Ref` makes a run prose.
   - Every other run up to a `Parbreak` becomes a paragraph if it contains prose (Text, Strong,
     Emph, inline raw, bare URLs, `#link` calls, …) — unless it is exactly one raw element Typst
     shows as a block (3+ backticks around a line break), which is a `codeBlock`. Otherwise, if it
@@ -364,7 +377,8 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
       character or whitespace; longer spans open first, so they nest;
     - a link becomes `#link("href")[..]`, or a bare URL when its text is its `href`, a plain
       `http(s)://` URL between whitespace;
-    - text right after a `]` that would continue a call (`(`, `.field`) gets a backslash;
+    - text right after a `]` that would continue a call (`(`, `.field`) gets a backslash, and so
+      does text right after a reference that would extend its name (`@intro\s`);
     - code text is printed as is, innermost (closed and reopened around other formatting
       changes), in single backticks where possible, else in a fence longer than any backtick run
       inside (`` ``` a`b``` ``, a space before the closing fence after a trailing backtick);
@@ -426,6 +440,23 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     heading holding the cursor (an empty paragraph is replaced): never replacing or splitting
     content — the initial selection is a node selection on the first raw block (often
     `#set page(..)`).
+- **References and labels** (`references/`, given the project's labels as `ProjectLabels`):
+  - Reference chips show the label's name; `referenceHints` adds what it labels (`data-hint`,
+    "Section · Method", "Figure · <caption>", from `describeLabel`) or marks it
+    `typst-visual__ref--unknown` (wavy, tooltip) when the project has no such label. Redrawn when
+    the doc or the label list changes.
+  - `labelTags`: a widget per labelled block — at the end of a textblock's text, below other
+    blocks. Clicking it opens a `FieldPopover`: Apply renames the label, **Rename and update N
+    references** also renames the references (this view: in the same transaction, one undo step;
+    other files: `ProjectLabels.renameReferences`, one change per file), Remove removes it. Names
+    are cleaned up by `labelName` (spaces → `-`).
+  - `referenceSuggestion` (own plugin, not `@tiptap/suggestion`: its popup mounts into
+    `document.body` and its outside-click check fails across the shadow root): `@` after a
+    space/bracket/line start in prose opens a list (`labelChoices`: name prefix, then name, then
+    title matches; at most 8) below it, inside `.typst-visual__body`. ArrowUp/Down, Enter/Tab or a
+    click insert the chip in place of `@query`; Escape dismisses that `@`. Typing a space or
+    punctuation right after the whole name of a label (`@intro `) inserts the chip as well.
+  - Without `labels`: tags only (rename and remove of the label itself).
 - **Text alignment** (`text-align.ts`, `alignment.ts` for the Typst syntax):
   - Commands `setTextAlign(left|center|right|justify)` and `unsetTextAlign`; shortcuts
     Mod-Shift-L/E/R/J; four toolbar buttons pressed by `textAlignAt(state)`.
@@ -607,6 +638,23 @@ worker → main   {id, type:'compile', result} | {id, type:'click', jump} | {id,
 - `compile` sends the full file map; `null` means "the same bytes as last time" (`FileSender`).
   The worker (`FileReceiver`) removes paths missing since the previous call, and Typst diffs the
   text itself. Package files are not part of the map and stay loaded.
+
+### Labels and references (`src/features/labels`)
+
+```ts
+new LabelIndex(project)        // implements ProjectLabels; createTypstEditor makes one per widget
+.labels() → LabelInfo[]        // { name, kind: heading|figure|table|listing|equation|bibliography|null, title, path }
+.referenceCount(name)          // @name references in all files
+.renameReferences(from, to, except?)   // edits the other .typ files, one change each
+.onChange(listener) → unsubscribe      // only when the label list changed
+.destroy()
+```
+
+Every `.typ` file is scanned with Lezer (`scan.ts`) when the index is made and again on each of
+its changes (the Project's change events); `.bib` files give their entry keys. A label's kind and
+title come from the element before it: a heading (its text), `#figure(..)` (by its body: image →
+figure, table → table, raw → listing; its caption), an equation. The Visual view reads the index
+through `ProjectLabels` (see "VisualView"); the Source view does not use it yet.
 
 ### Diagnostics in the widget (`src/features/diagnostics`)
 

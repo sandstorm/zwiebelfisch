@@ -1,6 +1,6 @@
 # Labels and references in the Visual view: tags and @-mention chips
 
-Status: open
+Status: done (branch task/labels-and-references)
 Depends on: restructure-src (done)
 Touches: features/visual-view (projection, nodes, a new references/ subfolder), toolbar (maybe), CSS
 
@@ -41,3 +41,23 @@ Touches: features/visual-view (projection, nodes, a new references/ subfolder), 
   rename with references.
 - Playwright (user-run): type `@` in the Visual view → list shows `intro`, `fig:…` → Enter inserts
   the chip → source has `@intro`; click the heading's tag → rename → refs updated.
+
+## Outcome
+- Projection: `@key` / `@key[supplement]` → `reference` inline atom (round-trips; text typed right
+  after one is escaped so it cannot extend the name). A label after a heading (same or next line)
+  or ending a block's run (paragraph, figure, equation, code block, table, table-cell paragraph)
+  is the block's `label` attribute `{ name, gap }`, printed after it. Labels mid-paragraph, after
+  which text follows on the heading line, inside list items, or doubled (`<a> <b>`) stay raw.
+- `features/labels`: `LabelIndex` (deep module, `ProjectLabels` interface): labels of all `.typ`
+  files with kind and title, `.bib` keys, reference counts, `renameReferences` across files;
+  notifies only when the label list changes.
+- `visual-view/references/`: chips with hints / wavy unknown marker; label tags (click → rename,
+  "Rename and update N references", remove); own `@` suggestion plugin (not `@tiptap/suggestion`:
+  it needs `@floating-ui/dom`, mounts into `document.body` and its outside-click check breaks in
+  the shadow DOM); `@name` + space/punctuation also makes a chip.
+- `FieldPopover` got an optional `alternative` button. No toolbar changes.
+- Tests: `projection/labels-and-references.test.ts` (advanced example chapters as fixtures),
+  `labels/labels.test.ts`, `references/label-edits.test.ts`, `label-choices.test.ts`,
+  `references.dom.test.ts`; Playwright `tests/e2e/visual-references.spec.ts` (not run here).
+- Left for later: the Inspector field for labels; adding a label to an unlabelled block from the
+  Visual view (`setLabel` exists, no UI); `@` completion in the Source view (the index is ready).
