@@ -1,4 +1,4 @@
-// FieldPopover: a small popover with one text field, for links and images. See visual-view.ts.
+// FieldPopover: a small popover with one text field, for links, images and labels. See visual-view.ts.
 /** What a field popover asks for and does with the answer. */
 export interface FieldPopoverOptions {
   /** Accessible name of the popover, e.g. "Link". */
@@ -9,6 +9,8 @@ export interface FieldPopoverOptions {
   apply(value: string): void;
   /** Offered as a "Remove" button while `open` says so. */
   remove?(): void;
+  /** A second way to apply the value, as its own button (e.g. "Rename and update 2 references"). */
+  alternative?: { text: string; apply(value: string): void };
   /** More controls below the field (e.g. files to pick), shown with it. */
   extra?: HTMLElement;
 }
@@ -45,14 +47,13 @@ export class FieldPopover {
     const apply = this.makeButton('Apply', 'submit');
     this.removeButton = this.makeButton('Remove', 'button');
     this.removeButton.dataset.action = 'remove';
-    this.form.append(this.input, apply, this.removeButton);
+    this.form.append(this.input, apply);
+    if (options.alternative) this.form.append(this.alternativeButton(options.alternative));
+    this.form.append(this.removeButton);
     if (options.extra) this.form.append(options.extra);
     this.form.addEventListener('submit', (event) => {
       event.preventDefault();
-      const value = this.input.value.trim();
-      if (!value) return;
-      this.close();
-      options.apply(value);
+      this.applyWith(options.apply);
     });
     this.removeButton.addEventListener('click', () => {
       this.close();
@@ -92,6 +93,21 @@ export class FieldPopover {
   destroy(): void {
     this.close();
     this.form.remove();
+  }
+
+  /** Applies a non-empty value with `apply`, closing the popover first. */
+  private applyWith(apply: (value: string) => void): void {
+    const value = this.input.value.trim();
+    if (!value) return;
+    this.close();
+    apply(value);
+  }
+
+  private alternativeButton({ text, apply }: { text: string; apply(value: string): void }): HTMLButtonElement {
+    const button = this.makeButton(text, 'button');
+    button.dataset.action = 'alternative';
+    button.addEventListener('click', () => this.applyWith(apply));
+    return button;
   }
 
   private makeButton(text: string, type: 'submit' | 'button'): HTMLButtonElement {
