@@ -31,7 +31,7 @@ export interface ExtensionContext {
   readonly workbench: Workbench;
   /** Node and mark specs, toolbar items, gutters, box renderers and editor extensions for every Visual view. */
   readonly visualView: VisualViewContributions;
-  /** CodeMirror extensions and link providers for every Source view. */
+  /** CodeMirror extensions for every Source view. */
   readonly sourceView: SourceViewContributions;
   /** Toolbar items, PDF variants and page overlays of the preview; its compile results (diagnostics, snippets, PDFs). */
   readonly preview: PreviewContributions;
@@ -129,6 +129,20 @@ export interface Workbench {
   /** Decorations changed: of these files, or of any (undefined). */
   readonly onDidChangeFileDecorations: Event<readonly ProjectPath[] | undefined>;
 
+  /**
+   * Adds links to Typst text until disposed: the Source views and the code of the Visual view's raw boxes show
+   * them (Mod+click, Alt+Enter, hover). The links of every provider are merged; where links overlap, the provider
+   * of the higher `priority` wins (default 100, higher first; equal: registration order).
+   */
+  registerDocumentLinkProvider(provider: DocumentLinkProvider, options?: { priority?: number }): Disposable;
+  /**
+   * The links of `document` from every provider, merged as the views show them, in text order (VS Code's
+   * `vscode.executeLinkProvider`), for an extension that shows links itself (an image box's path).
+   */
+  provideDocumentLinks(document: TextDocument): readonly DocumentLink[];
+  /** `link` (from `provideDocumentLinks`) with what its provider fills in on demand: target, tooltip, command. */
+  resolveDocumentLink(link: DocumentLink): DocumentLink;
+
   /** The editor of the Typst file shown in the editing area; null while another kind of file is shown. */
   readonly activeTextEditor: TextEditor | null;
   /**
@@ -184,6 +198,44 @@ export interface FileDecorationProvider {
   provideFileDecoration(path: ProjectPath): FileDecoration | readonly FileDecoration[] | undefined;
   /** Fires when decorations changed: of these files, or of any (undefined). */
   readonly onDidChangeFileDecorations: Event<readonly ProjectPath[] | undefined>;
+}
+
+/**
+ * The Typst text a link provider reads (VS Code's TextDocument, as far as links need it): a whole file's, or the
+ * code of one raw box in it.
+ */
+export interface TextDocument {
+  /** The file the text is in: relative paths in it resolve from here. */
+  readonly path: ProjectPath;
+  readonly text: string;
+}
+
+/** A range of a text that leads somewhere (VS Code's DocumentLink). */
+export interface DocumentLink {
+  /** Where the link is, as offsets in the text given to the provider. */
+  readonly range: { readonly from: number; readonly to: number };
+  /** The project file following the link opens; absent until resolved, or when it leads to no file. */
+  readonly target?: ProjectPath;
+  /** What the hover says about the link (e.g. that its file is missing). */
+  readonly tooltip?: string;
+  /** What the hover offers to do instead (VS Code: a `command:` link), e.g. create the missing file. */
+  readonly command?: DocumentLinkCommand;
+}
+
+/** An action a link's hover offers. */
+export interface DocumentLinkCommand {
+  /** The button's label ("Create chapter.typ"). */
+  readonly title: string;
+  /** Does it; resolves to why that failed (shown in the hover), or null. */
+  run(): Promise<string | null>;
+}
+
+/** Finds the links in Typst text (VS Code's DocumentLinkProvider). */
+export interface DocumentLinkProvider {
+  /** The links in `document` (cheap ones: `resolveDocumentLink` may fill in the rest when one is shown or followed). */
+  provideDocumentLinks(document: TextDocument): readonly DocumentLink[];
+  /** A link this provider gave, with its target, tooltip or command filled in. */
+  resolveDocumentLink?(link: DocumentLink): DocumentLink;
 }
 
 /** A view for one kind of file in the editing area; shown and hidden as files are opened. */

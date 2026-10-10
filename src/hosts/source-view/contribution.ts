@@ -2,7 +2,6 @@
 // A leaf (imports nothing of its folder), so contributions can name these types without importing the host.
 // See source-view.ts.
 import type { Extension } from '@codemirror/state';
-import type { DocumentLinkProvider } from '../../core/document-links/document-links';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 
 /**
@@ -15,9 +14,4 @@ export type SourceViewExtension = Extension | ((view: SourceViewContext) => Exte
 export interface SourceViewContext {
   /** The document the view edits. */
   readonly document: TypstDocument;
-  /** Where the file paths in the document lead (from the registered link providers); null: nowhere. */
-  readonly documentLinks: DocumentLinkProvider | null;
 }
-
-/** Gives the Source views of `document` the links of its file paths; null when it has none. */
-export type LinkProviderFactory = (document: TypstDocument) => DocumentLinkProvider | null;

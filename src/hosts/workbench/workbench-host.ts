@@ -12,6 +12,7 @@ import { ColorScheme } from './color-scheme/color-scheme';
 import { Commands } from './commands/commands';
 import { EditingViews, type EditorMode } from './editing-views/editing-views';
 import { ExtensionHost } from './extension-host/extension-host';
+import { DocumentLinks, documentLinkStyles, linkExtension, type LinkedText } from './document-links/document-links';
 import { FileDecorations } from './file-decorations/file-decorations';
 import { FileDrops } from './file-drops/file-drops';
 import { FileViews } from './file-views/file-views';
@@ -21,6 +22,8 @@ import type {
   CommandArguments,
   CommandRegistry,
   CommandResult,
+  DocumentLink,
+  DocumentLinkProvider,
   FileDecoration,
   FileDecorationProvider,
   FileViewProvider,
@@ -28,6 +31,7 @@ import type {
   SidePanel,
   SidePanelOptions,
   TextEditor,
+  TextDocument,
   TextEditorSelectionChangeEvent,
   TypstExtension,
   Workbench,
@@ -62,12 +66,13 @@ export class WorkbenchHost implements Workbench {
   readonly #views: EditingViews;
   readonly #fileViews: FileViews;
   readonly #fileDecorations = new FileDecorations();
+  readonly #documentLinks = new DocumentLinks();
   readonly #commands: Commands;
   readonly #drops: FileDrops;
   readonly #scheme: ColorScheme;
   readonly #extensions: ExtensionHost;
   readonly #styleSheets: StyleSheets;
-  readonly #ownStyles: Disposable | null;
+  readonly #ownStyles: Disposable;
   readonly #visualView = new VisualViewContributions();
   readonly #sourceViews = new SourceViewHost();
   readonly #preview: Preview;
@@ -88,7 +93,10 @@ export class WorkbenchHost implements Workbench {
   ) {
     this.#active = project.main;
     this.#styleSheets = new StyleSheets(host);
-    this.#ownStyles = options.styleSheet === undefined ? null : this.#styleSheets.add(options.styleSheet, 'typst-editor-styles');
+    this.#ownStyles = Disposable.from(
+      ...(options.styleSheet === undefined ? [] : [this.#styleSheets.add(options.styleSheet, 'typst-editor-styles')]),
+      this.#styleSheets.add(documentLinkStyles),
+    );
     host.classList.add('typst-editor');
     if (options.theme) host.dataset.theme = options.theme;
     this.#scheme = new ColorScheme(host);
@@ -100,6 +108,7 @@ export class WorkbenchHost implements Workbench {
     this.#fileViews = new FileViews(this.#layout.editor);
     this.#preview = new Preview(this.#layout.preview, { onJump: (jump) => this.#jump(jump) });
     this.#unsubscribe = project.onChange((change) => this.#changed(change));
+    this.#showDocumentLinks();
     this.#extensions = new ExtensionHost({
       project,
       workbench: this,
@@ -211,6 +220,18 @@ export class WorkbenchHost implements Workbench {
     return this.#fileDecorations.decorationsOf(path);
   }
 
+  registerDocumentLinkProvider(provider: DocumentLinkProvider, options: { priority?: number } = {}): Disposable {
+    return this.#documentLinks.register(provider, options);
+  }
+
+  provideDocumentLinks(document: TextDocument): readonly DocumentLink[] {
+    return this.#documentLinks.provideDocumentLinks(document);
+  }
+
+  resolveDocumentLink(link: DocumentLink): DocumentLink {
+    return this.#documentLinks.resolveDocumentLink(link);
+  }
+
   get activeTextEditor(): TextEditor | null {
     return this.#views.activeEditor();
   }
@@ -235,7 +256,7 @@ export class WorkbenchHost implements Workbench {
     delete this.host.dataset.theme;
     this.#scheme.destroy();
     this.#layout.destroy();
-    this.#ownStyles?.dispose();
+    this.#ownStyles.dispose();
   }
 
   /** The Visual/Source views of every document, wired to the preview, with the extensions' contributions. */
@@ -252,6 +273,18 @@ export class WorkbenchHost implements Workbench {
       // CodeMirror/ProseMirror read the new selection, so a listener would see the previous one.
       onSelection: (textEditor) => this.#selectionChanged.fire({ textEditor }),
     });
+  }
+
+  /** The registered document links in every Source view and in the code of every raw box (paths from its file's). */
+  #showDocumentLinks(): void {
+    const linked = (document: TypstDocument): LinkedText => ({
+      path: () => this.project.pathOf(document) ?? null,
+      provideDocumentLinks: (text) => this.#documentLinks.provideDocumentLinks(text),
+      resolveDocumentLink: (link) => this.#documentLinks.resolveDocumentLink(link),
+      open: (target) => this.open(target),
+    });
+    this.#sourceViews.registerExtension((view) => linkExtension(linked(view.document)));
+    this.#visualView.registerBoxCodeExtension((view) => linkExtension(linked(view.document)));
   }
 
   #compile(): void {

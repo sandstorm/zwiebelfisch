@@ -1,74 +1,127 @@
-// DocumentLinkProvider: the file paths a Typst document names (`#import`, `#include`, `image(…)`, `read(…)`, …),
-// where each one leads in the workspace, and following one (open the file, or create a missing Typst file).
-// The views use it to make paths clickable; it reads Typst syntax, the workspace owns the files.
-// Entry of core/document-links/. See ARCHITECTURE.md, "File links".
-import type { Tree } from '@lezer/common';
-import { type PathReference, ProjectPath } from '../paths/paths';
-import { documentLinkAt, provideDocumentLinks, type DocumentLink } from './find-links';
+// The file paths a Typst text names (`#import`, `#include`, `image(…)`, `read(…)`, …), found in its Lezer syntax
+// tree, and the reading order they give the project's files. Entry of core/document-links/. See ARCHITECTURE.md,
+// "File links".
+// Why only syntax here: where a path leads (the project, the file's current path) and what following it does (open,
+// create) is the document-links extension's, and showing links is the hosts' (`Workbench.registerDocumentLinkProvider`).
+import type { SyntaxNode } from '@lezer/common';
+import { typstParser } from 'codemirror-lang-typst/lezer';
+import { PathReference, ProjectPath } from '../paths/paths';
 
-export type { DocumentLink, LinkCall } from './find-links';
-export { neighbours, readingOrder } from './reading-order';
+/** What names the path: `#import`, `#include`, or the function whose first argument it is. */
+export type PathCall = 'import' | 'include' | 'image' | 'read' | 'json' | 'csv' | 'yaml' | 'toml' | 'xml' | 'cbor' | 'bibliography';
 
-/** What a DocumentLinkProvider needs from the workspace, for one document (paths resolve from its current path). */
-export interface LinkWorkspace {
-  /** The workspace path `reference` (as written in this document) points to; null when it leaves the workspace. */
-  resolve(reference: PathReference): ProjectPath | null;
-  exists(path: ProjectPath): boolean;
-  /** Shows the file (like the widget's `open`). */
-  open(path: ProjectPath): void;
-  /** Creates the empty Typst file `path` and opens it; resolves to why that was refused, or null. */
-  create(path: ProjectPath): Promise<string | null>;
+/** A file path written in Typst source, as written (relative to that file, or `/` from the project root). */
+export interface PathInSource {
+  /** The path as Typst reads it (escapes decoded). */
+  path: PathReference;
+  /** The range of the path's text (inside the quotes). */
+  from: number;
+  to: number;
+  call: PathCall;
 }
 
-/** Where a link leads, and what following it does: open an existing file, or create a missing Typst file. */
-export interface LinkTarget {
-  path: ProjectPath;
-  /** The path as shown to people. */
-  name: string;
-  exists: boolean;
-  /** Missing, and a Typst file that can be created empty. */
-  creatable: boolean;
+/**
+ * The file paths `text` names, in order: the string of `#import "…"` / `#include "…"` and the first positional
+ * argument of `image`, `read`, `json`, `csv`, `yaml`, `toml`, `xml`, `cbor` and `bibliography` (each string of a
+ * bibliography array). Package imports, empty strings, computed paths and methods (`image.decode`) are left out.
+ * `from` / `to` look at a part only.
+ */
+export function findFilePaths(text: string, options: { from?: number; to?: number } = {}): PathInSource[] {
+  const found: PathInSource[] = [];
+  typstParser.parse(text).iterate({
+    from: options.from,
+    to: options.to,
+    enter: (node) => {
+      for (const path of pathsOf(node.node, text)) found.push(path);
+    },
+  });
+  return found;
 }
 
-/** The links of one Typst document, against its workspace. */
-export class DocumentLinkProvider {
-  constructor(private readonly workspace: LinkWorkspace) {}
+/** The text of the Typst file `path`; undefined when there is none (missing, or not a Typst file). */
+export type ReadText = (path: ProjectPath) => string | undefined;
 
-  /**
-   * The file paths `text` names: the string of `#import "…"` / `#include "…"`
-   * and the first positional argument of `image`, `read`, `json`, `csv`,
-   * `yaml`, `toml`, `xml`, `cbor` and `bibliography` (each string of a
-   * bibliography array). Package imports, empty strings, computed paths and
-   * methods (`image.decode`) are left out. Pass the `tree` when the text is
-   * parsed already (an editor's syntax tree), and `from`/`to` to look at a part only.
-   */
-  provideDocumentLinks(text: string, options: { tree?: Tree; from?: number; to?: number } = {}): DocumentLink[] {
-    return provideDocumentLinks(text, options);
-  }
-
-  /** The link whose string (quotes included) holds `offset`, or null. */
-  documentLinkAt(text: string, offset: number, tree?: Tree): DocumentLink | null {
-    return documentLinkAt(text, offset, tree);
-  }
-
-  /** Where the path `reference` (as written) leads; null when it leaves the workspace. */
-  resolveDocumentLink(reference: PathReference): LinkTarget | null {
-    const path = this.workspace.resolve(reference);
-    if (path === null) return null;
-    const exists = this.workspace.exists(path);
-    return { path, name: ProjectPath.displayName(path), exists, creatable: !exists && ProjectPath.kind(path) === 'typst' };
-  }
-
-  /**
-   * Opens `target`, or creates it (empty) and opens it when it is a missing
-   * Typst file. Resolves to why that was refused, or null.
-   */
-  async followDocumentLink(target: LinkTarget): Promise<string | null> {
-    if (target.exists) {
-      this.workspace.open(target.path);
-      return null;
+/**
+ * The main file, then every file it `#include`s, depth first, in the order
+ * Typst reads them (a nested include comes right after the text before it).
+ * Missing files, imports, a file included a second time and include cycles
+ * are left out. Empty when there is no main file.
+ */
+export function readingOrder(read: ReadText, main: ProjectPath): ProjectPath[] {
+  const order: ProjectPath[] = [];
+  const visit = (path: ProjectPath) => {
+    const text = read(path);
+    if (text === undefined || order.includes(path)) return;
+    order.push(path);
+    for (const reference of findFilePaths(text)) {
+      if (reference.call !== 'include') continue;
+      const target = ProjectPath.resolve(path, reference.path);
+      if (target !== null) visit(target);
     }
-    if (!target.creatable) return `${target.name} is not in the project.`;
-    return this.workspace.create(target.path);
+  };
+  visit(main);
+  return order;
+}
+
+/**
+ * The files read before and after `path` (null at the end), or null when
+ * `path` is the main file or not included at all.
+ */
+export function neighbours(read: ReadText, main: ProjectPath, path: ProjectPath): { previous: ProjectPath; next: ProjectPath | null } | null {
+  const order = readingOrder(read, main);
+  const index = order.indexOf(path);
+  if (index <= 0) return null;
+  return { previous: order[index - 1], next: order[index + 1] ?? null };
+}
+
+/** Functions whose first positional argument is a file path. */
+const CALLS = new Set<PathCall>(['image', 'read', 'json', 'csv', 'yaml', 'toml', 'xml', 'cbor', 'bibliography']);
+
+function pathsOf(node: SyntaxNode, text: string): PathInSource[] {
+  if (node.name === 'ModuleImport' || node.name === 'ModuleInclude') return importPaths(node, text);
+  return node.name === 'FuncCall' ? callPaths(node, text) : [];
+}
+
+/** `import "…"` / `include "…"`. */
+function importPaths(node: SyntaxNode, text: string): PathInSource[] {
+  const string = node.getChild('Str');
+  return string ? onlyFiles([pathIn(string, text, node.name === 'ModuleImport' ? 'import' : 'include')]) : [];
+}
+
+/** `image("…")`, `bibliography(("…", "…"))`, …: the first positional argument. */
+function callPaths(node: SyntaxNode, text: string): PathInSource[] {
+  const callee = node.firstChild;
+  const name = callee?.name === 'Ident' ? (text.slice(callee.from, callee.to) as PathCall) : null;
+  const first = name && CALLS.has(name) ? firstPositional(node.getChild('Args')) : null;
+  if (!name || !first) return [];
+  const strings = first.name === 'Array' && name === 'bibliography' ? first.getChildren('Str') : first.name === 'Str' ? [first] : [];
+  return onlyFiles(strings.map((string) => pathIn(string, text, name)));
+}
+
+const SYNTAX = new Set(['LeftParen', 'RightParen', 'Comma', 'Space', 'LineComment', 'BlockComment']);
+
+function firstPositional(args: SyntaxNode | null): SyntaxNode | null {
+  for (let child = args?.firstChild ?? null; child; child = child.nextSibling) {
+    if (!SYNTAX.has(child.name)) return child.name === 'Named' || child.name === 'Spread' ? null : child;
   }
+  return null;
+}
+
+function pathIn(string: SyntaxNode, text: string, call: PathCall): PathInSource {
+  const from = string.from + 1;
+  const to = Math.max(from, text[string.to - 1] === '"' && string.to - 1 > string.from ? string.to - 1 : string.to);
+  return { path: PathReference.of(unescape(text.slice(from, to))), from, to, call };
+}
+
+/** Not packages, not empty. */
+function onlyFiles(paths: PathInSource[]): PathInSource[] {
+  return paths.filter((found) => found.path !== '' && !found.path.startsWith('@'));
+}
+
+const ESCAPES: Record<string, string> = { n: '\n', r: '\r', t: '\t', '"': '"', '\\': '\\' };
+
+function unescape(raw: string): string {
+  return raw.replace(/\\(u\{([0-9a-fA-F]+)\}|.)/g, (all, escape: string, hex?: string) =>
+    hex ? String.fromCodePoint(parseInt(hex, 16)) : (ESCAPES[escape] ?? all),
+  );
 }

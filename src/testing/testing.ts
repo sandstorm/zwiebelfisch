@@ -7,7 +7,6 @@ import type { Node, Schema } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
 import { expect } from 'vitest';
 import { Disposable } from '../core/disposable/disposable';
-import type { DocumentLinkProvider } from '../core/document-links/document-links';
 import type { TypstDocument } from '../core/typst-document/typst-document';
 import { alignment } from '../extensions/alignment/alignment';
 import { headings } from '../extensions/headings/headings';
@@ -16,8 +15,7 @@ import { markup } from '../extensions/markup/markup';
 import { outline } from '../extensions/outline/outline';
 import { pageLayout } from '../extensions/page-layout/page-layout';
 import { tables } from '../extensions/tables/tables';
-import { boxLinks } from '../extensions/document-links/document-links';
-import { imagesVisualView, type ImageAssets, type ImageUrls } from '../extensions/images/images';
+import { imagesVisualView, type ImageAssets, type ImageLinks, type ImageUrls } from '../extensions/images/images';
 import { renderedBoxesVisualView, type SnippetSource } from '../extensions/rendered-boxes/rendered-boxes';
 import { createSchema } from '../hosts/visual-view/nodes/nodes';
 import {
@@ -52,7 +50,7 @@ export type Renderings = SnippetSource & ImageUrls;
 export interface TestViewOptions {
   renderer?: Renderings;
   assets?: ImageAssets;
-  documentLinks?: DocumentLinkProvider;
+  imageLinks?: ImageLinks;
   /** The contributions of the extension under test, activated after the built-ins (as the widget's features are). */
   contributions?: readonly VisualViewContribution[];
 }
@@ -85,14 +83,13 @@ export function activate(contributions: readonly VisualViewContribution[]): Visu
  */
 export function builtins(options: Omit<TestViewOptions, 'contributions'> = {}): VisualViewContribution[] {
   return [
-    boxLinks({ documentLinks: options.documentLinks && (() => options.documentLinks) }),
     markup,
     headings,
     tables,
     imagesVisualView({
       assets: options.assets && (() => options.assets),
       imageUrls: options.renderer && (() => options.renderer),
-      documentLinks: options.documentLinks && (() => options.documentLinks),
+      imageLinks: options.imageLinks && (() => options.imageLinks),
     }),
     renderedBoxesVisualView({ snippets: options.renderer && (() => options.renderer) }),
     outline,

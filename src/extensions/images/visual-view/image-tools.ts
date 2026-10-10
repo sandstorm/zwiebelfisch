@@ -10,8 +10,8 @@ import { imagePath } from './image-syntax';
 
 /** The image box the tools belong to (its picture moves into the resize frame). */
 export interface ImageToolsHost extends BoxToolsHost {
-  /** The image's path in the heading, e.g. as a link to the file (default: the text). */
-  pathLabel?: ((path: PathReference) => globalThis.Node) | null;
+  /** The image's path (in the call `src`) in the heading, e.g. as a link to the file (default: the text). */
+  pathLabel?: ((path: PathReference, src: string) => globalThis.Node) | null;
 }
 
 /** Width presets offered as buttons (keyboard-friendly resizing). */
@@ -105,7 +105,7 @@ export class ImageTools implements BoxTools {
   update(node: Node): void {
     this.node = node;
     const path = imagePath(node.attrs.src);
-    this.label.replaceChildren('Image: ', path === null ? '(no path)' : (this.host.pathLabel?.(path) ?? path));
+    this.label.replaceChildren('Image: ', path === null ? '(no path)' : (this.host.pathLabel?.(path, node.attrs.src) ?? path));
     if (this.frame && !this.stopDrag) this.showWidth(imageWidthCss(node.attrs.src));
     this.refresh();
   }

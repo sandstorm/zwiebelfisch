@@ -77,22 +77,6 @@ describe('SourceViewHost contributions', () => {
     expect(marked(after.parent, '.first')).toEqual([]);
   });
 
-  it('gives each view the links of the first link provider that has some for its document', () => {
-    const host = new SourceViewHost();
-    const seen: (string | null)[] = [];
-    host.registerExtension(({ documentLinks }) => {
-      seen.push(documentLinks ? 'links' : null);
-      return [];
-    });
-    setup('text\n', host);
-    host.registerLinkProvider(() => null);
-    expect(seen).toEqual([null, null]);
-    const registration = host.registerLinkProvider(() => ({}) as never);
-    expect(seen.at(-1)).toBe('links');
-    registration.dispose();
-    expect(seen.at(-1)).toBe(null);
-  });
-
   it('keeps what an extension drew when another one is registered', () => {
     const host = new SourceViewHost();
     host.registerExtension(drawRanges);

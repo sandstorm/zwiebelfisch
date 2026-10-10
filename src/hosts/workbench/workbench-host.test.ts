@@ -168,4 +168,20 @@ describe('WorkbenchHost', () => {
     host.querySelector<HTMLElement>('.typst-editor__left .cm-content')!.focus();
     expect(workbench.isEditorFocused()).toBe(true);
   });
+
+  it("shows the links of the registered providers in the Source views and raw boxes' code, with the path of their file", () => {
+    const seen: string[] = [];
+    const { host } = setup(({ workbench, subscriptions }) =>
+      subscriptions.push(
+        workbench.registerDocumentLinkProvider({
+          provideDocumentLinks: ({ path, text }) => (seen.push(path), [{ range: { from: 2, to: text.length - 1 } }]),
+        }),
+      ),
+    );
+    expect(seen).toContain('/main.typ');
+    const marked = (root: Element) => [...root.querySelectorAll('.typst-source__path')].map((mark) => mark.textContent).join('');
+    expect(marked(host.querySelector('[data-testid=typst-source]')!)).toBe('Main');
+    // the box holds "= Main" without the line break
+    expect(marked(host.querySelector('.typst-visual__raw-block')!)).toBe('Mai');
+  });
 });

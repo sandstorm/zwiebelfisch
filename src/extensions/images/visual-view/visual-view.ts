@@ -4,9 +4,9 @@
 // extensions/images/visual-view/. See ARCHITECTURE.md, "VisualView".
 import { Node } from '@tiptap/core';
 import { Disposable } from '../../../core/disposable/disposable';
-import type { DocumentLinkProvider } from '../../../core/document-links/document-links';
 import type { Event } from '../../../core/event-emitter/event-emitter';
-import { PathReference } from '../../../core/paths/paths';
+import { PathReference, type ProjectPath } from '../../../core/paths/paths';
+import type { DocumentLink } from '../../../hosts/workbench/workbench';
 import { FieldPopover } from '../../../ui/field-popover/field-popover';
 import {
   parenthesized, svg, type Action, type BoxRenderer, type ToolbarContext, type TypstNodeSpec, type VisualViewContext, type VisualViewContribution,
@@ -33,8 +33,16 @@ export interface ImagesOptions {
   assets?(document: VisualViewContext['document']): ImageAssets | undefined;
   /** Image files shown in place of the call while it is not edited (default: the code). */
   imageUrls?(document: VisualViewContext['document']): ImageUrls | undefined;
-  /** Where the file paths in a document lead: an image box's path opens its file, or shows it is missing (default: the text). */
-  documentLinks?(document: VisualViewContext['document']): DocumentLinkProvider | undefined;
+  /** The links on image paths in a document: an image box's path opens its file, or shows it is missing (default: the text). */
+  imageLinks?(document: VisualViewContext['document']): ImageLinks | undefined;
+}
+
+/** The document links on the paths of a document's image calls. */
+export interface ImageLinks {
+  /** The (resolved) link on the path of the image call `src`, or null. */
+  linkOf(src: string): DocumentLink | null;
+  /** Shows a link's target. */
+  open(target: ProjectPath): void;
 }
 
 /**
@@ -86,8 +94,9 @@ function imageSpec(options: ImagesOptions): TypstNodeSpec {
     box: 'code',
     codeBox: {
       tools: (host, node) => {
-        const links = options.documentLinks?.(host.view.document);
-        return new ImageTools({ ...host, pathLabel: links && ((path) => imagePathLink(links, path, host.dom.ownerDocument)) }, node);
+        const links = options.imageLinks?.(host.view.document);
+        const pathLabel = links && ((path: PathReference, src: string) => imagePathLink(links.linkOf(src), path, host.dom.ownerDocument, (target) => links.open(target)));
+        return new ImageTools({ ...host, pathLabel }, node);
       },
     },
     blockCalls: {

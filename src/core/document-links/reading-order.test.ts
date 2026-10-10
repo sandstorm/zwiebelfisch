@@ -1,6 +1,6 @@
-// Tests for reading-order.ts.
+// Tests for document-links.ts: readingOrder and neighbours.
 import { describe, expect, it } from 'vitest';
-import { neighbours, readingOrder } from './reading-order';
+import { neighbours, readingOrder } from './document-links';
 import { ProjectPath } from '../paths/paths';
 
 const path = ProjectPath.of;

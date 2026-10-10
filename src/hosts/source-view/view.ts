@@ -16,7 +16,7 @@ export interface SourceViewOptions {
 
 /** What a view needs from its host: the contributed extensions for it, and word when they change. */
 export interface Contributions {
-  extensionsFor(view: Omit<SourceViewContext, 'documentLinks'>): Extension;
+  extensionsFor(view: SourceViewContext): Extension;
   readonly onDidChange: Event<void>;
 }
 
@@ -30,7 +30,7 @@ export class SourceView {
   private readonly subscriptions: Disposable[];
 
   constructor(parent: HTMLElement, document: TypstDocument, options: SourceViewOptions, contributions: Contributions) {
-    const context: Omit<SourceViewContext, 'documentLinks'> = { document };
+    const context: SourceViewContext = { document };
     this.view = new EditorView({
       parent,
       doc: document.text,

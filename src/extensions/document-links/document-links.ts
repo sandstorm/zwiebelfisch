@@ -1,57 +1,59 @@
-// The document-links extension: the file paths in a Typst file (`#include "ch1.typ"`, `image("logo.png")`) as
-// links in the Source view and the Visual view's raw boxes, which open the file or offer to create it. Entry of
-// extensions/document-links/. See ARCHITECTURE.md, "File links".
-// Why an extension: where a path leads depends on the project and the file's current path, and following it on the
-// workbench; the editors only offer link providers and CodeMirror extensions. Others (an image box's path) use the
-// `documentLinks` service instead of importing this.
-import { DocumentLinkProvider } from '../../core/document-links/document-links';
+// The document-links extension: the file paths in Typst text (`#include "ch1.typ"`, `image("logo.png")`) as document
+// links, which open the file or offer to create a missing Typst file. Entry of extensions/document-links/. See
+// ARCHITECTURE.md, "File links".
+// Why an extension: finding paths is Typst syntax (core/document-links), showing and following links is the hosts'
+// (every view shows the links of every `DocumentLinkProvider`); where a path leads in this project, and that a missing
+// Typst file may be created, is this extension's policy.
+import { findFilePaths } from '../../core/document-links/document-links';
 import { ProjectPath } from '../../core/paths/paths';
-import type { TypstDocument } from '../../core/typst-document/typst-document';
-import type { TypstExtension } from '../../hosts/workbench/workbench';
-import css from './document-links.css?inline';
-import { fileLinks } from './source-view/source-view';
-import { boxLinks } from './visual-view/visual-view';
-
-export { boxLinks } from './visual-view/visual-view';
-
-declare module '../../hosts/workbench/workbench' {
-  interface ServiceRegistry {
-    /** Where the file paths in a document lead (the document-links extension). */
-    documentLinks: (document: TypstDocument) => DocumentLinkProvider;
-  }
-}
+import type { Project } from '../../core/project/project';
+import type { DocumentLink, DocumentLinkProvider, TextDocument, TypstExtension, Workbench } from '../../hosts/workbench/workbench';
 
 /**
- * Links the file paths of every Typst file in the Source view and in the Visual view's raw boxes: they resolve from
- * the file's current path, open the file in the workbench, and create a missing one through `Workbench.applyChange`.
- * Provides the `documentLinks` service (an image box's path is a link with it, too).
+ * Links the file paths of all Typst text (the Source views, raw boxes, an image box's path): they resolve from the
+ * file's path, open an existing file, and create a missing Typst file through `Workbench.applyChange`.
  */
 export function documentLinks(): TypstExtension {
   return {
     id: 'document-links',
-    activate(context) {
-      context.subscriptions.push(context.workbench.registerStyleSheet(css));
-      const { project, workbench, sourceView, services, subscriptions } = context;
-      const provider = (document: TypstDocument) =>
-        new DocumentLinkProvider({
-          resolve: (reference) => {
-            const file = project.pathOf(document);
-            return file ? ProjectPath.resolve(file, reference) : null;
-          },
-          exists: (path) => project.has(path),
-          open: (path) => workbench.open(path),
-          create: async (path) => {
-            const problem = await workbench.applyChange({ kind: 'create', path, content: '' });
-            if (problem === null) workbench.open(path);
-            return problem;
-          },
-        });
-      subscriptions.push(
-        services.provide('documentLinks', provider),
-        sourceView.registerExtension(fileLinks),
-        sourceView.registerLinkProvider(provider),
-      );
-      boxLinks({ documentLinks: provider }).activate(context);
+    activate({ project, workbench, subscriptions }) {
+      subscriptions.push(workbench.registerDocumentLinkProvider(new FilePathLinks(project, workbench)));
     },
   };
+}
+
+/** The file paths of a text as links; resolved, a link opens its file, or says it is missing (and offers to create a Typst file). */
+class FilePathLinks implements DocumentLinkProvider {
+  /** Where each link given out leads (null: out of the project). */
+  readonly #targets = new WeakMap<DocumentLink, ProjectPath | null>();
+
+  constructor(
+    private readonly project: Project,
+    private readonly workbench: Pick<Workbench, 'applyChange' | 'open'>,
+  ) {}
+
+  provideDocumentLinks({ path, text }: TextDocument): DocumentLink[] {
+    return findFilePaths(text).map(({ path: reference, from, to }) => {
+      const link: DocumentLink = { range: { from, to } };
+      this.#targets.set(link, ProjectPath.resolve(path, reference));
+      return link;
+    });
+  }
+
+  resolveDocumentLink(link: DocumentLink): DocumentLink {
+    const target = this.#targets.get(link);
+    if (!target) return link;
+    if (this.project.has(target)) return { ...link, target };
+    const name = ProjectPath.displayName(target);
+    const tooltip = `${name} is not in the project`;
+    if (ProjectPath.kind(target) !== 'typst') return { ...link, tooltip };
+    return { ...link, tooltip, command: { title: `Create ${name}`, run: () => this.create(target) } };
+  }
+
+  /** Creates the empty Typst file `path` and opens it; resolves to why that was refused, or null. */
+  private async create(path: ProjectPath): Promise<string | null> {
+    const problem = await this.workbench.applyChange({ kind: 'create', path, content: '' });
+    if (problem === null) this.workbench.open(path);
+    return problem;
+  }
 }

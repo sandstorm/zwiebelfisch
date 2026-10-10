@@ -15,30 +15,36 @@ import { uploadTarget } from './model/model';
 import { imagesVisualView, type ImageAssets, type ImageUrls } from './visual-view/visual-view';
 import { assetViews } from './workbench/workbench';
 
-export { imagesVisualView, type ImageAssets, type ImageUrls } from './visual-view/visual-view';
+export { imagesVisualView, type ImageAssets, type ImageLinks, type ImageUrls } from './visual-view/visual-view';
 
 /**
  * Images in every document's Visual view (`#image(..)` boxes showing the project's image file, "Insert image"
- * offering the project's images and uploads, which go through `Workbench.applyChange`; an image box's path opens
- * the file, with the `documentLinks` service), and the read-only view of image and data files.
+ * offering the project's images and uploads, which go through `Workbench.applyChange`; an image box's path is the
+ * document link on it, from the workbench's link providers), and the read-only view of image and data files.
  */
 export function images(): TypstExtension {
   return {
     id: 'images',
     activate(context) {
       context.subscriptions.push(context.workbench.registerStyleSheet(css));
-      const { project, workbench, preview, services, subscriptions } = context;
+      const { project, workbench, preview, subscriptions } = context;
       const projectImages = new ProjectImages({ project, onDidChange: preview.onDidRender, request: (change) => workbench.applyChange(change) });
       subscriptions.push(
         new Disposable(() => projectImages.destroy()),
         workbench.registerFileView('image', assetViews),
         workbench.registerFileView('data', assetViews),
       );
-      const documentLinks = services.get('documentLinks');
       imagesVisualView({
         assets: (document) => projectImages.forDocument(document).assets,
         imageUrls: (document) => projectImages.forDocument(document).urls,
-        documentLinks,
+        imageLinks: (document) => ({
+          linkOf: (src) => {
+            const file = project.pathOf(document);
+            const [link] = file ? workbench.provideDocumentLinks({ path: file, text: src }) : [];
+            return link ? workbench.resolveDocumentLink(link) : null;
+          },
+          open: (target) => workbench.open(target),
+        }),
       }).activate(context);
     },
   };
