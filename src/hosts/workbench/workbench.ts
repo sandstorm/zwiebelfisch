@@ -22,7 +22,7 @@ import { CustomEditors } from './custom-editors/custom-editors';
 import { EditingViews } from './editing-views/editing-views';
 import { ExtensionHost } from './extension-host/extension-host';
 import { DocumentLinks } from './document-links/document-links';
-import { linkExtension, type LinkedText } from './document-links/link-extension';
+import { linkExtension } from './document-links/link-extension';
 import documentLinkStyles from './document-links/document-links.css?inline';
 import { FileDecorations } from './file-decorations/file-decorations';
 import { SourceControls } from './source-controls/source-controls';
@@ -896,15 +896,9 @@ export class WorkbenchHost implements Workbench {
 
   /** The registered document links in every Source view and in the code of every raw box (paths from its file's). */
   #showDocumentLinks(): void {
-    const linked = (document: TypstDocument): LinkedText => ({
-      path: () => this.project.pathOf(document) ?? null,
-      provideDocumentLinks: (text) => this.#documentLinks.provideDocumentLinks(text),
-      resolveDocumentLink: (link) => this.#documentLinks.resolveDocumentLink(link),
-      open: (target) => this.open(target),
-      executeCommand: (command, ...args) => this.executeCommand(command, ...args),
-    });
-    this.#sourceViews.registerExtension((view) => linkExtension(linked(view.document)));
-    this.#visualView.registerBoxCodeExtension((view) => linkExtension(linked(view.document)));
+    const links = (document: TypstDocument) => linkExtension(this, () => this.project.pathOf(document) ?? null);
+    this.#sourceViews.registerExtension((view) => links(view.document));
+    this.#visualView.registerBoxCodeExtension((view) => links(view.document));
   }
 
   /** `data-theme` from the setting `workbench.theme` (none: as the page), and the scheme the colors resolve to now. */

@@ -6,10 +6,8 @@ import { Decoration, type DecorationSet, EditorView, hoverTooltip, keymap, ViewP
 import { ProjectPath } from '../../../core/paths/paths';
 import type { DocumentLink, TextDocument } from '../workbench';
 
-/** What an editor's links come from, and where following one goes. */
-export interface LinkedText {
-  /** The file the editor's text is in, now (null: none; the text has no links). */
-  path(): ProjectPath | null;
+/** What the links come from, and where following one goes: the workbench's side of them. */
+export interface LinkActions {
   provideDocumentLinks(document: TextDocument): readonly DocumentLink[];
   resolveDocumentLink(link: DocumentLink): DocumentLink;
   /** Shows a link's target. */
@@ -26,20 +24,21 @@ const linkMark = Decoration.mark({ class: 'typst-source__path' });
 /**
  * Makes the links of the editor's text navigable: while the modifier is held, a hovered link shows as one; Mod+click
  * or Alt+Enter on it opens its target, and the hover tooltip offers "Open …", or says what the link's tooltip says
- * and offers its command (e.g. "Create chapter.typ").
+ * and offers its command (e.g. "Create chapter.typ"). `path`: the file the text is in, now (a file can be renamed);
+ * null: none, the text has no links.
  */
-export function linkExtension(text: LinkedText): Extension {
+export function linkExtension(actions: LinkActions, path: () => ProjectPath | null): Extension {
   const links = ViewPlugin.fromClass(
     class {
       links: readonly DocumentLink[];
       decorations: DecorationSet;
       constructor(view: EditorView) {
-        this.links = linksOf(view.state, text);
+        this.links = linksOf(view.state, actions, path());
         this.decorations = decorate(this.links);
       }
       update(update: ViewUpdate) {
         if (!update.docChanged) return;
-        this.links = linksOf(update.state, text);
+        this.links = linksOf(update.state, actions, path());
         this.decorations = decorate(this.links);
       }
     },
@@ -48,8 +47,8 @@ export function linkExtension(text: LinkedText): Extension {
   const linkAt = (view: EditorView, pos: number) => view.plugin(links)?.links.find((link) => link.range.from <= pos && pos <= link.range.to) ?? null;
   const follow = (view: EditorView, pos: number) => {
     const link = linkAt(view, pos);
-    const target = link && text.resolveDocumentLink(link).target;
-    if (target) text.open(target);
+    const target = link && actions.resolveDocumentLink(link).target;
+    if (target) actions.open(target);
     return Boolean(target);
   };
   return [
@@ -70,7 +69,7 @@ export function linkExtension(text: LinkedText): Extension {
     keymap.of([{ key: 'Alt-Enter', run: (view) => follow(view, view.state.selection.main.head) }]),
     hoverTooltip((view, pos) => {
       const link = linkAt(view, pos);
-      const dom = link && linkInfo(view.dom.ownerDocument, text.resolveDocumentLink(link), text);
+      const dom = link && linkInfo(view.dom.ownerDocument, actions.resolveDocumentLink(link), actions);
       return dom && link ? { pos: link.range.from, end: link.range.to, above: true, create: () => ({ dom }) } : null;
     }),
   ];
@@ -81,7 +80,7 @@ export function linkExtension(text: LinkedText): Extension {
  * tooltip, and a button for its command that shows the error's message when the command rejects. Null when it offers
  * nothing.
  */
-export function linkInfo(doc: Document, link: DocumentLink, actions: Pick<LinkedText, 'open' | 'executeCommand'>): HTMLElement | null {
+export function linkInfo(doc: Document, link: DocumentLink, actions: Pick<LinkActions, 'open' | 'executeCommand'>): HTMLElement | null {
   const { target, tooltip, command } = link;
   if (!target && !tooltip && !command) return null;
   const info = doc.createElement('span');
@@ -106,9 +105,9 @@ export function linkInfo(doc: Document, link: DocumentLink, actions: Pick<Linked
   return info;
 }
 
-function linksOf(state: EditorState, text: LinkedText): readonly DocumentLink[] {
-  const path = text.path();
-  return path ? text.provideDocumentLinks({ path, text: state.doc.toString() }).filter((link) => link.range.to <= state.doc.length) : [];
+/** The links of the editor's text, in the file at `path` (none: no links). */
+function linksOf(state: EditorState, actions: LinkActions, path: ProjectPath | null): readonly DocumentLink[] {
+  return path ? actions.provideDocumentLinks({ path, text: state.doc.toString() }).filter((link) => link.range.to <= state.doc.length) : [];
 }
 
 function decorate(links: readonly DocumentLink[]): DecorationSet {

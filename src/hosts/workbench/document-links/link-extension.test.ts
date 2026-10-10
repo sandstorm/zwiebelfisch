@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
 import { ProjectPath } from '../../../core/paths/paths';
 import type { DocumentLink } from '../workbench';
-import { linkExtension, linkInfo, type LinkedText } from './link-extension';
+import { linkExtension, linkInfo, type LinkActions } from './link-extension';
 
 const path = ProjectPath.of;
 
@@ -13,8 +13,7 @@ const CREATE = { title: 'Create missing.typ', command: 'test.create', arguments:
 
 /** Links on the two paths: the first resolves to its file, the second to a tooltip and a command. */
 function setup(text = TEXT) {
-  const linked: LinkedText = {
-    path: () => path('/main.typ'),
+  const linked: LinkActions = {
     provideDocumentLinks: ({ text }) =>
       ['template.typ', 'missing.typ'].flatMap((name) => {
         const from = text.indexOf(name);
@@ -28,7 +27,7 @@ function setup(text = TEXT) {
     executeCommand: vi.fn(async () => undefined),
   };
   const parent = document.body.appendChild(document.createElement('div'));
-  const view = new EditorView({ parent, doc: text, extensions: linkExtension(linked) });
+  const view = new EditorView({ parent, doc: text, extensions: linkExtension(linked, () => path('/main.typ')) });
   return { linked, parent, view };
 }
 
@@ -75,7 +74,7 @@ describe('linkExtension', () => {
   it('has no links in a text that is in no file', () => {
     const { linked } = setup();
     const parent = document.body.appendChild(document.createElement('div'));
-    new EditorView({ parent, doc: TEXT, extensions: linkExtension({ ...linked, path: () => null }) });
+    new EditorView({ parent, doc: TEXT, extensions: linkExtension(linked, () => null) });
     expect(parent.querySelector('.typst-source__path')).toBeNull();
   });
 });
