@@ -87,6 +87,23 @@ interface ExtensionContext {
   Code does), not by strings.
 - Not public API at first. Once it holds, `createTypstEditor({ extensions })` can expose it.
 
+### Priority: who wins when two contributions claim the same thing
+
+Registration order never carries meaning. Where contributions compete, the API has an explicit,
+documented tie-breaker, taken from the libraries underneath (decided 2026-10-10):
+
+| Contribution | Tie-breaker | Model |
+|---|---|---|
+| `registerNode` / `registerMark` (projector claims a syntax or call; schema order; mark nesting) | `priority?: number`, default 100, higher first; equal → registration order | Tiptap's extension `priority` (same number, same direction); ProseMirror parse-rule `priority` |
+| `registerBoxRenderer` (which renderer draws a raw box) | `priority?: number`, as above | Tiptap; VS Code providers ranked by `score` |
+| Toolbar items / menus, preview toolbar items | `group` + `order` | VS Code menus (`"navigation@1"`) |
+| Status bar items | `alignment` + `priority` | VS Code `StatusBarItem` |
+| Source-view extensions | CodeMirror's own `Prec.highest … lowest` (passed through, nothing of ours) | CodeMirror 6 |
+
+The built-ins use it: task lists `priority: 110` over lists, the image box renderer `110` over
+rendered snippets. Priority is part of each contribution point's docblock and of the public
+extension API once that is exposed (`createTypstEditor({ extensions })`).
+
 ## What stays in each host
 
 | Host | Mechanism it keeps | Contribution points |

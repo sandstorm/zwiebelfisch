@@ -28,8 +28,11 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    of work" (hosts → slices → rules → value types) replaces the old wave plan; the remaining review
    findings are folded into it. **Hosts: done. Next: slices** (move `features/*` and
    `hosts/*/builtins/*` into `extensions/<name>/`).
-   Open question for the user: registration order decides priority in the Visual view (task lists
-   before lists, images before rendered boxes); keep it, or an explicit `priority` on specs?
+   **After the slices merge: priority** (decided): `priority?: number` (default 100, higher first,
+   Tiptap's semantics) on `registerNode` / `registerMark` / `registerBoxRenderer`; `group` + `order`
+   for toolbar items, `alignment` + `priority` for status bar items; task lists and the image box
+   renderer get 110; the "don't reorder" comment at `builtinExtensions` goes. Documented on every
+   contribution point (see the architecture doc, "Priority").
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Lessons doc**: write `docs/2026_10_10_code-conventions.md` from "Decisions and conventions"
    below (refined), then **spawn subagents** (the user asked for it; workflow guideline < 10 agents)
