@@ -38,20 +38,22 @@ Importing the module does two things: it exports the JavaScript API, and it regi
 | | |
 |---|---|
 | `options` property | `Partial<TypstEditorOptions>`: everything `createTypstEditor` takes (section 2), read when the element connects. Set it before appending the element (or before the module has defined it: it is picked up then). Its `onFilesChange` / `onOpen` are called as well as the events. |
-| attributes | `value`, `file-list`, `pdf-download="hide"` and `theme` **win over** `options.source`, `fileList`, `pdfDownload` and `theme`. They are read when the element connects; `value` also later. |
+| `settings` attribute | A JSON object of settings by id (section 6), e.g. `settings='{"pdfExport.download": false, "workbench.theme": "dark"}'`, over `options.settings` id by id. Read when the element connects and again whenever it changes. Not a JSON object: ignored, with a console warning. |
+| `settings` property | The current settings; setting it replaces them (ids left out go back to their default). |
 | main file's text | The `value` property or attribute, else the element's text content (common indentation removed), else `options.source`, else `options.files[main]`. |
 | `value` property | The main file's text (a shortcut for `files[main]`). Setting it replaces the text as one minimal edit, so the cursor and undo history survive. The property is not reflected back into the attribute, as with `<input>`. |
 | `files` property | Every file, the main file included (see section 3). Setting it replaces them all. |
 | `change` event | `CustomEvent<TypstEditorChangeDetail>`, `detail: { path, content }`: what the file at `path` (a project path such as `/main.typ`) holds after a change, `content: null` when it is gone. It fires for every file whose content changes — edits in any file, new and deleted files, the others' edits when collaborating; a rename fires twice (old path with `null`, new path with the content). |
 | `files-change` event | `CustomEvent<FileChange>`: the same as `onFilesChange`, with renames as such. |
 | `open` event | `CustomEvent<{ path }>`: another file is shown (`onOpen`). |
+| `executeCommand(id, ...args)` | Runs an extension's command (section 7), e.g. `exportPdf` below is `pdfExport.export`. |
 | | Setting `value` or `files` dispatches no events. All events bubble and are `composed`. |
 | size | `display: block`, with a default height of `24rem`. Set `height` on the element. |
 
 ```js
 const editor = document.createElement('typst-editor');
 editor.options = { main: '/thesis.typ', files, mode: 'source', user: { name: 'Ada' } };
-editor.setAttribute('file-list', 'show');   // wins over options.fileList
+editor.setAttribute('settings', JSON.stringify({ 'files.panel': 'show' }));   // over options.settings
 document.body.append(editor);               // options are read now
 ```
 
@@ -83,8 +85,9 @@ Custom properties inherit into shadow roots, so `typst-editor { --te-accent: reb
 
 **Dark mode.** The editor takes the page's CSS `color-scheme`: light by default, dark where the page
 declares `color-scheme: dark`, and following the OS where it declares `color-scheme: light dark`.
-To choose regardless of the page, pass `theme: 'light' | 'dark' | 'auto'` (`auto`: as the OS) to
-`createTypstEditor`, or set the `theme` attribute on `<typst-editor>`. The colors are
+To choose regardless of the page, set the setting `workbench.theme` to `'light' | 'dark' | 'auto'` (`auto`: as
+the OS; section 6): `createTypstEditor(host, { settings: { 'workbench.theme': 'dark' } })`, `editor.settings = {
+'workbench.theme': 'light' }` later, or `settings='{"workbench.theme": "dark"}'` on `<typst-editor>`. The colors are
 `light-dark(..)` tokens. In dark mode the preview shows the pages inverted (white text on black,
 as dark-mode PDF readers do); the exported PDF is unchanged. Spreadsheets get dark colors made from
 the same tokens (colors set on cells stay).
@@ -136,7 +139,7 @@ changed ones updated (open views keep their cursor), and each change is reported
 
 ### The file panel
 
-A file panel on the left shows the project as a tree. With `fileList: 'auto'` (the default) it is
+A file panel on the left shows the project as a tree. With the setting `files.panel: 'auto'` (the default) it is
 open while the project has more than one file and collapsed to a narrow rail with a **Files**
 button otherwise; `'show'` opens it from the start, `'hide'` removes it (rail included; dropped
 files are then ignored). Once someone opens or closes it, that choice, the panel width and the
@@ -175,15 +178,16 @@ editor.open('/logo.png');
 
 `onOpen(path)` (on `<typst-editor>`: the `open` event, `detail.path`) reports when another file is
 shown, e.g. to keep it in the page URL. The demo stores it in the fragment (`#/chapters/intro.typ`,
-`demo/open-file-hash.ts`). `followCursor: false` starts the preview without following the cursor.
-The viewer can switch "Follow cursor" in the preview toolbar, and the choice is remembered in localStorage.
+`demo/open-file-hash.ts`). The setting `previewSync.followCursor: false` has the preview not follow the cursor.
+The viewer can switch "Follow cursor" in the preview toolbar; without the setting, that choice is remembered in
+localStorage and wins over the default.
 
 `onFilesChange` reports every change to any file, the main file included: every edit of a `.typ`
 file (`kind: 'update'`, with the full text), create / rename / delete, collaborators' changes,
 and assignments to `files` or `source`. It is the one place to hear about changes.
 
-On `<typst-editor>` the same map is the `files` property, the `file-list` attribute sets the
-file panel mode, and every file change dispatches `change` (`{ path, content }`) and
+On `<typst-editor>` the same map is the `files` property, the `settings` attribute sets the
+file panel mode (`files.panel`), and every file change dispatches `change` (`{ path, content }`) and
 `files-change` (the `FileChange`). Bytes are copied to the compile worker
 only when the `Uint8Array` changes, so reuse the same array for unchanged files.
 
@@ -239,10 +243,12 @@ default (not what the viewer chose), and an id no extension registered rejects:
 ```ts
 const blob = await editor.exportPdf();                                          // without comments
 const draft = await editor.exportPdf({ options: { 'comments.include': true } }); // with them
-createTypstEditor(host, { pdfDownload: false });   // no button (exportPdf still works)
+createTypstEditor(host, { settings: { 'pdfExport.download': false } });   // no button (exportPdf still works)
 ```
 
-On `<typst-editor>`: `element.exportPdf({ options })`, and `pdf-download="hide"` removes the button.
+`exportPdf` is a shortcut for the command `pdfExport.export`
+(`editor.executeCommand('pdfExport.export', { 'comments.include': true })`). On `<typst-editor>`:
+`element.exportPdf({ options })`, and `settings='{"pdfExport.download": false}'` removes the button.
 
 Without comments, the document is not changed: the export compiles copies of the `.typ` files
 with every note call removed (a range note keeps its text, without the highlight), through a
@@ -309,14 +315,17 @@ that are not declared stay code boxes, as before.
 
 ## 5. Real-time collaboration
 
-Several people can edit the same project at once. Pass `collaboration`, and set `user` to the
-name the others see next to your cursor:
+Several people can edit the same project at once. Add the `collaboration` extension with the connection, and
+set `user` to the name the others see next to your cursor:
 
 ```js
+import { collaboration, createTypstEditor } from 'typst-editor';
+
 createTypstEditor(host, {
   source,                                   // seeds a new room; an existing room's text wins
   user: { name: 'Ada Lovelace', color: '#6c71c4' },   // color optional
-  collaboration: { url: 'wss://collab.example.org', room: 'project-42', token },   // Hocuspocus server
+  // Hocuspocus server
+  extensions: (builtins) => [...builtins, collaboration({ url: 'wss://collab.example.org', room: 'project-42', token })],
 });
 ```
 
@@ -331,7 +340,7 @@ createTypstEditor(host, {
   must come from the same Yjs instance the widget uses, so bundle the widget from source with
   your Yjs (deduplicated); `dist/lib` bundles its own copy.
 - `onFilesChange` (and `change` on `<typst-editor>`) also fire for the others' edits.
-- On `<typst-editor>`, put `collaboration` and `user` into its `options` before the element is
+- On `<typst-editor>`, put `extensions` and `user` into its `options` before the element is
   connected.
 
 Demo: `mise run demo` starts the demo and a local server together; pick **Collaborate** in the
@@ -348,7 +357,7 @@ branch of a GitLab repository:
 createTypstEditor(host, {
   main: '/thesis.typ',                      // the repository's main file
   user: { name: 'Ada Lovelace' },           // the commit author (unless the server's token check knows better)
-  collaboration: { url: 'wss://collab.example.org', room: 'gitlab:group/thesis@main', token },
+  extensions: (builtins) => [...builtins, collaboration({ url: 'wss://collab.example.org', room: 'gitlab:group/thesis@main', token })],
 });
 ```
 
@@ -381,7 +390,118 @@ holding the demo's advanced example), then pick **GitLab (fake)** in the playgro
 `?room=gitlab:demo/report@main`. **Simulate upstream commit** in the bar pushes a change to the
 fake repository, to try merges and conflicts. See [demo-playground.md](demo-playground.md).
 
+## 6. Settings
+
+What a feature lets you configure is a **setting** its extension declares (VS Code's settings), by id
+`<section>.<key>`. Give values with `settings`, change them later with `editor.settings` (assigning replaces
+them all: ids left out go back to their default); the widget follows at once. Unknown ids and values of the wrong
+type are ignored, with a console warning.
+
+```ts
+const editor = createTypstEditor(host, { settings: { 'pdfExport.download': false, 'files.panel': 'show' } });
+editor.settings = { ...editor.settings, 'workbench.theme': 'dark' };
+```
+
+| Setting | Values (default) | |
+|---|---|---|
+| `workbench.theme` | `'light'`, `'dark'`, `'auto'` (`null`: as the page) | Light or dark colors; `auto`: as the OS. See "Dark mode". |
+| `files.panel` | `'auto'`, `'show'`, `'hide'` (`'auto'`) | When the file panel is open: with more than one file / always / never (and dropped files are ignored). |
+| `previewSync.followCursor` | `true`, `false` (unset: the viewer's last choice, else `true`) | Whether the preview follows the cursor. |
+| `pdfExport.download` | `true`, `false` (`true`) | "Download PDF" in the preview toolbar. `exportPdf` works either way. |
+
+Your own extensions declare settings the same way (section 7).
+
+## 7. Writing an extension
+
+Everything the editor does beyond its frame is an **extension**, the built-in features too: an object with an
+`id` and an `activate(context)` that registers what it adds (a status bar item, a preview toolbar item, a PDF
+export option, a command, …) and pushes each registration into `context.subscriptions`, which the editor disposes
+on `destroy`. The names and shapes are VS Code's (`registerCommand`, `onDidChange…`, `Disposable`,
+`getConfiguration`). Give the editor your extensions through `extensions`, a function that makes the list from the
+built-in ones:
+
+```ts
+createTypstEditor(host, { extensions: (builtins) => [...builtins, wordCount] });                 // add
+createTypstEditor(host, { extensions: (builtins) => builtins.filter((e) => e.id !== 'pdf-export') }); // leave out
+createTypstEditor(host, { extensions: (builtins) => [...builtins.filter((e) => e.id !== 'files'), myFiles] }); // replace
+```
+
+A complete example: the words of the shown file in the status bar, with a setting for its label and a command
+the host can run.
+
+```ts
+import { createTypstEditor, type TypstExtension } from 'typst-editor';
+
+export const wordCount: TypstExtension = {
+  id: 'word-count',
+  contributes: {
+    configuration: {
+      properties: {
+        'wordCount.label': { type: 'string', default: 'words', description: 'Shown after the number.' },
+      },
+    },
+  },
+  activate({ project, workspace, workbench, subscriptions }) {
+    const item = workbench.ownerDocument.createElement('span');
+    const count = () => {
+      const text = workbench.activeTextEditor?.document.text ?? '';
+      return text.split(/\s+/).filter(Boolean).length;
+    };
+    const show = () => {
+      item.textContent = `${count()} ${workspace.getConfiguration('wordCount').get<string>('label')}`;
+    };
+    show();
+    subscriptions.push(
+      workbench.registerStatusBarItem(item),
+      workbench.onDidShowFile(show),
+      { dispose: project.onChange(show) },
+      workspace.onDidChangeConfiguration((event) => {
+        if (event.affectsConfiguration('wordCount.label')) show();
+      }),
+      workbench.registerCommand('wordCount.count', () => count()),
+    );
+  },
+};
+
+const editor = createTypstEditor(host, {
+  source: '= Hello\n\nSome words here.',
+  settings: { 'wordCount.label': 'Wörter' },
+  extensions: (builtins) => [...builtins, wordCount],
+});
+await editor.executeCommand<number>('wordCount.count');   // 5
+```
+
+What `activate` gets (`ExtensionContext`; every type is exported from the package):
+
+| | |
+|---|---|
+| `subscriptions` | Push every registration here; disposed on `destroy`, in reverse order. |
+| `project` | The files: `files()`, `document(path)` (a Typst file's text), `onChange`. |
+| `workspace` | The settings: `getConfiguration('<section>').get('<key>')`, `onDidChangeConfiguration`. |
+| `workbench` | The frame: `registerStatusBarItem`, `registerSidePanel`, `registerTabBarItem`, `registerStyleSheet` (your CSS, inside the shadow root too), `registerCommand` / `executeCommand` / `registerKeybinding`, `registerDocumentLinkProvider`, `registerFileDecorationProvider`, `registerSourceControl`, `registerFileView`, `open(path)`, `applyChange(change)`, `activeTextEditor`, `onDidChangeTextEditorSelection`, `user`. |
+| `preview` | `registerToolbarItem(item, { group, order })`, `registerPdfExportOption`, `createOverlay`, `reveal`, `onDidClickPage`, `onDidChangeDiagnostics`. |
+| `visualView`, `sourceView` | Node and mark specs, toolbar items, decorations of the Visual view; CodeMirror extensions of the Source view. |
+
+Rules the built-ins follow, and yours should too:
+
+- **Extensions never depend on each other.** What one offers another goes through a generic contribution point
+  (document links, file decorations, source controls) or a command by id, never an import.
+- **Commands** are plain string ids `<extension>.<name>`. `executeCommand<T>(id, ...args)` calls the handler at
+  once and resolves to its result; it rejects for an unknown id or a failing handler.
+- **Order never decides who wins**: toolbar items have a `group` and an `order` (the preview toolbar's groups are
+  sorted by name: the built-ins use `1_sync`, `2_view`, `3_export`); Visual view nodes, marks and box renderers a
+  `priority` (default 100, higher first).
+- **Settings** are declared under the extension's own section and read with `getConfiguration`; follow
+  `onDidChangeConfiguration`, since the host may change them at any time.
+
 ## Migrating from the earlier API
+
+- Per-feature options are settings now (section 6): `pdfDownload: false` → `settings: { 'pdfExport.download':
+  false }`, `fileList` → `'files.panel'`, `followCursor` → `'previewSync.followCursor'`, `theme` →
+  `'workbench.theme'`. On `<typst-editor>`, the attributes `file-list`, `pdf-download` and `theme` are one
+  `settings` attribute (JSON).
+- `collaboration: { … }` → `extensions: (builtins) => [...builtins, collaboration({ … })]` (`collaboration` is
+  exported from the package).
 
 - `onChange(source)` is gone: use `onFilesChange` and look for `{ kind: 'update', path: main }`
   (or read `editor.source` there).

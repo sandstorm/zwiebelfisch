@@ -57,6 +57,39 @@ test('setting the value property updates the preview without a change event', as
   await expect(editor.getByTestId('typst-source')).toContainText('Second page');
 });
 
+test('maps the settings attribute onto the settings, also when it changes', async ({ page }) => {
+  const editor = page.locator('typst-editor');
+  const widget = editor.locator('.typst-editor');
+  const toolbar = editor.getByTestId('typst-preview-toolbar');
+  await expect(widget).toHaveAttribute('data-theme', 'light');
+  // files.panel: hide — no file panel, no rail button
+  await expect(editor.getByTestId('typst-panel-toggle-files')).toBeHidden();
+  await expect(toolbar.getByTestId('typst-pdf')).toBeVisible();
+  await page.getByTestId('dark').check();
+  await expect(widget).toHaveAttribute('data-theme', 'dark');
+  await expect(widget).toHaveAttribute('data-scheme', 'dark');
+  await page.getByTestId('pdf').uncheck();
+  await expect(toolbar.getByTestId('typst-pdf')).toHaveCount(0);
+  await page.getByTestId('pdf').check();
+  // back in its place: after the page number
+  await expect(toolbar.locator('> *').last()).toHaveAttribute('data-testid', 'typst-pdf');
+  expect(await editor.evaluate((el: HTMLElement & { settings: object }) => el.settings)).toEqual({
+    'workbench.theme': 'dark',
+    'files.panel': 'hide',
+    'pdfExport.download': true,
+  });
+});
+
+test('runs commands of the extensions', async ({ page }) => {
+  const editor = page.locator('typst-editor');
+  await expect(editor.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
+  const type = await editor.evaluate(async (el: HTMLElement & { executeCommand(id: string, ...args: unknown[]): Promise<Blob> }) => {
+    const blob = await el.executeCommand('pdfExport.export');
+    return blob.type;
+  });
+  expect(type).toBe('application/pdf');
+});
+
 test('the value attribute replaces the source', async ({ page }) => {
   const editor = page.locator('typst-editor');
   await editor.evaluate((el) => el.setAttribute('value', '= From attribute\n'));

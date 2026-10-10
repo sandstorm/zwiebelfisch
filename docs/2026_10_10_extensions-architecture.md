@@ -63,12 +63,14 @@ Controller: it subscribes views to the model's `onChange` and turns user input i
 ```ts
 interface TypstExtension {
   readonly id: string;
+  readonly contributes?: { configuration?: { properties: Record<string, ConfigurationProperty> } };  // its settings
   activate(context: ExtensionContext): void;  // registers into context.subscriptions
 }
 
 interface ExtensionContext {
   readonly subscriptions: Disposable[];       // disposed on destroy, in reverse order
   readonly project: Project;
+  readonly workspace: Workspace;               // getConfiguration('<section>').get('<key>'), onDidChangeConfiguration
   readonly workbench: Workbench;               // registerSidePanel, registerStatusBarItem,
                                                // registerFileView(kind, provider), open(path), …
   readonly visualView: VisualViewContributions;  // registerNode(spec), registerMark(spec),
@@ -81,14 +83,19 @@ interface ExtensionContext {
 
 - Contributions are registered **once**, at activation. The hosts apply them to every view they
   create later (views are created lazily per document), so an extension never tracks views.
-- Configuration (host options such as `user`, `pdfDownload`, `collaboration`) reaches an extension
-  as an argument of its factory in the built-in list: `comments({ user })`.
+- Configuration (as built, 2026-10-10): what a feature lets hosts configure is a setting its extension declares
+  (`contributes.configuration`, VS Code's shape: `pdfExport.download`, `files.panel`, `previewSync.followCursor`;
+  the workbench's own `workbench.theme`), set by the host (`createTypstEditor({ settings })`, `editor.settings`,
+  `<typst-editor settings='{…}'>`) and read with `workspace.getConfiguration`, following `onDidChangeConfiguration`.
+  `user` is a widget option every extension reads as `Workbench.user`; `collaboration` takes the host's connection
+  as its factory's argument and is added by the host.
 - No services (decided 2026-10-10): what one extension has for another goes through a generic contribution
   point of a host, VS Code's shapes: `workbench.registerDocumentLinkProvider` (read by both views and by
   `images`), `registerFileDecorationProvider` (collaboration's presence, shown by `files`),
   `registerSourceControl` (the GitLab room, shown by `source-control`). A feature's own contributions get its
   models directly (`labels` hands its `LabelIndex` to `references`).
-- Not public API at first. Once it holds, `createTypstEditor({ extensions })` can expose it.
+- Public (2026-10-10): `createTypstEditor({ extensions: (builtins) => [...builtins, mine] })`; the types are
+  exported from `src/index.ts`. Commands are plain string ids, `executeCommand<T>(id, ...args): Promise<T>`.
 
 ### Priority: who wins when two contributions claim the same thing
 
@@ -127,14 +134,15 @@ The result of the slices and the clean-up (2026-10-10). Every extension is `src/
 `<name>.ts`; "CSS" means it has `<name>.css`, imported `?inline` and added with `workbench.registerStyleSheet` on
 activation. The widget's list (`typst-editor/typst-editor.ts`, `builtinExtensions`) carries no order between the
 Visual view's contributions: `priority` decides (task lists 110 over bullet lists, the image box renderer 110 over
-snippets); the order only places toolbar, tab bar and status bar items.
+snippets), toolbar items (the preview's too) have `group` + `order`; the order only places tab bar and status bar
+items.
 
 | Extension (id) | `model/` | Contributions | Commands | CSS |
 |---|---|---|---|---|
 | `typstLanguage()` (`typst-language`) | — | Source: Typst syntax + code colors; Visual: the same in raw boxes (`registerBoxCodeExtension`) | — | — |
-| `documentLinks()` (`document-links`) | (core `document-links`: `findFilePaths`) | Workbench: a `DocumentLinkProvider` (the views show its links) | — | — |
-| `collaboration(options, user?)` | `SharedProject`, `SharedAssets`, `RemoteCursors`, `GitLabSourceControl` (lazy chunk; protocol in core `gitlab-protocol`); `presence/` (eager) | Source + Visual: other users' carets and selections (also in raw boxes); Workbench: file decorations, the GitLab room's source control | — | yes |
-| `files()`, `fileNavigation()` (`files`, `file-navigation`) | tree model (uploads: core `uploads`) | Workbench: file panel (side panel, file decorations of any provider), drops; editor frame "← previous / next file →" | — | yes (`files.css`) |
+| `documentLinks()` (`document-links`) | (core `document-links`: `findFilePaths`) | Workbench: a `DocumentLinkProvider` (the views show its links) | command `documentLinks.createFile` | — |
+| `collaboration(options)` (added by the host, not a built-in) | `SharedProject`, `SharedAssets`, `RemoteCursors`, `GitLabSourceControl` (lazy chunk; protocol in core `gitlab-protocol`); `presence/` (eager) | Source + Visual: other users' carets and selections (also in raw boxes); Workbench: file decorations, the GitLab room's source control | — | yes |
+| `files()`, `fileNavigation()` (`files`, `file-navigation`) | tree model (uploads: core `uploads`) | Setting `files.panel`; Workbench: file panel (side panel, file decorations of any provider), drops; editor frame "← previous / next file →" | — | yes (`files.css`) |
 | `spreadsheets()` | `typst-file` (`name.ic.gen.typ`) | Workbench: `.ic` file view (IronCalc, loaded on demand) | — | yes |
 | `diagnostics()` | `DiagnosticCollection`, summary | Source: lint; Visual: highlights; Workbench: status bar item | — | yes |
 | `sourceControl()` (`source-control`) | — | Workbench: "Save to <label>…" in the tab bar for every registered source control | — | — |
@@ -147,12 +155,12 @@ snippets); the order only places toolbar, tab bar and status bar items.
 | `pageLayout` (`page-layout`) | — | Visual: page break, horizontal rule | — | yes |
 | `lists` | cheq's preamble | Visual: bulleted, numbered and task lists (task lists 110), list buttons | — | yes |
 | `alignment` | alignment syntax | Visual: `#align` blocks, justified paragraphs, Align menu | — | — |
-| `comments({ user })` | margin-note syntax, threads, `addMarginNote`, `withoutNotes`, page margin, card layout | Visual: margin notes, notes gutter, Comment action; Workbench: Comment button (Source tab bar), Mod+Alt+M; Preview: PDF export option `comments.include` | command `comments.addComment` | yes |
+| `comments()` (signs as `Workbench.user`) | margin-note syntax, threads, `addMarginNote`, `withoutNotes`, page margin, card layout | Visual: margin notes, notes gutter, Comment action; Workbench: Comment button (Source tab bar), Mod+Alt+M; Preview: PDF export option `comments.include` | command `comments.addComment` | yes |
 | `labels()` | `LabelIndex`, scan, reference syntax, label choices | Visual: reference chips + hints, label tags, `@` list, Add label | — | yes |
 | `styles()` | `StyleIndex`, discover, `newStyle` | Visual: styled blocks, text styles, the style menu; "New style…" | — | yes |
-| `previewSync({ followCursor })` (`preview-sync`) | — | Preview: Follow cursor (reveal on selection), click → source | — | yes |
+| `previewSync()` (`preview-sync`) | — | Setting `previewSync.followCursor`; Preview: Follow cursor (reveal on selection), click → source | — | yes |
 | `previewControls()` (`preview-controls`) | zoom | Preview: zoom, page n / total | — | yes |
-| `pdfExport({ download })` (`pdf-export`) | — | Preview: Download PDF + options popover (remembered per viewer) | command `pdfExport.export` | yes |
+| `pdfExport()` (`pdf-export`) | — | Setting `pdfExport.download`; Preview: Download PDF + options popover (remembered per viewer) | command `pdfExport.export` | yes |
 
 Not extensions: the hosts' minimum (Visual view: paragraphs, text, raw boxes; the hosts' toolbar, highlights;
 the workbench's document links) and its CSS (`typst-editor.css` with the color tokens, `hosts/visual-view/visual-view.css`,

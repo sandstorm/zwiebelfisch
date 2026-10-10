@@ -15,20 +15,35 @@
     </style>
   </head>
   <body>
-    <typst-editor id="editor">
+    <!-- settings: what the editor's features let you configure, as one JSON attribute (docs/embedding.md, "Settings") -->
+    <typst-editor id="editor" settings='{"workbench.theme": "light", "files.panel": "hide"}'>
       #set page(width: 12cm, height: auto, margin: 1cm)
 
       = Plain HTML
 
       Embedded with a single `&lt;typst-editor&gt;` tag.
     </typst-editor>
-    <p>Characters: <output id="length" data-testid="length"></output></p>
+    <p>
+      Characters: <output id="length" data-testid="length"></output>
+      <label><input type="checkbox" id="dark" data-testid="dark" /> Dark</label>
+      <label><input type="checkbox" id="pdf" data-testid="pdf" checked /> Download PDF</label>
+    </p>
     <script type="module">
       const editor = document.getElementById('editor');
       const length = document.getElementById('length');
       const show = () => (length.value = String(editor.value.length));
       editor.addEventListener('change', show);
       customElements.whenDefined('typst-editor').then(show);
+      // settings change at any time: the editor follows the attribute
+      const dark = document.getElementById('dark');
+      const pdf = document.getElementById('pdf');
+      const configure = () =>
+        editor.setAttribute(
+          'settings',
+          JSON.stringify({ 'workbench.theme': dark.checked ? 'dark' : 'light', 'files.panel': 'hide', 'pdfExport.download': pdf.checked }),
+        );
+      dark.addEventListener('change', configure);
+      pdf.addEventListener('change', configure);
     </script>
   </body>
 </html>

@@ -8,9 +8,10 @@ code changes, update this file in the same commit.
 
 ```
 src/                        the widget (TypeScript); the most important API on top
-  index.ts                  public API of the package; registers <typst-editor>
+  index.ts                  public API of the package (createTypstEditor, <typst-editor>, the extension API's types,
+                            Disposable, EventEmitter, collaboration); registers <typst-editor>; the only re-exporting file
   typst-editor/             typst-editor.ts: createTypstEditor() — a Project in the workbench host with the built-in
-                            extension list (configured from the options), scoped CSS of the hosts (typst-editor.css:
+                            extension list (or the host's list made from it) and the host's settings, scoped CSS of the hosts (typst-editor.css:
                             tokens, frame, views, toolbar; the extensions bring their own)
   testing/                  testing.ts: test helpers composing the built-in extensions (the Visual view's schema and
                             a view with the built-ins, configured from test options; edit / after / find /
@@ -20,11 +21,13 @@ src/                        the widget (TypeScript); the most important API on t
                             createTypstEditor; inline-source.ts (source written inside the element → text)
   hosts/                    view hosts: mechanism + contribution points, no feature knowledge
     workbench/              the widget's frame and the extension API (workbench.ts: TypstExtension, ExtensionContext,
-                            Workbench, CommandRegistry, DocumentLinkProvider, FileDecorationProvider, SourceControl);
+                            Workspace (settings), Workbench, Command, DocumentLinkProvider, FileDecorationProvider,
+                            SourceControl);
                             workbench-host.ts (WorkbenchHost: what createTypstEditor creates); layout/ (layout.ts +
                             layout.css: side panels with rail buttons, editing area, preview, status bar), editing-views/
                             (Visual/Source tabs, lazily one VisualView + SourceView per document), color-scheme/
                             (`data-scheme`), extension-host/ (activation), commands/ (commands, key bindings),
+                            configuration/ (Configuration: declared settings, the host's values, changes),
                             file-views/ (views by file kind), file-drops/ (files dropped on the widget), style-sheets/
                             (StyleSheets: the widget's and the extensions' CSS in its shadow root or head, shared and
                             reference-counted), document-links/ (DocumentLinks: the providers' links merged by
@@ -212,12 +215,12 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
 ### `createTypstEditor` / `<typst-editor>` (`src/typst-editor/`, `src/typst-editor-element/`, `src/index.ts`)
 
 ```ts
-createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileChange?, onFilesChange?,
-                           user?, collaboration?, onOpen?, followCursor?, pdfDownload?, theme? })
-  → { files (get/set), source (get/set), activeFile, open(path), exportPdf({options?}) → Promise<Blob>,
-      destroy() }
-<typst-editor value="…" file-list="auto|show|hide" pdf-download="hide" theme="…">
-  .options (Partial<TypstEditorOptions>), .value, .files, exportPdf({options?});
+createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFilesChange?, onOpen?, user?,
+                           settings?: { [id]: value }, extensions?(builtins) → TypstExtension[] })
+  → { files (get/set), source (get/set), settings (get/set), activeFile, open(path),
+      executeCommand<T>(id, ...args) → Promise<T>, exportPdf({options?}) → Promise<Blob>, destroy() }
+<typst-editor value="…" settings='{"pdfExport.download": false}'>
+  .options (Partial<TypstEditorOptions>), .value, .files, .settings, executeCommand(id, ...args), exportPdf({options?});
   'change' {detail:{path, content}}, 'files-change' {detail: FileChange}, 'open' {detail:{path}}
 ```
 
@@ -228,26 +231,40 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   main file cannot be deleted, so without an entry it keeps its text) and recompiles. `source` is
   only a shortcut for the main file's text (as option it wins over `files[main]`; assigning it is an
   `update` of the main file). `@preview` packages need no entry.
-- **`<typst-editor>`** spreads its `options` property into `createTypstEditor` when it connects
-  (no per-option properties: a new option needs no change there); the attributes `value`,
-  `file-list`, `pdf-download`, `theme` win over the matching options, and the text content is the
-  main file's text when there is no `value`. `options` / `value` / `files` set before the element is
-  defined are picked up on upgrade. `value` / `files` are the live content; setting them dispatches
-  nothing. `change` fires per file whose content changed (`TypstEditorChangeDetail = { path:
-  ProjectPath, content: FileContent | null }`, null: gone; a rename is two), `files-change` with
-  every `FileChange`.
+- **`<typst-editor>`** is a thin generic adapter (decided 2026-10-10): a shadow root and `createTypstEditor`. It
+  spreads its `options` property in when it connects (no per-option properties or attributes: a new option or
+  setting needs no change there); one `settings` attribute (a JSON object, over `options.settings` id by id, read
+  again when it changes; not an object: ignored with a warning) and the `settings` property map onto the settings;
+  the editor's callbacks become DOM events from one table (`EVENTS`: `onFilesChange` → `files-change` + a
+  `change` per file, `onOpen` → `open`), the host's own callbacks are called as well. The `value` attribute and
+  the text content give the main file's text. `options` / `value` / `files` / `settings` set before the element
+  is defined are picked up on upgrade. `value` / `files` are the live content; setting them dispatches nothing.
+  `change` fires per file whose content changed (`TypstEditorChangeDetail = { path: ProjectPath, content:
+  FileContent | null }`, null: gone; a rename is two), `files-change` with every `FileChange`.
 - **Composition**: a `Project` in a `WorkbenchHost` (`hosts/workbench`, see "Extensions" below) that runs the
-  built-in extension list, configured from the options (`builtinExtensions`): `typstLanguage`, `documentLinks`,
-  `collaboration` (with the option, and `user`), `files` (`fileList`), `fileNavigation`, `spreadsheets`,
-  `diagnostics`, `sourceControl`; the Visual view's constructs and features: `markup`, `headings` (with
-  their numbers), `tables`, `images`, `renderedBoxes`, `outline`, `pageLayout`, `lists`, `alignment`, `comments`
-  (`user`), `labels`, `styles`; then `previewSync` (`followCursor`), `previewControls` and `pdfExport`
-  (`pdfDownload`), which also gives the preview toolbar its order. Extensions never depend on each other, so the
-  order only places toolbar, tab bar and status bar items: where the Visual view's contributions compete, or
-  document links overlap, `priority` decides (see "VisualView"; tested by projecting every fixture with the
-  built-ins in reverse order). The extension API is not public yet: the
-  options stay as they are. The preview always compiles `main` with `project.files()`; `exportPdf` runs the
-  `pdfExport.export` command; `onFilesChange` hears a change after the workbench and the extensions.
+  built-in extension list (`builtinExtensions`, none configured: what a feature lets hosts configure is a setting
+  it declares): `typstLanguage`, `documentLinks`, `files`, `fileNavigation`, `spreadsheets`, `diagnostics`,
+  `sourceControl`; the Visual view's constructs and features: `markup`, `headings` (with their numbers),
+  `tables`, `images`, `renderedBoxes`, `outline`, `pageLayout`, `lists`, `alignment`, `comments`, `labels`,
+  `styles`; then `previewSync`, `previewControls` and `pdfExport`. Extensions never depend on each other, so the
+  order carries no meaning: where the Visual view's contributions compete, or document links overlap, `priority`
+  decides (see "VisualView"; tested by projecting every fixture with the built-ins in reverse order); toolbar items
+  have `group` + `order`; only tab bar and status bar items still go in activation order. `typst-editor.ts` names
+  no feature: no per-feature option, only `exportPdf` (a documented shortcut for the command `pdfExport.export`).
+- **Public extension API** (decided 2026-10-10): `extensions(builtins) → list` makes the list from the built-ins
+  (default: them): add the host's own, leave one out or replace it by `id`. A function rather than an array, so
+  "add one" cannot be mistaken for "replace all", and neither the built-in list nor each factory has to be
+  exported. `collaboration` is not a built-in: it needs the host's connection (a Y.Doc or a server), so the host
+  adds `collaboration({ url, room })` (exported from `src/index.ts`). The extension API's types, `Disposable`,
+  `EventEmitter` and `Event` are exported from `src/index.ts`, the only file that re-exports.
+- **Widget options vs. settings** (decided 2026-10-10): the content and the host integration are options (`files`,
+  `main`, `source`, `mode` (where to start), `allowFileChange`, `onFilesChange`, `onOpen`, `user`); what a feature
+  lets hosts configure is a setting its extension declares, changeable later through `editor.settings`:
+  `pdfExport.download` (was `pdfDownload`), `files.panel` (was `fileList`), `previewSync.followCursor` (was
+  `followCursor`), and the workbench's own `workbench.theme` (was `theme`). `user` stays an option: several
+  extensions read it (`Workbench.user`: comments sign with it, collaboration shows and commits with it), so it is
+  no one extension's setting. The preview always compiles `main` with `project.files()`; `onFilesChange` hears a
+  change after the workbench and the extensions.
 - **Diagnostics**: the preview's `onDidChangeDiagnostics` is the one source. The `diagnostics` extension puts
   each document's into a `DiagnosticCollection`, which its Source views underline (`lint`) and its Visual views
   mark (`registerHighlights('diagnostics', …)`: `.typst-diagnostic` with the message as tooltip; an empty range
@@ -278,21 +295,23 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   links to the file read before it and the one after it, both at the top and at the bottom;
   nothing for the main file or files outside the include order.
 - **`FilePanel`** (see "File panel" below; the `files` extension) lives in the side panel `files`: open by
-  default when `fileList` is `show`, or `auto` with more than one file; `hide` removes it with its rail
-  button. A requested change goes through `Workbench.applyChange`: `project.check`, then the host's
+  default when the setting `files.panel` is `show`, or `auto` with more than one file; `hide` removes it with its
+  rail button (all three follow a change of the setting). A requested change goes through `Workbench.applyChange`: `project.check`, then the host's
   `allowFileChange` (async allowed; re-checked afterwards), then it is applied. Files dropped anywhere on
-  the widget (`Workbench.onDidDropFiles`) are uploaded unless `fileList` is `hide` (then ignored) — never
+  the widget (`Workbench.onDidDropFiles`) are uploaded unless `files.panel` is `hide` (then ignored) — never
   left to the browser, which would open the file in place of the page (the workbench prevents that, also
   while nobody listens). Image files dropped into the Visual view's text are taken
   there instead (uploaded and inserted at the drop point).
 - **File links** (see below): the `documentLinks` extension registers one `DocumentLinkProvider` with the
   workbench (paths resolve from the file's path; a link opens its file with `Workbench.open`; a missing `.typ`
-  file's link offers "Create …": a `create` change through `applyChange`, then `open`). The workbench shows the
+  file's link offers "Create …": the command `documentLinks.createFile(path)`, a `create` change through
+  `applyChange`, then `open`). The workbench shows the
   links of every provider in the Source views and the raw boxes' code; `images` shows an image box's path as its
   link (`Workbench.provideDocumentLinks` / `resolveDocumentLink`).
 - **Preview sync** (the `previewSync` extension): a click in the preview selects its source (another project
   file is opened first; clicks into packages are ignored), and while "Follow cursor" is on the preview scrolls to
-  the selection the user moves. Without the extension the preview neither follows nor jumps.
+  the selection the user moves (the setting `previewSync.followCursor` if the host set it, else the viewer's last
+  choice, else on). Without the extension the preview neither follows nor jumps.
 - **Images and rendered boxes** (`extensions/images`, `extensions/rendered-boxes`): `ProjectImages` (the `images`
   extension) gives every document's Visual view its `ImageUrls` (image files resolved like Typst
   (`ProjectPath.resolve`) and shown as object URLs, made once per content and revoked when replaced; refreshed on
@@ -310,7 +329,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   (`extensions/pdf-export/`) is the policy: `PdfExport` / the command `pdfExport.export(options?)` starts from
   `{ main, sources: {} }` and lets every registered option change it in turn (by `priority`, default 100, higher
   first; equal: registration order), each with its value (given, else its default; an unknown id rejects), then
-  compiles that entry; the toolbar item (`downloadPdf`, unless `pdfDownload: false`) opens a popover with a
+  compiles that entry; the toolbar item (`downloadPdf`, while the setting `pdfExport.download` is on) opens a popover with a
   checkbox per option, set as this viewer left them (`workbench.remember('pdf-export.options')`) else their
   default, and "Download"; without any option the button downloads at once. `exportPdf({ options })` on the
   widget runs the command (defaults, not the viewer's choices). The `comments` extension registers only
@@ -331,10 +350,15 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
 ### Extensions (`src/hosts/workbench`)
 
 ```ts
-interface TypstExtension { id; activate(context: ExtensionContext): void }
+interface TypstExtension {
+  id; activate(context: ExtensionContext): void
+  contributes?: { configuration?: { properties: { [id: '<section>.<key>']: ConfigurationProperty } } }
+}                                       // ConfigurationProperty { type (or types), default, description, enum? }
 interface ExtensionContext {
   subscriptions: { dispose() }[]        // disposed on destroy: extensions in reverse list order, each in reverse
   project: Project
+  workspace: Workspace                  // getConfiguration(section?) → { get(key, default?), has(key), inspect(key) },
+                                        // onDidChangeConfiguration: Event<{ affectsConfiguration(section) }>
   workbench: Workbench                  // the frame's contribution points (below)
   visualView: VisualViewContributions   // registerNode, registerMark, registerToolbarGroup / Item, registerGutter,
                                         // registerBoxRenderer, registerEditorExtension, … (see "VisualView")
@@ -343,12 +367,14 @@ interface ExtensionContext {
                                         // onDidChangeDiagnostics, onDidRender, snippet, exportPdf (see "Preview")
 }
 interface Workbench {
-  ownerDocument; activeFile; open(path, { selection?, mode? }); onDidShowFile; applyChange(change) → reason | null
+  ownerDocument; activeFile; user?: { name, color? }; open(path, { selection?, mode? }); onDidShowFile
+  applyChange(change) → reason | null
   registerSidePanel(id, { label, icon }) → SidePanel { body, setDefault, setAvailable, dismiss, dispose }
   registerStatusBarItem(element)  registerTabBarItem(element, { mode? })  registerEditorFrame({ top, bottom })
   registerStyleSheet(css)           // the extension's CSS where the widget renders (head or shadow root)
   registerFileView(kind, { createFileView(parent) → FileView { show(path, content), hide(), dispose() } })
-  registerCommand(id, handler)  executeCommand(id, ...args)  registerKeybinding('Mod+Alt+KeyM', id)
+  registerCommand(id: string, handler(...args))  executeCommand<T>(id, ...args) → Promise<T>
+  registerKeybinding('Mod+Alt+KeyM', id)
   onDidDropFiles  remember(name) → Memory
   registerFileDecorationProvider({ provideFileDecoration(path) → FileDecoration | FileDecoration[] | undefined,
                                    onDidChangeFileDecorations })   getFileDecorations(path)   onDidChangeFileDecorations
@@ -357,7 +383,7 @@ interface Workbench {
                                  resolveDocumentLink?(link) → DocumentLink }, { priority? })
   provideDocumentLinks(document) → DocumentLink[]   resolveDocumentLink(link) → DocumentLink
                                     // DocumentLink { range: {from, to}, target?: ProjectPath, tooltip?,
-                                    //                command?: { title, run() → Promise<reason | null> } }
+                                    //                command?: Command { title, command: id, arguments? } }
   registerSourceControl({ id, label, defaultCommitMessage?, state: { busy, status }, onDidChange, commit(message) })
   sourceControls   onDidChangeSourceControls
   activeTextEditor: TextEditor | null  onDidChangeTextEditorSelection: Event<{ textEditor }>  isEditorFocused()
@@ -367,8 +393,8 @@ interface TextEditor {   // a Typst file's Visual + Source views (one per docume
   selection        // {from, to} in that tab's view
   revealRange(from, to)
 }
-new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen?, styleSheet? })
-  .activate(extensions)  .destroy()      // + everything of Workbench
+new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, onOpen?, styleSheet? })
+  .activate(extensions)  .settings (get/set)  .destroy()      // + everything of Workbench
 ```
 
 - **Why.** The frame knows no feature by name (review finding `typst-editor.ts:170`): a feature is a
@@ -377,7 +403,9 @@ new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen?, sty
   `onDid…` (`Event<T>` from `EventEmitter`, `core/event-emitter`).
 - **Lifecycle.** The workbench host makes its view hosts first: `VisualViewContributions` and a `SourceViewHost`
   (both handed to `EditingViews`) and the `Preview`; they are the context's `visualView`, `sourceView` and
-  `preview`. `WorkbenchHost.activate(list)`: the
+  `preview`. `WorkbenchHost.activate(list)`: first every extension's declared settings
+  (`contributes.configuration`, so an extension may read any declared setting during activation; values for
+  undeclared settings are reported with a console warning and ignored), then the
   extensions in list order (`ExtensionHost`, ids unique), then the main file is shown and compiled. Views are created later, lazily, with what was registered. `destroy` disposes the
   extensions in reverse list order, each one's subscriptions in reverse (also ones pushed after activation,
   e.g. once a room connected), then the frame.
@@ -387,8 +415,21 @@ new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen?, sty
   (`registerDocumentLinkProvider`: the `documentLinks` extension's paths, read by the views and by `images`),
   file decorations (`registerFileDecorationProvider`: `collaboration`'s presence, shown by `files`), source
   controls (`registerSourceControl`: `collaboration`'s GitLab room, shown by `sourceControl`). VS Code's shapes.
-  Commands are typed by `CommandRegistry`, extended by declaration merging: `pdfExport.export`,
-  `comments.addComment` (bound to `Mod+Alt+KeyM`).
+- **Commands** (`Commands`, VS Code's shape, decided 2026-10-10): plain string ids `<extension>.<name>` (no
+  registry type, no declaration merging: the caller knows a command by its id and the arguments it documents).
+  `executeCommand<T>(id, ...args)` calls the handler synchronously (`Promise.resolve(handler(...))`, so the user's
+  gesture, the selection and the focus are as at the call) and resolves to its (awaited) result; an unknown id or a
+  throwing / rejecting handler rejects. The built-ins: `pdfExport.export(options?)` → Blob,
+  `comments.addComment()` (bound to `Mod+Alt+KeyM`), `documentLinks.createFile(path)` (a link's command). Hosts run
+  them through `editor.executeCommand`.
+- **Settings** (`Configuration`, `configuration/`, VS Code's configuration, decided 2026-10-10): declared by the
+  extensions (`contributes.configuration`, an id declared twice throws) and by the workbench itself
+  (`workbench.theme`); the values come from the host (`settings`) and replace each other as a whole
+  (`WorkbenchHost.settings = …`: ids left out go back to their default). A value counts only with the declared
+  type (and in `enum`); otherwise the default, with a warning. `get` gives the value or the default;
+  `inspect(key)` → `{ key, defaultValue, globalValue? }` tells whether the host set one (preview-sync: a host value
+  wins over the viewer's remembered choice, the default does not); `onDidChangeConfiguration` fires once per
+  replacement that changes any effective value, `affectsConfiguration('pdfExport')` / `('pdfExport.download')`.
 - **Document links** (`DocumentLinks`, `document-links/`): the links of every provider for a `TextDocument`
   (`{ path, text }`: a whole file's, or a raw box's code with the path of its file); overlapping ones go to the
   provider of the higher `priority` (default 100; equal: registered first). A link remembers its provider, which
@@ -412,7 +453,8 @@ new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen?, sty
   removes it, so `destroy` leaves no CSS behind. Class names stay the extensions' own; colors come from the
   `--te-*` tokens on `.typst-editor` (base stylesheet), so extension sheets follow light and dark.
 - **Keys** (`Commands`): `registerKeybinding(key, command)` handles `key` on the widget in the capture phase,
-  so the command runs before an editor sees the key, which then never does. `key`: modifiers (`Mod` = Ctrl or
+  so the command runs before an editor sees the key, which then never does (`preventDefault` is decided at once;
+  a failing command is logged). `key`: modifiers (`Mod` = Ctrl or
   Cmd, `Ctrl`, `Meta`, `Alt`, `Shift`) and a `KeyboardEvent.code`.
 - **Drops** (`FileDrops`): files from the computer dropped on the widget never make the browser open them;
   while someone listens to `onDidDropFiles`, the drop hint (`typst-editor--dropping`) shows and the files go
@@ -435,7 +477,9 @@ new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen?, sty
 - Every extension lives in `extensions/<name>/` (the entry exports the extension factory, e.g. `images()`, and only
   what other code needs). An extension imports no other extension.
   The extensions' Visual-view contributions are also exported for `testing/testing.ts` (a view with
-  the built-ins, configured from test options).
+  the built-ins, configured from test options). Extensions configure nothing through their factory any more
+  (`comments()`, `files()`, `pdfExport()`, …): settings and `Workbench.user` instead; only `collaboration(options)`
+  takes the host's connection.
 
 ### Paths (`src/core/paths`)
 
@@ -965,7 +1009,8 @@ SourceView
 
 ```ts
 interface PreviewContributions {                             // what ExtensionContext.preview offers
-  registerToolbarItem(item: (preview: PreviewContext) => { elements, update?(), dispose?() }): Disposable
+  registerToolbarItem(item: (preview: PreviewContext) => { elements, update?(), dispose?() },
+                      placement: { group, order? }): Disposable   // VS Code's menus: groups by name, `navigation` first
   registerPdfExportOption({ id, label, description?, default: boolean, apply(entry: PdfEntry, value) → PdfEntry },
                           { priority? }): Disposable                // unique ids; PdfEntry = { main, sources }
   pdfExportOptions() → PdfExportOption[]                       // by priority (default 100, higher first), then registration
@@ -989,15 +1034,19 @@ new Preview(container)                       // implements PreviewContributions;
 - **The host keeps the mechanism**: the engine worker and its protocol, coalesced compiles, the page list,
   hit-testing (with the click highlight; `onDidClickPage`), scrolling and `reveal`, and the view state
   toolbar items read and set through `PreviewContext`: zoom, which page is visible. When to reveal what, and
-  where a click leads, is the `preview-sync` extension's (see "createTypstEditor"). Toolbar items are placed in
-  registration order; their `update()` runs at most once per frame after a scroll, resize, zoom or new pages.
+  where a click leads, is the `preview-sync` extension's (see "createTypstEditor"). Toolbar items are placed by
+  `group` + `order` (VS Code's menus, decided 2026-10-10: groups by name, `navigation` first, then `order`, then
+  registration order), so an item registered again (a setting switched it off and on) comes back to its place;
+  their `update()` runs at most once per frame after a scroll, resize, zoom or new pages.
 - **Toolbar items** come from extensions (the host has none of its own): `preview-sync`
-  (`extensions/preview-sync/preview/`) registers `followCursor({ on, onChange })` (a `role=switch`; the choice is
-  remembered in localStorage; switching it on reveals the selection at once); `preview-controls`
-  (`extensions/preview-controls/preview/`) registers `zoomControls` (− / + to the neighbouring preset of
+  (`extensions/preview-sync/preview/`) registers `followCursor({ on, onChange })` in group `1_sync` (a `role=switch`; the choice is
+  remembered in localStorage; switching it on reveals the selection at once; made anew when the host changes
+  `previewSync.followCursor`); `preview-controls`
+  (`extensions/preview-controls/preview/`) registers in group `2_view` `zoomControls` (− / + to the neighbouring preset of
   25 %–400 %, Fit, 100 %, and "Fit · 83%" / "125%"; presets and labels in its `model/zoom.ts`)
   and `pageNumber` ("3 / 12"); `pdf-export`
-  (`extensions/pdf-export/preview/`) registers `downloadPdf` (below).
+  (`extensions/pdf-export/preview/`) registers `downloadPdf` (below) in group `3_export` while `pdfExport.download`
+  is on.
 - **Page overlays** (`createOverlay`, `pages/overlays.ts`): boxes in pt, drawn as children of the page
   elements in percent of the page, so they survive zoom and lazy unmounting; drawn again after every
   successful compile. The host's click highlight is one.
@@ -1257,9 +1306,9 @@ new Layout(host, storageKey)   .editor  .preview  .statusBar   // the editing co
   ProseMirror CSS, the fallback of a collaborator's color).
 - **Which one.** CSS `color-scheme` decides: by default the page's (inherited, also into
   `<typst-editor>`'s shadow root), so the widget is light unless the page declares dark, and a page
-  with `color-scheme: light dark` gets it dark when the OS is. The `theme` option (`light` | `dark` |
-  `auto`; the element's `theme` attribute) sets `data-theme` on the host, which the stylesheet turns
-  into its own `color-scheme`. Read once, at creation.
+  with `color-scheme: light dark` gets it dark when the OS is. The setting `workbench.theme` (`light` | `dark` |
+  `auto`, default null: as the page) sets `data-theme` on the host, which the stylesheet turns
+  into its own `color-scheme`; a change of the setting applies at once (`ColorScheme.update`).
 - **`data-scheme`** (`ColorScheme`, `src/hosts/workbench/color-scheme/color-scheme.ts`): the scheme the widget's
   colors resolved to (`light` | `dark`, from its computed text color: `isLightText`, `ui/color-scheme/`), for what light-dark() cannot
   express. With it dark, the preview shows the pages inverted like dark-mode PDF readers do
@@ -1269,14 +1318,14 @@ new Layout(host, storageKey)   .editor  .preview  .statusBar   // the editing co
 - **CodeMirror** (Source view and raw boxes): `codeColors` = CodeMirror's default highlight style
   with its colors from `--te-syn-*` tokens, plus `EditorView.darkTheme` (cursor, selection, gutters,
   panels, tooltips) switched on when the text around the editor resolves light.
-  It checks when the view is placed or resized and when the OS scheme changes (`ColorScheme` at
-  creation and on OS changes), so a page switching its own color-scheme later changes the tokens at
+  It checks when the view is placed or resized, when the OS scheme changes and when the widget's `data-scheme`
+  changes (a `MutationObserver`; `ColorScheme` at creation, on OS changes and on `workbench.theme` changes), so a page switching its own color-scheme later changes the tokens at
   once, CodeMirror's own chrome at the next resize, and the preview's inversion not until reload.
 
 ### File panel (`src/extensions/files`)
 
 ```ts
-files({ fileList? })  fileNavigation(): TypstExtension   // the side panel, the frame links (images / data files: the images extension)
+files()  fileNavigation(): TypstExtension   // setting files.panel: 'auto' | 'show' | 'hide' (default auto)   // the side panel, the frame links (images / data files: the images extension)
 // workbench/:
 new FilePanel(parent, { onOpen(path), onChange(change) → Promise<reason | null>, memory?, decorations?(path) }, state)
 .render({ paths, main, active })   .upload(files)   .destroy()
@@ -1313,10 +1362,11 @@ readingOrder(read, main) → ProjectPath[]              neighbours(read, main, p
 // the workbench (see "Extensions")
 workbench.registerDocumentLinkProvider({ provideDocumentLinks({ path, text }) → DocumentLink[], resolveDocumentLink?(link) },
                                        { priority? }) → Disposable
-// DocumentLink { range: {from, to}, target?: ProjectPath, tooltip?, command?: { title, run() → Promise<reason | null> } }
-linkExtension({ path(), provideDocumentLinks, resolveDocumentLink, open(target) }) → CodeMirror extension   // hosts/workbench
+// DocumentLink { range: {from, to}, target?: ProjectPath, tooltip?, command?: Command { title, command, arguments? } }
+linkExtension({ path(), provideDocumentLinks, resolveDocumentLink, open(target), executeCommand(id, ...args) })
+  → CodeMirror extension   // hosts/workbench
 // extensions/document-links
-documentLinks(): TypstExtension                       // one provider: the file paths of a text
+documentLinks(): TypstExtension                       // one provider: the file paths of a text; command documentLinks.createFile(path)
 ```
 
 - **One definition** of what a path reference is (`findFilePaths`; Lezer, `codemirror-lang-typst`): the string of
@@ -1330,14 +1380,16 @@ documentLinks(): TypstExtension                       // one provider: the file 
   `tooltip` and `command` when a link is hovered or followed (the workbench remembers each link's provider).
 - **The `documentLinks` extension** is one provider: a path's link resolves from its file's path; an existing file
   is its `target`; a missing one gets the tooltip "x is not in the project", and a missing `.typ` file the command
-  "Create x" (a `create` change through `Workbench.applyChange`, then `open`; resolves to the host's refusal); a
+  "Create x" (VS Code's `Command`: `documentLinks.createFile(path)`, a `create` change through
+  `Workbench.applyChange`, then `open`; rejects with the host's refusal); a
   path leaving the project resolves to nothing (marked, but no hover).
 - **Source view and raw boxes** (`linkExtension`, registered by the workbench host with every Source view and, through
   `registerBoxCodeExtension`, every raw box's code; the text's path is its file's, a box's text is its code): links
   are marked (`typst-source__path`, underlined on hover, a pointer while Ctrl/⌘ is held: `typst-source--mod`);
   Mod+mousedown on one opens its target (else CodeMirror's own Mod+click); Alt+Enter opens the target of the link
   holding the cursor (F12 was avoided: browsers take it for the developer tools); the hover (`linkInfo`) offers
-  "Open x (Ctrl+click or Alt+Enter)", shows the tooltip, and a button for the command that shows why it failed.
+  "Open x (Ctrl+click or Alt+Enter)", shows the tooltip, and a button that runs the command
+  (`executeCommand(command, ...arguments)`) and shows the rejection's message.
   The links are computed again on every change of the text.
 - **Image boxes**: the `images` extension shows an image box's path as the first link in its code
   (`Workbench.provideDocumentLinks` + `resolveDocumentLink`): a button opening the target, or the path marked
@@ -1399,7 +1451,7 @@ localDate(date?) → 'YYYY-MM-DD'
 layoutCards([{anchor, height}], {gap, active?, top?}) → tops   // card-layout.ts: cards beside anchors, no overlap
 
 // comments.ts, the entry
-comments({ user? }): TypstExtension   // registerAddComment + registerIncludeComments + marginNotes + notesGutter
+comments(): TypstExtension   // signs as Workbench.user; registerAddComment + registerIncludeComments + marginNotes + notesGutter
 
 // workbench/
 registerAddComment(workbench, cards: { editNote(document, offset) }) → Disposable
@@ -1540,7 +1592,8 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
 ### Collaboration (`src/extensions/collaboration`, `src/extensions/source-control`, `server/`)
 
 ```
-collaboration.ts        eager entry: collaboration(options, user?) (the extension)
+collaboration.ts        eager entry: collaboration(options) (the extension; the user is Workbench.user; not a built-in:
+                        the host adds it, see "createTypstEditor")
 collaboration-link.ts   CollaborationLink: import()s model/ on demand, publishes the selection, reports the places
 presence/               eager, pure: Presence, PlacedPresence, PresenceSource, Presences (everyone's places), initials
 model/                  the lazily loaded chunk (Yjs, Hocuspocus; no DOM): Collaboration (model.ts), SharedProject,
@@ -1555,7 +1608,7 @@ workbench/              presenceDecorations: a FileDecorationProvider (who is in
 
 ```ts
 createTypstEditor(host, { …, user?: {name, color?},
-  collaboration?: { doc: Y.Doc, awareness?: Awareness } | { url, room, token? } })
+  extensions: (builtins) => [...builtins, collaboration({ doc: Y.Doc, awareness?: Awareness } | { url, room, token? })] })
 
 Collaboration.start(options, { project, user }) → Promise<Collaboration>   // url: waits for the first sync
 .setCursor(path | null, range?)   .destroy()
