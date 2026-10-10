@@ -138,28 +138,35 @@ only when the `Uint8Array` changes, so reuse the same array for unchanged files.
 from `https://packages.typst.org/preview/` on first use and keeps it in the Cache API. Allow that
 origin in your Content-Security-Policy (`connect-src`).
 
-## 4. Review comments
+## 4. Comments are margin notes in the source
 
-Users select text and press **Comment** (or Ctrl/Cmd+Alt+M). Threads with replies, resolve and
-reopen show in a side panel. The commented text is highlighted in both views, and a marker sits
-in the preview margin. Comments are **never written into the Typst source**. The host stores
-them beside the file, for example as `main.typ.comments.json`:
+Users select text (or place the cursor) and press **Comment** (or Ctrl/Cmd+Alt+M). This writes a
+[`drafting`](https://typst.app/universe/package/drafting/) margin note into the Typst source and
+puts the cursor into it:
 
-```js
-const editor = createTypstEditor(host, {
-  source,
-  comments: await load('main.typ.comments.json'),   // JSON string from onCommentsChange, optional
-  user: { name: 'Ada Lovelace' },                   // author of new comments
-  onCommentsChange: (json) => save('main.typ.comments.json', json),
-});
-editor.comments = json;   // replace all threads (e.g. after a pull); anchors are found again
+```typst
+#import "@preview/drafting:0.2.2": margin-note
+This is #margin-note[the selected text][Is this right? — Ada] and a point note.#margin-note[Cite?]
 ```
 
-`onCommentsChange` also fires when edits move a comment's anchor. Each anchor is stored as a W3C
-TextQuoteSelector (`exact` text with `prefix`/`suffix` context) plus a `start`/`end` hint. When
-the source was changed elsewhere, the comment attaches to the best-matching occurrence. If the
-text is gone, the thread is listed as "Text deleted". On `<typst-editor>`, set the `comments` and
-`user` properties and listen for `commentschange` (`detail.comments`).
+The import is added once at the top of the file (or an existing drafting import is extended).
+The preview shows the notes the compiler draws in the page margin, so the document needs a
+page margin wide enough for them. The Visual view shows a note as a bubble you click to edit.
+There is nothing extra to store or wire up: notes arrive with `onChange` / `change` and travel
+through git, diffs and collaboration like any other text. There are no threads; resolving a note
+means deleting it. To hide all notes in a final build, the document can say
+`#set-margin-note-defaults(hidden: true)` (drafting's own switch, not a widget option).
+
+**Breaking change.** The earlier sidecar comments are gone. These APIs were removed:
+
+- `createTypstEditor` options `comments` and `onCommentsChange`, and the `comments`
+  getter/setter on the returned editor;
+- on `<typst-editor>`: the `comments` property and the `commentschange` event;
+- the exported types `CommentsData` and `TypstEditorCommentsChangeDetail`;
+- the `comments` map in the collaboration Y.Doc (rooms that still hold one simply ignore it).
+
+`user` stays: it is the name others see when collaborating and the author of saved versions.
+Existing `*.comments.json` sidecar files are not migrated.
 
 ## 5. Real-time collaboration
 
@@ -174,8 +181,8 @@ createTypstEditor(host, {
 });
 ```
 
-- **What is shared:** the text of every `.typ` file (create / rename / delete included) and the
-  review comments of the main file, through one Y.Doc per room. Images and other files are not
+- **What is shared:** the text of every `.typ` file (create / rename / delete included, margin
+  notes with it), through one Y.Doc per room. Images and other files are not
   shared (except in GitLab rooms, below); every widget keeps those it was given. Each user's Undo only reverts that user's edits.
 - **With a server** (`{ url, room, token? }`): the widget connects to a
   [Hocuspocus](https://tiptap.dev/docs/hocuspocus) server (this repo's `server/`, `mise run
@@ -184,7 +191,7 @@ createTypstEditor(host, {
   **synced** yourself (y-websocket, y-webrtc, …), and its awareness for remote cursors. The Y.Doc
   must come from the same Yjs instance the widget uses, so bundle the widget from source with
   your Yjs (deduplicated); `dist/lib` bundles its own copy.
-- `onChange` / `onFilesChange` / `onCommentsChange` also fire for the others' edits.
+- `onChange` / `onFilesChange` also fire for the others' edits.
 - On `<typst-editor>`, set the `collaboration` and `user` properties before the element is
   connected.
 

@@ -14,10 +14,9 @@ src/
   engine/                   typed TS wrapper around the wasm, default fonts (generated wasm/, fonts/ — gitignored),
                             withPackages (package download, tar reader), fixtures/ (test package archives)
   document/                 TypstDocument — the single source of truth (string or shared Y.Text); Highlight (a styled source range views draw)
-  collab/                   real-time collaboration (loaded on demand): Collaboration, SharedProject, SharedComments,
-                            RemoteCursors, RoomVersions + SharedAssets (GitLab rooms); in-process.ts (Y.Doc/awareness
+  collab/                   real-time collaboration (loaded on demand): Collaboration, SharedProject, RemoteCursors,
+                            RoomVersions + SharedAssets (GitLab rooms); in-process.ts (Y.Doc/awareness
                             wiring for tests); gitlab-protocol.ts (import-free, shared with the server)
-  comments/                 Comments (anchors + persistence), CommentsPanel (side panel), CommentsUI (wiring)
   diff/                     diffTexts — the text diff against a base version behind "Show changes"
   source-view/              SourceView — CodeMirror 6 editing view
   preview/                  Preview — worker-backed live preview + hit-testing, zoom, page numbers
@@ -28,7 +27,6 @@ src/
     latest-only.ts          "only the newest value" task runner (compiles, cursor reveals)
     geometry.ts, zoom.ts    pure helpers: overlay boxes, visibility, current page, zoom steps
     toolbar.ts              zoom buttons, zoom label, "page n / total"
-    markers.ts              PreviewMarkers: margin marker layers placed via cursor lookups
     snippet.ts              cut a page SVG down to the boxes of a source range (snippets for the Visual view)
   visual-view/              VisualView — Tiptap editor over the source-anchored projection,
                             formatting toolbar, raw boxes edited in a nested CodeMirror,
@@ -141,7 +139,6 @@ new SourceView(parent, document, { onCursor?, onBaseChange? })
 new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scrolling page area into container
 .update(files: Record<path, text | Uint8Array>, main)    // cheap per keystroke
 .reveal(path, offset)                        // cheap per cursor move: flash, scroll only if off-screen
-.setMarkers(layer, [{path, offset, className, attributes?, title?}])   // margin markers; replaces that layer
 .showChanges(path, ranges | null)            // change bars in the page margin, redrawn after every compile
 .snippet(path, from, to, text) → Promise<{svg, width, height} | null>   // the range as drawn, cut from its page
 .onRender(listener) → unsubscribe            // after every successful compile
@@ -183,9 +180,6 @@ new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scr
   `Uint8Array` identity: pass the same array again and only `null` crosses to the worker.
 - **Packages:** `@preview/…` imports are downloaded on first use (see `withPackages`); the
   diagnostics arrive after the download.
-- **Margin markers** (`PreviewMarkers`): per layer, placed with one `cursor` lookup per marker
-  (`jumpFromCursor`, first position: page and height) at the right page edge, and placed again
-  after every successful compile. Clicks on a marker are not treated as page clicks.
 - **Coordinates:** the SVG is scaled to the page element's width (zoom). Clicks are converted with
   `pt = (clientX − pageRect.left) × page.width / pageRect.width`.
 
@@ -277,10 +271,10 @@ Inside the crate:
 
 ```ts
 createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileChange?, onFilesChange?, onChange?,
-                           comments?, onCommentsChange?, user?, base?, collaboration? })
-  → { source (get/set), files (get/set), activeFile, open(path), comments (get/set, JSON), destroy() }
-<typst-editor value="…" file-list="auto|show|hide">   .value, .files, .comments, .user, .collaboration;
-  'change' {detail:{value}}, 'files-change' {detail: FileChange}, 'commentschange' {detail:{comments}}
+                           user?, base?, collaboration? })
+  → { source (get/set), files (get/set), activeFile, open(path), setBase(base), destroy() }
+<typst-editor value="…" file-list="auto|show|hide">   .value, .files, .user, .collaboration, setBase(base);
+  'change' {detail:{value}}, 'files-change' {detail: FileChange}
 ```
 
 - `source` is the text of the main file at `main` (default `/main.typ`; falls back to
@@ -331,15 +325,20 @@ worker → main   {id, type:'compile', result} | {id, type:'click', jump} | {id,
   The worker (`FileReceiver`) removes paths missing since the previous call, and Typst diffs the
   text itself. Package files are not part of the map and stay loaded.
 
-### Margin notes (`src/editor/comment-action.ts`, `add-margin-note.ts`, `src/visual-view/margin-notes.ts`)
+### Comments = margin notes (`src/editor/comment-action.ts`, `add-margin-note.ts`, `src/visual-view/margin-notes.ts`)
 
-Comments are `drafting` margin notes in the Typst source (`@preview/drafting:0.2.2`):
-`#margin-note[note]` (point) and `#margin-note[text][note]` (range: highlights `text`). The
-preview shows what the compiler draws; git, diffs and collaboration carry them as text.
+Comments are [`drafting`](https://typst.app/universe/package/drafting/) margin notes in the
+Typst source itself (`@preview/drafting:0.2.2`): `#margin-note[note]` (point, at a cursor) and
+`#margin-note[text][note]` (range: drafting highlights `text`). There is no other comment store:
+the preview shows what the compiler draws, and git, diffs, undo and collaboration carry notes as
+ordinary text. No threads: a reply is more text in the note, resolving means deleting the call,
+and an author is whatever the note's text says. Hiding notes for the final output
+(`#set-margin-note-defaults(hidden: true)`) and wide enough page margins are up to the author.
 
 ```ts
 addMarginNote(text, {from, to}) → {changes: TextChange[], note} | null   // note: offset of the new (empty) body
 new CommentAction(root, () => {document, view: {selection(), reveal(), editNote?()}} | null)   .button  .comment()  .destroy()
+VisualView.editNote(offset) → boolean   // opens the field of the note whose source holds offset
 ```
 
 - **`addMarginNote`** (pure): a selection becomes `#margin-note[selection][]` if the result
@@ -348,48 +347,21 @@ new CommentAction(root, () => {document, view: {selection(), reveal(), editNote?
   import is ensured exactly once: an existing drafting import (any version) is kept (`*`, or
   `margin-note` among its items), extended (`, margin-note`; `: margin-note` on a bare module
   import), else `#import "@preview/drafting:0.2.2": margin-note` goes first in the file.
-- **`CommentAction`**: the widget's "Comment" button and Ctrl/Cmd+Alt+M (captured at the
-  widget root). Works on the shown `.typ` file in the current view (`EditingViews.shown()`),
-  applies the edits as one `document.change`, then `VisualView.editNote(note)` opens the new
-  note's field, or the Source view puts the caret into `[]`.
+- **`CommentAction`**: the widget's only comment UI — the "Comment" button and Ctrl/Cmd+Alt+M
+  (captured at the widget root). Works on the shown `.typ` file in the current view
+  (`EditingViews.shown()`), applies the edits as one `document.change`, then
+  `VisualView.editNote(note)` opens the new note's field, or the Source view puts the caret into `[]`.
 - **Visual view** (`margin-notes.ts`): see `marginNote` / `noteRange` below. A bubble shows the
   note's markup; clicking it swaps in a text field (Enter or blur writes it back, with brackets
   that have no partner escaped; Escape cancels). A point note's edit replaces the body inside
   its `src`; a range note's replaces its mark (`note` attribute). Everything else stays as written.
+- **Source view**: plain Typst, no extra decoration.
 - Engine tests compile both forms against the real package (`src/engine/fixtures/drafting-0.2.2`).
-
-### Review comments (`src/comments`) — being replaced by margin notes
-
-The "Comment" button now adds margin notes; the panel and sidecar JSON below remain until
-they are removed (docs/todo/comments-drafting.md).
-
-```ts
-new Comments(document, { json?, user?: {name} })
-.threads() → [{id, range: {from,to} | null, quote, resolved, comments: [{id, author, time, text}]}]   // orphans first
-.add(range, text) → id | null   .reply(id, text)   .setResolved(id, bool)   .remove(id)
-.serialize() → json   .load(json)   .onChange(fn) → unsubscribe   .destroy()
-
-new CommentsUI(comments, document, { root, views, activeView(), preview, path })
-.panel  .button  .startComment()  .destroy()
-```
-
-- **Never in the Typst source.** The host persists `serialize()` beside the file (sidecar JSON
-  via `onCommentsChange`). When collaborating they are also in the Y.Doc (`SharedComments`).
-- **Live anchors** are offsets mapped through every `TypstDocument` change (`mapRange`): text
-  inserted inside a range belongs to it, at its edges it does not. A range whose text is deleted
-  becomes an **orphan** (`range: null`, last quote kept). It comes back when exactly that text
-  with its context reappears (undo).
-- **Persisted anchors** are W3C Web Annotation style `{start, end, exact, prefix, suffix}`
-  (TextQuoteSelector, 32 chars of context, plus a position hint). `load()` re-anchors them
-  (`reanchor`): first at the old position, else the occurrence of `exact` with the best-matching
-  context (nearest wins ties). If the text is not found, the thread is an orphan.
-- **Wiring (`CommentsUI`):** highlights go to every view through `setHighlights('comments', …)`
-  and markers to `Preview.setMarkers('comments', …)` (unresolved anchored threads only). Both
-  are refreshed once per microtask after any change, never inside another view's update. Views
-  map their highlights through edits in the meantime. Clicking a highlight or marker
-  (`data-comment-id`) selects the thread. Cards reveal their text in the active view.
-- **Panel (`CommentsPanel`):** a pure render of `{threads, active, draft}` that reports intents.
-  Typed text and focus survive re-renders. It is hidden (zero-width grid column) while empty.
+- **Removed** with this design (it replaced the sidecar comments of docs/todo/comments.md):
+  `src/comments` (Comments, quote anchors, CommentsPanel, CommentsUI), `SharedComments` and the
+  Y.Doc `comments` map, `Preview.setMarkers` / `PreviewMarkers`, the widget options `comments` /
+  `onCommentsChange`, the `comments` getter/setter, the element's `.comments` and
+  `commentschange`, and the `CommentsData` / `TypstEditorCommentsChangeDetail` types.
 
 ### `VisualView` (`src/visual-view`)
 
@@ -534,7 +506,7 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
 createTypstEditor(host, { …, user?: {name, color?},
   collaboration?: { doc: Y.Doc, awareness?: Awareness } | { url, room, token? } })
 
-Collaboration.start(options, { project, comments, user }) → Promise<Collaboration>   // url: waits for the first sync
+Collaboration.start(options, { project, user }) → Promise<Collaboration>   // url: waits for the first sync
 .sync()   .setCursor(path | null, range?)   .showCursors(path | null, views)   .destroy()
 .versions → RoomVersions | null      // GitLab rooms: .base(path), .onBaseChange(fn), .save(message, author?), .onMessage(fn)
 ```
@@ -545,7 +517,6 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
 | Y.Doc entry | Content | Kept in step by |
 |---|---|---|
 | `files`: `Y.Map<path, Y.Text>` | the text of every `.typ` file | `SharedProject` |
-| `comments`: `Y.Map<threadId, Y.Map>` | `{anchor: {from, to: RelativePosition JSON, quote}, resolved, comments: Y.Array}` (main file) | `SharedComments` |
 | awareness state | `user: {name, color}`, `cursor: {path, anchor, head}` (relative positions) | `RemoteCursors` |
 | `assets`: `Y.Map<path, sha \| Uint8Array>` | GitLab rooms only: the other files (blob sha, or uploaded bytes not committed yet) | `SharedAssets` (clients), `GitLabRoom` (server) |
 | `meta`: `Y.Map` | GitLab rooms only, written by the server: `baseSha`, `base` (path → text), `baseAssets` (path → sha), `lastCommits` (path → commit) | `GitLabRoom`; read by `RoomVersions` |
@@ -555,13 +526,8 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
   `Project.replace`) write the map in one transaction; remote map events become
   `Project.apply(…)` (one delete + one add in one transaction = rename). Joining: the shared files
   win, local files the room lacks are seeded. If two clients seeded a key concurrently, the loser
-  rebinds to the winner's Y.Text (one remote change; views and anchors survive). A rename is a new
+  rebinds to the winner's Y.Text (one remote change; views survive). A rename is a new
   Y.Text (its Yjs history starts over); the renaming client keeps its document and views.
-- **`SharedComments`**: `Comments` stays the model the UI talks to. Local changes (and anchors
-  moved by edits) are diffed against the map and written; remote changes are loaded with
-  `Comments.load`, anchors resolved from relative positions (the start sticks to the character
-  after it, the end to the one before, matching `mapRange`). Replies are a `Y.Array`, so
-  concurrent replies merge. A room without threads is seeded with the local ones.
 - **`RemoteCursors`**: publishes the local selection; draws the others' selections
   (`typst-remote-selection`) and carets (`typst-remote-cursor`: one character with a colored
   border and a name label, since views draw marks, not empty ranges) through `setHighlights(
@@ -612,7 +578,7 @@ HTTP             GET /rooms/<room>/files/<path> (Authorization: Bearer <room tok
     `merge3` (node-diff3, by lines; adjacent-line changes conflict like diff3); changed vs deleted
     → conflict. Any conflict → nothing applied, `gitlab:conflict` with the room's ranges.
     Otherwise applied in one transaction as `textEdits` (changed lines narrowed to the differing
-    characters, so cursors and comment anchors elsewhere stay put) and `meta` = upstream.
+    characters, so cursors elsewhere stay put) and `meta` = upstream.
     Assets: upstream wins where the room did not change them.
   - `BlobCache` (shared, LRU by bytes) keeps blob bytes by sha for the files endpoint.
 - **Widget**: `Collaboration` (server mode only) sees `meta.baseSha` after the first sync and adds
@@ -681,4 +647,4 @@ HTTP             GET /rooms/<room>/files/<path> (Authorization: Bearer <room tok
 - **Collaboration:** images and other non-`.typ` files are not shared (outside GitLab rooms). `{ doc }` mode needs the
   widget and the host on the same Yjs instance (`dist/lib` bundles its own Yjs). In `{ doc }`
   mode the host must pass a synced Y.Doc; with `{ url }` an unreachable server leaves the widget
-  local. Comments are shared for the main file only. Remote cursors at an empty line are not drawn.
+  local. Remote cursors at an empty line are not drawn.
