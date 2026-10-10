@@ -20,6 +20,7 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
 | `1245fc5`..`79bd3d1` | Slices merged: 21 extensions in `src/extensions/`, `features/` and `hosts/*/builtins/` gone; `src/testing/` (test-only composition); `registerStyleSheet` + per-extension CSS; `core/uploads`, `core/gitlab-protocol`; `{ priority }` on registerNode / registerMark / registerBoxRenderer |
 | `d4641ef`..`4cf2443` | Wave 1: presence out of core + hosts; `registerDocumentLinkProvider` (merged, priority) read by both views; `preview-sync`; no services (`registerFileDecorationProvider`, `registerSourceControl`, `versions` → `source-control`, "Save to GitLab…"); one "Download PDF" + options popover, `registerPdfExportOption`, `exportPdf({ options })`; IronCalc dark mode (palette from tokens, resize nudge redraws the canvas) |
 | `6f11f47`..`2399f41` | Wave 2: public extension API `createTypstEditor({ extensions: (builtins) => [...], settings })`; settings via `contributes.configuration` + `workspace.getConfiguration` (`pdfExport.download`, `files.panel`, `previewSync.followCursor`, `workbench.theme`); string async commands; `<typst-editor settings='{…}'>` thin adapter; preview toolbar `group` + `order`; UI services: messages, `showInputBox` / `showQuickPick` (FieldPopover deleted), `registerMenuItem` (`editor/title`, `file/newFile`, `explorer/context`) |
+| `23a1013`..wave-3 merge | Wave 3: custom editors (`registerCustomEditorProvider(viewType, provider, { filenamePattern, priority })`, `FileKind` gone → `ProjectPath.isTypst`); `diagrams` extension (`.drawio.png` in embedded diagrams.net, auto-save, dark mode, "New diagram…", "Edit diagram" via generic `registerBoxAction`); "New spreadsheet…"; one `PdfEntry` in `core/typst-engine`; status bar `alignment` + `priority`; source-control wiring test; collab e2e checks file decorations |
 
 ## Next steps, in order
 
@@ -121,13 +122,11 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    VS Code's built-in text editor), only registered through the custom-editor mechanism so the tabs
    become the generic "open with" switch. Extension layout is unchanged:
    `extensions/document-links/{source-view,visual-view}/` keep contributing to those hosts.
-   **Leftovers from wave 1** (fold into the next agents): preview toolbar items need `group` / `order`
-   (today list order; "Follow cursor" now first); a link's `command` → VS Code `Command { title,
-   command, arguments }` once commands are string ids; two identical `PdfEntry` types (host +
-   comments/model); `tests/e2e/collab.spec.ts` still checks `.typst-preview__presence` (always 0 now);
-   no unit test for the source-control extension wiring; status bar items: `alignment` + `priority`.
-   User to check by eye: IronCalc dark palette, new file panel (Rename / Delete in the context menu),
-   "Upload image…" after the quick pick (Safari user activation).
+   **Open, for the user (by eye / e2e):** IronCalc dark palette; new file panel (Rename / Delete in
+   the context menu); "Upload image…" after the quick pick (Safari); the real diagrams.net embed URL
+   parameters (`noSaveBtn`, `saveAndExit=0`, `dark=1`) and export reply; e2e specs changed in waves
+   1–3 (pdf-download, gitlab, web-component, multi-file-ui, image-upload, margin-notes, visual-*,
+   collab, spreadsheets, diagrams).
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Rules wave also does:** core `onChange` → `onDidChange: Event` + `Disposable` everywhere
    (`Project`, `TypstDocument`, …) (user: yes).
