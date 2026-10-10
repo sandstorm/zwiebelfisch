@@ -4,14 +4,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import type { Diagnostic } from '../core/typst-engine/typst-engine';
-import type { PdfVariant, PreviewContext, PreviewToolbarItem } from '../hosts/preview/preview';
+import type { PageClick, PdfVariant, PreviewContext, PreviewToolbarItem } from '../hosts/preview/preview';
 import { createTypstEditor, type TypstEditorOptions } from './typst-editor';
 
 const exportPdf = vi.fn(async () => ({ pdf: new Uint8Array([37, 80, 68, 70]), diagnostics: [], missingPackages: [] }));
 interface FakePreview {
   toolbarItems: PreviewToolbarItem[];
   pdfVariants: PdfVariant[];
+  revealed: [string, number, number][];
   compiled(diagnostics: Diagnostic[]): void;
+  click(click: PageClick): void;
 }
 const previews: FakePreview[] = [];
 
@@ -27,16 +29,24 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
     Preview: class {
       readonly toolbarItems: unknown[] = [];
       readonly pdfVariants: unknown[] = [];
+      readonly revealed: unknown[] = [];
       readonly #diagnostics = new EventEmitter<readonly Diagnostic[]>();
       readonly onDidChangeDiagnostics = this.#diagnostics.event;
+      readonly #clicks = new EventEmitter<PageClick>();
+      readonly onDidClickPage = this.#clicks.event;
       constructor() {
         previews.push(this as never);
       }
       compiled(diagnostics: Diagnostic[]) {
         this.#diagnostics.fire(diagnostics);
       }
+      click(click: PageClick) {
+        this.#clicks.fire(click);
+      }
       update() {}
-      reveal() {}
+      reveal(...args: unknown[]) {
+        this.revealed.push(args);
+      }
       snippet = async () => null;
       onDidRender = () => new Disposable(() => {});
       exportPdf = exportPdf;
@@ -66,8 +76,6 @@ function toolbarControls(items: readonly PreviewToolbarItem[]): string[] {
     setZoom() {},
     scale: () => 1,
     visiblePage: () => ({ index: 0, count: 0 }),
-    isFollowing: () => true,
-    setFollowing() {},
     pdfVariants: () => [],
   } satisfies PreviewContext;
   return items.map((item) => {
@@ -159,14 +167,34 @@ describe('the built-in extensions', () => {
     expect(shown.querySelector<HTMLElement>('.typst-diagnostic')?.dataset.severity).toBe('warning');
   });
 
-  it('fills the preview toolbar: zoom, "Follow cursor", page number, then "Download PDF" unless told not to', () => {
+  it('fills the preview toolbar: "Follow cursor", zoom, page number, then "Download PDF" unless told not to', () => {
     const { preview } = setup({ source: '= Hi' });
-    expect(toolbarControls(preview.toolbarItems)).toEqual(['typst-preview-zoom', 'typst-preview__follow', 'typst-preview-page-number', 'typst-pdf']);
+    expect(toolbarControls(preview.toolbarItems)).toEqual(['typst-preview__follow', 'typst-preview-zoom', 'typst-preview-page-number', 'typst-pdf']);
     expect(toolbarControls(setup({ source: '= Hi', pdfDownload: false }).preview.toolbarItems)).toEqual([
-      'typst-preview-zoom',
       'typst-preview__follow',
+      'typst-preview-zoom',
       'typst-preview-page-number',
     ]);
+  });
+
+  it('keeps the preview in step (preview-sync): it follows the focused selection, and a click selects its source', () => {
+    const { preview, source } = setup({ source: '= Hi\n\nText\n', followCursor: true });
+    source().dispatch({ selection: { anchor: 2 } });
+    expect(preview.revealed).toEqual([]);
+    source().focus();
+    source().dispatch({ selection: { anchor: 3 } });
+    expect(preview.revealed.at(-1)).toEqual(['/main.typ', 3, 3]);
+    preview.click({ path: '/main.typ', from: 6, to: 10 });
+    expect(source().state.selection.main).toMatchObject({ from: 6, to: 10 });
+    preview.click({ path: '@preview/pkg/lib.typ', from: 0, to: 1 });
+    expect(source().state.selection.main).toMatchObject({ from: 6, to: 10 });
+  });
+
+  it('does not follow while "Follow cursor" is off', () => {
+    const { preview, source } = setup({ source: '= Hi\n', followCursor: false });
+    source().focus();
+    source().dispatch({ selection: { anchor: 3 } });
+    expect(preview.revealed).toEqual([]);
   });
 
   it('exports the PDF through the pdf-export extension, which offers it without and with comments', async () => {

@@ -28,12 +28,16 @@ export interface PreviewContext {
   scale(): number;
   /** The page covering most of the viewport (0-based) and the number of pages. */
   visiblePage(): { index: number; count: number };
-  /** Whether `Preview.reveal` scrolls to the place asked for ("Follow cursor"); default true. */
-  isFollowing(): boolean;
-  /** Switches following on or off; switching it on goes to the newest place asked for. */
-  setFollowing(on: boolean): void;
   /** The registered PDF variants, in the order of registration. */
   pdfVariants(): readonly PdfVariant[];
+}
+
+/** A click in the preview on something with a source location: the source range of what was clicked (e.g. a text run). */
+export interface PageClick {
+  /** The file, as the engine names it (a project path, or a package file). */
+  readonly path: string;
+  readonly from: number;
+  readonly to: number;
 }
 
 /** A PDF the preview offers to download, e.g. "Without comments" / "With comments". */

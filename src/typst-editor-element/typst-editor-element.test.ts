@@ -12,6 +12,7 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => ({
     reveal() {}
     snippet = async () => null;
     onDidRender = () => ({ dispose() {} });
+    onDidClickPage = () => ({ dispose() {} });
     onDidChangeDiagnostics = () => ({ dispose() {} });
     registerToolbarItem = () => ({ dispose() {} });
     registerPdfVariant = () => ({ dispose() {} });

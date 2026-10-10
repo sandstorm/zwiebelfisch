@@ -8,8 +8,6 @@ export type EditorMode = 'visual' | 'source';
 export interface EditingViewsOptions {
   /** The editing view shown first (default: visual). */
   mode?: EditorMode;
-  /** The cursor moved in a view of `document` the user works in (focused). */
-  onCursor?(document: TypstDocument, offset: number): void;
   /** The selection in a view of `editor`'s document moved, or its text changed (the views already show the new selection). */
   onSelection?(editor: DocumentEditor): void;
   /** What every document's Visual view shows and offers (default: paragraphs and raw Typst only). */
@@ -180,18 +178,11 @@ export class EditingViews {
     this.parent.insertBefore(panes.visual, this.tabs.nextSibling);
     panes.visual.after(panes.source);
     const visual = new VisualView(panes.visual, document, this.options.visualView ?? new VisualViewContributions());
-    const source = this.sourceViews.createView(panes.source, document, {
-      onCursor: (offset) => this.options.onCursor?.(document, offset),
-      onSelection: () => this.options.onSelection?.(editor),
-    });
+    const source = this.sourceViews.createView(panes.source, document, { onSelection: () => this.options.onSelection?.(editor) });
     const editor = new DocumentEditor(document, { visual, source }, this);
     const views: Views = { panes, visual, source, editor };
     // disposed with the view
-    visual.onDidChangeSelection(() => {
-      // like the source view's onCursor: where the user works, for the preview to follow
-      if (visual.focused()) this.options.onCursor?.(document, visual.selection().from);
-      this.options.onSelection?.(editor);
-    });
+    visual.onDidChangeSelection(() => this.options.onSelection?.(editor));
     return views;
   }
 

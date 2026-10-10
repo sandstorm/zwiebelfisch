@@ -1,20 +1,19 @@
-// followCursor: the preview toolbar's "Follow cursor" on/off switch. See ../preview-controls.ts.
+// What the preview-sync extension adds to the preview's toolbar: the "Follow cursor" on/off switch. Entry of
+// extensions/preview-sync/preview/. See ../preview-sync.ts.
 import type { PreviewToolbarItem } from '../../../hosts/preview/preview';
 
 export interface FollowCursorOptions {
-  /** Whether the preview starts following the cursor. */
+  /** Whether it starts on. */
   on: boolean;
-  /** Called when the user switches it on or off (e.g. to remember it). */
-  onChange?(on: boolean): void;
+  /** Called when the user switches it on or off. */
+  onChange(on: boolean): void;
 }
 
-/**
- * The "Follow cursor" switch (role=switch): whether the preview scrolls to the text being edited or
- * selected (`Preview.reveal`). Switching it on goes to the newest place.
- */
+/** The "Follow cursor" switch (role=switch): whether the preview scrolls to the text being edited or selected. */
 export function followCursor({ on, onChange }: FollowCursorOptions): PreviewToolbarItem {
   return (preview) => {
     const doc = preview.ownerDocument;
+    let following = on;
     const button = doc.createElement('button');
     button.type = 'button';
     button.className = 'typst-preview__follow';
@@ -24,15 +23,13 @@ export function followCursor({ on, onChange }: FollowCursorOptions): PreviewTool
     track.className = 'typst-preview__switch';
     track.setAttribute('aria-hidden', 'true');
     button.append(track, 'Follow cursor');
-    const show = (following: boolean) => {
-      preview.setFollowing(following);
-      button.setAttribute('aria-checked', String(following));
-    };
+    const show = () => button.setAttribute('aria-checked', String(following));
     button.addEventListener('click', () => {
-      show(!preview.isFollowing());
-      onChange?.(preview.isFollowing());
+      following = !following;
+      show();
+      onChange(following);
     });
-    show(on);
+    show();
     return { elements: [button] };
   };
 }

@@ -11,6 +11,7 @@ import { fileNavigation, files } from '../extensions/files/files';
 import { labels } from '../extensions/labels/labels';
 import { pdfExport } from '../extensions/pdf-export/pdf-export';
 import { previewControls } from '../extensions/preview-controls/preview-controls';
+import { previewSync } from '../extensions/preview-sync/preview-sync';
 import { spreadsheets } from '../extensions/spreadsheets/spreadsheets';
 import { styles } from '../extensions/styles/styles';
 import { versions } from '../extensions/versions/versions';
@@ -218,8 +219,9 @@ function builtinExtensions(options: TypstEditorOptions): TypstExtension[] {
     comments({ user: options.user }),
     labels(),
     styles(),
-    // the preview's toolbar in this order: zoom, "Follow cursor", page number, then "Download PDF"
-    previewControls({ followCursor: options.followCursor }),
+    // the preview's toolbar in this order: "Follow cursor", zoom, page number, then "Download PDF"
+    previewSync({ followCursor: options.followCursor }),
+    previewControls(),
     pdfExport({ download: options.pdfDownload }),
   ];
 }

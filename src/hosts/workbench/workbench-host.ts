@@ -55,8 +55,7 @@ export interface WorkbenchOptions {
 
 /**
  * The frame of the widget on `host`: shows the project's files (Typst files in the Visual / Source tabs, others in
- * the file views extensions register), keeps the preview compiling the main file and in step with the cursor,
- * and runs the extensions. The Visual and Source views and the preview are its hosts (`ExtensionContext.visualView`,
+ * the file views extensions register), keeps the preview compiling the main file, and runs the extensions. The Visual and Source views and the preview are its hosts (`ExtensionContext.visualView`,
  * `sourceView`, `preview`). `activate` starts it: extensions first (their contributions are in place before any view exists),
  * then the main file is shown and compiled.
  */
@@ -106,7 +105,7 @@ export class WorkbenchHost implements Workbench {
     this.onDidDropFiles = this.#drops.onDidDrop;
     this.#views = this.#createViews();
     this.#fileViews = new FileViews(this.#layout.editor);
-    this.#preview = new Preview(this.#layout.preview, { onJump: (jump) => this.#jump(jump) });
+    this.#preview = new Preview(this.#layout.preview);
     this.#unsubscribe = project.onChange((change) => this.#changed(change));
     this.#showDocumentLinks();
     this.#extensions = new ExtensionHost({
@@ -259,16 +258,12 @@ export class WorkbenchHost implements Workbench {
     this.#ownStyles.dispose();
   }
 
-  /** The Visual/Source views of every document, wired to the preview, with the extensions' contributions. */
+  /** The Visual/Source views of every document, with the extensions' contributions. */
   #createViews(): EditingViews {
     return new EditingViews(this.#layout.editor, {
       mode: this.options.mode,
       visualView: this.#visualView,
       sourceViews: this.#sourceViews,
-      onCursor: (document, offset) => {
-        const path = this.project.pathOf(document);
-        if (path) this.#preview.reveal(path, offset);
-      },
       // Fired from the editors' own updates: the DOM's selectionchange fires before
       // CodeMirror/ProseMirror read the new selection, so a listener would see the previous one.
       onSelection: (textEditor) => this.#selectionChanged.fire({ textEditor }),
@@ -302,13 +297,6 @@ export class WorkbenchHost implements Workbench {
     const active = this.#active;
     if (change.kind === 'rename' && change.from === active) this.open(change.path);
     else this.open(this.project.has(active) ? active : this.project.main);
-  }
-
-  /** A click in the preview: opens its file and reveals the range. A package file is no project file, and ignored. */
-  #jump(target: { path: string; from: number; to: number }): void {
-    const path = ProjectPath.parse(target.path);
-    if (!path || !this.project.document(path)) return;
-    this.open(path, { selection: target });
   }
 
   #documents(): TypstDocument[] {

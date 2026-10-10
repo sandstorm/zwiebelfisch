@@ -1,20 +1,21 @@
 // Preview: the live preview of a Typst project, compiled in a worker, with hit-testing. Entry of hosts/preview/.
 // See ARCHITECTURE.md, "Preview", and docs/2026_10_10_extensions-architecture.md.
 // Why a host: the preview keeps the mechanism — the engine worker and its protocol, coalesced compiles, the
-// lazily rendered page list, hit-testing, scrolling and reveal. What sits on top of it is contributed: toolbar
-// items (zoom, "Follow cursor", page number, "Download PDF"), the PDF variants a menu offers, and overlays on
-// the pages. So a feature adds to the preview without the preview knowing it.
+// lazily rendered page list, hit-testing (`onDidClickPage`), scrolling and reveal. What sits on top of it is
+// contributed: toolbar items (zoom, "Follow cursor", page number, "Download PDF"), the PDF variants a menu offers,
+// overlays on the pages, and the policy of when to reveal what (the preview-sync extension follows the cursor and
+// jumps to the source of a click). So a feature adds to the preview without the preview knowing it.
 import { Disposable } from '../../core/disposable/disposable';
 import { type Event, EventEmitter } from '../../core/event-emitter/event-emitter';
-import type { Diagnostic, Jump, Page, PdfResult, Position } from '../../core/typst-engine/typst-engine';
+import type { Diagnostic, Page, PdfResult, Position } from '../../core/typst-engine/typst-engine';
 import { isInside, mostVisible, overlay, OverlayLayer, PageList, snippet, type Snippet, type Zoom } from './pages/pages';
 import { DEFAULT_FONT_URLS, ENGINE_WASM_URL } from '../../core/typst-engine/engine-assets';
 import type { FileContent } from '../../core/project/project';
 import { FileSender, type Init, type Request, type Response, startEngineWorker } from './worker/worker';
 import { LatestOnly } from './latest-only';
-import type { PageOverlay, PdfVariant, PreviewContext, PreviewToolbarItem, ToolbarItemView } from './contribution';
+import type { PageClick, PageOverlay, PdfVariant, PreviewContext, PreviewToolbarItem, ToolbarItemView } from './contribution';
 
-export type { PageOverlay, PdfFile, PdfVariant, PreviewContext, PreviewToolbarItem, ToolbarItemView } from './contribution';
+export type { PageClick, PageOverlay, PdfFile, PdfVariant, PreviewContext, PreviewToolbarItem, ToolbarItemView } from './contribution';
 export type { Snippet, Zoom } from './pages/pages';
 
 /**
@@ -35,18 +36,21 @@ export interface PreviewContributions {
   readonly onDidChangeDiagnostics: Event<readonly Diagnostic[]>;
   /** After every successful compilation (snippets may have changed). */
   readonly onDidRender: Event<void>;
+  /**
+   * Scrolls the preview to where the source range `from`..`to` of `path` is drawn (its start), only if that is
+   * off-screen; nothing is marked there. Cheap to call on every cursor move: calls are throttled and only the
+   * newest is looked up.
+   */
+  reveal(path: string, from: number, to: number): void;
+  /** Someone clicked something in the preview that has a source location (outlined in the preview until the next click or compile). */
+  readonly onDidClickPage: Event<PageClick>;
   snippet(path: string, from: number, to: number, text: string): Promise<Snippet | null>;
   exportPdf(main: string, sources?: Record<string, string>): Promise<PdfResult>;
 }
 
-export interface PreviewOptions {
-  /** Called when the user clicks something in the preview that has a source location. */
-  onJump?(jump: Extract<Jump, { kind: 'source' }>): void;
-}
-
 type RequestBody = Request extends infer R ? (R extends Request ? Omit<R, 'id'> : never) : never;
 type Compile = { files: Record<string, FileContent>; main: string };
-type Reveal = { path: string; offset: number };
+type Reveal = { path: string; from: number };
 
 /** Minimum time between two cursor → preview lookups while the cursor moves. */
 const REVEAL_INTERVAL_MS = 80;
@@ -85,16 +89,12 @@ export class Preview implements PreviewContributions {
   private compiled: { files: Record<string, FileContent>; pages: Page[] } = { files: {}, pages: [] };
   private readonly rendered = new EventEmitter<void>();
   private readonly diagnosed = new EventEmitter<readonly Diagnostic[]>();
+  private readonly clicked = new EventEmitter<PageClick>();
   readonly onDidRender = this.rendered.event;
   readonly onDidChangeDiagnostics = this.diagnosed.event;
-  private following = true;
-  /** The newest place asked for, also while not following: switching following on goes there. */
-  private lastReveal: Reveal | null = null;
+  readonly onDidClickPage = this.clicked.event;
 
-  constructor(
-    private readonly container: HTMLElement,
-    private readonly options: PreviewOptions = {},
-  ) {
+  constructor(private readonly container: HTMLElement) {
     const doc = container.ownerDocument;
     this.pane = div(doc, 'typst-preview-pane');
     this.toolbar = div(doc, 'typst-preview__toolbar');
@@ -139,15 +139,8 @@ export class Preview implements PreviewContributions {
     this.compiles.push({ files, main });
   }
 
-  /**
-   * Scrolls to where the text at `offset` in `path` appears, only if it is
-   * off-screen (no marker: following the cursor should not draw anything). Cheap to call on every cursor move: calls are
-   * throttled and only the newest is looked up. Does nothing while following
-   * is off (`PreviewContext.setFollowing`, "Follow cursor"), until it is switched on again.
-   */
-  reveal(path: string, offset: number): void {
-    this.lastReveal = { path, offset };
-    if (this.following) this.reveals.push(this.lastReveal);
+  reveal(path: string, from: number, _to: number): void {
+    this.reveals.push({ path, from });
   }
 
   /**
@@ -208,6 +201,7 @@ export class Preview implements PreviewContributions {
   destroy(): void {
     this.rendered.dispose();
     this.diagnosed.dispose();
+    this.clicked.dispose();
     for (const item of [...this.items]) this.removeItem(item);
     this.worker.terminate();
     this.resizeObserver?.disconnect();
@@ -223,8 +217,6 @@ export class Preview implements PreviewContributions {
       setZoom: (zoom) => this.setZoom(zoom),
       scale: () => this.list.scale(),
       visiblePage: () => this.visiblePage(),
-      isFollowing: () => this.following,
-      setFollowing: (on) => this.setFollowing(on),
       pdfVariants: () => [...this.variants],
     };
   }
@@ -255,15 +247,10 @@ export class Preview implements PreviewContributions {
     if (!superseded()) this.diagnosed.fire(response.result.diagnostics);
   }
 
-  private async lookUp({ path, offset }: Reveal, superseded: () => boolean): Promise<void> {
-    const response = await this.request({ type: 'cursor', path, offset });
+  private async lookUp({ path, from }: Reveal, superseded: () => boolean): Promise<void> {
+    const response = await this.request({ type: 'cursor', path, offset: from });
     if (superseded() || response.type !== 'cursor' || response.positions.length === 0) return;
     this.follow(response.positions[0]);
-  }
-
-  private setFollowing(on: boolean): void {
-    this.following = on;
-    if (on && this.lastReveal) this.reveals.push(this.lastReveal);
   }
 
   private setZoom(zoom: Zoom): void {
@@ -301,7 +288,8 @@ export class Preview implements PreviewContributions {
     if (response.type !== 'click' || response.jump?.kind !== 'source') return;
     // where the clicked source node is drawn (every line/page)
     this.clickHighlight.set(response.jump.boxes);
-    this.options.onJump?.(response.jump);
+    const { path, from, to } = response.jump;
+    this.clicked.fire({ path, from, to });
   }
 
   /** Scrolls to where the cursor's text is drawn, if that is off-screen; nothing is drawn there. */

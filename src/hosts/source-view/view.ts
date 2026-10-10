@@ -8,8 +8,6 @@ import { REMOTE_ORIGIN, type TextChange, type TypstDocument } from '../../core/t
 import type { SourceViewContext } from './contribution';
 
 export interface SourceViewOptions {
-  /** Called with the cursor offset whenever the selection moves. */
-  onCursor?(offset: number): void;
   /** Called after the selection moved or the text changed; `selection()` already returns the new selection. */
   onSelection?(): void;
 }
@@ -104,9 +102,8 @@ const highlightField = StateField.define<DecorationSet>({
   provide: (field) => EditorView.decorations.from(field),
 });
 
-/** Tells `options` about a moved selection (after the view has it), and about the focused cursor. */
+/** Tells `options` about a moved selection or changed text (after the view has it). */
 function reportSelection(update: ViewUpdate, options: SourceViewOptions): void {
-  if (update.selectionSet && update.view.hasFocus) options.onCursor?.(update.state.selection.main.head);
   if (update.selectionSet || update.docChanged) options.onSelection?.();
 }
 

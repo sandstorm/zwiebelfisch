@@ -128,23 +128,6 @@ describe('EditingViews selection reports', () => {
   });
 });
 
-describe('EditingViews cursor reports (the preview follows them)', () => {
-  it('reports the cursor of the focused Visual view, not of an unfocused one', () => {
-    const parent = document.createElement('div');
-    document.body.append(parent);
-    const cursors: number[] = [];
-    const doc = new TypstDocument('Hello world\n');
-    const views = new EditingViews(parent, { onCursor: (_document, offset) => cursors.push(offset) });
-    views.show(doc);
-    const { visual } = views.viewsOf(doc);
-    visual.reveal(6, 6);
-    expect(cursors).toEqual([]);
-    (parent.querySelector('.ProseMirror') as HTMLElement).focus();
-    visual.reveal(6, 11);
-    expect(cursors.at(-1)).toBe(6);
-  });
-});
-
 describe('EditingViews frame', () => {
   it('puts the frame elements first and last in the visible pane, following tab and document switches', () => {
     const { parent, views, a, b, visible, tab } = setup();

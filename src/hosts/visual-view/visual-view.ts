@@ -119,11 +119,6 @@ export class VisualView {
     this.editor.view.dispatch(setHighlights(this.editor.state.tr, layer, ranges));
   }
 
-  /** Whether the user works in this view (it has focus). */
-  focused(): boolean {
-    return this.editor.view.hasFocus();
-  }
-
   /**
    * The source range the selection shows: where it starts, and where the
    * last character (or box) it covers ends; `from === to` for a caret.
