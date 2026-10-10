@@ -6,8 +6,10 @@
 export type Authenticate = (token: string, room: string) => Promise<AuthenticatedUser>;
 
 export interface AuthenticatedUser {
-  /** Who the token belongs to, if the check knows (for logs and, later, commit authors). */
+  /** Who the token belongs to, if the check knows (for logs, and the author of GitLab commits). */
   name?: string;
+  /** Their email (the author email of GitLab commits). */
+  email?: string;
 }
 
 /**
