@@ -99,4 +99,57 @@ describe('Engine', () => {
     expect(positions).toHaveLength(1);
     expect(positions[0].page).toBe(1);
   });
+
+  it('compiles a document that includes and imports other files', () => {
+    engine.setSource('/chapters/intro.typ', '= Intro\n#import "../lib.typ": name\nHello #name');
+    engine.setSource('/lib.typ', '#let name = "Ada"');
+    engine.setSource('/main.typ', '#include "chapters/intro.typ"');
+    const { pages, diagnostics } = engine.compile('/main.typ');
+    expect(diagnostics).toEqual([]);
+    expect(pages).toHaveLength(1);
+  });
+
+  it('reports errors in other files with their path', () => {
+    const lib = '#let name = oops';
+    engine.setSource('/lib.typ', lib);
+    engine.setSource('/main.typ', '#import "lib.typ": name');
+    const { diagnostics } = engine.compile('/main.typ');
+    expect(diagnostics[0]).toMatchObject({ severity: 'error', path: '/lib.typ' });
+    expect(lib.slice(diagnostics[0].from, diagnostics[0].to)).toBe('oops');
+  });
+
+  it('renders an image from a binary file', () => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>';
+    engine.setBinary('/img/logo.svg', new TextEncoder().encode(svg));
+    engine.setSource('/main.typ', '#image("img/logo.svg", width: 2cm)');
+    const { pages, diagnostics } = engine.compile('/main.typ');
+    expect(diagnostics).toEqual([]);
+    expect(pages[0].svg).toContain('<image');
+    engine.remove('/img/logo.svg');
+    expect(engine.compile('/main.typ').diagnostics[0].message).toMatch(/not found/);
+  });
+
+  it('lists imported packages it has no files of', () => {
+    engine.setSource('/main.typ', '#import "@preview/absent:0.2.0": x');
+    const result = engine.compile('/main.typ');
+    expect(result.missingPackages).toEqual(['@preview/absent:0.2.0']);
+    expect(result.diagnostics[0].message).toContain('package not found');
+  });
+
+  it('compiles against package files added under their package path', () => {
+    const manifest =
+      '[package]\nname = "tiny"\nversion = "1.0.0"\nentrypoint = "src/lib.typ"\nauthors = ["T"]\nlicense = "MIT"\ndescription = "t"\n';
+    engine.setBinary('@preview/tiny:1.0.0/typst.toml', new TextEncoder().encode(manifest));
+    engine.setSource('@preview/tiny:1.0.0/src/lib.typ', '#let shout(x) = oops');
+    engine.setSource('/main.typ', '#import "@preview/tiny:1.0.0": shout\n#shout("hi")');
+    const result = engine.compile('/main.typ');
+    expect(result.missingPackages).toEqual([]);
+    expect(result.diagnostics[0].path).toBe('@preview/tiny:1.0.0/src/lib.typ');
+    engine.setSource('@preview/tiny:1.0.0/src/lib.typ', '#let shout(x) = upper(x)');
+    expect(engine.compile('/main.typ').diagnostics).toEqual([]);
+  });
+
+  it('rejects malformed package paths', () => {
+    expect(() => engine.setSource('@preview/no-version/lib.typ', '')).toThrow(/invalid/);
+  });
 });

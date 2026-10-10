@@ -2,7 +2,8 @@
 //! for the browser.
 //!
 //! The JS-facing contract:
-//! - Paths are absolute project paths such as `/main.typ`.
+//! - Paths are absolute project paths such as `/main.typ`, or package paths
+//!   such as `@preview/name:0.1.0/lib.typ`.
 //! - Text offsets are **UTF-16 code units** (what CodeMirror and ProseMirror
 //!   use); the UTF-8 byte offsets Typst works with never leave this crate.
 //! - Pages are 0-based; coordinates are typographic points from the page's
@@ -43,6 +44,10 @@ struct CompileJson {
     /// for display but no longer hit-testable.
     pages: Vec<PageJson>,
     diagnostics: Vec<DiagnosticJson>,
+    /// Packages (`@namespace/name:version`) the document imports that have
+    /// no files in the engine; add them and compile again.
+    #[serde(rename = "missingPackages")]
+    missing_packages: Vec<String>,
 }
 
 #[derive(Serialize)]
@@ -118,7 +123,7 @@ impl Engine {
     /// Compiles `main` and returns a `CompileJson` string.
     pub fn compile(&mut self, main: &str) -> String {
         let Some(id) = file_id(main) else {
-            return to_json(&CompileJson { pages: vec![], diagnostics: vec![] });
+            return to_json(&CompileJson { pages: vec![], diagnostics: vec![], missing_packages: vec![] });
         };
         self.world.set_main(id);
         let warned = typst::compile::<PagedDocument>(&self.world);
@@ -135,7 +140,8 @@ impl Engine {
                 vec![]
             }
         };
-        to_json(&CompileJson { pages, diagnostics })
+        let missing_packages = self.world.take_missing_packages();
+        to_json(&CompileJson { pages, diagnostics, missing_packages })
     }
 
     /// Resolves a click on `page` at (`x`, `y`) points to a `JumpJson`
@@ -203,7 +209,7 @@ impl Engine {
         let leaf = typst::syntax::LinkedNode::new(source.root()).leaf_at(byte, Side::After);
         let range = leaf.map(|l| l.range()).unwrap_or(byte..byte);
         Some(JumpJson::Source {
-            path: file_path(id)?,
+            path: file_path(id),
             offset: utf16(source, byte),
             from: utf16(source, range.start),
             to: utf16(source, range.end),
@@ -214,7 +220,7 @@ impl Engine {
         let located = diag.span.id().and_then(|id| {
             let source = self.world.loaded_source(id)?;
             let range = self.world.range(diag.span)?;
-            Some((file_path(id)?, utf16(source, range.start), utf16(source, range.end)))
+            Some((file_path(id), utf16(source, range.start), utf16(source, range.end)))
         });
         let (path, from, to) = match located {
             Some((path, from, to)) => (Some(path), from, to),
