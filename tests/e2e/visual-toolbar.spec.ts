@@ -11,7 +11,8 @@ async function freshSelectedLine(page: Page) {
   await page.keyboard.press('End');
   await page.keyboard.press('Enter');
   await page.keyboard.type('Fresh line');
-  await page.keyboard.press('Shift+Home');
+  // Shift+Home does not select to line start in every browser/OS keymap; extend the selection explicitly
+  for (let i = 0; i < 'Fresh line'.length; i++) await page.keyboard.press('Shift+ArrowLeft');
 }
 
 async function source(page: Page) {

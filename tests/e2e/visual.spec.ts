@@ -55,6 +55,6 @@ test('clicking the preview selects the block in the visual view', async ({ page 
   const svg = page.getByTestId('typst-preview').locator('.typst-preview__page svg').first();
   await expect(svg).toBeVisible();
   await svg.locator('use').first().click();
-  const selected = await page.evaluate(() => window.getSelection()?.toString());
-  expect(selected).toBe('Hello Typst');
+  // the jump arrives asynchronously from the engine worker
+  await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toBe('Hello Typst');
 });
