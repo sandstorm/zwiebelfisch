@@ -18,8 +18,8 @@ import { RawBoxNavigation, rawBoxView } from './raw-box';
  *   children (the container owns trailing whitespace) and on nodes created in
  *   the editor (a default separator is printed);
  * - doc `lead`/`trail`: whitespace before the first / after the last block;
- * - table `layout`: how the table's source is laid out around its cells
- *   (owned by the projection).
+ * - table and blockquote `layout`: how the source is laid out around their
+ *   content (owned by the projection).
  */
 const SourceAnchors = Extension.create({
   name: 'typstSourceAnchors',
@@ -33,7 +33,7 @@ const SourceAnchors = Extension.create({
         },
       },
       { types: ['listItem'], attributes: { marker: { default: null, rendered: false } } },
-      { types: ['table'], attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } } },
+      { types: ['table', 'blockquote'], attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } } },
       { types: ['hardBreak'], attributes: { src: { default: '\\\n', rendered: false, keepOnSplit: false } } },
     ];
   },
@@ -141,7 +141,7 @@ export const extensions = [
   StarterKit.configure({
     document: false,
     listItem: false,
-    blockquote: false,
+    blockquote: { HTMLAttributes: { class: 'typst-visual__quote' } },
     code: false,
     codeBlock: false,
     horizontalRule: false,

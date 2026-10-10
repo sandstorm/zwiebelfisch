@@ -67,3 +67,24 @@ describe('page breaks and horizontal rules', () => {
     expect(doc.text).toBe('Hello \\-\\--\n');
   });
 });
+
+describe('block quotes', () => {
+  it('"Quote" wraps the paragraph in #quote(block: true)[..] and unwraps it again', () => {
+    const { doc, view, button, parent } = setup('Hello\n');
+    view.reveal(2, 2);
+    button('Quote').click();
+    expect(doc.text).toBe('#quote(block: true)[Hello]\n');
+    expect(parent.querySelector('blockquote')?.textContent).toBe('Hello');
+    expect(button('Quote').getAttribute('aria-pressed')).toBe('true');
+    button('Quote').click();
+    expect(doc.text).toBe('Hello\n');
+  });
+
+  it('"> " at the start of a paragraph starts a quote', () => {
+    const { doc, view, editor } = setup('Hello\n');
+    view.reveal(5, 5);
+    editor.commands.splitBlock();
+    type(editor, '> Wise words');
+    expect(doc.text).toBe('Hello\n\n#quote(block: true)[Wise words]\n');
+  });
+});

@@ -212,17 +212,55 @@ function callee(ctx: Context, call: SyntaxNode): { name: string; args: SyntaxNod
   return { name: ident ? ctx.source.slice(ident.from, ident.to) : '', args: args ? children(args) : [] };
 }
 
-/** A run that is exactly one `#func(..)` call of a function modelled as a block (image, table). */
+/** A run that is exactly one `#func(..)` call of a function modelled as a block (image, table, quote, call atoms). */
 function blockCall(ctx: Context, segment: Segment, sep: string | null): Node | null {
   const [hash, call] = segment.nodes;
   if (segment.nodes.length !== 2 || hash.name !== 'Hash' || call.name !== 'FuncCall' || call.from !== hash.to) return null;
   const { name, args } = callee(ctx, call);
-  const src = ctx.source.slice(segment.from, segment.to);
-  if (name === 'image') return parenthesized(args) && imagePath(src) !== null ? ctx.schema.nodes.image.create({ src, sep }) : null;
-  if (name === 'table') return table(ctx, segment, args, sep);
+  const projected = BLOCK_CALLS[name]?.(ctx, segment, args, sep);
+  if (projected) return projected;
   const atom = callAtomType(name, args, (n) => ctx.source.slice(n.from, n.to));
-  if (atom) return ctx.schema.nodes[atom].create({ src, sep });
-  return null;
+  return atom ? ctx.schema.nodes[atom].create({ src: ctx.source.slice(segment.from, segment.to), sep }) : null;
+}
+
+type CallProjector = (ctx: Context, call: Segment, args: SyntaxNode[], sep: string | null) => Node | null;
+
+/** Projects calls of these functions into blocks of their own when it can (else they stay raw). */
+const BLOCK_CALLS: Record<string, CallProjector> = {
+  image: (ctx, call, args, sep) => {
+    const src = ctx.source.slice(call.from, call.to);
+    return parenthesized(args) && imagePath(src) !== null ? ctx.schema.nodes.image.create({ src, sep }) : null;
+  },
+  table: (ctx, call, args, sep) => table(ctx, call, args, sep),
+  quote: (ctx, call, args, sep) => blockquote(ctx, call, args, sep),
+};
+
+/** How a block quote's source lies around its content: `#quote(..)[` and `]`, with any whitespace inside. */
+interface QuoteLayout {
+  open: string;
+  close: string;
+}
+
+const NEW_QUOTE: QuoteLayout = { open: '#quote(block: true)[', close: ']' };
+
+/** `#quote(block: true, ..named)[content]`: a blockquote whose content is segmented like the document. */
+function blockquote(ctx: Context, call: Segment, args: SyntaxNode[], sep: string | null): Node | null {
+  const content = args.at(-1)!;
+  const parens = args.slice(0, -1);
+  if (!parenthesized(parens) || !isClosedContent(content) || !isBlockQuoteArgs(ctx, parens.slice(1, -1))) return null;
+  const markup = content.getChild('Markup')!;
+  const segments = segment(children(markup));
+  const from = segments[0]?.from ?? markup.from;
+  const to = segments.at(-1)?.to ?? markup.from;
+  const blocksInside = segments.length > 0 ? blocks(ctx, segments) : [textblock(ctx, { type: 'paragraph', attrs: { src: '' } }, from, [])];
+  const layout: QuoteLayout = { open: ctx.source.slice(call.from, from), close: ctx.source.slice(to, call.to) };
+  return ctx.schema.nodes.blockquote.create({ sep, layout }, blocksInside);
+}
+
+/** Named arguments only, `block: true` among them. */
+function isBlockQuoteArgs(ctx: Context, args: SyntaxNode[]): boolean {
+  const named = args.filter((a) => a.name !== 'Space' && a.name !== 'Comma');
+  return named.every((a) => a.name === 'Named') && named.some((a) => /^block\s*:\s*true$/.test(ctx.source.slice(a.from, a.to)));
 }
 
 /** How a table's source lies around its cells, for printing it back. */
@@ -626,20 +664,32 @@ function printBlock(out: Printer, node: Node, parent: Node, pos: number): void {
   if (pristineLayout) return printLayout(out, node, pristineLayout, pos + 1);
   if (pristine.has(node)) return printPristineItem(out, node, pos);
   if (isSourceAtom(node)) return out.shown(node.attrs.src, 'atom', pos, pos + 1);
-  switch (node.type.name) {
-    case 'heading':
-      out.hidden(`${'='.repeat(node.attrs.level)} `);
-      return printTextblock(out, node, pos);
-    case 'bulletList':
-    case 'orderedList':
-      return printBlocks(out, node, pos + 1, '\n');
-    case 'listItem':
-      return printListItem(out, node, parent, pos);
-    case 'table':
-      return printTable(out, node, pos);
-    default:
-      return printTextblock(out, node, pos);
-  }
+  (PRINT_BLOCK[node.type.name] ?? printTextblock)(out, node, pos, parent);
+}
+
+type BlockPrinter = (out: Printer, node: Node, pos: number, parent: Node) => void;
+
+const printList: BlockPrinter = (out, list, pos) => printBlocks(out, list, pos + 1, '\n');
+
+/** Printers of edited (non-pristine) blocks by node type; any other block is a textblock. */
+const PRINT_BLOCK: Record<string, BlockPrinter> = {
+  heading: (out, heading, pos) => {
+    out.hidden(`${'='.repeat(heading.attrs.level)} `);
+    printTextblock(out, heading, pos);
+  },
+  bulletList: printList,
+  orderedList: printList,
+  listItem: (out, item, pos, list) => printListItem(out, item, list, pos),
+  table: (out, table, pos) => printTable(out, table, pos),
+  blockquote: (out, quote, pos) => printQuote(out, quote, pos),
+};
+
+/** `#quote(block: true)[..]` around the quote's blocks, or the source around them as projected. */
+function printQuote(out: Printer, quote: Node, pos: number): void {
+  const { open, close }: QuoteLayout = quote.attrs.layout ?? NEW_QUOTE;
+  out.hidden(open);
+  printBlocks(out, quote, pos + 1, '\n\n');
+  out.closing(close);
 }
 
 /** A block shown as a whole and printed as its `src`: raw blocks, images, page breaks, rules. */

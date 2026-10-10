@@ -191,6 +191,8 @@
 .typst-visual__page-break::before,
 .typst-visual__page-break::after { content: ''; flex: 1; border-top: 1px dashed currentColor; }
 .typst-visual__rule { padding: 0.4em 0 1.1em; }
+.typst-visual__quote { margin: 0 0 0.7em; padding: 0 0 0 1em; border-left: 3px solid var(--te-border); color: #3d4451; }
+.typst-visual__quote > :last-child { margin-bottom: 0; }
 .typst-visual__rule hr { margin: 0; border: none; border-top: 1px solid #24292f; }
 .typst-popover {
   position: absolute;

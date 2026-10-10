@@ -8,7 +8,13 @@ import { svg, type Action } from './toolbar-action';
 const ICONS = {
   pageBreak: svg('<path d="M6 3v5h12V3"/><path d="M6 21v-5h12v5"/><path d="M3 12h2M8 12h2M14 12h2M19 12h2"/>'),
   rule: svg('<path d="M3 12h18"/>'),
+  quote: svg('<path d="M4 6v12"/><path d="M9 7h11M9 12h11M9 17h7"/>'),
 };
+
+/** Block containers: a quote. */
+export const BLOCKS: Action[] = [
+  { label: 'Quote', shortcut: 'Mod+Shift+B', icon: ICONS.quote, run: (c) => c.toggleBlockquote(), active: (e) => e.isActive('blockquote') },
+];
 
 /** Insert a page break or a horizontal rule. */
 export const BREAKS: Action[] = [
