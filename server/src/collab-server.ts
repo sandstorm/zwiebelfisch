@@ -21,6 +21,8 @@ export interface CollabOptions {
   quiet?: boolean;
   /** GitLab-backed rooms (`gitlab:<project>@<branch>`, see gitlab/gitlab-extension.ts); unset: none. */
   gitlab?: GitLabOptions;
+  /** Further extensions after the built-in ones (e.g. the playground's dev endpoints). */
+  extensions?: Extension[];
 }
 
 /**
@@ -39,6 +41,7 @@ export function collabConfiguration(options: CollabOptions = {}): Partial<Config
     extensions: [
       options.storage ?? new SQLite({ database: options.database ?? ':memory:' }),
       ...(options.gitlab ? [new GitLabExtension(options.gitlab, authenticate)] : []),
+      ...(options.extensions ?? []),
     ],
     async onAuthenticate({ token, documentName }) {
       return { user: await authenticate(token, documentName) };
