@@ -327,6 +327,16 @@
 .typst-label-tag__name::before { content: '<'; opacity: 0.5; }
 .typst-label-tag__name::after { content: '>'; opacity: 0.5; }
 .typst-label-tag__name:hover { border-color: var(--te-accent); color: var(--te-accent); }
+.typst-label-tag__input {
+  padding: 0 7px;
+  border: 1px solid var(--te-accent);
+  border-radius: 9px;
+  background: white;
+  color: #24292f;
+  font: inherit;
+  outline: none;
+  box-shadow: 0 0 0 2px var(--te-jump);
+}
 /* The @ list: the project's labels below the typed @ */
 .typst-ref-suggestions {
   position: absolute;

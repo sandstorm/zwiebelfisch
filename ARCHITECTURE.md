@@ -741,9 +741,11 @@ new LabelIndex(project)        // implements ProjectLabels; createTypstEditor ma
 Every `.typ` file is scanned with Lezer (`scan.ts`) when the index is made and again on each of
 its changes (the Project's change events); `.bib` files give their entry keys. A label's kind and
 title come from the element before it: a heading (its text), `#figure(..)` (by its body: image →
-figure, table → table, raw → listing; its caption), an equation. A new label goes on through the toolbar's Insert ▾ → "Add label" (`references/add-label.ts`: the
-figure the selection is in, else the innermost block that can carry one; `fig:` / `tab:` / `sec:`
-suggested), an existing one is renamed or removed through its tag. The Visual view reads the index
+figure, table → table, raw → listing; its caption), an equation. A new label goes on through the toolbar's Insert ▾ → "Add label": a draft tag with a field appears
+right where the tag will be (`startNewLabel`, label-tags.ts; target from `add-label.ts`: the figure
+the selection is in, else the innermost block that can carry one; `fig:` / `tab:` / `sec:`
+prefilled); Enter adds the label, Escape or leaving the field drops it. An existing label is
+renamed or removed through its tag. The Visual view reads the index
 through `ProjectLabels` (see "VisualView"); the Source view does not use it yet.
 
 ### Custom styles (`src/features/styles`, `visual-view/nodes/styles.ts`, `visual-view/toolbar/style-menu.ts`)

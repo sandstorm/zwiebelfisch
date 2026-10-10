@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests for add-label.ts, through the toolbar's Insert ▾ → "Add label".
+// Tests for add-label.ts and the draft tag (label-tags.ts), through the toolbar's Insert ▾ → "Add label".
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { VisualView } from '../visual-view';
@@ -14,16 +14,18 @@ function setup(text: string) {
   const doc = new TypstDocument(text);
   const view = new VisualView(parent, doc);
   const item = parent.querySelector<HTMLButtonElement>('button[aria-label="Add label"]')!;
-  const popover = parent.querySelector<HTMLFormElement>('form[aria-label="New label"]')!;
+  const draft = () => parent.querySelector<HTMLInputElement>('.ProseMirror input[aria-label="New label"]');
+  const key = (input: HTMLInputElement, name: string) => input.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true }));
+  /** Starts a new label, types `name` into the draft tag and presses Enter; returns what the field started with. */
   const add = (name: string) => {
     item.click();
-    const input = popover.querySelector('input')!;
+    const input = draft()!;
     const prefilled = input.value;
     input.value = name;
-    popover.requestSubmit();
+    key(input, 'Enter');
     return prefilled;
   };
-  return { doc, view, item, add };
+  return { parent, doc, view, item, draft, key, add };
 }
 
 const TABLE_FIGURE = '#figure(table(columns: 1, [a]), caption: [Timings])\n\nText\n';
@@ -56,5 +58,19 @@ describe('Add label', () => {
     view.reveal(1, 1);
     add('my label!');
     expect(doc.text).toBe('Text <my-label>\n');
+  });
+
+  it('the draft tag shows where the label will go; Escape drops it without a change', () => {
+    const { parent, doc, view, item, draft, key } = setup(TABLE_FIGURE);
+    const at = doc.text.indexOf('Timings');
+    view.reveal(at, at);
+    item.click();
+    const input = draft()!;
+    // below the figure, where its tag will be
+    expect(input.closest('.typst-label-tag--block')).not.toBeNull();
+    expect(parent.querySelector('figure')!.nextElementSibling).toBe(input.closest('.typst-label-tag'));
+    key(input, 'Escape');
+    expect(draft()).toBeNull();
+    expect(doc.text).toBe(TABLE_FIGURE);
   });
 });
