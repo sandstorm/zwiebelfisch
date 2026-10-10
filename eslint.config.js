@@ -39,8 +39,13 @@ function noDom(message) {
 export const layers = [
   { importers: '^src/core/', forbidden: '^src/(?!core/)', message: 'core/ imports only core/.' },
   {
+    importers: '^src/ui/',
+    forbidden: '^src/(hosts|extensions|typst-editor|typst-editor-element)/',
+    message: 'ui/ holds feature-neutral DOM widgets: it imports only core/ and other ui/ modules.',
+  },
+  {
     importers: '^src/hosts/',
-    forbidden: '^src/(extensions|typst-editor|testing)/',
+    forbidden: '^src/(extensions|typst-editor|typst-editor-element|testing)/',
     message: "hosts never import extensions/, testing/ or typst-editor/ (a host's tests use its own nodes and specs).",
   },
   {
@@ -52,6 +57,11 @@ export const layers = [
     importers: '^src/extensions/([^/]+)/model/',
     forbidden: '^src/extensions/$1/(visual-view|source-view|preview|workbench)/',
     message: 'model/ imports no view folder of its extension (the views import the model, not the other way).',
+  },
+  {
+    importers: '^src/extensions/[^/]+/model/',
+    forbidden: '^src/(hosts|ui|typst-editor|typst-editor-element)/',
+    message: "model/ builds on core/ only: hosts and ui/ are views (the extension's view folders use them).",
   },
   {
     importers: '^(?!src/testing/)(?!.*\\.test\\.ts$)',
