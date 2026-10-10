@@ -90,3 +90,62 @@ describe('addMarginNote', () => {
     expect(noted('Hi', 0, 2)).toBe(`${IMPORT}#margin-note[Hi][|]`);
   });
 });
+
+describe('addMarginNote and page margins (drafting 0.2.2 fails on a single-length margin)', () => {
+  /** The text after adding a point note at the end of `text`. */
+  function withNote(text: string): string {
+    const result = addMarginNote(text, { from: text.length, to: text.length })!;
+    return apply(text, result.changes);
+  }
+  const page = (args: string) => `#set page(${args})\nText`;
+
+  it('turns a single-length margin into one with room for notes on the right', () => {
+    expect(withNote(page('width: 16cm, height: auto, margin: 1.5cm'))).toBe(
+      `${IMPORT}#set page(width: 16cm, height: auto, margin: (right: 4cm, rest: 1.5cm))\nText#margin-note[]`,
+    );
+    expect(withNote(page('margin: 10%'))).toBe(`${IMPORT}${page('margin: (right: 4cm, rest: 10%)')}#margin-note[]`);
+    expect(withNote(page('margin: 1cm + 5%'))).toBe(`${IMPORT}${page('margin: (right: 4cm, rest: 1cm + 5%)')}#margin-note[]`);
+  });
+
+  it('keeps a right margin at least as wide as the others, but different from them', () => {
+    expect(withNote(page('margin: 5cm'))).toBe(`${IMPORT}${page('margin: (right: 6cm, rest: 5cm)')}#margin-note[]`);
+    expect(withNote(page('margin: 40mm'))).toBe(`${IMPORT}${page('margin: (right: 5cm, rest: 40mm)')}#margin-note[]`);
+    expect(withNote(page('margin: 1in'))).toBe(`${IMPORT}${page('margin: (right: 4cm, rest: 1in)')}#margin-note[]`);
+  });
+
+  it('rewrites uniform margin dictionaries, which Typst turns back into a single length', () => {
+    expect(withNote(page('margin: (rest: 2cm)'))).toBe(`${IMPORT}${page('margin: (right: 4cm, rest: 2cm)')}#margin-note[]`);
+    expect(withNote(page('margin: (x: 2cm, y: 2cm)'))).toBe(`${IMPORT}${page('margin: (right: 4cm, rest: 2cm)')}#margin-note[]`);
+    expect(withNote(page('margin: (left: 1cm, right: 1cm, top: 1cm, bottom: 1cm)'))).toBe(
+      `${IMPORT}${page('margin: (right: 4cm, rest: 1cm)')}#margin-note[]`,
+    );
+  });
+
+  it('leaves margins alone that drafting handles', () => {
+    for (const args of [
+      'margin: auto',
+      'paper: "a4"',
+      'margin: (right: 4cm, rest: 1.5cm)',
+      'margin: (x: 2cm)',
+      'margin: (x: 2cm, y: 1cm)',
+      'margin: (inside: 2cm, outside: 3cm, y: 1cm)',
+      'margin: m',
+      'margin: (..base, rest: 1cm)',
+    ]) {
+      expect(withNote(page(args))).toBe(`${IMPORT}${page(args)}#margin-note[]`);
+    }
+  });
+
+  it('rewrites every top-level page rule, also when the import exists already', () => {
+    const text = `${IMPORT}#set page(margin: 1cm)\n#set text(size: 11pt)\n#set page(width: 12cm, margin: 2cm)\nText`;
+    expect(withNote(text)).toBe(
+      `${IMPORT}#set page(margin: (right: 4cm, rest: 1cm))\n#set text(size: 11pt)\n#set page(width: 12cm, margin: (right: 4cm, rest: 2cm))\nText#margin-note[]`,
+    );
+  });
+
+  it('puts the cursor into the note after the margin rewrite', () => {
+    expect(noted(page('margin: 1cm'), page('margin: 1cm').length)).toBe(`${IMPORT}${page('margin: (right: 4cm, rest: 1cm)')}#margin-note[|]`);
+    const after = '= A\n\n#set page(margin: 1cm)\n';
+    expect(noted(after, 3)).toBe(`${IMPORT}= A#margin-note[|]\n\n#set page(margin: (right: 4cm, rest: 1cm))\n`);
+  });
+});

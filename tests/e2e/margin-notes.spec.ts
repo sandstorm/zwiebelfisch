@@ -19,16 +19,19 @@ const commentButton = (page: Page) => page.locator('.typst-editor__comment');
 /** The main file's text, from the demo's editor API. */
 const sourceText = (page: Page) => () => page.evaluate(() => (window as unknown as { editor: { source: string } }).editor.source);
 
-/** How many glyphs the first preview page draws in its right margin (the demo's margin is 1.5cm of 16cm). */
+/**
+ * How many glyphs the first preview page draws in its right margin. The demo's
+ * `margin: 1.5cm` becomes `(right: 4cm, rest: 1.5cm)` with the first note (drafting 0.2.2
+ * fails on a single-length margin), so the note margin is the last 4cm of 16cm.
+ */
 const marginGlyphs = (page: Page) => () =>
   page.getByTestId('typst-preview').locator('.typst-preview__page svg').first().evaluate((svg) => {
     const page = svg.getBoundingClientRect();
-    const margin = page.left + page.width * (1 - 1.5 / 16);
+    const margin = page.left + page.width * (1 - 4 / 16);
     return [...svg.querySelectorAll('use')].filter((glyph) => glyph.getBoundingClientRect().left >= margin).length;
   });
 
 test('a comment on selected text in the Visual view becomes a range margin note everywhere', async ({ page }) => {
-  await expect.poll(marginGlyphs(page)).toBe(0);
   await visual(page).locator('strong', { hasText: 'bold' }).dblclick();
   await commentButton(page).click();
 
@@ -41,6 +44,8 @@ test('a comment on selected text in the Visual view becomes a range margin note 
   await expect(bubbles(page)).toHaveText('Check this');
   await expect.poll(sourceText(page)).toContain('#margin-note[bold][Check this]');
   expect((await sourceText(page)()).split(IMPORT).length).toBe(2);
+  expect(await sourceText(page)()).toContain('margin: (right: 4cm, rest: 1.5cm)');
+  // the text now ends 4cm before the page edge: whatever is drawn beyond is the note
   await expect.poll(marginGlyphs(page)).toBeGreaterThan(0);
 
   await page.getByRole('tab', { name: 'Source' }).click();

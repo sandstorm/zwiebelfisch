@@ -346,7 +346,7 @@ Typst source itself (`@preview/drafting:0.2.2`): `#margin-note[note]` (point, at
 the preview shows what the compiler draws, and git, diffs, undo and collaboration carry notes as
 ordinary text. No threads: a reply is more text in the note, resolving means deleting the call,
 and an author is whatever the note's text says. Hiding notes for the final output
-(`#set-margin-note-defaults(hidden: true)`) and wide enough page margins are up to the author.
+(`#set-margin-note-defaults(hidden: true)`) is up to the author.
 
 ```ts
 // margin-note-syntax.ts: the only module that knows drafting's call syntax
@@ -372,6 +372,16 @@ VisualView.editNote(offset) → boolean   // opens the field of the note whose s
   after its last item, also after a trailing comma; `: margin-note` on a bare module import);
   else `#import "@preview/drafting:0.2.2": margin-note` goes first in the file (a drafting
   import below the note would not bind the name where the note is).
+- **Page margins** (`src/editor/page-margin.ts`, part of `addMarginNote`'s edits, same undo
+  step): drafting 0.2.2 crashes with "type relative length has no method `keys`" when the page
+  margin is a single length ([drafting.typ line 640](https://github.com/typst/packages/blob/main/packages/preview/drafting/0.2.2/drafting.typ#L640)
+  calls `page.margin.keys()` on anything but `auto`), and Typst turns uniform dictionaries
+  (`(rest: a)`, `(x: a, y: a)`) back into a length. So every top-level `#set page(.., margin: m)`
+  with such a literal `m` (a length, a sum of lengths, or a side dictionary with one value for
+  all four sides) becomes `margin: (right: R, rest: m)`: only the margin argument changes. R is
+  4cm (room for drafting's notes), or the next whole cm + 1 when `m` is an absolute length of
+  4cm or more (equal sides would be uniform again). `auto`, absent and non-uniform margins,
+  variables and spreads are never touched.
 - **`CommentAction`**: the widget's only comment UI — the "Comment" button and Ctrl/Cmd+Alt+M
   (captured at the widget root). Works on the shown `.typ` file in the current view
   (`EditingViews.shown()`), applies the edits as one `document.change`, then
