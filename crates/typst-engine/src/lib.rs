@@ -16,13 +16,14 @@ mod world;
 
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
+use std::ops::Range;
 
 use serde::Serialize;
 use typst::diag::{Severity, SourceDiagnostic};
 use typst::layout::{Abs, Point};
 use typst_layout::PagedDocument;
 use typst::introspection::PagedPosition;
-use typst::syntax::{FileId, LinkedNode, Side, Source};
+use typst::syntax::{FileId, LinkedNode, Side, Source, Span};
 use typst::utils::hash128;
 use typst::WorldExt;
 use typst_ide::Jump;
@@ -186,6 +187,36 @@ impl Engine {
         .unwrap_or_default();
         to_json(&positions.iter().map(position_json).collect::<Vec<_>>())
     }
+
+    /// Returns where the text of the source ranges `[from, to, from, to, ...]`
+    /// (UTF-16) of `path` is drawn, as `BoxJson[]` JSON: one box per run of
+    /// glyphs whose source character lies in one of the ranges.
+    #[wasm_bindgen(js_name = boxesForRanges)]
+    pub fn boxes_for_ranges(&self, path: &str, ranges: Vec<u32>) -> String {
+        let boxes = (|| {
+            let document = self.document.as_ref()?;
+            let id = file_id(path)?;
+            let source = self.world.loaded_source(id)?;
+            let lines = source.lines();
+            let bytes: Vec<Range<usize>> = ranges
+                .chunks_exact(2)
+                .filter_map(|r| Some(lines.utf16_to_byte(r[0] as usize)?..lines.utf16_to_byte(r[1] as usize)?))
+                .collect();
+            let mut nodes: HashMap<Span, Option<Range<usize>>> = HashMap::new();
+            Some(highlight::glyph_boxes(document, |span, offset| {
+                if span.id() != Some(id) {
+                    return false;
+                }
+                let node = nodes.entry(span).or_insert_with(|| self.world.range(span));
+                node.as_ref().is_some_and(|node| {
+                    let byte = node.start + offset as usize;
+                    bytes.iter().any(|range| range.contains(&byte))
+                })
+            }))
+        })()
+        .unwrap_or_default();
+        to_json(&boxes.into_iter().map(box_json).collect::<Vec<_>>())
+    }
 }
 
 impl Engine {
@@ -234,10 +265,7 @@ impl Engine {
             offset: utf16(source, byte),
             from: utf16(source, range.start),
             to: utf16(source, range.end),
-            boxes: boxes
-                .into_iter()
-                .map(|b| BoxJson { page: b.page, x: b.x, y: b.y, w: b.w, h: b.h })
-                .collect(),
+            boxes: boxes.into_iter().map(box_json).collect(),
         })
     }
 
@@ -267,6 +295,10 @@ impl Engine {
 
 fn utf16(source: &Source, byte: usize) -> usize {
     source.lines().byte_to_utf16(byte).unwrap_or(0)
+}
+
+fn box_json(b: highlight::PageBox) -> BoxJson {
+    BoxJson { page: b.page, x: b.x, y: b.y, w: b.w, h: b.h }
 }
 
 fn position_json(pos: &PagedPosition) -> PositionJson {

@@ -2,6 +2,7 @@ import { Editor } from '@tiptap/core';
 import { EditorState, TextSelection, type Transaction } from '@tiptap/pm/state';
 import type { Highlight } from '../document/highlight';
 import type { TypstDocument } from '../document/typst-document';
+import { changesPlugin, setChangesBase } from './change-decorations';
 import { extensions } from './extensions';
 import { highlights, setHighlights } from './highlights';
 import { posToSource, print, project, sourceToPos, syncDoc } from './projection';
@@ -36,7 +37,7 @@ export class VisualView {
     // what marks blocks as untouched.
     const { state } = this.editor;
     this.editor.view.updateState(
-      EditorState.create({ schema: state.schema, doc: project(document.text, state.schema), plugins: state.plugins }),
+      EditorState.create({ schema: state.schema, doc: project(document.text, state.schema), plugins: [...state.plugins, changesPlugin] }),
     );
     this.toolbar = new Toolbar(parent, this.editor);
     this.unsubscribe = document.onChange((_changes, origin) => {
@@ -64,6 +65,14 @@ export class VisualView {
     const { doc, selection } = this.editor.state;
     const from = posToSource(doc, selection.from);
     return { from, to: selection.empty ? from : Math.max(from, posToSource(doc, selection.to, -1)) };
+  }
+
+  /**
+   * Shows what changed against `base` (an earlier Typst source) until called
+   * with null: insertions highlighted, deletions struck through. Follows edits.
+   */
+  showChanges(base: string | null): void {
+    this.editor.view.dispatch(setChangesBase(this.editor.state.tr, base));
   }
 
   destroy(): void {

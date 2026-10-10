@@ -19,6 +19,12 @@ export interface Engine {
   jumpFromClick(page: number, x: number, y: number): Jump | null;
   /** Where the text at `offset` appears in the last compiled document. */
   jumpFromCursor(path: string, offset: number): Position[];
+  /**
+   * Where the text from the given source ranges of `path` is drawn in the last
+   * compiled document: one box per run of glyphs (per line and page). Only
+   * drawn characters count, so empty ranges and markup yield nothing.
+   */
+  boxesForRanges(path: string, ranges: readonly { from: number; to: number }[]): Box[];
 }
 
 export interface CompileResult {
@@ -107,6 +113,8 @@ export async function createEngine(
       return json === undefined ? null : JSON.parse(json);
     },
     jumpFromCursor: (path, offset) => JSON.parse(engine.jumpFromCursor(path, offset)),
+    boxesForRanges: (path, ranges) =>
+      JSON.parse(engine.boxesForRanges(path, new Uint32Array(ranges.flatMap(({ from, to }) => [from, to])))),
   };
 }
 

@@ -1,6 +1,7 @@
 import { basicSetup } from 'codemirror';
 import { setDiagnostics } from '@codemirror/lint';
-import { Annotation, EditorSelection, StateEffect, StateField, type ChangeSet, type ChangeSpec } from '@codemirror/state';
+import { getOriginalDoc, unifiedMergeView, updateOriginalDoc } from '@codemirror/merge';
+import { Annotation, Compartment, EditorSelection, StateEffect, StateField, type ChangeSet, type ChangeSpec } from '@codemirror/state';
 import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
 import type { Highlight } from '../document/highlight';
 import type { TextChange, TypstDocument } from '../document/typst-document';
@@ -58,6 +59,8 @@ function toDecorations(highlights: readonly Highlight[], length: number): Decora
 export interface SourceViewOptions {
   /** Called with the cursor offset whenever the selection moves. */
   onCursor?(offset: number): void;
+  /** Called with the new base text when the user accepts a change shown by `showChanges`. */
+  onBaseChange?(base: string): void;
 }
 
 /**
@@ -67,6 +70,8 @@ export interface SourceViewOptions {
 export class SourceView {
   private readonly view: EditorView;
   private readonly unsubscribe: () => void;
+  private readonly changes = new Compartment();
+  private base: string | null = null;
 
   constructor(parent: HTMLElement, document: TypstDocument, options: SourceViewOptions = {}) {
     this.view = new EditorView({
@@ -78,7 +83,12 @@ export class SourceView {
         EditorView.lineWrapping,
         highlightField,
         layersField,
+        this.changes.of([]),
         EditorView.updateListener.of((update) => {
+          if (update.transactions.some((tr) => tr.effects.some((effect) => effect.is(updateOriginalDoc)))) {
+            this.base = getOriginalDoc(update.state).toString();
+            options.onBaseChange?.(this.base);
+          }
           if (update.docChanged && !update.transactions.some((tr) => tr.annotation(fromDocument))) {
             document.change(toTextChanges(update.changes), this);
           }
@@ -122,6 +132,18 @@ export class SourceView {
   selection(): { from: number; to: number } {
     const { from, to } = this.view.state.selection.main;
     return { from, to };
+  }
+
+  /**
+   * Shows an inline diff against `base` (earlier Typst source), with accept /
+   * reject buttons per changed chunk, until called with null. Rejecting edits
+   * the document; accepting moves the base (see `onBaseChange`).
+   */
+  showChanges(base: string | null): void {
+    if (base === this.base) return;
+    this.base = base;
+    const extension = base === null ? [] : unifiedMergeView({ original: base, gutter: true, syntaxHighlightDeletions: true });
+    this.view.dispatch({ effects: this.changes.reconfigure(extension) });
   }
 
   destroy(): void {

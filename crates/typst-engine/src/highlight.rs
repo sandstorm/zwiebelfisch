@@ -20,7 +20,7 @@ pub struct PageBox {
 pub fn span_at(frame: &Frame, point: Point) -> Option<Span> {
     let mut found = None;
     walk_text(frame, Transform::identity(), &mut |ts, pos, text| {
-        for (glyph, rect) in glyph_rects(ts, pos, text) {
+        for ((glyph, _), rect) in glyph_rects(ts, pos, text) {
             if !glyph.is_detached() && rect.contains(point) {
                 found = Some(glyph);
             }
@@ -32,12 +32,18 @@ pub fn span_at(frame: &Frame, point: Point) -> Option<Span> {
 /// One box per contiguous run of glyphs from `span`, on every page — e.g. one
 /// per line for a sentence that wraps.
 pub fn span_boxes(document: &PagedDocument, span: Span) -> Vec<PageBox> {
+    glyph_boxes(document, |glyph, _| glyph == span)
+}
+
+/// One box per contiguous run of glyphs for which `keep(span, offset)` holds,
+/// on every page; `offset` is the glyph's byte offset within its span's text.
+pub fn glyph_boxes(document: &PagedDocument, mut keep: impl FnMut(Span, u16) -> bool) -> Vec<PageBox> {
     let mut boxes = Vec::new();
     for (page, p) in document.pages().iter().enumerate() {
         walk_text(&p.frame, Transform::identity(), &mut |ts, pos, text| {
             let mut run: Option<Rect> = None;
-            for (glyph, rect) in glyph_rects(ts, pos, text) {
-                if glyph == span {
+            for ((glyph, offset), rect) in glyph_rects(ts, pos, text) {
+                if keep(glyph, offset) {
                     run = Some(run.map_or(rect, |r| r.union(rect)));
                 } else if let Some(r) = run.take() {
                     boxes.push(r.on_page(page));
@@ -91,8 +97,8 @@ impl Rect {
     }
 }
 
-/// Each glyph's span with its page-space box (advance width × ascender..descender).
-fn glyph_rects(ts: Transform, pos: Point, text: &TextItem) -> Vec<(Span, Rect)> {
+/// Each glyph's span and offset in it, with its page-space box (advance width × ascender..descender).
+fn glyph_rects(ts: Transform, pos: Point, text: &TextItem) -> Vec<((Span, u16), Rect)> {
     let metrics = text.font.metrics();
     let top = pos.y - metrics.ascender.at(text.size);
     let bottom = pos.y - metrics.descender.at(text.size);
@@ -103,7 +109,7 @@ fn glyph_rects(ts: Transform, pos: Point, text: &TextItem) -> Vec<(Span, Rect)> 
             let advance = glyph.x_advance.at(text.size);
             let rect = Rect::transformed(ts, Point::new(x, top), Point::new(x + advance.max(Abs::zero()), bottom));
             x += advance;
-            (glyph.span.0, rect)
+            (glyph.span, rect)
         })
         .collect()
 }

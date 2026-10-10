@@ -1,4 +1,5 @@
 import type { Box, Diagnostic, Jump, Position } from '../engine/engine';
+import { changeBars, drawnRanges } from './change-bars';
 import { DEFAULT_FONT_URLS } from '../engine/default-fonts';
 import wasmUrl from '../engine/wasm/typst_engine_bg.wasm?url&no-inline';
 import { FileSender, type FileContent } from './project-files';
@@ -26,6 +27,7 @@ export interface PreviewOptions {
 type RequestBody = Request extends infer R ? (R extends Request ? Omit<R, 'id'> : never) : never;
 type Compile = { files: Record<string, FileContent>; main: string };
 type Reveal = { path: string; offset: number };
+type Changes = { path: string; ranges: { from: number; to: number }[] };
 
 /** Minimum time between two cursor → preview lookups while the cursor moves. */
 const REVEAL_INTERVAL_MS = 80;
@@ -50,6 +52,9 @@ export class Preview {
   private readonly reveals: LatestOnly<Reveal>;
   private readonly resizeObserver: ResizeObserver | null;
   private highlights: HTMLElement[] = [];
+  private changes: Changes | null = null;
+  private changeBars: HTMLElement[] = [];
+  private changeDraws = 0;
   private zoom: Zoom = 'fit';
   private nextId = 0;
   private readonly sender = new FileSender();
@@ -119,6 +124,17 @@ export class Preview {
     this.markers.set(layer, markers);
   }
 
+  /**
+   * Marks where the given source ranges of `path` are drawn with change bars
+   * in the page margin, after this and every following compilation, until
+   * called with null. The ranges refer to the text last passed to `update()`;
+   * an empty range (a deletion) marks the text around it.
+   */
+  showChanges(path: string, ranges: { from: number; to: number }[] | null): void {
+    this.changes = ranges ? { path, ranges: drawnRanges(ranges) } : null;
+    void this.drawChanges();
+  }
+
   destroy(): void {
     this.markers.destroy();
     this.worker.terminate();
@@ -138,6 +154,7 @@ export class Preview {
       this.list.render(response.result.pages);
       void this.markers.refresh();
       this.scheduleStatus();
+      if (!superseded()) void this.drawChanges();
     }
     this.pages.classList.toggle('typst-preview--stale', failed);
     // A newer update is waiting: these diagnostics describe outdated text.
@@ -195,6 +212,21 @@ export class Preview {
     for (const box of boxes) {
       const hit = this.list.at(box.page);
       if (hit) this.highlights.push(overlay(hit.element, 'typst-preview__highlight', percentOfPage(box, hit.page)));
+    }
+  }
+
+  /** Replaces the change bars with those for the current changes in the last compiled document. */
+  private async drawChanges(): Promise<void> {
+    const draw = ++this.changeDraws;
+    const boxes = this.changes?.ranges.length ? await this.request({ type: 'boxes', ...this.changes }) : null;
+    if (draw !== this.changeDraws) return;
+    for (const element of this.changeBars.splice(0)) element.remove();
+    if (boxes?.type !== 'boxes') return;
+    for (const bar of changeBars(boxes.boxes)) {
+      const hit = this.list.at(bar.page);
+      if (!hit) continue;
+      const box = percentOfPage({ x: 0, y: bar.y, w: 0, h: bar.h }, hit.page);
+      this.changeBars.push(overlay(hit.element, 'typst-preview__change-bar', { top: box.top, height: box.height }));
     }
   }
 

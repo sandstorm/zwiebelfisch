@@ -41,6 +41,7 @@ export class TypstEditorElement extends Base {
   #comments: string | undefined;
   /** Author of the comments written here; read when the element connects. */
   user: { name: string } | undefined;
+  #base: string | null = null;
   #settingValue = false;
 
   get value(): string {
@@ -78,6 +79,12 @@ export class TypstEditorElement extends Base {
     if (this.#editor) this.#editor.comments = json;
   }
 
+  /** Shows the changes against `base` (an earlier source), or none for null. */
+  setBase(base: string | null): void {
+    this.#base = base;
+    this.#editor?.setBase(base);
+  }
+
   connectedCallback(): void {
     const root = this.shadowRoot ?? this.attachShadow({ mode: 'open' });
     const style = document.createElement('style');
@@ -89,6 +96,7 @@ export class TypstEditorElement extends Base {
       source: this.value,
       files: this.#files,
       fileList: (this.getAttribute('file-list') ?? undefined) as FileListMode | undefined,
+      base: this.#base ?? undefined,
       onChange: (value) => this.#changed(value),
       onFilesChange: (change) => this.#filesChanged(change),
       comments: this.#comments,

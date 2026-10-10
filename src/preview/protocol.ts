@@ -1,4 +1,4 @@
-import type { CompileResult, Jump, Position } from '../engine/engine';
+import type { Box, CompileResult, Jump, Position } from '../engine/engine';
 import type { EncodedFiles } from './project-files';
 
 /**
@@ -17,10 +17,12 @@ export interface Init {
 export type Request =
   | { id: number; type: 'compile'; files: EncodedFiles; main: string }
   | { id: number; type: 'click'; page: number; x: number; y: number }
-  | { id: number; type: 'cursor'; path: string; offset: number };
+  | { id: number; type: 'cursor'; path: string; offset: number }
+  | { id: number; type: 'boxes'; path: string; ranges: { from: number; to: number }[] };
 
 export type Response =
   | { id: number; type: 'compile'; result: CompileResult }
   | { id: number; type: 'click'; jump: Jump | null }
   | { id: number; type: 'cursor'; positions: Position[] }
+  | { id: number; type: 'boxes'; boxes: Box[] }
   | { id: number; type: 'error'; message: string };

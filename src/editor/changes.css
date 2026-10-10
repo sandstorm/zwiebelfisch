@@ -1,0 +1,42 @@
+/* "Show changes": toggle, Visual view track changes, preview change bars.
+   (The Source view's inline diff is styled by @codemirror/merge.) */
+.typst-editor {
+  --te-inserted: rgba(26, 127, 55, 0.16);
+  --te-inserted-line: #1a7f37;
+  --te-deleted: #cf222e;
+  --te-format: rgba(130, 80, 223, 0.14);
+  --te-change-bar: #d4a72c;
+}
+.typst-editor__changes {
+  margin-left: auto;
+  border: 1px solid var(--te-border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  background: white;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.typst-editor__changes[aria-pressed='true'] { background: #fff8c5; border-color: var(--te-change-bar); }
+.typst-editor__changes[hidden] { display: none; }
+.typst-diff-insert {
+  background: var(--te-inserted);
+  text-decoration: underline;
+  text-decoration-color: var(--te-inserted-line);
+  text-underline-offset: 3px;
+}
+.typst-diff-delete {
+  color: var(--te-deleted);
+  text-decoration: line-through;
+  user-select: none;
+}
+.typst-diff-format { background: var(--te-format); border-bottom: 2px dotted #8250df; }
+.typst-diff-changed { box-shadow: inset 3px 0 0 var(--te-change-bar); }
+.typst-preview__change-bar {
+  position: absolute;
+  left: 1.5%;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--te-change-bar);
+  pointer-events: none;
+}

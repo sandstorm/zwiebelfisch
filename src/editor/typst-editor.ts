@@ -4,6 +4,8 @@ import type { Diagnostic } from '../engine/engine';
 import { Preview } from '../preview/preview';
 import proseMirrorStyles from '../visual-view/prosemirror.css?inline';
 import { AssetView } from './asset-view';
+import { ChangeTracking } from './change-tracking';
+import changeStyles from './changes.css?inline';
 import { DiagnosticsStatus } from './diagnostics-status';
 import { summarizeDiagnostics } from './diagnostics-summary';
 import { EditingViews, type EditorMode } from './editing-views';
@@ -56,6 +58,12 @@ export interface TypstEditorOptions {
   onCommentsChange?(comments: string): void;
   /** Who writes the comments made here. */
   user?: { name: string };
+  /**
+   * An earlier version of the main file (last saved, last commit) to show the
+   * changes against: inline diff in the Source view, track changes in the
+   * Visual view, change bars in the preview. See also `setBase`.
+   */
+  base?: string;
 }
 
 export interface TypstEditor {
@@ -72,6 +80,11 @@ export interface TypstEditor {
   open(path: string): void;
   /** The review comments on the main file as JSON; assigning replaces them, re-anchored in the current source. */
   comments: string;
+  /**
+   * Shows the changes of the main file against `base` (an earlier source)
+   * from now on, or none for null. A "Show changes" button toggles them while a base is set.
+   */
+  setBase(base: string | null): void;
   destroy(): void;
 }
 
@@ -111,6 +124,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
     set comments(json: string) {
       widget.comments.load(json);
     },
+    setBase: (base) => widget.changes.setBase(base),
     destroy: () => widget.destroy(),
   };
 }
@@ -132,6 +146,7 @@ class Widget {
   private readonly assets: AssetView;
   readonly comments: Comments;
   private readonly review: CommentsUI;
+  readonly changes: ChangeTracking;
   private readonly unsubscribe: () => void;
 
   constructor(
@@ -159,6 +174,9 @@ class Widget {
         const path = this.project.pathOf(document);
         if (path) void this.preview.reveal(path, offset);
       },
+      onBaseChange: (document, base) => {
+        if (this.project.pathOf(document) === this.project.main) this.changes.setBase(base);
+      },
     });
     this.switcher = new FileSwitcher(this.left, this.left, {
       onOpen: (path) => this.open(path),
@@ -168,6 +186,7 @@ class Widget {
     this.unsubscribe = this.project.onChange((change) => this.changed(change));
     this.open(main);
     [this.comments, this.review] = this.mountComments();
+    this.changes = this.mountChanges();
     this.refresh();
   }
 
@@ -204,6 +223,21 @@ class Widget {
     return [comments, review];
   }
 
+  /** "Show changes" for the main file: against `options.base`, in both of its views and the preview. */
+  private mountChanges(): ChangeTracking {
+    const main = this.project.main;
+    const document = this.project.document(main)!;
+    const views = this.views.viewsOf(document);
+    const actions = this.host.ownerDocument.createElement('span');
+    actions.className = 'typst-editor__tab-actions';
+    this.views.addTabAction(actions);
+    return new ChangeTracking(
+      actions,
+      { document, views: [views.source, views.visual], preview: (ranges) => this.preview.showChanges(main, ranges) },
+      this.options.base,
+    );
+  }
+
   replaceFiles(files: ProjectFiles): void {
     this.project.replace(files);
     this.views.retain(this.documents());
@@ -214,6 +248,7 @@ class Widget {
 
   destroy(): void {
     this.unsubscribe();
+    this.changes.destroy();
     this.review.destroy();
     this.comments.destroy();
     this.views.destroy();
@@ -319,6 +354,6 @@ function injectStyles(host: HTMLElement): void {
   if (target.querySelector(`#${STYLE_ID}`)) return;
   const style = host.ownerDocument.createElement('style');
   style.id = STYLE_ID;
-  style.textContent = proseMirrorStyles + styles;
+  style.textContent = proseMirrorStyles + styles + changeStyles;
   target.append(style);
 }

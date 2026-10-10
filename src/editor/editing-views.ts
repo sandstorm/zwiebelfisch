@@ -9,6 +9,8 @@ export interface EditingViewsOptions {
   mode?: EditorMode;
   /** The cursor moved in the source view of `document`. */
   onCursor?(document: TypstDocument, offset: number): void;
+  /** Accepting a change in the source view of `document` moved its base (see `SourceView.showChanges`). */
+  onBaseChange?(document: TypstDocument, base: string): void;
 }
 
 interface Views {
@@ -127,6 +129,7 @@ export class EditingViews {
           views.cursor = offset;
           this.options.onCursor?.(document, offset);
         },
+        onBaseChange: (base) => this.options.onBaseChange?.(document, base),
       }),
       cursor: null,
     };
