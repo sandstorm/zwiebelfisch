@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
-import { schema } from '../../../hosts/visual-view/test-support';
+import { schema } from '../../../testing/testing';
 import { posToSource, print, project as projectWith, sourceToPos } from '../../../hosts/visual-view/visual-view';
 
 const project = (source: string) => projectWith(source, schema);

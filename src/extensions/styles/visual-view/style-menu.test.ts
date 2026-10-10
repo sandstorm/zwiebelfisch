@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { calculateImportChange, TypstDocument } from '../../../core/typst-document/typst-document';
 import type { ProjectStyles, Style } from '../model/model';
-import { createVisualView } from '../../../hosts/visual-view/test-support';
+import { createVisualView } from '../../../testing/testing';
 import { ProjectPath } from '../../../core/paths/paths';
 import { customStyles } from './visual-view';
 

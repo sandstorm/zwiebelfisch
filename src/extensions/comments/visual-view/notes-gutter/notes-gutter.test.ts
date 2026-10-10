@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../../../core/typst-document/typst-document';
 import { addMarginNote, localDate } from '../../model/model';
-import { createVisualView } from '../../../../hosts/visual-view/test-support';
+import { createVisualView } from '../../../../testing/testing';
 import { marginNotes } from '../margin-notes';
 import { notesGutter, type NotesGutterOptions } from './notes-gutter';
 

@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-// Tests for the block nodes (page break, rule, task lists) in a VisualView (jsdom).
+// The built-in extensions' block nodes (page break, rule, quotes, task lists, tables) in a VisualView (integration:
+// src/testing composes the built-ins; jsdom).
 import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
-import { TypstDocument } from '../../core/typst-document/typst-document';
-import { createVisualView } from './test-support';
+import { TypstDocument } from '../core/typst-document/typst-document';
+import { createVisualView } from '../testing/testing';
 
 /** A Visual view over `text`, its toolbar, and its Tiptap editor (for typing). */
 function setup(text: string) {

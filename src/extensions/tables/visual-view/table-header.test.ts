@@ -2,7 +2,7 @@
 import type { Node } from '@tiptap/pm/model';
 import { describe, expect, it } from 'vitest';
 import { print } from '../../../hosts/visual-view/visual-view';
-import { after, edit, expectPreciseMap, find, project, schema } from '../../../hosts/visual-view/test-support';
+import { after, edit, expectPreciseMap, find, project, schema } from '../../../testing/testing';
 
 const FIXTURES: Record<string, string> = {
   parens: '#table(\n  columns: 2,\n  table.header([Name], [*Qty*]),\n  [a], [1],\n  [b], [2],\n)\n',

@@ -2,7 +2,7 @@
 // Tests for visual-view.ts (and box-carets.ts): other users' places drawn in a Visual view and in its boxes.
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { createVisualView } from '../../../hosts/visual-view/test-support';
+import { createVisualView } from '../../../testing/testing';
 import { presence } from './visual-view';
 
 /** A Visual view with the built-ins (the boxes and cells the tests put carets in) and the presence contribution. */

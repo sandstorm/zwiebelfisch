@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../../core/disposable/disposable';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { inlinePictureSize } from '../model/model';
-import { createVisualView, type Renderings as BoxRenderer } from '../../../hosts/visual-view/test-support';
+import { createVisualView, type Renderings as BoxRenderer } from '../../../testing/testing';
 
 const MATH_DOC = 'Intro\n\n$ x^2 $\n\nOutro\n';
 const SVG = '<svg viewBox="0 0 10 5"></svg>';

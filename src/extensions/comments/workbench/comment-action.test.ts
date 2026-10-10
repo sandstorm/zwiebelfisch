@@ -2,7 +2,6 @@
 // Tests for comment-action.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { markup } from '../../markup/markup';
 import { VisualView, VisualViewContributions } from '../../../hosts/visual-view/visual-view';
 import { localDate, NOTE_STYLE } from '../model/model';
 import { marginNotes, notesGutter } from '../visual-view/visual-view';
@@ -34,7 +33,7 @@ describe('CommentAction', () => {
     let comment = () => {};
     const { doc, root, action } = setup('Hello world\n', (document, parent) => {
       const notes = notesGutter({ user: { name: 'Anna' } });
-      const contributions = VisualViewContributions.from([markup, marginNotes({ comment: () => comment() }), notes]);
+      const contributions = VisualViewContributions.from([marginNotes({ comment: () => comment() }), notes]);
       const view = new VisualView(parent.appendChild(window.document.createElement('div')), document, contributions);
       view.reveal(6, 11);
       // as the widget makes it: the Visual view's notes gutter opens the new note's card

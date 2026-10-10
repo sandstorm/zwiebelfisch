@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { CHECKLIST_PREAMBLE } from '../model/model';
 import { ensureChecklistPreamble } from './checklist-preamble';
 import { print } from '../../../hosts/visual-view/visual-view';
-import { after, edit, expectPreciseMap, find, project, schema } from '../../../hosts/visual-view/test-support';
+import { after, edit, expectPreciseMap, find, project, schema } from '../../../testing/testing';
 
 const PREAMBLE = '#import "@preview/cheq:0.4.0": checklist\n#show: checklist';
 

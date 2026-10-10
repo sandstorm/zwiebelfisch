@@ -2,8 +2,6 @@
 // Tests for editing-views.ts.
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { headings } from '../../../extensions/headings/headings';
-import { markup } from '../../../extensions/markup/markup';
 import { VisualViewContributions } from '../../visual-view/visual-view';
 import { EditingViews } from './editing-views';
 
@@ -15,9 +13,9 @@ Element.prototype.scrollIntoView = () => {};
 function setup(mode?: 'visual' | 'source') {
   const parent = document.createElement('div');
   document.body.append(parent);
-  const views = new EditingViews(parent, { mode, visualView: VisualViewContributions.from([markup, headings]) });
-  const a = new TypstDocument('= A\n');
-  const b = new TypstDocument('= B\n');
+  const views = new EditingViews(parent, { mode, visualView: VisualViewContributions.from([]) });
+  const a = new TypstDocument('Alpha\n');
+  const b = new TypstDocument('Beta\n');
   const visible = () => [...parent.querySelectorAll<HTMLElement>('.typst-editor__pane')].filter((p) => !p.hidden);
   const tab = (name: string) => [...parent.querySelectorAll<HTMLElement>('[role=tab]')].find((t) => t.textContent === name)!;
   return { parent, views, a, b, visible, tab };
@@ -32,7 +30,7 @@ describe('EditingViews', () => {
       'typst-editor__pane',
       'typst-editor__pane',
     ]);
-    expect(parent.querySelector('h1')?.textContent).toBe('A');
+    expect(parent.querySelector('.typst-visual p')?.textContent).toBe('Alpha');
   });
 
   it('creates the views of a document only when it is first shown', () => {
@@ -42,7 +40,7 @@ describe('EditingViews', () => {
     views.show(b);
     expect(parent.querySelectorAll('.typst-editor__pane')).toHaveLength(4);
     expect(visible()).toHaveLength(1);
-    expect(visible()[0].querySelector('h1')?.textContent).toBe('B');
+    expect(visible()[0].querySelector('.typst-visual p')?.textContent).toBe('Beta');
   });
 
   it('keeps the chosen mode when switching documents', () => {
@@ -51,7 +49,7 @@ describe('EditingViews', () => {
     tab('Source').click();
     expect(views.mode).toBe('source');
     views.show(b);
-    expect(visible()[0].querySelector('[data-testid=typst-source]')?.textContent).toContain('= B');
+    expect(visible()[0].querySelector('[data-testid=typst-source]')?.textContent).toContain('Beta');
   });
 
   it('switches to the Source tab to reveal a range in the source view', () => {
@@ -109,7 +107,7 @@ describe('EditingViews', () => {
     views.show(b);
     views.retain([b]);
     expect(parent.querySelectorAll('.typst-editor__pane')).toHaveLength(2);
-    expect(parent.textContent).not.toContain('= A');
+    expect(parent.textContent).not.toContain('Alpha');
   });
 });
 

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { Disposable } from '../../../core/disposable/disposable';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { resizedPercent } from './image-tools';
-import { createVisualView, type Renderings as BoxRenderer } from '../../../hosts/visual-view/test-support';
+import { createVisualView, type Renderings as BoxRenderer } from '../../../testing/testing';
 
 const renderer: BoxRenderer = {
   snippet: async () => null,

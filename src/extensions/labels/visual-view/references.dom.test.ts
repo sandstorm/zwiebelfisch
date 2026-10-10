@@ -5,7 +5,7 @@ import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { Project } from '../../../core/project/project';
 import { LabelIndex } from '../model/model';
-import { createVisualView } from '../../../hosts/visual-view/test-support';
+import { createVisualView } from '../../../testing/testing';
 import { ProjectPath } from '../../../core/paths/paths';
 import { references } from './visual-view';
 

@@ -1,7 +1,7 @@
 // Tests for the projection of quotes (visual-view.ts).
 import { describe, expect, it } from 'vitest';
 import { print } from '../../../hosts/visual-view/visual-view';
-import { after, edit, expectPreciseMap, find, project, schema } from '../../../hosts/visual-view/test-support';
+import { after, edit, expectPreciseMap, find, project, schema } from '../../../testing/testing';
 
 const FIXTURES: Record<string, string> = {
   quote: 'Before\n\n#quote(block: true)[Quoted *text*]\n\nAfter\n',

@@ -2,7 +2,7 @@
 // Tests for text-align.ts.
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { createVisualView } from '../../../hosts/visual-view/test-support';
+import { createVisualView } from '../../../testing/testing';
 
 const LABELS = { left: 'Align left', center: 'Center', right: 'Align right', justify: 'Justify' } as const;
 type Alignment = keyof typeof LABELS;

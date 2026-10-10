@@ -3,7 +3,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { DocumentLinkProvider, type LinkWorkspace } from '../../../core/document-links/document-links';
-import { createVisualView } from '../../../hosts/visual-view/test-support';
+import { createVisualView } from '../../../testing/testing';
 import { ProjectPath } from '../../../core/paths/paths';
 
 const path = ProjectPath.of;

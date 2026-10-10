@@ -1,19 +1,37 @@
 // @vitest-environment jsdom
-// Tests for toolbar.ts.
+// Tests for toolbar.ts, with the host's own items (undo, redo) and an item defined here. The built-in extensions'
+// items are tested together in typst-editor/typst-editor.toolbar.test.ts.
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { createVisualView, type TestViewOptions } from '../test-support';
-import { PathReference } from '../../../core/paths/paths';
+import { children, starterKitPart, svg, VisualView, VisualViewContributions, type TypstMarkSpec, type VisualViewContribution } from '../visual-view';
 
-const ref = PathReference.of;
+/** `*x*` as a bold mark, and a "Bold" button for it in a group of its own. */
+const STRONG: TypstMarkSpec = {
+  name: 'bold',
+  extension: starterKitPart('testBold', { bold: {} }),
+  inlineSyntax: { Strong: (p, node, marks) => p.inline(children(node.getChild('Markup')!), p.schema.marks.bold.create().addToSet(marks)) },
+  print: () => ({ open: '*', close: '*' }),
+};
+const strong: VisualViewContribution = {
+  id: 'strong',
+  activate: ({ visualView, subscriptions }) => {
+    subscriptions.push(
+      visualView.registerMark(STRONG),
+      visualView.registerToolbarGroup({ kind: 'group', id: 'test', order: 20 }),
+      visualView.registerToolbarItem({
+        group: 'test',
+        action: { label: 'Bold', icon: svg(''), run: (c) => c.toggleBold(), active: (e) => e.isActive('bold') },
+      }),
+    );
+  },
+};
 
-function setup(text: string, options: TestViewOptions = {}) {
+function setup(text: string) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = createVisualView(parent, doc, options);
+  const view = new VisualView(parent, doc, VisualViewContributions.from([strong]));
   const toolbar = parent.querySelector<HTMLElement>('[role="toolbar"]')!;
-  // the formatting toolbar first, then the menus' items and the floating bars (selection, table)
   const button = (label: string) => parent.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
   return { doc, view, toolbar, button, parent };
 }
@@ -22,30 +40,16 @@ describe('Visual view toolbar', () => {
   it('is a labelled toolbar above the editor', () => {
     const { toolbar } = setup('Hello\n');
     expect(toolbar.getAttribute('aria-label')).toBe('Formatting');
-    // the text (with the notes gutter beside it) follows
+    // the text (with the gutters beside it) follows
     expect(toolbar.nextElementSibling?.firstElementChild?.classList.contains('typst-visual')).toBe(true);
   });
 
-  it('bold and italic wrap the selection', () => {
+  it("shows a contributed item's state and runs its command", () => {
     const { doc, view, button } = setup('Hello world\n');
     view.reveal(0, 'Hello world'.length);
     button('Bold').click();
     expect(doc.text).toBe('*Hello world*\n');
     expect(button('Bold').getAttribute('aria-pressed')).toBe('true');
-    button('Italic').click();
-    expect(doc.text).toBe('*_Hello world_*\n');
-  });
-
-  it('turns a paragraph into a bullet list and a numbered list', () => {
-    const { doc, view, button } = setup('Hello world\n');
-    view.reveal(0, 'Hello world'.length);
-    button('Bulleted list').click();
-    expect(doc.text).toBe('- Hello world\n');
-    expect(button('Bulleted list').getAttribute('aria-pressed')).toBe('true');
-    button('Numbered list').click();
-    expect(doc.text).toBe('+ Hello world\n');
-    button('Numbered list').click();
-    expect(doc.text).toBe('Hello world\n');
   });
 
   it('undo and redo revert and reapply the last edit', () => {
@@ -58,342 +62,6 @@ describe('Visual view toolbar', () => {
     expect(doc.text).toBe('Hello world\n');
     button('Redo').click();
     expect(doc.text).toBe('*Hello world*\n');
-  });
-
-  describe('link popover', () => {
-    /** Opens the popover from the Link button, enters `value` and applies it (as Enter would). */
-    function linkTo(toolbar: HTMLElement, button: (label: string) => HTMLButtonElement, value: string) {
-      button('Link').click();
-      const popover = toolbar.parentElement!.querySelector<HTMLFormElement>('form[aria-label="Link"]')!;
-      expect(popover.hidden).toBe(false);
-      const input = popover.querySelector('input')!;
-      input.value = value;
-      popover.requestSubmit();
-      return { popover, input };
-    }
-
-    it('links the selection', () => {
-      const { doc, view, toolbar, button } = setup('Hello world\n');
-      view.reveal(6, 11);
-      const { popover } = linkTo(toolbar, button, 'https://typst.app');
-      expect(doc.text).toBe('Hello #link("https://typst.app")[world]\n');
-      expect(popover.hidden).toBe(true);
-      expect(button('Link').getAttribute('aria-pressed')).toBe('true');
-    });
-
-    it('inserts the URL as linked text where nothing is selected', () => {
-      const { doc, view, toolbar, button } = setup('See  now\n');
-      view.reveal(4, 4);
-      linkTo(toolbar, button, 'https://typst.app');
-      expect(doc.text).toBe('See https://typst.app now\n');
-    });
-
-    it('edits and removes the link under the cursor', () => {
-      const source = 'A #link("https://a.org")[site] b\n';
-      const { doc, view, toolbar, button } = setup(source);
-      view.reveal(source.indexOf('ite'), source.indexOf('ite'));
-      const { popover, input } = linkTo(toolbar, button, 'https://b.org');
-      expect(doc.text).toBe('A #link("https://b.org")[site] b\n');
-      button('Link').click();
-      expect(input.value).toBe('https://b.org');
-      popover.querySelector<HTMLButtonElement>('button[data-action="remove"]')!.click();
-      expect(doc.text).toBe('A site b\n');
-      expect(popover.hidden).toBe(true);
-    });
-
-    it('opens with Mod+K in the text', () => {
-      const { parent, toolbar } = setup('Hello\n');
-      const editable = parent.querySelector<HTMLElement>('[contenteditable]')!;
-      const mac = /Mac/.test(navigator.platform);
-      const event = new KeyboardEvent('keydown', { key: 'k', metaKey: mac, ctrlKey: !mac, bubbles: true, cancelable: true });
-      editable.dispatchEvent(event);
-      expect(event.defaultPrevented).toBe(true);
-      expect(toolbar.parentElement!.querySelector<HTMLFormElement>('form[aria-label="Link"]')!.hidden).toBe(false);
-    });
-
-    it('closes on Escape without changing anything', () => {
-      const { doc, view, toolbar, button } = setup('Hello\n');
-      view.reveal(0, 5);
-      button('Link').click();
-      const popover = toolbar.parentElement!.querySelector<HTMLFormElement>('form[aria-label="Link"]')!;
-      popover.querySelector('input')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-      expect(popover.hidden).toBe(true);
-      expect(doc.text).toBe('Hello\n');
-    });
-  });
-
-  it('inserts an image block from a path', () => {
-    const { doc, view, toolbar, button } = setup('Text\n');
-    view.reveal(4, 4);
-    button('Insert image').click();
-    const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
-    popover.querySelector('input')!.value = 'img/logo.png';
-    popover.requestSubmit();
-    expect(doc.text).toBe('Text\n\n#image("img/logo.png")\n');
-  });
-
-  it('inserts an image picked from the project files', () => {
-    const assets = { list: () => [ref('img/logo.png'), ref('/shared/photo.jpg')], upload: async () => ({ error: 'unused' }), reference: () => null };
-    const { doc, view, toolbar, button } = setup('Text\n', { assets });
-    view.reveal(4, 4);
-    button('Insert image').click();
-    const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
-    const choices = [...popover.querySelectorAll<HTMLButtonElement>('button[data-path]')];
-    expect(choices.map((b) => b.textContent)).toEqual(['img/logo.png', '/shared/photo.jpg']);
-    choices[1].click();
-    expect(popover.hidden).toBe(true);
-    expect(doc.text).toBe('Text\n\n#image("/shared/photo.jpg")\n');
-  });
-
-  it('uploads an image into the project and inserts it', async () => {
-    const uploaded: File[] = [];
-    const assets = { list: () => [], upload: async (file: File) => (uploaded.push(file), { path: ref(`img/${file.name}`) }), reference: () => null };
-    const { doc, view, toolbar, button } = setup('Text\n', { assets });
-    view.reveal(4, 4);
-    button('Insert image').click();
-    const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
-    const input = popover.querySelector<HTMLInputElement>('input[type="file"]')!;
-    const file = new File([new Uint8Array([1])], 'cat.png', { type: 'image/png' });
-    Object.defineProperty(input, 'files', { value: [file] });
-    input.dispatchEvent(new Event('change'));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(uploaded).toEqual([file]);
-    expect(doc.text).toBe('Text\n\n#image("img/cat.png")\n');
-  });
-
-  it('shows why an upload was refused, keeps the popover open and the text unchanged', async () => {
-    const assets = { list: () => [], upload: async () => ({ error: 'This change is not allowed here.' }), reference: () => null };
-    const { doc, view, toolbar, button } = setup('Text\n', { assets });
-    view.reveal(4, 4);
-    button('Insert image').click();
-    const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
-    const input = popover.querySelector<HTMLInputElement>('input[type="file"]')!;
-    Object.defineProperty(input, 'files', { value: [new File([new Uint8Array([1])], 'cat.png')], configurable: true });
-    input.dispatchEvent(new Event('change'));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(popover.hidden).toBe(false);
-    expect(popover.querySelector('[role="alert"]')!.textContent).toBe('This change is not allowed here.');
-    expect(doc.text).toBe('Text\n');
-    button('Insert image').click();
-    button('Insert image').click();
-    expect(popover.querySelector('[role="alert"]')!.textContent).toBe('');
-  });
-
-  describe('image insertion never replaces or splits content', () => {
-    const SOURCE = '#set page(width: 16cm)\n#set text(size: 12pt)\n\n= Hello\n\nSome text here.\n';
-
-    function insertPath(toolbar: HTMLElement, button: (label: string) => HTMLButtonElement, path: string) {
-      button('Insert image').click();
-      const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
-      popover.querySelector('input')!.value = path;
-      popover.requestSubmit();
-    }
-
-    it('goes after the selected raw block (the initial selection) instead of replacing it', () => {
-      const { doc, toolbar, button } = setup(SOURCE);
-      insertPath(toolbar, button, 'cat.png');
-      expect(doc.text).toBe('#set page(width: 16cm)\n#set text(size: 12pt)\n\n#image("cat.png")\n\n= Hello\n\nSome text here.\n');
-    });
-
-    it('goes after the heading the cursor is in instead of splitting it', () => {
-      const { doc, view, toolbar, button } = setup(SOURCE);
-      const at = SOURCE.indexOf('Hello') + 2;
-      view.reveal(at, at);
-      insertPath(toolbar, button, 'cat.png');
-      expect(doc.text).toBe('#set page(width: 16cm)\n#set text(size: 12pt)\n\n= Hello\n\n#image("cat.png")\n\nSome text here.\n');
-    });
-
-    it('keeps selected text and goes after its paragraph', () => {
-      const { doc, view, toolbar, button } = setup(SOURCE);
-      view.reveal(SOURCE.indexOf('Some'), SOURCE.indexOf(' here'));
-      insertPath(toolbar, button, 'cat.png');
-      expect(doc.text).toBe(`${SOURCE}\n#image("cat.png")\n`);
-    });
-
-    it('fills an empty document', () => {
-      const { doc, toolbar, button } = setup('');
-      insertPath(toolbar, button, 'cat.png');
-      expect(doc.text).toBe('#image("cat.png")');
-    });
-  });
-
-  describe('image files dropped or pasted into the text', () => {
-    const png = (name: string) => new File([new Uint8Array([1])], name, { type: 'image/png' });
-    const pdf = new File(['%PDF'], 'paper.pdf', { type: 'application/pdf' });
-
-    /** A drop / paste event carrying `files`, as the browser sends it. */
-    function fileEvent(type: 'drop' | 'paste', files: File[]) {
-      const event = new Event(type, { bubbles: true, cancelable: true });
-      const data = { files, types: ['Files'], getData: () => '' };
-      Object.defineProperty(event, type === 'drop' ? 'dataTransfer' : 'clipboardData', { value: data });
-      return event;
-    }
-
-    function withUploads(error?: string) {
-      const uploaded: string[] = [];
-      const assets = {
-        list: () => [],
-        upload: async (file: File) => (error ? { error } : (uploaded.push(file.name), { path: ref(file.name) })),
-        reference: (path: string) => (path.endsWith('.png') ? ref(path.slice(1)) : null),
-      };
-      return { assets, uploaded };
-    }
-
-    const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
-
-    it('a pasted image is uploaded and inserted after the paragraph with the cursor', async () => {
-      const { assets, uploaded } = withUploads();
-      const { doc, view, parent } = setup('One\n\nTwo\n', { assets });
-      view.reveal(1, 1);
-      const event = fileEvent('paste', [png('shot.png')]);
-      parent.querySelector('[contenteditable]')!.dispatchEvent(event);
-      expect(event.defaultPrevented).toBe(true);
-      await settle();
-      expect(uploaded).toEqual(['shot.png']);
-      expect(doc.text).toBe('One\n\n#image("shot.png")\n\nTwo\n');
-    });
-
-    it('dropped images are uploaded and inserted in order, instead of the browser opening the file', async () => {
-      const { assets, uploaded } = withUploads();
-      const { doc, view, parent } = setup('One\n', { assets });
-      view.reveal(3, 3);
-      const outside: Event[] = [];
-      parent.addEventListener('drop', (e) => outside.push(e));
-      const event = fileEvent('drop', [png('a.png'), pdf, png('b.png')]);
-      parent.querySelector('[contenteditable]')!.dispatchEvent(event);
-      expect(event.defaultPrevented).toBe(true);
-      expect(outside).toEqual([]); // not uploaded once more by the file panel
-      await settle();
-      expect(uploaded).toEqual(['a.png', 'b.png']);
-      expect(doc.text).toBe('One\n\n#image("a.png")\n\n#image("b.png")\n');
-    });
-
-    it('leaves drops without images alone (the file panel may take them)', () => {
-      const { assets } = withUploads();
-      const { doc, parent } = setup('One\n', { assets });
-      const event = fileEvent('drop', [pdf]);
-      parent.querySelector('[contenteditable]')!.dispatchEvent(event);
-      expect(event.defaultPrevented).toBe(false);
-      expect(doc.text).toBe('One\n');
-    });
-
-    it('shows why a dropped image was not added in the image popover', async () => {
-      const { assets } = withUploads('This change is not allowed here.');
-      const { doc, toolbar, parent } = setup('One\n', { assets });
-      parent.querySelector('[contenteditable]')!.dispatchEvent(fileEvent('drop', [png('a.png')]));
-      await settle();
-      const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
-      expect(popover.hidden).toBe(false);
-      expect(popover.querySelector('[role="alert"]')!.textContent).toBe('This change is not allowed here.');
-      expect(doc.text).toBe('One\n');
-    });
-
-    /** A file-panel row (project path) dragged over or dropped on the text. */
-    function rowEvent(type: 'dragover' | 'drop', path: string) {
-      const event = new Event(type, { bubbles: true, cancelable: true });
-      const data = { files: [], types: ['application/x-typst-project-path'], getData: () => path, dropEffect: 'none' };
-      Object.defineProperty(event, 'dataTransfer', { value: data });
-      return event;
-    }
-
-    it('an image dragged from the file panel is inserted where it is dropped, without an upload', () => {
-      const { assets, uploaded } = withUploads();
-      const { doc, view, parent } = setup('One\n\nTwo\n', { assets });
-      view.reveal(1, 1);
-      const editable = parent.querySelector('[contenteditable]')!;
-      const over = rowEvent('dragover', '/img/logo.png');
-      editable.dispatchEvent(over);
-      expect(over.defaultPrevented).toBe(true); // the browser lets it drop
-      const drop = rowEvent('drop', '/img/logo.png');
-      editable.dispatchEvent(drop);
-      expect(drop.defaultPrevented).toBe(true);
-      expect(uploaded).toEqual([]);
-      expect(doc.text).toBe('One\n\n#image("img/logo.png")\n\nTwo\n');
-    });
-
-    it('a dragged file that is no image is not inserted', () => {
-      const { assets } = withUploads();
-      const { doc, parent } = setup('One\n', { assets });
-      parent.querySelector('[contenteditable]')!.dispatchEvent(rowEvent('drop', '/data.csv'));
-      expect(doc.text).toBe('One\n');
-    });
-
-    it('without assets, dropped files are left to the browser as before', () => {
-      const { parent } = setup('One\n');
-      const event = fileEvent('drop', [png('a.png')]);
-      parent.querySelector('[contenteditable]')!.dispatchEvent(event);
-      expect(event.defaultPrevented).toBe(false);
-    });
-  });
-
-  it('keeps the image popover (at the Insert menu) inside the toolbar when the menu is near the right edge', () => {
-    const { toolbar, button } = setup('Text\n', { assets: { list: () => [], upload: async () => ({ error: 'unused' }), reference: () => null } });
-    const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
-    Object.defineProperty(toolbar, 'clientWidth', { value: 300 });
-    Object.defineProperty(popover, 'offsetWidth', { value: 200 });
-    Object.defineProperty(button('Insert'), 'offsetLeft', { value: 250 });
-    button('Insert image').click();
-    expect(popover.style.left).toBe('100px');
-  });
-
-  it('inserts a table and adds and deletes rows and columns', () => {
-    const { doc, view, button } = setup('Text\n');
-    expect(button('Add row').disabled).toBe(true);
-    view.reveal(4, 4);
-    button('Insert table').click();
-    expect(doc.text).toBe('Text\n\n#table(\n  columns: 2,\n  [], [],\n  [], [],\n)\n');
-    expect(button('Add row').disabled).toBe(false);
-    button('Add row').click();
-    expect(doc.text).toBe('Text\n\n#table(\n  columns: 2,\n  [], [],\n  [], [],\n  [], [],\n)\n');
-    button('Add column').click();
-    expect(doc.text).toContain('columns: 3,\n  [], [], [],\n');
-    button('Delete column').click();
-    button('Delete row').click();
-    expect(doc.text).toBe('Text\n\n#table(\n  columns: 2,\n  [], [],\n  [], [],\n)\n');
-  });
-
-  it('Code marks the selection as inline code', () => {
-    const { doc, view, button } = setup('Hello world\n');
-    view.reveal(6, 11);
-    button('Code').click();
-    expect(doc.text).toBe('Hello `world`\n');
-    expect(button('Code').getAttribute('aria-pressed')).toBe('true');
-    button('Code').click();
-    expect(doc.text).toBe('Hello world\n');
-  });
-
-  it('Code block turns the paragraph into a code block and back', () => {
-    const { doc, view, button } = setup('Hello *world*\n');
-    view.reveal(0, 0);
-    button('Code block').click();
-    expect(doc.text).toBe('```\nHello world\n```\n');
-    expect(button('Code block').getAttribute('aria-pressed')).toBe('true');
-    button('Code block').click();
-    expect(doc.text).toBe('Hello world\n');
-  });
-
-  it('the language field of a code block sets its language tag', () => {
-    const { doc, parent } = setup('Text\n\n```rust\nfn main() {}\n```\n');
-    const field = parent.querySelector<HTMLInputElement>('input[aria-label="Language"]')!;
-    expect(field.value).toBe('rust');
-    field.value = 'python';
-    field.dispatchEvent(new Event('input'));
-    expect(doc.text).toBe('Text\n\n```python\nfn main() {}\n```\n');
-    field.value = 'c++';
-    field.dispatchEvent(new Event('input'));
-    expect(field.value).toBe('c');
-    expect(doc.text).toBe('Text\n\n```c\nfn main() {}\n```\n');
-    field.value = '';
-    field.dispatchEvent(new Event('input'));
-    expect(doc.text).toBe('Text\n\n```\nfn main() {}\n```\n');
-  });
-
-  it('Table of contents inserts #outline() as its own block', () => {
-    const { doc, view, button, parent } = setup('= Intro\n\nText\n');
-    view.reveal(15, 15);
-    button('Table of contents').click();
-    expect(doc.text).toBe('= Intro\n\nText\n\n#outline()\n');
-    expect(parent.querySelector('.typst-visual__outline .typst-visual__box-label')?.textContent).toBe('Table of contents');
   });
 
   it('keeps the editor focused: mousedown on a button does not steal focus', () => {

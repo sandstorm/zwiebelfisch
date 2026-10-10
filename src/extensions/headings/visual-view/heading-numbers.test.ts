@@ -3,7 +3,7 @@ import { EditorState } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 import { print } from '../../../hosts/visual-view/visual-view';
 import { hasHeadingNumbering, headingNumbers, toggleHeadingNumbering } from './heading-numbers';
-import { project } from '../../../hosts/visual-view/test-support';
+import { project } from '../../../testing/testing';
 
 /** The numbers shown next to the headings of `source`, by heading text. */
 function numbers(source: string): Record<string, string> {

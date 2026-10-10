@@ -30,9 +30,9 @@ export const boundaries = {
       why: 'asset URLs (wasm, default fonts) for the main thread; in the entry, the worker bundle would emit every asset again',
     },
     {
-      target: 'hosts/visual-view/test-support.ts',
-      importers: '\\.test\\.ts$',
-      why: "tests of an extension's Visual-view contributions build views and schemas with the host's test helpers",
+      target: 'hosts/visual-view/nodes/nodes.ts',
+      importers: '^src/testing/',
+      why: "the test helpers build the built-ins' schema with the Visual view's own (createSchema), as an Editor would",
     },
     {
       target: 'extensions/collaboration/model/in-process.ts',
@@ -43,11 +43,6 @@ export const boundaries = {
       target: 'extensions/collaboration/model/shared-project.ts',
       importers: '^server/.*\\.test\\.ts$',
       why: "the server's tests build rooms from the client's SharedProject",
-    },
-    {
-      target: 'hosts/visual-view/projection/projection.ts',
-      importers: '^src/extensions/.*\\.test\\.ts$',
-      why: 'tests of the extensions\' Visual-view parts project and print with the schema directly',
     },
   ],
 };
@@ -71,6 +66,24 @@ export default tseslint.config(
     files: ['**/*.ts'],
     plugins: { local: { rules: { 'entry-imports': entryImports } } },
     rules: { 'local/entry-imports': ['error', boundaries] },
+  },
+  {
+    // Layers (docs/2026_10_10_extensions-architecture.md, "Dependency rules"): src/testing/ composes the built-in
+    // extensions for tests, so only tests may import it.
+    files: ['src/**/*.ts'],
+    ignores: ['**/*.test.ts', 'src/testing/**'],
+    rules: { 'no-restricted-imports': ['error', { patterns: [{ group: ['**/testing/testing'], message: 'src/testing/ is for tests (*.test.ts) only.' }] }] },
+  },
+  {
+    // Hosts offer contribution points and know no extension, also not in their tests (which use the host's own nodes
+    // and specs of their own; tests of the built-ins together are the widget's, in typst-editor/).
+    files: ['src/hosts/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [{ group: ['**/extensions/**', '**/testing/testing', '**/typst-editor/**'], message: 'hosts never import extensions/, testing/ or typst-editor/.' }] },
+      ],
+    },
   },
   {
     // test bodies are long by nature; complexity limits still apply

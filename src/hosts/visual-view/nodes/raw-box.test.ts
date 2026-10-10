@@ -3,13 +3,13 @@
 import { EditorView } from '@codemirror/view';
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { createVisualView } from '../test-support';
+import { VisualView, VisualViewContributions } from '../visual-view';
 
 function setup(text: string) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = createVisualView(parent, doc);
+  const view = new VisualView(parent, doc, VisualViewContributions.from([]));
   const box = (selector: string) => {
     const dom = parent.querySelector<HTMLElement>(`${selector} .cm-content`)!;
     return EditorView.findFromDOM(dom)!;
@@ -101,7 +101,7 @@ describe('raw boxes', () => {
     const shadow = host.attachShadow({ mode: 'open' });
     const parent = document.createElement('div');
     shadow.append(parent);
-    createVisualView(parent, new TypstDocument(RAW));
+    new VisualView(parent, new TypstDocument(RAW), VisualViewContributions.from([]));
     const cm = EditorView.findFromDOM(parent.querySelector<HTMLElement>('.typst-visual__raw-block .cm-content')!)!;
     expect(cm.root).toBe(shadow);
   });

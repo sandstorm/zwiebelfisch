@@ -4,8 +4,8 @@ import type { Node } from '@tiptap/pm/model';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../../core/paths/paths';
 import type { Style } from '../model/model';
-import { print, project as projectWith } from '../../../hosts/visual-view/projection/projection';
-import { after, edit, expectPreciseMap, find, schemaWith } from '../../../hosts/visual-view/test-support';
+import { print, project as projectWith } from '../../../hosts/visual-view/visual-view';
+import { after, edit, expectPreciseMap, find, schemaWith } from '../../../testing/testing';
 import { customStyles } from './visual-view';
 
 const style = (name: string, kind: Style['kind'], label: string): Style => ({ name, kind, label, path: ProjectPath.of('/styles.typ') });

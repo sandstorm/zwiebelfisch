@@ -2,9 +2,9 @@
 import { describe, expect, it } from 'vitest';
 import { EditorState, NodeSelection, type Transaction } from '@tiptap/pm/state';
 import { minimalChange } from '../../../core/typst-document/typst-document';
-import { schema } from '../../../hosts/visual-view/test-support';
+import { schema } from '../../../testing/testing';
 import { addCaption, imageInfo, removeCaption, resizeImage, setImageAlt } from './image-edits';
-import { print, project } from '../../../hosts/visual-view/projection/projection';
+import { print, project } from '../../../hosts/visual-view/visual-view';
 
 const state = (source: string) => EditorState.create({ doc: project(source, schema) });
 

@@ -11,6 +11,10 @@ src/                        the widget (TypeScript); the most important API on t
   index.ts                  public API of the package; registers <typst-editor>
   typst-editor/             typst-editor.ts: createTypstEditor() — a Project in the workbench host with the built-in
                             extension list (configured from the options), scoped CSS (typst-editor.css)
+  testing/                  testing.ts: test helpers composing the built-in extensions (the Visual view's schema and
+                            a view with the built-ins, configured from test options; edit / after / find /
+                            expectPreciseMap); test-only: only `*.test.ts` files may import it, and it may import
+                            anything
   typst-editor-element/     typst-editor-element.ts: <typst-editor> custom element (shadow DOM) around
                             createTypstEditor; inline-source.ts (source written inside the element → text)
   hosts/                    view hosts: mechanism + contribution points, no feature knowledge
@@ -152,10 +156,14 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
     entry, the worker bundle (which imports the entry) would emit every asset a second time;
   - `extensions/collaboration/model/in-process.ts` — test files;
   - `extensions/collaboration/model/shared-project.ts` — the server's tests;
-  - `hosts/visual-view/test-support.ts` — test files: a Visual view with the built-in contributions plus an
-    extension's own contributions (`TestViewOptions.contributions`); it imports the extensions' Visual-view
-    contributions, the one place a host file imports `extensions/`;
-  - `hosts/visual-view/projection/projection.ts` — the extensions' tests: `project` / `print` with a schema.
+  - `hosts/visual-view/nodes/nodes.ts` — `testing/`: the built-ins' schema is made with the host's `createSchema`.
+- **Layers** (`no-restricted-imports` in `eslint.config.js`; docs/2026_10_10_extensions-architecture.md,
+  "Dependency rules"): `hosts/` never import `extensions/`, `testing/` or `typst-editor/`, also not in their
+  tests: a host's tests use its own nodes plus specs defined in the test. Only `*.test.ts` files import
+  `testing/`, which composes the built-in extensions; tests of the built-ins together (the projection's
+  fixtures, the toolbar's items, the block nodes) are the widget's, `typst-editor/typst-editor.*.test.ts`. An
+  extension's tests needing other extensions (a heading to put a label on) take them from `testing/` too,
+  never from the other extension.
 - **Top comments.** Every source file starts with a comment: its context, `See <entry file /
   ARCHITECTURE.md section>`, or `Tests for X` (`mise run quality:top-comments`, part of `quality`).
 - Other languages and separate programs stay at the top level: `crates/`, `server/`, `demo/`,
@@ -377,7 +385,7 @@ new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen? })
   publishes its selection and draws the others' carets in it (`setPresence`).
 - Every extension lives in `extensions/<name>/` (the entry exports the extension factory, e.g. `images()`, and only
   what other code needs). An extension imports no other extension: `images` reads the `documentLinks` service.
-  The extensions' Visual-view contributions are also exported for `hosts/visual-view/test-support.ts` (a view with
+  The extensions' Visual-view contributions are also exported for `testing/testing.ts` (a view with
   the built-ins, configured from test options).
 
 ### Paths (`src/core/paths`)
@@ -552,7 +560,7 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
   construct (headings, lists, tables, …) is an extension (`extensions/<name>/visual-view/`) and every
   feature shown in the view (labels, comments, styles, …) a contribution of its extension, using only the contribution API the host's entry exports (the contribution types, the
   `projection/` toolkit, `starterKitPart`; and for tests `project` / `print` / `syncDoc` / `posToSource` /
-  `sourceToPos` and `test-support.ts`). The widget's built-in extension list activates them in
+  `sourceToPos`, and `testing/` for the built-ins together). The widget's built-in extension list activates them in
   registration order (see "createTypstEditor"); `VisualViewOptions` is gone.
 - **Specs** (`TypstNodeSpec` / `TypstMarkSpec`, `projection/grammar.ts`): one per construct —
   `name`, its Tiptap `extension` (schema, node view, commands, keymap, input rules), `attributes`
@@ -574,7 +582,7 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
   registration order (task lists before lists), and so are box renderers (images before
   snippets). `attachGrammar` puts the specs on the schema (`schema.cached`), so `project(text,
   schema)` and `print(doc)` find them; `VisualView` attaches them to its editor's schema, tests use
-  `createSchema` (the `schema` of `test-support.ts`).
+  `createSchema` (the host's tests with their own specs; the built-ins' `schema` of `testing/testing.ts`).
 - **Per view**: providers get a `VisualViewContext` (`document`, `selection()`, `onDidChangePresence`: the
   presences the view is given as `PresenceTarget`); a toolbar item's
   `create(toolbar)` gets the `ToolbarContext` (the editor, the toolbar's root, `subscriptions`

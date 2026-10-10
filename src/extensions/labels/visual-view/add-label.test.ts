@@ -2,7 +2,7 @@
 // Tests for add-label.ts and the draft tag (label-tags.ts), through the toolbar's Insert ▾ → "Add label".
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { createVisualView } from '../../../hosts/visual-view/test-support';
+import { createVisualView } from '../../../testing/testing';
 import { references } from './visual-view';
 
 // jsdom lacks layout; ProseMirror only needs these to exist.

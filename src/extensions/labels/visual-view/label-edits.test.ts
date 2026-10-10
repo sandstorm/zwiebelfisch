@@ -2,8 +2,8 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { EditorState } from '@tiptap/pm/state';
-import { find, schemaWith } from '../../../hosts/visual-view/test-support';
-import { print, project } from '../../../hosts/visual-view/projection/projection';
+import { find, schemaWith } from '../../../testing/testing';
+import { print, project } from '../../../hosts/visual-view/visual-view';
 import { insertReference, renameLabel, setLabel } from './label-edits';
 import { labelName } from '../model/model';
 import { references } from './visual-view';

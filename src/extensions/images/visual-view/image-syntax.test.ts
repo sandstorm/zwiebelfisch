@@ -1,8 +1,8 @@
 // Tests for image-syntax.ts and figures.ts: an image call's path, a new call, and what a figure has besides its parts.
 import { describe, expect, it } from 'vitest';
 import { PathReference } from '../../../core/paths/paths';
-import { print } from '../../../hosts/visual-view/projection/projection';
-import { edit, expectPreciseMap, project, schema } from '../../../hosts/visual-view/test-support';
+import { print } from '../../../hosts/visual-view/visual-view';
+import { edit, expectPreciseMap, project, schema } from '../../../testing/testing';
 import { hasFigureExtras } from './figures';
 import { imagePath, imageSource } from './image-syntax';
 

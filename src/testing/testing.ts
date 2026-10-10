@@ -1,27 +1,27 @@
-/**
- * Shared helpers for Visual view tests: the built-ins' schema, project with
- * it, apply an edit, find text, check the position map exhaustively, and make
- * a view with the built-ins configured from options.
- */
+// Test helpers that compose the widget's built-in extensions: the Visual view's schema with the built-ins, project
+// with it, a view with the built-ins configured from options; and the helpers such tests use on a projected document
+// (apply an edit, find text, check the position map exhaustively). Entry of testing/: test-only, so it may import any
+// module (an extension's tests compose it with the others here, never by importing another extension); only
+// `*.test.ts` files may import it (eslint.config.js). Hosts' own tests use the host minimum and their own specs.
 import type { Node, Schema } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
 import { expect } from 'vitest';
-import type { DocumentLinkProvider } from '../../core/document-links/document-links';
-import type { TypstDocument } from '../../core/typst-document/typst-document';
-import { alignment } from '../../extensions/alignment/alignment';
-import { headings } from '../../extensions/headings/headings';
-import { lists } from '../../extensions/lists/lists';
-import { markup } from '../../extensions/markup/markup';
-import { outline } from '../../extensions/outline/outline';
-import { pageLayout } from '../../extensions/page-layout/page-layout';
-import { tables } from '../../extensions/tables/tables';
-import { boxLinks } from '../../extensions/document-links/document-links';
-import { imagesVisualView, type ImageAssets, type ImageUrls } from '../../extensions/images/images';
-import { renderedBoxesVisualView, type SnippetSource } from '../../extensions/rendered-boxes/rendered-boxes';
-import { VisualViewContributions, type VisualViewContribution } from './contributions/contributions';
-import { createSchema } from './nodes/nodes';
-import { posToSource, print, project as projectWith, sourceToPos } from './projection/projection';
-import { VisualView } from './visual-view';
+import type { DocumentLinkProvider } from '../core/document-links/document-links';
+import type { TypstDocument } from '../core/typst-document/typst-document';
+import { alignment } from '../extensions/alignment/alignment';
+import { headings } from '../extensions/headings/headings';
+import { lists } from '../extensions/lists/lists';
+import { markup } from '../extensions/markup/markup';
+import { outline } from '../extensions/outline/outline';
+import { pageLayout } from '../extensions/page-layout/page-layout';
+import { tables } from '../extensions/tables/tables';
+import { boxLinks } from '../extensions/document-links/document-links';
+import { imagesVisualView, type ImageAssets, type ImageUrls } from '../extensions/images/images';
+import { renderedBoxesVisualView, type SnippetSource } from '../extensions/rendered-boxes/rendered-boxes';
+import { createSchema } from '../hosts/visual-view/nodes/nodes';
+import {
+  posToSource, print, project as projectWith, sourceToPos, VisualView, VisualViewContributions, type VisualViewContribution,
+} from '../hosts/visual-view/visual-view';
 
 /** The schema of a view with the built-ins. */
 export const schema: Schema = schemaWith();
@@ -52,9 +52,17 @@ export function createVisualView(parent: HTMLElement, document: TypstDocument, o
   return new VisualView(parent, document, contributions(options));
 }
 
-/** The built-ins configured from `options`, in the order the widget's built-in extensions activate them. */
+/** The built-ins and `options.contributions`, activated. */
 function contributions(options: TestViewOptions): VisualViewContributions {
-  return VisualViewContributions.from([
+  return VisualViewContributions.from([...builtins(options), ...(options.contributions ?? [])]);
+}
+
+/**
+ * The built-ins' Visual-view contributions configured from `options`, in the order the widget's built-in
+ * extensions activate them (without `options.contributions`).
+ */
+export function builtins(options: Omit<TestViewOptions, 'contributions'> = {}): VisualViewContribution[] {
+  return [
     boxLinks({ documentLinks: options.documentLinks && (() => options.documentLinks) }),
     markup,
     headings,
@@ -70,8 +78,7 @@ function contributions(options: TestViewOptions): VisualViewContributions {
     pageLayout,
     lists,
     alignment,
-    ...(options.contributions ?? []),
-  ]);
+  ];
 }
 
 export function edit(doc: Node, change: (state: EditorState) => EditorState['tr']): Node {
