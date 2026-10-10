@@ -33,8 +33,18 @@ describe('addMarginNote', () => {
     expect(noted('A *bold* claim.\n', 2, 14)).toBe(`${IMPORT}A #margin-note[*bold* claim][|].\n`);
   });
 
+  it('takes in the delimiters of formatting the selection starts or ends with (as the Visual view prints a range note)', () => {
+    // the Visual view maps a selected bold word to the text between the stars
+    expect(noted('This is *bold* and\n', 9, 13)).toBe(`${IMPORT}This is #margin-note[*bold*][|] and\n`);
+    expect(noted('A *bold* claim.\n', 3, 14)).toBe(`${IMPORT}A #margin-note[*bold* claim][|].\n`);
+    expect(noted('A claim in _italics_.\n', 2, 19)).toBe(`${IMPORT}A #margin-note[claim in _italics_][|].\n`);
+    expect(noted('A *_both_* here\n', 4, 8)).toBe(`${IMPORT}A #margin-note[*_both_*][|] here\n`);
+    // a part of formatted text stays inside
+    expect(noted('A *bold claim*.\n', 3, 7)).toBe(`${IMPORT}A *#margin-note[bold][|] claim*.\n`);
+  });
+
   it('falls back to a point note at the end when the selection cuts through markup', () => {
-    expect(noted('A *bold* claim.\n', 3, 14)).toBe(`${IMPORT}A *bold* claim#margin-note[|].\n`);
+    expect(noted('A *bold* claim.\n', 4, 14)).toBe(`${IMPORT}A *bold* claim#margin-note[|].\n`);
   });
 
   it('falls back to a point note when the selection spans paragraphs', () => {

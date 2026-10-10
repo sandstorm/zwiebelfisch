@@ -2,7 +2,7 @@
 // Tests for notes-gutter.ts and note-card.ts (through VisualView): cards, threads, replies, editing, resolve, layout.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { localDate } from '../../comments/comments';
+import { addMarginNote, localDate } from '../../comments/comments';
 import { VisualView, type VisualViewOptions } from '../visual-view';
 
 function setup(source: string, options: VisualViewOptions = {}) {
@@ -111,6 +111,18 @@ describe('the notes gutter', () => {
       type(field(0), 'draft', 'blur');
       expect(doc.text).toBe(`A #margin-note[- ${signed('Anna', 'First')}] b.\n`);
       expect(field(0).value).toBe('draft');
+    });
+
+    it('the first message of a note on a selected bold word changes only the note', () => {
+      const source = 'This is *bold* text.\n';
+      const { doc, view, field } = setup(source, { user: { name: 'Anna' } });
+      const word = source.indexOf('bold');
+      view.reveal(word, word + 4);
+      doc.change(addMarginNote(doc.text, view.selection())!.changes, 'comment');
+      const made = doc.text;
+      expect(made).toContain('This is #margin-note[*bold*][] text.');
+      type(field(0), 'First');
+      expect(doc.text).toBe(made.replace('[*bold*][]', `[*bold*][- ${signed('Anna', 'First')}]`));
     });
 
     it('own messages and unsigned ones can be edited, others\' not; only the last own message can be deleted', () => {

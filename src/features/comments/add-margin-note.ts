@@ -14,7 +14,9 @@ export interface AddedNote {
 /**
  * The edits that add a `drafting` margin note at `range` of Typst `text`:
  * a selection becomes the highlighted text of a range note,
- * `#margin-note[selection][]`; a collapsed range (or a selection that is not
+ * `#margin-note[selection][]` (bold or italic text the selection starts or
+ * ends with goes inside whole: `#margin-note[*bold*][]`, as the Visual view
+ * prints it); a collapsed range (or a selection that is not
  * self-contained markup, e.g. half of `*bold*` or two paragraphs) gets a point
  * note `#margin-note[]` at its end. The file imports `margin-note` from
  * `drafting` exactly once afterwards: an existing drafting import is extended,
@@ -28,8 +30,8 @@ export function addMarginNote(text: string, range: { from: number; to: number })
   const note = noteEdit(text, range);
   if (!note) return null;
   const changes = [...withImport(text, note), ...noteMarginChanges(text)].sort((a, b) => a.from - b.from);
-  // Every note edit ends with `[]` inserted at `range.to`: the body is just before that `]`.
-  return { changes, note: mapOffset(changes, range.to) - 1 };
+  // Every note edit ends with `[]` inserted where the call ends: the body is just before that `]`.
+  return { changes, note: mapOffset(changes, note.at(-1)!.from) - 1 };
 }
 
 /**
@@ -48,13 +50,49 @@ export const NOTE_STYLE = `#${SET_DEFAULTS}(
 )
 `;
 
-/** The note itself. */
-function noteEdit(text: string, { from, to }: { from: number; to: number }): TextChange[] | null {
+/** The note itself: around the formatting the selection starts or ends with, else around the selection as is. */
+function noteEdit(text: string, range: { from: number; to: number }): TextChange[] | null {
   const { open, close } = rangeNoteSyntax(NOTE_HEAD, '');
-  if (from < to && fits(text, [from, open], [to, close])) return [insert(from, open), insert(to, close)];
+  for (const { from, to } of [aroundFormatting(text, range), range]) {
+    if (from < to && fits(text, [from, open], [to, close])) return [insert(from, open), insert(to, close)];
+  }
+  const { to } = range;
   const point = printNoteCall({ head: NOTE_HEAD, note: '' });
   if (fits(text, [to, point])) return [insert(to, point)];
   return null;
+}
+
+/**
+ * `range` grown over the delimiters of bold and italic text it starts or ends
+ * with (`bold` in `*bold*` becomes `*bold*`). The Visual view maps a selected
+ * bold word to the text between the stars, and prints a range note around its
+ * formatting (the note's mark is the outermost), so a note made like this
+ * keeps its source when the Visual view prints it again.
+ */
+function aroundFormatting(text: string, { from, to }: { from: number; to: number }): { from: number; to: number } {
+  const tree = typstParser.parse(text);
+  for (let grown = from < to; grown; ) {
+    grown = false;
+    tree.iterate({
+      from,
+      to,
+      enter: ({ node }) => {
+        const markup = delimitedMarkup(node);
+        if (!markup) return;
+        if (markup.from === from && markup.to <= to) [from, grown] = [node.from, true];
+        if (markup.to === to && markup.from >= from) [to, grown] = [node.to, true];
+      },
+    });
+  }
+  return { from, to };
+}
+
+/** The text between the delimiters of `*bold*` or `_italic_` markup (both present); null for anything else. */
+function delimitedMarkup(node: SyntaxNode): SyntaxNode | null {
+  if (node.name !== 'Strong' && node.name !== 'Emph') return null;
+  const markup = node.getChild('Markup');
+  const [first, last] = [node.firstChild, node.lastChild];
+  return markup && first && last && first !== last && first.name === last.name ? markup : null;
 }
 
 function insert(at: number, text: string): TextChange {
