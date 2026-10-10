@@ -30,6 +30,7 @@ describe('LabelIndex', () => {
         title: 'Cold (dark) and incremental (light) compile times for 1, 10, 50 and 100 pages.',
         path: '/chapters/results.typ',
       },
+      { name: 'tab:runs', kind: 'figure', title: 'Cold compile times (ms) of three runs per document size.', path: '/chapters/results.typ' },
     ]);
   });
 
@@ -69,18 +70,16 @@ describe('LabelIndex', () => {
     expect(index.labels().map((l) => l.name)).not.toContain('appendix');
   });
 
-  it('picks up replaced files on refresh() (Project.replace tells no listener)', () => {
+  it('picks up replaced files', () => {
     const project = new Project('/main.typ', { '/main.typ': 'See @method.\n' });
     const index = new LabelIndex(project);
     const listener = vi.fn();
     index.onChange(listener);
     project.replace({ '/method.typ': '= Method <method>\n\nAs @intro says.\n' });
-    index.refresh();
     expect(index.labels()).toEqual([{ name: 'method', kind: 'heading', title: 'Method', path: '/method.typ' }]);
     expect(index.referenceCount('intro')).toBe(1);
     expect(listener).toHaveBeenCalledTimes(1);
     project.replace({});
-    index.refresh();
     expect(index.labels()).toEqual([]);
     expect(index.referenceCount('intro')).toBe(0);
   });
