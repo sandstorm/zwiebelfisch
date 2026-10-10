@@ -14,6 +14,7 @@ src/
   engine/                   typed TS wrapper around the wasm, default fonts (generated wasm/, fonts/ — gitignored),
                             withPackages (package download, tar reader), fixtures/ (test package archives)
   document/                 TypstDocument — the single source of truth (string or shared Y.Text); Highlight (a styled source range views draw);
+                            Presence / PresenceTarget (other users' carets + selections, the interface both views implement);
                             margin-note-syntax.ts (drafting's margin-note call: parse, print, validity)
   collab/                   real-time collaboration (loaded on demand): Collaboration, SharedProject, RemoteCursors,
                             RoomVersions + SharedAssets (GitLab rooms); in-process.ts (Y.Doc/awareness
@@ -29,6 +30,7 @@ src/
     geometry.ts, zoom.ts    pure helpers: overlay boxes, visibility, current page, zoom steps
     toolbar.ts              zoom buttons, zoom label, "page n / total"
     snippet.ts              cut a page SVG down to the boxes of a source range (snippets for the Visual view)
+    presence-markers.ts     pure: where other users' initials markers go on the pages
   visual-view/              VisualView — Tiptap editor over the source-anchored projection,
                             formatting toolbar, raw boxes edited in a nested CodeMirror,
                             shown rendered (snippet / image) while not focused, notes gutter
@@ -125,11 +127,16 @@ new SourceView(parent, document, { onCursor?, onBaseChange? })
 .reveal(from, to)    // select, scroll to center, highlight
 .setDiagnostics([{severity, message, hints, from, to}])   // underline + hover; replaces previous
 .setHighlights(layer, [{from, to, className, attributes?}])  // replaces that layer; follows edits
+.setPresence([{id, user: {name, color}, anchor, head}])      // other users (PresenceTarget); follows edits
 .selection() → {from, to}
 .showChanges(base | null)   // inline unified diff against base, accept/reject per chunk
 .destroy()
 ```
 
+- **Presence** (`presence.ts`, y-codemirror style): each caret is a widget (bar + dot, also on
+  empty lines); its name flag shows on hover and for 2.5 s after the caret moved (the widget is
+  re-created only then: `moves` counts in its equality). Selections are tinted marks. The same
+  extension draws carets in the Visual view's raw boxes.
 - **Changes:** `@codemirror/merge`'s `unifiedMergeView` in a compartment. Reject edits the
   document like any edit; accept moves CodeMirror's original and reports the new base through
   `onBaseChange`, so the other views stop showing that change too.
@@ -149,6 +156,7 @@ new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scr
 .update(files: Record<path, text | Uint8Array>, main)    // cheap per keystroke
 .reveal(path, offset)                        // cheap per cursor move: flash, scroll only if off-screen
 .showChanges(path, ranges | null)            // change bars in the page margin, redrawn after every compile
+.showPresence([{id, path, head, user}, …])   // other users' initials at their carets, redrawn after every compile
 .snippet(path, from, to, text) → Promise<{svg, width, height} | null>   // the range as drawn, cut from its page
 .onRender(listener) → unsubscribe            // after every successful compile
 .destroy()
@@ -165,6 +173,11 @@ new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scr
   `changebar`). A pure deletion (empty range) takes the characters on either side. Bars are
   page overlays like the highlights; only the newest request draws.
 
+- **Presence markers** (`presence-markers.ts`): every caret goes through the same `cursor`
+  request as `reveal` (`jumpFromCursor`); a third `LatestOnly` runner (one lookup round per
+  250 ms, newest presences only; again after every successful compile) replaces the markers. A
+  marker is a page overlay with the user's initials in their color pointing at the baseline;
+  markers on the same spot are numbered and drawn side by side.
 - **Coalescing (`LatestOnly`):** at most one compilation is in flight. Updates that arrive
   meanwhile replace each other, so only the newest gets compiled. Typing never queues a backlog.
   Cursor reveals use the same runner, additionally throttled to one lookup per 80 ms.
@@ -444,6 +457,7 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
 new VisualView(parent, document, { renderer?, assets? })
 .reveal(from, to)    // select exactly what shows source range from..to (caret if empty)
 .setHighlights(layer, highlights)   // source ranges → inline decorations (sourceToPos, end with bias -1)
+.setPresence(presences)             // other users' carets / selections (PresenceTarget), see Collaboration
 .selection() → {from, to}           // posToSource; the end with bias -1
 .editNote(offset) → boolean         // focuses the gutter card of the margin note whose source holds offset
 .showChanges(base | null)   // track changes against base, following every edit
@@ -672,6 +686,14 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   `sourceToPos`: insertions as inline marks, deletions as struck-through `<del>` widgets with
   the deleted *visible* text (taken from the projected base), a change whose visible text is
   the same on both sides as a formatting change, and raw boxes inside a change outlined.
+- **Remote presence** (`presence.ts`, Tiptap CollaborationCaret look, but fed from our text sync):
+  a caret is a widget decoration (bar + name flag, always shown) at `sourceToPos(head)`, so it
+  shows in empty paragraphs too; a selection uses the highlight layers' range decorations. A
+  caret inside a box (block atoms — raw blocks, images, outlines, page breaks, rules — from
+  their first character to their line end; `rawInline` / `marginNote` strictly inside) outlines
+  the box instead (node decoration `typst-remote-box`, the names as flag, first user's color);
+  the decoration carries the carets' offsets in the box's source, and a raw box draws them in
+  its nested CodeMirror (`RawBox.update(node, decorations)`). Mapped through edits until set again.
 - **Invariants (unit-tested):**
   - `print(project(src)) === src` for every fixture (incl. links, images, figures, tables, unmodelled
     tables and figures, quotes, page breaks, rules, table headers, task lists);
@@ -685,7 +707,8 @@ createTypstEditor(host, { …, user?: {name, color?},
   collaboration?: { doc: Y.Doc, awareness?: Awareness } | { url, room, token? } })
 
 Collaboration.start(options, { project, user }) → Promise<Collaboration>   // url: waits for the first sync
-.sync()   .setCursor(path | null, range?)   .showCursors(path | null, views)   .destroy()
+.sync()   .setCursor(path | null, range?)   .showCursors(path | null, views: PresenceTarget[])   .destroy()
+.onPresence((presences: PlacedPresence[]) => …)   // everyone else, in every file, once per change
 .versions → RoomVersions | null      // GitLab rooms: .base(path), .onBaseChange(fn), .save(message, author?), .onMessage(fn)
 ```
 
@@ -706,11 +729,22 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
   win, local files the room lacks are seeded. If two clients seeded a key concurrently, the loser
   rebinds to the winner's Y.Text (one remote change; views survive). A rename is a new
   Y.Text (its Yjs history starts over); the renaming client keeps its document and views.
-- **`RemoteCursors`**: publishes the local selection; draws the others' selections
-  (`typst-remote-selection`) and carets (`typst-remote-cursor`: one character with a colored
-  border and a name label, since views draw marks, not empty ranges) through `setHighlights(
-  'remote-cursors', …)` of the shown file's views, re-resolved once per microtask after text or
-  presence changes. Color: `--typst-remote-color` per highlight.
+- **`RemoteCursors`** owns awareness and the Y relative positions: publishes the local selection
+  and resolves the others' into `Presence`s (`{id: clientID, user: {name, color}, anchor, head}`,
+  source offsets) once per microtask after a change of the shown text or of presence. The shown
+  file's views get them through `PresenceTarget.setPresence` (decoration details stay in each
+  view: see SourceView / VisualView); `onPresence` gets everyone in every file (with `path`),
+  only when that changed. Colors: the user's, else a palette entry by name; flag text black or
+  white by WCAG contrast (`flagTextColor`). CSS: `--typst-remote-color`, `--typst-remote-text`.
+- **Widget presence**: the views of the shown file (above), the preview (`showPresence`: initials
+  markers) and the file bar (`FileSwitcher.showPresence`: a dot with initials per user on the
+  files they are in).
+- **Why not Tiptap's Collaboration / CollaborationCaret** (decision): they are built on
+  y-prosemirror, which makes the ProseMirror document the shared truth (a Y.XmlFragment). Here
+  the Typst text is the truth (one Y.Text per file) and the Visual view is a projection of it;
+  syncing ProseMirror trees would bypass the projection (raw boxes, pristine source, Source
+  view and preview all follow the text). So the sync stays text-based and only the *look* of the
+  carets follows Tiptap / y-codemirror.
 - **Widget (`CollaborationLink`)**: `import()`s `src/collab` on demand (own chunk, ~37 kB gzip
   with Yjs and the Hocuspocus provider), publishes the selection on `selectionchange` while focus
   is in the editing area, and moves the cursors along when another file is shown.
@@ -847,4 +881,6 @@ an in-memory `FakeGitLab` holding `demo/examples/advanced`). Checklist with step
 - **Collaboration:** images and other non-`.typ` files are not shared (outside GitLab rooms). `{ doc }` mode needs the
   widget and the host on the same Yjs instance (`dist/lib` bundles its own Yjs). In `{ doc }`
   mode the host must pass a synced Y.Doc; with `{ url }` an unreachable server leaves the widget
-  local. Remote cursors at an empty line are not drawn.
+  local. Presence in the preview and the file bar is re-resolved on presence changes only (not on
+every edit of a file not shown). In the Visual view a caret inside hidden markup (delimiters,
+markers, blank lines) is drawn at the next visible spot.

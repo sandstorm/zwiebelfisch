@@ -46,14 +46,20 @@ function mapLayers(layers: Layers, tr: Transaction): Layers {
 }
 
 function toDecorations(doc: Node, highlights: readonly Highlight[]): DecorationSet {
-  const decorations = highlights.flatMap(({ from, to, className, attributes }) => {
-    const start = sourceToPos(doc, from);
-    const end = Math.max(start, sourceToPos(doc, to, -1));
-    if (start >= end) return [];
-    const attrs = { class: className, ...attributes };
-    return [Decoration.inline(start, end, attrs), ...blockAtoms(doc, start, end).map((pos) => Decoration.node(pos, pos + doc.nodeAt(pos)!.nodeSize, attrs))];
-  });
-  return DecorationSet.create(doc, decorations);
+  return DecorationSet.create(doc, highlights.flatMap((highlight) => rangeDecorations(doc, highlight)));
+}
+
+/**
+ * The decorations drawing source range `from..to` with `className` and
+ * `attributes`: inline over the text, plus the block atoms (raw code boxes)
+ * in range, which inline decorations skip.
+ */
+export function rangeDecorations(doc: Node, { from, to, className, attributes }: Highlight): Decoration[] {
+  const start = sourceToPos(doc, from);
+  const end = Math.max(start, sourceToPos(doc, to, -1));
+  if (start >= end) return [];
+  const attrs = { class: className, ...attributes };
+  return [Decoration.inline(start, end, attrs), ...blockAtoms(doc, start, end).map((pos) => Decoration.node(pos, pos + doc.nodeAt(pos)!.nodeSize, attrs))];
 }
 
 /** Positions of block atoms (raw code boxes) overlapping `from..to`: inline decorations skip them. */

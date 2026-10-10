@@ -1,9 +1,6 @@
 import type { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
-import type { Highlight } from '../document/highlight';
-
-/** The highlight layer remote cursors are drawn in. */
-export const CURSOR_LAYER = 'remote-cursors';
+import type { PlacedPresence, Presence, PresenceTarget } from '../document/presence';
 
 /** Who is editing here, as others see it. */
 export interface CollaborationUser {
@@ -12,15 +9,12 @@ export interface CollaborationUser {
   color?: string;
 }
 
-/** A view that draws highlights (SourceView, VisualView). */
-export interface HighlightTarget {
-  setHighlights(layer: string, highlights: readonly Highlight[]): void;
-}
-
 export interface RemoteCursorsOptions {
   user: CollaborationUser;
   /** The shared text of `path` (where cursors are anchored). */
   text(path: string): Y.Text | undefined;
+  /** Called with every other user's place, in any file, whenever one changes (e.g. for the preview and the file bar). */
+  onPresence?(presences: readonly PlacedPresence[]): void;
 }
 
 /** What a client publishes in its awareness state (field `cursor`; `user` follows the y-codemirror convention). */
@@ -34,18 +28,21 @@ const PALETTE = ['#d33682', '#2aa198', '#6c71c4', '#cb4b16', '#268bd2', '#859900
 
 /**
  * Presence: publishes the local user's selection through y-protocols
- * awareness, and draws the other users' selections and carets as highlights
- * in the views of the file shown here. Positions travel as Y relative
- * positions, so they stay on their characters while anyone edits; they are
- * resolved again after every change of the shown text and every presence
- * update (once per microtask, after the views have taken the change).
+ * awareness, and shows the other users' places: in the views of the file
+ * shown here (`show`), and everywhere through `onPresence`. Positions travel
+ * as Y relative positions, so they stay on their characters while anyone
+ * edits; they are resolved again after every change of the shown text and
+ * every presence update (once per microtask, after the views have taken the
+ * change).
  */
 export class RemoteCursors {
   private path: string | null = null;
-  private views: readonly HighlightTarget[] = [];
+  private views: readonly PresenceTarget[] = [];
   private observed: Y.Text | undefined;
   private scheduled = false;
   private destroyed = false;
+  /** What `onPresence` was last told (as JSON), so unchanged places are not reported again. */
+  private reported = '[]';
 
   constructor(
     private readonly awareness: Awareness,
@@ -68,9 +65,9 @@ export class RemoteCursors {
     this.awareness.setLocalStateField('cursor', cursor);
   }
 
-  /** Draws the cursors of `path` into `views` from now on, and clears the views drawn into before. */
-  show(path: string | null, views: readonly HighlightTarget[]): void {
-    for (const view of this.views) if (!views.includes(view)) view.setHighlights(CURSOR_LAYER, []);
+  /** Shows the others in `path` in `views` from now on, and clears the views shown in before. */
+  show(path: string | null, views: readonly PresenceTarget[]): void {
+    for (const view of this.views) if (!views.includes(view)) view.setPresence([]);
     this.path = path;
     this.views = views;
     this.render();
@@ -81,7 +78,8 @@ export class RemoteCursors {
     this.awareness.off('change', this.schedule);
     this.observed?.unobserve(this.schedule);
     this.awareness.setLocalStateField('cursor', null);
-    for (const view of this.views) view.setHighlights(CURSOR_LAYER, []);
+    for (const view of this.views) view.setPresence([]);
+    if (this.reported !== '[]') this.options.onPresence?.([]);
   }
 
   private readonly schedule = (): void => {
@@ -100,58 +98,43 @@ export class RemoteCursors {
       text?.observe(this.schedule);
       this.observed = text;
     }
-    const highlights = text ? this.highlights(text) : [];
-    for (const view of this.views) view.setHighlights(CURSOR_LAYER, highlights);
+    const everyone = this.others();
+    const here = everyone.filter((presence) => presence.path === this.path);
+    for (const view of this.views) view.setPresence(here);
+    const json = JSON.stringify(everyone);
+    if (json === this.reported) return;
+    this.reported = json;
+    this.options.onPresence?.(everyone);
   }
 
-  private highlights(text: Y.Text): Highlight[] {
-    const content = text.toString();
-    const result: Highlight[] = [];
+  /** The other users' places, in every file they are in. */
+  private others(): PlacedPresence[] {
+    const result: PlacedPresence[] = [];
     this.awareness.getStates().forEach((state, client) => {
-      if (client !== this.awareness.clientID) result.push(...this.highlightsOf(state, text, content));
+      const presence = client === this.awareness.clientID ? null : this.placeOf(String(client), state);
+      if (presence) result.push(presence);
     });
     return result;
   }
 
-  /** One user's selection (if not empty) and caret, if they are in the shown file. */
-  private highlightsOf(state: Record<string, unknown>, text: Y.Text, content: string): Highlight[] {
+  /** One user's place, if they are in a shared file. */
+  private placeOf(id: string, state: Record<string, unknown>): PlacedPresence | null {
     const cursor = state.cursor as CursorState | null | undefined;
-    if (cursor?.path !== this.path) return [];
+    const text = cursor ? this.options.text(cursor.path) : undefined;
+    if (!cursor || !text) return null;
     const anchor = this.resolve(cursor.anchor, text);
     const head = this.resolve(cursor.head, text);
-    if (anchor === null || head === null) return [];
-    const attributes = userAttributes(state.user as CollaborationUser | undefined);
-    const result: Highlight[] = [];
-    if (anchor !== head) result.push({ from: Math.min(anchor, head), to: Math.max(anchor, head), className: 'typst-remote-selection', attributes });
-    const caret = caretAt(content, head);
-    if (caret) result.push({ ...caret, attributes });
-    return result;
+    if (anchor === null || head === null) return null;
+    const user = state.user as CollaborationUser | undefined;
+    const name = user?.name ?? '';
+    const presence: Presence = { id, user: { name, color: user?.color ?? colorFor(name) }, anchor, head };
+    return { ...presence, path: cursor.path };
   }
 
   private resolve(json: unknown, text: Y.Text): number | null {
     const absolute = Y.createAbsolutePositionFromRelativePosition(Y.createRelativePositionFromJSON(json), text.doc!);
     return absolute?.type === text ? absolute.index : null;
   }
-}
-
-/**
- * The caret at `offset` as a highlight of one character (views draw marks,
- * not empty ranges): the character after it, drawn with a left border, or at
- * a line or text end the one before it, with a right border.
- */
-function caretAt(text: string, offset: number): Highlight | null {
-  if (offset < text.length && text[offset] !== '\n') {
-    return { from: offset, to: offset + 1, className: 'typst-remote-cursor' };
-  }
-  if (offset > 0 && text[offset - 1] !== '\n') {
-    return { from: offset - 1, to: offset, className: 'typst-remote-cursor typst-remote-cursor--end' };
-  }
-  return null;
-}
-
-/** Who a highlight belongs to: the name (for the caret label) and the color, on the marked DOM. */
-function userAttributes(user: CollaborationUser | undefined): Record<string, string> {
-  return { 'data-user': user?.name ?? '', style: `--typst-remote-color: ${user?.color ?? PALETTE[0]}` };
 }
 
 /** A stable color for a user without one. */

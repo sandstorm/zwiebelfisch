@@ -1,5 +1,5 @@
 import type { Collaboration, CollaborationOptions, RoomVersions, Shared } from '../collab/collaboration';
-import type { HighlightTarget } from '../collab/remote-cursors';
+import type { PlacedPresence, PresenceTarget } from '../document/presence';
 
 /** The editing view the local user works in, and what it has selected. */
 export interface CurrentSelection {
@@ -13,17 +13,20 @@ export interface LinkedWidget {
   current(): CurrentSelection | null;
   /** Called once connected, in a room backed by a GitLab branch ("Save version", the files' base). */
   onVersions?(versions: RoomVersions): void;
+  /** The other users' places changed (every file; e.g. for the preview and the file bar). */
+  onPresence?(presences: readonly PlacedPresence[]): void;
 }
 
 /**
  * The widget's side of collaboration. Loads the collaboration code (Yjs,
  * Hocuspocus) on demand, so widgets without collaboration never download it;
- * publishes the local selection whenever it changes inside `area`; draws the
- * others' cursors into the views of the file shown.
+ * publishes the local selection whenever it changes inside `area`; shows the
+ * others' carets and selections in the views of the file shown, and tells
+ * the widget where everyone is.
  */
 export class CollaborationLink {
   private collaboration: Collaboration | null = null;
-  private shown: { path: string | null; views: readonly HighlightTarget[] } = { path: null, views: [] };
+  private shown: { path: string | null; views: readonly PresenceTarget[] } = { path: null, views: [] };
   private destroyed = false;
   private scheduled = false;
 
@@ -37,7 +40,7 @@ export class CollaborationLink {
   }
 
   /** The file shown in the editing area changed: draw the cursors there (`views` of a Typst file, or none). */
-  show(path: string | null, views: readonly HighlightTarget[]): void {
+  show(path: string | null, views: readonly PresenceTarget[]): void {
     this.shown = { path, views };
     this.collaboration?.showCursors(path, views);
   }
@@ -61,6 +64,7 @@ export class CollaborationLink {
       return;
     }
     this.collaboration = collaboration;
+    collaboration.onPresence((presences) => this.widget.onPresence?.(presences));
     collaboration.showCursors(this.shown.path, this.shown.views);
     if (collaboration.versions) this.widget.onVersions?.(collaboration.versions);
     this.area.ownerDocument.addEventListener('selectionchange', this.schedule);

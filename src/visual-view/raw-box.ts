@@ -5,10 +5,12 @@ import { EditorView as CodeView, keymap, type KeyBinding } from '@codemirror/vie
 import { Extension, type Editor, type NodeViewRenderer } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, Selection } from '@tiptap/pm/state';
-import type { EditorView, NodeView } from '@tiptap/pm/view';
+import type { Decoration, EditorView, NodeView } from '@tiptap/pm/view';
 import { minimalChange } from '../document/minimal-change';
+import { remotePresence, showPresence } from '../source-view/presence';
 import { typstLanguage } from '../source-view/typst-language';
 import { ImageTools } from './image-tools';
+import { boxCarets } from './presence';
 import { posToSource } from './projection';
 import { RenderedBox, type BoxRenderer } from './rendered-box';
 
@@ -75,7 +77,7 @@ class RawBox implements NodeView {
   /** Set while mirroring `src` into the box, so that change is not sent back. */
   private mirroring = false;
 
-  constructor(private node: Node, private readonly editor: Editor, private readonly getPos: () => number | undefined) {
+  constructor(private node: Node, private readonly editor: Editor, private readonly getPos: () => number | undefined, decorations: readonly Decoration[]) {
     const inline = node.isInline;
     this.dom = editor.view.dom.ownerDocument.createElement(inline ? 'span' : 'div');
     this.dom.className = inline ? 'typst-visual__raw-inline' : 'typst-visual__raw-block';
@@ -96,10 +98,12 @@ class RawBox implements NodeView {
         syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
         inline ? inlineTheme : [blockTheme, CodeView.lineWrapping],
         CodeView.contentAttributes.of({ 'aria-label': 'Typst code' }),
+        remotePresence,
       ],
       dispatchTransactions: (trs, view) => this.forward(trs, view),
     });
     boxes.set(this.dom, this);
+    this.showCarets(decorations);
     const renderer = renderers.get(editor);
     if (renderer) {
       const host = { dom: this.dom, code: wrapper, source: () => this.source(), activate: () => (isImage ? this.select() : this.focus(-1)) };
@@ -118,7 +122,7 @@ class RawBox implements NodeView {
     this.code.dispatch({ selection: { anchor: side > 0 ? 0 : this.code.state.doc.length } });
   }
 
-  update(node: Node): boolean {
+  update(node: Node, decorations: readonly Decoration[]): boolean {
     if (node.type !== this.node.type) return false;
     this.node = node;
     const change = minimalChange(this.code.state.doc.toString(), node.attrs.src);
@@ -128,6 +132,7 @@ class RawBox implements NodeView {
       this.mirroring = false;
     }
     this.updateLabel();
+    this.showCarets(decorations);
     this.image?.update(node);
     this.rendered?.update(node);
     return true;
@@ -154,6 +159,12 @@ class RawBox implements NodeView {
     this.image?.destroy();
     this.rendered?.destroy();
     this.code.destroy();
+  }
+
+  /** Draws the other users' carets in this box (see the Visual view's presence) into its code. */
+  private showCarets(decorations: readonly Decoration[]): void {
+    const carets = boxCarets(decorations).map(({ id, user, offset }) => ({ id, user, anchor: offset, head: offset }));
+    showPresence(this.code, carets);
   }
 
   /** The node and where its source starts, while the box is in the document. */
@@ -234,7 +245,7 @@ class RawBox implements NodeView {
   }
 }
 
-export const rawBoxView: NodeViewRenderer = ({ node, editor, getPos }) => new RawBox(node, editor, getPos);
+export const rawBoxView: NodeViewRenderer = ({ node, editor, getPos, decorations }) => new RawBox(node, editor, getPos, decorations);
 
 /** The raw box at `pos` in the outer editor, if one is shown there. */
 function boxAt(view: EditorView, pos: number): RawBox | undefined {

@@ -64,3 +64,4 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [visual-block-nodes](visual-block-nodes.md) | done (branch task/visual-block-nodes) |
 | [demo-playground](demo-playground.md) | done (branch task/demo-playground) |
 | [comments-gutter](comments-gutter.md) | done (branch task/comments-gutter) |
+| [collab-markers](collab-markers.md) | done (branch task/collab-markers) |

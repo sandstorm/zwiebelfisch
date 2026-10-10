@@ -228,7 +228,7 @@ class Widget {
     );
   }
 
-  /** Shares the project; the others' cursors show in the shown file's views. */
+  /** Shares the project; the others' carets show in the shown file's views, the preview and the file bar. */
   private mountCollaboration(options: CollaborationOptions): CollaborationLink {
     const shared = { project: this.project, user: this.options.user };
     const current = () => {
@@ -237,7 +237,15 @@ class Widget {
       const views = this.views.viewsOf(document);
       return { path: this.active, view: this.views.mode === 'visual' ? views.visual : views.source };
     };
-    return new CollaborationLink(options, shared, this.left, { current, onVersions: (versions) => this.mountVersions(versions) });
+    return new CollaborationLink(options, shared, this.left, {
+      current,
+      onVersions: (versions) => this.mountVersions(versions),
+      // Where the others are, in every file: markers in the preview, dots in the file bar.
+      onPresence: (presences) => {
+        this.preview.showPresence(presences);
+        this.switcher.showPresence(presences);
+      },
+    });
   }
 
   /** "Save version" next to the tabs, in a room backed by a GitLab branch; "Show changes" follows its last commit. */

@@ -2,6 +2,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
+import { connect, connectAwareness } from '../collab/in-process';
+import type { PlacedPresence } from '../document/presence';
 import { CollaborationLink } from './collaboration-link';
 import { Project } from './project';
 
@@ -9,7 +11,7 @@ const MAIN = '/main.typ';
 const cleanup: (() => void)[] = [];
 afterEach(() => cleanup.splice(0).forEach((fn) => fn()));
 
-function setup() {
+function setup(onPresence?: (presences: readonly PlacedPresence[]) => void) {
   const ydoc = new Y.Doc();
   const awareness = new Awareness(ydoc);
   const project = new Project(MAIN, { [MAIN]: 'Hello world' });
@@ -18,7 +20,7 @@ function setup() {
   area.append(input);
   document.body.append(area);
   const view = { selection: () => ({ from: 6, to: 11 }) };
-  const link = new CollaborationLink({ doc: ydoc, awareness }, { project, user: { name: 'Ann' } }, area, { current: () => ({ path: MAIN, view }) });
+  const link = new CollaborationLink({ doc: ydoc, awareness }, { project, user: { name: 'Ann' } }, area, { current: () => ({ path: MAIN, view }), onPresence });
   cleanup.push(() => link.destroy(), () => awareness.destroy(), () => area.remove());
   return { ydoc, awareness, link, input, project };
 }
@@ -40,6 +42,23 @@ describe('CollaborationLink', () => {
     input.focus();
     document.dispatchEvent(new Event('selectionchange'));
     await vi.waitFor(() => expect(cursor(awareness)).toMatchObject({ path: MAIN }));
+  });
+
+  it("tells the widget where the other users are", async () => {
+    const onPresence = vi.fn();
+    const { ydoc, awareness } = setup(onPresence);
+    await vi.waitFor(() => expect(ydoc.getMap('files').size).toBe(1));
+    const other = new Y.Doc();
+    const otherAwareness = new Awareness(other);
+    cleanup.push(connect(ydoc, other), () => otherAwareness.destroy());
+    connectAwareness(awareness, otherAwareness);
+    otherAwareness.setLocalStateField('user', { name: 'Bob', color: '#000080' });
+    const text = other.getMap<Y.Text>('files').get(MAIN)!;
+    const position = Y.relativePositionToJSON(Y.createRelativePositionFromTypeIndex(text, 6));
+    otherAwareness.setLocalStateField('cursor', { path: MAIN, anchor: position, head: position });
+    await vi.waitFor(() =>
+      expect(onPresence).toHaveBeenLastCalledWith([expect.objectContaining({ path: MAIN, head: 6, user: { name: 'Bob', color: '#000080' } })]),
+    );
   });
 
   it('stops sharing when destroyed before loading finished', async () => {

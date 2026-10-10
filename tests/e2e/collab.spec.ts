@@ -53,6 +53,33 @@ test('the other user’s selection is shown with their name', async ({ browser, 
   await expect(selection.first()).toHaveAttribute('data-user', 'Ann');
 });
 
+test('the other user’s caret shows with their name in both views and in the preview', async ({ browser, baseURL }, info) => {
+  const { ann, bob } = await users(browser, baseURL!, info.project.name);
+  await ann.getByTestId('typst-visual').locator('h1').click();
+  await ann.keyboard.press('End');
+  const visualCaret = bob.getByTestId('typst-visual').locator('h1 .typst-remote-caret[data-user="Ann"]');
+  await expect(visualCaret).toHaveCount(1);
+  await expect(visualCaret.locator('.typst-remote-caret__flag')).toBeVisible();
+  await expect(visualCaret.locator('.typst-remote-caret__flag')).toHaveText('Ann');
+  const marker = bob.getByTestId('typst-preview').locator('.typst-preview__presence[data-user="Ann"]');
+  await expect(marker).toHaveText('A');
+  await bob.getByRole('tab', { name: 'Source' }).click();
+  const line = bob.getByTestId('typst-source').locator('.cm-line', { hasText: 'Hello Typst' });
+  const sourceCaret = line.locator('.typst-remote-caret[data-user="Ann"]');
+  await expect(sourceCaret).toHaveCount(1);
+  await sourceCaret.hover({ force: true });
+  await expect(sourceCaret.locator('.typst-remote-caret__flag')).toHaveCSS('opacity', '1');
+});
+
+test('a caret on an empty line shows in the other user’s Source view', async ({ browser, baseURL }, info) => {
+  const { ann, bob } = await users(browser, baseURL!, info.project.name);
+  await ann.getByRole('tab', { name: 'Source' }).click();
+  await ann.getByTestId('typst-source').locator('.cm-line', { hasText: /^$/ }).first().click();
+  await bob.getByRole('tab', { name: 'Source' }).click();
+  const caret = bob.getByTestId('typst-source').locator('.typst-remote-caret[data-user="Ann"]');
+  await expect(bob.getByTestId('typst-source').locator('.cm-line', { has: caret })).toHaveText('Ann');
+});
+
 test('a margin note reaches the other user', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
   await ann.getByTestId('typst-visual').locator('strong', { hasText: 'bold' }).dblclick();
