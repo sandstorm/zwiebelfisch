@@ -217,13 +217,19 @@ function blockCall(ctx: Context, segment: Segment, sep: string | null): Node | n
   const [hash, call, ...rest] = segment.nodes;
   if (hash.name !== 'Hash' || call?.name !== 'FuncCall' || call.from !== hash.to) return null;
   const { name, args } = callee(ctx, call);
-  if (name === 'figure' && isLabelAfter(rest)) return figure(ctx, segment, args, sep);
-  if (rest.length > 0) return null;
-  const src = ctx.source.slice(segment.from, segment.to);
-  if (name === 'image') return parenthesized(args) && imagePath(src) !== null ? ctx.schema.nodes.image.create({ src, sep }) : null;
-  if (name === 'table') return table(ctx, segment, args, sep);
-  return null;
+  const ends = name === 'figure' ? isLabelAfter(rest) : rest.length === 0;
+  return name in BLOCK_CALLS && ends ? BLOCK_CALLS[name](ctx, segment, args, sep) : null;
 }
+
+/** Projects a block call of the named function, given its arguments; null where it cannot be modelled. */
+const BLOCK_CALLS: Record<string, (ctx: Context, segment: Segment, args: SyntaxNode[], sep: string | null) => Node | null> = {
+  image: (ctx, segment, args, sep) => {
+    const src = ctx.source.slice(segment.from, segment.to);
+    return parenthesized(args) && imagePath(src) !== null ? ctx.schema.nodes.image.create({ src, sep }) : null;
+  },
+  table: (ctx, segment, args, sep) => table(ctx, segment, args, sep),
+  figure: (ctx, segment, args, sep) => figure(ctx, segment, args, sep),
+};
 
 /** Nothing, or one label after optional spaces. */
 function isLabelAfter(nodes: SyntaxNode[]): boolean {
@@ -267,21 +273,36 @@ function figure(ctx: Context, segment: Segment, args: SyntaxNode[], sep: string 
 }
 
 /** The image call and the caption argument of a figure, if it is an image with an optional one-paragraph caption. */
-function figureArgs(ctx: Context, args: SyntaxNode[]): { image: SyntaxNode; caption: { arg: SyntaxNode; content: SyntaxNode } | null } | null {
+function figureArgs(ctx: Context, args: SyntaxNode[]): { image: SyntaxNode; caption: CaptionArg | null } | null {
   if (!parenthesized(args)) return null;
   const [image, ...others] = args.slice(1, -1).filter((a) => a.name !== 'Space' && a.name !== 'Comma');
-  if (image?.name !== 'FuncCall' || callee(ctx, image).name !== 'image' || imagePath(ctx.source.slice(image.from, image.to)) === null) return null;
-  if (!parenthesized(callee(ctx, image).args)) return null;
-  let caption: { arg: SyntaxNode; content: SyntaxNode } | null = null;
-  for (const arg of others) {
-    const name = arg.name === 'Named' ? arg.getChild('Ident') : null;
-    if (!name) return null;
-    if (ctx.source.slice(name.from, name.to) !== 'caption') continue;
-    const content = arg.lastChild!;
-    if (caption || !isClosedContent(content) || !isOneParagraph(content.getChild('Markup')!)) return null;
-    caption = { arg, content };
-  }
-  return { image, caption };
+  if (!isImageCall(ctx, image)) return null;
+  const caption = captionArg(ctx, others);
+  return caption === undefined ? null : { image, caption };
+}
+
+/** `image("literal path", ..)` as code (a figure's body). */
+function isImageCall(ctx: Context, node: SyntaxNode | undefined): node is SyntaxNode {
+  if (node?.name !== 'FuncCall') return false;
+  const { name, args } = callee(ctx, node);
+  return name === 'image' && parenthesized(args) && imagePath(ctx.source.slice(node.from, node.to)) !== null;
+}
+
+/** A figure's `caption: [..]` argument and its content block. */
+interface CaptionArg {
+  arg: SyntaxNode;
+  content: SyntaxNode;
+}
+
+/** Among named arguments, the caption: null if there is none, undefined if the arguments cannot be modelled. */
+function captionArg(ctx: Context, args: SyntaxNode[]): CaptionArg | null | undefined {
+  const names = args.map((a) => (a.name === 'Named' ? a.getChild('Ident') : null));
+  if (names.some((n) => n === null)) return undefined;
+  const captions = args.filter((_, i) => ctx.source.slice(names[i]!.from, names[i]!.to) === 'caption');
+  if (captions.length === 0) return null;
+  const [arg] = captions;
+  const content = arg.lastChild!;
+  return captions.length === 1 && isClosedContent(content) && isOneParagraph(content.getChild('Markup')!) ? { arg, content } : undefined;
 }
 
 function isOneParagraph(markup: SyntaxNode): boolean {
@@ -704,6 +725,8 @@ function printBlock(out: Printer, node: Node, parent: Node, pos: number): void {
   const pristineLayout = pristine.get(node);
   if (pristineLayout) return printLayout(out, node, pristineLayout, pos + 1);
   if (pristine.has(node)) return printPristineItem(out, node, pos);
+  const structured = STRUCTURED_BLOCKS[node.type.name];
+  if (structured) return structured(out, node, pos);
   switch (node.type.name) {
     case 'heading':
       out.hidden(`${'='.repeat(node.attrs.level)} `);
@@ -716,14 +739,16 @@ function printBlock(out: Printer, node: Node, parent: Node, pos: number): void {
     case 'rawBlock':
     case 'image':
       return out.shown(node.attrs.src, 'atom', pos, pos + 1);
-    case 'table':
-      return printTable(out, node, pos);
-    case 'figure':
-      return printFigure(out, node, pos);
     default:
       return printTextblock(out, node, pos);
   }
 }
+
+/** Blocks printed from their source layout around their children. */
+const STRUCTURED_BLOCKS: Record<string, (out: Printer, node: Node, pos: number) => void> = {
+  table: (out, node, pos) => printTable(out, node, pos),
+  figure: (out, node, pos) => printFigure(out, node, pos),
+};
 
 /** A pristine textblock: its `src`, with the content positions its layout assigns. */
 function printLayout(out: Printer, block: Node, { runs, tail }: InlineLayout, start: number): void {

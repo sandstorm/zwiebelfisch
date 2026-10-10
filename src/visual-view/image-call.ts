@@ -16,33 +16,45 @@ interface NamedArg {
   previousEnd: number;
 }
 
+/** The argument list of the call in `source` (markup form), if it is exactly one closed `#image(..)` call. */
+function imageCallArgs(source: string): SyntaxNode | null {
+  if (!/^#image\(/.test(source)) return null;
+  const func = typstParser.parse(source).topNode.getChild('FuncCall');
+  const args = func?.getChild('Args');
+  return args?.lastChild?.name === 'RightParen' && func!.to === source.length ? args : null;
+}
+
+/** The arguments in an argument list, without spaces and commas. */
+function argNodes(args: SyntaxNode): SyntaxNode[] {
+  const result: SyntaxNode[] = [];
+  for (let arg = args.firstChild!.nextSibling; arg && arg.to < args.to; arg = arg.nextSibling) {
+    if (arg.name !== 'Space' && arg.name !== 'Comma') result.push(arg);
+  }
+  return result;
+}
+
+/** The name of a named argument that has a value; null for any other argument. */
+function argName(source: string, arg: SyntaxNode): string | null {
+  const name = arg.name === 'Named' ? arg.getChild('Ident') : null;
+  return name && arg.lastChild!.from > name.to ? source.slice(name.from, name.to) : null;
+}
+
 /** The parsed argument list of `call`; null if it is not one closed `image(..)` call. */
 function parseArgs(call: string): { named: Map<string, NamedArg>; lastEnd: number } | null {
+  // Parsed in markup form; positions are reported in `call`'s own.
   const offset = call.startsWith('#') ? 0 : 1;
   const source = offset ? `#${call}` : call;
-  const top = typstParser.parse(source).topNode;
-  const func = top.getChild('FuncCall');
-  const ident = func?.getChild('Ident');
-  const args = func?.getChild('Args');
-  if (!func || !ident || !args || func.to !== source.length || source.slice(ident.from, ident.to) !== 'image') return null;
-  if (args.firstChild?.name !== 'LeftParen' || args.lastChild?.name !== 'RightParen') return null;
+  const args = imageCallArgs(source);
+  if (!args) return null;
+  const shift = (node: SyntaxNode) => ({ from: node.from - offset, to: node.to - offset });
   const named = new Map<string, NamedArg>();
-  let lastEnd = args.firstChild.to;
-  for (let arg: SyntaxNode | null = args.firstChild.nextSibling; arg && arg.to < args.to; arg = arg.nextSibling) {
-    if (arg.name === 'Space' || arg.name === 'Comma') continue;
-    const name = arg.name === 'Named' ? arg.getChild('Ident') : null;
-    const value = name ? arg.lastChild : null;
-    if (name && value && value.from > name.to) {
-      named.set(source.slice(name.from, name.to), {
-        value: { from: value.from - offset, to: value.to - offset },
-        from: arg.from - offset,
-        to: arg.to - offset,
-        previousEnd: lastEnd - offset,
-      });
-    }
-    lastEnd = arg.to;
+  let lastEnd = args.firstChild!.to - offset;
+  for (const arg of argNodes(args)) {
+    const name = argName(source, arg);
+    if (name !== null) named.set(name, { value: shift(arg.lastChild!), ...shift(arg), previousEnd: lastEnd });
+    lastEnd = arg.to - offset;
   }
-  return { named, lastEnd: lastEnd - offset };
+  return { named, lastEnd };
 }
 
 /** The source of argument `name` of the image call `call`, or null if it has none. */
