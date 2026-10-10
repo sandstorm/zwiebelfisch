@@ -39,7 +39,7 @@ import { noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../document/marg
 const pristine = new WeakMap<Node, InlineLayout | null>();
 
 export function project(source: string, schema: Schema): Node {
-  const ctx: Context = { schema, source };
+  const ctx: Context = { schema, source, notes: 0 };
   const segments = segment(children(typstParser.parse(source).topNode));
   if (segments.length === 0) {
     return schema.nodes.doc.create({ lead: source, trail: '' }, [textblock(ctx, { type: 'paragraph', attrs: { src: '' } }, 0, [])]);
@@ -113,6 +113,8 @@ function gapSource(spans: Span[], index: number, pos: number): number {
 interface Context {
   schema: Schema;
   source: string;
+  /** Range notes projected so far in the current textblock: each one's `id`, so equal adjacent notes stay apart. */
+  notes: number;
 }
 
 type SegmentKind = 'heading' | 'bullet' | 'ordered' | 'run';
@@ -407,7 +409,7 @@ function marginNoteCall({ ctx, node, marks }: InlineContext): Node | Placed[] | 
   if (!syntax) return null;
   const { head, text, note } = syntax;
   if (!text) return ctx.schema.nodes.marginNote.create({ head, note }, null, marks);
-  const mark = ctx.schema.marks.noteRange.create({ head, note });
+  const mark = ctx.schema.marks.noteRange.create({ head, note, id: ctx.notes++ });
   return inline(ctx, children(text.getChild('Markup')!), mark.addToSet(marks));
 }
 
@@ -480,6 +482,7 @@ function textblock(
 ): Node {
   const node = ctx.schema.nodes[type].create(attrs, content.map((p) => p.node));
   pristine.set(node, layout(content, from, from + attrs.src.length));
+  ctx.notes = 0; // the next textblock numbers its range notes from 0 again
   return node;
 }
 

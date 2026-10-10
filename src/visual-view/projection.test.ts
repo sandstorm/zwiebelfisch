@@ -251,6 +251,24 @@ describe('margin notes', () => {
     expect(print(edit(doc, (s) => s.tr.insertText('!', after(s.doc, 'a'))))).toBe('#margin-note[a! #margin-note[b][inner] c][outer]\n');
   });
 
+  it('keeps adjacent range notes with the same call and note apart after an edit', () => {
+    const source = 'x #margin-note[a][n]#margin-note[b][n] y\n';
+    expect(print(edit(project(source), (s) => s.tr.insertText('Z', after(s.doc, 'x '))))).toBe('x Z#margin-note[a][n]#margin-note[b][n] y\n');
+    const empty = 'x #margin-note[a][]#margin-note[b][] y\n';
+    expect(print(edit(project(empty), (s) => s.tr.insertText('Z', after(s.doc, 'x '))))).toBe('x Z#margin-note[a][]#margin-note[b][] y\n');
+    const bold = '*#margin-note[a][n]*#margin-note[b][n]\n';
+    expect(print(edit(project(bold), (s) => s.tr.insertText('Z', s.doc.content.size - 1)))).toBe('#margin-note[#strong[a]][n]#margin-note[b][n]Z\n');
+  });
+
+  it('numbers range notes per textblock, so a source change elsewhere leaves their marks alone', () => {
+    const doc = project('One #margin-note[a][n].\n\nTwo #margin-note[b][n].\n');
+    const ids: unknown[] = [];
+    doc.descendants((node) => {
+      for (const mark of node.marks) if (mark.type.name === 'noteRange') ids.push(mark.attrs.id);
+    });
+    expect(ids).toEqual([0, 0]);
+  });
+
   it('syncs a note changed in the source', () => {
     const doc = project('Text#margin-note[old] and #margin-note[x][y].\n');
     const target = project('Text#margin-note[new] and #margin-note[x][z].\n');

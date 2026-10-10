@@ -43,7 +43,12 @@ export const NoteRange = Mark.create({
   inclusive: false,
   excludes: '',
   addAttributes() {
-    return { head: { default: NOTE_HEAD, rendered: false }, note: { default: '', rendered: false } };
+    return {
+      head: { default: NOTE_HEAD, rendered: false },
+      note: { default: '', rendered: false },
+      // tells apart notes in one textblock (numbered by the projection), so equal neighbours do not merge
+      id: { default: null, rendered: false },
+    };
   },
   renderHTML() {
     return ['mark', { class: 'typst-visual__note-range' }, 0];
