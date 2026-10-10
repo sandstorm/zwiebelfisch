@@ -10,6 +10,7 @@ test('renders the Typst document in the preview', async ({ page }) => {
 });
 
 test('updates the preview while typing in the source view', async ({ page }) => {
+  await page.getByRole('tab', { name: 'Source' }).click();
   const preview = page.getByTestId('typst-preview');
   await expect(preview.locator('.typst-preview__page')).toHaveCount(1);
   await page.getByTestId('typst-source').locator('.cm-content').click();
@@ -19,6 +20,7 @@ test('updates the preview while typing in the source view', async ({ page }) => 
 });
 
 test('clicking text in the preview selects its source', async ({ page }) => {
+  await page.getByRole('tab', { name: 'Source' }).click();
   const svg = page.getByTestId('typst-preview').locator('.typst-preview__page svg').first();
   await expect(svg).toBeVisible();
   // the first glyph on the page is the "H" of the heading "Hello Typst"

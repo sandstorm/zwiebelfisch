@@ -13,6 +13,7 @@
  */
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node } from 'prosemirror-model';
+import type { Transaction } from 'prosemirror-state';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { schema } from './schema';
 
@@ -334,4 +335,56 @@ function escapeMarkup(text: string, lineStart: boolean): string {
   const escaped = text.replace(INLINE_HAZARD, (c) => `\\${c}`);
   if (!lineStart) return escaped;
   return escaped.replace(LINE_START_MARKER, '\\$1').replace(ENUM_NUMBER, '$1\\.');
+}
+
+// ------------------------------------------------------------ synchronising
+
+/**
+ * The document position just inside the top-level block whose source
+ * contains `offset` (clamped to the first/last block).
+ */
+export function locate(doc: Node, offset: number): number {
+  let source = doc.attrs.lead.length;
+  let found = 1;
+  doc.forEach((child, pos, index) => {
+    if (source <= offset) found = pos + 1;
+    source += printBlock(child, doc).length + (index < doc.childCount - 1 ? (child.attrs.sep ?? '\n\n').length : 0);
+  });
+  return found;
+}
+
+/**
+ * Turns `tr.doc` into `target` (a fresh projection) by replacing only the
+ * top-level blocks that differ, so untouched blocks keep their identity —
+ * and with it their selection, decorations and pristine state.
+ */
+export function syncBlocks(tr: Transaction, target: Node): Transaction {
+  for (const attr of ['lead', 'trail']) {
+    if (tr.doc.attrs[attr] !== target.attrs[attr]) tr.setDocAttribute(attr, target.attrs[attr]);
+  }
+  const range = differingChildren(tr.doc, target);
+  if (!range) return tr;
+  const blocks: Node[] = [];
+  for (let i = range.start; i < range.endTarget; i++) blocks.push(target.child(i));
+  return tr.replaceWith(childOffset(tr.doc, range.start), childOffset(tr.doc, range.endCurrent), blocks);
+}
+
+/** The child index range that differs between two docs, after trimming equal children at both ends. */
+function differingChildren(current: Node, target: Node) {
+  const min = Math.min(current.childCount, target.childCount);
+  let start = 0;
+  while (start < min && current.child(start).eq(target.child(start))) start++;
+  let endCurrent = current.childCount;
+  let endTarget = target.childCount;
+  while (endCurrent > start && endTarget > start && current.child(endCurrent - 1).eq(target.child(endTarget - 1))) {
+    endCurrent--;
+    endTarget--;
+  }
+  return start === endCurrent && start === endTarget ? null : { start, endCurrent, endTarget };
+}
+
+function childOffset(parent: Node, index: number): number {
+  let offset = 0;
+  for (let i = 0; i < index; i++) offset += parent.child(i).nodeSize;
+  return offset;
 }

@@ -55,3 +55,50 @@
   to { opacity: 0; }
 }
 .typst-source__jump { background: var(--te-jump); border-radius: 2px; }
+.typst-editor__tabs {
+  display: flex;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--te-border);
+  background: #f7f8fa;
+}
+.typst-editor__tab {
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 12px;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.typst-editor__tab[aria-selected='true'] { background: white; border-color: var(--te-border); }
+.typst-editor__pane { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: auto; }
+.typst-editor__pane[hidden] { display: none; }
+.typst-visual {
+  flex: 1;
+  padding: 24px 32px;
+  outline: none;
+  font-family: 'Libertinus Serif', Georgia, serif;
+  font-size: 17px;
+  line-height: 1.5;
+}
+.typst-visual h1 { font-size: 1.6em; margin: 0.6em 0 0.3em; }
+.typst-visual h2 { font-size: 1.3em; margin: 0.6em 0 0.3em; }
+.typst-visual p { margin: 0 0 0.7em; }
+.typst-visual__raw-block {
+  margin: 0 0 0.7em;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #f1f3f6;
+  color: #57606a;
+  font: 13px/1.4 ui-monospace, monospace;
+  white-space: pre-wrap;
+}
+.typst-visual__raw-inline {
+  padding: 0 4px;
+  border-radius: 4px;
+  background: #f1f3f6;
+  color: #57606a;
+  font: 0.8em ui-monospace, monospace;
+}
+.typst-visual .ProseMirror-selectednode { outline: 2px solid var(--te-accent); }

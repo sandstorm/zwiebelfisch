@@ -1,13 +1,19 @@
 import { TypstDocument } from '../document/typst-document';
 import { Preview } from '../preview/preview';
 import { SourceView } from '../source-view/source-view';
+import { VisualView } from '../visual-view/visual-view';
+import proseMirrorStyles from 'prosemirror-view/style/prosemirror.css?inline';
 import styles from './styles.css?inline';
 
 const MAIN = '/main.typ';
 
+export type EditorMode = 'visual' | 'source';
+
 export interface TypstEditorOptions {
   /** Typst source of the main file. */
   source: string;
+  /** The editing view shown first (default: visual). */
+  mode?: EditorMode;
   /** Called whenever the source text changes. */
   onChange?(source: string): void;
 }
@@ -33,11 +39,16 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
   host.append(left, right);
 
   const preview = new Preview(right, {
-    onJump: (jump) => source.reveal(jump.from, jump.to),
+    onJump: (jump) => (mode === 'visual' ? visual : source).reveal(jump.from, jump.to),
   });
-  const source = new SourceView(left, document, {
+  const panes = createPanes(left);
+  const visual = new VisualView(panes.visual, document);
+  const source = new SourceView(panes.source, document, {
     onCursor: (offset) => void preview.reveal(MAIN, offset),
   });
+  let mode: EditorMode = options.mode ?? 'visual';
+  panes.onSwitch((next) => (mode = next));
+  panes.show(mode);
 
   const refresh = () => preview.update({ [MAIN]: document.text }, MAIN);
   const unsubscribe = document.onChange(() => {
@@ -53,6 +64,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
     destroy() {
       unsubscribe();
       source.destroy();
+      visual.destroy();
       preview.destroy();
       host.classList.remove('typst-editor');
       left.remove();
@@ -71,6 +83,43 @@ function injectStyles(doc: Document): void {
   if (doc.getElementById('typst-editor-styles')) return;
   const style = doc.createElement('style');
   style.id = 'typst-editor-styles';
-  style.textContent = styles;
+  style.textContent = proseMirrorStyles + styles;
   doc.head.append(style);
+}
+
+/** The Visual/Source tab bar and the two panes it switches between. */
+function createPanes(left: HTMLElement) {
+  const doc = left.ownerDocument;
+  const tabs = el(doc, 'typst-editor__tabs');
+  tabs.setAttribute('role', 'tablist');
+  const panes = { visual: el(doc, 'typst-editor__pane'), source: el(doc, 'typst-editor__pane') };
+  const buttons = (['visual', 'source'] as const).map((mode) => {
+    const button = doc.createElement('button');
+    button.className = 'typst-editor__tab';
+    button.setAttribute('role', 'tab');
+    button.textContent = mode === 'visual' ? 'Visual' : 'Source';
+    button.dataset.mode = mode;
+    tabs.append(button);
+    return button;
+  });
+  left.append(tabs, panes.visual, panes.source);
+  let listener: (mode: EditorMode) => void = () => {};
+  const show = (mode: EditorMode) => {
+    for (const button of buttons) button.setAttribute('aria-selected', String(button.dataset.mode === mode));
+    panes.visual.hidden = mode !== 'visual';
+    panes.source.hidden = mode !== 'source';
+    listener(mode);
+  };
+  tabs.addEventListener('click', (event) => {
+    const mode = (event.target as HTMLElement).closest<HTMLElement>('[data-mode]')?.dataset.mode;
+    if (mode === 'visual' || mode === 'source') show(mode);
+  });
+  return {
+    visual: panes.visual,
+    source: panes.source,
+    show,
+    onSwitch(fn: (mode: EditorMode) => void) {
+      listener = fn;
+    },
+  };
 }

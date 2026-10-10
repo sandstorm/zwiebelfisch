@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Node } from 'prosemirror-model';
 import { EditorState } from 'prosemirror-state';
-import { print, project } from './projection';
+import { locate, print, project, syncBlocks } from './projection';
 import { schema } from './schema';
 
 const FIXTURES: Record<string, string> = {
@@ -127,5 +127,33 @@ describe('projection', () => {
       });
       expect(print(doc)).toBe('- one\n- two\n- \n\nAfter\n');
     });
+  });
+});
+
+describe('locate', () => {
+  it('finds the top-level block containing a source offset', () => {
+    const source = '= Title\n\nFirst para.\n\n- a\n- b\n';
+    const doc = project(source);
+    const pos = locate(doc, source.indexOf('para'));
+    expect(doc.resolve(pos).parent.textContent).toBe('First para.');
+    expect(doc.resolve(locate(doc, source.indexOf('b\n'))).node(1).type.name).toBe('bullet_list');
+  });
+});
+
+describe('syncBlocks', () => {
+  it('replaces only the top-level blocks that differ', () => {
+    const before = project('= A\n\nOne\n\nTwo\n');
+    const after = project('= A\n\nOne changed\n\nTwo\n');
+    const state = EditorState.create({ doc: before });
+    const tr = syncBlocks(state.tr, after);
+    expect(tr.doc.eq(after)).toBe(true);
+    expect(tr.doc.child(0)).toBe(before.child(0));
+    expect(tr.doc.child(2)).toBe(before.child(2));
+    expect(print(tr.doc)).toBe('= A\n\nOne changed\n\nTwo\n');
+  });
+
+  it('updates leading and trailing whitespace', () => {
+    const tr = syncBlocks(EditorState.create({ doc: project('A\n') }).tr, project('\nA\n\n'));
+    expect(print(tr.doc)).toBe('\nA\n\n');
   });
 });
