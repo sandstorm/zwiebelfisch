@@ -1,6 +1,6 @@
 # Comments (review annotations)
 
-Status: done (branch task/comments)
+Status: done (branch task/comments); superseded by [comments-drafting](comments-drafting.md), which removed this sidecar system
 Depends on: projection-position-map; collab-yjs for the shared/realtime variant
 Touches: src/comments/** (new), src/visual-view/**, src/source-view/**, src/preview/** (margin markers), src/editor/**
 

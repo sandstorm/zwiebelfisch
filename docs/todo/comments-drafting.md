@@ -1,6 +1,6 @@
 # Comments as `drafting` margin notes in the Typst source
 
-Status: in-progress (part 1/2 done: engine fixture, Visual view notes, Comment action; old system removal pending)
+Status: done (branch task/comments-drafting)
 Depends on: comments (done), visual-view-compiled-boxes, multi-file-assets-packages
 Touches: src/comments/**, src/visual-view/** (new TipTap node), src/editor/**, src/collab/shared-comments.ts, ARCHITECTURE.md, docs/embedding.md
 
@@ -62,3 +62,24 @@ This reverses the "never in the Typst source" decision of the comments task. The
 
 ## Out of scope
 Mentions/notifications, permissions, migrating existing sidecar JSON (unless trivial).
+
+## Outcome
+- **Engine:** drafting 0.2.2 fixture (`src/engine/fixtures/drafting-0.2.2`); vitest compiles
+  point and range notes (with and without a page setup, `side: left`).
+- **Visual view:** `#margin-note(..)[note]` is a `marginNote` inline atom, `#margin-note(..)[text][note]`
+  editable text with a `noteRange` mark; both round-trip byte for byte (position-map checks
+  included). A bubble opens a field that edits the note in place (`VisualView.editNote`).
+- **Comment action** (`src/editor/comment-action.ts`, `add-margin-note.ts`): button and
+  Ctrl/Cmd+Alt+M in the shown `.typ` file and view; range note for a clean selection, else a
+  point note; the drafting import is added or extended exactly once. It is the only comment UI.
+- **Removed** (decision 2): `src/comments/` (Comments, anchors, CommentsPanel, CommentsUI),
+  `SharedComments` and the Y.Doc `comments` map, `Preview.setMarkers` / `PreviewMarkers` (nothing
+  else used them; `setHighlights` stays for remote cursors), the widget options
+  `comments` / `onCommentsChange`, the editor's `comments` accessor, the element's `.comments` /
+  `commentschange`, the `CommentsData` / `TypstEditorCommentsChangeDetail` exports, the panel
+  column and `--te-comment*` CSS, and `tests/e2e/comments.spec.ts`. Listed as a breaking change in
+  docs/embedding.md; ARCHITECTURE.md › "Comments = margin notes" has the module contract.
+- **Playwright:** `tests/e2e/margin-notes.spec.ts` and the margin-note case in `collab.spec.ts`
+  are written but have not run in a browser yet (sandbox).
+- **Not done:** Source-view decoration for notes (optional); migrating sidecar JSON (out of
+  scope). Known limits are in followups-2026-10-10.md › Editor.
