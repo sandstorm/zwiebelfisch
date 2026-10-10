@@ -5,6 +5,7 @@ import { addMarginNote } from './add-margin-note';
 
 export { addMarginNote } from './add-margin-note';
 export { NOTE_HEAD, noteCallSyntax, printNoteCall, rangeNoteSyntax, safeNote } from './margin-note-syntax';
+export { addReply, deleteMessage, editMessage, localDate, readThread, type NewMessage, type NoteMessage } from './note-thread';
 
 /** An editing view a note can be added in (source offsets throughout). */
 export interface NoteView {

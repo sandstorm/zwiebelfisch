@@ -3,7 +3,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createEngine, type Engine } from '../typst-engine';
 import { fetchPreviewPackage, withPackages } from './packages';
-import { addMarginNote } from '../../../features/comments/comments';
+import { addMarginNote, addReply } from '../../../features/comments/comments';
 import type { TextChange } from '../../typst-document/typst-document';
 
 const wasm = readFileSync(new URL('../wasm/typst_engine_bg.wasm', import.meta.url));
@@ -102,6 +102,26 @@ describe('the drafting package (margin notes)', () => {
     const { pages, diagnostics } = await project.compile('/main.typ');
     expect(diagnostics).toEqual([]);
     expect(pages).toHaveLength(1);
+  });
+
+  it('compiles comment threads (one list item per message) in both layouts', async () => {
+    const bare = await createEngine(wasm, fonts);
+    const project = withPackages(bare, async () => drafting);
+    const anna = { author: 'Anna', date: '2026-10-10', text: 'Is this *right*? #1 ]' };
+    const bob = { author: 'Bob', date: '2026-10-11', text: 'Yes.\nChecked.\n\n- with finance' };
+    const inline = addReply(addReply('', anna), bob);
+    const block = addReply(addReply('old\nnote', anna), { ...bob, text: 'one\ntwo' });
+    expect(block.startsWith('\n  - old\n')).toBe(true);
+    bare.setSource(
+      '/main.typ',
+      [
+        '#import "@preview/drafting:0.2.2": margin-note',
+        '#set page(margin: (x: 4cm))',
+        `Some #margin-note[text][${inline}] and #margin-note[${block}] and #margin-note[${addReply('', bob)}]`,
+      ].join('\n'),
+    );
+    const { diagnostics } = await project.compile('/main.typ');
+    expect(diagnostics).toEqual([]);
   });
 
   it('compiles a note in a document without page setup', async () => {

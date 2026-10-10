@@ -118,7 +118,7 @@ function balanceBrackets(markup: string): string {
 }
 
 /** Escapes every character that starts markup or code, so `text` reads back as itself. */
-function escapeText(text: string): string {
+export function escapeText(text: string): string {
   return text.replace(/[\\`$#*_<@[\]]|\/(?=[/*])/g, (c) => `\\${c}`);
 }
 
