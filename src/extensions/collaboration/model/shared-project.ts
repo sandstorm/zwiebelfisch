@@ -1,4 +1,5 @@
 // SharedProject: the Project's Typst files as Y.Texts in a Y.Doc. See model.ts.
+import type { Disposable } from '../../../core/disposable/disposable';
 import * as Y from 'yjs';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { type Project } from '../../../core/project/project';
@@ -27,7 +28,7 @@ interface Binding {
 export class SharedProject {
   private readonly files: Y.Map<Y.Text>;
   private readonly bindings = new Map<TypstDocument, Binding>();
-  private readonly unsubscribe: () => void;
+  private readonly subscription: Disposable;
 
   constructor(
     private readonly project: Project,
@@ -36,7 +37,7 @@ export class SharedProject {
     this.files = ydoc.getMap<Y.Text>(FILES_MAP);
     this.pull([...this.files.keys()].flatMap((key) => ProjectPath.parse(key) ?? []), []);
     this.files.observe(this.onRemote);
-    this.unsubscribe = project.onChange((change) => {
+    this.subscription = project.onDidChangeFile((change) => {
       if (change.kind !== 'update') this.sync();
     });
   }
@@ -68,7 +69,7 @@ export class SharedProject {
 
   /** Stops sharing; the documents keep their text. */
   destroy(): void {
-    this.unsubscribe();
+    this.subscription.dispose();
     this.files.unobserve(this.onRemote);
     for (const document of [...this.bindings.keys()]) this.unbind(document);
   }

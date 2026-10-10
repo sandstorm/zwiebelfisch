@@ -40,7 +40,7 @@ async function user(name: string, files: Record<string, string>, peer?: { ydoc: 
   const document = project.document(MAIN)!;
   const collaboration = await Collaboration.start({ doc: ydoc, awareness }, { project, user: { name } });
   const presences = new Presences((shown) => project.pathOf(shown));
-  collaboration.onPresence((all) => presences.set(all));
+  collaboration.onDidChangePresence((all) => presences.set(all));
   const visualParent = window.document.createElement('div');
   const sourceParent = window.document.createElement('div');
   window.document.body.append(visualParent, sourceParent);

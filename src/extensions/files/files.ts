@@ -127,7 +127,7 @@ export function fileNavigation(): TypstExtension {
       const navigation = new FileNavigation(workbench.ownerDocument, (path) => workbench.open(path));
       // recomputed on every open and every change: an #include may have been added, moved or removed
       const show = () => navigation.show(neighbours((path) => project.document(path)?.text, project.main, workbench.activeFile));
-      subscriptions.push(workbench.registerEditorFrame(navigation), workbench.onDidShowFile(show), new Disposable(project.onChange(show)));
+      subscriptions.push(workbench.registerEditorFrame(navigation), workbench.onDidShowFile(show), project.onDidChangeFile(show));
     },
   };
 }

@@ -1,6 +1,7 @@
 // TypstDocument: the single source of truth of one Typst file (a string, or a shared Y.Text), and what the views
 // share about it (Highlight). Entry of core/typst-document/. See ARCHITECTURE.md, "TypstDocument".
 import type * as Y from 'yjs';
+import { EventEmitter, type Event } from '../event-emitter/event-emitter';
 import { minimalChange } from './minimal-change';
 import type { TextChange } from './text-change';
 import { deltaToChanges, type DeltaOp } from './y-delta';
@@ -10,7 +11,11 @@ export type { Highlight } from './highlight';
 export type { TextChange } from './text-change';
 export { minimalChange } from './minimal-change';
 
-export type ChangeListener = (changes: readonly TextChange[], origin: unknown) => void;
+/** What `TypstDocument.onDidChange` tells: the changes (coordinates of the text before them) and who made them. */
+export interface TypstDocumentChangeEvent {
+  readonly contentChanges: readonly TextChange[];
+  readonly origin: unknown;
+}
 
 /** The origin of changes made by someone else (another collaborator, or a shared undo). */
 export const REMOTE_ORIGIN = 'remote';
@@ -28,7 +33,9 @@ export const REMOTE_ORIGIN = 'remote';
  */
 export class TypstDocument {
   private current: string;
-  private readonly listeners = new Set<ChangeListener>();
+  private readonly changed = new EventEmitter<TypstDocumentChangeEvent>();
+  /** Fires after every change, with its origin. */
+  readonly onDidChange: Event<TypstDocumentChangeEvent> = this.changed.event;
   private shared: Y.Text | null = null;
 
   constructor(text: string) {
@@ -94,12 +101,6 @@ export class TypstDocument {
     if (change) this.notify([change], REMOTE_ORIGIN);
   }
 
-  /** Subscribes to changes; returns the unsubscribe function. */
-  onChange(listener: ChangeListener): () => void {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
-  }
-
   private readonly follow = (event: Y.YTextEvent): void => {
     if (event.transaction.origin === this) return;
     const changes = deltaToChanges(event.delta as DeltaOp[]);
@@ -107,7 +108,7 @@ export class TypstDocument {
     if (changes.length > 0) this.notify(changes, REMOTE_ORIGIN);
   };
 
-  private notify(changes: readonly TextChange[], origin: unknown): void {
-    for (const listener of this.listeners) listener(changes, origin);
+  private notify(contentChanges: readonly TextChange[], origin: unknown): void {
+    this.changed.fire({ contentChanges, origin });
   }
 }

@@ -146,7 +146,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
   const builtins = builtinExtensions();
   workbench.activate(options.extensions?.(builtins) ?? builtins);
   // after the workbench's and the extensions' listeners: the host hears about a change once the widget shows it
-  const unsubscribe = project.onChange((change) => options.onFilesChange?.(change));
+  const subscription = project.onDidChangeFile((change) => options.onFilesChange?.(change));
   const document = project.document(main)!;
   return {
     get files() {
@@ -179,7 +179,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
     executeCommand: (id, ...args) => workbench.executeCommand(id, ...args),
     exportPdf: (pdf = {}) => workbench.executeCommand('pdfExport.export', pdf.options),
     destroy: () => {
-      unsubscribe();
+      subscription.dispose();
       workbench.destroy();
       project.destroy();
     },

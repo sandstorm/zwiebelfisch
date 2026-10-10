@@ -46,14 +46,13 @@ export class SourceView {
       ],
     });
     this.view.dom.dataset.testid = 'typst-source';
-    const unsubscribe = document.onChange((changes, origin) => {
-      if (origin === this) return;
-      // Undo is per user: collaborators' edits never enter this view's history (it maps over them).
-      const annotations = [fromDocument.of(true), ...(origin === REMOTE_ORIGIN ? [Transaction.addToHistory.of(false)] : [])];
-      this.view.dispatch({ changes: changes as ChangeSpec[], annotations });
-    });
     this.subscriptions = [
-      new Disposable(unsubscribe),
+      document.onDidChange(({ contentChanges, origin }) => {
+        if (origin === this) return;
+        // Undo is per user: collaborators' edits never enter this view's history (it maps over them).
+        const annotations = [fromDocument.of(true), ...(origin === REMOTE_ORIGIN ? [Transaction.addToHistory.of(false)] : [])];
+        this.view.dispatch({ changes: contentChanges as ChangeSpec[], annotations });
+      }),
       contributions.onDidChange(() => this.view.dispatch({ effects: this.contributed.reconfigure(contributions.extensionsFor(context)) })),
     ];
   }

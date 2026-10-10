@@ -108,7 +108,7 @@ export class WorkbenchHost implements Workbench {
   #hasFrame = false;
   readonly #shown = new EventEmitter<ProjectPath>();
   readonly #selectionChanged = new EventEmitter<TextEditorSelectionChangeEvent>();
-  readonly #unsubscribe: () => void;
+  readonly #subscription: Disposable;
 
   readonly onDidShowFile = this.#shown.event;
   readonly onDidChangeTextEditorSelection = this.#selectionChanged.event;
@@ -144,7 +144,7 @@ export class WorkbenchHost implements Workbench {
     this.#quickInput = new QuickInput(host);
     this.#customEditors = new CustomEditors(this.#layout.editor);
     this.#preview = new Preview(this.#layout.preview);
-    this.#unsubscribe = project.onChange((change) => this.#changed(change));
+    this.#subscription = project.onDidChangeFile((change) => this.#changed(change));
     this.#showDocumentLinks();
     this.#configuration.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('workbench.theme')) this.#applyTheme();
@@ -336,7 +336,7 @@ export class WorkbenchHost implements Workbench {
   }
 
   destroy(): void {
-    this.#unsubscribe();
+    this.#subscription.dispose();
     this.#extensions.dispose();
     this.#views.destroy();
     this.#customEditors.dispose();

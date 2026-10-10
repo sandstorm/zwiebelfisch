@@ -88,11 +88,10 @@ export class VisualView {
       }),
     );
     this.toolbar = new Toolbar(parent, this.editor, view, { groups: contributed.toolbarGroups, items: contributed.toolbarItems });
-    const unsubscribe = document.onChange((_changes, origin) => {
-      if (origin !== this) this.syncFromDocument();
-    });
     this.subscriptions = [
-      new Disposable(unsubscribe),
+      document.onDidChange(({ origin }) => {
+        if (origin !== this) this.syncFromDocument();
+      }),
       // e.g. a style declared or removed changes what its calls project to
       ...onDidChangeGrammar(schema, () => this.syncFromDocument()),
       ...contributed.highlights.map(({ layer, provider }) => {

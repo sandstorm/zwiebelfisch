@@ -48,7 +48,7 @@ describe('diagrams', () => {
   it('saves the exported PNG into the project as an update, and what is pending when the file is closed', async () => {
     const { workbench, project, send } = setup();
     const changes: string[] = [];
-    project.onChange((change) => changes.push(`${change.kind} ${change.path}`));
+    project.onDidChangeFile((change) => changes.push(`${change.kind} ${change.path}`));
     workbench.open(path('/img/flow.drawio.png'));
     send({ event: 'init' });
     send({ event: 'autosave', xml: '<mxfile>a</mxfile>' });

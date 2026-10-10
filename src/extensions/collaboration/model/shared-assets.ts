@@ -1,4 +1,5 @@
 // SharedAssets: the project's non-Typst files in a GitLab-backed room. See model.ts.
+import type { Disposable } from '../../../core/disposable/disposable';
 import * as Y from 'yjs';
 import { type FileChange, type Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
@@ -19,7 +20,7 @@ type AssetValue = string | Uint8Array;
 export class SharedAssets {
   private readonly assets: Y.Map<AssetValue>;
   private applying = false;
-  private readonly unsubscribe: () => void;
+  private readonly subscription: Disposable;
   private destroyed = false;
 
   constructor(
@@ -34,14 +35,14 @@ export class SharedAssets {
     }
     this.seed();
     this.assets.observe(this.onRemote);
-    this.unsubscribe = project.onChange((change) => {
+    this.subscription = project.onDidChangeFile((change) => {
       if (!this.applying) this.push(change);
     });
   }
 
   destroy(): void {
     this.destroyed = true;
-    this.unsubscribe();
+    this.subscription.dispose();
     this.assets.unobserve(this.onRemote);
   }
 

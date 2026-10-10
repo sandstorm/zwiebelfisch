@@ -20,7 +20,7 @@ function setup(text: string) {
     view.reveal(at, at + length);
   };
   const changes: number[] = [];
-  doc.onChange(() => changes.push(changes.length));
+  doc.onDidChange(() => changes.push(changes.length));
   return { doc, view, parent, button, pressed, select, changes };
 }
 

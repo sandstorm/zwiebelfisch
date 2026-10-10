@@ -54,7 +54,7 @@ export class CollaborationLink {
       return;
     }
     this.collaboration = collaboration;
-    collaboration.onPresence((presences) => this.widget.onPresence?.(presences));
+    collaboration.onDidChangePresence((presences) => this.widget.onPresence?.(presences));
     if (collaboration.sourceControl) this.widget.onSourceControl?.(collaboration.sourceControl);
   }
 

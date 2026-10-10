@@ -4,12 +4,14 @@
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import type { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
+import { Disposable } from '../../../core/disposable/disposable';
+import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { PlacedPresence } from '../presence/presence';
 import type { Project } from '../../../core/project/project';
 import { roomFilePath } from '../../../core/gitlab-protocol/gitlab-protocol';
 import { RemoteCursors, type CollaborationUser } from './remote-cursors';
-import { GitLabSourceControl } from './gitlab-source-control';
+import { GitLabSourceControl, type StatelessChannel } from './gitlab-source-control';
 import { SharedAssets } from './shared-assets';
 import { SharedProject } from './shared-project';
 
@@ -43,7 +45,9 @@ export class Collaboration {
   private readonly sharedProject: SharedProject;
   private readonly cursors: RemoteCursors | null;
   private readonly assets: SharedAssets | null = null;
-  private presenceListener: ((presences: readonly PlacedPresence[]) => void) | null = null;
+  private readonly presenceChanged = new EventEmitter<readonly PlacedPresence[]>();
+  /** Every other user's place, in any file, whenever one changes. */
+  readonly onDidChangePresence: Event<readonly PlacedPresence[]> = this.presenceChanged.event;
   /** Commits to the branch, in a room backed by a GitLab branch (else null). */
   readonly sourceControl: GitLabSourceControl | null = null;
 
@@ -60,7 +64,7 @@ export class Collaboration {
     }
     this.sharedProject = new SharedProject(project, ydoc);
     const text = (path: ProjectPath) => this.sharedProject.text(path);
-    const onPresence = (presences: readonly PlacedPresence[]) => this.presenceListener?.(presences);
+    const onPresence = (presences: readonly PlacedPresence[]) => this.presenceChanged.fire(presences);
     this.cursors = awareness ? new RemoteCursors(awareness, { user: user ?? { name: 'Anonymous' }, text, onPresence }) : null;
   }
 
@@ -84,12 +88,8 @@ export class Collaboration {
     this.cursors?.setLocal(path, range);
   }
 
-  /** Calls `listener` with every other user's place, in any file, whenever one changes (replaces the previous listener). */
-  onPresence(listener: (presences: readonly PlacedPresence[]) => void): void {
-    this.presenceListener = listener;
-  }
-
   destroy(): void {
+    this.presenceChanged.dispose();
     this.sourceControl?.dispose();
     this.cursors?.destroy();
     this.assets?.destroy();
@@ -99,13 +99,13 @@ export class Collaboration {
   }
 }
 
-function statelessChannel(provider: HocuspocusProvider) {
+function statelessChannel(provider: HocuspocusProvider): StatelessChannel {
   return {
     send: (payload: string) => provider.sendStateless(payload),
-    listen(listener: (payload: string) => void) {
+    onDidReceiveMessage(listener) {
       const handler = ({ payload }: { payload: string }) => listener(payload);
       provider.on('stateless', handler);
-      return () => void provider.off('stateless', handler);
+      return new Disposable(() => provider.off('stateless', handler));
     },
   };
 }

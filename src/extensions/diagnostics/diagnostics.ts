@@ -56,12 +56,12 @@ export function diagnostics(): TypstExtension {
           if (project.document(path)) lastSource = path;
           show();
         }),
-        new Disposable(project.onChange((change) => {
+        project.onDidChangeFile((change) => {
           const before = lastSource;
           if (change.kind === 'rename' && change.from === lastSource) lastSource = change.path;
           else if (!project.has(lastSource)) lastSource = project.main;
           if (lastSource !== before) show();
-        })),
+        }),
         preview.onDidChangeDiagnostics(compiled),
       );
     },

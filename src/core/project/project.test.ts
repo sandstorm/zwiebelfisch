@@ -47,7 +47,7 @@ describe('Project', () => {
   it('creates, renames and deletes files and notifies listeners', () => {
     const p = project();
     const listener = vi.fn();
-    p.onChange(listener);
+    p.onDidChangeFile(listener);
     p.apply({ kind: 'create', path: path('/new.typ'), content: '' });
     p.apply({ kind: 'rename', from: path('/new.typ'), path: path('/parts/new.typ') });
     p.apply({ kind: 'delete', path: path('/zeta.typ') });
@@ -66,7 +66,7 @@ describe('Project', () => {
   it('reports text edits of any Typst file as updates', () => {
     const p = project();
     const listener = vi.fn();
-    p.onChange(listener);
+    p.onDidChangeFile(listener);
     p.document(path('/chapter.typ'))!.setText('C!', 'view');
     expect(listener).toHaveBeenCalledWith({ kind: 'update', path: path('/chapter.typ'), content: 'C!' });
   });
@@ -76,7 +76,7 @@ describe('Project', () => {
     const doc = p.document(path('/chapter.typ'))!;
     p.apply({ kind: 'delete', path: path('/chapter.typ') });
     const listener = vi.fn();
-    p.onChange(listener);
+    p.onDidChangeFile(listener);
     doc.setText('gone', 'view');
     expect(listener).not.toHaveBeenCalled();
   });
@@ -105,7 +105,7 @@ describe('Project', () => {
   it('replaces the content of other files with an update, and tells listeners', () => {
     const p = project();
     const listener = vi.fn();
-    p.onChange(listener);
+    p.onDidChangeFile(listener);
     const bytes = new Uint8Array([9, 9]);
     p.apply({ kind: 'update', path: path('/logo.png'), content: bytes });
     expect(p.content(path('/logo.png'))).toBe(bytes);
@@ -137,7 +137,7 @@ describe('Project', () => {
     const p = project();
     const logo = p.content(path('/logo.png'));
     const listener = vi.fn();
-    p.onChange(listener);
+    p.onDidChangeFile(listener);
     const csv = new Uint8Array([7]);
     p.replace({ '/chapter.typ': 'C new', '/extra.typ': 'E', '/logo.png': logo!, '/data.csv': csv });
     expect(listener.mock.calls.map(([change]) => change)).toEqual([

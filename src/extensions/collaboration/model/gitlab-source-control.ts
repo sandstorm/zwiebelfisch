@@ -1,14 +1,15 @@
 // GitLabSourceControl: the GitLab branch behind a room as a source control (`Workbench.registerSourceControl`):
 // commit asks the server to commit over stateless messages, and the server's answers become its state. See model.ts.
 import type * as Y from 'yjs';
-import { EventEmitter } from '../../../core/event-emitter/event-emitter';
+import type { Disposable } from '../../../core/disposable/disposable';
+import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
 import { DEFAULT_COMMIT_MESSAGE, META_MAP, type ClientMessage, type ServerMessage } from '../../../core/gitlab-protocol/gitlab-protocol';
 
 /** Stateless messages to and from the server (the Hocuspocus provider's). */
 export interface StatelessChannel {
   send(payload: string): void;
-  /** Subscribes to messages from the server; returns the unsubscribe function. */
-  listen(listener: (payload: string) => void): () => void;
+  /** Fires with every message from the server. */
+  readonly onDidReceiveMessage: Event<string>;
 }
 
 /**
@@ -23,13 +24,13 @@ export class GitLabSourceControl {
   #state: CommitState = { busy: false, status: null };
   readonly #changed = new EventEmitter<void>();
   readonly onDidChange = this.#changed.event;
-  readonly #unsubscribe: () => void;
+  readonly #subscription: Disposable;
 
   constructor(
     private readonly channel: StatelessChannel,
     private readonly author?: { name: string },
   ) {
-    this.#unsubscribe = channel.listen((payload) => {
+    this.#subscription = channel.onDidReceiveMessage((payload) => {
       const message = parse(payload);
       if (message) this.#receive(message);
     });
@@ -51,7 +52,7 @@ export class GitLabSourceControl {
   }
 
   dispose(): void {
-    this.#unsubscribe();
+    this.#subscription.dispose();
     this.#changed.dispose();
   }
 

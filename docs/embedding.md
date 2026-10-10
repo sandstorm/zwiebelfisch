@@ -480,7 +480,7 @@ export const wordCount: TypstExtension = {
     subscriptions.push(
       workbench.registerStatusBarItem(item, { alignment: 'right', priority: 100 }),
       workbench.onDidShowFile(show),
-      { dispose: project.onChange(show) },
+      project.onDidChangeFile(show),
       workspace.onDidChangeConfiguration((event) => {
         if (event.affectsConfiguration('wordCount.label')) show();
       }),
@@ -502,7 +502,7 @@ What `activate` gets (`ExtensionContext`; every type is exported from the packag
 | | |
 |---|---|
 | `subscriptions` | Push every registration here; disposed on `destroy`, in reverse order. |
-| `project` | The files: `files()`, `document(path)` (a Typst file's text), `onChange`. |
+| `project` | The files: `files()`, `document(path)` (a Typst file's text), `onDidChangeFile` (an `Event<FileChange>`: subscribing returns a `Disposable`). |
 | `workspace` | The settings: `getConfiguration('<section>').get('<key>')`, `onDidChangeConfiguration`. |
 | `workbench` | The frame: `registerStatusBarItem(element, { alignment, priority })` (VS Code's: `'left'` or `'right'`, a higher priority further left within its side), `registerSidePanel`, `registerMenuItem`, `registerStyleSheet` (your CSS, inside the shadow root too), `registerCommand` / `executeCommand` / `registerKeybinding`, `showInformationMessage` / `showWarningMessage` / `showErrorMessage`, `showInputBox`, `showQuickPick`, `registerDocumentLinkProvider`, `registerFileDecorationProvider`, `registerSourceControl`, `registerCustomEditorProvider` (an editor for files by name pattern and priority, VS Code's custom editors), `open(path, { viewType? })`, `applyChange(change)`, `activeTextEditor`, `onDidChangeTextEditorSelection`, `user`. |
 | `preview` | `registerToolbarItem(item, { group, order })`, `registerPdfExportOption`, `createOverlay`, `reveal`, `onDidClickPage`, `onDidChangeDiagnostics`. |

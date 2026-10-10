@@ -43,7 +43,7 @@ src/
 ```
 
 `core` = Model, `hosts` + an extension's view folders = View, an extension's entry (`activate`) =
-Controller: it subscribes views to the model's `onChange` and turns user input into commands
+Controller: it subscribes views to the model's `onDid…` events and turns user input into commands
 (`FileChange`, `TextChange`). Pure presentation logic (`tree-model`, `geometry`, `card-layout`,
 `numbering`) is `model/`: the line between the layers is the DOM.
 

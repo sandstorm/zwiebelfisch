@@ -16,16 +16,16 @@ describe('TypstDocument', () => {
   it('notifies listeners with the changes and their origin', () => {
     const doc = new TypstDocument('abc');
     const listener = vi.fn();
-    doc.onChange(listener);
+    doc.onDidChange(listener);
     const changes = [{ from: 1, to: 2, insert: 'X' }];
     doc.change(changes, 'source-view');
-    expect(listener).toHaveBeenCalledWith(changes, 'source-view');
+    expect(listener).toHaveBeenCalledWith({ contentChanges: changes, origin: 'source-view' });
   });
 
   it('stops notifying after unsubscribing', () => {
     const doc = new TypstDocument('abc');
     const listener = vi.fn();
-    doc.onChange(listener)();
+    doc.onDidChange(listener).dispose();
     doc.change([{ from: 0, to: 0, insert: 'x' }], 'test');
     expect(listener).not.toHaveBeenCalled();
   });
@@ -33,7 +33,7 @@ describe('TypstDocument', () => {
   it('ignores empty change lists', () => {
     const doc = new TypstDocument('abc');
     const listener = vi.fn();
-    doc.onChange(listener);
+    doc.onDidChange(listener);
     doc.change([{ from: 1, to: 1, insert: '' }], 'test');
     expect(listener).not.toHaveBeenCalled();
   });
@@ -43,16 +43,16 @@ describe('TypstDocument.setText', () => {
   it('applies a whole new text as one minimal change', () => {
     const doc = new TypstDocument('Hello brave world');
     const listener = vi.fn();
-    doc.onChange(listener);
+    doc.onDidChange(listener);
     doc.setText('Hello new world', 'visual');
     expect(doc.text).toBe('Hello new world');
-    expect(listener).toHaveBeenCalledWith([{ from: 6, to: 11, insert: 'new' }], 'visual');
+    expect(listener).toHaveBeenCalledWith({ contentChanges: [{ from: 6, to: 11, insert: 'new' }], origin: 'visual' });
   });
 
   it('does nothing when the text is unchanged', () => {
     const doc = new TypstDocument('same');
     const listener = vi.fn();
-    doc.onChange(listener);
+    doc.onDidChange(listener);
     doc.setText('same', 'visual');
     expect(listener).not.toHaveBeenCalled();
   });
@@ -84,23 +84,23 @@ describe('TypstDocument shared through a Y.Text', () => {
   it('writes local changes into the Y.Text and notifies once with the local origin', () => {
     const { a, ya } = pair('Hello world');
     const listener = vi.fn();
-    a.onChange(listener);
+    a.onDidChange(listener);
     const changes = [{ from: 0, to: 5, insert: 'Bye' }, { from: 11, to: 11, insert: '!' }];
     a.change(changes, 'visual');
     expect(ya.getText('t').toString()).toBe('Bye world!');
     expect(listener).toHaveBeenCalledTimes(1);
-    expect(listener).toHaveBeenCalledWith(changes, 'visual');
+    expect(listener).toHaveBeenCalledWith({ contentChanges: changes, origin: 'visual' });
   });
 
   it('reports remote edits as changes with the remote origin', () => {
     const { a, b } = pair('Hello world');
     const before = b.text;
     const listener = vi.fn();
-    b.onChange(listener);
+    b.onDidChange(listener);
     a.change([{ from: 0, to: 5, insert: 'Bye' }, { from: 11, to: 11, insert: '!' }], 'visual');
     expect(b.text).toBe('Bye world!');
     expect(listener).toHaveBeenCalledTimes(1);
-    const [changes, origin] = listener.mock.calls[0];
+    const [{ contentChanges: changes, origin }] = listener.mock.calls[0];
     expect(origin).toBe(REMOTE_ORIGIN);
     expect(applyChanges(before, changes)).toBe('Bye world!');
   });
@@ -125,10 +125,10 @@ describe('TypstDocument shared through a Y.Text', () => {
     const ydoc = new Y.Doc();
     ydoc.getText('t').insert(0, 'shared text');
     const listener = vi.fn();
-    doc.onChange(listener);
+    doc.onDidChange(listener);
     doc.share(ydoc.getText('t'));
     expect(doc.text).toBe('shared text');
-    expect(listener).toHaveBeenCalledWith([{ from: 0, to: 5, insert: 'shared' }], REMOTE_ORIGIN);
+    expect(listener).toHaveBeenCalledWith({ contentChanges: [{ from: 0, to: 5, insert: 'shared' }], origin: REMOTE_ORIGIN });
     doc.change([{ from: 0, to: 0, insert: '> ' }], 'test');
     expect(ydoc.getText('t').toString()).toBe('> shared text');
   });

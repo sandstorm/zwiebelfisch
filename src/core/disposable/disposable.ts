@@ -4,7 +4,7 @@
 
 /**
  * Releases a resource once, on `dispose()` (later calls do nothing). `new Disposable(stop)` wraps a cleanup
- * function, such as the unsubscribe function `Project.onChange` returns; `Disposable.from(a, b)` disposes several
+ * function, such as a listener's removal; `Disposable.from(a, b)` disposes several
  * in reverse order.
  */
 export class Disposable {

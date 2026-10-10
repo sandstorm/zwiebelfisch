@@ -210,8 +210,8 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
 │  ┌──────────────┐ change(edits, origin) ┌──────────────┐ │   │  ┌──────────────────┐  │
 │  │  SourceView  │──────────────────────►│TypstDocument │ │   │  │  Engine (wasm)   │  │
 │  │ (CodeMirror) │◄──────────────────────│  text        │ │   │  │  MemoryWorld     │  │
-│  └──────┬───────┘   onChange(edits,     └──────┬───────┘ │   │  │  last document   │  │
-│         │ ▲          origin ≠ self)            │         │   │  │  svg cache       │  │
+│  └──────┬───────┘   onDidChange({      └──────┬───────┘ │   │  │  last document   │  │
+│         │ ▲    contentChanges, origin}) │         │   │  │  svg cache       │  │
 │ selected│ │reveal(from,to)                     │ text    │   │  └──────────────────┘  │
 │         ▼ │                                    ▼         │   │           ▲            │
 │  ┌──────────────────────────────────────────────────┐    │   │           │            │
@@ -289,7 +289,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
   still marks one character), and counts them in the status bar.
 - **`Project`** (`core/project/project.ts`): files by path. `.typ` strings become a `TypstDocument` each (kept
   across renames, so open views survive); everything else is stored as given.
-  `check(change)` → reason or null, `apply(change)`, `replace(files)`, `onChange(change)`
+  `check(change)` → reason or null, `apply(change)`, `replace(files)`, `onDidChangeFile: Event<FileChange>`
   (structural changes and every document edit as `update`; `replace` reports a `delete`, `create`
   or `update` per file, so subscribers never need to be refreshed by hand). The main file cannot be renamed or
   deleted; `.typ` files keep their ending.
@@ -430,7 +430,9 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
 - **Why.** The frame knows no feature by name (review finding `typst-editor.ts:170`): a feature is a
   `TypstExtension` that registers its contributions once, at activation, and pushes the registrations into
   `subscriptions`. VS Code's vocabulary: `register…` returns a `Disposable` (`core/disposable`), events are
-  `onDid…` (`Event<T>` from `EventEmitter`, `core/event-emitter`).
+  `onDid…` (`Event<T>` from `EventEmitter`, `core/event-emitter`), everywhere: core's models (`Project.onDidChangeFile`,
+  `TypstDocument.onDidChange`), the hosts and the extensions; subscribing returns a `Disposable`, never an
+  unsubscribe function.
 - **Lifecycle.** The workbench host makes its view hosts first: `VisualViewContributions` and a `SourceViewHost`
   (both handed to `EditingViews`) and the `Preview`; they are the context's `visualView`, `sourceView` and
   `preview`. `WorkbenchHost.activate(list)`: first every extension's declared settings
@@ -582,17 +584,17 @@ TypstDocument.fromYText(ytext)                   // shared: the text lives in an
 .change(changes: {from, to, insert}[], origin)   // all in pre-change coordinates (CodeMirror ChangeSet semantics)
 .setText(text, origin)                           // one minimal change
 .share(ytext | null)                             // (re)bind to a Y.Text, adopting its text as one REMOTE_ORIGIN change; null unshares
-.onChange((changes, origin) => …) → unsubscribe
+.onDidChange: Event<{ contentChanges, origin }>   // subscribe → Disposable
 REMOTE_ORIGIN                                    // the origin of edits that arrived through the Y.Text
 ```
 
-- **Single source of truth.** Every view writes through `change()` and reads through `onChange()`.
+- **Single source of truth.** Every view writes through `change()` and reads through `onDidChange`.
 - **Echo suppression by origin.** A view passes itself as `origin` and ignores notifications whose
   origin is itself.
 - **Hidden:** how the text is stored: a string, mirrored into a `Y.Text` when shared. A local
   `change()` updates the string, applies the changes in one `ydoc.transact(…, document)` and
   notifies with the caller's origin; the Y.Text observer skips that transaction. Every other
-  transaction (collaborators, a `Y.UndoManager`) becomes `onChange(changes, REMOTE_ORIGIN)`, the
+  transaction (collaborators, a `Y.UndoManager`) fires `onDidChange` with `REMOTE_ORIGIN`, the
   event delta converted to pre-change changes (`deltaToChanges`, `y-delta.ts`). The views need no
   change. `typst-document.ts` imports Yjs types only, so unshared widgets do not load Yjs.
 - **Undo is per user** (decision): each view keeps its own history. Remote changes never enter
@@ -1216,7 +1218,7 @@ references({ labels? }): VisualViewContribution   // the `reference` node spec, 
 ```
 
 - **Why one extension:** labels and references span files, so the read model follows the whole project
-  (`Project.onChange`; `Project.replace` reports every file, so no refresh is needed), and the Visual view's
+  (`Project.onDidChangeFile`; `Project.replace` reports every file, so no refresh is needed), and the Visual view's
   contributions read it through `ProjectLabels`. The Source view does not use it yet.
 - **Scanning:** every `.typ` file is scanned with Lezer (`model/scan.ts`) when the index is made and again on each
   of its changes; `.bib` files give their entry keys. A label's kind and title come from the element before it: a
@@ -1756,7 +1758,7 @@ createTypstEditor(host, { …, user?: {name, color?},
 
 Collaboration.start(options, { project, user }) → Promise<Collaboration>   // url: waits for the first sync
 .setCursor(path | null, range?)   .destroy()
-.onPresence((presences: PlacedPresence[]) => …)   // everyone else, in every file, once per change
+.onDidChangePresence: Event<PlacedPresence[]>      // everyone else, in every file, once per change
 .sourceControl → GitLabSourceControl | null   // GitLab rooms: a workbench SourceControl (commit(message), state)
 
 new Presences(pathOf)   .set(placed)   .presencesIn(document)   .presencesAt(path)   .onDidChange
@@ -1782,7 +1784,7 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
 - **`RemoteCursors`** owns awareness and the Y relative positions: publishes the local selection
   and resolves the others' into `PlacedPresence`s (`{id: clientID, user: {name, color}, anchor, head, path}`,
   source offsets) once per microtask after any change of the shared texts (Y.Doc `update`) or of presence;
-  `onPresence` gets everyone in every file, only when that changed. Colors: the user's, else a palette entry by
+  `Collaboration.onDidChangePresence` gets everyone in every file, only when that changed. Colors: the user's, else a palette entry by
   name; flag text black or white by WCAG contrast (`textColorOn`, `ui/color-scheme`). CSS: `--typst-remote-color`,
   `--typst-remote-text`.
 - **Presence out of the hosts** (decided 2026-10-10): the hosts know no presence. The extension keeps everyone's

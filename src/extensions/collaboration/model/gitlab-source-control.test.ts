@@ -1,20 +1,15 @@
 // Tests for gitlab-source-control.ts.
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
+import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { META_MAP } from '../../../core/gitlab-protocol/gitlab-protocol';
 import { commitStatus, GitLabSourceControl } from './gitlab-source-control';
 
 function setup() {
   const sent: string[] = [];
-  const listeners = new Set<(payload: string) => void>();
-  const channel = {
-    send: (payload: string) => void sent.push(payload),
-    listen(listener: (payload: string) => void) {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-  };
-  const receive = (payload: string) => listeners.forEach((listener) => listener(payload));
+  const messages = new EventEmitter<string>();
+  const channel = { send: (payload: string) => void sent.push(payload), onDidReceiveMessage: messages.event };
+  const receive = (payload: string) => messages.fire(payload);
   const sourceControl = new GitLabSourceControl(channel, { name: 'Ann' });
   let changes = 0;
   sourceControl.onDidChange(() => changes++);

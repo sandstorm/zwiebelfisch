@@ -1,8 +1,10 @@
 // Project: the one place that knows which files a project has and which changes to them are allowed. One
 // TypstDocument per .typ file (views edit it directly), the other files as bytes, the protected main file.
 // Everyone who derives something from the files (views, indexes, collaboration, the preview) subscribes to
-// `onChange` and is never told by hand: `apply`, `replace` and every text edit are reported there.
+// `onDidChangeFile` and is never told by hand: `apply`, `replace` and every text edit are reported there.
 // Entry of core/project/. See ARCHITECTURE.md, "Project".
+import type { Disposable } from '../disposable/disposable';
+import { EventEmitter, type Event } from '../event-emitter/event-emitter';
 import { TypstDocument } from '../typst-document/typst-document';
 import { ProjectPath } from '../paths/paths';
 
@@ -26,7 +28,7 @@ export type FileChange =
   | { kind: 'delete'; path: ProjectPath }
   | { kind: 'rename'; path: ProjectPath; from: ProjectPath };
 
-type Entry = { document: TypstDocument; unsubscribe: () => void } | { content: FileContent };
+type Entry = { document: TypstDocument; subscription: Disposable } | { content: FileContent };
 
 /**
  * The files of a Typst project. Every `.typ` file is a `TypstDocument` that
@@ -38,7 +40,9 @@ type Entry = { document: TypstDocument; unsubscribe: () => void } | { content: F
  */
 export class Project {
   private readonly entries = new Map<ProjectPath, Entry>();
-  private readonly listeners = new Set<(change: FileChange) => void>();
+  private readonly changed = new EventEmitter<FileChange>();
+  /** Fires after every change of a file: `apply`, `replace`, and every text edit of a document (as `update`). */
+  readonly onDidChangeFile: Event<FileChange> = this.changed.event;
 
   constructor(
     readonly main: ProjectPath,
@@ -129,15 +133,9 @@ export class Project {
     for (const [path, content] of next) this.put(path, content);
   }
 
-  /** Subscribes to changes; returns the unsubscribe function. */
-  onChange(listener: (change: FileChange) => void): () => void {
-    this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
-  }
-
   destroy(): void {
     for (const path of [...this.entries.keys()]) this.remove(path);
-    this.listeners.clear();
+    this.changed.dispose();
   }
 
   private checkNew(path: ProjectPath): string | null {
@@ -179,16 +177,16 @@ export class Project {
       return;
     }
     const document = new TypstDocument(content);
-    const unsubscribe = document.onChange(() => {
+    const subscription = document.onDidChange(() => {
       const current = this.pathOf(document);
       if (current) this.emit({ kind: 'update', path: current, content: document.text });
     });
-    this.entries.set(path, { document, unsubscribe });
+    this.entries.set(path, { document, subscription });
   }
 
   private remove(path: ProjectPath): void {
     const entry = this.entries.get(path);
-    if (entry && 'unsubscribe' in entry) entry.unsubscribe();
+    if (entry && 'subscription' in entry) entry.subscription.dispose();
     this.entries.delete(path);
   }
 
@@ -199,7 +197,7 @@ export class Project {
   }
 
   private emit(change: FileChange): void {
-    for (const listener of this.listeners) listener(change);
+    this.changed.fire(change);
   }
 }
 

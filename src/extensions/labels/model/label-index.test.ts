@@ -103,7 +103,7 @@ describe('LabelIndex', () => {
     const intro = project.document(path('/chapters/introduction.typ'))!;
     const results = project.document(path('/chapters/results.typ'))!;
     const changes = vi.fn();
-    results.onChange(changes);
+    results.onDidChange(changes);
     index.renameReferences('fig:compile-times', 'fig:times', intro);
     expect(results.text).toContain('@fig:times shows the same data');
     expect(results.text).toContain('<fig:compile-times>'); // the label itself is the Visual view's to change

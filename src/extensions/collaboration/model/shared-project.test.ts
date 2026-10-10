@@ -53,7 +53,7 @@ describe('SharedProject', () => {
     expect(b.project.document(path('/ch1.typ'))!.text).toBe('Chapter');
 
     const changes: string[] = [];
-    b.project.onChange((change) => changes.push(change.kind));
+    b.project.onDidChangeFile((change) => changes.push(change.kind));
     a.project.apply({ kind: 'rename', from: path('/ch1.typ'), path: path('/intro.typ') });
     expect(b.project.has(path('/ch1.typ'))).toBe(false);
     expect(b.project.document(path('/intro.typ'))!.text).toBe('Chapter');

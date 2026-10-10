@@ -1,4 +1,5 @@
 // LabelIndex: the read model of a project's labels and the references to them, kept up to date. See model.ts.
+import type { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { FileChange, Project } from '../../../core/project/project';
@@ -38,12 +39,12 @@ export class LabelIndex implements ProjectLabels {
   private readonly changed = new EventEmitter<void>();
   readonly onDidChange: Event<void> = this.changed.event;
   private list: LabelInfo[] = [];
-  private readonly unsubscribe: () => void;
+  private readonly subscription: Disposable;
 
   constructor(private readonly project: Project) {
     for (const path of project.paths()) this.rescan(path);
     this.list = this.collect();
-    this.unsubscribe = project.onChange((change) => this.update(change));
+    this.subscription = project.onDidChangeFile((change) => this.update(change));
   }
 
   labels(): readonly LabelInfo[] {
@@ -66,7 +67,7 @@ export class LabelIndex implements ProjectLabels {
 
   /** Stops following the project; listeners hear nothing more. */
   dispose(): void {
-    this.unsubscribe();
+    this.subscription.dispose();
     this.changed.dispose();
   }
 
