@@ -784,7 +784,7 @@ newStyle(text) → { text, from, to }   // "New style…": `new-style`, `new-sty
 - **Look:** `.typst-visual__style.typst-style--<name>` (accent bar, the title as a badge) and
   `.typst-visual__style-text.typst-style--<name>` (dotted underline, title as tooltip); hosts
   style a style by its class. The preview shows the real look.
-- **Widget:** one `StyleIndex`; "New style…" appends a stub to `/styles.typ` (created through the
+- **Widget:** one `StyleIndex`; "New style…" appends a stub to the file declaring most styles (`homeFile()`; else `/styles.typ`, created through the
   usual file request when missing) and shows it in the Source view.
 
 ### Layout (`src/typst-editor/layout.ts`)

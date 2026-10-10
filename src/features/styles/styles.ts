@@ -3,6 +3,7 @@
 import { type FileChange, importChange, type Project, referencePath, resolvePath } from '../../core/project/project';
 import type { TextChange, TypstDocument } from '../../core/typst-document/typst-document';
 import { scanStyles, type FoundStyle, type Style } from './discover';
+import { STYLES_FILE } from './new-style';
 
 export { discoverStyles, scanStyles, type Style, type StyleKind } from './discover';
 export { newStyle, STYLES_FILE } from './new-style';
@@ -46,6 +47,16 @@ export class StyleIndex {
   onChange(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  /** Where "New style…" adds a style: the file declaring the most styles (the first of equals), else `/styles.typ`. */
+  homeFile(): string {
+    const counts = new Map<string, number>();
+    for (const style of this.list) counts.set(style.path, (counts.get(style.path) ?? 0) + 1);
+    let home: string = STYLES_FILE;
+    let most = 0;
+    for (const [path, count] of counts) if (count > most) [home, most] = [path, count];
+    return home;
   }
 
   /** The styles as `document` sees them: imports are written relative to its (current) path. */
