@@ -25,14 +25,19 @@ test('keeps its styles inside the shadow root', async ({ page }) => {
 
 test('dispatches change with the new value while typing', async ({ page }) => {
   const editor = page.locator('typst-editor');
-  const detail = editor.evaluate(
-    (el) => new Promise<string>((resolve) => el.addEventListener('change', (event) => resolve((event as CustomEvent<{ value: string }>).detail.value), { once: true })),
-  );
+  // one change per keystroke: the last one carries all of the typed text
+  await editor.evaluate((el) => {
+    const values: string[] = [];
+    (el as HTMLElement & { changes: string[] }).changes = values;
+    el.addEventListener('change', (event) => values.push((event as CustomEvent<{ value: string }>).detail.value));
+  });
+  const changes = () => editor.evaluate((el) => (el as HTMLElement & { changes: string[] }).changes);
   await editor.getByRole('tab', { name: 'Source' }).click();
   await editor.getByTestId('typst-source').locator('.cm-content').click();
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.type('More text.');
-  expect(await detail).toContain('More text');
+  await expect.poll(async () => (await changes()).at(-1)).toContain('More text.');
+  expect((await changes()).length).toBeGreaterThan(1);
   await expect(page.getByTestId('length')).not.toHaveText('');
 });
 
