@@ -3,7 +3,7 @@ import { test, expect } from './fixtures';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
-const greet = readFileSync(new URL('../../src/engine/fixtures/greet-0.1.0.tar.gz', import.meta.url));
+const greet = readFileSync(new URL('../../src/core/typst-engine/fixtures/greet-0.1.0.tar.gz', import.meta.url));
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/examples/plain-html/');

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Project, type FileChange } from './project';
+import { Project, type FileChange } from '../core/project/project';
 import { ProjectRenderings } from './project-renderings';
 
 const LOGO = new Uint8Array([1, 2, 3]);

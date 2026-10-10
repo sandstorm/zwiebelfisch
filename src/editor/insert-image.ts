@@ -1,4 +1,4 @@
-import type { TextChange } from '../document/typst-document';
+import type { TextChange } from '../core/typst-document/typst-document';
 
 /**
  * The edit that inserts `#image("path")` as a paragraph of its own, after the

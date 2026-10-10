@@ -1,4 +1,4 @@
-import type { Diagnostic } from '../engine/engine';
+import type { Diagnostic } from '../core/typst-engine/typst-engine';
 
 /** A range in a project file. */
 export interface DiagnosticTarget {

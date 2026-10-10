@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
-import { Project } from '../editor/project';
+import { Project } from '../core/project/project';
 import { connect } from './in-process';
 import { SharedProject } from './shared-project';
 

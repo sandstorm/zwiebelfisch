@@ -1,9 +1,9 @@
-import type { TypstDocument } from '../document/typst-document';
+import type { TypstDocument } from '../core/typst-document/typst-document';
 import type { Preview } from '../preview/preview';
 import type { VisualViewOptions } from '../visual-view/visual-view';
 import type { FileContent } from '../preview/project-files';
-import { extensionOf, fileKind, imageBlob, referencePath, resolvePath } from './paths';
-import type { FileChange, Project } from './project';
+import { extensionOf, fileKind, imageBlob, referencePath, resolvePath } from '../core/project/paths';
+import type { FileChange, Project } from '../core/project/project';
 import { uploadChanges } from './upload';
 
 export interface ProjectRenderingsOptions {

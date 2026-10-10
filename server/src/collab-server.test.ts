@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { Hocuspocus, type Extension } from '@hocuspocus/server';
 import { afterEach, describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
-import { Project } from '../../src/editor/project.ts';
+import { Project } from '../../src/core/project/project.ts';
 import { connect } from '../../src/collab/in-process.ts';
 import { SharedProject } from '../../src/collab/shared-project.ts';
 import { sharedToken } from './auth.ts';

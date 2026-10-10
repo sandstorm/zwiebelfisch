@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { test, expect } from './fixtures';
 import type { Page } from '@playwright/test';
 
-const DRAFTING = readFileSync(resolve(import.meta.dirname, '../../src/engine/fixtures/drafting-0.2.2.tar.gz'));
+const DRAFTING = readFileSync(resolve(import.meta.dirname, '../../src/core/typst-engine/fixtures/drafting-0.2.2.tar.gz'));
 const IMPORT = '#import "@preview/drafting:0.2.2": margin-note';
 
 test.beforeEach(async ({ page }) => {

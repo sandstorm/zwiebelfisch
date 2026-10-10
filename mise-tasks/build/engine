@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-#MISE description="Build the typst-engine Rust crate to wasm (src/engine/wasm), optimised with wasm-opt"
+#MISE description="Build the typst-engine Rust crate to wasm (src/core/typst-engine/wasm), optimised with wasm-opt"
 #MISE sources=["crates/typst-engine/src/**/*.rs", "crates/typst-engine/Cargo.toml", "crates/typst-engine/Cargo.lock"]
-#MISE outputs=["src/engine/wasm/typst_engine_bg.wasm"]
+#MISE outputs=["src/core/typst-engine/wasm/typst_engine_bg.wasm"]
 set -euo pipefail
 cargo build --manifest-path crates/typst-engine/Cargo.toml --target wasm32-unknown-unknown --release
-wasm-bindgen --target web --omit-default-module-path --out-dir src/engine/wasm \
+wasm-bindgen --target web --omit-default-module-path --out-dir src/core/typst-engine/wasm \
   crates/typst-engine/target/wasm32-unknown-unknown/release/typst_engine.wasm
 # -Oz plus dropping the name section (≈10 MB of function names); wasm features
 # are read from the module's target_features section.
-wasm=src/engine/wasm/typst_engine_bg.wasm
+wasm=src/core/typst-engine/wasm/typst_engine_bg.wasm
 wasm-opt -Oz --strip-debug --strip-producers "$wasm" -o "$wasm"
 node -e '
   const { readFileSync } = require("node:fs");

@@ -1,6 +1,6 @@
 import * as Y from 'yjs';
-import type { FileChange, Project } from '../editor/project';
-import { fileKind } from '../editor/paths';
+import type { FileChange, Project } from '../core/project/project';
+import { fileKind } from '../core/project/paths';
 import { ASSETS_MAP } from './gitlab-protocol';
 
 type AssetValue = string | Uint8Array;

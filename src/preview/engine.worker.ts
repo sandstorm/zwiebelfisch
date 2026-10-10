@@ -1,6 +1,6 @@
-import { createEngine, type Engine } from '../engine/engine';
-import { fetchFonts } from '../engine/fetch-fonts';
-import { withPackages, type PackageProject } from '../engine/packages';
+import { createEngine, type Engine } from '../core/typst-engine/typst-engine';
+import { fetchFonts } from '../core/typst-engine/fetch-fonts';
+import { withPackages, type PackageProject } from '../core/typst-engine/packages/packages';
 import { FileReceiver } from './project-files';
 import type { Init, Request, Response } from './protocol';
 

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from 'vitest';
-import { TypstDocument } from '../document/typst-document';
+import { TypstDocument } from '../core/typst-document/typst-document';
 import { EditingViews } from './editing-views';
 
 // jsdom lacks layout; ProseMirror and CodeMirror only need these to exist.

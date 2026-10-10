@@ -1,5 +1,5 @@
 import { diffTexts } from '../diff/diff';
-import type { TypstDocument } from '../document/typst-document';
+import type { TypstDocument } from '../core/typst-document/typst-document';
 
 export interface ChangeTargets {
   /** The edited file. */

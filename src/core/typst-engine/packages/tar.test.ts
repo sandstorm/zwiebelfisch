@@ -30,7 +30,7 @@ function tar(entries: { name: string; type?: string; body?: string }[]): Uint8Ar
 
 describe('untarGz', () => {
   it('reads the files of a package archive made by a real tar (pax format)', async () => {
-    const files = await untarGz(new Uint8Array(readFileSync(new URL('./fixtures/greet-0.1.0.tar.gz', import.meta.url))));
+    const files = await untarGz(new Uint8Array(readFileSync(new URL('../fixtures/greet-0.1.0.tar.gz', import.meta.url))));
     expect([...files.keys()].sort()).toEqual([
       'lib.typ',
       'src/a-directory-with-a-rather-long-name-so-that-the-whole-path-is-longer-than-one-hundred-bytes/words.typ',

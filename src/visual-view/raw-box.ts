@@ -6,7 +6,7 @@ import { Extension, type Editor, type NodeViewRenderer } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { Decoration, EditorView, NodeView } from '@tiptap/pm/view';
-import { minimalChange } from '../document/minimal-change';
+import { minimalChange } from '../core/typst-document/minimal-change';
 import { remotePresence, showPresence } from '../source-view/presence';
 import { typstLanguage } from '../source-view/typst-language';
 import { ImageTools } from './image-tools';

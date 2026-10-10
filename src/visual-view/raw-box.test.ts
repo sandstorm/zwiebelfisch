@@ -2,7 +2,7 @@
 import './jsdom-setup';
 import { EditorView } from '@codemirror/view';
 import { describe, expect, it } from 'vitest';
-import { TypstDocument } from '../document/typst-document';
+import { TypstDocument } from '../core/typst-document/typst-document';
 import { VisualView } from './visual-view';
 
 function setup(text: string) {

@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 import { addMarginNote } from '../editor/add-margin-note';
-import { Project } from '../editor/project';
+import { Project } from '../core/project/project';
 import { SourceView } from '../source-view/source-view';
 import { VisualView } from '../visual-view/visual-view';
 import { Collaboration } from './collaboration';

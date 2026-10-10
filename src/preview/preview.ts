@@ -1,8 +1,8 @@
-import type { PlacedPresence } from '../document/presence';
-import type { Box, Diagnostic, Jump, Page, Position } from '../engine/engine';
+import type { PlacedPresence } from '../core/typst-document/presence';
+import type { Box, Diagnostic, Jump, Page, Position } from '../core/typst-engine/typst-engine';
 import { changeBars, drawnRanges } from './change-bars';
-import { DEFAULT_FONT_URLS } from '../engine/default-fonts';
-import wasmUrl from '../engine/wasm/typst_engine_bg.wasm?url&no-inline';
+import { DEFAULT_FONT_URLS } from '../core/typst-engine/default-fonts';
+import wasmUrl from '../core/typst-engine/wasm/typst_engine_bg.wasm?url&no-inline';
 import { FileSender, type FileContent } from './project-files';
 import { isInside, mostVisible, percentOfPage } from './geometry';
 import { LatestOnly } from './latest-only';

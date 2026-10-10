@@ -40,7 +40,7 @@ import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from './raw-code';
 
 export { codeLanguage } from './raw-code';
 import { alignArgs } from './alignment';
-import { noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../document/margin-note-syntax';
+import { noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../features/comments/margin-note-syntax';
 import { callAtomType } from './call-atoms';
 
 /**

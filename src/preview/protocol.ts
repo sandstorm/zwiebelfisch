@@ -1,4 +1,4 @@
-import type { Box, CompileResult, Jump, Position } from '../engine/engine';
+import type { Box, CompileResult, Jump, Position } from '../core/typst-engine/typst-engine';
 import type { EncodedFiles } from './project-files';
 
 /**

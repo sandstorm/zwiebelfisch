@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import './jsdom-setup';
 import { describe, expect, it, vi } from 'vitest';
-import { TypstDocument } from '../document/typst-document';
+import { TypstDocument } from '../core/typst-document/typst-document';
 import type { BoxRenderer } from './rendered-box';
 import { rendersInPlace } from './rendered-box';
 import { VisualView } from './visual-view';

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { TypstDocument } from '../document/typst-document';
+import { TypstDocument } from '../core/typst-document/typst-document';
 import { ChangeTracking } from './change-tracking';
 
 function setup(text: string, base: string | null = null) {

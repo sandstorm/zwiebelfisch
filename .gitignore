@@ -7,8 +7,8 @@ playwright-report/
 .DS_Store
 .cache/
 target/
-src/engine/wasm/
-src/engine/fonts/
+src/core/typst-engine/wasm/
+src/core/typst-engine/fonts/
 .claude/worktrees/
 server/.data/
 # local secrets (e.g. TYPST_GITLAB_TOKEN for the collaboration server)

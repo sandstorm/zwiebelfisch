@@ -1,6 +1,6 @@
 import { Plugin, PluginKey, TextSelection, type EditorState, type Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
-import { safeNote } from '../document/margin-note-syntax';
+import { safeNote } from '../features/comments/margin-note-syntax';
 import { layoutCards } from './card-layout';
 import { findNotes, followNotes, noteAtOffset, noteAtSelection, removeNote, setNoteText, type KeyedNote } from './note-list';
 

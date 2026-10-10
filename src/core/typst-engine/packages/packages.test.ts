@@ -1,14 +1,14 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { createEngine, type Engine } from './engine';
+import { createEngine, type Engine } from '../typst-engine';
 import { fetchPreviewPackage, withPackages } from './packages';
-import { addMarginNote } from '../editor/add-margin-note';
-import type { TextChange } from '../document/typst-document';
+import { addMarginNote } from '../../../editor/add-margin-note';
+import type { TextChange } from '../../typst-document/typst-document';
 
-const wasm = readFileSync(new URL('./wasm/typst_engine_bg.wasm', import.meta.url));
-const fontDir = new URL('./fonts/', import.meta.url);
+const wasm = readFileSync(new URL('../wasm/typst_engine_bg.wasm', import.meta.url));
+const fontDir = new URL('../fonts/', import.meta.url);
 const fonts = readdirSync(fontDir).map((name) => new Uint8Array(readFileSync(new URL(name, fontDir))));
-const greet = new Uint8Array(readFileSync(new URL('./fixtures/greet-0.1.0.tar.gz', import.meta.url)));
+const greet = new Uint8Array(readFileSync(new URL('../fixtures/greet-0.1.0.tar.gz', import.meta.url)));
 
 const doc = '#import "@preview/greet:0.1.0": greet\n#greet("World")';
 
@@ -84,7 +84,7 @@ describe('fetchPreviewPackage', () => {
 });
 
 describe('the drafting package (margin notes)', () => {
-  const drafting = new Uint8Array(readFileSync(new URL('./fixtures/drafting-0.2.2.tar.gz', import.meta.url)));
+  const drafting = new Uint8Array(readFileSync(new URL('../fixtures/drafting-0.2.2.tar.gz', import.meta.url)));
 
   it('compiles point and range margin notes', async () => {
     const bare = await createEngine(wasm, fonts);
@@ -111,7 +111,7 @@ describe('the drafting package (margin notes)', () => {
   });
 
   describe('page margins (drafting 0.2.2 needs a margin that differs by side)', () => {
-    const demo = readFileSync(new URL('../../demo/examples/hello/main.typ', import.meta.url), 'utf8');
+    const demo = readFileSync(new URL('../../../../demo/examples/hello/main.typ', import.meta.url), 'utf8');
     const compile = async (text: string) => {
       const bare = await createEngine(wasm, fonts);
       const project = withPackages(bare, async () => drafting);

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
 import { FileSwitcher } from './file-switcher';
-import type { FileChange } from './project';
+import type { FileChange } from '../core/project/project';
 
 const state = { paths: ['/main.typ', '/chapter.typ', '/logo.png'], main: '/main.typ', active: '/main.typ' };
 

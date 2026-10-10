@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { TextChange } from '../document/typst-document';
+import type { TextChange } from '../core/typst-document/typst-document';
 import { addMarginNote } from './add-margin-note';
 
 const IMPORT = '#import "@preview/drafting:0.2.2": margin-note\n';

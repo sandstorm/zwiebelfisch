@@ -3,7 +3,7 @@ import '../visual-view/jsdom-setup';
 import { describe, expect, it, vi } from 'vitest';
 import { undo } from '@codemirror/commands';
 import { EditorView } from '@codemirror/view';
-import { REMOTE_ORIGIN, TypstDocument } from '../document/typst-document';
+import { REMOTE_ORIGIN, TypstDocument } from '../core/typst-document/typst-document';
 import { SourceView } from './source-view';
 
 function setup(text: string, onBaseChange = vi.fn()) {

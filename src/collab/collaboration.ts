@@ -1,8 +1,8 @@
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import type { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
-import type { PlacedPresence, PresenceTarget } from '../document/presence';
-import type { Project } from '../editor/project';
+import type { PlacedPresence, PresenceTarget } from '../core/typst-document/presence';
+import type { Project } from '../core/project/project';
 import { roomFilePath } from './gitlab-protocol';
 import { RemoteCursors, type CollaborationUser } from './remote-cursors';
 import { RoomVersions } from './room-versions';

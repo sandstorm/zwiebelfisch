@@ -1,4 +1,4 @@
-import type { TypstDocument } from '../document/typst-document';
+import type { TypstDocument } from '../core/typst-document/typst-document';
 import { addMarginNote } from './add-margin-note';
 
 /** An editing view a note can be added in (source offsets throughout). */

@@ -1,6 +1,6 @@
 import type { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
-import type { PlacedPresence, Presence, PresenceTarget } from '../document/presence';
+import type { PlacedPresence, Presence, PresenceTarget } from '../core/typst-document/presence';
 
 /** Who is editing here, as others see it. */
 export interface CollaborationUser {

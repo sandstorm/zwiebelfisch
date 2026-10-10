@@ -1,8 +1,8 @@
 import { Editor } from '@tiptap/core';
 import { EditorState, TextSelection, type Transaction } from '@tiptap/pm/state';
-import type { Highlight } from '../document/highlight';
-import type { Presence, PresenceTarget } from '../document/presence';
-import type { TypstDocument } from '../document/typst-document';
+import type { Highlight } from '../core/typst-document/highlight';
+import type { Presence, PresenceTarget } from '../core/typst-document/presence';
+import type { TypstDocument } from '../core/typst-document/typst-document';
 import { changesPlugin, setChangesBase } from './change-decorations';
 import { extensions } from './extensions';
 import { highlights, setHighlights } from './highlights';

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import './jsdom-setup';
 import { describe, expect, it } from 'vitest';
-import { TypstDocument } from '../document/typst-document';
+import { TypstDocument } from '../core/typst-document/typst-document';
 import { VisualView } from './visual-view';
 
 const LABELS = { left: 'Align left', center: 'Center', right: 'Align right', justify: 'Justify' } as const;

@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createEngine, type Engine } from './engine';
-import { withPackages } from './packages';
+import { createEngine, type Engine } from './typst-engine';
+import { withPackages } from './packages/packages';
 
 /**
  * The Visual view's task lists rely on the Universe package cheq (pinned at

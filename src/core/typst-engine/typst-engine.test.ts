@@ -1,6 +1,6 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createEngine, type Engine } from './engine';
+import { createEngine, type Engine } from './typst-engine';
 
 const wasm = readFileSync(new URL('./wasm/typst_engine_bg.wasm', import.meta.url));
 const fontDir = new URL('./fonts/', import.meta.url);

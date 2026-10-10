@@ -1,10 +1,10 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createEngine, type Engine } from '../src/engine/engine';
+import { createEngine, type Engine } from '../src/core/typst-engine/typst-engine';
 import type { ProjectFiles } from '../src';
 import { EXAMPLES, exampleFiles, exampleFromQuery, exampleQuery } from './examples';
 
-const engineDir = new URL('../src/engine/', import.meta.url);
+const engineDir = new URL('../src/core/typst-engine/', import.meta.url);
 const wasm = readFileSync(new URL('wasm/typst_engine_bg.wasm', engineDir));
 const fontDir = new URL('fonts/', engineDir);
 const fonts = readdirSync(fontDir).map((name) => new Uint8Array(readFileSync(new URL(name, fontDir))));

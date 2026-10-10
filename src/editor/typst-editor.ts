@@ -1,5 +1,5 @@
 import type { CollaborationOptions } from '../collab/collaboration';
-import type { Diagnostic } from '../engine/engine';
+import type { Diagnostic } from '../core/typst-engine/typst-engine';
 import { Preview } from '../preview/preview';
 import proseMirrorStyles from '../visual-view/prosemirror.css?inline';
 import { AssetView } from './asset-view';
@@ -12,15 +12,15 @@ import { summarizeDiagnostics } from './diagnostics-summary';
 import { EditingViews, type EditorMode } from './editing-views';
 import { FileSwitcher } from './file-switcher';
 import { insertImage } from './insert-image';
-import { referencePath } from './paths';
-import { Project, type FileChange, type ProjectFiles } from './project';
+import { referencePath } from '../core/project/paths';
+import { Project, type FileChange, type ProjectFiles } from '../core/project/project';
 import { ProjectRenderings } from './project-renderings';
 import styles from './styles.css?inline';
 import { VersionControls, type Versions } from './version-controls';
 
 export type { CollaborationOptions } from '../collab/collaboration';
 export type { EditorMode } from './editing-views';
-export type { FileChange, ProjectFiles } from './project';
+export type { FileChange, ProjectFiles } from '../core/project/project';
 
 /** When the file bar is shown: `auto` (default) as soon as the project has more than one file. */
 export type FileListMode = 'auto' | 'show' | 'hide';

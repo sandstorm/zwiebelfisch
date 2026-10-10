@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-#MISE description="Pack the test package fixtures (src/engine/fixtures/<name>-<version>/) into .tar.gz like packages.typst.org serves them"
-#MISE sources=["src/engine/fixtures/*/**"]
-#MISE outputs=["src/engine/fixtures/*.tar.gz"]
+#MISE description="Pack the test package fixtures (src/core/typst-engine/fixtures/<name>-<version>/) into .tar.gz like packages.typst.org serves them"
+#MISE sources=["src/core/typst-engine/fixtures/*/**"]
+#MISE outputs=["src/core/typst-engine/fixtures/*.tar.gz"]
 set -euo pipefail
-cd src/engine/fixtures
+cd src/core/typst-engine/fixtures
 for dir in */; do
   name=${dir%/}
   # pax format: paths over 100 bytes become pax headers, as in real archives

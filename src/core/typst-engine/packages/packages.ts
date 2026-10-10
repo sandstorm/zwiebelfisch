@@ -1,4 +1,4 @@
-import type { CompileResult, Diagnostic, Engine } from './engine';
+import type { CompileResult, Diagnostic, Engine } from '../typst-engine';
 import { untarGz } from './tar';
 
 /** Returns the `.tar.gz` archive of a package spec like `@preview/name:0.1.0`. */

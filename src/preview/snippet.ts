@@ -1,4 +1,4 @@
-import type { Box, Page } from '../engine/engine';
+import type { Box, Page } from '../core/typst-engine/typst-engine';
 
 /** A cut-out of a compiled page: standalone SVG markup and its size in points. */
 export interface Snippet {

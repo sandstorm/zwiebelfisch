@@ -3,9 +3,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 import { connect, connectAwareness } from '../collab/in-process';
-import type { PlacedPresence } from '../document/presence';
+import type { PlacedPresence } from '../core/typst-document/presence';
 import { CollaborationLink } from './collaboration-link';
-import { Project } from './project';
+import { Project } from '../core/project/project';
 
 const MAIN = '/main.typ';
 const cleanup: (() => void)[] = [];

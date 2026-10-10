@@ -2,7 +2,7 @@
 import './jsdom-setup';
 import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
-import { TypstDocument } from '../document/typst-document';
+import { TypstDocument } from '../core/typst-document/typst-document';
 import { VisualView } from './visual-view';
 
 /** A Visual view over `text`, its toolbar, and its Tiptap editor (for typing). */
