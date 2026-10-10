@@ -55,7 +55,12 @@ export interface PreviewContributions {
   reveal(path: string, from: number, to: number): void;
   /** Someone clicked something in the preview that has a source location (outlined in the preview until the next click or compile). */
   readonly onDidClickPage: Event<PageClick>;
+  /**
+   * How the source range `from`..`to` of `path`, which holds `text`, is drawn: its page cut down to it. Null when it
+   * draws nothing or `text` is not what was compiled last.
+   */
   snippet(path: string, from: number, to: number, text: string): Promise<Snippet | null>;
+  /** A PDF of `entry.main` from the files last compiled, `entry.sources` replacing or adding text files for it. */
   exportPdf(entry: PdfEntry): Promise<PdfResult>;
 }
 
@@ -139,13 +144,13 @@ export type Zoom = 'fit' | number;
 
 /** A cut-out of a compiled page: standalone SVG markup and its size in points. */
 export interface Snippet {
-  svg: string;
-  width: number;
-  height: number;
+  readonly svg: string;
+  readonly width: number;
+  readonly height: number;
   /** Height of its tallest box (pt): one line of its biggest text, what an inline view scales by. */
-  textHeight: number;
+  readonly textHeight: number;
   /** Space (pt) kept around what is drawn (less where the page ends). */
-  padding: number;
+  readonly padding: number;
 }
 
 type RequestBody = Request extends infer R ? (R extends Request ? Omit<R, 'id'> : never) : never;
