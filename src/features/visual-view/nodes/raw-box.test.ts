@@ -32,6 +32,21 @@ function key(cm: EditorView, name: string, mod = false) {
 
 const RAW = '#set text(size: 12pt)\n\nHello\n';
 
+/**
+ * The `display` CodeMirror's mounted themes give `element` through its classes (rules like
+ * `.ͼ1 {…}`): `!important` beats normal, later beats earlier, as in a browser.
+ * jsdom's getComputedStyle ignores `!important`, and CodeMirror's base theme uses it.
+ */
+function cascadedDisplay(element: HTMLElement): string | null {
+  const rules = [...element.ownerDocument.styleSheets].flatMap((sheet) => [...sheet.cssRules]);
+  const declarations = rules
+    .filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule && /^\.[^\s.:>]+$/.test(rule.selectorText))
+    .filter((rule) => element.classList.contains(rule.selectorText.slice(1)) && rule.style.getPropertyValue('display'))
+    .map(({ style }) => ({ value: style.getPropertyValue('display'), important: style.getPropertyPriority('display') === 'important' }));
+  const important = declarations.filter((d) => d.important);
+  return (important.length > 0 ? important : declarations).at(-1)?.value ?? null;
+}
+
 describe('raw boxes', () => {
   it('show their Typst source in a nested code editor', () => {
     const { box } = setup(RAW);
@@ -89,6 +104,16 @@ describe('raw boxes', () => {
     new VisualView(parent, new TypstDocument(RAW));
     const cm = EditorView.findFromDOM(parent.querySelector<HTMLElement>('.typst-visual__raw-block .cm-content')!)!;
     expect(cm.root).toBe(shadow);
+  });
+
+  it('inline boxes hold only inline-level boxes, so they sit on one text line', () => {
+    const { parent } = setup('See #highlight[here] now.\n');
+    const box = parent.querySelector<HTMLElement>('.typst-visual__raw-inline')!;
+    // A block inside the inline <span> would split it into three lines (before, block, after).
+    const editor = box.querySelector<HTMLElement>('.cm-editor')!;
+    expect(cascadedDisplay(editor)).toBe('inline-flex');
+    for (let el = editor.parentElement; el && el !== box; el = el.parentElement) expect(el.tagName).toBe('SPAN');
+    expect([...box.children].map((child) => child.tagName)).toEqual(['SPAN']);
   });
 
   it('backspace in an emptied box removes it', () => {

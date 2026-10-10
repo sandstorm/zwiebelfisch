@@ -529,8 +529,11 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - **Rendered boxes** (`rendered-box.ts`, with a `BoxRenderer`): while not focused, a box shows
     an `<img>` instead of its code: an `image` box its file (`renderer.imageUrl(path)`, follows
     path edits at once), any other box the compiled snippet of its source range
-    (`renderer.snippet(from, to, src)` as an SVG data URL, sized in pt; refreshed on
-    `renderer.onChange`). Boxes starting with `#set`/`#show`/`#let`/`#import`/`#include` or a
+    (`renderer.snippet(from, to, src)` as an SVG data URL; refreshed on `renderer.onChange`).
+    Block boxes size it in pt; inline boxes in em of the text around them (`inlinePictureSize`:
+    scaled so the snippet's `textHeight` is a 1.15em text line, the padding taken back by
+    negative vertical margins), so a one-line snippet is one line high and its text the size of
+    the text around it. Boxes starting with `#set`/`#show`/`#let`/`#import`/`#include` or a
     comment (`rendersInPlace`) and boxes whose snippet is null keep showing code. Focus in
     the code (click on the picture — for images: double-click —, arrow keys, Enter) shows the
     code; focus leaving it shows the picture again.
@@ -540,6 +543,9 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - Undo/redo in a box run the Visual view's history. Arrow keys at a box's edges, Escape (and Enter
     in inline boxes) move into the outer editor; arrow keys in the outer editor (and Enter on a
     selected box) move into a box; Backspace in an empty box deletes it.
+  - Inline boxes are inline-level all the way down (`<span>`s and an `inline-flex` editor, which
+    must override CodeMirror's `display: flex !important`): a block inside the box's `<span>`
+    would split it into three lines.
   - Hidden: CodeMirror, the DOM ↔ box lookup, focus hand-over between the two editors. The
     nested CodeMirror gets the outer editor's root (the shadow root inside `<typst-editor>`):
     it is created before its box is attached, so it could not find that root itself and would
@@ -628,7 +634,7 @@ new Preview(container, { onJump?, onDiagnostics?, pdf? })   // renders a toolbar
 .reveal(path, offset)                        // cheap per cursor move: scroll only if off-screen (no marker); nothing while not following
 .setFollow(on)                               // "Follow cursor" (toolbar toggle; options follow / onFollowChange); on → goes to the newest reveal
 .showChanges(path, ranges | null)            // change bars in the page margin per path (all paths drawn), redrawn after every compile
-.snippet(path, from, to, text) → Promise<{svg, width, height} | null>   // the range as drawn, cut from its page
+.snippet(path, from, to, text) → Promise<{svg, width, height, textHeight, padding} | null>   // the range as drawn, cut from its page
 .onRender(listener) → unsubscribe            // after every successful compile
 .exportPdf(main, sources = {}) → Promise<PdfResult>   // the files of the last update(), sources replacing/adding texts
 .destroy()
@@ -636,9 +642,12 @@ new Preview(container, { onJump?, onDiagnostics?, pdf? })   // renders a toolbar
 
 - **Snippets** (`snippet.ts`): no extra compilation. After running compiles are done, the range
   goes to `boxesForRanges`; the union of the boxes on the first box's page (+2 pt, clamped to
-  the page) becomes the page SVG with that `viewBox` and size in pt. Null when the range draws
+  the page) becomes the page SVG with that `viewBox` and size in pt; `textHeight` is the tallest
+  box (one line of its biggest text), `padding` the 2 pt. Null when the range draws
   nothing, or when `text` is not what the range held at the last successful compile (it was
   edited since, or the document has errors), so a snippet never shows other source.
+  A call whose drawn glyphs all come from its definition (`ms(6)` with `#let ms(v) = [#v ms]`:
+  the glyphs' spans lie in the `let`) draws nothing in its own range, so its box keeps showing code.
 
 - **PDF menu** (`pdf-menu.ts`): "Download PDF" (without comments) plus ▾ with a `role=menu` of
   "Without comments" / "With comments" (Escape or a click outside closes it). While a PDF is

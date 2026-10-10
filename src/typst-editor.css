@@ -230,7 +230,10 @@
 .typst-visual__raw-block:not(.typst-visual__image) > .typst-visual__rendering { margin: 0 auto; }
 /* Image files show at their own size: keep a big photo from filling the whole view (aspect kept) */
 .typst-visual__image > .typst-visual__rendering { max-height: 24em; }
-.typst-visual__raw-inline > .typst-visual__rendering { display: inline-block; vertical-align: middle; }
+/* An inline snippet is sized in em of the text around it (see inlinePictureSize), so its box takes
+   that text's size, not the code chip's; a squeezed one keeps its aspect */
+.typst-visual__raw-inline.typst-visual__raw--rendered { font-size: inherit; }
+.typst-visual__raw-inline > .typst-visual__rendering { display: inline-block; vertical-align: middle; object-fit: contain; }
 .typst-visual__link { color: var(--te-accent); text-decoration: underline; cursor: text; }
 /* drafting margin notes in the text: highlighted text of a range note, a point note's marker */
 .typst-visual__note-range { background: var(--te-note); border-bottom: 2px solid var(--te-note-line); color: inherit; }
