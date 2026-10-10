@@ -1,6 +1,6 @@
 # Inspector sidebar: edit what the Visual view does not show, for the current selection
 
-Status: open (placement decided 2026-10-10; spike on dockview first)
+Status: open (placement decided 2026-10-10; dockview spike done: adopt later, build the side panel by hand behind a Layout module)
 Depends on: restructure-src (lands in `features/inspector/`), comments-gutter (shares the right side)
 Touches: src/visual-view/** (selection → context), new features/inspector/, widget layout, toolbar (things move out of it)
 
@@ -60,8 +60,15 @@ and the things around it (innermost first), with document-wide settings at the b
    - theming through CSS variables that match `--te-*`; small-width behaviour (embedding);
    - layout persistence (serialise per user; host option for a fixed default layout);
    - can the host restrict it (no docking for simple embeds: fixed two/three columns)?
-   Outcome: a short note here (adopt / not adopt + why). If adopted, the side-panel tabs are dockview
-   panels, and the widget's grid layout moves to dockview in its own task.
+   **Outcome (spike 2026-10-10, [docs/2026_10_10_dockview-spike.md](../2026_10_10_dockview-spike.md),
+   branch `spike/dockview`): adopt later, not now.** The core is MIT, works in a shadow root since
+   8.4.0 (2026-09-30), and has `toJSON`/`fromJSON`, `locked`/`disableDnd` and `--dv-*` variables
+   that map onto `--te-*`. But it costs +88 KB gzip JS (+23 % of our main module) for a layout we can
+   build by hand, its shadow-DOM support is two weeks old, features are moving into the paid
+   `dockview-enterprise` (keyboard navigation between groups, auto-hide side bars), and it has no
+   responsive collapse. So: build the Notes | Inspector side panel by hand behind a `Layout` module
+   (panel ids, `show(id)`, opaque saved layout, host option `fixed | dockable`), and swap dockview in
+   there when users need to rearrange or pop out panels.
 
 ## Acceptance (once decided)
 - A contributor API with tests; sections for image/figure, code block, link, alignment, generic
