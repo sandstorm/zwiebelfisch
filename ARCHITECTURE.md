@@ -1521,7 +1521,7 @@ files()  fileNavigation(): TypstExtension   // the side panel, the frame links (
 new FilePanel(parent, { onOpen(path), onChange(change) → Promise<reason | null>, prompts (the workbench's input box,
   warning and error messages), menus: { items(menuId, context), run(command, resource) }, memory?, decorations?(path) }, state)
 .render({ paths, main, active })  .newFile(at?)  .newFolder(at?)  .upload(at?)  .rename(path?)  .delete(path?)
-.uploadFiles(files)  .current()  .context(path)  .destroy()
+.uploadFiles(files)  .destroy()
 // workbench/tree/: new FileTree(parent, { onOpen, onRename, onDelete, onMove(source, folder), onUpload(files, folder),
 //                  onContextMenu(path, anchor), memory? })
 // workbench/icons/: icon(doc, name) — a leaf folder, so the tree and the panel both take it from below

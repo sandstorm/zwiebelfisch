@@ -1,15 +1,9 @@
 // FileTree: the project's files as an expandable tree (keyboard, drag & drop, decorations). See ../file-panel.ts and ARCHITECTURE.md, "File panel".
 import { ProjectPath } from '../../../../core/paths/paths';
-import { PROJECT_PATH_TYPE, type FileDecoration } from '../../../../hosts/workbench/workbench';
+import { PROJECT_PATH_TYPE, type FileDecoration, type Memory } from '../../../../hosts/workbench/workbench';
 import { textColorOn } from '../../../../ui/color-scheme/color-scheme';
 import { fileIcon, icon } from '../icons/icons';
 import { ancestorsOf, buildTree, filesUnder, type Folder, folderOf, type Move, navigate, type Row, visibleRows } from '../../model/tree-model';
-
-/** Where the tree remembers its open folders (e.g. for the browser session). */
-export interface FolderMemory {
-  load(): string[] | null;
-  save(folders: string[]): void;
-}
 
 export interface FileTreeOptions {
   /** A file was chosen (click, Enter). */
@@ -24,7 +18,8 @@ export interface FileTreeOptions {
   onUpload(files: File[], folder: Folder): void;
   /** The context menu of a row was asked for: a right click (at its point), Shift+F10 or the context menu key (below the row). */
   onContextMenu(path: ProjectPath, anchor: { x: number; y: number } | HTMLElement): void;
-  memory?: FolderMemory;
+  /** Where the open folders are remembered (e.g. for the browser session). */
+  memory?: Memory<string[]>;
 }
 
 export interface TreeState {
@@ -37,9 +32,6 @@ export interface TreeState {
   decorations(path: ProjectPath): readonly FileDecoration[];
 }
 
-/** The type of a dragged tree row in a drag's data. */
-const ROW_TYPE = PROJECT_PATH_TYPE;
-
 /**
  * The project's files as a tree (`role=tree`, one `treeitem` per visible row):
  * folders first, expandable (open folders are remembered), the main file
@@ -50,7 +42,7 @@ const ROW_TYPE = PROJECT_PATH_TYPE;
  * folders, and files from the computer dropped onto them.
  */
 export class FileTree {
-  readonly element: HTMLElement;
+  private readonly element: HTMLElement;
   private readonly expanded: Set<ProjectPath>;
   private state: TreeState | null = null;
   private rows: Row[] = [];
@@ -72,13 +64,6 @@ export class FileTree {
   /** The focused row (a file or folder path), else the shown file; null before the first `render`. */
   get current(): ProjectPath | null {
     return this.currentPath ?? this.state?.active ?? null;
-  }
-
-  /** The folder new files go into: the current folder, or the folder of the current file. */
-  get folder(): Folder {
-    const current = this.current;
-    if (current === null) return null;
-    return this.isFolder(current) ? current : folderOf(current);
   }
 
   isFolder(path: ProjectPath): boolean {
@@ -213,11 +198,11 @@ export class FileTree {
       return path === null || this.isFolder(path) ? path : folderOf(path);
     };
     const types = (event: DragEvent) => event.dataTransfer?.types ?? [];
-    const accepts = (event: DragEvent) => types(event).includes(ROW_TYPE) || types(event).includes('Files');
+    const accepts = (event: DragEvent) => types(event).includes(PROJECT_PATH_TYPE) || types(event).includes('Files');
     this.element.addEventListener('dragstart', (event) => {
       const path = pathAt(event);
       if (!path || !event.dataTransfer) return;
-      event.dataTransfer.setData(ROW_TYPE, path);
+      event.dataTransfer.setData(PROJECT_PATH_TYPE, path);
       // moved onto a folder here; copied as a reference elsewhere (an image dropped into the text)
       event.dataTransfer.effectAllowed = 'copyMove';
     });
@@ -237,7 +222,7 @@ export class FileTree {
       event.stopPropagation();
       mark(null);
       const folder = folderAt(event);
-      const source = ProjectPath.parse(event.dataTransfer?.getData(ROW_TYPE) ?? '');
+      const source = ProjectPath.parse(event.dataTransfer?.getData(PROJECT_PATH_TYPE) ?? '');
       if (source) this.options.onMove(source, folder);
       else this.options.onUpload([...(event.dataTransfer?.files ?? [])], folder);
     });
