@@ -7,6 +7,6 @@ export default defineConfig({
   worker: { format: 'es' },
   test: {
     root: '.',
-    include: ['src/**/*.test.ts'],
+    include: ['src/**/*.test.ts', 'demo/**/*.test.ts'],
   },
 });

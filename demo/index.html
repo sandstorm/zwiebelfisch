@@ -6,10 +6,20 @@
     <title>Typst Editor Demo</title>
     <style>
       html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; }
-      #editor { height: 100vh; }
+      body { display: flex; flex-direction: column; }
+      .demo-bar { display: flex; align-items: center; gap: 4px; padding: 4px 8px; font-size: 13px; border-bottom: 1px solid #d0d7de; background: #f6f8fa; }
+      .demo-bar__label { color: #57606a; margin-right: 4px; }
+      .demo-bar a { padding: 2px 8px; border-radius: 4px; color: #0969da; text-decoration: none; }
+      .demo-bar a:hover { background: #eaeef2; }
+      .demo-bar a[aria-current='page'] { background: #0969da; color: #fff; }
+      #editor { flex: 1; min-height: 0; }
     </style>
   </head>
   <body>
+    <nav class="demo-bar" aria-label="Examples">
+      <span class="demo-bar__label">Example:</span>
+      <span id="examples" style="display: contents"></span>
+    </nav>
     <div id="editor"></div>
     <script type="module" src="./main.ts"></script>
   </body>
