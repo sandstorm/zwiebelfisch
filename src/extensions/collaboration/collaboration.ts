@@ -46,7 +46,7 @@ export function collaboration(options: CollaborationOptions): TypstExtension {
         current: () => {
           const editor = workbench.activeTextEditor;
           const path = editor && project.pathOf(editor.document);
-          return path ? { path, view: { selection: () => editor.selection } } : null;
+          return path ? { path, selection: editor.selection } : null;
         },
         focused: () => workbench.isEditorFocused(),
         onSourceControl: (sourceControl) => subscriptions.push(workbench.registerSourceControl(sourceControl)),

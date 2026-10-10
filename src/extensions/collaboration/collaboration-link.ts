@@ -6,10 +6,10 @@ import type { GitLabSourceControl } from './model/gitlab-source-control';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { PlacedPresence } from './presence/presence';
 
-/** The editing view the local user works in, and what it has selected. */
+/** The file the local user works in, and what they have selected there (source offsets). */
 export interface CurrentSelection {
   path: ProjectPath;
-  view: { selection(): { from: number; to: number } };
+  selection: { from: number; to: number };
 }
 
 /** What the link asks of the widget, and tells it. */
@@ -72,7 +72,7 @@ export class CollaborationLink {
       this.scheduled = false;
       if (!this.collaboration || !this.widget.focused()) return;
       const current = this.widget.current();
-      this.collaboration.setCursor(current?.path ?? null, current?.view.selection());
+      this.collaboration.setCursor(current?.path ?? null, current?.selection);
     });
   }
 }
