@@ -29,6 +29,7 @@ import { SourceControls } from './source-controls/source-controls';
 import { FileDrops } from './file-drops/file-drops';
 import { Layout } from './layout/layout';
 import layoutStyles from './layout/layout.css?inline';
+import { EditorTitleMenu } from './menus/editor-title-menu';
 import { Menus } from './menus/menus';
 import { Notifications } from './notifications/notifications';
 import { QuickInput } from './quick-input/quick-input';
@@ -569,9 +570,6 @@ export interface Memory<T> {
  */
 export const PROJECT_PATH_TYPE = 'application/x-typst-project-path';
 
-/** The menu of the Visual / Source tab bar (VS Code's id). */
-const EDITOR_TITLE = 'editor/title';
-
 export interface WorkbenchOptions {
   /** The editing view shown first (default: visual). */
   mode?: EditorMode;
@@ -612,8 +610,7 @@ export class WorkbenchHost implements Workbench {
   readonly #menus = new Menus();
   readonly #notifications: Notifications;
   readonly #quickInput: QuickInput;
-  /** The `editor/title` menu, at the end of the tab bar. */
-  readonly #editorActions: HTMLElement;
+  readonly #editorTitle: EditorTitleMenu;
   readonly #commands: Commands;
   readonly #configuration: Configuration;
   readonly #drops: FileDrops;
@@ -658,7 +655,11 @@ export class WorkbenchHost implements Workbench {
     this.#drops = new FileDrops(host);
     this.onDidDropFiles = this.#drops.onDidDrop;
     this.#views = this.#createViews();
-    this.#editorActions = this.#createEditorActions();
+    this.#editorTitle = new EditorTitleMenu(host.ownerDocument, this.#menus, {
+      context: () => ({ editorMode: this.#views.mode, resource: this.#active }),
+      executeCommand: (command) => this.executeCommand(command),
+    });
+    this.#views.addTabActions(this.#editorTitle.element);
     this.#notifications = new Notifications(host);
     this.#quickInput = new QuickInput(host);
     this.#customEditors = new CustomEditors(this.#layout.editor);
@@ -720,7 +721,7 @@ export class WorkbenchHost implements Workbench {
     this.#views.show(document ?? null);
     if (document && options.selection) this.#views.reveal(options.selection.from, options.selection.to, options.mode);
     this.#shown.fire(path);
-    this.#showEditorActions();
+    this.#editorTitle.update();
     if (changed) this.options.onOpen?.(path);
   }
 
@@ -863,7 +864,7 @@ export class WorkbenchHost implements Workbench {
     this.#sourceControls.dispose();
     this.#quickInput.dispose();
     this.#notifications.dispose();
-    this.#editorActions.remove();
+    this.#editorTitle.dispose();
     this.#menus.dispose();
     this.#preview.destroy();
     this.#commands.dispose();
@@ -886,55 +887,8 @@ export class WorkbenchHost implements Workbench {
       // Fired from the editors' own updates: the DOM's selectionchange fires before
       // CodeMirror/ProseMirror read the new selection, so a listener would see the previous one.
       onSelection: (textEditor) => this.#selectionChanged.fire({ textEditor }),
-      onMode: () => this.#showEditorActions(),
+      onMode: () => this.#editorTitle.update(),
     });
-  }
-
-  /** The `editor/title` menu as a toolbar at the end of the tab bar, shown again whenever its context or entries change. */
-  #createEditorActions(): HTMLElement {
-    const bar = this.host.ownerDocument.createElement('div');
-    bar.className = 'typst-editor__tab-actions';
-    bar.setAttribute('role', 'toolbar');
-    bar.setAttribute('aria-label', 'Editor actions');
-    // the commands act on the editor's selection: pressing an action keeps the focus there
-    bar.addEventListener('mousedown', (event) => {
-      if ((event.target as Element).closest('button')) event.preventDefault();
-    });
-    this.#views.addTabActions(bar);
-    this.#menus.onDidChange((menuId) => menuId === EDITOR_TITLE && this.#showEditorActions());
-    return bar;
-  }
-
-  #showEditorActions(): void {
-    const context = { editorMode: this.#views.mode, resource: this.#active };
-    const doc = this.host.ownerDocument;
-    this.#editorActions.replaceChildren(
-      ...this.#menus.items(EDITOR_TITLE, context).map((item) => {
-        const button = doc.createElement('button');
-        button.type = 'button';
-        button.className = 'typst-editor__tab-action';
-        button.dataset.command = item.command;
-        const title = item.title ?? item.command;
-        button.title = title;
-        if (item.icon) {
-          const icon = doc.createElement('span');
-          icon.className = 'typst-editor__tab-action-icon';
-          icon.setAttribute('aria-hidden', 'true');
-          icon.innerHTML = item.icon;
-          button.append(icon);
-        }
-        const text = doc.createElement('span');
-        text.textContent = title;
-        button.append(text);
-        button.addEventListener('click', () => this.#run(item.command));
-        return button;
-      }),
-    );
-  }
-
-  /** Runs a menu entry's command; a failure is logged (the command tells the user itself). */
-  #run(command: string): void {
-    this.executeCommand(command).catch((error: unknown) => console.error(`Command ${command} failed:`, error));
   }
 
   /** The registered document links in every Source view and in the code of every raw box (paths from its file's). */

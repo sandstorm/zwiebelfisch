@@ -35,8 +35,8 @@ src/                        the widget (TypeScript); the most important API on t
                             priority; link-extension.ts: links in a CodeMirror editor, the Source views' and raw
                             boxes'), file-decorations/ (FileDecorations), source-controls/ (SourceControls),
                             status-bar/ (StatusBar: the status bar items, left / right by priority),
-                            menus/ (Menus: menu entries by menu id), notifications/ (Notifications: the messages),
-                            quick-input/ (QuickInput: input box and quick pick)
+                            menus/ (Menus: menu entries by menu id; EditorTitleMenu: `editor/title` in the tab bar),
+                            notifications/ (Notifications: the messages), quick-input/ (QuickInput: input box and quick pick)
     visual-view/            VisualView (Tiptap over the projection) and its contribution points, all in visual-view.ts:
                             VisualViewContributions, TypstNodeSpec / TypstMarkSpec, toolbar items and groups, box
                             renderers / tools / actions, gutters, highlights, VisualViewContext, svg, starterKitPart,
