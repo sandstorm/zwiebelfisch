@@ -1,4 +1,4 @@
-import { createTypstEditor, type ProjectFiles, type TypstEditor } from '../editor/typst-editor';
+import { createTypstEditor, type FileChange, type FileListMode, type ProjectFiles, type TypstEditor } from '../editor/typst-editor';
 import { inlineSource } from './inline-source';
 
 /** `detail` of the `change` event the element dispatches after every user edit. */
@@ -19,7 +19,10 @@ const Base = (typeof HTMLElement === 'undefined' ? class {} : HTMLElement) as ty
  * element's text content (common indentation removed). `value` is also a
  * property; setting it (or the attribute) replaces the source without a
  * `change` event. User edits dispatch `change` with `detail.value`.
- * The `files` property holds the project's other files (see `ProjectFiles`).
+ * The `files` property holds the project's other files (see `ProjectFiles`);
+ * with more than one file a file bar appears (attribute `file-list`:
+ * `auto` | `show` | `hide`). Every file change, including edits of other
+ * files, dispatches `files-change` with the `FileChange` as `detail`.
  */
 export class TypstEditorElement extends Base {
   static readonly observedAttributes = ['value'];
@@ -44,9 +47,9 @@ export class TypstEditorElement extends Base {
     }
   }
 
-  /** Other project files the source can include, import or load as images. */
+  /** Other project files the source can include, import or load as images (with current text). */
   get files(): ProjectFiles {
-    return this.#files;
+    return this.#editor?.files ?? this.#files;
   }
 
   set files(files: ProjectFiles) {
@@ -64,13 +67,16 @@ export class TypstEditorElement extends Base {
     this.#editor = createTypstEditor(container, {
       source: this.value,
       files: this.#files,
+      fileList: (this.getAttribute('file-list') ?? undefined) as FileListMode | undefined,
       onChange: (value) => this.#changed(value),
+      onFilesChange: (change) => this.#filesChanged(change),
     });
   }
 
   disconnectedCallback(): void {
     // Keep the text so a moved element comes back with it.
     this.#value = this.#editor?.source ?? this.#value;
+    this.#files = this.#editor?.files ?? this.#files;
     this.#editor?.destroy();
     this.#editor = null;
     this.shadowRoot?.replaceChildren();
@@ -85,6 +91,11 @@ export class TypstEditorElement extends Base {
     if (this.#settingValue) return;
     const detail: TypstEditorChangeDetail = { value };
     this.dispatchEvent(new CustomEvent('change', { detail, bubbles: true, composed: true }));
+  }
+
+  #filesChanged(change: FileChange): void {
+    if (this.#settingValue) return;
+    this.dispatchEvent(new CustomEvent('files-change', { detail: change, bubbles: true, composed: true }));
   }
 
   #initialSource(): string {
