@@ -146,7 +146,7 @@ defaultFonts() → Promise<Uint8Array>[]          // src/engine/default-fonts.ts
 .addFont(bytes)                                  // throws if bytes contain no font face
 .setSource(path, text) / .setBinary(path, bytes) / .remove(path)
 .compile(main) → { pages: [{hash, width, height, svg}], diagnostics: [{severity, message, hints, path, from, to}], missingPackages: string[] }
-.jumpFromClick(page, x, y) → {kind:'source', path, offset, from, to} | {kind:'url'} | {kind:'position'} | null
+.jumpFromClick(page, x, y) → {kind:'source', path, offset, from, to, boxes} | {kind:'url'} | {kind:'position'} | null
 .jumpFromCursor(path, offset) → [{page, x, y}]
 
 withPackages(engine, fetchPackage = fetchPreviewPackage) → { compile(main) → Promise<CompileResult> }
@@ -185,9 +185,14 @@ Inside the crate:
   compile again. A failed download is remembered (no retry until reload) and reported as an extra
   diagnostic with `path: null`, next to Typst's own "package not found" at the import.
 - **SVG cache:** page SVGs are keyed by `hash128(&page.frame)`. Unchanged pages skip `typst_svg::svg`.
-- **Hit-testing:** `typst_ide::jump_from_click(world, document, PagedPosition)` walks the frames of
-  the last successful document. `source_jump` widens the resulting byte offset to the enclosing
-  syntax leaf (`LinkedNode::leaf_at`) for highlighting. `jump_from_cursor` is the reverse.
+- **Hit-testing:**
+  - `typst_ide::jump_from_click(world, document, PagedPosition)` walks the frames of the last
+    successful document and gives the exact offset.
+  - `highlight.rs` finds the span of the glyph under the click. Its source node range becomes
+    `from..to`, and `span_boxes` returns one box per contiguous glyph run of that span (per
+    line/page). The preview draws these boxes.
+  - For non-text clicks, the range falls back to the syntax leaf at the offset, with no boxes.
+  - `jump_from_cursor` is the reverse.
 
 ### `createTypstEditor` / `<typst-editor>` (`src/editor`, `src/element`)
 
