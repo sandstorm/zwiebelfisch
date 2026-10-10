@@ -196,7 +196,7 @@ export class Preview implements PreviewContributions {
   readonly onDidChangeDiagnostics = this.diagnosed.event;
   readonly onDidClickPage = this.clicked.event;
 
-  constructor(private readonly container: HTMLElement) {
+  constructor(container: HTMLElement) {
     const doc = container.ownerDocument;
     this.pane = div(doc, 'typst-preview-pane');
     this.toolbar = div(doc, 'typst-preview__toolbar');
@@ -215,9 +215,7 @@ export class Preview implements PreviewContributions {
     this.scroller.addEventListener('scroll', () => this.scheduleStatus(), { passive: true });
     this.resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => this.scheduleStatus());
     this.resizeObserver?.observe(this.scroller);
-    this.compiles = new LatestOnly((compile, superseded) => this.compile(compile, superseded), {
-      onIdle: () => this.container.dispatchEvent(new CustomEvent('typst-preview-idle', { bubbles: true })),
-    });
+    this.compiles = new LatestOnly((compile, superseded) => this.compile(compile, superseded));
     this.reveals = new LatestOnly((reveal, superseded) => this.lookUp(reveal, superseded), {
       interval: REVEAL_INTERVAL_MS,
     });

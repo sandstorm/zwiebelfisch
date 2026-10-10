@@ -2,8 +2,6 @@
 export interface LatestOnlyOptions {
   /** Minimum time in ms between the start of two runs (default 0). */
   interval?: number;
-  /** Called whenever the last pending value has been processed. */
-  onIdle?(): void;
 }
 
 /**
@@ -47,6 +45,5 @@ export class LatestOnly<T> {
       }
     }
     this.running = null;
-    this.options.onIdle?.();
   }
 }

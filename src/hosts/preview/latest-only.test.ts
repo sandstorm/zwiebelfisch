@@ -47,15 +47,6 @@ describe('LatestOnly', () => {
     expect(superseded).toEqual([true, false]);
   });
 
-  it('calls onIdle once the queue has drained', async () => {
-    let idleCalls = 0;
-    const latest = new LatestOnly<number>(async () => {}, { onIdle: () => idleCalls++ });
-    latest.push(1);
-    latest.push(2);
-    await latest.idle();
-    expect(idleCalls).toBe(1);
-  });
-
   it('waits at least `interval` ms between two runs', async () => {
     const times: number[] = [];
     const latest = new LatestOnly<number>(async () => void times.push(Date.now()), { interval: 40 });
