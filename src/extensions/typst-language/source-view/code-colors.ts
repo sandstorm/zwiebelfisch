@@ -3,6 +3,7 @@ import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { Compartment, type Extension } from '@codemirror/state';
 import { EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import { tags as t } from '@lezer/highlight';
+import { isLightText } from '../../../ui/color-scheme/color-scheme';
 
 /** A token of typst-editor.css (`--te-syn-*`), with CodeMirror's default light color as fallback. */
 const token = (name: string, light: string) => `var(--te-syn-${name}, ${light})`;
@@ -29,17 +30,6 @@ export const typstHighlightStyle = HighlightStyle.define([
   { tag: t.comment, color: token('comment', '#940') },
   { tag: t.invalid, color: token('invalid', '#f00') },
 ]);
-
-/**
- * Whether a computed CSS color (`rgb(..)` / `rgba(..)`) is light: text in it sits on a dark background.
- * null when it is not a resolved color.
- */
-export function isLightText(color: string): boolean | null {
-  const match = /^rgba?\((\d+(?:\.\d+)?)[ ,]+(\d+(?:\.\d+)?)[ ,]+(\d+(?:\.\d+)?)/.exec(color);
-  if (!match) return null;
-  const [r, g, b] = match.slice(1).map(Number);
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 127.5;
-}
 
 const scheme = new Compartment();
 

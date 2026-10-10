@@ -1,81 +1,77 @@
-// ProjectRenderings: what a document's Visual view renders and inserts (snippets, image URLs, uploads).
-// Kept as one unit for now; the slices wave splits it into the `images` extension (image URLs, uploads)
-// and `rendered-boxes` (snippets). See ARCHITECTURE.md, "createTypstEditor".
+// The images extension: `#image(..)` blocks and figures in the Visual view showing the project's image files,
+// "Insert image" with the project's images and uploads, and images / data files opened read-only in the editing
+// area. Entry of extensions/images/. See ARCHITECTURE.md, "createTypstEditor".
+// Why one extension: an image is one concept from the file in the project to the box in the text; the Visual
+// view's host only knows boxes, renderers and file views, and the file panel only knows files.
 import { Disposable } from '../../core/disposable/disposable';
+import type { Event } from '../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
-import type { PreviewContributions } from '../../hosts/preview/preview';
-import { type FileChange, type FileContent, type Project } from '../../core/project/project';
+import { type FileChange, type Project } from '../../core/project/project';
 import { type PathReference, ProjectPath } from '../../core/paths/paths';
-import { uploadChanges } from '../../features/files/files';
-import { renderedBoxes, type SnippetSource } from '../rendered-boxes/rendered-boxes';
-import { images, type ImageAssets, type ImageUrls } from './visual-view/visual-view';
+import { uploadPath, uploadTarget } from './model/model';
+import { imagesVisualView, type ImageAssets, type ImageUrls } from './visual-view/visual-view';
+import { assetViews } from './workbench/workbench';
 
-export { assets } from './workbench/workbench';
-export { images, type ImageAssets, type ImageUrls } from './visual-view/visual-view';
-
-/** What a document's raw boxes show while not edited: compiled snippets and image files. */
-type Renderings = SnippetSource & ImageUrls;
+export { imagesVisualView, type ImageAssets, type ImageUrls } from './visual-view/visual-view';
 
 /**
- * What every document's Visual view renders and inserts: images (`#image(..)` boxes showing the project's image
- * file, "Insert image" offering the project's images and uploads, which go through `Workbench.applyChange`; an image
- * box's path opens the file, with the `documentLinks` service), and raw boxes as compiled snippets from the preview.
+ * Images in every document's Visual view (`#image(..)` boxes showing the project's image file, "Insert image"
+ * offering the project's images and uploads, which go through `Workbench.applyChange`; an image box's path opens
+ * the file, with the `documentLinks` service), and the read-only view of image and data files.
  */
-export function projectRenderings(): TypstExtension {
+export function images(): TypstExtension {
   return {
-    id: 'project-renderings',
+    id: 'images',
     activate(context) {
       const { project, workbench, preview, services, subscriptions } = context;
-      const renderings = new ProjectRenderings({ project, preview, request: (change) => workbench.applyChange(change) });
-      subscriptions.push(new Disposable(() => renderings.destroy()));
+      const projectImages = new ProjectImages({ project, onDidChange: preview.onDidRender, request: (change) => workbench.applyChange(change) });
+      subscriptions.push(
+        new Disposable(() => projectImages.destroy()),
+        workbench.registerFileView('image', assetViews),
+        workbench.registerFileView('data', assetViews),
+      );
       const documentLinks = services.get('documentLinks');
-      images({
-        assets: (document) => renderings.forDocument(document).assets,
-        imageUrls: (document) => renderings.forDocument(document).renderer,
+      imagesVisualView({
+        assets: (document) => projectImages.forDocument(document).assets,
+        imageUrls: (document) => projectImages.forDocument(document).urls,
         documentLinks,
       }).activate(context);
-      // after images, whose renderer draws image boxes
-      renderedBoxes({ snippets: (document) => renderings.forDocument(document).renderer }).activate(context);
     },
   };
 }
 
-export interface ProjectRenderingsOptions {
+export interface ProjectImagesOptions {
   project: Project;
-  preview: Pick<PreviewContributions, 'snippet' | 'onDidRender'>;
+  /** Fires whenever image files may have changed (a new compile). */
+  onDidChange: Event<void>;
   /** Applies a change (an uploaded image) if allowed; resolves to the reason it was not, or null. */
   request(change: FileChange): Promise<string | null>;
 }
 
 /**
- * What the Visual view of a project document shows and inserts: compiled
- * snippets cut from the preview's pages, the project's image files (as object
- * URLs, made once per file content and revoked when replaced or on destroy),
- * and the images "Insert image" offers or uploads, with paths as written in
- * that document.
+ * The project's image files as a document's Visual view shows and inserts
+ * them: as object URLs (made once per file content and revoked when replaced
+ * or on destroy), and as the images "Insert image" offers or uploads, with
+ * paths as written in that document.
  */
-export class ProjectRenderings {
+export class ProjectImages {
   private readonly urls = new Map<ProjectPath, { content: unknown; url: string }>();
 
-  constructor(private readonly options: ProjectRenderingsOptions) {}
+  constructor(private readonly options: ProjectImagesOptions) {}
 
-  /** What the Visual view of `document` renders and inserts (it may be renamed later; paths follow). */
-  forDocument(document: TypstDocument): { renderer: Renderings; assets: ImageAssets } {
-    const { project, preview } = this.options;
+  /** The images of `document`'s Visual view (it may be renamed later; paths follow). */
+  forDocument(document: TypstDocument): { urls: ImageUrls; assets: ImageAssets } {
+    const { project, onDidChange } = this.options;
     const path = () => project.pathOf(document);
     return {
-      renderer: {
-        snippet: async (from, to, text) => {
-          const file = path();
-          return file ? preview.snippet(file, from, to, text) : null;
-        },
+      urls: {
         imageUrl: (reference) => {
           const file = path();
           const target = file && ProjectPath.resolve(file, reference);
           return target ? this.imageUrl(target) : null;
         },
-        onDidChange: preview.onDidRender,
+        onDidChange,
       },
       assets: {
         list: () => {
@@ -110,33 +106,15 @@ export class ProjectRenderings {
 
   private async upload(upload: File, file: ProjectPath | undefined): Promise<{ path: PathReference } | { error: string }> {
     if (!file) return { error: 'This document is no longer part of the project.' };
-    const [change] = await uploadChanges([upload]);
-    if (!change || change.kind !== 'create' || ProjectPath.kind(change.path) !== 'image') {
+    const path = uploadPath(upload.name);
+    if (!path || ProjectPath.kind(path) !== 'image') {
       return { error: `${upload.name} is not an image the document can show (PNG, JPEG, GIF, SVG or WebP).` };
     }
-    const target = this.placeFor(change.path, change.content);
-    if (this.options.project.has(target)) return { path: ProjectPath.referenceTo(file, target) };
-    const problem = await this.options.request({ ...change, path: target });
+    const { project, request } = this.options;
+    const content = new Uint8Array(await upload.arrayBuffer());
+    const target = uploadTarget(path, content, (candidate) => project.content(candidate));
+    if (project.has(target)) return { path: ProjectPath.referenceTo(file, target) };
+    const problem = await request({ kind: 'create', path: target, content });
     return problem === null ? { path: ProjectPath.referenceTo(file, target) } : { error: problem };
   }
-
-  /**
-   * Where an upload of `content` named `path` goes: a file with the same
-   * content (`name.png`, `name-2.png`, …), else the first free one of those
-   * names (browsers name every pasted screenshot `image.png`).
-   */
-  private placeFor(path: ProjectPath, content: FileContent): ProjectPath {
-    const extension = ProjectPath.extension(path);
-    const stem = path.slice(0, path.length - extension.length);
-    for (let n = 1; ; n++) {
-      const candidate = n === 1 ? path : ProjectPath.of(`${stem}-${n}${extension}`);
-      const existing = this.options.project.content(candidate);
-      if (existing === undefined || sameContent(existing, content)) return candidate;
-    }
-  }
-}
-
-function sameContent(a: FileContent, b: FileContent): boolean {
-  if (typeof a === 'string' || typeof b === 'string') return a === b;
-  return a.length === b.length && a.every((byte, i) => byte === b[i]);
 }

@@ -1,12 +1,15 @@
 // The document-links extension: the file paths in a Typst file (`#include "ch1.typ"`, `image("logo.png")`) as
-// links in the Source view, which open the file or offer to create it. Entry of extensions/document-links/.
-// See ARCHITECTURE.md, "File links".
+// links in the Source view and the Visual view's raw boxes, which open the file or offer to create it. Entry of
+// extensions/document-links/. See ARCHITECTURE.md, "File links".
+// Why an extension: where a path leads depends on the project and the file's current path, and following it on the
+// workbench; the editors only offer link providers and CodeMirror extensions. Others (an image box's path) use the
+// `documentLinks` service instead of importing this.
 import { DocumentLinkProvider } from '../../core/document-links/document-links';
 import { ProjectPath } from '../../core/paths/paths';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
+import type { TypstExtension } from '../../hosts/workbench/workbench';
 import { fileLinks } from './source-view/source-view';
 import { boxLinks } from './visual-view/visual-view';
-import type { TypstExtension } from '../../hosts/workbench/workbench';
 
 export { boxLinks } from './visual-view/visual-view';
 

@@ -8,7 +8,6 @@ import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { Decoration, EditorView, NodeView } from '@tiptap/pm/view';
 import { minimalChange } from '../../../core/typst-document/typst-document';
-import { codeColors, typstSyntax as typstLanguage } from '../../../extensions/typst-language/typst-language';
 import { remotePresence, showPresence } from '../../source-view/source-view';
 import type { BoxRenderer, BoxTools, BoxToolsHost, CodeBoxSpec, VisualViewContext } from '../contributions/contributions';
 import { nodeGrammar, posToSource } from '../projection/projection';
@@ -71,7 +70,8 @@ const inlineTheme = CodeView.theme({
 
 /**
  * A raw box (a node whose spec has `box: 'code'`: `rawBlock`, `rawInline`, an image call, an outline):
- * Typst the Visual view does not model, edited in place in a nested CodeMirror with Typst highlighting.
+ * Typst the Visual view does not model, edited in place in a nested CodeMirror (the language and its colors
+ * are contributed: `registerBoxCodeExtension`).
  *
  * The box's text is the node's `src` attribute, which the projection prints
  * verbatim: every edit sets `src` (an attribute step, so positions and the
@@ -168,8 +168,6 @@ class RawBox implements NodeView {
       doc: this.node.attrs.src,
       extensions: [
         keymap.of([...this.keys(inline), ...defaultKeymap]),
-        typstLanguage(),
-        codeColors,
         inline ? inlineTheme : [blockTheme, CodeView.lineWrapping],
         CodeView.contentAttributes.of({ 'aria-label': 'Typst code' }),
         remotePresence,

@@ -1,6 +1,7 @@
-// fileLinks: paths in #import / #include / image(..) / read(..) / data calls open their file (Mod+click,
-// Alt+Enter, hover tooltip). In the Source view (from its link providers) and the Visual view's raw boxes. See
-// document-links.ts and ARCHITECTURE.md, "File links".
+// File links in CodeMirror: paths in #import / #include / image(..) / read(..) / data calls open their file
+// (Mod+click, Alt+Enter, hover tooltip). In the Source view (`fileLinks`, from its link providers) and the Visual
+// view's raw boxes (`pathLinks`). Entry of extensions/document-links/source-view/. See ../document-links.ts and
+// ARCHITECTURE.md, "File links".
 import { syntaxTree } from '@codemirror/language';
 import { type EditorState, type Extension, RangeSetBuilder } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, hoverTooltip, keymap, ViewPlugin, type ViewUpdate } from '@codemirror/view';
@@ -14,7 +15,7 @@ const MOD_CLICK = MAC ? '⌘+click' : 'Ctrl+click';
 const pathMark = Decoration.mark({ class: 'typst-source__path' });
 
 /** The file paths of a Source view's document as links, from its link providers (none: plain text). */
-export const fileLinks: SourceViewExtension = (view) => (view.documentLinks ? documentLinks(view.documentLinks) : []);
+export const fileLinks: SourceViewExtension = (view) => (view.documentLinks ? pathLinks(view.documentLinks) : []);
 
 /**
  * Makes the file paths in the code navigable, like IntelliJ: while the
@@ -22,7 +23,7 @@ export const fileLinks: SourceViewExtension = (view) => (view.documentLinks ? do
  * one opens its file, and the hover tooltip offers "Open …" or, for a
  * missing Typst file, "Create …".
  */
-export function documentLinks(links: DocumentLinkProvider): Extension {
+export function pathLinks(links: DocumentLinkProvider): Extension {
   return [
     pathDecorations(links),
     EditorView.domEventHandlers({

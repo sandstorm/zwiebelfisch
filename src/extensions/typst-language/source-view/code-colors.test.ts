@@ -2,7 +2,7 @@
 // Tests for code-colors.ts.
 import { EditorView } from '@codemirror/view';
 import { describe, expect, it } from 'vitest';
-import { codeColors, isLightText, typstHighlightStyle } from './code-colors';
+import { codeColors, typstHighlightStyle } from './code-colors';
 
 /** Lets the color check run (it waits a microtask: no dispatch while the view is being built). */
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -12,19 +12,6 @@ function mount(color: string): EditorView {
   parent.style.color = color;
   return new EditorView({ parent, doc: '= Title', extensions: codeColors });
 }
-
-describe('isLightText', () => {
-  it('tells light text (a dark background) from dark text', () => {
-    expect(isLightText('rgb(230, 237, 243)')).toBe(true);
-    expect(isLightText('rgb(31, 35, 40)')).toBe(false);
-    expect(isLightText('rgba(255, 255, 255, 0.9)')).toBe(true);
-  });
-
-  it('knows nothing from an unresolved color', () => {
-    expect(isLightText('')).toBeNull();
-    expect(isLightText('light-dark(black, white)')).toBeNull();
-  });
-});
 
 describe('codeColors', () => {
   it("turns on CodeMirror's dark theme where the text around the editor is light", async () => {

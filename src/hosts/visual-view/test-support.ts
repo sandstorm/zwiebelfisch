@@ -15,8 +15,8 @@ import {
   tables, taskLists,
 } from './builtins/builtins';
 import { boxLinks } from '../../extensions/document-links/document-links';
-import { images, type ImageAssets, type ImageUrls } from '../../extensions/images/images';
-import { renderedBoxes, type SnippetSource } from '../../extensions/rendered-boxes/rendered-boxes';
+import { imagesVisualView, type ImageAssets, type ImageUrls } from '../../extensions/images/images';
+import { renderedBoxesVisualView, type SnippetSource } from '../../extensions/rendered-boxes/rendered-boxes';
 import { VisualViewContributions } from './contributions/contributions';
 import { createSchema } from './nodes/nodes';
 import { posToSource, print, project as projectWith, sourceToPos } from './projection/projection';
@@ -63,13 +63,13 @@ function contributions(options: TestViewOptions) {
     markup,
     headings,
     tables,
-    images({
+    imagesVisualView({
       assets: options.assets && (() => options.assets),
       imageUrls: options.renderer && (() => options.renderer),
       documentLinks: options.documentLinks && (() => options.documentLinks),
     }),
     // after images, whose renderer draws image boxes
-    renderedBoxes({ snippets: options.renderer && (() => options.renderer) }),
+    renderedBoxesVisualView({ snippets: options.renderer && (() => options.renderer) }),
     outline,
     pageBreak,
     horizontalRule,

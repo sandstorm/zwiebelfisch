@@ -1,0 +1,43 @@
+// The rendered-boxes model: which raw boxes a snippet is meaningful for, and how big a snippet is drawn. No DOM.
+// Entry of extensions/rendered-boxes/model/. See ../rendered-boxes.ts.
+
+/** A picture of compiled Typst: standalone SVG markup and its size in points. */
+export interface Snippet {
+  svg: string;
+  width: number;
+  height: number;
+  /** Height (pt) of one line of its biggest text; without it, inline boxes show the snippet at its own size. */
+  textHeight?: number;
+  /** Space (pt) around what is drawn. */
+  padding?: number;
+}
+
+/** Code that configures or defines (`#set`, `#let`, …) and draws nothing in place, or only elsewhere. */
+const NOT_IN_PLACE = /^\s*(#(set|show|let|import|include)\b|\/\/|\/\*)/;
+
+/** Whether `src` (a raw box's Typst) draws its own output where it stands, so a snippet of it is meaningful. */
+export function rendersInPlace(src: string): boolean {
+  return !NOT_IN_PLACE.test(src);
+}
+
+/** A snippet at its own size (pt), or inline in the line of text around it (em, see `inlinePictureSize`), as CSS lengths. */
+export function snippetSize(snippet: Snippet, inline: boolean): { width: string; height: string; margin: string } {
+  const em = inline ? inlinePictureSize(snippet) : null;
+  if (!em) return { width: `${snippet.width}pt`, height: '', margin: '' };
+  return { width: '', height: `${em.height}em`, margin: `${em.margin}em` };
+}
+
+/** How tall a line of text is (ascender to descender, as the engine boxes glyph runs), in em of its size. */
+const TEXT_LINE_EM = 1.15;
+
+/**
+ * How an inline box draws its snippet, in em of the text around it: scaled so
+ * the snippet's text (`textHeight`) is as big as that text, and with negative
+ * vertical margins taking back the padding, so a one-line snippet takes one
+ * line (1.15em) and does not make its line taller. Null without a text height.
+ */
+export function inlinePictureSize({ height, textHeight, padding = 0 }: Pick<Snippet, 'height' | 'textHeight' | 'padding'>): { height: number; margin: number } | null {
+  if (!textHeight) return null;
+  const emPerPt = TEXT_LINE_EM / textHeight;
+  return { height: height * emPerPt, margin: -padding * emPerPt };
+}

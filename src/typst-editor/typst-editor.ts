@@ -16,7 +16,8 @@ import { spreadsheets } from '../features/spreadsheets/spreadsheets';
 import { styles } from '../features/styles/styles';
 import { versions } from '../features/versions/versions';
 import { documentLinks } from '../extensions/document-links/document-links';
-import { assets, projectRenderings } from '../extensions/images/images';
+import { images } from '../extensions/images/images';
+import { renderedBoxes } from '../extensions/rendered-boxes/rendered-boxes';
 import { typstLanguage } from '../extensions/typst-language/typst-language';
 import {
   alignment, headingNumbers, headings, horizontalRule, lists, markup, outline, pageBreak, tables, taskLists,
@@ -198,15 +199,15 @@ function builtinExtensions(options: TypstEditorOptions): TypstExtension[] {
     ...(options.collaboration ? [collaboration(options.collaboration, options.user)] : []),
     files({ fileList: options.fileList }),
     fileNavigation(),
-    assets(),
     spreadsheets(),
     diagnostics(),
     versions({ user: options.user }),
     markup,
     headings,
     tables,
-    // images, and raw boxes drawn as compiled snippets (after images, whose renderer draws image boxes)
-    projectRenderings(),
+    images(),
+    // raw boxes drawn as compiled snippets (after images, whose renderer draws image boxes)
+    renderedBoxes(),
     outline,
     pageBreak,
     horizontalRule,

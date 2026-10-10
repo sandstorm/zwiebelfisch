@@ -44,7 +44,7 @@ export interface ImagesOptions {
  * as rich text; "Insert image" (a path, or the project's images and uploads),
  * and image files dropped on or pasted into the text.
  */
-export function images(options: ImagesOptions = {}): VisualViewContribution {
+export function imagesVisualView(options: ImagesOptions = {}): VisualViewContribution {
   return {
     id: 'images',
     activate({ visualView, subscriptions }) {

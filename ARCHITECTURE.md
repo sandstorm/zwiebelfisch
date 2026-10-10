@@ -24,9 +24,8 @@ src/                        the widget (TypeScript); the most important API on t
     source-view/            SourceViewHost (registerExtension, registerLinkProvider, createView: what
                             `ExtensionContext.sourceView` is) and SourceView (view.ts: CodeMirror 6 bound to a
                             TypstDocument); contribution.ts (the contribution types)
-      builtins/             the built-in contributions until they move into extensions: typst-language, code-colors,
-                            lint (DiagnosticCollection), file-links (Mod+click / Alt+Enter / tooltip on paths),
-                            presence; the raw boxes use them too
+      builtins/             the built-in contributions until they move into extensions: lint (DiagnosticCollection),
+                            presence; the raw boxes use presence too
     preview/                Preview — worker-backed live preview + hit-testing, scroll / reveal; what
                             `ExtensionContext.preview` is: toolbar items, PDF variants, page overlays (contribution.ts),
                             onDidChangeDiagnostics / onDidRender, snippet, exportPdf; latest-only.ts ("only the
@@ -61,7 +60,20 @@ src/                        the widget (TypeScript); the most important API on t
     event-emitter/          EventEmitter<T> (`event` to subscribe, `fire`), Event<T>
   ui/                       feature-neutral DOM widgets, one folder each: field-popover/ (FieldPopover: one text field,
                             Apply / Remove; also used by versions/), toolbar-menu/ (ToolbarMenu: a menu button of
-                            toolbar buttons), floating-bar/ (FloatingBar: a bar above an anchor in the text)
+                            toolbar buttons), floating-bar/ (FloatingBar: a bar above an anchor in the text),
+                            color-scheme/ (isLightText: light or dark, from a resolved text color)
+  extensions/               one folder per concept (docs/2026_10_10_extensions-architecture.md): <name>.ts (the
+                            TypstExtension), model/ (pure, no DOM), and one folder per host it contributes to
+    images/                 images(): image boxes + figures, "Insert image", ProjectImages (object URLs, uploads);
+                            model/ (image-call.ts: arguments edited in place; upload.ts: uploadPath, uploadTarget),
+                            visual-view/ (imagesVisualView: specs, tools, insertion, image-path-link),
+                            workbench/ (AssetView: images and data files read-only, the `image` / `data` file views)
+    rendered-boxes/         renderedBoxes(): raw boxes drawn as snippets from the preview; model/ (Snippet,
+                            rendersInPlace, inlinePictureSize, snippetSize), visual-view/ (the box renderer)
+    document-links/         documentLinks(): file paths as links, the `documentLinks` service; source-view/ (fileLinks,
+                            pathLinks, linkInfo), visual-view/ (boxLinks: pathLinks in raw boxes)
+    typst-language/         typstLanguage(): Typst syntax + code colors in the Source views and raw boxes;
+                            source-view/ (typst-syntax.ts, code-colors.ts)
   features/                 one folder per feature, each entered through the file named like it
     diagnostics/            DiagnosticsStatus (status bar), diagnostics-summary.ts
     labels/                 LabelIndex: the project's labels (kind, title, file) and reference counts; scan.ts (Lezer, .bib)
@@ -72,7 +84,7 @@ src/                        the widget (TypeScript); the most important API on t
     comments/               CommentAction ("Comment" / Ctrl+Alt+M), add-margin-note.ts, margin-note-syntax.ts
                             (drafting's call: parse, print, validity), note-thread.ts (a note's body as a
                             thread of messages), page-margin.ts, without-notes.ts (the PDF without comments)
-    files/                  FilePanel (the file panel: header, prompts, drops; files.css), icons.ts, asset-view.ts,
+    files/                  FilePanel (the file panel: header, prompts, drops; files.css), icons.ts,
                             upload.ts, file-navigation.ts ("← previous file" / "next file →" around an included file)
       tree/                 tree.ts (FileTree: rows, keyboard, drag & drop, presence), tree-model.ts (pure)
     collaboration/          real-time collaboration (loaded on demand): Collaboration, SharedProject, RemoteCursors,
@@ -81,10 +93,6 @@ src/                        the widget (TypeScript); the most important API on t
                             (the widget's eager side: loads the rest on demand)
     pdf-export/             PdfExport: the project's PDF with / without comments
     preview-controls/       previewControls: zoom, "Follow cursor" (remembered in localStorage), page number
-    typst-language/         typstLanguage: Typst syntax + code colors in the Source views
-    document-links/         documentLinks: file paths as links in the Source views; the `documentLinks` service
-    project-renderings/     ProjectRenderings: what a document's Visual view renders and inserts (snippets, image URLs,
-                            uploads); one unit until the slices wave splits it into images / rendered-boxes
     versions/               VersionControls: "Save version", commit message, outcome (GitLab rooms)
 crates/typst-engine/        Rust → wasm: Typst compiler, SVG and PDF export, click/cursor jumps
   src/world.rs              in-memory Typst World (files and fonts pushed from JS)
@@ -112,7 +120,7 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
   a stylesheet may be `files/files.css`). Everything else in the folder is internal to it, and
   folders that grow get subfolders named after a concept (`projection/`, `worker/`), never generic
   ones. No sibling folders: an entry file lives inside its folder (`typst-editor/typst-editor.ts`),
-  never next to it. `core/`, `ui/`, `hosts/` and `features/` only group.
+  never next to it. `core/`, `ui/`, `hosts/`, `extensions/` and `features/` only group.
 - **Imports from outside a folder go to its entry file**, which re-exports what others need.
   ESLint enforces this (`local/entry-imports`, `eslint-rules/entry-imports.js`); only TypeScript and
   CSS sources count (not the generated `wasm/`, `fonts/` or the `fixtures/`). The exceptions are
@@ -124,7 +132,10 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
   - `features/collaboration/collaboration-link.ts` — `typst-editor/typst-editor.ts`: the eager side of
     collaboration; the folder's entry is the lazily loaded chunk (until the slices wave);
   - `features/collaboration/in-process.ts` — test files;
-  - `features/collaboration/shared-project.ts` — the server's tests.
+  - `features/collaboration/shared-project.ts` — the server's tests;
+  - `hosts/visual-view/test-support.ts` — test files: a Visual view with the built-in contributions (it imports
+    the extensions' Visual-view contributions, the one place a host file imports `extensions/`);
+  - `hosts/visual-view/projection/projection.ts` — the extensions' tests: `project` / `print` with a schema.
 - **Top comments.** Every source file starts with a comment: its context, `See <entry file /
   ARCHITECTURE.md section>`, or `Tests for X` (`mise run quality:top-comments`, part of `quality`).
 - Other languages and separate programs stay at the top level: `crates/`, `server/`, `demo/`,
@@ -187,9 +198,9 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   every `FileChange`.
 - **Composition**: a `Project` in a `WorkbenchHost` (`hosts/workbench`, see "Extensions" below) that runs the
   built-in extension list, configured from the options (`builtinExtensions`): `typstLanguage`, `documentLinks`,
-  `collaboration` (with the option), `files` (`fileList`), `fileNavigation`, `assets`, `spreadsheets`,
+  `collaboration` (with the option), `files` (`fileList`), `fileNavigation`, `spreadsheets`,
   `diagnostics`, `versions` (`user`); the Visual view's constructs and features in schema order: `markup`,
-  `headings`, `tables`, `projectRenderings` (images, then compiled snippets), `outline`, `pageBreak`,
+  `headings`, `tables`, `images`, `renderedBoxes` (after `images`, whose renderer draws image boxes), `outline`, `pageBreak`,
   `horizontalRule`, `taskLists` (before `lists`: its projector gets `- [ ]` items first), `lists`,
   `headingNumbers`, `alignment`, `comments` (`user`), `labels`, `styles`; then `previewControls`
   (`followCursor`) and `pdfExport` (`pdfDownload`). The extension API is not public yet: the
@@ -210,7 +221,8 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   and makes every document's Visual view from it. The Typst constructs without configuration (`markup`,
   `headings`, `tables`, `outline`, `pageBreak`, `horizontalRule`, `taskLists`, `lists`, `headingNumbers`,
   `alignment`) are extensions of the built-in list themselves; the features activate theirs with what they own:
-  `documentLinks` → `boxLinks`, `projectRenderings` → `images` + `renderedBoxes`, `comments` → `marginNotes` +
+  `documentLinks` → `boxLinks`, `images` → `imagesVisualView`, `renderedBoxes` → `renderedBoxesVisualView`,
+  `typstLanguage` → the raw boxes' syntax and colors (`registerBoxCodeExtension`), `comments` → `marginNotes` +
   `notesGutter`, `labels` → `references`, `styles` → `customStyles`. The list's order is the schema's.
 - **`EditingViews`** (`hosts/workbench/editing-views/`): one Visual/Source tab bar; a document's views are
   created the first time it is shown and then only hidden, so cursor and undo history survive switching. The
@@ -234,16 +246,18 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
 - **File links** (see below): the `documentLinks` extension gives each document a `DocumentLinkProvider`
   (paths resolve from the document's current path; `open` is `Workbench.open`; `create` is a `create` change
   through `applyChange`, then `open`), as the Source views' link provider, for the paths in the Visual view's
-  raw boxes (`boxLinks`), and as the `documentLinks` service (an image box's path, through `projectRenderings`).
+  raw boxes (`boxLinks`), and as the `documentLinks` service (an image box's path, through `images`).
 - Preview clicks into another project file open it, then reveal. Clicks into packages are ignored.
-- **`ProjectRenderings`** (the `projectRenderings` extension, through `images` and `renderedBoxes`) gives every document's Visual view its `renderer` (snippets from
-  `Preview.snippet` under the document's current path, refreshed on `Preview.onRender`; image
-  files resolved like Typst (`ProjectPath.resolve`) and shown as object URLs, made once per content and
-  revoked when replaced) and `assets` (the project's images as `PathReference`s (`ProjectPath.referenceTo`); uploads become
-  a `create` change that goes through `allowFileChange` like the file panel's; an upload equal to
-  an existing file (`name.png`, `name-2.png`, …) reuses it, a different one gets the first free
-  of those names — every pasted screenshot is `image.png`; refusals — not an image Typst shows,
-  the host's veto — come back as an error the popover shows).
+- **Images and rendered boxes** (`extensions/images`, `extensions/rendered-boxes`): `ProjectImages` (the `images`
+  extension) gives every document's Visual view its `ImageUrls` (image files resolved like Typst
+  (`ProjectPath.resolve`) and shown as object URLs, made once per content and revoked when replaced; refreshed on
+  `Preview.onDidRender`) and `ImageAssets` (the project's images as `PathReference`s (`ProjectPath.referenceTo`);
+  uploads become a `create` change (`uploadPath`, `uploadTarget` in `model/`) that goes through `allowFileChange`
+  like the file panel's; an upload equal to an existing file (`name.png`, `name-2.png`, …) reuses it, a different
+  one gets the first free of those names — every pasted screenshot is `image.png`; refusals — not an image Typst
+  shows, the host's veto — come back as an error the popover shows). The `renderedBoxes` extension gives each
+  document's raw boxes their snippets: `Preview.snippet` under the document's current path, refreshed on
+  `Preview.onDidRender`.
 - **PDF** (`PdfExport`, the `pdfExport` extension in `features/pdf-export/`): `exportPdf({comments})` (the
   `pdfExport.export` command) and the preview's "Download PDF" (the `pdfMenu` toolbar item with the PDF variants
   "Without comments" / "With comments" it registers, unless `pdfDownload: false`). With comments the main
@@ -252,7 +266,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   error(s): …" (the toolbar shows it), never an older PDF. File name after the main file:
   `main.pdf` / `main-with-comments.pdf`. The plain button is the version without comments
   (decision: the usual final version); the menu has both.
-- **Images into the text**: `AssetView` (the `assets` extension: the file view of `image` and `data` files) only previews. An image row dragged from the file panel
+- **Images into the text**: `AssetView` (the `images` extension's file view of `image` and `data` files) only previews. An image row dragged from the file panel
   (drag type `PROJECT_PATH_TYPE`, data: the project path) and dropped on the Visual view is
   inserted there as an image block (`imageFileDrops` → `ImageAssets.reference(path)`: relative
   when in the same folder tree, else project-absolute; not for non-images).
@@ -316,8 +330,8 @@ new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen? })
   `comments.addComment` (bound to `Mod+Alt+KeyM`).
 - **File views by kind.** `open(path)` shows a Typst file in the tabs and any other file in the view
   registered for `ProjectPath.kind(path)` (`FileViews`: created on first use, one per provider, shown again
-  on every open so a replaced file shows its new content; nothing for a kind without a view). `assets`
-  registers `image` + `data`, `spreadsheets` registers `spreadsheet` (and stores its edits with
+  on every open so a replaced file shows its new content; nothing for a kind without a view). `images`
+  registers `image` + `data` (`AssetView`), `spreadsheets` registers `spreadsheet` (and stores its edits with
   `applyChange`).
 - **Keys** (`Commands`): `registerKeybinding(key, command)` handles `key` on the widget in the capture phase,
   so the command runs before an editor sees the key, which then never does. `key`: modifiers (`Mod` = Ctrl or
@@ -325,18 +339,23 @@ new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen? })
 - **Drops** (`FileDrops`): files from the computer dropped on the widget never make the browser open them;
   while someone listens to `onDidDropFiles`, the drop hint (`typst-editor--dropping`) shows and the files go
   to the listeners. A view inside that stops the drop keeps it.
-- **View contributions by extension:** `typstLanguage` (`typstLanguage()`, `codeColors`),
-  `documentLinks` (`fileLinks` + a link provider; Visual: `boxLinks`), `collaboration` (`presence`),
-  `diagnostics` (`lint(collection)`; Visual: highlights); `projectRenderings` (Visual: `images`, `renderedBoxes`), `comments`
+- **View contributions by extension:** `typstLanguage` (`typstLanguage()`, `codeColors`; Visual: the same in raw
+  boxes), `documentLinks` (`fileLinks` + a link provider; Visual: `boxLinks`), `collaboration` (`presence`),
+  `diagnostics` (`lint(collection)`; Visual: highlights); `images` (Visual: `imagesVisualView`; Workbench: the
+  `image` / `data` file views), `renderedBoxes` (Visual: `renderedBoxesVisualView`), `comments`
   (Visual: `marginNotes`, `notesGutter`), `labels` (Visual: `references`), `styles` (Visual: `customStyles`);
   `previewControls` (`zoomControls`, `followCursor`, `pageNumber`), `pdfExport` (`pdfMenu`, the two PDF
   variants). The Visual view's constructs (`markup`, `headings`, `tables`, …) are in the list themselves: a
-  `VisualViewContribution` is shaped like a `TypstExtension`. The contributions are still in `hosts/*/builtins/`.
+  `VisualViewContribution` is shaped like a `TypstExtension`. The contributions of the extensions not moved yet are
+  still in `hosts/*/builtins/`.
 - **The active editor** (`activeTextEditor`, `onDidChangeTextEditorSelection`, VS Code's names): `comments`
   adds a note at its selection (and opens the note's card through its own notes gutter), `collaboration`
   publishes its selection and draws the others' carets in it (`setPresence`).
-- Extensions still live in `features/<name>/` (the entry exports the extension factory, e.g. `labels()`,
-  `files({ fileList })`); the slices wave moves them to `extensions/<name>/`.
+- Extensions live in `extensions/<name>/` (`images`, `rendered-boxes`, `document-links`, `typst-language`; the
+  entry exports the extension factory, e.g. `images()`), the others still in `features/<name>/` (e.g. `labels()`,
+  `files({ fileList })`) until the slices wave moves them. An extension imports no other extension: `images`
+  reads the `documentLinks` service. The extensions' Visual-view contributions are also exported for
+  `hosts/visual-view/test-support.ts` (a view with the built-ins, configured from test options).
 
 ### Paths (`src/core/paths`)
 
@@ -482,9 +501,9 @@ visualView.registerBoxCodeExtension((view) => codeMirrorExtension) → Disposabl
 
 // the built-ins (builtins/), each a VisualViewContribution = { id, activate({ visualView, subscriptions }) }, shaped
 // like a TypstExtension: markup, headings, tables, outline, pageBreak, horizontalRule, taskLists, lists,
-// headingNumbers, alignment; configured by their feature's extension: images({ assets, imageUrls, documentLinks }),
-// renderedBoxes({ snippets }), boxLinks({ documentLinks }), marginNotes({ comment }), notesGutter({ user }),
-// references({ labels }), customStyles({ styles, create })
+// headingNumbers, alignment; configured by their feature's extension: marginNotes({ comment }), notesGutter({ user }),
+// references({ labels }), customStyles({ styles, create }); in extensions/<name>/visual-view/:
+// imagesVisualView({ assets, imageUrls, documentLinks }), renderedBoxesVisualView({ snippets }), boxLinks({ documentLinks })
 ```
 
 The editor is **Tiptap 3**, which is ProseMirror underneath. Tiptap provides the keymaps (Mod-B/I,
@@ -707,7 +726,7 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
     closes). Link with nothing selected inserts the URL as linked text; inside a link it edits or
     removes the whole link.
   - With `assets` (`ImageAssets`: `list()`, `upload(file)` → `{ path } | { error }`), the image
-    popover also lists the project's images and offers "Upload image…" (`builtins/images/image-choices.ts`;
+    popover also lists the project's images and offers "Upload image…" (`extensions/images/visual-view/image-choices.ts`;
     refusals show in the popover); either inserts an `#image("path")` block. With `assets`,
     image files dropped on or pasted into the text are uploaded and inserted as well
     (`imageFileDrops`; the drop stops there, refusals open the popover).
@@ -750,18 +769,19 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
   code) above a `<pre><code>` content DOM.
 - **Raw boxes** (`nodes/raw-box.ts`): the nodes whose spec has `box: 'code'` (`rawBlock` /
   `rawInline`, and with the built-ins `image` / `outline`) render through a NodeView that hosts a
-  nested CodeMirror (Typst highlighting, no own history), plus what contributions add: the spec's
+  nested CodeMirror (no own history), plus what contributions add: the spec's
   `codeBox` (a heading, e.g. an outline box's "Table of contents"; tools, e.g. an image box's,
   whose picture click then selects the box), the CodeMirror extensions of
-  `registerBoxCodeExtension` (the built-in `boxLinks`: the Source view's `documentLinks` extension,
-  link tooltip on a path, Mod+click opens; no separate "Open …" row: it took too much space) and
+  `registerBoxCodeExtension` (`typstLanguage`: Typst syntax and code colors, as in the Source view; `boxLinks`:
+  the Source view's `pathLinks` extension, link tooltip on a path, Mod+click opens; no separate "Open …" row: it
+  took too much space) and
   the first `BoxRenderer` (`registerBoxRenderer`) that `renders` the box.
   - **Rendered boxes** (`nodes/rendered-box.ts` shows a `BoxRenderer`'s picture): while not
     focused, a box shows an `<img>` instead of its code; a renderer that `followsEdits` draws
     again on every node change, others on `onDidChange`. The built-ins: an `image` box shows its
-    file (`images`, from `Renderings.imageUrl(path)`; follows path edits at once), any other box
-    the compiled snippet of its source range (`rendered-boxes`, `Renderings.snippet(from, to,
-    src)` as an SVG data URL; refreshed on `Renderings.onChange`).
+    file (`images`, from `ImageUrls.imageUrl(path)`; follows path edits at once), any other box
+    the compiled snippet of its source range (`rendered-boxes`, `SnippetSource.snippet(from, to,
+    src)` as an SVG data URL; refreshed on `SnippetSource.onDidChange`).
     Block boxes size it in pt; inline boxes in em of the text around them (`inlinePictureSize`:
     scaled so the snippet's `textHeight` is a 1.15em text line, the padding taken back by
     negative vertical margins), so a one-line snippet is one line high and its text the size of
@@ -782,8 +802,8 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
     nested CodeMirror gets the outer editor's root (the shadow root inside `<typst-editor>`):
     it is created before its box is attached, so it could not find that root itself and would
     read focus and selection from the document.
-- **Image tools** (`builtins/images/image-tools.ts`, the image spec's `codeBox.tools`): the "Image: path" heading (with
-  `documentLinks`, the path opens the file: `imagePathLink` of `box-links`, wired by `builtins`), a
+- **Image tools** (`extensions/images/visual-view/image-tools.ts`, the image spec's `codeBox.tools`): the "Image: path"
+  heading (with the `documentLinks` service, the path opens the file: `imagePathLink`), a
   frame around the rendered picture sized from the call's `width` (`imageWidthCss`), and,
   while the image is selected (a click on the picture selects it; double-click, Enter or
   "Edit code" open the code): resize handles (corners, sides) and an "Image" toolbar
@@ -792,7 +812,7 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
   - Every action is one transaction from `image-edits.ts` (one undo step): `addCaption`
     (image → figure with an empty caption, cursor in it), `removeCaption` (a figure without
     label/other arguments → `#image(..)` again, else only the caption goes), `resizeImage`,
-    `setImageAlt`. `image-call.ts` edits one argument of the call in place (replace the value,
+    `setImageAlt`. `model/image-call.ts` edits one argument of the call in place (replace the value,
     append after the last argument, or remove with the preceding comma).
 - **Input rules** (Tiptap's, plus ours): `> ` quote, `[ ] ` / `[x] ` task item; `---` (`—-`,
   `___ `, `*** `) becomes a rule only when it is the whole paragraph, since `---` is an em dash in
@@ -853,17 +873,19 @@ SourceView
   the carets shown) and those made later; disposing it removes it from all of them. A function extension
   is called per view with its `SourceViewContext`: its document, the links of the first link provider that
   has some for that document, and the presence handed to the view.
+- **Contributions from `extensions/`**:
+  - `typstLanguage()` (`extensions/typst-language/source-view/typst-syntax.ts`, also in the raw boxes) — the
+    Typst language support (`codemirror-lang-typst/lezer`: a pure-JS Lezer parser using typst-syntax node names,
+    plus completion and folding; its Lezer syntax linter is left out so that compiler diagnostics are the only
+    error source; its indentation service is wrapped so that Enter right after a closed construct like
+    `#set page(..)` does not indent, which 0.6.0 gets wrong).
+  - `codeColors` (`extensions/typst-language/source-view/code-colors.ts`) — see "Dark mode".
+  - `fileLinks` (`extensions/document-links/source-view/`) — see "File links".
 - **Built-ins** (`builtins/`, one module per contribution; they move into extensions next):
-  - `typstLanguage()` — the Typst language support (`codemirror-lang-typst/lezer`: a pure-JS Lezer
-    parser using typst-syntax node names, plus completion and folding; its Lezer syntax linter is left
-    out so that compiler diagnostics are the only error source; its indentation service is wrapped so
-    that Enter right after a closed construct like `#set page(..)` does not indent, which 0.6.0 gets wrong).
-  - `codeColors` — see "Dark mode".
   - `lint(diagnostics)` — the diagnostics a `DiagnosticCollection` holds for the view's document
     (`set(document, [{severity, message, hints, from, to}])`, VS Code's name), underlined with hover
     (`@codemirror/lint`, which maps them through later edits); those set before a view exists show
     when it is made. `describeDiagnostic` words a diagnostic for every view.
-  - `fileLinks` — see "File links".
   - `presence` (y-codemirror style): each caret is a widget (bar + dot, also on empty lines); its name
     flag shows on hover and for 2.5 s after the caret moved (the widget is re-created only then: `moves`
     counts in its equality). Selections are tinted marks. Its `remotePresence` / `showPresence` draw the
@@ -1092,7 +1114,7 @@ new Layout(host, storageKey)   .editor  .preview  .statusBar   // the editing co
   closed, opens only on the rail button and closes on Escape, a click outside, or `dismiss()`
   (the file panel calls `SidePanel.dismiss()` after a file was chosen in it).
 
-### Dark mode (`src/typst-editor/typst-editor.css`, `src/hosts/source-view/builtins/code-colors.ts`)
+### Dark mode (`src/typst-editor/typst-editor.css`, `src/extensions/typst-language/source-view/code-colors.ts`, `src/ui/color-scheme/`)
 
 - **Tokens.** Every color of the widget's stylesheets is a custom property on `.typst-editor`
   defined as `light-dark(light, dark)` (`--te-bg`, `--te-surface`, `--te-subtle`, `--te-text`,
@@ -1105,7 +1127,7 @@ new Layout(host, storageKey)   .editor  .preview  .statusBar   // the editing co
   `auto`; the element's `theme` attribute) sets `data-theme` on the host, which the stylesheet turns
   into its own `color-scheme`. Read once, at creation.
 - **`data-scheme`** (`ColorScheme`, `src/hosts/workbench/color-scheme/color-scheme.ts`): the scheme the widget's
-  colors resolved to (`light` | `dark`, from its computed text color), for what light-dark() cannot
+  colors resolved to (`light` | `dark`, from its computed text color: `isLightText`, `ui/color-scheme/`), for what light-dark() cannot
   express. With it dark, the preview shows the pages inverted like dark-mode PDF readers do
   (`filter: invert(1) hue-rotate(180deg)` on `.typst-preview__content`, pictures inside turned
   back; the overlays beside it keep their colors), and so are compiled snippets in the Visual view
@@ -1120,7 +1142,7 @@ new Layout(host, storageKey)   .editor  .preview  .statusBar   // the editing co
 ### File panel (`src/features/files`)
 
 ```ts
-files({ fileList? })  fileNavigation()  assets(): TypstExtension   // the side panel, the frame links, the image/data file view
+files({ fileList? })  fileNavigation(): TypstExtension   // the side panel, the frame links (images / data files: the images extension)
 new FilePanel(parent, { onOpen(path), onChange(change) → Promise<reason | null>, memory? }, state)
 .render({ paths, main, active })   .showPresence(placedPresences)   .upload(files)   .destroy()
 // tree/: new FileTree(parent, { onOpen, onRename, onDelete, onMove(source, folder), onUpload(files, folder), memory? })
@@ -1145,7 +1167,7 @@ new FilePanel(parent, { onOpen(path), onChange(change) → Promise<reason | null
   top level) is relocated there; files from the computer dropped on a row are uploaded into that
   folder (the tree stops the drop, so the widget-wide handler does not upload them again).
 
-### File links (`src/core/document-links/`, `src/hosts/source-view/builtins/file-links.ts`, `src/hosts/visual-view/builtins/box-links/`)
+### File links (`src/core/document-links/`, `src/extensions/document-links/`)
 
 ```ts
 new DocumentLinkProvider(workspace: LinkWorkspace)        // one per document
@@ -1154,8 +1176,9 @@ new DocumentLinkProvider(workspace: LinkWorkspace)        // one per document
   .resolveDocumentLink(reference) → LinkTarget | null                    // { path, name, exists, creatable }; creatable: a missing .typ file
   .followDocumentLink(target) → Promise<reason | null>                  // open, or create a missing .typ file (and open it)
 interface LinkWorkspace { resolve(reference) → path | null; exists(path); open(path); create(path) → Promise<reason | null> }
-fileLinks: SourceViewExtension (documentLinks of the view's link provider)
-documentLinks(provider) → CodeMirror extension      linkInfo(doc, provider, reference, { hint? }) → "Open …" / "Create …" DOM
+documentLinks(): TypstExtension                    // a provider per document: link provider, `documentLinks` service, boxLinks
+fileLinks: SourceViewExtension (pathLinks of the view's link provider)
+pathLinks(provider) → CodeMirror extension          linkInfo(doc, provider, reference, { hint? }) → "Open …" / "Create …" DOM
 ```
 
 - **One definition** of what a path reference is (Lezer, `codemirror-lang-typst`): the string of
@@ -1170,8 +1193,9 @@ documentLinks(provider) → CodeMirror extension      linkInfo(doc, provider, re
   was avoided: browsers take it for the developer tools); the hover tooltip is `linkInfo`: "Open
   x (Ctrl+click or Alt+Enter)", or "x is not in the project" + "Create x" for a `.typ` file
   (showing the host's refusal).
-- **Visual view**: the nested CodeMirror of every raw box gets `documentLinks` (the same tooltip as
-  the Source view; no "Open …" row); an image box's path is a button.
+- **Visual view** (`boxLinks`, `registerBoxCodeExtension`): the nested CodeMirror of every raw box gets `pathLinks`
+  (the same tooltip as the Source view; no "Open …" row); an image box's path is a button (the `images`
+  extension, with the `documentLinks` service).
 - **Workbench**: `open` shows the file (the panel selects it and opens its folders); `create` asks
   for a `create` change like the panel's New file.
 
