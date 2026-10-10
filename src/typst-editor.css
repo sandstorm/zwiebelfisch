@@ -588,6 +588,28 @@
 .typst-visual__rule { padding: 0.4em 0 1.1em; }
 .typst-visual__quote { margin: 0 0 0.7em; padding: 0 0 0 1em; border-left: 3px solid var(--te-border); color: #3d4451; }
 .typst-visual__quote > :last-child { margin-bottom: 0; }
+/* Custom styles (features/styles): a paragraph style's blocks in a frame with its name; text in a text style
+   underlined dotted, its name as tooltip. Hosts style one by its class, typst-style--<name>. */
+.typst-visual__style {
+  position: relative;
+  margin: 0 0 0.7em;
+  padding: 0.35em 0.8em 0.1em;
+  border-left: 3px solid #8fb3ec;
+  border-radius: 0 6px 6px 0;
+  background: #f5f8fd;
+}
+.typst-visual__style::before {
+  content: attr(data-style-title);
+  display: block;
+  margin-bottom: 0.15em;
+  color: #4b6a9b;
+  font: 600 11px system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+  user-select: none;
+}
+.typst-visual__style > :last-child { margin-bottom: 0.4em; }
+.typst-visual__style-text { text-decoration: underline dotted #4b6a9b; text-underline-offset: 3px; }
 .typst-visual ul[data-type='taskList'] { list-style: none; padding-left: 0.3em; }
 .typst-visual ul[data-type='taskList'] > li { display: flex; gap: 0.5em; align-items: baseline; }
 .typst-visual ul[data-type='taskList'] > li > label { flex: none; }

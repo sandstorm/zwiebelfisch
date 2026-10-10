@@ -60,7 +60,8 @@ export class StyleIndex {
         return importChange(text, {
           name: style.name,
           matches: (written) => resolvePath(path, written) === style.path,
-          create: () => `#import "${module}": ${style.name}\n`,
+          // a blank line after it: an import right above `#note[..]` would make the two one (raw) block
+          create: () => `#import "${module}": ${style.name}\n${/^\s*\n/.test(text) ? '' : '\n'}`,
           use,
         });
       },

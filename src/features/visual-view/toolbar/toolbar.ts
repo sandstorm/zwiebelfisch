@@ -1,6 +1,6 @@
 // Toolbar: the Visual view's formatting toolbar (styles, marks, lists, alignment, insert). Entry of
 // visual-view/toolbar/. See ARCHITECTURE.md, "VisualView".
-import { findParentNode, type ChainedCommands, type Editor } from '@tiptap/core';
+import { findParentNode, type Editor } from '@tiptap/core';
 import { FieldPopover } from '../field-popover';
 import { type ImageAssets, ImageChoices, imageFileDrops, insertImages } from '../images/images';
 import { TextSelection, type Plugin } from '@tiptap/pm/state';
@@ -9,6 +9,9 @@ import { svg, type Action } from './toolbar-action';
 import { BLOCKS as QUOTE_AND_TASKS, BREAKS, HEADER_ROW } from './toolbar-blocks';
 import { ToolbarMenu } from './toolbar-menu';
 import { type Anchor, FloatingBar } from './floating-bar';
+import { type MenuStyles, StyleMenu } from './style-menu';
+
+export type { MenuStyles } from './style-menu';
 
 const ICONS = {
   undo: svg('<path d="M9 15 4 10l5-5"/><path d="M4 10h11a5 5 0 0 1 0 10h-3"/>'),
@@ -98,6 +101,8 @@ function applyLink(editor: Editor, href: string): void {
 export interface ToolbarOptions {
   /** Lets "Insert image" offer the project's images and upload new ones. */
   assets?: ImageAssets;
+  /** The project's custom styles, offered in the text style menu (default: normal text and headings only). */
+  styles?: MenuStyles;
   /** Adds a comment (margin note) at the selection: shows the "Comment" button. */
   comment?(): void;
 }
@@ -118,24 +123,10 @@ function commentAction(comment: () => void): Action {
   };
 }
 
-/** Entries of the paragraph style menu, by `<option>` value. */
-const STYLES: Record<string, { label: string; run(chain: ChainedCommands): ChainedCommands; level?: 1 | 2 | 3 }> = {
-  paragraph: { label: 'Normal text', run: (c) => c.setParagraph() },
-  'heading-1': { label: 'Heading 1', run: (c) => c.setHeading({ level: 1 }), level: 1 },
-  'heading-2': { label: 'Heading 2', run: (c) => c.setHeading({ level: 2 }), level: 2 },
-  'heading-3': { label: 'Heading 3', run: (c) => c.setHeading({ level: 3 }), level: 3 },
-};
-
-function currentStyle(editor: Editor): string {
-  for (const [value, style] of Object.entries(STYLES)) {
-    if (style.level ? editor.isActive('heading', { level: style.level }) : editor.isActive('paragraph')) return value;
-  }
-  return '';
-}
-
 /**
- * The Visual view's formatting toolbar, kept short: undo/redo, a paragraph
- * style menu (normal text, headings 1–3), bold/italic/inline code, link
+ * The Visual view's formatting toolbar, kept short: undo/redo, a text style
+ * menu (normal text, headings 1–3, the project's custom styles and "New
+ * style…", see `style-menu.ts`), bold/italic/inline code, link
  * (Mod+K, asks for the URL in a popover), bulleted/numbered/task lists, an
  * "Align" menu (left, center, right, justify), an "Insert" menu (image — asks
  * for its path, or offers the project's images and an upload when given
@@ -157,6 +148,7 @@ export class Toolbar {
   private linkAtCaret = false;
   private readonly imagePopover: FieldPopover;
   private readonly menus: ToolbarMenu[] = [];
+  private readonly cleanups: (() => void)[] = [];
   private readonly floating: FloatingBar[] = [];
   /** Takes image files dropped on or pasted into the text (with `assets` only). */
   private imageFiles: Plugin | null = null;
@@ -170,7 +162,7 @@ export class Toolbar {
   constructor(
     parent: HTMLElement,
     private readonly editor: Editor,
-    { assets, comment }: ToolbarOptions = {},
+    { assets, comment, styles }: ToolbarOptions = {},
   ) {
     const doc = parent.ownerDocument;
     this.root = doc.createElement('div');
@@ -196,7 +188,7 @@ export class Toolbar {
     const insert = this.menu('Insert', () => ICONS.insert, [image, INSERT_TABLE, OUTLINE, CODE_BLOCK, quote, ...BREAKS]);
     this.root.append(
       this.group(HISTORY),
-      this.styleMenu(),
+      this.styleMenu(styles),
       this.group([...LISTS, taskList]),
       this.wrap(align.element),
       this.wrap(insert.element),
@@ -215,6 +207,7 @@ export class Toolbar {
   destroy(): void {
     if (this.imageFiles) this.editor.unregisterPlugin(this.imageFiles.spec.key!);
     for (const menu of this.menus) menu.destroy();
+    for (const cleanup of this.cleanups) cleanup();
     for (const bar of this.floating) bar.destroy();
     this.editor.off('blur', this.refresh);
     this.editor.view.dom.removeEventListener('keydown', this.linkShortcut);
@@ -366,21 +359,12 @@ export class Toolbar {
     else popover.open(button, value, removable);
   }
 
-  private styleMenu(): HTMLElement {
-    const select = this.root.ownerDocument.createElement('select');
-    select.className = 'typst-toolbar__style';
-    select.setAttribute('aria-label', 'Text style');
-    select.title = 'Text style';
-    for (const [value, style] of Object.entries(STYLES)) select.add(new Option(style.label, value));
-    select.addEventListener('change', () => STYLES[select.value]?.run(this.editor.chain().focus()).run());
-    this.refreshers.push(() => {
-      select.value = currentStyle(this.editor);
-      for (const option of select.options) option.disabled = !STYLES[option.value].run(this.editor.can().chain()).run();
-    });
-    const group = this.root.ownerDocument.createElement('div');
-    group.className = 'typst-toolbar__group';
-    group.append(select);
-    return group;
+  /** The text style menu (normal text, headings, the project's custom styles). */
+  private styleMenu(styles: MenuStyles | undefined): HTMLElement {
+    const menu = new StyleMenu(this.root.ownerDocument, this.editor, styles);
+    this.refreshers.push(() => menu.refresh());
+    this.cleanups.push(() => menu.destroy());
+    return this.wrap(menu.element);
   }
 }
 
