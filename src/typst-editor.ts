@@ -12,6 +12,7 @@ import changeStyles from './features/changes/changes.css?inline';
 import { DiagnosticsStatus, summarizeDiagnostics } from './features/diagnostics/diagnostics';
 import { EditingViews, type EditorMode } from './typst-editor/editing-views';
 import { type FileChange, Project, type ProjectFiles, referencePath } from './core/project/project';
+import { PdfExport } from './typst-editor/pdf-export';
 import { ProjectRenderings } from './typst-editor/project-renderings';
 import styles from './typst-editor.css?inline';
 import { VersionControls, type Versions } from './features/versions/versions';
@@ -67,6 +68,17 @@ export interface TypstEditorOptions {
    * Visual view, change bars in the preview. See also `setBase`.
    */
   base?: string;
+  /**
+   * Whether the preview toolbar has "Download PDF" (default true): without
+   * comments, or with them from its menu. Hosts can call `exportPdf` either way.
+   */
+  pdfDownload?: boolean;
+}
+
+/** Which PDF `exportPdf` makes. */
+export interface PdfExportOptions {
+  /** With the margin notes as the preview shows them (default false: the final version, notes left out). */
+  comments?: boolean;
 }
 
 export interface TypstEditor {
@@ -86,6 +98,11 @@ export interface TypstEditor {
    * from now on, or none for null. A "Show changes" button toggles them while a base is set.
    */
   setBase(base: string | null): void;
+  /**
+   * The project as a PDF (`application/pdf`), from the current text. Rejects
+   * with an error naming the problem when the document has errors.
+   */
+  exportPdf(options?: PdfExportOptions): Promise<Blob>;
   destroy(): void;
 }
 
@@ -120,6 +137,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
     },
     open: (path) => widget.open(path),
     setBase: (base) => widget.changes.setBase(base),
+    exportPdf: (options = {}) => widget.pdfs.blob(options.comments ?? false),
     destroy: () => widget.destroy(),
   };
 }
@@ -136,6 +154,7 @@ class Widget {
   private readonly right: HTMLElement;
   private readonly status: DiagnosticsStatus;
   private readonly preview: Preview;
+  readonly pdfs: PdfExport;
   private readonly views: EditingViews;
   private readonly switcher: FileSwitcher;
   private readonly assets: AssetView;
@@ -164,7 +183,9 @@ class Widget {
     this.preview = new Preview(this.right, {
       onJump: (jump) => this.jump(jump),
       onDiagnostics: (diagnostics) => this.showDiagnostics(diagnostics),
+      pdf: options.pdfDownload === false ? undefined : (comments) => this.pdfs.file(comments),
     });
+    this.pdfs = new PdfExport(this.project, this.preview);
     this.renderings = new ProjectRenderings({ project: this.project, preview: this.preview, request: (change) => this.request(change) });
     this.views = new EditingViews(this.left, {
       mode: options.mode,
