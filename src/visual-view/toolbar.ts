@@ -2,6 +2,7 @@ import type { ChainedCommands, Editor } from '@tiptap/core';
 import { FieldPopover } from './field-popover';
 import { ImageChoices, type ImageAssets } from './image-choices';
 import { imageSource } from './projection';
+import { textAlignAt, type TextAlignment } from './text-align';
 
 /** A toolbar button: how it looks, what it does, and when it shows as on. */
 interface Action {
@@ -40,6 +41,10 @@ const ICONS = {
   addColumn: svg('<rect x="3" y="3" width="9" height="18" rx="2"/><path d="M15 12h5M17.5 9.5v5"/>'),
   deleteRow: svg('<rect x="3" y="4" width="18" height="9" rx="2"/><path d="M9.5 18.5h5"/>'),
   deleteColumn: svg('<rect x="3" y="3" width="9" height="18" rx="2"/><path d="M15 12h5"/>'),
+  alignLeft: svg('<path d="M4 6h16M4 10h10M4 14h16M4 18h10"/>'),
+  alignCenter: svg('<path d="M4 6h16M7 10h10M4 14h16M7 18h10"/>'),
+  alignRight: svg('<path d="M4 6h16M10 10h10M4 14h16M10 18h10"/>'),
+  alignJustify: svg('<path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>'),
 };
 
 const HISTORY: Action[] = [
@@ -53,6 +58,21 @@ const MARKS: Action[] = [
 const LISTS: Action[] = [
   { label: 'Bulleted list', icon: ICONS.bulletList, run: (c) => c.toggleBulletList(), active: (e) => e.isActive('bulletList') },
   { label: 'Numbered list', icon: ICONS.orderedList, run: (c) => c.toggleOrderedList(), active: (e) => e.isActive('orderedList') },
+];
+
+/** Radio-like: the button of the selection's (effective) alignment is pressed. */
+const alignAction = (label: string, alignment: TextAlignment, shortcut: string, icon: string): Action => ({
+  label,
+  shortcut,
+  icon,
+  run: (c) => c.setTextAlign(alignment),
+  active: (e) => textAlignAt(e.state) === alignment,
+});
+const ALIGNMENTS: Action[] = [
+  alignAction('Align left', 'left', 'Mod+Shift+L', ICONS.alignLeft),
+  alignAction('Center', 'center', 'Mod+Shift+E', ICONS.alignCenter),
+  alignAction('Align right', 'right', 'Mod+Shift+R', ICONS.alignRight),
+  alignAction('Justify', 'justify', 'Mod+Shift+J', ICONS.alignJustify),
 ];
 
 const TABLES: Action[] = [
@@ -91,7 +111,8 @@ function currentStyle(editor: Editor): string {
 /**
  * The Visual view's formatting toolbar: undo/redo, a paragraph style menu
  * (normal text, headings 1–3), bold/italic, link (Mod+K, asks for the URL in
- * a popover), the two list kinds, insert image (asks for its path, or offers
+ * a popover), the two list kinds, text alignment (left, center, right,
+ * justify), insert image (asks for its path, or offers
  * the project's images and an upload when given `assets`) and table
  * editing. Buttons reflect the selection (pressed, disabled) after every
  * transaction and never take the focus away from the text.
@@ -145,6 +166,7 @@ export class Toolbar {
       this.styleMenu(),
       this.group([...MARKS, link]),
       this.group(LISTS),
+      this.group(ALIGNMENTS),
       this.group([image, ...TABLES]),
     );
     parent.prepend(this.root);
