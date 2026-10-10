@@ -68,7 +68,7 @@ src/                        the widget (TypeScript); the most important API on t
     engine-assets/          the wasm + default font URLs for the main thread (a module of its own: the worker imports
                             typst-engine and must not bundle the assets again)
     typst-packages/         withPackages: Typst packages (@preview/…) downloaded on first use and added to an engine
-                            (fetchPreviewPackage, tar.ts: the archive reader; fixtures/: the greet test package)
+                            (from packages.typst.org; tar.ts: the archive reader; fixtures/: the greet test package)
     paths/                  ProjectPath (where a file is) and PathReference (a path as written in Typst source),
                             branded strings with their operations: parse, fromName, resolve, referenceTo, isTypst
                             (the only kind core knows: Typst source or not), displayName, extension
@@ -665,10 +665,10 @@ fetchFonts(DEFAULT_FONT_URLS) → Promise<Uint8Array>[]   // the bundled font as
 .jumpFromCursor(path, offset) → [{page, x, y}]
 .boxesForRanges(path, [{from, to}]) → [{page, x, y, w, h}]   // where those ranges are drawn: per glyph run, shape, image
 
-withPackages(engine, fetchPackage = fetchPreviewPackage) → { compile(main) → Promise<CompileResult>, exportPdf(main) → Promise<PdfResult> }
+withPackages(engine, fetchPackage?) → { compile(main) → Promise<CompileResult>, exportPdf(main) → Promise<PdfResult> }
+                                                   // default fetchPackage: the .tar.gz from packages.typst.org, Cache API
 PdfEntry = { main, sources }                       // what a PDF compiles: entry file + .typ texts replacing/adding the project's,
                                                    // for that export only (the preview's exportPdf, PDF export options, comments' withoutNotes)
-fetchPreviewPackage(spec) → Promise<Uint8Array>     // .tar.gz from packages.typst.org, Cache API
 untarGz(bytes) → Promise<Map<relativePath, Uint8Array>>
 ```
 

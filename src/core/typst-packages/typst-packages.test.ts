@@ -2,7 +2,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createEngine, type Engine } from '../typst-engine/typst-engine';
-import { fetchPreviewPackage, withPackages } from './typst-packages';
+import { withPackages } from './typst-packages';
 
 const wasm = readFileSync(new URL('../typst-engine/wasm/typst_engine_bg.wasm', import.meta.url));
 const fontDir = new URL('../typst-engine/fonts/', import.meta.url);
@@ -83,19 +83,29 @@ describe('withPackages', () => {
   });
 });
 
-describe('fetchPreviewPackage', () => {
+describe('withPackages without a fetcher', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('downloads @preview packages from packages.typst.org', async () => {
     const fetch = vi.fn(async (_url: string) => new Response(greet));
     vi.stubGlobal('fetch', fetch);
-    expect(await fetchPreviewPackage('@preview/greet:0.1.0')).toEqual(greet);
-    expect(fetch.mock.calls[0][0]).toBe('https://packages.typst.org/preview/greet-0.1.0.tar.gz');
+    const bare = await createEngine(wasm, fonts);
+    bare.setSource('/main.typ', doc);
+    expect((await withPackages(bare).compile('/main.typ')).diagnostics).toEqual([]);
+    expect(fetch.mock.calls.map(([url]) => url)).toEqual(['https://packages.typst.org/preview/greet-0.1.0.tar.gz']);
   });
 
-  it('rejects on HTTP errors and for other namespaces', async () => {
+  it('reports HTTP errors, and packages of other namespaces as not downloadable', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 404 })));
-    await expect(fetchPreviewPackage('@preview/nope:1.0.0')).rejects.toThrow(/404/);
-    await expect(fetchPreviewPackage('@local/mine:1.0.0')).rejects.toThrow(/@preview/);
+    const bare = await createEngine(wasm, fonts);
+    const packages = withPackages(bare);
+    bare.setSource('/main.typ', '#import "@preview/nope:1.0.0": x');
+    expect((await packages.compile('/main.typ')).diagnostics).toContainEqual(
+      expect.objectContaining({ path: null, message: expect.stringMatching(/@preview\/nope:1\.0\.0.*404/) }),
+    );
+    bare.setSource('/main.typ', '#import "@local/mine:1.0.0": y');
+    expect((await packages.compile('/main.typ')).diagnostics).toContainEqual(
+      expect.objectContaining({ path: null, message: expect.stringMatching(/@local\/mine:1\.0\.0.*only @preview/) }),
+    );
   });
 });

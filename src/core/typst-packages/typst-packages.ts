@@ -76,7 +76,7 @@ const CACHE = 'typst-packages';
  * Downloads an `@preview` package archive from packages.typst.org. Versions
  * are immutable, so archives are kept in the Cache API where available.
  */
-export async function fetchPreviewPackage(spec: string): Promise<Uint8Array> {
+async function fetchPreviewPackage(spec: string): Promise<Uint8Array> {
   const match = /^@preview\/([^:/]+):([^:/]+)$/.exec(spec);
   if (!match) throw new Error(`only @preview packages can be downloaded, not ${spec}`);
   const url = `${REGISTRY}${match[1]}-${match[2]}.tar.gz`;
