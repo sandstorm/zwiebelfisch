@@ -1,7 +1,6 @@
-// Adding a label: which block the selection would label, and a name to start from. See references.ts.
+// Adding a label: which block the selection would label, and a name to start from. See label-tags.ts.
 import type { Node } from '@tiptap/pm/model';
-import { type EditorState, NodeSelection, type Transaction } from '@tiptap/pm/state';
-import { labelName, setLabel } from './label-edits';
+import { type EditorState, NodeSelection } from '@tiptap/pm/state';
 
 /**
  * The block a new label goes on: a figure the selection is in (its image or
@@ -21,13 +20,6 @@ export function labelTarget(state: EditorState): { pos: number; node: Node } | n
 /** Whether `node`'s type has the `label` attribute (see nodes.ts, `LABELLED_BLOCKS`). */
 function canHaveLabel(node: Node): boolean {
   return 'label' in node.attrs;
-}
-
-/** The transaction labelling the `labelTarget` with `input` made a valid name; null without a target or a name. */
-export function addLabel(state: EditorState, input: string): Transaction | null {
-  const target = labelTarget(state);
-  const name = labelName(input);
-  return target && name ? setLabel(state, target.pos, name) : null;
 }
 
 /** How a new label for `node` starts, by Typst custom: `fig:` / `tab:` for figures, `sec:` for headings, else nothing. */

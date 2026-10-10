@@ -10,7 +10,7 @@ import { BLOCKS as QUOTE_AND_TASKS, BREAKS, HEADER_ROW } from './toolbar-blocks'
 import { ToolbarMenu } from './toolbar-menu';
 import { type Anchor, FloatingBar } from './floating-bar';
 import { type MenuStyles, StyleMenu } from './style-menu';
-import { addLabel, labelPrefix, labelTarget } from '../references/references';
+import { canStartNewLabel, startNewLabel } from '../references/references';
 
 export type { MenuStyles } from './style-menu';
 
@@ -295,35 +295,17 @@ export class Toolbar {
   }
 
   /**
-   * "Add label": a label (`<fig:logo>`) on the figure or block the selection is in, named in a popover
-   * (starting with `fig:`, `tab:` or `sec:` as is customary). Enabled where that block has none yet;
-   * an existing label is renamed or removed through its tag.
+   * "Add label": a label (`<fig:logo>`) on the figure or block the selection is in, typed into a draft tag
+   * right where it will show (starting with `fig:`, `tab:` or `sec:` as is customary). Enabled where that
+   * block has none yet; an existing label is renamed or removed through its tag.
    */
   private labelAction(): Action {
-    const popover = new FieldPopover(this.root, {
-      label: 'New label',
-      field: 'Label name',
-      placeholder: 'e.g. fig:overview',
-      applyText: 'Add label',
-      apply: (value) => {
-        const tr = addLabel(this.editor.state, value);
-        if (tr) this.editor.view.dispatch(tr);
-        this.editor.commands.focus();
-      },
-    });
-    this.cleanups.push(() => popover.destroy());
     return {
       label: 'Add label',
       icon: ICONS.label,
       run: (c) => c,
-      enabled: (editor) => {
-        const target = labelTarget(editor.state);
-        return !!target && !target.node.attrs.label;
-      },
-      click: () => {
-        const target = labelTarget(this.editor.state);
-        if (target) popover.open(this.insertTrigger(), labelPrefix(target.node), false);
-      },
+      enabled: (editor) => canStartNewLabel(editor.state) !== null,
+      click: () => startNewLabel(this.editor.view),
     };
   }
 

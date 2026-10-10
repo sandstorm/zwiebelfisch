@@ -1,12 +1,14 @@
-// Label tags: a block's label (`= Intro <intro>`) drawn as a small tag on the block, edited in a popover.
+// Label tags: a block's label (`= Intro <intro>`) drawn as a small tag on the block, edited in a popover; a new
+// label typed into a draft tag right where it will show.
 // See references.ts.
 import type { Node } from '@tiptap/pm/model';
-import { Plugin, PluginKey } from '@tiptap/pm/state';
+import { type EditorState, Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import type { ProjectLabels } from '../../labels/labels';
 import { FieldPopover } from '../field-popover';
 import { labelName, renameLabel, setLabel } from './label-edits';
+import { labelPrefix, labelTarget } from './add-label';
 
 /** What the tags need besides the document: the project's labels (renaming updates their references by default). */
 export interface LabelTagsOptions {
@@ -15,38 +17,115 @@ export interface LabelTagsOptions {
   document?: TypstDocument;
 }
 
-const key = new PluginKey<DecorationSet>('typstLabelTags');
+/** The tags drawn, and the block a new label is being typed for (its position), if any. */
+interface TagsState {
+  decorations: DecorationSet;
+  draft: number | null;
+}
+
+const key = new PluginKey<TagsState>('typstLabelTags');
 
 /**
  * Draws every labelled block's label as a tag: at the end of a heading's or
  * paragraph's text, or below other blocks (figures, equations, tables). A
  * click on the tag opens a popover to rename the label (optionally with every
  * reference to it in the project) or remove it; each is one undo step here.
+ * `startNewLabel` draws a draft tag with a field at the same place instead.
  */
 export function labelTags(options: LabelTagsOptions): Plugin {
-  return new Plugin({
+  return new Plugin<TagsState>({
     key,
     state: {
-      init: (_, state) => tags(state.doc, options),
-      apply: (tr, old) => (tr.docChanged ? tags(tr.doc, options) : old),
+      init: (_, state) => ({ decorations: tags(state.doc, null, options), draft: null }),
+      apply: (tr, old) => {
+        const meta: { draft: number | null } | undefined = tr.getMeta(key);
+        const draft = meta ? meta.draft : old.draft === null ? null : tr.mapping.map(old.draft);
+        if (!tr.docChanged && draft === old.draft) return old;
+        return { decorations: tags(tr.doc, draft, options), draft };
+      },
     },
-    props: { decorations: (state) => key.getState(state) },
+    props: { decorations: (state) => key.getState(state)!.decorations },
   });
 }
 
-function tags(doc: Node, options: LabelTagsOptions): DecorationSet {
+/**
+ * Starts a new label on the figure or block the selection is in (see
+ * `labelTarget`): a draft tag where the label will show, holding a field
+ * (prefilled `fig:`, `tab:` or `sec:`). Enter adds the label, Escape or
+ * leaving the field drops it. False when there is no such block or it has a
+ * label already.
+ */
+export function startNewLabel(view: EditorView): boolean {
+  const target = canStartNewLabel(view.state);
+  if (target === null) return false;
+  view.dispatch(view.state.tr.setMeta(key, { draft: target }));
+  return true;
+}
+
+/** The block a new label would go on (its position), or null (none, or it has one). */
+export function canStartNewLabel(state: EditorState): number | null {
+  const target = labelTarget(state);
+  return target && !target.node.attrs.label ? target.pos : null;
+}
+
+function tags(doc: Node, draft: number | null, options: LabelTagsOptions): DecorationSet {
   const decorations: Decoration[] = [];
   doc.descendants((node, pos) => {
     const name: string | undefined = node.attrs.label?.name;
-    if (name === undefined) return true;
     const inline = node.isTextblock;
     const at = inline ? pos + node.nodeSize - 1 : pos + node.nodeSize;
+    const spec = { side: inline ? 1 : -1, ignoreSelection: true, stopEvent: () => true };
+    if (pos === draft && name === undefined) {
+      const toDOM = (view: EditorView) => draftElement(view, pos, labelPrefix(node), inline);
+      decorations.push(Decoration.widget(at, toDOM, { ...spec, key: `draft:${pos}` }));
+    }
+    if (name === undefined) return true;
     const toDOM = (view: EditorView, getPos: () => number | undefined) =>
       tagElement({ view, name, inline, block: () => blockAt(view, getPos(), inline), options });
-    decorations.push(Decoration.widget(at, toDOM, { key: `label:${inline}:${name}`, side: inline ? 1 : -1, ignoreSelection: true, stopEvent: () => true }));
+    decorations.push(Decoration.widget(at, toDOM, { ...spec, key: `label:${inline}:${name}` }));
     return true;
   });
   return DecorationSet.create(doc, decorations);
+}
+
+/** The draft tag: a field for the new label of the block at `pos`; Enter adds it, Escape or blur drops it. */
+function draftElement(view: EditorView, pos: number, prefix: string, inline: boolean): HTMLElement {
+  const doc = view.dom.ownerDocument;
+  const wrap = doc.createElement('span');
+  wrap.className = `typst-label-tag typst-label-tag--draft${inline ? '' : ' typst-label-tag--block'}`;
+  wrap.contentEditable = 'false';
+  const input = wrap.appendChild(doc.createElement('input'));
+  input.className = 'typst-label-tag__input';
+  input.setAttribute('aria-label', 'New label');
+  input.placeholder = 'label';
+  input.value = prefix;
+  input.size = Math.max(8, prefix.length + 6);
+  let done = false;
+  const finish = (name: string | null) => {
+    if (done) return;
+    done = true;
+    const block = key.getState(view.state)?.draft ?? pos;
+    const tr = name ? setLabel(view.state, block, name) : view.state.tr;
+    view.dispatch(tr.setMeta(key, { draft: null }));
+    view.focus();
+  };
+  input.addEventListener('input', () => (input.size = Math.max(8, input.value.length + 2)));
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      finish(labelName(input.value));
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      finish(null);
+    }
+  });
+  input.addEventListener('blur', () => finish(null));
+  // once the widget is in the document
+  setTimeout(() => {
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+  });
+  return wrap;
 }
 
 /** The position of the block a tag at `widget` belongs to: the textblock it ends, or the block before it. */
