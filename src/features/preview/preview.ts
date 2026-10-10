@@ -120,8 +120,8 @@ export class Preview {
   }
 
   /**
-   * Flashes where the text at `offset` in `path` appears, scrolling there only
-   * if it is off-screen. Cheap to call on every cursor move: calls are
+   * Scrolls to where the text at `offset` in `path` appears, only if it is
+   * off-screen (no marker: following the cursor should not draw anything). Cheap to call on every cursor move: calls are
    * throttled and only the newest is looked up. Does nothing while
    * "Follow cursor" is off (until it is switched on again).
    */
@@ -201,7 +201,7 @@ export class Preview {
   private async lookUp({ path, offset }: Reveal, superseded: () => boolean): Promise<void> {
     const response = await this.request({ type: 'cursor', path, offset });
     if (superseded() || response.type !== 'cursor' || response.positions.length === 0) return;
-    this.flash(response.positions[0]);
+    this.follow(response.positions[0]);
   }
 
   private setZoom(request: ZoomRequest): void {
@@ -267,15 +267,17 @@ export class Preview {
     this.highlights = [];
   }
 
-  private flash({ page, x, y }: Position): void {
+  /** Scrolls to where the cursor's text is drawn, if that is off-screen; nothing is drawn there. */
+  private follow({ page, x, y }: Position): void {
     const hit = this.list.at(page);
     if (!hit) return;
-    const marker = overlay(hit.element, 'typst-preview__flash', {
+    // an invisible point at the spot, only to measure and scroll to
+    const spot = overlay(hit.element, 'typst-preview__follow-spot', {
       left: (x / hit.page.width) * 100,
       top: (y / hit.page.height) * 100,
     });
-    marker.addEventListener('animationend', () => marker.remove());
-    this.scrollIntoView(marker);
+    this.scrollIntoView(spot);
+    spot.remove();
   }
 
   /** Scrolls the preview (and nothing around it) so `target` is centred, unless it is already visible. */

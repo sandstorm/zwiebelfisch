@@ -113,7 +113,7 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
 │  │  click (px→pt) ──────────────────────────────────┼────┼──►│ jumpFromClick          │
 │  │  onJump(from,to) ◄───────────────────────────────┼────┼───│ {kind:'source',…}      │
 │  │  reveal(offset) ─────────────────────────────────┼────┼──►│ jumpFromCursor         │
-│  │  flash marker   ◄────────────────────────────────┼────┼───│ [{page,x,y}]           │
+│  │  scroll to      ◄────────────────────────────────┼────┼───│ [{page,x,y}]           │
 │  └──────────────────────────────────────────────────┘    │   └────────────────────────┘
 └──────────────────────────────────────────────────────────┘
 ```
@@ -542,7 +542,7 @@ new SourceView(parent, document, { onCursor?, onBaseChange? })
 ```ts
 new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scrolling page area into container
 .update(files: Record<path, text | Uint8Array>, main)    // cheap per keystroke
-.reveal(path, offset)                        // cheap per cursor move: flash, scroll only if off-screen; nothing while not following
+.reveal(path, offset)                        // cheap per cursor move: scroll only if off-screen (no marker); nothing while not following
 .setFollow(on)                               // "Follow cursor" (toolbar toggle; options follow / onFollowChange); on → goes to the newest reveal
 .showChanges(path, ranges | null)            // change bars in the page margin, redrawn after every compile
 .snippet(path, from, to, text) → Promise<{svg, width, height} | null>   // the range as drawn, cut from its page
@@ -571,7 +571,7 @@ new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scr
   on page 7 does not touch pages 1–6 in the DOM. Without `IntersectionObserver` all pages render.
 - **Zoom:** fit width (default) or a fixed scale (presets 25 %–400 %, 100 % = 1 pt → 4/3 CSS px).
   The page number shown is the page covering most of the viewport.
-- **Overlays** (reveal flash, click highlight) are children of the page element, positioned in
+- **Overlays** (click highlight, change bars) are children of the page element, positioned in
   percent of the page, so they survive zoom and lazy unmounting. A click that resolves to a source
   location outlines the clicked text run (Typst draws one as a `<g>` of glyph `<use>`s) until the
   next click or successful compile.

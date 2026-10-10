@@ -93,20 +93,7 @@
   outline: 1px solid var(--te-accent);
   pointer-events: none;
 }
-.typst-preview__flash {
-  position: absolute;
-  width: 6px;
-  height: 1.4em;
-  margin: -1.2em 0 0 -3px;
-  border-radius: 3px;
-  background: var(--te-accent);
-  pointer-events: none;
-  animation: typst-preview-flash 1.2s ease-out forwards;
-}
-@keyframes typst-preview-flash {
-  from { opacity: 0.9; }
-  to { opacity: 0; }
-}
+.typst-preview__follow-spot { position: absolute; width: 1px; height: 1.4em; margin-top: -1.2em; pointer-events: none; }
 .typst-source__jump { background: var(--te-jump); border-radius: 2px; }
 .typst-editor__tabs {
   display: flex;

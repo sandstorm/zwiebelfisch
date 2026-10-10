@@ -57,7 +57,7 @@ Each item names the mode and example to use, the steps to take and what you shou
 | ☐ | Visual / Source tabs | Local / Hello. Switch between the tabs, then edit in each. | The other view and the preview follow every edit. Cursor and undo history survive a tab switch. | visual.spec, preview.spec |
 | ☐ | Live preview | Type in either view. | The preview updates while you type, and earlier pages stay untouched. | preview.spec |
 | ☐ | Preview → source jump | Click a word in the preview. | The editing view selects that word, and the clicked run is outlined in the preview. | preview.spec |
-| ☐ | Source → preview reveal | Move the cursor in the Source view. | The preview flashes the spot and scrolls only if it is off-screen. | preview-ux.spec |
+| ☐ | Preview follows the cursor | Move the cursor in either view ("Follow cursor" on). | The preview scrolls to that spot only if it is off-screen; nothing is drawn. Toggle off: it stays put. | preview-ux.spec |
 | ☐ | Zoom, page number | Local / Advanced. Use the preview toolbar's zoom buttons and scroll. | Fit width by default, presets from 25 % to 400 %, and a "page n / total" readout. | preview-ux.spec |
 | ☐ | Errors keep the last pages | Type `#foo(` in Source. | The preview dims but keeps the last good pages. The status bar shows "1 error". | preview-ux.spec |
 
