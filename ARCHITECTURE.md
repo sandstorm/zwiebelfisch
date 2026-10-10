@@ -131,7 +131,7 @@ src/                        the widget (TypeScript); the most important API on t
     images/                 images(): image boxes + figures, "Insert image", ProjectImages (object URLs, uploads);
                             imagesVisualView (its options, ImageAssets / ImageUrls / ImageLinks: the test seam
                             testing/ uses), all in images.ts;
-                            model/ (image-call.ts: arguments edited in place; upload.ts: uploadTarget),
+                            model/ (image-call.ts: arguments edited in place; upload.ts: uploadTarget; resize.ts: resizedPercent),
                             visual-view/ (specs, tools, insertion, image-path-link: the path's document link),
                             model/image-files.ts (isImage, imageBlob: the media types), workbench/ (AssetView: images and other
                             files read-only, the custom editors `images.preview` and `images.file`)
