@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState, TextSelection } from '@tiptap/pm/state';
 import { schema } from './extensions';
-import { imagePath, imageSource, posToSource, print, project as projectWith, sourceToPos, syncDoc } from './projection';
+import { codeLanguage, imagePath, imageSource, posToSource, print, project as projectWith, sourceToPos, syncDoc } from './projection';
 
 const project = (source: string) => projectWith(source, schema);
 
@@ -25,6 +25,8 @@ const FIXTURES: Record<string, string> = {
   images: '#image("img/logo.png", width: 50%)\n\nText #image("i.png") inline\n',
   tables: '#table(\n  columns: 2,\n  stroke: none,\n  [a], [*b* c],\n  [], [- x\n  - y],\n)\n\n#table(columns: 1, [one\n\ntwo])\n',
   rawTables: '#table(columns: (1fr, 1fr), [a], [b])\n\n#table(columns: 2, [a], [b], [c])\n\n#table(columns: 1, table.header[H], [a])\n',
+  code: 'Use `x` and ``` `y` ``` or ```js a``` *`b`*.\n\n```rust\nfn main() {}\n```\n\n````\na```b\n````\n\n```\n```\n\n`a\nb` ``\n',
+  outline: '#outline()\n\n#outline(title: [Contents], depth: 2)\n\nText #outline() inline\n',
 };
 
 function edit(doc: Node, change: (state: EditorState) => EditorState['tr']): Node {
@@ -494,5 +496,170 @@ describe('tables', () => {
     expect(print(tr.doc)).toBe(changed);
     expect(tr.doc.child(0).child(1)).toBe(state.doc.child(0).child(1));
     expectPreciseMap(tr.doc);
+  });
+});
+
+const codeMark = (fence = 1, lang: string | null = null) => schema.marks.code.create({ fence, lang });
+const codeOf = (node: Node) => node.marks.find((m) => m.type.name === 'code')?.attrs;
+
+/**
+ * The first block's content as runs of equally formatted text (atoms by type name), to compare a doc with the
+ * projection of its print; how text is written in the source (`typstSource`) does not count.
+ */
+function markedText(doc: Node): [string, string[]][] {
+  const result: [string, string[]][] = [];
+  doc.child(0).forEach((child) => {
+    const marks = child.marks.filter((m) => m.type.name !== 'typstSource').map((m) => m.type.name);
+    const last = result.at(-1);
+    if (child.isText && last && last[1].join() === marks.join() && last[0] !== '') last[0] += child.text;
+    else result.push([child.text ?? '', child.isText ? marks : [child.type.name]]);
+  });
+  return result;
+}
+
+/** Edits the first block of `source`, then checks that the printed Typst reads back as the same text and marks. */
+function editInline(source: string, change: (state: EditorState) => EditorState['tr']): string {
+  const doc = edit(project(source), change);
+  expect(markedText(project(print(doc)))).toEqual(markedText(doc));
+  expectPreciseMap(doc);
+  return print(doc);
+}
+
+describe('code blocks', () => {
+  it('projects a fenced raw block as a code block with its language and text', () => {
+    const block = project('```rust\nfn main() {}\n  x\n```\n').child(0);
+    expect(block.type.name).toBe('codeBlock');
+    expect(block.attrs.language).toBe('rust');
+    expect(block.attrs.fence).toBe(3);
+    expect(block.textContent).toBe('fn main() {}\n  x');
+  });
+
+  it('keeps longer fences and the backticks they enclose', () => {
+    const block = project('````\na```b\n````').child(0);
+    expect(block.type.name).toBe('codeBlock');
+    expect(block.attrs.fence).toBe(4);
+    expect(block.attrs.language).toBeNull();
+    expect(block.textContent).toBe('a```b');
+  });
+
+  it('projects an empty code block', () => {
+    const block = project('```py\n```').child(0);
+    expect(block.type.name).toBe('codeBlock');
+    expect(block.content.size).toBe(0);
+  });
+
+  it('keeps unclosed or embedded raw text unmodelled', () => {
+    expect(project('```rust\nabc').child(0).type.name).toBe('rawBlock');
+    const paragraph = project('Text ```\na\n``` more').child(0);
+    expect(paragraph.type.name).toBe('paragraph');
+    expect(paragraph.child(1).type.name).toBe('rawInline');
+  });
+
+  it('typing in a code block changes only its text', () => {
+    const source = 'Intro\n\n```rust\nfn main() {}\n```\n';
+    const doc = edit(project(source), (s) => s.tr.insertText('\n// done', after(s.doc, '{}')));
+    expect(print(doc)).toBe('Intro\n\n```rust\nfn main() {}\n// done\n```\n');
+    expectPreciseMap(doc);
+  });
+
+  it('changing the language re-prints the fence with the new tag', () => {
+    const source = '```rust\nfn main() {}\n```\n';
+    expect(print(edit(project(source), (s) => s.tr.setNodeAttribute(0, 'language', 'py')))).toBe('```py\nfn main() {}\n```\n');
+    expect(print(edit(project(source), (s) => s.tr.setNodeAttribute(0, 'language', null)))).toBe('```\nfn main() {}\n```\n');
+  });
+
+  it('lengthens the fence when the text contains one', () => {
+    const doc = edit(project('```\na\n```\n'), (s) => s.tr.insertText('\n````', after(s.doc, 'a')));
+    expect(print(doc)).toBe('`````\na\n````\n`````\n');
+    expect(project(print(doc)).child(0).textContent).toBe('a\n````');
+  });
+
+  it('prints a code block created in the editor', () => {
+    const block = schema.nodes.codeBlock.create({ language: 'js' }, schema.text('let a = `*`;\nb'));
+    const doc = edit(project('Text\n'), (s) => s.tr.insert(s.doc.content.size, block));
+    expect(print(doc)).toBe('Text\n\n```js\nlet a = `*`;\nb\n```\n');
+    expectPreciseMap(doc);
+    const empty = edit(project('Text\n'), (s) => s.tr.insert(s.doc.content.size, schema.nodes.codeBlock.create()));
+    expect(print(empty)).toBe('Text\n\n```\n\n```\n');
+    expect(project(print(empty)).child(1).type.name).toBe('codeBlock');
+  });
+
+  it('accepts only what Typst reads as a language tag', () => {
+    expect(codeLanguage('rust')).toBe('rust');
+    expect(codeLanguage('my-lang_2')).toBe('my-lang_2');
+    expect(codeLanguage('c++')).toBe('c');
+    expect(codeLanguage(' 1x')).toBe('');
+  });
+});
+
+describe('inline code', () => {
+  it('projects inline raw text as text with a code mark', () => {
+    const paragraph = project('Use `a*b` or ```js x()``` here').child(0);
+    expect(paragraph.textContent).toBe('Use a*b or x() here');
+    expect(paragraph.child(1).text).toBe('a*b');
+    expect(codeOf(paragraph.child(1))).toEqual({ fence: 1, lang: null });
+    expect(paragraph.child(3).text).toBe('x()');
+    expect(codeOf(paragraph.child(3))).toEqual({ fence: 3, lang: 'js' });
+  });
+
+  it('projects a line of only inline code as a paragraph', () => {
+    const paragraph = project('`x`').child(0);
+    expect(paragraph.type.name).toBe('paragraph');
+    expect(codeOf(paragraph.child(0))).toEqual({ fence: 1, lang: null });
+  });
+
+  it('keeps empty and multi-line inline raw as raw inlines', () => {
+    for (const src of ['``', '`a\nb`', '```abc```']) {
+      expect(project(`A ${src} b`).child(0).child(1).type.name, src).toBe('rawInline');
+    }
+  });
+
+  it('typing inside inline code keeps the code and its delimiters', () => {
+    expect(editInline('Use `ab` and ```js x``` now\n', (s) => s.tr.insertText('*', after(s.doc, 'a')).insertText('y', after(s.doc, 'x') + 1)))
+      .toBe('Use `a*b` and ```js xy``` now\n');
+  });
+
+  it('marking text as code prints it in backticks, unescaped', () => {
+    expect(editInline('Hello \\*x\\* \\#y\n', (s) => s.tr.addMark(1, s.doc.child(0).content.size + 1, codeMark()))).toBe('`Hello *x* #y`\n');
+    expect(editInline('A #emph[b] c\n', (s) => s.tr.addMark(1, s.doc.child(0).content.size + 1, codeMark()))).toBe('`A `#emph[b]` c`\n');
+  });
+
+  it('uses a longer fence for code containing backticks', () => {
+    expect(editInline('a\\`b\n', (s) => s.tr.addMark(1, 4, codeMark()))).toBe('``` a`b```\n');
+    expect(editInline('ab\\`\n', (s) => s.tr.addMark(1, 4, codeMark()))).toBe('``` ab` ```\n');
+    expect(editInline('a\\`\\`\\`b\n', (s) => s.tr.addMark(1, 6, codeMark()))).toBe('```` a```b````\n');
+  });
+
+  it('keeps code inside other formatting, never formatting inside code', () => {
+    expect(editInline('Hello world\n', (s) => s.tr.addMark(7, 12, codeMark()).addMark(7, 12, schema.marks.bold.create())))
+      .toBe('Hello *`world`*\n');
+    expect(editInline('Hello world\n', (s) => s.tr.addMark(7, 12, codeMark()).addMark(7, 10, schema.marks.bold.create())))
+      .toBe('Hello *`wor`*`ld`\n');
+    expect(editInline('Hello world\n', (s) => s.tr.addMark(7, 12, codeMark()).addMark(9, 12, schema.marks.italic.create())))
+      .toBe('Hello `wo`_`rld`_\n');
+  });
+
+  it('removing the code mark escapes the text again', () => {
+    const doc = edit(project('Use `*x*` now\n'), (s) => s.tr.removeMark(0, s.doc.content.size, schema.marks.code));
+    expect(print(doc)).toBe('Use \\*x\\* now\n');
+    expect(project(print(doc)).textContent).toBe('Use *x* now');
+  });
+});
+
+describe('table of contents', () => {
+  it('projects a standalone #outline call as an outline block', () => {
+    const doc = project('#outline()\n\n#outline(title: [Contents], depth: 2)\n\nText #outline()\n\n#outline\n');
+    expect(doc.child(0).type.name).toBe('outline');
+    expect(doc.child(0).attrs.src).toBe('#outline()');
+    expect(doc.child(1).type.name).toBe('outline');
+    expect(doc.child(1).attrs.src).toBe('#outline(title: [Contents], depth: 2)');
+    expect(doc.child(2).child(1).type.name).toBe('rawInline');
+    expect(doc.child(3).type.name).toBe('rawBlock');
+  });
+
+  it('prints an outline created in the editor', () => {
+    const doc = edit(project('= Intro\n'), (s) => s.tr.insert(0, schema.nodes.outline.create({ src: '#outline()' })));
+    expect(print(doc)).toBe('#outline()\n\n= Intro\n');
+    expectPreciseMap(doc);
   });
 });

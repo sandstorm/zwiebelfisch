@@ -17,15 +17,19 @@
  * their verbatim source.
  *
  * Besides markup (headings, lists, paragraphs, strong/emph), it models links
- * (`#link("url")[text]`, bare URLs) as a `link` mark, standalone
- * `#image("path", ..)` calls as `image` blocks (source kept like a raw block)
- * and `#table(columns: n, [..], ..)` with content cells as tables whose cells
- * hold blocks.
+ * (`#link("url")[text]`, bare URLs) as a `link` mark, raw text as code blocks
+ * (```lang …```) and a `code` mark (`code`), standalone `#image("path", ..)`
+ * and `#outline(..)` calls as `image` / `outline` blocks (source kept like a
+ * raw block) and `#table(columns: n, [..], ..)` with content cells as tables
+ * whose cells hold blocks.
  */
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
 import { typstParser } from 'codemirror-lang-typst/lezer';
+import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from './raw-code';
+
+export { codeLanguage } from './raw-code';
 
 /**
  * Nodes created by `project` and not modified since. ProseMirror nodes are
@@ -123,7 +127,7 @@ interface Segment {
 }
 
 /** Syntax that makes a run of inline content a paragraph rather than a raw block. */
-const PROSE = new Set(['Text', 'Strong', 'Emph', 'Escape', 'Shorthand', 'SmartQuote', 'Linebreak', 'Link']);
+const PROSE = new Set(['Text', 'Strong', 'Emph', 'Escape', 'Shorthand', 'SmartQuote', 'Linebreak', 'Link', 'Raw']);
 const SHORTHANDS: Record<string, string> = {
   '~': '\u00a0',
   '--': '\u2013',
@@ -187,11 +191,28 @@ function toBlock(ctx: Context, segment: Segment, sep: string | null): Node {
     case 'ordered':
       return listItem(ctx, node, sep);
     case 'run':
-      if (segment.nodes.some((n) => PROSE.has(n.name) || isLinkCall(ctx, n))) {
-        return textblock(ctx, { type: 'paragraph', attrs: { src, sep } }, segment.from, inline(ctx, segment.nodes));
-      }
-      return blockCall(ctx, segment, sep) ?? ctx.schema.nodes.rawBlock.create({ src, sep });
+      return runBlock(ctx, segment, src, sep);
   }
+}
+
+/** A run of inline syntax: a code block, a paragraph, a block call or else a raw block. */
+function runBlock(ctx: Context, segment: Segment, src: string, sep: string | null): Node {
+  const code = segment.nodes.length === 1 ? codeBlock(ctx, segment.nodes[0], sep) : null;
+  if (code) return code;
+  if (segment.nodes.some((n) => PROSE.has(n.name) || isLinkCall(ctx, n))) {
+    return textblock(ctx, { type: 'paragraph', attrs: { src, sep } }, segment.from, inline(ctx, segment.nodes));
+  }
+  return blockCall(ctx, segment, sep) ?? ctx.schema.nodes.rawBlock.create({ src, sep });
+}
+
+/** Raw text Typst shows as a block: a code block whose text is the source between the delimiters. */
+function codeBlock(ctx: Context, node: SyntaxNode, sep: string | null): Node | null {
+  const code = rawCode(node, ctx.source);
+  if (!code?.block) return null;
+  const text = ctx.source.slice(code.from, code.to);
+  const attrs = { language: code.lang, fence: code.fence, src: ctx.source.slice(node.from, node.to), sep };
+  const content = text ? [{ node: ctx.schema.text(text), from: code.from, to: code.to }] : [];
+  return textblock(ctx, { type: 'codeBlock', attrs, contentTo: code.to }, node.from, content);
 }
 
 /** A `link(..)` call, which is prose like a bare URL. */
@@ -211,16 +232,24 @@ function callee(ctx: Context, call: SyntaxNode): { name: string; args: SyntaxNod
   return { name: ident ? ctx.source.slice(ident.from, ident.to) : '', args: args ? children(args) : [] };
 }
 
-/** A run that is exactly one `#func(..)` call of a function modelled as a block (image, table). */
+/** A run that is exactly one `#func(..)` call of a function modelled as a block (image, outline, table). */
 function blockCall(ctx: Context, segment: Segment, sep: string | null): Node | null {
   const [hash, call] = segment.nodes;
   if (segment.nodes.length !== 2 || hash.name !== 'Hash' || call.name !== 'FuncCall' || call.from !== hash.to) return null;
   const { name, args } = callee(ctx, call);
-  const src = ctx.source.slice(segment.from, segment.to);
-  if (name === 'image') return parenthesized(args) && imagePath(src) !== null ? ctx.schema.nodes.image.create({ src, sep }) : null;
-  if (name === 'table') return table(ctx, segment, args, sep);
-  return null;
+  return BLOCK_CALLS[name]?.(ctx, segment, args, sep) ?? null;
 }
+
+/** Block calls by function name; each checks its arguments and projects the call, or returns null. */
+const BLOCK_CALLS: Record<string, (ctx: Context, call: Segment, args: SyntaxNode[], sep: string | null) => Node | null> = {
+  image: (ctx, call, args, sep) => {
+    const src = ctx.source.slice(call.from, call.to);
+    return parenthesized(args) && imagePath(src) !== null ? ctx.schema.nodes.image.create({ src, sep }) : null;
+  },
+  outline: (ctx, call, args, sep) =>
+    parenthesized(args) ? ctx.schema.nodes.outline.create({ src: ctx.source.slice(call.from, call.to), sep }) : null,
+  table: (ctx, call, args, sep) => table(ctx, call, args, sep),
+};
 
 /** How a table's source lies around its cells, for printing it back. */
 interface TableLayout {
@@ -377,6 +406,7 @@ const INLINE: Record<string, (c: InlineContext) => Node | Placed[]> = {
   Strong: (c) => delimited(c, 'bold') ?? raw(c.ctx, c.src, c.marks),
   Emph: (c) => delimited(c, 'italic') ?? raw(c.ctx, c.src, c.marks),
   Link: (c) => c.ctx.schema.text(c.src, c.ctx.schema.marks.link.create({ href: c.src }).addToSet(c.marks)),
+  Raw: (c) => inlineCode(c) ?? raw(c.ctx, c.src, c.marks),
 };
 
 function inlineNode(context: InlineContext): Node | Placed[] {
@@ -398,6 +428,15 @@ function linkCall({ ctx, node, marks }: InlineContext): Placed[] | null {
   if (href === null || !isClosedContent(args[3]) || content.length === 0) return null;
   if (content.some((n) => n.name === 'Parbreak')) return null;
   return inline(ctx, content, ctx.schema.marks.link.create({ href }).addToSet(marks));
+}
+
+/** Raw text on one line: its text with a `code` mark remembering the delimiters; null for empty or multi-line raw text. */
+function inlineCode({ ctx, node, marks }: InlineContext): Placed[] | null {
+  const code = rawCode(node, ctx.source);
+  const text = code ? ctx.source.slice(code.from, code.to) : '';
+  if (!code || code.block || !text || text.includes('\n')) return null;
+  const mark = ctx.schema.marks.code.create({ fence: code.fence, lang: code.lang });
+  return [{ node: ctx.schema.text(text, mark.addToSet(marks)), from: code.from, to: code.to }];
 }
 
 /** A Typst string literal's value, if it uses no escapes other than `\"` and `\\`. */
@@ -448,33 +487,40 @@ function pristineNode(ctx: Context, type: string, attrs: Record<string, unknown>
   return node;
 }
 
-/** A pristine textblock whose `attrs.src` starts at source offset `from`. */
+/**
+ * A pristine textblock whose `attrs.src` starts at source offset `from`.
+ * Its content ends at `contentTo` (default: the end of `src`); syntax after
+ * that closes the block (e.g. a code block's fence).
+ */
 function textblock(
   ctx: Context,
-  { type, attrs }: { type: string; attrs: { src: string } & Record<string, unknown> },
+  { type, attrs, contentTo }: { type: string; attrs: { src: string } & Record<string, unknown>; contentTo?: number },
   from: number,
   content: Placed[],
 ): Node {
   const node = ctx.schema.nodes[type].create(attrs, content.map((p) => p.node));
-  pristine.set(node, layout(content, from, from + attrs.src.length));
+  const to = from + attrs.src.length;
+  pristine.set(node, layout(content, from, contentTo ?? to, to));
   return node;
 }
 
 /** How a pristine textblock's `src` lines up with its content: visible runs, with hidden syntax before each. */
 interface InlineLayout {
   runs: { hidden: number; length: number; size: number; kind: 'text' | 'atom' }[];
-  /** Hidden syntax after the last run. */
+  /** Hidden syntax after the last run, up to the end of the content. */
   tail: number;
+  /** Syntax closing the block, after its content. */
+  closing: number;
 }
 
-function layout(content: Placed[], from: number, to: number): InlineLayout {
+function layout(content: Placed[], from: number, contentTo: number, to: number): InlineLayout {
   let cursor = from;
   const runs = content.map(({ node, from: start, to: end }) => {
     const run = { hidden: start - cursor, length: end - start, size: node.nodeSize, kind: textKind(node, end - start) };
     cursor = end;
     return run;
   });
-  return { runs, tail: to - cursor };
+  return { runs, tail: contentTo - cursor, closing: to - contentTo };
 }
 
 /** Text shows its source character by character unless it is decoded (an escape or shorthand). */
@@ -617,11 +663,15 @@ function printBlocks(out: Printer, container: Node, start: number, defaultSep: s
   });
 }
 
+/** Atom blocks that print their `src` as is. */
+const VERBATIM_BLOCKS = new Set(['rawBlock', 'image', 'outline']);
+
 /** Prints `node`, which starts at document position `pos`. */
 function printBlock(out: Printer, node: Node, parent: Node, pos: number): void {
   const pristineLayout = pristine.get(node);
   if (pristineLayout) return printLayout(out, node, pristineLayout, pos + 1);
   if (pristine.has(node)) return printPristineItem(out, node, pos);
+  if (VERBATIM_BLOCKS.has(node.type.name)) return out.shown(node.attrs.src, 'atom', pos, pos + 1);
   switch (node.type.name) {
     case 'heading':
       out.hidden(`${'='.repeat(node.attrs.level)} `);
@@ -631,9 +681,8 @@ function printBlock(out: Printer, node: Node, parent: Node, pos: number): void {
       return printBlocks(out, node, pos + 1, '\n');
     case 'listItem':
       return printListItem(out, node, parent, pos);
-    case 'rawBlock':
-    case 'image':
-      return out.shown(node.attrs.src, 'atom', pos, pos + 1);
+    case 'codeBlock':
+      return printCodeBlock(out, node, pos);
     case 'table':
       return printTable(out, node, pos);
     default:
@@ -642,7 +691,7 @@ function printBlock(out: Printer, node: Node, parent: Node, pos: number): void {
 }
 
 /** A pristine textblock: its `src`, with the content positions its layout assigns. */
-function printLayout(out: Printer, block: Node, { runs, tail }: InlineLayout, start: number): void {
+function printLayout(out: Printer, block: Node, { runs, tail, closing }: InlineLayout, start: number): void {
   const src: string = block.attrs.src;
   let from = 0;
   let pos = start;
@@ -655,6 +704,7 @@ function printLayout(out: Printer, block: Node, { runs, tail }: InlineLayout, st
   }
   out.hidden(src.slice(from, from + tail));
   out.endBlock(pos, pos === start);
+  out.closing(src.slice(from + tail, from + tail + closing));
 }
 
 /** A pristine list item: its marker, then its only child, which is pristine, too. */
@@ -669,6 +719,16 @@ function printPristineItem(out: Printer, item: Node, pos: number): void {
 function printTextblock(out: Printer, block: Node, pos: number): void {
   printInline(out, block, pos + 1);
   out.endBlock(pos + block.nodeSize - 1, block.content.size === 0);
+}
+
+/** An edited code block: its text verbatim between fences that keep it intact. */
+function printCodeBlock(out: Printer, block: Node, pos: number): void {
+  const text = block.textContent;
+  const { open, close } = codeBlockDelimiters(text, block.attrs.language, block.attrs.fence);
+  out.hidden(open);
+  out.shown(text, 'text', pos + 1, pos + 1 + text.length);
+  out.endBlock(pos + block.nodeSize - 1, text.length === 0);
+  out.closing(close);
 }
 
 /** `- body`, with further children (e.g. a nested list) on following lines, indented. */
@@ -737,6 +797,7 @@ const FORMATTING: Record<string, (mark: Mark, around: Around) => { open: string;
   bold: (_mark, around) => delimitedSyntax('*', 'strong', around),
   italic: (_mark, around) => delimitedSyntax('_', 'emph', around),
   link: (mark) => ({ open: `#link(${quote(mark.attrs.href)})[`, close: ']' }),
+  code: (mark, { text }) => inlineCodeDelimiters(text, mark.attrs.lang, mark.attrs.fence),
 };
 
 /** What a formatted span starts and ends with, and the printed characters around it. */
@@ -745,6 +806,8 @@ interface Around {
   after: string | undefined;
   first: string;
   last: string;
+  /** The span's text, as the document shows it. */
+  text: string;
 }
 
 function delimitedSyntax(delimiter: string, func: string, around: Around): { open: string; close: string } {
@@ -757,6 +820,8 @@ interface Piece {
   text: string;
   /** The printed text is `node`'s text, escaped. */
   escaped: boolean;
+  /** The printed text is `node`'s text as is, inside raw text (inline code). */
+  code: boolean;
   node: Node;
   pos: number;
 }
@@ -765,7 +830,8 @@ interface Piece {
  * Prints inline content: each formatted span opens with its syntax (longer
  * spans outside), choosing `*x*` or `#strong[x]` so the result parses back
  * the same, and a link showing its own URL as a bare URL where Typst reads
- * it back as one.
+ * it back as one. Code is raw text, which holds no markup: it is always
+ * innermost, closed and reopened around any other formatting change.
  */
 function printInline(out: Printer, block: Node, start: number): void {
   const pieces = inlinePieces(block, start);
@@ -775,13 +841,21 @@ function printInline(out: Printer, block: Node, start: number): void {
     printedSoFar += syntax;
     out.hidden(syntax);
   };
+  const closeFrom = (index: number) => {
+    while (index >= 0 && open.length > index) hidden(open.pop()!.close);
+  };
   pieces.forEach((piece, i) => {
-    const ended = open.findIndex((o) => !o.mark.isInSet(piece.marks));
-    while (ended >= 0 && open.length > ended) hidden(open.pop()!.close);
+    closeFrom(open.findIndex((o) => !o.mark.isInSet(piece.marks)));
     let text = piece.text;
-    const opening = marksToOpen(pieces, i, open);
+    let opening = marksToOpen(pieces, i, open);
+    if (opening.length > 0 && open.at(-1)?.mark.type.name === 'code') {
+      closeFrom(open.length - 1);
+      opening = marksToOpen(pieces, i, open);
+    }
     opening.forEach(({ mark, end }, n) => {
-      const around = { before: printedSoFar.at(-1), after: pieces[end + 1]?.text[0], first: piece.text, last: pieces[end].text };
+      const spanText = pieces.slice(i, end + 1).map((p) => p.text).join('');
+      const next = pieces[end + 1];
+      const around = { before: printedSoFar.at(-1), after: next?.code ? '`' : next?.text[0], first: piece.text, last: pieces[end].text, text: spanText };
       if (n === opening.length - 1 && end === i && isBareLink(mark, piece, around)) {
         open.push({ mark, close: '' });
         text = piece.node.text!;
@@ -798,12 +872,27 @@ function printInline(out: Printer, block: Node, start: number): void {
   while (open.length > 0) hidden(open.pop()!.close);
 }
 
-/** The marks of `pieces[index]` not open yet, with the last piece they span; longer spans first. */
+/**
+ * The marks of `pieces[index]` not open yet, with the last piece they span;
+ * longer spans first, code last (it spans only pieces formatted alike).
+ */
 function marksToOpen(pieces: Piece[], index: number, open: { mark: Mark }[]): { mark: Mark; end: number }[] {
+  const isCode = (mark: Mark) => Number(mark.type.name === 'code');
   return pieces[index].marks
     .filter((mark) => !open.some((o) => o.mark.eq(mark)))
-    .map((mark) => ({ mark, end: spanEnd(pieces, index, mark) }))
-    .sort((a, b) => b.end - a.end);
+    .map((mark) => ({ mark, end: isCode(mark) ? alikeEnd(pieces, index) : spanEnd(pieces, index, mark) }))
+    .sort((a, b) => isCode(a.mark) - isCode(b.mark) || b.end - a.end);
+}
+
+/** The last piece of the run from `start` with the same formatting. */
+function alikeEnd(pieces: Piece[], start: number): number {
+  let end = start;
+  while (end + 1 < pieces.length && sameMarks(pieces[end + 1].marks, pieces[start].marks)) end++;
+  return end;
+}
+
+function sameMarks(a: readonly Mark[], b: readonly Mark[]): boolean {
+  return a.length === b.length && a.every((mark, i) => mark.eq(b[i]));
 }
 
 /** Bare URL characters, not ending in punctuation that Typst would leave out of the link. */
@@ -825,17 +914,24 @@ function inlinePieces(block: Node, start: number): Piece[] {
   const pieces: Piece[] = [];
   let lineStart = true;
   block.forEach((child, offset) => {
-    const original = child.isText ? originalSource(child) : (child.attrs.src as string);
-    const text = original ?? escapeMarkup(child.text!.replace(/\n/g, ' '), lineStart);
-    const marks = child.marks.filter((m) => m.type.name in FORMATTING);
-    pieces.push({ marks, text, escaped: original === null, node: child, pos: start + offset });
+    // only text can be code; atoms keep their own source
+    const marks = child.marks.filter((m) => m.type.name in FORMATTING && (child.isText || m.type.name !== 'code'));
+    const code = marks.some((m) => m.type.name === 'code');
+    const original = code ? null : child.isText ? originalSource(child) : (child.attrs.src as string);
+    const plain = child.text?.replace(/\n/g, ' ') ?? '';
+    const text = original ?? (code ? plain : escapeMarkup(plain, lineStart));
+    pieces.push({ marks, text, escaped: original === null && !code, code, node: child, pos: start + offset });
     lineStart = /\n\s*$/.test(text);
   });
   return pieces;
 }
 
-/** Prints `text`, which shows `node`: escaped text one character per position, its escaping backslashes hidden. */
-function printPiece(out: Printer, { escaped, node, pos }: Piece, text: string): void {
+/**
+ * Prints `text`, which shows `node`: escaped text one character per position,
+ * its escaping backslashes hidden; code likewise, with no escapes.
+ */
+function printPiece(out: Printer, { escaped, code, node, pos }: Piece, text: string): void {
+  if (code) return out.shown(text, 'text', pos, pos + node.nodeSize);
   if (!escaped) return out.shown(text, 'atom', pos, pos + node.nodeSize);
   let at = pos;
   for (let i = 0; i < text.length; i++) {
