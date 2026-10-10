@@ -1,8 +1,8 @@
-// Tests for style-index.ts (StyleIndex) and new-style.ts.
+// Tests for style-index.ts (StyleIndex) and new-style.ts (calculateNewStyleChange).
 import { describe, expect, it, vi } from 'vitest';
 import { Project } from '../../../core/project/project';
 import { scanStyles } from './discover';
-import { newStyle } from './new-style';
+import { calculateNewStyleChange } from './new-style';
 import { StyleIndex } from './style-index';
 import { ProjectPath } from '../../../core/paths/paths';
 
@@ -70,7 +70,13 @@ describe('StyleIndex.homeFile (where New style… adds one)', () => {
   });
 });
 
-describe('newStyle', () => {
+/** `text` with the new style appended, and where its definition is. */
+function newStyle(text: string, label?: string): { text: string; from: number; to: number } {
+  const { change, definition } = calculateNewStyleChange(text, label);
+  return { text: text.slice(0, change.from) + change.insert + text.slice(change.to), ...definition };
+}
+
+describe('calculateNewStyleChange', () => {
   it('appends a declared paragraph style with a free name, and says where it is', () => {
     const first = newStyle('');
     expect(scanStyles(first.text)).toEqual([{ name: 'new-style', kind: 'paragraph', label: 'New style' }]);

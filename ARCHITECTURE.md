@@ -1324,8 +1324,8 @@ new StyleIndex(project)        // implements ProjectStyles (what the Visual view
 .styles() → Style[] (+ path)   .onDidChange: Event<void>   .homeFile()   .dispose()
 .calculateImportChange(document, style, use) → TextChange | null   // relative to the document's path; null in the declaring file
 calculateImportChange(text, { name, matches(module), create(), use? }) → TextChange | null   // core/typst-syntax
-newStyle(text, label = 'New style') → { text, from, to }   // "New style…": `styleName(label)`, numbered if taken
-styleName(label) → string   // `Side box` → `side-box`; starts with a letter (`style-2-columns`)
+calculateNewStyleChange(text, label = 'New style') → { change, definition: { from, to } }   // "New style…"'s stub:
+                               // named after the label (`Side box` → `side-box`, `style-2-columns`), numbered if taken
 // visual-view/
 customStyles({ styles?, create? }): VisualViewContribution   // styledBlock + style mark specs, the text style menu
 ```

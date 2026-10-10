@@ -6,7 +6,7 @@
 import type { Project } from '../../core/project/project';
 import type { TypstExtension, Workbench } from '../../hosts/workbench/workbench';
 import css from './styles.css?inline';
-import { newStyle } from './model/new-style';
+import { calculateNewStyleChange } from './model/new-style';
 import { StyleIndex } from './model/style-index';
 import { customStyles } from './visual-view/visual-view';
 
@@ -42,11 +42,11 @@ async function addNewStyle(index: StyleIndex, project: Project, workbench: Workb
   if (label === undefined) return;
   const path = index.homeFile();
   const file = project.document(path);
-  const added = newStyle(file?.text ?? '', label.trim());
-  if (file) file.change([{ from: file.text.length, to: file.text.length, insert: added.text.slice(file.text.length) }], 'new-style');
+  const { change, definition } = calculateNewStyleChange(file?.text ?? '', label.trim());
+  if (file) file.change([change], 'new-style');
   else {
-    const problem = await workbench.applyChange({ kind: 'create', path, content: added.text });
+    const problem = await workbench.applyChange({ kind: 'create', path, content: change.insert });
     if (problem !== null) return void workbench.showErrorMessage(`The style was not added: ${problem}`);
   }
-  workbench.open(path, { selection: { from: added.from, to: added.to }, mode: 'source' });
+  workbench.open(path, { selection: definition, mode: 'source' });
 }
