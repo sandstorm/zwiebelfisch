@@ -1,20 +1,13 @@
 // Layout: the widget's regions — side panels (rail buttons, resizable, collapsible, an overlay when narrow),
 // editing area, preview, status bar — and the per-session layout memory. See workbench.ts and ARCHITECTURE.md, "Layout".
 
-import type { Memory } from '../workbench';
+import type { Memory, SidePanelOptions } from '../workbench';
 
 /** Below this widget width an open side panel lies over the editing area instead of beside it. */
 const NARROW = 720;
 const WIDTH = { min: 160, max: 480, initial: 240, step: 16 };
 /** The preview's share of the widget's width, in percent (the editor/preview separator). */
 const SHARE = { min: 20, max: 80, initial: 50, step: 5 };
-
-export interface PanelOptions {
-  /** Shown on the rail button (as its tooltip and accessible name). */
-  label: string;
-  /** The rail button's icon. */
-  icon: Element;
-}
 
 /** What the layout remembers for the browser session: the panel width, the preview's share and the panels people opened or closed. */
 interface Saved {
@@ -87,7 +80,7 @@ export class Layout {
   }
 
   /** Adds side panel `id` with its rail button; returns the element the panel's content goes into. */
-  addPanel(id: string, options: PanelOptions): HTMLElement {
+  addPanel(id: string, options: SidePanelOptions): HTMLElement {
     if (this.panels.has(id)) throw new Error(`There is a side panel ${id} already`);
     const doc = this.host.ownerDocument;
     const body = div(doc, 'typst-editor__panel-body');
@@ -120,11 +113,6 @@ export class Layout {
     this.layout();
   }
 
-  /** Whether panel `id` is open now. */
-  isOpen(id: string): boolean {
-    return this.openId === id;
-  }
-
   /** Opens panel `id` by default (unless someone opened or closed it this session, or the widget is narrow). */
   setDefault(id: string, open: boolean): void {
     const panel = this.panels.get(id);
@@ -142,7 +130,7 @@ export class Layout {
   }
 
   /** Opens or closes panel `id` as someone's choice (remembered for the session). */
-  choose(id: string, open: boolean): void {
+  private choose(id: string, open: boolean): void {
     // Narrow: the overlay opens and closes for the moment only.
     if (this.narrow) return this.show(open ? id : null);
     this.state.chosen = { ...this.state.chosen, [id]: open };
