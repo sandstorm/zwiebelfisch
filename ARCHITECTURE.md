@@ -62,7 +62,7 @@ src/                        the widget (TypeScript); the most important API on t
                             (drafting's call: parse, print, validity), note-thread.ts (a note's body as a
                             thread of messages), page-margin.ts, without-notes.ts (the PDF without comments)
     files/                  FilePanel (the file panel: header, prompts, drops; files.css), icons.ts, asset-view.ts,
-                            upload.ts, insert-image.ts
+                            upload.ts
       tree/                 tree.ts (FileTree: rows, keyboard, drag & drop, presence), tree-model.ts (pure)
     collaboration/          real-time collaboration (loaded on demand): Collaboration, SharedProject, RemoteCursors,
                             RoomVersions + SharedAssets (GitLab rooms); in-process.ts (Y.Doc/awareness wiring for
@@ -195,9 +195,10 @@ createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileCha
   error(s): …" (the toolbar shows it), never an older PDF. File name after the main file:
   `main.pdf` / `main-with-comments.pdf`. The plain button is the version without comments
   (decision: the usual final version); the menu has both.
-- **Insert image** (`AssetView`): `#image("…")` as its own paragraph after the line of the last
-  source-view cursor (else at the end) of the last shown `.typ` file, relative path when in the
-  same folder tree, else project-absolute.
+- **Images into the text**: `AssetView` only previews. An image row dragged from the file panel
+  (drag type `PROJECT_PATH_TYPE`, data: the project path) and dropped on the Visual view is
+  inserted there as an image block (`imageFileDrops` → `ImageAssets.reference(path)`: relative
+  when in the same folder tree, else project-absolute; not for non-images).
 
 - Setting `source`/`value` applies **one minimal edit**: only the range between the common prefix
   and the common suffix changes (`minimalChange`), so cursors and undo history are preserved.
@@ -1177,9 +1178,8 @@ an in-memory `FakeGitLab` holding `demo/examples/advanced`). Checklist with step
   fonts — ship a JSON index of `FontInfo` so the `FontBook` is complete up front and fetch font
   data on first use (compile, see which fonts were missing, fetch, recompile).
 - **Multi-file UI:** empty folders live only in the panel (the project has no folders); a
-  folder rename / move / delete is one change per file and may stop half-way at a refusal. The
-  visual view has no cursor API, so "Insert into …" uses the last source-view cursor, else the
-  end of the file. File links do not follow paths built at run time (variables, `+`).
+  folder rename / move / delete is one change per file and may stop half-way at a refusal. Dragging an
+  image from the panel into the Source view does nothing yet (Visual view only). File links do not follow paths built at run time (variables, `+`).
 - **Packages:** only `@preview` from packages.typst.org (no configurable registry, no `@local`);
   failed downloads are not retried until the worker restarts.
 - **Snippets are cut from the compiled pages**, so they only appear after a successful compile,

@@ -217,7 +217,8 @@ export class Toolbar {
   /**
    * "Insert image" and its popover: a path field, plus the project's images
    * and an upload with `assets`. With them, image files dropped on or pasted
-   * into the text are uploaded and inserted too (refusals open the popover).
+   * into the text are uploaded and inserted too (refusals open the popover),
+   * and an image dragged from the file panel is inserted where it is dropped.
    */
   private imageAction(assets: ImageAssets | undefined): [Action, FieldPopover] {
     const choices = assets
@@ -234,11 +235,18 @@ export class Toolbar {
       extra: choices?.element,
     });
     if (choices) {
-      this.imageFiles = imageFileDrops(async (files, near) => {
-        const added = await choices.upload(files, near);
-        const button = this.root.querySelector<HTMLButtonElement>('button[aria-label="Insert image"]');
-        if (!added && !popover.isOpen && button) popover.open(button, '', false);
-      });
+      this.imageFiles = imageFileDrops(
+        async (files, near) => {
+          const added = await choices.upload(files, near);
+          const button = this.root.querySelector<HTMLButtonElement>('button[aria-label="Insert image"]');
+          if (!added && !popover.isOpen && button) popover.open(button, '', false);
+        },
+        (path, near) => {
+          const reference = assets!.reference(path);
+          if (reference !== null) insertImages(this.editor, [reference], near);
+          return reference !== null;
+        },
+      );
       this.editor.registerPlugin(this.imageFiles);
     }
     const action: Action = {

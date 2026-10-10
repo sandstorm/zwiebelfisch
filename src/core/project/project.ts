@@ -7,6 +7,9 @@ export { displayName, extensionOf, fileKind, imageBlob, referencePath, resolvePa
 export { neighbours, readingOrder } from './reading-order';
 export { describeLink, findPathReferences, pathReferenceAt, type FileLinks, type LinkTarget, type PathCall, type PathReference } from './path-references';
 
+/** The drag data type of a project file dragged from the file panel; the data is its path. */
+export const PROJECT_PATH_TYPE = 'application/x-typst-project-path';
+
 /** A project file: Typst source text, or bytes (images, data files, …). */
 export type FileContent = string | Uint8Array;
 

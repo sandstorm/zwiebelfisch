@@ -780,16 +780,6 @@
   white-space: pre-wrap;
 }
 .typst-asset__note { color: #57606a; }
-.typst-asset__insert {
-  border: 1px solid var(--te-accent);
-  border-radius: 6px;
-  padding: 6px 14px;
-  background: var(--te-accent);
-  color: white;
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-}
 .typst-toolbar__style:hover { background: #eef1f5; }
 .typst-status__open {
   border: 0;

@@ -1,6 +1,6 @@
 // FileTree: the project's files as an expandable tree (keyboard, drag & drop, presence dots). Entry of
 // features/files/tree/. See files.ts and ARCHITECTURE.md, "File panel".
-import { displayName, fileKind } from '../../../core/project/project';
+import { displayName, fileKind, PROJECT_PATH_TYPE } from '../../../core/project/project';
 import { initials, presenceStyle, type PresenceUser } from '../../../core/typst-document/typst-document';
 import { icon } from '../icons';
 import { ancestorsOf, buildTree, filesUnder, folderOf, navigate, type Row, visibleRows } from './tree-model';
@@ -38,7 +38,7 @@ export interface TreeState {
 }
 
 /** The type of a dragged tree row in a drag's data. */
-const ROW_TYPE = 'application/x-typst-project-path';
+const ROW_TYPE = PROJECT_PATH_TYPE;
 
 /**
  * The project's files as a tree (`role=tree`, one `treeitem` per visible row):
@@ -207,7 +207,8 @@ export class FileTree {
       const path = (event.target as HTMLElement).closest<HTMLElement>('[data-path]')?.dataset.path;
       if (!path || !event.dataTransfer) return;
       event.dataTransfer.setData(ROW_TYPE, path);
-      event.dataTransfer.effectAllowed = 'move';
+      // moved onto a folder here; copied as a reference elsewhere (an image dropped into the text)
+      event.dataTransfer.effectAllowed = 'copyMove';
     });
     this.element.addEventListener('dragover', (event) => {
       if (!accepts(event)) return;

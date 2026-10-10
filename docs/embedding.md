@@ -115,8 +115,8 @@ widget width of 720px the open panel lies over the editing view and closes after
 
 - folders first, expandable; the main file marked, the shown file highlighted, icons by kind
   (Typst / image / data), the initials of collaborators in each file (also on closed folders);
-  `.typ` files open in their own Visual/Source views, images open as a preview with an
-  **Insert into …** button, data files as read-only text;
+  `.typ` files open in their own Visual/Source views, images open as a preview (drag an
+  image from the panel into the Visual view to insert it there), data files as read-only text;
 - **New file**, **New folder**, **Upload** (or drop files onto the editor, or onto a folder),
   **Rename**, **Delete** on the focused row — a folder is renamed / deleted with every file in it
   (one change each); the main file (and the folder holding it) cannot be renamed, moved or

@@ -1,19 +1,16 @@
-// AssetView: the read-only view of a non-Typst file (image or data) with "Insert into …". See files.ts.
+// AssetView: the read-only view of a non-Typst file (image or data). See files.ts.
 import { displayName, type FileContent, fileKind, imageBlob } from '../../core/project/project';
 
 /**
  * The read-only view of a project file that is not Typst source: an image
- * preview with an "Insert into …" button, the text of a data file, or just
- * its size.
+ * preview, the text of a data file, or just its size. (Images get into the
+ * text by dragging them from the file panel, or with "Insert image".)
  */
 export class AssetView {
   private readonly root: HTMLElement;
   private objectUrl: string | null = null;
 
-  constructor(
-    parent: HTMLElement,
-    private readonly onInsert: (path: string) => void,
-  ) {
+  constructor(parent: HTMLElement) {
     this.root = parent.ownerDocument.createElement('div');
     this.root.className = 'typst-asset';
     this.root.dataset.testid = 'typst-asset';
@@ -21,8 +18,8 @@ export class AssetView {
     parent.append(this.root);
   }
 
-  /** Shows `path`; `insertInto` names the file an image would be inserted into (null: no button). */
-  show(path: string, content: FileContent, insertInto: string | null): void {
+  /** Shows `path`. */
+  show(path: string, content: FileContent): void {
     this.release();
     const doc = this.root.ownerDocument;
     const title = doc.createElement('h2');
@@ -33,7 +30,6 @@ export class AssetView {
     size.textContent = formatSize(typeof content === 'string' ? new TextEncoder().encode(content).length : content.length);
     title.append(size);
     this.root.replaceChildren(title, this.body(path, content));
-    if (insertInto !== null && fileKind(path) === 'image') this.root.append(this.insertButton(path, insertInto));
     this.root.hidden = false;
   }
 
@@ -68,15 +64,6 @@ export class AssetView {
     note.className = 'typst-asset__note';
     note.textContent = 'This file is used by the document but cannot be shown here.';
     return note;
-  }
-
-  private insertButton(path: string, insertInto: string): HTMLButtonElement {
-    const button = this.root.ownerDocument.createElement('button');
-    button.type = 'button';
-    button.className = 'typst-asset__insert';
-    button.textContent = `Insert into ${displayName(insertInto)}`;
-    button.addEventListener('click', () => this.onInsert(path));
-    return button;
   }
 
   private release(): void {

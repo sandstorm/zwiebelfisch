@@ -7,7 +7,6 @@ import { FileTree, filesUnder, type FolderMemory, relocate } from './tree/tree';
 import { uploadChanges } from './upload';
 
 export { AssetView } from './asset-view';
-export { insertImage } from './insert-image';
 export { uploadChanges } from './upload';
 export type { FolderMemory } from './tree/tree';
 
