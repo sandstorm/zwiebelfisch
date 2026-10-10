@@ -57,6 +57,22 @@ describe('addMarginNote', () => {
     expect(noted(text, text.length - 1)).toBe('#import "@preview/drafting:0.1.0": inline-note, margin-note\nText#margin-note[|]\n');
   });
 
+  it('extends an import list that ends with a comma', () => {
+    const parens = '#import "@preview/drafting:0.2.2": (inline-note,)\nText\n';
+    expect(noted(parens, parens.length - 1)).toBe('#import "@preview/drafting:0.2.2": (inline-note, margin-note)\nText#margin-note[|]\n');
+    const bare = '#import "@preview/drafting:0.2.2": inline-note,\nText\n';
+    expect(noted(bare, bare.length - 1)).toBe('#import "@preview/drafting:0.2.2": inline-note, margin-note\nText#margin-note[|]\n');
+    const renamed = '#import "@preview/drafting:0.2.2": (a, b as c)\nText\n';
+    expect(noted(renamed, renamed.length - 1)).toBe('#import "@preview/drafting:0.2.2": (a, b as c, margin-note)\nText#margin-note[|]\n');
+  });
+
+  it('adds an import at the top for a note above the existing drafting import', () => {
+    const text = '= T\n#import "@preview/drafting:0.2.2": inline-note\nText\n';
+    expect(noted(text, 3)).toBe(`${IMPORT}= T#margin-note[|]\n#import "@preview/drafting:0.2.2": inline-note\nText\n`);
+    const full = '= T\n#import "@preview/drafting:0.2.2": margin-note\nText\n';
+    expect(noted(full, 3)).toBe(`${IMPORT}= T#margin-note[|]\n#import "@preview/drafting:0.2.2": margin-note\nText\n`);
+  });
+
   it('keeps wildcard imports and turns a bare module import into an item import', () => {
     const star = '#import "@preview/drafting:0.2.2": *\nText\n';
     expect(noted(star, star.length - 1)).toBe('#import "@preview/drafting:0.2.2": *\nText#margin-note[|]\n');

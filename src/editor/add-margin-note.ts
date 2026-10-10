@@ -54,26 +54,41 @@ function fits(text: string, ...parts: [number, string][]): boolean {
   return isNoteCallAt(result, parts[0][0], end);
 }
 
-/** `changes` plus whatever makes `margin-note` imported from drafting; an import at a note's position goes first. */
+/**
+ * `changes` (the note's, the first one at the start of its call) plus
+ * whatever makes `margin-note` imported from drafting there; an import at the
+ * note's position goes first.
+ */
 function withImport(text: string, changes: TextChange[]): TextChange[] {
-  const extra = importChange(text);
+  const extra = importChange(text, changes[0].from);
   if (!extra) return changes;
   const same = changes.find((change) => change.from === extra.from);
   if (same) return changes.map((change) => (change === same ? { ...same, insert: extra.insert + same.insert } : change));
   return [extra, ...changes].sort((a, b) => a.from - b.from);
 }
 
-/** Null when `margin-note` is imported from drafting already. */
-function importChange(text: string): TextChange | null {
+/**
+ * Null when `margin-note` is imported from drafting before `use` already. An
+ * import binds names only after itself, so only imports ending before `use`
+ * are extended; otherwise one goes at the top.
+ */
+function importChange(text: string, use: number): TextChange | null {
   for (const node of topLevel(text)) {
+    if (node.to > use) break;
     if (node.name !== 'ModuleImport' || !isDrafting(text, node)) continue;
     const items = node.getChild('ImportItems');
     if (node.getChild('Star') || (items && importsMarginNote(text, items))) return null;
-    if (items) return insert(items.lastChild!.to, `, ${MARGIN_NOTE}`);
+    if (items) return addItem(items);
     const str = node.getChild('Str')!;
     if (str.to === node.to) return insert(str.to, `: ${MARGIN_NOTE}`);
   }
   return insert(0, `#import "${DRAFTING}": ${MARGIN_NOTE}\n`);
+}
+
+/** Adds `margin-note` after the last item of an import list, which may end with a comma. */
+function addItem(items: SyntaxNode): TextChange {
+  const last = items.lastChild!;
+  return last.name === 'Comma' ? insert(last.to, ` ${MARGIN_NOTE}`) : insert(last.to, `, ${MARGIN_NOTE}`);
 }
 
 /** Code at the top level of the file (what follows a `#`). */
