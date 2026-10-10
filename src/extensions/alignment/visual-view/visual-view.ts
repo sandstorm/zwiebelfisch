@@ -1,36 +1,11 @@
-// Text alignment: `#align(..)[..]` blocks, justified paragraphs (`#par(justify: ..)[..]`) and the Align menu.
-// Entry of visual-view/builtins/alignment/. See ARCHITECTURE.md, "VisualView".
+// What the alignment extension contributes to the Visual view: `#align(..)[..]` blocks, justified paragraphs
+// (`#par(justify: ..)[..]`) and the Align menu. Entry of alignment/visual-view/. See alignment.ts.
 import type { Node } from '@tiptap/pm/model';
 import {
-  type Action, type Call, type Printer, type ProjectionContext, type TypstNodeSpec, type VisualViewContribution, children, isClosedContent, svg,
+  children, isClosedContent, svg, type Action, type Call, type Printer, type ProjectionContext, type ToolbarGroup, type TypstNodeSpec,
 } from '../../../hosts/visual-view/visual-view';
 import { alignArgs, type TextAlignment } from '../model/model';
 import { TextAlign, textAlignAt } from './text-align';
-
-/**
- * `#align(<literal alignment>)[..]` (`left|center|right|start|end`, optionally
- * `+` one vertical alignment) is an `alignment` block whose content is
- * segmented like the document; `#par(justify: <bool>)[one paragraph]` is that
- * paragraph with its `justify` flag. The Align menu (left, center, right,
- * justify; its icon is the current alignment) and Mod-Shift-L/E/R/J set them.
- */
-export const alignment: VisualViewContribution = {
-  id: 'alignment',
-  activate({ visualView, subscriptions }) {
-    subscriptions.push(
-      visualView.registerNode(ALIGNMENT),
-      visualView.registerNode(JUSTIFIED_PARAGRAPH),
-      visualView.registerToolbarGroup({
-        kind: 'menu',
-        id: 'align',
-        order: 40,
-        label: 'Align',
-        icon: (editor) => ALIGNMENTS.find((a) => a.active!(editor))?.icon ?? ICONS.alignLeft,
-      }),
-      ...ALIGNMENTS.map((action, i) => visualView.registerToolbarItem({ group: 'align', order: 10 * (i + 1), action })),
-    );
-  },
-};
 
 /** How an alignment block's source lies around its blocks, for printing it back. */
 interface AlignLayout {
@@ -41,7 +16,14 @@ interface AlignLayout {
   close: string;
 }
 
-const ALIGNMENT: TypstNodeSpec = {
+/**
+ * `#align(<literal alignment>)[..]` (`left|center|right|start|end`, optionally
+ * `+` one vertical alignment) is an `alignment` block whose content is
+ * segmented like the document; `#par(justify: <bool>)[one paragraph]` is that
+ * paragraph with its `justify` flag. The Align menu (left, center, right,
+ * justify; its icon is the current alignment) and Mod-Shift-L/E/R/J set them.
+ */
+export const ALIGNMENT: TypstNodeSpec = {
   name: 'alignment',
   extension: TextAlign,
   anchors: ['layout'],
@@ -51,7 +33,7 @@ const ALIGNMENT: TypstNodeSpec = {
 };
 
 /** Paragraphs that are justified (or not) on their own: `#par(justify: ..)[..]` around their text. */
-const JUSTIFIED_PARAGRAPH: TypstNodeSpec = {
+export const JUSTIFIED_PARAGRAPH: TypstNodeSpec = {
   name: 'paragraph',
   blockCalls: { par: projectJustified },
   print: printParagraph,
@@ -116,9 +98,19 @@ const alignAction = (label: string, alignment: TextAlignment, shortcut: string, 
   active: (e) => textAlignAt(e.state) === alignment,
 });
 
-const ALIGNMENTS: Action[] = [
+/** The Align menu's buttons: left, center, right, justify. */
+export const ALIGNMENTS: Action[] = [
   alignAction('Align left', 'left', 'Mod+Shift+L', ICONS.alignLeft),
   alignAction('Center', 'center', 'Mod+Shift+E', ICONS.alignCenter),
   alignAction('Align right', 'right', 'Mod+Shift+R', ICONS.alignRight),
   alignAction('Justify', 'justify', 'Mod+Shift+J', ICONS.alignJustify),
 ];
+
+/** The Align menu in the toolbar; its icon is the selection's current alignment. */
+export const ALIGN_MENU: ToolbarGroup = {
+  kind: 'menu',
+  id: 'align',
+  order: 40,
+  label: 'Align',
+  icon: (editor) => ALIGNMENTS.find((a) => a.active!(editor))?.icon ?? ICONS.alignLeft,
+};

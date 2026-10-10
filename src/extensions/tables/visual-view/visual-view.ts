@@ -1,11 +1,16 @@
-// Tables: `#table(columns: n, ..)` as Tiptap's table nodes, "Insert table" and the bar over a table. Entry of
-// visual-view/builtins/tables/. See ARCHITECTURE.md, "VisualView".
+// What the tables extension contributes to the Visual view: the table spec (`#table(columns: n, ..)` as Tiptap's
+// table nodes), "Insert table" and the bar over a table. Entry of tables/visual-view/. See tables.ts.
 import { Extension, findParentNode, type Editor } from '@tiptap/core';
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
 import type { Anchor } from '../../../ui/floating-bar/floating-bar';
-import { svg, type Action, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
+import { svg, type Action, type ToolbarGroup, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 import { printTable } from './table-printing';
 import { projectTable } from './table-projection';
+
+const Tables = Extension.create({
+  name: 'typstTables',
+  addExtensions: () => [Table.configure({ resizable: false, HTMLAttributes: { class: 'typst-visual__table' } }), TableRow, TableCell, TableHeader],
+});
 
 /**
  * `#table(columns: <int>, ..named, cells)` whose `columns` comes before the
@@ -15,28 +20,10 @@ import { projectTable } from './table-projection';
  * document. A cell written as an expression (`ms(18)`) holds one paragraph
  * with one raw inline box whose `code` attribute is set. Other `table.*`
  * elements, other expressions and comments keep the table raw. `layout` is the
- * source around the cells and how its rows are written (see `table-layout.ts`).
- * Also "Insert table" and the bar above a table holding the cursor (rows,
- * columns, header row).
+ * source around the cells and how its rows are written (see the model's
+ * `TableLayout`).
  */
-export const tables: VisualViewContribution = {
-  id: 'tables',
-  activate({ visualView, subscriptions }) {
-    subscriptions.push(
-      visualView.registerNode(TABLE),
-      visualView.registerToolbarItem({ group: 'insert', order: 20, action: INSERT_TABLE }),
-      visualView.registerToolbarGroup({ kind: 'floating', id: 'table', order: 20, label: 'Table', anchor: (editor) => tableAnchor(editor) }),
-      ...TABLE_EDITS.map((action, i) => visualView.registerToolbarItem({ group: 'table', order: 10 * (i + 1), action })),
-    );
-  },
-};
-
-const Tables = Extension.create({
-  name: 'typstTables',
-  addExtensions: () => [Table.configure({ resizable: false, HTMLAttributes: { class: 'typst-visual__table' } }), TableRow, TableCell, TableHeader],
-});
-
-const TABLE: TypstNodeSpec = {
+export const TABLE: TypstNodeSpec = {
   name: 'table',
   extension: Tables,
   attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } },
@@ -55,10 +42,14 @@ const ICONS = {
   headerRow: svg('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M4 7h16" stroke-width="4"/>'),
 };
 
-const INSERT_TABLE: Action = { label: 'Insert table', icon: ICONS.table, run: (c) => c.insertTable({ rows: 2, cols: 2, withHeaderRow: false }) };
+/** "Insert table" in the Insert menu: a 2 × 2 table without header row. */
+export const INSERT_TABLE: Action = { label: 'Insert table', icon: ICONS.table, run: (c) => c.insertTable({ rows: 2, cols: 2, withHeaderRow: false }) };
 
-/** The bar over a table the cursor is in. */
-const TABLE_EDITS: Action[] = [
+/** The bar floating above the table that holds the cursor. */
+export const TABLE_BAR: ToolbarGroup = { kind: 'floating', id: 'table', order: 20, label: 'Table', anchor: (editor) => tableAnchor(editor) };
+
+/** The table bar's buttons: rows, columns, header row. */
+export const TABLE_EDITS: Action[] = [
   { label: 'Add row', icon: ICONS.addRow, run: (c) => c.addRowAfter() },
   { label: 'Add column', icon: ICONS.addColumn, run: (c) => c.addColumnAfter() },
   { label: 'Delete row', icon: ICONS.deleteRow, run: (c) => c.deleteRow() },

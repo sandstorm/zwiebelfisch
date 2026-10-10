@@ -1,4 +1,4 @@
-// Tests for real-world tables in the projection (tables.ts): expression cells, styles, tables in figures.
+// Tests for real-world tables in the projection (visual-view.ts): expression cells, styles, tables in figures.
 import { readFileSync } from 'node:fs';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState, TextSelection, type Command } from '@tiptap/pm/state';

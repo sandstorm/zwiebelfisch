@@ -1,5 +1,5 @@
 // Printing an edited table: its source around unchanged cells, or re-printed in the style it was written in.
-// See tables.ts.
+// See visual-view.ts.
 import type { Node } from '@tiptap/pm/model';
 import { isEmbeddable, type Printer } from '../../../hosts/visual-view/visual-view';
 import { NEW_TABLE, type TableLayout, type TableStyle } from '../model/model';

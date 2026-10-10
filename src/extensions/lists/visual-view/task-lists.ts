@@ -1,36 +1,11 @@
-// Task lists (checklists, rendered by the cheq package): `- [ ] todo` / `- [x] done`. Entry of
-// visual-view/builtins/task-lists/. See ARCHITECTURE.md, "VisualView".
+// Task lists (checklists, rendered by the cheq package): `- [ ] todo` / `- [x] done`. See visual-view.ts.
 import { Extension } from '@tiptap/core';
 import { TaskItem, TaskList } from '@tiptap/extension-list';
 import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
 import { Plugin } from '@tiptap/pm/state';
-import { type ProjectionContext, type TypstNodeSpec, type VisualViewContribution, children, svg } from '../../../hosts/visual-view/visual-view';
+import { children, svg, type Action, type ProjectionContext, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 import { countTaskItems, ensureChecklistPreamble } from './checklist-preamble';
-
-export { CHECKLIST_PREAMBLE, ensureChecklistPreamble } from './checklist-preamble';
-
-/**
- * Task lists: a bullet item `- [ ] text` / `- [x] text` (one paragraph) is a
- * task item, the box hidden syntax; consecutive ones form a task list.
- * Tiptap's TaskList / TaskItem (one paragraph, no nesting; the `[ ] ` input
- * rule and clickable checkboxes are Tiptap's), and the "Task list" button.
- * Registered before `lists`: its projector gets bullet items first.
- */
-export const taskLists: VisualViewContribution = {
-  id: 'task-lists',
-  activate({ visualView, subscriptions }) {
-    subscriptions.push(
-      visualView.registerNode(TASK_LIST),
-      visualView.registerNode(TASK_ITEM),
-      visualView.registerToolbarItem({
-        group: 'lists',
-        order: 30,
-        action: { label: 'Task list', shortcut: 'Mod+Shift+9', icon: ICON, run: (c) => c.toggleTaskList(), active: (e) => e.isActive('taskList') },
-      }),
-    );
-  },
-};
 
 const TypstTaskList = TaskList.extend({
   addAttributes() {
@@ -76,13 +51,20 @@ const TaskLists = Extension.create({
   addExtensions: () => [TypstTaskList, TypstTaskItem, ChecklistPreamble],
 });
 
-const TASK_LIST: TypstNodeSpec = {
+/**
+ * Task lists: a bullet item `- [ ] text` / `- [x] text` (one paragraph) is a
+ * task item, the box hidden syntax; consecutive ones form a task list.
+ * Tiptap's TaskList / TaskItem (one paragraph, no nesting; the `[ ] ` input
+ * rule and clickable checkboxes are Tiptap's). Registered before bullet
+ * lists: its projector gets bullet items first.
+ */
+export const TASK_LIST: TypstNodeSpec = {
   name: 'taskList',
   extension: TaskLists,
   print: (out, list, pos) => out.blocks(list, pos + 1, '\n'),
 };
 
-const TASK_ITEM: TypstNodeSpec = {
+export const TASK_ITEM: TypstNodeSpec = {
   name: 'taskItem',
   anchors: ['marker'],
   container: () => 'taskList',
@@ -107,3 +89,12 @@ function taskItem(p: ProjectionContext, node: SyntaxNode, sep: string | null): N
 }
 
 const ICON = svg('<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m4.5 8 1 1 2-2"/><rect x="3" y="14" width="6" height="6" rx="1"/><path d="M13 8h8M13 17h8"/>');
+
+/** "Task list", after the other lists in the toolbar's `lists` group. */
+export const TASK_LIST_ACTION: Action = {
+  label: 'Task list',
+  shortcut: 'Mod+Shift+9',
+  icon: ICON,
+  run: (c) => c.toggleTaskList(),
+  active: (e) => e.isActive('taskList'),
+};

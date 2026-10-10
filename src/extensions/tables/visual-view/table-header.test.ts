@@ -1,4 +1,4 @@
-// Tests for the projection of table header rows (tables.ts, through the projection).
+// Tests for the projection of table header rows (visual-view.ts, through the projection).
 import type { Node } from '@tiptap/pm/model';
 import { describe, expect, it } from 'vitest';
 import { print } from '../../../hosts/visual-view/visual-view';

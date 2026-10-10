@@ -1,41 +1,12 @@
-// Bulleted and numbered lists: `- item` / `+ item` (`1. item`) as Tiptap's lists, with their buttons. See builtins.ts.
+// What the lists extension contributes to the Visual view: bulleted and numbered lists (`- item` / `+ item`,
+// `1. item`) as Tiptap's lists, task lists (task-lists.ts) and their buttons. Entry of lists/visual-view/. See lists.ts.
 import { BulletList, ListItem, ListKeymap, OrderedList } from '@tiptap/extension-list';
 import { Extension } from '@tiptap/core';
 import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
 import {
-  type BlockPrinter, type ProjectionContext, type TypstNodeSpec, type VisualViewContribution, children, svg,
+  children, svg, type Action, type BlockPrinter, type ProjectionContext, type TypstNodeSpec,
 } from '../../../hosts/visual-view/visual-view';
-
-/**
- * List items are blocks of their own; consecutive items of the same kind
- * (bulleted: `-`, numbered: `+` or `1.`) form one list. An item holds one
- * paragraph; an item whose source has nested content keeps its body as a raw
- * block. Items keep their `marker`; edited items print it (`-` / `+` in a
- * list of the other kind), further children (nested lists made with Tab) on
- * following lines, indented.
- */
-export const lists: VisualViewContribution = {
-  id: 'lists',
-  activate({ visualView, subscriptions }) {
-    subscriptions.push(
-      visualView.registerNode({ ...LIST, name: 'bulletList', extension: Lists }),
-      visualView.registerNode({ ...LIST, name: 'orderedList' }),
-      visualView.registerNode(LIST_ITEM),
-      visualView.registerToolbarGroup({ kind: 'group', id: 'lists', order: 30 }),
-      visualView.registerToolbarItem({
-        group: 'lists',
-        order: 10,
-        action: { label: 'Bulleted list', icon: ICONS.bulletList, run: (c) => c.toggleBulletList(), active: (e) => e.isActive('bulletList') },
-      }),
-      visualView.registerToolbarItem({
-        group: 'lists',
-        order: 20,
-        action: { label: 'Numbered list', icon: ICONS.orderedList, run: (c) => c.toggleOrderedList(), active: (e) => e.isActive('orderedList') },
-      }),
-    );
-  },
-};
 
 /** A list item's first child may be verbatim Typst (an item whose body the Visual view cannot model). */
 const TypstListItem = ListItem.extend({ content: '(paragraph | rawBlock) block*' });
@@ -59,13 +30,24 @@ const LIST: Omit<TypstNodeSpec, 'name'> = {
   print: (out, list, pos) => out.blocks(list, pos + 1, '\n'),
 };
 
+/**
+ * List items are blocks of their own; consecutive items of the same kind
+ * (bulleted: `-`, numbered: `+` or `1.`) form one list. An item holds one
+ * paragraph; an item whose source has nested content keeps its body as a raw
+ * block. Items keep their `marker`; edited items print it (`-` / `+` in a
+ * list of the other kind), further children (nested lists made with Tab) on
+ * following lines, indented.
+ */
+export const BULLET_LIST: TypstNodeSpec = { ...LIST, name: 'bulletList', extension: Lists };
+export const ORDERED_LIST: TypstNodeSpec = { ...LIST, name: 'orderedList' };
+
 const printListItem: BlockPrinter = (out, item, pos, list) => {
   const ordered = list.type.name === 'orderedList';
   const keepMarker = item.attrs.marker !== null && ORDERED_MARKER.test(item.attrs.marker) === ordered;
   out.item(item, pos, `${keepMarker ? item.attrs.marker : ordered ? '+' : '-'} `);
 };
 
-const LIST_ITEM: TypstNodeSpec = {
+export const LIST_ITEM: TypstNodeSpec = {
   name: 'listItem',
   attributes: { ...ANCHORS, marker: { default: null, rendered: false } },
   anchors: ['marker'],
@@ -96,4 +78,11 @@ const ICONS = {
       '<path d="M3.5 14h2.5l-2.5 4h2.5" stroke-width="1.5"/>',
   ),
 };
-export { taskLists } from './task-lists';
+
+/** "Bulleted list" and "Numbered list", in the toolbar's `lists` group. */
+export const LIST_ACTIONS: Action[] = [
+  { label: 'Bulleted list', icon: ICONS.bulletList, run: (c) => c.toggleBulletList(), active: (e) => e.isActive('bulletList') },
+  { label: 'Numbered list', icon: ICONS.orderedList, run: (c) => c.toggleOrderedList(), active: (e) => e.isActive('orderedList') },
+];
+
+export { TASK_ITEM, TASK_LIST, TASK_LIST_ACTION } from './task-lists';

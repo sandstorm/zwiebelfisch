@@ -1,5 +1,5 @@
 // Reading `#table(..)` calls: which ones the Visual view models as tables, their cells and how they are written.
-// See tables.ts.
+// See visual-view.ts.
 import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
 import { children, isClosedContent, isEmbeddable, parenthesized, type Call, type ProjectionContext } from '../../../hosts/visual-view/visual-view';

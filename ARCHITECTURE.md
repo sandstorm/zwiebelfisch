@@ -62,6 +62,17 @@ src/                        the widget (TypeScript); the most important API on t
   ui/                       feature-neutral DOM widgets, one folder each: field-popover/ (FieldPopover: one text field,
                             Apply / Remove; also used by versions/), toolbar-menu/ (ToolbarMenu: a menu button of
                             toolbar buttons), floating-bar/ (FloatingBar: a bar above an anchor in the text)
+  extensions/               one vertical slice per concept: <name>.ts (the entry: the TypstExtension, whose activate
+                            lists what it registers), model/ (pure: Typst syntax, numbering; no DOM, no editor; tests in
+                            node), and a folder per host it contributes to (visual-view/: specs, node views, toolbar
+                            actions), each entered through its entry file. Extensions never import each other.
+    markup/                 strong, emphasis, links, raw text (inline code, code blocks; model: raw-code), quotes
+    headings/               headings and their numbers (model: numbering patterns, HeadingCounter, the rules' code)
+    lists/                  bulleted, numbered and task lists (model: cheq's preamble, calculateChecklistPreambleChange)
+    tables/                 `#table(..)` as a table, Insert table, the table bar (model: TableLayout)
+    page-layout/            page breaks and horizontal rules
+    alignment/              `#align(..)[..]`, `#par(justify: ..)[..]`, the Align menu (model: alignment syntax)
+    outline/                the table of contents (`#outline(..)`)
   features/                 one folder per feature, each entered through the file named like it
     diagnostics/            DiagnosticsStatus (status bar), diagnostics-summary.ts
     labels/                 LabelIndex: the project's labels (kind, title, file) and reference counts; scan.ts (Lezer, .bib)
@@ -112,7 +123,7 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
   a stylesheet may be `files/files.css`). Everything else in the folder is internal to it, and
   folders that grow get subfolders named after a concept (`projection/`, `worker/`), never generic
   ones. No sibling folders: an entry file lives inside its folder (`typst-editor/typst-editor.ts`),
-  never next to it. `core/`, `ui/`, `hosts/` and `features/` only group.
+  never next to it. `core/`, `ui/`, `hosts/`, `extensions/` and `features/` only group.
 - **Imports from outside a folder go to its entry file**, which re-exports what others need.
   ESLint enforces this (`local/entry-imports`, `eslint-rules/entry-imports.js`); only TypeScript and
   CSS sources count (not the generated `wasm/`, `fonts/` or the `fixtures/`). The exceptions are
@@ -123,6 +134,8 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
     entry, the worker bundle (which imports the entry) would emit every asset a second time;
   - `features/collaboration/collaboration-link.ts` — `typst-editor/typst-editor.ts`: the eager side of
     collaboration; the folder's entry is the lazily loaded chunk (until the slices wave);
+  - `hosts/visual-view/test-support.ts` — test files: tests of Visual-view contributions project, edit and view
+    documents with the built-ins' schema;
   - `features/collaboration/in-process.ts` — test files;
   - `features/collaboration/shared-project.ts` — the server's tests.
 - **Top comments.** Every source file starts with a comment: its context, `See <entry file /
@@ -188,10 +201,11 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
 - **Composition**: a `Project` in a `WorkbenchHost` (`hosts/workbench`, see "Extensions" below) that runs the
   built-in extension list, configured from the options (`builtinExtensions`): `typstLanguage`, `documentLinks`,
   `collaboration` (with the option), `files` (`fileList`), `fileNavigation`, `assets`, `spreadsheets`,
-  `diagnostics`, `versions` (`user`); the Visual view's constructs and features in schema order: `markup`,
-  `headings`, `tables`, `projectRenderings` (images, then compiled snippets), `outline`, `pageBreak`,
-  `horizontalRule`, `taskLists` (before `lists`: its projector gets `- [ ]` items first), `lists`,
-  `headingNumbers`, `alignment`, `comments` (`user`), `labels`, `styles`; then `previewControls`
+  `diagnostics`, `versions` (`user`); the Visual view's constructs and features in schema order: `markup`
+  (its marks nest outside the features'), `headings` (with their numbers), `tables` (before `projectRenderings`:
+  figures may hold a table), `projectRenderings` (images, then compiled snippets), `outline`, `pageLayout`, `lists` (task lists
+  before bullet lists: a task item is a bullet item `- [ ]`), `alignment`, `comments` (`user`), `labels`,
+  `styles`; then `previewControls`
   (`followCursor`) and `pdfExport` (`pdfDownload`). The extension API is not public yet: the
   options stay as they are. The preview always compiles `main` with `project.files()`; `exportPdf` runs the
   `pdfExport.export` command; `onFilesChange` hears a change after the workbench and the extensions.
@@ -207,9 +221,9 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   deleted; `.typ` files keep their ending.
   `FileChange = {kind:'create', path, content} | {kind:'update', path, content} | {kind:'delete', path} | {kind:'rename', from, path}`.
 - **Visual view contributions**: the workbench host has one `VisualViewContributions` (`ExtensionContext.visualView`)
-  and makes every document's Visual view from it. The Typst constructs without configuration (`markup`,
-  `headings`, `tables`, `outline`, `pageBreak`, `horizontalRule`, `taskLists`, `lists`, `headingNumbers`,
-  `alignment`) are extensions of the built-in list themselves; the features activate theirs with what they own:
+  and makes every document's Visual view from it. The Typst constructs (`markup`, `headings`, `tables`,
+  `outline`, `pageLayout`, `lists`, `alignment`) are extensions in `extensions/<name>/`; the features activate
+  theirs with what they own:
   `documentLinks` → `boxLinks`, `projectRenderings` → `images` + `renderedBoxes`, `comments` → `marginNotes` +
   `notesGutter`, `labels` → `references`, `styles` → `customStyles`. The list's order is the schema's.
 - **`EditingViews`** (`hosts/workbench/editing-views/`): one Visual/Source tab bar; a document's views are
@@ -330,12 +344,14 @@ new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen? })
   `diagnostics` (`lint(collection)`; Visual: highlights); `projectRenderings` (Visual: `images`, `renderedBoxes`), `comments`
   (Visual: `marginNotes`, `notesGutter`), `labels` (Visual: `references`), `styles` (Visual: `customStyles`);
   `previewControls` (`zoomControls`, `followCursor`, `pageNumber`), `pdfExport` (`pdfMenu`, the two PDF
-  variants). The Visual view's constructs (`markup`, `headings`, `tables`, …) are in the list themselves: a
-  `VisualViewContribution` is shaped like a `TypstExtension`. The contributions are still in `hosts/*/builtins/`.
+  variants). The features' contributions are still in `hosts/*/builtins/`. The Visual view's constructs
+  (`markup`, `headings`, `tables`, `outline`, `pageLayout`, `lists`, `alignment`) are extensions in
+  `extensions/<name>/`: the entry's `activate` registers specs, toolbar groups and items from its `visual-view/`
+  folder through `context.visualView`.
 - **The active editor** (`activeTextEditor`, `onDidChangeTextEditorSelection`, VS Code's names): `comments`
   adds a note at its selection (and opens the note's card through its own notes gutter), `collaboration`
   publishes its selection and draws the others' carets in it (`setPresence`).
-- Extensions still live in `features/<name>/` (the entry exports the extension factory, e.g. `labels()`,
+- The features still live in `features/<name>/` (the entry exports the extension factory, e.g. `labels()`,
   `files({ fileList })`); the slices wave moves them to `extensions/<name>/`.
 
 ### Paths (`src/core/paths`)
@@ -480,9 +496,9 @@ visualView.registerHighlights(layer, { provideHighlights(document), onDidChangeH
 visualView.registerBoxRenderer((view) => BoxRenderer | null) → Disposable
 visualView.registerBoxCodeExtension((view) => codeMirrorExtension) → Disposable
 
-// the built-ins (builtins/), each a VisualViewContribution = { id, activate({ visualView, subscriptions }) }, shaped
-// like a TypstExtension: markup, headings, tables, outline, pageBreak, horizontalRule, taskLists, lists,
-// headingNumbers, alignment; configured by their feature's extension: images({ assets, imageUrls, documentLinks }),
+// the constructs are extensions (extensions/: markup, headings, tables, outline, pageLayout, lists, alignment); the
+// features' contributions (builtins/), each a VisualViewContribution = { id, activate({ visualView, subscriptions }) },
+// shaped like a TypstExtension, configured by their feature's extension: images({ assets, imageUrls, documentLinks }),
 // renderedBoxes({ snippets }), boxLinks({ documentLinks }), marginNotes({ comment }), notesGutter({ user }),
 // references({ labels }), customStyles({ styles, create })
 ```
@@ -504,11 +520,12 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
   sync, the position map); paragraphs, text, line breaks, escapes and shorthands; raw Typst
   (`rawBlock` / `rawInline` in raw boxes, the fallback for whatever no spec models); the toolbar
   with undo/redo, the "Insert" menu and the "Selection" bar; highlights, presence. Every other
-  construct (headings, lists, tables, …) and every feature shown in the view (labels, comments,
-  styles, …) is a contribution in `builtins/`, one module each, using only the contribution API
-  (`contributions/`, the `projection/` toolkit, `starterKitPart` of `nodes/`), so the slices wave can
-  move it into `extensions/<name>/visual-view/` as it is. The widget's built-in extension list activates them
-  in registration order (see "createTypstEditor"); `VisualViewOptions` is gone.
+  construct (headings, lists, tables, …) is an extension (`extensions/<name>/visual-view/`) and every
+  feature shown in the view (labels, comments, styles, …) a contribution in `builtins/` until its slice
+  moves, using only the contribution API the host's entry exports (the contribution types, the
+  `projection/` toolkit, `starterKitPart`; and for tests `project` / `print` / `syncDoc` / `posToSource` /
+  `sourceToPos` and `test-support.ts`). The widget's built-in extension list activates them in
+  registration order (see "createTypstEditor"); `VisualViewOptions` is gone.
 - **Specs** (`TypstNodeSpec` / `TypstMarkSpec`, `projection/grammar.ts`): one per construct —
   `name`, its Tiptap `extension` (schema, node view, commands, keymap, input rules), `attributes`
   the host adds (source anchors like `src`, `sep`, `marker`, `layout`), `anchors` (compared like
@@ -549,11 +566,11 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
     cells plus the table's `TableStyle` (how its rows are written). A cell written as an
     expression (`ms(18)`) holds one paragraph with one `rawInline` whose `code` attribute is set:
     its `src` is code, without `#` (`embedded-code.ts`).
-  - `taskList` > `taskItem` (Tiptap's, `checked`; one paragraph, not nested; `builtins/task-lists/`).
+  - `taskList` > `taskItem` (Tiptap's, `checked`; one paragraph, not nested; `extensions/lists/`).
   - `blockquote` (Tiptap's; holds blocks; `layout` is the source around its content).
   - `pageBreak`, `horizontalRule` (atom blocks keeping their call as `src`, shown as a labelled
-    dashed divider / a rule; `builtins/page-break.ts`, `builtins/horizontal-rule.ts`).
-  - `alignment` (`builtins/alignment/`): `#align(args)[blocks]`, content `block+`. `args` is the
+    dashed divider / a rule; `extensions/page-layout/`).
+  - `alignment` (`extensions/alignment/`): `#align(args)[blocks]`, content `block+`. `args` is the
     literal alignment as written; `layout` (an anchor) is the source around the blocks.
     Paragraphs have a `justify` attribute (`true` / `false` / `null`) for
     `#par(justify: ..)[text]`.
@@ -733,7 +750,7 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
     click insert the chip in place of `@query`; Escape dismisses that `@`. Typing a space or
     punctuation right after the whole name of a label (`@intro `) inserts the chip as well.
   - Without `labels`: tags only (rename and remove of the label itself).
-- **Text alignment** (`builtins/alignment/`: `text-align.ts`, `alignment-syntax.ts` for the Typst syntax):
+- **Text alignment** (`extensions/alignment/`: `visual-view/text-align.ts`, `model/alignment-syntax.ts` for the Typst syntax):
   - Commands `setTextAlign(left|center|right|justify)` and `unsetTextAlign`; shortcuts
     Mod-Shift-L/E/R/J; four items of the toolbar's Align menu, pressed by `textAlignAt(state)`.
   - Horizontal alignment wraps the selected blocks (in the doc, an alignment block or a table
@@ -745,7 +762,7 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
     `#set align(..)` / `#set par(justify: ..)` in earlier raw-block siblings of each ancestor.
     Commands only write what differs from it. A plugin decorates every textblock with its
     effective `text-align`.
-- **Code blocks** (`builtins/markup/code-block-view.ts`): a NodeView with a header holding a "Language" field
+- **Code blocks** (`extensions/markup/visual-view/code-block-view.ts`): a NodeView with a header holding a "Language" field
   (accepts only a valid tag, sets `language` as one types; Enter/Escape/ArrowDown go to the
   code) above a `<pre><code>` content DOM.
 - **Raw boxes** (`nodes/raw-box.ts`): the nodes whose spec has `box: 'code'` (`rawBlock` /
@@ -797,14 +814,14 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
 - **Input rules** (Tiptap's, plus ours): `> ` quote, `[ ] ` / `[x] ` task item; `---` (`—-`,
   `___ `, `*** `) becomes a rule only when it is the whole paragraph, since `---` is an em dash in
   Typst markup.
-- **Task lists need cheq** (`builtins/task-lists/checklist-preamble.ts`): Typst has no checkboxes; the Universe package
-  cheq (pinned 0.4.0) draws `- [ ]` items as boxes under `#show: checklist`.
-  `ensureChecklistPreamble(tr)` adds what is missing of its import and show rule to the top-level
-  raw blocks, once; the `ChecklistPreamble` plugin calls it when a Visual edit (not a sync from the
+- **Task lists need cheq** (`extensions/lists/`: `model/checklist-preamble.ts`, `visual-view/checklist-preamble.ts`):
+  Typst has no checkboxes; the Universe package cheq (pinned 0.4.0) draws `- [ ]` items as boxes under
+  `#show: checklist`. `calculateChecklistPreambleChange(codeBlocks)` (model) decides what is missing of its import
+  and show rule in the top-level raw blocks; `ensureChecklistPreamble(tr)` adds it, once; the `ChecklistPreamble` plugin calls it when a Visual edit (not a sync from the
   source) adds a task item, as an appended transaction (same undo step).
-- **Heading numbers** (`builtins/heading-numbers/`: `numbering.ts`, `heading-numbering.ts`, `heading-numbers.ts`):
-  `headingNumbers(doc)` follows top-level `#set heading(numbering: ..)` rules and Typst's heading
-  counter; `numberingFormatter(pattern)` applies Typst numbering patterns (`1 a A i I * ①`;
+- **Heading numbers** (`extensions/headings/`: `model/numbering.ts`, `model/heading-numbering.ts`,
+  `visual-view/heading-numbers.ts`): `headingNumbers(doc)` follows top-level `#set heading(numbering: ..)` rules
+  with the model's `HeadingCounter` (Typst's heading counter: `readRules(code)`, `count(level)`); `numberingFormatter(pattern)` applies Typst numbering patterns (`1 a A i I * ①`;
   others → no numbers). A plugin draws them as node decorations (`data-heading-number`, CSS
   `::after` in a gutter right of the text; the editor gets `typst-visual--numbered`). Command
   `toggleHeadingNumbering` (no toolbar button; meant for the Inspector's document section) adds `#set heading(numbering: "1.")` after the leading raw blocks or

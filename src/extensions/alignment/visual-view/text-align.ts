@@ -1,4 +1,4 @@
-// Text alignment: `#align(..)` blocks and alignment set rules, edited through the toolbar. See alignment.ts.
+// Text alignment: `#align(..)` blocks and alignment set rules, edited through the toolbar. See visual-view.ts.
 import { Node } from '@tiptap/core';
 import type { Node as PMNode, NodeRange, ResolvedPos } from '@tiptap/pm/model';
 import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state';

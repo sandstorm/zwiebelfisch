@@ -11,11 +11,11 @@ import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { ProjectLabels } from '../../features/labels/labels';
 import type { DocumentStyles } from '../../features/styles/styles';
 import { alignment } from '../../extensions/alignment/alignment';
-import { headingNumbers, headings } from '../../extensions/headings/headings';
-import { lists, taskLists } from '../../extensions/lists/lists';
+import { headings } from '../../extensions/headings/headings';
+import { lists } from '../../extensions/lists/lists';
 import { markup } from '../../extensions/markup/markup';
 import { outline } from '../../extensions/outline/outline';
-import { horizontalRule, pageBreak } from '../../extensions/page-layout/page-layout';
+import { pageLayout } from '../../extensions/page-layout/page-layout';
 import { tables } from '../../extensions/tables/tables';
 import {
   boxLinks, customStyles, images, marginNotes, notesGutter, references, renderedBoxes, type ImageAssets, type Renderings,
@@ -71,12 +71,8 @@ function contributions(options: TestViewOptions) {
     // after images, whose renderer draws image boxes
     renderedBoxes({ snippets: options.renderer && (() => options.renderer) }),
     outline,
-    pageBreak,
-    horizontalRule,
-    // before lists: its projector gets bullet items (`- [ ] ..`) first
-    taskLists,
+    pageLayout,
     lists,
-    headingNumbers,
     alignment,
     marginNotes({ comment: options.comment }),
     notes,

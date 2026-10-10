@@ -1,5 +1,6 @@
-// Headings: `= Title` as Tiptap's heading node, with the label right after it. See builtins.ts.
-import { type TypstNodeSpec, type VisualViewContribution, children, starterKitPart } from '../../../hosts/visual-view/visual-view';
+// What the headings extension contributes to the Visual view: the heading spec (`= Title` as Tiptap's heading node,
+// with the label right after it) and the heading numbers. Entry of headings/visual-view/. See headings.ts.
+import { children, starterKitPart, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 
 /**
  * `= Title` .. `====== Title` (deeper levels count as 6): a heading of its own
@@ -8,14 +9,7 @@ import { type TypstNodeSpec, type VisualViewContribution, children, starterKitPa
  * not: Typst reads that label as part of the line). An edited heading prints
  * its level's `=` and its text.
  */
-export const headings: VisualViewContribution = {
-  id: 'headings',
-  activate({ visualView, subscriptions }) {
-    subscriptions.push(visualView.registerNode(HEADING));
-  },
-};
-
-const HEADING: TypstNodeSpec = {
+export const HEADING: TypstNodeSpec = {
   name: 'heading',
   extension: starterKitPart('typstHeading', { heading: {} }),
   attributes: {
@@ -39,4 +33,5 @@ const HEADING: TypstNodeSpec = {
     out.textblock(heading, pos);
   },
 };
-export { headingNumbers } from './heading-numbers';
+
+export { HeadingNumbers } from './heading-numbers';

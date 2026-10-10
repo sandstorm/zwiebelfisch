@@ -1,4 +1,4 @@
-// Tests for the projection of `#align(..)` and alignment set rules (alignment.ts).
+// Tests for the projection of `#align(..)` and alignment set rules (visual-view.ts, text-align.ts).
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';

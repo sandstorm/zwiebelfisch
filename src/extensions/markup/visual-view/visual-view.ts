@@ -1,5 +1,5 @@
-// Markup: strong and emphasis, links, raw text (inline code, code blocks) and block quotes, with their toolbar
-// entries. Entry of visual-view/builtins/markup/. See ARCHITECTURE.md, "VisualView".
+// What the markup extension contributes to the Visual view: the specs of strong and emphasis, links, raw text
+// (inline code, code blocks) and block quotes, and their toolbar entries. Entry of markup/visual-view/. See markup.ts.
 import type { SyntaxNode } from '@lezer/common';
 import type { Editor } from '@tiptap/core';
 import Code from '@tiptap/extension-code';
@@ -9,29 +9,10 @@ import { Disposable } from '../../../core/disposable/disposable';
 import { FieldPopover } from '../../../ui/field-popover/field-popover';
 import {
   children, decodeString, isClosedContent, parenthesized, quote, starterKitPart, svg, type Action, type Around, type Call, type Placed,
-  type Printer, type ProjectionContext, type ToolbarContext, type TypstMarkSpec, type TypstNodeSpec, type VisualViewContribution,
+  type Printer, type ProjectionContext, type ToolbarContext, type TypstMarkSpec, type TypstNodeSpec,
 } from '../../../hosts/visual-view/visual-view';
 import { codeBlockView } from './code-block-view';
 import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from '../model/model';
-
-/** Strong, emphasis, links, inline code, code blocks and block quotes: their nodes, marks and buttons. */
-export const markup: VisualViewContribution = {
-  id: 'markup',
-  activate({ visualView, subscriptions }) {
-    subscriptions.push(
-      visualView.registerMark(BOLD),
-      visualView.registerMark(ITALIC),
-      visualView.registerMark(LINK),
-      visualView.registerMark(CODE),
-      visualView.registerNode(CODE_BLOCK),
-      visualView.registerNode(BLOCKQUOTE),
-      ...[MARK_ACTIONS.bold, MARK_ACTIONS.italic, MARK_ACTIONS.code].map((action, i) => visualView.registerToolbarItem({ group: 'selection', order: 10 * (i + 1), action })),
-      visualView.registerToolbarItem({ group: 'selection', order: 40, create: linkAction }),
-      visualView.registerToolbarItem({ group: 'insert', order: 40, action: INSERT_CODE_BLOCK }),
-      visualView.registerToolbarItem({ group: 'insert', order: 50, action: INSERT_QUOTE }),
-    );
-  },
-};
 
 /** Tiptap's bold, italic, link and blockquote (StarterKit's), configured for Typst. */
 const StarterParts = starterKitPart('typstMarkup', {
@@ -83,13 +64,13 @@ function delimited(markName: string) {
   };
 }
 
-const BOLD: TypstMarkSpec = {
+export const BOLD: TypstMarkSpec = {
   name: 'bold',
   inlineSyntax: { Strong: delimited('bold') },
   print: (_mark, around) => delimitedSyntax('*', 'strong', around),
 };
 
-const ITALIC: TypstMarkSpec = {
+export const ITALIC: TypstMarkSpec = {
   name: 'italic',
   inlineSyntax: { Emph: delimited('italic') },
   print: (_mark, around) => delimitedSyntax('_', 'emph', around),
@@ -107,7 +88,7 @@ const BARE_URL = /^https?:\/\/[\w\-.~:/?#@!$&'*+,;=%]*[\w\-~/#@$&+=%]$/;
  * running text. An edited link prints `#link("href")[..]`, or a bare URL when
  * its text is its `href`, a plain `http(s)://` URL between whitespace.
  */
-const LINK: TypstMarkSpec = {
+export const LINK: TypstMarkSpec = {
   name: 'link',
   inlineSyntax: { Link: (p, node, marks) => p.schema.text(p.text(node), p.schema.marks.link.create({ href: p.text(node) }).addToSet(marks)) },
   inlineCalls: [{ matches: (_p, call) => call.name === 'link', project: linkCall }],
@@ -130,7 +111,7 @@ function linkCall(p: ProjectionContext, { name, args }: Call, marks: readonly Ma
 // ----------------------------------------------------------------- raw text
 
 /** Inline raw text on one line: its text with a `code` mark remembering the delimiters (empty and multi-line raw stays raw). */
-const CODE: TypstMarkSpec = {
+export const CODE: TypstMarkSpec = {
   name: 'code',
   extension: TypstCode,
   inlineSyntax: {
@@ -153,7 +134,7 @@ const CODE: TypstMarkSpec = {
  * ```` ```lang\ntext\n``` ````, keeping its fence unless the text needs a
  * longer one; the language is cut to what Typst reads as a tag.
  */
-const CODE_BLOCK: TypstNodeSpec = {
+export const CODE_BLOCK: TypstNodeSpec = {
   name: 'codeBlock',
   extension: TypstCodeBlock,
   attributes: {
@@ -197,7 +178,7 @@ const NEW_QUOTE: QuoteLayout = { open: '#quote(block: true)[', close: ']' };
  * is segmented like the document; `layout` is the source around it (new:
  * `#quote(block: true)[` / `]`).
  */
-const BLOCKQUOTE: TypstNodeSpec = {
+export const BLOCKQUOTE: TypstNodeSpec = {
   name: 'blockquote',
   // also bold, italic and link
   extension: StarterParts,
@@ -243,14 +224,14 @@ const ICONS = {
 };
 
 /** Bold, italic, inline code: in the bar above the selection, their only place. */
-const MARK_ACTIONS: Record<'bold' | 'italic' | 'code', Action> = {
+export const MARK_ACTIONS: Record<'bold' | 'italic' | 'code', Action> = {
   bold: { label: 'Bold', shortcut: 'Mod+B', icon: ICONS.bold, run: (c) => c.toggleBold(), active: (e) => e.isActive('bold') },
   italic: { label: 'Italic', shortcut: 'Mod+I', icon: ICONS.italic, run: (c) => c.toggleItalic(), active: (e) => e.isActive('italic') },
   code: { label: 'Code', shortcut: 'Mod+E', icon: ICONS.code, run: (c) => c.toggleCode(), active: (e) => e.isActive('code') },
 };
 
-const INSERT_CODE_BLOCK: Action = { label: 'Code block', icon: ICONS.codeBlock, run: (c) => c.toggleCodeBlock(), active: (e) => e.isActive('codeBlock') };
-const INSERT_QUOTE: Action = { label: 'Quote', shortcut: 'Mod+Shift+B', icon: ICONS.quote, run: (c) => c.toggleBlockquote(), active: (e) => e.isActive('blockquote') };
+export const INSERT_CODE_BLOCK: Action = { label: 'Code block', icon: ICONS.codeBlock, run: (c) => c.toggleCodeBlock(), active: (e) => e.isActive('codeBlock') };
+export const INSERT_QUOTE: Action = { label: 'Quote', shortcut: 'Mod+Shift+B', icon: ICONS.quote, run: (c) => c.toggleBlockquote(), active: (e) => e.isActive('blockquote') };
 
 /**
  * "Link" in the selection's bar, and Mod+K in the text (not in a raw box): asks
@@ -258,7 +239,7 @@ const INSERT_QUOTE: Action = { label: 'Quote', shortcut: 'Mod+Shift+B', icon: IC
  * With nothing selected it inserts the URL as linked text; inside a link it
  * edits or removes the whole link.
  */
-function linkAction(toolbar: ToolbarContext): Action {
+export function linkAction(toolbar: ToolbarContext): Action {
   const { editor } = toolbar;
   let popover: FieldPopover | null = null;
   /** Set while the bar is placed for a caret outside a link (Mod+K). */

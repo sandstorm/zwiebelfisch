@@ -1,4 +1,4 @@
-// Tests for the projection of quotes (markup.ts).
+// Tests for the projection of quotes (visual-view.ts).
 import { describe, expect, it } from 'vitest';
 import { print } from '../../../hosts/visual-view/visual-view';
 import { after, edit, expectPreciseMap, find, project, schema } from '../../../hosts/visual-view/test-support';

@@ -1,4 +1,4 @@
-// How a table's source lies around its cells: what projecting records and printing keeps. See tables.ts.
+// How a table's source lies around its cells: what projecting records and printing keeps. See model.ts.
 
 /** How a table's source lies around its cells, for printing it back. */
 export interface TableLayout {

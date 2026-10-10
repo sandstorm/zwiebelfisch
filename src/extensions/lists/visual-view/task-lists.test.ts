@@ -1,7 +1,8 @@
 // Tests for task lists: their projection and the checklist preamble (task-lists.ts, checklist-preamble.ts).
 import { EditorState } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
-import { CHECKLIST_PREAMBLE, ensureChecklistPreamble } from './checklist-preamble';
+import { CHECKLIST_PREAMBLE } from '../model/model';
+import { ensureChecklistPreamble } from './checklist-preamble';
 import { print } from '../../../hosts/visual-view/visual-view';
 import { after, edit, expectPreciseMap, find, project, schema } from '../../../hosts/visual-view/test-support';
 

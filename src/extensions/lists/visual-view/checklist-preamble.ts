@@ -1,21 +1,8 @@
-// Makes sure a document with task lists has cheq's import and `#show: checklist` exactly once. See task-lists.ts.
+// Makes sure a document with task lists has cheq's import and `#show: checklist` exactly once (the decision is the
+// model's calculateChecklistPreambleChange). See task-lists.ts.
 import type { Node } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
-
-/**
- * Task lists are Typst bullet items starting with `[ ]` / `[x]`, which only
- * render as checkboxes under the Universe package cheq
- * (https://typst.app/universe/package/cheq): its import and `#show:
- * checklist`. This module makes sure a document has both, exactly once.
- */
-const IMPORT = '#import "@preview/cheq:0.4.0": checklist';
-const SHOW = '#show: checklist';
-export const CHECKLIST_PREAMBLE = `${IMPORT}\n${SHOW}`;
-
-/** Any version, importing `checklist` (or everything). */
-const HAS_IMPORT = /#import\s+"@preview\/cheq:[^"]*"\s*:\s*(?:\*|[^\n]*\bchecklist\b)/;
-/** `#show: checklist` or `#show: checklist.with(..)`. */
-const HAS_SHOW = /#show\s*:\s*checklist\b/;
+import { calculateChecklistPreambleChange } from '../model/model';
 
 /**
  * Adds what is missing of cheq's import and show rule to the top-level raw
@@ -24,20 +11,12 @@ const HAS_SHOW = /#show\s*:\s*checklist\b/;
  * the import at the top before an existing show rule.
  */
 export function ensureChecklistPreamble(tr: Transaction): void {
-  const importAt = blockEnd(tr.doc, HAS_IMPORT);
-  const hasShow = blockEnd(tr.doc, HAS_SHOW) !== null;
-  const raw = (src: string) => tr.doc.type.schema.nodes.rawBlock.create({ src });
-  if (importAt === null) tr.insert(0, raw(hasShow ? IMPORT : CHECKLIST_PREAMBLE));
-  else if (!hasShow) tr.insert(importAt, raw(SHOW));
-}
-
-/** The position after the first top-level raw block whose source matches `pattern`. */
-function blockEnd(doc: Node, pattern: RegExp): number | null {
-  let end: number | null = null;
-  doc.forEach((block, offset) => {
-    if (end === null && block.type.name === 'rawBlock' && pattern.test(block.attrs.src)) end = offset + block.nodeSize;
+  const blocks: { code: string; end: number }[] = [];
+  tr.doc.forEach((block, offset) => {
+    if (block.type.name === 'rawBlock') blocks.push({ code: block.attrs.src, end: offset + block.nodeSize });
   });
-  return end;
+  const change = calculateChecklistPreambleChange(blocks.map((block) => block.code));
+  if (change) tr.insert(change.after === null ? 0 : blocks[change.after].end, tr.doc.type.schema.nodes.rawBlock.create({ src: change.code }));
 }
 
 /** How many task items `doc` holds. */

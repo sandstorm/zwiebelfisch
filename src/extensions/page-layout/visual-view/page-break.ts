@@ -1,6 +1,6 @@
-// The page break: `#pagebreak()` as a labelled divider, "Insert page break" and Mod+Enter. See builtins.ts.
+// The page break: `#pagebreak()` as a labelled divider, "Insert page break" and Mod+Enter. See visual-view.ts.
 import { Node } from '@tiptap/core';
-import { type TypstNodeSpec, type VisualViewContribution, parenthesized, svg } from '../../../hosts/visual-view/visual-view';
+import { parenthesized, svg, type Action, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -10,25 +10,6 @@ declare module '@tiptap/core' {
     };
   }
 }
-
-/**
- * A standalone `#pagebreak(..)` call (any arguments), shown as a labelled
- * dashed divider (a fixed widget, not editable as code). Its source,
- * arguments included, is kept verbatim.
- */
-export const pageBreak: VisualViewContribution = {
-  id: 'page-break',
-  activate({ visualView, subscriptions }) {
-    subscriptions.push(
-      visualView.registerNode(PAGE_BREAK),
-      visualView.registerToolbarItem({
-        group: 'insert',
-        order: 60,
-        action: { label: 'Insert page break', shortcut: 'Mod+Enter', icon: ICON, run: (c) => c.setPageBreak() },
-      }),
-    );
-  },
-};
 
 const PageBreak = Node.create({
   name: 'pageBreak',
@@ -54,7 +35,12 @@ const PageBreak = Node.create({
   },
 });
 
-const PAGE_BREAK: TypstNodeSpec = {
+/**
+ * A standalone `#pagebreak(..)` call (any arguments), shown as a labelled
+ * dashed divider (a fixed widget, not editable as code). Its source,
+ * arguments included, is kept verbatim.
+ */
+export const PAGE_BREAK: TypstNodeSpec = {
   name: 'pageBreak',
   extension: PageBreak,
   labelled: true,
@@ -62,3 +48,6 @@ const PAGE_BREAK: TypstNodeSpec = {
 };
 
 const ICON = svg('<path d="M6 3v5h12V3"/><path d="M6 21v-5h12v5"/><path d="M3 12h2M8 12h2M14 12h2M19 12h2"/>');
+
+/** "Insert page break" in the Insert menu (also Mod+Enter in the text). */
+export const INSERT_PAGE_BREAK: Action = { label: 'Insert page break', shortcut: 'Mod+Enter', icon: ICON, run: (c) => c.setPageBreak() };

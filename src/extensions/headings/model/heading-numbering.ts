@@ -1,13 +1,10 @@
-// Heading numbers as Typst computes them from `#set heading(numbering: ..)`, and the edit that switches
-// numbering on or off. See heading-numbers.ts.
-import type { Node } from '@tiptap/pm/model';
-import type { Transaction } from '@tiptap/pm/state';
+// Heading numbers as Typst computes them from `#set heading(numbering: ..)` rules, and the code that switches
+// numbering on or off. Pure: works on Typst code, not on a view's document. See model.ts.
 import { numberingFormatter } from './numbering';
 
 /**
  * Heading numbers as Typst computes them, from the `#set heading(numbering:
- * ..)` rules of a projected document, and the source edit that switches
- * numbering on or off.
+ * ..)` rules of the code blocks before a heading.
  *
  * Approximations (the preview shows the real numbers):
  * - only rules at the start of a line in top-level raw blocks count; rules in
@@ -25,22 +22,29 @@ interface Numbering {
 }
 
 const UNNUMBERED: Numbering = { numbered: false, format: null };
-const HEADING_NUMBERING_RULE = '#set heading(numbering: "1.")';
 
-/** The number of each heading in `doc` that shows one, by the heading's position. */
-export function headingNumbers(doc: Node): { pos: number; number: string }[] {
-  const result: { pos: number; number: string }[] = [];
-  const counter: number[] = [];
-  let numbering = UNNUMBERED;
-  doc.descendants((node, pos, parent) => {
-    if (node.type.name === 'rawBlock' && parent === doc) numbering = lastNumbering(node.attrs.src) ?? numbering;
-    if (node.type.name === 'heading' && numbering.numbered) {
-      step(counter, node.attrs.level);
-      if (numbering.format) result.push({ pos, number: numbering.format(counter) });
-    }
-    return !node.isTextblock && !node.isAtom;
-  });
-  return result;
+/** The rule that switches numbering on: Typst's default pattern. */
+export const HEADING_NUMBERING_RULE = '#set heading(numbering: "1.")';
+
+/**
+ * Numbers headings in document order as Typst's heading counter does,
+ * following the heading set rules of the code met on the way.
+ */
+export class HeadingCounter {
+  private readonly counter: number[] = [];
+  private numbering = UNNUMBERED;
+
+  /** Follows the heading set rules in `code` (a top-level code block) from here on; the last one wins. */
+  readRules(code: string): void {
+    this.numbering = lastNumbering(code) ?? this.numbering;
+  }
+
+  /** Counts a heading of `level` (1 = top); its number as shown, or null when it shows none. */
+  count(level: number): string | null {
+    if (!this.numbering.numbered) return null;
+    step(this.counter, level);
+    return this.numbering.format?.(this.counter) ?? null;
+  }
 }
 
 /** Typst's counter step at `level`: missing levels start at zero, deeper ones are dropped. */
@@ -50,42 +54,9 @@ function step(counter: number[], level: number): void {
   counter.length = level;
 }
 
-/** Whether a top-level rule numbers headings. */
-export function hasHeadingNumbering(doc: Node): boolean {
-  let numbered = false;
-  doc.forEach((block) => {
-    if (block.type.name === 'rawBlock') numbered ||= lastNumbering(block.attrs.src)?.numbered === true;
-  });
-  return numbered;
-}
-
-/**
- * Numbered headings → removes the numbering from every top-level set rule
- * (a block left empty is deleted); otherwise adds `HEADING_NUMBERING_RULE`
- * as a block after the raw blocks the document starts with.
- */
-export function toggleHeadingNumbering(tr: Transaction): void {
-  if (hasHeadingNumbering(tr.doc)) removeNumbering(tr);
-  else addNumbering(tr);
-}
-
-function addNumbering(tr: Transaction): void {
-  let pos = 0;
-  for (let i = 0; i < tr.doc.childCount && tr.doc.child(i).type.name === 'rawBlock'; i++) pos += tr.doc.child(i).nodeSize;
-  tr.insert(pos, tr.doc.type.schema.nodes.rawBlock.create({ src: HEADING_NUMBERING_RULE }));
-}
-
-function removeNumbering(tr: Transaction): void {
-  const blocks: { block: Node; pos: number }[] = [];
-  tr.doc.forEach((block, pos) => {
-    if (block.type.name === 'rawBlock') blocks.push({ block, pos });
-  });
-  for (const { block, pos } of blocks.reverse()) {
-    const src = withoutHeadingNumbering(block.attrs.src);
-    if (src === block.attrs.src) continue;
-    if (src.trim() === '') tr.delete(pos, pos + block.nodeSize);
-    else tr.setNodeMarkup(pos, undefined, { ...block.attrs, src });
-  }
+/** Whether the heading set rules in `code` leave headings numbered. */
+export function numbersHeadings(code: string): boolean {
+  return lastNumbering(code)?.numbered === true;
 }
 
 /** `src` without the `numbering` argument of its heading set rules; a rule left without arguments goes, with its line. */

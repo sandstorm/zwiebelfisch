@@ -1,9 +1,9 @@
 // The horizontal rule: a full-width `#line(length: 100%)` shown as a rule, "Horizontal rule" and `---`.
-// See builtins.ts.
+// See visual-view.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { InputRule, Node } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
-import { type ProjectionContext, type TypstNodeSpec, type VisualViewContribution, parenthesized, svg } from '../../../hosts/visual-view/visual-view';
+import { parenthesized, svg, type Action, type ProjectionContext, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -13,22 +13,6 @@ declare module '@tiptap/core' {
     };
   }
 }
-
-/**
- * `#line(length: 100%, ..)`: a line across the full width, shown as a rule
- * (a fixed widget). Only named arguments, and none that position or turn it
- * (`start`, `end`, `angle`); `stroke` and the like are kept. Any other line
- * stays raw. Its source is kept verbatim.
- */
-export const horizontalRule: VisualViewContribution = {
-  id: 'horizontal-rule',
-  activate({ visualView, subscriptions }) {
-    subscriptions.push(
-      visualView.registerNode(RULE),
-      visualView.registerToolbarItem({ group: 'insert', order: 70, action: { label: 'Horizontal rule', icon: ICON, run: (c) => c.setHorizontalRule() } }),
-    );
-  },
-};
 
 /** `---` (or `—-`, as some systems autocorrect it), `___ ` or `*** `: Markdown's rules, as in Tiptap. */
 const RULE_INPUT = /^(?:---|—-|___\s|\*\*\*\s)$/;
@@ -77,7 +61,13 @@ const HorizontalRule = Node.create({
   },
 });
 
-const RULE: TypstNodeSpec = {
+/**
+ * `#line(length: 100%, ..)`: a line across the full width, shown as a rule
+ * (a fixed widget). Only named arguments, and none that position or turn it
+ * (`start`, `end`, `angle`); `stroke` and the like are kept. Any other line
+ * stays raw. Its source is kept verbatim.
+ */
+export const HORIZONTAL_RULE: TypstNodeSpec = {
   name: 'horizontalRule',
   extension: HorizontalRule,
   labelled: true,
@@ -101,3 +91,6 @@ function isFullWidthLine(p: ProjectionContext, args: SyntaxNode[]): boolean {
 }
 
 const ICON = svg('<path d="M3 12h18"/>');
+
+/** "Horizontal rule" in the Insert menu. */
+export const INSERT_HORIZONTAL_RULE: Action = { label: 'Horizontal rule', icon: ICON, run: (c) => c.setHorizontalRule() };
