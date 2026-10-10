@@ -4,12 +4,6 @@ import { Disposable } from '../../../core/disposable/disposable';
 import type { ExtensionContext, TypstExtension } from '../workbench';
 import { ExtensionHost, type SharedContext } from './extension-host';
 
-declare module '../workbench' {
-  interface ServiceRegistry {
-    'test.greeting': { greet(): string };
-  }
-}
-
 const shared = {} as SharedContext;
 
 function extension(id: string, activate: (context: ExtensionContext) => void): TypstExtension {
@@ -40,33 +34,7 @@ describe('ExtensionHost', () => {
     expect(disposed).toBe(true);
   });
 
-  it('gives an extension the services of those before it, typed by the registry', () => {
-    const seen: (string | undefined)[] = [];
-    const host = new ExtensionHost(shared);
-    const reader = (id: string) => extension(id, ({ services }) => seen.push(services.get('test.greeting')?.greet()));
-    host.activate([
-      reader('early'),
-      extension('provider', ({ services, subscriptions }) => subscriptions.push(services.provide('test.greeting', { greet: () => 'hi' }))),
-      reader('late'),
-    ]);
-    expect(seen).toEqual([undefined, 'hi']);
-  });
-
-  it('refuses a second provider of a service and an extension listed twice', () => {
-    const provider = (id: string) => extension(id, ({ services }) => services.provide('test.greeting', { greet: () => id }));
-    expect(() => new ExtensionHost(shared).activate([provider('a'), provider('b')])).toThrow(/provided already/);
+  it('refuses an extension listed twice', () => {
     expect(() => new ExtensionHost(shared).activate([extension('a', () => {}), extension('a', () => {})])).toThrow(/twice/);
-  });
-
-  it('ends a service with the subscription that provided it', () => {
-    const host = new ExtensionHost(shared);
-    let get = (): unknown => null;
-    host.activate([
-      extension('provider', ({ services, subscriptions }) => subscriptions.push(services.provide('test.greeting', { greet: () => 'hi' }))),
-      extension('reader', ({ services }) => (get = () => services.get('test.greeting'))),
-    ]);
-    expect(get()).toBeDefined();
-    host.dispose();
-    expect(get()).toBeUndefined();
   });
 });

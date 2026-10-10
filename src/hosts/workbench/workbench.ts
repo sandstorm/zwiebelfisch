@@ -1,8 +1,9 @@
 // The workbench host: the widget's frame (side panels, editing area with the Visual / Source tabs and file views,
 // preview, status bar) and the extension API every feature uses to put itself into it. Entry of hosts/workbench/.
 // Why extensions: the frame knows no feature by name. A feature is a `TypstExtension` that registers what it adds
-// (a side panel, a file view, a command, a service other extensions read) once, at activation, and the host
-// disposes all of it on destroy. Adding a feature is adding it to a list, not editing the frame.
+// (a side panel, a file view, a command, a link provider, a source control) once, at activation, and the host
+// disposes all of it on destroy. Adding a feature is adding it to a list, not editing the frame. Extensions never
+// depend on each other: what one offers another goes through a generic contribution point of a host.
 // See ARCHITECTURE.md, "Extensions" and "Layout".
 import type { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
@@ -33,32 +34,11 @@ export interface ExtensionContext {
   readonly visualView: VisualViewContributions;
   /** CodeMirror extensions for every Source view. */
   readonly sourceView: SourceViewContributions;
-  /** Toolbar items, PDF variants and page overlays of the preview; its compile results (diagnostics, snippets, PDFs). */
+  /** Toolbar items, PDF variants and page overlays of the preview; reveal and clicks; its compile results (diagnostics, snippets, PDFs). */
   readonly preview: PreviewContributions;
-  /** What extensions provide each other (instead of importing each other). */
-  readonly services: Services;
 }
 
-/**
- * The services extensions provide each other, by id. An extension adds its entry by declaration merging, next to
- * the code that provides it:
- *
- * ```ts
- * declare module '../../hosts/workbench/workbench' {
- *   interface ServiceRegistry { labels: LabelIndex }
- * }
- * ```
- */
-export interface ServiceRegistry {}
-
-export interface Services {
-  /** Makes `service` available as `id` (once per id: a second provider is an error) until the result is disposed. */
-  provide<K extends keyof ServiceRegistry>(id: K, service: ServiceRegistry[K]): Disposable;
-  /** The service `id`, if an extension activated earlier in the list provides it. */
-  get<K extends keyof ServiceRegistry>(id: K): ServiceRegistry[K] | undefined;
-}
-
-/** The commands extensions register, by id, with their handler's type; extended by declaration merging like `ServiceRegistry`. */
+/** The commands extensions register, by id, with their handler's type; extended by declaration merging. */
 export interface CommandRegistry {}
 
 export type CommandArguments<K extends keyof CommandRegistry> = CommandRegistry[K] extends (...args: infer A) => unknown ? A : never;
@@ -142,6 +122,16 @@ export interface Workbench {
   provideDocumentLinks(document: TextDocument): readonly DocumentLink[];
   /** `link` (from `provideDocumentLinks`) with what its provider fills in on demand: target, tooltip, command. */
   resolveDocumentLink(link: DocumentLink): DocumentLink;
+
+  /**
+   * Offers `sourceControl` (VS Code's `scm.createSourceControl`) until disposed: somewhere the project can be
+   * committed, shown by whichever extension shows source controls. One per `id`.
+   */
+  registerSourceControl(sourceControl: SourceControl): Disposable;
+  /** The registered source controls, in registration order. */
+  readonly sourceControls: readonly SourceControl[];
+  /** A source control was registered or disposed. */
+  readonly onDidChangeSourceControls: Event<void>;
 
   /** The editor of the Typst file shown in the editing area; null while another kind of file is shown. */
   readonly activeTextEditor: TextEditor | null;
@@ -236,6 +226,29 @@ export interface DocumentLinkProvider {
   provideDocumentLinks(document: TextDocument): readonly DocumentLink[];
   /** A link this provider gave, with its target, tooltip or command filled in. */
   resolveDocumentLink?(link: DocumentLink): DocumentLink;
+}
+
+/** Somewhere the project's state can be committed (VS Code's SourceControl), e.g. the GitLab branch behind a room. */
+export interface SourceControl {
+  /** Unique among the registered ones. */
+  readonly id: string;
+  /** Names it to people ("GitLab"). */
+  readonly label: string;
+  /** The commit message offered (VS Code: the input box's placeholder). */
+  readonly defaultCommitMessage?: string;
+  /** What it is doing, and what happened last. */
+  readonly state: SourceControlState;
+  /** `state` changed. */
+  readonly onDidChange: Event<void>;
+  /** Commits the project's current state with `message` (VS Code: its accept-input command); the outcome shows in `state`. */
+  commit(message: string): void;
+}
+
+export interface SourceControlState {
+  /** A commit is under way (no second one meanwhile). */
+  readonly busy: boolean;
+  /** One line on the last outcome or news ("Saved version 01234567 (Ann)", "Merged new changes from GitLab"); '' for none. */
+  readonly status: string;
 }
 
 /** A view for one kind of file in the editing area; shown and hidden as files are opened. */

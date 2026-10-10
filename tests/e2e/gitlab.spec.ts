@@ -27,9 +27,9 @@ async function users(browser: Browser, baseURL: string, project: string) {
   return { room, ann: await join(browser, baseURL, room, 'Ann'), bob: await join(browser, baseURL, room, 'Bob') };
 }
 
-async function saveVersion(page: Page, message: string): Promise<void> {
-  await page.getByRole('button', { name: 'Save version' }).click();
-  const form = page.getByRole('form', { name: 'Save version' });
+async function saveToGitLab(page: Page, message: string): Promise<void> {
+  await page.getByRole('button', { name: 'Save to GitLab…' }).click();
+  const form = page.getByRole('form', { name: 'Save to GitLab' });
   await form.getByRole('textbox', { name: 'Commit message' }).fill(message);
   await form.getByRole('button', { name: 'Apply' }).click();
 }
@@ -42,7 +42,7 @@ test('the branch is loaded with its files, images from the repository', async ({
   await expect(ann.locator('.typst-editor__right svg image, .typst-editor__right svg use').first()).toBeAttached();
 });
 
-test('Save version commits, and everyone in the room is told', async ({ browser, baseURL }, info) => {
+test('Save to GitLab commits, and everyone in the room is told', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
   // the main file's Visual view is all raw boxes, so Ann types in Source
   await ann.getByRole('tab', { name: 'Source' }).click();
@@ -53,9 +53,9 @@ test('Save version commits, and everyone in the room is told', async ({ browser,
   await ann.keyboard.type('Again.');
   await expect(visualText(bob, 'Again.')).toBeVisible();
 
-  await saveVersion(ann, 'Add a line');
-  await expect(ann.locator('.typst-editor__version-status')).toContainText('Saved version');
-  await expect(bob.locator('.typst-editor__version-status')).toContainText('Saved version');
+  await saveToGitLab(ann, 'Add a line');
+  await expect(ann.locator('.typst-editor__source-control-status')).toContainText('Saved version');
+  await expect(bob.locator('.typst-editor__source-control-status')).toContainText('Saved version');
 });
 
 test('a simulated upstream commit (playground endpoint) is merged into the room', async ({ browser, baseURL, request }, info) => {
@@ -63,7 +63,7 @@ test('a simulated upstream commit (playground endpoint) is merged into the room'
   const response = await request.post(`${SERVER}/playground/upstream?room=${encodeURIComponent(room)}`);
   expect(response.ok()).toBe(true);
   for (const page of [ann, bob]) {
-    await expect(page.locator('.typst-editor__version-status')).toHaveText('Merged new changes from GitLab');
+    await expect(page.locator('.typst-editor__source-control-status')).toHaveText('Merged new changes from GitLab');
     await openFile(page, 'chapters/introduction.typ');
     await expect(visualText(page, 'a colleague added this paragraph on GitLab')).toBeVisible();
   }
@@ -71,6 +71,6 @@ test('a simulated upstream commit (playground endpoint) is merged into the room'
 
 test('saving without changes says so', async ({ browser, baseURL }, info) => {
   const { ann } = await users(browser, baseURL!, info.project.name);
-  await saveVersion(ann, 'Nothing');
-  await expect(ann.locator('.typst-editor__version-status')).toHaveText('No changes to save');
+  await saveToGitLab(ann, 'Nothing');
+  await expect(ann.locator('.typst-editor__source-control-status')).toHaveText('No changes to save');
 });

@@ -1,6 +1,6 @@
 // The styles extension: the paragraph and text styles a project declares (`/// @style …`), in the Visual view.
 // Entry of extensions/styles/. Why an extension: a style is a Typst function declared in some file of the project,
-// never a registry of the editor's own, so one read model (StyleIndex, the `styles` service) follows the whole
+// never a registry of the editor's own, so one read model (StyleIndex) follows the whole
 // project, and every document's Visual view shows the styles' calls as styled text and applies them from the text
 // style menu, importing a style where it is used. See ARCHITECTURE.md, "Custom styles".
 import type { Project } from '../../core/project/project';
@@ -9,15 +9,8 @@ import css from './styles.css?inline';
 import { newStyle, StyleIndex } from './model/model';
 import { customStyles } from './visual-view/visual-view';
 
-declare module '../../hosts/workbench/workbench' {
-  interface ServiceRegistry {
-    /** The custom styles the project declares (the styles extension). */
-    styles: StyleIndex;
-  }
-}
-
 /**
- * Keeps the project's custom styles indexed (the `styles` service); every document's Visual view shows and applies
+ * Keeps the project's custom styles indexed; every document's Visual view shows and applies
  * them and offers "New style…".
  */
 export function styles(): TypstExtension {
@@ -25,9 +18,9 @@ export function styles(): TypstExtension {
     id: 'styles',
     activate(context) {
       context.subscriptions.push(context.workbench.registerStyleSheet(css));
-      const { project, workbench, services, subscriptions } = context;
+      const { project, workbench, subscriptions } = context;
       const index = new StyleIndex(project);
-      subscriptions.push(index, services.provide('styles', index));
+      subscriptions.push(index);
       customStyles({ styles: index, create: () => void addNewStyle(index, project, workbench) }).activate(context);
     },
   };

@@ -14,6 +14,7 @@ import { EditingViews, type EditorMode } from './editing-views/editing-views';
 import { ExtensionHost } from './extension-host/extension-host';
 import { DocumentLinks, documentLinkStyles, linkExtension, type LinkedText } from './document-links/document-links';
 import { FileDecorations } from './file-decorations/file-decorations';
+import { SourceControls } from './source-controls/source-controls';
 import { FileDrops } from './file-drops/file-drops';
 import { FileViews } from './file-views/file-views';
 import { Layout, type Memory } from './layout/layout';
@@ -30,6 +31,7 @@ import type {
   OpenOptions,
   SidePanel,
   SidePanelOptions,
+  SourceControl,
   TextEditor,
   TextDocument,
   TextEditorSelectionChangeEvent,
@@ -66,6 +68,7 @@ export class WorkbenchHost implements Workbench {
   readonly #fileViews: FileViews;
   readonly #fileDecorations = new FileDecorations();
   readonly #documentLinks = new DocumentLinks();
+  readonly #sourceControls = new SourceControls();
   readonly #commands: Commands;
   readonly #drops: FileDrops;
   readonly #scheme: ColorScheme;
@@ -84,6 +87,7 @@ export class WorkbenchHost implements Workbench {
   readonly onDidChangeTextEditorSelection = this.#selectionChanged.event;
   readonly onDidDropFiles: Event<File[]>;
   readonly onDidChangeFileDecorations = this.#fileDecorations.onDidChange;
+  readonly onDidChangeSourceControls = this.#sourceControls.onDidChange;
 
   constructor(
     private readonly host: HTMLElement,
@@ -231,6 +235,14 @@ export class WorkbenchHost implements Workbench {
     return this.#documentLinks.resolveDocumentLink(link);
   }
 
+  registerSourceControl(sourceControl: SourceControl): Disposable {
+    return this.#sourceControls.register(sourceControl);
+  }
+
+  get sourceControls(): readonly SourceControl[] {
+    return this.#sourceControls.all;
+  }
+
   get activeTextEditor(): TextEditor | null {
     return this.#views.activeEditor();
   }
@@ -247,6 +259,7 @@ export class WorkbenchHost implements Workbench {
     this.#views.destroy();
     this.#fileViews.dispose();
     this.#fileDecorations.dispose();
+    this.#sourceControls.dispose();
     this.#preview.destroy();
     this.#commands.dispose();
     this.#drops.dispose();

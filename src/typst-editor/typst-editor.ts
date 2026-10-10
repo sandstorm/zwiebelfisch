@@ -14,7 +14,7 @@ import { previewControls } from '../extensions/preview-controls/preview-controls
 import { previewSync } from '../extensions/preview-sync/preview-sync';
 import { spreadsheets } from '../extensions/spreadsheets/spreadsheets';
 import { styles } from '../extensions/styles/styles';
-import { versions } from '../extensions/versions/versions';
+import { sourceControl } from '../extensions/source-control/source-control';
 import { documentLinks } from '../extensions/document-links/document-links';
 import { images } from '../extensions/images/images';
 import { renderedBoxes } from '../extensions/rendered-boxes/rendered-boxes';
@@ -80,7 +80,7 @@ export interface TypstEditorOptions {
    * edited or selected). Default: what this viewer chose last (remembered in localStorage), else on.
    */
   followCursor?: boolean;
-  /** Who works here: the name (and cursor color) others see when collaborating, who saves versions and signs comments. */
+  /** Who works here: the name (and cursor color) others see when collaborating, who commits to GitLab and signs comments. */
   user?: { name: string; color?: string };
   /**
    * Real-time collaboration on the project's Typst files (margin notes
@@ -90,7 +90,7 @@ export interface TypstEditorOptions {
    * connected (and synced) itself. Images and other files are not shared,
    * except in a room backed by a GitLab branch (`room: 'gitlab:<project>@<branch>'`
    * on a server configured for GitLab): there the server loads the branch,
-   * images come from the repository, and a "Save version" button commits.
+   * images come from the repository, and "Save to GitLab…" commits.
    */
   collaboration?: CollaborationOptions;
   /**
@@ -193,9 +193,10 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
 }
 
 /**
- * The features of the widget and the Typst constructs of the Visual view, in activation order: an extension reads
- * the services of those before it. Where the Visual view's contributions compete (projectors of the same syntax,
- * box renderers, mark nesting), their `priority` decides, not this order (see VisualViewContributions).
+ * The features of the widget and the Typst constructs of the Visual view, in activation order. Extensions never
+ * depend on each other; where the Visual view's contributions compete (projectors of the same syntax, box renderers,
+ * mark nesting) or document links overlap, their `priority` decides, not this order. The order only places the
+ * items of the preview's toolbar, the tab bar and the status bar.
  */
 function builtinExtensions(options: TypstEditorOptions): TypstExtension[] {
   return [
@@ -206,7 +207,7 @@ function builtinExtensions(options: TypstEditorOptions): TypstExtension[] {
     fileNavigation(),
     spreadsheets(),
     diagnostics(),
-    versions({ user: options.user }),
+    sourceControl(),
     markup,
     headings,
     tables,

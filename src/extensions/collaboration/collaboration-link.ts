@@ -1,6 +1,6 @@
 // CollaborationLink: the widget's side of a Collaboration, which it loads on demand (so this file must stay outside
 // the lazily loaded chunk, model/). See collaboration.ts.
-import type { Collaboration, CollaborationOptions, RoomVersions, Shared } from './model/model';
+import type { Collaboration, CollaborationOptions, GitLabSourceControl, Shared } from './model/model';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { PlacedPresence } from './presence/presence';
 
@@ -16,8 +16,8 @@ export interface LinkedWidget {
   current(): CurrentSelection | null;
   /** Whether the user works in the widget's editing area (only then is the selection published). */
   focused(): boolean;
-  /** Called once connected, in a room backed by a GitLab branch ("Save version"). */
-  onVersions?(versions: RoomVersions): void;
+  /** Called once connected, in a room backed by a GitLab branch: what commits to it. */
+  onSourceControl?(sourceControl: GitLabSourceControl): void;
   /** The other users' places changed (every file; e.g. for the file panel). */
   onPresence?(presences: readonly PlacedPresence[]): void;
 }
@@ -55,7 +55,7 @@ export class CollaborationLink {
     }
     this.collaboration = collaboration;
     collaboration.onPresence((presences) => this.widget.onPresence?.(presences));
-    if (collaboration.versions) this.widget.onVersions?.(collaboration.versions);
+    if (collaboration.sourceControl) this.widget.onSourceControl?.(collaboration.sourceControl);
   }
 
   /**

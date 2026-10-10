@@ -1,10 +1,10 @@
-// ExtensionHost: activates the widget's extensions in list order and disposes what they registered in reverse;
-// the services they provide each other. See workbench.ts and ARCHITECTURE.md, "Extensions".
+// ExtensionHost: activates the widget's extensions in list order and disposes what they registered in reverse.
+// See workbench.ts and ARCHITECTURE.md, "Extensions".
 import { Disposable } from '../../../core/disposable/disposable';
-import type { ExtensionContext, ServiceRegistry, Services, TypstExtension } from '../workbench';
+import type { ExtensionContext, TypstExtension } from '../workbench';
 
-/** Everything of a context but what the host adds per extension (`subscriptions`) and itself (`services`). */
-export type SharedContext = Omit<ExtensionContext, 'subscriptions' | 'services'>;
+/** Everything of a context but what the host adds per extension (`subscriptions`). */
+export type SharedContext = Omit<ExtensionContext, 'subscriptions'>;
 
 /**
  * Runs a list of extensions: each is activated once, in list order, with its own `subscriptions`; `dispose`
@@ -12,7 +12,6 @@ export type SharedContext = Omit<ExtensionContext, 'subscriptions' | 'services'>
  * registered later (and may depend on what came before) goes first.
  */
 export class ExtensionHost {
-  readonly #services = new ServiceCollection();
   readonly #activated: { dispose(): unknown }[][] = [];
 
   constructor(private readonly shared: SharedContext) {}
@@ -24,26 +23,11 @@ export class ExtensionHost {
       ids.add(extension.id);
       const subscriptions: { dispose(): unknown }[] = [];
       this.#activated.push(subscriptions);
-      extension.activate({ ...this.shared, subscriptions, services: this.#services });
+      extension.activate({ ...this.shared, subscriptions });
     }
   }
 
   dispose(): void {
     for (const subscriptions of this.#activated.splice(0).reverse()) Disposable.from(...subscriptions).dispose();
-  }
-}
-
-/** The services by id: one provider each, read by the extensions after it. */
-class ServiceCollection implements Services {
-  readonly #services = new Map<keyof ServiceRegistry, unknown>();
-
-  provide<K extends keyof ServiceRegistry>(id: K, service: ServiceRegistry[K]): Disposable {
-    if (this.#services.has(id)) throw new Error(`Service ${String(id)} is provided already`);
-    this.#services.set(id, service);
-    return new Disposable(() => this.#services.delete(id));
-  }
-
-  get<K extends keyof ServiceRegistry>(id: K): ServiceRegistry[K] | undefined {
-    return this.#services.get(id) as ServiceRegistry[K] | undefined;
   }
 }

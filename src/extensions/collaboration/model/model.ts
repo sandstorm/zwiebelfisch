@@ -9,12 +9,12 @@ import type { PlacedPresence } from '../presence/presence';
 import type { Project } from '../../../core/project/project';
 import { roomFilePath } from '../../../core/gitlab-protocol/gitlab-protocol';
 import { RemoteCursors, type CollaborationUser } from './remote-cursors';
-import { RoomVersions } from './room-versions';
+import { GitLabSourceControl } from './gitlab-source-control';
 import { SharedAssets } from './shared-assets';
 import { SharedProject } from './shared-project';
 
 export type { CollaborationUser } from './remote-cursors';
-export type { RoomVersions } from './room-versions';
+export type { GitLabSourceControl } from './gitlab-source-control';
 
 /**
  * Where the shared state lives: a Y.Doc the host connects itself (any
@@ -37,15 +37,15 @@ export interface Shared {
  * through awareness. Only text is shared — the editing views never sync
  * directly; they keep following their TypstDocument. In a room backed by a
  * GitLab branch (the server put a base into its `meta` map) the other files
- * are shared too, and `versions` offers "Save version".
+ * are shared too, and `sourceControl` commits to the branch.
  */
 export class Collaboration {
   private readonly sharedProject: SharedProject;
   private readonly cursors: RemoteCursors | null;
   private readonly assets: SharedAssets | null = null;
   private presenceListener: ((presences: readonly PlacedPresence[]) => void) | null = null;
-  /** "Save version", in a room backed by a GitLab branch (else null). */
-  readonly versions: RoomVersions | null = null;
+  /** Commits to the branch, in a room backed by a GitLab branch (else null). */
+  readonly sourceControl: GitLabSourceControl | null = null;
 
   private constructor(
     ydoc: Y.Doc,
@@ -54,8 +54,8 @@ export class Collaboration {
     private readonly server: { provider: HocuspocusProvider; files: (path: ProjectPath) => Promise<Uint8Array> } | null,
   ) {
     const { project, user } = shared;
-    if (server && RoomVersions.isVersioned(ydoc)) {
-      this.versions = new RoomVersions(statelessChannel(server.provider));
+    if (server && GitLabSourceControl.isGitLabRoom(ydoc)) {
+      this.sourceControl = new GitLabSourceControl(statelessChannel(server.provider), user && { name: user.name });
       this.assets = new SharedAssets(project, ydoc, server.files);
     }
     this.sharedProject = new SharedProject(project, ydoc);
@@ -90,6 +90,7 @@ export class Collaboration {
   }
 
   destroy(): void {
+    this.sourceControl?.dispose();
     this.cursors?.destroy();
     this.assets?.destroy();
     this.sharedProject.destroy();
