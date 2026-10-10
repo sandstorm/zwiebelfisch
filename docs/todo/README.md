@@ -42,6 +42,6 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [diff-rendering](diff-rendering.md) | open (after position map) |
 | [multi-file-ui](multi-file-ui.md) | open (after multi-file-assets-packages) |
 | [visual-view-toolbar-and-raw-editing](visual-view-toolbar-and-raw-editing.md) | open (after projection) |
-| [preview-ux](preview-ux.md) | open |
+| [preview-ux](preview-ux.md) | done (branch task/preview-ux) |
 | [collab-yjs](collab-yjs.md) | open (later) |
 | [server-gitlab](server-gitlab.md) | open (later) |

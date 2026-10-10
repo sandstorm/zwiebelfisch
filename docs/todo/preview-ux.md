@@ -1,6 +1,6 @@
 # Preview UX
 
-Status: open
+Status: done (branch task/preview-ux)
 Depends on: nothing
 Touches: src/preview/**, src/editor/styles.css
 
