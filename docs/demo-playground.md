@@ -116,9 +116,9 @@ Each item names the mode and example to use, the steps to take and what you shou
 | ✓ | Feature | Steps (mode / example) | Expected | Automated |
 |---|---|---|---|---|
 | ☐ | Loading a branch | GitLab (fake). | The file bar lists `main.typ`, `template.typ`, `helpers.typ`, the chapters and the SVGs. Images come from the server. | gitlab.spec |
-| ☐ | Show changes vs. last commit | Edit `chapters/introduction.typ`. | Your edit is marked as a change in both windows. | gitlab.spec |
+| ☐ | Show changes vs. last commit | In `main.typ` (Source tab), add a paragraph `Again.` after `#pagebreak()`. "Show changes" covers only the main file for now. | Both windows mark the paragraph as inserted. | gitlab.spec |
 | ☐ | Save version | Click **Save version**, enter a message and click **Apply**. | Both windows say "Saved version <sha> (Ann)", and "Show changes" starts over. Saving again says "No changes to save". | gitlab.spec |
-| ☐ | Upstream merge | Edit `main.typ`. Choose "add a paragraph" and click **Simulate upstream commit**. | The status shows the fake commit. Both windows say "Merged new changes from GitLab", and the paragraph appears in the Introduction. Your edit is kept. | gitlab.spec, playground.test.ts |
+| ☐ | Upstream merge | Edit `main.typ` (as above). Choose "add a paragraph" and click **Simulate upstream commit**. | The status shows the fake commit. Both windows say "Merged new changes from GitLab", and the paragraph appears in the Introduction. Your edit is kept. | gitlab.spec, playground.test.ts |
 | ☐ | Upstream conflict | Edit the "Introduction" heading. Choose "revise a heading" and click **Simulate upstream commit**. | "Changes on GitLab conflict with edits in /chapters/introduction.typ; not saved". The room keeps your text, with no conflict markers. Make the heading match and save again to resolve it. | gitlab-rooms.test.ts |
 | ☐ | Uploads in a GitLab room | Upload an image and click **Save version**. | The image is part of the commit and shows in the second window. | gitlab-rooms.test.ts |
 | ☐ | Fresh branch | Open `?room=gitlab%3Ademo%2Freport%40try-1`. | The branch starts at `main`, and its saves do not touch `main`. | gitlab.spec |

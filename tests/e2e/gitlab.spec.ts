@@ -8,19 +8,18 @@ import { expect, serve, test } from './fixtures';
 test.skip(!process.env.TYPST_GITLAB_E2E, 'needs the collaboration server with a fake GitLab: mise run test:e2e-gitlab');
 
 const SERVER = 'http://127.0.0.1:1234';
-const INTRO_TAB = /introduction\.typ/;
 
-/** Opens the room as `user`, showing chapters/introduction.typ. */
+/** Opens the room as `user` (main.typ shown). */
 async function join(browser: Browser, baseURL: string, room: string, user: string): Promise<Page> {
   const page = await (await browser.newContext()).newPage();
   await serve(page, baseURL);
   await page.goto(`/?room=${encodeURIComponent(room)}&user=${user}`);
-  await page.getByTestId('typst-files').getByRole('tab', { name: INTRO_TAB }).click();
-  await expect(goals(page)).toHaveText('Goals');
+  await expect(page.getByTestId('typst-files').getByRole('tab', { name: /introduction\.typ/ })).toBeVisible();
   return page;
 }
 
-const goals = (page: Page) => page.getByTestId('typst-visual').locator('h2', { hasText: 'Goals' });
+/** Text in the Visual view of the file shown (each opened file keeps a hidden Visual view of its own). */
+const visualText = (page: Page, text: string) => page.getByTestId('typst-visual').getByText(text);
 
 async function users(browser: Browser, baseURL: string, project: string) {
   const room = `gitlab:demo/report@e2e-${project}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
@@ -43,16 +42,20 @@ test('the branch is loaded with its files, images from the repository', async ({
 
 test('Save version commits; everyone’s "Show changes" starts over from the new version', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
-  await goals(ann).click();
+  // "Show changes" covers the main file; its Visual view is all raw boxes, so Ann types in Source
+  await ann.getByRole('tab', { name: 'Source' }).click();
+  await ann.getByTestId('typst-source').locator('.cm-line', { hasText: '#pagebreak()' }).click();
   await ann.keyboard.press('End');
-  await ann.keyboard.type(' again');
-  await expect(bob.getByTestId('typst-visual').locator('.typst-diff-insert')).toHaveText(' again');
+  await ann.keyboard.press('Enter');
+  await ann.keyboard.press('Enter');
+  await ann.keyboard.type('Again.');
+  await expect(bob.getByTestId('typst-visual').locator('.typst-diff-insert')).toContainText('Again');
 
-  await saveVersion(ann, 'Greet again');
+  await saveVersion(ann, 'Add a line');
   await expect(ann.locator('.typst-editor__version-status')).toContainText('Saved version');
   await expect(bob.locator('.typst-editor__version-status')).toContainText('Saved version');
   await expect(bob.getByTestId('typst-visual').locator('.typst-diff-insert')).toHaveCount(0);
-  await expect(goals(bob)).toHaveText('Goals again');
+  await expect(visualText(bob, 'Again.')).toBeVisible();
 });
 
 test('a simulated upstream commit (playground endpoint) is merged into the room', async ({ browser, baseURL, request }, info) => {
@@ -61,7 +64,8 @@ test('a simulated upstream commit (playground endpoint) is merged into the room'
   expect(response.ok()).toBe(true);
   for (const page of [ann, bob]) {
     await expect(page.locator('.typst-editor__version-status')).toHaveText('Merged new changes from GitLab');
-    await expect(page.getByTestId('typst-visual')).toContainText('a colleague added this paragraph on GitLab');
+    await page.getByTestId('typst-files').getByRole('tab', { name: /introduction\.typ/ }).click();
+    await expect(visualText(page, 'a colleague added this paragraph on GitLab')).toBeVisible();
   }
 });
 
