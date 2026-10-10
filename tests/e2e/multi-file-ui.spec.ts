@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect, clickGlyph } from './fixtures';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
@@ -23,7 +23,8 @@ test('clicking text of another file in the preview opens that file; editing it u
   await expect(preview.locator('.typst-preview__page')).toHaveCount(2);
 
   await editor.getByRole('tab', { name: 'Source' }).click();
-  await preview.locator('.typst-preview__page').nth(1).locator('svg use').first().click();
+  // the first glyph of the second page is the "C" of "Chapter text" in chapter1.typ
+  await clickGlyph(preview.locator('.typst-preview__page').nth(1).locator('svg use').first());
   await expect(files.getByRole('tab', { name: /chapter1\.typ/ })).toHaveAttribute('aria-selected', 'true');
   const source = editor.locator('[data-testid=typst-source]:visible');
   await expect(source).toHaveCount(1);

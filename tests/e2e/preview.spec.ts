@@ -1,4 +1,4 @@
-import { test, expect } from './fixtures';
+import { test, expect, clickGlyph } from './fixtures';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -24,7 +24,7 @@ test('clicking text in the preview selects its source', async ({ page }) => {
   const svg = page.getByTestId('typst-preview').locator('.typst-preview__page svg').first();
   await expect(svg).toBeVisible();
   // the first glyph on the page is the "H" of the heading "Hello Typst"
-  await svg.locator('use').first().click();
+  await clickGlyph(svg.locator('use').first());
   await expect(page.getByTestId('typst-source').locator('.typst-source__jump')).toHaveText('Hello Typst');
 });
 
@@ -33,7 +33,7 @@ test('clicking text in the preview selects exactly that text in the visual view'
   const svg = page.getByTestId('typst-preview').locator('.typst-preview__page svg').first();
   await expect(svg).toBeVisible();
   // the first glyph on the page is the "H" of the heading "Hello Typst"
-  await svg.locator('use').first().click();
+  await clickGlyph(svg.locator('use').first());
   await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toBe('Hello Typst');
 });
 
@@ -42,6 +42,7 @@ test('shows compiler errors in the source and the status, and clears them when f
   const status = page.getByTestId('typst-status');
   const preview = page.getByTestId('typst-preview');
   await expect(status).toHaveText(/✓ compiled/);
+  await page.getByRole('tab', { name: 'Source' }).click();
   await source.locator('.cm-content').click();
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.type('\n#unknown');
@@ -58,10 +59,15 @@ test('shows compiler errors in the source and the status, and clears them when f
 
 test('clicking the error count selects the first error in the source', async ({ page }) => {
   const source = page.getByTestId('typst-source');
+  await page.getByRole('tab', { name: 'Source' }).click();
   await source.locator('.cm-content').click();
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.type('\n#unknown');
+  // from the Visual view, which does not mark errors, the count switches to the Source view
+  await page.getByRole('tab', { name: 'Visual' }).click();
+  await expect(source).toBeHidden();
   await page.getByTestId('typst-status').getByRole('button', { name: /1 error/ }).click();
+  await expect(page.getByRole('tab', { name: 'Source' })).toHaveAttribute('aria-selected', 'true');
   await expect(source.locator('.typst-source__jump')).toHaveText('unknown');
 });
 

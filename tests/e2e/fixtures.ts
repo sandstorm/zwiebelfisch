@@ -1,4 +1,4 @@
-import { test as base, expect, type Page } from '@playwright/test';
+import { test as base, expect, type Locator, type Page } from '@playwright/test';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
@@ -26,6 +26,21 @@ export async function serve(page: Page, baseURL: string): Promise<void> {
     const file = join(dir, pathname.endsWith('/') ? `${pathname}index.html` : pathname);
     return existsSync(file) ? route.fulfill({ path: file }) : route.fulfill({ status: 404 });
   });
+}
+
+/**
+ * Clicks the middle of a glyph (a `<use>` in a preview page), as a user clicking
+ * that letter does. The preview maps the click position to the source, so the
+ * click needs to land in the glyph's box, not on its ink. A plain `click()` also
+ * insists that the element hit at that point is the glyph itself, which fails
+ * whenever the middle of the box is blank: always for a "C", and for the
+ * "H" of the demo heading the middle lies 0.06 pt above the bottom edge of its
+ * thin crossbar, which Firefox's hit test misses.
+ */
+export async function clickGlyph(glyph: Locator): Promise<void> {
+  // `force` skips every actionability check, so wait for the visible glyph first
+  await expect(glyph).toBeVisible();
+  await glyph.click({ force: true });
 }
 
 export { expect };

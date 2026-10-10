@@ -208,11 +208,11 @@ and computes the status label ("✓ compiled" / "1 error, 2 warnings") and the j
 (`{path, from, to}`: earliest error in the shown file, else in another project file, else the
 same for warnings). `DiagnosticsStatus` renders it as a status bar below both panes; clicking the
 label, or a listed diagnostic of a project file, opens that file and reveals the range in the
-source view. Hovering or focusing the label lists the shown file's messages (with hints), each
-jumping to its range. Every document's views get the diagnostics of their own path: the Source
-view as CodeMirror lint (underline + hover), the Visual view as the `diagnostics` highlight layer
-(wavy underline, message + hints as tooltip; raw code boxes in range are outlined, since inline
-decorations skip block atoms; an empty range marks one character).
+source view, switching to the Source tab. Hovering or focusing the label lists the shown file's
+messages (with hints), each jumping to its range. Every document's views get the diagnostics of
+their own path: the Source view as CodeMirror lint (underline + hover), the Visual view as the
+`diagnostics` highlight layer (wavy underline, message + hints as tooltip; raw code boxes in range
+are outlined, since inline decorations skip block atoms; an empty range marks one character).
 
 ### `typst-engine` (Rust crate + `src/engine`)
 

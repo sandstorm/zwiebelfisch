@@ -50,6 +50,25 @@ describe('EditingViews', () => {
     expect(visible()[0].querySelector('[data-testid=typst-source]')?.textContent).toContain('= B');
   });
 
+  it('switches to the Source tab to reveal a range in the source view', () => {
+    // regression: clicking the error count in the Visual view revealed the error in the hidden source view
+    const { views, a, visible, tab } = setup();
+    views.show(a);
+    views.reveal(2, 3, true);
+    expect(views.mode).toBe('source');
+    expect(tab('Source').getAttribute('aria-selected')).toBe('true');
+    expect(visible()).toHaveLength(1);
+    expect(visible()[0].querySelector('[data-testid=typst-source]')).not.toBeNull();
+  });
+
+  it('reveals in the current view without switching tabs otherwise', () => {
+    const { views, a, visible } = setup();
+    views.show(a);
+    views.reveal(2, 3);
+    expect(views.mode).toBe('visual');
+    expect(visible()[0].querySelector('[data-testid=typst-source]')).toBeNull();
+  });
+
   it('hides everything, tabs included, when no document is shown', () => {
     const { parent, views, a, visible } = setup();
     views.show(a);
