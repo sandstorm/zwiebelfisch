@@ -1,11 +1,11 @@
-#import "../helpers.typ": note
+#import "../helpers.typ": note, term
 
 = Introduction <intro>
 
 Writers want to see their document while they type. Classic typesetting
 systems rebuild the whole document after every change, which takes seconds for
-long texts. Typst instead remembers what it computed before and redoes only the
-parts an edit touches.
+long texts. Typst instead compiles #term[incrementally]: it remembers what it
+computed before and redoes only the parts an edit touches.
 
 This report measures how much that matters in practice. @method describes the
 setup, @results the numbers, and @fig:compile-times sums them up in one picture.
@@ -18,4 +18,7 @@ setup, @results the numbers, and @fig:compile-times sums them up in one picture.
 
 #note[This document is itself a multi-file project: the template, the
 chapters, a helper module and an SVG image are separate files. Open them in
-the file panel on the left, or Ctrl+click a path such as `"template.typ"`.]
+the file panel on the left, or Ctrl+click a path such as `"template.typ"`.
+
+Notes like this one and terms like #term[incrementally] are custom styles
+declared in `helpers.typ`: pick them in the Visual view's text style menu.]
