@@ -23,7 +23,8 @@ describe('Visual view toolbar', () => {
   it('is a labelled toolbar above the editor', () => {
     const { toolbar } = setup('Hello\n');
     expect(toolbar.getAttribute('aria-label')).toBe('Formatting');
-    expect(toolbar.nextElementSibling?.classList.contains('typst-visual')).toBe(true);
+    // the text (with the notes gutter beside it) follows
+    expect(toolbar.nextElementSibling?.firstElementChild?.classList.contains('typst-visual')).toBe(true);
   });
 
   it('bold and italic wrap the selection', () => {
