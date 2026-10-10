@@ -1,16 +1,17 @@
 // SpreadsheetView: a spreadsheet file (`.ic`) shown and edited in IronCalc's workbook UI; every edit saves the file
-// and the values Typst reads. Entry of features/spreadsheets/. See ARCHITECTURE.md, "Spreadsheets".
+// and the Typst file documents import. Entry of features/spreadsheets/. See ARCHITECTURE.md, "Spreadsheets".
 import { displayName, type FileContent } from '../../core/project/project';
 import type { MountedWorkbook, WorkbookEdit } from './workbook';
 
-export { sheetValues, valuesPath } from './values';
+export { typstPath } from './typst-file';
 export type { WorkbookEdit } from './workbook';
 
 /**
  * The editing area of a spreadsheet: a title and IronCalc's workbook UI,
  * loaded (with React and the engine) the first time a spreadsheet is shown.
- * Edits go to `onEdit` with the path, the new bytes and the sheets'
- * displayed values (see `sheetValues`); the host stores both.
+ * Edits go to `onEdit` with the path, the new bytes and the spreadsheet's
+ * Typst file (tables and values, see `spreadsheetTypst`); the host stores
+ * both (the Typst file at `typstPath`).
  */
 export class SpreadsheetView {
   private readonly root: HTMLElement;
@@ -48,8 +49,8 @@ export class SpreadsheetView {
       const { mountWorkbook } = await import('./workbook');
       if (generation !== this.generation) return;
       this.body.textContent = '';
-      const name = displayName(path).replace(/^.*\//, '').replace(/\.ic$/, '');
-      const mounted = await mountWorkbook(this.body, bytes, name, (edit) => this.onEdit(path, edit));
+      const fileName = path.slice(path.lastIndexOf('/') + 1);
+      const mounted = await mountWorkbook(this.body, bytes, fileName, (edit) => this.onEdit(path, edit));
       if (generation === this.generation) this.mounted = mounted;
       else mounted.destroy();
     } catch (error) {

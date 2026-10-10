@@ -21,7 +21,7 @@ import { PdfExport } from './typst-editor/pdf-export';
 import { ProjectRenderings } from './typst-editor/project-renderings';
 import { LabelIndex } from './features/labels/labels';
 import { newStyle, StyleIndex } from './features/styles/styles';
-import { SpreadsheetView, valuesPath, type WorkbookEdit } from './features/spreadsheets/spreadsheets';
+import { SpreadsheetView, typstPath, type WorkbookEdit } from './features/spreadsheets/spreadsheets';
 import styles from './typst-editor.css?inline';
 import { VersionControls, type Versions } from './features/versions/versions';
 
@@ -435,11 +435,10 @@ class Widget {
     this.jump({ path, from: added.from, to: added.to }, true);
   }
 
-  /** Stores an edit of spreadsheet `path`: its bytes, and the displayed values next to it for Typst (`valuesPath`). */
-  private saveSpreadsheet(path: string, { bytes, values }: WorkbookEdit): void {
+  /** Stores an edit of spreadsheet `path`: its bytes, and its Typst file next to it (`typstPath`). */
+  private saveSpreadsheet(path: string, { bytes, typst: content }: WorkbookEdit): void {
     void this.request({ kind: 'update', path, content: bytes });
-    const target = valuesPath(path);
-    const content = `${JSON.stringify(values, null, 2)}\n`;
+    const target = typstPath(path);
     if (this.project.content(target) === content) return;
     void this.request(this.project.has(target) ? { kind: 'update', path: target, content } : { kind: 'create', path: target, content });
   }

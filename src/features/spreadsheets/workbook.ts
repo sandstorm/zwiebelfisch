@@ -4,17 +4,17 @@ import { IronCalc, init, Model } from '@ironcalc/workbook';
 import styles from '@ironcalc/workbook/style.css?inline';
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
-import { sheetValues } from './values';
+import { spreadsheetTypst } from './typst-file';
 
 /** A mounted workbook; edits are reported through the `onEdit` given to `mountWorkbook`. */
 export interface MountedWorkbook {
   destroy(): void;
 }
 
-/** What an edit produced: the file's new bytes and the sheets' displayed values. */
+/** What an edit produced: the file's new bytes and its Typst file (see `spreadsheetTypst`). */
 export interface WorkbookEdit {
   bytes: Uint8Array;
-  values: Record<string, string[][]>;
+  typst: string;
 }
 
 const STYLE_ID = 'typst-ironcalc-styles';
@@ -28,14 +28,21 @@ let engine: Promise<unknown> | null = null;
  * (IronCalc's own format; empty: a new workbook named `name`). Its styles go
  * into the container's root (the document, or `<typst-editor>`'s shadow
  * root); its menus open inside the container. After every edit (cells,
- * sheets, formats) `onEdit` gets the new bytes and the computed values.
+ * sheets, formats, sizes) `onEdit` gets the new bytes and the Typst file;
+ * `fileName` (e.g. `budget.ic`) is named in that file's header.
  */
-export async function mountWorkbook(container: HTMLElement, bytes: Uint8Array, name: string, onEdit: (edit: WorkbookEdit) => void): Promise<MountedWorkbook> {
+export async function mountWorkbook(
+  container: HTMLElement,
+  bytes: Uint8Array,
+  fileName: string,
+  onEdit: (edit: WorkbookEdit) => void,
+): Promise<MountedWorkbook> {
   engine ??= init();
   await engine;
   injectStyles(container);
-  const model = bytes.length > 0 ? Model.from_bytes(bytes, 'en') : new Model(name, 'en', 'UTC', 'en');
-  if (bytes.length === 0) onEdit({ bytes: model.toBytes(), values: sheetValues(model) });
+  const model = bytes.length > 0 ? Model.from_bytes(bytes, 'en') : new Model(fileName.replace(/\.ic$/, ''), 'en', 'UTC', 'en');
+  const edited = () => onEdit({ bytes: model.toBytes(), typst: spreadsheetTypst(model, fileName) });
+  if (bytes.length === 0) edited();
   const root = createRoot(container);
   root.render(createElement(IronCalc, { model, rootContainer: container }));
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -44,7 +51,7 @@ export async function mountWorkbook(container: HTMLElement, bytes: Uint8Array, n
     clearTimeout(timer);
     timer = setTimeout(() => {
       if (model.flushSendQueue().length === 0) return;
-      onEdit({ bytes: model.toBytes(), values: sheetValues(model) });
+      edited();
     }, SAVE_DELAY);
   };
   const events = ['keyup', 'pointerup', 'paste', 'cut', 'drop', 'change', 'focusout'];
