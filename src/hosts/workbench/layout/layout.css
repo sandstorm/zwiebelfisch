@@ -81,14 +81,18 @@
   max-width: calc(100vw - 48px);
   box-shadow: 4px 0 16px rgba(0, 0, 0, 0.16);
 }
-/* Below everything: the status bar items (e.g. the compile status), left to right. */
+/* Below everything: the status bar items (e.g. the compile status), the left ones from the start, the right ones at
+   the end (StatusBar orders them; hidden while there is none). */
 .typst-editor__status-bar {
   grid-column: 1 / -1;
   grid-row: 2;
   display: flex;
   min-width: 0;
+  border-top: 1px solid var(--te-border);
 }
-.typst-editor__status-bar:empty { display: none; }
+.typst-editor__status-bar[hidden] { display: none; }
+.typst-editor__status-bar-left { flex: 1; display: flex; min-width: 0; }
+.typst-editor__status-bar-right { display: flex; }
 /* A custom editor's panel (registerCustomEditorProvider): fills the editing area, a flex column for the editor. */
 .typst-editor__custom-editor { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 /* The workbench's overlays (notifications, input boxes, quick picks, menus) are placed in the widget. */

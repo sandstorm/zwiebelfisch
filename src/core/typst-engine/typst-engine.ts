@@ -52,6 +52,16 @@ export interface CompileResult {
   missingPackages: string[];
 }
 
+/**
+ * What a PDF compiles: an entry file and source texts that replace (or add to) the project's `.typ` files for this
+ * compile only (the project itself stays as it is). `{ main, sources: {} }` is the project as it is.
+ */
+export interface PdfEntry {
+  readonly main: string;
+  /** Replaced and added `.typ` files by path; the rest of the project stays as it is. */
+  readonly sources: Readonly<Record<string, string>>;
+}
+
 export interface PdfResult {
   /** The PDF file; null when compilation failed (see `diagnostics`). */
   pdf: Uint8Array | null;

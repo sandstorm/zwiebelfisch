@@ -6,8 +6,8 @@
 // this extension's policy.
 import { Disposable } from '../../core/disposable/disposable';
 import type { Project } from '../../core/project/project';
-import type { Diagnostic } from '../../core/typst-engine/typst-engine';
-import type { PdfEntry, PdfExportOption, PreviewContributions } from '../../hosts/preview/preview';
+import type { Diagnostic, PdfEntry } from '../../core/typst-engine/typst-engine';
+import type { PdfExportOption, PreviewContributions } from '../../hosts/preview/preview';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './pdf-export.css?inline';
 import { downloadPdf } from './preview/preview';
@@ -75,7 +75,7 @@ export class PdfExport {
   /** The PDF with the options set as in `values` (by id), the others at their default. Rejects for an unknown id. */
   async blob(values: Record<string, boolean> = {}): Promise<Blob> {
     const entry = this.entry(values);
-    const { pdf, diagnostics } = await this.preview.exportPdf(entry.main, { ...entry.sources });
+    const { pdf, diagnostics } = await this.preview.exportPdf(entry);
     if (!pdf) throw new Error(failure(diagnostics));
     return new Blob([pdf as Uint8Array<ArrayBuffer>], { type: 'application/pdf' });
   }

@@ -8,6 +8,7 @@ export { createTypstEditor, type PdfExportOptions, type TypstEditor, type TypstE
 export { TypstEditorElement, defineTypstEditorElement, type TypstEditorChangeDetail } from './typst-editor-element/typst-editor-element';
 export type { FileChange, FileContent, ProjectFiles } from './core/project/project';
 export type { ProjectPath } from './core/paths/paths';
+export type { PdfEntry } from './core/typst-engine/typst-engine';
 export { Disposable } from './core/disposable/disposable';
 export { EventEmitter, type Event } from './core/event-emitter/event-emitter';
 export type {
@@ -37,6 +38,7 @@ export type {
   SourceControl,
   SourceControlState,
   SourceControlStatus,
+  StatusBarPlacement,
   TextDocument,
   TypstExtension,
   User,
@@ -44,7 +46,7 @@ export type {
   Workspace,
   WorkspaceConfiguration,
 } from './hosts/workbench/workbench';
-export type { PdfEntry, PdfExportOption, PreviewContributions, PreviewToolbarItem, ToolbarPlacement } from './hosts/preview/preview';
+export type { PdfExportOption, PreviewContributions, PreviewToolbarItem, ToolbarPlacement } from './hosts/preview/preview';
 export type { SourceViewContributions } from './hosts/source-view/source-view';
 export type { VisualViewContributions } from './hosts/visual-view/visual-view';
 export { collaboration, type CollaborationOptions } from './extensions/collaboration/collaboration';

@@ -32,7 +32,7 @@ export interface Memory<T> {
  * panel and the open panel (resizable; one at a time), then the editing area
  * and the preview, with a separator between them (drag or arrow keys: the
  * preview's share of the width, 20–80%); the status bar below spans them all
- * (hidden while empty). Panels have ids
+ * (its items: StatusBar). Panels have ids
  * (`files`), so a later docking layout can take over the same contract.
  *
  * A panel is open by default as its owner says (`setDefault`) until someone

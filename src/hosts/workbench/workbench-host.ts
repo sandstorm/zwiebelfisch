@@ -22,6 +22,7 @@ import { Layout, type Memory } from './layout/layout';
 import { Menus } from './menus/menus';
 import { Notifications } from './notifications/notifications';
 import { QuickInput } from './quick-input/quick-input';
+import { StatusBar } from './status-bar/status-bar';
 import { StyleSheets } from './style-sheets/style-sheets';
 import type {
   CustomEditorOptions,
@@ -41,6 +42,7 @@ import type {
   SidePanel,
   SidePanelOptions,
   SourceControl,
+  StatusBarPlacement,
   TextEditor,
   TextDocument,
   TextEditorSelectionChangeEvent,
@@ -82,6 +84,7 @@ export interface WorkbenchOptions {
 export class WorkbenchHost implements Workbench {
   #active: ProjectPath;
   readonly #layout: Layout;
+  readonly #statusBar: StatusBar;
   readonly #views: EditingViews;
   readonly #customEditors: CustomEditors;
   readonly #fileDecorations = new FileDecorations();
@@ -131,6 +134,7 @@ export class WorkbenchHost implements Workbench {
     this.#scheme = new ColorScheme(host);
     this.#applyTheme();
     this.#layout = new Layout(host, `typst-editor:${project.main}`);
+    this.#statusBar = new StatusBar(this.#layout.statusBar);
     this.#commands = new Commands(host);
     this.#drops = new FileDrops(host);
     this.onDidDropFiles = this.#drops.onDidDrop;
@@ -229,9 +233,8 @@ export class WorkbenchHost implements Workbench {
     return this.#styleSheets.add(css);
   }
 
-  registerStatusBarItem(element: HTMLElement): Disposable {
-    this.#layout.statusBar.append(element);
-    return new Disposable(() => element.remove());
+  registerStatusBarItem(element: HTMLElement, placement: StatusBarPlacement): Disposable {
+    return this.#statusBar.add(element, placement);
   }
 
   registerEditorFrame(frame: { top: HTMLElement; bottom: HTMLElement }): Disposable {

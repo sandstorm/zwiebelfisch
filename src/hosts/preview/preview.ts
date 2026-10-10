@@ -7,7 +7,7 @@
 // jumps to the source of a click). So a feature adds to the preview without the preview knowing it.
 import { Disposable } from '../../core/disposable/disposable';
 import { type Event, EventEmitter } from '../../core/event-emitter/event-emitter';
-import type { Diagnostic, Page, PdfResult, Position } from '../../core/typst-engine/typst-engine';
+import type { Diagnostic, Page, PdfEntry, PdfResult, Position } from '../../core/typst-engine/typst-engine';
 import { isInside, mostVisible, overlay, OverlayLayer, PageList, snippet, type Snippet, type Zoom } from './pages/pages';
 import { DEFAULT_FONT_URLS, ENGINE_WASM_URL } from '../../core/typst-engine/engine-assets';
 import type { FileContent } from '../../core/project/project';
@@ -15,7 +15,7 @@ import { FileSender, type Init, type Request, type Response, startEngineWorker }
 import { LatestOnly } from './latest-only';
 import type { PageClick, PageOverlay, PdfExportOption, PreviewContext, PreviewToolbarItem, ToolbarItemView, ToolbarPlacement } from './contribution';
 
-export type { PageClick, PageOverlay, PdfEntry, PdfExportOption, PreviewContext, PreviewToolbarItem, ToolbarItemView, ToolbarPlacement } from './contribution';
+export type { PageClick, PageOverlay, PdfExportOption, PreviewContext, PreviewToolbarItem, ToolbarItemView, ToolbarPlacement } from './contribution';
 export type { Snippet, Zoom } from './pages/pages';
 
 /**
@@ -55,7 +55,7 @@ export interface PreviewContributions {
   /** Someone clicked something in the preview that has a source location (outlined in the preview until the next click or compile). */
   readonly onDidClickPage: Event<PageClick>;
   snippet(path: string, from: number, to: number, text: string): Promise<Snippet | null>;
-  exportPdf(main: string, sources?: Record<string, string>): Promise<PdfResult>;
+  exportPdf(entry: PdfEntry): Promise<PdfResult>;
 }
 
 type RequestBody = Request extends infer R ? (R extends Request ? Omit<R, 'id'> : never) : never;
@@ -173,14 +173,14 @@ export class Preview implements PreviewContributions {
   }
 
   /**
-   * A PDF of `main` (null with the errors when it does not compile), from the
-   * files last passed to `update()`, with `sources` replacing or adding text
+   * A PDF of `entry.main` (null with the errors when it does not compile), from the
+   * files last passed to `update()`, with `entry.sources` replacing or adding text
    * files for this export only. Waits for running compilations; the preview
    * itself does not change.
    */
-  async exportPdf(main: string, sources: Record<string, string> = {}): Promise<PdfResult> {
+  async exportPdf(entry: PdfEntry): Promise<PdfResult> {
     await this.compiles.idle();
-    const response = await this.request({ type: 'pdf', main, sources });
+    const response = await this.request({ type: 'pdf', main: entry.main, sources: { ...entry.sources } });
     if (response.type === 'pdf') return response.result;
     throw new Error(response.type === 'error' ? response.message : 'unexpected answer from the engine');
   }

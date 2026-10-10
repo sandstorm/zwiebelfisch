@@ -56,7 +56,7 @@ test('the other user’s selection is shown with their name', async ({ browser, 
   await expect(selection.first()).toHaveAttribute('data-user', 'Ann');
 });
 
-test('the other user’s caret shows with their name in both views, where they moved it last', async ({ browser, baseURL }, info) => {
+test('the other user’s caret shows with their name in both views, where they moved it last, and their file is marked in the tree', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
   await ann.getByTestId('typst-visual').locator('h1').click();
   await ann.keyboard.press('End');
@@ -75,7 +75,10 @@ test('the other user’s caret shows with their name in both views, where they m
   await expect.poll(textBefore).toBe('Hello Typst');
   await ann.keyboard.press('Home');
   await expect.poll(textBefore).toBe('');
-  await expect(bob.getByTestId('typst-preview').locator('.typst-preview__presence')).toHaveCount(0);
+  // the collaboration extension's file decoration: Ann's initial on her file in Bob's file tree (the panel may be closed)
+  const decoration = bob.getByTestId('typst-files').locator('[data-path="/main.typ"] .typst-files__decoration');
+  await expect(decoration).toHaveText('A');
+  await expect(decoration).toHaveAttribute('title', 'Ann');
   await bob.getByRole('tab', { name: 'Source' }).click();
   const line = bob.getByTestId('typst-source').locator('.cm-line', { hasText: 'Hello Typst' });
   const sourceCaret = line.locator('.typst-remote-caret[data-user="Ann"]');

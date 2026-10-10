@@ -158,8 +158,11 @@ export interface Workbench {
   registerStyleSheet(css: string): Disposable;
   /** Adds a side panel with its rail button (one panel is open at a time); disposing removes both. */
   registerSidePanel(id: string, options: SidePanelOptions): SidePanel;
-  /** Puts `element` into the status bar below everything, after the items registered before. */
-  registerStatusBarItem(element: HTMLElement): Disposable;
+  /**
+   * Puts `element` into the status bar below everything, until disposed: on the side `placement.alignment` says, the
+   * higher `placement.priority` further left within it (VS Code's StatusBarItem).
+   */
+  registerStatusBarItem(element: HTMLElement, placement: StatusBarPlacement): Disposable;
   /**
    * Shows `top` right before and `bottom` right after the shown Typst file's content (in the Visual tab below its
    * toolbar), scrolling with it, across tab and file switches; detached while no Typst file is shown. One frame at a time.
@@ -360,6 +363,15 @@ export interface OpenOptions {
   mode?: EditorMode;
   /** The custom editor to open a file that is not Typst source in (its view type); default: the one its name picks. */
   viewType?: string;
+}
+
+/**
+ * Where a status bar item goes, as VS Code's `StatusBarItem`: `left` items from the bar's start, `right` items at its
+ * end; within a side the higher `priority` further left (default 0), equal priorities in registration order.
+ */
+export interface StatusBarPlacement {
+  readonly alignment: 'left' | 'right';
+  readonly priority?: number;
 }
 
 export interface SidePanelOptions {

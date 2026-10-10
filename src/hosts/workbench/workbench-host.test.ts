@@ -89,7 +89,7 @@ describe('WorkbenchHost', () => {
       panel.setDefault(true);
       const status = doc.createElement('span');
       status.textContent = 'status';
-      subscriptions.push(panel, workbench.registerStatusBarItem(status));
+      subscriptions.push(panel, workbench.registerStatusBarItem(status, { alignment: 'left' }));
     });
     expect(host.querySelector('[data-panel=outline]')!.textContent).toBe('outline');
     expect(host.querySelector('.typst-editor__status-bar')!.textContent).toBe('status');

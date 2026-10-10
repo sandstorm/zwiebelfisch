@@ -34,6 +34,7 @@ src/                        the widget (TypeScript); the most important API on t
                             reference-counted), document-links/ (DocumentLinks: the providers' links merged by
                             priority; link-extension.ts: links in a CodeMirror editor, the Source views' and raw
                             boxes'), file-decorations/ (FileDecorations), source-controls/ (SourceControls),
+                            status-bar/ (StatusBar: the status bar items, left / right by priority),
                             menus/ (Menus: menu entries by menu id), notifications/ (Notifications: the messages),
                             quick-input/ (QuickInput: input box and quick pick)
     source-view/            SourceViewHost (registerExtension, createView: what
@@ -264,7 +265,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
   `styles`; then `previewSync`, `previewControls` and `pdfExport`. Extensions never depend on each other, so the
   order carries no meaning: where the Visual view's contributions compete, or document links overlap, `priority`
   decides (see "VisualView"; tested by projecting every fixture with the built-ins in reverse order); toolbar items
-  and menu entries (also the tab bar's) have `group` + `order`; only status bar items still go in activation order. `typst-editor.ts` names
+  and menu entries (also the tab bar's) have `group` + `order`, status bar items `alignment` + `priority`. `typst-editor.ts` names
   no feature: no per-feature option, only `exportPdf` (a documented shortcut for the command `pdfExport.export`).
 - **Public extension API** (decided 2026-10-10): `extensions(builtins) → list` makes the list from the built-ins
   (default: them): add the host's own, leave one out or replace it by `id`. A function rather than an array, so
@@ -388,7 +389,9 @@ interface Workbench {
   ownerDocument; activeFile; user?: { name, color? }; open(path, { selection?, mode?, viewType? }); onDidShowFile
   applyChange(change) → reason | null
   registerSidePanel(id, { label, icon }) → SidePanel { body, setDefault, setAvailable, dismiss, dispose }
-  registerStatusBarItem(element)  registerEditorFrame({ top, bottom })
+  registerStatusBarItem(element, { alignment: 'left' | 'right', priority? })   // VS Code's StatusBarItem: higher priority
+                                    // further left within its side (default 0), equal: registration order
+  registerEditorFrame({ top, bottom })
   registerStyleSheet(css)           // the extension's CSS where the widget renders (head or shadow root)
   registerCustomEditorProvider(viewType, { resolveCustomEditor(document: { path, content }, panel: { element, onDidDispose }) },
                                { filenamePattern: '*.drawio.png', priority?: 'default' | 'option' | number })
@@ -612,6 +615,8 @@ defaultFonts() → Promise<Uint8Array>[]          // engine-assets.ts: fetches t
 .boxesForRanges(path, [{from, to}]) → [{page, x, y, w, h}]   // where those ranges are drawn: per glyph run, shape, image
 
 withPackages(engine, fetchPackage = fetchPreviewPackage) → { compile(main) → Promise<CompileResult>, exportPdf(main) → Promise<PdfResult> }
+PdfEntry = { main, sources }                       // what a PDF compiles: entry file + .typ texts replacing/adding the project's,
+                                                   // for that export only (the preview's exportPdf, PDF export options, comments' withoutNotes)
 fetchPreviewPackage(spec) → Promise<Uint8Array>     // .tar.gz from packages.typst.org, Cache API
 untarGz(bytes) → Promise<Map<relativePath, Uint8Array>>
 ```
@@ -1087,7 +1092,7 @@ interface PreviewContributions {                             // what ExtensionCo
   registerToolbarItem(item: (preview: PreviewContext) => { elements, update?(), dispose?() },
                       placement: { group, order? }): Disposable   // VS Code's menus: groups by name, `navigation` first
   registerPdfExportOption({ id, label, description?, default: boolean, apply(entry: PdfEntry, value) → PdfEntry },
-                          { priority? }): Disposable                // unique ids; PdfEntry = { main, sources }
+                          { priority? }): Disposable                // unique ids; PdfEntry: core typst-engine
   pdfExportOptions() → PdfExportOption[]                       // by priority (default 100, higher first), then registration
   createOverlay(className) → { set(boxes: Box[]), dispose() }   // boxes in pt on their page
   reveal(path, from, to)                                       // cheap per cursor move: scroll to the range's start, only if off-screen (no marker)
@@ -1095,7 +1100,7 @@ interface PreviewContributions {                             // what ExtensionCo
   onDidChangeDiagnostics: Event<Diagnostic[]>                  // of the newest update(), never stale
   onDidRender: Event<void>                                     // after every successful compile
   snippet(path, from, to, text) → Promise<{svg, width, height, textHeight, padding} | null>   // the range as drawn, cut from its page
-  exportPdf(main, sources = {}) → Promise<PdfResult>   // the files of the last update(), sources replacing/adding texts
+  exportPdf(entry: PdfEntry) → Promise<PdfResult>      // the files of the last update(), entry.sources replacing/adding texts
 }
 interface PreviewContext { ownerDocument, zoom(), setZoom(zoom), scale(), visiblePage() → {index, count},
                            pdfExportOptions() }
@@ -1407,7 +1412,8 @@ new Layout(host, storageKey)   .editor  .preview  .statusBar   // the editing co
 ```
 
 - One grid on the host: side (rail + open panel) | editing column | preview; the status bar
-  (`Workbench.registerStatusBarItem`; hidden while empty) spans all. The preview is a share of the widget (default half; the separator on its left edge
+  (`Workbench.registerStatusBarItem`; `status-bar/StatusBar` places the items: a left and a right side, each by
+  priority, higher further left; hidden while empty) spans all. The preview is a share of the widget (default half; the separator on its left edge
   sets it, drag or arrow keys, 20–80%, saved with the layout, applied as `--te-preview-share`), so
   opening or resizing a side panel narrows only the editing column (down to min(20rem, 25%), then
   the preview gives way too). The hand-built version of the `Layout` module planned by the dockview spike
@@ -1548,7 +1554,7 @@ workbench/             DiagnosticsStatus: the status bar item
 those of the shown file and those elsewhere (other files, packages or no location: only listed),
 and computes the status label ("✓ compiled" / "1 error, 2 warnings") and the jump target
 (`{path, from, to}`: earliest error in the shown file, else in another project file, else the
-same for warnings). `DiagnosticsStatus` (the `diagnostics` extension: a status bar item, for the Typst file
+same for warnings). `DiagnosticsStatus` (the `diagnostics` extension: a status bar item, left, priority 100, for the Typst file
 shown last, from the preview's `onDidChangeDiagnostics`) renders it below both panes; clicking the
 label, or a listed diagnostic of a project file, opens that file and reveals the range in the
 source view, switching to the Source tab. Hovering or focusing the label lists the shown file's
@@ -1580,7 +1586,7 @@ isNoteCallAt(source, from, to) → boolean            // one note call in markup
 safeNote(markup) → string | null                    // markup that cannot end or swallow its call
 addMarginNote(text, {from, to}) → {changes: TextChange[], note} | null   // note: offset of the new (empty) body
 NOTE_STYLE                                          // the set-margin-note-defaults(..) call added with a new import
-withoutNotes(files, main) → {main, sources}         // the PDF without comments: entry + replaced/added .typ texts
+withoutNotes(files, main) → PdfEntry                // the PDF without comments: entry + replaced/added .typ texts
 // note-thread.ts: the only module that knows the thread format (all on the note's markup)
 readThread(note) → {author, date, text}[]          // author/date null: an anonymous message (markup)
 addReply(note, {author, date, text}) → note        // only an insertion after the last item
