@@ -15,6 +15,12 @@
  * Visual view changes only the source of what it touched. Constructs the
  * Visual view does not model become `rawBlock` / `rawInline` atoms holding
  * their verbatim source.
+ *
+ * Besides markup (headings, lists, paragraphs, strong/emph), it models links
+ * (`#link("url")[text]`, bare URLs) as a `link` mark, standalone
+ * `#image("path", ..)` calls as `image` blocks (source kept like a raw block)
+ * and `#table(columns: n, [..], ..)` with content cells as tables whose cells
+ * hold blocks.
  */
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
@@ -35,10 +41,9 @@ export function project(source: string, schema: Schema): Node {
   if (segments.length === 0) {
     return schema.nodes.doc.create({ lead: source, trail: '' }, [textblock(ctx, { type: 'paragraph', attrs: { src: '' } }, 0, [])]);
   }
-  const blocks = groupLists(ctx, segments.map((s, i) => toBlock(ctx, s, sepAfter(segments, i, source))));
   return schema.nodes.doc.create(
     { lead: source.slice(0, segments[0].from), trail: source.slice(segments.at(-1)!.to) },
-    blocks,
+    blocks(ctx, segments),
   );
 }
 
@@ -106,7 +111,7 @@ interface Segment {
 }
 
 /** Syntax that makes a run of inline content a paragraph rather than a raw block. */
-const PROSE = new Set(['Text', 'Strong', 'Emph', 'Escape', 'Shorthand', 'SmartQuote', 'Linebreak']);
+const PROSE = new Set(['Text', 'Strong', 'Emph', 'Escape', 'Shorthand', 'SmartQuote', 'Linebreak', 'Link']);
 const SHORTHANDS: Record<string, string> = {
   '~': '\u00a0',
   '--': '\u2013',
@@ -170,9 +175,102 @@ function toBlock(ctx: Context, segment: Segment, sep: string | null): Node {
     case 'ordered':
       return listItem(ctx, node, sep);
     case 'run':
-      return segment.nodes.some((n) => PROSE.has(n.name))
-        ? textblock(ctx, { type: 'paragraph', attrs: { src, sep } }, segment.from, inline(ctx, segment.nodes))
-        : ctx.schema.nodes.rawBlock.create({ src, sep });
+      if (segment.nodes.some((n) => PROSE.has(n.name) || isLinkCall(ctx, n))) {
+        return textblock(ctx, { type: 'paragraph', attrs: { src, sep } }, segment.from, inline(ctx, segment.nodes));
+      }
+      return blockCall(ctx, segment, sep) ?? ctx.schema.nodes.rawBlock.create({ src, sep });
+  }
+}
+
+/** A `link(..)` call, which is prose like a bare URL. */
+function isLinkCall(ctx: Context, node: SyntaxNode): boolean {
+  return node.name === 'FuncCall' && callee(ctx, node).name === 'link';
+}
+
+/** Projects the blocks of a markup range: `doc` content, a table cell's. */
+function blocks(ctx: Context, segments: Segment[]): Node[] {
+  return groupLists(ctx, segments.map((s, i) => toBlock(ctx, s, sepAfter(segments, i, ctx.source))));
+}
+
+/** The name of the function `call` (a `FuncCall`) calls, and its argument list. */
+function callee(ctx: Context, call: SyntaxNode): { name: string; args: SyntaxNode[] } {
+  const ident = call.getChild('Ident');
+  const args = call.getChild('Args');
+  return { name: ident ? ctx.source.slice(ident.from, ident.to) : '', args: args ? children(args) : [] };
+}
+
+/** A run that is exactly one `#func(..)` call of a function modelled as a block (image, table). */
+function blockCall(ctx: Context, segment: Segment, sep: string | null): Node | null {
+  const [hash, call] = segment.nodes;
+  if (segment.nodes.length !== 2 || hash.name !== 'Hash' || call.name !== 'FuncCall' || call.from !== hash.to) return null;
+  const { name, args } = callee(ctx, call);
+  const src = ctx.source.slice(segment.from, segment.to);
+  if (name === 'image') return parenthesized(args) && imagePath(src) !== null ? ctx.schema.nodes.image.create({ src, sep }) : null;
+  if (name === 'table') return table(ctx, segment, args, sep);
+  return null;
+}
+
+/** How a table's source lies around its cells, for printing it back. */
+interface TableLayout {
+  columns: number;
+  /** The source before, between and after the cells' content; one more than cells. */
+  gaps: string[];
+  /** Named arguments other than `columns`, as written. */
+  named: string[];
+}
+
+/** `#table(columns: n, [..], ..)` whose positional arguments are all content blocks filling n columns. */
+function table(ctx: Context, call: Segment, args: SyntaxNode[], sep: string | null): Node | null {
+  const parsed = tableArgs(ctx, args);
+  if (!parsed || parsed.cells.length === 0 || parsed.cells.length % parsed.columns !== 0) return null;
+  const { schema, source } = ctx;
+  const gaps: string[] = [];
+  let pos = call.from;
+  const cells = parsed.cells.map((block) => {
+    const markup = block.getChild('Markup')!;
+    const segments = segment(children(markup));
+    const from = segments[0]?.from ?? markup.from;
+    gaps.push(source.slice(pos, from));
+    pos = segments.at(-1)?.to ?? markup.from;
+    const content = segments.length > 0 ? blocks(ctx, segments) : [textblock(ctx, { type: 'paragraph', attrs: { src: '' } }, from, [])];
+    return schema.nodes.tableCell.create(null, content);
+  });
+  gaps.push(source.slice(pos, call.to));
+  const rows: Node[] = [];
+  for (let i = 0; i < cells.length; i += parsed.columns) rows.push(schema.nodes.tableRow.create(null, cells.slice(i, i + parsed.columns)));
+  const layout: TableLayout = { columns: parsed.columns, gaps, named: parsed.named };
+  return schema.nodes.table.create({ sep, layout }, rows);
+}
+
+/** The arguments of a table call: an integer `columns`, other named arguments and closed content blocks only. */
+function tableArgs(ctx: Context, args: SyntaxNode[]): { columns: number; named: string[]; cells: SyntaxNode[] } | null {
+  if (!parenthesized(args)) return null;
+  const result = { columns: 0, named: [] as string[], cells: [] as SyntaxNode[] };
+  for (const arg of args.slice(1, -1)) {
+    if (isClosedContent(arg)) result.cells.push(arg);
+    else if (arg.name === 'Named') namedArg(ctx, arg, result);
+    else if (arg.name !== 'Space' && arg.name !== 'Comma') return null;
+  }
+  return result.columns > 0 ? result : null;
+}
+
+/** Whether an argument list is `(..)` alone: closed, and no trailing content block. */
+function parenthesized(args: SyntaxNode[]): boolean {
+  return args[0]?.name === 'LeftParen' && args.at(-1)?.name === 'RightParen';
+}
+
+function isClosedContent(node: SyntaxNode): boolean {
+  return node.name === 'ContentBlock' && node.lastChild?.name === 'RightBracket' && node.getChild('Markup') !== null;
+}
+
+function namedArg(ctx: Context, arg: SyntaxNode, into: { columns: number; named: string[] }): void {
+  const name = arg.getChild('Ident');
+  if (!name || ctx.source.slice(name.from, name.to) !== 'columns') {
+    into.named.push(ctx.source.slice(arg.from, arg.to));
+  } else if (arg.lastChild?.name === 'Int') {
+    into.columns = Number(ctx.source.slice(arg.lastChild.from, arg.lastChild.to));
+  } else {
+    into.columns = NaN;
   }
 }
 
@@ -230,15 +328,23 @@ function inline(ctx: Context, nodes: SyntaxNode[], marks: readonly Mark[] = []):
   const result: Placed[] = [];
   let pos = nodes[0]?.from ?? 0;
   for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    if (node.from > pos) result.push({ node: raw(ctx, ctx.source.slice(pos, node.from), marks), from: pos, to: node.from });
-    // `#` and the expression after it form one piece of code
-    const end = node.name === 'Hash' && nodes[i + 1]?.from === node.to ? nodes[++i].to : node.to;
-    const projected = inlineNode({ ctx, node, src: ctx.source.slice(node.from, end), marks });
-    result.push(...(Array.isArray(projected) ? projected : [{ node: projected, from: node.from, to: end }]));
-    pos = end;
+    if (nodes[i].from > pos) result.push({ node: raw(ctx, ctx.source.slice(pos, nodes[i].from), marks), from: pos, to: nodes[i].from });
+    const piece = projectAt(ctx, nodes, i, marks);
+    result.push(...piece.placed);
+    pos = piece.to;
+    i = piece.last;
   }
   return result;
+}
+
+/** Projects `nodes[index]`, or a `#` together with the expression after it as one piece of code. */
+function projectAt(ctx: Context, nodes: SyntaxNode[], index: number, marks: readonly Mark[]): { placed: Placed[]; to: number; last: number } {
+  const node = nodes[index];
+  const code = node.name === 'Hash' && nodes[index + 1]?.from === node.to ? nodes[index + 1] : null;
+  const to = code ? code.to : node.to;
+  const context = { ctx, node: code ?? node, src: ctx.source.slice(node.from, to), marks };
+  const projected = code ? codeNode(context) : inlineNode(context);
+  return { placed: Array.isArray(projected) ? projected : [{ node: projected, from: node.from, to }], to, last: code ? index + 1 : index };
 }
 
 interface InlineContext {
@@ -258,10 +364,49 @@ const INLINE: Record<string, (c: InlineContext) => Node | Placed[]> = {
   Shorthand: (c) => (c.src in SHORTHANDS ? sourceText(c, SHORTHANDS[c.src]) : raw(c.ctx, c.src, c.marks)),
   Strong: (c) => delimited(c, 'bold') ?? raw(c.ctx, c.src, c.marks),
   Emph: (c) => delimited(c, 'italic') ?? raw(c.ctx, c.src, c.marks),
+  Link: (c) => c.ctx.schema.text(c.src, c.ctx.schema.marks.link.create({ href: c.src }).addToSet(c.marks)),
 };
 
 function inlineNode(context: InlineContext): Node | Placed[] {
   return (INLINE[context.node.name] ?? ((c: InlineContext) => raw(c.ctx, c.src, c.marks)))(context);
+}
+
+/** Projects the expression after a `#`: `#link("url")[text]` becomes linked text, anything else a raw inline. */
+function codeNode(context: InlineContext): Node | Placed[] {
+  return (context.node.name === 'FuncCall' && linkCall(context)) || raw(context.ctx, context.src, context.marks);
+}
+
+/** `#link("url")[text]` with a plain string and non-empty, single-paragraph text; null otherwise. */
+function linkCall({ ctx, node, marks }: InlineContext): Placed[] | null {
+  const { name, args } = callee(ctx, node);
+  if (name !== 'link' || args.map((a) => a.name).join() !== 'LeftParen,Str,RightParen,ContentBlock') return null;
+  const href = decodeString(ctx.source.slice(args[1].from, args[1].to));
+  const markup = args[3].getChild('Markup');
+  const content = markup ? children(markup) : [];
+  if (href === null || !isClosedContent(args[3]) || content.length === 0) return null;
+  if (content.some((n) => n.name === 'Parbreak')) return null;
+  return inline(ctx, content, ctx.schema.marks.link.create({ href }).addToSet(marks));
+}
+
+/** A Typst string literal's value, if it uses no escapes other than `\"` and `\\`. */
+function decodeString(literal: string): string | null {
+  return /^"(?:[^"\\\n]|\\["\\])*"$/.test(literal) ? literal.slice(1, -1).replace(/\\(["\\])/g, '$1') : null;
+}
+
+/** A Typst string literal with value `text`. */
+function quote(text: string): string {
+  return `"${text.replace(/["\\]/g, '\\$&')}"`;
+}
+
+/** The path of the image an `#image("path", ..)` call shows; null if it is not a call with a literal path. */
+export function imagePath(src: string): string | null {
+  const literal = /^#image\(\s*("(?:[^"\\\n]|\\.)*")/.exec(src);
+  return literal ? decodeString(literal[1]) : null;
+}
+
+/** The source of an image block showing the image at `path`. */
+export function imageSource(path: string): string {
+  return `#image(${quote(path)})`;
 }
 
 /** `*…*` / `_…_` with both delimiters present; null for unclosed (erroneous) ones. */
@@ -384,10 +529,20 @@ class Printer {
     this.end = pmTo;
   }
 
-  /** Closes a textblock whose content ends at `pos`: its trailing syntax maps there. */
-  endBlock(pos: number): void {
+  /**
+   * Closes a textblock whose content ends at `pos`: its trailing syntax maps
+   * there. An `empty` block shows no source, so a zero-width span marks where
+   * its content would go.
+   */
+  endBlock(pos: number, empty: boolean): void {
     this.settle(pos);
     this.end = pos;
+    if (empty) this.spans.push({ from: this.text.length, to: this.text.length, pmFrom: pos, pmTo: pos, kind: 'text' });
+  }
+
+  /** Source closing the block printed last (e.g. a table cell's `]`); it maps to that block's end. */
+  closing(src: string): void {
+    this.write(src, 'syntax', this.end, this.end);
   }
 
   /** Prints with every line of the output indented by two more spaces. */
@@ -465,7 +620,10 @@ function printBlock(out: Printer, node: Node, parent: Node, pos: number): void {
     case 'listItem':
       return printListItem(out, node, parent, pos);
     case 'rawBlock':
+    case 'image':
       return out.shown(node.attrs.src, 'atom', pos, pos + 1);
+    case 'table':
+      return printTable(out, node, pos);
     default:
       return printTextblock(out, node, pos);
   }
@@ -484,7 +642,7 @@ function printLayout(out: Printer, block: Node, { runs, tail }: InlineLayout, st
     pos += run.size;
   }
   out.hidden(src.slice(from, from + tail));
-  out.endBlock(pos);
+  out.endBlock(pos, pos === start);
 }
 
 /** A pristine list item: its marker, then its only child, which is pristine, too. */
@@ -498,7 +656,7 @@ function printPristineItem(out: Printer, item: Node, pos: number): void {
 
 function printTextblock(out: Printer, block: Node, pos: number): void {
   printInline(out, block, pos + 1);
-  out.endBlock(pos + block.nodeSize - 1);
+  out.endBlock(pos + block.nodeSize - 1, block.content.size === 0);
 }
 
 /** `- body`, with further children (e.g. a nested list) on following lines, indented. */
@@ -513,15 +671,77 @@ function printListItem(out: Printer, item: Node, list: Node, pos: number): void 
   });
 }
 
-/** Typst syntax per formatting mark: delimiter and function name. */
-const FORMATTING: Record<string, { delimiter: string; func: string }> = {
-  bold: { delimiter: '*', func: 'strong' },
-  italic: { delimiter: '_', func: 'emph' },
+/** A table cell and the document position it starts at. */
+interface PlacedCell {
+  cell: Node;
+  pos: number;
+}
+
+/**
+ * A table: its source around unchanged cell content while it still has the
+ * projected shape, so editing a cell changes just that cell; otherwise
+ * `#table(columns: n, ..named, [..], ..)`, one row per line.
+ */
+function printTable(out: Printer, table: Node, pos: number): void {
+  const rows: PlacedCell[][] = [];
+  table.forEach((row, rowOffset) => {
+    const cells: PlacedCell[] = [];
+    row.forEach((cell, cellOffset) => cells.push({ cell, pos: pos + 1 + rowOffset + 1 + cellOffset }));
+    rows.push(cells);
+  });
+  const layout: TableLayout | null = table.attrs.layout;
+  const printCell = ({ cell, pos: cellPos }: PlacedCell) => printBlocks(out, cell, cellPos + 1, '\n\n');
+  if (layout && hasShape(rows, layout)) {
+    const cells = rows.flat();
+    layout.gaps.forEach((gap, i) => {
+      // the part up to `]` closes the previous cell, the rest opens the next one
+      const close = i === 0 ? 0 : gap.indexOf(']') + 1;
+      out.closing(gap.slice(0, close));
+      out.hidden(gap.slice(close));
+      if (i < cells.length) printCell(cells[i]);
+    });
+    return;
+  }
+  out.hidden(`#table(\n  columns: ${rows[0].length},\n`);
+  for (const arg of layout?.named ?? []) out.hidden(`  ${arg},\n`);
+  for (const row of rows) {
+    row.forEach((cell, i) => {
+      out.hidden(i === 0 ? '  [' : ', [');
+      printCell(cell);
+      out.closing(']');
+    });
+    out.hidden(',\n');
+  }
+  out.hidden(')');
+}
+
+/** Whether the table still has the rows and columns its source `layout` was made for. */
+function hasShape(rows: unknown[][], { columns, gaps }: TableLayout): boolean {
+  return rows.every((row) => row.length === columns) && rows.length * columns === gaps.length - 1;
+}
+
+/** Typst syntax around a formatted span, by mark: e.g. `*…*`, or `#strong[…]` where delimiters would not work. */
+const FORMATTING: Record<string, (mark: Mark, around: Around) => { open: string; close: string }> = {
+  bold: (_mark, around) => delimitedSyntax('*', 'strong', around),
+  italic: (_mark, around) => delimitedSyntax('_', 'emph', around),
+  link: (mark) => ({ open: `#link(${quote(mark.attrs.href)})[`, close: ']' }),
 };
-const FORMATTING_ORDER = Object.keys(FORMATTING);
+
+/** What a formatted span starts and ends with, and the printed characters around it. */
+interface Around {
+  before: string | undefined;
+  after: string | undefined;
+  first: string;
+  last: string;
+}
+
+function delimitedSyntax(delimiter: string, func: string, around: Around): { open: string; close: string } {
+  return needsFunctionSyntax(around) ? { open: `#${func}[`, close: ']' } : { open: delimiter, close: delimiter };
+}
 
 interface Piece {
-  marks: string[];
+  /** Formatting marks, in schema order. */
+  marks: readonly Mark[];
   text: string;
   /** The printed text is `node`'s text, escaped. */
   escaped: boolean;
@@ -529,30 +749,64 @@ interface Piece {
   pos: number;
 }
 
-/** Prints inline content, choosing `*x*` or `#strong[x]` per span so the result parses back the same. */
+/**
+ * Prints inline content: each formatted span opens with its syntax (longer
+ * spans outside), choosing `*x*` or `#strong[x]` so the result parses back
+ * the same, and a link showing its own URL as a bare URL where Typst reads
+ * it back as one.
+ */
 function printInline(out: Printer, block: Node, start: number): void {
   const pieces = inlinePieces(block, start);
-  const open: { mark: string; close: string }[] = [];
+  const open: { mark: Mark; close: string }[] = [];
   let printedSoFar = '';
   const hidden = (syntax: string) => {
     printedSoFar += syntax;
     out.hidden(syntax);
   };
   pieces.forEach((piece, i) => {
-    let common = 0;
-    while (common < open.length && piece.marks[common] === open[common].mark) common++;
-    while (open.length > common) hidden(open.pop()!.close);
-    for (const mark of piece.marks.slice(common)) {
-      const end = spanEnd(pieces, i, mark);
-      const syntax = FORMATTING[mark];
-      const asFunction = needsFunctionSyntax(printedSoFar.at(-1), pieces[end + 1]?.text[0], piece.text, pieces[end].text);
-      hidden(asFunction ? `#${syntax.func}[` : syntax.delimiter);
-      open.push({ mark, close: asFunction ? ']' : syntax.delimiter });
-    }
-    printedSoFar += piece.text;
-    printPiece(out, piece);
+    const ended = open.findIndex((o) => !o.mark.isInSet(piece.marks));
+    while (ended >= 0 && open.length > ended) hidden(open.pop()!.close);
+    let text = piece.text;
+    const opening = marksToOpen(pieces, i, open);
+    opening.forEach(({ mark, end }, n) => {
+      const around = { before: printedSoFar.at(-1), after: pieces[end + 1]?.text[0], first: piece.text, last: pieces[end].text };
+      if (n === opening.length - 1 && end === i && isBareLink(mark, piece, around)) {
+        open.push({ mark, close: '' });
+        text = piece.node.text!;
+        return;
+      }
+      const syntax = FORMATTING[mark.type.name](mark, around);
+      hidden(syntax.open);
+      open.push({ mark, close: syntax.close });
+    });
+    text = guardCall(printedSoFar, text, piece.escaped);
+    printedSoFar += text;
+    printPiece(out, piece, text);
   });
   while (open.length > 0) hidden(open.pop()!.close);
+}
+
+/** The marks of `pieces[index]` not open yet, with the last piece they span; longer spans first. */
+function marksToOpen(pieces: Piece[], index: number, open: { mark: Mark }[]): { mark: Mark; end: number }[] {
+  return pieces[index].marks
+    .filter((mark) => !open.some((o) => o.mark.eq(mark)))
+    .map((mark) => ({ mark, end: spanEnd(pieces, index, mark) }))
+    .sort((a, b) => b.end - a.end);
+}
+
+/** Bare URL characters, not ending in punctuation that Typst would leave out of the link. */
+const BARE_URL = /^https?:\/\/[\w\-.~:/?#@!$&'*+,;=%]*[\w\-~/#@$&+=%]$/;
+
+/** A link over exactly its own URL, between spaces: printed bare, Typst reads it back as the same link. */
+function isBareLink(mark: Mark, piece: Piece, { before, after }: Around): boolean {
+  const href: string = mark.attrs.href;
+  return mark.type.name === 'link' && piece.escaped && piece.node.text === href && BARE_URL.test(href)
+    && (before === undefined || /\s/.test(before)) && (after === undefined || /\s/.test(after));
+}
+
+/** Text right after `]` would continue a function call if it starts with `(` or `.field`; escapes that. */
+function guardCall(printedSoFar: string, text: string, escaped: boolean): string {
+  return escaped && printedSoFar.endsWith(']') && /^(\(|\.\w)/.test(text) ? `\\${text}` : text;
 }
 
 function inlinePieces(block: Node, start: number): Piece[] {
@@ -561,15 +815,15 @@ function inlinePieces(block: Node, start: number): Piece[] {
   block.forEach((child, offset) => {
     const original = child.isText ? originalSource(child) : (child.attrs.src as string);
     const text = original ?? escapeMarkup(child.text!.replace(/\n/g, ' '), lineStart);
-    const names = new Set(child.marks.map((m) => m.type.name));
-    pieces.push({ marks: FORMATTING_ORDER.filter((m) => names.has(m)), text, escaped: original === null, node: child, pos: start + offset });
+    const marks = child.marks.filter((m) => m.type.name in FORMATTING);
+    pieces.push({ marks, text, escaped: original === null, node: child, pos: start + offset });
     lineStart = /\n\s*$/.test(text);
   });
   return pieces;
 }
 
-/** Escaped text shows one character per position; the inserted backslashes are hidden. */
-function printPiece(out: Printer, { text, escaped, node, pos }: Piece): void {
+/** Prints `text`, which shows `node`: escaped text one character per position, its escaping backslashes hidden. */
+function printPiece(out: Printer, { escaped, node, pos }: Piece, text: string): void {
   if (!escaped) return out.shown(text, 'atom', pos, pos + node.nodeSize);
   let at = pos;
   for (let i = 0; i < text.length; i++) {
@@ -578,15 +832,15 @@ function printPiece(out: Printer, { text, escaped, node, pos }: Piece): void {
   }
 }
 
-function spanEnd(pieces: Piece[], start: number, mark: string): number {
+function spanEnd(pieces: Piece[], start: number, mark: Mark): number {
   let end = start;
-  while (end + 1 < pieces.length && pieces[end + 1].marks.includes(mark)) end++;
+  while (end + 1 < pieces.length && mark.isInSet(pieces[end + 1].marks)) end++;
   return end;
 }
 
 const WORD = /[\p{L}\p{N}_]/u;
 
-function needsFunctionSyntax(before: string | undefined, after: string | undefined, first: string, last: string): boolean {
+function needsFunctionSyntax({ before, after, first, last }: Around): boolean {
   return (before !== undefined && WORD.test(before)) || (after !== undefined && WORD.test(after)) || /^\s/.test(first) || /\s$/.test(last);
 }
 
@@ -642,7 +896,7 @@ export function syncDoc(tr: Transaction, target: Node): Transaction {
   return tr;
 }
 
-const ANCHORS = ['src', 'sep', 'marker', 'lead', 'trail'];
+const ANCHORS = ['src', 'sep', 'marker', 'lead', 'trail', 'layout'];
 
 function withoutAnchors(node: Node): Node {
   if (node.isText) return node;

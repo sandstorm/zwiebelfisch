@@ -8,13 +8,14 @@ import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { EditorView, NodeView } from '@tiptap/pm/view';
 import { minimalChange } from '../document/minimal-change';
 import { typstLanguage } from '../source-view/typst-language';
+import { imagePath } from './projection';
 
 type Side = -1 | 1;
 
 /** The open raw boxes by their DOM, so arrow keys in the outer editor can move into them. */
 const boxes = new WeakMap<globalThis.Node, RawBox>();
 
-const RAW_TYPES = new Set(['rawBlock', 'rawInline']);
+const RAW_TYPES = new Set(['rawBlock', 'rawInline', 'image']);
 
 const sharedTheme = {
   '.cm-scroller': { fontFamily: 'inherit', lineHeight: 'inherit' },
@@ -30,7 +31,7 @@ const inlineTheme = CodeView.theme({
 });
 
 /**
- * A raw box (`rawBlock` / `rawInline`): Typst the Visual view does not model,
+ * A raw box (`rawBlock` / `rawInline` / `image`): Typst the Visual view does not model,
  * edited in place in a nested CodeMirror with Typst highlighting.
  *
  * The box's text is the node's `src` attribute, which the projection prints
@@ -38,10 +39,13 @@ const inlineTheme = CodeView.theme({
  * outer selection stay put), and outside changes to `src` flow back into the
  * box as one minimal change. Undo/redo go to the Visual view's history;
  * arrow keys at the edges, Escape (and Enter in inline boxes) leave the box;
- * Backspace in an empty box deletes it.
+ * Backspace in an empty box deletes it. An `image` box is headed by the path
+ * of its image.
  */
 class RawBox implements NodeView {
   readonly dom: HTMLElement;
+  /** Above the code of an image box: which image it shows. */
+  private readonly label: HTMLElement | null = null;
   private readonly code: CodeView;
   /** Set while mirroring `src` into the box, so that change is not sent back. */
   private mirroring = false;
@@ -50,6 +54,12 @@ class RawBox implements NodeView {
     const inline = node.isInline;
     this.dom = editor.view.dom.ownerDocument.createElement(inline ? 'span' : 'div');
     this.dom.className = inline ? 'typst-visual__raw-inline' : 'typst-visual__raw-block';
+    if (node.type.name === 'image') {
+      this.dom.classList.add('typst-visual__image');
+      this.label = this.dom.appendChild(this.dom.ownerDocument.createElement('div'));
+      this.label.className = 'typst-visual__image-label';
+      this.updateLabel();
+    }
     this.code = new CodeView({
       parent: this.dom,
       doc: node.attrs.src,
@@ -80,6 +90,7 @@ class RawBox implements NodeView {
       this.code.dispatch({ changes: change });
       this.mirroring = false;
     }
+    this.updateLabel();
     return true;
   }
 
@@ -93,6 +104,10 @@ class RawBox implements NodeView {
 
   destroy(): void {
     this.code.destroy();
+  }
+
+  private updateLabel(): void {
+    if (this.label) this.label.textContent = `Image: ${imagePath(this.node.attrs.src) ?? '(no path)'}`;
   }
 
   private forward(trs: readonly CodeTransaction[], view: CodeView): void {

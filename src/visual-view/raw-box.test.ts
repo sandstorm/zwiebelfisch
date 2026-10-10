@@ -46,11 +46,11 @@ describe('raw boxes', () => {
   });
 
   it('editing a raw inline box changes exactly that source', () => {
-    const { doc, box } = setup('See #link("a")[here] now.\n');
+    const { doc, box } = setup('See #highlight[here] now.\n');
     const cm = box('.typst-visual__raw-inline');
-    expect(cm.state.doc.toString()).toBe('#link("a")[here]');
+    expect(cm.state.doc.toString()).toBe('#highlight[here]');
     cm.dispatch({ changes: { from: 11, to: 15, insert: 'there' } });
-    expect(doc.text).toBe('See #link("a")[there] now.\n');
+    expect(doc.text).toBe('See #highlight[there] now.\n');
   });
 
   it('follows changes made to the source elsewhere', () => {

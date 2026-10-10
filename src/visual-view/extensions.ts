@@ -1,6 +1,7 @@
 import { Extension, Mark, Node, getSchema } from '@tiptap/core';
 import Document from '@tiptap/extension-document';
 import { ListItem } from '@tiptap/extension-list';
+import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
 import StarterKit from '@tiptap/starter-kit';
 import { RawBoxNavigation, rawBoxView } from './raw-box';
 
@@ -14,7 +15,9 @@ import { RawBoxNavigation, rawBoxView } from './raw-box';
  * - `sep`: whitespace between this node and its next sibling — `null` on last
  *   children (the container owns trailing whitespace) and on nodes created in
  *   the editor (a default separator is printed);
- * - doc `lead`/`trail`: whitespace before the first / after the last block.
+ * - doc `lead`/`trail`: whitespace before the first / after the last block;
+ * - table `layout`: how the table's source is laid out around its cells
+ *   (owned by the projection).
  */
 const SourceAnchors = Extension.create({
   name: 'typstSourceAnchors',
@@ -28,6 +31,7 @@ const SourceAnchors = Extension.create({
         },
       },
       { types: ['listItem'], attributes: { marker: { default: null, rendered: false } } },
+      { types: ['table'], attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } } },
       { types: ['hardBreak'], attributes: { src: { default: '\\\n', rendered: false, keepOnSplit: false } } },
     ];
   },
@@ -56,6 +60,27 @@ const RawBlock = Node.create({
   },
   renderHTML({ node }) {
     return ['pre', { class: 'typst-visual__raw-block' }, node.attrs.src];
+  },
+  addNodeView() {
+    return rawBoxView;
+  },
+});
+
+/**
+ * A standalone `#image("path", ..)` call. Its source is kept and edited like a
+ * raw block's; the box shows which image it is.
+ */
+const Image = Node.create({
+  name: 'image',
+  group: 'block',
+  atom: true,
+  selectable: true,
+  draggable: true,
+  addAttributes() {
+    return { src: { default: '#image("")', rendered: false }, sep: { default: null, rendered: false } };
+  },
+  renderHTML({ node }) {
+    return ['pre', { class: 'typst-visual__image' }, node.attrs.src];
   },
   addNodeView() {
     return rawBoxView;
@@ -120,9 +145,14 @@ export const extensions = [
     horizontalRule: false,
     strike: false,
     underline: false,
-    link: false,
+    link: { openOnClick: false, autolink: false, HTMLAttributes: { class: 'typst-visual__link', target: null, rel: null } },
     trailingNode: false,
   }),
+  Table.configure({ resizable: false, HTMLAttributes: { class: 'typst-visual__table' } }),
+  TableRow,
+  TableCell,
+  TableHeader,
+  Image,
   TypstDocument,
   TypstListItem,
   SourceAnchors,
