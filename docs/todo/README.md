@@ -43,7 +43,7 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [multi-file-ui](multi-file-ui.md) | done |
 | [visual-view-toolbar-and-raw-editing](visual-view-toolbar-and-raw-editing.md) | done |
 | [visual-view-links-images-tables](visual-view-links-images-tables.md) | done |
-| [visual-view-compiled-boxes](visual-view-compiled-boxes.md) | open |
+| [visual-view-compiled-boxes](visual-view-compiled-boxes.md) | done (branch task/visual-view-compiled-boxes) |
 | [preview-ux](preview-ux.md) | done |
 | [collab-yjs](collab-yjs.md) | in-progress (agent) |
 | [server-gitlab](server-gitlab.md) | open (later) |

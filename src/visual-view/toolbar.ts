@@ -1,5 +1,6 @@
 import type { ChainedCommands, Editor } from '@tiptap/core';
 import { FieldPopover } from './field-popover';
+import { ImageChoices, type ImageAssets } from './image-choices';
 import { imageSource } from './projection';
 
 /** A toolbar button: how it looks, what it does, and when it shows as on. */
@@ -90,7 +91,8 @@ function currentStyle(editor: Editor): string {
 /**
  * The Visual view's formatting toolbar: undo/redo, a paragraph style menu
  * (normal text, headings 1–3), bold/italic, link (Mod+K, asks for the URL in
- * a popover), the two list kinds, insert image (asks for its path) and table
+ * a popover), the two list kinds, insert image (asks for its path, or offers
+ * the project's images and an upload when given `assets`) and table
  * editing. Buttons reflect the selection (pressed, disabled) after every
  * transaction and never take the focus away from the text.
  */
@@ -107,7 +109,11 @@ export class Toolbar {
     this.root.querySelector<HTMLButtonElement>('button[aria-label="Link"]')?.click();
   };
 
-  constructor(parent: HTMLElement, private readonly editor: Editor) {
+  constructor(
+    parent: HTMLElement,
+    private readonly editor: Editor,
+    assets?: ImageAssets,
+  ) {
     const doc = parent.ownerDocument;
     this.root = doc.createElement('div');
     this.root.className = 'typst-toolbar';
@@ -124,12 +130,8 @@ export class Toolbar {
       apply: (href) => applyLink(editor, href),
       remove: () => editor.chain().focus().extendMarkRange('link').unsetLink().run(),
     });
-    this.imagePopover = new FieldPopover(this.root, {
-      label: 'Image',
-      field: 'Image path',
-      placeholder: 'images/figure.png',
-      apply: (path) => editor.chain().focus().insertContent({ type: 'image', attrs: { src: imageSource(path) } }).run(),
-    });
+    const [image, imagePopover] = this.imageAction(assets);
+    this.imagePopover = imagePopover;
     const link: Action = {
       label: 'Link',
       shortcut: 'Mod+K',
@@ -137,12 +139,6 @@ export class Toolbar {
       run: (c) => c.setLink({ href: 'https://typst.app' }),
       click: (button) => this.toggle(this.linkPopover, button, editor.getAttributes('link').href ?? '', editor.isActive('link')),
       active: (e) => e.isActive('link'),
-    };
-    const image: Action = {
-      label: 'Insert image',
-      icon: ICONS.image,
-      run: (c) => c.insertContent({ type: 'image' }),
-      click: (button) => this.toggle(this.imagePopover, button, '', false),
     };
     this.root.append(
       this.group(HISTORY),
@@ -165,6 +161,35 @@ export class Toolbar {
     this.editor.off('transaction', this.refresh);
     this.editor.off('focus', this.refresh);
     this.root.remove();
+  }
+
+  /** "Insert image" and its popover: a path field, plus the project's images and an upload with `assets`. */
+  private imageAction(assets: ImageAssets | undefined): [Action, FieldPopover] {
+    const insert = (path: string) =>
+      this.editor.chain().focus().insertContent({ type: 'image', attrs: { src: imageSource(path) } }).run();
+    const choices = assets
+      ? new ImageChoices(this.root.ownerDocument, assets, (path) => {
+          popover.close();
+          insert(path);
+        })
+      : null;
+    const popover = new FieldPopover(this.root, {
+      label: 'Image',
+      field: 'Image path',
+      placeholder: 'images/figure.png',
+      apply: insert,
+      extra: choices?.element,
+    });
+    const action: Action = {
+      label: 'Insert image',
+      icon: ICONS.image,
+      run: (c) => c.insertContent({ type: 'image' }),
+      click: (button) => {
+        choices?.refresh();
+        this.toggle(popover, button, '', false);
+      },
+    };
+    return [action, popover];
   }
 
   private group(actions: Action[]): HTMLElement {

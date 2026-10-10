@@ -8,7 +8,8 @@ import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { EditorView, NodeView } from '@tiptap/pm/view';
 import { minimalChange } from '../document/minimal-change';
 import { typstLanguage } from '../source-view/typst-language';
-import { imagePath } from './projection';
+import { imagePath, posToSource } from './projection';
+import { RenderedBox, type BoxRenderer } from './rendered-box';
 
 type Side = -1 | 1;
 
@@ -16,6 +17,18 @@ type Side = -1 | 1;
 const boxes = new WeakMap<globalThis.Node, RawBox>();
 
 const RAW_TYPES = new Set(['rawBlock', 'rawInline', 'image']);
+
+/** What the raw boxes of an editor show while not edited (see `setBoxRenderer`). */
+const renderers = new WeakMap<Editor, BoxRenderer>();
+
+/**
+ * Lets the raw boxes of `editor` show compiled snippets and images instead
+ * of their code while they are not being edited. Set it before the boxes are
+ * created.
+ */
+export function setBoxRenderer(editor: Editor, renderer: BoxRenderer): void {
+  renderers.set(editor, renderer);
+}
 
 const sharedTheme = {
   '.cm-scroller': { fontFamily: 'inherit', lineHeight: 'inherit' },
@@ -40,13 +53,15 @@ const inlineTheme = CodeView.theme({
  * box as one minimal change. Undo/redo go to the Visual view's history;
  * arrow keys at the edges, Escape (and Enter in inline boxes) leave the box;
  * Backspace in an empty box deletes it. An `image` box is headed by the path
- * of its image.
+ * of its image. With a renderer (`setBoxRenderer`), the box shows the image or
+ * its compiled snippet instead of the code until it gets focus.
  */
 class RawBox implements NodeView {
   readonly dom: HTMLElement;
   /** Above the code of an image box: which image it shows. */
   private readonly label: HTMLElement | null = null;
   private readonly code: CodeView;
+  private readonly rendered: RenderedBox | null = null;
   /** Set while mirroring `src` into the box, so that change is not sent back. */
   private mirroring = false;
 
@@ -60,8 +75,10 @@ class RawBox implements NodeView {
       this.label.className = 'typst-visual__image-label';
       this.updateLabel();
     }
+    const wrapper = this.dom.appendChild(this.dom.ownerDocument.createElement(inline ? 'span' : 'div'));
+    wrapper.className = 'typst-visual__code';
     this.code = new CodeView({
-      parent: this.dom,
+      parent: wrapper,
       doc: node.attrs.src,
       extensions: [
         keymap.of([...this.keys(inline), ...defaultKeymap]),
@@ -73,10 +90,16 @@ class RawBox implements NodeView {
       dispatchTransactions: (trs, view) => this.forward(trs, view),
     });
     boxes.set(this.dom, this);
+    const renderer = renderers.get(editor);
+    if (renderer) {
+      const host = { dom: this.dom, code: wrapper, source: () => this.source(), activate: () => this.focus(-1) };
+      this.rendered = new RenderedBox(host, renderer);
+    }
   }
 
   /** Focuses the box with the cursor at its start (entered moving forward) or its end. */
   focus(side: Side): void {
+    this.rendered?.edit();
     this.code.focus();
     this.code.dispatch({ selection: { anchor: side > 0 ? 0 : this.code.state.doc.length } });
   }
@@ -91,6 +114,7 @@ class RawBox implements NodeView {
       this.mirroring = false;
     }
     this.updateLabel();
+    this.rendered?.update(node);
     return true;
   }
 
@@ -103,7 +127,14 @@ class RawBox implements NodeView {
   }
 
   destroy(): void {
+    this.rendered?.destroy();
     this.code.destroy();
+  }
+
+  /** The node and where its source starts, while the box is in the document. */
+  private source(): { node: Node; from: number } | null {
+    const pos = this.getPos();
+    return pos === undefined ? null : { node: this.node, from: posToSource(this.editor.state.doc, pos) };
   }
 
   private updateLabel(): void {

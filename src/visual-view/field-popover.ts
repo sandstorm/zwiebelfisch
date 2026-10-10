@@ -8,6 +8,8 @@ export interface FieldPopoverOptions {
   apply(value: string): void;
   /** Offered as a "Remove" button while `open` says so. */
   remove?(): void;
+  /** More controls below the field (e.g. files to pick), shown with it. */
+  extra?: HTMLElement;
 }
 
 /**
@@ -40,6 +42,7 @@ export class FieldPopover {
     this.removeButton = this.makeButton('Remove', 'button');
     this.removeButton.dataset.action = 'remove';
     this.form.append(this.input, apply, this.removeButton);
+    if (options.extra) this.form.append(options.extra);
     this.form.addEventListener('submit', (event) => {
       event.preventDefault();
       const value = this.input.value.trim();

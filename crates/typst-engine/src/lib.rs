@@ -190,7 +190,8 @@ impl Engine {
 
     /// Returns where the text of the source ranges `[from, to, from, to, ...]`
     /// (UTF-16) of `path` is drawn, as `BoxJson[]` JSON: one box per run of
-    /// glyphs whose source character lies in one of the ranges.
+    /// glyphs whose source character lies in one of the ranges, and one per
+    /// shape or image whose syntax node starts in one of them.
     #[wasm_bindgen(js_name = boxesForRanges)]
     pub fn boxes_for_ranges(&self, path: &str, ranges: Vec<u32>) -> String {
         let boxes = (|| {
@@ -203,7 +204,7 @@ impl Engine {
                 .filter_map(|r| Some(lines.utf16_to_byte(r[0] as usize)?..lines.utf16_to_byte(r[1] as usize)?))
                 .collect();
             let mut nodes: HashMap<Span, Option<Range<usize>>> = HashMap::new();
-            Some(highlight::glyph_boxes(document, |span, offset| {
+            Some(highlight::drawn_boxes(document, |span, offset| {
                 if span.id() != Some(id) {
                     return false;
                 }

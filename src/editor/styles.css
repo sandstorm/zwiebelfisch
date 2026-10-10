@@ -159,6 +159,13 @@
 .typst-visual__raw-block:focus-within,
 .typst-visual__raw-inline:focus-within { background: white; box-shadow: 0 0 0 2px var(--te-accent); color: #24292f; }
 .typst-visual .ProseMirror-selectednode { outline: 2px solid var(--te-accent); }
+/* Raw boxes showing their image or compiled snippet (code while focused) */
+.typst-visual__code[hidden],
+.typst-visual__rendering[hidden] { display: none; }
+.typst-visual__raw--rendered { background: transparent; }
+.typst-visual__rendering { display: block; max-width: 100%; height: auto; cursor: text; }
+.typst-visual__raw-block:not(.typst-visual__image) > .typst-visual__rendering { margin: 0 auto; }
+.typst-visual__raw-inline > .typst-visual__rendering { display: inline-block; vertical-align: middle; }
 .typst-visual__link { color: var(--te-accent); text-decoration: underline; cursor: text; }
 .typst-visual__image-label {
   margin-bottom: 2px;
@@ -189,6 +196,11 @@
 .typst-popover button { padding: 4px 10px; border: 1px solid var(--te-border); border-radius: 4px; background: #f6f8fa; font: inherit; cursor: pointer; }
 .typst-popover button[type='submit'] { border-color: var(--te-accent); background: var(--te-accent); color: white; }
 .typst-popover button[hidden] { display: none; }
+.typst-popover { flex-wrap: wrap; max-width: 360px; }
+.typst-popover__choices { flex-basis: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.typst-popover__files { display: flex; flex-direction: column; align-self: stretch; max-height: 160px; overflow: auto; }
+.typst-popover .typst-popover__files button { border: none; background: none; padding: 3px 6px; text-align: left; }
+.typst-popover .typst-popover__files button:hover { background: #eef2f7; }
 .typst-preview--stale { opacity: 0.45; filter: grayscale(0.6); transition: opacity 0.2s; }
 .typst-status {
   grid-column: 1 / -1;

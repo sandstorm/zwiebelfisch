@@ -26,15 +26,18 @@ src/
     geometry.ts, zoom.ts    pure helpers: overlay boxes, visibility, current page, zoom steps
     toolbar.ts              zoom buttons, zoom label, "page n / total"
     markers.ts              PreviewMarkers: margin marker layers placed via cursor lookups
+    snippet.ts              cut a page SVG down to the boxes of a source range (snippets for the Visual view)
   visual-view/              VisualView — Tiptap editor over the source-anchored projection,
-                            formatting toolbar, raw boxes edited in a nested CodeMirror
+                            formatting toolbar, raw boxes edited in a nested CodeMirror,
+                            shown rendered (snippet / image) while not focused
   editor/                   createTypstEditor() — composes the widget, Visual/Source tabs, status bar, scoped CSS,
                             ChangeTracking (base version + "Show changes" toggle)
     project.ts              Project: the file model (one TypstDocument per .typ file, main protected)
     editing-views.ts        Visual/Source tabs, lazily one VisualView + SourceView per document
     file-switcher.ts        file bar: tabs, new/upload/rename/delete, drop (optional mode)
     asset-view.ts           read-only image/data view with "Insert into …"
-    paths.ts, insert-image.ts, upload.ts   pure helpers (names → paths, #image insertion, uploads)
+    project-renderings.ts   what a document's Visual view renders and inserts (snippets, image URLs, uploads)
+    paths.ts, insert-image.ts, upload.ts   pure helpers (names → paths, Typst path resolution, #image insertion, uploads)
   element/                  <typst-editor> custom element (shadow DOM) around createTypstEditor
   index.ts                  public API of the package; registers <typst-editor>
 demo/                       dev/demo page (vite root)
@@ -118,8 +121,16 @@ new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scr
 .reveal(path, offset)                        // cheap per cursor move: flash, scroll only if off-screen
 .setMarkers(layer, [{path, offset, className, attributes?, title?}])   // margin markers; replaces that layer
 .showChanges(path, ranges | null)            // change bars in the page margin, redrawn after every compile
+.snippet(path, from, to, text) → Promise<{svg, width, height} | null>   // the range as drawn, cut from its page
+.onRender(listener) → unsubscribe            // after every successful compile
 .destroy()
 ```
+
+- **Snippets** (`snippet.ts`): no extra compilation. After running compiles are done, the range
+  goes to `boxesForRanges`; the union of the boxes on the first box's page (+2 pt, clamped to
+  the page) becomes the page SVG with that `viewBox` and size in pt. Null when the range draws
+  nothing, or when `text` is not what the range held at the last successful compile (it was
+  edited since, or the document has errors), so a snippet never shows other source.
 
 - **Change bars** (`change-bars.ts`): the ranges go to the engine's `boxesForRanges` after every
   successful compile; boxes on the same or adjacent lines join into one bar (like LaTeX
@@ -189,7 +200,7 @@ defaultFonts() → Promise<Uint8Array>[]          // src/engine/default-fonts.ts
 .compile(main) → { pages: [{hash, width, height, svg}], diagnostics: [{severity, message, hints, path, from, to}], missingPackages: string[] }
 .jumpFromClick(page, x, y) → {kind:'source', path, offset, from, to, boxes} | {kind:'url'} | {kind:'position'} | null
 .jumpFromCursor(path, offset) → [{page, x, y}]
-.boxesForRanges(path, [{from, to}]) → [{page, x, y, w, h}]   // where the drawn text of those ranges is, per glyph run
+.boxesForRanges(path, [{from, to}]) → [{page, x, y, w, h}]   // where those ranges are drawn: per glyph run, shape, image
 
 withPackages(engine, fetchPackage = fetchPreviewPackage) → { compile(main) → Promise<CompileResult> }
 fetchPreviewPackage(spec) → Promise<Uint8Array>     // .tar.gz from packages.typst.org, Cache API
@@ -235,9 +246,10 @@ Inside the crate:
     line/page). The preview draws these boxes.
   - For non-text clicks, the range falls back to the syntax leaf at the offset, with no boxes.
   - `jump_from_cursor` is the reverse.
-  - `boxesForRanges` walks all glyphs (`highlight::glyph_boxes`) and keeps those whose source
-    byte (span range start + the glyph's offset in its span) lies in one of the ranges: character
-    precise for text, nothing for markup or code that draws no glyphs.
+  - `boxesForRanges` walks all frame items (`highlight::drawn_boxes`) and keeps glyphs whose
+    source byte (span range start + the glyph's offset in its span) lies in one of the ranges
+    (character precise for text), plus shapes (rules, fraction lines, rectangles; stroke
+    included) and images whose span's node starts in one. Code that draws nothing yields nothing.
 
 ### `createTypstEditor` / `<typst-editor>` (`src/editor`, `src/element`)
 
@@ -269,6 +281,11 @@ createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileCha
   `auto` with more than one file. A requested change passes `project.check`, then the host's
   `allowFileChange` (async allowed; re-checked afterwards), then is applied.
 - Preview clicks into another project file open it, then reveal. Clicks into packages are ignored.
+- **`ProjectRenderings`** gives every document's VisualView its `renderer` (snippets from
+  `Preview.snippet` under the document's current path, refreshed on `Preview.onRender`; image
+  files resolved like Typst (`resolvePath`) and shown as object URLs, made once per content and
+  revoked when replaced) and `assets` (the project's images as `referencePath`s; uploads become
+  a `create` change that goes through `allowFileChange` like the file bar's).
 - **Insert image** (`AssetView`): `#image("…")` as its own paragraph after the line of the last
   source-view cursor (else at the end) of the last shown `.typ` file, relative path when in the
   same folder tree, else project-absolute.
@@ -325,7 +342,7 @@ new CommentsUI(comments, document, { root, views, activeView(), preview, path })
 ### `VisualView` (`src/visual-view`)
 
 ```ts
-new VisualView(parent, document)
+new VisualView(parent, document, { renderer?, assets? })
 .reveal(from, to)    // select exactly what shows source range from..to (caret if empty)
 .setHighlights(layer, highlights)   // source ranges → inline decorations (sourceToPos, end with bias -1)
 .selection() → {from, to}           // posToSource; the end with bias -1
@@ -421,9 +438,20 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     (`field-popover.ts`: one text field, Apply/Enter, optional Remove, Escape or a click outside
     closes). Link with nothing selected inserts the URL as linked text; inside a link it edits or
     removes the whole link.
+  - With `assets` (`ImageAssets`: `list()`, `upload(file)`), the image popover also lists the
+    project's images and offers "Upload image…" (`image-choices.ts`); either inserts an
+    `#image("path")` block.
 - **Raw boxes** (`raw-box.ts`): `rawBlock` / `rawInline` / `image` render through a NodeView that
   hosts a nested CodeMirror (Typst highlighting, no own history). An image box is headed by
-  "Image: <path>" (`imagePath(src)`); the image itself is not rendered yet.
+  "Image: <path>" (`imagePath(src)`).
+  - **Rendered boxes** (`rendered-box.ts`, with a `BoxRenderer`): while not focused, a box shows
+    an `<img>` instead of its code: an `image` box its file (`renderer.imageUrl(path)`, follows
+    path edits at once), any other box the compiled snippet of its source range
+    (`renderer.snippet(from, to, src)` as an SVG data URL, sized in pt; refreshed on
+    `renderer.onChange`). Boxes starting with `#set`/`#show`/`#let`/`#import`/`#include` or a
+    comment (`rendersInPlace`) and boxes whose snippet is null keep showing code. Focus inside
+    the box (click on the picture, arrow keys, Enter) shows the code; focus leaving shows the
+    picture again.
   - An edit sets `attrs.src` with an attribute step (positions and the outer selection stay put);
     the projection prints `src` verbatim, so the source changes exactly there.
   - An outside change of `src` (via `syncDoc`) reaches the box as one minimal change.
@@ -484,6 +512,8 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
 - **Packages:** only `@preview` from packages.typst.org (no configurable registry, no `@local`);
   failed downloads are not retried until the worker restarts.
 - **No error display in the visual view** yet (diagnostics only reach the source view).
-- **Visual view images and raw boxes show code**, not the rendered image / snippet (see
-  [visual-view-compiled-boxes](docs/todo/visual-view-compiled-boxes.md)). Tables with headers,
-  merged cells or `columns: (..)` stay raw boxes.
+- **Snippets are cut from the compiled pages**, so they only appear after a successful compile,
+  show only what lies on the first page the range draws on, and include whatever overlaps that
+  rectangle (e.g. a float). Every raw box asks again after every compile (one `boxes` walk each),
+  also while the Visual view is hidden. Tables with headers, merged cells or `columns: (..)` stay
+  raw boxes.

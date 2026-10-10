@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { displayName, fileKind, referencePath, toPath } from './paths';
+import { displayName, fileKind, referencePath, resolvePath, toPath } from './paths';
 
 describe('fileKind', () => {
   it('tells Typst sources, images and other files apart', () => {
@@ -44,5 +44,20 @@ describe('referencePath', () => {
 describe('displayName', () => {
   it('drops the leading slash', () => {
     expect(displayName('/parts/intro.typ')).toBe('parts/intro.typ');
+  });
+});
+
+describe('resolvePath', () => {
+  it('resolves Typst paths like Typst: relative to the file, or from the project root', () => {
+    expect(resolvePath('/main.typ', 'logo.png')).toBe('/logo.png');
+    expect(resolvePath('/chapters/one.typ', 'img/a.png')).toBe('/chapters/img/a.png');
+    expect(resolvePath('/chapters/one.typ', '../logo.png')).toBe('/logo.png');
+    expect(resolvePath('/chapters/one.typ', './a.png')).toBe('/chapters/a.png');
+    expect(resolvePath('/chapters/one.typ', '/logo.png')).toBe('/logo.png');
+  });
+
+  it('is null for paths outside the project', () => {
+    expect(resolvePath('/main.typ', '../x.png')).toBeNull();
+    expect(resolvePath('/main.typ', '')).toBeNull();
   });
 });

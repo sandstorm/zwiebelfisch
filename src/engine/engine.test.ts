@@ -129,6 +129,21 @@ describe('Engine', () => {
     expect(engine.boxesForRanges('/other.typ', [{ from: gamma, to: gamma + 5 }])).toEqual([]);
   });
 
+  it('returns boxes for shapes drawn from source ranges, e.g. rectangles and fraction lines', () => {
+    const source = '#set page(width: 200pt, height: 200pt, margin: 0pt)\n#v(50pt)\n#rect(width: 40pt, height: 30pt)\n\n$ 1/2 $';
+    engine.setSource('/main.typ', source);
+    engine.compile('/main.typ');
+    const rect = source.indexOf('#rect');
+    const [box] = engine.boxesForRanges('/main.typ', [{ from: rect, to: rect + '#rect(width: 40pt, height: 30pt)'.length }]);
+    expect(box.y).toBeCloseTo(49.5, 1); // 50pt down, minus half the stroke
+    expect(box.w).toBeGreaterThanOrEqual(40);
+    expect(box.h).toBeGreaterThanOrEqual(30);
+    const math = source.indexOf('$ 1/2 $');
+    const boxes = engine.boxesForRanges('/main.typ', [{ from: math, to: math + 7 }]);
+    expect(boxes.length).toBeGreaterThanOrEqual(3); // numerator, denominator, line
+    expect(boxes.every((b) => b.y > 80)).toBe(true);
+  });
+
   it('returns nothing for a click on empty space', () => {
     engine.setSource('/main.typ', '#set page(width: 200pt, height: 100pt, margin: 0pt)\nHi');
     engine.compile('/main.typ');

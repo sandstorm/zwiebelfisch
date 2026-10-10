@@ -37,21 +37,42 @@ pub fn span_boxes(document: &PagedDocument, span: Span) -> Vec<PageBox> {
 
 /// One box per contiguous run of glyphs for which `keep(span, offset)` holds,
 /// on every page; `offset` is the glyph's byte offset within its span's text.
-pub fn glyph_boxes(document: &PagedDocument, mut keep: impl FnMut(Span, u16) -> bool) -> Vec<PageBox> {
+pub fn glyph_boxes(document: &PagedDocument, keep: impl FnMut(Span, u16) -> bool) -> Vec<PageBox> {
+    boxes(document, false, keep)
+}
+
+/// Like `glyph_boxes`, but shapes (rules, fraction lines, rectangles) and
+/// images count, too: each one whose span passes `keep(span, 0)` is a box of
+/// its own.
+pub fn drawn_boxes(document: &PagedDocument, keep: impl FnMut(Span, u16) -> bool) -> Vec<PageBox> {
+    boxes(document, true, keep)
+}
+
+fn boxes(document: &PagedDocument, graphics: bool, mut keep: impl FnMut(Span, u16) -> bool) -> Vec<PageBox> {
     let mut boxes = Vec::new();
     for (page, p) in document.pages().iter().enumerate() {
-        walk_text(&p.frame, Transform::identity(), &mut |ts, pos, text| {
-            let mut run: Option<Rect> = None;
-            for ((glyph, offset), rect) in glyph_rects(ts, pos, text) {
-                if keep(glyph, offset) {
-                    run = Some(run.map_or(rect, |r| r.union(rect)));
-                } else if let Some(r) = run.take() {
+        walk_items(&p.frame, Transform::identity(), &mut |ts, pos, item| match item {
+            FrameItem::Text(text) => {
+                let mut run: Option<Rect> = None;
+                for ((glyph, offset), rect) in glyph_rects(ts, pos, text) {
+                    if keep(glyph, offset) {
+                        run = Some(run.map_or(rect, |r| r.union(rect)));
+                    } else if let Some(r) = run.take() {
+                        boxes.push(r.on_page(page));
+                    }
+                }
+                if let Some(r) = run {
                     boxes.push(r.on_page(page));
                 }
             }
-            if let Some(r) = run {
-                boxes.push(r.on_page(page));
+            FrameItem::Shape(shape, span) if graphics && keep(*span, 0) => {
+                let bbox = shape.bbox(true);
+                boxes.push(Rect::transformed(ts, pos + bbox.min, pos + bbox.max).on_page(page));
             }
+            FrameItem::Image(_, size, span) if graphics && keep(*span, 0) => {
+                boxes.push(Rect::transformed(ts, pos, pos + size.to_point()).on_page(page));
+            }
+            _ => {}
         });
     }
     boxes
@@ -115,14 +136,22 @@ fn glyph_rects(ts: Transform, pos: Point, text: &TextItem) -> Vec<((Span, u16), 
 }
 
 fn walk_text(frame: &Frame, ts: Transform, f: &mut impl FnMut(Transform, Point, &TextItem)) {
+    walk_items(frame, ts, &mut |ts, pos, item| {
+        if let FrameItem::Text(text) = item {
+            f(ts, pos, text);
+        }
+    });
+}
+
+/// Calls `f` with every non-group item, its position and the transform of its frame.
+fn walk_items(frame: &Frame, ts: Transform, f: &mut impl FnMut(Transform, Point, &FrameItem)) {
     for (pos, item) in frame.items() {
         match item {
             FrameItem::Group(group) => {
                 let inner = ts.pre_concat(Transform::translate(pos.x, pos.y)).pre_concat(group.transform);
-                walk_text(&group.frame, inner, f);
+                walk_items(&group.frame, inner, f);
             }
-            FrameItem::Text(text) => f(ts, *pos, text),
-            _ => {}
+            item => f(ts, *pos, item),
         }
     }
 }

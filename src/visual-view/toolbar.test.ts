@@ -2,13 +2,13 @@
 import './jsdom-setup';
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../document/typst-document';
-import { VisualView } from './visual-view';
+import { VisualView, type VisualViewOptions } from './visual-view';
 
-function setup(text: string) {
+function setup(text: string, options: VisualViewOptions = {}) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = new VisualView(parent, doc);
+  const view = new VisualView(parent, doc, options);
   const toolbar = parent.querySelector<HTMLElement>('[role="toolbar"]')!;
   const button = (label: string) => toolbar.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
   const style = toolbar.querySelector<HTMLSelectElement>('select')!;
@@ -145,6 +145,35 @@ describe('Visual view toolbar', () => {
     popover.querySelector('input')!.value = 'img/logo.png';
     popover.requestSubmit();
     expect(doc.text).toBe('Text\n\n#image("img/logo.png")\n');
+  });
+
+  it('inserts an image picked from the project files', () => {
+    const assets = { list: () => ['img/logo.png', '/shared/photo.jpg'], upload: async () => null };
+    const { doc, view, toolbar, button } = setup('Text\n', { assets });
+    view.reveal(4, 4);
+    button('Insert image').click();
+    const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
+    const choices = [...popover.querySelectorAll<HTMLButtonElement>('button[data-path]')];
+    expect(choices.map((b) => b.textContent)).toEqual(['img/logo.png', '/shared/photo.jpg']);
+    choices[1].click();
+    expect(popover.hidden).toBe(true);
+    expect(doc.text).toBe('Text\n\n#image("/shared/photo.jpg")\n');
+  });
+
+  it('uploads an image into the project and inserts it', async () => {
+    const uploaded: File[] = [];
+    const assets = { list: () => [], upload: async (file: File) => (uploaded.push(file), `img/${file.name}`) };
+    const { doc, view, toolbar, button } = setup('Text\n', { assets });
+    view.reveal(4, 4);
+    button('Insert image').click();
+    const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
+    const input = popover.querySelector<HTMLInputElement>('input[type="file"]')!;
+    const file = new File([new Uint8Array([1])], 'cat.png', { type: 'image/png' });
+    Object.defineProperty(input, 'files', { value: [file] });
+    input.dispatchEvent(new Event('change'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(uploaded).toEqual([file]);
+    expect(doc.text).toBe('Text\n\n#image("img/cat.png")\n');
   });
 
   it('inserts a table and adds and deletes rows and columns', () => {
