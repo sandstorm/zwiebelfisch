@@ -41,11 +41,13 @@ test('Mod+click on the #import path in the Source view opens the file', async ({
   await expect(page.locator('[data-testid=typst-source]:visible')).toContainText('#let accent');
 });
 
-test('"Open template.typ" on a raw box in the Visual view shows on hover and opens the file', async ({ page }) => {
-  const open = page.getByTestId('typst-visual').getByRole('button', { name: 'Open template.typ' });
-  await expect(open).toBeHidden(); // takes no space while the pointer is elsewhere
-  await page.getByTestId('typst-visual').locator('.typst-visual__raw-block', { has: open }).hover();
-  await open.click();
+test('a raw box in the Visual view has no "Open …" row; its path shows the link tooltip and opens the file', async ({ page }) => {
+  const visual = page.locator('[data-testid=typst-visual]:visible');
+  await expect(visual.getByRole('button', { name: 'Open template.typ' })).toHaveCount(0);
+  const path = visual.locator('.typst-visual__raw-block .typst-source__path', { hasText: 'template.typ' });
+  await path.hover();
+  await expect(page.locator('.cm-tooltip')).toContainText('Open template.typ');
+  await path.click({ modifiers: ['ControlOrMeta'] });
   await expect(fileRow(page, 'template.typ')).toHaveAttribute('aria-selected', 'true');
 });
 
@@ -103,4 +105,12 @@ test('an included file links the files before and after it in the main file\'s i
   await expect(navigation('Next file')).toHaveCount(0); // the last one
   await navigation('Previous file').getByRole('button').click();
   await expect(fileRow(page, 'chapters/method.typ')).toHaveAttribute('aria-selected', 'true');
+});
+
+test('"Create …" in the link tooltip of a missing file creates and opens it', async ({ page }) => {
+  await page.locator('typst-editor').evaluate((el: HTMLElement & { value: string }) => (el.value = '#include "appendix.typ"\n'));
+  await page.getByRole('tab', { name: 'Source' }).click();
+  await page.locator('[data-testid=typst-source]:visible .typst-source__path', { hasText: 'appendix.typ' }).hover();
+  await page.locator('.cm-tooltip').getByRole('button', { name: 'Create appendix.typ' }).click();
+  await expect(fileRow(page, 'appendix.typ')).toHaveAttribute('aria-selected', 'true');
 });
