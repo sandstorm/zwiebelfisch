@@ -40,23 +40,6 @@ describe('VisualView', () => {
     expect(window.getSelection()?.toString()).toBe('bold');
   });
 
-  it('draws highlights given in source offsets over the visible text', () => {
-    const source = 'Title\n\nSome *bold* text.\n';
-    const { view, parent } = setup(source);
-    const from = source.indexOf('bold');
-    view.setHighlights('cursors', [{ from: from - 1, to: from + 5, className: 'note', attributes: { 'data-user': 'a' } }]);
-    expect([...parent.querySelectorAll('.note[data-user="a"]')].map((e) => e.textContent).join('')).toBe('bold');
-    view.setHighlights('cursors', []);
-    expect(parent.querySelector('.note')).toBeNull();
-  });
-
-  it('keeps highlights on their text through edits from elsewhere', () => {
-    const source = 'Some bold text\n';
-    const { doc, view, parent } = setup(source);
-    view.setHighlights('cursors', [{ from: 5, to: 9, className: 'note' }]);
-    doc.setText(`Really. ${source}`, 'source');
-    expect(parent.querySelector('.note')?.textContent).toBe('bold');
-  });
 
   it('reports the selection as the source range it shows', () => {
     const source = 'Title\n\nSome *bold* text.\n';
@@ -93,7 +76,39 @@ describe('VisualViewContributions.registerHighlights', () => {
     view.destroy();
     expect(changed.hasListeners).toBe(false);
   });
+
+  it('draws highlights given in source offsets over the visible text', () => {
+    const source = 'Title\n\nSome *bold* text.\n';
+    const from = source.indexOf('bold');
+    const { highlights, parent } = withHighlights(source, [{ from: from - 1, to: from + 5, className: 'note', attributes: { 'data-user': 'a' } }]);
+    expect([...parent.querySelectorAll('.note[data-user="a"]')].map((e) => e.textContent).join('')).toBe('bold');
+    highlights([]);
+    expect(parent.querySelector('.note')).toBeNull();
+  });
+
+  it('keeps highlights on their text through edits from elsewhere', () => {
+    const source = 'Some bold text\n';
+    const { doc, parent } = withHighlights(source, [{ from: 5, to: 9, className: 'note' }]);
+    doc.setText(`Really. ${source}`, 'source');
+    expect(parent.querySelector('.note')?.textContent).toBe('bold');
+  });
 });
+
+/** A view of `text` (with `strong`) and a highlight provider whose highlights start as `initial`; `highlights` sets new ones. */
+function withHighlights(text: string, initial: Highlight[]) {
+  let current = initial;
+  const changed = new EventEmitter<TypstDocument>();
+  const contributions = VisualViewContributions.from([strong]);
+  contributions.registerHighlights('test', { provideHighlights: () => current, onDidChangeHighlights: changed.event });
+  const doc = new TypstDocument(text);
+  const parent = document.body.appendChild(document.createElement('div'));
+  const view = new VisualView(parent, doc, contributions);
+  const highlights = (next: Highlight[]) => {
+    current = next;
+    changed.fire(doc);
+  };
+  return { doc, view, parent, highlights };
+}
 
 describe('VisualView contexts', () => {
   it('give contributions the source ↔ position mapping and which nodes are boxes', () => {

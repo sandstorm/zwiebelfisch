@@ -727,7 +727,6 @@ Inside the crate:
 ```ts
 new VisualView(parent, document, contributions: VisualViewContributions)
 .reveal(from, to)    // select exactly what shows source range from..to (caret if empty)
-.setHighlights(layer, highlights)   // source ranges → inline decorations (sourceToPos, end with bias -1)
 .selection() → {from, to}           // posToSource; the end with bias -1
 .onDidChangeSelection: Event<void>  // after the selection moved or the text changed
 .destroy()
@@ -741,7 +740,8 @@ visualView.registerToolbarGroup({ kind: 'group' | 'menu' | 'floating', id, order
 visualView.registerToolbarItem({ group, order?, action } | { group, order?, create(toolbar) }) → Disposable
 visualView.registerGutter((view, body) => { plugin?, destroy() }) → Disposable
 visualView.registerHighlights(layer, { provideHighlights(document), onDidChangeHighlights }) → Disposable
-                                     // set on a view's creation and on every change of its document (diagnostics)
+                                     // set on a view's creation and on every change of its document (diagnostics);
+                                     // source ranges → inline decorations (sourceToPos, end with bias -1)
                                      // Highlight { from, to, className, attributes? }: the host's own type (only the
                                      // Visual view draws highlights; the Source view's contributions use CodeMirror
                                      // decorations), exported from hosts/visual-view
@@ -784,7 +784,7 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
   projection's (the spec contract: `ProjectionContext`, `Call`, `Placed`, `Printer`, …; and for tests `project` /
   `print` / `syncDoc` / `posToSource` / `sourceToPos`), core's `typst-syntax` (reading syntax nodes), and
   `testing/` for the built-ins together). The widget's built-in extension list activates them (see
-  "createTypstEditor"); `VisualViewOptions` is gone.
+  "createTypstEditor").
 - **Specs** (`TypstNodeSpec` / `TypstMarkSpec`; their `NodeGrammar` / `MarkGrammar` in `projection/projection.ts`): one per construct —
   `name`, its Tiptap `extension` (schema, node view, commands, keymap, input rules), `attributes`
   the host adds (source anchors like `src`, `sep`, `marker`, `layout`), `anchors` (compared like
@@ -797,10 +797,9 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
   styles; `matches` makes the run prose). Printing: `print` (an edited block, through the
   `Printer`), `printAtom` (an inline atom's source), `escapeAfter` (`@intro\s`); a mark's `print`
   (`*x*` or `#strong[x]`), `raw` (inline code: innermost, unescaped) and `printsBare` (a bare URL).
-  `onDidChange` makes every view project its document again (styles declared or removed). What
-  the framework used to list by name (`BLOCK_CALLS`, `PRINT_BLOCK`, `RAW_TYPES`, `LABELLED_BLOCKS`,
-  `callAtomType`, the inline boxes of presence, the anchors) is derived from the specs; the
-  projection imports no feature. A second spec of the same name extends the first (alignment adds
+  `onDidChange` makes every view project its document again (styles declared or removed). Which
+  syntax and calls project to what, how edited blocks print, which blocks take labels, which nodes are
+  boxes and which attributes are anchors are all derived from the specs; the projection imports no feature. A second spec of the same name extends the first (alignment adds
   `#par(justify: ..)` and the paragraph printer); **priority**, not registration order,
   decides where contributions compete (`registerNode` / `registerMark` / `registerBoxRenderer(…, { priority })`:
   default 100, higher first, Tiptap's semantics; equal ones in registration order): the schema's order (a
@@ -812,8 +811,8 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
 - **Per view**: providers get a `VisualViewContext` (`document`, `selection()`, `sourceToPos(doc, offset, bias?)` /
   `posToSource(doc, pos, bias?)`: the position map over a document node of the view, e.g. a transaction's;
   `isBox(node)`: shown as a box of its own); a toolbar item's
-  `create(toolbar)` gets the `ToolbarContext` (the editor, the toolbar's root, `subscriptions`
-  disposed with it, `element(group)`, `refresh()`). Contributions are registered once and applied
+  `create(toolbar)` gets the `ToolbarContext` (the view's context, the editor, the toolbar's root, `subscriptions`
+  disposed with it). Contributions are registered once and applied
   to every view created afterwards.
 - **Schema** (the host's `nodes/nodes.ts` and the built-ins' specs):
   - **Blocks:** `paragraph`, `heading`, and `bulletList` / `orderedList` > `listItem` (a `marker`
@@ -939,7 +938,7 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
   - Alignment blocks print their `layout` around their blocks, with only `#align(args)`
     re-printed when `args` changed. New ones print `#align(x)[A\n\nB]`. An edited paragraph with
     `justify` prints `#par(justify: x)[..]` around its inline content.
-  - Edited blocks are printed through `PRINT_BLOCK` (by node type; textblocks by default).
+  - Edited blocks are printed by their spec's `print` (textblocks by default: their inline content).
 - **Position map:** `sourceToPos(doc, offset, bias?)` / `posToSource(doc, pos, bias?)` map between
   source offsets (UTF-16) and document positions at character precision, for any doc (pristine,
   edited or synced).

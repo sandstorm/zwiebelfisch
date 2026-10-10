@@ -41,8 +41,8 @@ export class Grammar {
     schema.cached.typstGrammar = grammar;
   }
 
-  node(type: NodeType | string): NodeGrammar | undefined {
-    return this.nodes.get(typeof type === 'string' ? type : type.name);
+  node(type: NodeType): NodeGrammar | undefined {
+    return this.nodes.get(type.name);
   }
 
   mark(name: string): MarkGrammar | undefined {

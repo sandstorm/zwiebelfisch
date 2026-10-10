@@ -1,5 +1,5 @@
-// Tests for projection.ts: the framework with the host's own nodes (paragraphs, text, raw Typst) and specs defined
-// here. The built-in extensions' specs are tested together in typst-editor/typst-editor.projection.test.ts.
+// Tests for hosts/projection: the framework with the Visual view host's own nodes (paragraphs, text, raw Typst) and
+// specs defined here. The built-in extensions' specs are tested together in typst-editor/typst-editor.projection.test.ts.
 import { Node as TiptapNode } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';

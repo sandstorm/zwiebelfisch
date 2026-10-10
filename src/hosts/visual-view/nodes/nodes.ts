@@ -8,7 +8,7 @@ import { Plugin } from '@tiptap/pm/state';
 import type { EditorView, NodeView, NodeViewConstructor } from '@tiptap/pm/view';
 import { attachGrammar, type MarkGrammar, type NodeGrammar } from '../../projection/projection';
 import { starterKitPart } from '../visual-view';
-import { RawBoxNavigation, rawBoxView } from './raw-box';
+import { RawBoxNavigation, rawBoxViews, type Boxes } from './raw-box';
 
 /**
  * The Tiptap extensions of a Visual view whose schema holds `nodes` and
@@ -27,12 +27,13 @@ import { RawBoxNavigation, rawBoxView } from './raw-box';
  *   renders the same: a block whose anchors change (as every re-projected
  *   block's `src` does after an edit from elsewhere) keeps its DOM, so what is
  *   inside, like an open note editor, survives;
- * - with `box: 'code'`, the raw box node view (`raw-box.ts`).
+ * - with `box: 'code'`, the raw box node view (`raw-box.ts`) with what `boxes` contribute (null: a schema only,
+ *   for documents no view shows).
  */
-export function editorExtensions(nodes: readonly NodeGrammar[], marks: readonly MarkGrammar[]): AnyExtension[] {
+export function editorExtensions(nodes: readonly NodeGrammar[], marks: readonly MarkGrammar[], boxes: Boxes | null): AnyExtension[] {
   const specs = [...HOST_NODES, ...nodes];
   const contributed = [...nodes, ...marks].map((spec) => spec.extension).filter((extension) => extension !== undefined);
-  return [HostBase, ...new Set(contributed), TypstDocument, RawBlock, RawInline, RawBoxNavigation, SoftBreak, TypstSource, sourceAnchors(specs)];
+  return [HostBase, ...new Set(contributed), TypstDocument, RawBlock, RawInline, RawBoxNavigation, SoftBreak, TypstSource, sourceAnchors(specs, boxes)];
 }
 
 /** Makes `nodes` and `marks` (and the host's own specs) what `project` and `print` use for documents of `schema`. */
@@ -57,15 +58,15 @@ const HOST_NODES: NodeGrammar[] = [
 ];
 
 /** What the specs ask the host for: source anchors and labels (global attributes), kept DOM and raw box node views. */
-function sourceAnchors(specs: readonly NodeGrammar[]): AnyExtension {
+function sourceAnchors(specs: readonly NodeGrammar[], boxes: Boxes | null): AnyExtension {
   return Extension.create({
     name: 'typstSourceAnchors',
     addProseMirrorPlugins() {
-      const editor = this.editor;
+      const rawBox = boxes ? rawBoxViews(this.editor, boxes) : null;
       const views: Record<string, NodeViewConstructor> = {};
       for (const spec of specs) {
         if (spec.keepsDom) views[spec.name] = keepWhileRenderedSame;
-        if (spec.box === 'code') views[spec.name] = (node, _view, getPos, decorations) => rawBoxView(node, editor, getPos, decorations);
+        if (spec.box === 'code' && rawBox) views[spec.name] = rawBox;
       }
       return [new Plugin({ props: { nodeViews: views } })];
     },

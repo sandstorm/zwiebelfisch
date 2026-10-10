@@ -14,7 +14,7 @@ import { nodeGrammar, onDidChangeGrammar, posToSource, print, project, sourceToP
 import type { Anchor } from '../../ui/floating-bar/floating-bar';
 import { highlights, setHighlights } from './highlights';
 import { attachSpecs, editorExtensions } from './nodes/nodes';
-import { setBoxes } from './nodes/raw-box';
+import type { Boxes } from './nodes/raw-box';
 import { Toolbar } from './toolbar/toolbar';
 
 /** Marks transactions that mirror a document change, so they are not written back. */
@@ -52,7 +52,7 @@ export class VisualView {
     this.editor = new Editor({
       element: body,
       extensions: [
-        ...editorExtensions(contributed.nodes, contributed.marks),
+        ...editorExtensions(contributed.nodes, contributed.marks, boxes(view, contributed)),
         highlights,
         ...contributed.editorExtensions.flatMap((provider) => provider(view)),
       ],
@@ -65,7 +65,6 @@ export class VisualView {
     });
     const { schema } = this.editor;
     attachSpecs(schema, contributed.nodes, contributed.marks);
-    setBoxes(this.editor, boxes(view, contributed));
     this.gutters = contributed.gutters.map((provider) => provider(view, body));
     // Load the projection itself (not a JSON copy): its node identities are what marks blocks as untouched.
     this.editor.view.updateState(
@@ -81,7 +80,7 @@ export class VisualView {
         if (origin !== this) this.syncFromDocument();
       }),
       // e.g. a style declared or removed changes what its calls project to
-      ...onDidChangeGrammar(schema, () => this.syncFromDocument()),
+      onDidChangeGrammar(schema, () => this.syncFromDocument()),
       ...contributed.highlights.map(({ layer, provider }) => {
         this.setHighlights(layer, provider.provideHighlights(document));
         return provider.onDidChangeHighlights((changed) => {
@@ -99,11 +98,6 @@ export class VisualView {
     const selection = TextSelection.between(doc.resolve(anchor), doc.resolve(head));
     this.editor.view.dispatch(this.editor.state.tr.setSelection(selection).scrollIntoView());
     this.editor.view.focus();
-  }
-
-  /** Replaces the highlights of `layer` (source ranges); they follow edits until set again. */
-  setHighlights(layer: string, ranges: readonly Highlight[]): void {
-    this.editor.view.dispatch(setHighlights(this.editor.state.tr, layer, ranges));
   }
 
   /**
@@ -124,6 +118,11 @@ export class VisualView {
     for (const gutter of this.gutters) gutter.destroy();
   }
 
+  /** Replaces the highlights of `layer` (source ranges); they follow edits until set again. */
+  private setHighlights(layer: string, ranges: readonly Highlight[]): void {
+    this.editor.view.dispatch(setHighlights(this.editor.state.tr, layer, ranges));
+  }
+
   private afterTransaction(tr: Transaction): void {
     if (!tr.docChanged || tr.getMeta(FROM_DOCUMENT)) return;
     this.document.setText(print(this.editor.state.doc), this);
@@ -142,7 +141,7 @@ function isBox(node: Node): boolean {
 }
 
 /** What the raw boxes of `view` get from the contributions. */
-function boxes(view: VisualViewContext, contributed: Contributed) {
+function boxes(view: VisualViewContext, contributed: Contributed): Boxes {
   return {
     view,
     renderers: contributed.boxRenderers.map((provider) => provider(view)).filter((renderer) => renderer !== null),
@@ -430,7 +429,7 @@ export interface BoxRenderer {
   /** Draws a box again as soon as its node changes (an image follows its path), not only on `onDidChange`. */
   readonly followsEdits?: boolean;
   /** Fires whenever pictures may have changed (a new compile). */
-  onDidChange(listener: () => void): Disposable;
+  readonly onDidChange: Event<void>;
 }
 
 /** The renderer of one view's boxes (null: none for this view). */
@@ -558,10 +557,6 @@ export interface ToolbarContext extends VisualViewContext {
   readonly root: HTMLElement;
   /** Disposed with the toolbar: popovers, listeners, plugins an item adds. */
   readonly subscriptions: Disposable[];
-  /** The element of group `id`: a floating bar (to hold a popover of its item), a menu, a group; null if not shown. */
-  element(group: string): HTMLElement | null;
-  /** Shows every button's state anew and places the floating bars. */
-  refresh(): void;
 }
 
 /** A button (or control) in toolbar group `group`, sorted by `order` (then registration order). */
@@ -578,7 +573,7 @@ export type ToolbarItem =
 
 /** A schema of `nodes` and `marks` with its grammar attached (an `Editor` builds an equal but distinct instance). */
 export function createSchema(nodes: readonly NodeGrammar[], marks: readonly MarkGrammar[]): Schema {
-  const schema = getSchema(editorExtensions(nodes, marks));
+  const schema = getSchema(editorExtensions(nodes, marks, null));
   attachSpecs(schema, nodes, marks);
   return schema;
 }
