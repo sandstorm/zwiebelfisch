@@ -50,16 +50,27 @@ describe('ProjectRenderings', () => {
   it('lists the project images and uploads new ones, with paths as written in the document', async () => {
     const { chapter, project, request } = setup({ '/chapters/fig.svg': '<svg/>' });
     expect(chapter.assets!.list()).toEqual(['fig.svg', '/img/logo.png']);
-    const path = await chapter.assets!.upload(new File([new Uint8Array([9])], 'cat.png'));
+    const result = await chapter.assets!.upload(new File([new Uint8Array([9])], 'cat.png'));
     expect(request).toHaveBeenCalledWith(expect.objectContaining({ kind: 'create', path: '/cat.png' }));
-    expect(path).toBe('/cat.png');
+    expect(result).toEqual({ path: '/cat.png' });
     expect(project.has('/cat.png')).toBe(true);
   });
 
-  it('does not insert an upload that was refused or is no image', async () => {
+  it('says why an upload was refused or is no image it can show', async () => {
     const { chapter, request } = setup();
     request.mockResolvedValueOnce('This change is not allowed here.');
-    expect(await chapter.assets!.upload(new File(['x'], 'cat.png'))).toBeNull();
-    expect(await chapter.assets!.upload(new File(['x'], 'notes.txt'))).toBeNull();
+    expect(await chapter.assets!.upload(new File(['x'], 'cat.png'))).toEqual({ error: 'This change is not allowed here.' });
+    expect(await chapter.assets!.upload(new File(['x'], 'photo.heic'))).toEqual({
+      error: 'photo.heic is not an image the document can show (PNG, JPEG, GIF, SVG or WebP).',
+    });
+  });
+
+  it('reuses an image that is already in the project with the same content, refuses a different one', async () => {
+    const { chapter, request } = setup({ '/cat.png': new Uint8Array([9]) });
+    expect(await chapter.assets!.upload(new File([new Uint8Array([9])], 'cat.png'))).toEqual({ path: '/cat.png' });
+    expect(request).not.toHaveBeenCalled();
+    expect(await chapter.assets!.upload(new File([new Uint8Array([8])], 'cat.png'))).toEqual({
+      error: 'There is already a different cat.png in the project. Rename the file and upload it again.',
+    });
   });
 });

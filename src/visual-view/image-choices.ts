@@ -2,8 +2,8 @@
 export interface ImageAssets {
   /** The project's images, as paths to write in `#image(..)` in this document. */
   list(): string[];
-  /** Adds `file` to the project; resolves to the path to write in `#image(..)`, or null when it was not added. */
-  upload(file: File): Promise<string | null>;
+  /** Adds `file` to the project; resolves to the path to write in `#image(..)`, or why it was not added (in words for people). */
+  upload(file: File): Promise<{ path: string } | { error: string }>;
 }
 
 /**
@@ -13,6 +13,7 @@ export interface ImageAssets {
 export class ImageChoices {
   readonly element: HTMLElement;
   private readonly list: HTMLElement;
+  private readonly error: HTMLElement;
 
   constructor(
     doc: Document,
@@ -29,7 +30,8 @@ export class ImageChoices {
     });
     const picker = doc.createElement('input');
     picker.type = 'file';
-    picker.accept = 'image/*';
+    // The formats Typst can show; others would only be refused after picking.
+    picker.accept = '.png,.jpg,.jpeg,.gif,.svg,.webp';
     picker.hidden = true;
     picker.addEventListener('change', () => {
       const file = picker.files?.[0];
@@ -40,13 +42,17 @@ export class ImageChoices {
     upload.type = 'button';
     upload.textContent = 'Upload image…';
     upload.addEventListener('click', () => picker.click());
-    this.element.append(this.list, upload, picker);
+    this.error = doc.createElement('span');
+    this.error.className = 'typst-popover__error';
+    this.error.setAttribute('role', 'alert');
+    this.element.append(this.list, upload, picker, this.error);
     this.refresh();
   }
 
-  /** Lists the project's images as they are now. */
+  /** Lists the project's images as they are now, and forgets an earlier upload error. */
   refresh(): void {
     const doc = this.element.ownerDocument;
+    this.error.textContent = '';
     this.list.replaceChildren(
       ...this.assets.list().map((path) => {
         const button = doc.createElement('button');
@@ -59,7 +65,9 @@ export class ImageChoices {
   }
 
   private async upload(file: File): Promise<void> {
-    const path = await this.assets.upload(file);
-    if (path !== null) this.choose(path);
+    this.error.textContent = '';
+    const result = await this.assets.upload(file);
+    if ('path' in result) this.choose(result.path);
+    else this.error.textContent = result.error;
   }
 }

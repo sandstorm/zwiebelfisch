@@ -201,6 +201,8 @@
 .typst-popover__files { display: flex; flex-direction: column; align-self: stretch; max-height: 160px; overflow: auto; }
 .typst-popover .typst-popover__files button { border: none; background: none; padding: 3px 6px; text-align: left; }
 .typst-popover .typst-popover__files button:hover { background: #eef2f7; }
+.typst-popover__error { color: #cf222e; }
+.typst-popover__error:empty { display: none; }
 .typst-preview--stale { opacity: 0.45; filter: grayscale(0.6); transition: opacity 0.2s; }
 .typst-status {
   grid-column: 1 / -1;

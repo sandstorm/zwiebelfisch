@@ -1,7 +1,8 @@
 import type { TypstDocument } from '../document/typst-document';
 import type { Preview } from '../preview/preview';
 import type { VisualViewOptions } from '../visual-view/visual-view';
-import { fileKind, imageBlob, referencePath, resolvePath } from './paths';
+import type { FileContent } from '../preview/project-files';
+import { displayName, fileKind, imageBlob, referencePath, resolvePath } from './paths';
 import type { FileChange, Project } from './project';
 import { uploadChanges } from './upload';
 
@@ -68,11 +69,23 @@ export class ProjectRenderings {
     return url;
   }
 
-  private async upload(upload: File, file: string | undefined): Promise<string | null> {
-    if (!file) return null;
+  private async upload(upload: File, file: string | undefined): Promise<{ path: string } | { error: string }> {
+    if (!file) return { error: 'This document is no longer part of the project.' };
     const [change] = await uploadChanges([upload]);
-    if (change.kind !== 'create' || fileKind(change.path) !== 'image') return null;
+    if (change.kind !== 'create' || fileKind(change.path) !== 'image') {
+      return { error: `${upload.name} is not an image the document can show (PNG, JPEG, GIF, SVG or WebP).` };
+    }
+    const existing = this.options.project.content(change.path);
+    if (existing !== undefined) {
+      if (sameContent(existing, change.content)) return { path: referencePath(file, change.path) };
+      return { error: `There is already a different ${displayName(change.path)} in the project. Rename the file and upload it again.` };
+    }
     const problem = await this.options.request(change);
-    return problem === null ? referencePath(file, change.path) : null;
+    return problem === null ? { path: referencePath(file, change.path) } : { error: problem };
   }
+}
+
+function sameContent(a: FileContent, b: FileContent): boolean {
+  if (typeof a === 'string' || typeof b === 'string') return a === b;
+  return a.length === b.length && a.every((byte, i) => byte === b[i]);
 }

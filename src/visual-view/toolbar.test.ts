@@ -148,7 +148,7 @@ describe('Visual view toolbar', () => {
   });
 
   it('inserts an image picked from the project files', () => {
-    const assets = { list: () => ['img/logo.png', '/shared/photo.jpg'], upload: async () => null };
+    const assets = { list: () => ['img/logo.png', '/shared/photo.jpg'], upload: async () => ({ error: 'unused' }) };
     const { doc, view, toolbar, button } = setup('Text\n', { assets });
     view.reveal(4, 4);
     button('Insert image').click();
@@ -162,7 +162,7 @@ describe('Visual view toolbar', () => {
 
   it('uploads an image into the project and inserts it', async () => {
     const uploaded: File[] = [];
-    const assets = { list: () => [], upload: async (file: File) => (uploaded.push(file), `img/${file.name}`) };
+    const assets = { list: () => [], upload: async (file: File) => (uploaded.push(file), { path: `img/${file.name}` }) };
     const { doc, view, toolbar, button } = setup('Text\n', { assets });
     view.reveal(4, 4);
     button('Insert image').click();
@@ -174,6 +174,24 @@ describe('Visual view toolbar', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(uploaded).toEqual([file]);
     expect(doc.text).toBe('Text\n\n#image("img/cat.png")\n');
+  });
+
+  it('shows why an upload was refused, keeps the popover open and the text unchanged', async () => {
+    const assets = { list: () => [], upload: async () => ({ error: 'This change is not allowed here.' }) };
+    const { doc, view, toolbar, button } = setup('Text\n', { assets });
+    view.reveal(4, 4);
+    button('Insert image').click();
+    const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
+    const input = popover.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, 'files', { value: [new File([new Uint8Array([1])], 'cat.png')], configurable: true });
+    input.dispatchEvent(new Event('change'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(popover.hidden).toBe(false);
+    expect(popover.querySelector('[role="alert"]')!.textContent).toBe('This change is not allowed here.');
+    expect(doc.text).toBe('Text\n');
+    button('Insert image').click();
+    button('Insert image').click();
+    expect(popover.querySelector('[role="alert"]')!.textContent).toBe('');
   });
 
   describe('image insertion never replaces or splits content', () => {

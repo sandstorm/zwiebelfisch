@@ -305,7 +305,9 @@ createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileCha
   `Preview.snippet` under the document's current path, refreshed on `Preview.onRender`; image
   files resolved like Typst (`resolvePath`) and shown as object URLs, made once per content and
   revoked when replaced) and `assets` (the project's images as `referencePath`s; uploads become
-  a `create` change that goes through `allowFileChange` like the file bar's).
+  a `create` change that goes through `allowFileChange` like the file bar's; an upload equal to
+  an existing file just reuses it; refusals — not an image Typst shows, a different file of the
+  same name, the host's veto — come back as an error the popover shows).
 - **Insert image** (`AssetView`): `#image("…")` as its own paragraph after the line of the last
   source-view cursor (else at the end) of the last shown `.typ` file, relative path when in the
   same folder tree, else project-absolute.
@@ -458,9 +460,13 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     (`field-popover.ts`: one text field, Apply/Enter, optional Remove, Escape or a click outside
     closes). Link with nothing selected inserts the URL as linked text; inside a link it edits or
     removes the whole link.
-  - With `assets` (`ImageAssets`: `list()`, `upload(file)`), the image popover also lists the
-    project's images and offers "Upload image…" (`image-choices.ts`); either inserts an
-    `#image("path")` block.
+  - With `assets` (`ImageAssets`: `list()`, `upload(file)` → `{ path } | { error }`), the image
+    popover also lists the project's images and offers "Upload image…" (`image-choices.ts`;
+    refusals show in the popover); either inserts an `#image("path")` block.
+  - Image blocks (`image-insertion.ts`) go after the selected block, or after the paragraph /
+    heading holding the cursor (an empty paragraph is replaced): never replacing or splitting
+    content — the initial selection is a node selection on the first raw block (often
+    `#set page(..)`).
 - **Raw boxes** (`raw-box.ts`): `rawBlock` / `rawInline` / `image` render through a NodeView that
   hosts a nested CodeMirror (Typst highlighting, no own history). An image box is headed by
   "Image: <path>" (`imagePath(src)`).
