@@ -595,6 +595,8 @@ defaultFonts() → Promise<Uint8Array>[]          // engine-assets.ts: fetches t
 .boxesForRanges(path, [{from, to}]) → [{page, x, y, w, h}]   // where those ranges are drawn: per glyph run, shape, image
 
 withPackages(engine, fetchPackage = fetchPreviewPackage) → { compile(main) → Promise<CompileResult>, exportPdf(main) → Promise<PdfResult> }
+PdfEntry = { main, sources }                       // what a PDF compiles: entry file + .typ texts replacing/adding the project's,
+                                                   // for that export only (the preview's exportPdf, PDF export options, comments' withoutNotes)
 fetchPreviewPackage(spec) → Promise<Uint8Array>     // .tar.gz from packages.typst.org, Cache API
 untarGz(bytes) → Promise<Map<relativePath, Uint8Array>>
 ```
@@ -1064,7 +1066,7 @@ interface PreviewContributions {                             // what ExtensionCo
   registerToolbarItem(item: (preview: PreviewContext) => { elements, update?(), dispose?() },
                       placement: { group, order? }): Disposable   // VS Code's menus: groups by name, `navigation` first
   registerPdfExportOption({ id, label, description?, default: boolean, apply(entry: PdfEntry, value) → PdfEntry },
-                          { priority? }): Disposable                // unique ids; PdfEntry = { main, sources }
+                          { priority? }): Disposable                // unique ids; PdfEntry: core typst-engine
   pdfExportOptions() → PdfExportOption[]                       // by priority (default 100, higher first), then registration
   createOverlay(className) → { set(boxes: Box[]), dispose() }   // boxes in pt on their page
   reveal(path, from, to)                                       // cheap per cursor move: scroll to the range's start, only if off-screen (no marker)
@@ -1072,7 +1074,7 @@ interface PreviewContributions {                             // what ExtensionCo
   onDidChangeDiagnostics: Event<Diagnostic[]>                  // of the newest update(), never stale
   onDidRender: Event<void>                                     // after every successful compile
   snippet(path, from, to, text) → Promise<{svg, width, height, textHeight, padding} | null>   // the range as drawn, cut from its page
-  exportPdf(main, sources = {}) → Promise<PdfResult>   // the files of the last update(), sources replacing/adding texts
+  exportPdf(entry: PdfEntry) → Promise<PdfResult>      // the files of the last update(), entry.sources replacing/adding texts
 }
 interface PreviewContext { ownerDocument, zoom(), setZoom(zoom), scale(), visiblePage() → {index, count},
                            pdfExportOptions() }
@@ -1514,7 +1516,7 @@ isNoteCallAt(source, from, to) → boolean            // one note call in markup
 safeNote(markup) → string | null                    // markup that cannot end or swallow its call
 addMarginNote(text, {from, to}) → {changes: TextChange[], note} | null   // note: offset of the new (empty) body
 NOTE_STYLE                                          // the set-margin-note-defaults(..) call added with a new import
-withoutNotes(files, main) → {main, sources}         // the PDF without comments: entry + replaced/added .typ texts
+withoutNotes(files, main) → PdfEntry                // the PDF without comments: entry + replaced/added .typ texts
 // note-thread.ts: the only module that knows the thread format (all on the note's markup)
 readThread(note) → {author, date, text}[]          // author/date null: an anonymous message (markup)
 addReply(note, {author, date, text}) → note        // only an insertion after the last item

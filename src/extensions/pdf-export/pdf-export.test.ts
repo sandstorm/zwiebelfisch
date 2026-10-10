@@ -1,7 +1,7 @@
 // Tests for pdf-export.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { Project } from '../../core/project/project';
-import type { Diagnostic, PdfResult } from '../../core/typst-engine/typst-engine';
+import type { Diagnostic, PdfEntry, PdfResult } from '../../core/typst-engine/typst-engine';
 import type { PdfExportOption } from '../../hosts/preview/preview';
 import { PdfExport } from './pdf-export';
 import { ProjectPath } from '../../core/paths/paths';
@@ -13,7 +13,7 @@ const pdf = new TextEncoder().encode('%PDF-1.7');
 
 function setup(result: Partial<PdfResult> = {}, main = path('/main.typ'), options: PdfExportOption[] = []) {
   const project = new Project(main, { [main]: TEXT, '/logo.png': new Uint8Array([1]) });
-  const exportPdf = vi.fn(async (_main: string, _sources?: Record<string, string>) => ({ pdf, diagnostics: [], missingPackages: [], ...result }));
+  const exportPdf = vi.fn(async (_entry: PdfEntry) => ({ pdf, diagnostics: [], missingPackages: [], ...result }));
   return { exportPdf, pdfs: new PdfExport(project, { exportPdf, pdfExportOptions: () => options }) };
 }
 
@@ -33,15 +33,15 @@ describe('PdfExport', () => {
     const blob = await pdfs.blob();
     expect(blob.type).toBe('application/pdf');
     expect(new Uint8Array(await blob.arrayBuffer())).toEqual(pdf);
-    expect(exportPdf).toHaveBeenCalledWith(path('/main.typ'), {});
+    expect(exportPdf).toHaveBeenCalledWith({ main: path('/main.typ'), sources: {} });
   });
 
   it('applies every option in order, each to what the ones before made, with the values given or their default', async () => {
     const { exportPdf, pdfs } = setup({}, path('/main.typ'), [marker('a.first', true), marker('b.off'), marker('c.last')]);
     await pdfs.blob({ 'c.last': true });
-    expect(exportPdf).toHaveBeenCalledWith('/main.typ', { '/a.first.typ': '', '/c.last.typ': '/a.first.typ' });
+    expect(exportPdf).toHaveBeenCalledWith({ main: '/main.typ', sources: { '/a.first.typ': '', '/c.last.typ': '/a.first.typ' } });
     await pdfs.blob({ 'a.first': false });
-    expect(exportPdf).toHaveBeenLastCalledWith('/main.typ', {});
+    expect(exportPdf).toHaveBeenLastCalledWith({ main: '/main.typ', sources: {} });
   });
 
   it('rejects an option nobody registered', async () => {

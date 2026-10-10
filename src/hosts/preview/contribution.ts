@@ -1,7 +1,7 @@
 // What a contribution to the preview is (toolbar items, PDF export options, page overlays), and what the preview
 // tells it. Imports no host file above it, so contributions can name these types without importing the
 // host. See preview.ts.
-import type { Box } from '../../core/typst-engine/typst-engine';
+import type { Box, PdfEntry } from '../../core/typst-engine/typst-engine';
 import type { Zoom } from './pages/pages';
 
 /** A control in the preview's toolbar: made once, for the preview it is registered with. */
@@ -45,15 +45,6 @@ export interface PageClick {
   readonly path: string;
   readonly from: number;
   readonly to: number;
-}
-
-/**
- * What a PDF compiles: an entry file and source texts that replace (or add to) the project's `.typ` files for this
- * export only; the documents stay as they are. The export starts from the main file and no sources.
- */
-export interface PdfEntry {
-  readonly main: string;
-  readonly sources: Readonly<Record<string, string>>;
 }
 
 /**

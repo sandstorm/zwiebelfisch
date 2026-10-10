@@ -2,14 +2,8 @@
 // ARCHITECTURE.md, "Comments = margin notes".
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import type { FileContent } from '../../../core/project/project';
+import type { PdfEntry } from '../../../core/typst-engine/typst-engine';
 import { DRAFTING, noteCallSyntax, SET_DEFAULTS } from './margin-note-syntax';
-
-/** An entry to compile instead of the project's main file, and source texts that replace the project's for it. */
-export interface PdfEntry {
-  main: string;
-  /** Replaced and added `.typ` files by path; the rest of the project stays as it is. */
-  sources: Record<string, string>;
-}
 
 /**
  * The project as compiled for a PDF without comments; the documents

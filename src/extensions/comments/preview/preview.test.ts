@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { Disposable } from '../../../core/disposable/disposable';
 import { Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
-import type { PdfEntry, PdfExportOption } from '../../../hosts/preview/preview';
+import type { PdfEntry } from '../../../core/typst-engine/typst-engine';
+import type { PdfExportOption } from '../../../hosts/preview/preview';
 import { registerIncludeComments } from './preview';
 
 const path = ProjectPath.of;

@@ -230,7 +230,7 @@ describe('the built-in extensions', () => {
     expect(preview.pdfOptions.map((option) => option.id)).toEqual(['comments.include']);
     const blob = await editor.exportPdf({ options: { 'comments.include': true } });
     expect(blob.type).toBe('application/pdf');
-    expect(exportPdf).toHaveBeenCalledWith('/main.typ', {});
+    expect(exportPdf).toHaveBeenCalledWith({ main: '/main.typ', sources: {} });
     await expect(editor.exportPdf({ options: { nope: true } })).rejects.toThrow('Unknown PDF export option: nope');
   });
 

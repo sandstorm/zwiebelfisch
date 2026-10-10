@@ -3,7 +3,8 @@
 // See ARCHITECTURE.md, "Comments = margin notes".
 import type { Disposable } from '../../../core/disposable/disposable';
 import type { Project } from '../../../core/project/project';
-import type { PdfEntry, PreviewContributions } from '../../../hosts/preview/preview';
+import type { PdfEntry } from '../../../core/typst-engine/typst-engine';
+import type { PreviewContributions } from '../../../hosts/preview/preview';
 import { withoutNotes } from '../model/model';
 
 /**
