@@ -4,6 +4,5 @@
 export { changeBars, drawnRanges } from './change-bars';
 export { isInside, mostVisible, percentOfPage } from './geometry';
 export { PageList } from './page-list';
-export { presenceMarkers } from './presence-markers';
 export { snippet, type Snippet } from './snippet';
 export { stepZoom, zoomLabel, type Zoom } from './zoom';

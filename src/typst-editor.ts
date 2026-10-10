@@ -173,6 +173,9 @@ class Widget {
         const path = this.project.pathOf(document);
         if (path) void this.preview.reveal(path, offset);
       },
+      // Publish the local selection from the editors' own updates: the DOM's selectionchange
+      // fires before CodeMirror/ProseMirror read the new selection, so it would publish the previous one.
+      onSelection: () => this.collaboration?.selectionChanged(),
       onBaseChange: (document, base) => {
         if (this.project.pathOf(document) === this.project.main) this.changes.setBase(base);
       },
@@ -226,7 +229,7 @@ class Widget {
     );
   }
 
-  /** Shares the project; the others' carets show in the shown file's views, the preview and the file bar. */
+  /** Shares the project; the others' carets show in the shown file's views and the file bar. */
   private mountCollaboration(options: CollaborationOptions): CollaborationLink {
     const shared = { project: this.project, user: this.options.user };
     const current = () => {
@@ -238,11 +241,8 @@ class Widget {
     return new CollaborationLink(options, shared, this.left, {
       current,
       onVersions: (versions) => this.mountVersions(versions),
-      // Where the others are, in every file: markers in the preview, dots in the file bar.
-      onPresence: (presences) => {
-        this.preview.showPresence(presences);
-        this.switcher.showPresence(presences);
-      },
+      // Where the others are, in every file: dots in the file bar.
+      onPresence: (presences) => this.switcher.showPresence(presences),
     });
   }
 

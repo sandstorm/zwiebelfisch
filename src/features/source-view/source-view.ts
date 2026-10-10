@@ -4,7 +4,7 @@ import { basicSetup } from 'codemirror';
 import { setDiagnostics } from '@codemirror/lint';
 import { getOriginalDoc, unifiedMergeView, updateOriginalDoc } from '@codemirror/merge';
 import { Annotation, Compartment, EditorSelection, StateEffect, StateField, Transaction, type ChangeSet, type ChangeSpec } from '@codemirror/state';
-import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
+import { Decoration, EditorView, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { type Highlight, type Presence, type PresenceTarget, REMOTE_ORIGIN, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
 import { toLintDiagnostics, type SourceDiagnostic } from './lint';
 import { remotePresence, showPresence } from './presence';
@@ -60,11 +60,19 @@ function toDecorations(highlights: readonly Highlight[], length: number): Decora
   return Decoration.set(ranges, true);
 }
 
+/** Tells `options` about a moved selection (after the view has it), and about the focused cursor. */
+function reportSelection(update: ViewUpdate, options: SourceViewOptions): void {
+  if (update.selectionSet && update.view.hasFocus) options.onCursor?.(update.state.selection.main.head);
+  if (update.selectionSet || update.docChanged) options.onSelection?.();
+}
+
 export interface SourceViewOptions {
   /** Called with the cursor offset whenever the selection moves. */
   onCursor?(offset: number): void;
   /** Called with the new base text when the user accepts a change shown by `showChanges`. */
   onBaseChange?(base: string): void;
+  /** Called after the selection moved or the text changed; `selection()` already returns the new selection. */
+  onSelection?(): void;
 }
 
 /**
@@ -97,7 +105,7 @@ export class SourceView implements PresenceTarget {
           if (update.docChanged && !update.transactions.some((tr) => tr.annotation(fromDocument))) {
             document.change(toTextChanges(update.changes), this);
           }
-          if (update.selectionSet && update.view.hasFocus) options.onCursor?.(update.state.selection.main.head);
+          reportSelection(update, options);
         }),
       ],
     });

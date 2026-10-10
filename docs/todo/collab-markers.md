@@ -56,3 +56,10 @@ presence for non-`.typ` files.
   same spot.
 - File bar: a dot with initials per user on their file.
 - Needs a browser run: `mise run test:e2e-collab` (and a look at the caret/flag/box/marker CSS).
+
+## Later changes (2026-10-10)
+- Preview markers removed (user: "collab cursor also shown in Typst preview — why?"):
+  `presence-markers.ts` and `Preview.showPresence` are gone.
+- Off-by-one fix: the local selection was published on the DOM's `selectionchange`, read from the
+  editors' state before they had applied the move, so others saw the previous position. The
+  views now report selection changes themselves (`onSelection`).

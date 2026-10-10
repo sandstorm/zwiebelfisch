@@ -21,6 +21,8 @@ export interface VisualViewOptions {
   renderer?: BoxRenderer;
   /** Lets "Insert image" offer the project's images and upload new ones (default: it only asks for a path). */
   assets?: ImageAssets;
+  /** Called after the selection moved or the text changed; `selection()` already returns the new selection. */
+  onSelection?(): void;
 }
 
 /** Marks transactions that mirror a document change, so they are not written back. */
@@ -50,7 +52,10 @@ export class VisualView implements PresenceTarget {
       extensions: [...extensions, highlights, remotePresence],
       injectCSS: false,
       editorProps: { attributes: { class: 'typst-visual', 'data-testid': 'typst-visual' } },
-      onTransaction: ({ transaction }) => this.afterTransaction(transaction),
+      onTransaction: ({ transaction }) => {
+        this.afterTransaction(transaction);
+        if (transaction.selectionSet || transaction.docChanged) options.onSelection?.();
+      },
     });
     if (options.renderer) setBoxRenderer(this.editor, options.renderer);
     // Load the projection itself (not a JSON copy): its node identities are

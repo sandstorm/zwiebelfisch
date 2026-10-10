@@ -103,32 +103,6 @@
   pointer-events: none;
   animation: typst-preview-flash 1.2s ease-out forwards;
 }
-/* Another user's caret in the preview: their initials in their color, pointing at the baseline. */
-.typst-preview__presence {
-  position: absolute;
-  min-width: 1.6em;
-  height: 1.6em;
-  padding: 0 3px;
-  box-sizing: border-box;
-  transform: translate(calc(var(--typst-presence-stack, 0) * 1.7em - 1px), calc(-100% - 0.9em));
-  border-radius: 0.8em 0.8em 0.8em 0;
-  background: var(--typst-remote-color, #268bd2);
-  color: var(--typst-remote-text, #fff);
-  font: 600 10px/1.6em system-ui, sans-serif;
-  text-align: center;
-  box-shadow: 0 0 0 1.5px #fff;
-  z-index: 1;
-  transition: left 0.2s, top 0.2s;
-}
-.typst-preview__presence::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 100%;
-  width: 2px;
-  height: 1.1em;
-  background: var(--typst-remote-color, #268bd2);
-}
 @keyframes typst-preview-flash {
   from { opacity: 0.9; }
   to { opacity: 0; }

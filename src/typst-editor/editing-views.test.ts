@@ -118,3 +118,20 @@ describe('EditingViews diagnostics', () => {
     expect(parent.querySelector('.ProseMirror .typst-diagnostic')?.textContent).toBe('Hello');
   });
 });
+
+describe('EditingViews selection reports', () => {
+  it('reports a moved selection after the view has it (the collaboration cursor is never one step behind)', () => {
+    const parent = document.createElement('div');
+    document.body.append(parent);
+    const seen: { from: number; to: number }[] = [];
+    const doc = new TypstDocument('Hello world\n');
+    const views = new EditingViews(parent, { onSelection: (document) => seen.push(views.viewsOf(document).visual.selection()) });
+    views.show(doc);
+    const { visual, source } = views.viewsOf(doc);
+    visual.reveal(6, 11);
+    expect(seen.at(-1)).toEqual({ from: 6, to: 11 });
+    const before = seen.length;
+    source.reveal(0, 5);
+    expect(seen.length).toBeGreaterThan(before);
+  });
+});

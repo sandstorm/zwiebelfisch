@@ -54,7 +54,7 @@ test('the other user’s selection is shown with their name', async ({ browser, 
   await expect(selection.first()).toHaveAttribute('data-user', 'Ann');
 });
 
-test('the other user’s caret shows with their name in both views and in the preview', async ({ browser, baseURL }, info) => {
+test('the other user’s caret shows with their name in both views, where they moved it last', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
   await ann.getByTestId('typst-visual').locator('h1').click();
   await ann.keyboard.press('End');
@@ -62,8 +62,18 @@ test('the other user’s caret shows with their name in both views and in the pr
   await expect(visualCaret).toHaveCount(1);
   await expect(visualCaret.locator('.typst-remote-caret__flag')).toBeVisible();
   await expect(visualCaret.locator('.typst-remote-caret__flag')).toHaveText('Ann');
-  const marker = bob.getByTestId('typst-preview').locator('.typst-preview__presence[data-user="Ann"]');
-  await expect(marker).toHaveText('A');
+  // Regression: the caret is published after the move, not one step behind (at the click position).
+  const textBefore = () =>
+    visualCaret.evaluate((caret) => {
+      const range = document.createRange();
+      range.setStart(caret.closest('h1')!, 0);
+      range.setEndBefore(caret);
+      return range.toString();
+    });
+  await expect.poll(textBefore).toBe('Hello Typst');
+  await ann.keyboard.press('Home');
+  await expect.poll(textBefore).toBe('');
+  await expect(bob.getByTestId('typst-preview').locator('.typst-preview__presence')).toHaveCount(0);
   await bob.getByRole('tab', { name: 'Source' }).click();
   const line = bob.getByTestId('typst-source').locator('.cm-line', { hasText: 'Hello Typst' });
   const sourceCaret = line.locator('.typst-remote-caret[data-user="Ann"]');

@@ -1,8 +1,7 @@
 // Preview: the worker-backed live preview with hit-testing, zoom and page numbers. Entry of features/preview/.
 // See ARCHITECTURE.md, "Preview".
-import type { PlacedPresence } from '../../core/typst-document/typst-document';
 import type { Box, Diagnostic, Jump, Page, Position } from '../../core/typst-engine/typst-engine';
-import { changeBars, drawnRanges, isInside, mostVisible, PageList, percentOfPage, presenceMarkers, snippet, type Snippet, stepZoom, type Zoom, zoomLabel } from './pages/pages';
+import { changeBars, drawnRanges, isInside, mostVisible, PageList, percentOfPage, snippet, type Snippet, stepZoom, type Zoom, zoomLabel } from './pages/pages';
 import { DEFAULT_FONT_URLS, ENGINE_WASM_URL } from '../../core/typst-engine/engine-assets';
 import type { FileContent } from '../../core/project/project';
 import { FileSender, type Init, type Request, type Response, startEngineWorker } from './worker/worker';
@@ -29,8 +28,6 @@ type Changes = { path: string; ranges: { from: number; to: number }[] };
 
 /** Minimum time between two cursor → preview lookups while the cursor moves. */
 const REVEAL_INTERVAL_MS = 80;
-/** Minimum time between two lookups of the other users' places. */
-const PRESENCE_INTERVAL_MS = 250;
 
 /**
  * The live preview: compiles Typst in a worker and shows the pages as SVG,
@@ -50,9 +47,6 @@ export class Preview {
   private readonly toolbar: PreviewToolbar;
   private readonly compiles: LatestOnly<Compile>;
   private readonly reveals: LatestOnly<Reveal>;
-  private readonly presenceLookups: LatestOnly<readonly PlacedPresence[]>;
-  private presence: readonly PlacedPresence[] = [];
-  private presenceMarkers: HTMLElement[] = [];
   private readonly resizeObserver: ResizeObserver | null;
   private highlights: HTMLElement[] = [];
   private changes: Changes | null = null;
@@ -90,9 +84,6 @@ export class Preview {
     });
     this.reveals = new LatestOnly((reveal, superseded) => this.lookUp(reveal, superseded), {
       interval: REVEAL_INTERVAL_MS,
-    });
-    this.presenceLookups = new LatestOnly((presences, superseded) => this.placePresence(presences, superseded), {
-      interval: PRESENCE_INTERVAL_MS,
     });
 
     this.worker.postMessage({ type: 'init', wasm: ENGINE_WASM_URL, fonts: DEFAULT_FONT_URLS } satisfies Init);
@@ -151,17 +142,6 @@ export class Preview {
     return response.type === 'boxes' ? snippet(pages, response.boxes) : null;
   }
 
-  /**
-   * Marks where other users are with their initials in their color, at
-   * their caret (`head`) in `path`, until called again; redrawn after every
-   * compilation. Cheap to call often: lookups are throttled, only the newest
-   * presences are looked up.
-   */
-  showPresence(presences: readonly PlacedPresence[]): void {
-    this.presence = presences;
-    this.presenceLookups.push(presences);
-  }
-
   /** Calls `listener` after every successful compilation (snippets may have changed). Returns the unsubscribe function. */
   onRender(listener: () => void): () => void {
     this.renderListeners.add(listener);
@@ -188,7 +168,6 @@ export class Preview {
       this.scheduleStatus();
       if (!superseded()) void this.drawChanges();
       this.compiled = { files, pages: response.result.pages };
-      if (this.presence.length > 0) this.presenceLookups.push(this.presence);
       for (const listener of this.renderListeners) listener();
     }
     this.pages.classList.toggle('typst-preview--stale', failed);
@@ -200,28 +179,6 @@ export class Preview {
     const response = await this.request({ type: 'cursor', path, offset });
     if (superseded() || response.type !== 'cursor' || response.positions.length === 0) return;
     this.flash(response.positions[0]);
-  }
-
-  /** Replaces the presence markers with those at the places the engine draws `presences`' carets. */
-  private async placePresence(presences: readonly PlacedPresence[], superseded: () => boolean): Promise<void> {
-    const found = await Promise.all(
-      presences.map(async ({ id, user, path, head }) => {
-        const response = await this.request({ type: 'cursor', path, offset: head });
-        return { id, user, positions: response.type === 'cursor' ? response.positions : [] };
-      }),
-    );
-    if (superseded()) return;
-    for (const element of this.presenceMarkers.splice(0)) element.remove();
-    for (const marker of presenceMarkers(found, (page) => this.list.at(page)?.page)) {
-      const element = overlay(this.list.at(marker.page)!.element, 'typst-preview__presence', { left: marker.left, top: marker.top });
-      element.textContent = marker.label;
-      element.title = marker.title;
-      element.dataset.user = marker.title;
-      element.style.setProperty('--typst-remote-color', marker.color);
-      element.style.setProperty('--typst-remote-text', marker.textColor);
-      element.style.setProperty('--typst-presence-stack', String(marker.stack));
-      this.presenceMarkers.push(element);
-    }
   }
 
   private setZoom(request: ZoomRequest): void {

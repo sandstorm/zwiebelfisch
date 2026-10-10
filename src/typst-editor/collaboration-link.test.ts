@@ -34,14 +34,14 @@ describe('CollaborationLink', () => {
     await vi.waitFor(() => expect(ydoc.getMap<Y.Text>('files').get(MAIN)?.toString()).toBe('Hello world'));
   });
 
-  it('publishes the selection when it changes while the user works in the widget', async () => {
-    const { ydoc, awareness, input } = setup();
+  it('publishes the selection the views report while the user works in the widget', async () => {
+    const { ydoc, awareness, input, link } = setup();
     await vi.waitFor(() => expect(ydoc.getMap('files').size).toBe(1));
-    document.dispatchEvent(new Event('selectionchange'));
+    link.selectionChanged();
     await Promise.resolve();
     expect(cursor(awareness)).toBeFalsy();
     input.focus();
-    document.dispatchEvent(new Event('selectionchange'));
+    link.selectionChanged();
     await vi.waitFor(() => expect(cursor(awareness)).toMatchObject({ path: MAIN }));
   });
 

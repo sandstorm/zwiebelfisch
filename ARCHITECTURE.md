@@ -41,8 +41,7 @@ src/                        the widget (TypeScript); the most important API on t
                             toolbar.ts, latest-only.ts ("only the newest value" task runner)
       worker/               worker.ts (startEngineWorker, main-thread side), engine.worker.ts (the worker),
                             protocol.ts (messages), project-files.ts (FileSender/FileReceiver)
-      pages/                pages.ts: page-list (SVG only near the viewport), geometry, zoom, snippet, change-bars,
-                            presence-markers
+      pages/                pages.ts: page-list (SVG only near the viewport), geometry, zoom, snippet, change-bars
     diagnostics/            DiagnosticsStatus (status bar), diagnostics-summary.ts
     changes/                ChangeTracking (base version + "Show changes"), diff.ts (diffTexts), changes.css
     comments/               CommentAction ("Comment" / Ctrl+Alt+M), add-margin-note.ts, margin-note-syntax.ts
@@ -545,7 +544,6 @@ new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scr
 .update(files: Record<path, text | Uint8Array>, main)    // cheap per keystroke
 .reveal(path, offset)                        // cheap per cursor move: flash, scroll only if off-screen
 .showChanges(path, ranges | null)            // change bars in the page margin, redrawn after every compile
-.showPresence([{id, path, head, user}, …])   // other users' initials at their carets, redrawn after every compile
 .snippet(path, from, to, text) → Promise<{svg, width, height} | null>   // the range as drawn, cut from its page
 .onRender(listener) → unsubscribe            // after every successful compile
 .destroy()
@@ -562,11 +560,6 @@ new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scr
   `changebar`). A pure deletion (empty range) takes the characters on either side. Bars are
   page overlays like the highlights; only the newest request draws.
 
-- **Presence markers** (`presence-markers.ts`): every caret goes through the same `cursor`
-  request as `reveal` (`jumpFromCursor`); a third `LatestOnly` runner (one lookup round per
-  250 ms, newest presences only; again after every successful compile) replaces the markers. A
-  marker is a page overlay with the user's initials in their color pointing at the baseline;
-  markers on the same spot are numbered and drawn side by side.
 - **Coalescing (`LatestOnly`):** at most one compilation is in flight. Updates that arrive
   meanwhile replace each other, so only the newest gets compiled. Typing never queues a backlog.
   Cursor reveals use the same runner, additionally throttled to one lookup per 80 ms.
@@ -765,9 +758,9 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
   view: see SourceView / VisualView); `onPresence` gets everyone in every file (with `path`),
   only when that changed. Colors: the user's, else a palette entry by name; flag text black or
   white by WCAG contrast (`flagTextColor`). CSS: `--typst-remote-color`, `--typst-remote-text`.
-- **Widget presence**: the views of the shown file (above), the preview (`showPresence`: initials
-  markers) and the file bar (`FileSwitcher.showPresence`: a dot with initials per user on the
-  files they are in).
+- **Widget presence**: the views of the shown file (above) and the file bar
+  (`FileSwitcher.showPresence`: a dot with initials per user on the files they are in). Not the
+  preview (decision 2026-10-10: carets there were noise; the preview is the output).
 - **Why not Tiptap's Collaboration / CollaborationCaret** (decision): they are built on
   y-prosemirror, which makes the ProseMirror document the shared truth (a Y.XmlFragment). Here
   the Typst text is the truth (one Y.Text per file) and the Visual view is a projection of it;
@@ -775,8 +768,10 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
   view and preview all follow the text). So the sync stays text-based and only the *look* of the
   carets follows Tiptap / y-codemirror.
 - **Widget (`CollaborationLink`)**: `import()`s `features/collaboration/collaboration.ts` on demand (own chunk, ~37 kB gzip
-  with Yjs and the Hocuspocus provider), publishes the selection on `selectionchange` while focus
-  is in the editing area, and moves the cursors along when another file is shown.
+  with Yjs and the Hocuspocus provider), publishes the selection when the editing views report a change
+  (`onSelection` → `selectionChanged()`, once per microtask, while focus is in the editing area;
+  not on the DOM's `selectionchange`, which fires before CodeMirror/ProseMirror read the new
+  selection and so published the previous one), and moves the cursors along when another file is shown.
 - **Server (`server/`)**: `collabConfiguration({ storage?, database?, authenticate?, debounce?, gitlab?, extensions? })`
   → Hocuspocus configuration; `createCollabServer({ port, … })`. Storage keeps every room's Yjs
   state (`onLoadDocument` / `onStoreDocument`; default `@hocuspocus/extension-sqlite`).
@@ -910,6 +905,6 @@ an in-memory `FakeGitLab` holding `demo/examples/advanced`). Checklist with step
 - **Collaboration:** images and other non-`.typ` files are not shared (outside GitLab rooms). `{ doc }` mode needs the
   widget and the host on the same Yjs instance (`dist/lib` bundles its own Yjs). In `{ doc }`
   mode the host must pass a synced Y.Doc; with `{ url }` an unreachable server leaves the widget
-  local. Presence in the preview and the file bar is re-resolved on presence changes only (not on
+  local. Presence in the file bar is re-resolved on presence changes only (not on
 every edit of a file not shown). In the Visual view a caret inside hidden markup (delimiters,
 markers, blank lines) is drawn at the next visible spot.

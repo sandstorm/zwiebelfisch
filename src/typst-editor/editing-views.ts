@@ -10,6 +10,8 @@ export interface EditingViewsOptions {
   mode?: EditorMode;
   /** The cursor moved in the source view of `document`. */
   onCursor?(document: TypstDocument, offset: number): void;
+  /** The selection in a view of `document` moved, or its text changed (the views already show the new selection). */
+  onSelection?(document: TypstDocument): void;
   /** Accepting a change in the source view of `document` moved its base (see `SourceView.showChanges`). */
   onBaseChange?(document: TypstDocument, base: string): void;
   /** Options for the Visual view of `document` (rendered raw boxes, images to insert). */
@@ -138,13 +140,17 @@ export class EditingViews {
     panes.visual.after(panes.source);
     const views: Views = {
       panes,
-      visual: new VisualView(panes.visual, document, this.options.visualOptions?.(document)),
+      visual: new VisualView(panes.visual, document, {
+        ...this.options.visualOptions?.(document),
+        onSelection: () => this.options.onSelection?.(document),
+      }),
       source: new SourceView(panes.source, document, {
         onCursor: (offset) => {
           views.cursor = offset;
           this.options.onCursor?.(document, offset);
         },
         onBaseChange: (base) => this.options.onBaseChange?.(document, base),
+        onSelection: () => this.options.onSelection?.(document),
       }),
       cursor: null,
     };

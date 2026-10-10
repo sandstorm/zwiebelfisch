@@ -21,7 +21,7 @@ export interface LinkedWidget {
 /**
  * The widget's side of collaboration. Loads the collaboration code (Yjs,
  * Hocuspocus) on demand, so widgets without collaboration never download it;
- * publishes the local selection whenever it changes inside `area`; shows the
+ * publishes the local selection when the views report a change (`selectionChanged`); shows the
  * others' carets and selections in the views of the file shown, and tells
  * the widget where everyone is.
  */
@@ -53,7 +53,6 @@ export class CollaborationLink {
 
   destroy(): void {
     this.destroyed = true;
-    this.area.ownerDocument.removeEventListener('selectionchange', this.schedule);
     this.collaboration?.destroy();
   }
 
@@ -68,11 +67,14 @@ export class CollaborationLink {
     collaboration.onPresence((presences) => this.widget.onPresence?.(presences));
     collaboration.showCursors(this.shown.path, this.shown.views);
     if (collaboration.versions) this.widget.onVersions?.(collaboration.versions);
-    this.area.ownerDocument.addEventListener('selectionchange', this.schedule);
   }
 
-  /** Publishes the selection once per burst of selection events, when the user works in this widget. */
-  private readonly schedule = (): void => {
+  /**
+   * The local selection moved (called by the editing views after their state
+   * has the new selection). Publishes it once per burst, when the user works
+   * in this widget.
+   */
+  selectionChanged(): void {
     if (this.scheduled) return;
     this.scheduled = true;
     queueMicrotask(() => {
@@ -81,7 +83,7 @@ export class CollaborationLink {
       const current = this.widget.current();
       this.collaboration.setCursor(current?.path ?? null, current?.view.selection());
     });
-  };
+  }
 
   private focused(): boolean {
     const root = this.area.getRootNode() as Document | ShadowRoot;
