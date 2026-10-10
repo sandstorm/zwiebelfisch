@@ -9,8 +9,9 @@ import {
 } from './visual-view/visual-view';
 
 /**
- * Strong, emphasis, links, inline code, code blocks and block quotes: their nodes, marks and buttons. The marks nest
- * in the order they are registered (the schema's), so bold is outermost and code innermost.
+ * Strong, emphasis, links, inline code, code blocks and block quotes: their nodes, marks and buttons. Where marks
+ * cover the same text, a link is outermost (Tiptap's link mark has priority 1000), then bold, italic; inline code
+ * prints innermost whatever the schema's order (`raw`).
  */
 export const markup: TypstExtension = {
   id: 'markup',
