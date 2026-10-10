@@ -1,0 +1,5 @@
+[tools]
+node = "24.21.0"
+pnpm = "10.34.6"
+# keep in sync with the Typst version bundled in @myriaddreamin/typst-ts-web-compiler
+typst = "0.14.2"
