@@ -71,9 +71,9 @@ describe('table headers', () => {
     expectPreciseMap(doc);
   });
 
-  it('turning the first row into a header row wraps it in table.header', () => {
+  it('turning the first row into a header row wraps it in table.header, in the style of the table', () => {
     const doc = setFirstRow(project('#table(columns: 2, stroke: none, [a], [b], [c], [d])\n'), 'tableHeader');
-    expect(print(doc)).toBe('#table(\n  columns: 2,\n  stroke: none,\n  table.header([a], [b]),\n  [c], [d],\n)\n');
+    expect(print(doc)).toBe('#table(columns: 2, stroke: none, table.header([a], [b]), [c], [d])\n');
     expectPreciseMap(doc);
   });
 });

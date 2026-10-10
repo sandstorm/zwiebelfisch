@@ -36,7 +36,7 @@ const FIXTURES: Record<string, string> = {
     '#table(columns: 1, [#figure(image("t.png"), caption: [In a cell])])\n',
   rawFigures:
     '#figure([text], caption: [x])\n\n#figure(image("a.png"), caption: [a\n\nb])\n\n' +
-    '#figure(table(columns: 1, [a]))\n\n#figure(image(p), caption: [x])\n\n#figure(image("a.png")) <a> <b>\n',
+    '#figure(table(columns: 1, [a], table.hline()))\n\n#figure(image(p), caption: [x])\n\n#figure(image("a.png")) <a> <b>\n',
   marginNotes:
     '#import "@preview/drafting:0.2.2": margin-note\n\nSome text#margin-note[Is this right? -- Anna] and #margin-note[a *range*][the [note]] '
     + 'plus #margin-note(side: left, dy: 1em)[left][x].\n\n#margin-note[alone]\n\n#margin-note[][] #margin-note[a\n\nb][c] #margin-note([a], [b])\n',

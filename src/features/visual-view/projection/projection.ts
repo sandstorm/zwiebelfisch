@@ -20,9 +20,10 @@
  * (`#link("url")[text]`, bare URLs) as a `link` mark, raw text as code blocks
  * (```lang …```) and a `code` mark (`code`), standalone `#image("path", ..)`
  * and `#outline(..)` calls as `image` / `outline` blocks (source kept like a
- * raw block), `#figure(image("path", ..), caption: [..])` as figures whose
- * caption is rich text, and `#table(columns: n, [..], ..)` with content cells
- * as tables whose cells hold blocks. Text alignment (see `text-align.ts`):
+ * raw block), `#figure(image("path", ..) | table(..), caption: [..])` as
+ * figures whose caption is rich text, and `#table(columns: n, [..], ..)` as
+ * tables whose cells hold blocks; a cell written as an expression (`ms(18)`)
+ * is a code box of its own (see `embedded-code.ts`). Text alignment (see `text-align.ts`):
  * `#align(<alignment>)[..]` is an `alignment` block holding blocks,
  * `#par(justify: ..)[..]` a paragraph with its `justify` flag.
  * `drafting` margin notes become a `marginNote` atom
@@ -43,6 +44,7 @@ export { alignArgs, setRules, withHorizontal, type Horizontal, type TextAlignmen
 import { alignArgs } from './alignment';
 import { noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../../comments/comments';
 import { callAtomType } from './call-atoms';
+import { isEmbeddable, markupSource } from './embedded-code';
 
 /**
  * Nodes created by `project` and not modified since. ProseMirror nodes are
@@ -299,11 +301,11 @@ function isLabelAfter(nodes: SyntaxNode[]): boolean {
   return nodes.length === 0 || (nodes.at(-1)!.name === 'Label' && nodes.slice(0, -1).every((n) => n.name === 'Space'));
 }
 
-/** How a figure's source lies around its image call and caption content, for printing it back. */
+/** How a figure's source lies around its body (image or table call) and caption content, for printing it back. */
 interface FigureLayout {
-  /** From `#figure` to the image call, e.g. `#figure(`. */
+  /** From `#figure` to the body, e.g. `#figure(`. */
   open: string;
-  /** Around the caption's content: from the image call to the content, and after the content to the end of the argument. */
+  /** Around the caption's content: from the body to the content, and after the content to the end of the argument. */
   caption: { before: string; open: string; close: string } | null;
   /** The rest: other arguments, `)`, a label. */
   rest: string;
@@ -314,41 +316,43 @@ const NEW_FIGURE: FigureLayout = { open: '#figure(', caption: null, rest: ')' };
 const NEW_CAPTION = { before: ', ', open: 'caption: [', close: ']' };
 
 /**
- * `#figure(image("path", ..), ..named) <label>?` whose `caption`, if any, is
- * one paragraph of markup; other named arguments stay as written.
+ * `#figure(image("path", ..), ..named) <label>?` or `#figure(table(..), ..)`
+ * (a table as `table` projects it) whose `caption`, if any, is one paragraph
+ * of markup; other named arguments stay as written.
  */
 function figure(ctx: Context, segment: Segment, args: SyntaxNode[], sep: string | null): Node | null {
   const parsed = figureArgs(ctx, args);
   if (!parsed) return null;
   const { schema, source } = ctx;
-  const { image, caption } = parsed;
-  const imageNode = schema.nodes.image.create({ src: source.slice(image.from, image.to) });
-  const layout: FigureLayout = { open: source.slice(segment.from, image.from), caption: null, rest: '' };
+  const { body, bodyNode, caption } = parsed;
+  const layout: FigureLayout = { open: source.slice(segment.from, body.from), caption: null, rest: '' };
   if (!caption) {
-    layout.rest = source.slice(image.to, segment.to);
-    return schema.nodes.figure.create({ sep, layout }, [imageNode]);
+    layout.rest = source.slice(body.to, segment.to);
+    return schema.nodes.figure.create({ sep, layout }, [bodyNode]);
   }
   const { from, to, nodes } = captionContent(caption.content);
-  layout.caption = { before: source.slice(image.to, caption.arg.from), open: source.slice(caption.arg.from, from), close: source.slice(to, caption.arg.to) };
+  layout.caption = { before: source.slice(body.to, caption.arg.from), open: source.slice(caption.arg.from, from), close: source.slice(to, caption.arg.to) };
   layout.rest = source.slice(caption.arg.to, segment.to);
   const captionNode = textblock(ctx, { type: 'figureCaption', attrs: { src: source.slice(from, to) } }, from, inline(ctx, nodes));
-  return schema.nodes.figure.create({ sep, layout }, [imageNode, captionNode]);
+  return schema.nodes.figure.create({ sep, layout }, [bodyNode, captionNode]);
 }
 
-/** The image call and the caption argument of a figure, if it is an image with an optional one-paragraph caption. */
-function figureArgs(ctx: Context, args: SyntaxNode[]): { image: SyntaxNode; caption: CaptionArg | null } | null {
+/** The body (call and node) and the caption argument of a figure, if it is an image or table with an optional one-paragraph caption. */
+function figureArgs(ctx: Context, args: SyntaxNode[]): { body: SyntaxNode; bodyNode: Node; caption: CaptionArg | null } | null {
   if (!parenthesized(args)) return null;
-  const [image, ...others] = args.slice(1, -1).filter((a) => a.name !== 'Space' && a.name !== 'Comma');
-  if (!isImageCall(ctx, image)) return null;
-  const caption = captionArg(ctx, others);
-  return caption === undefined ? null : { image, caption };
+  const [body, ...others] = args.slice(1, -1).filter((a) => a.name !== 'Space' && a.name !== 'Comma');
+  const bodyNode = body ? figureBody(ctx, body) : null;
+  const caption = bodyNode ? captionArg(ctx, others) : undefined;
+  return caption === undefined ? null : { body, bodyNode: bodyNode!, caption };
 }
 
-/** `image("literal path", ..)` as code (a figure's body). */
-function isImageCall(ctx: Context, node: SyntaxNode | undefined): node is SyntaxNode {
-  if (node?.name !== 'FuncCall') return false;
+/** A figure's body: `image("literal path", ..)`, or `table(..)` as a table. */
+function figureBody(ctx: Context, node: SyntaxNode): Node | null {
+  if (node.name !== 'FuncCall') return null;
   const { name, args } = callee(ctx, node);
-  return name === 'image' && parenthesized(args) && imagePath(ctx.source.slice(node.from, node.to)) !== null;
+  if (name === 'table') return table(ctx, node, args, null);
+  const src = ctx.source.slice(node.from, node.to);
+  return name === 'image' && parenthesized(args) && imagePath(src) !== null ? ctx.schema.nodes.image.create({ src }) : null;
 }
 
 /** A figure's `caption: [..]` argument and its content block. */
@@ -408,35 +412,119 @@ interface TableLayout {
   columns: number;
   /** The source before, between and after the cells' content; one more than cells. */
   gaps: string[];
-  /** Named arguments other than `columns`, as written. */
-  named: string[];
+  /** Per cell: written bare, as an expression (`ms(18)`), so its gaps hold no brackets. */
+  bare: boolean[];
   /** The first row is a `table.header(..)`. */
   header: boolean;
+  /** How the rows are written, for re-printing the table once its shape changed. */
+  style: TableStyle;
 }
 
+/** How a table's arguments are written: what a re-printed table keeps. */
+interface TableStyle {
+  /** The source from the call to the first row, around the `columns` count. */
+  head: [string, string];
+  /** Named arguments written between rows; re-printed after the head. */
+  named: string[];
+  /** Between the cells of a row and between rows, e.g. `, ` and `,\n  `. */
+  cellSep: string;
+  rowSep: string;
+  /** Around and between the header row's cells. */
+  header: { open: string; sep: string; close: string };
+  /** After the last row: e.g. `,\n)`. */
+  tail: string;
+}
+
+/** The style of a table made in the editor: `#table(\n  columns: n,\n  [..], [..],\n)`. */
+const NEW_TABLE: TableStyle = {
+  head: ['#table(\n  columns: ', ',\n  '],
+  named: [],
+  cellSep: ', ',
+  rowSep: ',\n  ',
+  header: { open: 'table.header(', sep: ', ', close: ')' },
+  tail: ',\n)',
+};
+
 /**
- * `#table(columns: n, [..], ..)` whose positional arguments are all content
- * blocks filling n columns, optionally starting with a one-row
- * `table.header([..], ..)`.
+ * `#table(columns: n, ..)` (or `table(..)` as a figure's body) whose
+ * positional arguments fill n columns, optionally starting with a one-row
+ * `table.header(..)`. A cell is a content block `[..]` or an expression
+ * (`ms(18)`, `$x^2$`), which becomes a raw box in a cell of its own.
  */
-function table(ctx: Context, call: Segment, args: SyntaxNode[], sep: string | null): Node | null {
+function table(ctx: Context, call: { from: number; to: number }, args: SyntaxNode[], sep: string | null): Node | null {
   const parsed = tableArgs(ctx, args);
   if (!parsed || parsed.cells.length === 0 || parsed.cells.length % parsed.columns !== 0) return null;
-  if (parsed.header !== 0 && parsed.header !== parsed.columns) return null;
+  if (parsed.headerCells !== 0 && parsed.headerCells !== parsed.columns) return null;
+  const style = tableStyle(ctx, call, parsed);
+  if (!style) return null;
   const { schema, source } = ctx;
   const gaps: string[] = [];
   let pos = call.from;
-  const cells = parsed.cells.map((block, index) => {
-    const { content, from, to } = contentBlocks(ctx, block);
+  const cells = parsed.cells.map(({ node, bare }, index) => {
+    const { content, from, to } = bare ? bareCell(ctx, node) : contentBlocks(ctx, node);
     gaps.push(source.slice(pos, from));
     pos = to;
-    return (index < parsed.header ? schema.nodes.tableHeader : schema.nodes.tableCell).create(null, content);
+    return (index < parsed.headerCells ? schema.nodes.tableHeader : schema.nodes.tableCell).create(null, content);
   });
   gaps.push(source.slice(pos, call.to));
   const rows: Node[] = [];
   for (let i = 0; i < cells.length; i += parsed.columns) rows.push(schema.nodes.tableRow.create(null, cells.slice(i, i + parsed.columns)));
-  const layout: TableLayout = { columns: parsed.columns, gaps, named: parsed.named, header: parsed.header > 0 };
+  const bare = parsed.cells.map((c) => c.bare);
+  const layout: TableLayout = { columns: parsed.columns, gaps, bare, header: parsed.headerCells > 0, style };
   return schema.nodes.table.create({ sep, layout }, rows);
+}
+
+/** A cell written as an expression: a paragraph holding it as a raw box (code, without `#`). */
+function bareCell(ctx: Context, node: SyntaxNode): { content: Node[]; from: number; to: number } {
+  const src = ctx.source.slice(node.from, node.to);
+  const atom = ctx.schema.nodes.rawInline.create({ src, code: true });
+  const paragraph = textblock(ctx, { type: 'paragraph', attrs: { src } }, node.from, [{ node: atom, from: node.from, to: node.to }]);
+  return { content: [paragraph], from: node.from, to: node.to };
+}
+
+/** Separators between table arguments: a comma and whitespace, nothing else (no comments). */
+const ARG_SEP = /^\s*,\s*$/;
+
+/**
+ * How the table's rows are written: the source before the first row (with
+ * the `columns` count cut out), the separators of its last rows, the header
+ * call's syntax and what follows the last row. Null if `columns` comes after
+ * the first row.
+ */
+function tableStyle(ctx: Context, call: { from: number; to: number }, parsed: TableArgs): TableStyle | null {
+  const text = (from: number, to: number) => ctx.source.slice(from, to);
+  const between = (a: SyntaxNode | undefined, b: SyntaxNode | undefined) => (a && b ? text(a.to, b.from) : null);
+  const cells = parsed.cells.map((c) => c.node);
+  const rows: SyntaxNode[][] = parsed.header ? [[parsed.header]] : [];
+  for (let i = parsed.headerCells; i < cells.length; i += parsed.columns) rows.push(cells.slice(i, i + parsed.columns));
+  const first = rows[0][0];
+  const last = rows.at(-1)!.at(-1)!;
+  const count = parsed.columnsCount!;
+  if (count.to > first.from) return null;
+  const lastRow = rows.at(-1)!;
+  const sepOf = (s: string | null, fallback: string) => (s !== null && ARG_SEP.test(s) ? s : fallback);
+  const cellSep = sepOf(lastRow === rows[0] && parsed.header ? null : between(lastRow[0], lastRow[1]), NEW_TABLE.cellSep);
+  const indent = /\s*$/.exec(text(call.from, first.from))![0];
+  const rowSep = sepOf(between(rows.at(-2)?.at(-1), lastRow[0]), indent.includes('\n') ? `,${indent}` : cellSep);
+  return {
+    head: [text(call.from, count.from), text(count.to, first.from)],
+    named: parsed.named.filter((n) => n.from > first.from && n.to <= last.from).map((n) => text(n.from, n.to)),
+    cellSep,
+    rowSep,
+    header: parsed.header ? headerStyle(text, parsed.header, cells.slice(0, parsed.headerCells), cellSep) : { ...NEW_TABLE.header, sep: cellSep },
+    tail: text(last.to, call.to),
+  };
+}
+
+/** How a `table.header(..)` call is written around and between its `cells`. */
+function headerStyle(text: (from: number, to: number) => string, call: SyntaxNode, cells: SyntaxNode[], cellSep: string): TableStyle['header'] {
+  const sep = cells.length > 1 ? text(cells[0].to, cells[1].from) : cellSep;
+  return {
+    open: text(call.from, cells[0].from),
+    // `table.header[a][b]` has no separators at all
+    sep: sep === '' || ARG_SEP.test(sep) ? sep : cellSep,
+    close: text(cells.at(-1)!.to, call.to),
+  };
 }
 
 /** The blocks of a closed content block `[..]` (an empty paragraph if there are none) and the source range they cover. */
@@ -482,38 +570,61 @@ function justified(ctx: Context, call: Segment, args: SyntaxNode[], sep: string 
 
 interface TableArgs {
   columns: number;
-  named: string[];
-  /** Content blocks: the header's cells first. */
-  cells: SyntaxNode[];
-  /** How many of the cells are header cells. */
-  header: number;
+  /** The `columns` integer. */
+  columnsCount: SyntaxNode | null;
+  /** Named arguments other than `columns`. */
+  named: SyntaxNode[];
+  /** The cells, the header's first: content blocks, or bare expressions. */
+  cells: { node: SyntaxNode; bare: boolean }[];
+  /** The `table.header(..)` call, if any, and how many of the cells are in it. */
+  header: SyntaxNode | null;
+  headerCells: number;
 }
 
 /**
  * The arguments of a table call: an integer `columns`, other named arguments
- * and closed content blocks only, the first of them optionally in a
+ * and cells only (see `tableCell`), the first of them optionally in a
  * `table.header(..)`.
  */
 function tableArgs(ctx: Context, args: SyntaxNode[]): TableArgs | null {
   if (!parenthesized(args)) return null;
-  const result: TableArgs = { columns: 0, named: [], cells: [], header: 0 };
+  const result: TableArgs = { columns: 0, columnsCount: null, named: [], cells: [], header: null, headerCells: 0 };
   for (const arg of args.slice(1, -1)) {
-    if (isClosedContent(arg)) result.cells.push(arg);
-    else if (arg.name === 'Named') namedArg(ctx, arg, result);
-    else if (!headerArg(ctx, arg, result) && arg.name !== 'Space' && arg.name !== 'Comma') return null;
+    if (arg.name === 'Space' || arg.name === 'Comma') continue;
+    if (arg.name === 'Named') namedArg(ctx, arg, result);
+    else if (!headerArg(ctx, arg, result)) {
+      const cell = tableCell(ctx, arg);
+      if (!cell) return null;
+      result.cells.push(cell);
+    }
   }
   return result.columns > 0 ? result : null;
 }
 
-/** Takes a `table.header([..], ..)` of closed content blocks before any cell as the header cells. */
+/** Takes a `table.header(..)` of cells before any other cell as the header cells. */
 function headerArg(ctx: Context, arg: SyntaxNode, into: TableArgs): boolean {
   const target = arg.name === 'FuncCall' ? arg.firstChild : null;
   if (!target || ctx.source.slice(target.from, target.to) !== 'table.header' || into.cells.length > 0) return false;
   const parts = children(arg.getChild('Args')!).filter((a) => !['LeftParen', 'RightParen', 'Space', 'Comma'].includes(a.name));
-  if (!parts.every(isClosedContent)) return false;
-  into.cells.push(...parts);
-  into.header = parts.length;
+  const cells = parts.map((part) => tableCell(ctx, part));
+  if (cells.length === 0 || cells.some((c) => c === null)) return false;
+  into.cells.push(...(cells as { node: SyntaxNode; bare: boolean }[]));
+  into.header = arg;
+  into.headerCells = cells.length;
   return true;
+}
+
+/**
+ * A cell argument: a closed content block, or an expression Typst would read
+ * the same after a `#` in markup (`ms(18)`, `$x^2$`, `"text"`), which is
+ * `bare`. Other `table.*` elements (cells with spans, lines, a footer) and
+ * comments are not cells: the table stays raw.
+ */
+function tableCell(ctx: Context, arg: SyntaxNode): { node: SyntaxNode; bare: boolean } | null {
+  if (isClosedContent(arg)) return { node: arg, bare: false };
+  const src = ctx.source.slice(arg.from, arg.to);
+  if (arg.name === 'ContentBlock' || /Comment/.test(arg.name) || /^table\s*\./.test(src)) return null;
+  return isEmbeddable(src) ? { node: arg, bare: true } : null;
 }
 
 /** Whether an argument list is `(..)` alone: closed, and no trailing content block. */
@@ -525,12 +636,13 @@ function isClosedContent(node: SyntaxNode): boolean {
   return node.name === 'ContentBlock' && node.lastChild?.name === 'RightBracket' && node.getChild('Markup') !== null;
 }
 
-function namedArg(ctx: Context, arg: SyntaxNode, into: { columns: number; named: string[] }): void {
+function namedArg(ctx: Context, arg: SyntaxNode, into: TableArgs): void {
   const name = arg.getChild('Ident');
   if (!name || ctx.source.slice(name.from, name.to) !== 'columns') {
-    into.named.push(ctx.source.slice(arg.from, arg.to));
+    into.named.push(arg);
   } else if (arg.lastChild?.name === 'Int') {
     into.columns = Number(ctx.source.slice(arg.lastChild.from, arg.lastChild.to));
+    into.columnsCount = arg.lastChild;
   } else {
     into.columns = NaN;
   }
@@ -1049,7 +1161,8 @@ interface PlacedCell {
 /**
  * A table: its source around unchanged cell content while it still has the
  * projected shape, so editing a cell changes just that cell; otherwise
- * `#table(columns: n, ..named, [..], ..)`, one row per line, the first in
+ * re-printed in the style it was written in (see `TableStyle`; editor-made:
+ * `#table(columns: n, [..], ..)`, one row per line), the first row in
  * `table.header(..)` if its cells are header cells.
  */
 function printTable(out: Printer, table: Node, pos: number): void {
@@ -1060,47 +1173,80 @@ function printTable(out: Printer, table: Node, pos: number): void {
     rows.push(cells);
   });
   const layout: TableLayout | null = table.attrs.layout;
-  const printCell = ({ cell, pos: cellPos }: PlacedCell) => printBlocks(out, cell, cellPos + 1, '\n\n');
-  if (layout && hasShape(rows, layout)) {
-    const cells = rows.flat();
-    layout.gaps.forEach((gap, i) => {
-      // the part up to `]` closes the previous cell, the rest opens the next one
-      const close = i === 0 ? 0 : gap.indexOf(']') + 1;
-      out.closing(gap.slice(0, close));
-      out.hidden(gap.slice(close));
-      if (i < cells.length) printCell(cells[i]);
-    });
-    return;
-  }
-  out.hidden(`#table(\n  columns: ${rows[0].length},\n`);
-  for (const arg of layout?.named ?? []) out.hidden(`  ${arg},\n`);
-  const header = isHeaderRow(rows[0]);
+  if (layout && hasShape(rows, layout)) return printInLayout(out, rows.flat(), layout);
+  const style = layout?.style ?? NEW_TABLE;
+  out.hidden(style.head[0] + rows[0].length + style.head[1]);
+  const indent = /\s*$/.exec(style.head[1])![0] || ' ';
+  for (const arg of style.named) out.hidden(`${arg},${indent}`);
   rows.forEach((row, r) => {
-    const [open, close] = r === 0 && header ? ['table.header(', ')'] : ['', ''];
+    if (r > 0) out.hidden(style.rowSep);
+    const { open, sep, close } = r === 0 && isHeaderRow(row) ? headerSyntax(style, row) : { open: '', sep: style.cellSep, close: '' };
+    out.hidden(open);
     row.forEach((cell, i) => {
-      out.hidden(i === 0 ? `  ${open}[` : ', [');
-      printCell(cell);
-      out.closing(']');
+      if (i > 0) out.hidden(sep);
+      printCell(out, cell, true);
     });
-    out.hidden(`${close},\n`);
+    out.hidden(close);
   });
-  out.hidden(')');
+  out.hidden(style.tail);
+}
+
+/** The table's source around its cells, as projected; only edited cells print anew. */
+function printInLayout(out: Printer, cells: PlacedCell[], { gaps, bare }: TableLayout): void {
+  gaps.forEach((gap, i) => {
+    // the part up to `]` closes the previous cell (bare cells have none), the rest opens the next one
+    const close = i === 0 || bare[i - 1] ? 0 : gap.indexOf(']') + 1;
+    out.closing(gap.slice(0, close));
+    out.hidden(gap.slice(close));
+    if (i < cells.length) printCell(out, cells[i], bare[i]);
+  });
 }
 
 /**
- * A figure: its source around the image call and the caption content, so
+ * A cell's content. A cell holding just a code box prints its code, if
+ * `bracketed` is set (its source has no brackets of its own) and the code is
+ * still one expression; other cells print their blocks, in brackets if
+ * `bracketed` (`[#ms(18) more]`).
+ */
+function printCell(out: Printer, { cell, pos }: PlacedCell, bracketed: boolean): void {
+  const code = bracketed ? bareCode(cell) : null;
+  if (code) {
+    out.shown(code.attrs.src, 'atom', pos + 2, pos + 3);
+    return out.endBlock(pos + 3, false);
+  }
+  if (bracketed) out.hidden('[');
+  printBlocks(out, cell, pos + 1, '\n\n');
+  if (bracketed) out.closing(']');
+}
+
+/** The code box a cell consists of, if it can be printed as a bare expression. */
+function bareCode(cell: Node): Node | null {
+  const only = (node: Node | null) => (node?.childCount === 1 ? node.firstChild : null);
+  const paragraph = only(cell);
+  const atom = paragraph?.type.name === 'paragraph' && paragraph.attrs.justify == null ? only(paragraph) : null;
+  const isCode = atom?.type.name === 'rawInline' && atom.attrs.code && atom.marks.length === 0;
+  return isCode && isEmbeddable(atom.attrs.src) ? atom : null;
+}
+
+/** `table.header(..)` around a header row, as written; the bracket form `table.header[a][b]` only if it holds no bare cells. */
+function headerSyntax({ header }: TableStyle, row: PlacedCell[]): TableStyle['header'] {
+  return header.open.endsWith('(') || !row.some(({ cell }) => bareCode(cell)) ? header : NEW_TABLE.header;
+}
+
+/**
+ * A figure: its source around the body (image or table) and the caption content, so
  * each prints (and changes) on its own. An added caption goes right after the
- * image call; a removed one takes its argument and the comma before it along.
+ * body; a removed one takes its argument and the comma before it along.
  */
 function printFigure(out: Printer, figure: Node, pos: number): void {
   const layout: FigureLayout = figure.attrs.layout ?? NEW_FIGURE;
-  const image = figure.child(0);
+  const body = figure.child(0);
   out.hidden(layout.open);
-  printBlock(out, image, figure, pos + 1);
+  printBlock(out, body, figure, pos + 1);
   if (figure.childCount > 1) {
     const around = layout.caption ?? NEW_CAPTION;
     out.hidden(around.before + around.open);
-    printBlock(out, figure.child(1), figure, pos + 1 + image.nodeSize);
+    printBlock(out, figure.child(1), figure, pos + 1 + body.nodeSize);
     out.closing(around.close);
   } else if (layout.caption) {
     out.hidden(layout.caption.before.replace(/,\s*$/, ''));
@@ -1281,7 +1427,8 @@ function needsFunctionSyntax({ before, after, first, last }: Around): boolean {
 
 /** The source an inline atom prints. */
 function atomSource(atom: Node): string {
-  return atom.type.name === 'marginNote' ? printNoteCall(atom.attrs as { head: string; note: string }) : atom.attrs.src;
+  if (atom.type.name === 'marginNote') return printNoteCall(atom.attrs as { head: string; note: string });
+  return atom.attrs.code ? markupSource(atom.attrs.src) : atom.attrs.src;
 }
 
 /** How a decoded escape or shorthand was written, if its text is unchanged. */

@@ -375,6 +375,7 @@
 .typst-visual__figure > .typst-visual__image { margin-bottom: 0.2em; }
 .typst-visual__figure .typst-visual__image-frame { margin: 0 auto; }
 .typst-visual__figure .typst-visual__image-tools { justify-content: center; }
+.typst-visual__figure .typst-visual__table { margin: 0 auto 0.2em; } /* a table figure: centred above its caption, as Typst sets it */
 .typst-visual__caption { position: relative; text-align: center; font-size: 0.95em; }
 .typst-visual__caption:has(> br.ProseMirror-trailingBreak:only-child)::before {
   content: 'Caption';
