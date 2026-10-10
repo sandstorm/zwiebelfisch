@@ -1,5 +1,5 @@
 // The Typst file of a spreadsheet: what Typst documents import of `name.ic` — every sheet as a table (displayed values,
-// alignment, fills, fonts, borders, column widths, row heights) and as values — in `name.ic.gen.typ`. See spreadsheets.ts.
+// alignment, fills, fonts, borders, column widths, row heights) and as values — in `name.ic.gen.typ`. See ../spreadsheets.ts.
 import type { CellStyle, Color } from '@ironcalc/wasm';
 
 /** The part of IronCalc's `Model` the file needs. */

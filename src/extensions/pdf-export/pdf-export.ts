@@ -1,5 +1,7 @@
 // The pdf-export extension: the project's PDF, with or without comments (the host's `exportPdf`, the preview's
 // "Download PDF"), made by PdfExport. Entry of extensions/pdf-export/. See ARCHITECTURE.md, "createTypstEditor".
+// Why an extension: the preview's engine can make a PDF, but which PDFs a widget offers, and whether it has a
+// download button at all, is configuration; the menu (preview/) only lists the variants registered with the preview.
 import type { Project } from '../../core/project/project';
 import type { Diagnostic, PdfResult } from '../../core/typst-engine/typst-engine';
 import type { PdfFile } from '../../hosts/preview/preview';

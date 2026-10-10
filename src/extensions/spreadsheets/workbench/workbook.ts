@@ -1,10 +1,10 @@
-// mountWorkbook: IronCalc's workbook UI (React) over a spreadsheet's bytes. Loaded on demand by spreadsheets.ts:
+// mountWorkbook: IronCalc's workbook UI (React) over a spreadsheet's bytes. Loaded on demand by spreadsheet-view.ts:
 // it brings React, the UI and the 2 MB engine, which nothing else needs.
 import { IronCalc, init, Model } from '@ironcalc/workbook';
 import styles from '@ironcalc/workbook/style.css?inline';
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
-import { spreadsheetTypst } from './model/model';
+import { spreadsheetTypst } from '../model/model';
 
 /** A mounted workbook; edits are reported through the `onEdit` given to `mountWorkbook`. */
 export interface MountedWorkbook {

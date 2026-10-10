@@ -1,5 +1,7 @@
 // The preview-controls extension: zoom, "Follow cursor" and the page number in the preview's toolbar.
 // Entry of extensions/preview-controls/. See ARCHITECTURE.md, "Preview".
+// Why an extension: the preview host keeps the mechanism (zoom, following, which page is shown) and offers it to
+// toolbar items; which controls a widget shows, and that "Follow cursor" is remembered per viewer, is decided here.
 import { followCursor, pageNumber, zoomControls } from './preview/preview';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 

@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
-// Tests for files.ts (the file panel and its tree).
+// Tests for file-panel.ts (the file panel and its tree).
 import { describe, expect, it, vi } from 'vitest';
-import { FilePanel } from './files';
-import type { FileChange } from '../../core/project/project';
-import { ProjectPath } from '../../core/paths/paths';
+import { FilePanel } from './file-panel';
+import type { FileChange } from '../../../core/project/project';
+import { ProjectPath } from '../../../core/paths/paths';
 
 const path = ProjectPath.of;
 

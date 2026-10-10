@@ -1,4 +1,4 @@
-// uploadChanges: uploaded files as project changes (names, kinds). See files.ts.
+// uploadChanges: uploaded files as project changes (names, kinds). See model.ts.
 import { type FileChange } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 

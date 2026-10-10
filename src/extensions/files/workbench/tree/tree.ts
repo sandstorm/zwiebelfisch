@@ -1,5 +1,5 @@
 // FileTree: the project's files as an expandable tree (keyboard, drag & drop, presence dots). Entry of
-// extensions/files/workbench/tree/. See files.ts and ARCHITECTURE.md, "File panel".
+// extensions/files/workbench/tree/. See ../file-panel.ts and ARCHITECTURE.md, "File panel".
 import { PROJECT_PATH_TYPE } from '../../../../core/project/project';
 import { ProjectPath } from '../../../../core/paths/paths';
 import { initials, presenceStyle, type PresenceUser } from '../../../../core/typst-document/typst-document';
@@ -103,7 +103,7 @@ export class FileTree {
   }
 
   /** Opens or closes `folder`. */
-  setExpanded(folder: ProjectPath, open: boolean): void {
+  private setExpanded(folder: ProjectPath, open: boolean): void {
     if (open) this.expanded.add(folder);
     else this.expanded.delete(folder);
     this.options.memory?.save([...this.expanded]);

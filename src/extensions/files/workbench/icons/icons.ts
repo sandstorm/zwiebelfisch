@@ -1,4 +1,4 @@
-// The file panel's icons (16×16 strokes, currentColor): file kinds, folders, actions. See files.ts.
+// The file panel's icons (16×16 strokes, currentColor): file kinds, folders, actions. See ../file-panel.ts.
 import type { FileKind } from '../../../../core/paths/paths';
 
 const ICONS = {
