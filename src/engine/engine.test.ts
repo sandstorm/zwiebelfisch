@@ -108,6 +108,27 @@ describe('Engine', () => {
     expect(new Set(paragraph.boxes.map((b) => Math.round(b.y))).size).toBe(paragraph.boxes.length);
   });
 
+  it('returns boxes for the text drawn from source ranges, at character precision', () => {
+    const words = 'alpha beta gamma delta epsilon zeta eta theta iota kappa lambda';
+    const source = `#set page(width: 120pt, height: 200pt, margin: 0pt)\n${words}\n#pagebreak()\nsecond page`;
+    engine.setSource('/main.typ', source);
+    engine.compile('/main.typ');
+    const gamma = source.indexOf('gamma');
+    const boxes = engine.boxesForRanges('/main.typ', [{ from: gamma, to: gamma + 5 }]);
+    expect(boxes).toHaveLength(1);
+    expect(boxes[0].page).toBe(0);
+    expect(boxes[0].x).toBeGreaterThan(10);
+    expect(boxes[0].w).toBeLessThan(40);
+
+    const both = engine.boxesForRanges('/main.typ', [
+      { from: gamma, to: gamma + 5 },
+      { from: source.indexOf('second'), to: source.indexOf('second') + 6 },
+    ]);
+    expect(both.map((b) => b.page)).toEqual([0, 1]);
+    expect(engine.boxesForRanges('/main.typ', [{ from: 0, to: 10 }])).toEqual([]); // code, not drawn text
+    expect(engine.boxesForRanges('/other.typ', [{ from: gamma, to: gamma + 5 }])).toEqual([]);
+  });
+
   it('returns nothing for a click on empty space', () => {
     engine.setSource('/main.typ', '#set page(width: 200pt, height: 100pt, margin: 0pt)\nHi');
     engine.compile('/main.typ');
