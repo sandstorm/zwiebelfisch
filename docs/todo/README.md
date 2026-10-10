@@ -49,3 +49,4 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [server-gitlab](server-gitlab.md) | done |
 | [followups-2026-10-10](followups-2026-10-10.md) | open |
 | [comments-drafting](comments-drafting.md) | open |
+| [fix-image-upload-ui](fix-image-upload-ui.md) | done (branch task/fix-image-upload-ui) |
