@@ -13,6 +13,7 @@ import { DiagnosticsStatus, summarizeDiagnostics } from './features/diagnostics/
 import { EditingViews, type EditorMode } from './typst-editor/editing-views';
 import { type FileChange, Project, type ProjectFiles, referencePath } from './core/project/project';
 import { ProjectRenderings } from './typst-editor/project-renderings';
+import { LabelIndex } from './features/labels/labels';
 import styles from './typst-editor.css?inline';
 import { VersionControls, type Versions } from './features/versions/versions';
 
@@ -140,6 +141,7 @@ class Widget {
   private readonly switcher: FileSwitcher;
   private readonly assets: AssetView;
   private readonly renderings: ProjectRenderings;
+  private readonly labels: LabelIndex;
   private readonly commentAction: CommentAction;
   readonly changes: ChangeTracking;
   private readonly collaboration: CollaborationLink | null = null;
@@ -165,10 +167,11 @@ class Widget {
       onJump: (jump) => this.jump(jump),
       onDiagnostics: (diagnostics) => this.showDiagnostics(diagnostics),
     });
+    this.labels = new LabelIndex(this.project);
     this.renderings = new ProjectRenderings({ project: this.project, preview: this.preview, request: (change) => this.request(change) });
     this.views = new EditingViews(this.left, {
       mode: options.mode,
-      visualOptions: (document) => this.renderings.forDocument(document),
+      visualOptions: (document) => ({ ...this.renderings.forDocument(document), labels: this.labels }),
       onCursor: (document, offset) => {
         const path = this.project.pathOf(document);
         if (path) void this.preview.reveal(path, offset);
@@ -280,6 +283,7 @@ class Widget {
     this.switcher.destroy();
     this.assets.destroy();
     this.renderings.destroy();
+    this.labels.destroy();
     this.preview.destroy();
     this.status.destroy();
     this.project.destroy();
