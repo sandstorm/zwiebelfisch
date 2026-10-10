@@ -883,7 +883,11 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
   and nothing after the last `]`; any other `margin-note` call is ordinary code. Projection,
   the Visual view and `addMarginNote` all use this one definition.
 - **`addMarginNote`** (pure): a selection becomes `#margin-note[selection][]` if the result
-  is one note call in markup (`isNoteCallAt`); else (half of `*bold*`, two paragraphs) a
+  is one note call in markup (`isNoteCallAt`). Bold or italic text the selection starts or
+  ends with goes in whole, delimiters included (`bold` in `*bold*` → `#margin-note[*bold*][]`):
+  the Visual view maps a selected bold word to the text between the stars, and prints a range
+  note around its formatting (`noteRange` is the outermost mark), so the first message sent
+  from the card changes only the note. Else (half of `*bold*`, two paragraphs) a
   point note `#margin-note[]` at the selection's end; null where none fits (inside code). The
   import is ensured exactly once: an existing top-level drafting import (any version) that ends
   before the note is kept (`*`, or `margin-note` among its items) or extended (`, margin-note`
@@ -971,7 +975,7 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
     in one `requestAnimationFrame` after a doc change, an active-note change, typing in a card,
     or a resize of the body or the text (`ResizeObserver`, which also covers loaded images; plus
     captured `load` events). No measuring in the projection.
-  - Narrow (body narrower than 640px): no column; only the active note's card shows, as a
+  - Narrow (body narrower than 560px): no column; only the active note's card shows, as a
     popover below its anchor.
   - `editNote(offset)` finds the note in the document: a point note whose call holds `offset`, or
     among range notes whose text ends at the same place (nested) the one whose `][note]` holds it,

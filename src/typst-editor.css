@@ -84,7 +84,7 @@
 .typst-preview__pdf-menu button { border: none; border-radius: 4px; padding: 4px 8px; background: none; font: inherit; text-align: left; cursor: pointer; }
 .typst-preview__pdf-menu button:hover, .typst-preview__pdf-menu button:focus-visible { background: #eef2f7; }
 .typst-preview__pdf-status { position: absolute; top: calc(100% + 4px); right: 0; z-index: 19; max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #57606a; }
-.typst-preview__pdf-status:empty { display: none; }
+/* empty, it takes no room but stays a live region (display: none would keep its messages from screen readers) */
 .typst-preview__pdf-status:not(:empty) { padding: 3px 6px; border: 1px solid var(--te-border); border-radius: 4px; background: white; }
 .typst-preview__zoom { margin-left: 4px; color: #57606a; font-variant-numeric: tabular-nums; }
 .typst-preview__page-number { margin-left: auto; color: #57606a; font-variant-numeric: tabular-nums; }

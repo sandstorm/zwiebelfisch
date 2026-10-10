@@ -50,7 +50,7 @@ const marginGlyphs = (page: Page) => () =>
     return [...svg.querySelectorAll('use')].filter((glyph) => glyph.getBoundingClientRect().left >= margin).length;
   });
 
-/** Selects the demo's bold word and comments on it, writing `note` into the new card. */
+/** Selects the demo's bold word and comments on it (`#margin-note[*bold*][..]`), writing `note` into the new card. */
 async function commentOnBold(page: Page, note: string) {
   await visual(page).locator('strong', { hasText: 'bold' }).dblclick();
   await commentButton(page).click();
@@ -70,7 +70,7 @@ test('a comment on selected text becomes a range note with a card in the gutter,
   // the card sits at the height of its highlighted text
   await expect.poll(() => offset(cards(page).first(), highlight(page))).toBeLessThan(4);
 
-  await expect.poll(sourceText(page)).toContain(`#margin-note[bold][${signed('Check this')}]`);
+  await expect.poll(sourceText(page)).toContain(`#margin-note[*bold*][${signed('Check this')}]`);
   expect((await sourceText(page)()).split(IMPORT).length).toBe(2);
   // drafting's look in the PDF comes with the import, once
   expect((await sourceText(page)()).split('#set-margin-note-defaults(').length).toBe(2);
@@ -79,7 +79,7 @@ test('a comment on selected text becomes a range note with a card in the gutter,
   await expect.poll(marginGlyphs(page)).toBeGreaterThan(0);
 
   await page.getByRole('tab', { name: 'Source' }).click();
-  await expect(page.getByTestId('typst-source').locator('.cm-content')).toContainText(`#margin-note[bold][${signed('Check this')}]`);
+  await expect(page.getByTestId('typst-source').locator('.cm-content')).toContainText(`#margin-note[*bold*][${signed('Check this')}]`);
 });
 
 test('a comment at the cursor becomes a point note; a second note does not repeat the import', async ({ page }) => {
@@ -130,7 +130,7 @@ test('editing an own message updates the source and the preview', async ({ page 
   await field.fill('A much longer note than before');
   // leaving the field saves, too
   await visual(page).locator('h1').click();
-  await expect.poll(sourceText(page)).toContain(`#margin-note[bold][${signed('A much longer note than before')}]`);
+  await expect.poll(sourceText(page)).toContain(`#margin-note[*bold*][${signed('A much longer note than before')}]`);
   await expect.poll(marginGlyphs(page)).toBeGreaterThan(before);
 
   await edit.click();
@@ -146,7 +146,7 @@ test('a reply appends a message to the thread, in the card and in the source', a
   await noteField(page).fill('Yes: #1 [checked]');
   await noteField(page).press('ControlOrMeta+Enter');
   await expect(messageTexts(page)).toHaveText(['Is this right?', 'Yes: #1 [checked]']);
-  await expect.poll(sourceText(page)).toContain(`#margin-note[bold][${signed('Is this right?')}\n${signed('Yes: \\#1 \\[checked\\]')}]`);
+  await expect.poll(sourceText(page)).toContain(`#margin-note[*bold*][${signed('Is this right?')}\n${signed('Yes: \\#1 \\[checked\\]')}]`);
   // the last own message can be deleted again
   await cards(page).first().getByRole('button', { name: 'Delete message' }).click();
   await expect(messageTexts(page)).toHaveText(['Is this right?']);

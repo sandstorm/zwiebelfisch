@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 // Tests for pdf-menu.ts.
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PdfMenu, type PdfSource } from './pdf-menu';
 
@@ -82,5 +84,10 @@ describe('PdfMenu', () => {
     await vi.waitFor(() => expect(saved).toHaveLength(1));
     expect(source).toHaveBeenCalledTimes(1);
     expect(status()).toBe('');
+  });
+
+  it('keeps the empty status in the page (no display: none), so a screen reader announces the messages put into it', () => {
+    const css = readFileSync(resolve(import.meta.dirname, '../../typst-editor.css'), 'utf8');
+    expect(css).not.toMatch(/\.typst-preview__pdf-status[^{]*\{[^}]*display:\s*none/);
   });
 });

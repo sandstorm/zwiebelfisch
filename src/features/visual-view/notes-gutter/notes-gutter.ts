@@ -225,8 +225,12 @@ export class NotesGutter {
   }
 }
 
-/** Below this width of the text and gutter together, cards become popovers. */
-const NARROW_PX = 640;
+/**
+ * Below this width of the text and gutter together, cards become popovers.
+ * Half of a 1280px window, next to the side panels' rail, is about 620px:
+ * there the column still fits, leaving 300px and more for the text.
+ */
+const NARROW_PX = 560;
 const CARD_GAP_PX = 8;
 const POPOVER_GAP_PX = 4;
 
