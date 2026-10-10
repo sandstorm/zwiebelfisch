@@ -4,6 +4,7 @@ import { TypstDocument } from '../typst-document/typst-document';
 import { fileKind } from './paths';
 
 export { displayName, extensionOf, fileKind, imageBlob, referencePath, resolvePath, toPath, type FileKind } from './paths';
+export { describeLink, findPathReferences, pathReferenceAt, type FileLinks, type LinkTarget, type PathCall, type PathReference } from './path-references';
 
 /** A project file: Typst source text, or bytes (images, data files, …). */
 export type FileContent = string | Uint8Array;
