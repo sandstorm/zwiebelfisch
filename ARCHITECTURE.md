@@ -44,7 +44,8 @@ src/
     paths.ts, insert-image.ts, upload.ts   pure helpers (names → paths, Typst path resolution, #image insertion, uploads)
   element/                  <typst-editor> custom element (shadow DOM) around createTypstEditor
   index.ts                  public API of the package; registers <typst-editor>
-demo/                       dev/demo page (vite root); ?room=<name> joins ws://127.0.0.1:1234
+demo/                       dev/demo page (vite root); ?example=hello|simple|advanced picks a project from demo/examples/<name>/
+                            (examples.ts: import.meta.glob → file map), ?room=<name> joins ws://127.0.0.1:1234
 server/                     collaboration server (Node package, Hocuspocus; TypeScript run by Node directly)
   src/gitlab/               GitLab-backed rooms: GitLabExtension, GitLabRoom, GitLabProject (REST), merge, commit actions,
                             HTTP endpoints, FakeGitLab (in-process, for tests and server:dev-fake-gitlab)
@@ -595,7 +596,7 @@ HTTP             GET /rooms/<room>/files/<path> (Authorization: Bearer <room tok
 | `mise run dev` | Vite dev server for `demo/` on 127.0.0.1:5199 |
 | `mise run build` | engine + typecheck + static demo build → `dist/demo` |
 | `mise run build:lib` | library build → `dist/lib`: bundled ESM, worker, wasm, d.ts (`vite.lib.config.ts`, `tsconfig.lib.json`) |
-| `mise run test:unit` | vitest (node): engine against the real wasm, document model, (later) projection round-trips |
+| `mise run test:unit` | vitest (node): engine against the real wasm, document model, projection round-trips, demo examples compile |
 | `mise run test:e2e` | builds demo + lib, then Playwright against `dist/demo` and `examples/` (+ `dist/lib`), served through request interception (no port needed) |
 | `mise run server:dev` | collaboration server on ws://127.0.0.1:1234 (SQLite in `server/.data/`; env `PORT`, `TYPST_COLLAB_DB`, `TYPST_COLLAB_TOKEN`; GitLab rooms with `TYPST_GITLAB_URL` + `TYPST_GITLAB_TOKEN`, see docs/embedding.md) |
 | `mise run server:test` | server tests (vitest, Hocuspocus in-process via `openDirectConnection`, no port) |
