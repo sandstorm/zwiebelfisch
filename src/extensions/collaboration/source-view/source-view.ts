@@ -1,20 +1,22 @@
-// presence: other users' carets and selections in a CodeMirror editor: the Source views (what they are given as
-// PresenceTarget) and the Visual view's raw boxes. See builtins.ts.
+// The collaboration's part of the Source views: other users' carets and selections in a CodeMirror editor (the
+// Source views, which hand them over as PresenceTargets, and the code of the Visual view's raw boxes).
+// Entry of collaboration/source-view/. See collaboration.ts.
 import { StateEffect, StateField, type EditorState, type Extension, type Range } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet } from '@codemirror/view';
 import { caretElement, type Presence, type PresenceUser } from '../../../core/typst-document/typst-document';
-import type { SourceViewExtension } from '../contribution';
+import type { SourceViewExtension } from '../../../hosts/source-view/source-view';
 
 /** Draws the carets and selections a Source view is given (`setPresence`); they follow edits. */
 export const presence: SourceViewExtension = (view) => [
   remotePresence,
   ViewPlugin.define((editor) => {
-    const subscription = view.onDidChangePresence((presences) => showPresence(editor, presences));
+    const subscription = view.onDidChangePresence((presences) => editor.dispatch({ effects: setPresence.of(presences) }));
     return { destroy: () => subscription.dispose() };
   }),
 ];
 
-const setPresence = StateEffect.define<readonly Presence[]>();
+/** Shows these presences (offsets in the editor's text) in an editor with `remotePresence`, replacing the ones shown. */
+export const setPresence = StateEffect.define<readonly Presence[]>();
 
 /** A presence as shown: `moves` counts how often its caret moved (a move shows the name flag again). */
 interface Shown extends Presence {
@@ -25,6 +27,7 @@ interface Shown extends Presence {
  * Other users' carets and selections in a CodeMirror view, in the style of
  * y-codemirror: a bar in the user's color (name on hover, and briefly after
  * each move), the selection tinted in that color. Also on empty lines.
+ * Shows what `setPresence` gives it.
  */
 export const remotePresence: Extension = StateField.define<readonly Shown[]>({
   create: () => [],
@@ -37,11 +40,6 @@ export const remotePresence: Extension = StateField.define<readonly Shown[]>({
   },
   provide: (field) => EditorView.decorations.compute([field], (state) => decorations(state, state.field(field))),
 });
-
-/** Shows `presences` (offsets in the view's text) in `view`, replacing the ones shown before. */
-export function showPresence(view: EditorView, presences: readonly Presence[]): void {
-  view.dispatch({ effects: setPresence.of(presences) });
-}
 
 /** The new presences, clamped to the text; a caret that moved (or is new) counts one more move. */
 function arrive(before: readonly Shown[], presences: readonly Presence[], length: number): Shown[] {

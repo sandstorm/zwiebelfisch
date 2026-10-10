@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 // Tests for visual-view.ts.
+import { EditorState } from '@codemirror/state';
 import { describe, expect, it } from 'vitest';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
-import { type Highlight, TypstDocument } from '../../core/typst-document/typst-document';
+import { type Highlight, type Presence, TypstDocument } from '../../core/typst-document/typst-document';
 import { createVisualView } from './test-support';
-import { VisualView, VisualViewContributions } from './visual-view';
+import { setBoxDecorations, VisualView, VisualViewContributions } from './visual-view';
 
 function setup(text: string) {
   const parent = document.createElement('div');
@@ -95,5 +96,42 @@ describe('VisualViewContributions.registerHighlights', () => {
     expect(parent.querySelector('.marked')?.textContent).toBe('world');
     view.destroy();
     expect(changed.hasListeners).toBe(false);
+  });
+});
+
+describe('VisualView presence (a PresenceTarget without drawing of its own)', () => {
+  const ann = { id: '1', user: { name: 'Ann', color: '#b58900' }, anchor: 2, head: 2 };
+
+  it('hands the presences it is given to the contributions (onDidChangePresence)', () => {
+    const contributions = new VisualViewContributions();
+    const seen: (readonly Presence[])[] = [];
+    contributions.registerEditorExtension((view) => {
+      view.onDidChangePresence((presences) => seen.push(presences));
+      return [];
+    });
+    const parent = document.body.appendChild(document.createElement('div'));
+    const view = new VisualView(parent, new TypstDocument('Hello\n'), contributions);
+    view.setPresence([ann]);
+    expect(seen).toEqual([[ann]]);
+    expect(parent.querySelector('.typst-remote-caret')).toBeNull();
+    view.destroy();
+  });
+
+  it("gives a raw box's code its decorations (setBoxDecorations), when made and on every update", () => {
+    const contributions = new VisualViewContributions();
+    const given: number[] = [];
+    contributions.registerBoxCodeExtension(() =>
+      EditorState.transactionExtender.of((tr) => {
+        for (const effect of tr.effects) if (effect.is(setBoxDecorations)) given.push(effect.value.length);
+        return null;
+      }),
+    );
+    const parent = document.body.appendChild(document.createElement('div'));
+    const doc = new TypstDocument('Intro\n\n#set page(width: 10cm)\n');
+    const view = new VisualView(parent, doc, contributions);
+    expect(given).toEqual([0]);
+    doc.setText('Intro\n\n#set page(width: 12cm)\n', 'test');
+    expect(given).toEqual([0, 0]);
+    view.destroy();
   });
 });

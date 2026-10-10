@@ -17,9 +17,6 @@ export {
   documentLinks,
   fileLinks,
   isLightText,
-  presence,
-  remotePresence,
-  showPresence,
   typstLanguage,
 } from './builtins/builtins';
 

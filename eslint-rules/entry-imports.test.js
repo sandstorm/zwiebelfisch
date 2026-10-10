@@ -37,7 +37,7 @@ describe('entry-imports', () => {
   it("allows another folder's entry file and anything inside the own folder", () => {
     expect(lint('src/features/files/files.ts', "import { Preview } from '../../hosts/preview/preview';")).toEqual([]);
     expect(lint('src/hosts/visual-view/nodes/raw-box.ts', "import { x } from '../projection/projection';")).toEqual([]);
-    expect(lint('src/hosts/visual-view/nodes/raw-box.ts', "import { x } from '../presence';")).toEqual([]);
+    expect(lint('src/hosts/visual-view/nodes/raw-box.ts', "import { x } from '../highlights';")).toEqual([]);
   });
 
   it('enters a host through its entry file only (hosts/ only groups)', () => {

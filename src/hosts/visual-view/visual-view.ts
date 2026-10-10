@@ -9,12 +9,11 @@ import type { Highlight, Presence, PresenceTarget, TypstDocument } from '../../c
 import type { Contributed, Gutter, VisualViewContext, VisualViewContributions } from './contributions/contributions';
 import { highlights, setHighlights } from './highlights';
 import { attachSpecs, editorExtensions, setBoxes } from './nodes/nodes';
-import { remotePresence, setPresence } from './presence';
 import { onDidChangeGrammar, posToSource, print, project, sourceToPos, syncDoc } from './projection/projection';
 import { Toolbar } from './toolbar/toolbar';
 
 export {
-  VisualViewContributions, svg, type Action, type BoxPicture, type BoxRenderer, type BoxRendererProvider, type BoxCodeExtensionProvider,
+  VisualViewContributions, setBoxDecorations, svg, type Action, type BoxPicture, type BoxRenderer, type BoxRendererProvider, type BoxCodeExtensionProvider,
   type BoxTools, type BoxToolsHost, type CodeBoxSpec, type ContributionContext, type EditorExtensionProvider, type Gutter, type HighlightProvider,
   type GutterProvider, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem, type TypstMarkSpec,
   type TypstNodeSpec, type VisualViewContext, type VisualViewContribution,
@@ -26,6 +25,9 @@ export {
   type ProjectionContext, type RunProjector,
 } from './projection/projection';
 export { starterKitPart } from './nodes/nodes';
+// source offsets ↔ positions in a view's document, and the decorations that draw a source range (other users' places)
+export { nodeGrammar, posToSource, sourceToPos } from './projection/projection';
+export { rangeDecorations } from './highlights';
 // the built-in contributions: the constructs are extensions of the widget's built-in list; the rest are activated by
 // the extension of their feature (until extensions/ takes them over)
 export {
@@ -55,13 +57,14 @@ export class VisualView implements PresenceTarget {
   private readonly toolbar: Toolbar;
   private readonly gutters: Gutter[];
   private readonly selectionChanged = new EventEmitter<void>();
+  private readonly presence = new EventEmitter<readonly Presence[]>();
   /** After the selection moved or the text changed; `selection()` already returns the new selection. */
   readonly onDidChangeSelection: Event<void> = this.selectionChanged.event;
   private readonly subscriptions: Disposable[];
 
   constructor(parent: HTMLElement, private readonly document: TypstDocument, contributions: VisualViewContributions) {
     const contributed = contributions.contributed();
-    const view: VisualViewContext = { document, selection: () => this.selection() };
+    const view: VisualViewContext = { document, selection: () => this.selection(), onDidChangePresence: this.presence.event };
     // the text and, right of it, the gutters
     const body = parent.appendChild(parent.ownerDocument.createElement('div'));
     body.className = 'typst-visual__body';
@@ -71,7 +74,6 @@ export class VisualView implements PresenceTarget {
       extensions: [
         ...editorExtensions(contributed.nodes, contributed.marks),
         highlights,
-        remotePresence,
         ...contributed.editorExtensions.flatMap((provider) => provider(view)),
       ],
       injectCSS: false,
@@ -125,9 +127,9 @@ export class VisualView implements PresenceTarget {
     this.editor.view.dispatch(setHighlights(this.editor.state.tr, layer, ranges));
   }
 
-  /** Shows other users' carets and selections (source offsets), replacing those shown; they follow edits. */
+  /** Hands other users' carets and selections (source offsets) to the contributions that draw them (`onDidChangePresence`). */
   setPresence(presences: readonly Presence[]): void {
-    this.editor.view.dispatch(setPresence(this.editor.state.tr, presences));
+    this.presence.fire(presences);
   }
 
   /** Whether the user works in this view (it has focus). */
@@ -148,6 +150,7 @@ export class VisualView implements PresenceTarget {
   destroy(): void {
     for (const subscription of [...this.subscriptions].reverse()) subscription.dispose();
     this.selectionChanged.dispose();
+    this.presence.dispose();
     this.toolbar.destroy();
     this.editor.destroy();
     for (const gutter of this.gutters) gutter.destroy();

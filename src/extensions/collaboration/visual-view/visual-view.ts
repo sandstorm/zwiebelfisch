@@ -1,46 +1,63 @@
-// Other users' carets and selections in the Visual view (decorations, and carets inside boxes). See visual-view.ts.
+// The collaboration's part of the Visual view: other users' carets and selections (decorations), and their carets
+// inside boxes (drawn in a raw box's code). Entry of collaboration/visual-view/. See collaboration.ts.
 import { Extension } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
-import { Plugin, PluginKey, type Transaction } from '@tiptap/pm/state';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import { caretElement, flagTextColor, type Presence, type PresenceUser } from '../../core/typst-document/typst-document';
-import { rangeDecorations } from './highlights';
-import { boxCaretsSpec, type BoxCaret } from './nodes/nodes';
-import { nodeGrammar, posToSource, sourceToPos } from './projection/projection';
+import { caretElement, flagTextColor, type Presence, type PresenceUser } from '../../../core/typst-document/typst-document';
+import {
+  nodeGrammar, posToSource, rangeDecorations, sourceToPos, type VisualViewContext, type VisualViewContribution,
+} from '../../../hosts/visual-view/visual-view';
+import { boxCaretsSpec, boxPresence, type BoxCaret } from './box-carets';
+
+/**
+ * Draws the carets and selections every Visual view is given (`setPresence`), in the view and in the code of its
+ * raw boxes; they follow edits.
+ */
+export const presence: VisualViewContribution = {
+  id: 'collaboration.presence',
+  activate({ visualView, subscriptions }) {
+    subscriptions.push(
+      visualView.registerEditorExtension(remotePresence),
+      visualView.registerBoxCodeExtension(() => boxPresence),
+    );
+  },
+};
 
 const key = new PluginKey<DecorationSet>('typst-presence');
 
 /**
- * Other users' places in the Visual view, in the style of Tiptap's
+ * Other users' places in one Visual view, in the style of Tiptap's
  * CollaborationCaret: a caret is a widget (a bar in the user's color with
  * a name flag), so it also shows in empty paragraphs; a selection is tinted.
  * A caret inside something shown as a whole (a raw box, an image, a page
  * break, a margin note) outlines that box in the user's color with the name
- * instead; the box gets the caret's offset in its own source (`boxCarets`).
+ * instead; the box gets the caret's offset in its own source (`boxCaretsSpec`).
  */
-export const remotePresence = Extension.create({
-  name: 'typstRemotePresence',
-  addProseMirrorPlugins() {
-    return [
-      new Plugin<DecorationSet>({
-        key,
-        state: {
-          init: () => DecorationSet.empty,
-          apply(tr, set) {
-            const presences = tr.getMeta(key) as readonly Presence[] | undefined;
-            if (presences) return presenceDecorations(tr.doc, presences);
-            return tr.docChanged ? set.map(tr.mapping, tr.doc) : set;
+function remotePresence(view: VisualViewContext): Extension {
+  return Extension.create({
+    name: 'typstRemotePresence',
+    addProseMirrorPlugins() {
+      return [
+        new Plugin<DecorationSet>({
+          key,
+          state: {
+            init: () => DecorationSet.empty,
+            apply(tr, set) {
+              const presences = tr.getMeta(key) as readonly Presence[] | undefined;
+              if (presences) return presenceDecorations(tr.doc, presences);
+              return tr.docChanged ? set.map(tr.mapping, tr.doc) : set;
+            },
           },
-        },
-        props: { decorations: (state) => key.getState(state) },
-      }),
-    ];
-  },
-});
-
-/** Marks `tr` to show `presences` (source offsets), replacing the ones shown. */
-export function setPresence(tr: Transaction, presences: readonly Presence[]): Transaction {
-  return tr.setMeta(key, presences);
+          props: { decorations: (state) => key.getState(state) },
+          view: (editor) => {
+            const subscription = view.onDidChangePresence((presences) => editor.dispatch(editor.state.tr.setMeta(key, presences)));
+            return { destroy: () => subscription.dispose() };
+          },
+        }),
+      ];
+    },
+  });
 }
 
 function presenceDecorations(doc: Node, presences: readonly Presence[]): DecorationSet {

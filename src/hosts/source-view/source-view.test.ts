@@ -2,9 +2,10 @@
 // Tests for source-view.ts: the host's contribution points, and the Source view it makes (view.ts).
 import { describe, expect, it } from 'vitest';
 import { undo } from '@codemirror/commands';
-import { Decoration, EditorView } from '@codemirror/view';
-import { REMOTE_ORIGIN, TypstDocument } from '../../core/typst-document/typst-document';
-import { presence, SourceViewHost, type SourceViewExtension } from './source-view';
+import { StateEffect, StateField } from '@codemirror/state';
+import { Decoration, EditorView, ViewPlugin, type DecorationSet } from '@codemirror/view';
+import { type Presence, REMOTE_ORIGIN, TypstDocument } from '../../core/typst-document/typst-document';
+import { SourceViewHost, type SourceViewExtension } from './source-view';
 
 function setup(text: string, host = new SourceViewHost()) {
   const parent = document.createElement('div');
@@ -43,6 +44,24 @@ describe('SourceViewHost contributions', () => {
   /** Marks the first word of the view's document (as it was when the extension was made). */
   const firstWord: SourceViewExtension = ({ document }) =>
     EditorView.decorations.of(Decoration.set(Decoration.mark({ class: 'first' }).range(0, document.text.search(/\s/))));
+  /** Marks the selections of the presences the view is given (`onDidChangePresence`), in a state field (one for all views). */
+  const drawn = StateEffect.define<readonly Presence[]>();
+  const drawing = StateField.define<DecorationSet>({
+    create: () => Decoration.none,
+    update(set, tr) {
+      const given = tr.effects.find((effect) => effect.is(drawn));
+      if (!given) return set.map(tr.changes);
+      return Decoration.set(given.value.map(({ anchor, head }) => Decoration.mark({ class: 'drawn' }).range(anchor, head)));
+    },
+    provide: (field) => EditorView.decorations.from(field),
+  });
+  const drawPresence: SourceViewExtension = (view) => [
+    drawing,
+    ViewPlugin.define((editor) => {
+      const subscription = view.onDidChangePresence((presences) => editor.dispatch({ effects: drawn.of(presences) }));
+      return { destroy: () => subscription.dispose() };
+    }),
+  ];
 
   it('applies a registered extension to the views made before and after, until disposed', () => {
     const host = new SourceViewHost();
@@ -74,11 +93,11 @@ describe('SourceViewHost contributions', () => {
 
   it('keeps what an extension drew when another one is registered', () => {
     const host = new SourceViewHost();
-    host.registerExtension(presence);
+    host.registerExtension(drawPresence);
     const { view, parent } = setup('Some bold text\n', host);
     view.setPresence([{ id: '1', user: { name: 'Ann', color: '#b58900' }, anchor: 5, head: 9 }]);
     host.registerExtension(firstWord);
-    expect(marked(parent, '.typst-remote-selection')).toEqual(['bold']);
+    expect(marked(parent, '.drawn')).toEqual(['bold']);
   });
 
   it('stops applying contributions to a destroyed view', () => {
@@ -95,57 +114,10 @@ describe('SourceViewHost contributions', () => {
   });
 });
 
-describe('SourceView presence (the presence contribution)', () => {
-  const ann = { id: '1', user: { name: 'Ann', color: '#b58900' } };
-  const withPresence = (text: string) => {
-    const host = new SourceViewHost();
-    host.registerExtension(presence);
-    return setup(text, host);
-  };
-  /** The line text before each caret. */
-  const carets = (parent: HTMLElement) =>
-    [...parent.querySelectorAll<HTMLElement>('.cm-line .typst-remote-caret')].map((caret) => {
-      const nodes = [...caret.closest('.cm-line')!.childNodes];
-      return nodes.slice(0, nodes.indexOf(caret)).map((node) => node.textContent).join('');
-    });
-
-  it('draws a named caret at the position, also on an empty line', () => {
-    const { view, parent } = withPresence('one\n\nthree\n');
-    view.setPresence([{ ...ann, anchor: 4, head: 4 }]);
-    const caret = parent.querySelector<HTMLElement>('.typst-remote-caret')!;
-    expect(caret.dataset.user).toBe('Ann');
-    expect(caret.closest('.cm-line')!.textContent).toBe('Ann');
-    expect(caret.querySelector('.typst-remote-caret__flag')!.textContent).toBe('Ann');
-    expect(caret.style.getPropertyValue('--typst-remote-color')).toBe('#b58900');
-    view.setPresence([{ ...ann, anchor: 2, head: 2 }]);
-    expect(carets(parent)).toEqual(['on']);
-  });
-
-  it('tints the selection and keeps it on its text through edits', () => {
-    const { doc, view, parent } = withPresence('Some bold text\n');
-    view.setPresence([{ ...ann, anchor: 5, head: 9 }]);
-    expect(marked(parent, '.typst-remote-selection[data-user="Ann"]')).toEqual(['bold']);
-    doc.change([{ from: 0, to: 0, insert: 'Really. ' }], 'visual');
-    expect(marked(parent, '.typst-remote-selection')).toEqual(['bold']);
-    expect(carets(parent)).toEqual(['Really. Some bold']);
-    view.setPresence([]);
-    expect(parent.querySelector('.typst-remote-caret, .typst-remote-selection')).toBeNull();
-  });
-
-  it('redraws the caret (showing the name again) only when it moved', () => {
-    const { view, parent } = withPresence('Some bold text\n');
-    view.setPresence([{ ...ann, anchor: 2, head: 2 }]);
-    const first = parent.querySelector('.typst-remote-caret');
-    expect(first!.classList).toContain('typst-remote-caret--transient');
-    view.setPresence([{ ...ann, anchor: 2, head: 2 }]);
-    expect(parent.querySelector('.typst-remote-caret')).toBe(first);
-    view.setPresence([{ ...ann, anchor: 3, head: 3 }]);
-    expect(parent.querySelector('.typst-remote-caret')).not.toBe(first);
-  });
-
-  it('draws nothing without the presence contribution', () => {
+describe('SourceView presence (a PresenceTarget without drawing of its own)', () => {
+  it('draws nothing itself', () => {
     const { view, parent } = setup('Some bold text\n');
-    view.setPresence([{ ...ann, anchor: 5, head: 9 }]);
+    view.setPresence([{ id: '1', user: { name: 'Ann', color: '#b58900' }, anchor: 5, head: 9 }]);
     expect(parent.querySelector('.typst-remote-caret, .typst-remote-selection')).toBeNull();
   });
 });

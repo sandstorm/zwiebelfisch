@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-// Tests for collaboration.ts.
+// Tests for collaboration-link.ts.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 import { connect, connectAwareness } from './model/in-process';
 import type { PlacedPresence } from '../../core/typst-document/typst-document';
-import { CollaborationLink } from './collaboration';
+import { CollaborationLink } from './collaboration-link';
 import { Project } from '../../core/project/project';
 import { ProjectPath } from '../../core/paths/paths';
 

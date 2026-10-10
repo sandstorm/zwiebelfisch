@@ -1,19 +1,11 @@
-// lint: compile diagnostics underlined in the Source views (CodeMirror lint), and their wording. See builtins.ts.
+// lint: the diagnostics' part of the Source views: compile diagnostics underlined (CodeMirror lint). Entry of
+// diagnostics/source-view/. See ../diagnostics.ts.
 import { type Diagnostic as LintDiagnostic, setDiagnostics } from '@codemirror/lint';
 import { type EditorView, ViewPlugin } from '@codemirror/view';
 import type { Disposable } from '../../../core/disposable/disposable';
-import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import type { SourceViewExtension } from '../../../hosts/source-view/source-view';
-
-/** A compiler diagnostic located in the text shown by a SourceView (UTF-16 offsets). */
-export interface SourceDiagnostic {
-  severity: 'error' | 'warning';
-  message: string;
-  hints: string[];
-  from: number;
-  to: number;
-}
+import { describeDiagnostic, type DiagnosticCollection, type SourceDiagnostic } from '../model/model';
 
 /**
  * Underlines the diagnostics `diagnostics` holds for a view's document, with the message and hints on
@@ -21,24 +13,6 @@ export interface SourceDiagnostic {
  */
 export function lint(diagnostics: DiagnosticCollection): SourceViewExtension {
   return ({ document }) => ViewPlugin.define((view) => new LintShown(view, document, diagnostics));
-}
-
-/** The diagnostics of each document, for every Source view of it (VS Code's DiagnosticCollection). */
-export class DiagnosticCollection {
-  private readonly entries = new WeakMap<TypstDocument, readonly SourceDiagnostic[]>();
-  private readonly changed = new EventEmitter<TypstDocument>();
-  /** Fires with the document whose diagnostics were set. */
-  readonly onDidChange = this.changed.event;
-
-  /** Replaces the diagnostics of `document` (offsets in its current text). */
-  set(document: TypstDocument, diagnostics: readonly SourceDiagnostic[]): void {
-    this.entries.set(document, diagnostics);
-    this.changed.fire(document);
-  }
-
-  get(document: TypstDocument): readonly SourceDiagnostic[] {
-    return this.entries.get(document) ?? [];
-  }
 }
 
 /** Keeps one view's lint diagnostics those of its document. */
@@ -79,9 +53,4 @@ export function toLintDiagnostics(diagnostics: readonly SourceDiagnostic[], leng
     message: describeDiagnostic(d),
     source: 'typst',
   }));
-}
-
-/** A diagnostic's message with its hints, one per line, as every view shows it. */
-export function describeDiagnostic(diagnostic: Pick<SourceDiagnostic, 'message' | 'hints'>): string {
-  return [diagnostic.message, ...diagnostic.hints.map((hint) => `hint: ${hint}`)].join('\n');
 }

@@ -1,5 +1,6 @@
-// Collaboration: real-time editing over Yjs (a Hocuspocus server, or a Y.Doc the host connects), loaded on
-// demand. Entry of features/collaboration/. See ARCHITECTURE.md, "Collaboration".
+// Collaboration: real-time editing over Yjs (a Hocuspocus server, or a Y.Doc the host connects): the lazily loaded
+// chunk of the collaboration extension (no DOM, no editor library). Entry of collaboration/model/. See
+// ../collaboration.ts and ARCHITECTURE.md, "Collaboration".
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import type { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';

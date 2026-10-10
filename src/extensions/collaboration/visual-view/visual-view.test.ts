@@ -1,14 +1,16 @@
 // @vitest-environment jsdom
-// Tests for presence.ts.
+// Tests for visual-view.ts (and box-carets.ts): other users' places drawn in a Visual view and in its boxes.
 import { describe, expect, it } from 'vitest';
-import { TypstDocument } from '../../core/typst-document/typst-document';
-import { createVisualView } from './test-support';
+import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { headings, images, tables, VisualView, VisualViewContributions } from '../../../hosts/visual-view/visual-view';
+import { presence } from './visual-view';
 
+/** A Visual view with the presence contribution, and the constructs whose boxes and cells the tests put carets in. */
 function setup(text: string) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = createVisualView(parent, doc);
+  const view = new VisualView(parent, doc, VisualViewContributions.from([headings, tables, images({}), presence]));
   return { doc, view, parent };
 }
 

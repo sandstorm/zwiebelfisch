@@ -8,10 +8,9 @@ import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { Decoration, EditorView, NodeView } from '@tiptap/pm/view';
 import { minimalChange } from '../../../core/typst-document/typst-document';
-import { codeColors, remotePresence, showPresence, typstLanguage } from '../../source-view/source-view';
-import type { BoxRenderer, BoxTools, BoxToolsHost, CodeBoxSpec, VisualViewContext } from '../contributions/contributions';
+import { codeColors, typstLanguage } from '../../source-view/source-view';
+import { setBoxDecorations, type BoxRenderer, type BoxTools, type BoxToolsHost, type CodeBoxSpec, type VisualViewContext } from '../contributions/contributions';
 import { nodeGrammar, posToSource } from '../projection/projection';
-import { boxCarets } from './box-carets';
 import { RenderedBox } from './rendered-box';
 
 type Side = -1 | 1;
@@ -106,7 +105,7 @@ class RawBox implements NodeView {
     wrapper.className = 'typst-visual__code';
     this.code = this.createCode(wrapper, inline, codeExtensions);
     boxes.set(this.dom, this);
-    this.showCarets(decorations);
+    this.showDecorations(decorations);
     this.rendered = renderer ? this.createRendered(wrapper, renderer) : null;
     this.tools = view && spec?.tools ? spec.tools(this.toolsHost(wrapper, view), node) : null;
   }
@@ -128,7 +127,7 @@ class RawBox implements NodeView {
       this.mirroring = false;
     }
     this.updateLabel();
-    this.showCarets(decorations);
+    this.showDecorations(decorations);
     this.tools?.update(node);
     this.rendered?.update();
     return true;
@@ -171,7 +170,6 @@ class RawBox implements NodeView {
         codeColors,
         inline ? inlineTheme : [blockTheme, CodeView.lineWrapping],
         CodeView.contentAttributes.of({ 'aria-label': 'Typst code' }),
-        remotePresence,
         contributed,
       ],
       dispatchTransactions: (trs, view) => this.forward(trs, view),
@@ -190,10 +188,9 @@ class RawBox implements NodeView {
     return { dom: this.dom, code, picture, editor: this.editor, view, getPos: this.getPos, editCode: () => this.focus(-1) };
   }
 
-  /** Draws the other users' carets in this box (see the Visual view's presence) into its code. */
-  private showCarets(decorations: readonly Decoration[]): void {
-    const carets = boxCarets(decorations).map(({ id, user, offset }) => ({ id, user, anchor: offset, head: offset }));
-    showPresence(this.code, carets);
+  /** Hands the box's decorations (e.g. other users' carets in it) to its code's extensions (`setBoxDecorations`). */
+  private showDecorations(decorations: readonly Decoration[]): void {
+    this.code.dispatch({ effects: setBoxDecorations.of(decorations) });
   }
 
   /** The node and where its source starts, while the box is in the document. */

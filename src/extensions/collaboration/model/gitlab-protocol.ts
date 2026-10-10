@@ -1,7 +1,10 @@
-// The protocol of GitLab-backed rooms, shared by the widget (features/collaboration,
-// features/versions) and the collaboration server (server/src/gitlab). No imports: the
-// server's Node runtime loads this file directly. Imported directly rather than through
-// collaboration.ts: an exception to the entry-file rule, listed in eslint.config.js.
+// The protocol of the rooms (the Y.Doc's maps) and of GitLab-backed rooms (stateless messages, file URLs), shared
+// by the widget (the collaboration and versions extensions) and the collaboration server (server/src). No imports:
+// the server's Node runtime loads this file directly. Imported directly rather than through model.ts (the lazily
+// loaded chunk): an exception to the entry-file rule, listed in eslint.config.js.
+
+/** The Y.Doc map of the shared Typst files: path → Y.Text (see SharedProject; the server reads and merges them). */
+export const FILES_MAP = 'files';
 
 /** Room names of GitLab-backed rooms: `gitlab:<project id or path>@<branch>`. */
 export const GITLAB_ROOM_PREFIX = 'gitlab:';

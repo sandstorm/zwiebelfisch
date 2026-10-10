@@ -1,5 +1,5 @@
 // RemoteCursors: other users' carets and selections over Yjs awareness, handed to the views as presences.
-// See collaboration.ts.
+// See model.ts.
 import type { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 import { ProjectPath } from '../../../core/paths/paths';

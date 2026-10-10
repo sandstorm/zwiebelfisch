@@ -1,8 +1,9 @@
 // What contributions add to raw boxes (Typst kept verbatim, edited as code): pictures instead of the code, tools
 // around it, extensions of the code editor. See contributions.ts and nodes/raw-box.ts.
-import type { Extension as CodeExtension } from '@codemirror/state';
+import { StateEffect, type Extension as CodeExtension } from '@codemirror/state';
 import type { Editor } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
+import type { Decoration } from '@tiptap/pm/view';
 import type { Disposable } from '../../../core/disposable/disposable';
 import type { VisualViewContext } from './view-context';
 
@@ -34,6 +35,13 @@ export type BoxRendererProvider = (view: VisualViewContext) => BoxRenderer | nul
 
 /** CodeMirror extensions of every raw box's code in one view (e.g. links on file paths). */
 export type BoxCodeExtensionProvider = (view: VisualViewContext) => CodeExtension;
+
+/**
+ * The decorations the Visual view gives a raw box's node (e.g. one marking another user's caret inside the box),
+ * dispatched to the box's code editor when the box is made and on every update of its node: how a box code
+ * extension learns what is drawn on its box (a transaction extender or state field reads the effect).
+ */
+export const setBoxDecorations = StateEffect.define<readonly Decoration[]>();
 
 /** The box tools of a code box belong to. */
 export interface BoxToolsHost {
