@@ -3,7 +3,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createEngine, type Engine } from '../typst-engine';
 import { fetchPreviewPackage, withPackages } from './packages';
-import { addMarginNote, addReply } from '../../../features/comments/comments';
+import { addMarginNote, addReply, withoutNotes } from '../../../features/comments/comments';
 import type { TextChange } from '../../typst-document/typst-document';
 
 const wasm = readFileSync(new URL('../wasm/typst_engine_bg.wasm', import.meta.url));
@@ -147,6 +147,36 @@ describe('the drafting package (margin notes)', () => {
     const project = withPackages(bare, async () => drafting);
     bare.setSource('/main.typ', '#import "@preview/drafting:0.2.2": margin-note\nText#margin-note[note]');
     expect((await project.compile('/main.typ')).diagnostics).toEqual([]);
+  });
+
+  describe('the PDF without comments (withoutNotes)', () => {
+    const page = '#set page(width: 16cm, height: 8cm, margin: (right: 4cm, rest: 1cm))\n';
+    /** Glyphs drawn (SVG `<use>`s) when compiling `main` with `sources`. */
+    const glyphs = async (sources: Record<string, string>, main = '/main.typ') => {
+      const bare = await createEngine(wasm, fonts);
+      const project = withPackages(bare, async () => drafting);
+      for (const [path, text] of Object.entries(sources)) bare.setSource(path, text);
+      const { pages, diagnostics } = await project.compile(main);
+      expect(diagnostics).toEqual([]);
+      expect((await project.exportPdf(main)).pdf).not.toBeNull();
+      return pages.map((p) => p.svg.split('<use').length - 1).reduce((a, b) => a + b);
+    };
+
+    it('hides every note and keeps the text of range notes, also after the document styles its notes', async () => {
+      const files = {
+        '/main.typ': `#import "@preview/drafting:0.2.2": margin-note, set-margin-note-defaults
+${page}#set-margin-note-defaults(stroke: blue)
+#let todo = margin-note.with(stroke: red)
+Alpha #margin-note[Beta][Gamma note] Delta#margin-note[Point note] #todo[Helper note]
+`,
+      };
+      const plain = { '/main.typ': `${page}Alpha Beta Delta\n` };
+      const entry = withoutNotes(files, '/main.typ');
+      const all = await glyphs(files);
+      const none = await glyphs({ ...files, ...entry.sources }, entry.main);
+      expect(none).toBe(await glyphs(plain));
+      expect(all).toBeGreaterThan(none + 'GammanotePointnoteHelpernote'.length - 1);
+    });
   });
 
   describe('page margins (drafting 0.2.2 needs a margin that differs by side)', () => {
