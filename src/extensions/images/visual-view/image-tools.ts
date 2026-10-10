@@ -1,10 +1,11 @@
-// ImageTools: resize handles, width presets, alt text and caption on an image box. See images.ts.
+// ImageTools: resize handles, width presets, alt text and caption on an image box. See ../images.ts.
 import type { PathReference } from '../../../core/paths/paths';
 import type { Node } from '@tiptap/pm/model';
 import type { EditorState, Transaction } from '@tiptap/pm/state';
 import type { BoxTools, BoxToolsHost } from '../../../hosts/visual-view/visual-view';
 import type { Workbench } from '../../../hosts/workbench/workbench';
 import { imageWidthCss } from '../model/image-call';
+import { type DragStart, resizedPercent } from '../model/resize';
 import { addCaption, imageInfo, removeCaption, resizeImage, setImageAlt } from './image-edits';
 import { imagePath } from './image-syntax';
 
@@ -20,24 +21,6 @@ export interface ImageToolsHost extends BoxToolsHost {
 const PRESETS = [25, 50, 75, 100];
 /** Resize handles: corners and sides; `w` in the name means it sits on the left. */
 const HANDLES = ['nw', 'ne', 'sw', 'se', 'w', 'e'];
-
-/** Where a resize drag started: the image's width and the text width (px), and whether the image is centered. */
-export interface DragStart {
-  width: number;
-  reference: number;
-  centered: boolean;
-}
-
-/**
- * The new width in percent of the text width after dragging a handle by `dx`
- * pixels: `direction` is -1 for handles on the left. A centered image grows
- * on both sides, so it changes by twice the drag. Whole percent, 1 to 100.
- */
-export function resizedPercent({ width, reference, centered }: DragStart, dx: number, direction: 1 | -1): number {
-  if (reference <= 0) return 100;
-  const dragged = width + dx * direction * (centered ? 2 : 1);
-  return Math.min(100, Math.max(1, Math.round((dragged / reference) * 100)));
-}
 
 /**
  * What an image box offers besides its code: the "Image: path" heading, a

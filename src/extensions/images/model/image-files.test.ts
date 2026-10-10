@@ -1,7 +1,7 @@
 // Tests for image-files.ts.
 import { describe, expect, it } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
-import { IMAGE_FILES, imageBlob, isImage } from './image-files';
+import { IMAGE_ACCEPT, IMAGE_FILES, imageBlob, isImage } from './image-files';
 
 const path = ProjectPath.of;
 
@@ -14,6 +14,7 @@ describe('image files', () => {
     expect(isImage(path('/budget.ic'))).toBe(false);
     expect(isImage(path('/png'))).toBe(false);
     expect(IMAGE_FILES).toBe('*.{png,jpg,jpeg,gif,svg,webp}');
+    expect(IMAGE_ACCEPT).toBe('.png,.jpg,.jpeg,.gif,.svg,.webp');
   });
 
   it('come as Blobs of their media type', () => {

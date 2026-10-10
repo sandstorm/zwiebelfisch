@@ -1,5 +1,5 @@
 // Figures: `#figure(image(..) | table(..), caption: [..])`, read with the caption as rich text and printed back
-// around their parts. See images.ts.
+// around their parts. See ../images.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { Node } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';

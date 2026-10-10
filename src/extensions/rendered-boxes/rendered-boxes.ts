@@ -12,7 +12,7 @@ import { snippetRenderer } from './visual-view/visual-view';
 
 /**
  * Raw boxes drawn as compiled snippets from the preview (`Preview.snippet` under the document's current path,
- * refreshed on `onDidRender`). In the built-in list after `images`, whose renderer draws image boxes.
+ * refreshed on `onDidRender`). Image boxes are drawn by the images' renderer (priority 110 over this one's 100).
  */
 export function renderedBoxes(): TypstExtension {
   return {
@@ -54,7 +54,7 @@ export interface RenderedBoxesOptions {
  * boxes size it in pt; inline boxes in em of the text around them (see
  * `inlinePictureSize`). Boxes that draw nothing in place (`#set`, `#let`,
  * comments: see `rendersInPlace`) and boxes whose snippet is null keep
- * showing code. Registered after `images`, whose renderer draws image boxes.
+ * showing code. Image boxes are drawn by the images' renderer (priority 110).
  */
 export function renderedBoxesVisualView(options: RenderedBoxesOptions = {}): VisualViewContribution {
   return {

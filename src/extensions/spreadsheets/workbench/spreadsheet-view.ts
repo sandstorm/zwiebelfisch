@@ -16,7 +16,7 @@ export class SpreadsheetView {
   private readonly title: HTMLElement;
   private readonly body: HTMLElement;
   private mounted: MountedWorkbook | null = null;
-  /** Bumped by every show / hide: a slow load that was overtaken is dropped. */
+  /** Bumped by every show and by destroy: a slow load that was overtaken is dropped. */
   private generation = 0;
 
   constructor(
@@ -27,7 +27,6 @@ export class SpreadsheetView {
     this.root = doc.createElement('div');
     this.root.className = 'typst-sheet';
     this.root.dataset.testid = 'typst-spreadsheet';
-    this.root.hidden = true;
     this.title = doc.createElement('h2');
     this.title.className = 'typst-sheet__title';
     this.body = doc.createElement('div');
@@ -40,7 +39,6 @@ export class SpreadsheetView {
   async show(path: ProjectPath, content: FileContent): Promise<void> {
     const generation = this.unmount();
     this.title.textContent = ProjectPath.displayName(path);
-    this.root.hidden = false;
     this.body.textContent = 'Loading spreadsheet…';
     const bytes = typeof content === 'string' ? new TextEncoder().encode(content) : content;
     try {
@@ -54,11 +52,6 @@ export class SpreadsheetView {
     } catch (error) {
       if (generation === this.generation) this.body.textContent = `This spreadsheet cannot be opened: ${String(error)}`;
     }
-  }
-
-  hide(): void {
-    this.unmount();
-    this.root.hidden = true;
   }
 
   destroy(): void {

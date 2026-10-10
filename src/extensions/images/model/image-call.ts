@@ -2,7 +2,7 @@
  * Reading and editing the arguments of an image call, `#image("path", ..)`
  * (an image block) or `image("path", ..)` (the body of a figure). Edits
  * replace only the text of the argument they touch, so a resize or a new alt
- * text is a minimal source change and everything else stays as written.
+ * text is a minimal source change and everything else stays as written. See ../images.ts.
  */
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';

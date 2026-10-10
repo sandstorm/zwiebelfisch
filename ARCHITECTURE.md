@@ -133,7 +133,7 @@ src/                        the widget (TypeScript); the most important API on t
     images/                 images(): image boxes + figures, "Insert image", ProjectImages (object URLs, uploads);
                             imagesVisualView (its options, ImageAssets / ImageUrls / ImageLinks: the test seam
                             testing/ uses), all in images.ts;
-                            model/ (image-call.ts: arguments edited in place; upload.ts: uploadTarget),
+                            model/ (image-call.ts: arguments edited in place; upload.ts: uploadTarget; resize.ts: resizedPercent),
                             visual-view/ (specs, tools, insertion, image-path-link: the path's document link),
                             model/image-files.ts (isImage, imageBlob: the media types), workbench/ (AssetView: images and other
                             files read-only, the custom editors `images.preview` and `images.file`)
@@ -1378,8 +1378,8 @@ followColorScheme(container, onDidChange) → Disposable   // sets / takes away 
   new workbook, which is saved at once: "New spreadsheet…" (the file panel's "New", menu `file/newFile`, command
   `spreadsheets.newSpreadsheet` with the row as argument) asks for a name (`.ic` added; in the row's folder),
   creates the empty file and opens it.
-- `workbench/workbook.ts` is a separate chunk (`import()` from `spreadsheet-view.ts` on the first show; the
-  folder's entry exports only its types): `@ironcalc/workbook` (React,
+- `workbench/workbook.ts` is a separate chunk (`import()` from `spreadsheet-view.ts` on the first show; everything
+  else imports only its types): `@ironcalc/workbook` (React,
   i18next, lucide icons) and the engine's wasm. Its CSS (scoped `.ic-root`) goes into the
   container's root node (the shadow root of `<typst-editor>`); `rootContainer` keeps its menus
   inside the container.

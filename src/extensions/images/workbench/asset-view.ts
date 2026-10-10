@@ -16,7 +16,6 @@ export class AssetView {
     this.root = parent.ownerDocument.createElement('div');
     this.root.className = 'typst-asset';
     this.root.dataset.testid = 'typst-asset';
-    this.root.hidden = true;
     parent.append(this.root);
   }
 
@@ -32,13 +31,6 @@ export class AssetView {
     size.textContent = formatSize(typeof content === 'string' ? new TextEncoder().encode(content).length : content.length);
     title.append(size);
     this.root.replaceChildren(title, this.body(path, content));
-    this.root.hidden = false;
-  }
-
-  hide(): void {
-    this.root.hidden = true;
-    this.release();
-    this.root.replaceChildren();
   }
 
   destroy(): void {
@@ -74,7 +66,7 @@ export class AssetView {
   }
 }
 
-export function formatSize(bytes: number): string {
+function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;

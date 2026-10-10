@@ -10,7 +10,7 @@ import { typst_lezer, typstLezerIndentService, typstLezerLinter } from 'codemirr
  * reported twice. Its indentation service is wrapped so that a construct
  * closed right before the cursor does not indent the next line.
  */
-export function typstLanguage(): LanguageSupport {
+export function typstSyntax(): LanguageSupport {
   const lezer = typst_lezer();
   const support = (lezer.support as readonly Extension[])
     .filter((extension) => extension !== typstLezerLinter)

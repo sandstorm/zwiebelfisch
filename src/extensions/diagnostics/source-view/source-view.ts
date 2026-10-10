@@ -44,7 +44,7 @@ class LintShown {
 }
 
 /** Converts compiler diagnostics to CodeMirror lint diagnostics, hints folded into the message. */
-export function toLintDiagnostics(diagnostics: readonly SourceDiagnostic[], length: number): LintDiagnostic[] {
+function toLintDiagnostics(diagnostics: readonly SourceDiagnostic[], length: number): LintDiagnostic[] {
   return diagnostics.map((d) => ({
     from: Math.min(d.from, length),
     to: Math.min(d.to, length),

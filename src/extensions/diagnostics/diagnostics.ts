@@ -5,7 +5,6 @@
 // Why one DiagnosticCollection (model/): the preview reports a compilation's diagnostics once, for every file; the
 // collection splits them by document, and each view of a document reads its own from there, whenever it is made.
 import { Disposable } from '../../core/disposable/disposable';
-import { ProjectPath } from '../../core/paths/paths';
 import type { Diagnostic } from '../../core/typst-engine/typst-engine';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './diagnostics.css?inline';
@@ -17,9 +16,8 @@ import { DiagnosticsStatus } from './workbench/workbench';
 
 /**
  * The preview's diagnostics, each document's in a DiagnosticCollection its Source views underline (`lint`) and its
- * Visual views mark, and the
- * compile status in the status bar, for the Typst file shown last (while an image is shown, too). Clicking the
- * status, or a message, opens the file and reveals the range in the Source view.
+ * Visual views mark, and the compile status in the status bar, for the Typst file shown last (while an image is
+ * shown, too). Clicking the status, or a message, opens the file and reveals the range in the Source view.
  */
 export function diagnostics(): TypstExtension {
   return {
@@ -28,15 +26,14 @@ export function diagnostics(): TypstExtension {
       subscriptions.push(workbench.registerStyleSheet(css));
       const collection = new DiagnosticCollection();
       const status = new DiagnosticsStatus(workbench.ownerDocument, (target) => {
-        const path = ProjectPath.parse(target.path);
-        if (path && project.document(path)) workbench.open(path, { selection: target, mode: 'source' });
+        if (project.document(target.path)) workbench.open(target.path, { selection: target, mode: 'source' });
       });
       /** The Typst file shown last: whose diagnostics the status counts. */
       let lastSource = project.main;
       /** The newest compilation's (null before the first). */
       let latest: readonly Diagnostic[] | null = null;
       const show = () => {
-        if (latest) status.show(summarizeDiagnostics([...latest], lastSource));
+        if (latest) status.show(summarizeDiagnostics(latest, lastSource));
       };
       const compiled = (diagnostics: readonly Diagnostic[]) => {
         latest = diagnostics;

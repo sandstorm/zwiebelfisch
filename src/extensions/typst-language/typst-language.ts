@@ -5,7 +5,7 @@
 // is contributed here, once for both views.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import { codeColors } from './source-view/code-colors';
-import { typstLanguage as typstSyntax } from './source-view/typst-syntax';
+import { typstSyntax } from './source-view/typst-syntax';
 
 /** Typst syntax and its highlighting, in CodeMirror's light or dark theme, in the Source views and raw boxes. */
 export function typstLanguage(): TypstExtension {
