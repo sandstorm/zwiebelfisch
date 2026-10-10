@@ -96,11 +96,6 @@ export class Project {
     }
   }
 
-  /** A Typst file takes only text; other files any content. */
-  private checkUpdate(path: ProjectPath, content: FileContent): string | null {
-    return this.document(path) && typeof content !== 'string' ? `${path} must contain text.` : null;
-  }
-
   /** Applies `change` and notifies listeners; throws when `check` refuses it. */
   apply(change: FileChange): void {
     const problem = this.check(change);
@@ -138,6 +133,11 @@ export class Project {
 
   private checkNew(path: ProjectPath): string | null {
     return this.entries.has(path) ? `${path} already exists.` : null;
+  }
+
+  /** A Typst file takes only text; other files any content. */
+  private checkUpdate(path: ProjectPath, content: FileContent): string | null {
+    return this.document(path) && typeof content !== 'string' ? `${path} must contain text.` : null;
   }
 
   private checkRename(from: ProjectPath, to: ProjectPath): string | null {
