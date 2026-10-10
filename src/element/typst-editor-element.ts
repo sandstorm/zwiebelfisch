@@ -1,4 +1,4 @@
-import { createTypstEditor, type TypstEditor } from '../editor/typst-editor';
+import { createTypstEditor, type ProjectFiles, type TypstEditor } from '../editor/typst-editor';
 import { inlineSource } from './inline-source';
 
 /** `detail` of the `change` event the element dispatches after every user edit. */
@@ -19,12 +19,14 @@ const Base = (typeof HTMLElement === 'undefined' ? class {} : HTMLElement) as ty
  * element's text content (common indentation removed). `value` is also a
  * property; setting it (or the attribute) replaces the source without a
  * `change` event. User edits dispatch `change` with `detail.value`.
+ * The `files` property holds the project's other files (see `ProjectFiles`).
  */
 export class TypstEditorElement extends Base {
   static readonly observedAttributes = ['value'];
 
   #editor: TypstEditor | null = null;
   #value: string | null = null;
+  #files: ProjectFiles = {};
   #settingValue = false;
 
   get value(): string {
@@ -42,6 +44,16 @@ export class TypstEditorElement extends Base {
     }
   }
 
+  /** Other project files the source can include, import or load as images. */
+  get files(): ProjectFiles {
+    return this.#files;
+  }
+
+  set files(files: ProjectFiles) {
+    this.#files = files;
+    if (this.#editor) this.#editor.files = files;
+  }
+
   connectedCallback(): void {
     const root = this.shadowRoot ?? this.attachShadow({ mode: 'open' });
     const style = document.createElement('style');
@@ -51,6 +63,7 @@ export class TypstEditorElement extends Base {
     root.replaceChildren(style, container);
     this.#editor = createTypstEditor(container, {
       source: this.value,
+      files: this.#files,
       onChange: (value) => this.#changed(value),
     });
   }

@@ -1,5 +1,6 @@
 import { TypstDocument } from '../document/typst-document';
 import { Preview } from '../preview/preview';
+import type { FileContent } from '../preview/project-files';
 import { SourceView } from '../source-view/source-view';
 import { VisualView } from '../visual-view/visual-view';
 import proseMirrorStyles from 'prosemirror-view/style/prosemirror.css?inline';
@@ -7,13 +8,22 @@ import { DiagnosticsStatus } from './diagnostics-status';
 import { summarizeDiagnostics } from './diagnostics-summary';
 import styles from './styles.css?inline';
 
-const MAIN = '/main.typ';
-
 export type EditorMode = 'visual' | 'source';
 
+/** Other project files by absolute path (`/chapter.typ`, `/img/logo.png`): source text or bytes. */
+export type ProjectFiles = Record<string, FileContent>;
+
 export interface TypstEditorOptions {
-  /** Typst source of the main file. */
+  /** Typst source of the main file — the one that is edited. */
   source: string;
+  /** Path of the main file (default `/main.typ`). */
+  main?: string;
+  /**
+   * The project's other files, which the main file can `#include`, `#import`
+   * or load (`image(…)`). Not editable here. `@preview` packages need no
+   * entry: they are downloaded from packages.typst.org on first import.
+   */
+  files?: ProjectFiles;
   /** The editing view shown first (default: visual). */
   mode?: EditorMode;
   /** Called whenever the source text changes. */
@@ -26,6 +36,8 @@ export interface TypstEditor {
    * (only the differing middle changes) and also triggers `onChange`.
    */
   source: string;
+  /** The other project files; assigning replaces them all and recompiles. */
+  files: ProjectFiles;
   destroy(): void;
 }
 
@@ -41,6 +53,8 @@ export interface TypstEditor {
 export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions): TypstEditor {
   injectStyles(host);
   const document = new TypstDocument(options.source);
+  const MAIN = options.main ?? '/main.typ';
+  let files = options.files ?? {};
 
   const left = el(host.ownerDocument, 'typst-editor__left');
   const right = el(host.ownerDocument, 'typst-editor__right');
@@ -49,7 +63,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
 
   const status = new DiagnosticsStatus(host, (from, to) => source.reveal(from, to));
   const preview = new Preview(right, {
-    onJump: (jump) => (mode === 'visual' ? visual : source).reveal(jump.from, jump.to),
+    onJump: (jump) => jump.path === MAIN && (mode === 'visual' ? visual : source).reveal(jump.from, jump.to),
     onDiagnostics: (diagnostics) => {
       const summary = summarizeDiagnostics(diagnostics, MAIN);
       source.setDiagnostics(summary.inMain);
@@ -65,7 +79,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
   panes.onSwitch((next) => (mode = next));
   panes.show(mode);
 
-  const refresh = () => preview.update({ [MAIN]: document.text }, MAIN);
+  const refresh = () => preview.update({ ...files, [MAIN]: document.text }, MAIN);
   const unsubscribe = document.onChange(() => {
     refresh();
     options.onChange?.(document.text);
@@ -78,6 +92,13 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
     },
     set source(text: string) {
       document.setText(text, 'api');
+    },
+    get files() {
+      return files;
+    },
+    set files(next: ProjectFiles) {
+      files = next;
+      refresh();
     },
     destroy() {
       unsubscribe();
