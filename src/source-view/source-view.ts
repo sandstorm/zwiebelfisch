@@ -4,8 +4,10 @@ import { getOriginalDoc, unifiedMergeView, updateOriginalDoc } from '@codemirror
 import { Annotation, Compartment, EditorSelection, StateEffect, StateField, Transaction, type ChangeSet, type ChangeSpec } from '@codemirror/state';
 import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
 import type { Highlight } from '../document/highlight';
+import type { Presence, PresenceTarget } from '../document/presence';
 import { REMOTE_ORIGIN, type TextChange, type TypstDocument } from '../document/typst-document';
 import { toLintDiagnostics, type SourceDiagnostic } from './lint';
+import { remotePresence, showPresence } from './presence';
 import { typstLanguage } from './typst-language';
 
 export { describeDiagnostic, type SourceDiagnostic } from './lint';
@@ -67,7 +69,7 @@ export interface SourceViewOptions {
  * The plain-Typst editing view (CodeMirror 6), kept in sync with a
  * TypstDocument in both directions.
  */
-export class SourceView {
+export class SourceView implements PresenceTarget {
   private readonly view: EditorView;
   private readonly unsubscribe: () => void;
   private readonly changes = new Compartment();
@@ -83,6 +85,7 @@ export class SourceView {
         EditorView.lineWrapping,
         highlightField,
         layersField,
+        remotePresence,
         this.changes.of([]),
         EditorView.updateListener.of((update) => {
           if (update.transactions.some((tr) => tr.effects.some((effect) => effect.is(updateOriginalDoc)))) {
@@ -128,6 +131,11 @@ export class SourceView {
   /** Replaces the highlights of `layer`; they follow edits until set again. */
   setHighlights(layer: string, highlights: readonly Highlight[]): void {
     this.view.dispatch({ effects: setLayer.of({ layer, highlights }) });
+  }
+
+  /** Shows other users' carets and selections (replacing those shown before); they follow edits. */
+  setPresence(presences: readonly Presence[]): void {
+    showPresence(this.view, presences);
   }
 
   /** The selected source range (the main selection). */
