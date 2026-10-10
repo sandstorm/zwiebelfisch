@@ -319,8 +319,8 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
   exported. `collaboration` is not a built-in: it needs the host's connection (a Y.Doc or a server), so the host
   adds `collaboration({ url, room })` (exported from `src/index.ts`). The extension API's types (also those of
   messages, input box, quick pick and menus: `MessageItem`, `InputBoxOptions`, `QuickPickItem`, `QuickPickOptions`,
-  `MenuItem`, `MenuContext`), `Disposable`, `EventEmitter` and `Event` are exported from `src/index.ts`, the only
-  file that re-exports.
+  `MenuItem`, `MenuContext`), `Disposable`, `EventEmitter`, `Event` and `ProjectPath` (with `parse` / `of`: the
+  API takes parsed paths) are exported from `src/index.ts`, the only file that re-exports.
 - **Widget options vs. settings** (decided 2026-10-10): the content and the host integration are options (`files`,
   `main`, `source`, `mode` (where to start), `allowFileChange`, `onFilesChange`, `onOpen`, `user`); what a feature
   lets hosts configure is a setting its extension declares, changeable later through `editor.settings`:

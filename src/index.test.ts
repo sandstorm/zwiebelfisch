@@ -10,5 +10,6 @@ describe('package entry', () => {
     expect(typeof api.createTypstEditor).toBe('function');
     expect(typeof api.defineTypstEditorElement).toBe('function');
     expect(() => api.defineTypstEditorElement()).not.toThrow();
+    expect(api.ProjectPath.parse('/chapters/a.typ')).toBe('/chapters/a.typ');
   }, IMPORT_TIMEOUT);
 });
