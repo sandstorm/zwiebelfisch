@@ -1,7 +1,7 @@
 // End-to-end tests (Playwright, against the demo build): inline raw boxes sit on their text line,
 // one line high, as code and as compiled snippets, in paragraphs and table cells.
-import type { Locator, Page } from '@playwright/test';
-import { test, expect } from './fixtures';
+import { expect, type Locator, type Page } from '@playwright/test';
+import { test } from './fixtures';
 
 type Editor = HTMLElement & { value: string };
 

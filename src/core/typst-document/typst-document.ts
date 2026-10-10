@@ -4,11 +4,13 @@
 // document from outside, like y-codemirror binds one to an editor: local changes go into the Y.Text, and edits
 // arriving through it come back through `change`, with an origin of its own.
 import { EventEmitter, type Event } from '../event-emitter/event-emitter';
-import { minimalChange } from './minimal-change';
-import type { TextChange } from './text-change';
 
-export type { TextChange } from './text-change';
-export { minimalChange } from './minimal-change';
+/** A replacement of `from..to` (UTF-16 offsets) by `insert`: the one edit format of the widget (CodeMirror's ChangeSpec shape). */
+export interface TextChange {
+  from: number;
+  to: number;
+  insert: string;
+}
 
 /** What `TypstDocument.onDidChange` tells: the changes (coordinates of the text before them) and who made them. */
 export interface TypstDocumentChangeEvent {
@@ -77,4 +79,33 @@ export class TypstDocument {
       this.queued.length = 0;
     }
   }
+}
+
+/**
+ * The single change that turns `before` into `after`, covering only the part
+ * between their common prefix and suffix (null if they are equal). Keeps
+ * cursors, undo history and incremental reparsing intact when a whole new
+ * text is set from outside. Never splits a UTF-16 surrogate pair.
+ */
+export function minimalChange(before: string, after: string): TextChange | null {
+  if (before === after) return null;
+  const max = Math.min(before.length, after.length);
+  let prefix = 0;
+  while (prefix < max && before.charCodeAt(prefix) === after.charCodeAt(prefix)) prefix++;
+  if (prefix > 0 && isHighSurrogate(before.charCodeAt(prefix - 1))) prefix--;
+
+  let suffix = 0;
+  const maxSuffix = max - prefix;
+  while (suffix < maxSuffix && before.charCodeAt(before.length - 1 - suffix) === after.charCodeAt(after.length - 1 - suffix)) suffix++;
+  if (suffix > 0 && isLowSurrogate(before.charCodeAt(before.length - suffix))) suffix--;
+
+  return { from: prefix, to: before.length - suffix, insert: after.slice(prefix, after.length - suffix) };
+}
+
+function isHighSurrogate(code: number): boolean {
+  return code >= 0xd800 && code <= 0xdbff;
+}
+
+function isLowSurrogate(code: number): boolean {
+  return code >= 0xdc00 && code <= 0xdfff;
 }

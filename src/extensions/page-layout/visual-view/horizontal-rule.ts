@@ -1,9 +1,11 @@
 // The horizontal rule: a full-width `#line(length: 100%)` shown as a rule, "Horizontal rule" and `---`.
-// See visual-view.ts.
+// See ../page-layout.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { InputRule, Node } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
-import { parenthesized, svg, type Action, type ProjectionContext, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import { parenthesized } from '../../../core/typst-syntax/typst-syntax';
+import { svg, type Action, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import type { ProjectionContext } from '../../../hosts/projection/projection';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {

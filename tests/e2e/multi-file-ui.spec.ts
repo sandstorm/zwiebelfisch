@@ -1,5 +1,6 @@
 // End-to-end tests (Playwright, against the demo build): the file panel (multi-file projects).
-import { test, expect, clickGlyph, fileRow } from './fixtures';
+import { expect } from '@playwright/test';
+import { test, clickGlyph, fileRow } from './fixtures';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 

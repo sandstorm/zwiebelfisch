@@ -2,7 +2,8 @@
 // and the sources without notes it writes compile, and draw what they should.
 import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { createEngine, withPackages } from '../../../core/typst-engine/typst-engine';
+import { createEngine } from '../../../core/typst-engine/typst-engine';
+import { withPackages } from '../../../core/typst-packages/typst-packages';
 import type { TextChange } from '../../../core/typst-document/typst-document';
 import { addMarginNote } from './add-margin-note';
 import { addReply } from './note-thread';

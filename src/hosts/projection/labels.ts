@@ -1,11 +1,6 @@
 // Which label (`<name>`) belongs to which block, and printing it back after the block. See projection.ts.
 import type { SyntaxNode } from '@lezer/common';
-
-/** A block's label: its name, and the source between the block and `<name>` (`' '`, `''`, `'\n'`). */
-export interface BlockLabel {
-  name: string;
-  gap: string;
-}
+import type { BlockLabel } from './projection';
 
 /** `<name>` after its gap. */
 export function labelSyntax({ name, gap }: BlockLabel): string {

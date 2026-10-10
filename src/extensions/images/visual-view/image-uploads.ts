@@ -1,16 +1,7 @@
 // Image uploads: where "Insert image" gets the project's images from, and image files from the computer added to the
 // project. See visual-view.ts.
-import type { PathReference, ProjectPath } from '../../../core/paths/paths';
-
-/** Where the Visual view gets images to insert from: the host's project files. */
-export interface ImageAssets {
-  /** The project's images, as paths to write in `#image(..)` in this document. */
-  list(): PathReference[];
-  /** Adds `file` to the project; resolves to the path to write in `#image(..)`, or why it was not added (in words for people). */
-  upload(file: File): Promise<{ path: PathReference } | { error: string }>;
-  /** The path to write in `#image(..)` in this document for the project file `path` (e.g. dragged from the file panel); null if it is no image. */
-  reference(path: ProjectPath): PathReference | null;
-}
+import type { PathReference } from '../../../core/paths/paths';
+import type { ImageAssets } from '../images';
 
 /** Uploads `files` one by one: the paths of those added, and why the others were not. */
 export async function uploadImages(assets: ImageAssets, files: readonly File[]): Promise<{ paths: PathReference[]; errors: string[] }> {

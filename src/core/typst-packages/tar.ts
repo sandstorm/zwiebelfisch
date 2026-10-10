@@ -1,4 +1,4 @@
-// A minimal .tar.gz reader for package archives. See packages.ts.
+// A minimal .tar.gz reader for package archives. See typst-packages.ts.
 const BLOCK = 512;
 
 /**

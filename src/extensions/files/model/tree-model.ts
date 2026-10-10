@@ -1,5 +1,5 @@
 // The file tree as data: folders from paths, the rows shown for the expanded folders, keyboard moves, and
-// moving files or folders. Pure. See model.ts.
+// moving files or folders. Pure. See ../files.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 
 /** A folder (a path, like a file's, without a trailing slash), or null for the top level. */

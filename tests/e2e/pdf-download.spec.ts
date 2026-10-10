@@ -2,8 +2,8 @@
 // popover ("Include comments"), and the exportPdf API.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { test, expect } from './fixtures';
-import type { Download, Page } from '@playwright/test';
+import { test } from './fixtures';
+import { expect, type Download, type Page } from '@playwright/test';
 
 const DRAFTING = readFileSync(resolve(import.meta.dirname, '../../src/extensions/comments/model/fixtures/drafting-0.2.2.tar.gz'));
 

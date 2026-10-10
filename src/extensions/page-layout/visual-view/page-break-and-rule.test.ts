@@ -1,6 +1,6 @@
 // Tests for page-break.ts and horizontal-rule.ts: `#pagebreak()` and full-width `#line(..)` as widgets.
 import { describe, expect, it } from 'vitest';
-import { print } from '../../../hosts/visual-view/visual-view';
+import { print } from '../../../hosts/projection/projection';
 import { after, edit, expectPreciseMap, project, schema } from '../../../testing/testing';
 
 const FIXTURES: Record<string, string> = {

@@ -1,6 +1,5 @@
 // Helpers for the Visual view specs: locators and source text.
-import type { Locator, Page } from '@playwright/test';
-import { expect } from './fixtures';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 /** The Visual view's editing area. */
 export const visual = (page: Page) => page.getByTestId('typst-visual');

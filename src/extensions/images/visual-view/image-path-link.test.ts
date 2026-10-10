@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { createVisualView } from '../../../testing/testing';
-import type { ImageLinks } from './visual-view';
+import type { ImageLinks } from '../images';
 
 const path = ProjectPath.of;
 

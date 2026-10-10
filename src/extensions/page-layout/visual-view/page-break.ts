@@ -1,6 +1,7 @@
-// The page break: `#pagebreak()` as a labelled divider, "Insert page break" and Mod+Enter. See visual-view.ts.
+// The page break: `#pagebreak()` as a labelled divider, "Insert page break" and Mod+Enter. See ../page-layout.ts.
 import { Node } from '@tiptap/core';
-import { parenthesized, svg, type Action, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import { parenthesized } from '../../../core/typst-syntax/typst-syntax';
+import { svg, type Action, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {

@@ -1,13 +1,12 @@
 // @vitest-environment jsdom
-// Tests for workbench-host.ts: the contribution points as an extension uses them (preview mocked: no worker in jsdom).
+// Tests for workbench.ts (WorkbenchHost): the contribution points as an extension uses them (preview mocked: no worker in jsdom).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
-import type { ExtensionContext } from './workbench';
-import { WorkbenchHost, type WorkbenchOptions } from './workbench';
+import { type ExtensionContext, WorkbenchHost, type WorkbenchOptions } from './workbench';
 
 vi.mock('../preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),

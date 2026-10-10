@@ -1,7 +1,8 @@
 // Tests that the engine compiles checklists with the cheq package (./fixtures/cheq-0.4.0), as task lists need it.
 import { readFileSync, readdirSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createEngine, withPackages, type Engine } from '../../../core/typst-engine/typst-engine';
+import { createEngine, type Engine } from '../../../core/typst-engine/typst-engine';
+import { withPackages } from '../../../core/typst-packages/typst-packages';
 
 /**
  * The Visual view's task lists rely on the Universe package cheq (pinned at

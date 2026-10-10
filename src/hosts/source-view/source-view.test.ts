@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests for source-view.ts: the host's contribution points, and the Source view it makes (view.ts).
+// Tests for source-view.ts: the host's contribution points, and the Source views it makes.
 import { describe, expect, it } from 'vitest';
 import { undo } from '@codemirror/commands';
 import { EditorState, StateEffect, StateField, Transaction } from '@codemirror/state';

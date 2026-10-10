@@ -1,11 +1,11 @@
-// Tests for packages.ts.
+// Tests for typst-packages.ts.
 import { readFileSync, readdirSync } from 'node:fs';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { createEngine, type Engine } from '../typst-engine';
-import { fetchPreviewPackage, withPackages } from './packages';
+import { createEngine, type Engine } from '../typst-engine/typst-engine';
+import { fetchPreviewPackage, withPackages } from './typst-packages';
 
-const wasm = readFileSync(new URL('../wasm/typst_engine_bg.wasm', import.meta.url));
-const fontDir = new URL('../fonts/', import.meta.url);
+const wasm = readFileSync(new URL('../typst-engine/wasm/typst_engine_bg.wasm', import.meta.url));
+const fontDir = new URL('../typst-engine/fonts/', import.meta.url);
 const fonts = readdirSync(fontDir).map((name) => new Uint8Array(readFileSync(new URL(name, fontDir))));
 const greet = new Uint8Array(readFileSync(new URL('./fixtures/greet-0.1.0.tar.gz', import.meta.url)));
 

@@ -1,7 +1,7 @@
 // Tests for the projection of table header rows (visual-view.ts, through the projection).
 import type { Node } from '@tiptap/pm/model';
 import { describe, expect, it } from 'vitest';
-import { print } from '../../../hosts/visual-view/visual-view';
+import { print } from '../../../hosts/projection/projection';
 import { after, edit, expectPreciseMap, find, project, schema } from '../../../testing/testing';
 
 const FIXTURES: Record<string, string> = {

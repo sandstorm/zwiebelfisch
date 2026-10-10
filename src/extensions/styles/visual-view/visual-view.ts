@@ -3,10 +3,9 @@
 // "Custom styles".
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node } from '@tiptap/pm/model';
-import {
-  children, isClosedContent, parenthesized, type Call, type Placed, type Printer, type ProjectionContext, type ToolbarContext, type ToolbarControl,
-  type TypstMarkSpec, type TypstNodeSpec, type VisualViewContribution,
-} from '../../../hosts/visual-view/visual-view';
+import { children, isClosedContent, parenthesized } from '../../../core/typst-syntax/typst-syntax';
+import type { Call, Placed, Printer, ProjectionContext } from '../../../hosts/projection/projection';
+import type { ToolbarContext, ToolbarControl, TypstMarkSpec, TypstNodeSpec, VisualViewContribution } from '../../../hosts/visual-view/visual-view';
 import type { ProjectStyles } from '../model/style-index';
 import type { Style } from '../model/discover';
 import { StyleMenu } from './style-menu';

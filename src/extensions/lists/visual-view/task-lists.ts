@@ -4,7 +4,9 @@ import { TaskItem, TaskList } from '@tiptap/extension-list';
 import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
 import { Plugin } from '@tiptap/pm/state';
-import { children, svg, type Action, type ProjectionContext, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import { children } from '../../../core/typst-syntax/typst-syntax';
+import { svg, type Action, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import type { ProjectionContext } from '../../../hosts/projection/projection';
 import { countTaskItems, ensureChecklistPreamble } from './checklist-preamble';
 
 const TypstTaskList = TaskList.extend({

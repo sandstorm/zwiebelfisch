@@ -1,5 +1,5 @@
 // StyleIndex: the read model of the custom styles a project declares, kept up to date, and how a document imports
-// one. See model.ts.
+// one. See ../styles.ts.
 import type { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
 import { PathReference, ProjectPath } from '../../../core/paths/paths';

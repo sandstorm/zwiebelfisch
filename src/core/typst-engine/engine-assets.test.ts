@@ -1,15 +1,16 @@
-// Tests for engine-assets.ts.
+// Tests for engine-assets.ts (the default fonts) and fetchFonts (typst-engine.ts).
 import { readdirSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { defaultFonts } from './engine-assets';
+import { DEFAULT_FONT_URLS } from './engine-assets';
+import { fetchFonts } from './typst-engine';
 
-describe('defaultFonts', () => {
+describe('fetchFonts(DEFAULT_FONT_URLS)', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('fetches every bundled font file in parallel', async () => {
     const fetch = vi.fn(async (_url: string) => new Response(new Uint8Array([1, 2, 3])));
     vi.stubGlobal('fetch', fetch);
-    const fonts = defaultFonts();
+    const fonts = fetchFonts(DEFAULT_FONT_URLS);
     expect(fetch).toHaveBeenCalledTimes(readdirSync(new URL('./fonts/', import.meta.url)).length);
     expect(fetch.mock.calls.map(([url]) => url)).toContainEqual(
       expect.stringMatching(/LibertinusSerif-Regular\.otf/),
@@ -19,6 +20,6 @@ describe('defaultFonts', () => {
 
   it('rejects when a font cannot be loaded', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 404 })));
-    await expect(Promise.all(defaultFonts())).rejects.toThrow(/404/);
+    await expect(Promise.all(fetchFonts(DEFAULT_FONT_URLS))).rejects.toThrow(/404/);
   });
 });

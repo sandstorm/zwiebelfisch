@@ -1,0 +1,368 @@
+/**
+ * The source-anchored projection between Typst text and the Visual view's
+ * ProseMirror document: the framework, which knows no Typst construct beyond
+ * paragraphs, text and raw Typst. Every other construct comes in as a spec
+ * (`NodeGrammar` / `MarkGrammar`, below): which syntax and calls it
+ * projects, how an edited one prints. `attachGrammar` gives a schema its specs.
+ *
+ *   project(text, schema) → doc    every node remembers the source it came from
+ *   print(doc)            → text   untouched nodes print their original source
+ *                                  byte for byte; only edited ones are re-printed
+ *   sourceToPos(doc, offset) / posToSource(doc, pos)
+ *                                  map between source offsets and document
+ *                                  positions, down to the character
+ *   syncDoc(tr, target)   → tr     turns the current doc into a fresh projection
+ *                                  with the smallest possible replacement
+ *
+ * Hence `print(project(text)) === text` for any input, and an edit in the
+ * Visual view changes only the source of what it touched. Syntax no spec
+ * models becomes `rawBlock` / `rawInline` atoms holding their verbatim source.
+ * Labels (`<key>`) after a heading, or ending a block's run, are that block's
+ * `label` attribute (see `labels.ts`).
+ *
+ * The Visual view host's mechanism, a module of its own: the host builds on it,
+ * and the specs contributed to the Visual view are written against its types.
+ * Entry of hosts/projection/. See ARCHITECTURE.md, "VisualView".
+ */
+import type { SyntaxNode } from '@lezer/common';
+import type { AnyExtension, Attribute } from '@tiptap/core';
+import type { Mark, Node, Schema } from '@tiptap/pm/model';
+import type { Transaction } from '@tiptap/pm/state';
+import type { Disposable } from '../../core/disposable/disposable';
+import { Grammar } from './grammar';
+import { projectDocument } from './projecting';
+import { forgetPrinted, printed, type Span } from './printing';
+import { pristine } from './pristine';
+
+/** A block's label: its name, and the source between the block and `<name>` (`' '`, `''`, `'\n'`). */
+export interface BlockLabel {
+  name: string;
+  gap: string;
+}
+
+/** An inline node and the source range it shows; source between placed nodes is hidden syntax. */
+export interface Placed {
+  node: Node;
+  from: number;
+  to: number;
+}
+
+/** A function call: its `FuncCall` node, the function's name and arguments, and the source it spans (with a `#`). */
+export interface Call {
+  node: SyntaxNode;
+  name: string;
+  /** The children of its `Args` node: `(`, arguments, separators, `)` and trailing content blocks. */
+  args: SyntaxNode[];
+  from: number;
+  to: number;
+}
+
+/**
+ * What projectors get to build nodes from Typst syntax: the source, the schema, and the framework's own
+ * steps (blocks of a content block, inline content, textblocks that print their source while untouched).
+ */
+export interface ProjectionContext {
+  readonly schema: Schema;
+  readonly source: string;
+  /** The source of `range`. */
+  text(range: { from: number; to: number }): string;
+  /** `call` (a `FuncCall`) read as a call; `from`..`to` is the call's own source. */
+  call(call: SyntaxNode): Call;
+  /** A call (a `FuncCall` without `#`, e.g. a figure's body) as the block its projectors make of it, or null. */
+  blockCall(call: SyntaxNode): Node | null;
+  /** The blocks of a closed content block `[..]` (an empty paragraph if there are none), and the source they cover. */
+  blocks(content: SyntaxNode): { content: Node[]; from: number; to: number };
+  /** Projects inline syntax (a textblock's content), each node carrying `marks`. */
+  inline(nodes: readonly SyntaxNode[], marks?: readonly Mark[]): Placed[];
+  /** Whether markup `nodes` are one paragraph: no paragraph break, no block of its own (heading, list item). */
+  isOneParagraph(nodes: readonly SyntaxNode[]): boolean;
+  /**
+   * A textblock whose `attrs.src` starts at source offset `from`; while untouched it prints `src` verbatim. Its
+   * content ends at `contentTo` (default: the end of `src`); syntax after that closes the block (a code fence).
+   */
+  textblock(block: { type: string; attrs: { src: string } & Record<string, unknown>; contentTo?: number }, from: number, content: Placed[]): Node;
+  /** A node that prints `attrs.src` while untouched (a list item: its marker, then its only child). */
+  pristine(type: string, attrs: Record<string, unknown>, content?: Node[]): Node;
+  /** Verbatim inline Typst: a raw inline box. */
+  raw(src: string, marks?: readonly Mark[]): Node;
+  /** Counts up from 0 within the textblock being projected (equal neighbouring marks stay apart by such an `id`). */
+  serial(): number;
+}
+
+/** Block syntax that always stands alone (`Heading`, `ListItem`): the block, or null to let the next projector try. */
+export interface BlockSyntaxProjector {
+  project(p: ProjectionContext, node: SyntaxNode, sep: string | null): Node | null;
+  /** A label right after it (same line or the next, then a paragraph break or a block) is its label: headings. */
+  takesLabel?: boolean;
+}
+
+/** A run of markup that is exactly `node` (e.g. raw text over several lines): a block, or null. */
+export type RunProjector = (p: ProjectionContext, node: SyntaxNode, sep: string | null) => Node | null;
+
+/** A run that is exactly one `#name(..)` call: the block (checking the arguments first), or null. */
+export type BlockCallProjector = (p: ProjectionContext, call: Call, sep: string | null) => Node | null;
+
+/** One piece of inline syntax: a node showing all of its source, the placed content (marks), or null (raw). */
+export type InlineProjector = (p: ProjectionContext, node: SyntaxNode, marks: readonly Mark[]) => Node | Placed[] | null;
+
+/** A call after `#` in running text (`#link("url")[text]`). */
+export interface InlineCallProjector {
+  /** Whether `call` is this construct's: it then belongs in running text (makes its run a paragraph), even if left raw. */
+  matches(p: ProjectionContext, call: Call): boolean;
+  /** The node or placed content, or null to leave the call raw (or to the next projector). */
+  project(p: ProjectionContext, call: Call, marks: readonly Mark[]): Node | Placed[] | null;
+}
+
+/** How a spec reads Typst: by syntax, by call, by the inline syntax it models. */
+export interface ProjectionSpec {
+  /** Block syntax standing alone, by Lezer node name (`Heading`, `ListItem`, `EnumItem`); tried in registration order. */
+  readonly blockSyntax?: Readonly<Record<string, BlockSyntaxProjector>>;
+  /** A run that is exactly one syntax node of this name (`Raw`: a code block); tried before the run becomes prose. */
+  readonly runSyntax?: Readonly<Record<string, RunProjector>>;
+  /** Block calls by function name; `*` takes any call no projector names. */
+  readonly blockCalls?: Readonly<Record<string, BlockCallProjector>>;
+  /** Inline syntax by Lezer node name (`Strong`, `Ref`); such syntax makes a run prose. */
+  readonly inlineSyntax?: Readonly<Record<string, InlineProjector>>;
+  /** Calls in running text, tried in registration order. */
+  readonly inlineCalls?: readonly InlineCallProjector[];
+  /** Fires when what this spec projects changed (styles declared or removed): views project their document again. */
+  onDidChange?(listener: () => void): Disposable;
+}
+
+/** Prints an edited (not untouched) block that starts at document position `pos` inside `parent`. */
+export type BlockPrinter = (out: Printer, node: Node, pos: number, parent: Node) => void;
+
+/** What the framework knows of a node type: its schema part, how it is read from Typst and printed back. */
+export interface NodeGrammar extends ProjectionSpec {
+  /** The node type's name. A second spec of the same name extends the first (another printer, more projectors). */
+  readonly name: string;
+  /** The Tiptap extension defining it (schema, node view, commands, keymap, input rules); omitted if another spec's defines it too. */
+  readonly extension?: AnyExtension;
+  /** Attributes the host adds to the node type: source anchors such as `src`, `sep`, `marker`, `layout` (never rendered). */
+  readonly attributes?: Readonly<Record<string, Attribute>>;
+  /** Those of its attributes that a re-projection may change in place (`marker`, `layout`), like `src` and `sep`. */
+  readonly anchors?: readonly string[];
+  /** Keeps its DOM (and what is inside) while a new version renders the same, as after every outside edit its `src` changes. */
+  readonly keepsDom?: boolean;
+  /** A label may follow it (`<intro>`): it gets the `label` attribute, printed after it. */
+  readonly labelled?: boolean;
+  /** Shown as a box a remote caret inside outlines: `code` edits its `src` in a nested code editor (the host's raw box). */
+  readonly box?: 'code' | 'widget';
+  /** Consecutive nodes of this type form a container, of the type this returns (list items: their list). */
+  container?(item: Node): string;
+  /** Prints the node when edited; default for textblocks: their inline content. Block atoms print their `src`. */
+  readonly print?: BlockPrinter;
+  /** The source of an inline atom (`@intro`). */
+  printAtom?(node: Node): string;
+  /** Text printed right after this inline atom, escaped where it would continue the atom's syntax (`@intro\s`). */
+  escapeAfter?(node: Node, text: string): string;
+}
+
+/** What a formatted span starts and ends with, and the printed characters around it. */
+export interface Around {
+  before: string | undefined;
+  after: string | undefined;
+  first: string;
+  last: string;
+  /** The span's text, as the document shows it. */
+  text: string;
+}
+
+/** What the framework knows of a mark type (bold, a link, a margin note's range): schema part, reading and printing. */
+export interface MarkGrammar extends ProjectionSpec {
+  readonly name: string;
+  /** The Tiptap extension defining it; omitted if another spec's defines it too. */
+  readonly extension?: AnyExtension;
+  /** The syntax around a formatted span: `*…*`, or `#strong[…]` where delimiters would not work. */
+  print(mark: Mark, around: Around): { open: string; close: string };
+  /** Raw text: its text prints as is (no escapes), innermost, closed and reopened around other formatting (inline code). */
+  readonly raw?: boolean;
+  /** Prints nothing around `text`, Typst reading it back as this mark all the same (a bare URL). */
+  printsBare?(mark: Mark, text: string, around: Around): boolean;
+}
+
+/**
+ * Accumulates source text together with the document positions each part of it belongs to. Printers of edited
+ * blocks (`NodeGrammar.print`) write through it: syntax hidden in the document, shown text and atoms, and child
+ * blocks, which print as the grammar says.
+ */
+export interface Printer {
+  /** Source not shown in the document; it maps to the next visible position in its block. */
+  hidden(src: string): void;
+  /** Source shown by the document range `pmFrom`..`pmTo`. */
+  shown(src: string, kind: 'text' | 'atom', pmFrom: number, pmTo: number): void;
+  /**
+   * Closes a textblock whose content ends at `pos`: its trailing syntax maps there. An `empty` block shows no source,
+   * so a zero-width span marks where its content would go.
+   */
+  endBlock(pos: number, empty: boolean): void;
+  /** Source closing the block printed last (e.g. a table cell's `]`); it maps to that block's end. */
+  closing(src: string): void;
+  /** Source right after the syntax printed last, mapping where that syntax maps (e.g. a block's label). */
+  after(src: string): void;
+  /** Prints with every line of the output indented by two more spaces. */
+  indented(print: () => void): void;
+  /** Prints the children of `container`, whose content starts at document position `start`, `defaultSep` between new ones. */
+  blocks(container: Node, start: number, defaultSep: string): void;
+  /** Prints `node`, which starts at document position `pos`, and its label; the label maps to the block's end. */
+  block(node: Node, parent: Node, pos: number): void;
+  /** A textblock's inline content and end: the default printer of edited textblocks. */
+  textblock(block: Node, pos: number): void;
+  /** The inline content of `block`, which starts at document position `start`. */
+  inline(block: Node, start: number): void;
+  /** An item at `pos` (a list item): `prefix` (its marker), its first child, further children on following lines, indented. */
+  item(item: Node, pos: number, prefix: string): void;
+}
+
+/** The document `source` projects to, through the specs attached to `schema` (see `attachGrammar`). */
+export function project(source: string, schema: Schema): Node {
+  return projectDocument(source, schema, Grammar.of(schema));
+}
+
+/** The Typst source of `doc`: untouched nodes as they were written, edited ones printed anew. */
+export function print(doc: Node): string {
+  return printed(doc).text;
+}
+
+/**
+ * Makes `nodes` and `marks` the specs `project` and `print` use for documents
+ * of `schema` (a schema made from their extensions). Specs of the same name
+ * merge, the later one winning.
+ */
+export function attachGrammar(schema: Schema, nodes: readonly NodeGrammar[], marks: readonly MarkGrammar[]): void {
+  Grammar.attach(schema, new Grammar(nodes, marks));
+}
+
+/** The spec of node `node`'s type in the grammar attached to its schema, if there is one. */
+export function nodeGrammar(node: Node): NodeGrammar | undefined {
+  return Grammar.of(node.type.schema).node(node.type);
+}
+
+/** Subscribes `listener` to every spec of `schema` whose projection can change (see `ProjectionSpec.onDidChange`). */
+export function onDidChangeGrammar(schema: Schema, listener: () => void): Disposable[] {
+  return Grammar.of(schema).changing().map((spec) => spec.onDidChange!(listener));
+}
+
+/**
+ * The document position showing the source character at `offset`. Hidden
+ * syntax (delimiters, markers, separators) maps to the next visible position
+ * in its block; the inside of an atom to the position before the atom.
+ *
+ * With `bias` -1, `offset` is the end of a range and maps to the position
+ * just after the visible character before it.
+ */
+export function sourceToPos(doc: Node, offset: number, bias: 1 | -1 = 1): number {
+  const { spans, end } = printed(doc);
+  if (bias < 0 && offset > 0) {
+    const span = spans[firstIndex(spans, (s) => s.to >= offset)];
+    if (span) return span.kind === 'text' ? span.pmFrom + offset - span.from : span.pmTo;
+  }
+  const span = spans[firstIndex(spans, (s) => s.to > offset)];
+  if (!span) return end;
+  return span.kind === 'text' ? span.pmFrom + Math.max(0, offset - span.from) : span.pmFrom;
+}
+
+/**
+ * The source offset of the character after document position `pos`; at the
+ * end of a block or between blocks, the offset just after the preceding
+ * visible source.
+ *
+ * With `bias` -1, `pos` is the end of a range and maps to just after the
+ * source of the visible character (or atom) before it.
+ */
+export function posToSource(doc: Node, pos: number, bias: 1 | -1 = 1): number {
+  const { spans } = printed(doc);
+  const end = bias < 0 ? endSource(spans, pos) : null;
+  if (end !== null) return end;
+  const index = firstIndex(spans, (s) => s.pmTo > pos);
+  const span = spans[index];
+  if (span && span.kind !== 'syntax' && span.pmFrom <= pos) {
+    return span.kind === 'text' ? span.from + pos - span.pmFrom : span.from;
+  }
+  return gapSource(spans, index, pos);
+}
+
+/**
+ * Turns `tr.doc` into `target` (a fresh projection of the current text) with
+ * the smallest replacement: ProseMirror's diff descends into equal-typed
+ * nodes, so a changed word inside a paragraph replaces just that text and a
+ * cursor elsewhere in the paragraph stays put. Attributes (`src`, `sep`) are
+ * then updated in place and the result is marked pristine again.
+ */
+export function syncDoc(tr: Transaction, target: Node): Transaction {
+  for (const attr of ['lead', 'trail']) {
+    if (tr.doc.attrs[attr] !== target.attrs[attr]) tr.setDocAttribute(attr, target.attrs[attr]);
+  }
+  // Diff without the anchoring attributes: a block whose `src` changed must
+  // still be descended into, not replaced wholesale. Sizes are unaffected.
+  // `label` is not printed from `src` but compared like an anchor: a renamed label updates the attribute in place.
+  const anchors = Grammar.of(target.type.schema).anchors;
+  const current = withoutAnchors(tr.doc, anchors).content;
+  const wanted = withoutAnchors(target, anchors).content;
+  const start = current.findDiffStart(wanted);
+  if (start !== null) {
+    let { a: endA, b: endB } = current.findDiffEnd(wanted)!;
+    const overlap = start - Math.min(endA, endB);
+    if (overlap > 0) {
+      endA += overlap;
+      endB += overlap;
+    }
+    tr.replace(start, endA, target.slice(start, endB));
+  }
+  copyAttrs(tr, target);
+  markPristine(tr.doc, target);
+  forgetPrinted(tr.doc);
+  return tr;
+}
+
+/** The source end of the visible character or atom ending at `pos`, if there is one. */
+function endSource(spans: Span[], pos: number): number | null {
+  const span = spans[firstIndex(spans, (s) => s.pmTo >= pos)];
+  if (!span || span.kind === 'syntax' || span.pmFrom >= pos) return null;
+  return span.kind === 'text' ? span.from + pos - span.pmFrom : span.to;
+}
+
+/** For `pos` between visible spans, before `spans[index]`: the end of the visible source ending right there, or of the syntax up to it. */
+function gapSource(spans: Span[], index: number, pos: number): number {
+  let before = index - 1;
+  while (before >= 0 && spans[before].kind === 'syntax' && spans[before].pmTo === pos) before--;
+  if (before >= 0 && spans[before].pmTo === pos) return spans[before].to;
+  return index > 0 ? spans[index - 1].to : 0;
+}
+
+/** The first index whose span satisfies `test`, which is monotonic over the spans; `spans.length` if none. */
+function firstIndex(spans: Span[], test: (span: Span) => boolean): number {
+  let low = 0;
+  let high = spans.length;
+  while (low < high) {
+    const mid = (low + high) >> 1;
+    if (test(spans[mid])) high = mid;
+    else low = mid + 1;
+  }
+  return low;
+}
+
+function withoutAnchors(node: Node, anchors: ReadonlySet<string>): Node {
+  if (node.isText) return node;
+  const attrs = { ...node.attrs };
+  for (const key of anchors) if (key in attrs) attrs[key] = null;
+  const content: Node[] = [];
+  node.forEach((child) => content.push(withoutAnchors(child, anchors)));
+  return node.type.create(attrs, content, node.marks);
+}
+
+/** Updates node attributes that differ from `target` (structure is already equal). */
+function copyAttrs(tr: Transaction, target: Node): void {
+  tr.doc.descendants((node, pos) => {
+    const other = target.nodeAt(pos);
+    if (other && other.type === node.type && !node.hasMarkup(other.type, other.attrs, node.marks)) {
+      tr.setNodeMarkup(pos, undefined, other.attrs);
+    }
+  });
+}
+
+function markPristine(node: Node, target: Node): void {
+  if (pristine.has(target)) pristine.set(node, pristine.get(target)!);
+  if (node.childCount !== target.childCount) return;
+  node.forEach((child, _offset, index) => markPristine(child, target.child(index)));
+}

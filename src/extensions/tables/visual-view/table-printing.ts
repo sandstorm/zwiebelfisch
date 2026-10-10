@@ -1,7 +1,8 @@
 // Printing an edited table: its source around unchanged cells, or re-printed in the style it was written in.
 // See visual-view.ts.
 import type { Node } from '@tiptap/pm/model';
-import { isEmbeddable, type Printer } from '../../../hosts/visual-view/visual-view';
+import { isEmbeddable } from '../../../core/typst-syntax/typst-syntax';
+import type { Printer } from '../../../hosts/projection/projection';
 import { NEW_TABLE, type TableLayout, type TableStyle } from '../model/table-layout';
 
 /** A table cell and the document position it starts at. */

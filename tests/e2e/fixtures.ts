@@ -58,8 +58,6 @@ export async function clickGlyph(glyph: Locator): Promise<void> {
   await glyph.page().mouse.click(point.x, point.y);
 }
 
-export { expect };
-
 /** The file panel's tree row of `path` (as shown: `chapters/intro.typ`, a folder `chapters`). */
 export function fileRow(scope: Page | Locator, path: string): Locator {
   return scope.getByTestId('typst-files').locator(`[role=treeitem][title="${path}"]`);

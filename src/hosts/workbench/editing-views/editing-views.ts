@@ -1,9 +1,8 @@
 // EditingViews: the Visual/Source tabs; lazily one VisualView and SourceView per document. See workbench.ts.
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
+import type { EditorMode } from '../workbench';
 import { type SourceView, SourceViewHost } from '../../source-view/source-view';
 import { VisualView, VisualViewContributions } from '../../visual-view/visual-view';
-
-export type EditorMode = 'visual' | 'source';
 
 export interface EditingViewsOptions {
   /** The editing view shown first (default: visual). */

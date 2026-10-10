@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
 import { after, edit, expectPreciseMap, find, schemaWith } from '../../../testing/testing';
-import { print, project as projectWith, syncDoc } from '../../../hosts/visual-view/visual-view';
+import { print, project as projectWith, syncDoc } from '../../../hosts/projection/projection';
 import { references as referencesContribution } from './visual-view';
 
 const schema = schemaWith({ contributions: [referencesContribution()] });

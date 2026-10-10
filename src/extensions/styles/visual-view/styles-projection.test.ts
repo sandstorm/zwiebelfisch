@@ -4,7 +4,7 @@ import type { Node } from '@tiptap/pm/model';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../../core/paths/paths';
 import type { Style } from '../model/discover';
-import { print, project as projectWith } from '../../../hosts/visual-view/visual-view';
+import { print, project as projectWith } from '../../../hosts/projection/projection';
 import { after, edit, expectPreciseMap, find, schemaWith } from '../../../testing/testing';
 import { customStyles } from './visual-view';
 

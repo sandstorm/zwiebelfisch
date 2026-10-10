@@ -1,7 +1,7 @@
 // RenderedBox: a raw box shown as a picture (from a box renderer) while it is not edited. See raw-box.ts.
 import type { Node } from '@tiptap/pm/model';
 import type { Disposable } from '../../../core/disposable/disposable';
-import type { BoxPicture, BoxRenderer } from '../contributions/boxes';
+import type { BoxPicture, BoxRenderer } from '../visual-view';
 
 /** The raw box a `RenderedBox` belongs to. */
 export interface BoxHost {

@@ -1,4 +1,4 @@
-// Overlays on the preview's pages: elements positioned in percent of their page. See pages.ts.
+// Overlays on the preview's pages: elements positioned in percent of their page. See ../preview.ts.
 import type { Box } from '../../../core/typst-engine/typst-engine';
 import { percentOfPage } from './geometry';
 import type { PageList } from './page-list';

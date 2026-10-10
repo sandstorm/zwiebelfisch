@@ -4,7 +4,7 @@ import type { Node } from '@tiptap/pm/model';
 import { EditorState, TextSelection, type Command } from '@tiptap/pm/state';
 import { addRowAfter, deleteColumn, deleteRow, toggleHeaderRow } from '@tiptap/pm/tables';
 import { describe, expect, it } from 'vitest';
-import { print, syncDoc } from '../../../hosts/visual-view/visual-view';
+import { print, syncDoc } from '../../../hosts/projection/projection';
 import { after, edit, expectPreciseMap, find, project } from '../../../testing/testing';
 
 /** The table of demo/examples/advanced (results.typ), without the figure around it. */

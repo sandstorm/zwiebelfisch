@@ -7,10 +7,9 @@ import CodeBlock from '@tiptap/extension-code-block';
 import type { Mark, Node } from '@tiptap/pm/model';
 import { Disposable } from '../../../core/disposable/disposable';
 import type { Workbench } from '../../../hosts/workbench/workbench';
-import {
-  children, decodeString, isClosedContent, parenthesized, quote, starterKitPart, svg, type Action, type Around, type Call, type Placed,
-  type Printer, type ProjectionContext, type ToolbarContext, type TypstMarkSpec, type TypstNodeSpec,
-} from '../../../hosts/visual-view/visual-view';
+import { children, decodeString, isClosedContent, parenthesized, quote } from '../../../core/typst-syntax/typst-syntax';
+import { starterKitPart, svg, type Action, type ToolbarContext, type TypstMarkSpec, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import type { Around, Call, Placed, Printer, ProjectionContext } from '../../../hosts/projection/projection';
 import { codeBlockView } from './code-block-view';
 import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from '../model/raw-code';
 

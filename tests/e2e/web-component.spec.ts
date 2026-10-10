@@ -1,5 +1,6 @@
 // End-to-end tests (Playwright, against the demo build): the <typst-editor> element from the library build.
-import { test, expect } from './fixtures';
+import { expect } from '@playwright/test';
+import { test } from './fixtures';
 
 // examples/plain-html loads dist/lib/typst-editor.js without any bundler.
 test.beforeEach(async ({ page }) => {

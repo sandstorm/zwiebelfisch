@@ -4,7 +4,7 @@ import type { Editor } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { print } from '../../../hosts/visual-view/visual-view';
+import { print } from '../../../hosts/projection/projection';
 import { after, createVisualView, edit, expectPreciseMap, project as projectWith, schemaWith } from '../../../testing/testing';
 import { marginNotes, type MarginNotesOptions } from './margin-notes';
 

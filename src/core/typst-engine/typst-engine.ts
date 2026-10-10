@@ -2,9 +2,8 @@
 // data types. Entry of core/typst-engine/. See ARCHITECTURE.md, "typst-engine".
 import init, { Engine as WasmEngine, type InitInput } from './wasm/typst_engine';
 
-// Asset URLs (wasm, default fonts) are in engine-assets.ts, not here: the worker imports this file.
-export { fetchFonts } from './fetch-fonts';
-export { fetchPreviewPackage, withPackages, type PackageFetcher, type PackageProject } from './packages/packages';
+// Asset URLs (wasm, default fonts) are in engine-assets.ts, not here: the worker imports this file. Packages
+// (@preview/…) are core/typst-packages.
 
 /**
  * The Typst compiler, SVG renderer and preview hit-testing (Rust → wasm).
@@ -122,7 +121,7 @@ export type FontSource = Uint8Array | Promise<Uint8Array>;
 
 /**
  * Instantiates the engine from the wasm module (URL, bytes or response). The
- * engine embeds no fonts: pass them here (see `defaultFonts()` in engine-assets.ts) or add them later.
+ * engine embeds no fonts: pass them here (`fetchFonts(DEFAULT_FONT_URLS)`, see engine-assets.ts) or add them later.
  */
 export async function createEngine(
   wasm: InitInput | Promise<InitInput>,
@@ -160,4 +159,15 @@ export async function createEngine(
 
 function assertValidPath(ok: boolean, path: string): void {
   if (!ok) throw new Error(`invalid project path: ${path}`);
+}
+
+/** Starts downloading every font at once; pass the result to `createEngine`. */
+export function fetchFonts(urls: readonly string[]): Promise<Uint8Array>[] {
+  return urls.map(fetchFont);
+}
+
+async function fetchFont(url: string): Promise<Uint8Array> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`font ${url}: HTTP ${response.status}`);
+  return new Uint8Array(await response.arrayBuffer());
 }

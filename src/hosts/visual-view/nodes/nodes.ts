@@ -1,14 +1,13 @@
 // The Visual view's schema: the host's own nodes (document, paragraph, text, line breaks, raw Typst), the
 // contributed specs' extensions, and what the host adds to every contributed node (source anchors, labels, raw box
 // node views). See ARCHITECTURE.md, "VisualView".
-import { Extension, Mark, Node, getSchema, type AnyExtension, type Attribute } from '@tiptap/core';
+import { Extension, Mark, Node, type AnyExtension, type Attribute } from '@tiptap/core';
 import Document from '@tiptap/extension-document';
 import { DOMSerializer, type Node as PMNode, type Schema } from '@tiptap/pm/model';
 import { Plugin } from '@tiptap/pm/state';
 import type { EditorView, NodeView, NodeViewConstructor } from '@tiptap/pm/view';
-import StarterKit, { type StarterKitOptions } from '@tiptap/starter-kit';
-import { attachGrammar } from '../projection/projection';
-import type { MarkGrammar, NodeGrammar } from '../projection/grammar';
+import { attachGrammar, type MarkGrammar, type NodeGrammar } from '../../projection/projection';
+import { starterKitPart } from '../visual-view';
 import { RawBoxNavigation, rawBoxView } from './raw-box';
 
 /**
@@ -39,28 +38,6 @@ export function editorExtensions(nodes: readonly NodeGrammar[], marks: readonly 
 /** Makes `nodes` and `marks` (and the host's own specs) what `project` and `print` use for documents of `schema`. */
 export function attachSpecs(schema: Schema, nodes: readonly NodeGrammar[], marks: readonly MarkGrammar[]): void {
   attachGrammar(schema, [...HOST_NODES, ...nodes], marks);
-}
-
-/** A schema of `nodes` and `marks` with its grammar attached (an `Editor` builds an equal but distinct instance). */
-export function createSchema(nodes: readonly NodeGrammar[], marks: readonly MarkGrammar[]): Schema {
-  const schema = getSchema(editorExtensions(nodes, marks));
-  attachSpecs(schema, nodes, marks);
-  return schema;
-}
-
-const STARTER_KIT_PARTS = [
-  'blockquote', 'bold', 'bulletList', 'code', 'codeBlock', 'document', 'dropcursor', 'gapcursor', 'hardBreak', 'heading', 'undoRedo',
-  'horizontalRule', 'italic', 'listItem', 'listKeymap', 'link', 'orderedList', 'paragraph', 'strike', 'text', 'underline', 'trailingNode',
-] as const;
-
-/**
- * Some of Tiptap's StarterKit as one extension named `name`: the parts in
- * `parts` (with their options), no others. (The parts' own packages are not
- * dependencies of this package; StarterKit is.)
- */
-export function starterKitPart(name: string, parts: Partial<StarterKitOptions>): AnyExtension {
-  const options = Object.fromEntries(STARTER_KIT_PARTS.map((part) => [part, part in parts ? parts[part] : false]));
-  return StarterKit.extend({ name }).configure(options);
 }
 
 /** The host's base: paragraphs, text, line breaks (`\`), history, drop and gap cursors. */

@@ -1,4 +1,4 @@
-// Typst syntax highlighting and indentation for CodeMirror (the Source views and the Visual view's raw boxes). See source-view.ts.
+// Typst syntax highlighting and indentation for CodeMirror (the Source views and the Visual view's raw boxes). See ../typst-language.ts.
 import { indentService, LanguageSupport, syntaxTree, type IndentContext } from '@codemirror/language';
 import { EditorState, type Extension } from '@codemirror/state';
 import type { SyntaxNode } from '@lezer/common';

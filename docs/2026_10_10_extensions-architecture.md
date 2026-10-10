@@ -25,6 +25,8 @@ src/
   ui/                    Feature-neutral DOM widgets: PopupMenu, ToolbarMenu, FloatingBar, icons.
   hosts/                 VIEW HOSTS: mechanism + contribution points, no feature knowledge.
     visual-view/         Tiptap editor over the projection *framework*
+    projection/          the projection framework itself (Typst text ↔ ProseMirror document; the spec contract),
+                         a module of its own (2026-10-11), not a view
     source-view/         CodeMirror bound to a TypstDocument
     preview/             engine worker, page list, hit-testing, scrolling
     workbench/           the widget's frame: layout slots, file views, extension lifecycle
@@ -62,8 +64,9 @@ Controller: it subscribes views to the model's `onDid…` events and turns user 
 4. `typst-editor/` imports hosts and extension entry files only.
 5. The module boundary is the core / host / extension / ui folder (and `typst-editor/`, `typst-editor-element/`,
    `testing/`): from outside, only its entry file is imported; inside, layer and concept folders (`model/`,
-   `visual-view/`, …) have no entry files and files import each other directly. No `export *`; no re-export of
-   another module's API; entry file inside its folder (no sibling folders).
+   `visual-view/`, …) have no entry files and files import each other directly. No re-exports at all outside
+   `src/index.ts` (`local/no-re-exports`): an entry defines its API, it does not forward its internal files; entry
+   file inside its folder (no sibling folders).
 
 ## The extension API (VS Code vocabulary)
 

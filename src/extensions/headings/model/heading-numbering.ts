@@ -1,5 +1,5 @@
 // Heading numbers as Typst computes them from `#set heading(numbering: ..)` rules, and the code that switches
-// numbering on or off. Pure: works on Typst code, not on a view's document. See model.ts.
+// numbering on or off. Pure: works on Typst code, not on a view's document. See ../headings.ts.
 import { numberingFormatter } from './numbering';
 
 /**

@@ -7,23 +7,17 @@
 // jumps to the source of a click). So a feature adds to the preview without the preview knowing it.
 import { Disposable } from '../../core/disposable/disposable';
 import { type Event, EventEmitter } from '../../core/event-emitter/event-emitter';
-import type { Diagnostic, Page, PdfEntry, PdfResult, Position } from '../../core/typst-engine/typst-engine';
+import type { Box, Diagnostic, Page, PdfEntry, PdfResult, Position } from '../../core/typst-engine/typst-engine';
 import { isInside, mostVisible } from './pages/geometry';
 import { overlay, OverlayLayer } from './pages/overlays';
 import { PageList } from './pages/page-list';
-import { snippet, type Snippet } from './pages/snippet';
-import type { Zoom } from './pages/zoom';
+import { snippet } from './pages/snippet';
 import { DEFAULT_FONT_URLS, ENGINE_WASM_URL } from '../../core/typst-engine/engine-assets';
 import type { FileContent } from '../../core/project/project';
 import { FileSender } from './worker/project-files';
 import type { Init, Request, Response } from './worker/protocol';
 import { startEngineWorker } from './worker/worker';
 import { LatestOnly } from './latest-only';
-import type { PageClick, PageOverlay, PdfExportOption, PreviewContext, PreviewToolbarItem, ToolbarItemView, ToolbarPlacement } from './contribution';
-
-export type { PageClick, PageOverlay, PdfExportOption, PreviewContext, PreviewToolbarItem, ToolbarItemView, ToolbarPlacement } from './contribution';
-export type { Snippet } from './pages/snippet';
-export type { Zoom } from './pages/zoom';
 
 /**
  * The preview as extensions see it (`ExtensionContext.preview`): its contribution points, and what its engine
@@ -63,6 +57,95 @@ export interface PreviewContributions {
   readonly onDidClickPage: Event<PageClick>;
   snippet(path: string, from: number, to: number, text: string): Promise<Snippet | null>;
   exportPdf(entry: PdfEntry): Promise<PdfResult>;
+}
+
+/** A control in the preview's toolbar: made once, for the preview it is registered with. */
+export type PreviewToolbarItem = (preview: PreviewContext) => ToolbarItemView;
+
+/**
+ * Where a toolbar item goes, as in VS Code's menus: the groups in the order of their names (the group `navigation`
+ * first), so groups are named like `1_sync`, `2_view`; within a group by `order` (default 0), then registration order.
+ */
+export interface ToolbarPlacement {
+  readonly group: string;
+  readonly order?: number;
+}
+
+/** A toolbar item as made for one preview. */
+export interface ToolbarItemView {
+  /** Its elements, placed in the toolbar in this order, where its `ToolbarPlacement` puts it. */
+  readonly elements: readonly HTMLElement[];
+  /** Called (at most once per frame) after the view changed: scrolled, resized, zoomed, new pages. */
+  update?(): void;
+  /** Called when the item is unregistered or the preview destroyed; the toolbar removes `elements`. */
+  dispose?(): void;
+}
+
+/** What a toolbar item may read and change of the preview it is in. */
+export interface PreviewContext {
+  /** The DOM document the preview lives in (to make elements). */
+  readonly ownerDocument: Document;
+  zoom(): Zoom;
+  /** Zooms, keeping the part of the document shown (relatively) where it was. */
+  setZoom(zoom: Zoom): void;
+  /** The scale of the first page (1 = 100 %), also when fitting the width. */
+  scale(): number;
+  /** The page covering most of the viewport (0-based) and the number of pages. */
+  visiblePage(): { index: number; count: number };
+}
+
+/** A click in the preview on something with a source location: the source range of what was clicked (e.g. a text run). */
+export interface PageClick {
+  /** The file, as the engine names it (a project path, or a package file). */
+  readonly path: string;
+  readonly from: number;
+  readonly to: number;
+}
+
+/**
+ * A choice offered when exporting a PDF (a checkbox next to "Download"; `exportPdf({ options })` for hosts), e.g.
+ * whether the PDF includes the comments. Each option changes what is compiled, never the documents. Options are
+ * checkboxes for now; a later `choices?: { value, label }[]` would make `default` and `value` one of them.
+ */
+export interface PdfExportOption {
+  /** `<extension>.<name>`, e.g. `comments.include`: the key in `exportPdf({ options })` and in what is remembered. */
+  readonly id: string;
+  /** The checkbox's label ("Include comments"). */
+  readonly label: string;
+  /** A longer explanation, shown as the checkbox's tooltip. */
+  readonly description?: string;
+  /** Its value until someone chooses otherwise. */
+  readonly default: boolean;
+  /**
+   * What to compile with this option set to `value`, from what the options before it made (see
+   * `PreviewContributions.registerPdfExportOption` for the order). Called for every option, also when it is off.
+   */
+  apply(entry: PdfEntry, value: boolean): PdfEntry;
+}
+
+/**
+ * Marks drawn over the pages (`Preview.createOverlay`), each a box in points on its page, kept in place at
+ * any zoom and through lazy rendering and recompiles, until set again or disposed.
+ */
+export interface PageOverlay {
+  /** Replaces the boxes shown. */
+  set(boxes: readonly Box[]): void;
+  /** Removes the boxes, for good. */
+  dispose(): void;
+}
+
+/** Preview zoom: fit the pane width, or a fixed scale where 1 = 100 % (1 pt = 1/72 in). */
+export type Zoom = 'fit' | number;
+
+/** A cut-out of a compiled page: standalone SVG markup and its size in points. */
+export interface Snippet {
+  svg: string;
+  width: number;
+  height: number;
+  /** Height of its tallest box (pt): one line of its biggest text, what an inline view scales by. */
+  textHeight: number;
+  /** Space (pt) kept around what is drawn (less where the page ends). */
+  padding: number;
 }
 
 type RequestBody = Request extends infer R ? (R extends Request ? Omit<R, 'id'> : never) : never;

@@ -3,10 +3,11 @@
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
 import { typstParser } from 'codemirror-lang-typst/lezer';
-import type { Call, Grammar, Placed, ProjectionContext } from './grammar';
-import { type BlockLabel, labelAfterBlock, splitTrailingLabel } from './labels';
+import type { Call, Placed, ProjectionContext, BlockLabel } from './projection';
+import type { Grammar } from './grammar';
+import { labelAfterBlock, splitTrailingLabel } from './labels';
 import { layout, pristine } from './pristine';
-import { children } from './syntax';
+import { children } from '../../core/typst-syntax/typst-syntax';
 
 /** Projects `source` into a document of `schema`, through the grammar attached to it. */
 export function projectDocument(source: string, schema: Schema, grammar: Grammar): Node {

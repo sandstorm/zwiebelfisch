@@ -2,7 +2,8 @@
 // See visual-view.ts.
 import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
-import { children, isClosedContent, isEmbeddable, parenthesized, type Call, type ProjectionContext } from '../../../hosts/visual-view/visual-view';
+import { children, isClosedContent, isEmbeddable, parenthesized } from '../../../core/typst-syntax/typst-syntax';
+import type { Call, ProjectionContext } from '../../../hosts/projection/projection';
 import { NEW_TABLE, type TableLayout, type TableStyle } from '../model/table-layout';
 
 /**

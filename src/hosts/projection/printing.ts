@@ -2,10 +2,11 @@
 // printers the grammar has for them; every stretch of output remembers the document range showing it (the
 // position map). See projection.ts.
 import type { Mark, Node } from '@tiptap/pm/model';
-import { type Around, Grammar } from './grammar';
+import { Grammar } from './grammar';
+import type { Around, Printer } from './projection';
 import { labelSyntax } from './labels';
 import { type InlineLayout, pristine } from './pristine';
-import { markupSource } from './embedded-code';
+import { markupSource } from '../../core/typst-syntax/typst-syntax';
 
 /** A stretch of printed source and the document range showing it (empty for hidden syntax). */
 export interface Span {
@@ -32,7 +33,7 @@ const printedDocs = new WeakMap<Node, Printed>();
 export function printed(doc: Node): Printed {
   let result = printedDocs.get(doc);
   if (!result) {
-    const printer = new Printer(Grammar.of(doc.type.schema));
+    const printer = new SourcePrinter(Grammar.of(doc.type.schema));
     printer.hidden(doc.attrs.lead);
     printer.blocks(doc, 0, '\n\n');
     printer.hidden(doc.attrs.trail);
@@ -47,12 +48,8 @@ export function forgetPrinted(doc: Node): void {
   printedDocs.delete(doc);
 }
 
-/**
- * Accumulates source text together with the document positions each part of it belongs to. Printers of edited
- * blocks (see `NodeGrammar.print`) write through it: syntax hidden in the document, shown text and atoms, and
- * child blocks, which print as the grammar says.
- */
-export class Printer {
+/** The `Printer` printers of edited blocks write through; accumulates source text with the positions showing it. */
+class SourcePrinter implements Printer {
   private text = '';
   private readonly spans: Span[] = [];
   /** Hidden syntax waiting for the next visible position. */

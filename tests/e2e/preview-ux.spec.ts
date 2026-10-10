@@ -1,6 +1,6 @@
 // End-to-end tests (Playwright, against the demo build): preview zoom, page numbers and reveal.
-import type { Page } from '@playwright/test';
-import { test, expect, clickGlyph } from './fixtures';
+import { expect, type Page } from '@playwright/test';
+import { test, clickGlyph } from './fixtures';
 
 /** A document of `count` fixed-size pages, each with a heading and a paragraph. */
 function longDocument(count: number): string {

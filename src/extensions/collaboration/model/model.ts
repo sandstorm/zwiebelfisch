@@ -7,6 +7,7 @@ import * as Y from 'yjs';
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
+import type { CollaborationOptions } from '../collaboration';
 import type { PlacedPresence } from '../presence/presence';
 import type { Project } from '../../../core/project/project';
 import { roomFilePath } from '../../../core/gitlab-protocol/gitlab-protocol';
@@ -14,15 +15,6 @@ import { RemoteCursors, type CollaborationUser } from './remote-cursors';
 import { GitLabSourceControl, type StatelessChannel } from './gitlab-source-control';
 import { SharedAssets } from './shared-assets';
 import { SharedProject } from './shared-project';
-
-/**
- * Where the shared state lives: a Y.Doc the host connects itself (any
- * provider; pass it synced, and its awareness for remote cursors), or a
- * Hocuspocus server the widget connects to.
- */
-export type CollaborationOptions =
-  | { doc: Y.Doc; awareness?: Awareness }
-  | { url: string; room: string; token?: string };
 
 /** What gets shared: the project's Typst files (margin notes are part of their text). */
 export interface Shared {

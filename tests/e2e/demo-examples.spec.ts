@@ -1,6 +1,6 @@
 // End-to-end tests (Playwright, against the demo build): the demo's examples.
-import type { Page } from '@playwright/test';
-import { test, expect, fileRow } from './fixtures';
+import { expect, type Page } from '@playwright/test';
+import { test, fileRow } from './fixtures';
 
 const examples = (page: Page) => page.getByRole('navigation', { name: 'Examples' });
 const preview = (page: Page) => page.getByTestId('typst-preview');

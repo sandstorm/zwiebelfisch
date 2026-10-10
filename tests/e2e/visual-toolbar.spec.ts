@@ -1,6 +1,6 @@
 // End-to-end tests (Playwright, against the demo build): the Visual view's toolbar.
-import { test, expect } from './fixtures';
-import type { Page } from '@playwright/test';
+import { test } from './fixtures';
+import { expect, type Page } from '@playwright/test';
 import { caretAtEnd, compiled, freshSelectedLine, selectionBar, sourceText, toolbar, visual } from './visual-helpers';
 
 test.beforeEach(async ({ page }) => {

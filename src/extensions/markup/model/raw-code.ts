@@ -2,7 +2,7 @@
  * Typst raw text (`code`, ```lang … ```) as the Visual view models it: code
  * blocks and inline code. Reads the parts of a parsed `Raw` node and writes
  * the delimiters around edited code, so that Typst reads the text back
- * unchanged. See model.ts.
+ * unchanged. See ../markup.ts.
  */
 import type { SyntaxNode } from '@lezer/common';
 

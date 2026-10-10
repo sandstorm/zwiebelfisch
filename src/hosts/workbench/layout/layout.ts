@@ -1,6 +1,8 @@
 // Layout: the widget's regions — side panels (rail buttons, resizable, collapsible, an overlay when narrow),
 // editing area, preview, status bar — and the per-session layout memory. See workbench.ts and ARCHITECTURE.md, "Layout".
 
+import type { Memory } from '../workbench';
+
 /** Below this widget width an open side panel lies over the editing area instead of beside it. */
 const NARROW = 720;
 const WIDTH = { min: 160, max: 480, initial: 240, step: 16 };
@@ -19,12 +21,6 @@ interface Saved {
   width: number;
   preview: number;
   chosen: Record<string, boolean>;
-}
-
-/** Remembers one value for the browser session (when storage is available). */
-export interface Memory<T> {
-  load(): T | null;
-  save(value: T): void;
 }
 
 /**

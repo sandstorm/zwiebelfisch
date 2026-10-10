@@ -1,6 +1,6 @@
 // Tests for lists.ts: task lists win over bullet lists by priority, not by registration order.
 import { describe, expect, it } from 'vitest';
-import { print, project } from '../../hosts/visual-view/visual-view';
+import { print, project } from '../../hosts/projection/projection';
 import { schemaOf } from '../../testing/testing';
 import { lists } from './lists';
 

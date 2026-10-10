@@ -1,9 +1,9 @@
 // What the alignment extension contributes to the Visual view: `#align(..)[..]` blocks, justified paragraphs
 // (`#par(justify: ..)[..]`) and the Align menu. See alignment.ts.
 import type { Node } from '@tiptap/pm/model';
-import {
-  children, isClosedContent, svg, type Action, type Call, type Printer, type ProjectionContext, type ToolbarGroup, type TypstNodeSpec,
-} from '../../../hosts/visual-view/visual-view';
+import { children, isClosedContent } from '../../../core/typst-syntax/typst-syntax';
+import { svg, type Action, type ToolbarGroup, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import type { Call, Printer, ProjectionContext } from '../../../hosts/projection/projection';
 import { alignArgs, type TextAlignment } from '../model/alignment-syntax';
 import { TextAlign, textAlignAt } from './text-align';
 

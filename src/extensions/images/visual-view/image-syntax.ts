@@ -1,6 +1,6 @@
 // An image call's path: reading it from `#image("path", ..)` and writing a new call. See images.ts.
 import { PathReference } from '../../../core/paths/paths';
-import { decodeString, quote } from '../../../hosts/visual-view/visual-view';
+import { decodeString, quote } from '../../../core/typst-syntax/typst-syntax';
 
 /** The path of the image an `#image("path", ..)` call (or a figure's `image(..)`) shows; null if it is not a call with a literal path. */
 export function imagePath(src: string): PathReference | null {

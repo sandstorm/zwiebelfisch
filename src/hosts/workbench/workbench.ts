@@ -6,16 +6,34 @@
 // picks) is the workbench's, in VS Code's shapes, so features look and behave alike. Adding a feature is adding it to a list, not editing the frame. Extensions never
 // depend on each other: what one offers another goes through a generic contribution point of a host.
 // See ARCHITECTURE.md, "Extensions" and "Layout".
-import type { Disposable } from '../../core/disposable/disposable';
-import type { Event } from '../../core/event-emitter/event-emitter';
+// WorkbenchHost (below the API) is what createTypstEditor creates; extensions see it as `Workbench`.
+import { Disposable } from '../../core/disposable/disposable';
+import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { FileChange, FileContent, Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
-import type { PreviewContributions } from '../preview/preview';
-import type { SourceViewContributions } from '../source-view/source-view';
-import type { VisualViewContributions } from '../visual-view/visual-view';
-import type { EditorMode } from './editing-views/editing-views';
-import type { Memory } from './layout/layout';
+import { Preview, type PreviewContributions } from '../preview/preview';
+import { SourceViewHost, type SourceViewContributions } from '../source-view/source-view';
+import { VisualViewContributions } from '../visual-view/visual-view';
+import { ColorScheme } from './color-scheme/color-scheme';
+import { Commands } from './commands/commands';
+import { Configuration } from './configuration/configuration';
+import { CustomEditors } from './custom-editors/custom-editors';
+import { EditingViews } from './editing-views/editing-views';
+import { ExtensionHost } from './extension-host/extension-host';
+import { DocumentLinks } from './document-links/document-links';
+import { linkExtension, type LinkedText } from './document-links/link-extension';
+import documentLinkStyles from './document-links/document-links.css?inline';
+import { FileDecorations } from './file-decorations/file-decorations';
+import { SourceControls } from './source-controls/source-controls';
+import { FileDrops } from './file-drops/file-drops';
+import { Layout } from './layout/layout';
+import layoutStyles from './layout/layout.css?inline';
+import { Menus } from './menus/menus';
+import { Notifications } from './notifications/notifications';
+import { QuickInput } from './quick-input/quick-input';
+import { StatusBar } from './status-bar/status-bar';
+import { StyleSheets } from './style-sheets/style-sheets';
 
 /**
  * A feature of the widget: activated once, in list order; what it registers goes into `context.subscriptions`.
@@ -536,13 +554,439 @@ export interface TextEditorSelectionChangeEvent {
   readonly textEditor: TextEditor;
 }
 
+/** The editing views of a Typst file: the Visual view or the Source view. */
+export type EditorMode = 'visual' | 'source';
+
+/** Remembers one value for the browser session (when storage is available). */
+export interface Memory<T> {
+  load(): T | null;
+  save(value: T): void;
+}
+
 /**
  * The drag data type (`DataTransfer`) of a project file dragged inside the widget, e.g. a row of the file panel; the
  * data is its path. Any view may take such a drop (the Visual view inserts a dragged image).
  */
 export const PROJECT_PATH_TYPE = 'application/x-typst-project-path';
 
-export { WorkbenchHost, type WorkbenchOptions } from './workbench-host';
-export type { EditorMode } from './editing-views/editing-views';
-export type { Memory } from './layout/layout';
-export { default as workbenchStyles } from './layout/layout.css?inline';
+/** The menu of the Visual / Source tab bar (VS Code's id). */
+const EDITOR_TITLE = 'editor/title';
+
+export interface WorkbenchOptions {
+  /** The editing view shown first (default: visual). */
+  mode?: EditorMode;
+  /** Who works here (`Workbench.user`). */
+  user?: User;
+  /**
+   * The settings' values by full id (the workbench's own `workbench.theme`, and the extensions'), changeable later
+   * (`settings`).
+   */
+  settings?: Settings;
+  /** The host's veto on a change someone asked for (`applyChange`); default: all may happen. */
+  allowFileChange?(change: FileChange): boolean | Promise<boolean>;
+  /** Another file is shown in the editing area. */
+  onOpen?(path: ProjectPath): void;
+  /**
+   * The widget's own CSS (the other hosts' included), put where it renders before the frame is built (the color
+   * scheme reads the resolved colors), as `<style id="typst-editor-styles">` together with the frame's own layout
+   * CSS; the extensions' stylesheets follow it.
+   */
+  styleSheet?: string;
+}
+
+/**
+ * The frame of the widget on `host`: shows the project's files (Typst files in the Visual / Source tabs, others in
+ * the custom editors extensions register), keeps the preview compiling the main file, and runs the extensions. The Visual and Source views and the preview are its hosts (`ExtensionContext.visualView`,
+ * `sourceView`, `preview`). `activate` starts it: extensions first (their contributions are in place before any view exists),
+ * then the main file is shown and compiled.
+ */
+export class WorkbenchHost implements Workbench {
+  #active: ProjectPath;
+  readonly #layout: Layout;
+  readonly #statusBar: StatusBar;
+  readonly #views: EditingViews;
+  readonly #customEditors: CustomEditors;
+  readonly #fileDecorations = new FileDecorations();
+  readonly #documentLinks = new DocumentLinks();
+  readonly #sourceControls = new SourceControls();
+  readonly #menus = new Menus();
+  readonly #notifications: Notifications;
+  readonly #quickInput: QuickInput;
+  /** The `editor/title` menu, at the end of the tab bar. */
+  readonly #editorActions: HTMLElement;
+  readonly #commands: Commands;
+  readonly #configuration: Configuration;
+  readonly #drops: FileDrops;
+  readonly #scheme: ColorScheme;
+  readonly #extensions: ExtensionHost;
+  readonly #styleSheets: StyleSheets;
+  readonly #ownStyles: Disposable;
+  readonly #visualView = new VisualViewContributions();
+  readonly #sourceViews = new SourceViewHost();
+  readonly #preview: Preview;
+  #hasFrame = false;
+  readonly #shown = new EventEmitter<ProjectPath>();
+  readonly #selectionChanged = new EventEmitter<TextEditorSelectionChangeEvent>();
+  readonly #subscription: Disposable;
+
+  readonly onDidShowFile = this.#shown.event;
+  readonly onDidChangeTextEditorSelection = this.#selectionChanged.event;
+  readonly onDidDropFiles: Event<File[]>;
+  readonly onDidChangeFileDecorations = this.#fileDecorations.onDidChange;
+  readonly onDidChangeSourceControls = this.#sourceControls.onDidChange;
+  readonly onDidChangeMenu = this.#menus.onDidChange;
+
+  constructor(
+    private readonly host: HTMLElement,
+    private readonly project: Project,
+    private readonly options: WorkbenchOptions = {},
+  ) {
+    this.#active = project.main;
+    this.#styleSheets = new StyleSheets(host);
+    this.#ownStyles = Disposable.from(
+      this.#styleSheets.add((options.styleSheet ?? '') + layoutStyles, 'typst-editor-styles'),
+      this.#styleSheets.add(documentLinkStyles),
+    );
+    host.classList.add('typst-editor');
+    this.#configuration = new Configuration(options.settings);
+    this.#configuration.declare(WORKBENCH_SETTINGS);
+    this.#scheme = new ColorScheme(host);
+    this.#applyTheme();
+    this.#layout = new Layout(host, `typst-editor:${project.main}`);
+    this.#statusBar = new StatusBar(this.#layout.statusBar);
+    this.#commands = new Commands(host);
+    this.#drops = new FileDrops(host);
+    this.onDidDropFiles = this.#drops.onDidDrop;
+    this.#views = this.#createViews();
+    this.#editorActions = this.#createEditorActions();
+    this.#notifications = new Notifications(host);
+    this.#quickInput = new QuickInput(host);
+    this.#customEditors = new CustomEditors(this.#layout.editor);
+    this.#preview = new Preview(this.#layout.preview);
+    this.#subscription = project.onDidChangeFile((change) => this.#changed(change));
+    this.#showDocumentLinks();
+    this.#configuration.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration('workbench.theme')) this.#applyTheme();
+    });
+    this.#extensions = new ExtensionHost({
+      project,
+      workspace: this.#configuration,
+      workbench: this,
+      visualView: this.#visualView,
+      sourceView: this.#sourceViews,
+      preview: this.#preview,
+    });
+  }
+
+  /**
+   * Declares the settings of `extensions`, activates them (in order), then shows the main file and compiles it. Once.
+   * Values set for settings no one declares are reported (console) and ignored.
+   */
+  activate(extensions: readonly TypstExtension[]): void {
+    for (const extension of extensions) this.#configuration.declare(extension.contributes?.configuration?.properties ?? {});
+    this.#configuration.check();
+    this.#extensions.activate(extensions);
+    this.open(this.project.main);
+    this.#compile();
+  }
+
+  get ownerDocument(): Document {
+    return this.host.ownerDocument;
+  }
+
+  get activeFile(): ProjectPath {
+    return this.#active;
+  }
+
+  get user(): User | undefined {
+    return this.options.user;
+  }
+
+  /** The settings' values the host set, by full id. Assigning replaces them; listeners hear what changed. */
+  get settings(): Settings {
+    return this.#configuration.values;
+  }
+
+  set settings(settings: Settings) {
+    this.#configuration.update(settings);
+  }
+
+  open(path: ProjectPath, options: OpenOptions = {}): void {
+    if (!this.project.has(path)) return;
+    const changed = path !== this.#active;
+    this.#active = path;
+    const document = this.project.document(path);
+    this.#customEditors.show(document ? null : { path, content: this.project.content(path)! }, options.viewType);
+    this.#views.show(document ?? null);
+    if (document && options.selection) this.#views.reveal(options.selection.from, options.selection.to, options.mode);
+    this.#shown.fire(path);
+    this.#showEditorActions();
+    if (changed) this.options.onOpen?.(path);
+  }
+
+  async applyChange(change: FileChange): Promise<string | null> {
+    const problem = this.project.check(change);
+    if (problem) return problem;
+    const allowed = (await this.options.allowFileChange?.(change)) ?? true;
+    if (!allowed) return 'This change is not allowed here.';
+    // The project may have changed while the host decided.
+    const late = this.project.check(change);
+    if (late) return late;
+    this.project.apply(change);
+    return null;
+  }
+
+  registerSidePanel(id: string, options: SidePanelOptions): SidePanel {
+    const layout = this.#layout;
+    const body = layout.addPanel(id, options);
+    return {
+      body,
+      setDefault: (open) => layout.setDefault(id, open),
+      setAvailable: (available) => layout.setAvailable(id, available),
+      dismiss: () => layout.dismiss(),
+      dispose: () => layout.removePanel(id),
+    };
+  }
+
+  registerStyleSheet(css: string): Disposable {
+    return this.#styleSheets.add(css);
+  }
+
+  registerStatusBarItem(element: HTMLElement, placement: StatusBarPlacement): Disposable {
+    return this.#statusBar.add(element, placement);
+  }
+
+  registerEditorFrame(frame: { top: HTMLElement; bottom: HTMLElement }): Disposable {
+    if (this.#hasFrame) throw new Error('There is an editor frame already');
+    this.#hasFrame = true;
+    this.#views.setFrame(frame);
+    return new Disposable(() => {
+      this.#hasFrame = false;
+      this.#views.setFrame(null);
+    });
+  }
+
+  registerCustomEditorProvider(viewType: string, provider: CustomEditorProvider, options: CustomEditorOptions): Disposable {
+    return this.#customEditors.register(viewType, provider, options);
+  }
+
+  registerCommand(id: string, handler: (...args: any[]) => unknown): Disposable {
+    return this.#commands.register(id, handler);
+  }
+
+  executeCommand<T = unknown>(id: string, ...args: unknown[]): Promise<T> {
+    return this.#commands.execute<T>(id, ...args);
+  }
+
+  registerKeybinding(key: string, command: string): Disposable {
+    return this.#commands.bind(key, command);
+  }
+
+  remember<T>(name: string): Memory<T> {
+    return this.#layout.remember<T>(name);
+  }
+
+  showInformationMessage<T extends string | MessageItem>(message: string, ...items: T[]): Promise<T | undefined> {
+    return this.#notifications.show('info', message, items);
+  }
+
+  showWarningMessage<T extends string | MessageItem>(message: string, ...items: T[]): Promise<T | undefined> {
+    return this.#notifications.show('warning', message, items);
+  }
+
+  showErrorMessage<T extends string | MessageItem>(message: string, ...items: T[]): Promise<T | undefined> {
+    return this.#notifications.show('error', message, items);
+  }
+
+  showInputBox(options?: InputBoxOptions): Promise<string | undefined> {
+    return this.#quickInput.showInputBox(options);
+  }
+
+  showQuickPick<T extends string | QuickPickItem>(items: readonly T[] | Promise<readonly T[]>, options: QuickPickOptions & { canPickMany: true }): Promise<T[] | undefined>;
+  showQuickPick<T extends string | QuickPickItem>(items: readonly T[] | Promise<readonly T[]>, options?: QuickPickOptions): Promise<T | undefined>;
+  showQuickPick<T extends string | QuickPickItem>(items: readonly T[] | Promise<readonly T[]>, options?: QuickPickOptions): Promise<T | T[] | undefined> {
+    return this.#quickInput.showQuickPick(items, options);
+  }
+
+  registerMenuItem(menuId: string, item: MenuItem): Disposable {
+    return this.#menus.register(menuId, item);
+  }
+
+  getMenuItems(menuId: string, context?: MenuContext): readonly MenuItem[] {
+    return this.#menus.items(menuId, context);
+  }
+
+  registerFileDecorationProvider(provider: FileDecorationProvider): Disposable {
+    return this.#fileDecorations.register(provider);
+  }
+
+  getFileDecorations(path: ProjectPath): readonly FileDecoration[] {
+    return this.#fileDecorations.decorationsOf(path);
+  }
+
+  registerDocumentLinkProvider(provider: DocumentLinkProvider, options: { priority?: number } = {}): Disposable {
+    return this.#documentLinks.register(provider, options);
+  }
+
+  provideDocumentLinks(document: TextDocument): readonly DocumentLink[] {
+    return this.#documentLinks.provideDocumentLinks(document);
+  }
+
+  resolveDocumentLink(link: DocumentLink): DocumentLink {
+    return this.#documentLinks.resolveDocumentLink(link);
+  }
+
+  registerSourceControl(sourceControl: SourceControl): Disposable {
+    return this.#sourceControls.register(sourceControl);
+  }
+
+  get sourceControls(): readonly SourceControl[] {
+    return this.#sourceControls.all;
+  }
+
+  get activeTextEditor(): TextEditor | null {
+    return this.#views.activeEditor();
+  }
+
+  isEditorFocused(): boolean {
+    const area = this.#layout.editor;
+    const root = area.getRootNode() as Document | ShadowRoot;
+    return root.activeElement !== null && area.contains(root.activeElement);
+  }
+
+  destroy(): void {
+    this.#subscription.dispose();
+    this.#extensions.dispose();
+    this.#views.destroy();
+    this.#customEditors.dispose();
+    this.#fileDecorations.dispose();
+    this.#sourceControls.dispose();
+    this.#quickInput.dispose();
+    this.#notifications.dispose();
+    this.#editorActions.remove();
+    this.#menus.dispose();
+    this.#preview.destroy();
+    this.#commands.dispose();
+    this.#configuration.dispose();
+    this.#drops.dispose();
+    for (const emitter of [this.#shown, this.#selectionChanged]) emitter.dispose();
+    this.host.classList.remove('typst-editor');
+    delete this.host.dataset.theme;
+    this.#scheme.destroy();
+    this.#layout.destroy();
+    this.#ownStyles.dispose();
+  }
+
+  /** The Visual/Source views of every document, with the extensions' contributions. */
+  #createViews(): EditingViews {
+    return new EditingViews(this.#layout.editor, {
+      mode: this.options.mode,
+      visualView: this.#visualView,
+      sourceViews: this.#sourceViews,
+      // Fired from the editors' own updates: the DOM's selectionchange fires before
+      // CodeMirror/ProseMirror read the new selection, so a listener would see the previous one.
+      onSelection: (textEditor) => this.#selectionChanged.fire({ textEditor }),
+      onMode: () => this.#showEditorActions(),
+    });
+  }
+
+  /** The `editor/title` menu as a toolbar at the end of the tab bar, shown again whenever its context or entries change. */
+  #createEditorActions(): HTMLElement {
+    const bar = this.host.ownerDocument.createElement('div');
+    bar.className = 'typst-editor__tab-actions';
+    bar.setAttribute('role', 'toolbar');
+    bar.setAttribute('aria-label', 'Editor actions');
+    // the commands act on the editor's selection: pressing an action keeps the focus there
+    bar.addEventListener('mousedown', (event) => {
+      if ((event.target as Element).closest('button')) event.preventDefault();
+    });
+    this.#views.addTabActions(bar);
+    this.#menus.onDidChange((menuId) => menuId === EDITOR_TITLE && this.#showEditorActions());
+    return bar;
+  }
+
+  #showEditorActions(): void {
+    const context = { editorMode: this.#views.mode, resource: this.#active };
+    const doc = this.host.ownerDocument;
+    this.#editorActions.replaceChildren(
+      ...this.#menus.items(EDITOR_TITLE, context).map((item) => {
+        const button = doc.createElement('button');
+        button.type = 'button';
+        button.className = 'typst-editor__tab-action';
+        button.dataset.command = item.command;
+        const title = item.title ?? item.command;
+        button.title = title;
+        if (item.icon) {
+          const icon = doc.createElement('span');
+          icon.className = 'typst-editor__tab-action-icon';
+          icon.setAttribute('aria-hidden', 'true');
+          icon.innerHTML = item.icon;
+          button.append(icon);
+        }
+        const text = doc.createElement('span');
+        text.textContent = title;
+        button.append(text);
+        button.addEventListener('click', () => this.#run(item.command));
+        return button;
+      }),
+    );
+  }
+
+  /** Runs a menu entry's command; a failure is logged (the command tells the user itself). */
+  #run(command: string): void {
+    this.executeCommand(command).catch((error: unknown) => console.error(`Command ${command} failed:`, error));
+  }
+
+  /** The registered document links in every Source view and in the code of every raw box (paths from its file's). */
+  #showDocumentLinks(): void {
+    const linked = (document: TypstDocument): LinkedText => ({
+      path: () => this.project.pathOf(document) ?? null,
+      provideDocumentLinks: (text) => this.#documentLinks.provideDocumentLinks(text),
+      resolveDocumentLink: (link) => this.#documentLinks.resolveDocumentLink(link),
+      open: (target) => this.open(target),
+      executeCommand: (command, ...args) => this.executeCommand(command, ...args),
+    });
+    this.#sourceViews.registerExtension((view) => linkExtension(linked(view.document)));
+    this.#visualView.registerBoxCodeExtension((view) => linkExtension(linked(view.document)));
+  }
+
+  /** `data-theme` from the setting `workbench.theme` (none: as the page), and the scheme the colors resolve to now. */
+  #applyTheme(): void {
+    const theme = this.#configuration.getConfiguration('workbench').get<string | null>('theme');
+    if (theme) this.host.dataset.theme = theme;
+    else delete this.host.dataset.theme;
+    this.#scheme.update();
+  }
+
+  #compile(): void {
+    this.#preview.update(this.project.files(), this.project.main);
+  }
+
+  #changed(change: FileChange): void {
+    this.#compile();
+    if (change.kind !== 'update') this.#restructured(change);
+  }
+
+  /** Keeps the editing area on an existing file after a create / rename / delete (a renamed file stays shown). */
+  #restructured(change: FileChange): void {
+    this.#views.retain(this.#documents());
+    const active = this.#active;
+    if (change.kind === 'rename' && change.from === active) this.open(change.path);
+    else this.open(this.project.has(active) ? active : this.project.main);
+  }
+
+  #documents(): TypstDocument[] {
+    return this.project.paths().flatMap((path) => this.project.document(path) ?? []);
+  }
+}
+
+/** The workbench's own settings. */
+const WORKBENCH_SETTINGS = {
+  'workbench.theme': {
+    type: ['string', 'null'],
+    enum: ['light', 'dark', 'auto', null],
+    default: null,
+    description:
+      'Light or dark colors, or `auto`: as the OS. Default (null): as the page around the widget, through CSS `color-scheme`. In dark mode the preview shows the pages inverted; the PDF stays as it is.',
+  },
+} as const;

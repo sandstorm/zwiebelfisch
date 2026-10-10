@@ -3,7 +3,8 @@
 import type { SyntaxNode } from '@lezer/common';
 import { Node } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
-import { children, isClosedContent, parenthesized, type Call, type Printer, type ProjectionContext } from '../../../hosts/visual-view/visual-view';
+import { children, isClosedContent, parenthesized } from '../../../core/typst-syntax/typst-syntax';
+import type { Call, Printer, ProjectionContext } from '../../../hosts/projection/projection';
 
 /** How a figure's source lies around its body (image or table call) and caption content, for printing it back. */
 interface FigureLayout {

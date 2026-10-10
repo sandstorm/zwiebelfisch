@@ -1,4 +1,4 @@
-// LabelIndex: the read model of a project's labels and the references to them, kept up to date. See model.ts.
+// LabelIndex: the read model of a project's labels and the references to them, kept up to date. See ../labels.ts.
 import type { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';

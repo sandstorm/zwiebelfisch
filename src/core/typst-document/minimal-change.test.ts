@@ -1,6 +1,6 @@
-// Tests for minimal-change.ts.
+// Tests for minimalChange (typst-document.ts).
 import { describe, expect, it } from 'vitest';
-import { minimalChange } from './minimal-change';
+import { minimalChange } from './typst-document';
 
 function apply(text: string, change: { from: number; to: number; insert: string } | null): string {
   return change ? text.slice(0, change.from) + change.insert + text.slice(change.to) : text;

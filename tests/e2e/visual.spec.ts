@@ -1,5 +1,6 @@
 // End-to-end tests (Playwright, against the demo build): the Visual view.
-import { test, expect } from './fixtures';
+import { expect } from '@playwright/test';
+import { test } from './fixtures';
 import { caretAtEnd, clickFirstGlyph, compiled, visual } from './visual-helpers';
 
 test.beforeEach(async ({ page }) => {

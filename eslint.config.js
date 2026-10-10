@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import tseslint from 'typescript-eslint';
 import sonarjs from 'eslint-plugin-sonarjs';
 import entryImports from './eslint-rules/entry-imports.js';
+import noReExports from './eslint-rules/no-re-exports.js';
 
 /** DOM globals core/ must not use, as values (no-restricted-globals) or types (no-restricted-types). */
 const DOM_GLOBALS = [
@@ -22,6 +23,13 @@ export const thresholds = {
   params: 4,
 };
 
+// Files that may re-export (`export … from`, or export an imported name), each with its reason. Everywhere else a
+// module's entry defines its API and internal files are not forwarded (eslint-rules/no-re-exports.js); the list
+// should shrink, not grow.
+export const reExportExceptions = [
+  { files: 'src/index.ts', why: 'the package entry: the public API is gathered from the modules that define it' },
+];
+
 // The folder boundaries and their only exceptions. `importers` is a regular expression over the
 // importing file's path from the repository root.
 export const boundaries = {
@@ -32,11 +40,6 @@ export const boundaries = {
       target: 'core/typst-engine/engine-assets.ts',
       importers: '^src/hosts/preview/preview\\.ts$',
       why: 'asset URLs (wasm, default fonts) for the main thread; in the entry, the worker bundle would emit every asset again',
-    },
-    {
-      target: 'hosts/visual-view/nodes/nodes.ts',
-      importers: '^src/testing/',
-      why: "the test helpers build the built-ins' schema with the Visual view's own (createSchema), as an Editor would",
     },
     {
       target: 'extensions/collaboration/model/in-process.ts',
@@ -66,10 +69,16 @@ export default tseslint.config(
     },
   },
   {
-    // Folder boundaries under src/: imports into a folder go to its entry file (see eslint-rules/entry-imports.js).
+    // Module boundaries under src/: imports into a module go to its entry file (eslint-rules/entry-imports.js); no
+    // re-exports (eslint-rules/no-re-exports.js).
     files: ['**/*.ts'],
-    plugins: { local: { rules: { 'entry-imports': entryImports } } },
-    rules: { 'local/entry-imports': ['error', boundaries] },
+    plugins: { local: { rules: { 'entry-imports': entryImports, 'no-re-exports': noReExports } } },
+    rules: { 'local/entry-imports': ['error', boundaries], 'local/no-re-exports': 'error' },
+  },
+  {
+    // a file exports only what it defines; the exceptions above
+    files: reExportExceptions.map((exception) => exception.files),
+    rules: { 'local/no-re-exports': 'off' },
   },
   {
     // Layers (docs/2026_10_10_extensions-architecture.md, "Dependency rules"): src/testing/ composes the built-in

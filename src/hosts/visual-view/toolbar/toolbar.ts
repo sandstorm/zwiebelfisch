@@ -4,8 +4,7 @@ import type { Editor } from '@tiptap/core';
 import { type Anchor, FloatingBar } from '../../../ui/floating-bar/floating-bar';
 import { ToolbarMenu } from '../../../ui/toolbar-menu/toolbar-menu';
 import type { Disposable } from '../../../core/disposable/disposable';
-import { svg, type Action, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem } from '../contributions/toolbar-items';
-import type { VisualViewContext } from '../contributions/view-context';
+import { svg, type Action, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem, type VisualViewContext } from '../visual-view';
 
 /**
  * The Visual view's formatting toolbar: a row of groups and menus sorted by

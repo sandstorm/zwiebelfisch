@@ -1,6 +1,6 @@
 // End-to-end tests (Playwright, against the plain-HTML example): references as chips, labels as tags, the @ list.
-import type { Page } from '@playwright/test';
-import { test, expect } from './fixtures';
+import { expect, type Page } from '@playwright/test';
+import { test } from './fixtures';
 import { caretAtEnd } from './visual-helpers';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };

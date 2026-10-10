@@ -2,8 +2,8 @@
 // `.drawio.png` made with "New diagram…", edited in the embedded editor, saved without pressing Save, shown by Typst.
 // diagrams.net itself is not loaded: a stub page at its URL speaks the embed protocol (init, load, autosave,
 // export as xmlpng), drawing a bigger rectangle on every "Draw".
-import type { Page } from '@playwright/test';
-import { test, expect, fileRow } from './fixtures';
+import { expect, type Page } from '@playwright/test';
+import { test, fileRow } from './fixtures';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 

@@ -1,6 +1,6 @@
 // End-to-end tests (Playwright, against the demo build): text alignment in the Visual view.
-import { test, expect } from './fixtures';
-import type { Page } from '@playwright/test';
+import { test } from './fixtures';
+import { expect, type Page } from '@playwright/test';
 import { caretAtEnd, chooseFrom } from './visual-helpers';
 
 test.beforeEach(async ({ page }) => {

@@ -1,4 +1,4 @@
-// Reading labels and references out of one file: Typst source (Lezer) or a BibTeX bibliography. See model.ts.
+// Reading labels and references out of one file: Typst source (Lezer) or a BibTeX bibliography. See ../labels.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import type { TextChange } from '../../../core/typst-document/typst-document';

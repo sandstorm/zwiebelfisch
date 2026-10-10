@@ -1,6 +1,6 @@
 // End-to-end tests (Playwright, against the demo build): the demo playground's modes and bar.
-import type { Page } from '@playwright/test';
-import { test, expect } from './fixtures';
+import { expect, type Page } from '@playwright/test';
+import { test } from './fixtures';
 
 // The demo's playground bar without a server: Local mode (the default) never
 // talks to one; the room modes are checked against an unreachable server and a

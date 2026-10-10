@@ -5,9 +5,9 @@ import type { Mark as PMMark, Node as PMNode } from '@tiptap/pm/model';
 import { TextSelection } from '@tiptap/pm/state';
 import type { NodeView } from '@tiptap/pm/view';
 import { NOTE_HEAD, noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../model/margin-note-syntax';
-import {
-  children, svg, type Action, type Call, type Placed, type ProjectionContext, type TypstMarkSpec, type TypstNodeSpec, type VisualViewContribution,
-} from '../../../hosts/visual-view/visual-view';
+import { children } from '../../../core/typst-syntax/typst-syntax';
+import { svg, type Action, type TypstMarkSpec, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
+import type { Call, Placed, ProjectionContext } from '../../../hosts/projection/projection';
 
 export interface MarginNotesOptions {
   /** Adds a comment (margin note) at the selection: the "Comment" button in the toolbar and the selection's bar (none without it). */

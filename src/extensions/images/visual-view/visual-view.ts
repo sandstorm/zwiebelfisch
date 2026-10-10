@@ -1,73 +1,20 @@
 // Images in the Visual view: `#image(..)` blocks and figures, what "Insert image" offers (the host's project
 // files, uploads), inserting image blocks (toolbar, file drops), the image file in place of the code, and the tools
-// on an image box (resize, alt text, caption), which edit the call's source minimally. See ARCHITECTURE.md, "VisualView".
+// on an image box (resize, alt text, caption), which edit the call's source minimally; `imagesVisualView` in
+// images.ts registers them. See ARCHITECTURE.md, "VisualView".
 import { Node } from '@tiptap/core';
 import { Disposable } from '../../../core/disposable/disposable';
-import type { Event } from '../../../core/event-emitter/event-emitter';
-import { PathReference, type ProjectPath } from '../../../core/paths/paths';
-import type { DocumentLink, QuickPickItem, Workbench } from '../../../hosts/workbench/workbench';
-import {
-  parenthesized, svg, type Action, type BoxRenderer, type ToolbarContext, type TypstNodeSpec, type VisualViewContext, type VisualViewContribution,
-} from '../../../hosts/visual-view/visual-view';
+import { PathReference } from '../../../core/paths/paths';
+import type { QuickPickItem } from '../../../hosts/workbench/workbench';
+import { parenthesized } from '../../../core/typst-syntax/typst-syntax';
+import { svg, type Action, type BoxRenderer, type ToolbarContext, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import type { ImageAssets, ImagePrompts, ImagesOptions, ImageUrls } from '../images';
 import { Figure, FigureCaption, printFigure, projectFigure } from './figures';
 import { imageFileDrops, insertImages } from './image-insertion';
 import { imagePathLink } from './image-path-link';
 import { imagePath } from './image-syntax';
 import { ImageTools } from './image-tools';
-import { imagePicker, uploadImages, type ImageAssets } from './image-uploads';
-
-/** Where images ask (an image, a path, alt text) and tell why an upload was refused: the workbench's. */
-export type ImagePrompts = Pick<Workbench, 'showQuickPick' | 'showInputBox' | 'showErrorMessage'>;
-
-/** Where image files are shown from: the host's project files, as URLs. */
-export interface ImageUrls {
-  /** A URL of the image file `path` (as written in `#image(..)`), or null if there is none. */
-  imageUrl(path: PathReference): string | null;
-  /** Fires whenever images may have changed. */
-  readonly onDidChange: Event<void>;
-}
-
-export interface ImagesOptions {
-  /** What "Insert image" offers in a document: the project's images and uploads (default: it only asks for a path). */
-  assets?(document: VisualViewContext['document']): ImageAssets | undefined;
-  /** Image files shown in place of the call while it is not edited (default: the code). */
-  imageUrls?(document: VisualViewContext['document']): ImageUrls | undefined;
-  /** The links on image paths in a document: an image box's path opens its file, or shows it is missing (default: the text). */
-  imageLinks?(document: VisualViewContext['document']): ImageLinks | undefined;
-  /** Where "Insert image" and "Alt text" ask, and refused uploads are told (default: they do nothing). */
-  prompts?: ImagePrompts;
-}
-
-/** The document links on the paths of a document's image calls. */
-export interface ImageLinks {
-  /** The (resolved) link on the path of the image call `src`, or null. */
-  linkOf(src: string): DocumentLink | null;
-  /** Shows a link's target. */
-  open(target: ProjectPath): void;
-}
-
-/**
- * `#image("literal path", ..)` blocks, edited as code in a box headed "Image:
- * path", with tools (resize handles, caption, width, alt text) and the image
- * file in place of the code; figures of an image or a table, their caption
- * as rich text; "Insert image" (a path, or the project's images and uploads),
- * and image files dropped on or pasted into the text.
- */
-export function imagesVisualView(options: ImagesOptions = {}): VisualViewContribution {
-  return {
-    id: 'images',
-    activate({ visualView, subscriptions }) {
-      subscriptions.push(
-        visualView.registerNode(imageSpec(options)),
-        visualView.registerNode(FIGURE),
-        visualView.registerNode(FIGURE_CAPTION),
-        visualView.registerToolbarItem({ group: 'insert', order: 10, create: (toolbar) => insertImage(toolbar, options.assets?.(toolbar.document), options.prompts) }),
-        // image boxes are raw boxes, too: drawn as their image file rather than as a compiled snippet (priority 100)
-        visualView.registerBoxRenderer((view) => imageRenderer(options.imageUrls?.(view.document)), { priority: 110 }),
-      );
-    },
-  };
-}
+import { imagePicker, uploadImages } from './image-uploads';
 
 /**
  * A standalone `#image("path", ..)` call. Its source is kept and edited like a
@@ -87,7 +34,7 @@ const Image = Node.create({
   },
 });
 
-function imageSpec(options: ImagesOptions): TypstNodeSpec {
+export function imageSpec(options: ImagesOptions): TypstNodeSpec {
   return {
     name: 'image',
     extension: Image,
@@ -109,7 +56,7 @@ function imageSpec(options: ImagesOptions): TypstNodeSpec {
   };
 }
 
-const FIGURE: TypstNodeSpec = {
+export const FIGURE: TypstNodeSpec = {
   name: 'figure',
   extension: Figure,
   anchors: ['layout'],
@@ -118,10 +65,10 @@ const FIGURE: TypstNodeSpec = {
   print: printFigure,
 };
 
-const FIGURE_CAPTION: TypstNodeSpec = { name: 'figureCaption', extension: FigureCaption };
+export const FIGURE_CAPTION: TypstNodeSpec = { name: 'figureCaption', extension: FigureCaption };
 
 /** Image boxes show their file (following path edits at once). */
-function imageRenderer(urls: ImageUrls | undefined): BoxRenderer | null {
+export function imageRenderer(urls: ImageUrls | undefined): BoxRenderer | null {
   if (!urls) return null;
   return {
     renders: (node) => node.type.name === 'image',
@@ -148,7 +95,7 @@ const ENTER_PATH: ImageChoice = { label: 'Enter a path…' };
  * an input box for the path. With `assets`, image files dropped on or pasted into the text are uploaded and inserted
  * too, and an image dragged from the file panel is inserted where it is dropped; refused uploads are error messages.
  */
-function insertImage(toolbar: ToolbarContext, assets: ImageAssets | undefined, prompts: ImagePrompts | undefined): Action {
+export function insertImage(toolbar: ToolbarContext, assets: ImageAssets | undefined, prompts: ImagePrompts | undefined): Action {
   const { editor, root } = toolbar;
   const upload = async (files: File[], near?: number) => {
     const { paths, errors } = await uploadImages(assets!, files);

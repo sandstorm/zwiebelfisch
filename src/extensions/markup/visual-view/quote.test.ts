@@ -1,6 +1,6 @@
 // Tests for the projection of quotes (visual-view.ts).
 import { describe, expect, it } from 'vitest';
-import { print } from '../../../hosts/visual-view/visual-view';
+import { print } from '../../../hosts/projection/projection';
 import { after, edit, expectPreciseMap, find, project, schema } from '../../../testing/testing';
 
 const FIXTURES: Record<string, string> = {

@@ -1,6 +1,8 @@
 // Typst syntax several extensions need, read from the Lezer syntax tree (codemirror-lang-typst): the file paths a
-// text names (`#import`, `#include`, `image(…)`, `read(…)`, …), the reading order they give the project's files, and
-// the change that imports a name (calculate-import-change.ts). Entry of core/typst-syntax/. See ARCHITECTURE.md,
+// text names (`#import`, `#include`, `image(…)`, `read(…)`, …), the reading order they give the project's files, the
+// change that imports a name (calculateImportChange), and reading syntax nodes, string literals and embeddable code
+// as the Visual view's projectors and printers do (children, parenthesized, isClosedContent, decodeString, quote,
+// isEmbeddable). Entry of core/typst-syntax/. See ARCHITECTURE.md,
 // "File links".
 // Why here: extensions never import each other, and this knowledge is about Typst, not about one feature. Only
 // syntax: where a path leads (the project, the file's current path) and what following it does (open, create) is the
@@ -9,8 +11,7 @@
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { PathReference, ProjectPath } from '../paths/paths';
-
-export { calculateImportChange, type ImportRequest } from './calculate-import-change';
+import type { TextChange } from '../typst-document/typst-document';
 
 /** What names the path: `#import`, `#include`, or the function whose first argument it is. */
 export type PathCall = 'import' | 'include' | 'image' | 'read' | 'json' | 'csv' | 'yaml' | 'toml' | 'xml' | 'cbor' | 'bibliography';
@@ -79,6 +80,96 @@ export function neighbours(read: ReadText, main: ProjectPath, path: ProjectPath)
   return { previous: order[index - 1], next: order[index + 1] ?? null };
 }
 
+/** What to import, and how to recognise and write the module's import. */
+export interface ImportRequest {
+  /** The name to import, e.g. `margin-note`, `note`. */
+  name: string;
+  /** Whether an import's module string (its value, e.g. `@preview/drafting:0.2.2`, `styles.typ`) is the module. */
+  matches(module: string): boolean;
+  /** The text of a new import, added at the top when no import of the module can take the name (with its newline). */
+  create(): string;
+  /** Where the name is used: only imports ending before it count (an import binds names only after itself). Default: the end. */
+  use?: number;
+}
+
+/**
+ * Decides the change that makes `name` imported from the module in Typst
+ * `text`, without applying it: the caller sends it through
+ * `TypstDocument.change`, possibly merged with its own changes into one edit
+ * (one undo step).
+ *
+ * Null when an import before `use` already brings it (by name or `*`); else
+ * the name is added to the item list of the first such import of the module
+ * (`: a, b` → `: a, b, name`; a bare `#import "m"` gets `: name`), or
+ * `create()` goes at the top. Never a duplicate.
+ */
+export function calculateImportChange(text: string, request: ImportRequest): TextChange | null {
+  const use = request.use ?? text.length;
+  for (let node = typstParser.parse(text).topNode.firstChild; node && node.to <= use; node = node.nextSibling) {
+    if (node.name !== 'ModuleImport' || !importsModule(text, node, request)) continue;
+    const change = extend(text, node, request.name);
+    if (change !== undefined) return change;
+  }
+  return insert(0, request.create());
+}
+
+// Reading Typst syntax (Lezer nodes) as the Visual view's projectors and printers need it.
+
+/** The children of `node`, in order. */
+export function children(node: SyntaxNode): SyntaxNode[] {
+  const result: SyntaxNode[] = [];
+  for (let child = node.firstChild; child; child = child.nextSibling) result.push(child);
+  return result;
+}
+
+/** Whether an argument list is `(..)` alone: closed, and no trailing content block. */
+export function parenthesized(args: readonly SyntaxNode[]): boolean {
+  return args[0]?.name === 'LeftParen' && args.at(-1)?.name === 'RightParen';
+}
+
+/** Whether `node` is a content block `[..]` with its closing bracket. */
+export function isClosedContent(node: SyntaxNode): boolean {
+  return node.name === 'ContentBlock' && node.lastChild?.name === 'RightBracket' && node.getChild('Markup') !== null;
+}
+
+/** A Typst string literal's value, if it uses no escapes other than `\"` and `\\`. */
+export function decodeString(literal: string): string | null {
+  return /^"(?:[^"\\\n]|\\["\\])*"$/.test(literal) ? literal.slice(1, -1).replace(/\\(["\\])/g, '$1') : null;
+}
+
+/** A Typst string literal with value `text`. */
+export function quote(text: string): string {
+  return `"${text.replace(/["\\]/g, '\\$&')}"`;
+}
+
+/**
+ * Whether `code`, an expression in code (an argument), reads the same after
+ * a `#` in markup: one embedded expression, nothing after it, no errors.
+ * `ms(18)`, `x.y`, `"text"`, `1pt` and `$x^2$` do; `-1`, `a + b` or a
+ * comment do not.
+ */
+export function isEmbeddable(code: string): boolean {
+  if (code.trim() !== code || code === '') return false;
+  const markup = `#${code}`;
+  const tree = typstParser.parse(markup);
+  const hash = tree.topNode.firstChild;
+  const expression = hash?.name === 'Hash' ? hash.nextSibling : null;
+  const whole = expression?.from === 1 && expression.to === markup.length && !expression.nextSibling;
+  if (!whole || /Comment/.test(expression.name)) return false;
+  let broken = false;
+  tree.iterate({
+    enter: (node) => {
+      if (node.type.isError || node.name === 'Error') broken = true;
+    },
+  });
+  return !broken;
+}
+
+/** The markup that shows what `code` (an embeddable expression) does: `#code`, or an equation as it is. */
+export function markupSource(code: string): string {
+  return code.startsWith('$') ? code : `#${code}`;
+}
+
 /** Functions whose first positional argument is a file path. */
 const CALLS = new Set<PathCall>(['image', 'read', 'json', 'csv', 'yaml', 'toml', 'xml', 'cbor', 'bibliography']);
 
@@ -129,4 +220,32 @@ function unescape(raw: string): string {
   return raw.replace(/\\(u\{([0-9a-fA-F]+)\}|.)/g, (all, escape: string, hex?: string) =>
     hex ? String.fromCodePoint(parseInt(hex, 16)) : (ESCAPES[escape] ?? all),
   );
+}
+
+/** For an import of the module: null if it brings `name` already, the edit adding it, or undefined if it cannot take it (`as`). */
+function extend(text: string, node: SyntaxNode, name: string): TextChange | null | undefined {
+  const items = node.getChild('ImportItems');
+  if (node.getChild('Star') || (items && imports(text, items, name))) return null;
+  if (items) return addItem(items, name);
+  const str = node.getChild('Str')!;
+  return str.to === node.to ? insert(str.to, `: ${name}`) : undefined;
+}
+
+function importsModule(text: string, node: SyntaxNode, request: ImportRequest): boolean {
+  const str = node.getChild('Str');
+  return str !== null && request.matches(text.slice(str.from + 1, str.to - 1));
+}
+
+function imports(text: string, items: SyntaxNode, name: string): boolean {
+  return items.getChildren('ImportItemPath').some((item) => text.slice(item.from, item.to) === name);
+}
+
+/** Adds `name` after the last item of an import list, which may end with a comma. */
+function addItem(items: SyntaxNode, name: string): TextChange {
+  const last = items.lastChild!;
+  return last.name === 'Comma' ? insert(last.to, ` ${name}`) : insert(last.to, `, ${name}`);
+}
+
+function insert(at: number, text: string): TextChange {
+  return { from: at, to: at, insert: text };
 }

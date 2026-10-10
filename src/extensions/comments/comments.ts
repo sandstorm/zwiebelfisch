@@ -10,10 +10,6 @@ import { marginNotes } from './visual-view/margin-notes';
 import { notesGutter } from './visual-view/notes-gutter/notes-gutter';
 import { ADD_COMMENT, registerAddComment } from './workbench/workbench';
 
-// for tests that compose Visual views with margin notes outside the widget (collaboration's convergence)
-export { addMarginNote } from './model/add-margin-note';
-export { marginNotes } from './visual-view/margin-notes';
-
 /**
  * Comments as margin notes, written as the workbench's `user` (signs replies; only own messages can be edited): in
  * the Visual view the notes in the text and a card per note in the notes gutter; "Comment" in the Visual view's

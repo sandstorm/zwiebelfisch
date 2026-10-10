@@ -4,7 +4,7 @@ import { EditorState, NodeSelection, type Transaction } from '@tiptap/pm/state';
 import { minimalChange } from '../../../core/typst-document/typst-document';
 import { schema } from '../../../testing/testing';
 import { addCaption, imageInfo, removeCaption, resizeImage, setImageAlt } from './image-edits';
-import { print, project } from '../../../hosts/visual-view/visual-view';
+import { print, project } from '../../../hosts/projection/projection';
 
 const state = (source: string) => EditorState.create({ doc: project(source, schema) });
 

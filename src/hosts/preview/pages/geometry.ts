@@ -1,4 +1,4 @@
-// Preview geometry: boxes in percent of a page, and which page or box is in view. See pages.ts.
+// Preview geometry: boxes in percent of a page, and which page or box is in view. See ../preview.ts.
 /** The parts of a DOMRect the preview geometry needs. */
 export interface Rect {
   left: number;

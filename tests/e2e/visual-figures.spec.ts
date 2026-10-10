@@ -1,6 +1,6 @@
 // End-to-end tests (Playwright, against the demo build): figures and image resizing in the Visual view.
-import type { Page } from '@playwright/test';
-import { test, expect } from './fixtures';
+import { expect, type Page } from '@playwright/test';
+import { test } from './fixtures';
 import { caretAtEnd, chooseFrom } from './visual-helpers';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };

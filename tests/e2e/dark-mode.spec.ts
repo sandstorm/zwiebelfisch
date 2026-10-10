@@ -1,5 +1,6 @@
 // End-to-end tests (Playwright, against the demo build): dark mode follows the page's color-scheme (the demo: the OS).
-import { test, expect } from './fixtures';
+import { expect } from '@playwright/test';
+import { test } from './fixtures';
 
 test.describe('with the OS in dark mode', () => {
   test.use({ colorScheme: 'dark' });

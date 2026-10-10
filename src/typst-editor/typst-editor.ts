@@ -27,7 +27,7 @@ import { outline } from '../extensions/outline/outline';
 import { pageLayout } from '../extensions/page-layout/page-layout';
 import { tables } from '../extensions/tables/tables';
 import proseMirrorStyles from '../hosts/visual-view/visual-view.css?inline';
-import { type EditorMode, type Settings, type TypstExtension, type User, WorkbenchHost, workbenchStyles } from '../hosts/workbench/workbench';
+import { type EditorMode, type Settings, type TypstExtension, type User, WorkbenchHost } from '../hosts/workbench/workbench';
 import { type FileChange, Project, type ProjectFiles } from '../core/project/project';
 import { ProjectPath } from '../core/paths/paths';
 import widgetStyles from './typst-editor.css?inline';
@@ -140,8 +140,8 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
     settings: options.settings,
     allowFileChange: options.allowFileChange,
     onOpen: options.onOpen,
-    // the hosts' and the widget's; each extension adds its own (Workbench.registerStyleSheet)
-    styleSheet: proseMirrorStyles + widgetStyles + workbenchStyles,
+    // the other hosts' and the widget's; the workbench adds its layout, each extension its own (registerStyleSheet)
+    styleSheet: proseMirrorStyles + widgetStyles,
   });
   const builtins = builtinExtensions();
   workbench.activate(options.extensions?.(builtins) ?? builtins);

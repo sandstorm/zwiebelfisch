@@ -1,6 +1,6 @@
 // End-to-end tests (Playwright, against the demo build): raw boxes shown compiled in the Visual view.
-import type { Locator, Page } from '@playwright/test';
-import { test, expect } from './fixtures';
+import { expect, type Locator, type Page } from '@playwright/test';
+import { test } from './fixtures';
 import { chooseFrom } from './visual-helpers';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };

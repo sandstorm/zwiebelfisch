@@ -1,7 +1,7 @@
 // Tests for heading-numbers.ts.
 import { EditorState } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
-import { print } from '../../../hosts/visual-view/visual-view';
+import { print } from '../../../hosts/projection/projection';
 import { hasHeadingNumbering, headingNumbers, toggleHeadingNumbering } from './heading-numbers';
 import { project } from '../../../testing/testing';
 

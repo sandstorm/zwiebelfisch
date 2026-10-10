@@ -1,5 +1,5 @@
 // Which labels the @ list offers for a query, and how a label is described (chip hints, list entries).
-// See model.ts.
+// See ../labels.ts.
 import type { LabelInfo } from './label-index';
 import type { LabelKind } from './scan';
 

@@ -1,6 +1,6 @@
-// Tests for calculate-import-change.ts.
+// Tests for typst-syntax.ts: calculateImportChange.
 import { describe, expect, it } from 'vitest';
-import { calculateImportChange } from './calculate-import-change';
+import { calculateImportChange } from './typst-syntax';
 
 const apply = (text: string, change: { from: number; to: number; insert: string } | null) =>
   change ? text.slice(0, change.from) + change.insert + text.slice(change.to) : text;

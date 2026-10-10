@@ -3,7 +3,7 @@ import type { Mark as PMMark, Node as PMNode } from '@tiptap/pm/model';
 import { NodeSelection, type Selection, type Transaction } from '@tiptap/pm/state';
 import type { Mappable } from '@tiptap/pm/transform';
 import { rangeNoteSyntax } from '../../model/margin-note-syntax';
-import { posToSource, print, sourceToPos } from '../../../../hosts/visual-view/visual-view';
+import { posToSource, print, sourceToPos } from '../../../../hosts/projection/projection';
 
 /**
  * The margin notes of a Visual-view document as a list, followed across

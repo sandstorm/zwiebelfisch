@@ -1,5 +1,6 @@
 // End-to-end tests (Playwright, against the demo build): the file panel's tree and file links in the code.
-import { test, expect, fileRow, openFile } from './fixtures';
+import { expect } from '@playwright/test';
+import { test, fileRow, openFile } from './fixtures';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/?example=advanced');

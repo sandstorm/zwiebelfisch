@@ -2,7 +2,7 @@
 import { EditorState, NodeSelection, TextSelection } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 import { findNotes, followNotes, noteAtOffset, noteAtSelection, removeNote, setNoteText, type KeyedNote } from './note-list';
-import { print } from '../../../../hosts/visual-view/visual-view';
+import { print } from '../../../../hosts/projection/projection';
 import { after, project as projectWith, schemaWith } from '../../../../testing/testing';
 import { marginNotes } from '../margin-notes';
 

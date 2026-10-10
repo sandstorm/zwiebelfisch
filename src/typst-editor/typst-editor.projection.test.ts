@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState, TextSelection } from '@tiptap/pm/state';
-import { posToSource, print, project as projectWith, sourceToPos, syncDoc } from '../hosts/visual-view/visual-view';
+import { posToSource, print, project as projectWith, sourceToPos, syncDoc } from '../hosts/projection/projection';
 import { builtins, schema, schemaOf } from '../testing/testing';
 
 const project = (source: string) => projectWith(source, schema);

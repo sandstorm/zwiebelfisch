@@ -1,7 +1,7 @@
 // End-to-end tests (Playwright, against the demo build): uploading and inserting images.
-import type { Locator, Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { deflateSync } from 'node:zlib';
-import { test, expect, fileRow } from './fixtures';
+import { test, fileRow } from './fixtures';
 import { chooseFrom } from './visual-helpers';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };

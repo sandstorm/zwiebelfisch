@@ -1,6 +1,7 @@
 // CollaborationLink: the widget's side of a Collaboration, which it loads on demand (so this file must stay outside
 // the lazily loaded chunk, model/). See collaboration.ts.
-import type { Collaboration, CollaborationOptions, Shared } from './model/model';
+import type { CollaborationOptions } from './collaboration';
+import type { Collaboration, Shared } from './model/model';
 import type { GitLabSourceControl } from './model/gitlab-source-control';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { PlacedPresence } from './presence/presence';

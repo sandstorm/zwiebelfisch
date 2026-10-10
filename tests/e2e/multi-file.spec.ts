@@ -1,10 +1,11 @@
 // End-to-end tests (Playwright, against the demo build): multi-file projects and packages.
 import { readFileSync } from 'node:fs';
-import { test, expect } from './fixtures';
+import { expect } from '@playwright/test';
+import { test } from './fixtures';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
-const greet = readFileSync(new URL('../../src/core/typst-engine/packages/fixtures/greet-0.1.0.tar.gz', import.meta.url));
+const greet = readFileSync(new URL('../../src/core/typst-packages/fixtures/greet-0.1.0.tar.gz', import.meta.url));
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/examples/plain-html/');

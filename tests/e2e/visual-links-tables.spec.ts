@@ -1,5 +1,6 @@
 // End-to-end tests (Playwright, against the demo build): links and tables in the Visual view.
-import { test, expect } from './fixtures';
+import { expect } from '@playwright/test';
+import { test } from './fixtures';
 import { caretAtEnd, chooseFrom, compiled, freshSelectedLine, selectionBar, sourceText, tableBar, toolbar, visual } from './visual-helpers';
 
 test.beforeEach(async ({ page }) => {

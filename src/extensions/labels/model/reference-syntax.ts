@@ -1,5 +1,5 @@
 // Typst's reference syntax (`@key`, `@key[supplement]`) and label names: reading, printing, cleaning up a typed
-// name. See model.ts.
+// name. See ../labels.ts.
 
 /** `@target` and the supplement as written (`[..]`), if any. */
 export function referenceSyntax(target: string, supplement: string | null): string {

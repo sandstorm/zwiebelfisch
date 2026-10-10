@@ -1,16 +1,6 @@
-// Snippets: a page SVG cut down to the boxes of a source range (shown in the Visual view). See pages.ts.
+// Snippets: a page SVG cut down to the boxes of a source range (shown in the Visual view). See ../preview.ts.
 import type { Box, Page } from '../../../core/typst-engine/typst-engine';
-
-/** A cut-out of a compiled page: standalone SVG markup and its size in points. */
-export interface Snippet {
-  svg: string;
-  width: number;
-  height: number;
-  /** Height of its tallest box (pt): one line of its biggest text, what an inline view scales by. */
-  textHeight: number;
-  /** Space (pt) kept around what is drawn (less where the page ends). */
-  padding: number;
-}
+import type { Snippet } from '../preview';
 
 /** Space (pt) kept around what is drawn, so strokes and descenders are not clipped. */
 const PADDING = 2;

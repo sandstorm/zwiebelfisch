@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { EditorState } from '@tiptap/pm/state';
 import { find, schemaWith } from '../../../testing/testing';
-import { print, project } from '../../../hosts/visual-view/visual-view';
+import { print, project } from '../../../hosts/projection/projection';
 import { insertReference, renameLabel, setLabel } from './label-edits';
 import { labelName } from '../model/reference-syntax';
 import { references } from './visual-view';

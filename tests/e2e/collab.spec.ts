@@ -1,8 +1,8 @@
 // End-to-end tests (Playwright, against the demo build): two users in one room (needs the collaboration server: mise run test:e2e-collab).
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import type { Browser, Page } from '@playwright/test';
-import { expect, serve, test } from './fixtures';
+import { expect, type Browser, type Page } from '@playwright/test';
+import { serve, test } from './fixtures';
 
 // Two users in one room of the local collaboration server. Needs the server:
 // run through `mise run test:e2e-collab`, which starts it (ws://127.0.0.1:1234).

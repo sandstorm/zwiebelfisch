@@ -1,5 +1,5 @@
 // Where an uploaded image goes in the project: the name it gets next to the project's other files (its path from
-// the file name is core/uploads'). See model.ts.
+// the file name is core/uploads'). See ../images.ts.
 import type { FileContent } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 

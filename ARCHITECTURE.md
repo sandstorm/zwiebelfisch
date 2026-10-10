@@ -22,8 +22,8 @@ src/                        the widget (TypeScript); the most important API on t
   hosts/                    view hosts: mechanism + contribution points, no feature knowledge
     workbench/              the widget's frame and the extension API (workbench.ts: TypstExtension, ExtensionContext,
                             Workspace (settings), Workbench, Command, DocumentLinkProvider, FileDecorationProvider,
-                            SourceControl);
-                            workbench-host.ts (WorkbenchHost: what createTypstEditor creates); layout/ (layout.ts +
+                            SourceControl, EditorMode, Memory; and WorkbenchHost, what createTypstEditor creates, which
+                            adds its own layout CSS); layout/ (layout.ts +
                             layout.css: side panels with rail buttons, editing area, preview, status bar), editing-views/
                             (Visual/Source tabs, lazily one VisualView + SourceView per document), color-scheme/
                             (`data-scheme`), extension-host/ (activation), commands/ (commands, key bindings),
@@ -37,11 +37,21 @@ src/                        the widget (TypeScript); the most important API on t
                             status-bar/ (StatusBar: the status bar items, left / right by priority),
                             menus/ (Menus: menu entries by menu id), notifications/ (Notifications: the messages),
                             quick-input/ (QuickInput: input box and quick pick)
-    source-view/            SourceViewHost (registerExtension, createView: what
-                            `ExtensionContext.sourceView` is) and SourceView (view.ts: CodeMirror 6 bound to a
-                            TypstDocument); contribution.ts (the contribution types)
+    visual-view/            VisualView (Tiptap over the projection) and its contribution points, all in visual-view.ts:
+                            VisualViewContributions, TypstNodeSpec / TypstMarkSpec, toolbar items and groups, box
+                            renderers / tools / actions, gutters, highlights, VisualViewContext, svg, starterKitPart,
+                            createSchema; nodes/ (the host's own nodes, the raw box), toolbar/, highlights.ts
+    projection/             the source-anchored projection between Typst text and the Visual view's ProseMirror
+                            document (projection.ts: project, print, syncDoc, the position maps, the spec contract
+                            NodeGrammar / MarkGrammar / ProjectionContext / Printer); grammar.ts, projecting.ts,
+                            printing.ts, labels.ts, pristine.ts. Not a view: the Visual view host's mechanism, a
+                            module of its own so specs and tests reach it through its entry
+    source-view/            source-view.ts, all of it: SourceViewHost (registerExtension, createView: what
+                            `ExtensionContext.sourceView` is), the contribution types, `fromDocument`, and SourceView
+                            (CodeMirror 6 bound to a TypstDocument)
     preview/                Preview — worker-backed live preview + hit-testing, scroll / reveal; what
-                            `ExtensionContext.preview` is: toolbar items, PDF export options, page overlays (contribution.ts),
+                            `ExtensionContext.preview` is: toolbar items, PDF export options, page overlays (their types,
+                            Zoom and Snippet are in preview.ts),
                             reveal / onDidClickPage, onDidChangeDiagnostics / onDidRender, snippet, exportPdf;
                             latest-only.ts ("only the newest value" task runner)
       worker/               worker.ts (startEngineWorker, main-thread side), engine.worker.ts (the worker),
@@ -52,10 +62,12 @@ src/                        the widget (TypeScript); the most important API on t
                             hex colors only in the color tokens (dark mode)
   core/                     the models everything builds on
     typst-document/         TypstDocument — the single source of truth (a string; no Yjs: collaboration binds a Y.Text
-                            from outside); TextChange (the one edit format, text-change.ts); minimal-change.ts
-    typst-engine/           typed TS wrapper around the wasm (typst-engine.ts: createEngine), fetch-fonts.ts;
-                            engine-assets.ts (wasm + default font URLs for the main thread); packages/ (withPackages,
-                            tar reader; packages/fixtures/: the greet test package); generated wasm/, fonts/ (gitignored)
+                            from outside); TextChange (the one edit format) and minimalChange, all in typst-document.ts
+    typst-engine/           typed TS wrapper around the wasm (typst-engine.ts: createEngine, fetchFonts);
+                            engine-assets.ts (wasm + default font URLs for the main thread); generated wasm/, fonts/
+                            (gitignored)
+    typst-packages/         withPackages: Typst packages (@preview/…) downloaded on first use and added to an engine
+                            (fetchPreviewPackage, tar.ts: the archive reader; fixtures/: the greet test package)
     paths/                  ProjectPath (where a file is) and PathReference (a path as written in Typst source),
                             branded strings with their operations: parse, fromName, resolve, referenceTo, isTypst
                             (the only kind core knows: Typst source or not), displayName, extension
@@ -64,7 +76,8 @@ src/                        the widget (TypeScript); the most important API on t
     typst-syntax/           the Typst syntax several extensions need (Lezer): findFilePaths (the file paths a Typst text
                             names), readingOrder (main file, then its #includes depth first) and neighbours,
                             calculateImportChange (the change that imports a name from a module, once; applies
-                            nothing: margin notes merge it into their own edit)
+                            nothing: margin notes merge it into their own edit); what projectors and printers read
+                            (children, parenthesized, isClosedContent, decodeString, quote, isEmbeddable)
     uploads/                uploadChanges: files from the computer (picked, dropped) as `create` changes at the top
                             of the project (`.typ` as text, the rest as bytes); used by files and images; takes any
                             `UploadedFile` (`name`, `text()`, `arrayBuffer()`: a DOM File is one, core names no DOM type)
@@ -115,13 +128,15 @@ src/                        the widget (TypeScript); the most important API on t
     preview-sync/           previewSync: the preview follows the cursor ("Follow cursor", remembered in localStorage),
                             a click in it selects the source; preview/ (followCursor: the switch)
     images/                 images(): image boxes + figures, "Insert image", ProjectImages (object URLs, uploads);
+                            imagesVisualView (its options, ImageAssets / ImageUrls / ImageLinks: the test seam
+                            testing/ uses), all in images.ts;
                             model/ (image-call.ts: arguments edited in place; upload.ts: uploadTarget),
-                            visual-view/ (imagesVisualView: specs, tools, insertion, image-path-link: the path's
-                            document link),
+                            visual-view/ (specs, tools, insertion, image-path-link: the path's document link),
                             model/image-files.ts (isImage, imageBlob: the media types), workbench/ (AssetView: images and other
                             files read-only, the custom editors `images.preview` and `images.file`)
-    rendered-boxes/         renderedBoxes(): raw boxes drawn as snippets from the preview; model/ (Snippet,
-                            rendersInPlace, inlinePictureSize, snippetSize), visual-view/ (the box renderer)
+    rendered-boxes/         renderedBoxes() and renderedBoxesVisualView({ snippets }): raw boxes drawn as snippets
+                            from the preview; model/ (Snippet, rendersInPlace, inlinePictureSize, snippetSize),
+                            visual-view/ (the box renderer)
     document-links/         documentLinks(): a DocumentLinkProvider: file paths as links (open, or create a missing .typ)
     typst-language/         typstLanguage(): Typst syntax + code colors in the Source views and raw boxes;
                             source-view/ (typst-syntax.ts, code-colors.ts)
@@ -194,7 +209,11 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
     entry, the worker bundle (which imports the entry) would emit every asset a second time;
   - `extensions/collaboration/model/in-process.ts` — test files;
   - `extensions/collaboration/model/shared-project.ts` — the server's tests;
-  - `hosts/visual-view/nodes/nodes.ts` — `testing/`: the built-ins' schema is made with the host's `createSchema`.
+- **No re-exports** (`local/no-re-exports`, `eslint-rules/no-re-exports.js`): a file exports only what it
+  defines; `export … from` and exporting an imported name are errors everywhere but `src/index.ts`, the package
+  entry (`reExportExceptions` in `eslint.config.js`). A module's entry defines its API; its internal files import
+  the API's types from it and are never forwarded. An outside caller needing an internal name means the code moves
+  into the entry, or the concept is a module of its own (`core/typst-packages`, `hosts/projection`).
 - **Layers** (`no-restricted-imports` in `eslint.config.js`; docs/2026_10_10_extensions-architecture.md,
   "Dependency rules"): `hosts/` never import `extensions/`, `testing/` or `typst-editor/`, also not in their
   tests: a host's tests use its own nodes plus specs defined in the test. Only `*.test.ts` files import
@@ -620,7 +639,7 @@ new TypstDocument(text)
 
 ```ts
 createEngine(wasm, fonts?: (Uint8Array | Promise<Uint8Array>)[]) → Promise<Engine>
-defaultFonts() → Promise<Uint8Array>[]          // engine-assets.ts: fetches the bundled font assets
+fetchFonts(DEFAULT_FONT_URLS) → Promise<Uint8Array>[]   // the bundled font assets (URLs: engine-assets.ts)
 .addFont(bytes)                                  // throws if bytes contain no font face
 .setSource(path, text) / .setBinary(path, bytes) / .remove(path)
 .compile(main) → { pages: [{hash, width, height, svg}], diagnostics: [{severity, message, hints, path, from, to}], missingPackages: string[] }
@@ -725,7 +744,8 @@ visualView.registerBoxAction({ title, when?(node, view) → boolean, run(node, v
 
 The editor is **Tiptap 3**, which is ProseMirror underneath. Tiptap provides the keymaps (Mod-B/I,
 undo), the input rules (`## ` → heading, `- ` → list) and list handling. The source-of-truth logic
-lives in `projection/`, which is plain ProseMirror and knows nothing about Tiptap:
+lives in `hosts/projection/`, a module of its own (the Visual view host builds on it, specs are written against its
+types), which is plain ProseMirror and knows nothing about Tiptap:
 
 ```
  text ──typstParser (Lezer)──► CST ──project(text, schema)──► PM doc   (nodes carry attrs.src / attrs.sep)
@@ -743,11 +763,12 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
   collaboration extension's, drawn through the generic points (highlights, an editor extension, a box code
   extension, the context's position map). Every other
   construct (headings, lists, tables, …) is an extension (`extensions/<name>/visual-view/`) and every
-  feature shown in the view (labels, comments, styles, …) a contribution of its extension, using only the contribution API the host's entry exports (the contribution types, the
-  `projection/` toolkit, `starterKitPart`; and for tests `project` / `print` / `syncDoc` / `posToSource` /
-  `sourceToPos`, and `testing/` for the built-ins together). The widget's built-in extension list activates them (see
+  feature shown in the view (labels, comments, styles, …) a contribution of its extension, using only the entries: the Visual view's (the contribution types, `starterKitPart`, `createSchema`), the
+  projection's (the spec contract: `ProjectionContext`, `Call`, `Placed`, `Printer`, …; and for tests `project` /
+  `print` / `syncDoc` / `posToSource` / `sourceToPos`), core's `typst-syntax` (reading syntax nodes), and
+  `testing/` for the built-ins together). The widget's built-in extension list activates them (see
   "createTypstEditor"); `VisualViewOptions` is gone.
-- **Specs** (`TypstNodeSpec` / `TypstMarkSpec`, `projection/grammar.ts`): one per construct —
+- **Specs** (`TypstNodeSpec` / `TypstMarkSpec`; their `NodeGrammar` / `MarkGrammar` in `projection/projection.ts`): one per construct —
   `name`, its Tiptap `extension` (schema, node view, commands, keymap, input rules), `attributes`
   the host adds (source anchors like `src`, `sep`, `marker`, `layout`), `anchors` (compared like
   `src` / `sep` by `syncDoc`), `keepsDom`, `labelled`, `box` (`'code'`: the host's raw box node
@@ -791,7 +812,7 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
     resizable); cells hold blocks. `table.layout` (an anchor attribute) is the source around the
     cells plus the table's `TableStyle` (how its rows are written). A cell written as an
     expression (`ms(18)`) holds one paragraph with one `rawInline` whose `code` attribute is set:
-    its `src` is code, without `#` (`embedded-code.ts`).
+    its `src` is code, without `#` (`isEmbeddable` in core's typst-syntax).
   - `taskList` > `taskItem` (Tiptap's, `checked`; one paragraph, not nested; `extensions/lists/`).
   - `blockquote` (Tiptap's; holds blocks; `layout` is the source around its content).
   - `pageBreak`, `horizontalRule` (atom blocks keeping their call as `src`, shown as a labelled
@@ -941,7 +962,7 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
   shows): **Selection** (`selection`, 10: bold, italic, code (Mod+E), link, comment) above a text
   selection or where an item asks for it (`Action.showsBar`: a link holding the cursor) — the
   only place of the mark buttons —, and **Table** (`table`, 20: add/delete row/column, header
-  row) above a table holding the cursor. Entries are `Action`s (`contributions/toolbar-items.ts`):
+  row) above a table holding the cursor. Entries are `Action`s (`visual-view.ts`):
   Tiptap chain commands; after every transaction the buttons show `aria-pressed` and are
   disabled when `editor.can()` (or the action's own `enabled`) says no.
   Mousedown is cancelled, so the text keeps focus and selection.
@@ -1918,7 +1939,7 @@ an in-memory `FakeGitLab` holding `demo/examples/advanced`). Checklist with step
 |---|---|
 | `mise run build:engine` | `cargo build --target wasm32-unknown-unknown --release` + `wasm-bindgen --target web` + `wasm-opt -Oz --strip-debug` → `src/core/typst-engine/wasm/`, prints raw/gzip/brotli size (skipped when the Rust sources are unchanged) |
 | `mise run build:fonts` | default fonts from the pinned typst-assets crate → `src/core/typst-engine/fonts/` |
-| `mise run fixtures:packages` | packs every test package `src/**/fixtures/<name>-<version>/` into `.tar.gz` (committed); each lives next to the tests using it: greet (`core/typst-engine/packages/`), drafting (`extensions/comments/model/`), cheq (`extensions/lists/model/`, `cheq.test.ts`) |
+| `mise run fixtures:packages` | packs every test package `src/**/fixtures/<name>-<version>/` into `.tar.gz` (committed); each lives next to the tests using it: greet (`core/typst-packages/`), drafting (`extensions/comments/model/`), cheq (`extensions/lists/model/`, `cheq.test.ts`) |
 | `mise run demo` | the playground: Vite (127.0.0.1:5199) + collaboration server with the in-memory fake GitLab (ws://127.0.0.1:1234); Ctrl-C stops both. Feature checklist: [docs/demo-playground.md](docs/demo-playground.md) |
 | `mise run dev` | Vite dev server for `demo/` on 127.0.0.1:5199 (Local mode needs nothing else) |
 | `mise run build` | engine + typecheck + static demo build → `dist/demo` |

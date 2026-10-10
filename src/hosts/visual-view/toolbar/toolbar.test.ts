@@ -3,7 +3,8 @@
 // items are tested together in typst-editor/typst-editor.toolbar.test.ts.
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { children, starterKitPart, svg, VisualView, VisualViewContributions, type TypstMarkSpec, type VisualViewContribution } from '../visual-view';
+import { children } from '../../../core/typst-syntax/typst-syntax';
+import { starterKitPart, svg, VisualView, VisualViewContributions, type TypstMarkSpec, type VisualViewContribution } from '../visual-view';
 
 /** `*x*` as a bold mark, and a "Bold" button for it in a group of its own. */
 const STRONG: TypstMarkSpec = {

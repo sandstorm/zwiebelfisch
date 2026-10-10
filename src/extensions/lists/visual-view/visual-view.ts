@@ -4,9 +4,9 @@ import { BulletList, ListItem, ListKeymap, OrderedList } from '@tiptap/extension
 import { Extension } from '@tiptap/core';
 import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
-import {
-  children, svg, type Action, type BlockPrinter, type ProjectionContext, type TypstNodeSpec,
-} from '../../../hosts/visual-view/visual-view';
+import { children } from '../../../core/typst-syntax/typst-syntax';
+import { svg, type Action, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import type { BlockPrinter, ProjectionContext } from '../../../hosts/projection/projection';
 
 /** A list item's first child may be verbatim Typst (an item whose body the Visual view cannot model). */
 const TypstListItem = ListItem.extend({ content: '(paragraph | rawBlock) block*' });

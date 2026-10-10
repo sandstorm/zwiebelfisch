@@ -1,7 +1,7 @@
 // End-to-end tests (Playwright, against the plain-HTML example, so inside <typst-editor>'s shadow root): a
 // spreadsheet (.ic) edited in IronCalc's workbook UI, imported by Typst through its generated Typst file.
-import type { Page } from '@playwright/test';
-import { test, expect, fileRow } from './fixtures';
+import { expect, type Page } from '@playwright/test';
+import { test, fileRow } from './fixtures';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 

@@ -1,6 +1,6 @@
 // End-to-end tests (Playwright, against the demo build): GitLab-backed rooms (needs the fake GitLab server: mise run test:e2e-gitlab).
-import type { Browser, Page } from '@playwright/test';
-import { expect, fileRow, openFile, serve, test } from './fixtures';
+import { expect, type Browser, type Page } from '@playwright/test';
+import { fileRow, openFile, serve, test } from './fixtures';
 
 // A room backed by a (fake, in-memory) GitLab branch. Needs the server with
 // the fake GitLab: run through `mise run test:e2e-gitlab`, which starts it
