@@ -17,6 +17,19 @@ function setup(files: Record<string, string> = {}) {
 }
 
 describe('StyleIndex', () => {
+  it('collects the styles of every Typst file, with the file they are declared in, in the project\'s order', () => {
+    const project = new Project(path('/main.typ'), {
+      '/main.typ': '= Doc\n',
+      '/styles.typ': STYLES,
+      '/more/terms.typ': '/// @style text Term\n#let term(body) = emph(body)\n',
+      '/logo.png': new Uint8Array([1]),
+    });
+    expect(new StyleIndex(project).styles().map((s) => [s.name, s.path])).toEqual([
+      ['term', '/more/terms.typ'],
+      ['note', '/styles.typ'],
+    ]);
+  });
+
   it('lists the project styles and tells listeners when the list changes, not on every edit', () => {
     const { project, index } = setup();
     expect(index.styles()).toEqual([{ name: 'note', kind: 'paragraph', label: 'Note', path: path('/styles.typ') }]);

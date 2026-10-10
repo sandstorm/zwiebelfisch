@@ -24,7 +24,7 @@ export function newStyle(text: string, label = 'New style'): { text: string; fro
 }
 
 /** A Typst function name for a style called `label`: its words in lower case joined by `-`, starting with a letter. */
-export function styleName(label: string): string {
+function styleName(label: string): string {
   const words = label.trim().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '');
   return /^\p{L}/u.test(words) ? words : `style${words ? `-${words}` : ''}`;
 }

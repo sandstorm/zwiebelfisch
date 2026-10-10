@@ -1,8 +1,7 @@
 // Style discovery: the functions a Typst file declares as paragraph or text styles (`/// @style …`). See ../styles.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
-import { ProjectPath } from '../../../core/paths/paths';
-import type { ProjectFiles } from '../../../core/project/project';
+import type { ProjectPath } from '../../../core/paths/paths';
 
 /** Wraps blocks (`#note[..]` around paragraphs) or inline text (`#key[..]` in a sentence). */
 export type StyleKind = 'paragraph' | 'text';
@@ -48,14 +47,6 @@ function nextDeclaration(text: string, node: SyntaxNode, declared: Declaration |
     return match ? { kind: match[1] as StyleKind, label: match[2].trim() } : declared;
   }
   return node.name === 'Hash' || node.name === 'Space' ? declared : null;
-}
-
-/** The styles declared in the project's Typst files, by file in the project's order. */
-export function discoverStyles(files: ProjectFiles): Style[] {
-  return Object.entries(files).flatMap(([key, content]) => {
-    const path = ProjectPath.parse(key);
-    return path && path.endsWith('.typ') && typeof content === 'string' ? scanStyles(content).map((style) => ({ ...style, path })) : [];
-  });
 }
 
 /** The name of a `let name(body, named: ..) = …` binding, if it has exactly one positional parameter. */

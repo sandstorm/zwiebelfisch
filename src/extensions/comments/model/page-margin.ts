@@ -2,6 +2,7 @@
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import type { TextChange } from '../../../core/typst-document/typst-document';
+import { children } from '../../../core/typst-syntax/typst-syntax';
 
 /**
  * Page margins that `drafting` 0.2.2 can place notes in.
@@ -103,10 +104,4 @@ function name(text: string, node: SyntaxNode): string {
 
 function slice(text: string, node: SyntaxNode): string {
   return text.slice(node.from, node.to);
-}
-
-function children(node: SyntaxNode): SyntaxNode[] {
-  const result: SyntaxNode[] = [];
-  for (let child = node.firstChild; child; child = child.nextSibling) result.push(child);
-  return result;
 }

@@ -1,6 +1,6 @@
 // Tests for discover.ts.
 import { describe, expect, it } from 'vitest';
-import { discoverStyles, scanStyles } from './discover';
+import { scanStyles } from './discover';
 
 const STYLES = `/// The house styles.
 
@@ -46,22 +46,5 @@ describe('scanStyles', () => {
       '#let value = 1',
     ].join('\n');
     expect(scanStyles(text)).toEqual([]);
-  });
-});
-
-describe('discoverStyles', () => {
-  it('collects the styles of every Typst file, with the file they are declared in', () => {
-    const files = {
-      '/main.typ': '= Doc\n',
-      '/styles.typ': STYLES,
-      '/more/terms.typ': '/// @style text Term\n#let term(body) = emph(body)\n',
-      '/logo.png': new Uint8Array([1]),
-    };
-    expect(discoverStyles(files).map((s) => [s.name, s.path])).toEqual([
-      ['note', '/styles.typ'],
-      ['key', '/styles.typ'],
-      ['callout', '/styles.typ'],
-      ['term', '/more/terms.typ'],
-    ]);
   });
 });

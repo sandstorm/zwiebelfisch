@@ -4,11 +4,10 @@ import { EventEmitter, type Event } from '../../../core/event-emitter/event-emit
 import { ProjectPath } from '../../../core/paths/paths';
 import type { FileChange, Project } from '../../../core/project/project';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
-import { calculateReferenceRenames, scanBibliography, scanTypst, type FoundLabel, type LabelKind, type Scan } from './scan';
+import { calculateReferenceRenames, scanBibliography, scanTypst, type FoundLabel, type Scan } from './scan';
 
 /** A label of the project: its name, what it labels (null: something else), that element's title, and its file. */
 export interface LabelInfo extends FoundLabel {
-  kind: LabelKind | null;
   path: ProjectPath;
 }
 
