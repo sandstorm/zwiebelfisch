@@ -1,3 +1,4 @@
+import type { CollaborationOptions } from '../collab/collaboration';
 import { Comments } from '../comments/comments';
 import { CommentsUI } from '../comments/comments-ui';
 import type { Diagnostic } from '../engine/engine';
@@ -5,6 +6,7 @@ import { Preview } from '../preview/preview';
 import proseMirrorStyles from '../visual-view/prosemirror.css?inline';
 import { AssetView } from './asset-view';
 import { ChangeTracking } from './change-tracking';
+import { CollaborationLink } from './collaboration-link';
 import changeStyles from './changes.css?inline';
 import { DiagnosticsStatus } from './diagnostics-status';
 import { summarizeDiagnostics } from './diagnostics-summary';
@@ -15,6 +17,7 @@ import { referencePath } from './paths';
 import { Project, type FileChange, type ProjectFiles } from './project';
 import styles from './styles.css?inline';
 
+export type { CollaborationOptions } from '../collab/collaboration';
 export type { EditorMode } from './editing-views';
 export type { FileChange, ProjectFiles } from './project';
 
@@ -56,8 +59,16 @@ export interface TypstEditorOptions {
    * edits move their anchors. Persist it to keep the comments.
    */
   onCommentsChange?(comments: string): void;
-  /** Who writes the comments made here. */
-  user?: { name: string };
+  /** Who works here: the author of comments, and the name (and cursor color) others see when collaborating. */
+  user?: { name: string; color?: string };
+  /**
+   * Real-time collaboration on the project's Typst files and the review
+   * comments: `{ url, room, token? }` connects to a Hocuspocus server (the
+   * room's text wins over `source` / `files` once synced; a new room is seeded
+   * with them), or `{ doc, awareness? }` shares through a Y.Doc the host has
+   * connected (and synced) itself. Images and other files are not shared.
+   */
+  collaboration?: CollaborationOptions;
   /**
    * An earlier version of the main file (last saved, last commit) to show the
    * changes against: inline diff in the Source view, track changes in the
@@ -147,6 +158,7 @@ class Widget {
   readonly comments: Comments;
   private readonly review: CommentsUI;
   readonly changes: ChangeTracking;
+  private readonly collaboration: CollaborationLink | null = null;
   private readonly unsubscribe: () => void;
 
   constructor(
@@ -187,6 +199,10 @@ class Widget {
     this.open(main);
     [this.comments, this.review] = this.mountComments();
     this.changes = this.mountChanges();
+    if (options.collaboration) {
+      this.collaboration = this.mountCollaboration(options.collaboration);
+      this.showCursors();
+    }
     this.refresh();
   }
 
@@ -201,6 +217,7 @@ class Widget {
       this.assets.show(path, this.project.content(path)!, this.lastSource);
     }
     this.views.show(document ?? null);
+    this.showCursors();
     this.renderFiles();
     this.showStatus();
   }
@@ -238,8 +255,26 @@ class Widget {
     );
   }
 
+  /** Shares the project and the comments; the others' cursors show in the shown file's views. */
+  private mountCollaboration(options: CollaborationOptions): CollaborationLink {
+    const shared = { project: this.project, comments: this.comments, user: this.options.user };
+    return new CollaborationLink(options, shared, this.left, () => {
+      const document = this.project.document(this.active);
+      if (!document) return null;
+      const views = this.views.viewsOf(document);
+      return { path: this.active, view: this.views.mode === 'visual' ? views.visual : views.source };
+    });
+  }
+
+  private showCursors(): void {
+    const document = this.project.document(this.active);
+    const views = document ? this.views.viewsOf(document) : null;
+    this.collaboration?.show(views ? this.active : null, views ? [views.visual, views.source] : []);
+  }
+
   replaceFiles(files: ProjectFiles): void {
     this.project.replace(files);
+    this.collaboration?.sync();
     this.views.retain(this.documents());
     this.open(this.project.has(this.active) ? this.active : this.project.main);
     if (!this.project.has(this.lastSource)) this.lastSource = this.project.main;
@@ -248,6 +283,7 @@ class Widget {
 
   destroy(): void {
     this.unsubscribe();
+    this.collaboration?.destroy();
     this.changes.destroy();
     this.review.destroy();
     this.comments.destroy();

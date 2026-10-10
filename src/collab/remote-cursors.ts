@@ -108,17 +108,23 @@ export class RemoteCursors {
     const content = text.toString();
     const result: Highlight[] = [];
     this.awareness.getStates().forEach((state, client) => {
-      const cursor = state.cursor as CursorState | null | undefined;
-      if (client === this.awareness.clientID || cursor?.path !== this.path) return;
-      const anchor = this.resolve(cursor.anchor, text);
-      const head = this.resolve(cursor.head, text);
-      if (anchor === null || head === null) return;
-      const user = state.user as CollaborationUser | undefined;
-      const attributes = { 'data-user': user?.name ?? '', style: `--typst-remote-color: ${user?.color ?? PALETTE[0]}` };
-      if (anchor !== head) result.push({ from: Math.min(anchor, head), to: Math.max(anchor, head), className: 'typst-remote-selection', attributes });
-      const caret = caretAt(content, head);
-      if (caret) result.push({ ...caret, attributes });
+      if (client !== this.awareness.clientID) result.push(...this.highlightsOf(state, text, content));
     });
+    return result;
+  }
+
+  /** One user's selection (if not empty) and caret, if they are in the shown file. */
+  private highlightsOf(state: Record<string, unknown>, text: Y.Text, content: string): Highlight[] {
+    const cursor = state.cursor as CursorState | null | undefined;
+    if (cursor?.path !== this.path) return [];
+    const anchor = this.resolve(cursor.anchor, text);
+    const head = this.resolve(cursor.head, text);
+    if (anchor === null || head === null) return [];
+    const attributes = userAttributes(state.user as CollaborationUser | undefined);
+    const result: Highlight[] = [];
+    if (anchor !== head) result.push({ from: Math.min(anchor, head), to: Math.max(anchor, head), className: 'typst-remote-selection', attributes });
+    const caret = caretAt(content, head);
+    if (caret) result.push({ ...caret, attributes });
     return result;
   }
 
@@ -141,6 +147,11 @@ function caretAt(text: string, offset: number): Highlight | null {
     return { from: offset - 1, to: offset, className: 'typst-remote-cursor typst-remote-cursor--end' };
   }
   return null;
+}
+
+/** Who a highlight belongs to: the name (for the caret label) and the color, on the marked DOM. */
+function userAttributes(user: CollaborationUser | undefined): Record<string, string> {
+  return { 'data-user': user?.name ?? '', style: `--typst-remote-color: ${user?.color ?? PALETTE[0]}` };
 }
 
 /** A stable color for a user without one. */
