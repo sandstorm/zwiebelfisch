@@ -129,6 +129,11 @@ editor.activeFile;              // '/chapters/intro.typ'
 editor.open('/logo.png');
 ```
 
+`onOpen(path)` (on `<typst-editor>`: the `open` event, `detail.path`) reports when another file is
+shown, e.g. to keep it in the page URL. The demo stores it in the fragment (`#/chapters/intro.typ`,
+`demo/open-file-hash.ts`). `followCursor: false` starts the preview without following the cursor.
+The viewer can switch "Follow cursor" in the preview toolbar, and the choice is remembered in localStorage.
+
 `onFilesChange` also reports every edit of a `.typ` file (`kind: 'update'`, with the full text).
 `editor.files` returns all files but the main one, with their current text.
 

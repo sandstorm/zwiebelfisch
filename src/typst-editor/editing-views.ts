@@ -8,7 +8,7 @@ export type EditorMode = 'visual' | 'source';
 export interface EditingViewsOptions {
   /** The editing view shown first (default: visual). */
   mode?: EditorMode;
-  /** The cursor moved in the source view of `document`. */
+  /** The cursor moved in a view of `document` the user works in (focused). */
   onCursor?(document: TypstDocument, offset: number): void;
   /** The selection in a view of `document` moved, or its text changed (the views already show the new selection). */
   onSelection?(document: TypstDocument): void;
@@ -142,7 +142,11 @@ export class EditingViews {
       panes,
       visual: new VisualView(panes.visual, document, {
         ...this.options.visualOptions?.(document),
-        onSelection: () => this.options.onSelection?.(document),
+        onSelection: () => {
+          // like the source view's onCursor: where the user works, for the preview to follow
+          if (views.visual.focused()) this.options.onCursor?.(document, views.visual.selection().from);
+          this.options.onSelection?.(document);
+        },
       }),
       source: new SourceView(panes.source, document, {
         onCursor: (offset) => {

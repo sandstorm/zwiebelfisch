@@ -105,6 +105,11 @@ export class VisualView implements PresenceTarget {
   }
 
   /** The source range shown by the selection. */
+  /** Whether the user works in this view (it has focus). */
+  focused(): boolean {
+    return this.editor.view.hasFocus();
+  }
+
   selection(): { from: number; to: number } {
     const { doc, selection } = this.editor.state;
     const from = posToSource(doc, selection.from);

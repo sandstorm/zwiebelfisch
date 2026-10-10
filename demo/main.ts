@@ -4,6 +4,7 @@
 // server (`mise run demo`), `&user=<name>`. Without `room` (Local mode, the
 // default and what the static e2e build uses) it never talks to a server.
 import { createTypstEditor } from '../src';
+import { OpenFileHash } from './open-file-hash';
 import { editorOptions, playgroundFromQuery, userQuery } from './playground';
 import { renderPlaygroundBar } from './playground-bar';
 import { probeServer, simulateUpstream } from './server-status';
@@ -27,7 +28,14 @@ async function start(): Promise<void> {
   // Local mode does not wait for anything: the editor exists synchronously, as before.
   const server = state.mode === 'local' ? null : await probeServer();
   if (server) bar.setServer(server);
-  const editor = createTypstEditor(document.getElementById('editor')!, { ...editorOptions(state, server), user: { name: state.user } });
+  const hash = new OpenFileHash();
+  const editor = createTypstEditor(document.getElementById('editor')!, {
+    ...editorOptions(state, server),
+    user: { name: state.user },
+    onOpen: (path) => hash.opened(path),
+    onFilesChange: () => hash.filesChanged(),
+  });
+  hash.attach(editor);
   Object.assign(window, { editor });
   if (server) watchServer(server !== 'offline');
 }

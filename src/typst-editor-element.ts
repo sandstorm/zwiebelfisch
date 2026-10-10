@@ -88,6 +88,7 @@ export class TypstEditorElement extends Base {
       base: this.#base ?? undefined,
       onChange: (value) => this.#changed(value),
       onFilesChange: (change) => this.#filesChanged(change),
+      onOpen: (path) => this.dispatchEvent(new CustomEvent('open', { detail: { path }, bubbles: true, composed: true })),
       user: this.user,
       collaboration: this.collaboration,
     });

@@ -47,6 +47,13 @@ export interface TypstEditorOptions {
   onFilesChange?(change: FileChange): void;
   /** Called whenever the main file's text changes. */
   onChange?(source: string): void;
+  /** Called when another file is shown in the editing area (e.g. to put it into the page URL). */
+  onOpen?(path: string): void;
+  /**
+   * Whether the preview starts following the cursor ("Follow cursor": it scrolls to the text being
+   * edited or selected). Default: what this viewer chose last (remembered in localStorage), else on.
+   */
+  followCursor?: boolean;
   /** Who works here: the name (and cursor color) others see when collaborating, and who saves versions. */
   user?: { name: string; color?: string };
   /**
@@ -164,6 +171,8 @@ class Widget {
     this.preview = new Preview(this.right, {
       onJump: (jump) => this.jump(jump),
       onDiagnostics: (diagnostics) => this.showDiagnostics(diagnostics),
+      follow: options.followCursor ?? rememberedFollow() ?? true,
+      onFollowChange: rememberFollow,
     });
     this.renderings = new ProjectRenderings({ project: this.project, preview: this.preview, request: (change) => this.request(change) });
     this.views = new EditingViews(this.left, {
@@ -200,6 +209,7 @@ class Widget {
 
   open(path: string): void {
     if (!this.project.has(path)) return;
+    const changed = path !== this.active;
     this.active = path;
     const document = this.project.document(path);
     if (document) {
@@ -212,6 +222,7 @@ class Widget {
     this.showCursors();
     this.renderFiles();
     this.showStatus();
+    if (changed) this.options.onOpen?.(path);
   }
 
   /** "Show changes" for the main file: against `options.base`, in both of its views and the preview. */
@@ -382,4 +393,24 @@ function injectStyles(host: HTMLElement): void {
   style.id = STYLE_ID;
   style.textContent = proseMirrorStyles + styles + changeStyles;
   target.append(style);
+}
+
+const FOLLOW_KEY = 'typst-editor:follow-cursor';
+
+/** The viewer's last "Follow cursor" choice, if storage has one (storage may be unavailable). */
+function rememberedFollow(): boolean | null {
+  try {
+    const stored = localStorage.getItem(FOLLOW_KEY);
+    return stored === null ? null : stored === 'true';
+  } catch {
+    return null;
+  }
+}
+
+function rememberFollow(on: boolean): void {
+  try {
+    localStorage.setItem(FOLLOW_KEY, String(on));
+  } catch {
+    // private window, blocked storage: the choice lasts for this page only
+  }
 }

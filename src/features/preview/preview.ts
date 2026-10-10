@@ -19,6 +19,10 @@ export interface PreviewOptions {
    * always match the text that was last given.
    */
   onDiagnostics?(diagnostics: Diagnostic[]): void;
+  /** Whether the preview starts following the cursor (`reveal`), default true; the toolbar toggles it. */
+  follow?: boolean;
+  /** Called when the user switches "Follow cursor" on or off (e.g. to remember it). */
+  onFollowChange?(on: boolean): void;
 }
 
 type RequestBody = Request extends infer R ? (R extends Request ? Omit<R, 'id'> : never) : never;
@@ -59,6 +63,9 @@ export class Preview {
   /** The files and pages of the last successful compilation. */
   private compiled: { files: Record<string, FileContent>; pages: Page[] } = { files: {}, pages: [] };
   private readonly renderListeners = new Set<() => void>();
+  private following: boolean;
+  /** The newest place asked for, also while not following: switching following on goes there. */
+  private lastReveal: Reveal | null = null;
 
   constructor(
     private readonly container: HTMLElement,
@@ -69,7 +76,14 @@ export class Preview {
     this.scroller = div(doc, 'typst-preview__scroller');
     this.pages = div(doc, 'typst-preview');
     this.pages.dataset.testid = 'typst-preview';
-    this.toolbar = new PreviewToolbar(doc, (request) => this.setZoom(request));
+    this.following = options.follow ?? true;
+    this.toolbar = new PreviewToolbar(doc, (request) => this.setZoom(request), {
+      on: this.following,
+      onChange: (on) => {
+        this.setFollow(on);
+        this.options.onFollowChange?.(on);
+      },
+    });
     this.list = new PageList(this.pages, { root: this.scroller });
     this.scroller.append(this.pages);
     this.pane.append(this.toolbar.element, this.scroller);
@@ -108,10 +122,19 @@ export class Preview {
   /**
    * Flashes where the text at `offset` in `path` appears, scrolling there only
    * if it is off-screen. Cheap to call on every cursor move: calls are
-   * throttled and only the newest is looked up.
+   * throttled and only the newest is looked up. Does nothing while
+   * "Follow cursor" is off (until it is switched on again).
    */
   reveal(path: string, offset: number): void {
-    this.reveals.push({ path, offset });
+    this.lastReveal = { path, offset };
+    if (this.following) this.reveals.push(this.lastReveal);
+  }
+
+  /** Switches "Follow cursor" on or off; switching it on shows the newest place asked for. */
+  setFollow(on: boolean): void {
+    this.following = on;
+    this.toolbar.showFollow(on);
+    if (on && this.lastReveal) this.reveals.push(this.lastReveal);
   }
 
   /**

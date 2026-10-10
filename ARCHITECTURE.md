@@ -127,7 +127,7 @@ createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileCha
                            user?, base?, collaboration? })
   → { source (get/set), files (get/set), activeFile, open(path), setBase(base), destroy() }
 <typst-editor value="…" file-list="auto|show|hide">   .value, .files, .user, .collaboration, setBase(base);
-  'change' {detail:{value}}, 'files-change' {detail: FileChange}
+  'change' {detail:{value}}, 'files-change' {detail: FileChange}, 'open' {detail:{path}}
 ```
 
 - `source` is the text of the main file at `main` (default `/main.typ`; falls back to
@@ -542,7 +542,8 @@ new SourceView(parent, document, { onCursor?, onBaseChange? })
 ```ts
 new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scrolling page area into container
 .update(files: Record<path, text | Uint8Array>, main)    // cheap per keystroke
-.reveal(path, offset)                        // cheap per cursor move: flash, scroll only if off-screen
+.reveal(path, offset)                        // cheap per cursor move: flash, scroll only if off-screen; nothing while not following
+.setFollow(on)                               // "Follow cursor" (toolbar toggle; options follow / onFollowChange); on → goes to the newest reveal
 .showChanges(path, ranges | null)            // change bars in the page margin, redrawn after every compile
 .snippet(path, from, to, text) → Promise<{svg, width, height} | null>   // the range as drawn, cut from its page
 .onRender(listener) → unsubscribe            // after every successful compile
