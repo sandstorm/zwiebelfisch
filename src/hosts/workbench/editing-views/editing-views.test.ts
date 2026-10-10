@@ -110,15 +110,12 @@ describe('EditingViews selection reports', () => {
     const parent = document.createElement('div');
     document.body.append(parent);
     const seen: { from: number; to: number }[] = [];
-    const doc = new TypstDocument('Hello world\n');
-    const views = new EditingViews(parent, { onSelection: (editor) => seen.push(views.viewsOf(editor.document).visual.selection()) });
-    views.show(doc);
-    const { visual, source } = views.viewsOf(doc);
-    visual.reveal(6, 11);
+    const views = new EditingViews(parent, { onSelection: (editor) => seen.push(editor.selection) });
+    views.show(new TypstDocument('Hello world\n'));
+    views.activeTextEditor!.revealRange(6, 11);
     expect(seen.at(-1)).toEqual({ from: 6, to: 11 });
-    const before = seen.length;
-    source.reveal(0, 5);
-    expect(seen.length).toBeGreaterThan(before);
+    views.reveal(0, 5, 'source');
+    expect(seen.at(-1)).toEqual({ from: 0, to: 5 });
   });
 });
 

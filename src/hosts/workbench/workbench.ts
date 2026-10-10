@@ -845,7 +845,7 @@ export class WorkbenchHost implements Workbench {
   }
 
   get activeTextEditor(): TextEditor | null {
-    return this.#views.activeEditor();
+    return this.#views.activeTextEditor;
   }
 
   isEditorFocused(): boolean {
