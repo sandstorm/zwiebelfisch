@@ -18,6 +18,14 @@ export {
   type GutterProvider, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem, type TypstMarkSpec,
   type TypstNodeSpec, type VisualViewContext, type VisualViewContribution,
 } from './contributions/contributions';
+// the toolkit specs' projectors and printers use (see projection/grammar.ts)
+export {
+  children, decodeString, isClosedContent, isEmbeddable, parenthesized, quote, type Around, type BlockCallProjector, type BlockLabel,
+  type BlockPrinter, type BlockSyntaxProjector, type Call, type InlineCallProjector, type InlineProjector, type Placed, type Printer,
+  type ProjectionContext, type RunProjector,
+} from './projection/projection';
+export { starterKitPart } from './nodes/nodes';
+// the built-in contributions, until extensions/ takes them over
 export { builtins, type Builtins, type BuiltinOptions, type ImageAssets, type Renderings, type Snippet } from './builtins/builtins';
 
 /** Marks transactions that mirror a document change, so they are not written back. */

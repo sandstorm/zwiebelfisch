@@ -41,7 +41,9 @@ export interface ToolbarControl {
  * A place for toolbar items: a group of buttons in the toolbar row, a menu
  * button there ("Insert ▾", its icon following the selection), or a bar
  * floating in the text above its anchor. The row is sorted by `order`; of the
- * floating bars, only the first (by `order`) with an anchor shows.
+ * floating bars, only the first (by `order`) with an anchor shows. The host's
+ * own: `history` (undo/redo, order 10), the `insert` menu ("Insert", 50) and
+ * the `selection` bar (above a text selection, 10).
  */
 export type ToolbarGroup =
   | { readonly kind: 'group'; readonly id: string; readonly order: number }
