@@ -56,7 +56,7 @@ src/                        the widget (TypeScript); the most important API on t
                             latest-only.ts ("only the newest value" task runner)
       worker/               worker.ts (startEngineWorker, main-thread side), engine.worker.ts (the worker),
                             protocol.ts (messages), project-files.ts (FileSender/FileReceiver)
-      pages/                page-list (SVG only near the viewport), overlays, geometry, zoom, snippet
+      pages/                page-list (SVG only near the viewport), overlays, geometry, snippet
   stylesheets.test.ts       every .css under src/ parses (lightningcss, no error recovery), no nested style rules,
                             every block closed (an unclosed rule silently nests the rest of the file),
                             hex colors only in the color tokens (dark mode)
