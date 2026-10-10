@@ -45,6 +45,7 @@ export function images(): TypstExtension {
           },
           open: (target) => workbench.open(target),
         }),
+        prompts: workbench,
       }).activate(context);
     },
   };

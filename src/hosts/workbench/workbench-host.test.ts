@@ -81,7 +81,7 @@ describe('WorkbenchHost', () => {
     expect(workbench.activeFile).toBe('/main.typ');
   });
 
-  it('puts side panels, status bar items and tab bar items into the frame, and takes them out on destroy', () => {
+  it('puts side panels and status bar items into the frame, and takes them out on destroy', () => {
     const { host, workbench } = setup(({ workbench, subscriptions }) => {
       const doc = workbench.ownerDocument;
       const panel = workbench.registerSidePanel('outline', { label: 'Outline', icon: doc.createElement('span') });
@@ -89,17 +89,73 @@ describe('WorkbenchHost', () => {
       panel.setDefault(true);
       const status = doc.createElement('span');
       status.textContent = 'status';
-      const action = doc.createElement('button');
-      action.textContent = 'action';
-      subscriptions.push(panel, workbench.registerStatusBarItem(status), workbench.registerTabBarItem(action, { mode: 'visual' }));
+      subscriptions.push(panel, workbench.registerStatusBarItem(status));
     });
     expect(host.querySelector('[data-panel=outline]')!.textContent).toBe('outline');
     expect(host.querySelector('.typst-editor__status-bar')!.textContent).toBe('status');
-    const action = host.querySelector<HTMLElement>('.typst-editor__tabs button:not([role=tab])')!;
-    expect(action.hidden).toBe(true); // a Visual-only action, in the Source tab
     workbench.destroy();
     expect(host.children).toHaveLength(0);
-    expect(action.isConnected).toBe(false);
+  });
+
+  it("shows the editor/title menu in the tab bar: the entries whose `when` holds for the tab and file, in order; a click runs the command", () => {
+    const ran: string[] = [];
+    const later = { registration: new Disposable(() => {}) };
+    const { host, workbench } = setup(({ workbench, subscriptions }) => {
+      const register = (id: string) => workbench.registerCommand(id, () => ran.push(id));
+      subscriptions.push(
+        register('test.always'),
+        register('test.visual'),
+        register('test.other'),
+        workbench.registerMenuItem('editor/title', { command: 'test.visual', title: 'Visual only', when: (context) => context.editorMode === 'visual' }),
+        workbench.registerMenuItem('editor/title', { command: 'test.always', title: 'Always', group: 'navigation', icon: '<svg></svg>' }),
+        workbench.registerMenuItem('editor/title', { command: 'test.other', title: 'In a.typ', when: (context) => context.resource === '/a.typ' }),
+      );
+      later.registration = workbench.registerMenuItem('editor/title', { command: 'test.later', title: 'Later', order: -1 });
+    });
+    const actions = () => [...host.querySelectorAll<HTMLButtonElement>('[role=toolbar][aria-label="Editor actions"] button')];
+    expect(actions().map((button) => button.textContent)).toEqual(['Always', 'Later']); // the Source tab, /main.typ
+    expect(actions()[0].querySelector('svg')).not.toBeNull();
+    [...host.querySelectorAll<HTMLElement>('[role=tab]')].find((tab) => tab.textContent === 'Visual')!.click();
+    workbench.open(path('/a.typ'));
+    expect(actions().map((button) => button.textContent)).toEqual(['Always', 'Later', 'Visual only', 'In a.typ']);
+    later.registration.dispose();
+    expect(actions().map((button) => button.textContent)).toEqual(['Always', 'Visual only', 'In a.typ']);
+    actions()[1].click();
+    expect(ran).toEqual(['test.visual']);
+    const press = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    actions()[0].dispatchEvent(press);
+    expect(press.defaultPrevented).toBe(true); // the editor keeps its selection
+  });
+
+  it('gives extensions the menus registered for any id, sorted (navigation first, then groups by name, then order)', () => {
+    const { workbench } = setup(({ workbench, subscriptions }) => {
+      for (const [title, group, order] of [['c', 'b', 0], ['b', 'a', 2], ['a', 'a', 1], ['n', 'navigation', 9]] as const) {
+        subscriptions.push(workbench.registerMenuItem('test/menu', { command: `test.${title}`, title, group, order, when: (context) => context.show !== false }));
+      }
+    });
+    expect(workbench.getMenuItems('test/menu').map((item) => item.title)).toEqual(['n', 'a', 'b', 'c']);
+    expect(workbench.getMenuItems('test/menu', { show: false })).toEqual([]);
+    expect(workbench.getMenuItems('other/menu')).toEqual([]);
+  });
+
+  it('shows messages, resolving to the item chosen', async () => {
+    const { host, workbench } = setup();
+    const answer = workbench.showWarningMessage('Delete a.typ?', 'Delete');
+    const message = host.querySelector<HTMLElement>('[data-testid=typst-notifications] [role=alert]')!;
+    expect(message.textContent).toContain('Delete a.typ?');
+    message.querySelector<HTMLButtonElement>('.typst-notification__item')!.click();
+    expect(await answer).toBe('Delete');
+    expect(message.isConnected).toBe(false);
+  });
+
+  it('asks for text in an input box', async () => {
+    const { host, workbench } = setup();
+    const answer = workbench.showInputBox({ title: 'Rename', prompt: 'New name', value: 'a.typ' });
+    const form = host.querySelector<HTMLFormElement>('form[aria-label="Rename"]')!;
+    form.querySelector('input')!.value = 'b.typ';
+    form.requestSubmit();
+    expect(await answer).toBe('b.typ');
+    expect(form.isConnected).toBe(false);
   });
 
   it('refuses a second side panel with the same id, and a second editor frame', () => {

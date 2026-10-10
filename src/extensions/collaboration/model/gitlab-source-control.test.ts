@@ -29,31 +29,31 @@ describe('GitLabSourceControl', () => {
     expect(GitLabSourceControl.isGitLabRoom(ydoc)).toBe(true);
   });
 
-  it('commits as its author, busy until the server answers, which becomes the status', () => {
+  it('commits as its author, busy until the server answers, whose answer becomes the status', () => {
     const { sent, receive, sourceControl, changes } = setup();
     expect(sourceControl).toMatchObject({ id: 'gitlab', label: 'GitLab', defaultCommitMessage: 'Edit via Typst editor' });
     sourceControl.commit('Fix typo');
     expect(JSON.parse(sent[0])).toEqual({ type: 'gitlab:save', message: 'Fix typo', author: { name: 'Ann' } });
-    expect(sourceControl.state).toEqual({ busy: true, status: 'Saving…' });
+    expect(sourceControl.state).toEqual({ busy: true, status: null });
     receive('{"type":"gitlab:merged","sha":"s"}');
-    expect(sourceControl.state).toEqual({ busy: true, status: 'Merged new changes from GitLab' });
+    expect(sourceControl.state).toEqual({ busy: true, status: { message: 'Merged new changes from GitLab', severity: 'info' } });
     receive('{"type":"other"}');
     receive('not json');
     receive('{"type":"gitlab:saved","sha":"0123456789abcdef","author":"Ann"}');
-    expect(sourceControl.state).toEqual({ busy: false, status: 'Saved version 01234567 (Ann)' });
+    expect(sourceControl.state).toEqual({ busy: false, status: { message: 'Saved version 01234567 (Ann)', severity: 'info' } });
     expect(changes()).toBe(3);
   });
 });
 
 describe('commitStatus', () => {
   it('says when there was nothing to save, upstream was merged, or saving failed', () => {
-    expect(commitStatus({ type: 'gitlab:unchanged' })).toBe('No changes to save');
-    expect(commitStatus({ type: 'gitlab:merged', sha: 's' })).toBe('Merged new changes from GitLab');
-    expect(commitStatus({ type: 'gitlab:error', message: 'no token' })).toBe('Saving failed: no token');
+    expect(commitStatus({ type: 'gitlab:unchanged' })).toEqual({ message: 'No changes to save', severity: 'info' });
+    expect(commitStatus({ type: 'gitlab:merged', sha: 's' })).toEqual({ message: 'Merged new changes from GitLab', severity: 'info' });
+    expect(commitStatus({ type: 'gitlab:error', message: 'no token' })).toEqual({ message: 'Saving failed: no token', severity: 'error' });
   });
 
   it('lists the conflicting files', () => {
     const files = [{ path: '/main.typ', ranges: [] }, { path: '/a.typ', ranges: [{ from: 0, to: 1 }] }];
-    expect(commitStatus({ type: 'gitlab:conflict', sha: 's', files })).toBe('Changes on GitLab conflict with edits in /main.typ, /a.typ; not saved');
+    expect(commitStatus({ type: 'gitlab:conflict', sha: 's', files })).toEqual({ message: 'Changes on GitLab conflict with edits in /main.typ, /a.typ; not saved', severity: 'warning' });
   });
 });

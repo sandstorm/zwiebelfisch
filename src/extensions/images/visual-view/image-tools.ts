@@ -2,8 +2,8 @@
 import type { PathReference } from '../../../core/paths/paths';
 import type { Node } from '@tiptap/pm/model';
 import type { EditorState, Transaction } from '@tiptap/pm/state';
-import { FieldPopover } from '../../../ui/field-popover/field-popover';
 import type { BoxTools, BoxToolsHost } from '../../../hosts/visual-view/visual-view';
+import type { Workbench } from '../../../hosts/workbench/workbench';
 import { imageWidthCss } from '../model/model';
 import { addCaption, imageInfo, removeCaption, resizeImage, setImageAlt } from './image-edits';
 import { imagePath } from './image-syntax';
@@ -12,6 +12,8 @@ import { imagePath } from './image-syntax';
 export interface ImageToolsHost extends BoxToolsHost {
   /** The image's path (in the call `src`) in the heading, e.g. as a link to the file (default: the text). */
   pathLabel?: ((path: PathReference, src: string) => globalThis.Node) | null;
+  /** Where "Alt text" asks for the text (the workbench's input box; default: no "Alt text"). */
+  prompts?: Pick<Workbench, 'showInputBox'>;
 }
 
 /** Width presets offered as buttons (keyboard-friendly resizing). */
@@ -54,7 +56,6 @@ export class ImageTools implements BoxTools {
   private readonly tools: HTMLElement;
   private readonly captionButton: HTMLButtonElement;
   private readonly presetButtons: HTMLButtonElement[];
-  private readonly altPopover: FieldPopover;
   private node: Node;
   private stopDrag: (() => void) | null = null;
 
@@ -87,17 +88,11 @@ export class ImageTools implements BoxTools {
       button.setAttribute('aria-label', `Width ${percent}%`);
       return button;
     });
-    const altButton = this.button('Alt text', () => this.openAlt(altButton));
+    const prompts = host.prompts;
+    const altButtons = prompts ? [this.button('Alt text', () => void this.askAlt(prompts))] : [];
     const codeButton = this.button('Edit code', () => host.editCode());
-    this.tools.append(this.captionButton, ...this.presetButtons, altButton, codeButton);
+    this.tools.append(this.captionButton, ...this.presetButtons, ...altButtons, codeButton);
     host.dom.insertBefore(this.tools, host.code);
-    this.altPopover = new FieldPopover(this.tools, {
-      label: 'Alt text',
-      field: 'Alt text',
-      placeholder: 'What the image shows',
-      apply: (alt) => this.run((state, pos) => setImageAlt(state, pos, alt)),
-      remove: () => this.run((state, pos) => setImageAlt(state, pos, '')),
-    });
     this.update(node);
   }
 
@@ -125,7 +120,6 @@ export class ImageTools implements BoxTools {
 
   destroy(): void {
     this.stopDrag?.();
-    this.altPopover.destroy();
   }
 
   private toggleCaption(): void {
@@ -134,11 +128,18 @@ export class ImageTools implements BoxTools {
     this.run(caption ? removeCaption : addCaption);
   }
 
-  private openAlt(anchor: HTMLElement): void {
-    if (this.altPopover.isOpen) return this.altPopover.close();
+  /** Asks for the alt text (an empty one removes it) and sets it. */
+  private async askAlt(prompts: Pick<Workbench, 'showInputBox'>): Promise<void> {
     const pos = this.host.getPos();
-    const alt = pos === undefined ? null : imageInfo(this.host.editor.state, pos)?.alt;
-    this.altPopover.open(anchor, alt ?? '', Boolean(alt));
+    const alt = (pos === undefined ? null : imageInfo(this.host.editor.state, pos)?.alt) ?? '';
+    const text = await prompts.showInputBox({
+      title: 'Alt text',
+      prompt: alt ? 'Alt text (empty removes it)' : 'Alt text',
+      value: alt,
+      placeHolder: 'What the image shows',
+    });
+    if (text === undefined) return this.host.editor.view.focus();
+    this.run((state, at) => setImageAlt(state, at, text.trim()));
   }
 
   /** Dispatches the edit for this image (if it applies) and returns the focus to the text. */

@@ -116,9 +116,8 @@ export class Toolbar {
 
   /**
    * The bars floating in the text column, each re-placed after every
-   * transaction: shown above its anchor while the text has the focus,
-   * something in the bar has it, or an item keeps it; only the first with an
-   * anchor shows.
+   * transaction: shown above its anchor while the text or something in the
+   * bar has the focus; only the first with an anchor shows.
    */
   private floatingBars(groups: readonly ToolbarGroup[], entries: Map<string, (Action | ToolbarControl)[]>): void {
     const container = this.editor.view.dom.parentElement!;
@@ -131,8 +130,7 @@ export class Toolbar {
       this.elements.set(group.id, bar.element);
       this.destroyers.push(() => bar.destroy());
       const earlier = [...bars];
-      const keep = () => actions.some((action) => action.keepsBar?.());
-      const focused = () => this.editor.isFocused || bar.element.contains(bar.element.ownerDocument.activeElement) || keep();
+      const focused = () => this.editor.isFocused || bar.element.contains(bar.element.ownerDocument.activeElement);
       const anchor = (): Anchor => {
         if (!focused() || earlier.some((shown) => shown())) return null;
         return group.anchor(this.editor, actions.some((action) => action.showsBar?.(this.editor)));

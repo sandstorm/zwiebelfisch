@@ -1,7 +1,7 @@
 // What the pdf-export extension adds to the preview: "Download PDF" and its options popover (downloadPdf).
 // Entry of extensions/pdf-export/preview/. See ../pdf-export.ts.
 import type { PdfExportOption, PreviewToolbarItem } from '../../../hosts/preview/preview';
-import type { Memory } from '../../../hosts/workbench/workbench';
+import type { Memory, Workbench } from '../../../hosts/workbench/workbench';
 
 /** What the button downloads: the PDF made with the given option values, and the name to save it under. */
 export interface PdfDownloads {
@@ -11,34 +11,39 @@ export interface PdfDownloads {
   file(values: Record<string, boolean>): Promise<{ blob: Blob; name: string }>;
 }
 
+/** Where the button tells why there is no PDF. */
+export type PdfMessages = Pick<Workbench, 'showErrorMessage'>;
+
 /**
  * "Download PDF". With export options registered it opens a popover with a checkbox per option (as this viewer left
  * them last time, else their defaults) and "Download"; without any it downloads at once. While a PDF is being made
- * the buttons are disabled; a failure is shown next to them, and nothing is downloaded.
+ * the buttons are disabled ("Making PDF…"); a failure is an error message, and nothing is downloaded.
  */
-export function downloadPdf(pdfs: PdfDownloads, memory: Memory<Record<string, boolean>>): PreviewToolbarItem {
+export function downloadPdf(pdfs: PdfDownloads, memory: Memory<Record<string, boolean>>, messages: PdfMessages): PreviewToolbarItem {
   return (preview) => {
-    const button = new DownloadPdfButton(preview.ownerDocument, pdfs, memory);
+    const button = new DownloadPdfButton(preview.ownerDocument, pdfs, memory, messages);
     return { elements: [button.element], update: () => button.describe(), dispose: () => button.destroy() };
   };
 }
+
+const LABEL = 'Download PDF';
 
 class DownloadPdfButton {
   readonly element: HTMLElement;
   private readonly download: HTMLButtonElement;
   private readonly popover: HTMLElement;
-  private readonly status: HTMLElement;
   private busy = false;
 
   constructor(
     private readonly doc: Document,
     private readonly pdfs: PdfDownloads,
     private readonly memory: Memory<Record<string, boolean>>,
+    private readonly messages: PdfMessages,
   ) {
     this.element = doc.createElement('span');
     this.element.className = 'typst-preview__pdf';
     this.element.dataset.testid = 'typst-pdf';
-    this.download = this.button('Download PDF');
+    this.download = this.button(LABEL);
     this.download.addEventListener('click', () => this.click());
     this.popover = doc.createElement('div');
     this.popover.className = 'typst-preview__pdf-options';
@@ -50,12 +55,7 @@ class DownloadPdfButton {
       this.open(false);
       this.download.focus();
     });
-    this.status = doc.createElement('span');
-    this.status.className = 'typst-preview__pdf-status';
-    this.status.setAttribute('role', 'status');
-    this.status.title = 'Click to dismiss';
-    this.status.addEventListener('click', () => (this.status.textContent = ''));
-    this.element.append(this.download, this.popover, this.status);
+    this.element.append(this.download, this.popover);
     this.describe();
     doc.addEventListener('mousedown', this.closeOutside, true);
   }
@@ -137,20 +137,22 @@ class DownloadPdfButton {
 
   private async makeAndSave(values: Record<string, boolean>): Promise<void> {
     if (this.busy) return;
-    this.setBusy(true, 'Making PDF…');
+    this.setBusy(true);
     try {
       const { blob, name } = await this.pdfs.file(values);
       save(this.doc, blob, name);
-      this.setBusy(false, '');
     } catch (error) {
-      this.setBusy(false, `No PDF: ${error instanceof Error ? error.message : String(error)}`);
+      void this.messages.showErrorMessage(`No PDF: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      this.setBusy(false);
     }
   }
 
-  private setBusy(busy: boolean, status: string): void {
+  private setBusy(busy: boolean): void {
     this.busy = busy;
     for (const button of this.element.querySelectorAll('button')) button.disabled = busy;
-    this.status.textContent = status;
+    this.download.textContent = busy ? 'Making PDF…' : LABEL;
+    this.download.setAttribute('aria-busy', String(busy));
   }
 }
 

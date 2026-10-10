@@ -66,4 +66,11 @@ describe('newStyle', () => {
     expect(scanStyles(second.text).map((s) => [s.name, s.label])).toEqual([['new-style', 'New style'], ['new-style-2', 'New style 2']]);
     expect(second.text.startsWith(`${first.text}\n`)).toBe(true);
   });
+
+  it('names the function after the label the user gave', () => {
+    const added = newStyle('#let note(body) = body\n', 'Note');
+    expect(scanStyles(added.text)).toEqual([{ name: 'note-2', kind: 'paragraph', label: 'Note 2' }]);
+    expect(scanStyles(newStyle('', ' Side box! ').text)).toEqual([{ name: 'side-box', kind: 'paragraph', label: 'Side box!' }]);
+    expect(scanStyles(newStyle('', '2 columns').text).map((style) => style.name)).toEqual(['style-2-columns']);
+  });
 });

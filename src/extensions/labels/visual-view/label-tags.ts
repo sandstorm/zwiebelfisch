@@ -1,20 +1,25 @@
-// Label tags: a block's label (`= Intro <intro>`) drawn as a small tag on the block, edited in a popover; a new
-// label typed into a draft tag right where it will show.
+// Label tags: a block's label (`= Intro <intro>`) drawn as a small tag on the block, renamed or removed through the
+// workbench's quick pick and input box; a new label typed into a draft tag right where it will show.
 // See visual-view.ts.
 import type { Node } from '@tiptap/pm/model';
 import { type EditorState, Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
-import { FieldPopover } from '../../../ui/field-popover/field-popover';
+import type { QuickPickItem, Workbench } from '../../../hosts/workbench/workbench';
 import { renameLabel, setLabel } from './label-edits';
 import { labelName, type ProjectLabels } from '../model/model';
 import { labelPrefix, labelTarget } from './add-label';
+
+/** Where a tag asks what to do with its label, and for the new name. */
+export type LabelPrompts = Pick<Workbench, 'showQuickPick' | 'showInputBox'>;
 
 /** What the tags need besides the document: the project's labels (renaming updates their references by default). */
 export interface LabelTagsOptions {
   labels?: ProjectLabels;
   /** The document this view shows: its references are renamed in the view, the other files' by `labels`. */
   document?: TypstDocument;
+  /** Without them a tag only shows its label. */
+  prompts?: LabelPrompts;
 }
 
 /** The tags drawn, and the block a new label is being typed for (its position), if any. */
@@ -28,8 +33,8 @@ const key = new PluginKey<TagsState>('typstLabelTags');
 /**
  * Draws every labelled block's label as a tag: at the end of a heading's or
  * paragraph's text, or below other blocks (figures, equations, tables). A
- * click on the tag opens a popover to rename the label (optionally with every
- * reference to it in the project) or remove it; each is one undo step here.
+ * click on the tag offers to rename the label (with every reference to it in
+ * the project, or alone) or remove it; each is one undo step here.
  * `startNewLabel` draws a draft tag with a field at the same place instead.
  */
 export function labelTags(options: LabelTagsOptions): Plugin {
@@ -159,44 +164,59 @@ function tagElement(tag: Tag): HTMLElement {
   button.dataset.testid = 'typst-label-tag';
   button.textContent = name;
   button.title = `Label <${name}>: click to rename or remove it`;
-  let popover: FieldPopover | null = null;
   button.addEventListener('mousedown', (event) => event.preventDefault());
-  button.addEventListener('click', () => {
-    popover?.destroy();
-    popover = tagPopover(tag, wrap);
-    popover.open(button, name, true);
-  });
+  button.addEventListener('click', () => void editTag(tag));
   return wrap;
 }
 
-/** The popover of the tag of label `name`: rename, rename with the references, remove. */
-function tagPopover({ view, name, block, options }: Tag, wrap: HTMLElement): FieldPopover {
-  const { labels, document } = options;
-  const references = labels?.referenceCount(name) ?? 0;
-  const rename = (value: string, withReferences: boolean) => {
-    const next = labelName(value);
-    const pos = block();
-    if (next === null || next === name || pos === null) return;
-    view.dispatch(renameLabel(view.state, pos, next, withReferences));
-    if (withReferences) labels?.renameReferences(name, next, document);
-    view.focus();
-  };
-  return new FieldPopover(wrap, {
-    label: 'Label',
-    field: 'Label name',
-    placeholder: 'e.g. intro',
-    // with references, updating them is what Enter does; renaming only the label is the exception
-    ...(references > 0
-      ? {
-          applyText: `Rename and update ${references} reference${references === 1 ? '' : 's'}`,
-          apply: (value: string) => rename(value, true),
-          alternative: { text: 'Rename without updating references', apply: (value: string) => rename(value, false) },
-        }
-      : { applyText: 'Rename', apply: (value: string) => rename(value, false) }),
-    remove: () => {
-      const pos = block();
-      if (pos !== null) view.dispatch(setLabel(view.state, pos, null));
-      view.focus();
-    },
+/**
+ * What a click on the tag of label `name` offers: rename (updating its references, the first choice while there are
+ * any), rename only the label, remove; renaming asks for the new name.
+ */
+async function editTag(tag: Tag): Promise<void> {
+  const prompts = tag.options.prompts;
+  if (!prompts) return;
+  const references = countedReferences(tag);
+  const choice = await prompts.showQuickPick(tagChoices(references), {
+    title: `Label <${tag.name}>`,
+    placeHolder: references ? `${references} to it` : 'No references to it',
   });
+  if (choice?.action === 'remove') removeLabel(tag);
+  else if (choice) await renameTag(tag, prompts, choice.action === 'rename' ? references : null);
+  tag.view.focus();
+}
+
+/** "2 references" to the tag's label; null for none. */
+function countedReferences({ name, options }: Tag): string | null {
+  const count = options.labels?.referenceCount(name) ?? 0;
+  return count > 0 ? `${count} reference${count === 1 ? '' : 's'}` : null;
+}
+
+function removeLabel({ view, block }: Tag): void {
+  const pos = block();
+  if (pos !== null) view.dispatch(setLabel(view.state, pos, null));
+}
+
+/** What a tag offers: rename (with the references, if `references` says how many), rename only the label, remove. */
+function tagChoices(references: string | null): (QuickPickItem & { action: 'rename' | 'renameOnly' | 'remove' })[] {
+  const rename = { label: 'Rename…', description: references ? `and update ${references}` : undefined, action: 'rename' as const };
+  const renameOnly = { label: 'Rename without updating references…', action: 'renameOnly' as const };
+  const remove = { label: 'Remove label', action: 'remove' as const };
+  return references ? [rename, renameOnly, remove] : [rename, remove];
+}
+
+/** Asks for the new name of the tag's label and renames it; with `references` (how many), them too. */
+async function renameTag({ view, name, block, options }: Tag, prompts: LabelPrompts, references: string | null): Promise<void> {
+  const value = await prompts.showInputBox({
+    title: references ? `Rename <${name}> and update ${references}` : `Rename <${name}>`,
+    prompt: 'Label name',
+    value: name,
+    placeHolder: 'e.g. intro',
+    validateInput: (text) => (labelName(text) === null ? 'Enter a label name.' : null),
+  });
+  const next = value === undefined ? null : labelName(value);
+  const pos = block();
+  if (next === null || next === name || pos === null) return;
+  view.dispatch(renameLabel(view.state, pos, next, references !== null));
+  if (references) options.labels?.renameReferences(name, next, options.document);
 }

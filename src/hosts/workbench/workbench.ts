@@ -1,8 +1,9 @@
 // The workbench host: the widget's frame (side panels, editing area with the Visual / Source tabs and file views,
 // preview, status bar) and the extension API every feature uses to put itself into it. Entry of hosts/workbench/.
 // Why extensions: the frame knows no feature by name. A feature is a `TypstExtension` that registers what it adds
-// (a side panel, a file view, a command, a link provider, a source control) once, at activation, and the host
-// disposes all of it on destroy. Adding a feature is adding it to a list, not editing the frame. Extensions never
+// (a side panel, a file view, a command, a menu item, a link provider, a source control) once, at activation, and the
+// host disposes all of it on destroy. What every feature needs to talk to the user (messages, input boxes, quick
+// picks) is the workbench's, in VS Code's shapes, so features look and behave alike. Adding a feature is adding it to a list, not editing the frame. Extensions never
 // depend on each other: what one offers another goes through a generic contribution point of a host.
 // See ARCHITECTURE.md, "Extensions" and "Layout".
 import type { Disposable } from '../../core/disposable/disposable';
@@ -158,8 +159,6 @@ export interface Workbench {
   registerSidePanel(id: string, options: SidePanelOptions): SidePanel;
   /** Puts `element` into the status bar below everything, after the items registered before. */
   registerStatusBarItem(element: HTMLElement): Disposable;
-  /** Puts `element` at the end of the Visual / Source tab bar; with `mode`, it only shows in that tab. */
-  registerTabBarItem(element: HTMLElement, options?: { mode?: EditorMode }): Disposable;
   /**
    * Shows `top` right before and `bottom` right after the shown Typst file's content (in the Visual tab below its
    * toolbar), scrolling with it, across tab and file switches; detached while no Typst file is shown. One frame at a time.
@@ -191,6 +190,45 @@ export interface Workbench {
   readonly onDidDropFiles: Event<File[]>;
   /** A value remembered for the browser session under this widget's key (`name` tells values apart). */
   remember<T>(name: string): Memory<T>;
+
+  /**
+   * Shows `message` in the widget's notification area (VS Code's `window.showInformationMessage`), with a button per
+   * item. Resolves to the item chosen, or undefined once it is closed (an information message without items closes
+   * by itself after a while). Not modal: the user goes on working meanwhile.
+   */
+  showInformationMessage<T extends string | MessageItem>(message: string, ...items: T[]): Promise<T | undefined>;
+  /** As `showInformationMessage`, as a warning (stays until closed). */
+  showWarningMessage<T extends string | MessageItem>(message: string, ...items: T[]): Promise<T | undefined>;
+  /** As `showInformationMessage`, as an error (stays until closed). */
+  showErrorMessage<T extends string | MessageItem>(message: string, ...items: T[]): Promise<T | undefined>;
+  /**
+   * Asks for one line of text (VS Code's `window.showInputBox`), below what the user just used (a button, a row),
+   * or at the selection when they work in an editor. Resolves to the text on Enter / OK, undefined on Escape or a
+   * click elsewhere. One at a time: a new input box or quick pick cancels the open one.
+   */
+  showInputBox(options?: InputBoxOptions): Promise<string | undefined>;
+  /**
+   * Lets the user pick one of `items` (VS Code's `window.showQuickPick`), filtered as they type, placed as
+   * `showInputBox`. Resolves to the item picked, undefined when cancelled; with `canPickMany`, to the items checked.
+   */
+  showQuickPick<T extends string | QuickPickItem>(
+    items: readonly T[] | Promise<readonly T[]>,
+    options: QuickPickOptions & { canPickMany: true },
+  ): Promise<T[] | undefined>;
+  showQuickPick<T extends string | QuickPickItem>(items: readonly T[] | Promise<readonly T[]>, options?: QuickPickOptions): Promise<T | undefined>;
+
+  /**
+   * Adds `item` to the menu `menuId` until disposed (VS Code's `contributes.menus`). Whoever shows a menu renders
+   * the items whose `when` holds there, sorted by `group` and `order`, and runs an item's command with the menu's
+   * arguments. The workbench shows `editor/title`: the Visual / Source tab bar (context: `editorMode`, `resource`
+   * (the shown file); no arguments). Other ids are menus of views that extensions show, documented there (the file
+   * panel: `file/newFile`, `explorer/context`).
+   */
+  registerMenuItem(menuId: string, item: MenuItem): Disposable;
+  /** The items of `menuId` to show in `context` (those whose `when` holds), sorted, for a view that shows that menu. */
+  getMenuItems(menuId: string, context?: MenuContext): readonly MenuItem[];
+  /** Items of a menu (its id) were registered or disposed. */
+  readonly onDidChangeMenu: Event<string>;
 
   /**
    * Adds decorations to files (badges on their rows in the views that list files, such as other users' initials)
@@ -236,6 +274,77 @@ export interface Workbench {
   /** Whether the user works in the editing area (the focus is inside it). */
   isEditorFocused(): boolean;
 }
+
+/** A button of a message (VS Code's MessageItem); the message resolves to the one chosen. */
+export interface MessageItem {
+  readonly title: string;
+}
+
+/** What `showInputBox` asks (VS Code's InputBoxOptions). */
+export interface InputBoxOptions {
+  /** Above the field: what is being done ("Link"). The box's accessible name. */
+  title?: string;
+  /** The text the field starts with. */
+  value?: string;
+  /** The part of `value` selected at first, as [start, end) offsets; default: all of it. */
+  valueSelection?: readonly [number, number];
+  /** What to enter: the field's label, below it. */
+  prompt?: string;
+  /** Shown in the empty field. */
+  placeHolder?: string;
+  /**
+   * Checks the text as it is typed and on Enter: a message says what is wrong (and Enter does nothing); undefined,
+   * null or '' that it is fine. May be async.
+   */
+  validateInput?(value: string): string | undefined | null | Promise<string | undefined | null>;
+}
+
+/** An item of `showQuickPick` (VS Code's QuickPickItem). */
+export interface QuickPickItem {
+  /** What the item is called; typing filters by it. */
+  readonly label: string;
+  /** Less prominent, after the label. */
+  readonly description?: string;
+  /** Less prominent, on a line of its own. */
+  readonly detail?: string;
+  /** Checked at first (with `canPickMany`). */
+  readonly picked?: boolean;
+}
+
+/** How `showQuickPick` asks (VS Code's QuickPickOptions). */
+export interface QuickPickOptions {
+  /** Above the list: what is being picked. The box's accessible name. */
+  title?: string;
+  /** Shown in the empty filter field: what to do. */
+  placeHolder?: string;
+  /** Checkboxes and OK instead of picking one; resolves to the checked items. */
+  canPickMany?: boolean;
+}
+
+/** One entry of a menu (VS Code's `contributes.menus` entry): a command by its id, shown while `when` holds. */
+export interface MenuItem {
+  /** The command the entry runs (`executeCommand`), with the arguments of the menu it is in. */
+  readonly command: string;
+  /** What the entry says; default: the command id. */
+  readonly title?: string;
+  /** An SVG icon (markup drawn in `currentColor`) before the title, where the menu shows icons (the tab bar). */
+  readonly icon?: string;
+  /**
+   * Whether the entry shows, given the context the menu is shown in (e.g. `(context) => context.resourceKind ===
+   * 'folder'`); default: always. Asked each time the menu is shown.
+   */
+  readonly when?: (context: MenuContext) => boolean;
+  /** Entries are grouped by this: `navigation` first, the others by name, a separator between groups; default ''. */
+  readonly group?: string;
+  /** The place in its group (lower first; equal: registration order); default 0. */
+  readonly order?: number;
+}
+
+/** What a menu is shown for (VS Code's context keys), by key, e.g. `{ editorMode: 'source', resource: '/main.typ' }`. */
+export type MenuContext = Readonly<Record<string, unknown>>;
+
+/** How serious a message is. */
+export type MessageSeverity = 'info' | 'warning' | 'error';
 
 export interface OpenOptions {
   /** A range of the Typst file (source offsets) to reveal. */
@@ -335,8 +444,17 @@ export interface SourceControl {
 export interface SourceControlState {
   /** A commit is under way (no second one meanwhile). */
   readonly busy: boolean;
-  /** One line on the last outcome or news ("Saved version 01234567 (Ann)", "Merged new changes from GitLab"); '' for none. */
-  readonly status: string;
+  /**
+   * The last outcome or piece of news ("Saved version 01234567 (Ann)", "Merged new changes from GitLab"), told to
+   * the user once, when it changes (a new object); null for none.
+   */
+  readonly status: SourceControlStatus | null;
+}
+
+/** An outcome or a piece of news of a source control, told as a message. */
+export interface SourceControlStatus {
+  readonly message: string;
+  readonly severity: MessageSeverity;
 }
 
 /** A view for one kind of file in the editing area; shown and hidden as files are opened. */

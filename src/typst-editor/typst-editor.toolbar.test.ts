@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 // The Visual view's toolbar with the built-in extensions' items (integration: src/testing composes the built-ins).
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../core/typst-document/typst-document';
-import { createVisualView, type TestViewOptions } from '../testing/testing';
+import { createVisualView, TestPrompts, type TestViewOptions } from '../testing/testing';
 import { PathReference } from '../core/paths/paths';
 
 const ref = PathReference.of;
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 function setup(text: string, options: TestViewOptions = {}) {
   const parent = document.createElement('div');
@@ -41,159 +42,164 @@ describe('Visual view toolbar', () => {
     expect(doc.text).toBe('Hello world\n');
   });
 
-  describe('link popover', () => {
-    /** Opens the popover from the Link button, enters `value` and applies it (as Enter would). */
-    function linkTo(toolbar: HTMLElement, button: (label: string) => HTMLButtonElement, value: string) {
+  describe('link', () => {
+    /** "Link" with `answer` as the URL entered. */
+    async function linkTo(button: (label: string) => HTMLButtonElement, prompts: TestPrompts, answer: string | undefined) {
+      prompts.answer(answer);
       button('Link').click();
-      const popover = toolbar.parentElement!.querySelector<HTMLFormElement>('form[aria-label="Link"]')!;
-      expect(popover.hidden).toBe(false);
-      const input = popover.querySelector('input')!;
-      input.value = value;
-      popover.requestSubmit();
-      return { popover, input };
+      await settle();
     }
 
-    it('links the selection', () => {
-      const { doc, view, toolbar, button } = setup('Hello world\n');
+    it('asks for the URL and links the selection', async () => {
+      const prompts = new TestPrompts();
+      const { doc, view, button } = setup('Hello world\n', { prompts });
       view.reveal(6, 11);
-      const { popover } = linkTo(toolbar, button, 'https://typst.app');
+      await linkTo(button, prompts, 'https://typst.app');
+      expect(prompts.asked[0].options).toMatchObject({ title: 'Link', prompt: 'URL', value: '', placeHolder: 'https://…' });
       expect(doc.text).toBe('Hello #link("https://typst.app")[world]\n');
-      expect(popover.hidden).toBe(true);
       expect(button('Link').getAttribute('aria-pressed')).toBe('true');
     });
 
-    it('inserts the URL as linked text where nothing is selected', () => {
-      const { doc, view, toolbar, button } = setup('See  now\n');
+    it('inserts the URL as linked text where nothing is selected', async () => {
+      const prompts = new TestPrompts();
+      const { doc, view, button } = setup('See  now\n', { prompts });
       view.reveal(4, 4);
-      linkTo(toolbar, button, 'https://typst.app');
+      await linkTo(button, prompts, 'https://typst.app');
       expect(doc.text).toBe('See https://typst.app now\n');
     });
 
-    it('edits and removes the link under the cursor', () => {
+    it('edits the link under the cursor, and an empty URL removes it', async () => {
       const source = 'A #link("https://a.org")[site] b\n';
-      const { doc, view, toolbar, button } = setup(source);
+      const prompts = new TestPrompts();
+      const { doc, view, button } = setup(source, { prompts });
       view.reveal(source.indexOf('ite'), source.indexOf('ite'));
-      const { popover, input } = linkTo(toolbar, button, 'https://b.org');
+      await linkTo(button, prompts, 'https://b.org');
+      expect(prompts.asked[0].options).toMatchObject({ prompt: 'URL (empty removes the link)', value: 'https://a.org' });
       expect(doc.text).toBe('A #link("https://b.org")[site] b\n');
-      button('Link').click();
-      expect(input.value).toBe('https://b.org');
-      popover.querySelector<HTMLButtonElement>('button[data-action="remove"]')!.click();
+      await linkTo(button, prompts, '');
+      expect(prompts.asked[1].options).toMatchObject({ value: 'https://b.org' });
       expect(doc.text).toBe('A site b\n');
-      expect(popover.hidden).toBe(true);
     });
 
-    it('opens with Mod+K in the text', () => {
-      const { parent, toolbar } = setup('Hello\n');
+    it('asks with Mod+K in the text', () => {
+      const prompts = new TestPrompts();
+      const { parent } = setup('Hello\n', { prompts });
       const editable = parent.querySelector<HTMLElement>('[contenteditable]')!;
       const mac = /Mac/.test(navigator.platform);
       const event = new KeyboardEvent('keydown', { key: 'k', metaKey: mac, ctrlKey: !mac, bubbles: true, cancelable: true });
       editable.dispatchEvent(event);
       expect(event.defaultPrevented).toBe(true);
-      expect(toolbar.parentElement!.querySelector<HTMLFormElement>('form[aria-label="Link"]')!.hidden).toBe(false);
+      expect(prompts.asked).toHaveLength(1);
     });
 
-    it('closes on Escape without changing anything', () => {
-      const { doc, view, toolbar, button } = setup('Hello\n');
+    it('changes nothing when cancelled', async () => {
+      const prompts = new TestPrompts();
+      const { doc, view, button } = setup('Hello\n', { prompts });
       view.reveal(0, 5);
-      button('Link').click();
-      const popover = toolbar.parentElement!.querySelector<HTMLFormElement>('form[aria-label="Link"]')!;
-      popover.querySelector('input')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-      expect(popover.hidden).toBe(true);
+      await linkTo(button, prompts, undefined);
       expect(doc.text).toBe('Hello\n');
     });
   });
 
-  it('inserts an image block from a path', () => {
-    const { doc, view, toolbar, button } = setup('Text\n');
+  it('without the project, "Insert image" asks for a path and inserts an image block', async () => {
+    const prompts = new TestPrompts().answer('img/logo.png');
+    const { doc, view, button } = setup('Text\n', { prompts });
     view.reveal(4, 4);
     button('Insert image').click();
-    const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
-    popover.querySelector('input')!.value = 'img/logo.png';
-    popover.requestSubmit();
+    await settle();
+    expect(prompts.asked[0].options).toMatchObject({ prompt: 'Image path' });
     expect(doc.text).toBe('Text\n\n#image("img/logo.png")\n');
   });
 
-  it('inserts an image picked from the project files', () => {
+  it("offers the project's images, an upload and a path, and inserts the one picked", async () => {
     const assets = { list: () => [ref('img/logo.png'), ref('/shared/photo.jpg')], upload: async () => ({ error: 'unused' }), reference: () => null };
-    const { doc, view, toolbar, button } = setup('Text\n', { assets });
+    const prompts = new TestPrompts().answer('/shared/photo.jpg', 'Enter a path…', 'cat.png');
+    const { doc, view, button } = setup('Text\n', { assets, prompts });
     view.reveal(4, 4);
     button('Insert image').click();
-    const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
-    const choices = [...popover.querySelectorAll<HTMLButtonElement>('button[data-path]')];
-    expect(choices.map((b) => b.textContent)).toEqual(['img/logo.png', '/shared/photo.jpg']);
-    choices[1].click();
-    expect(popover.hidden).toBe(true);
+    await settle();
+    expect(prompts.asked[0].items!.map((item) => (typeof item === 'string' ? item : item.label))).toEqual([
+      'img/logo.png',
+      '/shared/photo.jpg',
+      'Upload image…',
+      'Enter a path…',
+    ]);
     expect(doc.text).toBe('Text\n\n#image("/shared/photo.jpg")\n');
+    button('Insert image').click();
+    await settle();
+    expect(doc.text).toContain('#image("cat.png")');
   });
 
-  it('uploads an image into the project and inserts it', async () => {
+  it('"Upload image…" opens the file picker; the image goes into the project and is inserted', async () => {
     const uploaded: File[] = [];
     const assets = { list: () => [], upload: async (file: File) => (uploaded.push(file), { path: ref(`img/${file.name}`) }), reference: () => null };
-    const { doc, view, toolbar, button } = setup('Text\n', { assets });
+    const prompts = new TestPrompts().answer('Upload image…');
+    const { doc, view, parent, button } = setup('Text\n', { assets, prompts });
     view.reveal(4, 4);
+    const input = parent.querySelector<HTMLInputElement>('input[type="file"]')!;
+    const opened = vi.spyOn(input, 'click').mockImplementation(() => {});
     button('Insert image').click();
-    const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
-    const input = popover.querySelector<HTMLInputElement>('input[type="file"]')!;
+    await settle();
+    expect(opened).toHaveBeenCalled();
     const file = new File([new Uint8Array([1])], 'cat.png', { type: 'image/png' });
     Object.defineProperty(input, 'files', { value: [file] });
     input.dispatchEvent(new Event('change'));
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await settle();
     expect(uploaded).toEqual([file]);
     expect(doc.text).toBe('Text\n\n#image("img/cat.png")\n');
   });
 
-  it('shows why an upload was refused, keeps the popover open and the text unchanged', async () => {
+  it('tells why an upload was refused (an error message), and leaves the text unchanged', async () => {
     const assets = { list: () => [], upload: async () => ({ error: 'This change is not allowed here.' }), reference: () => null };
-    const { doc, view, toolbar, button } = setup('Text\n', { assets });
+    const prompts = new TestPrompts();
+    const { doc, view, parent } = setup('Text\n', { assets, prompts });
     view.reveal(4, 4);
-    button('Insert image').click();
-    const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
-    const input = popover.querySelector<HTMLInputElement>('input[type="file"]')!;
+    const input = parent.querySelector<HTMLInputElement>('input[type="file"]')!;
     Object.defineProperty(input, 'files', { value: [new File([new Uint8Array([1])], 'cat.png')], configurable: true });
     input.dispatchEvent(new Event('change'));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(popover.hidden).toBe(false);
-    expect(popover.querySelector('[role="alert"]')!.textContent).toBe('This change is not allowed here.');
+    await settle();
+    expect(prompts.told).toEqual(['This change is not allowed here.']);
     expect(doc.text).toBe('Text\n');
-    button('Insert image').click();
-    button('Insert image').click();
-    expect(popover.querySelector('[role="alert"]')!.textContent).toBe('');
   });
 
   describe('image insertion never replaces or splits content', () => {
     const SOURCE = '#set page(width: 16cm)\n#set text(size: 12pt)\n\n= Hello\n\nSome text here.\n';
 
-    function insertPath(toolbar: HTMLElement, button: (label: string) => HTMLButtonElement, path: string) {
+    /** "Insert image" with `path` entered, in a view set up with `prompts`. */
+    async function insertPath(button: (label: string) => HTMLButtonElement, prompts: TestPrompts, path: string) {
+      prompts.answer(path);
       button('Insert image').click();
-      const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
-      popover.querySelector('input')!.value = path;
-      popover.requestSubmit();
+      await settle();
     }
 
-    it('goes after the selected raw block (the initial selection) instead of replacing it', () => {
-      const { doc, toolbar, button } = setup(SOURCE);
-      insertPath(toolbar, button, 'cat.png');
+    it('goes after the selected raw block (the initial selection) instead of replacing it', async () => {
+      const prompts = new TestPrompts();
+      const { doc, button } = setup(SOURCE, { prompts });
+      await insertPath(button, prompts, 'cat.png');
       expect(doc.text).toBe('#set page(width: 16cm)\n#set text(size: 12pt)\n\n#image("cat.png")\n\n= Hello\n\nSome text here.\n');
     });
 
-    it('goes after the heading the cursor is in instead of splitting it', () => {
-      const { doc, view, toolbar, button } = setup(SOURCE);
+    it('goes after the heading the cursor is in instead of splitting it', async () => {
+      const prompts = new TestPrompts();
+      const { doc, view, button } = setup(SOURCE, { prompts });
       const at = SOURCE.indexOf('Hello') + 2;
       view.reveal(at, at);
-      insertPath(toolbar, button, 'cat.png');
+      await insertPath(button, prompts, 'cat.png');
       expect(doc.text).toBe('#set page(width: 16cm)\n#set text(size: 12pt)\n\n= Hello\n\n#image("cat.png")\n\nSome text here.\n');
     });
 
-    it('keeps selected text and goes after its paragraph', () => {
-      const { doc, view, toolbar, button } = setup(SOURCE);
+    it('keeps selected text and goes after its paragraph', async () => {
+      const prompts = new TestPrompts();
+      const { doc, view, button } = setup(SOURCE, { prompts });
       view.reveal(SOURCE.indexOf('Some'), SOURCE.indexOf(' here'));
-      insertPath(toolbar, button, 'cat.png');
+      await insertPath(button, prompts, 'cat.png');
       expect(doc.text).toBe(`${SOURCE}\n#image("cat.png")\n`);
     });
 
-    it('fills an empty document', () => {
-      const { doc, toolbar, button } = setup('');
-      insertPath(toolbar, button, 'cat.png');
+    it('fills an empty document', async () => {
+      const prompts = new TestPrompts();
+      const { doc, button } = setup('', { prompts });
+      await insertPath(button, prompts, 'cat.png');
       expect(doc.text).toBe('#image("cat.png")');
     });
   });
@@ -220,7 +226,6 @@ describe('Visual view toolbar', () => {
       return { assets, uploaded };
     }
 
-    const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
     it('a pasted image is uploaded and inserted after the paragraph with the cursor', async () => {
       const { assets, uploaded } = withUploads();
@@ -258,14 +263,13 @@ describe('Visual view toolbar', () => {
       expect(doc.text).toBe('One\n');
     });
 
-    it('shows why a dropped image was not added in the image popover', async () => {
+    it('tells why a dropped image was not added (an error message)', async () => {
       const { assets } = withUploads('This change is not allowed here.');
-      const { doc, toolbar, parent } = setup('One\n', { assets });
+      const prompts = new TestPrompts();
+      const { doc, parent } = setup('One\n', { assets, prompts });
       parent.querySelector('[contenteditable]')!.dispatchEvent(fileEvent('drop', [png('a.png')]));
       await settle();
-      const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
-      expect(popover.hidden).toBe(false);
-      expect(popover.querySelector('[role="alert"]')!.textContent).toBe('This change is not allowed here.');
+      expect(prompts.told).toEqual(['This change is not allowed here.']);
       expect(doc.text).toBe('One\n');
     });
 
@@ -305,16 +309,6 @@ describe('Visual view toolbar', () => {
       parent.querySelector('[contenteditable]')!.dispatchEvent(event);
       expect(event.defaultPrevented).toBe(false);
     });
-  });
-
-  it('keeps the image popover (at the Insert menu) inside the toolbar when the menu is near the right edge', () => {
-    const { toolbar, button } = setup('Text\n', { assets: { list: () => [], upload: async () => ({ error: 'unused' }), reference: () => null } });
-    const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
-    Object.defineProperty(toolbar, 'clientWidth', { value: 300 });
-    Object.defineProperty(popover, 'offsetWidth', { value: 200 });
-    Object.defineProperty(button('Insert'), 'offsetLeft', { value: 250 });
-    button('Insert image').click();
-    expect(popover.style.left).toBe('100px');
   });
 
   it('inserts a table and adds and deletes rows and columns', () => {

@@ -1,4 +1,4 @@
-/* The files extension's styles: the file panel (header with actions, inline prompts, the file tree) and
+/* The files extension's styles: the file panel (header with "New", the file tree) and
    "← previous file" / "next file →". Registered by files.ts (Workbench.registerStyleSheet). */
 .typst-files {
   display: flex;
@@ -23,7 +23,6 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.typst-files__actions { display: flex; flex: none; gap: 0; }
 .typst-files__action {
   display: inline-flex;
   align-items: center;
@@ -34,8 +33,8 @@
   color: var(--te-muted);
   cursor: pointer;
 }
-.typst-files__action:hover:not(:disabled) { background: var(--te-hover); color: var(--te-text); }
-.typst-files__action:disabled { opacity: 0.35; cursor: default; }
+.typst-files__action[hidden] { display: none; }
+.typst-files__action:hover { background: var(--te-hover); color: var(--te-text); }
 .typst-files__tree {
   flex: 1;
   min-height: 0;
@@ -96,37 +95,6 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.typst-files__prompt {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 8px;
-  padding: 8px;
-  border-bottom: 1px solid var(--te-border);
-  background: var(--te-accent-faint);
-}
-.typst-files__message { display: flex; flex-direction: column; align-items: stretch; gap: 6px; flex-basis: 100%; color: var(--te-text); }
-.typst-files__message input {
-  min-width: 0;
-  border: 1px solid var(--te-border);
-  border-radius: 6px;
-  padding: 4px 8px;
-  font: inherit;
-}
-.typst-files__message input:focus { outline: 2px solid var(--te-jump); border-color: var(--te-accent); }
-.typst-files__confirm,
-.typst-files__cancel {
-  border: 1px solid var(--te-border);
-  border-radius: 6px;
-  padding: 4px 12px;
-  background: var(--te-surface);
-  font: inherit;
-  cursor: pointer;
-}
-.typst-files__confirm { border-color: var(--te-accent); background: var(--te-accent); color: white; }
-.typst-files__confirm--danger { border-color: var(--te-danger); background: var(--te-danger); }
-.typst-files__error { flex-basis: 100%; color: var(--te-danger); }
-.typst-files__error:empty { display: none; }
 /* "← previous file" / "next file →" at the start and end of an included file (reading order of the main file) */
 .typst-editor__file-nav { flex: none; display: flex; gap: 16px; padding: 6px 32px; font: 12px system-ui, sans-serif; }
 .typst-editor__file-nav[hidden] { display: none; }

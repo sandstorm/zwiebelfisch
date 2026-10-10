@@ -18,12 +18,10 @@ import { tables } from '../extensions/tables/tables';
 import { imagesVisualView, type ImageAssets, type ImageLinks, type ImageUrls } from '../extensions/images/images';
 import { renderedBoxesVisualView, type SnippetSource } from '../extensions/rendered-boxes/rendered-boxes';
 import { createSchema } from '../hosts/visual-view/nodes/nodes';
+import type { InputBoxOptions, MessageItem, QuickPickItem, QuickPickOptions, Workbench } from '../hosts/workbench/workbench';
 import {
   posToSource, print, project as projectWith, sourceToPos, VisualView, VisualViewContributions, type ContributionContext, type VisualViewContribution,
 } from '../hosts/visual-view/visual-view';
-
-/** The schema of a view with the built-ins. */
-export const schema: Schema = schemaWith();
 
 /** The schema of a view with the built-ins configured from `options`. */
 export function schemaWith(options: TestViewOptions = {}): Schema {
@@ -40,8 +38,6 @@ function schemaFrom(registry: VisualViewContributions): Schema {
   return createSchema(nodes, marks);
 }
 
-/** `source` projected with `withSchema` (default: the built-ins' `schema`). */
-export const project = (source: string, withSchema: Schema = schema): Node => projectWith(source, withSchema);
 
 /** What a document's raw boxes show while not edited, in tests: compiled snippets and image files. */
 export type Renderings = SnippetSource & ImageUrls;
@@ -51,9 +47,54 @@ export interface TestViewOptions {
   renderer?: Renderings;
   assets?: ImageAssets;
   imageLinks?: ImageLinks;
+  /** What the user answers when the view asks (link URL, image, alt text, …); default: every question cancelled. */
+  prompts?: TestPrompts;
   /** The contributions of the extension under test, activated after the built-ins (as the widget's features are). */
   contributions?: readonly VisualViewContribution[];
 }
+
+/**
+ * The workbench's input box, quick pick and messages in a test: each question takes the next of `answers` (an input
+ * box the text, a quick pick the label of the item or its index; undefined cancels), and `asked` / `told` keep what
+ * was asked and said.
+ */
+export class TestPrompts implements Pick<Workbench, 'showInputBox' | 'showQuickPick' | 'showErrorMessage'> {
+  readonly answers: (string | number | undefined)[] = [];
+  readonly asked: { options?: InputBoxOptions | QuickPickOptions; items?: readonly (string | QuickPickItem)[] }[] = [];
+  readonly told: string[] = [];
+
+  /** Adds answers to the questions to come. */
+  answer(...answers: (string | number | undefined)[]): this {
+    this.answers.push(...answers);
+    return this;
+  }
+
+  showInputBox = async (options?: InputBoxOptions): Promise<string | undefined> => {
+    this.asked.push({ options });
+    const answer = this.answers.shift();
+    return answer === undefined ? undefined : String(answer);
+  };
+
+  showQuickPick = (async (items: readonly (string | QuickPickItem)[] | Promise<readonly (string | QuickPickItem)[]>, options?: QuickPickOptions) => {
+    const list = await items;
+    this.asked.push({ options, items: list });
+    const answer = this.answers.shift();
+    if (typeof answer === 'number') return list[answer];
+    return list.find((item) => (typeof item === 'string' ? item : item.label) === answer);
+  }) as Workbench['showQuickPick'];
+
+  showErrorMessage = async <T extends string | MessageItem>(message: string): Promise<T | undefined> => {
+    this.told.push(message);
+    return undefined;
+  };
+}
+
+// after TestPrompts: making the schema activates the built-ins, which get prompts
+/** The schema of a view with the built-ins. */
+export const schema: Schema = schemaWith();
+
+/** `source` projected with `withSchema` (default: the built-ins' `schema`). */
+export const project = (source: string, withSchema: Schema = schema): Node => projectWith(source, withSchema);
 
 /** A Visual view of `document` with the built-ins configured from `options`. */
 export function createVisualView(parent: HTMLElement, document: TypstDocument, options: TestViewOptions = {}): VisualView {
@@ -62,17 +103,23 @@ export function createVisualView(parent: HTMLElement, document: TypstDocument, o
 
 /** The built-ins and `options.contributions`, activated. */
 function contributions(options: TestViewOptions): VisualViewContributions {
-  return activate([...builtins(options), ...(options.contributions ?? [])]);
+  return activate([...builtins(options), ...(options.contributions ?? [])], options.prompts);
 }
 
 /**
  * `contributions` activated in order, for their Visual-view contributions. The built-in constructs are extensions:
- * of the rest of the extension context they use only the workbench's stylesheets (left out here).
+ * of the rest of the extension context they use only the workbench's stylesheets and its prompts (`prompts`; default:
+ * every question cancelled).
  */
-export function activate(contributions: readonly VisualViewContribution[]): VisualViewContributions {
+export function activate(contributions: readonly VisualViewContribution[], prompts: TestPrompts = new TestPrompts()): VisualViewContributions {
   const visualView = new VisualViewContributions();
   const subscriptions: { dispose(): unknown }[] = [];
-  const workbench = { registerStyleSheet: () => new Disposable(() => {}) };
+  const workbench = {
+    registerStyleSheet: () => new Disposable(() => {}),
+    showInputBox: prompts.showInputBox,
+    showQuickPick: prompts.showQuickPick,
+    showErrorMessage: prompts.showErrorMessage,
+  };
   for (const contribution of contributions) contribution.activate({ visualView, subscriptions, workbench } as ContributionContext);
   return visualView;
 }
@@ -90,6 +137,7 @@ export function builtins(options: Omit<TestViewOptions, 'contributions'> = {}): 
       assets: options.assets && (() => options.assets),
       imageUrls: options.renderer && (() => options.renderer),
       imageLinks: options.imageLinks && (() => options.imageLinks),
+      prompts: options.prompts ?? new TestPrompts(),
     }),
     renderedBoxesVisualView({ snippets: options.renderer && (() => options.renderer) }),
     outline,

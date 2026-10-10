@@ -14,8 +14,7 @@ function setup(text: string, view: NoteView | ((document: TypstDocument, parent:
   document.body.append(root);
   const doc = new TypstDocument(text);
   const shown = typeof view === 'function' ? view(doc, root) : view;
-  const action = new CommentAction(document, () => ({ document: doc, view: shown }));
-  root.append(action.button);
+  const action = new CommentAction(() => ({ document: doc, view: shown }));
   return { doc, root, action, view: shown };
 }
 
@@ -23,7 +22,7 @@ describe('CommentAction', () => {
   it('wraps the selection of a source-like view and puts the cursor into the note', () => {
     const reveal = vi.fn();
     const { doc, action } = setup('Hello world\n', { selection: () => ({ from: 6, to: 11 }), reveal });
-    action.button.click();
+    action.comment();
     expect(doc.text).toBe(`${IMPORT}Hello #margin-note[world][]\n`);
     const body = doc.text.lastIndexOf('[]') + 1;
     expect(reveal).toHaveBeenCalledWith(body, body);

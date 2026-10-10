@@ -7,26 +7,28 @@ test.beforeEach(async ({ page }) => {
   await compiled(page);
 });
 
-test('Link button links the selection to the URL entered in its popover', async ({ page }) => {
+test('Link button links the selection to the URL entered in the input box', async ({ page }) => {
   await freshSelectedLine(page);
   await selectionBar(page).getByRole('button', { name: 'Link' }).click();
-  const popover = page.getByRole('form', { name: 'Link' });
-  await popover.getByLabel('URL').fill('https://typst.app');
-  await popover.getByLabel('URL').press('Enter');
-  await expect(popover).toBeHidden();
+  const input = page.getByRole('form', { name: 'Link' });
+  await input.getByLabel('URL').fill('https://typst.app');
+  await input.getByLabel('URL').press('Enter');
+  await expect(input).toBeHidden();
   await expect(visual(page).locator('a', { hasText: 'Fresh line' })).toHaveAttribute('href', 'https://typst.app');
   await expect.poll(sourceText(page)).toContain('#link("https://typst.app")[Fresh line]');
 });
 
-test('Mod+K opens the link popover; Remove unlinks', async ({ page }) => {
+test('Mod+K asks for the URL; an empty one unlinks', async ({ page }) => {
   await freshSelectedLine(page);
   await page.keyboard.press('ControlOrMeta+K');
-  const popover = page.getByRole('form', { name: 'Link' });
-  await popover.getByLabel('URL').fill('https://typst.app');
-  await popover.getByRole('button', { name: 'Apply' }).click();
+  const input = page.getByRole('form', { name: 'Link' });
+  await input.getByLabel('URL').fill('https://typst.app');
+  await input.getByRole('button', { name: 'OK' }).click();
   await visual(page).locator('a', { hasText: 'Fresh line' }).click();
   await page.keyboard.press('ControlOrMeta+K');
-  await popover.getByRole('button', { name: 'Remove' }).click();
+  await expect(input.getByLabel('URL (empty removes the link)')).toHaveValue('https://typst.app');
+  await input.getByLabel('URL (empty removes the link)').fill('');
+  await input.getByLabel('URL (empty removes the link)').press('Enter');
   await expect(visual(page).locator('a', { hasText: 'Fresh line' })).toHaveCount(0);
   await expect.poll(sourceText(page)).not.toContain('#link(');
 });
@@ -34,9 +36,10 @@ test('Mod+K opens the link popover; Remove unlinks', async ({ page }) => {
 test('Insert image adds an #image block with the entered path', async ({ page }) => {
   await caretAtEnd(visual(page).locator('p').first());
   await chooseFrom(toolbar(page), 'Insert', 'Insert image');
-  const popover = page.getByRole('form', { name: 'Image' });
-  await popover.getByLabel('Image path').fill('images/logo.png');
-  await popover.getByLabel('Image path').press('Enter');
+  await page.getByRole('dialog', { name: 'Insert image' }).getByRole('option', { name: 'Enter a path…' }).click();
+  const input = page.getByRole('form', { name: 'Insert image' });
+  await input.getByLabel('Image path').fill('images/logo.png');
+  await input.getByLabel('Image path').press('Enter');
   await expect(visual(page).locator('.typst-visual__image-label')).toHaveText('Image: images/logo.png');
   await expect.poll(sourceText(page)).toContain('\n\n#image("images/logo.png")\n');
 });

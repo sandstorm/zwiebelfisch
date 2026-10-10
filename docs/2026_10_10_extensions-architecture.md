@@ -22,7 +22,7 @@ in below) and answers two questions the user raised:
 src/
   core/                  MODEL. Project, TypstDocument, paths, document-links, typst-engine.
                          No DOM; no ProseMirror / CodeMirror / Tiptap. Tests run in node.
-  ui/                    Feature-neutral DOM widgets: FieldPopover, ToolbarMenu, FloatingBar, icons.
+  ui/                    Feature-neutral DOM widgets: PopupMenu, ToolbarMenu, FloatingBar, icons.
   hosts/                 VIEW HOSTS: mechanism + contribution points, no feature knowledge.
     visual-view/         Tiptap editor over the projection *framework*
     source-view/         CodeMirror bound to a TypstDocument

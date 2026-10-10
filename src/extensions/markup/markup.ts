@@ -27,7 +27,7 @@ export const markup: TypstExtension = {
       ...[MARK_ACTIONS.bold, MARK_ACTIONS.italic, MARK_ACTIONS.code].map((action, i) =>
         visualView.registerToolbarItem({ group: 'selection', order: 10 * (i + 1), action }),
       ),
-      visualView.registerToolbarItem({ group: 'selection', order: 40, create: linkAction }),
+      visualView.registerToolbarItem({ group: 'selection', order: 40, create: (toolbar) => linkAction(toolbar, workbench) }),
       visualView.registerToolbarItem({ group: 'insert', order: 40, action: INSERT_CODE_BLOCK }),
       visualView.registerToolbarItem({ group: 'insert', order: 50, action: INSERT_QUOTE }),
     );

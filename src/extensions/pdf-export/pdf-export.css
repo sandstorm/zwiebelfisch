@@ -29,6 +29,3 @@
 .typst-preview__pdf-options label { display: flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; }
 .typst-preview__pdf-options .typst-preview__pdf-download { align-self: flex-end; }
 .typst-preview__pdf button:hover:not(:disabled), .typst-preview__pdf button:focus-visible { background: var(--te-hover); }
-.typst-preview__pdf-status { position: absolute; top: calc(100% + 4px); right: 0; z-index: 19; max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--te-muted); }
-/* empty, it takes no room but stays a live region (display: none would keep its messages from screen readers) */
-.typst-preview__pdf-status:not(:empty) { padding: 3px 6px; border: 1px solid var(--te-border); border-radius: 4px; background: var(--te-surface); }

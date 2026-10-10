@@ -47,13 +47,17 @@ test('creates and deletes a file from the file panel', async ({ page }) => {
     el.files = { '/notes.typ': 'Notes' };
   });
   const files = editor.getByTestId('typst-files');
-  await files.getByRole('button', { name: 'New file' }).click();
+  await files.getByRole('button', { name: 'New', exact: true }).click();
+  await editor.getByRole('menu', { name: 'New' }).getByRole('menuitem', { name: 'New file…' }).click();
   await editor.getByRole('textbox', { name: 'Name of the new file' }).fill('appendix');
-  await editor.getByRole('button', { name: 'Create' }).click();
+  await editor.getByRole('textbox', { name: 'Name of the new file' }).press('Enter');
   await expect(fileRow(editor, 'appendix.typ')).toHaveAttribute('aria-selected', 'true');
 
-  await files.getByRole('button', { name: 'Delete' }).click();
-  await editor.getByRole('button', { name: 'Delete', exact: true }).last().click();
+  // the row's context menu, then the confirmation (a warning message)
+  await fileRow(editor, 'appendix.typ').click({ button: 'right' });
+  await editor.getByRole('menuitem', { name: 'Delete' }).click();
+  const confirmation = editor.getByTestId('typst-notifications').getByRole('alert').filter({ hasText: 'Delete appendix.typ?' });
+  await confirmation.getByRole('button', { name: 'Delete', exact: true }).click();
   await expect(fileRow(editor, 'appendix.typ')).toHaveCount(0);
   await expect(fileRow(editor, 'main.typ')).toHaveAttribute('aria-selected', 'true');
 });
@@ -63,9 +67,11 @@ test('the main file cannot be renamed or deleted', async ({ page }) => {
   await editor.evaluate((el: Editor) => {
     el.files = { '/notes.typ': 'Notes' };
   });
-  const files = editor.getByTestId('typst-files');
-  await expect(files.getByRole('button', { name: 'Rename' })).toBeDisabled();
-  await expect(files.getByRole('button', { name: 'Delete' })).toBeDisabled();
+  await fileRow(editor, 'main.typ').click({ button: 'right' });
+  const menu = editor.getByRole('menu', { name: 'main.typ' });
+  await expect(menu.getByRole('menuitem', { name: 'New file…' })).toBeVisible();
+  await expect(menu.getByRole('menuitem', { name: 'Rename…' })).toHaveCount(0);
+  await expect(menu.getByRole('menuitem', { name: 'Delete' })).toHaveCount(0);
 });
 
 test('shows an image file; dragged from the file panel into the text, it is inserted there', async ({ page }) => {

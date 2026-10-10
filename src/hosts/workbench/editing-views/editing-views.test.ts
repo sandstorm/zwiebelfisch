@@ -63,26 +63,20 @@ describe('EditingViews', () => {
     expect(visible()[0].querySelector('[data-testid=typst-source]')).not.toBeNull();
   });
 
-  it('shows a tab-bar control for one view only in that view (the Source view\'s "Comment")', () => {
-    const { parent, views, a, tab } = setup();
-    views.show(a);
-    const comment = document.createElement('button');
-    const always = document.createElement('span');
-    views.addTabAction(comment, 'source');
-    views.addTabAction(always);
-    expect([comment.hidden, always.hidden]).toEqual([true, false]);
+  it('puts the actions at the end of the tab bar and tells when the user switches tabs', () => {
+    const parent = document.createElement('div');
+    document.body.append(parent);
+    const modes: string[] = [];
+    const views = new EditingViews(parent, { visualView: VisualViewContributions.from([]), onMode: (mode) => modes.push(mode) });
+    views.show(new TypstDocument('Alpha\n'));
+    const actions = document.createElement('div');
+    views.addTabActions(actions);
+    expect(parent.querySelector('.typst-editor__tabs')?.lastElementChild).toBe(actions);
+    const tab = (name: string) => [...parent.querySelectorAll<HTMLElement>('[role=tab]')].find((t) => t.textContent === name)!;
     tab('Source').click();
-    expect([comment.hidden, always.hidden]).toEqual([false, false]);
-    expect(parent.querySelector('.typst-editor__tabs')?.contains(comment)).toBe(true);
-  });
-
-  it('removes a tab-bar control', () => {
-    const { parent, views, a } = setup();
-    views.show(a);
-    const comment = document.createElement('button');
-    const remove = views.addTabAction(comment, 'source');
-    remove();
-    expect(parent.querySelector('.typst-editor__tabs')?.contains(comment)).toBe(false);
+    tab('Source').click();
+    tab('Visual').click();
+    expect(modes).toEqual(['source', 'visual']);
   });
 
   it('reveals in the current view without switching tabs otherwise', () => {

@@ -83,12 +83,6 @@
   pointer-events: none;
 }
 .typst-visual__image-frame > .typst-visual__rendering { cursor: default; }
-.typst-popover__choices { flex-basis: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
-.typst-popover__files { display: flex; flex-direction: column; align-self: stretch; max-height: 160px; overflow: auto; }
-.typst-popover .typst-popover__files button { border: none; background: none; padding: 3px 6px; text-align: left; }
-.typst-popover .typst-popover__files button:hover { background: var(--te-hover); }
-.typst-popover__error { color: var(--te-danger); }
-.typst-popover__error:empty { display: none; }
 /* Read-only view of images and data files */
 .typst-asset {
   flex: 1;

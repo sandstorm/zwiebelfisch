@@ -37,7 +37,7 @@ export function pdfExport(): TypstExtension {
       subscriptions.push(workbench.registerStyleSheet(css));
       const pdfs = new PdfExport(project, preview);
       subscriptions.push(workbench.registerCommand('pdfExport.export', (values?: Record<string, boolean>) => pdfs.blob(values)));
-      const download = downloadPdf(pdfs, workbench.remember('pdf-export.options'));
+      const download = downloadPdf(pdfs, workbench.remember('pdf-export.options'), workbench);
       let button: Disposable | null = null;
       const show = () => {
         const wanted = workspace.getConfiguration('pdfExport').get('download', true);

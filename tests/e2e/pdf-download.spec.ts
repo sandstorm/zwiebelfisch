@@ -15,7 +15,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 const pdfControls = (page: Page) => page.getByTestId('typst-pdf');
-const status = (page: Page) => pdfControls(page).getByRole('status');
+/** The error messages shown ("No PDF: …"). */
+const errors = (page: Page) => page.getByTestId('typst-notifications').getByRole('alert');
 type Editor = { source: string; exportPdf(options?: { options?: Record<string, boolean> }): Promise<Blob> };
 const setSource = (page: Page, text: string) =>
   page.evaluate((t) => ((window as unknown as { editor: Editor }).editor.source = t), text);
@@ -61,7 +62,7 @@ test('"Download PDF" offers "Include comments" (off by default, remembered) and 
   await expect(options.getByRole('checkbox', { name: 'Include comments' })).toBeChecked();
   await page.keyboard.press('Escape');
   await expect(options).toBeHidden();
-  await expect(status(page)).toHaveText('');
+  await expect(errors(page)).toHaveCount(0);
 });
 
 test('a document with errors gives a message, not a PDF', async ({ page }) => {
@@ -70,7 +71,7 @@ test('a document with errors gives a message, not a PDF', async ({ page }) => {
   page.on('download', () => downloads++);
   const options = await openOptions(page);
   await options.getByRole('button', { name: 'Download', exact: true }).click();
-  await expect(status(page)).toHaveText(/^No PDF: The document has 1 error: unknown variable: oops/);
+  await expect(errors(page)).toContainText(/No PDF: The document has 1 error: unknown variable: oops/);
   expect(downloads).toBe(0);
 });
 

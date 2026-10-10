@@ -54,20 +54,25 @@ test('a reference to a missing label is marked', async ({ page }) => {
   await expect(visual(page).locator('.typst-visual__ref--unknown')).toHaveText('nowhere');
 });
 
-test('renaming a label from its tag updates the references in every file', async ({ page }) => {
+/** Clicks the heading's label tag and picks `choice` in the quick pick it opens. */
+async function tagChoice(page: Page, choice: string) {
   await visual(page).locator('h1').getByTestId('typst-label-tag').click();
-  const form = page.locator('typst-editor').getByRole('form', { name: 'Label' });
+  const pick = page.locator('typst-editor').getByRole('dialog', { name: 'Label <intro>' });
+  await pick.getByRole('option', { name: choice }).click();
+}
+
+test('renaming a label from its tag updates the references in every file', async ({ page }) => {
+  await tagChoice(page, 'Rename… and update 1 reference'); // the first choice while anything refers to it
+  const form = page.locator('typst-editor').getByRole('form', { name: 'Rename <intro> and update 1 reference' });
   await form.getByRole('textbox', { name: 'Label name' }).fill('start');
-  await expect(form.getByRole('button', { name: 'Rename and update 1 reference' })).toBeVisible();
-  await form.getByRole('textbox', { name: 'Label name' }).press('Enter'); // updating the references is the default
+  await form.getByRole('textbox', { name: 'Label name' }).press('Enter');
   await expect.poll(value(page)).toContain('= Introduction <start>\n');
   await expect.poll(methodFile(page)).toContain('As @start says');
   await expect(visual(page).locator('h1').getByTestId('typst-label-tag')).toHaveText('start');
 });
 
 test('removing a label from its tag', async ({ page }) => {
-  await visual(page).locator('h1').getByTestId('typst-label-tag').click();
-  await page.locator('typst-editor').getByRole('form', { name: 'Label' }).getByRole('button', { name: 'Remove' }).click();
+  await tagChoice(page, 'Remove label');
   await expect.poll(value(page)).toContain('= Introduction\n\n');
   await expect(visual(page).locator('h1').getByTestId('typst-label-tag')).toHaveCount(0);
 });

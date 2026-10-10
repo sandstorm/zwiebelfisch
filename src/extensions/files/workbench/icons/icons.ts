@@ -1,4 +1,4 @@
-// The file panel's icons (16×16 strokes, currentColor): file kinds, folders, actions. See ../file-panel.ts.
+// The file panel's icons (16×16 strokes, currentColor): file kinds, folders, "New". See ../file-panel.ts.
 import type { FileKind } from '../../../../core/paths/paths';
 
 const ICONS = {
@@ -11,10 +11,6 @@ const ICONS = {
   chevron: '<path d="m6 4 4 4-4 4"/>',
   files: '<path d="M5 1.5h5L13 4.5V12H5z"/><path d="M3 4v10h7"/>',
   add: '<path d="M8 3v10M3 8h10"/>',
-  'add-folder': '<path d="M1.5 4.5v8h13v-7H7.5L6 4H2z"/><path d="M8 7v4M6 9h4"/>',
-  upload: '<path d="M8 11V3M4.5 6.5 8 3l3.5 3.5M3 13h10"/>',
-  rename: '<path d="m10.5 2.5 3 3L6 13H3v-3z"/>',
-  delete: '<path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 9h5.6l.7-9"/>',
 } satisfies Record<FileKind | string, string>;
 
 export type IconName = keyof typeof ICONS;

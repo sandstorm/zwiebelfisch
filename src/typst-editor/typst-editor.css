@@ -226,25 +226,6 @@
   font: 600 12px system-ui, sans-serif;
   color: var(--te-text-2);
 }
-.typst-popover {
-  position: absolute;
-  top: 100%;
-  z-index: 2;
-  display: flex;
-  gap: 4px;
-  padding: 6px;
-  border: 1px solid var(--te-border);
-  border-radius: 8px;
-  background: var(--te-surface);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.12);
-  font: 13px system-ui, sans-serif;
-}
-.typst-popover[hidden] { display: none; }
-.typst-popover input { width: 260px; padding: 4px 6px; border: 1px solid var(--te-border); border-radius: 4px; font: inherit; }
-.typst-popover button { padding: 4px 10px; border: 1px solid var(--te-border); border-radius: 4px; background: var(--te-subtle); font: inherit; cursor: pointer; }
-.typst-popover button[type='submit'] { border-color: var(--te-accent); background: var(--te-accent); color: white; }
-.typst-popover button[hidden] { display: none; }
-.typst-popover { flex-wrap: wrap; max-width: 360px; }
 .typst-preview--stale { opacity: 0.45; filter: grayscale(0.6); transition: opacity 0.2s; }
 .typst-toolbar {
   position: sticky;
@@ -324,3 +305,31 @@
 
 
 
+/* Popup menus (ui/popup-menu: context menus, "New ▾") */
+.typst-popup-menu {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: 4px;
+  border: 1px solid var(--te-border);
+  border-radius: 8px;
+  background: var(--te-surface);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16);
+  font: 13px system-ui, sans-serif;
+}
+.typst-popup-menu__item {
+  border: 0;
+  border-radius: 6px;
+  padding: 4px 10px;
+  background: none;
+  color: var(--te-text);
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.typst-popup-menu__item:hover,
+.typst-popup-menu__item:focus { background: var(--te-hover); outline: none; }
+.typst-popup-menu__separator { height: 1px; margin: 4px 2px; background: var(--te-divider); }

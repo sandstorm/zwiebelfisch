@@ -20,7 +20,7 @@ export class GitLabSourceControl {
   readonly id = 'gitlab';
   readonly label = 'GitLab';
   readonly defaultCommitMessage = DEFAULT_COMMIT_MESSAGE;
-  #state = { busy: false, status: '' };
+  #state: CommitState = { busy: false, status: null };
   readonly #changed = new EventEmitter<void>();
   readonly onDidChange = this.#changed.event;
   readonly #unsubscribe: () => void;
@@ -40,13 +40,13 @@ export class GitLabSourceControl {
     return typeof ydoc.getMap(META_MAP).get('baseSha') === 'string';
   }
 
-  get state(): { readonly busy: boolean; readonly status: string } {
+  get state(): CommitState {
     return this.#state;
   }
 
   commit(message: string): void {
     const request: ClientMessage = { type: 'gitlab:save', message, ...(this.author ? { author: this.author } : {}) };
-    this.#set({ busy: true, status: 'Saving…' });
+    this.#set({ busy: true, status: null });
     this.channel.send(JSON.stringify(request));
   }
 
@@ -60,25 +60,36 @@ export class GitLabSourceControl {
     this.#set({ busy: message.type === 'gitlab:merged' && this.#state.busy, status: commitStatus(message) });
   }
 
-  #set(state: { busy: boolean; status: string }): void {
+  #set(state: CommitState): void {
     this.#state = state;
     this.#changed.fire();
   }
 }
 
-/** The status line for `message`: the saved version, nothing to save, merged upstream changes, a conflict, a failure. */
-export function commitStatus(message: ServerMessage): string {
+/** A commit under way, and the last outcome or news as a message (the workbench's `SourceControlState`). */
+export interface CommitState {
+  readonly busy: boolean;
+  readonly status: CommitStatus | null;
+}
+
+export interface CommitStatus {
+  readonly message: string;
+  readonly severity: 'info' | 'warning' | 'error';
+}
+
+/** The message for `message`: the saved version, nothing to save, merged upstream changes, a conflict, a failure. */
+export function commitStatus(message: ServerMessage): CommitStatus {
   switch (message.type) {
     case 'gitlab:saved':
-      return `Saved version ${message.sha.slice(0, 8)} (${message.author})`;
+      return { message: `Saved version ${message.sha.slice(0, 8)} (${message.author})`, severity: 'info' };
     case 'gitlab:unchanged':
-      return 'No changes to save';
+      return { message: 'No changes to save', severity: 'info' };
     case 'gitlab:merged':
-      return 'Merged new changes from GitLab';
+      return { message: 'Merged new changes from GitLab', severity: 'info' };
     case 'gitlab:conflict':
-      return `Changes on GitLab conflict with edits in ${message.files.map((file) => file.path).join(', ')}; not saved`;
+      return { message: `Changes on GitLab conflict with edits in ${message.files.map((file) => file.path).join(', ')}; not saved`, severity: 'warning' };
     case 'gitlab:error':
-      return `Saving failed: ${message.message}`;
+      return { message: `Saving failed: ${message.message}`, severity: 'error' };
   }
 }
 

@@ -126,21 +126,3 @@
 }
 .typst-visual__body--narrow .typst-note-card { display: none; left: 0; right: 0; pointer-events: auto; transition: none; z-index: 2; }
 .typst-visual__body--narrow .typst-note-card--active { display: block; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18); }
-/* ---- the Comment button (adds a margin note) ---- */
-.typst-editor__comment {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-  border: 1px solid var(--te-border);
-  border-radius: 6px;
-  padding: 3px 10px;
-  background: var(--te-surface);
-  color: var(--te-text-2);
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-}
-.typst-editor__comment[hidden] { display: none; }
-.typst-editor__comment:hover { background: var(--te-hover); }
-.typst-editor__comment:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 1px; }
