@@ -172,6 +172,73 @@
   font: 600 12px system-ui, sans-serif;
   color: #3d4451;
 }
+/* Images: a frame showing the width, resize handles and the image toolbar while selected */
+.typst-visual__image-frame { position: relative; width: fit-content; max-width: 100%; }
+.typst-visual__image-frame--sized > .typst-visual__rendering { width: 100%; }
+.typst-visual__image-frame:has(> .typst-visual__rendering[hidden]) { display: none; }
+.typst-visual__resize-handle {
+  position: absolute;
+  display: none;
+  width: 10px;
+  height: 10px;
+  margin: -5px;
+  border: 1px solid white;
+  border-radius: 2px;
+  background: var(--te-accent);
+  touch-action: none;
+}
+.typst-visual__image.ProseMirror-selectednode .typst-visual__resize-handle,
+.typst-visual__image-frame--resizing .typst-visual__resize-handle { display: block; }
+.typst-visual__resize-handle[data-handle='nw'] { top: 0; left: 0; cursor: nwse-resize; }
+.typst-visual__resize-handle[data-handle='ne'] { top: 0; right: 0; cursor: nesw-resize; }
+.typst-visual__resize-handle[data-handle='sw'] { bottom: 0; left: 0; cursor: nesw-resize; }
+.typst-visual__resize-handle[data-handle='se'] { bottom: 0; right: 0; cursor: nwse-resize; }
+.typst-visual__resize-handle[data-handle='w'] { top: 50%; left: 0; height: 20px; margin-top: -10px; cursor: ew-resize; }
+.typst-visual__resize-handle[data-handle='e'] { top: 50%; right: 0; height: 20px; margin-top: -10px; cursor: ew-resize; }
+.typst-visual__image-size {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: none;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 0.65);
+  color: white;
+  font: 12px system-ui, sans-serif;
+}
+.typst-visual__image-frame--resizing > .typst-visual__image-size { display: block; }
+.typst-visual__image-tools {
+  position: relative;
+  display: none;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+  font: 12px system-ui, sans-serif;
+}
+.typst-visual__image.ProseMirror-selectednode.typst-visual__raw--rendered > .typst-visual__image-tools,
+.typst-visual__image-tools:focus-within { display: flex; }
+.typst-visual__image-tools > button {
+  padding: 2px 8px;
+  border: 1px solid var(--te-border);
+  border-radius: 4px;
+  background: white;
+  font: inherit;
+  cursor: pointer;
+}
+.typst-visual__image-tools > button[aria-pressed='true'] { border-color: var(--te-accent); background: #e3ecfd; }
+.typst-visual__figure { margin: 0 0 0.7em; }
+.typst-visual__figure > .typst-visual__image { margin-bottom: 0.2em; }
+.typst-visual__figure .typst-visual__image-frame { margin: 0 auto; }
+.typst-visual__figure .typst-visual__image-tools { justify-content: center; }
+.typst-visual__caption { position: relative; text-align: center; font-size: 0.95em; }
+.typst-visual__caption:has(> br.ProseMirror-trailingBreak:only-child)::before {
+  content: 'Caption';
+  position: absolute;
+  inset: 0;
+  color: #8c959f;
+  pointer-events: none;
+}
+.typst-visual__image-frame > .typst-visual__rendering { cursor: default; }
 .typst-visual__table { border-collapse: collapse; margin: 0 0 0.7em; table-layout: fixed; }
 .typst-visual__table td,
 .typst-visual__table th { min-width: 3em; padding: 2px 8px; border: 1px solid var(--te-border); vertical-align: top; }

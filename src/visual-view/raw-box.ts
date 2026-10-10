@@ -8,7 +8,8 @@ import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { EditorView, NodeView } from '@tiptap/pm/view';
 import { minimalChange } from '../document/minimal-change';
 import { typstLanguage } from '../source-view/typst-language';
-import { imagePath, posToSource } from './projection';
+import { ImageTools } from './image-tools';
+import { posToSource } from './projection';
 import { RenderedBox, type BoxRenderer } from './rendered-box';
 
 type Side = -1 | 1;
@@ -52,16 +53,17 @@ const inlineTheme = CodeView.theme({
  * outer selection stay put), and outside changes to `src` flow back into the
  * box as one minimal change. Undo/redo go to the Visual view's history;
  * arrow keys at the edges, Escape (and Enter in inline boxes) leave the box;
- * Backspace in an empty box deletes it. An `image` box is headed by the path
- * of its image. With a renderer (`setBoxRenderer`), the box shows the image or
- * its compiled snippet instead of the code until it gets focus.
+ * Backspace in an empty box deletes it. With a renderer (`setBoxRenderer`),
+ * the box shows the image or its compiled snippet instead of the code until
+ * the code gets focus. An `image` box adds its `ImageTools` (path heading,
+ * resize handles, caption/width/alt toolbar); clicking its picture selects
+ * the image rather than opening the code (double-click, Enter or "Edit code" do).
  */
 class RawBox implements NodeView {
   readonly dom: HTMLElement;
-  /** Above the code of an image box: which image it shows. */
-  private readonly label: HTMLElement | null = null;
   private readonly code: CodeView;
   private readonly rendered: RenderedBox | null = null;
+  private readonly image: ImageTools | null = null;
   /** Set while mirroring `src` into the box, so that change is not sent back. */
   private mirroring = false;
 
@@ -69,12 +71,8 @@ class RawBox implements NodeView {
     const inline = node.isInline;
     this.dom = editor.view.dom.ownerDocument.createElement(inline ? 'span' : 'div');
     this.dom.className = inline ? 'typst-visual__raw-inline' : 'typst-visual__raw-block';
-    if (node.type.name === 'image') {
-      this.dom.classList.add('typst-visual__image');
-      this.label = this.dom.appendChild(this.dom.ownerDocument.createElement('div'));
-      this.label.className = 'typst-visual__image-label';
-      this.updateLabel();
-    }
+    const isImage = node.type.name === 'image';
+    if (isImage) this.dom.classList.add('typst-visual__image');
     const wrapper = this.dom.appendChild(this.dom.ownerDocument.createElement(inline ? 'span' : 'div'));
     wrapper.className = 'typst-visual__code';
     this.code = new CodeView({
@@ -92,8 +90,12 @@ class RawBox implements NodeView {
     boxes.set(this.dom, this);
     const renderer = renderers.get(editor);
     if (renderer) {
-      const host = { dom: this.dom, code: wrapper, source: () => this.source(), activate: () => this.focus(-1) };
+      const host = { dom: this.dom, code: wrapper, source: () => this.source(), activate: () => (isImage ? this.select() : this.focus(-1)) };
       this.rendered = new RenderedBox(host, renderer);
+    }
+    if (isImage) {
+      const host = { dom: this.dom, code: wrapper, picture: this.rendered?.picture ?? null, editor, getPos, editCode: () => this.focus(-1) };
+      this.image = new ImageTools(host, node);
     }
   }
 
@@ -113,9 +115,18 @@ class RawBox implements NodeView {
       this.code.dispatch({ changes: change });
       this.mirroring = false;
     }
-    this.updateLabel();
+    this.image?.update(node);
     this.rendered?.update(node);
     return true;
+  }
+
+  selectNode(): void {
+    this.dom.classList.add('ProseMirror-selectednode');
+    this.image?.refresh();
+  }
+
+  deselectNode(): void {
+    this.dom.classList.remove('ProseMirror-selectednode');
   }
 
   stopEvent(): boolean {
@@ -127,6 +138,7 @@ class RawBox implements NodeView {
   }
 
   destroy(): void {
+    this.image?.destroy();
     this.rendered?.destroy();
     this.code.destroy();
   }
@@ -137,8 +149,13 @@ class RawBox implements NodeView {
     return pos === undefined ? null : { node: this.node, from: posToSource(this.editor.state.doc, pos) };
   }
 
-  private updateLabel(): void {
-    if (this.label) this.label.textContent = `Image: ${imagePath(this.node.attrs.src) ?? '(no path)'}`;
+  /** Selects the box as a whole in the outer editor (an image: shows its tools). */
+  private select(): void {
+    const pos = this.getPos();
+    if (pos === undefined) return;
+    const outer = this.editor.view;
+    outer.dispatch(outer.state.tr.setSelection(NodeSelection.create(outer.state.doc, pos)));
+    outer.focus();
   }
 
   private forward(trs: readonly CodeTransaction[], view: CodeView): void {
