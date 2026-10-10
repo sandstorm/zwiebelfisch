@@ -3,8 +3,9 @@
 // Why extensions: the frame knows no feature by name. A feature is a `TypstExtension` that registers what it adds
 // (a side panel, a custom editor, a command, a menu item, a link provider, a source control) once, at activation, and the
 // host disposes all of it on destroy. What every feature needs to talk to the user (messages, input boxes, quick
-// picks) is the workbench's, in VS Code's shapes, so features look and behave alike. Adding a feature is adding it to a list, not editing the frame. Extensions never
-// depend on each other: what one offers another goes through a generic contribution point of a host.
+// picks) is the workbench's, in VS Code's shapes, so features look and behave alike. Adding a feature is adding it to
+// a list, not editing the frame. Extensions never depend on each other: what one offers another goes through a
+// generic contribution point of a host.
 // See ARCHITECTURE.md, "Extensions" and "Layout".
 // WorkbenchHost (below the API) is what createTypstEditor creates; extensions see it as `Workbench`.
 import { Disposable } from '../../core/disposable/disposable';
@@ -595,9 +596,10 @@ export interface WorkbenchOptions {
 
 /**
  * The frame of the widget on `host`: shows the project's files (Typst files in the Visual / Source tabs, others in
- * the custom editors extensions register), keeps the preview compiling the main file, and runs the extensions. The Visual and Source views and the preview are its hosts (`ExtensionContext.visualView`,
- * `sourceView`, `preview`). `activate` starts it: extensions first (their contributions are in place before any view exists),
- * then the main file is shown and compiled.
+ * the custom editors extensions register), keeps the preview compiling the main file, and runs the extensions. The
+ * Visual and Source views and the preview are its hosts (`ExtensionContext.visualView`, `sourceView`, `preview`).
+ * `activate` starts it: extensions first (their contributions are in place before any view exists), then the main
+ * file is shown and compiled.
  */
 export class WorkbenchHost implements Workbench {
   #active: ProjectPath;
