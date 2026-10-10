@@ -49,14 +49,75 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    the hosts' generic points only (Visual decorations / highlights, Source CodeMirror extensions,
    `setBoxDecorations`, source↔pos mapping on the view context). Also sweep the hosts for other
    single-extension pass-throughs and remove them the same way.
+   **Same agent: document links in VS Code's shape** (user: merging sounds sensible): one
+   `workbench.registerDocumentLinkProvider({ provideDocumentLinks(document) → DocumentLink[] (range,
+   target?, tooltip?), resolveDocumentLink?(link) }, { priority? })` read by BOTH views (Source view
+   and the Visual view's boxes; no separate box-links route); links of all providers are merged,
+   overlapping ranges → higher priority wins. The `document-links` extension is one provider (open, or
+   create a missing .typ); `core/document-links` keeps only Typst-syntax finding + reading order.
+   Replaces `sourceView.registerLinkProvider` (factory returning a whole provider, first one wins).
+   **Same agent: editor ↔ preview sync as an extension** (user: "shouldn't this be an extension?"):
+   the preview host keeps only mechanism: `reveal(path, from, to)`, hit-testing, `onDidClickPage`
+   (with the source position). A `preview-sync` extension owns the policy both ways: follow cursor
+   (listens to `onDidChangeTextEditorSelection`, calls `reveal`), its toolbar switch + remembered
+   state, and click-in-preview → jump to source (today's `onJump` option). Without it the preview
+   neither follows nor jumps. `previewControls` keeps zoom + page number.
+   **Same agent: no services, no declaration merging** (user: "really needed?"): `labels` / `styles`
+   services are never read (delete); `documentLinks` goes with the generic link providers;
+   `collaboration` → `workbench.registerFileDecorationProvider` (presence dots in the file tree, VS
+   Code's FileDecorationProvider) + a workbench `SourceControl` registry (VS Code's
+   `scm.createSourceControl`: the GitLab room registers one, the `source-control` extension is only
+   the UI). Then `ServiceRegistry` / `Services` / `context.services` go. Commands: plain string ids,
+   `executeCommand<T = unknown>(id: string, ...args: unknown[]): Promise<T>` (no `CommandRegistry`).
+   Rule: an extension that needs something from another gets a generic host contribution point,
+   never a dependency. (`declare module '@tiptap/core'` for Tiptap commands stays: Tiptap needs it.)
    **After the slices merge: public extension API** (user: yes, now): `createTypstEditor({ extensions })`
    (the built-in list is the default; hosts can add their own, and replace or leave out built-ins),
    the extension types exported from `src/index.ts`, docs/embedding.md "Writing an extension" with an
-   example. Async `executeCommand` (VS Code) before it goes public.
+   example. Async `executeCommand` (user: yes): returns `Promise<Awaited<CommandResult<K>>>`, but calls
+   the handler synchronously (`Promise.resolve(handler(...))`, so user activation, selection and
+   focus behave as today); a throwing handler / unknown id rejects; the keybinding path decides
+   `preventDefault` synchronously and `catch`es + logs.
    **Rename `versions` → `source-control`** (user: "versions" is a bad name, it commits the state):
    VS Code's `SourceControl` concept; collaboration's GitLab room provides a `SourceControl` service
    (`commit(message)`, state, `onDidChange`) replacing `RoomVersions`; button label proposed
    "Save to GitLab…" (user to confirm).
+   **After the slices merge: IronCalc dark mode** (user asked; small, own agent): IronCalc 0.8.3 has
+   no dark preset but `setThemeVariables(vars, target)` (~60 CSS variables: palette, greys, sheet
+   grid / headers / default text / outline). The spreadsheets extension sets a dark palette derived
+   from the widget's color tokens while `data-scheme="dark"`, and follows scheme changes (check
+   whether the canvas redraws on its own or needs a nudge). Cell colors set in the file stay.
+   **After the slices merge: draw.io diagrams** (user asked): see
+   [todo/drawio-diagrams.md](todo/drawio-diagrams.md): `extensions/diagrams/`, `.drawio.png` in the
+   embedded diagrams.net editor, auto-save (autosave → export xmlpng → project update, debounced).
+   Brings VS Code's custom editors: `registerCustomEditorProvider(viewType, provider, {
+   filenamePattern, priority })` replaces `registerFileView(kind)`; `registerNewFileTemplate` for
+   "New diagram…" / "New spreadsheet…". Runs after the IronCalc dark-mode agent or merges after it
+   (both touch spreadsheets' registration).
+   **Decided 2026-10-10 (user), generic mechanisms after the slices merge:**
+   - *Configuration* (with the public extension API agent): extensions declare settings (id, type,
+     default, description); read via `workspace.getConfiguration('<ext>').get('<key>')` +
+     `onDidChangeConfiguration`; `createTypstEditor({ settings })` (and the element's attributes, if
+     it stays) map onto it generically — no hand-wired per-feature options (`pdfDownload`,
+     `fileList`, `user`, `followCursor`, …) in `typst-editor.ts`.
+   - *Workbench UI services* (one agent, after the public API): `showInformationMessage` /
+     `showWarningMessage` / `showErrorMessage`; `showInputBox` / `showQuickPick` (replace per-feature
+     `FieldPopover` uses: label names, link URL, commit message, new style); menus as contribution
+     points `registerMenuItem(menuId, { command, when?, group, order })` for the file panel context
+     menu, "New …" entries, tab bar actions (replaces the planned `registerNewFileTemplate`).
+   **Rules wave also does (core cleanup, user decided):** Yjs out of `TypstDocument` (`share`,
+   `fromYText`, `y-delta`, `REMOTE_ORIGIN` → collaboration binds a Y.Text from outside, like
+   y-codemirror; verify undo + origins); `FileKind` reduced to Typst vs. other (editors by filename
+   pattern), MIME table + `imageBlob` → images; `Highlight` → hosts; `core/typst-syntax/` holds the
+   path finder, `calculateImportChange`, reading order; engine test packages next to their tests.
+   **`<typst-editor>` stays as a thin generic adapter** (user): shadow root + `createTypstEditor`;
+   `setting-*` attributes map onto settings generically; editor events forwarded as DOM events; no
+   per-option code (with the configuration work).
+   **Later (after draw.io brings custom editors): Visual / Source as the two built-in editors for
+   `*.typ`** (user: makes sense architecture-wise). They stay *hosts* with contribution points (like
+   VS Code's built-in text editor), only registered through the custom-editor mechanism so the tabs
+   become the generic "open with" switch. Extension layout is unchanged:
+   `extensions/document-links/{source-view,visual-view}/` keep contributing to those hosts.
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Rules wave also does:** core `onChange` → `onDidChange: Event` + `Disposable` everywhere
    (`Project`, `TypstDocument`, …) (user: yes).
