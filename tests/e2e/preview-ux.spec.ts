@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { test, expect } from './fixtures';
+import { test, expect, clickGlyph } from './fixtures';
 
 /** A document of `count` fixed-size pages, each with a heading and a paragraph. */
 function longDocument(count: number): string {
@@ -48,12 +48,12 @@ test('zooms in, out, to 100% and back to fit width', async ({ page }) => {
 test('clicking keeps working when zoomed in', async ({ page }) => {
   await page.getByRole('tab', { name: 'Source' }).click();
   await page.getByTestId('typst-preview-toolbar').getByRole('button', { name: 'Zoom in' }).click();
-  await pages(page).locator('svg use').first().click();
+  await clickGlyph(pages(page).locator('svg use').first());
   await expect(page.getByTestId('typst-source').locator('.typst-source__jump')).toHaveText('Hello Typst');
 });
 
 test('highlights the clicked text in the preview', async ({ page }) => {
-  await pages(page).locator('svg use').first().click();
+  await clickGlyph(pages(page).locator('svg use').first());
   const highlight = pages(page).first().locator('.typst-preview__highlight');
   await expect(highlight).toBeVisible();
   const box = (await highlight.boundingBox())!;
