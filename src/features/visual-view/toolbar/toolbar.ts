@@ -10,6 +10,8 @@ import { BLOCKS as QUOTE_AND_TASKS, BREAKS, HEADER_ROW } from './toolbar-blocks'
 import { ToolbarMenu } from './toolbar-menu';
 import { type Anchor, FloatingBar } from './floating-bar';
 import { type MenuStyles, StyleMenu } from './style-menu';
+import { labelPrefix, labelTarget } from '../references/add-label';
+import { labelName, setLabel } from '../references/label-edits';
 
 export type { MenuStyles } from './style-menu';
 
@@ -42,6 +44,7 @@ const ICONS = {
   alignJustify: svg('<path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>'),
   comment: svg('<path d="M4 5h16v11h-9l-5 4v-4H4z"/>'),
   insert: svg('<path d="M12 5v14M5 12h14"/>'),
+  label: svg('<path d="M3 12V4h8l9 8-8 8z"/><circle cx="7.5" cy="8.5" r="1.2"/>'),
 };
 
 const HISTORY: Action[] = [
@@ -185,7 +188,7 @@ export class Toolbar {
     };
     const [taskList, quote] = QUOTE_AND_TASKS;
     const align = this.menu('Align', () => ALIGNMENTS.find((a) => a.active!(editor))?.icon ?? ICONS.alignLeft, ALIGNMENTS);
-    const insert = this.menu('Insert', () => ICONS.insert, [image, INSERT_TABLE, OUTLINE, CODE_BLOCK, quote, ...BREAKS]);
+    const insert = this.menu('Insert', () => ICONS.insert, [image, INSERT_TABLE, OUTLINE, CODE_BLOCK, quote, ...BREAKS, this.labelAction()]);
     this.root.append(
       this.group(HISTORY),
       this.styleMenu(styles),
@@ -290,6 +293,40 @@ export class Toolbar {
     this.linkAtCaret = false;
     const button = this.bubble.element.querySelector<HTMLButtonElement>('button[aria-label="Link"]')!;
     this.linkPopover.open(button, this.editor.getAttributes('link').href ?? '', this.editor.isActive('link'));
+  }
+
+  /**
+   * "Add label": a label (`<fig:logo>`) on the figure or block the selection is in, named in a popover
+   * (starting with `fig:`, `tab:` or `sec:` as is customary). Enabled where that block has none yet;
+   * an existing label is renamed or removed through its tag.
+   */
+  private labelAction(): Action {
+    const popover = new FieldPopover(this.root, {
+      label: 'New label',
+      field: 'Label name',
+      placeholder: 'e.g. fig:overview',
+      applyText: 'Add label',
+      apply: (value) => {
+        const target = labelTarget(this.editor.state);
+        const name = labelName(value);
+        if (target && name) this.editor.view.dispatch(setLabel(this.editor.state, target.pos, name));
+        this.editor.commands.focus();
+      },
+    });
+    this.cleanups.push(() => popover.destroy());
+    return {
+      label: 'Add label',
+      icon: ICONS.label,
+      run: (c) => c,
+      enabled: (editor) => {
+        const target = labelTarget(editor.state);
+        return !!target && !target.node.attrs.label;
+      },
+      click: () => {
+        const target = labelTarget(this.editor.state);
+        if (target) popover.open(this.insertTrigger(), labelPrefix(target.node), false);
+      },
+    };
   }
 
   /** The anchor of popovers for items of the Insert menu (the item itself is hidden once chosen). */
