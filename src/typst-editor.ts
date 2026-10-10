@@ -1,5 +1,8 @@
 // createTypstEditor: the widget. Composes a Project, the editing views (typst-editor/editing-views.ts), the
 // preview, the file panel (in typst-editor/layout.ts), the status bar and the features. See ARCHITECTURE.md, "createTypstEditor".
+// Why the API looks like this: a Typst document is a project of files, and the main file is one of them. So the
+// host gives and gets every file through one map (`files`, `onFilesChange`); `source` is only a shortcut for the
+// main file's text, for hosts that edit a single file.
 import type { CollaborationOptions } from './features/collaboration/collaboration';
 import type { Diagnostic } from './core/typst-engine/typst-engine';
 import type { TypstDocument } from './core/typst-document/typst-document';
@@ -28,7 +31,7 @@ import { VersionControls, type Versions } from './features/versions/versions';
 
 export type { CollaborationOptions } from './features/collaboration/collaboration';
 export type { EditorMode } from './typst-editor/editing-views';
-export type { FileChange, ProjectFiles } from './core/project/project';
+export type { FileChange, FileContent, ProjectFiles } from './core/project/project';
 
 /**
  * The file panel: `auto` (default) open while the project has more than one file, collapsed to its rail
@@ -40,16 +43,19 @@ export type FileListMode = 'auto' | 'show' | 'hide';
 export type Theme = 'light' | 'dark' | 'auto';
 
 export interface TypstEditorOptions {
-  /** Typst source of the main file (default: `files[main]`, else empty). */
-  source?: string;
+  /**
+   * The project's files by absolute path, the main file included: `.typ` files (editable, each in its own
+   * views), images and data files (shown read-only). `@preview` packages need no entry: they are downloaded
+   * on first import.
+   */
+  files?: ProjectFiles;
   /** Path of the main file (default `/main.typ`). It is compiled, and cannot be renamed or deleted. */
   main?: string;
   /**
-   * The project's files by absolute path: further `.typ` files (editable,
-   * each in its own views), images and data files (shown read-only).
-   * `@preview` packages need no entry: they are downloaded on first import.
+   * Shortcut for the main file's text, for hosts with a single file: wins over `files[main]`. Without either,
+   * the main file starts empty.
    */
-  files?: ProjectFiles;
+  source?: string;
   /** The editing view shown first (default: visual). */
   mode?: EditorMode;
   /** When the file panel is open (default `auto`: when there is more than one file; see FileListMode). */
@@ -59,10 +65,11 @@ export interface TypstEditorOptions {
    * the file panel may happen (default: all may). May be async, e.g. to ask a server.
    */
   allowFileChange?(change: FileChange): boolean | Promise<boolean>;
-  /** Called after every change to any file: edits (`update`) and create / rename / delete. */
+  /**
+   * Called after every change to any file, the main file included: edits (`update`, with the full text),
+   * create / rename / delete, the collaborators' changes and assignments to `files` / `source`.
+   */
   onFilesChange?(change: FileChange): void;
-  /** Called whenever the main file's text changes. */
-  onChange?(source: string): void;
   /** Called when another file is shown in the editing area (e.g. to put it into the page URL). */
   onOpen?(path: string): void;
   /**
@@ -104,12 +111,16 @@ export interface PdfExportOptions {
 
 export interface TypstEditor {
   /**
-   * The current Typst source of the main file. Assigning replaces it as one
-   * minimal edit (only the differing middle changes) and also triggers `onChange`.
+   * Every file of the project, the main file included, with its current content. Assigning replaces them all
+   * (reported through `onFilesChange`) and recompiles; the main file cannot be deleted, so without an entry
+   * for it it keeps its text.
+   */
+  files: ProjectFiles;
+  /**
+   * Shortcut for the main file's text (`files[main]`). Assigning replaces it as one minimal edit (only the
+   * differing middle changes), reported through `onFilesChange` as an `update`.
    */
   source: string;
-  /** All files but the main one, with current text; assigning replaces them all and recompiles. */
-  files: ProjectFiles;
   /** The path of the file shown in the editing area. */
   readonly activeFile: string;
   /** Shows `path` in the editing area (if the project has it). */
@@ -136,17 +147,17 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
   const widget = new Widget(host, options);
   const main = widget.project.document(widget.project.main)!;
   return {
+    get files() {
+      return widget.project.files();
+    },
+    set files(next: ProjectFiles) {
+      widget.replaceFiles(next);
+    },
     get source() {
       return main.text;
     },
     set source(text: string) {
       main.setText(text, 'api');
-    },
-    get files() {
-      return widget.project.otherFiles();
-    },
-    set files(next: ProjectFiles) {
-      widget.replaceFiles(next);
     },
     get activeFile() {
       return widget.active;
@@ -352,7 +363,6 @@ class Widget {
     this.showNeighbours(); // an #include may have been added, moved or removed
     if (change.kind !== 'update') this.restructured(change);
     this.options.onFilesChange?.(change);
-    if (change.kind === 'update' && change.path === this.project.main && typeof change.content === 'string') this.options.onChange?.(change.content);
   }
 
   /** Keeps `active` and `lastSource` pointing at existing files after a create / rename / delete. */

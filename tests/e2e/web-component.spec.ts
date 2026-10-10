@@ -23,21 +23,22 @@ test('keeps its styles inside the shadow root', async ({ page }) => {
   expect(inShadow).toBe(true);
 });
 
-test('dispatches change with the new value while typing', async ({ page }) => {
+test('dispatches change with the path and new content of the edited file while typing', async ({ page }) => {
   const editor = page.locator('typst-editor');
   // one change per keystroke: the last one carries all of the typed text
   await editor.evaluate((el) => {
-    const values: string[] = [];
-    (el as HTMLElement & { changes: string[] }).changes = values;
-    el.addEventListener('change', (event) => values.push((event as CustomEvent<{ value: string }>).detail.value));
+    const changes: { path: string; content: unknown }[] = [];
+    (el as HTMLElement & { changes: typeof changes }).changes = changes;
+    el.addEventListener('change', (event) => changes.push((event as CustomEvent<{ path: string; content: unknown }>).detail));
   });
-  const changes = () => editor.evaluate((el) => (el as HTMLElement & { changes: string[] }).changes);
+  const changes = () => editor.evaluate((el) => (el as HTMLElement & { changes: { path: string; content: unknown }[] }).changes);
   await editor.getByRole('tab', { name: 'Source' }).click();
   await editor.getByTestId('typst-source').locator('.cm-content').click();
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.type('More text.');
-  await expect.poll(async () => (await changes()).at(-1)).toContain('More text.');
+  await expect.poll(async () => (await changes()).at(-1)?.content).toContain('More text.');
   expect((await changes()).length).toBeGreaterThan(1);
+  expect((await changes()).every((change) => change.path === '/main.typ')).toBe(true);
   await expect(page.getByTestId('length')).not.toHaveText('');
 });
 

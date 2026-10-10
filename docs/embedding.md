@@ -30,17 +30,30 @@ Importing the module does two things: it exports the JavaScript API, and it regi
 
 <script type="module">
   const doc = document.getElementById('doc');
-  doc.addEventListener('change', (e) => save(e.detail.value));
+  doc.addEventListener('change', (e) => save(e.detail.path, e.detail.content));
   doc.value = '= Replaced\n';   // no change event for programmatic sets
 </script>
 ```
 
 | | |
 |---|---|
-| `value` attribute | Initial source. It takes precedence over the text content, and setting it later replaces the source. The property is not reflected back into the attribute, as with `<input>`. |
-| `value` property | Reads the current source. Setting it replaces the source as one minimal edit, so the cursor and undo history survive. |
-| `change` event | `CustomEvent<{ value: string }>`. It fires after every user edit, bubbles, and is `composed`. |
+| `options` property | `Partial<TypstEditorOptions>`: everything `createTypstEditor` takes (section 2), read when the element connects. Set it before appending the element (or before the module has defined it: it is picked up then). Its `onFilesChange` / `onOpen` are called as well as the events. |
+| attributes | `value`, `file-list`, `pdf-download="hide"` and `theme` **win over** `options.source`, `fileList`, `pdfDownload` and `theme`. They are read when the element connects; `value` also later. |
+| main file's text | The `value` property or attribute, else the element's text content (common indentation removed), else `options.source`, else `options.files[main]`. |
+| `value` property | The main file's text (a shortcut for `files[main]`). Setting it replaces the text as one minimal edit, so the cursor and undo history survive. The property is not reflected back into the attribute, as with `<input>`. |
+| `files` property | Every file, the main file included (see section 3). Setting it replaces them all. |
+| `change` event | `CustomEvent<TypstEditorChangeDetail>`, `detail: { path, content }`: what the file at `path` (a project path such as `/main.typ`) holds after a change, `content: null` when it is gone. It fires for every file whose content changes — edits in any file, new and deleted files, the others' edits when collaborating; a rename fires twice (old path with `null`, new path with the content). |
+| `files-change` event | `CustomEvent<FileChange>`: the same as `onFilesChange`, with renames as such. |
+| `open` event | `CustomEvent<{ path }>`: another file is shown (`onOpen`). |
+| | Setting `value` or `files` dispatches no events. All events bubble and are `composed`. |
 | size | `display: block`, with a default height of `24rem`. Set `height` on the element. |
+
+```js
+const editor = document.createElement('typst-editor');
+editor.options = { main: '/thesis.typ', files, mode: 'source', user: { name: 'Ada' } };
+editor.setAttribute('file-list', 'show');   // wins over options.fileList
+document.body.append(editor);               // options are read now
+```
 
 To register the element under another tag name, call `defineTypstEditorElement('my-editor')`.
 Registering it again under `typst-editor` does nothing.
@@ -82,34 +95,43 @@ import { createTypstEditor } from 'typst-editor';
 
 const host = document.getElementById('editor')!;   // attach it to the document first
 const editor = createTypstEditor(host, {
-  source: '= Hello\n',
-  onChange: (source) => save(source),
+  source: '= Hello\n',                                 // the main file's text
+  onFilesChange: (change) => save(change),            // every change to any file, see section 3
 });
 
-editor.source;               // current text
-editor.source = '= New\n';   // replace (minimal edit, also triggers onChange)
+editor.source;               // the main file's current text
+editor.source = '= New\n';   // replace (minimal edit, reported to onFilesChange as an update)
 editor.destroy();
 ```
+
+`source` is a shortcut for the main file's text, for hosts with a single file. Everything else
+goes through `files`, which always includes the main file.
 
 The editor fills `host`, so give `host` a height. Styles go into `document.head`, or into the
 shadow root when `host` is inside one.
 
 ## 3. Other files, images and packages
 
-The main file is the one that is compiled. The project's other files go into `files`, by absolute
-path: Typst text as a string, anything else (images, CSV, …) as a `Uint8Array`.
+`files` holds every file of the project by absolute path, the main file included: Typst text as
+a string, anything else (images, CSV, …) as a `Uint8Array`. The main file (`main`) is the one that
+is compiled; it cannot be renamed or deleted. `source`, if given, wins over `files[main]`.
 
 ```ts
 const editor = createTypstEditor(host, {
   main: '/thesis.typ',                     // default '/main.typ'
-  source: '#include "chapters/intro.typ"\n#image("logo.png")',
   files: {
+    '/thesis.typ': '#include "chapters/intro.typ"\n#image("logo.png")',
     '/chapters/intro.typ': '= Introduction\n…',
     '/logo.png': new Uint8Array(await (await fetch('/logo.png')).arrayBuffer()),
   },
 });
+editor.files;                              // every file with its current content, '/thesis.typ' included
 editor.files = { ...editor.files, '/chapters/outro.typ': '= Outro' };   // replaces the map, recompiles
 ```
+
+Assigning `files` replaces every file: paths that are missing are deleted, new ones created,
+changed ones updated (open views keep their cursor), and each change is reported to
+`onFilesChange`. The main file cannot be deleted: a map without it leaves its text as it is.
 
 ### The file panel
 
@@ -155,11 +177,13 @@ shown, e.g. to keep it in the page URL. The demo stores it in the fragment (`#/c
 `demo/open-file-hash.ts`). `followCursor: false` starts the preview without following the cursor.
 The viewer can switch "Follow cursor" in the preview toolbar, and the choice is remembered in localStorage.
 
-`onFilesChange` also reports every edit of a `.typ` file (`kind: 'update'`, with the full text).
-`editor.files` returns all files but the main one, with their current text.
+`onFilesChange` reports every change to any file, the main file included: every edit of a `.typ`
+file (`kind: 'update'`, with the full text), create / rename / delete, collaborators' changes,
+and assignments to `files` or `source`. It is the one place to hear about changes.
 
 On `<typst-editor>` the same map is the `files` property, the `file-list` attribute sets the
-file panel mode, and every file change dispatches a `files-change` event (`detail`: the change). Bytes are copied to the compile worker
+file panel mode, and every file change dispatches `change` (`{ path, content }`) and
+`files-change` (the `FileChange`). Bytes are copied to the compile worker
 only when the `Uint8Array` changes, so reuse the same array for unchanged files.
 
 `#import "@preview/name:version"` works without configuration: the worker downloads the package
@@ -196,7 +220,7 @@ permission) and on hand-written ones, delete on your last message, and "Resolve"
 note). A note written by hand without names and dates (`#margin-note[Cite?]`) shows as one
 message and stays as written until someone replies. On narrow panes the card pops up when you
 click the highlighted text.
-There is nothing extra to store or wire up: notes arrive with `onChange` / `change` and travel
+There is nothing extra to store or wire up: notes arrive with `onFilesChange` / `change` and travel
 through git, diffs and collaboration like any other text (two people replying at once give two
 list items). Resolving a note means deleting it.
 
@@ -302,8 +326,8 @@ createTypstEditor(host, {
   **synced** yourself (y-websocket, y-webrtc, …), and its awareness for remote cursors. The Y.Doc
   must come from the same Yjs instance the widget uses, so bundle the widget from source with
   your Yjs (deduplicated); `dist/lib` bundles its own copy.
-- `onChange` / `onFilesChange` also fire for the others' edits.
-- On `<typst-editor>`, set the `collaboration` and `user` properties before the element is
+- `onFilesChange` (and `change` on `<typst-editor>`) also fire for the others' edits.
+- On `<typst-editor>`, put `collaboration` and `user` into its `options` before the element is
   connected.
 
 Demo: `mise run demo` starts the demo and a local server together; pick **Collaborate** in the
@@ -352,6 +376,15 @@ Try it without GitLab: `mise run demo` (the demo plus a server with an in-memory
 holding the demo's advanced example), then pick **GitLab (fake)** in the playground bar, or open
 `?room=gitlab:demo/report@main`. **Simulate upstream commit** in the bar pushes a change to the
 fake repository, to try merges and conflicts. See [demo-playground.md](demo-playground.md).
+
+## Migrating from the earlier API
+
+- `onChange(source)` is gone: use `onFilesChange` and look for `{ kind: 'update', path: main }`
+  (or read `editor.source` there).
+- `files` (option, getter, setter) now includes the main file. A map without the main file still
+  works: the main file keeps its text.
+- `<typst-editor>`: the `user` and `collaboration` properties are gone (put them into `options`);
+  `change` carries `{ path, content }` for every file instead of `{ value }` for the main file.
 
 ## Using it from a bundler
 

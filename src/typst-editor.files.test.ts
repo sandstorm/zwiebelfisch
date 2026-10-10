@@ -34,6 +34,36 @@ afterEach(() => {
   sessionStorage.clear();
 });
 
+describe('files and source', () => {
+  it('`files` holds every file, the main one included; `source` is the main file\'s text', () => {
+    const { editor } = setup({ files: { '/main.typ': '= Main', '/a.typ': 'A' } });
+    expect(editor.files).toEqual({ '/main.typ': '= Main', '/a.typ': 'A' });
+    expect(editor.source).toBe('= Main');
+    expect(setup({ source: '= Shortcut', files: { '/main.typ': '= Main' } }).editor.source).toBe('= Shortcut');
+  });
+
+  it('assigning `files` replaces them all, the main file too, and reports each change', () => {
+    const onFilesChange = vi.fn();
+    const { editor } = setup({ files: { '/main.typ': '= Main', '/a.typ': 'A' }, onFilesChange });
+    editor.files = { '/main.typ': '= New', '/b.typ': 'B' };
+    expect(editor.files).toEqual({ '/main.typ': '= New', '/b.typ': 'B' });
+    expect(onFilesChange.mock.calls.map(([change]) => change)).toEqual([
+      { kind: 'delete', path: '/a.typ' },
+      { kind: 'update', path: '/main.typ', content: '= New' },
+      { kind: 'create', path: '/b.typ', content: 'B' },
+    ]);
+    editor.files = { '/c.typ': 'C' }; // the main file cannot be deleted: it stays as it is
+    expect(editor.files).toEqual({ '/main.typ': '= New', '/c.typ': 'C' });
+  });
+
+  it('assigning `source` is an update of the main file', () => {
+    const onFilesChange = vi.fn();
+    const { editor } = setup({ source: '= Hello', onFilesChange });
+    editor.source = '= Bye';
+    expect(onFilesChange).toHaveBeenLastCalledWith({ kind: 'update', path: '/main.typ', content: '= Bye' });
+  });
+});
+
 describe('the file panel in the widget', () => {
   it('is collapsed to its rail button for a single file and open with more files (auto)', () => {
     const single = setup({ source: '= Hello' });

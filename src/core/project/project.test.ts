@@ -112,16 +112,25 @@ describe('Project', () => {
     expect(listener).toHaveBeenCalledWith({ kind: 'update', path: path('/logo.png'), content: bytes });
   });
 
-  it('replaces the other files, keeping documents of paths that stay', () => {
+  it('replaces the files, the main one included, keeping documents of paths that stay', () => {
     const p = project();
     const chapter = p.document(path('/chapter.typ'));
     const main = p.document(path('/main.typ'));
-    p.replace({ '/chapter.typ': 'C new', '/extra.typ': 'E', '/main.typ': 'ignored' });
+    p.replace({ '/chapter.typ': 'C new', '/extra.typ': 'E', '/main.typ': '= New main' });
     expect(p.paths()).toEqual(['/main.typ', path('/chapter.typ'), path('/extra.typ')]);
     expect(p.document(path('/chapter.typ'))).toBe(chapter);
     expect(chapter!.text).toBe('C new');
     expect(p.document(path('/main.typ'))).toBe(main);
-    expect(main!.text).toBe('= Main');
+    expect(main!.text).toBe('= New main');
+  });
+
+  it('keeps the main file when the replacing files have no entry for it, and refuses bytes for it', () => {
+    const p = project();
+    p.replace({ '/extra.typ': 'E' });
+    expect(p.paths()).toEqual(['/main.typ', path('/extra.typ')]);
+    expect(p.document(path('/main.typ'))!.text).toBe('= Main');
+    expect(() => p.replace({ '/main.typ': new Uint8Array([1]) })).toThrow(/must contain text/);
+    expect(p.paths()).toEqual(['/main.typ', path('/extra.typ')]);
   });
 
   it('tells listeners what replacing changed: deleted, created, updated files', () => {
@@ -137,9 +146,5 @@ describe('Project', () => {
       { kind: 'create', path: path('/extra.typ'), content: 'E' },
       { kind: 'update', path: path('/data.csv'), content: csv },
     ]);
-  });
-
-  it('lists the other files without the main file', () => {
-    expect(Object.keys(project().otherFiles())).toEqual(['/chapter.typ', path('/zeta.typ'), path('/data.csv'), path('/logo.png')]);
   });
 });

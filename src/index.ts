@@ -6,6 +6,7 @@ export {
   type CollaborationOptions,
   type EditorMode,
   type FileChange,
+  type FileContent,
   type FileListMode,
   type Theme,
   type PdfExportOptions,
@@ -13,6 +14,7 @@ export {
   type TypstEditor,
   type TypstEditorOptions,
 } from './typst-editor';
+export type { ProjectPath } from './core/paths/paths';
 export {
   TypstEditorElement,
   defineTypstEditorElement,

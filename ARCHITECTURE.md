@@ -125,7 +125,7 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
 ```
  main thread                                                    worker thread
 ┌──────────────────────────────────────────────────────────┐   ┌────────────────────────┐
-│ createTypstEditor(host, { source })                      │   │ engine.worker.ts       │
+│ createTypstEditor(host, { files })                       │   │ engine.worker.ts       │
 │                                                          │   │                        │
 │  ┌──────────────┐ change(edits, origin) ┌──────────────┐ │   │  ┌──────────────────┐  │
 │  │  SourceView  │──────────────────────►│TypstDocument │ │   │  │  Engine (wasm)   │  │
@@ -151,18 +151,30 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
 ### `createTypstEditor` / `<typst-editor>` (`src/typst-editor.ts`, `src/typst-editor/`, `src/typst-editor-element.ts`, `src/index.ts`)
 
 ```ts
-createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileChange?, onFilesChange?, onChange?,
-                           user?, collaboration?, onOpen?, followCursor?, pdfDownload? })
-  → { source (get/set), files (get/set), activeFile, open(path), exportPdf({comments?}) → Promise<Blob>,
+createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileChange?, onFilesChange?,
+                           user?, collaboration?, onOpen?, followCursor?, pdfDownload?, theme? })
+  → { files (get/set), source (get/set), activeFile, open(path), exportPdf({comments?}) → Promise<Blob>,
       destroy() }
-<typst-editor value="…" file-list="auto|show|hide" pdf-download="hide">   .value, .files, .user, .collaboration,
-  exportPdf({comments?}); 'change' {detail:{value}}, 'files-change' {detail: FileChange}, 'open' {detail:{path}}
+<typst-editor value="…" file-list="auto|show|hide" pdf-download="hide" theme="…">
+  .options (Partial<TypstEditorOptions>), .value, .files, exportPdf({comments?});
+  'change' {detail:{path, content}}, 'files-change' {detail: FileChange}, 'open' {detail:{path}}
 ```
 
-- `source` is the text of the main file at `main` (default `/main.typ`; falls back to
-  `files[main]`). `files` (`ProjectFiles = Record<path, string | Uint8Array>`) are the project's
-  other files. Assigning `files` replaces them (documents of paths that stay are kept and get the
-  new text as one edit) and recompiles. `@preview` packages need no entry.
+- **One mechanism for all files.** `files` (`ProjectFiles = Record<path, string | Uint8Array>`) are
+  *all* the project's files, the main file (`main`, default `/main.typ`) included — as option, getter
+  and setter; `onFilesChange` reports every change to any of them. Assigning `files` replaces them
+  (`Project.replace`: documents of paths that stay are kept and get the new text as one edit; the
+  main file cannot be deleted, so without an entry it keeps its text) and recompiles. `source` is
+  only a shortcut for the main file's text (as option it wins over `files[main]`; assigning it is an
+  `update` of the main file). `@preview` packages need no entry.
+- **`<typst-editor>`** spreads its `options` property into `createTypstEditor` when it connects
+  (no per-option properties: a new option needs no change there); the attributes `value`,
+  `file-list`, `pdf-download`, `theme` win over the matching options, and the text content is the
+  main file's text when there is no `value`. `options` / `value` / `files` set before the element is
+  defined are picked up on upgrade. `value` / `files` are the live content; setting them dispatches
+  nothing. `change` fires per file whose content changed (`TypstEditorChangeDetail = { path:
+  ProjectPath, content: FileContent | null }`, null: gone; a rename is two), `files-change` with
+  every `FileChange`.
 - **Composition** (`Widget`, private): `Project` + `Layout` + `EditingViews` + `FilePanel` +
   `AssetView` + `Preview` + `DiagnosticsStatus`. The preview always compiles `main` with `project.files()`.
 - **`Project`** (`core/project/project.ts`): files by path. `.typ` strings become a `TypstDocument` each (kept

@@ -79,13 +79,6 @@ export class Project {
     return Object.fromEntries(this.paths().map((path) => [path, this.content(path)!]));
   }
 
-  /** Every file except the main one. */
-  otherFiles(): ProjectFiles {
-    const files = this.files();
-    delete files[this.main];
-    return files;
-  }
-
   /** Why `change` cannot be applied, in words for people, or null if it can. */
   check(change: FileChange): string | null {
     if (change.kind === 'create') return this.checkNew(change.path) ?? checkContent(change.path, change.content);
@@ -122,19 +115,18 @@ export class Project {
   }
 
   /**
-   * Replaces all files but the main one (its entry in `files` is ignored),
-   * telling listeners as `apply` would: a `delete` per file that is gone, a
-   * `create` per new one, an `update` per changed one. Documents of paths that
-   * stay are kept and get the new text as one edit.
+   * Replaces the files with `files`, telling listeners as `apply` would: a `delete` per file that is gone, a
+   * `create` per new one, an `update` per changed one. Documents of paths that stay are kept and get the new
+   * text as one edit. The main file cannot be deleted: without an entry in `files` it keeps its text.
    */
   replace(files: ProjectFiles): void {
+    const next = new Map(Object.entries(files).map(([key, content]) => [parseKey(key), content]));
+    const main = next.get(this.main);
+    if (main !== undefined && typeof main !== 'string') throw new Error(`The main file ${this.main} must contain text.`);
     for (const path of [...this.entries.keys()]) {
-      if (path !== this.main && !(path in files)) this.removeAndEmit(path);
+      if (path !== this.main && !next.has(path)) this.removeAndEmit(path);
     }
-    for (const [key, content] of Object.entries(files)) {
-      const path = parseKey(key);
-      if (path !== this.main) this.put(path, content);
-    }
+    for (const [path, content] of next) this.put(path, content);
   }
 
   /** Subscribes to changes; returns the unsubscribe function. */
