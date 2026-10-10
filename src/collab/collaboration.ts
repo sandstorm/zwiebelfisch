@@ -1,13 +1,11 @@
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import type { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
-import type { Comments } from '../comments/comments';
 import type { Project } from '../editor/project';
 import { roomFilePath } from './gitlab-protocol';
 import { RemoteCursors, type CollaborationUser, type HighlightTarget } from './remote-cursors';
 import { RoomVersions } from './room-versions';
 import { SharedAssets } from './shared-assets';
-import { SharedComments } from './shared-comments';
 import { SharedProject } from './shared-project';
 
 export type { CollaborationUser } from './remote-cursors';
@@ -22,16 +20,15 @@ export type CollaborationOptions =
   | { doc: Y.Doc; awareness?: Awareness }
   | { url: string; room: string; token?: string };
 
-/** What gets shared: the project's Typst files and the main file's review comments. */
+/** What gets shared: the project's Typst files (margin notes are part of their text). */
 export interface Shared {
   project: Project;
-  comments: Comments;
   user?: CollaborationUser;
 }
 
 /**
- * Real-time collaboration for one widget: the Typst files' text and the
- * review comments through a Y.Doc (one per project), the users' cursors
+ * Real-time collaboration for one widget: the Typst files' text through a
+ * Y.Doc (one per project), the users' cursors
  * through awareness. Only text is shared — the editing views never sync
  * directly; they keep following their TypstDocument. In a room backed by a
  * GitLab branch (the server put a base into its `meta` map) the other files
@@ -39,7 +36,6 @@ export interface Shared {
  */
 export class Collaboration {
   private readonly sharedProject: SharedProject;
-  private readonly sharedComments: SharedComments;
   private readonly cursors: RemoteCursors | null;
   private readonly assets: SharedAssets | null = null;
   /** "Save version" and the files' base, in a room backed by a GitLab branch (else null). */
@@ -51,13 +47,12 @@ export class Collaboration {
     shared: Shared,
     private readonly server: { provider: HocuspocusProvider; files: (path: string) => Promise<Uint8Array> } | null,
   ) {
-    const { project, comments, user } = shared;
+    const { project, user } = shared;
     if (server && RoomVersions.isVersioned(ydoc)) {
       this.versions = new RoomVersions(ydoc, statelessChannel(server.provider));
       this.assets = new SharedAssets(project, ydoc, server.files);
     }
     this.sharedProject = new SharedProject(project, ydoc);
-    this.sharedComments = new SharedComments(comments, ydoc, () => this.sharedProject.text(project.main));
     const text = (path: string) => this.sharedProject.text(path);
     this.cursors = awareness ? new RemoteCursors(awareness, { user: user ?? { name: 'Anonymous' }, text }) : null;
   }
@@ -95,7 +90,6 @@ export class Collaboration {
   destroy(): void {
     this.cursors?.destroy();
     this.assets?.destroy();
-    this.sharedComments.destroy();
     this.sharedProject.destroy();
     this.server?.provider.destroy();
     this.server?.provider.document.destroy();

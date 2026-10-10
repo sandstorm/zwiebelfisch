@@ -38,7 +38,7 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [multi-file-assets-packages](multi-file-assets-packages.md) | done |
 | [tiptap-migration](tiptap-migration.md) | done |
 | [projection-position-map](projection-position-map.md) | done |
-| [comments](comments.md) | done |
+| [comments](comments.md) | done (superseded by comments-drafting) |
 | [diff-rendering](diff-rendering.md) | done |
 | [multi-file-ui](multi-file-ui.md) | done |
 | [visual-view-toolbar-and-raw-editing](visual-view-toolbar-and-raw-editing.md) | done |
@@ -48,7 +48,6 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [collab-yjs](collab-yjs.md) | done |
 | [server-gitlab](server-gitlab.md) | done |
 | [followups-2026-10-10](followups-2026-10-10.md) | open |
-| [comments-drafting](comments-drafting.md) | open |
 | [diff-redline-palimset](diff-redline-palimset.md) | open |
 | [restructure-src](restructure-src.md) | open |
 | [e2e-preview](e2e-preview.md) | done (branch task/e2e-preview) |
@@ -60,3 +59,4 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [custom-styles-mvp](custom-styles-mvp.md) | open |
 | [visual-figures-resize](visual-figures-resize.md) | done (branch task/visual-figures-resize) |
 | [visual-text-align](visual-text-align.md) | done (branch task/visual-text-align) |
+| [comments-drafting](comments-drafting.md) | done |

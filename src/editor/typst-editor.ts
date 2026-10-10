@@ -1,11 +1,10 @@
 import type { CollaborationOptions } from '../collab/collaboration';
-import { Comments } from '../comments/comments';
-import { CommentsUI } from '../comments/comments-ui';
 import type { Diagnostic } from '../engine/engine';
 import { Preview } from '../preview/preview';
 import proseMirrorStyles from '../visual-view/prosemirror.css?inline';
 import { AssetView } from './asset-view';
 import { ChangeTracking } from './change-tracking';
+import { CommentAction } from './comment-action';
 import { CollaborationLink } from './collaboration-link';
 import changeStyles from './changes.css?inline';
 import { DiagnosticsStatus } from './diagnostics-status';
@@ -50,22 +49,11 @@ export interface TypstEditorOptions {
   onFilesChange?(change: FileChange): void;
   /** Called whenever the main file's text changes. */
   onChange?(source: string): void;
-  /**
-   * Review comments on the main file to start with, as last passed to
-   * `onCommentsChange`. They are kept beside the source, never in it; store
-   * them next to the file (e.g. `main.typ.comments.json`).
-   */
-  comments?: string;
-  /**
-   * Called with all comments as JSON whenever they change, including when
-   * edits move their anchors. Persist it to keep the comments.
-   */
-  onCommentsChange?(comments: string): void;
-  /** Who works here: the author of comments, and the name (and cursor color) others see when collaborating. */
+  /** Who works here: the name (and cursor color) others see when collaborating, and who saves versions. */
   user?: { name: string; color?: string };
   /**
-   * Real-time collaboration on the project's Typst files and the review
-   * comments: `{ url, room, token? }` connects to a Hocuspocus server (the
+   * Real-time collaboration on the project's Typst files (margin notes
+   * included, as they are part of the text): `{ url, room, token? }` connects to a Hocuspocus server (the
    * room's text wins over `source` / `files` once synced; a new room is seeded
    * with them), or `{ doc, awareness? }` shares through a Y.Doc the host has
    * connected (and synced) itself. Images and other files are not shared,
@@ -95,8 +83,6 @@ export interface TypstEditor {
   readonly activeFile: string;
   /** Shows `path` in the editing area (if the project has it). */
   open(path: string): void;
-  /** The review comments on the main file as JSON; assigning replaces them, re-anchored in the current source. */
-  comments: string;
   /**
    * Shows the changes of the main file against `base` (an earlier source)
    * from now on, or none for null. A "Show changes" button toggles them while a base is set.
@@ -135,12 +121,6 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
       return widget.active;
     },
     open: (path) => widget.open(path),
-    get comments() {
-      return widget.comments.serialize();
-    },
-    set comments(json: string) {
-      widget.comments.load(json);
-    },
     setBase: (base) => widget.changes.setBase(base),
     destroy: () => widget.destroy(),
   };
@@ -162,8 +142,7 @@ class Widget {
   private readonly switcher: FileSwitcher;
   private readonly assets: AssetView;
   private readonly renderings: ProjectRenderings;
-  readonly comments: Comments;
-  private readonly review: CommentsUI;
+  private readonly commentAction: CommentAction;
   readonly changes: ChangeTracking;
   private readonly collaboration: CollaborationLink | null = null;
   private versions: VersionControls | null = null;
@@ -208,7 +187,8 @@ class Widget {
     this.assets = new AssetView(this.left, (path) => this.insertImage(path));
     this.unsubscribe = this.project.onChange((change) => this.changed(change));
     this.open(main);
-    [this.comments, this.review] = this.mountComments();
+    this.commentAction = new CommentAction(host, () => this.views.shown());
+    this.views.addTabAction(this.commentAction.button);
     this.changes = this.mountChanges();
     if (options.collaboration) {
       this.collaboration = this.mountCollaboration(options.collaboration);
@@ -233,24 +213,6 @@ class Widget {
     this.showStatus();
   }
 
-  /** Review comments on the main file: the model, its side panel and the "Comment" button next to the tabs. */
-  private mountComments(): [Comments, CommentsUI] {
-    const document = this.project.document(this.project.main)!;
-    const views = this.views.viewsOf(document);
-    const comments = new Comments(document, { json: this.options.comments, user: this.options.user });
-    const review = new CommentsUI(comments, document, {
-      root: this.host,
-      views: [views.visual, views.source],
-      activeView: () => (this.views.mode === 'visual' ? views.visual : views.source),
-      preview: this.preview,
-      path: this.project.main,
-    });
-    this.host.insertBefore(review.panel, this.right);
-    this.views.addTabAction(review.button);
-    comments.onChange(() => this.options.onCommentsChange?.(comments.serialize()));
-    return [comments, review];
-  }
-
   /** "Show changes" for the main file: against `options.base`, in both of its views and the preview. */
   private mountChanges(): ChangeTracking {
     const main = this.project.main;
@@ -266,9 +228,9 @@ class Widget {
     );
   }
 
-  /** Shares the project and the comments; the others' cursors show in the shown file's views. */
+  /** Shares the project; the others' cursors show in the shown file's views. */
   private mountCollaboration(options: CollaborationOptions): CollaborationLink {
-    const shared = { project: this.project, comments: this.comments, user: this.options.user };
+    const shared = { project: this.project, user: this.options.user };
     const current = () => {
       const document = this.project.document(this.active);
       if (!document) return null;
@@ -307,8 +269,7 @@ class Widget {
     this.versions?.destroy();
     this.collaboration?.destroy();
     this.changes.destroy();
-    this.review.destroy();
-    this.comments.destroy();
+    this.commentAction.destroy();
     this.views.destroy();
     this.switcher.destroy();
     this.assets.destroy();

@@ -26,7 +26,7 @@ export interface CollabOptions {
 /**
  * The Hocuspocus configuration of the collaboration server: one Y.Doc per
  * room (= project), as the widget's `collaboration` option shares it
- * (`files`: path → Y.Text, `comments`: thread id → Y.Map). The server does
+ * (`files`: path → Y.Text). The server does
  * not look inside, except in GitLab-backed rooms (`gitlab`); it relays,
  * authenticates and persists.
  */

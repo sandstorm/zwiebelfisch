@@ -17,12 +17,17 @@ Each line names the area; sources are the agents' final reports.
 - Unreachable collab server: tell the user (today the widget silently stays local).
 
 ## Editor
-- Comments and "Show changes" only cover the main file → per file.
+- "Show changes" only covers the main file → per file. (Comments are margin notes in the text
+  now, so they already work in every `.typ` file.)
 - Toolbar acts on the last main-text selection while the cursor is in a raw box.
 - Text typed into a raw box that is modelled Typst (`= Heading`) stays raw until re-read.
 - "Insert into …" (image) uses the Source-view cursor; use the active view's cursor.
-- Comment anchors whose text changed outside the editor: fuzzy re-anchoring instead of "Text deleted".
-- Edit a comment after posting.
+- Margin notes (comments): the Visual-view note field edits raw Typst markup, not formatted text;
+  Escape on a brand-new note leaves an empty `#margin-note[]`; a note that only becomes valid
+  by escaping is saved as escaped plain text (its formatting is lost). (Anchors and editing
+  after posting no longer apply: notes are text in the source.)
+- Visual view: a change to the text before the first block (`doc.lead`) still rebuilds the whole
+  editor DOM (ProseMirror re-renders on any doc attribute change), closing an open note field.
 - Remote cursors on empty lines are not drawn.
 - Source-view diff chunks lack the word/markup cleanup the other views get.
 

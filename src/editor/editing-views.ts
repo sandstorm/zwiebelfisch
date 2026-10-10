@@ -81,6 +81,12 @@ export class EditingViews {
     return this.views.get(document)!;
   }
 
+  /** The shown document and the view it is shown in; null while no document is shown. */
+  shown(): { document: TypstDocument; view: VisualView | SourceView } | null {
+    const views = this.active && this.views.get(this.active);
+    return views ? { document: this.active!, view: views[this.current] } : null;
+  }
+
   /** Puts a control (e.g. the "Comment" button) at the end of the tab bar. */
   addTabAction(element: HTMLElement): void {
     this.tabs.append(element);

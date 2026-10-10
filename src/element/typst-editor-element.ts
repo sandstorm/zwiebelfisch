@@ -6,11 +6,6 @@ export interface TypstEditorChangeDetail {
   value: string;
 }
 
-/** `detail` of the `commentschange` event: all review comments as JSON. */
-export interface TypstEditorCommentsChangeDetail {
-  comments: string;
-}
-
 const hostStyles = ':host { display: block; height: 24rem; } :host([hidden]) { display: none; }';
 
 // Lets this module be imported where there is no DOM (SSR, unit tests).
@@ -28,11 +23,10 @@ const Base = (typeof HTMLElement === 'undefined' ? class {} : HTMLElement) as ty
  * with more than one file a file bar appears (attribute `file-list`:
  * `auto` | `show` | `hide`). Every file change, including edits of other
  * files, dispatches `files-change` with the `FileChange` as `detail`.
- * Review comments: the `comments` property (JSON, kept beside the source),
- * the `user` property (`{ name }`, the author of new comments), and a
- * `commentschange` event with `detail.comments` whenever they change.
- * Collaboration: the `collaboration` property (see
- * `TypstEditorOptions.collaboration`), read when the element connects.
+ * Comments are `drafting` margin notes in the source itself (the "Comment"
+ * button), so they arrive with `value` and `change` like any other text.
+ * Collaboration: the `collaboration` and `user` properties (see
+ * `TypstEditorOptions`), read when the element connects.
  */
 export class TypstEditorElement extends Base {
   static readonly observedAttributes = ['value'];
@@ -40,8 +34,7 @@ export class TypstEditorElement extends Base {
   #editor: TypstEditor | null = null;
   #value: string | null = null;
   #files: ProjectFiles = {};
-  #comments: string | undefined;
-  /** Author of the comments written here, and who others see when collaborating; read when the element connects. */
+  /** Who others see when collaborating; read when the element connects. */
   user: { name: string; color?: string } | undefined;
   /** Real-time collaboration (see `TypstEditorOptions.collaboration`); read when the element connects. */
   collaboration: CollaborationOptions | undefined;
@@ -73,16 +66,6 @@ export class TypstEditorElement extends Base {
     if (this.#editor) this.#editor.files = files;
   }
 
-  /** The review comments as JSON (see `TypstEditorOptions.comments`). */
-  get comments(): string {
-    return this.#editor?.comments ?? this.#comments ?? '';
-  }
-
-  set comments(json: string) {
-    this.#comments = json;
-    if (this.#editor) this.#editor.comments = json;
-  }
-
   /** Shows the changes against `base` (an earlier source), or none for null. */
   setBase(base: string | null): void {
     this.#base = base;
@@ -103,14 +86,8 @@ export class TypstEditorElement extends Base {
       base: this.#base ?? undefined,
       onChange: (value) => this.#changed(value),
       onFilesChange: (change) => this.#filesChanged(change),
-      comments: this.#comments,
       user: this.user,
       collaboration: this.collaboration,
-      onCommentsChange: (comments) => {
-        this.#comments = comments;
-        const detail: TypstEditorCommentsChangeDetail = { comments };
-        this.dispatchEvent(new CustomEvent('commentschange', { detail, bubbles: true, composed: true }));
-      },
     });
   }
 

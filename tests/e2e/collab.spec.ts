@@ -53,12 +53,13 @@ test('the other user’s selection is shown with their name', async ({ browser, 
   await expect(selection.first()).toHaveAttribute('data-user', 'Ann');
 });
 
-test('a review comment reaches the other user', async ({ browser, baseURL }, info) => {
+test('a margin note reaches the other user', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
   await ann.getByTestId('typst-visual').locator('strong', { hasText: 'bold' }).dblclick();
   await ann.locator('.typst-editor__comment').click();
-  await ann.getByTestId('typst-comments').getByRole('textbox', { name: 'Add a comment' }).fill('Shared note');
-  await ann.getByTestId('typst-comments').getByRole('button', { name: 'Comment', exact: true }).click();
-  await expect(bob.getByTestId('typst-comments')).toContainText('Shared note');
-  await expect(bob.getByTestId('typst-visual').locator('.typst-comment-range')).toHaveText('bold');
+  const field = ann.getByTestId('typst-margin-note').getByRole('textbox', { name: 'Note' });
+  await field.fill('Shared note');
+  await field.press('Enter');
+  await expect(bob.getByTestId('typst-visual').getByTestId('typst-margin-note')).toHaveText('Shared note');
+  await expect(bob.getByTestId('typst-visual').locator('mark.typst-visual__note-range')).toHaveText('bold');
 });

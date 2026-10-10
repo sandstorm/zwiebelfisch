@@ -25,6 +25,9 @@
  * as tables whose cells hold blocks. Text alignment (see `text-align.ts`):
  * `#align(<alignment>)[..]` is an `alignment` block holding blocks,
  * `#par(justify: ..)[..]` a paragraph with its `justify` flag.
+ * `drafting` margin notes become a `marginNote` atom
+ * (`#margin-note(..)[note]`) or, for `#margin-note(..)[text][note]`, a
+ * `noteRange` mark over the projected text that holds the call and the note.
  */
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
@@ -34,6 +37,7 @@ import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from './raw-code';
 
 export { codeLanguage } from './raw-code';
 import { alignArgs } from './alignment';
+import { noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../document/margin-note-syntax';
 
 /**
  * Nodes created by `project` and not modified since. ProseMirror nodes are
@@ -44,7 +48,7 @@ import { alignArgs } from './alignment';
 const pristine = new WeakMap<Node, InlineLayout | null>();
 
 export function project(source: string, schema: Schema): Node {
-  const ctx: Context = { schema, source };
+  const ctx: Context = { schema, source, notes: 0 };
   const segments = segment(children(typstParser.parse(source).topNode));
   if (segments.length === 0) {
     return schema.nodes.doc.create({ lead: source, trail: '' }, [textblock(ctx, { type: 'paragraph', attrs: { src: '' } }, 0, [])]);
@@ -118,6 +122,8 @@ function gapSource(spans: Span[], index: number, pos: number): number {
 interface Context {
   schema: Schema;
   source: string;
+  /** Range notes projected so far in the current textblock: each one's `id`, so equal adjacent notes stay apart. */
+  notes: number;
 }
 
 type SegmentKind = 'heading' | 'bullet' | 'ordered' | 'run';
@@ -203,7 +209,7 @@ function toBlock(ctx: Context, segment: Segment, sep: string | null): Node {
 function runBlock(ctx: Context, segment: Segment, src: string, sep: string | null): Node {
   const code = segment.nodes.length === 1 ? codeBlock(ctx, segment.nodes[0], sep) : null;
   if (code) return code;
-  if (segment.nodes.some((n) => PROSE.has(n.name) || isLinkCall(ctx, n))) {
+  if (segment.nodes.some((n) => PROSE.has(n.name) || isProseCall(ctx, n))) {
     return textblock(ctx, { type: 'paragraph', attrs: { src, sep } }, segment.from, inline(ctx, segment.nodes));
   }
   return blockCall(ctx, segment, sep) ?? ctx.schema.nodes.rawBlock.create({ src, sep });
@@ -219,9 +225,10 @@ function codeBlock(ctx: Context, node: SyntaxNode, sep: string | null): Node | n
   return textblock(ctx, { type: 'codeBlock', attrs, contentTo: code.to }, node.from, content);
 }
 
-/** A `link(..)` call, which is prose like a bare URL. */
-function isLinkCall(ctx: Context, node: SyntaxNode): boolean {
-  return node.name === 'FuncCall' && callee(ctx, node).name === 'link';
+/** Calls that belong in running text: `link(..)`, which is prose like a bare URL, and margin notes. */
+function isProseCall(ctx: Context, node: SyntaxNode): boolean {
+  if (node.name !== 'FuncCall') return false;
+  return callee(ctx, node).name === 'link' || noteCallSyntax(ctx.source, node) !== null;
 }
 
 /** Projects the blocks of a markup range: `doc` content, a table cell's. */
@@ -553,9 +560,28 @@ function inlineNode(context: InlineContext): Node | Placed[] {
   return (INLINE[context.node.name] ?? ((c: InlineContext) => raw(c.ctx, c.src, c.marks)))(context);
 }
 
-/** Projects the expression after a `#`: `#link("url")[text]` becomes linked text, anything else a raw inline. */
+/**
+ * Projects the expression after a `#`: `#link("url")[text]` becomes linked
+ * text, a margin note a `marginNote` atom or `noteRange` text, anything else
+ * a raw inline.
+ */
 function codeNode(context: InlineContext): Node | Placed[] {
-  return (context.node.name === 'FuncCall' && linkCall(context)) || raw(context.ctx, context.src, context.marks);
+  const modelled = context.node.name === 'FuncCall' && (linkCall(context) ?? marginNoteCall(context));
+  return modelled || raw(context.ctx, context.src, context.marks);
+}
+
+/**
+ * `#margin-note(..named)[note]` → a `marginNote` atom holding the call's head
+ * and note; `#margin-note(..named)[text][note]` → `text` with a `noteRange`
+ * mark holding them. Null for calls that are not margin notes.
+ */
+function marginNoteCall({ ctx, node, marks }: InlineContext): Node | Placed[] | null {
+  const syntax = noteCallSyntax(ctx.source, node);
+  if (!syntax) return null;
+  const { head, text, note } = syntax;
+  if (!text) return ctx.schema.nodes.marginNote.create({ head, note }, null, marks);
+  const mark = ctx.schema.marks.noteRange.create({ head, note, id: ctx.notes++ });
+  return inline(ctx, children(text.getChild('Markup')!), mark.addToSet(marks));
 }
 
 /** `#link("url")[text]` with a plain string and non-empty, single-paragraph text; null otherwise. */
@@ -641,6 +667,7 @@ function textblock(
   const node = ctx.schema.nodes[type].create(attrs, content.map((p) => p.node));
   const to = from + attrs.src.length;
   pristine.set(node, layout(content, from, contentTo ?? to, to));
+  ctx.notes = 0; // the next textblock numbers its range notes from 0 again
   return node;
 }
 
@@ -979,6 +1006,7 @@ const FORMATTING: Record<string, (mark: Mark, around: Around) => { open: string;
   italic: (_mark, around) => delimitedSyntax('_', 'emph', around),
   link: (mark) => ({ open: `#link(${quote(mark.attrs.href)})[`, close: ']' }),
   code: (mark, { text }) => inlineCodeDelimiters(text, mark.attrs.lang, mark.attrs.fence),
+  noteRange: (mark) => rangeNoteSyntax(mark.attrs.head, mark.attrs.note),
 };
 
 /** What a formatted span starts and ends with, and the printed characters around it. */
@@ -1098,7 +1126,7 @@ function inlinePieces(block: Node, start: number): Piece[] {
     // only text can be code; atoms keep their own source
     const marks = child.marks.filter((m) => m.type.name in FORMATTING && (child.isText || m.type.name !== 'code'));
     const code = marks.some((m) => m.type.name === 'code');
-    const original = code ? null : child.isText ? originalSource(child) : (child.attrs.src as string);
+    const original = code ? null : child.isText ? originalSource(child) : atomSource(child);
     const plain = child.text?.replace(/\n/g, ' ') ?? '';
     const text = original ?? (code ? plain : escapeMarkup(plain, lineStart));
     pieces.push({ marks, text, escaped: original === null && !code, code, node: child, pos: start + offset });
@@ -1131,6 +1159,11 @@ const WORD = /[\p{L}\p{N}_]/u;
 
 function needsFunctionSyntax({ before, after, first, last }: Around): boolean {
   return (before !== undefined && WORD.test(before)) || (after !== undefined && WORD.test(after)) || /^\s/.test(first) || /\s$/.test(last);
+}
+
+/** The source an inline atom prints. */
+function atomSource(atom: Node): string {
+  return atom.type.name === 'marginNote' ? printNoteCall(atom.attrs as { head: string; note: string }) : atom.attrs.src;
 }
 
 /** How a decoded escape or shorthand was written, if its text is unchanged. */

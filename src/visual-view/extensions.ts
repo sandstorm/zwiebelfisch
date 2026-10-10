@@ -1,11 +1,15 @@
 import { Extension, Mark, Node, getSchema } from '@tiptap/core';
 import Code from '@tiptap/extension-code';
 import CodeBlock from '@tiptap/extension-code-block';
+import { DOMSerializer, type Node as PMNode } from '@tiptap/pm/model';
+import { Plugin } from '@tiptap/pm/state';
+import type { EditorView, NodeView } from '@tiptap/pm/view';
 import Document from '@tiptap/extension-document';
 import { ListItem } from '@tiptap/extension-list';
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
 import StarterKit from '@tiptap/starter-kit';
 import { codeBlockView } from './code-block-view';
+import { MarginNote, NoteRange } from './margin-notes';
 import { RawBoxNavigation, rawBoxView } from './raw-box';
 import { TextAlign } from './text-align';
 
@@ -23,13 +27,24 @@ import { TextAlign } from './text-align';
  * - table `layout`: how the table's source is laid out around its cells
  *   (owned by the projection);
  * - code block `fence`: the backticks of its delimiters.
+ *
+ * A block whose anchors change (as every re-projected block's `src` does
+ * after an edit from elsewhere) keeps its DOM, so what is inside, like an
+ * open note editor, survives; see `keepWhileRenderedSame`.
  */
+const ANCHORED_BLOCKS = ['paragraph', 'heading', 'bulletList', 'orderedList', 'listItem'];
+
 const SourceAnchors = Extension.create({
   name: 'typstSourceAnchors',
+  addProseMirrorPlugins() {
+    const views = Object.fromEntries(ANCHORED_BLOCKS.map((type) => [type, keepWhileRenderedSame]));
+    return [new Plugin({ props: { nodeViews: views } })];
+  },
   addGlobalAttributes() {
     return [
       {
-        types: ['paragraph', 'heading', 'bulletList', 'orderedList', 'listItem', 'codeBlock'],
+        // code blocks have their own node view (code-block-view.ts), so they are anchored but not kept
+        types: [...ANCHORED_BLOCKS, 'codeBlock'],
         attributes: {
           src: { default: null, rendered: false, keepOnSplit: false },
           sep: { default: null, rendered: false },
@@ -42,6 +57,26 @@ const SourceAnchors = Extension.create({
     ];
   },
 });
+
+/**
+ * The block as its schema renders it, kept (and its content updated in place)
+ * while a new version renders the same. ProseMirror would rebuild it, and
+ * everything inside, on any attribute change.
+ */
+function keepWhileRenderedSame(initial: PMNode, view: EditorView): NodeView {
+  let node = initial;
+  const render = (n: PMNode) => n.type.spec.toDOM!(n);
+  const { dom, contentDOM } = DOMSerializer.renderSpec(view.dom.ownerDocument, render(node));
+  return {
+    dom,
+    contentDOM,
+    update: (next) => {
+      if (next.type !== node.type || JSON.stringify(render(next)) !== JSON.stringify(render(node))) return false;
+      node = next;
+      return true;
+    },
+  };
+}
 
 const TypstDocument = Document.extend({
   addAttributes() {
@@ -258,6 +293,8 @@ export const extensions = [
   SoftBreak,
   TypstSource,
   TextAlign,
+  MarginNote,
+  NoteRange,
 ];
 
 /** The schema `extensions` produce; an `Editor` builds an equal but distinct instance. */

@@ -30,7 +30,7 @@ const highlightField = StateField.define<DecorationSet>({
   provide: (field) => EditorView.decorations.from(field),
 });
 
-/** Highlights by layer (one per feature, e.g. comments), each layer replaced as a whole. */
+/** Highlights by layer (one per feature, e.g. remote cursors), each layer replaced as a whole. */
 const setLayer = StateEffect.define<{ layer: string; highlights: readonly Highlight[] }>();
 const layersField = StateField.define<Record<string, DecorationSet>>({
   create: () => ({}),

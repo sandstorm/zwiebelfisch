@@ -14,9 +14,7 @@ export {
   TypstEditorElement,
   defineTypstEditorElement,
   type TypstEditorChangeDetail,
-  type TypstEditorCommentsChangeDetail,
 } from './element/typst-editor-element';
-export type { CommentsData } from './comments/comments';
 
 // Importing the package makes <typst-editor> available (no-op without a DOM).
 defineTypstEditorElement();
