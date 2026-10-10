@@ -17,7 +17,7 @@ export const thresholds = {
 // importing file's path from the repository root.
 export const boundaries = {
   srcRoot: fileURLToPath(new URL('src', import.meta.url)),
-  groupingFolders: ['core', 'features', 'hosts', 'ui'],
+  groupingFolders: ['core', 'extensions', 'features', 'hosts', 'ui'],
   exceptions: [
     {
       target: 'features/collaboration/gitlab-protocol.ts',
@@ -28,6 +28,11 @@ export const boundaries = {
       target: 'features/collaboration/collaboration-link.ts',
       importers: '^src/typst-editor/typst-editor\\.ts$',
       why: "the widget's eager side of collaboration; the folder's entry collaboration.ts is the lazily loaded chunk (until the slices wave makes the link the extension's entry)",
+    },
+    {
+      target: 'features/files/asset-view.ts',
+      importers: '^src/extensions/files/files\\.ts$',
+      why: 'the asset view stays behind until it moves into the images extension (slices wave); features/files/ has no entry any more',
     },
     {
       target: 'core/typst-engine/engine-assets.ts',

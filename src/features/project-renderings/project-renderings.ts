@@ -8,7 +8,7 @@ import type { PreviewContributions } from '../../hosts/preview/preview';
 import { images, renderedBoxes, type ImageAssets, type Renderings } from '../../hosts/visual-view/visual-view';
 import { type FileChange, type FileContent, type Project } from '../../core/project/project';
 import { type PathReference, ProjectPath } from '../../core/paths/paths';
-import { uploadChanges } from '../files/files';
+import { uploadChanges } from '../../extensions/files/files';
 
 /**
  * What every document's Visual view renders and inserts: images (`#image(..)` boxes showing the project's image

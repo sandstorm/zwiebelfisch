@@ -4,7 +4,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import type { Diagnostic } from '../core/typst-engine/typst-engine';
-import { pageNumber, pdfMenu, type PdfVariant, type PreviewToolbarItem, zoomControls } from '../hosts/preview/preview';
+import type { PdfVariant, PreviewContext, PreviewToolbarItem } from '../hosts/preview/preview';
 import { createTypstEditor, type TypstEditorOptions } from './typst-editor';
 
 const exportPdf = vi.fn(async () => ({ pdf: new Uint8Array([37, 80, 68, 70]), diagnostics: [], missingPackages: [] }));
@@ -56,6 +56,25 @@ function setup(options: TypstEditorOptions) {
     return EditorView.findFromDOM(visible!.querySelector<HTMLElement>('.cm-editor')!)!;
   };
   return { host, editor, source, preview: previews.at(-1)! };
+}
+
+/** What each toolbar item shows, named by its element's test id or class (made once for a stand-in preview). */
+function toolbarControls(items: readonly PreviewToolbarItem[]): string[] {
+  const context = {
+    ownerDocument: document,
+    zoom: () => 'fit',
+    setZoom() {},
+    scale: () => 1,
+    visiblePage: () => ({ index: 0, count: 0 }),
+    isFollowing: () => true,
+    setFollowing() {},
+    pdfVariants: () => [],
+  } satisfies PreviewContext;
+  return items.map((item) => {
+    const view = item(context);
+    view.dispose?.();
+    return view.elements.map((element) => element.dataset.testid || element.className).filter(Boolean).join(' ');
+  });
 }
 
 function drop(target: HTMLElement, files: File[]) {
@@ -142,9 +161,12 @@ describe('the built-in extensions', () => {
 
   it('fills the preview toolbar: zoom, "Follow cursor", page number, then "Download PDF" unless told not to', () => {
     const { preview } = setup({ source: '= Hi' });
-    expect(preview.toolbarItems).toHaveLength(4);
-    expect([preview.toolbarItems[0], preview.toolbarItems[2], preview.toolbarItems[3]]).toEqual([zoomControls, pageNumber, pdfMenu]);
-    expect(setup({ source: '= Hi', pdfDownload: false }).preview.toolbarItems).not.toContain(pdfMenu);
+    expect(toolbarControls(preview.toolbarItems)).toEqual(['typst-preview-zoom', 'typst-preview__follow', 'typst-preview-page-number', 'typst-pdf']);
+    expect(toolbarControls(setup({ source: '= Hi', pdfDownload: false }).preview.toolbarItems)).toEqual([
+      'typst-preview-zoom',
+      'typst-preview__follow',
+      'typst-preview-page-number',
+    ]);
   });
 
   it('exports the PDF through the pdf-export extension, which offers it without and with comments', async () => {

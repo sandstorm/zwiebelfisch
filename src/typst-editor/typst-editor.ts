@@ -8,16 +8,16 @@ import { collaboration } from '../features/collaboration/collaboration-link';
 import { comments } from '../features/comments/comments';
 import { diagnostics } from '../features/diagnostics/diagnostics';
 import { documentLinks } from '../features/document-links/document-links';
-import { assets, fileNavigation, files } from '../features/files/files';
-import fileStyles from '../features/files/files.css?inline';
+import { assets, fileNavigation, files } from '../extensions/files/files';
+import fileStyles from '../extensions/files/files.css?inline';
 import { labels } from '../features/labels/labels';
-import { pdfExport } from '../features/pdf-export/pdf-export';
-import { previewControls } from '../features/preview-controls/preview-controls';
+import { pdfExport } from '../extensions/pdf-export/pdf-export';
+import { previewControls } from '../extensions/preview-controls/preview-controls';
 import { projectRenderings } from '../features/project-renderings/project-renderings';
-import { spreadsheets } from '../features/spreadsheets/spreadsheets';
+import { spreadsheets } from '../extensions/spreadsheets/spreadsheets';
 import { styles } from '../features/styles/styles';
 import { typstLanguage } from '../features/typst-language/typst-language';
-import { versions } from '../features/versions/versions';
+import { versions } from '../extensions/versions/versions';
 import {
   alignment, headingNumbers, headings, horizontalRule, lists, markup, outline, pageBreak, tables, taskLists,
 } from '../hosts/visual-view/visual-view';
