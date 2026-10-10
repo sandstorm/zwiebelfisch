@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boxWithin, isInside, mostVisible } from './geometry';
+import { isInside, mostVisible, percentOfPage } from './geometry';
 
 const rect = (left: number, top: number, width: number, height: number) => ({
   left,
@@ -10,9 +10,9 @@ const rect = (left: number, top: number, width: number, height: number) => ({
   height,
 });
 
-describe('boxWithin', () => {
-  it('gives a box as percentages of its page', () => {
-    expect(boxWithin(rect(150, 250, 50, 20), rect(100, 200, 200, 400))).toEqual({
+describe('percentOfPage', () => {
+  it('gives a box in points as percentages of its page', () => {
+    expect(percentOfPage({ x: 50, y: 50, w: 50, h: 20 }, { width: 200, height: 400 })).toEqual({
       left: 25,
       top: 12.5,
       width: 25,

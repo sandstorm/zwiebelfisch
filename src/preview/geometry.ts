@@ -16,13 +16,16 @@ export interface PercentBox {
   height: number;
 }
 
-/** `target` relative to `page`, in percent of the page size. */
-export function boxWithin(target: Rect, page: Rect): PercentBox {
+/** A box in points on a page of the given size, as percent of the page — stays in place at any zoom. */
+export function percentOfPage(
+  box: { x: number; y: number; w: number; h: number },
+  page: { width: number; height: number },
+): PercentBox {
   return {
-    left: ((target.left - page.left) / page.width) * 100,
-    top: ((target.top - page.top) / page.height) * 100,
-    width: (target.width / page.width) * 100,
-    height: (target.height / page.height) * 100,
+    left: (box.x / page.width) * 100,
+    top: (box.y / page.height) * 100,
+    width: (box.w / page.width) * 100,
+    height: (box.h / page.height) * 100,
   };
 }
 

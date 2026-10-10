@@ -60,6 +60,10 @@ test('highlights the clicked text in the preview', async ({ page }) => {
   const glyph = (await pages(page).locator('svg use').first().boundingBox())!;
   expect(box.x).toBeLessThanOrEqual(glyph.x + 1);
   expect(box.x + box.width).toBeGreaterThan(glyph.x + glyph.width - 1);
+  // regression: the outline must be the clicked text, never the whole page
+  const pageBox = (await pages(page).first().boundingBox())!;
+  expect(box.height).toBeLessThan(pageBox.height / 4);
+  expect(box.width).toBeLessThan(pageBox.width * 0.9);
 });
 
 test.describe('a 30-page document', () => {

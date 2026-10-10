@@ -11,6 +11,7 @@
 //! - Structured results are returned as JSON strings (see the `*Json` types)
 //!   so the boundary needs no serde glue on the JS side.
 
+mod highlight;
 mod world;
 
 use std::collections::HashMap;
@@ -21,7 +22,7 @@ use typst::diag::{Severity, SourceDiagnostic};
 use typst::layout::{Abs, Point};
 use typst_layout::PagedDocument;
 use typst::introspection::PagedPosition;
-use typst::syntax::{FileId, Side, Source};
+use typst::syntax::{FileId, LinkedNode, Side, Source};
 use typst::utils::hash128;
 use typst::WorldExt;
 use typst_ide::Jump;
@@ -73,11 +74,22 @@ struct DiagnosticJson {
 #[derive(Serialize)]
 #[serde(tag = "kind", rename_all = "lowercase")]
 enum JumpJson {
-    /// A location in a source file. `from..to` is the syntax leaf (e.g. the
-    /// text run) that contains `offset`, for highlighting.
-    Source { path: String, offset: usize, from: usize, to: usize },
+    /// A location in a source file. `from..to` is the syntax node that
+    /// produced the clicked text (e.g. a text run), for highlighting it in the
+    /// editor; `boxes` is where that node is drawn, for highlighting it in the
+    /// preview (one box per line/page; empty for non-text such as shapes).
+    Source { path: String, offset: usize, from: usize, to: usize, boxes: Vec<BoxJson> },
     Url { url: String },
     Position(PositionJson),
+}
+
+#[derive(Serialize)]
+struct BoxJson {
+    page: usize,
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
 }
 
 #[derive(Serialize)]
@@ -154,7 +166,7 @@ impl Engine {
             point: Point::new(Abs::pt(x), Abs::pt(y)),
         };
         let jump = match typst_ide::jump_from_click(&self.world, document, &position)? {
-            Jump::File(id, byte) => self.source_jump(id, byte)?,
+            Jump::File(id, byte) => self.source_jump(id, byte, &position)?,
             Jump::Url(url) => JumpJson::Url { url: url.as_str().into() },
             Jump::Position(pos) => JumpJson::Position(position_json(&pos)),
         };
@@ -204,15 +216,28 @@ impl Engine {
         pages
     }
 
-    fn source_jump(&self, id: FileId, byte: usize) -> Option<JumpJson> {
+    /// The jump for a click that landed on source `byte` in file `id`. Prefers
+    /// the span of the glyph under the click: its node range and its boxes
+    /// give precise highlights; falls back to the syntax leaf at `byte`.
+    fn source_jump(&self, id: FileId, byte: usize, click: &PagedPosition) -> Option<JumpJson> {
         let source = self.world.loaded_source(id)?;
-        let leaf = typst::syntax::LinkedNode::new(source.root()).leaf_at(byte, Side::After);
-        let range = leaf.map(|l| l.range()).unwrap_or(byte..byte);
+        let document = self.document.as_ref()?;
+        let page = document.pages().get(click.page.get() - 1)?;
+        let span = highlight::span_at(&page.frame, click.point).filter(|span| span.id() == Some(id));
+        let range = span
+            .and_then(|span| self.world.range(span))
+            .or_else(|| LinkedNode::new(source.root()).leaf_at(byte, Side::After).map(|leaf| leaf.range()))
+            .unwrap_or(byte..byte);
+        let boxes = span.map(|span| highlight::span_boxes(document, span)).unwrap_or_default();
         Some(JumpJson::Source {
             path: file_path(id),
             offset: utf16(source, byte),
             from: utf16(source, range.start),
             to: utf16(source, range.end),
+            boxes: boxes
+                .into_iter()
+                .map(|b| BoxJson { page: b.page, x: b.x, y: b.y, w: b.w, h: b.h })
+                .collect(),
         })
     }
 

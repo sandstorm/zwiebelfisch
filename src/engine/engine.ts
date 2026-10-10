@@ -56,9 +56,26 @@ export interface Position {
   y: number;
 }
 
+/** A rectangle on a page, in points from its top-left corner. */
+export interface Box {
+  page: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 export type Jump =
   /** `from..to` is the syntax leaf containing `offset`, e.g. a text run. */
-  | { kind: 'source'; path: string; offset: number; from: number; to: number }
+  | {
+      kind: 'source';
+      path: string;
+      offset: number;
+      from: number;
+      to: number;
+      /** Where the clicked source node is drawn: one box per line/page; empty for non-text. */
+      boxes: Box[];
+    }
   | { kind: 'url'; url: string }
   | ({ kind: 'position' } & Position);
 

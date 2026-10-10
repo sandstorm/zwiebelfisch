@@ -85,6 +85,29 @@ describe('Engine', () => {
     expect(jump.offset).toBeGreaterThanOrEqual(jump.from);
   });
 
+  it('returns highlight boxes for the clicked text: one per line, containing the click', () => {
+    const words = 'alpha beta gamma delta epsilon zeta eta theta iota kappa lambda';
+    engine.setSource('/main.typ', `#set page(width: 120pt, height: 200pt, margin: 0pt)\n= Title\n\n${words}`);
+    engine.compile('/main.typ');
+    const title = engine.jumpFromClick(0, 4, 8);
+    if (title?.kind !== 'source') throw new Error('expected source jump');
+    expect(title.boxes).toHaveLength(1);
+    const [box] = title.boxes;
+    expect(box.page).toBe(0);
+    expect(box.x).toBeLessThanOrEqual(4);
+    expect(box.x + box.w).toBeGreaterThan(4);
+    expect(box.w).toBeLessThan(120); // the title, not the page
+    expect(box.y).toBeLessThanOrEqual(8);
+    expect(box.y + box.h).toBeGreaterThanOrEqual(8);
+
+    const source = `#set page(width: 120pt, height: 200pt, margin: 0pt)\n= Title\n\n${words}`;
+    const [at] = engine.jumpFromCursor('/main.typ', source.indexOf('alpha') + 1);
+    const paragraph = engine.jumpFromClick(0, at.x, at.y - 2);
+    if (paragraph?.kind !== 'source') throw new Error('expected source jump');
+    expect(paragraph.boxes.length).toBeGreaterThan(1); // the paragraph wraps
+    expect(new Set(paragraph.boxes.map((b) => Math.round(b.y))).size).toBe(paragraph.boxes.length);
+  });
+
   it('returns nothing for a click on empty space', () => {
     engine.setSource('/main.typ', '#set page(width: 200pt, height: 100pt, margin: 0pt)\nHi');
     engine.compile('/main.typ');

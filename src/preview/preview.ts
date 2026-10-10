@@ -1,8 +1,8 @@
-import type { Diagnostic, Jump, Position } from '../engine/engine';
+import type { Box, Diagnostic, Jump, Position } from '../engine/engine';
 import { DEFAULT_FONT_URLS } from '../engine/default-fonts';
 import wasmUrl from '../engine/wasm/typst_engine_bg.wasm?url&no-inline';
 import { FileSender, type FileContent } from './project-files';
-import { boxWithin, isInside, mostVisible } from './geometry';
+import { isInside, mostVisible, percentOfPage } from './geometry';
 import { LatestOnly } from './latest-only';
 import { PageList } from './page-list';
 import type { Init, Request, Response } from './protocol';
@@ -46,7 +46,7 @@ export class Preview {
   private readonly compiles: LatestOnly<Compile>;
   private readonly reveals: LatestOnly<Reveal>;
   private readonly resizeObserver: ResizeObserver | null;
-  private highlight: HTMLElement | null = null;
+  private highlights: HTMLElement[] = [];
   private zoom: Zoom = 'fit';
   private nextId = 0;
   private readonly sender = new FileSender();
@@ -164,25 +164,22 @@ export class Preview {
     const y = (event.clientY - rect.top) * scale;
     const response = await this.request({ type: 'click', page: hit.index, x, y });
     if (response.type !== 'click' || response.jump?.kind !== 'source') return;
-    this.highlightClicked(event.target as Element, hit.element);
+    this.highlightBoxes(response.jump.boxes);
     this.options.onJump?.(response.jump);
   }
 
-  /**
-   * Outlines the clicked text run (or shape), until the next click or recompile.
-   * Typst's SVG draws a text run as a `<g>` of glyph `<use>`s.
-   */
-  private highlightClicked(target: Element, page: HTMLElement): void {
-    const region = target.tagName === 'use' && target.parentElement ? target.parentElement : target;
-    if (!(region instanceof SVGGraphicsElement) || region instanceof SVGSVGElement) return;
+  /** Outlines where the clicked source node is drawn (every line/page), until the next click or recompile. */
+  private highlightBoxes(boxes: Box[]): void {
     this.clearHighlight();
-    const box = boxWithin(region.getBoundingClientRect(), page.getBoundingClientRect());
-    this.highlight = overlay(page, 'typst-preview__highlight', box);
+    for (const box of boxes) {
+      const hit = this.list.at(box.page);
+      if (hit) this.highlights.push(overlay(hit.element, 'typst-preview__highlight', percentOfPage(box, hit.page)));
+    }
   }
 
   private clearHighlight(): void {
-    this.highlight?.remove();
-    this.highlight = null;
+    for (const element of this.highlights) element.remove();
+    this.highlights = [];
   }
 
   private flash({ page, x, y }: Position): void {
