@@ -833,6 +833,11 @@
   white-space: pre-wrap;
 }
 .typst-asset__note { color: #57606a; }
+/* Spreadsheets (.ic): IronCalc's workbook UI fills the editing column */
+.typst-sheet { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.typst-sheet[hidden] { display: none; }
+.typst-sheet__title { margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--te-border); font-size: 13px; font-weight: 600; color: #1f2328; }
+.typst-sheet__body { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; color: #57606a; font-size: 13px; }
 .typst-toolbar__style:hover { background: #eef1f5; }
 .typst-status__open {
   border: 0;

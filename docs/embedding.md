@@ -228,6 +228,21 @@ drops the highlighted text of range notes as well. A document that sets
 signature of comments (without it, comments are signed "Anonymous").
 Existing `*.comments.json` sidecar files are not migrated.
 
+## Spreadsheets
+
+A project file ending in `.ic` is a spreadsheet: it opens in [IronCalc](https://www.ironcalc.com)'s
+workbook UI (formulas, formats, several sheets), loaded only when the first spreadsheet opens.
+Create one with **New file** `budget.ic`. Every edit is saved into the file and, for Typst, into
+`budget.ic.json` next to it: every sheet's cells as displayed.
+
+```typst
+#let budget = json("budget.ic.json")
+#table(columns: 2, ..budget.Sheet1.flatten())
+Rent: #budget.Sheet1.at(1).at(1)
+```
+
+The file is in IronCalc's own format; `.xlsx` files cannot be opened yet.
+
 ## Custom styles
 
 Authors declare their own paragraph and text styles as Typst functions, with a doc comment

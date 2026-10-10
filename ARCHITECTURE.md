@@ -58,6 +58,8 @@ src/                        the widget (TypeScript); the most important API on t
       pages/                pages.ts: page-list (SVG only near the viewport), geometry, zoom, snippet, change-bars
     diagnostics/            DiagnosticsStatus (status bar), diagnostics-summary.ts
     labels/                 LabelIndex: the project's labels (kind, title, file) and reference counts; scan.ts (Lezer, .bib)
+    spreadsheets/           SpreadsheetView (.ic files in IronCalc's workbook UI), workbook.ts (React + IronCalc,
+                            loaded on demand), values.ts (sheetValues → name.ic.json for Typst)
     styles/                 StyleIndex: the custom styles the project declares (`/// @style …`), discover.ts,
                             new-style.ts ("New style…" stub); DocumentStyles (what a Visual view uses)
     changes/                ChangeTracking (a base per Typst file + "Changes since …"), diff.ts (diffTexts), changes.css
@@ -786,6 +788,32 @@ newStyle(text) → { text, from, to }   // "New style…": `new-style`, `new-sty
   style a style by its class. The preview shows the real look.
 - **Widget:** one `StyleIndex`; "New style…" appends a stub to the file declaring most styles (`homeFile()`; else `/styles.typ`, created through the
   usual file request when missing) and shows it in the Source view.
+
+### Spreadsheets (`src/features/spreadsheets`)
+
+Concept: docs/2026_10_10_spreadsheets.md; task docs/todo/ironcalc.md. Calculations happen in
+IronCalc; Typst shows the results.
+
+```ts
+new SpreadsheetView(parent, onEdit(path, { bytes, values }))   .show(path, content)   .hide()   .destroy()
+sheetValues(model) → { [sheet]: string[][] }   // displayed values, A1 to the last cell with data, visible sheets
+valuesPath('/budget.ic') → '/budget.ic.json'
+```
+
+- A spreadsheet is a project file `name.ic` (`fileKind` `spreadsheet`), in IronCalc's own format
+  (`Model.from_bytes` / `toBytes`): the browser package has no `.xlsx`. An empty file opens as a
+  new workbook (so "New file" `budget.ic` makes one), which is saved at once.
+- `workbook.ts` is a separate chunk (`import()` on the first show): `@ironcalc/workbook` (React,
+  i18next, lucide icons) and the engine's wasm. Its CSS (scoped `.ic-root`) goes into the
+  container's root node (the shadow root of `<typst-editor>`); `rootContainer` keeps its menus
+  inside the container.
+- Edits: the UI changes the model itself. After user events in the container (keyup, pointerup,
+  paste, …, 300 ms quiet) a non-empty `flushSendQueue()` means the model changed: `onEdit` gets
+  `toBytes()` and `sheetValues`. The widget stores both through the usual file requests: the
+  `.ic` file (a binary `update`) and `name.ic.json` (created or updated, only when it changed).
+- Typst: `#let data = json("budget.ic.json")`, `data.Sheet1.at(row).at(column)` (strings as
+  displayed, e.g. "1,200.00").
+- Not yet: `.xlsx`, sharing spreadsheet edits in collaboration rooms (binary: the last save wins).
 
 ### Layout (`src/typst-editor/layout.ts`)
 

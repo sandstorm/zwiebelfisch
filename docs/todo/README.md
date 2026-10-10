@@ -71,5 +71,5 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [changes-per-file](changes-per-file.md) | done (branch task/changes-per-file) |
 | [files-tree](files-tree.md) | done (branch task/files-tree) |
 | [tables-real-world](tables-real-world.md) | done (branch task/tables-real-world) |
-| [ironcalc](ironcalc.md) | in-progress (branch task/ironcalc) |
+| [ironcalc](ironcalc.md) | done (branch task/ironcalc) |
 | [drawio-diagrams](drawio-diagrams.md) | open (long term) |

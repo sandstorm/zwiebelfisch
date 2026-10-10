@@ -1,13 +1,14 @@
 // Project paths: file kinds, display names, new names, and Typst path resolution. See project.ts.
 import type { FileContent } from './project';
 
-/** What the widget can do with a file: edit it, preview it as an image, or only list it. */
-export type FileKind = 'typst' | 'image' | 'data';
+/** What the widget can do with a file: edit it, preview it as an image, edit it as a spreadsheet (IronCalc, `.ic`), or only list it. */
+export type FileKind = 'typst' | 'image' | 'spreadsheet' | 'data';
 
 const IMAGE = /\.(png|jpe?g|gif|svg|webp)$/i;
 
 export function fileKind(path: string): FileKind {
   if (path.endsWith('.typ')) return 'typst';
+  if (path.endsWith('.ic')) return 'spreadsheet';
   return IMAGE.test(path) ? 'image' : 'data';
 }
 

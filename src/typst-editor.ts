@@ -15,12 +15,13 @@ import { DiagnosticsStatus, summarizeDiagnostics } from './features/diagnostics/
 import { EditingViews, type EditorMode } from './typst-editor/editing-views';
 import { Layout } from './typst-editor/layout';
 import layoutStyles from './typst-editor/layout.css?inline';
-import { type FileChange, type FileLinks, neighbours, Project, type ProjectFiles, resolvePath } from './core/project/project';
+import { type FileChange, type FileLinks, fileKind, neighbours, Project, type ProjectFiles, resolvePath } from './core/project/project';
 import { FileNavigation } from './typst-editor/file-navigation';
 import { PdfExport } from './typst-editor/pdf-export';
 import { ProjectRenderings } from './typst-editor/project-renderings';
 import { LabelIndex } from './features/labels/labels';
 import { newStyle, StyleIndex } from './features/styles/styles';
+import { SpreadsheetView, valuesPath, type WorkbookEdit } from './features/spreadsheets/spreadsheets';
 import styles from './typst-editor.css?inline';
 import { VersionControls, type Versions } from './features/versions/versions';
 
@@ -183,6 +184,7 @@ class Widget {
   private readonly navigation: FileNavigation;
   private readonly files: FilePanel;
   private readonly assets: AssetView;
+  private readonly spreadsheets: SpreadsheetView;
   private readonly renderings: ProjectRenderings;
   private readonly labels: LabelIndex;
   private readonly styles: StyleIndex;
@@ -232,6 +234,7 @@ class Widget {
       memory: this.layout.remember('folders'),
     });
     this.assets = new AssetView(this.left);
+    this.spreadsheets = new SpreadsheetView(this.left, (path, edit) => this.saveSpreadsheet(path, edit));
     this.unsubscribe = this.project.onChange((change) => this.changed(change));
     // the Visual view has "Comment" in its toolbar; the tab bar's button is for the Source view
     this.commentAction = new CommentAction(host, () => this.views.shown());
@@ -250,12 +253,13 @@ class Widget {
     const changed = path !== this.active;
     this.active = path;
     const document = this.project.document(path);
-    if (document) {
-      this.lastSource = path;
-      this.assets.hide();
-    } else {
-      this.assets.show(path, this.project.content(path)!);
-    }
+    const spreadsheet = fileKind(path) === 'spreadsheet';
+    if (document) this.lastSource = path;
+    if (document || spreadsheet) this.assets.hide();
+    else this.assets.show(path, this.project.content(path)!);
+    // reopened on every open: a spreadsheet changed elsewhere (replaced files) shows its new content
+    if (spreadsheet) void this.spreadsheets.show(path, this.project.content(path)!);
+    else this.spreadsheets.hide();
     this.views.show(document ?? null);
     this.showNeighbours();
     this.showCursors();
@@ -354,6 +358,7 @@ class Widget {
     this.views.destroy();
     this.files.destroy();
     this.assets.destroy();
+    this.spreadsheets.destroy();
     this.renderings.destroy();
     this.labels.destroy();
     this.styles.destroy();
@@ -428,6 +433,15 @@ class Widget {
     if (file) file.change([{ from: file.text.length, to: file.text.length, insert: added.text.slice(file.text.length) }], 'new-style');
     else if ((await this.request({ kind: 'create', path, content: added.text })) !== null) return;
     this.jump({ path, from: added.from, to: added.to }, true);
+  }
+
+  /** Stores an edit of spreadsheet `path`: its bytes, and the displayed values next to it for Typst (`valuesPath`). */
+  private saveSpreadsheet(path: string, { bytes, values }: WorkbookEdit): void {
+    void this.request({ kind: 'update', path, content: bytes });
+    const target = valuesPath(path);
+    const content = `${JSON.stringify(values, null, 2)}\n`;
+    if (this.project.content(target) === content) return;
+    void this.request(this.project.has(target) ? { kind: 'update', path: target, content } : { kind: 'create', path: target, content });
   }
 
   /** Opens the file of `target` and reveals the range (in the source view on request). */

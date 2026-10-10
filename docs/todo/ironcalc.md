@@ -1,6 +1,6 @@
 # Spreadsheets with IronCalc
 
-Status: in-progress (branch task/ironcalc)
+Status: done (branch task/ironcalc) — Playwright spec written, needs a browser run
 Depends on: nothing
 Touches: src/core/project (binary updates, file kind), a new src/features/spreadsheets/, src/typst-editor.ts (opening files), src/features/files (icon), package.json (IronCalc, React), vite configs, ARCHITECTURE.md, docs/embedding.md
 

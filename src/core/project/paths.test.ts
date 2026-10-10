@@ -8,6 +8,8 @@ describe('fileKind', () => {
     expect(fileKind('/img/Logo.PNG')).toBe('image');
     expect(fileKind('/logo.svg')).toBe('image');
     expect(fileKind('/data.csv')).toBe('data');
+    expect(fileKind('/sheets/budget.ic')).toBe('spreadsheet');
+    expect(fileKind('/budget.ic.json')).toBe('data');
     expect(fileKind('/README')).toBe('data');
   });
 });
