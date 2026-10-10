@@ -145,8 +145,8 @@ src/                        the widget (TypeScript); the most important API on t
                             print, validity; note-thread.ts: a note's body as a thread of messages; add-margin-note.ts,
                             page-margin.ts, without-notes.ts: the sources without comments; card-layout.ts);
                             visual-view/ (marginNotes: notes in the text + the Comment action; notes-gutter/: the cards);
-                            workbench/ (CommentAction, the command comments.addComment, Ctrl+Alt+M, its editor/title
-                            entry in the Source tab); preview/
+                            workbench/ (registerAddComment: the command comments.addComment, Ctrl+Alt+M, its
+                            editor/title entry in the Source tab); preview/
                             (registerIncludeComments: the PDF export option `comments.include`)
     collaboration/          collaboration.ts (eager: the extension), collaboration-link.ts (CollaborationLink: loads
                             model/ on demand), remote-origin.ts (REMOTE_ORIGIN, eager); presence/ (Presence,
@@ -1659,7 +1659,6 @@ comments(): TypstExtension   // signs as Workbench.user; registerAddComment + re
 // workbench/
 registerAddComment(workbench, cards: { editNote(document, offset) }) → Disposable
                                      // command comments.addComment, Mod+Alt+KeyM, the Source view's tab-bar button
-new CommentAction(doc, () => {document, view: {selection(), reveal(), editNote?()}} | null)   .button  .comment()  .destroy()
 
 // preview/
 registerIncludeComments(preview, project) → Disposable
@@ -1671,7 +1670,6 @@ marginNotes({ comment? }) → VisualViewContribution  // marginNote + noteRange 
                                      // the selection's bar (runs comments.addComment)
 notesGutter({user?}) → { activate, editNote(document, offset) → boolean }   // registers a gutter per Visual view;
                                      // editNote focuses the reply box in the card of the note whose source holds offset
-new NotesGutter(body, {user?})   .plugin (add to the editor state)  .edit(offset) → boolean  .destroy()
 findNotes(doc) / followNotes(prev, mapping, found, newKey) / setNoteText(tr, note, markup) / removeNote(tr, note)
 noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-list.ts, pure ProseMirror
 ```
@@ -1732,7 +1730,7 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
   (`/.without-comments.typ`, or `-2`, … if taken) with `set-margin-note-defaults(hidden: true)`
   and `#include "<main>"` for notes written other ways (`margin-note.with(..)`, calls in code).
   Engine test: the result draws exactly the glyphs of the plain text.
-- **`CommentAction`** (`workbench/`): "Comment" and Ctrl/Cmd+Alt+M (the command
+- **"Comment"** (`workbench/`): "Comment" and Ctrl/Cmd+Alt+M (the command
   `comments.addComment`, bound with `registerKeybinding`: captured at the widget root). The Visual
   view's toolbar has the button (`marginNotes({ comment })` runs the command);
   the tab bar has it for the Source view only (an `editor/title` menu entry with `when: editorMode ===
@@ -1783,7 +1781,7 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
 - Tests: `model/note-thread.test.ts` (format, round trips, escaping, concurrent replies over Y.Docs),
   `visual-view/margin-notes.test.ts` (projection, printing, the toolbar action),
   `visual-view/notes-gutter/notes-gutter.test.ts` (cards and threads in jsdom), `preview/preview.test.ts` (the PDF
-  export option), `workbench/comment-action.test.ts`.
+  export option), `workbench/workbench.test.ts` (the command).
 - Engine tests (`model/drafting.test.ts`) compile both note forms, both thread layouts, page margins and the
   sources without notes against the real package (`src/extensions/comments/model/fixtures/drafting-0.2.2`).
 - **Removed** with this design (it replaced the sidecar comments of docs/todo/comments.md):
