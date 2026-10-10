@@ -2,7 +2,7 @@
 // A leaf (imports nothing of its folder), so contributions can name these types without importing the host.
 // See source-view.ts.
 import type { Extension } from '@codemirror/state';
-import type { Disposable } from '../../core/disposable/disposable';
+import type { Event } from '../../core/event-emitter/event-emitter';
 import type { DocumentLinkProvider } from '../../core/document-links/document-links';
 import type { Presence, TypstDocument } from '../../core/typst-document/typst-document';
 
@@ -22,7 +22,7 @@ export interface SourceViewContext {
    * Fires with the other users' carets and selections whenever the view (a `PresenceTarget`) is given
    * new ones; offsets in the document's text at that moment.
    */
-  onDidChangePresence(listener: (presences: readonly Presence[]) => void): Disposable;
+  readonly onDidChangePresence: Event<readonly Presence[]>;
 }
 
 /** Gives the Source views of `document` the links of its file paths; null when it has none. */

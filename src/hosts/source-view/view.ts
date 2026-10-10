@@ -3,6 +3,7 @@ import { basicSetup } from 'codemirror';
 import { Annotation, Compartment, EditorSelection, StateEffect, StateField, Transaction, type ChangeSet, type ChangeSpec, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { Disposable } from '../../core/disposable/disposable';
+import { type Event, EventEmitter } from '../../core/event-emitter/event-emitter';
 import { type Presence, type PresenceTarget, REMOTE_ORIGIN, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
 import type { SourceViewContext } from './contribution';
 
@@ -16,7 +17,7 @@ export interface SourceViewOptions {
 /** What a view needs from its host: the contributed extensions for it, and word when they change. */
 export interface Contributions {
   extensionsFor(view: Omit<SourceViewContext, 'documentLinks'>): Extension;
-  onDidChange(listener: () => void): Disposable;
+  readonly onDidChange: Event<void>;
 }
 
 /**
@@ -26,16 +27,13 @@ export interface Contributions {
 export class SourceView implements PresenceTarget {
   private readonly view: EditorView;
   private readonly contributed = new Compartment();
-  private readonly presenceListeners = new Set<(presences: readonly Presence[]) => void>();
+  private readonly presence = new EventEmitter<readonly Presence[]>();
   private readonly subscriptions: Disposable[];
 
   constructor(parent: HTMLElement, document: TypstDocument, options: SourceViewOptions, contributions: Contributions) {
     const context: Omit<SourceViewContext, 'documentLinks'> = {
       document,
-      onDidChangePresence: (listener) => {
-        this.presenceListeners.add(listener);
-        return new Disposable(() => this.presenceListeners.delete(listener));
-      },
+      onDidChangePresence: this.presence.event,
     };
     this.view = new EditorView({
       parent,
@@ -79,7 +77,7 @@ export class SourceView implements PresenceTarget {
 
   /** Hands other users' carets and selections to the contributions that draw them (`onDidChangePresence`). */
   setPresence(presences: readonly Presence[]): void {
-    for (const listener of this.presenceListeners) listener(presences);
+    this.presence.fire(presences);
   }
 
   /** The selected source range (the main selection). */
@@ -90,7 +88,7 @@ export class SourceView implements PresenceTarget {
 
   destroy(): void {
     for (const subscription of this.subscriptions) subscription.dispose();
-    this.presenceListeners.clear();
+    this.presence.dispose();
     this.view.destroy();
   }
 }

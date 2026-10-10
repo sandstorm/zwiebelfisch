@@ -1,7 +1,8 @@
 // lint: compile diagnostics underlined in the Source views (CodeMirror lint), and their wording. See builtins.ts.
 import { type Diagnostic as LintDiagnostic, setDiagnostics } from '@codemirror/lint';
 import { type EditorView, ViewPlugin } from '@codemirror/view';
-import { Disposable } from '../../../core/disposable/disposable';
+import type { Disposable } from '../../../core/disposable/disposable';
+import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import type { SourceViewExtension } from '../contribution';
 
@@ -25,21 +26,18 @@ export function lint(diagnostics: DiagnosticCollection): SourceViewExtension {
 /** The diagnostics of each document, for every Source view of it (VS Code's DiagnosticCollection). */
 export class DiagnosticCollection {
   private readonly entries = new WeakMap<TypstDocument, readonly SourceDiagnostic[]>();
-  private readonly listeners = new Set<(document: TypstDocument) => void>();
+  private readonly changed = new EventEmitter<TypstDocument>();
+  /** Fires with the document whose diagnostics were set. */
+  readonly onDidChange = this.changed.event;
 
   /** Replaces the diagnostics of `document` (offsets in its current text). */
   set(document: TypstDocument, diagnostics: readonly SourceDiagnostic[]): void {
     this.entries.set(document, diagnostics);
-    for (const listener of this.listeners) listener(document);
+    this.changed.fire(document);
   }
 
   get(document: TypstDocument): readonly SourceDiagnostic[] {
     return this.entries.get(document) ?? [];
-  }
-
-  onDidChange(listener: (document: TypstDocument) => void): Disposable {
-    this.listeners.add(listener);
-    return new Disposable(() => this.listeners.delete(listener));
   }
 }
 

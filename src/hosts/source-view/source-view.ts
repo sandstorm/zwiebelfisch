@@ -5,6 +5,7 @@
 // contribution, registered once and applied to every view made before or after, so a feature never tracks views.
 import type { Extension } from '@codemirror/state';
 import { Disposable } from '../../core/disposable/disposable';
+import { EventEmitter } from '../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { LinkProviderFactory, SourceViewContext, SourceViewExtension } from './contribution';
 import { type Contributions, SourceView, type SourceViewOptions } from './view';
@@ -38,14 +39,11 @@ export interface SourceViewContributions {
 export class SourceViewHost implements SourceViewContributions {
   private readonly extensions: SourceViewExtension[] = [];
   private readonly linkProviders: LinkProviderFactory[] = [];
-  private readonly listeners = new Set<() => void>();
+  private readonly changed = new EventEmitter<void>();
   /** How a view gets its contributions: it asks for them now and again on every change. */
   private readonly contributions: Contributions = {
     extensionsFor: (view) => this.extensionsFor(view),
-    onDidChange: (listener) => {
-      this.listeners.add(listener);
-      return new Disposable(() => this.listeners.delete(listener));
-    },
+    onDidChange: this.changed.event,
   };
 
   registerExtension(extension: SourceViewExtension): Disposable {
@@ -63,15 +61,11 @@ export class SourceViewHost implements SourceViewContributions {
 
   private register<T>(list: T[], item: T): Disposable {
     list.push(item);
-    this.changed();
+    this.changed.fire();
     return new Disposable(() => {
       list.splice(list.indexOf(item), 1);
-      this.changed();
+      this.changed.fire();
     });
-  }
-
-  private changed(): void {
-    for (const listener of this.listeners) listener();
   }
 
   private extensionsFor(view: Omit<SourceViewContext, 'documentLinks'>): Extension {
