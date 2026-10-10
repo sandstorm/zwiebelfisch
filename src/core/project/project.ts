@@ -108,7 +108,7 @@ export class Project {
     if (change.kind === 'create') this.add(change.path, change.content);
     if (change.kind === 'delete') this.remove(change.path);
     if (change.kind === 'rename') this.move(change.from, change.path);
-    this.emit(change);
+    this.changed.fire(change);
   }
 
   /**
@@ -156,16 +156,16 @@ export class Project {
     if (entry?.kind === 'content' && !becomesDocument) {
       if (entry.content === content) return;
       this.entries.set(path, { kind: 'content', content });
-      return this.emit({ kind: 'update', path, content });
+      return this.changed.fire({ kind: 'update', path, content });
     }
     if (entry) this.removeAndEmit(path);
     this.add(path, content);
-    this.emit({ kind: 'create', path, content });
+    this.changed.fire({ kind: 'create', path, content });
   }
 
   private removeAndEmit(path: ProjectPath): void {
     this.remove(path);
-    this.emit({ kind: 'delete', path });
+    this.changed.fire({ kind: 'delete', path });
   }
 
   private add(path: ProjectPath, content: FileContent): void {
@@ -177,7 +177,7 @@ export class Project {
     const document = new TypstDocument(content);
     const subscription = document.onDidChange(() => {
       const current = this.pathOf(document);
-      if (current) this.emit({ kind: 'update', path: current, content: document.text });
+      if (current) this.changed.fire({ kind: 'update', path: current, content: document.text });
     });
     this.entries.set(path, { kind: 'document', document, subscription });
   }
@@ -192,10 +192,6 @@ export class Project {
     const entry = this.entries.get(from)!;
     this.entries.delete(from);
     this.entries.set(to, entry);
-  }
-
-  private emit(change: FileChange): void {
-    this.changed.fire(change);
   }
 }
 
