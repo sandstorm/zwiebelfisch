@@ -3,6 +3,8 @@ import { defineTypstEditorElement } from './element/typst-editor-element';
 export {
   createTypstEditor,
   type EditorMode,
+  type FileChange,
+  type FileListMode,
   type ProjectFiles,
   type TypstEditor,
   type TypstEditorOptions,

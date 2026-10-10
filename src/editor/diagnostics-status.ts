@@ -1,10 +1,11 @@
 import type { Diagnostic } from '../engine/engine';
-import type { DiagnosticsSummary } from './diagnostics-summary';
+import { inProject, type DiagnosticTarget, type DiagnosticsSummary } from './diagnostics-summary';
 
 /**
  * The compact compile status of the widget: "✓ compiled" or "2 errors".
  * Clicking it jumps to the summary's target; diagnostics of other files
- * (which the editor cannot mark) are listed next to it.
+ * (which the shown editor cannot mark) are listed next to it, and those in
+ * project files jump there when clicked.
  */
 export class DiagnosticsStatus {
   private readonly root: HTMLElement;
@@ -12,7 +13,10 @@ export class DiagnosticsStatus {
   private readonly list: HTMLUListElement;
   private target: DiagnosticsSummary['target'] = null;
 
-  constructor(parent: HTMLElement, onJump: (from: number, to: number) => void) {
+  constructor(
+    parent: HTMLElement,
+    private readonly onJump: (target: DiagnosticTarget) => void,
+  ) {
     const doc = parent.ownerDocument;
     this.root = doc.createElement('div');
     this.root.className = 'typst-status';
@@ -22,7 +26,7 @@ export class DiagnosticsStatus {
     this.button.className = 'typst-status__summary';
     this.button.textContent = 'compiling…';
     this.button.addEventListener('click', () => {
-      if (this.target) onJump(this.target.from, this.target.to);
+      if (this.target) onJump(this.target);
     });
     this.list = doc.createElement('ul');
     this.list.className = 'typst-status__elsewhere';
@@ -43,9 +47,21 @@ export class DiagnosticsStatus {
   }
 
   private item(diagnostic: Diagnostic): HTMLLIElement {
-    const item = this.root.ownerDocument.createElement('li');
+    const doc = this.root.ownerDocument;
+    const item = doc.createElement('li');
     item.dataset.severity = diagnostic.severity;
-    item.textContent = `${diagnostic.path ?? '(no file)'}: ${diagnostic.message}`;
+    const text = `${diagnostic.path ?? '(no file)'}: ${diagnostic.message}`;
+    const { path, from, to } = diagnostic;
+    if (!inProject(path)) {
+      item.textContent = text;
+      return item;
+    }
+    const button = doc.createElement('button');
+    button.type = 'button';
+    button.className = 'typst-status__open';
+    button.textContent = text;
+    button.addEventListener('click', () => this.onJump({ path, from, to }));
+    item.append(button);
     return item;
   }
 }

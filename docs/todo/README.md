@@ -40,7 +40,7 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [projection-position-map](projection-position-map.md) | done |
 | [comments](comments.md) | open (after position map) |
 | [diff-rendering](diff-rendering.md) | open (after position map) |
-| [multi-file-ui](multi-file-ui.md) | in-progress (agent) |
+| [multi-file-ui](multi-file-ui.md) | done |
 | [visual-view-toolbar-and-raw-editing](visual-view-toolbar-and-raw-editing.md) | done |
 | [visual-view-links-images-tables](visual-view-links-images-tables.md) | open |
 | [preview-ux](preview-ux.md) | done |

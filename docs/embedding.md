@@ -87,8 +87,8 @@ shadow root when `host` is inside one.
 
 ## 3. Other files, images and packages
 
-Only the main file is edited. The project's other files go into `files`, by absolute path:
-Typst text as a string, anything else (images, CSV, …) as a `Uint8Array`.
+The main file is the one that is compiled. The project's other files go into `files`, by absolute
+path: Typst text as a string, anything else (images, CSV, …) as a `Uint8Array`.
 
 ```ts
 const editor = createTypstEditor(host, {
@@ -102,7 +102,36 @@ const editor = createTypstEditor(host, {
 editor.files = { ...editor.files, '/chapters/outro.typ': '= Outro' };   // replaces the map, recompiles
 ```
 
-On `<typst-editor>` the same map is the `files` property. Bytes are copied to the compile worker
+### The file bar (optional)
+
+With one file the widget looks as before. As soon as the project has more than one file
+(`fileList: 'auto'`, the default; `'show'` / `'hide'` force it), a file bar appears above the
+editing view:
+
+- one tab per file, the main file marked; `.typ` files open in their own Visual/Source views,
+  images open as a preview with an **Insert into …** button, data files as read-only text;
+- **New file**, **Upload** (or drop files onto the editor), **Rename**, **Delete** — the main
+  file cannot be renamed or deleted, folders are at most one level deep;
+- clicking preview text that comes from another file opens that file; error entries in the status
+  bar open their file too.
+
+The host decides and persists:
+
+```ts
+createTypstEditor(host, {
+  files,
+  allowFileChange: async (change) => confirmWithServer(change),   // false → refused, the user sees why
+  onFilesChange: (change) => save(change),   // {kind:'create'|'update'|'delete'|'rename', path, …}
+});
+editor.activeFile;              // '/chapters/intro.typ'
+editor.open('/logo.png');
+```
+
+`onFilesChange` also reports every edit of a `.typ` file (`kind: 'update'`, with the full text).
+`editor.files` returns all files but the main one, with their current text.
+
+On `<typst-editor>` the same map is the `files` property, the `file-list` attribute sets the
+file bar mode, and every file change dispatches a `files-change` event (`detail`: the change). Bytes are copied to the compile worker
 only when the `Uint8Array` changes, so reuse the same array for unchanged files.
 
 `#import "@preview/name:version"` works without configuration: the worker downloads the package

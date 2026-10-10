@@ -13,5 +13,13 @@ This is *bold* and _emphasised_ text. Click anything in the preview to jump to i
 $ sum_(k=1)^n k = (n(n+1)) / 2 $
 `;
 
-const editor = createTypstEditor(document.getElementById('editor')!, { source });
+// `?files` opens a small multi-file project to try the file bar.
+const multiFile = new URLSearchParams(location.search).has('files');
+const files: Record<string, string> = multiFile
+  ? { '/chapter1.typ': '= Chapter 1\n\nThis text lives in `chapter1.typ`. Click it in the preview.\n' }
+  : {};
+const editor = createTypstEditor(document.getElementById('editor')!, {
+  source: multiFile ? `${source}\n#include "chapter1.typ"\n` : source,
+  files,
+});
 Object.assign(window, { editor });
