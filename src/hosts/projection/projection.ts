@@ -28,7 +28,8 @@ import type { SyntaxNode } from '@lezer/common';
 import type { AnyExtension, Attribute } from '@tiptap/core';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
-import type { Disposable } from '../../core/disposable/disposable';
+import { Disposable } from '../../core/disposable/disposable';
+import type { Event } from '../../core/event-emitter/event-emitter';
 import { Grammar } from './grammar';
 import { projectDocument } from './projecting';
 import { forgetPrinted, printed, type Span } from './printing';
@@ -126,7 +127,7 @@ export interface ProjectionSpec {
   /** Calls in running text, tried in registration order. */
   readonly inlineCalls?: readonly InlineCallProjector[];
   /** Fires when what this spec projects changed (styles declared or removed): views project their document again. */
-  onDidChange?(listener: () => void): Disposable;
+  readonly onDidChange?: Event<void>;
 }
 
 /** Prints an edited (not untouched) block that starts at document position `pos` inside `parent`. */
@@ -239,8 +240,8 @@ export function nodeGrammar(node: Node): NodeGrammar | undefined {
 }
 
 /** Subscribes `listener` to every spec of `schema` whose projection can change (see `ProjectionSpec.onDidChange`). */
-export function onDidChangeGrammar(schema: Schema, listener: () => void): Disposable[] {
-  return Grammar.of(schema).changing().map((spec) => spec.onDidChange!(listener));
+export function onDidChangeGrammar(schema: Schema, listener: () => void): Disposable {
+  return Disposable.from(...Grammar.of(schema).changing().map((spec) => spec.onDidChange!(listener)));
 }
 
 /**

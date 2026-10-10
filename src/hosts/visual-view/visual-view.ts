@@ -81,7 +81,7 @@ export class VisualView {
         if (origin !== this) this.syncFromDocument();
       }),
       // e.g. a style declared or removed changes what its calls project to
-      ...onDidChangeGrammar(schema, () => this.syncFromDocument()),
+      onDidChangeGrammar(schema, () => this.syncFromDocument()),
       ...contributed.highlights.map(({ layer, provider }) => {
         this.setHighlights(layer, provider.provideHighlights(document));
         return provider.onDidChangeHighlights((changed) => {
@@ -430,7 +430,7 @@ export interface BoxRenderer {
   /** Draws a box again as soon as its node changes (an image follows its path), not only on `onDidChange`. */
   readonly followsEdits?: boolean;
   /** Fires whenever pictures may have changed (a new compile). */
-  onDidChange(listener: () => void): Disposable;
+  readonly onDidChange: Event<void>;
 }
 
 /** The renderer of one view's boxes (null: none for this view). */
