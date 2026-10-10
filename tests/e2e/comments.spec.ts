@@ -1,6 +1,10 @@
 import { test, expect } from './fixtures';
 import type { Page } from '@playwright/test';
 
+// The "Comment" button now adds drafting margin notes (margin-notes.spec.ts); the sidecar
+// comments this spec covers are being removed (docs/todo/comments-drafting.md).
+test.skip(() => true, 'sidecar comments are replaced by margin notes');
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
 });
