@@ -1,6 +1,6 @@
 // EditingViews: the Visual/Source tabs; lazily one VisualView and SourceView per document. See workbench.ts.
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
-import type { EditorMode } from '../workbench';
+import type { EditorMode, TextEditor } from '../workbench';
 import { type SourceView, SourceViewHost } from '../../source-view/source-view';
 import { VisualView, VisualViewContributions } from '../../visual-view/visual-view';
 
@@ -24,11 +24,8 @@ interface Views {
   editor: DocumentEditor;
 }
 
-/**
- * A document's editor (`TextEditor` in workbench.ts): its two views, used through the tab chosen in the
- * EditingViews that made it.
- */
-export class DocumentEditor {
+/** A document's editor: its two views, used through the tab chosen in the EditingViews that made it. */
+export class DocumentEditor implements TextEditor {
   constructor(
     readonly document: TypstDocument,
     private readonly views: { readonly visual: VisualView; readonly source: SourceView },
@@ -100,15 +97,8 @@ export class EditingViews {
     this.layout();
   }
 
-  /** The views of `document`, created (hidden) if it was not shown yet. */
-  viewsOf(document: TypstDocument): { visual: VisualView; source: SourceView } {
-    const views = this.ensure(document);
-    this.layout();
-    return views;
-  }
-
   /** The editor of the shown document; null while no document is shown. */
-  activeEditor(): DocumentEditor | null {
+  get activeTextEditor(): DocumentEditor | null {
     return (this.active && this.views.get(this.active)?.editor) ?? null;
   }
 
@@ -149,7 +139,7 @@ export class EditingViews {
     }
   }
 
-  destroy(): void {
+  dispose(): void {
     for (const document of [...this.views.keys()]) this.drop(document);
     this.tabs.remove();
   }

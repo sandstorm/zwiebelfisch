@@ -27,8 +27,12 @@ afterEach(() => {
 describe('ColorScheme', () => {
   it('marks the widget dark where its text resolves light, light where it resolves dark', () => {
     fakeMedia();
-    expect(new ColorScheme(host('rgb(230, 237, 243)')).host.dataset.scheme).toBe('dark');
-    expect(new ColorScheme(host('rgb(31, 35, 40)')).host.dataset.scheme).toBe('light');
+    const dark = host('rgb(230, 237, 243)');
+    const light = host('rgb(31, 35, 40)');
+    new ColorScheme(dark);
+    new ColorScheme(light);
+    expect(dark.dataset.scheme).toBe('dark');
+    expect(light.dataset.scheme).toBe('light');
   });
 
   it('checks again when the OS scheme changes', () => {
@@ -40,11 +44,11 @@ describe('ColorScheme', () => {
     expect(element.dataset.scheme).toBe('dark');
   });
 
-  it('takes its mark and its listener away when destroyed', () => {
+  it('takes its mark and its listener away when disposed', () => {
     const media = fakeMedia();
-    const scheme = new ColorScheme(host('rgb(230, 237, 243)'));
-    scheme.destroy();
-    expect(scheme.host.dataset.scheme).toBeUndefined();
+    const element = host('rgb(230, 237, 243)');
+    new ColorScheme(element).dispose();
+    expect(element.dataset.scheme).toBeUndefined();
     expect(media.count()).toBe(0);
   });
 });

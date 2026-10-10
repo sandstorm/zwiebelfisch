@@ -10,13 +10,13 @@ import { isLightText } from '../../../ui/color-scheme/color-scheme';
 export class ColorScheme {
   private readonly media: MediaQueryList | null;
 
-  constructor(readonly host: HTMLElement) {
+  constructor(private readonly host: HTMLElement) {
     this.media = host.ownerDocument.defaultView?.matchMedia?.('(prefers-color-scheme: dark)') ?? null;
     this.media?.addEventListener('change', this.update);
     this.update();
   }
 
-  destroy(): void {
+  dispose(): void {
     this.media?.removeEventListener('change', this.update);
     delete this.host.dataset.scheme;
   }
