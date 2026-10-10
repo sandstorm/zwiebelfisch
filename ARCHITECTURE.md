@@ -708,6 +708,7 @@ new LabelIndex(project)        // implements ProjectLabels; createTypstEditor ma
 .referenceCount(name)          // @name references in all files
 .renameReferences(from, to, except?)   // edits the other .typ files, one change each
 .onChange(listener) → unsubscribe      // only when the label list changed
+.refresh()                     // rescans every file: after Project.replace (assigning `files`), which emits no events
 .destroy()
 ```
 

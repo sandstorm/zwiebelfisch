@@ -69,6 +69,22 @@ describe('LabelIndex', () => {
     expect(index.labels().map((l) => l.name)).not.toContain('appendix');
   });
 
+  it('picks up replaced files on refresh() (Project.replace tells no listener)', () => {
+    const project = new Project('/main.typ', { '/main.typ': 'See @method.\n' });
+    const index = new LabelIndex(project);
+    const listener = vi.fn();
+    index.onChange(listener);
+    project.replace({ '/method.typ': '= Method <method>\n\nAs @intro says.\n' });
+    index.refresh();
+    expect(index.labels()).toEqual([{ name: 'method', kind: 'heading', title: 'Method', path: '/method.typ' }]);
+    expect(index.referenceCount('intro')).toBe(1);
+    expect(listener).toHaveBeenCalledTimes(1);
+    project.replace({});
+    index.refresh();
+    expect(index.labels()).toEqual([]);
+    expect(index.referenceCount('intro')).toBe(0);
+  });
+
   it('lists bibliography keys without a kind', () => {
     const bib = '@book{knuth1984,\n  title = {The TeXbook},\n}\n@article{ lamport94 , title={LaTeX}}\n';
     const project = new Project('/main.typ', { '/main.typ': '@knuth1984\n', '/refs.bib': new TextEncoder().encode(bib) });

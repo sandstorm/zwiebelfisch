@@ -331,6 +331,7 @@ class Widget {
     this.open(this.project.has(this.active) ? this.active : this.project.main);
     if (!this.project.has(this.lastSource)) this.lastSource = this.project.main;
     this.changes.refresh();
+    this.labels.refresh();
     this.refresh();
   }
 

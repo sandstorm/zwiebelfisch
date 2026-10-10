@@ -70,6 +70,13 @@ export class LabelIndex implements ProjectLabels {
     return () => this.listeners.delete(listener);
   }
 
+  /** Rescans every file: after `Project.replace`, which tells no listener. */
+  refresh(): void {
+    this.scans.clear();
+    for (const path of this.project.paths()) this.rescan(path);
+    this.publish();
+  }
+
   destroy(): void {
     this.unsubscribe();
     this.listeners.clear();
@@ -79,6 +86,11 @@ export class LabelIndex implements ProjectLabels {
     if (change.kind === 'rename') this.scans.delete(change.from);
     if (change.kind === 'delete') this.scans.delete(change.path);
     else this.rescan(change.path);
+    this.publish();
+  }
+
+  /** Recollects the label list and tells the listeners if it changed. */
+  private publish(): void {
     const list = this.collect();
     if (JSON.stringify(list) === JSON.stringify(this.list)) return;
     this.list = list;
