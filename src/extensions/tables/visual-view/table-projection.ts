@@ -3,7 +3,7 @@
 import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
 import { children, isClosedContent, isEmbeddable, parenthesized, type Call, type ProjectionContext } from '../../../hosts/visual-view/visual-view';
-import { NEW_TABLE, type TableLayout, type TableStyle } from '../model/model';
+import { NEW_TABLE, type TableLayout, type TableStyle } from '../model/table-layout';
 
 /**
  * `#table(columns: n, ..)` (or `table(..)` as a figure's body) whose

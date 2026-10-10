@@ -8,8 +8,9 @@ import type { FileChange, Project } from '../../core/project/project';
 import { ProjectPath } from '../../core/paths/paths';
 import type { TypstExtension, Workbench } from '../../hosts/workbench/workbench';
 import css from './spreadsheets.css?inline';
-import { typstPath } from './model/model';
-import { SpreadsheetView, type WorkbookEdit } from './workbench/workbench';
+import { typstPath } from './model/typst-file';
+import { SpreadsheetView } from './workbench/spreadsheet-view';
+import type { WorkbookEdit } from './workbench/workbook';
 
 /** The command behind "New spreadsheet…" (optional argument: the file or folder it goes next to / into). */
 const NEW_SPREADSHEET = 'spreadsheets.newSpreadsheet';

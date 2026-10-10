@@ -2,7 +2,9 @@
 // See visual-view.ts.
 import { Plugin, PluginKey, type EditorState } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
-import { describeLabel, LABEL_CHAR, labelChoices, type LabelInfo, type ProjectLabels } from '../model/model';
+import { describeLabel, labelChoices } from '../model/label-choices';
+import { LABEL_CHAR } from '../model/reference-syntax';
+import type { LabelInfo, ProjectLabels } from '../model/label-index';
 import { insertReference } from './label-edits';
 
 /** The `@query` being typed: from the `@` to the cursor. */

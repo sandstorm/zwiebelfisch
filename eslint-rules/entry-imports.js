@@ -1,11 +1,13 @@
-// ESLint rule `local/entry-imports`: a folder under src/ is entered only through its entry file.
+// ESLint rule `local/entry-imports`: a module under src/ is entered only through its entry file.
 //
-// The layout (ARCHITECTURE.md, "Repository layout"):
-// - Every folder `x/` has one entry file named like it, `x/x.ts` (a stylesheet may be `x/x.css`).
-//   Everything else in the folder is internal: only files inside `x/` may import it.
-// - No sibling folders: an entry file lives inside its folder (`typst-editor/typst-editor.ts`), never
-//   next to it.
-// - Grouping folders (`core/`, `ui/`, `hosts/`, `extensions/`) have no entry; the rule applies to the folders in them.
+// The layout (ARCHITECTURE.md, "Folder rules"):
+// - The modules are the folders `core/<name>/`, `hosts/<name>/`, `extensions/<name>/`, `ui/<name>/` and the
+//   top-level folders `typst-editor/`, `typst-editor-element/`, `testing/`. `core/`, `hosts/`, `extensions/` and
+//   `ui/` only group modules.
+// - A module's entry file is named like it, `x/x.ts` (a stylesheet may be `x/x.css`), and lives inside it. From
+//   outside the module only the entry may be imported.
+// - Inside a module everything is open: layer and concept subfolders (`model/`, `visual-view/`, `projection/`, …)
+//   have no entry files of their own, and files import each other directly.
 // - Only TypeScript and CSS sources count. Generated or data files (wasm/, fonts/, fixtures/) are not
 //   modules with an interface.
 // - The few exceptions are the rule's `exceptions` option, listed in eslint.config.js.
@@ -41,30 +43,32 @@ function resolveImport(fromFile, specifier) {
   return null;
 }
 
+/** The module folder (absolute) `file` belongs to, or null for files directly in src/ or outside it. */
+export function moduleOf(file, { srcRoot, groupingFolders = [] }) {
+  const parts = path.relative(srcRoot, file).split(path.sep);
+  if (parts[0] === '..' || parts.length < 2) return null;
+  const depth = groupingFolders.includes(parts[0]) ? 2 : 1;
+  return parts.length > depth ? path.join(srcRoot, ...parts.slice(0, depth)) : null;
+}
+
 /** Why `importer` may not import `target` (both absolute), or null if it may. */
-export function boundaryViolation(importer, target, { srcRoot, groupingFolders = [], exceptions = [] }) {
-  const rel = path.relative(srcRoot, target);
-  if (rel.startsWith('..') || !SOURCE.test(target)) return null;
+export function boundaryViolation(importer, target, options) {
+  const { srcRoot, exceptions = [] } = options;
+  const module = moduleOf(target, options);
+  if (!module || !SOURCE.test(target) || importer.startsWith(module + path.sep)) return null;
+  const name = path.basename(module);
+  if (path.dirname(target) === module && path.basename(target).replace(SOURCE, '') === name) return null;
   const relImporter = path.relative(path.dirname(srcRoot), importer);
-  for (const exception of exceptions) {
-    if (rel === exception.target && new RegExp(exception.importers).test(relImporter)) return null;
-  }
-  const parts = path.dirname(rel).split(path.sep).filter((p) => p !== '.');
-  for (let depth = 1; depth <= parts.length; depth++) {
-    const folder = path.join(srcRoot, ...parts.slice(0, depth));
-    if (depth === 1 && groupingFolders.includes(parts[0])) continue;
-    if (importer.startsWith(folder + path.sep)) continue;
-    const name = path.basename(folder);
-    const isEntry = path.dirname(target) === folder && path.basename(target).replace(SOURCE, '') === name;
-    return isEntry ? null : `import ${path.relative(srcRoot, folder)}/ through its entry file ${path.relative(srcRoot, folder)}/${name}.ts`;
-  }
-  return null;
+  const rel = path.relative(srcRoot, target);
+  if (exceptions.some((exception) => rel === exception.target && new RegExp(exception.importers).test(relImporter))) return null;
+  const folder = path.relative(srcRoot, module);
+  return `import ${folder}/ through its entry file ${folder}/${name}.ts`;
 }
 
 export default {
   meta: {
     type: 'problem',
-    docs: { description: 'Imports into a folder under src/ go to its entry file only' },
+    docs: { description: 'Imports into a module under src/ go to its entry file only' },
     schema: [
       {
         type: 'object',

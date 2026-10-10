@@ -1,7 +1,7 @@
 // AssetView: the read-only view of a non-Typst file (image or data). See workbench.ts.
-import { type FileContent } from '../../../core/project/project';
+import type { FileContent } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
-import { imageBlob, isImage } from '../model/model';
+import { imageBlob, isImage } from '../model/image-files';
 
 /**
  * The read-only view of a project file that is not Typst source: an image

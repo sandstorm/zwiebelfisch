@@ -1,6 +1,7 @@
 // Tests for contributions.ts: priority, not registration order, decides where contributions compete.
 import { describe, expect, it } from 'vitest';
-import type { BoxRendererProvider, TypstMarkSpec, TypstNodeSpec } from './contributions';
+import type { BoxRendererProvider } from './boxes';
+import type { TypstMarkSpec, TypstNodeSpec } from './contributions';
 import { VisualViewContributions } from './contributions';
 
 const node = (name: string): TypstNodeSpec => ({ name });

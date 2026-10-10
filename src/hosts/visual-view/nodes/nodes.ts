@@ -1,16 +1,15 @@
 // The Visual view's schema: the host's own nodes (document, paragraph, text, line breaks, raw Typst), the
 // contributed specs' extensions, and what the host adds to every contributed node (source anchors, labels, raw box
-// node views). Entry of visual-view/nodes/. See ARCHITECTURE.md, "VisualView".
+// node views). See ARCHITECTURE.md, "VisualView".
 import { Extension, Mark, Node, getSchema, type AnyExtension, type Attribute } from '@tiptap/core';
 import Document from '@tiptap/extension-document';
 import { DOMSerializer, type Node as PMNode, type Schema } from '@tiptap/pm/model';
 import { Plugin } from '@tiptap/pm/state';
 import type { EditorView, NodeView, NodeViewConstructor } from '@tiptap/pm/view';
 import StarterKit, { type StarterKitOptions } from '@tiptap/starter-kit';
-import { attachGrammar, type MarkGrammar, type NodeGrammar } from '../projection/projection';
+import { attachGrammar } from '../projection/projection';
+import type { MarkGrammar, NodeGrammar } from '../projection/grammar';
 import { RawBoxNavigation, rawBoxView } from './raw-box';
-
-export { setBoxes, type Boxes } from './raw-box';
 
 /**
  * The Tiptap extensions of a Visual view whose schema holds `nodes` and

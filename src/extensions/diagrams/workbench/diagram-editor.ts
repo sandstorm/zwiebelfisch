@@ -2,7 +2,7 @@
 // carries messages between the iframe and the EmbedSession (model/), follows the widget's color scheme, and shows
 // the picture when the editor cannot be loaded. See ../diagrams.ts.
 import type { ProjectPath } from '../../../core/paths/paths';
-import { EmbedSession, embedUrl, type EmbedAction } from '../model/model';
+import { EmbedSession, embedUrl, type EmbedAction } from '../model/embed-session';
 
 /** How long the editor may take to say it is ready before it counts as not loading (offline, blocked). */
 const LOAD_TIMEOUT = 20_000;

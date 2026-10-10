@@ -1,5 +1,5 @@
 // What the pdf-export extension adds to the preview: "Download PDF" and its options popover (downloadPdf).
-// Entry of extensions/pdf-export/preview/. See ../pdf-export.ts.
+// See ../pdf-export.ts.
 import type { PdfExportOption, PreviewToolbarItem } from '../../../hosts/preview/preview';
 import type { Memory, Workbench } from '../../../hosts/workbench/workbench';
 

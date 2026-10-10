@@ -60,8 +60,10 @@ Controller: it subscribes views to the model's `onDid…` events and turns user 
    through a generic contribution point of a host that any extension may use (document links, file
    decorations, source controls; no services). No cycles between folders.
 4. `typst-editor/` imports hosts and extension entry files only.
-5. The existing rules stay: imports from outside a folder go to its entry file; no `export *`; no
-   re-export of another module's API; entry file inside its folder (no sibling folders).
+5. The module boundary is the core / host / extension / ui folder (and `typst-editor/`, `typst-editor-element/`,
+   `testing/`): from outside, only its entry file is imported; inside, layer and concept folders (`model/`,
+   `visual-view/`, …) have no entry files and files import each other directly. No `export *`; no re-export of
+   another module's API; entry file inside its folder (no sibling folders).
 
 ## The extension API (VS Code vocabulary)
 

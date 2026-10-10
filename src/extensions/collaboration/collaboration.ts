@@ -7,7 +7,8 @@
 // extensions in the Source views (source-view/; also what keeps other users' edits out of their undo history), highlights, decorations and box code extensions in the Visual views
 // (visual-view/), file decorations in the workbench (workbench/). It reads them from its own `Presences`. In a room
 // backed by a GitLab branch it registers the branch as a workbench source control.
-import type { CollaborationOptions, CollaborationUser } from './model/model';
+import type { CollaborationOptions } from './model/model';
+import type { CollaborationUser } from './model/remote-cursors';
 import { Disposable } from '../../core/disposable/disposable';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './collaboration.css?inline';

@@ -4,7 +4,7 @@ import { Extension } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey, type Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import { HEADING_NUMBERING_RULE, HeadingCounter, numbersHeadings, withoutHeadingNumbering } from '../model/model';
+import { HEADING_NUMBERING_RULE, HeadingCounter, numbersHeadings, withoutHeadingNumbering } from '../model/heading-numbering';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {

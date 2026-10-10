@@ -1,5 +1,5 @@
 // What the markup extension contributes to the Visual view: the specs of strong and emphasis, links, raw text
-// (inline code, code blocks) and block quotes, and their toolbar entries. Entry of markup/visual-view/. See markup.ts.
+// (inline code, code blocks) and block quotes, and their toolbar entries. See markup.ts.
 import type { SyntaxNode } from '@lezer/common';
 import type { Editor } from '@tiptap/core';
 import Code from '@tiptap/extension-code';
@@ -12,7 +12,7 @@ import {
   type Printer, type ProjectionContext, type ToolbarContext, type TypstMarkSpec, type TypstNodeSpec,
 } from '../../../hosts/visual-view/visual-view';
 import { codeBlockView } from './code-block-view';
-import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from '../model/model';
+import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from '../model/raw-code';
 
 /** Tiptap's bold, italic, link and blockquote (StarterKit's), configured for Typst. */
 const StarterParts = starterKitPart('typstMarkup', {

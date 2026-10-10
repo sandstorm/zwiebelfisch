@@ -4,7 +4,7 @@ import { Mark, Node } from '@tiptap/core';
 import type { Mark as PMMark, Node as PMNode } from '@tiptap/pm/model';
 import { TextSelection } from '@tiptap/pm/state';
 import type { NodeView } from '@tiptap/pm/view';
-import { NOTE_HEAD, noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../model/model';
+import { NOTE_HEAD, noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../model/margin-note-syntax';
 import {
   children, svg, type Action, type Call, type Placed, type ProjectionContext, type TypstMarkSpec, type TypstNodeSpec, type VisualViewContribution,
 } from '../../../hosts/visual-view/visual-view';

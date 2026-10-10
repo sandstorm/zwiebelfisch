@@ -1,5 +1,5 @@
 // The rendered-boxes model: which raw boxes a snippet is meaningful for, and how big a snippet is drawn. No DOM.
-// Entry of extensions/rendered-boxes/model/. See ../rendered-boxes.ts.
+// See ../rendered-boxes.ts.
 
 /** A picture of compiled Typst: standalone SVG markup and its size in points. */
 export interface Snippet {

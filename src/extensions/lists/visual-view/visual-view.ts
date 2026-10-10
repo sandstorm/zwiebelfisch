@@ -1,5 +1,5 @@
 // What the lists extension contributes to the Visual view: bulleted and numbered lists (`- item` / `+ item`,
-// `1. item`) as Tiptap's lists, task lists (task-lists.ts) and their buttons. Entry of lists/visual-view/. See lists.ts.
+// `1. item`) as Tiptap's lists, task lists (task-lists.ts) and their buttons. See lists.ts.
 import { BulletList, ListItem, ListKeymap, OrderedList } from '@tiptap/extension-list';
 import { Extension } from '@tiptap/core';
 import type { SyntaxNode } from '@lezer/common';
@@ -84,5 +84,3 @@ export const LIST_ACTIONS: Action[] = [
   { label: 'Bulleted list', icon: ICONS.bulletList, run: (c) => c.toggleBulletList(), active: (e) => e.isActive('bulletList') },
   { label: 'Numbered list', icon: ICONS.orderedList, run: (c) => c.toggleOrderedList(), active: (e) => e.isActive('orderedList') },
 ];
-
-export { TASK_ITEM, TASK_LIST, TASK_LIST_ACTION } from './task-lists';

@@ -1,6 +1,6 @@
 // CommentAction: "Comment" adds a margin note at the selection of the view the user works in. See workbench.ts.
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
-import { addMarginNote } from '../model/model';
+import { addMarginNote } from '../model/add-margin-note';
 
 /** An editing view a note can be added in (source offsets throughout). */
 export interface NoteView {

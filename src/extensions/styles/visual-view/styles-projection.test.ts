@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../../core/paths/paths';
-import type { Style } from '../model/model';
+import type { Style } from '../model/discover';
 import { print, project as projectWith } from '../../../hosts/visual-view/visual-view';
 import { after, edit, expectPreciseMap, find, schemaWith } from '../../../testing/testing';
 import { customStyles } from './visual-view';

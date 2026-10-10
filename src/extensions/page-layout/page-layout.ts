@@ -4,7 +4,8 @@
 // text and raw Typst; without it these calls stay raw boxes.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './page-layout.css?inline';
-import { HORIZONTAL_RULE, INSERT_HORIZONTAL_RULE, INSERT_PAGE_BREAK, PAGE_BREAK } from './visual-view/visual-view';
+import { HORIZONTAL_RULE, INSERT_HORIZONTAL_RULE } from './visual-view/horizontal-rule';
+import { INSERT_PAGE_BREAK, PAGE_BREAK } from './visual-view/page-break';
 
 /** Page breaks and horizontal rules. */
 export const pageLayout: TypstExtension = {

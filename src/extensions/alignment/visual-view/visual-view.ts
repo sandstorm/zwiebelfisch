@@ -1,10 +1,10 @@
 // What the alignment extension contributes to the Visual view: `#align(..)[..]` blocks, justified paragraphs
-// (`#par(justify: ..)[..]`) and the Align menu. Entry of alignment/visual-view/. See alignment.ts.
+// (`#par(justify: ..)[..]`) and the Align menu. See alignment.ts.
 import type { Node } from '@tiptap/pm/model';
 import {
   children, isClosedContent, svg, type Action, type Call, type Printer, type ProjectionContext, type ToolbarGroup, type TypstNodeSpec,
 } from '../../../hosts/visual-view/visual-view';
-import { alignArgs, type TextAlignment } from '../model/model';
+import { alignArgs, type TextAlignment } from '../model/alignment-syntax';
 import { TextAlign, textAlignAt } from './text-align';
 
 /** How an alignment block's source lies around its blocks, for printing it back. */

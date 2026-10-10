@@ -7,24 +7,25 @@ import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { Node } from '@tiptap/pm/model';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
-import type { Contributed, Gutter, Highlight, VisualViewContext, VisualViewContributions } from './contributions/contributions';
+import type { Contributed, Gutter, Highlight, VisualViewContributions } from './contributions/contributions';
+import type { VisualViewContext } from './contributions/view-context';
 import { highlights, setHighlights } from './highlights';
-import { attachSpecs, editorExtensions, setBoxes } from './nodes/nodes';
+import { attachSpecs, editorExtensions } from './nodes/nodes';
+import { setBoxes } from './nodes/raw-box';
 import { nodeGrammar, onDidChangeGrammar, posToSource, print, project, sourceToPos, syncDoc } from './projection/projection';
 import { Toolbar } from './toolbar/toolbar';
 
-export {
-  VisualViewContributions, setBoxDecorations, svg, type Action, type BoxAction, type BoxPicture, type BoxRenderer, type BoxRendererProvider, type BoxCodeExtensionProvider,
-  type BoxTools, type BoxToolsHost, type CodeBoxSpec, type ContributionContext, type EditorExtensionProvider, type Gutter, type Highlight, type HighlightProvider,
-  type GutterProvider, type PriorityOptions, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem, type TypstMarkSpec,
-  type TypstNodeSpec, type VisualViewContext, type VisualViewContribution,
-} from './contributions/contributions';
+export { VisualViewContributions, type ContributionContext, type EditorExtensionProvider, type Gutter, type Highlight, type HighlightProvider, type GutterProvider, type PriorityOptions, type TypstMarkSpec, type TypstNodeSpec, type VisualViewContribution } from './contributions/contributions';
+export { setBoxDecorations, type BoxAction, type BoxPicture, type BoxRenderer, type BoxRendererProvider, type BoxCodeExtensionProvider, type BoxTools, type BoxToolsHost, type CodeBoxSpec } from './contributions/boxes';
+export { svg, type Action, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem } from './contributions/toolbar-items';
+export type { VisualViewContext } from './contributions/view-context';
 // the toolkit specs' projectors and printers use (see projection/grammar.ts)
-export {
-  children, decodeString, isClosedContent, isEmbeddable, parenthesized, posToSource, print, quote, sourceToPos, type Around, type BlockCallProjector, type BlockLabel,
-  type BlockPrinter, type BlockSyntaxProjector, type Call, type InlineCallProjector, type InlineProjector, type Placed, type Printer,
-  type ProjectionContext, type RunProjector,
-} from './projection/projection';
+export { children, decodeString, isClosedContent, parenthesized, quote } from './projection/syntax';
+export { isEmbeddable } from './projection/embedded-code';
+export { posToSource, print, sourceToPos } from './projection/projection';
+export type { Around, BlockCallProjector, BlockPrinter, BlockSyntaxProjector, Call, InlineCallProjector, InlineProjector, Placed, ProjectionContext, RunProjector } from './projection/grammar';
+export type { BlockLabel } from './projection/labels';
+export type { Printer } from './projection/printing';
 // the projection framework itself, for tests of the specs: project a source, sync (print and the position maps are above)
 export { project, syncDoc } from './projection/projection';
 export { starterKitPart } from './nodes/nodes';

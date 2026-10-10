@@ -1,12 +1,10 @@
 // What the comments extension contributes to the frame: the command that adds a note, its key binding and the
-// Source view's "Comment" (a tab bar menu entry). Entry of extensions/comments/workbench/. See ARCHITECTURE.md,
+// Source view's "Comment" (a tab bar menu entry). See ARCHITECTURE.md,
 // "Comments = margin notes".
 import { Disposable } from '../../../core/disposable/disposable';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import type { Workbench } from '../../../hosts/workbench/workbench';
 import { CommentAction, type NoteTarget } from './comment-action';
-
-export { CommentAction, type NoteTarget, type NoteView } from './comment-action';
 
 /** The command that adds a margin note at the selection of the view the user works in. */
 export const ADD_COMMENT = 'comments.addComment';

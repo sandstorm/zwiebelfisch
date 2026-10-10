@@ -1,9 +1,10 @@
-// NotesGutter: the comment column of the Visual view, a card per margin note. Entry of
-// extensions/comments/visual-view/notes-gutter/. See ARCHITECTURE.md, "Comments = margin notes".
+// NotesGutter: the comment column of the Visual view, a card per margin note. See ARCHITECTURE.md, "Comments = margin notes".
 import { Plugin, PluginKey, TextSelection, type EditorState, type Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 import type { TypstDocument } from '../../../../core/typst-document/typst-document';
-import { addReply, deleteMessage, editMessage, layoutCards, localDate, safeNote } from '../../model/model';
+import { addReply, deleteMessage, editMessage, localDate } from '../../model/note-thread';
+import { layoutCards } from '../../model/card-layout';
+import { safeNote } from '../../model/margin-note-syntax';
 import type { VisualViewContribution } from '../../../../hosts/visual-view/visual-view';
 import { type CardActions, NoteCard } from './note-card';
 import { findNotes, followNotes, noteAtOffset, noteAtSelection, removeNote, setNoteText, type KeyedNote } from './note-list';

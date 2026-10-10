@@ -20,7 +20,7 @@
  * Labels (`<key>`) after a heading, or ending a block's run, are that block's
  * `label` attribute (see `labels.ts`).
  *
- * Entry of visual-view/projection/. See ARCHITECTURE.md, "VisualView".
+ * See ARCHITECTURE.md, "VisualView".
  */
 import type { Node, Schema } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
@@ -29,15 +29,6 @@ import { Grammar, type MarkGrammar, type NodeGrammar } from './grammar';
 import { projectDocument } from './projecting';
 import { forgetPrinted, printed, type Span } from './printing';
 import { pristine } from './pristine';
-
-export type {
-  Around, BlockCallProjector, BlockPrinter, BlockSyntaxProjector, Call, InlineCallProjector, InlineProjector, MarkGrammar,
-  NodeGrammar, Placed, ProjectionContext, ProjectionSpec, RunProjector,
-} from './grammar';
-export type { BlockLabel } from './labels';
-export type { Printer } from './printing';
-export { children, decodeString, isClosedContent, parenthesized, quote } from './syntax';
-export { isEmbeddable } from './embedded-code';
 
 /** The document `source` projects to, through the specs attached to `schema` (see `attachGrammar`). */
 export function project(source: string, schema: Schema): Node {

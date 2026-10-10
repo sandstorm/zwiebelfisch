@@ -4,7 +4,7 @@ import { IronCalc, init, Model } from '@ironcalc/workbook';
 import styles from '@ironcalc/workbook/style.css?inline';
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
-import { spreadsheetTypst } from '../model/model';
+import { spreadsheetTypst } from '../model/typst-file';
 import { followColorScheme } from './color-scheme';
 
 /** A mounted workbook; edits are reported through the `onEdit` given to `mountWorkbook`. */

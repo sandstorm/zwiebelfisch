@@ -1,19 +1,15 @@
 // VisualViewContributions: the Visual view's contribution points. Every Typst construct beyond paragraphs and
 // raw Typst, and every feature (labels, comments, styles, …), comes into the view through them, so the view's
-// mechanism names none of them. Entry of visual-view/contributions/. See ARCHITECTURE.md, "VisualView".
+// mechanism names none of them. See ARCHITECTURE.md, "VisualView".
 import type { AnyExtension } from '@tiptap/core';
 import type { Plugin } from '@tiptap/pm/state';
 import { Disposable } from '../../../core/disposable/disposable';
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
-import type { MarkGrammar, NodeGrammar } from '../projection/projection';
+import type { MarkGrammar, NodeGrammar } from '../projection/grammar';
 import type { BoxAction, BoxCodeExtensionProvider, BoxRendererProvider, CodeBoxSpec } from './boxes';
 import type { ToolbarGroup, ToolbarItem } from './toolbar-items';
 import type { VisualViewContext } from './view-context';
-
-export { setBoxDecorations, type BoxAction, type BoxCodeExtensionProvider, type BoxPicture, type BoxRenderer, type BoxRendererProvider, type BoxTools, type BoxToolsHost, type CodeBoxSpec } from './boxes';
-export { svg, type Action, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem } from './toolbar-items';
-export type { VisualViewContext } from './view-context';
 
 /**
  * A Typst construct the Visual view models as a node: its Tiptap extension

@@ -6,12 +6,13 @@
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './comments.css?inline';
 import { registerIncludeComments } from './preview/preview';
-import { marginNotes, notesGutter } from './visual-view/visual-view';
+import { marginNotes } from './visual-view/margin-notes';
+import { notesGutter } from './visual-view/notes-gutter/notes-gutter';
 import { ADD_COMMENT, registerAddComment } from './workbench/workbench';
 
 // for tests that compose Visual views with margin notes outside the widget (collaboration's convergence)
-export { addMarginNote } from './model/model';
-export { marginNotes } from './visual-view/visual-view';
+export { addMarginNote } from './model/add-margin-note';
+export { marginNotes } from './visual-view/margin-notes';
 
 /**
  * Comments as margin notes, written as the workbench's `user` (signs replies; only own messages can be edited): in

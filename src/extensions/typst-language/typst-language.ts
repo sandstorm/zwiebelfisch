@@ -4,7 +4,8 @@
 // Why an extension: the editors are hosts for any CodeMirror language; that it is Typst, and how it is colored,
 // is contributed here, once for both views.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
-import { codeColors, typstLanguage as typstSyntax } from './source-view/source-view';
+import { codeColors } from './source-view/code-colors';
+import { typstLanguage as typstSyntax } from './source-view/typst-syntax';
 
 /** Typst syntax and its highlighting, in CodeMirror's light or dark theme, in the Source views and raw boxes. */
 export function typstLanguage(): TypstExtension {

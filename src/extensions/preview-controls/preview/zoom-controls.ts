@@ -1,6 +1,6 @@
 // zoomControls: the preview toolbar's zoom buttons and the current zoom. See ../preview-controls.ts.
 import type { PreviewToolbarItem } from '../../../hosts/preview/preview';
-import { stepZoom, zoomText } from '../model/model';
+import { stepZoom, zoomText } from '../model/zoom';
 
 /** Zoom out / in by one preset, fit the width, actual size; then the zoom shown ("Fit · 83%", "125%"). */
 export const zoomControls: PreviewToolbarItem = (preview) => {

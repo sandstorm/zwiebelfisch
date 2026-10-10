@@ -3,7 +3,7 @@ import type { Editor, NodeViewRenderer } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { TextSelection } from '@tiptap/pm/state';
 import type { NodeView, ViewMutationRecord } from '@tiptap/pm/view';
-import { codeLanguage } from '../model/model';
+import { codeLanguage } from '../model/raw-code';
 
 /**
  * A code block: its text edited in place (monospace, plain text), under a

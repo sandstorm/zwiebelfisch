@@ -1,5 +1,5 @@
 // Collaboration: real-time editing over Yjs (a Hocuspocus server, or a Y.Doc the host connects): the lazily loaded
-// chunk of the collaboration extension (no DOM, no editor library). Entry of collaboration/model/. See
+// chunk of the collaboration extension (no DOM, no editor library). See
 // ../collaboration.ts and ARCHITECTURE.md, "Collaboration".
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import type { Awareness } from 'y-protocols/awareness';
@@ -14,9 +14,6 @@ import { RemoteCursors, type CollaborationUser } from './remote-cursors';
 import { GitLabSourceControl, type StatelessChannel } from './gitlab-source-control';
 import { SharedAssets } from './shared-assets';
 import { SharedProject } from './shared-project';
-
-export type { CollaborationUser } from './remote-cursors';
-export type { GitLabSourceControl } from './gitlab-source-control';
 
 /**
  * Where the shared state lives: a Y.Doc the host connects itself (any

@@ -6,7 +6,7 @@
  */
 import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, TextSelection, type EditorState, type Transaction } from '@tiptap/pm/state';
-import { imageAlt, imageArg, withHash, withImageAlt, withImageWidth, withoutHash } from '../model/model';
+import { imageAlt, imageArg, withHash, withImageAlt, withImageWidth, withoutHash } from '../model/image-call';
 import { hasFigureExtras } from './figures';
 
 /** What the image tools show for an image block. */

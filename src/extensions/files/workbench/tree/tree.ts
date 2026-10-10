@@ -1,10 +1,9 @@
-// FileTree: the project's files as an expandable tree (keyboard, drag & drop, decorations). Entry of
-// extensions/files/workbench/tree/. See ../file-panel.ts and ARCHITECTURE.md, "File panel".
+// FileTree: the project's files as an expandable tree (keyboard, drag & drop, decorations). See ../file-panel.ts and ARCHITECTURE.md, "File panel".
 import { ProjectPath } from '../../../../core/paths/paths';
 import { PROJECT_PATH_TYPE, type FileDecoration } from '../../../../hosts/workbench/workbench';
 import { textColorOn } from '../../../../ui/color-scheme/color-scheme';
 import { fileIcon, icon } from '../icons/icons';
-import { ancestorsOf, buildTree, filesUnder, type Folder, folderOf, navigate, type Row, visibleRows } from '../../model/model';
+import { ancestorsOf, buildTree, filesUnder, type Folder, folderOf, navigate, type Row, visibleRows } from '../../model/tree-model';
 
 /** Where the tree remembers its open folders (e.g. for the browser session). */
 export interface FolderMemory {

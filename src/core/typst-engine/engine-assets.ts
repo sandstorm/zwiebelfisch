@@ -3,9 +3,10 @@
 // and a worker bundle that imports these would emit a second copy of every asset. A documented
 // boundary exception (eslint.config.js): hosts/preview imports this file directly.
 import { fetchFonts } from './fetch-fonts';
+import wasmUrl from './wasm/typst_engine_bg.wasm?url&no-inline';
 
 /** URL of the engine's wasm binary (pass it to `createEngine`, e.g. in a worker). */
-export { default as ENGINE_WASM_URL } from './wasm/typst_engine_bg.wasm?url&no-inline';
+export const ENGINE_WASM_URL: string = wasmUrl;
 
 /**
  * Typst's default fonts (Libertinus Serif, New Computer Modern + Math,

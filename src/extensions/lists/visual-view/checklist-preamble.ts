@@ -2,7 +2,7 @@
 // model's calculateChecklistPreambleChange). See task-lists.ts.
 import type { Node } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
-import { calculateChecklistPreambleChange } from '../model/model';
+import { calculateChecklistPreambleChange } from '../model/checklist-preamble';
 
 /**
  * Adds what is missing of cheq's import and show rule to the top-level raw

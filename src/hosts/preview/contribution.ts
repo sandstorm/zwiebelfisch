@@ -2,7 +2,7 @@
 // tells it. Imports no host file above it, so contributions can name these types without importing the
 // host. See preview.ts.
 import type { Box, PdfEntry } from '../../core/typst-engine/typst-engine';
-import type { Zoom } from './pages/pages';
+import type { Zoom } from './pages/zoom';
 
 /** A control in the preview's toolbar: made once, for the preview it is registered with. */
 export type PreviewToolbarItem = (preview: PreviewContext) => ToolbarItemView;

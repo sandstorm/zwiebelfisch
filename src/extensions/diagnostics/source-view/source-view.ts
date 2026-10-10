@@ -1,5 +1,4 @@
-// lint: the diagnostics' part of the Source views: compile diagnostics underlined (CodeMirror lint). Entry of
-// diagnostics/source-view/. See ../diagnostics.ts.
+// lint: the diagnostics' part of the Source views: compile diagnostics underlined (CodeMirror lint). See ../diagnostics.ts.
 import { type Diagnostic as LintDiagnostic, setDiagnostics } from '@codemirror/lint';
 import { type EditorView, ViewPlugin } from '@codemirror/view';
 import type { Disposable } from '../../../core/disposable/disposable';

@@ -1,5 +1,5 @@
 // Custom styles in the Visual view: declared paragraph styles as styled blocks (`#note[..]`), text styles as a
-// mark (`#key[..]`), and the text style menu. Entry of extensions/styles/visual-view/. See ARCHITECTURE.md,
+// mark (`#key[..]`), and the text style menu. See ARCHITECTURE.md,
 // "Custom styles".
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node } from '@tiptap/pm/model';
@@ -7,7 +7,8 @@ import {
   children, isClosedContent, parenthesized, type Call, type Placed, type Printer, type ProjectionContext, type ToolbarContext, type ToolbarControl,
   type TypstMarkSpec, type TypstNodeSpec, type VisualViewContribution,
 } from '../../../hosts/visual-view/visual-view';
-import type { ProjectStyles, Style } from '../model/model';
+import type { ProjectStyles } from '../model/style-index';
+import type { Style } from '../model/discover';
 import { StyleMenu } from './style-menu';
 import { StyledBlock, StyleMark } from './style-nodes';
 

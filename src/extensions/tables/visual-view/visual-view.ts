@@ -1,5 +1,5 @@
 // What the tables extension contributes to the Visual view: the table spec (`#table(columns: n, ..)` as Tiptap's
-// table nodes), "Insert table" and the bar over a table. Entry of tables/visual-view/. See tables.ts.
+// table nodes), "Insert table" and the bar over a table. See tables.ts.
 import { Extension, findParentNode, type Editor } from '@tiptap/core';
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
 import type { Anchor } from '../../../ui/floating-bar/floating-bar';

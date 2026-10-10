@@ -7,7 +7,8 @@ import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import type { QuickPickItem, Workbench } from '../../../hosts/workbench/workbench';
 import { renameLabel, setLabel } from './label-edits';
-import { labelName, type ProjectLabels } from '../model/model';
+import { labelName } from '../model/reference-syntax';
+import type { ProjectLabels } from '../model/label-index';
 import { labelPrefix, labelTarget } from './add-label';
 
 /** Where a tag asks what to do with its label, and for the new name. */

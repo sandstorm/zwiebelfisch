@@ -6,7 +6,8 @@
 import type { Project } from '../../core/project/project';
 import type { TypstExtension, Workbench } from '../../hosts/workbench/workbench';
 import css from './styles.css?inline';
-import { newStyle, StyleIndex } from './model/model';
+import { newStyle } from './model/new-style';
+import { StyleIndex } from './model/style-index';
 import { customStyles } from './visual-view/visual-view';
 
 /**

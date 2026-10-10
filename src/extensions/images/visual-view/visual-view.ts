@@ -1,7 +1,6 @@
 // Images in the Visual view: `#image(..)` blocks and figures, what "Insert image" offers (the host's project
 // files, uploads), inserting image blocks (toolbar, file drops), the image file in place of the code, and the tools
-// on an image box (resize, alt text, caption), which edit the call's source minimally. Entry of
-// extensions/images/visual-view/. See ARCHITECTURE.md, "VisualView".
+// on an image box (resize, alt text, caption), which edit the call's source minimally. See ARCHITECTURE.md, "VisualView".
 import { Node } from '@tiptap/core';
 import { Disposable } from '../../../core/disposable/disposable';
 import type { Event } from '../../../core/event-emitter/event-emitter';
@@ -16,8 +15,6 @@ import { imagePathLink } from './image-path-link';
 import { imagePath } from './image-syntax';
 import { ImageTools } from './image-tools';
 import { imagePicker, uploadImages, type ImageAssets } from './image-uploads';
-
-export type { ImageAssets } from './image-uploads';
 
 /** Where images ask (an image, a path, alt text) and tell why an upload was refused: the workbench's. */
 export type ImagePrompts = Pick<Workbench, 'showQuickPick' | 'showInputBox' | 'showErrorMessage'>;

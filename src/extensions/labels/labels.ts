@@ -5,7 +5,7 @@
 // See ARCHITECTURE.md, "Labels and references".
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './labels.css?inline';
-import { LabelIndex } from './model/model';
+import { LabelIndex } from './model/label-index';
 import { references } from './visual-view/visual-view';
 
 /** Keeps the project's labels indexed and contributes references and labels to the Visual view. */

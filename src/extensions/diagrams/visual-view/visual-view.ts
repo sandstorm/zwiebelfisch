@@ -1,5 +1,5 @@
 // The diagrams extension in the Visual view: "Edit diagram" on a box that shows a `.drawio.png` (an image box, or
-// any raw box naming one), through the host's generic box actions. Entry of extensions/diagrams/visual-view/.
+// any raw box naming one), through the host's generic box actions.
 // See ../diagrams.ts.
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';

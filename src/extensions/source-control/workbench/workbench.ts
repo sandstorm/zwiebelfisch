@@ -1,5 +1,5 @@
 // What the source-control extension does in the workbench: commit to a source control, asking for the message, and
-// tell its outcomes and news as messages. Entry of extensions/source-control/workbench/. See ../source-control.ts.
+// tell its outcomes and news as messages. See ../source-control.ts.
 import type { Disposable } from '../../../core/disposable/disposable';
 import type { SourceControl, Workbench } from '../../../hosts/workbench/workbench';
 

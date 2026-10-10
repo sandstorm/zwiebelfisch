@@ -1,7 +1,8 @@
 // DiagnosticsStatus: the diagnostics' part of the workbench: the status bar's compile status ("✓ compiled",
-// "2 errors") with the messages behind it. Entry of diagnostics/workbench/. See ../diagnostics.ts.
+// "2 errors") with the messages behind it. See ../diagnostics.ts.
 import type { Diagnostic } from '../../../core/typst-engine/typst-engine';
-import { describeDiagnostic, inProject, type DiagnosticTarget, type DiagnosticsSummary } from '../model/model';
+import { describeDiagnostic } from '../model/model';
+import { inProject, type DiagnosticTarget, type DiagnosticsSummary } from '../model/diagnostics-summary';
 
 /**
  * The compact compile status of the widget: "✓ compiled" or "2 errors".

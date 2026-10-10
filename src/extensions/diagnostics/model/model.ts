@@ -1,10 +1,7 @@
 // The diagnostics' read model: each document's compile diagnostics (DiagnosticCollection), how every view words
-// one, and the status summary (diagnostics-summary.ts). No DOM, no editor library. Entry of
-// diagnostics/model/. See ../diagnostics.ts.
+// one, and the status summary (diagnostics-summary.ts). No DOM, no editor library. See ../diagnostics.ts.
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
-
-export { inProject, summarizeDiagnostics, type DiagnosticTarget, type DiagnosticsSummary } from './diagnostics-summary';
 
 /** A compiler diagnostic located in a document's text (UTF-16 offsets). */
 export interface SourceDiagnostic {

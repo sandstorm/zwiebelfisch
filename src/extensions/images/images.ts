@@ -8,14 +8,17 @@ import type { Event } from '../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './images.css?inline';
-import { type FileChange, type Project } from '../../core/project/project';
+import type { FileChange, Project } from '../../core/project/project';
 import { type PathReference, ProjectPath } from '../../core/paths/paths';
 import { uploadChanges } from '../../core/uploads/uploads';
-import { IMAGE_FILES, imageBlob, isImage, uploadTarget } from './model/model';
-import { imagesVisualView, type ImageAssets, type ImageUrls } from './visual-view/visual-view';
+import { IMAGE_FILES, imageBlob, isImage } from './model/image-files';
+import { uploadTarget } from './model/upload';
+import { imagesVisualView, type ImageUrls } from './visual-view/visual-view';
+import type { ImageAssets } from './visual-view/image-uploads';
 import { assetEditor } from './workbench/workbench';
 
-export { imagesVisualView, type ImageAssets, type ImageLinks, type ImageUrls } from './visual-view/visual-view';
+export { imagesVisualView, type ImageLinks, type ImageUrls } from './visual-view/visual-view';
+export type { ImageAssets } from './visual-view/image-uploads';
 
 /**
  * Images in every document's Visual view (`#image(..)` boxes showing the project's image file, "Insert image"

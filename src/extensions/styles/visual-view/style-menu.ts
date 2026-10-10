@@ -2,7 +2,7 @@
 import type { ChainedCommands, Editor } from '@tiptap/core';
 import type { Disposable } from '../../../core/disposable/disposable';
 import type { Event } from '../../../core/event-emitter/event-emitter';
-import type { Style } from '../model/model';
+import type { Style } from '../model/discover';
 
 /** The custom styles the menu offers, and what happens around applying one. */
 export interface MenuStyles {

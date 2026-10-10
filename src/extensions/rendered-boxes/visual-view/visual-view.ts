@@ -1,5 +1,5 @@
 // Rendered boxes in the Visual view: raw boxes show the compiled snippet of their source while they are not
-// edited. Entry of extensions/rendered-boxes/visual-view/. See ../rendered-boxes.ts and ARCHITECTURE.md, "VisualView".
+// edited. See ../rendered-boxes.ts and ARCHITECTURE.md, "VisualView".
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import type { BoxRenderer, VisualViewContribution } from '../../../hosts/visual-view/visual-view';

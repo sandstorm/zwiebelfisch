@@ -5,7 +5,9 @@ import type { Node } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 import { createSchema, starterKitPart } from '../nodes/nodes';
-import { children, parenthesized, posToSource, print, project as projectWith, sourceToPos, type MarkGrammar, type NodeGrammar } from './projection';
+import { children, parenthesized } from './syntax';
+import { posToSource, print, project as projectWith, sourceToPos } from './projection';
+import type { MarkGrammar, NodeGrammar } from './grammar';
 
 /** `*x*` as a bold mark: hidden syntax around visible text. */
 const STRONG: MarkGrammar = {

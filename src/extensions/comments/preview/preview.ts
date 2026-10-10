@@ -1,11 +1,11 @@
 // What the comments extension contributes to the preview: the PDF export option "Include comments". The PDF itself
-// is the pdf-export extension's; comments only decide what it compiles. Entry of extensions/comments/preview/.
+// is the pdf-export extension's; comments only decide what it compiles.
 // See ARCHITECTURE.md, "Comments = margin notes".
 import type { Disposable } from '../../../core/disposable/disposable';
 import type { Project } from '../../../core/project/project';
 import type { PdfEntry } from '../../../core/typst-engine/typst-engine';
 import type { PreviewContributions } from '../../../hosts/preview/preview';
-import { withoutNotes } from '../model/model';
+import { withoutNotes } from '../model/without-notes';
 
 /**
  * `comments.include` (default off: the final version): with it the PDF shows the margin notes as the preview does;

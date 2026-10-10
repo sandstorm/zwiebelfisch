@@ -2,7 +2,7 @@
 // See visual-view.ts.
 import type { Node } from '@tiptap/pm/model';
 import { isEmbeddable, type Printer } from '../../../hosts/visual-view/visual-view';
-import { NEW_TABLE, type TableLayout, type TableStyle } from '../model/model';
+import { NEW_TABLE, type TableLayout, type TableStyle } from '../model/table-layout';
 
 /** A table cell and the document position it starts at. */
 interface PlacedCell {

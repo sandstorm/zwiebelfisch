@@ -1,5 +1,5 @@
 // What the headings extension contributes to the Visual view: the heading spec (`= Title` as Tiptap's heading node,
-// with the label right after it) and the heading numbers. Entry of headings/visual-view/. See headings.ts.
+// with the label right after it) and the heading numbers. See headings.ts.
 import { children, starterKitPart, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 
 /**
@@ -33,5 +33,3 @@ export const HEADING: TypstNodeSpec = {
     out.textblock(heading, pos);
   },
 };
-
-export { HeadingNumbers } from './heading-numbers';

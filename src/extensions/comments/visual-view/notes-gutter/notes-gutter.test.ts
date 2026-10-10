@@ -2,7 +2,8 @@
 // Tests for notes-gutter.ts and note-card.ts (through VisualView): cards, threads, replies, editing, resolve, layout.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../../../core/typst-document/typst-document';
-import { addMarginNote, localDate } from '../../model/model';
+import { addMarginNote } from '../../model/add-margin-note';
+import { localDate } from '../../model/note-thread';
 import { createVisualView } from '../../../../testing/testing';
 import { marginNotes } from '../margin-notes';
 import { notesGutter, type NotesGutterOptions } from './notes-gutter';

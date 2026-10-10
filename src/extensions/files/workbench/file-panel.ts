@@ -1,11 +1,11 @@
 // FilePanel: the file panel's view — a "Files" header with its "New" menu, the project as a FileTree with a context
 // menu per row, uploads. It turns gestures into FileChanges and leaves to its owner whether they happen. See ../files.ts.
-import { type FileChange } from '../../../core/project/project';
+import type { FileChange } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import { uploadChanges } from '../../../core/uploads/uploads';
 import type { FileDecoration, MenuContext, MenuItem, Workbench } from '../../../hosts/workbench/workbench';
 import { PopupMenu, type PopupMenuAnchor } from '../../../ui/popup-menu/popup-menu';
-import { filesUnder, type Folder, folderOf, relocate } from '../model/model';
+import { filesUnder, type Folder, folderOf, relocate } from '../model/tree-model';
 import { icon } from './icons/icons';
 import { FileTree, type FolderMemory } from './tree/tree';
 

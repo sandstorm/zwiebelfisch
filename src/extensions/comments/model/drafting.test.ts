@@ -4,7 +4,9 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { createEngine, withPackages } from '../../../core/typst-engine/typst-engine';
 import type { TextChange } from '../../../core/typst-document/typst-document';
-import { addMarginNote, addReply, withoutNotes } from './model';
+import { addMarginNote } from './add-margin-note';
+import { addReply } from './note-thread';
+import { withoutNotes } from './without-notes';
 
 const engineDir = new URL('../../../core/typst-engine/', import.meta.url);
 const wasm = readFileSync(new URL('wasm/typst_engine_bg.wasm', engineDir));

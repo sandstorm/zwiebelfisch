@@ -2,7 +2,7 @@
 // Tests for workbench.ts.
 import { describe, expect, it, vi } from 'vitest';
 import type { Diagnostic } from '../../../core/typst-engine/typst-engine';
-import { summarizeDiagnostics } from '../model/model';
+import { summarizeDiagnostics } from '../model/diagnostics-summary';
 import { DiagnosticsStatus } from './workbench';
 
 const MAIN = '/main.typ';

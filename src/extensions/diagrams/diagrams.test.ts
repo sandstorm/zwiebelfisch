@@ -7,7 +7,8 @@ import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
 import { WorkbenchHost } from '../../hosts/workbench/workbench';
 import { diagrams } from './diagrams';
-import { emptyDiagram, readDiagramXml, toDataUri, writeDiagramXml } from './model/model';
+import { emptyDiagram } from './model/empty-diagram';
+import { readDiagramXml, toDataUri, writeDiagramXml } from './model/png';
 
 vi.mock('../../hosts/preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),

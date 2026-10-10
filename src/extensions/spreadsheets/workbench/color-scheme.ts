@@ -1,7 +1,7 @@
 // followColorScheme: IronCalc's workbook UI in the widget's color scheme (dark: model/dark-theme.ts). Used by
 // workbook.ts. See ARCHITECTURE.md, "Spreadsheets" and "Dark mode".
 import { Disposable } from '../../../core/disposable/disposable';
-import { type ColorToken, darkThemeVariables } from '../model/model';
+import { type ColorToken, darkThemeVariables } from '../model/dark-theme';
 
 /**
  * Keeps the theme variables of the workbook in `container` (IronCalc's `rootContainer`) in step with the widget's

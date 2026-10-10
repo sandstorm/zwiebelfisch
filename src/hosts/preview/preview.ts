@@ -8,15 +8,22 @@
 import { Disposable } from '../../core/disposable/disposable';
 import { type Event, EventEmitter } from '../../core/event-emitter/event-emitter';
 import type { Diagnostic, Page, PdfEntry, PdfResult, Position } from '../../core/typst-engine/typst-engine';
-import { isInside, mostVisible, overlay, OverlayLayer, PageList, snippet, type Snippet, type Zoom } from './pages/pages';
+import { isInside, mostVisible } from './pages/geometry';
+import { overlay, OverlayLayer } from './pages/overlays';
+import { PageList } from './pages/page-list';
+import { snippet, type Snippet } from './pages/snippet';
+import type { Zoom } from './pages/zoom';
 import { DEFAULT_FONT_URLS, ENGINE_WASM_URL } from '../../core/typst-engine/engine-assets';
 import type { FileContent } from '../../core/project/project';
-import { FileSender, type Init, type Request, type Response, startEngineWorker } from './worker/worker';
+import { FileSender } from './worker/project-files';
+import type { Init, Request, Response } from './worker/protocol';
+import { startEngineWorker } from './worker/worker';
 import { LatestOnly } from './latest-only';
 import type { PageClick, PageOverlay, PdfExportOption, PreviewContext, PreviewToolbarItem, ToolbarItemView, ToolbarPlacement } from './contribution';
 
 export type { PageClick, PageOverlay, PdfExportOption, PreviewContext, PreviewToolbarItem, ToolbarItemView, ToolbarPlacement } from './contribution';
-export type { Snippet, Zoom } from './pages/pages';
+export type { Snippet } from './pages/snippet';
+export type { Zoom } from './pages/zoom';
 
 /**
  * The preview as extensions see it (`ExtensionContext.preview`): its contribution points, and what its engine

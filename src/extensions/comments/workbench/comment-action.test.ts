@@ -3,8 +3,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { VisualView, VisualViewContributions } from '../../../hosts/visual-view/visual-view';
-import { localDate, NOTE_STYLE } from '../model/model';
-import { marginNotes, notesGutter } from '../visual-view/visual-view';
+import { localDate } from '../model/note-thread';
+import { NOTE_STYLE } from '../model/add-margin-note';
+import { marginNotes } from '../visual-view/margin-notes';
+import { notesGutter } from '../visual-view/notes-gutter/notes-gutter';
 import { CommentAction, type NoteView } from './comment-action';
 
 const IMPORT = `#import "@preview/drafting:0.2.2": margin-note, set-margin-note-defaults\n${NOTE_STYLE}`;

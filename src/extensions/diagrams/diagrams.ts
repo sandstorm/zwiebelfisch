@@ -12,7 +12,8 @@ import type { CustomEditorProvider, TypstExtension, Workbench } from '../../host
 import css from './diagrams.css?inline';
 import { DIAGRAM_FILES, isDiagram } from './model/model';
 import { editDiagramAction } from './visual-view/visual-view';
-import { DiagramEditor, newDiagram } from './workbench/workbench';
+import { DiagramEditor } from './workbench/diagram-editor';
+import { newDiagram } from './workbench/new-diagram';
 
 /** The command behind "New diagram…" (optional argument: the file or folder it goes next to / into). */
 const NEW_DIAGRAM = 'diagrams.newDiagram';

@@ -2,7 +2,8 @@
 import { ProjectPath } from '../../../core/paths/paths';
 import type { Project } from '../../../core/project/project';
 import type { Workbench } from '../../../hosts/workbench/workbench';
-import { DIAGRAM_EXTENSION, emptyDiagram } from '../model/model';
+import { DIAGRAM_EXTENSION } from '../model/model';
+import { emptyDiagram } from '../model/empty-diagram';
 
 /**
  * Asks for the new diagram's name in the folder of `resource` (a file's folder, or the folder itself; default: the

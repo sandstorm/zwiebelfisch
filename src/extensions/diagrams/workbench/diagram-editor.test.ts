@@ -2,7 +2,8 @@
 // Tests for diagram-editor.ts: the iframe's window is faked (messages in, postMessage out), timers too.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
-import { emptyDiagram, readDiagramXml, toDataUri, writeDiagramXml } from '../model/model';
+import { emptyDiagram } from '../model/empty-diagram';
+import { readDiagramXml, toDataUri, writeDiagramXml } from '../model/png';
 import { DiagramEditor, type DiagramEditorOptions } from './diagram-editor';
 
 const xml = (label: string) => `<mxfile><diagram>${label}</diagram></mxfile>`;

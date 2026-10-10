@@ -1,11 +1,8 @@
 // DocumentLinks: the links of every registered DocumentLinkProvider, merged (`Workbench.registerDocumentLinkProvider`),
 // and how the views show them: the Source views and the code of the Visual view's raw boxes get `linkExtension`.
-// Entry of hosts/workbench/document-links/. See workbench.ts and ARCHITECTURE.md, "File links".
+// See workbench.ts and ARCHITECTURE.md, "File links".
 import { Disposable } from '../../../core/disposable/disposable';
 import type { DocumentLink, DocumentLinkProvider, TextDocument } from '../workbench';
-
-export { linkExtension, type LinkedText } from './link-extension';
-export { default as documentLinkStyles } from './document-links.css?inline';
 
 /** The default `priority` of a provider (as for the Visual view's contributions). */
 const DEFAULT_PRIORITY = 100;

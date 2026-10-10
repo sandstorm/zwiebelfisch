@@ -9,7 +9,9 @@ import { neighbours } from '../../core/typst-syntax/typst-syntax';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { TypstExtension, Workbench } from '../../hosts/workbench/workbench';
 import css from './files.css?inline';
-import { CONTEXT_MENU, FileNavigation, FilePanel, icon, NEW_FILE_MENU, type FilePanelOptions } from './workbench/workbench';
+import { CONTEXT_MENU, FilePanel, NEW_FILE_MENU, type FilePanelOptions } from './workbench/file-panel';
+import { FileNavigation } from './workbench/file-navigation';
+import { icon } from './workbench/icons/icons';
 
 /** When the file panel is open (the setting `files.panel`). */
 type PanelMode = 'auto' | 'show' | 'hide';

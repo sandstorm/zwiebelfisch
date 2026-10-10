@@ -1,5 +1,6 @@
 // Tests for the `local/entry-imports` rule, run against the real src/ tree (the rule resolves
-// imports on disk). Proves that an import into another folder's internals fails.
+// imports on disk). Proves that an import into another module's internals fails, and that a module's own
+// subfolders are open to it.
 import path from 'node:path';
 import { Linter } from 'eslint';
 import tseslint from 'typescript-eslint';
@@ -29,15 +30,18 @@ describe('entry-imports', () => {
     expect(messages).toEqual([expect.stringContaining('through its entry file hosts/preview/preview.ts')]);
   });
 
-  it("fails on an import into a sibling subfolder's internals", () => {
-    const messages = lint('src/hosts/visual-view/toolbar/toolbar.ts', "import { x } from '../nodes/raw-box';");
-    expect(messages).toEqual([expect.stringContaining('hosts/visual-view/nodes/nodes.ts')]);
+  it('opens a module to its own files, subfolders included: they have no entries of their own', () => {
+    expect(lint('src/hosts/visual-view/toolbar/toolbar.ts', "import { x } from '../nodes/raw-box';")).toEqual([]);
+    expect(lint('src/extensions/labels/labels.ts', "import { x } from './model/label-index';")).toEqual([]);
+    expect(lint('src/extensions/labels/visual-view/reference-node.ts', "import { x } from '../model/label-index';")).toEqual([]);
   });
 
-  it("allows another folder's entry file and anything inside the own folder", () => {
-    expect(lint('src/extensions/files/files.ts', "import { Preview } from '../../hosts/preview/preview';")).toEqual([]);
-    expect(lint('src/hosts/visual-view/nodes/raw-box.ts', "import { x } from '../projection/projection';")).toEqual([]);
-    expect(lint('src/hosts/visual-view/nodes/raw-box.ts', "import { x } from '../highlights';")).toEqual([]);
+  it("fails on an import of another module's subfolder file, also from a module in the same group", () => {
+    expect(lint('src/extensions/styles/styles.ts', "import { x } from '../labels/model/label-index';")).toEqual([
+      expect.stringContaining('through its entry file extensions/labels/labels.ts'),
+    ]);
+    expect(lint('src/typst-editor/typst-editor.ts', "import { x } from '../testing/testing';")).toEqual([]);
+    expect(lint('src/typst-editor/typst-editor.ts', "import { x } from '../typst-editor-element/typst-editor-element';")).toEqual([]);
   });
 
   it('enters a host through its entry file only (hosts/ only groups)', () => {

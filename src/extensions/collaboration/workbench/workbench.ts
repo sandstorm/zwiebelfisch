@@ -1,5 +1,5 @@
 // The collaboration's part of the workbench: where the other users are, as file decorations (the file panel shows
-// them as badges with their initials). Entry of collaboration/workbench/. See ../collaboration.ts.
+// them as badges with their initials). See ../collaboration.ts.
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { FileDecorationProvider } from '../../../hosts/workbench/workbench';

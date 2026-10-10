@@ -1,5 +1,5 @@
 // The images extension in the workbench: images and other files open read-only in the editing area (AssetView).
-// Entry of extensions/images/workbench/. See ../images.ts.
+// See ../images.ts.
 import type { CustomEditorProvider } from '../../../hosts/workbench/workbench';
 import { AssetView } from './asset-view';
 

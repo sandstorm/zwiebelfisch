@@ -1,5 +1,5 @@
 // Presence: other users' carets and selections as source ranges, and where the views read them (`Presences`).
-// Entry of collaboration/presence/. Pure (no Yjs, no DOM): the eager part of the extension uses it, so it is not in
+// Pure (no Yjs, no DOM): the eager part of the extension uses it, so it is not in
 // the lazily loaded chunk (model/). See ../collaboration.ts.
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';

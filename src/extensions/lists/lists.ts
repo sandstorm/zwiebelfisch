@@ -3,9 +3,8 @@
 // share their syntax and their toolbar group; task lists' priority puts their projectors first.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './lists.css?inline';
-import {
-  BULLET_LIST, LIST_ACTIONS, LIST_ITEM, ORDERED_LIST, TASK_ITEM, TASK_LIST, TASK_LIST_ACTION,
-} from './visual-view/visual-view';
+import { BULLET_LIST, LIST_ACTIONS, LIST_ITEM, ORDERED_LIST } from './visual-view/visual-view';
+import { TASK_ITEM, TASK_LIST, TASK_LIST_ACTION } from './visual-view/task-lists';
 
 /** Task lists' priority over bullet lists (default 100), whose syntax they share. */
 const TASK_LISTS_PRIORITY = 110;

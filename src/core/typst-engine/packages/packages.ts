@@ -1,5 +1,4 @@
-// withPackages: Typst packages (@preview/…) downloaded on first use and added to the engine. Entry of
-// typst-engine/packages/. See typst-engine.ts.
+// withPackages: Typst packages (@preview/…) downloaded on first use and added to the engine. See typst-engine.ts.
 import type { CompileResult, Diagnostic, Engine, PdfResult } from '../typst-engine';
 import { untarGz } from './tar';
 

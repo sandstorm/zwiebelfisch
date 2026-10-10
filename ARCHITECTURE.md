@@ -46,7 +46,7 @@ src/                        the widget (TypeScript); the most important API on t
                             latest-only.ts ("only the newest value" task runner)
       worker/               worker.ts (startEngineWorker, main-thread side), engine.worker.ts (the worker),
                             protocol.ts (messages), project-files.ts (FileSender/FileReceiver)
-      pages/                pages.ts: page-list (SVG only near the viewport), overlays, geometry, zoom, snippet
+      pages/                page-list (SVG only near the viewport), overlays, geometry, zoom, snippet
   stylesheets.test.ts       every .css under src/ parses (lightningcss, no error recovery), no nested style rules,
                             every block closed (an unclosed rule silently nests the rest of the file),
                             hex colors only in the color tokens (dark mode)
@@ -80,8 +80,9 @@ src/                        the widget (TypeScript); the most important API on t
                             or white text on a color)
   extensions/               one vertical slice per concept (docs/2026_10_10_extensions-architecture.md): <name>.ts
                             (the entry: the TypstExtension factory, the controller), model/ (pure, no DOM), and one
-                            folder per host it contributes to (workbench/, preview/, visual-view/, …), each entered
-                            through the file named like it. Extensions never import each other.
+                            folder per host it contributes to (workbench/, preview/, visual-view/, …), which have no
+                            entry files: the extension's files import each other directly. Extensions never import
+                            each other.
     files/                  files (the file panel in a side panel; the commands files.newFile / newFolder / upload /
                             rename / delete in the menus file/newFile and explorer/context), fileNavigation (editor
                             frame); files.css (each extension with styles has its <name>.css, registered with
@@ -177,12 +178,15 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
 
 ### Folder rules
 
-- **Entry files.** Every folder under `src/` has one entry file named like it (`preview/preview.ts`;
-  a stylesheet may be `files/files.css`). Everything else in the folder is internal to it, and
-  folders that grow get subfolders named after a concept (`projection/`, `worker/`), never generic
-  ones. No sibling folders: an entry file lives inside its folder (`typst-editor/typst-editor.ts`),
-  never next to it. `core/`, `ui/`, `hosts/` and `extensions/` only group.
-- **Imports from outside a folder go to its entry file**, which re-exports what others need.
+- **Modules.** The module boundary is the core / host / extension / ui folder, not every folder:
+  `core/<name>/`, `hosts/<name>/`, `extensions/<name>/`, `ui/<name>/`, `typst-editor/`,
+  `typst-editor-element/`, `testing/`. Each has one entry file named like it (`preview/preview.ts`; a
+  stylesheet may be `files/files.css`), inside its folder (no sibling folders). `core/`, `ui/`, `hosts/` and
+  `extensions/` only group.
+- **Inside a module everything is open.** Layer and concept subfolders (`model/`, `visual-view/`,
+  `projection/`, `worker/`; never generic ones like `utils/`) have no entry files of their own: files import
+  each other directly (`./model/label-index`).
+- **From outside a module, only its entry file may be imported.**
   ESLint enforces this (`local/entry-imports`, `eslint-rules/entry-imports.js`); only TypeScript and
   CSS sources count (not the generated `wasm/`, `fonts/` or the `fixtures/`). The exceptions are
   listed once, with reasons, in `eslint.config.js` (`boundaries.exceptions`):

@@ -1,5 +1,4 @@
-// What the preview-sync extension adds to the preview's toolbar: the "Follow cursor" on/off switch. Entry of
-// extensions/preview-sync/preview/. See ../preview-sync.ts.
+// What the preview-sync extension adds to the preview's toolbar: the "Follow cursor" on/off switch. See ../preview-sync.ts.
 import type { PreviewToolbarItem } from '../../../hosts/preview/preview';
 
 export interface FollowCursorOptions {

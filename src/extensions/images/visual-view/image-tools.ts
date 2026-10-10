@@ -4,7 +4,7 @@ import type { Node } from '@tiptap/pm/model';
 import type { EditorState, Transaction } from '@tiptap/pm/state';
 import type { BoxTools, BoxToolsHost } from '../../../hosts/visual-view/visual-view';
 import type { Workbench } from '../../../hosts/workbench/workbench';
-import { imageWidthCss } from '../model/model';
+import { imageWidthCss } from '../model/image-call';
 import { addCaption, imageInfo, removeCaption, resizeImage, setImageAlt } from './image-edits';
 import { imagePath } from './image-syntax';
 

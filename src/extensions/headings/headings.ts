@@ -3,7 +3,8 @@
 // ARCHITECTURE.md, "VisualView". Why one extension: the numbers are a view of the headings, nothing without them.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './headings.css?inline';
-import { HEADING, HeadingNumbers } from './visual-view/visual-view';
+import { HEADING } from './visual-view/visual-view';
+import { HeadingNumbers } from './visual-view/heading-numbers';
 
 /** Headings and their numbers. */
 export const headings: TypstExtension = {
