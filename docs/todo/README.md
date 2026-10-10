@@ -66,3 +66,4 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [comments-gutter](comments-gutter.md) | done (branch task/comments-gutter) |
 | [collab-markers](collab-markers.md) | done (branch task/collab-markers) |
 | [comment-replies](comment-replies.md) | open |
+| [notes-pdf](notes-pdf.md) | open |
