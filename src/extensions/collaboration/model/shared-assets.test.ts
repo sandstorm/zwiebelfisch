@@ -1,11 +1,11 @@
 // Tests for shared-assets.ts.
 import { describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
-import { Project } from '../../core/project/project';
+import { Project } from '../../../core/project/project';
 import { ASSETS_MAP } from './gitlab-protocol';
 import { connect } from './in-process';
 import { SharedAssets } from './shared-assets';
-import { ProjectPath } from '../../core/paths/paths';
+import { ProjectPath } from '../../../core/paths/paths';
 
 const path = ProjectPath.of;
 

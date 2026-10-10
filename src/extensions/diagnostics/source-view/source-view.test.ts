@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
-// Tests for lint.ts.
+// Tests for source-view.ts.
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { SourceViewHost } from '../source-view';
-import { DiagnosticCollection, lint, toLintDiagnostics } from './lint';
+import { SourceViewHost } from '../../../hosts/source-view/source-view';
+import { DiagnosticCollection } from '../model/model';
+import { lint, toLintDiagnostics } from './source-view';
 
 const base = { severity: 'error' as const, message: 'unknown variable: unknown', hints: [], from: 1, to: 8 };
 

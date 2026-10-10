@@ -17,7 +17,7 @@ describe('renderedBoxes', () => {
     const visualView = new VisualViewContributions();
     renderedBoxes().activate({ project, preview, visualView, subscriptions: [] } as unknown as ExtensionContext);
     const document = project.document(path('/chapters/one.typ'))!;
-    const renderer = visualView.contributed().boxRenderers[0]({ document, selection: () => ({ from: 0, to: 0 }) })!;
+    const renderer = visualView.contributed().boxRenderers[0]({ document, selection: () => ({ from: 0, to: 0 }), onDidChangePresence: () => new Disposable(() => {}) })!;
     const box = { attrs: { src: '$x$' }, isInline: false } as unknown as Node;
     await renderer.render(box, 0);
     expect(preview.snippet).toHaveBeenCalledWith(path('/chapters/one.typ'), 0, 3, '$x$');

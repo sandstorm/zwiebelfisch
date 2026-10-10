@@ -37,7 +37,7 @@ describe('entry-imports', () => {
   it("allows another folder's entry file and anything inside the own folder", () => {
     expect(lint('src/features/files/files.ts', "import { Preview } from '../../hosts/preview/preview';")).toEqual([]);
     expect(lint('src/hosts/visual-view/nodes/raw-box.ts', "import { x } from '../projection/projection';")).toEqual([]);
-    expect(lint('src/hosts/visual-view/nodes/raw-box.ts', "import { x } from '../presence';")).toEqual([]);
+    expect(lint('src/hosts/visual-view/nodes/raw-box.ts', "import { x } from '../highlights';")).toEqual([]);
   });
 
   it('enters a host through its entry file only (hosts/ only groups)', () => {
@@ -48,9 +48,9 @@ describe('entry-imports', () => {
   });
 
   it('allows the listed exceptions, and only for their importers', () => {
-    expect(lint('server/src/gitlab/merge.ts', "import { x } from '../../../src/features/collaboration/gitlab-protocol.ts';")).toEqual([]);
-    expect(lint('src/typst-editor/typst-editor.files.test.ts', "import { x } from '../features/collaboration/in-process';")).toEqual([]);
-    expect(lint('src/typst-editor/typst-editor.ts', "import { x } from '../features/collaboration/in-process';")).toHaveLength(1);
+    expect(lint('server/src/gitlab/merge.ts', "import { x } from '../../../src/extensions/collaboration/model/gitlab-protocol.ts';")).toEqual([]);
+    expect(lint('src/typst-editor/typst-editor.files.test.ts', "import { x } from '../extensions/collaboration/model/in-process';")).toEqual([]);
+    expect(lint('src/typst-editor/typst-editor.ts', "import { x } from '../extensions/collaboration/model/in-process';")).toHaveLength(1);
   });
 
   it('checks paths in new URL(…, import.meta.url) and vi.mock(…)', () => {

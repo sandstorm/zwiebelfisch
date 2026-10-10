@@ -3,10 +3,10 @@
 // Why the API looks like this: a Typst document is a project of files, and the main file is one of them. So the
 // host gives and gets every file through one map (`files`, `onFilesChange`); `source` is only a shortcut for the
 // main file's text, for hosts that edit a single file.
-import type { CollaborationOptions } from '../features/collaboration/collaboration';
-import { collaboration } from '../features/collaboration/collaboration-link';
+import type { CollaborationOptions } from '../extensions/collaboration/collaboration';
+import { collaboration } from '../extensions/collaboration/collaboration';
 import { comments } from '../extensions/comments/comments';
-import { diagnostics } from '../features/diagnostics/diagnostics';
+import { diagnostics } from '../extensions/diagnostics/diagnostics';
 import { fileNavigation, files } from '../extensions/files/files';
 import fileStyles from '../extensions/files/files.css?inline';
 import { labels } from '../features/labels/labels';
@@ -28,7 +28,7 @@ import { type FileChange, Project, type ProjectFiles } from '../core/project/pro
 import { ProjectPath } from '../core/paths/paths';
 import widgetStyles from './typst-editor.css?inline';
 
-export type { CollaborationOptions } from '../features/collaboration/collaboration';
+export type { CollaborationOptions } from '../extensions/collaboration/collaboration';
 export type { EditorMode } from '../hosts/workbench/workbench';
 export type { FileChange, FileContent, ProjectFiles } from '../core/project/project';
 

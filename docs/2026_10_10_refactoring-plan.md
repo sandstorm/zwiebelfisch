@@ -33,6 +33,22 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    for toolbar items, `alignment` + `priority` for status bar items; task lists and the image box
    renderer get 110; the "don't reorder" comment at `builtinExtensions` goes. Documented on every
    contribution point (see the architecture doc, "Priority").
+   **After the slices merge: PDF export options** (decided by the user): ONE "Download PDF" button
+   with an options popover, no button / menu entry per variant. Any extension adds options through
+   the preview host: `preview.registerPdfExportOption({ id: '<ext>.<name>', label, default, apply(entry)
+   → entry })` (checkboxes now; `choices` later), replacing `registerPdfVariant`. The pdf-export
+   extension is the button + popover + export (applies every option to the compile entry); values
+   remembered per viewer (`workbench.remember`). Public API: `exportPdf({ options: { 'comments.include':
+   true } })` replaces `exportPdf({ comments })`. Comments only registers `comments.include`
+   (default off); the `comments.exportPdf` command goes.
+   **After the slices merge: presence out of the hosts** (decided by the user): the hosts'
+   `PresenceTarget` / `setPresence` / `onDidChangePresence`, `TextEditor.setPresence` and the
+   `Presence` types in `core/typst-document` are a pass-through for one extension. `Presence`,
+   `PresenceTarget`, `PlacedPresence` → `extensions/collaboration/model/`; collaboration's view
+   contributions subscribe to its own `RemoteCursors` (closure in `activate`, an `Event`) and draw via
+   the hosts' generic points only (Visual decorations / highlights, Source CodeMirror extensions,
+   `setBoxDecorations`, source↔pos mapping on the view context). Also sweep the hosts for other
+   single-extension pass-throughs and remove them the same way.
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Lessons doc**: write `docs/2026_10_10_code-conventions.md` from "Decisions and conventions"
    below (refined), then **spawn subagents** (the user asked for it; workflow guideline < 10 agents)
@@ -68,6 +84,14 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
 - Remove features that do not work rather than polish them.
 - **The main agent only plans and merges**; every refactoring runs in subagents (Workflow), in
   parallel where the files are disjoint (worktrees), merged and checked by the main agent.
+- **Module boundary = the extension / host / core folder, not every folder** (user, 2026-10-10:
+  "entry named after its folder" is a guideline, not a 100% rule). Outside code imports only the
+  module's entry (`extensions/labels/labels.ts`); inside a module, layer and concept folders
+  (`model/`, `visual-view/`, `projection/`, …) have no entry files of their own and files import each
+  other directly (`./model/label-index`). No thin re-exporting entries like `model/model.ts`. Inside a
+  module the layer direction still holds (`model/` imports no view folder, no DOM). Entry names follow
+  the folder where that reads well; the lint checks "only through the entry", not the file name.
+  Implemented in the rules wave (`eslint-rules/entry-imports.js`).
 - **No sibling folders**: a module's entry file lives inside its folder (`typst-editor/typst-editor.ts`),
   never next to it. Code that is a feature lives in `features/`, even if only the widget uses it.
 - Tooling: every operation is a mise task; docs go in `docs/YYYY_MM_DD_slug.md`; commit per step on

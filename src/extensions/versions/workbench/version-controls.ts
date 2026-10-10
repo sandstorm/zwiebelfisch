@@ -1,6 +1,6 @@
 // VersionControls: the "Save version" button, its commit message field and the outcome as a status line.
 // See ../versions.ts.
-import { DEFAULT_COMMIT_MESSAGE, type ServerMessage } from '../../../features/collaboration/gitlab-protocol';
+import { DEFAULT_COMMIT_MESSAGE, type ServerMessage } from '../../collaboration/model/gitlab-protocol';
 import { FieldPopover } from '../../../ui/field-popover/field-popover';
 import { versionStatus } from '../model/model';
 

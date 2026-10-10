@@ -12,15 +12,6 @@ import { type Contributions, SourceView, type SourceViewOptions } from './view';
 
 export type { LinkProviderFactory, SourceViewContext, SourceViewExtension } from './contribution';
 export type { SourceView, SourceViewOptions } from './view';
-export {
-  DiagnosticCollection,
-  describeDiagnostic,
-  lint,
-  presence,
-  remotePresence,
-  showPresence,
-  type SourceDiagnostic,
-} from './builtins/builtins';
 
 /** The Source view's contribution points (what `ExtensionContext.sourceView` offers). */
 export interface SourceViewContributions {

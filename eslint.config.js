@@ -20,14 +20,9 @@ export const boundaries = {
   groupingFolders: ['core', 'extensions', 'features', 'hosts', 'ui'],
   exceptions: [
     {
-      target: 'features/collaboration/gitlab-protocol.ts',
+      target: 'extensions/collaboration/model/gitlab-protocol.ts',
       importers: '.',
-      why: 'import-free room protocol shared with the server and with features/versions (which must not load the lazily loaded collaboration chunk)',
-    },
-    {
-      target: 'features/collaboration/collaboration-link.ts',
-      importers: '^src/typst-editor/typst-editor\\.ts$',
-      why: "the widget's eager side of collaboration; the folder's entry collaboration.ts is the lazily loaded chunk (until the slices wave makes the link the extension's entry)",
+      why: 'import-free room protocol shared with the server and with the versions extension (which must not load the lazily loaded collaboration chunk, model/)',
     },
     {
       target: 'core/typst-engine/engine-assets.ts',
@@ -40,12 +35,12 @@ export const boundaries = {
       why: "tests of an extension's Visual-view contributions build views and schemas with the host's test helpers",
     },
     {
-      target: 'features/collaboration/in-process.ts',
+      target: 'extensions/collaboration/model/in-process.ts',
       importers: '\\.test\\.ts$',
       why: 'tests wire Y.Docs and awarenesses together in-process',
     },
     {
-      target: 'features/collaboration/shared-project.ts',
+      target: 'extensions/collaboration/model/shared-project.ts',
       importers: '^server/.*\\.test\\.ts$',
       why: "the server's tests build rooms from the client's SharedProject",
     },

@@ -1,11 +1,12 @@
-// Collaboration: real-time editing over Yjs (a Hocuspocus server, or a Y.Doc the host connects), loaded on
-// demand. Entry of features/collaboration/. See ARCHITECTURE.md, "Collaboration".
+// Collaboration: real-time editing over Yjs (a Hocuspocus server, or a Y.Doc the host connects): the lazily loaded
+// chunk of the collaboration extension (no DOM, no editor library). Entry of collaboration/model/. See
+// ../collaboration.ts and ARCHITECTURE.md, "Collaboration".
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import type { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
-import type { ProjectPath } from '../../core/paths/paths';
-import type { PlacedPresence, PresenceTarget } from '../../core/typst-document/typst-document';
-import type { Project } from '../../core/project/project';
+import type { ProjectPath } from '../../../core/paths/paths';
+import type { PlacedPresence, PresenceTarget } from '../../../core/typst-document/typst-document';
+import type { Project } from '../../../core/project/project';
 import { roomFilePath } from './gitlab-protocol';
 import { RemoteCursors, type CollaborationUser } from './remote-cursors';
 import { RoomVersions } from './room-versions';

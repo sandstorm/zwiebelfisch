@@ -6,12 +6,13 @@ import type { Editor } from '@tiptap/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
-import { addMarginNote, marginNotes } from '../../extensions/comments/comments';
 import { Project } from '../../core/project/project';
-import { presence, SourceViewHost } from '../../hosts/source-view/source-view';
-import { headings, markup, VisualView, VisualViewContributions } from '../../hosts/visual-view/visual-view';
-import { Collaboration } from './collaboration';
-import { connect, connectAwareness } from './in-process';
+import { SourceViewHost } from '../../hosts/source-view/source-view';
+import { VisualView, VisualViewContributions } from '../../hosts/visual-view/visual-view';
+import { Collaboration } from './model/model';
+import { connect, connectAwareness } from './model/in-process';
+import { presence as sourcePresence } from './source-view/source-view';
+import { presence as visualPresence } from './visual-view/visual-view';
 import { ProjectPath } from '../../core/paths/paths';
 
 const path = ProjectPath.of;
@@ -22,7 +23,8 @@ afterEach(() => cleanup.splice(0).forEach((fn) => fn()));
 
 /**
  * One user's widget, reduced to what collaboration touches: the project, both
- * editing views of the main file, and the Collaboration
+ * editing views of the main file (with nothing contributed but this extension's
+ * drawing of the others' places: what the views do not model shows as raw Typst), and the Collaboration
  * joining the room `peer` is in (already synced, as with a server).
  */
 async function user(name: string, files: Record<string, string>, peer?: { ydoc: Y.Doc; awareness: Awareness }) {
@@ -39,9 +41,9 @@ async function user(name: string, files: Record<string, string>, peer?: { ydoc: 
   const visualParent = window.document.createElement('div');
   const sourceParent = window.document.createElement('div');
   window.document.body.append(visualParent, sourceParent);
-  const visual = new VisualView(visualParent, document, VisualViewContributions.from([markup, headings, marginNotes()]));
+  const visual = new VisualView(visualParent, document, VisualViewContributions.from([visualPresence]));
   const sourceViews = new SourceViewHost();
-  sourceViews.registerExtension(presence);
+  sourceViews.registerExtension(sourcePresence);
   const source = sourceViews.createView(sourceParent, document);
   collaboration.showCursors(MAIN, [visual, source]);
   cleanup.push(() => {
@@ -108,18 +110,19 @@ describe('collaboration', () => {
     expect(a.tiptap.state.doc.textContent).toBe(b.tiptap.state.doc.textContent);
   });
 
-  it('a margin note reaches the other user and survives their edits', async () => {
+  it('a margin note (one edit in two places, as the comments extension makes it) reaches the other user and survives their edits', async () => {
     const a = await user('Ann', { [MAIN]: START });
     const b = await user('Bob', {}, a);
-    const from = START.indexOf('Second');
-    const added = addMarginNote(a.document.text, { from, to: from + 6 })!;
-    a.document.change(added.changes, 'test');
+    const from = START.indexOf('First');
+    const IMPORT = '#import "@preview/drafting:0.2.2": margin-note\n';
+    a.document.change([{ from: 0, to: 0, insert: IMPORT }, { from, to: from + 5, insert: '#margin-note[First][]' }], 'test');
     typeSource(a, a.document.text.indexOf('][]') + 2, 'Rename? Ann');
-    typeSource(b, b.document.text.indexOf('First'), 'The ');
+    typeSource(b, b.document.text.indexOf('Second'), 'The ');
     typeVisual(b, 'Second', ' More.');
     for (const u of [a, b]) {
-      expect(u.document.text).toContain('The First paragraph.');
-      expect(u.document.text).toContain('#margin-note[Second][Rename? Ann] paragraph. More.');
+      expect(u.document.text.startsWith(IMPORT)).toBe(true);
+      expect(u.document.text).toContain('#margin-note[First][Rename? Ann] paragraph.');
+      expect(u.document.text).toContain('The Second paragraph. More.');
     }
     expect(a.document.text).toBe(b.document.text);
   });

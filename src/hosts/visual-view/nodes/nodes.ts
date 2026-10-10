@@ -11,7 +11,6 @@ import { attachGrammar, type MarkGrammar, type NodeGrammar } from '../projection
 import { RawBoxNavigation, rawBoxView } from './raw-box';
 
 export { setBoxes, type Boxes } from './raw-box';
-export { boxCaretsSpec, type BoxCaret } from './box-carets';
 
 /**
  * The Tiptap extensions of a Visual view whose schema holds `nodes` and

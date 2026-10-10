@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
-// Tests for diagnostics.ts.
+// Tests for workbench.ts.
 import { describe, expect, it, vi } from 'vitest';
-import type { Diagnostic } from '../../core/typst-engine/typst-engine';
-import { DiagnosticsStatus } from './diagnostics';
-import { summarizeDiagnostics } from './diagnostics-summary';
+import type { Diagnostic } from '../../../core/typst-engine/typst-engine';
+import { summarizeDiagnostics } from '../model/model';
+import { DiagnosticsStatus } from './workbench';
 
 const MAIN = '/main.typ';
 

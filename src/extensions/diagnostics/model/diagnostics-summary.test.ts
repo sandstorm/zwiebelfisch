@@ -1,6 +1,6 @@
 // Tests for diagnostics-summary.ts.
 import { describe, expect, it } from 'vitest';
-import type { Diagnostic } from '../../core/typst-engine/typst-engine';
+import type { Diagnostic } from '../../../core/typst-engine/typst-engine';
 import { summarizeDiagnostics } from './diagnostics-summary';
 
 const MAIN = '/main.typ';

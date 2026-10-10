@@ -11,7 +11,7 @@ import type { BoxCodeExtensionProvider, BoxRendererProvider, CodeBoxSpec } from 
 import type { ToolbarGroup, ToolbarItem } from './toolbar-items';
 import type { VisualViewContext } from './view-context';
 
-export type { BoxCodeExtensionProvider, BoxPicture, BoxRenderer, BoxRendererProvider, BoxTools, BoxToolsHost, CodeBoxSpec } from './boxes';
+export { setBoxDecorations, type BoxCodeExtensionProvider, type BoxPicture, type BoxRenderer, type BoxRendererProvider, type BoxTools, type BoxToolsHost, type CodeBoxSpec } from './boxes';
 export { svg, type Action, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem } from './toolbar-items';
 export type { VisualViewContext } from './view-context';
 

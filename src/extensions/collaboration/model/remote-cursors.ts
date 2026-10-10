@@ -1,9 +1,9 @@
 // RemoteCursors: other users' carets and selections over Yjs awareness, handed to the views as presences.
-// See collaboration.ts.
+// See model.ts.
 import type { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
-import { ProjectPath } from '../../core/paths/paths';
-import type { PlacedPresence, PresenceTarget } from '../../core/typst-document/typst-document';
+import { ProjectPath } from '../../../core/paths/paths';
+import type { PlacedPresence, PresenceTarget } from '../../../core/typst-document/typst-document';
 
 /** Who is editing here, as others see it. */
 export interface CollaborationUser {

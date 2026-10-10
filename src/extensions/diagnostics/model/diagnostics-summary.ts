@@ -1,5 +1,5 @@
-// summarizeDiagnostics: compile diagnostics counted and sorted per file. See diagnostics.ts.
-import type { Diagnostic } from '../../core/typst-engine/typst-engine';
+// summarizeDiagnostics: compile diagnostics counted and sorted per file. See model.ts.
+import type { Diagnostic } from '../../../core/typst-engine/typst-engine';
 
 /** A range in a project file. */
 export interface DiagnosticTarget {
