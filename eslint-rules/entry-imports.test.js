@@ -53,6 +53,14 @@ describe('entry-imports', () => {
     expect(lint('src/typst-editor/collaboration-link.ts', "import { x } from '../features/collaboration/in-process';")).toHaveLength(1);
   });
 
+  it('checks paths in new URL(…, import.meta.url) and vi.mock(…)', () => {
+    const worker = "new Worker(new URL('../preview/worker/worker.ts', import.meta.url), { type: 'module' });";
+    expect(lint('src/features/files/files.ts', worker)).toEqual([expect.stringContaining('features/preview/preview.ts')]);
+    expect(lint('src/features/files/files.test.ts', "vi.mock('../preview/pages/page-list');")).toHaveLength(1);
+    expect(lint('src/features/preview/preview.ts', "new URL('./worker/worker.ts', import.meta.url);")).toEqual([]);
+    expect(lint('src/features/files/files.test.ts', "vi.mock('../preview/preview');")).toEqual([]);
+  });
+
   it('ignores generated and data files', () => {
     expect(lint('src/features/preview/preview.ts', "import url from '../../core/typst-engine/wasm/typst_engine_bg.wasm?url';")).toEqual([]);
   });

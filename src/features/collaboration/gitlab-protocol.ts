@@ -1,6 +1,7 @@
-// The protocol of GitLab-backed rooms, shared by the widget (src/collab) and
-// the collaboration server (server/src/gitlab). No imports: the server's Node
-// runtime loads this file directly.
+// The protocol of GitLab-backed rooms, shared by the widget (features/collaboration,
+// features/versions) and the collaboration server (server/src/gitlab). No imports: the
+// server's Node runtime loads this file directly. Imported directly rather than through
+// collaboration.ts: an exception to the entry-file rule, listed in eslint.config.js.
 
 /** Room names of GitLab-backed rooms: `gitlab:<project id or path>@<branch>`. */
 export const GITLAB_ROOM_PREFIX = 'gitlab:';

@@ -3,7 +3,7 @@
 import { DEFAULT_COMMIT_MESSAGE, type ServerMessage } from '../collaboration/gitlab-protocol';
 import { FieldPopover } from '../visual-view/visual-view';
 
-/** A room's versions (`RoomVersions` in src/collab), as far as the controls use them. */
+/** A room's versions (`RoomVersions` in features/collaboration), as far as the controls use them. */
 export interface Versions {
   base(path: string): string | null;
   onBaseChange(listener: () => void): () => void;

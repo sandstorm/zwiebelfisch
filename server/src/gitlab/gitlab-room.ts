@@ -8,7 +8,7 @@ import { commitActions, type RoomFiles } from './commit-actions.ts';
 import { GitLabError, type GitLabProject } from './gitlab-api.ts';
 import { mergeFiles, textEdits } from './merge.ts';
 
-/** The widget's map of shared Typst files (path → Y.Text), see src/collab/shared-project.ts. */
+/** The widget's map of shared Typst files (path → Y.Text), see src/features/collaboration/shared-project.ts. */
 const FILES_MAP = 'files';
 
 /** How often a save merges upstream and tries again when the branch keeps moving. */
