@@ -13,18 +13,13 @@ import { type Contributions, SourceView, type SourceViewOptions } from './view';
 export type { LinkProviderFactory, SourceViewContext, SourceViewExtension } from './contribution';
 export type { SourceView, SourceViewOptions } from './view';
 export {
-  codeColors,
   DiagnosticCollection,
   describeDiagnostic,
-  documentLinks,
-  fileLinks,
-  isLightText,
   lint,
   presence,
   remotePresence,
   showPresence,
   type SourceDiagnostic,
-  typstLanguage,
 } from './builtins/builtins';
 
 /** The Source view's contribution points (what `ExtensionContext.sourceView` offers). */

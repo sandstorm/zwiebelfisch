@@ -1,5 +1,5 @@
 // ColorScheme: which scheme the widget is shown in, as `data-scheme` for CSS. See ARCHITECTURE.md, "Dark mode".
-import { isLightText } from '../../source-view/source-view';
+import { isLightText } from '../../../ui/color-scheme/color-scheme';
 
 /**
  * Keeps `data-scheme` (`light` | `dark`) on the widget's host: the scheme its colors resolved to

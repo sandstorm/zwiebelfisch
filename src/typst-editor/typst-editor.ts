@@ -7,17 +7,18 @@ import type { CollaborationOptions } from '../features/collaboration/collaborati
 import { collaboration } from '../features/collaboration/collaboration-link';
 import { comments } from '../features/comments/comments';
 import { diagnostics } from '../features/diagnostics/diagnostics';
-import { documentLinks } from '../features/document-links/document-links';
-import { assets, fileNavigation, files } from '../extensions/files/files';
+import { fileNavigation, files } from '../extensions/files/files';
 import fileStyles from '../extensions/files/files.css?inline';
 import { labels } from '../features/labels/labels';
 import { pdfExport } from '../extensions/pdf-export/pdf-export';
 import { previewControls } from '../extensions/preview-controls/preview-controls';
-import { projectRenderings } from '../features/project-renderings/project-renderings';
 import { spreadsheets } from '../extensions/spreadsheets/spreadsheets';
 import { styles } from '../features/styles/styles';
-import { typstLanguage } from '../features/typst-language/typst-language';
 import { versions } from '../extensions/versions/versions';
+import { documentLinks } from '../extensions/document-links/document-links';
+import { images } from '../extensions/images/images';
+import { renderedBoxes } from '../extensions/rendered-boxes/rendered-boxes';
+import { typstLanguage } from '../extensions/typst-language/typst-language';
 import {
   alignment, headingNumbers, headings, horizontalRule, lists, markup, outline, pageBreak, tables, taskLists,
 } from '../hosts/visual-view/visual-view';
@@ -198,15 +199,15 @@ function builtinExtensions(options: TypstEditorOptions): TypstExtension[] {
     ...(options.collaboration ? [collaboration(options.collaboration, options.user)] : []),
     files({ fileList: options.fileList }),
     fileNavigation(),
-    assets(),
     spreadsheets(),
     diagnostics(),
     versions({ user: options.user }),
     markup,
     headings,
     tables,
-    // images, and raw boxes drawn as compiled snippets (after images, whose renderer draws image boxes)
-    projectRenderings(),
+    images(),
+    // raw boxes drawn as compiled snippets (after images, whose renderer draws image boxes)
+    renderedBoxes(),
     outline,
     pageBreak,
     horizontalRule,

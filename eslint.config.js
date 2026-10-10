@@ -30,11 +30,6 @@ export const boundaries = {
       why: "the widget's eager side of collaboration; the folder's entry collaboration.ts is the lazily loaded chunk (until the slices wave makes the link the extension's entry)",
     },
     {
-      target: 'features/files/asset-view.ts',
-      importers: '^src/extensions/files/files\\.ts$',
-      why: 'the asset view stays behind until it moves into the images extension (slices wave); features/files/ has no entry any more',
-    },
-    {
       target: 'core/typst-engine/engine-assets.ts',
       importers: '^src/hosts/preview/preview\\.ts$',
       why: 'asset URLs (wasm, default fonts) for the main thread; in the entry, the worker bundle would emit every asset again',
@@ -48,6 +43,16 @@ export const boundaries = {
       target: 'features/collaboration/shared-project.ts',
       importers: '^server/.*\\.test\\.ts$',
       why: "the server's tests build rooms from the client's SharedProject",
+    },
+    {
+      target: 'hosts/visual-view/test-support.ts',
+      importers: '\\.test\\.ts$',
+      why: "tests of the extensions' Visual-view parts make a Visual view with the built-in contributions",
+    },
+    {
+      target: 'hosts/visual-view/projection/projection.ts',
+      importers: '^src/extensions/.*\\.test\\.ts$',
+      why: 'tests of the extensions\' Visual-view parts project and print with the schema directly',
     },
   ],
 };

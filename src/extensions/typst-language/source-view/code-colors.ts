@@ -1,0 +1,81 @@
+// codeColors: CodeMirror in the widget's color scheme, light or dark (Source views, raw boxes). See source-view.ts and ARCHITECTURE.md, "Dark mode".
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { Compartment, type Extension } from '@codemirror/state';
+import { EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
+import { tags as t } from '@lezer/highlight';
+import { isLightText } from '../../../ui/color-scheme/color-scheme';
+
+/** A token of typst-editor.css (`--te-syn-*`), with CodeMirror's default light color as fallback. */
+const token = (name: string, light: string) => `var(--te-syn-${name}, ${light})`;
+
+/** CodeMirror's default highlight style, its colors taken from the widget's tokens. */
+export const typstHighlightStyle = HighlightStyle.define([
+  { tag: t.meta, color: token('meta', '#404740') },
+  { tag: t.link, textDecoration: 'underline' },
+  { tag: t.heading, textDecoration: 'underline', fontWeight: 'bold' },
+  { tag: t.emphasis, fontStyle: 'italic' },
+  { tag: t.strong, fontWeight: 'bold' },
+  { tag: t.strikethrough, textDecoration: 'line-through' },
+  { tag: t.keyword, color: token('keyword', '#708') },
+  { tag: [t.atom, t.bool, t.url, t.contentSeparator, t.labelName], color: token('atom', '#219') },
+  { tag: [t.literal, t.inserted], color: token('literal', '#164') },
+  { tag: [t.string, t.deleted], color: token('string', '#a11') },
+  { tag: [t.regexp, t.escape, t.special(t.string)], color: token('string-2', '#e40') },
+  { tag: t.definition(t.variableName), color: token('definition', '#00f') },
+  { tag: t.local(t.variableName), color: token('local', '#30a') },
+  { tag: [t.typeName, t.namespace], color: token('type', '#085') },
+  { tag: t.className, color: token('class', '#167') },
+  { tag: [t.special(t.variableName), t.macroName], color: token('macro', '#256') },
+  { tag: t.definition(t.propertyName), color: token('property', '#00c') },
+  { tag: t.comment, color: token('comment', '#940') },
+  { tag: t.invalid, color: token('invalid', '#f00') },
+]);
+
+const scheme = new Compartment();
+
+/**
+ * Follows the scheme the editor is shown in (the page's color-scheme, the widget's `theme`, the OS):
+ * light text around the editor turns on CodeMirror's dark theme (cursor, selection, gutters, panels,
+ * tooltips). Checked when the editor is placed or resized and when the OS scheme changes.
+ */
+const follower = ViewPlugin.fromClass(
+  class {
+    private readonly media: MediaQueryList | null;
+    private pending = false;
+
+    constructor(private readonly view: EditorView) {
+      const window = view.dom.ownerDocument.defaultView;
+      this.media = window?.matchMedia?.('(prefers-color-scheme: dark)') ?? null;
+      this.media?.addEventListener('change', this.schedule);
+      this.schedule();
+    }
+
+    update(update: ViewUpdate): void {
+      if (update.geometryChanged) this.schedule();
+    }
+
+    destroy(): void {
+      this.media?.removeEventListener('change', this.schedule);
+    }
+
+    /** Later: a view may not dispatch while it is being built or updated. */
+    private readonly schedule = () => {
+      if (this.pending) return;
+      this.pending = true;
+      queueMicrotask(() => {
+        this.pending = false;
+        this.check();
+      });
+    };
+
+    private check(): void {
+      if (!this.view.dom.isConnected) return;
+      const dark = isLightText(getComputedStyle(this.view.dom).color);
+      if (dark === null || dark === this.view.state.facet(EditorView.darkTheme)) return;
+      this.view.dispatch({ effects: scheme.reconfigure(EditorView.darkTheme.of(dark)) });
+    }
+  },
+);
+
+/** Syntax colors and CodeMirror's light or dark theme, following the widget's color scheme. */
+export const codeColors: Extension = [syntaxHighlighting(typstHighlightStyle), scheme.of([]), follower];
