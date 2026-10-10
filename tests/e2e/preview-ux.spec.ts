@@ -119,3 +119,16 @@ test.describe('a 30-page document', () => {
     await expect(page.getByTestId('typst-preview-page-number')).toHaveText('30 / 30');
   });
 });
+
+test('dragging the separator between editor and preview resizes both', async ({ page }) => {
+  const preview = page.getByTestId('typst-preview');
+  const before = (await preview.boundingBox())!;
+  const split = page.getByRole('separator', { name: 'Preview width' });
+  const box = (await split.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x - 150, box.y + box.height / 2, { steps: 5 });
+  await page.mouse.up();
+  const after = (await preview.boundingBox())!;
+  expect(after.width).toBeGreaterThan(before.width + 100);
+});

@@ -59,6 +59,18 @@
 .typst-editor__resizer:focus-visible,
 .typst-editor--resizing .typst-editor__resizer { background: var(--te-jump); outline: none; }
 .typst-editor--resizing { cursor: col-resize; user-select: none; }
+/* Between editing area and preview: on the preview's left edge (inside it: it clips its overflow) */
+.typst-editor__split {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 6px;
+  z-index: 5;
+  cursor: col-resize;
+}
+.typst-editor__split:hover,
+.typst-editor__split:focus-visible { background: var(--te-jump); outline: none; }
 /* Narrow widget: an open panel lies over the editing area. */
 .typst-editor--narrow .typst-editor__panel {
   position: absolute;

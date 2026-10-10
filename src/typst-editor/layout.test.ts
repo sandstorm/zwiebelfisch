@@ -46,10 +46,8 @@ describe('Layout', () => {
   it('the preview column is a share of the widget, so an opening side panel narrows only the editing column', () => {
     // Regression (image-upload.spec): with `1fr 1fr` the panel's width came out of both columns and the preview moved.
     const css = readFileSync('src/typst-editor.css', 'utf8');
-    const columns = /\.typst-editor \{[^}]*grid-template-columns:\s*([^;]+);/.exec(css)?.[1].trim().split(/\s+(?![^(]*\))/);
-    expect(columns).toHaveLength(3);
-    expect(columns![1]).toMatch(/1fr\)$/);
-    expect(columns![2]).toBe('minmax(0, 50%)');
+    const columns = /\.typst-editor \{[^}]*grid-template-columns:\s*([^;]+);/.exec(css)?.[1].trim();
+    expect(columns).toBe('auto minmax(min(20rem, 25%), 1fr) minmax(0, var(--te-preview-share, 50%))');
   });
 
   it('a panel is closed until its default says open; the rail button toggles it', () => {
@@ -81,6 +79,21 @@ describe('Layout', () => {
     expect(toggle.hidden).toBe(true);
     expect(layout.isOpen('files')).toBe(false);
     expect(host.querySelector<HTMLElement>('.typst-editor__side')!.hidden).toBe(true);
+  });
+
+  it('the separator between editing area and preview sets the preview share (keys), 20–80%, remembered', () => {
+    const { host, key } = setup();
+    const split = host.querySelector<HTMLElement>('.typst-editor__right > [role=separator]')!;
+    expect(split.getAttribute('aria-label')).toBe('Preview width');
+    expect(host.style.getPropertyValue('--te-preview-share')).toBe('50%');
+    split.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    expect(host.style.getPropertyValue('--te-preview-share')).toBe('55%');
+    for (let i = 0; i < 20; i++) split.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    expect(host.style.getPropertyValue('--te-preview-share')).toBe('20%');
+    expect(split.getAttribute('aria-valuenow')).toBe('20');
+    expect(JSON.parse(sessionStorage.getItem(`${key}:layout`)!).preview).toBe(20);
+    const next = setup({ key });
+    expect(next.host.style.getPropertyValue('--te-preview-share')).toBe('20%');
   });
 
   it('the separator changes the width (keys), within bounds, remembered', () => {
