@@ -2,7 +2,7 @@
 // (VersionControls). Entry of features/versions/. See ARCHITECTURE.md, "GitLab-backed rooms".
 import { Disposable } from '../../core/disposable/disposable';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
-import { DEFAULT_COMMIT_MESSAGE, type ServerMessage } from '../collaboration/gitlab-protocol';
+import { DEFAULT_COMMIT_MESSAGE, type ServerMessage } from '../../extensions/collaboration/model/gitlab-protocol';
 import { FieldPopover } from '../../ui/field-popover/field-popover';
 
 /**

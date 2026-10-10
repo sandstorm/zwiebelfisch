@@ -1,14 +1,14 @@
 // GitLabRoom: one GitLab-backed room: loads the branch into the Y.Doc, commits versions, merges upstream pushes.
 // See ARCHITECTURE.md, "GitLab-backed rooms".
 import * as Y from 'yjs';
-import { ASSETS_MAP, META_MAP, type RoomMeta, type ServerMessage } from '../../../src/features/collaboration/gitlab-protocol.ts';
+import { ASSETS_MAP, META_MAP, type RoomMeta, type ServerMessage } from '../../../src/extensions/collaboration/model/gitlab-protocol.ts';
 import type { BlobCache } from './blob-cache.ts';
 import { blobSha } from './blob-sha.ts';
 import { commitActions, type RoomFiles } from './commit-actions.ts';
 import { GitLabError, type GitLabProject } from './gitlab-api.ts';
 import { mergeFiles, textEdits } from './merge.ts';
 
-/** The widget's map of shared Typst files (path → Y.Text), see src/features/collaboration/shared-project.ts. */
+/** The widget's map of shared Typst files (path → Y.Text), see src/extensions/collaboration/model/shared-project.ts. */
 const FILES_MAP = 'files';
 
 /** How often a save merges upstream and tries again when the branch keeps moving. */

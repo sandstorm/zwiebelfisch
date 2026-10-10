@@ -1,8 +1,8 @@
 // SharedProject: the Project's Typst files as Y.Texts in a Y.Doc. See collaboration.ts.
 import * as Y from 'yjs';
-import type { TypstDocument } from '../../core/typst-document/typst-document';
-import { type Project } from '../../core/project/project';
-import { ProjectPath } from '../../core/paths/paths';
+import type { TypstDocument } from '../../../core/typst-document/typst-document';
+import { type Project } from '../../../core/project/project';
+import { ProjectPath } from '../../../core/paths/paths';
 
 /** The Y.Doc's map of shared Typst files: path → text. */
 export const FILES_MAP = 'files';

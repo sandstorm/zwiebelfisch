@@ -4,7 +4,7 @@ import { type EditorView, ViewPlugin } from '@codemirror/view';
 import type { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
-import type { SourceViewExtension } from '../contribution';
+import type { SourceViewExtension } from '../../../hosts/source-view/source-view';
 
 /** A compiler diagnostic located in the text shown by a SourceView (UTF-16 offsets). */
 export interface SourceDiagnostic {

@@ -1,10 +1,10 @@
 // Tests for shared-project.ts.
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
-import { Project } from '../../core/project/project';
+import { Project } from '../../../core/project/project';
 import { connect } from './in-process';
 import { SharedProject } from './shared-project';
-import { ProjectPath } from '../../core/paths/paths';
+import { ProjectPath } from '../../../core/paths/paths';
 
 const path = ProjectPath.of;
 

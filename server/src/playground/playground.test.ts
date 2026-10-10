@@ -4,7 +4,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Hocuspocus, type onRequestPayload } from '@hocuspocus/server';
 import { afterEach, describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
-import type { ServerMessage } from '../../../src/features/collaboration/gitlab-protocol.ts';
+import type { ServerMessage } from '../../../src/extensions/collaboration/model/gitlab-protocol.ts';
 import { collabConfiguration } from '../collab-server.ts';
 import { FakeGitLab } from '../gitlab/fake-gitlab.ts';
 import { PLAYGROUND_PROJECT, PLAYGROUND_ROOM, PlaygroundEndpoints, playgroundOptions, upstreamEdit } from './playground.ts';

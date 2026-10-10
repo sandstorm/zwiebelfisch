@@ -1,7 +1,7 @@
 // SharedAssets: the project's non-Typst files in a GitLab-backed room. See collaboration.ts.
 import * as Y from 'yjs';
-import { type FileChange, type Project } from '../../core/project/project';
-import { ProjectPath } from '../../core/paths/paths';
+import { type FileChange, type Project } from '../../../core/project/project';
+import { ProjectPath } from '../../../core/paths/paths';
 import { ASSETS_MAP } from './gitlab-protocol';
 
 type AssetValue = string | Uint8Array;

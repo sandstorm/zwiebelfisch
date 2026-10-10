@@ -5,7 +5,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import type { Highlight } from '../../core/typst-document/typst-document';
 import type { Diagnostic } from '../../core/typst-engine/typst-engine';
-import { DiagnosticCollection, describeDiagnostic, lint, type SourceDiagnostic } from '../../hosts/source-view/source-view';
+import { DiagnosticCollection, describeDiagnostic, lint, type SourceDiagnostic } from './source-view/source-view';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import { inProject, summarizeDiagnostics, type DiagnosticTarget, type DiagnosticsSummary } from './diagnostics-summary';
 

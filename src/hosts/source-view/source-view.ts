@@ -14,16 +14,12 @@ export type { LinkProviderFactory, SourceViewContext, SourceViewExtension } from
 export type { SourceView, SourceViewOptions } from './view';
 export {
   codeColors,
-  DiagnosticCollection,
-  describeDiagnostic,
   documentLinks,
   fileLinks,
   isLightText,
-  lint,
   presence,
   remotePresence,
   showPresence,
-  type SourceDiagnostic,
   typstLanguage,
 } from './builtins/builtins';
 

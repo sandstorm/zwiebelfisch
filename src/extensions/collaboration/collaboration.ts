@@ -1,12 +1,14 @@
 // The collaboration extension and CollaborationLink: connects the widget to a Collaboration (loaded on demand, so
 // this file must stay outside the lazily loaded chunk). See ARCHITECTURE.md, "Collaboration".
-import type { Collaboration, CollaborationOptions, CollaborationUser, RoomVersions, Shared } from './collaboration';
+import type { Collaboration, CollaborationOptions, CollaborationUser, RoomVersions, Shared } from './model/model';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { PlacedPresence, PresenceTarget } from '../../core/typst-document/typst-document';
 import { presence as sourcePresence } from '../../hosts/source-view/source-view';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
+
+export type { CollaborationOptions } from './model/model';
 
 declare module '../../hosts/workbench/workbench' {
   interface ServiceRegistry {
@@ -122,7 +124,7 @@ export class CollaborationLink {
   }
 
   private async start(options: CollaborationOptions, shared: Shared): Promise<void> {
-    const { Collaboration } = await import('./collaboration');
+    const { Collaboration } = await import('./model/model');
     const collaboration = await Collaboration.start(options, shared);
     if (this.destroyed) {
       collaboration.destroy();

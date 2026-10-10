@@ -6,12 +6,12 @@ import type { Editor } from '@tiptap/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
-import { addMarginNote } from '../comments/comments';
+import { addMarginNote } from '../../features/comments/comments';
 import { Project } from '../../core/project/project';
 import { presence, SourceViewHost } from '../../hosts/source-view/source-view';
 import { headings, marginNotes, markup, VisualView, VisualViewContributions } from '../../hosts/visual-view/visual-view';
-import { Collaboration } from './collaboration';
-import { connect, connectAwareness } from './in-process';
+import { Collaboration } from './model/model';
+import { connect, connectAwareness } from './model/in-process';
 import { ProjectPath } from '../../core/paths/paths';
 
 const path = ProjectPath.of;
