@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest';
 import { Project } from '../../../core/project/project';
 import { LabelIndex } from '../model/label-index';
 import { createVisualView, TestPrompts } from '../../../testing/testing';
+import { VisualView, VisualViewContributions } from '../../../hosts/visual-view/visual-view';
+import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { ProjectPath } from '../../../core/paths/paths';
 import type { InputBoxOptions } from '../../../hosts/workbench/workbench';
 import { references } from './visual-view';
@@ -183,5 +185,18 @@ describe('references in the Visual view', () => {
     parent.querySelector<HTMLElement>('h1 [data-testid="typst-label-tag"]')!.click();
     await tick();
     expect(text(path('/chapters/introduction.typ'))).toBe(before);
+  });
+});
+
+describe('references without the other constructs', () => {
+  it('offers the labels after @ also where no extension contributes inline code', () => {
+    const project = new Project(path('/main.typ'), { '/main.typ': '= Intro <intro>\n\nText\n' });
+    const contributions = VisualViewContributions.from([references({ labels: new LabelIndex(project), prompts: new TestPrompts() })]);
+    const parent = document.body.appendChild(document.createElement('div'));
+    new VisualView(parent, new TypstDocument('Text\n'), contributions);
+    const editor = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
+    cursorAfter(editor, 'Text');
+    type(editor, ' @');
+    expect(parent.querySelector<HTMLElement>('[data-testid="typst-ref-suggestions"]')!.hidden).toBe(false);
   });
 });
