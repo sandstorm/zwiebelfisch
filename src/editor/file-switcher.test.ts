@@ -76,6 +76,58 @@ describe('FileSwitcher', () => {
     expect(parent.querySelector('.typst-files__prompt')).toBeNull();
   });
 
+  describe('dropped files', () => {
+    // jsdom's File has no arrayBuffer()
+    const png = Object.assign(new File([new Uint8Array([1])], 'cat.png', { type: 'image/png' }), {
+      arrayBuffer: async () => new Uint8Array([1]).buffer,
+    });
+
+    function drop(target: HTMLElement, files: File[]) {
+      const event = new Event('drop', { bubbles: true, cancelable: true });
+      Object.defineProperty(event, 'dataTransfer', { value: { files, types: ['Files'] } });
+      target.dispatchEvent(event);
+      return event;
+    }
+
+    function enter(target: HTMLElement) {
+      const event = new Event('dragenter', { bubbles: true });
+      Object.defineProperty(event, 'dataTransfer', { value: { types: ['Files'] } });
+      target.dispatchEvent(event);
+    }
+
+    it('are uploaded and the hint goes away', async () => {
+      const { parent, change } = setup();
+      enter(parent);
+      expect(parent.classList.contains('typst-editor--dropping')).toBe(true);
+      expect(drop(parent, [png]).defaultPrevented).toBe(true);
+      await vi.waitFor(() => expect(change).toHaveBeenCalledWith(expect.objectContaining({ kind: 'create', path: '/cat.png' })));
+      expect(parent.classList.contains('typst-editor--dropping')).toBe(false);
+    });
+
+    it('are left to a view inside that takes them (e.g. images dropped into the text); the hint goes away', async () => {
+      const { parent, change } = setup();
+      const view = parent.appendChild(document.createElement('div'));
+      view.addEventListener('drop', (event) => (event.preventDefault(), event.stopPropagation()));
+      enter(view);
+      drop(view, [png]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(change).not.toHaveBeenCalled();
+      expect(parent.classList.contains('typst-editor--dropping')).toBe(false);
+    });
+
+    it('never make the browser leave the page, also while the file bar is hidden', async () => {
+      const { parent, switcher, change } = setup();
+      switcher.visible = false;
+      const over = new Event('dragover', { bubbles: true, cancelable: true });
+      Object.defineProperty(over, 'dataTransfer', { value: { types: ['Files'] } });
+      parent.dispatchEvent(over);
+      expect(over.defaultPrevented).toBe(true);
+      expect(drop(parent, [png]).defaultPrevented).toBe(true);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(change).not.toHaveBeenCalled();
+    });
+  });
+
   it('can be hidden', () => {
     const { parent, switcher } = setup();
     switcher.visible = false;

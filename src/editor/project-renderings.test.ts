@@ -50,16 +50,28 @@ describe('ProjectRenderings', () => {
   it('lists the project images and uploads new ones, with paths as written in the document', async () => {
     const { chapter, project, request } = setup({ '/chapters/fig.svg': '<svg/>' });
     expect(chapter.assets!.list()).toEqual(['fig.svg', '/img/logo.png']);
-    const path = await chapter.assets!.upload(new File([new Uint8Array([9])], 'cat.png'));
+    const result = await chapter.assets!.upload(new File([new Uint8Array([9])], 'cat.png'));
     expect(request).toHaveBeenCalledWith(expect.objectContaining({ kind: 'create', path: '/cat.png' }));
-    expect(path).toBe('/cat.png');
+    expect(result).toEqual({ path: '/cat.png' });
     expect(project.has('/cat.png')).toBe(true);
   });
 
-  it('does not insert an upload that was refused or is no image', async () => {
+  it('says why an upload was refused or is no image it can show', async () => {
     const { chapter, request } = setup();
     request.mockResolvedValueOnce('This change is not allowed here.');
-    expect(await chapter.assets!.upload(new File(['x'], 'cat.png'))).toBeNull();
-    expect(await chapter.assets!.upload(new File(['x'], 'notes.txt'))).toBeNull();
+    expect(await chapter.assets!.upload(new File(['x'], 'cat.png'))).toEqual({ error: 'This change is not allowed here.' });
+    expect(await chapter.assets!.upload(new File(['x'], 'photo.heic'))).toEqual({
+      error: 'photo.heic is not an image the document can show (PNG, JPEG, GIF, SVG or WebP).',
+    });
+  });
+
+  it('reuses an image already in the project with the same content; a different one gets a free name', async () => {
+    const { chapter, project, request } = setup({ '/image.png': new Uint8Array([9]), '/image-2.png': new Uint8Array([7]) });
+    expect(await chapter.assets!.upload(new File([new Uint8Array([9])], 'image.png'))).toEqual({ path: '/image.png' });
+    expect(request).not.toHaveBeenCalled();
+    // e.g. a second pasted screenshot: browsers name them all image.png
+    expect(await chapter.assets!.upload(new File([new Uint8Array([8])], 'image.png'))).toEqual({ path: '/image-3.png' });
+    expect(project.content('/image-3.png')).toEqual(new Uint8Array([8]));
+    expect(await chapter.assets!.upload(new File([new Uint8Array([7])], 'image.png'))).toEqual({ path: '/image-2.png' });
   });
 });

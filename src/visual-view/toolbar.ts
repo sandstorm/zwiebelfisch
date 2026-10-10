@@ -1,7 +1,8 @@
 import type { ChainedCommands, Editor } from '@tiptap/core';
 import { FieldPopover } from './field-popover';
 import { ImageChoices, type ImageAssets } from './image-choices';
-import { imageSource } from './projection';
+import type { Plugin } from '@tiptap/pm/state';
+import { imageFileDrops, insertImages } from './image-insertion';
 
 /** A toolbar button: how it looks, what it does, and when it shows as on. */
 interface Action {
@@ -102,6 +103,8 @@ export class Toolbar {
   private readonly refresh = () => this.refreshers.forEach((fn) => fn());
   private readonly linkPopover: FieldPopover;
   private readonly imagePopover: FieldPopover;
+  /** Takes image files dropped on or pasted into the text (with `assets` only). */
+  private imageFiles: Plugin | null = null;
   private readonly linkShortcut = (event: KeyboardEvent) => {
     if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey) return;
     if ((event.target as Element).closest?.('.cm-editor')) return; // in a raw box
@@ -155,6 +158,7 @@ export class Toolbar {
   }
 
   destroy(): void {
+    if (this.imageFiles) this.editor.unregisterPlugin(this.imageFiles.spec.key!);
     this.editor.view.dom.removeEventListener('keydown', this.linkShortcut);
     this.linkPopover.destroy();
     this.imagePopover.destroy();
@@ -163,23 +167,33 @@ export class Toolbar {
     this.root.remove();
   }
 
-  /** "Insert image" and its popover: a path field, plus the project's images and an upload with `assets`. */
+  /**
+   * "Insert image" and its popover: a path field, plus the project's images
+   * and an upload with `assets`. With them, image files dropped on or pasted
+   * into the text are uploaded and inserted too (refusals open the popover).
+   */
   private imageAction(assets: ImageAssets | undefined): [Action, FieldPopover] {
-    const insert = (path: string) =>
-      this.editor.chain().focus().insertContent({ type: 'image', attrs: { src: imageSource(path) } }).run();
     const choices = assets
-      ? new ImageChoices(this.root.ownerDocument, assets, (path) => {
+      ? new ImageChoices(this.root.ownerDocument, assets, (paths, near) => {
           popover.close();
-          insert(path);
+          insertImages(this.editor, paths, near);
         })
       : null;
     const popover = new FieldPopover(this.root, {
       label: 'Image',
       field: 'Image path',
       placeholder: 'images/figure.png',
-      apply: insert,
+      apply: (path) => insertImages(this.editor, [path]),
       extra: choices?.element,
     });
+    if (choices) {
+      this.imageFiles = imageFileDrops(async (files, near) => {
+        const added = await choices.upload(files, near);
+        const button = this.root.querySelector<HTMLButtonElement>('button[aria-label="Insert image"]');
+        if (!added && !popover.isOpen && button) popover.open(button, '', false);
+      });
+      this.editor.registerPlugin(this.imageFiles);
+    }
     const action: Action = {
       label: 'Insert image',
       icon: ICONS.image,

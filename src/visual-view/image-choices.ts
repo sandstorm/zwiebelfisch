@@ -2,22 +2,24 @@
 export interface ImageAssets {
   /** The project's images, as paths to write in `#image(..)` in this document. */
   list(): string[];
-  /** Adds `file` to the project; resolves to the path to write in `#image(..)`, or null when it was not added. */
-  upload(file: File): Promise<string | null>;
+  /** Adds `file` to the project; resolves to the path to write in `#image(..)`, or why it was not added (in words for people). */
+  upload(file: File): Promise<{ path: string } | { error: string }>;
 }
 
 /**
  * The part of the "Insert image" popover that offers the project's images
- * (one button each) and an upload. Calls `choose` with the path to insert.
+ * (one button each) and an upload. Calls `choose` with the paths to insert,
+ * and shows why an upload was not added.
  */
 export class ImageChoices {
   readonly element: HTMLElement;
   private readonly list: HTMLElement;
+  private readonly error: HTMLElement;
 
   constructor(
     doc: Document,
     private readonly assets: ImageAssets,
-    private readonly choose: (path: string) => void,
+    private readonly choose: (paths: string[], near?: number) => void,
   ) {
     this.element = doc.createElement('div');
     this.element.className = 'typst-popover__choices';
@@ -25,28 +27,33 @@ export class ImageChoices {
     this.list.className = 'typst-popover__files';
     this.list.addEventListener('click', (event) => {
       const path = (event.target as HTMLElement).closest<HTMLElement>('[data-path]')?.dataset.path;
-      if (path) choose(path);
+      if (path) choose([path]);
     });
     const picker = doc.createElement('input');
     picker.type = 'file';
-    picker.accept = 'image/*';
+    // The formats Typst can show; others would only be refused after picking.
+    picker.accept = '.png,.jpg,.jpeg,.gif,.svg,.webp';
     picker.hidden = true;
     picker.addEventListener('change', () => {
       const file = picker.files?.[0];
       picker.value = '';
-      if (file) void this.upload(file);
+      if (file) void this.upload([file]);
     });
     const upload = doc.createElement('button');
     upload.type = 'button';
     upload.textContent = 'Upload image…';
     upload.addEventListener('click', () => picker.click());
-    this.element.append(this.list, upload, picker);
+    this.error = doc.createElement('span');
+    this.error.className = 'typst-popover__error';
+    this.error.setAttribute('role', 'alert');
+    this.element.append(this.list, upload, picker, this.error);
     this.refresh();
   }
 
-  /** Lists the project's images as they are now. */
+  /** Lists the project's images as they are now, and forgets an earlier upload error. */
   refresh(): void {
     const doc = this.element.ownerDocument;
+    this.error.textContent = '';
     this.list.replaceChildren(
       ...this.assets.list().map((path) => {
         const button = doc.createElement('button');
@@ -58,8 +65,20 @@ export class ImageChoices {
     );
   }
 
-  private async upload(file: File): Promise<void> {
-    const path = await this.assets.upload(file);
-    if (path !== null) this.choose(path);
+  /**
+   * Uploads `files` one by one, then chooses those that were added (to go
+   * near document position `near`, if given). Resolves to false when it
+   * shows why one was not added.
+   */
+  async upload(files: File[], near?: number): Promise<boolean> {
+    this.error.textContent = '';
+    const paths: string[] = [];
+    for (const file of files) {
+      const result = await this.assets.upload(file);
+      if ('path' in result) paths.push(result.path);
+      else this.error.textContent = result.error;
+    }
+    if (paths.length > 0) this.choose(paths, near);
+    return this.error.textContent === '';
   }
 }

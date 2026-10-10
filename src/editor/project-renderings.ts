@@ -1,7 +1,8 @@
 import type { TypstDocument } from '../document/typst-document';
 import type { Preview } from '../preview/preview';
 import type { VisualViewOptions } from '../visual-view/visual-view';
-import { fileKind, imageBlob, referencePath, resolvePath } from './paths';
+import type { FileContent } from '../preview/project-files';
+import { extensionOf, fileKind, imageBlob, referencePath, resolvePath } from './paths';
 import type { FileChange, Project } from './project';
 import { uploadChanges } from './upload';
 
@@ -68,11 +69,35 @@ export class ProjectRenderings {
     return url;
   }
 
-  private async upload(upload: File, file: string | undefined): Promise<string | null> {
-    if (!file) return null;
+  private async upload(upload: File, file: string | undefined): Promise<{ path: string } | { error: string }> {
+    if (!file) return { error: 'This document is no longer part of the project.' };
     const [change] = await uploadChanges([upload]);
-    if (change.kind !== 'create' || fileKind(change.path) !== 'image') return null;
-    const problem = await this.options.request(change);
-    return problem === null ? referencePath(file, change.path) : null;
+    if (change.kind !== 'create' || fileKind(change.path) !== 'image') {
+      return { error: `${upload.name} is not an image the document can show (PNG, JPEG, GIF, SVG or WebP).` };
+    }
+    const target = this.placeFor(change.path, change.content);
+    if (this.options.project.has(target)) return { path: referencePath(file, target) };
+    const problem = await this.options.request({ ...change, path: target });
+    return problem === null ? { path: referencePath(file, target) } : { error: problem };
   }
+
+  /**
+   * Where an upload of `content` named `path` goes: a file with the same
+   * content (`name.png`, `name-2.png`, …), else the first free one of those
+   * names (browsers name every pasted screenshot `image.png`).
+   */
+  private placeFor(path: string, content: FileContent): string {
+    const extension = extensionOf(path);
+    const stem = path.slice(0, path.length - extension.length);
+    for (let n = 1; ; n++) {
+      const candidate = n === 1 ? path : `${stem}-${n}${extension}`;
+      const existing = this.options.project.content(candidate);
+      if (existing === undefined || sameContent(existing, content)) return candidate;
+    }
+  }
+}
+
+function sameContent(a: FileContent, b: FileContent): boolean {
+  if (typeof a === 'string' || typeof b === 'string') return a === b;
+  return a.length === b.length && a.every((byte, i) => byte === b[i]);
 }

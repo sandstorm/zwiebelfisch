@@ -200,7 +200,8 @@ class Widget {
         if (this.project.pathOf(document) === this.project.main) this.changes.setBase(base);
       },
     });
-    this.switcher = new FileSwitcher(this.left, this.left, {
+    // Drops anywhere on the widget (also the preview): never the browser opening the file instead.
+    this.switcher = new FileSwitcher(this.left, host, {
       onOpen: (path) => this.open(path),
       onChange: (change) => this.request(change),
     });

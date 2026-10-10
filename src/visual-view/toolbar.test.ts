@@ -148,7 +148,7 @@ describe('Visual view toolbar', () => {
   });
 
   it('inserts an image picked from the project files', () => {
-    const assets = { list: () => ['img/logo.png', '/shared/photo.jpg'], upload: async () => null };
+    const assets = { list: () => ['img/logo.png', '/shared/photo.jpg'], upload: async () => ({ error: 'unused' }) };
     const { doc, view, toolbar, button } = setup('Text\n', { assets });
     view.reveal(4, 4);
     button('Insert image').click();
@@ -162,7 +162,7 @@ describe('Visual view toolbar', () => {
 
   it('uploads an image into the project and inserts it', async () => {
     const uploaded: File[] = [];
-    const assets = { list: () => [], upload: async (file: File) => (uploaded.push(file), `img/${file.name}`) };
+    const assets = { list: () => [], upload: async (file: File) => (uploaded.push(file), { path: `img/${file.name}` }) };
     const { doc, view, toolbar, button } = setup('Text\n', { assets });
     view.reveal(4, 4);
     button('Insert image').click();
@@ -174,6 +174,150 @@ describe('Visual view toolbar', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(uploaded).toEqual([file]);
     expect(doc.text).toBe('Text\n\n#image("img/cat.png")\n');
+  });
+
+  it('shows why an upload was refused, keeps the popover open and the text unchanged', async () => {
+    const assets = { list: () => [], upload: async () => ({ error: 'This change is not allowed here.' }) };
+    const { doc, view, toolbar, button } = setup('Text\n', { assets });
+    view.reveal(4, 4);
+    button('Insert image').click();
+    const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
+    const input = popover.querySelector<HTMLInputElement>('input[type="file"]')!;
+    Object.defineProperty(input, 'files', { value: [new File([new Uint8Array([1])], 'cat.png')], configurable: true });
+    input.dispatchEvent(new Event('change'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(popover.hidden).toBe(false);
+    expect(popover.querySelector('[role="alert"]')!.textContent).toBe('This change is not allowed here.');
+    expect(doc.text).toBe('Text\n');
+    button('Insert image').click();
+    button('Insert image').click();
+    expect(popover.querySelector('[role="alert"]')!.textContent).toBe('');
+  });
+
+  describe('image insertion never replaces or splits content', () => {
+    const SOURCE = '#set page(width: 16cm)\n#set text(size: 12pt)\n\n= Hello\n\nSome text here.\n';
+
+    function insertPath(toolbar: HTMLElement, button: (label: string) => HTMLButtonElement, path: string) {
+      button('Insert image').click();
+      const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
+      popover.querySelector('input')!.value = path;
+      popover.requestSubmit();
+    }
+
+    it('goes after the selected raw block (the initial selection) instead of replacing it', () => {
+      const { doc, toolbar, button } = setup(SOURCE);
+      insertPath(toolbar, button, 'cat.png');
+      expect(doc.text).toBe('#set page(width: 16cm)\n#set text(size: 12pt)\n\n#image("cat.png")\n\n= Hello\n\nSome text here.\n');
+    });
+
+    it('goes after the heading the cursor is in instead of splitting it', () => {
+      const { doc, view, toolbar, button } = setup(SOURCE);
+      const at = SOURCE.indexOf('Hello') + 2;
+      view.reveal(at, at);
+      insertPath(toolbar, button, 'cat.png');
+      expect(doc.text).toBe('#set page(width: 16cm)\n#set text(size: 12pt)\n\n= Hello\n\n#image("cat.png")\n\nSome text here.\n');
+    });
+
+    it('keeps selected text and goes after its paragraph', () => {
+      const { doc, view, toolbar, button } = setup(SOURCE);
+      view.reveal(SOURCE.indexOf('Some'), SOURCE.indexOf(' here'));
+      insertPath(toolbar, button, 'cat.png');
+      expect(doc.text).toBe(`${SOURCE}\n#image("cat.png")\n`);
+    });
+
+    it('fills an empty document', () => {
+      const { doc, toolbar, button } = setup('');
+      insertPath(toolbar, button, 'cat.png');
+      expect(doc.text).toBe('#image("cat.png")');
+    });
+  });
+
+  describe('image files dropped or pasted into the text', () => {
+    const png = (name: string) => new File([new Uint8Array([1])], name, { type: 'image/png' });
+    const pdf = new File(['%PDF'], 'paper.pdf', { type: 'application/pdf' });
+
+    /** A drop / paste event carrying `files`, as the browser sends it. */
+    function fileEvent(type: 'drop' | 'paste', files: File[]) {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      const data = { files, types: ['Files'], getData: () => '' };
+      Object.defineProperty(event, type === 'drop' ? 'dataTransfer' : 'clipboardData', { value: data });
+      return event;
+    }
+
+    function withUploads(error?: string) {
+      const uploaded: string[] = [];
+      const assets = {
+        list: () => [],
+        upload: async (file: File) => (error ? { error } : (uploaded.push(file.name), { path: file.name })),
+      };
+      return { assets, uploaded };
+    }
+
+    const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+    it('a pasted image is uploaded and inserted after the paragraph with the cursor', async () => {
+      const { assets, uploaded } = withUploads();
+      const { doc, view, parent } = setup('One\n\nTwo\n', { assets });
+      view.reveal(1, 1);
+      const event = fileEvent('paste', [png('shot.png')]);
+      parent.querySelector('[contenteditable]')!.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(true);
+      await settle();
+      expect(uploaded).toEqual(['shot.png']);
+      expect(doc.text).toBe('One\n\n#image("shot.png")\n\nTwo\n');
+    });
+
+    it('dropped images are uploaded and inserted in order, instead of the browser opening the file', async () => {
+      const { assets, uploaded } = withUploads();
+      const { doc, view, parent } = setup('One\n', { assets });
+      view.reveal(3, 3);
+      const outside: Event[] = [];
+      parent.addEventListener('drop', (e) => outside.push(e));
+      const event = fileEvent('drop', [png('a.png'), pdf, png('b.png')]);
+      parent.querySelector('[contenteditable]')!.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(true);
+      expect(outside).toEqual([]); // not uploaded once more by the file bar
+      await settle();
+      expect(uploaded).toEqual(['a.png', 'b.png']);
+      expect(doc.text).toBe('One\n\n#image("a.png")\n\n#image("b.png")\n');
+    });
+
+    it('leaves drops without images alone (the file bar may take them)', () => {
+      const { assets } = withUploads();
+      const { doc, parent } = setup('One\n', { assets });
+      const event = fileEvent('drop', [pdf]);
+      parent.querySelector('[contenteditable]')!.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+      expect(doc.text).toBe('One\n');
+    });
+
+    it('shows why a dropped image was not added in the image popover', async () => {
+      const { assets } = withUploads('This change is not allowed here.');
+      const { doc, toolbar, parent } = setup('One\n', { assets });
+      parent.querySelector('[contenteditable]')!.dispatchEvent(fileEvent('drop', [png('a.png')]));
+      await settle();
+      const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
+      expect(popover.hidden).toBe(false);
+      expect(popover.querySelector('[role="alert"]')!.textContent).toBe('This change is not allowed here.');
+      expect(doc.text).toBe('One\n');
+    });
+
+    it('without assets, dropped files are left to the browser as before', () => {
+      const { parent } = setup('One\n');
+      const event = fileEvent('drop', [png('a.png')]);
+      parent.querySelector('[contenteditable]')!.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+    });
+  });
+
+  it('keeps the image popover inside the toolbar when its button is near the right edge', () => {
+    const { toolbar, button } = setup('Text\n', { assets: { list: () => [], upload: async () => ({ error: 'unused' }) } });
+    const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
+    Object.defineProperty(toolbar, 'clientWidth', { value: 300 });
+    Object.defineProperty(popover, 'offsetWidth', { value: 200 });
+    Object.defineProperty(button('Insert image'), 'offsetLeft', { value: 250 });
+    button('Insert image').click();
+    expect(popover.style.left).toBe('100px');
   });
 
   it('inserts a table and adds and deletes rows and columns', () => {
