@@ -34,6 +34,9 @@ const ICONS = {
       '<path d="M3.5 14h2.5l-2.5 4h2.5" stroke-width="1.5"/>',
   ),
   link: svg('<path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/>'),
+  code: svg('<path d="m8 7-5 5 5 5"/><path d="m16 7 5 5-5 5"/>'),
+  codeBlock: svg('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="m10 9-3 3 3 3"/><path d="m14 9 3 3-3 3"/>'),
+  outline: svg('<path d="M4 6h10M7 10h13M7 14h13M4 18h10"/>'),
   image: svg('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 17-5-5-9 8"/>'),
   table: svg('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M12 4v16"/>'),
   addRow: svg('<rect x="3" y="4" width="18" height="9" rx="2"/><path d="M12 16v5M9.5 18.5h5"/>'),
@@ -49,11 +52,18 @@ const HISTORY: Action[] = [
 const MARKS: Action[] = [
   { label: 'Bold', shortcut: 'Mod+B', icon: ICONS.bold, run: (c) => c.toggleBold(), active: (e) => e.isActive('bold') },
   { label: 'Italic', shortcut: 'Mod+I', icon: ICONS.italic, run: (c) => c.toggleItalic(), active: (e) => e.isActive('italic') },
+  { label: 'Code', shortcut: 'Mod+E', icon: ICONS.code, run: (c) => c.toggleCode(), active: (e) => e.isActive('code') },
 ];
-const LISTS: Action[] = [
+const BLOCKS: Action[] = [
   { label: 'Bulleted list', icon: ICONS.bulletList, run: (c) => c.toggleBulletList(), active: (e) => e.isActive('bulletList') },
   { label: 'Numbered list', icon: ICONS.orderedList, run: (c) => c.toggleOrderedList(), active: (e) => e.isActive('orderedList') },
+  { label: 'Code block', icon: ICONS.codeBlock, run: (c) => c.toggleCodeBlock(), active: (e) => e.isActive('codeBlock') },
 ];
+const OUTLINE: Action = {
+  label: 'Table of contents',
+  icon: ICONS.outline,
+  run: (c) => c.insertContent({ type: 'outline', attrs: { src: '#outline()' } }),
+};
 
 const TABLES: Action[] = [
   { label: 'Insert table', icon: ICONS.table, run: (c) => c.insertTable({ rows: 2, cols: 2, withHeaderRow: false }) },
@@ -90,10 +100,10 @@ function currentStyle(editor: Editor): string {
 
 /**
  * The Visual view's formatting toolbar: undo/redo, a paragraph style menu
- * (normal text, headings 1–3), bold/italic, link (Mod+K, asks for the URL in
- * a popover), the two list kinds, insert image (asks for its path, or offers
- * the project's images and an upload when given `assets`) and table
- * editing. Buttons reflect the selection (pressed, disabled) after every
+ * (normal text, headings 1–3), bold/italic/inline code, link (Mod+K, asks for
+ * the URL in a popover), the two list kinds and code block, insert image (asks
+ * for its path, or offers the project's images and an upload when given
+ * `assets`), table of contents (`#outline()`) and table editing. Buttons reflect the selection (pressed, disabled) after every
  * transaction and never take the focus away from the text.
  */
 export class Toolbar {
@@ -144,8 +154,8 @@ export class Toolbar {
       this.group(HISTORY),
       this.styleMenu(),
       this.group([...MARKS, link]),
-      this.group(LISTS),
-      this.group([image, ...TABLES]),
+      this.group(BLOCKS),
+      this.group([image, OUTLINE, ...TABLES]),
     );
     parent.prepend(this.root);
     editor.view.dom.addEventListener('keydown', this.linkShortcut);

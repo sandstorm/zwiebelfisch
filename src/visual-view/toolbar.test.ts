@@ -192,6 +192,50 @@ describe('Visual view toolbar', () => {
     expect(doc.text).toBe('Text\n\n#table(\n  columns: 2,\n  [], [],\n  [], [],\n)\n');
   });
 
+  it('Code marks the selection as inline code', () => {
+    const { doc, view, button } = setup('Hello world\n');
+    view.reveal(6, 11);
+    button('Code').click();
+    expect(doc.text).toBe('Hello `world`\n');
+    expect(button('Code').getAttribute('aria-pressed')).toBe('true');
+    button('Code').click();
+    expect(doc.text).toBe('Hello world\n');
+  });
+
+  it('Code block turns the paragraph into a code block and back', () => {
+    const { doc, view, button } = setup('Hello *world*\n');
+    view.reveal(0, 0);
+    button('Code block').click();
+    expect(doc.text).toBe('```\nHello world\n```\n');
+    expect(button('Code block').getAttribute('aria-pressed')).toBe('true');
+    button('Code block').click();
+    expect(doc.text).toBe('Hello world\n');
+  });
+
+  it('the language field of a code block sets its language tag', () => {
+    const { doc, parent } = setup('Text\n\n```rust\nfn main() {}\n```\n');
+    const field = parent.querySelector<HTMLInputElement>('input[aria-label="Language"]')!;
+    expect(field.value).toBe('rust');
+    field.value = 'python';
+    field.dispatchEvent(new Event('input'));
+    expect(doc.text).toBe('Text\n\n```python\nfn main() {}\n```\n');
+    field.value = 'c++';
+    field.dispatchEvent(new Event('input'));
+    expect(field.value).toBe('c');
+    expect(doc.text).toBe('Text\n\n```c\nfn main() {}\n```\n');
+    field.value = '';
+    field.dispatchEvent(new Event('input'));
+    expect(doc.text).toBe('Text\n\n```\nfn main() {}\n```\n');
+  });
+
+  it('Table of contents inserts #outline() as its own block', () => {
+    const { doc, view, button, parent } = setup('= Intro\n\nText\n');
+    view.reveal(15, 15);
+    button('Table of contents').click();
+    expect(doc.text).toBe('= Intro\n\nText\n\n#outline()\n');
+    expect(parent.querySelector('.typst-visual__outline .typst-visual__box-label')?.textContent).toBe('Table of contents');
+  });
+
   it('keeps the editor focused: mousedown on a button does not steal focus', () => {
     const { button } = setup('Hello\n');
     const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true });

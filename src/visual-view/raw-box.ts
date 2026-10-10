@@ -16,7 +16,13 @@ type Side = -1 | 1;
 /** The open raw boxes by their DOM, so arrow keys in the outer editor can move into them. */
 const boxes = new WeakMap<globalThis.Node, RawBox>();
 
-const RAW_TYPES = new Set(['rawBlock', 'rawInline', 'image']);
+const RAW_TYPES = new Set(['rawBlock', 'rawInline', 'image', 'outline']);
+
+/** Boxes headed by what they show, by node type: the heading's text from the source. */
+const LABELS: Record<string, { className: string; text(src: string): string }> = {
+  image: { className: 'typst-visual__image', text: (src) => `Image: ${imagePath(src) ?? '(no path)'}` },
+  outline: { className: 'typst-visual__outline', text: () => 'Table of contents' },
+};
 
 /** What the raw boxes of an editor show while not edited (see `setBoxRenderer`). */
 const renderers = new WeakMap<Editor, BoxRenderer>();
@@ -44,7 +50,7 @@ const inlineTheme = CodeView.theme({
 });
 
 /**
- * A raw box (`rawBlock` / `rawInline` / `image`): Typst the Visual view does not model,
+ * A raw box (`rawBlock` / `rawInline` / `image` / `outline`): Typst the Visual view does not model,
  * edited in place in a nested CodeMirror with Typst highlighting.
  *
  * The box's text is the node's `src` attribute, which the projection prints
@@ -53,12 +59,12 @@ const inlineTheme = CodeView.theme({
  * box as one minimal change. Undo/redo go to the Visual view's history;
  * arrow keys at the edges, Escape (and Enter in inline boxes) leave the box;
  * Backspace in an empty box deletes it. An `image` box is headed by the path
- * of its image. With a renderer (`setBoxRenderer`), the box shows the image or
+ * of its image, an `outline` box by "Table of contents". With a renderer (`setBoxRenderer`), the box shows the image or
  * its compiled snippet instead of the code until it gets focus.
  */
 class RawBox implements NodeView {
   readonly dom: HTMLElement;
-  /** Above the code of an image box: which image it shows. */
+  /** Above the code of an image or outline box: what it shows. */
   private readonly label: HTMLElement | null = null;
   private readonly code: CodeView;
   private readonly rendered: RenderedBox | null = null;
@@ -69,10 +75,11 @@ class RawBox implements NodeView {
     const inline = node.isInline;
     this.dom = editor.view.dom.ownerDocument.createElement(inline ? 'span' : 'div');
     this.dom.className = inline ? 'typst-visual__raw-inline' : 'typst-visual__raw-block';
-    if (node.type.name === 'image') {
-      this.dom.classList.add('typst-visual__image');
+    const label = LABELS[node.type.name];
+    if (label) {
+      this.dom.classList.add(label.className);
       this.label = this.dom.appendChild(this.dom.ownerDocument.createElement('div'));
-      this.label.className = 'typst-visual__image-label';
+      this.label.className = `typst-visual__box-label ${label.className}-label`;
       this.updateLabel();
     }
     const wrapper = this.dom.appendChild(this.dom.ownerDocument.createElement(inline ? 'span' : 'div'));
@@ -138,7 +145,7 @@ class RawBox implements NodeView {
   }
 
   private updateLabel(): void {
-    if (this.label) this.label.textContent = `Image: ${imagePath(this.node.attrs.src) ?? '(no path)'}`;
+    if (this.label) this.label.textContent = LABELS[this.node.type.name].text(this.node.attrs.src);
   }
 
   private forward(trs: readonly CodeTransaction[], view: CodeView): void {

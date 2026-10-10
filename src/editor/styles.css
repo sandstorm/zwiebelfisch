@@ -167,10 +167,51 @@
 .typst-visual__raw-block:not(.typst-visual__image) > .typst-visual__rendering { margin: 0 auto; }
 .typst-visual__raw-inline > .typst-visual__rendering { display: inline-block; vertical-align: middle; }
 .typst-visual__link { color: var(--te-accent); text-decoration: underline; cursor: text; }
-.typst-visual__image-label {
+.typst-visual__box-label {
   margin-bottom: 2px;
   font: 600 12px system-ui, sans-serif;
   color: #3d4451;
+}
+/* Code: inline code and code blocks (plain text edited in place, with a language field) */
+.typst-visual__code-inline {
+  padding: 0 3px;
+  border-radius: 4px;
+  background: #f1f3f6;
+  font: 0.85em ui-monospace, monospace;
+}
+.typst-visual__code-block {
+  margin: 0 0 0.7em;
+  border: 1px solid var(--te-border);
+  border-radius: 6px;
+  background: #f6f8fa;
+}
+.typst-visual__code-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-bottom: 1px solid var(--te-border);
+  font: 600 12px system-ui, sans-serif;
+  color: #3d4451;
+  user-select: none;
+}
+.typst-visual__code-language {
+  width: 9em;
+  padding: 1px 4px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  font: 12px ui-monospace, monospace;
+  color: inherit;
+}
+.typst-visual__code-language:hover,
+.typst-visual__code-language:focus { border-color: var(--te-border); background: white; outline: none; }
+.typst-visual__code-block pre {
+  margin: 0;
+  padding: 6px 8px;
+  font: 13px/1.45 ui-monospace, monospace;
+  color: #24292f;
+  white-space: pre-wrap;
 }
 .typst-visual__table { border-collapse: collapse; margin: 0 0 0.7em; table-layout: fixed; }
 .typst-visual__table td,
