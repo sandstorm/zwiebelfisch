@@ -1,5 +1,5 @@
 /* The images extension's styles: image boxes (frame, resize handles, tools), figures and captions,
-   the image popover's choices, an image's path link, and the read-only view of image and data files.
+   an image's path link, and the read-only view of image and data files.
    Registered by images.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 /* An image box's path: a button opening the file, or struck through when the file is missing */
 .typst-visual__path {

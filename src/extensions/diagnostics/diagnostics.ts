@@ -16,9 +16,8 @@ import { DiagnosticsStatus } from './workbench/workbench';
 
 /**
  * The preview's diagnostics, each document's in a DiagnosticCollection its Source views underline (`lint`) and its
- * Visual views mark, and the
- * compile status in the status bar, for the Typst file shown last (while an image is shown, too). Clicking the
- * status, or a message, opens the file and reveals the range in the Source view.
+ * Visual views mark, and the compile status in the status bar, for the Typst file shown last (while an image is
+ * shown, too). Clicking the status, or a message, opens the file and reveals the range in the Source view.
  */
 export function diagnostics(): TypstExtension {
   return {

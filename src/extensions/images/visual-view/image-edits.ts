@@ -2,7 +2,7 @@
  * The edits the image tools make to an image block (bare, or the image of a
  * figure), each one transaction, so one undo step: caption on and off, width
  * and alt text. The image call changes only in the argument concerned; the
- * projection prints everything else of the block as it was.
+ * projection prints everything else of the block as it was. See ../images.ts.
  */
 import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, TextSelection, type EditorState, type Transaction } from '@tiptap/pm/state';

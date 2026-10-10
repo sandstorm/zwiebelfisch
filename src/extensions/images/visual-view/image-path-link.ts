@@ -1,4 +1,4 @@
-// An image box's path as a link to the file (the document link on it). See images.ts.
+// An image box's path as a link to the file (the document link on it). See ../images.ts.
 import { type PathReference, ProjectPath } from '../../../core/paths/paths';
 import type { DocumentLink } from '../../../hosts/workbench/workbench';
 
