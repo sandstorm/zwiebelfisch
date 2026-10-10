@@ -1,6 +1,6 @@
 # Multiple files, images and `@preview` packages
 
-Status: open
+Status: done (branch task/multi-file-assets-packages)
 Depends on: engine-wasm-size (touches the same engine files — coordinate or do after)
 Touches: crates/typst-engine/src/world.rs, src/engine/**, src/preview/**, src/editor/** (API)
 
