@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+#MISE description="Playground: the demo (Vite, :5199) and the collaboration server with an in-memory fake GitLab (:1234); Ctrl-C stops both"
+#MISE depends=["build:engine"]
+# Everything local: no real GitLab, no secrets, nothing stored. See docs/demo-playground.md.
+# The demo page expects the server on 127.0.0.1:1234 and Vite on 127.0.0.1:5199 (vite.config.ts).
+set -euo pipefail
+
+node server/src/fake-gitlab-main.ts &
+server=$!
+# stop the server however this script ends (Ctrl-C, Vite exiting, an error)
+trap 'kill "$server" 2>/dev/null || true; wait "$server" 2>/dev/null || true' EXIT
+trap 'exit 130' INT TERM
+
+# wait until the server accepts connections (up to 10 s); give up early if it died (port taken?)
+for _ in $(seq 100); do
+  if (exec 3<>/dev/tcp/127.0.0.1/1234) 2>/dev/null; then break; fi
+  if ! kill -0 "$server" 2>/dev/null; then
+    echo "The collaboration server did not start (is port 1234 in use, e.g. by mise run server:dev?)." >&2
+    exit 1
+  fi
+  sleep 0.1
+done
+
+demo='http://127.0.0.1:5199'
+cat <<EOF
+
+Typst editor playground
+  Local          $demo/
+  Collaborate    $demo/?room=playground-hello&user=Ann   (second window: &user=Bob)
+  GitLab (fake)  $demo/?room=gitlab%3Ademo%2Freport%40main&user=Ann
+  Server         ws://127.0.0.1:1234  (plain rooms, and gitlab:demo/report@<any branch>)
+  Checklist      docs/demo-playground.md
+Ctrl-C stops both.
+
+EOF
+
+pnpm exec vite "$@"
