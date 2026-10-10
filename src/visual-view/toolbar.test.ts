@@ -310,6 +310,16 @@ describe('Visual view toolbar', () => {
     });
   });
 
+  it('keeps the image popover inside the toolbar when its button is near the right edge', () => {
+    const { toolbar, button } = setup('Text\n', { assets: { list: () => [], upload: async () => ({ error: 'unused' }) } });
+    const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
+    Object.defineProperty(toolbar, 'clientWidth', { value: 300 });
+    Object.defineProperty(popover, 'offsetWidth', { value: 200 });
+    Object.defineProperty(button('Insert image'), 'offsetLeft', { value: 250 });
+    button('Insert image').click();
+    expect(popover.style.left).toBe('100px');
+  });
+
   it('inserts a table and adds and deletes rows and columns', () => {
     const { doc, view, button } = setup('Text\n');
     expect(button('Add row').disabled).toBe(true);

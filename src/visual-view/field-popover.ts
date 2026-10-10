@@ -28,7 +28,10 @@ export class FieldPopover {
   };
   private anchor: HTMLElement | null = null;
 
-  constructor(parent: HTMLElement, private readonly options: FieldPopoverOptions) {
+  constructor(
+    private readonly parent: HTMLElement,
+    private readonly options: FieldPopoverOptions,
+  ) {
     const doc = parent.ownerDocument;
     this.form = doc.createElement('form');
     this.form.className = 'typst-popover';
@@ -71,8 +74,10 @@ export class FieldPopover {
     this.anchor = anchor;
     this.input.value = value;
     this.removeButton.hidden = !removable || !this.options.remove;
-    this.form.style.left = `${anchor.offsetLeft}px`;
     this.form.hidden = false;
+    // Below the anchor, but not past the right edge of the parent: that would scroll the editing pane sideways.
+    const room = this.parent.clientWidth - this.form.offsetWidth;
+    this.form.style.left = `${Math.max(0, room > 0 ? Math.min(anchor.offsetLeft, room) : anchor.offsetLeft)}px`;
     this.form.ownerDocument.addEventListener('mousedown', this.closeOnOutsideClick, true);
     this.input.focus();
     this.input.select();
