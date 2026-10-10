@@ -270,41 +270,72 @@ interface TableLayout {
   gaps: string[];
   /** Named arguments other than `columns`, as written. */
   named: string[];
+  /** The first row is a `table.header(..)`. */
+  header: boolean;
 }
 
-/** `#table(columns: n, [..], ..)` whose positional arguments are all content blocks filling n columns. */
+/**
+ * `#table(columns: n, [..], ..)` whose positional arguments are all content
+ * blocks filling n columns, optionally starting with a one-row
+ * `table.header([..], ..)`.
+ */
 function table(ctx: Context, call: Segment, args: SyntaxNode[], sep: string | null): Node | null {
   const parsed = tableArgs(ctx, args);
   if (!parsed || parsed.cells.length === 0 || parsed.cells.length % parsed.columns !== 0) return null;
+  if (parsed.header !== 0 && parsed.header !== parsed.columns) return null;
   const { schema, source } = ctx;
   const gaps: string[] = [];
   let pos = call.from;
-  const cells = parsed.cells.map((block) => {
+  const cells = parsed.cells.map((block, index) => {
     const markup = block.getChild('Markup')!;
     const segments = segment(children(markup));
     const from = segments[0]?.from ?? markup.from;
     gaps.push(source.slice(pos, from));
     pos = segments.at(-1)?.to ?? markup.from;
     const content = segments.length > 0 ? blocks(ctx, segments) : [textblock(ctx, { type: 'paragraph', attrs: { src: '' } }, from, [])];
-    return schema.nodes.tableCell.create(null, content);
+    return (index < parsed.header ? schema.nodes.tableHeader : schema.nodes.tableCell).create(null, content);
   });
   gaps.push(source.slice(pos, call.to));
   const rows: Node[] = [];
   for (let i = 0; i < cells.length; i += parsed.columns) rows.push(schema.nodes.tableRow.create(null, cells.slice(i, i + parsed.columns)));
-  const layout: TableLayout = { columns: parsed.columns, gaps, named: parsed.named };
+  const layout: TableLayout = { columns: parsed.columns, gaps, named: parsed.named, header: parsed.header > 0 };
   return schema.nodes.table.create({ sep, layout }, rows);
 }
 
-/** The arguments of a table call: an integer `columns`, other named arguments and closed content blocks only. */
-function tableArgs(ctx: Context, args: SyntaxNode[]): { columns: number; named: string[]; cells: SyntaxNode[] } | null {
+interface TableArgs {
+  columns: number;
+  named: string[];
+  /** Content blocks: the header's cells first. */
+  cells: SyntaxNode[];
+  /** How many of the cells are header cells. */
+  header: number;
+}
+
+/**
+ * The arguments of a table call: an integer `columns`, other named arguments
+ * and closed content blocks only, the first of them optionally in a
+ * `table.header(..)`.
+ */
+function tableArgs(ctx: Context, args: SyntaxNode[]): TableArgs | null {
   if (!parenthesized(args)) return null;
-  const result = { columns: 0, named: [] as string[], cells: [] as SyntaxNode[] };
+  const result: TableArgs = { columns: 0, named: [], cells: [], header: 0 };
   for (const arg of args.slice(1, -1)) {
     if (isClosedContent(arg)) result.cells.push(arg);
     else if (arg.name === 'Named') namedArg(ctx, arg, result);
-    else if (arg.name !== 'Space' && arg.name !== 'Comma') return null;
+    else if (!headerArg(ctx, arg, result) && arg.name !== 'Space' && arg.name !== 'Comma') return null;
   }
   return result.columns > 0 ? result : null;
+}
+
+/** Takes a `table.header([..], ..)` of closed content blocks before any cell as the header cells. */
+function headerArg(ctx: Context, arg: SyntaxNode, into: TableArgs): boolean {
+  const target = arg.name === 'FuncCall' ? arg.firstChild : null;
+  if (!target || ctx.source.slice(target.from, target.to) !== 'table.header' || into.cells.length > 0) return false;
+  const parts = children(arg.getChild('Args')!).filter((a) => !['LeftParen', 'RightParen', 'Space', 'Comma'].includes(a.name));
+  if (!parts.every(isClosedContent)) return false;
+  into.cells.push(...parts);
+  into.header = parts.length;
+  return true;
 }
 
 /** Whether an argument list is `(..)` alone: closed, and no trailing content block. */
@@ -748,7 +779,8 @@ interface PlacedCell {
 /**
  * A table: its source around unchanged cell content while it still has the
  * projected shape, so editing a cell changes just that cell; otherwise
- * `#table(columns: n, ..named, [..], ..)`, one row per line.
+ * `#table(columns: n, ..named, [..], ..)`, one row per line, the first in
+ * `table.header(..)` if its cells are header cells.
  */
 function printTable(out: Printer, table: Node, pos: number): void {
   const rows: PlacedCell[][] = [];
@@ -772,20 +804,27 @@ function printTable(out: Printer, table: Node, pos: number): void {
   }
   out.hidden(`#table(\n  columns: ${rows[0].length},\n`);
   for (const arg of layout?.named ?? []) out.hidden(`  ${arg},\n`);
-  for (const row of rows) {
+  const header = isHeaderRow(rows[0]);
+  rows.forEach((row, r) => {
+    const [open, close] = r === 0 && header ? ['table.header(', ')'] : ['', ''];
     row.forEach((cell, i) => {
-      out.hidden(i === 0 ? '  [' : ', [');
+      out.hidden(i === 0 ? `  ${open}[` : ', [');
       printCell(cell);
       out.closing(']');
     });
-    out.hidden(',\n');
-  }
+    out.hidden(`${close},\n`);
+  });
   out.hidden(')');
 }
 
-/** Whether the table still has the rows and columns its source `layout` was made for. */
-function hasShape(rows: unknown[][], { columns, gaps }: TableLayout): boolean {
-  return rows.every((row) => row.length === columns) && rows.length * columns === gaps.length - 1;
+/** Whether the table still has the rows, columns and header its source `layout` was made for. */
+function hasShape(rows: PlacedCell[][], { columns, gaps, header }: TableLayout): boolean {
+  return rows.every((row) => row.length === columns) && rows.length * columns === gaps.length - 1 && isHeaderRow(rows[0]) === header;
+}
+
+/** A row of header cells only (Tiptap's header row). */
+function isHeaderRow(row: PlacedCell[]): boolean {
+  return row.every(({ cell }) => cell.type.name === 'tableHeader');
 }
 
 /** Typst syntax around a formatted span, by mark: e.g. `*…*`, or `#strong[…]` where delimiters would not work. */

@@ -3,7 +3,7 @@ import { FieldPopover } from './field-popover';
 import { ImageChoices, type ImageAssets } from './image-choices';
 import { imageSource } from './projection';
 import { svg, type Action } from './toolbar-action';
-import { BLOCKS, BREAKS } from './toolbar-blocks';
+import { BLOCKS, BREAKS, HEADER_ROW } from './toolbar-blocks';
 
 const ICONS = {
   undo: svg('<path d="M9 15 4 10l5-5"/><path d="M4 10h11a5 5 0 0 1 0 10h-3"/>'),
@@ -131,7 +131,7 @@ export class Toolbar {
       this.group([...MARKS, link]),
       this.group(LISTS),
       this.group(BLOCKS),
-      this.group([image, ...TABLES]),
+      this.group([image, ...TABLES, HEADER_ROW]),
       this.group(BREAKS),
     );
     parent.prepend(this.root);

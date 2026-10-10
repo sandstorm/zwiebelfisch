@@ -88,3 +88,21 @@ describe('block quotes', () => {
     expect(doc.text).toBe('Hello\n\n#quote(block: true)[Wise words]\n');
   });
 });
+
+describe('table header row', () => {
+  it('"Header row" wraps the first row in table.header and back', () => {
+    const source = 'Hi\n\n#table(columns: 2, [a], [b], [c], [d])\n';
+    const { doc, view, button, parent } = setup(source);
+    view.reveal(1, 1);
+    expect(button('Header row').disabled).toBe(true);
+    view.reveal(source.indexOf('c'), source.indexOf('c'));
+    expect(button('Header row').getAttribute('aria-pressed')).toBe('false');
+    button('Header row').click();
+    expect(doc.text).toBe('Hi\n\n#table(\n  columns: 2,\n  table.header([a], [b]),\n  [c], [d],\n)\n');
+    expect([...parent.querySelectorAll('th')].map((th) => th.textContent)).toEqual(['a', 'b']);
+    expect(button('Header row').getAttribute('aria-pressed')).toBe('true');
+    button('Header row').click();
+    // the table has its projected shape again, so it prints its original source
+    expect(doc.text).toBe(source);
+  });
+});

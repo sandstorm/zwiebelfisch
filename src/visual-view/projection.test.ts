@@ -444,7 +444,6 @@ describe('tables', () => {
     for (const src of [
       '#table(columns: (1fr, 1fr), [a], [b])',
       '#table(columns: 2, [a], [b], [c])',
-      '#table(columns: 1, table.header[H], [a])',
       '#table([a], [b])',
       '#table(columns: 1, [a]',
     ]) {
