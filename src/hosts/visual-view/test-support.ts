@@ -8,8 +8,6 @@ import { EditorState } from '@tiptap/pm/state';
 import { expect } from 'vitest';
 import type { DocumentLinkProvider } from '../../core/document-links/document-links';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
-import type { ProjectLabels } from '../../features/labels/labels';
-import type { DocumentStyles } from '../../features/styles/styles';
 import { alignment } from '../../extensions/alignment/alignment';
 import { headings } from '../../extensions/headings/headings';
 import { lists } from '../../extensions/lists/lists';
@@ -17,7 +15,6 @@ import { markup } from '../../extensions/markup/markup';
 import { outline } from '../../extensions/outline/outline';
 import { pageLayout } from '../../extensions/page-layout/page-layout';
 import { tables } from '../../extensions/tables/tables';
-import { customStyles, references } from './builtins/builtins';
 import { boxLinks } from '../../extensions/document-links/document-links';
 import { imagesVisualView, type ImageAssets, type ImageUrls } from '../../extensions/images/images';
 import { renderedBoxesVisualView, type SnippetSource } from '../../extensions/rendered-boxes/rendered-boxes';
@@ -26,7 +23,7 @@ import { createSchema } from './nodes/nodes';
 import { posToSource, print, project as projectWith, sourceToPos } from './projection/projection';
 import { VisualView } from './visual-view';
 
-/** The schema of a view with the built-ins (no styles declared). */
+/** The schema of a view with the built-ins. */
 export const schema: Schema = schemaWith();
 
 /** The schema of a view with the built-ins configured from `options`. */
@@ -45,11 +42,8 @@ export type Renderings = SnippetSource & ImageUrls;
 export interface TestViewOptions {
   renderer?: Renderings;
   assets?: ImageAssets;
-  labels?: ProjectLabels;
   documentLinks?: DocumentLinkProvider;
-  /** The project's styles, as one document sees them; `create` is "New style…". */
-  styles?: DocumentStyles;
-  /** Contributions beyond the host's built-ins, activated after them: an extension's own, in its tests. */
+  /** The contributions of the extension under test, activated after the built-ins (as the widget's features are). */
   contributions?: readonly VisualViewContribution[];
 }
 
@@ -60,7 +54,6 @@ export function createVisualView(parent: HTMLElement, document: TypstDocument, o
 
 /** The built-ins configured from `options`, in the order the widget's built-in extensions activate them. */
 function contributions(options: TestViewOptions): VisualViewContributions {
-  const { styles } = options;
   return VisualViewContributions.from([
     boxLinks({ documentLinks: options.documentLinks && (() => options.documentLinks) }),
     markup,
@@ -77,11 +70,6 @@ function contributions(options: TestViewOptions): VisualViewContributions {
     pageLayout,
     lists,
     alignment,
-    references({ labels: options.labels }),
-    customStyles({
-      styles: styles && { styles: () => styles.styles(), onChange: (listener) => styles.onChange(listener), forDocument: () => styles },
-      create: styles?.create,
-    }),
     ...(options.contributions ?? []),
   ]);
 }

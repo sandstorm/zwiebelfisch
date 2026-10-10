@@ -45,11 +45,6 @@ export const boundaries = {
       why: "the server's tests build rooms from the client's SharedProject",
     },
     {
-      target: 'hosts/visual-view/test-support.ts',
-      importers: '\\.test\\.ts$',
-      why: "tests of the extensions' Visual-view parts make a Visual view with the built-in contributions",
-    },
-    {
       target: 'hosts/visual-view/projection/projection.ts',
       importers: '^src/extensions/.*\\.test\\.ts$',
       why: 'tests of the extensions\' Visual-view parts project and print with the schema directly',

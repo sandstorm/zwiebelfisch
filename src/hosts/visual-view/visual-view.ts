@@ -30,10 +30,6 @@ export { starterKitPart } from './nodes/nodes';
 // source offsets ↔ positions in a view's document, and the decorations that draw a source range (other users' places)
 export { nodeGrammar } from './projection/projection';
 export { rangeDecorations } from './highlights';
-// the features' built-in contributions, activated by the extension of their feature (until extensions/ takes them over)
-export {
-  customStyles, references, type StyleSource,
-} from './builtins/builtins';
 
 /** Marks transactions that mirror a document change, so they are not written back. */
 const FROM_DOCUMENT = 'typst-from-document';

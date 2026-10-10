@@ -49,8 +49,18 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    the hosts' generic points only (Visual decorations / highlights, Source CodeMirror extensions,
    `setBoxDecorations`, source↔pos mapping on the view context). Also sweep the hosts for other
    single-extension pass-throughs and remove them the same way.
+   **After the slices merge: public extension API** (user: yes, now): `createTypstEditor({ extensions })`
+   (the built-in list is the default; hosts can add their own, and replace or leave out built-ins),
+   the extension types exported from `src/index.ts`, docs/embedding.md "Writing an extension" with an
+   example. Async `executeCommand` (VS Code) before it goes public.
+   **Rename `versions` → `source-control`** (user: "versions" is a bad name, it commits the state):
+   VS Code's `SourceControl` concept; collaboration's GitLab room provides a `SourceControl` service
+   (`commit(message)`, state, `onDidChange`) replacing `RoomVersions`; button label proposed
+   "Save to GitLab…" (user to confirm).
 2. **Value types** and the rules: see steps 3–4 of that doc.
-3. **Lessons doc**: write `docs/2026_10_10_code-conventions.md` from "Decisions and conventions"
+3. **Rules wave also does:** core `onChange` → `onDidChange: Event` + `Disposable` everywhere
+   (`Project`, `TypstDocument`, …) (user: yes).
+4. **Lessons doc**: write `docs/2026_10_10_code-conventions.md` from "Decisions and conventions"
    below (refined), then **spawn subagents** (the user asked for it; workflow guideline < 10 agents)
    to check the rest of the codebase against it, one area each (core, visual-view, source-view +
    preview, files + collaboration + versions, widget + element + demo, server), and fix what they find.

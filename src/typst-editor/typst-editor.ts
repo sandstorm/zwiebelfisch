@@ -9,11 +9,11 @@ import { comments } from '../extensions/comments/comments';
 import { diagnostics } from '../extensions/diagnostics/diagnostics';
 import { fileNavigation, files } from '../extensions/files/files';
 import fileStyles from '../extensions/files/files.css?inline';
-import { labels } from '../features/labels/labels';
+import { labels } from '../extensions/labels/labels';
 import { pdfExport } from '../extensions/pdf-export/pdf-export';
 import { previewControls } from '../extensions/preview-controls/preview-controls';
 import { spreadsheets } from '../extensions/spreadsheets/spreadsheets';
-import { styles } from '../features/styles/styles';
+import { styles } from '../extensions/styles/styles';
 import { versions } from '../extensions/versions/versions';
 import { documentLinks } from '../extensions/document-links/document-links';
 import { images } from '../extensions/images/images';
@@ -197,8 +197,8 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
  * nest in it) and of its projectors (the first that takes a piece of syntax gets it).
  *
  * The Typst constructs depend on that order: `markup` comes first, so its marks (bold, italic, link, code) nest
- * outside the features' marks (comments, styles); `tables` before `projectRenderings`, whose figures may hold a
- * table; images before rendered snippets (the first box renderer that takes a box draws it); within `lists`, task
+ * outside the features' marks (comments, styles); `tables` before `images`, whose figures may hold a
+ * table; `images` before `renderedBoxes` (the first box renderer that takes a box draws it); within `lists`, task
  * lists before bullet lists (a task item is a bullet item `- [ ] ..`); `alignment` after the other blocks (its
  * paragraph spec extends the host's paragraph).
  */
