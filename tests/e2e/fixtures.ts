@@ -32,16 +32,30 @@ export async function serve(page: Page, baseURL: string): Promise<void> {
 /**
  * Clicks the middle of a glyph (a `<use>` in a preview page), as a user clicking
  * that letter does. The preview maps the click position to the source, so the
- * click needs to land in the glyph's box, not on its ink. A plain `click()` also
- * insists that the element hit at that point is the glyph itself, which fails
- * whenever the middle of the box is blank: always for a "C", and for the
- * "H" of the demo heading the middle lies 0.06 pt above the bottom edge of its
- * thin crossbar, which Firefox's hit test misses.
+ * click needs to land in the glyph's box, not on its ink. The box is computed
+ * from the glyph's outline (the `<path>` in the `<symbol>` it uses), because
+ * Firefox's box of a `<use>` of a `<symbol>` is the symbol's whole viewport (as
+ * wide as the page, from the glyph on), whose middle is usually blank paper.
+ * A plain `click()` would also insist that the element hit is the glyph itself,
+ * which fails whenever the middle of the box is blank: always for a "C".
  */
 export async function clickGlyph(glyph: Locator): Promise<void> {
-  // `force` skips every actionability check, so wait for the visible glyph first
   await expect(glyph).toBeVisible();
-  await glyph.click({ force: true });
+  const point = await glyph.evaluate((use: SVGUseElement) => {
+    const id = (use.getAttribute('href') ?? use.getAttribute('xlink:href') ?? '').slice(1);
+    const outline = (use.getRootNode() as Document | ShadowRoot).getElementById(id)?.querySelector('path');
+    if (!outline) throw new Error(`glyph ${id} has no outline`);
+    // a rendered copy of the outline where the glyph is drawn: same place, honest box
+    const copy = outline.cloneNode() as SVGPathElement;
+    copy.setAttribute('transform', `translate(${use.x.baseVal.value} ${use.y.baseVal.value})`);
+    copy.setAttribute('fill', 'none');
+    use.after(copy);
+    copy.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    const box = copy.getBoundingClientRect();
+    copy.remove();
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  });
+  await glyph.page().mouse.click(point.x, point.y);
 }
 
 export { expect };

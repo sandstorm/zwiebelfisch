@@ -56,8 +56,10 @@ test("an image box's path opens the image", async ({ page }) => {
 
 test('a file dragged onto a folder moves into it', async ({ page }) => {
   await fileRow(page, 'helpers.typ').dragTo(fileRow(page, 'chapters'));
-  await fileRow(page, 'chapters').click();
-  await expect(fileRow(page, 'chapters/helpers.typ')).toBeVisible();
+  // the moved file is opened, which opens its folder (a click on the folder would close it again)
+  await expect(fileRow(page, 'chapters/helpers.typ')).toHaveAttribute('aria-selected', 'true');
+  await expect(fileRow(page, 'chapters')).toHaveAttribute('aria-expanded', 'true');
+  await expect(fileRow(page, 'helpers.typ')).toHaveCount(0);
 });
 
 test('the panel can be collapsed and resized', async ({ page }) => {
