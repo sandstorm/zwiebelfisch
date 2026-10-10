@@ -8,10 +8,10 @@ code changes, update this file in the same commit.
 
 ```
 crates/typst-engine/        Rust → wasm: Typst compiler, SVG export, click/cursor jumps
-  src/world.rs              in-memory Typst World (files pushed from JS, embedded fonts)
+  src/world.rs              in-memory Typst World (files and fonts pushed from JS)
   src/lib.rs                wasm-bindgen interface (JSON in/out, UTF-16 offsets)
 src/
-  engine/                   typed TS wrapper around the wasm (+ generated wasm/ — gitignored)
+  engine/                   typed TS wrapper around the wasm, default fonts (generated wasm/, fonts/ — gitignored)
   document/                 TypstDocument — the single source of truth
   source-view/              SourceView — CodeMirror 6 editing view
   preview/                  Preview — worker-backed live preview + hit-testing
@@ -102,7 +102,9 @@ new Preview(container, { onJump?, onDiagnostics? })
 ### `typst-engine` (Rust crate + `src/engine`)
 
 ```ts
-createEngine(wasm) → Engine
+createEngine(wasm, fonts?: (Uint8Array | Promise<Uint8Array>)[]) → Promise<Engine>
+defaultFonts() → Promise<Uint8Array>[]          // src/engine/default-fonts.ts: fetches the bundled font assets
+.addFont(bytes)                                  // throws if bytes contain no font face
 .setSource(path, text) / .setBinary(path, bytes) / .remove(path)
 .compile(main) → { pages: [{hash, width, height, svg}], diagnostics: [{severity, message, hints, path, from, to}] }
 .jumpFromClick(page, x, y) → {kind:'source', path, offset, from, to} | {kind:'url'} | {kind:'position'} | null
@@ -123,10 +125,16 @@ Inside the crate:
 
 - **`MemoryWorld`** implements `typst::World` and `typst_ide::IdeWorld`. Files live in a
   `HashMap<FileId, Source | Bytes>`. `set_source` reuses the existing `Source` (`Source::replace`), so
-  Typst reparses incrementally and the spans of unchanged nodes stay stable. Fonts are
-  `typst-assets`, embedded for now. `today()` returns `None`, which keeps output deterministic.
+  Typst reparses incrementally and the spans of unchanged nodes stay stable. **No fonts are
+  embedded**: `add_font` pushes each face into the `FontBook` (a `LazyHash`, so comemo sees the
+  change). `today()` returns `None`, which keeps output deterministic.
 - **Incremental compilation** comes from Typst's own memoisation (`comemo`), which persists across
   `compile` calls because the world lives as long as the engine.
+- **Fonts as assets:** `mise run build:fonts` copies Typst's default set (Libertinus Serif,
+  New Computer Modern + Math, DejaVu Sans Mono; 17 files, 9.7 MB) from the typst-assets crate
+  pinned by `Cargo.lock` into `src/engine/fonts/`. `defaultFonts()` turns them into bundler
+  assets (`import.meta.glob(…?url)`) and starts all downloads at once. The worker passes them to
+  `createEngine`, which awaits wasm and fonts in parallel.
 - **SVG cache:** page SVGs are keyed by `hash128(&page.frame)`. Unchanged pages skip `typst_svg::svg`.
 - **Hit-testing:** `typst_ide::jump_from_click(world, document, PagedPosition)` walks the frames of
   the last successful document. `source_jump` widens the resulting byte offset to the enclosing
@@ -167,7 +175,8 @@ worker → main   {id, type:'compile', result} | {id, type:'click', jump} | {id,
 
 | Task | What it does |
 |---|---|
-| `mise run build:engine` | `cargo build --target wasm32-unknown-unknown --release` + `wasm-bindgen --target web` → `src/engine/wasm/` (skipped when the Rust sources are unchanged) |
+| `mise run build:engine` | `cargo build --target wasm32-unknown-unknown --release` + `wasm-bindgen --target web` + `wasm-opt -Oz --strip-debug` → `src/engine/wasm/`, prints raw/gzip/brotli size (skipped when the Rust sources are unchanged) |
+| `mise run build:fonts` | default fonts from the pinned typst-assets crate → `src/engine/fonts/` |
 | `mise run dev` | Vite dev server for `demo/` on 127.0.0.1:5199 |
 | `mise run build` | engine + typecheck + static demo build → `dist/demo` |
 | `mise run test:unit` | vitest (node): engine against the real wasm, document model, (later) projection round-trips |
@@ -177,12 +186,20 @@ worker → main   {id, type:'compile', result} | {id, type:'click', jump} | {id,
 **Version pins** are all exact:
 - Typst 0.15.1: the Rust crates and the CLI in `mise.toml`.
 - wasm-bindgen 0.2.129: the crate and the CLI must match.
+- binaryen (wasm-opt) 133.
 - Rust 1.99.0, Node 24.21.0, pnpm 10.34.6.
 
 ## Known limitations / next steps
 
-- **wasm is 41 MB,** mostly embedded fonts. Plan: serve the fonts as separate assets, fetch them
-  lazily, add `wasm-opt`.
+- **wasm is 21 MB raw (8.4 MB gzip, 6.2 MB brotli)**, down from 43 MB (15.8 / 10.6). The rest is
+  code (11.7 MB: typst-library 2.7, plus wasmi for plugins, hayro for PDF images, citation/
+  hayagriva, image codecs, usvg, serde_yaml/toml/xml loaders) and data (9.4 MB: ICU, syntect
+  syntaxes via two-face, hayagriva styles, hyphenation tries). None of it is feature-gated in
+  typst 0.15.1, so going further needs a typst fork. `opt-level = "z"` saves another 1.9 MB but
+  compiles ~40 % slower, so the crate stays at `"s"`.
+- **All 17 default fonts (9.7 MB, 6.4 MB gzip) load before the first render.** Next step: lazy
+  fonts — ship a JSON index of `FontInfo` so the `FontBook` is complete up front and fetch font
+  data on first use (compile, see which fonts were missing, fetch, recompile).
 - **Single file only.** Multi-file projects, images and `@preview` packages need `setBinary` wiring
   and a package fetcher.
 - **No diagnostics UI yet.** `onDiagnostics` exists, but nothing renders it.

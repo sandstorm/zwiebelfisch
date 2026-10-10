@@ -8,3 +8,4 @@ playwright-report/
 .cache/
 target/
 src/engine/wasm/
+src/engine/fonts/

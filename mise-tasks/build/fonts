@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+#MISE description="Copy the default fonts (Typst's typst-assets set) into src/engine/fonts as static assets"
+#MISE sources=["crates/typst-engine/Cargo.lock"]
+#MISE outputs=["src/engine/fonts/LibertinusSerif-Regular.otf"]
+# The fonts come from the typst-assets crate that Cargo.lock pins, so they are
+# exactly the ones the Typst CLI of the same version embeds. The .pfb files next
+# to them are PDF base-14 substitutes that typst-assets does not expose as fonts.
+set -euo pipefail
+manifest=$(cargo metadata --manifest-path crates/typst-engine/Cargo.toml --format-version 1 \
+  --locked --filter-platform wasm32-unknown-unknown \
+  | node -e 'let s = ""; process.stdin.on("data", (d) => (s += d)).on("end", () =>
+      console.log(JSON.parse(s).packages.find((p) => p.name === "typst-assets").manifest_path))')
+source_dir="$(dirname "$manifest")/files/fonts"
+rm -rf src/engine/fonts
+mkdir -p src/engine/fonts
+cp "$source_dir"/*.otf "$source_dir"/*.ttf src/engine/fonts/
+echo "fonts: $(ls src/engine/fonts | wc -l | tr -d ' ') files, $(du -sh src/engine/fonts | cut -f1)"

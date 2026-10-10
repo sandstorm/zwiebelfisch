@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 #MISE description="Run unit tests (vitest)"
-#MISE depends=["build:engine"]
+#MISE depends=["build:engine", "build:fonts"]
 set -euo pipefail
 exec pnpm exec vitest run "$@"

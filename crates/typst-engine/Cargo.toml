@@ -13,7 +13,6 @@ typst = "=0.15.1"
 typst-svg = "=0.15.1"
 typst-layout = "=0.15.1"
 typst-ide = "=0.15.1"
-typst-assets = { version = "=0.15.1", features = ["fonts"] }
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = "=1.0.151"
 # must match the wasm-bindgen CLI pinned in mise.toml

@@ -1,8 +1,9 @@
 import { createEngine } from '../engine/engine';
+import { defaultFonts } from '../engine/default-fonts';
 import wasmUrl from '../engine/wasm/typst_engine_bg.wasm?url';
 import type { Request, Response } from './protocol';
 
-const engine = createEngine(wasmUrl);
+const engine = createEngine(wasmUrl, defaultFonts());
 /** Paths pushed by the previous compile, so files deleted since are removed. */
 let knownPaths = new Set<string>();
 
