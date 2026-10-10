@@ -75,7 +75,7 @@ export class VisualView {
    * (a point note, or the note part of a range note). False if there is none.
    */
   editNote(offset: number): boolean {
-    return editNoteAt(this.editor.view, sourceToPos(this.editor.state.doc, offset));
+    return editNoteAt(this.editor.view, offset);
   }
 
   /** Replaces the highlights of `layer` (source ranges); they follow edits until set again. */

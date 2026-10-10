@@ -119,4 +119,23 @@ describe('margin notes in the Visual view', () => {
     expect(document.activeElement).toBe(bubbles()[1].querySelector('textarea'));
     expect(view.editNote(0)).toBe(false);
   });
+
+  it('editNote picks the note whose source holds the offset among notes ending at the same place', () => {
+    const source = '#margin-note[#margin-note[x][]][old] y\n';
+    const { view } = setup(source);
+    expect(view.editNote(source.indexOf('[]') + 1)).toBe(true);
+    expect((document.activeElement as HTMLTextAreaElement).value).toBe('');
+    expect(view.editNote(source.indexOf('old'))).toBe(true);
+    expect((document.activeElement as HTMLTextAreaElement).value).toBe('old');
+  });
+
+  it('editNote opens a range note, not the point note right after it', () => {
+    const source = 'A #margin-note[x][first]#margin-note[second] b\n';
+    const { view } = setup(source);
+    expect(view.editNote(source.indexOf('first'))).toBe(true);
+    expect((document.activeElement as HTMLTextAreaElement).value).toBe('first');
+    expect(view.editNote(source.indexOf('second'))).toBe(true);
+    expect((document.activeElement as HTMLTextAreaElement).value).toBe('second');
+    expect(view.editNote(source.indexOf(' b'))).toBe(false);
+  });
 });

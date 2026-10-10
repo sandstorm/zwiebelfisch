@@ -2,7 +2,8 @@ import { Mark, Node, type Editor } from '@tiptap/core';
 import type { Mark as PMMark, Node as PMNode } from '@tiptap/pm/model';
 import { Plugin, PluginKey, TextSelection } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView, type NodeView } from '@tiptap/pm/view';
-import { NOTE_HEAD, safeNote } from '../document/margin-note-syntax';
+import { NOTE_HEAD, rangeNoteSyntax, safeNote } from '../document/margin-note-syntax';
+import { posToSource, print, sourceToPos } from './projection';
 
 /**
  * `drafting` margin notes in the Visual view.
@@ -59,16 +60,50 @@ export const NoteRange = Mark.create({
 });
 
 /**
- * Opens the note editor of the note at document position `pos`: a point note
- * right after `pos`, or a range note whose text ends at `pos`. False if
- * there is none.
+ * Opens the note editor of the note whose source holds `offset` (in the
+ * printed document): a point note's call, or the `][note]` part of a range
+ * note. False if there is none.
  */
-export function editNoteAt(view: EditorView, pos: number): boolean {
-  const point = view.state.doc.nodeAt(pos)?.type.name === 'marginNote' ? view.nodeDOM(pos) : null;
-  const dom = point ?? [...view.dom.querySelectorAll('.typst-visual__note--range')].find((el) => bubbles.get(el)?.at() === pos);
-  const bubble = dom ? bubbles.get(dom) : undefined;
+export function editNoteAt(view: EditorView, offset: number): boolean {
+  const found = noteAt(view.state.doc, offset);
+  const bubble = found ? bubbleOf(view, found) : undefined;
   bubble?.edit();
   return bubble !== undefined;
+}
+
+function bubbleOf(view: EditorView, { pos, id }: { pos: number; id?: unknown }): Bubble | undefined {
+  if (id === undefined) {
+    const dom = view.nodeDOM(pos);
+    return dom ? bubbles.get(dom) : undefined;
+  }
+  for (const dom of view.dom.querySelectorAll('.typst-visual__note--range')) {
+    const range = bubbleNotes.get(dom);
+    if (range?.id === id && range.bubble.at() === pos) return range.bubble;
+  }
+  return undefined;
+}
+
+/**
+ * The note whose source holds `offset`: a point note at `pos`, or the range
+ * note `id` whose text ends at `pos`.
+ */
+function noteAt(doc: PMNode, offset: number): { pos: number; id?: unknown } | null {
+  // hidden syntax maps to the next visible position: the end of the range note's text, or a point note's atom
+  const pos = sourceToPos(doc, offset);
+  if (doc.nodeAt(pos)?.type.name === 'marginNote' && posToSource(doc, pos) <= offset) return { pos };
+  const $pos = doc.resolve(pos);
+  // notes ending at the same place are nested; the inner one, numbered later, closes first
+  const ending = noteSpans($pos.parent, $pos.start()).filter((span) => span.to === pos).sort((a, b) => b.mark.attrs.id - a.mark.attrs.id);
+  const source = print(doc);
+  let cursor = posToSource(doc, pos, -1);
+  for (const { mark } of ending) {
+    const { close } = rangeNoteSyntax(mark.attrs.head, mark.attrs.note);
+    const at = source.indexOf(close, cursor);
+    if (at < 0 || offset < at) return null;
+    if (offset < at + close.length) return { pos, id: mark.attrs.id };
+    cursor = at + close.length;
+  }
+  return null;
 }
 
 // ------------------------------------------------------------------ bubble
@@ -82,6 +117,8 @@ interface BubbleTarget {
 }
 
 const bubbles = new WeakMap<object, Bubble>();
+/** Range-note bubbles by their DOM, with the `id` of their note. */
+const bubbleNotes = new WeakMap<object, { bubble: Bubble; id: unknown }>();
 
 /** The marker showing a note's text, which turns into a text field when clicked. */
 class Bubble {
@@ -276,6 +313,7 @@ function rangeBubble(view: EditorView, mark: PMMark): HTMLElement {
     },
     at: () => span()?.to,
   }, 'range');
+  bubbleNotes.set(bubble.dom, { bubble, id: mark.attrs.id });
   return bubble.dom;
 }
 
