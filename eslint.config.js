@@ -33,7 +33,7 @@ function noDom(message) {
   };
 }
 
-// The layers (docs/2026_10_10_extensions-architecture.md, "Dependency rules"), on resolved files
+// The layers (docs/2026_10_11_code-conventions.md, "Layers"), on resolved files
 // (eslint-rules/dependencies.js): `importers` may not import `forbidden` (regular expressions over paths from the
 // repository root; `$1` is what `importers` captured). Tests included, unless a rule says otherwise.
 export const layers = [
