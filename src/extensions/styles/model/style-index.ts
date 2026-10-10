@@ -92,7 +92,7 @@ export class StyleIndex implements ProjectStyles {
 
   private rescan(path: ProjectPath): void {
     const content = this.project.content(path);
-    if (path.endsWith('.typ') && typeof content === 'string') this.scans.set(path, scanStyles(content));
+    if (ProjectPath.isTypst(path) && typeof content === 'string') this.scans.set(path, scanStyles(content));
   }
 
   private collect(): Style[] {

@@ -1,7 +1,7 @@
 // LabelIndex: the read model of a project's labels and the references to them, kept up to date. See ../labels.ts.
 import type { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
-import type { ProjectPath } from '../../../core/paths/paths';
+import { ProjectPath } from '../../../core/paths/paths';
 import type { FileChange, Project } from '../../../core/project/project';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { calculateReferenceRenames, scanBibliography, scanTypst, type FoundLabel, type LabelKind, type Scan } from './scan';
@@ -88,9 +88,10 @@ export class LabelIndex implements ProjectLabels {
 
   private rescan(path: ProjectPath): void {
     const content = this.project.content(path);
-    const text = typeof content === 'string' ? content : content && new TextDecoder().decode(content);
-    if (path.endsWith('.typ') && typeof content === 'string') this.scans.set(path, scanTypst(content));
-    else if (path.endsWith('.bib') && text !== undefined) this.scans.set(path, scanBibliography(text));
+    if (ProjectPath.isTypst(path) && typeof content === 'string') this.scans.set(path, scanTypst(content));
+    else if (ProjectPath.extension(path) === '.bib' && content !== undefined) {
+      this.scans.set(path, scanBibliography(typeof content === 'string' ? content : new TextDecoder().decode(content)));
+    }
   }
 
   private collect(): LabelInfo[] {
