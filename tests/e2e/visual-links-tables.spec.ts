@@ -1,23 +1,10 @@
 import { test, expect } from './fixtures';
-import type { Page } from '@playwright/test';
+import { caretAtEnd, compiled, freshSelectedLine, sourceText, toolbar, visual } from './visual-helpers';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
+  await compiled(page);
 });
-
-const toolbar = (page: Page) => page.getByRole('toolbar', { name: 'Formatting' });
-const visual = (page: Page) => page.getByTestId('typst-visual');
-/** The main file's text, from the demo's editor API (CodeMirror renders lines separately). */
-const sourceText = (page: Page) => () => page.evaluate(() => (window as unknown as { editor: { source: string } }).editor.source);
-
-/** Adds a new paragraph "Fresh line" after the first paragraph and selects it. */
-async function freshSelectedLine(page: Page) {
-  await visual(page).locator('p').first().click();
-  await page.keyboard.press('End');
-  await page.keyboard.press('Enter');
-  await page.keyboard.type('Fresh line');
-  await page.keyboard.press('Shift+Home');
-}
 
 test('Link button links the selection to the URL entered in its popover', async ({ page }) => {
   await freshSelectedLine(page);
@@ -44,8 +31,7 @@ test('Mod+K opens the link popover; Remove unlinks', async ({ page }) => {
 });
 
 test('Insert image adds an #image block with the entered path', async ({ page }) => {
-  await visual(page).locator('p').first().click();
-  await page.keyboard.press('End');
+  await caretAtEnd(visual(page).locator('p').first());
   await toolbar(page).getByRole('button', { name: 'Insert image' }).click();
   const popover = page.getByRole('form', { name: 'Image' });
   await popover.getByLabel('Image path').fill('images/logo.png');
@@ -55,8 +41,7 @@ test('Insert image adds an #image block with the entered path', async ({ page })
 });
 
 test('Insert table adds a 2x2 #table; typing into a cell fills it', async ({ page }) => {
-  await visual(page).locator('p').first().click();
-  await page.keyboard.press('End');
+  await caretAtEnd(visual(page).locator('p').first());
   await toolbar(page).getByRole('button', { name: 'Insert table' }).click();
   await expect(visual(page).locator('table td')).toHaveCount(4);
   await page.keyboard.type('Cell');
@@ -64,8 +49,7 @@ test('Insert table adds a 2x2 #table; typing into a cell fills it', async ({ pag
 });
 
 test('table buttons add and delete rows and columns', async ({ page }) => {
-  await visual(page).locator('p').first().click();
-  await page.keyboard.press('End');
+  await caretAtEnd(visual(page).locator('p').first());
   const bar = toolbar(page);
   await bar.getByRole('button', { name: 'Insert table' }).click();
   await bar.getByRole('button', { name: 'Add row' }).click();
@@ -82,8 +66,7 @@ test('a table from the source is edited cell by cell', async ({ page }) => {
     const editor = (window as unknown as { editor: { source: string } }).editor;
     editor.source = '#table(\n  columns: 2,\n  stroke: none,\n  [a], [b],\n)\n';
   });
-  await visual(page).locator('td', { hasText: 'b' }).click();
-  await page.keyboard.press('End');
+  await caretAtEnd(visual(page).locator('td', { hasText: 'b' }).locator('p'));
   await page.keyboard.type('!');
   await expect.poll(sourceText(page)).toBe('#table(\n  columns: 2,\n  stroke: none,\n  [a], [b!],\n)\n');
 });

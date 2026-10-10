@@ -1,26 +1,16 @@
 import { test, expect } from './fixtures';
 import type { Page } from '@playwright/test';
+import { caretAtEnd, compiled, freshSelectedLine, sourceText, toolbar, visual } from './visual-helpers';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
+  await compiled(page);
 });
-
-/** Adds a new paragraph "Fresh line" after the first paragraph and selects it. */
-async function freshSelectedLine(page: Page) {
-  await page.getByTestId('typst-visual').locator('p').first().click();
-  await page.keyboard.press('End');
-  await page.keyboard.press('Enter');
-  await page.keyboard.type('Fresh line');
-  // Shift+Home does not select to line start in every browser/OS keymap; extend the selection explicitly
-  for (let i = 0; i < 'Fresh line'.length; i++) await page.keyboard.press('Shift+ArrowLeft');
-}
 
 async function source(page: Page) {
   await page.getByRole('tab', { name: 'Source' }).click();
   return page.getByTestId('typst-source');
 }
-
-const toolbar = (page: Page) => page.getByRole('toolbar', { name: 'Formatting' });
 
 test('Bold button wraps the selection in *…*', async ({ page }) => {
   await freshSelectedLine(page);
@@ -44,7 +34,7 @@ for (const [label, prefix] of [['Heading 1', '= '], ['Heading 2', '== '], ['Head
 }
 
 test('text style "Normal text" turns a heading back into a paragraph', async ({ page }) => {
-  await page.getByTestId('typst-visual').locator('h1').click();
+  await caretAtEnd(visual(page).locator('h1'));
   await toolbar(page).getByLabel('Text style').selectOption({ label: 'Normal text' });
   const src = await source(page);
   await expect(src).not.toContainText('= Hello Typst');
@@ -68,28 +58,25 @@ test('Undo and Redo buttons revert and reapply an edit', async ({ page }) => {
   const bar = toolbar(page);
   await bar.getByRole('button', { name: 'Bold' }).click();
   await bar.getByRole('button', { name: 'Undo' }).click();
-  await expect(page.getByTestId('typst-visual').locator('strong', { hasText: 'Fresh line' })).toHaveCount(0);
+  await expect(visual(page).locator('strong', { hasText: 'Fresh line' })).toHaveCount(0);
   await bar.getByRole('button', { name: 'Redo' }).click();
   await expect(await source(page)).toContainText('*Fresh line*');
 });
 
 test('raw blocks are editable in place and change only their source', async ({ page }) => {
-  const box = page.getByTestId('typst-visual').locator('.typst-visual__raw-block').first();
+  const box = visual(page).locator('.typst-visual__raw-block').first();
   await box.locator('.cm-content').click();
   await page.keyboard.press('ControlOrMeta+Home');
   await page.keyboard.press('End');
   await page.keyboard.type('\n#set par(justify: true)');
-  // CodeMirror renders lines as separate elements, so read the source text from the demo's editor API
-  const text = () => page.evaluate(() => (window as unknown as { editor: { source: string } }).editor.source);
-  await expect.poll(text).toContain('margin: 1.5cm)\n#set par(justify: true)\n#set text');
+  await expect.poll(sourceText(page)).toContain('margin: 1.5cm)\n#set par(justify: true)\n#set text');
 });
 
 test('arrow down on the last line of a raw block moves into the next block', async ({ page }) => {
-  const visual = page.getByTestId('typst-visual');
-  await visual.locator('.typst-visual__raw-block').first().locator('.cm-content').click();
+  await visual(page).locator('.typst-visual__raw-block').first().locator('.cm-content').click();
   await page.keyboard.press('ControlOrMeta+Home');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.type('X');
-  await expect(visual.locator('h1')).toHaveText('XHello Typst');
+  await expect(visual(page).locator('h1')).toHaveText('XHello Typst');
 });
