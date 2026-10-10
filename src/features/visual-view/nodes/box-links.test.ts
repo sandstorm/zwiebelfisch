@@ -2,12 +2,12 @@
 // Tests for box-links.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import type { FileLinks } from '../../../core/project/project';
+import { DocumentLinkProvider, type LinkWorkspace } from '../../../core/document-links/document-links';
 import { VisualView } from '../visual-view';
 
 function setup(text: string) {
   const files = new Set(['/main.typ', '/template.typ', '/logo.png']);
-  const links: FileLinks = {
+  const links: LinkWorkspace = {
     resolve: (reference) => `/${reference}`,
     exists: (path) => files.has(path),
     open: vi.fn(),
@@ -16,7 +16,7 @@ function setup(text: string) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  new VisualView(parent, doc, { links });
+  new VisualView(parent, doc, { documentLinks: new DocumentLinkProvider(links) });
   return { parent, links, doc, files };
 }
 

@@ -3,7 +3,7 @@
 import { Editor } from '@tiptap/core';
 import { EditorState, TextSelection, type Transaction } from '@tiptap/pm/state';
 import type { Highlight, Presence, PresenceTarget, TypstDocument } from '../../core/typst-document/typst-document';
-import type { FileLinks } from '../../core/project/project';
+import type { DocumentLinkProvider } from '../../core/document-links/document-links';
 import { changesPlugin, setChangesBase } from './change-decorations';
 import { type BoxRenderer, extensions, setBoxLinks, setBoxRenderer } from './nodes/nodes';
 import { highlights, setHighlights } from './highlights';
@@ -37,7 +37,7 @@ export interface VisualViewOptions {
    */
   labels?: ProjectLabels;
   /** Makes file paths in raw boxes open their file ("Open template.typ", clickable image paths). */
-  links?: FileLinks;
+  documentLinks?: DocumentLinkProvider;
   /**
    * The project's custom styles: their calls show as styled, editable text, and the text style menu applies them
    * (importing them where needed) and offers "New style…" (default: such calls stay raw boxes).
@@ -86,7 +86,7 @@ export class VisualView implements PresenceTarget {
       },
     });
     if (options.renderer) setBoxRenderer(this.editor, options.renderer);
-    if (options.links) setBoxLinks(this.editor, options.links);
+    if (options.documentLinks) setBoxLinks(this.editor, options.documentLinks);
     // Load the projection itself (not a JSON copy): its node identities are
     // what marks blocks as untouched.
     this.notes = new NotesGutter(body, { user: options.user });
@@ -180,7 +180,7 @@ export class VisualView implements PresenceTarget {
 
   /** Imports `style` (just applied at the selection) into the document, unless it is usable there already. */
   private imported(style: Style): void {
-    const change = this.styles?.importChange(this.document.text, style, this.selection().from);
+    const change = this.styles?.calculateImportChange(this.document.text, style, this.selection().from);
     if (change) this.document.change([change], STYLE_IMPORT);
   }
 

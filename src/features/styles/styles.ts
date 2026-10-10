@@ -1,7 +1,8 @@
 // StyleIndex: the paragraph and text styles a project declares (`/// @style …`), kept up to date, and how a
 // document imports one. Entry of features/styles/. See ARCHITECTURE.md, "Custom styles".
-import { type FileChange, importChange, type Project, referencePath, resolvePath } from '../../core/project/project';
-import type { TextChange, TypstDocument } from '../../core/typst-document/typst-document';
+import { type FileChange, type Project } from '../../core/project/project';
+import { referencePath, resolvePath } from '../../core/paths/paths';
+import { calculateImportChange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
 import { scanStyles, type FoundStyle, type Style } from './discover';
 import { STYLES_FILE } from './new-style';
 
@@ -18,7 +19,7 @@ export interface DocumentStyles {
    * The edit to this document's `text` that imports `style` for a use at
    * `use`; null when nothing is needed (declared in this file, imported already).
    */
-  importChange(text: string, style: Style, use: number): TextChange | null;
+  calculateImportChange(text: string, style: Style, use: number): TextChange | null;
   /** "New style…" in the style menu: adds a style to start from and shows it. Absent: no such entry. */
   create?(): void;
 }
@@ -64,11 +65,11 @@ export class StyleIndex {
     return {
       styles: () => this.list,
       onChange: (listener) => this.onChange(listener),
-      importChange: (text, style, use) => {
+      calculateImportChange: (text, style, use) => {
         const path = this.project.pathOf(document);
         if (!path || path === style.path) return null;
         const module = referencePath(path, style.path);
-        return importChange(text, {
+        return calculateImportChange(text, {
           name: style.name,
           matches: (written) => resolvePath(path, written) === style.path,
           // a blank line after it: an import right above `#note[..]` would make the two one (raw) block

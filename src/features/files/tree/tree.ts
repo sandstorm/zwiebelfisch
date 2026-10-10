@@ -1,6 +1,7 @@
 // FileTree: the project's files as an expandable tree (keyboard, drag & drop, presence dots). Entry of
 // features/files/tree/. See files.ts and ARCHITECTURE.md, "File panel".
-import { displayName, fileKind, PROJECT_PATH_TYPE } from '../../../core/project/project';
+import { PROJECT_PATH_TYPE } from '../../../core/project/project';
+import { displayName, fileKind } from '../../../core/paths/paths';
 import { initials, presenceStyle, type PresenceUser } from '../../../core/typst-document/typst-document';
 import { icon } from '../icons';
 import { ancestorsOf, buildTree, filesUnder, folderOf, navigate, type Row, visibleRows } from './tree-model';

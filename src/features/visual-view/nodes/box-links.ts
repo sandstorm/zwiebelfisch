@@ -1,10 +1,10 @@
 // File links on raw boxes: a clickable path in an image box's heading. (Paths in a box's code get the
 // Source view's link tooltip.) See raw-box.ts and ARCHITECTURE.md, "File links".
-import { describeLink, type FileLinks } from '../../../core/project/project';
+import type { DocumentLinkProvider } from '../../../core/document-links/document-links';
 
 /** An image box's path as a button that opens the file, or the path marked as missing. */
-export function imagePathLink(doc: Document, links: FileLinks, path: string): Node {
-  const target = describeLink(links, path);
+export function imagePathLink(doc: Document, links: DocumentLinkProvider, path: string): Node {
+  const target = links.resolveDocumentLink(path);
   if (!target?.exists) {
     const missing = doc.createElement('span');
     missing.className = 'typst-visual__path typst-visual__path--missing';
@@ -18,6 +18,6 @@ export function imagePathLink(doc: Document, links: FileLinks, path: string): No
   button.textContent = path;
   button.title = `Open ${target.name}`;
   button.addEventListener('mousedown', (event) => event.preventDefault());
-  button.addEventListener('click', () => links.open(target.path));
+  button.addEventListener('click', () => void links.followDocumentLink(target));
   return button;
 }

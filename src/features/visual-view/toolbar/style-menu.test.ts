@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Tests for style-menu.ts: custom styles in the text style menu, through the Visual view.
 import { describe, expect, it, vi } from 'vitest';
-import { importChange } from '../../../core/project/project';
+import { calculateImportChange } from '../../../core/typst-document/typst-document';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import type { DocumentStyles, Style } from '../../styles/styles';
 import { VisualView } from '../visual-view';
@@ -19,8 +19,8 @@ function setup(text: string, initial: Style[] = [NOTE, KEY], create?: () => void
   const styles: DocumentStyles = {
     styles: () => list,
     onChange: (listener) => (listeners.add(listener), () => listeners.delete(listener)),
-    importChange: (source, style, use) =>
-      importChange(source, { name: style.name, matches: (m) => m === 'styles.typ', create: () => `#import "styles.typ": ${style.name}\n\n`, use }),
+    calculateImportChange: (source, style, use) =>
+      calculateImportChange(source, { name: style.name, matches: (m) => m === 'styles.typ', create: () => `#import "styles.typ": ${style.name}\n\n`, use }),
     create,
   };
   const parent = document.createElement('div');

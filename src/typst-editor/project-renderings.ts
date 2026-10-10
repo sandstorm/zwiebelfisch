@@ -3,7 +3,8 @@
 import type { TypstDocument } from '../core/typst-document/typst-document';
 import type { Preview } from '../features/preview/preview';
 import type { VisualViewOptions } from '../features/visual-view/visual-view';
-import { extensionOf, type FileChange, type FileContent, fileKind, imageBlob, type Project, referencePath, resolvePath } from '../core/project/project';
+import { type FileChange, type FileContent, type Project } from '../core/project/project';
+import { extensionOf, fileKind, imageBlob, referencePath, resolvePath } from '../core/paths/paths';
 import { uploadChanges } from '../features/files/files';
 
 export interface ProjectRenderingsOptions {

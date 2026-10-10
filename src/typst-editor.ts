@@ -16,7 +16,9 @@ import { DiagnosticsStatus, summarizeDiagnostics } from './features/diagnostics/
 import { EditingViews, type EditorMode } from './typst-editor/editing-views';
 import { Layout } from './typst-editor/layout';
 import layoutStyles from './typst-editor/layout.css?inline';
-import { type FileChange, type FileLinks, fileKind, neighbours, Project, type ProjectFiles, resolvePath } from './core/project/project';
+import { type FileChange, Project, type ProjectFiles } from './core/project/project';
+import { fileKind, resolvePath } from './core/paths/paths';
+import { DocumentLinkProvider, neighbours } from './core/document-links/document-links';
 import { FileNavigation } from './typst-editor/file-navigation';
 import { PdfExport } from './typst-editor/pdf-export';
 import { ProjectRenderings } from './typst-editor/project-renderings';
@@ -292,7 +294,7 @@ class Widget {
         labels: this.labels,
         styles: { ...this.styles.forDocument(document), create: () => void this.newStyle() },
       }),
-      links: (document) => this.fileLinks(document),
+      documentLinks: (document) => this.documentLinks(document),
       onCursor: (document, offset) => {
         const path = this.project.pathOf(document);
         if (path) void this.preview.reveal(path, offset);
@@ -414,9 +416,9 @@ class Widget {
     return null;
   }
 
-  /** Where the paths written in `document` lead: resolved from its current path, opened here. */
-  private fileLinks(document: TypstDocument): FileLinks {
-    return {
+  /** The links of `document`: its paths resolve from its current path and open here. */
+  private documentLinks(document: TypstDocument): DocumentLinkProvider {
+    return new DocumentLinkProvider({
       resolve: (reference) => {
         const file = this.project.pathOf(document);
         return file ? resolvePath(file, reference) : null;
@@ -428,7 +430,7 @@ class Widget {
         if (problem === null) this.open(path);
         return problem;
       },
-    };
+    });
   }
 
   /**
@@ -461,7 +463,7 @@ class Widget {
 
   /** "← previous file" / "next file →" around an included file, in the main file's reading order. */
   private showNeighbours(): void {
-    this.navigation.show(neighbours(this.project.files(), this.project.main, this.active));
+    this.navigation.show(neighbours((path) => this.project.document(path)?.text, this.project.main, this.active));
   }
 
   private showDiagnostics(diagnostics: Diagnostic[]): void {

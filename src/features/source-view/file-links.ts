@@ -4,7 +4,7 @@
 import { syntaxTree } from '@codemirror/language';
 import { type EditorState, type Extension, RangeSetBuilder } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, hoverTooltip, keymap, ViewPlugin, type ViewUpdate } from '@codemirror/view';
-import { describeLink, type FileLinks, findPathReferences, pathReferenceAt } from '../../core/project/project';
+import type { DocumentLinkProvider } from '../../core/document-links/document-links';
 
 const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 /** The modifier that turns a click on a path into "open", as people read it. */
@@ -17,9 +17,9 @@ const pathMark = Decoration.mark({ class: 'typst-source__path' });
  * one opens its file, and the hover tooltip offers "Open …" or, for a
  * missing Typst file, "Create …".
  */
-export function fileLinks(links: FileLinks): Extension {
+export function documentLinks(links: DocumentLinkProvider): Extension {
   return [
-    pathDecorations,
+    pathDecorations(links),
     EditorView.domEventHandlers({
       mousedown: (event, view) => {
         if (event.button !== 0 || !isMod(event)) return false;
@@ -35,7 +35,7 @@ export function fileLinks(links: FileLinks): Extension {
     }),
     keymap.of([{ key: 'Alt-Enter', run: (view) => follow(view.state, view.state.selection.main.head, links) }]),
     hoverTooltip((view, pos) => {
-      const reference = pathReferenceAt(view.state.doc.toString(), pos, syntaxTree(view.state));
+      const reference = links.documentLinkAt(view.state.doc.toString(), pos, syntaxTree(view.state));
       const dom = reference && linkInfo(view.dom.ownerDocument, links, reference.path);
       return dom ? { pos: reference.from, end: reference.to, above: true, create: () => ({ dom }) } : null;
     }),
@@ -48,13 +48,13 @@ export function fileLinks(links: FileLinks): Extension {
  * and, for a Typst file, a "Create …" button that shows why it was refused.
  * Null when the path leaves the project.
  */
-export function linkInfo(doc: Document, links: FileLinks, reference: string, { hint = true } = {}): HTMLElement | null {
-  const target = describeLink(links, reference);
+export function linkInfo(doc: Document, links: DocumentLinkProvider, reference: string, { hint = true } = {}): HTMLElement | null {
+  const target = links.resolveDocumentLink(reference);
   if (!target) return null;
   const info = doc.createElement('span');
   info.className = 'typst-file-link';
   if (target.exists) {
-    info.append(button(doc, `Open ${target.name}`, () => links.open(target.path)));
+    info.append(button(doc, `Open ${target.name}`, () => void links.followDocumentLink(target)));
     if (hint) info.append(note(doc, `(${MOD_CLICK} or Alt+Enter)`));
     return info;
   }
@@ -63,42 +63,44 @@ export function linkInfo(doc: Document, links: FileLinks, reference: string, { h
     const error = note(doc, '');
     error.classList.add('typst-file-link__error');
     error.setAttribute('role', 'alert');
-    info.append(button(doc, `Create ${target.name}`, async () => (error.textContent = (await links.create(target.path)) ?? '')), error);
+    info.append(button(doc, `Create ${target.name}`, async () => (error.textContent = (await links.followDocumentLink(target)) ?? '')), error);
   }
   return info;
 }
 
 /** Opens the existing file whose path holds `pos`; false when there is none. */
-function follow(state: EditorState, pos: number, links: FileLinks): boolean {
-  const reference = pathReferenceAt(state.doc.toString(), pos, syntaxTree(state));
-  const target = reference && describeLink(links, reference.path);
+function follow(state: EditorState, pos: number, links: DocumentLinkProvider): boolean {
+  const reference = links.documentLinkAt(state.doc.toString(), pos, syntaxTree(state));
+  const target = reference && links.resolveDocumentLink(reference.path);
   if (!target?.exists) return false;
-  links.open(target.path);
+  void links.followDocumentLink(target);
   return true;
 }
 
 /** Underlines the paths in the visible part of the code. */
-const pathDecorations = ViewPlugin.fromClass(
-  class {
-    decorations: DecorationSet;
-    constructor(view: EditorView) {
-      this.decorations = decorate(view);
-    }
-    update(update: ViewUpdate) {
-      if (update.docChanged || update.viewportChanged || syntaxTree(update.startState) !== syntaxTree(update.state)) {
-        this.decorations = decorate(update.view);
+function pathDecorations(links: DocumentLinkProvider) {
+  return ViewPlugin.fromClass(
+    class {
+      decorations: DecorationSet;
+      constructor(view: EditorView) {
+        this.decorations = decorate(view, links);
       }
-    }
-  },
-  { decorations: (plugin) => plugin.decorations },
-);
+      update(update: ViewUpdate) {
+        if (update.docChanged || update.viewportChanged || syntaxTree(update.startState) !== syntaxTree(update.state)) {
+          this.decorations = decorate(update.view, links);
+        }
+      }
+    },
+    { decorations: (plugin) => plugin.decorations },
+  );
+}
 
-function decorate(view: EditorView): DecorationSet {
+function decorate(view: EditorView, links: DocumentLinkProvider): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>();
   const text = view.state.doc.toString();
   const tree = syntaxTree(view.state);
   for (const { from, to } of view.visibleRanges) {
-    for (const reference of findPathReferences(text, { tree, from, to })) {
+    for (const reference of links.provideDocumentLinks(text, { tree, from, to })) {
       if (reference.from < reference.to) builder.add(reference.from, reference.to, pathMark);
     }
   }

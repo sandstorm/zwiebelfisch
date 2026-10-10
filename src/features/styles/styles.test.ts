@@ -30,13 +30,13 @@ describe('StyleIndex', () => {
     const { project, index } = setup({ '/chapters/one.typ': 'Text\n' });
     const [note] = index.styles();
     const chapter = index.forDocument(project.document('/chapters/one.typ')!);
-    expect(chapter.importChange('Text\n', note, 0)).toEqual({ from: 0, to: 0, insert: '#import "/styles.typ": note\n\n' });
+    expect(chapter.calculateImportChange('Text\n', note, 0)).toEqual({ from: 0, to: 0, insert: '#import "/styles.typ": note\n\n' });
     const main = index.forDocument(project.document('/main.typ')!);
-    expect(main.importChange('= Doc\n', note, 0)).toEqual({ from: 0, to: 0, insert: '#import "styles.typ": note\n\n' });
-    expect(main.importChange('\n= Doc\n', note, 0)).toEqual({ from: 0, to: 0, insert: '#import "styles.typ": note\n' });
-    expect(main.importChange('#import "styles.typ": note\n#note[x]\n', note, 30)).toBeNull();
+    expect(main.calculateImportChange('= Doc\n', note, 0)).toEqual({ from: 0, to: 0, insert: '#import "styles.typ": note\n\n' });
+    expect(main.calculateImportChange('\n= Doc\n', note, 0)).toEqual({ from: 0, to: 0, insert: '#import "styles.typ": note\n' });
+    expect(main.calculateImportChange('#import "styles.typ": note\n#note[x]\n', note, 30)).toBeNull();
     const own = index.forDocument(project.document('/styles.typ')!);
-    expect(own.importChange(STYLES, note, STYLES.length)).toBeNull();
+    expect(own.calculateImportChange(STYLES, note, STYLES.length)).toBeNull();
   });
 });
 

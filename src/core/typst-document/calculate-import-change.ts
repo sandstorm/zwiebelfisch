@@ -1,7 +1,8 @@
-// importChange: the edit that makes a name imported from a module in a Typst file, once. See project.ts.
+// calculateImportChange: the change that makes a name imported from a module in a Typst text (applies nothing).
+// See typst-document.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
-import type { TextChange } from '../typst-document/typst-document';
+import type { TextChange } from './text-change';
 
 /** What to import, and how to recognise and write the module's import. */
 export interface ImportRequest {
@@ -16,13 +17,17 @@ export interface ImportRequest {
 }
 
 /**
- * The edit that makes `name` imported from the module in Typst `text`: null
- * when an import before `use` already brings it (by name or `*`); else the
- * name is added to the item list of the first such import of the module (`: a,
- * b` → `: a, b, name`; a bare `#import "m"` gets `: name`), or `create()` goes
- * at the top. One edit, never a duplicate.
+ * Decides the change that makes `name` imported from the module in Typst
+ * `text`, without applying it: the caller sends it through
+ * `TypstDocument.change`, possibly merged with its own changes into one edit
+ * (one undo step).
+ *
+ * Null when an import before `use` already brings it (by name or `*`); else
+ * the name is added to the item list of the first such import of the module
+ * (`: a, b` → `: a, b, name`; a bare `#import "m"` gets `: name`), or
+ * `create()` goes at the top. Never a duplicate.
  */
-export function importChange(text: string, request: ImportRequest): TextChange | null {
+export function calculateImportChange(text: string, request: ImportRequest): TextChange | null {
   const use = request.use ?? text.length;
   for (let node = typstParser.parse(text).topNode.firstChild; node && node.to <= use; node = node.nextSibling) {
     if (node.name !== 'ModuleImport' || !importsModule(text, node, request)) continue;

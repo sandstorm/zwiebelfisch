@@ -1,5 +1,5 @@
 // minimalChange: the one replacement between two texts. See typst-document.ts.
-import type { TextChange } from './typst-document';
+import type { TextChange } from './text-change';
 
 /**
  * The single change that turns `before` into `after`, covering only the part

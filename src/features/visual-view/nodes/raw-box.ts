@@ -7,8 +7,8 @@ import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { Decoration, EditorView, NodeView } from '@tiptap/pm/view';
 import { minimalChange } from '../../../core/typst-document/typst-document';
-import type { FileLinks } from '../../../core/project/project';
-import { codeColors, fileLinks, remotePresence, showPresence, typstLanguage } from '../../source-view/source-view';
+import type { DocumentLinkProvider } from '../../../core/document-links/document-links';
+import { codeColors, documentLinks, remotePresence, showPresence, typstLanguage } from '../../source-view/source-view';
 import { imagePathLink } from './box-links';
 import { ImageTools } from '../images/images';
 import { boxCarets } from '../presence';
@@ -31,14 +31,14 @@ const LABELS: Record<string, { className: string; text(src: string): string }> =
 const renderers = new WeakMap<Editor, BoxRenderer>();
 
 /** Where the paths in the raw boxes of an editor lead (see `setBoxLinks`). */
-const fileLinksOf = new WeakMap<Editor, FileLinks>();
+const fileLinksOf = new WeakMap<Editor, DocumentLinkProvider>();
 
 /**
  * Makes the file paths in the raw boxes of `editor` open their file: links
  * above a raw block naming files, a clickable path in an image box's heading,
  * Mod+click / Alt+Enter in the code. Set it before the boxes are created.
  */
-export function setBoxLinks(editor: Editor, links: FileLinks): void {
+export function setBoxLinks(editor: Editor, links: DocumentLinkProvider): void {
   fileLinksOf.set(editor, links);
 }
 
@@ -117,7 +117,7 @@ class RawBox implements NodeView {
         inline ? inlineTheme : [blockTheme, CodeView.lineWrapping],
         CodeView.contentAttributes.of({ 'aria-label': 'Typst code' }),
         remotePresence,
-        links ? fileLinks(links) : [],
+        links ? documentLinks(links) : [],
       ],
       dispatchTransactions: (trs, view) => this.forward(trs, view),
     });
@@ -132,7 +132,7 @@ class RawBox implements NodeView {
   }
 
   /** The tools of an image box; its path in the heading opens the file when there are `links`. */
-  private imageTools(code: HTMLElement, links: FileLinks | undefined): ImageTools {
+  private imageTools(code: HTMLElement, links: DocumentLinkProvider | undefined): ImageTools {
     const pathLabel = links && ((path: string) => imagePathLink(this.dom.ownerDocument, links, path));
     const host = { dom: this.dom, code, picture: this.rendered?.picture ?? null, editor: this.editor, getPos: this.getPos, editCode: () => this.focus(-1), pathLabel };
     return new ImageTools(host, this.node);

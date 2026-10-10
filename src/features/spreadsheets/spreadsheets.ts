@@ -1,6 +1,7 @@
 // SpreadsheetView: a spreadsheet file (`.ic`) shown and edited in IronCalc's workbook UI; every edit saves the file
 // and the Typst file documents import. Entry of features/spreadsheets/. See ARCHITECTURE.md, "Spreadsheets".
-import { displayName, type FileContent } from '../../core/project/project';
+import { type FileContent } from '../../core/project/project';
+import { displayName } from '../../core/paths/paths';
 import type { MountedWorkbook, WorkbookEdit } from './workbook';
 
 export { typstPath } from './typst-file';

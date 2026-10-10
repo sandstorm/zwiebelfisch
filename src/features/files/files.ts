@@ -1,7 +1,8 @@
 // FilePanel: the project's files as a tree in the left side panel (new file / folder, upload, rename,
 // delete, drag & drop, presence). Entry of features/files/. See ARCHITECTURE.md, "File panel".
 import type { PlacedPresence, PresenceUser } from '../../core/typst-document/typst-document';
-import { displayName, extensionOf, type FileChange, toPath } from '../../core/project/project';
+import { type FileChange } from '../../core/project/project';
+import { displayName, extensionOf, toPath } from '../../core/paths/paths';
 import { icon, type IconName } from './icons';
 import { FileTree, filesUnder, type FolderMemory, relocate } from './tree/tree';
 import { uploadChanges } from './upload';

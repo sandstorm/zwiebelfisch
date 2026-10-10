@@ -1,5 +1,6 @@
-// Project paths: file kinds, display names, new names, and Typst path resolution. See project.ts.
-import type { FileContent } from './project';
+// Paths: how project files are named and what they are (file kinds, display names, names people type, Typst path
+// resolution). Pure functions on strings, so every module agrees on paths without needing a Project.
+// Entry of core/paths/. See ARCHITECTURE.md, "Paths".
 
 /** What the widget can do with a file: edit it, preview it as an image, edit it as a spreadsheet (IronCalc, `.ic`), or only list it. */
 export type FileKind = 'typst' | 'image' | 'spreadsheet' | 'data';
@@ -55,7 +56,7 @@ const IMAGE_TYPES: Record<string, string> = {
 };
 
 /** The image file `path` with `content` as a Blob of its media type, e.g. for an object URL. */
-export function imageBlob(path: string, content: FileContent): Blob {
+export function imageBlob(path: string, content: string | Uint8Array): Blob {
   const bytes = typeof content === 'string' ? new TextEncoder().encode(content) : content;
   return new Blob([bytes as BlobPart], { type: IMAGE_TYPES[extensionOf(path).toLowerCase()] });
 }

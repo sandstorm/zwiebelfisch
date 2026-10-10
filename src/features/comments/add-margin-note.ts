@@ -2,8 +2,7 @@
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { DRAFTING, isNoteCallAt, MARGIN_NOTE, NOTE_HEAD, printNoteCall, rangeNoteSyntax, SET_DEFAULTS } from './margin-note-syntax';
-import type { TextChange } from '../../core/typst-document/typst-document';
-import { importChange as importChangeOf } from '../../core/project/project';
+import { calculateImportChange, type TextChange } from '../../core/typst-document/typst-document';
 import { noteMarginChanges } from './page-margin';
 
 /** Where a new note goes in the edited text: its (still empty) body starts at `note`. */
@@ -119,17 +118,17 @@ function fits(text: string, ...parts: [number, string][]): boolean {
  * note's position goes first.
  */
 function withImport(text: string, changes: TextChange[]): TextChange[] {
-  const extra = importChange(text, changes[0].from);
+  const extra = marginNoteImport(text, changes[0].from);
   if (!extra) return changes;
   const same = changes.find((change) => change.from === extra.from);
   if (same) return changes.map((change) => (change === same ? { ...same, insert: extra.insert + same.insert } : change));
   return [extra, ...changes].sort((a, b) => a.from - b.from);
 }
 
-/** Null when `margin-note` is imported from drafting before `use` already; else the edit that imports it (see `importChange`). */
-function importChange(text: string, use: number): TextChange | null {
+/** Null when `margin-note` is imported from drafting before `use` already; else the edit that imports it (see `calculateImportChange`). */
+function marginNoteImport(text: string, use: number): TextChange | null {
   const version = DRAFTING.slice(0, DRAFTING.lastIndexOf(':') + 1);
-  return importChangeOf(text, { name: MARGIN_NOTE, matches: (module) => module.startsWith(version), create: () => newImport(text), use });
+  return calculateImportChange(text, { name: MARGIN_NOTE, matches: (module) => module.startsWith(version), create: () => newImport(text), use });
 }
 
 /** The import added at the top, with `NOTE_STYLE` unless `text` sets note defaults itself. */

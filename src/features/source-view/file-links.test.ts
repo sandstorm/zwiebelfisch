@@ -3,7 +3,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
 import { TypstDocument } from '../../core/typst-document/typst-document';
-import type { FileLinks } from '../../core/project/project';
+import { DocumentLinkProvider, type LinkWorkspace } from '../../core/document-links/document-links';
 import { SourceView } from './source-view';
 import { linkInfo } from './file-links';
 
@@ -11,7 +11,7 @@ const TEXT = '#import "template.typ": template\n#include "missing.typ"\n#image("
 
 function setup(text = TEXT) {
   const files = new Set(['/main.typ', '/template.typ']);
-  const links: FileLinks = {
+  const links: LinkWorkspace = {
     resolve: (reference) => (reference.startsWith('..') ? null : `/${reference}`),
     exists: (path) => files.has(path),
     open: vi.fn(),
@@ -19,7 +19,7 @@ function setup(text = TEXT) {
   };
   const parent = document.createElement('div');
   document.body.append(parent);
-  const source = new SourceView(parent, new TypstDocument(text), { links });
+  const source = new SourceView(parent, new TypstDocument(text), { documentLinks: new DocumentLinkProvider(links) });
   const view = EditorView.findFromDOM(parent.querySelector<HTMLElement>('.cm-editor')!)!;
   return { links, parent, source, view };
 }
@@ -67,7 +67,7 @@ describe('file links in the Source view', () => {
 describe('linkInfo (the hover tooltip)', () => {
   it('offers to open an existing file', () => {
     const { links } = setup();
-    const dom = linkInfo(document, links, 'template.typ')!;
+    const dom = linkInfo(document, new DocumentLinkProvider(links), 'template.typ')!;
     expect(dom.textContent).toMatch(/Open template\.typ/);
     expect(dom.textContent).toMatch(/Ctrl\+click/);
     dom.querySelector('button')!.click();
@@ -76,20 +76,20 @@ describe('linkInfo (the hover tooltip)', () => {
 
   it('says a file is missing and offers to create a missing .typ file', async () => {
     const { links } = setup();
-    const dom = linkInfo(document, links, 'missing.typ')!;
+    const dom = linkInfo(document, new DocumentLinkProvider(links), 'missing.typ')!;
     expect(dom.textContent).toContain('missing.typ is not in the project');
     const create = dom.querySelector('button')!;
     expect(create.textContent).toBe('Create missing.typ');
     create.click();
     expect(links.create).toHaveBeenCalledWith('/missing.typ');
-    expect(linkInfo(document, links, 'gone.png')!.querySelector('button')).toBeNull();
-    expect(linkInfo(document, links, '../up.typ')).toBeNull();
+    expect(linkInfo(document, new DocumentLinkProvider(links), 'gone.png')!.querySelector('button')).toBeNull();
+    expect(linkInfo(document, new DocumentLinkProvider(links), '../up.typ')).toBeNull();
   });
 
   it('shows why creating failed', async () => {
     const { links } = setup();
     vi.mocked(links.create).mockResolvedValueOnce('This change is not allowed here.');
-    const dom = linkInfo(document, links, 'missing.typ')!;
+    const dom = linkInfo(document, new DocumentLinkProvider(links), 'missing.typ')!;
     dom.querySelector('button')!.click();
     await vi.waitFor(() => expect(dom.textContent).toContain('This change is not allowed here.'));
   });

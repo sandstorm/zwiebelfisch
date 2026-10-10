@@ -1,5 +1,6 @@
 // uploadChanges: uploaded files as project changes (names, kinds). See files.ts.
-import { type FileChange, fileKind } from '../../core/project/project';
+import { type FileChange } from '../../core/project/project';
+import { fileKind } from '../../core/paths/paths';
 
 /** The create changes for uploaded files: `.typ` files as text, everything else as bytes. */
 export async function uploadChanges(files: File[]): Promise<FileChange[]> {

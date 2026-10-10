@@ -1,5 +1,5 @@
 // The file panel's icons (16×16 strokes, currentColor): file kinds, folders, actions. See files.ts.
-import type { FileKind } from '../../core/project/project';
+import type { FileKind } from '../../core/paths/paths';
 
 const ICONS = {
   typst: '<path d="M4 1.5h5.5L13 5v9.5H4z"/><path d="M9.5 1.5V5H13M6.5 8.5h4M6.5 11h4"/>',

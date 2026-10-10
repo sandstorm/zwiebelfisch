@@ -1,6 +1,6 @@
 // EditingViews: the Visual/Source tabs; lazily one VisualView and SourceView per document. See typst-editor.ts.
 import type { Highlight, TypstDocument } from '../core/typst-document/typst-document';
-import type { FileLinks } from '../core/project/project';
+import type { DocumentLinkProvider } from '../core/document-links/document-links';
 import { describeDiagnostic, SourceView, type SourceDiagnostic } from '../features/source-view/source-view';
 import { VisualView, type VisualViewOptions } from '../features/visual-view/visual-view';
 
@@ -20,7 +20,7 @@ export interface EditingViewsOptions {
   /** Options for the Visual view of `document` (rendered raw boxes, images to insert). */
   visualOptions?(document: TypstDocument): VisualViewOptions;
   /** Where the file paths in `document` lead (both views open them); default: plain text. */
-  links?(document: TypstDocument): FileLinks;
+  documentLinks?(document: TypstDocument): DocumentLinkProvider;
 }
 
 interface Views {
@@ -169,12 +169,12 @@ export class EditingViews {
     // After the tabs (and any earlier panes): only one pair is ever visible.
     this.parent.insertBefore(panes.visual, this.tabs.nextSibling);
     panes.visual.after(panes.source);
-    const links = this.options.links?.(document);
+    const documentLinks = this.options.documentLinks?.(document);
     const views: Views = {
       panes,
       visual: new VisualView(panes.visual, document, {
         ...this.options.visualOptions?.(document),
-        links,
+        documentLinks,
         onSelection: () => {
           // like the source view's onCursor: where the user works, for the preview to follow
           if (views.visual.focused()) this.options.onCursor?.(document, views.visual.selection().from);
@@ -182,7 +182,7 @@ export class EditingViews {
         },
       }),
       source: new SourceView(panes.source, document, {
-        links,
+        documentLinks,
         onCursor: (offset) => {
           views.cursor = offset;
           this.options.onCursor?.(document, offset);

@@ -2,9 +2,12 @@
 // share about it (Highlight, Presence). Entry of core/typst-document/. See ARCHITECTURE.md, "TypstDocument".
 import type * as Y from 'yjs';
 import { minimalChange } from './minimal-change';
+import type { TextChange } from './text-change';
 import { deltaToChanges, type DeltaOp } from './y-delta';
 
+export { calculateImportChange, type ImportRequest } from './calculate-import-change';
 export type { Highlight } from './highlight';
+export type { TextChange } from './text-change';
 export { minimalChange } from './minimal-change';
 export {
   caretElement,
@@ -16,13 +19,6 @@ export {
   type PresenceTarget,
   type PresenceUser,
 } from './presence';
-
-/** A replacement of `from..to` (UTF-16 offsets) by `insert`. */
-export interface TextChange {
-  from: number;
-  to: number;
-  insert: string;
-}
 
 export type ChangeListener = (changes: readonly TextChange[], origin: unknown) => void;
 

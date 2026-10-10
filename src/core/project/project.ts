@@ -1,12 +1,10 @@
-// Project: the file model of the widget: one TypstDocument per .typ file, the other files as bytes, the
-// protected main file. Entry of core/project/. See ARCHITECTURE.md, "createTypstEditor".
+// Project: the one place that knows which files a project has and which changes to them are allowed. One
+// TypstDocument per .typ file (views edit it directly), the other files as bytes, the protected main file.
+// Everyone who derives something from the files (views, indexes, collaboration, the preview) subscribes to
+// `onChange` and is never told by hand: `apply`, `replace` and every text edit are reported there.
+// Entry of core/project/. See ARCHITECTURE.md, "Project".
 import { TypstDocument } from '../typst-document/typst-document';
-import { fileKind } from './paths';
-
-export { displayName, extensionOf, fileKind, imageBlob, referencePath, resolvePath, toPath, type FileKind } from './paths';
-export { neighbours, readingOrder } from './reading-order';
-export { importChange, type ImportRequest } from './imports';
-export { describeLink, findPathReferences, pathReferenceAt, type FileLinks, type LinkTarget, type PathCall, type PathReference } from './path-references';
+import { fileKind } from '../paths/paths';
 
 /** The drag data type of a project file dragged from the file panel; the data is its path. */
 export const PROJECT_PATH_TYPE = 'application/x-typst-project-path';

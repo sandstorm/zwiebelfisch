@@ -23,17 +23,22 @@ src/                        the widget (TypeScript); the most important API on t
                             every block closed (an unclosed rule silently nests the rest of the file),
                             hex colors only in the color tokens (dark mode)
   core/                     the models everything builds on
-    typst-document/         TypstDocument — the single source of truth (string or shared Y.Text); Highlight (a
-                            styled source range views draw); Presence / PresenceTarget (other users' carets +
-                            selections, the interface both views implement); minimal-change.ts, y-delta.ts
+    typst-document/         TypstDocument — the single source of truth (string or shared Y.Text); TextChange (the
+                            one edit format, text-change.ts); Highlight (a styled source range views draw);
+                            Presence / PresenceTarget (other users' carets + selections, the interface both views
+                            implement); calculateImportChange (the change that imports a name from a module, once;
+                            applies nothing: margin notes merge it into their own edit); minimal-change.ts, y-delta.ts
     typst-engine/           typed TS wrapper around the wasm (typst-engine.ts: createEngine), fetch-fonts.ts;
                             engine-assets.ts (wasm + default font URLs for the main thread); packages/ (withPackages,
                             tar reader); fixtures/ (test package archives); generated wasm/, fonts/ (gitignored)
-    project/                Project: the file model (one TypstDocument per .typ file, main protected); paths.ts
-                            (names → paths, Typst path resolution, file kinds); FileContent; path-references.ts
-                            (the file paths a Typst text names; FileLinks); reading-order.ts (main file, then
-                            its #includes depth first; a file's neighbours in that order); imports.ts
-                            (importChange: import a name from a module once, used by margin notes and styles)
+    paths/                  how project files are named and what they are (pure functions on strings): fileKind,
+                            displayName, toPath, extensionOf, imageBlob, Typst path resolution (resolvePath,
+                            referencePath)
+    project/                Project: which files a project has and which changes are allowed (one TypstDocument
+                            per .typ file, main protected); FileChange, FileContent, ProjectFiles. No re-exports.
+    document-links/         DocumentLinkProvider: the file paths a Typst document names (find-links.ts, Lezer),
+                            where they lead and following them (LinkWorkspace: what it needs from the widget);
+                            reading-order.ts (main file, then its #includes depth first; a file's neighbours)
   features/                 one folder per feature, each entered through the file named like it
     visual-view/            VisualView — Tiptap editor over the source-anchored projection; visual-view.css
                             (ProseMirror core styles); decorations at the root: highlights, change-decorations,
@@ -164,7 +169,8 @@ createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileCha
 - **`Project`** (`core/project/project.ts`): files by path. `.typ` strings become a `TypstDocument` each (kept
   across renames, so open views survive); everything else is stored as given.
   `check(change)` → reason or null, `apply(change)`, `replace(files)`, `onChange(change)`
-  (structural changes and every document edit as `update`). The main file cannot be renamed or
+  (structural changes and every document edit as `update`; `replace` reports a `delete`, `create`
+  or `update` per file, so subscribers never need to be refreshed by hand). The main file cannot be renamed or
   deleted; `.typ` files keep their ending.
   `FileChange = {kind:'create', path, content} | {kind:'update', path, content} | {kind:'delete', path} | {kind:'rename', from, path}`.
 - **`EditingViews`**: one Visual/Source tab bar; a document's views are created the first time
@@ -172,7 +178,7 @@ createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileCha
   shared. With a single file the DOM is the same as before (tabs + two panes).
   `setFrame(top, bottom)` keeps two elements first and last in the visible pane (they scroll with
   the file). The widget puts `FileNavigation` there: for a file the main file `#include`s
-  (`neighbours(files, main, path)` from `reading-order.ts`, recomputed on open and every change),
+  (`neighbours(read, main, path)` from `core/document-links`, recomputed on open and every change),
   links to the file read before it and the one after it, both at the top and at the bottom;
   nothing for the main file or files outside the include order.
 - **`FilePanel`** (see "File panel" below) lives in the `Layout`'s `files` panel: open by default
@@ -182,7 +188,7 @@ createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileCha
   uploaded unless `fileList` is `hide` (then ignored) — never left to the browser, which would
   open the file in place of the page. Image files dropped into the Visual view's text are taken
   there instead (uploaded and inserted at the drop point).
-- **File links** (see below): each document's views get a `FileLinks` (`Widget.fileLinks`:
+- **File links** (see below): each document's views get a `DocumentLinkProvider` (`Widget.documentLinks`:
   paths resolve from the document's current path; `open` is `Widget.open`; `create` is a
   `create` change through `request`, then `open`).
   `onCreate(document, views)` reports new views (the widget attaches them to `ChangeTracking`).
@@ -311,7 +317,7 @@ Inside the crate:
 ### `VisualView` (`src/features/visual-view`)
 
 ```ts
-new VisualView(parent, document, { renderer?, assets?, user?: {name}, comment?(), labels?, links?, styles? })   // user signs replies; comment: the toolbar's "Comment"; labels: ProjectLabels; links: FileLinks; styles: DocumentStyles
+new VisualView(parent, document, { renderer?, assets?, user?: {name}, comment?(), labels?, documentLinks?, styles? })   // user signs replies; comment: the toolbar's "Comment"; labels: ProjectLabels; documentLinks: DocumentLinkProvider; styles: DocumentStyles
 .reveal(from, to)    // select exactly what shows source range from..to (caret if empty)
 .setHighlights(layer, highlights)   // source ranges → inline decorations (sourceToPos, end with bias -1)
 .setPresence(presences)             // other users' carets / selections (PresenceTarget), see Collaboration
@@ -544,7 +550,7 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   NodeView that hosts a nested CodeMirror (Typst highlighting, no own history). An image box is
   headed by "Image: <path>" (`imagePath(src)`; with `links` the path opens the file), an outline box
   by "Table of contents"; with a renderer, the outline shows its compiled snippet. With `links`
-  (`setBoxLinks`), every box's code gets the Source view's `fileLinks` extension (link tooltip
+  (`setBoxLinks`), every box's code gets the Source view's `documentLinks` extension (link tooltip
   on a path, Mod+click opens; no separate "Open …" row: it took too much space).
   - **Rendered boxes** (`rendered-box.ts`, with a `BoxRenderer`): while not focused, a box shows
     an `<img>` instead of its code: an `image` box its file (`renderer.imageUrl(path)`, follows
@@ -619,7 +625,7 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
 ### `SourceView` (`src/features/source-view`)
 
 ```ts
-new SourceView(parent, document, { onCursor?, onBaseChange?, links? })   // links: FileLinks, see "File links"
+new SourceView(parent, document, { onCursor?, onBaseChange?, documentLinks? })   // a DocumentLinkProvider, see "File links"
 .reveal(from, to)    // select, scroll to center, highlight
 .setDiagnostics([{severity, message, hints, from, to}])   // underline + hover; replaces previous
 .setHighlights(layer, [{from, to, className, attributes?}])  // replaces that layer; follows edits
@@ -767,8 +773,8 @@ doc comment; the editor never keeps a registry of its own:
 ```ts
 scanStyles(text) → [{ name, kind: paragraph|text, label }]   // `///` line + `#let f(body, named: ..)` (one positional parameter)
 new StyleIndex(project)   .styles() → Style[] (+ path)   .onChange(listener)   .refresh()   .destroy()
-.forDocument(document) → DocumentStyles { styles(), onChange(), importChange(text, style, use) → TextChange | null, create?() }
-importChange(text, { name, matches(module), create(), use? }) → TextChange | null   // core/project/imports.ts
+.forDocument(document) → DocumentStyles { styles(), onChange(), calculateImportChange(text, style, use) → TextChange | null, create?() }
+calculateImportChange(text, { name, matches(module), create(), use? }) → TextChange | null   // core/typst-document
 newStyle(text) → { text, from, to }   // "New style…": `new-style`, `new-style-2`, … appended to /styles.typ
 ```
 
@@ -783,7 +789,7 @@ newStyle(text) → { text, from, to }   // "New style…": `new-style`, `new-sty
   headings and "New style…"; it shows the selection's paragraph style. Paragraph styles wrap the
   selected blocks (`wrapIn`, or rename the style around them); *Normal text* lifts them out;
   text styles toggle the mark (inclusive, like bold; one at a time). After applying one, the view
-  adds the import (`DocumentStyles.importChange` at the selection; relative to the file, never
+  adds the import (`DocumentStyles.calculateImportChange` at the selection; relative to the file, never
   into the file declaring it, a new import followed by a blank line so it stays its own block).
 - **Look:** `.typst-visual__style.typst-style--<name>` (accent bar, the title as a badge) and
   `.typst-visual__style-text.typst-style--<name>` (dotted underline, title as tooltip); hosts
@@ -905,14 +911,16 @@ new FilePanel(parent, dropTarget, { onOpen(path), onChange(change) → Promise<r
   top level) is relocated there; files from the computer dropped on a row are uploaded into that
   folder (the tree stops the drop, so the widget-wide handler does not upload them again).
 
-### File links (`src/core/project/path-references.ts`, `src/features/source-view/file-links.ts`, `src/features/visual-view/nodes/box-links.ts`)
+### File links (`src/core/document-links/`, `src/features/source-view/file-links.ts`, `src/features/visual-view/nodes/box-links.ts`)
 
 ```ts
-findPathReferences(text, { tree?, from?, to? }) → [{ path, from, to, call }]   // call: import | include | image | read | json | …
-pathReferenceAt(text, offset, tree?) → PathReference | null                    // the string holding offset (quotes included)
-interface FileLinks { resolve(reference) → path | null; exists(path); open(path); create(path) → Promise<reason | null> }
-describeLink(links, reference) → { path, name, exists, creatable } | null      // creatable: a missing .typ file
-fileLinks(links) → CodeMirror extension      linkInfo(doc, links, reference, { hint? }) → "Open …" / "Create …" DOM
+new DocumentLinkProvider(workspace: LinkWorkspace)        // one per document
+  .provideDocumentLinks(text, { tree?, from?, to? }) → DocumentLink[]   // { path, from, to, call }; call: import | include | image | …
+  .documentLinkAt(text, offset, tree?) → DocumentLink | null             // the string holding offset (quotes included)
+  .resolveDocumentLink(reference) → LinkTarget | null                    // { path, name, exists, creatable }; creatable: a missing .typ file
+  .followDocumentLink(target) → Promise<reason | null>                  // open, or create a missing .typ file (and open it)
+interface LinkWorkspace { resolve(reference) → path | null; exists(path); open(path); create(path) → Promise<reason | null> }
+documentLinks(provider) → CodeMirror extension      linkInfo(doc, provider, reference, { hint? }) → "Open …" / "Create …" DOM
 ```
 
 - **One definition** of what a path reference is (Lezer, `codemirror-lang-typst`): the string of
@@ -921,13 +929,13 @@ fileLinks(links) → CodeMirror extension      linkInfo(doc, links, reference, {
   bibliography array); escapes decoded; packages (`@…`), empty strings, named arguments, computed
   paths and methods (`image.decode`) are not references. Callers with a parsed tree (an editor's
   `syntaxTree`) pass it, and a range to look at the visible part only.
-- **Source view** (`fileLinks`): paths are marked (`typst-source__path`, underlined on hover, a
+- **Source view** (`documentLinks`): paths are marked (`typst-source__path`, underlined on hover, a
   pointer while Ctrl/⌘ is held: `typst-source--mod`); Mod+mousedown on one opens an existing file
   (else CodeMirror's own Mod+click); Alt+Enter opens the file whose path holds the cursor (F12
   was avoided: browsers take it for the developer tools); the hover tooltip is `linkInfo`: "Open
   x (Ctrl+click or Alt+Enter)", or "x is not in the project" + "Create x" for a `.typ` file
   (showing the host's refusal).
-- **Visual view**: the nested CodeMirror of every raw box gets `fileLinks` (the same tooltip as
+- **Visual view**: the nested CodeMirror of every raw box gets `documentLinks` (the same tooltip as
   the Source view; no "Open …" row); an image box's path is a button.
 - **Widget**: `open` shows the file (the panel selects it and opens its folders); `create` asks
   for a `create` change like the panel's New file.
