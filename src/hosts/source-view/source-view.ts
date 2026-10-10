@@ -29,21 +29,17 @@ export class SourceViewHost implements SourceViewContributions {
   };
 
   registerExtension(extension: SourceViewExtension): Disposable {
-    return this.register(this.extensions, extension);
+    this.extensions.push(extension);
+    this.changed.fire();
+    return new Disposable(() => {
+      this.extensions.splice(this.extensions.indexOf(extension), 1);
+      this.changed.fire();
+    });
   }
 
   /** A Source view of `document` in `parent`, with every contribution registered now or later. */
   createView(parent: HTMLElement, document: TypstDocument, options: SourceViewOptions = {}): SourceView {
     return new SourceView(parent, document, options, this.contributions);
-  }
-
-  private register<T>(list: T[], item: T): Disposable {
-    list.push(item);
-    this.changed.fire();
-    return new Disposable(() => {
-      list.splice(list.indexOf(item), 1);
-      this.changed.fire();
-    });
   }
 
   private extensionsFor(view: SourceViewContext): Extension {
