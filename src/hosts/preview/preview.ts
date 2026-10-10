@@ -235,7 +235,7 @@ export class Preview implements PreviewContributions {
    * runs are collapsed into one, and bytes that are the same `Uint8Array` as
    * last time are not sent to the worker again.
    */
-  update(files: Record<string, FileContent>, main = '/main.typ'): void {
+  update(files: Record<string, FileContent>, main: string): void {
     this.compiles.push({ files, main });
   }
 
