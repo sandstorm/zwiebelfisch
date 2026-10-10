@@ -102,6 +102,12 @@
   color: #57606a;
   font: 0.8em ui-monospace, monospace;
 }
+.typst-visual__raw-block,
+.typst-visual__raw-inline { cursor: text; transition: box-shadow 0.15s, background 0.15s; }
+.typst-visual__raw-block:hover,
+.typst-visual__raw-inline:hover { background: #e9edf2; }
+.typst-visual__raw-block:focus-within,
+.typst-visual__raw-inline:focus-within { background: white; box-shadow: 0 0 0 2px var(--te-accent); color: #24292f; }
 .typst-visual .ProseMirror-selectednode { outline: 2px solid var(--te-accent); }
 .typst-preview--stale { opacity: 0.45; filter: grayscale(0.6); transition: opacity 0.2s; }
 .typst-status {
