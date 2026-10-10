@@ -29,7 +29,16 @@ export const schema: Schema = schemaWith();
 
 /** The schema of a view with the built-ins configured from `options`. */
 export function schemaWith(options: TestViewOptions = {}): Schema {
-  const { nodes, marks } = contributions(options).contributed();
+  return schemaFrom(contributions(options));
+}
+
+/** The schema of a view with only `list` (built-in constructs or features), activated in that order. */
+export function schemaOf(list: readonly VisualViewContribution[]): Schema {
+  return schemaFrom(activate(list));
+}
+
+function schemaFrom(registry: VisualViewContributions): Schema {
+  const { nodes, marks } = registry.contributed();
   return createSchema(nodes, marks);
 }
 
@@ -53,17 +62,20 @@ export function createVisualView(parent: HTMLElement, document: TypstDocument, o
   return new VisualView(parent, document, contributions(options));
 }
 
-/**
- * The built-ins and `options.contributions`, activated for their Visual-view contributions. The built-in constructs
- * are extensions: of the rest of the extension context they use only the workbench's stylesheets (left out here).
- */
+/** The built-ins and `options.contributions`, activated. */
 function contributions(options: TestViewOptions): VisualViewContributions {
+  return activate([...builtins(options), ...(options.contributions ?? [])]);
+}
+
+/**
+ * `contributions` activated in order, for their Visual-view contributions. The built-in constructs are extensions:
+ * of the rest of the extension context they use only the workbench's stylesheets (left out here).
+ */
+export function activate(contributions: readonly VisualViewContribution[]): VisualViewContributions {
   const visualView = new VisualViewContributions();
   const subscriptions: { dispose(): unknown }[] = [];
   const workbench = { registerStyleSheet: () => new Disposable(() => {}) };
-  for (const contribution of [...builtins(options), ...(options.contributions ?? [])]) {
-    contribution.activate({ visualView, subscriptions, workbench } as ContributionContext);
-  }
+  for (const contribution of contributions) contribution.activate({ visualView, subscriptions, workbench } as ContributionContext);
   return visualView;
 }
 
@@ -82,7 +94,6 @@ export function builtins(options: Omit<TestViewOptions, 'contributions'> = {}): 
       imageUrls: options.renderer && (() => options.renderer),
       documentLinks: options.documentLinks && (() => options.documentLinks),
     }),
-    // after images, whose renderer draws image boxes
     renderedBoxesVisualView({ snippets: options.renderer && (() => options.renderer) }),
     outline,
     pageLayout,

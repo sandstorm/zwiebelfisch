@@ -15,7 +15,7 @@ import { Toolbar } from './toolbar/toolbar';
 export {
   VisualViewContributions, setBoxDecorations, svg, type Action, type BoxPicture, type BoxRenderer, type BoxRendererProvider, type BoxCodeExtensionProvider,
   type BoxTools, type BoxToolsHost, type CodeBoxSpec, type ContributionContext, type EditorExtensionProvider, type Gutter, type HighlightProvider,
-  type GutterProvider, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem, type TypstMarkSpec,
+  type GutterProvider, type PriorityOptions, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem, type TypstMarkSpec,
   type TypstNodeSpec, type VisualViewContext, type VisualViewContribution,
 } from './contributions/contributions';
 // the toolkit specs' projectors and printers use (see projection/grammar.ts)

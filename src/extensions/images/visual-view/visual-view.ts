@@ -53,7 +53,8 @@ export function imagesVisualView(options: ImagesOptions = {}): VisualViewContrib
         visualView.registerNode(FIGURE),
         visualView.registerNode(FIGURE_CAPTION),
         visualView.registerToolbarItem({ group: 'insert', order: 10, create: (toolbar) => insertImage(toolbar, options.assets?.(toolbar.document)) }),
-        visualView.registerBoxRenderer((view) => imageRenderer(options.imageUrls?.(view.document))),
+        // image boxes are raw boxes, too: drawn as their image file rather than as a compiled snippet (priority 100)
+        visualView.registerBoxRenderer((view) => imageRenderer(options.imageUrls?.(view.document)), { priority: 110 }),
       );
     },
   };

@@ -193,14 +193,8 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
 
 /**
  * The features of the widget and the Typst constructs of the Visual view, in activation order: an extension reads
- * the services of those before it, and the order of the Visual view's contributions is that of its schema (marks
- * nest in it) and of its projectors (the first that takes a piece of syntax gets it).
- *
- * The Typst constructs depend on that order: `markup` comes first, so its marks (bold, italic, link, code) nest
- * outside the features' marks (comments, styles); `tables` before `images`, whose figures may hold a
- * table; `images` before `renderedBoxes` (the first box renderer that takes a box draws it); within `lists`, task
- * lists before bullet lists (a task item is a bullet item `- [ ] ..`); `alignment` after the other blocks (its
- * paragraph spec extends the host's paragraph).
+ * the services of those before it. Where the Visual view's contributions compete (projectors of the same syntax,
+ * box renderers, mark nesting), their `priority` decides, not this order (see VisualViewContributions).
  */
 function builtinExtensions(options: TypstEditorOptions): TypstExtension[] {
   return [
@@ -216,7 +210,6 @@ function builtinExtensions(options: TypstEditorOptions): TypstExtension[] {
     headings,
     tables,
     images(),
-    // raw boxes drawn as compiled snippets (after images, whose renderer draws image boxes)
     renderedBoxes(),
     outline,
     pageLayout,

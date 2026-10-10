@@ -69,7 +69,21 @@ export interface VisualViewContribution {
   activate(context: ContributionContext): void;
 }
 
-/** Everything registered, in registration order: what the host applies to each view it creates. */
+/**
+ * Who wins where contributions compete: higher `priority` first (default 100, as Tiptap's extension priority), and
+ * equal priorities in registration order. Registration order alone never carries meaning between extensions.
+ */
+export interface PriorityOptions {
+  readonly priority?: number;
+}
+
+/** The default `priority` (Tiptap's). */
+const DEFAULT_PRIORITY = 100;
+
+/**
+ * Everything registered: nodes, marks and box renderers by priority (see `PriorityOptions`), the rest in
+ * registration order. What the host applies to each view it creates.
+ */
 export interface Contributed {
   readonly nodes: readonly TypstNodeSpec[];
   readonly marks: readonly TypstMarkSpec[];
@@ -91,15 +105,17 @@ export interface Contributed {
  * registration takes it out of views created later.
  */
 export class VisualViewContributions {
+  private readonly ranked = {
+    nodes: [] as Ranked<TypstNodeSpec>[],
+    marks: [] as Ranked<TypstMarkSpec>[],
+    boxRenderers: [] as Ranked<BoxRendererProvider>[],
+  };
   private readonly lists = {
-    nodes: [] as TypstNodeSpec[],
-    marks: [] as TypstMarkSpec[],
     editorExtensions: [] as EditorExtensionProvider[],
     toolbarGroups: [] as ToolbarGroup[],
     toolbarItems: [] as ToolbarItem[],
     gutters: [] as GutterProvider[],
     highlights: [] as { layer: string; provider: HighlightProvider }[],
-    boxRenderers: [] as BoxRendererProvider[],
     boxCodeExtensions: [] as BoxCodeExtensionProvider[],
   };
 
@@ -111,14 +127,23 @@ export class VisualViewContributions {
     return visualView;
   }
 
-  /** A node type and its Typst: schema, projection, printing, box. */
-  registerNode(spec: TypstNodeSpec): Disposable {
-    return this.add(this.lists.nodes, spec);
+  /**
+   * A node type and its Typst: schema, projection, printing, box. `priority` (default 100, higher first; equal:
+   * registration order) orders the schema (a group's first node type is its default) and the projectors: of specs
+   * claiming the same syntax or call, the higher one is asked first (task lists, 110, before bullet lists, both
+   * `- ..`). Of two specs of the same name, the later one in that order extends the earlier.
+   */
+  registerNode(spec: TypstNodeSpec, options: PriorityOptions = {}): Disposable {
+    return this.add(this.ranked.nodes, rank(spec, options));
   }
 
-  /** A mark type and its Typst. */
-  registerMark(spec: TypstMarkSpec): Disposable {
-    return this.add(this.lists.marks, spec);
+  /**
+   * A mark type and its Typst. `priority` (default 100, higher first; equal: registration order) orders the schema,
+   * which is how marks nest: a higher one is outside a lower one (bold outside a comment's range); it also orders
+   * the projectors, as for nodes.
+   */
+  registerMark(spec: TypstMarkSpec, options: PriorityOptions = {}): Disposable {
+    return this.add(this.ranked.marks, rank(spec, options));
   }
 
   /** Tiptap extensions made for each view (they may use its document). */
@@ -149,9 +174,13 @@ export class VisualViewContributions {
     return this.add(this.lists.highlights, { layer, provider });
   }
 
-  /** What raw boxes of each view show instead of their code while not edited. */
-  registerBoxRenderer(provider: BoxRendererProvider): Disposable {
-    return this.add(this.lists.boxRenderers, provider);
+  /**
+   * What raw boxes of each view show instead of their code while not edited. The renderers are asked by `priority`
+   * (default 100, higher first; equal: registration order), and the first that `renders` a box draws it: the image
+   * renderer (110) draws image boxes, compiled snippets (100) the rest.
+   */
+  registerBoxRenderer(provider: BoxRendererProvider, options: PriorityOptions = {}): Disposable {
+    return this.add(this.ranked.boxRenderers, rank(provider, options));
   }
 
   /** CodeMirror extensions for the code of every raw box of each view. */
@@ -163,14 +192,14 @@ export class VisualViewContributions {
   contributed(): Contributed {
     const lists = this.lists;
     return {
-      nodes: [...lists.nodes],
-      marks: [...lists.marks],
+      nodes: byPriority(this.ranked.nodes),
+      marks: byPriority(this.ranked.marks),
       editorExtensions: [...lists.editorExtensions],
       toolbarGroups: [...lists.toolbarGroups],
       toolbarItems: [...lists.toolbarItems],
       gutters: [...lists.gutters],
       highlights: [...lists.highlights],
-      boxRenderers: [...lists.boxRenderers],
+      boxRenderers: byPriority(this.ranked.boxRenderers),
       boxCodeExtensions: [...lists.boxCodeExtensions],
     };
   }
@@ -182,4 +211,19 @@ export class VisualViewContributions {
       if (index >= 0) list.splice(index, 1);
     });
   }
+}
+
+/** A registered value and its priority. */
+interface Ranked<T> {
+  readonly value: T;
+  readonly priority: number;
+}
+
+function rank<T>(value: T, options: PriorityOptions): Ranked<T> {
+  return { value, priority: options.priority ?? DEFAULT_PRIORITY };
+}
+
+/** The values, higher priority first; equal priorities in registration order (the sort is stable). */
+function byPriority<T>(ranked: readonly Ranked<T>[]): T[] {
+  return [...ranked].sort((a, b) => b.priority - a.priority).map((entry) => entry.value);
 }

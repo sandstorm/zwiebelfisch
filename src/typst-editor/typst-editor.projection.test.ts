@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState, TextSelection } from '@tiptap/pm/state';
 import { posToSource, print, project as projectWith, sourceToPos, syncDoc } from '../hosts/visual-view/visual-view';
-import { schema } from '../testing/testing';
+import { builtins, schema, schemaOf } from '../testing/testing';
 
 const project = (source: string) => projectWith(source, schema);
 
@@ -741,4 +741,18 @@ describe('figures', () => {
     expect(tr.doc.child(0).child(0)).toBe(state.doc.child(0).child(0));
   });
 
+});
+
+describe('the order of the built-in extensions', () => {
+  // Registration order carries no meaning: where contributions compete (task lists and bullet lists claim `- ..`,
+  // the image and snippet renderers draw raw boxes), their priority decides.
+  const reversed = schemaOf([...builtins()].reverse());
+
+  for (const [name, source] of Object.entries(FIXTURES)) {
+    it(`does not change how ${name} projects and prints`, () => {
+      const doc = projectWith(source, reversed);
+      expect(doc.toJSON()).toEqual(project(source).toJSON());
+      expect(print(doc)).toBe(source);
+    });
+  }
 });

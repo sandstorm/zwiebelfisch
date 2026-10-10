@@ -231,12 +231,12 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
 - **Composition**: a `Project` in a `WorkbenchHost` (`hosts/workbench`, see "Extensions" below) that runs the
   built-in extension list, configured from the options (`builtinExtensions`): `typstLanguage`, `documentLinks`,
   `collaboration` (with the option), `files` (`fileList`), `fileNavigation`, `spreadsheets`,
-  `diagnostics`, `versions` (`user`); the Visual view's constructs and features in schema order: `markup`
-  (its marks nest outside the features'), `headings` (with their numbers), `tables` (before `images`: figures may
-  hold a table), `images`, `renderedBoxes` (after `images`, whose renderer draws image boxes), `outline`,
-  `pageLayout`, `lists` (task lists before bullet lists: a task item is a bullet item `- [ ]`), `alignment`,
-  `comments` (`user`), `labels`, `styles`; then `previewControls`
-  (`followCursor`) and `pdfExport` (`pdfDownload`). The extension API is not public yet: the
+  `diagnostics`, `versions` (`user`); the Visual view's constructs and features: `markup`, `headings` (with
+  their numbers), `tables`, `images`, `renderedBoxes`, `outline`, `pageLayout`, `lists`, `alignment`, `comments`
+  (`user`), `labels`, `styles`; then `previewControls` (`followCursor`) and `pdfExport` (`pdfDownload`), which
+  also gives the preview toolbar its order. The order matters only for services (an extension reads those of
+  the extensions before it): where the Visual view's contributions compete, `priority` decides (see
+  "VisualView"; tested by projecting every fixture with the built-ins in reverse order). The extension API is not public yet: the
   options stay as they are. The preview always compiles `main` with `project.files()`; `exportPdf` runs the
   `comments.exportPdf` command; `onFilesChange` hears a change after the workbench and the extensions.
 - **Diagnostics**: the preview's `onDidChangeDiagnostics` is the one source. The `diagnostics` extension puts
@@ -573,8 +573,8 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
   construct (headings, lists, tables, …) is an extension (`extensions/<name>/visual-view/`) and every
   feature shown in the view (labels, comments, styles, …) a contribution of its extension, using only the contribution API the host's entry exports (the contribution types, the
   `projection/` toolkit, `starterKitPart`; and for tests `project` / `print` / `syncDoc` / `posToSource` /
-  `sourceToPos`, and `testing/` for the built-ins together). The widget's built-in extension list activates them in
-  registration order (see "createTypstEditor"); `VisualViewOptions` is gone.
+  `sourceToPos`, and `testing/` for the built-ins together). The widget's built-in extension list activates them (see
+  "createTypstEditor"); `VisualViewOptions` is gone.
 - **Specs** (`TypstNodeSpec` / `TypstMarkSpec`, `projection/grammar.ts`): one per construct —
   `name`, its Tiptap `extension` (schema, node view, commands, keymap, input rules), `attributes`
   the host adds (source anchors like `src`, `sep`, `marker`, `layout`), `anchors` (compared like
@@ -591,9 +591,12 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
   the framework used to list by name (`BLOCK_CALLS`, `PRINT_BLOCK`, `RAW_TYPES`, `LABELLED_BLOCKS`,
   `callAtomType`, the inline boxes of presence, the anchors) is derived from the specs; the
   projection imports no feature. A second spec of the same name extends the first (alignment adds
-  `#par(justify: ..)` and the paragraph printer); projectors of the same syntax are tried in
-  registration order (task lists before lists), and so are box renderers (images before
-  snippets). `attachGrammar` puts the specs on the schema (`schema.cached`), so `project(text,
+  `#par(justify: ..)` and the paragraph printer); **priority**, not registration order,
+  decides where contributions compete (`registerNode` / `registerMark` / `registerBoxRenderer(…, { priority })`:
+  default 100, higher first, Tiptap's semantics; equal ones in registration order): the schema's order (a
+  higher mark nests outside a lower one), which of the projectors of the same syntax or call is asked first
+  (task lists, 110, before bullet lists: a task item is a bullet item `- [ ]`), and which box renderer draws a
+  raw box (images' renderer, 110, before compiled snippets). Toolbar items keep `group` + `order`. `attachGrammar` puts the specs on the schema (`schema.cached`), so `project(text,
   schema)` and `print(doc)` find them; `VisualView` attaches them to its editor's schema, tests use
   `createSchema` (the host's tests with their own specs; the built-ins' `schema` of `testing/testing.ts`).
 - **Per view**: providers get a `VisualViewContext` (`document`, `selection()`, `onDidChangePresence`: the
