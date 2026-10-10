@@ -165,6 +165,8 @@
 .typst-visual__raw--rendered { background: transparent; }
 .typst-visual__rendering { display: block; max-width: 100%; height: auto; cursor: text; }
 .typst-visual__raw-block:not(.typst-visual__image) > .typst-visual__rendering { margin: 0 auto; }
+/* Image files show at their own size: keep a big photo from filling the whole view (aspect kept) */
+.typst-visual__image > .typst-visual__rendering { max-height: 24em; }
 .typst-visual__raw-inline > .typst-visual__rendering { display: inline-block; vertical-align: middle; }
 .typst-visual__link { color: var(--te-accent); text-decoration: underline; cursor: text; }
 .typst-visual__image-label {
