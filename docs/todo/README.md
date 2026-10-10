@@ -68,3 +68,5 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [comment-replies](comment-replies.md) | open |
 | [notes-pdf](notes-pdf.md) | open |
 | [labels-and-references](labels-and-references.md) | open |
+| [comment-replies](comment-replies.md) | done (branch task/comment-replies) |
+| [notes-pdf](notes-pdf.md) | done (branch task/notes-pdf) |

@@ -1,6 +1,6 @@
 // withPackages: Typst packages (@preview/…) downloaded on first use and added to the engine. Entry of
 // typst-engine/packages/. See typst-engine.ts.
-import type { CompileResult, Diagnostic, Engine } from '../typst-engine';
+import type { CompileResult, Diagnostic, Engine, PdfResult } from '../typst-engine';
 import { untarGz } from './tar';
 
 /** Returns the `.tar.gz` archive of a package spec like `@preview/name:0.1.0`. */
@@ -13,6 +13,8 @@ export interface PackageProject {
    * that fails to download is reported as a diagnostic and not tried again.
    */
   compile(main: string): Promise<CompileResult>;
+  /** `Engine.exportPdf`, with packages downloaded like `compile`. */
+  exportPdf(main: string): Promise<PdfResult>;
 }
 
 /**
@@ -30,15 +32,18 @@ export function withPackages(engine: Engine, fetchPackage: PackageFetcher = fetc
       failed.set(spec, error instanceof Error ? error.message : String(error));
     }
   };
+  /** Runs `task` until it misses no package that could still be downloaded. */
+  const withDownloads = async <R extends CompileResult | PdfResult>(task: () => R): Promise<R> => {
+    for (;;) {
+      const result = task();
+      const wanted = result.missingPackages.filter((spec) => !failed.has(spec));
+      if (wanted.length === 0) return withFailures(result, failed);
+      await Promise.all(wanted.map(load));
+    }
+  };
   return {
-    async compile(main) {
-      for (;;) {
-        const result = engine.compile(main);
-        const wanted = result.missingPackages.filter((spec) => !failed.has(spec));
-        if (wanted.length === 0) return withFailures(result, failed);
-        await Promise.all(wanted.map(load));
-      }
-    },
+    compile: (main) => withDownloads(() => engine.compile(main)),
+    exportPdf: (main) => withDownloads(() => engine.exportPdf(main)),
   };
 }
 
@@ -52,7 +57,7 @@ function addPackage(engine: Engine, spec: string, files: Map<string, Uint8Array>
   }
 }
 
-function withFailures(result: CompileResult, failed: Map<string, string>): CompileResult {
+function withFailures<R extends { diagnostics: Diagnostic[]; missingPackages: string[] }>(result: R, failed: Map<string, string>): R {
   const failures: Diagnostic[] = result.missingPackages.map((spec) => ({
     severity: 'error',
     message: `could not download package ${spec}: ${failed.get(spec)}`,

@@ -1,7 +1,7 @@
 // addMarginNote: the source edits for a new drafting margin note (and its import). See comments.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
-import { DRAFTING, isNoteCallAt, MARGIN_NOTE, NOTE_HEAD, printNoteCall, rangeNoteSyntax } from './margin-note-syntax';
+import { DRAFTING, isNoteCallAt, MARGIN_NOTE, NOTE_HEAD, printNoteCall, rangeNoteSyntax, SET_DEFAULTS } from './margin-note-syntax';
 import type { TextChange } from '../../core/typst-document/typst-document';
 import { noteMarginChanges } from './page-margin';
 
@@ -18,7 +18,8 @@ export interface AddedNote {
  * self-contained markup, e.g. half of `*bold*` or two paragraphs) gets a point
  * note `#margin-note[]` at its end. The file imports `margin-note` from
  * `drafting` exactly once afterwards: an existing drafting import is extended,
- * else one is added at the top. Page margins drafting 0.2.2 cannot handle (a
+ * else one is added at the top, together with `NOTE_STYLE` unless the file
+ * calls `set-margin-note-defaults` already. Page margins drafting 0.2.2 cannot handle (a
  * single length) get room for notes on the right (see `noteMarginChanges`).
  *
  * Null where no note fits (the position is inside code).
@@ -30,6 +31,22 @@ export function addMarginNote(text: string, range: { from: number; to: number })
   // Every note edit ends with `[]` inserted at `range.to`: the body is just before that `]`.
   return { changes, note: mapOffset(changes, range.to) - 1 };
 }
+
+/**
+ * drafting's look of notes in the PDF, set right after an import the editor
+ * adds: small text in a box tinted like the Visual view's notes (which is also
+ * the range highlight), a thin amber border and connector.
+ */
+export const NOTE_STYLE = `#${SET_DEFAULTS}(
+  stroke: rgb("#e0a800") + 0.5pt,
+  fill: rgb("#fabe1447"),
+  rect: (body, ..args) => rect(radius: 2pt, inset: 3pt, ..args, {
+    set text(size: 8pt)
+    set list(indent: 0pt, body-indent: 0.3em)
+    body
+  }),
+)
+`;
 
 /** The note itself. */
 function noteEdit(text: string, { from, to }: { from: number; to: number }): TextChange[] | null {
@@ -85,7 +102,13 @@ function importChange(text: string, use: number): TextChange | null {
     const str = node.getChild('Str')!;
     if (str.to === node.to) return insert(str.to, `: ${MARGIN_NOTE}`);
   }
-  return insert(0, `#import "${DRAFTING}": ${MARGIN_NOTE}\n`);
+  return insert(0, newImport(text));
+}
+
+/** The import added at the top, with `NOTE_STYLE` unless `text` sets note defaults itself. */
+function newImport(text: string): string {
+  if (text.includes(SET_DEFAULTS)) return `#import "${DRAFTING}": ${MARGIN_NOTE}\n`;
+  return `#import "${DRAFTING}": ${MARGIN_NOTE}, ${SET_DEFAULTS}\n${NOTE_STYLE}`;
 }
 
 /** Adds `margin-note` after the last item of an import list, which may end with a comma. */

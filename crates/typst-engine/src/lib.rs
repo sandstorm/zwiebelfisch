@@ -1,5 +1,5 @@
-//! Typst compiler, SVG renderer and source <-> preview hit-testing, packaged
-//! for the browser.
+//! Typst compiler, SVG renderer, PDF export and source <-> preview
+//! hit-testing, packaged for the browser.
 //!
 //! The JS-facing contract:
 //! - Paths are absolute project paths such as `/main.typ`, or package paths
@@ -25,7 +25,7 @@ use typst_layout::PagedDocument;
 use typst::introspection::PagedPosition;
 use typst::syntax::{FileId, LinkedNode, Side, Source, Span};
 use typst::utils::hash128;
-use typst::WorldExt;
+use typst::{World, WorldExt};
 use typst_ide::Jump;
 use wasm_bindgen::prelude::*;
 
@@ -50,6 +50,35 @@ struct CompileJson {
     /// no files in the engine; add them and compile again.
     #[serde(rename = "missingPackages")]
     missing_packages: Vec<String>,
+}
+
+/// What `exportPdf` reports besides the PDF itself.
+#[derive(Serialize)]
+struct PdfReportJson {
+    diagnostics: Vec<DiagnosticJson>,
+    #[serde(rename = "missingPackages")]
+    missing_packages: Vec<String>,
+}
+
+/// The outcome of `Engine::exportPdf`: the PDF file, if compilation and export
+/// succeeded, and a `PdfReportJson` string (errors, warnings, missing packages).
+#[wasm_bindgen]
+pub struct PdfExport {
+    pdf: Option<Vec<u8>>,
+    report: String,
+}
+
+#[wasm_bindgen]
+impl PdfExport {
+    /// The PDF file; `undefined` if the document has errors.
+    pub fn pdf(&self) -> Option<Vec<u8>> {
+        self.pdf.clone()
+    }
+
+    /// The `PdfReportJson` string.
+    pub fn report(&self) -> String {
+        self.report.clone()
+    }
 }
 
 #[derive(Serialize)]
@@ -155,6 +184,34 @@ impl Engine {
         };
         let missing_packages = self.world.take_missing_packages();
         to_json(&CompileJson { pages, diagnostics, missing_packages })
+    }
+
+    /// Compiles `main` and exports it as PDF. Leaves the document used for
+    /// hit-testing (the last `compile`) and the main file untouched, so a
+    /// download can compile a different entry than the preview.
+    #[wasm_bindgen(js_name = exportPdf)]
+    pub fn export_pdf(&mut self, main: &str) -> PdfExport {
+        let Some(id) = file_id(main) else {
+            let report = PdfReportJson { diagnostics: vec![], missing_packages: vec![] };
+            return PdfExport { pdf: None, report: to_json(&report) };
+        };
+        let previous = self.world.main();
+        self.world.set_main(id);
+        let warned = typst::compile::<PagedDocument>(&self.world);
+        self.world.set_main(previous);
+        let mut diagnostics: Vec<_> = warned.warnings.iter().map(|d| self.diagnostic(d)).collect();
+        let exported = warned
+            .output
+            .and_then(|document| typst_pdf::pdf(&document, &typst_pdf::PdfOptions::default()));
+        let pdf = match exported {
+            Ok(bytes) => Some(bytes),
+            Err(errors) => {
+                diagnostics.extend(errors.iter().map(|d| self.diagnostic(d)));
+                None
+            }
+        };
+        let missing_packages = self.world.take_missing_packages();
+        PdfExport { pdf, report: to_json(&PdfReportJson { diagnostics, missing_packages }) }
     }
 
     /// Resolves a click on `page` at (`x`, `y`) points to a `JumpJson`

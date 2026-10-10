@@ -2,19 +2,26 @@
 // visual-view/notes-gutter/. See ARCHITECTURE.md, "Comments = margin notes".
 import { Plugin, PluginKey, TextSelection, type EditorState, type Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
-import { safeNote } from '../../comments/comments';
+import { addReply, deleteMessage, editMessage, localDate, safeNote } from '../../comments/comments';
 import { layoutCards } from './card-layout';
+import { type CardActions, NoteCard } from './note-card';
 import { findNotes, followNotes, noteAtOffset, noteAtSelection, removeNote, setNoteText, type KeyedNote } from './note-list';
+
+export interface NotesGutterOptions {
+  /** Who writes replies: the name signs them, and only own messages can be edited (default: "Anonymous"). */
+  user?: { name: string };
+}
 
 /**
  * The comment gutter of the Visual view: a column right of the text with a
  * card for every margin note, next to its anchor (a point note's marker, a
  * range note's highlighted text) and pushed down where cards would overlap.
  *
- * - A card holds the note's markup in a text area: Mod+Enter or leaving it
- *   saves (escaped where needed, so the call stays intact; one undo step),
- *   Escape cancels. "Resolve" deletes the note: a point note's call, or a
- *   range note's call around its text (the text stays).
+ * - A card shows the note as a thread (see `readThread`) and has a reply
+ *   box: Mod+Enter appends a message signed with the user's name and today's
+ *   date. Own messages can be edited, the last own one deleted. Every change
+ *   is one undo step and keeps the call intact. "Resolve" deletes the note:
+ *   a point note's call, or a range note's call around its text (the text stays).
  * - The note at the cursor (or a clicked marker, or a focused card) is
  *   active: its card sits exactly at its anchor and both are highlighted;
  *   hovering either highlights both.
@@ -37,8 +44,11 @@ export class NotesGutter {
   private frame = 0;
   private readonly resize: ResizeObserver | null = null;
 
-  constructor(private readonly body: HTMLElement) {
+  private readonly me: string;
+
+  constructor(private readonly body: HTMLElement, options: NotesGutterOptions = {}) {
     const doc = body.ownerDocument;
+    this.me = options.user?.name.trim() || 'Anonymous';
     this.root = body.appendChild(doc.createElement('aside'));
     this.root.className = 'typst-notes-gutter';
     this.root.setAttribute('aria-label', 'Notes');
@@ -107,7 +117,7 @@ export class NotesGutter {
     for (const note of notes) {
       let card = this.cards.get(note.key);
       if (!card) {
-        card = new NoteCard(this.root.ownerDocument, note.key, this.cardActions);
+        card = new NoteCard(this.root.ownerDocument, note.key, this.me, this.cardActions);
         this.cards.set(note.key, card);
       }
       card.show(note);
@@ -119,10 +129,13 @@ export class NotesGutter {
   }
 
   private readonly cardActions: CardActions = {
-    save: (key, markup) => this.change(key, (tr, note) => {
-      const safe = safeNote(markup);
-      return safe === null || safe === note.note ? null : setNoteText(tr, note, safe);
-    }),
+    reply: (key, text) => this.rewrite(key, (note) => addReply(note, { author: this.me, date: localDate(), text })),
+    edit: (key, index, text) => this.rewrite(key, (note) => editMessage(note, index, text)),
+    deleteMessage: (key, index) => {
+      const note = this.note(key);
+      if (note && deleteMessage(note.note, index) === '') this.cardActions.remove(key);
+      else this.rewrite(key, (markup) => deleteMessage(markup, index));
+    },
     remove: (key) => {
       const at = this.note(key)?.from;
       this.change(key, (tr, note) => removeNote(tr, note));
@@ -139,6 +152,15 @@ export class NotesGutter {
 
   private note(key: string): KeyedNote | undefined {
     return this.state()?.notes.find((note) => note.key === key);
+  }
+
+  /** Replaces the note's markup with `next(markup)` (one step), unless null, unchanged or unsafe for the call. */
+  private rewrite(key: string, next: (markup: string) => string | null): void {
+    this.change(key, (tr, note) => {
+      const markup = next(note.note);
+      const safe = markup === null ? null : safeNote(markup);
+      return safe === null || safe !== markup || safe === note.note ? null : setNoteText(tr, note, safe);
+    });
   }
 
   private change(key: string, edit: (tr: Transaction, note: KeyedNote) => Transaction | null): void {
@@ -294,109 +316,3 @@ function hoverAnchor(view: EditorView, key: string | null): boolean {
   if (gutterKey.getState(view.state)?.hover !== key) view.dispatch(view.state.tr.setMeta(gutterKey, { hover: key }));
   return false;
 }
-
-// -------------------------------------------------------------------- card
-
-interface CardActions {
-  /** Writes `markup` into the note (nothing if the note is gone or unchanged). */
-  save(key: string, markup: string): void;
-  remove(key: string): void;
-  /** Editing is over: the text cursor goes after the note. */
-  done(key: string): void;
-  activate(key: string): void;
-  hover(key: string | null): void;
-  resized(): void;
-}
-
-/** One note's card: what it highlights, its markup in a text area, and a resolve button. */
-class NoteCard {
-  readonly dom: HTMLElement;
-  private readonly quote: HTMLElement;
-  private readonly field: HTMLTextAreaElement;
-  /** The note's markup as last shown, for Escape and to tell whether the field changed. */
-  private markup = '';
-
-  constructor(doc: Document, private readonly key: string, private readonly actions: CardActions) {
-    this.dom = doc.createElement('div');
-    this.dom.className = 'typst-note-card';
-    this.dom.dataset.testid = 'typst-note-card';
-    this.dom.dataset.noteKey = key;
-    this.dom.innerHTML = CARD_HTML;
-    this.quote = this.dom.querySelector('.typst-note-card__quote')!;
-    this.field = this.dom.querySelector('textarea')!;
-    const resolve = this.dom.querySelector<HTMLButtonElement>('.typst-note-card__resolve')!;
-    // keep the field's focus: resolving must not save first (two undo steps)
-    resolve.addEventListener('mousedown', (event) => event.preventDefault());
-    resolve.addEventListener('click', () => actions.remove(key));
-    // a click anywhere on the card (but the field and the button) edits the note
-    this.dom.addEventListener('mousedown', (event) => {
-      if ((event.target as Element).closest('textarea, button')) return;
-      event.preventDefault();
-      this.focus();
-    });
-    this.dom.addEventListener('mouseenter', () => actions.hover(key));
-    this.dom.addEventListener('mouseleave', () => actions.hover(null));
-    this.field.addEventListener('focus', () => actions.activate(key));
-    this.field.addEventListener('blur', () => this.save());
-    this.field.addEventListener('input', () => actions.resized());
-    this.field.addEventListener('keydown', (event) => this.handleKey(event));
-  }
-
-  /** Shows `note`; a field being edited keeps what the user typed. */
-  show(note: KeyedNote): void {
-    this.dom.classList.toggle('typst-note-card--range', note.kind === 'range');
-    this.quote.textContent = note.kind === 'range' ? note.text : 'Note';
-    this.quote.title = note.kind === 'range' ? note.text : '';
-    this.markup = note.note;
-    if (!this.editing && this.field.value !== note.note) {
-      this.field.value = note.note;
-      this.actions.resized();
-    }
-  }
-
-  highlight(active: boolean, hover: boolean): void {
-    this.dom.classList.toggle('typst-note-card--active', active);
-    this.dom.classList.toggle('typst-note-card--hover', hover);
-  }
-
-  focus(): void {
-    this.field.focus();
-    this.field.setSelectionRange(this.field.value.length, this.field.value.length);
-  }
-
-  place(top: number): void {
-    this.dom.style.top = `${Math.round(top)}px`;
-  }
-
-  private get editing(): boolean {
-    // the root's active element: inside <typst-editor>'s shadow root, the document's is the host
-    return (this.field.getRootNode() as Document | ShadowRoot).activeElement === this.field;
-  }
-
-  private save(): void {
-    if (this.field.value !== this.markup) this.actions.save(this.key, this.field.value);
-    // what was saved (maybe escaped), or the old note if nothing could be
-    if (!this.editing) this.field.value = this.markup;
-  }
-
-  private handleKey(event: KeyboardEvent): void {
-    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-      this.save();
-    } else if (event.key === 'Escape') {
-      this.field.value = this.markup;
-    } else {
-      return;
-    }
-    event.preventDefault();
-    this.actions.done(this.key);
-  }
-}
-
-const ICON =
-  '<svg class="typst-note-card__icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"/></svg>';
-const CHECK =
-  '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg>';
-const CARD_HTML =
-  `<div class="typst-note-card__head">${ICON}<span class="typst-note-card__quote"></span>`
-  + `<button type="button" class="typst-note-card__resolve" aria-label="Resolve note" title="Resolve: delete the note (Typst: removes the margin-note call)">${CHECK}</button></div>`
-  + '<textarea class="typst-note-card__field" rows="2" aria-label="Note" placeholder="Write a note…"></textarea>';

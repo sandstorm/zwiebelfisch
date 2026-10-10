@@ -12,6 +12,7 @@ import changeStyles from './features/changes/changes.css?inline';
 import { DiagnosticsStatus, summarizeDiagnostics } from './features/diagnostics/diagnostics';
 import { EditingViews, type EditorMode } from './typst-editor/editing-views';
 import { type FileChange, Project, type ProjectFiles, referencePath } from './core/project/project';
+import { PdfExport } from './typst-editor/pdf-export';
 import { ProjectRenderings } from './typst-editor/project-renderings';
 import styles from './typst-editor.css?inline';
 import { VersionControls, type Versions } from './features/versions/versions';
@@ -54,7 +55,7 @@ export interface TypstEditorOptions {
    * edited or selected). Default: what this viewer chose last (remembered in localStorage), else on.
    */
   followCursor?: boolean;
-  /** Who works here: the name (and cursor color) others see when collaborating, and who saves versions. */
+  /** Who works here: the name (and cursor color) others see when collaborating, who saves versions and signs comments. */
   user?: { name: string; color?: string };
   /**
    * Real-time collaboration on the project's Typst files (margin notes
@@ -76,6 +77,17 @@ export interface TypstEditorOptions {
   base?: string;
   /** How the toggle names `base`: "Changes since <baseLabel>" (default "the given version"). */
   baseLabel?: string;
+  /**
+   * Whether the preview toolbar has "Download PDF" (default true): without
+   * comments, or with them from its menu. Hosts can call `exportPdf` either way.
+   */
+  pdfDownload?: boolean;
+}
+
+/** Which PDF `exportPdf` makes. */
+export interface PdfExportOptions {
+  /** With the margin notes as the preview shows them (default false: the final version, notes left out). */
+  comments?: boolean;
 }
 
 export interface TypstEditor {
@@ -96,6 +108,11 @@ export interface TypstEditor {
    * given version"). null goes back to comparing with the text as opened.
    */
   setBase(base: string | null, label?: string): void;
+  /**
+   * The project as a PDF (`application/pdf`), from the current text. Rejects
+   * with an error naming the problem when the document has errors.
+   */
+  exportPdf(options?: PdfExportOptions): Promise<Blob>;
   destroy(): void;
 }
 
@@ -130,6 +147,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
     },
     open: (path) => widget.open(path),
     setBase: (base, label) => widget.changes.setBase(base === null ? null : { text: base, label: label ?? GIVEN_VERSION }),
+    exportPdf: (options = {}) => widget.pdfs.blob(options.comments ?? false),
     destroy: () => widget.destroy(),
   };
 }
@@ -146,6 +164,7 @@ class Widget {
   private readonly right: HTMLElement;
   private readonly status: DiagnosticsStatus;
   private readonly preview: Preview;
+  readonly pdfs: PdfExport;
   private readonly views: EditingViews;
   private readonly switcher: FileSwitcher;
   private readonly assets: AssetView;
@@ -176,11 +195,17 @@ class Widget {
       onDiagnostics: (diagnostics) => this.showDiagnostics(diagnostics),
       follow: options.followCursor ?? rememberedFollow() ?? true,
       onFollowChange: rememberFollow,
+      pdf: options.pdfDownload === false ? undefined : (comments) => this.pdfs.file(comments),
     });
+    this.pdfs = new PdfExport(this.project, this.preview);
     this.renderings = new ProjectRenderings({ project: this.project, preview: this.preview, request: (change) => this.request(change) });
     this.views = new EditingViews(this.left, {
       mode: options.mode,
-      visualOptions: (document) => this.renderings.forDocument(document),
+      visualOptions: (document) => ({
+        ...this.renderings.forDocument(document),
+        user: options.user,
+        comment: () => this.commentAction.comment(),
+      }),
       onCursor: (document, offset) => {
         const path = this.project.pathOf(document);
         if (path) void this.preview.reveal(path, offset);
@@ -201,8 +226,9 @@ class Widget {
     this.assets = new AssetView(this.left, (path) => this.insertImage(path));
     this.unsubscribe = this.project.onChange((change) => this.changed(change));
     this.open(main);
+    // the Visual view has "Comment" in its toolbar; the tab bar's button is for the Source view
     this.commentAction = new CommentAction(host, () => this.views.shown());
-    this.views.addTabAction(this.commentAction.button);
+    this.views.addTabAction(this.commentAction.button, 'source');
     this.changes = this.mountChanges();
     if (options.collaboration) {
       this.collaboration = this.mountCollaboration(options.collaboration);

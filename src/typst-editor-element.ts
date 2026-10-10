@@ -1,6 +1,6 @@
 // <typst-editor>: the editor as a custom element in a shadow root, around createTypstEditor.
 // See docs/embedding.md.
-import { createTypstEditor, type CollaborationOptions, type FileChange, type FileListMode, type ProjectFiles, type TypstEditor } from './typst-editor';
+import { createTypstEditor, type CollaborationOptions, type FileChange, type FileListMode, type PdfExportOptions, type ProjectFiles, type TypstEditor } from './typst-editor';
 import { inlineSource } from './typst-editor-element/inline-source';
 
 /** `detail` of the `change` event the element dispatches after every user edit. */
@@ -29,6 +29,8 @@ const Base = (typeof HTMLElement === 'undefined' ? class {} : HTMLElement) as ty
  * button), so they arrive with `value` and `change` like any other text.
  * Collaboration: the `collaboration` and `user` properties (see
  * `TypstEditorOptions`), read when the element connects.
+ * `exportPdf({ comments })` gives the PDF as a Blob; the preview's "Download
+ * PDF" button goes away with `pdf-download="hide"`.
  */
 export class TypstEditorElement extends Base {
   static readonly observedAttributes = ['value'];
@@ -68,6 +70,12 @@ export class TypstEditorElement extends Base {
     if (this.#editor) this.#editor.files = files;
   }
 
+  /** The project as a PDF, with or without comments (see `TypstEditor.exportPdf`); rejects while not connected. */
+  exportPdf(options?: PdfExportOptions): Promise<Blob> {
+    if (!this.#editor) return Promise.reject(new Error('<typst-editor> is not connected'));
+    return this.#editor.exportPdf(options);
+  }
+
   /** Shows the changes against `base` (an earlier source), or none for null. */
   setBase(base: string | null): void {
     this.#base = base;
@@ -86,6 +94,7 @@ export class TypstEditorElement extends Base {
       files: this.#files,
       fileList: (this.getAttribute('file-list') ?? undefined) as FileListMode | undefined,
       base: this.#base ?? undefined,
+      pdfDownload: this.getAttribute('pdf-download') !== 'hide',
       onChange: (value) => this.#changed(value),
       onFilesChange: (change) => this.#filesChanged(change),
       onOpen: (path) => this.dispatchEvent(new CustomEvent('open', { detail: { path }, bubbles: true, composed: true })),

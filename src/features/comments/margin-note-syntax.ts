@@ -16,6 +16,8 @@ import { typstParser } from 'codemirror-lang-typst/lezer';
 export const DRAFTING = '@preview/drafting:0.2.2';
 /** The function name, as imported from `drafting`. */
 export const MARGIN_NOTE = 'margin-note';
+/** drafting's function that sets every note's look (and `hidden`) from where it is called on. */
+export const SET_DEFAULTS = 'set-margin-note-defaults';
 /** The head of a new note's call. */
 export const NOTE_HEAD = `#${MARGIN_NOTE}`;
 
@@ -118,7 +120,7 @@ function balanceBrackets(markup: string): string {
 }
 
 /** Escapes every character that starts markup or code, so `text` reads back as itself. */
-function escapeText(text: string): string {
+export function escapeText(text: string): string {
   return text.replace(/[\\`$#*_<@[\]]|\/(?=[/*])/g, (c) => `\\${c}`);
 }
 

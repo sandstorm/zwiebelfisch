@@ -23,6 +23,10 @@ export interface VisualViewOptions {
   assets?: ImageAssets;
   /** Called after the selection moved or the text changed; `selection()` already returns the new selection. */
   onSelection?(): void;
+  /** Who works here: signs replies in the notes gutter; only own messages can be edited (default: "Anonymous"). */
+  user?: { name: string };
+  /** Adds a comment (margin note) at the selection: the toolbar's "Comment" button (none without it). */
+  comment?(): void;
 }
 
 /** Marks transactions that mirror a document change, so they are not written back. */
@@ -60,7 +64,7 @@ export class VisualView implements PresenceTarget {
     if (options.renderer) setBoxRenderer(this.editor, options.renderer);
     // Load the projection itself (not a JSON copy): its node identities are
     // what marks blocks as untouched.
-    this.notes = new NotesGutter(body);
+    this.notes = new NotesGutter(body, { user: options.user });
     const { state } = this.editor;
     this.editor.view.updateState(
       EditorState.create({
@@ -69,7 +73,7 @@ export class VisualView implements PresenceTarget {
         plugins: [...state.plugins, changesPlugin, this.notes.plugin],
       }),
     );
-    this.toolbar = new Toolbar(parent, this.editor, options.assets);
+    this.toolbar = new Toolbar(parent, this.editor, { assets: options.assets, comment: options.comment });
     this.unsubscribe = document.onChange((_changes, origin) => {
       if (origin !== this) this.syncFromDocument();
     });

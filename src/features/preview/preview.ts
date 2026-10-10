@@ -1,14 +1,16 @@
 // Preview: the worker-backed live preview with hit-testing, zoom and page numbers. Entry of features/preview/.
 // See ARCHITECTURE.md, "Preview".
-import type { Box, Diagnostic, Jump, Page, Position } from '../../core/typst-engine/typst-engine';
+import type { Box, Diagnostic, Jump, Page, PdfResult, Position } from '../../core/typst-engine/typst-engine';
 import { changeBars, drawnRanges, isInside, mostVisible, PageList, percentOfPage, snippet, type Snippet, stepZoom, type Zoom, zoomLabel } from './pages/pages';
 import { DEFAULT_FONT_URLS, ENGINE_WASM_URL } from '../../core/typst-engine/engine-assets';
 import type { FileContent } from '../../core/project/project';
 import { FileSender, type Init, type Request, type Response, startEngineWorker } from './worker/worker';
 import { LatestOnly } from './latest-only';
+import { PdfMenu, type PdfSource } from './pdf-menu';
 import { PreviewToolbar, type ZoomRequest } from './toolbar';
 
 export type { Snippet } from './pages/pages';
+export type { PdfFile, PdfSource } from './pdf-menu';
 
 export interface PreviewOptions {
   /** Called when the user clicks something in the preview that has a source location. */
@@ -23,6 +25,8 @@ export interface PreviewOptions {
   follow?: boolean;
   /** Called when the user switches "Follow cursor" on or off (e.g. to remember it). */
   onFollowChange?(on: boolean): void;
+  /** Where "Download PDF" in the toolbar gets its file; no button without it. */
+  pdf?: PdfSource;
 }
 
 type RequestBody = Request extends infer R ? (R extends Request ? Omit<R, 'id'> : never) : never;
@@ -49,6 +53,7 @@ export class Preview {
   private readonly pages: HTMLElement;
   private readonly list: PageList;
   private readonly toolbar: PreviewToolbar;
+  private readonly pdfMenu: PdfMenu | null;
   private readonly compiles: LatestOnly<Compile>;
   private readonly reveals: LatestOnly<Reveal>;
   private readonly resizeObserver: ResizeObserver | null;
@@ -84,6 +89,8 @@ export class Preview {
         this.options.onFollowChange?.(on);
       },
     });
+    this.pdfMenu = options.pdf ? new PdfMenu(doc, options.pdf) : null;
+    if (this.pdfMenu) this.toolbar.element.append(this.pdfMenu.element);
     this.list = new PageList(this.pages, { root: this.scroller });
     this.scroller.append(this.pages);
     this.pane.append(this.toolbar.element, this.scroller);
@@ -165,6 +172,19 @@ export class Preview {
     return response.type === 'boxes' ? snippet(pages, response.boxes) : null;
   }
 
+  /**
+   * A PDF of `main` (null with the errors when it does not compile), from the
+   * files last passed to `update()`, with `sources` replacing or adding text
+   * files for this export only. Waits for running compilations; the preview
+   * itself does not change.
+   */
+  async exportPdf(main: string, sources: Record<string, string> = {}): Promise<PdfResult> {
+    await this.compiles.idle();
+    const response = await this.request({ type: 'pdf', main, sources });
+    if (response.type === 'pdf') return response.result;
+    throw new Error(response.type === 'error' ? response.message : 'unexpected answer from the engine');
+  }
+
   /** Calls `listener` after every successful compilation (snippets may have changed). Returns the unsubscribe function. */
   onRender(listener: () => void): () => void {
     this.renderListeners.add(listener);
@@ -173,6 +193,7 @@ export class Preview {
 
   destroy(): void {
     this.renderListeners.clear();
+    this.pdfMenu?.destroy();
     this.worker.terminate();
     this.resizeObserver?.disconnect();
     cancelAnimationFrame(this.frame);

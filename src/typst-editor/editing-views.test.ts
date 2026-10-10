@@ -62,6 +62,19 @@ describe('EditingViews', () => {
     expect(visible()[0].querySelector('[data-testid=typst-source]')).not.toBeNull();
   });
 
+  it('shows a tab-bar control for one view only in that view (the Source view\'s "Comment")', () => {
+    const { parent, views, a, tab } = setup();
+    views.show(a);
+    const comment = document.createElement('button');
+    const always = document.createElement('span');
+    views.addTabAction(comment, 'source');
+    views.addTabAction(always);
+    expect([comment.hidden, always.hidden]).toEqual([true, false]);
+    tab('Source').click();
+    expect([comment.hidden, always.hidden]).toEqual([false, false]);
+    expect(parent.querySelector('.typst-editor__tabs')?.contains(comment)).toBe(true);
+  });
+
   it('reveals in the current view without switching tabs otherwise', () => {
     const { views, a, visible } = setup();
     views.show(a);

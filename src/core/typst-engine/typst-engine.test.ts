@@ -213,3 +213,44 @@ describe('Engine', () => {
     expect(() => engine.setSource('@preview/no-version/lib.typ', '')).toThrow(/invalid/);
   });
 });
+
+describe('Engine.exportPdf', () => {
+  let engine: Engine;
+  beforeAll(async () => {
+    engine = await createEngine(wasm, fonts);
+  });
+  const text = (pdf: Uint8Array) => new TextDecoder('latin1').decode(pdf);
+
+  it('exports a PDF file', () => {
+    engine.setSource('/main.typ', '= Title\nHello *PDF*');
+    const { pdf, diagnostics, missingPackages } = engine.exportPdf('/main.typ');
+    expect(diagnostics).toEqual([]);
+    expect(missingPackages).toEqual([]);
+    expect(text(pdf!).startsWith('%PDF-')).toBe(true);
+    expect(text(pdf!).trimEnd().endsWith('%%EOF')).toBe(true);
+  });
+
+  it('gives no PDF but the errors for a document with errors', () => {
+    engine.setSource('/main.typ', 'Text #oops');
+    const { pdf, diagnostics } = engine.exportPdf('/main.typ');
+    expect(pdf).toBeNull();
+    expect(diagnostics).toEqual([expect.objectContaining({ severity: 'error', path: '/main.typ', from: 6, to: 10 })]);
+  });
+
+  it('exports another entry without touching the compiled document used for hit-testing', () => {
+    engine.setSource('/main.typ', 'Preview text');
+    engine.compile('/main.typ');
+    engine.setSource('/other.typ', '#include "/main.typ"\nMore');
+    expect(engine.exportPdf('/other.typ').pdf).not.toBeNull();
+    expect(engine.jumpFromCursor('/main.typ', 3)).toHaveLength(1);
+    // the preview's next compile still compiles its own main file
+    engine.setSource('/main.typ', 'Preview text #oops');
+    expect(engine.compile('/main.typ').diagnostics[0].path).toBe('/main.typ');
+    expect(engine.exportPdf('/nope.typ').diagnostics[0].message).toMatch(/not found/);
+  });
+
+  it('reports packages it has no files of', () => {
+    engine.setSource('/main.typ', '#import "@preview/absent:0.2.0": x');
+    expect(engine.exportPdf('/main.typ')).toMatchObject({ pdf: null, missingPackages: ['@preview/absent:0.2.0'] });
+  });
+});

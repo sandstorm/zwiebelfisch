@@ -24,7 +24,9 @@ self.onmessage = async (event: MessageEvent<Init | Request>) => {
     return;
   }
   try {
-    self.postMessage(await handle(await session, request));
+    const response = await handle(await session, request);
+    const transfer = response.type === 'pdf' && response.result.pdf ? [response.result.pdf.buffer] : [];
+    self.postMessage(response, { transfer });
   } catch (error) {
     self.postMessage({ id: request.id, type: 'error', message: String(error) } satisfies Response);
   }
@@ -33,8 +35,9 @@ self.onmessage = async (event: MessageEvent<Init | Request>) => {
 async function handle({ engine, files, packages }: Session, request: Request): Promise<Response> {
   switch (request.type) {
     case 'compile':
-      files.apply(request.files);
-      return { id: request.id, type: 'compile', result: await packages.compile(request.main) };
+      return { id: request.id, type: 'compile', result: await files.update(request.files, () => packages.compile(request.main)) };
+    case 'pdf':
+      return { id: request.id, type: 'pdf', result: await files.withSources(request.sources, () => packages.exportPdf(request.main)) };
     case 'click':
       return { id: request.id, type: 'click', jump: engine.jumpFromClick(request.page, request.x, request.y) };
     case 'cursor':
