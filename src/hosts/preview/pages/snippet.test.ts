@@ -1,6 +1,6 @@
 // Tests for snippet.ts.
 import { describe, expect, it } from 'vitest';
-import { cropSvg, snippet } from './snippet';
+import { snippet } from './snippet';
 
 const SVG = '<svg class="typst-doc" viewBox="0 0 200 100" width="200pt" height="100pt" xmlns="http://www.w3.org/2000/svg"><g/></svg>';
 const pages = [
@@ -8,15 +8,13 @@ const pages = [
   { hash: 'b', width: 200, height: 100, svg: SVG },
 ];
 
-describe('cropSvg', () => {
-  it('replaces the root viewBox and size, keeping everything else', () => {
-    expect(cropSvg(SVG, { x: 10, y: 20, w: 30.12345, h: 40 })).toBe(
+describe('snippet', () => {
+  it("is the page's SVG with the root's viewBox and size (pt) replaced, everything else kept", () => {
+    expect(snippet(pages, [{ page: 0, x: 12, y: 22, w: 26.12345, h: 36 }])?.svg).toBe(
       '<svg viewBox="10 20 30.123 40" width="30.123pt" height="40pt" class="typst-doc" xmlns="http://www.w3.org/2000/svg"><g/></svg>',
     );
   });
-});
 
-describe('snippet', () => {
   it('cuts out the union of the boxes on the first box page, padded', () => {
     const result = snippet(pages, [
       { page: 0, x: 50, y: 40, w: 10, h: 10 },

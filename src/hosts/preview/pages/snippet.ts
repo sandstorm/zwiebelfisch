@@ -25,7 +25,7 @@ export function snippet(pages: readonly Page[], boxes: readonly Box[]): Snippet 
 }
 
 /** `svg` (a page as Typst exports it) showing only the rectangle `crop`, sized to it in pt. */
-export function cropSvg(svg: string, crop: { x: number; y: number; w: number; h: number }): string {
+function cropSvg(svg: string, crop: { x: number; y: number; w: number; h: number }): string {
   return svg.replace(/<svg\b[^>]*>/, (tag) => {
     const rest = tag.replace(/\s(viewBox|width|height)="[^"]*"/g, '').slice('<svg'.length);
     const n = (value: number) => +value.toFixed(3);
