@@ -100,6 +100,8 @@ describe('Layout', () => {
     host.querySelector('.typst-editor__panel-body')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     expect(layout.isOpen('files')).toBe(false);
     toggle.click();
+    host.querySelector('.typst-editor__panel-body')!.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    expect(layout.isOpen('files')).toBe(true);
     layout.editor.dispatchEvent(new Event('pointerdown', { bubbles: true }));
     expect(layout.isOpen('files')).toBe(false);
     setWidth(1200);

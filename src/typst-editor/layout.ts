@@ -70,7 +70,8 @@ export class Layout {
     this.state = { width: WIDTH.initial, chosen: {}, ...this.saved.load() };
     this.watchWidth();
     this.listen(doc, 'pointerdown', (event) => {
-      if (this.narrow && this.openId && !this.side.contains(event.target as Node)) this.show(null);
+      // composedPath: inside <typst-editor>'s shadow root the document sees the host as the target.
+      if (this.narrow && this.openId && !event.composedPath().includes(this.side)) this.show(null);
     });
     this.side.addEventListener('keydown', (event) => {
       if (event.key === 'Escape' && this.narrow && this.openId) this.closeFromKeyboard();

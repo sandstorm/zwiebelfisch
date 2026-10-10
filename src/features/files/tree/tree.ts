@@ -110,7 +110,8 @@ export class FileTree {
   }
 
   private draw(): void {
-    const hadFocus = this.element.contains(this.element.ownerDocument.activeElement);
+    // The root's active element: inside <typst-editor>'s shadow root the document only sees the host.
+    const hadFocus = this.element.contains((this.element.getRootNode() as Document | ShadowRoot).activeElement);
     const { paths, folders } = this.state;
     this.rows = visibleRows(buildTree(paths, folders), this.expanded);
     const tabbable = this.rows.some((row) => row.path === this.current) ? this.current : this.rows[0]?.path;
