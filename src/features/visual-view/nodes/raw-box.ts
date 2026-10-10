@@ -1,6 +1,5 @@
 // Raw boxes: Typst the Visual view does not model, edited as code in a nested CodeMirror. See nodes.ts.
 import { defaultKeymap } from '@codemirror/commands';
-import { defaultHighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import type { Transaction as CodeTransaction } from '@codemirror/state';
 import { EditorView as CodeView, keymap, type KeyBinding } from '@codemirror/view';
 import { Extension, type Editor, type NodeViewRenderer } from '@tiptap/core';
@@ -9,7 +8,7 @@ import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { Decoration, EditorView, NodeView } from '@tiptap/pm/view';
 import { minimalChange } from '../../../core/typst-document/typst-document';
 import type { FileLinks } from '../../../core/project/project';
-import { fileLinks, remotePresence, showPresence, typstLanguage } from '../../source-view/source-view';
+import { codeColors, fileLinks, remotePresence, showPresence, typstLanguage } from '../../source-view/source-view';
 import { imagePathLink } from './box-links';
 import { ImageTools } from '../images/images';
 import { boxCarets } from '../presence';
@@ -114,7 +113,7 @@ class RawBox implements NodeView {
       extensions: [
         keymap.of([...this.keys(inline), ...defaultKeymap]),
         typstLanguage(),
-        syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+        codeColors,
         inline ? inlineTheme : [blockTheme, CodeView.lineWrapping],
         CodeView.contentAttributes.of({ 'aria-label': 'Typst code' }),
         remotePresence,
