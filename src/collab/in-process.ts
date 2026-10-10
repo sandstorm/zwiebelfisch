@@ -1,4 +1,15 @@
+import { applyAwarenessUpdate, encodeAwarenessUpdate, type Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
+
+/** Forwards awareness (presence) updates between `awarenesses` in-process (for tests). */
+export function connectAwareness(...awarenesses: Awareness[]): void {
+  for (const awareness of awarenesses) {
+    awareness.on('update', ({ added, updated, removed }: Record<string, number[]>, origin: unknown) => {
+      const update = encodeAwarenessUpdate(awareness, [...added, ...updated, ...removed]);
+      for (const other of awarenesses) if (other !== awareness && origin !== other) applyAwarenessUpdate(other, update, awareness);
+    });
+  }
+}
 
 /**
  * Connects Y.Docs in-process, the way a server would: every update of one is
