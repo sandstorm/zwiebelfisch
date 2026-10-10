@@ -1,10 +1,18 @@
-import type { Collaboration, CollaborationOptions, Shared } from '../collab/collaboration';
+import type { Collaboration, CollaborationOptions, RoomVersions, Shared } from '../collab/collaboration';
 import type { HighlightTarget } from '../collab/remote-cursors';
 
 /** The editing view the local user works in, and what it has selected. */
 export interface CurrentSelection {
   path: string;
   view: { selection(): { from: number; to: number } };
+}
+
+/** What the link asks of the widget, and tells it. */
+export interface LinkedWidget {
+  /** Where the local user's selection is (null: not in a Typst file). */
+  current(): CurrentSelection | null;
+  /** Called once connected, in a room backed by a GitLab branch ("Save version", the files' base). */
+  onVersions?(versions: RoomVersions): void;
 }
 
 /**
@@ -23,7 +31,7 @@ export class CollaborationLink {
     options: CollaborationOptions,
     shared: Shared,
     private readonly area: HTMLElement,
-    private readonly current: () => CurrentSelection | null,
+    private readonly widget: LinkedWidget,
   ) {
     void this.start(options, shared);
   }
@@ -54,6 +62,7 @@ export class CollaborationLink {
     }
     this.collaboration = collaboration;
     collaboration.showCursors(this.shown.path, this.shown.views);
+    if (collaboration.versions) this.widget.onVersions?.(collaboration.versions);
     this.area.ownerDocument.addEventListener('selectionchange', this.schedule);
   }
 
@@ -64,7 +73,7 @@ export class CollaborationLink {
     queueMicrotask(() => {
       this.scheduled = false;
       if (!this.collaboration || !this.focused()) return;
-      const current = this.current();
+      const current = this.widget.current();
       this.collaboration.setCursor(current?.path ?? null, current?.view.selection());
     });
   };

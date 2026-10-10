@@ -176,7 +176,7 @@ createTypstEditor(host, {
 
 - **What is shared:** the text of every `.typ` file (create / rename / delete included) and the
   review comments of the main file, through one Y.Doc per room. Images and other files are not
-  shared; every widget keeps those it was given. Each user's Undo only reverts that user's edits.
+  shared (except in GitLab rooms, below); every widget keeps those it was given. Each user's Undo only reverts that user's edits.
 - **With a server** (`{ url, room, token? }`): the widget connects to a
   [Hocuspocus](https://tiptap.dev/docs/hocuspocus) server (this repo's `server/`, `mise run
   server:dev`) and joins the room once it has synced. Until then it shows the local `source`.
@@ -190,6 +190,46 @@ createTypstEditor(host, {
 
 Demo: start `mise run server:dev`, then open the demo with `?room=test` (and `&user=Ann`) in two
 windows.
+
+### Rooms backed by a GitLab branch
+
+With a server configured for GitLab, a room named `gitlab:<project id or path>@<branch>` is a
+branch of a GitLab repository:
+
+```js
+createTypstEditor(host, {
+  main: '/thesis.typ',                      // the repository's main file
+  user: { name: 'Ada Lovelace' },           // the commit author (unless the server's token check knows better)
+  collaboration: { url: 'wss://collab.example.org', room: 'gitlab:group/thesis@main', token },
+});
+```
+
+- **Loading:** the first user to open the room makes the server load the branch: every `.typ`
+  file becomes shared text, the other files (images, data) are fetched by the widget from the
+  server (`GET /rooms/<room>/files/<path>`, with the token as `Authorization: Bearer`). Pass
+  `main` as the repository's main file; `source` / `files` are not needed (the room wins).
+- **Save version:** a "Save version" button appears next to the tabs. It asks for a commit
+  message (default "Edit via Typst editor") and makes the server commit every change since the
+  last commit (edits, new, renamed and deleted files, uploaded images) as **one** commit by the
+  saving user. Everyone's "Show changes" then starts over from the new commit.
+- **Changes on GitLab** (pushes, merge requests): merged into the room when someone saves (and,
+  with the webhook, as soon as they are pushed), file by file, three-way. Where the room and
+  GitLab changed the same lines, nothing is merged or committed: everyone sees "Changes on GitLab
+  conflict with edits in …", and the room keeps its text — no conflict markers in the source.
+  Resolve it (e.g. on GitLab, or by editing those lines to match), then save again.
+
+Server configuration (environment, e.g. in a git-ignored `mise.local.toml` `[env]` section —
+never commit the token):
+
+| Variable | |
+|---|---|
+| `TYPST_GITLAB_URL` | GitLab instance, e.g. `https://gitlab.com` |
+| `TYPST_GITLAB_TOKEN` | server-side token with `api` scope (clients never see it) |
+| `TYPST_GITLAB_WEBHOOK_SECRET` | optional: enables `POST /gitlab/webhook`; add a push webhook with this secret token in the project |
+| `TYPST_GITLAB_AUTHOR_EMAIL` | optional: author email when the user's is unknown |
+
+Try it without GitLab: `mise run server:dev-fake-gitlab` (an in-memory fake repository), then
+open the demo with `?room=gitlab:demo/report@main`.
 
 ## Using it from a bundler
 

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Start the collaboration server with GitLab rooms backed by an in-memory fake GitLab (room gitlab:demo/report@main)"
+set -euo pipefail
+exec node server/src/fake-gitlab-main.ts "$@"
