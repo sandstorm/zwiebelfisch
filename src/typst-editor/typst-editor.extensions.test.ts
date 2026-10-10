@@ -133,6 +133,54 @@ describe('custom editors', () => {
   });
 });
 
+describe('diagrams', () => {
+  const diagram = () => new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+
+  it('opens a .drawio.png in the diagram editor (priority over the images), any other PNG as an image', () => {
+    URL.createObjectURL = vi.fn(() => 'blob:1');
+    URL.revokeObjectURL = vi.fn();
+    const { host, editor } = setup({ source: '= Hi', files: { '/a.drawio.png': diagram(), '/a.png': new Uint8Array([1]) } });
+    editor.open('/a.drawio.png');
+    expect(host.querySelector('[data-testid=typst-diagram] iframe')).not.toBeNull();
+    expect(host.querySelector('[data-testid=typst-asset]')).toBeNull();
+    editor.open('/a.png');
+    expect(host.querySelector('[data-testid=typst-diagram]')).toBeNull();
+    expect(host.querySelector('[data-testid=typst-asset] img')).not.toBeNull();
+  });
+
+  it('puts "New spreadsheet…" and "New diagram…" into the file panel\'s "New"', () => {
+    const { host } = setup({ source: '= Hi', settings: { 'files.panel': 'show' } });
+    const panel = host.querySelector<HTMLElement>('[data-testid=typst-files]')!;
+    panel.querySelector<HTMLButtonElement>('button[aria-label=New]')!.click();
+    // the Visual view's toolbar menus are role=menu too
+    const entries = [...host.querySelectorAll('[role=menu] [role=menuitem]')].filter((entry) => !entry.closest('.typst-toolbar'));
+    expect(entries.map((entry) => entry.textContent)).toEqual([
+      'New file…',
+      'New spreadsheet…',
+      'New diagram…',
+      'New folder…',
+      'Upload files…',
+    ]);
+  });
+
+  it('offers "Edit diagram" on an image box showing a diagram of the project, which opens it', () => {
+    URL.createObjectURL = vi.fn(() => 'blob:1');
+    URL.revokeObjectURL = vi.fn();
+    const { host, editor } = setup({
+      mode: 'visual',
+      source: '#image("img/flow.drawio.png")\n\n#image("img/logo.png")\n',
+      files: { '/img/flow.drawio.png': diagram(), '/img/logo.png': new Uint8Array([1]) },
+    });
+    const [flow, logo] = [...host.querySelectorAll<HTMLElement>('.typst-visual__image')];
+    const actions = (box: HTMLElement) => [...box.querySelectorAll('.typst-visual__image-tools .typst-visual__box-actions button')].map((b) => b.textContent);
+    expect(actions(flow)).toEqual(['Edit diagram']);
+    expect(actions(logo)).toEqual([]);
+    flow.querySelector<HTMLButtonElement>('.typst-visual__box-actions button')!.click();
+    expect(editor.activeFile).toBe('/img/flow.drawio.png');
+    expect(host.querySelector('[data-testid=typst-diagram]')).not.toBeNull();
+  });
+});
+
 describe('the built-in extensions', () => {
   it('uploads files dropped on the widget, unless the file list is hidden', async () => {
     // jsdom's File has no arrayBuffer()

@@ -298,6 +298,21 @@ and the document's font. Merged cells are not carried over yet.
 
 The file is in IronCalc's own format; `.xlsx` files cannot be opened yet.
 
+## Diagrams
+
+A project file ending in `.drawio.png` is a diagram: a PNG with the [diagrams.net](https://www.diagrams.net)
+diagram inside, so Typst shows it as an image and the editor opens it in diagrams.net, embedded. Create one with
+**New → New diagram…** in the file panel; in the Visual view, an image of a diagram has **Edit diagram** in its
+toolbar. There is no Save button: every change is saved into the file (and the preview updates) as you draw.
+
+```typst
+#figure(image("diagrams/architecture.drawio.png", width: 80%), caption: [Architecture])
+```
+
+The editor follows the widget into dark mode. It is loaded from `https://embed.diagrams.net/`; set
+`diagrams.editorUrl` to your own installation of the drawio web app to keep diagrams off the internet or to work
+offline. Without it the editor says so and offers to show the picture instead.
+
 ## Custom styles
 
 Authors declare their own paragraph and text styles as Typst functions, with a doc comment
@@ -418,6 +433,7 @@ editor.settings = { ...editor.settings, 'workbench.theme': 'dark' };
 | `files.panel` | `'auto'`, `'show'`, `'hide'` (`'auto'`) | When the file panel is open: with more than one file / always / never (and dropped files are ignored). |
 | `previewSync.followCursor` | `true`, `false` (unset: the viewer's last choice, else `true`) | Whether the preview follows the cursor. |
 | `pdfExport.download` | `true`, `false` (`true`) | "Download PDF" in the preview toolbar. `exportPdf` works either way. |
+| `diagrams.editorUrl` | a URL (`'https://embed.diagrams.net/'`) | Where the diagram editor comes from: diagrams.net, or your own installation of the drawio web app (Apache-2.0), e.g. without internet access. |
 
 Your own extensions declare settings the same way (section 7).
 
@@ -503,6 +519,9 @@ Rules the built-ins follow, and yours should too:
   `priority` (default 100, higher first).
 - **Settings** are declared under the extension's own section and read with `getConfiguration`; follow
   `onDidChangeConfiguration`, since the host may change them at any time.
+- **Buttons on Visual view boxes**: `visualView.registerBoxAction({ title, when?(node, view), run(node, view) })` adds
+  a button to every raw box `when` holds for (its Typst is `node.attrs.src`), shown in the box's tools (an image's
+  toolbar) or above its code; `diagrams`' "Edit diagram" is one.
 - **Buttons are menu entries.** `registerMenuItem(menuId, { command, title?, icon?, group?, order?, when?(context)
   })` puts a command where the user finds it; `when` decides per menu context. Menu ids (VS Code's):
 
@@ -526,7 +545,9 @@ Rules the built-ins follow, and yours should too:
   images' `*.{png,…}`, which beats `*`). Every open gets a new panel: fill `panel.element`, store edits with
   `applyChange({ kind: 'update', path, content })`, and store what is pending in `panel.onDidDispose`. The built-ins:
   `images.preview` (images), `images.file` (`*`: any other file, read-only), `spreadsheets.editor` (`*.ic`),
-  `diagrams.editor` (`*.drawio.png`, priority 110).
+  `diagrams.editor` (`*.drawio.png`, priority 110). The built-in "New …" entries (`file/newFile`): "New file…",
+  "New spreadsheet…" (`spreadsheets.newSpreadsheet`), "New diagram…" (`diagrams.newDiagram`), "New folder…",
+  "Upload files…".
 
   ```ts
   workbench.registerCustomEditorProvider('csv.table', {

@@ -1,5 +1,5 @@
 // What contributions add to raw boxes (Typst kept verbatim, edited as code): pictures instead of the code, tools
-// around it, extensions of the code editor. See contributions.ts and nodes/raw-box.ts.
+// around it, action buttons, extensions of the code editor. See contributions.ts and nodes/raw-box.ts.
 import { StateEffect, type Extension as CodeExtension } from '@codemirror/state';
 import type { Editor } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
@@ -58,6 +58,11 @@ export interface BoxToolsHost {
   getPos(): number | undefined;
   /** Shows and focuses the code. */
   editCode(): void;
+  /**
+   * The box's action buttons (`registerBoxAction`), kept up to date by the host: the tools put the element where
+   * they show their buttons (else the box shows it above the code).
+   */
+  readonly actions: HTMLElement;
 }
 
 /** Tools on a code box (an image's resize handles and toolbar); a click on the picture then selects the box. */
@@ -67,6 +72,19 @@ export interface BoxTools {
   /** The box was selected. */
   select(): void;
   destroy(): void;
+}
+
+/**
+ * A button any contribution adds to the raw boxes it applies to (an image box of a diagram: "Edit diagram"), shown
+ * with the box's tools (an image box's toolbar), or above the code of a box without tools.
+ */
+export interface BoxAction {
+  /** The button's text. */
+  readonly title: string;
+  /** Whether the box of `node` (its Typst: `node.attrs.src`) in `view` offers it; asked whenever the node changes. Default: every box. */
+  when?(node: Node, view: VisualViewContext): boolean;
+  /** Runs it for the box of `node` (the box's node now). */
+  run(node: Node, view: VisualViewContext): void;
 }
 
 /** What a code box of a node type shows besides its code (see `TypstNodeSpec.codeBox`). */

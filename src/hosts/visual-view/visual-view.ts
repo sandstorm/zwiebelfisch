@@ -14,7 +14,7 @@ import { nodeGrammar, onDidChangeGrammar, posToSource, print, project, sourceToP
 import { Toolbar } from './toolbar/toolbar';
 
 export {
-  VisualViewContributions, setBoxDecorations, svg, type Action, type BoxPicture, type BoxRenderer, type BoxRendererProvider, type BoxCodeExtensionProvider,
+  VisualViewContributions, setBoxDecorations, svg, type Action, type BoxAction, type BoxPicture, type BoxRenderer, type BoxRendererProvider, type BoxCodeExtensionProvider,
   type BoxTools, type BoxToolsHost, type CodeBoxSpec, type ContributionContext, type EditorExtensionProvider, type Gutter, type HighlightProvider,
   type GutterProvider, type PriorityOptions, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem, type TypstMarkSpec,
   type TypstNodeSpec, type VisualViewContext, type VisualViewContribution,
@@ -160,6 +160,7 @@ function boxes(view: VisualViewContext, contributed: Contributed) {
     view,
     renderers: contributed.boxRenderers.map((provider) => provider(view)).filter((renderer) => renderer !== null),
     codeExtensions: contributed.boxCodeExtensions.map((provider) => provider(view)),
+    actions: contributed.boxActions,
     specs: new Map(contributed.nodes.flatMap((spec) => (spec.codeBox ? [[spec.name, spec.codeBox] as const] : []))),
   };
 }

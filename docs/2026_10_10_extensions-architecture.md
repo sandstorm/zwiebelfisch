@@ -72,7 +72,8 @@ interface ExtensionContext {
   readonly project: Project;
   readonly workspace: Workspace;               // getConfiguration('<section>').get('<key>'), onDidChangeConfiguration
   readonly workbench: Workbench;               // registerSidePanel, registerStatusBarItem,
-                                               // registerFileView(kind, provider), open(path), …
+                                               // registerCustomEditorProvider(viewType, provider,
+                                               //   { filenamePattern, priority }), open(path), …
   readonly visualView: VisualViewContributions;  // registerNode(spec), registerMark(spec),
                                                // registerToolbarItem, registerGutter, registerDecorations
   readonly sourceView: SourceViewContributions;  // registerExtension(cm)
@@ -118,10 +119,10 @@ extension API once that is exposed (`createTypstEditor({ extensions })`).
 
 | Host | Mechanism it keeps | Contribution points |
 |---|---|---|
-| `visual-view` | Tiptap editor; the projection **framework**: segmenting source into blocks, source anchors (`src` / `sep` / `lead` / `trail`), print + minimal change back to the document, sync from the document, `posToSource` / `sourceToPos`; the **raw box** (unmodelled Typst, never rewritten, is the host's fallback, not an extension); paragraph + text (the minimum a document needs); selection; the view context's position map | `TypstNodeSpec` / `TypstMarkSpec` registry (schema node, projector for its syntax / call, printer, label + box flags, node view, keymap, input rules); toolbar items and menus; decorations; side gutters; box renderers |
+| `visual-view` | Tiptap editor; the projection **framework**: segmenting source into blocks, source anchors (`src` / `sep` / `lead` / `trail`), print + minimal change back to the document, sync from the document, `posToSource` / `sourceToPos`; the **raw box** (unmodelled Typst, never rewritten, is the host's fallback, not an extension); paragraph + text (the minimum a document needs); selection; the view context's position map | `TypstNodeSpec` / `TypstMarkSpec` registry (schema node, projector for its syntax / call, printer, label + box flags, node view, keymap, input rules); toolbar items and menus; decorations; side gutters; box renderers; box actions |
 | `source-view` | CodeMirror bound to a `TypstDocument`, document sync, the reveal highlight | CodeMirror extensions (language, lint, colors, other users' carets) |
 | `preview` | engine worker + protocol, coalesced compiles, page list (lazy SVG), hit-testing (`onDidClickPage`), scroll / `reveal` | toolbar items, PDF export options, overlays on pages |
-| `workbench` | layout (side panels with rail buttons, editing area, preview, status bar), the Visual / Source tabs, file views by kind, extension lifecycle, color scheme; showing document links in the Source views and raw boxes | side panels, status bar items, file views, commands, document link providers, file decoration providers, source controls |
+| `workbench` | layout (side panels with rail buttons, editing area, preview, status bar), the Visual / Source tabs, custom editors by file name pattern + priority, extension lifecycle, color scheme; showing document links in the Source views and raw boxes | side panels, status bar items, custom editors, commands, menus, document link providers, file decoration providers, source controls |
 
 `BLOCK_CALLS`, `PRINT_BLOCK`, `RAW_TYPES`, `LABELLED_BLOCKS` and `callAtomType` are derived from the
 registered specs (review blocker `projection.ts:467`). `projection.ts` imports no feature (blocker
@@ -143,13 +144,14 @@ items.
 | `documentLinks()` (`document-links`) | (core `document-links`: `findFilePaths`) | Workbench: a `DocumentLinkProvider` (the views show its links) | command `documentLinks.createFile` | — |
 | `collaboration(options)` (added by the host, not a built-in) | `SharedProject`, `SharedAssets`, `RemoteCursors`, `GitLabSourceControl` (lazy chunk; protocol in core `gitlab-protocol`); `presence/` (eager) | Source + Visual: other users' carets and selections (also in raw boxes); Workbench: file decorations, the GitLab room's source control | — | yes |
 | `files()`, `fileNavigation()` (`files`, `file-navigation`) | tree model (uploads: core `uploads`) | Setting `files.panel`; Workbench: file panel (side panel, file decorations of any provider), drops; editor frame "← previous / next file →" | — | yes (`files.css`) |
-| `spreadsheets()` | `typst-file` (`name.ic.gen.typ`) | Workbench: `.ic` file view (IronCalc, loaded on demand) | — | yes |
+| `spreadsheets()` | `typst-file` (`name.ic.gen.typ`) | Workbench: custom editor `spreadsheets.editor` for `*.ic` (IronCalc, loaded on demand), "New spreadsheet…" in `file/newFile` | command `spreadsheets.newSpreadsheet` | yes |
+| `diagrams()` | `EmbedSession` (embed protocol), PNG round trip, empty diagram | Setting `diagrams.editorUrl`; Workbench: custom editor `diagrams.editor` for `*.drawio.png` (priority 110), "New diagram…" in `file/newFile`; Visual: box action "Edit diagram" | command `diagrams.newDiagram` | yes |
 | `diagnostics()` | `DiagnosticCollection`, summary | Source: lint; Visual: highlights; Workbench: status bar item | — | yes |
 | `sourceControl()` (`source-control`) | — | Workbench: "Save to <label>…" in the tab bar for every registered source control | — | — |
 | `markup` | raw code (code delimiters) | Visual: strong, emphasis, links, inline code, code blocks, block quotes; selection bar, Insert items | — | yes |
 | `headings` | numbering patterns, `HeadingCounter` | Visual: headings, their numbers (editor extension) | — | yes |
 | `tables` | `TableLayout` | Visual: `#table(..)`, Insert table, the table bar | — | yes |
-| `images()` | image call edits, `uploadTarget` | Visual: image boxes + figures (the path as its document link), tools, Insert image, drops; box renderer (110); Workbench: `image` / `data` file views | — | yes |
+| `images()` | image call edits, `uploadTarget` | Visual: image boxes + figures (the path as its document link), tools, Insert image, drops; box renderer (110); Workbench: custom editors `images.preview` (images) and `images.file` (`*`) | — | yes |
 | `renderedBoxes()` (`rendered-boxes`) | `Snippet`, sizes | Visual: box renderer (compiled snippets from the preview) | — | — |
 | `outline` | — | Visual: `#outline(..)` as a labelled box, Insert table of contents | — | — |
 | `pageLayout` (`page-layout`) | — | Visual: page break, horizontal rule | — | yes |

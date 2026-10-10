@@ -7,11 +7,11 @@ import { Disposable } from '../../../core/disposable/disposable';
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { Highlight, TypstDocument } from '../../../core/typst-document/typst-document';
 import type { MarkGrammar, NodeGrammar } from '../projection/projection';
-import type { BoxCodeExtensionProvider, BoxRendererProvider, CodeBoxSpec } from './boxes';
+import type { BoxAction, BoxCodeExtensionProvider, BoxRendererProvider, CodeBoxSpec } from './boxes';
 import type { ToolbarGroup, ToolbarItem } from './toolbar-items';
 import type { VisualViewContext } from './view-context';
 
-export { setBoxDecorations, type BoxCodeExtensionProvider, type BoxPicture, type BoxRenderer, type BoxRendererProvider, type BoxTools, type BoxToolsHost, type CodeBoxSpec } from './boxes';
+export { setBoxDecorations, type BoxAction, type BoxCodeExtensionProvider, type BoxPicture, type BoxRenderer, type BoxRendererProvider, type BoxTools, type BoxToolsHost, type CodeBoxSpec } from './boxes';
 export { svg, type Action, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem } from './toolbar-items';
 export type { VisualViewContext } from './view-context';
 
@@ -94,6 +94,7 @@ export interface Contributed {
   readonly highlights: readonly { readonly layer: string; readonly provider: HighlightProvider }[];
   readonly boxRenderers: readonly BoxRendererProvider[];
   readonly boxCodeExtensions: readonly BoxCodeExtensionProvider[];
+  readonly boxActions: readonly BoxAction[];
 }
 
 /**
@@ -117,6 +118,7 @@ export class VisualViewContributions {
     gutters: [] as GutterProvider[],
     highlights: [] as { layer: string; provider: HighlightProvider }[],
     boxCodeExtensions: [] as BoxCodeExtensionProvider[],
+    boxActions: [] as BoxAction[],
   };
 
   /** A registry with `contributions` activated, for as long as it lives (for a view without the workbench, as in tests). */
@@ -188,6 +190,14 @@ export class VisualViewContributions {
     return this.add(this.lists.boxCodeExtensions, provider);
   }
 
+  /**
+   * A button on every raw box `action.when` holds for (any box: a contribution need not own the box's node type),
+   * in registration order: with the box's tools (an image box's toolbar), else above its code.
+   */
+  registerBoxAction(action: BoxAction): Disposable {
+    return this.add(this.lists.boxActions, action);
+  }
+
   /** Everything registered now (for the host, when it creates a view). */
   contributed(): Contributed {
     const lists = this.lists;
@@ -201,6 +211,7 @@ export class VisualViewContributions {
       highlights: [...lists.highlights],
       boxRenderers: byPriority(this.ranked.boxRenderers),
       boxCodeExtensions: [...lists.boxCodeExtensions],
+      boxActions: [...lists.boxActions],
     };
   }
 

@@ -6,6 +6,7 @@
 // feature's extension declares (`settings: { 'pdfExport.download': false }`), so this file knows no feature by name.
 import { comments } from '../extensions/comments/comments';
 import { diagnostics } from '../extensions/diagnostics/diagnostics';
+import { diagrams } from '../extensions/diagrams/diagrams';
 import { fileNavigation, files } from '../extensions/files/files';
 import { labels } from '../extensions/labels/labels';
 import { pdfExport } from '../extensions/pdf-export/pdf-export';
@@ -199,6 +200,7 @@ function builtinExtensions(): TypstExtension[] {
     files(),
     fileNavigation(),
     spreadsheets(),
+    diagrams(),
     diagnostics(),
     sourceControl(),
     markup,

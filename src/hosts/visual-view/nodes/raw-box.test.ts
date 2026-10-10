@@ -1,15 +1,15 @@
 // @vitest-environment jsdom
 // Tests for raw-box.ts.
 import { EditorView } from '@codemirror/view';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { VisualView, VisualViewContributions } from '../visual-view';
+import { VisualView, VisualViewContributions, type VisualViewContribution } from '../visual-view';
 
-function setup(text: string) {
+function setup(text: string, contributions: readonly VisualViewContribution[] = []) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = new VisualView(parent, doc, VisualViewContributions.from([]));
+  const view = new VisualView(parent, doc, VisualViewContributions.from(contributions));
   const box = (selector: string) => {
     const dom = parent.querySelector<HTMLElement>(`${selector} .cm-content`)!;
     return EditorView.findFromDOM(dom)!;
@@ -123,5 +123,25 @@ describe('raw boxes', () => {
     key(cm, 'Backspace');
     expect(parent.querySelector('.typst-visual__raw-block')).toBeNull();
     expect(doc.text).toBe('Hello\n');
+  });
+
+  it('show the contributed actions that apply to them above the code, kept up to date with the source', () => {
+    const run = vi.fn();
+    const actions: VisualViewContribution = {
+      id: 'test',
+      activate: ({ visualView }) => {
+        visualView.registerBoxAction({ title: 'Make bigger', when: (node) => node.attrs.src.includes('12pt'), run });
+        visualView.registerBoxAction({ title: 'Never', when: () => false, run });
+      },
+    };
+    const { parent, box, doc } = setup(RAW, [actions]);
+    const raw = parent.querySelector<HTMLElement>('.typst-visual__raw-block')!;
+    const bar = raw.querySelector<HTMLElement>('.typst-visual__box-actions')!;
+    expect(bar.nextElementSibling?.classList.contains('typst-visual__code')).toBe(true);
+    expect([...bar.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['Make bigger']);
+    bar.querySelector('button')!.click();
+    expect(run).toHaveBeenCalledWith(expect.objectContaining({ attrs: expect.objectContaining({ src: '#set text(size: 12pt)' }) }), expect.objectContaining({ document: doc }));
+    box('.typst-visual__raw-block').dispatch({ changes: { from: 16, to: 20, insert: '14pt' } });
+    expect(bar.querySelectorAll('button')).toHaveLength(0);
   });
 });

@@ -8,8 +8,9 @@ import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { Decoration, EditorView, NodeView } from '@tiptap/pm/view';
 import { minimalChange } from '../../../core/typst-document/typst-document';
-import { setBoxDecorations, type BoxRenderer, type BoxTools, type BoxToolsHost, type CodeBoxSpec, type VisualViewContext } from '../contributions/contributions';
+import { setBoxDecorations, type BoxAction, type BoxRenderer, type BoxTools, type BoxToolsHost, type CodeBoxSpec, type VisualViewContext } from '../contributions/contributions';
 import { nodeGrammar, posToSource } from '../projection/projection';
+import { BoxActionBar } from './box-actions';
 import { RenderedBox } from './rendered-box';
 
 type Side = -1 | 1;
@@ -24,6 +25,8 @@ export interface Boxes {
   readonly renderers: readonly BoxRenderer[];
   /** Extensions of every box's code editor. */
   readonly codeExtensions: readonly CodeExtension[];
+  /** Buttons on the boxes they apply to. */
+  readonly actions: readonly BoxAction[];
   /** What a box of a node type shows besides its code, by type name. */
   readonly specs: ReadonlyMap<string, CodeBoxSpec>;
 }
@@ -37,11 +40,15 @@ export function setBoxes(editor: Editor, contributed: Boxes): void {
 }
 
 /** What contributions add to a box of `node` in `editor`: its spec's heading and tools, code extensions, the renderer drawing it. */
-function contributionsFor(editor: Editor, node: Node): Partial<Pick<Boxes, 'view'>> & { spec?: CodeBoxSpec; codeExtensions: readonly CodeExtension[]; renderer?: BoxRenderer } {
+function contributionsFor(
+  editor: Editor,
+  node: Node,
+): Partial<Pick<Boxes, 'view'>> & { spec?: CodeBoxSpec; codeExtensions: readonly CodeExtension[]; renderer?: BoxRenderer; actions: readonly BoxAction[] } {
   const contributed = boxesOf.get(editor);
-  if (!contributed) return { codeExtensions: [] };
+  if (!contributed) return { codeExtensions: [], actions: [] };
   const renderer = contributed.renderers.find((candidate) => candidate.renders(node));
-  return { spec: contributed.specs.get(node.type.name), codeExtensions: contributed.codeExtensions, renderer, view: contributed.view };
+  const { codeExtensions, actions, view } = contributed;
+  return { spec: contributed.specs.get(node.type.name), codeExtensions, renderer, view, actions };
 }
 
 /** Whether `node` shows as a raw box (its spec asks for a code box). */
@@ -91,12 +98,14 @@ class RawBox implements NodeView {
   private readonly code: CodeView;
   private readonly rendered: RenderedBox | null;
   private readonly tools: BoxTools | null;
+  /** The contributed action buttons that apply to the box (with its tools, else above the code). */
+  private readonly actionBar: BoxActionBar | null;
   /** Set while mirroring `src` into the box, so that change is not sent back. */
   private mirroring = false;
 
   constructor(private node: Node, private readonly editor: Editor, private readonly getPos: () => number | undefined, decorations: readonly Decoration[]) {
     const inline = node.isInline;
-    const { spec, codeExtensions, renderer, view } = contributionsFor(editor, node);
+    const { spec, codeExtensions, renderer, view, actions } = contributionsFor(editor, node);
     this.spec = spec;
     this.dom = editor.view.dom.ownerDocument.createElement(inline ? 'span' : 'div');
     this.dom.className = inline ? 'typst-visual__raw-inline' : 'typst-visual__raw-block';
@@ -107,7 +116,15 @@ class RawBox implements NodeView {
     boxes.set(this.dom, this);
     this.showDecorations(decorations);
     this.rendered = renderer ? this.createRendered(wrapper, renderer) : null;
+    this.actionBar = view && actions.length > 0 ? new BoxActionBar(this.dom.ownerDocument, actions, view, node) : null;
     this.tools = view && spec?.tools ? spec.tools(this.toolsHost(wrapper, view), node) : null;
+    this.placeActionBar(wrapper);
+  }
+
+  /** The action buttons above the code, unless the tools put them in place. */
+  private placeActionBar(code: HTMLElement): void {
+    const bar = this.actionBar?.element;
+    if (bar && !bar.parentElement) this.dom.insertBefore(bar, code);
   }
 
   /** Focuses the box with the cursor at its start (entered moving forward) or its end. */
@@ -129,6 +146,7 @@ class RawBox implements NodeView {
     this.updateLabel();
     this.showDecorations(decorations);
     this.tools?.update(node);
+    this.actionBar?.update(node);
     this.rendered?.update();
     return true;
   }
@@ -183,7 +201,8 @@ class RawBox implements NodeView {
   /** What the box's tools get: the box, its picture (if rendered), the editor and view, how to edit the code. */
   private toolsHost(code: HTMLElement, view: VisualViewContext): BoxToolsHost {
     const picture = this.rendered?.picture ?? null;
-    return { dom: this.dom, code, picture, editor: this.editor, view, getPos: this.getPos, editCode: () => this.focus(-1) };
+    const actions = this.actionBar?.element ?? this.dom.ownerDocument.createElement('span');
+    return { dom: this.dom, code, picture, editor: this.editor, view, getPos: this.getPos, editCode: () => this.focus(-1), actions };
   }
 
   /** Hands the box's decorations (e.g. other users' carets in it) to its code's extensions (`setBoxDecorations`). */

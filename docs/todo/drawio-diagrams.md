@@ -1,11 +1,36 @@
 # Diagrams: `.drawio.png` edited with the diagrams.net editor
 
-Status: planned (wave after the slices merge; asked for on 2026-10-10, confirmed the same day)
+Status: done (2026-10-11; asked for on 2026-10-10, confirmed the same day). E2E spec written, to be run by the user
+(`tests/e2e/diagrams.spec.ts`, a stub page at the editor's URL speaks the protocol).
 Depends on: the extension architecture ([2026_10_10_extensions-architecture.md](../2026_10_10_extensions-architecture.md)),
 the spreadsheets extension (same "a file opens in its own embedded editor" pattern, binary updates)
 Touches: new `src/extensions/diagrams/`, the workbench's file views (→ custom editors, below),
 `extensions/images` (Visual image box tool), `extensions/files` (new-file entries), ARCHITECTURE.md,
 docs/embedding.md
+
+## What was built
+- **Custom editors** (`hosts/workbench/custom-editors/`): `workbench.registerCustomEditorProvider(viewType,
+  { resolveCustomEditor(document, panel) }, { filenamePattern, priority })` replaced `registerFileView(kind)`. A
+  glob over the file name (`*`, `**`, `?`, `{a,b}`; with `/` over the path; case-insensitive); the highest priority
+  opens a file (`'default'` = 100, `'option'` only via `open(path, { viewType })`), then the most specific pattern,
+  then registration order. Every open gets a fresh panel; `panel.onDidDispose` fires while its element is still in
+  place. `images.preview` (`*.{png,jpg,jpeg,gif,svg,webp}`), `images.file` (`*`), `spreadsheets.editor` (`*.ic`),
+  `diagrams.editor` (`*.drawio.png`, 110). `core/paths` keeps only `ProjectPath.isTypst`; the media types and
+  `imageBlob` moved to `extensions/images/model/image-files.ts`; the file panel picks icons by name.
+- **New-file entries**: menu items in `file/newFile` (the UI-services wave replaced `registerNewFileTemplate` with
+  menus): "New spreadsheet…" (`spreadsheets.newSpreadsheet`) and "New diagram…" (`diagrams.newDiagram`), each asking
+  for a name in the row's folder (input box), creating the file and opening it.
+- **Box actions** (`visualView.registerBoxAction({ title, when?(node, view), run(node, view) })`): a generic button
+  on raw boxes, shown in the box's tools (the image toolbar) or above its code. "Edit diagram" is one; it finds the
+  diagram through the workbench's document links (no Typst parsing in the extension).
+- **`extensions/diagrams/`**: `diagrams()` with the setting `diagrams.editorUrl` (default
+  `https://embed.diagrams.net/`); `model/` `EmbedSession` (init → load xmlpng + autosave; autosave → export xmlpng,
+  one at a time → save after 800 ms quiet, last export wins; `flush` saves the pending export and puts a newer diagram
+  into the last PNG), `png.ts` (tEXt `mxfile` chunk, URI-encoded, CRC), `emptyDiagram()`; `workbench/`
+  `DiagramEditor` (iframe, messages only from its own window, `dark=1` with the widget's scheme and a reload on change,
+  "could not be loaded" after 20 s / offline with "Show as image"), `newDiagram`; `visual-view/` `editDiagramAction`.
+- Not done: renaming an open diagram while a save is pending saves to the old path (refused, an error message); an
+  export still in flight when the file is closed is replaced by the XML-only save (picture follows on the next edit).
 
 ## Goal
 People draw diagrams in the editor and use them in the document as ordinary images:

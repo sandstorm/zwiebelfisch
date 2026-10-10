@@ -1,0 +1,10 @@
+/* The diagrams extension's styles: a diagram (.drawio.png) in the embedded diagrams.net editor, its loading and
+   failure status, the picture shown instead. Registered by diagrams.ts (Workbench.registerStyleSheet); colors from
+   the widget's --te-* tokens. */
+.typst-diagram { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.typst-diagram__title { margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--te-border); font-size: 13px; font-weight: 600; color: var(--te-text); }
+.typst-diagram__body { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.typst-diagram__frame { flex: 1; min-height: 0; width: 100%; border: 0; background: var(--te-surface); }
+.typst-diagram__status { margin: 0; padding: 8px 12px; color: var(--te-muted); font-size: 13px; }
+.typst-diagram__status[hidden] { display: none; }
+.typst-diagram__image { align-self: center; max-width: calc(100% - 48px); margin: 24px; object-fit: contain; }

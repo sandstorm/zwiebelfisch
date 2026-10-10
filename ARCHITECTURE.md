@@ -93,6 +93,12 @@ src/                        the widget (TypeScript); the most important API on t
                             (darkThemeVariables: IronCalc's palette from the widget's tokens)
       workbench/            spreadsheet-view.ts (SpreadsheetView), workbook.ts (React + IronCalc, loaded on demand),
                             color-scheme.ts (followColorScheme: the dark palette while data-scheme is dark)
+    diagrams/               diagrams(): `.drawio.png` in diagrams.net's embedded editor (the custom editor diagrams.editor,
+                            auto-save), "New diagram…", "Edit diagram" on boxes showing one; diagrams.css
+      model/                embed-session.ts (EmbedSession: the embed protocol as pure state; embedUrl), png.ts (the
+                            diagram's XML in a PNG's tEXt chunk, data URIs), empty-diagram.ts
+      workbench/            diagram-editor.ts (DiagramEditor: the iframe, scheme, offline), new-diagram.ts
+      visual-view/          editDiagramAction (a box action)
     source-control/         sourceControl(): the UI over the workbench's source controls: "Save to <label>…" in the
                             tab bar (menu editor/title, command sourceControl.commit)
       workbench/            commit (the commit message in the input box), tellStatus (outcomes and news as messages)
@@ -252,7 +258,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
   FileContent | null }`, null: gone; a rename is two), `files-change` with every `FileChange`.
 - **Composition**: a `Project` in a `WorkbenchHost` (`hosts/workbench`, see "Extensions" below) that runs the
   built-in extension list (`builtinExtensions`, none configured: what a feature lets hosts configure is a setting
-  it declares): `typstLanguage`, `documentLinks`, `files`, `fileNavigation`, `spreadsheets`, `diagnostics`,
+  it declares): `typstLanguage`, `documentLinks`, `files`, `fileNavigation`, `spreadsheets`, `diagrams`, `diagnostics`,
   `sourceControl`; the Visual view's constructs and features: `markup`, `headings` (with their numbers),
   `tables`, `images`, `renderedBoxes`, `outline`, `pageLayout`, `lists`, `alignment`, `comments`, `labels`,
   `styles`; then `previewSync`, `previewControls` and `pdfExport`. Extensions never depend on each other, so the
@@ -442,8 +448,8 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   gesture, the selection and the focus are as at the call) and resolves to its (awaited) result; an unknown id or a
   throwing / rejecting handler rejects. The built-ins: `pdfExport.export(options?)` → Blob,
   `comments.addComment()` (bound to `Mod+Alt+KeyM`), `documentLinks.createFile(path)` (a link's command),
-  `sourceControl.commit()`, `files.newFile` / `newFolder` / `upload` / `rename` / `delete` (each with an optional
-  row). Hosts run them through `editor.executeCommand`; menu entries name them by id (a menu or key binding logs a
+  `sourceControl.commit()`, `files.newFile` / `newFolder` / `upload` / `rename` / `delete`,
+  `spreadsheets.newSpreadsheet`, `diagrams.newDiagram` (each with an optional row). Hosts run them through `editor.executeCommand`; menu entries name them by id (a menu or key binding logs a
   rejection with `console.error`; the command tells the user itself).
 - **Settings** (`Configuration`, `configuration/`, VS Code's configuration, decided 2026-10-10): declared by the
   extensions (`contributes.configuration`, an id declared twice throws) and by the workbench itself
@@ -489,7 +495,7 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   `editor/title` — the tab bar, shown by the workbench (`.typst-editor__tab-actions`, `role=toolbar` "Editor
   actions"; context `{ editorMode, resource }`; no arguments; shown again on a tab switch, a file shown, a
   registration; pressing an entry keeps the editor's selection): `comments`' "Comment" (Source tab),
-  `sourceControl`'s "Save to GitLab…". `file/newFile` — "New" in the file panel's header, and
+  `sourceControl`'s "Save to GitLab…". `file/newFile` — "New" in the file panel's header (`files`' entries, "New spreadsheet…", "New diagram…"), and
   `explorer/context` — a file panel row's context menu (context `{ view: 'files', resource, resourceKind:
   'file' | 'folder', resourceIsMain }`; argument: the row), both shown by the `files` extension with
   `ui/popup-menu`. The tab bar takes nothing but menu entries (`registerTabBarItem` is gone).
@@ -528,7 +534,8 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   `renderedBoxes` (Visual: `renderedBoxesVisualView`), `comments` (Visual: `marginNotes`, `notesGutter`; Preview:
   the PDF export option `comments.include`), `labels` (Visual: `references`), `styles` (Visual: `customStyles`); `sourceControl`
   ("Save to <label>…" in the tab bar's menu, its outcomes as messages); `previewSync` (`followCursor`; reveal, clicks), `previewControls`
-  (`zoomControls`, `pageNumber`), `pdfExport` (`downloadPdf`). The Visual view's constructs
+  (`zoomControls`, `pageNumber`), `pdfExport` (`downloadPdf`), `diagrams` (Workbench: the custom editor
+  `diagrams.editor`; Visual: the box action "Edit diagram"). The Visual view's constructs
   (`markup`, `headings`, `tables`, `outline`, `pageLayout`, `lists`, `alignment`) are extensions in
   `extensions/<name>/`: the entry's `activate` registers specs, toolbar groups and items from its `visual-view/`
   folder through `context.visualView`. No host has built-in contributions any more.
@@ -682,6 +689,8 @@ visualView.registerHighlights(layer, { provideHighlights(document), onDidChangeH
 visualView.registerBoxRenderer((view) => BoxRenderer | null) → Disposable
 visualView.registerBoxCodeExtension((view) => codeMirrorExtension) → Disposable
                                      // a box's code gets its node decorations as the effect setBoxDecorations
+visualView.registerBoxAction({ title, when?(node, view) → boolean, run(node, view) }) → Disposable
+                                     // a button on every raw box `when` holds for (diagrams: "Edit diagram")
 
 // the constructs are extensions (extensions/: markup, headings, tables, outline, pageLayout, lists, alignment); the
 // features' contributions, each a VisualViewContribution = { id, activate({ visualView, subscriptions }) } shaped
@@ -950,7 +959,10 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
   `registerBoxCodeExtension` (`typstLanguage`: Typst syntax and code colors, as in the Source view; the
   workbench's document links, as in the Source view: link tooltip on a path, Mod+click opens; no separate
   "Open …" row: it took too much space; the collaboration extension's carets in the box) and the first `BoxRenderer`
-  (`registerBoxRenderer`) that `renders` the box. A box hands its node's decorations to its code as the CodeMirror
+  (`registerBoxRenderer`) that `renders` the box, and the box actions (`registerBoxAction`, any contribution's, for
+  any box: a `BoxActionBar` of the actions whose `when(node, view)` holds, asked again on every node update; the
+  box's tools place it in their toolbar (`BoxToolsHost.actions`: the image toolbar, before "Edit code"), a box
+  without tools shows it above its code; the diagrams extension's "Edit diagram"). A box hands its node's decorations to its code as the CodeMirror
   effect `setBoxDecorations` (when made and on every update), so a box code extension can draw what is marked on
   the box.
   - **Rendered boxes** (`nodes/rendered-box.ts` shows a `BoxRenderer`'s picture): while not
@@ -985,7 +997,8 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
   frame around the rendered picture sized from the call's `width` (`imageWidthCss`), and,
   while the image is selected (a click on the picture selects it; double-click, Enter or
   "Edit code" open the code): resize handles (corners, sides) and an "Image" toolbar
-  (Add/Remove caption, Width 25/50/75/100 %, Alt text: an input box, empty removes it). A drag resizes live and writes
+  (Add/Remove caption, Width 25/50/75/100 %, Alt text: an input box, empty removes it; the box actions of other
+  extensions, e.g. "Edit diagram"; Edit code). A drag resizes live and writes
   `width: NN%` (whole percent of the text width, any other unit replaced) on release.
   - Every action is one transaction from `image-edits.ts` (one undo step): `addCaption`
     (image → figure with an empty caption, cursor in it), `removeCaption` (a figure without
@@ -1343,6 +1356,46 @@ followColorScheme(container, onDidChange) → Disposable   // sets / takes away 
   - `spreadsheets.css` recolors, under `[data-scheme='dark']`, the few places IronCalc's CSS colors without its
     variables (the cell editor's white background, the sheet tab hover, the fill handle's border).
 - Not yet: `.xlsx`, sharing spreadsheet edits in collaboration rooms (binary: the last save wins).
+
+### Diagrams (`src/extensions/diagrams`)
+
+Task: docs/todo/drawio-diagrams.md. A diagram is a `.drawio.png`: a PNG with the diagrams.net diagram's XML in it,
+so Typst shows it as an image (`#image("flow.drawio.png")`) and diagrams.net edits it again.
+
+```ts
+diagrams(): TypstExtension   // setting diagrams.editorUrl (default https://embed.diagrams.net/); custom editor
+                             // diagrams.editor (*.drawio.png, priority 110: over images.preview); command
+                             // diagrams.newDiagram ("New diagram…" in file/newFile); box action "Edit diagram"
+// model/ (pure):
+new EmbedSession({ content, post(action), save(png), timers?, delay? })  .receive(message)  .flush()  .initialized  .content
+embedUrl(base, { dark }) → URL           // embed=1, proto=json, spin=1, noSaveBtn=1, noExitBtn=1, saveAndExit=0, dark=0|1
+readDiagramXml(png) → xml | null   writeDiagramXml(png, xml) → png   toDataUri(png)   fromDataUri(uri)   emptyDiagram()
+// workbench/:
+new DiagramEditor(panel.element, { path, content, editorUrl, save(png), failed() → Promise<boolean>, loadTimeout? })  .dispose()
+newDiagram(project, workbench, resource?)
+```
+
+- **Protocol** (diagrams.net embed mode, JSON): the editor sends `init`, the session answers `load` with the file as
+  `xmlpng` (a data URI; an empty file or no PNG: an empty `xml`) and `autosave: 1`. Every `autosave` (and `save`)
+  asks for `export` as `xmlpng`, one at a time (changes during an export ask for one more when it returns); every
+  exported PNG is saved `SAVE_DELAY` (800 ms) after the last one, through `Workbench.applyChange({ kind: 'update',
+  content })` (the last export wins; a refusal is an error message). An export with the diagram the file holds
+  already is not saved (the editor reports its loaded state). `flush` (the panel's `onDidDispose`: another file
+  shown, destroy; a scheme change) saves the pending export at once and, if the diagram changed after the last
+  export (the export did not come back in time), writes the newer XML into the last PNG: the diagram is never
+  lost, its picture follows with the next export. Collaboration: binary files are not merged; the last save wins.
+- **The view** only carries messages: those from its own iframe (`event.source`) to the session, the session's to
+  the iframe as JSON (target origin: the editor's). Dark mode: `dark=1` while the widget's `data-scheme` is dark; a
+  change of scheme flushes and loads the editor again with the file as last saved. Offline (`navigator.onLine`) or
+  no `init` within 20 s: the status says the editor could not be loaded and an error message offers "Show as
+  image", which replaces the iframe with the picture (read-only).
+- **PNG round trip** (`png.ts`): the diagram is a `tEXt` chunk `mxfile` holding the URI-encoded XML, as diagrams.net
+  writes it (it also reads `mxGraphModel`); writing replaces it, right after `IHDR`, with a fresh CRC; the picture is
+  untouched. The empty diagram is a 1×1 transparent PNG with an empty one-page diagram.
+- **"New diagram…"** asks for a name in the row's folder (the file's, or the folder itself), `.drawio.png` added
+  (`flow`, `flow.drawio`), refuses existing names, creates the empty diagram and opens it.
+- **"Edit diagram"** (`visualView.registerBoxAction`): on every box whose Typst links (the workbench's document links:
+  the extension parses no Typst) to a diagram of the project, e.g. an image box's toolbar; it opens the diagram.
 
 ### Layout (`src/hosts/workbench/layout/layout.ts`)
 
