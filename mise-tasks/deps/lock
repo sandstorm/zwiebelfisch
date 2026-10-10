@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Install JS dependencies after package.json changed, updating pnpm-lock.yaml (versions stay exact pins)"
+set -euo pipefail
+pnpm install --no-frozen-lockfile
