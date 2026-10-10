@@ -32,7 +32,7 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | Task | Status |
 |---|---|
 | [engine-wasm-size](engine-wasm-size.md) | open |
-| [visual-view-projection](visual-view-projection.md) | in-progress (main agent) |
+| [visual-view-projection](visual-view-projection.md) | done |
 | [diagnostics-ui](diagnostics-ui.md) | open |
 | [web-component-and-library-build](web-component-and-library-build.md) | open |
 | [multi-file-assets-packages](multi-file-assets-packages.md) | open |

@@ -1,6 +1,6 @@
 # Visual view v1: source-anchored ProseMirror projection
 
-Status: in-progress (main agent, 2026-10-10)
+Status: done (9667bd1) — e2e specs written, need a user run
 Depends on: nothing
 Touches: src/visual-view/**, src/editor/** (view switch)
 

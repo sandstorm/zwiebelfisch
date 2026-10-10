@@ -17,7 +17,8 @@ src/
   preview/                  Preview — worker-backed live preview + hit-testing
     engine.worker.ts        hosts the engine off the main thread
     protocol.ts             request/response messages main ↔ worker
-  editor/                   createTypstEditor() — composes the widget, scoped CSS
+  visual-view/              VisualView — ProseMirror projection (schema, projection, view)
+  editor/                   createTypstEditor() — composes the widget, Visual/Source tabs, scoped CSS
   index.ts                  public API of the package
 demo/                       dev/demo page (vite root)
 tests/e2e/                  Playwright specs (run against the static build)
@@ -143,20 +144,54 @@ worker → main   {id, type:'compile', result} | {id, type:'click', jump} | {id,
 - `compile` sends the full file map. The worker diffs paths against the previous call to remove
   files that were deleted, and Typst diffs the text itself.
 
+### `VisualView` (`src/visual-view`)
+
+```ts
+new VisualView(parent, document)
+.reveal(from, to)    // select the top-level block containing `from`
+.destroy()
+```
+
+The interesting part is `projection.ts`, which exports two functions plus two sync helpers:
+
+```
+ text ──typstParser (Lezer)──► CST ──project()──► PM doc   (blocks carry attrs.src / attrs.sep)
+                                                    │ user edit (PM transaction)
+ text ◄── minimal TextChange ◄── diff ◄── print() ◄─┘   (untouched nodes print attrs.src verbatim)
+
+ text changed elsewhere ──► project() ──► syncBlocks(): replace only differing top-level blocks
+```
+
+- **Schema** (`schema.ts`):
+  - Blocks: `paragraph`, `heading`, `bullet_list` / `ordered_list` > `list_item`
+    (marker attribute), `raw_block`.
+  - Inline: text with `strong` / `emph` marks, `soft_break` (a source newline that renders as a
+    space), `hard_break` (`\`), `raw_inline`.
+  - The `source` mark remembers how escapes and shorthands (`\*`, `--`) were written.
+- **Segmentation:** headings and list items are blocks of their own. Every other run up to a
+  `Parbreak` becomes a paragraph if it contains prose (Text, Strong, Emph, …). Otherwise it becomes a
+  `raw_block` (`#set`, `#let`, display math, figures, …). A list item with nested content keeps its
+  body as a `raw_block`.
+- **Separators:**
+  - The whitespace between siblings is `attrs.sep`, so it is part of node equality.
+  - The last child has no separator; its container owns that whitespace (`list.sep`,
+    `doc.lead` / `doc.trail`).
+  - Nodes created in the editor have `sep: null` and get a default separator: `\n\n` between
+    blocks, `\n` between list items.
+- **Pristine tracking:** a module-private `WeakSet` holds the nodes created by `project()`.
+  ProseMirror keeps the identity of unchanged nodes, so membership means "still equal to
+  `attrs.src`". Pristine nodes print `src`. Edited nodes are printed canonically:
+  - Text is escaped (`*`, `#`, `$`, `//`, …, plus line-start markers).
+  - Marks are printed as `*x*` / `_x_`, or as `#strong[x]` when the span touches a word character
+    or whitespace.
+- **Write-back:** `print(doc)` is diffed against the current text (common prefix/suffix), which
+  gives exactly one minimal `TextChange`.
+- **Read-back:** re-project, then `syncBlocks`. Comparing nodes with `eq` (which includes `src` and
+  `sep`) is exact, so the replaced blocks are fresh and pristine.
+- **Invariant (unit-tested):** `print(project(src)) === src` for every fixture, and edits change
+  only their block.
+
 ## Planned modules
-
-### `VisualView` (ProseMirror projection)
-
-```
- TypstDocument.text ──parse (Lezer)──► CST ──project──► PM doc  (nodes carry source ranges)
-                                                          │
-          ◄── minimal TextChange ◄── diff ◄── re-print changed block only ◄── PM transaction
-```
-
-- **Supported nodes:** paragraph, heading, strong, emph, lists, link, inline raw, math (atom).
-- **Everything else** becomes a `raw_block` / `raw_inline` atom holding the verbatim source.
-- **Invariant, checked by tests:** `print(project(src)) === src` for every fixture. An edit changes
-  only the text range of the block that was edited.
 
 ### Collaboration
 
