@@ -150,9 +150,11 @@ describe('the drafting package (margin notes)', () => {
 
     it('compiles point and range notes in the demo after adding them', async () => {
       let text = demo;
-      for (const at of [text.indexOf('Hello Typst') + 5, text.length - 1]) {
+      for (const where of [(t: string) => t.indexOf('Hello Typst') + 5, (t: string) => t.length - 1]) {
+        const at = where(text);
         text = apply(text, addMarginNote(text, { from: at, to: at })!.changes);
       }
+      expect(text.split('set-margin-note-defaults(')).toHaveLength(2);
       const word = text.indexOf('Typst', text.indexOf('= Hello'));
       text = apply(text, addMarginNote(text, { from: word, to: word + 5 })!.changes);
       expect(text).toMatch(/margin: \(right: 4cm, rest: 1\.5cm\)/);
