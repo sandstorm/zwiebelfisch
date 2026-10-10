@@ -1,6 +1,5 @@
 // What the comments extension contributes to the frame: the command that adds a note, its key binding and the
-// Source view's "Comment" (a tab bar menu entry). See ARCHITECTURE.md,
-// "Comments = margin notes".
+// Source view's "Comment" (a tab bar menu entry). See ARCHITECTURE.md, "Comments = margin notes".
 import { Disposable } from '../../../core/disposable/disposable';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import type { Workbench } from '../../../hosts/workbench/workbench';

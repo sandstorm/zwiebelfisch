@@ -57,8 +57,8 @@ const TaskLists = Extension.create({
  * Task lists: a bullet item `- [ ] text` / `- [x] text` (one paragraph) is a
  * task item, the box hidden syntax; consecutive ones form a task list.
  * Tiptap's TaskList / TaskItem (one paragraph, no nesting; the `[ ] ` input
- * rule and clickable checkboxes are Tiptap's). Registered before bullet
- * lists: its projector gets bullet items first.
+ * rule and clickable checkboxes are Tiptap's). Registered with a higher
+ * priority than bullet lists (lists.ts), so its projector gets bullet items first.
  */
 export const TASK_LIST: TypstNodeSpec = {
   name: 'taskList',
