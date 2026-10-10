@@ -74,9 +74,11 @@ test('clicking the error count selects the first error in the source', async ({ 
 
 test('hovering the error count lists the message; the Visual view marks the error inline', async ({ page }) => {
   const source = page.getByTestId('typst-source');
+  await page.getByRole('tab', { name: 'Source' }).click();
   await source.locator('.cm-content').click();
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.type('\n#unknown');
+  await page.getByRole('tab', { name: 'Visual' }).click();
   const status = page.getByTestId('typst-status');
   await status.getByRole('button', { name: /1 error/ }).hover();
   await expect(status.locator('.typst-status__details')).toBeVisible();
