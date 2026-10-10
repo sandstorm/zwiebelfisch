@@ -9,3 +9,4 @@ playwright-report/
 target/
 src/engine/wasm/
 src/engine/fonts/
+.claude/worktrees/
