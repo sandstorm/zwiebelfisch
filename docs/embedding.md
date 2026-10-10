@@ -195,8 +195,10 @@ createTypstEditor(host, {
 - On `<typst-editor>`, set the `collaboration` and `user` properties before the element is
   connected.
 
-Demo: start `mise run server:dev`, then open the demo with `?room=test` (and `&user=Ann`) in two
-windows.
+Demo: `mise run demo` starts the demo and a local server together; pick **Collaborate** in the
+playground bar and **Open a second window** as another user (see
+[demo-playground.md](demo-playground.md)). With `mise run server:dev` instead, open the demo with
+`?room=test` (and `&user=Ann`) in two windows.
 
 ### Rooms backed by a GitLab branch
 
@@ -235,8 +237,10 @@ never commit the token):
 | `TYPST_GITLAB_WEBHOOK_SECRET` | optional: enables `POST /gitlab/webhook`; add a push webhook with this secret token in the project |
 | `TYPST_GITLAB_AUTHOR_EMAIL` | optional: author email when the user's is unknown |
 
-Try it without GitLab: `mise run server:dev-fake-gitlab` (an in-memory fake repository), then
-open the demo with `?room=gitlab:demo/report@main`.
+Try it without GitLab: `mise run demo` (the demo plus a server with an in-memory fake repository
+holding the demo's advanced example), then pick **GitLab (fake)** in the playground bar, or open
+`?room=gitlab:demo/report@main`. **Simulate upstream commit** in the bar pushes a change to the
+fake repository, to try merges and conflicts. See [demo-playground.md](demo-playground.md).
 
 ## Using it from a bundler
 

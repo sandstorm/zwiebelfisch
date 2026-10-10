@@ -3,23 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Typst Editor Demo</title>
+    <title>Typst Editor Playground</title>
     <style>
       html, body { margin: 0; height: 100%; font-family: system-ui, sans-serif; }
       body { display: flex; flex-direction: column; }
-      .demo-bar { display: flex; align-items: center; gap: 4px; padding: 4px 8px; font-size: 13px; border-bottom: 1px solid #d0d7de; background: #f6f8fa; }
-      .demo-bar__label { color: #57606a; margin-right: 4px; }
+      .demo-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 4px 8px; font-size: 13px; border-bottom: 1px solid #d0d7de; background: #f6f8fa; }
+      .demo-bar__group { display: flex; align-items: center; gap: 4px; }
+      .demo-bar__label { color: #57606a; margin-right: 2px; }
       .demo-bar a { padding: 2px 8px; border-radius: 4px; color: #0969da; text-decoration: none; }
       .demo-bar a:hover { background: #eaeef2; }
       .demo-bar a[aria-current='page'] { background: #0969da; color: #fff; }
+      .demo-bar a[aria-disabled='true'] { color: #8c959f; cursor: not-allowed; background: none; }
+      .demo-bar input, .demo-bar select, .demo-bar button { font: inherit; }
+      .demo-bar__status { flex: 1 1 18rem; color: #57606a; }
+      .demo-bar__status[data-level='ok'] { color: #1a7f37; }
+      .demo-bar__status[data-level='warn'] { color: #9a6700; }
+      .demo-bar__status code { background: #eaeef2; padding: 0 4px; border-radius: 3px; color: #24292f; }
       #editor { flex: 1; min-height: 0; }
     </style>
   </head>
   <body>
-    <nav class="demo-bar" aria-label="Examples">
-      <span class="demo-bar__label">Example:</span>
-      <span id="examples" style="display: contents"></span>
-    </nav>
+    <!-- the playground bar (demo/playground-bar.ts); see docs/demo-playground.md -->
+    <header id="playground" class="demo-bar"></header>
     <div id="editor"></div>
     <script type="module" src="./main.ts"></script>
   </body>

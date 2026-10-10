@@ -45,11 +45,15 @@ src/
     paths.ts, insert-image.ts, upload.ts   pure helpers (names → paths, Typst path resolution, #image insertion, uploads)
   element/                  <typst-editor> custom element (shadow DOM) around createTypstEditor
   index.ts                  public API of the package; registers <typst-editor>
-demo/                       dev/demo page (vite root); ?example=hello|simple|advanced picks a project from demo/examples/<name>/
-                            (examples.ts: import.meta.glob → file map), ?room=<name> joins ws://127.0.0.1:1234
+demo/                       the playground (vite root; checklist: docs/demo-playground.md); ?example=hello|simple|advanced
+                            picks a project from demo/examples/<name>/ (examples.ts: import.meta.glob → file map);
+                            playground.ts (URL ↔ state: example, room → Local/Collaborate/GitLab mode, user, changes),
+                            server-status.ts (probe ws://127.0.0.1:1234, simulate upstream), playground-bar.ts (the bar)
 server/                     collaboration server (Node package, Hocuspocus; TypeScript run by Node directly)
   src/gitlab/               GitLab-backed rooms: GitLabExtension, GitLabRoom, GitLabProject (REST), merge, commit actions,
                             HTTP endpoints, FakeGitLab (in-process, for tests and server:dev-fake-gitlab)
+  src/playground/           dev-only: playgroundOptions (fake GitLab with the advanced example + webhook),
+                            PlaygroundEndpoints (GET /playground, POST /playground/upstream), readProjectFiles
 examples/plain-html/        <typst-editor> loaded from dist/lib without a bundler
 tests/e2e/                  Playwright specs (run against the static build)
 mise-tasks/                 every script (build, test, quality, …) — `mise tasks ls`
@@ -669,7 +673,7 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
 - **Widget (`CollaborationLink`)**: `import()`s `src/collab` on demand (own chunk, ~37 kB gzip
   with Yjs and the Hocuspocus provider), publishes the selection on `selectionchange` while focus
   is in the editing area, and moves the cursors along when another file is shown.
-- **Server (`server/`)**: `collabConfiguration({ storage?, database?, authenticate?, debounce?, gitlab? })`
+- **Server (`server/`)**: `collabConfiguration({ storage?, database?, authenticate?, debounce?, gitlab?, extensions? })`
   → Hocuspocus configuration; `createCollabServer({ port, … })`. Storage keeps every room's Yjs
   state (`onLoadDocument` / `onStoreDocument`; default `@hocuspocus/extension-sqlite`).
   `onAuthenticate` calls an `Authenticate(token, room) → {name?, email?}` check; the stub
@@ -723,6 +727,28 @@ HTTP             GET /rooms/<room>/files/<path> (Authorization: Bearer <room tok
   `ChangeTracking.setBase(base of main)` on every base change, so "Show changes" resets for
   everyone after a save.
 
+### Demo playground (`demo/`, `server/src/playground`)
+
+`mise run demo` = Vite + `server/src/fake-gitlab-main.ts` (plain rooms, and GitLab rooms against
+an in-memory `FakeGitLab` holding `demo/examples/advanced`). Checklist with steps per feature:
+[docs/demo-playground.md](docs/demo-playground.md).
+
+- **State is the URL** (`demo/playground.ts`): `example`, `room` (none → Local, `gitlab:…` →
+  GitLab, else Collaborate), `user` (put into the URL in a room, default Ann; the bar's second
+  window link uses the next name), `changes` (base = the example as loaded). `editorOptions(state,
+  server)` → `files` / `collaboration` / `base`: GitLab mode passes no local files; no server →
+  the local example.
+- **Local mode never contacts a server**, so the static e2e build needs none. The room modes
+  first `probeServer()` (`GET /playground` with CORS → `gitlab`; else an opaque `no-cors` request
+  → `plain`; else `offline`) and re-probe every 5 s for the bar's status (`lost`, `reload`).
+- **Dev-only endpoints** (`PlaygroundEndpoints`, a Hocuspocus extension added through
+  `CollabOptions.extensions`; never loaded by `server/src/main.ts`): `GET /playground` →
+  `{project, room}`; `POST /playground/upstream?room=gitlab:<project>@<branch>&change=append|heading`
+  commits `upstreamEdit(…)` of one file (`appendTo`, here `chapters/introduction.typ`) to the
+  fake branch, then hands a push-webhook request (random per-process secret) to the
+  `GitLabExtension` found on the Hocuspocus instance, so open rooms merge it or report a
+  conflict exactly as with a real push.
+
 ## Build and test
 
 | Task | What it does |
@@ -730,7 +756,8 @@ HTTP             GET /rooms/<room>/files/<path> (Authorization: Bearer <room tok
 | `mise run build:engine` | `cargo build --target wasm32-unknown-unknown --release` + `wasm-bindgen --target web` + `wasm-opt -Oz --strip-debug` → `src/engine/wasm/`, prints raw/gzip/brotli size (skipped when the Rust sources are unchanged) |
 | `mise run build:fonts` | default fonts from the pinned typst-assets crate → `src/engine/fonts/` |
 | `mise run fixtures:packages` | packs `src/engine/fixtures/<name>-<version>/` into `.tar.gz` (committed) for package tests |
-| `mise run dev` | Vite dev server for `demo/` on 127.0.0.1:5199 |
+| `mise run demo` | the playground: Vite (127.0.0.1:5199) + collaboration server with the in-memory fake GitLab (ws://127.0.0.1:1234); Ctrl-C stops both. Feature checklist: [docs/demo-playground.md](docs/demo-playground.md) |
+| `mise run dev` | Vite dev server for `demo/` on 127.0.0.1:5199 (Local mode needs nothing else) |
 | `mise run build` | engine + typecheck + static demo build → `dist/demo` |
 | `mise run build:lib` | library build → `dist/lib`: bundled ESM, worker, wasm, d.ts (`vite.lib.config.ts`, `tsconfig.lib.json`) |
 | `mise run test:unit` | vitest (node): engine against the real wasm, document model, projection round-trips, demo examples compile |
@@ -738,7 +765,7 @@ HTTP             GET /rooms/<room>/files/<path> (Authorization: Bearer <room tok
 | `mise run server:dev` | collaboration server on ws://127.0.0.1:1234 (SQLite in `server/.data/`; env `PORT`, `TYPST_COLLAB_DB`, `TYPST_COLLAB_TOKEN`; GitLab rooms with `TYPST_GITLAB_URL` + `TYPST_GITLAB_TOKEN`, see docs/embedding.md) |
 | `mise run server:test` | server tests (vitest, Hocuspocus in-process via `openDirectConnection`, no port) |
 | `mise run test:e2e-collab` | starts the server in memory, then the two-user Playwright spec (`tests/e2e/collab.spec.ts`; skipped by `test:e2e`) |
-| `mise run server:dev-fake-gitlab` | collaboration server with GitLab rooms against an in-memory fake GitLab (`gitlab:demo/report@<any branch>`) |
+| `mise run server:dev-fake-gitlab` | the playground server alone: plain rooms + GitLab rooms against an in-memory fake GitLab (`gitlab:demo/report@<any branch>`, the advanced example), playground endpoints |
 | `mise run test:e2e-gitlab` | starts that server, then the GitLab room Playwright spec (`tests/e2e/gitlab.spec.ts`; skipped by `test:e2e`) |
 | `mise run quality` / `quality:report` | complexity gate and hot-spot table (see `.claude/skills/code-quality`) |
 

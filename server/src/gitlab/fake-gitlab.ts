@@ -41,11 +41,19 @@ export class FakeGitLab {
     this.branches.set(branch, this.record(null, files, 'Initial commit', { name: 'Upstream', email: 'upstream@test' }).sha);
   }
 
-  /** Commits `files` (null deletes) on `branch`, as someone pushing would. Returns the new sha. */
+  /**
+   * Commits `files` (null deletes) on `branch`, as someone pushing would. A
+   * branch nobody created yet starts at `main` with `autoBranches`. Returns the new sha.
+   */
   push(branch: string, files: Files, message = 'Upstream change'): string {
-    const commit = this.record(this.branches.get(branch) ?? null, files, message, { name: 'Upstream', email: 'upstream@test' });
+    const parent = this.branches.get(branch) ?? (this.autoBranches ? this.branches.get('main')! : null);
+    const commit = this.record(parent, files, message, { name: 'Upstream', email: 'upstream@test' });
     this.branches.set(branch, commit.sha);
     return commit.sha;
+  }
+
+  hasBranch(name: string): boolean {
+    return this.branches.has(name);
   }
 
   head(branch: string): Commit {
