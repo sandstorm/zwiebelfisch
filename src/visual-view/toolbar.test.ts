@@ -176,6 +176,44 @@ describe('Visual view toolbar', () => {
     expect(doc.text).toBe('Text\n\n#image("img/cat.png")\n');
   });
 
+  describe('image insertion never replaces or splits content', () => {
+    const SOURCE = '#set page(width: 16cm)\n#set text(size: 12pt)\n\n= Hello\n\nSome text here.\n';
+
+    function insertPath(toolbar: HTMLElement, button: (label: string) => HTMLButtonElement, path: string) {
+      button('Insert image').click();
+      const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
+      popover.querySelector('input')!.value = path;
+      popover.requestSubmit();
+    }
+
+    it('goes after the selected raw block (the initial selection) instead of replacing it', () => {
+      const { doc, toolbar, button } = setup(SOURCE);
+      insertPath(toolbar, button, 'cat.png');
+      expect(doc.text).toBe('#set page(width: 16cm)\n#set text(size: 12pt)\n\n#image("cat.png")\n\n= Hello\n\nSome text here.\n');
+    });
+
+    it('goes after the heading the cursor is in instead of splitting it', () => {
+      const { doc, view, toolbar, button } = setup(SOURCE);
+      const at = SOURCE.indexOf('Hello') + 2;
+      view.reveal(at, at);
+      insertPath(toolbar, button, 'cat.png');
+      expect(doc.text).toBe('#set page(width: 16cm)\n#set text(size: 12pt)\n\n= Hello\n\n#image("cat.png")\n\nSome text here.\n');
+    });
+
+    it('keeps selected text and goes after its paragraph', () => {
+      const { doc, view, toolbar, button } = setup(SOURCE);
+      view.reveal(SOURCE.indexOf('Some'), SOURCE.indexOf(' here'));
+      insertPath(toolbar, button, 'cat.png');
+      expect(doc.text).toBe(`${SOURCE}\n#image("cat.png")\n`);
+    });
+
+    it('fills an empty document', () => {
+      const { doc, toolbar, button } = setup('');
+      insertPath(toolbar, button, 'cat.png');
+      expect(doc.text).toBe('#image("cat.png")');
+    });
+  });
+
   it('inserts a table and adds and deletes rows and columns', () => {
     const { doc, view, button } = setup('Text\n');
     expect(button('Add row').disabled).toBe(true);

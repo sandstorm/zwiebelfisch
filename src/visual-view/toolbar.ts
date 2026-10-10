@@ -1,7 +1,7 @@
 import type { ChainedCommands, Editor } from '@tiptap/core';
 import { FieldPopover } from './field-popover';
 import { ImageChoices, type ImageAssets } from './image-choices';
-import { imageSource } from './projection';
+import { insertImageBlock } from './image-insertion';
 
 /** A toolbar button: how it looks, what it does, and when it shows as on. */
 interface Action {
@@ -165,8 +165,7 @@ export class Toolbar {
 
   /** "Insert image" and its popover: a path field, plus the project's images and an upload with `assets`. */
   private imageAction(assets: ImageAssets | undefined): [Action, FieldPopover] {
-    const insert = (path: string) =>
-      this.editor.chain().focus().insertContent({ type: 'image', attrs: { src: imageSource(path) } }).run();
+    const insert = (path: string) => insertImageBlock(this.editor, path);
     const choices = assets
       ? new ImageChoices(this.root.ownerDocument, assets, (path) => {
           popover.close();
