@@ -10,8 +10,7 @@ import { BLOCKS as QUOTE_AND_TASKS, BREAKS, HEADER_ROW } from './toolbar-blocks'
 import { ToolbarMenu } from './toolbar-menu';
 import { type Anchor, FloatingBar } from './floating-bar';
 import { type MenuStyles, StyleMenu } from './style-menu';
-import { labelPrefix, labelTarget } from '../references/add-label';
-import { labelName, setLabel } from '../references/label-edits';
+import { addLabel, labelPrefix, labelTarget } from '../references/references';
 
 export type { MenuStyles } from './style-menu';
 
@@ -307,9 +306,8 @@ export class Toolbar {
       placeholder: 'e.g. fig:overview',
       applyText: 'Add label',
       apply: (value) => {
-        const target = labelTarget(this.editor.state);
-        const name = labelName(value);
-        if (target && name) this.editor.view.dispatch(setLabel(this.editor.state, target.pos, name));
+        const tr = addLabel(this.editor.state, value);
+        if (tr) this.editor.view.dispatch(tr);
         this.editor.commands.focus();
       },
     });

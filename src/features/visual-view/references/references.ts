@@ -8,6 +8,7 @@ import { referenceHints } from './reference-hints';
 import { referenceSuggestion } from './reference-suggestion';
 
 export { Reference } from './reference-node';
+export { addLabel, labelPrefix, labelTarget } from './add-label';
 
 /**
  * How the Visual view of `document` shows and edits references and labels:
