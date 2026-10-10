@@ -37,6 +37,15 @@ describe('playground bar', () => {
     expect(new URLSearchParams(navigate.mock.calls[0][0]).get('user')).toBe('Ada');
   });
 
+  it('Track changes reloads with ?changes (not in GitLab mode, which compares with its last commit)', () => {
+    const { root, navigate } = render('?example=simple');
+    const box = root.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+    expect(box.checked).toBe(false);
+    box.click();
+    expect(new URLSearchParams(navigate.mock.calls[0][0]).has('changes')).toBe(true);
+    expect(render(`?room=${encodeURIComponent(GITLAB_ROOM)}`).root.querySelector('input[type="checkbox"]')).toBeNull();
+  });
+
   it('in a room: a second window joins as another user, and the status follows the server', () => {
     const { root, bar, status } = render('?room=r1&user=Ann');
     const second = root.querySelector<HTMLAnchorElement>('[data-testid="second-window"]')!;

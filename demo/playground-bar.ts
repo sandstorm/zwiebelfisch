@@ -1,5 +1,5 @@
 import { EXAMPLES } from './examples';
-import { MODES, exampleLink, modeQuery, otherUser, playgroundFromQuery, userQuery, type PlaygroundState } from './playground';
+import { MODES, changesQuery, exampleLink, modeQuery, otherUser, playgroundFromQuery, userQuery, type PlaygroundState } from './playground';
 import { describeServer, type ServerState, type UpstreamChange } from './server-status';
 
 export interface BarActions {
@@ -16,7 +16,8 @@ export interface PlaygroundBar {
 
 /**
  * The demo's playground bar in `root`: example and mode switchers (links, so
- * every state has a URL), the user's name, a link that opens a second window
+ * every state has a URL), the user's name, "Track changes" (Local and
+ * Collaborate), a link that opens a second window
  * as another user in the same room, the server status with the command to
  * start it, and in GitLab mode "Simulate upstream commit".
  */
@@ -24,6 +25,7 @@ export function renderPlaygroundBar(root: HTMLElement, params: URLSearchParams, 
   const state = playgroundFromQuery(params);
   const status = new StatusLine(state);
   root.append(examplesNav(state, params), modesNav(state, params), userForm(state, params, actions));
+  if (state.mode !== 'gitlab') root.append(changesToggle(state, params, actions));
   if (state.mode !== 'local') root.append(secondWindow(state, params));
   const upstream = state.mode === 'gitlab' ? upstreamControls(actions, status) : null;
   if (upstream) root.append(upstream.element);
@@ -83,6 +85,16 @@ function userForm(state: PlaygroundState, params: URLSearchParams, actions: BarA
     if (user && user !== state.user) actions.navigate(userQuery(user, params));
   });
   return form;
+}
+
+/** "Show changes" against the example as loaded (GitLab rooms compare with their last commit by themselves). */
+function changesToggle(state: PlaygroundState, params: URLSearchParams, actions: BarActions): HTMLElement {
+  const box = el('input', { type: 'checkbox' });
+  box.checked = state.changes;
+  box.addEventListener('change', () => actions.navigate(changesQuery(box.checked, params)));
+  const label = el('label', { class: 'demo-bar__group' }, box, 'Track changes');
+  label.title = 'Compare with the example as loaded: "Show changes" in both views and the preview';
+  return label;
 }
 
 function secondWindow(state: PlaygroundState, params: URLSearchParams): HTMLElement {

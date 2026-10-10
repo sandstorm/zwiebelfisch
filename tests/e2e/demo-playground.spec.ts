@@ -48,6 +48,17 @@ test('the name field reloads as that user', async ({ page }) => {
   await expect(bar(page).getByRole('textbox', { name: 'Your name' })).toHaveValue('Ada');
 });
 
+test('Track changes compares with the example as loaded', async ({ page }) => {
+  await page.goto('/');
+  await bar(page).getByRole('checkbox', { name: 'Track changes' }).check();
+  await expect(page).toHaveURL(/[?&]changes(=|&|$)/);
+  await expect(bar(page).getByRole('checkbox', { name: 'Track changes' })).toBeChecked();
+  await page.getByTestId('typst-visual').locator('h1').click();
+  await page.keyboard.press('End');
+  await page.keyboard.type(' again');
+  await expect(page.getByTestId('typst-visual').locator('.typst-diff-insert')).toHaveText(' again');
+});
+
 test('Collaborate without a server: says how to start it and edits a local copy', async ({ page }) => {
   await noServer(page);
   await page.goto('/?room=playground-hello');
