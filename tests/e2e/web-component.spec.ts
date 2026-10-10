@@ -62,8 +62,6 @@ test('maps the settings attribute onto the settings, also when it changes', asyn
   const widget = editor.locator('.typst-editor');
   const toolbar = editor.getByTestId('typst-preview-toolbar');
   await expect(widget).toHaveAttribute('data-theme', 'light');
-  // files.panel: hide — no file panel, no rail button
-  await expect(editor.getByTestId('typst-panel-toggle-files')).toBeHidden();
   await expect(toolbar.getByTestId('typst-pdf')).toBeVisible();
   await page.getByTestId('dark').check();
   await expect(widget).toHaveAttribute('data-theme', 'dark');
@@ -75,9 +73,12 @@ test('maps the settings attribute onto the settings, also when it changes', asyn
   await expect(toolbar.locator('> *').last()).toHaveAttribute('data-testid', 'typst-pdf');
   expect(await editor.evaluate((el: HTMLElement & { settings: object }) => el.settings)).toEqual({
     'workbench.theme': 'dark',
-    'files.panel': 'hide',
     'pdfExport.download': true,
   });
+  // files.panel: hide — no file panel, no rail button
+  await expect(editor.getByTestId('typst-panel-toggle-files')).toBeVisible();
+  await editor.evaluate((el) => el.setAttribute('settings', '{"files.panel": "hide"}'));
+  await expect(editor.getByTestId('typst-panel-toggle-files')).toBeHidden();
 });
 
 test('runs commands of the extensions', async ({ page }) => {

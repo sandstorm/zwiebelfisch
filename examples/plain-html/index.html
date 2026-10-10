@@ -16,7 +16,7 @@
   </head>
   <body>
     <!-- settings: what the editor's features let you configure, as one JSON attribute (docs/embedding.md, "Settings") -->
-    <typst-editor id="editor" settings='{"workbench.theme": "light", "files.panel": "hide"}'>
+    <typst-editor id="editor" settings='{"workbench.theme": "light"}'>
       #set page(width: 12cm, height: auto, margin: 1cm)
 
       = Plain HTML
@@ -40,7 +40,7 @@
       const configure = () =>
         editor.setAttribute(
           'settings',
-          JSON.stringify({ 'workbench.theme': dark.checked ? 'dark' : 'light', 'files.panel': 'hide', 'pdfExport.download': pdf.checked }),
+          JSON.stringify({ 'workbench.theme': dark.checked ? 'dark' : 'light', 'pdfExport.download': pdf.checked }),
         );
       dark.addEventListener('change', configure);
       pdf.addEventListener('change', configure);
