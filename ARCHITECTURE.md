@@ -141,7 +141,7 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
   a stylesheet may be `files/files.css`). Everything else in the folder is internal to it, and
   folders that grow get subfolders named after a concept (`projection/`, `worker/`), never generic
   ones. No sibling folders: an entry file lives inside its folder (`typst-editor/typst-editor.ts`),
-  never next to it. `core/`, `ui/`, `hosts/`, `extensions/` and `features/` only group.
+  never next to it. `core/`, `ui/`, `hosts/` and `extensions/` only group.
 - **Imports from outside a folder go to its entry file**, which re-exports what others need.
   ESLint enforces this (`local/entry-imports`, `eslint-rules/entry-imports.js`); only TypeScript and
   CSS sources count (not the generated `wasm/`, `fonts/` or the `fixtures/`). The exceptions are

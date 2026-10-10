@@ -25,7 +25,7 @@ function lint(file, code) {
 
 describe('entry-imports', () => {
   it("fails on an import into another folder's internals", () => {
-    const messages = lint('src/features/files/files.ts', "import { pageList } from '../../hosts/preview/pages/page-list';");
+    const messages = lint('src/extensions/files/files.ts', "import { pageList } from '../../hosts/preview/pages/page-list';");
     expect(messages).toEqual([expect.stringContaining('through its entry file hosts/preview/preview.ts')]);
   });
 
@@ -35,7 +35,7 @@ describe('entry-imports', () => {
   });
 
   it("allows another folder's entry file and anything inside the own folder", () => {
-    expect(lint('src/features/files/files.ts', "import { Preview } from '../../hosts/preview/preview';")).toEqual([]);
+    expect(lint('src/extensions/files/files.ts', "import { Preview } from '../../hosts/preview/preview';")).toEqual([]);
     expect(lint('src/hosts/visual-view/nodes/raw-box.ts', "import { x } from '../projection/projection';")).toEqual([]);
     expect(lint('src/hosts/visual-view/nodes/raw-box.ts', "import { x } from '../highlights';")).toEqual([]);
   });
@@ -55,10 +55,10 @@ describe('entry-imports', () => {
 
   it('checks paths in new URL(…, import.meta.url) and vi.mock(…)', () => {
     const worker = "new Worker(new URL('../../hosts/preview/worker/worker.ts', import.meta.url), { type: 'module' });";
-    expect(lint('src/features/files/files.ts', worker)).toEqual([expect.stringContaining('hosts/preview/preview.ts')]);
-    expect(lint('src/features/files/files.test.ts', "vi.mock('../../hosts/preview/pages/page-list');")).toHaveLength(1);
+    expect(lint('src/extensions/files/files.ts', worker)).toEqual([expect.stringContaining('hosts/preview/preview.ts')]);
+    expect(lint('src/extensions/files/files.test.ts', "vi.mock('../../hosts/preview/pages/page-list');")).toHaveLength(1);
     expect(lint('src/hosts/preview/preview.ts', "new URL('./worker/worker.ts', import.meta.url);")).toEqual([]);
-    expect(lint('src/features/files/files.test.ts', "vi.mock('../../hosts/preview/preview');")).toEqual([]);
+    expect(lint('src/extensions/files/files.test.ts', "vi.mock('../../hosts/preview/preview');")).toEqual([]);
   });
 
   it('ignores generated and data files', () => {

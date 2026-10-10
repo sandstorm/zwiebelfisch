@@ -5,7 +5,7 @@
 //   Everything else in the folder is internal: only files inside `x/` may import it.
 // - No sibling folders: an entry file lives inside its folder (`typst-editor/typst-editor.ts`), never
 //   next to it.
-// - Grouping folders (`core/`, `hosts/`, `features/`) have no entry; the rule applies to the folders in them.
+// - Grouping folders (`core/`, `ui/`, `hosts/`, `extensions/`) have no entry; the rule applies to the folders in them.
 // - Only TypeScript and CSS sources count. Generated or data files (wasm/, fonts/, fixtures/) are not
 //   modules with an interface.
 // - The few exceptions are the rule's `exceptions` option, listed in eslint.config.js.
