@@ -51,3 +51,4 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [comments-drafting](comments-drafting.md) | open |
 | [diff-redline-palimset](diff-redline-palimset.md) | open |
 | [e2e-preview](e2e-preview.md) | done (branch task/e2e-preview) |
+| [e2e-visual](e2e-visual.md) | done (branch task/e2e-visual) |

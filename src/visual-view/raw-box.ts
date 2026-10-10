@@ -79,6 +79,9 @@ class RawBox implements NodeView {
     wrapper.className = 'typst-visual__code';
     this.code = new CodeView({
       parent: wrapper,
+      // The box is not attached yet, so CodeMirror cannot find its root itself; in a shadow root
+      // (<typst-editor>) it would read focus and selection from the document and style the wrong tree.
+      root: editor.view.root,
       doc: node.attrs.src,
       extensions: [
         keymap.of([...this.keys(inline), ...defaultKeymap]),

@@ -129,7 +129,8 @@ new SourceView(parent, document, { onCursor?, onBaseChange? })
 - **Hidden:** CodeMirror and its extensions, and the Typst language support
   (`codemirror-lang-typst/lezer`: a pure-JS Lezer parser using typst-syntax node names, plus
   completion and folding; its Lezer syntax linter is left out so that compiler diagnostics are the
-  only error source). Also hidden: `@codemirror/lint`, which maps shown diagnostics through later
+  only error source; its indentation service is wrapped so that Enter right after a closed
+  construct like `#set page(..)` does not indent, which 0.6.0 gets wrong). Also hidden: `@codemirror/lint`, which maps shown diagnostics through later
   edits. Also hidden: translating ChangeSets to and from `TextChange[]`, and the
   annotation that stops document-originated transactions from being written back.
 
@@ -482,7 +483,10 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - Undo/redo in a box run the Visual view's history. Arrow keys at a box's edges, Escape (and Enter
     in inline boxes) move into the outer editor; arrow keys in the outer editor (and Enter on a
     selected box) move into a box; Backspace in an empty box deletes it.
-  - Hidden: CodeMirror, the DOM ↔ box lookup, focus hand-over between the two editors.
+  - Hidden: CodeMirror, the DOM ↔ box lookup, focus hand-over between the two editors. The
+    nested CodeMirror gets the outer editor's root (the shadow root inside `<typst-editor>`):
+    it is created before its box is attached, so it could not find that root itself and would
+    read focus and selection from the document.
 - **Track changes** (`change-decorations.ts`): a ProseMirror plugin holds the projected base
   and, on every doc change, decorates `diffTexts(print(base), print(doc))` through
   `sourceToPos`: insertions as inline marks, deletions as struck-through `<del>` widgets with
