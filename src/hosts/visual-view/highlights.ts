@@ -1,4 +1,4 @@
-// Highlights (jump flashes, diagnostics) as ProseMirror decorations over source ranges. See visual-view.ts.
+// Highlights (other users' selections, diagnostics) as ProseMirror decorations over source ranges. See visual-view.ts.
 import { Extension } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey, type Transaction } from '@tiptap/pm/state';
@@ -11,7 +11,7 @@ type Layers = Record<string, DecorationSet>;
 const key = new PluginKey<Layers>('typst-highlights');
 
 /**
- * Highlights by layer (one per feature, e.g. remote cursors) over the Visual view,
+ * Highlights by layer (one per provider, e.g. other users' selections) over the Visual view,
  * given in source offsets. Each layer is replaced as a whole and follows
  * edits until it is set again.
  */

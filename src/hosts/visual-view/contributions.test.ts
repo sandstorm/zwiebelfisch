@@ -1,4 +1,5 @@
-// Tests for contributions.ts: priority, not registration order, decides where contributions compete.
+// Tests for VisualViewContributions (visual-view.ts): priority, not registration order, decides where contributions
+// compete.
 import { describe, expect, it } from 'vitest';
 import { type BoxRendererProvider, type TypstMarkSpec, type TypstNodeSpec, VisualViewContributions } from './visual-view';
 
