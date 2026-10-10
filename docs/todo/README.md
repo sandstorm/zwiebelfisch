@@ -59,3 +59,4 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [custom-styles-mvp](custom-styles-mvp.md) | open |
 | [visual-figures-resize](visual-figures-resize.md) | done (branch task/visual-figures-resize) |
 | [visual-text-align](visual-text-align.md) | done (branch task/visual-text-align) |
+| [demo-playground](demo-playground.md) | done (branch task/demo-playground) |
