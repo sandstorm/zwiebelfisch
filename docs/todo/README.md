@@ -49,7 +49,7 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [server-gitlab](server-gitlab.md) | done |
 | [followups-2026-10-10](followups-2026-10-10.md) | open |
 | [diff-redline-palimset](diff-redline-palimset.md) | open |
-| [restructure-src](restructure-src.md) | open |
+| [restructure-src](restructure-src.md) | done (branch task/restructure-src) |
 | [inspector-sidebar](inspector-sidebar.md) | open (concept; dockview spike: adopt later) |
 | [e2e-preview](e2e-preview.md) | done (branch task/e2e-preview) |
 | [e2e-visual](e2e-visual.md) | done (branch task/e2e-visual) |

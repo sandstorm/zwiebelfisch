@@ -7,62 +7,91 @@ code changes, update this file in the same commit.
 ## Repository layout
 
 ```
+src/                        the widget (TypeScript); the most important API on top
+  index.ts                  public API of the package; registers <typst-editor>
+  typst-editor.ts           createTypstEditor() — composes the widget: Project, editing views, preview, file bar,
+                            status bar, scoped CSS (typst-editor.css)
+  typst-editor-element.ts   <typst-editor> custom element (shadow DOM) around createTypstEditor
+  typst-editor/             what only typst-editor.ts uses: editing-views.ts (Visual/Source tabs, lazily one
+                            VisualView + SourceView per document), project-renderings.ts (what a document's Visual
+                            view renders and inserts: snippets, image URLs, uploads), collaboration-link.ts
+  typst-editor-element/     inline-source.ts (source written inside the element → text)
+  core/                     the models everything builds on
+    typst-document/         TypstDocument — the single source of truth (string or shared Y.Text); Highlight (a
+                            styled source range views draw); Presence / PresenceTarget (other users' carets +
+                            selections, the interface both views implement); minimal-change.ts, y-delta.ts
+    typst-engine/           typed TS wrapper around the wasm (typst-engine.ts: createEngine), fetch-fonts.ts;
+                            engine-assets.ts (wasm + default font URLs for the main thread); packages/ (withPackages,
+                            tar reader); fixtures/ (test package archives); generated wasm/, fonts/ (gitignored)
+    project/                Project: the file model (one TypstDocument per .typ file, main protected); paths.ts
+                            (names → paths, Typst path resolution, file kinds); FileContent
+  features/                 one folder per feature, each entered through the file named like it
+    visual-view/            VisualView — Tiptap editor over the source-anchored projection; visual-view.css
+                            (ProseMirror core styles); decorations at the root: highlights, change-decorations,
+                            presence; field-popover.ts (also used by versions/)
+      projection/           projection.ts (source ↔ document), raw-code, alignment, call-atoms
+      nodes/                nodes.ts (the schema: Tiptap extensions), raw-box, rendered-box, code-block-view,
+                            page-break, horizontal-rule, task-list + checklist-preamble, heading numbers, text-align,
+                            margin-notes
+      images/               images.ts: image choices, insertion, image tools (resize, alt, caption), image-call edits
+      toolbar/              toolbar.ts, toolbar-action, toolbar-blocks
+      notes-gutter/         notes-gutter.ts (comment cards), note-list, card-layout
+    source-view/            SourceView — CodeMirror 6 editing view; typst-language, lint, presence
+    preview/                Preview — worker-backed live preview + hit-testing, zoom, page numbers;
+                            toolbar.ts, latest-only.ts ("only the newest value" task runner)
+      worker/               worker.ts (startEngineWorker, main-thread side), engine.worker.ts (the worker),
+                            protocol.ts (messages), project-files.ts (FileSender/FileReceiver)
+      pages/                pages.ts: page-list (SVG only near the viewport), geometry, zoom, snippet, change-bars,
+                            presence-markers
+    diagnostics/            DiagnosticsStatus (status bar), diagnostics-summary.ts
+    changes/                ChangeTracking (base version + "Show changes"), diff.ts (diffTexts), changes.css
+    comments/               CommentAction ("Comment" / Ctrl+Alt+M), add-margin-note.ts, margin-note-syntax.ts
+                            (drafting's call: parse, print, validity), page-margin.ts
+    files/                  FileSwitcher (file bar), asset-view.ts, upload.ts, insert-image.ts
+    collaboration/          real-time collaboration (loaded on demand): Collaboration, SharedProject, RemoteCursors,
+                            RoomVersions + SharedAssets (GitLab rooms); in-process.ts (Y.Doc/awareness wiring for
+                            tests); gitlab-protocol.ts (import-free, shared with the server)
+    versions/               VersionControls: "Save version", commit message, outcome (GitLab rooms)
 crates/typst-engine/        Rust → wasm: Typst compiler, SVG export, click/cursor jumps
   src/world.rs              in-memory Typst World (files and fonts pushed from JS)
   src/lib.rs                wasm-bindgen interface (JSON in/out, UTF-16 offsets)
-src/
-  engine/                   typed TS wrapper around the wasm, default fonts (generated wasm/, fonts/ — gitignored),
-                            withPackages (package download, tar reader), fixtures/ (test package archives)
-  document/                 TypstDocument — the single source of truth (string or shared Y.Text); Highlight (a styled source range views draw);
-                            Presence / PresenceTarget (other users' carets + selections, the interface both views implement);
-                            margin-note-syntax.ts (drafting's margin-note call: parse, print, validity)
-  collab/                   real-time collaboration (loaded on demand): Collaboration, SharedProject, RemoteCursors,
-                            RoomVersions + SharedAssets (GitLab rooms); in-process.ts (Y.Doc/awareness
-                            wiring for tests); gitlab-protocol.ts (import-free, shared with the server)
-  diff/                     diffTexts — the text diff against a base version behind "Show changes"
-  source-view/              SourceView — CodeMirror 6 editing view
-  preview/                  Preview — worker-backed live preview + hit-testing, zoom, page numbers
-    engine.worker.ts        hosts the engine off the main thread
-    protocol.ts             request/response messages main ↔ worker
-    project-files.ts        FileSender/FileReceiver: file maps across the worker boundary
-    page-list.ts            page placeholders; SVG only for pages near the viewport
-    latest-only.ts          "only the newest value" task runner (compiles, cursor reveals)
-    geometry.ts, zoom.ts    pure helpers: overlay boxes, visibility, current page, zoom steps
-    toolbar.ts              zoom buttons, zoom label, "page n / total"
-    snippet.ts              cut a page SVG down to the boxes of a source range (snippets for the Visual view)
-    presence-markers.ts     pure: where other users' initials markers go on the pages
-  visual-view/              VisualView — Tiptap editor over the source-anchored projection,
-                            formatting toolbar, raw boxes edited in a nested CodeMirror,
-                            shown rendered (snippet / image) while not focused, notes gutter
-                            (notes-gutter.ts, note-list.ts, card-layout.ts)
-  editor/                   createTypstEditor() — composes the widget, Visual/Source tabs, status bar, scoped CSS,
-                            ChangeTracking (base version + "Show changes" toggle), CollaborationLink
-    project.ts              Project: the file model (one TypstDocument per .typ file, main protected)
-    editing-views.ts        Visual/Source tabs, lazily one VisualView + SourceView per document
-    file-switcher.ts        file bar: tabs, new/upload/rename/delete, drop (optional mode)
-    asset-view.ts           read-only image/data view with "Insert into …"
-    project-renderings.ts   what a document's Visual view renders and inserts (snippets, image URLs, uploads)
-    version-controls.ts     "Save version" button, commit message, outcome; Show changes follows the last commit (GitLab rooms)
-    comment-action.ts       "Comment" button / Ctrl+Alt+M: a drafting margin note at the selection of the active view
-    add-margin-note.ts      addMarginNote(text, range): the source edits for a new note and the drafting import
-    page-margin.ts          noteMarginChanges(text): single-length page margins → room for notes (drafting 0.2.2 bug)
-    paths.ts, insert-image.ts, upload.ts   pure helpers (names → paths, Typst path resolution, #image insertion, uploads)
-  element/                  <typst-editor> custom element (shadow DOM) around createTypstEditor
-  index.ts                  public API of the package; registers <typst-editor>
-demo/                       the playground (vite root; checklist: docs/demo-playground.md); ?example=hello|simple|advanced
-                            picks a project from demo/examples/<name>/ (examples.ts: import.meta.glob → file map);
-                            playground.ts (URL ↔ state: example, room → Local/Collaborate/GitLab mode, user, changes),
-                            server-status.ts (probe ws://127.0.0.1:1234, simulate upstream), playground-bar.ts (the bar)
 server/                     collaboration server (Node package, Hocuspocus; TypeScript run by Node directly)
   src/gitlab/               GitLab-backed rooms: GitLabExtension, GitLabRoom, GitLabProject (REST), merge, commit actions,
                             HTTP endpoints, FakeGitLab (in-process, for tests and server:dev-fake-gitlab)
   src/playground/           dev-only: playgroundOptions (fake GitLab with the advanced example + webhook),
                             PlaygroundEndpoints (GET /playground, POST /playground/upstream), readProjectFiles
+demo/                       the playground (vite root; checklist: docs/demo-playground.md); ?example=hello|simple|advanced
+                            picks a project from demo/examples/<name>/ (examples.ts: import.meta.glob → file map);
+                            playground.ts (URL ↔ state: example, room → Local/Collaborate/GitLab mode, user, changes),
+                            server-status.ts (probe ws://127.0.0.1:1234, simulate upstream), playground-bar.ts (the bar)
 examples/plain-html/        <typst-editor> loaded from dist/lib without a bundler
-tests/e2e/                  Playwright specs (run against the static build)
+tests/e2e/                  Playwright specs (run against the static build); tests/jsdom-setup.ts (vitest setup file)
+eslint-rules/               entry-imports.js: the folder boundary rule (below)
 mise-tasks/                 every script (build, test, quality, …) — `mise tasks ls`
 docs/                       research and concepts (YYYY_MM_DD_slug.md)
 ```
+
+### Folder rules
+
+- **Entry files.** Every folder under `src/` has one entry file named like it (`preview/preview.ts`;
+  a stylesheet may be `changes/changes.css`). Everything else in the folder is internal to it, and
+  folders that grow get subfolders named after a concept (`projection/`, `worker/`), never generic
+  ones. A folder beside a file of the same name (`typst-editor/` next to `typst-editor.ts`) holds
+  that file's internals. `core/` and `features/` only group.
+- **Imports from outside a folder go to its entry file**, which re-exports what others need.
+  ESLint enforces this (`local/entry-imports`, `eslint-rules/entry-imports.js`); only TypeScript and
+  CSS sources count (not the generated `wasm/`, `fonts/` or the `fixtures/`). The exceptions are
+  listed once, with reasons, in `eslint.config.js` (`boundaries.exceptions`):
+  - `features/collaboration/gitlab-protocol.ts` — anyone: import-free, shared with `server/` and
+    `features/versions` (which must not load the lazily loaded collaboration chunk);
+  - `core/typst-engine/engine-assets.ts` — `features/preview/preview.ts`: the asset URLs; in the
+    entry, the worker bundle (which imports the entry) would emit every asset a second time;
+  - `features/collaboration/in-process.ts` — test files;
+  - `features/collaboration/shared-project.ts` — the server's tests.
+- **Top comments.** Every source file starts with a comment: its context, `See <entry file /
+  ARCHITECTURE.md section>`, or `Tests for X` (`mise run quality:top-comments`, part of `quality`).
+- Other languages and separate programs stay at the top level: `crates/`, `server/`, `demo/`,
+  `examples/`.
 
 ## Runtime picture
 
@@ -92,208 +121,7 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
 
 ## Modules and their contracts
 
-### `TypstDocument` (`src/document`)
-
-```ts
-new TypstDocument(text)
-TypstDocument.fromYText(ytext)                   // shared: the text lives in an (integrated) Y.Text
-.text
-.change(changes: {from, to, insert}[], origin)   // all in pre-change coordinates (CodeMirror ChangeSet semantics)
-.setText(text, origin)                           // one minimal change
-.share(ytext | null)                             // (re)bind to a Y.Text, adopting its text as one REMOTE_ORIGIN change; null unshares
-.onChange((changes, origin) => …) → unsubscribe
-REMOTE_ORIGIN                                    // the origin of edits that arrived through the Y.Text
-```
-
-- **Single source of truth.** Every view writes through `change()` and reads through `onChange()`.
-- **Echo suppression by origin.** A view passes itself as `origin` and ignores notifications whose
-  origin is itself.
-- **Hidden:** how the text is stored: a string, mirrored into a `Y.Text` when shared. A local
-  `change()` updates the string, applies the changes in one `ydoc.transact(…, document)` and
-  notifies with the caller's origin; the Y.Text observer skips that transaction. Every other
-  transaction (collaborators, a `Y.UndoManager`) becomes `onChange(changes, REMOTE_ORIGIN)`, the
-  event delta converted to pre-change changes (`deltaToChanges`, `y-delta.ts`). The views need no
-  change. `typst-document.ts` imports Yjs types only, so unshared widgets do not load Yjs.
-- **Undo is per user** (decision): each view keeps its own history. Remote changes never enter
-  it (the SourceView dispatches them with `addToHistory: false`; the VisualView already does that
-  for every outside change), and the histories map over them. A user's Undo reverts the last edit
-  of that view's history (the Source view's history also holds the same user's Visual edits), never
-  a collaborator's. No `Y.UndoManager`.
-
-### `SourceView` (`src/source-view`)
-
-```ts
-new SourceView(parent, document, { onCursor?, onBaseChange? })
-.reveal(from, to)    // select, scroll to center, highlight
-.setDiagnostics([{severity, message, hints, from, to}])   // underline + hover; replaces previous
-.setHighlights(layer, [{from, to, className, attributes?}])  // replaces that layer; follows edits
-.setPresence([{id, user: {name, color}, anchor, head}])      // other users (PresenceTarget); follows edits
-.selection() → {from, to}
-.showChanges(base | null)   // inline unified diff against base, accept/reject per chunk
-.destroy()
-```
-
-- **Presence** (`presence.ts`, y-codemirror style): each caret is a widget (bar + dot, also on
-  empty lines); its name flag shows on hover and for 2.5 s after the caret moved (the widget is
-  re-created only then: `moves` counts in its equality). Selections are tinted marks. The same
-  extension draws carets in the Visual view's raw boxes.
-- **Changes:** `@codemirror/merge`'s `unifiedMergeView` in a compartment. Reject edits the
-  document like any edit; accept moves CodeMirror's original and reports the new base through
-  `onBaseChange`, so the other views stop showing that change too.
-
-- **Hidden:** CodeMirror and its extensions, and the Typst language support
-  (`codemirror-lang-typst/lezer`: a pure-JS Lezer parser using typst-syntax node names, plus
-  completion and folding; its Lezer syntax linter is left out so that compiler diagnostics are the
-  only error source; its indentation service is wrapped so that Enter right after a closed
-  construct like `#set page(..)` does not indent, which 0.6.0 gets wrong). Also hidden: `@codemirror/lint`, which maps shown diagnostics through later
-  edits. Also hidden: translating ChangeSets to and from `TextChange[]`, and the
-  annotation that stops document-originated transactions from being written back.
-
-### `Preview` (`src/preview`)
-
-```ts
-new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scrolling page area into container
-.update(files: Record<path, text | Uint8Array>, main)    // cheap per keystroke
-.reveal(path, offset)                        // cheap per cursor move: flash, scroll only if off-screen
-.showChanges(path, ranges | null)            // change bars in the page margin, redrawn after every compile
-.showPresence([{id, path, head, user}, …])   // other users' initials at their carets, redrawn after every compile
-.snippet(path, from, to, text) → Promise<{svg, width, height} | null>   // the range as drawn, cut from its page
-.onRender(listener) → unsubscribe            // after every successful compile
-.destroy()
-```
-
-- **Snippets** (`snippet.ts`): no extra compilation. After running compiles are done, the range
-  goes to `boxesForRanges`; the union of the boxes on the first box's page (+2 pt, clamped to
-  the page) becomes the page SVG with that `viewBox` and size in pt. Null when the range draws
-  nothing, or when `text` is not what the range held at the last successful compile (it was
-  edited since, or the document has errors), so a snippet never shows other source.
-
-- **Change bars** (`change-bars.ts`): the ranges go to the engine's `boxesForRanges` after every
-  successful compile; boxes on the same or adjacent lines join into one bar (like LaTeX
-  `changebar`). A pure deletion (empty range) takes the characters on either side. Bars are
-  page overlays like the highlights; only the newest request draws.
-
-- **Presence markers** (`presence-markers.ts`): every caret goes through the same `cursor`
-  request as `reveal` (`jumpFromCursor`); a third `LatestOnly` runner (one lookup round per
-  250 ms, newest presences only; again after every successful compile) replaces the markers. A
-  marker is a page overlay with the user's initials in their color pointing at the baseline;
-  markers on the same spot are numbered and drawn side by side.
-- **Coalescing (`LatestOnly`):** at most one compilation is in flight. Updates that arrive
-  meanwhile replace each other, so only the newest gets compiled. Typing never queues a backlog.
-  Cursor reveals use the same runner, additionally throttled to one lookup per 80 ms.
-- **Incremental, lazy DOM (`PageList`):** every page is a placeholder sized by `aspect-ratio`
-  from the page's pt size. An `IntersectionObserver` (root: the preview's scroller, margin: one
-  viewport above and below) decides which pages carry their SVG; far pages drop it. Every page
-  carries its content `hash`, and only near pages whose hash changed get new SVG markup. An edit
-  on page 7 does not touch pages 1–6 in the DOM. Without `IntersectionObserver` all pages render.
-- **Zoom:** fit width (default) or a fixed scale (presets 25 %–400 %, 100 % = 1 pt → 4/3 CSS px).
-  The page number shown is the page covering most of the viewport.
-- **Overlays** (reveal flash, click highlight) are children of the page element, positioned in
-  percent of the page, so they survive zoom and lazy unmounting. A click that resolves to a source
-  location outlines the clicked text run (Typst draws one as a `<g>` of glyph `<use>`s) until the
-  next click or successful compile.
-- **Scrolling** only ever moves the preview's own scroller (never `scrollIntoView`), so an embedded
-  widget does not scroll its host page.
-- **Errors keep the last good pages.** When a compilation fails, the preview keeps showing the
-  previous pages, dimmed (`typst-preview--stale`), and reports diagnostics through `onDiagnostics`.
-- **Diagnostics are never stale.** `onDiagnostics` is only called when no newer `update()` is
-  waiting, so its offsets always refer to the text last passed in.
-- **Files:** text is sent with every update (Typst diffs it). Bytes are sent once per
-  `Uint8Array` identity: pass the same array again and only `null` crosses to the worker.
-- **Packages:** `@preview/…` imports are downloaded on first use (see `withPackages`); the
-  diagnostics arrive after the download.
-- **Coordinates:** the SVG is scaled to the page element's width (zoom). Clicks are converted with
-  `pt = (clientX − pageRect.left) × page.width / pageRect.width`.
-
-### `diffTexts` (`src/diff`)
-
-```ts
-diffTexts(base, current) → [{fromA, toA, fromB, toB}]   // A = base, B = current; sorted, UTF-16
-```
-
-- The single text diff behind every "Show changes" rendering (the Source view's merge view runs
-  the same `@codemirror/merge` algorithm itself, for its accept/reject chunks).
-- **Cleanup for readers:** a change inside a word grows to the whole word; a change touching a
-  markup delimiter (`*`, `_`, heading `=`, list markers; Lezer tree of either text) grows to the
-  whole construct, so `*bold*` → `_bold_` is one change with unchanged visible text. Grown
-  ranges are mapped to the other text through the raw changes and merged when they touch.
-
-### Diagnostics in the widget (`src/editor`)
-
-`summarizeDiagnostics(diagnostics, file)` (pure, unit-tested) splits a compile's diagnostics into
-those of the shown file and those elsewhere (other files, packages or no location: only listed),
-and computes the status label ("✓ compiled" / "1 error, 2 warnings") and the jump target
-(`{path, from, to}`: earliest error in the shown file, else in another project file, else the
-same for warnings). `DiagnosticsStatus` renders it as a status bar below both panes; clicking the
-label, or a listed diagnostic of a project file, opens that file and reveals the range in the
-source view, switching to the Source tab. Hovering or focusing the label lists the shown file's
-messages (with hints), each jumping to its range. Every document's views get the diagnostics of
-their own path: the Source view as CodeMirror lint (underline + hover), the Visual view as the
-`diagnostics` highlight layer (wavy underline, message + hints as tooltip; raw code boxes in range
-are outlined, since inline decorations skip block atoms; an empty range marks one character).
-
-### `typst-engine` (Rust crate + `src/engine`)
-
-```ts
-createEngine(wasm, fonts?: (Uint8Array | Promise<Uint8Array>)[]) → Promise<Engine>
-defaultFonts() → Promise<Uint8Array>[]          // src/engine/default-fonts.ts: fetches the bundled font assets
-.addFont(bytes)                                  // throws if bytes contain no font face
-.setSource(path, text) / .setBinary(path, bytes) / .remove(path)
-.compile(main) → { pages: [{hash, width, height, svg}], diagnostics: [{severity, message, hints, path, from, to}], missingPackages: string[] }
-.jumpFromClick(page, x, y) → {kind:'source', path, offset, from, to, boxes} | {kind:'url'} | {kind:'position'} | null
-.jumpFromCursor(path, offset) → [{page, x, y}]
-.boxesForRanges(path, [{from, to}]) → [{page, x, y, w, h}]   // where those ranges are drawn: per glyph run, shape, image
-
-withPackages(engine, fetchPackage = fetchPreviewPackage) → { compile(main) → Promise<CompileResult> }
-fetchPreviewPackage(spec) → Promise<Uint8Array>     // .tar.gz from packages.typst.org, Cache API
-untarGz(bytes) → Promise<Map<relativePath, Uint8Array>>
-```
-
-Boundary conventions. Each one is decided once, inside the engine:
-
-| Concern | Convention | Why |
-|---|---|---|
-| Offsets | **UTF-16 code units** | CodeMirror and ProseMirror use them. Typst's UTF-8 byte offsets never leave Rust (`Lines::byte_to_utf16`). |
-| Pages | 0-based | JS arrays |
-| Coordinates | pt from the page's top-left | the same unit as the page size |
-| Results | JSON strings | no serde/JS glue; the TS wrapper parses and types them |
-| Paths | absolute project paths (`/main.typ`), package paths (`@preview/name:0.1.0/lib.typ`) | map 1:1 to `FileId` with `VirtualRoot::Project` / `VirtualRoot::Package(spec)`; diagnostics and jumps report package files the same way |
-
-Inside the crate:
-
-- **`MemoryWorld`** implements `typst::World` and `typst_ide::IdeWorld`. Files live in a
-  `HashMap<FileId, Source | Bytes>`. `set_source` reuses the existing `Source` (`Source::replace`), so
-  Typst reparses incrementally and the spans of unchanged nodes stay stable. **No fonts are
-  embedded**: `add_font` pushes each face into the `FontBook` (a `LazyHash`, so comemo sees the
-  change). `today()` returns `None`, which keeps output deterministic.
-- **Incremental compilation** comes from Typst's own memoisation (`comemo`), which persists across
-  `compile` calls because the world lives as long as the engine.
-- **Fonts as assets:** `mise run build:fonts` copies Typst's default set (Libertinus Serif,
-  New Computer Modern + Math, DejaVu Sans Mono; 17 files, 9.7 MB) from the typst-assets crate
-  pinned by `Cargo.lock` into `src/engine/fonts/`. `defaultFonts()` turns them into bundler
-  assets (`import.meta.glob(…?url)`) and starts all downloads at once. The worker passes them to
-  `createEngine`, which awaits wasm and fonts in parallel.
-- **Packages** are files like any other, under their package path. A file of a package with no
-  files at all fails with `PackageError::NotFound` and records the spec; `compile` returns those
-  as `missingPackages` (cleared per compile). `withPackages` (TS) loops: compile → fetch the
-  missing archives in parallel → `untarGz` → `.typ` via `setSource`, the rest via `setBinary` →
-  compile again. A failed download is remembered (no retry until reload) and reported as an extra
-  diagnostic with `path: null`, next to Typst's own "package not found" at the import.
-- **SVG cache:** page SVGs are keyed by `hash128(&page.frame)`. Unchanged pages skip `typst_svg::svg`.
-- **Hit-testing:**
-  - `typst_ide::jump_from_click(world, document, PagedPosition)` walks the frames of the last
-    successful document and gives the exact offset.
-  - `highlight.rs` finds the span of the glyph under the click. Its source node range becomes
-    `from..to`, and `span_boxes` returns one box per contiguous glyph run of that span (per
-    line/page). The preview draws these boxes.
-  - For non-text clicks, the range falls back to the syntax leaf at the offset, with no boxes.
-  - `jump_from_cursor` is the reverse.
-  - `boxesForRanges` walks all frame items (`highlight::drawn_boxes`) and keeps glyphs whose
-    source byte (span range start + the glyph's offset in its span) lies in one of the ranges
-    (character precise for text), plus shapes (rules, fraction lines, rectangles; stroke
-    included) and images whose span's node starts in one. Code that draws nothing yields nothing.
-
-### `createTypstEditor` / `<typst-editor>` (`src/editor`, `src/element`)
+### `createTypstEditor` / `<typst-editor>` (`src/typst-editor.ts`, `src/typst-editor/`, `src/typst-editor-element.ts`, `src/index.ts`)
 
 ```ts
 createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileChange?, onFilesChange?, onChange?,
@@ -309,7 +137,7 @@ createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileCha
   new text as one edit) and recompiles. `@preview` packages need no entry.
 - **Composition** (`Widget`, private): `Project` + `EditingViews` + `FileSwitcher` + `AssetView`
   + `Preview` + `DiagnosticsStatus`. The preview always compiles `main` with `project.files()`.
-- **`Project`** (`project.ts`): files by path. `.typ` strings become a `TypstDocument` each (kept
+- **`Project`** (`core/project/project.ts`): files by path. `.typ` strings become a `TypstDocument` each (kept
   across renames, so open views survive); everything else is stored as given.
   `check(change)` → reason or null, `apply(change)`, `replace(files)`, `onChange(change)`
   (structural changes and every document edit as `update`). The main file cannot be renamed or
@@ -343,115 +171,96 @@ createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileCha
 - **Styles** go into `host.getRootNode()`: `document.head`, or the element's shadow root.
   CodeMirror mounts its own styles into the same root. Embedding guide: [docs/embedding.md](docs/embedding.md).
 
-### Worker protocol (`src/preview/protocol.ts`)
-
-```
-main → worker   {type:'init', wasm}  (first, once; the URL is resolved on the main thread)
-main → worker   {id, type:'compile', files: Record<path, text | Uint8Array | null>, main} | {id, type:'click', page, x, y} | {id, type:'cursor', path, offset} | {id, type:'boxes', path, ranges}
-worker → main   {id, type:'compile', result} | {id, type:'click', jump} | {id, type:'cursor', positions} | {id, type:'boxes', boxes} | {id, type:'error', message}
-```
-
-- Requests are answered in order, because the worker is single-threaded, except that a
-  `compile` waiting for a package download lets `click`/`cursor` requests overtake it.
-- `compile` sends the full file map; `null` means "the same bytes as last time" (`FileSender`).
-  The worker (`FileReceiver`) removes paths missing since the previous call, and Typst diffs the
-  text itself. Package files are not part of the map and stay loaded.
-
-### Comments = margin notes (`src/document/margin-note-syntax.ts`, `src/editor/comment-action.ts`, `add-margin-note.ts`, `page-margin.ts`, `src/visual-view/margin-notes.ts`, `notes-gutter.ts`, `note-list.ts`, `card-layout.ts`)
-
-Comments are [`drafting`](https://typst.app/universe/package/drafting/) margin notes in the
-Typst source itself (`@preview/drafting:0.2.2`): `#margin-note[note]` (point, at a cursor) and
-`#margin-note[text][note]` (range: drafting highlights `text`). There is no other comment store:
-the preview shows what the compiler draws, and git, diffs, undo and collaboration carry notes as
-ordinary text. No threads: a reply is more text in the note, resolving means deleting the call,
-and an author is whatever the note's text says. Hiding notes for the final output
-(`#set-margin-note-defaults(hidden: true)`) is up to the author.
+### `TypstDocument` (`src/core/typst-document`)
 
 ```ts
-// margin-note-syntax.ts: the only module that knows drafting's call syntax
-parseNoteCall(src) → {head, text?, note} | null     // head: `#margin-note` plus any `(..named)`
-printNoteCall({head, text?, note}) → string         // printNoteCall(parseNoteCall(src)) === src
-noteCallSyntax(source, funcCallNode) → {head, text: ContentBlock | null, note} | null   // in a parsed tree
-isNoteCallAt(source, from, to) → boolean            // one note call in markup from `#` to exactly `to`
-safeNote(markup) → string | null                    // markup that cannot end or swallow its call
-addMarginNote(text, {from, to}) → {changes: TextChange[], note} | null   // note: offset of the new (empty) body
-new CommentAction(root, () => {document, view: {selection(), reveal(), editNote?()}} | null)   .button  .comment()  .destroy()
-VisualView.editNote(offset) → boolean   // focuses the gutter card of the note whose source holds offset
-// src/visual-view: the notes gutter
-new NotesGutter(body)   .plugin (add to the editor state)  .edit(offset) → boolean  .destroy()
-layoutCards([{anchor, height}], {gap, active?, top?}) → tops   // pure: cards beside anchors, no overlap
-findNotes(doc) / followNotes(prev, mapping, found, newKey) / setNoteText(tr, note, markup) / removeNote(tr, note)
-noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-list.ts, pure ProseMirror
+new TypstDocument(text)
+TypstDocument.fromYText(ytext)                   // shared: the text lives in an (integrated) Y.Text
+.text
+.change(changes: {from, to, insert}[], origin)   // all in pre-change coordinates (CodeMirror ChangeSet semantics)
+.setText(text, origin)                           // one minimal change
+.share(ytext | null)                             // (re)bind to a Y.Text, adopting its text as one REMOTE_ORIGIN change; null unshares
+.onChange((changes, origin) => …) → unsubscribe
+REMOTE_ORIGIN                                    // the origin of edits that arrived through the Y.Text
 ```
 
-- **Syntax** (`margin-note-syntax.ts`): a note is `#margin-note(..named)[note]` or
-  `#margin-note(..named)[text][note]` with no syntax errors, a non-empty one-paragraph `text`
-  and nothing after the last `]`; any other `margin-note` call is ordinary code. Projection,
-  the Visual view and `addMarginNote` all use this one definition.
-- **`addMarginNote`** (pure): a selection becomes `#margin-note[selection][]` if the result
-  is one note call in markup (`isNoteCallAt`); else (half of `*bold*`, two paragraphs) a
-  point note `#margin-note[]` at the selection's end; null where none fits (inside code). The
-  import is ensured exactly once: an existing top-level drafting import (any version) that ends
-  before the note is kept (`*`, or `margin-note` among its items) or extended (`, margin-note`
-  after its last item, also after a trailing comma; `: margin-note` on a bare module import);
-  else `#import "@preview/drafting:0.2.2": margin-note` goes first in the file (a drafting
-  import below the note would not bind the name where the note is).
-- **Page margins** (`src/editor/page-margin.ts`, part of `addMarginNote`'s edits, same undo
-  step): drafting 0.2.2 crashes with "type relative length has no method `keys`" when the page
-  margin is a single length ([drafting.typ line 640](https://github.com/typst/packages/blob/main/packages/preview/drafting/0.2.2/drafting.typ#L640)
-  calls `page.margin.keys()` on anything but `auto`), and Typst turns uniform dictionaries
-  (`(rest: a)`, `(x: a, y: a)`) back into a length. So every top-level `#set page(.., margin: m)`
-  with such a literal `m` (a length, a sum of lengths, or a side dictionary with one value for
-  all four sides) becomes `margin: (right: R, rest: m)`: only the margin argument changes. R is
-  4cm (room for drafting's notes), or the next whole cm + 1 when `m` is an absolute length of
-  4cm or more (equal sides would be uniform again). `auto`, absent and non-uniform margins,
-  variables and spreads are never touched.
-- **`CommentAction`**: the widget's only comment UI — the "Comment" button and Ctrl/Cmd+Alt+M
-  (captured at the widget root). Works on the shown `.typ` file in the current view
-  (`EditingViews.shown()`), applies the edits as one `document.change`, then
-  `VisualView.editNote(note)` focuses the new note's card, or the Source view puts the caret into `[]`.
-- **Visual view, in the text** (`margin-notes.ts`): see `marginNote` / `noteRange` below. A point
-  note is a small marker (tooltip: its note), a range note's text is highlighted.
-- **Visual view, notes gutter** (`notes-gutter.ts`, like the comment sidebar of Google Docs or
-  Tiptap's comments): a column right of the text (`.typst-visual__body` holds the editor DOM and
-  the gutter; the column only shows while the document has notes) with a card per note, in
-  document order: the highlighted text (range notes), the note's markup in a multi-line text
-  area, and "Resolve note".
-  - Editing: Mod+Enter or leaving the field writes the markup back through `safeNote` (brackets
-    without a partner escaped, or all of it escaped as plain text if the markup would still
-    break the call) as one transaction (one undo step) setting the `note` attribute of the atom
-    or mark; everything else stays as written. Escape restores the field. Mod+Enter and Escape put
-    the text cursor after the note. Resolve deletes a point note's atom, or only the `noteRange`
-    mark of a range note (its text stays), one undo step.
-  - State: a ProseMirror plugin keeps the notes as a list (`note-list.ts`: `findNotes` on every
-    doc change, `followNotes` maps the previous notes through the transaction's mapping to keep
-    each note's key; a range note may change at one end). The plugin decorates every anchor with
-    `data-note-key` (node decoration on a marker, inline decoration over a range) plus
-    `--active` / `--hover` classes. The active note is the one at the cursor (innermost range
-    note, or a selected marker), a focused card's, or a clicked marker's; hover comes from the
-    anchor or the card. Cards are DOM outside ProseMirror, reconciled by key: an open card keeps
-    its field and the user's text while the document changes from elsewhere and saves into its
-    own note; a card whose note is gone saves nothing.
-  - Layout (`card-layout.ts`, pure): cards start at their anchor's top, pushed down below the
-    previous card (gap 8px); the active card stays at its anchor and cards above it move up (not
-    above the gutter's top). Measuring (anchor rects, card heights; all reads, then writes) runs
-    in one `requestAnimationFrame` after a doc change, an active-note change, typing in a card,
-    or a resize of the body or the text (`ResizeObserver`, which also covers loaded images; plus
-    captured `load` events). No measuring in the projection.
-  - Narrow (body narrower than 640px): no column; only the active note's card shows, as a
-    popover below its anchor.
-  - `editNote(offset)` finds the note in the document: a point note whose call holds `offset`, or
-    among range notes whose text ends at the same place (nested) the one whose `][note]` holds it,
-    makes it active and focuses its card.
-- **Source view**: plain Typst, no extra decoration.
-- Engine tests compile both forms against the real package (`src/engine/fixtures/drafting-0.2.2`).
-- **Removed** with this design (it replaced the sidecar comments of docs/todo/comments.md):
-  `src/comments` (Comments, quote anchors, CommentsPanel, CommentsUI), `SharedComments` and the
-  Y.Doc `comments` map, `Preview.setMarkers` / `PreviewMarkers`, the widget options `comments` /
-  `onCommentsChange`, the `comments` getter/setter, the element's `.comments` and
-  `commentschange`, and the `CommentsData` / `TypstEditorCommentsChangeDetail` types.
+- **Single source of truth.** Every view writes through `change()` and reads through `onChange()`.
+- **Echo suppression by origin.** A view passes itself as `origin` and ignores notifications whose
+  origin is itself.
+- **Hidden:** how the text is stored: a string, mirrored into a `Y.Text` when shared. A local
+  `change()` updates the string, applies the changes in one `ydoc.transact(…, document)` and
+  notifies with the caller's origin; the Y.Text observer skips that transaction. Every other
+  transaction (collaborators, a `Y.UndoManager`) becomes `onChange(changes, REMOTE_ORIGIN)`, the
+  event delta converted to pre-change changes (`deltaToChanges`, `y-delta.ts`). The views need no
+  change. `typst-document.ts` imports Yjs types only, so unshared widgets do not load Yjs.
+- **Undo is per user** (decision): each view keeps its own history. Remote changes never enter
+  it (the SourceView dispatches them with `addToHistory: false`; the VisualView already does that
+  for every outside change), and the histories map over them. A user's Undo reverts the last edit
+  of that view's history (the Source view's history also holds the same user's Visual edits), never
+  a collaborator's. No `Y.UndoManager`.
 
-### `VisualView` (`src/visual-view`)
+### `typst-engine` (Rust crate + `src/core/typst-engine`)
+
+```ts
+createEngine(wasm, fonts?: (Uint8Array | Promise<Uint8Array>)[]) → Promise<Engine>
+defaultFonts() → Promise<Uint8Array>[]          // engine-assets.ts: fetches the bundled font assets
+.addFont(bytes)                                  // throws if bytes contain no font face
+.setSource(path, text) / .setBinary(path, bytes) / .remove(path)
+.compile(main) → { pages: [{hash, width, height, svg}], diagnostics: [{severity, message, hints, path, from, to}], missingPackages: string[] }
+.jumpFromClick(page, x, y) → {kind:'source', path, offset, from, to, boxes} | {kind:'url'} | {kind:'position'} | null
+.jumpFromCursor(path, offset) → [{page, x, y}]
+.boxesForRanges(path, [{from, to}]) → [{page, x, y, w, h}]   // where those ranges are drawn: per glyph run, shape, image
+
+withPackages(engine, fetchPackage = fetchPreviewPackage) → { compile(main) → Promise<CompileResult> }
+fetchPreviewPackage(spec) → Promise<Uint8Array>     // .tar.gz from packages.typst.org, Cache API
+untarGz(bytes) → Promise<Map<relativePath, Uint8Array>>
+```
+
+Boundary conventions. Each one is decided once, inside the engine:
+
+| Concern | Convention | Why |
+|---|---|---|
+| Offsets | **UTF-16 code units** | CodeMirror and ProseMirror use them. Typst's UTF-8 byte offsets never leave Rust (`Lines::byte_to_utf16`). |
+| Pages | 0-based | JS arrays |
+| Coordinates | pt from the page's top-left | the same unit as the page size |
+| Results | JSON strings | no serde/JS glue; the TS wrapper parses and types them |
+| Paths | absolute project paths (`/main.typ`), package paths (`@preview/name:0.1.0/lib.typ`) | map 1:1 to `FileId` with `VirtualRoot::Project` / `VirtualRoot::Package(spec)`; diagnostics and jumps report package files the same way |
+
+Inside the crate:
+
+- **`MemoryWorld`** implements `typst::World` and `typst_ide::IdeWorld`. Files live in a
+  `HashMap<FileId, Source | Bytes>`. `set_source` reuses the existing `Source` (`Source::replace`), so
+  Typst reparses incrementally and the spans of unchanged nodes stay stable. **No fonts are
+  embedded**: `add_font` pushes each face into the `FontBook` (a `LazyHash`, so comemo sees the
+  change). `today()` returns `None`, which keeps output deterministic.
+- **Incremental compilation** comes from Typst's own memoisation (`comemo`), which persists across
+  `compile` calls because the world lives as long as the engine.
+- **Fonts as assets:** `mise run build:fonts` copies Typst's default set (Libertinus Serif,
+  New Computer Modern + Math, DejaVu Sans Mono; 17 files, 9.7 MB) from the typst-assets crate
+  pinned by `Cargo.lock` into `src/core/typst-engine/fonts/`. `engine-assets.ts` turns them into bundler
+  assets (`import.meta.glob(…?url)`) and starts all downloads at once. The worker passes them to
+  `createEngine`, which awaits wasm and fonts in parallel.
+- **Packages** are files like any other, under their package path. A file of a package with no
+  files at all fails with `PackageError::NotFound` and records the spec; `compile` returns those
+  as `missingPackages` (cleared per compile). `withPackages` (TS) loops: compile → fetch the
+  missing archives in parallel → `untarGz` → `.typ` via `setSource`, the rest via `setBinary` →
+  compile again. A failed download is remembered (no retry until reload) and reported as an extra
+  diagnostic with `path: null`, next to Typst's own "package not found" at the import.
+- **SVG cache:** page SVGs are keyed by `hash128(&page.frame)`. Unchanged pages skip `typst_svg::svg`.
+- **Hit-testing:**
+  - `typst_ide::jump_from_click(world, document, PagedPosition)` walks the frames of the last
+    successful document and gives the exact offset.
+  - `highlight.rs` finds the span of the glyph under the click. Its source node range becomes
+    `from..to`, and `span_boxes` returns one box per contiguous glyph run of that span (per
+    line/page). The preview draws these boxes.
+  - For non-text clicks, the range falls back to the syntax leaf at the offset, with no boxes.
+  - `jump_from_cursor` is the reverse.
+  - `boxesForRanges` walks all frame items (`highlight::drawn_boxes`) and keeps glyphs whose
+    source byte (span range start + the glyph's offset in its span) lies in one of the ranges
+    (character precise for text), plus shapes (rules, fraction lines, rectangles; stroke
+    included) and images whose span's node starts in one. Code that draws nothing yields nothing.
+
+### `VisualView` (`src/features/visual-view`)
 
 ```ts
 new VisualView(parent, document, { renderer?, assets? })
@@ -476,7 +285,7 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
  text changed elsewhere ──► project() ──► syncDoc(tr, target): smallest replacement, cursor stays put
 ```
 
-- **Schema** (`extensions.ts`):
+- **Schema** (`nodes/nodes.ts`):
   - **Blocks:** `paragraph`, `heading`, and `bulletList` / `orderedList` > `listItem` (a `marker`
     attribute; content `(paragraph | rawBlock) block*`, so nested lists made with Tab print
     indented), plus `rawBlock`.
@@ -700,7 +509,227 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - edits change only what they touch;
   - an outside change to a paragraph keeps the cursor position in it.
 
-### Collaboration (`src/collab`, `server/`)
+### `SourceView` (`src/features/source-view`)
+
+```ts
+new SourceView(parent, document, { onCursor?, onBaseChange? })
+.reveal(from, to)    // select, scroll to center, highlight
+.setDiagnostics([{severity, message, hints, from, to}])   // underline + hover; replaces previous
+.setHighlights(layer, [{from, to, className, attributes?}])  // replaces that layer; follows edits
+.setPresence([{id, user: {name, color}, anchor, head}])      // other users (PresenceTarget); follows edits
+.selection() → {from, to}
+.showChanges(base | null)   // inline unified diff against base, accept/reject per chunk
+.destroy()
+```
+
+- **Presence** (`presence.ts`, y-codemirror style): each caret is a widget (bar + dot, also on
+  empty lines); its name flag shows on hover and for 2.5 s after the caret moved (the widget is
+  re-created only then: `moves` counts in its equality). Selections are tinted marks. The same
+  extension draws carets in the Visual view's raw boxes.
+- **Changes:** `@codemirror/merge`'s `unifiedMergeView` in a compartment. Reject edits the
+  document like any edit; accept moves CodeMirror's original and reports the new base through
+  `onBaseChange`, so the other views stop showing that change too.
+
+- **Hidden:** CodeMirror and its extensions, and the Typst language support
+  (`codemirror-lang-typst/lezer`: a pure-JS Lezer parser using typst-syntax node names, plus
+  completion and folding; its Lezer syntax linter is left out so that compiler diagnostics are the
+  only error source; its indentation service is wrapped so that Enter right after a closed
+  construct like `#set page(..)` does not indent, which 0.6.0 gets wrong). Also hidden: `@codemirror/lint`, which maps shown diagnostics through later
+  edits. Also hidden: translating ChangeSets to and from `TextChange[]`, and the
+  annotation that stops document-originated transactions from being written back.
+
+### `Preview` (`src/features/preview`)
+
+```ts
+new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scrolling page area into container
+.update(files: Record<path, text | Uint8Array>, main)    // cheap per keystroke
+.reveal(path, offset)                        // cheap per cursor move: flash, scroll only if off-screen
+.showChanges(path, ranges | null)            // change bars in the page margin, redrawn after every compile
+.showPresence([{id, path, head, user}, …])   // other users' initials at their carets, redrawn after every compile
+.snippet(path, from, to, text) → Promise<{svg, width, height} | null>   // the range as drawn, cut from its page
+.onRender(listener) → unsubscribe            // after every successful compile
+.destroy()
+```
+
+- **Snippets** (`snippet.ts`): no extra compilation. After running compiles are done, the range
+  goes to `boxesForRanges`; the union of the boxes on the first box's page (+2 pt, clamped to
+  the page) becomes the page SVG with that `viewBox` and size in pt. Null when the range draws
+  nothing, or when `text` is not what the range held at the last successful compile (it was
+  edited since, or the document has errors), so a snippet never shows other source.
+
+- **Change bars** (`change-bars.ts`): the ranges go to the engine's `boxesForRanges` after every
+  successful compile; boxes on the same or adjacent lines join into one bar (like LaTeX
+  `changebar`). A pure deletion (empty range) takes the characters on either side. Bars are
+  page overlays like the highlights; only the newest request draws.
+
+- **Presence markers** (`presence-markers.ts`): every caret goes through the same `cursor`
+  request as `reveal` (`jumpFromCursor`); a third `LatestOnly` runner (one lookup round per
+  250 ms, newest presences only; again after every successful compile) replaces the markers. A
+  marker is a page overlay with the user's initials in their color pointing at the baseline;
+  markers on the same spot are numbered and drawn side by side.
+- **Coalescing (`LatestOnly`):** at most one compilation is in flight. Updates that arrive
+  meanwhile replace each other, so only the newest gets compiled. Typing never queues a backlog.
+  Cursor reveals use the same runner, additionally throttled to one lookup per 80 ms.
+- **Incremental, lazy DOM (`PageList`):** every page is a placeholder sized by `aspect-ratio`
+  from the page's pt size. An `IntersectionObserver` (root: the preview's scroller, margin: one
+  viewport above and below) decides which pages carry their SVG; far pages drop it. Every page
+  carries its content `hash`, and only near pages whose hash changed get new SVG markup. An edit
+  on page 7 does not touch pages 1–6 in the DOM. Without `IntersectionObserver` all pages render.
+- **Zoom:** fit width (default) or a fixed scale (presets 25 %–400 %, 100 % = 1 pt → 4/3 CSS px).
+  The page number shown is the page covering most of the viewport.
+- **Overlays** (reveal flash, click highlight) are children of the page element, positioned in
+  percent of the page, so they survive zoom and lazy unmounting. A click that resolves to a source
+  location outlines the clicked text run (Typst draws one as a `<g>` of glyph `<use>`s) until the
+  next click or successful compile.
+- **Scrolling** only ever moves the preview's own scroller (never `scrollIntoView`), so an embedded
+  widget does not scroll its host page.
+- **Errors keep the last good pages.** When a compilation fails, the preview keeps showing the
+  previous pages, dimmed (`typst-preview--stale`), and reports diagnostics through `onDiagnostics`.
+- **Diagnostics are never stale.** `onDiagnostics` is only called when no newer `update()` is
+  waiting, so its offsets always refer to the text last passed in.
+- **Files:** text is sent with every update (Typst diffs it). Bytes are sent once per
+  `Uint8Array` identity: pass the same array again and only `null` crosses to the worker.
+- **Packages:** `@preview/…` imports are downloaded on first use (see `withPackages`); the
+  diagnostics arrive after the download.
+- **Coordinates:** the SVG is scaled to the page element's width (zoom). Clicks are converted with
+  `pt = (clientX − pageRect.left) × page.width / pageRect.width`.
+
+### Worker protocol (`src/features/preview/worker`)
+
+```
+main → worker   {type:'init', wasm}  (first, once; the URL is resolved on the main thread)
+main → worker   {id, type:'compile', files: Record<path, text | Uint8Array | null>, main} | {id, type:'click', page, x, y} | {id, type:'cursor', path, offset} | {id, type:'boxes', path, ranges}
+worker → main   {id, type:'compile', result} | {id, type:'click', jump} | {id, type:'cursor', positions} | {id, type:'boxes', boxes} | {id, type:'error', message}
+```
+
+- Requests are answered in order, because the worker is single-threaded, except that a
+  `compile` waiting for a package download lets `click`/`cursor` requests overtake it.
+- `compile` sends the full file map; `null` means "the same bytes as last time" (`FileSender`).
+  The worker (`FileReceiver`) removes paths missing since the previous call, and Typst diffs the
+  text itself. Package files are not part of the map and stay loaded.
+
+### Diagnostics in the widget (`src/features/diagnostics`)
+
+`summarizeDiagnostics(diagnostics, file)` (pure, unit-tested) splits a compile's diagnostics into
+those of the shown file and those elsewhere (other files, packages or no location: only listed),
+and computes the status label ("✓ compiled" / "1 error, 2 warnings") and the jump target
+(`{path, from, to}`: earliest error in the shown file, else in another project file, else the
+same for warnings). `DiagnosticsStatus` renders it as a status bar below both panes; clicking the
+label, or a listed diagnostic of a project file, opens that file and reveals the range in the
+source view, switching to the Source tab. Hovering or focusing the label lists the shown file's
+messages (with hints), each jumping to its range. Every document's views get the diagnostics of
+their own path: the Source view as CodeMirror lint (underline + hover), the Visual view as the
+`diagnostics` highlight layer (wavy underline, message + hints as tooltip; raw code boxes in range
+are outlined, since inline decorations skip block atoms; an empty range marks one character).
+
+### `diffTexts` and "Show changes" (`src/features/changes`)
+
+```ts
+diffTexts(base, current) → [{fromA, toA, fromB, toB}]   // A = base, B = current; sorted, UTF-16
+```
+
+- The single text diff behind every "Show changes" rendering (the Source view's merge view runs
+  the same `@codemirror/merge` algorithm itself, for its accept/reject chunks).
+- **Cleanup for readers:** a change inside a word grows to the whole word; a change touching a
+  markup delimiter (`*`, `_`, heading `=`, list markers; Lezer tree of either text) grows to the
+  whole construct, so `*bold*` → `_bold_` is one change with unchanged visible text. Grown
+  ranges are mapped to the other text through the raw changes and merged when they touch.
+
+### Comments = margin notes (`src/features/comments`, `src/features/visual-view/nodes/margin-notes.ts`, `src/features/visual-view/notes-gutter`)
+
+Comments are [`drafting`](https://typst.app/universe/package/drafting/) margin notes in the
+Typst source itself (`@preview/drafting:0.2.2`): `#margin-note[note]` (point, at a cursor) and
+`#margin-note[text][note]` (range: drafting highlights `text`). There is no other comment store:
+the preview shows what the compiler draws, and git, diffs, undo and collaboration carry notes as
+ordinary text. No threads: a reply is more text in the note, resolving means deleting the call,
+and an author is whatever the note's text says. Hiding notes for the final output
+(`#set-margin-note-defaults(hidden: true)`) is up to the author.
+
+```ts
+// margin-note-syntax.ts: the only module that knows drafting's call syntax
+parseNoteCall(src) → {head, text?, note} | null     // head: `#margin-note` plus any `(..named)`
+printNoteCall({head, text?, note}) → string         // printNoteCall(parseNoteCall(src)) === src
+noteCallSyntax(source, funcCallNode) → {head, text: ContentBlock | null, note} | null   // in a parsed tree
+isNoteCallAt(source, from, to) → boolean            // one note call in markup from `#` to exactly `to`
+safeNote(markup) → string | null                    // markup that cannot end or swallow its call
+addMarginNote(text, {from, to}) → {changes: TextChange[], note} | null   // note: offset of the new (empty) body
+new CommentAction(root, () => {document, view: {selection(), reveal(), editNote?()}} | null)   .button  .comment()  .destroy()
+VisualView.editNote(offset) → boolean   // focuses the gutter card of the note whose source holds offset
+// visual-view/notes-gutter: the notes gutter
+new NotesGutter(body)   .plugin (add to the editor state)  .edit(offset) → boolean  .destroy()
+layoutCards([{anchor, height}], {gap, active?, top?}) → tops   // pure: cards beside anchors, no overlap
+findNotes(doc) / followNotes(prev, mapping, found, newKey) / setNoteText(tr, note, markup) / removeNote(tr, note)
+noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-list.ts, pure ProseMirror
+```
+
+- **Syntax** (`margin-note-syntax.ts`): a note is `#margin-note(..named)[note]` or
+  `#margin-note(..named)[text][note]` with no syntax errors, a non-empty one-paragraph `text`
+  and nothing after the last `]`; any other `margin-note` call is ordinary code. Projection,
+  the Visual view and `addMarginNote` all use this one definition.
+- **`addMarginNote`** (pure): a selection becomes `#margin-note[selection][]` if the result
+  is one note call in markup (`isNoteCallAt`); else (half of `*bold*`, two paragraphs) a
+  point note `#margin-note[]` at the selection's end; null where none fits (inside code). The
+  import is ensured exactly once: an existing top-level drafting import (any version) that ends
+  before the note is kept (`*`, or `margin-note` among its items) or extended (`, margin-note`
+  after its last item, also after a trailing comma; `: margin-note` on a bare module import);
+  else `#import "@preview/drafting:0.2.2": margin-note` goes first in the file (a drafting
+  import below the note would not bind the name where the note is).
+- **Page margins** (`page-margin.ts`, part of `addMarginNote`'s edits, same undo
+  step): drafting 0.2.2 crashes with "type relative length has no method `keys`" when the page
+  margin is a single length ([drafting.typ line 640](https://github.com/typst/packages/blob/main/packages/preview/drafting/0.2.2/drafting.typ#L640)
+  calls `page.margin.keys()` on anything but `auto`), and Typst turns uniform dictionaries
+  (`(rest: a)`, `(x: a, y: a)`) back into a length. So every top-level `#set page(.., margin: m)`
+  with such a literal `m` (a length, a sum of lengths, or a side dictionary with one value for
+  all four sides) becomes `margin: (right: R, rest: m)`: only the margin argument changes. R is
+  4cm (room for drafting's notes), or the next whole cm + 1 when `m` is an absolute length of
+  4cm or more (equal sides would be uniform again). `auto`, absent and non-uniform margins,
+  variables and spreads are never touched.
+- **`CommentAction`**: the widget's only comment UI — the "Comment" button and Ctrl/Cmd+Alt+M
+  (captured at the widget root). Works on the shown `.typ` file in the current view
+  (`EditingViews.shown()`), applies the edits as one `document.change`, then
+  `VisualView.editNote(note)` focuses the new note's card, or the Source view puts the caret into `[]`.
+- **Visual view, in the text** (`margin-notes.ts`): see `marginNote` / `noteRange` below. A point
+  note is a small marker (tooltip: its note), a range note's text is highlighted.
+- **Visual view, notes gutter** (`notes-gutter.ts`, like the comment sidebar of Google Docs or
+  Tiptap's comments): a column right of the text (`.typst-visual__body` holds the editor DOM and
+  the gutter; the column only shows while the document has notes) with a card per note, in
+  document order: the highlighted text (range notes), the note's markup in a multi-line text
+  area, and "Resolve note".
+  - Editing: Mod+Enter or leaving the field writes the markup back through `safeNote` (brackets
+    without a partner escaped, or all of it escaped as plain text if the markup would still
+    break the call) as one transaction (one undo step) setting the `note` attribute of the atom
+    or mark; everything else stays as written. Escape restores the field. Mod+Enter and Escape put
+    the text cursor after the note. Resolve deletes a point note's atom, or only the `noteRange`
+    mark of a range note (its text stays), one undo step.
+  - State: a ProseMirror plugin keeps the notes as a list (`note-list.ts`: `findNotes` on every
+    doc change, `followNotes` maps the previous notes through the transaction's mapping to keep
+    each note's key; a range note may change at one end). The plugin decorates every anchor with
+    `data-note-key` (node decoration on a marker, inline decoration over a range) plus
+    `--active` / `--hover` classes. The active note is the one at the cursor (innermost range
+    note, or a selected marker), a focused card's, or a clicked marker's; hover comes from the
+    anchor or the card. Cards are DOM outside ProseMirror, reconciled by key: an open card keeps
+    its field and the user's text while the document changes from elsewhere and saves into its
+    own note; a card whose note is gone saves nothing.
+  - Layout (`card-layout.ts`, pure): cards start at their anchor's top, pushed down below the
+    previous card (gap 8px); the active card stays at its anchor and cards above it move up (not
+    above the gutter's top). Measuring (anchor rects, card heights; all reads, then writes) runs
+    in one `requestAnimationFrame` after a doc change, an active-note change, typing in a card,
+    or a resize of the body or the text (`ResizeObserver`, which also covers loaded images; plus
+    captured `load` events). No measuring in the projection.
+  - Narrow (body narrower than 640px): no column; only the active note's card shows, as a
+    popover below its anchor.
+  - `editNote(offset)` finds the note in the document: a point note whose call holds `offset`, or
+    among range notes whose text ends at the same place (nested) the one whose `][note]` holds it,
+    makes it active and focuses its card.
+- **Source view**: plain Typst, no extra decoration.
+- Engine tests compile both forms against the real package (`src/core/typst-engine/fixtures/drafting-0.2.2`).
+- **Removed** with this design (it replaced the sidecar comments of docs/todo/comments.md):
+  `src/comments` (Comments, quote anchors, CommentsPanel, CommentsUI), `SharedComments` and the
+  Y.Doc `comments` map, `Preview.setMarkers` / `PreviewMarkers`, the widget options `comments` /
+  `onCommentsChange`, the `comments` getter/setter, the element's `.comments` and
+  `commentschange`, and the `CommentsData` / `TypstEditorCommentsChangeDetail` types.
+
+### Collaboration (`src/features/collaboration`, `src/features/versions`, `server/`)
 
 ```ts
 createTypstEditor(host, { …, user?: {name, color?},
@@ -745,7 +774,7 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
   syncing ProseMirror trees would bypass the projection (raw boxes, pristine source, Source
   view and preview all follow the text). So the sync stays text-based and only the *look* of the
   carets follows Tiptap / y-codemirror.
-- **Widget (`CollaborationLink`)**: `import()`s `src/collab` on demand (own chunk, ~37 kB gzip
+- **Widget (`CollaborationLink`)**: `import()`s `features/collaboration/collaboration.ts` on demand (own chunk, ~37 kB gzip
   with Yjs and the Hocuspocus provider), publishes the selection on `selectionchange` while focus
   is in the editing area, and moves the cursors along when another file is shown.
 - **Server (`server/`)**: `collabConfiguration({ storage?, database?, authenticate?, debounce?, gitlab?, extensions? })`
@@ -755,11 +784,11 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
   `sharedToken(TYPST_COLLAB_TOKEN)` allows all when unset. The server looks inside the Y.Doc
   only in GitLab rooms.
 
-#### GitLab-backed rooms (`server/src/gitlab`, `src/collab/room-versions.ts`, `shared-assets.ts`)
+#### GitLab-backed rooms (`server/src/gitlab`, `src/features/collaboration/room-versions.ts`, `shared-assets.ts`, `src/features/versions`)
 
 A room named `gitlab:<project id or path>@<branch>` is that branch (`parseRoomName`). The server
 config (`gitlab: {url, token, webhookSecret?, authorEmail?, fetch?}`, from `TYPST_GITLAB_*` in
-`main.ts`) holds the only GitLab token. Protocol (`src/collab/gitlab-protocol.ts`):
+`main.ts`) holds the only GitLab token. Protocol (`src/features/collaboration/gitlab-protocol.ts`):
 
 ```
 client → server  stateless {type:'gitlab:save', message?, author?: {name, email?}}
@@ -798,7 +827,7 @@ HTTP             GET /rooms/<room>/files/<path> (Authorization: Bearer <room tok
   stateless channel) and `SharedAssets` (assets ↔ project's other files; repository files
   fetched from the files endpoint, uploads as bytes; bytes → sha after a commit is not a
   change). `CollaborationLink` passes `versions` to the widget, which mounts `VersionControls`
-  (`src/editor/version-controls.ts`): "Save version" + commit-message popover + status line, and
+  (`src/features/versions/versions.ts`): "Save version" + commit-message popover + status line, and
   `ChangeTracking.setBase(base of main)` on every base change, so "Show changes" resets for
   everyone after a save.
 
@@ -828,9 +857,9 @@ an in-memory `FakeGitLab` holding `demo/examples/advanced`). Checklist with step
 
 | Task | What it does |
 |---|---|
-| `mise run build:engine` | `cargo build --target wasm32-unknown-unknown --release` + `wasm-bindgen --target web` + `wasm-opt -Oz --strip-debug` → `src/engine/wasm/`, prints raw/gzip/brotli size (skipped when the Rust sources are unchanged) |
-| `mise run build:fonts` | default fonts from the pinned typst-assets crate → `src/engine/fonts/` |
-| `mise run fixtures:packages` | packs `src/engine/fixtures/<name>-<version>/` into `.tar.gz` (committed) for package tests |
+| `mise run build:engine` | `cargo build --target wasm32-unknown-unknown --release` + `wasm-bindgen --target web` + `wasm-opt -Oz --strip-debug` → `src/core/typst-engine/wasm/`, prints raw/gzip/brotli size (skipped when the Rust sources are unchanged) |
+| `mise run build:fonts` | default fonts from the pinned typst-assets crate → `src/core/typst-engine/fonts/` |
+| `mise run fixtures:packages` | packs `src/core/typst-engine/fixtures/<name>-<version>/` into `.tar.gz` (committed) for package tests |
 | `mise run demo` | the playground: Vite (127.0.0.1:5199) + collaboration server with the in-memory fake GitLab (ws://127.0.0.1:1234); Ctrl-C stops both. Feature checklist: [docs/demo-playground.md](docs/demo-playground.md) |
 | `mise run dev` | Vite dev server for `demo/` on 127.0.0.1:5199 (Local mode needs nothing else) |
 | `mise run build` | engine + typecheck + static demo build → `dist/demo` |
@@ -842,7 +871,7 @@ an in-memory `FakeGitLab` holding `demo/examples/advanced`). Checklist with step
 | `mise run test:e2e-collab` | starts the server in memory, then the two-user Playwright spec (`tests/e2e/collab.spec.ts`; skipped by `test:e2e`) |
 | `mise run server:dev-fake-gitlab` | the playground server alone: plain rooms + GitLab rooms against an in-memory fake GitLab (`gitlab:demo/report@<any branch>`, the advanced example), playground endpoints |
 | `mise run test:e2e-gitlab` | starts that server, then the GitLab room Playwright spec (`tests/e2e/gitlab.spec.ts`; skipped by `test:e2e`) |
-| `mise run quality` / `quality:report` | complexity gate and hot-spot table (see `.claude/skills/code-quality`) |
+| `mise run quality` / `quality:report` | complexity gate, folder boundaries (ESLint `local/entry-imports`), top comments (`quality:top-comments`); hot-spot table (see `.claude/skills/code-quality`) |
 
 **Version pins** are all exact:
 - Typst 0.15.1: the Rust crates and the CLI in `mise.toml`.

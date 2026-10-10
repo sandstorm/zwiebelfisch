@@ -2,7 +2,7 @@
 
 Status: open
 Depends on: diff-rendering (done), multi-file-assets-packages
-Touches: src/editor/change-tracking.ts, src/preview/** (compile entry), src/engine/fixtures/**
+Touches: src/features/changes/**, src/features/preview/** (compile entry), src/core/typst-engine/fixtures/**
 
 ## Goal
 "Show changes" today marks the *editors* (Source/Visual) and draws change bars in the preview

@@ -58,10 +58,12 @@ Styles that must live inside the shadow root:
 - **CodeMirror** mounts its styles into the root node of the editor's parent. The view is created
   after its container is attached to the shadow root, so CodeMirror finds the shadow root without
   being told.
-- **Widget styles** (`src/editor/styles.css`): `createTypstEditor` injects them into
+- **Widget styles** (`src/typst-editor.css`, plus the feature styles
+  `src/features/changes/changes.css`): `createTypstEditor` injects them into
   `host.getRootNode()`, which is the shadow root here and `document.head` otherwise.
-- **ProseMirror** (visual view, planned) has no style mounting of its own. Its CSS has to go into
-  `styles.css` so that it ends up in the same place.
+- **ProseMirror** (Visual view) has no style mounting of its own. Its core CSS is vendored in
+  `src/features/visual-view/visual-view.css` and injected together with the widget styles, so it
+  ends up in the same place.
 
 Theming goes through the CSS custom properties on `.typst-editor` (`--te-border`, `--te-accent`, …).
 Custom properties inherit into shadow roots, so `typst-editor { --te-accent: rebeccapurple }` works.

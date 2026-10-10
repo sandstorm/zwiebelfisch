@@ -2,7 +2,7 @@
 
 Status: open
 Depends on: comments-drafting (shares the import helper and touches projection.ts; start after it is merged)
-Touches: src/visual-view/projection.ts, src/visual-view/extensions.ts, src/visual-view/toolbar.ts, a new src/visual-view/styles.ts (discovery), src/editor/** (wiring project files → VisualView), src/editor/styles.css, ARCHITECTURE.md, docs/embedding.md
+Touches: src/features/visual-view/projection/projection.ts, src/features/visual-view/nodes/nodes.ts, src/features/visual-view/toolbar/toolbar.ts, a new style discovery module in src/features/visual-view/, src/typst-editor/** (wiring project files → VisualView), src/typst-editor.css, ARCHITECTURE.md, docs/embedding.md
 
 ## Goal
 Users of the Visual view can apply their own paragraph and character styles. A style is a

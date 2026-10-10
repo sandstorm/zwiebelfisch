@@ -2,7 +2,7 @@
 
 Status: open (placement decided 2026-10-10; dockview spike done: adopt later, build the side panel by hand behind a Layout module)
 Depends on: restructure-src (lands in `features/inspector/`), comments-gutter (shares the right side)
-Touches: src/visual-view/** (selection → context), new features/inspector/, widget layout, toolbar (things move out of it)
+Touches: src/features/visual-view/** (selection → context), new src/features/inspector/, widget layout, toolbar (things move out of it)
 
 ## Goal (user, 2026-10-10)
 "We need some sidebar concept for the editor, which can edit non-visible things context-dependent
