@@ -1,4 +1,6 @@
 // End-to-end tests (Playwright, against the demo build): two users in one room (needs the collaboration server: mise run test:e2e-collab).
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { Browser, Page } from '@playwright/test';
 import { expect, serve, test } from './fixtures';
 
@@ -84,10 +86,45 @@ test('a caret on an empty line shows in the other user’s Source view', async (
 test('a margin note reaches the other user', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
   await ann.getByTestId('typst-visual').locator('strong', { hasText: 'bold' }).dblclick();
-  await ann.locator('.typst-editor__comment').click();
-  const field = ann.getByTestId('typst-note-card').getByRole('textbox', { name: 'Note' });
+  await ann.getByRole('toolbar', { name: 'Formatting' }).getByRole('button', { name: 'Comment' }).click();
+  const field = ann.getByTestId('typst-note-card').getByRole('textbox', { name: 'Comment' });
   await field.fill('Shared note');
   await field.press('ControlOrMeta+Enter');
-  await expect(bob.getByTestId('typst-note-card').getByRole('textbox', { name: 'Note' })).toHaveValue('Shared note');
+  await expect(bob.getByTestId('typst-note-card').locator('.typst-note-card__text')).toHaveText(['Shared note']);
   await expect(bob.getByTestId('typst-visual').locator('mark.typst-visual__note-range')).toHaveText('bold');
+});
+
+test('a reply from the other user: both see the thread in the card and in the PDF margin', async ({ browser, baseURL }, info) => {
+  const { ann, bob } = await users(browser, baseURL!, info.project.name);
+  // the package comes from the test fixture, not from packages.typst.org
+  const drafting = readFileSync(resolve(import.meta.dirname, '../../src/core/typst-engine/fixtures/drafting-0.2.2.tar.gz'));
+  for (const page of [ann, bob]) {
+    await page.route('https://packages.typst.org/preview/drafting-0.2.2.tar.gz', (route) => route.fulfill({ body: drafting, contentType: 'application/gzip' }));
+  }
+  await ann.getByTestId('typst-visual').locator('strong', { hasText: 'bold' }).dblclick();
+  await ann.keyboard.press('ControlOrMeta+Alt+KeyM');
+  const annField = ann.getByTestId('typst-note-card').getByRole('textbox', { name: 'Comment' });
+  await annField.fill('Is this right?');
+  await annField.press('ControlOrMeta+Enter');
+
+  const bobCard = bob.getByTestId('typst-note-card');
+  await expect(bobCard.locator('.typst-note-card__text')).toHaveText(['Is this right?']);
+  // Ann's message is not Bob's to edit
+  await expect(bobCard.getByRole('button', { name: 'Edit message' })).toHaveCount(0);
+  await bobCard.locator('.typst-note-card__head').click();
+  const bobField = bobCard.getByRole('textbox', { name: 'Reply' });
+  await bobField.fill('Yes, checked.');
+  await bobField.press('ControlOrMeta+Enter');
+
+  for (const page of [ann, bob]) {
+    const card = page.getByTestId('typst-note-card');
+    await expect(card.locator('.typst-note-card__author')).toHaveText(['Ann', 'Bob']);
+    await expect(card.locator('.typst-note-card__text')).toHaveText(['Is this right?', 'Yes, checked.']);
+    // drafting draws the note (both messages) in the page's right margin: the last 4cm of 16cm
+    await expect.poll(() => page.getByTestId('typst-preview').locator('.typst-preview__page svg').first().evaluate((svg) => {
+      const box = svg.getBoundingClientRect();
+      const margin = box.left + box.width * (1 - 4 / 16);
+      return [...svg.querySelectorAll('use')].filter((glyph) => glyph.getBoundingClientRect().left >= margin).length;
+    })).toBeGreaterThan(20);
+  }
 });
