@@ -489,7 +489,7 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     `#set page(..)`).
 - **References and labels** (`references/`, given the project's labels as `ProjectLabels`):
   - Reference chips show the label's name; `referenceHints` adds what it labels (`data-hint`,
-    "Section · Method", "Figure · <caption>", from `describeLabel`) or marks it
+    "Section · Method", "Figure · <caption>", from `describeLabel`) as a hover tooltip only or marks it
     `typst-visual__ref--unknown` (wavy, tooltip) when the project has no such label. Redrawn when
     the doc or the label list changes.
   - `labelTags`: a widget per labelled block — at the end of a textblock's text, below other

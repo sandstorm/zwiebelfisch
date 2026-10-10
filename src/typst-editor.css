@@ -257,7 +257,7 @@
 .typst-visual__note.typst-visual__note-anchor--hover,
 .typst-visual__note.typst-visual__note-anchor--active { background: var(--te-note-strong); box-shadow: 0 0 0 2px var(--te-note-line); }
 .typst-visual__note-icon { flex: none; }
-/* References (@key) as chips: the label, then what it labels (data-hint); a missing label underlined wavy */
+/* References (@key) as chips showing the label; what it labels is only in the hover tooltip (title); a missing label underlined wavy */
 .typst-visual__ref {
   display: inline-flex;
   align-items: baseline;
@@ -271,7 +271,6 @@
   white-space: nowrap;
   cursor: default;
 }
-.typst-visual__ref[data-hint]::after { content: attr(data-hint); color: #6e7781; }
 .typst-visual__ref-supplement { color: #24292f; }
 .typst-visual__ref--unknown { background: #fff1f0; color: #cf222e; text-decoration: underline wavy #cf222e; text-underline-offset: 3px; }
 /* Labels (<key>) as a tag on the block they label: in the text of headings and paragraphs, below other blocks */
