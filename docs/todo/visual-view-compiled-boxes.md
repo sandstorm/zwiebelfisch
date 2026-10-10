@@ -1,6 +1,6 @@
 # Visual view: compiled raw boxes and rendered images
 
-Status: open
+Status: done (branch task/visual-view-compiled-boxes)
 Depends on: visual-view-links-images-tables, multi-file-ui
 Touches: src/visual-view/raw-box.ts, src/visual-view/visual-view.ts (an option), src/preview (snippet compile), src/editor/typst-editor.ts (wiring)
 
@@ -27,3 +27,14 @@ math and an image from `files` showing rendered and switching to code on click.
 
 ## Out of scope
 Image resizing/cropping in the Visual view.
+
+## Outcome
+- Snippets are cut from the main document's compiled pages (no extra compile):
+  `Preview.snippet(path, from, to, text)` → `boxesForRanges` → page SVG with a cropped
+  `viewBox` (`src/preview/snippet.ts`). `boxesForRanges` now also returns shapes and images, so
+  fraction lines, rectangles and figure images are inside the crop (and get change bars).
+- `RenderedBox` (`src/visual-view/rendered-box.ts`) toggles picture/code on focus; the widget
+  provides `BoxRenderer` + `ImageAssets` through `ProjectRenderings` (`src/editor`).
+- "Insert image" lists the project's images and uploads new ones (through `allowFileChange`).
+- Tests: jsdom unit tests (`rendered-box.test.ts`, toolbar, `project-renderings.test.ts`,
+  `snippet.test.ts`, engine shapes test); Playwright `tests/e2e/visual-compiled-boxes.spec.ts`.
