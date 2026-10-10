@@ -1,7 +1,7 @@
 /**
  * A styled stretch of the source (UTF-16 offsets) that an editing view draws
- * over its text, e.g. a commented range. `attributes` are set on the marked
- * DOM, so clicks can be traced back (`data-comment-id`). Views follow edits
+ * over its text, e.g. another user's selection. `attributes` are set on the
+ * marked DOM (e.g. a style with the user's color). Views follow edits
  * with their highlights until the owner sets them again.
  */
 export interface Highlight {

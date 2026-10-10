@@ -45,16 +45,16 @@ describe('VisualView', () => {
     const source = '= Title\n\nSome *bold* text.\n';
     const { view, parent } = setup(source);
     const from = source.indexOf('bold');
-    view.setHighlights('comments', [{ from: from - 1, to: from + 5, className: 'note', attributes: { 'data-comment-id': 'a' } }]);
-    expect([...parent.querySelectorAll('.note[data-comment-id="a"]')].map((e) => e.textContent).join('')).toBe('bold');
-    view.setHighlights('comments', []);
+    view.setHighlights('cursors', [{ from: from - 1, to: from + 5, className: 'note', attributes: { 'data-user': 'a' } }]);
+    expect([...parent.querySelectorAll('.note[data-user="a"]')].map((e) => e.textContent).join('')).toBe('bold');
+    view.setHighlights('cursors', []);
     expect(parent.querySelector('.note')).toBeNull();
   });
 
   it('keeps highlights on their text through edits from elsewhere', () => {
     const source = 'Some bold text\n';
     const { doc, view, parent } = setup(source);
-    view.setHighlights('comments', [{ from: 5, to: 9, className: 'note' }]);
+    view.setHighlights('cursors', [{ from: 5, to: 9, className: 'note' }]);
     doc.setText(`Really. ${source}`, 'source');
     expect(parent.querySelector('.note')?.textContent).toBe('bold');
   });

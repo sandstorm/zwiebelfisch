@@ -70,18 +70,18 @@ const marked = (parent: HTMLElement, selector: string) =>
 describe('SourceView highlights', () => {
   it('marks highlighted ranges with class and attributes, per layer', () => {
     const { view, parent } = setup('Some bold text\n');
-    view.setHighlights('comments', [{ from: 5, to: 9, className: 'note', attributes: { 'data-comment-id': 'a' } }]);
+    view.setHighlights('cursors', [{ from: 5, to: 9, className: 'note', attributes: { 'data-user': 'a' } }]);
     view.setHighlights('diff', [{ from: 10, to: 14, className: 'added' }]);
-    expect(marked(parent, '.note[data-comment-id="a"]')).toEqual(['bold']);
+    expect(marked(parent, '.note[data-user="a"]')).toEqual(['bold']);
     expect(marked(parent, '.added')).toEqual(['text']);
-    view.setHighlights('comments', []);
+    view.setHighlights('cursors', []);
     expect(marked(parent, '.note')).toEqual([]);
     expect(marked(parent, '.added')).toEqual(['text']);
   });
 
   it('keeps highlights on their text through edits from elsewhere', () => {
     const { doc, view, parent } = setup('Some bold text\n');
-    view.setHighlights('comments', [{ from: 5, to: 9, className: 'note' }]);
+    view.setHighlights('cursors', [{ from: 5, to: 9, className: 'note' }]);
     doc.change([{ from: 0, to: 0, insert: 'Really. ' }], 'visual');
     expect(marked(parent, '.note')).toEqual(['bold']);
   });

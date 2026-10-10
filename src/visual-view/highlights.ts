@@ -10,7 +10,7 @@ type Layers = Record<string, DecorationSet>;
 const key = new PluginKey<Layers>('typst-highlights');
 
 /**
- * Highlights by layer (one per feature, e.g. comments) over the Visual view,
+ * Highlights by layer (one per feature, e.g. remote cursors) over the Visual view,
  * given in source offsets. Each layer is replaced as a whole and follows
  * edits until it is set again.
  */
