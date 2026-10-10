@@ -13,8 +13,9 @@ export class ToolbarMenu {
   readonly trigger: HTMLButtonElement;
   private readonly list: HTMLElement;
   private readonly glyph: HTMLElement;
+  /** Closes on a mousedown outside; the composed path sees through shadow roots (`<typst-editor>`). */
   private readonly outside = (event: MouseEvent) => {
-    if (!this.element.contains(event.target as Node)) this.close();
+    if (!event.composedPath().includes(this.element)) this.close();
   };
 
   constructor(

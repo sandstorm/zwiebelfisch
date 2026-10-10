@@ -60,3 +60,23 @@ describe('ToolbarMenu', () => {
     expect(menu.trigger.innerHTML).toContain('center');
   });
 });
+
+describe('ToolbarMenu in a shadow root (as in <typst-editor>)', () => {
+  it('a press on an item is not "outside": the item gets its click', () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = host.attachShadow({ mode: 'open' });
+    const chosen = vi.fn();
+    const choice = item('Insert image', chosen);
+    const menu = new ToolbarMenu(document, 'Insert', () => '', [choice]);
+    root.append(menu.element);
+    menu.trigger.click();
+    // the document sees the shadow host as the target; the composed path still holds the item
+    choice.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, composed: true }));
+    expect(menu.isOpen).toBe(true);
+    choice.click();
+    expect(chosen).toHaveBeenCalled();
+    host.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, composed: true }));
+    expect(menu.isOpen).toBe(false);
+  });
+});

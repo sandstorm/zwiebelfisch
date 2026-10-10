@@ -110,7 +110,7 @@ test('an included file links the files before and after it, at its start and its
 });
 
 test('"Create …" in the link tooltip of a missing file creates and opens it', async ({ page }) => {
-  await page.locator('typst-editor').evaluate((el: HTMLElement & { value: string }) => (el.value = '#include "appendix.typ"\n'));
+  await page.evaluate(() => ((window as unknown as { editor: { source: string } }).editor.source = '#include "appendix.typ"\n'));
   await page.getByRole('tab', { name: 'Source' }).click();
   await page.locator('[data-testid=typst-source]:visible .typst-source__path', { hasText: 'appendix.typ' }).hover();
   await page.locator('.cm-tooltip').getByRole('button', { name: 'Create appendix.typ' }).click();

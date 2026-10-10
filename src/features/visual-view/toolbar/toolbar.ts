@@ -207,9 +207,18 @@ export class Toolbar {
     // the text column: the floating bars scroll with the text
     const column = editor.view.dom.parentElement!;
     // bold, italic, code and link only float above a selection (or a link holding the cursor)
-    this.bubble = this.floatingBar(column, 'Selection', [...MARKS, link, ...(commenting ? [commenting] : [])], () =>
-      this.linkAtCaret || this.linkPopover.isOpen || hasTextSelection(editor) || editor.isActive('link') ? selectionCoords(editor) : null,
+    this.bubble = this.floatingBar(
+      column,
+      'Selection',
+      [...MARKS, link, ...(commenting ? [commenting] : [])],
+      () => (this.linkAtCaret || this.linkPopover.isOpen || hasTextSelection(editor) || editor.isActive('link') ? selectionCoords(editor) : null),
+      // its link popover takes the focus from the text: the bar (holding it) stays
+      () => this.linkPopover.isOpen,
     );
+    // Escape in the link popover: back to the text (the popover closed; the bar follows the text again)
+    this.bubble.element.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') editor.commands.focus();
+    });
     this.linkPopover = new FieldPopover(this.bubble.element, {
       label: 'Link',
       field: 'URL',
@@ -317,12 +326,15 @@ export class Toolbar {
     return this.root.querySelector<HTMLButtonElement>('button[aria-label="Insert"]')!;
   }
 
-  /** A bar of `actions` floating in `column` above `anchor()`, re-placed after every transaction. */
-  private floatingBar(column: HTMLElement, label: string, actions: Action[], anchor: () => Anchor): FloatingBar {
+  /**
+   * A bar of `actions` floating in `column` above `anchor()`, re-placed after every transaction;
+   * shown while the text has the focus, something in the bar has it, or `keep()` says so.
+   */
+  private floatingBar(column: HTMLElement, label: string, actions: Action[], anchor: () => Anchor, keep = () => false): FloatingBar {
     const bar = new FloatingBar(column, label, actions.map((action) => this.button(action)));
     this.floating.push(bar);
-    // shown while the text has the focus, or something in the bar (the link popover's field)
-    this.refreshers.push(() => bar.show(this.editor.isFocused || bar.element.contains(bar.element.ownerDocument.activeElement) ? anchor() : null));
+    const focused = () => this.editor.isFocused || bar.element.contains(bar.element.ownerDocument.activeElement) || keep();
+    this.refreshers.push(() => bar.show(focused() ? anchor() : null));
     bar.element.addEventListener('focusout', () => queueMicrotask(this.refresh));
     return bar;
   }
