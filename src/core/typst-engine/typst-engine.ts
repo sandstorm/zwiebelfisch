@@ -21,6 +21,12 @@ export interface Engine {
   setBinary(path: string, data: Uint8Array): void;
   remove(path: string): void;
   compile(main: string): CompileResult;
+  /**
+   * Compiles `main` and exports it as a PDF file (null if the document has
+   * errors). Does not replace the document of the last `compile`, which
+   * hit-testing uses, so `main` may be another entry than the preview's.
+   */
+  exportPdf(main: string): PdfResult;
   /** What is at a point of the last compiled document, or null for empty space. */
   jumpFromClick(page: number, x: number, y: number): Jump | null;
   /** Where the text at `offset` appears in the last compiled document. */
@@ -43,6 +49,14 @@ export interface CompileResult {
    * Imported packages (`@namespace/name:version`) of which the engine has no
    * files. Add their files and compile again; `withPackages` does that.
    */
+  missingPackages: string[];
+}
+
+export interface PdfResult {
+  /** The PDF file; null when compilation failed (see `diagnostics`). */
+  pdf: Uint8Array | null;
+  diagnostics: Diagnostic[];
+  /** As in `CompileResult`: add these packages and export again. */
   missingPackages: string[];
 }
 
@@ -116,6 +130,14 @@ export async function createEngine(
     setBinary: (path, data) => assertValidPath(engine.setBinary(path, data), path),
     remove: (path) => engine.remove(path),
     compile: (main) => JSON.parse(engine.compile(main)),
+    exportPdf: (main) => {
+      const exported = engine.exportPdf(main);
+      try {
+        return { pdf: exported.pdf() ?? null, ...JSON.parse(exported.report()) };
+      } finally {
+        exported.free();
+      }
+    },
     jumpFromClick: (page, x, y) => {
       const json = engine.jumpFromClick(page, x, y);
       return json === undefined ? null : JSON.parse(json);

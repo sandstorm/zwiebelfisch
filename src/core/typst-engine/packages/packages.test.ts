@@ -55,6 +55,24 @@ describe('withPackages', () => {
     expect(fetchPackage).toHaveBeenCalledTimes(1);
   });
 
+  it('downloads the packages of a PDF export too, and reports failed downloads there', async () => {
+    const bare = await createEngine(wasm, fonts);
+    const fetchPackage = vi.fn(async (spec: string) => {
+      if (spec === '@preview/greet:0.1.0') return greet;
+      throw new Error('offline');
+    });
+    const project = withPackages(bare, fetchPackage);
+    bare.setSource('/main.typ', doc);
+    const { pdf, diagnostics } = await project.exportPdf('/main.typ');
+    expect(diagnostics).toEqual([]);
+    expect(new TextDecoder().decode(pdf!.subarray(0, 5))).toBe('%PDF-');
+
+    bare.setSource('/main.typ', '#import "@preview/nope:1.0.0": x');
+    const failed = await project.exportPdf('/main.typ');
+    expect(failed.pdf).toBeNull();
+    expect(failed.diagnostics).toContainEqual(expect.objectContaining({ path: null, message: expect.stringMatching(/nope.*offline/) }));
+  });
+
   it('gives up on an archive without files instead of looping', async () => {
     const bare = await createEngine(wasm, fonts);
     const empty = new Uint8Array(new Uint8Array(await new Response(
