@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+#MISE description="Start the collaboration server with a fake GitLab, then run the GitLab room Playwright spec against the demo build"
+#MISE depends=["build"]
+set -euo pipefail
+node server/src/fake-gitlab-main.ts &
+server=$!
+trap 'kill "$server"' EXIT
+# wait until the server accepts connections (up to 10 s)
+for _ in $(seq 100); do
+  if (exec 3<>/dev/tcp/127.0.0.1/1234) 2>/dev/null; then break; fi
+  sleep 0.1
+done
+TYPST_GITLAB_E2E=1 pnpm exec playwright test tests/e2e/gitlab.spec.ts "$@"

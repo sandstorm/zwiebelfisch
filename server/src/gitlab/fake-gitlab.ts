@@ -29,6 +29,8 @@ export class FakeGitLab {
   readonly requests: string[] = [];
   /** Answer the next commit request with this error (a race with a push, a server error). */
   failNextCommit: { status: number; message: string; push?: Files } | null = null;
+  /** Branches nobody created yet start at `main` when first asked for (one fresh branch per e2e test). */
+  autoBranches = false;
   private readonly commits = new Map<string, Commit>();
   private readonly branches = new Map<string, string>();
   private counter = 0;
@@ -71,15 +73,18 @@ export class FakeGitLab {
     const path = url.pathname;
     const query = url.searchParams;
     let match: RegExpMatchArray | null;
-    if ((match = path.match(/^\/repository\/branches\/([^/]+)$/))) {
-      const sha = this.branches.get(decodeURIComponent(match[1]));
-      return sha ? json({ name: decodeURIComponent(match[1]), commit: { id: sha } }) : fail(404, '404 Branch Not Found');
-    }
+    if ((match = path.match(/^\/repository\/branches\/([^/]+)$/))) return this.branch(decodeURIComponent(match[1]));
     if (path === '/repository/tree') return this.tree(query);
     if ((match = path.match(/^\/repository\/files\/([^/]+)$/))) return this.file(decodeURIComponent(match[1]), query.get('ref')!);
     if ((match = path.match(/^\/repository\/blobs\/([0-9a-f]+)\/raw$/))) return this.blob(match[1]);
     if (path === '/repository/commits' && method === 'POST') return this.commit(JSON.parse(body ?? '{}'));
     return fail(404, '404 Not Found');
+  }
+
+  private branch(name: string): Response {
+    if (!this.branches.has(name) && this.autoBranches) this.branches.set(name, this.branches.get('main')!);
+    const sha = this.branches.get(name);
+    return sha ? json({ name, commit: { id: sha } }) : fail(404, '404 Branch Not Found');
   }
 
   private resolve(ref: string): Commit | undefined {
