@@ -4,20 +4,24 @@ import type { Node } from '@tiptap/pm/model';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../../core/paths/paths';
 import type { Style } from '../model/discover';
+import type { ProjectStyles } from '../model/style-index';
 import { print, project as projectWith } from '../../../hosts/projection/projection';
 import { after, edit, expectPreciseMap, find, schemaWith } from '../../../testing/testing';
 import { customStyles } from './visual-view';
 
 const style = (name: string, kind: Style['kind'], label: string): Style => ({ name, kind, label, path: ProjectPath.of('/styles.typ') });
+/** A project's styles that are `list`, never changing. */
+function declaring(list: Style[]): ProjectStyles {
+  return { styles: () => list, onDidChange: new EventEmitter<void>().event, calculateImportChange: () => null };
+}
+
 const STYLES = [style('note', 'paragraph', 'Note'), style('callout', 'paragraph', 'Callout'), style('key', 'text', 'Keyword')];
 
 /** The schema of a view whose project declares `STYLES`. */
-const schema = schemaWith({
-  contributions: [customStyles({ styles: { styles: () => STYLES, onDidChange: new EventEmitter<void>().event, calculateImportChange: () => null } })],
-});
+const schema = schemaWith({ contributions: [customStyles({ styles: declaring(STYLES), create: () => {} })] });
 
 /** The schema of a view whose project declares no styles. */
-const withoutStyles = schemaWith({ contributions: [customStyles()] });
+const withoutStyles = schemaWith({ contributions: [customStyles({ styles: declaring([]), create: () => {} })] });
 
 const project = (source: string): Node => projectWith(source, schema);
 

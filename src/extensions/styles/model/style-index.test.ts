@@ -1,8 +1,8 @@
-// Tests for style-index.ts (StyleIndex) and new-style.ts.
+// Tests for style-index.ts (StyleIndex) and new-style.ts (calculateNewStyleChange).
 import { describe, expect, it, vi } from 'vitest';
 import { Project } from '../../../core/project/project';
 import { scanStyles } from './discover';
-import { newStyle } from './new-style';
+import { calculateNewStyleChange } from './new-style';
 import { StyleIndex } from './style-index';
 import { ProjectPath } from '../../../core/paths/paths';
 
@@ -17,6 +17,19 @@ function setup(files: Record<string, string> = {}) {
 }
 
 describe('StyleIndex', () => {
+  it('collects the styles of every Typst file, with the file they are declared in, in the project\'s order', () => {
+    const project = new Project(path('/main.typ'), {
+      '/main.typ': '= Doc\n',
+      '/styles.typ': STYLES,
+      '/more/terms.typ': '/// @style text Term\n#let term(body) = emph(body)\n',
+      '/logo.png': new Uint8Array([1]),
+    });
+    expect(new StyleIndex(project).styles().map((s) => [s.name, s.path])).toEqual([
+      ['term', '/more/terms.typ'],
+      ['note', '/styles.typ'],
+    ]);
+  });
+
   it('lists the project styles and tells listeners when the list changes, not on every edit', () => {
     const { project, index } = setup();
     expect(index.styles()).toEqual([{ name: 'note', kind: 'paragraph', label: 'Note', path: path('/styles.typ') }]);
@@ -57,7 +70,13 @@ describe('StyleIndex.homeFile (where New style… adds one)', () => {
   });
 });
 
-describe('newStyle', () => {
+/** `text` with the new style appended, and where its definition is. */
+function newStyle(text: string, label?: string): { text: string; from: number; to: number } {
+  const { change, definition } = calculateNewStyleChange(text, label);
+  return { text: text.slice(0, change.from) + change.insert + text.slice(change.to), ...definition };
+}
+
+describe('calculateNewStyleChange', () => {
   it('appends a declared paragraph style with a free name, and says where it is', () => {
     const first = newStyle('');
     expect(scanStyles(first.text)).toEqual([{ name: 'new-style', kind: 'paragraph', label: 'New style' }]);

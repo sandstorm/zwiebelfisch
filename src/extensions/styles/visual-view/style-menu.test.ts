@@ -7,6 +7,7 @@ import { calculateImportChange } from '../../../core/typst-syntax/typst-syntax';
 import type { ProjectStyles } from '../model/style-index';
 import type { Style } from '../model/discover';
 import { createVisualView } from '../../../testing/testing';
+import { VisualView, VisualViewContributions } from '../../../hosts/visual-view/visual-view';
 import { ProjectPath } from '../../../core/paths/paths';
 import { customStyles } from './visual-view';
 
@@ -19,7 +20,7 @@ Range.prototype.getBoundingClientRect = () => new DOMRect();
 const NOTE: Style = { name: 'note', kind: 'paragraph', label: 'Note', path: path('/styles.typ') };
 const KEY: Style = { name: 'key', kind: 'text', label: 'Keyword', path: path('/styles.typ') };
 
-function setup(text: string, initial: Style[] = [NOTE, KEY], create?: () => void) {
+function setup(text: string, initial: Style[] = [NOTE, KEY], create = () => {}) {
   let list = initial;
   const changed = new EventEmitter<void>();
   const styles: ProjectStyles = {
@@ -61,8 +62,8 @@ describe('custom styles in the text style menu', () => {
     expect(doc.text).toBe('Hello world\n');
   });
 
-  it('lists the paragraph and the text styles after the headings, and New style… when it can create one', () => {
-    const { menu, labels } = setup('Text\n', [NOTE, KEY], () => {});
+  it('lists the paragraph and the text styles after the headings, and New style…', () => {
+    const { menu, labels } = setup('Text\n', [NOTE, KEY]);
     expect(labels()).toEqual([['Paragraph styles', 'Note'], ['Text styles', 'Keyword']]);
     expect([...menu.options].map((o) => o.value)).toEqual(['paragraph', 'heading-1', 'heading-2', 'heading-3', 'paragraph:note', 'text:key', 'new-style']);
   });
@@ -115,5 +116,16 @@ describe('custom styles in the text style menu', () => {
     const { choose } = setup('Text\n', [NOTE], create);
     choose('new-style');
     expect(create).toHaveBeenCalled();
+  });
+});
+
+describe('the text style menu without headings', () => {
+  it('offers normal text and the styles, but no heading levels, when no extension contributes headings', () => {
+    const styles: ProjectStyles = { styles: () => [NOTE], onDidChange: new EventEmitter<void>().event, calculateImportChange: () => null };
+    const contributions = VisualViewContributions.from([customStyles({ styles, create: () => {} })]);
+    const parent = document.body.appendChild(document.createElement('div'));
+    new VisualView(parent, new TypstDocument('Text\n'), contributions);
+    const menu = parent.querySelector<HTMLSelectElement>('select[aria-label="Text style"]')!;
+    expect([...menu.options].map((o) => o.value)).toEqual(['paragraph', 'paragraph:note', 'new-style']);
   });
 });

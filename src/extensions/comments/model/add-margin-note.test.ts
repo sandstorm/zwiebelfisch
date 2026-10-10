@@ -1,7 +1,7 @@
 // Tests for add-margin-note.ts.
 import { describe, expect, it } from 'vitest';
 import type { TextChange } from '../../../core/typst-document/typst-document';
-import { addMarginNote, NOTE_STYLE } from './add-margin-note';
+import { calculateMarginNoteChanges, NOTE_STYLE } from './add-margin-note';
 
 /** What a file without drafting gets at the top with its first note. */
 const IMPORT = `#import "@preview/drafting:0.2.2": margin-note, set-margin-note-defaults\n${NOTE_STYLE}`;
@@ -14,13 +14,13 @@ function apply(text: string, changes: readonly TextChange[]): string {
 
 /** The text after adding a note at `from..to`, with `|` where the note's body starts. */
 function noted(text: string, from: number, to = from): string {
-  const result = addMarginNote(text, { from, to });
+  const result = calculateMarginNoteChanges(text, { from, to });
   if (!result) return 'null';
   const after = apply(text, result.changes);
   return `${after.slice(0, result.note)}|${after.slice(result.note)}`;
 }
 
-describe('addMarginNote', () => {
+describe('calculateMarginNoteChanges', () => {
   it('inserts a point note at a collapsed cursor and the import at the top', () => {
     expect(noted('Hello world\n', 5)).toBe(`${IMPORT}Hello#margin-note[|] world\n`);
   });
@@ -119,10 +119,10 @@ describe('addMarginNote', () => {
   });
 });
 
-describe('addMarginNote and page margins (drafting 0.2.2 fails on a single-length margin)', () => {
+describe('calculateMarginNoteChanges and page margins (drafting 0.2.2 fails on a single-length margin)', () => {
   /** The text after adding a point note at the end of `text`. */
   function withNote(text: string): string {
-    const result = addMarginNote(text, { from: text.length, to: text.length })!;
+    const result = calculateMarginNoteChanges(text, { from: text.length, to: text.length })!;
     return apply(text, result.changes);
   }
   const page = (args: string) => `#set page(${args})\nText`;

@@ -147,8 +147,8 @@ src/                        the widget (TypeScript); the most important API on t
                             print, validity; note-thread.ts: a note's body as a thread of messages; add-margin-note.ts,
                             page-margin.ts, without-notes.ts: the sources without comments; card-layout.ts);
                             visual-view/ (marginNotes: notes in the text + the Comment action; notes-gutter/: the cards);
-                            workbench/ (CommentAction, the command comments.addComment, Ctrl+Alt+M, its editor/title
-                            entry in the Source tab); preview/
+                            workbench/ (registerAddComment: the command comments.addComment, Ctrl+Alt+M, its
+                            editor/title entry in the Source tab); preview/
                             (registerIncludeComments: the PDF export option `comments.include`)
     collaboration/          collaboration.ts (eager: the extension), collaboration-link.ts (CollaborationLink: loads
                             model/ on demand), remote-origin.ts (REMOTE_ORIGIN, eager); presence/ (Presence,
@@ -1271,7 +1271,7 @@ new LabelIndex(project)        // implements ProjectLabels (what the Visual view
 labelChoices(labels, query) / describeLabel(label)   // the @ list's choices, "Section · Method"
 referenceSyntax / labelName / LABEL_CHAR / guardAfterReference(supplement, text)   // Typst's syntax
 // visual-view/
-references({ labels? }): VisualViewContribution   // the `reference` node spec, label tags, the @ list, hints, "Add label"
+references({ labels, prompts }): VisualViewContribution   // the `reference` node spec, label tags, the @ list, hints, "Add label"
 ```
 
 - **Why one extension:** labels and references span files, so the read model follows the whole project
@@ -1303,7 +1303,6 @@ references({ labels? }): VisualViewContribution   // the `reference` node spec, 
   (`labelChoices`: name prefix, then name, then title matches; at most 8) below it, inside `.typst-visual__body`.
   ArrowUp/Down, Enter/Tab or a click insert the chip in place of `@query`; Escape dismisses that `@`. Typing a
   space or punctuation right after the whole name of a label (`@intro `) inserts the chip as well.
-- Without `labels` (tests): tags only (rename and remove of the label itself).
 
 ### Custom styles (`src/extensions/styles`)
 
@@ -1325,10 +1324,10 @@ new StyleIndex(project)        // implements ProjectStyles (what the Visual view
 .styles() → Style[] (+ path)   .onDidChange: Event<void>   .homeFile()   .dispose()
 .calculateImportChange(document, style, use) → TextChange | null   // relative to the document's path; null in the declaring file
 calculateImportChange(text, { name, matches(module), create(), use? }) → TextChange | null   // core/typst-syntax
-newStyle(text, label = 'New style') → { text, from, to }   // "New style…": `styleName(label)`, numbered if taken
-styleName(label) → string   // `Side box` → `side-box`; starts with a letter (`style-2-columns`)
+calculateNewStyleChange(text, label = 'New style') → { change, definition: { from, to } }   // "New style…"'s stub:
+                               // named after the label (`Side box` → `side-box`, `style-2-columns`), numbered if taken
 // visual-view/
-customStyles({ styles?, create? }): VisualViewContribution   // styledBlock + style mark specs, the text style menu
+customStyles({ styles, create }): VisualViewContribution   // styledBlock + style mark specs, the text style menu
 ```
 
 - **Projection:** the specs project the declared styles (`blockCalls['*']`, `inlineCalls`, from
@@ -1644,7 +1643,7 @@ printNoteCall({head, text?, note}) → string         // printNoteCall(parseNote
 noteCallSyntax(source, funcCallNode) → {head, text: ContentBlock | null, note} | null   // in a parsed tree
 isNoteCallAt(source, from, to) → boolean            // one note call in markup from `#` to exactly `to`
 safeNote(markup) → string | null                    // markup that cannot end or swallow its call
-addMarginNote(text, {from, to}) → {changes: TextChange[], note} | null   // note: offset of the new (empty) body
+calculateMarginNoteChanges(text, {from, to}) → {changes: TextChange[], note} | null   // note: offset of the new (empty) body
 NOTE_STYLE                                          // the set-margin-note-defaults(..) call added with a new import
 withoutNotes(files, main) → PdfEntry                // the PDF without comments: entry + replaced/added .typ texts
 // note-thread.ts: the only module that knows the thread format (all on the note's markup)
@@ -1660,7 +1659,6 @@ comments(): TypstExtension   // signs as Workbench.user; registerAddComment + re
 // workbench/
 registerAddComment(workbench, cards: { editNote(document, offset) }) → Disposable
                                      // command comments.addComment, Mod+Alt+KeyM, the Source view's tab-bar button
-new CommentAction(doc, () => {document, view: {selection(), reveal(), editNote?()}} | null)   .button  .comment()  .destroy()
 
 // preview/
 registerIncludeComments(preview, project) → Disposable
@@ -1668,11 +1666,10 @@ registerIncludeComments(preview, project) → Disposable
                                      // project's files overlaid with the entry's sources; on → the entry as it is
 
 // visual-view/
-marginNotes({ comment? }) → VisualViewContribution  // marginNote + noteRange specs; "Comment" in the toolbar and
+marginNotes({ comment }) → VisualViewContribution    // marginNote + noteRange specs; "Comment" in the toolbar and
                                      // the selection's bar (runs comments.addComment)
 notesGutter({user?}) → { activate, editNote(document, offset) → boolean }   // registers a gutter per Visual view;
                                      // editNote focuses the reply box in the card of the note whose source holds offset
-new NotesGutter(body, {user?})   .plugin (add to the editor state)  .edit(offset) → boolean  .destroy()
 findNotes(doc) / followNotes(prev, mapping, found, newKey) / setNoteText(tr, note, markup) / removeNote(tr, note)
 noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-list.ts, pure ProseMirror
 ```
@@ -1680,8 +1677,8 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
 - **Syntax** (`margin-note-syntax.ts`): a note is `#margin-note(..named)[note]` or
   `#margin-note(..named)[text][note]` with no syntax errors, a non-empty one-paragraph `text`
   and nothing after the last `]`; any other `margin-note` call is ordinary code. Projection,
-  the Visual view and `addMarginNote` all use this one definition.
-- **`addMarginNote`** (pure): a selection becomes `#margin-note[selection][]` if the result
+  the Visual view and `calculateMarginNoteChanges` all use this one definition.
+- **`calculateMarginNoteChanges`** (pure): a selection becomes `#margin-note[selection][]` if the result
   is one note call in markup (`isNoteCallAt`). Bold or italic text the selection starts or
   ends with goes in whole, delimiters included (`bold` in `*bold*` → `#margin-note[*bold*][]`):
   the Visual view maps a selected bold word to the text between the stars, and prints a range
@@ -1700,7 +1697,7 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
   (`docs/images/notes-pdf-*.png`). Only with an import the editor adds, and only if the file
   does not mention `set-margin-note-defaults` already (a file's own style stays; never two calls).
   The call is global state from where it stands on, like any drafting default.
-- **Page margins** (`page-margin.ts`, part of `addMarginNote`'s edits, same undo
+- **Page margins** (`page-margin.ts`, part of `calculateMarginNoteChanges`'s edits, same undo
   step): drafting 0.2.2 crashes with "type relative length has no method `keys`" when the page
   margin is a single length ([drafting.typ line 640](https://github.com/typst/packages/blob/main/packages/preview/drafting/0.2.2/drafting.typ#L640)
   calls `page.margin.keys()` on anything but `auto`), and Typst turns uniform dictionaries
@@ -1733,7 +1730,7 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
   (`/.without-comments.typ`, or `-2`, … if taken) with `set-margin-note-defaults(hidden: true)`
   and `#include "<main>"` for notes written other ways (`margin-note.with(..)`, calls in code).
   Engine test: the result draws exactly the glyphs of the plain text.
-- **`CommentAction`** (`workbench/`): "Comment" and Ctrl/Cmd+Alt+M (the command
+- **"Comment"** (`workbench/`): "Comment" and Ctrl/Cmd+Alt+M (the command
   `comments.addComment`, bound with `registerKeybinding`: captured at the widget root). The Visual
   view's toolbar has the button (`marginNotes({ comment })` runs the command);
   the tab bar has it for the Source view only (an `editor/title` menu entry with `when: editorMode ===
@@ -1784,7 +1781,7 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
 - Tests: `model/note-thread.test.ts` (format, round trips, escaping, concurrent replies over Y.Docs),
   `visual-view/margin-notes.test.ts` (projection, printing, the toolbar action),
   `visual-view/notes-gutter/notes-gutter.test.ts` (cards and threads in jsdom), `preview/preview.test.ts` (the PDF
-  export option), `workbench/comment-action.test.ts`.
+  export option), `workbench/workbench.test.ts` (the command).
 - Engine tests (`model/drafting.test.ts`) compile both note forms, both thread layouts, page margins and the
   sources without notes against the real package (`src/extensions/comments/model/fixtures/drafting-0.2.2`).
 - **Removed** with this design (it replaced the sidecar comments of docs/todo/comments.md):

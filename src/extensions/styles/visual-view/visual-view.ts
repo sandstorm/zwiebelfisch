@@ -1,6 +1,5 @@
 // Custom styles in the Visual view: declared paragraph styles as styled blocks (`#note[..]`), text styles as a
-// mark (`#key[..]`), and the text style menu. See ARCHITECTURE.md,
-// "Custom styles".
+// mark (`#key[..]`), and the text style menu. See ARCHITECTURE.md, "Custom styles".
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node } from '@tiptap/pm/model';
 import { children, isClosedContent, parenthesized } from '../../../core/typst-syntax/typst-syntax';
@@ -12,10 +11,10 @@ import { StyleMenu } from './style-menu';
 import { StyledBlock, StyleMark } from './style-nodes';
 
 export interface StylesOptions {
-  /** The project's styles: their calls show as styled, editable text (default: such calls stay raw boxes). */
-  styles?: ProjectStyles;
-  /** "New style…" in the text style menu (default: no such entry). */
-  create?(): void;
+  /** The project's styles: their calls show as styled, editable text. */
+  styles: ProjectStyles;
+  /** "New style…" in the text style menu. */
+  create(): void;
 }
 
 /** The origin of the import a newly applied style adds to the document. */
@@ -30,10 +29,10 @@ const STYLE_IMPORT = 'style-import';
  * text, headings 1–3, the project's styles, "New style…") applies them,
  * importing a style where it is now used.
  */
-export function customStyles(options: StylesOptions = {}): VisualViewContribution {
+export function customStyles(options: StylesOptions): VisualViewContribution {
   const declared = declaredStyles(options.styles);
   // a style declared or removed: every view projects its document again
-  const onDidChange = options.styles?.onDidChange;
+  const onDidChange = options.styles.onDidChange;
   return {
     id: 'styles',
     activate({ visualView, subscriptions }) {
@@ -53,11 +52,11 @@ export function customStyles(options: StylesOptions = {}): VisualViewContributio
 type Declared = ReadonlyMap<string, { kind: 'paragraph' | 'text'; label: string }>;
 
 /** The declared styles by function name, as of now (made anew when the list changes). */
-function declaredStyles(source: ProjectStyles | undefined): () => Declared {
+function declaredStyles(source: ProjectStyles): () => Declared {
   let list: readonly Style[] | null = null;
   let map: Declared = new Map();
   return () => {
-    const current = source?.styles() ?? [];
+    const current = source.styles();
     if (current !== list) {
       list = current;
       map = new Map(current.map((style) => [style.name, { kind: style.kind, label: style.label }]));
@@ -121,7 +120,7 @@ function styleCall(p: ProjectionContext, { node, name, args }: Call, marks: read
 /** The text style menu of one view: applying a style imports it into the view's document where needed. */
 function styleMenu(toolbar: ToolbarContext, { styles: source, create }: StylesOptions): ToolbarControl {
   const { document } = toolbar;
-  const menuStyles = source && {
+  const menuStyles = {
     styles: () => source.styles(),
     onDidChange: source.onDidChange,
     applied: (style: Style) => {

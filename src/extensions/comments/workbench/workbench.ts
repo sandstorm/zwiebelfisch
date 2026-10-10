@@ -1,10 +1,9 @@
 // What the comments extension contributes to the frame: the command that adds a note, its key binding and the
-// Source view's "Comment" (a tab bar menu entry). See ARCHITECTURE.md,
-// "Comments = margin notes".
+// Source view's "Comment" (a tab bar menu entry). See ARCHITECTURE.md, "Comments = margin notes".
 import { Disposable } from '../../../core/disposable/disposable';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
-import type { Workbench } from '../../../hosts/workbench/workbench';
-import { CommentAction, type NoteTarget } from './comment-action';
+import type { TextEditor, Workbench } from '../../../hosts/workbench/workbench';
+import { calculateMarginNoteChanges } from '../model/add-margin-note';
 
 /** The command that adds a margin note at the selection of the view the user works in. */
 export const ADD_COMMENT = 'comments.addComment';
@@ -15,18 +14,23 @@ export interface NoteCards {
   editNote(document: TypstDocument, offset: number): boolean;
 }
 
+/** What "Comment" uses of the workbench: where to register, and the editor the user works in. */
+export type CommentWorkbench = Pick<Workbench, 'registerCommand' | 'registerKeybinding' | 'registerMenuItem' | 'activeTextEditor'>;
+
 const COMMENT_ICON =
   '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"/></svg>';
 
 /**
  * "Comment" in the frame: the command `comments.addComment` adds a note in the active editor, Ctrl/Cmd+Alt+M runs
  * it, and the tab bar (menu `editor/title`) offers it in the Source tab (the Visual view has "Comment" in its own
- * toolbar). A note added in the Visual tab opens its card; in the Source tab the caret goes into the new note.
+ * toolbar).
  */
-export function registerAddComment(workbench: Workbench, cards: NoteCards): Disposable {
-  const action = new CommentAction(activeNoteTarget(workbench, cards));
+export function registerAddComment(workbench: CommentWorkbench, cards: NoteCards): Disposable {
   return Disposable.from(
-    workbench.registerCommand(ADD_COMMENT, () => action.comment()),
+    workbench.registerCommand(ADD_COMMENT, () => {
+      const editor = workbench.activeTextEditor;
+      if (editor) addComment(editor, cards);
+    }),
     workbench.registerKeybinding('Mod+Alt+KeyM', ADD_COMMENT),
     workbench.registerMenuItem('editor/title', {
       command: ADD_COMMENT,
@@ -38,19 +42,15 @@ export function registerAddComment(workbench: Workbench, cards: NoteCards): Disp
   );
 }
 
-/** Where "Comment" adds a note: the active editor; in its Visual tab, the new note's card opens. */
-function activeNoteTarget(workbench: Workbench, cards: NoteCards): NoteTarget {
-  return () => {
-    const editor = workbench.activeTextEditor;
-    if (!editor) return null;
-    const { document } = editor;
-    return {
-      document,
-      view: {
-        selection: () => editor.selection,
-        reveal: (from, to) => editor.revealRange(from, to),
-        editNote: editor.mode === 'visual' ? (offset) => cards.editNote(document, offset) : undefined,
-      },
-    };
-  };
+/**
+ * Adds a `drafting` margin note at the editor's selection, in the document's own Typst (`#margin-note[selection][]`,
+ * or `#margin-note[]` at a caret, plus the import), and puts the cursor into it: in the Visual tab the new note's card
+ * opens, in the Source tab the caret goes between its `[]`. Nothing happens where no note fits.
+ */
+function addComment(editor: TextEditor, cards: NoteCards): void {
+  const { document } = editor;
+  const added = calculateMarginNoteChanges(document.text, editor.selection);
+  if (!added) return;
+  document.change(added.changes, ADD_COMMENT);
+  if (editor.mode !== 'visual' || !cards.editNote(document, added.note)) editor.revealRange(added.note, added.note);
 }

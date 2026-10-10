@@ -26,7 +26,8 @@ function referenceQuery(state: EditorState): ReferenceQuery | null {
   const match = TYPED_REFERENCE.exec(before);
   if (!match) return null;
   const from = $pos.pos - match[1].length - 1;
-  if (state.doc.rangeHasMark(from, from + 1, schema.marks.code)) return null;
+  // inline code (the markup extension's mark, where there is one)
+  if (schema.marks.code && state.doc.rangeHasMark(from, from + 1, schema.marks.code)) return null;
   return { from, to: $pos.pos, query: match[1] };
 }
 

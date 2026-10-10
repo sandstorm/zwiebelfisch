@@ -13,13 +13,13 @@ import type { Around, Call, Placed, Printer, ProjectionContext } from '../../../
 import { codeBlockView } from './code-block-view';
 import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from '../model/raw-code';
 
-/** Tiptap's bold, italic, link and blockquote (StarterKit's), configured for Typst. */
-const StarterParts = starterKitPart('typstMarkup', {
-  bold: {},
-  italic: {},
-  blockquote: { HTMLAttributes: { class: 'typst-visual__quote' } },
+/** Tiptap's bold, italic, link and blockquote (StarterKit's), configured for Typst: each spec brings its own. */
+const Bold = starterKitPart('typstBold', { bold: {} });
+const Italic = starterKitPart('typstItalic', { italic: {} });
+const Link = starterKitPart('typstLink', {
   link: { openOnClick: false, autolink: false, HTMLAttributes: { class: 'typst-visual__link', target: null, rel: null } },
 });
+const Blockquote = starterKitPart('typstBlockquote', { blockquote: { HTMLAttributes: { class: 'typst-visual__quote' } } });
 
 /**
  * Inline raw text (`code`). Unlike Tiptap's code mark it combines with other
@@ -65,12 +65,14 @@ function delimited(markName: string) {
 
 export const BOLD: TypstMarkSpec = {
   name: 'bold',
+  extension: Bold,
   inlineSyntax: { Strong: delimited('bold') },
   print: (_mark, around) => delimitedSyntax('*', 'strong', around),
 };
 
 export const ITALIC: TypstMarkSpec = {
   name: 'italic',
+  extension: Italic,
   inlineSyntax: { Emph: delimited('italic') },
   print: (_mark, around) => delimitedSyntax('_', 'emph', around),
 };
@@ -89,6 +91,7 @@ const BARE_URL = /^https?:\/\/[\w\-.~:/?#@!$&'*+,;=%]*[\w\-~/#@$&+=%]$/;
  */
 export const LINK: TypstMarkSpec = {
   name: 'link',
+  extension: Link,
   inlineSyntax: { Link: (p, node, marks) => p.schema.text(p.text(node), p.schema.marks.link.create({ href: p.text(node) }).addToSet(marks)) },
   inlineCalls: [{ matches: (_p, call) => call.name === 'link', project: linkCall }],
   print: (mark) => ({ open: `#link(${quote(mark.attrs.href)})[`, close: ']' }),
@@ -179,8 +182,7 @@ const NEW_QUOTE: QuoteLayout = { open: '#quote(block: true)[', close: ']' };
  */
 export const BLOCKQUOTE: TypstNodeSpec = {
   name: 'blockquote',
-  // also bold, italic and link
-  extension: StarterParts,
+  extension: Blockquote,
   attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } },
   anchors: ['layout'],
   labelled: true,

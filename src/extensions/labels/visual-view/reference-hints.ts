@@ -3,6 +3,7 @@
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import { ProjectPath } from '../../../core/paths/paths';
 import { describeLabel } from '../model/label-choices';
 import type { LabelInfo, ProjectLabels } from '../model/label-index';
 
@@ -53,7 +54,7 @@ function hints(doc: Node, labels: readonly LabelInfo[]): DecorationSet {
 
 function known(label: LabelInfo): Record<string, string> {
   const hint = describeLabel(label);
-  const where = `in ${label.path.replace(/^\//, '')}`;
+  const where = `in ${ProjectPath.displayName(label.path)}`;
   return hint ? { 'data-hint': hint, title: `${hint} (${where})` } : { title: `<${label.name}> ${where}` };
 }
 

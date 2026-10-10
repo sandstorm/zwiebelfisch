@@ -6,7 +6,7 @@ import { print } from '../../../../hosts/projection/projection';
 import { after, project as projectWith, schemaWith } from '../../../../testing/testing';
 import { marginNotes } from '../margin-notes';
 
-const schema = schemaWith({ contributions: [marginNotes()] });
+const schema = schemaWith({ contributions: [marginNotes({ comment: () => {} })] });
 const project = (source: string) => projectWith(source, schema);
 
 const SOURCE = 'A #margin-note[key claim][first] and b#margin-note[second].\n\n#margin-note[#margin-note[x][inner]][outer] y\n';

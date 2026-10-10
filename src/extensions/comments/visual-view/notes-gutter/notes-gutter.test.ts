@@ -2,7 +2,7 @@
 // Tests for notes-gutter.ts and note-card.ts (through VisualView): cards, threads, replies, editing, resolve, layout.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../../../core/typst-document/typst-document';
-import { addMarginNote } from '../../model/add-margin-note';
+import { calculateMarginNoteChanges } from '../../model/add-margin-note';
 import { localDate } from '../../model/note-thread';
 import { createVisualView } from '../../../../testing/testing';
 import { marginNotes } from '../margin-notes';
@@ -14,7 +14,7 @@ function setup(source: string, options: NotesGutterOptions = {}) {
   document.body.append(parent);
   const doc = new TypstDocument(source);
   const notes = notesGutter(options);
-  const view = Object.assign(createVisualView(parent, doc, { contributions: [marginNotes(), notes] }), {
+  const view = Object.assign(createVisualView(parent, doc, { contributions: [marginNotes({ comment: () => {} }), notes] }), {
     editNote: (offset: number) => notes.editNote(doc, offset),
   });
   const cards = () => [...parent.querySelectorAll<HTMLElement>('[data-testid="typst-note-card"]')];
@@ -126,7 +126,7 @@ describe('the notes gutter', () => {
       const { doc, view, field } = setup(source, { user: { name: 'Anna' } });
       const word = source.indexOf('bold');
       view.reveal(word, word + 4);
-      doc.change(addMarginNote(doc.text, view.selection())!.changes, 'comment');
+      doc.change(calculateMarginNoteChanges(doc.text, view.selection())!.changes, 'comment');
       const made = doc.text;
       expect(made).toContain('This is #margin-note[*bold*][] text.');
       type(field(0), 'First');

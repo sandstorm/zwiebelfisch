@@ -3,11 +3,15 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
-import { after, edit, expectPreciseMap, find, schemaWith } from '../../../testing/testing';
+import { after, edit, expectPreciseMap, find, schemaWith, TestPrompts } from '../../../testing/testing';
+import { Project } from '../../../core/project/project';
+import { ProjectPath } from '../../../core/paths/paths';
+import { LabelIndex } from '../model/label-index';
 import { print, project as projectWith, syncDoc } from '../../../hosts/projection/projection';
 import { references as referencesContribution } from './visual-view';
 
-const schema = schemaWith({ contributions: [referencesContribution()] });
+const noLabels = new LabelIndex(new Project(ProjectPath.of('/main.typ'), { '/main.typ': '' }));
+const schema = schemaWith({ contributions: [referencesContribution({ labels: noLabels, prompts: new TestPrompts() })] });
 const project = (source: string): Node => projectWith(source, schema);
 
 const chapter = (name: string) => readFileSync(new URL(`../../../../demo/examples/advanced/chapters/${name}.typ`, import.meta.url), 'utf8');

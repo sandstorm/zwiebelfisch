@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { createEngine } from '../../../core/typst-engine/typst-engine';
 import { withPackages } from '../../../core/typst-packages/typst-packages';
 import type { TextChange } from '../../../core/typst-document/typst-document';
-import { addMarginNote } from './add-margin-note';
+import { calculateMarginNoteChanges } from './add-margin-note';
 import { addReply } from './note-thread';
 import { withoutNotes } from './without-notes';
 
@@ -112,18 +112,18 @@ Alpha #margin-note[Beta][Gamma note] Delta#margin-note[Point note] #todo[Helper 
       let text = demo;
       for (const where of [(t: string) => t.indexOf('Hello Typst') + 5, (t: string) => t.length - 1]) {
         const at = where(text);
-        text = apply(text, addMarginNote(text, { from: at, to: at })!.changes);
+        text = apply(text, calculateMarginNoteChanges(text, { from: at, to: at })!.changes);
       }
       expect(text.split('set-margin-note-defaults(')).toHaveLength(2);
       const word = text.indexOf('Typst', text.indexOf('= Hello'));
-      text = apply(text, addMarginNote(text, { from: word, to: word + 5 })!.changes);
+      text = apply(text, calculateMarginNoteChanges(text, { from: word, to: word + 5 })!.changes);
       expect(text).toMatch(/margin: \(right: 4cm, rest: 1\.5cm\)/);
       expect(await compile(text)).toEqual([]);
     });
 
     it.each(['5cm', '1in', '1cm + 5%', '(x: 2cm, y: 2cm)'])('compiles a note after rewriting margin: %s', async (margin) => {
       const text = `#set page(width: 16cm, height: auto, margin: ${margin})\nText\n`;
-      expect(await compile(apply(text, addMarginNote(text, { from: text.length - 1, to: text.length - 1 })!.changes))).toEqual([]);
+      expect(await compile(apply(text, calculateMarginNoteChanges(text, { from: text.length - 1, to: text.length - 1 })!.changes))).toEqual([]);
     });
   });
 });

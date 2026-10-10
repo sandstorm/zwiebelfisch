@@ -71,7 +71,7 @@ export function notesGutter(options: NotesGutterOptions = {}): NotesGutterContri
  * Add `plugin` to the editor's state; the gutter column goes into `body`,
  * next to the editor's DOM.
  */
-export class NotesGutter {
+class NotesGutter {
   readonly plugin: Plugin<GutterState>;
   private readonly root: HTMLElement;
   private readonly cards = new Map<string, NoteCard>();

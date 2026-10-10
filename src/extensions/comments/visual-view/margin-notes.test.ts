@@ -8,7 +8,7 @@ import { print } from '../../../hosts/projection/projection';
 import { after, createVisualView, edit, expectPreciseMap, project as projectWith, schemaWith } from '../../../testing/testing';
 import { marginNotes, type MarginNotesOptions } from './margin-notes';
 
-const schema = schemaWith({ contributions: [marginNotes()] });
+const schema = schemaWith({ contributions: [marginNotes({ comment: () => {} })] });
 const project = (source: string) => projectWith(source, schema);
 
 const MARGIN_NOTES =
@@ -116,7 +116,7 @@ describe('margin notes', () => {
   it('syncs a note changed in the source', () => {
     const parent = document.createElement('div');
     const doc = new TypstDocument('Text#margin-note[old] and #margin-note[x][y].\n');
-    createVisualView(parent, doc, { contributions: [marginNotes()] });
+    createVisualView(parent, doc, { contributions: [marginNotes({ comment: () => {} })] });
     const target = 'Text#margin-note[new] and #margin-note[x][z].\n';
     doc.setText(target, 'test');
     const shown = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor.state.doc;
@@ -125,7 +125,7 @@ describe('margin notes', () => {
   });
 });
 
-function setup(text: string, options: MarginNotesOptions = {}) {
+function setup(text: string, options: MarginNotesOptions = { comment: () => {} }) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const view = createVisualView(parent, new TypstDocument(text), { contributions: [marginNotes(options)] });
@@ -134,8 +134,7 @@ function setup(text: string, options: MarginNotesOptions = {}) {
 }
 
 describe('Comment in the toolbar', () => {
-  it('is there only with a `comment` option, and calls it', () => {
-    expect(setup('Hello\n').button('Comment')).toBeNull();
+  it('calls the `comment` option', () => {
     const comment = vi.fn();
     const { view, button } = setup('Hello world\n', { comment });
     view.reveal(6, 11);
