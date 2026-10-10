@@ -2,6 +2,7 @@
 // syntax tree. See document-links.ts.
 import type { SyntaxNode, Tree } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
+import { PathReference } from '../paths/paths';
 
 /** What names the path: `#import`, `#include`, or the function whose first argument it is. */
 export type LinkCall = 'import' | 'include' | 'image' | 'read' | 'json' | 'csv' | 'yaml' | 'toml' | 'xml' | 'cbor' | 'bibliography';
@@ -9,7 +10,7 @@ export type LinkCall = 'import' | 'include' | 'image' | 'read' | 'json' | 'csv' 
 /** A file path written in Typst source, as written (relative to that file, or `/` from the project root). */
 export interface DocumentLink {
   /** The path as Typst reads it (escapes decoded). */
-  path: string;
+  path: PathReference;
   /** The range of the path's text (inside the quotes). */
   from: number;
   to: number;
@@ -72,7 +73,7 @@ function firstPositional(args: SyntaxNode | null): SyntaxNode | null {
 function link(string: SyntaxNode, text: string, call: LinkCall): DocumentLink {
   const from = string.from + 1;
   const to = Math.max(from, text[string.to - 1] === '"' && string.to - 1 > string.from ? string.to - 1 : string.to);
-  return { path: unescape(text.slice(from, to)), from, to, call };
+  return { path: PathReference.of(unescape(text.slice(from, to))), from, to, call };
 }
 
 /** Not packages, not empty. */

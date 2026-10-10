@@ -5,6 +5,7 @@ import { syntaxTree } from '@codemirror/language';
 import { type EditorState, type Extension, RangeSetBuilder } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, hoverTooltip, keymap, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import type { DocumentLinkProvider } from '../../core/document-links/document-links';
+import type { PathReference } from '../../core/paths/paths';
 
 const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 /** The modifier that turns a click on a path into "open", as people read it. */
@@ -48,7 +49,7 @@ export function documentLinks(links: DocumentLinkProvider): Extension {
  * and, for a Typst file, a "Create …" button that shows why it was refused.
  * Null when the path leaves the project.
  */
-export function linkInfo(doc: Document, links: DocumentLinkProvider, reference: string, { hint = true } = {}): HTMLElement | null {
+export function linkInfo(doc: Document, links: DocumentLinkProvider, reference: PathReference, { hint = true } = {}): HTMLElement | null {
   const target = links.resolveDocumentLink(reference);
   if (!target) return null;
   const info = doc.createElement('span');

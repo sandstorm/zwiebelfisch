@@ -4,7 +4,7 @@ import type { TypstDocument } from '../core/typst-document/typst-document';
 import type { Preview } from '../features/preview/preview';
 import type { VisualViewOptions } from '../features/visual-view/visual-view';
 import { type FileChange, type FileContent, type Project } from '../core/project/project';
-import { extensionOf, fileKind, imageBlob, referencePath, resolvePath } from '../core/paths/paths';
+import { type PathReference, ProjectPath } from '../core/paths/paths';
 import { uploadChanges } from '../features/files/files';
 
 export interface ProjectRenderingsOptions {
@@ -22,7 +22,7 @@ export interface ProjectRenderingsOptions {
  * that document.
  */
 export class ProjectRenderings {
-  private readonly urls = new Map<string, { content: unknown; url: string }>();
+  private readonly urls = new Map<ProjectPath, { content: unknown; url: string }>();
 
   constructor(private readonly options: ProjectRenderingsOptions) {}
 
@@ -38,7 +38,7 @@ export class ProjectRenderings {
         },
         imageUrl: (reference) => {
           const file = path();
-          const target = file && resolvePath(file, reference);
+          const target = file && ProjectPath.resolve(file, reference);
           return target ? this.imageUrl(target) : null;
         },
         onChange: (listener) => preview.onRender(listener),
@@ -46,12 +46,12 @@ export class ProjectRenderings {
       assets: {
         list: () => {
           const file = path();
-          return file ? project.paths().filter((p) => fileKind(p) === 'image').map((p) => referencePath(file, p)) : [];
+          return file ? project.paths().filter((p) => ProjectPath.kind(p) === 'image').map((p) => ProjectPath.referenceTo(file, p)) : [];
         },
         upload: (upload) => this.upload(upload, path()),
         reference: (image) => {
           const file = path();
-          return file && fileKind(image) === 'image' && project.has(image) ? referencePath(file, image) : null;
+          return file && ProjectPath.kind(image) === 'image' && project.has(image) ? ProjectPath.referenceTo(file, image) : null;
         },
       },
     };
@@ -62,28 +62,28 @@ export class ProjectRenderings {
     this.urls.clear();
   }
 
-  private imageUrl(path: string): string | null {
-    const content = fileKind(path) === 'image' ? this.options.project.content(path) : undefined;
+  private imageUrl(path: ProjectPath): string | null {
+    const content = ProjectPath.kind(path) === 'image' ? this.options.project.content(path) : undefined;
     const cached = this.urls.get(path);
     if (cached?.content === content) return cached?.url ?? null;
     if (cached) URL.revokeObjectURL(cached.url);
     this.urls.delete(path);
     if (content === undefined) return null;
-    const url = URL.createObjectURL(imageBlob(path, content));
+    const url = URL.createObjectURL(ProjectPath.imageBlob(path, content));
     this.urls.set(path, { content, url });
     return url;
   }
 
-  private async upload(upload: File, file: string | undefined): Promise<{ path: string } | { error: string }> {
+  private async upload(upload: File, file: ProjectPath | undefined): Promise<{ path: PathReference } | { error: string }> {
     if (!file) return { error: 'This document is no longer part of the project.' };
     const [change] = await uploadChanges([upload]);
-    if (change.kind !== 'create' || fileKind(change.path) !== 'image') {
+    if (!change || change.kind !== 'create' || ProjectPath.kind(change.path) !== 'image') {
       return { error: `${upload.name} is not an image the document can show (PNG, JPEG, GIF, SVG or WebP).` };
     }
     const target = this.placeFor(change.path, change.content);
-    if (this.options.project.has(target)) return { path: referencePath(file, target) };
+    if (this.options.project.has(target)) return { path: ProjectPath.referenceTo(file, target) };
     const problem = await this.options.request({ ...change, path: target });
-    return problem === null ? { path: referencePath(file, target) } : { error: problem };
+    return problem === null ? { path: ProjectPath.referenceTo(file, target) } : { error: problem };
   }
 
   /**
@@ -91,11 +91,11 @@ export class ProjectRenderings {
    * content (`name.png`, `name-2.png`, …), else the first free one of those
    * names (browsers name every pasted screenshot `image.png`).
    */
-  private placeFor(path: string, content: FileContent): string {
-    const extension = extensionOf(path);
+  private placeFor(path: ProjectPath, content: FileContent): ProjectPath {
+    const extension = ProjectPath.extension(path);
     const stem = path.slice(0, path.length - extension.length);
     for (let n = 1; ; n++) {
-      const candidate = n === 1 ? path : `${stem}-${n}${extension}`;
+      const candidate = n === 1 ? path : ProjectPath.of(`${stem}-${n}${extension}`);
       const existing = this.options.project.content(candidate);
       if (existing === undefined || sameContent(existing, content)) return candidate;
     }

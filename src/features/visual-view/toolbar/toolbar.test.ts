@@ -3,6 +3,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { VisualView, type VisualViewOptions } from '../visual-view';
+import { PathReference } from '../../../core/paths/paths';
+
+const ref = PathReference.of;
 
 function setup(text: string, options: VisualViewOptions = {}) {
   const parent = document.createElement('div');
@@ -150,7 +153,7 @@ describe('Visual view toolbar', () => {
   });
 
   it('inserts an image picked from the project files', () => {
-    const assets = { list: () => ['img/logo.png', '/shared/photo.jpg'], upload: async () => ({ error: 'unused' }), reference: () => null };
+    const assets = { list: () => [ref('img/logo.png'), ref('/shared/photo.jpg')], upload: async () => ({ error: 'unused' }), reference: () => null };
     const { doc, view, toolbar, button } = setup('Text\n', { assets });
     view.reveal(4, 4);
     button('Insert image').click();
@@ -164,7 +167,7 @@ describe('Visual view toolbar', () => {
 
   it('uploads an image into the project and inserts it', async () => {
     const uploaded: File[] = [];
-    const assets = { list: () => [], upload: async (file: File) => (uploaded.push(file), { path: `img/${file.name}` }), reference: () => null };
+    const assets = { list: () => [], upload: async (file: File) => (uploaded.push(file), { path: ref(`img/${file.name}`) }), reference: () => null };
     const { doc, view, toolbar, button } = setup('Text\n', { assets });
     view.reveal(4, 4);
     button('Insert image').click();
@@ -250,8 +253,8 @@ describe('Visual view toolbar', () => {
       const uploaded: string[] = [];
       const assets = {
         list: () => [],
-        upload: async (file: File) => (error ? { error } : (uploaded.push(file.name), { path: file.name })),
-        reference: (path: string) => (path.endsWith('.png') ? path.slice(1) : null),
+        upload: async (file: File) => (error ? { error } : (uploaded.push(file.name), { path: ref(file.name) })),
+        reference: (path: string) => (path.endsWith('.png') ? ref(path.slice(1)) : null),
       };
       return { assets, uploaded };
     }

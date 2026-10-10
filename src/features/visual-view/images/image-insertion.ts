@@ -1,6 +1,7 @@
 // Inserting image blocks: from the toolbar, and from files dropped on the editor. See images.ts.
 import type { Editor } from '@tiptap/core';
 import type { ResolvedPos } from '@tiptap/pm/model';
+import { type PathReference, ProjectPath } from '../../../core/paths/paths';
 import { PROJECT_PATH_TYPE } from '../../../core/project/project';
 import { NodeSelection, Plugin, PluginKey } from '@tiptap/pm/state';
 import { imageSource } from '../projection/projection';
@@ -12,7 +13,7 @@ import { imageSource } from '../projection/projection';
  * It never replaces or splits anything; only an empty paragraph is taken
  * over. The cursor ends up after the images, in a focused editor.
  */
-export function insertImages(editor: Editor, paths: string[], near?: number): void {
+export function insertImages(editor: Editor, paths: PathReference[], near?: number): void {
   const { state } = editor;
   const content = paths.map((path) => ({ type: 'image', attrs: { src: imageSource(path) } }));
   const { selection } = state;
@@ -46,7 +47,7 @@ function besideTextblock($pos: ResolvedPos): { from: number; to: number } {
  */
 export function imageFileDrops(
   onImages: (files: File[], near?: number) => void,
-  onProjectFile?: (path: string, near?: number) => boolean,
+  onProjectFile?: (path: ProjectPath, near?: number) => boolean,
 ): Plugin {
   const carriesProjectFile = (event: DragEvent) => !!onProjectFile && !!event.dataTransfer?.types.includes(PROJECT_PATH_TYPE);
   return new Plugin({
@@ -65,7 +66,8 @@ export function imageFileDrops(
           if (carriesProjectFile(event)) {
             event.preventDefault();
             event.stopPropagation();
-            return onProjectFile!(event.dataTransfer!.getData(PROJECT_PATH_TYPE), near());
+            const path = ProjectPath.parse(event.dataTransfer!.getData(PROJECT_PATH_TYPE));
+            return path !== null && onProjectFile!(path, near());
           }
           const files = imageFiles(event.dataTransfer);
           if (files.length === 0) return false;

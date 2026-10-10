@@ -7,8 +7,11 @@ import { connect, connectAwareness } from '../features/collaboration/in-process'
 import type { PlacedPresence } from '../core/typst-document/typst-document';
 import { CollaborationLink } from './collaboration-link';
 import { Project } from '../core/project/project';
+import { ProjectPath } from '../core/paths/paths';
 
-const MAIN = '/main.typ';
+const path = ProjectPath.of;
+
+const MAIN = path('/main.typ');
 const cleanup: (() => void)[] = [];
 afterEach(() => cleanup.splice(0).forEach((fn) => fn()));
 

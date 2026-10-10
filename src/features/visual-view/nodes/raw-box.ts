@@ -8,6 +8,7 @@ import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { Decoration, EditorView, NodeView } from '@tiptap/pm/view';
 import { minimalChange } from '../../../core/typst-document/typst-document';
 import type { DocumentLinkProvider } from '../../../core/document-links/document-links';
+import type { PathReference } from '../../../core/paths/paths';
 import { codeColors, documentLinks, remotePresence, showPresence, typstLanguage } from '../../source-view/source-view';
 import { imagePathLink } from './box-links';
 import { ImageTools } from '../images/images';
@@ -133,7 +134,7 @@ class RawBox implements NodeView {
 
   /** The tools of an image box; its path in the heading opens the file when there are `links`. */
   private imageTools(code: HTMLElement, links: DocumentLinkProvider | undefined): ImageTools {
-    const pathLabel = links && ((path: string) => imagePathLink(this.dom.ownerDocument, links, path));
+    const pathLabel = links && ((path: PathReference) => imagePathLink(this.dom.ownerDocument, links, path));
     const host = { dom: this.dom, code, picture: this.rendered?.picture ?? null, editor: this.editor, getPos: this.getPos, editCode: () => this.focus(-1), pathLabel };
     return new ImageTools(host, this.node);
   }

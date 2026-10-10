@@ -1,5 +1,6 @@
 // Toolbar: the Visual view's formatting toolbar (styles, marks, lists, alignment, insert). Entry of
 // visual-view/toolbar/. See ARCHITECTURE.md, "VisualView".
+import { PathReference } from '../../../core/paths/paths';
 import { findParentNode, type Editor } from '@tiptap/core';
 import { FieldPopover } from '../field-popover';
 import { type ImageAssets, ImageChoices, imageFileDrops, insertImages } from '../images/images';
@@ -237,7 +238,7 @@ export class Toolbar {
       label: 'Image',
       field: 'Image path',
       placeholder: 'images/figure.png',
-      apply: (path) => insertImages(this.editor, [path]),
+      apply: (path) => insertImages(this.editor, [PathReference.of(path)]),
       extra: choices?.element,
     });
     if (choices) {

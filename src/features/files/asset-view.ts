@@ -1,6 +1,6 @@
 // AssetView: the read-only view of a non-Typst file (image or data). See files.ts.
 import { type FileContent } from '../../core/project/project';
-import { displayName, fileKind, imageBlob } from '../../core/paths/paths';
+import { ProjectPath } from '../../core/paths/paths';
 
 /**
  * The read-only view of a project file that is not Typst source: an image
@@ -20,12 +20,12 @@ export class AssetView {
   }
 
   /** Shows `path`. */
-  show(path: string, content: FileContent): void {
+  show(path: ProjectPath, content: FileContent): void {
     this.release();
     const doc = this.root.ownerDocument;
     const title = doc.createElement('h2');
     title.className = 'typst-asset__title';
-    title.textContent = displayName(path);
+    title.textContent = ProjectPath.displayName(path);
     const size = doc.createElement('span');
     size.className = 'typst-asset__size';
     size.textContent = formatSize(typeof content === 'string' ? new TextEncoder().encode(content).length : content.length);
@@ -45,13 +45,13 @@ export class AssetView {
     this.root.remove();
   }
 
-  private body(path: string, content: FileContent): HTMLElement {
+  private body(path: ProjectPath, content: FileContent): HTMLElement {
     const doc = this.root.ownerDocument;
-    if (fileKind(path) === 'image') {
+    if (ProjectPath.kind(path) === 'image') {
       const image = doc.createElement('img');
       image.className = 'typst-asset__image';
-      image.alt = displayName(path);
-      this.objectUrl = URL.createObjectURL(imageBlob(path, content));
+      image.alt = ProjectPath.displayName(path);
+      this.objectUrl = URL.createObjectURL(ProjectPath.imageBlob(path, content));
       image.src = this.objectUrl;
       return image;
     }

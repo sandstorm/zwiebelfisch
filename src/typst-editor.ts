@@ -17,7 +17,7 @@ import { EditingViews, type EditorMode } from './typst-editor/editing-views';
 import { Layout } from './typst-editor/layout';
 import layoutStyles from './typst-editor/layout.css?inline';
 import { type FileChange, Project, type ProjectFiles } from './core/project/project';
-import { fileKind, resolvePath } from './core/paths/paths';
+import { ProjectPath } from './core/paths/paths';
 import { DocumentLinkProvider, neighbours } from './core/document-links/document-links';
 import { FileNavigation } from './typst-editor/file-navigation';
 import { PdfExport } from './typst-editor/pdf-export';
@@ -171,8 +171,11 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
     get activeFile() {
       return widget.active;
     },
-    open: (path) => widget.open(path),
-    setBase: (base, label, path) => widget.changes.setBase(base === null ? null : { text: base, label: label ?? GIVEN_VERSION }, path),
+    open: (path) => {
+      const parsed = ProjectPath.parse(path);
+      if (parsed) widget.open(parsed);
+    },
+    setBase: (base, label, path) => widget.changes.setBase(base === null ? null : { text: base, label: label ?? GIVEN_VERSION }, path === undefined ? undefined : ProjectPath.of(path)),
     exportPdf: (options = {}) => widget.pdfs.blob(options.comments ?? false),
     destroy: () => widget.destroy(),
   };
@@ -182,9 +185,9 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
 class Widget {
   readonly project: Project;
   /** The file shown in the editing area. */
-  active: string;
+  active: ProjectPath;
   /** The Typst file shown last: where images are inserted and whose diagnostics the status counts. */
-  private lastSource: string;
+  private lastSource: ProjectPath;
   private diagnostics: Diagnostic[] | null = null;
   private readonly layout: Layout;
   private readonly left: HTMLElement;
@@ -212,7 +215,7 @@ class Widget {
     private readonly options: TypstEditorOptions,
   ) {
     injectStyles(host);
-    const main = options.main ?? '/main.typ';
+    const main = ProjectPath.of(options.main ?? '/main.typ');
     const files = { ...options.files, ...(options.source === undefined ? {} : { [main]: options.source }) };
     this.project = new Project(main, files);
     this.active = this.lastSource = main;
@@ -247,7 +250,7 @@ class Widget {
       },
       onChange: (change) => this.request(change),
       memory: this.layout.remember('folders'),
-    });
+    }, { paths: this.project.paths(), main, active: main });
     this.assets = new AssetView(this.left);
     this.spreadsheets = new SpreadsheetView(this.left, (path, edit) => this.saveSpreadsheet(path, edit));
     this.unsubscribe = this.project.onChange((change) => this.changed(change));
@@ -263,12 +266,12 @@ class Widget {
     this.refresh();
   }
 
-  open(path: string): void {
+  open(path: ProjectPath): void {
     if (!this.project.has(path)) return;
     const changed = path !== this.active;
     this.active = path;
     const document = this.project.document(path);
-    const spreadsheet = fileKind(path) === 'spreadsheet';
+    const spreadsheet = ProjectPath.kind(path) === 'spreadsheet';
     if (document) this.lastSource = path;
     if (document || spreadsheet) this.assets.hide();
     else this.assets.show(path, this.project.content(path)!);
@@ -394,7 +397,7 @@ class Widget {
 
   /** Keeps `active` and `lastSource` pointing at existing files after a create / rename / delete. */
   private restructured(change: FileChange): void {
-    const follow = (path: string) => {
+    const follow = (path: ProjectPath) => {
       if (change.kind === 'rename' && change.from === path) return change.path;
       return this.project.has(path) ? path : this.project.main;
     };
@@ -421,7 +424,7 @@ class Widget {
     return new DocumentLinkProvider({
       resolve: (reference) => {
         const file = this.project.pathOf(document);
-        return file ? resolvePath(file, reference) : null;
+        return file ? ProjectPath.resolve(file, reference) : null;
       },
       exists: (path) => this.project.has(path),
       open: (path) => this.open(path),
@@ -447,17 +450,21 @@ class Widget {
   }
 
   /** Stores an edit of spreadsheet `path`: its bytes, and its Typst file next to it (`typstPath`). */
-  private saveSpreadsheet(path: string, { bytes, typst: content }: WorkbookEdit): void {
+  private saveSpreadsheet(path: ProjectPath, { bytes, typst: content }: WorkbookEdit): void {
     void this.request({ kind: 'update', path, content: bytes });
     const target = typstPath(path);
     if (this.project.content(target) === content) return;
     void this.request(this.project.has(target) ? { kind: 'update', path: target, content } : { kind: 'create', path: target, content });
   }
 
-  /** Opens the file of `target` and reveals the range (in the source view on request). */
+  /**
+   * Opens the file of `target` and reveals the range (in the source view on request). Its path comes from the
+   * engine (a click in the preview, a diagnostic): a package file is no project path, and is ignored.
+   */
   private jump(target: { path: string; from: number; to: number }, inSource = false): void {
-    if (!this.project.document(target.path)) return;
-    if (target.path !== this.active) this.open(target.path);
+    const path = ProjectPath.parse(target.path);
+    if (!path || !this.project.document(path)) return;
+    if (path !== this.active) this.open(path);
     this.views.reveal(target.from, target.to, inSource);
   }
 

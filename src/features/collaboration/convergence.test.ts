@@ -12,8 +12,11 @@ import { SourceView } from '../source-view/source-view';
 import { VisualView } from '../visual-view/visual-view';
 import { Collaboration } from './collaboration';
 import { connect, connectAwareness } from './in-process';
+import { ProjectPath } from '../../core/paths/paths';
 
-const MAIN = '/main.typ';
+const path = ProjectPath.of;
+
+const MAIN = path('/main.typ');
 const cleanup: (() => void)[] = [];
 afterEach(() => cleanup.splice(0).forEach((fn) => fn()));
 

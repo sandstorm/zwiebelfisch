@@ -3,7 +3,7 @@
 // The views use it to make paths clickable; it reads Typst syntax, the workspace owns the files.
 // Entry of core/document-links/. See ARCHITECTURE.md, "File links".
 import type { Tree } from '@lezer/common';
-import { displayName, fileKind } from '../paths/paths';
+import { type PathReference, ProjectPath } from '../paths/paths';
 import { documentLinkAt, provideDocumentLinks, type DocumentLink } from './find-links';
 
 export type { DocumentLink, LinkCall } from './find-links';
@@ -12,17 +12,17 @@ export { neighbours, readingOrder } from './reading-order';
 /** What a DocumentLinkProvider needs from the workspace, for one document (paths resolve from its current path). */
 export interface LinkWorkspace {
   /** The workspace path `reference` (as written in this document) points to; null when it leaves the workspace. */
-  resolve(reference: string): string | null;
-  exists(path: string): boolean;
+  resolve(reference: PathReference): ProjectPath | null;
+  exists(path: ProjectPath): boolean;
   /** Shows the file (like the widget's `open`). */
-  open(path: string): void;
+  open(path: ProjectPath): void;
   /** Creates the empty Typst file `path` and opens it; resolves to why that was refused, or null. */
-  create(path: string): Promise<string | null>;
+  create(path: ProjectPath): Promise<string | null>;
 }
 
 /** Where a link leads, and what following it does: open an existing file, or create a missing Typst file. */
 export interface LinkTarget {
-  path: string;
+  path: ProjectPath;
   /** The path as shown to people. */
   name: string;
   exists: boolean;
@@ -52,11 +52,11 @@ export class DocumentLinkProvider {
   }
 
   /** Where the path `reference` (as written) leads; null when it leaves the workspace. */
-  resolveDocumentLink(reference: string): LinkTarget | null {
+  resolveDocumentLink(reference: PathReference): LinkTarget | null {
     const path = this.workspace.resolve(reference);
     if (path === null) return null;
     const exists = this.workspace.exists(path);
-    return { path, name: displayName(path), exists, creatable: !exists && fileKind(path) === 'typst' };
+    return { path, name: ProjectPath.displayName(path), exists, creatable: !exists && ProjectPath.kind(path) === 'typst' };
   }
 
   /**

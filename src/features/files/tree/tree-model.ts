@@ -1,10 +1,14 @@
 // The file tree as data: folders from paths, the rows shown for the expanded folders, keyboard moves, and
 // moving files or folders. Pure. See tree.ts.
+import { ProjectPath } from '../../../core/paths/paths';
 
-/** A file, or a folder (`path` without a trailing slash; the root is ''). */
+/** A folder (a path, like a file's, without a trailing slash), or null for the top level. */
+export type Folder = ProjectPath | null;
+
+/** A file, or a folder (the root's `path` is null). */
 export interface TreeEntry {
   kind: 'file' | 'folder';
-  path: string;
+  path: Folder;
   name: string;
   /** Folders only: sorted, folders first. */
   children: TreeEntry[];
@@ -13,18 +17,18 @@ export interface TreeEntry {
 /** One visible line of the tree. */
 export interface Row {
   kind: 'file' | 'folder';
-  path: string;
+  path: ProjectPath;
   name: string;
   /** 0 at the top level. */
   depth: number;
   /** Folders only. */
   expanded?: boolean;
-  /** The folder it is in ('' for the top level). */
-  parent: string;
+  /** The folder it is in. */
+  parent: Folder;
 }
 
 /** What a key does in the tree: move the focus, expand or collapse a folder, or open a file. */
-export type Move = { focus: string } | { expand: string } | { collapse: string } | { open: string };
+export type Move = { focus: ProjectPath } | { expand: ProjectPath } | { collapse: ProjectPath } | { open: ProjectPath };
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
@@ -33,17 +37,17 @@ const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'bas
  * (empty folders made in the panel). Each folder lists its folders first,
  * then its files, both by name (numbers by value: 2 before 10).
  */
-export function buildTree(paths: readonly string[], folders: Iterable<string> = []): TreeEntry {
-  const root: TreeEntry = { kind: 'folder', path: '', name: '', children: [] };
-  const index = new Map<string, TreeEntry>([['', root]]);
-  const folder = (path: string): TreeEntry => {
+export function buildTree(paths: readonly ProjectPath[], folders: Iterable<ProjectPath> = []): TreeEntry {
+  const root: TreeEntry = { kind: 'folder', path: null, name: '', children: [] };
+  const index = new Map<Folder, TreeEntry>([[null, root]]);
+  const folder = (path: Folder): TreeEntry => {
     let entry = index.get(path);
-    if (!entry) {
+    if (!entry && path !== null) {
       entry = { kind: 'folder', path, name: nameOf(path), children: [] };
       index.set(path, entry);
       folder(folderOf(path)).children.push(entry);
     }
-    return entry;
+    return entry!;
   };
   for (const path of folders) folder(path);
   for (const path of paths) folder(folderOf(path)).children.push({ kind: 'file', path, name: nameOf(path), children: [] });
@@ -52,13 +56,14 @@ export function buildTree(paths: readonly string[], folders: Iterable<string> = 
 }
 
 /** The rows shown when the folders in `expanded` are open, top to bottom. */
-export function visibleRows(root: TreeEntry, expanded: ReadonlySet<string>): Row[] {
+export function visibleRows(root: TreeEntry, expanded: ReadonlySet<ProjectPath>): Row[] {
   const rows: Row[] = [];
   const walk = (folder: TreeEntry, depth: number) => {
     for (const entry of folder.children) {
+      const path = entry.path!; // only the root has none
       const isFolder = entry.kind === 'folder';
-      const open = isFolder && expanded.has(entry.path);
-      rows.push({ kind: entry.kind, path: entry.path, name: entry.name, depth, parent: folder.path, ...(isFolder ? { expanded: open } : {}) });
+      const open = isFolder && expanded.has(path);
+      rows.push({ kind: entry.kind, path, name: entry.name, depth, parent: folder.path, ...(isFolder ? { expanded: open } : {}) });
       if (open) walk(entry, depth + 1);
     }
   };
@@ -66,20 +71,20 @@ export function visibleRows(root: TreeEntry, expanded: ReadonlySet<string>): Row
   return rows;
 }
 
-/** The folder `path` is in: '/a/b.typ' → '/a', '/b.typ' → ''. */
-export function folderOf(path: string): string {
-  return path.slice(0, path.lastIndexOf('/'));
+/** The folder `path` is in: '/a/b.typ' → '/a', '/b.typ' → null (the top level). */
+export function folderOf(path: ProjectPath): Folder {
+  return ProjectPath.parse(path.slice(0, path.lastIndexOf('/')));
 }
 
 /** The folders around `path`, outermost first. */
-export function ancestorsOf(path: string): string[] {
-  const result: string[] = [];
-  for (let folder = folderOf(path); folder !== ''; folder = folderOf(folder)) result.unshift(folder);
+export function ancestorsOf(path: ProjectPath): ProjectPath[] {
+  const result: ProjectPath[] = [];
+  for (let folder = folderOf(path); folder !== null; folder = folderOf(folder)) result.unshift(folder);
   return result;
 }
 
 /** The files in `folder`, at any depth, in the order of `paths`. */
-export function filesUnder(paths: readonly string[], folder: string): string[] {
+export function filesUnder(paths: readonly ProjectPath[], folder: ProjectPath): ProjectPath[] {
   return paths.filter((path) => path.startsWith(`${folder}/`));
 }
 
@@ -87,14 +92,14 @@ export function filesUnder(paths: readonly string[], folder: string): string[] {
  * The renames that put `source` (a file or a folder with everything in it)
  * at `target`. None when nothing would change or a folder would go into itself.
  */
-export function relocate(paths: readonly string[], source: string, target: string): { from: string; path: string }[] {
+export function relocate(paths: readonly ProjectPath[], source: ProjectPath, target: ProjectPath): { from: ProjectPath; path: ProjectPath }[] {
   if (source === target || target.startsWith(`${source}/`)) return [];
   if (paths.includes(source)) return [{ from: source, path: target }];
-  return filesUnder(paths, source).map((from) => ({ from, path: target + from.slice(source.length) }));
+  return filesUnder(paths, source).map((from) => ({ from, path: ProjectPath.of(target + from.slice(source.length)) }));
 }
 
 /** What `key` does with the focus on `current` (null: nothing focused yet); null when nothing. */
-export function navigate(rows: readonly Row[], current: string | null, key: string): Move | null {
+export function navigate(rows: readonly Row[], current: ProjectPath | null, key: string): Move | null {
   const index = rows.findIndex((row) => row.path === current);
   if (index < 0) return FOCUS_KEYS.has(key) && rows.length > 0 ? { focus: rows[0].path } : null;
   return Object.hasOwn(KEYS, key) ? KEYS[key](rows, index) : null;
@@ -131,7 +136,7 @@ const KEYS: Record<string, (rows: readonly Row[], index: number) => Move | null>
   },
 };
 
-function nameOf(path: string): string {
+function nameOf(path: ProjectPath): string {
   return path.slice(path.lastIndexOf('/') + 1);
 }
 

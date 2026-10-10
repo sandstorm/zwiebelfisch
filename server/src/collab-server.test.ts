@@ -6,10 +6,13 @@ import { Hocuspocus, type Extension } from '@hocuspocus/server';
 import { afterEach, describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 import { Project } from '../../src/core/project/project.ts';
+import { ProjectPath } from '../../src/core/paths/paths.ts';
 import { connect } from '../../src/features/collaboration/in-process.ts';
 import { SharedProject } from '../../src/features/collaboration/shared-project.ts';
 import { sharedToken } from './auth.ts';
 import { collabConfiguration } from './collab-server.ts';
+
+const path = ProjectPath.of;
 
 // Everything runs in-process (Hocuspocus without its WebSocket server):
 // the sandbox cannot bind ports. Clients are joined to a room's server-side
@@ -50,9 +53,9 @@ describe('collaboration server', () => {
     const connection = await first.openDirectConnection('book');
     const client = new Y.Doc();
     const disconnect = connect(connection.document!, client);
-    const project = new Project('/main.typ', { '/main.typ': 'Hello', '/ch1.typ': 'One' });
+    const project = new Project(path('/main.typ'), { '/main.typ': 'Hello', '/ch1.typ': 'One' });
     const shared = new SharedProject(project, client);
-    project.document('/main.typ')!.setText('Hello world', 'test');
+    project.document(path('/main.typ'))!.setText('Hello world', 'test');
     shared.destroy();
     disconnect();
     await connection.disconnect();

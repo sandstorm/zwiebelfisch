@@ -1,8 +1,9 @@
 // newStyle: the stub "New style…" appends to the styles file. See styles.ts.
+import { ProjectPath } from '../../core/paths/paths';
 import { scanStyles } from './discover';
 
 /** Where "New style…" puts new styles while the project declares none. */
-export const STYLES_FILE = '/styles.typ';
+export const STYLES_FILE = ProjectPath.of('/styles.typ');
 
 /**
  * The text of the styles file with a new paragraph style appended (`text` is

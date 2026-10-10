@@ -1,12 +1,14 @@
 // Image choices: the project's images offered in the "Insert image" popover, and uploads. See images.ts.
+import { PathReference, type ProjectPath } from '../../../core/paths/paths';
+
 /** Where the Visual view gets images to insert from: the host's project files. */
 export interface ImageAssets {
   /** The project's images, as paths to write in `#image(..)` in this document. */
-  list(): string[];
+  list(): PathReference[];
   /** Adds `file` to the project; resolves to the path to write in `#image(..)`, or why it was not added (in words for people). */
-  upload(file: File): Promise<{ path: string } | { error: string }>;
+  upload(file: File): Promise<{ path: PathReference } | { error: string }>;
   /** The path to write in `#image(..)` in this document for the project file `path` (e.g. dragged from the file panel); null if it is no image. */
-  reference(path: string): string | null;
+  reference(path: ProjectPath): PathReference | null;
 }
 
 /**
@@ -22,7 +24,7 @@ export class ImageChoices {
   constructor(
     doc: Document,
     private readonly assets: ImageAssets,
-    private readonly choose: (paths: string[], near?: number) => void,
+    private readonly choose: (paths: PathReference[], near?: number) => void,
   ) {
     this.element = doc.createElement('div');
     this.element.className = 'typst-popover__choices';
@@ -30,7 +32,7 @@ export class ImageChoices {
     this.list.className = 'typst-popover__files';
     this.list.addEventListener('click', (event) => {
       const path = (event.target as HTMLElement).closest<HTMLElement>('[data-path]')?.dataset.path;
-      if (path) choose([path]);
+      if (path) choose([PathReference.of(path)]);
     });
     const picker = doc.createElement('input');
     picker.type = 'file';
@@ -75,7 +77,7 @@ export class ImageChoices {
    */
   async upload(files: File[], near?: number): Promise<boolean> {
     this.error.textContent = '';
-    const paths: string[] = [];
+    const paths: PathReference[] = [];
     for (const file of files) {
       const result = await this.assets.upload(file);
       if ('path' in result) paths.push(result.path);

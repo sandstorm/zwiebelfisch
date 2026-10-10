@@ -1,7 +1,7 @@
 // StyleIndex: the paragraph and text styles a project declares (`/// @style …`), kept up to date, and how a
 // document imports one. Entry of features/styles/. See ARCHITECTURE.md, "Custom styles".
 import { type FileChange, type Project } from '../../core/project/project';
-import { referencePath, resolvePath } from '../../core/paths/paths';
+import { PathReference, ProjectPath } from '../../core/paths/paths';
 import { calculateImportChange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
 import { scanStyles, type FoundStyle, type Style } from './discover';
 import { STYLES_FILE } from './new-style';
@@ -30,7 +30,7 @@ export interface DocumentStyles {
  * not about every keystroke.
  */
 export class StyleIndex {
-  private readonly scans = new Map<string, FoundStyle[]>();
+  private readonly scans = new Map<ProjectPath, FoundStyle[]>();
   private readonly listeners = new Set<() => void>();
   private list: Style[] = [];
   private readonly unsubscribe: () => void;
@@ -51,10 +51,10 @@ export class StyleIndex {
   }
 
   /** Where "New style…" adds a style: the file declaring the most styles (the first of equals), else `/styles.typ`. */
-  homeFile(): string {
-    const counts = new Map<string, number>();
+  homeFile(): ProjectPath {
+    const counts = new Map<ProjectPath, number>();
     for (const style of this.list) counts.set(style.path, (counts.get(style.path) ?? 0) + 1);
-    let home: string = STYLES_FILE;
+    let home = STYLES_FILE;
     let most = 0;
     for (const [path, count] of counts) if (count > most) [home, most] = [path, count];
     return home;
@@ -68,10 +68,10 @@ export class StyleIndex {
       calculateImportChange: (text, style, use) => {
         const path = this.project.pathOf(document);
         if (!path || path === style.path) return null;
-        const module = referencePath(path, style.path);
+        const module = ProjectPath.referenceTo(path, style.path);
         return calculateImportChange(text, {
           name: style.name,
-          matches: (written) => resolvePath(path, written) === style.path,
+          matches: (written) => ProjectPath.resolve(path, PathReference.of(written)) === style.path,
           // a blank line after it: an import right above `#note[..]` would make the two one (raw) block
           create: () => `#import "${module}": ${style.name}\n${/^\s*\n/.test(text) ? '' : '\n'}`,
           use,
@@ -99,7 +99,7 @@ export class StyleIndex {
     for (const listener of this.listeners) listener();
   }
 
-  private rescan(path: string): void {
+  private rescan(path: ProjectPath): void {
     const content = this.project.content(path);
     if (path.endsWith('.typ') && typeof content === 'string') this.scans.set(path, scanStyles(content));
   }

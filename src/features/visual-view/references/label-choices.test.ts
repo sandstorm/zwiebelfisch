@@ -2,16 +2,19 @@
 import { describe, expect, it } from 'vitest';
 import type { LabelInfo } from '../../labels/labels';
 import { describeLabel, labelChoices } from './label-choices';
+import { ProjectPath } from '../../../core/paths/paths';
+
+const path = ProjectPath.of;
 
 const LABELS: LabelInfo[] = [
-  { name: 'intro', kind: 'heading', title: 'Introduction', path: '/chapters/introduction.typ' },
-  { name: 'method', kind: 'heading', title: 'Method', path: '/chapters/method.typ' },
-  { name: 'eq:speedup', kind: 'equation', title: null, path: '/chapters/method.typ' },
-  { name: 'results', kind: 'heading', title: 'Results', path: '/chapters/results.typ' },
-  { name: 'tab:timings', kind: 'table', title: 'Median compile times (illustrative numbers).', path: '/chapters/results.typ' },
-  { name: 'fig:compile-times', kind: 'figure', title: 'Cold (dark) and incremental (light) compile times for 1, 10, 50 and 100 pages.', path: '/chapters/results.typ' },
-  { name: 'knuth1984', kind: 'bibliography', title: null, path: '/refs.bib' },
-  { name: 'intro', kind: 'heading', title: 'Duplicate', path: '/other.typ' },
+  { name: 'intro', kind: 'heading', title: 'Introduction', path: path('/chapters/introduction.typ') },
+  { name: 'method', kind: 'heading', title: 'Method', path: path('/chapters/method.typ') },
+  { name: 'eq:speedup', kind: 'equation', title: null, path: path('/chapters/method.typ') },
+  { name: 'results', kind: 'heading', title: 'Results', path: path('/chapters/results.typ') },
+  { name: 'tab:timings', kind: 'table', title: 'Median compile times (illustrative numbers).', path: path('/chapters/results.typ') },
+  { name: 'fig:compile-times', kind: 'figure', title: 'Cold (dark) and incremental (light) compile times for 1, 10, 50 and 100 pages.', path: path('/chapters/results.typ') },
+  { name: 'knuth1984', kind: 'bibliography', title: null, path: path('/refs.bib') },
+  { name: 'intro', kind: 'heading', title: 'Duplicate', path: path('/other.typ') },
 ];
 
 const names = (query: string) => labelChoices(LABELS, query).map((l) => l.name);
@@ -44,6 +47,6 @@ describe('describeLabel', () => {
 
   it('has nothing to say about bibliography keys and unknown elements', () => {
     expect(describeLabel(LABELS[6])).toBeNull();
-    expect(describeLabel({ name: 'p', kind: null, title: null, path: '/a.typ' })).toBeNull();
+    expect(describeLabel({ name: 'p', kind: null, title: null, path: path('/a.typ') })).toBeNull();
   });
 });

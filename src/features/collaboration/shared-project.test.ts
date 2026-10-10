@@ -4,8 +4,11 @@ import * as Y from 'yjs';
 import { Project } from '../../core/project/project';
 import { connect } from './in-process';
 import { SharedProject } from './shared-project';
+import { ProjectPath } from '../../core/paths/paths';
 
-const MAIN = '/main.typ';
+const path = ProjectPath.of;
+
+const MAIN = path('/main.typ');
 
 function client(files: Record<string, string | Uint8Array> = {}, ydoc = new Y.Doc()) {
   const project = new Project(MAIN, files);
@@ -27,7 +30,7 @@ describe('SharedProject', () => {
     connect(a.ydoc, ydoc);
     const b = client({ [MAIN]: 'local main' }, ydoc);
     expect(b.project.document(MAIN)!.text).toBe('shared main');
-    expect(b.project.document('/a.typ')!.text).toBe('a');
+    expect(b.project.document(path('/a.typ'))!.text).toBe('a');
   });
 
   it('edits of either client reach the other', () => {
@@ -46,21 +49,21 @@ describe('SharedProject', () => {
     const a = client({ [MAIN]: '' });
     const b = client({}, new Y.Doc());
     connect(a.ydoc, b.ydoc);
-    a.project.apply({ kind: 'create', path: '/ch1.typ', content: 'Chapter' });
-    expect(b.project.document('/ch1.typ')!.text).toBe('Chapter');
+    a.project.apply({ kind: 'create', path: path('/ch1.typ'), content: 'Chapter' });
+    expect(b.project.document(path('/ch1.typ'))!.text).toBe('Chapter');
 
     const changes: string[] = [];
     b.project.onChange((change) => changes.push(change.kind));
-    a.project.apply({ kind: 'rename', from: '/ch1.typ', path: '/intro.typ' });
-    expect(b.project.has('/ch1.typ')).toBe(false);
-    expect(b.project.document('/intro.typ')!.text).toBe('Chapter');
+    a.project.apply({ kind: 'rename', from: path('/ch1.typ'), path: path('/intro.typ') });
+    expect(b.project.has(path('/ch1.typ'))).toBe(false);
+    expect(b.project.document(path('/intro.typ'))!.text).toBe('Chapter');
     expect(changes).toEqual(['rename']);
 
-    b.project.document('/intro.typ')!.setText('Intro', 'test');
-    expect(a.project.document('/intro.typ')!.text).toBe('Intro');
+    b.project.document(path('/intro.typ'))!.setText('Intro', 'test');
+    expect(a.project.document(path('/intro.typ'))!.text).toBe('Intro');
 
-    b.project.apply({ kind: 'delete', path: '/intro.typ' });
-    expect(a.project.has('/intro.typ')).toBe(false);
+    b.project.apply({ kind: 'delete', path: path('/intro.typ') });
+    expect(a.project.has(path('/intro.typ'))).toBe(false);
     expect(sharedPaths(a.ydoc)).toEqual([MAIN]);
   });
 
@@ -69,8 +72,8 @@ describe('SharedProject', () => {
     const b = client({}, new Y.Doc());
     connect(a.ydoc, b.ydoc);
     a.project.replace({ '/new.typ': 'new' });
-    expect(b.project.has('/old.typ')).toBe(false);
-    expect(b.project.document('/new.typ')!.text).toBe('new');
+    expect(b.project.has(path('/old.typ'))).toBe(false);
+    expect(b.project.document(path('/new.typ'))!.text).toBe('new');
   });
 
   it('destroy() stops sharing and keeps the local text', () => {

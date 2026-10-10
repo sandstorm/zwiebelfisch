@@ -1,4 +1,5 @@
 // RenderedBox: a raw box shown compiled (snippet or image) while it is not edited. See raw-box.ts.
+import type { PathReference } from '../../../core/paths/paths';
 import type { Node } from '@tiptap/pm/model';
 import { imagePath } from '../projection/projection';
 
@@ -47,7 +48,7 @@ export interface BoxRenderer {
    */
   snippet(from: number, to: number, text: string): Promise<Snippet | null>;
   /** A URL of the image file `path` (as written in `#image(..)`), or null if there is none. */
-  imageUrl(path: string): string | null;
+  imageUrl(path: PathReference): string | null;
   /** Calls `listener` whenever snippets or images may have changed. Returns the unsubscribe function. */
   onChange(listener: () => void): () => void;
 }

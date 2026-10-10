@@ -1,6 +1,9 @@
 // Tests for reading-order.ts.
 import { describe, expect, it } from 'vitest';
 import { neighbours, readingOrder } from './reading-order';
+import { ProjectPath } from '../paths/paths';
+
+const path = ProjectPath.of;
 
 /** Reads from a file map, as the widget reads its project. */
 const from = (files: Record<string, string>) => (path: string) => files[path];
@@ -16,12 +19,12 @@ const BOOK = {
 
 describe('readingOrder', () => {
   it('lists the main file, then every included file in the order Typst reads them (nested includes in place)', () => {
-    expect(readingOrder(from(BOOK), '/main.typ')).toEqual([
-      '/main.typ',
-      '/chapters/introduction.typ',
-      '/chapters/method.typ',
-      '/chapters/setup.typ',
-      '/chapters/results.typ',
+    expect(readingOrder(from(BOOK), path('/main.typ'))).toEqual([
+      path('/main.typ'),
+      path('/chapters/introduction.typ'),
+      path('/chapters/method.typ'),
+      path('/chapters/setup.typ'),
+      path('/chapters/results.typ'),
     ]);
   });
 
@@ -32,24 +35,24 @@ describe('readingOrder', () => {
       '/b.typ': '#include "a.typ"\n',
       '/template.typ': '',
     };
-    expect(readingOrder(from(files), '/main.typ')).toEqual(['/main.typ', '/a.typ', '/b.typ']);
+    expect(readingOrder(from(files), path('/main.typ'))).toEqual([path('/main.typ'), path('/a.typ'), path('/b.typ')]);
   });
 
   it('is only the main file without includes, and empty without a main file', () => {
-    expect(readingOrder(from({ '/main.typ': 'Hi' }), '/main.typ')).toEqual(['/main.typ']);
-    expect(readingOrder(from({}), '/main.typ')).toEqual([]);
+    expect(readingOrder(from({ '/main.typ': 'Hi' }), path('/main.typ'))).toEqual([path('/main.typ')]);
+    expect(readingOrder(from({}), path('/main.typ'))).toEqual([]);
   });
 });
 
 describe('neighbours', () => {
   it('gives the files before and after `path` in reading order', () => {
-    expect(neighbours(from(BOOK), '/main.typ', '/chapters/method.typ')).toEqual({ previous: '/chapters/introduction.typ', next: '/chapters/setup.typ' });
-    expect(neighbours(from(BOOK), '/main.typ', '/chapters/introduction.typ')).toEqual({ previous: '/main.typ', next: '/chapters/method.typ' });
-    expect(neighbours(from(BOOK), '/main.typ', '/chapters/results.typ')).toEqual({ previous: '/chapters/setup.typ', next: null });
+    expect(neighbours(from(BOOK), path('/main.typ'), path('/chapters/method.typ'))).toEqual({ previous: path('/chapters/introduction.typ'), next: path('/chapters/setup.typ') });
+    expect(neighbours(from(BOOK), path('/main.typ'), path('/chapters/introduction.typ'))).toEqual({ previous: path('/main.typ'), next: path('/chapters/method.typ') });
+    expect(neighbours(from(BOOK), path('/main.typ'), path('/chapters/results.typ'))).toEqual({ previous: path('/chapters/setup.typ'), next: null });
   });
 
   it('is null for the main file and files that are not included', () => {
-    expect(neighbours(from(BOOK), '/main.typ', '/main.typ')).toBeNull();
-    expect(neighbours(from(BOOK), '/main.typ', '/template.typ')).toBeNull();
+    expect(neighbours(from(BOOK), path('/main.typ'), path('/main.typ'))).toBeNull();
+    expect(neighbours(from(BOOK), path('/main.typ'), path('/template.typ'))).toBeNull();
   });
 });

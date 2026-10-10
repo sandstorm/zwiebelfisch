@@ -1,7 +1,7 @@
 // SpreadsheetView: a spreadsheet file (`.ic`) shown and edited in IronCalc's workbook UI; every edit saves the file
 // and the Typst file documents import. Entry of features/spreadsheets/. See ARCHITECTURE.md, "Spreadsheets".
 import { type FileContent } from '../../core/project/project';
-import { displayName } from '../../core/paths/paths';
+import { ProjectPath } from '../../core/paths/paths';
 import type { MountedWorkbook, WorkbookEdit } from './workbook';
 
 export { typstPath } from './typst-file';
@@ -24,7 +24,7 @@ export class SpreadsheetView {
 
   constructor(
     parent: HTMLElement,
-    private readonly onEdit: (path: string, edit: WorkbookEdit) => void,
+    private readonly onEdit: (path: ProjectPath, edit: WorkbookEdit) => void,
   ) {
     const doc = parent.ownerDocument;
     this.root = doc.createElement('div');
@@ -40,9 +40,9 @@ export class SpreadsheetView {
   }
 
   /** Shows spreadsheet `path` with `content` (its bytes; empty: a new workbook). */
-  async show(path: string, content: FileContent): Promise<void> {
+  async show(path: ProjectPath, content: FileContent): Promise<void> {
     const generation = this.unmount();
-    this.title.textContent = displayName(path);
+    this.title.textContent = ProjectPath.displayName(path);
     this.root.hidden = false;
     this.body.textContent = 'Loading spreadsheet…';
     const bytes = typeof content === 'string' ? new TextEncoder().encode(content) : content;

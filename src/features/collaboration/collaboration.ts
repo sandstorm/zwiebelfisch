@@ -3,6 +3,7 @@
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import type { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
+import type { ProjectPath } from '../../core/paths/paths';
 import type { PlacedPresence, PresenceTarget } from '../../core/typst-document/typst-document';
 import type { Project } from '../../core/project/project';
 import { roomFilePath } from './gitlab-protocol';
@@ -49,7 +50,7 @@ export class Collaboration {
     ydoc: Y.Doc,
     awareness: Awareness | null,
     shared: Shared,
-    private readonly server: { provider: HocuspocusProvider; files: (path: string) => Promise<Uint8Array> } | null,
+    private readonly server: { provider: HocuspocusProvider; files: (path: ProjectPath) => Promise<Uint8Array> } | null,
   ) {
     const { project, user } = shared;
     if (server && RoomVersions.isVersioned(ydoc)) {
@@ -57,7 +58,7 @@ export class Collaboration {
       this.assets = new SharedAssets(project, ydoc, server.files);
     }
     this.sharedProject = new SharedProject(project, ydoc);
-    const text = (path: string) => this.sharedProject.text(path);
+    const text = (path: ProjectPath) => this.sharedProject.text(path);
     const onPresence = (presences: readonly PlacedPresence[]) => this.presenceListener?.(presences);
     this.cursors = awareness ? new RemoteCursors(awareness, { user: user ?? { name: 'Anonymous' }, text, onPresence }) : null;
   }
@@ -78,12 +79,12 @@ export class Collaboration {
   }
 
   /** Tells the others where the local user's selection is (a source range in `path`), or nowhere. */
-  setCursor(path: string | null, range?: { from: number; to: number }): void {
+  setCursor(path: ProjectPath | null, range?: { from: number; to: number }): void {
     this.cursors?.setLocal(path, range);
   }
 
   /** Shows the other users' carets and selections in `path` in `views` (the views of the shown file). */
-  showCursors(path: string | null, views: readonly PresenceTarget[]): void {
+  showCursors(path: ProjectPath | null, views: readonly PresenceTarget[]): void {
     this.cursors?.show(path, views);
   }
 
@@ -116,7 +117,7 @@ function statelessChannel(provider: HocuspocusProvider) {
  * Fetches a file of the room from the server's HTTP side (same host and path
  * as the WebSocket: ws → http, wss → https), with the room's token.
  */
-function roomFiles(options: { url: string; room: string; token?: string }): (path: string) => Promise<Uint8Array> {
+function roomFiles(options: { url: string; room: string; token?: string }): (path: ProjectPath) => Promise<Uint8Array> {
   const base = options.url.replace(/^ws/, 'http').replace(/\/$/, '');
   const headers: Record<string, string> = options.token ? { Authorization: `Bearer ${options.token}` } : {};
   return async (path) => {

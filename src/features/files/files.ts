@@ -2,9 +2,9 @@
 // delete, drag & drop, presence). Entry of features/files/. See ARCHITECTURE.md, "File panel".
 import type { PlacedPresence, PresenceUser } from '../../core/typst-document/typst-document';
 import { type FileChange } from '../../core/project/project';
-import { displayName, extensionOf, toPath } from '../../core/paths/paths';
+import { ProjectPath } from '../../core/paths/paths';
 import { icon, type IconName } from './icons';
-import { FileTree, filesUnder, type FolderMemory, relocate } from './tree/tree';
+import { FileTree, filesUnder, type Folder, type FolderMemory, relocate } from './tree/tree';
 import { uploadChanges } from './upload';
 
 export { AssetView } from './asset-view';
@@ -18,7 +18,7 @@ export function filesPanelIcon(doc: Document): SVGSVGElement {
 
 export interface FilePanelOptions {
   /** Someone picked a file. */
-  onOpen(path: string): void;
+  onOpen(path: ProjectPath): void;
   /** Someone asked for `change`. Resolves to why it was refused (shown to them), or null once applied. */
   onChange(change: FileChange): Promise<string | null>;
   /** Where the open folders are remembered (default: only while the panel lives). */
@@ -26,9 +26,9 @@ export interface FilePanelOptions {
 }
 
 export interface FileListState {
-  paths: string[];
-  main: string;
-  active: string;
+  paths: ProjectPath[];
+  main: ProjectPath;
+  active: ProjectPath;
 }
 
 interface Prompt {
@@ -56,13 +56,12 @@ export class FilePanel {
   private readonly remove: HTMLButtonElement;
   private readonly picker: HTMLInputElement;
   private prompt: HTMLFormElement | null = null;
-  private state: FileListState = { paths: [], main: '', active: '' };
   /** Who else is in which file. */
-  private others = new Map<string, PresenceUser[]>();
+  private others = new Map<ProjectPath, PresenceUser[]>();
   /** Folders made with "New folder" that hold no file yet. */
-  private emptyFolders = new Set<string>();
+  private emptyFolders = new Set<ProjectPath>();
   /** Where the next upload goes. */
-  private uploadFolder = '';
+  private uploadFolder: Folder = null;
   private readonly detachDrop: () => void;
   /** Whether files dropped anywhere on `dropTarget` are uploaded (else ignored). */
   acceptDrops = true;
@@ -71,6 +70,8 @@ export class FilePanel {
     parent: HTMLElement,
     dropTarget: HTMLElement,
     private readonly options: FilePanelOptions,
+    /** What the panel shows until the next `render`. */
+    private state: FileListState,
   ) {
     const doc = parent.ownerDocument;
     this.element = element(doc, 'div', 'typst-files');
@@ -88,8 +89,8 @@ export class FilePanel {
       iconButton(doc, 'add', 'New file', () => this.askCreate()),
       iconButton(doc, 'add-folder', 'New folder', () => this.askFolder()),
       iconButton(doc, 'upload', 'Upload', () => this.pick()),
-      (this.rename = iconButton(doc, 'rename', 'Rename', () => this.askRename(this.tree.current))),
-      (this.remove = iconButton(doc, 'delete', 'Delete', () => this.askDelete(this.tree.current))),
+      (this.rename = iconButton(doc, 'rename', 'Rename', () => this.askRename(this.tree.current ?? this.state.active))),
+      (this.remove = iconButton(doc, 'delete', 'Delete', () => this.askDelete(this.tree.current ?? this.state.active))),
     );
     header.append(title, actions, this.picker);
     this.element.append(header);
@@ -103,7 +104,8 @@ export class FilePanel {
     });
     this.tree.element.addEventListener('focusin', () => this.updateButtons());
     parent.append(this.element);
-    this.detachDrop = acceptDrops(dropTarget, () => this.acceptDrops, (files) => void this.upload(files, ''));
+    this.detachDrop = acceptDrops(dropTarget, () => this.acceptDrops, (files) => void this.upload(files, null));
+    this.render(state);
   }
 
   render(state: FileListState): void {
@@ -127,19 +129,19 @@ export class FilePanel {
 
   /** Rename and Delete are off for the main file and a folder holding it. */
   private updateButtons(): void {
-    const fixed = this.holdsMain(this.tree.current);
+    const fixed = this.holdsMain(this.tree.current ?? this.state.active);
     this.rename.disabled = fixed;
     this.remove.disabled = fixed;
   }
 
-  private holdsMain(path: string): boolean {
+  private holdsMain(path: ProjectPath): boolean {
     return path === this.state.main || this.state.main.startsWith(`${path}/`);
   }
 
   /** The focused folder as the start of a name: 'chapters/' ('' at the top level). */
   private folderPrefix(): string {
     const folder = this.tree.folder;
-    return folder === '' ? '' : `${displayName(folder)}/`;
+    return folder === null ? '' : `${ProjectPath.displayName(folder)}/`;
   }
 
   private pick(): void {
@@ -153,7 +155,7 @@ export class FilePanel {
       value: this.folderPrefix(),
       confirm: 'Create',
       submit: async (name) => {
-        const target = toPath(name, '.typ');
+        const target = ProjectPath.fromName(name, '.typ');
         if ('error' in target) return target.error;
         return this.request([{ kind: 'create', path: target.path, content: '' }], target.path);
       },
@@ -166,9 +168,9 @@ export class FilePanel {
       value: this.folderPrefix(),
       confirm: 'Create',
       submit: async (name) => {
-        const target = toPath(name, '');
+        const target = ProjectPath.fromName(name, '');
         if ('error' in target) return target.error;
-        if (this.state.paths.includes(target.path) || this.tree.isFolder(target.path)) return `${displayName(target.path)} already exists.`;
+        if (this.state.paths.includes(target.path) || this.tree.isFolder(target.path)) return `${ProjectPath.displayName(target.path)} already exists.`;
         this.emptyFolders.add(target.path);
         this.render(this.state);
         this.tree.focus(target.path);
@@ -177,25 +179,25 @@ export class FilePanel {
     });
   }
 
-  private askRename(from: string): void {
+  private askRename(from: ProjectPath): void {
     if (this.holdsMain(from)) return;
     const folder = this.tree.isFolder(from);
     this.ask({
-      message: `Rename ${displayName(from)} to`,
-      value: displayName(from),
+      message: `Rename ${ProjectPath.displayName(from)} to`,
+      value: ProjectPath.displayName(from),
       confirm: 'Rename',
       submit: async (name) => {
-        const target = toPath(name, folder ? '' : extensionOf(from));
+        const target = ProjectPath.fromName(name, folder ? '' : ProjectPath.extension(from));
         if ('error' in target) return target.error;
         return this.relocate(from, target.path);
       },
     });
   }
 
-  private askDelete(path: string): void {
+  private askDelete(path: ProjectPath): void {
     if (this.holdsMain(path)) return;
     const files = this.tree.isFolder(path) ? filesUnder(this.state.paths, path) : [path];
-    const what = files.length === 1 && files[0] === path ? displayName(path) : `${displayName(path)} and the ${files.length} files in it`;
+    const what = files.length === 1 && files[0] === path ? ProjectPath.displayName(path) : `${ProjectPath.displayName(path)} and the ${files.length} files in it`;
     this.ask({
       message: `Delete ${what}? This cannot be undone.`,
       confirm: 'Delete',
@@ -209,14 +211,14 @@ export class FilePanel {
   }
 
   /** A row dragged onto `folder`. */
-  private async move(source: string, folder: string): Promise<void> {
-    const target = `${folder}/${source.slice(source.lastIndexOf('/') + 1)}`;
+  private async move(source: ProjectPath, folder: Folder): Promise<void> {
+    const target = ProjectPath.of(`${folder ?? ''}/${source.slice(source.lastIndexOf('/') + 1)}`);
     const error = await this.relocate(source, target);
     if (error) this.ask({ message: error, confirm: 'OK', submit: async () => null });
   }
 
   /** Moves a file, or a folder with its files, to `target`; opens the moved file. */
-  private async relocate(source: string, target: string): Promise<string | null> {
+  private async relocate(source: ProjectPath, target: ProjectPath): Promise<string | null> {
     if (this.holdsMain(source)) return 'The main file stays where it is.';
     const renames = relocate(this.state.paths, source, target);
     if (this.emptyFolders.delete(source)) this.emptyFolders.add(target);
@@ -226,15 +228,15 @@ export class FilePanel {
     return error;
   }
 
-  private async upload(files: File[], folder: string): Promise<void> {
+  private async upload(files: File[], folder: Folder): Promise<void> {
     this.picker.value = '';
-    const changes = (await uploadChanges(files)).map((change) => ({ ...change, path: folder + change.path }));
+    const changes = (await uploadChanges(files)).map((change) => ({ ...change, path: ProjectPath.of(`${folder ?? ''}${change.path}`) }));
     const error = await this.request(changes, changes[changes.length - 1]?.path ?? null);
     if (error) this.ask({ message: error, confirm: 'OK', submit: async () => null });
   }
 
   /** Asks for `changes` one after the other (stopping at a refusal), then opens `open` if all were applied. */
-  private async request(changes: FileChange[], open: string | null): Promise<string | null> {
+  private async request(changes: FileChange[], open: ProjectPath | null): Promise<string | null> {
     for (const change of changes) {
       const error = await this.options.onChange(change);
       if (error) return error;

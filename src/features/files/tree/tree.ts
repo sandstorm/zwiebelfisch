@@ -1,12 +1,12 @@
 // FileTree: the project's files as an expandable tree (keyboard, drag & drop, presence dots). Entry of
 // features/files/tree/. See files.ts and ARCHITECTURE.md, "File panel".
 import { PROJECT_PATH_TYPE } from '../../../core/project/project';
-import { displayName, fileKind } from '../../../core/paths/paths';
+import { ProjectPath } from '../../../core/paths/paths';
 import { initials, presenceStyle, type PresenceUser } from '../../../core/typst-document/typst-document';
 import { icon } from '../icons';
-import { ancestorsOf, buildTree, filesUnder, folderOf, navigate, type Row, visibleRows } from './tree-model';
+import { ancestorsOf, buildTree, filesUnder, type Folder, folderOf, navigate, type Row, visibleRows } from './tree-model';
 
-export { filesUnder, relocate } from './tree-model';
+export { filesUnder, relocate, type Folder } from './tree-model';
 
 /** Where the tree remembers its open folders (e.g. for the browser session). */
 export interface FolderMemory {
@@ -16,26 +16,26 @@ export interface FolderMemory {
 
 export interface FileTreeOptions {
   /** A file was chosen (click, Enter). */
-  onOpen(path: string): void;
+  onOpen(path: ProjectPath): void;
   /** F2 on a row (a file or a folder). */
-  onRename(path: string): void;
+  onRename(path: ProjectPath): void;
   /** Delete on a row (a file or a folder). */
-  onDelete(path: string): void;
-  /** A row (file or folder) was dragged onto `folder` ('' for the top level). */
-  onMove(source: string, folder: string): void;
+  onDelete(path: ProjectPath): void;
+  /** A row (file or folder) was dragged onto `folder` (null: the top level). */
+  onMove(source: ProjectPath, folder: Folder): void;
   /** Files from the computer were dropped onto `folder`. */
-  onUpload(files: File[], folder: string): void;
+  onUpload(files: File[], folder: Folder): void;
   memory?: FolderMemory;
 }
 
 export interface TreeState {
-  paths: readonly string[];
+  paths: readonly ProjectPath[];
   /** Empty folders that exist only in the panel so far. */
-  folders: readonly string[];
-  main: string;
-  active: string;
+  folders: readonly ProjectPath[];
+  main: ProjectPath;
+  active: ProjectPath;
   /** Who else is in which file. */
-  presence: ReadonlyMap<string, readonly PresenceUser[]>;
+  presence: ReadonlyMap<ProjectPath, readonly PresenceUser[]>;
 }
 
 /** The type of a dragged tree row in a drag's data. */
@@ -51,40 +51,42 @@ const ROW_TYPE = PROJECT_PATH_TYPE;
  */
 export class FileTree {
   readonly element: HTMLElement;
-  private readonly expanded: Set<string>;
-  private state: TreeState = { paths: [], folders: [], main: '', active: '', presence: new Map() };
+  private readonly expanded: Set<ProjectPath>;
+  private state: TreeState | null = null;
   private rows: Row[] = [];
-  private currentPath: string | null = null;
+  private currentPath: ProjectPath | null = null;
 
   constructor(parent: HTMLElement, private readonly options: FileTreeOptions) {
     this.element = parent.ownerDocument.createElement('div');
     this.element.className = 'typst-files__tree';
     this.element.setAttribute('role', 'tree');
     this.element.setAttribute('aria-label', 'Files');
-    this.expanded = new Set(options.memory?.load() ?? []);
+    this.expanded = new Set((options.memory?.load() ?? []).flatMap((folder) => ProjectPath.parse(folder) ?? []));
     this.element.addEventListener('click', (event) => this.click(event));
     this.element.addEventListener('keydown', (event) => this.key(event));
     this.listenToDrags();
     parent.append(this.element);
   }
 
-  /** The focused row (a file or folder path), else the shown file. */
-  get current(): string {
-    return this.currentPath ?? this.state.active;
+  /** The focused row (a file or folder path), else the shown file; null before the first `render`. */
+  get current(): ProjectPath | null {
+    return this.currentPath ?? this.state?.active ?? null;
   }
 
   /** The folder new files go into: the current folder, or the folder of the current file. */
-  get folder(): string {
+  get folder(): Folder {
     const current = this.current;
+    if (current === null) return null;
     return this.isFolder(current) ? current : folderOf(current);
   }
 
-  isFolder(path: string): boolean {
-    return path !== '' && !this.state.paths.includes(path) && (this.state.folders.includes(path) || filesUnder(this.state.paths, path).length > 0);
+  isFolder(path: ProjectPath): boolean {
+    const state = this.state;
+    return !!state && !state.paths.includes(path) && (state.folders.includes(path) || filesUnder(state.paths, path).length > 0);
   }
 
   render(state: TreeState): void {
-    const shown = state.active !== this.state.active;
+    const shown = state.active !== this.state?.active;
     this.state = state;
     if (shown) {
       this.currentPath = state.active;
@@ -95,7 +97,7 @@ export class FileTree {
   }
 
   /** Focuses the row of `path` (e.g. a new folder), opening the folders around it. */
-  focus(path: string): void {
+  focus(path: ProjectPath): void {
     for (const folder of ancestorsOf(path)) this.expanded.add(folder);
     this.currentPath = path;
     this.draw();
@@ -103,7 +105,7 @@ export class FileTree {
   }
 
   /** Opens or closes `folder`. */
-  setExpanded(folder: string, open: boolean): void {
+  setExpanded(folder: ProjectPath, open: boolean): void {
     if (open) this.expanded.add(folder);
     else this.expanded.delete(folder);
     this.options.memory?.save([...this.expanded]);
@@ -113,21 +115,22 @@ export class FileTree {
   private draw(): void {
     // The root's active element: inside <typst-editor>'s shadow root the document only sees the host.
     const hadFocus = this.element.contains((this.element.getRootNode() as Document | ShadowRoot).activeElement);
-    const { paths, folders } = this.state;
-    this.rows = visibleRows(buildTree(paths, folders), this.expanded);
-    const tabbable = this.rows.some((row) => row.path === this.current) ? this.current : this.rows[0]?.path;
-    this.element.replaceChildren(...this.rows.map((row) => this.rowElementFor(row, row.path === tabbable)));
-    if (hadFocus) this.rowElement(tabbable ?? '')?.focus();
+    const state = this.state;
+    if (!state) return;
+    this.rows = visibleRows(buildTree(state.paths, state.folders), this.expanded);
+    const tabbable = this.rows.some((row) => row.path === this.current) ? this.current : (this.rows[0]?.path ?? null);
+    this.element.replaceChildren(...this.rows.map((row) => this.rowElementFor(state, row, row.path === tabbable)));
+    if (hadFocus && tabbable) this.rowElement(tabbable)?.focus();
   }
 
-  private rowElementFor(row: Row, tabbable: boolean): HTMLElement {
+  private rowElementFor(state: TreeState, row: Row, tabbable: boolean): HTMLElement {
     const doc = this.element.ownerDocument;
     const item = element(doc, 'div', `typst-files__row typst-files__row--${row.kind}`);
     item.setAttribute('role', 'treeitem');
     item.setAttribute('aria-level', String(row.depth + 1));
     item.tabIndex = tabbable ? 0 : -1;
     item.dataset.path = row.path;
-    item.title = displayName(row.path);
+    item.title = ProjectPath.displayName(row.path);
     item.draggable = true;
     item.style.setProperty('--typst-files-depth', String(row.depth));
     const name = element(doc, 'span', 'typst-files__name');
@@ -136,22 +139,13 @@ export class FileTree {
       item.setAttribute('aria-expanded', String(row.expanded));
       item.append(chevron(doc), icon(doc, row.expanded ? 'folder-open' : 'folder'), name);
     } else {
-      item.setAttribute('aria-selected', String(row.path === this.state.active));
-      item.append(icon(doc, fileKind(row.path)), name);
+      item.setAttribute('aria-selected', String(row.path === state.active));
+      item.append(icon(doc, ProjectPath.kind(row.path)), name);
     }
-    if (row.path === this.state.main) item.append(badge(doc));
-    const users = this.usersIn(row);
+    if (row.path === state.main) item.append(badge(doc));
+    const users = usersIn(state, row);
     if (users.length > 0) item.append(presenceDots(doc, users));
     return item;
-  }
-
-  /** The others in a file, or in any file of a closed folder. */
-  private usersIn(row: Row): PresenceUser[] {
-    const { presence, paths } = this.state;
-    if (row.kind === 'file') return [...(presence.get(row.path) ?? [])];
-    if (row.expanded) return [];
-    const users = filesUnder(paths, row.path).flatMap((path) => presence.get(path) ?? []);
-    return [...new Map(users.map((user) => [user.name, user])).values()];
   }
 
   private click(event: MouseEvent): void {
@@ -171,8 +165,10 @@ export class FileTree {
   }
 
   private command(key: string): boolean {
-    if (key === 'F2') this.options.onRename(this.current);
-    else if (key === 'Delete') this.options.onDelete(this.current);
+    const current = this.current;
+    if (current === null) return false;
+    if (key === 'F2') this.options.onRename(current);
+    else if (key === 'Delete') this.options.onDelete(current);
     else return false;
     return true;
   }
@@ -198,14 +194,16 @@ export class FileTree {
       target = next;
       target?.classList.add('typst-files__row--drop');
     };
-    const folderAt = (event: DragEvent): string => {
-      const path = (event.target as HTMLElement).closest<HTMLElement>('[data-path]')?.dataset.path ?? '';
-      return this.isFolder(path) ? path : folderOf(path);
+    const pathAt = (event: DragEvent): ProjectPath | null =>
+      ProjectPath.parse((event.target as HTMLElement).closest<HTMLElement>('[data-path]')?.dataset.path ?? '');
+    const folderAt = (event: DragEvent): Folder => {
+      const path = pathAt(event);
+      return path === null || this.isFolder(path) ? path : folderOf(path);
     };
     const types = (event: DragEvent) => event.dataTransfer?.types ?? [];
     const accepts = (event: DragEvent) => types(event).includes(ROW_TYPE) || types(event).includes('Files');
     this.element.addEventListener('dragstart', (event) => {
-      const path = (event.target as HTMLElement).closest<HTMLElement>('[data-path]')?.dataset.path;
+      const path = pathAt(event);
       if (!path || !event.dataTransfer) return;
       event.dataTransfer.setData(ROW_TYPE, path);
       // moved onto a folder here; copied as a reference elsewhere (an image dropped into the text)
@@ -214,7 +212,8 @@ export class FileTree {
     this.element.addEventListener('dragover', (event) => {
       if (!accepts(event)) return;
       event.preventDefault();
-      mark(this.rowElement(folderAt(event)));
+      const folder = folderAt(event);
+      mark(folder === null ? null : this.rowElement(folder));
     });
     this.element.addEventListener('dragleave', (event) => {
       if (!this.element.contains(event.relatedTarget as Node | null)) mark(null);
@@ -226,11 +225,19 @@ export class FileTree {
       event.stopPropagation();
       mark(null);
       const folder = folderAt(event);
-      const source = event.dataTransfer?.getData(ROW_TYPE);
+      const source = ProjectPath.parse(event.dataTransfer?.getData(ROW_TYPE) ?? '');
       if (source) this.options.onMove(source, folder);
       else this.options.onUpload([...(event.dataTransfer?.files ?? [])], folder);
     });
   }
+}
+
+/** The others in a file, or in any file of a closed folder. */
+function usersIn({ presence, paths }: TreeState, row: Row): PresenceUser[] {
+  if (row.kind === 'file') return [...(presence.get(row.path) ?? [])];
+  if (row.expanded) return [];
+  const users = filesUnder(paths, row.path).flatMap((path) => presence.get(path) ?? []);
+  return [...new Map(users.map((user) => [user.name, user])).values()];
 }
 
 function chevron(doc: Document): SVGSVGElement {

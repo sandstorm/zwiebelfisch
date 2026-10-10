@@ -2,13 +2,13 @@
 import * as Y from 'yjs';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import { type Project } from '../../core/project/project';
-import { fileKind } from '../../core/paths/paths';
+import { ProjectPath } from '../../core/paths/paths';
 
 /** The Y.Doc's map of shared Typst files: path → text. */
 export const FILES_MAP = 'files';
 
 interface Binding {
-  path: string;
+  path: ProjectPath;
   text: Y.Text;
 }
 
@@ -36,7 +36,7 @@ export class SharedProject {
     private readonly ydoc: Y.Doc,
   ) {
     this.files = ydoc.getMap<Y.Text>(FILES_MAP);
-    this.pull([...this.files.keys()], []);
+    this.pull([...this.files.keys()].flatMap((key) => ProjectPath.parse(key) ?? []), []);
     this.files.observe(this.onRemote);
     this.unsubscribe = project.onChange((change) => {
       if (change.kind !== 'update') this.sync();
@@ -44,7 +44,7 @@ export class SharedProject {
   }
 
   /** The shared text of `path`, if it is a shared file. */
-  text(path: string): Y.Text | undefined {
+  text(path: ProjectPath): Y.Text | undefined {
     return this.files.get(path);
   }
 
@@ -57,7 +57,7 @@ export class SharedProject {
     this.ydoc.transact(() => {
       for (const path of this.project.paths()) {
         const document = this.project.document(path);
-        if (document && fileKind(path) === 'typst') this.bind(path, document);
+        if (document && ProjectPath.kind(path) === 'typst') this.bind(path, document);
       }
       for (const { path, text } of previous) {
         if (!this.project.document(path) && this.files.get(path) === text) this.files.delete(path);
@@ -76,7 +76,7 @@ export class SharedProject {
   }
 
   /** Binds `document` to the shared text of `path`, seeding it from the document if there is none. */
-  private bind(path: string, document: TypstDocument): void {
+  private bind(path: ProjectPath, document: TypstDocument): void {
     let text = this.files.get(path);
     if (!text) {
       text = new Y.Text();
@@ -94,14 +94,17 @@ export class SharedProject {
 
   private readonly onRemote = (event: Y.YMapEvent<Y.Text>): void => {
     if (event.transaction.origin === this) return;
-    const added: string[] = [];
-    const deleted: string[] = [];
-    event.changes.keys.forEach((change, key) => (change.action === 'delete' ? deleted : added).push(key));
+    const added: ProjectPath[] = [];
+    const deleted: ProjectPath[] = [];
+    event.changes.keys.forEach((change, key) => {
+      const path = ProjectPath.parse(key); // another client's key: not trusted to be a path
+      if (path) (change.action === 'delete' ? deleted : added).push(path);
+    });
     this.pull(added, deleted);
   };
 
   /** Applies files added / deleted in the Y.Doc to the project (one of each is a rename), then binds. */
-  private pull(added: string[], deleted: string[]): void {
+  private pull(added: ProjectPath[], deleted: ProjectPath[]): void {
     if (added.length === 1 && deleted.length === 1 && this.tryApply({ kind: 'rename', from: deleted[0], path: added[0] })) {
       this.sync();
       return;

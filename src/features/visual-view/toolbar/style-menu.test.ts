@@ -5,13 +5,16 @@ import { calculateImportChange } from '../../../core/typst-document/typst-docume
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import type { DocumentStyles, Style } from '../../styles/styles';
 import { VisualView } from '../visual-view';
+import { ProjectPath } from '../../../core/paths/paths';
+
+const path = ProjectPath.of;
 
 // jsdom lacks layout; ProseMirror only needs these to exist.
 Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
 Range.prototype.getBoundingClientRect = () => new DOMRect();
 
-const NOTE: Style = { name: 'note', kind: 'paragraph', label: 'Note', path: '/styles.typ' };
-const KEY: Style = { name: 'key', kind: 'text', label: 'Keyword', path: '/styles.typ' };
+const NOTE: Style = { name: 'note', kind: 'paragraph', label: 'Note', path: path('/styles.typ') };
+const KEY: Style = { name: 'key', kind: 'text', label: 'Keyword', path: path('/styles.typ') };
 
 function setup(text: string, initial: Style[] = [NOTE, KEY], create?: () => void) {
   let list = initial;

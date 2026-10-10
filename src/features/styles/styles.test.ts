@@ -2,11 +2,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Project } from '../../core/project/project';
 import { newStyle, scanStyles, StyleIndex } from './styles';
+import { ProjectPath } from '../../core/paths/paths';
+
+const path = ProjectPath.of;
 
 const STYLES = '/// @style paragraph Note\n#let note(body) = block(body)\n';
 
 function setup(files: Record<string, string> = {}) {
-  const project = new Project('/main.typ', { '/main.typ': '= Doc\n', '/styles.typ': STYLES, ...files });
+  const project = new Project(path('/main.typ'), { '/main.typ': '= Doc\n', '/styles.typ': STYLES, ...files });
   const index = new StyleIndex(project);
   return { project, index };
 }
@@ -14,28 +17,28 @@ function setup(files: Record<string, string> = {}) {
 describe('StyleIndex', () => {
   it('lists the project styles and tells listeners when the list changes, not on every edit', () => {
     const { project, index } = setup();
-    expect(index.styles()).toEqual([{ name: 'note', kind: 'paragraph', label: 'Note', path: '/styles.typ' }]);
+    expect(index.styles()).toEqual([{ name: 'note', kind: 'paragraph', label: 'Note', path: path('/styles.typ') }]);
     const listener = vi.fn();
     index.onChange(listener);
-    project.document('/main.typ')!.setText('= Doc\n\nText\n', 'test');
+    project.document(path('/main.typ'))!.setText('= Doc\n\nText\n', 'test');
     expect(listener).not.toHaveBeenCalled();
-    project.document('/styles.typ')!.setText(`${STYLES}/// @style text Key\n#let key(body) = strong(body)\n`, 'test');
+    project.document(path('/styles.typ'))!.setText(`${STYLES}/// @style text Key\n#let key(body) = strong(body)\n`, 'test');
     expect(listener).toHaveBeenCalledTimes(1);
     expect(index.styles().map((s) => s.name)).toEqual(['note', 'key']);
-    project.apply({ kind: 'delete', path: '/styles.typ' });
+    project.apply({ kind: 'delete', path: path('/styles.typ') });
     expect(index.styles()).toEqual([]);
   });
 
   it("imports a style into a document relative to its path, once; not into the style's own file", () => {
     const { project, index } = setup({ '/chapters/one.typ': 'Text\n' });
     const [note] = index.styles();
-    const chapter = index.forDocument(project.document('/chapters/one.typ')!);
+    const chapter = index.forDocument(project.document(path('/chapters/one.typ'))!);
     expect(chapter.calculateImportChange('Text\n', note, 0)).toEqual({ from: 0, to: 0, insert: '#import "/styles.typ": note\n\n' });
-    const main = index.forDocument(project.document('/main.typ')!);
+    const main = index.forDocument(project.document(path('/main.typ'))!);
     expect(main.calculateImportChange('= Doc\n', note, 0)).toEqual({ from: 0, to: 0, insert: '#import "styles.typ": note\n\n' });
     expect(main.calculateImportChange('\n= Doc\n', note, 0)).toEqual({ from: 0, to: 0, insert: '#import "styles.typ": note\n' });
     expect(main.calculateImportChange('#import "styles.typ": note\n#note[x]\n', note, 30)).toBeNull();
-    const own = index.forDocument(project.document('/styles.typ')!);
+    const own = index.forDocument(project.document(path('/styles.typ'))!);
     expect(own.calculateImportChange(STYLES, note, STYLES.length)).toBeNull();
   });
 });
@@ -44,9 +47,9 @@ describe('StyleIndex.homeFile (where New style… adds one)', () => {
   it('is the file declaring the most styles, else /styles.typ', () => {
     const helpers = '/// @style paragraph A\n#let a(body) = body\n/// @style text B\n#let b(body) = body\n';
     const { index } = setup({ '/helpers.typ': helpers });
-    expect(index.homeFile()).toBe('/helpers.typ');
-    const none = new StyleIndex(new Project('/main.typ', { '/main.typ': '' }));
-    expect(none.homeFile()).toBe('/styles.typ');
+    expect(index.homeFile()).toBe(path('/helpers.typ'));
+    const none = new StyleIndex(new Project(path('/main.typ'), { '/main.typ': '' }));
+    expect(none.homeFile()).toBe(path('/styles.typ'));
   });
 });
 

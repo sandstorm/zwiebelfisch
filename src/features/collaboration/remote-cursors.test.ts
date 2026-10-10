@@ -5,9 +5,12 @@ import * as Y from 'yjs';
 import type { PlacedPresence, Presence } from '../../core/typst-document/typst-document';
 import { connect, connectAwareness } from './in-process';
 import { RemoteCursors } from './remote-cursors';
+import { ProjectPath } from '../../core/paths/paths';
 
-const PATH = '/main.typ';
-const OTHER = '/chapter.typ';
+const path = ProjectPath.of;
+
+const PATH = path('/main.typ');
+const OTHER = path('/chapter.typ');
 const cleanup: (() => void)[] = [];
 afterEach(() => cleanup.splice(0).forEach((fn) => fn()));
 

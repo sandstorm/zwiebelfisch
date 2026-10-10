@@ -1,10 +1,11 @@
 // CollaborationLink: connects the widget to a Collaboration (loaded on demand). See typst-editor.ts.
 import type { Collaboration, CollaborationOptions, RoomVersions, Shared } from '../features/collaboration/collaboration';
+import type { ProjectPath } from '../core/paths/paths';
 import type { PlacedPresence, PresenceTarget } from '../core/typst-document/typst-document';
 
 /** The editing view the local user works in, and what it has selected. */
 export interface CurrentSelection {
-  path: string;
+  path: ProjectPath;
   view: { selection(): { from: number; to: number } };
 }
 
@@ -29,7 +30,7 @@ export interface LinkedWidget {
  */
 export class CollaborationLink {
   private collaboration: Collaboration | null = null;
-  private shown: { path: string | null; views: readonly PresenceTarget[] } = { path: null, views: [] };
+  private shown: { path: ProjectPath | null; views: readonly PresenceTarget[] } = { path: null, views: [] };
   private destroyed = false;
   private scheduled = false;
 
@@ -43,7 +44,7 @@ export class CollaborationLink {
   }
 
   /** The file shown in the editing area changed: draw the cursors there (`views` of a Typst file, or none). */
-  show(path: string | null, views: readonly PresenceTarget[]): void {
+  show(path: ProjectPath | null, views: readonly PresenceTarget[]): void {
     this.shown = { path, views };
     this.collaboration?.showCursors(path, views);
   }

@@ -1,4 +1,5 @@
 // Presence: other users' carets and selections as source ranges. See typst-document.ts.
+import type { ProjectPath } from '../paths/paths';
 /** Who another user is, as the views show them. */
 export interface PresenceUser {
   name: string;
@@ -20,7 +21,7 @@ export interface Presence {
 
 /** A presence together with the file it is in. */
 export interface PlacedPresence extends Presence {
-  path: string;
+  path: ProjectPath;
 }
 
 /**

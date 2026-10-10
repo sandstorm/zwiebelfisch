@@ -3,12 +3,15 @@
 import { describe, expect, it, vi } from 'vitest';
 import { FilePanel } from './files';
 import type { FileChange } from '../../core/project/project';
+import { ProjectPath } from '../../core/paths/paths';
 
-const state = { paths: ['/main.typ', '/chapter.typ', '/logo.png'], main: '/main.typ', active: '/main.typ' };
+const path = ProjectPath.of;
+
+const state = { paths: [path('/main.typ'), path('/chapter.typ'), path('/logo.png')], main: path('/main.typ'), active: path('/main.typ') };
 const nested = {
-  paths: ['/main.typ', '/chapters/intro.typ', '/chapters/end.typ', '/img/logo.png', '/data.csv'],
-  main: '/main.typ',
-  active: '/main.typ',
+  paths: [path('/main.typ'), path('/chapters/intro.typ'), path('/chapters/end.typ'), path('/img/logo.png'), path('/data.csv')],
+  main: path('/main.typ'),
+  active: path('/main.typ'),
 };
 
 function setup(onChange: (change: FileChange) => Promise<string | null> = async () => null, initial = state) {
@@ -17,8 +20,7 @@ function setup(onChange: (change: FileChange) => Promise<string | null> = async 
   const onOpen = vi.fn();
   const change = vi.fn(onChange);
   const memory = { load: vi.fn(() => null), save: vi.fn() };
-  const panel = new FilePanel(parent, parent, { onOpen, onChange: change, memory });
-  panel.render(initial);
+  const panel = new FilePanel(parent, parent, { onOpen, onChange: change, memory }, initial);
   const button = (name: string) =>
     [...parent.querySelectorAll('button')].find((b) => b.textContent?.trim() === name || b.title === name)!;
   const items = () => [...parent.querySelectorAll<HTMLElement>('[role=treeitem]')];
@@ -47,7 +49,7 @@ describe('FilePanel', () => {
     expect(item('main.typ').getAttribute('aria-selected')).toBe('true');
     expect(item('main.typ').textContent).toContain('Main');
     item('chapter.typ').click();
-    expect(onOpen).toHaveBeenCalledWith('/chapter.typ');
+    expect(onOpen).toHaveBeenCalledWith(path('/chapter.typ'));
   });
 
   it('shows folders first, collapsed, and expands them on click (remembering it)', () => {
@@ -63,12 +65,12 @@ describe('FilePanel', () => {
       ['data.csv', '1'],
       ['main.typ', '1'],
     ]);
-    expect(memory.save).toHaveBeenLastCalledWith(['/chapters']);
+    expect(memory.save).toHaveBeenLastCalledWith([path('/chapters')]);
   });
 
   it('opens the folders around the shown file', () => {
     const { panel, item } = setup(undefined, nested);
-    panel.render({ ...nested, active: '/img/logo.png' });
+    panel.render({ ...nested, active: path('/img/logo.png') });
     expect(item('img').getAttribute('aria-expanded')).toBe('true');
     expect(item('img/logo.png').getAttribute('aria-selected')).toBe('true');
   });
@@ -80,10 +82,10 @@ describe('FilePanel', () => {
   });
 
   it('marks the files other users are in with their initials in their color, closed folders too', () => {
-    const { parent, panel, item } = setup(undefined, { ...state, paths: [...state.paths, '/parts/a.typ'] });
+    const { parent, panel, item } = setup(undefined, { ...state, paths: [...state.paths, path('/parts/a.typ')] });
     const ann = { id: '1', user: { name: 'Ann Lee', color: '#b58900' }, anchor: 0, head: 0 };
     const bob = { id: '2', user: { name: 'Bob', color: '#000080' }, anchor: 0, head: 0 };
-    panel.showPresence([{ ...ann, path: '/chapter.typ' }, { ...bob, path: '/chapter.typ' }, { ...bob, path: '/parts/a.typ' }]);
+    panel.showPresence([{ ...ann, path: path('/chapter.typ') }, { ...bob, path: path('/chapter.typ') }, { ...bob, path: path('/parts/a.typ') }]);
     const dots = [...item('chapter.typ').querySelectorAll<HTMLElement>('.typst-files__user')];
     expect(dots.map((dot) => [dot.textContent, dot.title])).toEqual([['AL', 'Ann Lee'], ['B', 'Bob']]);
     expect(dots[0].style.getPropertyValue('--typst-remote-color')).toBe('#b58900');
@@ -91,7 +93,7 @@ describe('FilePanel', () => {
     expect(item('chapter.typ').querySelector('.typst-files__presence')!.getAttribute('aria-label')).toBe('Here: Ann Lee, Bob');
     expect(item('parts').querySelector('.typst-files__presence')!.getAttribute('aria-label')).toBe('Here: Bob');
     expect(item('main.typ').querySelector('.typst-files__presence')).toBeNull();
-    panel.render({ ...state, paths: [...state.paths, '/parts/a.typ'], active: '/chapter.typ' });
+    panel.render({ ...state, paths: [...state.paths, path('/parts/a.typ')], active: path('/chapter.typ') });
     expect(item('chapter.typ').querySelectorAll('.typst-files__user')).toHaveLength(2);
     panel.showPresence([]);
     expect(parent.querySelector('.typst-files__presence')).toBeNull();
@@ -113,7 +115,7 @@ describe('FilePanel', () => {
     const input = parent.querySelector<HTMLInputElement>('.typst-files__prompt input')!;
     expect(input.value).toBe('chapters/');
     await submit(parent, `${input.value}outro`);
-    expect(change).toHaveBeenCalledWith({ kind: 'create', path: '/chapters/outro.typ', content: '' });
+    expect(change).toHaveBeenCalledWith({ kind: 'create', path: path('/chapters/outro.typ'), content: '' });
   });
 
   it('makes a new (empty) folder that new files can go into', async () => {
@@ -139,14 +141,14 @@ describe('FilePanel', () => {
     const { parent, panel, button, change } = setup();
     expect(button('Rename').disabled).toBe(true);
     expect(button('Delete').disabled).toBe(true);
-    panel.render({ ...state, active: '/chapter.typ' });
+    panel.render({ ...state, active: path('/chapter.typ') });
     button('Rename').click();
     expect(parent.querySelector<HTMLInputElement>('.typst-files__prompt input')!.value).toBe('chapter.typ');
     await submit(parent, 'intro');
-    expect(change).toHaveBeenCalledWith({ kind: 'rename', from: '/chapter.typ', path: '/intro.typ' });
+    expect(change).toHaveBeenCalledWith({ kind: 'rename', from: path('/chapter.typ'), path: path('/intro.typ') });
     button('Delete').click();
     await submit(parent);
-    expect(change).toHaveBeenCalledWith({ kind: 'delete', path: '/chapter.typ' });
+    expect(change).toHaveBeenCalledWith({ kind: 'delete', path: path('/chapter.typ') });
   });
 
   it('renames and deletes a folder with everything in it', async () => {
@@ -155,15 +157,15 @@ describe('FilePanel', () => {
     button('Rename').click();
     await submit(parent, 'parts');
     expect(change.mock.calls.map(([c]) => c)).toEqual([
-      { kind: 'rename', from: '/chapters/intro.typ', path: '/parts/intro.typ' },
-      { kind: 'rename', from: '/chapters/end.typ', path: '/parts/end.typ' },
+      { kind: 'rename', from: path('/chapters/intro.typ'), path: path('/parts/intro.typ') },
+      { kind: 'rename', from: path('/chapters/end.typ'), path: path('/parts/end.typ') },
     ]);
     change.mockClear();
     item('img').click();
     button('Delete').click();
     expect(parent.querySelector('.typst-files__message')!.textContent).toBe('Delete img and the 1 files in it? This cannot be undone.');
     await submit(parent);
-    expect(change.mock.calls.map(([c]) => c)).toEqual([{ kind: 'delete', path: '/img/logo.png' }]);
+    expect(change.mock.calls.map(([c]) => c)).toEqual([{ kind: 'delete', path: path('/img/logo.png') }]);
   });
 
   it('cancels a prompt with Escape', () => {
@@ -190,7 +192,7 @@ describe('FilePanel', () => {
       expect(document.activeElement).toBe(item('chapters/intro.typ'));
       const enter = press(item('chapters/intro.typ'), 'Enter');
       expect(enter.defaultPrevented).toBe(true);
-      expect(onOpen).toHaveBeenCalledWith('/chapters/intro.typ');
+      expect(onOpen).toHaveBeenCalledWith(path('/chapters/intro.typ'));
       press(item('chapters/intro.typ'), 'ArrowLeft');
       expect(document.activeElement).toBe(item('chapters'));
       press(item('chapters'), 'ArrowLeft');
@@ -207,7 +209,7 @@ describe('FilePanel', () => {
       press(item('chapter.typ'), 'Delete');
       expect(parent.querySelector('.typst-files__message')!.textContent).toContain('Delete chapter.typ?');
       await submit(parent);
-      expect(change).toHaveBeenCalledWith({ kind: 'delete', path: '/chapter.typ' });
+      expect(change).toHaveBeenCalledWith({ kind: 'delete', path: path('/chapter.typ') });
     });
 
     it('F2 and Delete do nothing on the main file', () => {
@@ -246,16 +248,16 @@ describe('FilePanel', () => {
       expect(dragEvent('dragover', item('img'), transfer).defaultPrevented).toBe(true);
       expect(item('img').classList.contains('typst-files__row--drop')).toBe(true);
       dragEvent('drop', item('img'), transfer);
-      await vi.waitFor(() => expect(change).toHaveBeenCalledWith({ kind: 'rename', from: '/data.csv', path: '/img/data.csv' }));
+      await vi.waitFor(() => expect(change).toHaveBeenCalledWith({ kind: 'rename', from: path('/data.csv'), path: path('/img/data.csv') }));
     });
 
     it('a folder dragged onto the top level moves with its files; the main file stays', async () => {
-      const { item, change, panel, parent } = setup(undefined, { ...nested, paths: [...nested.paths, '/img/old/a.png'] });
-      panel.render({ ...nested, paths: [...nested.paths, '/img/old/a.png'], active: '/img/old/a.png' });
+      const { item, change, panel, parent } = setup(undefined, { ...nested, paths: [...nested.paths, path('/img/old/a.png')] });
+      panel.render({ ...nested, paths: [...nested.paths, path('/img/old/a.png')], active: path('/img/old/a.png') });
       const transfer = dataTransfer();
       dragEvent('dragstart', item('img/old'), transfer);
       dragEvent('drop', item('main.typ'), transfer);
-      await vi.waitFor(() => expect(change).toHaveBeenCalledWith({ kind: 'rename', from: '/img/old/a.png', path: '/old/a.png' }));
+      await vi.waitFor(() => expect(change).toHaveBeenCalledWith({ kind: 'rename', from: path('/img/old/a.png'), path: path('/old/a.png') }));
       change.mockClear();
       const main = dataTransfer();
       dragEvent('dragstart', item('main.typ'), main);
@@ -270,7 +272,7 @@ describe('FilePanel', () => {
       });
       const { item, change } = setup(undefined, nested);
       dragEvent('drop', item('img'), dataTransfer({}, [png]));
-      await vi.waitFor(() => expect(change).toHaveBeenCalledWith(expect.objectContaining({ kind: 'create', path: '/img/cat.png' })));
+      await vi.waitFor(() => expect(change).toHaveBeenCalledWith(expect.objectContaining({ kind: 'create', path: path('/img/cat.png') })));
       expect(change).toHaveBeenCalledTimes(1);
     });
   });
@@ -299,7 +301,7 @@ describe('FilePanel', () => {
       enter(parent);
       expect(parent.classList.contains('typst-editor--dropping')).toBe(true);
       expect(drop(parent, [png]).defaultPrevented).toBe(true);
-      await vi.waitFor(() => expect(change).toHaveBeenCalledWith(expect.objectContaining({ kind: 'create', path: '/cat.png' })));
+      await vi.waitFor(() => expect(change).toHaveBeenCalledWith(expect.objectContaining({ kind: 'create', path: path('/cat.png') })));
       expect(parent.classList.contains('typst-editor--dropping')).toBe(false);
     });
 

@@ -6,23 +6,26 @@ import { describe, expect, it } from 'vitest';
 import { Project } from '../../../core/project/project';
 import { LabelIndex } from '../../labels/labels';
 import { VisualView } from '../visual-view';
+import { ProjectPath } from '../../../core/paths/paths';
+
+const path = ProjectPath.of;
 
 // jsdom's import.meta.url is not a file URL: read relative to the repository root
 const ADVANCED = 'demo/examples/advanced/';
 const CHAPTERS = ['introduction', 'method', 'results'];
 
 /** The advanced example's chapters, its label index, and a Visual view of the introduction (or `path`). */
-function setup(path = '/chapters/introduction.typ', edit?: (files: Record<string, string>) => void) {
+function setup(file = path('/chapters/introduction.typ'), edit?: (files: Record<string, string>) => void) {
   const files = Object.fromEntries(CHAPTERS.map((c) => [`/chapters/${c}.typ`, readFileSync(`${ADVANCED}chapters/${c}.typ`, 'utf8')]));
   edit?.(files);
-  const project = new Project('/main.typ', { '/main.typ': '#include "chapters/introduction.typ"\n', ...files });
+  const project = new Project(path('/main.typ'), { '/main.typ': '#include "chapters/introduction.typ"\n', ...files });
   const labels = new LabelIndex(project);
   const parent = document.createElement('div');
   document.body.append(parent);
-  const document_ = project.document(path)!;
+  const document_ = project.document(file)!;
   new VisualView(parent, document_, { labels });
   const editor = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
-  const text = (p: string) => project.document(p)!.text;
+  const text = (p: string) => project.document(path(p))!.text;
   return { project, labels, parent, editor, document: document_, text };
 }
 
@@ -64,12 +67,12 @@ describe('references in the Visual view', () => {
   });
 
   it('marks references to missing labels, and unmarks them once the label exists', async () => {
-    const { parent, project } = setup('/chapters/introduction.typ', (files) => {
+    const { parent, project } = setup(path('/chapters/introduction.typ'), (files) => {
       files['/chapters/method.typ'] = files['/chapters/method.typ'].replace('<method>', '<approach>');
     });
     expect(chip(parent, 'method').classList.contains('typst-visual__ref--unknown')).toBe(true);
     expect(chip(parent, 'method').title).toContain('no label <method>');
-    const method = project.document('/chapters/method.typ')!;
+    const method = project.document(path('/chapters/method.typ'))!;
     method.setText(method.text.replace('<approach>', '<method>'), 'test');
     await tick();
     expect(chip(parent, 'method').classList.contains('typst-visual__ref--unknown')).toBe(false);
@@ -94,7 +97,7 @@ describe('references in the Visual view', () => {
     type(editor, 'fig');
     expect(options()).toEqual(['fig:compile-times']);
     expect(press(editor, 'Enter')).toBe(true);
-    expect(text('/chapters/introduction.typ')).toContain('one picture. See @fig:compile-times\n');
+    expect(text(path('/chapters/introduction.typ'))).toContain('one picture. See @fig:compile-times\n');
     expect(list.hidden).toBe(true);
   });
 
@@ -109,7 +112,7 @@ describe('references in the Visual view', () => {
     expect(list.hidden).toBe(true);
     type(editor, 'm'); // still dismissed while the same @ is typed on
     expect(list.hidden).toBe(true);
-    expect(text('/chapters/introduction.typ')).toContain('one picture. \\@m\n');
+    expect(text(path('/chapters/introduction.typ'))).toContain('one picture. \\@m\n');
   });
 
   it('a click on a listed label inserts it', () => {
@@ -118,18 +121,18 @@ describe('references in the Visual view', () => {
     type(editor, ' @res');
     const option = parent.querySelector<HTMLElement>('[role="option"][data-index="0"]')!;
     option.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
-    expect(text('/chapters/introduction.typ')).toContain('one picture. @results\n');
+    expect(text(path('/chapters/introduction.typ'))).toContain('one picture. @results\n');
   });
 
   it('typing a whole label name and a space or full stop makes it a reference', () => {
     const { editor, text } = setup();
     cursorAfter(editor, 'sums them up');
     type(editor, ' @intro. And @nolabel ');
-    expect(text('/chapters/introduction.typ')).toContain('one picture. @intro. And \\@nolabel \n');
+    expect(text(path('/chapters/introduction.typ'))).toContain('one picture. @intro. And \\@nolabel \n');
   });
 
   it('renaming a label from its tag updates every reference in the project by default (Enter)', () => {
-    const { parent, text } = setup('/chapters/results.typ');
+    const { parent, text } = setup(path('/chapters/results.typ'));
     const tag = [...parent.querySelectorAll<HTMLElement>('[data-testid="typst-label-tag"]')].find((t) => t.textContent === 'fig:compile-times')!;
     tag.click();
     const form = tag.parentElement!.querySelector<HTMLFormElement>('form')!;
@@ -137,20 +140,20 @@ describe('references in the Visual view', () => {
     expect(form.querySelector('[data-action="alternative"]')!.textContent).toBe('Rename without updating references');
     form.querySelector('input')!.value = 'fig:times';
     form.requestSubmit();
-    expect(text('/chapters/results.typ')).toContain('@fig:times shows the same data');
-    expect(text('/chapters/results.typ')).toContain(') <fig:times>');
-    expect(text('/chapters/introduction.typ')).toContain('@fig:times sums them up');
+    expect(text(path('/chapters/results.typ'))).toContain('@fig:times shows the same data');
+    expect(text(path('/chapters/results.typ'))).toContain(') <fig:times>');
+    expect(text(path('/chapters/introduction.typ'))).toContain('@fig:times sums them up');
   });
 
   it('"Rename without updating references" renames only the label', () => {
-    const { parent, text } = setup('/chapters/results.typ');
+    const { parent, text } = setup(path('/chapters/results.typ'));
     const tag = [...parent.querySelectorAll<HTMLElement>('[data-testid="typst-label-tag"]')].find((t) => t.textContent === 'fig:compile-times')!;
     tag.click();
     const form = tag.parentElement!.querySelector<HTMLFormElement>('form')!;
     form.querySelector('input')!.value = 'fig:times';
     form.querySelector<HTMLButtonElement>('[data-action="alternative"]')!.click();
-    expect(text('/chapters/results.typ')).toContain(') <fig:times>');
-    expect(text('/chapters/results.typ')).toContain('@fig:compile-times shows the same data');
+    expect(text(path('/chapters/results.typ'))).toContain(') <fig:times>');
+    expect(text(path('/chapters/results.typ'))).toContain('@fig:compile-times shows the same data');
   });
 
   it('without references, Enter renames the label ("Rename"), and Remove removes it', () => {
@@ -161,11 +164,11 @@ describe('references in the Visual view', () => {
     expect(form.querySelector('[data-action="alternative"]')).toBeNull(); // nothing refers to <intro>
     form.querySelector('input')!.value = 'start here';
     form.requestSubmit();
-    expect(text('/chapters/introduction.typ')).toContain('= Introduction <start-here>\n');
+    expect(text(path('/chapters/introduction.typ'))).toContain('= Introduction <start-here>\n');
     tagOf()!.click();
     form = tagOf()!.parentElement!.querySelector<HTMLFormElement>('form')!;
     form.querySelector<HTMLButtonElement>('[data-action="remove"]')!.click();
-    expect(text('/chapters/introduction.typ')).toContain('= Introduction\n');
+    expect(text(path('/chapters/introduction.typ'))).toContain('= Introduction\n');
     expect(tagOf()).toBeNull();
   });
 });

@@ -6,6 +6,7 @@ import { ASSETS_MAP, META_MAP, roomFilePath, type ServerMessage } from '../../..
 import { connect } from '../../../src/features/collaboration/in-process.ts';
 import { SharedProject } from '../../../src/features/collaboration/shared-project.ts';
 import { Project } from '../../../src/core/project/project.ts';
+import { ProjectPath } from '../../../src/core/paths/paths.ts';
 import { sharedToken } from '../auth.ts';
 import { collabConfiguration } from '../collab-server.ts';
 import { blobSha } from './blob-sha.ts';
@@ -13,13 +14,15 @@ import { FakeGitLab } from './fake-gitlab.ts';
 import type { GitLabExtension } from './gitlab-extension.ts';
 import type { HttpResponse } from './http.ts';
 
+const path = ProjectPath.of;
+
 // Integration tests: the collaboration server (Hocuspocus in-process, no
 // port) with GitLab-backed rooms against an in-process fake GitLab (injected
 // fetch, no network).
 
 const PROJECT = 'group/report';
 const ROOM = `gitlab:${PROJECT}@main`;
-const MAIN = '/main.typ';
+const MAIN = path('/main.typ');
 const LOGO = new Uint8Array([137, 80, 78, 71, 1, 2, 3]);
 const MAIN_TEXT = '= Report\n\nFirst paragraph.\n\nSecond paragraph.\n\nThird paragraph.\n';
 
@@ -176,10 +179,10 @@ describe('GitLab rooms: saving', () => {
   it('commits creates, renames and deletes made by a widget client', async () => {
     const { gitlab, save, doc } = await setup();
     const project = widgetClient(doc);
-    project.apply({ kind: 'rename', from: '/ch1.typ', path: '/chapter-1.typ' });
-    project.document('/chapter-1.typ')!.setText('= One\n\nText of one, edited.\n', 'test');
-    project.apply({ kind: 'delete', path: '/old.typ' });
-    project.apply({ kind: 'create', path: '/new.typ', content: 'new\n' });
+    project.apply({ kind: 'rename', from: path('/ch1.typ'), path: path('/chapter-1.typ') });
+    project.document(path('/chapter-1.typ'))!.setText('= One\n\nText of one, edited.\n', 'test');
+    project.apply({ kind: 'delete', path: path('/old.typ') });
+    project.apply({ kind: 'create', path: path('/new.typ'), content: 'new\n' });
     const commits = gitlab.requests.filter((request) => request.startsWith('POST'));
     expect((await save())[0].type).toBe('gitlab:saved');
     expect(gitlab.requests.filter((request) => request.startsWith('POST')).length).toBe(commits.length + 1);

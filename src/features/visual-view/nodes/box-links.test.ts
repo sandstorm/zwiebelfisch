@@ -4,11 +4,14 @@ import { describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { DocumentLinkProvider, type LinkWorkspace } from '../../../core/document-links/document-links';
 import { VisualView } from '../visual-view';
+import { ProjectPath } from '../../../core/paths/paths';
+
+const path = ProjectPath.of;
 
 function setup(text: string) {
-  const files = new Set(['/main.typ', '/template.typ', '/logo.png']);
+  const files = new Set(['/main.typ', path('/template.typ'), path('/logo.png')]);
   const links: LinkWorkspace = {
-    resolve: (reference) => `/${reference}`,
+    resolve: (reference) => ProjectPath.resolve(path('/main.typ'), reference),
     exists: (path) => files.has(path),
     open: vi.fn(),
     create: vi.fn(async (path: string) => (files.add(path), null)),
@@ -34,7 +37,7 @@ describe('file links in the Visual view', () => {
     const label = parent.querySelector('.typst-visual__image-label')!;
     expect(label.textContent).toBe('Image: logo.png');
     label.querySelector<HTMLButtonElement>('button.typst-visual__path')!.click();
-    expect(links.open).toHaveBeenCalledWith('/logo.png');
+    expect(links.open).toHaveBeenCalledWith(path('/logo.png'));
   });
 
   it("a missing image's path is marked, not a link", () => {

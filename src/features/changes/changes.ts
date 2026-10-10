@@ -1,6 +1,7 @@
 // ChangeTracking: the base version of every Typst file and the "Changes since …" toggle; the views and the
 // preview mark what changed. Entry of features/changes/. See ARCHITECTURE.md, "ChangeTracking".
 import { diffTexts } from './diff';
+import type { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 
@@ -21,7 +22,7 @@ export interface ChangeTargets {
   /** Whose Typst files are tracked: every one has its own base. */
   project: Project;
   /** Marks the changed ranges of the current text of `path` in the preview (null: none). */
-  preview(path: string, ranges: { from: number; to: number }[] | null): void;
+  preview(path: ProjectPath, ranges: { from: number; to: number }[] | null): void;
 }
 
 /** The label of the default base: each file's text as it was when the editor opened. */
@@ -45,11 +46,11 @@ export class ChangeTracking {
   private opened = new Map<TypstDocument, string>();
   /** The bases set per document; files without one compare with `fallback(path)`. */
   private bases = new Map<TypstDocument, string>();
-  private fallback: (path: string) => string = () => '';
+  private fallback: (path: ProjectPath) => string = () => '';
   private shown = false;
   private readonly views = new Map<TypstDocument, ChangeView[]>();
   /** The paths the preview has (or had) changes for, to clear those of deleted and renamed files. */
-  private readonly marked = new Set<string>();
+  private readonly marked = new Set<ProjectPath>();
   private readonly unsubscribe: () => void;
 
   constructor(
@@ -99,7 +100,7 @@ export class ChangeTracking {
    * Compares every file with `base(path)` (null: the file is new since) from
    * now on, e.g. the last commit, and shows the changes.
    */
-  setBases(label: string, base: (path: string) => string | null): void {
+  setBases(label: string, base: (path: ProjectPath) => string | null): void {
     this.bases.clear();
     this.fallback = (path) => base(path) ?? '';
     this.label = label;
@@ -137,7 +138,7 @@ export class ChangeTracking {
     if (this.label === OPENED) this.bases = new Map(this.opened);
   }
 
-  private update(path: string): void {
+  private update(path: ProjectPath): void {
     const document = this.targets.project.document(path);
     if (this.shown && document) this.mark(path, this.ranges(document, path));
   }
@@ -156,31 +157,31 @@ export class ChangeTracking {
   }
 
   /** Clears the preview's changes of paths that are gone (deleted, renamed) and drops the views of deleted files. */
-  private forgetGone(documents: [string, TypstDocument][]): void {
+  private forgetGone(documents: [ProjectPath, TypstDocument][]): void {
     const paths = new Set(documents.map(([path]) => path));
     for (const path of [...this.marked].filter((marked) => !paths.has(marked))) this.mark(path, null);
     const present = new Set(documents.map(([, document]) => document));
     for (const document of [...this.views.keys()].filter((viewed) => !present.has(viewed))) this.views.delete(document);
   }
 
-  private mark(path: string, ranges: { from: number; to: number }[] | null): void {
+  private mark(path: ProjectPath, ranges: { from: number; to: number }[] | null): void {
     if (ranges === null && !this.marked.has(path)) return;
     if (ranges === null) this.marked.delete(path);
     else this.marked.add(path);
     this.targets.preview(path, ranges);
   }
 
-  private baseOf(document: TypstDocument, path: string): string {
+  private baseOf(document: TypstDocument, path: ProjectPath): string {
     return this.bases.get(document) ?? this.fallback(path);
   }
 
-  private ranges(document: TypstDocument, path: string): { from: number; to: number }[] {
+  private ranges(document: TypstDocument, path: ProjectPath): { from: number; to: number }[] {
     return diffTexts(this.baseOf(document, path), document.text).map((change) => ({ from: change.fromB, to: change.toB }));
   }
 
-  private documents(): [string, TypstDocument][] {
+  private documents(): [ProjectPath, TypstDocument][] {
     const { project } = this.targets;
-    return project.paths().flatMap((path): [string, TypstDocument][] => {
+    return project.paths().flatMap((path): [ProjectPath, TypstDocument][] => {
       const document = project.document(path);
       return document ? [[path, document]] : [];
     });

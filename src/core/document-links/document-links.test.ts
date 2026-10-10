@@ -2,12 +2,16 @@
 import { describe, expect, it, vi } from 'vitest';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { DocumentLinkProvider, type LinkWorkspace } from './document-links';
+import { PathReference, ProjectPath } from '../paths/paths';
 
-const files = new Set(['/main.typ', '/template.typ', '/chapters/intro.typ']);
+const path = ProjectPath.of;
+const ref = PathReference.of;
+
+const files = new Set(['/main.typ', path('/template.typ'), path('/chapters/intro.typ')]);
 
 function workspace(): LinkWorkspace {
   return {
-    resolve: (reference) => (reference.startsWith('..') ? null : reference.startsWith('/') ? reference : `/${reference}`),
+    resolve: (reference) => ProjectPath.resolve(path('/main.typ'), reference),
     exists: (path) => files.has(path),
     open: vi.fn(),
     create: vi.fn(async () => null),
@@ -88,18 +92,18 @@ describe('documentLinkAt', () => {
   });
 });
 
-describe('resolveDocumentLink', () => {
-  it('describes an existing file', () => {
-    expect(provider.resolveDocumentLink('template.typ')).toEqual({ path: '/template.typ', name: 'template.typ', exists: true, creatable: false });
+describe('resolveDocumentLinkref(', () => {
+  it(')describes an existing file', () => {
+    expect(provider.resolveDocumentLink(ref('template.typ'))).toEqual({ path: path('/template.typ'), name: 'template.typ', exists: true, creatable: false });
   });
 
   it('offers to create a missing Typst file, not a missing image', () => {
-    expect(provider.resolveDocumentLink('appendix.typ')).toEqual({ path: '/appendix.typ', name: 'appendix.typ', exists: false, creatable: true });
-    expect(provider.resolveDocumentLink('logo.png')).toMatchObject({ exists: false, creatable: false });
+    expect(provider.resolveDocumentLink(ref('appendix.typ'))).toEqual({ path: path('/appendix.typ'), name: 'appendix.typ', exists: false, creatable: true });
+    expect(provider.resolveDocumentLink(ref('logo.png'))).toMatchObject({ exists: false, creatable: false });
   });
 
   it('is null for paths outside the project', () => {
-    expect(provider.resolveDocumentLink('../outside.typ')).toBeNull();
+    expect(provider.resolveDocumentLink(ref('../outside.typ'))).toBeNull();
   });
 });
 
@@ -107,10 +111,10 @@ describe('followDocumentLink', () => {
   it('opens an existing file, creates a missing Typst file, and refuses a missing image', async () => {
     const files = workspace();
     const links = new DocumentLinkProvider(files);
-    expect(await links.followDocumentLink(links.resolveDocumentLink('template.typ')!)).toBeNull();
-    expect(files.open).toHaveBeenCalledWith('/template.typ');
-    expect(await links.followDocumentLink(links.resolveDocumentLink('appendix.typ')!)).toBeNull();
-    expect(files.create).toHaveBeenCalledWith('/appendix.typ');
-    expect(await links.followDocumentLink(links.resolveDocumentLink('logo.png')!)).toBe('logo.png is not in the project.');
+    expect(await links.followDocumentLink(links.resolveDocumentLink(ref('template.typ'))!)).toBeNull();
+    expect(files.open).toHaveBeenCalledWith(path('/template.typ'));
+    expect(await links.followDocumentLink(links.resolveDocumentLink(ref('appendix.typ'))!)).toBeNull();
+    expect(files.create).toHaveBeenCalledWith(path('/appendix.typ'));
+    expect(await links.followDocumentLink(links.resolveDocumentLink(ref('logo.png'))!)).toBe('logo.png is not in the project.');
   });
 });

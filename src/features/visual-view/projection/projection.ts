@@ -40,6 +40,7 @@
  * (`<key>`) after a heading, or ending a block's run, is that block's `label`
  * attribute (see `labels.ts`).
  */
+import { PathReference } from '../../../core/paths/paths';
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
@@ -917,13 +918,14 @@ function quote(text: string): string {
 }
 
 /** The path of the image an `#image("path", ..)` call (or a figure's `image(..)`) shows; null if it is not a call with a literal path. */
-export function imagePath(src: string): string | null {
+export function imagePath(src: string): PathReference | null {
   const literal = /^#?image\(\s*("(?:[^"\\\n]|\\.)*")/.exec(src);
-  return literal ? decodeString(literal[1]) : null;
+  const path = literal && decodeString(literal[1]);
+  return path ? PathReference.of(path) : null;
 }
 
 /** The source of an image block showing the image at `path`. */
-export function imageSource(path: string): string {
+export function imageSource(path: PathReference): string {
   return `#image(${quote(path)})`;
 }
 

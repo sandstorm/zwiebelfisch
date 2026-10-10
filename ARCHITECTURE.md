@@ -31,9 +31,9 @@ src/                        the widget (TypeScript); the most important API on t
     typst-engine/           typed TS wrapper around the wasm (typst-engine.ts: createEngine), fetch-fonts.ts;
                             engine-assets.ts (wasm + default font URLs for the main thread); packages/ (withPackages,
                             tar reader); fixtures/ (test package archives); generated wasm/, fonts/ (gitignored)
-    paths/                  how project files are named and what they are (pure functions on strings): fileKind,
-                            displayName, toPath, extensionOf, imageBlob, Typst path resolution (resolvePath,
-                            referencePath)
+    paths/                  ProjectPath (where a file is) and PathReference (a path as written in Typst source),
+                            branded strings with their operations: parse, fromName, resolve, referenceTo, kind,
+                            displayName, extension, imageBlob
     project/                Project: which files a project has and which changes are allowed (one TypstDocument
                             per .typ file, main protected); FileChange, FileContent, ProjectFiles. No re-exports.
     document-links/         DocumentLinkProvider: the file paths a Typst document names (find-links.ts, Lezer),
@@ -195,8 +195,8 @@ createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileCha
 - Preview clicks into another project file open it, then reveal. Clicks into packages are ignored.
 - **`ProjectRenderings`** gives every document's VisualView its `renderer` (snippets from
   `Preview.snippet` under the document's current path, refreshed on `Preview.onRender`; image
-  files resolved like Typst (`resolvePath`) and shown as object URLs, made once per content and
-  revoked when replaced) and `assets` (the project's images as `referencePath`s; uploads become
+  files resolved like Typst (`ProjectPath.resolve`) and shown as object URLs, made once per content and
+  revoked when replaced) and `assets` (the project's images as `PathReference`s (`ProjectPath.referenceTo`); uploads become
   a `create` change that goes through `allowFileChange` like the file panel's; an upload equal to
   an existing file (`name.png`, `name-2.png`, …) reuses it, a different one gets the first free
   of those names — every pasted screenshot is `image.png`; refusals — not an image Typst shows,
@@ -217,6 +217,27 @@ createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileCha
   and the common suffix changes (`minimalChange`), so cursors and undo history are preserved.
 - **Styles** go into `host.getRootNode()`: `document.head`, or the element's shadow root.
   CodeMirror mounts its own styles into the same root. Embedding guide: [docs/embedding.md](docs/embedding.md).
+
+### Paths (`src/core/paths`)
+
+```ts
+type ProjectPath = string & { __type: 'ProjectPath' }      // '/chapters/intro.typ': absolute, no '.', '..' or empty segments
+type PathReference = string & { __type: 'PathReference' }  // 'img/logo.png', '../x.typ', '/data.csv': as written in Typst
+ProjectPath.parse(value) → ProjectPath | null    ProjectPath.of(value) → ProjectPath (throws; constants, tests)
+ProjectPath.fromName(typed, extension) → { path } | { error }    // "chapter 2" → /chapter 2.typ
+ProjectPath.resolve(file, reference) → ProjectPath | null         // as Typst resolves it; null: leaves the project
+ProjectPath.referenceTo(file, target) → PathReference             // relative in the same folder tree, else absolute
+ProjectPath.kind / displayName / extension / imageBlob            PathReference.of(written)
+```
+
+- **Branded strings, not classes**: free at runtime, usable as `Map`/`Record` keys, unchanged through
+  `postMessage`, Yjs maps and the server. The compiler refuses a `PathReference` where a `ProjectPath`
+  is meant (`project.has(reference)`), and a plain string for either.
+- **Parsed once, at the edges**: the public API (`main`, `files`, `open`), Yjs keys and awareness
+  states of other clients, drag data, localStorage (open folders), uploads' file names and the
+  engine's paths (`Widget.jump`: package files are no project paths) go through `parse`; what is not
+  a path is dropped there (a host's invalid `files` key throws). Inside, every path is typed.
+- `ProjectFiles` stays string-keyed: the plain data the host and the engine exchange.
 
 ### `TypstDocument` (`src/core/typst-document`)
 
@@ -808,7 +829,7 @@ spreadsheetTypst(model, 'budget.ic') → Typst source   // `values` and `sheets`
 typstPath('/budget.ic') → '/budget.ic.gen.typ'
 ```
 
-- A spreadsheet is a project file `name.ic` (`fileKind` `spreadsheet`), in IronCalc's own format
+- A spreadsheet is a project file `name.ic` (`ProjectPath.kind` `spreadsheet`), in IronCalc's own format
   (`Model.from_bytes` / `toBytes`): the browser package has no `.xlsx`. An empty file opens as a
   new workbook (so "New file" `budget.ic` makes one), which is saved at once.
 - `workbook.ts` is a separate chunk (`import()` on the first show): `@ironcalc/workbook` (React,
@@ -894,7 +915,7 @@ new FilePanel(parent, dropTarget, { onOpen(path), onChange(change) → Promise<r
 //                       relocate(paths, source, target) → renames, filesUnder, folderOf, ancestorsOf
 ```
 
-- **Only gestures → `FileChange`s** (names via `toPath`: any folder depth, default extension);
+- **Only gestures → `FileChange`s** (names via `ProjectPath.fromName`: any folder depth, default extension);
   refusals show inline in a prompt above the tree. A gesture that needs several changes (a
   folder's rename / move / delete: one per file) asks for them in order and stops at the first
   refusal.

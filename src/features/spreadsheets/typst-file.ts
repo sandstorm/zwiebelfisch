@@ -62,8 +62,10 @@ export function spreadsheetTypst(model: SheetSource, name: string): string {
 }
 
 /** Where the Typst file of spreadsheet `path` goes: `budget.ic` → `budget.ic.gen.typ`, next to it. */
-export function typstPath(path: string): string {
-  return `${path}.gen.typ`;
+// generic, so a ProjectPath stays one (a suffix keeps a path valid) without this file importing it: the demo's
+// spreadsheet task runs it in Node, which resolves no extensionless imports
+export function typstPath<Path extends string>(path: Path): Path {
+  return `${path}.gen.typ` as Path;
 }
 
 interface Size {

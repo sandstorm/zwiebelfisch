@@ -4,7 +4,7 @@
 // `onChange` and is never told by hand: `apply`, `replace` and every text edit are reported there.
 // Entry of core/project/. See ARCHITECTURE.md, "Project".
 import { TypstDocument } from '../typst-document/typst-document';
-import { fileKind } from '../paths/paths';
+import { ProjectPath } from '../paths/paths';
 
 /** The drag data type of a project file dragged from the file panel; the data is its path. */
 export const PROJECT_PATH_TYPE = 'application/x-typst-project-path';
@@ -12,16 +12,19 @@ export const PROJECT_PATH_TYPE = 'application/x-typst-project-path';
 /** A project file: Typst source text, or bytes (images, data files, …). */
 export type FileContent = string | Uint8Array;
 
-/** Project files by absolute path (`/chapter.typ`, `/img/logo.png`): source text or bytes. */
+/**
+ * Project files by absolute path (`/chapter.typ`, `/img/logo.png`): source text or bytes. The plain data the
+ * host and the engine exchange; `Project` parses its keys (see `ProjectPath`).
+ */
 export type ProjectFiles = Record<string, FileContent>;
 
 /** One change to the project's files, as the host sees (and may veto) it. */
 export type FileChange =
-  | { kind: 'create'; path: string; content: FileContent }
+  | { kind: 'create'; path: ProjectPath; content: FileContent }
   /** Text of a Typst file (its document), or the new content of any other file. */
-  | { kind: 'update'; path: string; content: FileContent }
-  | { kind: 'delete'; path: string }
-  | { kind: 'rename'; path: string; from: string };
+  | { kind: 'update'; path: ProjectPath; content: FileContent }
+  | { kind: 'delete'; path: ProjectPath }
+  | { kind: 'rename'; path: ProjectPath; from: ProjectPath };
 
 type Entry = { document: TypstDocument; unsubscribe: () => void } | { content: FileContent };
 
@@ -34,38 +37,38 @@ type Entry = { document: TypstDocument; unsubscribe: () => void } | { content: F
  * and the text edits of every document.
  */
 export class Project {
-  private readonly entries = new Map<string, Entry>();
+  private readonly entries = new Map<ProjectPath, Entry>();
   private readonly listeners = new Set<(change: FileChange) => void>();
 
   constructor(
-    readonly main: string,
+    readonly main: ProjectPath,
     files: ProjectFiles,
   ) {
-    for (const [path, content] of Object.entries(files)) this.add(path, content);
+    for (const [path, content] of Object.entries(files)) this.add(parseKey(path), content);
     if (!this.entries.has(main)) this.add(main, '');
   }
 
   /** The main file, then other Typst files, then the rest; each group sorted. */
-  paths(): string[] {
-    const rank = (path: string) => (path === this.main ? 0 : fileKind(path) === 'typst' ? 1 : 2);
+  paths(): ProjectPath[] {
+    const rank = (path: ProjectPath) => (path === this.main ? 0 : ProjectPath.kind(path) === 'typst' ? 1 : 2);
     return [...this.entries.keys()].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
   }
 
-  has(path: string): boolean {
+  has(path: ProjectPath): boolean {
     return this.entries.has(path);
   }
 
-  document(path: string): TypstDocument | undefined {
+  document(path: ProjectPath): TypstDocument | undefined {
     const entry = this.entries.get(path);
     return entry && 'document' in entry ? entry.document : undefined;
   }
 
-  pathOf(document: TypstDocument): string | undefined {
+  pathOf(document: TypstDocument): ProjectPath | undefined {
     for (const [path, entry] of this.entries) if ('document' in entry && entry.document === document) return path;
     return undefined;
   }
 
-  content(path: string): FileContent | undefined {
+  content(path: ProjectPath): FileContent | undefined {
     const entry = this.entries.get(path);
     if (!entry) return undefined;
     return 'document' in entry ? entry.document.text : entry.content;
@@ -99,7 +102,7 @@ export class Project {
   }
 
   /** A Typst file takes only text; other files any content. */
-  private checkUpdate(path: string, content: FileContent): string | null {
+  private checkUpdate(path: ProjectPath, content: FileContent): string | null {
     return this.document(path) && typeof content !== 'string' ? `${path} must contain text.` : null;
   }
 
@@ -128,7 +131,8 @@ export class Project {
     for (const path of [...this.entries.keys()]) {
       if (path !== this.main && !(path in files)) this.removeAndEmit(path);
     }
-    for (const [path, content] of Object.entries(files)) {
+    for (const [key, content] of Object.entries(files)) {
+      const path = parseKey(key);
       if (path !== this.main) this.put(path, content);
     }
   }
@@ -144,23 +148,23 @@ export class Project {
     this.listeners.clear();
   }
 
-  private checkNew(path: string): string | null {
+  private checkNew(path: ProjectPath): string | null {
     return this.entries.has(path) ? `${path} already exists.` : null;
   }
 
-  private checkRename(from: string, to: string): string | null {
+  private checkRename(from: ProjectPath, to: ProjectPath): string | null {
     if (from === this.main) return 'The main file cannot be renamed.';
-    if ((fileKind(from) === 'typst') !== (fileKind(to) === 'typst')) {
+    if ((ProjectPath.kind(from) === 'typst') !== (ProjectPath.kind(to) === 'typst')) {
       return 'Typst files must keep the .typ ending, and other files cannot get it.';
     }
     return this.checkNew(to);
   }
 
   /** Sets the content of `path` for `replace`: an edit where the kind of entry stays, else a new file. */
-  private put(path: string, content: FileContent): void {
+  private put(path: ProjectPath, content: FileContent): void {
     const entry = this.entries.get(path);
     if (entry && 'document' in entry && typeof content === 'string') return entry.document.setText(content, 'api');
-    const becomesDocument = fileKind(path) === 'typst' && typeof content === 'string';
+    const becomesDocument = ProjectPath.kind(path) === 'typst' && typeof content === 'string';
     if (entry && 'content' in entry && !becomesDocument) {
       if (entry.content === content) return;
       this.entries.set(path, { content });
@@ -171,14 +175,14 @@ export class Project {
     this.emit({ kind: 'create', path, content });
   }
 
-  private removeAndEmit(path: string): void {
+  private removeAndEmit(path: ProjectPath): void {
     this.remove(path);
     this.emit({ kind: 'delete', path });
   }
 
-  private add(path: string, content: FileContent): void {
+  private add(path: ProjectPath, content: FileContent): void {
     this.remove(path);
-    if (fileKind(path) !== 'typst' || typeof content !== 'string') {
+    if (ProjectPath.kind(path) !== 'typst' || typeof content !== 'string') {
       this.entries.set(path, { content });
       return;
     }
@@ -190,13 +194,13 @@ export class Project {
     this.entries.set(path, { document, unsubscribe });
   }
 
-  private remove(path: string): void {
+  private remove(path: ProjectPath): void {
     const entry = this.entries.get(path);
     if (entry && 'unsubscribe' in entry) entry.unsubscribe();
     this.entries.delete(path);
   }
 
-  private move(from: string, to: string): void {
+  private move(from: ProjectPath, to: ProjectPath): void {
     const entry = this.entries.get(from)!;
     this.entries.delete(from);
     this.entries.set(to, entry);
@@ -207,6 +211,13 @@ export class Project {
   }
 }
 
-function checkContent(path: string, content: FileContent): string | null {
-  return fileKind(path) === 'typst' && typeof content !== 'string' ? 'A .typ file must contain text.' : null;
+/** A key of host-given `ProjectFiles` as a path; a key that is none is the host's mistake, so it throws. */
+function parseKey(key: string): ProjectPath {
+  const path = ProjectPath.parse(key);
+  if (path === null) throw new Error(`Not a project path: "${key}" (paths start with "/", without "." or ".." segments)`);
+  return path;
+}
+
+function checkContent(path: ProjectPath, content: FileContent): string | null {
+  return ProjectPath.kind(path) === 'typst' && typeof content !== 'string' ? 'A .typ file must contain text.' : null;
 }

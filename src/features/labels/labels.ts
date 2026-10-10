@@ -1,5 +1,6 @@
 // LabelIndex: the labels of a project (all files) and the references to them, kept up to date.
 // Entry of features/labels/. See ARCHITECTURE.md, "Labels and references".
+import type { ProjectPath } from '../../core/paths/paths';
 import type { FileChange, Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import { referenceEdits, scanBibliography, scanTypst, type FoundLabel, type LabelKind, type Scan } from './scan';
@@ -10,7 +11,7 @@ export type { LabelKind } from './scan';
 /** A label of the project: its name, what it labels (null: something else), that element's title, and its file. */
 export interface LabelInfo extends FoundLabel {
   kind: LabelKind | null;
-  path: string;
+  path: ProjectPath;
 }
 
 /** What the Visual view needs to know about the project's labels (see `LabelIndex`). */
@@ -36,7 +37,7 @@ const RENAME_ORIGIN = 'rename-references';
  * of the label list only, not about every keystroke.
  */
 export class LabelIndex implements ProjectLabels {
-  private readonly scans = new Map<string, Scan>();
+  private readonly scans = new Map<ProjectPath, Scan>();
   private readonly listeners = new Set<() => void>();
   private list: LabelInfo[] = [];
   private readonly unsubscribe: () => void;
@@ -90,7 +91,7 @@ export class LabelIndex implements ProjectLabels {
     for (const listener of this.listeners) listener();
   }
 
-  private rescan(path: string): void {
+  private rescan(path: ProjectPath): void {
     const content = this.project.content(path);
     const text = typeof content === 'string' ? content : content && new TextDecoder().decode(content);
     if (path.endsWith('.typ') && typeof content === 'string') this.scans.set(path, scanTypst(content));

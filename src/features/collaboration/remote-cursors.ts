@@ -2,7 +2,8 @@
 // See collaboration.ts.
 import type { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
-import type { PlacedPresence, Presence, PresenceTarget } from '../../core/typst-document/typst-document';
+import { ProjectPath } from '../../core/paths/paths';
+import type { PlacedPresence, PresenceTarget } from '../../core/typst-document/typst-document';
 
 /** Who is editing here, as others see it. */
 export interface CollaborationUser {
@@ -14,13 +15,14 @@ export interface CollaborationUser {
 export interface RemoteCursorsOptions {
   user: CollaborationUser;
   /** The shared text of `path` (where cursors are anchored). */
-  text(path: string): Y.Text | undefined;
+  text(path: ProjectPath): Y.Text | undefined;
   /** Called with every other user's place, in any file, whenever one changes (e.g. for the preview and the file panel). */
   onPresence?(presences: readonly PlacedPresence[]): void;
 }
 
 /** What a client publishes in its awareness state (field `cursor`; `user` follows the y-codemirror convention). */
 interface CursorState {
+  /** A project path, as another client sent it: parsed before use. */
   path: string;
   anchor: unknown;
   head: unknown;
@@ -38,7 +40,7 @@ const PALETTE = ['#d33682', '#2aa198', '#6c71c4', '#cb4b16', '#268bd2', '#859900
  * change).
  */
 export class RemoteCursors {
-  private path: string | null = null;
+  private path: ProjectPath | null = null;
   private views: readonly PresenceTarget[] = [];
   private observed: Y.Text | undefined;
   private scheduled = false;
@@ -56,7 +58,7 @@ export class RemoteCursors {
   }
 
   /** Publishes where the local user is: a source range in `path`, or nowhere (null). */
-  setLocal(path: string | null, range?: { from: number; to: number }): void {
+  setLocal(path: ProjectPath | null, range?: { from: number; to: number }): void {
     const text = path && range ? this.options.text(path) : undefined;
     if (!path || !range || !text) {
       this.awareness.setLocalStateField('cursor', null);
@@ -68,7 +70,7 @@ export class RemoteCursors {
   }
 
   /** Shows the others in `path` in `views` from now on, and clears the views shown in before. */
-  show(path: string | null, views: readonly PresenceTarget[]): void {
+  show(path: ProjectPath | null, views: readonly PresenceTarget[]): void {
     for (const view of this.views) if (!views.includes(view)) view.setPresence([]);
     this.path = path;
     this.views = views;
@@ -121,16 +123,21 @@ export class RemoteCursors {
 
   /** One user's place, if they are in a shared file. */
   private placeOf(id: string, state: Record<string, unknown>): PlacedPresence | null {
-    const cursor = state.cursor as CursorState | null | undefined;
-    const text = cursor ? this.options.text(cursor.path) : undefined;
-    if (!cursor || !text) return null;
-    const anchor = this.resolve(cursor.anchor, text);
-    const head = this.resolve(cursor.head, text);
-    if (anchor === null || head === null) return null;
+    const place = this.cursorPlace(state.cursor as CursorState | null | undefined);
+    if (!place) return null;
     const user = state.user as CollaborationUser | undefined;
     const name = user?.name ?? '';
-    const presence: Presence = { id, user: { name, color: user?.color ?? colorFor(name) }, anchor, head };
-    return { ...presence, path: cursor.path };
+    return { id, user: { name, color: user?.color ?? colorFor(name) }, ...place };
+  }
+
+  /** Where another client's cursor is: null when its file is no shared one (any more), or its positions are gone. */
+  private cursorPlace(cursor: CursorState | null | undefined): { path: ProjectPath; anchor: number; head: number } | null {
+    const path = cursor ? ProjectPath.parse(cursor.path) : null;
+    const text = path ? this.options.text(path) : undefined;
+    if (!cursor || !path || !text) return null;
+    const anchor = this.resolve(cursor.anchor, text);
+    const head = this.resolve(cursor.head, text);
+    return anchor === null || head === null ? null : { path, anchor, head };
   }
 
   private resolve(json: unknown, text: Y.Text): number | null {

@@ -2,6 +2,9 @@
 // Tests for asset-view.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { AssetView, formatSize } from './asset-view';
+import { ProjectPath } from '../../core/paths/paths';
+
+const path = ProjectPath.of;
 
 function setup() {
   const parent = document.createElement('div');
@@ -17,7 +20,7 @@ describe('AssetView', () => {
     Object.assign(URL, { createObjectURL, revokeObjectURL }); // jsdom has neither
     const { root, view } = setup();
     expect(root.hidden).toBe(true);
-    view.show('/img/logo.png', new Uint8Array(2048));
+    view.show(path('/img/logo.png'), new Uint8Array(2048));
     expect(root.hidden).toBe(false);
     expect(root.querySelector('img')?.getAttribute('src')).toBe('blob:logo');
     expect(root.textContent).toContain('img/logo.png');
@@ -29,9 +32,9 @@ describe('AssetView', () => {
 
   it('shows the text of data files and a note for other bytes', () => {
     const { root, view } = setup();
-    view.show('/data.csv', 'a,b');
+    view.show(path('/data.csv'), 'a,b');
     expect(root.querySelector('pre')?.textContent).toBe('a,b');
-    view.show('/font.otf', new Uint8Array(3));
+    view.show(path('/font.otf'), new Uint8Array(3));
     expect(root.querySelector('.typst-asset__note')).not.toBeNull();
   });
 });

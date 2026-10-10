@@ -4,6 +4,8 @@ import type { Node } from '@tiptap/pm/model';
 import { EditorState, TextSelection } from '@tiptap/pm/state';
 import { schema } from '../nodes/nodes';
 import { codeLanguage, hasFigureExtras, imagePath, imageSource, posToSource, print, project as projectWith, sourceToPos, syncDoc } from './projection';
+import { PathReference } from '../../../core/paths/paths';
+
 
 const project = (source: string) => projectWith(source, schema);
 
@@ -526,7 +528,7 @@ describe('images', () => {
 
   it('prints an image created in the editor', () => {
     const doc = edit(project('Text\n'), (s) =>
-      s.tr.insert(s.doc.content.size, schema.nodes.image.create({ src: imageSource('a "b".png') })),
+      s.tr.insert(s.doc.content.size, schema.nodes.image.create({ src: imageSource(PathReference.of('a "b".png')) })),
     );
     expect(print(doc)).toBe('Text\n\n#image("a \\"b\\".png")\n');
     expectPreciseMap(doc);

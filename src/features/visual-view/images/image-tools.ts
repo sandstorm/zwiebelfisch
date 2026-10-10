@@ -1,4 +1,5 @@
 // ImageTools: resize handles, width presets, alt text and caption on an image box. See images.ts.
+import type { PathReference } from '../../../core/paths/paths';
 import type { Editor } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import type { EditorState, Transaction } from '@tiptap/pm/state';
@@ -21,7 +22,7 @@ export interface ImageToolsHost {
   /** Shows and focuses the image call's code. */
   editCode(): void;
   /** The image's path in the heading, e.g. as a link to the file (default: the text). */
-  pathLabel?: ((path: string) => globalThis.Node) | null;
+  pathLabel?: ((path: PathReference) => globalThis.Node) | null;
 }
 
 /** Width presets offered as buttons (keyboard-friendly resizing). */

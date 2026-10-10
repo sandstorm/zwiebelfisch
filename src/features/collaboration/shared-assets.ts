@@ -1,7 +1,7 @@
 // SharedAssets: the project's non-Typst files in a GitLab-backed room. See collaboration.ts.
 import * as Y from 'yjs';
 import { type FileChange, type Project } from '../../core/project/project';
-import { fileKind } from '../../core/paths/paths';
+import { ProjectPath } from '../../core/paths/paths';
 import { ASSETS_MAP } from './gitlab-protocol';
 
 type AssetValue = string | Uint8Array;
@@ -25,10 +25,13 @@ export class SharedAssets {
   constructor(
     private readonly project: Project,
     private readonly ydoc: Y.Doc,
-    private readonly load: (path: string) => Promise<Uint8Array>,
+    private readonly load: (path: ProjectPath) => Promise<Uint8Array>,
   ) {
     this.assets = ydoc.getMap<AssetValue>(ASSETS_MAP);
-    for (const [path, value] of this.assets) this.pull(path, value);
+    for (const [key, value] of this.assets) {
+      const path = ProjectPath.parse(key);
+      if (path) this.pull(path, value);
+    }
     this.seed();
     this.assets.observe(this.onRemote);
     this.unsubscribe = project.onChange((change) => {
@@ -53,7 +56,7 @@ export class SharedAssets {
 
   /** A local create / rename / delete of another file, into the map. */
   private push(change: FileChange): void {
-    if (change.kind === 'update' || fileKind(change.path) === 'typst') return;
+    if (change.kind === 'update' || ProjectPath.kind(change.path) === 'typst') return;
     this.ydoc.transact(() => {
       if (change.kind === 'create') this.assets.set(change.path, bytes(change.content));
       if (change.kind === 'delete') this.assets.delete(change.path);
@@ -67,7 +70,11 @@ export class SharedAssets {
 
   private readonly onRemote = (event: Y.YMapEvent<AssetValue>): void => {
     if (event.transaction.origin === this) return;
-    const changed = [...event.changes.keys];
+    // another client's keys: not trusted to be paths
+    const changed = [...event.changes.keys].flatMap(([key, change]) => {
+      const path = ProjectPath.parse(key);
+      return path ? [[path, change] as const] : [];
+    });
     const deleted = changed.filter(([, change]) => change.action === 'delete').map(([path]) => path);
     const added = changed.filter(([, change]) => change.action !== 'delete');
     if (deleted.length === 1 && added.length === 1 && this.renamed(deleted[0], added[0][0])) return;
@@ -79,14 +86,14 @@ export class SharedAssets {
   };
 
   /** Applies a remote rename (one file deleted, one with the same content added), if that is what happened. */
-  private renamed(from: string, to: string): boolean {
+  private renamed(from: ProjectPath, to: ProjectPath): boolean {
     if (!this.project.has(from) || this.project.has(to)) return false;
     return this.apply({ kind: 'rename', from, path: to });
   }
 
   /** Puts the file at `path` with the map's `value` into the project (loading a repository file first). */
-  private pull(path: string, value: AssetValue): void {
-    if (fileKind(path) === 'typst') return;
+  private pull(path: ProjectPath, value: AssetValue): void {
+    if (ProjectPath.kind(path) === 'typst') return;
     if (value instanceof Uint8Array) {
       this.put(path, value);
       return;
@@ -99,7 +106,7 @@ export class SharedAssets {
     );
   }
 
-  private put(path: string, content: Uint8Array): void {
+  private put(path: ProjectPath, content: Uint8Array): void {
     if (this.project.has(path)) this.apply({ kind: 'delete', path });
     this.apply({ kind: 'create', path, content });
   }
