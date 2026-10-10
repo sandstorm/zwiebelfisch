@@ -20,7 +20,7 @@ function setup() {
   area.append(input);
   document.body.append(area);
   const view = { selection: () => ({ from: 6, to: 11 }) };
-  const link = new CollaborationLink({ doc: ydoc, awareness }, { project, comments, user: { name: 'Ann' } }, area, () => ({ path: MAIN, view }));
+  const link = new CollaborationLink({ doc: ydoc, awareness }, { project, comments, user: { name: 'Ann' } }, area, { current: () => ({ path: MAIN, view }) });
   cleanup.push(() => link.destroy(), () => awareness.destroy(), () => area.remove());
   return { ydoc, awareness, link, input, project };
 }

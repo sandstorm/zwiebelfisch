@@ -17,6 +17,7 @@ import { referencePath } from './paths';
 import { Project, type FileChange, type ProjectFiles } from './project';
 import { ProjectRenderings } from './project-renderings';
 import styles from './styles.css?inline';
+import { VersionControls, type Versions } from './version-controls';
 
 export type { CollaborationOptions } from '../collab/collaboration';
 export type { EditorMode } from './editing-views';
@@ -67,7 +68,11 @@ export interface TypstEditorOptions {
    * comments: `{ url, room, token? }` connects to a Hocuspocus server (the
    * room's text wins over `source` / `files` once synced; a new room is seeded
    * with them), or `{ doc, awareness? }` shares through a Y.Doc the host has
-   * connected (and synced) itself. Images and other files are not shared.
+   * connected (and synced) itself. Images and other files are not shared,
+   * except in a room backed by a GitLab branch (`room: 'gitlab:<project>@<branch>'`
+   * on a server configured for GitLab): there the server loads the branch,
+   * images come from the repository, a "Save version" button commits, and
+   * "Show changes" compares with the last commit.
    */
   collaboration?: CollaborationOptions;
   /**
@@ -161,6 +166,7 @@ class Widget {
   private readonly review: CommentsUI;
   readonly changes: ChangeTracking;
   private readonly collaboration: CollaborationLink | null = null;
+  private versions: VersionControls | null = null;
   private readonly unsubscribe: () => void;
 
   constructor(
@@ -262,12 +268,22 @@ class Widget {
   /** Shares the project and the comments; the others' cursors show in the shown file's views. */
   private mountCollaboration(options: CollaborationOptions): CollaborationLink {
     const shared = { project: this.project, comments: this.comments, user: this.options.user };
-    return new CollaborationLink(options, shared, this.left, () => {
+    const current = () => {
       const document = this.project.document(this.active);
       if (!document) return null;
       const views = this.views.viewsOf(document);
       return { path: this.active, view: this.views.mode === 'visual' ? views.visual : views.source };
-    });
+    };
+    return new CollaborationLink(options, shared, this.left, { current, onVersions: (versions) => this.mountVersions(versions) });
+  }
+
+  /** "Save version" next to the tabs, in a room backed by a GitLab branch; "Show changes" follows its last commit. */
+  private mountVersions(versions: Versions): void {
+    const toolbar = this.host.ownerDocument.createElement('span');
+    toolbar.className = 'typst-editor__tab-actions';
+    this.views.addTabAction(toolbar);
+    const main = this.project.main;
+    this.versions = new VersionControls(toolbar, versions, { path: main, user: this.options.user, setBase: (base) => this.changes.setBase(base) });
   }
 
   private showCursors(): void {
@@ -287,6 +303,7 @@ class Widget {
 
   destroy(): void {
     this.unsubscribe();
+    this.versions?.destroy();
     this.collaboration?.destroy();
     this.changes.destroy();
     this.review.destroy();
