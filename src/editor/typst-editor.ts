@@ -1,3 +1,5 @@
+import { Comments } from '../comments/comments';
+import { CommentsUI } from '../comments/comments-ui';
 import { TypstDocument } from '../document/typst-document';
 import { Preview } from '../preview/preview';
 import type { FileContent } from '../preview/project-files';
@@ -28,6 +30,19 @@ export interface TypstEditorOptions {
   mode?: EditorMode;
   /** Called whenever the source text changes. */
   onChange?(source: string): void;
+  /**
+   * Review comments to start with, as last passed to `onCommentsChange`.
+   * They are kept beside the source, never in it; store them next to the
+   * file (e.g. `main.typ.comments.json`).
+   */
+  comments?: string;
+  /**
+   * Called with all comments as JSON whenever they change, including when
+   * edits move their anchors. Persist it to keep the comments.
+   */
+  onCommentsChange?(comments: string): void;
+  /** Who writes the comments made here. */
+  user?: { name: string };
 }
 
 export interface TypstEditor {
@@ -38,6 +53,8 @@ export interface TypstEditor {
   source: string;
   /** The other project files; assigning replaces them all and recompiles. */
   files: ProjectFiles;
+  /** The review comments as JSON; assigning replaces them, re-anchored in the current source. */
+  comments: string;
   destroy(): void;
 }
 
@@ -56,28 +73,13 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
   const MAIN = options.main ?? '/main.typ';
   let files = options.files ?? {};
 
-  const left = el(host.ownerDocument, 'typst-editor__left');
-  const right = el(host.ownerDocument, 'typst-editor__right');
-  host.classList.add('typst-editor');
-  host.append(left, right);
+  const { left, right, panes, visual, source, preview, status, activeView } = mountViews(host, document, MAIN, options.mode);
 
-  const status = new DiagnosticsStatus(host, (from, to) => source.reveal(from, to));
-  const preview = new Preview(right, {
-    onJump: (jump) => jump.path === MAIN && (mode === 'visual' ? visual : source).reveal(jump.from, jump.to),
-    onDiagnostics: (diagnostics) => {
-      const summary = summarizeDiagnostics(diagnostics, MAIN);
-      source.setDiagnostics(summary.inMain);
-      status.show(summary);
-    },
-  });
-  const panes = createPanes(left);
-  const visual = new VisualView(panes.visual, document);
-  const source = new SourceView(panes.source, document, {
-    onCursor: (offset) => void preview.reveal(MAIN, offset),
-  });
-  let mode: EditorMode = options.mode ?? 'visual';
-  panes.onSwitch((next) => (mode = next));
-  panes.show(mode);
+  const comments = new Comments(document, { json: options.comments, user: options.user });
+  const review = new CommentsUI(comments, document, { root: host, views: [visual, source], activeView, preview, path: MAIN });
+  host.insertBefore(review.panel, right);
+  panes.tabs.append(review.button);
+  const unsubscribeComments = comments.onChange(() => options.onCommentsChange?.(comments.serialize()));
 
   const refresh = () => preview.update({ ...files, [MAIN]: document.text }, MAIN);
   const unsubscribe = document.onChange(() => {
@@ -100,8 +102,17 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
       files = next;
       refresh();
     },
+    get comments() {
+      return comments.serialize();
+    },
+    set comments(json: string) {
+      comments.load(json);
+    },
     destroy() {
       unsubscribe();
+      unsubscribeComments();
+      review.destroy();
+      comments.destroy();
       source.destroy();
       visual.destroy();
       preview.destroy();
@@ -111,6 +122,34 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
       right.remove();
     },
   };
+}
+
+/** The editing views (Visual/Source tabs) on the left, the preview on the right, the status bar below. */
+function mountViews(host: HTMLElement, document: TypstDocument, main: string, initialMode: EditorMode = 'visual') {
+  const left = el(host.ownerDocument, 'typst-editor__left');
+  const right = el(host.ownerDocument, 'typst-editor__right');
+  host.classList.add('typst-editor');
+  host.append(left, right);
+
+  const status = new DiagnosticsStatus(host, (from, to) => source.reveal(from, to));
+  const preview = new Preview(right, {
+    onJump: (jump) => jump.path === main && activeView().reveal(jump.from, jump.to),
+    onDiagnostics: (diagnostics) => {
+      const summary = summarizeDiagnostics(diagnostics, main);
+      source.setDiagnostics(summary.inMain);
+      status.show(summary);
+    },
+  });
+  const panes = createPanes(left);
+  const visual = new VisualView(panes.visual, document);
+  const source = new SourceView(panes.source, document, {
+    onCursor: (offset) => void preview.reveal(main, offset),
+  });
+  let mode = initialMode;
+  const activeView = () => (mode === 'visual' ? visual : source);
+  panes.onSwitch((next) => (mode = next));
+  panes.show(mode);
+  return { left, right, panes, visual, source, preview, status, activeView };
 }
 
 function el(doc: Document, className: string): HTMLElement {
@@ -159,6 +198,7 @@ function createPanes(left: HTMLElement) {
     if (mode === 'visual' || mode === 'source') show(mode);
   });
   return {
+    tabs,
     visual: panes.visual,
     source: panes.source,
     show,

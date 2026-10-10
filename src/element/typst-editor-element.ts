@@ -6,6 +6,11 @@ export interface TypstEditorChangeDetail {
   value: string;
 }
 
+/** `detail` of the `commentschange` event: all review comments as JSON. */
+export interface TypstEditorCommentsChangeDetail {
+  comments: string;
+}
+
 const hostStyles = ':host { display: block; height: 24rem; } :host([hidden]) { display: none; }';
 
 // Lets this module be imported where there is no DOM (SSR, unit tests).
@@ -20,6 +25,9 @@ const Base = (typeof HTMLElement === 'undefined' ? class {} : HTMLElement) as ty
  * property; setting it (or the attribute) replaces the source without a
  * `change` event. User edits dispatch `change` with `detail.value`.
  * The `files` property holds the project's other files (see `ProjectFiles`).
+ * Review comments: the `comments` property (JSON, kept beside the source),
+ * the `user` property (`{ name }`, the author of new comments), and a
+ * `commentschange` event with `detail.comments` whenever they change.
  */
 export class TypstEditorElement extends Base {
   static readonly observedAttributes = ['value'];
@@ -27,6 +35,9 @@ export class TypstEditorElement extends Base {
   #editor: TypstEditor | null = null;
   #value: string | null = null;
   #files: ProjectFiles = {};
+  #comments: string | undefined;
+  /** Author of the comments written here; read when the element connects. */
+  user: { name: string } | undefined;
   #settingValue = false;
 
   get value(): string {
@@ -54,6 +65,16 @@ export class TypstEditorElement extends Base {
     if (this.#editor) this.#editor.files = files;
   }
 
+  /** The review comments as JSON (see `TypstEditorOptions.comments`). */
+  get comments(): string {
+    return this.#editor?.comments ?? this.#comments ?? '';
+  }
+
+  set comments(json: string) {
+    this.#comments = json;
+    if (this.#editor) this.#editor.comments = json;
+  }
+
   connectedCallback(): void {
     const root = this.shadowRoot ?? this.attachShadow({ mode: 'open' });
     const style = document.createElement('style');
@@ -65,6 +86,13 @@ export class TypstEditorElement extends Base {
       source: this.value,
       files: this.#files,
       onChange: (value) => this.#changed(value),
+      comments: this.#comments,
+      user: this.user,
+      onCommentsChange: (comments) => {
+        this.#comments = comments;
+        const detail: TypstEditorCommentsChangeDetail = { comments };
+        this.dispatchEvent(new CustomEvent('commentschange', { detail, bubbles: true, composed: true }));
+      },
     });
   }
 

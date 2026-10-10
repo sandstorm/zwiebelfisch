@@ -13,5 +13,5 @@ This is *bold* and _emphasised_ text. Click anything in the preview to jump to i
 $ sum_(k=1)^n k = (n(n+1)) / 2 $
 `;
 
-const editor = createTypstEditor(document.getElementById('editor')!, { source });
+const editor = createTypstEditor(document.getElementById('editor')!, { source, user: { name: 'Demo user' } });
 Object.assign(window, { editor });

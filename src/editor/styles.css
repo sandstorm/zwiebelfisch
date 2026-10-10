@@ -3,8 +3,12 @@
   --te-preview-bg: #eef0f3;
   --te-accent: #2f6feb;
   --te-jump: rgba(47, 111, 235, 0.25);
+  --te-comment: rgba(250, 190, 20, 0.28);
+  --te-comment-strong: rgba(250, 175, 0, 0.55);
+  --te-comment-line: #e0a800;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  /* editing view | comments panel (auto: 0 while hidden) | preview */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto;
   height: 100%;
   min-height: 0;
@@ -12,6 +16,8 @@
   font-family: system-ui, sans-serif;
 }
 .typst-editor__left {
+  grid-column: 1;
+  grid-row: 1;
   min-height: 0;
   overflow: hidden;
   display: flex;
@@ -21,6 +27,8 @@
 .typst-editor__left .cm-editor { flex: 1; min-height: 0; }
 .typst-editor__left .cm-scroller { overflow: auto; }
 .typst-editor__right {
+  grid-column: 3;
+  grid-row: 1;
   min-height: 0;
   overflow: hidden;
   background: var(--te-preview-bg);
@@ -226,3 +234,172 @@
   cursor: pointer;
 }
 .typst-toolbar__style:hover { background: #eef1f5; }
+
+/* ---- review comments ---- */
+.typst-editor__comment {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  border: 1px solid var(--te-border);
+  border-radius: 6px;
+  padding: 3px 10px;
+  background: white;
+  color: #3d4451;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.typst-editor__comment:hover { background: #eef1f5; }
+.typst-editor__comment:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 1px; }
+.typst-comment-range {
+  background: var(--te-comment);
+  border-bottom: 2px solid var(--te-comment-line);
+  cursor: pointer;
+}
+.typst-comment-range--active,
+.typst-comment-range--draft { background: var(--te-comment-strong); }
+.typst-comments {
+  grid-column: 2;
+  grid-row: 1;
+  width: 288px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--te-border);
+  background: #f7f8fa;
+  font-size: 13px;
+  color: #24292f;
+}
+.typst-comments[hidden] { display: none; }
+.typst-comments__header {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--te-border);
+  font-weight: 600;
+  font-size: 13px;
+}
+.typst-comments__list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+}
+.typst-comment {
+  flex: none;
+  padding: 10px 12px;
+  border: 1px solid var(--te-border);
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.typst-comment:hover { border-color: #c4c9d1; }
+.typst-comment--active {
+  border-color: var(--te-comment-line);
+  box-shadow: 0 0 0 1px var(--te-comment-line), 0 2px 8px rgba(0, 0, 0, 0.08);
+  cursor: default;
+}
+.typst-comment--resolved { opacity: 0.6; }
+.typst-comment__header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.typst-comment__quote {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding-left: 8px;
+  border-left: 3px solid var(--te-comment-line);
+  color: #57606a;
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.typst-comment--orphan .typst-comment__quote { border-left-color: #b8bec8; text-decoration: line-through; }
+.typst-comment__status {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: #eef1f5;
+  color: #57606a;
+  font-size: 11px;
+}
+.typst-comment__actions { display: flex; flex: none; gap: 2px; }
+.typst-comment__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: #57606a;
+  cursor: pointer;
+}
+.typst-comment__icon:hover { background: #eef1f5; color: #24292f; }
+.typst-comment__icon[data-action='resolve']:hover { color: #1a7f37; }
+.typst-comment__icon[data-action='remove']:hover { color: #cf222e; }
+.typst-comment__message {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  column-gap: 8px;
+  padding: 6px 0;
+}
+.typst-comment__message + .typst-comment__message { border-top: 1px solid #eef1f5; }
+.typst-comment__avatar {
+  grid-row: span 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: hsl(var(--hue, 210) 55% 45%);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+}
+.typst-comment__meta { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.typst-comment__author { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.typst-comment__time { color: #8c959f; font-size: 11px; white-space: nowrap; }
+.typst-comment__text { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.4; }
+.typst-comment__new { margin-bottom: 6px; font-weight: 600; }
+.typst-comment__form { margin-top: 6px; }
+.typst-comment__input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 52px;
+  padding: 6px 8px;
+  border: 1px solid var(--te-border);
+  border-radius: 6px;
+  font: inherit;
+  resize: vertical;
+}
+.typst-comment__input:focus { outline: 2px solid var(--te-accent); outline-offset: -1px; border-color: transparent; }
+.typst-comment__buttons { display: flex; justify-content: flex-end; gap: 6px; margin-top: 6px; }
+.typst-comment__button {
+  border: 1px solid var(--te-border);
+  border-radius: 6px;
+  padding: 4px 12px;
+  background: white;
+  font: inherit;
+  cursor: pointer;
+}
+.typst-comment__button--primary { border-color: var(--te-accent); background: var(--te-accent); color: white; }
+.typst-comment__button:disabled { opacity: 0.5; cursor: default; }
+.typst-preview__marker.typst-comment-marker {
+  position: absolute;
+  right: 0;
+  width: 14px;
+  height: 12px;
+  margin: -12px -7px 0 0;
+  border-radius: 3px 3px 3px 0;
+  background: var(--te-comment-line);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+.typst-preview__marker.typst-comment-marker--active { outline: 2px solid white; box-shadow: 0 0 0 3px var(--te-comment-line); }
