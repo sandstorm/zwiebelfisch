@@ -783,7 +783,7 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
   projection's (the spec contract: `ProjectionContext`, `Call`, `Placed`, `Printer`, …; and for tests `project` /
   `print` / `syncDoc` / `posToSource` / `sourceToPos`), core's `typst-syntax` (reading syntax nodes), and
   `testing/` for the built-ins together). The widget's built-in extension list activates them (see
-  "createTypstEditor"); `VisualViewOptions` is gone.
+  "createTypstEditor").
 - **Specs** (`TypstNodeSpec` / `TypstMarkSpec`; their `NodeGrammar` / `MarkGrammar` in `projection/projection.ts`): one per construct —
   `name`, its Tiptap `extension` (schema, node view, commands, keymap, input rules), `attributes`
   the host adds (source anchors like `src`, `sep`, `marker`, `layout`), `anchors` (compared like
@@ -796,10 +796,9 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
   styles; `matches` makes the run prose). Printing: `print` (an edited block, through the
   `Printer`), `printAtom` (an inline atom's source), `escapeAfter` (`@intro\s`); a mark's `print`
   (`*x*` or `#strong[x]`), `raw` (inline code: innermost, unescaped) and `printsBare` (a bare URL).
-  `onDidChange` makes every view project its document again (styles declared or removed). What
-  the framework used to list by name (`BLOCK_CALLS`, `PRINT_BLOCK`, `RAW_TYPES`, `LABELLED_BLOCKS`,
-  `callAtomType`, the inline boxes of presence, the anchors) is derived from the specs; the
-  projection imports no feature. A second spec of the same name extends the first (alignment adds
+  `onDidChange` makes every view project its document again (styles declared or removed). Which
+  syntax and calls project to what, how edited blocks print, which blocks take labels, which nodes are
+  boxes and which attributes are anchors are all derived from the specs; the projection imports no feature. A second spec of the same name extends the first (alignment adds
   `#par(justify: ..)` and the paragraph printer); **priority**, not registration order,
   decides where contributions compete (`registerNode` / `registerMark` / `registerBoxRenderer(…, { priority })`:
   default 100, higher first, Tiptap's semantics; equal ones in registration order): the schema's order (a
@@ -938,7 +937,7 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
   - Alignment blocks print their `layout` around their blocks, with only `#align(args)`
     re-printed when `args` changed. New ones print `#align(x)[A\n\nB]`. An edited paragraph with
     `justify` prints `#par(justify: x)[..]` around its inline content.
-  - Edited blocks are printed through `PRINT_BLOCK` (by node type; textblocks by default).
+  - Edited blocks are printed by their spec's `print` (textblocks by default: their inline content).
 - **Position map:** `sourceToPos(doc, offset, bias?)` / `posToSource(doc, pos, bias?)` map between
   source offsets (UTF-16) and document positions at character precision, for any doc (pristine,
   edited or synced).
