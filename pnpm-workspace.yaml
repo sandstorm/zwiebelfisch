@@ -1,2 +1,6 @@
+packages:
+  - server
 saveExact: true
-onlyBuiltDependencies: []
+onlyBuiltDependencies:
+  # native SQLite binding of @hocuspocus/extension-sqlite (the server's dev persistence)
+  - better-sqlite3

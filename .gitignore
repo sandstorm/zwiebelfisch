@@ -10,3 +10,4 @@ target/
 src/engine/wasm/
 src/engine/fonts/
 .claude/worktrees/
+server/.data/

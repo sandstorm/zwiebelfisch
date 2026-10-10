@@ -1,0 +1,12 @@
+{
+  // The server's tests: they also import widget modules, which use bundler-style (extensionless) imports.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "erasableSyntaxOnly": false,
+    "types": ["node", "vite/client"]
+  },
+  "include": ["src", "vitest.config.ts"],
+  "exclude": []
+}

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Run the collaboration server's tests (vitest, in-process; no port needed)"
+set -euo pipefail
+exec pnpm exec vitest run --config server/vitest.config.ts "$@"
