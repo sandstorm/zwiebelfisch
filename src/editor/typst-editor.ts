@@ -6,6 +6,7 @@ import { Preview } from '../preview/preview';
 import proseMirrorStyles from '../visual-view/prosemirror.css?inline';
 import { AssetView } from './asset-view';
 import { ChangeTracking } from './change-tracking';
+import { CommentAction } from './comment-action';
 import { CollaborationLink } from './collaboration-link';
 import changeStyles from './changes.css?inline';
 import { DiagnosticsStatus } from './diagnostics-status';
@@ -164,6 +165,7 @@ class Widget {
   private readonly renderings: ProjectRenderings;
   readonly comments: Comments;
   private readonly review: CommentsUI;
+  private readonly commentAction: CommentAction;
   readonly changes: ChangeTracking;
   private readonly collaboration: CollaborationLink | null = null;
   private versions: VersionControls | null = null;
@@ -208,6 +210,8 @@ class Widget {
     this.unsubscribe = this.project.onChange((change) => this.changed(change));
     this.open(main);
     [this.comments, this.review] = this.mountComments();
+    this.commentAction = new CommentAction(host, () => this.views.shown());
+    this.views.addTabAction(this.commentAction.button);
     this.changes = this.mountChanges();
     if (options.collaboration) {
       this.collaboration = this.mountCollaboration(options.collaboration);
@@ -232,7 +236,7 @@ class Widget {
     this.showStatus();
   }
 
-  /** Review comments on the main file: the model, its side panel and the "Comment" button next to the tabs. */
+  /** Review comments on the main file (being replaced by margin notes): the model and its side panel. */
   private mountComments(): [Comments, CommentsUI] {
     const document = this.project.document(this.project.main)!;
     const views = this.views.viewsOf(document);
@@ -245,7 +249,6 @@ class Widget {
       path: this.project.main,
     });
     this.host.insertBefore(review.panel, this.right);
-    this.views.addTabAction(review.button);
     comments.onChange(() => this.options.onCommentsChange?.(comments.serialize()));
     return [comments, review];
   }
@@ -306,6 +309,7 @@ class Widget {
     this.versions?.destroy();
     this.collaboration?.destroy();
     this.changes.destroy();
+    this.commentAction.destroy();
     this.review.destroy();
     this.comments.destroy();
     this.views.destroy();
