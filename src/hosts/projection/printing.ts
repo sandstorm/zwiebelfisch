@@ -18,6 +18,7 @@ export interface Span {
   kind: 'text' | 'atom' | 'syntax';
 }
 
+/** A document's source and its position map. */
 export interface Printed {
   text: string;
   /** Tile the text in order; their document ranges are in order, too. */
@@ -48,7 +49,10 @@ export function forgetPrinted(doc: Node): void {
   printedDocs.delete(doc);
 }
 
-/** The `Printer` printers of edited blocks write through; accumulates source text with the positions showing it. */
+/**
+ * The `Printer` printers of edited blocks write through (its members are documented there); accumulates source text
+ * with the positions showing it.
+ */
 class SourcePrinter implements Printer {
   private text = '';
   private readonly spans: Span[] = [];
@@ -59,42 +63,32 @@ class SourcePrinter implements Printer {
 
   constructor(private readonly grammar: Grammar) {}
 
-  /** Source not shown in the document; it maps to the next visible position in its block. */
   hidden(src: string): void {
     const span = this.write(src, 'syntax', 0, 0);
     if (span) this.pending.push(span);
   }
 
-  /** Source shown by the document range `pmFrom`..`pmTo`. */
   shown(src: string, kind: 'text' | 'atom', pmFrom: number, pmTo: number): void {
     this.settle(pmFrom);
     this.write(src, kind, pmFrom, pmTo);
     this.end = pmTo;
   }
 
-  /**
-   * Closes a textblock whose content ends at `pos`: its trailing syntax maps
-   * there. An `empty` block shows no source, so a zero-width span marks where
-   * its content would go.
-   */
   endBlock(pos: number, empty: boolean): void {
     this.settle(pos);
     this.end = pos;
     if (empty) this.spans.push({ from: this.text.length, to: this.text.length, pmFrom: pos, pmTo: pos, kind: 'text' });
   }
 
-  /** Source closing the block printed last (e.g. a table cell's `]`); it maps to that block's end. */
   closing(src: string): void {
     this.write(src, 'syntax', this.end, this.end);
   }
 
-  /** Source right after the syntax printed last, mapping where that syntax maps (e.g. a block's label). */
   after(src: string): void {
     if (this.pending.length > 0) this.hidden(src);
     else this.closing(src);
   }
 
-  /** Prints with every line of the output indented by two more spaces. */
   indented(print: () => void): void {
     const outer = this.indent;
     this.indent += '  ';
@@ -103,7 +97,6 @@ class SourcePrinter implements Printer {
     this.indent = outer;
   }
 
-  /** Prints the children of `container`, whose content starts at document position `start`, `defaultSep` between new ones. */
   blocks(container: Node, start: number, defaultSep: string): void {
     container.forEach((child, offset, index) => {
       this.block(child, container, start + offset);
@@ -111,24 +104,20 @@ class SourcePrinter implements Printer {
     });
   }
 
-  /** Prints `node`, which starts at document position `pos`, and its label; the label maps to the block's end. */
   block(node: Node, parent: Node, pos: number): void {
     this.unlabelled(node, parent, pos);
     if (node.attrs.label) this.after(labelSyntax(node.attrs.label));
   }
 
-  /** A textblock's inline content and end: the default printer of edited textblocks. */
   textblock(block: Node, pos: number): void {
     this.inline(block, pos + 1);
     this.endBlock(pos + block.nodeSize - 1, block.content.size === 0);
   }
 
-  /** The inline content of `block`, which starts at document position `start` (see `printInline`). */
   inline(block: Node, start: number): void {
     printInline(this, this.grammar, block, start);
   }
 
-  /** An item at `pos` (a list item): `prefix` (its marker), its first child, further children on following lines, indented. */
   item(item: Node, pos: number, prefix: string): void {
     this.hidden(prefix);
     item.forEach((child, offset, index) => {
