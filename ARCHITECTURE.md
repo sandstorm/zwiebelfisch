@@ -166,7 +166,7 @@ createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileCha
   `Preview.snippet` under the document's current path, refreshed on `Preview.onRender`; image
   files resolved like Typst (`resolvePath`) and shown as object URLs, made once per content and
   revoked when replaced) and `assets` (the project's images as `referencePath`s; uploads become
-  a `create` change that goes through `allowFileChange` like the file bar's; an upload equal to
+  a `create` change that goes through `allowFileChange` like the file panel's; an upload equal to
   an existing file (`name.png`, `name-2.png`, …) reuses it, a different one gets the first free
   of those names — every pasted screenshot is `image.png`; refusals — not an image Typst shows,
   the host's veto — come back as an error the popover shows).

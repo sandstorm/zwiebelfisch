@@ -36,8 +36,8 @@ function besideTextblock($pos: ResolvedPos): { from: number; to: number } {
  * Takes image files dropped on or pasted into the editor: calls `onImages`
  * with them (and, for a drop, the document position under the mouse). The
  * event goes no further, so the browser does not open a dropped file in
- * place of the page and the file bar does not add it once more. Events
- * without image files are left to others (e.g. the file bar).
+ * place of the page and the file panel does not add it once more. Events
+ * without image files are left to others (e.g. the file panel).
  */
 export function imageFileDrops(onImages: (files: File[], near?: number) => void): Plugin {
   return new Plugin({

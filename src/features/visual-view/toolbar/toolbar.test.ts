@@ -277,13 +277,13 @@ describe('Visual view toolbar', () => {
       const event = fileEvent('drop', [png('a.png'), pdf, png('b.png')]);
       parent.querySelector('[contenteditable]')!.dispatchEvent(event);
       expect(event.defaultPrevented).toBe(true);
-      expect(outside).toEqual([]); // not uploaded once more by the file bar
+      expect(outside).toEqual([]); // not uploaded once more by the file panel
       await settle();
       expect(uploaded).toEqual(['a.png', 'b.png']);
       expect(doc.text).toBe('One\n\n#image("a.png")\n\n#image("b.png")\n');
     });
 
-    it('leaves drops without images alone (the file bar may take them)', () => {
+    it('leaves drops without images alone (the file panel may take them)', () => {
       const { assets } = withUploads();
       const { doc, parent } = setup('One\n', { assets });
       const event = fileEvent('drop', [pdf]);

@@ -15,7 +15,7 @@ export interface RemoteCursorsOptions {
   user: CollaborationUser;
   /** The shared text of `path` (where cursors are anchored). */
   text(path: string): Y.Text | undefined;
-  /** Called with every other user's place, in any file, whenever one changes (e.g. for the preview and the file bar). */
+  /** Called with every other user's place, in any file, whenever one changes (e.g. for the preview and the file panel). */
   onPresence?(presences: readonly PlacedPresence[]): void;
 }
 

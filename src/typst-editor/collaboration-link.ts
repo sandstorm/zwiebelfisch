@@ -14,7 +14,7 @@ export interface LinkedWidget {
   current(): CurrentSelection | null;
   /** Called once connected, in a room backed by a GitLab branch ("Save version", the files' base). */
   onVersions?(versions: RoomVersions): void;
-  /** The other users' places changed (every file; e.g. for the preview and the file bar). */
+  /** The other users' places changed (every file; e.g. for the preview and the file panel). */
   onPresence?(presences: readonly PlacedPresence[]): void;
 }
 
