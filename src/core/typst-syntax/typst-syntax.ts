@@ -1,11 +1,16 @@
-// The file paths a Typst text names (`#import`, `#include`, `image(…)`, `read(…)`, …), found in its Lezer syntax
-// tree, and the reading order they give the project's files. Entry of core/document-links/. See ARCHITECTURE.md,
+// Typst syntax several extensions need, read from the Lezer syntax tree (codemirror-lang-typst): the file paths a
+// text names (`#import`, `#include`, `image(…)`, `read(…)`, …), the reading order they give the project's files, and
+// the change that imports a name (calculate-import-change.ts). Entry of core/typst-syntax/. See ARCHITECTURE.md,
 // "File links".
-// Why only syntax here: where a path leads (the project, the file's current path) and what following it does (open,
-// create) is the document-links extension's, and showing links is the hosts' (`Workbench.registerDocumentLinkProvider`).
+// Why here: extensions never import each other, and this knowledge is about Typst, not about one feature. Only
+// syntax: where a path leads (the project, the file's current path) and what following it does (open, create) is the
+// document-links extension's, and showing links is the hosts' (`Workbench.registerDocumentLinkProvider`); applying
+// a change is the caller's.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { PathReference, ProjectPath } from '../paths/paths';
+
+export { calculateImportChange, type ImportRequest } from './calculate-import-change';
 
 /** What names the path: `#import`, `#include`, or the function whose first argument it is. */
 export type PathCall = 'import' | 'include' | 'image' | 'read' | 'json' | 'csv' | 'yaml' | 'toml' | 'xml' | 'cbor' | 'bibliography';

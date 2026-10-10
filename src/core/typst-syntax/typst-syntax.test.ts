@@ -1,6 +1,6 @@
-// Tests for document-links.ts: findFilePaths.
+// Tests for typst-syntax.ts: findFilePaths.
 import { describe, expect, it } from 'vitest';
-import { findFilePaths } from './document-links';
+import { findFilePaths } from './typst-syntax';
 
 const SOURCE = `#import "template.typ": template
 #include "chapters/intro.typ"

@@ -20,7 +20,7 @@ in below) and answers two questions the user raised:
 
 ```
 src/
-  core/                  MODEL. Project, TypstDocument, paths, document-links, typst-engine.
+  core/                  MODEL. Project, TypstDocument, paths, typst-syntax, typst-engine.
                          No DOM; no ProseMirror / CodeMirror / Tiptap. Tests run in node.
   ui/                    Feature-neutral DOM widgets: PopupMenu, ToolbarMenu, FloatingBar, icons.
   hosts/                 VIEW HOSTS: mechanism + contribution points, no feature knowledge.
@@ -143,7 +143,7 @@ items.
 | Extension (id) | `model/` | Contributions | Commands | CSS |
 |---|---|---|---|---|
 | `typstLanguage()` (`typst-language`) | — | Source: Typst syntax + code colors; Visual: the same in raw boxes (`registerBoxCodeExtension`) | — | — |
-| `documentLinks()` (`document-links`) | (core `document-links`: `findFilePaths`) | Workbench: a `DocumentLinkProvider` (the views show its links) | command `documentLinks.createFile` | — |
+| `documentLinks()` (`document-links`) | (core `typst-syntax`: `findFilePaths`) | Workbench: a `DocumentLinkProvider` (the views show its links) | command `documentLinks.createFile` | — |
 | `collaboration(options)` (added by the host, not a built-in) | `SharedProject`, `TextBinding` (a TypstDocument bound to its Y.Text from outside; core knows no Yjs), `SharedAssets`, `RemoteCursors`, `GitLabSourceControl` (lazy chunk; protocol in core `gitlab-protocol`); `presence/` (eager) | Source + Visual: other users' carets and selections (also in raw boxes), Source: `perUserUndo` (their edits out of the undo history, via the host's `fromDocument` origin); Workbench: file decorations, the GitLab room's source control | — | yes |
 | `files()`, `fileNavigation()` (`files`, `file-navigation`) | tree model (uploads: core `uploads`) | Setting `files.panel`; Workbench: file panel (side panel, file decorations of any provider), drops; editor frame "← previous / next file →" | — | yes (`files.css`) |
 | `spreadsheets()` | `typst-file` (`name.ic.gen.typ`) | Workbench: custom editor `spreadsheets.editor` for `*.ic` (IronCalc, loaded on demand), "New spreadsheet…" in `file/newFile` | command `spreadsheets.newSpreadsheet` | yes |

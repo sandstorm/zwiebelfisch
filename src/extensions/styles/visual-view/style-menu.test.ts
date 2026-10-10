@@ -2,7 +2,8 @@
 // Tests for style-menu.ts: custom styles in the text style menu, through the Visual view.
 import { describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
-import { calculateImportChange, TypstDocument } from '../../../core/typst-document/typst-document';
+import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { calculateImportChange } from '../../../core/typst-syntax/typst-syntax';
 import type { ProjectStyles, Style } from '../model/model';
 import { createVisualView } from '../../../testing/testing';
 import { ProjectPath } from '../../../core/paths/paths';

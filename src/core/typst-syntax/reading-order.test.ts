@@ -1,6 +1,6 @@
-// Tests for document-links.ts: readingOrder and neighbours.
+// Tests for typst-syntax.ts: readingOrder and neighbours.
 import { describe, expect, it } from 'vitest';
-import { neighbours, readingOrder } from './document-links';
+import { neighbours, readingOrder } from './typst-syntax';
 import { ProjectPath } from '../paths/paths';
 
 const path = ProjectPath.of;

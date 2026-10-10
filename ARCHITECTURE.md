@@ -52,8 +52,7 @@ src/                        the widget (TypeScript); the most important API on t
                             hex colors only in the color tokens (dark mode)
   core/                     the models everything builds on
     typst-document/         TypstDocument — the single source of truth (a string; no Yjs: collaboration binds a Y.Text
-                            from outside); TextChange (the one edit format, text-change.ts); calculateImportChange (the change that imports a name from a module, once;
-                            applies nothing: margin notes merge it into their own edit); minimal-change.ts
+                            from outside); TextChange (the one edit format, text-change.ts); minimal-change.ts
     typst-engine/           typed TS wrapper around the wasm (typst-engine.ts: createEngine), fetch-fonts.ts;
                             engine-assets.ts (wasm + default font URLs for the main thread); packages/ (withPackages,
                             tar reader); fixtures/ (test package archives); generated wasm/, fonts/ (gitignored)
@@ -62,8 +61,10 @@ src/                        the widget (TypeScript); the most important API on t
                             (the only kind core knows: Typst source or not), displayName, extension
     project/                Project: which files a project has and which changes are allowed (one TypstDocument
                             per .typ file, main protected); FileChange, FileContent, ProjectFiles. No re-exports.
-    document-links/         Typst syntax only: findFilePaths (the file paths a Typst text names, Lezer), readingOrder
-                            (main file, then its #includes depth first) and neighbours
+    typst-syntax/           the Typst syntax several extensions need (Lezer): findFilePaths (the file paths a Typst text
+                            names), readingOrder (main file, then its #includes depth first) and neighbours,
+                            calculateImportChange (the change that imports a name from a module, once; applies
+                            nothing: margin notes merge it into their own edit)
     uploads/                uploadChanges: files from the computer (picked, dropped) as `create` changes at the top
                             of the project (`.typ` as text, the rest as bytes); used by files and images
     gitlab-protocol/        the rooms' Y.Doc map names (FILES_MAP, ASSETS_MAP, META_MAP) and GitLab rooms' messages
@@ -311,7 +312,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
   `setFrame({ top, bottom })` (`Workbench.registerEditorFrame`) keeps two elements first and last in the
   visible pane (they scroll with the file). The `fileNavigation` extension puts `FileNavigation` there: for a
   file the main file `#include`s
-  (`neighbours(read, main, path)` from `core/document-links`, recomputed on open and every change),
+  (`neighbours(read, main, path)` from `core/typst-syntax`, recomputed on open and every change),
   links to the file read before it and the one after it, both at the top and at the bottom;
   nothing for the main file or files outside the include order.
 - **`FilePanel`** (see "File panel" below; the `files` extension) lives in the side panel `files`: open by
@@ -1278,7 +1279,7 @@ scanStyles(text) → [{ name, kind: paragraph|text, label }]   // `///` line + `
 new StyleIndex(project)        // implements ProjectStyles (what the Visual view reads)
 .styles() → Style[] (+ path)   .onDidChange: Event<void>   .homeFile()   .dispose()
 .calculateImportChange(document, style, use) → TextChange | null   // relative to the document's path; null in the declaring file
-calculateImportChange(text, { name, matches(module), create(), use? }) → TextChange | null   // core/typst-document
+calculateImportChange(text, { name, matches(module), create(), use? }) → TextChange | null   // core/typst-syntax
 newStyle(text, label = 'New style') → { text, from, to }   // "New style…": `styleName(label)`, numbered if taken
 styleName(label) → string   // `Side box` → `side-box`; starts with a letter (`style-2-columns`)
 // visual-view/
@@ -1510,10 +1511,10 @@ new FilePanel(parent, { onOpen(path), onChange(change) → Promise<reason | null
   top level) is relocated there; files from the computer dropped on a row are uploaded into that
   folder (the tree stops the drop, so the widget-wide handler does not upload them again).
 
-### File links (`src/core/document-links/`, `src/hosts/workbench/document-links/`, `src/extensions/document-links/`)
+### File links (`src/core/typst-syntax/`, `src/hosts/workbench/document-links/`, `src/extensions/document-links/`)
 
 ```ts
-// core/document-links (Typst syntax only)
+// core/typst-syntax (Typst syntax only)
 findFilePaths(text, { from?, to? }) → PathInSource[]   // { path: PathReference, from, to, call }; call: import | include | image | …
 readingOrder(read, main) → ProjectPath[]              neighbours(read, main, path) → { previous, next } | null
 // the workbench (see "Extensions")

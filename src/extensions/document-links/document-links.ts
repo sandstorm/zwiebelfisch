@@ -1,10 +1,10 @@
 // The document-links extension: the file paths in Typst text (`#include "ch1.typ"`, `image("logo.png")`) as document
 // links, which open the file or offer to create a missing Typst file. Entry of extensions/document-links/. See
 // ARCHITECTURE.md, "File links".
-// Why an extension: finding paths is Typst syntax (core/document-links), showing and following links is the hosts'
+// Why an extension: finding paths is Typst syntax (core/typst-syntax), showing and following links is the hosts'
 // (every view shows the links of every `DocumentLinkProvider`); where a path leads in this project, and that a missing
 // Typst file may be created, is this extension's policy.
-import { findFilePaths } from '../../core/document-links/document-links';
+import { findFilePaths } from '../../core/typst-syntax/typst-syntax';
 import { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
 import type { DocumentLink, DocumentLinkProvider, TextDocument, TypstExtension } from '../../hosts/workbench/workbench';

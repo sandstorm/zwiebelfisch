@@ -5,7 +5,7 @@
 // editor frame, commands, menus) and the project; the views (workbench/) and the pure tree model (model/) get what
 // they need of the workbench as options, so the panel is tested without one.
 import { Disposable } from '../../core/disposable/disposable';
-import { neighbours } from '../../core/document-links/document-links';
+import { neighbours } from '../../core/typst-syntax/typst-syntax';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { TypstExtension, Workbench } from '../../hosts/workbench/workbench';
 import css from './files.css?inline';

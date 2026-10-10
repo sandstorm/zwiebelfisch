@@ -1,8 +1,8 @@
 // calculateImportChange: the change that makes a name imported from a module in a Typst text (applies nothing).
-// See typst-document.ts.
+// See typst-syntax.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
-import type { TextChange } from './text-change';
+import type { TextChange } from '../typst-document/typst-document';
 
 /** What to import, and how to recognise and write the module's import. */
 export interface ImportRequest {

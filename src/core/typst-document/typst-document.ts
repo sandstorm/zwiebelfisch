@@ -7,7 +7,6 @@ import { EventEmitter, type Event } from '../event-emitter/event-emitter';
 import { minimalChange } from './minimal-change';
 import type { TextChange } from './text-change';
 
-export { calculateImportChange, type ImportRequest } from './calculate-import-change';
 export type { TextChange } from './text-change';
 export { minimalChange } from './minimal-change';
 

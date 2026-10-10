@@ -4,7 +4,8 @@ import type { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
 import { PathReference, ProjectPath } from '../../../core/paths/paths';
 import type { FileChange, Project } from '../../../core/project/project';
-import { calculateImportChange, type TextChange, type TypstDocument } from '../../../core/typst-document/typst-document';
+import type { TextChange, TypstDocument } from '../../../core/typst-document/typst-document';
+import { calculateImportChange } from '../../../core/typst-syntax/typst-syntax';
 import { scanStyles, type FoundStyle, type Style } from './discover';
 import { STYLES_FILE } from './new-style';
 
