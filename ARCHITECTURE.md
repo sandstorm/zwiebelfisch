@@ -124,7 +124,7 @@ src/                        the widget (TypeScript); the most important API on t
       preview/              preview.ts (downloadPdf: "Download PDF" + popover: a checkbox per option, "Download";
                             no PDF: an error message)
     preview-controls/       previewControls: the preview toolbar's zoom and page number
-      model/                zoom.ts (stepZoom over the presets, zoomText / zoomLabel)
+      model/                zoom.ts (stepZoom over the presets, zoomText)
       preview/              zoom-controls.ts (zoomControls), page-number.ts (pageNumber)
     preview-sync/           previewSync: the preview follows the cursor ("Follow cursor", remembered in localStorage),
                             a click in it selects the source; preview/ (followCursor: the switch)

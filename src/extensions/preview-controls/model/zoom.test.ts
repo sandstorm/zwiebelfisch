@@ -1,6 +1,6 @@
 // Tests for zoom.ts.
 import { describe, expect, it } from 'vitest';
-import { stepZoom, zoomLabel, zoomText } from './zoom';
+import { stepZoom, zoomText } from './zoom';
 
 describe('stepZoom', () => {
   it('goes to the next preset up or down', () => {
@@ -18,16 +18,10 @@ describe('stepZoom', () => {
   });
 });
 
-describe('zoomLabel', () => {
-  it('rounds to whole percent', () => {
-    expect(zoomLabel(1)).toBe('100%');
-    expect(zoomLabel(0.834)).toBe('83%');
-  });
-});
-
 describe('zoomText', () => {
-  it('names fitting the width with its scale, a fixed zoom by its percentage', () => {
+  it('names fitting the width with its scale, a fixed zoom by its percentage (whole percent)', () => {
     expect(zoomText('fit', 0.834)).toBe('Fit · 83%');
     expect(zoomText(1.25, 0.834)).toBe('125%');
+    expect(zoomText(1, 0.834)).toBe('100%');
   });
 });
