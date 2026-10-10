@@ -41,7 +41,7 @@ and the things around it (innermost first), with document-wide settings at the b
 - **Document section:** top-level `#set page/text/par/heading` rules as a form. The
   custom-styles concept (docs/2026_10_10_custom-styles.md, option b) builds on this.
 - **What moves in:** the image toolbar's alt/width/caption, the code block language field,
-  link URL editing, "Numbered headings" (from the toolbar), alignment (it can stay in the toolbar too).
+  link URL editing, heading numbering (its toolbar button was removed on 2026-10-10; the `toggleHeadingNumbering` command is ready), alignment (it can stay in the toolbar too).
   The toolbar keeps only frequent inline actions.
 
 ## Decisions (user, 2026-10-10)

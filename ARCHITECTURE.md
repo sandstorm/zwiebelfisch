@@ -406,7 +406,7 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - It then copies the attributes over (`setNodeMarkup`) and marks nodes pristine again wherever
     the target node was pristine.
 - **Toolbar** (`toolbar.ts`, created by `VisualView` above the editor): undo/redo, a text style
-  menu (normal text, heading 1–3), numbered headings, bold/italic/code (Mod+E)/link,
+  menu (normal text, heading 1–3), bold/italic/code (Mod+E)/link,
   bulleted/numbered list, code block, task list, quote, text alignment, insert image, table of
   contents (an `#outline()` block at the cursor), insert table, add/delete row/column, header row,
   insert page break, horizontal rule (the block-node entries live in `toolbar-blocks.ts`; `Action`
@@ -487,7 +487,7 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   counter; `numberingFormatter(pattern)` applies Typst numbering patterns (`1 a A i I * ①`;
   others → no numbers). A plugin draws them as node decorations (`data-heading-number`, CSS
   `::after` in a gutter right of the text; the editor gets `typst-visual--numbered`). Command
-  `toggleHeadingNumbering` adds `#set heading(numbering: "1.")` after the leading raw blocks or
+  `toggleHeadingNumbering` (no toolbar button; meant for the Inspector's document section) adds `#set heading(numbering: "1.")` after the leading raw blocks or
   removes the numbering arguments. Rules in content blocks, show rules and numbering functions are
   not followed (the preview is exact).
 - **Track changes** (`change-decorations.ts`): a ProseMirror plugin holds the projected base

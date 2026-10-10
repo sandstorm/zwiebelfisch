@@ -6,7 +6,7 @@ import { type ImageAssets, ImageChoices, imageFileDrops, insertImages } from '..
 import type { Plugin } from '@tiptap/pm/state';
 import { textAlignAt, type TextAlignment } from '../nodes/nodes';
 import { svg, type Action } from './toolbar-action';
-import { BLOCKS as QUOTE_AND_TASKS, BREAKS, HEADER_ROW, NUMBERED_HEADINGS } from './toolbar-blocks';
+import { BLOCKS as QUOTE_AND_TASKS, BREAKS, HEADER_ROW } from './toolbar-blocks';
 
 const ICONS = {
   undo: svg('<path d="M9 15 4 10l5-5"/><path d="M4 10h11a5 5 0 0 1 0 10h-3"/>'),
@@ -163,7 +163,6 @@ export class Toolbar {
     this.root.append(
       this.group(HISTORY),
       this.styleMenu(),
-      this.group([NUMBERED_HEADINGS]),
       this.group([...MARKS, link]),
       this.group(LISTS),
       this.group(QUOTE_AND_TASKS),

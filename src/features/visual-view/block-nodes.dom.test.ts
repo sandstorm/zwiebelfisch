@@ -170,16 +170,9 @@ describe('heading numbers', () => {
     expect(numbers(parent)).toEqual(['1 A', '2 New', '2.1 B', '3 C']);
   });
 
-  it('"Numbered headings" adds and removes the set rule', () => {
-    const { doc, button, parent } = setup('= A\n\n== B\n');
-    expect(numbers(parent)).toEqual([]);
-    expect(parent.querySelector('.typst-visual--numbered')).toBeNull();
-    expect(button('Numbered headings').getAttribute('aria-pressed')).toBe('false');
-    button('Numbered headings').click();
-    expect(doc.text).toBe('#set heading(numbering: "1.")\n\n= A\n\n== B\n');
-    expect(numbers(parent)).toEqual(['1. A', '1.1. B']);
-    expect(button('Numbered headings').getAttribute('aria-pressed')).toBe('true');
-    button('Numbered headings').click();
-    expect(doc.text).toBe('= A\n\n== B\n');
+  it('has no "Numbered headings" button (numbering is a document setting, see inspector-sidebar.md)', () => {
+    const { parent } = setup('= A\n');
+    expect(parent.querySelector('[aria-label="Numbered headings"]')).toBeNull();
   });
+
 });

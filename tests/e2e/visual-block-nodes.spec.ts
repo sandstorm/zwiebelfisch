@@ -68,11 +68,8 @@ test('Task list adds cheq once; clicking a checkbox flips [ ] to [x]', async ({ 
   expect((await sourceText(page)()).split('@preview/cheq').length).toBe(2);
 });
 
-test('Numbered headings shows numbers right of the headings', async ({ page }) => {
-  await setSource(page, '= Intro\n\n== Detail\n\n= Next\n');
-  await visual(page).locator('h1', { hasText: 'Intro' }).click();
-  await toolbar(page).getByRole('button', { name: 'Numbered headings' }).click();
-  await expect.poll(sourceText(page)).toBe('#set heading(numbering: "1.")\n\n= Intro\n\n== Detail\n\n= Next\n');
+test('a heading numbering set rule shows numbers right of the headings', async ({ page }) => {
+  await setSource(page, '#set heading(numbering: "1.")\n\n= Intro\n\n== Detail\n\n= Next\n');
   const numbers = visual(page).locator('[data-heading-number]');
   await expect(numbers).toHaveCount(3);
   expect(await numbers.evaluateAll((els) => els.map((el) => el.getAttribute('data-heading-number')))).toEqual(['1.', '1.1.', '2.']);
