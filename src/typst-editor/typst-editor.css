@@ -3,7 +3,7 @@
    views, toolbar and popovers. Each extension adds its own (extensions/<name>/<name>.css, through
    Workbench.registerStyleSheet). See docs/embedding.md. */
 /* Colors: tokens as light-dark(light, dark). The widget follows the page's color-scheme (a page that
-   declares `color-scheme: light dark` gets it dark when the OS is); the `theme` option sets its own
+   declares `color-scheme: light dark` gets it dark when the OS is); the setting `workbench.theme` sets its own
    (data-theme). What light-dark() cannot express selects on data-scheme (typst-editor/color-scheme.ts). */
 .typst-editor[data-theme='light'] { color-scheme: light; }
 .typst-editor[data-theme='dark'] { color-scheme: dark; }

@@ -152,7 +152,7 @@ describe('WorkbenchHost', () => {
       preview = context.preview;
       context.subscriptions.push(
         context.sourceView.registerExtension(EditorView.editorAttributes.of({ class: 'contributed' })),
-        context.preview.registerToolbarItem(item),
+        context.preview.registerToolbarItem(item, { group: 'test' }),
       );
     });
     workbench.open(path('/a.typ'));
@@ -160,6 +160,53 @@ describe('WorkbenchHost', () => {
     expect((preview as unknown as { toolbarItems: unknown[] }).toolbarItems).toEqual([item]);
     workbench.destroy();
     expect((preview as unknown as { toolbarItems: unknown[] }).toolbarItems).toEqual([]);
+  });
+
+  it("gives extensions the settings they declare, with the host's values, and tells them about changes", () => {
+    const host = document.body.appendChild(document.createElement('div'));
+    const project = new Project(path('/main.typ'), { '/main.typ': '' });
+    const workbench = new WorkbenchHost(host, project, { settings: { 'test.size': 3 } });
+    const seen: unknown[] = [];
+    workbench.activate([
+      {
+        id: 'test',
+        contributes: { configuration: { properties: { 'test.size': { type: 'number', default: 1, description: 'A size.' } } } },
+        activate: ({ workspace, subscriptions }) => {
+          const read = () => seen.push(workspace.getConfiguration('test').get('size'));
+          read();
+          subscriptions.push(workspace.onDidChangeConfiguration((event) => event.affectsConfiguration('test') && read()));
+        },
+      },
+    ]);
+    workbench.settings = { 'test.size': 5 };
+    workbench.settings = {};
+    expect(seen).toEqual([3, 5, 1]);
+    expect(workbench.settings).toEqual({});
+  });
+
+  it('takes the theme from the setting workbench.theme, also when it changes', () => {
+    const { host, workbench } = setup(undefined, { settings: { 'workbench.theme': 'dark' } });
+    expect(host.dataset.theme).toBe('dark');
+    workbench.settings = { 'workbench.theme': 'light' };
+    expect(host.dataset.theme).toBe('light');
+    workbench.settings = {};
+    expect(host.dataset.theme).toBeUndefined();
+  });
+
+  it('runs commands by id, resolving to their result', async () => {
+    const created: unknown[] = [];
+    const { workbench } = setup(({ workbench, subscriptions }) =>
+      subscriptions.push(workbench.registerCommand('test.create', async (name: string) => (created.push(name), `made ${name}`))),
+    );
+    await expect(workbench.executeCommand('test.create', 'a.typ')).resolves.toBe('made a.typ');
+    expect(created).toEqual(['a.typ']);
+    await expect(workbench.executeCommand('test.unknown')).rejects.toThrow(/No command test.unknown/);
+  });
+
+  it('gives extensions who works here', () => {
+    let user: unknown = null;
+    setup(({ workbench }) => (user = workbench.user), { user: { name: 'Ada' } });
+    expect(user).toEqual({ name: 'Ada' });
   });
 
   it('tells whether the user works in the editing area', () => {

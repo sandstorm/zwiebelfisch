@@ -10,6 +10,7 @@ import { SourceViewHost } from '../source-view/source-view';
 import { VisualViewContributions } from '../visual-view/visual-view';
 import { ColorScheme } from './color-scheme/color-scheme';
 import { Commands } from './commands/commands';
+import { Configuration } from './configuration/configuration';
 import { EditingViews, type EditorMode } from './editing-views/editing-views';
 import { ExtensionHost } from './extension-host/extension-host';
 import { DocumentLinks, documentLinkStyles, linkExtension, type LinkedText } from './document-links/document-links';
@@ -20,15 +21,13 @@ import { FileViews } from './file-views/file-views';
 import { Layout, type Memory } from './layout/layout';
 import { StyleSheets } from './style-sheets/style-sheets';
 import type {
-  CommandArguments,
-  CommandRegistry,
-  CommandResult,
   DocumentLink,
   DocumentLinkProvider,
   FileDecoration,
   FileDecorationProvider,
   FileViewProvider,
   OpenOptions,
+  Settings,
   SidePanel,
   SidePanelOptions,
   SourceControl,
@@ -36,14 +35,20 @@ import type {
   TextDocument,
   TextEditorSelectionChangeEvent,
   TypstExtension,
+  User,
   Workbench,
 } from './workbench';
 
 export interface WorkbenchOptions {
   /** The editing view shown first (default: visual). */
   mode?: EditorMode;
-  /** Light or dark colors, or as the OS; default: as the page (see ARCHITECTURE.md, "Dark mode"). */
-  theme?: 'light' | 'dark' | 'auto';
+  /** Who works here (`Workbench.user`). */
+  user?: User;
+  /**
+   * The settings' values by full id (the workbench's own `workbench.theme`, and the extensions'), changeable later
+   * (`settings`).
+   */
+  settings?: Settings;
   /** The host's veto on a change someone asked for (`applyChange`); default: all may happen. */
   allowFileChange?(change: FileChange): boolean | Promise<boolean>;
   /** Another file is shown in the editing area. */
@@ -70,6 +75,7 @@ export class WorkbenchHost implements Workbench {
   readonly #documentLinks = new DocumentLinks();
   readonly #sourceControls = new SourceControls();
   readonly #commands: Commands;
+  readonly #configuration: Configuration;
   readonly #drops: FileDrops;
   readonly #scheme: ColorScheme;
   readonly #extensions: ExtensionHost;
@@ -101,8 +107,10 @@ export class WorkbenchHost implements Workbench {
       this.#styleSheets.add(documentLinkStyles),
     );
     host.classList.add('typst-editor');
-    if (options.theme) host.dataset.theme = options.theme;
+    this.#configuration = new Configuration(options.settings);
+    this.#configuration.declare(WORKBENCH_SETTINGS);
     this.#scheme = new ColorScheme(host);
+    this.#applyTheme();
     this.#layout = new Layout(host, `typst-editor:${project.main}`);
     this.#commands = new Commands(host);
     this.#drops = new FileDrops(host);
@@ -112,8 +120,12 @@ export class WorkbenchHost implements Workbench {
     this.#preview = new Preview(this.#layout.preview);
     this.#unsubscribe = project.onChange((change) => this.#changed(change));
     this.#showDocumentLinks();
+    this.#configuration.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration('workbench.theme')) this.#applyTheme();
+    });
     this.#extensions = new ExtensionHost({
       project,
+      workspace: this.#configuration,
       workbench: this,
       visualView: this.#visualView,
       sourceView: this.#sourceViews,
@@ -121,8 +133,13 @@ export class WorkbenchHost implements Workbench {
     });
   }
 
-  /** Activates `extensions` (in order), then shows the main file and compiles it. Once. */
+  /**
+   * Declares the settings of `extensions`, activates them (in order), then shows the main file and compiles it. Once.
+   * Values set for settings no one declares are reported (console) and ignored.
+   */
   activate(extensions: readonly TypstExtension[]): void {
+    for (const extension of extensions) this.#configuration.declare(extension.contributes?.configuration?.properties ?? {});
+    this.#configuration.check();
     this.#extensions.activate(extensions);
     this.open(this.project.main);
     this.#compile();
@@ -134,6 +151,19 @@ export class WorkbenchHost implements Workbench {
 
   get activeFile(): ProjectPath {
     return this.#active;
+  }
+
+  get user(): User | undefined {
+    return this.options.user;
+  }
+
+  /** The settings' values the host set, by full id. Assigning replaces them; listeners hear what changed. */
+  get settings(): Settings {
+    return this.#configuration.values;
+  }
+
+  set settings(settings: Settings) {
+    this.#configuration.update(settings);
   }
 
   open(path: ProjectPath, options: OpenOptions = {}): void {
@@ -199,15 +229,15 @@ export class WorkbenchHost implements Workbench {
     return this.#fileViews.register(kind, provider);
   }
 
-  registerCommand<K extends keyof CommandRegistry>(id: K, handler: CommandRegistry[K]): Disposable {
+  registerCommand(id: string, handler: (...args: any[]) => unknown): Disposable {
     return this.#commands.register(id, handler);
   }
 
-  executeCommand<K extends keyof CommandRegistry>(id: K, ...args: CommandArguments<K>): CommandResult<K> {
-    return this.#commands.execute(id, ...args);
+  executeCommand<T = unknown>(id: string, ...args: unknown[]): Promise<T> {
+    return this.#commands.execute<T>(id, ...args);
   }
 
-  registerKeybinding(key: string, command: keyof CommandRegistry): Disposable {
+  registerKeybinding(key: string, command: string): Disposable {
     return this.#commands.bind(key, command);
   }
 
@@ -262,6 +292,7 @@ export class WorkbenchHost implements Workbench {
     this.#sourceControls.dispose();
     this.#preview.destroy();
     this.#commands.dispose();
+    this.#configuration.dispose();
     this.#drops.dispose();
     for (const emitter of [this.#shown, this.#selectionChanged]) emitter.dispose();
     this.host.classList.remove('typst-editor');
@@ -290,9 +321,18 @@ export class WorkbenchHost implements Workbench {
       provideDocumentLinks: (text) => this.#documentLinks.provideDocumentLinks(text),
       resolveDocumentLink: (link) => this.#documentLinks.resolveDocumentLink(link),
       open: (target) => this.open(target),
+      executeCommand: (command, ...args) => this.executeCommand(command, ...args),
     });
     this.#sourceViews.registerExtension((view) => linkExtension(linked(view.document)));
     this.#visualView.registerBoxCodeExtension((view) => linkExtension(linked(view.document)));
+  }
+
+  /** `data-theme` from the setting `workbench.theme` (none: as the page), and the scheme the colors resolve to now. */
+  #applyTheme(): void {
+    const theme = this.#configuration.getConfiguration('workbench').get<string | null>('theme');
+    if (theme) this.host.dataset.theme = theme;
+    else delete this.host.dataset.theme;
+    this.#scheme.update();
   }
 
   #compile(): void {
@@ -316,3 +356,14 @@ export class WorkbenchHost implements Workbench {
     return this.project.paths().flatMap((path) => this.project.document(path) ?? []);
   }
 }
+
+/** The workbench's own settings. */
+const WORKBENCH_SETTINGS = {
+  'workbench.theme': {
+    type: ['string', 'null'],
+    enum: ['light', 'dark', 'auto', null],
+    default: null,
+    description:
+      'Light or dark colors, or `auto`: as the OS. Default (null): as the page around the widget, through CSS `color-scheme`. In dark mode the preview shows the pages inverted; the PDF stays as it is.',
+  },
+} as const;

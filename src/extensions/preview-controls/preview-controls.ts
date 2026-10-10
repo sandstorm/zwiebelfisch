@@ -12,7 +12,10 @@ export function previewControls(): TypstExtension {
     id: 'preview-controls',
     activate({ workbench, preview, subscriptions }) {
       subscriptions.push(workbench.registerStyleSheet(css));
-      for (const item of [zoomControls, pageNumber]) subscriptions.push(preview.registerToolbarItem(item));
+      subscriptions.push(
+        preview.registerToolbarItem(zoomControls, { group: '2_view', order: 10 }),
+        preview.registerToolbarItem(pageNumber, { group: '2_view', order: 20 }),
+      );
     },
   };
 }

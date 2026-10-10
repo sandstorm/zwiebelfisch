@@ -20,16 +20,18 @@ import { presenceDecorations } from './workbench/workbench';
 export type { CollaborationOptions } from './model/model';
 
 /**
- * Real-time collaboration (`options`: see `CollaborationOptions`) as `user`: shares the project, publishes the
- * local selection, draws the others' places in every file's views and marks the files they are in; in a GitLab-backed
- * room, `user` commits through the room's source control.
+ * Real-time collaboration (`options`: see `CollaborationOptions`) as the workbench's `user`: shares the project,
+ * publishes the local selection, draws the others' places in every file's views and marks the files they are in; in
+ * a GitLab-backed room, the user commits through the room's source control. Not a built-in: the host adds it with its
+ * connection (`createTypstEditor({ extensions: (builtins) => [...builtins, collaboration({ url, room })] })`).
  */
-export function collaboration(options: CollaborationOptions, user?: CollaborationUser): TypstExtension {
+export function collaboration(options: CollaborationOptions): TypstExtension {
   return {
     id: 'collaboration',
     activate({ project, workbench, sourceView, visualView, subscriptions }) {
       subscriptions.push(workbench.registerStyleSheet(css));
       const presences = new Presences((document) => project.pathOf(document));
+      const user: CollaborationUser | undefined = workbench.user;
       const link = new CollaborationLink(options, { project, user }, {
         current: () => {
           const editor = workbench.activeTextEditor;

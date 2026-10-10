@@ -137,7 +137,7 @@ export class Layout {
     this.layout();
   }
 
-  /** Shows or removes panel `id` and its rail button altogether (e.g. `fileList: 'hide'`). */
+  /** Shows or removes panel `id` and its rail button altogether (e.g. the setting `files.panel: 'hide'`). */
   setAvailable(id: string, available: boolean): void {
     const panel = this.panels.get(id);
     if (!panel || panel.available === available) return;

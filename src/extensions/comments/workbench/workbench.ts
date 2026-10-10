@@ -8,12 +8,8 @@ import { CommentAction, type NoteTarget } from './comment-action';
 
 export { CommentAction, type NoteTarget, type NoteView } from './comment-action';
 
-declare module '../../../hosts/workbench/workbench' {
-  interface CommandRegistry {
-    /** Adds a margin note at the selection of the view the user works in (the comments extension). */
-    'comments.addComment': () => void;
-  }
-}
+/** The command that adds a margin note at the selection of the view the user works in. */
+export const ADD_COMMENT = 'comments.addComment';
 
 /** The notes' cards in the Visual views: the notes gutter. */
 export interface NoteCards {
@@ -30,8 +26,8 @@ export function registerAddComment(workbench: Workbench, cards: NoteCards): Disp
   const action = new CommentAction(workbench.ownerDocument, activeNoteTarget(workbench, cards));
   return Disposable.from(
     new Disposable(() => action.destroy()),
-    workbench.registerCommand('comments.addComment', () => action.comment()),
-    workbench.registerKeybinding('Mod+Alt+KeyM', 'comments.addComment'),
+    workbench.registerCommand(ADD_COMMENT, () => action.comment()),
+    workbench.registerKeybinding('Mod+Alt+KeyM', ADD_COMMENT),
     workbench.registerTabBarItem(action.button, { mode: 'source' }),
   );
 }

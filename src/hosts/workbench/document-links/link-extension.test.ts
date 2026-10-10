@@ -9,10 +9,10 @@ import { linkExtension, linkInfo, type LinkedText } from './link-extension';
 const path = ProjectPath.of;
 
 const TEXT = '#import "template.typ": template\n#include "missing.typ"\nText\n';
+const CREATE = { title: 'Create missing.typ', command: 'test.create', arguments: ['/missing.typ'] };
 
 /** Links on the two paths: the first resolves to its file, the second to a tooltip and a command. */
 function setup(text = TEXT) {
-  const run = vi.fn(async () => null as string | null);
   const linked: LinkedText = {
     path: () => path('/main.typ'),
     provideDocumentLinks: ({ text }) =>
@@ -23,12 +23,13 @@ function setup(text = TEXT) {
     resolveDocumentLink: (link) =>
       text.slice(link.range.from, link.range.to) === 'template.typ'
         ? { ...link, target: path('/template.typ') }
-        : { ...link, tooltip: 'missing.typ is not in the project', command: { title: 'Create missing.typ', run } },
+        : { ...link, tooltip: 'missing.typ is not in the project', command: CREATE },
     open: vi.fn(),
+    executeCommand: vi.fn(async () => undefined),
   };
   const parent = document.body.appendChild(document.createElement('div'));
   const view = new EditorView({ parent, doc: text, extensions: linkExtension(linked) });
-  return { linked, parent, view, run };
+  return { linked, parent, view };
 }
 
 function modClick(view: EditorView, pos: number, init: MouseEventInit = { ctrlKey: true }) {
@@ -82,27 +83,30 @@ describe('linkExtension', () => {
 describe('linkInfo (the hover)', () => {
   const link: DocumentLink = { range: { from: 0, to: 1 } };
 
+  const actions = () => ({ open: vi.fn(), executeCommand: vi.fn(async (): Promise<unknown> => undefined) });
+
   it('offers to open the target', () => {
-    const open = vi.fn();
-    const dom = linkInfo(document, { ...link, target: path('/template.typ') }, open)!;
+    const { open, executeCommand } = actions();
+    const dom = linkInfo(document, { ...link, target: path('/template.typ') }, { open, executeCommand })!;
     expect(dom.textContent).toMatch(/Open template\.typ/);
     expect(dom.textContent).toMatch(/Ctrl\+click/);
     dom.querySelector('button')!.click();
     expect(open).toHaveBeenCalledWith(path('/template.typ'));
   });
 
-  it("shows the tooltip and runs the command, showing why it failed", async () => {
-    const run = vi.fn(async () => 'This change is not allowed here.');
-    const dom = linkInfo(document, { ...link, tooltip: 'missing.typ is not in the project', command: { title: 'Create missing.typ', run } }, vi.fn())!;
+  it("shows the tooltip and runs the command with its arguments, showing why it failed", async () => {
+    const { open, executeCommand } = actions();
+    executeCommand.mockRejectedValueOnce(new Error('This change is not allowed here.'));
+    const dom = linkInfo(document, { ...link, tooltip: 'missing.typ is not in the project', command: CREATE }, { open, executeCommand })!;
     expect(dom.textContent).toContain('missing.typ is not in the project');
     const create = dom.querySelector('button')!;
     expect(create.textContent).toBe('Create missing.typ');
     create.click();
-    expect(run).toHaveBeenCalled();
+    expect(executeCommand).toHaveBeenCalledWith('test.create', '/missing.typ');
     await vi.waitFor(() => expect(dom.textContent).toContain('This change is not allowed here.'));
   });
 
   it('is nothing for a link that offers nothing', () => {
-    expect(linkInfo(document, link, vi.fn())).toBeNull();
+    expect(linkInfo(document, link, actions())).toBeNull();
   });
 });

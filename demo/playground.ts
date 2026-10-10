@@ -1,6 +1,6 @@
 // The playground's state as the URL (example, room → Local / Collaborate / GitLab mode, user) and the
 // editor options it means. See docs/demo-playground.md.
-import type { TypstEditorOptions } from '../src';
+import type { CollaborationOptions, TypstEditorOptions } from '../src';
 import { exampleFiles, exampleFromQuery, exampleQuery, type ExampleName } from './examples';
 
 /**
@@ -94,4 +94,5 @@ export function editorOptions(state: PlaygroundState, server: ServerKind | null)
   return state.mode === 'gitlab' ? { files: {}, collaboration } : { ...local, collaboration };
 }
 
-type EditorOptions = Pick<TypstEditorOptions, 'files' | 'collaboration'>;
+/** The files to start from, and the room to join (main.ts adds the collaboration extension for it). */
+type EditorOptions = Pick<TypstEditorOptions, 'files'> & { collaboration?: CollaborationOptions };

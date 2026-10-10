@@ -34,19 +34,23 @@ export const typstHighlightStyle = HighlightStyle.define([
 const scheme = new Compartment();
 
 /**
- * Follows the scheme the editor is shown in (the page's color-scheme, the widget's `theme`, the OS):
+ * Follows the scheme the editor is shown in (the page's color-scheme, the widget's `workbench.theme`, the OS):
  * light text around the editor turns on CodeMirror's dark theme (cursor, selection, gutters, panels,
- * tooltips). Checked when the editor is placed or resized and when the OS scheme changes.
+ * tooltips). Checked when the editor is placed or resized, when the OS scheme changes, and when the widget's
+ * `data-scheme` changes (the theme set anew).
  */
 const follower = ViewPlugin.fromClass(
   class {
     private readonly media: MediaQueryList | null;
+    private readonly observer: MutationObserver | null;
+    private observed: Element | null = null;
     private pending = false;
 
     constructor(private readonly view: EditorView) {
       const window = view.dom.ownerDocument.defaultView;
       this.media = window?.matchMedia?.('(prefers-color-scheme: dark)') ?? null;
       this.media?.addEventListener('change', this.schedule);
+      this.observer = window?.MutationObserver ? new window.MutationObserver(this.schedule) : null;
       this.schedule();
     }
 
@@ -56,6 +60,16 @@ const follower = ViewPlugin.fromClass(
 
     destroy(): void {
       this.media?.removeEventListener('change', this.schedule);
+      this.observer?.disconnect();
+    }
+
+    /** Watches the widget's `data-scheme` once the editor is inside it (it is placed after it is made). */
+    private observe(): void {
+      const widget = this.view.dom.closest('[data-scheme]');
+      if (!widget || widget === this.observed) return;
+      this.observed = widget;
+      this.observer?.disconnect();
+      this.observer?.observe(widget, { attributes: true, attributeFilter: ['data-scheme'] });
     }
 
     /** Later: a view may not dispatch while it is being built or updated. */
@@ -70,6 +84,7 @@ const follower = ViewPlugin.fromClass(
 
     private check(): void {
       if (!this.view.dom.isConnected) return;
+      this.observe();
       const dark = isLightText(getComputedStyle(this.view.dom).color);
       if (dark === null || dark === this.view.state.facet(EditorView.darkTheme)) return;
       this.view.dispatch({ effects: scheme.reconfigure(EditorView.darkTheme.of(dark)) });

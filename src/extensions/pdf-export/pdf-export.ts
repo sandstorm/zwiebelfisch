@@ -4,6 +4,7 @@
 // Why an extension: the preview's engine can make a PDF and keeps the options registered with it, but how they are
 // offered (one button, a checkbox each, remembered per viewer) and whether a widget has a download button at all is
 // this extension's policy.
+import { Disposable } from '../../core/disposable/disposable';
 import type { Project } from '../../core/project/project';
 import type { Diagnostic } from '../../core/typst-engine/typst-engine';
 import type { PdfEntry, PdfExportOption, PreviewContributions } from '../../hosts/preview/preview';
@@ -11,29 +12,46 @@ import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './pdf-export.css?inline';
 import { downloadPdf } from './preview/preview';
 
-declare module '../../hosts/workbench/workbench' {
-  interface CommandRegistry {
-    /**
-     * The project's PDF as it is now, with the export options set as given (by id; the others at their default);
-     * rejects naming the errors, or an unknown option (the pdf-export extension).
-     */
-    'pdfExport.export': (options?: Record<string, boolean>) => Promise<Blob>;
-  }
-}
-
 /**
- * The `pdfExport.export` command and, with `download` (default true), "Download PDF" in the preview's toolbar:
- * a popover with a checkbox per registered export option (remembered for this viewer) and "Download", or, without
- * options, the download at once.
+ * The command `pdfExport.export(options?: Record<string, boolean>): Promise<Blob>`: the project's PDF as it is now,
+ * with the export options set as given (by id; the others at their default); rejects naming the errors, or an
+ * unknown option. And, while the setting `pdfExport.download` is on (default), "Download PDF" in the preview's
+ * toolbar: a popover with a checkbox per registered export option (remembered for this viewer) and "Download", or,
+ * without options, the download at once.
  */
-export function pdfExport(options: { download?: boolean } = {}): TypstExtension {
+export function pdfExport(): TypstExtension {
   return {
     id: 'pdf-export',
-    activate({ project, workbench, preview, subscriptions }) {
+    contributes: {
+      configuration: {
+        properties: {
+          'pdfExport.download': {
+            type: 'boolean',
+            default: true,
+            description: 'Whether the preview toolbar has "Download PDF" (with the export options). The command pdfExport.export works either way.',
+          },
+        },
+      },
+    },
+    activate({ project, workspace, workbench, preview, subscriptions }) {
       subscriptions.push(workbench.registerStyleSheet(css));
       const pdfs = new PdfExport(project, preview);
-      subscriptions.push(workbench.registerCommand('pdfExport.export', (values) => pdfs.blob(values)));
-      if (options.download !== false) subscriptions.push(preview.registerToolbarItem(downloadPdf(pdfs, workbench.remember('pdf-export.options'))));
+      subscriptions.push(workbench.registerCommand('pdfExport.export', (values?: Record<string, boolean>) => pdfs.blob(values)));
+      const download = downloadPdf(pdfs, workbench.remember('pdf-export.options'));
+      let button: Disposable | null = null;
+      const show = () => {
+        const wanted = workspace.getConfiguration('pdfExport').get('download', true);
+        if (wanted === (button !== null)) return;
+        button?.dispose();
+        button = wanted ? preview.registerToolbarItem(download, { group: '3_export', order: 10 }) : null;
+      };
+      show();
+      subscriptions.push(
+        workspace.onDidChangeConfiguration((event) => {
+          if (event.affectsConfiguration('pdfExport.download')) show();
+        }),
+        new Disposable(() => button?.dispose()),
+      );
     },
   };
 }

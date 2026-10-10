@@ -7,30 +7,39 @@
 import { findFilePaths } from '../../core/document-links/document-links';
 import { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
-import type { DocumentLink, DocumentLinkProvider, TextDocument, TypstExtension, Workbench } from '../../hosts/workbench/workbench';
+import type { DocumentLink, DocumentLinkProvider, TextDocument, TypstExtension } from '../../hosts/workbench/workbench';
 
 /**
  * Links the file paths of all Typst text (the Source views, raw boxes, an image box's path): they resolve from the
- * file's path, open an existing file, and create a missing Typst file through `Workbench.applyChange`.
+ * file's path, open an existing file, and offer to create a missing Typst file: the command
+ * `documentLinks.createFile(path)` creates it through `Workbench.applyChange` and opens it, or rejects saying why not.
  */
 export function documentLinks(): TypstExtension {
   return {
     id: 'document-links',
     activate({ project, workbench, subscriptions }) {
-      subscriptions.push(workbench.registerDocumentLinkProvider(new FilePathLinks(project, workbench)));
+      subscriptions.push(
+        workbench.registerDocumentLinkProvider(new FilePathLinks(project)),
+        workbench.registerCommand(CREATE_FILE, async (path: string) => {
+          const target = ProjectPath.parse(path);
+          if (!target) throw new Error(`Not a project path: ${path}`);
+          const problem = await workbench.applyChange({ kind: 'create', path: target, content: '' });
+          if (problem !== null) throw new Error(problem);
+          workbench.open(target);
+        }),
+      );
     },
   };
 }
+
+const CREATE_FILE = 'documentLinks.createFile';
 
 /** The file paths of a text as links; resolved, a link opens its file, or says it is missing (and offers to create a Typst file). */
 class FilePathLinks implements DocumentLinkProvider {
   /** Where each link given out leads (null: out of the project). */
   readonly #targets = new WeakMap<DocumentLink, ProjectPath | null>();
 
-  constructor(
-    private readonly project: Project,
-    private readonly workbench: Pick<Workbench, 'applyChange' | 'open'>,
-  ) {}
+  constructor(private readonly project: Project) {}
 
   provideDocumentLinks({ path, text }: TextDocument): DocumentLink[] {
     return findFilePaths(text).map(({ path: reference, from, to }) => {
@@ -47,13 +56,6 @@ class FilePathLinks implements DocumentLinkProvider {
     const name = ProjectPath.displayName(target);
     const tooltip = `${name} is not in the project`;
     if (ProjectPath.kind(target) !== 'typst') return { ...link, tooltip };
-    return { ...link, tooltip, command: { title: `Create ${name}`, run: () => this.create(target) } };
-  }
-
-  /** Creates the empty Typst file `path` and opens it; resolves to why that was refused, or null. */
-  private async create(path: ProjectPath): Promise<string | null> {
-    const problem = await this.workbench.applyChange({ kind: 'create', path, content: '' });
-    if (problem === null) this.workbench.open(path);
-    return problem;
+    return { ...link, tooltip, command: { title: `Create ${name}`, command: CREATE_FILE, arguments: [target] } };
   }
 }

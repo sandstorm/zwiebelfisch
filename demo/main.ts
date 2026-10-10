@@ -3,7 +3,7 @@
 // `?room=gitlab:demo/report@<branch>` (GitLab mode) on the local playground
 // server (`mise run demo`), `&user=<name>`. Without `room` (Local mode, the
 // default and what the static e2e build uses) it never talks to a server.
-import { createTypstEditor } from '../src';
+import { collaboration, createTypstEditor } from '../src';
 import { OpenFileHash } from './open-file-hash';
 import { editorOptions, playgroundFromQuery, userQuery } from './playground';
 import { renderPlaygroundBar } from './playground-bar';
@@ -29,8 +29,10 @@ async function start(): Promise<void> {
   const server = state.mode === 'local' ? null : await probeServer();
   if (server) bar.setServer(server);
   const hash = new OpenFileHash();
+  const { files, collaboration: room } = editorOptions(state, server);
   const editor = createTypstEditor(document.getElementById('editor')!, {
-    ...editorOptions(state, server),
+    files,
+    extensions: (builtins) => (room ? [...builtins, collaboration(room)] : builtins),
     user: { name: state.user },
     onOpen: (path) => hash.opened(path),
     onFilesChange: () => hash.filesChanged(),

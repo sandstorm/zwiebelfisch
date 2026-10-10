@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests for typst-editor.ts: the `theme` option (light, dark, auto; default: as the page). Preview mocked: no worker in jsdom.
+// Tests for typst-editor.ts: the setting `workbench.theme` (light, dark, auto; default: as the page). Preview mocked: no worker in jsdom.
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createTypstEditor } from './typst-editor';
@@ -22,12 +22,12 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => ({
 
 function mount(theme?: 'light' | 'dark' | 'auto') {
   const host = document.body.appendChild(document.createElement('div'));
-  return { host, editor: createTypstEditor(host, { source: '= Hello', mode: 'source', theme }) };
+  return { host, editor: createTypstEditor(host, { source: '= Hello', mode: 'source', settings: theme ? { 'workbench.theme': theme } : {} }) };
 }
 
 afterEach(() => document.body.replaceChildren());
 
-describe('the theme option', () => {
+describe('the setting workbench.theme', () => {
   it('marks the widget with the chosen scheme, which its stylesheet turns into a color-scheme', () => {
     const { host } = mount('dark');
     expect(host.dataset.theme).toBe('dark');

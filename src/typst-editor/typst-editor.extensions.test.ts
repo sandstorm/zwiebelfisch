@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import type { Diagnostic } from '../core/typst-engine/typst-engine';
 import type { PageClick, PdfExportOption, PreviewContext, PreviewToolbarItem } from '../hosts/preview/preview';
+import type { TypstExtension } from '../hosts/workbench/workbench';
 import { createTypstEditor, type TypstEditorOptions } from './typst-editor';
 
 const exportPdf = vi.fn(async () => ({ pdf: new Uint8Array([37, 80, 68, 70]), diagnostics: [], missingPackages: [] }));
@@ -50,7 +51,14 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
       snippet = async () => null;
       onDidRender = () => new Disposable(() => {});
       exportPdf = exportPdf;
-      registerToolbarItem = registry(this.toolbarItems);
+      readonly #placements = new Map<unknown, string>();
+      // in toolbar order: by group, then order (the built-ins use neither `navigation` nor equal places)
+      registerToolbarItem = (item: unknown, placement: { group: string; order?: number }) => {
+        this.#placements.set(item, `${placement.group}@${String(placement.order ?? 0).padStart(4, '0')}`);
+        const registration = registry(this.toolbarItems)(item);
+        this.toolbarItems.sort((a, b) => this.#placements.get(a)!.localeCompare(this.#placements.get(b)!));
+        return registration;
+      };
       registerPdfExportOption = registry(this.pdfOptions);
       pdfExportOptions = () => this.pdfOptions;
       destroy() {}
@@ -129,7 +137,7 @@ describe('the built-in extensions', () => {
     const shown = setup({ source: '= Hi' });
     expect(drop(shown.host, [png]).defaultPrevented).toBe(true);
     await vi.waitFor(() => expect(Object.keys(shown.editor.files)).toContain('/cat.png'));
-    const hidden = setup({ source: '= Hi', fileList: 'hide' });
+    const hidden = setup({ source: '= Hi', settings: { 'files.panel': 'hide' } });
     expect(drop(hidden.host, [png]).defaultPrevented).toBe(true);
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(Object.keys(hidden.editor.files)).toEqual(['/main.typ']);
@@ -167,18 +175,38 @@ describe('the built-in extensions', () => {
     expect(shown.querySelector<HTMLElement>('.typst-diagnostic')?.dataset.severity).toBe('warning');
   });
 
-  it('fills the preview toolbar: "Follow cursor", zoom, page number, then "Download PDF" unless told not to', () => {
-    const { preview } = setup({ source: '= Hi' });
-    expect(toolbarControls(preview.toolbarItems)).toEqual(['typst-preview__follow', 'typst-preview-zoom', 'typst-preview-page-number', 'typst-pdf']);
-    expect(toolbarControls(setup({ source: '= Hi', pdfDownload: false }).preview.toolbarItems)).toEqual([
-      'typst-preview__follow',
-      'typst-preview-zoom',
-      'typst-preview-page-number',
-    ]);
+  it('fills the preview toolbar: "Follow cursor", zoom, page number, then "Download PDF" while pdfExport.download is on', () => {
+    const { editor, preview } = setup({ source: '= Hi' });
+    const all = ['typst-preview__follow', 'typst-preview-zoom', 'typst-preview-page-number', 'typst-pdf'];
+    expect(toolbarControls(preview.toolbarItems)).toEqual(all);
+    expect(toolbarControls(setup({ source: '= Hi', settings: { 'pdfExport.download': false } }).preview.toolbarItems)).toEqual(all.slice(0, 3));
+    editor.settings = { 'pdfExport.download': false };
+    expect(toolbarControls(preview.toolbarItems)).toEqual(all.slice(0, 3));
+    // back in its place, by its group and order
+    editor.settings = {};
+    expect(toolbarControls(preview.toolbarItems)).toEqual(all);
+  });
+
+  it('switches "Follow cursor" when the host changes previewSync.followCursor', () => {
+    const { editor, preview, source } = setup({ source: '= Hi\n', settings: { 'previewSync.followCursor': false } });
+    editor.settings = { 'previewSync.followCursor': true };
+    source().focus();
+    source().dispatch({ selection: { anchor: 3 } });
+    expect(preview.revealed.at(-1)).toEqual(['/main.typ', 3, 3]);
+  });
+
+  it('removes the file panel while files.panel is hide', () => {
+    const { host, editor } = setup({ source: '= Hi', files: { '/a.typ': 'A' } });
+    const side = () => host.querySelector<HTMLElement>('.typst-editor__side')!;
+    expect(side().hidden).toBe(false);
+    editor.settings = { 'files.panel': 'hide' };
+    expect(side().hidden).toBe(true);
+    editor.settings = {};
+    expect(side().hidden).toBe(false);
   });
 
   it('keeps the preview in step (preview-sync): it follows the focused selection, and a click selects its source', () => {
-    const { preview, source } = setup({ source: '= Hi\n\nText\n', followCursor: true });
+    const { preview, source } = setup({ source: '= Hi\n\nText\n', settings: { 'previewSync.followCursor': true } });
     source().dispatch({ selection: { anchor: 2 } });
     expect(preview.revealed).toEqual([]);
     source().focus();
@@ -191,7 +219,7 @@ describe('the built-in extensions', () => {
   });
 
   it('does not follow while "Follow cursor" is off', () => {
-    const { preview, source } = setup({ source: '= Hi\n', followCursor: false });
+    const { preview, source } = setup({ source: '= Hi\n', settings: { 'previewSync.followCursor': false } });
     source().focus();
     source().dispatch({ selection: { anchor: 3 } });
     expect(preview.revealed).toEqual([]);
@@ -204,6 +232,31 @@ describe('the built-in extensions', () => {
     expect(blob.type).toBe('application/pdf');
     expect(exportPdf).toHaveBeenCalledWith('/main.typ', {});
     await expect(editor.exportPdf({ options: { nope: true } })).rejects.toThrow('Unknown PDF export option: nope');
+  });
+
+  it("runs the host's own extensions with the built-ins, with their settings, and leaves out built-ins by id", async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const seen: unknown[] = [];
+    const counter: TypstExtension = {
+      id: 'word-count',
+      contributes: { configuration: { properties: { 'wordCount.label': { type: 'string', default: 'words', description: 'The label.' } } } },
+      activate: ({ workspace, workbench, subscriptions }) => {
+        seen.push(workspace.getConfiguration('wordCount').get('label'));
+        subscriptions.push(workbench.registerCommand('wordCount.count', () => 2));
+      },
+    };
+    const { editor, preview } = setup({
+      source: '= Hi',
+      settings: { 'wordCount.label': 'Wörter', 'pdfExport.download': false },
+      extensions: (builtins) => [...builtins.filter((extension) => extension.id !== 'preview-sync'), counter],
+    });
+    expect(seen).toEqual(['Wörter']);
+    await expect(editor.executeCommand('wordCount.count')).resolves.toBe(2);
+    expect(toolbarControls(preview.toolbarItems)).toEqual(['typst-preview-zoom', 'typst-preview-page-number']);
+    // pdfExport.download is declared, but previewSync.followCursor is not without preview-sync
+    setup({ source: '= Hi', settings: { 'previewSync.followCursor': false }, extensions: (builtins) => builtins.filter((e) => e.id !== 'preview-sync') });
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown setting previewSync.followCursor'));
+    warn.mockRestore();
   });
 
   it('removes everything it added on destroy', () => {

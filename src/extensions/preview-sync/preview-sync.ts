@@ -4,27 +4,36 @@
 // Why an extension: the preview host only offers the mechanism (`reveal`, hit-testing and `onDidClickPage`), the
 // workbench the selection (`onDidChangeTextEditorSelection`) and `open`; when to follow and where a click leads is
 // policy. Without this extension the preview neither follows nor jumps.
+import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { TypstExtension, Workspace } from '../../hosts/workbench/workbench';
 import { followCursor } from './preview/preview';
 import css from './preview-sync.css?inline';
 
-export interface PreviewSyncOptions {
-  /** Whether the preview starts following the cursor; default: what this viewer chose last (localStorage), else on. */
-  followCursor?: boolean;
-}
-
 /**
  * While "Follow cursor" is on, the preview scrolls to the selection the user moves in the shown file (when it is
- * off-screen); switching it on goes there at once. A click on text in the preview opens its file with the clicked
- * range selected (package files are no project files: ignored).
+ * off-screen); switching it on goes there at once. It starts as the setting `previewSync.followCursor` says if the
+ * host set it, else as this viewer chose last, else on; the host setting it later switches it. A click on text in
+ * the preview opens its file with the clicked range selected (package files are no project files: ignored).
  */
-export function previewSync(options: PreviewSyncOptions = {}): TypstExtension {
+export function previewSync(): TypstExtension {
   return {
     id: 'preview-sync',
-    activate({ project, workbench, preview, subscriptions }) {
+    contributes: {
+      configuration: {
+        properties: {
+          'previewSync.followCursor': {
+            type: 'boolean',
+            default: true,
+            description:
+              'Whether the preview follows the cursor ("Follow cursor": it scrolls to the text being edited or selected). Unset: what this viewer chose last (localStorage), else on.',
+          },
+        },
+      },
+    },
+    activate({ project, workspace, workbench, preview, subscriptions }) {
       subscriptions.push(workbench.registerStyleSheet(css));
-      let following = options.followCursor ?? rememberedFollow() ?? true;
+      let following = configuredFollow(workspace);
       const revealSelection = () => {
         const editor = workbench.activeTextEditor;
         const path = editor && project.pathOf(editor.document);
@@ -35,8 +44,16 @@ export function previewSync(options: PreviewSyncOptions = {}): TypstExtension {
         rememberFollow(on);
         if (on) revealSelection();
       };
+      // made anew to show a new state; its place stays (group + order)
+      let toggle = preview.registerToolbarItem(followCursor({ on: following, onChange }), { group: '1_sync', order: 10 });
       subscriptions.push(
-        preview.registerToolbarItem(followCursor({ on: following, onChange })),
+        new Disposable(() => toggle.dispose()),
+        workspace.onDidChangeConfiguration((event) => {
+          if (!event.affectsConfiguration('previewSync.followCursor')) return;
+          following = configuredFollow(workspace);
+          toggle.dispose();
+          toggle = preview.registerToolbarItem(followCursor({ on: following, onChange }), { group: '1_sync', order: 10 });
+        }),
         // where the user works: the shown file's editor, focused (not a collaborator's edit in a hidden view)
         workbench.onDidChangeTextEditorSelection(({ textEditor }) => {
           if (following && textEditor === workbench.activeTextEditor && workbench.isEditorFocused()) revealSelection();
@@ -51,6 +68,12 @@ export function previewSync(options: PreviewSyncOptions = {}): TypstExtension {
 }
 
 const FOLLOW_KEY = 'typst-editor:follow-cursor';
+
+/** The host's value of `previewSync.followCursor`, else the viewer's last choice, else the default (on). */
+function configuredFollow(workspace: Workspace): boolean {
+  const setting = workspace.getConfiguration('previewSync').inspect<boolean>('followCursor');
+  return setting?.globalValue ?? rememberedFollow() ?? setting?.defaultValue ?? true;
+}
 
 /** The viewer's last "Follow cursor" choice, if storage has one (storage may be unavailable). */
 function rememberedFollow(): boolean | null {

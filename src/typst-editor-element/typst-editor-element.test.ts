@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import { defineTypstEditorElement, type TypstEditorChangeDetail, type TypstEditorElement } from './typst-editor-element';
-import type { FileChange } from '../typst-editor/typst-editor';
+import type { FileChange } from '../core/project/project';
 
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -65,11 +65,39 @@ describe('<typst-editor>', () => {
     expect(option.value).toBe('= Option');
   });
 
-  it('lets attributes win over options', () => {
-    const el = element('<typst-editor theme="dark" pdf-download="hide"></typst-editor>');
-    el.options = { theme: 'light', pdfDownload: true };
+  it('maps the settings attribute (JSON) onto the settings, over options.settings, also when it changes', () => {
+    const el = element(`<typst-editor settings='{"workbench.theme": "dark"}'></typst-editor>`);
+    el.options = { settings: { 'workbench.theme': 'light', 'files.panel': 'show' } };
     document.body.append(el);
-    expect(el.shadowRoot!.querySelector<HTMLElement>('.typst-editor')!.dataset.theme).toBe('dark');
+    const widget = () => el.shadowRoot!.querySelector<HTMLElement>('.typst-editor')!;
+    expect(widget().dataset.theme).toBe('dark');
+    expect(el.settings).toEqual({ 'workbench.theme': 'dark', 'files.panel': 'show' });
+    el.setAttribute('settings', '{"workbench.theme": "auto"}');
+    expect(widget().dataset.theme).toBe('auto');
+    el.settings = {};
+    expect(widget().dataset.theme).toBeUndefined();
+  });
+
+  it('ignores a settings attribute that is not a JSON object, with a warning', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const el = element(`<typst-editor settings="dark"></typst-editor>`);
+    document.body.append(el);
+    expect(el.settings).toEqual({});
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('not a JSON object'));
+    warn.mockRestore();
+  });
+
+  it('forwards `open`, and runs commands', async () => {
+    const el = element();
+    const onOpen = vi.fn();
+    el.options = { files: { '/main.typ': '= Main', '/a.typ': 'A' }, onOpen };
+    document.body.append(el);
+    const opened: unknown[] = [];
+    el.addEventListener('open', (event) => opened.push((event as CustomEvent).detail));
+    await el.executeCommand('documentLinks.createFile', '/b.typ');
+    expect(el.files['/b.typ']).toBe('');
+    expect(opened).toEqual([{ path: '/b.typ' }]);
+    expect(onOpen).toHaveBeenCalledWith('/b.typ');
   });
 
   it('fires `change` per edited file with its path and content, and `files-change` with the change', () => {

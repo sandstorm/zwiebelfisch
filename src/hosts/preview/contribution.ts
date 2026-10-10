@@ -7,9 +7,18 @@ import type { Zoom } from './pages/pages';
 /** A control in the preview's toolbar: made once, for the preview it is registered with. */
 export type PreviewToolbarItem = (preview: PreviewContext) => ToolbarItemView;
 
+/**
+ * Where a toolbar item goes, as in VS Code's menus: the groups in the order of their names (the group `navigation`
+ * first), so groups are named like `1_sync`, `2_view`; within a group by `order` (default 0), then registration order.
+ */
+export interface ToolbarPlacement {
+  readonly group: string;
+  readonly order?: number;
+}
+
 /** A toolbar item as made for one preview. */
 export interface ToolbarItemView {
-  /** Its elements, placed in the toolbar in this order after those of the items registered before. */
+  /** Its elements, placed in the toolbar in this order, where its `ToolbarPlacement` puts it. */
   readonly elements: readonly HTMLElement[];
   /** Called (at most once per frame) after the view changed: scrolled, resized, zoomed, new pages. */
   update?(): void;

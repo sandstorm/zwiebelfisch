@@ -14,6 +14,8 @@ export interface LinkedText {
   resolveDocumentLink(link: DocumentLink): DocumentLink;
   /** Shows a link's target. */
   open(target: ProjectPath): void;
+  /** Runs a link's command (`Workbench.executeCommand`). */
+  executeCommand(command: string, ...args: unknown[]): Promise<unknown>;
 }
 
 const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
@@ -68,7 +70,7 @@ export function linkExtension(text: LinkedText): Extension {
     keymap.of([{ key: 'Alt-Enter', run: (view) => follow(view, view.state.selection.main.head) }]),
     hoverTooltip((view, pos) => {
       const link = linkAt(view, pos);
-      const dom = link && linkInfo(view.dom.ownerDocument, text.resolveDocumentLink(link), (target) => text.open(target));
+      const dom = link && linkInfo(view.dom.ownerDocument, text.resolveDocumentLink(link), text);
       return dom && link ? { pos: link.range.from, end: link.range.to, above: true, create: () => ({ dom }) } : null;
     }),
   ];
@@ -76,15 +78,21 @@ export function linkExtension(text: LinkedText): Extension {
 
 /**
  * What a (resolved) link offers, as a small piece of DOM: "Open …" for its target (with the Mod+click hint, if
- * `hint`), its tooltip, and a button for its command that shows why the command failed. Null when it offers nothing.
+ * `hint`), its tooltip, and a button for its command that shows the error's message when the command rejects. Null
+ * when it offers nothing.
  */
-export function linkInfo(doc: Document, link: DocumentLink, open: (target: ProjectPath) => void, { hint = true } = {}): HTMLElement | null {
+export function linkInfo(
+  doc: Document,
+  link: DocumentLink,
+  actions: Pick<LinkedText, 'open' | 'executeCommand'>,
+  { hint = true } = {},
+): HTMLElement | null {
   const { target, tooltip, command } = link;
   if (!target && !tooltip && !command) return null;
   const info = doc.createElement('span');
   info.className = 'typst-file-link';
   if (target) {
-    info.append(button(doc, `Open ${ProjectPath.displayName(target)}`, () => open(target)));
+    info.append(button(doc, `Open ${ProjectPath.displayName(target)}`, () => actions.open(target)));
     if (hint) info.append(note(doc, `(${MOD_CLICK} or Alt+Enter)`));
   }
   if (tooltip) info.append(note(doc, tooltip));
@@ -92,7 +100,13 @@ export function linkInfo(doc: Document, link: DocumentLink, open: (target: Proje
     const error = note(doc, '');
     error.classList.add('typst-file-link__error');
     error.setAttribute('role', 'alert');
-    info.append(button(doc, command.title, async () => (error.textContent = (await command.run()) ?? '')), error);
+    const run = () => {
+      error.textContent = '';
+      actions.executeCommand(command.command, ...(command.arguments ?? [])).catch((failure: unknown) => {
+        error.textContent = failure instanceof Error ? failure.message : String(failure);
+      });
+    };
+    info.append(button(doc, command.title, run), error);
   }
   return info;
 }

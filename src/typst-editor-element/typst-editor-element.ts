@@ -1,8 +1,12 @@
 // <typst-editor>: the editor as a custom element in a shadow root, around createTypstEditor.
-// Why one `options` property: the element must offer every option createTypstEditor has, without listing (and
-// forgetting) them one by one; only what fits an HTML attribute is an attribute as well. See docs/embedding.md.
-import { createTypstEditor, type FileChange, type FileContent, type FileListMode, type PdfExportOptions, type ProjectFiles, type Theme, type TypstEditor, type TypstEditorOptions } from '../typst-editor/typst-editor';
+// Why a thin adapter: the element must offer everything createTypstEditor has without listing (and forgetting) it
+// option by option. So it passes one `options` property through, maps one `settings` attribute (JSON) onto the
+// settings the extensions declare, and forwards the editor's callbacks as DOM events from one table; the content
+// (`value`, `files`) is all it knows by name, as with `<input>`. See docs/embedding.md.
+import { createTypstEditor, type PdfExportOptions, type TypstEditor, type TypstEditorOptions } from '../typst-editor/typst-editor';
+import type { FileChange, FileContent, ProjectFiles } from '../core/project/project';
 import type { ProjectPath } from '../core/paths/paths';
+import type { Settings } from '../hosts/workbench/workbench';
 import { inlineSource } from './inline-source';
 
 /**
@@ -14,36 +18,48 @@ export interface TypstEditorChangeDetail {
   content: FileContent | null;
 }
 
+/** The events (type, `detail`) a call of the editor's callback makes; `files`: every file now. */
+type Forward = (value: never, files: () => ProjectFiles) => [type: string, detail: unknown][];
+
+/** The editor's callbacks the element forwards as DOM events. */
+const EVENTS: Record<string, Forward> = {
+  onFilesChange: (change: FileChange, files) => [['files-change', change], ...changedFiles(change, files).map((detail): [string, unknown] => ['change', detail])],
+  onOpen: (path: string) => [['open', { path }]],
+};
+
 /**
  * `<typst-editor>`: the editor widget as a custom element, rendered in an open
  * shadow root so page styles and editor styles cannot leak into each other.
  *
  * - `options` (`Partial<TypstEditorOptions>`): everything `createTypstEditor` takes, read when the element
- *   connects. Its `onFilesChange` / `onOpen` are called as well as the events below.
- * - Attributes win over `options`: `value` over `source`, `file-list` over `fileList`, `pdf-download="hide"`
- *   over `pdfDownload`, `theme` over `theme`. Without `value` (attribute or property), the element's text
- *   content (common indentation removed), if any, is the main file's text.
+ *   connects. Its callbacks are called as well as the events below.
+ * - `settings` attribute: JSON of settings by full id (`settings='{"pdfExport.download": false}'`), over
+ *   `options.settings` id by id; read on connect and whenever it changes. The `settings` property is the current
+ *   settings; setting it replaces them.
+ * - `value` attribute (wins over `options.source`); without it (attribute or property), the element's text content
+ *   (common indentation removed), if any, is the main file's text.
  * - `files` (all files, the main one included) and `value` (the main file's text, a shortcut) are the
  *   current content; setting them replaces it without events, as with `<input>`.
  * - Events (bubbling, composed): `change` for every file whose content changes (`TypstEditorChangeDetail`),
- *   `files-change` with every `FileChange` (the same as `onFilesChange`), `open` with `{ path }`.
- * - `exportPdf({ options })` gives the PDF as a Blob.
+ *   `files-change` with every `FileChange` (`onFilesChange`), `open` with `{ path }` (`onOpen`).
+ * - `executeCommand(id, ...args)` runs an extension's command; `exportPdf({ options })` gives the PDF as a Blob.
  */
 export class TypstEditorElement extends Base() {
-  static readonly observedAttributes = ['value'];
+  static readonly observedAttributes = ['value', 'settings'];
 
   #options: Partial<TypstEditorOptions> = {};
   #editor: TypstEditor | null = null;
-  /** The text and files set while not connected, or kept from the last connection. */
+  /** The text, files and settings set while not connected, or kept from the last connection. */
   #source: string | null = null;
   #files: ProjectFiles | null = null;
+  #settings: Settings | null = null;
   /** While the host sets `value` / `files`: no events, as with `<input>`. */
   #quiet = false;
 
   constructor() {
     super();
     // Set on the element before it was defined (upgraded): own properties that hide the accessors below.
-    for (const property of ['options', 'value', 'files'] as const) {
+    for (const property of ['options', 'value', 'files', 'settings'] as const) {
       if (!Object.hasOwn(this, property)) continue;
       const value = this[property] as never;
       delete this[property];
@@ -51,7 +67,7 @@ export class TypstEditorElement extends Base() {
     }
   }
 
-  /** Options for `createTypstEditor`, read when the element connects; attributes win (see the class). */
+  /** Options for `createTypstEditor`, read when the element connects (see the class). */
   get options(): Partial<TypstEditorOptions> {
     return this.#options;
   }
@@ -80,6 +96,22 @@ export class TypstEditorElement extends Base() {
     this.#quietly((editor) => (editor.files = files));
   }
 
+  /** The settings by full id (see `TypstEditor.settings`); setting them replaces them. */
+  get settings(): Settings {
+    return this.#editor?.settings ?? this.#settings ?? this.#initialSettings();
+  }
+
+  set settings(settings: Settings) {
+    this.#settings = settings;
+    if (this.#editor) this.#editor.settings = settings;
+  }
+
+  /** Runs an extension's command (see `TypstEditor.executeCommand`); rejects while not connected. */
+  executeCommand<T = unknown>(id: string, ...args: unknown[]): Promise<T> {
+    if (!this.#editor) return Promise.reject(new Error('<typst-editor> is not connected'));
+    return this.#editor.executeCommand<T>(id, ...args);
+  }
+
   /** The project as a PDF, with the export options as given (see `TypstEditor.exportPdf`); rejects while not connected. */
   exportPdf(options?: PdfExportOptions): Promise<Blob> {
     if (!this.#editor) return Promise.reject(new Error('<typst-editor> is not connected'));
@@ -93,23 +125,12 @@ export class TypstEditorElement extends Base() {
     const container = document.createElement('div');
     container.style.height = '100%';
     root.replaceChildren(style, container);
-    const options = this.options;
-    const pdfDownload = this.getAttribute('pdf-download');
     this.#editor = createTypstEditor(container, {
-      ...options,
+      ...this.options,
+      ...this.#forwardedEvents(),
       source: this.#source ?? this.#initialSource(),
-      files: this.#files ?? options.files,
-      fileList: (this.getAttribute('file-list') as FileListMode | null) ?? options.fileList,
-      pdfDownload: pdfDownload === null ? options.pdfDownload : pdfDownload !== 'hide',
-      theme: (this.getAttribute('theme') as Theme | null) ?? options.theme,
-      onFilesChange: (change) => {
-        options.onFilesChange?.(change);
-        this.#filesChanged(change);
-      },
-      onOpen: (path) => {
-        options.onOpen?.(path);
-        this.#dispatch('open', { path });
-      },
+      files: this.#files ?? this.options.files,
+      settings: this.#settings ?? this.#initialSettings(),
     });
   }
 
@@ -118,14 +139,29 @@ export class TypstEditorElement extends Base() {
     if (this.#editor) {
       this.#source = this.#editor.source;
       this.#files = this.#editor.files;
+      this.#settings = this.#editor.settings;
     }
     this.#editor?.destroy();
     this.#editor = null;
     this.shadowRoot?.replaceChildren();
   }
 
-  attributeChangedCallback(_name: string, _old: string | null, value: string | null): void {
-    this.value = value ?? '';
+  attributeChangedCallback(name: string, _old: string | null, value: string | null): void {
+    if (name === 'value') this.value = value ?? '';
+    else if (this.#editor) this.settings = this.#initialSettings();
+  }
+
+  /** The callbacks of EVENTS: the host's own (from `options`), then the event. */
+  #forwardedEvents(): Partial<TypstEditorOptions> {
+    const options = this.options as Record<string, ((value: unknown) => void) | undefined>;
+    const forwarded: Record<string, (value: never) => void> = {};
+    for (const [name, events] of Object.entries(EVENTS)) {
+      forwarded[name] = (value: never) => {
+        options[name]?.(value);
+        for (const [type, detail] of events(value, () => this.files)) this.#dispatch(type, detail);
+      };
+    }
+    return forwarded;
   }
 
   #quietly(set: (editor: TypstEditor) => void): void {
@@ -138,26 +174,8 @@ export class TypstEditorElement extends Base() {
     }
   }
 
-  #filesChanged(change: FileChange): void {
-    if (this.#quiet) return;
-    this.#dispatch('files-change', change);
-    for (const detail of this.#changedFiles(change)) this.#dispatch('change', detail);
-  }
-
-  /** What each path touched by `change` holds now. */
-  #changedFiles(change: FileChange): TypstEditorChangeDetail[] {
-    switch (change.kind) {
-      case 'create':
-      case 'update':
-        return [{ path: change.path, content: change.content }];
-      case 'delete':
-        return [{ path: change.path, content: null }];
-      case 'rename':
-        return [{ path: change.from, content: null }, { path: change.path, content: this.#editor?.files[change.path] ?? null }];
-    }
-  }
-
   #dispatch(type: string, detail: unknown): void {
+    if (this.#quiet) return;
     this.dispatchEvent(new CustomEvent(type, { detail, bubbles: true, composed: true }));
   }
 
@@ -165,6 +183,11 @@ export class TypstEditorElement extends Base() {
   #initialSource(): string | undefined {
     const inline = inlineSource(this.textContent ?? '');
     return this.getAttribute('value') ?? (inline === '' ? undefined : inline) ?? this.options.source;
+  }
+
+  /** `options.settings`, and over them those of the `settings` attribute (JSON; ignored, with a warning, if it is not an object). */
+  #initialSettings(): Settings {
+    return { ...this.options.settings, ...parseSettings(this.getAttribute('settings')) };
   }
 }
 
@@ -175,6 +198,31 @@ export function defineTypstEditorElement(name = 'typst-editor'): void {
 }
 
 const hostStyles = ':host { display: block; height: 24rem; } :host([hidden]) { display: none; }';
+
+/** What each path touched by `change` holds now (`files`: every file now). */
+function changedFiles(change: FileChange, files: () => ProjectFiles): TypstEditorChangeDetail[] {
+  switch (change.kind) {
+    case 'create':
+    case 'update':
+      return [{ path: change.path, content: change.content }];
+    case 'delete':
+      return [{ path: change.path, content: null }];
+    case 'rename':
+      return [{ path: change.from, content: null }, { path: change.path, content: files()[change.path] ?? null }];
+  }
+}
+
+function parseSettings(json: string | null): Settings {
+  if (json === null) return {};
+  try {
+    const parsed: unknown = JSON.parse(json);
+    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) return parsed as Settings;
+  } catch {
+    // reported below
+  }
+  console.warn(`<typst-editor>: the settings attribute is not a JSON object: ${json}`);
+  return {};
+}
 
 /** HTMLElement, or a plain class where there is no DOM (SSR, unit tests), so this module can be imported there. */
 function Base(): typeof HTMLElement {

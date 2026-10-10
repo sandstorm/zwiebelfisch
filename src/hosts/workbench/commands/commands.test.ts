@@ -1,14 +1,7 @@
 // @vitest-environment jsdom
 // Tests for commands.ts.
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Commands } from './commands';
-
-declare module '../workbench' {
-  interface CommandRegistry {
-    'test.add': (a: number, b: number) => number;
-    'test.run': () => void;
-  }
-}
 
 function setup() {
   const root = document.body.appendChild(document.createElement('div'));
@@ -22,14 +15,39 @@ function press(target: HTMLElement, init: KeyboardEventInit) {
   return event;
 }
 
+afterEach(() => vi.restoreAllMocks());
+
 describe('Commands', () => {
-  it('runs a registered command with its arguments, until it is disposed', () => {
+  it('runs a registered command with its arguments, until it is disposed', async () => {
     const { commands } = setup();
-    const registration = commands.register('test.add', (a, b) => a + b);
-    expect(commands.execute('test.add', 2, 3)).toBe(5);
+    const registration = commands.register('test.add', (a: number, b: number) => a + b);
+    await expect(commands.execute<number>('test.add', 2, 3)).resolves.toBe(5);
     expect(() => commands.register('test.add', () => 0)).toThrow(/registered already/);
     registration.dispose();
-    expect(() => commands.execute('test.add', 2, 3)).toThrow(/No command test.add/);
+    await expect(commands.execute('test.add', 2, 3)).rejects.toThrow(/No command test.add/);
+  });
+
+  it('calls the handler synchronously, and resolves to what an async handler resolves to', async () => {
+    const { commands } = setup();
+    const calls: string[] = [];
+    commands.register('test.async', async () => {
+      calls.push('handler');
+      return 'done';
+    });
+    const result = commands.execute('test.async');
+    calls.push('after execute');
+    expect(calls).toEqual(['handler', 'after execute']);
+    await expect(result).resolves.toBe('done');
+  });
+
+  it('rejects when the handler throws or rejects', async () => {
+    const { commands } = setup();
+    commands.register('test.throws', () => {
+      throw new Error('broken');
+    });
+    commands.register('test.rejects', () => Promise.reject(new Error('later')));
+    await expect(commands.execute('test.throws')).rejects.toThrow('broken');
+    await expect(commands.execute('test.rejects')).rejects.toThrow('later');
   });
 
   it('runs a bound key anywhere inside, before (and instead of) the editors', () => {
@@ -45,6 +63,15 @@ describe('Commands', () => {
     expect(event.defaultPrevented).toBe(true);
     press(inner, { code: 'KeyM', altKey: true, metaKey: true });
     expect(run).toHaveBeenCalledTimes(2);
+  });
+
+  it('logs a bound command that fails, the key still taken', async () => {
+    const { inner, commands } = setup();
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    commands.register('test.fails', () => Promise.reject(new Error('nope')));
+    commands.bind('Mod+KeyK', 'test.fails');
+    expect(press(inner, { code: 'KeyK', ctrlKey: true }).defaultPrevented).toBe(true);
+    await vi.waitFor(() => expect(error).toHaveBeenCalledWith('Command test.fails failed:', expect.objectContaining({ message: 'nope' })));
   });
 
   it('leaves other keys to the editors, and bound keys once the binding or the command is gone', () => {

@@ -16,12 +16,29 @@ import type { VisualViewContributions } from '../visual-view/visual-view';
 import type { EditorMode } from './editing-views/editing-views';
 import type { Memory } from './layout/layout';
 
-/** A feature of the widget: activated once, in list order; what it registers goes into `context.subscriptions`. */
+/**
+ * A feature of the widget: activated once, in list order; what it registers goes into `context.subscriptions`.
+ * Hosts write their own the same way and give them to `createTypstEditor({ extensions })`.
+ */
 export interface TypstExtension {
-  /** Unique in the list (e.g. `files`). */
+  /** Unique in the list (e.g. `files`); a host replaces a built-in by leaving out the one with this id. */
   readonly id: string;
+  /**
+   * What the extension declares before any extension is activated (VS Code's `contributes` in an extension's
+   * manifest): its settings.
+   */
+  readonly contributes?: ExtensionContributions;
   /** Registers the extension's contributions; everything it pushes into `context.subscriptions` is disposed on destroy. */
   activate(context: ExtensionContext): void;
+}
+
+/** What an extension declares up front (VS Code's `contributes`). */
+export interface ExtensionContributions {
+  /**
+   * Its settings by full id, `<section>.<key>` with the extension's own section (`pdfExport.download`). The host sets
+   * values with `createTypstEditor({ settings })`; the extension reads them with `workspace.getConfiguration`.
+   */
+  readonly configuration?: { readonly properties: Readonly<Record<string, ConfigurationProperty>> };
 }
 
 /** What an extension gets to work with. Contributions are registered once, at activation; the hosts apply them to every view they create later. */
@@ -29,6 +46,8 @@ export interface ExtensionContext {
   /** Disposed when the widget is destroyed, in reverse order (the extensions in reverse list order, too). */
   readonly subscriptions: { dispose(): unknown }[];
   readonly project: Project;
+  /** The settings (VS Code's `workspace.getConfiguration` / `onDidChangeConfiguration`). */
+  readonly workspace: Workspace;
   readonly workbench: Workbench;
   /** Node and mark specs, toolbar items, gutters, box renderers and editor extensions for every Visual view. */
   readonly visualView: VisualViewContributions;
@@ -38,11 +57,74 @@ export interface ExtensionContext {
   readonly preview: PreviewContributions;
 }
 
-/** The commands extensions register, by id, with their handler's type; extended by declaration merging. */
-export interface CommandRegistry {}
+/** The values of settings by full id (`{ 'pdfExport.download': false }`): JSON-like values. */
+export type Settings = Readonly<Record<string, unknown>>;
 
-export type CommandArguments<K extends keyof CommandRegistry> = CommandRegistry[K] extends (...args: infer A) => unknown ? A : never;
-export type CommandResult<K extends keyof CommandRegistry> = CommandRegistry[K] extends (...args: never[]) => infer R ? R : never;
+/** A JSON type a setting's value may have. */
+export type ConfigurationType = 'boolean' | 'string' | 'number' | 'object' | 'array' | 'null';
+
+/** One setting as an extension declares it (VS Code's configuration property). */
+export interface ConfigurationProperty {
+  /** The value's type, or the types it may have (`['string', 'null']`). A value of another type counts as unset. */
+  readonly type: ConfigurationType | readonly ConfigurationType[];
+  /** Its value while the host sets none. */
+  readonly default: unknown;
+  /** What it does, for people configuring the widget. */
+  readonly description: string;
+  /** The only values it may have. */
+  readonly enum?: readonly unknown[];
+}
+
+/** The settings as extensions read them (VS Code's `workspace` namespace, as far as settings go). */
+export interface Workspace {
+  /** The settings under `section` (`getConfiguration('pdfExport').get('download')`), or all by full id. */
+  getConfiguration(section?: string): WorkspaceConfiguration;
+  /** Some settings changed their value (the host set new ones). */
+  readonly onDidChangeConfiguration: Event<ConfigurationChangeEvent>;
+}
+
+/** The settings of one section (VS Code's WorkspaceConfiguration). */
+export interface WorkspaceConfiguration {
+  /** The value the host set, else the declared default; undefined (or `defaultValue`) for a setting no one declares. */
+  get<T>(key: string): T | undefined;
+  get<T>(key: string, defaultValue: T): T;
+  /** Whether the setting is declared or has a value. */
+  has(key: string): boolean;
+  /** Where the value comes from: the declared default, and the host's value if it set a valid one (`globalValue`). */
+  inspect<T>(key: string): ConfigurationInspect<T> | undefined;
+}
+
+export interface ConfigurationInspect<T> {
+  /** The full id. */
+  readonly key: string;
+  readonly defaultValue?: T;
+  /** The value the host set (VS Code: the user's), absent when it set none. */
+  readonly globalValue?: T;
+}
+
+/** Which settings changed (VS Code's ConfigurationChangeEvent). */
+export interface ConfigurationChangeEvent {
+  /** Whether the setting `section` (a full id), or one under it (`pdfExport`), changed. */
+  affectsConfiguration(section: string): boolean;
+}
+
+/** A command as data (VS Code's Command), e.g. what a document link's hover offers to do. */
+export interface Command {
+  /** The label of the button or menu entry ("Create chapter.typ"). */
+  readonly title: string;
+  /** The id of the command (`Workbench.registerCommand`). */
+  readonly command: string;
+  /** The arguments it is run with. */
+  readonly arguments?: readonly unknown[];
+}
+
+/** Who works in the widget (`createTypstEditor({ user })`). */
+export interface User {
+  /** The name others see (collaborating), that signs comments and commits. */
+  readonly name: string;
+  /** The color others see the user's cursor in (default: one made from the name). */
+  readonly color?: string;
+}
 
 /** The widget's frame as extensions see it: which file is shown, and the places they can put things. */
 export interface Workbench {
@@ -50,6 +132,8 @@ export interface Workbench {
   readonly ownerDocument: Document;
   /** The file shown in the editing area. */
   readonly activeFile: ProjectPath;
+  /** Who works in the widget, as the host said (`createTypstEditor({ user })`); undefined: anonymous. */
+  readonly user: User | undefined;
   /**
    * Shows `path` in the editing area (if the project has it): a Typst file in the Visual / Source tabs, any other
    * file in the view registered for its kind (nothing without one). Opening the shown file again shows it again (a
@@ -83,14 +167,23 @@ export interface Workbench {
   registerEditorFrame(frame: { top: HTMLElement; bottom: HTMLElement }): Disposable;
   /** Shows files of `kind` (not `typst`: that is the Visual / Source tabs) with the view `provider` creates. One provider per kind. */
   registerFileView(kind: Exclude<FileKind, 'typst'>, provider: FileViewProvider): Disposable;
-  registerCommand<K extends keyof CommandRegistry>(id: K, handler: CommandRegistry[K]): Disposable;
-  /** Runs command `id`; an error if none is registered. */
-  executeCommand<K extends keyof CommandRegistry>(id: K, ...args: CommandArguments<K>): CommandResult<K>;
   /**
-   * Runs `command` (without arguments) on `key` anywhere in the widget, before the editors see the key. `key`:
-   * modifiers and a `KeyboardEvent.code`, joined by `+`, e.g. `Mod+Alt+KeyM` (Mod: Ctrl or Cmd). Unnamed modifiers are not checked.
+   * Registers `handler` as command `id` (`<extension>.<name>`, e.g. `pdfExport.export`) until disposed; an id
+   * registered twice is an error. Other extensions and the host run it by id (`executeCommand`), never by importing it.
    */
-  registerKeybinding(key: string, command: keyof CommandRegistry): Disposable;
+  registerCommand(id: string, handler: (...args: any[]) => unknown): Disposable;
+  /**
+   * Runs command `id` with `args` and resolves to its result (awaited if it is a Promise). The handler is called
+   * synchronously, so the user's gesture, the selection and the focus are as now. Rejects for an unknown id and when
+   * the handler throws or rejects.
+   */
+  executeCommand<T = unknown>(id: string, ...args: unknown[]): Promise<T>;
+  /**
+   * Runs `command` (without arguments) on `key` anywhere in the widget, before the editors see the key (they never
+   * do; a failing command is logged). `key`: modifiers and a `KeyboardEvent.code`, joined by `+`, e.g. `Mod+Alt+KeyM`
+   * (Mod: Ctrl or Cmd). Unnamed modifiers are not checked.
+   */
+  registerKeybinding(key: string, command: string): Disposable;
   /**
    * Files from the computer dropped anywhere on the widget (and not taken by a view inside, such as the Visual view
    * taking images). The widget never lets the browser open a dropped file; it shows the drop hint while anyone listens.
@@ -163,7 +256,7 @@ export interface SidePanel {
   readonly body: HTMLElement;
   /** Opens it by default (unless someone opened or closed it this session, or the widget is narrow). */
   setDefault(open: boolean): void;
-  /** Shows or removes it and its rail button altogether (e.g. `fileList: 'hide'`). */
+  /** Shows or removes it and its rail button altogether (e.g. the setting `files.panel: 'hide'`). */
   setAvailable(available: boolean): void;
   /** Closes it if it lies over the editing area (narrow widget), e.g. after something was chosen in it. */
   dismiss(): void;
@@ -208,16 +301,11 @@ export interface DocumentLink {
   readonly target?: ProjectPath;
   /** What the hover says about the link (e.g. that its file is missing). */
   readonly tooltip?: string;
-  /** What the hover offers to do instead (VS Code: a `command:` link), e.g. create the missing file. */
-  readonly command?: DocumentLinkCommand;
-}
-
-/** An action a link's hover offers. */
-export interface DocumentLinkCommand {
-  /** The button's label ("Create chapter.typ"). */
-  readonly title: string;
-  /** Does it; resolves to why that failed (shown in the hover), or null. */
-  run(): Promise<string | null>;
+  /**
+   * What the hover offers to do instead (VS Code: a `command:` link), e.g. create the missing file. If the command
+   * rejects, the hover shows the error's message.
+   */
+  readonly command?: Command;
 }
 
 /** Finds the links in Typst text (VS Code's DocumentLinkProvider). */

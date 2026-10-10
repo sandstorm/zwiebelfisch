@@ -13,9 +13,9 @@ import { DEFAULT_FONT_URLS, ENGINE_WASM_URL } from '../../core/typst-engine/engi
 import type { FileContent } from '../../core/project/project';
 import { FileSender, type Init, type Request, type Response, startEngineWorker } from './worker/worker';
 import { LatestOnly } from './latest-only';
-import type { PageClick, PageOverlay, PdfExportOption, PreviewContext, PreviewToolbarItem, ToolbarItemView } from './contribution';
+import type { PageClick, PageOverlay, PdfExportOption, PreviewContext, PreviewToolbarItem, ToolbarItemView, ToolbarPlacement } from './contribution';
 
-export type { PageClick, PageOverlay, PdfEntry, PdfExportOption, PreviewContext, PreviewToolbarItem, ToolbarItemView } from './contribution';
+export type { PageClick, PageOverlay, PdfEntry, PdfExportOption, PreviewContext, PreviewToolbarItem, ToolbarItemView, ToolbarPlacement } from './contribution';
 export type { Snippet, Zoom } from './pages/pages';
 
 /**
@@ -23,8 +23,12 @@ export type { Snippet, Zoom } from './pages/pages';
  * answers about the project it compiles.
  */
 export interface PreviewContributions {
-  /** Adds a control to the toolbar, after those registered before, until disposed. */
-  registerToolbarItem(item: PreviewToolbarItem): Disposable;
+  /**
+   * Adds a control to the toolbar until disposed, at `placement`: VS Code's menu `group` + `order` (groups by name,
+   * `navigation` first; the built-ins: `1_sync` "Follow cursor", `2_view` zoom and page number, `3_export` "Download
+   * PDF"), never by registration order alone.
+   */
+  registerToolbarItem(item: PreviewToolbarItem, placement: ToolbarPlacement): Disposable;
   /**
    * Offers a choice for PDF exports (a checkbox), until disposed. An export applies every option, by `priority`
    * (default 100, higher first; equal: registration order), each to what the ones before it made. Throws when an
@@ -82,7 +86,8 @@ export class Preview implements PreviewContributions {
   private readonly resizeObserver: ResizeObserver | null;
   /** What toolbar items see of the preview. */
   private readonly context: PreviewContext;
-  private readonly items: ToolbarItemView[] = [];
+  /** The toolbar's items in toolbar order. */
+  private readonly items: { view: ToolbarItemView; group: string; order: number }[] = [];
   /** The PDF export options, with their priority, in registration order. */
   private readonly exportOptions: { option: PdfExportOption; priority: number }[] = [];
   private readonly overlays = new Set<OverlayLayer>();
@@ -180,10 +185,13 @@ export class Preview implements PreviewContributions {
     throw new Error(response.type === 'error' ? response.message : 'unexpected answer from the engine');
   }
 
-  registerToolbarItem(item: PreviewToolbarItem): Disposable {
+  registerToolbarItem(item: PreviewToolbarItem, placement: ToolbarPlacement): Disposable {
     const view = item(this.context);
-    this.toolbar.append(...view.elements);
-    this.items.push(view);
+    const entry = { view, group: placement.group, order: placement.order ?? 0 };
+    // the sort is stable: equal places stay in registration order
+    this.items.push(entry);
+    this.items.sort(byPlacement);
+    this.toolbar.append(...this.items.flatMap((each) => each.view.elements));
     this.scheduleStatus();
     return new Disposable(() => this.removeItem(view));
   }
@@ -219,7 +227,7 @@ export class Preview implements PreviewContributions {
     this.rendered.dispose();
     this.diagnosed.dispose();
     this.clicked.dispose();
-    for (const item of [...this.items]) this.removeItem(item);
+    for (const { view } of [...this.items]) this.removeItem(view);
     this.worker.terminate();
     this.resizeObserver?.disconnect();
     cancelAnimationFrame(this.frame);
@@ -238,7 +246,7 @@ export class Preview implements PreviewContributions {
   }
 
   private removeItem(item: ToolbarItemView): void {
-    const index = this.items.indexOf(item);
+    const index = this.items.findIndex((entry) => entry.view === item);
     if (index < 0) return;
     this.items.splice(index, 1);
     for (const element of item.elements) element.remove();
@@ -289,7 +297,7 @@ export class Preview implements PreviewContributions {
   }
 
   private updateStatus(): void {
-    for (const item of this.items) item.update?.();
+    for (const { view } of this.items) view.update?.();
   }
 
   private async handleClick(event: MouseEvent): Promise<void> {
@@ -340,6 +348,15 @@ export class Preview implements PreviewContributions {
       this.worker.postMessage({ ...body, id });
     });
   }
+}
+
+/** Toolbar order (see `ToolbarPlacement`): the group `navigation` first, the other groups by name, then `order`. */
+function byPlacement(a: { group: string; order: number }, b: { group: string; order: number }): number {
+  if (a.group !== b.group) {
+    if (a.group === 'navigation' || b.group === 'navigation') return a.group === 'navigation' ? -1 : 1;
+    return a.group < b.group ? -1 : 1;
+  }
+  return a.order - b.order;
 }
 
 function div(doc: Document, className: string): HTMLElement {
