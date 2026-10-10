@@ -45,3 +45,18 @@ export async function clickGlyph(glyph: Locator): Promise<void> {
 }
 
 export { expect };
+
+/** The file panel's tree row of `path` (as shown: `chapters/intro.typ`, a folder `chapters`). */
+export function fileRow(scope: Page | Locator, path: string): Locator {
+  return scope.getByTestId('typst-files').locator(`[role=treeitem][title="${path}"]`);
+}
+
+/** Opens `path` in the file panel: expands the folders around it, then clicks its row. */
+export async function openFile(scope: Page | Locator, path: string): Promise<void> {
+  const parts = path.split('/');
+  for (let depth = 1; depth < parts.length; depth++) {
+    const folder = fileRow(scope, parts.slice(0, depth).join('/'));
+    if ((await folder.getAttribute('aria-expanded')) === 'false') await folder.click();
+  }
+  await fileRow(scope, path).click();
+}

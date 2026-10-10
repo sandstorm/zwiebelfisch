@@ -21,7 +21,7 @@ import { Reference } from '../references/references';
 import { TextAlign } from './text-align';
 
 export { hasHeadingNumbering } from './heading-numbering';
-export { setBoxRenderer } from './raw-box';
+export { setBoxLinks, setBoxRenderer } from './raw-box';
 export type { BoxRenderer, Snippet } from './rendered-box';
 export { textAlignAt, type TextAlignment } from './text-align';
 

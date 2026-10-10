@@ -22,8 +22,8 @@ const Base = (typeof HTMLElement === 'undefined' ? class {} : HTMLElement) as ty
  * property; setting it (or the attribute) replaces the source without a
  * `change` event. User edits dispatch `change` with `detail.value`.
  * The `files` property holds the project's other files (see `ProjectFiles`);
- * with more than one file a file bar appears (attribute `file-list`:
- * `auto` | `show` | `hide`). Every file change, including edits of other
+ * the file panel on the left opens with more than one file (attribute
+ * `file-list`: `auto` | `show` | `hide`). Every file change, including edits of other
  * files, dispatches `files-change` with the `FileChange` as `detail`.
  * Comments are `drafting` margin notes in the source itself (the "Comment"
  * button), so they arrive with `value` and `change` like any other text.

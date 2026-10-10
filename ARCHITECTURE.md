@@ -9,13 +9,14 @@ code changes, update this file in the same commit.
 ```
 src/                        the widget (TypeScript); the most important API on top
   index.ts                  public API of the package; registers <typst-editor>
-  typst-editor.ts           createTypstEditor() — composes the widget: Project, editing views, preview, file bar,
-                            status bar, scoped CSS (typst-editor.css)
+  typst-editor.ts           createTypstEditor() — composes the widget: Project, layout, editing views, preview, file
+                            panel, status bar, scoped CSS (typst-editor.css)
   typst-editor-element.ts   <typst-editor> custom element (shadow DOM) around createTypstEditor
   typst-editor/             what only typst-editor.ts uses: editing-views.ts (Visual/Source tabs, lazily one
                             VisualView + SourceView per document), project-renderings.ts (what a document's Visual
                             view renders and inserts: snippets, image URLs, uploads), collaboration-link.ts,
                             pdf-export.ts (the project's PDF with / without comments)
+                            layout.ts + layout.css (side panels with rail buttons, editing area, preview)
   typst-editor-element/     inline-source.ts (source written inside the element → text)
   stylesheets.test.ts       every .css under src/ parses (lightningcss, no error recovery), no nested style rules,
                             every block closed (an unclosed rule silently nests the rest of the file)
@@ -27,7 +28,8 @@ src/                        the widget (TypeScript); the most important API on t
                             engine-assets.ts (wasm + default font URLs for the main thread); packages/ (withPackages,
                             tar reader); fixtures/ (test package archives); generated wasm/, fonts/ (gitignored)
     project/                Project: the file model (one TypstDocument per .typ file, main protected); paths.ts
-                            (names → paths, Typst path resolution, file kinds); FileContent
+                            (names → paths, Typst path resolution, file kinds); FileContent; path-references.ts
+                            (the file paths a Typst text names; FileLinks)
   features/                 one folder per feature, each entered through the file named like it
     visual-view/            VisualView — Tiptap editor over the source-anchored projection; visual-view.css
                             (ProseMirror core styles); decorations at the root: highlights, change-decorations,
@@ -35,14 +37,15 @@ src/                        the widget (TypeScript); the most important API on t
       projection/           projection.ts (source ↔ document), raw-code, alignment, call-atoms, labels (label/ref syntax)
       nodes/                nodes.ts (the schema: Tiptap extensions), raw-box, rendered-box, code-block-view,
                             page-break, horizontal-rule, task-list + checklist-preamble, heading numbers, text-align,
-                            margin-notes
+                            margin-notes, box-links (file links on raw boxes)
       images/               images.ts: image choices, insertion, image tools (resize, alt, caption), image-call edits
       references/           references.ts: the `reference` node (@key chips), label tags, reference hints, the @ list
                             (reference-suggestion), label-edits, label-choices
       toolbar/              toolbar.ts, toolbar-action, toolbar-blocks
       notes-gutter/         notes-gutter.ts (comment column), note-card (a note's thread + reply box), note-list,
                             card-layout
-    source-view/            SourceView — CodeMirror 6 editing view; typst-language, lint, presence
+    source-view/            SourceView — CodeMirror 6 editing view; typst-language, lint, presence, file-links
+                            (Mod+click / Alt+Enter / tooltip on paths; also used by raw boxes)
     preview/                Preview — worker-backed live preview + hit-testing, zoom, page numbers, PDF export;
                             toolbar.ts, pdf-menu.ts ("Download PDF" + menu), latest-only.ts ("only the newest
                             value" task runner)
@@ -55,7 +58,9 @@ src/                        the widget (TypeScript); the most important API on t
     comments/               CommentAction ("Comment" / Ctrl+Alt+M), add-margin-note.ts, margin-note-syntax.ts
                             (drafting's call: parse, print, validity), note-thread.ts (a note's body as a
                             thread of messages), page-margin.ts, without-notes.ts (the PDF without comments)
-    files/                  FileSwitcher (file bar), asset-view.ts, upload.ts, insert-image.ts
+    files/                  FilePanel (the file panel: header, prompts, drops; files.css), icons.ts, asset-view.ts,
+                            upload.ts, insert-image.ts
+      tree/                 tree.ts (FileTree: rows, keyboard, drag & drop, presence), tree-model.ts (pure)
     collaboration/          real-time collaboration (loaded on demand): Collaboration, SharedProject, RemoteCursors,
                             RoomVersions + SharedAssets (GitLab rooms); in-process.ts (Y.Doc/awareness wiring for
                             tests); gitlab-protocol.ts (import-free, shared with the server)
@@ -144,8 +149,8 @@ createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileCha
   `files[main]`). `files` (`ProjectFiles = Record<path, string | Uint8Array>`) are the project's
   other files. Assigning `files` replaces them (documents of paths that stay are kept and get the
   new text as one edit) and recompiles. `@preview` packages need no entry.
-- **Composition** (`Widget`, private): `Project` + `EditingViews` + `FileSwitcher` + `AssetView`
-  + `Preview` + `DiagnosticsStatus`. The preview always compiles `main` with `project.files()`.
+- **Composition** (`Widget`, private): `Project` + `Layout` + `EditingViews` + `FilePanel` +
+  `AssetView` + `Preview` + `DiagnosticsStatus`. The preview always compiles `main` with `project.files()`.
 - **`Project`** (`core/project/project.ts`): files by path. `.typ` strings become a `TypstDocument` each (kept
   across renames, so open views survive); everything else is stored as given.
   `check(change)` → reason or null, `apply(change)`, `replace(files)`, `onChange(change)`
@@ -154,21 +159,24 @@ createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileCha
   `FileChange = {kind:'create', path, content} | {kind:'update', path, content} | {kind:'delete', path} | {kind:'rename', from, path}`.
 - **`EditingViews`**: one Visual/Source tab bar; a document's views are created the first time
   it is shown and then only hidden, so cursor and undo history survive switching. The mode is
-  shared. With a single file the DOM is the same as before (tabs + two panes). `onCreate(document,
-  views)` reports new views (the widget attaches them to `ChangeTracking`).
-- **`FileSwitcher`**: only turns gestures into `FileChange`s (names via `toPath`: one folder
-  level, default extension) and shows refusals inline. Hidden unless `fileList` is `show`, or
-  `auto` with more than one file. A requested change passes `project.check`, then the host's
-  `allowFileChange` (async allowed; re-checked afterwards), then is applied. Files dropped
-  anywhere on the widget are uploaded while the bar shows, else ignored — never left to the
-  browser, which would open the file in place of the page. Image files dropped into the Visual
-  view's text are taken there instead (uploaded and inserted at the drop point).
+  shared. With a single file the DOM is the same as before (tabs + two panes).
+- **`FilePanel`** (see "File panel" below) lives in the `Layout`'s `files` panel: open by default
+  when `fileList` is `show`, or `auto` with more than one file; `hide` removes it with its rail
+  button. A requested change passes `project.check`, then the host's `allowFileChange` (async
+  allowed; re-checked afterwards), then is applied. Files dropped anywhere on the widget are
+  uploaded unless `fileList` is `hide` (then ignored) — never left to the browser, which would
+  open the file in place of the page. Image files dropped into the Visual view's text are taken
+  there instead (uploaded and inserted at the drop point).
+- **File links** (see below): each document's views get a `FileLinks` (`Widget.fileLinks`:
+  paths resolve from the document's current path; `open` is `Widget.open`; `create` is a
+  `create` change through `request`, then `open`).
+  `onCreate(document, views)` reports new views (the widget attaches them to `ChangeTracking`).
 - Preview clicks into another project file open it, then reveal. Clicks into packages are ignored.
 - **`ProjectRenderings`** gives every document's VisualView its `renderer` (snippets from
   `Preview.snippet` under the document's current path, refreshed on `Preview.onRender`; image
   files resolved like Typst (`resolvePath`) and shown as object URLs, made once per content and
   revoked when replaced) and `assets` (the project's images as `referencePath`s; uploads become
-  a `create` change that goes through `allowFileChange` like the file bar's; an upload equal to
+  a `create` change that goes through `allowFileChange` like the file panel's; an upload equal to
   an existing file (`name.png`, `name-2.png`, …) reuses it, a different one gets the first free
   of those names — every pasted screenshot is `image.png`; refusals — not an image Typst shows,
   the host's veto — come back as an error the popover shows).
@@ -287,7 +295,7 @@ Inside the crate:
 ### `VisualView` (`src/features/visual-view`)
 
 ```ts
-new VisualView(parent, document, { renderer?, assets?, user?: {name}, comment?(), labels? })   // user signs replies; comment: the toolbar's "Comment"; labels: ProjectLabels (features/labels)
+new VisualView(parent, document, { renderer?, assets?, user?: {name}, comment?(), labels?, links? })   // user signs replies; comment: the toolbar's "Comment"; labels: ProjectLabels; links: FileLinks
 .reveal(from, to)    // select exactly what shows source range from..to (caret if empty)
 .setHighlights(layer, highlights)   // source ranges → inline decorations (sourceToPos, end with bias -1)
 .setPresence(presences)             // other users' carets / selections (PresenceTarget), see Collaboration
@@ -497,8 +505,10 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   code) above a `<pre><code>` content DOM.
 - **Raw boxes** (`raw-box.ts`): `rawBlock` / `rawInline` / `image` / `outline` render through a
   NodeView that hosts a nested CodeMirror (Typst highlighting, no own history). An image box is
-  headed by "Image: <path>" (`imagePath(src)`), an outline box by "Table of contents"; with a
-  renderer, the outline shows its compiled snippet.
+  headed by "Image: <path>" (`imagePath(src)`; with `links` the path opens the file), an outline box
+  by "Table of contents"; with a renderer, the outline shows its compiled snippet. With `links`
+  (`setBoxLinks`), a raw block naming files gets an "Open …" row (`box-links.ts`) and every box's
+  code the Source view's `fileLinks` extension.
   - **Rendered boxes** (`rendered-box.ts`, with a `BoxRenderer`): while not focused, a box shows
     an `<img>` instead of its code: an `image` box its file (`renderer.imageUrl(path)`, follows
     path edits at once), any other box the compiled snippet of its source range
@@ -566,7 +576,7 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
 ### `SourceView` (`src/features/source-view`)
 
 ```ts
-new SourceView(parent, document, { onCursor?, onBaseChange? })
+new SourceView(parent, document, { onCursor?, onBaseChange?, links? })   // links: FileLinks, see "File links"
 .reveal(from, to)    // select, scroll to center, highlight
 .setDiagnostics([{severity, message, hints, from, to}])   // underline + hover; replaces previous
 .setHighlights(layer, [{from, to, className, attributes?}])  // replaces that layer; follows edits
@@ -690,6 +700,81 @@ its changes (the Project's change events); `.bib` files give their entry keys. A
 title come from the element before it: a heading (its text), `#figure(..)` (by its body: image →
 figure, table → table, raw → listing; its caption), an equation. The Visual view reads the index
 through `ProjectLabels` (see "VisualView"); the Source view does not use it yet.
+
+### Layout (`src/typst-editor/layout.ts`)
+
+```ts
+new Layout(host, storageKey)   .editor  .preview            // the editing column and the preview column
+.addPanel(id, { label, icon }) → body element             // a side panel + its rail button
+.setDefault(id, open)  .setAvailable(id, available)  .choose(id, open)  .isOpen(id)  .dismiss()
+.remember<T>(name) → { load(), save(value) }               // sessionStorage `${storageKey}:${name}`, failures ignored
+```
+
+- One grid on the host: side (rail + open panel) | editing column | preview; the status bar
+  spans all. The hand-built version of the `Layout` module planned by the dockview spike
+  (docs/2026_10_10_dockview-spike.md): panels have ids, one side panel is open at a time, the
+  saved state (width, who opened or closed what) is opaque to the panels.
+- A panel's owner sets its default (`setDefault`: the file panel's `auto` follows the file count);
+  a person's toggle wins for the session. The panel is resizable (separator: drag or arrow keys,
+  160–480px).
+- **Narrow** (widget < 720px, `ResizeObserver`): the open panel overlays the editing column, starts
+  closed, opens only on the rail button and closes on Escape, a click outside, or `dismiss()`
+  (the widget calls it after a file was chosen in the panel).
+
+### File panel (`src/features/files`)
+
+```ts
+new FilePanel(parent, dropTarget, { onOpen(path), onChange(change) → Promise<reason | null>, memory? })
+.render({ paths, main, active })   .showPresence(placedPresences)   .acceptDrops = boolean   .destroy()
+// tree/: new FileTree(parent, { onOpen, onRename, onDelete, onMove(source, folder), onUpload(files, folder), memory? })
+// tree-model.ts (pure): buildTree(paths, emptyFolders), visibleRows(tree, expanded), navigate(rows, current, key),
+//                       relocate(paths, source, target) → renames, filesUnder, folderOf, ancestorsOf
+```
+
+- **Only gestures → `FileChange`s** (names via `toPath`: any folder depth, default extension);
+  refusals show inline in a prompt above the tree. A gesture that needs several changes (a
+  folder's rename / move / delete: one per file) asks for them in order and stops at the first
+  refusal.
+- **Tree**: folders first, then files, both by name (`Intl.Collator`, numeric). `role=tree`, one
+  `treeitem` per visible row (`aria-level`, `aria-expanded`, `aria-selected` on the shown file;
+  roving tabindex). Open folders are remembered (`memory`, the Layout's session store); the
+  folders around the shown file open when it changes. Presence dots per file, and on a closed
+  folder for the files inside.
+- **The focused row** (click, keyboard; else the shown file) is what Rename / Delete / F2 /
+  Delete act on and where New file, New folder and Upload put things. The main file and a folder
+  holding it cannot be renamed, moved or deleted.
+- **Empty folders** exist in the panel only (the project has no folders), until a file goes in.
+- **Drag & drop**: a row dragged onto a folder row (or a file row: its folder; empty space: the
+  top level) is relocated there; files from the computer dropped on a row are uploaded into that
+  folder (the tree stops the drop, so the widget-wide handler does not upload them again).
+
+### File links (`src/core/project/path-references.ts`, `src/features/source-view/file-links.ts`, `src/features/visual-view/nodes/box-links.ts`)
+
+```ts
+findPathReferences(text, { tree?, from?, to? }) → [{ path, from, to, call }]   // call: import | include | image | read | json | …
+pathReferenceAt(text, offset, tree?) → PathReference | null                    // the string holding offset (quotes included)
+interface FileLinks { resolve(reference) → path | null; exists(path); open(path); create(path) → Promise<reason | null> }
+describeLink(links, reference) → { path, name, exists, creatable } | null      // creatable: a missing .typ file
+fileLinks(links) → CodeMirror extension      linkInfo(doc, links, reference, { hint? }) → "Open …" / "Create …" DOM
+```
+
+- **One definition** of what a path reference is (Lezer, `codemirror-lang-typst`): the string of
+  `import "…"` / `include "…"` and the first positional string argument of `image`, `read`,
+  `json`, `csv`, `yaml`, `toml`, `xml`, `cbor`, `bibliography` (also the strings of a
+  bibliography array); escapes decoded; packages (`@…`), empty strings, named arguments, computed
+  paths and methods (`image.decode`) are not references. Callers with a parsed tree (an editor's
+  `syntaxTree`) pass it, and a range to look at the visible part only.
+- **Source view** (`fileLinks`): paths are marked (`typst-source__path`, underlined on hover, a
+  pointer while Ctrl/⌘ is held: `typst-source--mod`); Mod+mousedown on one opens an existing file
+  (else CodeMirror's own Mod+click); Alt+Enter opens the file whose path holds the cursor (F12
+  was avoided: browsers take it for the developer tools); the hover tooltip is `linkInfo`: "Open
+  x (Ctrl+click or Alt+Enter)", or "x is not in the project" + "Create x" for a `.typ` file
+  (showing the host's refusal).
+- **Visual view**: raw blocks naming files get a row of `linkInfo`s above their code (re-checked
+  on pointer enter, so a file created meanwhile becomes "Open"); an image box's path is a button;
+  the nested CodeMirror of every raw box gets `fileLinks` too.
+- **Widget**: `open` shows the file (the panel selects it and opens its folders); `create` asks
+  for a `create` change like the panel's New file.
 
 ### Diagnostics in the widget (`src/features/diagnostics`)
 
@@ -921,8 +1006,8 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
   view: see SourceView / VisualView); `onPresence` gets everyone in every file (with `path`),
   only when that changed. Colors: the user's, else a palette entry by name; flag text black or
   white by WCAG contrast (`flagTextColor`). CSS: `--typst-remote-color`, `--typst-remote-text`.
-- **Widget presence**: the views of the shown file (above) and the file bar
-  (`FileSwitcher.showPresence`: a dot with initials per user on the files they are in). Not the
+- **Widget presence**: the views of the shown file (above) and the file panel
+  (`FilePanel.showPresence`: a dot with initials per user on the files they are in). Not the
   preview (decision 2026-10-10: carets there were noise; the preview is the output).
 - **Why not Tiptap's Collaboration / CollaborationCaret** (decision): they are built on
   y-prosemirror, which makes the ProseMirror document the shared truth (a Y.XmlFragment). Here
@@ -1051,8 +1136,10 @@ an in-memory `FakeGitLab` holding `demo/examples/advanced`). Checklist with step
 - **All 17 default fonts (9.7 MB, 6.4 MB gzip) load before the first render.** Next step: lazy
   fonts — ship a JSON index of `FontInfo` so the `FontBook` is complete up front and fetch font
   data on first use (compile, see which fonts were missing, fetch, recompile).
-- **Multi-file UI:** one folder level; no folder tree. The visual view has no cursor API, so
-  "Insert into …" uses the last source-view cursor, else the end of the file.
+- **Multi-file UI:** empty folders live only in the panel (the project has no folders); a
+  folder rename / move / delete is one change per file and may stop half-way at a refusal. The
+  visual view has no cursor API, so "Insert into …" uses the last source-view cursor, else the
+  end of the file. File links do not follow paths built at run time (variables, `+`).
 - **Packages:** only `@preview` from packages.typst.org (no configurable registry, no `@local`);
   failed downloads are not retried until the worker restarts.
 - **Snippets are cut from the compiled pages**, so they only appear after a successful compile,
@@ -1069,7 +1156,7 @@ an in-memory `FakeGitLab` holding `demo/examples/advanced`). Checklist with step
 - **Collaboration:** images and other non-`.typ` files are not shared (outside GitLab rooms). `{ doc }` mode needs the
   widget and the host on the same Yjs instance (`dist/lib` bundles its own Yjs). In `{ doc }`
   mode the host must pass a synced Y.Doc; with `{ url }` an unreachable server leaves the widget
-  local. Presence in the file bar is re-resolved on presence changes only (not on
+  local. Presence in the file panel is re-resolved on presence changes only (not on
 every edit of a file not shown). In the Visual view a caret inside hidden markup (delimiters,
 markers, blank lines) is drawn at the visible spot before it (the end of the line it ends), so a
 caret at the end of a line never jumps to the start of the next one.

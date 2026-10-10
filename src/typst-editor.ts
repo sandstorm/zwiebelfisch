@@ -1,17 +1,21 @@
 // createTypstEditor: the widget. Composes a Project, the editing views (typst-editor/editing-views.ts), the
-// preview, the file bar, the status bar and the features. See ARCHITECTURE.md, "createTypstEditor".
+// preview, the file panel (in typst-editor/layout.ts), the status bar and the features. See ARCHITECTURE.md, "createTypstEditor".
 import type { CollaborationOptions } from './features/collaboration/collaboration';
 import type { Diagnostic } from './core/typst-engine/typst-engine';
+import type { TypstDocument } from './core/typst-document/typst-document';
 import { Preview } from './features/preview/preview';
 import proseMirrorStyles from './features/visual-view/visual-view.css?inline';
-import { AssetView, FileSwitcher, insertImage } from './features/files/files';
+import { AssetView, FilePanel, filesPanelIcon, insertImage } from './features/files/files';
+import fileStyles from './features/files/files.css?inline';
 import { ChangeTracking } from './features/changes/changes';
 import { CommentAction } from './features/comments/comments';
 import { CollaborationLink } from './typst-editor/collaboration-link';
 import changeStyles from './features/changes/changes.css?inline';
 import { DiagnosticsStatus, summarizeDiagnostics } from './features/diagnostics/diagnostics';
 import { EditingViews, type EditorMode } from './typst-editor/editing-views';
-import { type FileChange, Project, type ProjectFiles, referencePath } from './core/project/project';
+import { Layout } from './typst-editor/layout';
+import layoutStyles from './typst-editor/layout.css?inline';
+import { type FileChange, type FileLinks, Project, type ProjectFiles, referencePath, resolvePath } from './core/project/project';
 import { PdfExport } from './typst-editor/pdf-export';
 import { ProjectRenderings } from './typst-editor/project-renderings';
 import { LabelIndex } from './features/labels/labels';
@@ -22,7 +26,10 @@ export type { CollaborationOptions } from './features/collaboration/collaboratio
 export type { EditorMode } from './typst-editor/editing-views';
 export type { FileChange, ProjectFiles } from './core/project/project';
 
-/** When the file bar is shown: `auto` (default) as soon as the project has more than one file. */
+/**
+ * The file panel: `auto` (default) open while the project has more than one file, collapsed to its rail
+ * button otherwise (until someone opens or closes it); `show` open; `hide` none at all.
+ */
 export type FileListMode = 'auto' | 'show' | 'hide';
 
 export interface TypstEditorOptions {
@@ -38,11 +45,11 @@ export interface TypstEditorOptions {
   files?: ProjectFiles;
   /** The editing view shown first (default: visual). */
   mode?: EditorMode;
-  /** When to show the file bar (default `auto`: when there is more than one file). */
+  /** When the file panel is open (default `auto`: when there is more than one file; see FileListMode). */
   fileList?: FileListMode;
   /**
    * Decides whether a create / rename / delete / upload someone asked for in
-   * the file bar may happen (default: all may). May be async, e.g. to ask a server.
+   * the file panel may happen (default: all may). May be async, e.g. to ask a server.
    */
   allowFileChange?(change: FileChange): boolean | Promise<boolean>;
   /** Called after every change to any file: edits (`update`) and create / rename / delete. */
@@ -124,8 +131,8 @@ export interface TypstEditor {
  * Mounts the editor widget into `host`: an editing view on the left and the
  * live preview on the right. Clicking the preview reveals the source; moving
  * the cursor reveals the spot in the preview. Compiler errors are underlined in
- * the source and counted in a status bar that jumps to the first one. With
- * more than one file, a file bar above the editing view switches between them.
+ * the source and counted in a status bar that jumps to the first one. A file
+ * panel on the left shows the project as a tree (open with more than one file).
  *
  * Styles go into the root node `host` is attached to: `document.head`, or the
  * shadow root when `host` lives in one. Attach `host` before calling this.
@@ -164,13 +171,14 @@ class Widget {
   /** The Typst file shown last: where images are inserted and whose diagnostics the status counts. */
   private lastSource: string;
   private diagnostics: Diagnostic[] | null = null;
+  private readonly layout: Layout;
   private readonly left: HTMLElement;
   private readonly right: HTMLElement;
   private readonly status: DiagnosticsStatus;
   private readonly preview: Preview;
   readonly pdfs: PdfExport;
   private readonly views: EditingViews;
-  private readonly switcher: FileSwitcher;
+  private readonly files: FilePanel;
   private readonly assets: AssetView;
   private readonly renderings: ProjectRenderings;
   private readonly labels: LabelIndex;
@@ -189,10 +197,10 @@ class Widget {
     const files = { ...options.files, ...(options.source === undefined ? {} : { [main]: options.source }) };
     this.project = new Project(main, files);
     this.active = this.lastSource = main;
-    this.left = el(host.ownerDocument, 'typst-editor__left');
-    this.right = el(host.ownerDocument, 'typst-editor__right');
     host.classList.add('typst-editor');
-    host.append(this.left, this.right);
+    this.layout = new Layout(host, `typst-editor:${main}`);
+    this.left = this.layout.editor;
+    this.right = this.layout.preview;
 
     this.status = new DiagnosticsStatus(host, (target) => this.jump(target, true));
     this.preview = new Preview(this.right, {
@@ -205,29 +213,16 @@ class Widget {
     this.pdfs = new PdfExport(this.project, this.preview);
     this.labels = new LabelIndex(this.project);
     this.renderings = new ProjectRenderings({ project: this.project, preview: this.preview, request: (change) => this.request(change) });
-    this.views = new EditingViews(this.left, {
-      mode: options.mode,
-      visualOptions: (document) => ({
-        ...this.renderings.forDocument(document),
-        user: options.user,
-        comment: () => this.commentAction.comment(),
-        labels: this.labels,
-      }),
-      onCursor: (document, offset) => {
-        const path = this.project.pathOf(document);
-        if (path) void this.preview.reveal(path, offset);
-      },
-      // Publish the local selection from the editors' own updates: the DOM's selectionchange
-      // fires before CodeMirror/ProseMirror read the new selection, so it would publish the previous one.
-      onSelection: () => this.collaboration?.selectionChanged(),
-      // accepting a change moves that file's base; it is still the same version for the reader
-      onBaseChange: (document, base) => this.changes.accept(document, base),
-      onCreate: (document, views) => this.changes.attach(document, [views.source, views.visual]),
-    });
+    this.views = this.mountViews();
     // Drops anywhere on the widget (also the preview): never the browser opening the file instead.
-    this.switcher = new FileSwitcher(this.left, host, {
-      onOpen: (path) => this.open(path),
+    const filesBody = this.layout.addPanel('files', { label: 'Files', icon: filesPanelIcon(host.ownerDocument) });
+    this.files = new FilePanel(filesBody, host, {
+      onOpen: (path) => {
+        this.open(path);
+        this.layout.dismiss();
+      },
       onChange: (change) => this.request(change),
+      memory: this.layout.remember('folders'),
     });
     this.assets = new AssetView(this.left, (path) => this.insertImage(path));
     this.unsubscribe = this.project.onChange((change) => this.changed(change));
@@ -261,6 +256,30 @@ class Widget {
     if (changed) this.options.onOpen?.(path);
   }
 
+  /** The Visual/Source views of every document, wired to the preview, collaboration, changes and file links. */
+  private mountViews(): EditingViews {
+    return new EditingViews(this.left, {
+      mode: this.options.mode,
+      visualOptions: (document) => ({
+        ...this.renderings.forDocument(document),
+        user: this.options.user,
+        comment: () => this.commentAction.comment(),
+        labels: this.labels,
+      }),
+      links: (document) => this.fileLinks(document),
+      onCursor: (document, offset) => {
+        const path = this.project.pathOf(document);
+        if (path) void this.preview.reveal(path, offset);
+      },
+      // Publish the local selection from the editors' own updates: the DOM's selectionchange
+      // fires before CodeMirror/ProseMirror read the new selection, so it would publish the previous one.
+      onSelection: () => this.collaboration?.selectionChanged(),
+      // accepting a change moves that file's base; it is still the same version for the reader
+      onBaseChange: (document, base) => this.changes.accept(document, base),
+      onCreate: (document, views) => this.changes.attach(document, [views.source, views.visual]),
+    });
+  }
+
   /** "Changes since …" for every Typst file: the main file against `options.base`, else each file as opened. */
   private mountChanges(): ChangeTracking {
     const actions = this.host.ownerDocument.createElement('span');
@@ -273,7 +292,7 @@ class Widget {
     );
   }
 
-  /** Shares the project; the others' carets show in the shown file's views and the file bar. */
+  /** Shares the project; the others' carets show in the shown file's views and the file panel. */
   private mountCollaboration(options: CollaborationOptions): CollaborationLink {
     const shared = { project: this.project, user: this.options.user };
     const current = () => {
@@ -286,8 +305,8 @@ class Widget {
       current,
       onSynced: () => this.changes.resetOpened(),
       onVersions: (versions) => this.mountVersions(versions),
-      // Where the others are, in every file: dots in the file bar.
-      onPresence: (presences) => this.switcher.showPresence(presences),
+      // Where the others are, in every file: dots in the file panel.
+      onPresence: (presences) => this.files.showPresence(presences),
     });
   }
 
@@ -322,7 +341,7 @@ class Widget {
     this.changes.destroy();
     this.commentAction.destroy();
     this.views.destroy();
-    this.switcher.destroy();
+    this.files.destroy();
     this.assets.destroy();
     this.renderings.destroy();
     this.labels.destroy();
@@ -330,8 +349,7 @@ class Widget {
     this.status.destroy();
     this.project.destroy();
     this.host.classList.remove('typst-editor');
-    this.left.remove();
-    this.right.remove();
+    this.layout.destroy();
   }
 
   private refresh(): void {
@@ -356,7 +374,7 @@ class Widget {
     this.open(follow(this.active));
   }
 
-  /** Applies a change asked for in the file bar, if the project and the host allow it. */
+  /** Applies a change asked for in the file panel (or a link), if the project and the host allow it. */
   private async request(change: FileChange): Promise<string | null> {
     const problem = this.project.check(change);
     if (problem) return problem;
@@ -367,6 +385,23 @@ class Widget {
     if (late) return late;
     this.project.apply(change);
     return null;
+  }
+
+  /** Where the paths written in `document` lead: resolved from its current path, opened here. */
+  private fileLinks(document: TypstDocument): FileLinks {
+    return {
+      resolve: (reference) => {
+        const file = this.project.pathOf(document);
+        return file ? resolvePath(file, reference) : null;
+      },
+      exists: (path) => this.project.has(path),
+      open: (path) => this.open(path),
+      create: async (path) => {
+        const problem = await this.request({ kind: 'create', path, content: '' });
+        if (problem === null) this.open(path);
+        return problem;
+      },
+    };
   }
 
   /** Opens the file of `target` and reveals the range (in the source view on request). */
@@ -403,19 +438,15 @@ class Widget {
   private renderFiles(): void {
     const paths = this.project.paths();
     const mode = this.options.fileList ?? 'auto';
-    this.switcher.visible = mode === 'show' || (mode === 'auto' && paths.length > 1);
-    this.switcher.render({ paths, main: this.project.main, active: this.active });
+    this.layout.setAvailable('files', mode !== 'hide');
+    this.layout.setDefault('files', mode === 'show' || paths.length > 1);
+    this.files.acceptDrops = mode !== 'hide';
+    this.files.render({ paths, main: this.project.main, active: this.active });
   }
 
   private documents() {
     return this.project.paths().flatMap((path) => this.project.document(path) ?? []);
   }
-}
-
-function el(doc: Document, className: string): HTMLElement {
-  const element = doc.createElement('div');
-  element.className = className;
-  return element;
 }
 
 const STYLE_ID = 'typst-editor-styles';
@@ -426,7 +457,7 @@ function injectStyles(host: HTMLElement): void {
   if (target.querySelector(`#${STYLE_ID}`)) return;
   const style = host.ownerDocument.createElement('style');
   style.id = STYLE_ID;
-  style.textContent = proseMirrorStyles + styles + changeStyles;
+  style.textContent = proseMirrorStyles + styles + layoutStyles + fileStyles + changeStyles;
   target.append(style);
 }
 

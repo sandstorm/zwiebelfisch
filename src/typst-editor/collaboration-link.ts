@@ -16,7 +16,7 @@ export interface LinkedWidget {
   onVersions?(versions: RoomVersions): void;
   /** The project has the room's text now (first sync done), e.g. to start "changes since opened" from it. */
   onSynced?(): void;
-  /** The other users' places changed (every file; e.g. for the preview and the file bar). */
+  /** The other users' places changed (every file; e.g. for the file panel). */
   onPresence?(presences: readonly PlacedPresence[]): void;
 }
 

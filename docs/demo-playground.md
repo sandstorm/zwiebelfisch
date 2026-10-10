@@ -88,9 +88,13 @@ Each item names the mode and example to use, the steps to take and what you shou
 
 | ✓ | Feature | Steps (mode / example) | Expected | Automated |
 |---|---|---|---|---|
-| ☐ | File bar | Local / Advanced. The tabs list every file, with the main file marked. | `.typ` files open in their own views, and images open as a preview with **Insert into …**. | multi-file-ui.spec |
-| ☐ | New / Upload / Rename / Delete | Use the file bar buttons. Try to rename `main.typ`. | The change takes effect, and the main file is protected. | multi-file-ui.spec |
-| ☐ | Cross-file jumps | Click chapter text in the preview. | That chapter's tab opens. | multi-file.spec |
+| ☐ | File panel (tree) | Local / Advanced. The panel on the left lists `assets` and `chapters` (collapsed) first, then the files; `main.typ` is marked. Expand `chapters`, open `method.typ`. | Folders expand and collapse (kept after a reload), `.typ` files open in their own views, images as a preview with **Insert into …**. | files-tree.spec, multi-file-ui.spec |
+| ☐ | Keyboard in the tree | Focus a row: arrow keys, Home/End, Enter, F2, Delete. | Focus moves, folders open/close, Enter opens, F2 asks for a new name, Delete asks to confirm. | files-tree.spec |
+| ☐ | New / New folder / Upload / Rename / Delete | Use the panel's buttons; make a folder `drafts`, then a file in it. Rename the `chapters` folder. Try to rename `main.typ`. | The change takes effect (a folder with all its files), and the main file is protected. | multi-file-ui.spec, files unit tests |
+| ☐ | Drag & drop | Drag `helpers.typ` onto `chapters`; drop an image from the desktop onto `assets`. | The file moves into the folder; the image is uploaded into it. | files-tree.spec |
+| ☐ | Collapse, resize, narrow | Toggle the **Files** rail button; drag the panel's right edge; make the window narrower than ~720px. | The panel hides/shows (kept after a reload) and resizes; when narrow it opens over the editor and closes after choosing a file. Hello (one file) starts collapsed. | files-tree.spec |
+| ☐ | File links | In `main.typ`: Source tab, hover `"template.typ"` in the `#import`, then Ctrl/⌘+click it (or put the cursor in it and press Alt+Enter). Visual tab: **Open template.typ** above the import box. In `chapters/results.typ` click the image path in the image box's heading. Write `#include "appendix.typ"` and use **Create appendix.typ** in the tooltip. | The tooltip offers "Open template.typ"; the file opens and is selected in the panel; a missing `.typ` file is created and opened. | files-tree.spec, typst-editor unit tests |
+| ☐ | Cross-file jumps | Click chapter text in the preview. | That chapter opens and is selected in the panel (its folder expands). | multi-file.spec |
 | ☐ | Packages | Add `#import "@preview/…"` (needs internet). | The package downloads on first use. | engine unit tests |
 
 ### Comments
@@ -115,7 +119,7 @@ Each item names the mode and example to use, the steps to take and what you shou
 
 | ✓ | Feature | Steps (mode / example) | Expected | Automated |
 |---|---|---|---|---|
-| ☐ | Loading a branch | GitLab (fake). | The file bar lists `main.typ`, `template.typ`, `helpers.typ`, the chapters and the SVGs. Images come from the server. | gitlab.spec |
+| ☐ | Loading a branch | GitLab (fake). | The file panel lists `main.typ`, `template.typ`, `helpers.typ`, the `chapters` and `assets` folders. Images come from the server. | gitlab.spec |
 | ☐ | Changes since … vs. last commit | In `main.typ` (Source tab), add a paragraph `Again.` after `#pagebreak()`, and edit `chapters/method.typ`. | Both windows mark the paragraph and the chapter edit as inserted ("Changes since last saved version"). | gitlab.spec |
 | ☐ | Save version | Click **Save version**, enter a message and click **Apply**. | Both windows say "Saved version <sha> (Ann)", and "Changes since …" starts over. Saving again says "No changes to save". | gitlab.spec |
 | ☐ | Upstream merge | Edit `main.typ` (as above). Choose "add a paragraph" and click **Simulate upstream commit**. | The status shows the fake commit. Both windows say "Merged new changes from GitLab", and the paragraph appears in the Introduction. Your edit is kept. | gitlab.spec, playground.test.ts |

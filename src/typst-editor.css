@@ -1,5 +1,6 @@
-/* The widget's styles, scoped under .typst-editor and injected by createTypstEditor (feature styles:
-   features/changes/changes.css, features/visual-view/visual-view.css). See docs/embedding.md. */
+/* The widget's styles, scoped under .typst-editor and injected by createTypstEditor (also injected:
+   typst-editor/layout.css, features/files/files.css, features/changes/changes.css,
+   features/visual-view/visual-view.css). See docs/embedding.md. */
 .typst-editor {
   --te-border: #d9dce1;
   --te-preview-bg: #eef0f3;
@@ -9,8 +10,8 @@
   --te-note-line: #e0a800;
   --te-note-strong: rgba(250, 190, 20, 0.55);
   display: grid;
-  /* editing view | preview */
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  /* side panels (typst-editor/layout.css) | editing view | preview */
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto;
   height: 100%;
   min-height: 0;
@@ -18,7 +19,7 @@
   font-family: system-ui, sans-serif;
 }
 .typst-editor__left {
-  grid-column: 1;
+  grid-column: 2;
   grid-row: 1;
   min-height: 0;
   overflow: hidden;
@@ -29,7 +30,7 @@
 .typst-editor__left .cm-editor { flex: 1; min-height: 0; }
 .typst-editor__left .cm-scroller { overflow: auto; }
 .typst-editor__right {
-  grid-column: 2;
+  grid-column: 3;
   grid-row: 1;
   min-height: 0;
   overflow: hidden;
@@ -126,6 +127,30 @@
 }
 .typst-preview__follow-spot { position: absolute; width: 1px; height: 1.4em; margin-top: -1.2em; pointer-events: none; }
 .typst-source__jump { background: var(--te-jump); border-radius: 2px; }
+/* File links: paths in #import / #include / image(..) open their file (Source view, raw boxes) */
+.typst-source__path:hover,
+.typst-source--mod .typst-source__path { text-decoration: underline; text-decoration-color: var(--te-accent); }
+.typst-source--mod .typst-source__path { cursor: pointer; }
+.typst-file-link { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; font: 12px system-ui, sans-serif; }
+.typst-file-link + .typst-file-link { margin-left: 12px; }
+.cm-tooltip .typst-file-link { padding: 3px 6px; }
+.typst-file-link__button,
+.typst-visual__path {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--te-accent);
+  font: inherit;
+  cursor: pointer;
+}
+.typst-file-link__button:hover,
+.typst-visual__path:hover { text-decoration: underline; }
+.typst-file-link__note { color: #57606a; }
+.typst-file-link__error { color: #cf222e; }
+.typst-file-link__error:empty { display: none; }
+.typst-visual__path--missing { color: #8c959f; cursor: default; text-decoration: line-through dotted; }
+.typst-visual__box-links { font-weight: 400; }
+.typst-visual__box-links[hidden] { display: none; }
 .typst-editor__tabs {
   display: flex;
   gap: 4px;
@@ -661,127 +686,6 @@
   font-size: 13px;
   cursor: pointer;
 }
-/* File bar (multi-file projects only) */
-.typst-files {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--te-border);
-  background: #fbfbfc;
-  font-size: 13px;
-}
-.typst-files[hidden] { display: none; }
-.typst-files__list {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  gap: 4px;
-  overflow-x: auto;
-  scrollbar-width: thin;
-}
-.typst-files__tab {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 6px;
-  max-width: 14em;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  padding: 3px 10px 3px 8px;
-  background: none;
-  color: #3d444d;
-  font: inherit;
-  cursor: pointer;
-}
-.typst-files__tab:hover { background: #eef1f5; }
-.typst-files__tab[aria-selected='true'] {
-  background: white;
-  border-color: var(--te-border);
-  color: #1f2328;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
-}
-.typst-files__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.typst-files__presence { display: inline-flex; margin-left: 2px; }
-.typst-files__user {
-  min-width: 1.6em;
-  height: 1.6em;
-  margin-left: -3px;
-  padding: 0 2px;
-  box-sizing: border-box;
-  border-radius: 0.8em;
-  background: var(--typst-remote-color, #268bd2);
-  color: var(--typst-remote-text, #fff);
-  box-shadow: 0 0 0 1.5px #fff;
-  font: 600 9px/1.6em system-ui, sans-serif;
-  text-align: center;
-}
-.typst-files__user:first-child { margin-left: 0; }
-.typst-files__badge {
-  border-radius: 999px;
-  padding: 0 6px;
-  background: #e7efff;
-  color: var(--te-accent);
-  font-size: 11px;
-  font-weight: 600;
-}
-.typst-files__icon {
-  flex: none;
-  width: 14px;
-  height: 14px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.3;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.typst-files__actions { display: flex; flex: none; gap: 2px; }
-.typst-files__action {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border: 0;
-  border-radius: 6px;
-  padding: 4px 6px;
-  background: none;
-  color: #57606a;
-  font: inherit;
-  cursor: pointer;
-}
-.typst-files__action:hover:not(:disabled) { background: #eef1f5; color: #1f2328; }
-.typst-files__action:disabled { opacity: 0.35; cursor: default; }
-.typst-files__prompt {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 8px;
-  padding: 8px;
-  border-bottom: 1px solid var(--te-border);
-  background: #f4f7fd;
-  font-size: 13px;
-}
-.typst-files__message { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: #1f2328; }
-.typst-files__message input {
-  min-width: 12em;
-  border: 1px solid var(--te-border);
-  border-radius: 6px;
-  padding: 4px 8px;
-  font: inherit;
-}
-.typst-files__message input:focus { outline: 2px solid var(--te-jump); border-color: var(--te-accent); }
-.typst-files__confirm,
-.typst-files__cancel {
-  border: 1px solid var(--te-border);
-  border-radius: 6px;
-  padding: 4px 12px;
-  background: white;
-  font: inherit;
-  cursor: pointer;
-}
-.typst-files__confirm { border-color: var(--te-accent); background: var(--te-accent); color: white; }
-.typst-files__confirm--danger { border-color: #cf222e; background: #cf222e; }
-.typst-files__error { color: #cf222e; }
-.typst-files__error:empty { display: none; }
 .typst-editor__tabs[hidden] { display: none; }
 .typst-editor.typst-editor--dropping { outline: 2px dashed var(--te-accent); outline-offset: -4px; }
 /* Read-only view of images and data files */

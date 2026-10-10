@@ -1,0 +1,71 @@
+/* The widget's side panels (rail, resizable panel, narrow overlay), injected by createTypstEditor.
+   See layout.ts. */
+.typst-editor__side {
+  grid-column: 1;
+  grid-row: 1;
+  position: relative;
+  display: flex;
+  min-height: 0;
+  border-right: 1px solid var(--te-border);
+  background: #fbfbfc;
+}
+.typst-editor__side[hidden] { display: none; }
+.typst-editor__rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px;
+}
+.typst-editor__rail-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0;
+  background: none;
+  color: #57606a;
+  cursor: pointer;
+}
+.typst-editor__rail-button[hidden] { display: none; }
+.typst-editor__rail-button:hover { background: #eef1f5; color: #1f2328; }
+.typst-editor__rail-button[aria-pressed='true'] { background: #e7efff; color: var(--te-accent); }
+.typst-editor__rail-button svg { width: 16px; height: 16px; }
+.typst-editor__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-width: 50vw;
+  border-left: 1px solid var(--te-border);
+  background: #fbfbfc;
+}
+.typst-editor__panel[hidden],
+.typst-editor__panel-body[hidden] { display: none; }
+.typst-editor__panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.typst-editor__resizer {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  bottom: 0;
+  width: 6px;
+  z-index: 3;
+  cursor: col-resize;
+}
+.typst-editor__resizer:hover,
+.typst-editor__resizer:focus-visible,
+.typst-editor--resizing .typst-editor__resizer { background: var(--te-jump); outline: none; }
+.typst-editor--resizing { cursor: col-resize; user-select: none; }
+/* Narrow widget: an open panel lies over the editing area. */
+.typst-editor--narrow .typst-editor__panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  z-index: 10;
+  max-width: calc(100vw - 48px);
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.16);
+}

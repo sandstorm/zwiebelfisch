@@ -8,7 +8,9 @@ import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { Decoration, EditorView, NodeView } from '@tiptap/pm/view';
 import { minimalChange } from '../../../core/typst-document/typst-document';
-import { remotePresence, showPresence, typstLanguage } from '../../source-view/source-view';
+import type { FileLinks } from '../../../core/project/project';
+import { fileLinks, remotePresence, showPresence, typstLanguage } from '../../source-view/source-view';
+import { BoxLinks, imagePathLink } from './box-links';
 import { ImageTools } from '../images/images';
 import { boxCarets } from '../presence';
 import { posToSource } from '../projection/projection';
@@ -28,6 +30,18 @@ const LABELS: Record<string, { className: string; text(src: string): string }> =
 
 /** What the raw boxes of an editor show while not edited (see `setBoxRenderer`). */
 const renderers = new WeakMap<Editor, BoxRenderer>();
+
+/** Where the paths in the raw boxes of an editor lead (see `setBoxLinks`). */
+const fileLinksOf = new WeakMap<Editor, FileLinks>();
+
+/**
+ * Makes the file paths in the raw boxes of `editor` open their file: links
+ * above a raw block naming files, a clickable path in an image box's heading,
+ * Mod+click / Alt+Enter in the code. Set it before the boxes are created.
+ */
+export function setBoxLinks(editor: Editor, links: FileLinks): void {
+  fileLinksOf.set(editor, links);
+}
 
 /**
  * Lets the raw boxes of `editor` show compiled snippets and images instead
@@ -74,6 +88,8 @@ class RawBox implements NodeView {
   private readonly code: CodeView;
   private readonly rendered: RenderedBox | null = null;
   private readonly image: ImageTools | null = null;
+  /** "Open template.typ" above a raw block that names project files. */
+  private readonly links: BoxLinks | null = null;
   /** Set while mirroring `src` into the box, so that change is not sent back. */
   private mirroring = false;
 
@@ -84,6 +100,7 @@ class RawBox implements NodeView {
     const isImage = node.type.name === 'image';
     if (isImage) this.dom.classList.add('typst-visual__image');
     this.label = this.createLabel(node);
+    const links = fileLinksOf.get(editor);
     const wrapper = this.dom.appendChild(this.dom.ownerDocument.createElement(inline ? 'span' : 'div'));
     wrapper.className = 'typst-visual__code';
     this.code = new CodeView({
@@ -99,20 +116,26 @@ class RawBox implements NodeView {
         inline ? inlineTheme : [blockTheme, CodeView.lineWrapping],
         CodeView.contentAttributes.of({ 'aria-label': 'Typst code' }),
         remotePresence,
+        links ? fileLinks(links) : [],
       ],
       dispatchTransactions: (trs, view) => this.forward(trs, view),
     });
     boxes.set(this.dom, this);
+    this.links = rawBlockLinks(this.dom, node, links);
     this.showCarets(decorations);
     const renderer = renderers.get(editor);
     if (renderer) {
       const host = { dom: this.dom, code: wrapper, source: () => this.source(), activate: () => (isImage ? this.select() : this.focus(-1)) };
       this.rendered = new RenderedBox(host, renderer);
     }
-    if (isImage) {
-      const host = { dom: this.dom, code: wrapper, picture: this.rendered?.picture ?? null, editor, getPos, editCode: () => this.focus(-1) };
-      this.image = new ImageTools(host, node);
-    }
+    if (isImage) this.image = this.imageTools(wrapper, links);
+  }
+
+  /** The tools of an image box; its path in the heading opens the file when there are `links`. */
+  private imageTools(code: HTMLElement, links: FileLinks | undefined): ImageTools {
+    const pathLabel = links && ((path: string) => imagePathLink(this.dom.ownerDocument, links, path));
+    const host = { dom: this.dom, code, picture: this.rendered?.picture ?? null, editor: this.editor, getPos: this.getPos, editCode: () => this.focus(-1), pathLabel };
+    return new ImageTools(host, this.node);
   }
 
   /** Focuses the box with the cursor at its start (entered moving forward) or its end. */
@@ -132,6 +155,7 @@ class RawBox implements NodeView {
       this.mirroring = false;
     }
     this.updateLabel();
+    this.links?.update(node.attrs.src);
     this.showCarets(decorations);
     this.image?.update(node);
     this.rendered?.update(node);
@@ -243,6 +267,11 @@ class RawBox implements NodeView {
     outer.focus();
     return true;
   }
+}
+
+/** The file links above a raw block (not inline boxes, images or outlines), with `links` only. */
+function rawBlockLinks(dom: HTMLElement, node: Node, links: FileLinks | undefined): BoxLinks | null {
+  return links && node.type.name === 'rawBlock' ? new BoxLinks(dom, links, node.attrs.src) : null;
 }
 
 export const rawBoxView: NodeViewRenderer = ({ node, editor, getPos, decorations }) => new RawBox(node, editor, getPos, decorations);

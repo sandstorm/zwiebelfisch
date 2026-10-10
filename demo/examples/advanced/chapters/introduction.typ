@@ -17,5 +17,5 @@ setup, @results the numbers, and @fig:compile-times sums them up in one picture.
 + Check that the preview stays responsive while typing.
 
 #note[This document is itself a multi-file project: the template, the
-chapters, a helper module and an SVG image are separate files. Switch between
-them with the file bar above the editor.]
+chapters, a helper module and an SVG image are separate files. Open them in
+the file panel on the left, or Ctrl+click a path such as `"template.typ"`.]

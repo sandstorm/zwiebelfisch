@@ -1,7 +1,7 @@
 // End-to-end tests (Playwright, against the demo build): uploading and inserting images.
 import type { Locator, Page } from '@playwright/test';
 import { deflateSync } from 'node:zlib';
-import { test, expect } from './fixtures';
+import { test, expect, fileRow } from './fixtures';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
@@ -68,13 +68,15 @@ async function expectLayoutIntact(page: Page, before: Awaited<ReturnType<typeof 
   await expect(editor.getByTestId('typst-visual')).toBeVisible();
   await expect(editor.getByRole('toolbar', { name: 'Formatting' })).toBeVisible();
   await expect(editor.getByTestId('typst-asset')).toBeHidden();
-  await expect(editor.getByTestId('typst-files').getByRole('tab', { name: /main\.typ/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(fileRow(editor, 'main.typ')).toHaveAttribute('aria-selected', 'true');
   const after = await layout(page);
-  for (const side of ['left', 'right'] as const) {
-    expect(Math.abs(after[side].x - before[side].x)).toBeLessThanOrEqual(1);
-    expect(Math.abs(after[side].width - before[side].width)).toBeLessThanOrEqual(1);
-    expect(Math.abs(after[side].height - before[side].height)).toBeLessThanOrEqual(1);
-  }
+  // The file panel opens beside the editing column once there are two files (auto): the editing
+  // column may only get narrower from the left, by at most the panel's width.
+  expect(Math.abs(after.right.x - before.right.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(after.right.width - before.right.width)).toBeLessThanOrEqual(1);
+  expect(Math.abs(after.left.x + after.left.width - (before.left.x + before.left.width))).toBeLessThanOrEqual(1);
+  expect(before.left.width - after.left.width).toBeLessThanOrEqual(481);
+  for (const side of ['left', 'right'] as const) expect(Math.abs(after[side].height - before[side].height)).toBeLessThanOrEqual(1);
   expect(after.overflow).toBeLessThanOrEqual(0);
   // A big photo shows scaled down, not filling the editing view.
   const picture = editor.getByTestId('typst-visual').locator('.typst-visual__image img.typst-visual__rendering').first();
@@ -100,7 +102,7 @@ test('uploading an image with Insert image keeps the layout and the page setup',
   expect(text).toContain('\n\n#image("photo.png")\n\n');
   expect(text).toContain('= Title\n\nSome text.\n');
   await expect(form).toBeHidden();
-  await expect(editor.getByTestId('typst-files')).toBeVisible(); // the project has two files now
+  await expect(editor.getByTestId('typst-files')).toBeVisible(); // the project has two files now: the panel opens
   await expectLayoutIntact(page, before);
   await expect(editor.getByTestId('typst-preview').locator('.typst-preview__page image')).toHaveCount(1);
   await expect(editor.getByTestId('typst-visual')).toBeFocused();
