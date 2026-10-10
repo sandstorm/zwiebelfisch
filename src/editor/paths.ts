@@ -1,3 +1,5 @@
+import type { FileContent } from '../preview/project-files';
+
 /** What the widget can do with a file: edit it, preview it as an image, or only list it. */
 export type FileKind = 'typst' | 'image' | 'data';
 
@@ -40,4 +42,37 @@ export function extensionOf(path: string): string {
   const name = path.slice(path.lastIndexOf('/') + 1);
   const dot = name.lastIndexOf('.');
   return dot > 0 ? name.slice(dot) : '';
+}
+
+const IMAGE_TYPES: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.webp': 'image/webp',
+};
+
+/** The image file `path` with `content` as a Blob of its media type, e.g. for an object URL. */
+export function imageBlob(path: string, content: FileContent): Blob {
+  const bytes = typeof content === 'string' ? new TextEncoder().encode(content) : content;
+  return new Blob([bytes as BlobPart], { type: IMAGE_TYPES[extensionOf(path).toLowerCase()] });
+}
+
+/**
+ * The project path a Typst path in `file` refers to, as Typst resolves it:
+ * `/x` from the project root, anything else from the folder of `file`.
+ * Null when it leaves the project.
+ */
+export function resolvePath(file: string, reference: string): string | null {
+  const base = reference.startsWith('/') ? [] : file.split('/').slice(1, -1);
+  const segments: string[] = base;
+  for (const segment of reference.split('/')) {
+    if (segment === '..') {
+      if (segments.pop() === undefined) return null;
+    } else if (segment !== '' && segment !== '.') {
+      segments.push(segment);
+    }
+  }
+  return segments.length === 0 ? null : `/${segments.join('/')}`;
 }

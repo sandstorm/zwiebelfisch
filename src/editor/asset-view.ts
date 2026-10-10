@@ -1,14 +1,5 @@
 import type { FileContent } from '../preview/project-files';
-import { displayName, extensionOf, fileKind } from './paths';
-
-const MIME: Record<string, string> = {
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.gif': 'image/gif',
-  '.svg': 'image/svg+xml',
-  '.webp': 'image/webp',
-};
+import { displayName, fileKind, imageBlob } from './paths';
 
 /**
  * The read-only view of a project file that is not Typst source: an image
@@ -63,8 +54,7 @@ export class AssetView {
       const image = doc.createElement('img');
       image.className = 'typst-asset__image';
       image.alt = displayName(path);
-      const bytes = typeof content === 'string' ? new TextEncoder().encode(content) : content;
-      this.objectUrl = URL.createObjectURL(new Blob([bytes as BlobPart], { type: MIME[extensionOf(path).toLowerCase()] }));
+      this.objectUrl = URL.createObjectURL(imageBlob(path, content));
       image.src = this.objectUrl;
       return image;
     }

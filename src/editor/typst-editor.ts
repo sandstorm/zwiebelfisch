@@ -13,6 +13,7 @@ import { FileSwitcher } from './file-switcher';
 import { insertImage } from './insert-image';
 import { referencePath } from './paths';
 import { Project, type FileChange, type ProjectFiles } from './project';
+import { ProjectRenderings } from './project-renderings';
 import styles from './styles.css?inline';
 
 export type { EditorMode } from './editing-views';
@@ -144,6 +145,7 @@ class Widget {
   private readonly views: EditingViews;
   private readonly switcher: FileSwitcher;
   private readonly assets: AssetView;
+  private readonly renderings: ProjectRenderings;
   readonly comments: Comments;
   private readonly review: CommentsUI;
   readonly changes: ChangeTracking;
@@ -168,8 +170,10 @@ class Widget {
       onJump: (jump) => this.jump(jump),
       onDiagnostics: (diagnostics) => this.showDiagnostics(diagnostics),
     });
+    this.renderings = new ProjectRenderings({ project: this.project, preview: this.preview, request: (change) => this.request(change) });
     this.views = new EditingViews(this.left, {
       mode: options.mode,
+      visualOptions: (document) => this.renderings.forDocument(document),
       onCursor: (document, offset) => {
         const path = this.project.pathOf(document);
         if (path) void this.preview.reveal(path, offset);
@@ -254,6 +258,7 @@ class Widget {
     this.views.destroy();
     this.switcher.destroy();
     this.assets.destroy();
+    this.renderings.destroy();
     this.preview.destroy();
     this.status.destroy();
     this.project.destroy();

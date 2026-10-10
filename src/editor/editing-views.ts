@@ -1,6 +1,6 @@
 import type { TypstDocument } from '../document/typst-document';
 import { SourceView, type SourceDiagnostic } from '../source-view/source-view';
-import { VisualView } from '../visual-view/visual-view';
+import { VisualView, type VisualViewOptions } from '../visual-view/visual-view';
 
 export type EditorMode = 'visual' | 'source';
 
@@ -11,6 +11,8 @@ export interface EditingViewsOptions {
   onCursor?(document: TypstDocument, offset: number): void;
   /** Accepting a change in the source view of `document` moved its base (see `SourceView.showChanges`). */
   onBaseChange?(document: TypstDocument, base: string): void;
+  /** Options for the Visual view of `document` (rendered raw boxes, images to insert). */
+  visualOptions?(document: TypstDocument): VisualViewOptions;
 }
 
 interface Views {
@@ -123,7 +125,7 @@ export class EditingViews {
     panes.visual.after(panes.source);
     const views: Views = {
       panes,
-      visual: new VisualView(panes.visual, document),
+      visual: new VisualView(panes.visual, document, this.options.visualOptions?.(document)),
       source: new SourceView(panes.source, document, {
         onCursor: (offset) => {
           views.cursor = offset;
