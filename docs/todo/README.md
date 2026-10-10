@@ -50,3 +50,4 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [followups-2026-10-10](followups-2026-10-10.md) | open |
 | [comments-drafting](comments-drafting.md) | open |
 | [diff-redline-palimset](diff-redline-palimset.md) | open |
+| [visual-block-nodes](visual-block-nodes.md) | done (branch task/visual-block-nodes) |

@@ -18,9 +18,11 @@
  *
  * Besides markup (headings, lists, paragraphs, strong/emph), it models links
  * (`#link("url")[text]`, bare URLs) as a `link` mark, standalone
- * `#image("path", ..)` calls as `image` blocks (source kept like a raw block)
- * and `#table(columns: n, [..], ..)` with content cells as tables whose cells
- * hold blocks.
+ * `#image("path", ..)` calls as `image` blocks (source kept like a raw block),
+ * `#table(columns: n, [..], ..)` with content cells (and an optional
+ * `table.header(..)`) as tables whose cells hold blocks,
+ * `#quote(block: true)[..]` as block quotes, `- [ ]` / `- [x]` items as task
+ * items, and `#pagebreak()` / full-width `#line(..)` as atoms (`call-atoms.ts`).
  */
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
