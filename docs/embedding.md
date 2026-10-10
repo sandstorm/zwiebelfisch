@@ -86,7 +86,8 @@ declares `color-scheme: dark`, and following the OS where it declares `color-sch
 To choose regardless of the page, pass `theme: 'light' | 'dark' | 'auto'` (`auto`: as the OS) to
 `createTypstEditor`, or set the `theme` attribute on `<typst-editor>`. The colors are
 `light-dark(..)` tokens. In dark mode the preview shows the pages inverted (white text on black,
-as dark-mode PDF readers do); the exported PDF is unchanged.
+as dark-mode PDF readers do); the exported PDF is unchanged. Spreadsheets get dark colors made from
+the same tokens (colors set on cells stay).
 
 ## 2. JavaScript API: `createTypstEditor`
 

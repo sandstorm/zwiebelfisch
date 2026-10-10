@@ -5,6 +5,7 @@ import styles from '@ironcalc/workbook/style.css?inline';
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { spreadsheetTypst } from '../model/model';
+import { followColorScheme } from './color-scheme';
 
 /** A mounted workbook; edits are reported through the `onEdit` given to `mountWorkbook`. */
 export interface MountedWorkbook {
@@ -43,6 +44,7 @@ export async function mountWorkbook(
   const model = bytes.length > 0 ? Model.from_bytes(bytes, 'en') : new Model(fileName.replace(/\.ic$/, ''), 'en', 'UTC', 'en');
   const edited = () => onEdit({ bytes: model.toBytes(), typst: spreadsheetTypst(model, fileName) });
   if (bytes.length === 0) edited();
+  const scheme = followColorScheme(container, () => redrawGrid(container));
   const root = createRoot(container);
   root.render(createElement(IronCalc, { model, rootContainer: container }));
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -61,9 +63,19 @@ export async function mountWorkbook(
       clearTimeout(timer);
       for (const type of events) container.removeEventListener(type, check, true);
       root.unmount();
+      scheme.dispose();
       model.free();
     },
   };
+}
+
+/**
+ * Makes IronCalc's grid take up changed theme variables. The grid canvas reads them only when it is built, and the
+ * worksheet builds it anew on every render; a window resize is what makes it render from outside (its own
+ * listener), without losing a cell being edited (re-rendering the workbook would).
+ */
+function redrawGrid(container: HTMLElement): void {
+  container.ownerDocument.defaultView?.dispatchEvent(new Event('resize'));
 }
 
 function injectStyles(container: HTMLElement): void {

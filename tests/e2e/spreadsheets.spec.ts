@@ -41,3 +41,42 @@ test('a new spreadsheet opens in IronCalc; its Typst file (tables and values) is
   // `values.Sheet1.at(0)` fails on the empty new sheet; with the values in place the document compiles
   await expect(editor(page).getByTestId('typst-status')).toHaveText(/✓/);
 });
+
+/** How light IronCalc's grid is in its middle (0 black … 255 white): its cell background there. */
+const gridLightness = (page: Page) => () =>
+  editor(page)
+    .getByTestId('typst-spreadsheet')
+    .locator('canvas')
+    .first()
+    .evaluate((canvas: HTMLCanvasElement) => {
+      const [r, g, b] = canvas.getContext('2d')!.getImageData(canvas.width / 2, canvas.height / 2, 1, 1).data;
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    });
+
+test('the workbook follows the widget into dark mode and back, its grid included', async ({ page }) => {
+  await page.goto('/examples/plain-html/');
+  await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
+  await editor(page).evaluate((el: Editor) => {
+    el.files = { '/budget.ic': '' };
+  });
+  await fileRow(editor(page), 'budget.ic').click();
+  const workbook = editor(page).getByTestId('typst-spreadsheet').locator('.ic-root');
+  await expect(workbook).toBeVisible();
+  await expect.poll(gridLightness(page)).toBeGreaterThan(200);
+
+  // the page turns dark; the widget checks its scheme when the OS one changes
+  const switchTo = async (scheme: 'dark' | 'light') => {
+    await editor(page).evaluate((el, scheme) => (el.style.colorScheme = scheme), scheme);
+    await page.emulateMedia({ colorScheme: scheme });
+  };
+  await switchTo('dark');
+  await expect(editor(page).locator('.typst-editor')).toHaveAttribute('data-scheme', 'dark');
+  await expect
+    .poll(() => workbook.evaluate((root) => root.style.getPropertyValue('--palette-common-white')))
+    .toBe('rgb(13, 17, 23)');
+  await expect.poll(gridLightness(page)).toBeLessThan(60);
+
+  await switchTo('light');
+  await expect.poll(() => workbook.evaluate((root) => root.style.getPropertyValue('--palette-common-white'))).toBe('');
+  await expect.poll(gridLightness(page)).toBeGreaterThan(200);
+});
