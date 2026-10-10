@@ -3,7 +3,7 @@ import { ProjectPath } from '../../../../core/paths/paths';
 import { PROJECT_PATH_TYPE, type FileDecoration } from '../../../../hosts/workbench/workbench';
 import { textColorOn } from '../../../../ui/color-scheme/color-scheme';
 import { fileIcon, icon } from '../icons/icons';
-import { ancestorsOf, buildTree, filesUnder, type Folder, folderOf, navigate, type Row, visibleRows } from '../../model/tree-model';
+import { ancestorsOf, buildTree, filesUnder, type Folder, folderOf, type Move, navigate, type Row, visibleRows } from '../../model/tree-model';
 
 /** Where the tree remembers its open folders (e.g. for the browser session). */
 export interface FolderMemory {
@@ -186,12 +186,11 @@ export class FileTree {
     this.options.onContextMenu(path, { x: event.clientX, y: event.clientY });
   }
 
-  private move(move: ReturnType<typeof navigate>): boolean {
+  private move(move: Move | null): boolean {
     if (!move) return false;
-    if ('focus' in move) this.focus(move.focus);
-    if ('expand' in move) this.setExpanded(move.expand, true);
-    if ('collapse' in move) this.setExpanded(move.collapse, false);
-    if ('open' in move) this.options.onOpen(move.open);
+    if (move.kind === 'focus') this.focus(move.path);
+    else if (move.kind === 'open') this.options.onOpen(move.path);
+    else this.setExpanded(move.path, move.kind === 'expand');
     return true;
   }
 

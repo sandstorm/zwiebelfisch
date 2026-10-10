@@ -28,7 +28,10 @@ export interface Row {
 }
 
 /** What a key does in the tree: move the focus, expand or collapse a folder, or open a file. */
-export type Move = { focus: ProjectPath } | { expand: ProjectPath } | { collapse: ProjectPath } | { open: ProjectPath };
+export interface Move {
+  kind: 'focus' | 'expand' | 'collapse' | 'open';
+  path: ProjectPath;
+}
 
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
@@ -101,7 +104,7 @@ export function relocate(paths: readonly ProjectPath[], source: ProjectPath, tar
 /** What `key` does with the focus on `current` (null: nothing focused yet); null when nothing. */
 export function navigate(rows: readonly Row[], current: ProjectPath | null, key: string): Move | null {
   const index = rows.findIndex((row) => row.path === current);
-  if (index < 0) return FOCUS_KEYS.has(key) && rows.length > 0 ? { focus: rows[0].path } : null;
+  if (index < 0) return FOCUS_KEYS.has(key) && rows.length > 0 ? { kind: 'focus', path: rows[0].path } : null;
   return Object.hasOwn(KEYS, key) ? KEYS[key](rows, index) : null;
 }
 
@@ -109,7 +112,7 @@ const FOCUS_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
 
 /** Focus on `target`, unless it is missing or already focused. */
 function focusOn(rows: readonly Row[], index: number, target: number): Move | null {
-  return target !== index && rows[target] ? { focus: rows[target].path } : null;
+  return target !== index && rows[target] ? { kind: 'focus', path: rows[target].path } : null;
 }
 
 const KEYS: Record<string, (rows: readonly Row[], index: number) => Move | null> = {
@@ -121,18 +124,18 @@ const KEYS: Record<string, (rows: readonly Row[], index: number) => Move | null>
   ArrowRight: (rows, i) => {
     const row = rows[i];
     if (row.kind !== 'folder') return null;
-    if (!row.expanded) return { expand: row.path };
+    if (!row.expanded) return { kind: 'expand', path: row.path };
     return rows[i + 1]?.parent === row.path ? focusOn(rows, i, i + 1) : null;
   },
   /** An open folder closes; anything else hands the focus to its folder. */
   ArrowLeft: (rows, i) => {
     const row = rows[i];
-    return row.expanded ? { collapse: row.path } : focusOn(rows, i, rows.findIndex((r) => r.path === row.parent));
+    return row.expanded ? { kind: 'collapse', path: row.path } : focusOn(rows, i, rows.findIndex((r) => r.path === row.parent));
   },
   Enter: (rows, i) => {
     const row = rows[i];
-    if (row.kind === 'file') return { open: row.path };
-    return row.expanded ? { collapse: row.path } : { expand: row.path };
+    if (row.kind === 'file') return { kind: 'open', path: row.path };
+    return row.expanded ? { kind: 'collapse', path: row.path } : { kind: 'expand', path: row.path };
   },
 };
 

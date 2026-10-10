@@ -82,27 +82,27 @@ describe('navigate (keyboard)', () => {
   const rows = visibleRows(tree, new Set([path('/chapters')]));
 
   it('Up / Down / Home / End move the focus through the visible rows', () => {
-    expect(navigate(rows, path('/chapters'), 'ArrowDown')).toEqual({ focus: path('/chapters/parts') });
-    expect(navigate(rows, path('/chapters/parts'), 'ArrowUp')).toEqual({ focus: path('/chapters') });
+    expect(navigate(rows, path('/chapters'), 'ArrowDown')).toEqual({ kind: 'focus', path: path('/chapters/parts') });
+    expect(navigate(rows, path('/chapters/parts'), 'ArrowUp')).toEqual({ kind: 'focus', path: path('/chapters') });
     expect(navigate(rows, path('/chapters'), 'ArrowUp')).toBeNull();
-    expect(navigate(rows, path('/chapters'), 'End')).toEqual({ focus: path('/Zeta.typ') });
-    expect(navigate(rows, path('/Zeta.typ'), 'Home')).toEqual({ focus: path('/chapters') });
-    expect(navigate(rows, null, 'ArrowDown')).toEqual({ focus: path('/chapters') });
+    expect(navigate(rows, path('/chapters'), 'End')).toEqual({ kind: 'focus', path: path('/Zeta.typ') });
+    expect(navigate(rows, path('/Zeta.typ'), 'Home')).toEqual({ kind: 'focus', path: path('/chapters') });
+    expect(navigate(rows, null, 'ArrowDown')).toEqual({ kind: 'focus', path: path('/chapters') });
   });
 
   it('Right expands a folder, then goes to its first child; Left collapses, then goes to the parent', () => {
-    expect(navigate(rows, path('/chapters/parts'), 'ArrowRight')).toEqual({ expand: path('/chapters/parts') });
-    expect(navigate(rows, path('/chapters'), 'ArrowRight')).toEqual({ focus: path('/chapters/parts') });
-    expect(navigate(rows, path('/chapters'), 'ArrowLeft')).toEqual({ collapse: path('/chapters') });
-    expect(navigate(rows, path('/chapters/intro.typ'), 'ArrowLeft')).toEqual({ focus: path('/chapters') });
+    expect(navigate(rows, path('/chapters/parts'), 'ArrowRight')).toEqual({ kind: 'expand', path: path('/chapters/parts') });
+    expect(navigate(rows, path('/chapters'), 'ArrowRight')).toEqual({ kind: 'focus', path: path('/chapters/parts') });
+    expect(navigate(rows, path('/chapters'), 'ArrowLeft')).toEqual({ kind: 'collapse', path: path('/chapters') });
+    expect(navigate(rows, path('/chapters/intro.typ'), 'ArrowLeft')).toEqual({ kind: 'focus', path: path('/chapters') });
     expect(navigate(rows, path('/main.typ'), 'ArrowLeft')).toBeNull();
     expect(navigate(rows, path('/main.typ'), 'ArrowRight')).toBeNull();
   });
 
   it('Enter opens a file and toggles a folder', () => {
-    expect(navigate(rows, path('/main.typ'), 'Enter')).toEqual({ open: path('/main.typ') });
-    expect(navigate(rows, path('/chapters'), 'Enter')).toEqual({ collapse: path('/chapters') });
-    expect(navigate(rows, path('/img'), 'Enter')).toEqual({ expand: path('/img') });
+    expect(navigate(rows, path('/main.typ'), 'Enter')).toEqual({ kind: 'open', path: path('/main.typ') });
+    expect(navigate(rows, path('/chapters'), 'Enter')).toEqual({ kind: 'collapse', path: path('/chapters') });
+    expect(navigate(rows, path('/img'), 'Enter')).toEqual({ kind: 'expand', path: path('/img') });
   });
 
   it('ignores other keys', () => {
