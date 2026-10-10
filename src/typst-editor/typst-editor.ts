@@ -8,7 +8,6 @@ import { collaboration } from '../extensions/collaboration/collaboration';
 import { comments } from '../extensions/comments/comments';
 import { diagnostics } from '../extensions/diagnostics/diagnostics';
 import { fileNavigation, files } from '../extensions/files/files';
-import fileStyles from '../extensions/files/files.css?inline';
 import { labels } from '../extensions/labels/labels';
 import { pdfExport } from '../extensions/pdf-export/pdf-export';
 import { previewControls } from '../extensions/preview-controls/preview-controls';
@@ -147,7 +146,6 @@ export interface TypstEditor {
  * shadow root when `host` lives in one. Attach `host` before calling this.
  */
 export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions): TypstEditor {
-  injectStyles(host);
   const main = ProjectPath.of(options.main ?? '/main.typ');
   const project = new Project(main, { ...options.files, ...(options.source === undefined ? {} : { [main]: options.source }) });
   const workbench = new WorkbenchHost(host, project, {
@@ -155,6 +153,8 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
     theme: options.theme,
     allowFileChange: options.allowFileChange,
     onOpen: options.onOpen,
+    // the hosts' and the widget's; each extension adds its own (Workbench.registerStyleSheet)
+    styleSheet: proseMirrorStyles + widgetStyles + workbenchStyles,
   });
   workbench.activate(builtinExtensions(options));
   // after the workbench's and the extensions' listeners: the host hears about a change once the widget shows it
@@ -229,16 +229,4 @@ function builtinExtensions(options: TypstEditorOptions): TypstExtension[] {
     previewControls({ followCursor: options.followCursor }),
     pdfExport({ download: options.pdfDownload }),
   ];
-}
-
-const STYLE_ID = 'typst-editor-styles';
-
-function injectStyles(host: HTMLElement): void {
-  const root = host.getRootNode();
-  const target = root instanceof ShadowRoot ? root : host.ownerDocument.head;
-  if (target.querySelector(`#${STYLE_ID}`)) return;
-  const style = host.ownerDocument.createElement('style');
-  style.id = STYLE_ID;
-  style.textContent = proseMirrorStyles + widgetStyles + workbenchStyles + fileStyles;
-  target.append(style);
 }

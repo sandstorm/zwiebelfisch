@@ -8,6 +8,7 @@ import { DocumentLinkProvider } from '../../core/document-links/document-links';
 import { ProjectPath } from '../../core/paths/paths';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
+import css from './document-links.css?inline';
 import { fileLinks } from './source-view/source-view';
 import { boxLinks } from './visual-view/visual-view';
 
@@ -29,6 +30,7 @@ export function documentLinks(): TypstExtension {
   return {
     id: 'document-links',
     activate(context) {
+      context.subscriptions.push(context.workbench.registerStyleSheet(css));
       const { project, workbench, sourceView, services, subscriptions } = context;
       const provider = (document: TypstDocument) =>
         new DocumentLinkProvider({

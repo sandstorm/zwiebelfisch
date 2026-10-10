@@ -10,7 +10,8 @@ code changes, update this file in the same commit.
 src/                        the widget (TypeScript); the most important API on top
   index.ts                  public API of the package; registers <typst-editor>
   typst-editor/             typst-editor.ts: createTypstEditor() — a Project in the workbench host with the built-in
-                            extension list (configured from the options), scoped CSS (typst-editor.css)
+                            extension list (configured from the options), scoped CSS of the hosts (typst-editor.css:
+                            tokens, frame, views, toolbar; the extensions bring their own)
   testing/                  testing.ts: test helpers composing the built-in extensions (the Visual view's schema and
                             a view with the built-ins, configured from test options; edit / after / find /
                             expectPreciseMap); test-only: only `*.test.ts` files may import it, and it may import
@@ -66,7 +67,8 @@ src/                        the widget (TypeScript); the most important API on t
                             (the entry: the TypstExtension factory, the controller), model/ (pure, no DOM), and one
                             folder per host it contributes to (workbench/, preview/, visual-view/, …), each entered
                             through the file named like it. Extensions never import each other.
-    files/                  files (the file panel in a side panel), fileNavigation (editor frame); files.css
+    files/                  files (the file panel in a side panel), fileNavigation (editor frame); files.css (each
+                            extension with styles has its <name>.css, registered with Workbench.registerStyleSheet)
       model/                tree-model.ts (the tree as data, keyboard moves, relocate), upload.ts (uploadChanges)
       workbench/            file-panel.ts (FilePanel: header, prompts, uploads), file-navigation.ts ("← previous file"
                             / "next file →"), tree/ (FileTree: rows, keyboard, drag & drop, presence), icons/ (leaf)
@@ -326,6 +328,7 @@ interface Workbench {
   ownerDocument; activeFile; open(path, { selection?, mode? }); onDidShowFile; applyChange(change) → reason | null
   registerSidePanel(id, { label, icon }) → SidePanel { body, setDefault, setAvailable, dismiss, dispose }
   registerStatusBarItem(element)  registerTabBarItem(element, { mode? })  registerEditorFrame({ top, bottom })
+  registerStyleSheet(css)           // the extension's CSS where the widget renders (head or shadow root)
   registerFileView(kind, { createFileView(parent) → FileView { show(path, content), hide(), dispose() } })
   registerCommand(id, handler)  executeCommand(id, ...args)  registerKeybinding('Mod+Alt+KeyM', id)
   onDidDropFiles  remember(name) → Memory
@@ -336,7 +339,7 @@ interface TextEditor extends PresenceTarget {   // a Typst file's Visual + Sourc
   selection        // {from, to} in that tab's view
   revealRange(from, to)   setPresence(presences)   // both views
 }
-new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen? })
+new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen?, styleSheet? })
   .activate(extensions)  .destroy()      // + everything of Workbench
 ```
 
@@ -364,6 +367,14 @@ new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen? })
   on every open so a replaced file shows its new content; nothing for a kind without a view). `images`
   registers `image` + `data` (`AssetView`), `spreadsheets` registers `spreadsheet` (and stores its edits with
   `applyChange`).
+- **Stylesheets** (`StyleSheets`, `style-sheets/`): the widget's own CSS (`styleSheet`: the Visual view's
+  `visual-view.css`, `typst-editor.css`, the layout's `layout.css`) goes in first, as `<style
+  id="typst-editor-styles">`, before the frame is built (the color scheme reads the resolved colors); each
+  extension adds its own `extensions/<name>/<name>.css` (imported `?inline`) with `registerStyleSheet` on
+  activation, after it. Both go where the widget renders: its shadow root, else `document.head`. Widgets in one
+  root share each distinct stylesheet (one `<style>`, reference-counted); disposing the last registration
+  removes it, so `destroy` leaves no CSS behind. Class names stay the extensions' own; colors come from the
+  `--te-*` tokens on `.typst-editor` (base stylesheet), so extension sheets follow light and dark.
 - **Keys** (`Commands`): `registerKeybinding(key, command)` handles `key` on the widget in the capture phase,
   so the command runs before an editor sees the key, which then never does. `key`: modifiers (`Mod` = Ctrl or
   Cmd, `Ctrl`, `Meta`, `Alt`, `Shift`) and a `KeyboardEvent.code`.

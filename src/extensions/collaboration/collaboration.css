@@ -1,0 +1,70 @@
+/* The collaboration extension's styles: Other users' carets, selections and boxes in the Visual and Source views.
+   Registered by collaboration.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
+/* ---- collaboration: other users' carets, selections and boxes
+   (per user: --typst-remote-color, and --typst-remote-text for text on it) ---- */
+.typst-remote-selection {
+  background: color-mix(in srgb, var(--typst-remote-color, #268bd2) 22%, transparent);
+}
+/* A caret: a thin bar with a name flag (Tiptap CollaborationCaret / y-codemirror look). */
+.typst-remote-caret {
+  position: relative;
+  margin: 0 -1px;
+  border-left: 1px solid var(--typst-remote-color, #268bd2);
+  border-right: 1px solid var(--typst-remote-color, #268bd2);
+  word-break: normal;
+  pointer-events: none;
+}
+.typst-remote-caret__flag,
+.typst-remote-box:not(.typst-visual__page-break)::after {
+  position: absolute;
+  padding: 0 4px;
+  background: var(--typst-remote-color, #268bd2);
+  color: var(--typst-remote-text, #fff);
+  font: 600 11px/1.5 system-ui, sans-serif;
+  font-style: normal;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  z-index: 2;
+}
+.typst-remote-caret__flag {
+  bottom: 100%;
+  left: -1px;
+  border-radius: 3px 3px 3px 0;
+}
+/* Source view (y-codemirror): a dot on the bar; the name on hover and for a moment after each move. */
+.typst-remote-caret--transient { pointer-events: auto; }
+.typst-remote-caret--transient::before {
+  content: '';
+  position: absolute;
+  top: -0.2em;
+  left: -0.25em;
+  width: 0.4em;
+  height: 0.4em;
+  border-radius: 50%;
+  background: var(--typst-remote-color, #268bd2);
+}
+.typst-remote-caret--transient > .typst-remote-caret__flag {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+  animation: typst-remote-flag 2.5s ease-in;
+}
+.typst-remote-caret--transient:hover > .typst-remote-caret__flag { opacity: 1; animation: none; }
+@keyframes typst-remote-flag {
+  0%, 70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* Visual view: a box (raw code, image, page break, note) someone's caret is in. */
+.typst-remote-box {
+  position: relative;
+  outline: 2px solid var(--typst-remote-color, #268bd2);
+  outline-offset: 1px;
+}
+.typst-remote-box:not(.typst-visual__page-break)::after {
+  content: attr(data-user);
+  right: -3px;
+  bottom: calc(100% + 3px);
+  border-radius: 3px 3px 0 3px;
+}

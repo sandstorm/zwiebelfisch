@@ -3,6 +3,7 @@
 // Visual view (notes in the text, a card per note in the notes gutter), adds them ("Comment", Ctrl/Cmd+Alt+M) and
 // offers the PDF without them. Entry of extensions/comments/. See ARCHITECTURE.md, "Comments = margin notes".
 import type { TypstExtension } from '../../hosts/workbench/workbench';
+import css from './comments.css?inline';
 import { CommentsPdf, registerPdfVariants } from './preview/preview';
 import { marginNotes, notesGutter } from './visual-view/visual-view';
 import { registerAddComment } from './workbench/workbench';
@@ -28,6 +29,7 @@ export function comments(options: { user?: { name: string } } = {}): TypstExtens
   return {
     id: 'comments',
     activate(context) {
+      context.subscriptions.push(context.workbench.registerStyleSheet(css));
       const { project, workbench, preview, subscriptions } = context;
       const notes = notesGutter({ user: options.user });
       const pdfs = new CommentsPdf(project, workbench);

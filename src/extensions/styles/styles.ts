@@ -5,6 +5,7 @@
 // style menu, importing a style where it is used. See ARCHITECTURE.md, "Custom styles".
 import type { Project } from '../../core/project/project';
 import type { TypstExtension, Workbench } from '../../hosts/workbench/workbench';
+import css from './styles.css?inline';
 import { newStyle, StyleIndex } from './model/model';
 import { customStyles } from './visual-view/visual-view';
 
@@ -23,6 +24,7 @@ export function styles(): TypstExtension {
   return {
     id: 'styles',
     activate(context) {
+      context.subscriptions.push(context.workbench.registerStyleSheet(css));
       const { project, workbench, services, subscriptions } = context;
       const index = new StyleIndex(project);
       subscriptions.push(index, services.provide('styles', index));

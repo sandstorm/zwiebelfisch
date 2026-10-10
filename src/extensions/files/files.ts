@@ -7,6 +7,7 @@
 import { Disposable } from '../../core/disposable/disposable';
 import { neighbours } from '../../core/document-links/document-links';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
+import css from './files.css?inline';
 import { FileNavigation, FilePanel, icon } from './workbench/workbench';
 
 export interface FilesOptions {
@@ -26,6 +27,7 @@ export function files(options: FilesOptions = {}): TypstExtension {
   return {
     id: 'files',
     activate({ project, workbench, services, subscriptions }) {
+      subscriptions.push(workbench.registerStyleSheet(css));
       const mode = options.fileList ?? 'auto';
       const side = workbench.registerSidePanel('files', { label: 'Files', icon: icon(workbench.ownerDocument, 'files') });
       const state = () => ({ paths: project.paths(), main: project.main, active: workbench.activeFile });
@@ -56,6 +58,7 @@ export function fileNavigation(): TypstExtension {
   return {
     id: 'file-navigation',
     activate({ project, workbench, subscriptions }) {
+      subscriptions.push(workbench.registerStyleSheet(css));
       const navigation = new FileNavigation(workbench.ownerDocument, (path) => workbench.open(path));
       // recomputed on every open and every change: an #include may have been added, moved or removed
       const show = () => navigation.show(neighbours((path) => project.document(path)?.text, project.main, workbench.activeFile));

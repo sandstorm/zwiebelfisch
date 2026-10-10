@@ -4,6 +4,7 @@
 // toolbar items; which controls a widget shows, and that "Follow cursor" is remembered per viewer, is decided here.
 import { followCursor, pageNumber, zoomControls } from './preview/preview';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
+import css from './preview-controls.css?inline';
 
 export interface PreviewControlsOptions {
   /** Whether the preview starts following the cursor; default: what this viewer chose last (localStorage), else on. */
@@ -14,7 +15,8 @@ export interface PreviewControlsOptions {
 export function previewControls(options: PreviewControlsOptions = {}): TypstExtension {
   return {
     id: 'preview-controls',
-    activate({ preview, subscriptions }) {
+    activate({ workbench, preview, subscriptions }) {
+      subscriptions.push(workbench.registerStyleSheet(css));
       const follow = followCursor({ on: options.followCursor ?? rememberedFollow() ?? true, onChange: rememberFollow });
       for (const item of [zoomControls, follow, pageNumber]) subscriptions.push(preview.registerToolbarItem(item));
     },

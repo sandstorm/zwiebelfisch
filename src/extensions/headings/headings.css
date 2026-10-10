@@ -1,0 +1,21 @@
+/* The headings extension's styles: Headings in the Visual view, and their numbers in a gutter right of the text.
+   Registered by headings.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
+.typst-visual h1 { font-size: 1.6em; margin: 0.6em 0 0.3em; }
+.typst-visual h2 { font-size: 1.3em; margin: 0.6em 0 0.3em; }
+/* Heading numbers (from #set heading(numbering: ..)) in a gutter right of the text; not editable */
+.typst-visual--numbered { padding-right: 6em; }
+.typst-visual__numbered-heading { position: relative; }
+.typst-visual__numbered-heading::after {
+  content: attr(data-heading-number);
+  position: absolute;
+  top: 0;
+  left: 100%;
+  margin-left: 0.75em;
+  font-size: 0.8em;
+  font-weight: normal;
+  line-height: 1.9;
+  color: var(--te-faint);
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}

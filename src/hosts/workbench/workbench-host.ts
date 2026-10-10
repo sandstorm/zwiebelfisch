@@ -15,6 +15,7 @@ import { ExtensionHost } from './extension-host/extension-host';
 import { FileDrops } from './file-drops/file-drops';
 import { FileViews } from './file-views/file-views';
 import { Layout, type Memory } from './layout/layout';
+import { StyleSheets } from './style-sheets/style-sheets';
 import type {
   CommandArguments,
   CommandRegistry,
@@ -38,6 +39,11 @@ export interface WorkbenchOptions {
   allowFileChange?(change: FileChange): boolean | Promise<boolean>;
   /** Another file is shown in the editing area. */
   onOpen?(path: ProjectPath): void;
+  /**
+   * The widget's own CSS (the hosts' included), put where it renders before the frame is built (the color scheme
+   * reads the resolved colors), as `<style id="typst-editor-styles">`; the extensions' stylesheets follow it.
+   */
+  styleSheet?: string;
 }
 
 /**
@@ -56,6 +62,8 @@ export class WorkbenchHost implements Workbench {
   readonly #drops: FileDrops;
   readonly #scheme: ColorScheme;
   readonly #extensions: ExtensionHost;
+  readonly #styleSheets: StyleSheets;
+  readonly #ownStyles: Disposable | null;
   readonly #visualView = new VisualViewContributions();
   readonly #sourceViews = new SourceViewHost();
   readonly #preview: Preview;
@@ -74,6 +82,8 @@ export class WorkbenchHost implements Workbench {
     private readonly options: WorkbenchOptions = {},
   ) {
     this.#active = project.main;
+    this.#styleSheets = new StyleSheets(host);
+    this.#ownStyles = options.styleSheet === undefined ? null : this.#styleSheets.add(options.styleSheet, 'typst-editor-styles');
     host.classList.add('typst-editor');
     if (options.theme) host.dataset.theme = options.theme;
     this.#scheme = new ColorScheme(host);
@@ -145,6 +155,10 @@ export class WorkbenchHost implements Workbench {
     };
   }
 
+  registerStyleSheet(css: string): Disposable {
+    return this.#styleSheets.add(css);
+  }
+
   registerStatusBarItem(element: HTMLElement): Disposable {
     this.#layout.statusBar.append(element);
     return new Disposable(() => element.remove());
@@ -207,6 +221,7 @@ export class WorkbenchHost implements Workbench {
     delete this.host.dataset.theme;
     this.#scheme.destroy();
     this.#layout.destroy();
+    this.#ownStyles?.dispose();
   }
 
   /** The Visual/Source views of every document, wired to the preview, with the extensions' contributions. */

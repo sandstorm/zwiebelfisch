@@ -6,6 +6,7 @@
 import type { Node, Schema } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
 import { expect } from 'vitest';
+import { Disposable } from '../core/disposable/disposable';
 import type { DocumentLinkProvider } from '../core/document-links/document-links';
 import type { TypstDocument } from '../core/typst-document/typst-document';
 import { alignment } from '../extensions/alignment/alignment';
@@ -20,7 +21,7 @@ import { imagesVisualView, type ImageAssets, type ImageUrls } from '../extension
 import { renderedBoxesVisualView, type SnippetSource } from '../extensions/rendered-boxes/rendered-boxes';
 import { createSchema } from '../hosts/visual-view/nodes/nodes';
 import {
-  posToSource, print, project as projectWith, sourceToPos, VisualView, VisualViewContributions, type VisualViewContribution,
+  posToSource, print, project as projectWith, sourceToPos, VisualView, VisualViewContributions, type ContributionContext, type VisualViewContribution,
 } from '../hosts/visual-view/visual-view';
 
 /** The schema of a view with the built-ins. */
@@ -52,9 +53,18 @@ export function createVisualView(parent: HTMLElement, document: TypstDocument, o
   return new VisualView(parent, document, contributions(options));
 }
 
-/** The built-ins and `options.contributions`, activated. */
+/**
+ * The built-ins and `options.contributions`, activated for their Visual-view contributions. The built-in constructs
+ * are extensions: of the rest of the extension context they use only the workbench's stylesheets (left out here).
+ */
 function contributions(options: TestViewOptions): VisualViewContributions {
-  return VisualViewContributions.from([...builtins(options), ...(options.contributions ?? [])]);
+  const visualView = new VisualViewContributions();
+  const subscriptions: { dispose(): unknown }[] = [];
+  const workbench = { registerStyleSheet: () => new Disposable(() => {}) };
+  for (const contribution of [...builtins(options), ...(options.contributions ?? [])]) {
+    contribution.activate({ visualView, subscriptions, workbench } as ContributionContext);
+  }
+  return visualView;
 }
 
 /**

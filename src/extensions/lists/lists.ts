@@ -2,6 +2,7 @@
 // ARCHITECTURE.md, "VisualView". Why one extension: a task list is a bullet list in Typst (`- [ ] todo`), so the two
 // share their syntax, their toolbar group and the order in which their projectors are asked.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
+import css from './lists.css?inline';
 import {
   BULLET_LIST, LIST_ACTIONS, LIST_ITEM, ORDERED_LIST, TASK_ITEM, TASK_LIST, TASK_LIST_ACTION,
 } from './visual-view/visual-view';
@@ -9,7 +10,8 @@ import {
 /** Bulleted, numbered and task lists. */
 export const lists: TypstExtension = {
   id: 'lists',
-  activate({ visualView, subscriptions }) {
+  activate({ workbench, visualView, subscriptions }) {
+    subscriptions.push(workbench.registerStyleSheet(css));
     subscriptions.push(
       // task lists first: projectors of the same syntax are asked in registration order, and a task item is a bullet
       // item (`- [ ] ..`)

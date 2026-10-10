@@ -71,9 +71,9 @@ Styles that must live inside the shadow root:
 - **CodeMirror** mounts its styles into the root node of the editor's parent. The view is created
   after its container is attached to the shadow root, so CodeMirror finds the shadow root without
   being told.
-- **Widget styles** (`src/typst-editor/typst-editor.css`, plus the feature styles such as
-  `src/extensions/files/files.css`): `createTypstEditor` injects them into
-  `host.getRootNode()`, which is the shadow root here and `document.head` otherwise.
+- **Widget styles** (`src/typst-editor/typst-editor.css`, and each extension's own, such as
+  `src/extensions/files/files.css`, registered with `Workbench.registerStyleSheet`): the widget injects them
+  into `host.getRootNode()`, which is the shadow root here and `document.head` otherwise.
 - **ProseMirror** (Visual view) has no style mounting of its own. Its core CSS is vendored in
   `src/hosts/visual-view/visual-view.css` and injected together with the widget styles, so it
   ends up in the same place.

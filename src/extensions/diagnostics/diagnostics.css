@@ -1,0 +1,82 @@
+/* The diagnostics extension's styles: The status bar's diagnostics summary and messages, and diagnostics underlined in the Visual view.
+   Registered by diagnostics.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
+.typst-status {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 4px 8px;
+  border-top: 1px solid var(--te-border);
+  font-size: 12px;
+}
+.typst-status__summary {
+  font: inherit;
+  border: 0;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: none;
+  color: var(--te-success);
+  cursor: pointer;
+}
+.typst-status__summary:disabled { cursor: default; }
+.typst-status[data-severity='warning'] .typst-status__summary { color: var(--te-warning); }
+.typst-status[data-severity='error'] .typst-status__summary { color: var(--te-danger); font-weight: 600; }
+/* Messages of the shown file, opened by hovering or focusing the count. */
+.typst-status__hover { position: relative; }
+.typst-status__details {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  z-index: 10;
+  min-width: 260px;
+  max-width: min(520px, 80vw);
+  max-height: 40vh;
+  overflow: auto;
+  margin: 0 0 4px;
+  padding: 4px;
+  list-style: none;
+  background: var(--te-surface);
+  border: 1px solid var(--te-border);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.typst-status__hover:is(:hover, :focus-within) > .typst-status__details:not([hidden]) { display: block; }
+.typst-status__detail {
+  display: block;
+  width: 100%;
+  padding: 4px 6px;
+  border: 0;
+  border-left: 3px solid var(--te-warning);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  white-space: pre-wrap;
+  cursor: pointer;
+}
+.typst-status__details > li[data-severity='error'] > .typst-status__detail { border-left-color: var(--te-danger); }
+.typst-status__detail:hover, .typst-status__detail:focus-visible { background: var(--te-preview-bg); }
+.typst-status__elsewhere { display: contents; list-style: none; }
+.typst-status__elsewhere > li { color: var(--te-muted); }
+.typst-status__elsewhere > li[data-severity='error'] { color: var(--te-danger); }
+.typst-status__open {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline dotted;
+  cursor: pointer;
+}
+/* ---- diagnostics in the Visual view (tooltip: message + hints) ---- */
+.typst-diagnostic {
+  text-decoration: underline wavy var(--te-warning);
+  text-decoration-skip-ink: none;
+  text-underline-offset: 3px;
+}
+.typst-diagnostic[data-severity='error'] { text-decoration-color: var(--te-danger); }
+/* Raw code boxes: an underline would not reach the code inside, so outline the box. */
+:is(.typst-visual__raw-block, .typst-visual__raw-inline).typst-diagnostic { outline: 2px solid rgba(154, 103, 0, 0.6); outline-offset: 1px; }
+:is(.typst-visual__raw-block, .typst-visual__raw-inline).typst-diagnostic[data-severity='error'] { outline-color: rgba(207, 34, 46, 0.6); }

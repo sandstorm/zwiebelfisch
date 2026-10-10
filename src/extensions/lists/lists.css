@@ -1,0 +1,7 @@
+/* The lists extension's styles: Task lists in the Visual view.
+   Registered by lists.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
+.typst-visual ul[data-type='taskList'] { list-style: none; padding-left: 0.3em; }
+.typst-visual ul[data-type='taskList'] > li { display: flex; gap: 0.5em; align-items: baseline; }
+.typst-visual ul[data-type='taskList'] > li > label { flex: none; }
+.typst-visual ul[data-type='taskList'] > li > div { flex: 1; min-width: 0; }
+.typst-visual ul[data-type='taskList'] > li > div > p { margin: 0; }

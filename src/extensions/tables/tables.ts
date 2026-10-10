@@ -3,12 +3,14 @@
 // extension: the Visual view's host models only paragraphs, text and raw Typst; a table the view cannot model stays a
 // raw box.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
+import css from './tables.css?inline';
 import { INSERT_TABLE, TABLE, TABLE_BAR, TABLE_EDITS } from './visual-view/visual-view';
 
 /** Tables, "Insert table" and the table bar. */
 export const tables: TypstExtension = {
   id: 'tables',
-  activate({ visualView, subscriptions }) {
+  activate({ workbench, visualView, subscriptions }) {
+    subscriptions.push(workbench.registerStyleSheet(css));
     subscriptions.push(
       visualView.registerNode(TABLE),
       visualView.registerToolbarItem({ group: 'insert', order: 20, action: INSERT_TABLE }),

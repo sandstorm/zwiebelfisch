@@ -8,6 +8,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import type { Diagnostic } from '../../core/typst-engine/typst-engine';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
+import css from './diagnostics.css?inline';
 import { DiagnosticCollection, diagnosticHighlight, summarizeDiagnostics } from './model/model';
 import { lint } from './source-view/source-view';
 import { DiagnosticsStatus } from './workbench/workbench';
@@ -22,6 +23,7 @@ export function diagnostics(): TypstExtension {
   return {
     id: 'diagnostics',
     activate({ project, workbench, sourceView, visualView, preview, subscriptions }) {
+      subscriptions.push(workbench.registerStyleSheet(css));
       const collection = new DiagnosticCollection();
       const status = new DiagnosticsStatus(workbench.ownerDocument, (target) => {
         const path = ProjectPath.parse(target.path);

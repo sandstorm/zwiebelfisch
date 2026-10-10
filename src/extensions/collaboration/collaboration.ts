@@ -11,6 +11,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { PlacedPresence } from '../../core/typst-document/typst-document';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
+import css from './collaboration.css?inline';
 import { CollaborationLink } from './collaboration-link';
 import { presence as sourcePresence } from './source-view/source-view';
 import { presence as visualPresence } from './visual-view/visual-view';
@@ -40,6 +41,7 @@ export function collaboration(options: CollaborationOptions, user?: Collaboratio
   return {
     id: 'collaboration',
     activate({ project, workbench, sourceView, visualView, services, subscriptions }) {
+      subscriptions.push(workbench.registerStyleSheet(css));
       const presence = new EventEmitter<readonly PlacedPresence[]>();
       const connected = new EventEmitter<RoomVersions>();
       let versions: RoomVersions | null = null;

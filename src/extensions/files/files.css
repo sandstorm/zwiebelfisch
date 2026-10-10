@@ -1,5 +1,5 @@
-/* The file panel: header with actions, inline prompts, the file tree. Injected by createTypstEditor.
-   See files.ts. */
+/* The files extension's styles: the file panel (header with actions, inline prompts, the file tree) and
+   "← previous file" / "next file →". Registered by files.ts (Workbench.registerStyleSheet). */
 .typst-files {
   display: flex;
   flex: 1;
@@ -127,3 +127,9 @@
 .typst-files__confirm--danger { border-color: var(--te-danger); background: var(--te-danger); }
 .typst-files__error { flex-basis: 100%; color: var(--te-danger); }
 .typst-files__error:empty { display: none; }
+/* "← previous file" / "next file →" at the start and end of an included file (reading order of the main file) */
+.typst-editor__file-nav { flex: none; display: flex; gap: 16px; padding: 6px 32px; font: 12px system-ui, sans-serif; }
+.typst-editor__file-nav[hidden] { display: none; }
+.typst-editor__file-nav-link--next { margin-left: auto; }
+.typst-editor__file-nav-link { border: 0; padding: 0; background: none; color: var(--te-accent); font: inherit; cursor: pointer; }
+.typst-editor__file-nav-link:hover { text-decoration: underline; }

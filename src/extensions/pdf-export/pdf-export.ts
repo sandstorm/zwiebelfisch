@@ -7,6 +7,7 @@ import type { Project } from '../../core/project/project';
 import type { Diagnostic, PdfResult } from '../../core/typst-engine/typst-engine';
 import { pdfMenu } from './preview/preview';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
+import css from './pdf-export.css?inline';
 
 declare module '../../hosts/workbench/workbench' {
   interface CommandRegistry {
@@ -23,6 +24,7 @@ export function pdfExport(options: { download?: boolean } = {}): TypstExtension 
   return {
     id: 'pdf-export',
     activate({ project, workbench, preview, subscriptions }) {
+      subscriptions.push(workbench.registerStyleSheet(css));
       const pdfs = new PdfExport(project, preview);
       subscriptions.push(workbench.registerCommand('pdfExport.export', (entry) => pdfs.blob(entry)));
       if (options.download !== false) subscriptions.push(preview.registerToolbarItem(pdfMenu));

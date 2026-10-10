@@ -3,6 +3,7 @@
 // Why an extension: the Visual view's host models only paragraphs, text and raw Typst; every construct beyond that
 // is contributed, so the host stays small and a construct can be left out or replaced on its own.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
+import css from './markup.css?inline';
 import {
   BLOCKQUOTE, BOLD, CODE, CODE_BLOCK, INSERT_CODE_BLOCK, INSERT_QUOTE, ITALIC, LINK, linkAction, MARK_ACTIONS,
 } from './visual-view/visual-view';
@@ -13,7 +14,8 @@ import {
  */
 export const markup: TypstExtension = {
   id: 'markup',
-  activate({ visualView, subscriptions }) {
+  activate({ workbench, visualView, subscriptions }) {
+    subscriptions.push(workbench.registerStyleSheet(css));
     subscriptions.push(
       visualView.registerMark(BOLD),
       visualView.registerMark(ITALIC),

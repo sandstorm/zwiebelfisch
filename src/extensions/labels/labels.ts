@@ -4,6 +4,7 @@
 // references as chips with what they point to, labels as tags, and offers the labels after `@`.
 // See ARCHITECTURE.md, "Labels and references".
 import type { TypstExtension } from '../../hosts/workbench/workbench';
+import css from './labels.css?inline';
 import { LabelIndex } from './model/model';
 import { references } from './visual-view/visual-view';
 
@@ -19,6 +20,7 @@ export function labels(): TypstExtension {
   return {
     id: 'labels',
     activate(context) {
+      context.subscriptions.push(context.workbench.registerStyleSheet(css));
       const index = new LabelIndex(context.project);
       context.subscriptions.push(index, context.services.provide('labels', index));
       references({ labels: index }).activate(context);

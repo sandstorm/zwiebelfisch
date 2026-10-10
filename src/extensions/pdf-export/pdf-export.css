@@ -1,0 +1,33 @@
+/* The pdf-export extension's styles: "Download PDF" in the preview toolbar and its menu of PDF variants.
+   Registered by pdf-export.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
+.typst-preview__pdf { position: relative; display: inline-flex; align-items: center; margin-left: 8px; }
+.typst-preview__pdf > button {
+  border: 1px solid var(--te-border);
+  padding: 2px 8px;
+  background: var(--te-surface);
+  font: inherit;
+  cursor: pointer;
+}
+.typst-preview__pdf > button:first-of-type { border-radius: 4px 0 0 4px; }
+.typst-preview__pdf > button:nth-of-type(2) { border-left: none; border-radius: 0 4px 4px 0; padding: 2px 5px; }
+.typst-preview__pdf button:disabled { cursor: progress; opacity: 0.6; }
+.typst-preview__pdf-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+  padding: 4px;
+  border: 1px solid var(--te-border);
+  border-radius: 6px;
+  background: var(--te-surface);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+.typst-preview__pdf-menu[hidden] { display: none; }
+.typst-preview__pdf-menu button { border: none; border-radius: 4px; padding: 4px 8px; background: none; font: inherit; text-align: left; cursor: pointer; }
+.typst-preview__pdf-menu button:hover, .typst-preview__pdf-menu button:focus-visible { background: var(--te-hover); }
+.typst-preview__pdf-status { position: absolute; top: calc(100% + 4px); right: 0; z-index: 19; max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--te-muted); }
+/* empty, it takes no room but stays a live region (display: none would keep its messages from screen readers) */
+.typst-preview__pdf-status:not(:empty) { padding: 3px 6px; border: 1px solid var(--te-border); border-radius: 4px; background: var(--te-surface); }

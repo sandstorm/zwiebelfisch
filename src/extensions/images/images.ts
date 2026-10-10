@@ -7,6 +7,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
+import css from './images.css?inline';
 import { type FileChange, type Project } from '../../core/project/project';
 import { type PathReference, ProjectPath } from '../../core/paths/paths';
 import { uploadPath, uploadTarget } from './model/model';
@@ -24,6 +25,7 @@ export function images(): TypstExtension {
   return {
     id: 'images',
     activate(context) {
+      context.subscriptions.push(context.workbench.registerStyleSheet(css));
       const { project, workbench, preview, services, subscriptions } = context;
       const projectImages = new ProjectImages({ project, onDidChange: preview.onDidRender, request: (change) => workbench.applyChange(change) });
       subscriptions.push(

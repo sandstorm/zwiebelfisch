@@ -1,0 +1,123 @@
+/* The images extension's styles: image boxes (frame, resize handles, tools), figures and captions,
+   the image popover's choices, an image's path link, and the read-only view of image and data files.
+   Registered by images.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
+/* An image box's path: a button opening the file, or struck through when the file is missing */
+.typst-visual__path {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--te-accent);
+  font: inherit;
+  cursor: pointer;
+}
+.typst-visual__path:hover { text-decoration: underline; }
+.typst-visual__path--missing { color: var(--te-faint); cursor: default; text-decoration: line-through dotted; }
+/* Image files show at their own size: keep a big photo from filling the whole view (aspect kept;
+   the picture sits in the image frame, so not a direct child) */
+.typst-visual__image .typst-visual__rendering { max-height: min(24em, 40vh); object-fit: contain; }
+/* Images: a frame showing the width, resize handles and the image toolbar while selected */
+.typst-visual__image-frame { position: relative; width: fit-content; max-width: 100%; }
+.typst-visual__image-frame--sized > .typst-visual__rendering { width: 100%; }
+.typst-visual__image-frame:has(> .typst-visual__rendering[hidden]) { display: none; }
+.typst-visual__resize-handle {
+  position: absolute;
+  display: none;
+  width: 10px;
+  height: 10px;
+  margin: -5px;
+  border: 1px solid white;
+  border-radius: 2px;
+  background: var(--te-accent);
+  touch-action: none;
+}
+.typst-visual__image.ProseMirror-selectednode .typst-visual__resize-handle,
+.typst-visual__image-frame--resizing .typst-visual__resize-handle { display: block; }
+.typst-visual__resize-handle[data-handle='nw'] { top: 0; left: 0; cursor: nwse-resize; }
+.typst-visual__resize-handle[data-handle='ne'] { top: 0; right: 0; cursor: nesw-resize; }
+.typst-visual__resize-handle[data-handle='sw'] { bottom: 0; left: 0; cursor: nesw-resize; }
+.typst-visual__resize-handle[data-handle='se'] { bottom: 0; right: 0; cursor: nwse-resize; }
+.typst-visual__resize-handle[data-handle='w'] { top: 50%; left: 0; height: 20px; margin-top: -10px; cursor: ew-resize; }
+.typst-visual__resize-handle[data-handle='e'] { top: 50%; right: 0; height: 20px; margin-top: -10px; cursor: ew-resize; }
+.typst-visual__image-size {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: none;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 0.65);
+  color: white;
+  font: 12px system-ui, sans-serif;
+}
+.typst-visual__image-frame--resizing > .typst-visual__image-size { display: block; }
+.typst-visual__image-tools {
+  position: relative;
+  display: none;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+  font: 12px system-ui, sans-serif;
+}
+.typst-visual__image.ProseMirror-selectednode.typst-visual__raw--rendered > .typst-visual__image-tools,
+.typst-visual__image-tools:focus-within { display: flex; }
+.typst-visual__image-tools > button {
+  padding: 2px 8px;
+  border: 1px solid var(--te-border);
+  border-radius: 4px;
+  background: var(--te-surface);
+  font: inherit;
+  cursor: pointer;
+}
+.typst-visual__image-tools > button[aria-pressed='true'] { border-color: var(--te-accent); background: var(--te-selected); }
+.typst-visual__figure { margin: 0 0 0.7em; }
+.typst-visual__figure > .typst-visual__image { margin-bottom: 0.2em; }
+.typst-visual__figure .typst-visual__image-frame { margin: 0 auto; }
+.typst-visual__figure .typst-visual__image-tools { justify-content: center; }
+.typst-visual__figure .typst-visual__table { margin: 0 auto 0.2em; } /* a table figure: centred above its caption, as Typst sets it */
+.typst-visual__caption { position: relative; text-align: center; font-size: 0.95em; }
+.typst-visual__caption:has(> br.ProseMirror-trailingBreak:only-child)::before {
+  content: 'Caption';
+  position: absolute;
+  inset: 0;
+  color: var(--te-faint);
+  pointer-events: none;
+}
+.typst-visual__image-frame > .typst-visual__rendering { cursor: default; }
+.typst-popover__choices { flex-basis: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.typst-popover__files { display: flex; flex-direction: column; align-self: stretch; max-height: 160px; overflow: auto; }
+.typst-popover .typst-popover__files button { border: none; background: none; padding: 3px 6px; text-align: left; }
+.typst-popover .typst-popover__files button:hover { background: var(--te-hover); }
+.typst-popover__error { color: var(--te-danger); }
+.typst-popover__error:empty { display: none; }
+/* Read-only view of images and data files */
+.typst-asset {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+}
+.typst-asset[hidden] { display: none; }
+.typst-asset__title { margin: 0; font-size: 15px; font-weight: 600; color: var(--te-text); }
+.typst-asset__size { margin-left: 8px; font-weight: 400; color: var(--te-faint); font-size: 12px; }
+.typst-asset__image {
+  max-width: 100%;
+  max-height: 60vh;
+  object-fit: contain;
+  border-radius: 6px;
+  background: repeating-conic-gradient(var(--te-chip) 0 25%, var(--te-surface) 0 50%) 0 0 / 16px 16px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+.typst-asset__text {
+  align-self: stretch;
+  margin: 0;
+  padding: 12px;
+  border-radius: 6px;
+  background: var(--te-subtle);
+  font: 12px/1.5 ui-monospace, monospace;
+  white-space: pre-wrap;
+}
+.typst-asset__note { color: var(--te-muted); }

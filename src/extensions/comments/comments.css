@@ -1,0 +1,146 @@
+/* The comments extension's styles: Margin notes in the text, the notes gutter with its cards, and the Comment button.
+   Registered by comments.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
+/* drafting margin notes in the text: highlighted text of a range note, a point note's marker */
+.typst-visual__note-range { background: var(--te-note); border-bottom: 2px solid var(--te-note-line); color: inherit; }
+.typst-visual__note-anchor--hover .typst-visual__note-range,
+.typst-visual__note-range .typst-visual__note-anchor--hover,
+.typst-visual__note-anchor--active .typst-visual__note-range,
+.typst-visual__note-range .typst-visual__note-anchor--active { background: var(--te-note-strong); }
+.typst-visual__note {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 2px;
+  padding: 1px 3px;
+  border: 1px solid var(--te-note-line);
+  border-radius: 6px 6px 6px 1px;
+  background: var(--te-note-bg);
+  color: var(--te-note-text);
+  vertical-align: baseline;
+  cursor: pointer;
+}
+.typst-visual__note--empty { border-style: dashed; }
+.typst-visual__note.typst-visual__note-anchor--hover,
+.typst-visual__note.typst-visual__note-anchor--active { background: var(--te-note-strong); box-shadow: 0 0 0 2px var(--te-note-line); }
+.typst-visual__note-icon { flex: none; }
+.typst-notes-gutter { display: none; }
+.typst-visual__body--notes > .typst-notes-gutter {
+  display: block;
+  position: relative;
+  flex: none;
+  width: 260px;
+  border-left: 1px solid var(--te-border);
+  background: var(--te-subtle);
+}
+.typst-note-card {
+  position: absolute;
+  top: 0;
+  left: 8px;
+  right: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--te-border);
+  border-radius: 8px;
+  background: var(--te-surface);
+  font: 13px/1.4 system-ui, sans-serif;
+  color: var(--te-text);
+  cursor: text;
+  transition: top 0.15s ease-out, box-shadow 0.15s, border-color 0.15s;
+}
+.typst-note-card--hover { border-color: var(--te-note-line); }
+.typst-note-card--active { border-color: var(--te-note-line); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); }
+.typst-note-card:focus-within { border-color: var(--te-accent); box-shadow: 0 0 0 2px var(--te-jump); }
+.typst-note-card__head { display: flex; align-items: center; gap: 5px; color: var(--te-note-text); }
+.typst-note-card__icon { flex: none; }
+.typst-note-card__quote { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
+.typst-note-card--range .typst-note-card__quote { font-style: italic; }
+.typst-note-card--range .typst-note-card__quote::before { content: "\201C"; }
+.typst-note-card--range .typst-note-card__quote::after { content: "\201D"; }
+.typst-note-card__resolve {
+  flex: none;
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: var(--te-muted);
+  cursor: pointer;
+}
+.typst-note-card__resolve:hover { border-color: var(--te-border); color: var(--te-success); background: var(--te-success-soft); }
+/* the thread: one message per list item (name, date, text), oldest first */
+.typst-note-card__thread { margin: 4px 0 0; padding: 0; list-style: none; }
+.typst-note-card__thread[hidden] { display: none; }
+.typst-note-card__message { padding: 4px 0; }
+.typst-note-card__message + .typst-note-card__message { border-top: 1px solid var(--te-divider); }
+.typst-note-card__meta { display: flex; align-items: center; gap: 6px; min-height: 18px; }
+.typst-note-card__author { font-weight: 600; }
+.typst-note-card__date { color: var(--te-muted-2); font-size: 12px; }
+.typst-note-card__text { display: block; white-space: pre-wrap; overflow-wrap: anywhere; }
+.typst-note-card__edit,
+.typst-note-card__delete,
+.typst-note-card__send,
+.typst-note-card__more {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: var(--te-muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.typst-note-card__edit { margin-left: auto; }
+.typst-note-card__delete:hover { color: var(--te-danger); }
+.typst-note-card__edit:hover,
+.typst-note-card__send:hover,
+.typst-note-card__more:hover { border-color: var(--te-border); background: var(--te-subtle); }
+.typst-note-card__more { padding: 0 4px; color: var(--te-accent); }
+/* the reply box (and a message being edited) */
+.typst-note-card__compose { display: flex; align-items: flex-end; gap: 4px; margin-top: 4px; border-top: 1px solid var(--te-divider); padding-top: 4px; }
+.typst-note-card__thread[hidden] + .typst-note-card__compose { border-top: none; }
+.typst-note-card__field,
+.typst-note-card__reply {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 1.6em;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  resize: none;
+  field-sizing: content;
+}
+.typst-note-card__field { min-height: 2.8em; }
+.typst-note-card__send { flex: none; }
+/* Narrow panes: no gutter column; the active note's card pops up below its anchor */
+.typst-visual__body--narrow.typst-visual__body--notes > .typst-notes-gutter {
+  position: absolute;
+  top: 0;
+  right: 8px;
+  width: min(280px, calc(100% - 16px));
+  border: none;
+  background: none;
+  pointer-events: none;
+}
+.typst-visual__body--narrow .typst-note-card { display: none; left: 0; right: 0; pointer-events: auto; transition: none; z-index: 2; }
+.typst-visual__body--narrow .typst-note-card--active { display: block; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18); }
+/* ---- the Comment button (adds a margin note) ---- */
+.typst-editor__comment {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  border: 1px solid var(--te-border);
+  border-radius: 6px;
+  padding: 3px 10px;
+  background: var(--te-surface);
+  color: var(--te-text-2);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.typst-editor__comment[hidden] { display: none; }
+.typst-editor__comment:hover { background: var(--te-hover); }
+.typst-editor__comment:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 1px; }

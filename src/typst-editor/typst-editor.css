@@ -1,5 +1,7 @@
-/* The widget's styles, scoped under .typst-editor and injected by createTypstEditor (also injected:
-   hosts/workbench/layout/layout.css, extensions/files/files.css, hosts/visual-view/visual-view.css). See docs/embedding.md. */
+/* The widget's styles, scoped under .typst-editor and injected by createTypstEditor (with
+   hosts/visual-view/visual-view.css and hosts/workbench/layout/layout.css): the color tokens, the hosts' frame,
+   views, toolbar and popovers. Each extension adds its own (extensions/<name>/<name>.css, through
+   Workbench.registerStyleSheet). See docs/embedding.md. */
 /* Colors: tokens as light-dark(light, dark). The widget follows the page's color-scheme (a page that
    declares `color-scheme: light dark` gets it dark when the OS is); the `theme` option sets its own
    (data-theme). What light-dark() cannot express selects on data-scheme (typst-editor/color-scheme.ts). */
@@ -108,72 +110,6 @@
   font: inherit;
   cursor: pointer;
 }
-/* "Follow cursor": an on/off switch (track and thumb), not a plain button */
-.typst-preview__toolbar > .typst-preview__follow {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: 8px;
-  border: none;
-  padding: 2px 4px;
-  background: none;
-}
-.typst-preview__switch {
-  position: relative;
-  flex: none;
-  width: 26px;
-  height: 14px;
-  border-radius: 7px;
-  background: var(--te-control);
-  transition: background 0.15s;
-}
-.typst-preview__switch::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--te-surface);
-  transition: transform 0.15s;
-}
-.typst-preview__follow[aria-checked='true'] > .typst-preview__switch { background: var(--te-accent); }
-.typst-preview__follow[aria-checked='true'] > .typst-preview__switch::after { transform: translateX(12px); }
-.typst-preview__follow:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 1px; border-radius: 4px; }
-.typst-preview__pdf { position: relative; display: inline-flex; align-items: center; margin-left: 8px; }
-.typst-preview__pdf > button {
-  border: 1px solid var(--te-border);
-  padding: 2px 8px;
-  background: var(--te-surface);
-  font: inherit;
-  cursor: pointer;
-}
-.typst-preview__pdf > button:first-of-type { border-radius: 4px 0 0 4px; }
-.typst-preview__pdf > button:nth-of-type(2) { border-left: none; border-radius: 0 4px 4px 0; padding: 2px 5px; }
-.typst-preview__pdf button:disabled { cursor: progress; opacity: 0.6; }
-.typst-preview__pdf-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  min-width: 150px;
-  padding: 4px;
-  border: 1px solid var(--te-border);
-  border-radius: 6px;
-  background: var(--te-surface);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-}
-.typst-preview__pdf-menu[hidden] { display: none; }
-.typst-preview__pdf-menu button { border: none; border-radius: 4px; padding: 4px 8px; background: none; font: inherit; text-align: left; cursor: pointer; }
-.typst-preview__pdf-menu button:hover, .typst-preview__pdf-menu button:focus-visible { background: var(--te-hover); }
-.typst-preview__pdf-status { position: absolute; top: calc(100% + 4px); right: 0; z-index: 19; max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--te-muted); }
-/* empty, it takes no room but stays a live region (display: none would keep its messages from screen readers) */
-.typst-preview__pdf-status:not(:empty) { padding: 3px 6px; border: 1px solid var(--te-border); border-radius: 4px; background: var(--te-surface); }
-.typst-preview__zoom { margin-left: 4px; color: var(--te-muted); font-variant-numeric: tabular-nums; }
-.typst-preview__page-number { margin-left: auto; color: var(--te-muted); font-variant-numeric: tabular-nums; }
 .typst-preview__scroller { flex: 1; min-height: 0; overflow: auto; }
 .typst-preview {
   display: flex;
@@ -220,27 +156,6 @@
 }
 .typst-preview__follow-spot { position: absolute; width: 1px; height: 1.4em; margin-top: -1.2em; pointer-events: none; }
 .typst-source__jump { background: var(--te-jump); border-radius: 2px; }
-/* File links: paths in #import / #include / image(..) open their file (Source view, raw boxes) */
-/* like IntelliJ: a path becomes a link (underline, pointer) only while Mod is held and it is hovered */
-.typst-source--mod .typst-source__path:hover { text-decoration: underline; text-decoration-color: var(--te-accent); color: var(--te-accent); cursor: pointer; }
-.typst-file-link { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; font: 12px system-ui, sans-serif; }
-.typst-file-link + .typst-file-link { margin-left: 12px; }
-.cm-tooltip .typst-file-link { padding: 3px 6px; }
-.typst-file-link__button,
-.typst-visual__path {
-  border: 0;
-  padding: 0;
-  background: none;
-  color: var(--te-accent);
-  font: inherit;
-  cursor: pointer;
-}
-.typst-file-link__button:hover,
-.typst-visual__path:hover { text-decoration: underline; }
-.typst-file-link__note { color: var(--te-muted); }
-.typst-file-link__error { color: var(--te-danger); }
-.typst-file-link__error:empty { display: none; }
-.typst-visual__path--missing { color: var(--te-faint); cursor: default; text-decoration: line-through dotted; }
 .typst-editor__tabs {
   display: flex;
   gap: 4px;
@@ -260,12 +175,6 @@
 .typst-editor__tab[aria-selected='true'] { background: var(--te-surface); border-color: var(--te-border); }
 .typst-editor__pane { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: auto; }
 .typst-editor__pane[hidden] { display: none; }
-/* "← previous file" / "next file →" at the start and end of an included file (reading order of the main file) */
-.typst-editor__file-nav { flex: none; display: flex; gap: 16px; padding: 6px 32px; font: 12px system-ui, sans-serif; }
-.typst-editor__file-nav[hidden] { display: none; }
-.typst-editor__file-nav-link--next { margin-left: auto; }
-.typst-editor__file-nav-link { border: 0; padding: 0; background: none; color: var(--te-accent); font: inherit; cursor: pointer; }
-.typst-editor__file-nav-link:hover { text-decoration: underline; }
 .typst-visual {
   flex: 1;
   padding: 24px 32px;
@@ -274,26 +183,7 @@
   font-size: 17px;
   line-height: 1.5;
 }
-.typst-visual h1 { font-size: 1.6em; margin: 0.6em 0 0.3em; }
-.typst-visual h2 { font-size: 1.3em; margin: 0.6em 0 0.3em; }
 .typst-visual p { margin: 0 0 0.7em; }
-/* Heading numbers (from #set heading(numbering: ..)) in a gutter right of the text; not editable */
-.typst-visual--numbered { padding-right: 6em; }
-.typst-visual__numbered-heading { position: relative; }
-.typst-visual__numbered-heading::after {
-  content: attr(data-heading-number);
-  position: absolute;
-  top: 0;
-  left: 100%;
-  margin-left: 0.75em;
-  font-size: 0.8em;
-  font-weight: normal;
-  line-height: 1.9;
-  color: var(--te-faint);
-  white-space: nowrap;
-  pointer-events: none;
-  user-select: none;
-}
 .typst-visual__raw-block {
   margin: 0 0 0.7em;
   padding: 4px 8px;
@@ -323,366 +213,19 @@
 .typst-visual__raw--rendered { background: transparent; }
 .typst-visual__rendering { display: block; max-width: 100%; height: auto; cursor: text; }
 .typst-visual__raw-block:not(.typst-visual__image) > .typst-visual__rendering { margin: 0 auto; }
-/* Image files show at their own size: keep a big photo from filling the whole view (aspect kept;
-   the picture sits in the image frame, so not a direct child) */
-.typst-visual__image .typst-visual__rendering { max-height: min(24em, 40vh); object-fit: contain; }
 /* An inline snippet is sized in em of the text around it (see inlinePictureSize), so its box takes
    that text's size, not the code chip's; a squeezed one keeps its aspect */
 .typst-visual__raw-inline.typst-visual__raw--rendered { font-size: inherit; }
 .typst-visual__raw-inline > .typst-visual__rendering { display: inline-block; vertical-align: middle; object-fit: contain; }
-.typst-visual__link { color: var(--te-accent); text-decoration: underline; cursor: text; }
-/* drafting margin notes in the text: highlighted text of a range note, a point note's marker */
-.typst-visual__note-range { background: var(--te-note); border-bottom: 2px solid var(--te-note-line); color: inherit; }
-.typst-visual__note-anchor--hover .typst-visual__note-range,
-.typst-visual__note-range .typst-visual__note-anchor--hover,
-.typst-visual__note-anchor--active .typst-visual__note-range,
-.typst-visual__note-range .typst-visual__note-anchor--active { background: var(--te-note-strong); }
-.typst-visual__note {
-  display: inline-flex;
-  align-items: center;
-  margin: 0 2px;
-  padding: 1px 3px;
-  border: 1px solid var(--te-note-line);
-  border-radius: 6px 6px 6px 1px;
-  background: var(--te-note-bg);
-  color: var(--te-note-text);
-  vertical-align: baseline;
-  cursor: pointer;
-}
-.typst-visual__note--empty { border-style: dashed; }
-.typst-visual__note.typst-visual__note-anchor--hover,
-.typst-visual__note.typst-visual__note-anchor--active { background: var(--te-note-strong); box-shadow: 0 0 0 2px var(--te-note-line); }
-.typst-visual__note-icon { flex: none; }
-/* References (@key) as chips showing the label; what it labels is only in the hover tooltip (title); a missing label underlined wavy */
-.typst-visual__ref {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.4em;
-  margin: 0 1px;
-  padding: 0 5px;
-  border-radius: 4px;
-  background: var(--te-selected);
-  color: var(--te-accent);
-  font: 0.8em system-ui, sans-serif;
-  white-space: nowrap;
-  cursor: default;
-}
-.typst-visual__ref-supplement { color: var(--te-text); }
-.typst-visual__ref--unknown { background: var(--te-danger-soft); color: var(--te-danger); text-decoration: underline wavy var(--te-danger); text-underline-offset: 3px; }
-/* Labels (<key>) as a tag on the block they label: in the text of headings and paragraphs, below other blocks */
-.typst-label-tag { position: relative; display: inline-block; margin-left: 0.5em; font: normal 12px/1.4 system-ui, sans-serif; vertical-align: middle; }
-.typst-label-tag--block { display: flex; justify-content: flex-end; margin: -0.5em 0 0.5em; }
-.typst-label-tag__name {
-  padding: 0 7px;
-  border: 1px solid var(--te-border);
-  border-radius: 9px;
-  background: var(--te-subtle);
-  color: var(--te-muted);
-  font: inherit;
-  cursor: pointer;
-}
-.typst-label-tag__name::before { content: '<'; opacity: 0.5; }
-.typst-label-tag__name::after { content: '>'; opacity: 0.5; }
-.typst-label-tag__name:hover { border-color: var(--te-accent); color: var(--te-accent); }
-.typst-label-tag__input {
-  padding: 0 7px;
-  border: 1px solid var(--te-accent);
-  border-radius: 9px;
-  background: var(--te-surface);
-  color: var(--te-text);
-  font: inherit;
-  outline: none;
-  box-shadow: 0 0 0 2px var(--te-jump);
-}
-/* The @ list: the project's labels below the typed @ */
-.typst-ref-suggestions {
-  position: absolute;
-  z-index: 3;
-  min-width: 220px;
-  max-width: 380px;
-  padding: 4px;
-  border: 1px solid var(--te-border);
-  border-radius: 8px;
-  background: var(--te-surface);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.12);
-  font: 13px system-ui, sans-serif;
-}
-.typst-ref-suggestions[hidden] { display: none; }
-.typst-ref-suggestions__option { display: flex; gap: 10px; align-items: baseline; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
-.typst-ref-suggestions__option[aria-selected='true'] { background: var(--te-hover); }
-.typst-ref-suggestions__name { font-family: ui-monospace, monospace; white-space: nowrap; }
-.typst-ref-suggestions__hint { overflow: hidden; color: var(--te-muted-2); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 
-/* The Visual view's body: the text and, right of it, the notes gutter (cards placed by notes-gutter.ts) */
+/* The Visual view's body: the text and, right of it, the gutters contributions add (comments: the notes) */
 .typst-visual__body { flex: 1 0 auto; display: flex; position: relative; }
 .typst-visual__body > .typst-visual { min-width: 0; }
-.typst-notes-gutter { display: none; }
-.typst-visual__body--notes > .typst-notes-gutter {
-  display: block;
-  position: relative;
-  flex: none;
-  width: 260px;
-  border-left: 1px solid var(--te-border);
-  background: var(--te-subtle);
-}
-.typst-note-card {
-  position: absolute;
-  top: 0;
-  left: 8px;
-  right: 8px;
-  padding: 6px 8px;
-  border: 1px solid var(--te-border);
-  border-radius: 8px;
-  background: var(--te-surface);
-  font: 13px/1.4 system-ui, sans-serif;
-  color: var(--te-text);
-  cursor: text;
-  transition: top 0.15s ease-out, box-shadow 0.15s, border-color 0.15s;
-}
-.typst-note-card--hover { border-color: var(--te-note-line); }
-.typst-note-card--active { border-color: var(--te-note-line); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); }
-.typst-note-card:focus-within { border-color: var(--te-accent); box-shadow: 0 0 0 2px var(--te-jump); }
-.typst-note-card__head { display: flex; align-items: center; gap: 5px; color: var(--te-note-text); }
-.typst-note-card__icon { flex: none; }
-.typst-note-card__quote { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
-.typst-note-card--range .typst-note-card__quote { font-style: italic; }
-.typst-note-card--range .typst-note-card__quote::before { content: "\201C"; }
-.typst-note-card--range .typst-note-card__quote::after { content: "\201D"; }
-.typst-note-card__resolve {
-  flex: none;
-  display: inline-flex;
-  padding: 2px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  background: none;
-  color: var(--te-muted);
-  cursor: pointer;
-}
-.typst-note-card__resolve:hover { border-color: var(--te-border); color: var(--te-success); background: var(--te-success-soft); }
-/* the thread: one message per list item (name, date, text), oldest first */
-.typst-note-card__thread { margin: 4px 0 0; padding: 0; list-style: none; }
-.typst-note-card__thread[hidden] { display: none; }
-.typst-note-card__message { padding: 4px 0; }
-.typst-note-card__message + .typst-note-card__message { border-top: 1px solid var(--te-divider); }
-.typst-note-card__meta { display: flex; align-items: center; gap: 6px; min-height: 18px; }
-.typst-note-card__author { font-weight: 600; }
-.typst-note-card__date { color: var(--te-muted-2); font-size: 12px; }
-.typst-note-card__text { display: block; white-space: pre-wrap; overflow-wrap: anywhere; }
-.typst-note-card__edit,
-.typst-note-card__delete,
-.typst-note-card__send,
-.typst-note-card__more {
-  display: inline-flex;
-  padding: 2px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  background: none;
-  color: var(--te-muted);
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-.typst-note-card__edit { margin-left: auto; }
-.typst-note-card__delete:hover { color: var(--te-danger); }
-.typst-note-card__edit:hover,
-.typst-note-card__send:hover,
-.typst-note-card__more:hover { border-color: var(--te-border); background: var(--te-subtle); }
-.typst-note-card__more { padding: 0 4px; color: var(--te-accent); }
-/* the reply box (and a message being edited) */
-.typst-note-card__compose { display: flex; align-items: flex-end; gap: 4px; margin-top: 4px; border-top: 1px solid var(--te-divider); padding-top: 4px; }
-.typst-note-card__thread[hidden] + .typst-note-card__compose { border-top: none; }
-.typst-note-card__field,
-.typst-note-card__reply {
-  display: block;
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 1.6em;
-  padding: 0;
-  border: none;
-  outline: none;
-  background: transparent;
-  font: inherit;
-  color: inherit;
-  resize: none;
-  field-sizing: content;
-}
-.typst-note-card__field { min-height: 2.8em; }
-.typst-note-card__send { flex: none; }
-/* Narrow panes: no gutter column; the active note's card pops up below its anchor */
-.typst-visual__body--narrow.typst-visual__body--notes > .typst-notes-gutter {
-  position: absolute;
-  top: 0;
-  right: 8px;
-  width: min(280px, calc(100% - 16px));
-  border: none;
-  background: none;
-  pointer-events: none;
-}
-.typst-visual__body--narrow .typst-note-card { display: none; left: 0; right: 0; pointer-events: auto; transition: none; z-index: 2; }
-.typst-visual__body--narrow .typst-note-card--active { display: block; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18); }
 .typst-visual__box-label {
   margin-bottom: 2px;
   font: 600 12px system-ui, sans-serif;
   color: var(--te-text-2);
 }
-/* Code: inline code and code blocks (plain text edited in place, with a language field) */
-.typst-visual__code-inline {
-  padding: 0 3px;
-  border-radius: 4px;
-  background: var(--te-chip);
-  font: 0.85em ui-monospace, monospace;
-}
-.typst-visual__code-block {
-  margin: 0 0 0.7em;
-  border: 1px solid var(--te-border);
-  border-radius: 6px;
-  background: var(--te-subtle);
-}
-.typst-visual__code-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 8px;
-  border-bottom: 1px solid var(--te-border);
-  font: 600 12px system-ui, sans-serif;
-  color: var(--te-text-2);
-  user-select: none;
-}
-.typst-visual__code-language {
-  width: 9em;
-  padding: 1px 4px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  background: transparent;
-  font: 12px ui-monospace, monospace;
-  color: inherit;
-}
-.typst-visual__code-language:hover,
-.typst-visual__code-language:focus { border-color: var(--te-border); background: var(--te-surface); outline: none; }
-.typst-visual__code-block pre {
-  margin: 0;
-  padding: 6px 8px;
-  font: 13px/1.45 ui-monospace, monospace;
-  color: var(--te-text);
-  white-space: pre-wrap;
-}
-/* Images: a frame showing the width, resize handles and the image toolbar while selected */
-.typst-visual__image-frame { position: relative; width: fit-content; max-width: 100%; }
-.typst-visual__image-frame--sized > .typst-visual__rendering { width: 100%; }
-.typst-visual__image-frame:has(> .typst-visual__rendering[hidden]) { display: none; }
-.typst-visual__resize-handle {
-  position: absolute;
-  display: none;
-  width: 10px;
-  height: 10px;
-  margin: -5px;
-  border: 1px solid white;
-  border-radius: 2px;
-  background: var(--te-accent);
-  touch-action: none;
-}
-.typst-visual__image.ProseMirror-selectednode .typst-visual__resize-handle,
-.typst-visual__image-frame--resizing .typst-visual__resize-handle { display: block; }
-.typst-visual__resize-handle[data-handle='nw'] { top: 0; left: 0; cursor: nwse-resize; }
-.typst-visual__resize-handle[data-handle='ne'] { top: 0; right: 0; cursor: nesw-resize; }
-.typst-visual__resize-handle[data-handle='sw'] { bottom: 0; left: 0; cursor: nesw-resize; }
-.typst-visual__resize-handle[data-handle='se'] { bottom: 0; right: 0; cursor: nwse-resize; }
-.typst-visual__resize-handle[data-handle='w'] { top: 50%; left: 0; height: 20px; margin-top: -10px; cursor: ew-resize; }
-.typst-visual__resize-handle[data-handle='e'] { top: 50%; right: 0; height: 20px; margin-top: -10px; cursor: ew-resize; }
-.typst-visual__image-size {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  display: none;
-  padding: 1px 6px;
-  border-radius: 4px;
-  background: rgb(0 0 0 / 0.65);
-  color: white;
-  font: 12px system-ui, sans-serif;
-}
-.typst-visual__image-frame--resizing > .typst-visual__image-size { display: block; }
-.typst-visual__image-tools {
-  position: relative;
-  display: none;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 4px;
-  font: 12px system-ui, sans-serif;
-}
-.typst-visual__image.ProseMirror-selectednode.typst-visual__raw--rendered > .typst-visual__image-tools,
-.typst-visual__image-tools:focus-within { display: flex; }
-.typst-visual__image-tools > button {
-  padding: 2px 8px;
-  border: 1px solid var(--te-border);
-  border-radius: 4px;
-  background: var(--te-surface);
-  font: inherit;
-  cursor: pointer;
-}
-.typst-visual__image-tools > button[aria-pressed='true'] { border-color: var(--te-accent); background: var(--te-selected); }
-.typst-visual__figure { margin: 0 0 0.7em; }
-.typst-visual__figure > .typst-visual__image { margin-bottom: 0.2em; }
-.typst-visual__figure .typst-visual__image-frame { margin: 0 auto; }
-.typst-visual__figure .typst-visual__image-tools { justify-content: center; }
-.typst-visual__figure .typst-visual__table { margin: 0 auto 0.2em; } /* a table figure: centred above its caption, as Typst sets it */
-.typst-visual__caption { position: relative; text-align: center; font-size: 0.95em; }
-.typst-visual__caption:has(> br.ProseMirror-trailingBreak:only-child)::before {
-  content: 'Caption';
-  position: absolute;
-  inset: 0;
-  color: var(--te-faint);
-  pointer-events: none;
-}
-.typst-visual__image-frame > .typst-visual__rendering { cursor: default; }
-.typst-visual__table { border-collapse: collapse; margin: 0 0 0.7em; table-layout: fixed; }
-.typst-visual__table td,
-.typst-visual__table th { min-width: 3em; padding: 2px 8px; border: 1px solid var(--te-border); vertical-align: top; }
-.typst-visual__table td > :last-child,
-.typst-visual__table th > :last-child { margin-bottom: 0; }
-.typst-visual__table .selectedCell { background: var(--te-selected); }
-.typst-visual__page-break {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0.4em 0 1.1em;
-  color: var(--te-muted-2);
-  font: 600 11px system-ui, sans-serif;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.typst-visual__page-break::before,
-.typst-visual__page-break::after { content: ''; flex: 1; border-top: 1px dashed currentColor; }
-.typst-visual__rule { padding: 0.4em 0 1.1em; }
-.typst-visual__quote { margin: 0 0 0.7em; padding: 0 0 0 1em; border-left: 3px solid var(--te-border); color: var(--te-text-2); }
-.typst-visual__quote > :last-child { margin-bottom: 0; }
-/* Custom styles (extensions/styles): a paragraph style's blocks in a frame with its name; text in a text style
-   underlined dotted, its name as tooltip. Hosts style one by its class, typst-style--<name>. */
-.typst-visual__style {
-  position: relative;
-  margin: 0 0 0.7em;
-  padding: 0.35em 0.8em 0.1em;
-  border-left: 3px solid var(--te-accent-line);
-  border-radius: 0 6px 6px 0;
-  background: var(--te-accent-faint);
-}
-.typst-visual__style::before {
-  content: attr(data-style-title);
-  display: block;
-  margin-bottom: 0.15em;
-  color: var(--te-hint);
-  font: 600 11px system-ui, sans-serif;
-  letter-spacing: 0.02em;
-  pointer-events: none;
-  user-select: none;
-}
-.typst-visual__style > :last-child { margin-bottom: 0.4em; }
-.typst-visual__style-text { text-decoration: underline dotted var(--te-hint); text-underline-offset: 3px; }
-.typst-visual ul[data-type='taskList'] { list-style: none; padding-left: 0.3em; }
-.typst-visual ul[data-type='taskList'] > li { display: flex; gap: 0.5em; align-items: baseline; }
-.typst-visual ul[data-type='taskList'] > li > label { flex: none; }
-.typst-visual ul[data-type='taskList'] > li > div { flex: 1; min-width: 0; }
-.typst-visual ul[data-type='taskList'] > li > div > p { margin: 0; }
-.typst-visual__rule hr { margin: 0; border: none; border-top: 1px solid var(--te-text); }
 .typst-popover {
   position: absolute;
   top: 100%;
@@ -702,74 +245,7 @@
 .typst-popover button[type='submit'] { border-color: var(--te-accent); background: var(--te-accent); color: white; }
 .typst-popover button[hidden] { display: none; }
 .typst-popover { flex-wrap: wrap; max-width: 360px; }
-.typst-popover__choices { flex-basis: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
-.typst-popover__files { display: flex; flex-direction: column; align-self: stretch; max-height: 160px; overflow: auto; }
-.typst-popover .typst-popover__files button { border: none; background: none; padding: 3px 6px; text-align: left; }
-.typst-popover .typst-popover__files button:hover { background: var(--te-hover); }
-.typst-popover__error { color: var(--te-danger); }
-.typst-popover__error:empty { display: none; }
 .typst-preview--stale { opacity: 0.45; filter: grayscale(0.6); transition: opacity 0.2s; }
-.typst-status {
-  flex: 1;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 12px;
-  padding: 4px 8px;
-  border-top: 1px solid var(--te-border);
-  font-size: 12px;
-}
-.typst-status__summary {
-  font: inherit;
-  border: 0;
-  padding: 2px 6px;
-  border-radius: 3px;
-  background: none;
-  color: var(--te-success);
-  cursor: pointer;
-}
-.typst-status__summary:disabled { cursor: default; }
-.typst-status[data-severity='warning'] .typst-status__summary { color: var(--te-warning); }
-.typst-status[data-severity='error'] .typst-status__summary { color: var(--te-danger); font-weight: 600; }
-/* Messages of the shown file, opened by hovering or focusing the count. */
-.typst-status__hover { position: relative; }
-.typst-status__details {
-  display: none;
-  position: absolute;
-  bottom: 100%;
-  left: 0;
-  z-index: 10;
-  min-width: 260px;
-  max-width: min(520px, 80vw);
-  max-height: 40vh;
-  overflow: auto;
-  margin: 0 0 4px;
-  padding: 4px;
-  list-style: none;
-  background: var(--te-surface);
-  border: 1px solid var(--te-border);
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-.typst-status__hover:is(:hover, :focus-within) > .typst-status__details:not([hidden]) { display: block; }
-.typst-status__detail {
-  display: block;
-  width: 100%;
-  padding: 4px 6px;
-  border: 0;
-  border-left: 3px solid var(--te-warning);
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  white-space: pre-wrap;
-  cursor: pointer;
-}
-.typst-status__details > li[data-severity='error'] > .typst-status__detail { border-left-color: var(--te-danger); }
-.typst-status__detail:hover, .typst-status__detail:focus-visible { background: var(--te-preview-bg); }
-.typst-status__elsewhere { display: contents; list-style: none; }
-.typst-status__elsewhere > li { color: var(--te-muted); }
-.typst-status__elsewhere > li[data-severity='error'] { color: var(--te-danger); }
 .typst-toolbar {
   position: sticky;
   top: 0;
@@ -804,8 +280,7 @@
 .typst-toolbar__button:hover:not(:disabled) { background: var(--te-hover); }
 .typst-toolbar__button[aria-pressed='true'] { background: var(--te-selected); color: var(--te-accent); }
 .typst-toolbar__button:disabled { color: var(--te-faint-2); cursor: default; }
-.typst-toolbar__button:focus-visible,
-.typst-toolbar__style:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 1px; }
+.typst-toolbar__button:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 1px; }
 /* Toolbar menus (Insert ▾, Align ▾): a trigger with a caret, a list of labelled items below it */
 .typst-toolbar__menu { position: relative; }
 .typst-toolbar__menu-button { width: auto; gap: 2px; padding: 0 4px 0 7px; }
@@ -844,163 +319,8 @@
 }
 .typst-floating-bar[hidden] { display: none; }
 .typst-floating-bar > .typst-toolbar__button { width: 28px; height: 28px; }
-.typst-toolbar__style {
-  height: 32px;
-  min-width: 132px;
-  padding: 0 8px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: none;
-  color: var(--te-text-2);
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-}
 .typst-editor__tabs[hidden] { display: none; }
 .typst-editor.typst-editor--dropping { outline: 2px dashed var(--te-accent); outline-offset: -4px; }
-/* Read-only view of images and data files */
-.typst-asset {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  padding: 24px;
-}
-.typst-asset[hidden] { display: none; }
-.typst-asset__title { margin: 0; font-size: 15px; font-weight: 600; color: var(--te-text); }
-.typst-asset__size { margin-left: 8px; font-weight: 400; color: var(--te-faint); font-size: 12px; }
-.typst-asset__image {
-  max-width: 100%;
-  max-height: 60vh;
-  object-fit: contain;
-  border-radius: 6px;
-  background: repeating-conic-gradient(var(--te-chip) 0 25%, var(--te-surface) 0 50%) 0 0 / 16px 16px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
-}
-.typst-asset__text {
-  align-self: stretch;
-  margin: 0;
-  padding: 12px;
-  border-radius: 6px;
-  background: var(--te-subtle);
-  font: 12px/1.5 ui-monospace, monospace;
-  white-space: pre-wrap;
-}
-.typst-asset__note { color: var(--te-muted); }
-/* Spreadsheets (.ic): IronCalc's workbook UI fills the editing column */
-.typst-sheet { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.typst-sheet[hidden] { display: none; }
-.typst-sheet__title { margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--te-border); font-size: 13px; font-weight: 600; color: var(--te-text); }
-.typst-sheet__body { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; color: var(--te-muted); font-size: 13px; }
-.typst-toolbar__style:hover { background: var(--te-hover); }
-.typst-status__open {
-  border: 0;
-  padding: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-decoration: underline dotted;
-  cursor: pointer;
-}
 
-/* ---- the Comment button (adds a margin note) ---- */
-.typst-editor__comment {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-  border: 1px solid var(--te-border);
-  border-radius: 6px;
-  padding: 3px 10px;
-  background: var(--te-surface);
-  color: var(--te-text-2);
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-}
-.typst-editor__comment[hidden] { display: none; }
-.typst-editor__comment:hover { background: var(--te-hover); }
-.typst-editor__comment:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 1px; }
 
-/* ---- collaboration: other users' carets, selections and boxes
-   (per user: --typst-remote-color, and --typst-remote-text for text on it) ---- */
-.typst-remote-selection {
-  background: color-mix(in srgb, var(--typst-remote-color, #268bd2) 22%, transparent);
-}
-/* A caret: a thin bar with a name flag (Tiptap CollaborationCaret / y-codemirror look). */
-.typst-remote-caret {
-  position: relative;
-  margin: 0 -1px;
-  border-left: 1px solid var(--typst-remote-color, #268bd2);
-  border-right: 1px solid var(--typst-remote-color, #268bd2);
-  word-break: normal;
-  pointer-events: none;
-}
-.typst-remote-caret__flag,
-.typst-remote-box:not(.typst-visual__page-break)::after {
-  position: absolute;
-  padding: 0 4px;
-  background: var(--typst-remote-color, #268bd2);
-  color: var(--typst-remote-text, #fff);
-  font: 600 11px/1.5 system-ui, sans-serif;
-  font-style: normal;
-  letter-spacing: normal;
-  text-transform: none;
-  white-space: nowrap;
-  pointer-events: none;
-  user-select: none;
-  z-index: 2;
-}
-.typst-remote-caret__flag {
-  bottom: 100%;
-  left: -1px;
-  border-radius: 3px 3px 3px 0;
-}
-/* Source view (y-codemirror): a dot on the bar; the name on hover and for a moment after each move. */
-.typst-remote-caret--transient { pointer-events: auto; }
-.typst-remote-caret--transient::before {
-  content: '';
-  position: absolute;
-  top: -0.2em;
-  left: -0.25em;
-  width: 0.4em;
-  height: 0.4em;
-  border-radius: 50%;
-  background: var(--typst-remote-color, #268bd2);
-}
-.typst-remote-caret--transient > .typst-remote-caret__flag {
-  opacity: 0;
-  transition: opacity 0.3s ease-in-out;
-  animation: typst-remote-flag 2.5s ease-in;
-}
-.typst-remote-caret--transient:hover > .typst-remote-caret__flag { opacity: 1; animation: none; }
-@keyframes typst-remote-flag {
-  0%, 70% { opacity: 1; }
-  100% { opacity: 0; }
-}
-/* Visual view: a box (raw code, image, page break, note) someone's caret is in. */
-.typst-remote-box {
-  position: relative;
-  outline: 2px solid var(--typst-remote-color, #268bd2);
-  outline-offset: 1px;
-}
-.typst-remote-box:not(.typst-visual__page-break)::after {
-  content: attr(data-user);
-  right: -3px;
-  bottom: calc(100% + 3px);
-  border-radius: 3px 3px 0 3px;
-}
 
-/* ---- diagnostics in the Visual view (tooltip: message + hints) ---- */
-.typst-diagnostic {
-  text-decoration: underline wavy var(--te-warning);
-  text-decoration-skip-ink: none;
-  text-underline-offset: 3px;
-}
-.typst-diagnostic[data-severity='error'] { text-decoration-color: var(--te-danger); }
-/* Raw code boxes: an underline would not reach the code inside, so outline the box. */
-:is(.typst-visual__raw-block, .typst-visual__raw-inline).typst-diagnostic { outline: 2px solid rgba(154, 103, 0, 0.6); outline-offset: 1px; }
-:is(.typst-visual__raw-block, .typst-visual__raw-inline).typst-diagnostic[data-severity='error'] { outline-color: rgba(207, 34, 46, 0.6); }

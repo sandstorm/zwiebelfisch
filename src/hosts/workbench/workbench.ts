@@ -84,6 +84,12 @@ export interface Workbench {
    */
   applyChange(change: FileChange): Promise<string | null>;
 
+  /**
+   * Adds `css` where the widget renders (the page's `<head>`, or the shadow root of a `<typst-editor>`), after the
+   * widget's own stylesheet, until disposed. An extension styles what it adds this way, under class names of its own,
+   * with the colors of the `--te-*` tokens (light and dark). Widgets in one root share each stylesheet.
+   */
+  registerStyleSheet(css: string): Disposable;
   /** Adds a side panel with its rail button (one panel is open at a time); disposing removes both. */
   registerSidePanel(id: string, options: SidePanelOptions): SidePanel;
   /** Puts `element` into the status bar below everything, after the items registered before. */

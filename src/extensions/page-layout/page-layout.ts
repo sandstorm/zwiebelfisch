@@ -3,12 +3,14 @@
 // Insert menu. See ARCHITECTURE.md, "VisualView". Why an extension: the Visual view's host models only paragraphs,
 // text and raw Typst; without it these calls stay raw boxes.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
+import css from './page-layout.css?inline';
 import { HORIZONTAL_RULE, INSERT_HORIZONTAL_RULE, INSERT_PAGE_BREAK, PAGE_BREAK } from './visual-view/visual-view';
 
 /** Page breaks and horizontal rules. */
 export const pageLayout: TypstExtension = {
   id: 'page-layout',
-  activate({ visualView, subscriptions }) {
+  activate({ workbench, visualView, subscriptions }) {
+    subscriptions.push(workbench.registerStyleSheet(css));
     subscriptions.push(
       visualView.registerNode(PAGE_BREAK),
       visualView.registerNode(HORIZONTAL_RULE),

@@ -6,6 +6,7 @@
 import type { Project } from '../../core/project/project';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { TypstExtension, Workbench } from '../../hosts/workbench/workbench';
+import css from './spreadsheets.css?inline';
 import { typstPath } from './model/model';
 import { SpreadsheetView, type WorkbookEdit } from './workbench/workbench';
 
@@ -14,6 +15,7 @@ export function spreadsheets(): TypstExtension {
   return {
     id: 'spreadsheets',
     activate({ project, workbench, subscriptions }) {
+      subscriptions.push(workbench.registerStyleSheet(css));
       subscriptions.push(
         workbench.registerFileView('spreadsheet', {
           createFileView: (parent) => {
