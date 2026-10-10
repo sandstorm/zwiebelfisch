@@ -63,9 +63,10 @@ src/                        the widget (TypeScript); the most important API on t
   core/                     the models everything builds on
     typst-document/         TypstDocument — the single source of truth (a string; no Yjs: collaboration binds a Y.Text
                             from outside); TextChange (the one edit format) and minimalChange, all in typst-document.ts
-    typst-engine/           typed TS wrapper around the wasm (typst-engine.ts: createEngine, fetchFonts);
-                            engine-assets.ts (wasm + default font URLs for the main thread); generated wasm/, fonts/
-                            (gitignored)
+    typst-engine/           typed TS wrapper around the wasm (typst-engine.ts: createEngine, fetchFonts); generated
+                            wasm/, fonts/ (gitignored)
+    engine-assets/          the wasm + default font URLs for the main thread (a module of its own: the worker imports
+                            typst-engine and must not bundle the assets again)
     typst-packages/         withPackages: Typst packages (@preview/…) downloaded on first use and added to an engine
                             (fetchPreviewPackage, tar.ts: the archive reader; fixtures/: the greet test package)
     paths/                  ProjectPath (where a file is) and PathReference (a path as written in Typst source),
@@ -186,7 +187,8 @@ demo/                       the playground (vite root; checklist: docs/demo-play
                             server-status.ts (probe ws://127.0.0.1:1234, simulate upstream), playground-bar.ts (the bar)
 examples/plain-html/        <typst-editor> loaded from dist/lib without a bundler
 tests/e2e/                  Playwright specs (run against the static build); tests/jsdom-setup.ts (vitest setup file)
-eslint-rules/               entry-imports.js: the folder boundary rule (below)
+eslint-rules/               the ESLint rules of the folder rules (below): entry-imports.js, no-re-exports.js,
+                            dependencies.js (the layers), imports.js (what they share)
 mise-tasks/                 every script (build, test, quality, …) — `mise tasks ls`
 docs/                       research and concepts (YYYY_MM_DD_slug.md)
 ```
@@ -205,24 +207,24 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
   ESLint enforces this (`local/entry-imports`, `eslint-rules/entry-imports.js`); only TypeScript and
   CSS sources count (not the generated `wasm/`, `fonts/` or the `fixtures/`). The exceptions are
   listed once, with reasons, in `eslint.config.js` (`boundaries.exceptions`):
-  - `core/typst-engine/engine-assets.ts` — `hosts/preview/preview.ts`: the asset URLs; in the
-    entry, the worker bundle (which imports the entry) would emit every asset a second time;
-  - `extensions/collaboration/model/in-process.ts` — test files;
-  - `extensions/collaboration/model/shared-project.ts` — the server's tests;
+  - `extensions/collaboration/model/shared-project.ts` and `in-process.ts` — the server's tests, which build
+    rooms from the client's SharedProject and wire their Y.Docs together in-process.
 - **No re-exports** (`local/no-re-exports`, `eslint-rules/no-re-exports.js`): a file exports only what it
   defines; `export … from` and exporting an imported name are errors everywhere but `src/index.ts`, the package
   entry (`reExportExceptions` in `eslint.config.js`). A module's entry defines its API; its internal files import
   the API's types from it and are never forwarded. An outside caller needing an internal name means the code moves
   into the entry, or the concept is a module of its own (`core/typst-packages`, `hosts/projection`).
-- **Layers** (`no-restricted-imports` in `eslint.config.js`; docs/2026_10_10_extensions-architecture.md,
-  "Dependency rules"): `hosts/` never import `extensions/`, `testing/` or `typst-editor/`, also not in their
-  tests: a host's tests use its own nodes plus specs defined in the test. Only `*.test.ts` files import
-  `testing/`, which composes the built-in extensions; tests of the built-ins together (the projection's
-  fixtures, the toolbar's items, the block nodes) are the widget's, `typst-editor/typst-editor.*.test.ts`. An
-  extension's tests needing other extensions (a heading to put a label on) take them from `testing/` too,
-  never from the other extension. `core/` imports only `core/`, no Yjs (`yjs`, `y-*`, `@hocuspocus/*`) and uses no
-  DOM, neither as values nor as types (`no-restricted-globals`, `@typescript-eslint/no-restricted-types`), tests
-  included.
+- **Layers** (`local/dependencies` over resolved files, the list `layers` in `eslint.config.js`; package imports
+  with `no-restricted-imports`; docs/2026_10_10_extensions-architecture.md, "Dependency rules"; tests included):
+  `hosts/` never import `extensions/`, `testing/` or `typst-editor/`: a host's tests use its own nodes plus specs
+  defined in the test. Extensions never import each other. Only `*.test.ts` files import `testing/`, which composes
+  the built-in extensions; tests of the built-ins together (the projection's fixtures, the toolbar's items, the
+  block nodes) are the widget's, `typst-editor/typst-editor.*.test.ts`. An extension's tests needing other
+  extensions (a heading to put a label on) take them from `testing/` too, never from the other extension. `core/`
+  imports only `core/` and no Yjs (`yjs`, `y-*`, `@hocuspocus/*`); `core/` and every extension's `model/` import no
+  editor library (`@tiptap/*`, `prosemirror-*`, `@codemirror/*`, `codemirror`) and use no DOM, neither as values
+  nor as types (`no-restricted-globals`, `@typescript-eslint/no-restricted-types`); a `model/` imports no view
+  folder of its extension. No cycles between modules (`mise run quality:module-cycles`, part of `quality`).
 - **Top comments.** Every source file starts with a comment: its context, `See <entry file /
   ARCHITECTURE.md section>`, or `Tests for X` (`mise run quality:top-comments`, part of `quality`).
 - Other languages and separate programs stay at the top level: `crates/`, `server/`, `demo/`,
@@ -639,7 +641,7 @@ new TypstDocument(text)
 
 ```ts
 createEngine(wasm, fonts?: (Uint8Array | Promise<Uint8Array>)[]) → Promise<Engine>
-fetchFonts(DEFAULT_FONT_URLS) → Promise<Uint8Array>[]   // the bundled font assets (URLs: engine-assets.ts)
+fetchFonts(DEFAULT_FONT_URLS) → Promise<Uint8Array>[]   // the bundled font assets (URLs: core/engine-assets)
 .addFont(bytes)                                  // throws if bytes contain no font face
 .setSource(path, text) / .setBinary(path, bytes) / .remove(path)
 .compile(main) → { pages: [{hash, width, height, svg}], diagnostics: [{severity, message, hints, path, from, to}], missingPackages: string[] }
@@ -676,8 +678,8 @@ Inside the crate:
   `compile` calls because the world lives as long as the engine.
 - **Fonts as assets:** `mise run build:fonts` copies Typst's default set (Libertinus Serif,
   New Computer Modern + Math, DejaVu Sans Mono; 17 files, 9.7 MB) from the typst-assets crate
-  pinned by `Cargo.lock` into `src/core/typst-engine/fonts/`. `engine-assets.ts` turns them into bundler
-  assets (`import.meta.glob(…?url)`) and starts all downloads at once. The worker passes them to
+  pinned by `Cargo.lock` into `src/core/typst-engine/fonts/`. `core/engine-assets` turns them into bundler
+  assets (`import.meta.glob(…?url)`); `fetchFonts` starts all downloads at once. The worker passes them to
   `createEngine`, which awaits wasm and fonts in parallel.
 - **Packages** are files like any other, under their package path. A file of a package with no
   files at all fails with `PackageError::NotFound` and records the spec; `compile` returns those

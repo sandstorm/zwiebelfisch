@@ -2,7 +2,7 @@
 // data types. Entry of core/typst-engine/. See ARCHITECTURE.md, "typst-engine".
 import init, { Engine as WasmEngine, type InitInput } from './wasm/typst_engine';
 
-// Asset URLs (wasm, default fonts) are in engine-assets.ts, not here: the worker imports this file. Packages
+// Asset URLs (wasm, default fonts) are core/engine-assets, not here: the worker imports this file. Packages
 // (@preview/…) are core/typst-packages.
 
 /**
@@ -121,7 +121,7 @@ export type FontSource = Uint8Array | Promise<Uint8Array>;
 
 /**
  * Instantiates the engine from the wasm module (URL, bytes or response). The
- * engine embeds no fonts: pass them here (`fetchFonts(DEFAULT_FONT_URLS)`, see engine-assets.ts) or add them later.
+ * engine embeds no fonts: pass them here (`fetchFonts(DEFAULT_FONT_URLS)`, see core/engine-assets) or add them later.
  */
 export async function createEngine(
   wasm: InitInput | Promise<InitInput>,

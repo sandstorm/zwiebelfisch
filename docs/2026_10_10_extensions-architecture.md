@@ -51,22 +51,27 @@ Controller: it subscribes views to the model's `onDid…` events and turns user 
 
 ### Dependency rules (ESLint, part of `mise run quality`)
 
-1. `core/**` and every `**/model/**`: no DOM globals, no editor-library imports. `core/**` imports only `core/` and
-   no collaboration library (`yjs`, `y-*`, `@hocuspocus/*`): collaboration binds a Y.Text to a `TypstDocument` from
-   outside. ESLint checks core's DOM use as values (`no-restricted-globals`) and as types
-   (`@typescript-eslint/no-restricted-types`; e.g. uploads take an `UploadedFile`, not a `File`); the drag data type
-   of project files (`PROJECT_PATH_TYPE`) is the workbench host's. `fetch`, `Blob` and streams are no DOM (workers
-   have them). `model/` folders are not linted for it yet.
-2. `hosts/**` never import `extensions/**` (nor `typst-editor/`). They only offer contribution points.
+Checked on resolved files (`local/dependencies`, the list `layers` in `eslint.config.js`), tests included, so no
+relative path slips past; package imports with `no-restricted-imports`, the DOM with `no-restricted-globals` (values)
+and `@typescript-eslint/no-restricted-types` (types).
+
+1. `core/**` and every `**/model/**`: no DOM globals (as values or types), no editor library (`@tiptap/*`,
+   `prosemirror-*`, `@codemirror/*`, `codemirror`). `core/**` imports only `core/` and no collaboration library
+   (`yjs`, `y-*`, `@hocuspocus/*`): collaboration binds a Y.Text to a `TypstDocument` from outside. Uploads take an
+   `UploadedFile`, not a `File`; the drag data type of project files (`PROJECT_PATH_TYPE`) is the workbench host's.
+   `fetch`, `Blob` and streams are no DOM (workers have them). An extension's `model/` imports no view folder of its
+   extension (`visual-view/`, `source-view/`, `preview/`, `workbench/`).
+2. `hosts/**` never import `extensions/**`, `typst-editor/` or `testing/`. They only offer contribution points.
 3. `extensions/<a>` never imports `extensions/<b>`. Extensions meet through `core` models, or
    through a generic contribution point of a host that any extension may use (document links, file
-   decorations, source controls; no services). No cycles between folders.
-4. `typst-editor/` imports hosts and extension entry files only.
-5. The module boundary is the core / host / extension / ui folder (and `typst-editor/`, `typst-editor-element/`,
-   `testing/`): from outside, only its entry file is imported; inside, layer and concept folders (`model/`,
-   `visual-view/`, …) have no entry files and files import each other directly. No re-exports at all outside
-   `src/index.ts` (`local/no-re-exports`): an entry defines its API, it does not forward its internal files; entry
-   file inside its folder (no sibling folders).
+   decorations, source controls; no services).
+4. Only `*.test.ts` files import `testing/`.
+5. No cycles between modules (`mise run quality:module-cycles`; type imports count, tests do not).
+6. The module boundary is the core / host / extension / ui folder (and `typst-editor/`, `typst-editor-element/`,
+   `testing/`): from outside, only its entry file is imported (`local/entry-imports`); inside, layer and concept
+   folders (`model/`, `visual-view/`, …) have no entry files and files import each other directly. No re-exports at
+   all outside `src/index.ts` (`local/no-re-exports`): an entry defines its API, it does not forward its internal
+   files; entry file inside its folder (no sibling folders).
 
 ## The extension API (VS Code vocabulary)
 

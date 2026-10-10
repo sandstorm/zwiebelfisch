@@ -1,8 +1,8 @@
-// Tests for engine-assets.ts (the default fonts) and fetchFonts (typst-engine.ts).
+// Tests for engine-assets.ts: the default fonts, fetched with typst-engine's fetchFonts.
 import { readdirSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_FONT_URLS } from './engine-assets';
-import { fetchFonts } from './typst-engine';
+import { fetchFonts } from '../typst-engine/typst-engine';
 
 describe('fetchFonts(DEFAULT_FONT_URLS)', () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -11,7 +11,7 @@ describe('fetchFonts(DEFAULT_FONT_URLS)', () => {
     const fetch = vi.fn(async (_url: string) => new Response(new Uint8Array([1, 2, 3])));
     vi.stubGlobal('fetch', fetch);
     const fonts = fetchFonts(DEFAULT_FONT_URLS);
-    expect(fetch).toHaveBeenCalledTimes(readdirSync(new URL('./fonts/', import.meta.url)).length);
+    expect(fetch).toHaveBeenCalledTimes(readdirSync(new URL('../typst-engine/fonts/', import.meta.url)).length);
     expect(fetch.mock.calls.map(([url]) => url)).toContainEqual(
       expect.stringMatching(/LibertinusSerif-Regular\.otf/),
     );

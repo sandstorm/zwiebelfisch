@@ -12,7 +12,7 @@ import { isInside, mostVisible } from './pages/geometry';
 import { overlay, OverlayLayer } from './pages/overlays';
 import { PageList } from './pages/page-list';
 import { snippet } from './pages/snippet';
-import { DEFAULT_FONT_URLS, ENGINE_WASM_URL } from '../../core/typst-engine/engine-assets';
+import { DEFAULT_FONT_URLS, ENGINE_WASM_URL } from '../../core/engine-assets/engine-assets';
 import type { FileContent } from '../../core/project/project';
 import { FileSender } from './worker/project-files';
 import type { Init, Request, Response } from './worker/protocol';

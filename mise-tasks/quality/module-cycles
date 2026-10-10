@@ -1,0 +1,73 @@
+#!/usr/bin/env node
+//MISE description="Fail on a cycle between modules under src/ (core/<name>, hosts/<name>, extensions/<name>, …; tests left out)"
+// The modules depend on each other in one direction only: a module importing another (type imports included) must
+// not be imported back, directly or through others. Cycles inside a module are its own business. Test files are
+// left out: their imports are no part of the modules' structure (an extension's tests use testing/, which composes
+// the extensions). Prints every cycle with one import per step and exits 1. See ARCHITECTURE.md, "Folder rules".
+import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import ts from 'typescript';
+import { boundaries } from '../../eslint.config.js';
+import { moduleOf } from '../../eslint-rules/entry-imports.js';
+import { resolveImport } from '../../eslint-rules/imports.js';
+
+const root = path.resolve(import.meta.dirname, '../..');
+const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '--', ':(glob)src/**/*.ts'], { cwd: root, encoding: 'utf8' })
+  .split('\n')
+  .filter((file) => file && !file.endsWith('.test.ts') && !file.endsWith('.d.ts'))
+  .map((file) => path.join(root, file));
+
+/** The module of `file`, as a path from src/ (`hosts/preview`), or the file itself when it belongs to none. */
+const moduleName = (file) => path.relative(boundaries.srcRoot, moduleOf(file, boundaries) ?? file);
+
+/** module → module it imports → one import doing so (`importer → specifier`). */
+const graph = new Map();
+for (const file of files) {
+  const from = moduleName(file);
+  if (!graph.has(from)) graph.set(from, new Map());
+  for (const { fileName: specifier } of ts.preProcessFile(readFileSync(file, 'utf8'), true, true).importedFiles) {
+    const target = specifier.startsWith('.') ? resolveImport(file, specifier) : null;
+    const to = target && target.startsWith(boundaries.srcRoot + path.sep) ? moduleName(target) : null;
+    if (to && to !== from && !graph.get(from).has(to)) graph.get(from).set(to, `${path.relative(root, file)} → '${specifier}'`);
+  }
+}
+
+/** The strongly connected components with more than one module (Tarjan). */
+function cycles() {
+  const index = new Map();
+  const low = new Map();
+  const stack = [];
+  const found = [];
+  const visit = (node) => {
+    index.set(node, index.size);
+    low.set(node, index.get(node));
+    stack.push(node);
+    for (const next of graph.get(node)?.keys() ?? []) {
+      if (!index.has(next)) {
+        visit(next);
+        low.set(node, Math.min(low.get(node), low.get(next)));
+      } else if (stack.includes(next)) low.set(node, Math.min(low.get(node), index.get(next)));
+    }
+    if (low.get(node) !== index.get(node)) return;
+    const component = [];
+    let member;
+    do {
+      member = stack.pop();
+      component.push(member);
+    } while (member !== node);
+    if (component.length > 1) found.push(component);
+  };
+  for (const node of graph.keys()) if (!index.has(node)) visit(node);
+  return found;
+}
+
+const found = cycles();
+for (const component of found) {
+  console.log(`cycle between ${component.join(', ')}:`);
+  for (const from of component) {
+    for (const [to, via] of graph.get(from) ?? []) if (component.includes(to)) console.log(`  ${from} → ${to}   (${via})`);
+  }
+}
+if (found.length > 0) process.exit(1);
+console.log(`module cycles: none among ${graph.size} modules`);
