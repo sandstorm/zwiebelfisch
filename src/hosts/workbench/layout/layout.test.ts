@@ -37,10 +37,20 @@ afterEach(() => {
 });
 
 describe('Layout', () => {
-  it('puts the side, the editing area and the preview into the host', () => {
+  it('puts the side, the editing area, the preview and the status bar into the host', () => {
     const { host, layout } = setup();
-    expect([...host.children].map((c) => c.className)).toEqual(['typst-editor__side', 'typst-editor__left', 'typst-editor__right']);
+    expect([...host.children].map((c) => c.className)).toEqual(['typst-editor__side', 'typst-editor__left', 'typst-editor__right', 'typst-editor__status-bar']);
     expect(layout.editor.className).toBe('typst-editor__left');
+    expect(layout.statusBar.className).toBe('typst-editor__status-bar');
+  });
+
+  it('removes a panel and its rail button', () => {
+    const { host, layout } = setup();
+    layout.setDefault('files', true);
+    layout.removePanel('files');
+    expect(host.querySelector('[data-panel=files]')).toBeNull();
+    expect(host.querySelector('[data-testid=typst-panel-toggle-files]')).toBeNull();
+    expect(host.querySelector<HTMLElement>('.typst-editor__side')!.hidden).toBe(true);
   });
 
   it('the preview column is a share of the widget, so an opening side panel narrows only the editing column', () => {

@@ -9,14 +9,18 @@ code changes, update this file in the same commit.
 ```
 src/                        the widget (TypeScript); the most important API on top
   index.ts                  public API of the package; registers <typst-editor>
-  typst-editor/             typst-editor.ts: createTypstEditor() — composes the widget: Project, the workbench host,
-                            preview, features, scoped CSS (typst-editor.css)
+  typst-editor/             typst-editor.ts: createTypstEditor() — a Project in the workbench host with the built-in
+                            extension list (configured from the options), scoped CSS (typst-editor.css)
   typst-editor-element/     typst-editor-element.ts: <typst-editor> custom element (shadow DOM) around
                             createTypstEditor; inline-source.ts (source written inside the element → text)
   hosts/                    view hosts: mechanism + contribution points, no feature knowledge
-    workbench/              the widget's frame (workbench.ts): layout/ (layout.ts + layout.css: side panels with rail
-                            buttons, editing area, preview), editing-views/ (Visual/Source tabs, lazily one VisualView +
-                            SourceView per document), color-scheme/ (`data-scheme`)
+    workbench/              the widget's frame and the extension API (workbench.ts: TypstExtension, ExtensionContext,
+                            Workbench, ServiceRegistry, CommandRegistry); workbench-host.ts (WorkbenchHost: what
+                            createTypstEditor creates); layout/ (layout.ts + layout.css: side panels with rail buttons,
+                            editing area, preview, status bar), editing-views/ (Visual/Source tabs, lazily one VisualView
+                            + SourceView per document), color-scheme/ (`data-scheme`), extension-host/ (activation,
+                            services), commands/ (commands, key bindings), file-views/ (views by file kind),
+                            file-drops/ (files dropped on the widget)
   stylesheets.test.ts       every .css under src/ parses (lightningcss, no error recovery), no nested style rules,
                             every block closed (an unclosed rule silently nests the rest of the file),
                             hex colors only in the color tokens (dark mode)
@@ -37,6 +41,8 @@ src/                        the widget (TypeScript); the most important API on t
     document-links/         DocumentLinkProvider: the file paths a Typst document names (find-links.ts, Lezer),
                             where they lead and following them (LinkWorkspace: what it needs from the widget);
                             reading-order.ts (main file, then its #includes depth first; a file's neighbours)
+    disposable/             Disposable (VS Code's shape: dispose once; `Disposable.from` in reverse order)
+    event-emitter/          EventEmitter<T> (`event` to subscribe, `fire`), Event<T>
   features/                 one folder per feature, each entered through the file named like it
     visual-view/            VisualView — Tiptap editor over the source-anchored projection; visual-view.css
                             (ProseMirror core styles); decorations at the root: highlights, presence;
@@ -179,8 +185,13 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   nothing. `change` fires per file whose content changed (`TypstEditorChangeDetail = { path:
   ProjectPath, content: FileContent | null }`, null: gone; a rename is two), `files-change` with
   every `FileChange`.
-- **Composition** (`Widget`, private): `Project` + `Layout` + `EditingViews` + `FilePanel` +
-  `AssetView` + `Preview` + `DiagnosticsStatus`. The preview always compiles `main` with `project.files()`.
+- **Composition**: a `Project` in a `WorkbenchHost` (`hosts/workbench`, see "Extensions" below) that runs the
+  built-in extension list, configured from the options (`builtinExtensions`): `labels`, `styles`,
+  `collaboration` (with the option), `files` (`fileList`), `fileNavigation`, `assets`, `spreadsheets`,
+  `diagnostics`, `versions` (`user`), `comments` (`user`), `projectRenderings`, `pdfExport` (`pdfDownload`).
+  The extension API is not public yet: the options stay as they are. The preview always compiles `main` with
+  `project.files()`; `exportPdf` runs the `pdfExport.export` command; `onFilesChange` hears a change after the
+  workbench and the extensions.
 - **`Project`** (`core/project/project.ts`): files by path. `.typ` strings become a `TypstDocument` each (kept
   across renames, so open views survive); everything else is stored as given.
   `check(change)` → reason or null, `apply(change)`, `replace(files)`, `onChange(change)`
@@ -188,26 +199,28 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   or `update` per file, so subscribers never need to be refreshed by hand). The main file cannot be renamed or
   deleted; `.typ` files keep their ending.
   `FileChange = {kind:'create', path, content} | {kind:'update', path, content} | {kind:'delete', path} | {kind:'rename', from, path}`.
-- **`EditingViews`**: one Visual/Source tab bar; a document's views are created the first time
-  it is shown and then only hidden, so cursor and undo history survive switching. The mode is
-  shared. With a single file the DOM is the same as before (tabs + two panes).
-  `setFrame(top, bottom)` keeps two elements first and last in the visible pane (they scroll with
-  the file). The widget puts `FileNavigation` there: for a file the main file `#include`s
+- **`EditingViews`** (`hosts/workbench/editing-views/`): one Visual/Source tab bar; a document's views are
+  created the first time it is shown and then only hidden, so cursor and undo history survive switching. The
+  mode is shared. With a single file the DOM is the same as before (tabs + two panes).
+  `setFrame({ top, bottom })` (`Workbench.registerEditorFrame`) keeps two elements first and last in the
+  visible pane (they scroll with the file). The `fileNavigation` extension puts `FileNavigation` there: for a
+  file the main file `#include`s
   (`neighbours(read, main, path)` from `core/document-links`, recomputed on open and every change),
   links to the file read before it and the one after it, both at the top and at the bottom;
   nothing for the main file or files outside the include order.
-- **`FilePanel`** (see "File panel" below) lives in the `Layout`'s `files` panel: open by default
-  when `fileList` is `show`, or `auto` with more than one file; `hide` removes it with its rail
-  button. A requested change passes `project.check`, then the host's `allowFileChange` (async
-  allowed; re-checked afterwards), then is applied. Files dropped anywhere on the widget are
-  uploaded unless `fileList` is `hide` (then ignored) — never left to the browser, which would
-  open the file in place of the page. Image files dropped into the Visual view's text are taken
+- **`FilePanel`** (see "File panel" below; the `files` extension) lives in the side panel `files`: open by
+  default when `fileList` is `show`, or `auto` with more than one file; `hide` removes it with its rail
+  button. A requested change goes through `Workbench.applyChange`: `project.check`, then the host's
+  `allowFileChange` (async allowed; re-checked afterwards), then it is applied. Files dropped anywhere on
+  the widget (`Workbench.onDidDropFiles`) are uploaded unless `fileList` is `hide` (then ignored) — never
+  left to the browser, which would open the file in place of the page (the workbench prevents that, also
+  while nobody listens). Image files dropped into the Visual view's text are taken
   there instead (uploaded and inserted at the drop point).
-- **File links** (see below): each document's views get a `DocumentLinkProvider` (`Widget.documentLinks`:
-  paths resolve from the document's current path; `open` is `Widget.open`; `create` is a
-  `create` change through `request`, then `open`).
+- **File links** (see below): each document's views get a `DocumentLinkProvider` (the workbench host's
+  `#documentLinks`: paths resolve from the document's current path; `open` is `Workbench.open`; `create` is a
+  `create` change through `applyChange`, then `open`).
 - Preview clicks into another project file open it, then reveal. Clicks into packages are ignored.
-- **`ProjectRenderings`** gives every document's VisualView its `renderer` (snippets from
+- **`ProjectRenderings`** (the `projectRenderings` extension) gives every document's VisualView its `renderer` (snippets from
   `Preview.snippet` under the document's current path, refreshed on `Preview.onRender`; image
   files resolved like Typst (`ProjectPath.resolve`) and shown as object URLs, made once per content and
   revoked when replaced) and `assets` (the project's images as `PathReference`s (`ProjectPath.referenceTo`); uploads become
@@ -215,14 +228,15 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   an existing file (`name.png`, `name-2.png`, …) reuses it, a different one gets the first free
   of those names — every pasted screenshot is `image.png`; refusals — not an image Typst shows,
   the host's veto — come back as an error the popover shows).
-- **PDF** (`PdfExport`, `features/pdf-export/`): `exportPdf({comments})` and the preview's
-  "Download PDF" (`Preview` option `pdf`, unless `pdfDownload: false`). With comments the main
+- **PDF** (`PdfExport`, the `pdfExport` extension in `features/pdf-export/`): `exportPdf({comments})` (the
+  `pdfExport.export` command) and the preview's "Download PDF" (the interim `registerPdfSource` → `Preview` option
+  `pdf`, unless `pdfDownload: false`). With comments the main
   file is exported as compiled; without, `withoutNotes(project.files(), main)` gives the entry
   and replaced sources (see Comments). No PDF (errors) → an `Error` "The document has n
   error(s): …" (the toolbar shows it), never an older PDF. File name after the main file:
   `main.pdf` / `main-with-comments.pdf`. The plain button is the version without comments
   (decision: the usual final version); the menu has both.
-- **Images into the text**: `AssetView` only previews. An image row dragged from the file panel
+- **Images into the text**: `AssetView` (the `assets` extension: the file view of `image` and `data` files) only previews. An image row dragged from the file panel
   (drag type `PROJECT_PATH_TYPE`, data: the project path) and dropped on the Visual view is
   inserted there as an image block (`imageFileDrops` → `ImageAssets.reference(path)`: relative
   when in the same folder tree, else project-absolute; not for non-images).
@@ -231,6 +245,68 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   and the common suffix changes (`minimalChange`), so cursors and undo history are preserved.
 - **Styles** go into `host.getRootNode()`: `document.head`, or the element's shadow root.
   CodeMirror mounts its own styles into the same root. Embedding guide: [docs/embedding.md](docs/embedding.md).
+
+### Extensions (`src/hosts/workbench`)
+
+```ts
+interface TypstExtension { id; activate(context: ExtensionContext): void }
+interface ExtensionContext {
+  subscriptions: { dispose() }[]        // disposed on destroy: extensions in reverse list order, each in reverse
+  project: Project
+  workbench: Workbench                  // the frame's contribution points (below)
+  visualView: VisualViewContributions   // PLACEHOLDER (H1): interim registerDocumentOptions(document → VisualViewOptions)
+  sourceView: SourceViewContributions   // PLACEHOLDER (H2): empty
+  preview: PreviewContributions         // PLACEHOLDER (H2): interim registerPdfSource(source), engine (snippet, onRender, exportPdf)
+  services: Services                    // provide(id, service) → Disposable, get(id) → service | undefined
+}
+interface Workbench {
+  ownerDocument; activeFile; open(path, { selection?, mode? }); onDidShowFile; applyChange(change) → reason | null
+  registerSidePanel(id, { label, icon }) → SidePanel { body, setDefault, setAvailable, dismiss, dispose }
+  registerStatusBarItem(element)  registerTabBarItem(element, { mode? })  registerEditorFrame({ top, bottom })
+  registerFileView(kind, { createFileView(parent) → FileView { show(path, content), hide(), dispose() } })
+  registerCommand(id, handler)  executeCommand(id, ...args)  registerKeybinding('Mod+Alt+KeyM', id)
+  onDidDropFiles  remember(name) → Memory  diagnostics  onDidChangeDiagnostics
+  activeEditor (INTERIM: path, document, view, views)  onDidChangeEditorSelection (INTERIM)  isEditorFocused()
+}
+new WorkbenchHost(host, project, { mode?, theme?, followCursor?, allowFileChange?, onOpen? })
+  .activate(extensions)  .destroy()      // + everything of Workbench
+```
+
+- **Why.** The frame knows no feature by name (review finding `typst-editor.ts:170`): a feature is a
+  `TypstExtension` that registers its contributions once, at activation, and pushes the registrations into
+  `subscriptions`. VS Code's vocabulary: `register…` returns a `Disposable` (`core/disposable`), events are
+  `onDid…` (`Event<T>` from `EventEmitter`, `core/event-emitter`).
+- **Lifecycle.** `WorkbenchHost.activate(list)`: the extensions in list order (`ExtensionHost`, ids unique),
+  then the `Preview` (so a PDF source registered at activation gets its "Download PDF"), then the main file
+  is shown and compiled. Views are created later, lazily, with what was registered. `destroy` disposes the
+  extensions in reverse list order, each one's subscriptions in reverse (also ones pushed after activation,
+  e.g. once a room connected), then the frame.
+- **Services** replace imports between features: `ServiceRegistry` / `CommandRegistry` are empty interfaces
+  that the providing feature extends by declaration merging (`declare module '…/hosts/workbench/workbench' {
+  interface ServiceRegistry { labels: LabelIndex } }`), so `services.get('labels')` and
+  `executeCommand('pdfExport.export', true)` are typed without importing the provider. One provider per id;
+  a service is there for the extensions after its provider in the list. Today: `labels` (`LabelIndex`),
+  `styles` (`StyleIndex`), `collaboration` (`CollaborationSession`: `onDidChangePresence`,
+  `onDidConnectVersions`, read by `files` and `versions`); commands `pdfExport.export`,
+  `comments.addComment` (bound to `Mod+Alt+KeyM`).
+- **File views by kind.** `open(path)` shows a Typst file in the tabs and any other file in the view
+  registered for `ProjectPath.kind(path)` (`FileViews`: created on first use, one per provider, shown again
+  on every open so a replaced file shows its new content; nothing for a kind without a view). `assets`
+  registers `image` + `data`, `spreadsheets` registers `spreadsheet` (and stores its edits with
+  `applyChange`).
+- **Keys** (`Commands`): `registerKeybinding(key, command)` handles `key` on the widget in the capture phase,
+  so the command runs before an editor sees the key, which then never does. `key`: modifiers (`Mod` = Ctrl or
+  Cmd, `Ctrl`, `Meta`, `Alt`, `Shift`) and a `KeyboardEvent.code`.
+- **Drops** (`FileDrops`): files from the computer dropped on the widget never make the browser open them;
+  while someone listens to `onDidDropFiles`, the drop hint (`typst-editor--dropping`) shows and the files go
+  to the listeners. A view inside that stops the drop keeps it.
+- **Interim** (until H1 / H2 merge their contribution points): `visualView.registerDocumentOptions` merges
+  per-document `VisualViewOptions` (labels, styles, comments, renderings); `preview.registerPdfSource` and
+  `preview.engine`; `activeEditor` / `onDidChangeEditorSelection` for comments and collaboration; the
+  diagnostics are marked in the views by the workbench (`EditingViews.setDiagnostics`) and the documents'
+  links are built there (document-links is a later extension).
+- Extensions still live in `features/<name>/` (the entry exports the extension factory, e.g. `labels()`,
+  `files({ fileList })`); the slices wave moves them to `extensions/<name>/`.
 
 ### Paths (`src/core/paths`)
 
@@ -249,7 +325,7 @@ ProjectPath.kind / displayName / extension / imageBlob            PathReference.
   is meant (`project.has(reference)`), and a plain string for either.
 - **Parsed once, at the edges**: the public API (`main`, `files`, `open`), Yjs keys and awareness
   states of other clients, drag data, localStorage (open folders), uploads' file names and the
-  engine's paths (`Widget.jump`: package files are no project paths) go through `parse`; what is not
+  engine's paths (the workbench's preview jumps, the diagnostics status: package files are no project paths) go through `parse`; what is not
   a path is dropped there (a host's invalid `files` key throws). Inside, every path is typed.
 - `ProjectFiles` stays string-keyed: the plain data the host and the engine exchange.
 
@@ -812,8 +888,8 @@ newStyle(text) → { text, from, to }   // "New style…": `new-style`, `new-sty
 - **Look:** `.typst-visual__style.typst-style--<name>` (accent bar, the title as a badge) and
   `.typst-visual__style-text.typst-style--<name>` (dotted underline, title as tooltip); hosts
   style a style by its class. The preview shows the real look.
-- **Widget:** one `StyleIndex`; "New style…" appends a stub to the file declaring most styles (`homeFile()`; else `/styles.typ`, created through the
-  usual file request when missing) and shows it in the Source view.
+- **The `styles` extension:** one `StyleIndex` (the `styles` service); "New style…" appends a stub to the file declaring most styles (`homeFile()`; else `/styles.typ`, created through the
+  usual `applyChange` when missing) and shows it in the Source view (`Workbench.open(path, { selection, mode: 'source' })`).
 
 ### Spreadsheets (`src/features/spreadsheets`)
 
@@ -821,7 +897,8 @@ Concept: docs/2026_10_10_spreadsheets.md; task docs/todo/ironcalc.md. Calculatio
 IronCalc; Typst shows the results.
 
 ```ts
-new SpreadsheetView(parent, onEdit(path, { bytes, typst }))   .show(path, content)   .hide()   .destroy()
+spreadsheets(): TypstExtension   // registerFileView('spreadsheet', SpreadsheetView); edits → applyChange (file + typstPath)
+new SpreadsheetView(parent, onEdit(path, { bytes, typst }))   .show(path, content)   .hide()   .destroy()   // internal
 spreadsheetTypst(model, 'budget.ic') → Typst source   // `values` and `sheets` of the visible sheets
 typstPath('/budget.ic') → '/budget.ic.gen.typ'
 ```
@@ -857,14 +934,14 @@ typstPath('/budget.ic') → '/budget.ic.gen.typ'
 ### Layout (`src/hosts/workbench/layout/layout.ts`)
 
 ```ts
-new Layout(host, storageKey)   .editor  .preview            // the editing column and the preview column
-.addPanel(id, { label, icon }) → body element             // a side panel + its rail button
+new Layout(host, storageKey)   .editor  .preview  .statusBar   // the editing column, the preview column, the status bar
+.addPanel(id, { label, icon }) → body element  .removePanel(id) // a side panel + its rail button
 .setDefault(id, open)  .setAvailable(id, available)  .choose(id, open)  .isOpen(id)  .dismiss()
 .remember<T>(name) → { load(), save(value) }               // sessionStorage `${storageKey}:${name}`, failures ignored
 ```
 
 - One grid on the host: side (rail + open panel) | editing column | preview; the status bar
-  spans all. The preview is a share of the widget (default half; the separator on its left edge
+  (`Workbench.registerStatusBarItem`; hidden while empty) spans all. The preview is a share of the widget (default half; the separator on its left edge
   sets it, drag or arrow keys, 20–80%, saved with the layout, applied as `--te-preview-share`), so
   opening or resizing a side panel narrows only the editing column (down to min(20rem, 25%), then
   the preview gives way too). The hand-built version of the `Layout` module planned by the dockview spike
@@ -875,7 +952,7 @@ new Layout(host, storageKey)   .editor  .preview            // the editing colum
   160–480px).
 - **Narrow** (widget < 720px, `ResizeObserver`): the open panel overlays the editing column, starts
   closed, opens only on the rail button and closes on Escape, a click outside, or `dismiss()`
-  (the widget calls it after a file was chosen in the panel).
+  (the file panel calls `SidePanel.dismiss()` after a file was chosen in it).
 
 ### Dark mode (`src/typst-editor/typst-editor.css`, `src/features/source-view/code-colors.ts`)
 
@@ -905,8 +982,9 @@ new Layout(host, storageKey)   .editor  .preview            // the editing colum
 ### File panel (`src/features/files`)
 
 ```ts
-new FilePanel(parent, dropTarget, { onOpen(path), onChange(change) → Promise<reason | null>, memory? })
-.render({ paths, main, active })   .showPresence(placedPresences)   .acceptDrops = boolean   .destroy()
+files({ fileList? })  fileNavigation()  assets(): TypstExtension   // the side panel, the frame links, the image/data file view
+new FilePanel(parent, { onOpen(path), onChange(change) → Promise<reason | null>, memory? }, state)
+.render({ paths, main, active })   .showPresence(placedPresences)   .upload(files)   .destroy()
 // tree/: new FileTree(parent, { onOpen, onRename, onDelete, onMove(source, folder), onUpload(files, folder), memory? })
 // tree-model.ts (pure): buildTree(paths, emptyFolders), visibleRows(tree, expanded), navigate(rows, current, key),
 //                       relocate(paths, source, target) → renames, filesUnder, folderOf, ancestorsOf
@@ -955,7 +1033,7 @@ documentLinks(provider) → CodeMirror extension      linkInfo(doc, provider, re
   (showing the host's refusal).
 - **Visual view**: the nested CodeMirror of every raw box gets `documentLinks` (the same tooltip as
   the Source view; no "Open …" row); an image box's path is a button.
-- **Widget**: `open` shows the file (the panel selects it and opens its folders); `create` asks
+- **Workbench**: `open` shows the file (the panel selects it and opens its folders); `create` asks
   for a `create` change like the panel's New file.
 
 ### Diagnostics in the widget (`src/features/diagnostics`)
@@ -964,7 +1042,8 @@ documentLinks(provider) → CodeMirror extension      linkInfo(doc, provider, re
 those of the shown file and those elsewhere (other files, packages or no location: only listed),
 and computes the status label ("✓ compiled" / "1 error, 2 warnings") and the jump target
 (`{path, from, to}`: earliest error in the shown file, else in another project file, else the
-same for warnings). `DiagnosticsStatus` renders it as a status bar below both panes; clicking the
+same for warnings). `DiagnosticsStatus` (the `diagnostics` extension: a status bar item, for the Typst file
+shown last, from `Workbench.diagnostics` / `onDidChangeDiagnostics`) renders it below both panes; clicking the
 label, or a listed diagnostic of a project file, opens that file and reveals the range in the
 source view, switching to the Source tab. Hovering or focusing the label lists the shown file's
 messages (with hints), each jumping to its range. Every document's views get the diagnostics of
@@ -998,7 +1077,8 @@ readThread(note) → {author, date, text}[]          // author/date null: an ano
 addReply(note, {author, date, text}) → note        // only an insertion after the last item
 editMessage(note, index, text) → note | null   deleteMessage(note, index) → note | null ('' = the only one)
 localDate(date?) → 'YYYY-MM-DD'
-new CommentAction(root, () => {document, view: {selection(), reveal(), editNote?()}} | null)   .button  .comment()  .destroy()
+comments({ user? }): TypstExtension   // CommentAction + command comments.addComment (Mod+Alt+KeyM) + Visual view options
+new CommentAction(doc, () => {document, view: {selection(), reveal(), editNote?()}} | null)   .button  .comment()  .destroy()
 VisualView.editNote(offset) → boolean   // focuses the reply box in the card of the note whose source holds offset
 // visual-view/notes-gutter: the notes gutter
 new NotesGutter(body, {user?})   .plugin (add to the editor state)  .edit(offset) → boolean  .destroy()
@@ -1063,11 +1143,12 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
   (`/.without-comments.typ`, or `-2`, … if taken) with `set-margin-note-defaults(hidden: true)`
   and `#include "<main>"` for notes written other ways (`margin-note.with(..)`, calls in code).
   Engine test: the result draws exactly the glyphs of the plain text.
-- **`CommentAction`**: "Comment" and Ctrl/Cmd+Alt+M (captured at the widget root). The Visual
+- **`CommentAction`** (the `comments` extension): "Comment" and Ctrl/Cmd+Alt+M (the command
+  `comments.addComment`, bound with `registerKeybinding`: captured at the widget root). The Visual
   view's toolbar has the button (`VisualViewOptions.comment` calls `CommentAction.comment()`);
   the tab bar keeps `CommentAction.button` for the Source view only
-  (`EditingViews.addTabAction(element, 'source')` hides it in the Visual view). Works on the
-  shown `.typ` file in the current view (`EditingViews.shown()`), applies the edits as one
+  (`registerTabBarItem(element, { mode: 'source' })` hides it in the Visual view). Works on the
+  shown `.typ` file in the current view (`Workbench.activeEditor`), applies the edits as one
   `document.change`, then `VisualView.editNote(note)` focuses the new note's reply box, or the
   Source view puts the caret into `[]`.
 - **Visual view, in the text** (`margin-notes.ts`): see `marginNote` / `noteRange` below. A point
@@ -1157,7 +1238,7 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
   only when that changed. Colors: the user's, else a palette entry by name; flag text black or
   white by WCAG contrast (`flagTextColor`). CSS: `--typst-remote-color`, `--typst-remote-text`.
 - **Widget presence**: the views of the shown file (above) and the file panel
-  (`FilePanel.showPresence`: a dot with initials per user on the files they are in). Not the
+  (the `collaboration` service's `onDidChangePresence` → `FilePanel.showPresence`: a dot with initials per user on the files they are in). Not the
   preview (decision 2026-10-10: carets there were noise; the preview is the output).
 - **Why not Tiptap's Collaboration / CollaborationCaret** (decision): they are built on
   y-prosemirror, which makes the ProseMirror document the shared truth (a Y.XmlFragment). Here
@@ -1165,9 +1246,11 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
   syncing ProseMirror trees would bypass the projection (raw boxes, pristine source, Source
   view and preview all follow the text). So the sync stays text-based and only the *look* of the
   carets follows Tiptap / y-codemirror.
-- **Widget (`CollaborationLink`)**: `import()`s `features/collaboration/collaboration.ts` on demand (own chunk, ~37 kB gzip
+- **The `collaboration` extension (`CollaborationLink`, `features/collaboration/collaboration-link.ts`, outside the
+  chunk)**: `import()`s `features/collaboration/collaboration.ts` on demand (own chunk, ~37 kB gzip
   with Yjs and the Hocuspocus provider), publishes the selection when the editing views report a change
-  (`onSelection` → `selectionChanged()`, once per microtask, while focus is in the editing area;
+  (`Workbench.onDidChangeEditorSelection` → `selectionChanged()`, once per microtask, while focus is in the
+  editing area (`Workbench.isEditorFocused`);
   not on the DOM's `selectionchange`, which fires before CodeMirror/ProseMirror read the new
   selection and so published the previous one), and moves the cursors along when another file is shown.
 - **Server (`server/`)**: `collabConfiguration({ storage?, database?, authenticate?, debounce?, gitlab?, extensions? })`
@@ -1219,7 +1302,8 @@ HTTP             GET /rooms/<room>/files/<path> (Authorization: Bearer <room tok
   `RoomVersions` (`save`, `onMessage` over the provider's
   stateless channel) and `SharedAssets` (assets ↔ project's other files; repository files
   fetched from the files endpoint, uploads as bytes; bytes → sha after a commit is not a
-  change). `CollaborationLink` passes `versions` to the widget, which mounts `VersionControls`
+  change). `CollaborationLink` passes `versions` to the `collaboration` service (`onDidConnectVersions`); the
+  `versions` extension then puts `VersionControls` into the tab bar
   (`src/features/versions/versions.ts`): "Save version" + commit-message popover + status line.
 
 ### Demo playground (`demo/`, `server/src/playground`)

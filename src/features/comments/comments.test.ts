@@ -12,7 +12,7 @@ function setup(text: string, view: NoteView | ((document: TypstDocument, parent:
   document.body.append(root);
   const doc = new TypstDocument(text);
   const shown = typeof view === 'function' ? view(doc, root) : view;
-  const action = new CommentAction(root, () => ({ document: doc, view: shown }));
+  const action = new CommentAction(document, () => ({ document: doc, view: shown }));
   root.append(action.button);
   return { doc, root, action, view: shown };
 }
@@ -25,16 +25,6 @@ describe('CommentAction', () => {
     expect(doc.text).toBe(`${IMPORT}Hello #margin-note[world][]\n`);
     const body = doc.text.lastIndexOf('[]') + 1;
     expect(reveal).toHaveBeenCalledWith(body, body);
-  });
-
-  it('answers Ctrl/Cmd+Alt+M and keeps it from the editors', () => {
-    const { doc, root } = setup('Hi\n', { selection: () => ({ from: 2, to: 2 }), reveal: () => {} });
-    const inner = root.appendChild(document.createElement('div'));
-    const seen = vi.fn();
-    inner.addEventListener('keydown', seen);
-    inner.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyM', altKey: true, ctrlKey: true, bubbles: true }));
-    expect(doc.text).toBe(`${IMPORT}Hi#margin-note[]\n`);
-    expect(seen).not.toHaveBeenCalled();
   });
 
   it('opens the new note\'s card in the Visual view: the first message is signed with name and date', () => {

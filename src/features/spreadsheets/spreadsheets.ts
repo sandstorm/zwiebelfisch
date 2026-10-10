@@ -1,11 +1,36 @@
-// SpreadsheetView: a spreadsheet file (`.ic`) shown and edited in IronCalc's workbook UI; every edit saves the file
-// and the Typst file documents import. Entry of features/spreadsheets/. See ARCHITECTURE.md, "Spreadsheets".
-import { type FileContent } from '../../core/project/project';
+// The spreadsheets extension: a spreadsheet file (`.ic`) shown and edited in IronCalc's workbook UI
+// (SpreadsheetView); every edit saves the file and the Typst file documents import. Entry of features/spreadsheets/.
+// See ARCHITECTURE.md, "Spreadsheets".
+import { type FileContent, type Project } from '../../core/project/project';
 import { ProjectPath } from '../../core/paths/paths';
+import type { TypstExtension, Workbench } from '../../hosts/workbench/workbench';
+import { typstPath } from './typst-file';
 import type { MountedWorkbook, WorkbookEdit } from './workbook';
 
-export { typstPath } from './typst-file';
-export type { WorkbookEdit } from './workbook';
+/** Spreadsheet files in the editing area: IronCalc's workbook UI; every edit is stored with its Typst file. */
+export function spreadsheets(): TypstExtension {
+  return {
+    id: 'spreadsheets',
+    activate({ project, workbench, subscriptions }) {
+      subscriptions.push(
+        workbench.registerFileView('spreadsheet', {
+          createFileView: (parent) => {
+            const view = new SpreadsheetView(parent, (path, edit) => save(project, workbench, path, edit));
+            return { show: (path, content) => void view.show(path, content), hide: () => view.hide(), dispose: () => view.destroy() };
+          },
+        }),
+      );
+    },
+  };
+}
+
+/** Stores an edit of spreadsheet `path`: its bytes, and its Typst file next to it (`typstPath`). */
+function save(project: Project, workbench: Workbench, path: ProjectPath, { bytes, typst: content }: WorkbookEdit): void {
+  void workbench.applyChange({ kind: 'update', path, content: bytes });
+  const target = typstPath(path);
+  if (project.content(target) === content) return;
+  void workbench.applyChange(project.has(target) ? { kind: 'update', path: target, content } : { kind: 'create', path: target, content });
+}
 
 /**
  * The editing area of a spreadsheet: a title and IronCalc's workbook UI,
@@ -14,7 +39,7 @@ export type { WorkbookEdit } from './workbook';
  * Typst file (tables and values, see `spreadsheetTypst`); the host stores
  * both (the Typst file at `typstPath`).
  */
-export class SpreadsheetView {
+class SpreadsheetView {
   private readonly root: HTMLElement;
   private readonly title: HTMLElement;
   private readonly body: HTMLElement;

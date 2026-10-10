@@ -1,12 +1,43 @@
-// Comments are drafting margin notes in the source: the "Comment" button / Ctrl+Alt+M (CommentAction), and the
-// note syntax the Visual view reads. Entry of features/comments/. See ARCHITECTURE.md, "Comments = margin notes".
+// The comments extension: comments are drafting margin notes in the source. The "Comment" button / Ctrl+Alt+M
+// (CommentAction) and the note syntax the Visual view reads. Entry of features/comments/.
+// See ARCHITECTURE.md, "Comments = margin notes".
+import { Disposable } from '../../core/disposable/disposable';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
+import type { TypstExtension } from '../../hosts/workbench/workbench';
 import { addMarginNote } from './add-margin-note';
 
 export { addMarginNote, NOTE_STYLE } from './add-margin-note';
 export { NOTE_HEAD, noteCallSyntax, printNoteCall, rangeNoteSyntax, safeNote } from './margin-note-syntax';
 export { withoutNotes, type PdfEntry } from './without-notes';
 export { addReply, deleteMessage, editMessage, localDate, readThread, type NewMessage, type NoteMessage } from './note-thread';
+
+declare module '../../hosts/workbench/workbench' {
+  interface CommandRegistry {
+    /** Adds a margin note at the selection of the view the user works in (the comments extension). */
+    'comments.addComment': () => void;
+  }
+}
+
+/**
+ * Comments as margin notes, written as `user` (signs replies; only own messages can be edited): "Comment" in the
+ * Visual view's toolbar and, for the Source view, in the tab bar; Ctrl/Cmd+Alt+M in both.
+ */
+export function comments(options: { user?: { name: string } } = {}): TypstExtension {
+  return {
+    id: 'comments',
+    activate({ workbench, visualView, subscriptions }) {
+      const action = new CommentAction(workbench.ownerDocument, () => workbench.activeEditor);
+      subscriptions.push(
+        new Disposable(() => action.destroy()),
+        workbench.registerCommand('comments.addComment', () => action.comment()),
+        workbench.registerKeybinding('Mod+Alt+KeyM', 'comments.addComment'),
+        // the Visual view has "Comment" in its own toolbar
+        workbench.registerTabBarItem(action.button, { mode: 'source' }),
+        visualView.registerDocumentOptions(() => ({ user: options.user, comment: () => action.comment() })),
+      );
+    },
+  };
+}
 
 /** An editing view a note can be added in (source offsets throughout). */
 export interface NoteView {
@@ -20,21 +51,19 @@ export interface NoteView {
 export type NoteTarget = () => { document: TypstDocument; view: NoteView } | null;
 
 /**
- * The "Comment" button (and Ctrl/Cmd+Alt+M inside `root`): adds a `drafting`
- * margin note at the selection of the active view, in the document's own
- * Typst (`#margin-note[selection][]`, or `#margin-note[]` at a cursor, plus
- * the import), and puts the cursor into the new note.
+ * The "Comment" button: adds a `drafting` margin note at the selection of the
+ * active view, in the document's own Typst (`#margin-note[selection][]`, or
+ * `#margin-note[]` at a cursor, plus the import), and puts the cursor into the
+ * new note. The comments extension binds `comment` to Ctrl/Cmd+Alt+M as well.
  */
 export class CommentAction {
   /** The button, for the host's toolbar. */
   readonly button: HTMLButtonElement;
 
-  constructor(private readonly root: HTMLElement, private readonly target: NoteTarget) {
-    this.button = commentButton(root.ownerDocument);
+  constructor(doc: Document, private readonly target: NoteTarget) {
+    this.button = commentButton(doc);
     this.button.addEventListener('mousedown', (event) => event.preventDefault()); // keep the editor's selection
     this.button.addEventListener('click', () => this.comment());
-    // Capture: the shortcut is ours before an editor sees it.
-    root.addEventListener('keydown', this.handleKey, true);
   }
 
   /** Adds a note at the active view's selection and focuses it; does nothing where no note fits. */
@@ -49,16 +78,8 @@ export class CommentAction {
   }
 
   destroy(): void {
-    this.root.removeEventListener('keydown', this.handleKey, true);
     this.button.remove();
   }
-
-  private readonly handleKey = (event: KeyboardEvent): void => {
-    if (event.code !== 'KeyM' || !event.altKey || !(event.metaKey || event.ctrlKey)) return;
-    event.preventDefault();
-    event.stopPropagation();
-    this.comment();
-  };
 }
 
 function commentButton(doc: Document): HTMLButtonElement {

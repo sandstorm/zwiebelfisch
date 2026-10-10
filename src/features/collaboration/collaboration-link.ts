@@ -1,7 +1,69 @@
-// CollaborationLink: connects the widget to a Collaboration (loaded on demand). See typst-editor.ts.
-import type { Collaboration, CollaborationOptions, RoomVersions, Shared } from './collaboration';
+// The collaboration extension and CollaborationLink: connects the widget to a Collaboration (loaded on demand, so
+// this file must stay outside the lazily loaded chunk). See ARCHITECTURE.md, "Collaboration".
+import type { Collaboration, CollaborationOptions, CollaborationUser, RoomVersions, Shared } from './collaboration';
+import { Disposable } from '../../core/disposable/disposable';
+import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { PlacedPresence, PresenceTarget } from '../../core/typst-document/typst-document';
+import type { TypstExtension } from '../../hosts/workbench/workbench';
+
+declare module '../../hosts/workbench/workbench' {
+  interface ServiceRegistry {
+    /** The collaboration session (the collaboration extension, only with the `collaboration` option). */
+    collaboration: CollaborationSession;
+  }
+}
+
+/** What other extensions learn from the collaboration session. */
+export interface CollaborationSession {
+  /** Where the other users are, in every file (e.g. for the file panel). */
+  readonly onDidChangePresence: Event<readonly PlacedPresence[]>;
+  /** Once connected to a room backed by a GitLab branch: its versions ("Save version"); at once for a late listener. */
+  onDidConnectVersions(listener: (versions: RoomVersions) => void): Disposable;
+}
+
+/**
+ * Real-time collaboration (`options`: see `CollaborationOptions`) as `user`: shares the project, publishes the
+ * local selection, draws the others' carets in the shown file's views and provides the `collaboration` service.
+ */
+export function collaboration(options: CollaborationOptions, user?: CollaborationUser): TypstExtension {
+  return {
+    id: 'collaboration',
+    activate({ project, workbench, services, subscriptions }) {
+      const presence = new EventEmitter<readonly PlacedPresence[]>();
+      const connected = new EventEmitter<RoomVersions>();
+      let versions: RoomVersions | null = null;
+      const link = new CollaborationLink(options, { project, user }, {
+        current: () => workbench.activeEditor,
+        focused: () => workbench.isEditorFocused(),
+        onVersions: (opened) => {
+          versions = opened;
+          connected.fire(opened);
+        },
+        onPresence: (presences) => presence.fire(presences),
+      });
+      const showCursors = () => {
+        const editor = workbench.activeEditor;
+        link.show(editor?.path ?? null, editor?.views ?? []);
+      };
+      subscriptions.push(
+        new Disposable(() => link.destroy()),
+        presence,
+        connected,
+        services.provide('collaboration', {
+          onDidChangePresence: presence.event,
+          onDidConnectVersions: (listener) => {
+            if (versions) listener(versions);
+            return connected.event(listener);
+          },
+        }),
+        workbench.onDidShowFile(showCursors),
+        // fired from the editors' own updates, after their state has the new selection
+        workbench.onDidChangeEditorSelection(() => link.selectionChanged()),
+      );
+    },
+  };
+}
 
 /** The editing view the local user works in, and what it has selected. */
 export interface CurrentSelection {
@@ -13,6 +75,8 @@ export interface CurrentSelection {
 export interface LinkedWidget {
   /** Where the local user's selection is (null: not in a Typst file). */
   current(): CurrentSelection | null;
+  /** Whether the user works in the widget's editing area (only then is the selection published). */
+  focused(): boolean;
   /** Called once connected, in a room backed by a GitLab branch ("Save version"). */
   onVersions?(versions: RoomVersions): void;
   /** The other users' places changed (every file; e.g. for the file panel). */
@@ -35,7 +99,6 @@ export class CollaborationLink {
   constructor(
     options: CollaborationOptions,
     shared: Shared,
-    private readonly area: HTMLElement,
     private readonly widget: LinkedWidget,
   ) {
     void this.start(options, shared);
@@ -75,14 +138,9 @@ export class CollaborationLink {
     this.scheduled = true;
     queueMicrotask(() => {
       this.scheduled = false;
-      if (!this.collaboration || !this.focused()) return;
+      if (!this.collaboration || !this.widget.focused()) return;
       const current = this.widget.current();
       this.collaboration.setCursor(current?.path ?? null, current?.view.selection());
     });
-  }
-
-  private focused(): boolean {
-    const root = this.area.getRootNode() as Document | ShadowRoot;
-    return root.activeElement !== null && this.area.contains(root.activeElement);
   }
 }

@@ -1,29 +1,25 @@
-// createTypstEditor: the widget. Composes a Project, the editing views (typst-editor/editing-views.ts), the
-// preview, the file panel (in typst-editor/layout.ts), the status bar and the features. See ARCHITECTURE.md, "createTypstEditor".
+// createTypstEditor: the widget. A Project in the workbench host (hosts/workbench), with the built-in extensions
+// configured from the options. See ARCHITECTURE.md, "createTypstEditor".
 // Why the API looks like this: a Typst document is a project of files, and the main file is one of them. So the
 // host gives and gets every file through one map (`files`, `onFilesChange`); `source` is only a shortcut for the
 // main file's text, for hosts that edit a single file.
 import type { CollaborationOptions } from '../features/collaboration/collaboration';
-import type { Diagnostic } from '../core/typst-engine/typst-engine';
-import type { TypstDocument } from '../core/typst-document/typst-document';
-import { Preview } from '../features/preview/preview';
-import proseMirrorStyles from '../features/visual-view/visual-view.css?inline';
-import { AssetView, FileNavigation, FilePanel, filesPanelIcon } from '../features/files/files';
+import { collaboration } from '../features/collaboration/collaboration-link';
+import { comments } from '../features/comments/comments';
+import { diagnostics } from '../features/diagnostics/diagnostics';
+import { assets, fileNavigation, files } from '../features/files/files';
 import fileStyles from '../features/files/files.css?inline';
-import { CommentAction } from '../features/comments/comments';
-import { CollaborationLink } from '../features/collaboration/collaboration-link';
-import { DiagnosticsStatus, summarizeDiagnostics } from '../features/diagnostics/diagnostics';
-import { ColorScheme, EditingViews, type EditorMode, Layout, layoutStyles } from '../hosts/workbench/workbench';
+import { labels } from '../features/labels/labels';
+import { pdfExport } from '../features/pdf-export/pdf-export';
+import { projectRenderings } from '../features/project-renderings/project-renderings';
+import { spreadsheets } from '../features/spreadsheets/spreadsheets';
+import { styles } from '../features/styles/styles';
+import { versions } from '../features/versions/versions';
+import proseMirrorStyles from '../features/visual-view/visual-view.css?inline';
+import { type EditorMode, type TypstExtension, WorkbenchHost, workbenchStyles } from '../hosts/workbench/workbench';
 import { type FileChange, Project, type ProjectFiles } from '../core/project/project';
 import { ProjectPath } from '../core/paths/paths';
-import { DocumentLinkProvider, neighbours } from '../core/document-links/document-links';
-import { PdfExport } from '../features/pdf-export/pdf-export';
-import { ProjectRenderings } from '../features/project-renderings/project-renderings';
-import { LabelIndex } from '../features/labels/labels';
-import { newStyle, StyleIndex } from '../features/styles/styles';
-import { SpreadsheetView, typstPath, type WorkbookEdit } from '../features/spreadsheets/spreadsheets';
-import styles from './typst-editor.css?inline';
-import { VersionControls, type Versions } from '../features/versions/versions';
+import widgetStyles from './typst-editor.css?inline';
 
 export type { CollaborationOptions } from '../features/collaboration/collaboration';
 export type { EditorMode } from '../hosts/workbench/workbench';
@@ -140,330 +136,67 @@ export interface TypstEditor {
  * shadow root when `host` lives in one. Attach `host` before calling this.
  */
 export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions): TypstEditor {
-  const widget = new Widget(host, options);
-  const main = widget.project.document(widget.project.main)!;
+  injectStyles(host);
+  const main = ProjectPath.of(options.main ?? '/main.typ');
+  const project = new Project(main, { ...options.files, ...(options.source === undefined ? {} : { [main]: options.source }) });
+  const workbench = new WorkbenchHost(host, project, {
+    mode: options.mode,
+    theme: options.theme,
+    followCursor: options.followCursor,
+    allowFileChange: options.allowFileChange,
+    onOpen: options.onOpen,
+  });
+  workbench.activate(builtinExtensions(options));
+  // after the workbench's and the extensions' listeners: the host hears about a change once the widget shows it
+  const unsubscribe = project.onChange((change) => options.onFilesChange?.(change));
+  const document = project.document(main)!;
   return {
     get files() {
-      return widget.project.files();
+      return project.files();
     },
     set files(next: ProjectFiles) {
-      widget.replaceFiles(next);
+      project.replace(next); // listeners hear about every file
+      // shown again: a file view shows the new content of a replaced file (a spreadsheet)
+      workbench.open(workbench.activeFile);
     },
     get source() {
-      return main.text;
+      return document.text;
     },
     set source(text: string) {
-      main.setText(text, 'api');
+      document.setText(text, 'api');
     },
     get activeFile() {
-      return widget.active;
+      return workbench.activeFile;
     },
     open: (path) => {
       const parsed = ProjectPath.parse(path);
-      if (parsed) widget.open(parsed);
+      if (parsed) workbench.open(parsed);
     },
-    exportPdf: (options = {}) => widget.pdfs.blob(options.comments ?? false),
-    destroy: () => widget.destroy(),
+    exportPdf: (pdf = {}) => workbench.executeCommand('pdfExport.export', pdf.comments ?? false),
+    destroy: () => {
+      unsubscribe();
+      workbench.destroy();
+      project.destroy();
+    },
   };
 }
 
-/** The composition: which file is shown where, and who hears about what. */
-class Widget {
-  readonly project: Project;
-  /** The file shown in the editing area. */
-  active: ProjectPath;
-  /** The Typst file shown last: where images are inserted and whose diagnostics the status counts. */
-  private lastSource: ProjectPath;
-  private diagnostics: Diagnostic[] | null = null;
-  private readonly layout: Layout;
-  private readonly left: HTMLElement;
-  private readonly right: HTMLElement;
-  private readonly status: DiagnosticsStatus;
-  private readonly preview: Preview;
-  readonly pdfs: PdfExport;
-  private readonly views: EditingViews;
-  private readonly navigation: FileNavigation;
-  private readonly files: FilePanel;
-  private readonly assets: AssetView;
-  private readonly spreadsheets: SpreadsheetView;
-  private readonly renderings: ProjectRenderings;
-  private readonly labels: LabelIndex;
-  private readonly styles: StyleIndex;
-  private readonly commentAction: CommentAction;
-  private readonly scheme: ColorScheme;
-  private readonly collaboration: CollaborationLink | null = null;
-  private versions: VersionControls | null = null;
-  private readonly unsubscribe: () => void;
-
-  constructor(
-    private readonly host: HTMLElement,
-    private readonly options: TypstEditorOptions,
-  ) {
-    injectStyles(host);
-    const main = ProjectPath.of(options.main ?? '/main.typ');
-    const files = { ...options.files, ...(options.source === undefined ? {} : { [main]: options.source }) };
-    this.project = new Project(main, files);
-    this.active = this.lastSource = main;
-    host.classList.add('typst-editor');
-    if (options.theme) host.dataset.theme = options.theme;
-    this.scheme = new ColorScheme(host);
-    this.layout = new Layout(host, `typst-editor:${main}`);
-    this.left = this.layout.editor;
-    this.right = this.layout.preview;
-
-    this.status = new DiagnosticsStatus(host, (target) => this.jump(target, true));
-    this.preview = new Preview(this.right, {
-      onJump: (jump) => this.jump(jump),
-      onDiagnostics: (diagnostics) => this.showDiagnostics(diagnostics),
-      follow: options.followCursor ?? rememberedFollow() ?? true,
-      onFollowChange: rememberFollow,
-      pdf: options.pdfDownload === false ? undefined : (comments) => this.pdfs.file(comments),
-    });
-    this.pdfs = new PdfExport(this.project, this.preview);
-    this.labels = new LabelIndex(this.project);
-    this.styles = new StyleIndex(this.project);
-    this.renderings = new ProjectRenderings({ project: this.project, preview: this.preview, request: (change) => this.request(change) });
-    this.views = this.mountViews();
-    this.navigation = new FileNavigation(host.ownerDocument, (path) => this.open(path));
-    this.views.setFrame(this.navigation.top, this.navigation.bottom);
-    // Drops anywhere on the widget (also the preview): never the browser opening the file instead.
-    const filesBody = this.layout.addPanel('files', { label: 'Files', icon: filesPanelIcon(host.ownerDocument) });
-    this.files = new FilePanel(filesBody, host, {
-      onOpen: (path) => {
-        this.open(path);
-        this.layout.dismiss();
-      },
-      onChange: (change) => this.request(change),
-      memory: this.layout.remember('folders'),
-    }, { paths: this.project.paths(), main, active: main });
-    this.assets = new AssetView(this.left);
-    this.spreadsheets = new SpreadsheetView(this.left, (path, edit) => this.saveSpreadsheet(path, edit));
-    this.unsubscribe = this.project.onChange((change) => this.changed(change));
-    // the Visual view has "Comment" in its toolbar; the tab bar's button is for the Source view
-    this.commentAction = new CommentAction(host, () => this.views.shown());
-    this.views.addTabAction(this.commentAction.button, 'source');
-    this.open(main);
-    if (options.collaboration) {
-      this.collaboration = this.mountCollaboration(options.collaboration);
-      this.showCursors();
-    }
-    this.refresh();
-  }
-
-  open(path: ProjectPath): void {
-    if (!this.project.has(path)) return;
-    const changed = path !== this.active;
-    this.active = path;
-    const document = this.project.document(path);
-    const spreadsheet = ProjectPath.kind(path) === 'spreadsheet';
-    if (document) this.lastSource = path;
-    if (document || spreadsheet) this.assets.hide();
-    else this.assets.show(path, this.project.content(path)!);
-    // reopened on every open: a spreadsheet changed elsewhere (replaced files) shows its new content
-    if (spreadsheet) void this.spreadsheets.show(path, this.project.content(path)!);
-    else this.spreadsheets.hide();
-    this.views.show(document ?? null);
-    this.showNeighbours();
-    this.showCursors();
-    this.renderFiles();
-    this.showStatus();
-    if (changed) this.options.onOpen?.(path);
-  }
-
-  /** The Visual/Source views of every document, wired to the preview, collaboration and file links. */
-  private mountViews(): EditingViews {
-    return new EditingViews(this.left, {
-      mode: this.options.mode,
-      visualOptions: (document) => ({
-        ...this.renderings.forDocument(document),
-        user: this.options.user,
-        comment: () => this.commentAction.comment(),
-        labels: this.labels,
-        styles: { ...this.styles.forDocument(document), create: () => void this.newStyle() },
-      }),
-      documentLinks: (document) => this.documentLinks(document),
-      onCursor: (document, offset) => {
-        const path = this.project.pathOf(document);
-        if (path) void this.preview.reveal(path, offset);
-      },
-      // Publish the local selection from the editors' own updates: the DOM's selectionchange
-      // fires before CodeMirror/ProseMirror read the new selection, so it would publish the previous one.
-      onSelection: () => this.collaboration?.selectionChanged(),
-    });
-  }
-
-  /** Shares the project; the others' carets show in the shown file's views and the file panel. */
-  private mountCollaboration(options: CollaborationOptions): CollaborationLink {
-    const shared = { project: this.project, user: this.options.user };
-    const current = () => {
-      const document = this.project.document(this.active);
-      if (!document) return null;
-      const views = this.views.viewsOf(document);
-      return { path: this.active, view: this.views.mode === 'visual' ? views.visual : views.source };
-    };
-    return new CollaborationLink(options, shared, this.left, {
-      current,
-      onVersions: (versions) => this.mountVersions(versions),
-      // Where the others are, in every file: dots in the file panel.
-      onPresence: (presences) => this.files.showPresence(presences),
-    });
-  }
-
-  /** "Save version" next to the tabs, in a room backed by a GitLab branch. */
-  private mountVersions(versions: Versions): void {
-    const toolbar = this.host.ownerDocument.createElement('span');
-    toolbar.className = 'typst-editor__tab-actions';
-    this.views.addTabAction(toolbar);
-    this.versions = new VersionControls(toolbar, versions, { user: this.options.user });
-  }
-
-  private showCursors(): void {
-    const document = this.project.document(this.active);
-    const views = document ? this.views.viewsOf(document) : null;
-    this.collaboration?.show(views ? this.active : null, views ? [views.visual, views.source] : []);
-  }
-
-  replaceFiles(files: ProjectFiles): void {
-    this.project.replace(files); // listeners (also `changed`) hear about every file
-    // shown again: a file view shows the new content of a replaced file (a spreadsheet)
-    this.open(this.active);
-  }
-
-  destroy(): void {
-    this.unsubscribe();
-    this.versions?.destroy();
-    this.collaboration?.destroy();
-    this.commentAction.destroy();
-    this.views.destroy();
-    this.files.destroy();
-    this.assets.destroy();
-    this.spreadsheets.destroy();
-    this.renderings.destroy();
-    this.labels.destroy();
-    this.styles.destroy();
-    this.preview.destroy();
-    this.status.destroy();
-    this.project.destroy();
-    this.host.classList.remove('typst-editor');
-    delete this.host.dataset.theme;
-    this.scheme.destroy();
-    this.layout.destroy();
-  }
-
-  private refresh(): void {
-    this.preview.update(this.project.files(), this.project.main);
-  }
-
-  private changed(change: FileChange): void {
-    this.refresh();
-    this.showNeighbours(); // an #include may have been added, moved or removed
-    if (change.kind !== 'update') this.restructured(change);
-    this.options.onFilesChange?.(change);
-  }
-
-  /** Keeps `active` and `lastSource` pointing at existing files after a create / rename / delete. */
-  private restructured(change: FileChange): void {
-    const follow = (path: ProjectPath) => {
-      if (change.kind === 'rename' && change.from === path) return change.path;
-      return this.project.has(path) ? path : this.project.main;
-    };
-    this.views.retain(this.documents());
-    this.lastSource = follow(this.lastSource);
-    this.open(follow(this.active));
-  }
-
-  /** Applies a change asked for in the file panel (or a link), if the project and the host allow it. */
-  private async request(change: FileChange): Promise<string | null> {
-    const problem = this.project.check(change);
-    if (problem) return problem;
-    const allowed = (await this.options.allowFileChange?.(change)) ?? true;
-    if (!allowed) return 'This change is not allowed here.';
-    // The project may have changed while the host decided.
-    const late = this.project.check(change);
-    if (late) return late;
-    this.project.apply(change);
-    return null;
-  }
-
-  /** The links of `document`: its paths resolve from its current path and open here. */
-  private documentLinks(document: TypstDocument): DocumentLinkProvider {
-    return new DocumentLinkProvider({
-      resolve: (reference) => {
-        const file = this.project.pathOf(document);
-        return file ? ProjectPath.resolve(file, reference) : null;
-      },
-      exists: (path) => this.project.has(path),
-      open: (path) => this.open(path),
-      create: async (path) => {
-        const problem = await this.request({ kind: 'create', path, content: '' });
-        if (problem === null) this.open(path);
-        return problem;
-      },
-    });
-  }
-
-  /**
-   * "New style…": appends a paragraph style to start from to the file holding most styles (else
-   * `/styles.typ`, created when missing) and shows it in the Source view.
-   */
-  private async newStyle(): Promise<void> {
-    const path = this.styles.homeFile();
-    const file = this.project.document(path);
-    const added = newStyle(file?.text ?? '');
-    if (file) file.change([{ from: file.text.length, to: file.text.length, insert: added.text.slice(file.text.length) }], 'new-style');
-    else if ((await this.request({ kind: 'create', path, content: added.text })) !== null) return;
-    this.jump({ path, from: added.from, to: added.to }, true);
-  }
-
-  /** Stores an edit of spreadsheet `path`: its bytes, and its Typst file next to it (`typstPath`). */
-  private saveSpreadsheet(path: ProjectPath, { bytes, typst: content }: WorkbookEdit): void {
-    void this.request({ kind: 'update', path, content: bytes });
-    const target = typstPath(path);
-    if (this.project.content(target) === content) return;
-    void this.request(this.project.has(target) ? { kind: 'update', path: target, content } : { kind: 'create', path: target, content });
-  }
-
-  /**
-   * Opens the file of `target` and reveals the range (in the source view on request). Its path comes from the
-   * engine (a click in the preview, a diagnostic): a package file is no project path, and is ignored.
-   */
-  private jump(target: { path: string; from: number; to: number }, inSource = false): void {
-    const path = ProjectPath.parse(target.path);
-    if (!path || !this.project.document(path)) return;
-    if (path !== this.active) this.open(path);
-    this.views.reveal(target.from, target.to, inSource);
-  }
-
-  /** "← previous file" / "next file →" around an included file, in the main file's reading order. */
-  private showNeighbours(): void {
-    this.navigation.show(neighbours((path) => this.project.document(path)?.text, this.project.main, this.active));
-  }
-
-  private showDiagnostics(diagnostics: Diagnostic[]): void {
-    this.diagnostics = diagnostics;
-    for (const document of this.documents()) {
-      const path = this.project.pathOf(document);
-      this.views.setDiagnostics(document, diagnostics.filter((d) => d.path === path));
-    }
-    this.showStatus();
-  }
-
-  private showStatus(): void {
-    if (this.diagnostics) this.status.show(summarizeDiagnostics(this.diagnostics, this.lastSource));
-  }
-
-  private renderFiles(): void {
-    const paths = this.project.paths();
-    const mode = this.options.fileList ?? 'auto';
-    this.layout.setAvailable('files', mode !== 'hide');
-    this.layout.setDefault('files', mode === 'show' || paths.length > 1);
-    this.files.acceptDrops = mode !== 'hide';
-    this.files.render({ paths, main: this.project.main, active: this.active });
-  }
-
-  private documents() {
-    return this.project.paths().flatMap((path) => this.project.document(path) ?? []);
-  }
+/** The features of the widget, in activation order (an extension reads the services of those before it). */
+function builtinExtensions(options: TypstEditorOptions): TypstExtension[] {
+  return [
+    labels(),
+    styles(),
+    ...(options.collaboration ? [collaboration(options.collaboration, options.user)] : []),
+    files({ fileList: options.fileList }),
+    fileNavigation(),
+    assets(),
+    spreadsheets(),
+    diagnostics(),
+    versions({ user: options.user }),
+    comments({ user: options.user }),
+    projectRenderings(),
+    pdfExport({ download: options.pdfDownload }),
+  ];
 }
 
 const STYLE_ID = 'typst-editor-styles';
@@ -474,26 +207,6 @@ function injectStyles(host: HTMLElement): void {
   if (target.querySelector(`#${STYLE_ID}`)) return;
   const style = host.ownerDocument.createElement('style');
   style.id = STYLE_ID;
-  style.textContent = proseMirrorStyles + styles + layoutStyles + fileStyles;
+  style.textContent = proseMirrorStyles + widgetStyles + workbenchStyles + fileStyles;
   target.append(style);
-}
-
-const FOLLOW_KEY = 'typst-editor:follow-cursor';
-
-/** The viewer's last "Follow cursor" choice, if storage has one (storage may be unavailable). */
-function rememberedFollow(): boolean | null {
-  try {
-    const stored = localStorage.getItem(FOLLOW_KEY);
-    return stored === null ? null : stored === 'true';
-  } catch {
-    return null;
-  }
-}
-
-function rememberFollow(on: boolean): void {
-  try {
-    localStorage.setItem(FOLLOW_KEY, String(on));
-  } catch {
-    // private window, blocked storage: the choice lasts for this page only
-  }
 }

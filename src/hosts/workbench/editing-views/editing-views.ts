@@ -1,4 +1,4 @@
-// EditingViews: the Visual/Source tabs; lazily one VisualView and SourceView per document. See typst-editor.ts.
+// EditingViews: the Visual/Source tabs; lazily one VisualView and SourceView per document. See workbench.ts.
 import type { Highlight, TypstDocument } from '../../../core/typst-document/typst-document';
 import type { DocumentLinkProvider } from '../../../core/document-links/document-links';
 import { describeDiagnostic, SourceView, type SourceDiagnostic } from '../../../features/source-view/source-view';
@@ -91,11 +91,15 @@ export class EditingViews {
     return views ? { document: this.active!, view: views[this.current] } : null;
   }
 
-  /** Puts a control (e.g. the "Comment" button) at the end of the tab bar; with `mode`, it only shows in that view. */
-  addTabAction(element: HTMLElement, mode?: EditorMode): void {
+  /** Puts a control (e.g. the "Comment" button) at the end of the tab bar; with `mode`, it only shows in that view. Returns its removal. */
+  addTabAction(element: HTMLElement, mode?: EditorMode): () => void {
     if (mode) this.modeActions.set(element, mode);
     this.tabs.append(element);
     this.layout();
+    return () => {
+      this.modeActions.delete(element);
+      element.remove();
+    };
   }
 
   /**
@@ -103,21 +107,24 @@ export class EditingViews {
    * content (in the Visual view below its toolbar, above the first block), in
    * its scrolling pane, so they are the first and last thing of the file;
    * across tab and document switches; detached while no document is shown.
+   * null removes the frame.
    */
-  setFrame(top: HTMLElement, bottom: HTMLElement): void {
-    this.frame = { top, bottom };
+  setFrame(frame: { top: HTMLElement; bottom: HTMLElement } | null): void {
+    this.frame?.top.remove();
+    this.frame?.bottom.remove();
+    this.frame = frame;
     this.layout();
   }
 
   /**
-   * Reveals `from..to` of the shown document in the current view, or (`inSource`)
-   * in the source view, switching to the Source tab so that the range is visible.
+   * Reveals `from..to` of the shown document in the current view, or in the view of
+   * `mode`, switching to its tab so that the range is visible.
    */
-  reveal(from: number, to: number, inSource = false): void {
+  reveal(from: number, to: number, mode?: EditorMode): void {
     const views = this.active && this.views.get(this.active);
     if (!views) return;
-    if (inSource && this.current !== 'source') this.switchTo('source');
-    (this.current === 'source' ? views.source : views.visual).reveal(from, to);
+    if (mode && this.current !== mode) this.switchTo(mode);
+    views[this.current].reveal(from, to);
   }
 
   /** Marks `diagnostics` in both views of `document`, now or when they are created. */

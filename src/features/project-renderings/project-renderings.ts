@@ -1,12 +1,31 @@
 // ProjectRenderings: what a document's Visual view renders and inserts (snippets, image URLs, uploads).
 // Kept as one unit for now; the slices wave splits it into the `images` extension (image URLs, uploads)
 // and `rendered-boxes` (snippets). See ARCHITECTURE.md, "createTypstEditor".
+import { Disposable } from '../../core/disposable/disposable';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
+import type { TypstExtension } from '../../hosts/workbench/workbench';
 import type { Preview } from '../preview/preview';
 import type { VisualViewOptions } from '../visual-view/visual-view';
 import { type FileChange, type FileContent, type Project } from '../../core/project/project';
 import { type PathReference, ProjectPath } from '../../core/paths/paths';
 import { uploadChanges } from '../files/files';
+
+/**
+ * What every document's Visual view renders and inserts: compiled snippets from the preview, the project's image
+ * files, and the images "Insert image" offers or uploads (uploads go through `Workbench.applyChange`).
+ */
+export function projectRenderings(): TypstExtension {
+  return {
+    id: 'project-renderings',
+    activate({ project, workbench, preview, visualView, subscriptions }) {
+      const renderings = new ProjectRenderings({ project, preview: preview.engine, request: (change) => workbench.applyChange(change) });
+      subscriptions.push(
+        new Disposable(() => renderings.destroy()),
+        visualView.registerDocumentOptions((document) => renderings.forDocument(document)),
+      );
+    },
+  };
+}
 
 export interface ProjectRenderingsOptions {
   project: Project;

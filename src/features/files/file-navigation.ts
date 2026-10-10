@@ -1,5 +1,5 @@
 // FileNavigation: "← previous file" and "next file →" above and below an included file, in the main file's
-// reading order. See typst-editor.ts and core/project/reading-order.ts.
+// reading order. See files.ts and core/document-links/reading-order.ts.
 import { ProjectPath } from '../../core/paths/paths';
 
 /**

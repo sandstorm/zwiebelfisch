@@ -1,12 +1,36 @@
-// LabelIndex: the labels of a project (all files) and the references to them, kept up to date.
-// Entry of features/labels/. See ARCHITECTURE.md, "Labels and references".
+// The labels extension and its LabelIndex: the labels of a project (all files) and the references to them, kept up
+// to date. Entry of features/labels/. See ARCHITECTURE.md, "Labels and references".
+import { Disposable } from '../../core/disposable/disposable';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { FileChange, Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
+import type { TypstExtension } from '../../hosts/workbench/workbench';
 import { referenceEdits, scanBibliography, scanTypst, type FoundLabel, type LabelKind, type Scan } from './scan';
 
 export { referenceEdits } from './scan';
 export type { LabelKind } from './scan';
+
+declare module '../../hosts/workbench/workbench' {
+  interface ServiceRegistry {
+    /** The project's labels and the references to them (the labels extension). */
+    labels: LabelIndex;
+  }
+}
+
+/** Keeps the project's labels indexed (the `labels` service) and offers them to every document's Visual view. */
+export function labels(): TypstExtension {
+  return {
+    id: 'labels',
+    activate({ project, services, visualView, subscriptions }) {
+      const index = new LabelIndex(project);
+      subscriptions.push(
+        new Disposable(() => index.destroy()),
+        services.provide('labels', index),
+        visualView.registerDocumentOptions(() => ({ labels: index })),
+      );
+    },
+  };
+}
 
 /** A label of the project: its name, what it labels (null: something else), that element's title, and its file. */
 export interface LabelInfo extends FoundLabel {

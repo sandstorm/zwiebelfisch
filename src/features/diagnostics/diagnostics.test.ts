@@ -15,7 +15,8 @@ describe('DiagnosticsStatus', () => {
   it('lists the messages of the shown file for hovering over the count, each jumping to its range', () => {
     const parent = document.createElement('div');
     const onJump = vi.fn();
-    const status = new DiagnosticsStatus(parent, onJump);
+    const status = new DiagnosticsStatus(document, onJump);
+    parent.append(status.element);
     status.show(summarizeDiagnostics([diag({ message: 'unknown variable: foo', hints: ['try bar'], from: 3, to: 6 })], MAIN));
     const details = parent.querySelector<HTMLElement>('.typst-status__details')!;
     expect(details.textContent).toContain('unknown variable: foo');
@@ -26,7 +27,8 @@ describe('DiagnosticsStatus', () => {
 
   it('has no details while the compile is clean', () => {
     const parent = document.createElement('div');
-    const status = new DiagnosticsStatus(parent, () => {});
+    const status = new DiagnosticsStatus(document, () => {});
+    parent.append(status.element);
     status.show(summarizeDiagnostics([], MAIN));
     expect(parent.querySelector<HTMLElement>('.typst-status__details')!.hidden).toBe(true);
   });

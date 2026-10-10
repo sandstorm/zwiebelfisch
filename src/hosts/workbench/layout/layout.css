@@ -1,4 +1,4 @@
-/* The widget's side panels (rail, resizable panel, narrow overlay), injected by createTypstEditor.
+/* The widget's side panels (rail, resizable panel, narrow overlay) and status bar, injected by createTypstEditor.
    See layout.ts. */
 .typst-editor__side {
   grid-column: 1;
@@ -81,3 +81,11 @@
   max-width: calc(100vw - 48px);
   box-shadow: 4px 0 16px rgba(0, 0, 0, 0.16);
 }
+/* Below everything: the status bar items (e.g. the compile status), left to right. */
+.typst-editor__status-bar {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: flex;
+  min-width: 0;
+}
+.typst-editor__status-bar:empty { display: none; }

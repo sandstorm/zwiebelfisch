@@ -1,20 +1,90 @@
-// FilePanel: the project's files as a tree in the left side panel (new file / folder, upload, rename,
-// delete, drag & drop, presence). Entry of features/files/. See ARCHITECTURE.md, "File panel".
+// The files extensions: the file panel (FilePanel: the project's files as a tree in the left side panel: new file /
+// folder, upload, rename, delete, drag & drop, presence), "← previous / next file →" around an included file, and
+// the read-only view of images and data files. Entry of features/files/. See ARCHITECTURE.md, "File panel".
+import { Disposable } from '../../core/disposable/disposable';
+import { neighbours } from '../../core/document-links/document-links';
 import type { PlacedPresence, PresenceUser } from '../../core/typst-document/typst-document';
 import { type FileChange } from '../../core/project/project';
 import { ProjectPath } from '../../core/paths/paths';
+import type { FileViewProvider, TypstExtension } from '../../hosts/workbench/workbench';
+import { AssetView } from './asset-view';
+import { FileNavigation } from './file-navigation';
 import { icon, type IconName } from './icons';
 import { FileTree, filesUnder, type Folder, type FolderMemory, relocate } from './tree/tree';
 import { uploadChanges } from './upload';
 
-export { AssetView } from './asset-view';
-export { FileNavigation } from './file-navigation';
 export { uploadChanges } from './upload';
 export type { FolderMemory } from './tree/tree';
 
-/** The file panel's icon (e.g. for the button that opens it). */
-export function filesPanelIcon(doc: Document): SVGSVGElement {
-  return icon(doc, 'files');
+export interface FilesOptions {
+  /**
+   * When the file panel is open: `auto` (default) while the project has more than one file, else collapsed to its
+   * rail button (until someone opens or closes it); `show` open; `hide` none at all (and dropped files are ignored).
+   */
+  fileList?: 'auto' | 'show' | 'hide';
+}
+
+/**
+ * The file panel in a side panel: shows the project and the shown file, opens what is picked, asks for every
+ * change through `Workbench.applyChange`, uploads files dropped on the widget, and shows where collaborators are
+ * (the `collaboration` service, when an extension before it in the list provides it).
+ */
+export function files(options: FilesOptions = {}): TypstExtension {
+  return {
+    id: 'files',
+    activate({ project, workbench, services, subscriptions }) {
+      const mode = options.fileList ?? 'auto';
+      const side = workbench.registerSidePanel('files', { label: 'Files', icon: icon(workbench.ownerDocument, 'files') });
+      const state = () => ({ paths: project.paths(), main: project.main, active: workbench.activeFile });
+      const panel = new FilePanel(side.body, {
+        onOpen: (path) => {
+          workbench.open(path);
+          side.dismiss();
+        },
+        onChange: (change) => workbench.applyChange(change),
+        memory: workbench.remember('folders'),
+      }, state());
+      // shown on every open, which also follows every create / rename / delete
+      const render = () => {
+        side.setAvailable(mode !== 'hide');
+        side.setDefault(mode === 'show' || project.paths().length > 1);
+        panel.render(state());
+      };
+      subscriptions.push(side, new Disposable(() => panel.destroy()), workbench.onDidShowFile(render));
+      if (mode !== 'hide') subscriptions.push(workbench.onDidDropFiles((dropped) => void panel.upload(dropped)));
+      const collaboration = services.get('collaboration');
+      if (collaboration) subscriptions.push(collaboration.onDidChangePresence((presences) => panel.showPresence(presences)));
+    },
+  };
+}
+
+/** "← previous file" / "next file →" above and below a file the main file includes, in its reading order. */
+export function fileNavigation(): TypstExtension {
+  return {
+    id: 'file-navigation',
+    activate({ project, workbench, subscriptions }) {
+      const navigation = new FileNavigation(workbench.ownerDocument, (path) => workbench.open(path));
+      // recomputed on every open and every change: an #include may have been added, moved or removed
+      const show = () => navigation.show(neighbours((path) => project.document(path)?.text, project.main, workbench.activeFile));
+      subscriptions.push(workbench.registerEditorFrame(navigation), workbench.onDidShowFile(show), new Disposable(project.onChange(show)));
+    },
+  };
+}
+
+/** Images and data files in the editing area, read-only (images get into the text by dragging or "Insert image"). */
+export function assets(): TypstExtension {
+  return {
+    id: 'assets',
+    activate({ workbench, subscriptions }) {
+      const provider: FileViewProvider = {
+        createFileView: (parent) => {
+          const view = new AssetView(parent);
+          return { show: (path, content) => view.show(path, content), hide: () => view.hide(), dispose: () => view.destroy() };
+        },
+      };
+      subscriptions.push(workbench.registerFileView('image', provider), workbench.registerFileView('data', provider));
+    },
+  };
 }
 
 export interface FilePanelOptions {
@@ -46,8 +116,8 @@ interface Prompt {
  * and Delete, and the project as a `FileTree`. Names are asked for inline,
  * refused changes show why. Rename and Delete act on the focused row (a file,
  * or a folder with everything in it); the main file (and a folder holding it)
- * stays. New files and uploads go into the focused folder. Files dropped on
- * `dropTarget` are uploaded while `acceptDrops`. It only turns gestures into
+ * stays. New files and uploads go into the focused folder; `upload` puts files
+ * (e.g. dropped on the widget) at the top level. It only turns gestures into
  * `FileChange`s; whether they happen is up to `onChange`.
  */
 export class FilePanel {
@@ -63,13 +133,9 @@ export class FilePanel {
   private emptyFolders = new Set<ProjectPath>();
   /** Where the next upload goes. */
   private uploadFolder: Folder = null;
-  private readonly detachDrop: () => void;
-  /** Whether files dropped anywhere on `dropTarget` are uploaded (else ignored). */
-  acceptDrops = true;
 
   constructor(
     parent: HTMLElement,
-    dropTarget: HTMLElement,
     private readonly options: FilePanelOptions,
     /** What the panel shows until the next `render`. */
     private state: FileListState,
@@ -84,7 +150,7 @@ export class FilePanel {
     this.picker.type = 'file';
     this.picker.multiple = true;
     this.picker.hidden = true;
-    this.picker.addEventListener('change', () => void this.upload([...(this.picker.files ?? [])], this.uploadFolder));
+    this.picker.addEventListener('change', () => void this.uploadInto([...(this.picker.files ?? [])], this.uploadFolder));
     const actions = element(doc, 'div', 'typst-files__actions');
     actions.append(
       iconButton(doc, 'add', 'New file', () => this.askCreate()),
@@ -100,12 +166,11 @@ export class FilePanel {
       onRename: (path) => this.askRename(path),
       onDelete: (path) => this.askDelete(path),
       onMove: (source, folder) => void this.move(source, folder),
-      onUpload: (files, folder) => void this.upload(files, folder),
+      onUpload: (files, folder) => void this.uploadInto(files, folder),
       memory: options.memory,
     });
     this.tree.element.addEventListener('focusin', () => this.updateButtons());
     parent.append(this.element);
-    this.detachDrop = acceptDrops(dropTarget, () => this.acceptDrops, (files) => void this.upload(files, null));
     this.render(state);
   }
 
@@ -123,8 +188,12 @@ export class FilePanel {
     this.render(this.state);
   }
 
+  /** Uploads `files` to the top level (refusals show in a prompt). */
+  upload(files: File[]): Promise<void> {
+    return this.uploadInto(files, null);
+  }
+
   destroy(): void {
-    this.detachDrop();
     this.element.remove();
   }
 
@@ -229,7 +298,7 @@ export class FilePanel {
     return error;
   }
 
-  private async upload(files: File[], folder: Folder): Promise<void> {
+  private async uploadInto(files: File[], folder: Folder): Promise<void> {
     this.picker.value = '';
     const changes = (await uploadChanges(files)).map((change) => ({ ...change, path: ProjectPath.of(`${folder ?? ''}${change.path}`) }));
     const error = await this.request(changes, changes[changes.length - 1]?.path ?? null);
@@ -301,33 +370,6 @@ function promptForm(doc: Document, prompt: Prompt, cancel: () => void): HTMLForm
  * browser never opens a dropped file in place of the page. A view inside
  * that takes a drop itself stops its propagation.
  */
-function acceptDrops(target: HTMLElement, enabled: () => boolean, onFiles: (files: File[]) => void): () => void {
-  let depth = 0;
-  const carriesFiles = (event: DragEvent) => !!event.dataTransfer?.types.includes('Files');
-  const setDepth = (next: number) => {
-    depth = Math.max(0, next);
-    target.classList.toggle('typst-editor--dropping', depth > 0);
-  };
-  const handlers: Record<string, (event: DragEvent) => void> = {
-    dragenter: (event) => carriesFiles(event) && enabled() && setDepth(depth + 1),
-    dragleave: (event) => carriesFiles(event) && enabled() && setDepth(depth - 1),
-    dragover: (event) => carriesFiles(event) && event.preventDefault(),
-    drop: (event) => {
-      if (!carriesFiles(event)) return;
-      event.preventDefault();
-      if (enabled()) onFiles([...(event.dataTransfer?.files ?? [])]);
-    },
-  };
-  // Captured, so the hint also goes when a view inside takes the drop.
-  const endHint = () => setDepth(0);
-  target.addEventListener('drop', endHint, true);
-  for (const [type, handler] of Object.entries(handlers)) target.addEventListener(type, handler as EventListener);
-  return () => {
-    target.removeEventListener('drop', endHint, true);
-    for (const [type, handler] of Object.entries(handlers)) target.removeEventListener(type, handler as EventListener);
-  };
-}
-
 function iconButton(doc: Document, name: IconName, label: string, onClick: () => void) {
   const button = element(doc, 'button', 'typst-files__action');
   button.type = 'button';

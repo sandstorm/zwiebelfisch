@@ -1,5 +1,5 @@
 // Layout: the widget's regions — side panels (rail buttons, resizable, collapsible, an overlay when narrow),
-// editing area, preview — and the per-session layout memory. See typst-editor.ts and ARCHITECTURE.md, "Layout".
+// editing area, preview, status bar — and the per-session layout memory. See workbench.ts and ARCHITECTURE.md, "Layout".
 
 /** Below this widget width an open side panel lies over the editing area instead of beside it. */
 const NARROW = 720;
@@ -31,7 +31,8 @@ export interface Memory<T> {
  * The widget's regions in one grid: on the left a rail with a button per side
  * panel and the open panel (resizable; one at a time), then the editing area
  * and the preview, with a separator between them (drag or arrow keys: the
- * preview's share of the width, 20–80%); the status bar below spans them all. Panels have ids
+ * preview's share of the width, 20–80%); the status bar below spans them all
+ * (hidden while empty). Panels have ids
  * (`files`), so a later docking layout can take over the same contract.
  *
  * A panel is open by default as its owner says (`setDefault`) until someone
@@ -42,6 +43,7 @@ export interface Memory<T> {
 export class Layout {
   readonly editor: HTMLElement;
   readonly preview: HTMLElement;
+  readonly statusBar: HTMLElement;
   private readonly side: HTMLElement;
   private readonly rail: HTMLElement;
   private readonly panel: HTMLElement;
@@ -72,7 +74,8 @@ export class Layout {
     this.preview = div(doc, 'typst-editor__right');
     this.split = this.createSplit();
     this.preview.append(this.split);
-    host.append(this.side, this.editor, this.preview);
+    this.statusBar = div(doc, 'typst-editor__status-bar');
+    host.append(this.side, this.editor, this.preview, this.statusBar);
     this.saved = this.remember<Saved>('layout');
     this.state = { width: WIDTH.initial, preview: SHARE.initial, chosen: {}, ...this.saved.load() };
     this.showSplit();
@@ -89,6 +92,7 @@ export class Layout {
 
   /** Adds side panel `id` with its rail button; returns the element the panel's content goes into. */
   addPanel(id: string, options: PanelOptions): HTMLElement {
+    if (this.panels.has(id)) throw new Error(`There is a side panel ${id} already`);
     const doc = this.host.ownerDocument;
     const body = div(doc, 'typst-editor__panel-body');
     body.id = `typst-panel-${id}-${Math.random().toString(36).slice(2, 8)}`;
@@ -107,6 +111,17 @@ export class Layout {
     this.panels.set(id, { body, button, fallback: false, available: true });
     this.layout();
     return body;
+  }
+
+  /** Removes side panel `id` and its rail button. */
+  removePanel(id: string): void {
+    const panel = this.panels.get(id);
+    if (!panel) return;
+    panel.body.remove();
+    panel.button.remove();
+    this.panels.delete(id);
+    if (this.openId === id) this.openId = null;
+    this.layout();
   }
 
   /** Whether panel `id` is open now. */
@@ -179,6 +194,7 @@ export class Layout {
     this.side.remove();
     this.editor.remove();
     this.preview.remove();
+    this.statusBar.remove();
     this.host.classList.remove('typst-editor--narrow');
     this.host.style.removeProperty('--te-preview-share');
   }

@@ -1,7 +1,32 @@
-// VersionControls: "Save version" with a commit message, and its outcome, in GitLab-backed rooms. Entry of
-// features/versions/. See ARCHITECTURE.md, "GitLab-backed rooms".
+// The versions extension: "Save version" with a commit message, and its outcome, in GitLab-backed rooms
+// (VersionControls). Entry of features/versions/. See ARCHITECTURE.md, "GitLab-backed rooms".
+import { Disposable } from '../../core/disposable/disposable';
+import type { TypstExtension } from '../../hosts/workbench/workbench';
 import { DEFAULT_COMMIT_MESSAGE, type ServerMessage } from '../collaboration/gitlab-protocol';
 import { FieldPopover } from '../visual-view/visual-view';
+
+/**
+ * "Save version" next to the Visual / Source tabs, as `user`, once the collaboration session (the `collaboration`
+ * service of an extension before it in the list) connects to a room backed by a GitLab branch.
+ */
+export function versions(options: VersionControlsOptions = {}): TypstExtension {
+  return {
+    id: 'versions',
+    activate({ workbench, services, subscriptions }) {
+      const session = services.get('collaboration');
+      if (!session) return;
+      subscriptions.push(
+        session.onDidConnectVersions((connected) => {
+          const toolbar = workbench.ownerDocument.createElement('span');
+          toolbar.className = 'typst-editor__tab-actions';
+          subscriptions.push(workbench.registerTabBarItem(toolbar));
+          const controls = new VersionControls(toolbar, connected, options);
+          subscriptions.push(new Disposable(() => controls.destroy()));
+        }),
+      );
+    },
+  };
+}
 
 /** A room's versions (`RoomVersions` in features/collaboration), as far as the controls use them. */
 export interface Versions {

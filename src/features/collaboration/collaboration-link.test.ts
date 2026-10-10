@@ -24,7 +24,8 @@ function setup(onPresence?: (presences: readonly PlacedPresence[]) => void) {
   area.append(input);
   document.body.append(area);
   const view = { selection: () => ({ from: 6, to: 11 }) };
-  const link = new CollaborationLink({ doc: ydoc, awareness }, { project, user: { name: 'Ann' } }, area, { current: () => ({ path: MAIN, view }), onPresence });
+  const focused = () => area.contains(document.activeElement);
+  const link = new CollaborationLink({ doc: ydoc, awareness }, { project, user: { name: 'Ann' } }, { current: () => ({ path: MAIN, view }), focused, onPresence });
   cleanup.push(() => link.destroy(), () => awareness.destroy(), () => area.remove());
   return { ydoc, awareness, link, input, project };
 }

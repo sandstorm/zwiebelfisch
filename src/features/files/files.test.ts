@@ -20,7 +20,7 @@ function setup(onChange: (change: FileChange) => Promise<string | null> = async 
   const onOpen = vi.fn();
   const change = vi.fn(onChange);
   const memory = { load: vi.fn(() => null), save: vi.fn() };
-  const panel = new FilePanel(parent, parent, { onOpen, onChange: change, memory }, initial);
+  const panel = new FilePanel(parent, { onOpen, onChange: change, memory }, initial);
   const button = (name: string) =>
     [...parent.querySelectorAll('button')].find((b) => b.textContent?.trim() === name || b.title === name)!;
   const items = () => [...parent.querySelectorAll<HTMLElement>('[role=treeitem]')];
@@ -277,55 +277,17 @@ describe('FilePanel', () => {
     });
   });
 
-  describe('files dropped on the widget', () => {
+  describe('upload (files dropped on the widget)', () => {
     // jsdom's File has no arrayBuffer()
     const png = Object.assign(new File([new Uint8Array([1])], 'cat.png', { type: 'image/png' }), {
       arrayBuffer: async () => new Uint8Array([1]).buffer,
     });
 
-    function drop(target: HTMLElement, files: File[]) {
-      const event = new Event('drop', { bubbles: true, cancelable: true });
-      Object.defineProperty(event, 'dataTransfer', { value: { files, types: ['Files'] } });
-      target.dispatchEvent(event);
-      return event;
-    }
-
-    function enter(target: HTMLElement) {
-      const event = new Event('dragenter', { bubbles: true });
-      Object.defineProperty(event, 'dataTransfer', { value: { types: ['Files'] } });
-      target.dispatchEvent(event);
-    }
-
-    it('are uploaded and the hint goes away', async () => {
-      const { parent, change } = setup();
-      enter(parent);
-      expect(parent.classList.contains('typst-editor--dropping')).toBe(true);
-      expect(drop(parent, [png]).defaultPrevented).toBe(true);
-      await vi.waitFor(() => expect(change).toHaveBeenCalledWith(expect.objectContaining({ kind: 'create', path: path('/cat.png') })));
-      expect(parent.classList.contains('typst-editor--dropping')).toBe(false);
-    });
-
-    it('are left to a view inside that takes them (e.g. images dropped into the text); the hint goes away', async () => {
-      const { parent, change } = setup();
-      const view = parent.appendChild(document.createElement('div'));
-      view.addEventListener('drop', (event) => (event.preventDefault(), event.stopPropagation()));
-      enter(view);
-      drop(view, [png]);
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      expect(change).not.toHaveBeenCalled();
-      expect(parent.classList.contains('typst-editor--dropping')).toBe(false);
-    });
-
-    it('never make the browser leave the page, also while drops are not accepted', async () => {
-      const { parent, panel, change } = setup();
-      panel.acceptDrops = false;
-      const over = new Event('dragover', { bubbles: true, cancelable: true });
-      Object.defineProperty(over, 'dataTransfer', { value: { types: ['Files'] } });
-      parent.dispatchEvent(over);
-      expect(over.defaultPrevented).toBe(true);
-      expect(drop(parent, [png]).defaultPrevented).toBe(true);
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      expect(change).not.toHaveBeenCalled();
+    it('puts them at the top level, also while a folder is focused', async () => {
+      const { panel, change, item } = setup(undefined, nested);
+      item('img').focus();
+      await panel.upload([png]);
+      expect(change).toHaveBeenCalledWith(expect.objectContaining({ kind: 'create', path: path('/cat.png') }));
     });
   });
 });

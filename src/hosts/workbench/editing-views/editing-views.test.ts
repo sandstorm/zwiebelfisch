@@ -55,7 +55,7 @@ describe('EditingViews', () => {
     // regression: clicking the error count in the Visual view revealed the error in the hidden source view
     const { views, a, visible, tab } = setup();
     views.show(a);
-    views.reveal(2, 3, true);
+    views.reveal(2, 3, 'source');
     expect(views.mode).toBe('source');
     expect(tab('Source').getAttribute('aria-selected')).toBe('true');
     expect(visible()).toHaveLength(1);
@@ -73,6 +73,15 @@ describe('EditingViews', () => {
     tab('Source').click();
     expect([comment.hidden, always.hidden]).toEqual([false, false]);
     expect(parent.querySelector('.typst-editor__tabs')?.contains(comment)).toBe(true);
+  });
+
+  it('removes a tab-bar control', () => {
+    const { parent, views, a } = setup();
+    views.show(a);
+    const comment = document.createElement('button');
+    const remove = views.addTabAction(comment, 'source');
+    remove();
+    expect(parent.querySelector('.typst-editor__tabs')?.contains(comment)).toBe(false);
   });
 
   it('reveals in the current view without switching tabs otherwise', () => {
@@ -171,7 +180,7 @@ describe('EditingViews frame', () => {
     const { parent, views, a, b, visible, tab } = setup();
     const top = document.createElement('nav');
     const bottom = document.createElement('nav');
-    views.setFrame(top, bottom);
+    views.setFrame({ top, bottom });
     views.show(a);
     const pane = () => visible()[0];
     // Visual: below the toolbar, right before the text; last in the pane
@@ -186,5 +195,15 @@ describe('EditingViews frame', () => {
     views.show(null);
     expect([top.isConnected, bottom.isConnected]).toEqual([false, false]);
     expect(parent.querySelectorAll('nav')).toHaveLength(0);
+  });
+
+  it('removes the frame on null', () => {
+    const { views, a } = setup();
+    const top = document.createElement('nav');
+    const bottom = document.createElement('nav');
+    views.setFrame({ top, bottom });
+    views.show(a);
+    views.setFrame(null);
+    expect([top.isConnected, bottom.isConnected]).toEqual([false, false]);
   });
 });

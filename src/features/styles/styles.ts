@@ -1,13 +1,42 @@
-// StyleIndex: the paragraph and text styles a project declares (`/// @style …`), kept up to date, and how a
-// document imports one. Entry of features/styles/. See ARCHITECTURE.md, "Custom styles".
+// The styles extension and its StyleIndex: the paragraph and text styles a project declares (`/// @style …`), kept
+// up to date, and how a document imports one. Entry of features/styles/. See ARCHITECTURE.md, "Custom styles".
+import { Disposable } from '../../core/disposable/disposable';
 import { type FileChange, type Project } from '../../core/project/project';
 import { PathReference, ProjectPath } from '../../core/paths/paths';
 import { calculateImportChange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
+import type { TypstExtension, Workbench } from '../../hosts/workbench/workbench';
 import { scanStyles, type FoundStyle, type Style } from './discover';
-import { STYLES_FILE } from './new-style';
+import { newStyle, STYLES_FILE } from './new-style';
 
 export { discoverStyles, scanStyles, type Style, type StyleKind } from './discover';
 export { newStyle, STYLES_FILE } from './new-style';
+
+declare module '../../hosts/workbench/workbench' {
+  interface ServiceRegistry {
+    /** The custom styles the project declares (the styles extension). */
+    styles: StyleIndex;
+  }
+}
+
+/**
+ * Keeps the project's custom styles indexed (the `styles` service); every document's Visual view shows and applies
+ * them and offers "New style…".
+ */
+export function styles(): TypstExtension {
+  return {
+    id: 'styles',
+    activate({ project, workbench, services, visualView, subscriptions }) {
+      const index = new StyleIndex(project);
+      subscriptions.push(
+        new Disposable(() => index.destroy()),
+        services.provide('styles', index),
+        visualView.registerDocumentOptions((document) => ({
+          styles: { ...index.forDocument(document), create: () => void addNewStyle(index, project, workbench) },
+        })),
+      );
+    },
+  };
+}
 
 /** What the Visual view of one document needs: the project's styles, and how to make one usable there. */
 export interface DocumentStyles {
@@ -107,4 +136,17 @@ export class StyleIndex {
   private collect(): Style[] {
     return this.project.paths().flatMap((path) => this.scans.get(path)?.map((style) => ({ ...style, path })) ?? []);
   }
+}
+
+/**
+ * "New style…": appends a paragraph style to start from to the file holding most styles (else
+ * `/styles.typ`, created when missing) and shows it in the Source view.
+ */
+async function addNewStyle(index: StyleIndex, project: Project, workbench: Workbench): Promise<void> {
+  const path = index.homeFile();
+  const file = project.document(path);
+  const added = newStyle(file?.text ?? '');
+  if (file) file.change([{ from: file.text.length, to: file.text.length, insert: added.text.slice(file.text.length) }], 'new-style');
+  else if ((await workbench.applyChange({ kind: 'create', path, content: added.text })) !== null) return;
+  workbench.open(path, { selection: { from: added.from, to: added.to }, mode: 'source' });
 }
