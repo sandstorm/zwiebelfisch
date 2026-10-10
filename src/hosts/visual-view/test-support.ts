@@ -11,13 +11,13 @@ import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { ProjectLabels } from '../../features/labels/labels';
 import type { DocumentStyles } from '../../features/styles/styles';
 import {
-  alignment, customStyles, headingNumbers, headings, horizontalRule, lists, marginNotes, markup, notesGutter, outline, pageBreak, references,
+  alignment, customStyles, headingNumbers, headings, horizontalRule, lists, markup, outline, pageBreak, references,
   tables, taskLists,
 } from './builtins/builtins';
 import { boxLinks } from '../../extensions/document-links/document-links';
 import { imagesVisualView, type ImageAssets, type ImageUrls } from '../../extensions/images/images';
 import { renderedBoxesVisualView, type SnippetSource } from '../../extensions/rendered-boxes/rendered-boxes';
-import { VisualViewContributions } from './contributions/contributions';
+import { VisualViewContributions, type VisualViewContribution } from './contributions/contributions';
 import { createSchema } from './nodes/nodes';
 import { posToSource, print, project as projectWith, sourceToPos } from './projection/projection';
 import { VisualView } from './visual-view';
@@ -27,11 +27,12 @@ export const schema: Schema = schemaWith();
 
 /** The schema of a view with the built-ins configured from `options`. */
 export function schemaWith(options: TestViewOptions = {}): Schema {
-  const { nodes, marks } = contributions(options).visualView.contributed();
+  const { nodes, marks } = contributions(options).contributed();
   return createSchema(nodes, marks);
 }
 
-export const project = (source: string): Node => projectWith(source, schema);
+/** `source` projected with `withSchema` (default: the built-ins' `schema`). */
+export const project = (source: string, withSchema: Schema = schema): Node => projectWith(source, withSchema);
 
 /** What a document's raw boxes show while not edited, in tests: compiled snippets and image files. */
 export type Renderings = SnippetSource & ImageUrls;
@@ -40,25 +41,23 @@ export type Renderings = SnippetSource & ImageUrls;
 export interface TestViewOptions {
   renderer?: Renderings;
   assets?: ImageAssets;
-  user?: { name: string };
-  comment?(): void;
   labels?: ProjectLabels;
   documentLinks?: DocumentLinkProvider;
   /** The project's styles, as one document sees them; `create` is "New style…". */
   styles?: DocumentStyles;
+  /** Contributions beyond the host's built-ins, activated after them: an extension's own, in its tests. */
+  contributions?: readonly VisualViewContribution[];
 }
 
-/** A Visual view of `document` with the built-ins configured from `options`, and the way to its notes' cards. */
-export function createVisualView(parent: HTMLElement, document: TypstDocument, options: TestViewOptions = {}): VisualView & { editNote(offset: number): boolean } {
-  const { visualView, editNote } = contributions(options);
-  return Object.assign(new VisualView(parent, document, visualView), { editNote: (offset: number) => editNote(document, offset) });
+/** A Visual view of `document` with the built-ins configured from `options`. */
+export function createVisualView(parent: HTMLElement, document: TypstDocument, options: TestViewOptions = {}): VisualView {
+  return new VisualView(parent, document, contributions(options));
 }
 
 /** The built-ins configured from `options`, in the order the widget's built-in extensions activate them. */
-function contributions(options: TestViewOptions) {
+function contributions(options: TestViewOptions): VisualViewContributions {
   const { styles } = options;
-  const notes = notesGutter({ user: options.user });
-  const visualView = VisualViewContributions.from([
+  return VisualViewContributions.from([
     boxLinks({ documentLinks: options.documentLinks && (() => options.documentLinks) }),
     markup,
     headings,
@@ -78,15 +77,13 @@ function contributions(options: TestViewOptions) {
     lists,
     headingNumbers,
     alignment,
-    marginNotes({ comment: options.comment }),
-    notes,
     references({ labels: options.labels }),
     customStyles({
       styles: styles && { styles: () => styles.styles(), onChange: (listener) => styles.onChange(listener), forDocument: () => styles },
       create: styles?.create,
     }),
+    ...(options.contributions ?? []),
   ]);
-  return { visualView, editNote: (document: TypstDocument, offset: number) => notes.editNote(document, offset) };
 }
 
 export function edit(doc: Node, change: (state: EditorState) => EditorState['tr']): Node {

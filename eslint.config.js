@@ -35,6 +35,11 @@ export const boundaries = {
       why: 'asset URLs (wasm, default fonts) for the main thread; in the entry, the worker bundle would emit every asset again',
     },
     {
+      target: 'hosts/visual-view/test-support.ts',
+      importers: '\\.test\\.ts$',
+      why: "tests of an extension's Visual-view contributions build views and schemas with the host's test helpers",
+    },
+    {
       target: 'features/collaboration/in-process.ts',
       importers: '\\.test\\.ts$',
       why: 'tests wire Y.Docs and awarenesses together in-process',

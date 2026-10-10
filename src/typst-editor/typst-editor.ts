@@ -5,7 +5,7 @@
 // main file's text, for hosts that edit a single file.
 import type { CollaborationOptions } from '../features/collaboration/collaboration';
 import { collaboration } from '../features/collaboration/collaboration-link';
-import { comments } from '../features/comments/comments';
+import { comments } from '../extensions/comments/comments';
 import { diagnostics } from '../features/diagnostics/diagnostics';
 import { fileNavigation, files } from '../extensions/files/files';
 import fileStyles from '../extensions/files/files.css?inline';
@@ -178,7 +178,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
       const parsed = ProjectPath.parse(path);
       if (parsed) workbench.open(parsed);
     },
-    exportPdf: (pdf = {}) => workbench.executeCommand('pdfExport.export', pdf.comments ?? false),
+    exportPdf: (pdf = {}) => workbench.executeCommand('comments.exportPdf', pdf.comments ?? false),
     destroy: () => {
       unsubscribe();
       workbench.destroy();
