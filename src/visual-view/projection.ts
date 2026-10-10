@@ -2,20 +2,21 @@
  * The source-anchored projection between Typst text and the Visual view's
  * ProseMirror document.
  *
- *   project(text)  → doc    every node remembers the source it came from
- *   print(doc)     → text   untouched nodes print their original source byte
- *                           for byte; only edited nodes are re-printed
+ *   project(text, schema) → doc    every node remembers the source it came from
+ *   print(doc)            → text   untouched nodes print their original source
+ *                                  byte for byte; only edited ones are re-printed
+ *   syncDoc(tr, target)   → tr     turns the current doc into a fresh projection
+ *                                  with the smallest possible replacement
  *
  * Hence `print(project(text)) === text` for any input, and an edit in the
- * Visual view changes only the source of the block it touched. Constructs the
- * Visual view does not model become `raw_block` / `raw_inline` atoms holding
+ * Visual view changes only the source of what it touched. Constructs the
+ * Visual view does not model become `rawBlock` / `rawInline` atoms holding
  * their verbatim source.
  */
 import type { SyntaxNode } from '@lezer/common';
-import type { Mark, Node } from 'prosemirror-model';
-import type { Transaction } from 'prosemirror-state';
+import type { Mark, Node, Schema } from '@tiptap/pm/model';
+import type { Transaction } from '@tiptap/pm/state';
 import { typstParser } from 'codemirror-lang-typst/lezer';
-import { schema } from './schema';
 
 /**
  * Nodes created by `project` and not modified since. ProseMirror nodes are
@@ -24,12 +25,13 @@ import { schema } from './schema';
  */
 const pristine = new WeakSet<Node>();
 
-export function project(source: string): Node {
+export function project(source: string, schema: Schema): Node {
+  const ctx: Context = { schema, source };
   const segments = segment(children(typstParser.parse(source).topNode));
   if (segments.length === 0) {
-    return schema.nodes.doc.create({ lead: source, trail: '' }, [pristineNode('paragraph', { src: '' })]);
+    return schema.nodes.doc.create({ lead: source, trail: '' }, [pristineNode(ctx, 'paragraph', { src: '' })]);
   }
-  const blocks = groupLists(segments.map((s, i) => toBlock(s, source, sepAfter(segments, i, source))));
+  const blocks = groupLists(ctx, segments.map((s, i) => toBlock(ctx, s, sepAfter(segments, i, source))));
   return schema.nodes.doc.create(
     { lead: source.slice(0, segments[0].from), trail: source.slice(segments.at(-1)!.to) },
     blocks,
@@ -41,6 +43,11 @@ export function print(doc: Node): string {
 }
 
 // ---------------------------------------------------------------- projecting
+
+interface Context {
+  schema: Schema;
+  source: string;
+}
 
 type SegmentKind = 'heading' | 'bullet' | 'ordered' | 'run';
 
@@ -61,6 +68,7 @@ const SHORTHANDS: Record<string, string> = {
   '-?': '\u00ad',
   '...': '\u2026',
 };
+const ORDERED_MARKER = /^\d|^\+/;
 
 function children(node: SyntaxNode): SyntaxNode[] {
   const result: SyntaxNode[] = [];
@@ -92,17 +100,10 @@ function segment(nodes: SyntaxNode[]): Segment[] {
   return segments;
 }
 
+const BLOCK_KINDS: Record<string, SegmentKind> = { Heading: 'heading', ListItem: 'bullet', EnumItem: 'ordered' };
+
 function blockKind(node: SyntaxNode): SegmentKind | null {
-  switch (node.name) {
-    case 'Heading':
-      return 'heading';
-    case 'ListItem':
-      return 'bullet';
-    case 'EnumItem':
-      return 'ordered';
-    default:
-      return null;
-  }
+  return BLOCK_KINDS[node.name] ?? null;
 }
 
 function sepAfter(segments: Segment[], index: number, source: string): string | null {
@@ -110,57 +111,58 @@ function sepAfter(segments: Segment[], index: number, source: string): string | 
   return next ? source.slice(segments[index].to, next.from) : null;
 }
 
-function toBlock(segment: Segment, source: string, sep: string | null): Node {
+function toBlock(ctx: Context, segment: Segment, sep: string | null): Node {
   const [node] = segment.nodes;
-  const src = source.slice(segment.from, segment.to);
+  const src = ctx.source.slice(segment.from, segment.to);
   switch (segment.kind) {
     case 'heading': {
-      const level = node.getChild('HeadingMarker')?.to! - node.from || 1;
+      const level = Math.min(6, (node.getChild('HeadingMarker')?.to ?? node.from + 1) - node.from);
       const markup = node.getChild('Markup');
-      return pristineNode('heading', { level, src, sep }, markup ? inline(children(markup), source) : []);
+      return pristineNode(ctx, 'heading', { level, src, sep }, markup ? inline(ctx, children(markup)) : []);
     }
     case 'bullet':
     case 'ordered':
-      return listItem(node, source, sep);
+      return listItem(ctx, node, sep);
     case 'run':
       return segment.nodes.some((n) => PROSE.has(n.name))
-        ? pristineNode('paragraph', { src, sep }, inline(segment.nodes, source))
-        : schema.nodes.raw_block.create({ src, sep });
+        ? pristineNode(ctx, 'paragraph', { src, sep }, inline(ctx, segment.nodes))
+        : ctx.schema.nodes.rawBlock.create({ src, sep });
   }
 }
 
-function listItem(node: SyntaxNode, source: string, sep: string | null): Node {
+function listItem(ctx: Context, node: SyntaxNode, sep: string | null): Node {
   const marker = node.firstChild!;
   const markup = node.getChild('Markup');
   const body = markup ? children(markup) : [];
-  const bodySrc = markup ? source.slice(markup.from, markup.to) : '';
+  const bodySrc = markup ? ctx.source.slice(markup.from, markup.to) : '';
   const nested = body.some((n) => n.name === 'Parbreak' || blockKind(n) !== null);
   const content = nested
-    ? schema.nodes.raw_block.create({ src: bodySrc })
-    : pristineNode('paragraph', { src: bodySrc }, inline(body, source));
+    ? ctx.schema.nodes.rawBlock.create({ src: bodySrc })
+    : pristineNode(ctx, 'paragraph', { src: bodySrc }, inline(ctx, body));
   return pristineNode(
-    'list_item',
-    { marker: source.slice(marker.from, marker.to), src: source.slice(node.from, node.to), sep },
+    ctx,
+    'listItem',
+    { marker: ctx.source.slice(marker.from, marker.to), src: ctx.source.slice(node.from, node.to), sep },
     [content],
   );
 }
 
 /** Wraps consecutive list items of the same kind into one list; the last item's separator moves to the list. */
-function groupLists(blocks: Node[]): Node[] {
+function groupLists(ctx: Context, blocks: Node[]): Node[] {
   const result: Node[] = [];
   let items: Node[] = [];
   const flush = () => {
     if (items.length === 0) return;
     const last = items.at(-1)!;
-    const listType = /^\d|^\+/.test(items[0].attrs.marker) ? schema.nodes.ordered_list : schema.nodes.bullet_list;
-    items[items.length - 1] = pristineNode('list_item', { ...last.attrs, sep: null }, last.content);
+    const listType = isOrdered(items[0]) ? ctx.schema.nodes.orderedList : ctx.schema.nodes.bulletList;
+    items[items.length - 1] = pristineNode(ctx, 'listItem', { ...last.attrs, sep: null }, last.content);
     result.push(listType.create({ sep: last.attrs.sep }, items));
     items = [];
   };
   for (const block of blocks) {
-    const sameList = items.length > 0 && isOrdered(items[0]) === isOrdered(block);
-    if (block.type !== schema.nodes.list_item || (items.length > 0 && !sameList)) flush();
-    if (block.type === schema.nodes.list_item) items.push(block);
+    const isItem = block.type.name === 'listItem';
+    if (!isItem || (items.length > 0 && isOrdered(items[0]) !== isOrdered(block))) flush();
+    if (isItem) items.push(block);
     else result.push(block);
   }
   flush();
@@ -168,56 +170,55 @@ function groupLists(blocks: Node[]): Node[] {
 }
 
 function isOrdered(item: Node): boolean {
-  return item.type === schema.nodes.list_item && /^\d|^\+/.test(item.attrs.marker);
+  return ORDERED_MARKER.test(item.attrs.marker ?? '');
 }
 
-function inline(nodes: SyntaxNode[], source: string, marks: readonly Mark[] = []): Node[] {
+function inline(ctx: Context, nodes: SyntaxNode[], marks: readonly Mark[] = []): Node[] {
   const result: Node[] = [];
   let pos = nodes[0]?.from ?? 0;
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
-    if (node.from > pos) result.push(raw(source.slice(pos, node.from), marks));
+    if (node.from > pos) result.push(raw(ctx, ctx.source.slice(pos, node.from), marks));
     // `#` and the expression after it form one piece of code
     const end = node.name === 'Hash' && nodes[i + 1]?.from === node.to ? nodes[++i].to : node.to;
-    result.push(...inlineNode({ node, src: source.slice(node.from, end), source, marks }));
+    result.push(...inlineNode({ ctx, node, src: ctx.source.slice(node.from, end), marks }));
     pos = end;
   }
   return result;
 }
 
 interface InlineContext {
+  ctx: Context;
   node: SyntaxNode;
   src: string;
-  source: string;
   marks: readonly Mark[];
 }
 
 const INLINE: Record<string, (c: InlineContext) => Node[]> = {
-  Text: (c) => [schema.text(c.src, c.marks)],
-  SmartQuote: (c) => [schema.text(c.src, c.marks)],
-  Space: (c) => [c.src.includes('\n') ? schema.nodes.soft_break.create({ src: c.src }) : schema.text(c.src, c.marks)],
-  Linebreak: (c) => [schema.nodes.hard_break.create({ src: c.src })],
-  Escape: (c) => [sourceText(decodeEscape(c.src), c.src, c.marks)],
-  Shorthand: (c) => (c.src in SHORTHANDS ? [sourceText(SHORTHANDS[c.src], c.src, c.marks)] : [raw(c.src, c.marks)]),
-  Strong: (c) => delimited(c.node, c.source, c.marks) ?? [raw(c.src, c.marks)],
-  Emph: (c) => delimited(c.node, c.source, c.marks) ?? [raw(c.src, c.marks)],
+  Text: (c) => [c.ctx.schema.text(c.src, c.marks)],
+  SmartQuote: (c) => [c.ctx.schema.text(c.src, c.marks)],
+  Space: (c) => [c.src.includes('\n') ? c.ctx.schema.nodes.softBreak.create({ src: c.src }) : c.ctx.schema.text(c.src, c.marks)],
+  Linebreak: (c) => [c.ctx.schema.nodes.hardBreak.create({ src: c.src })],
+  Escape: (c) => [sourceText(c, decodeEscape(c.src))],
+  Shorthand: (c) => (c.src in SHORTHANDS ? [sourceText(c, SHORTHANDS[c.src])] : [raw(c.ctx, c.src, c.marks)]),
+  Strong: (c) => delimited(c, 'bold') ?? [raw(c.ctx, c.src, c.marks)],
+  Emph: (c) => delimited(c, 'italic') ?? [raw(c.ctx, c.src, c.marks)],
 };
 
 function inlineNode(context: InlineContext): Node[] {
-  return (INLINE[context.node.name] ?? ((c: InlineContext) => [raw(c.src, c.marks)]))(context);
+  return (INLINE[context.node.name] ?? ((c: InlineContext) => [raw(c.ctx, c.src, c.marks)]))(context);
 }
 
 /** `*…*` / `_…_` with both delimiters present; null for unclosed (erroneous) ones. */
-function delimited(node: SyntaxNode, source: string, marks: readonly Mark[]): Node[] | null {
+function delimited({ ctx, node, marks }: InlineContext, markName: 'bold' | 'italic'): Node[] | null {
   const parts = children(node);
   const markup = node.getChild('Markup');
   if (parts.length !== 3 || !markup || parts[2].name !== parts[0].name) return null;
-  const mark = node.name === 'Strong' ? schema.marks.strong.create() : schema.marks.emph.create();
-  return inline(children(markup), source, mark.addToSet(marks));
+  return inline(ctx, children(markup), ctx.schema.marks[markName].create().addToSet(marks));
 }
 
-function sourceText(text: string, src: string, marks: readonly Mark[]): Node {
-  return schema.text(text, schema.marks.source.create({ src, text }).addToSet(marks));
+function sourceText({ ctx, src, marks }: InlineContext, text: string): Node {
+  return ctx.schema.text(text, ctx.schema.marks.typstSource.create({ src, text }).addToSet(marks));
 }
 
 function decodeEscape(src: string): string {
@@ -225,12 +226,12 @@ function decodeEscape(src: string): string {
   return unicode ? String.fromCodePoint(parseInt(unicode[1], 16)) : src.slice(1);
 }
 
-function raw(src: string, marks: readonly Mark[]): Node {
-  return schema.nodes.raw_inline.create({ src }, null, marks);
+function raw(ctx: Context, src: string, marks: readonly Mark[]): Node {
+  return ctx.schema.nodes.rawInline.create({ src }, null, marks);
 }
 
-function pristineNode(type: string, attrs: Record<string, unknown>, content?: Node[] | Node['content']): Node {
-  const node = schema.nodes[type].create(attrs, content);
+function pristineNode(ctx: Context, type: string, attrs: Record<string, unknown>, content?: Node[] | Node['content']): Node {
+  const node = ctx.schema.nodes[type].create(attrs, content);
   pristine.add(node);
   return node;
 }
@@ -251,33 +252,46 @@ function printBlock(node: Node, parent: Node): string {
   switch (node.type.name) {
     case 'heading':
       return `${'='.repeat(node.attrs.level)} ${printInline(node)}`;
-    case 'bullet_list':
-    case 'ordered_list':
+    case 'bulletList':
+    case 'orderedList':
       return printBlocks(node, '\n');
-    case 'list_item': {
-      const marker = parent.type === schema.nodes.ordered_list && !/^\d|^\+/.test(node.attrs.marker) ? '+' : node.attrs.marker;
-      return `${marker} ${printBlock(node.firstChild!, node)}`;
-    }
-    case 'raw_block':
+    case 'listItem':
+      return printListItem(node, parent);
+    case 'rawBlock':
       return node.attrs.src;
     default:
       return printInline(node);
   }
 }
 
-const FORMATTING = ['strong', 'emph'] as const;
-type Formatting = (typeof FORMATTING)[number];
-const DELIMITER: Record<Formatting, string> = { strong: '*', emph: '_' };
+/** `- body`, with further children (e.g. a nested list) on following lines, indented. */
+function printListItem(item: Node, list: Node): string {
+  const ordered = list.type.name === 'orderedList';
+  const keepMarker = item.attrs.marker !== null && ORDERED_MARKER.test(item.attrs.marker) === ordered;
+  const marker = keepMarker ? item.attrs.marker : ordered ? '+' : '-';
+  let out = `${marker} ${printBlock(item.firstChild!, item)}`;
+  item.forEach((child, _offset, index) => {
+    if (index > 0) out += `\n${printBlock(child, item).replace(/^/gm, '  ')}`;
+  });
+  return out;
+}
+
+/** Typst syntax per formatting mark: delimiter and function name. */
+const FORMATTING: Record<string, { delimiter: string; func: string }> = {
+  bold: { delimiter: '*', func: 'strong' },
+  italic: { delimiter: '_', func: 'emph' },
+};
+const FORMATTING_ORDER = Object.keys(FORMATTING);
 
 interface Piece {
-  marks: Formatting[];
+  marks: string[];
   text: string;
 }
 
 /** Prints inline content, choosing `*x*` or `#strong[x]` per span so the result parses back the same. */
 function printInline(block: Node): string {
   const pieces = inlinePieces(block);
-  const open: { mark: Formatting; close: string }[] = [];
+  const open: { mark: string; close: string }[] = [];
   let out = '';
   pieces.forEach((piece, i) => {
     let common = 0;
@@ -285,9 +299,10 @@ function printInline(block: Node): string {
     while (open.length > common) out += open.pop()!.close;
     for (const mark of piece.marks.slice(common)) {
       const end = spanEnd(pieces, i, mark);
+      const syntax = FORMATTING[mark];
       const asFunction = needsFunctionSyntax(out.at(-1), pieces[end + 1]?.text[0], piece.text, pieces[end].text);
-      out += asFunction ? `#${mark}[` : DELIMITER[mark];
-      open.push({ mark, close: asFunction ? ']' : DELIMITER[mark] });
+      out += asFunction ? `#${syntax.func}[` : syntax.delimiter;
+      open.push({ mark, close: asFunction ? ']' : syntax.delimiter });
     }
     out += piece.text;
   });
@@ -300,13 +315,14 @@ function inlinePieces(block: Node): Piece[] {
   let lineStart = true;
   block.forEach((child) => {
     const text = child.isText ? printText(child, lineStart) : (child.attrs.src as string);
-    pieces.push({ marks: FORMATTING.filter((m) => schema.marks[m].isInSet(child.marks)), text });
-    lineStart = !child.isText && text.endsWith('\n') ? true : /\n\s*$/.test(text);
+    const names = new Set(child.marks.map((m) => m.type.name));
+    pieces.push({ marks: FORMATTING_ORDER.filter((m) => names.has(m)), text });
+    lineStart = /\n\s*$/.test(text);
   });
   return pieces;
 }
 
-function spanEnd(pieces: Piece[], start: number, mark: Formatting): number {
+function spanEnd(pieces: Piece[], start: number, mark: string): number {
   let end = start;
   while (end + 1 < pieces.length && pieces[end + 1].marks.includes(mark)) end++;
   return end;
@@ -319,7 +335,7 @@ function needsFunctionSyntax(before: string | undefined, after: string | undefin
 }
 
 function printText(node: Node, lineStart: boolean): string {
-  const original = schema.marks.source.isInSet(node.marks);
+  const original = node.marks.find((m) => m.type.name === 'typstSource');
   if (original && original.attrs.text === node.text) return original.attrs.src;
   return escapeMarkup(node.text!.replace(/\n/g, ' '), lineStart);
 }
@@ -354,37 +370,58 @@ export function locate(doc: Node, offset: number): number {
 }
 
 /**
- * Turns `tr.doc` into `target` (a fresh projection) by replacing only the
- * top-level blocks that differ, so untouched blocks keep their identity —
- * and with it their selection, decorations and pristine state.
+ * Turns `tr.doc` into `target` (a fresh projection of the current text) with
+ * the smallest replacement: ProseMirror's diff descends into equal-typed
+ * nodes, so a changed word inside a paragraph replaces just that text and a
+ * cursor elsewhere in the paragraph stays put. Attributes (`src`, `sep`) are
+ * then updated in place and the result is marked pristine again.
  */
-export function syncBlocks(tr: Transaction, target: Node): Transaction {
+export function syncDoc(tr: Transaction, target: Node): Transaction {
   for (const attr of ['lead', 'trail']) {
     if (tr.doc.attrs[attr] !== target.attrs[attr]) tr.setDocAttribute(attr, target.attrs[attr]);
   }
-  const range = differingChildren(tr.doc, target);
-  if (!range) return tr;
-  const blocks: Node[] = [];
-  for (let i = range.start; i < range.endTarget; i++) blocks.push(target.child(i));
-  return tr.replaceWith(childOffset(tr.doc, range.start), childOffset(tr.doc, range.endCurrent), blocks);
-}
-
-/** The child index range that differs between two docs, after trimming equal children at both ends. */
-function differingChildren(current: Node, target: Node) {
-  const min = Math.min(current.childCount, target.childCount);
-  let start = 0;
-  while (start < min && current.child(start).eq(target.child(start))) start++;
-  let endCurrent = current.childCount;
-  let endTarget = target.childCount;
-  while (endCurrent > start && endTarget > start && current.child(endCurrent - 1).eq(target.child(endTarget - 1))) {
-    endCurrent--;
-    endTarget--;
+  // Diff without the anchoring attributes: a block whose `src` changed must
+  // still be descended into, not replaced wholesale. Sizes are unaffected.
+  const current = withoutAnchors(tr.doc).content;
+  const wanted = withoutAnchors(target).content;
+  const start = current.findDiffStart(wanted);
+  if (start !== null) {
+    let { a: endA, b: endB } = current.findDiffEnd(wanted)!;
+    const overlap = start - Math.min(endA, endB);
+    if (overlap > 0) {
+      endA += overlap;
+      endB += overlap;
+    }
+    tr.replace(start, endA, target.slice(start, endB));
   }
-  return start === endCurrent && start === endTarget ? null : { start, endCurrent, endTarget };
+  copyAttrs(tr, target);
+  markPristine(tr.doc, target);
+  return tr;
 }
 
-function childOffset(parent: Node, index: number): number {
-  let offset = 0;
-  for (let i = 0; i < index; i++) offset += parent.child(i).nodeSize;
-  return offset;
+const ANCHORS = ['src', 'sep', 'marker', 'lead', 'trail'];
+
+function withoutAnchors(node: Node): Node {
+  if (node.isText) return node;
+  const attrs = { ...node.attrs };
+  for (const key of ANCHORS) if (key in attrs) attrs[key] = null;
+  const content: Node[] = [];
+  node.forEach((child) => content.push(withoutAnchors(child)));
+  return node.type.create(attrs, content, node.marks);
+}
+
+/** Updates node attributes that differ from `target` (structure is already equal). */
+function copyAttrs(tr: Transaction, target: Node): void {
+  tr.doc.descendants((node, pos) => {
+    const other = target.nodeAt(pos);
+    if (other && other.type === node.type && !node.hasMarkup(other.type, other.attrs, node.marks)) {
+      tr.setNodeMarkup(pos, undefined, other.attrs);
+    }
+  });
+}
+
+function markPristine(node: Node, target: Node): void {
+  if (pristine.has(target)) pristine.add(node);
+  if (node.childCount !== target.childCount) return;
+  node.forEach((child, _offset, index) => markPristine(child, target.child(index)));
 }

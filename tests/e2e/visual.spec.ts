@@ -31,6 +31,26 @@ test('bold via keyboard shortcut becomes *…* in the source', async ({ page }) 
   await expect(page.getByTestId('typst-source')).toContainText('source. *new*');
 });
 
+test('Mod-i makes typed text italic instead of triggering a browser shortcut', async ({ page }) => {
+  const paragraph = page.getByTestId('typst-visual').locator('p').first();
+  await paragraph.click();
+  await page.keyboard.press('End');
+  await page.keyboard.type(' ');
+  await page.keyboard.press('ControlOrMeta+i');
+  await page.keyboard.type('slanted');
+  await expect(page.getByTestId('typst-visual').locator('em', { hasText: 'slanted' })).toBeVisible();
+});
+
+test('markdown-style input rules: "## " starts a heading', async ({ page }) => {
+  const paragraph = page.getByTestId('typst-visual').locator('p').first();
+  await paragraph.click();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('## Section');
+  await page.getByRole('tab', { name: 'Source' }).click();
+  await expect(page.getByTestId('typst-source')).toContainText('== Section');
+});
+
 test('clicking the preview selects the block in the visual view', async ({ page }) => {
   const svg = page.getByTestId('typst-preview').locator('.typst-preview__page svg').first();
   await expect(svg).toBeVisible();

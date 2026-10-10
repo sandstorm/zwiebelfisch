@@ -12,7 +12,7 @@ export const thresholds = {
 };
 
 export default tseslint.config(
-  { ignores: ['dist/**', '.cache/**', 'node_modules/**', 'test-results/**', 'playwright-report/**'] },
+  { ignores: ['dist/**', '.cache/**', '.claude/**', 'node_modules/**', 'test-results/**', 'playwright-report/**'] },
   {
     files: ['**/*.ts'],
     languageOptions: { parser: tseslint.parser },

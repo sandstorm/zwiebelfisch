@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { Node } from 'prosemirror-model';
-import { EditorState } from 'prosemirror-state';
-import { locate, print, project, syncBlocks } from './projection';
-import { schema } from './schema';
+import type { Node } from '@tiptap/pm/model';
+import { EditorState, TextSelection } from '@tiptap/pm/state';
+import { schema } from './extensions';
+import { locate, print, project as projectWith, syncDoc } from './projection';
+
+const project = (source: string) => projectWith(source, schema);
 
 const FIXTURES: Record<string, string> = {
   empty: '',
@@ -53,24 +55,24 @@ describe('projection', () => {
     expect(paragraph.textContent).toBe('Some bold and it text.');
     const bold = paragraph.child(1);
     expect(bold.text).toBe('bold');
-    expect(bold.marks.map((m) => m.type.name)).toEqual(['strong']);
+    expect(bold.marks.map((m) => m.type.name)).toEqual(['bold']);
   });
 
   it('keeps unmodelled code as raw blocks and raw inlines', () => {
     const doc = project('#set page(margin: 2cm)\n\nA #emph[func] call.');
-    expect(doc.child(0).type.name).toBe('raw_block');
+    expect(doc.child(0).type.name).toBe('rawBlock');
     expect(doc.child(0).attrs.src).toBe('#set page(margin: 2cm)');
     const inline = doc.child(1).child(1);
-    expect(inline.type.name).toBe('raw_inline');
+    expect(inline.type.name).toBe('rawInline');
     expect(inline.attrs.src).toBe('#emph[func]');
   });
 
   it('projects consecutive list items into one list', () => {
     const doc = project('- one\n- two\n\n+ a\n+ b');
     expect(doc.childCount).toBe(2);
-    expect(doc.child(0).type.name).toBe('bullet_list');
+    expect(doc.child(0).type.name).toBe('bulletList');
     expect(doc.child(0).childCount).toBe(2);
-    expect(doc.child(1).type.name).toBe('ordered_list');
+    expect(doc.child(1).type.name).toBe('orderedList');
   });
 
   describe('edits change only the edited block', () => {
@@ -84,7 +86,7 @@ describe('projection', () => {
     it('making text bold', () => {
       const doc = edit(project(source), (s) => {
         const to = after(s.doc, 'Report');
-        return s.tr.addMark(to - 'Report'.length, to, schema.marks.strong.create());
+        return s.tr.addMark(to - 'Report'.length, to, schema.marks.bold.create());
       });
       expect(print(doc)).toBe(source.replace('= Report', '= *Report*'));
     });
@@ -115,7 +117,7 @@ describe('projection', () => {
     });
 
     it('uses function syntax for marks inside words', () => {
-      const doc = edit(project('abcdef\n'), (s) => s.tr.addMark(3, 5, schema.marks.emph.create()));
+      const doc = edit(project('abcdef\n'), (s) => s.tr.addMark(3, 5, schema.marks.italic.create()));
       expect(print(doc)).toBe('ab#emph[cd]ef\n');
     });
 
@@ -136,16 +138,32 @@ describe('locate', () => {
     const doc = project(source);
     const pos = locate(doc, source.indexOf('para'));
     expect(doc.resolve(pos).parent.textContent).toBe('First para.');
-    expect(doc.resolve(locate(doc, source.indexOf('b\n'))).node(1).type.name).toBe('bullet_list');
+    expect(doc.resolve(locate(doc, source.indexOf('b\n'))).node(1).type.name).toBe('bulletList');
   });
 });
 
-describe('syncBlocks', () => {
+describe('syncDoc', () => {
+  it('keeps the cursor in a paragraph that changed elsewhere', () => {
+    const before = project('Hello world, this is text\n');
+    const cursor = 'Hello'.length + 1;
+    const state = EditorState.create({ doc: before, selection: TextSelection.create(before, cursor) });
+    const tr = syncDoc(state.tr, project('Hello world, this is more text\n'));
+    expect(tr.selection.from).toBe(cursor);
+    expect(tr.doc.textContent).toBe('Hello world, this is more text');
+  });
+
+  it('keeps nodes pristine after syncing, so later edits elsewhere print exact source', () => {
+    const state = EditorState.create({ doc: project('A -- b\n\nOther\n') });
+    const synced = state.apply(syncDoc(state.tr, project('A -- bc\n\nOther\n')));
+    const edited = synced.apply(synced.tr.insertText('!', after(synced.doc, 'Other')));
+    expect(print(edited.doc)).toBe('A -- bc\n\nOther!\n');
+  });
+
   it('replaces only the top-level blocks that differ', () => {
     const before = project('= A\n\nOne\n\nTwo\n');
     const after = project('= A\n\nOne changed\n\nTwo\n');
     const state = EditorState.create({ doc: before });
-    const tr = syncBlocks(state.tr, after);
+    const tr = syncDoc(state.tr, after);
     expect(tr.doc.eq(after)).toBe(true);
     expect(tr.doc.child(0)).toBe(before.child(0));
     expect(tr.doc.child(2)).toBe(before.child(2));
@@ -153,7 +171,7 @@ describe('syncBlocks', () => {
   });
 
   it('updates leading and trailing whitespace', () => {
-    const tr = syncBlocks(EditorState.create({ doc: project('A\n') }).tr, project('\nA\n\n'));
+    const tr = syncDoc(EditorState.create({ doc: project('A\n') }).tr, project('\nA\n\n'));
     expect(print(tr.doc)).toBe('\nA\n\n');
   });
 });

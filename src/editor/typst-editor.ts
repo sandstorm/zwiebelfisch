@@ -2,7 +2,7 @@ import { TypstDocument } from '../document/typst-document';
 import { Preview } from '../preview/preview';
 import { SourceView } from '../source-view/source-view';
 import { VisualView } from '../visual-view/visual-view';
-import proseMirrorStyles from 'prosemirror-view/style/prosemirror.css?inline';
+import proseMirrorStyles from '../visual-view/prosemirror.css?inline';
 import { DiagnosticsStatus } from './diagnostics-status';
 import { summarizeDiagnostics } from './diagnostics-summary';
 import styles from './styles.css?inline';

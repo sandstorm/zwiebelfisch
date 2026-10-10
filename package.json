@@ -12,8 +12,13 @@
       "import": "./dist/lib/typst-editor.js"
     }
   },
-  "files": ["dist/lib"],
-  "sideEffects": ["./dist/lib/typst-editor.js", "./src/index.ts"],
+  "files": [
+    "dist/lib"
+  ],
+  "sideEffects": [
+    "./dist/lib/typst-editor.js",
+    "./src/index.ts"
+  ],
   "packageManager": "pnpm@10.34.6",
   "devDependencies": {
     "@playwright/test": "1.64.0",
@@ -35,14 +40,12 @@
     "@codemirror/view": "6.43.14",
     "@lezer/common": "1.5.3",
     "@lezer/highlight": "1.2.5",
+    "@tiptap/core": "3.31.4",
+    "@tiptap/extension-document": "3.31.4",
+    "@tiptap/extension-list": "3.31.4",
+    "@tiptap/pm": "3.31.4",
+    "@tiptap/starter-kit": "3.31.4",
     "codemirror": "6.0.2",
-    "codemirror-lang-typst": "0.6.0",
-    "prosemirror-commands": "1.7.2",
-    "prosemirror-history": "1.5.1",
-    "prosemirror-keymap": "1.2.3",
-    "prosemirror-model": "1.25.12",
-    "prosemirror-state": "1.4.4",
-    "prosemirror-transform": "1.12.2",
-    "prosemirror-view": "1.42.6"
+    "codemirror-lang-typst": "0.6.0"
   }
 }

@@ -7,5 +7,9 @@ export default defineConfig({
   timeout: 60_000,
   expect: { timeout: 30_000 },
   use: { baseURL: 'http://typst-editor.test', trace: 'retain-on-failure' },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+  ],
 });

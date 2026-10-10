@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Install JS dependencies and Playwright browser"
+#MISE description="Install JS dependencies and Playwright browsers"
 set -euo pipefail
 pnpm install --frozen-lockfile
-pnpm exec playwright install chromium
+pnpm exec playwright install chromium firefox webkit
