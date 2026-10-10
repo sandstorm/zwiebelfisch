@@ -63,13 +63,16 @@ test('a set rule keeps showing its code', async ({ page }) => {
   await expect(picture(box)).toBeHidden();
 });
 
-test('an image block shows the image file from the project, and its code on click', async ({ page }) => {
+test('an image block shows the image file from the project; a click selects it, a double-click shows its code', async ({ page }) => {
   await load(page, '#image("logo.svg")\n\nText\n', { '/logo.svg': SVG });
   const box = visual(page).locator('.typst-visual__image');
   await expect(picture(box)).toBeVisible();
   await expect(picture(box)).toHaveAttribute('src', /^blob:/);
   expect(await picture(box).evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
   await picture(box).click();
+  await expect(box.getByRole('toolbar', { name: 'Image' })).toBeVisible();
+  await expect(code(box)).toBeHidden();
+  await picture(box).dblclick();
   await expect(code(box)).toBeVisible();
 });
 

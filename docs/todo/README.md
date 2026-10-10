@@ -57,3 +57,4 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [visual-toc-and-code](visual-toc-and-code.md) | done (branch task/visual-toc-and-code) |
 | [concept-custom-styles](concept-custom-styles.md) | done (concept: docs/2026_10_10_custom-styles.md) |
 | [custom-styles-mvp](custom-styles-mvp.md) | open |
+| [visual-figures-resize](visual-figures-resize.md) | done (branch task/visual-figures-resize) |

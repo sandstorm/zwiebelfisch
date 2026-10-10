@@ -54,7 +54,8 @@ export interface BoxHost {
  * snippets whenever the renderer reports a change.
  */
 export class RenderedBox {
-  private readonly picture: HTMLImageElement;
+  /** The `<img>` shown instead of the code (the box may move it, e.g. into a frame). */
+  readonly picture: HTMLImageElement;
   private readonly unsubscribe: () => void;
   private url: string | null = null;
   private editing = false;
@@ -74,10 +75,10 @@ export class RenderedBox {
       host.activate();
     });
     dom.insertBefore(this.picture, code);
-    dom.addEventListener('focusin', () => this.setEditing(true));
-    dom.addEventListener('focusout', (event) => {
+    code.addEventListener('focusin', () => this.setEditing(true));
+    code.addEventListener('focusout', (event) => {
       const next = event.relatedTarget as globalThis.Node | null;
-      if (!next || !dom.contains(next)) this.setEditing(false);
+      if (!next || !code.contains(next)) this.setEditing(false);
     });
     this.unsubscribe = renderer.onChange(() => void this.refresh());
     // Positions are only known once the node view is in place.
