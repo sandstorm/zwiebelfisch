@@ -31,6 +31,7 @@ import { Layout } from './layout/layout';
 import layoutStyles from './layout/layout.css?inline';
 import { EditorTitleMenu } from './menus/editor-title-menu';
 import { Menus } from './menus/menus';
+import { SessionMemory } from './memory/session-memory';
 import { Notifications } from './notifications/notifications';
 import { QuickInput } from './quick-input/quick-input';
 import { StatusBar } from './status-bar/status-bar';
@@ -601,6 +602,7 @@ export interface WorkbenchOptions {
 export class WorkbenchHost implements Workbench {
   #active: ProjectPath;
   readonly #layout: Layout;
+  readonly #memory: SessionMemory;
   readonly #statusBar: StatusBar;
   readonly #views: EditingViews;
   readonly #customEditors: CustomEditors;
@@ -649,7 +651,8 @@ export class WorkbenchHost implements Workbench {
     this.#configuration.declare(WORKBENCH_SETTINGS);
     this.#scheme = new ColorScheme(host);
     this.#applyTheme();
-    this.#layout = new Layout(host, `typst-editor:${project.main}`);
+    this.#memory = new SessionMemory(host.ownerDocument, `typst-editor:${project.main}`);
+    this.#layout = new Layout(host, this.#memory);
     this.#statusBar = new StatusBar(this.#layout.statusBar);
     this.#commands = new Commands(host);
     this.#drops = new FileDrops(host);
@@ -784,7 +787,7 @@ export class WorkbenchHost implements Workbench {
   }
 
   remember<T>(name: string): Memory<T> {
-    return this.#layout.remember<T>(name);
+    return this.#memory.remember<T>(name);
   }
 
   showInformationMessage<T extends string | MessageItem>(message: string, ...items: T[]): Promise<T | undefined> {

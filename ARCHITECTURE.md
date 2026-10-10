@@ -36,7 +36,8 @@ src/                        the widget (TypeScript); the most important API on t
                             boxes'), file-decorations/ (FileDecorations), source-controls/ (SourceControls),
                             status-bar/ (StatusBar: the status bar items, left / right by priority),
                             menus/ (Menus: menu entries by menu id; EditorTitleMenu: `editor/title` in the tab bar),
-                            notifications/ (Notifications: the messages), quick-input/ (QuickInput: input box and quick pick)
+                            notifications/ (Notifications: the messages), quick-input/ (QuickInput: input box and quick pick),
+                            memory/ (SessionMemory: `remember`, the values kept for the browser session)
     visual-view/            VisualView (Tiptap over the projection) and its contribution points, all in visual-view.ts:
                             VisualViewContributions, TypstNodeSpec / TypstMarkSpec, toolbar items and groups, box
                             renderers / tools / actions, gutters, highlights, VisualViewContext, svg, starterKitPart,

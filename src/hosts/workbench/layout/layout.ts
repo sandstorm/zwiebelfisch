@@ -1,7 +1,8 @@
 // Layout: the widget's regions — side panels (rail buttons, resizable, collapsible, an overlay when narrow),
-// editing area, preview, status bar — and the per-session layout memory. See workbench.ts and ARCHITECTURE.md, "Layout".
+// editing area, preview, status bar; their sizes and open panels kept for the session. See workbench.ts and ARCHITECTURE.md, "Layout".
 
 import type { Memory, SidePanelOptions } from '../workbench';
+import type { SessionMemory } from '../memory/session-memory';
 
 /** Below this widget width an open side panel lies over the editing area instead of beside it. */
 const NARROW = 720;
@@ -47,7 +48,7 @@ export class Layout {
 
   constructor(
     private readonly host: HTMLElement,
-    private readonly storageKey: string,
+    memory: SessionMemory,
   ) {
     const doc = host.ownerDocument;
     this.side = div(doc, 'typst-editor__side');
@@ -65,7 +66,7 @@ export class Layout {
     this.preview.append(this.split);
     this.statusBar = div(doc, 'typst-editor__status-bar');
     host.append(this.side, this.editor, this.preview, this.statusBar);
-    this.saved = this.remember<Saved>('layout');
+    this.saved = memory.remember<Saved>('layout');
     this.state = { width: WIDTH.initial, preview: SHARE.initial, chosen: {}, ...this.saved.load() };
     this.showSplit();
     this.watchWidth();
@@ -142,35 +143,6 @@ export class Layout {
   /** Closes the overlay panel of a narrow widget (nothing happens while the panel sits beside the editor). */
   dismiss(): void {
     if (this.narrow && this.openId) this.show(null);
-  }
-
-  /** A value remembered for the browser session under this widget's key (`name` tells values apart). */
-  remember<T>(name: string): Memory<T> {
-    const key = `${this.storageKey}:${name}`;
-    const storage = () => {
-      try {
-        return this.host.ownerDocument.defaultView?.sessionStorage ?? null;
-      } catch {
-        return null;
-      }
-    };
-    return {
-      load: () => {
-        try {
-          const text = storage()?.getItem(key);
-          return text ? (JSON.parse(text) as T) : null;
-        } catch {
-          return null;
-        }
-      },
-      save: (value) => {
-        try {
-          storage()?.setItem(key, JSON.stringify(value));
-        } catch {
-          // storage full or blocked: only this session's DOM keeps the state
-        }
-      },
-    };
   }
 
   dispose(): void {

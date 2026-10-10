@@ -2,6 +2,7 @@
 // Tests for layout.ts.
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { SessionMemory } from '../memory/session-memory';
 import { Layout } from './layout';
 
 let resize: (() => void) | null = null;
@@ -18,7 +19,7 @@ function setup({ observe = false, key = `test-${Math.random()}` } = {}) {
   }
   const host = document.createElement('div');
   document.body.append(host);
-  const layout = new Layout(host, key);
+  const layout = new Layout(host, new SessionMemory(document, key));
   const body = layout.addPanel('files', { label: 'Files', icon: document.createElement('span') });
   body.textContent = 'tree';
   const toggle = host.querySelector<HTMLButtonElement>('[data-testid=typst-panel-toggle-files]')!;
@@ -141,13 +142,5 @@ describe('Layout', () => {
     expect(isOpen()).toBe(false);
     setWidth(1200);
     expect(isOpen()).toBe(true);
-  });
-
-  it('remembers values for the session', () => {
-    const { layout } = setup();
-    const memory = layout.remember<string[]>('folders');
-    expect(memory.load()).toBeNull();
-    memory.save(['/a']);
-    expect(memory.load()).toEqual(['/a']);
   });
 });
