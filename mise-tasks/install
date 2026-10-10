@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Install JS dependencies and Playwright browser"
+set -euo pipefail
+pnpm install --frozen-lockfile
+pnpm exec playwright install chromium

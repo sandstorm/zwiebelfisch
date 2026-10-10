@@ -1,5 +1,12 @@
 [tools]
 node = "24.21.0"
 pnpm = "10.34.6"
-# keep in sync with the Typst version bundled in @myriaddreamin/typst-ts-web-compiler
-typst = "0.14.2"
+# CLI for reference renders; keep in sync with the typst crate in crates/typst-engine
+typst = "0.15.1"
+rust = { version = "1.99.0", targets = "wasm32-unknown-unknown" }
+# must match the wasm-bindgen crate version pinned in crates/typst-engine/Cargo.toml
+"github:wasm-bindgen/wasm-bindgen" = "0.2.129"
+
+[env]
+# keep Playwright browsers project-local (pinned with @playwright/test)
+PLAYWRIGHT_BROWSERS_PATH = "{{config_root}}/.cache/ms-playwright"

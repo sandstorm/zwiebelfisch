@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+#MISE description="Build the typst-engine Rust crate to wasm (src/engine/wasm)"
+#MISE sources=["crates/typst-engine/src/**/*.rs", "crates/typst-engine/Cargo.toml", "crates/typst-engine/Cargo.lock"]
+#MISE outputs=["src/engine/wasm/typst_engine_bg.wasm"]
+set -euo pipefail
+cargo build --manifest-path crates/typst-engine/Cargo.toml --target wasm32-unknown-unknown --release
+wasm-bindgen --target web --out-dir src/engine/wasm \
+  crates/typst-engine/target/wasm32-unknown-unknown/release/typst_engine.wasm
+ls -lh src/engine/wasm/typst_engine_bg.wasm | awk '{print "wasm size: " $5}'
