@@ -87,6 +87,47 @@ const Image = Node.create({
   },
 });
 
+/**
+ * `#figure(image(..), caption: [..])`: the image (an `image` node holding
+ * the call without its `#`) and, optionally, the caption as rich text.
+ * `layout` is how the figure's source lies around the two (owned by the
+ * projection); other arguments and a label after the call live there.
+ */
+const Figure = Node.create({
+  name: 'figure',
+  group: 'block',
+  content: 'image figureCaption?',
+  isolating: true,
+  addAttributes() {
+    return { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } };
+  },
+  renderHTML() {
+    return ['figure', { class: 'typst-visual__figure' }, 0];
+  },
+});
+
+/** A figure's caption: one paragraph of rich text. Enter leaves the figure. */
+const FigureCaption = Node.create({
+  name: 'figureCaption',
+  content: 'inline*',
+  addAttributes() {
+    return { src: { default: null, rendered: false } };
+  },
+  renderHTML() {
+    return ['figcaption', { class: 'typst-visual__caption' }, 0];
+  },
+  addKeyboardShortcuts() {
+    return {
+      Enter: () => {
+        const { $from } = this.editor.state.selection;
+        if ($from.parent.type.name !== 'figureCaption') return false;
+        const after = $from.after($from.depth - 1);
+        return this.editor.chain().insertContentAt(after, { type: 'paragraph' }).setTextSelection(after + 1).run();
+      },
+    };
+  },
+});
+
 /** Inline Typst the Visual view does not model (`#func[..]`, `$x$`, `@ref`, …), kept verbatim and editable as code. */
 const RawInline = Node.create({
   name: 'rawInline',
@@ -153,6 +194,8 @@ export const extensions = [
   TableCell,
   TableHeader,
   Image,
+  Figure,
+  FigureCaption,
   TypstDocument,
   TypstListItem,
   SourceAnchors,

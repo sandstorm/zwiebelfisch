@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState, TextSelection } from '@tiptap/pm/state';
 import { schema } from './extensions';
-import { imagePath, imageSource, posToSource, print, project as projectWith, sourceToPos, syncDoc } from './projection';
+import { hasFigureExtras, imagePath, imageSource, posToSource, print, project as projectWith, sourceToPos, syncDoc } from './projection';
 
 const project = (source: string) => projectWith(source, schema);
 
@@ -25,6 +25,15 @@ const FIXTURES: Record<string, string> = {
   images: '#image("img/logo.png", width: 50%)\n\nText #image("i.png") inline\n',
   tables: '#table(\n  columns: 2,\n  stroke: none,\n  [a], [*b* c],\n  [], [- x\n  - y],\n)\n\n#table(columns: 1, [one\n\ntwo])\n',
   rawTables: '#table(columns: (1fr, 1fr), [a], [b])\n\n#table(columns: 2, [a], [b], [c])\n\n#table(columns: 1, table.header[H], [a])\n',
+  figures:
+    '#figure(image("x.png", width: 50%), caption: [Some *caption*]) <fig:x>\n\n' +
+    '#figure(\n  image("a.png", height: 2cm, fit: "contain", alt: "A"),\n  placement: top,\n' +
+    '  caption: [ With #link("https://a.org")[a link] and `code` ],\n  kind: image,\n)\n<fig:y>\n\n' +
+    '#figure(image("b.png"))\n\n#figure(image("c.png"), caption: [])<c>\n\n' +
+    '#table(columns: 1, [#figure(image("t.png"), caption: [In a cell])])\n',
+  rawFigures:
+    '#figure([text], caption: [x])\n\n#figure(image("a.png"), caption: [a\n\nb])\n\n' +
+    '#figure(table(columns: 1, [a]))\n\n#figure(image(p), caption: [x])\n\n#figure(image("a.png")) <a> <b>\n',
 };
 
 function edit(doc: Node, change: (state: EditorState) => EditorState['tr']): Node {
@@ -494,5 +503,103 @@ describe('tables', () => {
     expect(print(tr.doc)).toBe(changed);
     expect(tr.doc.child(0).child(1)).toBe(state.doc.child(0).child(1));
     expectPreciseMap(tr.doc);
+  });
+});
+
+describe('figures', () => {
+  const source = '#figure(image("x.png", width: 50%), caption: [Some *caption*]) <fig:x>\n\nAfter\n';
+
+  it('projects an image figure as the image and its caption as rich text', () => {
+    const figure = project(source).child(0);
+    expect(figure.type.name).toBe('figure');
+    expect(figure.child(0).type.name).toBe('image');
+    expect(figure.child(0).attrs.src).toBe('image("x.png", width: 50%)');
+    const caption = figure.child(1);
+    expect(caption.type.name).toBe('figureCaption');
+    expect(caption.textContent).toBe('Some caption');
+    expect(caption.child(1).marks.map((m) => m.type.name)).toEqual(['bold']);
+  });
+
+  it('projects figures without a caption, with other arguments and inside table cells', () => {
+    const doc = project(FIXTURES.figures);
+    expect(doc.child(1).type.name).toBe('figure');
+    expect(doc.child(1).child(1).textContent).toBe('With a link and '); // `code` is a raw inline
+    expect(doc.child(2).childCount).toBe(1);
+    expect(doc.child(3).child(1).content.size).toBe(0);
+    expect(doc.child(4).child(0).child(0).child(0).type.name).toBe('figure');
+  });
+
+  it('keeps figures it cannot model raw', () => {
+    project(FIXTURES.rawFigures).forEach((block) => expect(block.type.name, block.attrs.src).toBe('rawBlock'));
+  });
+
+  it('editing the caption changes only the caption', () => {
+    const doc = edit(project(source), (s) => s.tr.insertText(' text', after(s.doc, 'caption')));
+    expect(print(doc)).toBe(source.replace('[Some *caption*]', '[Some *caption text*]'));
+    expectPreciseMap(doc);
+  });
+
+  it('typed caption text is escaped for a content block', () => {
+    const doc = edit(project('#figure(image("c.png"), caption: [])\n'), (s) => s.tr.insertText('- a] b', insideEmptyBlock(s.doc)));
+    expect(print(doc)).toBe('#figure(image("c.png"), caption: [\\- a\\] b])\n');
+  });
+
+  it('editing the image call changes only the image call', () => {
+    const doc = edit(project(source), (s) => s.tr.setNodeAttribute(1, 'src', 'image("x.png", width: 30%)'));
+    expect(print(doc)).toBe(source.replace('50%', '30%'));
+  });
+
+  it('adding a caption to a figure without one puts it right after the image', () => {
+    const text = '#figure(\n  image("b.png"),\n  placement: top,\n) <b>\n';
+    const doc = edit(project(text), (s) => {
+      const image = s.doc.child(0).child(0);
+      return s.tr.insert(1 + image.nodeSize, schema.nodes.figureCaption.create(null, schema.text('Hi')));
+    });
+    expect(print(doc)).toBe('#figure(\n  image("b.png"), caption: [Hi],\n  placement: top,\n) <b>\n');
+    expectPreciseMap(doc);
+  });
+
+  it('removing a caption removes just its argument', () => {
+    for (const [text, expected] of [
+      ['#figure(image("a.png"), caption: [x], placement: top) <a>\n', '#figure(image("a.png"), placement: top) <a>\n'],
+      ['#figure(image("a.png"), placement: top, caption: [x])\n', '#figure(image("a.png"), placement: top)\n'],
+      ['#figure(\n  image("a.png"),\n  caption: [x],\n)\n', '#figure(\n  image("a.png"),\n)\n'],
+    ]) {
+      const doc = edit(project(text), (s) => {
+        const figure = s.doc.child(0);
+        return s.tr.delete(1 + figure.child(0).nodeSize, figure.nodeSize - 1);
+      });
+      expect(print(doc), text).toBe(expected);
+    }
+  });
+
+  it('prints a figure created in the editor', () => {
+    const figure = schema.nodes.figure.create(null, [
+      schema.nodes.image.create({ src: 'image("a.png", width: 50%)' }),
+      schema.nodes.figureCaption.create(null, [schema.text('A '), schema.text('cat', [schema.marks.italic.create()])]),
+    ]);
+    const doc = edit(project('Text\n'), (s) => s.tr.insert(s.doc.content.size, figure));
+    expect(print(doc)).toBe('Text\n\n#figure(image("a.png", width: 50%), caption: [A _cat_])\n');
+    expectPreciseMap(doc);
+  });
+
+  it('syncs an outside change to the caption as a change in the caption', () => {
+    const state = EditorState.create({ doc: project(source) });
+    const changed = source.replace('Some', 'Any');
+    const tr = syncDoc(state.tr, project(changed));
+    expect(print(tr.doc)).toBe(changed);
+    expect(tr.doc.child(0).child(0)).toBe(state.doc.child(0).child(0));
+  });
+
+  it('tells whether a figure has more than its image and caption', () => {
+    const extras = (text: string) => hasFigureExtras(project(text).child(0));
+    expect(extras('#figure(image("a.png"), caption: [x])')).toBe(false);
+    expect(extras('#figure(\n  image("a.png"),\n  caption: [x],\n)')).toBe(false);
+    expect(extras('#figure(image("a.png"), caption: [x]) <a>')).toBe(true);
+    expect(extras('#figure(image("a.png"), placement: top)')).toBe(true);
+  });
+
+  it('reads the image path of a figure body', () => {
+    expect(imagePath('image("img/a.png", width: 50%)')).toBe('img/a.png');
   });
 });

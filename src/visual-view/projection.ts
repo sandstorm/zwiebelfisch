@@ -18,9 +18,10 @@
  *
  * Besides markup (headings, lists, paragraphs, strong/emph), it models links
  * (`#link("url")[text]`, bare URLs) as a `link` mark, standalone
- * `#image("path", ..)` calls as `image` blocks (source kept like a raw block)
- * and `#table(columns: n, [..], ..)` with content cells as tables whose cells
- * hold blocks.
+ * `#image("path", ..)` calls as `image` blocks (source kept like a raw block),
+ * `#figure(image("path", ..), caption: [..])` as figures whose caption is rich
+ * text, and `#table(columns: n, [..], ..)` with content cells as tables whose
+ * cells hold blocks.
  */
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
@@ -211,15 +212,96 @@ function callee(ctx: Context, call: SyntaxNode): { name: string; args: SyntaxNod
   return { name: ident ? ctx.source.slice(ident.from, ident.to) : '', args: args ? children(args) : [] };
 }
 
-/** A run that is exactly one `#func(..)` call of a function modelled as a block (image, table). */
+/** A run that is exactly one `#func(..)` call of a function modelled as a block (image, table, figure with a label). */
 function blockCall(ctx: Context, segment: Segment, sep: string | null): Node | null {
-  const [hash, call] = segment.nodes;
-  if (segment.nodes.length !== 2 || hash.name !== 'Hash' || call.name !== 'FuncCall' || call.from !== hash.to) return null;
+  const [hash, call, ...rest] = segment.nodes;
+  if (hash.name !== 'Hash' || call?.name !== 'FuncCall' || call.from !== hash.to) return null;
   const { name, args } = callee(ctx, call);
+  if (name === 'figure' && isLabelAfter(rest)) return figure(ctx, segment, args, sep);
+  if (rest.length > 0) return null;
   const src = ctx.source.slice(segment.from, segment.to);
   if (name === 'image') return parenthesized(args) && imagePath(src) !== null ? ctx.schema.nodes.image.create({ src, sep }) : null;
   if (name === 'table') return table(ctx, segment, args, sep);
   return null;
+}
+
+/** Nothing, or one label after optional spaces. */
+function isLabelAfter(nodes: SyntaxNode[]): boolean {
+  return nodes.length === 0 || (nodes.at(-1)!.name === 'Label' && nodes.slice(0, -1).every((n) => n.name === 'Space'));
+}
+
+/** How a figure's source lies around its image call and caption content, for printing it back. */
+interface FigureLayout {
+  /** From `#figure` to the image call, e.g. `#figure(`. */
+  open: string;
+  /** Around the caption's content: from the image call to the content, and after the content to the end of the argument. */
+  caption: { before: string; open: string; close: string } | null;
+  /** The rest: other arguments, `)`, a label. */
+  rest: string;
+}
+
+/** The layout of a figure made in the editor: `#figure(image(..), caption: [..])`. */
+const NEW_FIGURE: FigureLayout = { open: '#figure(', caption: null, rest: ')' };
+const NEW_CAPTION = { before: ', ', open: 'caption: [', close: ']' };
+
+/**
+ * `#figure(image("path", ..), ..named) <label>?` whose `caption`, if any, is
+ * one paragraph of markup; other named arguments stay as written.
+ */
+function figure(ctx: Context, segment: Segment, args: SyntaxNode[], sep: string | null): Node | null {
+  const parsed = figureArgs(ctx, args);
+  if (!parsed) return null;
+  const { schema, source } = ctx;
+  const { image, caption } = parsed;
+  const imageNode = schema.nodes.image.create({ src: source.slice(image.from, image.to) });
+  const layout: FigureLayout = { open: source.slice(segment.from, image.from), caption: null, rest: '' };
+  if (!caption) {
+    layout.rest = source.slice(image.to, segment.to);
+    return schema.nodes.figure.create({ sep, layout }, [imageNode]);
+  }
+  const { from, to, nodes } = captionContent(caption.content);
+  layout.caption = { before: source.slice(image.to, caption.arg.from), open: source.slice(caption.arg.from, from), close: source.slice(to, caption.arg.to) };
+  layout.rest = source.slice(caption.arg.to, segment.to);
+  const captionNode = textblock(ctx, { type: 'figureCaption', attrs: { src: source.slice(from, to) } }, from, inline(ctx, nodes));
+  return schema.nodes.figure.create({ sep, layout }, [imageNode, captionNode]);
+}
+
+/** The image call and the caption argument of a figure, if it is an image with an optional one-paragraph caption. */
+function figureArgs(ctx: Context, args: SyntaxNode[]): { image: SyntaxNode; caption: { arg: SyntaxNode; content: SyntaxNode } | null } | null {
+  if (!parenthesized(args)) return null;
+  const [image, ...others] = args.slice(1, -1).filter((a) => a.name !== 'Space' && a.name !== 'Comma');
+  if (image?.name !== 'FuncCall' || callee(ctx, image).name !== 'image' || imagePath(ctx.source.slice(image.from, image.to)) === null) return null;
+  if (!parenthesized(callee(ctx, image).args)) return null;
+  let caption: { arg: SyntaxNode; content: SyntaxNode } | null = null;
+  for (const arg of others) {
+    const name = arg.name === 'Named' ? arg.getChild('Ident') : null;
+    if (!name) return null;
+    if (ctx.source.slice(name.from, name.to) !== 'caption') continue;
+    const content = arg.lastChild!;
+    if (caption || !isClosedContent(content) || !isOneParagraph(content.getChild('Markup')!)) return null;
+    caption = { arg, content };
+  }
+  return { image, caption };
+}
+
+function isOneParagraph(markup: SyntaxNode): boolean {
+  return children(markup).every((n) => n.name !== 'Parbreak' && blockKind(n) === null);
+}
+
+/** A content block's markup without the spaces at its edges, and where that lies. */
+function captionContent(block: SyntaxNode): { from: number; to: number; nodes: SyntaxNode[] } {
+  const markup = block.getChild('Markup')!;
+  const nodes = children(markup);
+  while (nodes[0]?.name === 'Space') nodes.shift();
+  while (nodes.at(-1)?.name === 'Space') nodes.pop();
+  const from = nodes[0]?.from ?? markup.from;
+  return { from, to: nodes.at(-1)?.to ?? from, nodes };
+}
+
+/** Whether a figure's source has more than its image and caption: other arguments, a label, comments. */
+export function hasFigureExtras(figure: Node): boolean {
+  const layout: FigureLayout = figure.attrs.layout ?? NEW_FIGURE;
+  return (layout.open + (layout.caption?.before ?? '') + layout.rest).replace(/[\s,]/g, '') !== '#figure()';
 }
 
 /** How a table's source lies around its cells, for printing it back. */
@@ -410,9 +492,9 @@ function quote(text: string): string {
   return `"${text.replace(/["\\]/g, '\\$&')}"`;
 }
 
-/** The path of the image an `#image("path", ..)` call shows; null if it is not a call with a literal path. */
+/** The path of the image an `#image("path", ..)` call (or a figure's `image(..)`) shows; null if it is not a call with a literal path. */
 export function imagePath(src: string): string | null {
-  const literal = /^#image\(\s*("(?:[^"\\\n]|\\.)*")/.exec(src);
+  const literal = /^#?image\(\s*("(?:[^"\\\n]|\\.)*")/.exec(src);
   return literal ? decodeString(literal[1]) : null;
 }
 
@@ -636,6 +718,8 @@ function printBlock(out: Printer, node: Node, parent: Node, pos: number): void {
       return out.shown(node.attrs.src, 'atom', pos, pos + 1);
     case 'table':
       return printTable(out, node, pos);
+    case 'figure':
+      return printFigure(out, node, pos);
     default:
       return printTextblock(out, node, pos);
   }
@@ -725,6 +809,27 @@ function printTable(out: Printer, table: Node, pos: number): void {
     out.hidden(',\n');
   }
   out.hidden(')');
+}
+
+/**
+ * A figure: its source around the image call and the caption content, so
+ * each prints (and changes) on its own. An added caption goes right after the
+ * image call; a removed one takes its argument and the comma before it along.
+ */
+function printFigure(out: Printer, figure: Node, pos: number): void {
+  const layout: FigureLayout = figure.attrs.layout ?? NEW_FIGURE;
+  const image = figure.child(0);
+  out.hidden(layout.open);
+  printBlock(out, image, figure, pos + 1);
+  if (figure.childCount > 1) {
+    const around = layout.caption ?? NEW_CAPTION;
+    out.hidden(around.before + around.open);
+    printBlock(out, figure.child(1), figure, pos + 1 + image.nodeSize);
+    out.closing(around.close);
+  } else if (layout.caption) {
+    out.hidden(layout.caption.before.replace(/,\s*$/, ''));
+  }
+  out.hidden(layout.rest);
 }
 
 /** Whether the table still has the rows and columns its source `layout` was made for. */
