@@ -1,23 +1,23 @@
 /* "Changes since …": toggle, Visual view track changes, preview change bars.
    (The Source view's inline diff is styled by @codemirror/merge.) */
 .typst-editor {
-  --te-inserted: rgba(26, 127, 55, 0.16);
-  --te-inserted-line: #1a7f37;
-  --te-deleted: #cf222e;
-  --te-format: rgba(130, 80, 223, 0.14);
-  --te-change-bar: #d4a72c;
+  --te-inserted: light-dark(rgba(26, 127, 55, 0.16), rgba(46, 160, 67, 0.25));
+  --te-inserted-line: light-dark(#1a7f37, #3fb950);
+  --te-deleted: light-dark(#cf222e, #f85149);
+  --te-format: light-dark(rgba(130, 80, 223, 0.14), rgba(171, 125, 248, 0.2));
+  --te-change-bar: light-dark(#d4a72c, #bb8009);
 }
 .typst-editor__changes {
   margin-left: auto;
   border: 1px solid var(--te-border);
   border-radius: 6px;
   padding: 4px 10px;
-  background: white;
+  background: var(--te-surface);
   font: inherit;
   font-size: 13px;
   cursor: pointer;
 }
-.typst-editor__changes[aria-pressed='true'] { background: #fff8c5; border-color: var(--te-change-bar); }
+.typst-editor__changes[aria-pressed='true'] { background: var(--te-note-bg); border-color: var(--te-change-bar); }
 .typst-editor__changes[hidden] { display: none; }
 /* "Save version" (rooms backed by a GitLab branch): button, commit message popover, outcome */
 .typst-editor__versions { position: relative; display: inline-flex; align-items: center; gap: 6px; }
@@ -25,14 +25,14 @@
   border: 1px solid var(--te-accent);
   border-radius: 6px;
   padding: 4px 10px;
-  background: white;
+  background: var(--te-surface);
   color: var(--te-accent);
   font: inherit;
   font-size: 13px;
   cursor: pointer;
 }
 .typst-editor__save-version:disabled { opacity: 0.6; cursor: default; }
-.typst-editor__version-status { color: #57606a; font-size: 12px; max-width: 28em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.typst-editor__version-status { color: var(--te-muted); font-size: 12px; max-width: 28em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .typst-editor__versions .typst-popover { right: 0; left: auto !important; }
 .typst-diff-insert {
   background: var(--te-inserted);
@@ -45,7 +45,7 @@
   text-decoration: line-through;
   user-select: none;
 }
-.typst-diff-format { background: var(--te-format); border-bottom: 2px dotted #8250df; }
+.typst-diff-format { background: var(--te-format); border-bottom: 2px dotted var(--te-purple); }
 .typst-diff-changed { box-shadow: inset 3px 0 0 var(--te-change-bar); }
 .typst-preview__change-bar {
   position: absolute;

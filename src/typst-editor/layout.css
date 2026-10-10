@@ -7,7 +7,7 @@
   display: flex;
   min-height: 0;
   border-right: 1px solid var(--te-border);
-  background: #fbfbfc;
+  background: var(--te-subtle);
 }
 .typst-editor__side[hidden] { display: none; }
 .typst-editor__rail {
@@ -27,12 +27,12 @@
   border-radius: 6px;
   padding: 0;
   background: none;
-  color: #57606a;
+  color: var(--te-muted);
   cursor: pointer;
 }
 .typst-editor__rail-button[hidden] { display: none; }
-.typst-editor__rail-button:hover { background: #eef1f5; color: #1f2328; }
-.typst-editor__rail-button[aria-pressed='true'] { background: #e7efff; color: var(--te-accent); }
+.typst-editor__rail-button:hover { background: var(--te-hover); color: var(--te-text); }
+.typst-editor__rail-button[aria-pressed='true'] { background: var(--te-selected); color: var(--te-accent); }
 .typst-editor__rail-button svg { width: 16px; height: 16px; }
 .typst-editor__panel {
   position: relative;
@@ -41,7 +41,7 @@
   min-height: 0;
   max-width: 50vw;
   border-left: 1px solid var(--te-border);
-  background: #fbfbfc;
+  background: var(--te-subtle);
 }
 .typst-editor__panel[hidden],
 .typst-editor__panel-body[hidden] { display: none; }
