@@ -14,6 +14,8 @@ export interface EditingViewsOptions {
   onSelection?(document: TypstDocument): void;
   /** Accepting a change in the source view of `document` moved its base (see `SourceView.showChanges`). */
   onBaseChange?(document: TypstDocument, base: string): void;
+  /** The views of `document` were just created (e.g. to show its changes there too). */
+  onCreate?(document: TypstDocument, views: { visual: VisualView; source: SourceView }): void;
   /** Options for the Visual view of `document` (rendered raw boxes, images to insert). */
   visualOptions?(document: TypstDocument): VisualViewOptions;
 }
@@ -71,18 +73,16 @@ export class EditingViews {
   /** Shows the views of `document`, creating them on first use; null hides all of them. */
   show(document: TypstDocument | null): void {
     this.active = document;
-    if (document && !this.views.has(document)) this.views.set(document, this.create(document));
+    if (document) this.ensure(document);
     this.tabs.hidden = document === null;
     this.layout();
   }
 
   /** The views of `document`, created (hidden) if it was not shown yet. */
   viewsOf(document: TypstDocument): { visual: VisualView; source: SourceView } {
-    if (!this.views.has(document)) {
-      this.views.set(document, this.create(document));
-      this.layout();
-    }
-    return this.views.get(document)!;
+    const views = this.ensure(document);
+    this.layout();
+    return views;
   }
 
   /** The shown document and the view it is shown in; null while no document is shown. */
@@ -134,6 +134,17 @@ export class EditingViews {
   destroy(): void {
     for (const document of [...this.views.keys()]) this.drop(document);
     this.tabs.remove();
+  }
+
+  /** The views of `document`, created if it has none yet. */
+  private ensure(document: TypstDocument): Views {
+    let views = this.views.get(document);
+    if (!views) {
+      views = this.create(document);
+      this.views.set(document, views);
+      this.options.onCreate?.(document, views);
+    }
+    return views;
   }
 
   private create(document: TypstDocument): Views {

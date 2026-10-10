@@ -32,7 +32,6 @@ export interface PreviewOptions {
 type RequestBody = Request extends infer R ? (R extends Request ? Omit<R, 'id'> : never) : never;
 type Compile = { files: Record<string, FileContent>; main: string };
 type Reveal = { path: string; offset: number };
-type Changes = { path: string; ranges: { from: number; to: number }[] };
 
 /** Minimum time between two cursor → preview lookups while the cursor moves. */
 const REVEAL_INTERVAL_MS = 80;
@@ -58,9 +57,11 @@ export class Preview {
   private readonly reveals: LatestOnly<Reveal>;
   private readonly resizeObserver: ResizeObserver | null;
   private highlights: HTMLElement[] = [];
-  private changes: Changes | null = null;
+  /** The changed ranges to mark, per path (only paths with changes shown). */
+  private readonly changes = new Map<string, { from: number; to: number }[]>();
   private changeBars: HTMLElement[] = [];
   private changeDraws = 0;
+  private changesQueued = false;
   private zoom: Zoom = 'fit';
   private nextId = 0;
   private readonly sender = new FileSender();
@@ -147,12 +148,20 @@ export class Preview {
   /**
    * Marks where the given source ranges of `path` are drawn with change bars
    * in the page margin, after this and every following compilation, until
-   * called with null. The ranges refer to the text last passed to `update()`;
-   * an empty range (a deletion) marks the text around it.
+   * called with null for that path; each path has its own ranges, and the bars
+   * show those of all paths. The ranges refer to the text last passed to
+   * `update()`; an empty range (a deletion) marks the text around it.
    */
   showChanges(path: string, ranges: { from: number; to: number }[] | null): void {
-    this.changes = ranges ? { path, ranges: drawnRanges(ranges) } : null;
-    void this.drawChanges();
+    if (ranges) this.changes.set(path, drawnRanges(ranges));
+    else this.changes.delete(path);
+    // Several paths usually change together (the toggle): draw once for all of them.
+    if (this.changesQueued) return;
+    this.changesQueued = true;
+    queueMicrotask(() => {
+      this.changesQueued = false;
+      void this.drawChanges();
+    });
   }
 
   /**
@@ -268,14 +277,14 @@ export class Preview {
     }
   }
 
-  /** Replaces the change bars with those for the current changes in the last compiled document. */
+  /** Replaces the change bars with those for the current changes of every path in the last compiled document. */
   private async drawChanges(): Promise<void> {
     const draw = ++this.changeDraws;
-    const boxes = this.changes?.ranges.length ? await this.request({ type: 'boxes', ...this.changes }) : null;
+    const requests = [...this.changes].filter(([, ranges]) => ranges.length > 0).map(([path, ranges]) => this.request({ type: 'boxes', path, ranges }));
+    const boxes = (await Promise.all(requests)).flatMap((response) => (response.type === 'boxes' ? response.boxes : []));
     if (draw !== this.changeDraws) return;
     for (const element of this.changeBars.splice(0)) element.remove();
-    if (boxes?.type !== 'boxes') return;
-    for (const bar of changeBars(boxes.boxes)) {
+    for (const bar of changeBars(boxes)) {
       const hit = this.list.at(bar.page);
       if (!hit) continue;
       const box = percentOfPage({ x: 0, y: bar.y, w: 0, h: bar.h }, hit.page);
