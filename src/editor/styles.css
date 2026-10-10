@@ -159,6 +159,13 @@
 .typst-visual__raw-block:focus-within,
 .typst-visual__raw-inline:focus-within { background: white; box-shadow: 0 0 0 2px var(--te-accent); color: #24292f; }
 .typst-visual .ProseMirror-selectednode { outline: 2px solid var(--te-accent); }
+/* Raw boxes showing their image or compiled snippet (code while focused) */
+.typst-visual__code[hidden],
+.typst-visual__rendering[hidden] { display: none; }
+.typst-visual__raw--rendered { background: transparent; }
+.typst-visual__rendering { display: block; max-width: 100%; height: auto; cursor: text; }
+.typst-visual__raw-block:not(.typst-visual__image) > .typst-visual__rendering { margin: 0 auto; }
+.typst-visual__raw-inline > .typst-visual__rendering { display: inline-block; vertical-align: middle; }
 .typst-visual__link { color: var(--te-accent); text-decoration: underline; cursor: text; }
 .typst-visual__image-label {
   margin-bottom: 2px;

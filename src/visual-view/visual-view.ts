@@ -6,7 +6,16 @@ import { changesPlugin, setChangesBase } from './change-decorations';
 import { extensions } from './extensions';
 import { highlights, setHighlights } from './highlights';
 import { posToSource, print, project, sourceToPos, syncDoc } from './projection';
+import { setBoxRenderer } from './raw-box';
+import type { BoxRenderer } from './rendered-box';
 import { Toolbar } from './toolbar';
+
+export type { BoxRenderer, Snippet } from './rendered-box';
+
+export interface VisualViewOptions {
+  /** Shows images and compiled snippets in raw boxes while they are not edited (default: code only). */
+  renderer?: BoxRenderer;
+}
 
 /** Marks transactions that mirror a document change, so they are not written back. */
 const FROM_DOCUMENT = 'typst-from-document';
@@ -25,7 +34,7 @@ export class VisualView {
   private readonly toolbar: Toolbar;
   private readonly unsubscribe: () => void;
 
-  constructor(parent: HTMLElement, private readonly document: TypstDocument) {
+  constructor(parent: HTMLElement, private readonly document: TypstDocument, options: VisualViewOptions = {}) {
     this.editor = new Editor({
       element: parent,
       extensions: [...extensions, highlights],
@@ -33,6 +42,7 @@ export class VisualView {
       editorProps: { attributes: { class: 'typst-visual', 'data-testid': 'typst-visual' } },
       onTransaction: ({ transaction }) => this.afterTransaction(transaction),
     });
+    if (options.renderer) setBoxRenderer(this.editor, options.renderer);
     // Load the projection itself (not a JSON copy): its node identities are
     // what marks blocks as untouched.
     const { state } = this.editor;
