@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 // Tests for add-label.ts and the draft tag (label-tags.ts), through the toolbar's Insert ▾ → "Add label".
 import { describe, expect, it } from 'vitest';
-import { TypstDocument } from '../../../../core/typst-document/typst-document';
-import { createVisualView } from '../../test-support';
+import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { createVisualView } from '../../../hosts/visual-view/test-support';
+import { references } from './visual-view';
 
 // jsdom lacks layout; ProseMirror only needs these to exist.
 Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
@@ -12,7 +13,7 @@ function setup(text: string) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = createVisualView(parent, doc);
+  const view = createVisualView(parent, doc, { contributions: [references()] });
   const item = parent.querySelector<HTMLButtonElement>('button[aria-label="Add label"]')!;
   const draft = () => parent.querySelector<HTMLInputElement>('.ProseMirror input[aria-label="New label"]');
   const key = (input: HTMLInputElement, name: string) => input.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true }));

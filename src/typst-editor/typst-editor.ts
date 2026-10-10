@@ -10,12 +10,12 @@ import { diagnostics } from '../features/diagnostics/diagnostics';
 import { documentLinks } from '../features/document-links/document-links';
 import { assets, fileNavigation, files } from '../features/files/files';
 import fileStyles from '../features/files/files.css?inline';
-import { labels } from '../features/labels/labels';
+import { labels } from '../extensions/labels/labels';
 import { pdfExport } from '../features/pdf-export/pdf-export';
 import { previewControls } from '../features/preview-controls/preview-controls';
 import { projectRenderings } from '../features/project-renderings/project-renderings';
 import { spreadsheets } from '../features/spreadsheets/spreadsheets';
-import { styles } from '../features/styles/styles';
+import { styles } from '../extensions/styles/styles';
 import { typstLanguage } from '../features/typst-language/typst-language';
 import { versions } from '../features/versions/versions';
 import {

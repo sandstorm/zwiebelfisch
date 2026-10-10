@@ -2,15 +2,17 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { EditorState } from '@tiptap/pm/state';
-import { find, project } from '../../test-support';
-import { print } from '../../projection/projection';
+import { find, schemaWith } from '../../../hosts/visual-view/test-support';
+import { print, project } from '../../../hosts/visual-view/projection/projection';
 import { insertReference, renameLabel, setLabel } from './label-edits';
 import { labelName } from './reference-syntax';
+import { references } from './visual-view';
 
-const introduction = readFileSync(new URL('../../../../../demo/examples/advanced/chapters/introduction.typ', import.meta.url), 'utf8');
-const results = readFileSync(new URL('../../../../../demo/examples/advanced/chapters/results.typ', import.meta.url), 'utf8');
+const introduction = readFileSync(new URL('../../../../demo/examples/advanced/chapters/introduction.typ', import.meta.url), 'utf8');
+const results = readFileSync(new URL('../../../../demo/examples/advanced/chapters/results.typ', import.meta.url), 'utf8');
 
-const stateOf = (source: string) => EditorState.create({ doc: project(source) });
+const schema = schemaWith({ contributions: [references()] });
+const stateOf = (source: string) => EditorState.create({ doc: project(source, schema) });
 
 describe('label edits', () => {
   it('inserts a reference in place of the typed @query', () => {

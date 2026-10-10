@@ -15,9 +15,7 @@ export { markup } from './markup/markup';
 export { notesGutter, type NotesGutterContribution, type NotesGutterOptions } from './notes-gutter/notes-gutter';
 export { outline } from './outline';
 export { pageBreak } from './page-break';
-export { references, type ReferencesOptions } from './references/references';
 export { renderedBoxes, type RenderedBoxesOptions, type Snippet, type SnippetSource } from './rendered-boxes/rendered-boxes';
-export { customStyles, type StyleSource, type StylesOptions } from './styles/styles';
 export { tables } from './tables/tables';
 export { taskLists } from './task-lists/task-lists';
 

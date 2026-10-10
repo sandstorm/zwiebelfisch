@@ -4,7 +4,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import { type FileChange, type Project } from '../../core/project/project';
 import { PathReference, ProjectPath } from '../../core/paths/paths';
 import { calculateImportChange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
-import { customStyles } from '../../hosts/visual-view/visual-view';
+import { customStyles } from './visual-view/visual-view';
 import type { TypstExtension, Workbench } from '../../hosts/workbench/workbench';
 import { scanStyles, type FoundStyle, type Style } from './discover';
 import { newStyle, STYLES_FILE } from './new-style';

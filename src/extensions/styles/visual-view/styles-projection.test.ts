@@ -1,16 +1,22 @@
 // Tests for the projection of custom styles (styles.ts): declared style calls as styled blocks and text.
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
-import { ProjectPath } from '../../../../core/paths/paths';
-import type { Style } from '../../../../features/styles/styles';
-import { print, project as projectWith } from '../../projection/projection';
-import { after, edit, expectPreciseMap, find, schema as withoutStyles, schemaWith } from '../../test-support';
+import { ProjectPath } from '../../../core/paths/paths';
+import type { Style } from '../styles';
+import { print, project as projectWith } from '../../../hosts/visual-view/projection/projection';
+import { after, edit, expectPreciseMap, find, schemaWith } from '../../../hosts/visual-view/test-support';
+import { customStyles } from './visual-view';
 
 const style = (name: string, kind: Style['kind'], label: string): Style => ({ name, kind, label, path: ProjectPath.of('/styles.typ') });
 const STYLES = [style('note', 'paragraph', 'Note'), style('callout', 'paragraph', 'Callout'), style('key', 'text', 'Keyword')];
 
 /** The schema of a view whose project declares `STYLES`. */
-const schema = schemaWith({ styles: { styles: () => STYLES, onChange: () => () => {}, calculateImportChange: () => null } });
+const schema = schemaWith({
+  contributions: [customStyles({ styles: { styles: () => STYLES, onChange: () => () => {}, forDocument: () => ({ calculateImportChange: () => null }) } })],
+});
+
+/** The schema of a view whose project declares no styles. */
+const withoutStyles = schemaWith({ contributions: [customStyles()] });
 
 const project = (source: string): Node => projectWith(source, schema);
 

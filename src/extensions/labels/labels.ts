@@ -4,7 +4,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { FileChange, Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
-import { references } from '../../hosts/visual-view/visual-view';
+import { references } from './visual-view/visual-view';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import { referenceEdits, scanBibliography, scanTypst, type FoundLabel, type LabelKind, type Scan } from './scan';
 

@@ -3,10 +3,11 @@
 import { readFileSync } from 'node:fs';
 import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
-import { Project } from '../../../../core/project/project';
-import { LabelIndex } from '../../../../features/labels/labels';
-import { createVisualView } from '../../test-support';
-import { ProjectPath } from '../../../../core/paths/paths';
+import { Project } from '../../../core/project/project';
+import { LabelIndex } from '../labels';
+import { createVisualView } from '../../../hosts/visual-view/test-support';
+import { ProjectPath } from '../../../core/paths/paths';
+import { references } from './visual-view';
 
 const path = ProjectPath.of;
 
@@ -23,7 +24,7 @@ function setup(file = path('/chapters/introduction.typ'), edit?: (files: Record<
   const parent = document.createElement('div');
   document.body.append(parent);
   const document_ = project.document(file)!;
-  createVisualView(parent, document_, { labels });
+  createVisualView(parent, document_, { contributions: [references({ labels })] });
   const editor = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
   const text = (p: string) => project.document(path(p))!.text;
   return { project, labels, parent, editor, document: document_, text };

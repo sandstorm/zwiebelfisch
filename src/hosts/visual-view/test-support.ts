@@ -8,18 +8,16 @@ import { EditorState } from '@tiptap/pm/state';
 import { expect } from 'vitest';
 import type { DocumentLinkProvider } from '../../core/document-links/document-links';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
-import type { ProjectLabels } from '../../features/labels/labels';
-import type { DocumentStyles } from '../../features/styles/styles';
 import {
-  alignment, boxLinks, customStyles, headingNumbers, headings, horizontalRule, images, lists, marginNotes, markup, notesGutter, outline,
-  pageBreak, references, renderedBoxes, tables, taskLists, type ImageAssets, type Renderings,
+  alignment, boxLinks, headingNumbers, headings, horizontalRule, images, lists, marginNotes, markup, notesGutter, outline,
+  pageBreak, renderedBoxes, tables, taskLists, type ImageAssets, type Renderings,
 } from './builtins/builtins';
-import { VisualViewContributions } from './contributions/contributions';
+import { VisualViewContributions, type VisualViewContribution } from './contributions/contributions';
 import { createSchema } from './nodes/nodes';
 import { posToSource, print, project as projectWith, sourceToPos } from './projection/projection';
 import { VisualView } from './visual-view';
 
-/** The schema of a view with the built-ins (no styles declared). */
+/** The schema of a view with the built-ins. */
 export const schema: Schema = schemaWith();
 
 /** The schema of a view with the built-ins configured from `options`. */
@@ -36,10 +34,9 @@ export interface TestViewOptions {
   assets?: ImageAssets;
   user?: { name: string };
   comment?(): void;
-  labels?: ProjectLabels;
   documentLinks?: DocumentLinkProvider;
-  /** The project's styles, as one document sees them; `create` is "New style…". */
-  styles?: DocumentStyles;
+  /** The contributions of the extension under test, activated after the built-ins (as the widget's features are). */
+  contributions?: readonly VisualViewContribution[];
 }
 
 /** A Visual view of `document` with the built-ins configured from `options`, and the way to its notes' cards. */
@@ -50,7 +47,6 @@ export function createVisualView(parent: HTMLElement, document: TypstDocument, o
 
 /** The built-ins configured from `options`, in the order the widget's built-in extensions activate them. */
 function contributions(options: TestViewOptions) {
-  const { styles } = options;
   const notes = notesGutter({ user: options.user });
   const visualView = VisualViewContributions.from([
     boxLinks({ documentLinks: options.documentLinks && (() => options.documentLinks) }),
@@ -74,11 +70,7 @@ function contributions(options: TestViewOptions) {
     alignment,
     marginNotes({ comment: options.comment }),
     notes,
-    references({ labels: options.labels }),
-    customStyles({
-      styles: styles && { styles: () => styles.styles(), onChange: (listener) => styles.onChange(listener), forDocument: () => styles },
-      create: styles?.create,
-    }),
+    ...(options.contributions ?? []),
   ]);
   return { visualView, editNote: (document: TypstDocument, offset: number) => notes.editNote(document, offset) };
 }

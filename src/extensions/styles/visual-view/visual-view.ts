@@ -3,11 +3,11 @@
 // "Custom styles".
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node } from '@tiptap/pm/model';
-import { Disposable } from '../../../../core/disposable/disposable';
-import type { TypstDocument } from '../../../../core/typst-document/typst-document';
-import type { DocumentStyles, Style } from '../../../../features/styles/styles';
-import type { ToolbarContext, ToolbarControl, TypstMarkSpec, TypstNodeSpec, VisualViewContribution } from '../../contributions/contributions';
-import { children, isClosedContent, parenthesized, type Call, type Placed, type Printer, type ProjectionContext } from '../../projection/projection';
+import { Disposable } from '../../../core/disposable/disposable';
+import type { TypstDocument } from '../../../core/typst-document/typst-document';
+import type { DocumentStyles, Style } from '../styles';
+import type { ToolbarContext, ToolbarControl, TypstMarkSpec, TypstNodeSpec, VisualViewContribution } from '../../../hosts/visual-view/visual-view';
+import { children, isClosedContent, parenthesized, type Call, type Placed, type Printer, type ProjectionContext } from '../../../hosts/visual-view/visual-view';
 import { StyleMenu } from './style-menu';
 import { StyledBlock, StyleMark } from './style-nodes';
 

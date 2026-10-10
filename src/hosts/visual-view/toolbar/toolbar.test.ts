@@ -15,12 +15,7 @@ function setup(text: string, options: TestViewOptions = {}) {
   const toolbar = parent.querySelector<HTMLElement>('[role="toolbar"]')!;
   // the formatting toolbar first, then the menus' items and the floating bars (selection, table)
   const button = (label: string) => parent.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
-  const style = toolbar.querySelector<HTMLSelectElement>('select')!;
-  const choose = (value: string) => {
-    style.value = value;
-    style.dispatchEvent(new Event('change', { bubbles: true }));
-  };
-  return { doc, view, toolbar, button, style, choose, parent };
+  return { doc, view, toolbar, button, parent };
 }
 
 describe('Visual view toolbar', () => {
@@ -39,21 +34,6 @@ describe('Visual view toolbar', () => {
     expect(button('Bold').getAttribute('aria-pressed')).toBe('true');
     button('Italic').click();
     expect(doc.text).toBe('*_Hello world_*\n');
-  });
-
-  it('the paragraph style menu sets headings and back to normal text', () => {
-    const { doc, view, style, choose } = setup('Hello world\n');
-    view.reveal(0, 'Hello world'.length);
-    expect(style.value).toBe('paragraph');
-    choose('heading-2');
-    expect(doc.text).toBe('== Hello world\n');
-    expect(style.value).toBe('heading-2');
-    choose('heading-1');
-    expect(doc.text).toBe('= Hello world\n');
-    choose('heading-3');
-    expect(doc.text).toBe('=== Hello world\n');
-    choose('paragraph');
-    expect(doc.text).toBe('Hello world\n');
   });
 
   it('turns a paragraph into a bullet list and a numbered list', () => {

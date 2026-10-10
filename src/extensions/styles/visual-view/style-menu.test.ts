@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 // Tests for style-menu.ts: custom styles in the text style menu, through the Visual view.
 import { describe, expect, it, vi } from 'vitest';
-import { calculateImportChange } from '../../../../core/typst-document/typst-document';
-import { TypstDocument } from '../../../../core/typst-document/typst-document';
-import type { DocumentStyles, Style } from '../../../../features/styles/styles';
-import { createVisualView } from '../../test-support';
-import { ProjectPath } from '../../../../core/paths/paths';
+import { calculateImportChange } from '../../../core/typst-document/typst-document';
+import { TypstDocument } from '../../../core/typst-document/typst-document';
+import type { DocumentStyles, Style } from '../styles';
+import { createVisualView } from '../../../hosts/visual-view/test-support';
+import { ProjectPath } from '../../../core/paths/paths';
+import { customStyles } from './visual-view';
 
 const path = ProjectPath.of;
 
@@ -29,7 +30,7 @@ function setup(text: string, initial: Style[] = [NOTE, KEY], create?: () => void
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = createVisualView(parent, doc, { styles });
+  const view = createVisualView(parent, doc, { contributions: [customStyles({ styles: { ...styles, forDocument: () => styles }, create })] });
   const menu = parent.querySelector<HTMLSelectElement>('select[aria-label="Text style"]')!;
   const choose = (value: string) => {
     menu.value = value;
@@ -44,6 +45,21 @@ function setup(text: string, initial: Style[] = [NOTE, KEY], create?: () => void
 }
 
 describe('custom styles in the text style menu', () => {
+  it('sets headings and back to normal text', () => {
+    const { doc, view, menu, choose } = setup('Hello world\n', []);
+    view.reveal(0, 'Hello world'.length);
+    expect(menu.value).toBe('paragraph');
+    choose('heading-2');
+    expect(doc.text).toBe('== Hello world\n');
+    expect(menu.value).toBe('heading-2');
+    choose('heading-1');
+    expect(doc.text).toBe('= Hello world\n');
+    choose('heading-3');
+    expect(doc.text).toBe('=== Hello world\n');
+    choose('paragraph');
+    expect(doc.text).toBe('Hello world\n');
+  });
+
   it('lists the paragraph and the text styles after the headings, and New style… when it can create one', () => {
     const { menu, labels } = setup('Text\n', [NOTE, KEY], () => {});
     expect(labels()).toEqual([['Paragraph styles', 'Note'], ['Text styles', 'Keyword']]);

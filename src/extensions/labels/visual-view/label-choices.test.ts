@@ -1,8 +1,8 @@
 // Tests for label-choices.ts: which labels the @ list offers, and how a label is described.
 import { describe, expect, it } from 'vitest';
-import type { LabelInfo } from '../../../../features/labels/labels';
+import type { LabelInfo } from '../labels';
 import { describeLabel, labelChoices } from './label-choices';
-import { ProjectPath } from '../../../../core/paths/paths';
+import { ProjectPath } from '../../../core/paths/paths';
 
 const path = ProjectPath.of;
 

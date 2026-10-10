@@ -1,9 +1,9 @@
 // References and labels in the Visual view: `@key` chips, label tags on blocks, the `@` suggestion list, "Add
 // label". Entry of visual-view/builtins/references/. See ARCHITECTURE.md, "VisualView".
 import { Extension } from '@tiptap/core';
-import type { TypstDocument } from '../../../../core/typst-document/typst-document';
-import type { ProjectLabels } from '../../../../features/labels/labels';
-import { svg, type Action, type ToolbarContext, type TypstNodeSpec, type VisualViewContribution } from '../../contributions/contributions';
+import type { TypstDocument } from '../../../core/typst-document/typst-document';
+import type { ProjectLabels } from '../labels';
+import { svg, type Action, type ToolbarContext, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
 import { canStartNewLabel, labelTags, startNewLabel } from './label-tags';
 import { referenceHints } from './reference-hints';
 import { Reference } from './reference-node';

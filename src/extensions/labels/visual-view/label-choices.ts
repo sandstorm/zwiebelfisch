@@ -1,6 +1,6 @@
 // Which labels the @ list offers for a query, and how a label is described (chip hints, list entries).
 // See references.ts.
-import type { LabelInfo, LabelKind } from '../../../../features/labels/labels';
+import type { LabelInfo, LabelKind } from '../labels';
 
 /**
  * The labels to offer for `query` (what follows the typed `@`), each name

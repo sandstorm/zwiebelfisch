@@ -29,9 +29,9 @@ export { starterKitPart } from './nodes/nodes';
 // the built-in contributions: the constructs are extensions of the widget's built-in list; the rest are activated by
 // the extension of their feature (until extensions/ takes them over)
 export {
-  alignment, boxLinks, customStyles, headingNumbers, headings, horizontalRule, images, lists, marginNotes, markup, notesGutter, outline,
-  pageBreak, references, renderedBoxes, tables, taskLists, type ImageAssets, type ImageUrls, type NotesGutterContribution, type Renderings,
-  type Snippet, type SnippetSource, type StyleSource,
+  alignment, boxLinks, headingNumbers, headings, horizontalRule, images, lists, marginNotes, markup, notesGutter, outline,
+  pageBreak, renderedBoxes, tables, taskLists, type ImageAssets, type ImageUrls, type NotesGutterContribution, type Renderings,
+  type Snippet, type SnippetSource,
 } from './builtins/builtins';
 
 /** Marks transactions that mirror a document change, so they are not written back. */

@@ -1,12 +1,16 @@
-// Tests for references.ts and the projection: references (`@key`) as chips, labels (`<key>`) as attributes of the blocks they label.
+// Tests for visual-view.ts and the projection: references (`@key`) as chips, labels (`<key>`) as attributes of the blocks they label.
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
-import { after, edit, expectPreciseMap, find, project, schema } from '../../test-support';
-import { print, syncDoc } from '../../projection/projection';
+import { after, edit, expectPreciseMap, find, schemaWith } from '../../../hosts/visual-view/test-support';
+import { print, project as projectWith, syncDoc } from '../../../hosts/visual-view/projection/projection';
+import { references as referencesContribution } from './visual-view';
 
-const chapter = (name: string) => readFileSync(new URL(`../../../../../demo/examples/advanced/chapters/${name}.typ`, import.meta.url), 'utf8');
+const schema = schemaWith({ contributions: [referencesContribution()] });
+const project = (source: string): Node => projectWith(source, schema);
+
+const chapter = (name: string) => readFileSync(new URL(`../../../../demo/examples/advanced/chapters/${name}.typ`, import.meta.url), 'utf8');
 
 const FIXTURES: Record<string, string> = {
   introduction: chapter('introduction'),

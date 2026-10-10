@@ -17,7 +17,7 @@ export const thresholds = {
 // importing file's path from the repository root.
 export const boundaries = {
   srcRoot: fileURLToPath(new URL('src', import.meta.url)),
-  groupingFolders: ['core', 'features', 'hosts', 'ui'],
+  groupingFolders: ['core', 'extensions', 'features', 'hosts', 'ui'],
   exceptions: [
     {
       target: 'features/collaboration/gitlab-protocol.ts',
@@ -38,6 +38,16 @@ export const boundaries = {
       target: 'features/collaboration/in-process.ts',
       importers: '\\.test\\.ts$',
       why: 'tests wire Y.Docs and awarenesses together in-process',
+    },
+    {
+      target: 'hosts/visual-view/test-support.ts',
+      importers: '^src/extensions/.*\\.test\\.ts$',
+      why: "extensions' tests make Visual views and schemas with the host's built-ins plus the contributions under test",
+    },
+    {
+      target: 'hosts/visual-view/projection/projection.ts',
+      importers: '^src/extensions/.*\\.test\\.ts$',
+      why: "extensions' tests check that their specs project and print back (project, print, syncDoc)",
     },
     {
       target: 'features/collaboration/shared-project.ts',

@@ -2,7 +2,7 @@
 // See references.ts.
 import { Plugin, PluginKey, type EditorState } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
-import type { LabelInfo, ProjectLabels } from '../../../../features/labels/labels';
+import type { LabelInfo, ProjectLabels } from '../labels';
 import { describeLabel, labelChoices } from './label-choices';
 import { insertReference } from './label-edits';
 import { LABEL_CHAR } from './reference-syntax';
