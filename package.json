@@ -4,6 +4,16 @@
   "private": true,
   "type": "module",
   "description": "Embeddable Typst editor widget: source + WYSIWYG views with live preview",
+  "module": "./dist/lib/typst-editor.js",
+  "types": "./dist/lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/lib/types/index.d.ts",
+      "import": "./dist/lib/typst-editor.js"
+    }
+  },
+  "files": ["dist/lib"],
+  "sideEffects": ["./dist/lib/typst-editor.js", "./src/index.ts"],
   "packageManager": "pnpm@10.34.6",
   "devDependencies": {
     "@playwright/test": "1.64.0",

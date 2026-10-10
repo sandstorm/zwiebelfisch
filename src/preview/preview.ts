@@ -1,5 +1,6 @@
 import type { Diagnostic, Jump, Page, Position } from '../engine/engine';
-import type { Request, Response } from './protocol';
+import wasmUrl from '../engine/wasm/typst_engine_bg.wasm?url&no-inline';
+import type { Init, Request, Response } from './protocol';
 
 export interface PreviewOptions {
   /** Called when the user clicks something in the preview that has a source location. */
@@ -35,6 +36,7 @@ export class Preview {
     this.pages.dataset.testid = 'typst-preview';
     this.pages.addEventListener('click', (event) => void this.handleClick(event));
     container.append(this.pages);
+    this.worker.postMessage({ type: 'init', wasm: wasmUrl } satisfies Init);
     this.worker.onmessage = (event: MessageEvent<Response>) => {
       this.pending.get(event.data.id)?.(event.data);
       this.pending.delete(event.data.id);
