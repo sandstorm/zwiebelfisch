@@ -13,7 +13,8 @@ crates/typst-engine/        Rust → wasm: Typst compiler, SVG export, click/cur
 src/
   engine/                   typed TS wrapper around the wasm, default fonts (generated wasm/, fonts/ — gitignored),
                             withPackages (package download, tar reader), fixtures/ (test package archives)
-  document/                 TypstDocument — the single source of truth (string or shared Y.Text); Highlight (a styled source range views draw)
+  document/                 TypstDocument — the single source of truth (string or shared Y.Text); Highlight (a styled source range views draw);
+                            margin-note-syntax.ts (drafting's margin-note call: parse, print, validity)
   collab/                   real-time collaboration (loaded on demand): Collaboration, SharedProject, RemoteCursors,
                             RoomVersions + SharedAssets (GitLab rooms); in-process.ts (Y.Doc/awareness
                             wiring for tests); gitlab-protocol.ts (import-free, shared with the server)
@@ -325,7 +326,7 @@ worker → main   {id, type:'compile', result} | {id, type:'click', jump} | {id,
   The worker (`FileReceiver`) removes paths missing since the previous call, and Typst diffs the
   text itself. Package files are not part of the map and stay loaded.
 
-### Comments = margin notes (`src/editor/comment-action.ts`, `add-margin-note.ts`, `src/visual-view/margin-notes.ts`)
+### Comments = margin notes (`src/document/margin-note-syntax.ts`, `src/editor/comment-action.ts`, `add-margin-note.ts`, `src/visual-view/margin-notes.ts`)
 
 Comments are [`drafting`](https://typst.app/universe/package/drafting/) margin notes in the
 Typst source itself (`@preview/drafting:0.2.2`): `#margin-note[note]` (point, at a cursor) and
@@ -336,25 +337,42 @@ and an author is whatever the note's text says. Hiding notes for the final outpu
 (`#set-margin-note-defaults(hidden: true)`) and wide enough page margins are up to the author.
 
 ```ts
+// margin-note-syntax.ts: the only module that knows drafting's call syntax
+parseNoteCall(src) → {head, text?, note} | null     // head: `#margin-note` plus any `(..named)`
+printNoteCall({head, text?, note}) → string         // printNoteCall(parseNoteCall(src)) === src
+noteCallSyntax(source, funcCallNode) → {head, text: ContentBlock | null, note} | null   // in a parsed tree
+isNoteCallAt(source, from, to) → boolean            // one note call in markup from `#` to exactly `to`
+safeNote(markup) → string | null                    // markup that cannot end or swallow its call
 addMarginNote(text, {from, to}) → {changes: TextChange[], note} | null   // note: offset of the new (empty) body
 new CommentAction(root, () => {document, view: {selection(), reveal(), editNote?()}} | null)   .button  .comment()  .destroy()
 VisualView.editNote(offset) → boolean   // opens the field of the note whose source holds offset
 ```
 
+- **Syntax** (`margin-note-syntax.ts`): a note is `#margin-note(..named)[note]` or
+  `#margin-note(..named)[text][note]` with no syntax errors, a non-empty one-paragraph `text`
+  and nothing after the last `]`; any other `margin-note` call is ordinary code. Projection,
+  the Visual view and `addMarginNote` all use this one definition.
 - **`addMarginNote`** (pure): a selection becomes `#margin-note[selection][]` if the result
-  parses as one well-formed call in markup (Lezer); else (half of `*bold*`, two paragraphs) a
+  is one note call in markup (`isNoteCallAt`); else (half of `*bold*`, two paragraphs) a
   point note `#margin-note[]` at the selection's end; null where none fits (inside code). The
-  import is ensured exactly once: an existing drafting import (any version) is kept (`*`, or
-  `margin-note` among its items), extended (`, margin-note`; `: margin-note` on a bare module
-  import), else `#import "@preview/drafting:0.2.2": margin-note` goes first in the file.
+  import is ensured exactly once: an existing top-level drafting import (any version) that ends
+  before the note is kept (`*`, or `margin-note` among its items) or extended (`, margin-note`
+  after its last item, also after a trailing comma; `: margin-note` on a bare module import);
+  else `#import "@preview/drafting:0.2.2": margin-note` goes first in the file (a drafting
+  import below the note would not bind the name where the note is).
 - **`CommentAction`**: the widget's only comment UI — the "Comment" button and Ctrl/Cmd+Alt+M
   (captured at the widget root). Works on the shown `.typ` file in the current view
   (`EditingViews.shown()`), applies the edits as one `document.change`, then
   `VisualView.editNote(note)` opens the new note's field, or the Source view puts the caret into `[]`.
 - **Visual view** (`margin-notes.ts`): see `marginNote` / `noteRange` below. A bubble shows the
-  note's markup; clicking it swaps in a text field (Enter or blur writes it back, with brackets
-  that have no partner escaped; Escape cancels). A point note's edit replaces the body inside
-  its `src`; a range note's replaces its mark (`note` attribute). Everything else stays as written.
+  note's markup; clicking it swaps in a text field (Enter or blur writes it back through
+  `safeNote`: brackets without a partner escaped, or all of it escaped as plain text if the
+  markup would still break the call; Escape cancels). The edit sets the `note` attribute of the
+  atom or mark. Everything else stays as written. An open field survives edits from elsewhere
+  (textblocks keep their DOM while they render the same, range-note widgets have position-free
+  keys and look their note's text up when they save); a field whose note is gone saves nothing.
+  `editNote(offset)` finds the note in the document: a point note whose call holds `offset`, or
+  among range notes whose text ends at the same place (nested) the one whose `][note]` holds it.
 - **Source view**: plain Typst, no extra decoration.
 - Engine tests compile both forms against the real package (`src/engine/fixtures/drafting-0.2.2`).
 - **Removed** with this design (it replaced the sidecar comments of docs/todo/comments.md):
@@ -396,9 +414,10 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     blocks. `table.layout` (an anchor attribute) is the source around the cells.
   - **Inline:** text with `bold` / `italic` / `link` (Tiptap's link mark, `href`) marks;
     `softBreak` (a source newline that renders as a space); `hardBreak` (`\`); `rawInline`.
-  - **Margin notes:** `marginNote` (inline atom, `src` = the whole `#margin-note(..)[note]`
-    call, printed verbatim) and the `noteRange` mark (`call` = source before the text's `[`,
-    `note` = the note's markup; printed as `call[` … `][note]`; `excludes: ''`, so notes nest).
+  - **Margin notes:** `marginNote` (inline atom) and the `noteRange` mark over the highlighted
+    text, both with `head` (source before the first `[`) and `note` (the note's markup), printed
+    by `margin-note-syntax`. `noteRange` also has an unprinted `id`, the note's number in its
+    textblock, so equal neighbouring notes stay two marks; `excludes: ''`, so notes nest.
   - The `typstSource` mark remembers how escapes and shorthands (`\*`, `--`) were written.
   - Anchor attributes are added as Tiptap global attributes and are never rendered.
   - `project()` takes the schema as a parameter. Tiptap builds its own schema instance, and nodes
@@ -413,9 +432,9 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - Inline, `#link("plain string")[one paragraph]` puts a `link` mark on its projected content
     (the call syntax is hidden); a bare URL is text with a `link` mark whose `href` is the text.
     Other links stay `rawInline`.
-  - `#margin-note(..named)[note]` becomes a `marginNote`, `#margin-note(..named)[text][note]`
-    (non-empty `text`, one paragraph) puts a `noteRange` mark on the projected `text`. Margin
-    note calls count as prose. Other forms stay `rawInline`.
+  - A margin note call (as `noteCallSyntax` defines it) becomes a `marginNote`, or for the range
+    form a `noteRange` mark on the projected `text`, and counts as prose. Other `margin-note`
+    calls stay `rawInline` (or a `rawBlock` on a line of their own).
   - A table cell's markup is segmented like the document (paragraphs, lists, headings); an empty
     cell is an empty paragraph.
   - A list item whose source has nested content keeps its body as a `rawBlock`.
