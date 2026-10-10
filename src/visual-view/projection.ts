@@ -20,12 +20,15 @@
  * (`#link("url")[text]`, bare URLs) as a `link` mark, standalone
  * `#image("path", ..)` calls as `image` blocks (source kept like a raw block)
  * and `#table(columns: n, [..], ..)` with content cells as tables whose cells
- * hold blocks.
+ * hold blocks. Text alignment (see `text-align.ts`): `#align(<alignment>)[..]`
+ * is an `alignment` block holding blocks, `#par(justify: ..)[..]` a paragraph
+ * with its `justify` flag.
  */
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
 import { typstParser } from 'codemirror-lang-typst/lezer';
+import { alignArgs } from './alignment';
 
 /**
  * Nodes created by `project` and not modified since. ProseMirror nodes are
@@ -211,15 +214,28 @@ function callee(ctx: Context, call: SyntaxNode): { name: string; args: SyntaxNod
   return { name: ident ? ctx.source.slice(ident.from, ident.to) : '', args: args ? children(args) : [] };
 }
 
-/** A run that is exactly one `#func(..)` call of a function modelled as a block (image, table). */
+/** A run that is exactly one `#func(..)` call of a function modelled as a block (image, table, align, par). */
 function blockCall(ctx: Context, segment: Segment, sep: string | null): Node | null {
   const [hash, call] = segment.nodes;
   if (segment.nodes.length !== 2 || hash.name !== 'Hash' || call.name !== 'FuncCall' || call.from !== hash.to) return null;
   const { name, args } = callee(ctx, call);
-  const src = ctx.source.slice(segment.from, segment.to);
-  if (name === 'image') return parenthesized(args) && imagePath(src) !== null ? ctx.schema.nodes.image.create({ src, sep }) : null;
-  if (name === 'table') return table(ctx, segment, args, sep);
-  return null;
+  return BLOCK_CALLS.get(name)?.(ctx, segment, args, sep) ?? null;
+}
+
+type BlockCall = (ctx: Context, call: Segment, args: SyntaxNode[], sep: string | null) => Node | null;
+
+/** How a standalone call of each function modelled as a block projects; null where its arguments are not modelled. */
+const BLOCK_CALLS = new Map<string, BlockCall>([
+  ['image', image],
+  ['table', table],
+  ['align', alignment],
+  ['par', justified],
+]);
+
+/** `#image("literal path", ..)`. */
+function image(ctx: Context, call: Segment, args: SyntaxNode[], sep: string | null): Node | null {
+  const src = ctx.source.slice(call.from, call.to);
+  return parenthesized(args) && imagePath(src) !== null ? ctx.schema.nodes.image.create({ src, sep }) : null;
 }
 
 /** How a table's source lies around its cells, for printing it back. */
@@ -239,12 +255,9 @@ function table(ctx: Context, call: Segment, args: SyntaxNode[], sep: string | nu
   const gaps: string[] = [];
   let pos = call.from;
   const cells = parsed.cells.map((block) => {
-    const markup = block.getChild('Markup')!;
-    const segments = segment(children(markup));
-    const from = segments[0]?.from ?? markup.from;
+    const { content, from, to } = contentBlocks(ctx, block);
     gaps.push(source.slice(pos, from));
-    pos = segments.at(-1)?.to ?? markup.from;
-    const content = segments.length > 0 ? blocks(ctx, segments) : [textblock(ctx, { type: 'paragraph', attrs: { src: '' } }, from, [])];
+    pos = to;
     return schema.nodes.tableCell.create(null, content);
   });
   gaps.push(source.slice(pos, call.to));
@@ -252,6 +265,47 @@ function table(ctx: Context, call: Segment, args: SyntaxNode[], sep: string | nu
   for (let i = 0; i < cells.length; i += parsed.columns) rows.push(schema.nodes.tableRow.create(null, cells.slice(i, i + parsed.columns)));
   const layout: TableLayout = { columns: parsed.columns, gaps, named: parsed.named };
   return schema.nodes.table.create({ sep, layout }, rows);
+}
+
+/** The blocks of a closed content block `[..]` (an empty paragraph if there are none) and the source range they cover. */
+function contentBlocks(ctx: Context, block: SyntaxNode): { content: Node[]; from: number; to: number } {
+  const markup = block.getChild('Markup')!;
+  const segments = segment(children(markup));
+  const from = segments[0]?.from ?? markup.from;
+  const to = segments.at(-1)?.to ?? markup.from;
+  const content = segments.length > 0 ? blocks(ctx, segments) : [textblock(ctx, { type: 'paragraph', attrs: { src: '' } }, from, [])];
+  return { content, from, to };
+}
+
+/** How an alignment block's source lies around its blocks, for printing it back. */
+interface AlignLayout {
+  /** The alignment argument as written. */
+  args: string;
+  /** The source up to the first block (`#align(args)[`, whitespace) and after the last one. */
+  open: string;
+  close: string;
+}
+
+/** `#align(<literal alignment>)[..]`: an alignment block whose content is projected like the document's. */
+function alignment(ctx: Context, call: Segment, args: SyntaxNode[], sep: string | null): Node | null {
+  const body = args.at(-1);
+  const close = args.at(-2);
+  if (args[0]?.name !== 'LeftParen' || close?.name !== 'RightParen' || !body || !isClosedContent(body)) return null;
+  const argText = ctx.source.slice(args[0].to, close.from);
+  if (!alignArgs(argText)) return null;
+  const { content, from, to } = contentBlocks(ctx, body);
+  const layout: AlignLayout = { args: argText, open: ctx.source.slice(call.from, from), close: ctx.source.slice(to, call.to) };
+  return ctx.schema.nodes.alignment.create({ args: argText, sep, layout }, content);
+}
+
+/** `#par(justify: <bool>)[..]` around one paragraph's inline content: that paragraph, with its `justify` flag. */
+function justified(ctx: Context, call: Segment, args: SyntaxNode[], sep: string | null): Node | null {
+  if (args.map((a) => a.name).join() !== 'LeftParen,Named,RightParen,ContentBlock' || !isClosedContent(args[3])) return null;
+  const justify = /^justify\s*:\s*(true|false)$/.exec(ctx.source.slice(args[1].from, args[1].to));
+  const content = children(args[3].getChild('Markup')!);
+  if (!justify || content.length === 0 || content.some((n) => n.name === 'Parbreak' || blockKind(n) !== null)) return null;
+  const attrs = { src: ctx.source.slice(call.from, call.to), sep, justify: justify[1] === 'true' };
+  return textblock(ctx, { type: 'paragraph', attrs }, call.from, inline(ctx, content));
 }
 
 /** The arguments of a table call: an integer `columns`, other named arguments and closed content blocks only. */
@@ -634,12 +688,16 @@ function printBlock(out: Printer, node: Node, parent: Node, pos: number): void {
     case 'rawBlock':
     case 'image':
       return out.shown(node.attrs.src, 'atom', pos, pos + 1);
-    case 'table':
-      return printTable(out, node, pos);
     default:
-      return printTextblock(out, node, pos);
+      return (CONTAINER_PRINTERS.get(node.type.name) ?? printTextblock)(out, node, pos);
   }
 }
+
+/** Blocks holding blocks that are printed with source around them. */
+const CONTAINER_PRINTERS = new Map<string, (out: Printer, node: Node, pos: number) => void>([
+  ['table', printTable],
+  ['alignment', printAlignment],
+]);
 
 /** A pristine textblock: its `src`, with the content positions its layout assigns. */
 function printLayout(out: Printer, block: Node, { runs, tail }: InlineLayout, start: number): void {
@@ -667,7 +725,10 @@ function printPristineItem(out: Printer, item: Node, pos: number): void {
 }
 
 function printTextblock(out: Printer, block: Node, pos: number): void {
+  const justify: boolean | null = block.attrs.justify ?? null;
+  if (justify !== null) out.hidden(`#par(justify: ${justify})[`);
   printInline(out, block, pos + 1);
+  if (justify !== null) out.hidden(']');
   out.endBlock(pos + block.nodeSize - 1, block.content.size === 0);
 }
 
@@ -681,6 +742,16 @@ function printListItem(out: Printer, item: Node, list: Node, pos: number): void 
     out.hidden('\n');
     out.indented(() => printBlock(out, child, item, pos + 1 + offset));
   });
+}
+
+/** `#align(args)[blocks]`, keeping the source around the blocks as projected; only a changed `args` is re-printed. */
+function printAlignment(out: Printer, block: Node, pos: number): void {
+  const args: string = block.attrs.args;
+  const layout: AlignLayout = block.attrs.layout ?? { args, open: `#align(${args})[`, close: ']' };
+  const head = '#align(';
+  out.hidden(layout.args === args ? layout.open : head + args + layout.open.slice(head.length + layout.args.length));
+  printBlocks(out, block, pos + 1, '\n\n');
+  out.closing(layout.close);
 }
 
 /** A table cell and the document position it starts at. */

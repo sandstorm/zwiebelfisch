@@ -4,6 +4,7 @@ import { ListItem } from '@tiptap/extension-list';
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
 import StarterKit from '@tiptap/starter-kit';
 import { RawBoxNavigation, rawBoxView } from './raw-box';
+import { TextAlign } from './text-align';
 
 /**
  * The Visual view's Tiptap extensions, i.e. its ProseMirror schema plus
@@ -161,6 +162,7 @@ export const extensions = [
   RawBoxNavigation,
   SoftBreak,
   TypstSource,
+  TextAlign,
 ];
 
 /** The schema `extensions` produce; an `Editor` builds an equal but distinct instance. */
