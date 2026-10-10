@@ -2,7 +2,7 @@
 // See ARCHITECTURE.md, "Preview", and docs/2026_10_10_extensions-architecture.md.
 // Why a host: the preview keeps the mechanism — the engine worker and its protocol, coalesced compiles, the
 // lazily rendered page list, hit-testing, scrolling and reveal. What sits on top of it is contributed: toolbar
-// items (zoom, "Follow cursor", page number, "Download PDF"), the PDF variants a menu offers, and overlays on
+// items (zoom, "Follow cursor", page number, "Download PDF"), the options a PDF export offers, and overlays on
 // the pages. So a feature adds to the preview without the preview knowing it.
 import { Disposable } from '../../core/disposable/disposable';
 import { type Event, EventEmitter } from '../../core/event-emitter/event-emitter';
@@ -12,9 +12,9 @@ import { DEFAULT_FONT_URLS, ENGINE_WASM_URL } from '../../core/typst-engine/engi
 import type { FileContent } from '../../core/project/project';
 import { FileSender, type Init, type Request, type Response, startEngineWorker } from './worker/worker';
 import { LatestOnly } from './latest-only';
-import type { PageOverlay, PdfVariant, PreviewContext, PreviewToolbarItem, ToolbarItemView } from './contribution';
+import type { PageOverlay, PdfExportOption, PreviewContext, PreviewToolbarItem, ToolbarItemView } from './contribution';
 
-export type { PageOverlay, PdfFile, PdfVariant, PreviewContext, PreviewToolbarItem, ToolbarItemView } from './contribution';
+export type { PageOverlay, PdfEntry, PdfExportOption, PreviewContext, PreviewToolbarItem, ToolbarItemView } from './contribution';
 export type { Snippet, Zoom } from './pages/pages';
 
 /**
@@ -24,8 +24,14 @@ export type { Snippet, Zoom } from './pages/pages';
 export interface PreviewContributions {
   /** Adds a control to the toolbar, after those registered before, until disposed. */
   registerToolbarItem(item: PreviewToolbarItem): Disposable;
-  /** Offers a PDF to the toolbar items that download one (`PreviewContext.pdfVariants`), until disposed. */
-  registerPdfVariant(variant: PdfVariant): Disposable;
+  /**
+   * Offers a choice for PDF exports (a checkbox), until disposed. An export applies every option, by `priority`
+   * (default 100, higher first; equal: registration order), each to what the ones before it made. Throws when an
+   * option with the same `id` is registered.
+   */
+  registerPdfExportOption(option: PdfExportOption, options?: { priority?: number }): Disposable;
+  /** The registered PDF export options, in the order an export applies them. */
+  pdfExportOptions(): readonly PdfExportOption[];
   /** A layer of boxes drawn over the pages, as elements of class `className`. */
   createOverlay(className: string): PageOverlay;
   /**
@@ -73,7 +79,8 @@ export class Preview implements PreviewContributions {
   /** What toolbar items see of the preview. */
   private readonly context: PreviewContext;
   private readonly items: ToolbarItemView[] = [];
-  private readonly variants: PdfVariant[] = [];
+  /** The PDF export options, with their priority, in registration order. */
+  private readonly exportOptions: { option: PdfExportOption; priority: number }[] = [];
   private readonly overlays = new Set<OverlayLayer>();
   /** Outlines the clicked text, until the next click or successful compile. */
   private readonly clickHighlight: PageOverlay;
@@ -188,9 +195,19 @@ export class Preview implements PreviewContributions {
     return new Disposable(() => this.removeItem(view));
   }
 
-  registerPdfVariant(variant: PdfVariant): Disposable {
-    this.variants.push(variant);
-    return new Disposable(() => this.variants.splice(this.variants.indexOf(variant), 1));
+  registerPdfExportOption(option: PdfExportOption, options: { priority?: number } = {}): Disposable {
+    if (this.exportOptions.some((entry) => entry.option.id === option.id)) throw new Error(`PDF export option '${option.id}' is already registered`);
+    const entry = { option, priority: options.priority ?? 100 };
+    this.exportOptions.push(entry);
+    return new Disposable(() => {
+      const index = this.exportOptions.indexOf(entry);
+      if (index >= 0) this.exportOptions.splice(index, 1);
+    });
+  }
+
+  pdfExportOptions(): readonly PdfExportOption[] {
+    // the sort is stable: equal priorities stay in registration order
+    return [...this.exportOptions].sort((a, b) => b.priority - a.priority).map((entry) => entry.option);
   }
 
   createOverlay(className: string): PageOverlay {
@@ -225,7 +242,6 @@ export class Preview implements PreviewContributions {
       visiblePage: () => this.visiblePage(),
       isFollowing: () => this.following,
       setFollowing: (on) => this.setFollowing(on),
-      pdfVariants: () => [...this.variants],
     };
   }
 

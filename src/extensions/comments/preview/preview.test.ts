@@ -1,50 +1,52 @@
-// Tests for preview.ts: the PDF without and with comments, made through the `pdfExport.export` command.
-import { describe, expect, it, vi } from 'vitest';
+// Tests for preview.ts: the PDF export option `comments.include`.
+import { describe, expect, it } from 'vitest';
+import { Disposable } from '../../../core/disposable/disposable';
 import { Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
-import type { PdfVariant, PreviewContributions } from '../../../hosts/preview/preview';
-import { CommentsPdf, registerPdfVariants } from './preview';
+import type { PdfEntry, PdfExportOption } from '../../../hosts/preview/preview';
+import { registerIncludeComments } from './preview';
 
 const path = ProjectPath.of;
 
 const NOTED = '#import "@preview/drafting:0.2.2": margin-note\nText#margin-note[a note]\n';
 
-function setup(main = path('/main.typ')) {
-  const project = new Project(main, { [main]: NOTED, '/logo.png': new Uint8Array([1]) });
-  const blob = new Blob(['%PDF-1.7'], { type: 'application/pdf' });
-  const executeCommand = vi.fn(async (_id: 'pdfExport.export', _entry?: { main: string; sources: Record<string, string> }) => blob);
-  return { project, executeCommand, blob, pdfs: new CommentsPdf(project, { executeCommand } as never) };
+function setup() {
+  const project = new Project(path('/main.typ'), { '/main.typ': NOTED, '/logo.png': new Uint8Array([1]) });
+  const options: PdfExportOption[] = [];
+  const registration = registerIncludeComments(
+    { registerPdfExportOption: (option) => (options.push(option), new Disposable(() => options.splice(options.indexOf(option), 1))) },
+    project,
+  );
+  return { project, option: options[0], options, registration };
 }
 
-describe('CommentsPdf', () => {
-  it('exports the main file as it is with comments', async () => {
-    const { executeCommand, blob, pdfs } = setup();
-    expect(await pdfs.blob(true)).toBe(blob);
-    expect(executeCommand).toHaveBeenCalledWith('pdfExport.export', undefined);
+const start: PdfEntry = { main: '/main.typ', sources: {} };
+
+describe('registerIncludeComments', () => {
+  it('registers "Include comments", off by default, until disposed', () => {
+    const { option, options, registration } = setup();
+    expect(option).toMatchObject({ id: 'comments.include', label: 'Include comments', default: false });
+    registration.dispose();
+    expect(options).toEqual([]);
   });
 
-  it('exports a generated entry without the notes, without touching the documents', async () => {
-    const { executeCommand, project, pdfs } = setup();
-    await pdfs.blob(false);
-    const [, entry] = executeCommand.mock.calls[0];
-    expect(entry!.main).not.toBe(path('/main.typ'));
-    expect(entry!.sources['/main.typ']).toBe('#import "@preview/drafting:0.2.2": margin-note\nText\n');
-    expect(entry!.sources[entry!.main]).toContain('#include "/main.typ"');
+  it('leaves the entry as it is with comments', () => {
+    expect(setup().option.apply(start, true)).toBe(start);
+  });
+
+  it('compiles a generated entry without the notes, without touching the documents', () => {
+    const { option, project } = setup();
+    const entry = option.apply(start, false);
+    expect(entry.main).not.toBe('/main.typ');
+    expect(entry.sources['/main.typ']).toBe('#import "@preview/drafting:0.2.2": margin-note\nText\n');
+    expect(entry.sources[entry.main]).toContain('#include "/main.typ"');
     expect(project.document(path('/main.typ'))!.text).toBe(NOTED);
   });
 
-  it('names the file after the main file', async () => {
-    expect((await setup().pdfs.file(false)).name).toBe('main.pdf');
-    expect((await setup(path('/thesis/report.typ')).pdfs.file(true)).name).toBe('report-with-comments.pdf');
-  });
-
-  it('offers "Without comments" first, then "With comments"', async () => {
-    const variants: PdfVariant[] = [];
-    const preview = { registerPdfVariant: (variant: PdfVariant) => (variants.push(variant), { dispose: () => variants.splice(variants.indexOf(variant), 1) }) };
-    const registration = registerPdfVariants(preview as unknown as PreviewContributions, setup().pdfs);
-    expect(variants.map((variant) => variant.label)).toEqual(['Without comments', 'With comments']);
-    expect((await variants[1].create()).name).toBe('main-with-comments.pdf');
-    registration.dispose();
-    expect(variants).toEqual([]);
+  it('works on what the options before it made', () => {
+    const before: PdfEntry = { main: '/main.typ', sources: { '/main.typ': 'Other#margin-note[x]\n', '/extra.typ': 'kept' } };
+    const entry = setup().option.apply(before, false);
+    expect(entry.sources['/main.typ']).toBe('Other\n');
+    expect(entry.sources['/extra.typ']).toBe('kept');
   });
 });

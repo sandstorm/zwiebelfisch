@@ -13,7 +13,8 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => ({
     onDidRender = () => ({ dispose() {} });
     onDidChangeDiagnostics = () => ({ dispose() {} });
     registerToolbarItem = () => ({ dispose() {} });
-    registerPdfVariant = () => ({ dispose() {} });
+    registerPdfExportOption = () => ({ dispose() {} });
+    pdfExportOptions = () => [];
     destroy() {}
   },
 }));

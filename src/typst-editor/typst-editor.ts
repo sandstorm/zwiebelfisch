@@ -93,8 +93,8 @@ export interface TypstEditorOptions {
    */
   collaboration?: CollaborationOptions;
   /**
-   * Whether the preview toolbar has "Download PDF" (default true): without
-   * comments, or with them from its menu. Hosts can call `exportPdf` either way.
+   * Whether the preview toolbar has "Download PDF" (default true), with a popover of the export options
+   * ("Include comments"). Hosts can call `exportPdf` either way.
    */
   pdfDownload?: boolean;
   /**
@@ -107,8 +107,12 @@ export interface TypstEditorOptions {
 
 /** Which PDF `exportPdf` makes. */
 export interface PdfExportOptions {
-  /** With the margin notes as the preview shows them (default false: the final version, notes left out). */
-  comments?: boolean;
+  /**
+   * The export options by id, the others at their default (an id no extension registered rejects). Built in:
+   * `comments.include`, the margin notes as the preview shows them (default false: the final version, notes left
+   * out).
+   */
+  options?: Record<string, boolean>;
 }
 
 export interface TypstEditor {
@@ -128,8 +132,9 @@ export interface TypstEditor {
   /** Shows `path` in the editing area (if the project has it). */
   open(path: string): void;
   /**
-   * The project as a PDF (`application/pdf`), from the current text. Rejects
-   * with an error naming the problem when the document has errors.
+   * The project as a PDF (`application/pdf`), from the current text, with the export options as given
+   * (`{ options: { 'comments.include': true } }`). Rejects with an error naming the problem when the document
+   * has errors.
    */
   exportPdf(options?: PdfExportOptions): Promise<Blob>;
   destroy(): void;
@@ -182,7 +187,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
       const parsed = ProjectPath.parse(path);
       if (parsed) workbench.open(parsed);
     },
-    exportPdf: (pdf = {}) => workbench.executeCommand('comments.exportPdf', pdf.comments ?? false),
+    exportPdf: (pdf = {}) => workbench.executeCommand('pdfExport.export', pdf.options),
     destroy: () => {
       unsubscribe();
       workbench.destroy();

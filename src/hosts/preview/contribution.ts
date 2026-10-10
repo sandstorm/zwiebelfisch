@@ -1,4 +1,4 @@
-// What a contribution to the preview is (toolbar items, PDF variants, page overlays), and what the preview
+// What a contribution to the preview is (toolbar items, PDF export options, page overlays), and what the preview
 // tells it. Imports no host file above it, so contributions can name these types without importing the
 // host. See preview.ts.
 import type { Box } from '../../core/typst-engine/typst-engine';
@@ -32,22 +32,36 @@ export interface PreviewContext {
   isFollowing(): boolean;
   /** Switches following on or off; switching it on goes to the newest place asked for. */
   setFollowing(on: boolean): void;
-  /** The registered PDF variants, in the order of registration. */
-  pdfVariants(): readonly PdfVariant[];
 }
 
-/** A PDF the preview offers to download, e.g. "Without comments" / "With comments". */
-export interface PdfVariant {
-  /** How menus name it ("With comments"). */
+/**
+ * What a PDF compiles: an entry file and source texts that replace (or add to) the project's `.typ` files for this
+ * export only; the documents stay as they are. The export starts from the main file and no sources.
+ */
+export interface PdfEntry {
+  readonly main: string;
+  readonly sources: Readonly<Record<string, string>>;
+}
+
+/**
+ * A choice offered when exporting a PDF (a checkbox next to "Download"; `exportPdf({ options })` for hosts), e.g.
+ * whether the PDF includes the comments. Each option changes what is compiled, never the documents. Options are
+ * checkboxes for now; a later `choices?: { value, label }[]` would make `default` and `value` one of them.
+ */
+export interface PdfExportOption {
+  /** `<extension>.<name>`, e.g. `comments.include`: the key in `exportPdf({ options })` and in what is remembered. */
+  readonly id: string;
+  /** The checkbox's label ("Include comments"). */
   readonly label: string;
-  /** Makes the PDF. Rejects with an error whose message is shown to the user. */
-  create(): Promise<PdfFile>;
-}
-
-/** A PDF to save: the file and the name to save it under. */
-export interface PdfFile {
-  blob: Blob;
-  name: string;
+  /** A longer explanation, shown as the checkbox's tooltip. */
+  readonly description?: string;
+  /** Its value until someone chooses otherwise. */
+  readonly default: boolean;
+  /**
+   * What to compile with this option set to `value`, from what the options before it made (see
+   * `PreviewContributions.registerPdfExportOption` for the order). Called for every option, also when it is off.
+   */
+  apply(entry: PdfEntry, value: boolean): PdfEntry;
 }
 
 /**
