@@ -1,12 +1,8 @@
 // @vitest-environment jsdom
+import './jsdom-setup';
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../document/typst-document';
 import { VisualView } from './visual-view';
-
-// jsdom lacks layout; ProseMirror only needs these to exist.
-Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
-Range.prototype.getBoundingClientRect = () => new DOMRect();
-Element.prototype.scrollIntoView = () => {};
 
 function setup(text: string) {
   const parent = document.createElement('div');

@@ -3,13 +3,14 @@ import { EditorState, TextSelection, type Transaction } from '@tiptap/pm/state';
 import type { TypstDocument } from '../document/typst-document';
 import { extensions } from './extensions';
 import { locate, print, project, syncDoc } from './projection';
+import { Toolbar } from './toolbar';
 
 /** Marks transactions that mirror a document change, so they are not written back. */
 const FROM_DOCUMENT = 'typst-from-document';
 
 /**
- * The Word-like editing view (Tiptap/ProseMirror), a projection of a
- * TypstDocument.
+ * The Word-like editing view (Tiptap/ProseMirror) with its formatting
+ * toolbar, a projection of a TypstDocument.
  *
  * Visual edits become one minimal text change on the document; document
  * changes from elsewhere are re-projected and applied as the smallest
@@ -18,6 +19,7 @@ const FROM_DOCUMENT = 'typst-from-document';
  */
 export class VisualView {
   private readonly editor: Editor;
+  private readonly toolbar: Toolbar;
   private readonly unsubscribe: () => void;
 
   constructor(parent: HTMLElement, private readonly document: TypstDocument) {
@@ -34,6 +36,7 @@ export class VisualView {
     this.editor.view.updateState(
       EditorState.create({ schema: state.schema, doc: project(document.text, state.schema), plugins: state.plugins }),
     );
+    this.toolbar = new Toolbar(parent, this.editor);
     this.unsubscribe = document.onChange((_changes, origin) => {
       if (origin !== this) this.syncFromDocument();
     });
@@ -52,6 +55,7 @@ export class VisualView {
 
   destroy(): void {
     this.unsubscribe();
+    this.toolbar.destroy();
     this.editor.destroy();
   }
 

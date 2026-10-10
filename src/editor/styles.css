@@ -129,3 +129,52 @@
 .typst-status__elsewhere { display: contents; list-style: none; }
 .typst-status__elsewhere > li { color: #57606a; }
 .typst-status__elsewhere > li[data-severity='error'] { color: #cf222e; }
+.typst-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--te-border);
+  background: white;
+  font-family: system-ui, sans-serif;
+}
+.typst-toolbar__group { display: flex; align-items: center; gap: 2px; }
+.typst-toolbar__group + .typst-toolbar__group {
+  margin-left: 6px;
+  padding-left: 8px;
+  border-left: 1px solid var(--te-border);
+}
+.typst-toolbar__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: #3d4451;
+  cursor: pointer;
+}
+.typst-toolbar__button:hover:not(:disabled) { background: #eef1f5; }
+.typst-toolbar__button[aria-pressed='true'] { background: #e3ecfd; color: var(--te-accent); }
+.typst-toolbar__button:disabled { color: #b8bec8; cursor: default; }
+.typst-toolbar__button:focus-visible,
+.typst-toolbar__style:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 1px; }
+.typst-toolbar__style {
+  height: 32px;
+  min-width: 132px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: #3d4451;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.typst-toolbar__style:hover { background: #eef1f5; }
