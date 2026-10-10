@@ -17,6 +17,7 @@ import { HorizontalRule } from './horizontal-rule';
 import { PageBreak } from './page-break';
 import { ChecklistPreamble, TypstTaskItem, TypstTaskList } from './task-list';
 import { RawBoxNavigation, rawBoxView } from './raw-box';
+import { Reference } from '../references/references';
 import { TextAlign } from './text-align';
 
 export { hasHeadingNumbering } from './heading-numbering';
@@ -39,11 +40,19 @@ export { textAlignAt, type TextAlignment } from './text-align';
  *   content (owned by the projection);
  * - code block `fence`: the backticks of its delimiters.
  *
+ * `label` (`{ name, gap }` or null) is the label after a block (`= Intro
+ * <intro>`): printed after it, shown as a tag (see `references/`).
+ *
  * A block whose anchors change (as every re-projected block's `src` does
  * after an edit from elsewhere) keeps its DOM, so what is inside, like an
  * open note editor, survives; see `keepWhileRenderedSame`.
  */
 const ANCHORED_BLOCKS = ['paragraph', 'heading', 'bulletList', 'orderedList', 'listItem'];
+
+/** Blocks a label can follow: whatever a segment of markup projects to (see projection.ts). */
+const LABELLED_BLOCKS = [
+  'paragraph', 'heading', 'codeBlock', 'rawBlock', 'image', 'outline', 'figure', 'table', 'blockquote', 'alignment', 'pageBreak', 'horizontalRule',
+];
 
 const SourceAnchors = Extension.create({
   name: 'typstSourceAnchors',
@@ -65,6 +74,7 @@ const SourceAnchors = Extension.create({
       { types: ['codeBlock'], attributes: { fence: { default: 3, rendered: false } } },
       { types: ['table', 'blockquote'], attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } } },
       { types: ['hardBreak'], attributes: { src: { default: '\\\n', rendered: false, keepOnSplit: false } } },
+      { types: LABELLED_BLOCKS, attributes: { label: { default: null, rendered: false, keepOnSplit: false } } },
     ];
   },
 });
@@ -224,7 +234,7 @@ const FigureCaption = Node.create({
   },
 });
 
-/** Inline Typst the Visual view does not model (`#func[..]`, `$x$`, `@ref`, …), kept verbatim and editable as code. */
+/** Inline Typst the Visual view does not model (`#func[..]`, `$x$`, `<label>`, …), kept verbatim and editable as code. */
 const RawInline = Node.create({
   name: 'rawInline',
   group: 'inline',
@@ -312,6 +322,7 @@ export const extensions = [
   TextAlign,
   MarginNote,
   NoteRange,
+  Reference,
 ];
 
 /** The schema `extensions` produce; an `Editor` builds an equal but distinct instance. */

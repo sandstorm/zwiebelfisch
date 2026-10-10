@@ -31,6 +31,9 @@
  * Block nodes (see `call-atoms.ts`): `table.header(..)` rows as header
  * cells, `#quote(block: true)[..]` as block quotes, `- [ ]` / `- [x]` items as
  * task items, and `#pagebreak()` / full-width `#line(..)` as atoms.
+ * References (`@key`, `@key[supplement]`) are `reference` atoms; a label
+ * (`<key>`) after a heading, or ending a block's run, is that block's `label`
+ * attribute (see `labels.ts`).
  */
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
@@ -43,6 +46,7 @@ export { alignArgs, setRules, withHorizontal, type Horizontal, type TextAlignmen
 import { alignArgs } from './alignment';
 import { noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../../comments/comments';
 import { callAtomType } from './call-atoms';
+import { type BlockLabel, guardAfterReference, labelSyntax, referenceSyntax, splitTrailingLabel, labelAfterHeading } from './labels';
 
 /**
  * Nodes created by `project` and not modified since. ProseMirror nodes are
@@ -59,7 +63,7 @@ export function project(source: string, schema: Schema): Node {
     return schema.nodes.doc.create({ lead: source, trail: '' }, [textblock(ctx, { type: 'paragraph', attrs: { src: '' } }, 0, [])]);
   }
   return schema.nodes.doc.create(
-    { lead: source.slice(0, segments[0].from), trail: source.slice(segments.at(-1)!.to) },
+    { lead: source.slice(0, segments[0].from), trail: source.slice(end(segments.at(-1)!)) },
     blocks(ctx, segments),
   );
 }
@@ -133,16 +137,23 @@ interface Context {
 
 type SegmentKind = 'heading' | 'bullet' | 'ordered' | 'run';
 
-/** A top-level stretch of source that becomes one block (or one list item). */
+/** A top-level stretch of source that becomes one block (or one list item), and the label after it. */
 interface Segment {
   kind: SegmentKind;
   nodes: SyntaxNode[];
   from: number;
+  /** The end of the block's own source, before its label. */
   to: number;
+  label: SyntaxNode | null;
+}
+
+/** Where a segment's source ends, its label included. */
+function end(segment: Segment): number {
+  return segment.label?.to ?? segment.to;
 }
 
 /** Syntax that makes a run of inline content a paragraph rather than a raw block. */
-const PROSE = new Set(['Text', 'Strong', 'Emph', 'Escape', 'Shorthand', 'SmartQuote', 'Linebreak', 'Link', 'Raw']);
+const PROSE = new Set(['Text', 'Strong', 'Emph', 'Escape', 'Shorthand', 'SmartQuote', 'Linebreak', 'Link', 'Raw', 'Ref']);
 const SHORTHANDS: Record<string, string> = {
   '~': '\u00a0',
   '--': '\u2013',
@@ -158,26 +169,36 @@ function children(node: SyntaxNode): SyntaxNode[] {
   return result;
 }
 
-/** Splits markup into blocks: headings and list items stand alone, the rest forms runs up to a paragraph break. */
+/**
+ * Splits markup into blocks: headings and list items stand alone, the rest
+ * forms runs up to a paragraph break. A label right after a heading, or at the
+ * end of a run, goes with that segment.
+ */
 function segment(nodes: SyntaxNode[]): Segment[] {
   const segments: Segment[] = [];
   let run: SyntaxNode[] = [];
   const flushRun = () => {
     while (run.length > 0 && run.at(-1)!.name === 'Space') run.pop();
-    if (run.length > 0) segments.push({ kind: 'run', nodes: run, from: run[0].from, to: run.at(-1)!.to });
+    if (run.length > 0) {
+      const { content, label } = splitTrailingLabel(run);
+      segments.push({ kind: 'run', nodes: content, from: content[0].from, to: content.at(-1)!.to, label });
+    }
     run = [];
   };
-  for (const node of nodes) {
+  nodes.forEach((node, index) => {
     const kind = blockKind(node);
+    const last = segments.at(-1);
     if (kind) {
       flushRun();
-      segments.push({ kind, nodes: [node], from: node.from, to: node.to });
+      segments.push({ kind, nodes: [node], from: node.from, to: node.to, label: null });
     } else if (node.name === 'Parbreak') {
       flushRun();
+    } else if (run.length === 0 && last?.kind === 'heading' && !last.label && labelAfterHeading(nodes, index, last.nodes[0], BLOCK_KINDS)) {
+      last.label = node;
     } else if (node.name !== 'Space' || run.length > 0) {
       run.push(node);
     }
-  }
+  });
   flushRun();
   return segments;
 }
@@ -190,10 +211,20 @@ function blockKind(node: SyntaxNode): SegmentKind | null {
 
 function sepAfter(segments: Segment[], index: number, source: string): string | null {
   const next = segments[index + 1];
-  return next ? source.slice(segments[index].to, next.from) : null;
+  return next ? source.slice(end(segments[index]), next.from) : null;
 }
 
+/** The block a segment becomes, with the segment's label (if any) as its `label` attribute. */
 function toBlock(ctx: Context, segment: Segment, sep: string | null): Node {
+  const block = unlabelledBlock(ctx, segment, sep);
+  if (!segment.label) return block;
+  const label: BlockLabel = { name: ctx.source.slice(segment.label.from + 1, segment.label.to - 1), gap: ctx.source.slice(segment.to, segment.label.from) };
+  const labelled = block.type.create({ ...block.attrs, label }, block.content, block.marks);
+  if (pristine.has(block)) pristine.set(labelled, pristine.get(block)!);
+  return labelled;
+}
+
+function unlabelledBlock(ctx: Context, segment: Segment, sep: string | null): Node {
   const [node] = segment.nodes;
   const src = ctx.source.slice(segment.from, segment.to);
   switch (segment.kind) {
@@ -282,7 +313,7 @@ function blockquote(ctx: Context, call: Segment, args: SyntaxNode[], sep: string
   const markup = content.getChild('Markup')!;
   const segments = segment(children(markup));
   const from = segments[0]?.from ?? markup.from;
-  const to = segments.at(-1)?.to ?? markup.from;
+  const to = segments.length > 0 ? end(segments.at(-1)!) : markup.from;
   const blocksInside = segments.length > 0 ? blocks(ctx, segments) : [textblock(ctx, { type: 'paragraph', attrs: { src: '' } }, from, [])];
   const layout: QuoteLayout = { open: ctx.source.slice(call.from, from), close: ctx.source.slice(to, call.to) };
   return ctx.schema.nodes.blockquote.create({ sep, layout }, blocksInside);
@@ -385,7 +416,7 @@ function captionContent(block: SyntaxNode): { from: number; to: number; nodes: S
 /** Whether a figure's source has more than its image and caption: other arguments, a label, comments. */
 export function hasFigureExtras(figure: Node): boolean {
   const layout: FigureLayout = figure.attrs.layout ?? NEW_FIGURE;
-  return (layout.open + (layout.caption?.before ?? '') + layout.rest).replace(/[\s,]/g, '') !== '#figure()';
+  return figure.attrs.label !== null || (layout.open + (layout.caption?.before ?? '') + layout.rest).replace(/[\s,]/g, '') !== '#figure()';
 }
 
 /** Block calls by function name; each checks its arguments and projects the call, or returns null. */
@@ -444,7 +475,7 @@ function contentBlocks(ctx: Context, block: SyntaxNode): { content: Node[]; from
   const markup = block.getChild('Markup')!;
   const segments = segment(children(markup));
   const from = segments[0]?.from ?? markup.from;
-  const to = segments.at(-1)?.to ?? markup.from;
+  const to = segments.length > 0 ? end(segments.at(-1)!) : markup.from;
   const content = segments.length > 0 ? blocks(ctx, segments) : [textblock(ctx, { type: 'paragraph', attrs: { src: '' } }, from, [])];
   return { content, from, to };
 }
@@ -649,7 +680,16 @@ const INLINE: Record<string, (c: InlineContext) => Node | Placed[]> = {
   Emph: (c) => delimited(c, 'italic') ?? raw(c.ctx, c.src, c.marks),
   Link: (c) => c.ctx.schema.text(c.src, c.ctx.schema.marks.link.create({ href: c.src }).addToSet(c.marks)),
   Raw: (c) => inlineCode(c) ?? raw(c.ctx, c.src, c.marks),
+  Ref: (c) => reference(c),
 };
+
+/** `@key` / `@key[supplement]`: a `reference` atom; the supplement is kept as written. */
+function reference({ ctx, node, marks }: InlineContext): Node {
+  const marker = node.getChild('RefMarker')!;
+  const supplement = node.getChild('ContentBlock');
+  const attrs = { target: ctx.source.slice(marker.from + 1, marker.to), supplement: supplement ? ctx.source.slice(supplement.from, supplement.to) : null };
+  return ctx.schema.nodes.reference.create(attrs, null, marks);
+}
 
 function inlineNode(context: InlineContext): Node | Placed[] {
   return (INLINE[context.node.name] ?? ((c: InlineContext) => raw(c.ctx, c.src, c.marks)))(context);
@@ -865,6 +905,12 @@ class Printer {
     this.write(src, 'syntax', this.end, this.end);
   }
 
+  /** Source right after the syntax printed last, mapping where that syntax maps (e.g. a block's label). */
+  after(src: string): void {
+    if (this.pending.length > 0) this.hidden(src);
+    else this.closing(src);
+  }
+
   /** Prints with every line of the output indented by two more spaces. */
   indented(print: () => void): void {
     const outer = this.indent;
@@ -925,8 +971,13 @@ function printBlocks(out: Printer, container: Node, start: number, defaultSep: s
   });
 }
 
-/** Prints `node`, which starts at document position `pos`. */
+/** Prints `node`, which starts at document position `pos`, and its label; the label maps to the block's end. */
 function printBlock(out: Printer, node: Node, parent: Node, pos: number): void {
+  printUnlabelled(out, node, parent, pos);
+  if (node.attrs.label) out.after(labelSyntax(node.attrs.label));
+}
+
+function printUnlabelled(out: Printer, node: Node, parent: Node, pos: number): void {
   const pristineLayout = pristine.get(node);
   if (pristineLayout) return printLayout(out, node, pristineLayout, pos + 1);
   if (pristine.has(node)) return printPristineItem(out, node, pos);
@@ -1193,6 +1244,7 @@ function printInline(out: Printer, block: Node, start: number): void {
       open.push({ mark, close: syntax.close });
     });
     text = guardCall(printedSoFar, text, piece.escaped);
+    if (piece.escaped && i > 0) text = guardAfterReference(pieces[i - 1].node, text);
     printedSoFar += text;
     printPiece(out, piece, text);
   });
@@ -1281,6 +1333,7 @@ function needsFunctionSyntax({ before, after, first, last }: Around): boolean {
 
 /** The source an inline atom prints. */
 function atomSource(atom: Node): string {
+  if (atom.type.name === 'reference') return referenceSyntax(atom.attrs.target, atom.attrs.supplement);
   return atom.type.name === 'marginNote' ? printNoteCall(atom.attrs as { head: string; note: string }) : atom.attrs.src;
 }
 
@@ -1336,7 +1389,8 @@ export function syncDoc(tr: Transaction, target: Node): Transaction {
   return tr;
 }
 
-const ANCHORS = ['src', 'sep', 'marker', 'lead', 'trail', 'layout'];
+// `label` is not printed from `src` but compared like an anchor: a renamed label updates the attribute in place
+const ANCHORS = ['src', 'sep', 'marker', 'lead', 'trail', 'layout', 'label'];
 
 function withoutAnchors(node: Node): Node {
   if (node.isText) return node;
