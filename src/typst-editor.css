@@ -1,6 +1,5 @@
 /* The widget's styles, scoped under .typst-editor and injected by createTypstEditor (also injected:
-   typst-editor/layout.css, features/files/files.css, features/changes/changes.css,
-   features/visual-view/visual-view.css). See docs/embedding.md. */
+   typst-editor/layout.css, features/files/files.css, features/visual-view/visual-view.css). See docs/embedding.md. */
 /* Colors: tokens as light-dark(light, dark). The widget follows the page's color-scheme (a page that
    declares `color-scheme: light dark` gets it dark when the OS is); the `theme` option sets its own
    (data-theme). What light-dark() cannot express selects on data-scheme (typst-editor/color-scheme.ts). */
@@ -204,7 +203,7 @@
 }
 .typst-preview__content svg { display: block; width: 100%; height: auto; }
 /* Dark mode: the pages inverted, as dark-mode PDF readers do (white text on black, hues kept, pictures
-   turned back); the overlays (highlights, change bars) are outside the content and keep their colors.
+   turned back); the overlays (highlights) are outside the content and keep their colors.
    Compiled snippets in the Visual view likewise (image files not). */
 .typst-editor[data-scheme='dark'] .typst-preview__page { background: black; }
 .typst-editor[data-scheme='dark'] .typst-preview__content,

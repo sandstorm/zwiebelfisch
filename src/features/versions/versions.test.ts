@@ -8,23 +8,15 @@ const cleanup: (() => void)[] = [];
 afterEach(() => cleanup.splice(0).forEach((fn) => fn()));
 
 function setup() {
-  let base: Record<string, string> = { '/main.typ': 'v1' };
-  const baseListeners = new Set<() => void>();
   const messageListeners = new Set<(message: ServerMessage) => void>();
   const saved: { message: string; author?: { name: string } }[] = [];
   const versions = {
-    base: (path: string) => base[path] ?? null,
-    onBaseChange: (listener: () => void) => (baseListeners.add(listener), () => void baseListeners.delete(listener)),
     save: (message: string, author?: { name: string }) => void saved.push({ message, author }),
     onMessage: (listener: (message: ServerMessage) => void) => (messageListeners.add(listener), () => void messageListeners.delete(listener)),
   };
-  const bases: Record<string, string | null>[] = [];
   const toolbar = document.createElement('div');
   document.body.append(toolbar);
-  const controls = new VersionControls(toolbar, versions, {
-    user: { name: 'Ann' },
-    setBase: (b) => bases.push({ '/main.typ': b('/main.typ'), '/a.typ': b('/a.typ') }),
-  });
+  const controls = new VersionControls(toolbar, versions, { user: { name: 'Ann' } });
   cleanup.push(() => controls.destroy(), () => toolbar.remove());
   const button = toolbar.querySelector<HTMLButtonElement>('.typst-editor__save-version')!;
   const status = toolbar.querySelector('[role=status]')!;
@@ -33,23 +25,11 @@ function setup() {
     button,
     status,
     saved,
-    bases,
-    setBase(next: Record<string, string>) {
-      base = next;
-      baseListeners.forEach((listener) => listener());
-    },
     receive: (message: ServerMessage) => messageListeners.forEach((listener) => listener(message)),
   };
 }
 
 describe('VersionControls', () => {
-  it("shows every file's changes against the last commit and follows it", () => {
-    const { bases, setBase } = setup();
-    expect(bases).toEqual([{ '/main.typ': 'v1', '/a.typ': null }]);
-    setBase({ '/main.typ': 'v2', '/a.typ': 'a2' });
-    expect(bases.at(-1)).toEqual({ '/main.typ': 'v2', '/a.typ': 'a2' });
-  });
-
   it('asks for a commit message, saves as the user, and shows the outcome', () => {
     const { toolbar, button, status, saved, receive } = setup();
     button.click();

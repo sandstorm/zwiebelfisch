@@ -39,7 +39,6 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [tiptap-migration](tiptap-migration.md) | done |
 | [projection-position-map](projection-position-map.md) | done |
 | [comments](comments.md) | done (superseded by comments-drafting) |
-| [diff-rendering](diff-rendering.md) | done |
 | [multi-file-ui](multi-file-ui.md) | done |
 | [visual-view-toolbar-and-raw-editing](visual-view-toolbar-and-raw-editing.md) | done |
 | [visual-view-links-images-tables](visual-view-links-images-tables.md) | done |
@@ -48,7 +47,6 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [collab-yjs](collab-yjs.md) | done |
 | [server-gitlab](server-gitlab.md) | done |
 | [followups-2026-10-10](followups-2026-10-10.md) | open |
-| [diff-redline-palimset](diff-redline-palimset.md) | open |
 | [restructure-src](restructure-src.md) | done (branch task/restructure-src) |
 | [inspector-sidebar](inspector-sidebar.md) | open (concept; dockview spike: adopt later) |
 | [e2e-preview](e2e-preview.md) | done (branch task/e2e-preview) |
@@ -68,7 +66,6 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [comment-replies](comment-replies.md) | done (branch task/comment-replies) |
 | [notes-pdf](notes-pdf.md) | done (branch task/notes-pdf) |
 | [labels-and-references](labels-and-references.md) | done (branch task/labels-and-references) |
-| [changes-per-file](changes-per-file.md) | done (branch task/changes-per-file) |
 | [files-tree](files-tree.md) | done (branch task/files-tree) |
 | [tables-real-world](tables-real-world.md) | done (branch task/tables-real-world) |
 | [ironcalc](ironcalc.md) | done (branch task/ironcalc) |

@@ -8,7 +8,6 @@ vi.mock('./features/preview/preview', () => ({
   Preview: class {
     update() {}
     reveal() {}
-    showChanges() {}
     showPresence() {}
     snippet = async () => null;
     onRender = () => () => {};

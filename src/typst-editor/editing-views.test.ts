@@ -149,24 +149,6 @@ describe('EditingViews selection reports', () => {
   });
 });
 
-describe('EditingViews onCreate', () => {
-  it("reports each document's views once, when they are created (shown or asked for)", () => {
-    const parent = document.createElement('div');
-    document.body.append(parent);
-    const created: string[] = [];
-    const views = new EditingViews(parent, {
-      onCreate: (document, { visual, source }) => created.push(`${document.text.trim()} ${String(Boolean(visual && source))}`),
-    });
-    const a = new TypstDocument('= A\n');
-    const b = new TypstDocument('= B\n');
-    views.show(a);
-    views.show(a);
-    views.viewsOf(b);
-    views.show(b);
-    expect(created).toEqual(['= A true', '= B true']);
-  });
-});
-
 describe('EditingViews cursor reports (the preview follows them)', () => {
   it('reports the cursor of the focused Visual view, not of an unfocused one', () => {
     const parent = document.createElement('div');

@@ -49,17 +49,6 @@ test('the name field reloads as that user', async ({ page }) => {
   await expect(bar(page).getByRole('textbox', { name: 'Your name' })).toHaveValue('Ada');
 });
 
-test('"Changes since opened" shows what was typed since the example loaded', async ({ page }) => {
-  await page.goto('/');
-  const toggle = page.getByRole('button', { name: 'Changes since opened' });
-  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
-  await page.getByTestId('typst-visual').locator('h1').click();
-  await page.keyboard.press('End');
-  await page.keyboard.type(' again');
-  await toggle.click();
-  await expect(page.getByTestId('typst-visual').locator('.typst-diff-insert')).toHaveText(' again');
-});
-
 test('Collaborate without a server: says how to start it and edits a local copy', async ({ page }) => {
   await noServer(page);
   await page.goto('/?room=playground-hello');

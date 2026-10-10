@@ -24,7 +24,7 @@ interface Entry {
  * long documents keep a small DOM. An SVG is only replaced when the page's
  * hash changed.
  *
- * Page elements may hold overlays (click highlight, change bars) next to the SVG;
+ * Page elements may hold overlays (the click highlight) next to the SVG;
  * they are positioned in percent of the page.
  */
 export class PageList {

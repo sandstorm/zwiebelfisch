@@ -13,10 +13,6 @@ export interface EditingViewsOptions {
   onCursor?(document: TypstDocument, offset: number): void;
   /** The selection in a view of `document` moved, or its text changed (the views already show the new selection). */
   onSelection?(document: TypstDocument): void;
-  /** Accepting a change in the source view of `document` moved its base (see `SourceView.showChanges`). */
-  onBaseChange?(document: TypstDocument, base: string): void;
-  /** The views of `document` were just created (e.g. to show its changes there too). */
-  onCreate?(document: TypstDocument, views: { visual: VisualView; source: SourceView }): void;
   /** Options for the Visual view of `document` (rendered raw boxes, images to insert). */
   visualOptions?(document: TypstDocument): VisualViewOptions;
   /** Where the file paths in `document` lead (both views open them); default: plain text. */
@@ -27,7 +23,6 @@ interface Views {
   panes: Record<EditorMode, HTMLElement>;
   visual: VisualView;
   source: SourceView;
-  cursor: number | null;
 }
 
 /**
@@ -132,11 +127,6 @@ export class EditingViews {
     if (views) markDiagnostics(views, diagnostics);
   }
 
-  /** The last cursor offset in the source view of `document`, if there was one. */
-  cursor(document: TypstDocument): number | null {
-    return this.views.get(document)?.cursor ?? null;
-  }
-
   /** Destroys the views of every document not in `documents` (deleted files). */
   retain(documents: TypstDocument[]): void {
     for (const document of [...this.views.keys()]) {
@@ -158,7 +148,6 @@ export class EditingViews {
     if (!views) {
       views = this.create(document);
       this.views.set(document, views);
-      this.options.onCreate?.(document, views);
     }
     return views;
   }
@@ -183,14 +172,9 @@ export class EditingViews {
       }),
       source: new SourceView(panes.source, document, {
         documentLinks,
-        onCursor: (offset) => {
-          views.cursor = offset;
-          this.options.onCursor?.(document, offset);
-        },
-        onBaseChange: (base) => this.options.onBaseChange?.(document, base),
+        onCursor: (offset) => this.options.onCursor?.(document, offset),
         onSelection: () => this.options.onSelection?.(document),
       }),
-      cursor: null,
     };
     const diagnostics = this.diagnostics.get(document);
     if (diagnostics) markDiagnostics(views, diagnostics);

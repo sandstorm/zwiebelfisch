@@ -58,8 +58,8 @@ Styles that must live inside the shadow root:
 - **CodeMirror** mounts its styles into the root node of the editor's parent. The view is created
   after its container is attached to the shadow root, so CodeMirror finds the shadow root without
   being told.
-- **Widget styles** (`src/typst-editor.css`, plus the feature styles
-  `src/features/changes/changes.css`): `createTypstEditor` injects them into
+- **Widget styles** (`src/typst-editor.css`, plus the feature styles such as
+  `src/features/files/files.css`): `createTypstEditor` injects them into
   `host.getRootNode()`, which is the shadow root here and `document.head` otherwise.
 - **ProseMirror** (Visual view) has no style mounting of its own. Its core CSS is vendored in
   `src/features/visual-view/visual-view.css` and injected together with the widget styles, so it
@@ -331,7 +331,7 @@ createTypstEditor(host, {
 - **Save version:** a "Save version" button appears next to the tabs. It asks for a commit
   message (default "Edit via Typst editor") and makes the server commit every change since the
   last commit (edits, new, renamed and deleted files, uploaded images) as **one** commit by the
-  saving user. Everyone's "Changes since …" then starts over from the new commit.
+  saving user.
 - **Changes on GitLab** (pushes, merge requests): merged into the room when someone saves (and,
   with the webhook, as soon as they are pushed), file by file, three-way. Where the room and
   GitLab changed the same lines, nothing is merged or committed: everyone sees "Changes on GitLab
@@ -365,15 +365,3 @@ fake repository, to try merges and conflicts. See [demo-playground.md](demo-play
 ## Not covered yet
 
 Publishing to npm, and React/Vue wrappers.
-
-### Changes since …
-
-The toggle above the editor compares every Typst file of the project with its own base version and
-names that version: "Changes since opened" by default (each file's text when the editor opened, or
-in a collaboration room after the first sync; a file created since is new as a whole; off until
-clicked), "Changes since last saved version" in GitLab rooms (each file at the branch's last
-commit; a file added since is new as a whole), or what the host gives: `base` + `baseLabel`
-options (the main file), `editor.setBase(text, label, path?)` (the main file, or `path`; other
-files keep their bases, the label is shared). `setBase(null)` goes back to "since opened" for
-every file. The Visual and Source views of each file and the preview's change bars (for all
-files at once) follow; accepting a chunk in the Source view moves that file's base.

@@ -43,7 +43,6 @@ export class TypstEditorElement extends Base {
   user: { name: string; color?: string } | undefined;
   /** Real-time collaboration (see `TypstEditorOptions.collaboration`); read when the element connects. */
   collaboration: CollaborationOptions | undefined;
-  #base: string | null = null;
   #settingValue = false;
 
   get value(): string {
@@ -77,12 +76,6 @@ export class TypstEditorElement extends Base {
     return this.#editor.exportPdf(options);
   }
 
-  /** Shows the changes against `base` (an earlier source), or none for null. */
-  setBase(base: string | null): void {
-    this.#base = base;
-    this.#editor?.setBase(base);
-  }
-
   connectedCallback(): void {
     const root = this.shadowRoot ?? this.attachShadow({ mode: 'open' });
     const style = document.createElement('style');
@@ -94,7 +87,6 @@ export class TypstEditorElement extends Base {
       source: this.value,
       files: this.#files,
       fileList: (this.getAttribute('file-list') ?? undefined) as FileListMode | undefined,
-      base: this.#base ?? undefined,
       pdfDownload: this.getAttribute('pdf-download') !== 'hide',
       theme: (this.getAttribute('theme') ?? undefined) as Theme | undefined,
       onChange: (value) => this.#changed(value),

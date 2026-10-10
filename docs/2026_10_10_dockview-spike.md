@@ -144,7 +144,7 @@ Read in `dockview-core/dist/package/main.esm.mjs` (8.4.1) and the GitHub issues:
 
 Today (`typst-editor.ts`, `styles.css`): `.typst-editor` is a CSS grid with
 `columns: editing | preview` and `rows: 1fr | auto`. Left column: file bar (`FileSwitcher`,
-optional) → Visual/Source tabs with tab actions (Comment, Show changes, Save version) → the shown
+optional) → Visual/Source tabs with tab actions (Comment, Save version) → the shown
 file's views or the `AssetView`. Right column: `Preview` with its toolbar. Row 2: the
 `DiagnosticsStatus` status bar across both columns.
 

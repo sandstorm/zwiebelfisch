@@ -16,26 +16,15 @@ function setup() {
     },
   };
   const receive = (payload: string) => listeners.forEach((listener) => listener(payload));
-  return { ydoc, sent, receive, versions: new RoomVersions(ydoc, channel) };
+  return { ydoc, sent, receive, versions: new RoomVersions(channel) };
 }
 
 describe('RoomVersions', () => {
-  it('knows a GitLab-backed room by its base', () => {
+  it('knows a GitLab-backed room by its last commit', () => {
     const { ydoc } = setup();
     expect(RoomVersions.isVersioned(ydoc)).toBe(false);
     ydoc.getMap(META_MAP).set('baseSha', 'abc');
     expect(RoomVersions.isVersioned(ydoc)).toBe(true);
-  });
-
-  it('reads the base of a file and reports when it changes', () => {
-    const { ydoc, versions } = setup();
-    const changes: (string | null)[] = [];
-    versions.onBaseChange(() => changes.push(versions.base('/main.typ')));
-    expect(versions.base('/main.typ')).toBeNull();
-    ydoc.getMap(META_MAP).set('base', { '/main.typ': 'v1' });
-    ydoc.getMap(META_MAP).set('baseSha', 'abc');
-    ydoc.getMap(META_MAP).set('base', { '/main.typ': 'v2' });
-    expect(changes).toEqual(['v1', 'v2']);
   });
 
   it('sends save requests and passes on the server’s version messages only', () => {

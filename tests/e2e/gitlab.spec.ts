@@ -42,22 +42,20 @@ test('the branch is loaded with its files, images from the repository', async ({
   await expect(ann.locator('.typst-editor__right svg image, .typst-editor__right svg use').first()).toBeAttached();
 });
 
-test('Save version commits; everyone’s "Changes since …" starts over from the new version', async ({ browser, baseURL }, info) => {
+test('Save version commits, and everyone in the room is told', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
-  // "Changes since …" covers the main file; its Visual view is all raw boxes, so Ann types in Source
+  // the main file's Visual view is all raw boxes, so Ann types in Source
   await ann.getByRole('tab', { name: 'Source' }).click();
   await ann.getByTestId('typst-source').locator('.cm-line', { hasText: '#pagebreak()' }).click();
   await ann.keyboard.press('End');
   await ann.keyboard.press('Enter');
   await ann.keyboard.press('Enter');
   await ann.keyboard.type('Again.');
-  await expect(bob.getByTestId('typst-visual').locator('.typst-diff-insert')).toContainText('Again');
+  await expect(visualText(bob, 'Again.')).toBeVisible();
 
   await saveVersion(ann, 'Add a line');
   await expect(ann.locator('.typst-editor__version-status')).toContainText('Saved version');
   await expect(bob.locator('.typst-editor__version-status')).toContainText('Saved version');
-  await expect(bob.getByTestId('typst-visual').locator('.typst-diff-insert')).toHaveCount(0);
-  await expect(visualText(bob, 'Again.')).toBeVisible();
 });
 
 test('a simulated upstream commit (playground endpoint) is merged into the room', async ({ browser, baseURL, request }, info) => {

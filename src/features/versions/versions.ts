@@ -5,8 +5,6 @@ import { FieldPopover } from '../visual-view/visual-view';
 
 /** A room's versions (`RoomVersions` in features/collaboration), as far as the controls use them. */
 export interface Versions {
-  base(path: string): string | null;
-  onBaseChange(listener: () => void): () => void;
   save(message: string, author?: { name: string }): void;
   onMessage(listener: (message: ServerMessage) => void): () => void;
 }
@@ -14,15 +12,11 @@ export interface Versions {
 export interface VersionControlsOptions {
   /** Who saves (the commit author, unless the server knows better from the token). */
   user?: { name: string };
-  /** Shows every file's changes against `base(path)` (the last commit; null: new since) from now on. */
-  setBase(base: (path: string) => string | null): void;
 }
 
 /**
  * "Save version" in a room backed by a GitLab branch: the button (asks for a
- * commit message), the outcome as a status line, and the change rendering's
- * base following the room's last commit, so everyone's "Changes since …"
- * starts over after a save.
+ * commit message) and the outcome as a status line.
  */
 export class VersionControls {
   private readonly element: HTMLElement;
@@ -58,9 +52,7 @@ export class VersionControls {
       if (this.popover.isOpen) this.popover.close();
       else this.popover.open(this.button, DEFAULT_COMMIT_MESSAGE, false);
     });
-    const followBase = () => options.setBase((path) => versions.base(path));
-    followBase();
-    this.unsubscribe = [versions.onBaseChange(followBase), versions.onMessage((message) => this.show(message))];
+    this.unsubscribe = [versions.onMessage((message) => this.show(message))];
   }
 
   destroy(): void {

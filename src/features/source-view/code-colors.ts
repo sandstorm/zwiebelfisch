@@ -46,7 +46,7 @@ const scheme = new Compartment();
 /**
  * Follows the scheme the editor is shown in (the page's color-scheme, the widget's `theme`, the OS):
  * light text around the editor turns on CodeMirror's dark theme (cursor, selection, gutters, panels,
- * tooltips, the merge view). Checked when the editor is placed or resized and when the OS scheme changes.
+ * tooltips). Checked when the editor is placed or resized and when the OS scheme changes.
  */
 const follower = ViewPlugin.fromClass(
   class {

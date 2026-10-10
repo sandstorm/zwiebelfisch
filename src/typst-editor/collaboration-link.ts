@@ -13,10 +13,8 @@ export interface CurrentSelection {
 export interface LinkedWidget {
   /** Where the local user's selection is (null: not in a Typst file). */
   current(): CurrentSelection | null;
-  /** Called once connected, in a room backed by a GitLab branch ("Save version", the files' base). */
+  /** Called once connected, in a room backed by a GitLab branch ("Save version"). */
   onVersions?(versions: RoomVersions): void;
-  /** The project has the room's text now (first sync done), e.g. to start "changes since opened" from it. */
-  onSynced?(): void;
   /** The other users' places changed (every file; e.g. for the file panel). */
   onPresence?(presences: readonly PlacedPresence[]): void;
 }
@@ -64,7 +62,6 @@ export class CollaborationLink {
     this.collaboration = collaboration;
     collaboration.onPresence((presences) => this.widget.onPresence?.(presences));
     collaboration.showCursors(this.shown.path, this.shown.views);
-    this.widget.onSynced?.();
     if (collaboration.versions) this.widget.onVersions?.(collaboration.versions);
   }
 

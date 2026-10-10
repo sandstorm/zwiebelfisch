@@ -41,8 +41,8 @@ src/                        the widget (TypeScript); the most important API on t
                             reading-order.ts (main file, then its #includes depth first; a file's neighbours)
   features/                 one folder per feature, each entered through the file named like it
     visual-view/            VisualView — Tiptap editor over the source-anchored projection; visual-view.css
-                            (ProseMirror core styles); decorations at the root: highlights, change-decorations,
-                            presence; field-popover.ts (also used by versions/)
+                            (ProseMirror core styles); decorations at the root: highlights, presence;
+                            field-popover.ts (also used by versions/)
       projection/           projection.ts (source ↔ document), raw-code, alignment, call-atoms, labels (label/ref syntax),
                             embedded-code
       nodes/                nodes.ts (the schema: Tiptap extensions), raw-box, rendered-box, code-block-view,
@@ -61,14 +61,13 @@ src/                        the widget (TypeScript); the most important API on t
                             value" task runner)
       worker/               worker.ts (startEngineWorker, main-thread side), engine.worker.ts (the worker),
                             protocol.ts (messages), project-files.ts (FileSender/FileReceiver)
-      pages/                pages.ts: page-list (SVG only near the viewport), geometry, zoom, snippet, change-bars
+      pages/                pages.ts: page-list (SVG only near the viewport), geometry, zoom, snippet
     diagnostics/            DiagnosticsStatus (status bar), diagnostics-summary.ts
     labels/                 LabelIndex: the project's labels (kind, title, file) and reference counts; scan.ts (Lezer, .bib)
     spreadsheets/           SpreadsheetView (.ic files in IronCalc's workbook UI), workbook.ts (React + IronCalc,
                             loaded on demand), typst-file.ts (spreadsheetTypst → name.ic.gen.typ for Typst)
     styles/                 StyleIndex: the custom styles the project declares (`/// @style …`), discover.ts,
                             new-style.ts ("New style…" stub); DocumentStyles (what a Visual view uses)
-    changes/                ChangeTracking (a base per Typst file + "Changes since …"), diff.ts (diffTexts), changes.css
     comments/               CommentAction ("Comment" / Ctrl+Alt+M), add-margin-note.ts, margin-note-syntax.ts
                             (drafting's call: parse, print, validity), note-thread.ts (a note's body as a
                             thread of messages), page-margin.ts, without-notes.ts (the PDF without comments)
@@ -102,7 +101,7 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
 ### Folder rules
 
 - **Entry files.** Every folder under `src/` has one entry file named like it (`preview/preview.ts`;
-  a stylesheet may be `changes/changes.css`). Everything else in the folder is internal to it, and
+  a stylesheet may be `files/files.css`). Everything else in the folder is internal to it, and
   folders that grow get subfolders named after a concept (`projection/`, `worker/`), never generic
   ones. A folder beside a file of the same name (`typst-editor/` next to `typst-editor.ts`) holds
   that file's internals. `core/` and `features/` only group.
@@ -153,11 +152,11 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
 
 ```ts
 createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileChange?, onFilesChange?, onChange?,
-                           user?, base?, baseLabel?, collaboration?, onOpen?, followCursor?, pdfDownload? })
-  → { source (get/set), files (get/set), activeFile, open(path), setBase(base, label?), exportPdf({comments?}) → Promise<Blob>,
+                           user?, collaboration?, onOpen?, followCursor?, pdfDownload? })
+  → { source (get/set), files (get/set), activeFile, open(path), exportPdf({comments?}) → Promise<Blob>,
       destroy() }
 <typst-editor value="…" file-list="auto|show|hide" pdf-download="hide">   .value, .files, .user, .collaboration,
-  setBase(base), exportPdf({comments?}); 'change' {detail:{value}}, 'files-change' {detail: FileChange}, 'open' {detail:{path}}
+  exportPdf({comments?}); 'change' {detail:{value}}, 'files-change' {detail: FileChange}, 'open' {detail:{path}}
 ```
 
 - `source` is the text of the main file at `main` (default `/main.typ`; falls back to
@@ -191,7 +190,6 @@ createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileCha
 - **File links** (see below): each document's views get a `DocumentLinkProvider` (`Widget.documentLinks`:
   paths resolve from the document's current path; `open` is `Widget.open`; `create` is a
   `create` change through `request`, then `open`).
-  `onCreate(document, views)` reports new views (the widget attaches them to `ChangeTracking`).
 - Preview clicks into another project file open it, then reveal. Clicks into packages are ignored.
 - **`ProjectRenderings`** gives every document's VisualView its `renderer` (snippets from
   `Preview.snippet` under the document's current path, refreshed on `Preview.onRender`; image
@@ -344,7 +342,6 @@ new VisualView(parent, document, { renderer?, assets?, user?: {name}, comment?()
 .setPresence(presences)             // other users' carets / selections (PresenceTarget), see Collaboration
 .selection() → {from, to}           // posToSource; the end with bias -1
 .editNote(offset) → boolean         // focuses the gutter card of the margin note whose source holds offset
-.showChanges(base | null)   // track changes against base, following every edit
 .destroy()
 ```
 
@@ -624,11 +621,6 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   `toggleHeadingNumbering` (no toolbar button; meant for the Inspector's document section) adds `#set heading(numbering: "1.")` after the leading raw blocks or
   removes the numbering arguments. Rules in content blocks, show rules and numbering functions are
   not followed (the preview is exact).
-- **Track changes** (`change-decorations.ts`): a ProseMirror plugin holds the projected base
-  and, on every doc change, decorates `diffTexts(print(base), print(doc))` through
-  `sourceToPos`: insertions as inline marks, deletions as struck-through `<del>` widgets with
-  the deleted *visible* text (taken from the projected base), a change whose visible text is
-  the same on both sides as a formatting change, and raw boxes inside a change outlined.
 - **Remote presence** (`presence.ts`, Tiptap CollaborationCaret look, but fed from our text sync):
   a caret is a widget decoration (bar + name flag, always shown) at `sourceToPos(head)`, so it
   shows in empty paragraphs too; a selection uses the highlight layers' range decorations. A
@@ -646,13 +638,12 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
 ### `SourceView` (`src/features/source-view`)
 
 ```ts
-new SourceView(parent, document, { onCursor?, onBaseChange?, documentLinks? })   // a DocumentLinkProvider, see "File links"
+new SourceView(parent, document, { onCursor?, documentLinks? })   // a DocumentLinkProvider, see "File links"
 .reveal(from, to)    // select, scroll to center, highlight
 .setDiagnostics([{severity, message, hints, from, to}])   // underline + hover; replaces previous
 .setHighlights(layer, [{from, to, className, attributes?}])  // replaces that layer; follows edits
 .setPresence([{id, user: {name, color}, anchor, head}])      // other users (PresenceTarget); follows edits
 .selection() → {from, to}
-.showChanges(base | null)   // inline unified diff against base, accept/reject per chunk
 .destroy()
 ```
 
@@ -660,9 +651,6 @@ new SourceView(parent, document, { onCursor?, onBaseChange?, documentLinks? })  
   empty lines); its name flag shows on hover and for 2.5 s after the caret moved (the widget is
   re-created only then: `moves` counts in its equality). Selections are tinted marks. The same
   extension draws carets in the Visual view's raw boxes.
-- **Changes:** `@codemirror/merge`'s `unifiedMergeView` in a compartment. Reject edits the
-  document like any edit; accept moves CodeMirror's original and reports the new base through
-  `onBaseChange`, so the other views stop showing that change too.
 
 - **Hidden:** CodeMirror and its extensions, and the Typst language support
   (`codemirror-lang-typst/lezer`: a pure-JS Lezer parser using typst-syntax node names, plus
@@ -680,7 +668,6 @@ new Preview(container, { onJump?, onDiagnostics?, pdf? })   // renders a toolbar
 .update(files: Record<path, text | Uint8Array>, main)    // cheap per keystroke
 .reveal(path, offset)                        // cheap per cursor move: scroll only if off-screen (no marker); nothing while not following
 .setFollow(on)                               // "Follow cursor" (toolbar on/off switch, role=switch; options follow / onFollowChange); on → goes to the newest reveal
-.showChanges(path, ranges | null)            // change bars in the page margin per path (all paths drawn), redrawn after every compile
 .snippet(path, from, to, text) → Promise<{svg, width, height, textHeight, padding} | null>   // the range as drawn, cut from its page
 .onRender(listener) → unsubscribe            // after every successful compile
 .exportPdf(main, sources = {}) → Promise<PdfResult>   // the files of the last update(), sources replacing/adding texts
@@ -702,12 +689,6 @@ new Preview(container, { onJump?, onDiagnostics?, pdf? })   // renders a toolbar
   as "No PDF: <message>" (click dismisses). The file is saved through an object-URL link.
   `exportPdf` waits for running compiles (`LatestOnly.idle`), so it exports the newest text.
 
-- **Change bars** (`change-bars.ts`): each path's ranges go to the engine's `boxesForRanges`
-  (one request per path, boxes merged) after every successful compile and after `showChanges`
-  (coalesced to one draw per microtask); boxes on the same or adjacent lines join into one bar
-  (like LaTeX `changebar`). A pure deletion (empty range) takes the characters on either side.
-  Bars are page overlays like the highlights; only the newest draw wins.
-
 - **Coalescing (`LatestOnly`):** at most one compilation is in flight. Updates that arrive
   meanwhile replace each other, so only the newest gets compiled. Typing never queues a backlog.
   Cursor reveals use the same runner, additionally throttled to one lookup per 80 ms.
@@ -718,7 +699,7 @@ new Preview(container, { onJump?, onDiagnostics?, pdf? })   // renders a toolbar
   on page 7 does not touch pages 1–6 in the DOM. Without `IntersectionObserver` all pages render.
 - **Zoom:** fit width (default) or a fixed scale (presets 25 %–400 %, 100 % = 1 pt → 4/3 CSS px).
   The page number shown is the page covering most of the viewport.
-- **Overlays** (click highlight, change bars) are children of the page element, positioned in
+- **Overlays** (click highlight) are children of the page element, positioned in
   percent of the page, so they survive zoom and lazy unmounting. A click that resolves to a source
   location outlines the clicked text run (Typst draws one as a `<g>` of glyph `<use>`s) until the
   next click or successful compile.
@@ -900,7 +881,7 @@ new Layout(host, storageKey)   .editor  .preview            // the editing colum
   (image files not). The PDF export is unaffected. IronCalc's workbook UI has no dark theme.
 - **CodeMirror** (Source view and raw boxes): `codeColors` = CodeMirror's default highlight style
   with its colors from `--te-syn-*` tokens, plus `EditorView.darkTheme` (cursor, selection, gutters,
-  panels, tooltips, the merge view) switched on when the text around the editor resolves light.
+  panels, tooltips) switched on when the text around the editor resolves light.
   It checks when the view is placed or resized and when the OS scheme changes (`ColorScheme` at
   creation and on OS changes), so a page switching its own color-scheme later changes the tokens at
   once, CodeMirror's own chrome at the next resize, and the preview's inversion not until reload.
@@ -974,42 +955,6 @@ messages (with hints), each jumping to its range. Every document's views get the
 their own path: the Source view as CodeMirror lint (underline + hover), the Visual view as the
 `diagnostics` highlight layer (wavy underline, message + hints as tooltip; raw code boxes in range
 are outlined, since inline decorations skip block atoms; an empty range marks one character).
-
-### `diffTexts` and "Changes since …" (`src/features/changes`)
-
-```ts
-diffTexts(base, current) → [{fromA, toA, fromB, toB}]   // A = base, B = current; sorted, UTF-16
-```
-
-- The single text diff behind every "Changes since …" rendering (the Source view's merge view runs
-  the same `@codemirror/merge` algorithm itself, for its accept/reject chunks).
-- **Cleanup for readers:** a change inside a word grows to the whole word; a change touching a
-  markup delimiter (`*`, `_`, heading `=`, list markers; Lezer tree of either text) grows to the
-  whole construct, so `*bold*` → `_bold_` is one change with unchanged visible text. Grown
-  ranges are mapped to the other text through the raw changes and merged when they touch.
-
-```ts
-new ChangeTracking(toolbar, { project, preview(path, ranges | null) }, base?)   // the toggle button goes into toolbar
-.attach(document, views)            // a document's views (created lazily): showChanges(base | null) from now on
-.setBase({text, label} | null, path = main)   // one file's base (label shared); null: every file back to "opened"
-.setBases(label, (path) => text | null)       // every file from one version (GitLab: the last commit; null = new)
-.accept(document, base)             // the Source view accepted a chunk: that file's base moved, label stays
-.resetOpened()                      // a room synced: "opened" = the texts now
-.refresh()   .show(on)   .destroy()
-```
-
-- **Every Typst file has its own base**, kept per `TypstDocument` (so renames keep it): by
-  default its text as opened (a file created since has base `''`, so all of it is new; a
-  collaboration room's first sync → `resetOpened` for all); in GitLab rooms each path's
-  `RoomVersions.base(path)` (null → `''`), looked up lazily so files arriving later get theirs.
-  One toggle, one label for all ("Changes since opened" / "last saved version" / the host's).
-- **Diffs only while shown:** off, nothing is computed; on, an edit re-diffs only the edited
-  file (`Project.onChange` `update`), structural changes re-render all and clear the preview's
-  bars of paths that are gone. Views get `showChanges(base)` when attached and when the base
-  or the toggle changes; they follow edits themselves.
-- Widget wiring: `EditingViews.onCreate` → `attach`; `onBaseChange` → `accept`;
-  `Preview.showChanges(path, …)`; host `setBase(text, label?, path?)`; `VersionControls` →
-  `setBases('last saved version', path => versions.base(path))`.
 
 ### Comments = margin notes (`src/features/comments`, `src/features/visual-view/nodes/margin-notes.ts`, `src/features/visual-view/notes-gutter`)
 
@@ -1166,9 +1111,9 @@ createTypstEditor(host, { …, user?: {name, color?},
   collaboration?: { doc: Y.Doc, awareness?: Awareness } | { url, room, token? } })
 
 Collaboration.start(options, { project, user }) → Promise<Collaboration>   // url: waits for the first sync
-.sync()   .setCursor(path | null, range?)   .showCursors(path | null, views: PresenceTarget[])   .destroy()
+.setCursor(path | null, range?)   .showCursors(path | null, views: PresenceTarget[])   .destroy()
 .onPresence((presences: PlacedPresence[]) => …)   // everyone else, in every file, once per change
-.versions → RoomVersions | null      // GitLab rooms: .base(path), .onBaseChange(fn), .save(message, author?), .onMessage(fn)
+.versions → RoomVersions | null      // GitLab rooms: .save(message, author?), .onMessage(fn)
 ```
 
 **Only text is shared** — ProseMirror/Tiptap and CodeMirror never sync directly; they keep
@@ -1255,13 +1200,11 @@ HTTP             GET /rooms/<room>/files/<path> (Authorization: Bearer <room tok
     Assets: upstream wins where the room did not change them.
   - `BlobCache` (shared, LRU by bytes) keeps blob bytes by sha for the files endpoint.
 - **Widget**: `Collaboration` (server mode only) sees `meta.baseSha` after the first sync and adds
-  `RoomVersions` (base per path + `onBaseChange`, `save`, `onMessage` over the provider's
+  `RoomVersions` (`save`, `onMessage` over the provider's
   stateless channel) and `SharedAssets` (assets ↔ project's other files; repository files
   fetched from the files endpoint, uploads as bytes; bytes → sha after a commit is not a
   change). `CollaborationLink` passes `versions` to the widget, which mounts `VersionControls`
-  (`src/features/versions/versions.ts`): "Save version" + commit-message popover + status line, and
-  `ChangeTracking.setBases(…, path → base of path)` on every base change, so "Changes since …"
-  resets for everyone after a save, in every file.
+  (`src/features/versions/versions.ts`): "Save version" + commit-message popover + status line.
 
 ### Demo playground (`demo/`, `server/src/playground`)
 
@@ -1271,8 +1214,7 @@ an in-memory `FakeGitLab` holding `demo/examples/advanced`). Checklist with step
 
 - **State is the URL** (`demo/playground.ts`): `example`, `room` (none → Local, `gitlab:…` →
   GitLab, else Collaborate), `user` (put into the URL in a room, default Ann; the bar's second
-  window link uses the next name). "Changes since opened" is the widget's own default (no
-  `?changes` any more). `editorOptions(state, server)` → `files` / `collaboration`: GitLab mode passes no local files; no server →
+  window link uses the next name). `editorOptions(state, server)` → `files` / `collaboration`: GitLab mode passes no local files; no server →
   the local example.
 - **Local mode never contacts a server**, so the static e2e build needs none. The room modes
   first `probeServer()` (`GET /playground` with CORS → `gitlab`; else an opaque `no-cors` request

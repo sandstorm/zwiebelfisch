@@ -7,11 +7,9 @@ import { Preview } from './features/preview/preview';
 import proseMirrorStyles from './features/visual-view/visual-view.css?inline';
 import { AssetView, FilePanel, filesPanelIcon } from './features/files/files';
 import fileStyles from './features/files/files.css?inline';
-import { ChangeTracking } from './features/changes/changes';
 import { CommentAction } from './features/comments/comments';
 import { ColorScheme } from './typst-editor/color-scheme';
 import { CollaborationLink } from './typst-editor/collaboration-link';
-import changeStyles from './features/changes/changes.css?inline';
 import { DiagnosticsStatus, summarizeDiagnostics } from './features/diagnostics/diagnostics';
 import { EditingViews, type EditorMode } from './typst-editor/editing-views';
 import { Layout } from './typst-editor/layout';
@@ -82,20 +80,9 @@ export interface TypstEditorOptions {
    * connected (and synced) itself. Images and other files are not shared,
    * except in a room backed by a GitLab branch (`room: 'gitlab:<project>@<branch>'`
    * on a server configured for GitLab): there the server loads the branch,
-   * images come from the repository, a "Save version" button commits, and
-   * "Changes since …" compares with the last commit.
+   * images come from the repository, and a "Save version" button commits.
    */
   collaboration?: CollaborationOptions;
-  /**
-   * An earlier version of the main file (last saved, last commit) to show the
-   * changes against: inline diff in the Source view, track changes in the
-   * Visual view, change bars in the preview. Without it every Typst file is
-   * compared with its text as opened (a file created since is all new). See
-   * also `setBase`.
-   */
-  base?: string;
-  /** How the toggle names `base`: "Changes since <baseLabel>" (default "the given version"). */
-  baseLabel?: string;
   /**
    * Whether the preview toolbar has "Download PDF" (default true): without
    * comments, or with them from its menu. Hosts can call `exportPdf` either way.
@@ -127,13 +114,6 @@ export interface TypstEditor {
   readonly activeFile: string;
   /** Shows `path` in the editing area (if the project has it). */
   open(path: string): void;
-  /**
-   * Shows the changes of the main file (or of `path`) against `base` (an
-   * earlier text) from now on; the one "Changes since <label>" toggle names it
-   * (default "the given version"). Other files keep their bases. null goes
-   * back to comparing every file with its text as opened.
-   */
-  setBase(base: string | null, label?: string, path?: string): void;
   /**
    * The project as a PDF (`application/pdf`), from the current text. Rejects
    * with an error naming the problem when the document has errors.
@@ -175,7 +155,6 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
       const parsed = ProjectPath.parse(path);
       if (parsed) widget.open(parsed);
     },
-    setBase: (base, label, path) => widget.changes.setBase(base === null ? null : { text: base, label: label ?? GIVEN_VERSION }, path === undefined ? undefined : ProjectPath.of(path)),
     exportPdf: (options = {}) => widget.pdfs.blob(options.comments ?? false),
     destroy: () => widget.destroy(),
   };
@@ -204,7 +183,6 @@ class Widget {
   private readonly labels: LabelIndex;
   private readonly styles: StyleIndex;
   private readonly commentAction: CommentAction;
-  readonly changes: ChangeTracking;
   private readonly scheme: ColorScheme;
   private readonly collaboration: CollaborationLink | null = null;
   private versions: VersionControls | null = null;
@@ -257,7 +235,6 @@ class Widget {
     // the Visual view has "Comment" in its toolbar; the tab bar's button is for the Source view
     this.commentAction = new CommentAction(host, () => this.views.shown());
     this.views.addTabAction(this.commentAction.button, 'source');
-    this.changes = this.mountChanges(); // before any views exist: they attach to it when created
     this.open(main);
     if (options.collaboration) {
       this.collaboration = this.mountCollaboration(options.collaboration);
@@ -286,7 +263,7 @@ class Widget {
     if (changed) this.options.onOpen?.(path);
   }
 
-  /** The Visual/Source views of every document, wired to the preview, collaboration, changes and file links. */
+  /** The Visual/Source views of every document, wired to the preview, collaboration and file links. */
   private mountViews(): EditingViews {
     return new EditingViews(this.left, {
       mode: this.options.mode,
@@ -305,22 +282,7 @@ class Widget {
       // Publish the local selection from the editors' own updates: the DOM's selectionchange
       // fires before CodeMirror/ProseMirror read the new selection, so it would publish the previous one.
       onSelection: () => this.collaboration?.selectionChanged(),
-      // accepting a change moves that file's base; it is still the same version for the reader
-      onBaseChange: (document, base) => this.changes.accept(document, base),
-      onCreate: (document, views) => this.changes.attach(document, [views.source, views.visual]),
     });
-  }
-
-  /** "Changes since …" for every Typst file: the main file against `options.base`, else each file as opened. */
-  private mountChanges(): ChangeTracking {
-    const actions = this.host.ownerDocument.createElement('span');
-    actions.className = 'typst-editor__tab-actions';
-    this.views.addTabAction(actions);
-    return new ChangeTracking(
-      actions,
-      { project: this.project, preview: (path, ranges) => this.preview.showChanges(path, ranges) },
-      this.options.base === undefined ? null : { text: this.options.base, label: this.options.baseLabel ?? GIVEN_VERSION },
-    );
   }
 
   /** Shares the project; the others' carets show in the shown file's views and the file panel. */
@@ -334,19 +296,18 @@ class Widget {
     };
     return new CollaborationLink(options, shared, this.left, {
       current,
-      onSynced: () => this.changes.resetOpened(),
       onVersions: (versions) => this.mountVersions(versions),
       // Where the others are, in every file: dots in the file panel.
       onPresence: (presences) => this.files.showPresence(presences),
     });
   }
 
-  /** "Save version" next to the tabs, in a room backed by a GitLab branch; "Changes since …" follows its last commit. */
+  /** "Save version" next to the tabs, in a room backed by a GitLab branch. */
   private mountVersions(versions: Versions): void {
     const toolbar = this.host.ownerDocument.createElement('span');
     toolbar.className = 'typst-editor__tab-actions';
     this.views.addTabAction(toolbar);
-    this.versions = new VersionControls(toolbar, versions, { user: this.options.user, setBase: (base) => this.changes.setBases('last saved version', base) });
+    this.versions = new VersionControls(toolbar, versions, { user: this.options.user });
   }
 
   private showCursors(): void {
@@ -365,7 +326,6 @@ class Widget {
     this.unsubscribe();
     this.versions?.destroy();
     this.collaboration?.destroy();
-    this.changes.destroy();
     this.commentAction.destroy();
     this.views.destroy();
     this.files.destroy();
@@ -508,12 +468,9 @@ function injectStyles(host: HTMLElement): void {
   if (target.querySelector(`#${STYLE_ID}`)) return;
   const style = host.ownerDocument.createElement('style');
   style.id = STYLE_ID;
-  style.textContent = proseMirrorStyles + styles + layoutStyles + fileStyles + changeStyles;
+  style.textContent = proseMirrorStyles + styles + layoutStyles + fileStyles;
   target.append(style);
 }
-
-/** How "Changes since …" names a base the host gave without a label. */
-const GIVEN_VERSION = 'the given version';
 
 const FOLLOW_KEY = 'typst-editor:follow-cursor';
 

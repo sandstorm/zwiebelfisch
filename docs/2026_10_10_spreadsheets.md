@@ -12,7 +12,7 @@ Add a spreadsheet engine only when people need Excel-style formulas, and then us
    data in a `.typ` file). Typst reads them (`csv()`, `json()`) and calculates in its scripting
    language: array methods like `.map`, `.sum`, `.fold` and `.sorted`, plus the `calc` module.
    Results go into `table(..)`, text and charts. One engine, one source of truth. The PDF always
-   matches the data, the calculation is versioned with the text (GitLab diffs, "Changes since …"),
+   matches the data, the calculation is versioned with the text (GitLab diffs),
    and it works in the preview, the PDF export and collaboration without extra plumbing.
 2. **A grid editor for data files.** Today a `.csv` opens as read-only text in the asset view.
    Make it an editable grid that holds values only, no formulas. It can reuse the Visual view's
@@ -47,7 +47,7 @@ Add a spreadsheet engine only when people need Excel-style formulas, and then us
 
 - Two engines (spreadsheet formulas and Typst) means two places where numbers are calculated. A
   formula result shown in the text then depends on generated files staying in sync.
-- Spreadsheet files (`.xlsx`) are binary: they don't diff in GitLab, and our change tracking and
+- Spreadsheet files (`.xlsx`) are binary: they don't diff in GitLab, and our
   collaboration (Yjs over text) don't reach inside them.
 - Typst already has a complete scripting language. What is missing is an **editing UI for
   data**, not a calculation engine.

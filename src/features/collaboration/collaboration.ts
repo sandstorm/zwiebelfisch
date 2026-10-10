@@ -43,7 +43,7 @@ export class Collaboration {
   private readonly cursors: RemoteCursors | null;
   private readonly assets: SharedAssets | null = null;
   private presenceListener: ((presences: readonly PlacedPresence[]) => void) | null = null;
-  /** "Save version" and the files' base, in a room backed by a GitLab branch (else null). */
+  /** "Save version", in a room backed by a GitLab branch (else null). */
   readonly versions: RoomVersions | null = null;
 
   private constructor(
@@ -54,7 +54,7 @@ export class Collaboration {
   ) {
     const { project, user } = shared;
     if (server && RoomVersions.isVersioned(ydoc)) {
-      this.versions = new RoomVersions(ydoc, statelessChannel(server.provider));
+      this.versions = new RoomVersions(statelessChannel(server.provider));
       this.assets = new SharedAssets(project, ydoc, server.files);
     }
     this.sharedProject = new SharedProject(project, ydoc);

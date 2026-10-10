@@ -4,7 +4,6 @@ import { Editor } from '@tiptap/core';
 import { EditorState, TextSelection, type Transaction } from '@tiptap/pm/state';
 import type { Highlight, Presence, PresenceTarget, TypstDocument } from '../../core/typst-document/typst-document';
 import type { DocumentLinkProvider } from '../../core/document-links/document-links';
-import { changesPlugin, setChangesBase } from './change-decorations';
 import { type BoxRenderer, extensions, setBoxLinks, setBoxRenderer } from './nodes/nodes';
 import { highlights, setHighlights } from './highlights';
 import type { ImageAssets } from './images/images';
@@ -95,7 +94,7 @@ export class VisualView implements PresenceTarget {
       EditorState.create({
         schema: state.schema,
         doc: project(document.text, state.schema, this.projectedStyles()),
-        plugins: [...state.plugins, changesPlugin, this.notes.plugin],
+        plugins: [...state.plugins, this.notes.plugin],
       }),
     );
     this.toolbar = new Toolbar(parent, this.editor, { assets: options.assets, comment: options.comment, styles: this.menuStyles() });
@@ -149,14 +148,6 @@ export class VisualView implements PresenceTarget {
     const { doc, selection } = this.editor.state;
     const from = posToSource(doc, selection.from);
     return { from, to: selection.empty ? from : Math.max(from, posToSource(doc, selection.to, -1)) };
-  }
-
-  /**
-   * Shows what changed against `base` (an earlier Typst source) until called
-   * with null: insertions highlighted, deletions struck through. Follows edits.
-   */
-  showChanges(base: string | null): void {
-    this.editor.view.dispatch(setChangesBase(this.editor.state.tr, base));
   }
 
   destroy(): void {

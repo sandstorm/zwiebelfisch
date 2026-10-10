@@ -90,8 +90,8 @@ export function editorOptions(state: PlaygroundState, server: ServerKind | null)
   const local: EditorOptions = { files };
   if (state.room === null || server === null || server === 'offline') return local;
   const collaboration = { url: SERVER.ws, room: state.room };
-  // A GitLab room is loaded from the repository (local files would only shadow its images) and compares with its last commit.
+  // A GitLab room is loaded from the repository (local files would only shadow its images).
   return state.mode === 'gitlab' ? { files: {}, collaboration } : { ...local, collaboration };
 }
 
-type EditorOptions = Pick<TypstEditorOptions, 'files' | 'collaboration' | 'base'>;
+type EditorOptions = Pick<TypstEditorOptions, 'files' | 'collaboration'>;

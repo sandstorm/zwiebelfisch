@@ -1,7 +1,7 @@
 // Preview: the worker-backed live preview with hit-testing, zoom and page numbers. Entry of features/preview/.
 // See ARCHITECTURE.md, "Preview".
 import type { Box, Diagnostic, Jump, Page, PdfResult, Position } from '../../core/typst-engine/typst-engine';
-import { changeBars, drawnRanges, isInside, mostVisible, PageList, percentOfPage, snippet, type Snippet, stepZoom, type Zoom, zoomLabel } from './pages/pages';
+import { isInside, mostVisible, PageList, percentOfPage, snippet, type Snippet, stepZoom, type Zoom, zoomLabel } from './pages/pages';
 import { DEFAULT_FONT_URLS, ENGINE_WASM_URL } from '../../core/typst-engine/engine-assets';
 import type { FileContent } from '../../core/project/project';
 import { FileSender, type Init, type Request, type Response, startEngineWorker } from './worker/worker';
@@ -57,11 +57,6 @@ export class Preview {
   private readonly reveals: LatestOnly<Reveal>;
   private readonly resizeObserver: ResizeObserver | null;
   private highlights: HTMLElement[] = [];
-  /** The changed ranges to mark, per path (only paths with changes shown). */
-  private readonly changes = new Map<string, { from: number; to: number }[]>();
-  private changeBars: HTMLElement[] = [];
-  private changeDraws = 0;
-  private changesQueued = false;
   private zoom: Zoom = 'fit';
   private nextId = 0;
   private readonly sender = new FileSender();
@@ -146,25 +141,6 @@ export class Preview {
   }
 
   /**
-   * Marks where the given source ranges of `path` are drawn with change bars
-   * in the page margin, after this and every following compilation, until
-   * called with null for that path; each path has its own ranges, and the bars
-   * show those of all paths. The ranges refer to the text last passed to
-   * `update()`; an empty range (a deletion) marks the text around it.
-   */
-  showChanges(path: string, ranges: { from: number; to: number }[] | null): void {
-    if (ranges) this.changes.set(path, drawnRanges(ranges));
-    else this.changes.delete(path);
-    // Several paths usually change together (the toggle): draw once for all of them.
-    if (this.changesQueued) return;
-    this.changesQueued = true;
-    queueMicrotask(() => {
-      this.changesQueued = false;
-      void this.drawChanges();
-    });
-  }
-
-  /**
    * How the source range `from`..`to` of `path` looks in the document: its
    * page cut down to where that range draws text, shapes or images (first page
    * only). Null when it draws nothing, or when `text` is not what that range
@@ -219,7 +195,6 @@ export class Preview {
       this.clearHighlight();
       this.list.render(response.result.pages);
       this.scheduleStatus();
-      if (!superseded()) void this.drawChanges();
       this.compiled = { files, pages: response.result.pages };
       for (const listener of this.renderListeners) listener();
     }
@@ -274,21 +249,6 @@ export class Preview {
     for (const box of boxes) {
       const hit = this.list.at(box.page);
       if (hit) this.highlights.push(overlay(hit.element, 'typst-preview__highlight', percentOfPage(box, hit.page)));
-    }
-  }
-
-  /** Replaces the change bars with those for the current changes of every path in the last compiled document. */
-  private async drawChanges(): Promise<void> {
-    const draw = ++this.changeDraws;
-    const requests = [...this.changes].filter(([, ranges]) => ranges.length > 0).map(([path, ranges]) => this.request({ type: 'boxes', path, ranges }));
-    const boxes = (await Promise.all(requests)).flatMap((response) => (response.type === 'boxes' ? response.boxes : []));
-    if (draw !== this.changeDraws) return;
-    for (const element of this.changeBars.splice(0)) element.remove();
-    for (const bar of changeBars(boxes)) {
-      const hit = this.list.at(bar.page);
-      if (!hit) continue;
-      const box = percentOfPage({ x: 0, y: bar.y, w: 0, h: bar.h }, hit.page);
-      this.changeBars.push(overlay(hit.element, 'typst-preview__change-bar', { top: box.top, height: box.height }));
     }
   }
 

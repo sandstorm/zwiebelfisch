@@ -32,7 +32,7 @@ Image resizing/cropping in the Visual view.
 - Snippets are cut from the main document's compiled pages (no extra compile):
   `Preview.snippet(path, from, to, text)` → `boxesForRanges` → page SVG with a cropped
   `viewBox` (`src/preview/snippet.ts`). `boxesForRanges` now also returns shapes and images, so
-  fraction lines, rectangles and figure images are inside the crop (and get change bars).
+  fraction lines, rectangles and figure images are inside the crop.
 - `RenderedBox` (`src/visual-view/rendered-box.ts`) toggles picture/code on focus; the widget
   provides `BoxRenderer` + `ImageAssets` through `ProjectRenderings` (`src/editor`).
 - "Insert image" lists the project's images and uploads new ones (through `allowFileChange`).

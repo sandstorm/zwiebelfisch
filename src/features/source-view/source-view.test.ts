@@ -1,57 +1,18 @@
 // @vitest-environment jsdom
 // Tests for source-view.ts.
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { undo } from '@codemirror/commands';
 import { EditorView } from '@codemirror/view';
 import { REMOTE_ORIGIN, TypstDocument } from '../../core/typst-document/typst-document';
 import { SourceView } from './source-view';
 
-function setup(text: string, onBaseChange = vi.fn()) {
+function setup(text: string) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = new SourceView(parent, doc, { onBaseChange });
-  return { doc, view, parent, onBaseChange };
+  const view = new SourceView(parent, doc);
+  return { doc, view, parent };
 }
-
-/** Lines marked as changed. (jsdom's selector cache misses class changes CodeMirror makes in place.) */
-function changedLines(parent: HTMLElement): number {
-  return [...parent.querySelectorAll('.cm-line')].filter((line) => line.classList.contains('cm-changedLine')).length;
-}
-
-describe('SourceView changes', () => {
-  it('shows a unified diff against the base and removes it again', () => {
-    const { view, parent } = setup('Hello big world\n');
-    view.showChanges('Hello world\n');
-    expect(changedLines(parent)).toBeGreaterThan(0);
-    expect(parent.querySelector('.cm-deletedChunk')?.textContent).toContain('Hello world');
-    view.showChanges(null);
-    expect(changedLines(parent)).toBe(0);
-  });
-
-  it('rejecting a chunk restores the base text in the document', () => {
-    const { doc, view, parent } = setup('Hello big world\n');
-    view.showChanges('Hello world\n');
-    parent.querySelector<HTMLButtonElement>('button[name=reject]')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    expect(doc.text).toBe('Hello world\n');
-  });
-
-  it('accepting a chunk reports the new base', () => {
-    const { doc, view, parent, onBaseChange } = setup('Hello big world\n');
-    view.showChanges('Hello world\n');
-    parent.querySelector<HTMLButtonElement>('button[name=accept]')!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    expect(onBaseChange).toHaveBeenCalledWith('Hello big world\n');
-    expect(doc.text).toBe('Hello big world\n');
-  });
-
-  it('follows document changes while showing changes', () => {
-    const { doc, view, parent } = setup('Hello world\n');
-    view.showChanges('Hello world\n');
-    expect(changedLines(parent)).toBe(0);
-    doc.setText('Hello there world\n', 'visual');
-    expect(changedLines(parent)).toBeGreaterThan(0);
-  });
-});
 
 describe('SourceView history', () => {
   it('undo reverts only local edits, not those of collaborators', () => {
@@ -71,12 +32,12 @@ describe('SourceView highlights', () => {
   it('marks highlighted ranges with class and attributes, per layer', () => {
     const { view, parent } = setup('Some bold text\n');
     view.setHighlights('cursors', [{ from: 5, to: 9, className: 'note', attributes: { 'data-user': 'a' } }]);
-    view.setHighlights('diff', [{ from: 10, to: 14, className: 'added' }]);
+    view.setHighlights('search', [{ from: 10, to: 14, className: 'match' }]);
     expect(marked(parent, '.note[data-user="a"]')).toEqual(['bold']);
-    expect(marked(parent, '.added')).toEqual(['text']);
+    expect(marked(parent, '.match')).toEqual(['text']);
     view.setHighlights('cursors', []);
     expect(marked(parent, '.note')).toEqual([]);
-    expect(marked(parent, '.added')).toEqual(['text']);
+    expect(marked(parent, '.match')).toEqual(['text']);
   });
 
   it('keeps highlights on their text through edits from elsewhere', () => {
