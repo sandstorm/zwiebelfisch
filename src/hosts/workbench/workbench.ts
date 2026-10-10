@@ -34,7 +34,7 @@ export interface ExtensionContext {
   readonly visualView: VisualViewContributions;
   /** CodeMirror extensions for every Source view. */
   readonly sourceView: SourceViewContributions;
-  /** Toolbar items, PDF variants and page overlays of the preview; reveal and clicks; its compile results (diagnostics, snippets, PDFs). */
+  /** Toolbar items, PDF export options and page overlays of the preview; reveal and clicks; its compile results (diagnostics, snippets, PDFs). */
   readonly preview: PreviewContributions;
 }
 

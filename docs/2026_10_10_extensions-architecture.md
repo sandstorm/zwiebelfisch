@@ -74,7 +74,7 @@ interface ExtensionContext {
   readonly visualView: VisualViewContributions;  // registerNode(spec), registerMark(spec),
                                                // registerToolbarItem, registerGutter, registerDecorations
   readonly sourceView: SourceViewContributions;  // registerExtension(cm)
-  readonly preview: PreviewContributions;      // registerToolbarItem, registerPdfVariant, overlays, reveal,
+  readonly preview: PreviewContributions;      // registerToolbarItem, registerPdfExportOption, overlays, reveal,
                                                // onDidClickPage
 }
 ```
@@ -113,7 +113,7 @@ extension API once that is exposed (`createTypstEditor({ extensions })`).
 |---|---|---|
 | `visual-view` | Tiptap editor; the projection **framework**: segmenting source into blocks, source anchors (`src` / `sep` / `lead` / `trail`), print + minimal change back to the document, sync from the document, `posToSource` / `sourceToPos`; the **raw box** (unmodelled Typst, never rewritten, is the host's fallback, not an extension); paragraph + text (the minimum a document needs); selection; the view context's position map | `TypstNodeSpec` / `TypstMarkSpec` registry (schema node, projector for its syntax / call, printer, label + box flags, node view, keymap, input rules); toolbar items and menus; decorations; side gutters; box renderers |
 | `source-view` | CodeMirror bound to a `TypstDocument`, document sync, the reveal highlight | CodeMirror extensions (language, lint, colors, other users' carets) |
-| `preview` | engine worker + protocol, coalesced compiles, page list (lazy SVG), hit-testing (`onDidClickPage`), scroll / `reveal` | toolbar items, PDF variants, overlays on pages |
+| `preview` | engine worker + protocol, coalesced compiles, page list (lazy SVG), hit-testing (`onDidClickPage`), scroll / `reveal` | toolbar items, PDF export options, overlays on pages |
 | `workbench` | layout (side panels with rail buttons, editing area, preview, status bar), the Visual / Source tabs, file views by kind, extension lifecycle, color scheme; showing document links in the Source views and raw boxes | side panels, status bar items, file views, commands, document link providers, file decoration providers, source controls |
 
 `BLOCK_CALLS`, `PRINT_BLOCK`, `RAW_TYPES`, `LABELLED_BLOCKS` and `callAtomType` are derived from the
@@ -147,12 +147,12 @@ snippets); the order only places toolbar, tab bar and status bar items.
 | `pageLayout` (`page-layout`) | — | Visual: page break, horizontal rule | — | yes |
 | `lists` | cheq's preamble | Visual: bulleted, numbered and task lists (task lists 110), list buttons | — | yes |
 | `alignment` | alignment syntax | Visual: `#align` blocks, justified paragraphs, Align menu | — | — |
-| `comments({ user })` | margin-note syntax, threads, `addMarginNote`, `withoutNotes`, page margin, card layout | Visual: margin notes, notes gutter, Comment action; Workbench: Comment button (Source tab bar), Mod+Alt+M; Preview: PDF variants | commands `comments.addComment`, `comments.exportPdf` | yes |
+| `comments({ user })` | margin-note syntax, threads, `addMarginNote`, `withoutNotes`, page margin, card layout | Visual: margin notes, notes gutter, Comment action; Workbench: Comment button (Source tab bar), Mod+Alt+M; Preview: PDF export option `comments.include` | command `comments.addComment` | yes |
 | `labels()` | `LabelIndex`, scan, reference syntax, label choices | Visual: reference chips + hints, label tags, `@` list, Add label | — | yes |
 | `styles()` | `StyleIndex`, discover, `newStyle` | Visual: styled blocks, text styles, the style menu; "New style…" | — | yes |
 | `previewSync({ followCursor })` (`preview-sync`) | — | Preview: Follow cursor (reveal on selection), click → source | — | yes |
 | `previewControls()` (`preview-controls`) | zoom | Preview: zoom, page n / total | — | yes |
-| `pdfExport({ download })` (`pdf-export`) | — | Preview: Download PDF + variants menu | command `pdfExport.export` | yes |
+| `pdfExport({ download })` (`pdf-export`) | — | Preview: Download PDF + options popover (remembered per viewer) | command `pdfExport.export` | yes |
 
 Not extensions: the hosts' minimum (Visual view: paragraphs, text, raw boxes; the hosts' toolbar, highlights;
 the workbench's document links) and its CSS (`typst-editor.css` with the color tokens, `hosts/visual-view/visual-view.css`,

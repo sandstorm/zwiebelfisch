@@ -27,7 +27,7 @@ export interface TypstEditorChangeDetail {
  *   current content; setting them replaces it without events, as with `<input>`.
  * - Events (bubbling, composed): `change` for every file whose content changes (`TypstEditorChangeDetail`),
  *   `files-change` with every `FileChange` (the same as `onFilesChange`), `open` with `{ path }`.
- * - `exportPdf({ comments })` gives the PDF as a Blob.
+ * - `exportPdf({ options })` gives the PDF as a Blob.
  */
 export class TypstEditorElement extends Base() {
   static readonly observedAttributes = ['value'];
@@ -80,7 +80,7 @@ export class TypstEditorElement extends Base() {
     this.#quietly((editor) => (editor.files = files));
   }
 
-  /** The project as a PDF, with or without comments (see `TypstEditor.exportPdf`); rejects while not connected. */
+  /** The project as a PDF, with the export options as given (see `TypstEditor.exportPdf`); rejects while not connected. */
   exportPdf(options?: PdfExportOptions): Promise<Blob> {
     if (!this.#editor) return Promise.reject(new Error('<typst-editor> is not connected'));
     return this.#editor.exportPdf(options);

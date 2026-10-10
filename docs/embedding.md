@@ -226,19 +226,22 @@ list items). Resolving a note means deleting it.
 
 ### PDF with or without comments
 
-The preview toolbar has **Download PDF**: the plain button saves the PDF without comments (the
-usual final version, `main.pdf`), its menu (▾) offers **Without comments** and **With comments**
-(`main-with-comments.pdf`, the notes as the preview shows them). The name follows the main file.
-If the document has errors, the toolbar says so and nothing is downloaded (never an older PDF).
+The preview toolbar has one **Download PDF** button. It opens a popover with a checkbox per export
+option and **Download**; the built-in option is **Include comments** (`comments.include`, off by
+default: the usual final version; on: the notes as the preview shows them). Each viewer's choices are
+remembered for the browser session. The file is named after the main file (`main.pdf`). If the
+document has errors, the toolbar says so and nothing is downloaded (never an older PDF).
 
-Hosts can make the file themselves, e.g. to upload it:
+Hosts can make the file themselves, e.g. to upload it. Options are given by id; the others keep their
+default (not what the viewer chose), and an id no extension registered rejects:
 
 ```ts
-const blob = await editor.exportPdf({ comments: false });   // application/pdf; rejects with the first error
-createTypstEditor(host, { pdfDownload: false });            // no button (exportPdf still works)
+const blob = await editor.exportPdf();                                          // without comments
+const draft = await editor.exportPdf({ options: { 'comments.include': true } }); // with them
+createTypstEditor(host, { pdfDownload: false });   // no button (exportPdf still works)
 ```
 
-On `<typst-editor>`: `element.exportPdf({ comments })`, and `pdf-download="hide"` removes the button.
+On `<typst-editor>`: `element.exportPdf({ options })`, and `pdf-download="hide"` removes the button.
 
 Without comments, the document is not changed: the export compiles copies of the `.typ` files
 with every note call removed (a range note keeps its text, without the highlight), through a

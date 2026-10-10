@@ -4,13 +4,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import type { Diagnostic } from '../core/typst-engine/typst-engine';
-import type { PageClick, PdfVariant, PreviewContext, PreviewToolbarItem } from '../hosts/preview/preview';
+import type { PageClick, PdfExportOption, PreviewContext, PreviewToolbarItem } from '../hosts/preview/preview';
 import { createTypstEditor, type TypstEditorOptions } from './typst-editor';
 
 const exportPdf = vi.fn(async () => ({ pdf: new Uint8Array([37, 80, 68, 70]), diagnostics: [], missingPackages: [] }));
 interface FakePreview {
   toolbarItems: PreviewToolbarItem[];
-  pdfVariants: PdfVariant[];
+  pdfOptions: PdfExportOption[];
   revealed: [string, number, number][];
   compiled(diagnostics: Diagnostic[]): void;
   click(click: PageClick): void;
@@ -28,7 +28,7 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
     ...(await importOriginal<object>()),
     Preview: class {
       readonly toolbarItems: unknown[] = [];
-      readonly pdfVariants: unknown[] = [];
+      readonly pdfOptions: unknown[] = [];
       readonly revealed: unknown[] = [];
       readonly #diagnostics = new EventEmitter<readonly Diagnostic[]>();
       readonly onDidChangeDiagnostics = this.#diagnostics.event;
@@ -51,7 +51,8 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
       onDidRender = () => new Disposable(() => {});
       exportPdf = exportPdf;
       registerToolbarItem = registry(this.toolbarItems);
-      registerPdfVariant = registry(this.pdfVariants);
+      registerPdfExportOption = registry(this.pdfOptions);
+      pdfExportOptions = () => this.pdfOptions;
       destroy() {}
     },
   };
@@ -76,7 +77,6 @@ function toolbarControls(items: readonly PreviewToolbarItem[]): string[] {
     setZoom() {},
     scale: () => 1,
     visiblePage: () => ({ index: 0, count: 0 }),
-    pdfVariants: () => [],
   } satisfies PreviewContext;
   return items.map((item) => {
     const view = item(context);
@@ -197,13 +197,13 @@ describe('the built-in extensions', () => {
     expect(preview.revealed).toEqual([]);
   });
 
-  it('exports the PDF through the pdf-export extension, which offers it without and with comments', async () => {
+  it('exports the PDF through the pdf-export extension, with the options other extensions register', async () => {
     const { editor, preview } = setup({ source: '= Hi' });
-    const blob = await editor.exportPdf({ comments: true });
+    expect(preview.pdfOptions.map((option) => option.id)).toEqual(['comments.include']);
+    const blob = await editor.exportPdf({ options: { 'comments.include': true } });
     expect(blob.type).toBe('application/pdf');
     expect(exportPdf).toHaveBeenCalledWith('/main.typ', {});
-    expect(preview.pdfVariants.map((variant) => variant.label)).toEqual(['Without comments', 'With comments']);
-    expect((await preview.pdfVariants[1].create()).name).toBe('main-with-comments.pdf');
+    await expect(editor.exportPdf({ options: { nope: true } })).rejects.toThrow('Unknown PDF export option: nope');
   });
 
   it('removes everything it added on destroy', () => {

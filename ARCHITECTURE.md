@@ -34,7 +34,7 @@ src/                        the widget (TypeScript); the most important API on t
                             `ExtensionContext.sourceView` is) and SourceView (view.ts: CodeMirror 6 bound to a
                             TypstDocument); contribution.ts (the contribution types)
     preview/                Preview — worker-backed live preview + hit-testing, scroll / reveal; what
-                            `ExtensionContext.preview` is: toolbar items, PDF variants, page overlays (contribution.ts),
+                            `ExtensionContext.preview` is: toolbar items, PDF export options, page overlays (contribution.ts),
                             reveal / onDidClickPage, onDidChangeDiagnostics / onDidRender, snippet, exportPdf;
                             latest-only.ts ("only the newest value" task runner)
       worker/               worker.ts (startEngineWorker, main-thread side), engine.worker.ts (the worker),
@@ -85,9 +85,9 @@ src/                        the widget (TypeScript); the most important API on t
       workbench/            spreadsheet-view.ts (SpreadsheetView), workbook.ts (React + IronCalc, loaded on demand)
     source-control/         sourceControl(): the UI over the workbench's source controls, next to the tabs
       workbench/            SourceControlView: "Save to <label>…", commit message, status line
-    pdf-export/             pdfExport: the `pdfExport.export` command (PdfExport: the project's PDF, of the main file or
-                            of another entry) and the preview's "Download PDF" with the PDF variants others register
-      preview/              pdf-menu.ts (pdfMenu: "Download PDF" + menu of the registered PDF variants)
+    pdf-export/             pdfExport: the `pdfExport.export` command (PdfExport: the project's PDF, with every
+                            registered export option applied) and the preview's "Download PDF" with its options popover
+      preview/              preview.ts (downloadPdf: "Download PDF" + popover: a checkbox per option, "Download")
     preview-controls/       previewControls: the preview toolbar's zoom and page number
       model/                zoom.ts (stepZoom over the presets, zoomText / zoomLabel)
       preview/              zoom-controls.ts (zoomControls), page-number.ts (pageNumber)
@@ -108,7 +108,7 @@ src/                        the widget (TypeScript); the most important API on t
                             page-margin.ts, without-notes.ts: the sources without comments; card-layout.ts);
                             visual-view/ (marginNotes: notes in the text + the Comment action; notes-gutter/: the cards);
                             workbench/ (CommentAction, the command comments.addComment, Ctrl+Alt+M); preview/
-                            (CommentsPdf: the PDF variants "Without comments" / "With comments", comments.exportPdf)
+                            (registerIncludeComments: the PDF export option `comments.include`)
     collaboration/          collaboration.ts (eager: the extension), collaboration-link.ts (CollaborationLink: loads
                             model/ on demand); presence/ (Presence, PlacedPresence, Presences: everyone's places, eager);
                             model/ (the lazily loaded chunk: Collaboration, SharedProject, SharedAssets, RemoteCursors,
@@ -212,10 +212,10 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
 ```ts
 createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileChange?, onFilesChange?,
                            user?, collaboration?, onOpen?, followCursor?, pdfDownload?, theme? })
-  → { files (get/set), source (get/set), activeFile, open(path), exportPdf({comments?}) → Promise<Blob>,
+  → { files (get/set), source (get/set), activeFile, open(path), exportPdf({options?}) → Promise<Blob>,
       destroy() }
 <typst-editor value="…" file-list="auto|show|hide" pdf-download="hide" theme="…">
-  .options (Partial<TypstEditorOptions>), .value, .files, exportPdf({comments?});
+  .options (Partial<TypstEditorOptions>), .value, .files, exportPdf({options?});
   'change' {detail:{path, content}}, 'files-change' {detail: FileChange}, 'open' {detail:{path}}
 ```
 
@@ -245,7 +245,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   document links overlap, `priority` decides (see "VisualView"; tested by projecting every fixture with the
   built-ins in reverse order). The extension API is not public yet: the
   options stay as they are. The preview always compiles `main` with `project.files()`; `exportPdf` runs the
-  `comments.exportPdf` command; `onFilesChange` hears a change after the workbench and the extensions.
+  `pdfExport.export` command; `onFilesChange` hears a change after the workbench and the extensions.
 - **Diagnostics**: the preview's `onDidChangeDiagnostics` is the one source. The `diagnostics` extension puts
   each document's into a `DiagnosticCollection`, which its Source views underline (`lint`) and its Visual views
   mark (`registerHighlights('diagnostics', …)`: `.typst-diagnostic` with the message as tooltip; an empty range
@@ -301,16 +301,21 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   shows, the host's veto — come back as an error the popover shows). The `renderedBoxes` extension gives each
   document's raw boxes their snippets: `Preview.snippet` under the document's current path, refreshed on
   `Preview.onDidRender`.
-- **PDF**: the `pdfExport` extension (`extensions/pdf-export/`) makes the PDF — `PdfExport`, the command
-  `pdfExport.export(entry?)`: the main file as compiled, or another entry with replaced sources — and the preview's
-  "Download PDF" (the `pdfMenu` toolbar item, unless `pdfDownload: false`) with a menu of the PDF variants others
-  register. The `comments` extension registers the variants "Without comments" / "With comments" (`CommentsPdf`,
-  `extensions/comments/preview/`) and the command `comments.exportPdf(withComments)` behind `exportPdf({comments})`.
-  With comments the main file is exported as compiled; without, `withoutNotes(project.files(), main)` gives the
-  entry and replaced sources (see Comments). No PDF (errors) → an `Error` "The document has n
-  error(s): …" (the toolbar shows it), never an older PDF. File name after the main file:
-  `main.pdf` / `main-with-comments.pdf`. The plain button is the first variant, the version without comments
-  (decision: the usual final version); the menu has both.
+- **PDF**: one "Download PDF" button with an options popover, no button or menu entry per variant (decided
+  2026-10-10). Any extension offers a choice through the preview host:
+  `preview.registerPdfExportOption({ id: '<ext>.<name>', label, description?, default, apply(entry, value) → entry },
+  { priority? })` — checkboxes for now (`choices` can come later). The `pdfExport` extension
+  (`extensions/pdf-export/`) is the policy: `PdfExport` / the command `pdfExport.export(options?)` starts from
+  `{ main, sources: {} }` and lets every registered option change it in turn (by `priority`, default 100, higher
+  first; equal: registration order), each with its value (given, else its default; an unknown id rejects), then
+  compiles that entry; the toolbar item (`downloadPdf`, unless `pdfDownload: false`) opens a popover with a
+  checkbox per option, set as this viewer left them (`workbench.remember('pdf-export.options')`) else their
+  default, and "Download"; without any option the button downloads at once. `exportPdf({ options })` on the
+  widget runs the command (defaults, not the viewer's choices). The `comments` extension registers only
+  `comments.include` (default off; `extensions/comments/preview/`): off, `withoutNotes` of the project's files
+  overlaid with the entry's sources gives the new entry (see Comments); on, the entry stays. No PDF (errors) →
+  an `Error` "The document has n error(s): …" (the toolbar shows it), never an older PDF. File name after the
+  main file: `main.pdf`.
 - **Images into the text**: `AssetView` (the `images` extension's file view of `image` and `data` files) only previews. An image row dragged from the file panel
   (drag type `PROJECT_PATH_TYPE`, data: the project path) and dropped on the Visual view is
   inserted there as an image block (`imageFileDrops` → `ImageAssets.reference(path)`: relative
@@ -332,7 +337,7 @@ interface ExtensionContext {
   visualView: VisualViewContributions   // registerNode, registerMark, registerToolbarGroup / Item, registerGutter,
                                         // registerBoxRenderer, registerEditorExtension, … (see "VisualView")
   sourceView: SourceViewContributions   // registerExtension(cm | context → cm) (see "SourceView")
-  preview: PreviewContributions         // registerToolbarItem, registerPdfVariant, createOverlay, reveal, onDidClickPage,
+  preview: PreviewContributions         // registerToolbarItem, registerPdfExportOption, createOverlay, reveal, onDidClickPage,
                                         // onDidChangeDiagnostics, onDidRender, snippet, exportPdf (see "Preview")
 }
 interface Workbench {
@@ -381,7 +386,7 @@ new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen?, sty
   file decorations (`registerFileDecorationProvider`: `collaboration`'s presence, shown by `files`), source
   controls (`registerSourceControl`: `collaboration`'s GitLab room, shown by `sourceControl`). VS Code's shapes.
   Commands are typed by `CommandRegistry`, extended by declaration merging: `pdfExport.export`,
-  `comments.addComment` (bound to `Mod+Alt+KeyM`), `comments.exportPdf`.
+  `comments.addComment` (bound to `Mod+Alt+KeyM`).
 - **Document links** (`DocumentLinks`, `document-links/`): the links of every provider for a `TextDocument`
   (`{ path, text }`: a whole file's, or a raw box's code with the path of its file); overlapping ones go to the
   provider of the higher `priority` (default 100; equal: registered first). A link remembers its provider, which
@@ -416,9 +421,9 @@ new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen?, sty
   source control), `diagnostics` (`lint(collection)`;
   Visual: highlights); `images` (Visual: `imagesVisualView`; Workbench: the `image` / `data` file views),
   `renderedBoxes` (Visual: `renderedBoxesVisualView`), `comments` (Visual: `marginNotes`, `notesGutter`; Preview:
-  the PDF variants), `labels` (Visual: `references`), `styles` (Visual: `customStyles`); `sourceControl`
+  the PDF export option `comments.include`), `labels` (Visual: `references`), `styles` (Visual: `customStyles`); `sourceControl`
   (`SourceControlView` in the tab bar); `previewSync` (`followCursor`; reveal, clicks), `previewControls`
-  (`zoomControls`, `pageNumber`), `pdfExport` (`pdfMenu`). The Visual view's constructs
+  (`zoomControls`, `pageNumber`), `pdfExport` (`downloadPdf`). The Visual view's constructs
   (`markup`, `headings`, `tables`, `outline`, `pageLayout`, `lists`, `alignment`) are extensions in
   `extensions/<name>/`: the entry's `activate` registers specs, toolbar groups and items from its `visual-view/`
   folder through `context.visualView`. No host has built-in contributions any more.
@@ -959,7 +964,9 @@ SourceView
 ```ts
 interface PreviewContributions {                             // what ExtensionContext.preview offers
   registerToolbarItem(item: (preview: PreviewContext) => { elements, update?(), dispose?() }): Disposable
-  registerPdfVariant({ label, create() → Promise<{blob, name}> }): Disposable
+  registerPdfExportOption({ id, label, description?, default: boolean, apply(entry: PdfEntry, value) → PdfEntry },
+                          { priority? }): Disposable                // unique ids; PdfEntry = { main, sources }
+  pdfExportOptions() → PdfExportOption[]                       // by priority (default 100, higher first), then registration
   createOverlay(className) → { set(boxes: Box[]), dispose() }   // boxes in pt on their page
   reveal(path, from, to)                                       // cheap per cursor move: scroll to the range's start, only if off-screen (no marker)
   onDidClickPage: Event<{ path, from, to }>                    // a click on something with a source location
@@ -969,7 +976,7 @@ interface PreviewContributions {                             // what ExtensionCo
   exportPdf(main, sources = {}) → Promise<PdfResult>   // the files of the last update(), sources replacing/adding texts
 }
 interface PreviewContext { ownerDocument, zoom(), setZoom(zoom), scale(), visiblePage() → {index, count},
-                           pdfVariants() }
+                           pdfExportOptions() }
 
 new Preview(container)                       // implements PreviewContributions; renders a toolbar +
                                              // scrolling page area into container
@@ -988,7 +995,7 @@ new Preview(container)                       // implements PreviewContributions;
   (`extensions/preview-controls/preview/`) registers `zoomControls` (− / + to the neighbouring preset of
   25 %–400 %, Fit, 100 %, and "Fit · 83%" / "125%"; presets and labels in its `model/zoom.ts`)
   and `pageNumber` ("3 / 12"); `pdf-export`
-  (`extensions/pdf-export/preview/`) registers `pdfMenu` (below).
+  (`extensions/pdf-export/preview/`) registers `downloadPdf` (below).
 - **Page overlays** (`createOverlay`, `pages/overlays.ts`): boxes in pt, drawn as children of the page
   elements in percent of the page, so they survive zoom and lazy unmounting; drawn again after every
   successful compile. The host's click highlight is one.
@@ -1002,11 +1009,13 @@ new Preview(container)                       // implements PreviewContributions;
   A call whose drawn glyphs all come from its definition (`ms(6)` with `#let ms(v) = [#v ms]`:
   the glyphs' spans lie in the `let`) draws nothing in its own range, so its box keeps showing code.
 
-- **PDF menu** (`extensions/pdf-export/preview/pdf-menu.ts`): "Download PDF" (the first registered PDF variant: `pdfExport`
-  registers "Without comments" first) plus ▾ with a `role=menu` of the variants registered by the time
-  it opens (Escape or a click outside closes it). While a PDF is made the buttons are disabled and the
-  status says "Making PDF…"; the variant's rejection shows as "No PDF: <message>" (click dismisses). The
-  file is saved through an object-URL link.
+- **Download PDF** (`extensions/pdf-export/preview/preview.ts`, `downloadPdf(pdfs, memory)`): one button. With
+  export options registered it opens a `role=dialog` popover ("PDF options") with a checkbox per option registered
+  by the time it opens (label, `description` as tooltip; checked as this viewer left it, else its default; each
+  change saved to the memory at once) and "Download" (Escape, a second click or a click outside closes it);
+  without options it downloads at once. While a PDF is made the buttons are disabled and the status says "Making
+  PDF…"; a rejection shows as "No PDF: <message>" (click dismisses). The file is saved through an object-URL
+  link.
   `exportPdf` waits for running compiles (`LatestOnly.idle`), so it exports the newest text.
 
 - **Coalescing (`LatestOnly`):** at most one compilation is in flight. Updates that arrive
@@ -1369,7 +1378,7 @@ localDate(date?) → 'YYYY-MM-DD'
 layoutCards([{anchor, height}], {gap, active?, top?}) → tops   // card-layout.ts: cards beside anchors, no overlap
 
 // comments.ts, the entry
-comments({ user? }): TypstExtension   // registerAddComment + comments.exportPdf + PDF variants + marginNotes + notesGutter
+comments({ user? }): TypstExtension   // registerAddComment + registerIncludeComments + marginNotes + notesGutter
 
 // workbench/
 registerAddComment(workbench, cards: { editNote(document, offset) }) → Disposable
@@ -1377,9 +1386,9 @@ registerAddComment(workbench, cards: { editNote(document, offset) }) → Disposa
 new CommentAction(doc, () => {document, view: {selection(), reveal(), editNote?()}} | null)   .button  .comment()  .destroy()
 
 // preview/
-new CommentsPdf(project, workbench)  .blob(withComments) → Promise<Blob>   .file(withComments) → Promise<PdfFile>
-                                     // through pdfExport.export(entry?): without comments, the entry of withoutNotes
-registerPdfVariants(preview, pdfs) → Disposable   // "Without comments", then "With comments"
+registerIncludeComments(preview, project) → Disposable
+                                     // PDF export option comments.include (default off): off → withoutNotes of the
+                                     // project's files overlaid with the entry's sources; on → the entry as it is
 
 // visual-view/
 marginNotes({ comment? }) → VisualViewContribution  // marginNote + noteRange specs; "Comment" in the toolbar and
@@ -1498,7 +1507,7 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
 - Tests: `model/note-thread.test.ts` (format, round trips, escaping, concurrent replies over Y.Docs),
   `visual-view/margin-notes.test.ts` (projection, printing, the toolbar action),
   `visual-view/notes-gutter/notes-gutter.test.ts` (cards and threads in jsdom), `preview/preview.test.ts` (the PDF
-  variants), `workbench/comment-action.test.ts`.
+  export option), `workbench/comment-action.test.ts`.
 - Engine tests (`model/drafting.test.ts`) compile both note forms, both thread layouts, page margins and the
   sources without notes against the real package (`src/core/typst-engine/fixtures/drafting-0.2.2`).
 - **Removed** with this design (it replaced the sidecar comments of docs/todo/comments.md):
