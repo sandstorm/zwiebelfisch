@@ -7,9 +7,11 @@ export interface FieldPopoverOptions {
   field: string;
   placeholder: string;
   apply(value: string): void;
+  /** The text of the button that applies (and of what Enter does), default "Apply". */
+  applyText?: string;
   /** Offered as a "Remove" button while `open` says so. */
   remove?(): void;
-  /** A second way to apply the value, as its own button (e.g. "Rename and update 2 references"). */
+  /** A second way to apply the value, as its own button (e.g. "Rename without updating references"). */
   alternative?: { text: string; apply(value: string): void };
   /** More controls below the field (e.g. files to pick), shown with it. */
   extra?: HTMLElement;
@@ -44,7 +46,7 @@ export class FieldPopover {
     this.input.type = 'text';
     this.input.placeholder = options.placeholder;
     this.input.setAttribute('aria-label', options.field);
-    const apply = this.makeButton('Apply', 'submit');
+    const apply = this.makeButton(options.applyText ?? 'Apply', 'submit');
     this.removeButton = this.makeButton('Remove', 'button');
     this.removeButton.dataset.action = 'remove';
     this.form.append(this.input, apply);

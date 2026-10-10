@@ -8,7 +8,7 @@ import type { ProjectLabels } from '../../labels/labels';
 import { FieldPopover } from '../field-popover';
 import { labelName, renameLabel, setLabel } from './label-edits';
 
-/** What the tags need besides the document: the project's labels (for "Rename and update N references"). */
+/** What the tags need besides the document: the project's labels (renaming updates their references by default). */
 export interface LabelTagsOptions {
   labels?: ProjectLabels;
   /** The document this view shows: its references are renamed in the view, the other files' by `labels`. */
@@ -106,8 +106,14 @@ function tagPopover({ view, name, block, options }: Tag, wrap: HTMLElement): Fie
     label: 'Label',
     field: 'Label name',
     placeholder: 'e.g. intro',
-    apply: (value) => rename(value, false),
-    alternative: references > 0 ? { text: `Rename and update ${references} reference${references === 1 ? '' : 's'}`, apply: (value) => rename(value, true) } : undefined,
+    // with references, updating them is what Enter does; renaming only the label is the exception
+    ...(references > 0
+      ? {
+          applyText: `Rename and update ${references} reference${references === 1 ? '' : 's'}`,
+          apply: (value: string) => rename(value, true),
+          alternative: { text: 'Rename without updating references', apply: (value: string) => rename(value, false) },
+        }
+      : { applyText: 'Rename', apply: (value: string) => rename(value, false) }),
     remove: () => {
       const pos = block();
       if (pos !== null) view.dispatch(setLabel(view.state, pos, null));

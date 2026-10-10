@@ -493,9 +493,10 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     `typst-visual__ref--unknown` (wavy, tooltip) when the project has no such label. Redrawn when
     the doc or the label list changes.
   - `labelTags`: a widget per labelled block — at the end of a textblock's text, below other
-    blocks. Clicking it opens a `FieldPopover`: Apply renames the label, **Rename and update N
-    references** also renames the references (this view: in the same transaction, one undo step;
-    other files: `ProjectLabels.renameReferences`, one change per file), Remove removes it. Names
+    blocks. Clicking it opens a `FieldPopover`. While anything refers to the label, the default (Enter)
+    is **Rename and update N references**, which also renames the references (this view: in the same transaction, one undo step;
+    other files: `ProjectLabels.renameReferences`, one change per file), and **Rename without
+    updating references** is the alternative. Without references the default is **Rename**. Remove removes it. Names
     are cleaned up by `labelName` (spaces → `-`).
   - `referenceSuggestion` (own plugin, not `@tiptap/suggestion`: its popup mounts into
     `document.body` and its outside-click check fails across the shadow root): `@` after a

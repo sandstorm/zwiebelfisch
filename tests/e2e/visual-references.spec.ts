@@ -56,7 +56,8 @@ test('renaming a label from its tag updates the references in every file', async
   await visual(page).locator('h1').getByTestId('typst-label-tag').click();
   const form = page.locator('typst-editor').getByRole('form', { name: 'Label' });
   await form.getByRole('textbox', { name: 'Label name' }).fill('start');
-  await form.getByRole('button', { name: 'Rename and update 1 reference' }).click();
+  await expect(form.getByRole('button', { name: 'Rename and update 1 reference' })).toBeVisible();
+  await form.getByRole('textbox', { name: 'Label name' }).press('Enter'); // updating the references is the default
   await expect.poll(value(page)).toContain('= Introduction <start>\n');
   await expect.poll(methodFile(page)).toContain('As @start says');
   await expect(visual(page).locator('h1').getByTestId('typst-label-tag')).toHaveText('start');

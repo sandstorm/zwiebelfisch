@@ -128,21 +128,32 @@ describe('references in the Visual view', () => {
     expect(text('/chapters/introduction.typ')).toContain('one picture. @intro. And \\@nolabel \n');
   });
 
-  it('renames a label from its tag: only the label, or with every reference in the project', () => {
+  it('renaming a label from its tag updates every reference in the project by default (Enter)', () => {
     const { parent, text } = setup('/chapters/results.typ');
     const tag = [...parent.querySelectorAll<HTMLElement>('[data-testid="typst-label-tag"]')].find((t) => t.textContent === 'fig:compile-times')!;
     tag.click();
     const form = tag.parentElement!.querySelector<HTMLFormElement>('form')!;
-    const alternative = form.querySelector<HTMLButtonElement>('[data-action="alternative"]')!;
-    expect(alternative.textContent).toBe('Rename and update 2 references');
+    expect(form.querySelector('button[type="submit"]')!.textContent).toBe('Rename and update 2 references');
+    expect(form.querySelector('[data-action="alternative"]')!.textContent).toBe('Rename without updating references');
     form.querySelector('input')!.value = 'fig:times';
-    alternative.click();
+    form.requestSubmit();
     expect(text('/chapters/results.typ')).toContain('@fig:times shows the same data');
     expect(text('/chapters/results.typ')).toContain(') <fig:times>');
     expect(text('/chapters/introduction.typ')).toContain('@fig:times sums them up');
   });
 
-  it('renames just the label with Apply, and removes it with Remove', () => {
+  it('"Rename without updating references" renames only the label', () => {
+    const { parent, text } = setup('/chapters/results.typ');
+    const tag = [...parent.querySelectorAll<HTMLElement>('[data-testid="typst-label-tag"]')].find((t) => t.textContent === 'fig:compile-times')!;
+    tag.click();
+    const form = tag.parentElement!.querySelector<HTMLFormElement>('form')!;
+    form.querySelector('input')!.value = 'fig:times';
+    form.querySelector<HTMLButtonElement>('[data-action="alternative"]')!.click();
+    expect(text('/chapters/results.typ')).toContain(') <fig:times>');
+    expect(text('/chapters/results.typ')).toContain('@fig:compile-times shows the same data');
+  });
+
+  it('without references, Enter renames the label ("Rename"), and Remove removes it', () => {
     const { parent, text } = setup();
     const tagOf = () => parent.querySelector<HTMLElement>('h1 [data-testid="typst-label-tag"]');
     tagOf()!.click();
