@@ -3,6 +3,7 @@ import Document from '@tiptap/extension-document';
 import { ListItem } from '@tiptap/extension-list';
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
 import StarterKit from '@tiptap/starter-kit';
+import { HeadingNumbers } from './nodes/heading-numbers';
 import { HorizontalRule } from './nodes/horizontal-rule';
 import { PageBreak } from './nodes/page-break';
 import { ChecklistPreamble, TypstTaskItem, TypstTaskList } from './nodes/task-list';
@@ -161,6 +162,7 @@ export const extensions = [
   TypstTaskList,
   TypstTaskItem,
   ChecklistPreamble,
+  HeadingNumbers,
   TypstDocument,
   TypstListItem,
   SourceAnchors,

@@ -157,3 +157,29 @@ describe('task lists', () => {
     expect(doc.text).toBe('Text\n\n- [ ] a\n');
   });
 });
+
+describe('heading numbers', () => {
+  const numbers = (parent: HTMLElement) =>
+    [...parent.querySelectorAll<HTMLElement>('[data-heading-number]')].map((h) => `${h.dataset.headingNumber} ${h.textContent}`);
+
+  it('shows the numbers the set rule gives, beside the headings, following edits', () => {
+    const { doc, parent } = setup('#set heading(numbering: "1.1")\n\n= A\n\n== B\n\n= C\n');
+    expect(numbers(parent)).toEqual(['1 A', '1.1 B', '2 C']);
+    expect(parent.querySelector('.typst-visual')!.classList.contains('typst-visual--numbered')).toBe(true);
+    doc.setText('#set heading(numbering: "1.1")\n\n= A\n\n= New\n\n== B\n\n= C\n', 'source');
+    expect(numbers(parent)).toEqual(['1 A', '2 New', '2.1 B', '3 C']);
+  });
+
+  it('"Numbered headings" adds and removes the set rule', () => {
+    const { doc, button, parent } = setup('= A\n\n== B\n');
+    expect(numbers(parent)).toEqual([]);
+    expect(parent.querySelector('.typst-visual--numbered')).toBeNull();
+    expect(button('Numbered headings').getAttribute('aria-pressed')).toBe('false');
+    button('Numbered headings').click();
+    expect(doc.text).toBe('#set heading(numbering: "1.")\n\n= A\n\n== B\n');
+    expect(numbers(parent)).toEqual(['1. A', '1.1. B']);
+    expect(button('Numbered headings').getAttribute('aria-pressed')).toBe('true');
+    button('Numbered headings').click();
+    expect(doc.text).toBe('= A\n\n== B\n');
+  });
+});

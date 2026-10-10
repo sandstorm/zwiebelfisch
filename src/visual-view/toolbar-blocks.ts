@@ -1,4 +1,5 @@
 import { findParentNode, type Editor } from '@tiptap/core';
+import { hasHeadingNumbering } from './heading-numbering';
 import { svg, type Action } from './toolbar-action';
 
 /**
@@ -11,6 +12,7 @@ const ICONS = {
   rule: svg('<path d="M3 12h18"/>'),
   headerRow: svg('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M4 7h16" stroke-width="4"/>'),
   taskList: svg('<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m4.5 8 1 1 2-2"/><rect x="3" y="14" width="6" height="6" rx="1"/><path d="M13 8h8M13 17h8"/>'),
+  numbered: svg('<path d="M10 6h11M10 12h11M10 18h11"/><path d="M4 4.5 5.5 4v4" stroke-width="1.5"/><path d="M3.5 14h2.5l-2.5 4h2.5" stroke-width="1.5"/><path d="M3 21h3" stroke-width="1"/>'),
   quote: svg('<path d="M4 6v12"/><path d="M9 7h11M9 12h11M9 17h7"/>'),
 };
 
@@ -39,4 +41,12 @@ export const HEADER_ROW: Action = {
   icon: ICONS.headerRow,
   run: (c) => c.toggleHeaderRow(),
   active: inHeaderTable,
+};
+
+/** Numbers the headings (`#set heading(numbering: "1.")`), or stops numbering them. */
+export const NUMBERED_HEADINGS: Action = {
+  label: 'Numbered headings',
+  icon: ICONS.numbered,
+  run: (c) => c.toggleHeadingNumbering(),
+  active: (e) => hasHeadingNumbering(e.state.doc),
 };
