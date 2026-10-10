@@ -1,6 +1,7 @@
 // Image files: which project files are images Typst (and the browser) can show, by name, and their media types.
 // See ../images.ts.
 import { ProjectPath } from '../../../core/paths/paths';
+import type { FileContent } from '../../../core/project/project';
 
 /** The media type of each image file extension Typst shows. */
 const MEDIA_TYPES: Record<string, string> = {
@@ -26,7 +27,7 @@ export function isImage(path: ProjectPath): boolean {
 }
 
 /** The image file `path` with `content` as a Blob of its media type, e.g. for an object URL. */
-export function imageBlob(path: ProjectPath, content: string | Uint8Array): Blob {
+export function imageBlob(path: ProjectPath, content: FileContent): Blob {
   const bytes = typeof content === 'string' ? new TextEncoder().encode(content) : content;
   return new Blob([bytes as BlobPart], { type: MEDIA_TYPES[ProjectPath.extension(path).toLowerCase()] });
 }

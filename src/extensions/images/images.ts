@@ -5,13 +5,13 @@
 // view's host only knows boxes, renderers and custom editors, and the file panel only knows files.
 import { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
+import { type PathReference, ProjectPath } from '../../core/paths/paths';
+import type { FileChange, FileContent, Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
-import type { VisualViewContext, VisualViewContribution } from '../../hosts/visual-view/visual-view';
+import { uploadChanges } from '../../core/uploads/uploads';
+import type { VisualViewContribution } from '../../hosts/visual-view/visual-view';
 import type { DocumentLink, TypstExtension, Workbench } from '../../hosts/workbench/workbench';
 import css from './images.css?inline';
-import type { FileChange, Project } from '../../core/project/project';
-import { type PathReference, ProjectPath } from '../../core/paths/paths';
-import { uploadChanges } from '../../core/uploads/uploads';
 import { IMAGE_FILES, imageBlob, isImage } from './model/image-files';
 import { uploadTarget } from './model/upload';
 import { FIGURE, FIGURE_CAPTION, imageRenderer, imageSpec, insertImage } from './visual-view/visual-view';
@@ -27,10 +27,10 @@ export function images(): TypstExtension {
   return {
     id: 'images',
     activate(context) {
-      context.subscriptions.push(context.workbench.registerStyleSheet(css));
       const { project, workbench, preview, subscriptions } = context;
-      const projectImages = new ProjectImages({ project, onDidChange: preview.onDidRender, request: (change) => workbench.applyChange(change) });
+      const projectImages = new ProjectImages({ project, onDidChange: preview.onDidRender, applyChange: (change) => workbench.applyChange(change) });
       subscriptions.push(
+        workbench.registerStyleSheet(css),
         new Disposable(() => projectImages.destroy()),
         workbench.registerCustomEditorProvider('images.preview', assetEditor, { filenamePattern: IMAGE_FILES }),
         // any other file (`*` is the least specific pattern: every other editor's wins)
@@ -89,11 +89,11 @@ export interface ImageUrls {
 
 export interface ImagesOptions {
   /** What "Insert image" offers in a document: the project's images and uploads (default: it only asks for a path). */
-  assets?(document: VisualViewContext['document']): ImageAssets | undefined;
+  assets?(document: TypstDocument): ImageAssets | undefined;
   /** Image files shown in place of the call while it is not edited (default: the code). */
-  imageUrls?(document: VisualViewContext['document']): ImageUrls | undefined;
+  imageUrls?(document: TypstDocument): ImageUrls | undefined;
   /** The links on image paths in a document: an image box's path opens its file, or shows it is missing (default: the text). */
-  imageLinks?(document: VisualViewContext['document']): ImageLinks | undefined;
+  imageLinks?(document: TypstDocument): ImageLinks | undefined;
   /** Where "Insert image" and "Alt text" ask, and refused uploads are told (default: they do nothing). */
   prompts?: ImagePrompts;
 }
@@ -120,8 +120,8 @@ export interface ProjectImagesOptions {
   project: Project;
   /** Fires whenever image files may have changed (a new compile). */
   onDidChange: Event<void>;
-  /** Applies a change (an uploaded image) if allowed; resolves to the reason it was not, or null. */
-  request(change: FileChange): Promise<string | null>;
+  /** Applies a change (an uploaded image) if allowed; resolves to the reason it was not, or null (`Workbench.applyChange`). */
+  applyChange(change: FileChange): Promise<string | null>;
 }
 
 /**
@@ -131,7 +131,7 @@ export interface ProjectImagesOptions {
  * paths as written in that document.
  */
 export class ProjectImages {
-  private readonly urls = new Map<ProjectPath, { content: unknown; url: string }>();
+  private readonly urls = new Map<ProjectPath, { content: FileContent; url: string }>();
 
   constructor(private readonly options: ProjectImagesOptions) {}
 
@@ -185,11 +185,11 @@ export class ProjectImages {
     if (change?.kind !== 'create' || !isImage(change.path)) {
       return { error: `${upload.name} is not an image the document can show (PNG, JPEG, GIF, SVG or WebP).` };
     }
-    const { project, request } = this.options;
+    const { project, applyChange } = this.options;
     const { path, content } = change;
     const target = uploadTarget(path, content, (candidate) => project.content(candidate));
     if (project.has(target)) return { path: ProjectPath.referenceTo(file, target) };
-    const problem = await request({ kind: 'create', path: target, content });
+    const problem = await applyChange({ kind: 'create', path: target, content });
     return problem === null ? { path: ProjectPath.referenceTo(file, target) } : { error: problem };
   }
 }
