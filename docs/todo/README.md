@@ -37,11 +37,12 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [web-component-and-library-build](web-component-and-library-build.md) | done |
 | [multi-file-assets-packages](multi-file-assets-packages.md) | done |
 | [tiptap-migration](tiptap-migration.md) | done |
-| [projection-position-map](projection-position-map.md) | done (branch task/projection-position-map) |
+| [projection-position-map](projection-position-map.md) | done |
 | [comments](comments.md) | open (after position map) |
 | [diff-rendering](diff-rendering.md) | open (after position map) |
-| [multi-file-ui](multi-file-ui.md) | open (after multi-file-assets-packages) |
-| [visual-view-toolbar-and-raw-editing](visual-view-toolbar-and-raw-editing.md) | open (after projection) |
-| [preview-ux](preview-ux.md) | done (branch task/preview-ux) |
+| [multi-file-ui](multi-file-ui.md) | in-progress (agent) |
+| [visual-view-toolbar-and-raw-editing](visual-view-toolbar-and-raw-editing.md) | done |
+| [visual-view-links-images-tables](visual-view-links-images-tables.md) | open |
+| [preview-ux](preview-ux.md) | done |
 | [collab-yjs](collab-yjs.md) | open (later) |
 | [server-gitlab](server-gitlab.md) | open (later) |

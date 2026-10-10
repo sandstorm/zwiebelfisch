@@ -2,6 +2,7 @@ import { Extension, Mark, Node, getSchema } from '@tiptap/core';
 import Document from '@tiptap/extension-document';
 import { ListItem } from '@tiptap/extension-list';
 import StarterKit from '@tiptap/starter-kit';
+import { RawBoxNavigation, rawBoxView } from './raw-box';
 
 /**
  * The Visual view's Tiptap extensions, i.e. its ProseMirror schema plus
@@ -41,7 +42,10 @@ const TypstDocument = Document.extend({
 /** A list item's first child may be verbatim Typst (an item whose body the Visual view cannot model). */
 const TypstListItem = ListItem.extend({ content: '(paragraph | rawBlock) block*' });
 
-/** Block-level Typst the Visual view does not model (`#set`, `#let`, display math, figures, …), kept verbatim. */
+/**
+ * Block-level Typst the Visual view does not model (`#set`, `#let`, display
+ * math, figures, …), kept verbatim and editable as code in a raw box.
+ */
 const RawBlock = Node.create({
   name: 'rawBlock',
   group: 'block',
@@ -53,9 +57,12 @@ const RawBlock = Node.create({
   renderHTML({ node }) {
     return ['pre', { class: 'typst-visual__raw-block' }, node.attrs.src];
   },
+  addNodeView() {
+    return rawBoxView;
+  },
 });
 
-/** Inline Typst the Visual view does not model (`#func[..]`, `$x$`, `@ref`, …), kept verbatim. */
+/** Inline Typst the Visual view does not model (`#func[..]`, `$x$`, `@ref`, …), kept verbatim and editable as code. */
 const RawInline = Node.create({
   name: 'rawInline',
   group: 'inline',
@@ -66,6 +73,9 @@ const RawInline = Node.create({
   },
   renderHTML({ node }) {
     return ['code', { class: 'typst-visual__raw-inline' }, node.attrs.src];
+  },
+  addNodeView() {
+    return rawBoxView;
   },
 });
 
@@ -118,6 +128,7 @@ export const extensions = [
   SourceAnchors,
   RawBlock,
   RawInline,
+  RawBoxNavigation,
   SoftBreak,
   TypstSource,
 ];

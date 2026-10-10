@@ -1,11 +1,10 @@
 import { basicSetup } from 'codemirror';
-import { LanguageSupport } from '@codemirror/language';
 import { setDiagnostics } from '@codemirror/lint';
-import { Annotation, EditorSelection, StateEffect, StateField, type ChangeSet, type ChangeSpec, type Extension } from '@codemirror/state';
+import { Annotation, EditorSelection, StateEffect, StateField, type ChangeSet, type ChangeSpec } from '@codemirror/state';
 import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
-import { typst_lezer, typstLezerLinter } from 'codemirror-lang-typst/lezer';
 import type { TextChange, TypstDocument } from '../document/typst-document';
 import { toLintDiagnostics, type SourceDiagnostic } from './lint';
+import { typstLanguage } from './typst-language';
 
 export type { SourceDiagnostic } from './lint';
 
@@ -99,12 +98,3 @@ function toTextChanges(changes: ChangeSet): TextChange[] {
   return result;
 }
 
-/**
- * Typst language support without the Lezer syntax linter: the compiler's
- * diagnostics are the single source of errors, so nothing is reported twice.
- */
-function typstLanguage(): LanguageSupport {
-  const lezer = typst_lezer();
-  const support = (lezer.support as readonly Extension[]).filter((extension) => extension !== typstLezerLinter);
-  return new LanguageSupport(lezer.language, support);
-}
