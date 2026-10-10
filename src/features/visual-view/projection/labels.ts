@@ -50,8 +50,21 @@ export function labelAfterHeading(nodes: SyntaxNode[], index: number, heading: S
   return !following || following.name === 'Parbreak' || following.name in blockKinds;
 }
 
+/** The characters of a label's name (a regular expression character class). */
+export const LABEL_CHAR = '[\\p{L}\\p{N}_\\-:.]';
+
 /** Characters Typst reads as part of a reference's name; `.` and `:` only when more name characters follow. */
 const CONTINUES_REFERENCE = /^(?:[\p{L}\p{N}_-]|[.:][\p{L}\p{N}_-])/u;
+
+/**
+ * `input` as a label name Typst accepts and a reference can point to: spaces
+ * become `-`, other characters a label cannot hold are dropped, and so are a
+ * trailing `.` / `:` (which `@name.` would leave out). Null if nothing is left.
+ */
+export function labelName(input: string): string | null {
+  const name = input.trim().replace(/\s+/g, '-').replace(new RegExp(`(?!${LABEL_CHAR}).`, 'gu'), '').replace(/[.:]+$/, '');
+  return name || null;
+}
 
 /**
  * Text printed right after a reference without supplement must not extend

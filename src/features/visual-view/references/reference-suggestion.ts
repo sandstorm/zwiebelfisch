@@ -5,6 +5,7 @@ import type { EditorView } from '@tiptap/pm/view';
 import type { LabelInfo, ProjectLabels } from '../../labels/labels';
 import { describeLabel, labelChoices } from './label-choices';
 import { insertReference } from './label-edits';
+import { LABEL_CHAR } from '../projection/projection';
 
 /** The `@query` being typed: from the `@` to the cursor. */
 export interface ReferenceQuery {
@@ -14,7 +15,7 @@ export interface ReferenceQuery {
 }
 
 /** `@` after the start of the text, a space or an opening bracket, then label characters up to the cursor. */
-const TYPED_REFERENCE = /(?:^|[\s([{\u00a0])@([\p{L}\p{N}_\-:.]*)$/u;
+const TYPED_REFERENCE = new RegExp(`(?:^|[\\s([{\\u00a0])@(${LABEL_CHAR}*)$`, 'u');
 
 /** The `@query` right before the cursor, if one is being typed in prose (not in code). */
 export function referenceQuery(state: EditorState): ReferenceQuery | null {

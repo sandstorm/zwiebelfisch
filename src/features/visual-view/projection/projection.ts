@@ -42,6 +42,7 @@ import { typstParser } from 'codemirror-lang-typst/lezer';
 import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from './raw-code';
 
 export { codeLanguage } from './raw-code';
+export { LABEL_CHAR, labelName } from './labels';
 export { alignArgs, setRules, withHorizontal, type Horizontal, type TextAlignment } from './alignment';
 import { alignArgs } from './alignment';
 import { noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../../comments/comments';

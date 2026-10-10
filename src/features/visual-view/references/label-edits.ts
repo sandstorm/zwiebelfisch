@@ -2,15 +2,7 @@
 import type { EditorState, Transaction } from '@tiptap/pm/state';
 import { TextSelection } from '@tiptap/pm/state';
 
-/**
- * `input` as a label name Typst accepts and a reference can point to: spaces
- * become `-`, other characters a label cannot hold are dropped, and so are a
- * trailing `.` / `:` (which `@name.` would leave out). Null if nothing is left.
- */
-export function labelName(input: string): string | null {
-  const name = input.trim().replace(/\s+/g, '-').replace(/[^\p{L}\p{N}_\-:.]/gu, '').replace(/[.:]+$/, '');
-  return name || null;
-}
+export { labelName } from '../projection/projection';
 
 /** Replaces `range` (the typed `@query`) with a reference to `name`; the cursor goes after it. */
 export function insertReference(state: EditorState, range: { from: number; to: number }, name: string): Transaction {
