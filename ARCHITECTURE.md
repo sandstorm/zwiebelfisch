@@ -14,9 +14,13 @@ src/
   engine/                   typed TS wrapper around the wasm, default fonts (generated wasm/, fonts/ — gitignored)
   document/                 TypstDocument — the single source of truth
   source-view/              SourceView — CodeMirror 6 editing view
-  preview/                  Preview — worker-backed live preview + hit-testing
+  preview/                  Preview — worker-backed live preview + hit-testing, zoom, page numbers
     engine.worker.ts        hosts the engine off the main thread
     protocol.ts             request/response messages main ↔ worker
+    page-list.ts            page placeholders; SVG only for pages near the viewport
+    latest-only.ts          "only the newest value" task runner (compiles, cursor reveals)
+    geometry.ts, zoom.ts    pure helpers: overlay boxes, visibility, current page, zoom steps
+    toolbar.ts              zoom buttons, zoom label, "page n / total"
   visual-view/              VisualView — ProseMirror projection (schema, projection, view)
   editor/                   createTypstEditor() — composes the widget, Visual/Source tabs, status bar, scoped CSS
   element/                  <typst-editor> custom element (shadow DOM) around createTypstEditor
@@ -90,21 +94,33 @@ new SourceView(parent, document, { onCursor? })
 ### `Preview` (`src/preview`)
 
 ```ts
-new Preview(container, { onJump?, onDiagnostics? })
+new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scrolling page area into container
 .update(files: Record<path, text>, main)    // cheap per keystroke
-.reveal(path, offset)                        // scroll + flash
+.reveal(path, offset)                        // cheap per cursor move: flash, scroll only if off-screen
 .destroy()
 ```
 
-- **Coalescing:** at most one compilation is in flight. Updates that arrive meanwhile replace each
-  other, so only the newest gets compiled. Typing never queues a backlog.
-- **Incremental DOM:** every page carries its content `hash`. Only pages whose hash changed get new
-  SVG markup. An edit on page 7 does not touch pages 1–6 in the DOM.
+- **Coalescing (`LatestOnly`):** at most one compilation is in flight. Updates that arrive
+  meanwhile replace each other, so only the newest gets compiled. Typing never queues a backlog.
+  Cursor reveals use the same runner, additionally throttled to one lookup per 80 ms.
+- **Incremental, lazy DOM (`PageList`):** every page is a placeholder sized by `aspect-ratio`
+  from the page's pt size. An `IntersectionObserver` (root: the preview's scroller, margin: one
+  viewport above and below) decides which pages carry their SVG; far pages drop it. Every page
+  carries its content `hash`, and only near pages whose hash changed get new SVG markup. An edit
+  on page 7 does not touch pages 1–6 in the DOM. Without `IntersectionObserver` all pages render.
+- **Zoom:** fit width (default) or a fixed scale (presets 25 %–400 %, 100 % = 1 pt → 4/3 CSS px).
+  The page number shown is the page covering most of the viewport.
+- **Overlays** (reveal flash, click highlight) are children of the page element, positioned in
+  percent of the page, so they survive zoom and lazy unmounting. A click that resolves to a source
+  location outlines the clicked text run (Typst draws one as a `<g>` of glyph `<use>`s) until the
+  next click or successful compile.
+- **Scrolling** only ever moves the preview's own scroller (never `scrollIntoView`), so an embedded
+  widget does not scroll its host page.
 - **Errors keep the last good pages.** When a compilation fails, the preview keeps showing the
   previous pages, dimmed (`typst-preview--stale`), and reports diagnostics through `onDiagnostics`.
 - **Diagnostics are never stale.** `onDiagnostics` is only called when no newer `update()` is
   waiting, so its offsets always refer to the text last passed in.
-- **Coordinates:** the SVG is scaled to the pane width. Clicks are converted with
+- **Coordinates:** the SVG is scaled to the page element's width (zoom). Clicks are converted with
   `pt = (clientX − pageRect.left) × page.width / pageRect.width`.
 
 ### Diagnostics in the widget (`src/editor`)
