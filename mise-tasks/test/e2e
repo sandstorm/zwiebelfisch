@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-#MISE description="Build the demo and the library, then run end-to-end tests (Playwright)"
+#MISE description="Build the demo and the library, then run end-to-end tests (Playwright). First argument chromium|firefox|webkit: only that browser; the rest goes to Playwright"
 #MISE depends=["build", "build:lib"]
 set -euo pipefail
+# e.g. `mise run test:e2e firefox tests/e2e/visual-figures.spec.ts`
+case "${1:-}" in
+  chromium | firefox | webkit) browser="$1"; shift; set -- --project="$browser" "$@" ;;
+esac
 exec pnpm exec playwright test "$@"
