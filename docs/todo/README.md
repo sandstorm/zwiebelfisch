@@ -34,7 +34,7 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [engine-wasm-size](engine-wasm-size.md) | open |
 | [visual-view-projection](visual-view-projection.md) | in-progress (main agent) |
 | [diagnostics-ui](diagnostics-ui.md) | open |
-| [web-component-and-library-build](web-component-and-library-build.md) | open |
+| [web-component-and-library-build](web-component-and-library-build.md) | done (branch task/web-component-and-library-build) |
 | [multi-file-assets-packages](multi-file-assets-packages.md) | open |
 | [visual-view-toolbar-and-raw-editing](visual-view-toolbar-and-raw-editing.md) | open (after projection) |
 | [preview-ux](preview-ux.md) | open |

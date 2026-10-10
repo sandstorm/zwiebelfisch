@@ -1,6 +1,6 @@
 # `<typst-editor>` web component and library build
 
-Status: open
+Status: done (branch task/web-component-and-library-build)
 Depends on: nothing
 Touches: src/index.ts, src/editor/** (element wrapper only), vite.config.ts (or a separate lib config), package.json, mise-tasks/build/**, docs/embedding.md
 
