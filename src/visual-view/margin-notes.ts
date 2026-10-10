@@ -153,6 +153,8 @@ class Bubble {
     const field = this.field;
     if (!field) return;
     this.field = null;
+    // a field taken out of the document (its note is gone) has nothing to save to
+    if (!field.isConnected) return;
     field.replaceWith(this.text);
     const note = save && field.value !== this.target.note() ? safeNote(field.value) : null;
     if (note !== null) this.target.setNote(note);
@@ -232,11 +234,12 @@ function rangeDecorations(doc: PMNode): DecorationSet {
   const decorations: Decoration[] = [];
   doc.descendants((node, pos) => {
     if (!node.inlineContent) return true;
-    for (const span of noteSpans(node, pos + 1)) {
-      decorations.push(Decoration.widget(span.to, (view) => rangeBubble(view, span), {
+    for (const { mark, to } of noteSpans(node, pos + 1)) {
+      decorations.push(Decoration.widget(to, (view) => rangeBubble(view, mark), {
         side: -1,
         marks: [],
-        key: `note:${span.from}:${span.to}:${span.mark.attrs.head}:${span.mark.attrs.note}`,
+        // no positions: the bubble (and an open editor in it) stays while text around it changes
+        key: `note:${mark.attrs.id}:${mark.attrs.head}:${mark.attrs.note}`,
         stopEvent: () => true,
         ignoreSelection: true,
       }));
@@ -261,13 +264,30 @@ function noteSpans(block: PMNode, start: number): NoteSpan[] {
   return [...done, ...open];
 }
 
-function rangeBubble(view: EditorView, { mark, from, to }: NoteSpan): HTMLElement {
-  return new Bubble(view, {
+/** The bubble of the range note `mark`; it finds the note's current text when it needs it. */
+function rangeBubble(view: EditorView, mark: PMMark): HTMLElement {
+  const span = (): NoteSpan | undefined => currentSpan(view, bubble.dom, mark);
+  const bubble: Bubble = new Bubble(view, {
     note: () => mark.attrs.note,
     setNote: (note) => {
-      const tr = view.state.tr.removeMark(from, to, mark).addMark(from, to, mark.type.create({ ...mark.attrs, note }));
-      view.dispatch(tr);
+      const at = span();
+      if (!at) return;
+      view.dispatch(view.state.tr.removeMark(at.from, at.to, at.mark).addMark(at.from, at.to, mark.type.create({ ...at.mark.attrs, note })));
     },
-    at: () => to,
-  }, 'range').dom;
+    at: () => span()?.to,
+  }, 'range');
+  return bubble.dom;
+}
+
+/** The text of the range note shown by `bubble` (the widget after it) in the current document, if it is still there. */
+function currentSpan(view: EditorView, bubble: HTMLElement, mark: PMMark): NoteSpan | undefined {
+  if (!bubble.isConnected) return undefined;
+  let to: number;
+  try {
+    to = view.posAtDOM(bubble, 0);
+  } catch {
+    return undefined;
+  }
+  const $to = view.state.doc.resolve(to);
+  return noteSpans($to.parent, $to.start()).find((span) => span.to === to && span.mark.attrs.id === mark.attrs.id);
 }

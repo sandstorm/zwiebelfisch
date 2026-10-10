@@ -1,4 +1,7 @@
 import { Extension, Mark, Node, getSchema } from '@tiptap/core';
+import { DOMSerializer, type Node as PMNode } from '@tiptap/pm/model';
+import { Plugin } from '@tiptap/pm/state';
+import type { EditorView, NodeView } from '@tiptap/pm/view';
 import Document from '@tiptap/extension-document';
 import { ListItem } from '@tiptap/extension-list';
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
@@ -19,13 +22,23 @@ import { RawBoxNavigation, rawBoxView } from './raw-box';
  * - doc `lead`/`trail`: whitespace before the first / after the last block;
  * - table `layout`: how the table's source is laid out around its cells
  *   (owned by the projection).
+ *
+ * A block whose anchors change (as every re-projected block's `src` does
+ * after an edit from elsewhere) keeps its DOM, so what is inside, like an
+ * open note editor, survives; see `keepWhileRenderedSame`.
  */
+const ANCHORED_BLOCKS = ['paragraph', 'heading', 'bulletList', 'orderedList', 'listItem'];
+
 const SourceAnchors = Extension.create({
   name: 'typstSourceAnchors',
+  addProseMirrorPlugins() {
+    const views = Object.fromEntries(ANCHORED_BLOCKS.map((type) => [type, keepWhileRenderedSame]));
+    return [new Plugin({ props: { nodeViews: views } })];
+  },
   addGlobalAttributes() {
     return [
       {
-        types: ['paragraph', 'heading', 'bulletList', 'orderedList', 'listItem'],
+        types: ANCHORED_BLOCKS,
         attributes: {
           src: { default: null, rendered: false, keepOnSplit: false },
           sep: { default: null, rendered: false },
@@ -37,6 +50,26 @@ const SourceAnchors = Extension.create({
     ];
   },
 });
+
+/**
+ * The block as its schema renders it, kept (and its content updated in place)
+ * while a new version renders the same. ProseMirror would rebuild it, and
+ * everything inside, on any attribute change.
+ */
+function keepWhileRenderedSame(initial: PMNode, view: EditorView): NodeView {
+  let node = initial;
+  const render = (n: PMNode) => n.type.spec.toDOM!(n);
+  const { dom, contentDOM } = DOMSerializer.renderSpec(view.dom.ownerDocument, render(node));
+  return {
+    dom,
+    contentDOM,
+    update: (next) => {
+      if (next.type !== node.type || JSON.stringify(render(next)) !== JSON.stringify(render(node))) return false;
+      node = next;
+      return true;
+    },
+  };
+}
 
 const TypstDocument = Document.extend({
   addAttributes() {

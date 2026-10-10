@@ -55,6 +55,49 @@ describe('margin notes in the Visual view', () => {
     expect(doc.text).toBe('A #margin-note[key][ends with \\\\] and #margin-note[a \\// b] here.\n\nNext.\n');
   });
 
+  describe('an open note editor and changes from elsewhere', () => {
+    /** Opens the editor of the first bubble and types `text` without finishing. */
+    function typeInto(bubbles: () => HTMLElement[], text: string) {
+      bubbles()[0].dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+      const field = bubbles()[0].querySelector('textarea')!;
+      field.value = text;
+      return field;
+    }
+
+    for (const [kind, source, saved] of [
+      ['range', 'Text #margin-note[key][old] here.\n', 'XXText #margin-note[key][typed] here.\n'],
+      ['point', 'Text#margin-note[old] here.\n', 'XXText#margin-note[typed] here.\n'],
+    ]) {
+      it(`keeps the field of a ${kind} note and saves into that note`, () => {
+        const { doc, bubbles } = setup(source);
+        const field = typeInto(bubbles, 'typed');
+        doc.change([{ from: 0, to: 0, insert: 'XX' }], 'remote');
+        expect(field.isConnected).toBe(true);
+        expect(document.activeElement).toBe(field);
+        key(field, 'Enter');
+        expect(doc.text).toBe(saved);
+      });
+    }
+
+    it('keeps the field of a range note when its text changes', () => {
+      const { doc, bubbles } = setup('Text #margin-note[key][old] here.\n');
+      const field = typeInto(bubbles, 'typed');
+      doc.change([{ from: 21, to: 21, insert: 's' }], 'remote');
+      expect(field.isConnected).toBe(true);
+      key(field, 'Enter');
+      expect(doc.text).toBe('Text #margin-note[keys][typed] here.\n');
+    });
+
+    it('does not save from a field whose note is gone', () => {
+      const { doc, bubbles } = setup('Text #margin-note[key][old] here.\n');
+      const field = typeInto(bubbles, 'typed');
+      doc.setText('Other text.\n', 'remote');
+      key(field, 'Enter');
+      field.dispatchEvent(new FocusEvent('blur'));
+      expect(doc.text).toBe('Other text.\n');
+    });
+  });
+
   it('Escape leaves the note unchanged', () => {
     const { doc, bubbles } = setup('Text#margin-note[old].\n');
     editBubble(bubbles()[0], 'changed', 'Escape');
