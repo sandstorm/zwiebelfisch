@@ -2,7 +2,6 @@
    Registered by spreadsheets.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 /* Spreadsheets (.ic): IronCalc's workbook UI fills the editing column */
 .typst-sheet { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.typst-sheet[hidden] { display: none; }
 .typst-sheet__title { margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--te-border); font-size: 13px; font-weight: 600; color: var(--te-text); }
 .typst-sheet__body { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; color: var(--te-muted); font-size: 13px; }
 /* Dark: workbench/color-scheme.ts sets IronCalc's palette; these are what IronCalc's CSS colors without it */
