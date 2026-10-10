@@ -178,6 +178,20 @@
 .typst-visual__table td > :last-child,
 .typst-visual__table th > :last-child { margin-bottom: 0; }
 .typst-visual__table .selectedCell { background: #e3ecfd; }
+.typst-visual__page-break {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0.4em 0 1.1em;
+  color: #6e7781;
+  font: 600 11px system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.typst-visual__page-break::before,
+.typst-visual__page-break::after { content: ''; flex: 1; border-top: 1px dashed currentColor; }
+.typst-visual__rule { padding: 0.4em 0 1.1em; }
+.typst-visual__rule hr { margin: 0; border: none; border-top: 1px solid #24292f; }
 .typst-popover {
   position: absolute;
   top: 100%;

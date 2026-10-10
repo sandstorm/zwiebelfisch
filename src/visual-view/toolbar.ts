@@ -2,23 +2,8 @@ import type { ChainedCommands, Editor } from '@tiptap/core';
 import { FieldPopover } from './field-popover';
 import { ImageChoices, type ImageAssets } from './image-choices';
 import { imageSource } from './projection';
-
-/** A toolbar button: how it looks, what it does, and when it shows as on. */
-interface Action {
-  label: string;
-  /** Shortcut shown in the tooltip; `Mod` becomes ⌘ or Ctrl. */
-  shortcut?: string;
-  icon: string;
-  /** The command; also decides, dry-run, whether the button is enabled. */
-  run(chain: ChainedCommands): ChainedCommands;
-  /** Instead of running the command, e.g. to ask for a value first. */
-  click?(button: HTMLButtonElement): void;
-  /** Toggles show their state (`aria-pressed`); plain actions (undo) do not. */
-  active?(editor: Editor): boolean;
-}
-
-const svg = (body: string) =>
-  `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+import { svg, type Action } from './toolbar-action';
+import { BREAKS } from './toolbar-blocks';
 
 const ICONS = {
   undo: svg('<path d="M9 15 4 10l5-5"/><path d="M4 10h11a5 5 0 0 1 0 10h-3"/>'),
@@ -146,6 +131,7 @@ export class Toolbar {
       this.group([...MARKS, link]),
       this.group(LISTS),
       this.group([image, ...TABLES]),
+      this.group(BREAKS),
     );
     parent.prepend(this.root);
     editor.view.dom.addEventListener('keydown', this.linkShortcut);

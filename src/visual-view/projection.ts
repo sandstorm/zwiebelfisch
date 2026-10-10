@@ -26,6 +26,7 @@ import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
 import { typstParser } from 'codemirror-lang-typst/lezer';
+import { callAtomType } from './call-atoms';
 
 /**
  * Nodes created by `project` and not modified since. ProseMirror nodes are
@@ -219,6 +220,8 @@ function blockCall(ctx: Context, segment: Segment, sep: string | null): Node | n
   const src = ctx.source.slice(segment.from, segment.to);
   if (name === 'image') return parenthesized(args) && imagePath(src) !== null ? ctx.schema.nodes.image.create({ src, sep }) : null;
   if (name === 'table') return table(ctx, segment, args, sep);
+  const atom = callAtomType(name, args, (n) => ctx.source.slice(n.from, n.to));
+  if (atom) return ctx.schema.nodes[atom].create({ src, sep });
   return null;
 }
 
@@ -622,6 +625,7 @@ function printBlock(out: Printer, node: Node, parent: Node, pos: number): void {
   const pristineLayout = pristine.get(node);
   if (pristineLayout) return printLayout(out, node, pristineLayout, pos + 1);
   if (pristine.has(node)) return printPristineItem(out, node, pos);
+  if (isSourceAtom(node)) return out.shown(node.attrs.src, 'atom', pos, pos + 1);
   switch (node.type.name) {
     case 'heading':
       out.hidden(`${'='.repeat(node.attrs.level)} `);
@@ -631,14 +635,16 @@ function printBlock(out: Printer, node: Node, parent: Node, pos: number): void {
       return printBlocks(out, node, pos + 1, '\n');
     case 'listItem':
       return printListItem(out, node, parent, pos);
-    case 'rawBlock':
-    case 'image':
-      return out.shown(node.attrs.src, 'atom', pos, pos + 1);
     case 'table':
       return printTable(out, node, pos);
     default:
       return printTextblock(out, node, pos);
   }
+}
+
+/** A block shown as a whole and printed as its `src`: raw blocks, images, page breaks, rules. */
+function isSourceAtom(node: Node): boolean {
+  return node.isBlock && node.isAtom && typeof node.attrs.src === 'string';
 }
 
 /** A pristine textblock: its `src`, with the content positions its layout assigns. */

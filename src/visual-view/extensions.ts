@@ -3,6 +3,8 @@ import Document from '@tiptap/extension-document';
 import { ListItem } from '@tiptap/extension-list';
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
 import StarterKit from '@tiptap/starter-kit';
+import { HorizontalRule } from './nodes/horizontal-rule';
+import { PageBreak } from './nodes/page-break';
 import { RawBoxNavigation, rawBoxView } from './raw-box';
 
 /**
@@ -153,6 +155,8 @@ export const extensions = [
   TableCell,
   TableHeader,
   Image,
+  PageBreak,
+  HorizontalRule,
   TypstDocument,
   TypstListItem,
   SourceAnchors,
