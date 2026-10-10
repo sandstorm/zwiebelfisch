@@ -3,11 +3,14 @@
 // Runs ESLint with thresholds forced to 0 so every function reports its score,
 // then prints a hot-spot table. Pass a number to limit rows (default 25).
 import { ESLint } from 'eslint';
+import sonarjs from 'eslint-plugin-sonarjs';
 import { thresholds } from '../../eslint.config.js';
 
 const limit = Number(process.argv[2] ?? 25);
 const eslint = new ESLint({
   overrideConfig: {
+    files: ['**/*.ts'],
+    plugins: { sonarjs },
     rules: {
       'sonarjs/cognitive-complexity': ['warn', 0],
       complexity: ['warn', 0],
