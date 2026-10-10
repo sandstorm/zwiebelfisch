@@ -1378,8 +1378,8 @@ followColorScheme(container, onDidChange) → Disposable   // sets / takes away 
   new workbook, which is saved at once: "New spreadsheet…" (the file panel's "New", menu `file/newFile`, command
   `spreadsheets.newSpreadsheet` with the row as argument) asks for a name (`.ic` added; in the row's folder),
   creates the empty file and opens it.
-- `workbench/workbook.ts` is a separate chunk (`import()` from `spreadsheet-view.ts` on the first show; the
-  folder's entry exports only its types): `@ironcalc/workbook` (React,
+- `workbench/workbook.ts` is a separate chunk (`import()` from `spreadsheet-view.ts` on the first show; everything
+  else imports only its types): `@ironcalc/workbook` (React,
   i18next, lucide icons) and the engine's wasm. Its CSS (scoped `.ic-root`) goes into the
   container's root node (the shadow root of `<typst-editor>`); `rootContainer` keeps its menus
   inside the container.
