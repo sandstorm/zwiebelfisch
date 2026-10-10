@@ -47,30 +47,9 @@ export function findFilePaths(text: string, options: { from?: number; to?: numbe
 export type ReadText = (path: ProjectPath) => string | undefined;
 
 /**
- * The main file, then every file it `#include`s, depth first, in the order
- * Typst reads them (a nested include comes right after the text before it).
- * Missing files, imports, a file included a second time and include cycles
- * are left out. Empty when there is no main file.
- */
-export function readingOrder(read: ReadText, main: ProjectPath): ProjectPath[] {
-  const order: ProjectPath[] = [];
-  const visit = (path: ProjectPath) => {
-    const text = read(path);
-    if (text === undefined || order.includes(path)) return;
-    order.push(path);
-    for (const reference of findFilePaths(text)) {
-      if (reference.call !== 'include') continue;
-      const target = ProjectPath.resolve(path, reference.path);
-      if (target !== null) visit(target);
-    }
-  };
-  visit(main);
-  return order;
-}
-
-/**
- * The files read before and after `path` (null at the end), or null when
- * `path` is the main file or not included at all.
+ * The files read before and after `path` (null at the end), or null when `path` is the main file or not included
+ * at all. Typst reads the main file, then every file it `#include`s, depth first (a nested include comes right
+ * after the text before it); imports, missing files, a file included a second time and include cycles add nothing.
  */
 export function neighbours(read: ReadText, main: ProjectPath, path: ProjectPath): { previous: ProjectPath; next: ProjectPath | null } | null {
   const order = readingOrder(read, main);
@@ -167,6 +146,23 @@ export function isEmbeddable(code: string): boolean {
 /** The markup that shows what `code` (an embeddable expression) does: `#code`, or an equation as it is. */
 export function markupSource(code: string): string {
   return code.startsWith('$') ? code : `#${code}`;
+}
+
+/** The main file, then every file it `#include`s, as `neighbours` describes; empty without a main file. */
+function readingOrder(read: ReadText, main: ProjectPath): ProjectPath[] {
+  const order: ProjectPath[] = [];
+  const visit = (path: ProjectPath) => {
+    const text = read(path);
+    if (text === undefined || order.includes(path)) return;
+    order.push(path);
+    for (const reference of findFilePaths(text)) {
+      if (reference.call !== 'include') continue;
+      const target = ProjectPath.resolve(path, reference.path);
+      if (target !== null) visit(target);
+    }
+  };
+  visit(main);
+  return order;
 }
 
 /** Functions whose first positional argument is a file path. */

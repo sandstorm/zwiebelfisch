@@ -1,6 +1,6 @@
-// Tests for typst-syntax.ts: readingOrder and neighbours.
+// Tests for typst-syntax.ts: neighbours (the reading order of the project's files).
 import { describe, expect, it } from 'vitest';
-import { neighbours, readingOrder } from './typst-syntax';
+import { neighbours } from './typst-syntax';
 import { ProjectPath } from '../paths/paths';
 
 const path = ProjectPath.of;
@@ -17,33 +17,6 @@ const BOOK = {
   '/template.typ': '#let accent = blue\n',
 };
 
-describe('readingOrder', () => {
-  it('lists the main file, then every included file in the order Typst reads them (nested includes in place)', () => {
-    expect(readingOrder(from(BOOK), path('/main.typ'))).toEqual([
-      path('/main.typ'),
-      path('/chapters/introduction.typ'),
-      path('/chapters/method.typ'),
-      path('/chapters/setup.typ'),
-      path('/chapters/results.typ'),
-    ]);
-  });
-
-  it('leaves out imports, missing files, files included twice and include cycles', () => {
-    const files = {
-      '/main.typ': '#import "template.typ": accent\n#include "a.typ"\n#include "missing.typ"\n#include "a.typ"\n',
-      '/a.typ': '#include "main.typ"\n#include "b.typ"\n',
-      '/b.typ': '#include "a.typ"\n',
-      '/template.typ': '',
-    };
-    expect(readingOrder(from(files), path('/main.typ'))).toEqual([path('/main.typ'), path('/a.typ'), path('/b.typ')]);
-  });
-
-  it('is only the main file without includes, and empty without a main file', () => {
-    expect(readingOrder(from({ '/main.typ': 'Hi' }), path('/main.typ'))).toEqual([path('/main.typ')]);
-    expect(readingOrder(from({}), path('/main.typ'))).toEqual([]);
-  });
-});
-
 describe('neighbours', () => {
   it('gives the files before and after `path` in reading order', () => {
     expect(neighbours(from(BOOK), path('/main.typ'), path('/chapters/method.typ'))).toEqual({ previous: path('/chapters/introduction.typ'), next: path('/chapters/setup.typ') });
@@ -54,5 +27,22 @@ describe('neighbours', () => {
   it('is null for the main file and files that are not included', () => {
     expect(neighbours(from(BOOK), path('/main.typ'), path('/main.typ'))).toBeNull();
     expect(neighbours(from(BOOK), path('/main.typ'), path('/template.typ'))).toBeNull();
+  });
+
+  it('follows nested includes in place, and leaves out imports, missing files, files included twice and include cycles', () => {
+    const files = {
+      '/main.typ': '#import "template.typ": accent\n#include "a.typ"\n#include "missing.typ"\n#include "a.typ"\n',
+      '/a.typ': '#include "main.typ"\n#include "b.typ"\n',
+      '/b.typ': '#include "a.typ"\n',
+      '/template.typ': '',
+    };
+    const main = path('/main.typ');
+    expect(neighbours(from(files), main, path('/a.typ'))).toEqual({ previous: main, next: path('/b.typ') });
+    expect(neighbours(from(files), main, path('/b.typ'))).toEqual({ previous: path('/a.typ'), next: null });
+    expect(neighbours(from(files), main, path('/missing.typ'))).toBeNull();
+  });
+
+  it('is null for every file without a main file', () => {
+    expect(neighbours(from({ '/a.typ': 'A' }), path('/main.typ'), path('/a.typ'))).toBeNull();
   });
 });

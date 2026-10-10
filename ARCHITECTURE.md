@@ -75,7 +75,8 @@ src/                        the widget (TypeScript); the most important API on t
     project/                Project: which files a project has and which changes are allowed (one TypstDocument
                             per .typ file, main protected); FileChange, FileContent, ProjectFiles. No re-exports.
     typst-syntax/           the Typst syntax several extensions need (Lezer): findFilePaths (the file paths a Typst text
-                            names), readingOrder (main file, then its #includes depth first) and neighbours,
+                            names), neighbours (the files read before and after one: main file, then its #includes
+                            depth first),
                             calculateImportChange (the change that imports a name from a module, once; applies
                             nothing: margin notes merge it into their own edit); what projectors and printers read
                             (children, parenthesized, isClosedContent, decodeString, quote, isEmbeddable)
@@ -1560,7 +1561,7 @@ new FilePanel(parent, { onOpen(path), onChange(change) → Promise<reason | null
 ```ts
 // core/typst-syntax (Typst syntax only)
 findFilePaths(text, { from?, to? }) → PathInSource[]   // { path: PathReference, from, to, call }; call: import | include | image | …
-readingOrder(read, main) → ProjectPath[]              neighbours(read, main, path) → { previous, next } | null
+neighbours(read, main, path) → { previous, next } | null   // in reading order: main, then its #includes depth first
 // the workbench (see "Extensions")
 workbench.registerDocumentLinkProvider({ provideDocumentLinks({ path, text }) → DocumentLink[], resolveDocumentLink?(link) },
                                        { priority? }) → Disposable
