@@ -85,6 +85,30 @@ editor.destroy();
 The editor fills `host`, so give `host` a height. Styles go into `document.head`, or into the
 shadow root when `host` is inside one.
 
+## 3. Other files, images and packages
+
+Only the main file is edited. The project's other files go into `files`, by absolute path:
+Typst text as a string, anything else (images, CSV, …) as a `Uint8Array`.
+
+```ts
+const editor = createTypstEditor(host, {
+  main: '/thesis.typ',                     // default '/main.typ'
+  source: '#include "chapters/intro.typ"\n#image("logo.png")',
+  files: {
+    '/chapters/intro.typ': '= Introduction\n…',
+    '/logo.png': new Uint8Array(await (await fetch('/logo.png')).arrayBuffer()),
+  },
+});
+editor.files = { ...editor.files, '/chapters/outro.typ': '= Outro' };   // replaces the map, recompiles
+```
+
+On `<typst-editor>` the same map is the `files` property. Bytes are copied to the compile worker
+only when the `Uint8Array` changes, so reuse the same array for unchanged files.
+
+`#import "@preview/name:version"` works without configuration: the worker downloads the package
+from `https://packages.typst.org/preview/` on first use and keeps it in the Cache API. Allow that
+origin in your Content-Security-Policy (`connect-src`).
+
 ## Using it from a bundler
 
 `dist/lib/typst-editor.js` is a regular ES module whose assets are referenced through

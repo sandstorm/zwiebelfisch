@@ -11,12 +11,14 @@ crates/typst-engine/        Rust → wasm: Typst compiler, SVG export, click/cur
   src/world.rs              in-memory Typst World (files and fonts pushed from JS)
   src/lib.rs                wasm-bindgen interface (JSON in/out, UTF-16 offsets)
 src/
-  engine/                   typed TS wrapper around the wasm, default fonts (generated wasm/, fonts/ — gitignored)
+  engine/                   typed TS wrapper around the wasm, default fonts (generated wasm/, fonts/ — gitignored),
+                            withPackages (package download, tar reader), fixtures/ (test package archives)
   document/                 TypstDocument — the single source of truth
   source-view/              SourceView — CodeMirror 6 editing view
   preview/                  Preview — worker-backed live preview + hit-testing
     engine.worker.ts        hosts the engine off the main thread
     protocol.ts             request/response messages main ↔ worker
+    project-files.ts        FileSender/FileReceiver: file maps across the worker boundary
   visual-view/              VisualView — Tiptap editor over the source-anchored projection
   editor/                   createTypstEditor() — composes the widget, Visual/Source tabs, status bar, scoped CSS
   element/                  <typst-editor> custom element (shadow DOM) around createTypstEditor
@@ -91,7 +93,7 @@ new SourceView(parent, document, { onCursor? })
 
 ```ts
 new Preview(container, { onJump?, onDiagnostics? })
-.update(files: Record<path, text>, main)    // cheap per keystroke
+.update(files: Record<path, text | Uint8Array>, main)    // cheap per keystroke
 .reveal(path, offset)                        // scroll + flash
 .destroy()
 ```
@@ -104,6 +106,10 @@ new Preview(container, { onJump?, onDiagnostics? })
   previous pages, dimmed (`typst-preview--stale`), and reports diagnostics through `onDiagnostics`.
 - **Diagnostics are never stale.** `onDiagnostics` is only called when no newer `update()` is
   waiting, so its offsets always refer to the text last passed in.
+- **Files:** text is sent with every update (Typst diffs it). Bytes are sent once per
+  `Uint8Array` identity: pass the same array again and only `null` crosses to the worker.
+- **Packages:** `@preview/…` imports are downloaded on first use (see `withPackages`); the
+  diagnostics arrive after the download.
 - **Coordinates:** the SVG is scaled to the pane width. Clicks are converted with
   `pt = (clientX − pageRect.left) × page.width / pageRect.width`.
 
@@ -123,9 +129,13 @@ createEngine(wasm, fonts?: (Uint8Array | Promise<Uint8Array>)[]) → Promise<Eng
 defaultFonts() → Promise<Uint8Array>[]          // src/engine/default-fonts.ts: fetches the bundled font assets
 .addFont(bytes)                                  // throws if bytes contain no font face
 .setSource(path, text) / .setBinary(path, bytes) / .remove(path)
-.compile(main) → { pages: [{hash, width, height, svg}], diagnostics: [{severity, message, hints, path, from, to}] }
+.compile(main) → { pages: [{hash, width, height, svg}], diagnostics: [{severity, message, hints, path, from, to}], missingPackages: string[] }
 .jumpFromClick(page, x, y) → {kind:'source', path, offset, from, to} | {kind:'url'} | {kind:'position'} | null
 .jumpFromCursor(path, offset) → [{page, x, y}]
+
+withPackages(engine, fetchPackage = fetchPreviewPackage) → { compile(main) → Promise<CompileResult> }
+fetchPreviewPackage(spec) → Promise<Uint8Array>     // .tar.gz from packages.typst.org, Cache API
+untarGz(bytes) → Promise<Map<relativePath, Uint8Array>>
 ```
 
 Boundary conventions. Each one is decided once, inside the engine:
@@ -136,7 +146,7 @@ Boundary conventions. Each one is decided once, inside the engine:
 | Pages | 0-based | JS arrays |
 | Coordinates | pt from the page's top-left | the same unit as the page size |
 | Results | JSON strings | no serde/JS glue; the TS wrapper parses and types them |
-| Paths | absolute project paths (`/main.typ`) | map 1:1 to `FileId` with `VirtualRoot::Project` |
+| Paths | absolute project paths (`/main.typ`), package paths (`@preview/name:0.1.0/lib.typ`) | map 1:1 to `FileId` with `VirtualRoot::Project` / `VirtualRoot::Package(spec)`; diagnostics and jumps report package files the same way |
 
 Inside the crate:
 
@@ -152,6 +162,12 @@ Inside the crate:
   pinned by `Cargo.lock` into `src/engine/fonts/`. `defaultFonts()` turns them into bundler
   assets (`import.meta.glob(…?url)`) and starts all downloads at once. The worker passes them to
   `createEngine`, which awaits wasm and fonts in parallel.
+- **Packages** are files like any other, under their package path. A file of a package with no
+  files at all fails with `PackageError::NotFound` and records the spec; `compile` returns those
+  as `missingPackages` (cleared per compile). `withPackages` (TS) loops: compile → fetch the
+  missing archives in parallel → `untarGz` → `.typ` via `setSource`, the rest via `setBinary` →
+  compile again. A failed download is remembered (no retry until reload) and reported as an extra
+  diagnostic with `path: null`, next to Typst's own "package not found" at the import.
 - **SVG cache:** page SVGs are keyed by `hash128(&page.frame)`. Unchanged pages skip `typst_svg::svg`.
 - **Hit-testing:** `typst_ide::jump_from_click(world, document, PagedPosition)` walks the frames of
   the last successful document. `source_jump` widens the resulting byte offset to the enclosing
@@ -160,9 +176,15 @@ Inside the crate:
 ### `createTypstEditor` / `<typst-editor>` (`src/editor`, `src/element`)
 
 ```ts
-createTypstEditor(host, { source, onChange? }) → { source (get/set), destroy() }
-<typst-editor value="…">inline source</typst-editor>   .value (get/set), 'change' event {detail:{value}}
+createTypstEditor(host, { source, main?, files?, mode?, onChange? }) → { source (get/set), files (get/set), destroy() }
+<typst-editor value="…">inline source</typst-editor>   .value (get/set), .files (get/set), 'change' event {detail:{value}}
 ```
+
+- `source` is the text of the edited file at `main` (default `/main.typ`). `files`
+  (`ProjectFiles = Record<path, string | Uint8Array>`) are the project's other files — included
+  or imported `.typ`, images, data — read-only in the widget. Assigning `files` replaces the map
+  and recompiles. `@preview` packages need no entry.
+- Preview clicks that land in another file are ignored (no file switcher yet).
 
 - Setting `source`/`value` applies **one minimal edit**: only the range between the common prefix
   and the common suffix changes (`minimalChange`), so cursors and undo history are preserved.
@@ -173,13 +195,15 @@ createTypstEditor(host, { source, onChange? }) → { source (get/set), destroy()
 
 ```
 main → worker   {type:'init', wasm}  (first, once; the URL is resolved on the main thread)
-main → worker   {id, type:'compile', files, main} | {id, type:'click', page, x, y} | {id, type:'cursor', path, offset}
+main → worker   {id, type:'compile', files: Record<path, text | Uint8Array | null>, main} | {id, type:'click', page, x, y} | {id, type:'cursor', path, offset}
 worker → main   {id, type:'compile', result} | {id, type:'click', jump} | {id, type:'cursor', positions} | {id, type:'error', message}
 ```
 
-- Requests are answered in order, because the worker is single-threaded.
-- `compile` sends the full file map. The worker diffs paths against the previous call to remove
-  files that were deleted, and Typst diffs the text itself.
+- Requests are answered in order, because the worker is single-threaded, except that a
+  `compile` waiting for a package download lets `click`/`cursor` requests overtake it.
+- `compile` sends the full file map; `null` means "the same bytes as last time" (`FileSender`).
+  The worker (`FileReceiver`) removes paths missing since the previous call, and Typst diffs the
+  text itself. Package files are not part of the map and stay loaded.
 
 ### `VisualView` (`src/visual-view`)
 
@@ -253,6 +277,7 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
 |---|---|
 | `mise run build:engine` | `cargo build --target wasm32-unknown-unknown --release` + `wasm-bindgen --target web` + `wasm-opt -Oz --strip-debug` → `src/engine/wasm/`, prints raw/gzip/brotli size (skipped when the Rust sources are unchanged) |
 | `mise run build:fonts` | default fonts from the pinned typst-assets crate → `src/engine/fonts/` |
+| `mise run fixtures:packages` | packs `src/engine/fixtures/<name>-<version>/` into `.tar.gz` (committed) for package tests |
 | `mise run dev` | Vite dev server for `demo/` on 127.0.0.1:5199 |
 | `mise run build` | engine + typecheck + static demo build → `dist/demo` |
 | `mise run build:lib` | library build → `dist/lib`: bundled ESM, worker, wasm, d.ts (`vite.lib.config.ts`, `tsconfig.lib.json`) |
@@ -277,6 +302,8 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
 - **All 17 default fonts (9.7 MB, 6.4 MB gzip) load before the first render.** Next step: lazy
   fonts — ship a JSON index of `FontInfo` so the `FontBook` is complete up front and fetch font
   data on first use (compile, see which fonts were missing, fetch, recompile).
-- **Single file only.** Multi-file projects, images and `@preview` packages need `setBinary` wiring
-  and a package fetcher.
+- **Only the main file is editable.** Other files come in through `files`; there is no file tree
+  or upload UI yet, and jumps into other files are dropped.
+- **Packages:** only `@preview` from packages.typst.org (no configurable registry, no `@local`);
+  failed downloads are not retried until the worker restarts.
 - **No error display in the visual view** yet (diagnostics only reach the source view).

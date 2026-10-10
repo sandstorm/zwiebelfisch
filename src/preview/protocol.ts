@@ -1,4 +1,5 @@
 import type { CompileResult, Jump, Position } from '../engine/engine';
+import type { EncodedFiles } from './project-files';
 
 /**
  * First message to the worker: where the engine wasm and fonts are. The main thread
@@ -14,7 +15,7 @@ export interface Init {
 
 /** Messages between Preview (main thread) and the engine worker. */
 export type Request =
-  | { id: number; type: 'compile'; files: Record<string, string>; main: string }
+  | { id: number; type: 'compile'; files: EncodedFiles; main: string }
   | { id: number; type: 'click'; page: number; x: number; y: number }
   | { id: number; type: 'cursor'; path: string; offset: number };
 

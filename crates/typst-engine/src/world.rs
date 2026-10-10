@@ -1,10 +1,13 @@
 //! An in-memory Typst [`World`]: files and fonts are pushed in from JS. No
 //! fonts are embedded, which keeps the wasm small; the JS side loads them as
-//! separate assets.
+//! separate assets. Packages are pushed in as files too; the world only
+//! remembers which ones a compilation asked for but did not have.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::sync::Mutex;
 
-use typst::diag::{FileError, FileResult};
+use typst::diag::{FileError, FileResult, PackageError};
+use typst::syntax::package::PackageSpec;
 use typst::foundations::{Bytes, Datetime, Duration};
 use typst::syntax::{FileId, RootedPath, Source, VirtualPath, VirtualRoot};
 use typst::text::{Font, FontBook};
@@ -21,6 +24,11 @@ pub struct MemoryWorld {
     book: LazyHash<FontBook>,
     fonts: Vec<Font>,
     files: HashMap<FileId, File>,
+    /// Packages with at least one file present.
+    packages: HashSet<PackageSpec>,
+    /// Packages a compilation requested that are not in `packages`. Behind a
+    /// mutex because `World` methods take `&self` and must be `Sync`.
+    missing: Mutex<HashSet<PackageSpec>>,
     main: FileId,
 }
 
@@ -31,6 +39,8 @@ impl MemoryWorld {
             book: LazyHash::new(FontBook::new()),
             fonts: Vec::new(),
             files: HashMap::new(),
+            packages: HashSet::new(),
+            missing: Mutex::new(HashSet::new()),
             main: file_id("/main.typ").expect("valid path"),
         }
     }
@@ -50,6 +60,7 @@ impl MemoryWorld {
     /// Sets the text of a source file. Reuses the existing [`Source`] so that
     /// Typst can reparse incrementally and keep spans of unchanged nodes stable.
     pub fn set_source(&mut self, id: FileId, text: &str) {
+        self.note_package(id);
         match self.files.get_mut(&id) {
             Some(File::Source(source)) => {
                 source.replace(text);
@@ -61,6 +72,7 @@ impl MemoryWorld {
     }
 
     pub fn set_binary(&mut self, id: FileId, data: Vec<u8>) {
+        self.note_package(id);
         self.files.insert(id, File::Binary(Bytes::new(data)));
     }
 
@@ -72,6 +84,34 @@ impl MemoryWorld {
         self.main = id;
     }
 
+    /// The packages requested since the last call that have no files, as
+    /// `@namespace/name:version` strings, sorted.
+    pub fn take_missing_packages(&mut self) -> Vec<String> {
+        let missing = std::mem::take(self.missing.get_mut().expect("not poisoned"));
+        let mut specs: Vec<String> = missing.iter().map(ToString::to_string).collect();
+        specs.sort();
+        specs
+    }
+
+    fn note_package(&mut self, id: FileId) {
+        if let VirtualRoot::Package(spec) = id.get().root() {
+            self.packages.insert(spec.clone());
+        }
+    }
+
+    /// The error for a file that is not there. A file of a package that has
+    /// no files at all is recorded as a missing package.
+    fn not_found(&self, id: FileId) -> FileError {
+        let rooted = id.get();
+        match rooted.root() {
+            VirtualRoot::Package(spec) if !self.packages.contains(spec) => {
+                self.missing.lock().expect("not poisoned").insert(spec.clone());
+                FileError::Package(PackageError::NotFound(spec.clone()))
+            }
+            _ => FileError::NotFound(rooted.vpath().get_without_slash().into()),
+        }
+    }
+
     /// The already loaded source, without going through the `World` error path.
     pub fn loaded_source(&self, id: FileId) -> Option<&Source> {
         match self.files.get(&id) {
@@ -81,23 +121,30 @@ impl MemoryWorld {
     }
 }
 
-/// Maps a JS-facing path like `/main.typ` to an interned project file id.
+/// Maps a JS-facing path to an interned file id: `/main.typ` is a project
+/// file, `@preview/name:0.1.0/lib.typ` a file of a package.
 pub fn file_id(path: &str) -> Option<FileId> {
-    let vpath = VirtualPath::new(path).ok()?;
-    Some(RootedPath::new(VirtualRoot::Project, vpath).intern())
+    let (root, vpath) = match path.strip_prefix('@') {
+        Some(rest) => {
+            let (namespace, rest) = rest.split_once('/')?;
+            let slash = rest.find('/')?;
+            let spec: PackageSpec = format!("@{namespace}/{}", &rest[..slash]).parse().ok()?;
+            (VirtualRoot::Package(spec), &rest[slash..])
+        }
+        None => (VirtualRoot::Project, path),
+    };
+    let vpath = VirtualPath::new(vpath).ok()?;
+    Some(RootedPath::new(root, vpath).intern())
 }
 
-/// The inverse of [`file_id`] for project files; `None` for package files.
-pub fn file_path(id: FileId) -> Option<String> {
+/// The inverse of [`file_id`].
+pub fn file_path(id: FileId) -> String {
     let rooted = id.get();
+    let path = rooted.vpath().get_with_slash();
     match rooted.root() {
-        VirtualRoot::Project => Some(rooted.vpath().get_with_slash().to_string()),
-        VirtualRoot::Package(_) => None,
+        VirtualRoot::Project => path.to_string(),
+        VirtualRoot::Package(spec) => format!("{spec}{path}"),
     }
-}
-
-fn not_found(id: FileId) -> FileError {
-    FileError::NotFound(id.get().vpath().get_without_slash().into())
 }
 
 impl World for MemoryWorld {
@@ -117,7 +164,7 @@ impl World for MemoryWorld {
         match self.files.get(&id) {
             Some(File::Source(source)) => Ok(source.clone()),
             Some(File::Binary(_)) => Err(FileError::InvalidUtf8),
-            None => Err(not_found(id)),
+            None => Err(self.not_found(id)),
         }
     }
 
@@ -125,7 +172,7 @@ impl World for MemoryWorld {
         match self.files.get(&id) {
             Some(File::Binary(bytes)) => Ok(bytes.clone()),
             Some(File::Source(source)) => Ok(Bytes::from_string(source.text().to_string())),
-            None => Err(not_found(id)),
+            None => Err(self.not_found(id)),
         }
     }
 

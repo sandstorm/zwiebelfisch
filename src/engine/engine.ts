@@ -3,7 +3,8 @@ import init, { Engine as WasmEngine, type InitInput } from './wasm/typst_engine'
 /**
  * The Typst compiler, SVG renderer and preview hit-testing (Rust → wasm).
  *
- * Paths are project paths like `/main.typ`. Offsets are UTF-16 code units,
+ * Paths are project paths like `/main.typ`, or package paths like
+ * `@preview/name:0.1.0/lib.typ` (see `withPackages`). Offsets are UTF-16 code units,
  * pages are 0-based, and coordinates are points from the page's top-left.
  * The engine keeps the last successfully compiled document for hit-testing.
  */
@@ -24,6 +25,11 @@ export interface CompileResult {
   /** Empty when compilation failed. */
   pages: Page[];
   diagnostics: Diagnostic[];
+  /**
+   * Imported packages (`@namespace/name:version`) of which the engine has no
+   * files. Add their files and compile again; `withPackages` does that.
+   */
+  missingPackages: string[];
 }
 
 export interface Page {
@@ -38,7 +44,7 @@ export interface Diagnostic {
   severity: 'error' | 'warning';
   message: string;
   hints: string[];
-  /** null when the diagnostic has no location in a project file. */
+  /** null when the diagnostic has no location in a file. */
   path: string | null;
   from: number;
   to: number;
