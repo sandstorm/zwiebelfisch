@@ -19,6 +19,7 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
 | `698c971`..`fff6775` | Hosts wave (H1 visual-view, H2 source-view + preview, H3 workbench + extension API), merged and integrated: `ExtensionContext { subscriptions, project, workbench, visualView, sourceView, preview, services }`; one `Disposable` + `EventEmitter` in `core/`; the widget composes `builtinExtensions` in `src/typst-editor/typst-editor.ts`; `ui/` holds FieldPopover, ToolbarMenu, FloatingBar. Built-in modules still in `hosts/*/builtins/`, features still in `features/` |
 | `1245fc5`..`79bd3d1` | Slices merged: 21 extensions in `src/extensions/`, `features/` and `hosts/*/builtins/` gone; `src/testing/` (test-only composition); `registerStyleSheet` + per-extension CSS; `core/uploads`, `core/gitlab-protocol`; `{ priority }` on registerNode / registerMark / registerBoxRenderer |
 | `d4641ef`..`4cf2443` | Wave 1: presence out of core + hosts; `registerDocumentLinkProvider` (merged, priority) read by both views; `preview-sync`; no services (`registerFileDecorationProvider`, `registerSourceControl`, `versions` → `source-control`, "Save to GitLab…"); one "Download PDF" + options popover, `registerPdfExportOption`, `exportPdf({ options })`; IronCalc dark mode (palette from tokens, resize nudge redraws the canvas) |
+| `6f11f47`..`2399f41` | Wave 2: public extension API `createTypstEditor({ extensions: (builtins) => [...], settings })`; settings via `contributes.configuration` + `workspace.getConfiguration` (`pdfExport.download`, `files.panel`, `previewSync.followCursor`, `workbench.theme`); string async commands; `<typst-editor settings='{…}'>` thin adapter; preview toolbar `group` + `order`; UI services: messages, `showInputBox` / `showQuickPick` (FieldPopover deleted), `registerMenuItem` (`editor/title`, `file/newFile`, `explorer/context`) |
 
 ## Next steps, in order
 
@@ -124,7 +125,9 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    (today list order; "Follow cursor" now first); a link's `command` → VS Code `Command { title,
    command, arguments }` once commands are string ids; two identical `PdfEntry` types (host +
    comments/model); `tests/e2e/collab.spec.ts` still checks `.typst-preview__presence` (always 0 now);
-   no unit test for the source-control extension wiring. User to check by eye: IronCalc dark palette.
+   no unit test for the source-control extension wiring; status bar items: `alignment` + `priority`.
+   User to check by eye: IronCalc dark palette, new file panel (Rename / Delete in the context menu),
+   "Upload image…" after the quick pick (Safari user activation).
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Rules wave also does:** core `onChange` → `onDidChange: Event` + `Disposable` everywhere
    (`Project`, `TypstDocument`, …) (user: yes).
