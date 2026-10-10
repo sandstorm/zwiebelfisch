@@ -1,6 +1,6 @@
 # Comments as `drafting` margin notes in the Typst source
 
-Status: open
+Status: in-progress (part 1/2 done: engine fixture, Visual view notes, Comment action; old system removal pending)
 Depends on: comments (done), visual-view-compiled-boxes, multi-file-assets-packages
 Touches: src/comments/**, src/visual-view/** (new TipTap node), src/editor/**, src/collab/shared-comments.ts, ARCHITECTURE.md, docs/embedding.md
 

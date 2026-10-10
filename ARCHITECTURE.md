@@ -41,6 +41,8 @@ src/
     asset-view.ts           read-only image/data view with "Insert into …"
     project-renderings.ts   what a document's Visual view renders and inserts (snippets, image URLs, uploads)
     version-controls.ts     "Save version" button, commit message, outcome; Show changes follows the last commit (GitLab rooms)
+    comment-action.ts       "Comment" button / Ctrl+Alt+M: a drafting margin note at the selection of the active view
+    add-margin-note.ts      addMarginNote(text, range): the source edits for a new note and the drafting import
     paths.ts, insert-image.ts, upload.ts   pure helpers (names → paths, Typst path resolution, #image insertion, uploads)
   element/                  <typst-editor> custom element (shadow DOM) around createTypstEditor
   index.ts                  public API of the package; registers <typst-editor>
@@ -329,7 +331,37 @@ worker → main   {id, type:'compile', result} | {id, type:'click', jump} | {id,
   The worker (`FileReceiver`) removes paths missing since the previous call, and Typst diffs the
   text itself. Package files are not part of the map and stay loaded.
 
-### Review comments (`src/comments`)
+### Margin notes (`src/editor/comment-action.ts`, `add-margin-note.ts`, `src/visual-view/margin-notes.ts`)
+
+Comments are `drafting` margin notes in the Typst source (`@preview/drafting:0.2.2`):
+`#margin-note[note]` (point) and `#margin-note[text][note]` (range: highlights `text`). The
+preview shows what the compiler draws; git, diffs and collaboration carry them as text.
+
+```ts
+addMarginNote(text, {from, to}) → {changes: TextChange[], note} | null   // note: offset of the new (empty) body
+new CommentAction(root, () => {document, view: {selection(), reveal(), editNote?()}} | null)   .button  .comment()  .destroy()
+```
+
+- **`addMarginNote`** (pure): a selection becomes `#margin-note[selection][]` if the result
+  parses as one well-formed call in markup (Lezer); else (half of `*bold*`, two paragraphs) a
+  point note `#margin-note[]` at the selection's end; null where none fits (inside code). The
+  import is ensured exactly once: an existing drafting import (any version) is kept (`*`, or
+  `margin-note` among its items), extended (`, margin-note`; `: margin-note` on a bare module
+  import), else `#import "@preview/drafting:0.2.2": margin-note` goes first in the file.
+- **`CommentAction`**: the widget's "Comment" button and Ctrl/Cmd+Alt+M (captured at the
+  widget root). Works on the shown `.typ` file in the current view (`EditingViews.shown()`),
+  applies the edits as one `document.change`, then `VisualView.editNote(note)` opens the new
+  note's field, or the Source view puts the caret into `[]`.
+- **Visual view** (`margin-notes.ts`): see `marginNote` / `noteRange` below. A bubble shows the
+  note's markup; clicking it swaps in a text field (Enter or blur writes it back, with brackets
+  that have no partner escaped; Escape cancels). A point note's edit replaces the body inside
+  its `src`; a range note's replaces its mark (`note` attribute). Everything else stays as written.
+- Engine tests compile both forms against the real package (`src/engine/fixtures/drafting-0.2.2`).
+
+### Review comments (`src/comments`) — being replaced by margin notes
+
+The "Comment" button now adds margin notes; the panel and sidecar JSON below remain until
+they are removed (docs/todo/comments-drafting.md).
 
 ```ts
 new Comments(document, { json?, user?: {name} })
@@ -366,6 +398,7 @@ new VisualView(parent, document, { renderer?, assets? })
 .reveal(from, to)    // select exactly what shows source range from..to (caret if empty)
 .setHighlights(layer, highlights)   // source ranges → inline decorations (sourceToPos, end with bias -1)
 .selection() → {from, to}           // posToSource; the end with bias -1
+.editNote(offset) → boolean         // opens the field of the margin note whose source holds offset
 .showChanges(base | null)   // track changes against base, following every edit
 .destroy()
 ```
@@ -391,6 +424,9 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     blocks. `table.layout` (an anchor attribute) is the source around the cells.
   - **Inline:** text with `bold` / `italic` / `link` (Tiptap's link mark, `href`) marks;
     `softBreak` (a source newline that renders as a space); `hardBreak` (`\`); `rawInline`.
+  - **Margin notes:** `marginNote` (inline atom, `src` = the whole `#margin-note(..)[note]`
+    call, printed verbatim) and the `noteRange` mark (`call` = source before the text's `[`,
+    `note` = the note's markup; printed as `call[` … `][note]`; `excludes: ''`, so notes nest).
   - The `typstSource` mark remembers how escapes and shorthands (`\*`, `--`) were written.
   - Anchor attributes are added as Tiptap global attributes and are never rendered.
   - `project()` takes the schema as a parameter. Tiptap builds its own schema instance, and nodes
@@ -405,6 +441,9 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - Inline, `#link("plain string")[one paragraph]` puts a `link` mark on its projected content
     (the call syntax is hidden); a bare URL is text with a `link` mark whose `href` is the text.
     Other links stay `rawInline`.
+  - `#margin-note(..named)[note]` becomes a `marginNote`, `#margin-note(..named)[text][note]`
+    (non-empty `text`, one paragraph) puts a `noteRange` mark on the projected `text`. Margin
+    note calls count as prose. Other forms stay `rawInline`.
   - A table cell's markup is segmented like the document (paragraphs, lists, headings); an empty
     cell is an empty paragraph.
   - A list item whose source has nested content keeps its body as a `rawBlock`.
