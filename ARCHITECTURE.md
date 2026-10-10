@@ -195,38 +195,52 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
 
 ### Folder rules
 
-- **Modules.** The module boundary is the core / host / extension / ui folder, not every folder:
-  `core/<name>/`, `hosts/<name>/`, `extensions/<name>/`, `ui/<name>/`, `typst-editor/`,
-  `typst-editor-element/`, `testing/`. Each has one entry file named like it (`preview/preview.ts`; a
-  stylesheet may be `files/files.css`), inside its folder (no sibling folders). `core/`, `ui/`, `hosts/` and
-  `extensions/` only group.
-- **Inside a module everything is open.** Layer and concept subfolders (`model/`, `visual-view/`,
-  `projection/`, `worker/`; never generic ones like `utils/`) have no entry files of their own: files import
-  each other directly (`./model/label-index`).
-- **From outside a module, only its entry file may be imported.**
-  ESLint enforces this (`local/entry-imports`, `eslint-rules/entry-imports.js`); only TypeScript and
-  CSS sources count (not the generated `wasm/`, `fonts/` or the `fixtures/`). The exceptions are
-  listed once, with reasons, in `eslint.config.js` (`boundaries.exceptions`):
-  - `extensions/collaboration/model/shared-project.ts` and `in-process.ts` — the server's tests, which build
-    rooms from the client's SharedProject and wire their Y.Docs together in-process.
-- **No re-exports** (`local/no-re-exports`, `eslint-rules/no-re-exports.js`): a file exports only what it
-  defines; `export … from` and exporting an imported name are errors everywhere but `src/index.ts`, the package
-  entry (`reExportExceptions` in `eslint.config.js`). A module's entry defines its API; its internal files import
-  the API's types from it and are never forwarded. An outside caller needing an internal name means the code moves
-  into the entry, or the concept is a module of its own (`core/typst-packages`, `hosts/projection`).
-- **Layers** (`local/dependencies` over resolved files, the list `layers` in `eslint.config.js`; package imports
-  with `no-restricted-imports`; docs/2026_10_10_extensions-architecture.md, "Dependency rules"; tests included):
-  `hosts/` never import `extensions/`, `testing/` or `typst-editor/`: a host's tests use its own nodes plus specs
-  defined in the test. Extensions never import each other. Only `*.test.ts` files import `testing/`, which composes
-  the built-in extensions; tests of the built-ins together (the projection's fixtures, the toolbar's items, the
-  block nodes) are the widget's, `typst-editor/typst-editor.*.test.ts`. An extension's tests needing other
-  extensions (a heading to put a label on) take them from `testing/` too, never from the other extension. `core/`
-  imports only `core/` and no Yjs (`yjs`, `y-*`, `@hocuspocus/*`); `core/` and every extension's `model/` import no
-  editor library (`@tiptap/*`, `prosemirror-*`, `@codemirror/*`, `codemirror`) and use no DOM, neither as values
-  nor as types (`no-restricted-globals`, `@typescript-eslint/no-restricted-types`); a `model/` imports no view
-  folder of its extension. No cycles between modules (`mise run quality:module-cycles`, part of `quality`).
+All checked by `mise run quality` (ESLint with the rules in `eslint-rules/`, configured in `eslint.config.js`;
+`quality:top-comments`; `quality:module-cycles`). The exceptions are listed there, each with its reason, and should
+shrink, not grow.
+
+- **Modules.** The module boundary is the core / host / extension / ui folder, not every folder: `core/<name>/`,
+  `hosts/<name>/`, `extensions/<name>/`, `ui/<name>/`, and `typst-editor/`, `typst-editor-element/`, `testing/`.
+  `core/`, `hosts/`, `extensions/` and `ui/` only group. A module has one entry file, inside its folder (no sibling
+  folders), named after the folder where that reads well (all are today: `preview/preview.ts`; a stylesheet may be
+  `files/files.css`). `src/index.ts` is the package's entry.
+- **The entry defines the API.** What other modules use is declared in the entry, the most important part at the
+  top, under a top comment that says why the module exists. The internal files hold the implementation; they import
+  the API's types from the entry (`../visual-view`) and are never forwarded.
+- **No re-exports** (`local/no-re-exports`): a file exports only what it defines. `export … from`, `export *` and
+  exporting an imported name are errors everywhere but `src/index.ts`, which gathers the public API
+  (`reExportExceptions`). An outside caller that needs an internal name is a sign that the code belongs in the
+  entry, or that the concept is a module of its own (as `core/typst-packages`, `core/engine-assets` and
+  `hosts/projection` became).
+- **Inside a module everything is open.** Layer and concept subfolders (`model/`, `visual-view/`, `nodes/`,
+  `worker/`; never generic ones like `utils/` or `impl/`) have no entry files of their own: files import each other
+  directly (`./model/label-index`). A file named like its subfolder (`visual-view/visual-view.ts`) is no entry,
+  just the subfolder's main file.
+- **From outside a module, only its entry** (`local/entry-imports`). Only TypeScript and CSS sources count (not the
+  generated `wasm/`, `fonts/` or the `fixtures/`). Exceptions (`boundaries.exceptions`): the server's tests import
+  `extensions/collaboration/model/shared-project.ts` and `in-process.ts` to build rooms from the client's
+  SharedProject, wired in-process.
+- **Layers** (`local/dependencies` on resolved files, the list `layers`; package imports with
+  `no-restricted-imports`; the DOM with `no-restricted-globals` and `@typescript-eslint/no-restricted-types`; tests
+  included; see docs/2026_10_10_extensions-architecture.md, "Dependency rules"):
+
+  | Files | May not import / use |
+  |---|---|
+  | `core/**` | anything outside `core/`; Yjs (`yjs`, `y-*`, `@hocuspocus/*`); editor libraries; the DOM |
+  | `extensions/<name>/model/**` | editor libraries (`@tiptap/*`, `prosemirror-*`, `@codemirror/*`, `codemirror`); the DOM; the extension's view folders (`visual-view/`, `source-view/`, `preview/`, `workbench/`) |
+  | `hosts/**` | `extensions/`, `typst-editor/`, `testing/` (a host's tests use its own nodes and specs) |
+  | `extensions/<a>/**` | `extensions/<b>/` (extensions meet through core models or a host's generic contribution point) |
+  | anything but `*.test.ts` and `testing/` | `testing/` |
+
+  The DOM means its globals as values and as types (`window`, `document`, `HTMLElement`, `File`, …; `fetch`,
+  `Blob` and streams are no DOM, workers have them). Tests of the built-ins together (the projection's fixtures, the
+  toolbar's items, the block nodes) are the widget's, `typst-editor/typst-editor.*.test.ts`; an extension's tests
+  needing other extensions (a heading to put a label on) take them from `testing/`, never from the other extension.
+- **No cycles between modules** (`mise run quality:module-cycles`): type imports count, tests do not (an
+  extension's tests use `testing/`, which composes the extensions). Cycles inside a module are its own business
+  (the Visual view's entry and its `nodes/` and `toolbar/` import each other).
 - **Top comments.** Every source file starts with a comment: its context, `See <entry file /
-  ARCHITECTURE.md section>`, or `Tests for X` (`mise run quality:top-comments`, part of `quality`).
+  ARCHITECTURE.md section>`, or `Tests for X` (`mise run quality:top-comments`).
 - Other languages and separate programs stay at the top level: `crates/`, `server/`, `demo/`,
   `examples/`.
 
