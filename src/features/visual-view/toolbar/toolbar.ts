@@ -204,29 +204,7 @@ export class Toolbar {
     const commenting = comment && commentAction(comment);
     if (commenting) this.root.append(this.group([commenting]));
     parent.prepend(this.root);
-    // the text column: the floating bars scroll with the text
-    const column = editor.view.dom.parentElement!;
-    // bold, italic, code and link only float above a selection (or a link holding the cursor)
-    this.bubble = this.floatingBar(
-      column,
-      'Selection',
-      [...MARKS, link, ...(commenting ? [commenting] : [])],
-      () => (this.linkAtCaret || this.linkPopover.isOpen || hasTextSelection(editor) || editor.isActive('link') ? selectionCoords(editor) : null),
-      // its link popover takes the focus from the text: the bar (holding it) stays
-      () => this.linkPopover.isOpen,
-    );
-    // Escape in the link popover: back to the text (the popover closed; the bar follows the text again)
-    this.bubble.element.addEventListener('keydown', (event) => {
-      if (event.key === 'Escape') editor.commands.focus();
-    });
-    this.linkPopover = new FieldPopover(this.bubble.element, {
-      label: 'Link',
-      field: 'URL',
-      placeholder: 'https://…',
-      apply: (href) => applyLink(editor, href),
-      remove: () => editor.chain().focus().extendMarkRange('link').unsetLink().run(),
-    });
-    this.floatingBar(column, 'Table', [...TABLE_EDITS, HEADER_ROW], () => (this.bubble.element.hidden ? tableAnchor(editor) : null));
+    [this.bubble, this.linkPopover] = this.floatingBars([...MARKS, link, ...(commenting ? [commenting] : [])]);
     editor.view.dom.addEventListener('keydown', this.linkShortcut);
     editor.on('transaction', this.refresh);
     editor.on('focus', this.refresh);
@@ -327,11 +305,40 @@ export class Toolbar {
   }
 
   /**
-   * A bar of `actions` floating in `column` above `anchor()`, re-placed after every transaction;
+   * The bars floating in the text column (they scroll with the text): `marks` (bold, italic, code,
+   * link, comment) only above a selection or a link holding the cursor, with the link popover in
+   * it; the table edits above a table holding the cursor while that one is hidden.
+   */
+  private floatingBars(marks: Action[]): [FloatingBar, FieldPopover] {
+    const editor = this.editor;
+    const bubble = this.floatingBar({
+      label: 'Selection',
+      actions: marks,
+      anchor: () => (this.linkAtCaret || popover.isOpen || hasTextSelection(editor) || editor.isActive('link') ? selectionCoords(editor) : null),
+      // its link popover takes the focus from the text: the bar (holding it) stays
+      keep: () => popover.isOpen,
+    });
+    // Escape in the link popover: back to the text (the popover closed; the bar follows the text again)
+    bubble.element.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') editor.commands.focus();
+    });
+    const popover = new FieldPopover(bubble.element, {
+      label: 'Link',
+      field: 'URL',
+      placeholder: 'https://…',
+      apply: (href) => applyLink(editor, href),
+      remove: () => editor.chain().focus().extendMarkRange('link').unsetLink().run(),
+    });
+    this.floatingBar({ label: 'Table', actions: [...TABLE_EDITS, HEADER_ROW], anchor: () => (bubble.element.hidden ? tableAnchor(editor) : null) });
+    return [bubble, popover];
+  }
+
+  /**
+   * A bar of `actions` floating above `anchor()`, re-placed after every transaction;
    * shown while the text has the focus, something in the bar has it, or `keep()` says so.
    */
-  private floatingBar(column: HTMLElement, label: string, actions: Action[], anchor: () => Anchor, keep = () => false): FloatingBar {
-    const bar = new FloatingBar(column, label, actions.map((action) => this.button(action)));
+  private floatingBar({ label, actions, anchor, keep = () => false }: { label: string; actions: Action[]; anchor: () => Anchor; keep?: () => boolean }): FloatingBar {
+    const bar = new FloatingBar(this.editor.view.dom.parentElement!, label, actions.map((action) => this.button(action)));
     this.floating.push(bar);
     const focused = () => this.editor.isFocused || bar.element.contains(bar.element.ownerDocument.activeElement) || keep();
     this.refreshers.push(() => bar.show(focused() ? anchor() : null));
