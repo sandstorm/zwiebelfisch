@@ -49,10 +49,9 @@ export class SharedProject {
 
   /**
    * Shares the project's current set of Typst files: binds new documents,
-   * deletes what is gone locally. Runs after every create / rename / delete;
-   * call it after `Project.replace`, which does not report one.
+   * deletes what is gone locally. Runs after every create / rename / delete.
    */
-  sync(): void {
+  private sync(): void {
     const previous = [...this.bindings.values()];
     this.ydoc.transact(() => {
       for (const path of this.project.paths()) {

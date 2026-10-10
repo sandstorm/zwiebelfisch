@@ -351,15 +351,9 @@ class Widget {
   }
 
   replaceFiles(files: ProjectFiles): void {
-    this.project.replace(files);
-    this.collaboration?.sync();
-    this.views.retain(this.documents());
-    this.open(this.project.has(this.active) ? this.active : this.project.main);
-    if (!this.project.has(this.lastSource)) this.lastSource = this.project.main;
-    this.changes.refresh();
-    this.labels.refresh();
-    this.styles.refresh();
-    this.refresh();
+    this.project.replace(files); // listeners (also `changed`) hear about every file
+    // shown again: a file view shows the new content of a replaced file (a spreadsheet)
+    this.open(this.active);
   }
 
   destroy(): void {

@@ -77,11 +77,6 @@ export class Collaboration {
     return new Collaboration(ydoc, provider.awareness, shared, { provider, files: roomFiles(options) });
   }
 
-  /** Shares the project's current set of files (call after replacing them through the API). */
-  sync(): void {
-    this.sharedProject.sync();
-  }
-
   /** Tells the others where the local user's selection is (a source range in `path`), or nowhere. */
   setCursor(path: string | null, range?: { from: number; to: number }): void {
     this.cursors?.setLocal(path, range);

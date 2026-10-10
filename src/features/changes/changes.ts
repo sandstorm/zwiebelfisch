@@ -122,11 +122,6 @@ export class ChangeTracking {
     this.render();
   }
 
-  /** Re-renders every file, e.g. after files were replaced without a structural change event. */
-  refresh(): void {
-    this.render();
-  }
-
   show(shown: boolean): void {
     this.shown = shown;
     this.render();

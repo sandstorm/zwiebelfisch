@@ -64,12 +64,11 @@ describe('SharedProject', () => {
     expect(sharedPaths(a.ydoc)).toEqual([MAIN]);
   });
 
-  it('sync() shares files replaced through the API', () => {
+  it('shares files replaced through the API', () => {
     const a = client({ [MAIN]: '', '/old.typ': 'old' });
     const b = client({}, new Y.Doc());
     connect(a.ydoc, b.ydoc);
     a.project.replace({ '/new.typ': 'new' });
-    a.shared.sync();
     expect(b.project.has('/old.typ')).toBe(false);
     expect(b.project.document('/new.typ')!.text).toBe('new');
   });

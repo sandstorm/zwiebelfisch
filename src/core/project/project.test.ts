@@ -121,6 +121,21 @@ describe('Project', () => {
     expect(main!.text).toBe('= Main');
   });
 
+  it('tells listeners what replacing changed: deleted, created, updated files', () => {
+    const p = project();
+    const logo = p.content('/logo.png');
+    const listener = vi.fn();
+    p.onChange(listener);
+    const csv = new Uint8Array([7]);
+    p.replace({ '/chapter.typ': 'C new', '/extra.typ': 'E', '/logo.png': logo!, '/data.csv': csv });
+    expect(listener.mock.calls.map(([change]) => change)).toEqual([
+      { kind: 'delete', path: '/zeta.typ' },
+      { kind: 'update', path: '/chapter.typ', content: 'C new' },
+      { kind: 'create', path: '/extra.typ', content: 'E' },
+      { kind: 'update', path: '/data.csv', content: csv },
+    ]);
+  });
+
   it('lists the other files without the main file', () => {
     expect(Object.keys(project().otherFiles())).toEqual(['/chapter.typ', '/zeta.typ', '/data.csv', '/logo.png']);
   });

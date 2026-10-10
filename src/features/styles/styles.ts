@@ -79,13 +79,6 @@ export class StyleIndex {
     };
   }
 
-  /** Rescans every file: after `Project.replace`, which tells no listener. */
-  refresh(): void {
-    this.scans.clear();
-    for (const path of this.project.paths()) this.rescan(path);
-    this.publish();
-  }
-
   destroy(): void {
     this.unsubscribe();
     this.listeners.clear();

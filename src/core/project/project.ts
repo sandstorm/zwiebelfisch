@@ -121,18 +121,17 @@ export class Project {
   }
 
   /**
-   * Replaces all files but the main one (its entry in `files` is ignored).
-   * Documents of paths that stay are kept and get the new text as one edit.
+   * Replaces all files but the main one (its entry in `files` is ignored),
+   * telling listeners as `apply` would: a `delete` per file that is gone, a
+   * `create` per new one, an `update` per changed one. Documents of paths that
+   * stay are kept and get the new text as one edit.
    */
   replace(files: ProjectFiles): void {
     for (const path of [...this.entries.keys()]) {
-      if (path !== this.main && !(path in files)) this.remove(path);
+      if (path !== this.main && !(path in files)) this.removeAndEmit(path);
     }
     for (const [path, content] of Object.entries(files)) {
-      if (path === this.main) continue;
-      const document = this.document(path);
-      if (document && typeof content === 'string') document.setText(content, 'api');
-      else this.add(path, content);
+      if (path !== this.main) this.put(path, content);
     }
   }
 
@@ -157,6 +156,26 @@ export class Project {
       return 'Typst files must keep the .typ ending, and other files cannot get it.';
     }
     return this.checkNew(to);
+  }
+
+  /** Sets the content of `path` for `replace`: an edit where the kind of entry stays, else a new file. */
+  private put(path: string, content: FileContent): void {
+    const entry = this.entries.get(path);
+    if (entry && 'document' in entry && typeof content === 'string') return entry.document.setText(content, 'api');
+    const becomesDocument = fileKind(path) === 'typst' && typeof content === 'string';
+    if (entry && 'content' in entry && !becomesDocument) {
+      if (entry.content === content) return;
+      this.entries.set(path, { content });
+      return this.emit({ kind: 'update', path, content });
+    }
+    if (entry) this.removeAndEmit(path);
+    this.add(path, content);
+    this.emit({ kind: 'create', path, content });
+  }
+
+  private removeAndEmit(path: string): void {
+    this.remove(path);
+    this.emit({ kind: 'delete', path });
   }
 
   private add(path: string, content: FileContent): void {

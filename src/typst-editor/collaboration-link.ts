@@ -48,11 +48,6 @@ export class CollaborationLink {
     this.collaboration?.showCursors(path, views);
   }
 
-  /** Shares the project's current set of files (after they were replaced through the API). */
-  sync(): void {
-    this.collaboration?.sync();
-  }
-
   destroy(): void {
     this.destroyed = true;
     this.collaboration?.destroy();
