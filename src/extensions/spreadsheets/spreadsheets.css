@@ -1,7 +1,12 @@
-/* The spreadsheets extension's styles: The spreadsheet (.ic) file view.
+/* The spreadsheets extension's styles: the spreadsheet (.ic) file view, IronCalc's workbook UI in the dark.
    Registered by spreadsheets.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 /* Spreadsheets (.ic): IronCalc's workbook UI fills the editing column */
 .typst-sheet { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .typst-sheet[hidden] { display: none; }
 .typst-sheet__title { margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--te-border); font-size: 13px; font-weight: 600; color: var(--te-text); }
 .typst-sheet__body { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; color: var(--te-muted); font-size: 13px; }
+/* Dark: workbench/color-scheme.ts sets IronCalc's palette; these are what IronCalc's CSS colors without it */
+.typst-editor[data-scheme='dark'] .typst-sheet .ic-editor-container { background: var(--palette-common-white); }
+.typst-editor[data-scheme='dark'] .typst-sheet .ic-sheet-tab:hover { background-color: var(--palette-grey-50); }
+.typst-editor[data-scheme='dark'] .typst-sheet .ironcalc-cell-handle { border-color: var(--palette-common-white); }
+.typst-editor[data-scheme='dark'] .typst-sheet .ic-db-swatch-row + .ic-db-swatch-row { border-top-color: var(--palette-grey-300); }

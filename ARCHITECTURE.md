@@ -78,8 +78,10 @@ src/                        the widget (TypeScript); the most important API on t
       workbench/            file-panel.ts (FilePanel: header, prompts, uploads), file-navigation.ts ("← previous file"
                             / "next file →"), tree/ (FileTree: rows, keyboard, drag & drop, presence), icons/ (leaf)
     spreadsheets/           spreadsheets: the `.ic` file view; every edit also stores `name.ic.gen.typ`
-      model/                typst-file.ts (spreadsheetTypst → name.ic.gen.typ for Typst, typstPath)
-      workbench/            spreadsheet-view.ts (SpreadsheetView), workbook.ts (React + IronCalc, loaded on demand)
+      model/                typst-file.ts (spreadsheetTypst → name.ic.gen.typ for Typst, typstPath), dark-theme.ts
+                            (darkThemeVariables: IronCalc's palette from the widget's tokens)
+      workbench/            spreadsheet-view.ts (SpreadsheetView), workbook.ts (React + IronCalc, loaded on demand),
+                            color-scheme.ts (followColorScheme: the dark palette while data-scheme is dark)
     versions/               versions: "Save version" next to the tabs once the `collaboration` service has a GitLab room
       model/                version-status.ts (versionStatus: the outcome as a status line)
       workbench/            version-controls.ts (VersionControls: button, commit message, outcome)
@@ -1132,6 +1134,9 @@ spreadsheets(): TypstExtension   // registerFileView('spreadsheet', SpreadsheetV
 // model/ (pure):
 spreadsheetTypst(model, 'budget.ic') → Typst source   // `values` and `sheets` of the visible sheets
 typstPath('/budget.ic') → '/budget.ic.gen.typ'
+darkThemeVariables(color(token)) → { '--palette-…': color }   // IronCalc's theme variables for a dark widget
+// workbench/color-scheme.ts:
+followColorScheme(container, onDidChange) → Disposable   // sets / takes away the dark variables as data-scheme changes
 ```
 
 - The view only reports edits; the extension's entry (`save`) decides what the project gets: the `.ic` file and,
@@ -1164,6 +1169,22 @@ typstPath('/budget.ic') → '/budget.ic.gen.typ'
     wrap / overflow into neighbouring cells, double borders (drawn as one thick line).
 - `model/typst-file.ts` reads the model only through `SheetSource` (a slice of IronCalc's `Model`);
   its test runs the real IronCalc wasm and compiles the result with the Typst engine.
+- Dark mode: IronCalc 0.8 has no dark theme, but its CSS and its grid canvas read ~60 custom properties
+  (`--palette-*`, defaults on `.ic-root`; its `setThemeVariables` is not exported, so the extension sets them on the
+  container itself). While the widget's `data-scheme` is `dark` (see "Dark mode"), `followColorScheme` sets
+  `darkThemeVariables` there: the neutrals (cell background, grid lines, headers, default text, IronCalc's grey ladder
+  for its toolbar, menus and dialogs) from the widget's `--te-*` tokens; IronCalc's orange accent and status colors
+  stay; colors a file sets on cells stay. The canvas cannot resolve `light-dark(..)` / `var(..)`, so each token is
+  resolved first (`getComputedStyle` of a hidden element colored `var(--te-x)` in the widget: an embedder's token
+  overrides count). Light: the variables are removed, IronCalc's own apply. Set before the first render, and on every
+  change of `data-scheme` (a MutationObserver; setting the same value is ignored).
+  - The grid reads its colors only when its canvas object is built (`getComputedStyle` of `.ic-root` in the
+    constructor), which the worksheet does on every render. A change is applied by a synthetic window `resize` (the
+    worksheet's own listener re-renders it); re-rendering the `IronCalc` element instead would replace its
+    `workbookState` and lose a cell being edited. The toolbar, menus and dialogs use the variables in CSS and change
+    at once.
+  - `spreadsheets.css` recolors, under `[data-scheme='dark']`, the few places IronCalc's CSS colors without its
+    variables (the cell editor's white background, the sheet tab hover, the fill handle's border).
 - Not yet: `.xlsx`, sharing spreadsheet edits in collaboration rooms (binary: the last save wins).
 
 ### Layout (`src/hosts/workbench/layout/layout.ts`)
@@ -1206,7 +1227,7 @@ new Layout(host, storageKey)   .editor  .preview  .statusBar   // the editing co
   express. With it dark, the preview shows the pages inverted like dark-mode PDF readers do
   (`filter: invert(1) hue-rotate(180deg)` on `.typst-preview__content`, pictures inside turned
   back; the overlays beside it keep their colors), and so are compiled snippets in the Visual view
-  (image files not). The PDF export is unaffected. IronCalc's workbook UI has no dark theme.
+  (image files not). The PDF export is unaffected. IronCalc's workbook UI gets a dark palette from the tokens (see "Spreadsheets").
 - **CodeMirror** (Source view and raw boxes): `codeColors` = CodeMirror's default highlight style
   with its colors from `--te-syn-*` tokens, plus `EditorView.darkTheme` (cursor, selection, gutters,
   panels, tooltips) switched on when the text around the editor resolves light.
