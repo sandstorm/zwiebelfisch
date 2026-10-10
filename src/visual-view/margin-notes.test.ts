@@ -2,7 +2,6 @@
 import './jsdom-setup';
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../document/typst-document';
-import { balanceBrackets } from './margin-notes';
 import { VisualView } from './visual-view';
 
 function setup(text: string) {
@@ -49,6 +48,13 @@ describe('margin notes in the Visual view', () => {
     expect(doc.text).toBe('A #margin-note[key claim][new] here.\n');
   });
 
+  it('escapes a note whose markup would break out of its call', () => {
+    const { doc, bubbles } = setup('A #margin-note[key][old] and #margin-note[p] here.\n\nNext.\n');
+    editBubble(bubbles()[0], 'ends with \\');
+    editBubble(bubbles()[1], 'a // b');
+    expect(doc.text).toBe('A #margin-note[key][ends with \\\\] and #margin-note[a \\// b] here.\n\nNext.\n');
+  });
+
   it('Escape leaves the note unchanged', () => {
     const { doc, bubbles } = setup('Text#margin-note[old].\n');
     editBubble(bubbles()[0], 'changed', 'Escape');
@@ -69,13 +75,5 @@ describe('margin notes in the Visual view', () => {
     expect(view.editNote(source.lastIndexOf('[]') + 1)).toBe(true);
     expect(document.activeElement).toBe(bubbles()[1].querySelector('textarea'));
     expect(view.editNote(0)).toBe(false);
-  });
-});
-
-describe('balanceBrackets', () => {
-  it('escapes brackets without a partner and keeps balanced or escaped ones', () => {
-    expect(balanceBrackets('a [b] c')).toBe('a [b] c');
-    expect(balanceBrackets('a ] b [ c')).toBe('a \\] b \\[ c');
-    expect(balanceBrackets('x \\] y')).toBe('x \\] y');
   });
 });

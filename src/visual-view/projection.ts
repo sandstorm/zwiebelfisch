@@ -28,6 +28,7 @@ import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
 import { typstParser } from 'codemirror-lang-typst/lezer';
+import { noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../document/margin-note-syntax';
 
 /**
  * Nodes created by `project` and not modified since. ProseMirror nodes are
@@ -199,8 +200,7 @@ function toBlock(ctx: Context, segment: Segment, sep: string | null): Node {
 /** Calls that belong in running text: `link(..)`, which is prose like a bare URL, and margin notes. */
 function isProseCall(ctx: Context, node: SyntaxNode): boolean {
   if (node.name !== 'FuncCall') return false;
-  const { name } = callee(ctx, node);
-  return name === 'link' || name === MARGIN_NOTE;
+  return callee(ctx, node).name === 'link' || noteCallSyntax(ctx.source, node) !== null;
 }
 
 /** Projects the blocks of a markup range: `doc` content, a table cell's. */
@@ -397,37 +397,18 @@ function codeNode(context: InlineContext): Node | Placed[] {
   return modelled || raw(context.ctx, context.src, context.marks);
 }
 
-const MARGIN_NOTE = 'margin-note';
-
 /**
- * `#margin-note(..named)[note]` → a `marginNote` atom holding the call;
- * `#margin-note(..named)[text][note]` → `text` (one paragraph, not empty)
- * with a `noteRange` mark holding the source around it. Null for other forms.
+ * `#margin-note(..named)[note]` → a `marginNote` atom holding the call's head
+ * and note; `#margin-note(..named)[text][note]` → `text` with a `noteRange`
+ * mark holding them. Null for calls that are not margin notes.
  */
-function marginNoteCall({ ctx, node, src, marks }: InlineContext): Node | Placed[] | null {
-  const { name, args } = callee(ctx, node);
-  if (name !== MARGIN_NOTE) return null;
-  const blocks = trailingContent(args);
-  if (!blocks) return null;
-  if (blocks.length === 1) return ctx.schema.nodes.marginNote.create({ src }, null, marks);
-  const [text, note] = blocks;
-  const content = children(text.getChild('Markup')!);
-  if (content.length === 0 || content.some((n) => n.name === 'Parbreak')) return null;
-  const mark = ctx.schema.marks.noteRange.create({
-    call: ctx.source.slice(node.from - 1, text.from),
-    note: ctx.source.slice(note.firstChild!.to, note.lastChild!.from),
-  });
-  return inline(ctx, content, mark.addToSet(marks));
-}
-
-/** The one or two closed content blocks ending an argument list whose `(..)` part, if any, holds named arguments only. */
-function trailingContent(args: SyntaxNode[]): SyntaxNode[] | null {
-  const close = args.findIndex((a) => a.name === 'RightParen');
-  const named = close < 0 ? [] : args.slice(1, close);
-  if (close >= 0 && (args[0].name !== 'LeftParen' || !named.every((a) => ['Named', 'Comma', 'Space'].includes(a.name)))) return null;
-  const blocks = args.slice(close + 1);
-  const closed = blocks.every((b) => b.name === 'ContentBlock' && b.firstChild?.name === 'LeftBracket' && b.lastChild?.name === 'RightBracket');
-  return closed && (blocks.length === 1 || (blocks.length === 2 && isClosedContent(blocks[0]))) ? blocks : null;
+function marginNoteCall({ ctx, node, marks }: InlineContext): Node | Placed[] | null {
+  const syntax = noteCallSyntax(ctx.source, node);
+  if (!syntax) return null;
+  const { head, text, note } = syntax;
+  if (!text) return ctx.schema.nodes.marginNote.create({ head, note }, null, marks);
+  const mark = ctx.schema.marks.noteRange.create({ head, note });
+  return inline(ctx, children(text.getChild('Markup')!), mark.addToSet(marks));
 }
 
 /** `#link("url")[text]` with a plain string and non-empty, single-paragraph text; null otherwise. */
@@ -779,7 +760,7 @@ const FORMATTING: Record<string, (mark: Mark, around: Around) => { open: string;
   bold: (_mark, around) => delimitedSyntax('*', 'strong', around),
   italic: (_mark, around) => delimitedSyntax('_', 'emph', around),
   link: (mark) => ({ open: `#link(${quote(mark.attrs.href)})[`, close: ']' }),
-  noteRange: (mark) => ({ open: `${mark.attrs.call}[`, close: `][${mark.attrs.note}]` }),
+  noteRange: (mark) => rangeNoteSyntax(mark.attrs.head, mark.attrs.note),
 };
 
 /** What a formatted span starts and ends with, and the printed characters around it. */
@@ -868,7 +849,7 @@ function inlinePieces(block: Node, start: number): Piece[] {
   const pieces: Piece[] = [];
   let lineStart = true;
   block.forEach((child, offset) => {
-    const original = child.isText ? originalSource(child) : (child.attrs.src as string);
+    const original = child.isText ? originalSource(child) : atomSource(child);
     const text = original ?? escapeMarkup(child.text!.replace(/\n/g, ' '), lineStart);
     const marks = child.marks.filter((m) => m.type.name in FORMATTING);
     pieces.push({ marks, text, escaped: original === null, node: child, pos: start + offset });
@@ -897,6 +878,11 @@ const WORD = /[\p{L}\p{N}_]/u;
 
 function needsFunctionSyntax({ before, after, first, last }: Around): boolean {
   return (before !== undefined && WORD.test(before)) || (after !== undefined && WORD.test(after)) || /^\s/.test(first) || /\s$/.test(last);
+}
+
+/** The source an inline atom prints. */
+function atomSource(atom: Node): string {
+  return atom.type.name === 'marginNote' ? printNoteCall(atom.attrs as { head: string; note: string }) : atom.attrs.src;
 }
 
 /** How a decoded escape or shorthand was written, if its text is unchanged. */

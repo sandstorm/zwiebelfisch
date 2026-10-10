@@ -2,20 +2,21 @@ import { Mark, Node, type Editor } from '@tiptap/core';
 import type { Mark as PMMark, Node as PMNode } from '@tiptap/pm/model';
 import { Plugin, PluginKey, TextSelection } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView, type NodeView } from '@tiptap/pm/view';
-import { typstParser } from 'codemirror-lang-typst/lezer';
+import { NOTE_HEAD, safeNote } from '../document/margin-note-syntax';
 
 /**
  * `drafting` margin notes in the Visual view.
  *
- * - `marginNote`: a point note, `#margin-note(..)[note]`, an inline atom whose
- *   `src` is the whole call (printed verbatim, like a raw inline).
+ * - `marginNote`: a point note, `#margin-note(..)[note]`, an inline atom.
  * - `noteRange`: a range note, `#margin-note(..)[text][note]`, a mark over the
- *   (editable) text that keeps `call` (the source before the text's `[`) and
- *   `note` (the note's markup).
+ *   (editable) text.
+ *
+ * Both keep `head` (the source before the first `[`, as written) and `note`
+ * (the note's markup); `margin-note-syntax` reads and prints the call.
  *
  * Both show a bubble with the note (after the text of a range note). Clicking
  * the bubble edits the note's markup in place; Enter or leaving the field
- * writes it back (unbalanced brackets escaped, so the call stays intact),
+ * writes it back (escaped where needed, so the call stays intact),
  * Escape cancels. Everything outside the note's brackets stays as written.
  */
 export const MarginNote = Node.create({
@@ -25,10 +26,10 @@ export const MarginNote = Node.create({
   atom: true,
   selectable: true,
   addAttributes() {
-    return { src: { default: '#margin-note[]', rendered: false } };
+    return { head: { default: NOTE_HEAD, rendered: false }, note: { default: '', rendered: false } };
   },
   renderHTML({ node }) {
-    return ['span', { class: 'typst-visual__note' }, noteOf(node.attrs.src)];
+    return ['span', { class: 'typst-visual__note' }, node.attrs.note];
   },
   addNodeView() {
     return ({ node, editor, getPos }) => new PointNoteView(node, editor, getPos);
@@ -42,7 +43,7 @@ export const NoteRange = Mark.create({
   inclusive: false,
   excludes: '',
   addAttributes() {
-    return { call: { default: '#margin-note', rendered: false }, note: { default: '', rendered: false } };
+    return { head: { default: NOTE_HEAD, rendered: false }, note: { default: '', rendered: false } };
   },
   renderHTML() {
     return ['mark', { class: 'typst-visual__note-range' }, 0];
@@ -148,7 +149,8 @@ class Bubble {
     if (!field) return;
     this.field = null;
     field.replaceWith(this.text);
-    if (save && field.value !== this.target.note()) this.target.setNote(balanceBrackets(field.value));
+    const note = save && field.value !== this.target.note() ? safeNote(field.value) : null;
+    if (note !== null) this.target.setNote(note);
     this.show();
     const pos = this.target.at();
     if (!refocus || pos === undefined) return;
@@ -170,10 +172,10 @@ class PointNoteView implements NodeView {
   constructor(private node: PMNode, editor: Editor, private readonly getPos: () => number | undefined) {
     const { view } = editor;
     this.bubble = new Bubble(view, {
-      note: () => noteOf(this.node.attrs.src),
+      note: () => this.node.attrs.note,
       setNote: (note) => {
         const pos = this.getPos();
-        if (pos !== undefined) view.dispatch(view.state.tr.setNodeAttribute(pos, 'src', withNote(this.node.attrs.src, note)));
+        if (pos !== undefined) view.dispatch(view.state.tr.setNodeAttribute(pos, 'note', note));
       },
       at: () => {
         const pos = this.getPos();
@@ -197,36 +199,6 @@ class PointNoteView implements NodeView {
   ignoreMutation(): boolean {
     return true;
   }
-}
-
-/** The note's markup in a point note's call: the inside of its last content block. */
-function noteOf(src: string): string {
-  const range = noteRange(src);
-  return range ? src.slice(range.from, range.to) : '';
-}
-
-function withNote(src: string, note: string): string {
-  const range = noteRange(src);
-  return range ? src.slice(0, range.from) + note + src.slice(range.to) : src;
-}
-
-function noteRange(src: string): { from: number; to: number } | null {
-  const block = typstParser.parse(src).topNode.getChild('FuncCall')?.getChild('Args')?.lastChild;
-  if (block?.name !== 'ContentBlock' || block.lastChild?.name !== 'RightBracket') return null;
-  return { from: block.from + 1, to: block.to - 1 };
-}
-
-/** Escapes `[` and `]` without a partner, so the note cannot end (or swallow) its call. */
-export function balanceBrackets(markup: string): string {
-  const open: number[] = [];
-  const escape = new Set<number>();
-  for (let i = 0; i < markup.length; i++) {
-    if (markup[i] === '\\') i++;
-    else if (markup[i] === '[') open.push(i);
-    else if (markup[i] === ']' && open.pop() === undefined) escape.add(i);
-  }
-  for (const i of open) escape.add(i);
-  return [...markup].map((c, i) => (escape.has(i) ? `\\${c}` : c)).join('');
 }
 
 // -------------------------------------------------------------- range note
@@ -259,7 +231,7 @@ function rangeDecorations(doc: PMNode): DecorationSet {
       decorations.push(Decoration.widget(span.to, (view) => rangeBubble(view, span), {
         side: -1,
         marks: [],
-        key: `note:${span.from}:${span.to}:${span.mark.attrs.call}:${span.mark.attrs.note}`,
+        key: `note:${span.from}:${span.to}:${span.mark.attrs.head}:${span.mark.attrs.note}`,
         stopEvent: () => true,
         ignoreSelection: true,
       }));

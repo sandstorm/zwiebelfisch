@@ -180,17 +180,17 @@ describe('margin notes', () => {
   const notes = (doc: Node) => {
     const found: { text: string; marks: string[] }[] = [];
     doc.descendants((node) => {
-      if (node.isText) found.push({ text: node.text!, marks: node.marks.map((m) => `${m.type.name}:${m.attrs.call ?? ''}|${m.attrs.note ?? ''}`) });
+      if (node.isText) found.push({ text: node.text!, marks: node.marks.map((m) => `${m.type.name}:${m.attrs.head ?? ''}|${m.attrs.note ?? ''}`) });
     });
     return found;
   };
 
-  it('projects a point note as a marginNote atom holding the call', () => {
+  it('projects a point note as a marginNote atom holding the head and the note', () => {
     const doc = project('Some text#margin-note[Is this right?] here.\n');
     const paragraph = doc.child(0);
     expect(paragraph.type.name).toBe('paragraph');
     expect(paragraph.child(1).type.name).toBe('marginNote');
-    expect(paragraph.child(1).attrs.src).toBe('#margin-note[Is this right?]');
+    expect(paragraph.child(1).attrs).toEqual({ head: '#margin-note', note: 'Is this right?' });
   });
 
   it('projects a range note as editable text with a noteRange mark', () => {
@@ -206,6 +206,11 @@ describe('margin notes', () => {
   it('makes a line holding only a note a paragraph', () => {
     expect(project('#margin-note[alone]\n').child(0).type.name).toBe('paragraph');
     expect(project('#margin-note[a][b]\n').child(0).type.name).toBe('paragraph');
+  });
+
+  it('keeps a line holding only a margin-note call it does not model a raw block', () => {
+    expect(project('#margin-note(side: left, [x])\n').child(0).type.name).toBe('rawBlock');
+    expect(project('#margin-note[a *b]\n').child(0).type.name).toBe('rawBlock');
   });
 
   it('keeps forms it does not model as raw inlines', () => {
@@ -235,7 +240,7 @@ describe('margin notes', () => {
 
   it('prints an edited point note in place', () => {
     const source = 'Text#margin-note[old] more.\n';
-    const doc = edit(project(source), (s) => s.tr.setNodeAttribute(after(s.doc, 'Text'), 'src', '#margin-note[new]'));
+    const doc = edit(project(source), (s) => s.tr.setNodeAttribute(after(s.doc, 'Text'), 'note', 'new'));
     expect(print(doc)).toBe('Text#margin-note[new] more.\n');
   });
 
