@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { test, expect } from './fixtures';
 import type { Download, Page } from '@playwright/test';
 
-const DRAFTING = readFileSync(resolve(import.meta.dirname, '../../src/core/typst-engine/fixtures/drafting-0.2.2.tar.gz'));
+const DRAFTING = readFileSync(resolve(import.meta.dirname, '../../src/extensions/comments/model/fixtures/drafting-0.2.2.tar.gz'));
 
 test.beforeEach(async ({ page }) => {
   await page.route('https://packages.typst.org/preview/drafting-0.2.2.tar.gz', (route) =>

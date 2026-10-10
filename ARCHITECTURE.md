@@ -55,7 +55,7 @@ src/                        the widget (TypeScript); the most important API on t
                             from outside); TextChange (the one edit format, text-change.ts); minimal-change.ts
     typst-engine/           typed TS wrapper around the wasm (typst-engine.ts: createEngine), fetch-fonts.ts;
                             engine-assets.ts (wasm + default font URLs for the main thread); packages/ (withPackages,
-                            tar reader); fixtures/ (test package archives); generated wasm/, fonts/ (gitignored)
+                            tar reader; packages/fixtures/: the greet test package); generated wasm/, fonts/ (gitignored)
     paths/                  ProjectPath (where a file is) and PathReference (a path as written in Typst source),
                             branded strings with their operations: parse, fromName, resolve, referenceTo, isTypst
                             (the only kind core knows: Typst source or not), displayName, extension
@@ -144,7 +144,7 @@ src/                        the widget (TypeScript); the most important API on t
                             (DiagnosticsStatus: the status bar item)
     markup/                 strong, emphasis, links, raw text (inline code, code blocks; model: raw-code), quotes
     headings/               headings and their numbers (model: numbering patterns, HeadingCounter, the rules' code)
-    lists/                  bulleted, numbered and task lists (model: cheq's preamble, calculateChecklistPreambleChange)
+    lists/                  bulleted, numbered and task lists (model: cheq's preamble, calculateChecklistPreambleChange; cheq.test.ts compiles task lists with the cheq fixture)
     tables/                 `#table(..)` as a table, Insert table, the table bar (model: TableLayout)
     page-layout/            page breaks and horizontal rules
     alignment/              `#align(..)[..]`, `#par(justify: ..)[..]`, the Align menu (model: alignment syntax)
@@ -1741,7 +1741,7 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
   `visual-view/notes-gutter/notes-gutter.test.ts` (cards and threads in jsdom), `preview/preview.test.ts` (the PDF
   export option), `workbench/comment-action.test.ts`.
 - Engine tests (`model/drafting.test.ts`) compile both note forms, both thread layouts, page margins and the
-  sources without notes against the real package (`src/core/typst-engine/fixtures/drafting-0.2.2`).
+  sources without notes against the real package (`src/extensions/comments/model/fixtures/drafting-0.2.2`).
 - **Removed** with this design (it replaced the sidecar comments of docs/todo/comments.md):
   `src/comments` (Comments, quote anchors, CommentsPanel, CommentsUI), `SharedComments` and the
   Y.Doc `comments` map, `Preview.setMarkers` / `PreviewMarkers`, the widget options `comments` /
@@ -1911,7 +1911,7 @@ an in-memory `FakeGitLab` holding `demo/examples/advanced`). Checklist with step
 |---|---|
 | `mise run build:engine` | `cargo build --target wasm32-unknown-unknown --release` + `wasm-bindgen --target web` + `wasm-opt -Oz --strip-debug` → `src/core/typst-engine/wasm/`, prints raw/gzip/brotli size (skipped when the Rust sources are unchanged) |
 | `mise run build:fonts` | default fonts from the pinned typst-assets crate → `src/core/typst-engine/fonts/` |
-| `mise run fixtures:packages` | packs `src/core/typst-engine/fixtures/<name>-<version>/` into `.tar.gz` (committed) for package tests |
+| `mise run fixtures:packages` | packs every test package `src/**/fixtures/<name>-<version>/` into `.tar.gz` (committed); each lives next to the tests using it: greet (`core/typst-engine/packages/`), drafting (`extensions/comments/model/`), cheq (`extensions/lists/model/`, `cheq.test.ts`) |
 | `mise run demo` | the playground: Vite (127.0.0.1:5199) + collaboration server with the in-memory fake GitLab (ws://127.0.0.1:1234); Ctrl-C stops both. Feature checklist: [docs/demo-playground.md](docs/demo-playground.md) |
 | `mise run dev` | Vite dev server for `demo/` on 127.0.0.1:5199 (Local mode needs nothing else) |
 | `mise run build` | engine + typecheck + static demo build → `dist/demo` |

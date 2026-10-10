@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-#MISE description="Pack the test package fixtures (src/core/typst-engine/fixtures/<name>-<version>/) into .tar.gz like packages.typst.org serves them"
-#MISE sources=["src/core/typst-engine/fixtures/*/**"]
-#MISE outputs=["src/core/typst-engine/fixtures/*.tar.gz"]
+#MISE description="Pack the test package fixtures (src/**/fixtures/<name>-<version>/, next to the tests using them) into .tar.gz like packages.typst.org serves them"
+#MISE sources=["src/**/fixtures/*/typst.toml", "src/**/fixtures/*/**"]
+#MISE outputs=["src/**/fixtures/*.tar.gz"]
 set -euo pipefail
-cd src/core/typst-engine/fixtures
-for dir in */; do
-  name=${dir%/}
+# every package folder (it has a typst.toml) in a fixtures/ folder under src/
+find src -path '*/fixtures/*/typst.toml' -not -path '*/node_modules/*' | while read -r manifest; do
+  dir=$(dirname "$manifest")
   # pax format: paths over 100 bytes become pax headers, as in real archives
-  COPYFILE_DISABLE=1 tar --format pax -czf "$name.tar.gz" -C "$name" .
+  COPYFILE_DISABLE=1 tar --format pax -czf "$dir.tar.gz" -C "$dir" .
 done

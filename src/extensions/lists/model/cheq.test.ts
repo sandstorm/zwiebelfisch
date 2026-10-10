@@ -1,16 +1,16 @@
-// Tests that the engine compiles checklists with the cheq package (fixture archive).
+// Tests that the engine compiles checklists with the cheq package (./fixtures/cheq-0.4.0), as task lists need it.
 import { readFileSync, readdirSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createEngine, type Engine } from './typst-engine';
-import { withPackages } from './packages/packages';
+import { createEngine, withPackages, type Engine } from '../../../core/typst-engine/typst-engine';
 
 /**
  * The Visual view's task lists rely on the Universe package cheq (pinned at
  * the version `checklist-preamble.ts` imports): `- [ ] ..` / `- [x] ..` items
  * must compile and draw checkboxes instead of the bracket characters.
  */
-const wasm = readFileSync(new URL('./wasm/typst_engine_bg.wasm', import.meta.url));
-const fontDir = new URL('./fonts/', import.meta.url);
+const engineDir = new URL('../../../core/typst-engine/', import.meta.url);
+const wasm = readFileSync(new URL('wasm/typst_engine_bg.wasm', engineDir));
+const fontDir = new URL('fonts/', engineDir);
 const fonts = readdirSync(fontDir).map((name) => new Uint8Array(readFileSync(new URL(name, fontDir))));
 const cheq = new Uint8Array(readFileSync(new URL('./fixtures/cheq-0.4.0.tar.gz', import.meta.url)));
 

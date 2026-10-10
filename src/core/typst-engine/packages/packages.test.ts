@@ -7,7 +7,7 @@ import { fetchPreviewPackage, withPackages } from './packages';
 const wasm = readFileSync(new URL('../wasm/typst_engine_bg.wasm', import.meta.url));
 const fontDir = new URL('../fonts/', import.meta.url);
 const fonts = readdirSync(fontDir).map((name) => new Uint8Array(readFileSync(new URL(name, fontDir))));
-const greet = new Uint8Array(readFileSync(new URL('../fixtures/greet-0.1.0.tar.gz', import.meta.url)));
+const greet = new Uint8Array(readFileSync(new URL('./fixtures/greet-0.1.0.tar.gz', import.meta.url)));
 
 const doc = '#import "@preview/greet:0.1.0": greet\n#greet("World")';
 

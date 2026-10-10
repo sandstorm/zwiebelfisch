@@ -1,4 +1,4 @@
-// Tests for the model against the real drafting package (fixtures/drafting-0.2.2): the notes, threads, page margins
+// Tests for the model against the real drafting package (./fixtures/drafting-0.2.2): the notes, threads, page margins
 // and the sources without notes it writes compile, and draw what they should.
 import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
@@ -12,7 +12,7 @@ const fontDir = new URL('fonts/', engineDir);
 const fonts = readdirSync(fontDir).map((name) => new Uint8Array(readFileSync(new URL(name, fontDir))));
 
 describe('the drafting package (margin notes)', () => {
-  const drafting = new Uint8Array(readFileSync(new URL('fixtures/drafting-0.2.2.tar.gz', engineDir)));
+  const drafting = new Uint8Array(readFileSync(new URL('./fixtures/drafting-0.2.2.tar.gz', import.meta.url)));
 
   it('compiles point and range margin notes', async () => {
     const bare = await createEngine(wasm, fonts);
