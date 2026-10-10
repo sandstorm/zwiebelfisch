@@ -2,44 +2,64 @@
 
 Status: open — start after task/comments-drafting, task/visual-block-nodes and task/demo-playground are merged.
 Depends on: those three (renames would conflict with them)
-Touches: everything under src/, crates/ (moves), tsconfig/vite/eslint config, mise-tasks (engine build paths), ARCHITECTURE.md, docs/embedding.md
+Touches: everything under src/ (crates/ stays), tsconfig/vite/eslint config, mise-tasks (engine build paths), ARCHITECTURE.md, docs/embedding.md
 
 ## Goal
-Make it obvious, when you open a folder, what is API and what is internal (user decision, 2026-10-10):
-- **The files directly in a folder are its entry points** (usually one). Everything internal goes
-  into subfolders. File trees list folders first, so the entry point stands out in every folder.
-- **Imports may reach a folder's direct files, never its subfolders.** Enforce it with an ESLint
-  boundary rule (e.g. `no-restricted-imports` patterns, or eslint-plugin-boundaries, exactly pinned).
+Make it obvious, when you open a folder, what is API and what is internal (user decisions, 2026-10-10):
+- **The most important API is on top:** `src/typst-editor.ts` (createTypstEditor).
+- **Each folder has one entry file, named like the folder** (`preview/preview.ts`). Everything else
+  in the folder is internal to it. Folders that grow get **subfolders named after a concept**
+  (`projection/`, `toolbar/`, `worker/`), never generic ones (`parts/`, `utils/`, `internal/`).
+- **Imports from outside a folder go to its entry file only.** A few documented exceptions are
+  allowed (e.g. `collaboration/gitlab-protocol.ts`, which the server imports). An ESLint
+  boundary rule enforces this (`no-restricted-imports` patterns or eslint-plugin-boundaries,
+  exactly pinned).
 - **Every file starts with a top comment:** either the context, or `See <nearest concept>` (the
-  entry file, or an ARCHITECTURE.md section). Add a check to `mise run quality`.
-- The most important API is on top: `src/typst-editor.ts` (createTypstEditor).
+  entry file, or an ARCHITECTURE.md section). `mise run quality` checks it.
+- **Other languages and separate programs stay at the top level:** `crates/` (Rust engine),
+  `server/` (Node collaboration server), `demo/`, `examples/`.
 
 ## Target layout
 ```
 src/
-  typst-editor.ts            createTypstEditor (was editor/typst-editor.ts)
-  typst-editor-element.ts    <typst-editor> (was element/)
-  index.ts
-  wiring/                    editing-views, project-renderings, collaboration-link, styles.css
+  index.ts                     package exports
+  typst-editor.ts              createTypstEditor (was editor/typst-editor.ts)
+  typst-editor.css             (was editor/styles.css; feature CSS may move next to its feature)
+  typst-editor-element.ts      <typst-editor> (was element/; inline-source.ts folded in or beside it)
+  typst-editor/                what only typst-editor.ts uses: editing-views (Visual/Source tabs and
+                               panes per document), project-renderings, collaboration-link
   core/
-    typst-document/          typst-document.ts; parts/ (highlight, minimal-change, y-delta)
-    typst-engine/            typst-engine.ts (was engine/engine.ts); rust/ (was crates/typst-engine);
-                             wasm/, fonts/ (generated); parts/ (packages, tar, default/fetch fonts); fixtures/
-    project/                 project.ts; parts/ (paths)
+    typst-document/            typst-document.ts; highlight.ts, minimal-change.ts (shared types/helpers,
+                               documented exceptions); yjs/ (y-delta)
+    typst-engine/              typst-engine.ts (was engine/engine.ts); packages/ (packages, tar);
+                               fonts/ (default-fonts, fetch-fonts + generated fonts); wasm/ (generated
+                               from crates/typst-engine); fixtures/
+    project/                   project.ts; paths.ts
   features/
-    visual-view/             visual-view.ts; projection/, nodes/, toolbar/, decorations/
-    source-view/             source-view.ts; parts/ (lint, typst-language)
-    preview/                 preview.ts; worker/ (engine.worker, protocol, project-files); pages/ (…)
-    diagnostics/             diagnostics-status.ts; parts/ (summary)
-    changes/                 change-tracking.ts; parts/ (diff)
-    comments/                drafting margin notes
-    files/                   file-switcher.ts, asset-view.ts; parts/ (upload, insert-image)
-    collaboration/           collaboration.ts, gitlab-protocol.ts (server imports it); parts/ (…)
-    versions/                version-controls.ts
+    visual-view/               visual-view.ts
+      projection/              projection, raw-code, alignment, call-atoms, image-call, numbering
+      nodes/                   extensions, raw-box, rendered-box, code-block-view, page-break,
+                               horizontal-rule, task-list, checklist-preamble, heading-numbers,
+                               heading-numbering, text-align, margin-notes
+      toolbar/                 toolbar, toolbar-action, toolbar-blocks, field-popover
+      images/                  image-choices, image-edits, image-insertion, image-tools
+      decorations/             highlights, change-decorations
+      testing/                 jsdom-setup, test-support
+    source-view/               source-view.ts; language/ (typst-language, lint)
+    preview/                   preview.ts; worker/ (engine.worker, protocol, project-files, latest-only);
+                               pages/ (page-list, geometry, zoom, snippet, change-bars); toolbar.ts
+    diagnostics/               diagnostics.ts (was diagnostics-status); diagnostics-summary.ts
+    changes/                   changes.ts (was change-tracking); diff.ts; changes.css
+    comments/                  comments.ts (was comment-action); add-margin-note.ts; margin-note-syntax.ts
+    files/                     files.ts (was file-switcher); asset-view.ts; upload.ts; insert-image.ts
+    collaboration/             collaboration.ts; gitlab-protocol.ts (server imports it); shared-project,
+                               shared-assets, remote-cursors, room-versions, in-process (tests)
+    versions/                  versions.ts (was version-controls)
 ```
-Current leaks to fix while moving: `preview/project-files`, `visual-view/field-popover`,
-`source-view/typst-language` are imported from other folders. They either become entry files or
-the callers go through the entry.
+Renames of entry files to the folder name are suggestions. Keep a public class name
+(`DiagnosticsStatus`) when renaming its file. Current leaks to fix while moving:
+`preview/project-files`, `visual-view/field-popover`, `source-view/typst-language` are imported
+from other folders.
 
 ## Acceptance
 - `git mv` for all moves (history follows); no behaviour change; vitest, typecheck, quality green;
