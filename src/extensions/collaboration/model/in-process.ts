@@ -14,8 +14,9 @@ export function connectAwareness(...awarenesses: Awareness[]): void {
 
 /**
  * Connects Y.Docs in-process, the way a server would: every update of one is
- * applied to the others (for tests). Returns the function that disconnects
- * them again; `reconnect` exchanges what was missed meanwhile.
+ * applied to the others (for tests), after exchanging what each misses (so
+ * connecting again after a disconnect catches up). Returns the function that
+ * disconnects them again.
  */
 export function connect(...docs: Y.Doc[]): () => void {
   const handlers = docs.map((doc) => {
