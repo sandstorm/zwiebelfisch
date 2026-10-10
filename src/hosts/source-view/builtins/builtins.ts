@@ -3,8 +3,5 @@
 // The contributions, for `SourceViewHost.registerExtension` (in brackets: the extension each one goes to):
 // typstLanguage() and codeColors (typst-language), lint(diagnostics) (diagnostics), fileLinks (document-links),
 // presence (collaboration). The other exports are what the Visual view's raw boxes and the widget need of them.
-export { codeColors, isLightText } from './code-colors';
 export { DiagnosticCollection, describeDiagnostic, lint, type SourceDiagnostic } from './lint';
-export { documentLinks, fileLinks } from './file-links';
 export { presence, remotePresence, showPresence } from './presence';
-export { typstLanguage } from './typst-language';

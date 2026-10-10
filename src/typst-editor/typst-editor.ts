@@ -7,17 +7,17 @@ import type { CollaborationOptions } from '../features/collaboration/collaborati
 import { collaboration } from '../features/collaboration/collaboration-link';
 import { comments } from '../features/comments/comments';
 import { diagnostics } from '../features/diagnostics/diagnostics';
-import { documentLinks } from '../features/document-links/document-links';
-import { assets, fileNavigation, files } from '../features/files/files';
+import { fileNavigation, files } from '../features/files/files';
 import fileStyles from '../features/files/files.css?inline';
 import { labels } from '../features/labels/labels';
 import { pdfExport } from '../features/pdf-export/pdf-export';
 import { previewControls } from '../features/preview-controls/preview-controls';
-import { projectRenderings } from '../features/project-renderings/project-renderings';
 import { spreadsheets } from '../features/spreadsheets/spreadsheets';
 import { styles } from '../features/styles/styles';
-import { typstLanguage } from '../features/typst-language/typst-language';
 import { versions } from '../features/versions/versions';
+import { documentLinks } from '../extensions/document-links/document-links';
+import { assets, projectRenderings } from '../extensions/images/images';
+import { typstLanguage } from '../extensions/typst-language/typst-language';
 import {
   alignment, headingNumbers, headings, horizontalRule, lists, markup, outline, pageBreak, tables, taskLists,
 } from '../hosts/visual-view/visual-view';

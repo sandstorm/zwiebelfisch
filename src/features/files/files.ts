@@ -1,13 +1,12 @@
 // The files extensions: the file panel (FilePanel: the project's files as a tree in the left side panel: new file /
-// folder, upload, rename, delete, drag & drop, presence), "← previous / next file →" around an included file, and
-// the read-only view of images and data files. Entry of features/files/. See ARCHITECTURE.md, "File panel".
+// folder, upload, rename, delete, drag & drop, presence) and "← previous / next file →" around an included file.
+// Entry of features/files/. See ARCHITECTURE.md, "File panel".
 import { Disposable } from '../../core/disposable/disposable';
 import { neighbours } from '../../core/document-links/document-links';
 import type { PlacedPresence, PresenceUser } from '../../core/typst-document/typst-document';
 import { type FileChange } from '../../core/project/project';
 import { ProjectPath } from '../../core/paths/paths';
-import type { FileViewProvider, TypstExtension } from '../../hosts/workbench/workbench';
-import { AssetView } from './asset-view';
+import type { TypstExtension } from '../../hosts/workbench/workbench';
 import { FileNavigation } from './file-navigation';
 import { icon, type IconName } from './icons';
 import { FileTree, filesUnder, type Folder, type FolderMemory, relocate } from './tree/tree';
@@ -67,22 +66,6 @@ export function fileNavigation(): TypstExtension {
       // recomputed on every open and every change: an #include may have been added, moved or removed
       const show = () => navigation.show(neighbours((path) => project.document(path)?.text, project.main, workbench.activeFile));
       subscriptions.push(workbench.registerEditorFrame(navigation), workbench.onDidShowFile(show), new Disposable(project.onChange(show)));
-    },
-  };
-}
-
-/** Images and data files in the editing area, read-only (images get into the text by dragging or "Insert image"). */
-export function assets(): TypstExtension {
-  return {
-    id: 'assets',
-    activate({ workbench, subscriptions }) {
-      const provider: FileViewProvider = {
-        createFileView: (parent) => {
-          const view = new AssetView(parent);
-          return { show: (path, content) => view.show(path, content), hide: () => view.hide(), dispose: () => view.destroy() };
-        },
-      };
-      subscriptions.push(workbench.registerFileView('image', provider), workbench.registerFileView('data', provider));
     },
   };
 }

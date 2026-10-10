@@ -17,7 +17,7 @@ export const thresholds = {
 // importing file's path from the repository root.
 export const boundaries = {
   srcRoot: fileURLToPath(new URL('src', import.meta.url)),
-  groupingFolders: ['core', 'features', 'hosts', 'ui'],
+  groupingFolders: ['core', 'extensions', 'features', 'hosts', 'ui'],
   exceptions: [
     {
       target: 'features/collaboration/gitlab-protocol.ts',
@@ -43,6 +43,16 @@ export const boundaries = {
       target: 'features/collaboration/shared-project.ts',
       importers: '^server/.*\\.test\\.ts$',
       why: "the server's tests build rooms from the client's SharedProject",
+    },
+    {
+      target: 'hosts/visual-view/test-support.ts',
+      importers: '\\.test\\.ts$',
+      why: "tests of the extensions' Visual-view parts make a Visual view with the built-in contributions",
+    },
+    {
+      target: 'hosts/visual-view/projection/projection.ts',
+      importers: '^src/extensions/.*\\.test\\.ts$',
+      why: 'tests of the extensions\' Visual-view parts project and print with the schema directly',
     },
   ],
 };

@@ -11,9 +11,12 @@ import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { ProjectLabels } from '../../features/labels/labels';
 import type { DocumentStyles } from '../../features/styles/styles';
 import {
-  alignment, boxLinks, customStyles, headingNumbers, headings, horizontalRule, images, lists, marginNotes, markup, notesGutter, outline,
-  pageBreak, references, renderedBoxes, tables, taskLists, type ImageAssets, type Renderings,
+  alignment, customStyles, headingNumbers, headings, horizontalRule, lists, marginNotes, markup, notesGutter, outline, pageBreak, references,
+  tables, taskLists,
 } from './builtins/builtins';
+import { boxLinks } from '../../extensions/document-links/document-links';
+import { images, type ImageAssets, type ImageUrls } from '../../extensions/images/images';
+import { renderedBoxes, type SnippetSource } from '../../extensions/rendered-boxes/rendered-boxes';
 import { VisualViewContributions } from './contributions/contributions';
 import { createSchema } from './nodes/nodes';
 import { posToSource, print, project as projectWith, sourceToPos } from './projection/projection';
@@ -29,6 +32,9 @@ export function schemaWith(options: TestViewOptions = {}): Schema {
 }
 
 export const project = (source: string): Node => projectWith(source, schema);
+
+/** What a document's raw boxes show while not edited, in tests: compiled snippets and image files. */
+export type Renderings = SnippetSource & ImageUrls;
 
 /** The options tests give a view, as a document's Visual view had them before contributions. */
 export interface TestViewOptions {
