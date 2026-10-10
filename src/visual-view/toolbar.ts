@@ -102,7 +102,6 @@ export class Toolbar {
   private readonly refresh = () => this.refreshers.forEach((fn) => fn());
   private readonly linkPopover: FieldPopover;
   private readonly imagePopover: FieldPopover;
-  private readonly imageChoices: ImageChoices | null;
   private readonly linkShortcut = (event: KeyboardEvent) => {
     if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey) return;
     if ((event.target as Element).closest?.('.cm-editor')) return; // in a raw box
@@ -131,21 +130,8 @@ export class Toolbar {
       apply: (href) => applyLink(editor, href),
       remove: () => editor.chain().focus().extendMarkRange('link').unsetLink().run(),
     });
-    const insertImage = (path: string) =>
-      editor.chain().focus().insertContent({ type: 'image', attrs: { src: imageSource(path) } }).run();
-    this.imageChoices = assets
-      ? new ImageChoices(doc, assets, (path) => {
-          this.imagePopover.close();
-          insertImage(path);
-        })
-      : null;
-    this.imagePopover = new FieldPopover(this.root, {
-      label: 'Image',
-      field: 'Image path',
-      placeholder: 'images/figure.png',
-      apply: insertImage,
-      extra: this.imageChoices?.element,
-    });
+    const [image, imagePopover] = this.imageAction(assets);
+    this.imagePopover = imagePopover;
     const link: Action = {
       label: 'Link',
       shortcut: 'Mod+K',
@@ -153,15 +139,6 @@ export class Toolbar {
       run: (c) => c.setLink({ href: 'https://typst.app' }),
       click: (button) => this.toggle(this.linkPopover, button, editor.getAttributes('link').href ?? '', editor.isActive('link')),
       active: (e) => e.isActive('link'),
-    };
-    const image: Action = {
-      label: 'Insert image',
-      icon: ICONS.image,
-      run: (c) => c.insertContent({ type: 'image' }),
-      click: (button) => {
-        this.imageChoices?.refresh();
-        this.toggle(this.imagePopover, button, '', false);
-      },
     };
     this.root.append(
       this.group(HISTORY),
@@ -184,6 +161,35 @@ export class Toolbar {
     this.editor.off('transaction', this.refresh);
     this.editor.off('focus', this.refresh);
     this.root.remove();
+  }
+
+  /** "Insert image" and its popover: a path field, plus the project's images and an upload with `assets`. */
+  private imageAction(assets: ImageAssets | undefined): [Action, FieldPopover] {
+    const insert = (path: string) =>
+      this.editor.chain().focus().insertContent({ type: 'image', attrs: { src: imageSource(path) } }).run();
+    const choices = assets
+      ? new ImageChoices(this.root.ownerDocument, assets, (path) => {
+          popover.close();
+          insert(path);
+        })
+      : null;
+    const popover = new FieldPopover(this.root, {
+      label: 'Image',
+      field: 'Image path',
+      placeholder: 'images/figure.png',
+      apply: insert,
+      extra: choices?.element,
+    });
+    const action: Action = {
+      label: 'Insert image',
+      icon: ICONS.image,
+      run: (c) => c.insertContent({ type: 'image' }),
+      click: (button) => {
+        choices?.refresh();
+        this.toggle(popover, button, '', false);
+      },
+    };
+    return [action, popover];
   }
 
   private group(actions: Action[]): HTMLElement {
