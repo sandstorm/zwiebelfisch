@@ -1,5 +1,5 @@
-import type { FileContent } from '../features/preview/worker/project-files';
-import { displayName, fileKind, imageBlob } from '../core/project/paths';
+import type { FileContent } from '../preview/worker/project-files';
+import { displayName, fileKind, imageBlob } from '../../core/project/paths';
 
 /**
  * The read-only view of a project file that is not Typst source: an image

@@ -1,4 +1,4 @@
-import type { RoomMeta } from '../../../src/collab/gitlab-protocol.ts';
+import type { RoomMeta } from '../../../src/features/collaboration/gitlab-protocol.ts';
 import { blobSha } from './blob-sha.ts';
 import type { CommitAction } from './gitlab-api.ts';
 

@@ -1,5 +1,5 @@
 import { diff3Merge, diffPatch } from 'node-diff3';
-import type { ConflictRange, FileConflict } from '../../../src/collab/gitlab-protocol.ts';
+import type { ConflictRange, FileConflict } from '../../../src/features/collaboration/gitlab-protocol.ts';
 
 /** A replacement in pre-change coordinates (UTF-16). */
 export interface TextEdit {

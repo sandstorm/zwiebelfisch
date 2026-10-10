@@ -1,24 +1,24 @@
-import type { CollaborationOptions } from '../collab/collaboration';
+import type { CollaborationOptions } from '../features/collaboration/collaboration';
 import type { Diagnostic } from '../core/typst-engine/typst-engine';
 import { Preview } from '../features/preview/preview';
 import proseMirrorStyles from '../features/visual-view/visual-view.css?inline';
-import { AssetView } from './asset-view';
-import { ChangeTracking } from './change-tracking';
-import { CommentAction } from './comment-action';
+import { AssetView } from '../features/files/asset-view';
+import { ChangeTracking } from '../features/changes/changes';
+import { CommentAction } from '../features/comments/comments';
 import { CollaborationLink } from './collaboration-link';
-import changeStyles from './changes.css?inline';
-import { DiagnosticsStatus } from './diagnostics-status';
-import { summarizeDiagnostics } from './diagnostics-summary';
+import changeStyles from '../features/changes/changes.css?inline';
+import { DiagnosticsStatus } from '../features/diagnostics/diagnostics';
+import { summarizeDiagnostics } from '../features/diagnostics/diagnostics-summary';
 import { EditingViews, type EditorMode } from './editing-views';
-import { FileSwitcher } from './file-switcher';
-import { insertImage } from './insert-image';
+import { FileSwitcher } from '../features/files/files';
+import { insertImage } from '../features/files/insert-image';
 import { referencePath } from '../core/project/paths';
 import { Project, type FileChange, type ProjectFiles } from '../core/project/project';
 import { ProjectRenderings } from './project-renderings';
 import styles from './styles.css?inline';
-import { VersionControls, type Versions } from './version-controls';
+import { VersionControls, type Versions } from '../features/versions/versions';
 
-export type { CollaborationOptions } from '../collab/collaboration';
+export type { CollaborationOptions } from '../features/collaboration/collaboration';
 export type { EditorMode } from './editing-views';
 export type { FileChange, ProjectFiles } from '../core/project/project';
 

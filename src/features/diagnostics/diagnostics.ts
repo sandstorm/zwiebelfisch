@@ -1,5 +1,5 @@
-import type { Diagnostic } from '../core/typst-engine/typst-engine';
-import { describeDiagnostic } from '../features/source-view/source-view';
+import type { Diagnostic } from '../../core/typst-engine/typst-engine';
+import { describeDiagnostic } from '../source-view/source-view';
 import { inProject, type DiagnosticTarget, type DiagnosticsSummary } from './diagnostics-summary';
 
 /**

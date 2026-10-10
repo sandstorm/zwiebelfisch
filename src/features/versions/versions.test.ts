@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest';
-import type { ServerMessage } from '../collab/gitlab-protocol';
-import { VersionControls } from './version-controls';
+import type { ServerMessage } from '../collaboration/gitlab-protocol';
+import { VersionControls } from './versions';
 
 const cleanup: (() => void)[] = [];
 afterEach(() => cleanup.splice(0).forEach((fn) => fn()));

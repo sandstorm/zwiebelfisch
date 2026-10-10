@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import type { Diagnostic } from '../core/typst-engine/typst-engine';
-import { DiagnosticsStatus } from './diagnostics-status';
+import type { Diagnostic } from '../../core/typst-engine/typst-engine';
+import { DiagnosticsStatus } from './diagnostics';
 import { summarizeDiagnostics } from './diagnostics-summary';
 
 const MAIN = '/main.typ';

@@ -4,7 +4,7 @@ import {
   GITLAB_ROOM_PREFIX,
   type ClientMessage,
   type ServerMessage,
-} from '../../../src/collab/gitlab-protocol.ts';
+} from '../../../src/features/collaboration/gitlab-protocol.ts';
 import type { Authenticate, AuthenticatedUser } from '../auth.ts';
 import { BlobCache } from './blob-cache.ts';
 import { GitLabProject, type GitLabConfig } from './gitlab-api.ts';

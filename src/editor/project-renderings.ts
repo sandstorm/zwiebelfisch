@@ -4,7 +4,7 @@ import type { VisualViewOptions } from '../features/visual-view/visual-view';
 import type { FileContent } from '../features/preview/worker/project-files';
 import { extensionOf, fileKind, imageBlob, referencePath, resolvePath } from '../core/project/paths';
 import type { FileChange, Project } from '../core/project/project';
-import { uploadChanges } from './upload';
+import { uploadChanges } from '../features/files/upload';
 
 export interface ProjectRenderingsOptions {
   project: Project;

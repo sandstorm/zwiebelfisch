@@ -1,5 +1,5 @@
 import * as Y from 'yjs';
-import { ASSETS_MAP, META_MAP, type RoomMeta, type ServerMessage } from '../../../src/collab/gitlab-protocol.ts';
+import { ASSETS_MAP, META_MAP, type RoomMeta, type ServerMessage } from '../../../src/features/collaboration/gitlab-protocol.ts';
 import type { BlobCache } from './blob-cache.ts';
 import { blobSha } from './blob-sha.ts';
 import { commitActions, type RoomFiles } from './commit-actions.ts';

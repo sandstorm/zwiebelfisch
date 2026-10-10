@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { TypstDocument } from '../core/typst-document/typst-document';
-import { ChangeTracking } from './change-tracking';
+import { TypstDocument } from '../../core/typst-document/typst-document';
+import { ChangeTracking } from './changes';
 
 function setup(text: string, base: string | null = null) {
   const toolbar = document.createElement('div');

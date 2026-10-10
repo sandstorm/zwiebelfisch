@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
-import { connect, connectAwareness } from '../collab/in-process';
+import { connect, connectAwareness } from '../features/collaboration/in-process';
 import type { PlacedPresence } from '../core/typst-document/presence';
 import { CollaborationLink } from './collaboration-link';
 import { Project } from '../core/project/project';

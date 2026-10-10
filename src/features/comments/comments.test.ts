@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
-import '../features/visual-view/jsdom-setup';
+import '../visual-view/jsdom-setup';
 import { describe, expect, it, vi } from 'vitest';
-import { TypstDocument } from '../core/typst-document/typst-document';
-import { VisualView } from '../features/visual-view/visual-view';
-import { CommentAction, type NoteView } from './comment-action';
+import { TypstDocument } from '../../core/typst-document/typst-document';
+import { VisualView } from '../visual-view/visual-view';
+import { CommentAction, type NoteView } from './comments';
 
 const IMPORT = '#import "@preview/drafting:0.2.2": margin-note\n';
 

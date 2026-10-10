@@ -1,4 +1,4 @@
-import type { Collaboration, CollaborationOptions, RoomVersions, Shared } from '../collab/collaboration';
+import type { Collaboration, CollaborationOptions, RoomVersions, Shared } from '../features/collaboration/collaboration';
 import type { PlacedPresence, PresenceTarget } from '../core/typst-document/presence';
 
 /** The editing view the local user works in, and what it has selected. */
@@ -57,7 +57,7 @@ export class CollaborationLink {
   }
 
   private async start(options: CollaborationOptions, shared: Shared): Promise<void> {
-    const { Collaboration } = await import('../collab/collaboration');
+    const { Collaboration } = await import('../features/collaboration/collaboration');
     const collaboration = await Collaboration.start(options, shared);
     if (this.destroyed) {
       collaboration.destroy();

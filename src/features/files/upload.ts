@@ -1,5 +1,5 @@
-import { fileKind } from '../core/project/paths';
-import type { FileChange } from '../core/project/project';
+import { fileKind } from '../../core/project/paths';
+import type { FileChange } from '../../core/project/project';
 
 /** The create changes for uploaded files: `.typ` files as text, everything else as bytes. */
 export async function uploadChanges(files: File[]): Promise<FileChange[]> {

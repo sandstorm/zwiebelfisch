@@ -1,9 +1,9 @@
 import { Hocuspocus, type Document, type Extension, type onStatelessPayload } from '@hocuspocus/server';
 import { afterEach, describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
-import { ASSETS_MAP, META_MAP, roomFilePath, type ServerMessage } from '../../../src/collab/gitlab-protocol.ts';
-import { connect } from '../../../src/collab/in-process.ts';
-import { SharedProject } from '../../../src/collab/shared-project.ts';
+import { ASSETS_MAP, META_MAP, roomFilePath, type ServerMessage } from '../../../src/features/collaboration/gitlab-protocol.ts';
+import { connect } from '../../../src/features/collaboration/in-process.ts';
+import { SharedProject } from '../../../src/features/collaboration/shared-project.ts';
 import { Project } from '../../../src/core/project/project.ts';
 import { sharedToken } from '../auth.ts';
 import { collabConfiguration } from '../collab-server.ts';
