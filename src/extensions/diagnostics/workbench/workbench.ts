@@ -2,7 +2,7 @@
 // "2 errors") with the messages behind it. See ../diagnostics.ts.
 import type { Diagnostic } from '../../../core/typst-engine/typst-engine';
 import { describeDiagnostic } from '../model/model';
-import { inProject, type DiagnosticTarget, type DiagnosticsSummary } from '../model/diagnostics-summary';
+import { targetOf, type DiagnosticTarget, type DiagnosticsSummary } from '../model/diagnostics-summary';
 
 /**
  * The compact compile status of the widget: "✓ compiled" or "2 errors".
@@ -67,8 +67,8 @@ export class DiagnosticsStatus {
     button.type = 'button';
     button.className = 'typst-status__detail';
     button.textContent = describeDiagnostic(diagnostic);
-    const { path, from, to } = diagnostic;
-    button.addEventListener('click', () => this.onJump({ path: path!, from, to }));
+    const target = targetOf(diagnostic);
+    if (target) button.addEventListener('click', () => this.onJump(target));
     item.append(button);
     return item;
   }
@@ -78,8 +78,8 @@ export class DiagnosticsStatus {
     const item = doc.createElement('li');
     item.dataset.severity = diagnostic.severity;
     const text = `${diagnostic.path ?? '(no file)'}: ${diagnostic.message}`;
-    const { path, from, to } = diagnostic;
-    if (!inProject(path)) {
+    const target = targetOf(diagnostic);
+    if (!target) {
       item.textContent = text;
       return item;
     }
@@ -87,7 +87,7 @@ export class DiagnosticsStatus {
     button.type = 'button';
     button.className = 'typst-status__open';
     button.textContent = text;
-    button.addEventListener('click', () => this.onJump({ path, from, to }));
+    button.addEventListener('click', () => this.onJump(target));
     item.append(button);
     return item;
   }

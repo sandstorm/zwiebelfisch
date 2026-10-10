@@ -1,9 +1,10 @@
 // Tests for diagnostics-summary.ts.
 import { describe, expect, it } from 'vitest';
+import { ProjectPath } from '../../../core/paths/paths';
 import type { Diagnostic } from '../../../core/typst-engine/typst-engine';
 import { summarizeDiagnostics } from './diagnostics-summary';
 
-const MAIN = '/main.typ';
+const MAIN = ProjectPath.of('/main.typ');
 
 function diag(overrides: Partial<Diagnostic>): Diagnostic {
   return { severity: 'error', message: 'boom', hints: [], path: MAIN, from: 0, to: 1, ...overrides };
@@ -62,7 +63,7 @@ describe('summarizeDiagnostics', () => {
   });
 
   it('summarizes for the file that is shown', () => {
-    const summary = summarizeDiagnostics([diag({}), diag({ path: '/lib.typ', from: 5, to: 6 })], '/lib.typ');
+    const summary = summarizeDiagnostics([diag({}), diag({ path: '/lib.typ', from: 5, to: 6 })], ProjectPath.of('/lib.typ'));
     expect(summary.inFile).toEqual([diag({ path: '/lib.typ', from: 5, to: 6 })]);
     expect(summary.target).toEqual({ path: '/lib.typ', from: 5, to: 6 });
   });

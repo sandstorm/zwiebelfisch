@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 // Tests for workbench.ts.
 import { describe, expect, it, vi } from 'vitest';
+import { ProjectPath } from '../../../core/paths/paths';
 import type { Diagnostic } from '../../../core/typst-engine/typst-engine';
 import { summarizeDiagnostics } from '../model/diagnostics-summary';
 import { DiagnosticsStatus } from './workbench';
 
-const MAIN = '/main.typ';
+const MAIN = ProjectPath.of('/main.typ');
 
 function diag(overrides: Partial<Diagnostic>): Diagnostic {
   return { severity: 'error', message: 'boom', hints: [], path: MAIN, from: 0, to: 1, ...overrides };
@@ -23,6 +24,19 @@ describe('DiagnosticsStatus', () => {
     expect(details.textContent).toContain('hint: try bar');
     details.querySelector('button')!.click();
     expect(onJump).toHaveBeenCalledWith({ path: MAIN, from: 3, to: 6 });
+  });
+
+  it('lists the diagnostics of other files; those in project files jump there', () => {
+    const parent = document.createElement('div');
+    const onJump = vi.fn();
+    const status = new DiagnosticsStatus(document, onJump);
+    parent.append(status.element);
+    status.show(summarizeDiagnostics([diag({ path: '/lib.typ', from: 2, to: 4 }), diag({ path: '@preview/x:1.0.0/lib.typ' })], MAIN));
+    const items = [...parent.querySelectorAll('.typst-status__elsewhere li')];
+    expect(items.map((item) => item.textContent)).toEqual(['/lib.typ: boom', '@preview/x:1.0.0/lib.typ: boom']);
+    expect(items[1].querySelector('button')).toBeNull();
+    items[0].querySelector('button')!.click();
+    expect(onJump).toHaveBeenCalledWith({ path: '/lib.typ', from: 2, to: 4 });
   });
 
   it('has no details while the compile is clean', () => {
