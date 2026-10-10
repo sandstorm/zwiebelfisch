@@ -17,7 +17,7 @@ src/
   preview/                  Preview — worker-backed live preview + hit-testing
     engine.worker.ts        hosts the engine off the main thread
     protocol.ts             request/response messages main ↔ worker
-  visual-view/              VisualView — ProseMirror projection (schema, projection, view)
+  visual-view/              VisualView — Tiptap editor over the source-anchored projection
   editor/                   createTypstEditor() — composes the widget, Visual/Source tabs, status bar, scoped CSS
   element/                  <typst-editor> custom element (shadow DOM) around createTypstEditor
   index.ts                  public API of the package; registers <typst-editor>
@@ -189,44 +189,56 @@ new VisualView(parent, document)
 .destroy()
 ```
 
-The interesting part is `projection.ts`, which exports two functions plus two sync helpers:
+The editor is **Tiptap 3**, which is ProseMirror underneath. Tiptap provides the keymaps (Mod-B/I,
+undo), the input rules (`## ` → heading, `- ` → list) and list handling. The source-of-truth logic
+lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tiptap:
 
 ```
- text ──typstParser (Lezer)──► CST ──project()──► PM doc   (blocks carry attrs.src / attrs.sep)
-                                                    │ user edit (PM transaction)
- text ◄── minimal TextChange ◄── diff ◄── print() ◄─┘   (untouched nodes print attrs.src verbatim)
+ text ──typstParser (Lezer)──► CST ──project(text, schema)──► PM doc   (nodes carry attrs.src / attrs.sep)
+                                                               │ user edit (PM transaction)
+ text ◄── document.setText() (minimal change) ◄── print() ◄────┘   (untouched nodes print attrs.src verbatim)
 
- text changed elsewhere ──► project() ──► syncBlocks(): replace only differing top-level blocks
+ text changed elsewhere ──► project() ──► syncDoc(tr, target): smallest replacement, cursor stays put
 ```
 
-- **Schema** (`schema.ts`):
-  - Blocks: `paragraph`, `heading`, `bullet_list` / `ordered_list` > `list_item`
-    (marker attribute), `raw_block`.
-  - Inline: text with `strong` / `emph` marks, `soft_break` (a source newline that renders as a
-    space), `hard_break` (`\`), `raw_inline`.
-  - The `source` mark remembers how escapes and shorthands (`\*`, `--`) were written.
-- **Segmentation:** headings and list items are blocks of their own. Every other run up to a
-  `Parbreak` becomes a paragraph if it contains prose (Text, Strong, Emph, …). Otherwise it becomes a
-  `raw_block` (`#set`, `#let`, display math, figures, …). A list item with nested content keeps its
-  body as a `raw_block`.
+- **Schema** (`extensions.ts`):
+  - **Blocks:** `paragraph`, `heading`, and `bulletList` / `orderedList` > `listItem` (a `marker`
+    attribute; content `(paragraph | rawBlock) block*`, so nested lists made with Tab print
+    indented), plus `rawBlock`.
+  - **Inline:** text with `bold` / `italic` marks; `softBreak` (a source newline that renders as a
+    space); `hardBreak` (`\`); `rawInline`.
+  - The `typstSource` mark remembers how escapes and shorthands (`\*`, `--`) were written.
+  - Anchor attributes are added as Tiptap global attributes and are never rendered.
+  - `project()` takes the schema as a parameter. Tiptap builds its own schema instance, and nodes
+    must come from that instance.
+- **Segmentation:**
+  - Headings and list items are blocks of their own.
+  - Every other run up to a `Parbreak` becomes a paragraph if it contains prose (Text, Strong,
+    Emph, …), otherwise a `rawBlock` (`#set`, `#let`, display math, figures, …).
+  - A list item whose source has nested content keeps its body as a `rawBlock`.
 - **Separators:**
-  - The whitespace between siblings is `attrs.sep`, so it is part of node equality.
-  - The last child has no separator; its container owns that whitespace (`list.sep`,
+  - `attrs.sep` is the whitespace between siblings. It is part of node equality.
+  - The last child has none; its container owns that whitespace (`list.sep`,
     `doc.lead` / `doc.trail`).
-  - Nodes created in the editor have `sep: null` and get a default separator: `\n\n` between
-    blocks, `\n` between list items.
-- **Pristine tracking:** a module-private `WeakSet` holds the nodes created by `project()`.
-  ProseMirror keeps the identity of unchanged nodes, so membership means "still equal to
-  `attrs.src`". Pristine nodes print `src`. Edited nodes are printed canonically:
-  - Text is escaped (`*`, `#`, `$`, `//`, …, plus line-start markers).
-  - Marks are printed as `*x*` / `_x_`, or as `#strong[x]` when the span touches a word character
-    or whitespace.
-- **Write-back:** `print(doc)` is diffed against the current text (common prefix/suffix), which
-  gives exactly one minimal `TextChange`.
-- **Read-back:** re-project, then `syncBlocks`. Comparing nodes with `eq` (which includes `src` and
-  `sep`) is exact, so the replaced blocks are fresh and pristine.
-- **Invariant (unit-tested):** `print(project(src)) === src` for every fixture, and edits change
-  only their block.
+  - Editor-created nodes have `sep: null`, which prints the default: `\n\n` between blocks, `\n`
+    between list items.
+- **Pristine tracking:**
+  - A module-private `WeakSet` holds the nodes created by `project()`. ProseMirror keeps the
+    identity of unchanged nodes, so membership means "still equal to `attrs.src`".
+  - Pristine nodes print `src`. Edited nodes are printed canonically:
+    - text is escaped (`*`, `#`, `$`, `//`, …, and line-start markers);
+    - marks become `*x*` / `_x_`, or `#strong[x]` / `#emph[x]` when the span touches a word
+      character or whitespace.
+- **Write-back:** `document.setText(print(doc))` applies the single minimal change.
+- **Read-back:** `syncDoc` replaces only the innermost changed range.
+  - It diffs copies of both documents with the anchor attributes stripped. Otherwise a changed
+    `src` would make the whole block look different.
+  - It then copies the attributes over (`setNodeMarkup`) and marks nodes pristine again wherever
+    the target node was pristine.
+- **Invariants (unit-tested):**
+  - `print(project(src)) === src` for every fixture;
+  - edits change only what they touch;
+  - an outside change to a paragraph keeps the cursor position in it.
 
 ## Planned modules
 

@@ -36,8 +36,8 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [diagnostics-ui](diagnostics-ui.md) | done |
 | [web-component-and-library-build](web-component-and-library-build.md) | done |
 | [multi-file-assets-packages](multi-file-assets-packages.md) | open |
-| [tiptap-migration](tiptap-migration.md) | in-progress (main agent) |
-| [projection-position-map](projection-position-map.md) | open (after tiptap-migration) |
+| [tiptap-migration](tiptap-migration.md) | done |
+| [projection-position-map](projection-position-map.md) | open |
 | [comments](comments.md) | open (after position map) |
 | [diff-rendering](diff-rendering.md) | open (after position map) |
 | [visual-view-toolbar-and-raw-editing](visual-view-toolbar-and-raw-editing.md) | open (after projection) |

@@ -1,6 +1,6 @@
 # Visual view on Tiptap + recursive sync
 
-Status: in-progress (main agent, 2026-10-10)
+Status: done (4170f5b) — firefox/webkit e2e specs need a user run
 Depends on: nothing
 Touches: src/visual-view/**, package.json
 
