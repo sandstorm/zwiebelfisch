@@ -1,6 +1,7 @@
 // End-to-end tests (Playwright, against the demo build): outlines and code blocks in the Visual view.
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
+import { caretAtEnd, clickAndSettle } from './visual-helpers';
 
 type Editor = HTMLElement & { value: string };
 
@@ -22,8 +23,7 @@ test('a code block shows its language and text; typing edits the code in place',
   const block = visual(page).locator('.typst-visual__code-block');
   await expect(block.getByLabel('Language')).toHaveValue('rust');
   await expect(block.locator('pre code')).toHaveText('fn main() {}');
-  await block.locator('pre code').click();
-  await page.keyboard.press('End');
+  await caretAtEnd(block.locator('pre code'));
   await page.keyboard.type(' // ok *');
   await expect.poll(value(page)).toBe('Intro\n\n```rust\nfn main() {} // ok *\n```\n');
 });
@@ -49,7 +49,7 @@ test('Code block turns the current paragraph into a fenced block', async ({ page
 test('Code marks the selection as inline code, printed in backticks', async ({ page }) => {
   await load(page, 'Call print now\n');
   const paragraph = visual(page).locator('p').first();
-  await paragraph.click();
+  await clickAndSettle(paragraph);
   await page.keyboard.press('Home');
   for (let i = 0; i < 'Call '.length; i++) await page.keyboard.press('ArrowRight');
   for (let i = 0; i < 'print'.length; i++) await page.keyboard.press('Shift+ArrowRight');
@@ -62,16 +62,14 @@ test('inline code from the source is edited as text and keeps its delimiters', a
   await load(page, 'Use ```js x``` here\n');
   const code = visual(page).locator('p code');
   await expect(code).toHaveText('x');
-  await code.click();
-  await page.keyboard.press('End');
+  await caretAtEnd(code); // not End: that goes to the end of the line, past the code
   await page.keyboard.type('y');
   await expect.poll(value(page)).toBe('Use ```js xy``` here\n');
 });
 
 test('Table of contents inserts #outline(), shown compiled with its label', async ({ page }) => {
   await load(page, '= Intro\n\nText\n\n= Details\n');
-  await visual(page).locator('p', { hasText: 'Text' }).click();
-  await page.keyboard.press('End');
+  await caretAtEnd(visual(page).locator('p', { hasText: 'Text' }));
   await toolbar(page).getByRole('button', { name: 'Table of contents' }).click();
   await expect.poll(value(page)).toBe('= Intro\n\nText\n\n#outline()\n\n= Details\n');
   const box = visual(page).locator('.typst-visual__outline');
