@@ -5,7 +5,7 @@
 ```
 dist/lib/
   typst-editor.js              ES module, all dependencies bundled (CodeMirror, …)
-  typst_engine_bg.wasm         Typst compiler (~40 MB, ~16 MB gzipped)
+  typst_engine_bg.wasm         Typst compiler and PDF export (~23 MB, ~9 MB gzipped)
   assets/engine.worker-*.js    the compile worker
   types/index.d.ts             TypeScript declarations
 ```
@@ -149,12 +149,17 @@ puts the cursor into it. A note is a thread: one list item per message, signed w
 widget's `user.name` and the local date:
 
 ```typst
-#import "@preview/drafting:0.2.2": margin-note
+#import "@preview/drafting:0.2.2": margin-note, set-margin-note-defaults
+#set-margin-note-defaults(…)   // the notes' look in the PDF, see below
 This is #margin-note[the selected text][- *Ada* (2026-10-10): Is this right?
 - *Bob* (2026-10-11): Yes.] and a point note.#margin-note[Cite?]
 ```
 
 The import is added once at the top of the file (or an existing drafting import is extended).
+With an import it adds itself, the editor also sets the notes' look once: small (8pt) text in a
+box tinted like the Visual view's notes, a thin amber border and connector, the highlighted text
+in the same tint. A file that calls `set-margin-note-defaults` already keeps its own style, and
+the call is never added twice; edit or delete it like any other line.
 The preview shows the notes the compiler draws in the page margin. drafting 0.2.2 fails on a page
 margin that is a single length ("type relative length has no method `keys`"), so adding a note
 turns a top-level `#set page(margin: 1.5cm)` into `margin: (right: 4cm, rest: 1.5cm)`. The Visual
@@ -167,8 +172,30 @@ message and stays as written until someone replies. On narrow panes the card pop
 click the highlighted text.
 There is nothing extra to store or wire up: notes arrive with `onChange` / `change` and travel
 through git, diffs and collaboration like any other text (two people replying at once give two
-list items). Resolving a note means deleting it. To hide all notes in a final build, the document can say
-`#set-margin-note-defaults(hidden: true)` (drafting's own switch, not a widget option).
+list items). Resolving a note means deleting it.
+
+### PDF with or without comments
+
+The preview toolbar has **Download PDF**: the plain button saves the PDF without comments (the
+usual final version, `main.pdf`), its menu (▾) offers **Without comments** and **With comments**
+(`main-with-comments.pdf`, the notes as the preview shows them). The name follows the main file.
+If the document has errors, the toolbar says so and nothing is downloaded (never an older PDF).
+
+Hosts can make the file themselves, e.g. to upload it:
+
+```ts
+const blob = await editor.exportPdf({ comments: false });   // application/pdf; rejects with the first error
+createTypstEditor(host, { pdfDownload: false });            // no button (exportPdf still works)
+```
+
+On `<typst-editor>`: `element.exportPdf({ comments })`, and `pdf-download="hide"` removes the button.
+
+Without comments, the document is not changed: the export compiles copies of the `.typ` files
+with every note call removed (a range note keeps its text, without the highlight), through a
+generated entry that also sets drafting's `hidden: true` for notes written some other way
+(e.g. `#let todo = margin-note.with(..)`). drafting's `hidden` alone is not used, because it
+drops the highlighted text of range notes as well. A document that sets
+`set-margin-note-defaults(hidden: false)` itself shows those other notes again.
 
 **Breaking change.** The earlier sidecar comments are gone. These APIs were removed:
 

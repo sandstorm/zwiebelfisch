@@ -14,7 +14,8 @@ src/                        the widget (TypeScript); the most important API on t
   typst-editor-element.ts   <typst-editor> custom element (shadow DOM) around createTypstEditor
   typst-editor/             what only typst-editor.ts uses: editing-views.ts (Visual/Source tabs, lazily one
                             VisualView + SourceView per document), project-renderings.ts (what a document's Visual
-                            view renders and inserts: snippets, image URLs, uploads), collaboration-link.ts
+                            view renders and inserts: snippets, image URLs, uploads), collaboration-link.ts,
+                            pdf-export.ts (the project's PDF with / without comments)
   typst-editor-element/     inline-source.ts (source written inside the element → text)
   stylesheets.test.ts       every .css under src/ parses (lightningcss, no error recovery), no nested style rules,
                             every block closed (an unclosed rule silently nests the rest of the file)
@@ -40,8 +41,9 @@ src/                        the widget (TypeScript); the most important API on t
       notes-gutter/         notes-gutter.ts (comment column), note-card (a note's thread + reply box), note-list,
                             card-layout
     source-view/            SourceView — CodeMirror 6 editing view; typst-language, lint, presence
-    preview/                Preview — worker-backed live preview + hit-testing, zoom, page numbers;
-                            toolbar.ts, latest-only.ts ("only the newest value" task runner)
+    preview/                Preview — worker-backed live preview + hit-testing, zoom, page numbers, PDF export;
+                            toolbar.ts, pdf-menu.ts ("Download PDF" + menu), latest-only.ts ("only the newest
+                            value" task runner)
       worker/               worker.ts (startEngineWorker, main-thread side), engine.worker.ts (the worker),
                             protocol.ts (messages), project-files.ts (FileSender/FileReceiver)
       pages/                pages.ts: page-list (SVG only near the viewport), geometry, zoom, snippet, change-bars,
@@ -50,13 +52,13 @@ src/                        the widget (TypeScript); the most important API on t
     changes/                ChangeTracking (base version + "Show changes"), diff.ts (diffTexts), changes.css
     comments/               CommentAction ("Comment" / Ctrl+Alt+M), add-margin-note.ts, margin-note-syntax.ts
                             (drafting's call: parse, print, validity), note-thread.ts (a note's body as a
-                            thread of messages), page-margin.ts
+                            thread of messages), page-margin.ts, without-notes.ts (the PDF without comments)
     files/                  FileSwitcher (file bar), asset-view.ts, upload.ts, insert-image.ts
     collaboration/          real-time collaboration (loaded on demand): Collaboration, SharedProject, RemoteCursors,
                             RoomVersions + SharedAssets (GitLab rooms); in-process.ts (Y.Doc/awareness wiring for
                             tests); gitlab-protocol.ts (import-free, shared with the server)
     versions/               VersionControls: "Save version", commit message, outcome (GitLab rooms)
-crates/typst-engine/        Rust → wasm: Typst compiler, SVG export, click/cursor jumps
+crates/typst-engine/        Rust → wasm: Typst compiler, SVG and PDF export, click/cursor jumps
   src/world.rs              in-memory Typst World (files and fonts pushed from JS)
   src/lib.rs                wasm-bindgen interface (JSON in/out, UTF-16 offsets)
 server/                     collaboration server (Node package, Hocuspocus; TypeScript run by Node directly)
@@ -129,10 +131,11 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
 
 ```ts
 createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileChange?, onFilesChange?, onChange?,
-                           user?, base?, collaboration? })
-  → { source (get/set), files (get/set), activeFile, open(path), setBase(base), destroy() }
-<typst-editor value="…" file-list="auto|show|hide">   .value, .files, .user, .collaboration, setBase(base);
-  'change' {detail:{value}}, 'files-change' {detail: FileChange}
+                           user?, base?, collaboration?, pdfDownload? })
+  → { source (get/set), files (get/set), activeFile, open(path), setBase(base), exportPdf({comments?}) → Promise<Blob>,
+      destroy() }
+<typst-editor value="…" file-list="auto|show|hide" pdf-download="hide">   .value, .files, .user, .collaboration,
+  setBase(base), exportPdf({comments?}); 'change' {detail:{value}}, 'files-change' {detail: FileChange}
 ```
 
 - `source` is the text of the main file at `main` (default `/main.typ`; falls back to
@@ -166,6 +169,13 @@ createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileCha
   an existing file (`name.png`, `name-2.png`, …) reuses it, a different one gets the first free
   of those names — every pasted screenshot is `image.png`; refusals — not an image Typst shows,
   the host's veto — come back as an error the popover shows).
+- **PDF** (`PdfExport`, `typst-editor/pdf-export.ts`): `exportPdf({comments})` and the preview's
+  "Download PDF" (`Preview` option `pdf`, unless `pdfDownload: false`). With comments the main
+  file is exported as compiled; without, `withoutNotes(project.files(), main)` gives the entry
+  and replaced sources (see Comments). No PDF (errors) → an `Error` "The document has n
+  error(s): …" (the toolbar shows it), never an older PDF. File name after the main file:
+  `main.pdf` / `main-with-comments.pdf`. The plain button is the version without comments
+  (decision: the usual final version); the menu has both.
 - **Insert image** (`AssetView`): `#image("…")` as its own paragraph after the line of the last
   source-view cursor (else at the end) of the last shown `.typ` file, relative path when in the
   same folder tree, else project-absolute.
@@ -211,11 +221,12 @@ defaultFonts() → Promise<Uint8Array>[]          // engine-assets.ts: fetches t
 .addFont(bytes)                                  // throws if bytes contain no font face
 .setSource(path, text) / .setBinary(path, bytes) / .remove(path)
 .compile(main) → { pages: [{hash, width, height, svg}], diagnostics: [{severity, message, hints, path, from, to}], missingPackages: string[] }
+.exportPdf(main) → { pdf: Uint8Array | null, diagnostics, missingPackages }   // keeps the hit-testing document
 .jumpFromClick(page, x, y) → {kind:'source', path, offset, from, to, boxes} | {kind:'url'} | {kind:'position'} | null
 .jumpFromCursor(path, offset) → [{page, x, y}]
 .boxesForRanges(path, [{from, to}]) → [{page, x, y, w, h}]   // where those ranges are drawn: per glyph run, shape, image
 
-withPackages(engine, fetchPackage = fetchPreviewPackage) → { compile(main) → Promise<CompileResult> }
+withPackages(engine, fetchPackage = fetchPreviewPackage) → { compile(main) → Promise<CompileResult>, exportPdf(main) → Promise<PdfResult> }
 fetchPreviewPackage(spec) → Promise<Uint8Array>     // .tar.gz from packages.typst.org, Cache API
 untarGz(bytes) → Promise<Map<relativePath, Uint8Array>>
 ```
@@ -251,6 +262,12 @@ Inside the crate:
   compile again. A failed download is remembered (no retry until reload) and reported as an extra
   diagnostic with `path: null`, next to Typst's own "package not found" at the import.
 - **SVG cache:** page SVGs are keyed by `hash128(&page.frame)`. Unchanged pages skip `typst_svg::svg`.
+- **PDF export** (`typst-pdf`, same version as typst, default `PdfOptions`: tagged, no
+  timestamp): `exportPdf(main)` compiles `main` with the world's main file set to it and back,
+  and does not replace `document` (the last `compile`), so the preview's hit-testing is
+  unaffected and the export can use another entry. The wasm returns a `PdfExport` object
+  (`pdf()` bytes, `report()` JSON); the TS wrapper frees it. It added 1.9 MB raw / 0.66 MB gzip /
+  0.42 MB brotli to the wasm (krilla, subsetter, pdf-writer, …).
 - **Hit-testing:**
   - `typst_ide::jump_from_click(world, document, PagedPosition)` walks the frames of the last
     successful document and gives the exact offset.
@@ -547,13 +564,15 @@ new SourceView(parent, document, { onCursor?, onBaseChange? })
 ### `Preview` (`src/features/preview`)
 
 ```ts
-new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scrolling page area into container
+new Preview(container, { onJump?, onDiagnostics?, pdf? })   // renders a toolbar + scrolling page area into container;
+                                             // pdf: (comments) → Promise<{blob, name}> adds "Download PDF" (PdfMenu)
 .update(files: Record<path, text | Uint8Array>, main)    // cheap per keystroke
 .reveal(path, offset)                        // cheap per cursor move: flash, scroll only if off-screen
 .showChanges(path, ranges | null)            // change bars in the page margin, redrawn after every compile
 .showPresence([{id, path, head, user}, …])   // other users' initials at their carets, redrawn after every compile
 .snippet(path, from, to, text) → Promise<{svg, width, height} | null>   // the range as drawn, cut from its page
 .onRender(listener) → unsubscribe            // after every successful compile
+.exportPdf(main, sources = {}) → Promise<PdfResult>   // the files of the last update(), sources replacing/adding texts
 .destroy()
 ```
 
@@ -562,6 +581,12 @@ new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scr
   the page) becomes the page SVG with that `viewBox` and size in pt. Null when the range draws
   nothing, or when `text` is not what the range held at the last successful compile (it was
   edited since, or the document has errors), so a snippet never shows other source.
+
+- **PDF menu** (`pdf-menu.ts`): "Download PDF" (without comments) plus ▾ with a `role=menu` of
+  "Without comments" / "With comments" (Escape or a click outside closes it). While a PDF is
+  made the buttons are disabled and the status says "Making PDF…"; the source's rejection shows
+  as "No PDF: <message>" (click dismisses). The file is saved through an object-URL link.
+  `exportPdf` waits for running compiles (`LatestOnly.idle`), so it exports the newest text.
 
 - **Change bars** (`change-bars.ts`): the ranges go to the engine's `boxesForRanges` after every
   successful compile; boxes on the same or adjacent lines join into one bar (like LaTeX
@@ -605,7 +630,9 @@ new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scr
 ```
 main → worker   {type:'init', wasm}  (first, once; the URL is resolved on the main thread)
 main → worker   {id, type:'compile', files: Record<path, text | Uint8Array | null>, main} | {id, type:'click', page, x, y} | {id, type:'cursor', path, offset} | {id, type:'boxes', path, ranges}
-worker → main   {id, type:'compile', result} | {id, type:'click', jump} | {id, type:'cursor', positions} | {id, type:'boxes', boxes} | {id, type:'error', message}
+                | {id, type:'pdf', main, sources: Record<path, text>}
+worker → main   {id, type:'compile', result} | {id, type:'click', jump} | {id, type:'cursor', positions} | {id, type:'boxes', boxes} | {id, type:'pdf', result}
+                | {id, type:'error', message}
 ```
 
 - Requests are answered in order, because the worker is single-threaded, except that a
@@ -613,6 +640,12 @@ worker → main   {id, type:'compile', result} | {id, type:'click', jump} | {id,
 - `compile` sends the full file map; `null` means "the same bytes as last time" (`FileSender`).
   The worker (`FileReceiver`) removes paths missing since the previous call, and Typst diffs the
   text itself. Package files are not part of the map and stay loaded.
+- `pdf` exports with the files of the last `compile`; `sources` replace or add text files for that
+  export only (`FileReceiver.withSources`), restored afterwards. `compile` and `pdf` run one at a
+  time (also across package downloads), so neither sees the other's files. A `click`/`cursor`
+  that overtakes a `pdf` waiting for a download reads the export's sources (rare: the generated
+  entry only imports drafting, which the document has loaded already). The PDF's buffer is
+  transferred, not copied.
 
 ### Diagnostics in the widget (`src/features/diagnostics`)
 
@@ -649,8 +682,8 @@ Typst source itself (`@preview/drafting:0.2.2`): `#margin-note[note]` (point, at
 the preview shows what the compiler draws, and git, diffs, undo and collaboration carry notes as
 ordinary text. A thread is a list in the note (one item per message, `*Name* (YYYY-MM-DD): text`,
 below), resolving means deleting the call, and an author is whatever the note's text says (the
-widget's `user.name` when it writes a message). Hiding notes for the final output
-(`#set-margin-note-defaults(hidden: true)`) is up to the author.
+widget's `user.name` when it writes a message). The PDF download leaves notes out on request
+(`withoutNotes`, below).
 
 ```ts
 // margin-note-syntax.ts: the only module that knows drafting's call syntax
@@ -660,6 +693,8 @@ noteCallSyntax(source, funcCallNode) → {head, text: ContentBlock | null, note}
 isNoteCallAt(source, from, to) → boolean            // one note call in markup from `#` to exactly `to`
 safeNote(markup) → string | null                    // markup that cannot end or swallow its call
 addMarginNote(text, {from, to}) → {changes: TextChange[], note} | null   // note: offset of the new (empty) body
+NOTE_STYLE                                          // the set-margin-note-defaults(..) call added with a new import
+withoutNotes(files, main) → {main, sources}         // the PDF without comments: entry + replaced/added .typ texts
 // note-thread.ts: the only module that knows the thread format (all on the note's markup)
 readThread(note) → {author, date, text}[]          // author/date null: an anonymous message (markup)
 addReply(note, {author, date, text}) → note        // only an insertion after the last item
@@ -684,8 +719,15 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
   import is ensured exactly once: an existing top-level drafting import (any version) that ends
   before the note is kept (`*`, or `margin-note` among its items) or extended (`, margin-note`
   after its last item, also after a trailing comma; `: margin-note` on a bare module import);
-  else `#import "@preview/drafting:0.2.2": margin-note` goes first in the file (a drafting
-  import below the note would not bind the name where the note is).
+  else `#import "@preview/drafting:0.2.2": margin-note, set-margin-note-defaults` goes first in
+  the file (a drafting import below the note would not bind the name where the note is),
+  followed by `NOTE_STYLE`: `#set-margin-note-defaults(stroke: rgb("#e0a800") + 0.5pt, fill:
+  rgb("#fabe1447"), rect: ..)`, a rect with radius 2pt, inset 3pt, 8pt text and a compact list —
+  the Visual view's note colours (`--te-note`, `--te-note-line`); drafting uses `fill` for the
+  range highlight too. Chosen by rendering samples with the typst CLI
+  (`docs/images/notes-pdf-*.png`). Only with an import the editor adds, and only if the file
+  does not mention `set-margin-note-defaults` already (a file's own style stays; never two calls).
+  The call is global state from where it stands on, like any drafting default.
 - **Page margins** (`page-margin.ts`, part of `addMarginNote`'s edits, same undo
   step): drafting 0.2.2 crashes with "type relative length has no method `keys`" when the page
   margin is a single length ([drafting.typ line 640](https://github.com/typst/packages/blob/main/packages/preview/drafting/0.2.2/drafting.typ#L640)
@@ -709,6 +751,16 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
     starts its own line at column 0 (`[- … \n- *Bob* (…): …]`). A reply is only an insertion
     after the last item, so concurrent replies merge into two items (tested with in-process
     Y.Docs). Only a multi-line edit of an inline first message moves it into the block form.
+- **Without comments** (`without-notes.ts`, pure): checked with the typst CLI, drafting's
+  `hidden: true` also drops the highlighted text of range notes, and a later
+  `set-margin-note-defaults(hidden: false)` turns notes on again (a later call without `hidden`,
+  like `NOTE_STYLE`, does not). So `withoutNotes` removes every note call `noteCallSyntax`
+  accepts from copies of all `.typ` files (range → its text, point → nothing, a point note alone
+  on its line with that line, so no paragraph break appears; notes nested in a removed part go
+  with it), and, when a file imports drafting (that version), adds a generated entry
+  (`/.without-comments.typ`, or `-2`, … if taken) with `set-margin-note-defaults(hidden: true)`
+  and `#include "<main>"` for notes written other ways (`margin-note.with(..)`, calls in code).
+  Engine test: the result draws exactly the glyphs of the plain text.
 - **`CommentAction`**: "Comment" and Ctrl/Cmd+Alt+M (captured at the widget root). The Visual
   view's toolbar has the button (`VisualViewOptions.comment` calls `CommentAction.comment()`);
   the tab bar keeps `CommentAction.button` for the Source view only
@@ -920,7 +972,8 @@ an in-memory `FakeGitLab` holding `demo/examples/advanced`). Checklist with step
 
 ## Known limitations / next steps
 
-- **wasm is 21 MB raw (8.4 MB gzip, 6.2 MB brotli)**, down from 43 MB (15.8 / 10.6). The rest is
+- **wasm is 23.1 MB raw (9.0 MB gzip, 6.6 MB brotli)**, down from 43 MB (15.8 / 10.6); PDF export
+  (typst-pdf) is 1.9 MB raw / 0.66 MB gzip of it. The rest is
   code (11.7 MB: typst-library 2.7, plus wasmi for plugins, hayro for PDF images, citation/
   hayagriva, image codecs, usvg, serde_yaml/toml/xml loaders) and data (9.4 MB: ICU, syntect
   syntaxes via two-face, hayagriva styles, hyphenation tries). None of it is feature-gated in
