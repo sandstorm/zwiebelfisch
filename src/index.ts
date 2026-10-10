@@ -7,6 +7,7 @@ export {
   type EditorMode,
   type FileChange,
   type FileListMode,
+  type Theme,
   type PdfExportOptions,
   type ProjectFiles,
   type TypstEditor,

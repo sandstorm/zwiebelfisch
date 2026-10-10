@@ -1,14 +1,67 @@
 /* The widget's styles, scoped under .typst-editor and injected by createTypstEditor (also injected:
    typst-editor/layout.css, features/files/files.css, features/changes/changes.css,
    features/visual-view/visual-view.css). See docs/embedding.md. */
+/* Colors: tokens as light-dark(light, dark). The widget follows the page's color-scheme (a page that
+   declares `color-scheme: light dark` gets it dark when the OS is); the `theme` option sets its own
+   (data-theme, see typst-editor/color-scheme.ts). The preview's pages stay white, as on paper. */
+.typst-editor[data-theme='light'] { color-scheme: light; }
+.typst-editor[data-theme='dark'] { color-scheme: dark; }
+.typst-editor[data-theme='auto'] { color-scheme: light dark; }
 .typst-editor {
-  --te-border: #d9dce1;
-  --te-preview-bg: #eef0f3;
-  --te-accent: #2f6feb;
-  --te-jump: rgba(47, 111, 235, 0.25);
-  --te-note: rgba(250, 190, 20, 0.28);
-  --te-note-line: #e0a800;
-  --te-note-strong: rgba(250, 190, 20, 0.55);
+  --te-bg: light-dark(white, #0d1117);
+  /* raised: buttons, popovers, menus, cards, the selected tab */
+  --te-surface: light-dark(white, #1c2128);
+  /* toolbars, side panels, code blocks */
+  --te-subtle: light-dark(#f6f8fa, #161b22);
+  --te-hover: light-dark(#eef2f7, #2a313c);
+  --te-chip: light-dark(#f1f3f6, #262c36);
+  --te-divider: light-dark(#eef0f3, #262c36);
+  --te-control: light-dark(#c4cad3, #484f58);
+  --te-border: light-dark(#d9dce1, #30363d);
+  --te-preview-bg: light-dark(#eef0f3, #22272e);
+  --te-text: light-dark(#1f2328, #e6edf3);
+  --te-text-2: light-dark(#3d4451, #c9d1d9);
+  --te-muted: light-dark(#57606a, #9198a1);
+  --te-muted-2: light-dark(#6e7781, #848d97);
+  --te-faint: light-dark(#8c959f, #6e7681);
+  --te-faint-2: light-dark(#b8bec8, #484f58);
+  --te-accent: light-dark(#2f6feb, #4493f8);
+  --te-accent-faint: light-dark(#f4f7fd, #131c2b);
+  --te-accent-line: light-dark(#8fb3ec, #3b6db3);
+  --te-selected: light-dark(#e7efff, #1c2d4a);
+  --te-selected-strong: light-dark(#dbe7ff, #22406e);
+  --te-jump: light-dark(rgba(47, 111, 235, 0.25), rgba(68, 147, 248, 0.3));
+  --te-hint: light-dark(#4b6a9b, #8fb3ec);
+  --te-purple: light-dark(#8250df, #ab7df8);
+  --te-danger: light-dark(#cf222e, #f85149);
+  --te-danger-soft: light-dark(#fff1f0, #3d1a1d);
+  --te-success: light-dark(#1a7f37, #3fb950);
+  --te-success-soft: light-dark(#f1f8f3, #13291b);
+  --te-warning: light-dark(#9a6700, #d29922);
+  --te-note: light-dark(rgba(250, 190, 20, 0.28), rgba(210, 153, 34, 0.25));
+  --te-note-line: light-dark(#e0a800, #bb8009);
+  --te-note-strong: light-dark(rgba(250, 190, 20, 0.55), rgba(210, 153, 34, 0.5));
+  --te-note-bg: light-dark(#fff8e0, #3a2e0c);
+  --te-note-text: light-dark(#6b5200, #e3b341);
+  /* compiled snippets in the Visual view are drawn for white paper */
+  --te-rendering-bg: light-dark(transparent, white);
+  /* syntax highlighting (features/source-view/code-colors.ts); light: CodeMirror's default colors */
+  --te-syn-meta: light-dark(#404740, #8b949e);
+  --te-syn-keyword: light-dark(#770088, #ff7b72);
+  --te-syn-atom: light-dark(#221199, #79c0ff);
+  --te-syn-literal: light-dark(#116644, #7ee787);
+  --te-syn-string: light-dark(#aa1111, #a5d6ff);
+  --te-syn-string-2: light-dark(#ee4400, #ffa657);
+  --te-syn-definition: light-dark(#0000ff, #d2a8ff);
+  --te-syn-local: light-dark(#3300aa, #ffa657);
+  --te-syn-type: light-dark(#008855, #ffa657);
+  --te-syn-class: light-dark(#116677, #ffa657);
+  --te-syn-macro: light-dark(#225566, #d2a8ff);
+  --te-syn-property: light-dark(#0000cc, #79c0ff);
+  --te-syn-comment: light-dark(#994400, #8b949e);
+  --te-syn-invalid: light-dark(#ff0000, #f85149);
+  background: var(--te-bg);
+  color: var(--te-text);
   display: grid;
   /* side panels (typst-editor/layout.css) | editing view | preview. The preview is a share of the
      widget (half; the separator sets --te-preview-share), so opening or resizing a side panel narrows
@@ -46,7 +99,7 @@
   gap: 4px;
   padding: 4px 8px;
   border-bottom: 1px solid var(--te-border);
-  background: #f7f8fa;
+  background: var(--te-subtle);
   font-size: 12px;
 }
 .typst-preview__toolbar > button {
@@ -54,7 +107,7 @@
   border: 1px solid var(--te-border);
   border-radius: 4px;
   padding: 2px 6px;
-  background: white;
+  background: var(--te-surface);
   font: inherit;
   cursor: pointer;
 }
@@ -74,7 +127,7 @@
   width: 26px;
   height: 14px;
   border-radius: 7px;
-  background: #c4cad3;
+  background: var(--te-control);
   transition: background 0.15s;
 }
 .typst-preview__switch::after {
@@ -85,7 +138,7 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: white;
+  background: var(--te-surface);
   transition: transform 0.15s;
 }
 .typst-preview__follow[aria-checked='true'] > .typst-preview__switch { background: var(--te-accent); }
@@ -95,7 +148,7 @@
 .typst-preview__pdf > button {
   border: 1px solid var(--te-border);
   padding: 2px 8px;
-  background: white;
+  background: var(--te-surface);
   font: inherit;
   cursor: pointer;
 }
@@ -113,17 +166,17 @@
   padding: 4px;
   border: 1px solid var(--te-border);
   border-radius: 6px;
-  background: white;
+  background: var(--te-surface);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 .typst-preview__pdf-menu[hidden] { display: none; }
 .typst-preview__pdf-menu button { border: none; border-radius: 4px; padding: 4px 8px; background: none; font: inherit; text-align: left; cursor: pointer; }
-.typst-preview__pdf-menu button:hover, .typst-preview__pdf-menu button:focus-visible { background: #eef2f7; }
-.typst-preview__pdf-status { position: absolute; top: calc(100% + 4px); right: 0; z-index: 19; max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #57606a; }
+.typst-preview__pdf-menu button:hover, .typst-preview__pdf-menu button:focus-visible { background: var(--te-hover); }
+.typst-preview__pdf-status { position: absolute; top: calc(100% + 4px); right: 0; z-index: 19; max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--te-muted); }
 /* empty, it takes no room but stays a live region (display: none would keep its messages from screen readers) */
-.typst-preview__pdf-status:not(:empty) { padding: 3px 6px; border: 1px solid var(--te-border); border-radius: 4px; background: white; }
-.typst-preview__zoom { margin-left: 4px; color: #57606a; font-variant-numeric: tabular-nums; }
-.typst-preview__page-number { margin-left: auto; color: #57606a; font-variant-numeric: tabular-nums; }
+.typst-preview__pdf-status:not(:empty) { padding: 3px 6px; border: 1px solid var(--te-border); border-radius: 4px; background: var(--te-surface); }
+.typst-preview__zoom { margin-left: 4px; color: var(--te-muted); font-variant-numeric: tabular-nums; }
+.typst-preview__page-number { margin-left: auto; color: var(--te-muted); font-variant-numeric: tabular-nums; }
 .typst-preview__scroller { flex: 1; min-height: 0; overflow: auto; }
 .typst-preview {
   display: flex;
@@ -136,7 +189,7 @@
 .typst-preview__page {
   position: relative;
   flex: none;
-  background: white;
+  background: white; /* paper, also in dark mode */
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
   cursor: text;
 }
@@ -149,7 +202,7 @@
   padding-top: 6px;
   text-align: center;
   font-size: 11px;
-  color: #8c959f;
+  color: var(--te-faint);
 }
 .typst-preview__content svg { display: block; width: 100%; height: auto; }
 .typst-preview__highlight {
@@ -180,16 +233,16 @@
 }
 .typst-file-link__button:hover,
 .typst-visual__path:hover { text-decoration: underline; }
-.typst-file-link__note { color: #57606a; }
-.typst-file-link__error { color: #cf222e; }
+.typst-file-link__note { color: var(--te-muted); }
+.typst-file-link__error { color: var(--te-danger); }
 .typst-file-link__error:empty { display: none; }
-.typst-visual__path--missing { color: #8c959f; cursor: default; text-decoration: line-through dotted; }
+.typst-visual__path--missing { color: var(--te-faint); cursor: default; text-decoration: line-through dotted; }
 .typst-editor__tabs {
   display: flex;
   gap: 4px;
   padding: 6px 8px;
   border-bottom: 1px solid var(--te-border);
-  background: #f7f8fa;
+  background: var(--te-subtle);
 }
 .typst-editor__tab {
   border: 1px solid transparent;
@@ -200,7 +253,7 @@
   font-size: 13px;
   cursor: pointer;
 }
-.typst-editor__tab[aria-selected='true'] { background: white; border-color: var(--te-border); }
+.typst-editor__tab[aria-selected='true'] { background: var(--te-surface); border-color: var(--te-border); }
 .typst-editor__pane { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: auto; }
 .typst-editor__pane[hidden] { display: none; }
 /* "← previous file" / "next file →" at the start and end of an included file (reading order of the main file) */
@@ -232,7 +285,7 @@
   font-size: 0.8em;
   font-weight: normal;
   line-height: 1.9;
-  color: #8c959f;
+  color: var(--te-faint);
   white-space: nowrap;
   pointer-events: none;
   user-select: none;
@@ -241,30 +294,30 @@
   margin: 0 0 0.7em;
   padding: 4px 8px;
   border-radius: 6px;
-  background: #f1f3f6;
-  color: #57606a;
+  background: var(--te-chip);
+  color: var(--te-muted);
   font: 13px/1.4 ui-monospace, monospace;
   white-space: pre-wrap;
 }
 .typst-visual__raw-inline {
   padding: 0 4px;
   border-radius: 4px;
-  background: #f1f3f6;
-  color: #57606a;
+  background: var(--te-chip);
+  color: var(--te-muted);
   font: 0.8em ui-monospace, monospace;
 }
 .typst-visual__raw-block,
 .typst-visual__raw-inline { cursor: text; transition: box-shadow 0.15s, background 0.15s; }
 .typst-visual__raw-block:hover,
-.typst-visual__raw-inline:hover { background: #e9edf2; }
+.typst-visual__raw-inline:hover { background: var(--te-hover); }
 .typst-visual__raw-block:focus-within,
-.typst-visual__raw-inline:focus-within { background: white; box-shadow: 0 0 0 2px var(--te-accent); color: #24292f; }
+.typst-visual__raw-inline:focus-within { background: var(--te-surface); box-shadow: 0 0 0 2px var(--te-accent); color: var(--te-text); }
 .typst-visual .ProseMirror-selectednode { outline: 2px solid var(--te-accent); }
 /* Raw boxes showing their image or compiled snippet (code while focused) */
 .typst-visual__code[hidden],
 .typst-visual__rendering[hidden] { display: none; }
 .typst-visual__raw--rendered { background: transparent; }
-.typst-visual__rendering { display: block; max-width: 100%; height: auto; cursor: text; }
+.typst-visual__rendering { display: block; max-width: 100%; height: auto; background: var(--te-rendering-bg); cursor: text; }
 .typst-visual__raw-block:not(.typst-visual__image) > .typst-visual__rendering { margin: 0 auto; }
 /* Image files show at their own size: keep a big photo from filling the whole view (aspect kept;
    the picture sits in the image frame, so not a direct child) */
@@ -287,8 +340,8 @@
   padding: 1px 3px;
   border: 1px solid var(--te-note-line);
   border-radius: 6px 6px 6px 1px;
-  background: #fff8e0;
-  color: #6b5200;
+  background: var(--te-note-bg);
+  color: var(--te-note-text);
   vertical-align: baseline;
   cursor: pointer;
 }
@@ -304,14 +357,14 @@
   margin: 0 1px;
   padding: 0 5px;
   border-radius: 4px;
-  background: #e8f0fb;
+  background: var(--te-selected);
   color: var(--te-accent);
   font: 0.8em system-ui, sans-serif;
   white-space: nowrap;
   cursor: default;
 }
-.typst-visual__ref-supplement { color: #24292f; }
-.typst-visual__ref--unknown { background: #fff1f0; color: #cf222e; text-decoration: underline wavy #cf222e; text-underline-offset: 3px; }
+.typst-visual__ref-supplement { color: var(--te-text); }
+.typst-visual__ref--unknown { background: var(--te-danger-soft); color: var(--te-danger); text-decoration: underline wavy var(--te-danger); text-underline-offset: 3px; }
 /* Labels (<key>) as a tag on the block they label: in the text of headings and paragraphs, below other blocks */
 .typst-label-tag { position: relative; display: inline-block; margin-left: 0.5em; font: normal 12px/1.4 system-ui, sans-serif; vertical-align: middle; }
 .typst-label-tag--block { display: flex; justify-content: flex-end; margin: -0.5em 0 0.5em; }
@@ -319,8 +372,8 @@
   padding: 0 7px;
   border: 1px solid var(--te-border);
   border-radius: 9px;
-  background: #f6f8fa;
-  color: #57606a;
+  background: var(--te-subtle);
+  color: var(--te-muted);
   font: inherit;
   cursor: pointer;
 }
@@ -331,8 +384,8 @@
   padding: 0 7px;
   border: 1px solid var(--te-accent);
   border-radius: 9px;
-  background: white;
-  color: #24292f;
+  background: var(--te-surface);
+  color: var(--te-text);
   font: inherit;
   outline: none;
   box-shadow: 0 0 0 2px var(--te-jump);
@@ -346,15 +399,15 @@
   padding: 4px;
   border: 1px solid var(--te-border);
   border-radius: 8px;
-  background: white;
+  background: var(--te-surface);
   box-shadow: 0 4px 12px rgb(0 0 0 / 0.12);
   font: 13px system-ui, sans-serif;
 }
 .typst-ref-suggestions[hidden] { display: none; }
 .typst-ref-suggestions__option { display: flex; gap: 10px; align-items: baseline; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
-.typst-ref-suggestions__option[aria-selected='true'] { background: #eef2f7; }
+.typst-ref-suggestions__option[aria-selected='true'] { background: var(--te-hover); }
 .typst-ref-suggestions__name { font-family: ui-monospace, monospace; white-space: nowrap; }
-.typst-ref-suggestions__hint { overflow: hidden; color: #6e7781; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.typst-ref-suggestions__hint { overflow: hidden; color: var(--te-muted-2); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 
 /* The Visual view's body: the text and, right of it, the notes gutter (cards placed by notes-gutter.ts) */
 .typst-visual__body { flex: 1 0 auto; display: flex; position: relative; }
@@ -366,7 +419,7 @@
   flex: none;
   width: 260px;
   border-left: 1px solid var(--te-border);
-  background: #fafbfc;
+  background: var(--te-subtle);
 }
 .typst-note-card {
   position: absolute;
@@ -376,16 +429,16 @@
   padding: 6px 8px;
   border: 1px solid var(--te-border);
   border-radius: 8px;
-  background: white;
+  background: var(--te-surface);
   font: 13px/1.4 system-ui, sans-serif;
-  color: #24292f;
+  color: var(--te-text);
   cursor: text;
   transition: top 0.15s ease-out, box-shadow 0.15s, border-color 0.15s;
 }
 .typst-note-card--hover { border-color: var(--te-note-line); }
 .typst-note-card--active { border-color: var(--te-note-line); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); }
 .typst-note-card:focus-within { border-color: var(--te-accent); box-shadow: 0 0 0 2px var(--te-jump); }
-.typst-note-card__head { display: flex; align-items: center; gap: 5px; color: #6b5200; }
+.typst-note-card__head { display: flex; align-items: center; gap: 5px; color: var(--te-note-text); }
 .typst-note-card__icon { flex: none; }
 .typst-note-card__quote { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
 .typst-note-card--range .typst-note-card__quote { font-style: italic; }
@@ -398,18 +451,18 @@
   border: 1px solid transparent;
   border-radius: 4px;
   background: none;
-  color: #57606a;
+  color: var(--te-muted);
   cursor: pointer;
 }
-.typst-note-card__resolve:hover { border-color: var(--te-border); color: #1a7f37; background: #f1f8f3; }
+.typst-note-card__resolve:hover { border-color: var(--te-border); color: var(--te-success); background: var(--te-success-soft); }
 /* the thread: one message per list item (name, date, text), oldest first */
 .typst-note-card__thread { margin: 4px 0 0; padding: 0; list-style: none; }
 .typst-note-card__thread[hidden] { display: none; }
 .typst-note-card__message { padding: 4px 0; }
-.typst-note-card__message + .typst-note-card__message { border-top: 1px solid #eef0f3; }
+.typst-note-card__message + .typst-note-card__message { border-top: 1px solid var(--te-divider); }
 .typst-note-card__meta { display: flex; align-items: center; gap: 6px; min-height: 18px; }
 .typst-note-card__author { font-weight: 600; }
-.typst-note-card__date { color: #6e7781; font-size: 12px; }
+.typst-note-card__date { color: var(--te-muted-2); font-size: 12px; }
 .typst-note-card__text { display: block; white-space: pre-wrap; overflow-wrap: anywhere; }
 .typst-note-card__edit,
 .typst-note-card__delete,
@@ -420,19 +473,19 @@
   border: 1px solid transparent;
   border-radius: 4px;
   background: none;
-  color: #57606a;
+  color: var(--te-muted);
   font: inherit;
   font-size: 12px;
   cursor: pointer;
 }
 .typst-note-card__edit { margin-left: auto; }
-.typst-note-card__delete:hover { color: #cf222e; }
+.typst-note-card__delete:hover { color: var(--te-danger); }
 .typst-note-card__edit:hover,
 .typst-note-card__send:hover,
-.typst-note-card__more:hover { border-color: var(--te-border); background: #f6f8fa; }
+.typst-note-card__more:hover { border-color: var(--te-border); background: var(--te-subtle); }
 .typst-note-card__more { padding: 0 4px; color: var(--te-accent); }
 /* the reply box (and a message being edited) */
-.typst-note-card__compose { display: flex; align-items: flex-end; gap: 4px; margin-top: 4px; border-top: 1px solid #eef0f3; padding-top: 4px; }
+.typst-note-card__compose { display: flex; align-items: flex-end; gap: 4px; margin-top: 4px; border-top: 1px solid var(--te-divider); padding-top: 4px; }
 .typst-note-card__thread[hidden] + .typst-note-card__compose { border-top: none; }
 .typst-note-card__field,
 .typst-note-card__reply {
@@ -466,20 +519,20 @@
 .typst-visual__box-label {
   margin-bottom: 2px;
   font: 600 12px system-ui, sans-serif;
-  color: #3d4451;
+  color: var(--te-text-2);
 }
 /* Code: inline code and code blocks (plain text edited in place, with a language field) */
 .typst-visual__code-inline {
   padding: 0 3px;
   border-radius: 4px;
-  background: #f1f3f6;
+  background: var(--te-chip);
   font: 0.85em ui-monospace, monospace;
 }
 .typst-visual__code-block {
   margin: 0 0 0.7em;
   border: 1px solid var(--te-border);
   border-radius: 6px;
-  background: #f6f8fa;
+  background: var(--te-subtle);
 }
 .typst-visual__code-header {
   display: flex;
@@ -488,7 +541,7 @@
   padding: 2px 8px;
   border-bottom: 1px solid var(--te-border);
   font: 600 12px system-ui, sans-serif;
-  color: #3d4451;
+  color: var(--te-text-2);
   user-select: none;
 }
 .typst-visual__code-language {
@@ -501,12 +554,12 @@
   color: inherit;
 }
 .typst-visual__code-language:hover,
-.typst-visual__code-language:focus { border-color: var(--te-border); background: white; outline: none; }
+.typst-visual__code-language:focus { border-color: var(--te-border); background: var(--te-surface); outline: none; }
 .typst-visual__code-block pre {
   margin: 0;
   padding: 6px 8px;
   font: 13px/1.45 ui-monospace, monospace;
-  color: #24292f;
+  color: var(--te-text);
   white-space: pre-wrap;
 }
 /* Images: a frame showing the width, resize handles and the image toolbar while selected */
@@ -558,11 +611,11 @@
   padding: 2px 8px;
   border: 1px solid var(--te-border);
   border-radius: 4px;
-  background: white;
+  background: var(--te-surface);
   font: inherit;
   cursor: pointer;
 }
-.typst-visual__image-tools > button[aria-pressed='true'] { border-color: var(--te-accent); background: #e3ecfd; }
+.typst-visual__image-tools > button[aria-pressed='true'] { border-color: var(--te-accent); background: var(--te-selected); }
 .typst-visual__figure { margin: 0 0 0.7em; }
 .typst-visual__figure > .typst-visual__image { margin-bottom: 0.2em; }
 .typst-visual__figure .typst-visual__image-frame { margin: 0 auto; }
@@ -573,7 +626,7 @@
   content: 'Caption';
   position: absolute;
   inset: 0;
-  color: #8c959f;
+  color: var(--te-faint);
   pointer-events: none;
 }
 .typst-visual__image-frame > .typst-visual__rendering { cursor: default; }
@@ -582,13 +635,13 @@
 .typst-visual__table th { min-width: 3em; padding: 2px 8px; border: 1px solid var(--te-border); vertical-align: top; }
 .typst-visual__table td > :last-child,
 .typst-visual__table th > :last-child { margin-bottom: 0; }
-.typst-visual__table .selectedCell { background: #e3ecfd; }
+.typst-visual__table .selectedCell { background: var(--te-selected); }
 .typst-visual__page-break {
   display: flex;
   align-items: center;
   gap: 8px;
   margin: 0.4em 0 1.1em;
-  color: #6e7781;
+  color: var(--te-muted-2);
   font: 600 11px system-ui, sans-serif;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -596,7 +649,7 @@
 .typst-visual__page-break::before,
 .typst-visual__page-break::after { content: ''; flex: 1; border-top: 1px dashed currentColor; }
 .typst-visual__rule { padding: 0.4em 0 1.1em; }
-.typst-visual__quote { margin: 0 0 0.7em; padding: 0 0 0 1em; border-left: 3px solid var(--te-border); color: #3d4451; }
+.typst-visual__quote { margin: 0 0 0.7em; padding: 0 0 0 1em; border-left: 3px solid var(--te-border); color: var(--te-text-2); }
 .typst-visual__quote > :last-child { margin-bottom: 0; }
 /* Custom styles (features/styles): a paragraph style's blocks in a frame with its name; text in a text style
    underlined dotted, its name as tooltip. Hosts style one by its class, typst-style--<name>. */
@@ -604,28 +657,28 @@
   position: relative;
   margin: 0 0 0.7em;
   padding: 0.35em 0.8em 0.1em;
-  border-left: 3px solid #8fb3ec;
+  border-left: 3px solid var(--te-accent-line);
   border-radius: 0 6px 6px 0;
-  background: #f5f8fd;
+  background: var(--te-accent-faint);
 }
 .typst-visual__style::before {
   content: attr(data-style-title);
   display: block;
   margin-bottom: 0.15em;
-  color: #4b6a9b;
+  color: var(--te-hint);
   font: 600 11px system-ui, sans-serif;
   letter-spacing: 0.02em;
   pointer-events: none;
   user-select: none;
 }
 .typst-visual__style > :last-child { margin-bottom: 0.4em; }
-.typst-visual__style-text { text-decoration: underline dotted #4b6a9b; text-underline-offset: 3px; }
+.typst-visual__style-text { text-decoration: underline dotted var(--te-hint); text-underline-offset: 3px; }
 .typst-visual ul[data-type='taskList'] { list-style: none; padding-left: 0.3em; }
 .typst-visual ul[data-type='taskList'] > li { display: flex; gap: 0.5em; align-items: baseline; }
 .typst-visual ul[data-type='taskList'] > li > label { flex: none; }
 .typst-visual ul[data-type='taskList'] > li > div { flex: 1; min-width: 0; }
 .typst-visual ul[data-type='taskList'] > li > div > p { margin: 0; }
-.typst-visual__rule hr { margin: 0; border: none; border-top: 1px solid #24292f; }
+.typst-visual__rule hr { margin: 0; border: none; border-top: 1px solid var(--te-text); }
 .typst-popover {
   position: absolute;
   top: 100%;
@@ -635,21 +688,21 @@
   padding: 6px;
   border: 1px solid var(--te-border);
   border-radius: 8px;
-  background: white;
+  background: var(--te-surface);
   box-shadow: 0 4px 12px rgb(0 0 0 / 0.12);
   font: 13px system-ui, sans-serif;
 }
 .typst-popover[hidden] { display: none; }
 .typst-popover input { width: 260px; padding: 4px 6px; border: 1px solid var(--te-border); border-radius: 4px; font: inherit; }
-.typst-popover button { padding: 4px 10px; border: 1px solid var(--te-border); border-radius: 4px; background: #f6f8fa; font: inherit; cursor: pointer; }
+.typst-popover button { padding: 4px 10px; border: 1px solid var(--te-border); border-radius: 4px; background: var(--te-subtle); font: inherit; cursor: pointer; }
 .typst-popover button[type='submit'] { border-color: var(--te-accent); background: var(--te-accent); color: white; }
 .typst-popover button[hidden] { display: none; }
 .typst-popover { flex-wrap: wrap; max-width: 360px; }
 .typst-popover__choices { flex-basis: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
 .typst-popover__files { display: flex; flex-direction: column; align-self: stretch; max-height: 160px; overflow: auto; }
 .typst-popover .typst-popover__files button { border: none; background: none; padding: 3px 6px; text-align: left; }
-.typst-popover .typst-popover__files button:hover { background: #eef2f7; }
-.typst-popover__error { color: #cf222e; }
+.typst-popover .typst-popover__files button:hover { background: var(--te-hover); }
+.typst-popover__error { color: var(--te-danger); }
 .typst-popover__error:empty { display: none; }
 .typst-preview--stale { opacity: 0.45; filter: grayscale(0.6); transition: opacity 0.2s; }
 .typst-status {
@@ -668,12 +721,12 @@
   padding: 2px 6px;
   border-radius: 3px;
   background: none;
-  color: #1a7f37;
+  color: var(--te-success);
   cursor: pointer;
 }
 .typst-status__summary:disabled { cursor: default; }
-.typst-status[data-severity='warning'] .typst-status__summary { color: #9a6700; }
-.typst-status[data-severity='error'] .typst-status__summary { color: #cf222e; font-weight: 600; }
+.typst-status[data-severity='warning'] .typst-status__summary { color: var(--te-warning); }
+.typst-status[data-severity='error'] .typst-status__summary { color: var(--te-danger); font-weight: 600; }
 /* Messages of the shown file, opened by hovering or focusing the count. */
 .typst-status__hover { position: relative; }
 .typst-status__details {
@@ -689,7 +742,7 @@
   margin: 0 0 4px;
   padding: 4px;
   list-style: none;
-  background: #fff;
+  background: var(--te-surface);
   border: 1px solid var(--te-border);
   border-radius: 4px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -700,7 +753,7 @@
   width: 100%;
   padding: 4px 6px;
   border: 0;
-  border-left: 3px solid #9a6700;
+  border-left: 3px solid var(--te-warning);
   background: none;
   color: inherit;
   font: inherit;
@@ -708,11 +761,11 @@
   white-space: pre-wrap;
   cursor: pointer;
 }
-.typst-status__details > li[data-severity='error'] > .typst-status__detail { border-left-color: #cf222e; }
+.typst-status__details > li[data-severity='error'] > .typst-status__detail { border-left-color: var(--te-danger); }
 .typst-status__detail:hover, .typst-status__detail:focus-visible { background: var(--te-preview-bg); }
 .typst-status__elsewhere { display: contents; list-style: none; }
-.typst-status__elsewhere > li { color: #57606a; }
-.typst-status__elsewhere > li[data-severity='error'] { color: #cf222e; }
+.typst-status__elsewhere > li { color: var(--te-muted); }
+.typst-status__elsewhere > li[data-severity='error'] { color: var(--te-danger); }
 .typst-toolbar {
   position: sticky;
   top: 0;
@@ -723,7 +776,7 @@
   gap: 2px;
   padding: 4px 8px;
   border-bottom: 1px solid var(--te-border);
-  background: white;
+  background: var(--te-surface);
   font-family: system-ui, sans-serif;
 }
 .typst-toolbar__group { display: flex; align-items: center; gap: 2px; }
@@ -741,12 +794,12 @@
   border: 0;
   border-radius: 6px;
   background: none;
-  color: #3d4451;
+  color: var(--te-text-2);
   cursor: pointer;
 }
-.typst-toolbar__button:hover:not(:disabled) { background: #eef1f5; }
-.typst-toolbar__button[aria-pressed='true'] { background: #e3ecfd; color: var(--te-accent); }
-.typst-toolbar__button:disabled { color: #b8bec8; cursor: default; }
+.typst-toolbar__button:hover:not(:disabled) { background: var(--te-hover); }
+.typst-toolbar__button[aria-pressed='true'] { background: var(--te-selected); color: var(--te-accent); }
+.typst-toolbar__button:disabled { color: var(--te-faint-2); cursor: default; }
 .typst-toolbar__button:focus-visible,
 .typst-toolbar__style:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 1px; }
 /* Toolbar menus (Insert ▾, Align ▾): a trigger with a caret, a list of labelled items below it */
@@ -754,7 +807,7 @@
 .typst-toolbar__menu-button { width: auto; gap: 2px; padding: 0 4px 0 7px; }
 .typst-toolbar__menu-icon { display: inline-flex; }
 .typst-toolbar__caret { width: 0; height: 0; border: 4px solid transparent; border-top-color: currentColor; margin-top: 4px; }
-.typst-toolbar__menu-button[aria-expanded='true'] { background: #eef1f5; }
+.typst-toolbar__menu-button[aria-expanded='true'] { background: var(--te-hover); }
 .typst-toolbar__menu-list {
   position: absolute;
   top: calc(100% + 4px);
@@ -766,7 +819,7 @@
   padding: 4px;
   border: 1px solid var(--te-border);
   border-radius: 8px;
-  background: white;
+  background: var(--te-surface);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
 }
 .typst-toolbar__menu-list[hidden] { display: none; }
@@ -780,7 +833,7 @@
   padding: 2px;
   border: 1px solid var(--te-border);
   border-radius: 8px;
-  background: white;
+  background: var(--te-surface);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
   transform: translateY(-100%);
   font-family: system-ui, sans-serif;
@@ -794,7 +847,7 @@
   border: 1px solid transparent;
   border-radius: 6px;
   background: none;
-  color: #3d4451;
+  color: var(--te-text-2);
   font: inherit;
   font-size: 13px;
   cursor: pointer;
@@ -813,14 +866,14 @@
   padding: 24px;
 }
 .typst-asset[hidden] { display: none; }
-.typst-asset__title { margin: 0; font-size: 15px; font-weight: 600; color: #1f2328; }
-.typst-asset__size { margin-left: 8px; font-weight: 400; color: #8c959f; font-size: 12px; }
+.typst-asset__title { margin: 0; font-size: 15px; font-weight: 600; color: var(--te-text); }
+.typst-asset__size { margin-left: 8px; font-weight: 400; color: var(--te-faint); font-size: 12px; }
 .typst-asset__image {
   max-width: 100%;
   max-height: 60vh;
   object-fit: contain;
   border-radius: 6px;
-  background: repeating-conic-gradient(#f1f3f6 0 25%, white 0 50%) 0 0 / 16px 16px;
+  background: repeating-conic-gradient(var(--te-chip) 0 25%, var(--te-surface) 0 50%) 0 0 / 16px 16px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
 }
 .typst-asset__text {
@@ -828,17 +881,17 @@
   margin: 0;
   padding: 12px;
   border-radius: 6px;
-  background: #f6f8fa;
+  background: var(--te-subtle);
   font: 12px/1.5 ui-monospace, monospace;
   white-space: pre-wrap;
 }
-.typst-asset__note { color: #57606a; }
+.typst-asset__note { color: var(--te-muted); }
 /* Spreadsheets (.ic): IronCalc's workbook UI fills the editing column */
 .typst-sheet { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .typst-sheet[hidden] { display: none; }
-.typst-sheet__title { margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--te-border); font-size: 13px; font-weight: 600; color: #1f2328; }
-.typst-sheet__body { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; color: #57606a; font-size: 13px; }
-.typst-toolbar__style:hover { background: #eef1f5; }
+.typst-sheet__title { margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--te-border); font-size: 13px; font-weight: 600; color: var(--te-text); }
+.typst-sheet__body { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; color: var(--te-muted); font-size: 13px; }
+.typst-toolbar__style:hover { background: var(--te-hover); }
 .typst-status__open {
   border: 0;
   padding: 0;
@@ -858,14 +911,14 @@
   border: 1px solid var(--te-border);
   border-radius: 6px;
   padding: 3px 10px;
-  background: white;
-  color: #3d4451;
+  background: var(--te-surface);
+  color: var(--te-text-2);
   font: inherit;
   font-size: 13px;
   cursor: pointer;
 }
 .typst-editor__comment[hidden] { display: none; }
-.typst-editor__comment:hover { background: #eef1f5; }
+.typst-editor__comment:hover { background: var(--te-hover); }
 .typst-editor__comment:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 1px; }
 
 /* ---- collaboration: other users' carets, selections and boxes
@@ -939,11 +992,11 @@
 
 /* ---- diagnostics in the Visual view (tooltip: message + hints) ---- */
 .typst-diagnostic {
-  text-decoration: underline wavy #9a6700;
+  text-decoration: underline wavy var(--te-warning);
   text-decoration-skip-ink: none;
   text-underline-offset: 3px;
 }
-.typst-diagnostic[data-severity='error'] { text-decoration-color: #cf222e; }
+.typst-diagnostic[data-severity='error'] { text-decoration-color: var(--te-danger); }
 /* Raw code boxes: an underline would not reach the code inside, so outline the box. */
 :is(.typst-visual__raw-block, .typst-visual__raw-inline).typst-diagnostic { outline: 2px solid rgba(154, 103, 0, 0.6); outline-offset: 1px; }
 :is(.typst-visual__raw-block, .typst-visual__raw-inline).typst-diagnostic[data-severity='error'] { outline-color: rgba(207, 34, 46, 0.6); }

@@ -20,7 +20,8 @@ src/                        the widget (TypeScript); the most important API on t
                             layout.ts + layout.css (side panels with rail buttons, editing area, preview)
   typst-editor-element/     inline-source.ts (source written inside the element → text)
   stylesheets.test.ts       every .css under src/ parses (lightningcss, no error recovery), no nested style rules,
-                            every block closed (an unclosed rule silently nests the rest of the file)
+                            every block closed (an unclosed rule silently nests the rest of the file),
+                            hex colors only in the color tokens (dark mode)
   core/                     the models everything builds on
     typst-document/         TypstDocument — the single source of truth (string or shared Y.Text); Highlight (a
                             styled source range views draw); Presence / PresenceTarget (other users' carets +
@@ -48,7 +49,7 @@ src/                        the widget (TypeScript); the most important API on t
       toolbar/              toolbar.ts, toolbar-action, toolbar-blocks, toolbar-menu, floating-bar
       notes-gutter/         notes-gutter.ts (comment column), note-card (a note's thread + reply box), note-list,
                             card-layout
-    source-view/            SourceView — CodeMirror 6 editing view; typst-language, lint, presence, file-links
+    source-view/            SourceView — CodeMirror 6 editing view; typst-language, lint, presence, file-links, code-colors
                             (Mod+click / Alt+Enter / tooltip on paths; also used by raw boxes)
     preview/                Preview — worker-backed live preview + hit-testing, zoom, page numbers, PDF export;
                             toolbar.ts, pdf-menu.ts ("Download PDF" + menu), latest-only.ts ("only the newest
@@ -850,6 +851,26 @@ new Layout(host, storageKey)   .editor  .preview            // the editing colum
 - **Narrow** (widget < 720px, `ResizeObserver`): the open panel overlays the editing column, starts
   closed, opens only on the rail button and closes on Escape, a click outside, or `dismiss()`
   (the widget calls it after a file was chosen in the panel).
+
+### Dark mode (`src/typst-editor.css`, `src/features/source-view/code-colors.ts`)
+
+- **Tokens.** Every color of the widget's stylesheets is a custom property on `.typst-editor`
+  defined as `light-dark(light, dark)` (`--te-bg`, `--te-surface`, `--te-subtle`, `--te-text`,
+  `--te-muted`, `--te-accent`, …; the change colors in `changes.css`). New CSS uses them;
+  `stylesheets.test.ts` fails on a hex color outside a token definition (exceptions: the vendored
+  ProseMirror CSS, the fallback of a collaborator's color).
+- **Which one.** CSS `color-scheme` decides: by default the page's (inherited, also into
+  `<typst-editor>`'s shadow root), so the widget is light unless the page declares dark, and a page
+  with `color-scheme: light dark` gets it dark when the OS is. The `theme` option (`light` | `dark` |
+  `auto`; the element's `theme` attribute) sets `data-theme` on the host, which the stylesheet turns
+  into its own `color-scheme`. Read once, at creation.
+- **Stays light:** the preview's pages (paper) and compiled snippets in the Visual view
+  (`--te-rendering-bg`: white behind them in dark mode); IronCalc's workbook UI has no dark theme.
+- **CodeMirror** (Source view and raw boxes): `codeColors` = CodeMirror's default highlight style
+  with its colors from `--te-syn-*` tokens, plus `EditorView.darkTheme` (cursor, selection, gutters,
+  panels, tooltips, the merge view) switched on when the text around the editor resolves light.
+  It checks when the view is placed or resized and when the OS scheme changes, so a page switching
+  its own color-scheme later changes the CSS at once and CodeMirror's own chrome at the next resize.
 
 ### File panel (`src/features/files`)
 

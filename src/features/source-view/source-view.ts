@@ -7,11 +7,13 @@ import { Annotation, Compartment, EditorSelection, StateEffect, StateField, Tran
 import { Decoration, EditorView, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { type Highlight, type Presence, type PresenceTarget, REMOTE_ORIGIN, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
 import type { FileLinks } from '../../core/project/project';
+import { codeColors } from './code-colors';
 import { fileLinks } from './file-links';
 import { toLintDiagnostics, type SourceDiagnostic } from './lint';
 import { remotePresence, showPresence } from './presence';
 import { typstLanguage } from './typst-language';
 
+export { codeColors } from './code-colors';
 export { describeDiagnostic, type SourceDiagnostic } from './lint';
 export { fileLinks, linkInfo } from './file-links';
 export { remotePresence, showPresence } from './presence';
@@ -96,6 +98,7 @@ export class SourceView implements PresenceTarget {
       doc: document.text,
       extensions: [
         basicSetup,
+        codeColors,
         typstLanguage(),
         EditorView.lineWrapping,
         highlightField,

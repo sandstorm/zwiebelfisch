@@ -35,6 +35,19 @@ function nestedRules(path: string): string[] {
   return nested;
 }
 
+/**
+ * Hex colors outside the color tokens (`--te-*: light-dark(..)`), which would stay light in dark mode. Allowed:
+ * the fallback of a collaborator's color (`var(--typst-remote-*, #..)`), and ProseMirror's own stylesheet.
+ */
+function untokenizedColors(css: string): string[] {
+  return css
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split('\n')
+    .filter((line) => !/^\s*--te-[\w-]+:/.test(line))
+    .map((line) => line.replace(/var\(--typst-remote-[\w-]+, #[0-9a-f]+\)/gi, ''))
+    .flatMap((line) => line.match(/#[0-9a-f]{3,8}\b/gi) ?? []);
+}
+
 /** `{` minus `}` outside comments and strings: 0 when every block is closed. */
 function openBlocks(css: string): number {
   const code = css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g, '""');
@@ -57,6 +70,12 @@ describe('stylesheets', () => {
       it('closes every block', () => {
         expect(openBlocks(readFileSync(path, 'utf8'))).toBe(0);
       });
+
+      if (!path.endsWith('visual-view.css')) {
+        it('takes its colors from the tokens (light and dark)', () => {
+          expect(untokenizedColors(readFileSync(path, 'utf8'))).toEqual([]);
+        });
+      }
     });
   }
 });
