@@ -2,11 +2,12 @@
 // Tests for file-links.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
-import { TypstDocument } from '../../core/typst-document/typst-document';
-import { DocumentLinkProvider, type LinkWorkspace } from '../../core/document-links/document-links';
-import { SourceView } from './source-view';
-import { linkInfo } from './file-links';
-import { PathReference, ProjectPath } from '../../core/paths/paths';
+import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { DocumentLinkProvider, type LinkWorkspace } from '../../../core/document-links/document-links';
+import { SourceViewHost } from '../source-view';
+import { fileLinks, linkInfo } from './file-links';
+import { typstLanguage } from './typst-language';
+import { PathReference, ProjectPath } from '../../../core/paths/paths';
 
 const path = ProjectPath.of;
 const ref = PathReference.of;
@@ -23,7 +24,11 @@ function setup(text = TEXT) {
   };
   const parent = document.createElement('div');
   document.body.append(parent);
-  const source = new SourceView(parent, new TypstDocument(text), { documentLinks: new DocumentLinkProvider(links) });
+  const host = new SourceViewHost();
+  host.registerExtension(typstLanguage());
+  host.registerExtension(fileLinks);
+  host.registerLinkProvider(() => new DocumentLinkProvider(links));
+  const source = host.createView(parent, new TypstDocument(text));
   const view = EditorView.findFromDOM(parent.querySelector<HTMLElement>('.cm-editor')!)!;
   return { links, parent, source, view };
 }

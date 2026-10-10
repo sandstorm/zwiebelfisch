@@ -6,7 +6,8 @@
 import type { CollaborationOptions } from './features/collaboration/collaboration';
 import type { Diagnostic } from './core/typst-engine/typst-engine';
 import type { TypstDocument } from './core/typst-document/typst-document';
-import { Preview } from './hosts/preview/preview';
+import { followCursor, pageNumber, pdfMenu, Preview, zoomControls } from './hosts/preview/preview';
+import { codeColors, DiagnosticCollection, fileLinks, lint, presence, SourceViewHost, typstLanguage } from './hosts/source-view/source-view';
 import proseMirrorStyles from './features/visual-view/visual-view.css?inline';
 import { AssetView, FilePanel, filesPanelIcon } from './features/files/files';
 import fileStyles from './features/files/files.css?inline';
@@ -185,6 +186,9 @@ class Widget {
   private readonly status: DiagnosticsStatus;
   private readonly preview: Preview;
   readonly pdfs: PdfExport;
+  private readonly sourceViews = new SourceViewHost();
+  /** The diagnostics the Source views underline (their `lint` contribution). */
+  private readonly sourceDiagnostics = new DiagnosticCollection();
   private readonly views: EditingViews;
   private readonly navigation: FileNavigation;
   private readonly files: FilePanel;
@@ -219,11 +223,10 @@ class Widget {
     this.preview = new Preview(this.right, {
       onJump: (jump) => this.jump(jump),
       onDiagnostics: (diagnostics) => this.showDiagnostics(diagnostics),
-      follow: options.followCursor ?? rememberedFollow() ?? true,
-      onFollowChange: rememberFollow,
-      pdf: options.pdfDownload === false ? undefined : (comments) => this.pdfs.file(comments),
     });
     this.pdfs = new PdfExport(this.project, this.preview);
+    this.registerPreviewContributions();
+    this.registerSourceViewContributions();
     this.labels = new LabelIndex(this.project);
     this.styles = new StyleIndex(this.project);
     this.renderings = new ProjectRenderings({ project: this.project, preview: this.preview, request: (change) => this.request(change) });
@@ -274,10 +277,29 @@ class Widget {
     if (changed) this.options.onOpen?.(path);
   }
 
+  /** The preview's toolbar (zoom, "Follow cursor", page number, "Download PDF") and the PDFs it offers. */
+  private registerPreviewContributions(): void {
+    const follow = { on: this.options.followCursor ?? rememberedFollow() ?? true, onChange: rememberFollow };
+    for (const item of [zoomControls, followCursor(follow), pageNumber]) this.preview.registerToolbarItem(item);
+    if (this.options.pdfDownload !== false) this.preview.registerToolbarItem(pdfMenu);
+    // the plain "Download PDF" makes the first: the usual final version
+    this.preview.registerPdfVariant({ label: 'Without comments', create: () => this.pdfs.file(false) });
+    this.preview.registerPdfVariant({ label: 'With comments', create: () => this.pdfs.file(true) });
+  }
+
+  /** What every Source view has: Typst syntax and colors, other users' carets, file links, compile errors. */
+  private registerSourceViewContributions(): void {
+    for (const extension of [codeColors, typstLanguage(), presence, fileLinks, lint(this.sourceDiagnostics)]) {
+      this.sourceViews.registerExtension(extension);
+    }
+    this.sourceViews.registerLinkProvider((document) => this.documentLinks(document));
+  }
+
   /** The Visual/Source views of every document, wired to the preview, collaboration and file links. */
   private mountViews(): EditingViews {
     return new EditingViews(this.left, {
       mode: this.options.mode,
+      sourceViews: this.sourceViews,
       visualOptions: (document) => ({
         ...this.renderings.forDocument(document),
         user: this.options.user,
@@ -447,7 +469,9 @@ class Widget {
     this.diagnostics = diagnostics;
     for (const document of this.documents()) {
       const path = this.project.pathOf(document);
-      this.views.setDiagnostics(document, diagnostics.filter((d) => d.path === path));
+      const own = diagnostics.filter((d) => d.path === path);
+      this.views.setDiagnostics(document, own);
+      this.sourceDiagnostics.set(document, own);
     }
     this.showStatus();
   }

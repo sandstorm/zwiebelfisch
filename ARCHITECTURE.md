@@ -39,15 +39,22 @@ src/                        the widget (TypeScript); the most important API on t
     document-links/         DocumentLinkProvider: the file paths a Typst document names (find-links.ts, Lezer),
                             where they lead and following them (LinkWorkspace: what it needs from the widget);
                             reading-order.ts (main file, then its #includes depth first; a file's neighbours)
-  hosts/                    view hosts (docs/2026_10_10_extensions-architecture.md)
-    source-view/            SourceView — CodeMirror 6 editing view; typst-language, lint, presence, file-links, code-colors
-                            (Mod+click / Alt+Enter / tooltip on paths; also used by raw boxes)
-    preview/                Preview — worker-backed live preview + hit-testing, zoom, page numbers, PDF export;
-                            toolbar.ts, pdf-menu.ts ("Download PDF" + menu), latest-only.ts ("only the newest
-                            value" task runner)
+    disposable/             Disposable (VS Code's): what every register… / onDid… returns; dispose() undoes it
+  hosts/                    view hosts: mechanism + contribution points, no feature knowledge
+                            (docs/2026_10_10_extensions-architecture.md)
+    source-view/            SourceViewHost (registerExtension, registerLinkProvider, createView) and SourceView
+                            (view.ts: CodeMirror 6 bound to a TypstDocument); contribution.ts (the contribution types)
+      builtins/             the built-in contributions until they move into extensions: typst-language, code-colors,
+                            lint (DiagnosticCollection), file-links (Mod+click / Alt+Enter / tooltip on paths),
+                            presence; the raw boxes use them too
+    preview/                Preview — worker-backed live preview + hit-testing, scroll / reveal; contribution points
+                            for toolbar items, PDF variants, page overlays (contribution.ts); latest-only.ts ("only
+                            the newest value" task runner)
+      builtins/             toolbar items until they move into extensions: zoom (zoomControls, presets),
+                            follow-cursor, page-number, pdf-menu ("Download PDF" + menu of the PDF variants)
       worker/               worker.ts (startEngineWorker, main-thread side), engine.worker.ts (the worker),
                             protocol.ts (messages), project-files.ts (FileSender/FileReceiver)
-      pages/                pages.ts: page-list (SVG only near the viewport), geometry, zoom, snippet
+      pages/                pages.ts: page-list (SVG only near the viewport), overlays, geometry, zoom, snippet
   features/                 one folder per feature, each entered through the file named like it
     visual-view/            VisualView — Tiptap editor over the source-anchored projection; visual-view.css
                             (ProseMirror core styles); decorations at the root: highlights, presence;
@@ -178,6 +185,13 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   every `FileChange`.
 - **Composition** (`Widget`, private): `Project` + `Layout` + `EditingViews` + `FilePanel` +
   `AssetView` + `Preview` + `DiagnosticsStatus`. The preview always compiles `main` with `project.files()`.
+  The widget registers the hosts' built-in contributions (until the extension list does, see
+  docs/2026_10_10_extensions-architecture.md): on the `Preview` the toolbar items `zoomControls`,
+  `followCursor({ on, onChange })` (`followCursor` option, else the viewer's last choice from localStorage),
+  `pageNumber`, `pdfMenu` (unless `pdfDownload: false`) and the PDF variants "Without comments" / "With
+  comments"; on its `SourceViewHost` (handed to `EditingViews`) `codeColors`, `typstLanguage()`, `presence`,
+  `fileLinks`, `lint(diagnostics)` and the link provider `Widget.documentLinks`. Compile diagnostics go to
+  the Source views through that `DiagnosticCollection`, to the Visual views through `EditingViews.setDiagnostics`.
 - **`Project`** (`core/project/project.ts`): files by path. `.typ` strings become a `TypstDocument` each (kept
   across renames, so open views survive); everything else is stored as given.
   `check(change)` → reason or null, `apply(change)`, `replace(files)`, `onChange(change)`
@@ -200,7 +214,8 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   uploaded unless `fileList` is `hide` (then ignored) — never left to the browser, which would
   open the file in place of the page. Image files dropped into the Visual view's text are taken
   there instead (uploaded and inserted at the drop point).
-- **File links** (see below): each document's views get a `DocumentLinkProvider` (`Widget.documentLinks`:
+- **File links** (see below): each document's views get a `DocumentLinkProvider` (the Visual view through
+  `EditingViews`, the Source view as registered link provider; `Widget.documentLinks`:
   paths resolve from the document's current path; `open` is `Widget.open`; `create` is a
   `create` change through `request`, then `open`).
 - Preview clicks into another project file open it, then reveal. Clicks into packages are ignored.
@@ -213,7 +228,8 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   of those names — every pasted screenshot is `image.png`; refusals — not an image Typst shows,
   the host's veto — come back as an error the popover shows).
 - **PDF** (`PdfExport`, `typst-editor/pdf-export.ts`): `exportPdf({comments})` and the preview's
-  "Download PDF" (`Preview` option `pdf`, unless `pdfDownload: false`). With comments the main
+  "Download PDF" (the `pdfMenu` toolbar item with the two registered PDF variants, unless `pdfDownload:
+  false`). With comments the main
   file is exported as compiled; without, `withoutNotes(project.files(), main)` gives the entry
   and replaced sources (see Comments). No PDF (errors) → an `Error` "The document has n
   error(s): …" (the toolbar shows it), never an older PDF. File name after the main file:
@@ -648,44 +664,84 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - edits change only what they touch;
   - an outside change to a paragraph keeps the cursor position in it.
 
-### `SourceView` (`src/hosts/source-view`)
+### `SourceViewHost` / `SourceView` (`src/hosts/source-view`)
 
 ```ts
-new SourceView(parent, document, { onCursor?, documentLinks? })   // a DocumentLinkProvider, see "File links"
-.reveal(from, to)    // select, scroll to center, highlight
-.setDiagnostics([{severity, message, hints, from, to}])   // underline + hover; replaces previous
-.setHighlights(layer, [{from, to, className, attributes?}])  // replaces that layer; follows edits
-.setPresence([{id, user: {name, color}, anchor, head}])      // other users (PresenceTarget); follows edits
+interface SourceViewContributions {                          // what ExtensionContext.sourceView offers
+  registerExtension(extension: SourceViewExtension): Disposable     // CodeMirror extensions for every view
+  registerLinkProvider(provider: (document) => DocumentLinkProvider | null): Disposable
+}
+type SourceViewExtension = Extension | ((view: SourceViewContext) => Extension)
+interface SourceViewContext { document, documentLinks: DocumentLinkProvider | null,
+                              onDidChangePresence(listener: (presences) => void): Disposable }
+
+new SourceViewHost()                         // implements SourceViewContributions
+.createView(parent, document, { onCursor?, onSelection? }) → SourceView
+
+SourceView
+.reveal(from, to)    // select, scroll to center, highlight (the one highlight the host draws itself)
+.setPresence([{id, user: {name, color}, anchor, head}])      // PresenceTarget: handed to onDidChangePresence
 .selection() → {from, to}
 .destroy()
 ```
 
-- **Presence** (`presence.ts`, y-codemirror style): each caret is a widget (bar + dot, also on
-  empty lines); its name flag shows on hover and for 2.5 s after the caret moved (the widget is
-  re-created only then: `moves` counts in its equality). Selections are tinted marks. The same
-  extension draws carets in the Visual view's raw boxes.
-
-- **Hidden:** CodeMirror and its extensions, and the Typst language support
-  (`codemirror-lang-typst/lezer`: a pure-JS Lezer parser using typst-syntax node names, plus
-  completion and folding; its Lezer syntax linter is left out so that compiler diagnostics are the
-  only error source; its indentation service is wrapped so that Enter right after a closed
-  construct like `#set page(..)` does not indent, which 0.6.0 gets wrong). Also hidden: `@codemirror/lint`, which maps shown diagnostics through later
-  edits. Also hidden: translating ChangeSets to and from `TextChange[]`, and the
+- **The host keeps the mechanism**: CodeMirror bound to a `TypstDocument` in both directions (`basicSetup`,
+  line wrapping, the reveal highlight), selection and cursor reporting, and the presence target. Everything
+  else is a contribution. A contribution is registered once and applies to every view, those made before
+  (their `Compartment` is reconfigured; state of extensions kept in the new configuration survives, e.g.
+  the carets shown) and those made later; disposing it removes it from all of them. A function extension
+  is called per view with its `SourceViewContext`: its document, the links of the first link provider that
+  has some for that document, and the presence handed to the view.
+- **Built-ins** (`builtins/`, one module per contribution; they move into extensions next):
+  - `typstLanguage()` — the Typst language support (`codemirror-lang-typst/lezer`: a pure-JS Lezer
+    parser using typst-syntax node names, plus completion and folding; its Lezer syntax linter is left
+    out so that compiler diagnostics are the only error source; its indentation service is wrapped so
+    that Enter right after a closed construct like `#set page(..)` does not indent, which 0.6.0 gets wrong).
+  - `codeColors` — see "Dark mode".
+  - `lint(diagnostics)` — the diagnostics a `DiagnosticCollection` holds for the view's document
+    (`set(document, [{severity, message, hints, from, to}])`, VS Code's name), underlined with hover
+    (`@codemirror/lint`, which maps them through later edits); those set before a view exists show
+    when it is made. `describeDiagnostic` words a diagnostic for every view.
+  - `fileLinks` — see "File links".
+  - `presence` (y-codemirror style): each caret is a widget (bar + dot, also on empty lines); its name
+    flag shows on hover and for 2.5 s after the caret moved (the widget is re-created only then: `moves`
+    counts in its equality). Selections are tinted marks. Its `remotePresence` / `showPresence` draw the
+    carets in the Visual view's raw boxes.
+- **Hidden:** CodeMirror's view and state, translating ChangeSets to and from `TextChange[]`, and the
   annotation that stops document-originated transactions from being written back.
 
 ### `Preview` (`src/hosts/preview`)
 
 ```ts
-new Preview(container, { onJump?, onDiagnostics?, pdf? })   // renders a toolbar + scrolling page area into container;
-                                             // pdf: (comments) → Promise<{blob, name}> adds "Download PDF" (PdfMenu)
+interface PreviewContributions {                             // what ExtensionContext.preview offers
+  registerToolbarItem(item: (preview: PreviewContext) => { elements, update?(), dispose?() }): Disposable
+  registerPdfVariant({ label, create() → Promise<{blob, name}> }): Disposable
+  createOverlay(className) → { set(boxes: Box[]), dispose() }   // boxes in pt on their page
+}
+interface PreviewContext { ownerDocument, zoom(), setZoom(zoom), scale(), visiblePage() → {index, count},
+                           isFollowing(), setFollowing(on), pdfVariants() }
+
+new Preview(container, { onJump?, onDiagnostics? })   // implements PreviewContributions; renders a toolbar +
+                                                      // scrolling page area into container
 .update(files: Record<path, text | Uint8Array>, main)    // cheap per keystroke
 .reveal(path, offset)                        // cheap per cursor move: scroll only if off-screen (no marker); nothing while not following
-.setFollow(on)                               // "Follow cursor" (toolbar on/off switch, role=switch; options follow / onFollowChange); on → goes to the newest reveal
 .snippet(path, from, to, text) → Promise<{svg, width, height, textHeight, padding} | null>   // the range as drawn, cut from its page
 .onRender(listener) → unsubscribe            // after every successful compile
 .exportPdf(main, sources = {}) → Promise<PdfResult>   // the files of the last update(), sources replacing/adding texts
 .destroy()
 ```
+
+- **The host keeps the mechanism**: the engine worker and its protocol, coalesced compiles, the page list,
+  hit-testing (with the click highlight), scrolling and reveal, and the view state toolbar items read and
+  set through `PreviewContext`: zoom, which page is visible, whether `reveal` follows ("Follow cursor";
+  on by default; switching it on goes to the newest reveal). Toolbar items are placed in registration
+  order; their `update()` runs at most once per frame after a scroll, resize, zoom or new pages.
+- **Built-in toolbar items** (`builtins/`, one module each; they move into extensions next):
+  `zoomControls` (− / + to the neighbouring preset of 25 %–400 %, Fit, 100 %, and "Fit · 83%" / "125%"),
+  `followCursor({ on, onChange })` (a `role=switch`), `pageNumber` ("3 / 12"), `pdfMenu` (below).
+- **Page overlays** (`createOverlay`, `pages/overlays.ts`): boxes in pt, drawn as children of the page
+  elements in percent of the page, so they survive zoom and lazy unmounting; drawn again after every
+  successful compile. The host's click highlight is one.
 
 - **Snippets** (`snippet.ts`): no extra compilation. After running compiles are done, the range
   goes to `boxesForRanges`; the union of the boxes on the first box's page (+2 pt, clamped to
@@ -696,10 +752,11 @@ new Preview(container, { onJump?, onDiagnostics?, pdf? })   // renders a toolbar
   A call whose drawn glyphs all come from its definition (`ms(6)` with `#let ms(v) = [#v ms]`:
   the glyphs' spans lie in the `let`) draws nothing in its own range, so its box keeps showing code.
 
-- **PDF menu** (`pdf-menu.ts`): "Download PDF" (without comments) plus ▾ with a `role=menu` of
-  "Without comments" / "With comments" (Escape or a click outside closes it). While a PDF is
-  made the buttons are disabled and the status says "Making PDF…"; the source's rejection shows
-  as "No PDF: <message>" (click dismisses). The file is saved through an object-URL link.
+- **PDF menu** (`builtins/pdf-menu.ts`): "Download PDF" (the first registered PDF variant: the widget
+  registers "Without comments" first) plus ▾ with a `role=menu` of the variants registered by the time
+  it opens (Escape or a click outside closes it). While a PDF is made the buttons are disabled and the
+  status says "Making PDF…"; the variant's rejection shows as "No PDF: <message>" (click dismisses). The
+  file is saved through an object-URL link.
   `exportPdf` waits for running compiles (`LatestOnly.idle`), so it exports the newest text.
 
 - **Coalescing (`LatestOnly`):** at most one compilation is in flight. Updates that arrive
@@ -712,9 +769,7 @@ new Preview(container, { onJump?, onDiagnostics?, pdf? })   // renders a toolbar
   on page 7 does not touch pages 1–6 in the DOM. Without `IntersectionObserver` all pages render.
 - **Zoom:** fit width (default) or a fixed scale (presets 25 %–400 %, 100 % = 1 pt → 4/3 CSS px).
   The page number shown is the page covering most of the viewport.
-- **Overlays** (click highlight) are children of the page element, positioned in
-  percent of the page, so they survive zoom and lazy unmounting. A click that resolves to a source
-  location outlines the clicked text run (Typst draws one as a `<g>` of glyph `<use>`s) until the
+- **Click highlight** (a page overlay): a click that resolves to a source location outlines the clicked text run (Typst draws one as a `<g>` of glyph `<use>`s) until the
   next click or successful compile.
 - **Scrolling** only ever moves the preview's own scroller (never `scrollIntoView`), so an embedded
   widget does not scroll its host page.
@@ -874,7 +929,7 @@ new Layout(host, storageKey)   .editor  .preview            // the editing colum
   closed, opens only on the rail button and closes on Escape, a click outside, or `dismiss()`
   (the widget calls it after a file was chosen in the panel).
 
-### Dark mode (`src/typst-editor.css`, `src/hosts/source-view/code-colors.ts`)
+### Dark mode (`src/typst-editor.css`, `src/hosts/source-view/builtins/code-colors.ts`)
 
 - **Tokens.** Every color of the widget's stylesheets is a custom property on `.typst-editor`
   defined as `light-dark(light, dark)` (`--te-bg`, `--te-surface`, `--te-subtle`, `--te-text`,
@@ -926,7 +981,7 @@ new FilePanel(parent, dropTarget, { onOpen(path), onChange(change) → Promise<r
   top level) is relocated there; files from the computer dropped on a row are uploaded into that
   folder (the tree stops the drop, so the widget-wide handler does not upload them again).
 
-### File links (`src/core/document-links/`, `src/hosts/source-view/file-links.ts`, `src/features/visual-view/nodes/box-links.ts`)
+### File links (`src/core/document-links/`, `src/hosts/source-view/builtins/file-links.ts`, `src/features/visual-view/nodes/box-links.ts`)
 
 ```ts
 new DocumentLinkProvider(workspace: LinkWorkspace)        // one per document
@@ -935,6 +990,7 @@ new DocumentLinkProvider(workspace: LinkWorkspace)        // one per document
   .resolveDocumentLink(reference) → LinkTarget | null                    // { path, name, exists, creatable }; creatable: a missing .typ file
   .followDocumentLink(target) → Promise<reason | null>                  // open, or create a missing .typ file (and open it)
 interface LinkWorkspace { resolve(reference) → path | null; exists(path); open(path); create(path) → Promise<reason | null> }
+fileLinks: SourceViewExtension (documentLinks of the view's link provider)
 documentLinks(provider) → CodeMirror extension      linkInfo(doc, provider, reference, { hint? }) → "Open …" / "Create …" DOM
 ```
 
@@ -944,7 +1000,7 @@ documentLinks(provider) → CodeMirror extension      linkInfo(doc, provider, re
   bibliography array); escapes decoded; packages (`@…`), empty strings, named arguments, computed
   paths and methods (`image.decode`) are not references. Callers with a parsed tree (an editor's
   `syntaxTree`) pass it, and a range to look at the visible part only.
-- **Source view** (`documentLinks`): paths are marked (`typst-source__path`, underlined on hover, a
+- **Source view** (`fileLinks`, with the provider from `SourceViewHost.registerLinkProvider`): paths are marked (`typst-source__path`, underlined on hover, a
   pointer while Ctrl/⌘ is held: `typst-source--mod`); Mod+mousedown on one opens an existing file
   (else CodeMirror's own Mod+click); Alt+Enter opens the file whose path holds the cursor (F12
   was avoided: browsers take it for the developer tools); the hover tooltip is `linkInfo`: "Open
@@ -965,7 +1021,8 @@ same for warnings). `DiagnosticsStatus` renders it as a status bar below both pa
 label, or a listed diagnostic of a project file, opens that file and reveals the range in the
 source view, switching to the Source tab. Hovering or focusing the label lists the shown file's
 messages (with hints), each jumping to its range. Every document's views get the diagnostics of
-their own path: the Source view as CodeMirror lint (underline + hover), the Visual view as the
+their own path: the Source view as CodeMirror lint (underline + hover; the widget's
+`DiagnosticCollection` behind the `lint` contribution), the Visual view as the
 `diagnostics` highlight layer (wavy underline, message + hints as tooltip; raw code boxes in range
 are outlined, since inline decorations skip block atoms; an empty range marks one character).
 

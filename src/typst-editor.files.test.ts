@@ -4,13 +4,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import { createTypstEditor, type TypstEditorOptions } from './typst-editor';
 
-vi.mock('./hosts/preview/preview', () => ({
+vi.mock('./hosts/preview/preview', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   Preview: class {
     update() {}
     reveal() {}
     showPresence() {}
     snippet = async () => null;
     onRender = () => () => {};
+    registerToolbarItem = () => ({ dispose() {} });
+    registerPdfVariant = () => ({ dispose() {} });
     destroy() {}
   },
 }));

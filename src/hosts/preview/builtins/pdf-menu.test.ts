@@ -3,9 +3,15 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PdfMenu, type PdfSource } from './pdf-menu';
+import type { PdfFile, PdfVariant, PreviewContext } from '../preview';
+import { pdfMenu } from './pdf-menu';
 
-describe('PdfMenu', () => {
+const fakePreview = (variants: PdfVariant[]) => ({ ownerDocument: document, pdfVariants: () => variants }) as Partial<PreviewContext> as PreviewContext;
+
+/** Makes the PDF, with or without comments (the widget's two variants). */
+type PdfSource = (comments: boolean) => Promise<PdfFile>;
+
+describe('pdfMenu', () => {
   let saved: { name: string; href: string }[];
   beforeEach(() => {
     saved = [];
@@ -20,8 +26,13 @@ describe('PdfMenu', () => {
   });
 
   function setup(source: PdfSource) {
-    const menu = new PdfMenu(document, source);
-    document.body.append(menu.element);
+    const variants = [
+      { label: 'Without comments', create: () => source(false) },
+      { label: 'With comments', create: () => source(true) },
+    ];
+    const [element] = pdfMenu(fakePreview(variants)).elements;
+    const menu = { element };
+    document.body.append(element);
     const button = (name: string) =>
       [...menu.element.querySelectorAll('button')].find((b) => b.textContent === name || b.getAttribute('aria-label') === name)!;
     const status = () => menu.element.querySelector('[role="status"]')!.textContent;
@@ -86,8 +97,20 @@ describe('PdfMenu', () => {
     expect(status()).toBe('');
   });
 
+  it('offers the variants registered by the time it opens, and names what the plain button makes', () => {
+    const variants: PdfVariant[] = [];
+    const item = pdfMenu(fakePreview(variants));
+    const [element] = item.elements;
+    document.body.append(element);
+    variants.push({ label: 'Final', create: async () => file('final.pdf') });
+    item.update!();
+    expect(element.querySelector('button')!.title).toBe('Download the PDF final');
+    element.querySelector<HTMLButtonElement>('[aria-label="More PDF options"]')!.click();
+    expect([...element.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent)).toEqual(['Final']);
+  });
+
   it('keeps the empty status in the page (no display: none), so a screen reader announces the messages put into it', () => {
-    const css = readFileSync(resolve(import.meta.dirname, '../../typst-editor.css'), 'utf8');
+    const css = readFileSync(resolve(import.meta.dirname, '../../../typst-editor.css'), 'utf8');
     expect(css).not.toMatch(/\.typst-preview__pdf-status[^{]*\{[^}]*display:\s*none/);
   });
 });
