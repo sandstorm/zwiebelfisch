@@ -39,7 +39,7 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [tiptap-migration](tiptap-migration.md) | done |
 | [projection-position-map](projection-position-map.md) | done |
 | [comments](comments.md) | open (after position map) |
-| [diff-rendering](diff-rendering.md) | open (after position map) |
+| [diff-rendering](diff-rendering.md) | done (branch task/diff-rendering) |
 | [multi-file-ui](multi-file-ui.md) | in-progress (agent) |
 | [visual-view-toolbar-and-raw-editing](visual-view-toolbar-and-raw-editing.md) | done |
 | [visual-view-links-images-tables](visual-view-links-images-tables.md) | open |

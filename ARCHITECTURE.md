@@ -14,6 +14,7 @@ src/
   engine/                   typed TS wrapper around the wasm, default fonts (generated wasm/, fonts/ — gitignored),
                             withPackages (package download, tar reader), fixtures/ (test package archives)
   document/                 TypstDocument — the single source of truth
+  diff/                     diffTexts — the text diff against a base version behind "Show changes"
   source-view/              SourceView — CodeMirror 6 editing view
   preview/                  Preview — worker-backed live preview + hit-testing, zoom, page numbers
     engine.worker.ts        hosts the engine off the main thread
@@ -25,7 +26,8 @@ src/
     toolbar.ts              zoom buttons, zoom label, "page n / total"
   visual-view/              VisualView — Tiptap editor over the source-anchored projection,
                             formatting toolbar, raw boxes edited in a nested CodeMirror
-  editor/                   createTypstEditor() — composes the widget, Visual/Source tabs, status bar, scoped CSS
+  editor/                   createTypstEditor() — composes the widget, Visual/Source tabs, status bar, scoped CSS,
+                            ChangeTracking (base version + "Show changes" toggle)
   element/                  <typst-editor> custom element (shadow DOM) around createTypstEditor
   index.ts                  public API of the package; registers <typst-editor>
 demo/                       dev/demo page (vite root)
@@ -81,11 +83,16 @@ new TypstDocument(text)
 ### `SourceView` (`src/source-view`)
 
 ```ts
-new SourceView(parent, document, { onCursor? })
+new SourceView(parent, document, { onCursor?, onBaseChange? })
 .reveal(from, to)    // select, scroll to center, highlight
 .setDiagnostics([{severity, message, hints, from, to}])   // underline + hover; replaces previous
+.showChanges(base | null)   // inline unified diff against base, accept/reject per chunk
 .destroy()
 ```
+
+- **Changes:** `@codemirror/merge`'s `unifiedMergeView` in a compartment. Reject edits the
+  document like any edit; accept moves CodeMirror's original and reports the new base through
+  `onBaseChange`, so the other views stop showing that change too.
 
 - **Hidden:** CodeMirror and its extensions, and the Typst language support
   (`codemirror-lang-typst/lezer`: a pure-JS Lezer parser using typst-syntax node names, plus
@@ -100,8 +107,14 @@ new SourceView(parent, document, { onCursor? })
 new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scrolling page area into container
 .update(files: Record<path, text | Uint8Array>, main)    // cheap per keystroke
 .reveal(path, offset)                        // cheap per cursor move: flash, scroll only if off-screen
+.showChanges(path, ranges | null)            // change bars in the page margin, redrawn after every compile
 .destroy()
 ```
+
+- **Change bars** (`change-bars.ts`): the ranges go to the engine's `boxesForRanges` after every
+  successful compile; boxes on the same or adjacent lines join into one bar (like LaTeX
+  `changebar`). A pure deletion (empty range) takes the characters on either side. Bars are
+  page overlays like the highlights; only the newest request draws.
 
 - **Coalescing (`LatestOnly`):** at most one compilation is in flight. Updates that arrive
   meanwhile replace each other, so only the newest gets compiled. Typing never queues a backlog.
@@ -130,6 +143,19 @@ new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scr
 - **Coordinates:** the SVG is scaled to the page element's width (zoom). Clicks are converted with
   `pt = (clientX − pageRect.left) × page.width / pageRect.width`.
 
+### `diffTexts` (`src/diff`)
+
+```ts
+diffTexts(base, current) → [{fromA, toA, fromB, toB}]   // A = base, B = current; sorted, UTF-16
+```
+
+- The single text diff behind every "Show changes" rendering (the Source view's merge view runs
+  the same `@codemirror/merge` algorithm itself, for its accept/reject chunks).
+- **Cleanup for readers:** a change inside a word grows to the whole word; a change touching a
+  markup delimiter (`*`, `_`, heading `=`, list markers; Lezer tree of either text) grows to the
+  whole construct, so `*bold*` → `_bold_` is one change with unchanged visible text. Grown
+  ranges are mapped to the other text through the raw changes and merged when they touch.
+
 ### Diagnostics in the widget (`src/editor`)
 
 `summarizeDiagnostics(diagnostics, main)` (pure, unit-tested) splits a compile's diagnostics into
@@ -149,6 +175,7 @@ defaultFonts() → Promise<Uint8Array>[]          // src/engine/default-fonts.ts
 .compile(main) → { pages: [{hash, width, height, svg}], diagnostics: [{severity, message, hints, path, from, to}], missingPackages: string[] }
 .jumpFromClick(page, x, y) → {kind:'source', path, offset, from, to, boxes} | {kind:'url'} | {kind:'position'} | null
 .jumpFromCursor(path, offset) → [{page, x, y}]
+.boxesForRanges(path, [{from, to}]) → [{page, x, y, w, h}]   // where the drawn text of those ranges is, per glyph run
 
 withPackages(engine, fetchPackage = fetchPreviewPackage) → { compile(main) → Promise<CompileResult> }
 fetchPreviewPackage(spec) → Promise<Uint8Array>     // .tar.gz from packages.typst.org, Cache API
@@ -194,13 +221,21 @@ Inside the crate:
     line/page). The preview draws these boxes.
   - For non-text clicks, the range falls back to the syntax leaf at the offset, with no boxes.
   - `jump_from_cursor` is the reverse.
+  - `boxesForRanges` walks all glyphs (`highlight::glyph_boxes`) and keeps those whose source
+    byte (span range start + the glyph's offset in its span) lies in one of the ranges: character
+    precise for text, nothing for markup or code that draws no glyphs.
 
 ### `createTypstEditor` / `<typst-editor>` (`src/editor`, `src/element`)
 
 ```ts
-createTypstEditor(host, { source, main?, files?, mode?, onChange? }) → { source (get/set), files (get/set), destroy() }
-<typst-editor value="…">inline source</typst-editor>   .value (get/set), .files (get/set), 'change' event {detail:{value}}
+createTypstEditor(host, { source, main?, files?, mode?, onChange?, base? }) → { source (get/set), files (get/set), setBase(base | null), destroy() }
+<typst-editor value="…">inline source</typst-editor>   .value (get/set), .files (get/set), .setBase(base | null), 'change' event {detail:{value}}
 ```
+
+- **Show changes:** with a base (`base` option or `setBase`), `ChangeTracking` shows a
+  "Show changes" toggle in the tab bar and keeps all three renderings in step: the Source view's
+  merge view, the Visual view's track changes, and the preview's change bars (from
+  `diffTexts(base, text)`, recomputed per edit only while changes are shown).
 
 - `source` is the text of the edited file at `main` (default `/main.typ`). `files`
   (`ProjectFiles = Record<path, string | Uint8Array>`) are the project's other files — included
@@ -217,8 +252,8 @@ createTypstEditor(host, { source, main?, files?, mode?, onChange? }) → { sourc
 
 ```
 main → worker   {type:'init', wasm}  (first, once; the URL is resolved on the main thread)
-main → worker   {id, type:'compile', files: Record<path, text | Uint8Array | null>, main} | {id, type:'click', page, x, y} | {id, type:'cursor', path, offset}
-worker → main   {id, type:'compile', result} | {id, type:'click', jump} | {id, type:'cursor', positions} | {id, type:'error', message}
+main → worker   {id, type:'compile', files: Record<path, text | Uint8Array | null>, main} | {id, type:'click', page, x, y} | {id, type:'cursor', path, offset} | {id, type:'boxes', path, ranges}
+worker → main   {id, type:'compile', result} | {id, type:'click', jump} | {id, type:'cursor', positions} | {id, type:'boxes', boxes} | {id, type:'error', message}
 ```
 
 - Requests are answered in order, because the worker is single-threaded, except that a
@@ -232,6 +267,7 @@ worker → main   {id, type:'compile', result} | {id, type:'click', jump} | {id,
 ```ts
 new VisualView(parent, document)
 .reveal(from, to)    // select exactly what shows source range from..to (caret if empty)
+.showChanges(base | null)   // track changes against base, following every edit
 .destroy()
 ```
 
@@ -308,6 +344,11 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     in inline boxes) move into the outer editor; arrow keys in the outer editor (and Enter on a
     selected box) move into a box; Backspace in an empty box deletes it.
   - Hidden: CodeMirror, the DOM ↔ box lookup, focus hand-over between the two editors.
+- **Track changes** (`change-decorations.ts`): a ProseMirror plugin holds the projected base
+  and, on every doc change, decorates `diffTexts(print(base), print(doc))` through
+  `sourceToPos`: insertions as inline marks, deletions as struck-through `<del>` widgets with
+  the deleted *visible* text (taken from the projected base), a change whose visible text is
+  the same on both sides as a formatting change, and raw boxes inside a change outlined.
 - **Invariants (unit-tested):**
   - `print(project(src)) === src` for every fixture;
   - edits change only what they touch;
