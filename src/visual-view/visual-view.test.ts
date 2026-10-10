@@ -46,4 +46,21 @@ describe('VisualView', () => {
     doc.setText('= Title\n\nText changed\n', 'source');
     expect(parent.querySelector('p')?.textContent).toBe('Text changed');
   });
+
+  it('shows changes against a base version and follows edits', () => {
+    const { doc, view, parent } = setup('Hello world\n');
+    view.showChanges('Hello world\n');
+    expect(parent.querySelector('.typst-diff-insert')).toBeNull();
+    doc.setText('Hello big world\n', 'source');
+    expect(parent.querySelector('.typst-diff-insert')?.textContent).toBe('big ');
+    view.showChanges(null);
+    expect(parent.querySelector('.typst-diff-insert')).toBeNull();
+  });
+
+  it('shows deletions as struck-through text', () => {
+    const { view, parent } = setup('Hello world\n');
+    view.showChanges('Hello big world\n');
+    expect(parent.querySelector('del.typst-diff-delete')?.textContent).toBe('big ');
+    expect(parent.querySelector('p')?.textContent).toBe('Hello big world');
+  });
 });
