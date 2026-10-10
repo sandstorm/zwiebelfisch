@@ -632,7 +632,7 @@ new Preview(container, { onJump?, onDiagnostics?, pdf? })   // renders a toolbar
                                              // pdf: (comments) → Promise<{blob, name}> adds "Download PDF" (PdfMenu)
 .update(files: Record<path, text | Uint8Array>, main)    // cheap per keystroke
 .reveal(path, offset)                        // cheap per cursor move: scroll only if off-screen (no marker); nothing while not following
-.setFollow(on)                               // "Follow cursor" (toolbar toggle; options follow / onFollowChange); on → goes to the newest reveal
+.setFollow(on)                               // "Follow cursor" (toolbar on/off switch, role=switch; options follow / onFollowChange); on → goes to the newest reveal
 .showChanges(path, ranges | null)            // change bars in the page margin per path (all paths drawn), redrawn after every compile
 .snippet(path, from, to, text) → Promise<{svg, width, height, textHeight, padding} | null>   // the range as drawn, cut from its page
 .onRender(listener) → unsubscribe            // after every successful compile
