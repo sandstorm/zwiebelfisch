@@ -224,6 +224,42 @@
 .typst-status__summary:disabled { cursor: default; }
 .typst-status[data-severity='warning'] .typst-status__summary { color: #9a6700; }
 .typst-status[data-severity='error'] .typst-status__summary { color: #cf222e; font-weight: 600; }
+/* Messages of the shown file, opened by hovering or focusing the count. */
+.typst-status__hover { position: relative; }
+.typst-status__details {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  z-index: 10;
+  min-width: 260px;
+  max-width: min(520px, 80vw);
+  max-height: 40vh;
+  overflow: auto;
+  margin: 0 0 4px;
+  padding: 4px;
+  list-style: none;
+  background: #fff;
+  border: 1px solid var(--te-border);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.typst-status__hover:is(:hover, :focus-within) > .typst-status__details:not([hidden]) { display: block; }
+.typst-status__detail {
+  display: block;
+  width: 100%;
+  padding: 4px 6px;
+  border: 0;
+  border-left: 3px solid #9a6700;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  white-space: pre-wrap;
+  cursor: pointer;
+}
+.typst-status__details > li[data-severity='error'] > .typst-status__detail { border-left-color: #cf222e; }
+.typst-status__detail:hover, .typst-status__detail:focus-visible { background: var(--te-preview-bg); }
 .typst-status__elsewhere { display: contents; list-style: none; }
 .typst-status__elsewhere > li { color: #57606a; }
 .typst-status__elsewhere > li[data-severity='error'] { color: #cf222e; }
@@ -627,3 +663,14 @@
   user-select: none;
 }
 .typst-remote-cursor--end::before { left: auto; right: 0; border-radius: 3px 3px 0 3px; }
+
+/* ---- diagnostics in the Visual view (tooltip: message + hints) ---- */
+.typst-diagnostic {
+  text-decoration: underline wavy #9a6700;
+  text-decoration-skip-ink: none;
+  text-underline-offset: 3px;
+}
+.typst-diagnostic[data-severity='error'] { text-decoration-color: #cf222e; }
+/* Raw code boxes: an underline would not reach the code inside, so outline the box. */
+:is(.typst-visual__raw-block, .typst-visual__raw-inline).typst-diagnostic { outline: 2px solid rgba(154, 103, 0, 0.6); outline-offset: 1px; }
+:is(.typst-visual__raw-block, .typst-visual__raw-inline).typst-diagnostic[data-severity='error'] { outline-color: rgba(207, 34, 46, 0.6); }

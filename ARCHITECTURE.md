@@ -208,7 +208,11 @@ and computes the status label ("✓ compiled" / "1 error, 2 warnings") and the j
 (`{path, from, to}`: earliest error in the shown file, else in another project file, else the
 same for warnings). `DiagnosticsStatus` renders it as a status bar below both panes; clicking the
 label, or a listed diagnostic of a project file, opens that file and reveals the range in the
-source view. Every document's SourceView gets the diagnostics of its own path.
+source view. Hovering or focusing the label lists the shown file's messages (with hints), each
+jumping to its range. Every document's views get the diagnostics of their own path: the Source
+view as CodeMirror lint (underline + hover), the Visual view as the `diagnostics` highlight layer
+(wavy underline, message + hints as tooltip; raw code boxes in range are outlined, since inline
+decorations skip block atoms; an empty range marks one character).
 
 ### `typst-engine` (Rust crate + `src/engine`)
 
@@ -627,7 +631,6 @@ HTTP             GET /rooms/<room>/files/<path> (Authorization: Bearer <room tok
   "Insert into …" uses the last source-view cursor, else the end of the file.
 - **Packages:** only `@preview` from packages.typst.org (no configurable registry, no `@local`);
   failed downloads are not retried until the worker restarts.
-- **No error display in the visual view** yet (diagnostics only reach the source view).
 - **Snippets are cut from the compiled pages**, so they only appear after a successful compile,
   show only what lies on the first page the range draws on, and include whatever overlaps that
   rectangle (e.g. a float). Every raw box asks again after every compile (one `boxes` walk each),

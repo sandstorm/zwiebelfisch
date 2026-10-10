@@ -64,3 +64,16 @@ test('clicking the error count selects the first error in the source', async ({ 
   await page.getByTestId('typst-status').getByRole('button', { name: /1 error/ }).click();
   await expect(source.locator('.typst-source__jump')).toHaveText('unknown');
 });
+
+test('hovering the error count lists the message; the Visual view marks the error inline', async ({ page }) => {
+  const source = page.getByTestId('typst-source');
+  await source.locator('.cm-content').click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.type('\n#unknown');
+  const status = page.getByTestId('typst-status');
+  await status.getByRole('button', { name: /1 error/ }).hover();
+  await expect(status.locator('.typst-status__details')).toBeVisible();
+  await expect(status.locator('.typst-status__details')).toContainText('unknown variable');
+  await expect(page.getByTestId('typst-visual').locator('.typst-diagnostic[data-severity=error]')).toHaveCount(1);
+  await expect(page.getByTestId('typst-visual').locator('.typst-diagnostic')).toHaveAttribute('title', /unknown variable/);
+});

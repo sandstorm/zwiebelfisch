@@ -15,7 +15,12 @@ export function toLintDiagnostics(diagnostics: SourceDiagnostic[], length: numbe
     from: Math.min(d.from, length),
     to: Math.min(d.to, length),
     severity: d.severity,
-    message: [d.message, ...d.hints.map((hint) => `hint: ${hint}`)].join('\n'),
+    message: describeDiagnostic(d),
     source: 'typst',
   }));
+}
+
+/** A diagnostic's message with its hints, one per line, as every view shows it. */
+export function describeDiagnostic(diagnostic: Pick<SourceDiagnostic, 'message' | 'hints'>): string {
+  return [diagnostic.message, ...diagnostic.hints.map((hint) => `hint: ${hint}`)].join('\n');
 }
