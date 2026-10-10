@@ -8,6 +8,8 @@ import init, { Engine as WasmEngine, type InitInput } from './wasm/typst_engine'
  * The engine keeps the last successfully compiled document for hit-testing.
  */
 export interface Engine {
+  /** Adds all faces of an OpenType/TrueType font (or collection). Throws if `data` is no font. */
+  addFont(data: Uint8Array): void;
   setSource(path: string, text: string): void;
   setBinary(path: string, data: Uint8Array): void;
   remove(path: string): void;
@@ -54,11 +56,25 @@ export type Jump =
   | { kind: 'url'; url: string }
   | ({ kind: 'position' } & Position);
 
-/** Instantiates the engine from the wasm module (URL, bytes or response). */
-export async function createEngine(wasm: InitInput | Promise<InitInput>): Promise<Engine> {
-  await init({ module_or_path: wasm });
+/** Font file contents; a promise lets fonts download in parallel with the wasm. */
+export type FontSource = Uint8Array | Promise<Uint8Array>;
+
+/**
+ * Instantiates the engine from the wasm module (URL, bytes or response). The
+ * engine embeds no fonts: pass them here (see `defaultFonts()`) or add them later.
+ */
+export async function createEngine(
+  wasm: InitInput | Promise<InitInput>,
+  fonts: Iterable<FontSource> = [],
+): Promise<Engine> {
+  const [, ...fontData] = await Promise.all([init({ module_or_path: wasm }), ...fonts]);
   const engine = new WasmEngine();
+  const addFont = (data: Uint8Array) => {
+    if (engine.addFont(data) === 0) throw new Error('no font found in the given data');
+  };
+  fontData.forEach(addFont);
   return {
+    addFont,
     setSource: (path, text) => assertValidPath(engine.setSource(path, text), path),
     setBinary: (path, data) => assertValidPath(engine.setBinary(path, data), path),
     remove: (path) => engine.remove(path),

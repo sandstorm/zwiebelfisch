@@ -90,6 +90,13 @@ impl Engine {
         Engine { world: MemoryWorld::new(), document: None, svg_cache: HashMap::new() }
     }
 
+    /// Adds all faces of a font file. Returns how many were added (0 for
+    /// data that is not a font). Fonts cannot be removed.
+    #[wasm_bindgen(js_name = addFont)]
+    pub fn add_font(&mut self, data: Vec<u8>) -> usize {
+        self.world.add_font(data)
+    }
+
     /// Adds or replaces a source file. Returns false for an invalid path.
     #[wasm_bindgen(js_name = setSource)]
     pub fn set_source(&mut self, path: &str, text: &str) -> bool {

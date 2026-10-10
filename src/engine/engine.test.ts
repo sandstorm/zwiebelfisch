@@ -1,13 +1,47 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createEngine, type Engine } from './engine';
 
 const wasm = readFileSync(new URL('./wasm/typst_engine_bg.wasm', import.meta.url));
+const fontDir = new URL('./fonts/', import.meta.url);
+const fonts = readdirSync(fontDir).map((name) => new Uint8Array(readFileSync(new URL(name, fontDir))));
 
 describe('Engine', () => {
   let engine: Engine;
   beforeAll(async () => {
-    engine = await createEngine(wasm);
+    engine = await createEngine(wasm, fonts);
+  });
+
+  it.each(['Libertinus Serif', 'New Computer Modern', 'New Computer Modern Math', 'DejaVu Sans Mono'])(
+    'renders text in the default font family %s',
+    (family) => {
+      engine.setSource('/main.typ', `#text(font: "${family}")[Hello *bold* _italic_]`);
+      const { pages, diagnostics } = engine.compile('/main.typ');
+      expect(diagnostics).toEqual([]);
+      expect(pages[0].svg).toContain('<path');
+    },
+  );
+
+  it('renders math with the default math font', () => {
+    engine.setSource('/main.typ', '$ sum_(i=1)^n i = (n(n+1))/2 $');
+    const { pages, diagnostics } = engine.compile('/main.typ');
+    expect(diagnostics).toEqual([]);
+    expect(pages[0].svg).toContain('<path');
+  });
+
+  it('accepts fonts added after creation', async () => {
+    const bare = await createEngine(wasm);
+    bare.setSource('/main.typ', '#text(font: "DejaVu Sans Mono")[Hi]');
+    expect(bare.compile('/main.typ').diagnostics).toContainEqual(
+      expect.objectContaining({ severity: 'warning', message: expect.stringContaining('unknown font family') }),
+    );
+    bare.addFont(fonts[readdirSync(fontDir).indexOf('DejaVuSansMono.ttf')]);
+    expect(bare.compile('/main.typ').diagnostics).toEqual([]);
+  });
+
+  it('rejects data that is not a font', async () => {
+    const bare = await createEngine(wasm);
+    expect(() => bare.addFont(new Uint8Array([1, 2, 3]))).toThrow(/no font/);
   });
 
   it('compiles a document to one SVG per page', () => {

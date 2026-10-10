@@ -1,5 +1,6 @@
-//! An in-memory Typst [`World`]: files are pushed in from JS, fonts are the
-//! ones embedded via `typst-assets`.
+//! An in-memory Typst [`World`]: files and fonts are pushed in from JS. No
+//! fonts are embedded, which keeps the wasm small; the JS side loads them as
+//! separate assets.
 
 use std::collections::HashMap;
 
@@ -25,16 +26,25 @@ pub struct MemoryWorld {
 
 impl MemoryWorld {
     pub fn new() -> Self {
-        let fonts: Vec<Font> = typst_assets::fonts()
-            .flat_map(|data| Font::iter(Bytes::new(data)))
-            .collect();
         Self {
             library: LazyHash::new(Library::default()),
-            book: LazyHash::new(FontBook::from_fonts(&fonts)),
-            fonts,
+            book: LazyHash::new(FontBook::new()),
+            fonts: Vec::new(),
             files: HashMap::new(),
             main: file_id("/main.typ").expect("valid path"),
         }
+    }
+
+    /// Adds every face of a font file (OpenType/TrueType, or a collection).
+    /// Returns the number of faces added; 0 if `data` is not a font.
+    pub fn add_font(&mut self, data: Vec<u8>) -> usize {
+        let faces: Vec<Font> = Font::iter(Bytes::new(data)).collect();
+        for font in &faces {
+            self.book.push(font.info().clone());
+        }
+        let added = faces.len();
+        self.fonts.extend(faces);
+        added
     }
 
     /// Sets the text of a source file. Reuses the existing [`Source`] so that
