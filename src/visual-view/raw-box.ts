@@ -77,7 +77,6 @@ class RawBox implements NodeView {
   /** Set while mirroring `src` into the box, so that change is not sent back. */
   private mirroring = false;
 
-  // eslint-disable-next-line max-params -- the node view arguments ProseMirror passes
   constructor(private node: Node, private readonly editor: Editor, private readonly getPos: () => number | undefined, decorations: readonly Decoration[]) {
     const inline = node.isInline;
     this.dom = editor.view.dom.ownerDocument.createElement(inline ? 'span' : 'div');

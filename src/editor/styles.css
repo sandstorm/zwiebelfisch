@@ -100,6 +100,32 @@
   pointer-events: none;
   animation: typst-preview-flash 1.2s ease-out forwards;
 }
+/* Another user's caret in the preview: their initials in their color, pointing at the baseline. */
+.typst-preview__presence {
+  position: absolute;
+  min-width: 1.6em;
+  height: 1.6em;
+  padding: 0 3px;
+  box-sizing: border-box;
+  transform: translate(calc(var(--typst-presence-stack, 0) * 1.7em - 1px), calc(-100% - 0.9em));
+  border-radius: 0.8em 0.8em 0.8em 0;
+  background: var(--typst-remote-color, #268bd2);
+  color: var(--typst-remote-text, #fff);
+  font: 600 10px/1.6em system-ui, sans-serif;
+  text-align: center;
+  box-shadow: 0 0 0 1.5px #fff;
+  z-index: 1;
+  transition: left 0.2s, top 0.2s;
+}
+.typst-preview__presence::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 100%;
+  width: 2px;
+  height: 1.1em;
+  background: var(--typst-remote-color, #268bd2);
+}
 @keyframes typst-preview-flash {
   from { opacity: 0.9; }
   to { opacity: 0; }
@@ -530,6 +556,21 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 .typst-files__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.typst-files__presence { display: inline-flex; margin-left: 2px; }
+.typst-files__user {
+  min-width: 1.6em;
+  height: 1.6em;
+  margin-left: -3px;
+  padding: 0 2px;
+  box-sizing: border-box;
+  border-radius: 0.8em;
+  background: var(--typst-remote-color, #268bd2);
+  color: var(--typst-remote-text, #fff);
+  box-shadow: 0 0 0 1.5px #fff;
+  font: 600 9px/1.6em system-ui, sans-serif;
+  text-align: center;
+}
+.typst-files__user:first-child { margin-left: 0; }
 .typst-files__badge {
   border-radius: 999px;
   padding: 0 6px;
@@ -668,32 +709,74 @@
 .typst-editor__comment:hover { background: #eef1f5; }
 .typst-editor__comment:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 1px; }
 
-/* ---- collaboration: other users' selections and carets (color per user via --typst-remote-color) ---- */
+/* ---- collaboration: other users' carets, selections and boxes
+   (per user: --typst-remote-color, and --typst-remote-text for text on it) ---- */
 .typst-remote-selection {
   background: color-mix(in srgb, var(--typst-remote-color, #268bd2) 22%, transparent);
 }
-.typst-remote-cursor {
+/* A caret: a thin bar with a name flag (Tiptap CollaborationCaret / y-codemirror look). */
+.typst-remote-caret {
   position: relative;
-  box-shadow: inset 2px 0 0 var(--typst-remote-color, #268bd2);
+  margin: 0 -1px;
+  border-left: 1px solid var(--typst-remote-color, #268bd2);
+  border-right: 1px solid var(--typst-remote-color, #268bd2);
+  word-break: normal;
+  pointer-events: none;
 }
-.typst-remote-cursor--end { box-shadow: inset -2px 0 0 var(--typst-remote-color, #268bd2); }
-.typst-remote-cursor::before {
-  content: attr(data-user);
+.typst-remote-caret__flag,
+.typst-remote-box:not(.typst-visual__page-break)::after {
   position: absolute;
-  bottom: 100%;
-  left: 0;
   padding: 0 4px;
-  border-radius: 3px 3px 3px 0;
   background: var(--typst-remote-color, #268bd2);
-  color: white;
-  font: 11px/1.5 system-ui, sans-serif;
+  color: var(--typst-remote-text, #fff);
+  font: 600 11px/1.5 system-ui, sans-serif;
   font-style: normal;
-  font-weight: normal;
+  letter-spacing: normal;
+  text-transform: none;
   white-space: nowrap;
   pointer-events: none;
   user-select: none;
+  z-index: 2;
 }
-.typst-remote-cursor--end::before { left: auto; right: 0; border-radius: 3px 3px 0 3px; }
+.typst-remote-caret__flag {
+  bottom: 100%;
+  left: -1px;
+  border-radius: 3px 3px 3px 0;
+}
+/* Source view (y-codemirror): a dot on the bar; the name on hover and for a moment after each move. */
+.typst-remote-caret--transient { pointer-events: auto; }
+.typst-remote-caret--transient::before {
+  content: '';
+  position: absolute;
+  top: -0.2em;
+  left: -0.25em;
+  width: 0.4em;
+  height: 0.4em;
+  border-radius: 50%;
+  background: var(--typst-remote-color, #268bd2);
+}
+.typst-remote-caret--transient > .typst-remote-caret__flag {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+  animation: typst-remote-flag 2.5s ease-in;
+}
+.typst-remote-caret--transient:hover > .typst-remote-caret__flag { opacity: 1; animation: none; }
+@keyframes typst-remote-flag {
+  0%, 70% { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* Visual view: a box (raw code, image, page break, note) someone's caret is in. */
+.typst-remote-box {
+  position: relative;
+  outline: 2px solid var(--typst-remote-color, #268bd2);
+  outline-offset: 1px;
+}
+.typst-remote-box:not(.typst-visual__page-break)::after {
+  content: attr(data-user);
+  right: -3px;
+  bottom: calc(100% + 3px);
+  border-radius: 3px 3px 0 3px;
+}
 
 /* ---- diagnostics in the Visual view (tooltip: message + hints) ---- */
 .typst-diagnostic {

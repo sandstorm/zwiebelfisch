@@ -1,9 +1,10 @@
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import type { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
+import type { PlacedPresence, PresenceTarget } from '../document/presence';
 import type { Project } from '../editor/project';
 import { roomFilePath } from './gitlab-protocol';
-import { RemoteCursors, type CollaborationUser, type HighlightTarget } from './remote-cursors';
+import { RemoteCursors, type CollaborationUser } from './remote-cursors';
 import { RoomVersions } from './room-versions';
 import { SharedAssets } from './shared-assets';
 import { SharedProject } from './shared-project';
@@ -38,6 +39,7 @@ export class Collaboration {
   private readonly sharedProject: SharedProject;
   private readonly cursors: RemoteCursors | null;
   private readonly assets: SharedAssets | null = null;
+  private presenceListener: ((presences: readonly PlacedPresence[]) => void) | null = null;
   /** "Save version" and the files' base, in a room backed by a GitLab branch (else null). */
   readonly versions: RoomVersions | null = null;
 
@@ -54,7 +56,8 @@ export class Collaboration {
     }
     this.sharedProject = new SharedProject(project, ydoc);
     const text = (path: string) => this.sharedProject.text(path);
-    this.cursors = awareness ? new RemoteCursors(awareness, { user: user ?? { name: 'Anonymous' }, text }) : null;
+    const onPresence = (presences: readonly PlacedPresence[]) => this.presenceListener?.(presences);
+    this.cursors = awareness ? new RemoteCursors(awareness, { user: user ?? { name: 'Anonymous' }, text, onPresence }) : null;
   }
 
   /**
@@ -82,9 +85,14 @@ export class Collaboration {
     this.cursors?.setLocal(path, range);
   }
 
-  /** Draws the other users' cursors in `path` into `views` (the views of the shown file). */
-  showCursors(path: string | null, views: readonly HighlightTarget[]): void {
+  /** Shows the other users' carets and selections in `path` in `views` (the views of the shown file). */
+  showCursors(path: string | null, views: readonly PresenceTarget[]): void {
     this.cursors?.show(path, views);
+  }
+
+  /** Calls `listener` with every other user's place, in any file, whenever one changes (replaces the previous listener). */
+  onPresence(listener: (presences: readonly PlacedPresence[]) => void): void {
+    this.presenceListener = listener;
   }
 
   destroy(): void {
