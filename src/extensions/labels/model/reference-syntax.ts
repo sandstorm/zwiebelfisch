@@ -1,6 +1,5 @@
 // Typst's reference syntax (`@key`, `@key[supplement]`) and label names: reading, printing, cleaning up a typed
-// name. See references.ts.
-import type { Node } from '@tiptap/pm/model';
+// name. See model.ts.
 
 /** `@target` and the supplement as written (`[..]`), if any. */
 export function referenceSyntax(target: string, supplement: string | null): string {
@@ -28,6 +27,6 @@ export function labelName(input: string): string | null {
  * its name (`@intro` + `s` would read `@intros`): a backslash escapes the
  * first character.
  */
-export function guardAfterReference(reference: Node, text: string): string {
-  return reference.attrs.supplement === null && CONTINUES_REFERENCE.test(text) ? `\\${text}` : text;
+export function guardAfterReference(supplement: string | null, text: string): string {
+  return supplement === null && CONTINUES_REFERENCE.test(text) ? `\\${text}` : text;
 }

@@ -5,7 +5,7 @@ import { EditorState } from '@tiptap/pm/state';
 import { find, schemaWith } from '../../../hosts/visual-view/test-support';
 import { print, project } from '../../../hosts/visual-view/projection/projection';
 import { insertReference, renameLabel, setLabel } from './label-edits';
-import { labelName } from './reference-syntax';
+import { labelName } from '../model/model';
 import { references } from './visual-view';
 
 const introduction = readFileSync(new URL('../../../../demo/examples/advanced/chapters/introduction.typ', import.meta.url), 'utf8');

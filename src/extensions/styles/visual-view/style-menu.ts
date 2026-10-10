@@ -1,13 +1,15 @@
-// StyleMenu: the toolbar's text style menu — normal text, headings, and the project's custom styles. See toolbar.ts.
+// StyleMenu: the toolbar's text style menu — normal text, headings, and the project's custom styles. See visual-view.ts.
 import type { ChainedCommands, Editor } from '@tiptap/core';
-import type { Style } from '../styles';
+import type { Disposable } from '../../../core/disposable/disposable';
+import type { Event } from '../../../core/event-emitter/event-emitter';
+import type { Style } from '../model/model';
 
 /** The custom styles the menu offers, and what happens around applying one. */
 export interface MenuStyles {
   /** The project's styles (paragraph and text styles). */
   styles(): readonly Style[];
-  /** Calls `listener` whenever `styles()` changed; returns the unsubscribe function. */
-  onChange(listener: () => void): () => void;
+  /** Whenever `styles()` changed. */
+  readonly onDidChange: Event<void>;
   /** `style` was just applied (e.g. to import it where it is used). */
   applied(style: Style): void;
   /** "New style…": absent, no such entry. */
@@ -36,7 +38,7 @@ const NEW_STYLE = 'new-style';
 export class StyleMenu {
   readonly element: HTMLSelectElement;
   private shown = '';
-  private readonly unsubscribe: () => void;
+  private readonly subscription: Disposable | undefined;
 
   constructor(
     doc: Document,
@@ -48,7 +50,7 @@ export class StyleMenu {
     this.element.setAttribute('aria-label', 'Text style');
     this.element.title = 'Text style';
     this.element.addEventListener('change', () => this.choose(this.element.value));
-    this.unsubscribe = styles?.onChange(() => this.refresh()) ?? (() => {});
+    this.subscription = styles?.onDidChange(() => this.refresh());
     this.refresh();
   }
 
@@ -67,7 +69,7 @@ export class StyleMenu {
   }
 
   destroy(): void {
-    this.unsubscribe();
+    this.subscription?.dispose();
     this.element.remove();
   }
 

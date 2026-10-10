@@ -1,10 +1,9 @@
 // Reference hints: what a reference chip points to ("Section · Method"), or that its label does not exist.
-// See references.ts.
+// See visual-view.ts.
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import type { LabelInfo, ProjectLabels } from '../labels';
-import { describeLabel } from './label-choices';
+import { describeLabel, type LabelInfo, type ProjectLabels } from '../model/model';
 
 const key = new PluginKey<DecorationSet>('typstReferenceHints');
 
@@ -26,11 +25,11 @@ export function referenceHints(labels: ProjectLabels): Plugin {
     view: (view) => {
       let live = true;
       // the labels change while another view (or this one) handles a transaction: redraw afterwards
-      const unsubscribe = labels.onChange(() => queueMicrotask(() => live && view.dispatch(view.state.tr.setMeta(key, true))));
+      const subscription = labels.onDidChange(() => queueMicrotask(() => live && view.dispatch(view.state.tr.setMeta(key, true))));
       return {
         destroy: () => {
           live = false;
-          unsubscribe();
+          subscription.dispose();
         },
       };
     },

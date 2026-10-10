@@ -1,5 +1,5 @@
 // Custom styles in the text: a `styledBlock` around blocks (`#note[..]`) and a `style` mark on text (`#key[..]`).
-// See styles.ts.
+// See visual-view.ts.
 import { Mark, Node } from '@tiptap/core';
 
 /** A style as the Visual view applies it: the function's name and the name people see. */

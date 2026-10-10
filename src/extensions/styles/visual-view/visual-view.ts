@@ -1,29 +1,19 @@
 // Custom styles in the Visual view: declared paragraph styles as styled blocks (`#note[..]`), text styles as a
-// mark (`#key[..]`), and the text style menu. Entry of visual-view/builtins/styles/. See ARCHITECTURE.md,
+// mark (`#key[..]`), and the text style menu. Entry of extensions/styles/visual-view/. See ARCHITECTURE.md,
 // "Custom styles".
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node } from '@tiptap/pm/model';
-import { Disposable } from '../../../core/disposable/disposable';
-import type { TypstDocument } from '../../../core/typst-document/typst-document';
-import type { DocumentStyles, Style } from '../styles';
-import type { ToolbarContext, ToolbarControl, TypstMarkSpec, TypstNodeSpec, VisualViewContribution } from '../../../hosts/visual-view/visual-view';
-import { children, isClosedContent, parenthesized, type Call, type Placed, type Printer, type ProjectionContext } from '../../../hosts/visual-view/visual-view';
+import {
+  children, isClosedContent, parenthesized, type Call, type Placed, type Printer, type ProjectionContext, type ToolbarContext, type ToolbarControl,
+  type TypstMarkSpec, type TypstNodeSpec, type VisualViewContribution,
+} from '../../../hosts/visual-view/visual-view';
+import type { ProjectStyles, Style } from '../model/model';
 import { StyleMenu } from './style-menu';
 import { StyledBlock, StyleMark } from './style-nodes';
 
-/** The project's custom styles, as the Visual view reads them (a `StyleIndex`). */
-export interface StyleSource {
-  /** The project's styles (paragraph and text styles). */
-  styles(): readonly Style[];
-  /** Calls `listener` whenever `styles()` changed; returns the unsubscribe function. */
-  onChange(listener: () => void): () => void;
-  /** How `document` imports a style. */
-  forDocument(document: TypstDocument): Pick<DocumentStyles, 'calculateImportChange'>;
-}
-
 export interface StylesOptions {
   /** The project's styles: their calls show as styled, editable text (default: such calls stay raw boxes). */
-  styles?: StyleSource;
+  styles?: ProjectStyles;
   /** "New style…" in the text style menu (default: no such entry). */
   create?(): void;
 }
@@ -32,7 +22,7 @@ export interface StylesOptions {
 const STYLE_IMPORT = 'style-import';
 
 /**
- * Custom styles (see `features/styles/`): a call of a declared paragraph
+ * Custom styles (see `model/`): a call of a declared paragraph
  * style that is a block of its own (`#note[..]`, `#callout(..)[..]`) is a
  * `styledBlock` holding blocks; a text style call in running text
  * (`#key[..]`) is text with a `style` mark. Undeclared calls stay raw; a style
@@ -42,7 +32,8 @@ const STYLE_IMPORT = 'style-import';
  */
 export function customStyles(options: StylesOptions = {}): VisualViewContribution {
   const declared = declaredStyles(options.styles);
-  const onDidChange = (listener: () => void) => new Disposable(options.styles?.onChange(listener) ?? (() => {}));
+  // a style declared or removed: every view projects its document again
+  const onDidChange = options.styles?.onDidChange;
   return {
     id: 'styles',
     activate({ visualView, subscriptions }) {
@@ -62,7 +53,7 @@ export function customStyles(options: StylesOptions = {}): VisualViewContributio
 type Declared = ReadonlyMap<string, { kind: 'paragraph' | 'text'; label: string }>;
 
 /** The declared styles by function name, as of now (made anew when the list changes). */
-function declaredStyles(source: StyleSource | undefined): () => Declared {
+function declaredStyles(source: ProjectStyles | undefined): () => Declared {
   let list: readonly Style[] | null = null;
   let map: Declared = new Map();
   return () => {
@@ -132,9 +123,9 @@ function styleMenu(toolbar: ToolbarContext, { styles: source, create }: StylesOp
   const { document } = toolbar;
   const menuStyles = source && {
     styles: () => source.styles(),
-    onChange: (listener: () => void) => source.onChange(listener),
+    onDidChange: source.onDidChange,
     applied: (style: Style) => {
-      const change = source.forDocument(document).calculateImportChange(document.text, style, toolbar.selection().from);
+      const change = source.calculateImportChange(document, style, toolbar.selection().from);
       if (change) document.change([change], STYLE_IMPORT);
     },
     create,

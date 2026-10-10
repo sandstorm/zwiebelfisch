@@ -1,4 +1,4 @@
-// The `reference` node: `@key` / `@key[supplement]` as an inline chip. See references.ts.
+// The `reference` node: `@key` / `@key[supplement]` as an inline chip. See visual-view.ts.
 import { Node } from '@tiptap/core';
 
 /**

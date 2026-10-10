@@ -1,14 +1,13 @@
 // References and labels in the Visual view: `@key` chips, label tags on blocks, the `@` suggestion list, "Add
-// label". Entry of visual-view/builtins/references/. See ARCHITECTURE.md, "VisualView".
+// label". Entry of extensions/labels/visual-view/. See ARCHITECTURE.md, "Labels and references".
 import { Extension } from '@tiptap/core';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
-import type { ProjectLabels } from '../labels';
+import { guardAfterReference, referenceSyntax, type ProjectLabels } from '../model/model';
 import { svg, type Action, type ToolbarContext, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
 import { canStartNewLabel, labelTags, startNewLabel } from './label-tags';
 import { referenceHints } from './reference-hints';
 import { Reference } from './reference-node';
 import { referenceSuggestion } from './reference-suggestion';
-import { guardAfterReference, referenceSyntax } from './reference-syntax';
 
 export interface ReferencesOptions {
   /**
@@ -52,7 +51,7 @@ const REFERENCE: TypstNodeSpec = {
     },
   },
   printAtom: (node) => referenceSyntax(node.attrs.target, node.attrs.supplement),
-  escapeAfter: guardAfterReference,
+  escapeAfter: (reference, text) => guardAfterReference(reference.attrs.supplement, text),
 };
 
 /** The plugins of one view: label tags, and with `labels` the `@` list and reference hints. */

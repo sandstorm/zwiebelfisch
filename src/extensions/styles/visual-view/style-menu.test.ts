@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 // Tests for style-menu.ts: custom styles in the text style menu, through the Visual view.
 import { describe, expect, it, vi } from 'vitest';
-import { calculateImportChange } from '../../../core/typst-document/typst-document';
-import { TypstDocument } from '../../../core/typst-document/typst-document';
-import type { DocumentStyles, Style } from '../styles';
+import { EventEmitter } from '../../../core/event-emitter/event-emitter';
+import { calculateImportChange, TypstDocument } from '../../../core/typst-document/typst-document';
+import type { ProjectStyles, Style } from '../model/model';
 import { createVisualView } from '../../../hosts/visual-view/test-support';
 import { ProjectPath } from '../../../core/paths/paths';
 import { customStyles } from './visual-view';
@@ -19,18 +19,17 @@ const KEY: Style = { name: 'key', kind: 'text', label: 'Keyword', path: path('/s
 
 function setup(text: string, initial: Style[] = [NOTE, KEY], create?: () => void) {
   let list = initial;
-  const listeners = new Set<() => void>();
-  const styles: DocumentStyles = {
+  const changed = new EventEmitter<void>();
+  const styles: ProjectStyles = {
     styles: () => list,
-    onChange: (listener) => (listeners.add(listener), () => listeners.delete(listener)),
-    calculateImportChange: (source, style, use) =>
-      calculateImportChange(source, { name: style.name, matches: (m) => m === 'styles.typ', create: () => `#import "styles.typ": ${style.name}\n\n`, use }),
-    create,
+    onDidChange: changed.event,
+    calculateImportChange: (document, style, use) =>
+      calculateImportChange(document.text, { name: style.name, matches: (m) => m === 'styles.typ', create: () => `#import "styles.typ": ${style.name}\n\n`, use }),
   };
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = createVisualView(parent, doc, { contributions: [customStyles({ styles: { ...styles, forDocument: () => styles }, create })] });
+  const view = createVisualView(parent, doc, { contributions: [customStyles({ styles, create })] });
   const menu = parent.querySelector<HTMLSelectElement>('select[aria-label="Text style"]')!;
   const choose = (value: string) => {
     menu.value = value;
@@ -38,7 +37,7 @@ function setup(text: string, initial: Style[] = [NOTE, KEY], create?: () => void
   };
   const declare = (next: Style[]) => {
     list = next;
-    listeners.forEach((listener) => listener());
+    changed.fire();
   };
   const labels = () => [...menu.querySelectorAll('optgroup')].map((g) => [g.label, ...[...g.querySelectorAll('option')].map((o) => o.text)]);
   return { doc, view, menu, choose, declare, labels, parent };

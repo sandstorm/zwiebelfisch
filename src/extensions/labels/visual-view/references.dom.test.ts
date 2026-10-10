@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
-// Tests for references.ts in a VisualView (jsdom): chips with hints, label tags, the @ list, renaming with references.
+// Tests for visual-view.ts in a VisualView (jsdom): chips with hints, label tags, the @ list, renaming with references.
 import { readFileSync } from 'node:fs';
 import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { Project } from '../../../core/project/project';
-import { LabelIndex } from '../labels';
+import { LabelIndex } from '../model/model';
 import { createVisualView } from '../../../hosts/visual-view/test-support';
 import { ProjectPath } from '../../../core/paths/paths';
 import { references } from './visual-view';

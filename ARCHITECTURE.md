@@ -62,13 +62,19 @@ src/                        the widget (TypeScript); the most important API on t
   ui/                       feature-neutral DOM widgets, one folder each: field-popover/ (FieldPopover: one text field,
                             Apply / Remove; also used by versions/), toolbar-menu/ (ToolbarMenu: a menu button of
                             toolbar buttons), floating-bar/ (FloatingBar: a bar above an anchor in the text)
+  extensions/               one vertical slice per concept: <name>.ts (the TypstExtension), model/ (no DOM, no editor
+                            library), and a folder per host it contributes to (visual-view/, …), each entered through
+                            the file named like it
+    labels/                 labels(): model/ (LabelIndex: the project's labels and reference counts, the `labels`
+                            service; scan.ts (Lezer, .bib); reference syntax, label names, the @ list's choices);
+                            visual-view/ (reference chips + hints, label tags, the @ list, "Add label")
+    styles/                 styles(): model/ (StyleIndex: the custom styles the project declares (`/// @style …`),
+                            the `styles` service, how a document imports one; discover.ts, new-style.ts);
+                            visual-view/ (styled block + style mark, the text style menu); "New style…"
   features/                 one folder per feature, each entered through the file named like it
     diagnostics/            DiagnosticsStatus (status bar), diagnostics-summary.ts
-    labels/                 LabelIndex: the project's labels (kind, title, file) and reference counts; scan.ts (Lezer, .bib)
     spreadsheets/           SpreadsheetView (.ic files in IronCalc's workbook UI), workbook.ts (React + IronCalc,
                             loaded on demand), typst-file.ts (spreadsheetTypst → name.ic.gen.typ for Typst)
-    styles/                 StyleIndex: the custom styles the project declares (`/// @style …`), discover.ts,
-                            new-style.ts ("New style…" stub); DocumentStyles (what a Visual view uses)
     comments/               CommentAction ("Comment" / Ctrl+Alt+M), add-margin-note.ts, margin-note-syntax.ts
                             (drafting's call: parse, print, validity), note-thread.ts (a note's body as a
                             thread of messages), page-margin.ts, without-notes.ts (the PDF without comments)
@@ -112,7 +118,7 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
   a stylesheet may be `files/files.css`). Everything else in the folder is internal to it, and
   folders that grow get subfolders named after a concept (`projection/`, `worker/`), never generic
   ones. No sibling folders: an entry file lives inside its folder (`typst-editor/typst-editor.ts`),
-  never next to it. `core/`, `ui/`, `hosts/` and `features/` only group.
+  never next to it. `core/`, `ui/`, `hosts/`, `extensions/` and `features/` only group.
 - **Imports from outside a folder go to its entry file**, which re-exports what others need.
   ESLint enforces this (`local/entry-imports`, `eslint-rules/entry-imports.js`); only TypeScript and
   CSS sources count (not the generated `wasm/`, `fonts/` or the `fixtures/`). The exceptions are
@@ -124,6 +130,9 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
   - `features/collaboration/collaboration-link.ts` — `typst-editor/typst-editor.ts`: the eager side of
     collaboration; the folder's entry is the lazily loaded chunk (until the slices wave);
   - `features/collaboration/in-process.ts` — test files;
+  - `hosts/visual-view/test-support.ts` and `hosts/visual-view/projection/projection.ts` — the extensions' test
+    files: Visual views and schemas with the host's built-ins plus the contributions under test (`contributions`
+    option), and checking that their specs project and print back;
   - `features/collaboration/shared-project.ts` — the server's tests.
 - **Top comments.** Every source file starts with a comment: its context, `See <entry file /
   ARCHITECTURE.md section>`, or `Tests for X` (`mise run quality:top-comments`, part of `quality`).
@@ -336,7 +345,7 @@ new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen? })
   adds a note at its selection (and opens the note's card through its own notes gutter), `collaboration`
   publishes its selection and draws the others' carets in it (`setPresence`).
 - Extensions still live in `features/<name>/` (the entry exports the extension factory, e.g. `labels()`,
-  `files({ fileList })`); the slices wave moves them to `extensions/<name>/`.
+  `files({ fileList })`); the slices wave moves them to `extensions/<name>/` (done: `labels`, `styles`).
 
 ### Paths (`src/core/paths`)
 
@@ -483,8 +492,8 @@ visualView.registerBoxCodeExtension((view) => codeMirrorExtension) → Disposabl
 // the built-ins (builtins/), each a VisualViewContribution = { id, activate({ visualView, subscriptions }) }, shaped
 // like a TypstExtension: markup, headings, tables, outline, pageBreak, horizontalRule, taskLists, lists,
 // headingNumbers, alignment; configured by their feature's extension: images({ assets, imageUrls, documentLinks }),
-// renderedBoxes({ snippets }), boxLinks({ documentLinks }), marginNotes({ comment }), notesGutter({ user }),
-// references({ labels }), customStyles({ styles, create })
+// renderedBoxes({ snippets }), boxLinks({ documentLinks }), marginNotes({ comment }), notesGutter({ user })
+// (in extensions/<name>/visual-view/: references({ labels }) of `labels`, customStyles({ styles, create }) of `styles`)
 ```
 
 The editor is **Tiptap 3**, which is ProseMirror underneath. Tiptap provides the keymaps (Mod-B/I,
@@ -686,10 +695,10 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
   `create(toolbar)` for an item with per-view state or a control of its own); groups without
   items are left out. The host's own: undo/redo (`history`, 10), the **Insert** menu (`insert`,
   50) and the **Selection** bar. With the built-ins, kept short: undo/redo, a text style menu
-  (`text-style`, 20: normal text, heading 1–3, custom styles), bulleted/numbered/task list
+  (`text-style`, 20: normal text, heading 1–3, custom styles; the `styles` extension's), bulleted/numbered/task list
   (`lists`, 30), an **Align** menu (`align`, 40: left, center, right, justify; its icon is the
   current alignment), the **Insert** menu (image, table, table of contents — an `#outline()`
-  block —, code block, quote, page break, horizontal rule, add label), and "Comment" (`comments`,
+  block —, code block, quote, page break, horizontal rule, add label (`labels`)), and "Comment" (`comments`,
   60) when the margin notes get a `comment` (enabled with a caret or selection in text outside
   code blocks). Menus: `ToolbarMenu` (`ui/toolbar-menu/`, `role="menu"` of toolbar buttons;
   Escape, outside click, arrow keys). Bars float in the text column (`FloatingBar`,
@@ -715,24 +724,6 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
     heading holding the cursor (an empty paragraph is replaced): never replacing or splitting
     content — the initial selection is a node selection on the first raw block (often
     `#set page(..)`).
-- **References and labels** (`builtins/references/`, `references({ labels })` given the project's labels as `ProjectLabels`):
-  - Reference chips show the label's name; `referenceHints` adds what it labels (`data-hint`,
-    "Section · Method", "Figure · <caption>", from `describeLabel`) as a hover tooltip only or marks it
-    `typst-visual__ref--unknown` (wavy, tooltip) when the project has no such label. Redrawn when
-    the doc or the label list changes.
-  - `labelTags`: a widget per labelled block — at the end of a textblock's text, below other
-    blocks. Clicking it opens a `FieldPopover`. While anything refers to the label, the default (Enter)
-    is **Rename and update N references**, which also renames the references (this view: in the same transaction, one undo step;
-    other files: `ProjectLabels.renameReferences`, one change per file), and **Rename without
-    updating references** is the alternative. Without references the default is **Rename**. Remove removes it. Names
-    are cleaned up by `labelName` (spaces → `-`).
-  - `referenceSuggestion` (own plugin, not `@tiptap/suggestion`: its popup mounts into
-    `document.body` and its outside-click check fails across the shadow root): `@` after a
-    space/bracket/line start in prose opens a list (`labelChoices`: name prefix, then name, then
-    title matches; at most 8) below it, inside `.typst-visual__body`. ArrowUp/Down, Enter/Tab or a
-    click insert the chip in place of `@query`; Escape dismisses that `@`. Typing a space or
-    punctuation right after the whole name of a label (`@intro `) inserts the chip as well.
-  - Without `labels`: tags only (rename and remove of the label itself).
 - **Text alignment** (`builtins/alignment/`: `text-align.ts`, `alignment-syntax.ts` for the Typst syntax):
   - Commands `setTextAlign(left|center|right|justify)` and `unsetTextAlign`; shortcuts
     Mod-Shift-L/E/R/J; four items of the toolbar's Align menu, pressed by `textAlignAt(state)`.
@@ -968,29 +959,55 @@ worker → main   {id, type:'compile', result} | {id, type:'click', jump} | {id,
   entry only imports drafting, which the document has loaded already). The PDF's buffer is
   transferred, not copied.
 
-### Labels and references (`src/features/labels`)
+### Labels and references (`src/extensions/labels`)
 
 ```ts
-new LabelIndex(project)        // implements ProjectLabels; createTypstEditor makes one per widget
+labels(): TypstExtension     // one LabelIndex (the `labels` service, disposed with the widget) + references({ labels })
+// model/ (no DOM)
+new LabelIndex(project)        // implements ProjectLabels (what the Visual view reads)
 .labels() → LabelInfo[]        // { name, kind: heading|figure|table|listing|equation|bibliography|null, title, path }
 .referenceCount(name)          // @name references in all files
-.renameReferences(from, to, except?)   // edits the other .typ files, one change each
-.onChange(listener) → unsubscribe      // only when the label list changed
-.refresh()                     // rescans every file: after Project.replace (assigning `files`), which emits no events
-.destroy()
+.renameReferences(from, to, except?)   // changes the other .typ files, one change each (calculateReferenceRenames)
+.onDidChange: Event<void>      // only when the label list changed
+.dispose()
+labelChoices(labels, query) / describeLabel(label)   // the @ list's choices, "Section · Method"
+referenceSyntax / labelName / LABEL_CHAR / guardAfterReference(supplement, text)   // Typst's syntax
+// visual-view/
+references({ labels? }): VisualViewContribution   // the `reference` node spec, label tags, the @ list, hints, "Add label"
 ```
 
-Every `.typ` file is scanned with Lezer (`scan.ts`) when the index is made and again on each of
-its changes (the Project's change events); `.bib` files give their entry keys. A label's kind and
-title come from the element before it: a heading (its text), `#figure(..)` (by its body: image →
-figure, table → table, raw → listing; its caption), an equation. A new label goes on through the toolbar's Insert ▾ → "Add label": a draft tag with a field appears
-right where the tag will be (`startNewLabel`, label-tags.ts; target from `add-label.ts`: the figure
-the selection is in, else the innermost block that can carry one; `fig:` / `tab:` / `sec:`
-prefilled); Enter adds the label, Escape or leaving the field drops it. An existing label is
-renamed or removed through its tag. The Visual view reads the index
-through `ProjectLabels` (see "VisualView"); the Source view does not use it yet.
+- **Why one extension:** labels and references span files, so the read model follows the whole project
+  (`Project.onChange`; `Project.replace` reports every file, so no refresh is needed), and the Visual view's
+  contributions read it through `ProjectLabels`. The Source view does not use it yet.
+- **Scanning:** every `.typ` file is scanned with Lezer (`model/scan.ts`) when the index is made and again on each
+  of its changes; `.bib` files give their entry keys. A label's kind and title come from the element before it: a
+  heading (its text), `#figure(..)` (by its body: image → figure, table → table, raw → listing; its caption), an
+  equation.
+- **The block's label** is the host's (a `labelled` spec's `label` attribute, see "VisualView"); this extension
+  draws and edits it. A new label goes on through the toolbar's Insert ▾ → "Add label": a draft tag with a field
+  appears right where the tag will be (`startNewLabel`, `visual-view/label-tags.ts`; target from `add-label.ts`:
+  the figure the selection is in, else the innermost block that can carry one; `fig:` / `tab:` / `sec:`
+  prefilled); Enter adds the label, Escape or leaving the field drops it. An existing label is renamed or removed
+  through its tag.
+- **References** (`@key`, `@key[supplement]`) are `reference` atoms (`target`, `supplement` as written); text
+  printed right after one that would extend its name gets a backslash (`@intro\s`, the spec's `escapeAfter`).
+- Reference chips show the label's name; `referenceHints` adds what it labels (`data-hint`, "Section · Method",
+  "Figure · <caption>", from `describeLabel`) as a hover tooltip only or marks it `typst-visual__ref--unknown`
+  (wavy, tooltip) when the project has no such label. Redrawn when the doc or the label list changes.
+- `labelTags`: a widget per labelled block — at the end of a textblock's text, below other blocks. Clicking it
+  opens a `FieldPopover`. While anything refers to the label, the default (Enter) is **Rename and update N
+  references**, which also renames the references (this view: in the same transaction, one undo step; other
+  files: `ProjectLabels.renameReferences`, one change per file), and **Rename without updating references** is the
+  alternative. Without references the default is **Rename**. Remove removes it. Names are cleaned up by
+  `labelName` (spaces → `-`).
+- `referenceSuggestion` (own plugin, not `@tiptap/suggestion`: its popup mounts into `document.body` and its
+  outside-click check fails across the shadow root): `@` after a space/bracket/line start in prose opens a list
+  (`labelChoices`: name prefix, then name, then title matches; at most 8) below it, inside `.typst-visual__body`.
+  ArrowUp/Down, Enter/Tab or a click insert the chip in place of `@query`; Escape dismisses that `@`. Typing a
+  space or punctuation right after the whole name of a label (`@intro `) inserts the chip as well.
+- Without `labels` (tests): tags only (rename and remove of the label itself).
 
-### Custom styles (`src/features/styles`, `hosts/visual-view/builtins/styles/`: style-nodes, style menu)
+### Custom styles (`src/extensions/styles`)
 
 Concept: docs/2026_10_10_custom-styles.md, option (a). A style is a Typst function declared with a
 doc comment; the editor never keeps a registry of its own:
@@ -1003,14 +1020,20 @@ doc comment; the editor never keeps a registry of its own:
 ```
 
 ```ts
+styles(): TypstExtension     // one StyleIndex (the `styles` service, disposed with the widget) + customStyles(..) + "New style…"
+// model/ (no DOM)
 scanStyles(text) → [{ name, kind: paragraph|text, label }]   // `///` line + `#let f(body, named: ..)` (one positional parameter)
-new StyleIndex(project)   .styles() → Style[] (+ path)   .onChange(listener)   .refresh()   .destroy()
-.forDocument(document) → DocumentStyles { styles(), onChange(), calculateImportChange(text, style, use) → TextChange | null, create?() }
+new StyleIndex(project)        // implements ProjectStyles (what the Visual view reads)
+.styles() → Style[] (+ path)   .onDidChange: Event<void>   .homeFile()   .dispose()
+.calculateImportChange(document, style, use) → TextChange | null   // relative to the document's path; null in the declaring file
 calculateImportChange(text, { name, matches(module), create(), use? }) → TextChange | null   // core/typst-document
 newStyle(text) → { text, from, to }   // "New style…": `new-style`, `new-style-2`, … appended to /styles.typ
+// visual-view/
+customStyles({ styles?, create? }): VisualViewContribution   // styledBlock + style mark specs, the text style menu
 ```
 
-- **Projection:** `project(text, schema, styles)` gets the declared names. A run that is exactly
+- **Projection:** the specs project the declared styles (`blockCalls['*']`, `inlineCalls`, from
+  `ProjectStyles.styles()`; `onDidChange` makes every view project again). A run that is exactly
   `#name(..)?[content]` of a paragraph style is a `styledBlock` (attrs `name`, `title`, `sep`,
   `layout` = the call around the content, like a block quote) holding blocks; inline
   `#name(..)?[text]` of a text style is text with a `style` mark (attrs `name`, `title`, `head` =
@@ -1021,13 +1044,14 @@ newStyle(text) → { text, from, to }   // "New style…": `new-style`, `new-sty
   headings and "New style…"; it shows the selection's paragraph style. Paragraph styles wrap the
   selected blocks (`wrapIn`, or rename the style around them); *Normal text* lifts them out;
   text styles toggle the mark (inclusive, like bold; one at a time). After applying one, the view
-  adds the import (`DocumentStyles.calculateImportChange` at the selection; relative to the file, never
+  adds the import (`ProjectStyles.calculateImportChange` at the selection; relative to the file, never
   into the file declaring it, a new import followed by a blank line so it stays its own block).
 - **Look:** `.typst-visual__style.typst-style--<name>` (accent bar, the title as a badge) and
   `.typst-visual__style-text.typst-style--<name>` (dotted underline, title as tooltip); hosts
   style a style by its class. The preview shows the real look.
-- **The `styles` extension:** one `StyleIndex` (the `styles` service); "New style…" appends a stub to the file declaring most styles (`homeFile()`; else `/styles.typ`, created through the
-  usual `applyChange` when missing) and shows it in the Source view (`Workbench.open(path, { selection, mode: 'source' })`).
+- **"New style…"** (the extension's entry) appends a stub to the file declaring most styles (`homeFile()`; else
+  `/styles.typ`, created through the usual `applyChange` when missing) and shows it in the Source view
+  (`Workbench.open(path, { selection, mode: 'source' })`).
 
 ### Spreadsheets (`src/features/spreadsheets`)
 

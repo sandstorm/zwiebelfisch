@@ -655,7 +655,7 @@
 .typst-visual__rule { padding: 0.4em 0 1.1em; }
 .typst-visual__quote { margin: 0 0 0.7em; padding: 0 0 0 1em; border-left: 3px solid var(--te-border); color: var(--te-text-2); }
 .typst-visual__quote > :last-child { margin-bottom: 0; }
-/* Custom styles (features/styles): a paragraph style's blocks in a frame with its name; text in a text style
+/* Custom styles (extensions/styles): a paragraph style's blocks in a frame with its name; text in a text style
    underlined dotted, its name as tooltip. Hosts style one by its class, typst-style--<name>. */
 .typst-visual__style {
   position: relative;

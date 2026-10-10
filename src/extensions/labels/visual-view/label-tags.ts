@@ -1,14 +1,13 @@
 // Label tags: a block's label (`= Intro <intro>`) drawn as a small tag on the block, edited in a popover; a new
 // label typed into a draft tag right where it will show.
-// See references.ts.
+// See visual-view.ts.
 import type { Node } from '@tiptap/pm/model';
 import { type EditorState, Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
-import type { ProjectLabels } from '../labels';
 import { FieldPopover } from '../../../ui/field-popover/field-popover';
 import { renameLabel, setLabel } from './label-edits';
-import { labelName } from './reference-syntax';
+import { labelName, type ProjectLabels } from '../model/model';
 import { labelPrefix, labelTarget } from './add-label';
 
 /** What the tags need besides the document: the project's labels (renaming updates their references by default). */

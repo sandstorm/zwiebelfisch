@@ -1,8 +1,8 @@
-// Style discovery: the functions a Typst file declares as paragraph or text styles (`/// @style …`). See styles.ts.
+// Style discovery: the functions a Typst file declares as paragraph or text styles (`/// @style …`). See model.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
-import { ProjectPath } from '../../core/paths/paths';
-import type { ProjectFiles } from '../../core/project/project';
+import { ProjectPath } from '../../../core/paths/paths';
+import type { ProjectFiles } from '../../../core/project/project';
 
 /** Wraps blocks (`#note[..]` around paragraphs) or inline text (`#key[..]` in a sentence). */
 export type StyleKind = 'paragraph' | 'text';

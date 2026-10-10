@@ -1,11 +1,9 @@
 // The @ suggestion list: typing `@` offers the project's labels; choosing one inserts a reference chip.
-// See references.ts.
+// See visual-view.ts.
 import { Plugin, PluginKey, type EditorState } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
-import type { LabelInfo, ProjectLabels } from '../labels';
-import { describeLabel, labelChoices } from './label-choices';
+import { describeLabel, LABEL_CHAR, labelChoices, type LabelInfo, type ProjectLabels } from '../model/model';
 import { insertReference } from './label-edits';
-import { LABEL_CHAR } from './reference-syntax';
 
 /** The `@query` being typed: from the `@` to the cursor. */
 export interface ReferenceQuery {

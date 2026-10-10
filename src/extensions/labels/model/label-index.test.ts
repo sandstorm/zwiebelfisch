@@ -1,13 +1,14 @@
-// Tests for labels.ts: the project's label index, reference counts and renaming references across files.
+// Tests for label-index.ts and scan.ts: the project's label index, reference counts and renaming references across files.
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
-import { Project } from '../../core/project/project';
-import { LabelIndex, referenceEdits } from './labels';
-import { ProjectPath } from '../../core/paths/paths';
+import { Project } from '../../../core/project/project';
+import { LabelIndex } from './label-index';
+import { calculateReferenceRenames } from './scan';
+import { ProjectPath } from '../../../core/paths/paths';
 
 const path = ProjectPath.of;
 
-const ADVANCED = new URL('../../../demo/examples/advanced/', import.meta.url);
+const ADVANCED = new URL('../../../../demo/examples/advanced/', import.meta.url);
 const read = (path: string) => readFileSync(new URL(path, ADVANCED), 'utf8');
 
 /** The demo's advanced example (its Typst files). */
@@ -49,7 +50,7 @@ describe('LabelIndex', () => {
     const project = advanced();
     const index = new LabelIndex(project);
     const listener = vi.fn();
-    index.onChange(listener);
+    index.onDidChange(listener);
     const method = project.document(path('/chapters/method.typ'))!;
     method.setText(method.text.replace('We generated', 'We made'), 'test');
     expect(listener).not.toHaveBeenCalled();
@@ -77,7 +78,7 @@ describe('LabelIndex', () => {
     const project = new Project(path('/main.typ'), { '/main.typ': 'See @method.\n' });
     const index = new LabelIndex(project);
     const listener = vi.fn();
-    index.onChange(listener);
+    index.onDidChange(listener);
     project.replace({ '/method.typ': '= Method <method>\n\nAs @intro says.\n' });
     expect(index.labels()).toEqual([{ name: 'method', kind: 'heading', title: 'Method', path: path('/method.typ') }]);
     expect(index.referenceCount('intro')).toBe(1);
@@ -113,10 +114,10 @@ describe('LabelIndex', () => {
   });
 });
 
-describe('referenceEdits', () => {
+describe('calculateReferenceRenames', () => {
   it('replaces just the names of matching references', () => {
     const text = 'See @a, @a[Part] and @ab or @a.b; @a. End\n';
-    const edits = referenceEdits(text, 'a', 'start');
+    const edits = calculateReferenceRenames(text, 'a', 'start');
     expect(edits).toHaveLength(3);
     let result = text;
     for (const { from, to, insert } of [...edits].reverse()) result = result.slice(0, from) + insert + result.slice(to);

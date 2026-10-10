@@ -1,8 +1,9 @@
-// Tests for the projection of custom styles (styles.ts): declared style calls as styled blocks and text.
+// Tests for the projection of custom styles (visual-view.ts): declared style calls as styled blocks and text.
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
+import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../../core/paths/paths';
-import type { Style } from '../styles';
+import type { Style } from '../model/model';
 import { print, project as projectWith } from '../../../hosts/visual-view/projection/projection';
 import { after, edit, expectPreciseMap, find, schemaWith } from '../../../hosts/visual-view/test-support';
 import { customStyles } from './visual-view';
@@ -12,7 +13,7 @@ const STYLES = [style('note', 'paragraph', 'Note'), style('callout', 'paragraph'
 
 /** The schema of a view whose project declares `STYLES`. */
 const schema = schemaWith({
-  contributions: [customStyles({ styles: { styles: () => STYLES, onChange: () => () => {}, forDocument: () => ({ calculateImportChange: () => null }) } })],
+  contributions: [customStyles({ styles: { styles: () => STYLES, onDidChange: new EventEmitter<void>().event, calculateImportChange: () => null } })],
 });
 
 /** The schema of a view whose project declares no styles. */

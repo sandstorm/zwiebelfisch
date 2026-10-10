@@ -1,5 +1,5 @@
-// newStyle: the stub "New style…" appends to the styles file. See styles.ts.
-import { ProjectPath } from '../../core/paths/paths';
+// newStyle: the stub "New style…" appends to the styles file. See model.ts.
+import { ProjectPath } from '../../../core/paths/paths';
 import { scanStyles } from './discover';
 
 /** Where "New style…" puts new styles while the project declares none. */
