@@ -1,6 +1,7 @@
 // End-to-end tests (Playwright, against the demo build): text alignment in the Visual view.
 import { test, expect } from './fixtures';
 import type { Page } from '@playwright/test';
+import { caretAtEnd } from './visual-helpers';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -8,8 +9,7 @@ test.beforeEach(async ({ page }) => {
 
 /** Adds a new paragraph "Fresh line" after the first paragraph, cursor in it. */
 async function freshLine(page: Page) {
-  await page.getByTestId('typst-visual').locator('p').first().click();
-  await page.keyboard.press('End');
+  await caretAtEnd(page.getByTestId('typst-visual').locator('p').first());
   await page.keyboard.press('Enter');
   await page.keyboard.type('Fresh line');
 }
@@ -52,7 +52,9 @@ test('Mod+Shift+E centers and Mod+Shift+L aligns left', async ({ page }) => {
   await page.keyboard.press('ControlOrMeta+Shift+E');
   await expect(freshParagraph(page)).toHaveCSS('text-align', 'center');
   await page.keyboard.press('ControlOrMeta+Shift+L');
-  await expect(freshParagraph(page)).toHaveCSS('text-align', 'left');
+  await expect(toolbar(page).getByRole('button', { name: 'Align left' })).toHaveAttribute('aria-pressed', 'true');
+  // left is the document's default, so the paragraph has no alignment of its own: CSS's `start`, left in LTR text
+  await expect(freshParagraph(page)).toHaveCSS('text-align', /^(left|start)$/);
 });
 
 test('one undo reverts an alignment', async ({ page }) => {
