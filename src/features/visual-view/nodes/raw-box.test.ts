@@ -38,17 +38,13 @@ const RAW = '#set text(size: 12pt)\n\nHello\n';
  * jsdom's getComputedStyle ignores `!important`, and CodeMirror's base theme uses it.
  */
 function cascadedDisplay(element: HTMLElement): string | null {
-  let winner: { value: string; important: boolean } | null = null;
-  for (const sheet of element.ownerDocument.styleSheets) {
-    for (const rule of sheet.cssRules) {
-      if (!(rule instanceof CSSStyleRule) || !/^\.[^\s.:>]+$/.test(rule.selectorText)) continue;
-      if (!element.classList.contains(rule.selectorText.slice(1))) continue;
-      const value = rule.style.getPropertyValue('display');
-      const important = rule.style.getPropertyPriority('display') === 'important';
-      if (value && (!winner?.important || important)) winner = { value, important };
-    }
-  }
-  return winner?.value ?? null;
+  const rules = [...element.ownerDocument.styleSheets].flatMap((sheet) => [...sheet.cssRules]);
+  const declarations = rules
+    .filter((rule): rule is CSSStyleRule => rule instanceof CSSStyleRule && /^\.[^\s.:>]+$/.test(rule.selectorText))
+    .filter((rule) => element.classList.contains(rule.selectorText.slice(1)) && rule.style.getPropertyValue('display'))
+    .map(({ style }) => ({ value: style.getPropertyValue('display'), important: style.getPropertyPriority('display') === 'important' }));
+  const important = declarations.filter((d) => d.important);
+  return (important.length > 0 ? important : declarations).at(-1)?.value ?? null;
 }
 
 describe('raw boxes', () => {

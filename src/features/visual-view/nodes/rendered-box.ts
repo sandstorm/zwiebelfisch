@@ -7,6 +7,32 @@ export interface Snippet {
   svg: string;
   width: number;
   height: number;
+  /** Height (pt) of one line of its biggest text; without it, inline boxes show the snippet at its own size. */
+  textHeight?: number;
+  /** Space (pt) around what is drawn. */
+  padding?: number;
+}
+
+/** How tall a line of text is (ascender to descender, as the engine boxes glyph runs), in em of its size. */
+const TEXT_LINE_EM = 1.15;
+
+/**
+ * How an inline box draws its snippet, in em of the text around it: scaled so
+ * the snippet's text (`textHeight`) is as big as that text, and with negative
+ * vertical margins taking back the padding, so a one-line snippet takes one
+ * line (1.15em) and does not make its line taller. Null without a text height.
+ */
+export function inlinePictureSize({ height, textHeight, padding = 0 }: Pick<Snippet, 'height' | 'textHeight' | 'padding'>): { height: number; margin: number } | null {
+  if (!textHeight) return null;
+  const emPerPt = TEXT_LINE_EM / textHeight;
+  return { height: height * emPerPt, margin: -padding * emPerPt };
+}
+
+/** Sizes of a picture: CSS lengths, '' for automatic. */
+interface PictureSize {
+  width: string;
+  height: string;
+  margin: string;
 }
 
 /**
@@ -32,6 +58,13 @@ const NOT_IN_PLACE = /^\s*(#(set|show|let|import|include)\b|\/\/|\/\*)/;
 /** Whether `src` (a raw box's Typst) draws its own output where it stands, so a snippet of it is meaningful. */
 export function rendersInPlace(src: string): boolean {
   return !NOT_IN_PLACE.test(src);
+}
+
+/** A snippet at its own size (pt), or inline in the line of text around it (em, see `inlinePictureSize`). */
+function snippetSize(snippet: Snippet, inline: boolean): PictureSize {
+  const em = inline ? inlinePictureSize(snippet) : null;
+  if (!em) return { width: `${snippet.width}pt`, height: '', margin: '' };
+  return { width: '', height: `${em.height}em`, margin: `${em.margin}em` };
 }
 
 /** The raw box a `RenderedBox` belongs to. */
@@ -110,22 +143,25 @@ export class RenderedBox {
     this.url = picture?.url ?? null;
     if (picture) {
       if (this.picture.getAttribute('src') !== picture.url) this.picture.src = picture.url;
-      this.picture.style.width = picture.width === undefined ? '' : `${picture.width}pt`;
+      const { style } = this.picture;
+      style.width = picture.size.width;
+      style.height = picture.size.height;
+      style.marginTop = style.marginBottom = picture.size.margin;
       this.picture.alt = source.node.attrs.src;
     }
     this.show();
   }
 
-  private async render({ node, from }: { node: Node; from: number }): Promise<{ url: string; width?: number } | null> {
+  private async render({ node, from }: { node: Node; from: number }): Promise<{ url: string; size: PictureSize } | null> {
     const src: string = node.attrs.src;
     if (node.type.name === 'image') {
       const path = imagePath(src);
       const url = path === null ? null : this.renderer.imageUrl(path);
-      return url === null ? null : { url };
+      return url === null ? null : { url, size: { width: '', height: '', margin: '' } };
     }
     if (!rendersInPlace(src)) return null;
     const snippet = await this.renderer.snippet(from, from + src.length, src);
-    return snippet && { url: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(snippet.svg)}`, width: snippet.width };
+    return snippet && { url: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(snippet.svg)}`, size: snippetSize(snippet, node.isInline) };
   }
 
   private setEditing(editing: boolean): void {

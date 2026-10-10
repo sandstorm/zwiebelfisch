@@ -23,8 +23,17 @@ describe('snippet', () => {
       { page: 0, x: 70, y: 45, w: 10, h: 10 },
       { page: 1, x: 0, y: 0, w: 100, h: 100 },
     ]);
-    expect(result).toMatchObject({ width: 34, height: 19 });
+    expect(result).toMatchObject({ width: 34, height: 19, padding: 2 });
     expect(result?.svg).toContain('viewBox="48 38 34 19"');
+  });
+
+  it('tells the height of its tallest box: one line of its biggest text', () => {
+    const result = snippet(pages, [
+      { page: 0, x: 50, y: 40, w: 10, h: 12.5 },
+      { page: 0, x: 62, y: 38, w: 4, h: 8 },
+      { page: 1, x: 0, y: 0, w: 100, h: 100 },
+    ]);
+    expect(result?.textHeight).toBe(12.5);
   });
 
   it('stays inside the page', () => {

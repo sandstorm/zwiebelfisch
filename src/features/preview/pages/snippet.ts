@@ -6,6 +6,10 @@ export interface Snippet {
   svg: string;
   width: number;
   height: number;
+  /** Height of its tallest box (pt): one line of its biggest text, what an inline view scales by. */
+  textHeight: number;
+  /** Space (pt) kept around what is drawn (less where the page ends). */
+  padding: number;
 }
 
 /** Space (pt) kept around what is drawn, so strokes and descenders are not clipped. */
@@ -26,7 +30,8 @@ export function snippet(pages: readonly Page[], boxes: readonly Box[]): Snippet 
   const bottom = Math.min(page.height, Math.max(...onPage.map((b) => b.y + b.h)) + PADDING);
   if (right <= x || bottom <= y) return null;
   const crop = { x, y, w: right - x, h: bottom - y };
-  return { svg: cropSvg(page.svg, crop), width: crop.w, height: crop.h };
+  const textHeight = Math.max(...onPage.map((b) => b.h));
+  return { svg: cropSvg(page.svg, crop), width: crop.w, height: crop.h, textHeight, padding: PADDING };
 }
 
 /** `svg` (a page as Typst exports it) showing only the rectangle `crop`, sized to it in pt. */
