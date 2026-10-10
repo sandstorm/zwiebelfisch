@@ -31,8 +31,6 @@ src/                        the widget (TypeScript); the most important API on t
                             `ExtensionContext.preview` is: toolbar items, PDF variants, page overlays (contribution.ts),
                             onDidChangeDiagnostics / onDidRender, snippet, exportPdf; latest-only.ts ("only the
                             newest value" task runner)
-      builtins/             toolbar items until they move into extensions: zoom (zoomControls, presets),
-                            follow-cursor, page-number, pdf-menu ("Download PDF" + menu of the PDF variants)
       worker/               worker.ts (startEngineWorker, main-thread side), engine.worker.ts (the worker),
                             protocol.ts (messages), project-files.ts (FileSender/FileReceiver)
       pages/                pages.ts: page-list (SVG only near the viewport), overlays, geometry, zoom, snippet
@@ -62,30 +60,44 @@ src/                        the widget (TypeScript); the most important API on t
   ui/                       feature-neutral DOM widgets, one folder each: field-popover/ (FieldPopover: one text field,
                             Apply / Remove; also used by versions/), toolbar-menu/ (ToolbarMenu: a menu button of
                             toolbar buttons), floating-bar/ (FloatingBar: a bar above an anchor in the text)
+  extensions/               one vertical slice per concept (docs/2026_10_10_extensions-architecture.md): <name>.ts
+                            (the entry: the TypstExtension factory, the controller), model/ (pure, no DOM), and one
+                            folder per host it contributes to (workbench/, preview/, …), each entered through the file
+                            named like it
+    files/                  files (the file panel in a side panel), fileNavigation (editor frame), assets (file views of
+                            images and data files; the view is still features/files/asset-view.ts); files.css
+      model/                tree-model.ts (the tree as data, keyboard moves, relocate), upload.ts (uploadChanges)
+      workbench/            file-panel.ts (FilePanel: header, prompts, uploads), file-navigation.ts ("← previous file"
+                            / "next file →"), tree/ (FileTree: rows, keyboard, drag & drop, presence), icons/ (leaf)
+    spreadsheets/           spreadsheets: the `.ic` file view; every edit also stores `name.ic.gen.typ`
+      model/                typst-file.ts (spreadsheetTypst → name.ic.gen.typ for Typst, typstPath)
+      workbench/            spreadsheet-view.ts (SpreadsheetView), workbook.ts (React + IronCalc, loaded on demand)
+    versions/               versions: "Save version" next to the tabs once the `collaboration` service has a GitLab room
+      model/                version-status.ts (versionStatus: the outcome as a status line)
+      workbench/            version-controls.ts (VersionControls: button, commit message, outcome)
+    pdf-export/             pdfExport: the `pdfExport.export` command and the preview's PDF variants; PdfExport (the
+                            project's PDF with / without comments)
+      preview/              pdf-menu.ts (pdfMenu: "Download PDF" + menu of the registered PDF variants)
+    preview-controls/       previewControls: the preview toolbar's controls; "Follow cursor" remembered in localStorage
+      model/                zoom.ts (stepZoom over the presets, zoomText / zoomLabel)
+      preview/              zoom-controls.ts (zoomControls), follow-cursor.ts (followCursor), page-number.ts (pageNumber)
   features/                 one folder per feature, each entered through the file named like it
     diagnostics/            DiagnosticsStatus (status bar), diagnostics-summary.ts
     labels/                 LabelIndex: the project's labels (kind, title, file) and reference counts; scan.ts (Lezer, .bib)
-    spreadsheets/           SpreadsheetView (.ic files in IronCalc's workbook UI), workbook.ts (React + IronCalc,
-                            loaded on demand), typst-file.ts (spreadsheetTypst → name.ic.gen.typ for Typst)
     styles/                 StyleIndex: the custom styles the project declares (`/// @style …`), discover.ts,
                             new-style.ts ("New style…" stub); DocumentStyles (what a Visual view uses)
     comments/               CommentAction ("Comment" / Ctrl+Alt+M), add-margin-note.ts, margin-note-syntax.ts
                             (drafting's call: parse, print, validity), note-thread.ts (a note's body as a
                             thread of messages), page-margin.ts, without-notes.ts (the PDF without comments)
-    files/                  FilePanel (the file panel: header, prompts, drops; files.css), icons.ts, asset-view.ts,
-                            upload.ts, file-navigation.ts ("← previous file" / "next file →" around an included file)
-      tree/                 tree.ts (FileTree: rows, keyboard, drag & drop, presence), tree-model.ts (pure)
+    files/                  asset-view.ts only (AssetView), until it moves into the images extension
     collaboration/          real-time collaboration (loaded on demand): Collaboration, SharedProject, RemoteCursors,
                             RoomVersions + SharedAssets (GitLab rooms); in-process.ts (Y.Doc/awareness wiring for
                             tests); gitlab-protocol.ts (import-free, shared with the server); collaboration-link.ts
                             (the widget's eager side: loads the rest on demand)
-    pdf-export/             PdfExport: the project's PDF with / without comments
-    preview-controls/       previewControls: zoom, "Follow cursor" (remembered in localStorage), page number
     typst-language/         typstLanguage: Typst syntax + code colors in the Source views
     document-links/         documentLinks: file paths as links in the Source views; the `documentLinks` service
     project-renderings/     ProjectRenderings: what a document's Visual view renders and inserts (snippets, image URLs,
                             uploads); one unit until the slices wave splits it into images / rendered-boxes
-    versions/               VersionControls: "Save version", commit message, outcome (GitLab rooms)
 crates/typst-engine/        Rust → wasm: Typst compiler, SVG and PDF export, click/cursor jumps
   src/world.rs              in-memory Typst World (files and fonts pushed from JS)
   src/lib.rs                wasm-bindgen interface (JSON in/out, UTF-16 offsets)
@@ -112,13 +124,15 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
   a stylesheet may be `files/files.css`). Everything else in the folder is internal to it, and
   folders that grow get subfolders named after a concept (`projection/`, `worker/`), never generic
   ones. No sibling folders: an entry file lives inside its folder (`typst-editor/typst-editor.ts`),
-  never next to it. `core/`, `ui/`, `hosts/` and `features/` only group.
+  never next to it. `core/`, `ui/`, `hosts/`, `extensions/` and `features/` only group.
 - **Imports from outside a folder go to its entry file**, which re-exports what others need.
   ESLint enforces this (`local/entry-imports`, `eslint-rules/entry-imports.js`); only TypeScript and
   CSS sources count (not the generated `wasm/`, `fonts/` or the `fixtures/`). The exceptions are
   listed once, with reasons, in `eslint.config.js` (`boundaries.exceptions`):
   - `features/collaboration/gitlab-protocol.ts` — anyone: import-free, shared with `server/` and
-    `features/versions` (which must not load the lazily loaded collaboration chunk);
+    `extensions/versions` (which must not load the lazily loaded collaboration chunk);
+  - `features/files/asset-view.ts` — `extensions/files/files.ts`: the asset view stays behind until it
+    moves into the images extension;
   - `core/typst-engine/engine-assets.ts` — `hosts/preview/preview.ts`: the asset URLs; in the
     entry, the worker bundle (which imports the entry) would emit every asset a second time;
   - `features/collaboration/collaboration-link.ts` — `typst-editor/typst-editor.ts`: the eager side of
@@ -244,7 +258,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   an existing file (`name.png`, `name-2.png`, …) reuses it, a different one gets the first free
   of those names — every pasted screenshot is `image.png`; refusals — not an image Typst shows,
   the host's veto — come back as an error the popover shows).
-- **PDF** (`PdfExport`, the `pdfExport` extension in `features/pdf-export/`): `exportPdf({comments})` (the
+- **PDF** (`PdfExport`, the `pdfExport` extension in `extensions/pdf-export/`): `exportPdf({comments})` (the
   `pdfExport.export` command) and the preview's "Download PDF" (the `pdfMenu` toolbar item with the PDF variants
   "Without comments" / "With comments" it registers, unless `pdfDownload: false`). With comments the main
   file is exported as compiled; without, `withoutNotes(project.files(), main)` gives the entry
@@ -331,7 +345,8 @@ new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen? })
   (Visual: `marginNotes`, `notesGutter`), `labels` (Visual: `references`), `styles` (Visual: `customStyles`);
   `previewControls` (`zoomControls`, `followCursor`, `pageNumber`), `pdfExport` (`pdfMenu`, the two PDF
   variants). The Visual view's constructs (`markup`, `headings`, `tables`, …) are in the list themselves: a
-  `VisualViewContribution` is shaped like a `TypstExtension`. The contributions are still in `hosts/*/builtins/`.
+  `VisualViewContribution` is shaped like a `TypstExtension`. The contributions not yet moved into
+  `extensions/<name>/` are still in `hosts/*/builtins/` (the preview's are moved).
 - **The active editor** (`activeTextEditor`, `onDidChangeTextEditorSelection`, VS Code's names): `comments`
   adds a note at its selection (and opens the note's card through its own notes gutter), `collaboration`
   publishes its selection and draws the others' carets in it (`setPresence`).
@@ -898,9 +913,11 @@ new Preview(container, { onJump? })          // implements PreviewContributions;
   set through `PreviewContext`: zoom, which page is visible, whether `reveal` follows ("Follow cursor";
   on by default; switching it on goes to the newest reveal). Toolbar items are placed in registration
   order; their `update()` runs at most once per frame after a scroll, resize, zoom or new pages.
-- **Built-in toolbar items** (`builtins/`, one module each; they move into extensions next):
-  `zoomControls` (− / + to the neighbouring preset of 25 %–400 %, Fit, 100 %, and "Fit · 83%" / "125%"),
-  `followCursor({ on, onChange })` (a `role=switch`), `pageNumber` ("3 / 12"), `pdfMenu` (below).
+- **Toolbar items** come from extensions (the host has none of its own): `preview-controls`
+  (`extensions/preview-controls/preview/`) registers `zoomControls` (− / + to the neighbouring preset of
+  25 %–400 %, Fit, 100 %, and "Fit · 83%" / "125%"; presets and labels in its `model/zoom.ts`),
+  `followCursor({ on, onChange })` (a `role=switch`) and `pageNumber` ("3 / 12"); `pdf-export`
+  (`extensions/pdf-export/preview/`) registers `pdfMenu` (below).
 - **Page overlays** (`createOverlay`, `pages/overlays.ts`): boxes in pt, drawn as children of the page
   elements in percent of the page, so they survive zoom and lazy unmounting; drawn again after every
   successful compile. The host's click highlight is one.
@@ -914,7 +931,7 @@ new Preview(container, { onJump? })          // implements PreviewContributions;
   A call whose drawn glyphs all come from its definition (`ms(6)` with `#let ms(v) = [#v ms]`:
   the glyphs' spans lie in the `let`) draws nothing in its own range, so its box keeps showing code.
 
-- **PDF menu** (`builtins/pdf-menu.ts`): "Download PDF" (the first registered PDF variant: `pdfExport`
+- **PDF menu** (`extensions/pdf-export/preview/pdf-menu.ts`): "Download PDF" (the first registered PDF variant: `pdfExport`
   registers "Without comments" first) plus ▾ with a `role=menu` of the variants registered by the time
   it opens (Escape or a click outside closes it). While a PDF is made the buttons are disabled and the
   status says "Making PDF…"; the variant's rejection shows as "No PDF: <message>" (click dismisses). The
@@ -1029,22 +1046,27 @@ newStyle(text) → { text, from, to }   // "New style…": `new-style`, `new-sty
 - **The `styles` extension:** one `StyleIndex` (the `styles` service); "New style…" appends a stub to the file declaring most styles (`homeFile()`; else `/styles.typ`, created through the
   usual `applyChange` when missing) and shows it in the Source view (`Workbench.open(path, { selection, mode: 'source' })`).
 
-### Spreadsheets (`src/features/spreadsheets`)
+### Spreadsheets (`src/extensions/spreadsheets`)
 
 Concept: docs/2026_10_10_spreadsheets.md; task docs/todo/ironcalc.md. Calculations happen in
 IronCalc; Typst shows the results.
 
 ```ts
 spreadsheets(): TypstExtension   // registerFileView('spreadsheet', SpreadsheetView); edits → applyChange (file + typstPath)
-new SpreadsheetView(parent, onEdit(path, { bytes, typst }))   .show(path, content)   .hide()   .destroy()   // internal
+// workbench/: new SpreadsheetView(parent, onEdit(path, { bytes, typst }))   .show(path, content)   .hide()   .destroy()
+// model/ (pure):
 spreadsheetTypst(model, 'budget.ic') → Typst source   // `values` and `sheets` of the visible sheets
 typstPath('/budget.ic') → '/budget.ic.gen.typ'
 ```
 
+- The view only reports edits; the extension's entry (`save`) decides what the project gets: the `.ic` file and,
+  when it changed, its Typst file, both through `Workbench.applyChange`.
+
 - A spreadsheet is a project file `name.ic` (`ProjectPath.kind` `spreadsheet`), in IronCalc's own format
   (`Model.from_bytes` / `toBytes`): the browser package has no `.xlsx`. An empty file opens as a
   new workbook (so "New file" `budget.ic` makes one), which is saved at once.
-- `workbook.ts` is a separate chunk (`import()` on the first show): `@ironcalc/workbook` (React,
+- `workbench/workbook.ts` is a separate chunk (`import()` from `spreadsheet-view.ts` on the first show; the
+  folder's entry exports only its types): `@ironcalc/workbook` (React,
   i18next, lucide icons) and the engine's wasm. Its CSS (scoped `.ic-root`) goes into the
   container's root node (the shadow root of `<typst-editor>`); `rootContainer` keeps its menus
   inside the container.
@@ -1065,7 +1087,7 @@ typstPath('/budget.ic') → '/budget.ic.gen.typ'
     (`#set table(stroke: …)`); the font family stays the document's.
   - Not carried over: merged cells (IronCalc 0.8 has no API for them), conditional formats,
     wrap / overflow into neighbouring cells, double borders (drawn as one thick line).
-- `typst-file.ts` reads the model only through `SheetSource` (a slice of IronCalc's `Model`);
+- `model/typst-file.ts` reads the model only through `SheetSource` (a slice of IronCalc's `Model`);
   its test runs the real IronCalc wasm and compiles the result with the Typst engine.
 - Not yet: `.xlsx`, sharing spreadsheet edits in collaboration rooms (binary: the last save wins).
 
@@ -1117,15 +1139,18 @@ new Layout(host, storageKey)   .editor  .preview  .statusBar   // the editing co
   creation and on OS changes), so a page switching its own color-scheme later changes the tokens at
   once, CodeMirror's own chrome at the next resize, and the preview's inversion not until reload.
 
-### File panel (`src/features/files`)
+### File panel (`src/extensions/files`)
 
 ```ts
 files({ fileList? })  fileNavigation()  assets(): TypstExtension   // the side panel, the frame links, the image/data file view
+uploadChanges(files) → FileChange[]   // also exported by the entry: the images' uploads use it (projectRenderings)
+// workbench/:
 new FilePanel(parent, { onOpen(path), onChange(change) → Promise<reason | null>, memory? }, state)
 .render({ paths, main, active })   .showPresence(placedPresences)   .upload(files)   .destroy()
-// tree/: new FileTree(parent, { onOpen, onRename, onDelete, onMove(source, folder), onUpload(files, folder), memory? })
-// tree-model.ts (pure): buildTree(paths, emptyFolders), visibleRows(tree, expanded), navigate(rows, current, key),
-//                       relocate(paths, source, target) → renames, filesUnder, folderOf, ancestorsOf
+// workbench/tree/: new FileTree(parent, { onOpen, onRename, onDelete, onMove(source, folder), onUpload(files, folder), memory? })
+// workbench/icons/: icon(doc, name) — a leaf folder, so the tree and the panel both take it from below
+// model/ (pure): buildTree(paths, emptyFolders), visibleRows(tree, expanded), navigate(rows, current, key),
+//                relocate(paths, source, target) → renames, filesUnder, folderOf, ancestorsOf; uploadChanges
 ```
 
 - **Only gestures → `FileChange`s** (names via `ProjectPath.fromName`: any folder depth, default extension);
@@ -1343,7 +1368,7 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
   `onCommentsChange`, the `comments` getter/setter, the element's `.comments` and
   `commentschange`, and the `CommentsData` / `TypstEditorCommentsChangeDetail` types.
 
-### Collaboration (`src/features/collaboration`, `src/features/versions`, `server/`)
+### Collaboration (`src/features/collaboration`, `src/extensions/versions`, `server/`)
 
 ```ts
 createTypstEditor(host, { …, user?: {name, color?},
@@ -1402,7 +1427,7 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
   `sharedToken(TYPST_COLLAB_TOKEN)` allows all when unset. The server looks inside the Y.Doc
   only in GitLab rooms.
 
-#### GitLab-backed rooms (`server/src/gitlab`, `src/features/collaboration/room-versions.ts`, `shared-assets.ts`, `src/features/versions`)
+#### GitLab-backed rooms (`server/src/gitlab`, `src/features/collaboration/room-versions.ts`, `shared-assets.ts`, `src/extensions/versions`)
 
 A room named `gitlab:<project id or path>@<branch>` is that branch (`parseRoomName`). The server
 config (`gitlab: {url, token, webhookSecret?, authorEmail?, fetch?}`, from `TYPST_GITLAB_*` in
@@ -1446,7 +1471,8 @@ HTTP             GET /rooms/<room>/files/<path> (Authorization: Bearer <room tok
   fetched from the files endpoint, uploads as bytes; bytes → sha after a commit is not a
   change). `CollaborationLink` passes `versions` to the `collaboration` service (`onDidConnectVersions`); the
   `versions` extension then puts `VersionControls` into the tab bar
-  (`src/features/versions/versions.ts`): "Save version" + commit-message popover + status line.
+  (`src/extensions/versions/workbench/version-controls.ts`): "Save version" + commit-message popover + status line
+  (its text: `versionStatus` in `model/`).
 
 ### Demo playground (`demo/`, `server/src/playground`)
 

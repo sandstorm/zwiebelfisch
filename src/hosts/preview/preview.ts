@@ -16,7 +16,6 @@ import type { PageOverlay, PdfVariant, PreviewContext, PreviewToolbarItem, Toolb
 
 export type { PageOverlay, PdfFile, PdfVariant, PreviewContext, PreviewToolbarItem, ToolbarItemView } from './contribution';
 export type { Snippet, Zoom } from './pages/pages';
-export { followCursor, pageNumber, pdfMenu, zoomControls } from './builtins/builtins';
 
 /**
  * The preview as extensions see it (`ExtensionContext.preview`): its contribution points, and what its engine

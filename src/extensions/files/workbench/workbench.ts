@@ -1,0 +1,5 @@
+// What the files extension shows in the workbench: the file panel, the file navigation bars, the panel's icons.
+// Entry of extensions/files/workbench/. See ../files.ts.
+export { FileNavigation } from './file-navigation';
+export { FilePanel } from './file-panel';
+export { icon } from './icons/icons';
