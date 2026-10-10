@@ -28,11 +28,14 @@ async function users(browser: Browser, baseURL: string, project: string) {
 }
 
 async function saveToGitLab(page: Page, message: string): Promise<void> {
-  await page.getByRole('button', { name: 'Save to GitLab…' }).click();
+  await page.getByRole('toolbar', { name: 'Editor actions' }).getByRole('button', { name: 'Save to GitLab…' }).click();
   const form = page.getByRole('form', { name: 'Save to GitLab' });
   await form.getByRole('textbox', { name: 'Commit message' }).fill(message);
-  await form.getByRole('button', { name: 'Apply' }).click();
+  await form.getByRole('button', { name: 'OK' }).click();
 }
+
+/** The messages shown to `page`'s user (outcomes and news of the source control). */
+const messages = (page: Page) => page.getByTestId('typst-notifications');
 
 test('the branch is loaded with its files, images from the repository', async ({ browser, baseURL }, info) => {
   const { ann } = await users(browser, baseURL!, info.project.name);
@@ -54,8 +57,8 @@ test('Save to GitLab commits, and everyone in the room is told', async ({ browse
   await expect(visualText(bob, 'Again.')).toBeVisible();
 
   await saveToGitLab(ann, 'Add a line');
-  await expect(ann.locator('.typst-editor__source-control-status')).toContainText('Saved version');
-  await expect(bob.locator('.typst-editor__source-control-status')).toContainText('Saved version');
+  await expect(messages(ann)).toContainText('Saved version');
+  await expect(messages(bob)).toContainText('Saved version');
 });
 
 test('a simulated upstream commit (playground endpoint) is merged into the room', async ({ browser, baseURL, request }, info) => {
@@ -63,7 +66,7 @@ test('a simulated upstream commit (playground endpoint) is merged into the room'
   const response = await request.post(`${SERVER}/playground/upstream?room=${encodeURIComponent(room)}`);
   expect(response.ok()).toBe(true);
   for (const page of [ann, bob]) {
-    await expect(page.locator('.typst-editor__source-control-status')).toHaveText('Merged new changes from GitLab');
+    await expect(messages(page).getByRole('status').filter({ hasText: 'Merged new changes from GitLab' })).toBeVisible();
     await openFile(page, 'chapters/introduction.typ');
     await expect(visualText(page, 'a colleague added this paragraph on GitLab')).toBeVisible();
   }
@@ -72,5 +75,5 @@ test('a simulated upstream commit (playground endpoint) is merged into the room'
 test('saving without changes says so', async ({ browser, baseURL }, info) => {
   const { ann } = await users(browser, baseURL!, info.project.name);
   await saveToGitLab(ann, 'Nothing');
-  await expect(ann.locator('.typst-editor__source-control-status')).toHaveText('No changes to save');
+  await expect(messages(ann).getByRole('status').filter({ hasText: 'No changes to save' })).toBeVisible();
 });

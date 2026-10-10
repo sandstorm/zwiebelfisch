@@ -29,7 +29,9 @@ src/                        the widget (TypeScript); the most important API on t
                             (StyleSheets: the widget's and the extensions' CSS in its shadow root or head, shared and
                             reference-counted), document-links/ (DocumentLinks: the providers' links merged by
                             priority; link-extension.ts: links in a CodeMirror editor, the Source views' and raw
-                            boxes'), file-decorations/ (FileDecorations), source-controls/ (SourceControls)
+                            boxes'), file-decorations/ (FileDecorations), source-controls/ (SourceControls),
+                            menus/ (Menus: menu entries by menu id), notifications/ (Notifications: the messages),
+                            quick-input/ (QuickInput: input box and quick pick)
     source-view/            SourceViewHost (registerExtension, createView: what
                             `ExtensionContext.sourceView` is) and SourceView (view.ts: CodeMirror 6 bound to a
                             TypstDocument); contribution.ts (the contribution types)
@@ -65,19 +67,21 @@ src/                        the widget (TypeScript); the most important API on t
     disposable/             Disposable (VS Code's shape: `new Disposable(fn)` disposes once; `Disposable.from(...)` in
                             reverse order)
     event-emitter/          EventEmitter<T> (`event` to subscribe, `fire`), Event<T>
-  ui/                       feature-neutral DOM widgets, one folder each: field-popover/ (FieldPopover: one text field,
-                            Apply / Remove; also used by source-control/), toolbar-menu/ (ToolbarMenu: a menu button of
-                            toolbar buttons), floating-bar/ (FloatingBar: a bar above an anchor in the text),
+  ui/                       feature-neutral DOM widgets, one folder each: popup-menu/ (PopupMenu: a role=menu at a
+                            point or below a button, e.g. the file panel's menus), toolbar-menu/ (ToolbarMenu: a menu
+                            button of toolbar buttons), floating-bar/ (FloatingBar: a bar above an anchor in the text),
                             color-scheme/ (isLightText: light or dark, from a resolved text color; textColorOn: black
                             or white text on a color)
   extensions/               one vertical slice per concept (docs/2026_10_10_extensions-architecture.md): <name>.ts
                             (the entry: the TypstExtension factory, the controller), model/ (pure, no DOM), and one
                             folder per host it contributes to (workbench/, preview/, visual-view/, …), each entered
                             through the file named like it. Extensions never import each other.
-    files/                  files (the file panel in a side panel), fileNavigation (editor frame); files.css (each
-                            extension with styles has its <name>.css, registered with Workbench.registerStyleSheet)
+    files/                  files (the file panel in a side panel; the commands files.newFile / newFolder / upload /
+                            rename / delete in the menus file/newFile and explorer/context), fileNavigation (editor
+                            frame); files.css (each extension with styles has its <name>.css, registered with
+                            Workbench.registerStyleSheet)
       model/                tree-model.ts (the tree as data, keyboard moves, relocate)
-      workbench/            file-panel.ts (FilePanel: header, prompts, uploads), file-navigation.ts ("← previous file"
+      workbench/            file-panel.ts (FilePanel: header with "New", its menus, the operations, uploads), file-navigation.ts ("← previous file"
                             / "next file →"), tree/ (FileTree: rows, keyboard, drag & drop, file decorations as
                             badges), icons/ (leaf)
     spreadsheets/           spreadsheets: the `.ic` file view; every edit also stores `name.ic.gen.typ`
@@ -85,11 +89,13 @@ src/                        the widget (TypeScript); the most important API on t
                             (darkThemeVariables: IronCalc's palette from the widget's tokens)
       workbench/            spreadsheet-view.ts (SpreadsheetView), workbook.ts (React + IronCalc, loaded on demand),
                             color-scheme.ts (followColorScheme: the dark palette while data-scheme is dark)
-    source-control/         sourceControl(): the UI over the workbench's source controls, next to the tabs
-      workbench/            SourceControlView: "Save to <label>…", commit message, status line
+    source-control/         sourceControl(): the UI over the workbench's source controls: "Save to <label>…" in the
+                            tab bar (menu editor/title, command sourceControl.commit)
+      workbench/            commit (the commit message in the input box), tellStatus (outcomes and news as messages)
     pdf-export/             pdfExport: the `pdfExport.export` command (PdfExport: the project's PDF, with every
                             registered export option applied) and the preview's "Download PDF" with its options popover
-      preview/              preview.ts (downloadPdf: "Download PDF" + popover: a checkbox per option, "Download")
+      preview/              preview.ts (downloadPdf: "Download PDF" + popover: a checkbox per option, "Download";
+                            no PDF: an error message)
     preview-controls/       previewControls: the preview toolbar's zoom and page number
       model/                zoom.ts (stepZoom over the presets, zoomText / zoomLabel)
       preview/              zoom-controls.ts (zoomControls), page-number.ts (pageNumber)
@@ -109,7 +115,8 @@ src/                        the widget (TypeScript); the most important API on t
                             print, validity; note-thread.ts: a note's body as a thread of messages; add-margin-note.ts,
                             page-margin.ts, without-notes.ts: the sources without comments; card-layout.ts);
                             visual-view/ (marginNotes: notes in the text + the Comment action; notes-gutter/: the cards);
-                            workbench/ (CommentAction, the command comments.addComment, Ctrl+Alt+M); preview/
+                            workbench/ (CommentAction, the command comments.addComment, Ctrl+Alt+M, its editor/title
+                            entry in the Source tab); preview/
                             (registerIncludeComments: the PDF export option `comments.include`)
     collaboration/          collaboration.ts (eager: the extension), collaboration-link.ts (CollaborationLink: loads
                             model/ on demand); presence/ (Presence, PlacedPresence, Presences: everyone's places, eager);
@@ -300,7 +307,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   uploads become a `create` change (`uploadChanges` of `core/uploads`, `uploadTarget` in `model/`) that goes through `allowFileChange`
   like the file panel's; an upload equal to an existing file (`name.png`, `name-2.png`, …) reuses it, a different
   one gets the first free of those names — every pasted screenshot is `image.png`; refusals — not an image Typst
-  shows, the host's veto — come back as an error the popover shows). The `renderedBoxes` extension gives each
+  shows, the host's veto — come back as an error, shown as an error message). The `renderedBoxes` extension gives each
   document's raw boxes their snippets: `Preview.snippet` under the document's current path, refreshed on
   `Preview.onDidRender`.
 - **PDF**: one "Download PDF" button with an options popover, no button or menu entry per variant (decided
@@ -316,7 +323,8 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   widget runs the command (defaults, not the viewer's choices). The `comments` extension registers only
   `comments.include` (default off; `extensions/comments/preview/`): off, `withoutNotes` of the project's files
   overlaid with the entry's sources gives the new entry (see Comments); on, the entry stays. No PDF (errors) →
-  an `Error` "The document has n error(s): …" (the toolbar shows it), never an older PDF. File name after the
+  an `Error` "The document has n error(s): …" (the button shows it as an error message "No PDF: …"; while a PDF
+  is being made it says "Making PDF…" and is disabled), never an older PDF. File name after the
   main file: `main.pdf`.
 - **Images into the text**: `AssetView` (the `images` extension's file view of `image` and `data` files) only previews. An image row dragged from the file panel
   (drag type `PROJECT_PATH_TYPE`, data: the project path) and dropped on the Visual view is
@@ -345,11 +353,18 @@ interface ExtensionContext {
 interface Workbench {
   ownerDocument; activeFile; open(path, { selection?, mode? }); onDidShowFile; applyChange(change) → reason | null
   registerSidePanel(id, { label, icon }) → SidePanel { body, setDefault, setAvailable, dismiss, dispose }
-  registerStatusBarItem(element)  registerTabBarItem(element, { mode? })  registerEditorFrame({ top, bottom })
+  registerStatusBarItem(element)  registerEditorFrame({ top, bottom })
   registerStyleSheet(css)           // the extension's CSS where the widget renders (head or shadow root)
   registerFileView(kind, { createFileView(parent) → FileView { show(path, content), hide(), dispose() } })
   registerCommand(id, handler)  executeCommand(id, ...args)  registerKeybinding('Mod+Alt+KeyM', id)
   onDidDropFiles  remember(name) → Memory
+  showInformationMessage / showWarningMessage / showErrorMessage(message, ...items: (string | { title })[])
+                                    // → Promise<item | undefined>
+  showInputBox({ title?, value?, valueSelection?, prompt?, placeHolder?, validateInput?(value) → message }) → Promise<string | undefined>
+  showQuickPick(items: (string | { label, description?, detail?, picked? })[] | Promise<…>, { title?, placeHolder?, canPickMany? })
+                                    // → Promise<item | undefined>, with canPickMany Promise<item[] | undefined>
+  registerMenuItem(menuId, { command, title?, icon?, when?(context) → boolean, group?, order? })
+  getMenuItems(menuId, context?) → MenuItem[]   onDidChangeMenu: Event<menuId>
   registerFileDecorationProvider({ provideFileDecoration(path) → FileDecoration | FileDecoration[] | undefined,
                                    onDidChangeFileDecorations })   getFileDecorations(path)   onDidChangeFileDecorations
                                     // FileDecoration { badge?, tooltip?, color?, propagate? }
@@ -358,7 +373,8 @@ interface Workbench {
   provideDocumentLinks(document) → DocumentLink[]   resolveDocumentLink(link) → DocumentLink
                                     // DocumentLink { range: {from, to}, target?: ProjectPath, tooltip?,
                                     //                command?: { title, run() → Promise<reason | null> } }
-  registerSourceControl({ id, label, defaultCommitMessage?, state: { busy, status }, onDidChange, commit(message) })
+  registerSourceControl({ id, label, defaultCommitMessage?, state: { busy, status: { message, severity } | null },
+                          onDidChange, commit(message) })
   sourceControls   onDidChangeSourceControls
   activeTextEditor: TextEditor | null  onDidChangeTextEditorSelection: Event<{ textEditor }>  isEditorFocused()
 }
@@ -388,7 +404,8 @@ new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen?, sty
   file decorations (`registerFileDecorationProvider`: `collaboration`'s presence, shown by `files`), source
   controls (`registerSourceControl`: `collaboration`'s GitLab room, shown by `sourceControl`). VS Code's shapes.
   Commands are typed by `CommandRegistry`, extended by declaration merging: `pdfExport.export`,
-  `comments.addComment` (bound to `Mod+Alt+KeyM`).
+  `comments.addComment` (bound to `Mod+Alt+KeyM`), `sourceControl.commit`, `files.newFile` / `newFolder` /
+  `upload` / `rename` / `delete`. Menu entries name commands by their string id.
 - **Document links** (`DocumentLinks`, `document-links/`): the links of every provider for a `TextDocument`
   (`{ path, text }`: a whole file's, or a raw box's code with the path of its file); overlapping ones go to the
   provider of the higher `priority` (default 100; equal: registered first). A link remembers its provider, which
@@ -397,7 +414,38 @@ new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen?, sty
 - **File decorations** (`FileDecorations`): `getFileDecorations(path)` gives every provider's, in registration
   order; `onDidChangeFileDecorations` fires for any provider's change, and when one comes or goes.
 - **Source controls** (`SourceControls`): registered once per `id`, listed in order; `commit(message)` starts a
-  commit whose outcome shows in `state` (`busy` meanwhile; `status` one line).
+  commit whose outcome shows in `state` (`busy` meanwhile; `status`: the last outcome or news as `{ message,
+  severity }`, which the `sourceControl` extension tells as a message whenever it is a new object).
+- **Messages** (`Notifications`, `notifications/`; VS Code's `window.show…Message`): a small area at the bottom
+  right of the widget, newest last, at most three (a new one closes the oldest). Not modal and never takes the
+  focus. Information is `role=status` and closes by itself after 8 s (not while it has items, the pointer or the
+  focus); warnings and errors are `role=alert` and stay. Each has its items as buttons and a close button; the
+  promise resolves to the item chosen, else undefined. Features tell refusals and failures this way (a refused
+  upload, rename or new file, "No PDF: …", a failed save to GitLab) and ask for confirmations (Delete).
+- **Input box and quick pick** (`QuickInput`, `quick-input/`; VS Code's `window.showInputBox` / `showQuickPick`):
+  one box at a time over the widget (a new one cancels the open one). Placed below what the user last pressed
+  or typed in (a capture listener on the widget: a toolbar button, a menu entry, a file row); when that is an
+  editor (`contenteditable`, CodeMirror's content), below the selection; without either, at the top in the
+  middle; kept inside the widget, above the anchor where there is no room below. The input box is a form named
+  by `title` (the field by `prompt`, shown below it), Enter or OK accepts unless `validateInput` (checked while
+  typing, after the first keystroke, and on Enter) says what is wrong. The quick pick is a `role=dialog` with a
+  filter field (`role=combobox`) over a listbox: typing filters by label, arrows move, Enter or a click picks;
+  with `canPickMany` a checkbox per item and OK. Escape or a press outside cancels (undefined); closing gives the
+  focus back to where it was. This replaced `FieldPopover` and the file panel's inline prompts: every feature
+  asks the same way (decided 2026-10-10).
+- **Menus** (`Menus`, `menus/`; VS Code's `contributes.menus`): `registerMenuItem(menuId, item)` adds an entry
+  that runs `item.command` (a command id, any extension's); whoever shows the menu asks `getMenuItems(menuId,
+  context)` for the entries whose `when(context)` holds, sorted (group `navigation` first, the other groups by
+  name, then `order`, then registration order) and runs the command with the menu's arguments. `when` is a
+  predicate over the context the menu is shown in, not a context-key expression (no global context keys were
+  needed: each menu passes what it is shown for). Menus by id:
+  `editor/title` — the tab bar, shown by the workbench (`.typst-editor__tab-actions`, `role=toolbar` "Editor
+  actions"; context `{ editorMode, resource }`; no arguments; shown again on a tab switch, a file shown, a
+  registration; pressing an entry keeps the editor's selection): `comments`' "Comment" (Source tab),
+  `sourceControl`'s "Save to GitLab…". `file/newFile` — "New" in the file panel's header, and
+  `explorer/context` — a file panel row's context menu (context `{ view: 'files', resource, resourceKind:
+  'file' | 'folder', resourceIsMain }`; argument: the row), both shown by the `files` extension with
+  `ui/popup-menu`. The tab bar takes nothing but menu entries (`registerTabBarItem` is gone).
 - **File views by kind.** `open(path)` shows a Typst file in the tabs and any other file in the view
   registered for `ProjectPath.kind(path)` (`FileViews`: created on first use, one per provider, shown again
   on every open so a replaced file shows its new content; nothing for a kind without a view). `images`
@@ -424,7 +472,7 @@ new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen?, sty
   Visual: highlights); `images` (Visual: `imagesVisualView`; Workbench: the `image` / `data` file views),
   `renderedBoxes` (Visual: `renderedBoxesVisualView`), `comments` (Visual: `marginNotes`, `notesGutter`; Preview:
   the PDF export option `comments.include`), `labels` (Visual: `references`), `styles` (Visual: `customStyles`); `sourceControl`
-  (`SourceControlView` in the tab bar); `previewSync` (`followCursor`; reveal, clicks), `previewControls`
+  ("Save to <label>…" in the tab bar's menu, its outcomes as messages); `previewSync` (`followCursor`; reveal, clicks), `previewControls`
   (`zoomControls`, `pageNumber`), `pdfExport` (`downloadPdf`). The Visual view's constructs
   (`markup`, `headings`, `tables`, `outline`, `pageLayout`, `lists`, `alignment`) are extensions in
   `extensions/<name>/`: the entry's `activate` registers specs, toolbar groups and items from its `visual-view/`
@@ -808,15 +856,16 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
   Tiptap chain commands; after every transaction the buttons show `aria-pressed` and are
   disabled when `editor.can()` (or the action's own `enabled`) says no.
   Mousedown is cancelled, so the text keeps focus and selection.
-  - Link (and Mod+K in the text; its popover sits in the Selection bar, also shown for a caret then) and insert image (popover at the Insert menu) ask for a value in a `FieldPopover`
-    (`ui/field-popover/`: one text field, Apply/Enter, optional Remove, Escape or a click outside
-    closes). Link with nothing selected inserts the URL as linked text; inside a link it edits or
-    removes the whole link.
-  - With `assets` (`ImageAssets`: `list()`, `upload(file)` → `{ path } | { error }`), the image
-    popover also lists the project's images and offers "Upload image…" (`extensions/images/visual-view/image-choices.ts`;
-    refusals show in the popover); either inserts an `#image("path")` block. With `assets`,
-    image files dropped on or pasted into the text are uploaded and inserted as well
-    (`imageFileDrops`; the drop stops there, refusals open the popover).
+  - Link (in the Selection bar, and Mod+K in the text) asks for the URL in the workbench's input box
+    (`Workbench.showInputBox`, placed at the selection; `markup` passes the workbench to `linkAction`).
+    Link with nothing selected inserts the URL as linked text; inside a link it edits the whole link,
+    and an empty URL removes it.
+  - Insert image: without `assets` an input box for the path; with `assets` (`ImageAssets`: `list()`,
+    `upload(file)` → `{ path } | { error }`) a quick pick (`showQuickPick`) of the project's images,
+    "Upload image…" (a hidden file input, `image-uploads.ts`, opened within the user's gesture) and
+    "Enter a path…"; either inserts an `#image("path")` block. With `assets`, image files dropped on
+    or pasted into the text are uploaded and inserted as well (`imageFileDrops`; the drop stops
+    there). Refusals are error messages (`ImagesOptions.prompts`: the workbench).
   - Image blocks (`image-insertion.ts`) go after the selected block, or after the paragraph /
     heading holding the cursor (an empty paragraph is replaced): never replacing or splitting
     content — the initial selection is a node selection on the first raw block (often
@@ -879,7 +928,7 @@ lives in `projection/`, which is plain ProseMirror and knows nothing about Tipta
   frame around the rendered picture sized from the call's `width` (`imageWidthCss`), and,
   while the image is selected (a click on the picture selects it; double-click, Enter or
   "Edit code" open the code): resize handles (corners, sides) and an "Image" toolbar
-  (Add/Remove caption, Width 25/50/75/100 %, Alt text popover). A drag resizes live and writes
+  (Add/Remove caption, Width 25/50/75/100 %, Alt text: an input box, empty removes it). A drag resizes live and writes
   `width: NN%` (whole percent of the text width, any other unit replaced) on release.
   - Every action is one transaction from `image-edits.ts` (one undo step): `addCaption`
     (image → figure with an empty caption, cursor in it), `removeCaption` (a figure without
@@ -1011,13 +1060,15 @@ new Preview(container)                       // implements PreviewContributions;
   A call whose drawn glyphs all come from its definition (`ms(6)` with `#let ms(v) = [#v ms]`:
   the glyphs' spans lie in the `let`) draws nothing in its own range, so its box keeps showing code.
 
-- **Download PDF** (`extensions/pdf-export/preview/preview.ts`, `downloadPdf(pdfs, memory)`): one button. With
+- **Download PDF** (`extensions/pdf-export/preview/preview.ts`, `downloadPdf(pdfs, memory, messages)`): one button. With
   export options registered it opens a `role=dialog` popover ("PDF options") with a checkbox per option registered
   by the time it opens (label, `description` as tooltip; checked as this viewer left it, else its default; each
   change saved to the memory at once) and "Download" (Escape, a second click or a click outside closes it);
-  without options it downloads at once. While a PDF is made the buttons are disabled and the status says "Making
-  PDF…"; a rejection shows as "No PDF: <message>" (click dismisses). The file is saved through an object-URL
-  link.
+  without options it downloads at once. While a PDF is made the buttons are disabled and the button says "Making
+  PDF…" (`aria-busy`); a rejection is an error message "No PDF: <message>" (`Workbench.showErrorMessage`). The
+  options stay a popover of their own (not a quick pick with `canPickMany`): the user decided on one button with
+  an options popover, whose choices are saved as they are ticked, and "Download" says what happens. The file is
+  saved through an object-URL link.
   `exportPdf` waits for running compiles (`LatestOnly.idle`), so it exports the newest text.
 
 - **Coalescing (`LatestOnly`):** at most one compilation is in flight. Updates that arrive
@@ -1103,11 +1154,11 @@ references({ labels? }): VisualViewContribution   // the `reference` node spec, 
   "Figure · <caption>", from `describeLabel`) as a hover tooltip only or marks it `typst-visual__ref--unknown`
   (wavy, tooltip) when the project has no such label. Redrawn when the doc or the label list changes.
 - `labelTags`: a widget per labelled block — at the end of a textblock's text, below other blocks. Clicking it
-  opens a `FieldPopover`. While anything refers to the label, the default (Enter) is **Rename and update N
-  references**, which also renames the references (this view: in the same transaction, one undo step; other
-  files: `ProjectLabels.renameReferences`, one change per file), and **Rename without updating references** is the
-  alternative. Without references the default is **Rename**. Remove removes it. Names are cleaned up by
-  `labelName` (spaces → `-`).
+  opens a quick pick (`ReferencesOptions.prompts`: the workbench's) of **Rename…** (while anything refers to the
+  label: "and update N references", which also renames the references: this view in the same transaction, one
+  undo step; other files: `ProjectLabels.renameReferences`, one change per file), **Rename without updating
+  references…** (only while there are references) and **Remove label**; renaming asks for the name in the input
+  box. Names are cleaned up by `labelName` (spaces → `-`).
 - `referenceSuggestion` (own plugin, not `@tiptap/suggestion`: its popup mounts into `document.body` and its
   outside-click check fails across the shadow root): `@` after a space/bracket/line start in prose opens a list
   (`labelChoices`: name prefix, then name, then title matches; at most 8) below it, inside `.typst-visual__body`.
@@ -1135,7 +1186,8 @@ new StyleIndex(project)        // implements ProjectStyles (what the Visual view
 .styles() → Style[] (+ path)   .onDidChange: Event<void>   .homeFile()   .dispose()
 .calculateImportChange(document, style, use) → TextChange | null   // relative to the document's path; null in the declaring file
 calculateImportChange(text, { name, matches(module), create(), use? }) → TextChange | null   // core/typst-document
-newStyle(text) → { text, from, to }   // "New style…": `new-style`, `new-style-2`, … appended to /styles.typ
+newStyle(text, label = 'New style') → { text, from, to }   // "New style…": `styleName(label)`, numbered if taken
+styleName(label) → string   // `Side box` → `side-box`; starts with a letter (`style-2-columns`)
 // visual-view/
 customStyles({ styles?, create? }): VisualViewContribution   // styledBlock + style mark specs, the text style menu
 ```
@@ -1157,9 +1209,10 @@ customStyles({ styles?, create? }): VisualViewContribution   // styledBlock + st
 - **Look:** `.typst-visual__style.typst-style--<name>` (accent bar, the title as a badge) and
   `.typst-visual__style-text.typst-style--<name>` (dotted underline, title as tooltip); hosts
   style a style by its class. The preview shows the real look.
-- **"New style…"** (the extension's entry) appends a stub to the file declaring most styles (`homeFile()`; else
-  `/styles.typ`, created through the usual `applyChange` when missing) and shows it in the Source view
-  (`Workbench.open(path, { selection, mode: 'source' })`).
+- **"New style…"** (the extension's entry) asks for the style's name in the input box (default "New style"),
+  appends a paragraph style stub of that name to the file declaring most styles (`homeFile()`; else
+  `/styles.typ`, created through the usual `applyChange` when missing; a refusal is an error message) and shows
+  it in the Source view (`Workbench.open(path, { selection, mode: 'source' })`).
 
 ### Spreadsheets (`src/extensions/spreadsheets`)
 
@@ -1178,7 +1231,8 @@ followColorScheme(container, onDidChange) → Disposable   // sets / takes away 
 ```
 
 - The view only reports edits; the extension's entry (`save`) decides what the project gets: the `.ic` file and,
-  when it changed, its Typst file, both through `Workbench.applyChange`.
+  when it changed, its Typst file, both through `Workbench.applyChange`; a refusal is an error message ("budget.ic
+  not saved: …").
 
 - A spreadsheet is a project file `name.ic` (`ProjectPath.kind` `spreadsheet`), in IronCalc's own format
   (`Model.from_bytes` / `toBytes`): the browser package has no `.xlsx`. An empty file opens as a
@@ -1277,27 +1331,41 @@ new Layout(host, storageKey)   .editor  .preview  .statusBar   // the editing co
 
 ```ts
 files({ fileList? })  fileNavigation(): TypstExtension   // the side panel, the frame links (images / data files: the images extension)
+// commands (each on a row, default: the focused one): files.newFile, files.newFolder, files.upload, files.rename, files.delete
+// menus: file/newFile ("New" in the header), explorer/context (a row's context menu); context
+//        { view: 'files', resource, resourceKind: 'file' | 'folder', resourceIsMain }, argument: the row
 // workbench/:
-new FilePanel(parent, { onOpen(path), onChange(change) → Promise<reason | null>, memory?, decorations?(path) }, state)
-.render({ paths, main, active })   .upload(files)   .destroy()
-// workbench/tree/: new FileTree(parent, { onOpen, onRename, onDelete, onMove(source, folder), onUpload(files, folder), memory? })
+new FilePanel(parent, { onOpen(path), onChange(change) → Promise<reason | null>, prompts (the workbench's input box,
+  warning and error messages), menus: { items(menuId, context), run(command, resource) }, memory?, decorations?(path) }, state)
+.render({ paths, main, active })  .newFile(at?)  .newFolder(at?)  .upload(at?)  .rename(path?)  .delete(path?)
+.uploadFiles(files)  .current()  .context(path)  .destroy()
+// workbench/tree/: new FileTree(parent, { onOpen, onRename, onDelete, onMove(source, folder), onUpload(files, folder),
+//                  onContextMenu(path, anchor), memory? })
 // workbench/icons/: icon(doc, name) — a leaf folder, so the tree and the panel both take it from below
 // model/ (pure): buildTree(paths, emptyFolders), visibleRows(tree, expanded), navigate(rows, current, key),
 //                relocate(paths, source, target) → renames, filesUnder, folderOf, ancestorsOf; uploadChanges
 ```
 
-- **Only gestures → `FileChange`s** (names via `ProjectPath.fromName`: any folder depth, default extension);
-  refusals show inline in a prompt above the tree. A gesture that needs several changes (a
-  folder's rename / move / delete: one per file) asks for them in order and stops at the first
-  refusal.
+- **Only gestures → `FileChange`s** (names via `ProjectPath.fromName`: any folder depth, default extension).
+  Names are asked in the workbench's input box (`validateInput`: an unusable or taken name says so while typing;
+  a new name starts with the row's folder, `chapters/`; a rename selects the name without the extension, as VS
+  Code), a delete is confirmed by a warning message with "Delete", refusals are error messages. A gesture that
+  needs several changes (a folder's rename / move / delete: one per file) asks for them in order and stops at
+  the first refusal.
+- **Menus, not buttons**: the panel's operations are the extension's commands, offered through two menus any
+  extension may add to (e.g. "New diagram…"): "New" (`+`, `aria-haspopup=menu`; hidden while `file/newFile` has no
+  entries) opens `file/newFile` for the focused row; a right click, Shift+F10 or the context menu key opens
+  `explorer/context` for the row (`ui/popup-menu`; nothing opens while no entry applies). The built-in entries:
+  New file…, New folder…, Upload files… (both menus, group `navigation`), Rename… and Delete (context menu, group
+  `modification`, `when: !resourceIsMain`).
 - **Tree**: folders first, then files, both by name (`Intl.Collator`, numeric). `role=tree`, one
   `treeitem` per visible row (`aria-level`, `aria-expanded`, `aria-selected` on the shown file;
   roving tabindex). Open folders are remembered (`memory`, the Layout's session store); the
   folders around the shown file open when it changes. The files' decorations (`Workbench.getFileDecorations`, from
   every `FileDecorationProvider`, e.g. who else is in a file) as badges in their color, and on a closed folder the
   propagating ones of the files inside (each once); drawn again on `onDidChangeFileDecorations`.
-- **The focused row** (click, keyboard; else the shown file) is what Rename / Delete / F2 /
-  Delete act on and where New file, New folder and Upload put things. The main file and a folder
+- **The focused row** (click, keyboard, right click; else the shown file) is what F2 / Delete and
+  "New" act on: a new file, folder or upload goes into its folder. The main file and a folder
   holding it cannot be renamed, moved or deleted.
 - **Empty folders** exist in the panel only (the project has no folders), until a file goes in.
 - **Drag & drop**: a row dragged onto a folder row (or a file row: its folder; empty space: the
@@ -1480,8 +1548,8 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
 - **`CommentAction`** (`workbench/`): "Comment" and Ctrl/Cmd+Alt+M (the command
   `comments.addComment`, bound with `registerKeybinding`: captured at the widget root). The Visual
   view's toolbar has the button (`marginNotes({ comment })` runs the command);
-  the tab bar keeps `CommentAction.button` for the Source view only
-  (`registerTabBarItem(element, { mode: 'source' })` hides it in the Visual view). Works on the
+  the tab bar has it for the Source view only (an `editor/title` menu entry with `when: editorMode ===
+  'source'`, group `navigation`, its icon). Works on the
   shown `.typ` file in the current tab (`Workbench.activeTextEditor`), applies the edits as one
   `document.change`, then in the Visual tab the notes gutter's `editNote(document, note)` (the extension owns
   the gutter) focuses the new note's reply box, or the Source view puts the caret into `[]`.
@@ -1660,12 +1728,15 @@ HTTP             GET /rooms/<room>/files/<path> (Authorization: Bearer <room tok
 - **Widget**: `Collaboration` (server mode only) sees `meta.baseSha` after the first sync and adds
   `GitLabSourceControl` (a workbench `SourceControl`, VS Code's shape: `commit(message)` sends `gitlab:save` as the
   collaboration `user` over the provider's stateless channel; `state` is `busy` until the answer and `status` the
-  outcome as one line (`commitStatus`: "Saved version 01234567 (Ann)", "Merged new changes from GitLab", …), also for
-  other clients' saves and upstream merges) and `SharedAssets` (assets ↔ project's other files; repository files
+  outcome as a message (`commitStatus`: "Saved version 01234567 (Ann)", "Merged new changes from GitLab", "No
+  changes to save": info; a conflict: warning; "Saving failed: …": error), also for other clients' saves and
+  upstream merges) and `SharedAssets` (assets ↔ project's other files; repository files
   fetched from the files endpoint, uploads as bytes; bytes → sha after a commit is not a
   change). The extension registers the source control with `Workbench.registerSourceControl`; the
-  `source-control` extension (only the UI over registered source controls, `SourceControlView`) puts "Save to
-  GitLab…" + commit-message popover + status line (`.typst-editor__source-control-status`) into the tab bar.
+  `source-control` extension (only the UI over registered source controls) puts "Save to GitLab…" ("Saving to
+  GitLab…" while busy) into the tab bar's menu (`editor/title`, command `sourceControl.commit`: the commit message
+  in the input box, the default offered; several source controls: a quick pick first) and tells each new status as
+  a message of its severity, to everyone in the room.
 
 ### Demo playground (`demo/`, `server/src/playground`)
 
@@ -1738,7 +1809,7 @@ an in-memory `FakeGitLab` holding `demo/examples/advanced`). Checklist with step
   rectangle (e.g. a float). Every raw box asks again after every compile (one `boxes` walk each),
   also while the Visual view is hidden. Tables with merged cells, `table.cell`, header arguments
   or `columns: (..)` stay raw boxes.
-- **GitLab rooms:** conflicts are reported (status line), not highlighted in the views yet;
+- **GitLab rooms:** conflicts are reported (a warning message), not highlighted in the views yet;
   an asset changed on both sides keeps the room's
   version and overwrites upstream on save; GitLab-side renames are seen as delete + create; no
   GitLab sign-in yet (the token check is the stub, the author's name comes from the client); the

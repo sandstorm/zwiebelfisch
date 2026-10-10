@@ -163,7 +163,10 @@ export class QuickInput {
 
   /** Where the box goes: below the selection in an editor, else below what the user last used; null: nothing. */
   #anchor(root: Document | ShadowRoot): { top: number; bottom: number; left: number } | null {
-    const target = [this.#trigger, root.activeElement].find((candidate) => candidate?.isConnected && this.host.contains(candidate));
+    // what is still shown: a menu entry may be hidden by now
+    const shown = (candidate: Element | null): candidate is Element =>
+      !!candidate?.isConnected && this.host.contains(candidate) && candidate.getClientRects().length > 0;
+    const target = [this.#trigger, root.activeElement].find(shown);
     if (!target) return null;
     const rect = target.getBoundingClientRect();
     if (target.closest('[contenteditable="true"], .cm-content')) {
@@ -317,15 +320,16 @@ function itemElement(doc: Document, item: string | QuickPickItem): HTMLElement {
   label.textContent = labelOf(item);
   option.append(label);
   if (typeof item === 'string') return option;
+  // a space before each further part: the option's accessible name reads as words
   if (item.description) {
     const description = element(doc, 'span', 'typst-quick-pick__description');
     description.textContent = item.description;
-    option.append(description);
+    option.append(' ', description);
   }
   if (item.detail) {
     const detail = element(doc, 'span', 'typst-quick-pick__detail');
     detail.textContent = item.detail;
-    option.append(detail);
+    option.append(' ', detail);
   }
   return option;
 }

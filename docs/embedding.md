@@ -147,12 +147,15 @@ widget width of 720px the open panel lies over the editing view and closes after
   (Typst / image / data), the initials of collaborators in each file (also on closed folders);
   `.typ` files open in their own Visual/Source views, images open as a preview (drag an
   image from the panel into the Visual view to insert it there), data files as read-only text;
-- **New file**, **New folder**, **Upload** (or drop files onto the editor, or onto a folder),
-  **Rename**, **Delete** on the focused row — a folder is renamed / deleted with every file in it
-  (one change each); the main file (and the folder holding it) cannot be renamed, moved or
-  deleted; drag rows onto folders to move them; a new folder exists in the panel only until a
-  file goes into it;
-- keyboard: arrow keys, Home/End, Enter (open / expand), F2 (rename), Delete;
+- **New** (`+` in the panel's header) offers **New file…**, **New folder…** and **Upload files…**
+  into the focused row's folder (or drop files onto the editor, or onto a folder); a row's context
+  menu (right click, Shift+F10 or the context menu key) offers the same for its folder, and
+  **Rename…** and **Delete** — a folder is renamed / deleted with every file in it (one change
+  each); the main file (and the folder holding it) cannot be renamed, moved or deleted; drag rows
+  onto folders to move them; a new folder exists in the panel only until a file goes into it.
+  Names are asked in a small input box below the panel's button or row, deleting asks for a
+  confirmation, and a refused change is shown as an error message;
+- keyboard: arrow keys, Home/End, Enter (open / expand), F2 (rename), Delete, Shift+F10 (menu);
 - clicking preview text that comes from another file opens that file; error entries in the status
   bar open their file too;
 - **file links**: paths in `#import "…"`, `#include "…"`, `image("…")`, `read("…")`,
@@ -166,7 +169,7 @@ The host decides and persists:
 ```ts
 createTypstEditor(host, {
   files,
-  allowFileChange: async (change) => confirmWithServer(change),   // false → refused, the user sees why
+  allowFileChange: async (change) => confirmWithServer(change),   // false → refused, the user sees why (a message)
   onFilesChange: (change) => save(change),   // {kind:'create'|'update'|'delete'|'rename', path, …}
 });
 editor.activeFile;              // '/chapters/intro.typ'
@@ -231,7 +234,12 @@ The preview toolbar has one **Download PDF** button. It opens a popover with a c
 option and **Download**; the built-in option is **Include comments** (`comments.include`, off by
 default: the usual final version; on: the notes as the preview shows them). Each viewer's choices are
 remembered for the browser session. The file is named after the main file (`main.pdf`). If the
-document has errors, the toolbar says so and nothing is downloaded (never an older PDF).
+document has errors, an error message says so ("No PDF: …") and nothing is downloaded (never an older PDF).
+
+The widget tells its users about refusals and failures (a refused new file, rename or upload, no PDF, a
+failed save to GitLab) in small messages at its bottom right: information closes by itself, warnings and
+errors stay until closed. Values it needs (a link's URL, a new file's name, a commit message) are asked in
+a small input box next to what was clicked.
 
 Hosts can make the file themselves, e.g. to upload it. Options are given by id; the others keep their
 default (not what the viewer chose), and an id no extension registered rejects:
@@ -300,7 +308,8 @@ above them (in any `.typ` file of the project, usually `styles.typ`):
 The Visual view's text style menu then offers *Note* (it wraps the selected paragraphs in
 `#note[…]`) and *Keyword* (it puts `#key[…]` around the selection), and imports the function
 where it is used (`#import "styles.typ": note`). Styled text stays editable. *Normal text* takes
-paragraphs out of their style again. "New style…" adds a style to `styles.typ` to start from.
+paragraphs out of their style again. "New style…" asks for a name and adds a style of that name to
+`styles.typ` to start from.
 
 In the Visual view a paragraph style shows as a frame with its name, a text style as dotted
 underlined text; the preview shows the real look. Each carries the class `typst-style--<name>`
@@ -359,7 +368,8 @@ createTypstEditor(host, {
 - **Save to GitLab:** a "Save to GitLab…" button appears next to the tabs. It asks for a commit
   message (default "Edit via Typst editor") and makes the server commit every change since the
   last commit (edits, new, renamed and deleted files, uploaded images) as **one** commit by the
-  saving user.
+  saving user. Everyone in the room is told the outcome as a message ("Saved version 01234567
+  (Ann)", "No changes to save", "Saving failed: …").
 - **Changes on GitLab** (pushes, merge requests): merged into the room when someone saves (and,
   with the webhook, as soon as they are pushed), file by file, three-way. Where the room and
   GitLab changed the same lines, nothing is merged or committed: everyone sees "Changes on GitLab

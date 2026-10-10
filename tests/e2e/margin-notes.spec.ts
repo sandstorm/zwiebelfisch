@@ -22,8 +22,8 @@ const messageTexts = (page: Page, i = 0) => cards(page).nth(i).locator('.typst-n
 const highlight = (page: Page) => visual(page).locator('mark.typst-visual__note-range');
 /** "Comment" in the Visual view's formatting toolbar. */
 const commentButton = (page: Page) => page.getByRole('toolbar', { name: 'Formatting' }).getByRole('button', { name: 'Comment' });
-/** "Comment" in the tab bar, shown with the Source view. */
-const sourceCommentButton = (page: Page) => page.locator('.typst-editor__comment');
+/** "Comment" in the tab bar (its menu `editor/title`), shown with the Source view. */
+const sourceCommentButton = (page: Page) => page.getByRole('toolbar', { name: 'Editor actions' }).getByRole('button', { name: 'Comment' });
 /** The demo signs as "Demo user" (Local mode), with the local date. */
 const today = (() => {
   const d = new Date();

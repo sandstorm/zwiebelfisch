@@ -91,10 +91,15 @@ test('uploading an image with Insert image keeps the layout and the page setup',
   const editor = page.locator('typst-editor');
   // No click into the text first: the selection is still on the #set page block.
   await chooseFrom(editor.getByRole('toolbar', { name: 'Formatting' }), 'Insert', 'Insert image');
-  const form = editor.getByRole('form', { name: 'Image' });
-  await expect(form).toBeVisible();
-  expect(await layout(page).then((l) => l.overflow)).toBeLessThanOrEqual(0); // the popover does not stick out
-  await form.locator('input[type="file"]').setInputFiles({ name: 'photo.png', mimeType: 'image/png', buffer: PHOTO });
+  const pick = editor.getByRole('dialog', { name: 'Insert image' });
+  await expect(pick).toBeVisible();
+  expect(await layout(page).then((l) => l.overflow)).toBeLessThanOrEqual(0); // the quick pick does not stick out
+  const box = (await pick.boundingBox())!;
+  const widget = (await editor.boundingBox())!;
+  expect(box.x + box.width).toBeLessThanOrEqual(widget.x + widget.width + 1); // inside the widget
+  const chooser = page.waitForEvent('filechooser');
+  await pick.getByRole('option', { name: 'Upload image…' }).click();
+  await (await chooser).setFiles({ name: 'photo.png', mimeType: 'image/png', buffer: PHOTO });
 
   await expect.poll(value(page)).toContain('#image("photo.png")');
   // Inserted as a block of its own; nothing replaced or split (before the fix it replaced #set page).
@@ -102,7 +107,7 @@ test('uploading an image with Insert image keeps the layout and the page setup',
   expect(text.startsWith('#set page(width: 12cm, height: auto, margin: 1cm)\n')).toBe(true);
   expect(text).toContain('\n\n#image("photo.png")\n\n');
   expect(text).toContain('= Title\n\nSome text.\n');
-  await expect(form).toBeHidden();
+  await expect(pick).toBeHidden();
   await expect(editor.getByTestId('typst-files')).toBeVisible(); // the project has two files now: the panel opens
   await expectLayoutIntact(page, before);
   await expect(editor.getByTestId('typst-preview').locator('.typst-preview__page image')).toHaveCount(1);

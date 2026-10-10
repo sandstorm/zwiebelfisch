@@ -45,7 +45,7 @@ test('insert an image, add a caption, type it, drag a handle: the source gets th
   await load(page, 'Text\n');
   await visual(page).locator('p').first().click();
   await chooseFrom(page.getByRole('toolbar', { name: 'Formatting' }), 'Insert', 'Insert image');
-  await page.getByRole('form', { name: 'Image' }).getByRole('button', { name: 'logo.svg' }).click();
+  await page.getByRole('dialog', { name: 'Insert image' }).getByRole('option', { name: 'logo.svg' }).click();
   await expect.poll(value(page)).toContain('#image("logo.svg")');
 
   await picture(page).click();
@@ -76,7 +76,7 @@ test('preset widths, alt text and Remove caption in the image toolbar', async ({
   await expect.poll(value(page)).toContain('image("logo.svg", width: 25%)');
 
   await imageTools(page).getByRole('button', { name: 'Alt text' }).click();
-  const alt = imageTools(page).getByRole('form', { name: 'Alt text' });
+  const alt = page.getByRole('form', { name: 'Alt text' });
   await alt.getByLabel('Alt text').fill('A teal box');
   await alt.getByLabel('Alt text').press('Enter');
   await expect.poll(value(page)).toContain('image("logo.svg", width: 25%, alt: "A teal box")');
@@ -89,7 +89,7 @@ test('preset widths, alt text and Remove caption in the image toolbar', async ({
 test('a removed figure label can be added again, typed right where its tag shows', async ({ page }) => {
   await load(page, '#figure(image("logo.svg", width: 50%), caption: [A logo]) <fig:logo>\n');
   await visual(page).getByTestId('typst-label-tag').click();
-  await page.getByRole('form', { name: 'Label' }).getByRole('button', { name: 'Remove' }).click();
+  await page.getByRole('dialog', { name: 'Label <fig:logo>' }).getByRole('option', { name: 'Remove label' }).click();
   await expect.poll(value(page)).toBe('#figure(image("logo.svg", width: 50%), caption: [A logo])\n');
 
   await caretAtEnd(visual(page).locator('figure figcaption'));

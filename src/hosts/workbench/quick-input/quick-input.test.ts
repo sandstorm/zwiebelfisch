@@ -80,6 +80,7 @@ describe('showInputBox', () => {
     host.getBoundingClientRect = () => new DOMRect(10, 20, 600, 400);
     Object.defineProperties(host, { clientWidth: { value: 600 }, clientHeight: { value: 400 } });
     button.getBoundingClientRect = () => new DOMRect(110, 60, 40, 20);
+    button.getClientRects = () => [button.getBoundingClientRect()] as unknown as DOMRectList;
     button.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
     void quickInput.showInputBox();
     // jsdom has no layout: the box has no size, so it fits anywhere
@@ -96,7 +97,7 @@ describe('showQuickPick', () => {
     expect(dialog.getAttribute('role')).toBe('dialog');
     const input = dialog.querySelector('input')!;
     const options = () => [...dialog.querySelectorAll<HTMLElement>('[role=option]')].filter((option) => !option.hidden);
-    expect(options().map((option) => option.textContent)).toEqual(['Rename…', 'Remove label<intro>', 'Rename only the label…']);
+    expect(options().map((option) => option.textContent)).toEqual(['Rename…', 'Remove label <intro>', 'Rename only the label…']);
     type(input, 'ren');
     expect(options().map((option) => option.querySelector('.typst-quick-pick__label')!.textContent)).toEqual(['Rename…', 'Rename only the label…']);
     expect(options()[0].getAttribute('aria-selected')).toBe('true');

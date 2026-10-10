@@ -82,7 +82,7 @@ test('Insert image offers the project images', async ({ page }) => {
   await load(page, 'Text\n', { '/logo.svg': SVG });
   await visual(page).locator('p').first().click();
   await chooseFrom(page.getByRole('toolbar', { name: 'Formatting' }), 'Insert', 'Insert image');
-  await page.getByRole('form', { name: 'Image' }).getByRole('button', { name: 'logo.svg' }).click();
+  await page.getByRole('dialog', { name: 'Insert image' }).getByRole('option', { name: 'logo.svg' }).click();
   await expect.poll(value(page)).toContain('#image("logo.svg")');
   await expect(picture(visual(page).locator('.typst-visual__image'))).toBeVisible();
 });
@@ -91,8 +91,9 @@ test('Insert image uploads a file into the project and inserts it', async ({ pag
   await load(page, 'Text\n');
   await visual(page).locator('p').first().click();
   await chooseFrom(page.getByRole('toolbar', { name: 'Formatting' }), 'Insert', 'Insert image');
-  const form = page.getByRole('form', { name: 'Image' });
-  await form.locator('input[type="file"]').setInputFiles({ name: 'cat.png', mimeType: 'image/png', buffer: PNG });
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('dialog', { name: 'Insert image' }).getByRole('option', { name: 'Upload image…' }).click();
+  await (await chooser).setFiles({ name: 'cat.png', mimeType: 'image/png', buffer: PNG });
   await expect.poll(value(page)).toContain('#image("cat.png")');
   expect(await page.locator('typst-editor').evaluate((el: Editor) => Object.keys(el.files))).toContain('/cat.png');
   await expect(picture(visual(page).locator('.typst-visual__image'))).toBeVisible();
