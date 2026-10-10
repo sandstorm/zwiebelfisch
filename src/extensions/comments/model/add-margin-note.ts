@@ -1,13 +1,13 @@
-// addMarginNote: the source edits for a new drafting margin note (and its import). See ../comments.ts.
+// calculateMarginNoteChanges: the source edits for a new drafting margin note (and its import). See ../comments.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { DRAFTING, isNoteCallAt, MARGIN_NOTE, NOTE_HEAD, printNoteCall, rangeNoteSyntax, SET_DEFAULTS } from './margin-note-syntax';
 import type { TextChange } from '../../../core/typst-document/typst-document';
 import { calculateImportChange } from '../../../core/typst-syntax/typst-syntax';
-import { noteMarginChanges } from './page-margin';
+import { calculatePageMarginChanges } from './page-margin';
 
 /** Where a new note goes in the edited text: its (still empty) body starts at `note`. */
-export interface AddedNote {
+export interface MarginNoteChanges {
   changes: TextChange[];
   note: number;
 }
@@ -23,14 +23,14 @@ export interface AddedNote {
  * `drafting` exactly once afterwards: an existing drafting import is extended,
  * else one is added at the top, together with `NOTE_STYLE` unless the file
  * calls `set-margin-note-defaults` already. Page margins drafting 0.2.2 cannot handle (a
- * single length) get room for notes on the right (see `noteMarginChanges`).
+ * single length) get room for notes on the right (see `calculatePageMarginChanges`).
  *
  * Null where no note fits (the position is inside code).
  */
-export function addMarginNote(text: string, range: { from: number; to: number }): AddedNote | null {
+export function calculateMarginNoteChanges(text: string, range: { from: number; to: number }): MarginNoteChanges | null {
   const note = noteEdit(text, range);
   if (!note) return null;
-  const changes = [...withImport(text, note), ...noteMarginChanges(text)].sort((a, b) => a.from - b.from);
+  const changes = [...withImport(text, note), ...calculatePageMarginChanges(text)].sort((a, b) => a.from - b.from);
   // Every note edit ends with `[]` inserted where the call ends: the body is just before that `]`.
   return { changes, note: mapOffset(changes, note.at(-1)!.from) - 1 };
 }

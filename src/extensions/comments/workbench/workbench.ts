@@ -3,7 +3,7 @@
 import { Disposable } from '../../../core/disposable/disposable';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import type { TextEditor, Workbench } from '../../../hosts/workbench/workbench';
-import { addMarginNote } from '../model/add-margin-note';
+import { calculateMarginNoteChanges } from '../model/add-margin-note';
 
 /** The command that adds a margin note at the selection of the view the user works in. */
 export const ADD_COMMENT = 'comments.addComment';
@@ -49,7 +49,7 @@ export function registerAddComment(workbench: CommentWorkbench, cards: NoteCards
  */
 function addComment(editor: TextEditor, cards: NoteCards): void {
   const { document } = editor;
-  const added = addMarginNote(document.text, editor.selection);
+  const added = calculateMarginNoteChanges(document.text, editor.selection);
   if (!added) return;
   document.change(added.changes, ADD_COMMENT);
   if (editor.mode !== 'visual' || !cards.editNote(document, added.note)) editor.revealRange(added.note, added.note);

@@ -1643,7 +1643,7 @@ printNoteCall({head, text?, note}) → string         // printNoteCall(parseNote
 noteCallSyntax(source, funcCallNode) → {head, text: ContentBlock | null, note} | null   // in a parsed tree
 isNoteCallAt(source, from, to) → boolean            // one note call in markup from `#` to exactly `to`
 safeNote(markup) → string | null                    // markup that cannot end or swallow its call
-addMarginNote(text, {from, to}) → {changes: TextChange[], note} | null   // note: offset of the new (empty) body
+calculateMarginNoteChanges(text, {from, to}) → {changes: TextChange[], note} | null   // note: offset of the new (empty) body
 NOTE_STYLE                                          // the set-margin-note-defaults(..) call added with a new import
 withoutNotes(files, main) → PdfEntry                // the PDF without comments: entry + replaced/added .typ texts
 // note-thread.ts: the only module that knows the thread format (all on the note's markup)
@@ -1677,8 +1677,8 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
 - **Syntax** (`margin-note-syntax.ts`): a note is `#margin-note(..named)[note]` or
   `#margin-note(..named)[text][note]` with no syntax errors, a non-empty one-paragraph `text`
   and nothing after the last `]`; any other `margin-note` call is ordinary code. Projection,
-  the Visual view and `addMarginNote` all use this one definition.
-- **`addMarginNote`** (pure): a selection becomes `#margin-note[selection][]` if the result
+  the Visual view and `calculateMarginNoteChanges` all use this one definition.
+- **`calculateMarginNoteChanges`** (pure): a selection becomes `#margin-note[selection][]` if the result
   is one note call in markup (`isNoteCallAt`). Bold or italic text the selection starts or
   ends with goes in whole, delimiters included (`bold` in `*bold*` → `#margin-note[*bold*][]`):
   the Visual view maps a selected bold word to the text between the stars, and prints a range
@@ -1697,7 +1697,7 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
   (`docs/images/notes-pdf-*.png`). Only with an import the editor adds, and only if the file
   does not mention `set-margin-note-defaults` already (a file's own style stays; never two calls).
   The call is global state from where it stands on, like any drafting default.
-- **Page margins** (`page-margin.ts`, part of `addMarginNote`'s edits, same undo
+- **Page margins** (`page-margin.ts`, part of `calculateMarginNoteChanges`'s edits, same undo
   step): drafting 0.2.2 crashes with "type relative length has no method `keys`" when the page
   margin is a single length ([drafting.typ line 640](https://github.com/typst/packages/blob/main/packages/preview/drafting/0.2.2/drafting.typ#L640)
   calls `page.margin.keys()` on anything but `auto`), and Typst turns uniform dictionaries

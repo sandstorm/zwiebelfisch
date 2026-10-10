@@ -20,7 +20,7 @@ import { children } from '../../../core/typst-syntax/typst-syntax';
  * Margins written any other way (variables, spreads, other dictionaries) are
  * left alone.
  */
-export function noteMarginChanges(text: string): TextChange[] {
+export function calculatePageMarginChanges(text: string): TextChange[] {
   const changes: TextChange[] = [];
   for (let node = typstParser.parse(text).topNode.firstChild; node; node = node.nextSibling) {
     const margin = node.name === 'SetRule' && name(text, node) === 'page' ? namedArgument(text, node.getChild('Args'), 'margin') : null;
