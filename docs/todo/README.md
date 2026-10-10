@@ -49,3 +49,4 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [server-gitlab](server-gitlab.md) | done |
 | [followups-2026-10-10](followups-2026-10-10.md) | open |
 | [comments-drafting](comments-drafting.md) | open |
+| [e2e-visual](e2e-visual.md) | done (branch task/e2e-visual) |
