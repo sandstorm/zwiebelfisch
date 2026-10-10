@@ -324,8 +324,8 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
 - **Widget options vs. settings** (decided 2026-10-10): the content and the host integration are options (`files`,
   `main`, `source`, `mode` (where to start), `allowFileChange`, `onFilesChange`, `onOpen`, `user`); what a feature
   lets hosts configure is a setting its extension declares, changeable later through `editor.settings`:
-  `pdfExport.download` (was `pdfDownload`), `files.panel` (was `fileList`), `previewSync.followCursor` (was
-  `followCursor`), and the workbench's own `workbench.theme` (was `theme`). `user` stays an option: several
+  `pdfExport.download`, `files.panel`, `diagrams.editorUrl`, `previewSync.followCursor`, and the workbench's own
+  `workbench.theme`. `user` stays an option: several
   extensions read it (`Workbench.user`: comments sign with it, collaboration shows and commits with it), so it is
   no one extension's setting. The preview always compiles `main` with `project.files()`; `onFilesChange` hears a
   change after the workbench and the extensions.
