@@ -25,7 +25,7 @@ const bar = renderPlaygroundBar(document.getElementById('playground')!, params, 
 void start();
 
 async function start(): Promise<void> {
-  // Local mode does not wait for anything: the editor exists synchronously, as before.
+  // Local mode asks no server, so the editor is there at once.
   const server = state.mode === 'local' ? null : await probeServer();
   if (server) bar.setServer(server);
   const hash = new OpenFileHash();
