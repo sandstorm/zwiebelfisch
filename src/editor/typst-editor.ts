@@ -1,6 +1,7 @@
 import { TypstDocument } from '../document/typst-document';
 import { Preview } from '../preview/preview';
 import { SourceView } from '../source-view/source-view';
+import { minimalChange } from './minimal-change';
 import styles from './styles.css?inline';
 
 const MAIN = '/main.typ';
@@ -13,8 +14,11 @@ export interface TypstEditorOptions {
 }
 
 export interface TypstEditor {
-  /** The current Typst source. */
-  readonly source: string;
+  /**
+   * The current Typst source. Assigning replaces it as one minimal edit
+   * (only the differing middle changes) and also triggers `onChange`.
+   */
+  source: string;
   destroy(): void;
 }
 
@@ -22,9 +26,12 @@ export interface TypstEditor {
  * Mounts the editor widget into `host`: an editing view on the left and the
  * live preview on the right. Clicking the preview reveals the source; moving
  * the cursor reveals the spot in the preview.
+ *
+ * Styles go into the root node `host` is attached to: `document.head`, or the
+ * shadow root when `host` lives in one. Attach `host` before calling this.
  */
 export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions): TypstEditor {
-  injectStyles(host.ownerDocument);
+  injectStyles(host);
   const document = new TypstDocument(options.source);
 
   const left = el(host.ownerDocument, 'typst-editor__left');
@@ -50,6 +57,10 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
     get source() {
       return document.text;
     },
+    set source(text: string) {
+      const change = minimalChange(document.text, text);
+      if (change) document.change([change], 'api');
+    },
     destroy() {
       unsubscribe();
       source.destroy();
@@ -67,10 +78,14 @@ function el(doc: Document, className: string): HTMLElement {
   return element;
 }
 
-function injectStyles(doc: Document): void {
-  if (doc.getElementById('typst-editor-styles')) return;
-  const style = doc.createElement('style');
-  style.id = 'typst-editor-styles';
+const STYLE_ID = 'typst-editor-styles';
+
+function injectStyles(host: HTMLElement): void {
+  const root = host.getRootNode();
+  const target = root instanceof ShadowRoot ? root : host.ownerDocument.head;
+  if (target.querySelector(`#${STYLE_ID}`)) return;
+  const style = host.ownerDocument.createElement('style');
+  style.id = STYLE_ID;
   style.textContent = styles;
-  doc.head.append(style);
+  target.append(style);
 }
