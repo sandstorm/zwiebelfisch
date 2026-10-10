@@ -13,11 +13,16 @@ Calculations live in spreadsheets inside the project; Typst shows their results.
   later trial).
 - Opening it in the file panel shows IronCalc's own workbook UI (`@ironcalc/workbook`, React),
   loaded only when the first spreadsheet opens (decided 2026-10-10).
-- Every edit is saved into the file and into `name.ic.json`: per sheet, the rows of the cells'
-  displayed values. Typst reads that with `json("name.ic.json")`.
+- Every edit is saved into the file and into `name.ic.gen.typ` (decided 2026-10-10, replacing
+  `name.ic.json`): Typst imports `sheets` (each sheet as a `table` with the spreadsheet's column
+  widths, row heights, alignment, fills, fonts and borders) and `values` (the displayed strings),
+  both by sheet name: `#import "budget.ic.gen.typ": sheets, values`, `#sheets.Sheet1`,
+  `#values.Sheet1.at(1).at(0)` (A2).
 - "New file" `budget.ic` starts an empty workbook.
 
 ## Out of scope (MVP)
 - `.xlsx` import and export (needs IronCalc's Rust `xlsx` code built to WebAssembly).
 - Sharing spreadsheet edits in collaboration rooms (binary files: the last save wins).
-- Referencing single cells or ranges from Typst beyond the JSON file.
+- Referencing single cells or ranges from Typst beyond `values`.
+- Merged cells (IronCalc 0.8.4 exposes no merges), conditional formatting, text overflowing into
+  empty neighbour cells.

@@ -59,7 +59,7 @@ src/                        the widget (TypeScript); the most important API on t
     diagnostics/            DiagnosticsStatus (status bar), diagnostics-summary.ts
     labels/                 LabelIndex: the project's labels (kind, title, file) and reference counts; scan.ts (Lezer, .bib)
     spreadsheets/           SpreadsheetView (.ic files in IronCalc's workbook UI), workbook.ts (React + IronCalc,
-                            loaded on demand), values.ts (sheetValues → name.ic.json for Typst)
+                            loaded on demand), typst-file.ts (spreadsheetTypst → name.ic.gen.typ for Typst)
     styles/                 StyleIndex: the custom styles the project declares (`/// @style …`), discover.ts,
                             new-style.ts ("New style…" stub); DocumentStyles (what a Visual view uses)
     changes/                ChangeTracking (a base per Typst file + "Changes since …"), diff.ts (diffTexts), changes.css
@@ -795,9 +795,9 @@ Concept: docs/2026_10_10_spreadsheets.md; task docs/todo/ironcalc.md. Calculatio
 IronCalc; Typst shows the results.
 
 ```ts
-new SpreadsheetView(parent, onEdit(path, { bytes, values }))   .show(path, content)   .hide()   .destroy()
-sheetValues(model) → { [sheet]: string[][] }   // displayed values, A1 to the last cell with data, visible sheets
-valuesPath('/budget.ic') → '/budget.ic.json'
+new SpreadsheetView(parent, onEdit(path, { bytes, typst }))   .show(path, content)   .hide()   .destroy()
+spreadsheetTypst(model, 'budget.ic') → Typst source   // `values` and `sheets` of the visible sheets
+typstPath('/budget.ic') → '/budget.ic.gen.typ'
 ```
 
 - A spreadsheet is a project file `name.ic` (`fileKind` `spreadsheet`), in IronCalc's own format
@@ -809,10 +809,23 @@ valuesPath('/budget.ic') → '/budget.ic.json'
   inside the container.
 - Edits: the UI changes the model itself. After user events in the container (keyup, pointerup,
   paste, …, 300 ms quiet) a non-empty `flushSendQueue()` means the model changed: `onEdit` gets
-  `toBytes()` and `sheetValues`. The widget stores both through the usual file requests: the
-  `.ic` file (a binary `update`) and `name.ic.json` (created or updated, only when it changed).
-- Typst: `#let data = json("budget.ic.json")`, `data.Sheet1.at(row).at(column)` (strings as
-  displayed, e.g. "1,200.00").
+  `toBytes()` and `spreadsheetTypst`. The widget stores both through the usual file requests: the
+  `.ic` file (a binary `update`) and `name.ic.gen.typ` (created or updated, only when it changed).
+  (Projects from before keep their old `name.ic.json`; nothing writes it any more.)
+- Typst: `#import "budget.ic.gen.typ": sheets, values`. Both are dictionaries by sheet name
+  (visible sheets; `sheets.at("My sheet")` for names that are not identifiers):
+  - `values.Sheet1.at(row).at(column)`: the displayed strings (e.g. "1,200.00"), A1 to the last
+    cell with data, hidden rows and columns included (indices match the spreadsheet).
+  - `#sheets.Sheet1`: a `table` with the column widths and non-default row heights (IronCalc's
+    pixels × 3/4 as pt), alignment (as formatted; "general": numbers right, truth values and
+    errors centered, text left; vertical bottom unless set), fill, font (bold, italic, underline,
+    strike, colour, size relative to IronCalc's 12) and borders (thin/medium/thick widths,
+    dotted/dashed). Hidden rows and columns are left out. Grid lines are Typst's table stroke
+    (`#set table(stroke: …)`); the font family stays the document's.
+  - Not carried over: merged cells (IronCalc 0.8 has no API for them), conditional formats,
+    wrap / overflow into neighbouring cells, double borders (drawn as one thick line).
+- `typst-file.ts` reads the model only through `SheetSource` (a slice of IronCalc's `Model`);
+  its test runs the real IronCalc wasm and compiles the result with the Typst engine.
 - Not yet: `.xlsx`, sharing spreadsheet edits in collaboration rooms (binary: the last save wins).
 
 ### Layout (`src/typst-editor/layout.ts`)

@@ -233,13 +233,19 @@ Existing `*.comments.json` sidecar files are not migrated.
 A project file ending in `.ic` is a spreadsheet: it opens in [IronCalc](https://www.ironcalc.com)'s
 workbook UI (formulas, formats, several sheets), loaded only when the first spreadsheet opens.
 Create one with **New file** `budget.ic`. Every edit is saved into the file and, for Typst, into
-`budget.ic.json` next to it: every sheet's cells as displayed.
+`budget.ic.gen.typ` next to it (generated: don't edit it). It defines two dictionaries by sheet
+name: `sheets`, every sheet as a table that looks like the spreadsheet (column widths, row
+heights, alignment, background colours, bold / italic / coloured text, borders), and `values`,
+the cells as displayed.
 
 ```typst
-#let budget = json("budget.ic.json")
-#table(columns: 2, ..budget.Sheet1.flatten())
-Rent: #budget.Sheet1.at(1).at(1)
+#import "budget.ic.gen.typ": sheets, values
+#sheets.Sheet1
+Rent: #values.Sheet1.at(1).at(1)
 ```
+
+The tables use Typst's table stroke for the grid lines (`#set table(stroke: none)` hides them)
+and the document's font. Merged cells are not carried over yet.
 
 The file is in IronCalc's own format; `.xlsx` files cannot be opened yet.
 
