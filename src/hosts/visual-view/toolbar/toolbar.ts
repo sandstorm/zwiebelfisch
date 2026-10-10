@@ -67,7 +67,9 @@ export class Toolbar {
     return {
       document: view.document,
       selection: () => view.selection(),
-      onDidChangePresence: view.onDidChangePresence,
+      sourceToPos: view.sourceToPos,
+      posToSource: view.posToSource,
+      isBox: view.isBox,
       editor: this.editor,
       root: this.root,
       subscriptions: this.subscriptions,

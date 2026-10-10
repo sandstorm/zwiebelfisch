@@ -1,7 +1,7 @@
 // SourceViewHost: makes the Source views (CodeMirror bound to a TypstDocument) and applies what is contributed to
 // them. Entry of hosts/source-view/. See ARCHITECTURE.md, "SourceView", and docs/2026_10_10_extensions-architecture.md.
-// Why a host: the Source view itself only keeps text and selection in sync with its document (plus reveal and the
-// presence target). Everything else — the Typst language, colors, lint, file links, other users' carets — is a
+// Why a host: the Source view itself only keeps text and selection in sync with its document (plus reveal).
+// Everything else — the Typst language, colors, lint, file links, other users' carets — is a
 // contribution, registered once and applied to every view made before or after, so a feature never tracks views.
 import type { Extension } from '@codemirror/state';
 import { Disposable } from '../../core/disposable/disposable';

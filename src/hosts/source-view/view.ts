@@ -3,8 +3,8 @@ import { basicSetup } from 'codemirror';
 import { Annotation, Compartment, EditorSelection, StateEffect, StateField, Transaction, type ChangeSet, type ChangeSpec, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { Disposable } from '../../core/disposable/disposable';
-import { type Event, EventEmitter } from '../../core/event-emitter/event-emitter';
-import { type Presence, type PresenceTarget, REMOTE_ORIGIN, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
+import type { Event } from '../../core/event-emitter/event-emitter';
+import { REMOTE_ORIGIN, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
 import type { SourceViewContext } from './contribution';
 
 export interface SourceViewOptions {
@@ -24,17 +24,13 @@ export interface Contributions {
  * The plain-Typst editing view (CodeMirror 6), kept in sync with a
  * TypstDocument in both directions. Made by `SourceViewHost.createView`.
  */
-export class SourceView implements PresenceTarget {
+export class SourceView {
   private readonly view: EditorView;
   private readonly contributed = new Compartment();
-  private readonly presence = new EventEmitter<readonly Presence[]>();
   private readonly subscriptions: Disposable[];
 
   constructor(parent: HTMLElement, document: TypstDocument, options: SourceViewOptions, contributions: Contributions) {
-    const context: Omit<SourceViewContext, 'documentLinks'> = {
-      document,
-      onDidChangePresence: this.presence.event,
-    };
+    const context: Omit<SourceViewContext, 'documentLinks'> = { document };
     this.view = new EditorView({
       parent,
       doc: document.text,
@@ -75,11 +71,6 @@ export class SourceView implements PresenceTarget {
     this.view.focus();
   }
 
-  /** Hands other users' carets and selections to the contributions that draw them (`onDidChangePresence`). */
-  setPresence(presences: readonly Presence[]): void {
-    this.presence.fire(presences);
-  }
-
   /** The selected source range (the main selection). */
   selection(): { from: number; to: number } {
     const { from, to } = this.view.state.selection.main;
@@ -88,7 +79,6 @@ export class SourceView implements PresenceTarget {
 
   destroy(): void {
     for (const subscription of this.subscriptions) subscription.dispose();
-    this.presence.dispose();
     this.view.destroy();
   }
 }

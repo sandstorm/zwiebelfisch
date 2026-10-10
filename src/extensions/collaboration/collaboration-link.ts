@@ -2,7 +2,7 @@
 // the lazily loaded chunk, model/). See collaboration.ts.
 import type { Collaboration, CollaborationOptions, RoomVersions, Shared } from './model/model';
 import type { ProjectPath } from '../../core/paths/paths';
-import type { PlacedPresence, PresenceTarget } from '../../core/typst-document/typst-document';
+import type { PlacedPresence } from './presence/presence';
 
 /** The editing view the local user works in, and what it has selected. */
 export interface CurrentSelection {
@@ -25,13 +25,11 @@ export interface LinkedWidget {
 /**
  * The widget's side of collaboration. Loads the collaboration code (Yjs,
  * Hocuspocus) on demand, so widgets without collaboration never download it;
- * publishes the local selection when the views report a change (`selectionChanged`); shows the
- * others' carets and selections in the views of the file shown, and tells
- * the widget where everyone is.
+ * publishes the local selection when the views report a change (`selectionChanged`), and tells
+ * the widget where everyone else is.
  */
 export class CollaborationLink {
   private collaboration: Collaboration | null = null;
-  private shown: { path: ProjectPath | null; views: readonly PresenceTarget[] } = { path: null, views: [] };
   private destroyed = false;
   private scheduled = false;
 
@@ -41,12 +39,6 @@ export class CollaborationLink {
     private readonly widget: LinkedWidget,
   ) {
     void this.start(options, shared);
-  }
-
-  /** The file shown in the editing area changed: draw the cursors there (`views` of a Typst file, or none). */
-  show(path: ProjectPath | null, views: readonly PresenceTarget[]): void {
-    this.shown = { path, views };
-    this.collaboration?.showCursors(path, views);
   }
 
   destroy(): void {
@@ -63,7 +55,6 @@ export class CollaborationLink {
     }
     this.collaboration = collaboration;
     collaboration.onPresence((presences) => this.widget.onPresence?.(presences));
-    collaboration.showCursors(this.shown.path, this.shown.views);
     if (collaboration.versions) this.widget.onVersions?.(collaboration.versions);
   }
 

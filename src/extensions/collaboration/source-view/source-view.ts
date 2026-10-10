@@ -1,19 +1,25 @@
 // The collaboration's part of the Source views: other users' carets and selections in a CodeMirror editor (the
-// Source views, which hand them over as PresenceTargets, and the code of the Visual view's raw boxes).
-// Entry of collaboration/source-view/. See collaboration.ts.
-import { StateEffect, StateField, type EditorState, type Extension, type Range } from '@codemirror/state';
+// Source views, and the code of the Visual view's raw boxes). See collaboration.ts.
+import { Facet, StateEffect, StateField, type EditorState, type Extension, type Range } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet } from '@codemirror/view';
-import { caretElement, type Presence, type PresenceUser } from '../../../core/typst-document/typst-document';
 import type { SourceViewExtension } from '../../../hosts/source-view/source-view';
+import type { Presence, PresenceSource, PresenceUser } from '../presence/presence';
+import { textColorOn } from '../../../ui/color-scheme/color-scheme';
 
-/** Draws the carets and selections a Source view is given (`setPresence`); they follow edits. */
-export const presence: SourceViewExtension = (view) => [
-  remotePresence,
-  ViewPlugin.define((editor) => {
-    const subscription = view.onDidChangePresence((presences) => editor.dispatch({ effects: setPresence.of(presences) }));
-    return { destroy: () => subscription.dispose() };
-  }),
-];
+/** Draws the other users' carets and selections in every Source view, as `presences` has them; they follow edits. */
+export function sourcePresence(presences: PresenceSource): SourceViewExtension {
+  return (view) => [
+    remotePresence,
+    initialPresences.of(presences.presencesIn(view.document)),
+    ViewPlugin.define((editor) => {
+      const subscription = presences.onDidChange(() => editor.dispatch({ effects: setPresence.of(presences.presencesIn(view.document)) }));
+      return { destroy: () => subscription.dispose() };
+    }),
+  ];
+}
+
+/** What a new editor shows before the first `setPresence` (the places when it was made). */
+const initialPresences = Facet.define<readonly Presence[], readonly Presence[]>({ combine: (values) => values.at(-1) ?? [] });
 
 /** Shows these presences (offsets in the editor's text) in an editor with `remotePresence`, replacing the ones shown. */
 export const setPresence = StateEffect.define<readonly Presence[]>();
@@ -30,7 +36,7 @@ interface Shown extends Presence {
  * Shows what `setPresence` gives it.
  */
 export const remotePresence: Extension = StateField.define<readonly Shown[]>({
-  create: () => [],
+  create: (state) => arrive([], state.facet(initialPresences), state.doc.length),
   update(shown, tr) {
     let next = tr.docChanged
       ? shown.map((p) => ({ ...p, anchor: tr.changes.mapPos(p.anchor, 1), head: tr.changes.mapPos(p.head, 1) }))
@@ -93,4 +99,28 @@ class CaretWidget extends WidgetType {
   ignoreEvent(): boolean {
     return false;
   }
+}
+
+/** CSS custom properties for elements drawn in a user's color: the color and a readable text color on it. */
+export function presenceStyle(element: HTMLElement, user: PresenceUser): void {
+  element.style.setProperty('--typst-remote-color', user.color);
+  element.style.setProperty('--typst-remote-text', textColorOn(user.color));
+}
+
+/**
+ * A remote caret: a thin bar in the user's color with a flag naming them (the look of Tiptap's CollaborationCaret /
+ * y-codemirror). Styling decides whether the flag always shows or only on hover and right after a move.
+ */
+export function caretElement(doc: Document, user: PresenceUser): HTMLElement {
+  const caret = doc.createElement('span');
+  caret.className = 'typst-remote-caret';
+  caret.dataset.user = user.name;
+  caret.setAttribute('aria-hidden', 'true');
+  caret.contentEditable = 'false';
+  presenceStyle(caret, user);
+  const flag = doc.createElement('span');
+  flag.className = 'typst-remote-caret__flag';
+  flag.textContent = user.name;
+  caret.append(flag);
+  return caret;
 }

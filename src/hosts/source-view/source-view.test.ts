@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 import { undo } from '@codemirror/commands';
 import { StateEffect, StateField } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, type DecorationSet } from '@codemirror/view';
-import { type Presence, REMOTE_ORIGIN, TypstDocument } from '../../core/typst-document/typst-document';
+import { EventEmitter } from '../../core/event-emitter/event-emitter';
+import { REMOTE_ORIGIN, TypstDocument } from '../../core/typst-document/typst-document';
 import { SourceViewHost, type SourceViewExtension } from './source-view';
 
 function setup(text: string, host = new SourceViewHost()) {
@@ -44,8 +45,9 @@ describe('SourceViewHost contributions', () => {
   /** Marks the first word of the view's document (as it was when the extension was made). */
   const firstWord: SourceViewExtension = ({ document }) =>
     EditorView.decorations.of(Decoration.set(Decoration.mark({ class: 'first' }).range(0, document.text.search(/\s/))));
-  /** Marks the selections of the presences the view is given (`onDidChangePresence`), in a state field (one for all views). */
-  const drawn = StateEffect.define<readonly Presence[]>();
+  /** Marks the ranges `ranges` fires (as an extension drawing something of its own would), in a state field (one for all views). */
+  const drawn = StateEffect.define<readonly { anchor: number; head: number }[]>();
+  const ranges = new EventEmitter<readonly { anchor: number; head: number }[]>();
   const drawing = StateField.define<DecorationSet>({
     create: () => Decoration.none,
     update(set, tr) {
@@ -55,10 +57,10 @@ describe('SourceViewHost contributions', () => {
     },
     provide: (field) => EditorView.decorations.from(field),
   });
-  const drawPresence: SourceViewExtension = (view) => [
+  const drawRanges: SourceViewExtension = [
     drawing,
     ViewPlugin.define((editor) => {
-      const subscription = view.onDidChangePresence((presences) => editor.dispatch({ effects: drawn.of(presences) }));
+      const subscription = ranges.event((given) => editor.dispatch({ effects: drawn.of(given) }));
       return { destroy: () => subscription.dispose() };
     }),
   ];
@@ -93,9 +95,9 @@ describe('SourceViewHost contributions', () => {
 
   it('keeps what an extension drew when another one is registered', () => {
     const host = new SourceViewHost();
-    host.registerExtension(drawPresence);
-    const { view, parent } = setup('Some bold text\n', host);
-    view.setPresence([{ id: '1', user: { name: 'Ann', color: '#b58900' }, anchor: 5, head: 9 }]);
+    host.registerExtension(drawRanges);
+    const { parent } = setup('Some bold text\n', host);
+    ranges.fire([{ anchor: 5, head: 9 }]);
     host.registerExtension(firstWord);
     expect(marked(parent, '.drawn')).toEqual(['bold']);
   });
@@ -111,13 +113,5 @@ describe('SourceViewHost contributions', () => {
     view.destroy();
     host.registerExtension(firstWord);
     expect(made).toEqual(['text\n']);
-  });
-});
-
-describe('SourceView presence (a PresenceTarget without drawing of its own)', () => {
-  it('draws nothing itself', () => {
-    const { view, parent } = setup('Some bold text\n');
-    view.setPresence([{ id: '1', user: { name: 'Ann', color: '#b58900' }, anchor: 5, head: 9 }]);
-    expect(parent.querySelector('.typst-remote-caret, .typst-remote-selection')).toBeNull();
   });
 });

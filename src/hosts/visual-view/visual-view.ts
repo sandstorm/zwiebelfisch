@@ -5,11 +5,12 @@ import { Editor } from '@tiptap/core';
 import { EditorState, TextSelection, type Transaction } from '@tiptap/pm/state';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
-import type { Highlight, Presence, PresenceTarget, TypstDocument } from '../../core/typst-document/typst-document';
+import type { Node } from '@tiptap/pm/model';
+import type { Highlight, TypstDocument } from '../../core/typst-document/typst-document';
 import type { Contributed, Gutter, VisualViewContext, VisualViewContributions } from './contributions/contributions';
 import { highlights, setHighlights } from './highlights';
 import { attachSpecs, editorExtensions, setBoxes } from './nodes/nodes';
-import { onDidChangeGrammar, posToSource, print, project, sourceToPos, syncDoc } from './projection/projection';
+import { nodeGrammar, onDidChangeGrammar, posToSource, print, project, sourceToPos, syncDoc } from './projection/projection';
 import { Toolbar } from './toolbar/toolbar';
 
 export {
@@ -27,9 +28,6 @@ export {
 // the projection framework itself, for tests of the specs: project a source, sync (print and the position maps are above)
 export { project, syncDoc } from './projection/projection';
 export { starterKitPart } from './nodes/nodes';
-// source offsets ↔ positions in a view's document, and the decorations that draw a source range (other users' places)
-export { nodeGrammar } from './projection/projection';
-export { rangeDecorations } from './highlights';
 
 /** Marks transactions that mirror a document change, so they are not written back. */
 const FROM_DOCUMENT = 'typst-from-document';
@@ -45,21 +43,20 @@ const FROM_DOCUMENT = 'typst-from-document';
  * beyond that (headings, tables, labels, comments, …) comes from
  * `contributions`, as registered when the view is created.
  */
-export class VisualView implements PresenceTarget {
+export class VisualView {
   /** The text and the gutters beside it, below the toolbar: what scrolls as the document's content. */
   readonly content: HTMLElement;
   private readonly editor: Editor;
   private readonly toolbar: Toolbar;
   private readonly gutters: Gutter[];
   private readonly selectionChanged = new EventEmitter<void>();
-  private readonly presence = new EventEmitter<readonly Presence[]>();
   /** After the selection moved or the text changed; `selection()` already returns the new selection. */
   readonly onDidChangeSelection: Event<void> = this.selectionChanged.event;
   private readonly subscriptions: Disposable[];
 
   constructor(parent: HTMLElement, private readonly document: TypstDocument, contributions: VisualViewContributions) {
     const contributed = contributions.contributed();
-    const view: VisualViewContext = { document, selection: () => this.selection(), onDidChangePresence: this.presence.event };
+    const view: VisualViewContext = { document, selection: () => this.selection(), sourceToPos, posToSource, isBox };
     // the text and, right of it, the gutters
     const body = parent.appendChild(parent.ownerDocument.createElement('div'));
     body.className = 'typst-visual__body';
@@ -122,11 +119,6 @@ export class VisualView implements PresenceTarget {
     this.editor.view.dispatch(setHighlights(this.editor.state.tr, layer, ranges));
   }
 
-  /** Hands other users' carets and selections (source offsets) to the contributions that draw them (`onDidChangePresence`). */
-  setPresence(presences: readonly Presence[]): void {
-    this.presence.fire(presences);
-  }
-
   /** Whether the user works in this view (it has focus). */
   focused(): boolean {
     return this.editor.view.hasFocus();
@@ -145,7 +137,6 @@ export class VisualView implements PresenceTarget {
   destroy(): void {
     for (const subscription of [...this.subscriptions].reverse()) subscription.dispose();
     this.selectionChanged.dispose();
-    this.presence.dispose();
     this.toolbar.destroy();
     this.editor.destroy();
     for (const gutter of this.gutters) gutter.destroy();
@@ -161,6 +152,11 @@ export class VisualView implements PresenceTarget {
     const tr = syncDoc(state.tr, project(this.document.text, state.schema));
     if (tr.docChanged) this.editor.view.dispatch(tr.setMeta(FROM_DOCUMENT, true).setMeta('addToHistory', false));
   }
+}
+
+/** Block atoms, and inline atoms whose spec shows them as a box of their own (raw inline Typst, a margin note). */
+function isBox(node: Node): boolean {
+  return node.isBlock ? node.isAtom : node.isAtom && nodeGrammar(node)?.box !== undefined;
 }
 
 /** What the raw boxes of `view` get from the contributions. */

@@ -1,8 +1,9 @@
-// FileTree: the project's files as an expandable tree (keyboard, drag & drop, presence dots). Entry of
+// FileTree: the project's files as an expandable tree (keyboard, drag & drop, decorations). Entry of
 // extensions/files/workbench/tree/. See ../file-panel.ts and ARCHITECTURE.md, "File panel".
 import { PROJECT_PATH_TYPE } from '../../../../core/project/project';
 import { ProjectPath } from '../../../../core/paths/paths';
-import { initials, presenceStyle, type PresenceUser } from '../../../../core/typst-document/typst-document';
+import type { FileDecoration } from '../../../../hosts/workbench/workbench';
+import { textColorOn } from '../../../../ui/color-scheme/color-scheme';
 import { icon } from '../icons/icons';
 import { ancestorsOf, buildTree, filesUnder, type Folder, folderOf, navigate, type Row, visibleRows } from '../../model/model';
 
@@ -32,8 +33,8 @@ export interface TreeState {
   folders: readonly ProjectPath[];
   main: ProjectPath;
   active: ProjectPath;
-  /** Who else is in which file. */
-  presence: ReadonlyMap<ProjectPath, readonly PresenceUser[]>;
+  /** The decorations of a file (badges such as who else is in it). */
+  decorations(path: ProjectPath): readonly FileDecoration[];
 }
 
 /** The type of a dragged tree row in a drag's data. */
@@ -42,7 +43,7 @@ const ROW_TYPE = PROJECT_PATH_TYPE;
 /**
  * The project's files as a tree (`role=tree`, one `treeitem` per visible row):
  * folders first, expandable (open folders are remembered), the main file
- * marked, the shown file selected, who else is where as dots. One row has
+ * marked, the shown file selected, the files' decorations as badges. One row has
  * the focus ("current": where new files go, what F2 and Delete act on).
  * Keyboard: arrows, Home/End, Enter, F2, Delete. Rows can be dragged onto
  * folders, and files from the computer dropped onto them.
@@ -141,8 +142,8 @@ export class FileTree {
       item.append(icon(doc, ProjectPath.kind(row.path)), name);
     }
     if (row.path === state.main) item.append(badge(doc));
-    const users = usersIn(state, row);
-    if (users.length > 0) item.append(presenceDots(doc, users));
+    const decorations = decorationsOf(state, row);
+    if (decorations.length > 0) item.append(badges(doc, decorations));
     return item;
   }
 
@@ -230,12 +231,12 @@ export class FileTree {
   }
 }
 
-/** The others in a file, or in any file of a closed folder. */
-function usersIn({ presence, paths }: TreeState, row: Row): PresenceUser[] {
-  if (row.kind === 'file') return [...(presence.get(row.path) ?? [])];
+/** The decorations of a file, or those of the files in a closed folder that propagate (each once). */
+function decorationsOf({ decorations, paths }: TreeState, row: Row): FileDecoration[] {
+  if (row.kind === 'file') return [...decorations(row.path)];
   if (row.expanded) return [];
-  const users = filesUnder(paths, row.path).flatMap((path) => presence.get(path) ?? []);
-  return [...new Map(users.map((user) => [user.name, user])).values()];
+  const inside = filesUnder(paths, row.path).flatMap((path) => decorations(path).filter((decoration) => decoration.propagate));
+  return [...new Map(inside.map((decoration) => [JSON.stringify([decoration.badge, decoration.tooltip, decoration.color]), decoration])).values()];
 }
 
 function chevron(doc: Document): SVGSVGElement {
@@ -250,19 +251,21 @@ function badge(doc: Document): HTMLElement {
   return main;
 }
 
-/** One dot per user: initials on their color, the name as tooltip. */
-function presenceDots(doc: Document, users: readonly PresenceUser[]): HTMLElement {
-  const dots = element(doc, 'span', 'typst-files__presence');
-  dots.setAttribute('aria-label', `Here: ${users.map((user) => user.name).join(', ')}`);
-  for (const user of users) {
-    const dot = element(doc, 'span', 'typst-files__user');
-    dot.textContent = initials(user.name);
-    dot.title = user.name;
-    dot.dataset.user = user.name;
-    presenceStyle(dot, user);
-    dots.append(dot);
+/** One badge per decoration, in its color, its tooltip as title; the row names them all. */
+function badges(doc: Document, decorations: readonly FileDecoration[]): HTMLElement {
+  const badges = element(doc, 'span', 'typst-files__decorations');
+  badges.setAttribute('aria-label', decorations.flatMap((decoration) => decoration.tooltip ?? []).join(', '));
+  for (const { badge, tooltip, color } of decorations) {
+    const dot = element(doc, 'span', 'typst-files__decoration');
+    dot.textContent = badge ?? '';
+    if (tooltip) dot.title = tooltip;
+    if (color) {
+      dot.style.setProperty('--typst-files-decoration-color', color);
+      dot.style.setProperty('--typst-files-decoration-text', textColorOn(color));
+    }
+    badges.append(dot);
   }
-  return dots;
+  return badges;
 }
 
 function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, className: string) {

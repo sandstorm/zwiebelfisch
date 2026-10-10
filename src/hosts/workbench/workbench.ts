@@ -8,7 +8,7 @@ import type { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
 import type { FileKind, ProjectPath } from '../../core/paths/paths';
 import type { FileChange, FileContent, Project } from '../../core/project/project';
-import type { PresenceTarget, TypstDocument } from '../../core/typst-document/typst-document';
+import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { PreviewContributions } from '../preview/preview';
 import type { SourceViewContributions } from '../source-view/source-view';
 import type { VisualViewContributions } from '../visual-view/visual-view';
@@ -119,6 +119,16 @@ export interface Workbench {
   /** A value remembered for the browser session under this widget's key (`name` tells values apart). */
   remember<T>(name: string): Memory<T>;
 
+  /**
+   * Adds decorations to files (badges on their rows in the views that list files, such as other users' initials)
+   * until disposed. Several providers may decorate the same file; their decorations are shown in registration order.
+   */
+  registerFileDecorationProvider(provider: FileDecorationProvider): Disposable;
+  /** The decorations of `path` from every provider, for a view that lists files. */
+  getFileDecorations(path: ProjectPath): readonly FileDecoration[];
+  /** Decorations changed: of these files, or of any (undefined). */
+  readonly onDidChangeFileDecorations: Event<readonly ProjectPath[] | undefined>;
+
   /** The editor of the Typst file shown in the editing area; null while another kind of file is shown. */
   readonly activeTextEditor: TextEditor | null;
   /**
@@ -156,6 +166,26 @@ export interface SidePanel {
   dispose(): void;
 }
 
+/** How a view that lists files marks one (VS Code's FileDecoration): a small badge with a tooltip. */
+export interface FileDecoration {
+  /** A short text drawn as a badge (one or two characters, e.g. initials). */
+  readonly badge?: string;
+  /** What the decoration means (the badge's tooltip and accessible name). */
+  readonly tooltip?: string;
+  /** The CSS color the badge is drawn in (text on it is black or white, whichever reads better). */
+  readonly color?: string;
+  /** Also shown on the folders around the file while they are closed. */
+  readonly propagate?: boolean;
+}
+
+/** Gives files decorations (VS Code's FileDecorationProvider; one file may get several here). */
+export interface FileDecorationProvider {
+  /** The decorations of `path` now. */
+  provideFileDecoration(path: ProjectPath): FileDecoration | readonly FileDecoration[] | undefined;
+  /** Fires when decorations changed: of these files, or of any (undefined). */
+  readonly onDidChangeFileDecorations: Event<readonly ProjectPath[] | undefined>;
+}
+
 /** A view for one kind of file in the editing area; shown and hidden as files are opened. */
 export interface FileView {
   /** Shows `path` (called on every open, also of the shown file: its content may have changed). */
@@ -171,9 +201,9 @@ export interface FileViewProvider {
 
 /**
  * A Typst file's editor: its Visual and Source views, behind the Visual / Source tabs. One per document, for as
- * long as its views live. As a `PresenceTarget`, it shows other users' carets in both views.
+ * long as its views live.
  */
-export interface TextEditor extends PresenceTarget {
+export interface TextEditor {
   readonly document: TypstDocument;
   /** The tab the user works in: the view `selection` and `revealRange` use. */
   readonly mode: EditorMode;

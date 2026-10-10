@@ -2,9 +2,8 @@
 // A leaf (imports nothing of its folder), so contributions can name these types without importing the host.
 // See source-view.ts.
 import type { Extension } from '@codemirror/state';
-import type { Event } from '../../core/event-emitter/event-emitter';
 import type { DocumentLinkProvider } from '../../core/document-links/document-links';
-import type { Presence, TypstDocument } from '../../core/typst-document/typst-document';
+import type { TypstDocument } from '../../core/typst-document/typst-document';
 
 /**
  * CodeMirror extensions for every Source view: the same value for all of them, or made per view from
@@ -18,11 +17,6 @@ export interface SourceViewContext {
   readonly document: TypstDocument;
   /** Where the file paths in the document lead (from the registered link providers); null: nowhere. */
   readonly documentLinks: DocumentLinkProvider | null;
-  /**
-   * Fires with the other users' carets and selections whenever the view (a `PresenceTarget`) is given
-   * new ones; offsets in the document's text at that moment.
-   */
-  readonly onDidChangePresence: Event<readonly Presence[]>;
 }
 
 /** Gives the Source views of `document` the links of its file paths; null when it has none. */

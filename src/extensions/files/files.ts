@@ -1,5 +1,5 @@
 // The files extensions: the file panel (the project's files as a tree in the left side panel: new file / folder,
-// upload, rename, delete, drag & drop, presence) and "← previous / next file →" around an included file.
+// upload, rename, delete, drag & drop, file decorations) and "← previous / next file →" around an included file.
 // Entry of extensions/files/. See ARCHITECTURE.md, "File panel".
 // Why one extension per concern: each is a controller over the workbench's contribution points (a side panel, an
 // editor frame) and the project; the views (workbench/) and the pure tree model (model/) know nothing
@@ -20,13 +20,13 @@ export interface FilesOptions {
 
 /**
  * The file panel in a side panel: shows the project and the shown file, opens what is picked, asks for every
- * change through `Workbench.applyChange`, uploads files dropped on the widget, and shows where collaborators are
- * (the `collaboration` service, when an extension before it in the list provides it).
+ * change through `Workbench.applyChange`, uploads files dropped on the widget, and shows the files' decorations
+ * from every `FileDecorationProvider` (e.g. where collaborators are).
  */
 export function files(options: FilesOptions = {}): TypstExtension {
   return {
     id: 'files',
-    activate({ project, workbench, services, subscriptions }) {
+    activate({ project, workbench, subscriptions }) {
       subscriptions.push(workbench.registerStyleSheet(css));
       const mode = options.fileList ?? 'auto';
       const side = workbench.registerSidePanel('files', { label: 'Files', icon: icon(workbench.ownerDocument, 'files') });
@@ -38,6 +38,7 @@ export function files(options: FilesOptions = {}): TypstExtension {
         },
         onChange: (change) => workbench.applyChange(change),
         memory: workbench.remember('folders'),
+        decorations: (path) => workbench.getFileDecorations(path),
       }, state());
       // shown on every open, which also follows every create / rename / delete
       const render = () => {
@@ -45,10 +46,13 @@ export function files(options: FilesOptions = {}): TypstExtension {
         side.setDefault(mode === 'show' || project.paths().length > 1);
         panel.render(state());
       };
-      subscriptions.push(side, new Disposable(() => panel.destroy()), workbench.onDidShowFile(render));
+      subscriptions.push(
+        side,
+        new Disposable(() => panel.destroy()),
+        workbench.onDidShowFile(render),
+        workbench.onDidChangeFileDecorations(() => panel.render(state())),
+      );
       if (mode !== 'hide') subscriptions.push(workbench.onDidDropFiles((dropped) => void panel.upload(dropped)));
-      const collaboration = services.get('collaboration');
-      if (collaboration) subscriptions.push(collaboration.onDidChangePresence((presences) => panel.showPresence(presences)));
     },
   };
 }

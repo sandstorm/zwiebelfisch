@@ -2,7 +2,7 @@
 // visual-view.ts.
 import { EditorState, type Extension as CodeExtension } from '@codemirror/state';
 import type { Decoration } from '@tiptap/pm/view';
-import type { PresenceUser } from '../../../core/typst-document/typst-document';
+import type { PresenceUser } from '../presence/presence';
 import { setBoxDecorations } from '../../../hosts/visual-view/visual-view';
 import { remotePresence, setPresence } from '../source-view/source-view';
 

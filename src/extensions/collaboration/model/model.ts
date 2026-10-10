@@ -5,7 +5,7 @@ import { HocuspocusProvider } from '@hocuspocus/provider';
 import type { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 import type { ProjectPath } from '../../../core/paths/paths';
-import type { PlacedPresence, PresenceTarget } from '../../../core/typst-document/typst-document';
+import type { PlacedPresence } from '../presence/presence';
 import type { Project } from '../../../core/project/project';
 import { roomFilePath } from '../../../core/gitlab-protocol/gitlab-protocol';
 import { RemoteCursors, type CollaborationUser } from './remote-cursors';
@@ -82,11 +82,6 @@ export class Collaboration {
   /** Tells the others where the local user's selection is (a source range in `path`), or nowhere. */
   setCursor(path: ProjectPath | null, range?: { from: number; to: number }): void {
     this.cursors?.setLocal(path, range);
-  }
-
-  /** Shows the other users' carets and selections in `path` in `views` (the views of the shown file). */
-  showCursors(path: ProjectPath | null, views: readonly PresenceTarget[]): void {
-    this.cursors?.show(path, views);
   }
 
   /** Calls `listener` with every other user's place, in any file, whenever one changes (replaces the previous listener). */

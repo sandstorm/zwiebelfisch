@@ -62,21 +62,21 @@
 .typst-files__chevron { width: 12px; height: 12px; transition: transform 0.1s; color: var(--te-faint); }
 .typst-files__row[aria-expanded='true'] .typst-files__chevron { transform: rotate(90deg); }
 .typst-files__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.typst-files__presence { display: inline-flex; flex: none; margin-left: 2px; }
-.typst-files__user {
+.typst-files__decorations { display: inline-flex; flex: none; margin-left: 2px; }
+.typst-files__decoration {
   min-width: 1.6em;
   height: 1.6em;
   margin-left: -3px;
   padding: 0 2px;
   box-sizing: border-box;
   border-radius: 0.8em;
-  background: var(--typst-remote-color, #268bd2);
-  color: var(--typst-remote-text, #fff);
+  background: var(--typst-files-decoration-color, var(--te-accent));
+  color: var(--typst-files-decoration-text, var(--te-bg));
   box-shadow: 0 0 0 1.5px var(--te-bg);
   font: 600 9px/1.6em system-ui, sans-serif;
   text-align: center;
 }
-.typst-files__user:first-child { margin-left: 0; }
+.typst-files__decoration:first-child { margin-left: 0; }
 .typst-files__badge {
   flex: none;
   border-radius: 999px;

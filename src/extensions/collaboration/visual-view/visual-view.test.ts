@@ -2,15 +2,27 @@
 // Tests for visual-view.ts (and box-carets.ts): other users' places drawn in a Visual view and in its boxes.
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { ProjectPath } from '../../../core/paths/paths';
 import { createVisualView } from '../../../testing/testing';
-import { presence } from './visual-view';
+import { Presences, type Presence } from '../presence/presence';
+import { visualPresence } from './visual-view';
 
-/** A Visual view with the built-ins (the boxes and cells the tests put carets in) and the presence contribution. */
+const MAIN = ProjectPath.of('/main.typ');
+
+/**
+ * A Visual view with the built-ins (the boxes and cells the tests put carets in) and the presence contribution;
+ * `view.setPresence` reports the others' places in its file.
+ */
 function setup(text: string) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = createVisualView(parent, doc, { contributions: [presence] });
+  const presences = new Presences((document) => (document === doc ? MAIN : undefined));
+  const visual = createVisualView(parent, doc, { contributions: [visualPresence(presences, () => [doc])] });
+  const view = {
+    reveal: (from: number, to: number) => visual.reveal(from, to),
+    setPresence: (here: readonly Presence[]) => presences.set(here.map((presence) => ({ ...presence, path: MAIN }))),
+  };
   return { doc, view, parent };
 }
 

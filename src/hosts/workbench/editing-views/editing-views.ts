@@ -1,5 +1,5 @@
 // EditingViews: the Visual/Source tabs; lazily one VisualView and SourceView per document. See workbench.ts.
-import type { Presence, TypstDocument } from '../../../core/typst-document/typst-document';
+import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { type SourceView, SourceViewHost } from '../../source-view/source-view';
 import { VisualView, VisualViewContributions } from '../../visual-view/visual-view';
 
@@ -46,12 +46,6 @@ export class DocumentEditor {
 
   revealRange(from: number, to: number): void {
     this.views[this.mode].reveal(from, to);
-  }
-
-  /** In both views: the hidden one keeps them for when its tab is chosen. */
-  setPresence(presences: readonly Presence[]): void {
-    this.views.visual.setPresence(presences);
-    this.views.source.setPresence(presences);
   }
 }
 

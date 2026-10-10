@@ -55,7 +55,7 @@ function toDecorations(doc: Node, highlights: readonly Highlight[]): DecorationS
  * `attributes`: inline over the text, plus the block atoms (raw code boxes)
  * in range, which inline decorations skip.
  */
-export function rangeDecorations(doc: Node, { from, to, className, attributes }: Highlight): Decoration[] {
+function rangeDecorations(doc: Node, { from, to, className, attributes }: Highlight): Decoration[] {
   const start = sourceToPos(doc, from);
   const end = Math.max(start, sourceToPos(doc, to, -1));
   if (start >= end) return [];

@@ -12,6 +12,7 @@ import { ColorScheme } from './color-scheme/color-scheme';
 import { Commands } from './commands/commands';
 import { EditingViews, type EditorMode } from './editing-views/editing-views';
 import { ExtensionHost } from './extension-host/extension-host';
+import { FileDecorations } from './file-decorations/file-decorations';
 import { FileDrops } from './file-drops/file-drops';
 import { FileViews } from './file-views/file-views';
 import { Layout, type Memory } from './layout/layout';
@@ -20,6 +21,8 @@ import type {
   CommandArguments,
   CommandRegistry,
   CommandResult,
+  FileDecoration,
+  FileDecorationProvider,
   FileViewProvider,
   OpenOptions,
   SidePanel,
@@ -58,6 +61,7 @@ export class WorkbenchHost implements Workbench {
   readonly #layout: Layout;
   readonly #views: EditingViews;
   readonly #fileViews: FileViews;
+  readonly #fileDecorations = new FileDecorations();
   readonly #commands: Commands;
   readonly #drops: FileDrops;
   readonly #scheme: ColorScheme;
@@ -75,6 +79,7 @@ export class WorkbenchHost implements Workbench {
   readonly onDidShowFile = this.#shown.event;
   readonly onDidChangeTextEditorSelection = this.#selectionChanged.event;
   readonly onDidDropFiles: Event<File[]>;
+  readonly onDidChangeFileDecorations = this.#fileDecorations.onDidChange;
 
   constructor(
     private readonly host: HTMLElement,
@@ -198,6 +203,14 @@ export class WorkbenchHost implements Workbench {
     return this.#layout.remember<T>(name);
   }
 
+  registerFileDecorationProvider(provider: FileDecorationProvider): Disposable {
+    return this.#fileDecorations.register(provider);
+  }
+
+  getFileDecorations(path: ProjectPath): readonly FileDecoration[] {
+    return this.#fileDecorations.decorationsOf(path);
+  }
+
   get activeTextEditor(): TextEditor | null {
     return this.#views.activeEditor();
   }
@@ -213,6 +226,7 @@ export class WorkbenchHost implements Workbench {
     this.#extensions.dispose();
     this.#views.destroy();
     this.#fileViews.dispose();
+    this.#fileDecorations.dispose();
     this.#preview.destroy();
     this.#commands.dispose();
     this.#drops.dispose();

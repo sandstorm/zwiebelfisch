@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { FilePanel } from './file-panel';
 import type { FileChange } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
+import type { FileDecoration } from '../../../hosts/workbench/workbench';
 
 const path = ProjectPath.of;
 
@@ -14,13 +15,13 @@ const nested = {
   active: path('/main.typ'),
 };
 
-function setup(onChange: (change: FileChange) => Promise<string | null> = async () => null, initial = state) {
+function setup(onChange: (change: FileChange) => Promise<string | null> = async () => null, initial = state, decorations: Record<string, FileDecoration[]> = {}) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const onOpen = vi.fn();
   const change = vi.fn(onChange);
   const memory = { load: vi.fn(() => null), save: vi.fn() };
-  const panel = new FilePanel(parent, { onOpen, onChange: change, memory }, initial);
+  const panel = new FilePanel(parent, { onOpen, onChange: change, memory, decorations: (file) => decorations[file] ?? [] }, initial);
   const button = (name: string) =>
     [...parent.querySelectorAll('button')].find((b) => b.textContent?.trim() === name || b.title === name)!;
   const items = () => [...parent.querySelectorAll<HTMLElement>('[role=treeitem]')];
@@ -81,22 +82,22 @@ describe('FilePanel', () => {
     expect(item('chapters').classList.contains('typst-files__row--folder')).toBe(true);
   });
 
-  it('marks the files other users are in with their initials in their color, closed folders too', () => {
-    const { parent, panel, item } = setup(undefined, { ...state, paths: [...state.paths, path('/parts/a.typ')] });
-    const ann = { id: '1', user: { name: 'Ann Lee', color: '#b58900' }, anchor: 0, head: 0 };
-    const bob = { id: '2', user: { name: 'Bob', color: '#000080' }, anchor: 0, head: 0 };
-    panel.showPresence([{ ...ann, path: path('/chapter.typ') }, { ...bob, path: path('/chapter.typ') }, { ...bob, path: path('/parts/a.typ') }]);
-    const dots = [...item('chapter.typ').querySelectorAll<HTMLElement>('.typst-files__user')];
-    expect(dots.map((dot) => [dot.textContent, dot.title])).toEqual([['AL', 'Ann Lee'], ['B', 'Bob']]);
-    expect(dots[0].style.getPropertyValue('--typst-remote-color')).toBe('#b58900');
-    expect(dots[1].style.getPropertyValue('--typst-remote-text')).toBe('#ffffff');
-    expect(item('chapter.typ').querySelector('.typst-files__presence')!.getAttribute('aria-label')).toBe('Here: Ann Lee, Bob');
-    expect(item('parts').querySelector('.typst-files__presence')!.getAttribute('aria-label')).toBe('Here: Bob');
-    expect(item('main.typ').querySelector('.typst-files__presence')).toBeNull();
-    panel.render({ ...state, paths: [...state.paths, path('/parts/a.typ')], active: path('/chapter.typ') });
-    expect(item('chapter.typ').querySelectorAll('.typst-files__user')).toHaveLength(2);
-    panel.showPresence([]);
-    expect(parent.querySelector('.typst-files__presence')).toBeNull();
+  it("shows the files' decorations as badges in their colors, propagated ones on closed folders too", () => {
+    const ann: FileDecoration = { badge: 'AL', tooltip: 'Ann Lee', color: '#b58900', propagate: true };
+    const bob: FileDecoration = { badge: 'B', tooltip: 'Bob', color: '#000080', propagate: true };
+    const decorations: Record<string, FileDecoration[]> = { '/chapter.typ': [ann, bob], '/parts/a.typ': [bob, { badge: 'x', tooltip: 'local' }] };
+    const files = { ...state, paths: [...state.paths, path('/parts/a.typ')] };
+    const { parent, panel, item } = setup(undefined, files, decorations);
+    const badges = [...item('chapter.typ').querySelectorAll<HTMLElement>('.typst-files__decoration')];
+    expect(badges.map((badge) => [badge.textContent, badge.title])).toEqual([['AL', 'Ann Lee'], ['B', 'Bob']]);
+    expect(badges[0].style.getPropertyValue('--typst-files-decoration-color')).toBe('#b58900');
+    expect(badges[1].style.getPropertyValue('--typst-files-decoration-text')).toBe('#ffffff');
+    expect(item('chapter.typ').querySelector('.typst-files__decorations')!.getAttribute('aria-label')).toBe('Ann Lee, Bob');
+    expect(item('parts').querySelector('.typst-files__decorations')!.getAttribute('aria-label')).toBe('Bob');
+    expect(item('main.typ').querySelector('.typst-files__decorations')).toBeNull();
+    for (const file of Object.keys(decorations)) delete decorations[file];
+    panel.render(files);
+    expect(parent.querySelector('.typst-files__decorations')).toBeNull();
   });
 
   it('creates a .typ file from a typed name and opens it', async () => {

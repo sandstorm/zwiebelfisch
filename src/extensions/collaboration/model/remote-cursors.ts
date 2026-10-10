@@ -1,9 +1,9 @@
-// RemoteCursors: other users' carets and selections over Yjs awareness, handed to the views as presences.
+// RemoteCursors: other users' carets and selections over Yjs awareness, reported as presences.
 // See model.ts.
 import type { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 import { ProjectPath } from '../../../core/paths/paths';
-import type { PlacedPresence, PresenceTarget } from '../../../core/typst-document/typst-document';
+import type { PlacedPresence } from '../presence/presence';
 
 /** Who is editing here, as others see it. */
 export interface CollaborationUser {
@@ -16,7 +16,7 @@ export interface RemoteCursorsOptions {
   user: CollaborationUser;
   /** The shared text of `path` (where cursors are anchored). */
   text(path: ProjectPath): Y.Text | undefined;
-  /** Called with every other user's place, in any file, whenever one changes (e.g. for the preview and the file panel). */
+  /** Called with every other user's place, in any file, whenever one changes (the views, the file panel). */
   onPresence?(presences: readonly PlacedPresence[]): void;
 }
 
@@ -32,17 +32,13 @@ const PALETTE = ['#d33682', '#2aa198', '#6c71c4', '#cb4b16', '#268bd2', '#859900
 
 /**
  * Presence: publishes the local user's selection through y-protocols
- * awareness, and shows the other users' places: in the views of the file
- * shown here (`show`), and everywhere through `onPresence`. Positions travel
- * as Y relative positions, so they stay on their characters while anyone
- * edits; they are resolved again after every change of the shown text and
- * every presence update (once per microtask, after the views have taken the
- * change).
+ * awareness, and reports the other users' places, in every file, through
+ * `onPresence` (only when they changed). Positions travel as Y relative
+ * positions, so they stay on their characters while anyone edits; they are
+ * resolved again after every change of the shared texts and every presence
+ * update (once per microtask, after the views have taken the change).
  */
 export class RemoteCursors {
-  private path: ProjectPath | null = null;
-  private views: readonly PresenceTarget[] = [];
-  private observed: Y.Text | undefined;
   private scheduled = false;
   private destroyed = false;
   /** What `onPresence` was last told (as JSON), so unchanged places are not reported again. */
@@ -55,6 +51,9 @@ export class RemoteCursors {
     const { name, color } = options.user;
     awareness.setLocalStateField('user', { name, color: color ?? colorFor(name) });
     awareness.on('change', this.schedule);
+    awareness.doc.on('update', this.schedule);
+    // the others already there
+    this.schedule();
   }
 
   /** Publishes where the local user is: a source range in `path`, or nowhere (null). */
@@ -69,20 +68,11 @@ export class RemoteCursors {
     this.awareness.setLocalStateField('cursor', cursor);
   }
 
-  /** Shows the others in `path` in `views` from now on, and clears the views shown in before. */
-  show(path: ProjectPath | null, views: readonly PresenceTarget[]): void {
-    for (const view of this.views) if (!views.includes(view)) view.setPresence([]);
-    this.path = path;
-    this.views = views;
-    this.render();
-  }
-
   destroy(): void {
     this.destroyed = true;
     this.awareness.off('change', this.schedule);
-    this.observed?.unobserve(this.schedule);
+    this.awareness.doc.off('update', this.schedule);
     this.awareness.setLocalStateField('cursor', null);
-    for (const view of this.views) view.setPresence([]);
     if (this.reported !== '[]') this.options.onPresence?.([]);
   }
 
@@ -96,15 +86,7 @@ export class RemoteCursors {
   };
 
   private render(): void {
-    const text = this.path ? this.options.text(this.path) : undefined;
-    if (text !== this.observed) {
-      this.observed?.unobserve(this.schedule);
-      text?.observe(this.schedule);
-      this.observed = text;
-    }
     const everyone = this.others();
-    const here = everyone.filter((presence) => presence.path === this.path);
-    for (const view of this.views) view.setPresence(here);
     const json = JSON.stringify(everyone);
     if (json === this.reported) return;
     this.reported = json;

@@ -1,0 +1,78 @@
+// Presence: other users' carets and selections as source ranges, and where the views read them (`Presences`).
+// Entry of collaboration/presence/. Pure (no Yjs, no DOM): the eager part of the extension uses it, so it is not in
+// the lazily loaded chunk (model/). See ../collaboration.ts.
+import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
+import type { ProjectPath } from '../../../core/paths/paths';
+import type { TypstDocument } from '../../../core/typst-document/typst-document';
+
+/** Who another user is, as the views show them. */
+export interface PresenceUser {
+  name: string;
+  /** A CSS color for their caret, selection and markers. */
+  color: string;
+}
+
+/**
+ * Another user's place in a text: their caret (`head`) and selection (`anchor`..`head`, empty for a plain caret),
+ * in source offsets (UTF-16). `id` tells users apart (two may share a name).
+ */
+export interface Presence {
+  id: string;
+  user: PresenceUser;
+  anchor: number;
+  head: number;
+}
+
+/** A presence together with the file it is in. */
+export interface PlacedPresence extends Presence {
+  path: ProjectPath;
+}
+
+/** Where the other users are, as the contributions that draw them read it. */
+export interface PresenceSource {
+  /** The others' places in `document` now (offsets in its current text); none when it is no project file. */
+  presencesIn(document: TypstDocument): readonly PlacedPresence[];
+  /** The others' places in the file `path` now. */
+  presencesAt(path: ProjectPath): readonly PlacedPresence[];
+  /** Fires whenever someone's place changes, in any file. */
+  readonly onDidChange: Event<void>;
+}
+
+/** Everyone's places as last reported (`set`), for the views of every document and the file panel. */
+export class Presences implements PresenceSource {
+  #all: readonly PlacedPresence[] = [];
+  readonly #changed = new EventEmitter<void>();
+  readonly onDidChange = this.#changed.event;
+
+  /** `pathOf`: where a document is in the project now (it may be renamed). */
+  constructor(private readonly pathOf: (document: TypstDocument) => ProjectPath | undefined) {}
+
+  /** Replaces everyone's places, in every file. */
+  set(all: readonly PlacedPresence[]): void {
+    this.#all = all;
+    this.#changed.fire();
+  }
+
+  presencesIn(document: TypstDocument): readonly PlacedPresence[] {
+    const path = this.pathOf(document);
+    return path ? this.presencesAt(path) : [];
+  }
+
+  presencesAt(path: ProjectPath): readonly PlacedPresence[] {
+    return this.#all.filter((presence) => presence.path === path);
+  }
+
+  dispose(): void {
+    this.#changed.dispose();
+  }
+}
+
+/** Up to two initials of a name, for small markers ("Ann Lee" → "AL"). */
+export function initials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '?';
+  return words
+    .slice(0, 2)
+    .map((word) => String.fromCodePoint(word.codePointAt(0)!).toUpperCase())
+    .join('');
+}

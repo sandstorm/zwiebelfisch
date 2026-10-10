@@ -1,5 +1,5 @@
 // TypstDocument: the single source of truth of one Typst file (a string, or a shared Y.Text), and what the views
-// share about it (Highlight, Presence). Entry of core/typst-document/. See ARCHITECTURE.md, "TypstDocument".
+// share about it (Highlight). Entry of core/typst-document/. See ARCHITECTURE.md, "TypstDocument".
 import type * as Y from 'yjs';
 import { minimalChange } from './minimal-change';
 import type { TextChange } from './text-change';
@@ -9,16 +9,6 @@ export { calculateImportChange, type ImportRequest } from './calculate-import-ch
 export type { Highlight } from './highlight';
 export type { TextChange } from './text-change';
 export { minimalChange } from './minimal-change';
-export {
-  caretElement,
-  flagTextColor,
-  initials,
-  presenceStyle,
-  type PlacedPresence,
-  type Presence,
-  type PresenceTarget,
-  type PresenceUser,
-} from './presence';
 
 export type ChangeListener = (changes: readonly TextChange[], origin: unknown) => void;
 

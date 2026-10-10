@@ -3,8 +3,11 @@
 import { EditorState } from '@codemirror/state';
 import { describe, expect, it } from 'vitest';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
-import { type Highlight, type Presence, TypstDocument } from '../../core/typst-document/typst-document';
-import { children, setBoxDecorations, starterKitPart, VisualView, VisualViewContributions, type TypstMarkSpec, type VisualViewContribution } from './visual-view';
+import { type Highlight, TypstDocument } from '../../core/typst-document/typst-document';
+import type { Editor } from '@tiptap/core';
+import {
+  children, setBoxDecorations, starterKitPart, VisualView, VisualViewContributions, type TypstMarkSpec, type VisualViewContext, type VisualViewContribution,
+} from './visual-view';
 
 /** A test-local construct beyond the host's minimum: `*strong*` as a bold mark (hidden syntax around visible text). */
 const STRONG: TypstMarkSpec = {
@@ -93,21 +96,25 @@ describe('VisualViewContributions.registerHighlights', () => {
   });
 });
 
-describe('VisualView presence (a PresenceTarget without drawing of its own)', () => {
-  const ann = { id: '1', user: { name: 'Ann', color: '#b58900' }, anchor: 2, head: 2 };
-
-  it('hands the presences it is given to the contributions (onDidChangePresence)', () => {
+describe('VisualView contexts', () => {
+  it('give contributions the source ↔ position mapping and which nodes are boxes', () => {
     const contributions = new VisualViewContributions();
-    const seen: (readonly Presence[])[] = [];
+    const seen: { pos: number; offset: number; boxes: string[] }[] = [];
+    const seenBy: VisualViewContext[] = [];
     contributions.registerEditorExtension((view) => {
-      view.onDidChangePresence((presences) => seen.push(presences));
+      seenBy.push(view);
       return [];
     });
     const parent = document.body.appendChild(document.createElement('div'));
-    const view = new VisualView(parent, new TypstDocument('Hello\n'), contributions);
-    view.setPresence([ann]);
-    expect(seen).toEqual([[ann]]);
-    expect(parent.querySelector('.typst-remote-caret')).toBeNull();
+    const source = 'Hello\n\n#set page(width: 10cm)\n';
+    const view = new VisualView(parent, new TypstDocument(source), contributions);
+    const editor = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
+    const [context] = seenBy;
+    const doc = editor.state.doc;
+    const boxes: string[] = [];
+    doc.descendants((node) => void (context.isBox(node) && boxes.push(node.type.name)));
+    seen.push({ pos: context.sourceToPos(doc, source.indexOf('llo')), offset: context.posToSource(doc, 3), boxes });
+    expect(seen).toEqual([{ pos: 3, offset: 2, boxes: ['rawBlock'] }]);
     view.destroy();
   });
 

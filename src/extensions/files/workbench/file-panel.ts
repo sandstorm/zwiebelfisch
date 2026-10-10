@@ -1,9 +1,9 @@
 // FilePanel: the file panel's view — a "Files" header with its actions, the project as a FileTree, inline prompts,
 // uploads. It turns gestures into FileChanges and leaves to its owner whether they happen. See ../files.ts.
-import type { PlacedPresence, PresenceUser } from '../../../core/typst-document/typst-document';
 import { type FileChange } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import { uploadChanges } from '../../../core/uploads/uploads';
+import type { FileDecoration } from '../../../hosts/workbench/workbench';
 import { filesUnder, type Folder, relocate } from '../model/model';
 import { icon, type IconName } from './icons/icons';
 import { FileTree, type FolderMemory } from './tree/tree';
@@ -15,6 +15,8 @@ export interface FilePanelOptions {
   onChange(change: FileChange): Promise<string | null>;
   /** Where the open folders are remembered (default: only while the panel lives). */
   memory?: FolderMemory;
+  /** The decorations of a file (badges, e.g. who else is in it), as they are at each `render` (default: none). */
+  decorations?(path: ProjectPath): readonly FileDecoration[];
 }
 
 export interface FileListState {
@@ -48,8 +50,6 @@ export class FilePanel {
   private readonly remove: HTMLButtonElement;
   private readonly picker: HTMLInputElement;
   private prompt: HTMLFormElement | null = null;
-  /** Who else is in which file. */
-  private others = new Map<ProjectPath, PresenceUser[]>();
   /** Folders made with "New folder" that hold no file yet. */
   private emptyFolders = new Set<ProjectPath>();
   /** Where the next upload goes. */
@@ -98,15 +98,8 @@ export class FilePanel {
   render(state: FileListState): void {
     this.state = state;
     for (const folder of this.emptyFolders) if (filesUnder(state.paths, folder).length > 0) this.emptyFolders.delete(folder);
-    this.tree.render({ ...state, folders: [...this.emptyFolders], presence: this.others });
+    this.tree.render({ ...state, folders: [...this.emptyFolders], decorations: (path) => this.options.decorations?.(path) ?? [] });
     this.updateButtons();
-  }
-
-  /** Marks the files other users are in with a colored dot with their initials each. */
-  showPresence(presences: readonly PlacedPresence[]): void {
-    this.others = new Map();
-    for (const { path, user } of presences) this.others.set(path, [...(this.others.get(path) ?? []), user]);
-    this.render(this.state);
   }
 
   /** Uploads `files` to the top level (refusals show in a prompt). */

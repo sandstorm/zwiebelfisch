@@ -3,16 +3,23 @@
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { SourceViewHost } from '../../../hosts/source-view/source-view';
-import { presence } from './source-view';
+import { ProjectPath } from '../../../core/paths/paths';
+import { Presences, type Presence } from '../presence/presence';
+import { sourcePresence } from './source-view';
 
-/** A Source view of `text` with the presence contribution. */
+const MAIN = ProjectPath.of('/main.typ');
+
+/** A Source view of `text` with the presence contribution; `view.setPresence` reports the others' places in its file. */
 function withPresence(text: string) {
+  const doc = new TypstDocument(text);
+  const presences = new Presences((document) => (document === doc ? MAIN : undefined));
   const host = new SourceViewHost();
-  host.registerExtension(presence);
+  host.registerExtension(sourcePresence(presences));
   const parent = document.createElement('div');
   document.body.append(parent);
-  const doc = new TypstDocument(text);
-  return { doc, view: host.createView(parent, doc), parent };
+  host.createView(parent, doc);
+  const view = { setPresence: (here: readonly Presence[]) => presences.set(here.map((presence) => ({ ...presence, path: MAIN }))) };
+  return { doc, view, parent, presences };
 }
 
 const marked = (parent: HTMLElement, selector: string) =>
@@ -48,6 +55,17 @@ describe('presence in the Source view', () => {
     expect(carets(parent)).toEqual(['Really. Some bold']);
     view.setPresence([]);
     expect(parent.querySelector('.typst-remote-caret, .typst-remote-selection')).toBeNull();
+  });
+
+  it('draws the places known when the view is made, and only those in its file', () => {
+    const doc = new TypstDocument('Some bold text\n');
+    const presences = new Presences((document) => (document === doc ? MAIN : undefined));
+    presences.set([{ ...ann, anchor: 5, head: 9, path: MAIN }, { ...ann, id: '2', anchor: 0, head: 4, path: ProjectPath.of('/a.typ') }]);
+    const host = new SourceViewHost();
+    host.registerExtension(sourcePresence(presences));
+    const parent = document.body.appendChild(document.createElement('div'));
+    host.createView(parent, doc);
+    expect(marked(parent, '.typst-remote-selection')).toEqual(['bold']);
   });
 
   it('redraws the caret (showing the name again) only when it moved', () => {

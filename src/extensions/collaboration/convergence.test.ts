@@ -11,8 +11,9 @@ import { SourceViewHost } from '../../hosts/source-view/source-view';
 import { VisualView, VisualViewContributions } from '../../hosts/visual-view/visual-view';
 import { Collaboration } from './model/model';
 import { connect, connectAwareness } from './model/in-process';
-import { presence as sourcePresence } from './source-view/source-view';
-import { presence as visualPresence } from './visual-view/visual-view';
+import { Presences } from './presence/presence';
+import { sourcePresence } from './source-view/source-view';
+import { visualPresence } from './visual-view/visual-view';
 import { ProjectPath } from '../../core/paths/paths';
 
 const path = ProjectPath.of;
@@ -38,14 +39,15 @@ async function user(name: string, files: Record<string, string>, peer?: { ydoc: 
   const project = new Project(MAIN, files);
   const document = project.document(MAIN)!;
   const collaboration = await Collaboration.start({ doc: ydoc, awareness }, { project, user: { name } });
+  const presences = new Presences((shown) => project.pathOf(shown));
+  collaboration.onPresence((all) => presences.set(all));
   const visualParent = window.document.createElement('div');
   const sourceParent = window.document.createElement('div');
   window.document.body.append(visualParent, sourceParent);
-  const visual = new VisualView(visualParent, document, VisualViewContributions.from([visualPresence]));
+  const visual = new VisualView(visualParent, document, VisualViewContributions.from([visualPresence(presences, () => [document])]));
   const sourceViews = new SourceViewHost();
-  sourceViews.registerExtension(sourcePresence);
+  sourceViews.registerExtension(sourcePresence(presences));
   const source = sourceViews.createView(sourceParent, document);
-  collaboration.showCursors(MAIN, [visual, source]);
   cleanup.push(() => {
     disconnect();
     collaboration.destroy();
