@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+#MISE description="Code-quality gate: fail on complexity/length/nesting above thresholds"
+set -euo pipefail
+exec pnpm exec eslint .

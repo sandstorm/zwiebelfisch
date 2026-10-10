@@ -1,0 +1,42 @@
+#!/usr/bin/env node
+//MISE description="Rank every function by cognitive and cyclomatic complexity"
+// Runs ESLint with thresholds forced to 0 so every function reports its score,
+// then prints a hot-spot table. Pass a number to limit rows (default 25).
+import { ESLint } from 'eslint';
+import { thresholds } from '../../eslint.config.js';
+
+const limit = Number(process.argv[2] ?? 25);
+const eslint = new ESLint({
+  overrideConfig: {
+    rules: {
+      'sonarjs/cognitive-complexity': ['warn', 0],
+      complexity: ['warn', 0],
+      'max-depth': 'off',
+      'max-lines-per-function': 'off',
+      'max-params': 'off',
+    },
+  },
+});
+
+const fns = new Map();
+for (const file of await eslint.lintFiles(['src', 'tests', 'demo'])) {
+  for (const m of file.messages) {
+    const key = `${file.filePath.replace(process.cwd() + '/', '')}:${m.line}`;
+    const entry = fns.get(key) ?? { key, cognitive: 0, cyclomatic: 0 };
+    const score = Number(/(\d+)\D*$/.exec(m.message.split(' to the ')[0])?.[1] ?? 0);
+    if (m.ruleId === 'sonarjs/cognitive-complexity') entry.cognitive = Number(/from (\d+)/.exec(m.message)?.[1] ?? score);
+    if (m.ruleId === 'complexity') entry.cyclomatic = Number(/complexity of (\d+)/.exec(m.message)?.[1] ?? score);
+    fns.set(key, entry);
+  }
+}
+
+const rows = [...fns.values()].sort((a, b) => b.cognitive - a.cognitive || b.cyclomatic - a.cyclomatic);
+const flag = (v, max) => (v > max ? ' !' : '');
+console.log(`functions: ${rows.length}   thresholds: cognitive ${thresholds.cognitive}, cyclomatic ${thresholds.cyclomatic}\n`);
+console.log('cognitive  cyclomatic  location');
+for (const r of rows.slice(0, limit)) {
+  console.log(
+    `${String(r.cognitive).padStart(9)}${flag(r.cognitive, thresholds.cognitive).padEnd(2)} ${String(r.cyclomatic).padStart(10)}${flag(r.cyclomatic, thresholds.cyclomatic).padEnd(2)} ${r.key}`,
+  );
+}
+if (rows.length > limit) console.log(`… ${rows.length - limit} more (pass a larger limit to see all)`);
