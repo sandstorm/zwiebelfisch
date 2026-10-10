@@ -12,10 +12,14 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function load(page: Page, value: string) {
-  await page.locator('typst-editor').evaluate((el: Editor, value) => {
-    el.files = { '/logo.svg': new TextEncoder().encode(SVG) };
-    el.value = value;
-  }, value);
+  // evaluate runs in the page: SVG travels as an argument (a closure over it is not serialized).
+  await page.locator('typst-editor').evaluate(
+    (el: Editor, { value, svg }) => {
+      el.files = { '/logo.svg': new TextEncoder().encode(svg) };
+      el.value = value;
+    },
+    { value, svg: SVG },
+  );
 }
 
 const visual = (page: Page) => page.getByTestId('typst-visual');

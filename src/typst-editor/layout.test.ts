@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 // Tests for layout.ts.
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Layout } from './layout';
 
@@ -40,6 +41,15 @@ describe('Layout', () => {
     const { host, layout } = setup();
     expect([...host.children].map((c) => c.className)).toEqual(['typst-editor__side', 'typst-editor__left', 'typst-editor__right']);
     expect(layout.editor.className).toBe('typst-editor__left');
+  });
+
+  it('the preview column is a share of the widget, so an opening side panel narrows only the editing column', () => {
+    // Regression (image-upload.spec): with `1fr 1fr` the panel's width came out of both columns and the preview moved.
+    const css = readFileSync('src/typst-editor.css', 'utf8');
+    const columns = /\.typst-editor \{[^}]*grid-template-columns:\s*([^;]+);/.exec(css)?.[1].trim().split(/\s+(?![^(]*\))/);
+    expect(columns).toHaveLength(3);
+    expect(columns![1]).toMatch(/1fr\)$/);
+    expect(columns![2]).toBe('minmax(0, 50%)');
   });
 
   it('a panel is closed until its default says open; the rail button toggles it', () => {
