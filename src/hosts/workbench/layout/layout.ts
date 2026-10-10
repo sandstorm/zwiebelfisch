@@ -1,7 +1,7 @@
 // Layout: the widget's regions — side panels (rail buttons, resizable, collapsible, an overlay when narrow),
 // editing area, preview, status bar; their sizes and open panels kept for the session. See workbench.ts and ARCHITECTURE.md, "Layout".
 
-import type { Memory, SidePanelOptions } from '../workbench';
+import type { Memory, SidePanel, SidePanelOptions } from '../workbench';
 import type { SessionMemory } from '../memory/session-memory';
 
 /** Below this widget width an open side panel lies over the editing area instead of beside it. */
@@ -80,8 +80,8 @@ export class Layout {
     this.layout();
   }
 
-  /** Adds side panel `id` with its rail button; returns the element the panel's content goes into. */
-  addPanel(id: string, options: SidePanelOptions): HTMLElement {
+  /** Adds side panel `id` with its rail button: the element its content goes into, and how it opens. */
+  addPanel(id: string, options: SidePanelOptions): SidePanel {
     if (this.panels.has(id)) throw new Error(`There is a side panel ${id} already`);
     const doc = this.host.ownerDocument;
     const body = div(doc, 'typst-editor__panel-body');
@@ -100,11 +100,17 @@ export class Layout {
     this.panel.insertBefore(body, this.resizer);
     this.panels.set(id, { body, button, fallback: false, available: true });
     this.layout();
-    return body;
+    return {
+      body,
+      setDefault: (open) => this.setDefault(id, open),
+      setAvailable: (available) => this.setAvailable(id, available),
+      dismiss: () => this.dismiss(),
+      dispose: () => this.removePanel(id),
+    };
   }
 
   /** Removes side panel `id` and its rail button. */
-  removePanel(id: string): void {
+  private removePanel(id: string): void {
     const panel = this.panels.get(id);
     if (!panel) return;
     panel.body.remove();
@@ -115,7 +121,7 @@ export class Layout {
   }
 
   /** Opens panel `id` by default (unless someone opened or closed it this session, or the widget is narrow). */
-  setDefault(id: string, open: boolean): void {
+  private setDefault(id: string, open: boolean): void {
     const panel = this.panels.get(id);
     if (!panel || panel.fallback === open) return;
     panel.fallback = open;
@@ -123,7 +129,7 @@ export class Layout {
   }
 
   /** Shows or removes panel `id` and its rail button altogether (e.g. the setting `files.panel: 'hide'`). */
-  setAvailable(id: string, available: boolean): void {
+  private setAvailable(id: string, available: boolean): void {
     const panel = this.panels.get(id);
     if (!panel || panel.available === available) return;
     panel.available = available;
@@ -141,7 +147,7 @@ export class Layout {
   }
 
   /** Closes the overlay panel of a narrow widget (nothing happens while the panel sits beside the editor). */
-  dismiss(): void {
+  private dismiss(): void {
     if (this.narrow && this.openId) this.show(null);
   }
 

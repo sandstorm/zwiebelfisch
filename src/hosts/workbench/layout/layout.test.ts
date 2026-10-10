@@ -20,7 +20,8 @@ function setup({ observe = false, key = `test-${Math.random()}` } = {}) {
   const host = document.createElement('div');
   document.body.append(host);
   const layout = new Layout(host, new SessionMemory(document, key));
-  const body = layout.addPanel('files', { label: 'Files', icon: document.createElement('span') });
+  const sidePanel = layout.addPanel('files', { label: 'Files', icon: document.createElement('span') });
+  const body = sidePanel.body;
   body.textContent = 'tree';
   const toggle = host.querySelector<HTMLButtonElement>('[data-testid=typst-panel-toggle-files]')!;
   const panel = host.querySelector<HTMLElement>('.typst-editor__panel')!;
@@ -30,7 +31,7 @@ function setup({ observe = false, key = `test-${Math.random()}` } = {}) {
   };
   /** Whether the panel is open, as people see it: its rail button pressed and its body shown. */
   const isOpen = () => toggle.getAttribute('aria-pressed') === 'true' && !panel.hidden && !body.hidden;
-  return { host, layout, body, toggle, panel, setWidth, key, isOpen };
+  return { host, layout, sidePanel, body, toggle, panel, setWidth, key, isOpen };
 }
 
 afterEach(() => {
@@ -48,9 +49,9 @@ describe('Layout', () => {
   });
 
   it('removes a panel and its rail button', () => {
-    const { host, layout } = setup();
-    layout.setDefault('files', true);
-    layout.removePanel('files');
+    const { host, sidePanel } = setup();
+    sidePanel.setDefault(true);
+    sidePanel.dispose();
     expect(host.querySelector('[data-panel=files]')).toBeNull();
     expect(host.querySelector('[data-testid=typst-panel-toggle-files]')).toBeNull();
     expect(host.querySelector<HTMLElement>('.typst-editor__side')!.hidden).toBe(true);
@@ -64,10 +65,10 @@ describe('Layout', () => {
   });
 
   it('a panel is closed until its default says open; the rail button toggles it', () => {
-    const { layout, body, toggle, panel, isOpen } = setup();
+    const { sidePanel, body, toggle, panel, isOpen } = setup();
     expect(panel.hidden).toBe(true);
     expect(toggle.getAttribute('aria-pressed')).toBe('false');
-    layout.setDefault('files', true);
+    sidePanel.setDefault(true);
     expect(panel.hidden).toBe(false);
     expect(body.hidden).toBe(false);
     expect(isOpen()).toBe(true);
@@ -77,18 +78,18 @@ describe('Layout', () => {
   });
 
   it("someone's choice wins over the default, also for the next widget in the session", () => {
-    const { layout, toggle, key, isOpen } = setup();
+    const { sidePanel, toggle, key, isOpen } = setup();
     toggle.click();
-    layout.setDefault('files', false);
+    sidePanel.setDefault(false);
     expect(isOpen()).toBe(true);
     const again = setup({ key });
     expect(again.isOpen()).toBe(true);
   });
 
   it('an unavailable panel has no rail button, and with no panel there is no side at all', () => {
-    const { host, layout, toggle, isOpen } = setup();
-    layout.setDefault('files', true);
-    layout.setAvailable('files', false);
+    const { host, sidePanel, toggle, isOpen } = setup();
+    sidePanel.setDefault(true);
+    sidePanel.setAvailable(false);
     expect(toggle.hidden).toBe(true);
     expect(isOpen()).toBe(false);
     expect(host.querySelector<HTMLElement>('.typst-editor__side')!.hidden).toBe(true);
@@ -110,8 +111,8 @@ describe('Layout', () => {
   });
 
   it('the separator changes the width (keys), within bounds, remembered', () => {
-    const { host, layout, panel, key } = setup();
-    layout.setDefault('files', true);
+    const { host, sidePanel, panel, key } = setup();
+    sidePanel.setDefault(true);
     const separator = host.querySelector<HTMLElement>('[role=separator]')!;
     expect(panel.style.width).toBe('240px');
     separator.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
@@ -123,14 +124,14 @@ describe('Layout', () => {
   });
 
   it('when narrow, the panel starts closed and is an overlay that closes on dismiss, Escape or a click outside', () => {
-    const { host, layout, toggle, setWidth, isOpen } = setup({ observe: true });
-    layout.setDefault('files', true);
+    const { host, layout, sidePanel, toggle, setWidth, isOpen } = setup({ observe: true });
+    sidePanel.setDefault(true);
     setWidth(600);
     expect(host.classList.contains('typst-editor--narrow')).toBe(true);
     expect(isOpen()).toBe(false);
     toggle.click();
     expect(isOpen()).toBe(true);
-    layout.dismiss();
+    sidePanel.dismiss();
     expect(isOpen()).toBe(false);
     toggle.click();
     host.querySelector('.typst-editor__panel-body')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));

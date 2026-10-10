@@ -741,15 +741,7 @@ export class WorkbenchHost implements Workbench {
   }
 
   registerSidePanel(id: string, options: SidePanelOptions): SidePanel {
-    const layout = this.#layout;
-    const body = layout.addPanel(id, options);
-    return {
-      body,
-      setDefault: (open) => layout.setDefault(id, open),
-      setAvailable: (available) => layout.setAvailable(id, available),
-      dismiss: () => layout.dismiss(),
-      dispose: () => layout.removePanel(id),
-    };
+    return this.#layout.addPanel(id, options);
   }
 
   registerStyleSheet(css: string): Disposable {
