@@ -3,7 +3,7 @@
    features/visual-view/visual-view.css). See docs/embedding.md. */
 /* Colors: tokens as light-dark(light, dark). The widget follows the page's color-scheme (a page that
    declares `color-scheme: light dark` gets it dark when the OS is); the `theme` option sets its own
-   (data-theme, see typst-editor/color-scheme.ts). The preview's pages stay white, as on paper. */
+   (data-theme). What light-dark() cannot express selects on data-scheme (typst-editor/color-scheme.ts). */
 .typst-editor[data-theme='light'] { color-scheme: light; }
 .typst-editor[data-theme='dark'] { color-scheme: dark; }
 .typst-editor[data-theme='auto'] { color-scheme: light dark; }
@@ -43,8 +43,6 @@
   --te-note-strong: light-dark(rgba(250, 190, 20, 0.55), rgba(210, 153, 34, 0.5));
   --te-note-bg: light-dark(#fff8e0, #3a2e0c);
   --te-note-text: light-dark(#6b5200, #e3b341);
-  /* compiled snippets in the Visual view are drawn for white paper */
-  --te-rendering-bg: light-dark(transparent, white);
   /* syntax highlighting (features/source-view/code-colors.ts); light: CodeMirror's default colors */
   --te-syn-meta: light-dark(#404740, #8b949e);
   --te-syn-keyword: light-dark(#770088, #ff7b72);
@@ -189,7 +187,7 @@
 .typst-preview__page {
   position: relative;
   flex: none;
-  background: white; /* paper, also in dark mode */
+  background: white;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
   cursor: text;
 }
@@ -205,6 +203,13 @@
   color: var(--te-faint);
 }
 .typst-preview__content svg { display: block; width: 100%; height: auto; }
+/* Dark mode: the pages inverted, as dark-mode PDF readers do (white text on black, hues kept, pictures
+   turned back); the overlays (highlights, change bars) are outside the content and keep their colors.
+   Compiled snippets in the Visual view likewise (image files not). */
+.typst-editor[data-scheme='dark'] .typst-preview__page { background: black; }
+.typst-editor[data-scheme='dark'] .typst-preview__content,
+.typst-editor[data-scheme='dark'] .typst-preview__content image,
+.typst-editor[data-scheme='dark'] .typst-visual__raw--rendered:not(.typst-visual__image) > .typst-visual__rendering { filter: invert(1) hue-rotate(180deg); }
 .typst-preview__highlight {
   position: absolute;
   margin: -2px;
@@ -317,7 +322,7 @@
 .typst-visual__code[hidden],
 .typst-visual__rendering[hidden] { display: none; }
 .typst-visual__raw--rendered { background: transparent; }
-.typst-visual__rendering { display: block; max-width: 100%; height: auto; background: var(--te-rendering-bg); cursor: text; }
+.typst-visual__rendering { display: block; max-width: 100%; height: auto; cursor: text; }
 .typst-visual__raw-block:not(.typst-visual__image) > .typst-visual__rendering { margin: 0 auto; }
 /* Image files show at their own size: keep a big photo from filling the whole view (aspect kept;
    the picture sits in the image frame, so not a direct child) */

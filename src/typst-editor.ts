@@ -9,6 +9,7 @@ import { AssetView, FilePanel, filesPanelIcon } from './features/files/files';
 import fileStyles from './features/files/files.css?inline';
 import { ChangeTracking } from './features/changes/changes';
 import { CommentAction } from './features/comments/comments';
+import { ColorScheme } from './typst-editor/color-scheme';
 import { CollaborationLink } from './typst-editor/collaboration-link';
 import changeStyles from './features/changes/changes.css?inline';
 import { DiagnosticsStatus, summarizeDiagnostics } from './features/diagnostics/diagnostics';
@@ -100,8 +101,8 @@ export interface TypstEditorOptions {
   pdfDownload?: boolean;
   /**
    * Light or dark colors (default: as the page around the widget, through CSS `color-scheme`: light,
-   * unless the page declares dark; `color-scheme: light dark` there follows the OS). The preview's
-   * pages stay white either way.
+   * unless the page declares dark; `color-scheme: light dark` there follows the OS). In dark mode the
+   * preview shows the pages inverted (white text on black); the PDF stays as it is.
    */
   theme?: Theme;
 }
@@ -199,6 +200,7 @@ class Widget {
   private readonly styles: StyleIndex;
   private readonly commentAction: CommentAction;
   readonly changes: ChangeTracking;
+  private readonly scheme: ColorScheme;
   private readonly collaboration: CollaborationLink | null = null;
   private versions: VersionControls | null = null;
   private readonly unsubscribe: () => void;
@@ -214,6 +216,7 @@ class Widget {
     this.active = this.lastSource = main;
     host.classList.add('typst-editor');
     if (options.theme) host.dataset.theme = options.theme;
+    this.scheme = new ColorScheme(host);
     this.layout = new Layout(host, `typst-editor:${main}`);
     this.left = this.layout.editor;
     this.right = this.layout.preview;
@@ -377,6 +380,7 @@ class Widget {
     this.project.destroy();
     this.host.classList.remove('typst-editor');
     delete this.host.dataset.theme;
+    this.scheme.destroy();
     this.layout.destroy();
   }
 

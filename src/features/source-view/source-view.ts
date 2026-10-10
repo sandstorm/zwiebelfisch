@@ -13,7 +13,7 @@ import { toLintDiagnostics, type SourceDiagnostic } from './lint';
 import { remotePresence, showPresence } from './presence';
 import { typstLanguage } from './typst-language';
 
-export { codeColors } from './code-colors';
+export { codeColors, isLightText } from './code-colors';
 export { describeDiagnostic, type SourceDiagnostic } from './lint';
 export { fileLinks, linkInfo } from './file-links';
 export { remotePresence, showPresence } from './presence';

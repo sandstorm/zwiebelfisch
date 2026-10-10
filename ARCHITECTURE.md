@@ -864,13 +864,18 @@ new Layout(host, storageKey)   .editor  .preview            // the editing colum
   with `color-scheme: light dark` gets it dark when the OS is. The `theme` option (`light` | `dark` |
   `auto`; the element's `theme` attribute) sets `data-theme` on the host, which the stylesheet turns
   into its own `color-scheme`. Read once, at creation.
-- **Stays light:** the preview's pages (paper) and compiled snippets in the Visual view
-  (`--te-rendering-bg`: white behind them in dark mode); IronCalc's workbook UI has no dark theme.
+- **`data-scheme`** (`ColorScheme`, `src/typst-editor/color-scheme.ts`): the scheme the widget's
+  colors resolved to (`light` | `dark`, from its computed text color), for what light-dark() cannot
+  express. With it dark, the preview shows the pages inverted like dark-mode PDF readers do
+  (`filter: invert(1) hue-rotate(180deg)` on `.typst-preview__content`, pictures inside turned
+  back; the overlays beside it keep their colors), and so are compiled snippets in the Visual view
+  (image files not). The PDF export is unaffected. IronCalc's workbook UI has no dark theme.
 - **CodeMirror** (Source view and raw boxes): `codeColors` = CodeMirror's default highlight style
   with its colors from `--te-syn-*` tokens, plus `EditorView.darkTheme` (cursor, selection, gutters,
   panels, tooltips, the merge view) switched on when the text around the editor resolves light.
-  It checks when the view is placed or resized and when the OS scheme changes, so a page switching
-  its own color-scheme later changes the CSS at once and CodeMirror's own chrome at the next resize.
+  It checks when the view is placed or resized and when the OS scheme changes (`ColorScheme` at
+  creation and on OS changes), so a page switching its own color-scheme later changes the tokens at
+  once, CodeMirror's own chrome at the next resize, and the preview's inversion not until reload.
 
 ### File panel (`src/features/files`)
 
