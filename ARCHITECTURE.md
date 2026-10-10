@@ -1805,7 +1805,7 @@ model/                  the lazily loaded chunk (Yjs, Hocuspocus; no DOM): Colla
                         the server's)
 source-view/            sourcePresence: carets + selections in a CodeMirror editor (remotePresence, setPresence);
                         perUserUndo (other users' edits out of the Source views' undo history);
-                        caretElement, presenceStyle (the caret's DOM, also the Visual view's)
+                        caretElement (the caret's DOM, also the Visual view's)
 visual-view/            visualPresence: selections as highlights, carets and box outlines (an editor extension),
                         boxPresence for raw boxes' code
 workbench/              presenceDecorations: a FileDecorationProvider (who is in which file)
