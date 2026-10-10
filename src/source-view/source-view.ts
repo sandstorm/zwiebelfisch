@@ -8,7 +8,7 @@ import { REMOTE_ORIGIN, type TextChange, type TypstDocument } from '../document/
 import { toLintDiagnostics, type SourceDiagnostic } from './lint';
 import { typstLanguage } from './typst-language';
 
-export type { SourceDiagnostic } from './lint';
+export { describeDiagnostic, type SourceDiagnostic } from './lint';
 
 /** Marks transactions that mirror a document change, so they are not sent back. */
 const fromDocument = Annotation.define<boolean>();

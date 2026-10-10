@@ -49,7 +49,19 @@ function toDecorations(doc: Node, highlights: readonly Highlight[]): DecorationS
   const decorations = highlights.flatMap(({ from, to, className, attributes }) => {
     const start = sourceToPos(doc, from);
     const end = Math.max(start, sourceToPos(doc, to, -1));
-    return start < end ? [Decoration.inline(start, end, { class: className, ...attributes })] : [];
+    if (start >= end) return [];
+    const attrs = { class: className, ...attributes };
+    return [Decoration.inline(start, end, attrs), ...blockAtoms(doc, start, end).map((pos) => Decoration.node(pos, pos + doc.nodeAt(pos)!.nodeSize, attrs))];
   });
   return DecorationSet.create(doc, decorations);
+}
+
+/** Positions of block atoms (raw code boxes) overlapping `from..to`: inline decorations skip them. */
+function blockAtoms(doc: Node, from: number, to: number): number[] {
+  const found: number[] = [];
+  doc.nodesBetween(from, to, (node, pos) => {
+    if (node.isBlock && node.isAtom) found.push(pos);
+    return !node.isAtom;
+  });
+  return found;
 }

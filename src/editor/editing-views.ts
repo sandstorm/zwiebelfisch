@@ -1,5 +1,6 @@
 import type { TypstDocument } from '../document/typst-document';
-import { SourceView, type SourceDiagnostic } from '../source-view/source-view';
+import type { Highlight } from '../document/highlight';
+import { describeDiagnostic, SourceView, type SourceDiagnostic } from '../source-view/source-view';
 import { VisualView, type VisualViewOptions } from '../visual-view/visual-view';
 
 export type EditorMode = 'visual' | 'source';
@@ -91,10 +92,11 @@ export class EditingViews {
     if (views) (inSource || this.current === 'source' ? views.source : views.visual).reveal(from, to);
   }
 
-  /** Marks `diagnostics` in the source view of `document`, now or when it is created. */
+  /** Marks `diagnostics` in both views of `document`, now or when they are created. */
   setDiagnostics(document: TypstDocument, diagnostics: SourceDiagnostic[]): void {
     this.diagnostics.set(document, diagnostics);
-    this.views.get(document)?.source.setDiagnostics(diagnostics);
+    const views = this.views.get(document);
+    if (views) markDiagnostics(views, diagnostics);
   }
 
   /** The last cursor offset in the source view of `document`, if there was one. */
@@ -136,7 +138,7 @@ export class EditingViews {
       cursor: null,
     };
     const diagnostics = this.diagnostics.get(document);
-    if (diagnostics) views.source.setDiagnostics(diagnostics);
+    if (diagnostics) markDiagnostics(views, diagnostics);
     return views;
   }
 
@@ -162,6 +164,21 @@ export class EditingViews {
       panes.source.hidden = document !== this.active || this.current !== 'source';
     }
   }
+}
+
+/**
+ * The Source view underlines diagnostics with hover (CodeMirror lint); the
+ * Visual view gets highlights with the same text as tooltip. An empty range
+ * (e.g. "expected expression" at a point) still marks one character.
+ */
+function markDiagnostics(views: Views, diagnostics: SourceDiagnostic[]): void {
+  views.source.setDiagnostics(diagnostics);
+  views.visual.setHighlights('diagnostics', diagnostics.map((d): Highlight => ({
+    from: d.from,
+    to: Math.max(d.to, d.from + 1),
+    className: 'typst-diagnostic',
+    attributes: { 'data-severity': d.severity, title: describeDiagnostic(d) },
+  })));
 }
 
 function div(doc: Document, className: string): HTMLElement {
