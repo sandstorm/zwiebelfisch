@@ -62,6 +62,15 @@ src/                        the widget (TypeScript); the most important API on t
   ui/                       feature-neutral DOM widgets, one folder each: field-popover/ (FieldPopover: one text field,
                             Apply / Remove; also used by versions/), toolbar-menu/ (ToolbarMenu: a menu button of
                             toolbar buttons), floating-bar/ (FloatingBar: a bar above an anchor in the text)
+  extensions/               one folder per extension (the slices wave moves features/ and hosts/*/builtins/ here): the entry
+                            <name>.ts (the TypstExtension), model/ (pure: no DOM, no editor library) and one folder per
+                            host it contributes to (visual-view/, source-view/, preview/, workbench/)
+    comments/               comments.ts (comments({ user })); model/ (margin-note-syntax.ts: drafting's call, parse,
+                            print, validity; note-thread.ts: a note's body as a thread of messages; add-margin-note.ts,
+                            page-margin.ts, without-notes.ts: the sources without comments; card-layout.ts);
+                            visual-view/ (marginNotes: notes in the text + the Comment action; notes-gutter/: the cards);
+                            workbench/ (CommentAction, the command comments.addComment, Ctrl+Alt+M); preview/
+                            (CommentsPdf: the PDF variants "Without comments" / "With comments", comments.exportPdf)
   features/                 one folder per feature, each entered through the file named like it
     diagnostics/            DiagnosticsStatus (status bar), diagnostics-summary.ts
     labels/                 LabelIndex: the project's labels (kind, title, file) and reference counts; scan.ts (Lezer, .bib)
@@ -69,9 +78,6 @@ src/                        the widget (TypeScript); the most important API on t
                             loaded on demand), typst-file.ts (spreadsheetTypst → name.ic.gen.typ for Typst)
     styles/                 StyleIndex: the custom styles the project declares (`/// @style …`), discover.ts,
                             new-style.ts ("New style…" stub); DocumentStyles (what a Visual view uses)
-    comments/               CommentAction ("Comment" / Ctrl+Alt+M), add-margin-note.ts, margin-note-syntax.ts
-                            (drafting's call: parse, print, validity), note-thread.ts (a note's body as a
-                            thread of messages), page-margin.ts, without-notes.ts (the PDF without comments)
     files/                  FilePanel (the file panel: header, prompts, drops; files.css), icons.ts, asset-view.ts,
                             upload.ts, file-navigation.ts ("← previous file" / "next file →" around an included file)
       tree/                 tree.ts (FileTree: rows, keyboard, drag & drop, presence), tree-model.ts (pure)
@@ -79,7 +85,7 @@ src/                        the widget (TypeScript); the most important API on t
                             RoomVersions + SharedAssets (GitLab rooms); in-process.ts (Y.Doc/awareness wiring for
                             tests); gitlab-protocol.ts (import-free, shared with the server); collaboration-link.ts
                             (the widget's eager side: loads the rest on demand)
-    pdf-export/             PdfExport: the project's PDF with / without comments
+    pdf-export/             PdfExport: the project's PDF (of the main file, or of another entry), "Download PDF"
     preview-controls/       previewControls: zoom, "Follow cursor" (remembered in localStorage), page number
     typst-language/         typstLanguage: Typst syntax + code colors in the Source views
     document-links/         documentLinks: file paths as links in the Source views; the `documentLinks` service
@@ -124,6 +130,8 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
   - `features/collaboration/collaboration-link.ts` — `typst-editor/typst-editor.ts`: the eager side of
     collaboration; the folder's entry is the lazily loaded chunk (until the slices wave);
   - `features/collaboration/in-process.ts` — test files;
+  - `hosts/visual-view/test-support.ts` — test files: an extension's tests build Visual views and schemas with the
+    host's built-ins plus their own contributions (`TestViewOptions.contributions`);
   - `features/collaboration/shared-project.ts` — the server's tests.
 - **Top comments.** Every source file starts with a comment: its context, `See <entry file /
   ARCHITECTURE.md section>`, or `Tests for X` (`mise run quality:top-comments`, part of `quality`).
@@ -194,7 +202,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   `headingNumbers`, `alignment`, `comments` (`user`), `labels`, `styles`; then `previewControls`
   (`followCursor`) and `pdfExport` (`pdfDownload`). The extension API is not public yet: the
   options stay as they are. The preview always compiles `main` with `project.files()`; `exportPdf` runs the
-  `pdfExport.export` command; `onFilesChange` hears a change after the workbench and the extensions.
+  `comments.exportPdf` command; `onFilesChange` hears a change after the workbench and the extensions.
 - **Diagnostics**: the preview's `onDidChangeDiagnostics` is the one source. The `diagnostics` extension puts
   each document's into a `DiagnosticCollection`, which its Source views underline (`lint`) and its Visual views
   mark (`registerHighlights('diagnostics', …)`: `.typst-diagnostic` with the message as tooltip; an empty range
@@ -244,13 +252,15 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   an existing file (`name.png`, `name-2.png`, …) reuses it, a different one gets the first free
   of those names — every pasted screenshot is `image.png`; refusals — not an image Typst shows,
   the host's veto — come back as an error the popover shows).
-- **PDF** (`PdfExport`, the `pdfExport` extension in `features/pdf-export/`): `exportPdf({comments})` (the
-  `pdfExport.export` command) and the preview's "Download PDF" (the `pdfMenu` toolbar item with the PDF variants
-  "Without comments" / "With comments" it registers, unless `pdfDownload: false`). With comments the main
-  file is exported as compiled; without, `withoutNotes(project.files(), main)` gives the entry
-  and replaced sources (see Comments). No PDF (errors) → an `Error` "The document has n
+- **PDF**: the `pdfExport` extension (`features/pdf-export/`) makes the PDF — `PdfExport`, the command
+  `pdfExport.export(entry?)`: the main file as compiled, or another entry with replaced sources — and the preview's
+  "Download PDF" (the `pdfMenu` toolbar item, unless `pdfDownload: false`) with a menu of the PDF variants others
+  register. The `comments` extension registers the variants "Without comments" / "With comments" (`CommentsPdf`,
+  `extensions/comments/preview/`) and the command `comments.exportPdf(withComments)` behind `exportPdf({comments})`.
+  With comments the main file is exported as compiled; without, `withoutNotes(project.files(), main)` gives the
+  entry and replaced sources (see Comments). No PDF (errors) → an `Error` "The document has n
   error(s): …" (the toolbar shows it), never an older PDF. File name after the main file:
-  `main.pdf` / `main-with-comments.pdf`. The plain button is the version without comments
+  `main.pdf` / `main-with-comments.pdf`. The plain button is the first variant, the version without comments
   (decision: the usual final version); the menu has both.
 - **Images into the text**: `AssetView` (the `assets` extension: the file view of `image` and `data` files) only previews. An image row dragged from the file panel
   (drag type `PROJECT_PATH_TYPE`, data: the project path) and dropped on the Visual view is
@@ -313,7 +323,7 @@ new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen? })
   `styles` (`StyleIndex`), `collaboration` (`CollaborationSession`: `onDidChangePresence`,
   `onDidConnectVersions`, read by `files` and `versions`), `documentLinks` (document → `DocumentLinkProvider`);
   commands `pdfExport.export`,
-  `comments.addComment` (bound to `Mod+Alt+KeyM`).
+  `comments.addComment` (bound to `Mod+Alt+KeyM`), `comments.exportPdf`.
 - **File views by kind.** `open(path)` shows a Typst file in the tabs and any other file in the view
   registered for `ProjectPath.kind(path)` (`FileViews`: created on first use, one per provider, shown again
   on every open so a replaced file shows its new content; nothing for a kind without a view). `assets`
@@ -328,15 +338,15 @@ new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen? })
 - **View contributions by extension:** `typstLanguage` (`typstLanguage()`, `codeColors`),
   `documentLinks` (`fileLinks` + a link provider; Visual: `boxLinks`), `collaboration` (`presence`),
   `diagnostics` (`lint(collection)`; Visual: highlights); `projectRenderings` (Visual: `images`, `renderedBoxes`), `comments`
-  (Visual: `marginNotes`, `notesGutter`), `labels` (Visual: `references`), `styles` (Visual: `customStyles`);
-  `previewControls` (`zoomControls`, `followCursor`, `pageNumber`), `pdfExport` (`pdfMenu`, the two PDF
-  variants). The Visual view's constructs (`markup`, `headings`, `tables`, …) are in the list themselves: a
-  `VisualViewContribution` is shaped like a `TypstExtension`. The contributions are still in `hosts/*/builtins/`.
+  (Visual: `marginNotes`, `notesGutter`; Preview: the PDF variants), `labels` (Visual: `references`), `styles` (Visual: `customStyles`);
+  `previewControls` (`zoomControls`, `followCursor`, `pageNumber`), `pdfExport` (`pdfMenu`). The Visual view's constructs (`markup`, `headings`, `tables`, …) are in the list themselves: a
+  `VisualViewContribution` is shaped like a `TypstExtension`. The contributions are still in `hosts/*/builtins/`,
+  except those of the extensions already in `extensions/` (comments).
 - **The active editor** (`activeTextEditor`, `onDidChangeTextEditorSelection`, VS Code's names): `comments`
   adds a note at its selection (and opens the note's card through its own notes gutter), `collaboration`
   publishes its selection and draws the others' carets in it (`setPresence`).
 - Extensions still live in `features/<name>/` (the entry exports the extension factory, e.g. `labels()`,
-  `files({ fileList })`); the slices wave moves them to `extensions/<name>/`.
+  `files({ fileList })`); the slices wave moves them to `extensions/<name>/` (done: `comments`).
 
 ### Paths (`src/core/paths`)
 
@@ -483,8 +493,8 @@ visualView.registerBoxCodeExtension((view) => codeMirrorExtension) → Disposabl
 // the built-ins (builtins/), each a VisualViewContribution = { id, activate({ visualView, subscriptions }) }, shaped
 // like a TypstExtension: markup, headings, tables, outline, pageBreak, horizontalRule, taskLists, lists,
 // headingNumbers, alignment; configured by their feature's extension: images({ assets, imageUrls, documentLinks }),
-// renderedBoxes({ snippets }), boxLinks({ documentLinks }), marginNotes({ comment }), notesGutter({ user }),
-// references({ labels }), customStyles({ styles, create })
+// renderedBoxes({ snippets }), boxLinks({ documentLinks }), references({ labels }), customStyles({ styles, create });
+// the comments extension's marginNotes({ comment }), notesGutter({ user }) are in extensions/comments/visual-view/
 ```
 
 The editor is **Tiptap 3**, which is ProseMirror underneath. Tiptap provides the keymaps (Mod-B/I,
@@ -1192,7 +1202,7 @@ workbench host) as the
 `diagnostics` highlight layer (wavy underline, message + hints as tooltip; raw code boxes in range
 are outlined, since inline decorations skip block atoms; an empty range marks one character).
 
-### Comments = margin notes (`src/features/comments`, `src/hosts/visual-view/builtins/margin-notes.ts`, `src/hosts/visual-view/builtins/notes-gutter`)
+### Comments = margin notes (`src/extensions/comments`)
 
 Comments are [`drafting`](https://typst.app/universe/package/drafting/) margin notes in the
 Typst source itself (`@preview/drafting:0.2.2`): `#margin-note[note]` (point, at a cursor) and
@@ -1204,6 +1214,7 @@ widget's `user.name` when it writes a message). The PDF download leaves notes ou
 (`withoutNotes`, below).
 
 ```ts
+// model/ (pure)
 // margin-note-syntax.ts: the only module that knows drafting's call syntax
 parseNoteCall(src) → {head, text?, note} | null     // head: `#margin-note` plus any `(..named)`
 printNoteCall({head, text?, note}) → string         // printNoteCall(parseNoteCall(src)) === src
@@ -1218,13 +1229,27 @@ readThread(note) → {author, date, text}[]          // author/date null: an ano
 addReply(note, {author, date, text}) → note        // only an insertion after the last item
 editMessage(note, index, text) → note | null   deleteMessage(note, index) → note | null ('' = the only one)
 localDate(date?) → 'YYYY-MM-DD'
-comments({ user? }): TypstExtension   // CommentAction + command comments.addComment (Mod+Alt+KeyM) + marginNotes + notesGutter
+layoutCards([{anchor, height}], {gap, active?, top?}) → tops   // card-layout.ts: cards beside anchors, no overlap
+
+// comments.ts, the entry
+comments({ user? }): TypstExtension   // registerAddComment + comments.exportPdf + PDF variants + marginNotes + notesGutter
+
+// workbench/
+registerAddComment(workbench, cards: { editNote(document, offset) }) → Disposable
+                                     // command comments.addComment, Mod+Alt+KeyM, the Source view's tab-bar button
 new CommentAction(doc, () => {document, view: {selection(), reveal(), editNote?()}} | null)   .button  .comment()  .destroy()
-// hosts/visual-view/builtins/notes-gutter: the notes gutter
+
+// preview/
+new CommentsPdf(project, workbench)  .blob(withComments) → Promise<Blob>   .file(withComments) → Promise<PdfFile>
+                                     // through pdfExport.export(entry?): without comments, the entry of withoutNotes
+registerPdfVariants(preview, pdfs) → Disposable   // "Without comments", then "With comments"
+
+// visual-view/
+marginNotes({ comment? }) → VisualViewContribution  // marginNote + noteRange specs; "Comment" in the toolbar and
+                                     // the selection's bar (runs comments.addComment)
 notesGutter({user?}) → { activate, editNote(document, offset) → boolean }   // registers a gutter per Visual view;
                                      // editNote focuses the reply box in the card of the note whose source holds offset
 new NotesGutter(body, {user?})   .plugin (add to the editor state)  .edit(offset) → boolean  .destroy()
-layoutCards([{anchor, height}], {gap, active?, top?}) → tops   // pure: cards beside anchors, no overlap
 findNotes(doc) / followNotes(prev, mapping, found, newKey) / setNoteText(tr, note, markup) / removeNote(tr, note)
 noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-list.ts, pure ProseMirror
 ```
@@ -1285,17 +1310,17 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
   (`/.without-comments.typ`, or `-2`, … if taken) with `set-margin-note-defaults(hidden: true)`
   and `#include "<main>"` for notes written other ways (`margin-note.with(..)`, calls in code).
   Engine test: the result draws exactly the glyphs of the plain text.
-- **`CommentAction`** (the `comments` extension): "Comment" and Ctrl/Cmd+Alt+M (the command
+- **`CommentAction`** (`workbench/`): "Comment" and Ctrl/Cmd+Alt+M (the command
   `comments.addComment`, bound with `registerKeybinding`: captured at the widget root). The Visual
-  view's toolbar has the button (`marginNotes({ comment })` calls `CommentAction.comment()`);
+  view's toolbar has the button (`marginNotes({ comment })` runs the command);
   the tab bar keeps `CommentAction.button` for the Source view only
   (`registerTabBarItem(element, { mode: 'source' })` hides it in the Visual view). Works on the
   shown `.typ` file in the current tab (`Workbench.activeTextEditor`), applies the edits as one
   `document.change`, then in the Visual tab the notes gutter's `editNote(document, note)` (the extension owns
   the gutter) focuses the new note's reply box, or the Source view puts the caret into `[]`.
-- **Visual view, in the text** (`builtins/margin-notes.ts`): see `marginNote` / `noteRange` below. A point
+- **Visual view, in the text** (`visual-view/margin-notes.ts`): see `marginNote` / `noteRange` below. A point
   note is a small marker (tooltip: its note), a range note's text is highlighted.
-- **Visual view, notes gutter** (`notes-gutter.ts`, like the comment sidebar of Google Docs or
+- **Visual view, notes gutter** (`visual-view/notes-gutter/`, like the comment sidebar of Google Docs or
   Tiptap's comments): a column right of the text (`.typst-visual__body` holds the editor DOM and
   the gutter; the column only shows while the document has notes) with a card per note
   (`note-card.ts`), in document order: the highlighted text (range notes), the thread (name in
@@ -1321,7 +1346,7 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
     reply box (and a message being edited) with the user's text while the document changes from
     elsewhere (a reply arriving re-renders the thread, unless a message is open) and saves into
     its own note; a card whose note is gone saves nothing.
-  - Layout (`card-layout.ts`, pure): cards start at their anchor's top, pushed down below the
+  - Layout (`model/card-layout.ts`, pure): cards start at their anchor's top, pushed down below the
     previous card (gap 8px); the active card stays at its anchor and cards above it move up (not
     above the gutter's top). Measuring (anchor rects, card heights; all reads, then writes) runs
     in one `requestAnimationFrame` after a doc change, an active-note change, typing in a card,
@@ -1333,10 +1358,12 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
     among range notes whose text ends at the same place (nested) the one whose `][note]` holds it,
     makes it active and focuses its card's reply box.
 - **Source view**: plain Typst, no extra decoration.
-- Tests: `note-thread.test.ts` (format, round trips, escaping, concurrent replies over Y.Docs),
-  `builtins/notes-gutter/notes-gutter.test.ts` (cards and threads in jsdom), engine tests compile both
-  thread layouts against drafting.
-- Engine tests compile both forms against the real package (`src/core/typst-engine/fixtures/drafting-0.2.2`).
+- Tests: `model/note-thread.test.ts` (format, round trips, escaping, concurrent replies over Y.Docs),
+  `visual-view/margin-notes.test.ts` (projection, printing, the toolbar action),
+  `visual-view/notes-gutter/notes-gutter.test.ts` (cards and threads in jsdom), `preview/preview.test.ts` (the PDF
+  variants), `workbench/comment-action.test.ts`.
+- Engine tests (`model/drafting.test.ts`) compile both note forms, both thread layouts, page margins and the
+  sources without notes against the real package (`src/core/typst-engine/fixtures/drafting-0.2.2`).
 - **Removed** with this design (it replaced the sidecar comments of docs/todo/comments.md):
   `src/comments` (Comments, quote anchors, CommentsPanel, CommentsUI), `SharedComments` and the
   Y.Doc `comments` map, `Preview.setMarkers` / `PreviewMarkers`, the widget options `comments` /

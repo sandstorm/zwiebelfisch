@@ -3,13 +3,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../../../core/typst-document/typst-document';
 import { addMarginNote, localDate } from '../../model/model';
-import { createVisualView, type TestViewOptions } from '../../../../hosts/visual-view/test-support';
+import { createVisualView } from '../../../../hosts/visual-view/test-support';
+import { marginNotes } from '../margin-notes';
+import { notesGutter, type NotesGutterOptions } from './notes-gutter';
 
-function setup(source: string, options: TestViewOptions = {}) {
+/** A Visual view with margin notes and the notes gutter, written as `options.user`; `editNote` opens a note's card. */
+function setup(source: string, options: NotesGutterOptions = {}) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(source);
-  const view = createVisualView(parent, doc, options);
+  const notes = notesGutter(options);
+  const view = Object.assign(createVisualView(parent, doc, { contributions: [marginNotes(), notes] }), {
+    editNote: (offset: number) => notes.editNote(doc, offset),
+  });
   const cards = () => [...parent.querySelectorAll<HTMLElement>('[data-testid="typst-note-card"]')];
   /** The reply box of card `i`. */
   const field = (i: number) => cards()[i].querySelector<HTMLTextAreaElement>('.typst-note-card__reply')!;

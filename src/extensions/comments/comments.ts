@@ -1,111 +1,43 @@
-// The comments extension: comments are drafting margin notes in the source. The "Comment" button / Ctrl+Alt+M
-// (CommentAction) and the note syntax the Visual view reads. Entry of features/comments/.
-// See ARCHITECTURE.md, "Comments = margin notes".
-import { Disposable } from '../../core/disposable/disposable';
-import type { TypstDocument } from '../../core/typst-document/typst-document';
-import type { TextEditor, TypstExtension, Workbench } from '../../hosts/workbench/workbench';
-import { addMarginNote } from './model/model';
+// The comments extension. Why: comments are drafting margin notes in the Typst source itself, not a store beside
+// it, so the preview, git, undo and collaboration carry them as ordinary text. The extension shows them in the
+// Visual view (notes in the text, a card per note in the notes gutter), adds them ("Comment", Ctrl/Cmd+Alt+M) and
+// offers the PDF without them. Entry of extensions/comments/. See ARCHITECTURE.md, "Comments = margin notes".
+import type { TypstExtension } from '../../hosts/workbench/workbench';
+import { CommentsPdf, registerPdfVariants } from './preview/preview';
 import { marginNotes, notesGutter } from './visual-view/visual-view';
+import { registerAddComment } from './workbench/workbench';
 
-export { addMarginNote, addReply, localDate, NOTE_STYLE, withoutNotes, type PdfEntry } from './model/model';
-export { marginNotes, notesGutter } from './visual-view/visual-view';
+// for tests that compose Visual views with margin notes outside the widget (collaboration's convergence)
+export { addMarginNote } from './model/model';
+export { marginNotes } from './visual-view/visual-view';
 
 declare module '../../hosts/workbench/workbench' {
   interface CommandRegistry {
-    /** Adds a margin note at the selection of the view the user works in (the comments extension). */
-    'comments.addComment': () => void;
+    /** The project's PDF as it is now, with or without the comments; rejects naming the errors (the comments extension). */
+    'comments.exportPdf': (withComments: boolean) => Promise<Blob>;
   }
 }
 
 /**
  * Comments as margin notes, written as `user` (signs replies; only own messages can be edited): in the Visual view
  * the notes in the text and a card per note in the notes gutter; "Comment" in the Visual view's toolbar and, for the
- * Source view, in the tab bar; Ctrl/Cmd+Alt+M in both. A note added in the Visual view opens its card.
+ * Source view, in the tab bar; Ctrl/Cmd+Alt+M in both. A note added in the Visual view opens its card. The preview
+ * offers the PDF without and with comments, and `comments.exportPdf` makes either (through `pdfExport.export`).
  */
 export function comments(options: { user?: { name: string } } = {}): TypstExtension {
   return {
     id: 'comments',
     activate(context) {
-      const { workbench, subscriptions } = context;
+      const { project, workbench, preview, subscriptions } = context;
       const notes = notesGutter({ user: options.user });
-      const action = new CommentAction(workbench.ownerDocument, () => noteTarget(workbench, notes));
+      const pdfs = new CommentsPdf(project, workbench);
       subscriptions.push(
-        new Disposable(() => action.destroy()),
-        workbench.registerCommand('comments.addComment', () => action.comment()),
-        workbench.registerKeybinding('Mod+Alt+KeyM', 'comments.addComment'),
-        // the Visual view has "Comment" in its own toolbar
-        workbench.registerTabBarItem(action.button, { mode: 'source' }),
+        registerAddComment(workbench, notes),
+        workbench.registerCommand('comments.exportPdf', (withComments) => pdfs.blob(withComments)),
+        registerPdfVariants(preview, pdfs),
       );
-      marginNotes({ comment: () => action.comment() }).activate(context);
+      marginNotes({ comment: () => workbench.executeCommand('comments.addComment') }).activate(context);
       notes.activate(context);
     },
   };
-}
-
-/** Where "Comment" adds a note: the active editor; in its Visual tab, the new note's card opens. */
-function noteTarget(workbench: Workbench, notes: { editNote(document: TypstDocument, offset: number): boolean }): ReturnType<NoteTarget> {
-  const editor: TextEditor | null = workbench.activeTextEditor;
-  if (!editor) return null;
-  const { document } = editor;
-  return {
-    document,
-    view: {
-      selection: () => editor.selection,
-      reveal: (from, to) => editor.revealRange(from, to),
-      editNote: editor.mode === 'visual' ? (offset) => notes.editNote(document, offset) : undefined,
-    },
-  };
-}
-
-/** An editing view a note can be added in (source offsets throughout). */
-export interface NoteView {
-  selection(): { from: number; to: number };
-  reveal(from: number, to: number): void;
-  /** Opens the editor of the note whose source holds `offset`, if the view has one; false if not. */
-  editNote?(offset: number): boolean;
-}
-
-/** Where the user works right now; null while no Typst file is shown. */
-export type NoteTarget = () => { document: TypstDocument; view: NoteView } | null;
-
-/**
- * The "Comment" button: adds a `drafting` margin note at the selection of the
- * active view, in the document's own Typst (`#margin-note[selection][]`, or
- * `#margin-note[]` at a cursor, plus the import), and puts the cursor into the
- * new note. The comments extension binds `comment` to Ctrl/Cmd+Alt+M as well.
- */
-export class CommentAction {
-  /** The button, for the host's toolbar. */
-  readonly button: HTMLButtonElement;
-
-  constructor(doc: Document, private readonly target: NoteTarget) {
-    this.button = commentButton(doc);
-    this.button.addEventListener('mousedown', (event) => event.preventDefault()); // keep the editor's selection
-    this.button.addEventListener('click', () => this.comment());
-  }
-
-  /** Adds a note at the active view's selection and focuses it; does nothing where no note fits. */
-  comment(): void {
-    const target = this.target();
-    if (!target) return;
-    const { document, view } = target;
-    const added = addMarginNote(document.text, view.selection());
-    if (!added) return;
-    document.change(added.changes, this);
-    if (!view.editNote?.(added.note)) view.reveal(added.note, added.note);
-  }
-
-  destroy(): void {
-    this.button.remove();
-  }
-}
-
-function commentButton(doc: Document): HTMLButtonElement {
-  const button = doc.createElement('button');
-  button.type = 'button';
-  button.className = 'typst-editor__comment';
-  button.title = 'Add a margin note to the selection (Ctrl+Alt+M)';
-  button.innerHTML =
-    '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"/></svg><span>Comment</span>';
-  return button;
 }

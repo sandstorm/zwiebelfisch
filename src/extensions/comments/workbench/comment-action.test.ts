@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
-// Tests for comments.ts.
+// Tests for comment-action.ts.
 import { describe, expect, it, vi } from 'vitest';
-import { TypstDocument } from '../../core/typst-document/typst-document';
-import { markup, VisualView, VisualViewContributions } from '../../hosts/visual-view/visual-view';
-import { CommentAction, localDate, marginNotes, NOTE_STYLE, notesGutter, type NoteView } from './comments';
+import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { markup, VisualView, VisualViewContributions } from '../../../hosts/visual-view/visual-view';
+import { localDate, NOTE_STYLE } from '../model/model';
+import { marginNotes, notesGutter } from '../visual-view/visual-view';
+import { CommentAction, type NoteView } from './comment-action';
 
 const IMPORT = `#import "@preview/drafting:0.2.2": margin-note, set-margin-note-defaults\n${NOTE_STYLE}`;
 

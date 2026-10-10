@@ -1,5 +1,5 @@
-// Margin notes (drafting) in the text: point notes and range notes, and the "Comment" button. See builtins.ts and
-// features/comments.
+// Margin notes (drafting) in the text: point notes and range notes, and the "Comment" toolbar action. See
+// visual-view.ts.
 import { Mark, Node } from '@tiptap/core';
 import type { Mark as PMMark, Node as PMNode } from '@tiptap/pm/model';
 import { TextSelection } from '@tiptap/pm/state';

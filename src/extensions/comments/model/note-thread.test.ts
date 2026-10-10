@@ -2,7 +2,6 @@
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { connect } from '../../../features/collaboration/in-process';
 import { parseNoteCall, printNoteCall } from './margin-note-syntax';
 import { addReply, deleteMessage, editMessage, localDate, readThread } from './note-thread';
 
@@ -143,11 +142,17 @@ describe('localDate', () => {
 });
 
 describe('concurrent replies', () => {
+  /** Exchanges what two Y.Docs miss of each other, as a server would on reconnect. */
+  const sync = (a: Y.Doc, b: Y.Doc) => {
+    Y.applyUpdate(b, Y.encodeStateAsUpdate(a));
+    Y.applyUpdate(a, Y.encodeStateAsUpdate(b));
+  };
+
   for (const [layout, note] of [['inline', '- *Anna* (2026-10-10): Is this right?'], ['block', BLOCK]]) {
     it(`converge to one thread with both replies (${layout})`, () => {
       const [docA, docB] = [new Y.Doc(), new Y.Doc()];
       docA.getText('main').insert(0, `Text #margin-note[key][${note}] more.\n`);
-      connect(docA, docB)();
+      sync(docA, docB);
       const [a, b] = [TypstDocument.fromYText(docA.getText('main')), TypstDocument.fromYText(docB.getText('main'))];
       const reply = (document: TypstDocument, message: ReturnType<typeof anna>) => {
         const call = /#margin-note\[key\]\[[\s\S]*\]/.exec(document.text)!;
@@ -157,7 +162,7 @@ describe('concurrent replies', () => {
       };
       reply(a, anna('From A'));
       reply(b, bob('From B'));
-      connect(docA, docB);
+      sync(docA, docB);
       expect(a.text).toBe(b.text);
       const merged = parseNoteCall(/#margin-note\[key\]\[[\s\S]*\]/.exec(a.text)![0])!.note;
       expect(readThread(merged).slice(-2).map((m) => m.text).sort()).toEqual(['From A', 'From B']);

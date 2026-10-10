@@ -7,11 +7,11 @@ import { ProjectPath } from '../../core/paths/paths';
 
 const path = ProjectPath.of;
 
-const NOTED = '#import "@preview/drafting:0.2.2": margin-note\nText#margin-note[a note]\n';
+const TEXT = 'Text\n';
 const pdf = new TextEncoder().encode('%PDF-1.7');
 
 function setup(result: Partial<PdfResult> = {}, main = path('/main.typ')) {
-  const project = new Project(main, { [main]: NOTED, '/logo.png': new Uint8Array([1]) });
+  const project = new Project(main, { [main]: TEXT, '/logo.png': new Uint8Array([1]) });
   const exportPdf = vi.fn(async (_main: string, _sources?: Record<string, string>) => ({ pdf, diagnostics: [], missingPackages: [], ...result }));
   return { exportPdf, pdfs: new PdfExport(project, { exportPdf }) };
 }
@@ -19,33 +19,25 @@ function setup(result: Partial<PdfResult> = {}, main = path('/main.typ')) {
 const error = (message: string): Diagnostic => ({ severity: 'error', message, hints: [], path: path('/main.typ'), from: 0, to: 1 });
 
 describe('PdfExport', () => {
-  it('exports the main file as it is with comments', async () => {
+  it('exports the main file as it is', async () => {
     const { exportPdf, pdfs } = setup();
-    const blob = await pdfs.blob(true);
+    const blob = await pdfs.blob();
     expect(blob.type).toBe('application/pdf');
     expect(new Uint8Array(await blob.arrayBuffer())).toEqual(pdf);
     expect(exportPdf).toHaveBeenCalledWith(path('/main.typ'), {});
   });
 
-  it('exports a generated entry without the notes, without touching the documents', async () => {
+  it('exports another entry with replaced sources, without touching the documents', async () => {
     const { exportPdf, pdfs } = setup();
-    await pdfs.blob(false);
-    const [main, sources] = exportPdf.mock.calls[0];
-    expect(main).not.toBe(path('/main.typ'));
-    expect(sources!['/main.typ']).toBe('#import "@preview/drafting:0.2.2": margin-note\nText\n');
-    expect(sources![main]).toContain('#include "/main.typ"');
-  });
-
-  it('names the file after the main file', async () => {
-    expect((await setup().pdfs.file(false)).name).toBe('main.pdf');
-    expect((await setup({}, path('/thesis/report.typ')).pdfs.file(true)).name).toBe('report-with-comments.pdf');
+    await pdfs.blob({ main: '/entry.typ', sources: { '/entry.typ': '#include "/main.typ"' } });
+    expect(exportPdf).toHaveBeenCalledWith('/entry.typ', { '/entry.typ': '#include "/main.typ"' });
   });
 
   it('rejects with the errors instead of giving a stale PDF', async () => {
     const { pdfs } = setup({ pdf: null, diagnostics: [error('unknown variable: oops'), error('second')] });
-    await expect(pdfs.blob(false)).rejects.toThrow('The document has 2 errors. The first: unknown variable: oops');
+    await expect(pdfs.blob()).rejects.toThrow('The document has 2 errors. The first: unknown variable: oops');
     const one = setup({ pdf: null, diagnostics: [{ ...error('only warnings'), severity: 'warning' }, error('broken')] });
-    await expect(one.pdfs.blob(true)).rejects.toThrow('The document has 1 error: broken');
-    await expect(setup({ pdf: null }).pdfs.blob(true)).rejects.toThrow('The document did not compile.');
+    await expect(one.pdfs.blob()).rejects.toThrow('The document has 1 error: broken');
+    await expect(setup({ pdf: null }).pdfs.blob()).rejects.toThrow('The document did not compile.');
   });
 });

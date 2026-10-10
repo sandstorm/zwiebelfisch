@@ -14,8 +14,7 @@ import {
   alignment, boxLinks, customStyles, headingNumbers, headings, horizontalRule, images, lists, markup, outline,
   pageBreak, references, renderedBoxes, tables, taskLists, type ImageAssets, type Renderings,
 } from './builtins/builtins';
-import { marginNotes, notesGutter } from '../../extensions/comments/comments';
-import { VisualViewContributions } from './contributions/contributions';
+import { VisualViewContributions, type VisualViewContribution } from './contributions/contributions';
 import { createSchema } from './nodes/nodes';
 import { posToSource, print, project as projectWith, sourceToPos } from './projection/projection';
 import { VisualView } from './visual-view';
@@ -25,35 +24,34 @@ export const schema: Schema = schemaWith();
 
 /** The schema of a view with the built-ins configured from `options`. */
 export function schemaWith(options: TestViewOptions = {}): Schema {
-  const { nodes, marks } = contributions(options).visualView.contributed();
+  const { nodes, marks } = contributions(options).contributed();
   return createSchema(nodes, marks);
 }
 
-export const project = (source: string): Node => projectWith(source, schema);
+/** `source` projected with `withSchema` (default: the built-ins' `schema`). */
+export const project = (source: string, withSchema: Schema = schema): Node => projectWith(source, withSchema);
 
 /** The options tests give a view, as a document's Visual view had them before contributions. */
 export interface TestViewOptions {
   renderer?: Renderings;
   assets?: ImageAssets;
-  user?: { name: string };
-  comment?(): void;
   labels?: ProjectLabels;
   documentLinks?: DocumentLinkProvider;
   /** The project's styles, as one document sees them; `create` is "New style…". */
   styles?: DocumentStyles;
+  /** Contributions beyond the host's built-ins, activated after them: an extension's own, in its tests. */
+  contributions?: readonly VisualViewContribution[];
 }
 
-/** A Visual view of `document` with the built-ins configured from `options`, and the way to its notes' cards. */
-export function createVisualView(parent: HTMLElement, document: TypstDocument, options: TestViewOptions = {}): VisualView & { editNote(offset: number): boolean } {
-  const { visualView, editNote } = contributions(options);
-  return Object.assign(new VisualView(parent, document, visualView), { editNote: (offset: number) => editNote(document, offset) });
+/** A Visual view of `document` with the built-ins configured from `options`. */
+export function createVisualView(parent: HTMLElement, document: TypstDocument, options: TestViewOptions = {}): VisualView {
+  return new VisualView(parent, document, contributions(options));
 }
 
 /** The built-ins configured from `options`, in the order the widget's built-in extensions activate them. */
-function contributions(options: TestViewOptions) {
+function contributions(options: TestViewOptions): VisualViewContributions {
   const { styles } = options;
-  const notes = notesGutter({ user: options.user });
-  const visualView = VisualViewContributions.from([
+  return VisualViewContributions.from([
     boxLinks({ documentLinks: options.documentLinks && (() => options.documentLinks) }),
     markup,
     headings,
@@ -73,15 +71,13 @@ function contributions(options: TestViewOptions) {
     lists,
     headingNumbers,
     alignment,
-    marginNotes({ comment: options.comment }),
-    notes,
     references({ labels: options.labels }),
     customStyles({
       styles: styles && { styles: () => styles.styles(), onChange: (listener) => styles.onChange(listener), forDocument: () => styles },
       create: styles?.create,
     }),
+    ...(options.contributions ?? []),
   ]);
-  return { visualView, editNote: (document: TypstDocument, offset: number) => notes.editNote(document, offset) };
 }
 
 export function edit(doc: Node, change: (state: EditorState) => EditorState['tr']): Node {

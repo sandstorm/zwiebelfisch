@@ -177,7 +177,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
       const parsed = ProjectPath.parse(path);
       if (parsed) workbench.open(parsed);
     },
-    exportPdf: (pdf = {}) => workbench.executeCommand('pdfExport.export', pdf.comments ?? false),
+    exportPdf: (pdf = {}) => workbench.executeCommand('comments.exportPdf', pdf.comments ?? false),
     destroy: () => {
       unsubscribe();
       workbench.destroy();

@@ -3,7 +3,11 @@ import { EditorState, NodeSelection, TextSelection } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 import { findNotes, followNotes, noteAtOffset, noteAtSelection, removeNote, setNoteText, type KeyedNote } from './note-list';
 import { print } from '../../../../hosts/visual-view/visual-view';
-import { after, project } from '../../../../hosts/visual-view/test-support';
+import { after, project as projectWith, schemaWith } from '../../../../hosts/visual-view/test-support';
+import { marginNotes } from '../margin-notes';
+
+const schema = schemaWith({ contributions: [marginNotes()] });
+const project = (source: string) => projectWith(source, schema);
 
 const SOURCE = 'A #margin-note[key claim][first] and b#margin-note[second].\n\n#margin-note[#margin-note[x][inner]][outer] y\n';
 
