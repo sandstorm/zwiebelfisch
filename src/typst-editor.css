@@ -128,9 +128,8 @@
 .typst-preview__follow-spot { position: absolute; width: 1px; height: 1.4em; margin-top: -1.2em; pointer-events: none; }
 .typst-source__jump { background: var(--te-jump); border-radius: 2px; }
 /* File links: paths in #import / #include / image(..) open their file (Source view, raw boxes) */
-.typst-source__path:hover,
-.typst-source--mod .typst-source__path { text-decoration: underline; text-decoration-color: var(--te-accent); }
-.typst-source--mod .typst-source__path { cursor: pointer; }
+/* like IntelliJ: a path becomes a link (underline, pointer) only while Mod is held and it is hovered */
+.typst-source--mod .typst-source__path:hover { text-decoration: underline; text-decoration-color: var(--te-accent); color: var(--te-accent); cursor: pointer; }
 .typst-file-link { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; font: 12px system-ui, sans-serif; }
 .typst-file-link + .typst-file-link { margin-left: 12px; }
 .cm-tooltip .typst-file-link { padding: 3px 6px; }

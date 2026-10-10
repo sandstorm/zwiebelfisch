@@ -12,8 +12,8 @@ const MOD_CLICK = MAC ? '⌘+click' : 'Ctrl+click';
 const pathMark = Decoration.mark({ class: 'typst-source__path' });
 
 /**
- * Makes the file paths in the code navigable: they are underlined on hover
- * (with the pointer while the modifier is held), Mod+click or Alt+Enter on
+ * Makes the file paths in the code navigable, like IntelliJ: while the
+ * modifier is held, a hovered path shows as a link; Mod+click or Alt+Enter on
  * one opens its file, and the hover tooltip offers "Open …" or, for a
  * missing Typst file, "Create …".
  */
