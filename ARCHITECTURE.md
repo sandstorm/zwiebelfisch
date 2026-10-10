@@ -15,7 +15,8 @@ src/                        the widget (TypeScript); the most important API on t
   typst-editor/             what only typst-editor.ts uses: editing-views.ts (Visual/Source tabs, lazily one
                             VisualView + SourceView per document), project-renderings.ts (what a document's Visual
                             view renders and inserts: snippets, image URLs, uploads), collaboration-link.ts,
-                            pdf-export.ts (the project's PDF with / without comments)
+                            pdf-export.ts (the project's PDF with / without comments), file-navigation.ts
+                            ("← previous file" / "next file →" around an included file)
                             layout.ts + layout.css (side panels with rail buttons, editing area, preview)
   typst-editor-element/     inline-source.ts (source written inside the element → text)
   stylesheets.test.ts       every .css under src/ parses (lightningcss, no error recovery), no nested style rules,
@@ -29,7 +30,8 @@ src/                        the widget (TypeScript); the most important API on t
                             tar reader); fixtures/ (test package archives); generated wasm/, fonts/ (gitignored)
     project/                Project: the file model (one TypstDocument per .typ file, main protected); paths.ts
                             (names → paths, Typst path resolution, file kinds); FileContent; path-references.ts
-                            (the file paths a Typst text names; FileLinks)
+                            (the file paths a Typst text names; FileLinks); reading-order.ts (main file, then
+                            its #includes depth first; a file's neighbours in that order)
   features/                 one folder per feature, each entered through the file named like it
     visual-view/            VisualView — Tiptap editor over the source-anchored projection; visual-view.css
                             (ProseMirror core styles); decorations at the root: highlights, change-decorations,
@@ -38,11 +40,11 @@ src/                        the widget (TypeScript); the most important API on t
                             embedded-code
       nodes/                nodes.ts (the schema: Tiptap extensions), raw-box, rendered-box, code-block-view,
                             page-break, horizontal-rule, task-list + checklist-preamble, heading numbers, text-align,
-                            margin-notes, box-links (file links on raw boxes)
+                            margin-notes, box-links (an image box's path as a link)
       images/               images.ts: image choices, insertion, image tools (resize, alt, caption), image-call edits
       references/           references.ts: the `reference` node (@key chips), label tags, reference hints, the @ list
                             (reference-suggestion), label-edits, label-choices
-      toolbar/              toolbar.ts, toolbar-action, toolbar-blocks
+      toolbar/              toolbar.ts, toolbar-action, toolbar-blocks, toolbar-menu, floating-bar
       notes-gutter/         notes-gutter.ts (comment column), note-card (a note's thread + reply box), note-list,
                             card-layout
     source-view/            SourceView — CodeMirror 6 editing view; typst-language, lint, presence, file-links
@@ -60,7 +62,7 @@ src/                        the widget (TypeScript); the most important API on t
                             (drafting's call: parse, print, validity), note-thread.ts (a note's body as a
                             thread of messages), page-margin.ts, without-notes.ts (the PDF without comments)
     files/                  FilePanel (the file panel: header, prompts, drops; files.css), icons.ts, asset-view.ts,
-                            upload.ts, insert-image.ts
+                            upload.ts
       tree/                 tree.ts (FileTree: rows, keyboard, drag & drop, presence), tree-model.ts (pure)
     collaboration/          real-time collaboration (loaded on demand): Collaboration, SharedProject, RemoteCursors,
                             RoomVersions + SharedAssets (GitLab rooms); in-process.ts (Y.Doc/awareness wiring for
@@ -161,6 +163,11 @@ createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileCha
 - **`EditingViews`**: one Visual/Source tab bar; a document's views are created the first time
   it is shown and then only hidden, so cursor and undo history survive switching. The mode is
   shared. With a single file the DOM is the same as before (tabs + two panes).
+  `setFrame(top, bottom)` keeps two elements first and last in the visible pane (they scroll with
+  the file). The widget puts `FileNavigation` there: for a file the main file `#include`s
+  (`neighbours(files, main, path)` from `reading-order.ts`, recomputed on open and every change),
+  links to the file read before it and the one after it, both at the top and at the bottom;
+  nothing for the main file or files outside the include order.
 - **`FilePanel`** (see "File panel" below) lives in the `Layout`'s `files` panel: open by default
   when `fileList` is `show`, or `auto` with more than one file; `hide` removes it with its rail
   button. A requested change passes `project.check`, then the host's `allowFileChange` (async
@@ -188,9 +195,10 @@ createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileCha
   error(s): …" (the toolbar shows it), never an older PDF. File name after the main file:
   `main.pdf` / `main-with-comments.pdf`. The plain button is the version without comments
   (decision: the usual final version); the menu has both.
-- **Insert image** (`AssetView`): `#image("…")` as its own paragraph after the line of the last
-  source-view cursor (else at the end) of the last shown `.typ` file, relative path when in the
-  same folder tree, else project-absolute.
+- **Images into the text**: `AssetView` only previews. An image row dragged from the file panel
+  (drag type `PROJECT_PATH_TYPE`, data: the project path) and dropped on the Visual view is
+  inserted there as an image block (`imageFileDrops` → `ImageAssets.reference(path)`: relative
+  when in the same folder tree, else project-absolute; not for non-images).
 
 - Setting `source`/`value` applies **one minimal edit**: only the range between the common prefix
   and the common suffix changes (`minimalChange`), so cursors and undo history are preserved.
@@ -464,17 +472,22 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     `src` would make the whole block look different.
   - It then copies the attributes over (`setNodeMarkup`) and marks nodes pristine again wherever
     the target node was pristine.
-- **Toolbar** (`toolbar.ts`, created by `VisualView` above the editor): undo/redo, a text style
-  menu (normal text, heading 1–3), bold/italic/code (Mod+E)/link,
-  bulleted/numbered list, code block, task list, quote, text alignment, insert image, table of
-  contents (an `#outline()` block at the cursor), insert table, add/delete row/column, header row,
-  insert page break, horizontal rule (the block-node entries live in `toolbar-blocks.ts`; `Action`
-  in `toolbar-action.ts`), and "Comment" when the view has a `comment` option (enabled with a
-  caret or selection in text outside code blocks). Each entry is a row in a table of Tiptap chain
-  commands; after every transaction the buttons show `aria-pressed` and are disabled when
+- **Toolbar** (`toolbar.ts`, created by `VisualView` above the editor), kept short: undo/redo, a
+  text style menu (normal text, heading 1–3), bulleted/numbered/task list, an **Align** menu
+  (left, center, right, justify; its icon is the current alignment) and an **Insert** menu (image,
+  table, table of contents — an `#outline()` block —, code block, quote, horizontal rule, page
+  break), and "Comment" when the view has a `comment` option (enabled with a caret or selection
+  in text outside code blocks). Menus: `toolbar-menu.ts` (`role="menu"` of toolbar buttons;
+  Escape, outside click, arrow keys). Two bars float in the text column (`floating-bar.ts`,
+  placed in `.typst-visual__body` so they scroll with the text, shown while the text or the bar
+  has focus): **Selection** (bold, italic, code (Mod+E), link, comment) above a text selection
+  or a link holding the cursor — the only place of the mark buttons —, and **Table** (add/delete
+  row/column, header row) above a table holding the cursor (not while the Selection bar shows).
+  Entries are `Action`s (`toolbar-action.ts`; block-node entries in `toolbar-blocks.ts`): Tiptap
+  chain commands; after every transaction the buttons show `aria-pressed` and are disabled when
   `editor.can()` (or the action's own `enabled`) says no.
   Mousedown is cancelled, so the text keeps focus and selection.
-  - Link (and Mod+K in the text) and insert image ask for a value in a `FieldPopover`
+  - Link (and Mod+K in the text; its popover sits in the Selection bar, also shown for a caret then) and insert image (popover at the Insert menu) ask for a value in a `FieldPopover`
     (`field-popover.ts`: one text field, Apply/Enter, optional Remove, Escape or a click outside
     closes). Link with nothing selected inserts the URL as linked text; inside a link it edits or
     removes the whole link.
@@ -489,7 +502,7 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     `#set page(..)`).
 - **References and labels** (`references/`, given the project's labels as `ProjectLabels`):
   - Reference chips show the label's name; `referenceHints` adds what it labels (`data-hint`,
-    "Section · Method", "Figure · <caption>", from `describeLabel`) or marks it
+    "Section · Method", "Figure · <caption>", from `describeLabel`) as a hover tooltip only or marks it
     `typst-visual__ref--unknown` (wavy, tooltip) when the project has no such label. Redrawn when
     the doc or the label list changes.
   - `labelTags`: a widget per labelled block — at the end of a textblock's text, below other
@@ -507,7 +520,7 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - Without `labels`: tags only (rename and remove of the label itself).
 - **Text alignment** (`text-align.ts`, `alignment.ts` for the Typst syntax):
   - Commands `setTextAlign(left|center|right|justify)` and `unsetTextAlign`; shortcuts
-    Mod-Shift-L/E/R/J; four toolbar buttons pressed by `textAlignAt(state)`.
+    Mod-Shift-L/E/R/J; four items of the toolbar's Align menu, pressed by `textAlignAt(state)`.
   - Horizontal alignment wraps the selected blocks (in the doc, an alignment block or a table
     cell) in one alignment block. A value equal to the surrounding alignment removes the wrapper
     instead, a partly selected wrapper is split (lifted blocks get default separators), and a
@@ -524,8 +537,8 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   NodeView that hosts a nested CodeMirror (Typst highlighting, no own history). An image box is
   headed by "Image: <path>" (`imagePath(src)`; with `links` the path opens the file), an outline box
   by "Table of contents"; with a renderer, the outline shows its compiled snippet. With `links`
-  (`setBoxLinks`), a raw block naming files gets an "Open …" row (`box-links.ts`) and every box's
-  code the Source view's `fileLinks` extension.
+  (`setBoxLinks`), every box's code gets the Source view's `fileLinks` extension (link tooltip
+  on a path, Mod+click opens; no separate "Open …" row: it took too much space).
   - **Rendered boxes** (`rendered-box.ts`, with a `BoxRenderer`): while not focused, a box shows
     an `<img>` instead of its code: an `image` box its file (`renderer.imageUrl(path)`, follows
     path edits at once), any other box the compiled snippet of its source range
@@ -632,7 +645,7 @@ new Preview(container, { onJump?, onDiagnostics?, pdf? })   // renders a toolbar
                                              // pdf: (comments) → Promise<{blob, name}> adds "Download PDF" (PdfMenu)
 .update(files: Record<path, text | Uint8Array>, main)    // cheap per keystroke
 .reveal(path, offset)                        // cheap per cursor move: scroll only if off-screen (no marker); nothing while not following
-.setFollow(on)                               // "Follow cursor" (toolbar toggle; options follow / onFollowChange); on → goes to the newest reveal
+.setFollow(on)                               // "Follow cursor" (toolbar on/off switch, role=switch; options follow / onFollowChange); on → goes to the newest reveal
 .showChanges(path, ranges | null)            // change bars in the page margin per path (all paths drawn), redrawn after every compile
 .snippet(path, from, to, text) → Promise<{svg, width, height, textHeight, padding} | null>   // the range as drawn, cut from its page
 .onRender(listener) → unsubscribe            // after every successful compile
@@ -738,8 +751,10 @@ new Layout(host, storageKey)   .editor  .preview            // the editing colum
 ```
 
 - One grid on the host: side (rail + open panel) | editing column | preview; the status bar
-  spans all. The preview is half the widget, so opening or resizing a side panel narrows only the
-  editing column (down to min(20rem, 25%), then the preview gives way too). The hand-built version of the `Layout` module planned by the dockview spike
+  spans all. The preview is a share of the widget (default half; the separator on its left edge
+  sets it, drag or arrow keys, 20–80%, saved with the layout, applied as `--te-preview-share`), so
+  opening or resizing a side panel narrows only the editing column (down to min(20rem, 25%), then
+  the preview gives way too). The hand-built version of the `Layout` module planned by the dockview spike
   (docs/2026_10_10_dockview-spike.md): panels have ids, one side panel is open at a time, the
   saved state (width, who opened or closed what) is opaque to the panels.
 - A panel's owner sets its default (`setDefault`: the file panel's `auto` follows the file count);
@@ -798,9 +813,8 @@ fileLinks(links) → CodeMirror extension      linkInfo(doc, links, reference, {
   was avoided: browsers take it for the developer tools); the hover tooltip is `linkInfo`: "Open
   x (Ctrl+click or Alt+Enter)", or "x is not in the project" + "Create x" for a `.typ` file
   (showing the host's refusal).
-- **Visual view**: raw blocks naming files get a row of `linkInfo`s above their code (re-checked
-  on pointer enter, so a file created meanwhile becomes "Open"); an image box's path is a button;
-  the nested CodeMirror of every raw box gets `fileLinks` too.
+- **Visual view**: the nested CodeMirror of every raw box gets `fileLinks` (the same tooltip as
+  the Source view; no "Open …" row); an image box's path is a button.
 - **Widget**: `open` shows the file (the panel selects it and opens its folders); `create` asks
   for a `create` change like the panel's New file.
 
@@ -1169,9 +1183,8 @@ an in-memory `FakeGitLab` holding `demo/examples/advanced`). Checklist with step
   fonts — ship a JSON index of `FontInfo` so the `FontBook` is complete up front and fetch font
   data on first use (compile, see which fonts were missing, fetch, recompile).
 - **Multi-file UI:** empty folders live only in the panel (the project has no folders); a
-  folder rename / move / delete is one change per file and may stop half-way at a refusal. The
-  visual view has no cursor API, so "Insert into …" uses the last source-view cursor, else the
-  end of the file. File links do not follow paths built at run time (variables, `+`).
+  folder rename / move / delete is one change per file and may stop half-way at a refusal. Dragging an
+  image from the panel into the Source view does nothing yet (Visual view only). File links do not follow paths built at run time (variables, `+`).
 - **Packages:** only `@preview` from packages.typst.org (no configurable registry, no `@local`);
   failed downloads are not retried until the worker restarts.
 - **Snippets are cut from the compiled pages**, so they only appear after a successful compile,

@@ -1,6 +1,7 @@
 // End-to-end tests (Playwright, against the demo build): figures and image resizing in the Visual view.
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
+import { caretAtEnd, chooseFrom } from './visual-helpers';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
@@ -29,21 +30,21 @@ const picture = (page: Page) => imageBox(page).locator('img.typst-visual__render
 const imageTools = (page: Page) => imageBox(page).getByRole('toolbar', { name: 'Image' });
 
 test('a figure shows its image and its caption as editable rich text; label and arguments stay', async ({ page }) => {
-  await load(page, '#figure(image("logo.svg", width: 50%), caption: [A *logo*], placement: top) <fig:logo>\n');
+  await load(page, '#figure(image("logo.svg", width: 50%), caption: [A *logo* image], placement: top) <fig:logo>\n');
   const caption = visual(page).locator('figure figcaption');
-  await expect(caption).toHaveText('A logo');
+  await expect(caption).toHaveText('A logo image');
   await expect(caption.locator('strong')).toHaveText('logo');
   await expect(picture(page)).toBeVisible();
-  await caption.click();
-  await page.keyboard.press('End');
+  // not click + End: ProseMirror's focus timer can undo the caret move, and End is no line end on macOS
+  await caretAtEnd(caption);
   await page.keyboard.type(' here');
-  await expect.poll(value(page)).toBe('#figure(image("logo.svg", width: 50%), caption: [A *logo* here], placement: top) <fig:logo>\n');
+  await expect.poll(value(page)).toBe('#figure(image("logo.svg", width: 50%), caption: [A *logo* image here], placement: top) <fig:logo>\n');
 });
 
 test('insert an image, add a caption, type it, drag a handle: the source gets the caption and width: …%', async ({ page }) => {
   await load(page, 'Text\n');
   await visual(page).locator('p').first().click();
-  await page.getByRole('toolbar', { name: 'Formatting' }).getByRole('button', { name: 'Insert image' }).click();
+  await chooseFrom(page.getByRole('toolbar', { name: 'Formatting' }), 'Insert', 'Insert image');
   await page.getByRole('form', { name: 'Image' }).getByRole('button', { name: 'logo.svg' }).click();
   await expect.poll(value(page)).toContain('#image("logo.svg")');
 

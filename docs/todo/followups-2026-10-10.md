@@ -31,6 +31,10 @@ Each line names the area; sources are the agents' final reports.
 - Source-view diff chunks lack the word/markup cleanup the other views get.
 
 ## Preview / performance
+- Expression cells calling a user function (`ms(18)` in the advanced example's table) show code,
+  not a picture: their glyphs carry spans in the function body, so `boxesForRanges` finds nothing
+  for the cell's range. Needs another way to locate the cell (e.g. the table cell's layout via
+  introspection) in the engine.
 - Raw boxes re-request boxes after every compile, even while the Visual view is hidden.
 - Diff runs twice per keystroke while changes are shown; cache the base's syntax tree.
 - Snippets show only the first page a range is drawn on.

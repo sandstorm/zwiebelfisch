@@ -1,6 +1,6 @@
 // End-to-end tests (Playwright, against the demo build): links and tables in the Visual view.
 import { test, expect } from './fixtures';
-import { caretAtEnd, compiled, freshSelectedLine, sourceText, toolbar, visual } from './visual-helpers';
+import { caretAtEnd, chooseFrom, compiled, freshSelectedLine, selectionBar, sourceText, tableBar, toolbar, visual } from './visual-helpers';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -9,7 +9,7 @@ test.beforeEach(async ({ page }) => {
 
 test('Link button links the selection to the URL entered in its popover', async ({ page }) => {
   await freshSelectedLine(page);
-  await toolbar(page).getByRole('button', { name: 'Link' }).click();
+  await selectionBar(page).getByRole('button', { name: 'Link' }).click();
   const popover = page.getByRole('form', { name: 'Link' });
   await popover.getByLabel('URL').fill('https://typst.app');
   await popover.getByLabel('URL').press('Enter');
@@ -33,7 +33,7 @@ test('Mod+K opens the link popover; Remove unlinks', async ({ page }) => {
 
 test('Insert image adds an #image block with the entered path', async ({ page }) => {
   await caretAtEnd(visual(page).locator('p').first());
-  await toolbar(page).getByRole('button', { name: 'Insert image' }).click();
+  await chooseFrom(toolbar(page), 'Insert', 'Insert image');
   const popover = page.getByRole('form', { name: 'Image' });
   await popover.getByLabel('Image path').fill('images/logo.png');
   await popover.getByLabel('Image path').press('Enter');
@@ -43,7 +43,7 @@ test('Insert image adds an #image block with the entered path', async ({ page })
 
 test('Insert table adds a 2x2 #table; typing into a cell fills it', async ({ page }) => {
   await caretAtEnd(visual(page).locator('p').first());
-  await toolbar(page).getByRole('button', { name: 'Insert table' }).click();
+  await chooseFrom(toolbar(page), 'Insert', 'Insert table');
   await expect(visual(page).locator('table td')).toHaveCount(4);
   await page.keyboard.type('Cell');
   await expect.poll(sourceText(page)).toContain('#table(\n  columns: 2,\n  [Cell], [],\n  [], [],\n)');
@@ -51,8 +51,8 @@ test('Insert table adds a 2x2 #table; typing into a cell fills it', async ({ pag
 
 test('table buttons add and delete rows and columns', async ({ page }) => {
   await caretAtEnd(visual(page).locator('p').first());
-  const bar = toolbar(page);
-  await bar.getByRole('button', { name: 'Insert table' }).click();
+  await chooseFrom(toolbar(page), 'Insert', 'Insert table');
+  const bar = tableBar(page); // floats above the table while the cursor is in it
   await bar.getByRole('button', { name: 'Add row' }).click();
   await expect.poll(sourceText(page)).toContain('  [], [],\n  [], [],\n  [], [],\n)');
   await bar.getByRole('button', { name: 'Add column' }).click();

@@ -1,7 +1,7 @@
 // End-to-end tests (Playwright, against the demo build): the Visual view's toolbar.
 import { test, expect } from './fixtures';
 import type { Page } from '@playwright/test';
-import { caretAtEnd, compiled, freshSelectedLine, sourceText, toolbar, visual } from './visual-helpers';
+import { caretAtEnd, compiled, freshSelectedLine, selectionBar, sourceText, toolbar, visual } from './visual-helpers';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -15,14 +15,25 @@ async function source(page: Page) {
 
 test('Bold button wraps the selection in *…*', async ({ page }) => {
   await freshSelectedLine(page);
-  await toolbar(page).getByRole('button', { name: 'Bold' }).click();
-  await expect(toolbar(page).getByRole('button', { name: 'Bold' })).toHaveAttribute('aria-pressed', 'true');
+  await selectionBar(page).getByRole('button', { name: 'Bold' }).click();
+  await expect(selectionBar(page).getByRole('button', { name: 'Bold' })).toHaveAttribute('aria-pressed', 'true');
   await expect(await source(page)).toContainText('*Fresh line*');
+});
+
+test('a text selection gets a floating bar above it; its Italic formats the selection', async ({ page }) => {
+  const bubble = selectionBar(page);
+  await expect(bubble).toBeHidden();
+  await freshSelectedLine(page);
+  await expect(bubble).toBeVisible();
+  const [bar, line] = await Promise.all([bubble.boundingBox(), visual(page).locator('p', { hasText: 'Fresh line' }).boundingBox()]);
+  expect(bar!.y + bar!.height).toBeLessThanOrEqual(line!.y + 2); // above the selected line
+  await bubble.getByRole('button', { name: 'Italic' }).click();
+  await expect(await source(page)).toContainText('_Fresh line_');
 });
 
 test('Italic button wraps the selection in _…_', async ({ page }) => {
   await freshSelectedLine(page);
-  await toolbar(page).getByRole('button', { name: 'Italic' }).click();
+  await selectionBar(page).getByRole('button', { name: 'Italic' }).click();
   await expect(await source(page)).toContainText('_Fresh line_');
 });
 
@@ -57,7 +68,7 @@ test('Numbered list button makes a + item', async ({ page }) => {
 test('Undo and Redo buttons revert and reapply an edit', async ({ page }) => {
   await freshSelectedLine(page);
   const bar = toolbar(page);
-  await bar.getByRole('button', { name: 'Bold' }).click();
+  await selectionBar(page).getByRole('button', { name: 'Bold' }).click();
   await bar.getByRole('button', { name: 'Undo' }).click();
   await expect(visual(page).locator('strong', { hasText: 'Fresh line' })).toHaveCount(0);
   await bar.getByRole('button', { name: 'Redo' }).click();

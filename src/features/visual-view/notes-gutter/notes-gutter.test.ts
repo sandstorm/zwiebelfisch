@@ -61,7 +61,8 @@ describe('the notes gutter', () => {
   it('puts the gutter right of the text, in one body', () => {
     const { parent, text } = setup('Text#margin-note[n].\n');
     const body = parent.querySelector('.typst-visual__body')!;
-    expect([...body.children].map((c) => c.className.split(' ')[0])).toEqual([text.className.split(' ')[0], 'typst-notes-gutter']);
+    // then the toolbar's floating bars (selection, table), placed in the text column too
+    expect([...body.children].map((c) => c.className.split(' ')[0])).toEqual([text.className.split(' ')[0], 'typst-notes-gutter', 'typst-floating-bar', 'typst-floating-bar']);
   });
 
   describe('threads', () => {

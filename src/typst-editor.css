@@ -10,10 +10,10 @@
   --te-note-line: #e0a800;
   --te-note-strong: rgba(250, 190, 20, 0.55);
   display: grid;
-  /* side panels (typst-editor/layout.css) | editing view | preview. The preview is half the widget,
-     so opening or resizing a side panel narrows only the editing view (it keeps min(20rem, 25%),
-     then the preview gives way too). */
-  grid-template-columns: auto minmax(min(20rem, 25%), 1fr) minmax(0, 50%);
+  /* side panels (typst-editor/layout.css) | editing view | preview. The preview is a share of the
+     widget (half; the separator sets --te-preview-share), so opening or resizing a side panel narrows
+     only the editing view (it keeps min(20rem, 25%), then the preview gives way too). */
+  grid-template-columns: auto minmax(min(20rem, 25%), 1fr) minmax(0, var(--te-preview-share, 50%));
   grid-template-rows: minmax(0, 1fr) auto;
   height: 100%;
   min-height: 0;
@@ -32,6 +32,7 @@
 .typst-editor__left .cm-editor { flex: 1; min-height: 0; }
 .typst-editor__left .cm-scroller { overflow: auto; }
 .typst-editor__right {
+  position: relative;
   grid-column: 3;
   grid-row: 1;
   min-height: 0;
@@ -57,6 +58,39 @@
   font: inherit;
   cursor: pointer;
 }
+/* "Follow cursor": an on/off switch (track and thumb), not a plain button */
+.typst-preview__toolbar > .typst-preview__follow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  border: none;
+  padding: 2px 4px;
+  background: none;
+}
+.typst-preview__switch {
+  position: relative;
+  flex: none;
+  width: 26px;
+  height: 14px;
+  border-radius: 7px;
+  background: #c4cad3;
+  transition: background 0.15s;
+}
+.typst-preview__switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.15s;
+}
+.typst-preview__follow[aria-checked='true'] > .typst-preview__switch { background: var(--te-accent); }
+.typst-preview__follow[aria-checked='true'] > .typst-preview__switch::after { transform: translateX(12px); }
+.typst-preview__follow:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 1px; border-radius: 4px; }
 .typst-preview__pdf { position: relative; display: inline-flex; align-items: center; margin-left: 8px; }
 .typst-preview__pdf > button {
   border: 1px solid var(--te-border);
@@ -150,8 +184,6 @@
 .typst-file-link__error { color: #cf222e; }
 .typst-file-link__error:empty { display: none; }
 .typst-visual__path--missing { color: #8c959f; cursor: default; text-decoration: line-through dotted; }
-.typst-visual__box-links { font-weight: 400; }
-.typst-visual__box-links[hidden] { display: none; }
 .typst-editor__tabs {
   display: flex;
   gap: 4px;
@@ -171,6 +203,12 @@
 .typst-editor__tab[aria-selected='true'] { background: white; border-color: var(--te-border); }
 .typst-editor__pane { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: auto; }
 .typst-editor__pane[hidden] { display: none; }
+/* "← previous file" / "next file →" at the start and end of an included file (reading order of the main file) */
+.typst-editor__file-nav { flex: none; display: flex; gap: 16px; padding: 6px 32px; font: 12px system-ui, sans-serif; }
+.typst-editor__file-nav[hidden] { display: none; }
+.typst-editor__file-nav-link--next { margin-left: auto; }
+.typst-editor__file-nav-link { border: 0; padding: 0; background: none; color: var(--te-accent); font: inherit; cursor: pointer; }
+.typst-editor__file-nav-link:hover { text-decoration: underline; }
 .typst-visual {
   flex: 1;
   padding: 24px 32px;
@@ -228,8 +266,9 @@
 .typst-visual__raw--rendered { background: transparent; }
 .typst-visual__rendering { display: block; max-width: 100%; height: auto; cursor: text; }
 .typst-visual__raw-block:not(.typst-visual__image) > .typst-visual__rendering { margin: 0 auto; }
-/* Image files show at their own size: keep a big photo from filling the whole view (aspect kept) */
-.typst-visual__image > .typst-visual__rendering { max-height: 24em; }
+/* Image files show at their own size: keep a big photo from filling the whole view (aspect kept;
+   the picture sits in the image frame, so not a direct child) */
+.typst-visual__image .typst-visual__rendering { max-height: min(24em, 40vh); object-fit: contain; }
 /* An inline snippet is sized in em of the text around it (see inlinePictureSize), so its box takes
    that text's size, not the code chip's; a squeezed one keeps its aspect */
 .typst-visual__raw-inline.typst-visual__raw--rendered { font-size: inherit; }
@@ -257,7 +296,7 @@
 .typst-visual__note.typst-visual__note-anchor--hover,
 .typst-visual__note.typst-visual__note-anchor--active { background: var(--te-note-strong); box-shadow: 0 0 0 2px var(--te-note-line); }
 .typst-visual__note-icon { flex: none; }
-/* References (@key) as chips: the label, then what it labels (data-hint); a missing label underlined wavy */
+/* References (@key) as chips showing the label; what it labels is only in the hover tooltip (title); a missing label underlined wavy */
 .typst-visual__ref {
   display: inline-flex;
   align-items: baseline;
@@ -271,7 +310,6 @@
   white-space: nowrap;
   cursor: default;
 }
-.typst-visual__ref[data-hint]::after { content: attr(data-hint); color: #6e7781; }
 .typst-visual__ref-supplement { color: #24292f; }
 .typst-visual__ref--unknown { background: #fff1f0; color: #cf222e; text-decoration: underline wavy #cf222e; text-underline-offset: 3px; }
 /* Labels (<key>) as a tag on the block they label: in the text of headings and paragraphs, below other blocks */
@@ -679,6 +717,44 @@
 .typst-toolbar__button:disabled { color: #b8bec8; cursor: default; }
 .typst-toolbar__button:focus-visible,
 .typst-toolbar__style:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 1px; }
+/* Toolbar menus (Insert ▾, Align ▾): a trigger with a caret, a list of labelled items below it */
+.typst-toolbar__menu { position: relative; }
+.typst-toolbar__menu-button { width: auto; gap: 2px; padding: 0 4px 0 7px; }
+.typst-toolbar__menu-icon { display: inline-flex; }
+.typst-toolbar__caret { width: 0; height: 0; border: 4px solid transparent; border-top-color: currentColor; margin-top: 4px; }
+.typst-toolbar__menu-button[aria-expanded='true'] { background: #eef1f5; }
+.typst-toolbar__menu-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  min-width: 190px;
+  padding: 4px;
+  border: 1px solid var(--te-border);
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
+}
+.typst-toolbar__menu-list[hidden] { display: none; }
+.typst-toolbar__button.typst-toolbar__menu-item { width: auto; justify-content: flex-start; gap: 10px; padding: 0 10px 0 6px; font-size: 13px; white-space: nowrap; }
+/* Bars floating in the text: above a selection (marks, link, comment) and above a table (rows, columns) */
+.typst-floating-bar {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--te-border);
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  transform: translateY(-100%);
+  font-family: system-ui, sans-serif;
+}
+.typst-floating-bar[hidden] { display: none; }
+.typst-floating-bar > .typst-toolbar__button { width: 28px; height: 28px; }
 .typst-toolbar__style {
   height: 32px;
   min-width: 132px;
@@ -725,16 +801,6 @@
   white-space: pre-wrap;
 }
 .typst-asset__note { color: #57606a; }
-.typst-asset__insert {
-  border: 1px solid var(--te-accent);
-  border-radius: 6px;
-  padding: 6px 14px;
-  background: var(--te-accent);
-  color: white;
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-}
 .typst-toolbar__style:hover { background: #eef1f5; }
 .typst-status__open {
   border: 0;

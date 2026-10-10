@@ -48,6 +48,10 @@ export class ProjectRenderings {
           return file ? project.paths().filter((p) => fileKind(p) === 'image').map((p) => referencePath(file, p)) : [];
         },
         upload: (upload) => this.upload(upload, path()),
+        reference: (image) => {
+          const file = path();
+          return file && fileKind(image) === 'image' && project.has(image) ? referencePath(file, image) : null;
+        },
       },
     };
   }

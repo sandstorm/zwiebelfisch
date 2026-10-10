@@ -4,6 +4,8 @@
 /** Below this widget width an open side panel lies over the editing area instead of beside it. */
 const NARROW = 720;
 const WIDTH = { min: 160, max: 480, initial: 240, step: 16 };
+/** The preview's share of the widget's width, in percent (the editor/preview separator). */
+const SHARE = { min: 20, max: 80, initial: 50, step: 5 };
 
 export interface PanelOptions {
   /** Shown on the rail button (as its tooltip and accessible name). */
@@ -12,9 +14,10 @@ export interface PanelOptions {
   icon: Element;
 }
 
-/** What the layout remembers for the browser session: the panel width and the panels people opened or closed. */
+/** What the layout remembers for the browser session: the panel width, the preview's share and the panels people opened or closed. */
 interface Saved {
   width: number;
+  preview: number;
   chosen: Record<string, boolean>;
 }
 
@@ -27,7 +30,8 @@ export interface Memory<T> {
 /**
  * The widget's regions in one grid: on the left a rail with a button per side
  * panel and the open panel (resizable; one at a time), then the editing area
- * and the preview; the status bar below spans them all. Panels have ids
+ * and the preview, with a separator between them (drag or arrow keys: the
+ * preview's share of the width, 20–80%); the status bar below spans them all. Panels have ids
  * (`files`), so a later docking layout can take over the same contract.
  *
  * A panel is open by default as its owner says (`setDefault`) until someone
@@ -42,6 +46,7 @@ export class Layout {
   private readonly rail: HTMLElement;
   private readonly panel: HTMLElement;
   private readonly resizer: HTMLElement;
+  private readonly split: HTMLElement;
   private readonly panels = new Map<string, { body: HTMLElement; button: HTMLButtonElement; fallback: boolean; available: boolean }>();
   private readonly saved: Memory<Saved>;
   private state: Saved;
@@ -65,9 +70,12 @@ export class Layout {
     this.side.append(this.rail, this.panel);
     this.editor = div(doc, 'typst-editor__left');
     this.preview = div(doc, 'typst-editor__right');
+    this.split = this.createSplit();
+    this.preview.append(this.split);
     host.append(this.side, this.editor, this.preview);
     this.saved = this.remember<Saved>('layout');
-    this.state = { width: WIDTH.initial, chosen: {}, ...this.saved.load() };
+    this.state = { width: WIDTH.initial, preview: SHARE.initial, chosen: {}, ...this.saved.load() };
+    this.showSplit();
     this.watchWidth();
     this.listen(doc, 'pointerdown', (event) => {
       // composedPath: inside <typst-editor>'s shadow root the document sees the host as the target.
@@ -172,6 +180,7 @@ export class Layout {
     this.editor.remove();
     this.preview.remove();
     this.host.classList.remove('typst-editor--narrow');
+    this.host.style.removeProperty('--te-preview-share');
   }
 
   /** Which panel is open: the session's choice, else the default; while narrow only the overlay opened now. */
@@ -241,11 +250,49 @@ export class Layout {
     return resizer;
   }
 
+  /** The separator between editing area and preview: drag (or arrow keys) to change the preview's share. */
+  private createSplit(): HTMLElement {
+    const split = div(this.host.ownerDocument, 'typst-editor__split');
+    split.setAttribute('role', 'separator');
+    split.setAttribute('aria-orientation', 'vertical');
+    split.setAttribute('aria-label', 'Preview width');
+    split.setAttribute('aria-valuemin', String(SHARE.min));
+    split.setAttribute('aria-valuemax', String(SHARE.max));
+    split.tabIndex = 0;
+    split.addEventListener('keydown', (event) => {
+      // the separator moves with the arrow: left makes the preview wider
+      const step = { ArrowLeft: SHARE.step, ArrowRight: -SHARE.step }[event.key];
+      if (step === undefined) return;
+      event.preventDefault();
+      this.setShare(this.state.preview + step);
+    });
+    split.addEventListener('pointerdown', (event) => {
+      const box = this.host.getBoundingClientRect();
+      this.track(event, (e) => this.setShare(((box.right - e.clientX) / box.width) * 100));
+    });
+    return split;
+  }
+
+  private setShare(percent: number): void {
+    this.state.preview = Math.round(Math.min(SHARE.max, Math.max(SHARE.min, percent)));
+    this.saved.save(this.state);
+    this.showSplit();
+  }
+
+  private showSplit(): void {
+    this.host.style.setProperty('--te-preview-share', `${this.state.preview}%`);
+    this.split.setAttribute('aria-valuenow', String(this.state.preview));
+  }
+
   private drag(event: PointerEvent): void {
+    const start = { x: event.clientX, width: this.state.width };
+    this.track(event, (e) => this.resize(start.width + e.clientX - start.x));
+  }
+
+  /** Follows the pointer from `event` until it is released, calling `move` (a resize in progress). */
+  private track(event: PointerEvent, move: (event: PointerEvent) => void): void {
     event.preventDefault();
     const doc = this.host.ownerDocument;
-    const start = { x: event.clientX, width: this.state.width };
-    const move = (e: PointerEvent) => this.resize(start.width + e.clientX - start.x);
     const up = () => {
       doc.removeEventListener('pointermove', move);
       doc.removeEventListener('pointerup', up);

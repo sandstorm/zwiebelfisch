@@ -29,6 +29,8 @@ test('a heading label is a tag in the heading; a reference is a chip saying what
   await expect(visual(page).locator('h1').getByTestId('typst-label-tag')).toHaveText('intro');
   const chip = visual(page).locator('.typst-visual__ref[data-target="method"]');
   await expect(chip).toHaveAttribute('data-hint', 'Section · Method');
+  // the hint is a hover tooltip only: nothing is drawn after the name
+  expect(await chip.evaluate((el) => getComputedStyle(el, '::after').content)).toBe('none');
   await expect(visual(page).locator('.typst-visual__raw-block', { hasText: '<intro>' })).toHaveCount(0);
 });
 

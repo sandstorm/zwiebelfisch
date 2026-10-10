@@ -79,13 +79,4 @@ describe('file links in the widget', () => {
     expect(editor.activeFile).toBe('/chapters/intro.typ');
     expect(item('chapters')!.getAttribute('aria-expanded')).toBe('true');
   });
-
-  it('"Create" on a missing .typ file creates and opens it', async () => {
-    const { editor, host } = setup({ source: '#include "appendix.typ"', files, mode: 'visual' });
-    const row = host.querySelector<HTMLElement>('.typst-visual__box-links')!;
-    expect(row.textContent).toContain('appendix.typ is not in the project');
-    row.querySelector('button')!.click();
-    await vi.waitFor(() => expect(editor.activeFile).toBe('/appendix.typ'));
-    expect(editor.files['/appendix.typ']).toBe('');
-  });
 });

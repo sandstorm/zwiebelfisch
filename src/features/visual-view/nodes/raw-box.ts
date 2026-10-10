@@ -10,7 +10,7 @@ import type { Decoration, EditorView, NodeView } from '@tiptap/pm/view';
 import { minimalChange } from '../../../core/typst-document/typst-document';
 import type { FileLinks } from '../../../core/project/project';
 import { fileLinks, remotePresence, showPresence, typstLanguage } from '../../source-view/source-view';
-import { BoxLinks, imagePathLink } from './box-links';
+import { imagePathLink } from './box-links';
 import { ImageTools } from '../images/images';
 import { boxCarets } from '../presence';
 import { posToSource } from '../projection/projection';
@@ -92,8 +92,6 @@ class RawBox implements NodeView {
   private readonly code: CodeView;
   private readonly rendered: RenderedBox | null = null;
   private readonly image: ImageTools | null = null;
-  /** "Open template.typ" above a raw block that names project files. */
-  private readonly links: BoxLinks | null = null;
   /** Set while mirroring `src` into the box, so that change is not sent back. */
   private mirroring = false;
 
@@ -125,7 +123,6 @@ class RawBox implements NodeView {
       dispatchTransactions: (trs, view) => this.forward(trs, view),
     });
     boxes.set(this.dom, this);
-    this.links = rawBlockLinks(this.dom, node, links);
     this.showCarets(decorations);
     const renderer = renderers.get(editor);
     if (renderer) {
@@ -159,7 +156,6 @@ class RawBox implements NodeView {
       this.mirroring = false;
     }
     this.updateLabel();
-    this.links?.update(node.attrs.src);
     this.showCarets(decorations);
     this.image?.update(node);
     this.rendered?.update(node);
@@ -273,10 +269,6 @@ class RawBox implements NodeView {
   }
 }
 
-/** The file links above a raw block (not inline boxes, images or outlines), with `links` only. */
-function rawBlockLinks(dom: HTMLElement, node: Node, links: FileLinks | undefined): BoxLinks | null {
-  return links && node.type.name === 'rawBlock' ? new BoxLinks(dom, links, node.attrs.src) : null;
-}
 
 export const rawBoxView: NodeViewRenderer = ({ node, editor, getPos, decorations }) => new RawBox(node, editor, getPos, decorations);
 

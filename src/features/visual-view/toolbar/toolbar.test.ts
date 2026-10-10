@@ -10,7 +10,8 @@ function setup(text: string, options: VisualViewOptions = {}) {
   const doc = new TypstDocument(text);
   const view = new VisualView(parent, doc, options);
   const toolbar = parent.querySelector<HTMLElement>('[role="toolbar"]')!;
-  const button = (label: string) => toolbar.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
+  // the formatting toolbar first, then the menus' items and the floating bars (selection, table)
+  const button = (label: string) => parent.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
   const style = toolbar.querySelector<HTMLSelectElement>('select')!;
   const choose = (value: string) => {
     style.value = value;
@@ -80,7 +81,7 @@ describe('Visual view toolbar', () => {
     /** Opens the popover from the Link button, enters `value` and applies it (as Enter would). */
     function linkTo(toolbar: HTMLElement, button: (label: string) => HTMLButtonElement, value: string) {
       button('Link').click();
-      const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Link"]')!;
+      const popover = toolbar.parentElement!.querySelector<HTMLFormElement>('form[aria-label="Link"]')!;
       expect(popover.hidden).toBe(false);
       const input = popover.querySelector('input')!;
       input.value = value;
@@ -124,14 +125,14 @@ describe('Visual view toolbar', () => {
       const event = new KeyboardEvent('keydown', { key: 'k', metaKey: mac, ctrlKey: !mac, bubbles: true, cancelable: true });
       editable.dispatchEvent(event);
       expect(event.defaultPrevented).toBe(true);
-      expect(toolbar.querySelector<HTMLFormElement>('form[aria-label="Link"]')!.hidden).toBe(false);
+      expect(toolbar.parentElement!.querySelector<HTMLFormElement>('form[aria-label="Link"]')!.hidden).toBe(false);
     });
 
     it('closes on Escape without changing anything', () => {
       const { doc, view, toolbar, button } = setup('Hello\n');
       view.reveal(0, 5);
       button('Link').click();
-      const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Link"]')!;
+      const popover = toolbar.parentElement!.querySelector<HTMLFormElement>('form[aria-label="Link"]')!;
       popover.querySelector('input')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       expect(popover.hidden).toBe(true);
       expect(doc.text).toBe('Hello\n');
@@ -149,7 +150,7 @@ describe('Visual view toolbar', () => {
   });
 
   it('inserts an image picked from the project files', () => {
-    const assets = { list: () => ['img/logo.png', '/shared/photo.jpg'], upload: async () => ({ error: 'unused' }) };
+    const assets = { list: () => ['img/logo.png', '/shared/photo.jpg'], upload: async () => ({ error: 'unused' }), reference: () => null };
     const { doc, view, toolbar, button } = setup('Text\n', { assets });
     view.reveal(4, 4);
     button('Insert image').click();
@@ -163,7 +164,7 @@ describe('Visual view toolbar', () => {
 
   it('uploads an image into the project and inserts it', async () => {
     const uploaded: File[] = [];
-    const assets = { list: () => [], upload: async (file: File) => (uploaded.push(file), { path: `img/${file.name}` }) };
+    const assets = { list: () => [], upload: async (file: File) => (uploaded.push(file), { path: `img/${file.name}` }), reference: () => null };
     const { doc, view, toolbar, button } = setup('Text\n', { assets });
     view.reveal(4, 4);
     button('Insert image').click();
@@ -178,7 +179,7 @@ describe('Visual view toolbar', () => {
   });
 
   it('shows why an upload was refused, keeps the popover open and the text unchanged', async () => {
-    const assets = { list: () => [], upload: async () => ({ error: 'This change is not allowed here.' }) };
+    const assets = { list: () => [], upload: async () => ({ error: 'This change is not allowed here.' }), reference: () => null };
     const { doc, view, toolbar, button } = setup('Text\n', { assets });
     view.reveal(4, 4);
     button('Insert image').click();
@@ -250,6 +251,7 @@ describe('Visual view toolbar', () => {
       const assets = {
         list: () => [],
         upload: async (file: File) => (error ? { error } : (uploaded.push(file.name), { path: file.name })),
+        reference: (path: string) => (path.endsWith('.png') ? path.slice(1) : null),
       };
       return { assets, uploaded };
     }
@@ -303,6 +305,36 @@ describe('Visual view toolbar', () => {
       expect(doc.text).toBe('One\n');
     });
 
+    /** A file-panel row (project path) dragged over or dropped on the text. */
+    function rowEvent(type: 'dragover' | 'drop', path: string) {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      const data = { files: [], types: ['application/x-typst-project-path'], getData: () => path, dropEffect: 'none' };
+      Object.defineProperty(event, 'dataTransfer', { value: data });
+      return event;
+    }
+
+    it('an image dragged from the file panel is inserted where it is dropped, without an upload', () => {
+      const { assets, uploaded } = withUploads();
+      const { doc, view, parent } = setup('One\n\nTwo\n', { assets });
+      view.reveal(1, 1);
+      const editable = parent.querySelector('[contenteditable]')!;
+      const over = rowEvent('dragover', '/img/logo.png');
+      editable.dispatchEvent(over);
+      expect(over.defaultPrevented).toBe(true); // the browser lets it drop
+      const drop = rowEvent('drop', '/img/logo.png');
+      editable.dispatchEvent(drop);
+      expect(drop.defaultPrevented).toBe(true);
+      expect(uploaded).toEqual([]);
+      expect(doc.text).toBe('One\n\n#image("img/logo.png")\n\nTwo\n');
+    });
+
+    it('a dragged file that is no image is not inserted', () => {
+      const { assets } = withUploads();
+      const { doc, parent } = setup('One\n', { assets });
+      parent.querySelector('[contenteditable]')!.dispatchEvent(rowEvent('drop', '/data.csv'));
+      expect(doc.text).toBe('One\n');
+    });
+
     it('without assets, dropped files are left to the browser as before', () => {
       const { parent } = setup('One\n');
       const event = fileEvent('drop', [png('a.png')]);
@@ -311,12 +343,12 @@ describe('Visual view toolbar', () => {
     });
   });
 
-  it('keeps the image popover inside the toolbar when its button is near the right edge', () => {
-    const { toolbar, button } = setup('Text\n', { assets: { list: () => [], upload: async () => ({ error: 'unused' }) } });
+  it('keeps the image popover (at the Insert menu) inside the toolbar when the menu is near the right edge', () => {
+    const { toolbar, button } = setup('Text\n', { assets: { list: () => [], upload: async () => ({ error: 'unused' }), reference: () => null } });
     const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
     Object.defineProperty(toolbar, 'clientWidth', { value: 300 });
     Object.defineProperty(popover, 'offsetWidth', { value: 200 });
-    Object.defineProperty(button('Insert image'), 'offsetLeft', { value: 250 });
+    Object.defineProperty(button('Insert'), 'offsetLeft', { value: 250 });
     button('Insert image').click();
     expect(popover.style.left).toBe('100px');
   });

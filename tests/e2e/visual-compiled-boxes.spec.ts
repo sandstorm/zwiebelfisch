@@ -1,6 +1,7 @@
 // End-to-end tests (Playwright, against the demo build): raw boxes shown compiled in the Visual view.
 import type { Locator, Page } from '@playwright/test';
 import { test, expect } from './fixtures';
+import { chooseFrom } from './visual-helpers';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
@@ -80,7 +81,7 @@ test('an image block shows the image file from the project; a click selects it, 
 test('Insert image offers the project images', async ({ page }) => {
   await load(page, 'Text\n', { '/logo.svg': SVG });
   await visual(page).locator('p').first().click();
-  await page.getByRole('toolbar', { name: 'Formatting' }).getByRole('button', { name: 'Insert image' }).click();
+  await chooseFrom(page.getByRole('toolbar', { name: 'Formatting' }), 'Insert', 'Insert image');
   await page.getByRole('form', { name: 'Image' }).getByRole('button', { name: 'logo.svg' }).click();
   await expect.poll(value(page)).toContain('#image("logo.svg")');
   await expect(picture(visual(page).locator('.typst-visual__image'))).toBeVisible();
@@ -89,7 +90,7 @@ test('Insert image offers the project images', async ({ page }) => {
 test('Insert image uploads a file into the project and inserts it', async ({ page }) => {
   await load(page, 'Text\n');
   await visual(page).locator('p').first().click();
-  await page.getByRole('toolbar', { name: 'Formatting' }).getByRole('button', { name: 'Insert image' }).click();
+  await chooseFrom(page.getByRole('toolbar', { name: 'Formatting' }), 'Insert', 'Insert image');
   const form = page.getByRole('form', { name: 'Image' });
   await form.locator('input[type="file"]').setInputFiles({ name: 'cat.png', mimeType: 'image/png', buffer: PNG });
   await expect.poll(value(page)).toContain('#image("cat.png")');

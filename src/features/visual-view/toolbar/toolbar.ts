@@ -1,12 +1,14 @@
 // Toolbar: the Visual view's formatting toolbar (styles, marks, lists, alignment, insert). Entry of
 // visual-view/toolbar/. See ARCHITECTURE.md, "VisualView".
-import type { ChainedCommands, Editor } from '@tiptap/core';
+import { findParentNode, type ChainedCommands, type Editor } from '@tiptap/core';
 import { FieldPopover } from '../field-popover';
 import { type ImageAssets, ImageChoices, imageFileDrops, insertImages } from '../images/images';
 import { TextSelection, type Plugin } from '@tiptap/pm/state';
 import { textAlignAt, type TextAlignment } from '../nodes/nodes';
 import { svg, type Action } from './toolbar-action';
 import { BLOCKS as QUOTE_AND_TASKS, BREAKS, HEADER_ROW } from './toolbar-blocks';
+import { ToolbarMenu } from './toolbar-menu';
+import { type Anchor, FloatingBar } from './floating-bar';
 
 const ICONS = {
   undo: svg('<path d="M9 15 4 10l5-5"/><path d="M4 10h11a5 5 0 0 1 0 10h-3"/>'),
@@ -36,6 +38,7 @@ const ICONS = {
   alignRight: svg('<path d="M4 6h16M10 10h10M4 14h16M10 18h10"/>'),
   alignJustify: svg('<path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>'),
   comment: svg('<path d="M4 5h16v11h-9l-5 4v-4H4z"/>'),
+  insert: svg('<path d="M12 5v14M5 12h14"/>'),
 };
 
 const HISTORY: Action[] = [
@@ -50,8 +53,8 @@ const MARKS: Action[] = [
 const LISTS: Action[] = [
   { label: 'Bulleted list', icon: ICONS.bulletList, run: (c) => c.toggleBulletList(), active: (e) => e.isActive('bulletList') },
   { label: 'Numbered list', icon: ICONS.orderedList, run: (c) => c.toggleOrderedList(), active: (e) => e.isActive('orderedList') },
-  { label: 'Code block', icon: ICONS.codeBlock, run: (c) => c.toggleCodeBlock(), active: (e) => e.isActive('codeBlock') },
 ];
+const CODE_BLOCK: Action = { label: 'Code block', icon: ICONS.codeBlock, run: (c) => c.toggleCodeBlock(), active: (e) => e.isActive('codeBlock') };
 const OUTLINE: Action = {
   label: 'Table of contents',
   icon: ICONS.outline,
@@ -73,8 +76,9 @@ const ALIGNMENTS: Action[] = [
   alignAction('Justify', 'justify', 'Mod+Shift+J', ICONS.alignJustify),
 ];
 
-const TABLES: Action[] = [
-  { label: 'Insert table', icon: ICONS.table, run: (c) => c.insertTable({ rows: 2, cols: 2, withHeaderRow: false }) },
+const INSERT_TABLE: Action = { label: 'Insert table', icon: ICONS.table, run: (c) => c.insertTable({ rows: 2, cols: 2, withHeaderRow: false }) };
+/** The floating bar over a table the cursor is in. */
+const TABLE_EDITS: Action[] = [
   { label: 'Add row', icon: ICONS.addRow, run: (c) => c.addRowAfter() },
   { label: 'Add column', icon: ICONS.addColumn, run: (c) => c.addColumnAfter() },
   { label: 'Delete row', icon: ICONS.deleteRow, run: (c) => c.deleteRow() },
@@ -130,13 +134,16 @@ function currentStyle(editor: Editor): string {
 }
 
 /**
- * The Visual view's formatting toolbar: undo/redo, a paragraph style menu
- * (normal text, headings 1–3), bold/italic/inline code, link (Mod+K, asks for
- * the URL in a popover), the two list kinds and code block, text alignment
- * (left, center, right, justify), insert image (asks for its path, or offers
- * the project's images and an upload when given `assets`), table of contents
- * (`#outline()`), table editing and, given `comment`, "Comment" (adds a
- * margin note; Mod+Alt+M is the widget's). Buttons reflect the selection
+ * The Visual view's formatting toolbar, kept short: undo/redo, a paragraph
+ * style menu (normal text, headings 1–3), bold/italic/inline code, link
+ * (Mod+K, asks for the URL in a popover), bulleted/numbered/task lists, an
+ * "Align" menu (left, center, right, justify), an "Insert" menu (image — asks
+ * for its path, or offers the project's images and an upload when given
+ * `assets` —, table, table of contents, code block, quote, horizontal rule,
+ * page break) and, given `comment`, "Comment" (adds a margin note; Mod+Alt+M
+ * is the widget's). Two bars float in the text: the table edits (rows,
+ * columns, header row) above a table holding the cursor, and bold/italic/
+ * code/link/comment above a text selection. Buttons reflect the selection
  * (pressed, disabled) after every transaction and never take the focus away
  * from the text.
  */
@@ -145,14 +152,19 @@ export class Toolbar {
   private readonly refreshers: (() => void)[] = [];
   private readonly refresh = () => this.refreshers.forEach((fn) => fn());
   private readonly linkPopover: FieldPopover;
+  /** Bold, italic, code, link (and comment) above the selection. */
+  private readonly bubble: FloatingBar;
+  private linkAtCaret = false;
   private readonly imagePopover: FieldPopover;
+  private readonly menus: ToolbarMenu[] = [];
+  private readonly floating: FloatingBar[] = [];
   /** Takes image files dropped on or pasted into the text (with `assets` only). */
   private imageFiles: Plugin | null = null;
   private readonly linkShortcut = (event: KeyboardEvent) => {
     if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey) return;
     if ((event.target as Element).closest?.('.cm-editor')) return; // in a raw box
     event.preventDefault();
-    this.root.querySelector<HTMLButtonElement>('button[aria-label="Link"]')?.click();
+    this.openLink();
   };
 
   constructor(
@@ -169,13 +181,6 @@ export class Toolbar {
     this.root.addEventListener('mousedown', (event) => {
       if ((event.target as HTMLElement).closest('button')) event.preventDefault();
     });
-    this.linkPopover = new FieldPopover(this.root, {
-      label: 'Link',
-      field: 'URL',
-      placeholder: 'https://…',
-      apply: (href) => applyLink(editor, href),
-      remove: () => editor.chain().focus().extendMarkRange('link').unsetLink().run(),
-    });
     const [image, imagePopover] = this.imageAction(assets);
     this.imagePopover = imagePopover;
     const link: Action = {
@@ -183,29 +188,48 @@ export class Toolbar {
       shortcut: 'Mod+K',
       icon: ICONS.link,
       run: (c) => c.setLink({ href: 'https://typst.app' }),
-      click: (button) => this.toggle(this.linkPopover, button, editor.getAttributes('link').href ?? '', editor.isActive('link')),
+      click: () => (this.linkPopover.isOpen ? this.linkPopover.close() : this.openLink()),
       active: (e) => e.isActive('link'),
     };
+    const [taskList, quote] = QUOTE_AND_TASKS;
+    const align = this.menu('Align', () => ALIGNMENTS.find((a) => a.active!(editor))?.icon ?? ICONS.alignLeft, ALIGNMENTS);
+    const insert = this.menu('Insert', () => ICONS.insert, [image, INSERT_TABLE, OUTLINE, CODE_BLOCK, quote, ...BREAKS]);
     this.root.append(
       this.group(HISTORY),
       this.styleMenu(),
-      this.group([...MARKS, link]),
-      this.group(LISTS),
-      this.group(QUOTE_AND_TASKS),
-      this.group(ALIGNMENTS),
-      this.group([image, OUTLINE, ...TABLES, HEADER_ROW]),
-      this.group(BREAKS),
+      this.group([...LISTS, taskList]),
+      this.wrap(align.element),
+      this.wrap(insert.element),
     );
-    if (comment) this.root.append(this.group([commentAction(comment)]));
+    const commenting = comment && commentAction(comment);
+    if (commenting) this.root.append(this.group([commenting]));
     parent.prepend(this.root);
+    // the text column: the floating bars scroll with the text
+    const column = editor.view.dom.parentElement!;
+    // bold, italic, code and link only float above a selection (or a link holding the cursor)
+    this.bubble = this.floatingBar(column, 'Selection', [...MARKS, link, ...(commenting ? [commenting] : [])], () =>
+      this.linkAtCaret || this.linkPopover.isOpen || hasTextSelection(editor) || editor.isActive('link') ? selectionCoords(editor) : null,
+    );
+    this.linkPopover = new FieldPopover(this.bubble.element, {
+      label: 'Link',
+      field: 'URL',
+      placeholder: 'https://…',
+      apply: (href) => applyLink(editor, href),
+      remove: () => editor.chain().focus().extendMarkRange('link').unsetLink().run(),
+    });
+    this.floatingBar(column, 'Table', [...TABLE_EDITS, HEADER_ROW], () => (this.bubble.element.hidden ? tableAnchor(editor) : null));
     editor.view.dom.addEventListener('keydown', this.linkShortcut);
     editor.on('transaction', this.refresh);
     editor.on('focus', this.refresh);
+    editor.on('blur', this.refresh);
     this.refresh();
   }
 
   destroy(): void {
     if (this.imageFiles) this.editor.unregisterPlugin(this.imageFiles.spec.key!);
+    for (const menu of this.menus) menu.destroy();
+    for (const bar of this.floating) bar.destroy();
+    this.editor.off('blur', this.refresh);
     this.editor.view.dom.removeEventListener('keydown', this.linkShortcut);
     this.linkPopover.destroy();
     this.imagePopover.destroy();
@@ -217,7 +241,8 @@ export class Toolbar {
   /**
    * "Insert image" and its popover: a path field, plus the project's images
    * and an upload with `assets`. With them, image files dropped on or pasted
-   * into the text are uploaded and inserted too (refusals open the popover).
+   * into the text are uploaded and inserted too (refusals open the popover),
+   * and an image dragged from the file panel is inserted where it is dropped.
    */
   private imageAction(assets: ImageAssets | undefined): [Action, FieldPopover] {
     const choices = assets
@@ -234,30 +259,72 @@ export class Toolbar {
       extra: choices?.element,
     });
     if (choices) {
-      this.imageFiles = imageFileDrops(async (files, near) => {
-        const added = await choices.upload(files, near);
-        const button = this.root.querySelector<HTMLButtonElement>('button[aria-label="Insert image"]');
-        if (!added && !popover.isOpen && button) popover.open(button, '', false);
-      });
+      this.imageFiles = imageFileDrops(
+        async (files, near) => {
+          const added = await choices.upload(files, near);
+          if (!added && !popover.isOpen) popover.open(this.insertTrigger(), '', false);
+        },
+        (path, near) => {
+          const reference = assets!.reference(path);
+          if (reference !== null) insertImages(this.editor, [reference], near);
+          return reference !== null;
+        },
+      );
       this.editor.registerPlugin(this.imageFiles);
     }
     const action: Action = {
       label: 'Insert image',
       icon: ICONS.image,
       run: (c) => c.insertContent({ type: 'image' }),
-      click: (button) => {
+      click: () => {
         choices?.refresh();
-        this.toggle(popover, button, '', false);
+        this.toggle(popover, this.insertTrigger(), '', false);
       },
     };
     return [action, popover];
   }
 
   private group(actions: Action[]): HTMLElement {
+    return this.wrap(...actions.map((action) => this.button(action)));
+  }
+
+  private wrap(...children: HTMLElement[]): HTMLElement {
     const group = this.root.ownerDocument.createElement('div');
     group.className = 'typst-toolbar__group';
-    group.append(...actions.map((action) => this.button(action)));
+    group.append(...children);
     return group;
+  }
+
+  /** A menu button ("Insert", "Align") whose items are toolbar buttons; `icon` follows the selection. */
+  private menu(label: string, icon: () => string, actions: Action[]): ToolbarMenu {
+    const menu = new ToolbarMenu(this.root.ownerDocument, label, icon, actions.map((action) => this.button(action)));
+    this.menus.push(menu);
+    this.refreshers.push(() => menu.refresh());
+    return menu;
+  }
+
+  /** The link popover, in the selection's floating bar (shown for it also with only a caret, e.g. Mod+K). */
+  private openLink(): void {
+    this.linkAtCaret = true; // place the bar first, also for a caret outside a link
+    this.refresh();
+    this.linkAtCaret = false;
+    const button = this.bubble.element.querySelector<HTMLButtonElement>('button[aria-label="Link"]')!;
+    this.linkPopover.open(button, this.editor.getAttributes('link').href ?? '', this.editor.isActive('link'));
+  }
+
+  /** The anchor of popovers for items of the Insert menu (the item itself is hidden once chosen). */
+  private insertTrigger(): HTMLButtonElement {
+    return this.root.querySelector<HTMLButtonElement>('button[aria-label="Insert"]')!;
+  }
+
+  /** A bar of `actions` floating in `column` above `anchor()`, re-placed after every transaction. */
+  private floatingBar(column: HTMLElement, label: string, actions: Action[], anchor: () => Anchor): FloatingBar {
+    const bar = new FloatingBar(column, label, actions.map((action) => this.button(action)));
+    this.floating.push(bar);
+    // shown while the text has the focus, or something in the bar (the link popover's field)
+    this.refreshers.push(() => bar.show(this.editor.isFocused || bar.element.contains(bar.element.ownerDocument.activeElement) ? anchor() : null));
+    bar.element.addEventListener('focusout', () => queueMicrotask(this.refresh));
+    return bar;
   }
 
   private button(action: Action): HTMLButtonElement {
@@ -301,4 +368,36 @@ export class Toolbar {
 function shortcutText(shortcut: string): string {
   const mac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
   return shortcut.replace('Mod', mac ? '⌘' : 'Ctrl').replace('Shift', mac ? '⇧' : 'Shift').replace('Alt', mac ? '⌥' : 'Alt').replace(/\+/g, mac ? '' : '+');
+}
+
+/** Whether the selection is non-empty text. */
+function hasTextSelection(editor: Editor): boolean {
+  const { selection, doc } = editor.state;
+  return selection instanceof TextSelection && !selection.empty && doc.textBetween(selection.from, selection.to).trim() !== '';
+}
+
+/** Above the selection (or caret). */
+function selectionCoords(editor: Editor): Anchor {
+  const { from, to } = editor.state.selection;
+  return coords(editor, from, to);
+}
+
+/** Above the table holding the cursor, or null. */
+function tableAnchor(editor: Editor): Anchor {
+  const table = findParentNode((node) => node.type.name === 'table')(editor.state.selection);
+  const dom = table && (editor.view.nodeDOM(table.pos) as HTMLElement | null);
+  if (!dom?.getBoundingClientRect) return null;
+  const box = dom.getBoundingClientRect();
+  return { top: box.top, left: box.left, right: box.left + Math.min(box.width, 320) };
+}
+
+function coords(editor: Editor, from: number, to: number): Anchor {
+  try {
+    const start = editor.view.coordsAtPos(from);
+    const end = editor.view.coordsAtPos(to);
+    // on one line: centred over the selection; across lines: over its start
+    return { top: Math.min(start.top, end.top), left: start.left, right: end.top === start.top ? end.right : start.left };
+  } catch {
+    return null; // no layout (e.g. not attached)
+  }
 }

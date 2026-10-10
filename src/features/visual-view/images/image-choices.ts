@@ -5,6 +5,8 @@ export interface ImageAssets {
   list(): string[];
   /** Adds `file` to the project; resolves to the path to write in `#image(..)`, or why it was not added (in words for people). */
   upload(file: File): Promise<{ path: string } | { error: string }>;
+  /** The path to write in `#image(..)` in this document for the project file `path` (e.g. dragged from the file panel); null if it is no image. */
+  reference(path: string): string | null;
 }
 
 /**

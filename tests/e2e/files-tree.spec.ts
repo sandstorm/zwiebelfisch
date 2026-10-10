@@ -41,8 +41,13 @@ test('Mod+click on the #import path in the Source view opens the file', async ({
   await expect(page.locator('[data-testid=typst-source]:visible')).toContainText('#let accent');
 });
 
-test('"Open template.typ" on a raw box in the Visual view opens the file', async ({ page }) => {
-  await page.getByTestId('typst-visual').getByRole('button', { name: 'Open template.typ' }).click();
+test('a raw box in the Visual view has no "Open …" row; its path shows the link tooltip and opens the file', async ({ page }) => {
+  const visual = page.locator('[data-testid=typst-visual]:visible');
+  await expect(visual.getByRole('button', { name: 'Open template.typ' })).toHaveCount(0);
+  const path = visual.locator('.typst-visual__raw-block .typst-source__path', { hasText: 'template.typ' });
+  await path.hover();
+  await expect(page.locator('.cm-tooltip')).toContainText('Open template.typ');
+  await path.click({ modifiers: ['ControlOrMeta'] });
   await expect(fileRow(page, 'template.typ')).toHaveAttribute('aria-selected', 'true');
 });
 
@@ -87,4 +92,27 @@ test('narrow: the panel is an overlay that closes after choosing a file', async 
   await expect(files).toBeHidden();
   await page.getByTestId('typst-panel-toggle-files').click();
   await expect(fileRow(page, 'template.typ')).toHaveAttribute('aria-selected', 'true');
+});
+
+test('an included file links the files before and after it, at its start and its end', async ({ page }) => {
+  const bars = page.locator('nav.typst-editor__file-nav:visible');
+  const link = (where: 'top' | 'bottom', name: string) => page.locator(`nav.typst-editor__file-nav--${where}:visible`).getByRole('button', { name });
+  await expect(bars).toHaveCount(0); // the main file has none
+  await openFile(page, 'chapters/method.typ');
+  for (const where of ['top', 'bottom'] as const) {
+    await expect(page.locator(`nav.typst-editor__file-nav--${where}:visible`).getByRole('button')).toHaveText(['← chapters/introduction.typ', 'chapters/results.typ →']);
+  }
+  await link('bottom', 'chapters/results.typ →').click();
+  await expect(fileRow(page, 'chapters/results.typ')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('nav.typst-editor__file-nav--top:visible').getByRole('button')).toHaveText(['← chapters/method.typ']); // the last one
+  await link('top', '← chapters/method.typ').click();
+  await expect(fileRow(page, 'chapters/method.typ')).toHaveAttribute('aria-selected', 'true');
+});
+
+test('"Create …" in the link tooltip of a missing file creates and opens it', async ({ page }) => {
+  await page.locator('typst-editor').evaluate((el: HTMLElement & { value: string }) => (el.value = '#include "appendix.typ"\n'));
+  await page.getByRole('tab', { name: 'Source' }).click();
+  await page.locator('[data-testid=typst-source]:visible .typst-source__path', { hasText: 'appendix.typ' }).hover();
+  await page.locator('.cm-tooltip').getByRole('button', { name: 'Create appendix.typ' }).click();
+  await expect(fileRow(page, 'appendix.typ')).toHaveAttribute('aria-selected', 'true');
 });

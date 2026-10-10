@@ -5,7 +5,7 @@ import type { Diagnostic } from './core/typst-engine/typst-engine';
 import type { TypstDocument } from './core/typst-document/typst-document';
 import { Preview } from './features/preview/preview';
 import proseMirrorStyles from './features/visual-view/visual-view.css?inline';
-import { AssetView, FilePanel, filesPanelIcon, insertImage } from './features/files/files';
+import { AssetView, FilePanel, filesPanelIcon } from './features/files/files';
 import fileStyles from './features/files/files.css?inline';
 import { ChangeTracking } from './features/changes/changes';
 import { CommentAction } from './features/comments/comments';
@@ -15,7 +15,8 @@ import { DiagnosticsStatus, summarizeDiagnostics } from './features/diagnostics/
 import { EditingViews, type EditorMode } from './typst-editor/editing-views';
 import { Layout } from './typst-editor/layout';
 import layoutStyles from './typst-editor/layout.css?inline';
-import { type FileChange, type FileLinks, Project, type ProjectFiles, referencePath, resolvePath } from './core/project/project';
+import { type FileChange, type FileLinks, neighbours, Project, type ProjectFiles, resolvePath } from './core/project/project';
+import { FileNavigation } from './typst-editor/file-navigation';
 import { PdfExport } from './typst-editor/pdf-export';
 import { ProjectRenderings } from './typst-editor/project-renderings';
 import { LabelIndex } from './features/labels/labels';
@@ -178,6 +179,7 @@ class Widget {
   private readonly preview: Preview;
   readonly pdfs: PdfExport;
   private readonly views: EditingViews;
+  private readonly navigation: FileNavigation;
   private readonly files: FilePanel;
   private readonly assets: AssetView;
   private readonly renderings: ProjectRenderings;
@@ -214,6 +216,8 @@ class Widget {
     this.labels = new LabelIndex(this.project);
     this.renderings = new ProjectRenderings({ project: this.project, preview: this.preview, request: (change) => this.request(change) });
     this.views = this.mountViews();
+    this.navigation = new FileNavigation(host.ownerDocument, (path) => this.open(path));
+    this.views.setFrame(this.navigation.top, this.navigation.bottom);
     // Drops anywhere on the widget (also the preview): never the browser opening the file instead.
     const filesBody = this.layout.addPanel('files', { label: 'Files', icon: filesPanelIcon(host.ownerDocument) });
     this.files = new FilePanel(filesBody, host, {
@@ -224,7 +228,7 @@ class Widget {
       onChange: (change) => this.request(change),
       memory: this.layout.remember('folders'),
     });
-    this.assets = new AssetView(this.left, (path) => this.insertImage(path));
+    this.assets = new AssetView(this.left);
     this.unsubscribe = this.project.onChange((change) => this.changed(change));
     // the Visual view has "Comment" in its toolbar; the tab bar's button is for the Source view
     this.commentAction = new CommentAction(host, () => this.views.shown());
@@ -247,9 +251,10 @@ class Widget {
       this.lastSource = path;
       this.assets.hide();
     } else {
-      this.assets.show(path, this.project.content(path)!, this.lastSource);
+      this.assets.show(path, this.project.content(path)!);
     }
     this.views.show(document ?? null);
+    this.showNeighbours();
     this.showCursors();
     this.renderFiles();
     this.showStatus();
@@ -359,6 +364,7 @@ class Widget {
 
   private changed(change: FileChange): void {
     this.refresh();
+    this.showNeighbours(); // an #include may have been added, moved or removed
     if (change.kind !== 'update') this.restructured(change);
     this.options.onFilesChange?.(change);
     if (change.kind === 'update' && change.path === this.project.main) this.options.onChange?.(change.content);
@@ -412,15 +418,9 @@ class Widget {
     this.views.reveal(target.from, target.to, inSource);
   }
 
-  private insertImage(path: string): void {
-    const target = this.lastSource;
-    const document = this.project.document(target)!;
-    const offset = this.views.cursor(document) ?? document.text.length;
-    const change = insertImage(document.text, offset, referencePath(target, path));
-    document.change([change], 'insert-image');
-    this.open(target);
-    const start = change.from + change.insert.indexOf('#');
-    this.views.reveal(start, change.from + change.insert.trimEnd().length);
+  /** "← previous file" / "next file →" around an included file, in the main file's reading order. */
+  private showNeighbours(): void {
+    this.navigation.show(neighbours(this.project.files(), this.project.main, this.active));
   }
 
   private showDiagnostics(diagnostics: Diagnostic[]): void {

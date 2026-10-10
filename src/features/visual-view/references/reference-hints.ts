@@ -9,8 +9,8 @@ import { describeLabel } from './label-choices';
 const key = new PluginKey<DecorationSet>('typstReferenceHints');
 
 /**
- * Decorates every reference chip with what its label labels (`data-hint`,
- * shown after the name, and a tooltip naming the file) or, when the project
+ * Decorates every reference chip with what its label labels (`data-hint`, and
+ * a hover tooltip with it and the file; nothing extra is drawn inline) or, when the project
  * has no such label, marks it unknown (wavy underline, a tooltip saying why;
  * Typst reports the same error). Follows edits and changes of the project's
  * labels.

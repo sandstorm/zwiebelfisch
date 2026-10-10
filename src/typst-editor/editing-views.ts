@@ -44,6 +44,8 @@ export class EditingViews {
   private current: EditorMode;
   /** Tab-bar controls that only show in one view. */
   private readonly modeActions = new Map<HTMLElement, EditorMode>();
+  /** Shown above and below the visible view (see `setFrame`). */
+  private frame: { top: HTMLElement; bottom: HTMLElement } | null = null;
 
   constructor(
     private readonly parent: HTMLElement,
@@ -98,6 +100,17 @@ export class EditingViews {
   addTabAction(element: HTMLElement, mode?: EditorMode): void {
     if (mode) this.modeActions.set(element, mode);
     this.tabs.append(element);
+    this.layout();
+  }
+
+  /**
+   * Shows `top` right before and `bottom` right after the visible view's
+   * content (in the Visual view below its toolbar, above the first block), in
+   * its scrolling pane, so they are the first and last thing of the file;
+   * across tab and document switches; detached while no document is shown.
+   */
+  setFrame(top: HTMLElement, bottom: HTMLElement): void {
+    this.frame = { top, bottom };
     this.layout();
   }
 
@@ -206,6 +219,22 @@ export class EditingViews {
       panes.visual.hidden = document !== this.active || this.current !== 'visual';
       panes.source.hidden = document !== this.active || this.current !== 'source';
     }
+    this.placeFrame();
+  }
+
+  private placeFrame(): void {
+    if (!this.frame) return;
+    const views = this.active && this.views.get(this.active);
+    if (!views) {
+      this.frame.top.remove();
+      this.frame.bottom.remove();
+      return;
+    }
+    const pane = views.panes[this.current];
+    // the Visual view's toolbar stays on top; the Source view is all content
+    const content = this.current === 'visual' ? views.visual.content : pane.firstElementChild;
+    if (content !== this.frame.top && content?.previousSibling !== this.frame.top) pane.insertBefore(this.frame.top, content);
+    if (pane.lastChild !== this.frame.bottom) pane.append(this.frame.bottom);
   }
 }
 

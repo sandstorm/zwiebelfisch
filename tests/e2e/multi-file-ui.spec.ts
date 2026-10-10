@@ -68,7 +68,7 @@ test('the main file cannot be renamed or deleted', async ({ page }) => {
   await expect(files.getByRole('button', { name: 'Delete' })).toBeDisabled();
 });
 
-test('shows an image file and inserts it into the document', async ({ page }) => {
+test('shows an image file; dragged from the file panel into the text, it is inserted there', async ({ page }) => {
   const editor = page.locator('typst-editor');
   await editor.evaluate((el: Editor) => {
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>';
@@ -77,8 +77,9 @@ test('shows an image file and inserts it into the document', async ({ page }) =>
   await fileRow(editor, 'logo.svg').click();
   const asset = editor.getByTestId('typst-asset');
   await expect(asset.locator('img')).toBeVisible();
-  await asset.getByRole('button', { name: 'Insert into main.typ' }).click();
-  await expect(asset).toBeHidden();
-  expect(await editor.evaluate((el: Editor) => el.value)).toContain('#image("logo.svg")');
+  await expect(asset.getByRole('button')).toHaveCount(0); // no "Insert into …": images are dragged
+  await fileRow(editor, 'main.typ').click();
+  await fileRow(editor, 'logo.svg').dragTo(editor.getByTestId('typst-visual').locator('p').first());
+  await expect.poll(() => editor.evaluate((el: Editor) => el.value)).toContain('#image("logo.svg")');
   await expect(editor.getByTestId('typst-preview').locator('.typst-preview__page image')).toHaveCount(1);
 });

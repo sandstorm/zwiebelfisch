@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
-#MISE description="Build the demo and the library, then run end-to-end tests (Playwright)"
+#MISE description="Build the demo and the library, then run end-to-end tests (Playwright), in all browsers or one"
 #MISE depends=["build", "build:lib"]
+#USAGE arg "[browser]" help="Only this browser (default: all)" default="all" {
+#USAGE   choices "all" "chromium" "firefox" "webkit"
+#USAGE }
+#USAGE arg "[playwright_args]..." help="Passed on to Playwright (spec files; flags after --)" double_dash="automatic"
 set -euo pipefail
-exec pnpm exec playwright test "$@"
+# e.g. `mise run test:e2e firefox tests/e2e/visual-figures.spec.ts`, `mise run test:e2e all -- --grep figure`
+args=("$@")
+[[ ${#args[@]} -gt 0 && "${args[0]}" == "$usage_browser" ]] && args=(${args[@]+"${args[@]:1}"})
+[[ "$usage_browser" != all ]] && args=(--project="$usage_browser" ${args[@]+"${args[@]}"})
+exec pnpm exec playwright test ${args[@]+"${args[@]}"}

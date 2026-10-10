@@ -58,9 +58,13 @@ test('highlights the clicked text in the preview', async ({ page }) => {
   const highlight = pages(page).first().locator('.typst-preview__highlight');
   await expect(highlight).toBeVisible();
   const box = (await highlight.boundingBox())!;
-  const glyph = (await pages(page).locator('svg use').first().boundingBox())!;
-  expect(box.x).toBeLessThanOrEqual(glyph.x + 1);
-  expect(box.x + box.width).toBeGreaterThan(glyph.x + glyph.width - 1);
+  // the glyph's origin, not its bounding box: Firefox reports a size-less <use> as large as the page
+  const origin = await pages(page).locator('svg use').first().evaluate((use: SVGUseElement) => {
+    const local = new DOMPoint(use.x.baseVal.value + 3, use.y.baseVal.value);
+    return local.matrixTransform((use.parentNode as SVGGraphicsElement).getScreenCTM()!).x;
+  });
+  expect(box.x).toBeLessThanOrEqual(origin);
+  expect(box.x + box.width).toBeGreaterThan(origin);
   // regression: the outline must be the clicked text, never the whole page
   const pageBox = (await pages(page).first().boundingBox())!;
   expect(box.height).toBeLessThan(pageBox.height / 4);
@@ -114,4 +118,17 @@ test.describe('a 30-page document', () => {
     await expect.poll(() => scroller(page).evaluate((el) => el.scrollTop)).toBeGreaterThan(1000);
     await expect(page.getByTestId('typst-preview-page-number')).toHaveText('30 / 30');
   });
+});
+
+test('dragging the separator between editor and preview resizes both', async ({ page }) => {
+  const preview = page.getByTestId('typst-preview');
+  const before = (await preview.boundingBox())!;
+  const split = page.getByRole('separator', { name: 'Preview width' });
+  const box = (await split.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x - 150, box.y + box.height / 2, { steps: 5 });
+  await page.mouse.up();
+  const after = (await preview.boundingBox())!;
+  expect(after.width).toBeGreaterThan(before.width + 100);
 });

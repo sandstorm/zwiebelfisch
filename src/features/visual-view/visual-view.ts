@@ -52,6 +52,8 @@ const FROM_DOCUMENT = 'typst-from-document';
  * raw boxes and is never rewritten.
  */
 export class VisualView implements PresenceTarget {
+  /** The text and the notes gutter, below the toolbar: what scrolls as the document's content. */
+  readonly content: HTMLElement;
   private readonly editor: Editor;
   private readonly toolbar: Toolbar;
   private readonly notes: NotesGutter;
@@ -61,6 +63,7 @@ export class VisualView implements PresenceTarget {
     // the text and, right of it, the notes gutter
     const body = parent.appendChild(parent.ownerDocument.createElement('div'));
     body.className = 'typst-visual__body';
+    this.content = body;
     this.editor = new Editor({
       element: body,
       extensions: [...extensions, highlights, remotePresence, referencesExtension({ labels: options.labels, document })],
