@@ -68,7 +68,9 @@ function presenceDecorations(doc: Node, presences: readonly Presence[]): Decorat
       entry.carets.push({ id, user, offset: head - box.start });
       boxes.set(box.pos, entry);
     } else {
-      decorations.push(caret(sourceToPos(doc, head), id, user));
+      // A caret sticks to the text before it: at the end of a line, the hidden line break or
+      // blank line after it must not carry it to the start of the next one.
+      decorations.push(caret(sourceToPos(doc, head, -1), id, user));
     }
   }
   for (const [pos, { node, carets }] of boxes) decorations.push(boxOutline(pos, node, carets));

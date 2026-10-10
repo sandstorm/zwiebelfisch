@@ -908,4 +908,5 @@ an in-memory `FakeGitLab` holding `demo/examples/advanced`). Checklist with step
   mode the host must pass a synced Y.Doc; with `{ url }` an unreachable server leaves the widget
   local. Presence in the file bar is re-resolved on presence changes only (not on
 every edit of a file not shown). In the Visual view a caret inside hidden markup (delimiters,
-markers, blank lines) is drawn at the next visible spot.
+markers, blank lines) is drawn at the visible spot before it (the end of the line it ends), so a
+caret at the end of a line never jumps to the start of the next one.

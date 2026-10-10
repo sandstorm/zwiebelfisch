@@ -37,6 +37,22 @@ describe('VisualView presence', () => {
     expect(textBefore(caret)).toBe('Some ');
   });
 
+  it('a caret at the end of a line stays there (not at the start of the next line)', () => {
+    const source = '= Title\n\nFirst line\nsecond line\n\nNext paragraph\n';
+    const { view, parent } = setup(source);
+    const caretAt = (offset: number) => {
+      view.setPresence([{ ...ann, ...at(offset) }]);
+      const caret = parent.querySelector('.typst-remote-caret')!;
+      return { block: caret.closest('p, h1')!.textContent!.replace('Ann', ''), before: textBefore(caret).replace('Ann', '') };
+    };
+    expect(caretAt(source.indexOf('\n'))).toEqual({ block: 'Title', before: 'Title' });
+    expect(caretAt(source.indexOf('First line') + 'First line'.length)).toMatchObject({ before: 'First line' });
+    expect(caretAt(source.indexOf('second line') + 'second line'.length)).toEqual({ block: 'First line second line', before: 'First line second line' });
+    // and the start of a line stays at the start
+    expect(caretAt(source.indexOf('Next'))).toEqual({ block: 'Next paragraph', before: '' });
+    expect(caretAt(source.indexOf('Title'))).toEqual({ block: 'Title', before: '' });
+  });
+
   it('draws a caret in an empty paragraph (an empty table cell)', () => {
     const source = '#table(columns: 2, [a], [])\n';
     const { view, parent } = setup(source);
