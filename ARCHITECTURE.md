@@ -208,7 +208,8 @@ and computes the status label ("✓ compiled" / "1 error, 2 warnings") and the j
 (`{path, from, to}`: earliest error in the shown file, else in another project file, else the
 same for warnings). `DiagnosticsStatus` renders it as a status bar below both panes; clicking the
 label, or a listed diagnostic of a project file, opens that file and reveals the range in the
-source view. Every document's SourceView gets the diagnostics of its own path.
+source view, switching to the Source tab (only the source view marks diagnostics). Every
+document's SourceView gets the diagnostics of its own path.
 
 ### `typst-engine` (Rust crate + `src/engine`)
 

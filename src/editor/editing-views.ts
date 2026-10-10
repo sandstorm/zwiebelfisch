@@ -85,10 +85,15 @@ export class EditingViews {
     this.tabs.append(element);
   }
 
-  /** Reveals `from..to` of the shown document in the current view, or in the source view. */
+  /**
+   * Reveals `from..to` of the shown document in the current view, or (`inSource`)
+   * in the source view, switching to the Source tab so that the range is visible.
+   */
   reveal(from: number, to: number, inSource = false): void {
     const views = this.active && this.views.get(this.active);
-    if (views) (inSource || this.current === 'source' ? views.source : views.visual).reveal(from, to);
+    if (!views) return;
+    if (inSource && this.current !== 'source') this.switchTo('source');
+    (this.current === 'source' ? views.source : views.visual).reveal(from, to);
   }
 
   /** Marks `diagnostics` in the source view of `document`, now or when it is created. */
