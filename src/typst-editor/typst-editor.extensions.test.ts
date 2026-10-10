@@ -5,7 +5,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import type { Diagnostic } from '../core/typst-engine/typst-engine';
 import type { PageClick, PdfExportOption, PreviewContext, PreviewToolbarItem } from '../hosts/preview/preview';
-import type { TypstExtension } from '../hosts/workbench/workbench';
+import type { Disposable } from '../core/disposable/disposable';
+import { EventEmitter } from '../core/event-emitter/event-emitter';
+import type { SourceControl, SourceControlState, TypstExtension } from '../hosts/workbench/workbench';
 import { createTypstEditor, type TypstEditorOptions } from './typst-editor';
 
 const exportPdf = vi.fn(async () => ({ pdf: new Uint8Array([37, 80, 68, 70]), diagnostics: [], missingPackages: [] }));
@@ -193,6 +195,55 @@ describe('the built-in extensions', () => {
     source().focus();
     source().dispatch({ selection: { anchor: 3 } });
     expect(preview.revealed.at(-1)).toEqual(['/main.typ', 3, 3]);
+  });
+
+  it('offers "Save to <label>…" in the tab bar for a registered source control: asks for the message, commits, tells the outcome', async () => {
+    const changed = new EventEmitter<void>();
+    const committed: string[] = [];
+    const gitlab: SourceControl & { state: SourceControlState } = {
+      id: 'gitlab',
+      label: 'GitLab',
+      defaultCommitMessage: 'Edit via Typst editor',
+      state: { busy: false, status: null },
+      onDidChange: changed.event,
+      commit(message) {
+        committed.push(message);
+        this.state = { busy: true, status: null };
+        changed.fire();
+      },
+    };
+    let registration: Disposable | undefined;
+    // what the collaboration extension does for a GitLab room; source-control knows only the registry
+    const room: TypstExtension = {
+      id: 'room',
+      activate: ({ workbench, subscriptions }) => subscriptions.push((registration = workbench.registerSourceControl(gitlab))),
+    };
+    const { host } = setup({ source: '= Hi', extensions: (builtins) => [...builtins, room] });
+    const action = () => host.querySelector<HTMLButtonElement>('.typst-editor__tab-action[data-command="sourceControl.commit"]');
+    const notifications = () => [...host.querySelectorAll('.typst-notification__message')].map((message) => message.textContent);
+    expect(action()!.textContent).toBe('Save to GitLab…');
+
+    action()!.click();
+    const form = await vi.waitFor(() => host.querySelector<HTMLFormElement>('form.typst-quick-input')!);
+    const field = form.querySelector<HTMLInputElement>('input')!;
+    expect(field.value).toBe('Edit via Typst editor');
+    field.value = ' Fix the intro ';
+    form.dispatchEvent(new Event('submit', { cancelable: true }));
+    await vi.waitFor(() => expect(committed).toEqual(['Fix the intro']));
+    expect(action()!.textContent).toBe('Saving to GitLab…');
+
+    action()!.click();
+    await vi.waitFor(() => expect(notifications()).toEqual(['Saving to GitLab is under way.']));
+    expect(host.querySelector('form.typst-quick-input')).toBeNull();
+
+    gitlab.state = { busy: false, status: { message: 'Saving failed: no token', severity: 'error' } };
+    changed.fire();
+    expect(notifications()).toEqual(['Saving to GitLab is under way.', 'Saving failed: no token']);
+    expect(host.querySelector('.typst-notification--error')!.textContent).toContain('Saving failed: no token');
+    expect(action()!.textContent).toBe('Save to GitLab…');
+
+    registration!.dispose();
+    expect(action()).toBeNull();
   });
 
   it('removes the file panel while files.panel is hide', () => {
