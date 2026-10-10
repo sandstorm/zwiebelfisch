@@ -43,7 +43,7 @@ src/                        the widget (TypeScript); the most important API on t
                             protocol.ts (messages), project-files.ts (FileSender/FileReceiver)
       pages/                pages.ts: page-list (SVG only near the viewport), geometry, zoom, snippet, change-bars
     diagnostics/            DiagnosticsStatus (status bar), diagnostics-summary.ts
-    changes/                ChangeTracking (base version + "Show changes"), diff.ts (diffTexts), changes.css
+    changes/                ChangeTracking (base version + "Changes since …"), diff.ts (diffTexts), changes.css
     comments/               CommentAction ("Comment" / Ctrl+Alt+M), add-margin-note.ts, margin-note-syntax.ts
                             (drafting's call: parse, print, validity), page-margin.ts
     files/                  FileSwitcher (file bar), asset-view.ts, upload.ts, insert-image.ts
@@ -616,13 +616,13 @@ their own path: the Source view as CodeMirror lint (underline + hover), the Visu
 `diagnostics` highlight layer (wavy underline, message + hints as tooltip; raw code boxes in range
 are outlined, since inline decorations skip block atoms; an empty range marks one character).
 
-### `diffTexts` and "Show changes" (`src/features/changes`)
+### `diffTexts` and "Changes since …" (`src/features/changes`)
 
 ```ts
 diffTexts(base, current) → [{fromA, toA, fromB, toB}]   // A = base, B = current; sorted, UTF-16
 ```
 
-- The single text diff behind every "Show changes" rendering (the Source view's merge view runs
+- The single text diff behind every "Changes since …" rendering (the Source view's merge view runs
   the same `@codemirror/merge` algorithm itself, for its accept/reject chunks).
 - **Cleanup for readers:** a change inside a word grows to the whole word; a change touching a
   markup delimiter (`*`, `_`, heading `=`, list markers; Lezer tree of either text) grows to the
@@ -824,7 +824,7 @@ HTTP             GET /rooms/<room>/files/<path> (Authorization: Bearer <room tok
   fetched from the files endpoint, uploads as bytes; bytes → sha after a commit is not a
   change). `CollaborationLink` passes `versions` to the widget, which mounts `VersionControls`
   (`src/features/versions/versions.ts`): "Save version" + commit-message popover + status line, and
-  `ChangeTracking.setBase(base of main)` on every base change, so "Show changes" resets for
+  `ChangeTracking.setBase(base of main)` on every base change, so "Changes since …" resets for
   everyone after a save.
 
 ### Demo playground (`demo/`, `server/src/playground`)
@@ -898,7 +898,7 @@ an in-memory `FakeGitLab` holding `demo/examples/advanced`). Checklist with step
   also while the Visual view is hidden. Tables with merged cells, `table.cell`, header arguments
   or `columns: (..)` stay raw boxes.
 - **GitLab rooms:** conflicts are reported (status line), not highlighted in the views yet;
-  "Show changes" covers the main file only; an asset changed on both sides keeps the room's
+  "Changes since …" covers the main file only; an asset changed on both sides keeps the room's
   version and overwrites upstream on save; GitLab-side renames are seen as delete + create; no
   GitLab sign-in yet (the token check is the stub, the author's name comes from the client); the
   room's main file must exist in the repository (else the widget's empty main is committed).

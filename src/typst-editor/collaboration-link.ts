@@ -14,6 +14,8 @@ export interface LinkedWidget {
   current(): CurrentSelection | null;
   /** Called once connected, in a room backed by a GitLab branch ("Save version", the files' base). */
   onVersions?(versions: RoomVersions): void;
+  /** The project has the room's text now (first sync done), e.g. to start "changes since opened" from it. */
+  onSynced?(): void;
   /** The other users' places changed (every file; e.g. for the preview and the file bar). */
   onPresence?(presences: readonly PlacedPresence[]): void;
 }
@@ -66,6 +68,7 @@ export class CollaborationLink {
     this.collaboration = collaboration;
     collaboration.onPresence((presences) => this.widget.onPresence?.(presences));
     collaboration.showCursors(this.shown.path, this.shown.views);
+    this.widget.onSynced?.();
     if (collaboration.versions) this.widget.onVersions?.(collaboration.versions);
   }
 

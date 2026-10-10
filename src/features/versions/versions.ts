@@ -12,7 +12,7 @@ export interface Versions {
 }
 
 export interface VersionControlsOptions {
-  /** The file whose changes "Show changes" shows (the main file). */
+  /** The file whose changes "Changes since …" shows (the main file). */
   path: string;
   /** Who saves (the commit author, unless the server knows better from the token). */
   user?: { name: string };
@@ -23,7 +23,7 @@ export interface VersionControlsOptions {
 /**
  * "Save version" in a room backed by a GitLab branch: the button (asks for a
  * commit message), the outcome as a status line, and the change rendering's
- * base following the room's last commit, so everyone's "Show changes"
+ * base following the room's last commit, so everyone's "Changes since …"
  * starts over after a save.
  */
 export class VersionControls {

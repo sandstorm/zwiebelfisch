@@ -231,7 +231,7 @@ createTypstEditor(host, {
 - **Save version:** a "Save version" button appears next to the tabs. It asks for a commit
   message (default "Edit via Typst editor") and makes the server commit every change since the
   last commit (edits, new, renamed and deleted files, uploaded images) as **one** commit by the
-  saving user. Everyone's "Show changes" then starts over from the new commit.
+  saving user. Everyone's "Changes since …" then starts over from the new commit.
 - **Changes on GitLab** (pushes, merge requests): merged into the room when someone saves (and,
   with the webhook, as soon as they are pushed), file by file, three-way. Where the room and
   GitLab changed the same lines, nothing is merged or committed: everyone sees "Changes on GitLab
@@ -265,3 +265,11 @@ fake repository, to try merges and conflicts. See [demo-playground.md](demo-play
 ## Not covered yet
 
 Publishing to npm, and React/Vue wrappers.
+
+### Changes since …
+
+The toggle above the editor compares the main file with a base version and names it: "Changes since
+opened" by default (the text when the editor opened, or in a collaboration room after the first sync;
+off until clicked), "Changes since last saved version" in GitLab rooms (the branch's last commit), or
+what the host gives: `base` + `baseLabel` options, `editor.setBase(text, label)`. `setBase(null)`
+goes back to "since opened".

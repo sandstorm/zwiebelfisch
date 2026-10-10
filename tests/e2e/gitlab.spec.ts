@@ -41,9 +41,9 @@ test('the branch is loaded with its files, images from the repository', async ({
   await expect(ann.locator('.typst-editor__right svg image, .typst-editor__right svg use').first()).toBeAttached();
 });
 
-test('Save version commits; everyone’s "Show changes" starts over from the new version', async ({ browser, baseURL }, info) => {
+test('Save version commits; everyone’s "Changes since …" starts over from the new version', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
-  // "Show changes" covers the main file; its Visual view is all raw boxes, so Ann types in Source
+  // "Changes since …" covers the main file; its Visual view is all raw boxes, so Ann types in Source
   await ann.getByRole('tab', { name: 'Source' }).click();
   await ann.getByTestId('typst-source').locator('.cm-line', { hasText: '#pagebreak()' }).click();
   await ann.keyboard.press('End');

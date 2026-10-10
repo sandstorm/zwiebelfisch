@@ -65,7 +65,7 @@ export interface TypstEditorOptions {
    * except in a room backed by a GitLab branch (`room: 'gitlab:<project>@<branch>'`
    * on a server configured for GitLab): there the server loads the branch,
    * images come from the repository, a "Save version" button commits, and
-   * "Show changes" compares with the last commit.
+   * "Changes since …" compares with the last commit.
    */
   collaboration?: CollaborationOptions;
   /**
@@ -74,6 +74,8 @@ export interface TypstEditorOptions {
    * Visual view, change bars in the preview. See also `setBase`.
    */
   base?: string;
+  /** How the toggle names `base`: "Changes since <baseLabel>" (default "the given version"). */
+  baseLabel?: string;
 }
 
 export interface TypstEditor {
@@ -90,9 +92,10 @@ export interface TypstEditor {
   open(path: string): void;
   /**
    * Shows the changes of the main file against `base` (an earlier source)
-   * from now on, or none for null. A "Show changes" button toggles them while a base is set.
+   * from now on; the "Changes since <label>" toggle names it (default "the
+   * given version"). null goes back to comparing with the text as opened.
    */
-  setBase(base: string | null): void;
+  setBase(base: string | null, label?: string): void;
   destroy(): void;
 }
 
@@ -126,7 +129,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
       return widget.active;
     },
     open: (path) => widget.open(path),
-    setBase: (base) => widget.changes.setBase(base),
+    setBase: (base, label) => widget.changes.setBase(base === null ? null : { text: base, label: label ?? GIVEN_VERSION }),
     destroy: () => widget.destroy(),
   };
 }
@@ -186,7 +189,8 @@ class Widget {
       // fires before CodeMirror/ProseMirror read the new selection, so it would publish the previous one.
       onSelection: () => this.collaboration?.selectionChanged(),
       onBaseChange: (document, base) => {
-        if (this.project.pathOf(document) === this.project.main) this.changes.setBase(base);
+        // accepting a change moves the base; it is still the same version for the reader
+        if (this.project.pathOf(document) === this.project.main) this.changes.setBase({ text: base, label: this.changes.label });
       },
     });
     // Drops anywhere on the widget (also the preview): never the browser opening the file instead.
@@ -225,7 +229,7 @@ class Widget {
     if (changed) this.options.onOpen?.(path);
   }
 
-  /** "Show changes" for the main file: against `options.base`, in both of its views and the preview. */
+  /** "Changes since …" for the main file: against `options.base`, else the text as opened; both views and the preview. */
   private mountChanges(): ChangeTracking {
     const main = this.project.main;
     const document = this.project.document(main)!;
@@ -236,7 +240,7 @@ class Widget {
     return new ChangeTracking(
       actions,
       { document, views: [views.source, views.visual], preview: (ranges) => this.preview.showChanges(main, ranges) },
-      this.options.base,
+      this.options.base === undefined ? null : { text: this.options.base, label: this.options.baseLabel ?? GIVEN_VERSION },
     );
   }
 
@@ -251,19 +255,20 @@ class Widget {
     };
     return new CollaborationLink(options, shared, this.left, {
       current,
+      onSynced: () => this.changes.resetOpened(),
       onVersions: (versions) => this.mountVersions(versions),
       // Where the others are, in every file: dots in the file bar.
       onPresence: (presences) => this.switcher.showPresence(presences),
     });
   }
 
-  /** "Save version" next to the tabs, in a room backed by a GitLab branch; "Show changes" follows its last commit. */
+  /** "Save version" next to the tabs, in a room backed by a GitLab branch; "Changes since …" follows its last commit. */
   private mountVersions(versions: Versions): void {
     const toolbar = this.host.ownerDocument.createElement('span');
     toolbar.className = 'typst-editor__tab-actions';
     this.views.addTabAction(toolbar);
     const main = this.project.main;
-    this.versions = new VersionControls(toolbar, versions, { path: main, user: this.options.user, setBase: (base) => this.changes.setBase(base) });
+    this.versions = new VersionControls(toolbar, versions, { path: main, user: this.options.user, setBase: (base) => this.changes.setBase(base === null ? null : { text: base, label: 'last saved version' }) });
   }
 
   private showCursors(): void {
@@ -394,6 +399,9 @@ function injectStyles(host: HTMLElement): void {
   style.textContent = proseMirrorStyles + styles + changeStyles;
   target.append(style);
 }
+
+/** How "Changes since …" names a base the host gave without a label. */
+const GIVEN_VERSION = 'the given version';
 
 const FOLLOW_KEY = 'typst-editor:follow-cursor';
 

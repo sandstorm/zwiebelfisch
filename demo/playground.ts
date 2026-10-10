@@ -1,4 +1,4 @@
-// The playground's state as the URL (example, room → Local / Collaborate / GitLab mode, user, changes) and the
+// The playground's state as the URL (example, room → Local / Collaborate / GitLab mode, user) and the
 // editor options it means. See docs/demo-playground.md.
 import type { TypstEditorOptions } from '../src';
 import { exampleFiles, exampleFromQuery, exampleQuery, type ExampleName } from './examples';
@@ -12,7 +12,6 @@ import { exampleFiles, exampleFromQuery, exampleQuery, type ExampleName } from '
  * | `example`  | hello / simple / advanced (see examples.ts) |
  * | `room`     | none: Local mode; `gitlab:…`: GitLab mode; else Collaborate mode in that room |
  * | `user`     | the name others see (default Ann in a room, so the second window can be Bob) |
- * | `changes`  | present: "Show changes" against the example as loaded (Local / Collaborate; GitLab rooms compare with the last commit anyway) |
  *
  * The rooms live on the local collaboration server (`mise run demo`).
  */
@@ -39,7 +38,6 @@ export interface PlaygroundState {
   mode: Mode;
   room: string | null;
   user: string;
-  changes: boolean;
 }
 
 /** Whether the playground server answered: with its fake GitLab, without it (`mise run server:dev`), or not at all. */
@@ -52,7 +50,6 @@ export function playgroundFromQuery(params: URLSearchParams): PlaygroundState {
     mode: room === null ? 'local' : room.startsWith(GITLAB_PREFIX) ? 'gitlab' : 'collab',
     room,
     user: params.get('user') || (room === null ? 'Demo user' : USERS[0]),
-    changes: params.has('changes'),
   };
 }
 
@@ -68,14 +65,6 @@ export function modeQuery(mode: Mode, params: URLSearchParams): string {
 export function exampleLink(name: ExampleName, params: URLSearchParams): string {
   const next = new URLSearchParams(exampleQuery(name, params));
   if (next.get('room')?.startsWith(ROOM_PREFIX)) next.set('room', ROOM_PREFIX + name);
-  return `?${next}`;
-}
-
-/** The query that turns tracking changes against the example on or off. */
-export function changesQuery(on: boolean, params: URLSearchParams): string {
-  const next = new URLSearchParams(params);
-  if (on) next.set('changes', '');
-  else next.delete('changes');
   return `?${next}`;
 }
 
@@ -98,7 +87,7 @@ export function otherUser(name: string): string {
  */
 export function editorOptions(state: PlaygroundState, server: ServerKind | null): EditorOptions {
   const files = exampleFiles(state.example);
-  const local: EditorOptions = { files, ...(state.changes ? { base: files['/main.typ'] as string } : {}) };
+  const local: EditorOptions = { files };
   if (state.room === null || server === null || server === 'offline') return local;
   const collaboration = { url: SERVER.ws, room: state.room };
   // A GitLab room is loaded from the repository (local files would only shadow its images) and compares with its last commit.

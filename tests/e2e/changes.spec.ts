@@ -1,4 +1,4 @@
-// End-to-end tests (Playwright, against the demo build): "Show changes" in both views and the preview.
+// End-to-end tests (Playwright, against the demo build): "Changes since …" in both views and the preview.
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
 
@@ -60,9 +60,9 @@ test('the source view shows an inline diff with accept / reject per chunk', asyn
   expect(text).toContain('= Hello Typst\n');
 });
 
-test('"Show changes" toggles all change markers', async ({ page }) => {
+test('"Changes since …" toggles all change markers', async ({ page }) => {
   await replaceSource(page, 'second item', 'second changed item');
-  const toggle = page.getByRole('button', { name: 'Show changes' });
+  const toggle = page.getByRole('button', { name: /^Changes since/ });
   const visual = page.getByTestId('typst-visual');
   const bars = page.getByTestId('typst-preview').locator('.typst-preview__change-bar');
   await expect(visual.locator('.typst-diff-insert')).toHaveCount(1);

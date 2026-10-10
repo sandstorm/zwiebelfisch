@@ -1,4 +1,4 @@
-/* "Show changes": toggle, Visual view track changes, preview change bars.
+/* "Changes since …": toggle, Visual view track changes, preview change bars.
    (The Source view's inline diff is styled by @codemirror/merge.) */
 .typst-editor {
   --te-inserted: rgba(26, 127, 55, 0.16);

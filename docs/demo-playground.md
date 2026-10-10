@@ -73,7 +73,7 @@ Each item names the mode and example to use, the steps to take and what you shou
 | ☐ | Inline code, code blocks | Advanced → `chapters/method.typ`: edit the `ts` block and change its **Language** field. Press Mod+E on selected text. | The fence and the language update, and Mod+E toggles inline code. | visual-toc-and-code.spec |
 | ☐ | Table of contents | Advanced → `main.typ` shows the `#outline` box rendered. Use the toolbar's **Table of contents** in Hello. | An `#outline()` block is inserted and renders the headings. | visual-toc-and-code.spec |
 | ☐ | Text alignment | Select a paragraph, then use **Align left**, **Center**, **Align right**, **Justify** (Mod+Shift+L/E/R/J). | The source gets `#align(center)[…]` or `#par(justify: true)[…]`. The button for the current alignment is pressed. | visual-text-align.spec |
-| ☐ | Track changes | Local / Hello. Turn on **Track changes** and edit the heading. | Insertions are marked and deletions struck through, in both views. The preview shows change bars. **Show changes** toggles them. | changes.spec, demo-playground.spec |
+| ☐ | Track changes | Local / Hello. Turn on **Track changes** and edit the heading. | Insertions are marked and deletions struck through, in both views. The preview shows change bars. **Changes since …** toggles them. | changes.spec, demo-playground.spec |
 | ☐ | Diagnostics | Type an error in a paragraph, for example `#nope`. | A wavy underline with a tooltip in Visual, a lint underline in Source, and a status bar label that jumps to the error when clicked. | diagnostics-summary.test.ts, preview-ux.spec |
 
 ### Images and figures
@@ -116,8 +116,8 @@ Each item names the mode and example to use, the steps to take and what you shou
 | ✓ | Feature | Steps (mode / example) | Expected | Automated |
 |---|---|---|---|---|
 | ☐ | Loading a branch | GitLab (fake). | The file bar lists `main.typ`, `template.typ`, `helpers.typ`, the chapters and the SVGs. Images come from the server. | gitlab.spec |
-| ☐ | Show changes vs. last commit | In `main.typ` (Source tab), add a paragraph `Again.` after `#pagebreak()`. "Show changes" covers only the main file for now. | Both windows mark the paragraph as inserted. | gitlab.spec |
-| ☐ | Save version | Click **Save version**, enter a message and click **Apply**. | Both windows say "Saved version <sha> (Ann)", and "Show changes" starts over. Saving again says "No changes to save". | gitlab.spec |
+| ☐ | Changes since … vs. last commit | In `main.typ` (Source tab), add a paragraph `Again.` after `#pagebreak()`. "Changes since …" covers only the main file for now. | Both windows mark the paragraph as inserted. | gitlab.spec |
+| ☐ | Save version | Click **Save version**, enter a message and click **Apply**. | Both windows say "Saved version <sha> (Ann)", and "Changes since …" starts over. Saving again says "No changes to save". | gitlab.spec |
 | ☐ | Upstream merge | Edit `main.typ` (as above). Choose "add a paragraph" and click **Simulate upstream commit**. | The status shows the fake commit. Both windows say "Merged new changes from GitLab", and the paragraph appears in the Introduction. Your edit is kept. | gitlab.spec, playground.test.ts |
 | ☐ | Upstream conflict | Edit the "Introduction" heading. Choose "revise a heading" and click **Simulate upstream commit**. | "Changes on GitLab conflict with edits in /chapters/introduction.typ; not saved". The room keeps your text, with no conflict markers. Make the heading match and save again to resolve it. | gitlab-rooms.test.ts |
 | ☐ | Uploads in a GitLab room | Upload an image and click **Save version**. | The image is part of the commit and shows in the second window. | gitlab-rooms.test.ts |

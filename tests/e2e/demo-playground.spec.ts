@@ -49,14 +49,14 @@ test('the name field reloads as that user', async ({ page }) => {
   await expect(bar(page).getByRole('textbox', { name: 'Your name' })).toHaveValue('Ada');
 });
 
-test('Track changes compares with the example as loaded', async ({ page }) => {
+test('"Changes since opened" shows what was typed since the example loaded', async ({ page }) => {
   await page.goto('/');
-  await bar(page).getByRole('checkbox', { name: 'Track changes' }).check();
-  await expect(page).toHaveURL(/[?&]changes(=|&|$)/);
-  await expect(bar(page).getByRole('checkbox', { name: 'Track changes' })).toBeChecked();
+  const toggle = page.getByRole('button', { name: 'Changes since opened' });
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
   await page.getByTestId('typst-visual').locator('h1').click();
   await page.keyboard.press('End');
   await page.keyboard.type(' again');
+  await toggle.click();
   await expect(page.getByTestId('typst-visual').locator('.typst-diff-insert')).toHaveText(' again');
 });
 

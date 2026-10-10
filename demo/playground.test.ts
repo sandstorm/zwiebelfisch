@@ -1,14 +1,14 @@
 // Tests for playground.ts.
 import { describe, expect, it } from 'vitest';
 import { exampleFiles } from './examples';
-import { GITLAB_ROOM, SERVER, changesQuery, editorOptions, exampleLink, modeQuery, otherUser, playgroundFromQuery, userQuery } from './playground';
+import { GITLAB_ROOM, SERVER, editorOptions, exampleLink, modeQuery, otherUser, playgroundFromQuery, userQuery } from './playground';
 
 const query = (search: string) => new URLSearchParams(search);
 const parsed = (search: string) => Object.fromEntries(new URLSearchParams(search));
 
 describe('playgroundFromQuery', () => {
   it('is local without a room: the static e2e build needs no server', () => {
-    expect(playgroundFromQuery(query(''))).toEqual({ example: 'hello', mode: 'local', room: null, user: 'Demo user', changes: false });
+    expect(playgroundFromQuery(query(''))).toEqual({ example: 'hello', mode: 'local', room: null, user: 'Demo user' });
   });
 
   it('a plain room collaborates, a gitlab: room is GitLab mode', () => {
@@ -54,13 +54,6 @@ describe('exampleLink', () => {
   });
 });
 
-describe('changesQuery', () => {
-  it('turns the flag on and off, keeping the rest', () => {
-    expect(changesQuery(true, query('?example=simple'))).toBe('?example=simple&changes=');
-    expect(changesQuery(false, query('?example=simple&changes='))).toBe('?example=simple');
-  });
-});
-
 describe('users', () => {
   it('the second window is another user in the same room', () => {
     expect(parsed(userQuery(otherUser('Ann'), query('?room=r1&user=Ann')))).toEqual({ room: 'r1', user: 'Bob' });
@@ -94,12 +87,6 @@ describe('editorOptions', () => {
     });
   });
 
-  it('?changes compares with the example as loaded (Local and Collaborate only)', () => {
-    const main = exampleFiles('simple')['/main.typ'];
-    expect(editorOptions(state('?example=simple&changes'), null)).toEqual({ files: exampleFiles('simple'), base: main });
-    expect(editorOptions(state('?example=simple&changes&room=r1'), 'plain')).toMatchObject({ base: main });
-    expect(editorOptions(state(`?changes&room=${encodeURIComponent(GITLAB_ROOM)}`), 'gitlab')).not.toHaveProperty('base');
-  });
 
   it('falls back to a local copy of the example when the server is not reachable', () => {
     expect(editorOptions(state(`?room=${encodeURIComponent(GITLAB_ROOM)}`), 'offline')).toEqual({ files: exampleFiles('hello') });
