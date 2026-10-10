@@ -32,6 +32,10 @@
  * Block nodes (see `call-atoms.ts`): `table.header(..)` rows as header
  * cells, `#quote(block: true)[..]` as block quotes, `- [ ]` / `- [x]` items as
  * task items, and `#pagebreak()` / full-width `#line(..)` as atoms.
+ * Custom styles (see `features/styles/`): a call of a declared paragraph
+ * style that is a block of its own (`#note[..]`, `#callout(..)[..]`) is a
+ * `styledBlock` holding blocks; a text style call in running text
+ * (`#key[..]`) is text with a `style` mark. Undeclared calls stay raw.
  * References (`@key`, `@key[supplement]`) are `reference` atoms; a label
  * (`<key>`) after a heading, or ending a block's run, is that block's `label`
  * attribute (see `labels.ts`).
@@ -59,8 +63,13 @@ import { isEmbeddable, markupSource } from './embedded-code';
  */
 const pristine = new WeakMap<Node, InlineLayout | null>();
 
-export function project(source: string, schema: Schema): Node {
-  const ctx: Context = { schema, source, notes: 0 };
+/** The styles the projection models, by function name (see `features/styles/`). */
+export type ProjectedStyles = ReadonlyMap<string, { kind: 'paragraph' | 'text'; label: string }>;
+
+const NO_STYLES: ProjectedStyles = new Map();
+
+export function project(source: string, schema: Schema, styles: ProjectedStyles = NO_STYLES): Node {
+  const ctx: Context = { schema, source, notes: 0, styles };
   const segments = segment(children(typstParser.parse(source).topNode));
   if (segments.length === 0) {
     return schema.nodes.doc.create({ lead: source, trail: '' }, [textblock(ctx, { type: 'paragraph', attrs: { src: '' } }, 0, [])]);
@@ -136,6 +145,7 @@ interface Context {
   source: string;
   /** Range notes projected so far in the current textblock: each one's `id`, so equal adjacent notes stay apart. */
   notes: number;
+  styles: ProjectedStyles;
 }
 
 type SegmentKind = 'heading' | 'bullet' | 'ordered' | 'run';
@@ -269,10 +279,11 @@ function heading(ctx: Context, node: SyntaxNode, sep: string | null): Node {
   return textblock(ctx, { type: 'heading', attrs: { level, src, sep } }, node.from, markup ? inline(ctx, children(markup)) : []);
 }
 
-/** Calls that belong in running text: `link(..)`, which is prose like a bare URL, and margin notes. */
+/** Calls that belong in running text: `link(..)`, which is prose like a bare URL, margin notes and text styles. */
 function isProseCall(ctx: Context, node: SyntaxNode): boolean {
   if (node.name !== 'FuncCall') return false;
-  return callee(ctx, node).name === 'link' || noteCallSyntax(ctx.source, node) !== null;
+  const { name } = callee(ctx, node);
+  return name === 'link' || ctx.styles.get(name)?.kind === 'text' || noteCallSyntax(ctx.source, node) !== null;
 }
 
 /** Projects the blocks of a markup range: `doc` content, a table cell's. */
@@ -294,7 +305,7 @@ function blockCall(ctx: Context, segment: Segment, sep: string | null): Node | n
   const { name, args } = callee(ctx, call);
   const ends = name === 'figure' ? isLabelAfter(rest) : rest.length === 0;
   if (!ends) return null;
-  const projected = BLOCK_CALLS[name]?.(ctx, segment, args, sep);
+  const projected = blockProjector(ctx, name)?.(ctx, segment, args, sep);
   if (projected) return projected;
   const atom = callAtomType(name, args, (n) => ctx.source.slice(n.from, n.to));
   return atom ? ctx.schema.nodes[atom].create({ src: ctx.source.slice(segment.from, segment.to), sep }) : null;
@@ -320,6 +331,32 @@ function blockquote(ctx: Context, call: Segment, args: SyntaxNode[], sep: string
   const blocksInside = segments.length > 0 ? blocks(ctx, segments) : [textblock(ctx, { type: 'paragraph', attrs: { src: '' } }, from, [])];
   const layout: QuoteLayout = { open: ctx.source.slice(call.from, from), close: ctx.source.slice(to, call.to) };
   return ctx.schema.nodes.blockquote.create({ sep, layout }, blocksInside);
+}
+
+/** How a styled block's source lies around its content: `#note[` (or `#callout(..)[`) and `]`. Null: a new one. */
+interface StyleLayout {
+  open: string;
+  close: string;
+}
+
+/** How a block call of `name` is projected: a modelled function, else a declared paragraph style. */
+function blockProjector(ctx: Context, name: string): BlockProjector | undefined {
+  return BLOCK_CALLS[name] ?? (ctx.styles.get(name)?.kind === 'paragraph' ? styledBlock : undefined);
+}
+
+/** `#name(..)?[content]` of a declared paragraph style: a `styledBlock` whose content is segmented like the document. */
+function styledBlock(ctx: Context, call: Segment, args: SyntaxNode[], sep: string | null): Node | null {
+  const { name } = callee(ctx, call.nodes[1]);
+  const content = args.at(-1);
+  const parens = args.slice(0, -1);
+  if (!content || !isClosedContent(content) || (parens.length > 0 && !parenthesized(parens))) return null;
+  const markup = content.getChild('Markup')!;
+  const segments = segment(children(markup));
+  const from = segments[0]?.from ?? markup.from;
+  const to = segments.length > 0 ? end(segments.at(-1)!) : markup.from;
+  const inside = segments.length > 0 ? blocks(ctx, segments) : [textblock(ctx, { type: 'paragraph', attrs: { src: '' } }, from, [])];
+  const layout: StyleLayout = { open: ctx.source.slice(call.from, from), close: ctx.source.slice(to, call.to) };
+  return ctx.schema.nodes.styledBlock.create({ name, title: ctx.styles.get(name)!.label, sep, layout }, inside);
 }
 
 /** Named arguments only, `block: true` among them. */
@@ -425,7 +462,9 @@ export function hasFigureExtras(figure: Node): boolean {
 }
 
 /** Block calls by function name; each checks its arguments and projects the call, or returns null. */
-const BLOCK_CALLS: Record<string, (ctx: Context, call: Segment, args: SyntaxNode[], sep: string | null) => Node | null> = {
+type BlockProjector = (ctx: Context, call: Segment, args: SyntaxNode[], sep: string | null) => Node | null;
+
+const BLOCK_CALLS: Record<string, BlockProjector> = {
   image: (ctx, call, args, sep) => {
     const src = ctx.source.slice(call.from, call.to);
     return parenthesized(args) && imagePath(src) !== null ? ctx.schema.nodes.image.create({ src, sep }) : null;
@@ -814,7 +853,7 @@ function inlineNode(context: InlineContext): Node | Placed[] {
  * a raw inline.
  */
 function codeNode(context: InlineContext): Node | Placed[] {
-  const modelled = context.node.name === 'FuncCall' && (linkCall(context) ?? marginNoteCall(context));
+  const modelled = context.node.name === 'FuncCall' && (linkCall(context) ?? marginNoteCall(context) ?? styleCall(context));
   return modelled || raw(context.ctx, context.src, context.marks);
 }
 
@@ -842,6 +881,20 @@ function linkCall({ ctx, node, marks }: InlineContext): Placed[] | null {
   if (href === null || !isClosedContent(args[3]) || content.length === 0) return null;
   if (content.some((n) => n.name === 'Parbreak')) return null;
   return inline(ctx, content, ctx.schema.marks.link.create({ href }).addToSet(marks));
+}
+
+/** `#key[text]` (or `#key(..)[text]`) of a declared text style, with non-empty, single-paragraph text; null otherwise. */
+function styleCall({ ctx, node, marks }: InlineContext): Placed[] | null {
+  const { name, args } = callee(ctx, node);
+  const style = ctx.styles.get(name);
+  const content = args.at(-1);
+  const parens = args.slice(0, -1);
+  if (style?.kind !== 'text' || !content || !isClosedContent(content) || (parens.length > 0 && !parenthesized(parens))) return null;
+  const inside = children(content.getChild('Markup')!);
+  if (inside.length === 0 || inside.some((n) => n.name === 'Parbreak')) return null;
+  // the `#` before the call up to and with the `[`: printed again as is
+  const head = ctx.source.slice(node.from - 1, content.from + 1);
+  return inline(ctx, inside, ctx.schema.marks.style.create({ name, title: style.label, head }).addToSet(marks));
 }
 
 /** Raw text on one line: its text with a `code` mark remembering the delimiters; null for empty or multi-line raw text. */
@@ -1118,7 +1171,16 @@ const PRINT_BLOCK: Record<string, BlockPrinter> = {
   alignment: (out, block, pos) => printAlignment(out, block, pos),
   codeBlock: (out, block, pos) => printCodeBlock(out, block, pos),
   blockquote: (out, quote, pos) => printQuote(out, quote, pos),
+  styledBlock: (out, block, pos) => printStyledBlock(out, block, pos),
 };
+
+/** `#name[..]` around a styled block's blocks, or the call around them as projected. */
+function printStyledBlock(out: Printer, block: Node, pos: number): void {
+  const { open, close }: StyleLayout = block.attrs.layout ?? { open: `#${block.attrs.name}[`, close: ']' };
+  out.hidden(open);
+  printBlocks(out, block, pos + 1, '\n\n');
+  out.closing(close);
+}
 
 /** `#quote(block: true)[..]` around the quote's blocks, or the source around them as projected. */
 function printQuote(out: Printer, quote: Node, pos: number): void {
@@ -1323,6 +1385,7 @@ const FORMATTING: Record<string, (mark: Mark, around: Around) => { open: string;
   link: (mark) => ({ open: `#link(${quote(mark.attrs.href)})[`, close: ']' }),
   code: (mark, { text }) => inlineCodeDelimiters(text, mark.attrs.lang, mark.attrs.fence),
   noteRange: (mark) => rangeNoteSyntax(mark.attrs.head, mark.attrs.note),
+  style: (mark) => ({ open: mark.attrs.head ?? `#${mark.attrs.name}[`, close: ']' }),
 };
 
 /** What a formatted span starts and ends with, and the printed characters around it. */
