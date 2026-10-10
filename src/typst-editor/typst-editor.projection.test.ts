@@ -1,13 +1,12 @@
 // The Visual view's projection with the built-in extensions' specs: every fixture round-trips, edits stay minimal, the
 // position maps are precise (integration: src/testing composes the built-ins; the framework's own tests are in
-// hosts/visual-view/projection/projection.test.ts).
+// hosts/visual-view/projection.test.ts).
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState, TextSelection } from '@tiptap/pm/state';
-import { posToSource, print, project as projectWith, sourceToPos, syncDoc } from '../hosts/projection/projection';
-import { builtins, schema, schemaOf } from '../testing/testing';
+import { posToSource, print, sourceToPos, syncDoc } from '../hosts/projection/projection';
+import { after, builtins, edit, expectPreciseMap, project, schema, schemaOf } from '../testing/testing';
 
-const project = (source: string) => projectWith(source, schema);
 
 const FIXTURES: Record<string, string> = {
   empty: '',
@@ -40,21 +39,6 @@ const FIXTURES: Record<string, string> = {
     '#figure([text], caption: [x])\n\n#figure(image("a.png"), caption: [a\n\nb])\n\n' +
     '#figure(table(columns: 1, [a], table.hline()))\n\n#figure(image(p), caption: [x])\n\n#figure(image("a.png")) <a> <b>\n',
 };
-
-function edit(doc: Node, change: (state: EditorState) => EditorState['tr']): Node {
-  const state = EditorState.create({ doc });
-  return state.apply(change(state)).doc;
-}
-
-/** Position just after the first occurrence of `text` in the visual doc. */
-function after(doc: Node, text: string): number {
-  let found = -1;
-  doc.descendants((node, pos) => {
-    if (found < 0 && node.isText && node.text!.includes(text)) found = pos + node.text!.indexOf(text) + text.length;
-  });
-  if (found < 0) throw new Error(`"${text}" not found`);
-  return found;
-}
 
 describe('projection', () => {
   describe('round-trips every fixture byte for byte', () => {
@@ -149,43 +133,6 @@ describe('projection', () => {
     });
   });
 });
-
-/** Every position in `doc` whose next character is plain, visible text (not an atom or a decoded escape). */
-function visibleChars(doc: Node): { pos: number; char: string }[] {
-  const chars: { pos: number; char: string }[] = [];
-  doc.descendants((node, pos) => {
-    if (node.isText && !node.marks.some((m) => m.type.name === 'typstSource')) {
-      for (let i = 0; i < node.text!.length; i++) chars.push({ pos: pos + i, char: node.text![i] });
-    }
-  });
-  return chars;
-}
-
-/** Checks the position map of `doc` exhaustively against its printed source. */
-function expectPreciseMap(doc: Node): void {
-  const source = print(doc);
-  for (const { pos, char } of visibleChars(doc)) {
-    const offset = posToSource(doc, pos);
-    expect(source[offset], `char at position ${pos}`).toBe(char);
-    expect(sourceToPos(doc, offset)).toBe(pos);
-  }
-  let previous = -1;
-  for (let offset = 0; offset <= source.length; offset++) {
-    const pos = sourceToPos(doc, offset);
-    expect(pos, `monotonic at offset ${offset}`).toBeGreaterThanOrEqual(previous);
-    expect(pos).toBeLessThanOrEqual(doc.content.size);
-    // lands on the same visible character: mapping back and forth again is stable
-    expect(sourceToPos(doc, posToSource(doc, pos)), `round trip of offset ${offset}`).toBe(pos);
-    previous = pos;
-  }
-  previous = -1;
-  for (let pos = 0; pos <= doc.content.size; pos++) {
-    const offset = posToSource(doc, pos);
-    expect(offset, `monotonic at position ${pos}`).toBeGreaterThanOrEqual(previous);
-    expect(offset).toBeLessThanOrEqual(source.length);
-    previous = offset;
-  }
-}
 
 describe('source offset <-> document position', () => {
   describe('is precise, monotonic and stable for every fixture', () => {
@@ -750,7 +697,7 @@ describe('the order of the built-in extensions', () => {
 
   for (const [name, source] of Object.entries(FIXTURES)) {
     it(`does not change how ${name} projects and prints`, () => {
-      const doc = projectWith(source, reversed);
+      const doc = project(source, reversed);
       expect(doc.toJSON()).toEqual(project(source).toJSON());
       expect(print(doc)).toBe(source);
     });

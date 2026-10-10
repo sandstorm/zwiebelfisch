@@ -53,12 +53,15 @@ describe('layers', () => {
     expect(await broken(file, 'export const width = window.innerWidth;')).toEqual(['no-restricted-globals']);
   });
 
-  it("keeps an extension's model/ pure: no editor library, no DOM, no view folder", async () => {
+  it("keeps an extension's model/ pure: no editor library, no DOM, no view folder, no host or ui/", async () => {
     const file = 'src/extensions/labels/model/label-index.ts';
     expect(await broken(file, "import { Node } from '@tiptap/pm/model';")).toEqual(['no-restricted-imports']);
     expect(await broken(file, 'export const body = document.body;')).toEqual(['no-restricted-globals']);
     expect(await broken(file, 'export let element: HTMLElement | undefined;')).toEqual(['@typescript-eslint/no-restricted-types']);
     expect(await broken(file, "import { references } from '../visual-view/visual-view';")).toEqual(['local/dependencies']);
+    expect(await broken(file, "import { PopupMenu } from '../../../ui/popup-menu/popup-menu';")).toEqual(['local/dependencies']);
+    expect(await broken(file, "import type { Workbench } from '../../../hosts/workbench/workbench';")).toEqual(['local/dependencies']);
+    expect(await broken(file, "import { ProjectPath } from '../../../core/paths/paths';")).toEqual([]);
     expect(await broken(file, "import { scan } from './scan';")).toEqual([]);
     expect(await broken(file, "import * as Y from 'yjs';")).toEqual([]);
   });

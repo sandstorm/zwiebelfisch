@@ -1,5 +1,5 @@
-// ESLint rule `local/dependencies`: which folders may import which (docs/2026_10_10_extensions-architecture.md,
-// "Dependency rules"; ARCHITECTURE.md, "Folder rules").
+// ESLint rule `local/dependencies`: which folders may import which (docs/2026_10_11_code-conventions.md, "Layers";
+// ARCHITECTURE.md, "Folder rules").
 //
 // Works on resolved files, not on import strings, so a relative path cannot slip past it (`../labels/labels` from
 // another extension). Each entry of the `rules` option forbids files matching `importers` to import files matching

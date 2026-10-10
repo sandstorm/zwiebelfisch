@@ -3,18 +3,6 @@
 import type { CollaborationOptions, TypstEditorOptions } from '../src';
 import { exampleFiles, exampleFromQuery, exampleQuery, type ExampleName } from './examples';
 
-/**
- * The demo playground's state, all of it in the URL (so a second window, a
- * reload or a shared link shows the same):
- *
- * | parameter  | |
- * |------------|---|
- * | `example`  | hello / simple / advanced (see examples.ts) |
- * | `room`     | none: Local mode; `gitlab:…`: GitLab mode; else Collaborate mode in that room |
- * | `user`     | the name others see (default Ann in a room, so the second window can be Bob) |
- *
- * The rooms live on the local collaboration server (`mise run demo`).
- */
 export type Mode = 'local' | 'collab' | 'gitlab';
 
 export const MODES: readonly { mode: Mode; label: string }[] = [
@@ -33,6 +21,18 @@ const GITLAB_PREFIX = 'gitlab:';
 const ROOM_PREFIX = 'playground-';
 const USERS = ['Ann', 'Bob', 'Cleo', 'Dan'];
 
+/**
+ * The demo playground's state, all of it in the URL (so a second window, a
+ * reload or a shared link shows the same):
+ *
+ * | parameter  | |
+ * |------------|---|
+ * | `example`  | hello / simple / advanced (see examples.ts) |
+ * | `room`     | none: Local mode; `gitlab:…`: GitLab mode; else Collaborate mode in that room |
+ * | `user`     | the name others see (default Ann in a room, so the second window can be Bob) |
+ *
+ * The rooms live on the local collaboration server (`mise run demo`).
+ */
 export interface PlaygroundState {
   example: ExampleName;
   mode: Mode;

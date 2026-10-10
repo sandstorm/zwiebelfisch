@@ -59,7 +59,7 @@ export interface TypstEditorOptions {
    */
   onFilesChange?(change: FileChange): void;
   /** Called when another file is shown in the editing area (e.g. to put it into the page URL). */
-  onOpen?(path: string): void;
+  onOpen?(path: ProjectPath): void;
   /** Who works here: the name (and cursor color) others see when collaborating, who commits to GitLab and signs comments. */
   user?: User;
   /**
@@ -104,7 +104,7 @@ export interface TypstEditor {
    */
   settings: Settings;
   /** The path of the file shown in the editing area. */
-  readonly activeFile: string;
+  readonly activeFile: ProjectPath;
   /** Shows `path` in the editing area (if the project has it). */
   open(path: string): void;
   /**
@@ -189,9 +189,9 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
 /**
  * The features of the widget and the Typst constructs of the Visual view. Extensions never depend on each other, and
  * the order carries no meaning: where contributions compete (projectors of the same syntax, box renderers, mark
- * nesting, overlapping document links) their `priority` decides, toolbar items have a `group` + `order`. Only the
- * tab bar and the status bar still place items in activation order. Collaboration is not among them: the host adds
- * it with its connection.
+ * nesting, overlapping document links, custom editors) their `priority` decides; toolbar and menu items (the tab
+ * bar's too) have a `group` + `order`, status bar items an `alignment` + `priority`. Collaboration is not among them:
+ * the host adds it with its connection.
  */
 function builtinExtensions(): TypstExtension[] {
   return [

@@ -33,7 +33,7 @@ function noDom(message) {
   };
 }
 
-// The layers (docs/2026_10_10_extensions-architecture.md, "Dependency rules"), on resolved files
+// The layers (docs/2026_10_11_code-conventions.md, "Layers"), on resolved files
 // (eslint-rules/dependencies.js): `importers` may not import `forbidden` (regular expressions over paths from the
 // repository root; `$1` is what `importers` captured). Tests included, unless a rule says otherwise.
 export const layers = [
@@ -45,7 +45,7 @@ export const layers = [
   },
   {
     importers: '^src/hosts/',
-    forbidden: '^src/(extensions|typst-editor|testing)/',
+    forbidden: '^src/(extensions|typst-editor|typst-editor-element|testing)/',
     message: "hosts never import extensions/, testing/ or typst-editor/ (a host's tests use its own nodes and specs).",
   },
   {
@@ -57,6 +57,11 @@ export const layers = [
     importers: '^src/extensions/([^/]+)/model/',
     forbidden: '^src/extensions/$1/(visual-view|source-view|preview|workbench)/',
     message: 'model/ imports no view folder of its extension (the views import the model, not the other way).',
+  },
+  {
+    importers: '^src/extensions/[^/]+/model/',
+    forbidden: '^src/(hosts|ui|typst-editor|typst-editor-element)/',
+    message: "model/ builds on core/ only: hosts and ui/ are views (the extension's view folders use them).",
   },
   {
     importers: '^(?!src/testing/)(?!.*\\.test\\.ts$)',

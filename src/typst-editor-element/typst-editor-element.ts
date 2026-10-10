@@ -24,7 +24,7 @@ type Forward = (value: never, files: () => ProjectFiles) => [type: string, detai
 /** The editor's callbacks the element forwards as DOM events. */
 const EVENTS: Record<string, Forward> = {
   onFilesChange: (change: FileChange, files) => [['files-change', change], ...changedFiles(change, files).map((detail): [string, unknown] => ['change', detail])],
-  onOpen: (path: string) => [['open', { path }]],
+  onOpen: (path: ProjectPath) => [['open', { path }]],
 };
 
 /**
