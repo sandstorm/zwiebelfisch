@@ -228,6 +228,29 @@ drops the highlighted text of range notes as well. A document that sets
 signature of comments (without it, comments are signed "Anonymous").
 Existing `*.comments.json` sidecar files are not migrated.
 
+## Custom styles
+
+Authors declare their own paragraph and text styles as Typst functions, with a doc comment
+above them (in any `.typ` file of the project, usually `styles.typ`):
+
+```typst
+/// @style paragraph Note
+#let note(body) = block(fill: luma(240), inset: 8pt, radius: 4pt, body)
+
+/// @style text Keyword
+#let key(body) = text(fill: rgb("#1f4fa0"), weight: "bold", body)
+```
+
+The Visual view's text style menu then offers *Note* (it wraps the selected paragraphs in
+`#note[…]`) and *Keyword* (it puts `#key[…]` around the selection), and imports the function
+where it is used (`#import "styles.typ": note`). Styled text stays editable. *Normal text* takes
+paragraphs out of their style again. "New style…" adds a style to `styles.typ` to start from.
+
+In the Visual view a paragraph style shows as a frame with its name, a text style as dotted
+underlined text; the preview shows the real look. Each carries the class `typst-style--<name>`
+(`typst-style--note`), so a host can give them a closer look with its own CSS. Calls of functions
+that are not declared stay code boxes, as before.
+
 ## 5. Real-time collaboration
 
 Several people can edit the same project at once. Pass `collaboration`, and set `user` to the

@@ -31,7 +31,8 @@ src/                        the widget (TypeScript); the most important API on t
     project/                Project: the file model (one TypstDocument per .typ file, main protected); paths.ts
                             (names → paths, Typst path resolution, file kinds); FileContent; path-references.ts
                             (the file paths a Typst text names; FileLinks); reading-order.ts (main file, then
-                            its #includes depth first; a file's neighbours in that order)
+                            its #includes depth first; a file's neighbours in that order); imports.ts
+                            (importChange: import a name from a module once, used by margin notes and styles)
   features/                 one folder per feature, each entered through the file named like it
     visual-view/            VisualView — Tiptap editor over the source-anchored projection; visual-view.css
                             (ProseMirror core styles); decorations at the root: highlights, change-decorations,
@@ -57,6 +58,8 @@ src/                        the widget (TypeScript); the most important API on t
       pages/                pages.ts: page-list (SVG only near the viewport), geometry, zoom, snippet, change-bars
     diagnostics/            DiagnosticsStatus (status bar), diagnostics-summary.ts
     labels/                 LabelIndex: the project's labels (kind, title, file) and reference counts; scan.ts (Lezer, .bib)
+    styles/                 StyleIndex: the custom styles the project declares (`/// @style …`), discover.ts,
+                            new-style.ts ("New style…" stub); DocumentStyles (what a Visual view uses)
     changes/                ChangeTracking (a base per Typst file + "Changes since …"), diff.ts (diffTexts), changes.css
     comments/               CommentAction ("Comment" / Ctrl+Alt+M), add-margin-note.ts, margin-note-syntax.ts
                             (drafting's call: parse, print, validity), note-thread.ts (a note's body as a
@@ -304,7 +307,7 @@ Inside the crate:
 ### `VisualView` (`src/features/visual-view`)
 
 ```ts
-new VisualView(parent, document, { renderer?, assets?, user?: {name}, comment?(), labels?, links? })   // user signs replies; comment: the toolbar's "Comment"; labels: ProjectLabels; links: FileLinks
+new VisualView(parent, document, { renderer?, assets?, user?: {name}, comment?(), labels?, links?, styles? })   // user signs replies; comment: the toolbar's "Comment"; labels: ProjectLabels; links: FileLinks; styles: DocumentStyles
 .reveal(from, to)    // select exactly what shows source range from..to (caret if empty)
 .setHighlights(layer, highlights)   // source ranges → inline decorations (sourceToPos, end with bias -1)
 .setPresence(presences)             // other users' carets / selections (PresenceTarget), see Collaboration
@@ -740,6 +743,45 @@ its changes (the Project's change events); `.bib` files give their entry keys. A
 title come from the element before it: a heading (its text), `#figure(..)` (by its body: image →
 figure, table → table, raw → listing; its caption), an equation. The Visual view reads the index
 through `ProjectLabels` (see "VisualView"); the Source view does not use it yet.
+
+### Custom styles (`src/features/styles`, `visual-view/nodes/styles.ts`, `visual-view/toolbar/style-menu.ts`)
+
+Concept: docs/2026_10_10_custom-styles.md, option (a). A style is a Typst function declared with a
+doc comment; the editor never keeps a registry of its own:
+
+```typst
+/// @style paragraph Note
+#let note(body) = block(fill: luma(240), inset: 8pt, body)
+/// @style text Keyword
+#let key(body) = text(weight: "bold", body)
+```
+
+```ts
+scanStyles(text) → [{ name, kind: paragraph|text, label }]   // `///` line + `#let f(body, named: ..)` (one positional parameter)
+new StyleIndex(project)   .styles() → Style[] (+ path)   .onChange(listener)   .refresh()   .destroy()
+.forDocument(document) → DocumentStyles { styles(), onChange(), importChange(text, style, use) → TextChange | null, create?() }
+importChange(text, { name, matches(module), create(), use? }) → TextChange | null   // core/project/imports.ts
+newStyle(text) → { text, from, to }   // "New style…": `new-style`, `new-style-2`, … appended to /styles.typ
+```
+
+- **Projection:** `project(text, schema, styles)` gets the declared names. A run that is exactly
+  `#name(..)?[content]` of a paragraph style is a `styledBlock` (attrs `name`, `title`, `sep`,
+  `layout` = the call around the content, like a block quote) holding blocks; inline
+  `#name(..)?[text]` of a text style is text with a `style` mark (attrs `name`, `title`, `head` =
+  `#name(..)[`, printed again as written). Undeclared calls, paragraph styles inside a sentence, an
+  empty text style and calls with two content blocks stay raw. New ones print `#name[..]`.
+- **Visual view:** re-projects when the style list changes (a call turns from a raw box into
+  styled text). The style menu (`StyleMenu`) lists *Paragraph styles* and *Text styles* after the
+  headings and "New style…"; it shows the selection's paragraph style. Paragraph styles wrap the
+  selected blocks (`wrapIn`, or rename the style around them); *Normal text* lifts them out;
+  text styles toggle the mark (inclusive, like bold; one at a time). After applying one, the view
+  adds the import (`DocumentStyles.importChange` at the selection; relative to the file, never
+  into the file declaring it, a new import followed by a blank line so it stays its own block).
+- **Look:** `.typst-visual__style.typst-style--<name>` (accent bar, the title as a badge) and
+  `.typst-visual__style-text.typst-style--<name>` (dotted underline, title as tooltip); hosts
+  style a style by its class. The preview shows the real look.
+- **Widget:** one `StyleIndex`; "New style…" appends a stub to `/styles.typ` (created through the
+  usual file request when missing) and shows it in the Source view.
 
 ### Layout (`src/typst-editor/layout.ts`)
 

@@ -1,6 +1,6 @@
 # Custom styles MVP: declared style functions in the style menu
 
-Status: in-progress (Claude, 2026-10-10)
+Status: done (branch task/custom-styles-mvp) — Playwright spec written, needs a browser run
 Depends on: comments-drafting (shares the import helper and touches projection.ts; start after it is merged)
 Touches: src/features/visual-view/projection/projection.ts, src/features/visual-view/nodes/nodes.ts, src/features/visual-view/toolbar/toolbar.ts, a new style discovery module in src/features/visual-view/, src/typst-editor/** (wiring project files → VisualView), src/typst-editor.css, ARCHITECTURE.md, docs/embedding.md
 
