@@ -161,6 +161,36 @@ the source was changed elsewhere, the comment attaches to the best-matching occu
 text is gone, the thread is listed as "Text deleted". On `<typst-editor>`, set the `comments` and
 `user` properties and listen for `commentschange` (`detail.comments`).
 
+## 5. Real-time collaboration
+
+Several people can edit the same project at once. Pass `collaboration`, and set `user` to the
+name the others see next to your cursor:
+
+```js
+createTypstEditor(host, {
+  source,                                   // seeds a new room; an existing room's text wins
+  user: { name: 'Ada Lovelace', color: '#6c71c4' },   // color optional
+  collaboration: { url: 'wss://collab.example.org', room: 'project-42', token },   // Hocuspocus server
+});
+```
+
+- **What is shared:** the text of every `.typ` file (create / rename / delete included) and the
+  review comments of the main file, through one Y.Doc per room. Images and other files are not
+  shared; every widget keeps those it was given. Each user's Undo only reverts that user's edits.
+- **With a server** (`{ url, room, token? }`): the widget connects to a
+  [Hocuspocus](https://tiptap.dev/docs/hocuspocus) server (this repo's `server/`, `mise run
+  server:dev`) and joins the room once it has synced. Until then it shows the local `source`.
+- **With your own provider** (`{ doc, awareness? }`): pass a Y.Doc you have connected and
+  **synced** yourself (y-websocket, y-webrtc, …), and its awareness for remote cursors. The Y.Doc
+  must come from the same Yjs instance the widget uses, so bundle the widget from source with
+  your Yjs (deduplicated); `dist/lib` bundles its own copy.
+- `onChange` / `onFilesChange` / `onCommentsChange` also fire for the others' edits.
+- On `<typst-editor>`, set the `collaboration` and `user` properties before the element is
+  connected.
+
+Demo: start `mise run server:dev`, then open the demo with `?room=test` (and `&user=Ann`) in two
+windows.
+
 ## Using it from a bundler
 
 `dist/lib/typst-editor.js` is a regular ES module whose assets are referenced through

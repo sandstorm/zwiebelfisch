@@ -45,5 +45,5 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [visual-view-links-images-tables](visual-view-links-images-tables.md) | done |
 | [visual-view-compiled-boxes](visual-view-compiled-boxes.md) | open |
 | [preview-ux](preview-ux.md) | done |
-| [collab-yjs](collab-yjs.md) | in-progress (agent) |
+| [collab-yjs](collab-yjs.md) | done (branch task/collab-yjs) |
 | [server-gitlab](server-gitlab.md) | open (later) |
