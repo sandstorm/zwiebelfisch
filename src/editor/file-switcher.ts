@@ -73,8 +73,8 @@ export class FileSwitcher {
     this.picker.addEventListener('change', () => void this.upload([...(this.picker.files ?? [])]));
     const actions = element(doc, 'div', 'typst-files__actions');
     actions.append(
-      iconButton(doc, 'add', 'New file', () => this.askCreate(), true),
-      iconButton(doc, 'upload', 'Upload', () => this.picker.click(), true),
+      withText(iconButton(doc, 'add', 'New file', () => this.askCreate())),
+      withText(iconButton(doc, 'upload', 'Upload', () => this.picker.click())),
       (this.rename = iconButton(doc, 'rename', 'Rename', () => this.askRename())),
       (this.remove = iconButton(doc, 'delete', 'Delete', () => this.askDelete())),
     );
@@ -246,14 +246,19 @@ function acceptDrops(target: HTMLElement, enabled: () => boolean, onFiles: (file
   };
 }
 
-function iconButton(doc: Document, kind: keyof typeof ICONS, label: string, onClick: () => void, withText = false) {
+function iconButton(doc: Document, kind: keyof typeof ICONS, label: string, onClick: () => void) {
   const button = element(doc, 'button', 'typst-files__action');
   button.type = 'button';
   button.title = label;
   button.setAttribute('aria-label', label);
   button.append(icon(doc, kind));
-  if (withText) button.append(label);
   button.addEventListener('click', onClick);
+  return button;
+}
+
+/** Shows the button's label next to its icon. */
+function withText(button: HTMLButtonElement): HTMLButtonElement {
+  button.append(button.title);
   return button;
 }
 
