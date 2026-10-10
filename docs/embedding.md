@@ -138,6 +138,29 @@ only when the `Uint8Array` changes, so reuse the same array for unchanged files.
 from `https://packages.typst.org/preview/` on first use and keeps it in the Cache API. Allow that
 origin in your Content-Security-Policy (`connect-src`).
 
+## 4. Review comments
+
+Users select text and press **Comment** (or Ctrl/Cmd+Alt+M). Threads with replies, resolve and
+reopen show in a side panel. The commented text is highlighted in both views, and a marker sits
+in the preview margin. Comments are **never written into the Typst source**. The host stores
+them beside the file, for example as `main.typ.comments.json`:
+
+```js
+const editor = createTypstEditor(host, {
+  source,
+  comments: await load('main.typ.comments.json'),   // JSON string from onCommentsChange, optional
+  user: { name: 'Ada Lovelace' },                   // author of new comments
+  onCommentsChange: (json) => save('main.typ.comments.json', json),
+});
+editor.comments = json;   // replace all threads (e.g. after a pull); anchors are found again
+```
+
+`onCommentsChange` also fires when edits move a comment's anchor. Each anchor is stored as a W3C
+TextQuoteSelector (`exact` text with `prefix`/`suffix` context) plus a `start`/`end` hint. When
+the source was changed elsewhere, the comment attaches to the best-matching occurrence. If the
+text is gone, the thread is listed as "Text deleted". On `<typst-editor>`, set the `comments` and
+`user` properties and listen for `commentschange` (`detail.comments`).
+
 ## Using it from a bundler
 
 `dist/lib/typst-editor.js` is a regular ES module whose assets are referenced through

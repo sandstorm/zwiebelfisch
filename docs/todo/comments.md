@@ -1,6 +1,6 @@
 # Comments (review annotations)
 
-Status: open
+Status: done (branch task/comments)
 Depends on: projection-position-map; collab-yjs for the shared/realtime variant
 Touches: src/comments/** (new), src/visual-view/**, src/source-view/**, src/preview/** (margin markers), src/editor/**
 
@@ -36,3 +36,14 @@ and Source views and marked in the preview margin.
 
 ## Out of scope
 Mentions/notifications; comment permissions (server task).
+
+## Outcome
+- Standalone mode is built: `src/comments/` (`Comments`, `anchor.ts`, `CommentsPanel`, `CommentsUI`).
+  The widget takes `comments` (JSON), `user: {name}` and `onCommentsChange(json)`. The host
+  persists the JSON beside the file. See ARCHITECTURE.md › Review comments and docs/embedding.md §4.
+- Hook points added for other features: `setHighlights(layer, …)` on both views,
+  `Preview.setMarkers(layer, …)`, `posToSource(doc, pos, -1)` and `selection()` on both views.
+- Open: the collaborative variant (`Y.Map` + `RelativePosition`, collab-yjs); a server
+  sidecar; comments on files other than the main one (multi-file-ui); editing a posted comment;
+  fuzzy re-anchoring when the quoted text itself changed outside the editor (the thread is
+  orphaned today).

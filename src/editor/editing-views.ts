@@ -67,6 +67,20 @@ export class EditingViews {
     this.layout();
   }
 
+  /** The views of `document`, created (hidden) if it was not shown yet. */
+  viewsOf(document: TypstDocument): { visual: VisualView; source: SourceView } {
+    if (!this.views.has(document)) {
+      this.views.set(document, this.create(document));
+      this.layout();
+    }
+    return this.views.get(document)!;
+  }
+
+  /** Puts a control (e.g. the "Comment" button) at the end of the tab bar. */
+  addTabAction(element: HTMLElement): void {
+    this.tabs.append(element);
+  }
+
   /** Reveals `from..to` of the shown document in the current view, or in the source view. */
   reveal(from: number, to: number, inSource = false): void {
     const views = this.active && this.views.get(this.active);

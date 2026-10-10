@@ -13,7 +13,8 @@ crates/typst-engine/        Rust → wasm: Typst compiler, SVG export, click/cur
 src/
   engine/                   typed TS wrapper around the wasm, default fonts (generated wasm/, fonts/ — gitignored),
                             withPackages (package download, tar reader), fixtures/ (test package archives)
-  document/                 TypstDocument — the single source of truth
+  document/                 TypstDocument — the single source of truth; Highlight (a styled source range views draw)
+  comments/                 Comments (anchors + persistence), CommentsPanel (side panel), CommentsUI (wiring)
   source-view/              SourceView — CodeMirror 6 editing view
   preview/                  Preview — worker-backed live preview + hit-testing, zoom, page numbers
     engine.worker.ts        hosts the engine off the main thread
@@ -23,6 +24,7 @@ src/
     latest-only.ts          "only the newest value" task runner (compiles, cursor reveals)
     geometry.ts, zoom.ts    pure helpers: overlay boxes, visibility, current page, zoom steps
     toolbar.ts              zoom buttons, zoom label, "page n / total"
+    markers.ts              PreviewMarkers: margin marker layers placed via cursor lookups
   visual-view/              VisualView — Tiptap editor over the source-anchored projection,
                             formatting toolbar, raw boxes edited in a nested CodeMirror
   editor/                   createTypstEditor() — composes the widget, Visual/Source tabs, status bar, scoped CSS
@@ -89,6 +91,8 @@ new TypstDocument(text)
 new SourceView(parent, document, { onCursor? })
 .reveal(from, to)    // select, scroll to center, highlight
 .setDiagnostics([{severity, message, hints, from, to}])   // underline + hover; replaces previous
+.setHighlights(layer, [{from, to, className, attributes?}])  // replaces that layer; follows edits
+.selection() → {from, to}
 .destroy()
 ```
 
@@ -105,6 +109,7 @@ new SourceView(parent, document, { onCursor? })
 new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scrolling page area into container
 .update(files: Record<path, text | Uint8Array>, main)    // cheap per keystroke
 .reveal(path, offset)                        // cheap per cursor move: flash, scroll only if off-screen
+.setMarkers(layer, [{path, offset, className, attributes?, title?}])   // margin markers; replaces that layer
 .destroy()
 ```
 
@@ -132,6 +137,9 @@ new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scr
   `Uint8Array` identity: pass the same array again and only `null` crosses to the worker.
 - **Packages:** `@preview/…` imports are downloaded on first use (see `withPackages`); the
   diagnostics arrive after the download.
+- **Margin markers** (`PreviewMarkers`): per layer, placed with one `cursor` lookup per marker
+  (`jumpFromCursor`, first position: page and height) at the right page edge, and placed again
+  after every successful compile. Clicks on a marker are not treated as page clicks.
 - **Coordinates:** the SVG is scaled to the page element's width (zoom). Clicks are converted with
   `pt = (clientX − pageRect.left) × page.width / pageRect.width`.
 
@@ -204,9 +212,11 @@ Inside the crate:
 ### `createTypstEditor` / `<typst-editor>` (`src/editor`, `src/element`)
 
 ```ts
-createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileChange?, onFilesChange?, onChange? })
-  → { source (get/set), files (get/set), activeFile, open(path), destroy() }
-<typst-editor value="…" file-list="auto|show|hide">   .value, .files, 'change' {detail:{value}}, 'files-change' {detail: FileChange}
+createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileChange?, onFilesChange?, onChange?,
+                           comments?, onCommentsChange?, user? })
+  → { source (get/set), files (get/set), activeFile, open(path), comments (get/set, JSON), destroy() }
+<typst-editor value="…" file-list="auto|show|hide">   .value, .files, .comments, .user;
+  'change' {detail:{value}}, 'files-change' {detail: FileChange}, 'commentschange' {detail:{comments}}
 ```
 
 - `source` is the text of the main file at `main` (default `/main.typ`; falls back to
@@ -252,11 +262,43 @@ worker → main   {id, type:'compile', result} | {id, type:'click', jump} | {id,
   The worker (`FileReceiver`) removes paths missing since the previous call, and Typst diffs the
   text itself. Package files are not part of the map and stay loaded.
 
+### Review comments (`src/comments`)
+
+```ts
+new Comments(document, { json?, user?: {name} })
+.threads() → [{id, range: {from,to} | null, quote, resolved, comments: [{id, author, time, text}]}]   // orphans first
+.add(range, text) → id | null   .reply(id, text)   .setResolved(id, bool)   .remove(id)
+.serialize() → json   .load(json)   .onChange(fn) → unsubscribe   .destroy()
+
+new CommentsUI(comments, document, { root, views, activeView(), preview, path })
+.panel  .button  .startComment()  .destroy()
+```
+
+- **Never in the Typst source.** The host persists `serialize()` beside the file (sidecar JSON
+  via `onCommentsChange`). Later: a `Y.Map` in the collaborative Y.Doc, a server sidecar.
+- **Live anchors** are offsets mapped through every `TypstDocument` change (`mapRange`): text
+  inserted inside a range belongs to it, at its edges it does not. A range whose text is deleted
+  becomes an **orphan** (`range: null`, last quote kept). It comes back when exactly that text
+  with its context reappears (undo).
+- **Persisted anchors** are W3C Web Annotation style `{start, end, exact, prefix, suffix}`
+  (TextQuoteSelector, 32 chars of context, plus a position hint). `load()` re-anchors them
+  (`reanchor`): first at the old position, else the occurrence of `exact` with the best-matching
+  context (nearest wins ties). If the text is not found, the thread is an orphan.
+- **Wiring (`CommentsUI`):** highlights go to every view through `setHighlights('comments', …)`
+  and markers to `Preview.setMarkers('comments', …)` (unresolved anchored threads only). Both
+  are refreshed once per microtask after any change, never inside another view's update. Views
+  map their highlights through edits in the meantime. Clicking a highlight or marker
+  (`data-comment-id`) selects the thread. Cards reveal their text in the active view.
+- **Panel (`CommentsPanel`):** a pure render of `{threads, active, draft}` that reports intents.
+  Typed text and focus survive re-renders. It is hidden (zero-width grid column) while empty.
+
 ### `VisualView` (`src/visual-view`)
 
 ```ts
 new VisualView(parent, document)
 .reveal(from, to)    // select exactly what shows source range from..to (caret if empty)
+.setHighlights(layer, highlights)   // source ranges → inline decorations (sourceToPos, end with bias -1)
+.selection() → {from, to}           // posToSource; the end with bias -1
 .destroy()
 ```
 
@@ -318,7 +360,7 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - Tables print their `layout` gaps around the cells' blocks while they keep the projected shape
     (so a cell edit changes only that cell), else canonically: `#table(\n  columns: n,\n`, the
     other named arguments, one `[..], [..],` line per row, `)`. Images print `src`.
-- **Position map:** `sourceToPos(doc, offset, bias?)` / `posToSource(doc, pos)` map between
+- **Position map:** `sourceToPos(doc, offset, bias?)` / `posToSource(doc, pos, bias?)` map between
   source offsets (UTF-16) and document positions at character precision, for any doc (pristine,
   edited or synced).
   - Printing records, for every stretch of the printed source, the document range showing it:
@@ -329,7 +371,7 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - An empty textblock leaves a zero-width span where its content would go, and a table cell's
     closing `]` maps to the end of that cell, so empty cells and list items map back and forth.
   - The table is private and cached per (immutable) doc. `bias: -1` maps a range end to just
-    after the preceding visible character.
+    after the preceding visible character (in both directions).
   - Invariants (unit-tested exhaustively on all fixtures and on edited docs): monotonic both
     ways; every visible character maps to itself and back; mapping an offset to a position,
     back and forth again lands on the same position.

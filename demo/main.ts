@@ -21,5 +21,6 @@ const files: Record<string, string> = multiFile
 const editor = createTypstEditor(document.getElementById('editor')!, {
   source: multiFile ? `${source}\n#include "chapter1.typ"\n` : source,
   files,
+  user: { name: 'Demo user' },
 });
 Object.assign(window, { editor });

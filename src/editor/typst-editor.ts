@@ -1,3 +1,5 @@
+import { Comments } from '../comments/comments';
+import { CommentsUI } from '../comments/comments-ui';
 import type { Diagnostic } from '../engine/engine';
 import { Preview } from '../preview/preview';
 import proseMirrorStyles from '../visual-view/prosemirror.css?inline';
@@ -41,6 +43,19 @@ export interface TypstEditorOptions {
   onFilesChange?(change: FileChange): void;
   /** Called whenever the main file's text changes. */
   onChange?(source: string): void;
+  /**
+   * Review comments on the main file to start with, as last passed to
+   * `onCommentsChange`. They are kept beside the source, never in it; store
+   * them next to the file (e.g. `main.typ.comments.json`).
+   */
+  comments?: string;
+  /**
+   * Called with all comments as JSON whenever they change, including when
+   * edits move their anchors. Persist it to keep the comments.
+   */
+  onCommentsChange?(comments: string): void;
+  /** Who writes the comments made here. */
+  user?: { name: string };
 }
 
 export interface TypstEditor {
@@ -55,6 +70,8 @@ export interface TypstEditor {
   readonly activeFile: string;
   /** Shows `path` in the editing area (if the project has it). */
   open(path: string): void;
+  /** The review comments on the main file as JSON; assigning replaces them, re-anchored in the current source. */
+  comments: string;
   destroy(): void;
 }
 
@@ -88,6 +105,12 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
       return widget.active;
     },
     open: (path) => widget.open(path),
+    get comments() {
+      return widget.comments.serialize();
+    },
+    set comments(json: string) {
+      widget.comments.load(json);
+    },
     destroy: () => widget.destroy(),
   };
 }
@@ -107,6 +130,8 @@ class Widget {
   private readonly views: EditingViews;
   private readonly switcher: FileSwitcher;
   private readonly assets: AssetView;
+  readonly comments: Comments;
+  private readonly review: CommentsUI;
   private readonly unsubscribe: () => void;
 
   constructor(
@@ -142,6 +167,7 @@ class Widget {
     this.assets = new AssetView(this.left, (path) => this.insertImage(path));
     this.unsubscribe = this.project.onChange((change) => this.changed(change));
     this.open(main);
+    [this.comments, this.review] = this.mountComments();
     this.refresh();
   }
 
@@ -160,6 +186,24 @@ class Widget {
     this.showStatus();
   }
 
+  /** Review comments on the main file: the model, its side panel and the "Comment" button next to the tabs. */
+  private mountComments(): [Comments, CommentsUI] {
+    const document = this.project.document(this.project.main)!;
+    const views = this.views.viewsOf(document);
+    const comments = new Comments(document, { json: this.options.comments, user: this.options.user });
+    const review = new CommentsUI(comments, document, {
+      root: this.host,
+      views: [views.visual, views.source],
+      activeView: () => (this.views.mode === 'visual' ? views.visual : views.source),
+      preview: this.preview,
+      path: this.project.main,
+    });
+    this.host.insertBefore(review.panel, this.right);
+    this.views.addTabAction(review.button);
+    comments.onChange(() => this.options.onCommentsChange?.(comments.serialize()));
+    return [comments, review];
+  }
+
   replaceFiles(files: ProjectFiles): void {
     this.project.replace(files);
     this.views.retain(this.documents());
@@ -170,6 +214,8 @@ class Widget {
 
   destroy(): void {
     this.unsubscribe();
+    this.review.destroy();
+    this.comments.destroy();
     this.views.destroy();
     this.switcher.destroy();
     this.assets.destroy();

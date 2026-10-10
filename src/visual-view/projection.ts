@@ -74,15 +74,27 @@ export function sourceToPos(doc: Node, offset: number, bias: 1 | -1 = 1): number
  * The source offset of the character after document position `pos`; at the
  * end of a block or between blocks, the offset just after the preceding
  * visible source.
+ *
+ * With `bias` -1, `pos` is the end of a range and maps to just after the
+ * source of the visible character (or atom) before it.
  */
-export function posToSource(doc: Node, pos: number): number {
+export function posToSource(doc: Node, pos: number, bias: 1 | -1 = 1): number {
   const { spans } = printed(doc);
+  const end = bias < 0 ? endSource(spans, pos) : null;
+  if (end !== null) return end;
   const index = firstIndex(spans, (s) => s.pmTo > pos);
   const span = spans[index];
   if (span && span.kind !== 'syntax' && span.pmFrom <= pos) {
     return span.kind === 'text' ? span.from + pos - span.pmFrom : span.from;
   }
   return gapSource(spans, index, pos);
+}
+
+/** The source end of the visible character or atom ending at `pos`, if there is one. */
+function endSource(spans: Span[], pos: number): number | null {
+  const span = spans[firstIndex(spans, (s) => s.pmTo >= pos)];
+  if (!span || span.kind === 'syntax' || span.pmFrom >= pos) return null;
+  return span.kind === 'text' ? span.from + pos - span.pmFrom : span.to;
 }
 
 /** For `pos` between visible spans, before `spans[index]`: the end of the visible source ending right there, or of the syntax up to it. */

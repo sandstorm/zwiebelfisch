@@ -4,10 +4,13 @@ import wasmUrl from '../engine/wasm/typst_engine_bg.wasm?url&no-inline';
 import { FileSender, type FileContent } from './project-files';
 import { isInside, mostVisible, percentOfPage } from './geometry';
 import { LatestOnly } from './latest-only';
+import { PreviewMarkers, type Marker } from './markers';
 import { PageList } from './page-list';
 import type { Init, Request, Response } from './protocol';
 import { PreviewToolbar, type ZoomRequest } from './toolbar';
 import { stepZoom, zoomLabel, type Zoom } from './zoom';
+
+export type { Marker } from './markers';
 
 export interface PreviewOptions {
   /** Called when the user clicks something in the preview that has a source location. */
@@ -50,6 +53,7 @@ export class Preview {
   private zoom: Zoom = 'fit';
   private nextId = 0;
   private readonly sender = new FileSender();
+  private readonly markers: PreviewMarkers;
   private frame = 0;
 
   constructor(
@@ -63,6 +67,7 @@ export class Preview {
     this.pages.dataset.testid = 'typst-preview';
     this.toolbar = new PreviewToolbar(doc, (request) => this.setZoom(request));
     this.list = new PageList(this.pages, { root: this.scroller });
+    this.markers = new PreviewMarkers({ locate: (path, offset) => this.locate(path, offset), page: (index) => this.list.at(index) });
     this.scroller.append(this.pages);
     this.pane.append(this.toolbar.element, this.scroller);
     container.append(this.pane);
@@ -106,7 +111,16 @@ export class Preview {
     this.reveals.push({ path, offset });
   }
 
+  /**
+   * Replaces the margin markers of `layer` (one per feature, e.g. comments).
+   * They are placed again after every compilation, so they follow the text.
+   */
+  setMarkers(layer: string, markers: readonly Marker[]): void {
+    this.markers.set(layer, markers);
+  }
+
   destroy(): void {
+    this.markers.destroy();
     this.worker.terminate();
     this.resizeObserver?.disconnect();
     cancelAnimationFrame(this.frame);
@@ -122,6 +136,7 @@ export class Preview {
     if (!failed) {
       this.clearHighlight();
       this.list.render(response.result.pages);
+      void this.markers.refresh();
       this.scheduleStatus();
     }
     this.pages.classList.toggle('typst-preview--stale', failed);
@@ -133,6 +148,11 @@ export class Preview {
     const response = await this.request({ type: 'cursor', path, offset });
     if (superseded() || response.type !== 'cursor' || response.positions.length === 0) return;
     this.flash(response.positions[0]);
+  }
+
+  private async locate(path: string, offset: number): Promise<Position[]> {
+    const response = await this.request({ type: 'cursor', path, offset });
+    return response.type === 'cursor' ? response.positions : [];
   }
 
   private setZoom(request: ZoomRequest): void {
@@ -156,7 +176,8 @@ export class Preview {
   }
 
   private async handleClick(event: MouseEvent): Promise<void> {
-    const hit = this.list.pageAt(event.target as Element);
+    const target = event.target as Element;
+    const hit = PreviewMarkers.isMarker(target) ? null : this.list.pageAt(target);
     if (!hit) return;
     const rect = hit.element.getBoundingClientRect();
     const scale = hit.page.width / rect.width;

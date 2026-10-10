@@ -1,8 +1,10 @@
 import { Editor } from '@tiptap/core';
 import { EditorState, TextSelection, type Transaction } from '@tiptap/pm/state';
+import type { Highlight } from '../document/highlight';
 import type { TypstDocument } from '../document/typst-document';
 import { extensions } from './extensions';
-import { print, project, sourceToPos, syncDoc } from './projection';
+import { highlights, setHighlights } from './highlights';
+import { posToSource, print, project, sourceToPos, syncDoc } from './projection';
 import { Toolbar } from './toolbar';
 
 /** Marks transactions that mirror a document change, so they are not written back. */
@@ -25,7 +27,7 @@ export class VisualView {
   constructor(parent: HTMLElement, private readonly document: TypstDocument) {
     this.editor = new Editor({
       element: parent,
-      extensions,
+      extensions: [...extensions, highlights],
       injectCSS: false,
       editorProps: { attributes: { class: 'typst-visual', 'data-testid': 'typst-visual' } },
       onTransaction: ({ transaction }) => this.afterTransaction(transaction),
@@ -50,6 +52,18 @@ export class VisualView {
     const selection = TextSelection.between(doc.resolve(anchor), doc.resolve(head));
     this.editor.view.dispatch(this.editor.state.tr.setSelection(selection).scrollIntoView());
     this.editor.view.focus();
+  }
+
+  /** Replaces the highlights of `layer` (source ranges); they follow edits until set again. */
+  setHighlights(layer: string, ranges: readonly Highlight[]): void {
+    this.editor.view.dispatch(setHighlights(this.editor.state.tr, layer, ranges));
+  }
+
+  /** The source range shown by the selection. */
+  selection(): { from: number; to: number } {
+    const { doc, selection } = this.editor.state;
+    const from = posToSource(doc, selection.from);
+    return { from, to: selection.empty ? from : Math.max(from, posToSource(doc, selection.to, -1)) };
   }
 
   destroy(): void {
