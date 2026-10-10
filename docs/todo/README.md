@@ -40,7 +40,8 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [projection-position-map](projection-position-map.md) | open |
 | [comments](comments.md) | open (after position map) |
 | [diff-rendering](diff-rendering.md) | open (after position map) |
-| [visual-view-toolbar-and-raw-editing](visual-view-toolbar-and-raw-editing.md) | open (after projection) |
+| [visual-view-toolbar-and-raw-editing](visual-view-toolbar-and-raw-editing.md) | done (branch task/visual-view-toolbar-and-raw-editing) |
+| [visual-view-links-images-tables](visual-view-links-images-tables.md) | open (after position map) |
 | [preview-ux](preview-ux.md) | open |
 | [collab-yjs](collab-yjs.md) | open (later) |
 | [server-gitlab](server-gitlab.md) | open (later) |

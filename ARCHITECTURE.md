@@ -17,7 +17,8 @@ src/
   preview/                  Preview — worker-backed live preview + hit-testing
     engine.worker.ts        hosts the engine off the main thread
     protocol.ts             request/response messages main ↔ worker
-  visual-view/              VisualView — Tiptap editor over the source-anchored projection
+  visual-view/              VisualView — Tiptap editor over the source-anchored projection,
+                            formatting toolbar, raw boxes edited in a nested CodeMirror
   editor/                   createTypstEditor() — composes the widget, Visual/Source tabs, status bar, scoped CSS
   element/                  <typst-editor> custom element (shadow DOM) around createTypstEditor
   index.ts                  public API of the package; registers <typst-editor>
@@ -235,6 +236,19 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     `src` would make the whole block look different.
   - It then copies the attributes over (`setNodeMarkup`) and marks nodes pristine again wherever
     the target node was pristine.
+- **Toolbar** (`toolbar.ts`, created by `VisualView` above the editor): undo/redo, a text style
+  menu (normal text, heading 1–3), bold/italic, bulleted/numbered list. Each entry is a row in a
+  table of Tiptap chain commands; after every transaction the buttons show `aria-pressed` and are
+  disabled when `editor.can()` says no. Mousedown is cancelled, so the text keeps focus and selection.
+- **Raw boxes** (`raw-box.ts`): `rawBlock` / `rawInline` render through a NodeView that hosts a
+  nested CodeMirror (Typst highlighting, no own history).
+  - An edit sets `attrs.src` with an attribute step (positions and the outer selection stay put);
+    the projection prints `src` verbatim, so the source changes exactly there.
+  - An outside change of `src` (via `syncDoc`) reaches the box as one minimal change.
+  - Undo/redo in a box run the Visual view's history. Arrow keys at a box's edges, Escape (and Enter
+    in inline boxes) move into the outer editor; arrow keys in the outer editor (and Enter on a
+    selected box) move into a box; Backspace in an empty box deletes it.
+  - Hidden: CodeMirror, the DOM ↔ box lookup, focus hand-over between the two editors.
 - **Invariants (unit-tested):**
   - `print(project(src)) === src` for every fixture;
   - edits change only what they touch;
