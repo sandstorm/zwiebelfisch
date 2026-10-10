@@ -83,7 +83,8 @@ server/                     collaboration server (Node package, Hocuspocus; Type
   src/playground/           dev-only: playgroundOptions (fake GitLab with the advanced example + webhook),
                             PlaygroundEndpoints (GET /playground, POST /playground/upstream), readProjectFiles
 demo/                       the playground (vite root; checklist: docs/demo-playground.md); ?example=hello|simple|advanced
-                            picks a project from demo/examples/<name>/ (examples.ts: import.meta.glob → file map);
+                            picks a project from demo/examples/<name>/ (examples.ts: import.meta.glob → file map;
+                            the advanced example's data/compile-times.ic comes from mise run fixtures:demo-spreadsheet);
                             playground.ts (URL ↔ state: example, room → Local/Collaborate/GitLab mode, user),
                             server-status.ts (probe ws://127.0.0.1:1234, simulate upstream), playground-bar.ts (the bar)
 examples/plain-html/        <typst-editor> loaded from dist/lib without a bundler

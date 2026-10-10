@@ -1,4 +1,5 @@
 #import "../helpers.typ": ms, note
+#import "../data/compile-times.ic.gen.typ": sheets
 
 = Results <results>
 
@@ -27,6 +28,15 @@ compiles, the light ones incremental compiles after a one-word edit.
   image("../assets/compile-times.svg", width: 70%),
   caption: [Cold (dark) and incremental (light) compile times for 1, 10, 50 and 100 pages.],
 ) <fig:compile-times>
+
+The single runs behind the cold medians are in the spreadsheet
+`data/compile-times.ic`. Open it from the file panel and change a run: the
+median and @tab:runs follow.
+
+#figure(
+  sheets.Runs,
+  caption: [Cold compile times (ms) of three runs per document size.],
+) <tab:runs>
 
 == Discussion
 

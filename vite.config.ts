@@ -5,6 +5,8 @@ export default defineConfig({
   build: { outDir: '../dist/demo', emptyOutDir: true },
   server: { host: '127.0.0.1', port: 5199, strictPort: true },
   worker: { format: 'es' },
+  // the demo's IronCalc spreadsheets (examples.ts imports them inline)
+  assetsInclude: ['**/*.ic'],
   test: {
     root: '.',
     include: ['src/**/*.test.ts', 'demo/**/*.test.ts', 'eslint-rules/**/*.test.js'],

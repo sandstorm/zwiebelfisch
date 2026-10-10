@@ -55,6 +55,13 @@ describe('demo examples', () => {
     for (const [, content] of svgs) expect(content).toBeInstanceOf(Uint8Array);
     expect(compile(files).pages.length).toBeGreaterThan(1);
   });
+
+  it('the advanced example has an IronCalc spreadsheet, byte for byte, and its Typst file', () => {
+    const files = exampleFiles('advanced');
+    const onDisk = readFileSync(new URL('examples/advanced/data/compile-times.ic', import.meta.url));
+    expect(files['/data/compile-times.ic']).toEqual(new Uint8Array(onDisk));
+    expect(files['/data/compile-times.ic.gen.typ']).toMatch(/^\/\/ Generated from compile-times\.ic/);
+  });
 });
 
 describe('exampleFromQuery', () => {

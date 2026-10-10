@@ -17,7 +17,7 @@ This starts two things, and Ctrl-C stops both:
   (`server/src/fake-gitlab-main.ts`, in memory, nothing stored). It serves plain rooms, and
   GitLab rooms `gitlab:demo/report@<any branch>` backed by an in-memory **fake GitLab**. Its
   project `demo/report` holds the advanced example (template, chapters, helper module, SVG
-  images).
+  images, an IronCalc spreadsheet).
 
 The script prints the URLs to open. `mise run dev` still starts the demo alone, and Local mode
 needs nothing else. `mise run server:dev-fake-gitlab` starts the playground server alone.

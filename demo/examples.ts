@@ -5,7 +5,7 @@ import type { ProjectFiles } from '../src';
  * The demo's example projects. Each one is a folder under `examples/` whose
  * files become the project's files: `examples/<name>/main.typ` → `/main.typ`,
  * `examples/<name>/chapters/a.typ` → `/chapters/a.typ`. Typst files are text,
- * everything else (images) is passed as bytes.
+ * everything else (images, spreadsheets) is passed as bytes.
  */
 export const EXAMPLES = [
   { name: 'hello', label: 'Hello' },
@@ -24,6 +24,13 @@ const sources = import.meta.glob<string>('./examples/**/*.{typ,svg}', {
   eager: true,
 });
 
+/** Binary files (IronCalc spreadsheets) as `data:` URLs: `?raw` would decode them as UTF-8. */
+const binaries = import.meta.glob<string>('./examples/**/*.ic', {
+  query: '?inline',
+  import: 'default',
+  eager: true,
+});
+
 /** The files of an example project, keyed by absolute project path. */
 export function exampleFiles(name: ExampleName): ProjectFiles {
   const prefix = `./examples/${name}`;
@@ -33,7 +40,14 @@ export function exampleFiles(name: ExampleName): ProjectFiles {
     const path = key.slice(prefix.length);
     files[path] = path.endsWith('.typ') ? text : new TextEncoder().encode(text);
   }
+  for (const [key, url] of Object.entries(binaries)) {
+    if (key.startsWith(`${prefix}/`)) files[key.slice(prefix.length)] = dataUrlBytes(url);
+  }
   return files;
+}
+
+function dataUrlBytes(url: string): Uint8Array {
+  return Uint8Array.from(atob(url.slice(url.indexOf(',') + 1)), (char) => char.charCodeAt(0));
 }
 
 /**
