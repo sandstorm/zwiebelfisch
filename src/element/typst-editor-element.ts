@@ -27,6 +27,7 @@ export class TypstEditorElement extends Base {
   #editor: TypstEditor | null = null;
   #value: string | null = null;
   #files: ProjectFiles = {};
+  #base: string | null = null;
   #settingValue = false;
 
   get value(): string {
@@ -54,6 +55,12 @@ export class TypstEditorElement extends Base {
     if (this.#editor) this.#editor.files = files;
   }
 
+  /** Shows the changes against `base` (an earlier source), or none for null. */
+  setBase(base: string | null): void {
+    this.#base = base;
+    this.#editor?.setBase(base);
+  }
+
   connectedCallback(): void {
     const root = this.shadowRoot ?? this.attachShadow({ mode: 'open' });
     const style = document.createElement('style');
@@ -64,6 +71,7 @@ export class TypstEditorElement extends Base {
     this.#editor = createTypstEditor(container, {
       source: this.value,
       files: this.#files,
+      base: this.#base ?? undefined,
       onChange: (value) => this.#changed(value),
     });
   }

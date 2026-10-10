@@ -4,6 +4,8 @@ import type { FileContent } from '../preview/project-files';
 import { SourceView } from '../source-view/source-view';
 import { VisualView } from '../visual-view/visual-view';
 import proseMirrorStyles from '../visual-view/prosemirror.css?inline';
+import { ChangeTracking } from './change-tracking';
+import changeStyles from './changes.css?inline';
 import { DiagnosticsStatus } from './diagnostics-status';
 import { summarizeDiagnostics } from './diagnostics-summary';
 import styles from './styles.css?inline';
@@ -28,6 +30,12 @@ export interface TypstEditorOptions {
   mode?: EditorMode;
   /** Called whenever the source text changes. */
   onChange?(source: string): void;
+  /**
+   * An earlier version of the source (last saved, last commit) to show the
+   * changes against: inline diff in the Source view, track changes in the
+   * Visual view, change bars in the preview. See also `setBase`.
+   */
+  base?: string;
 }
 
 export interface TypstEditor {
@@ -38,6 +46,11 @@ export interface TypstEditor {
   source: string;
   /** The other project files; assigning replaces them all and recompiles. */
   files: ProjectFiles;
+  /**
+   * Shows the changes against `base` (an earlier source) from now on, or
+   * none for null. A "Show changes" button toggles them while a base is set.
+   */
+  setBase(base: string | null): void;
   destroy(): void;
 }
 
@@ -56,10 +69,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
   const MAIN = options.main ?? '/main.typ';
   let files = options.files ?? {};
 
-  const left = el(host.ownerDocument, 'typst-editor__left');
-  const right = el(host.ownerDocument, 'typst-editor__right');
-  host.classList.add('typst-editor');
-  host.append(left, right);
+  const { left, right, remove } = createLayout(host);
 
   const status = new DiagnosticsStatus(host, (from, to) => source.reveal(from, to));
   const preview = new Preview(right, {
@@ -74,7 +84,10 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
   const visual = new VisualView(panes.visual, document);
   const source = new SourceView(panes.source, document, {
     onCursor: (offset) => void preview.reveal(MAIN, offset),
+    onBaseChange: (base) => changes.setBase(base),
   });
+  const showInPreview = (ranges: { from: number; to: number }[] | null) => preview.showChanges(MAIN, ranges);
+  const changes = new ChangeTracking(panes.tabs, { document, views: [source, visual], preview: showInPreview }, options.base);
   let mode: EditorMode = options.mode ?? 'visual';
   panes.onSwitch((next) => (mode = next));
   panes.show(mode);
@@ -100,17 +113,31 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
       files = next;
       refresh();
     },
+    setBase: (base) => changes.setBase(base),
     destroy() {
       unsubscribe();
+      changes.destroy();
       source.destroy();
       visual.destroy();
       preview.destroy();
       status.destroy();
-      host.classList.remove('typst-editor');
-      left.remove();
-      right.remove();
+      remove();
     },
   };
+}
+
+/** The two columns of the widget: editing views left, preview right. */
+function createLayout(host: HTMLElement) {
+  const left = el(host.ownerDocument, 'typst-editor__left');
+  const right = el(host.ownerDocument, 'typst-editor__right');
+  host.classList.add('typst-editor');
+  host.append(left, right);
+  const remove = () => {
+    host.classList.remove('typst-editor');
+    left.remove();
+    right.remove();
+  };
+  return { left, right, remove };
 }
 
 function el(doc: Document, className: string): HTMLElement {
@@ -127,7 +154,7 @@ function injectStyles(host: HTMLElement): void {
   if (target.querySelector(`#${STYLE_ID}`)) return;
   const style = host.ownerDocument.createElement('style');
   style.id = STYLE_ID;
-  style.textContent = proseMirrorStyles + styles;
+  style.textContent = proseMirrorStyles + styles + changeStyles;
   target.append(style);
 }
 
@@ -159,6 +186,7 @@ function createPanes(left: HTMLElement) {
     if (mode === 'visual' || mode === 'source') show(mode);
   });
   return {
+    tabs,
     visual: panes.visual,
     source: panes.source,
     show,
