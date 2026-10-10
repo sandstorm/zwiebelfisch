@@ -150,8 +150,12 @@ This is #margin-note[the selected text][Is this right? — Ada] and a point note
 ```
 
 The import is added once at the top of the file (or an existing drafting import is extended).
-The preview shows the notes the compiler draws in the page margin, so the document needs a
-page margin wide enough for them. The Visual view shows a note as a bubble you click to edit.
+The preview shows the notes the compiler draws in the page margin. drafting 0.2.2 fails on a page
+margin that is a single length ("type relative length has no method `keys`"), so adding a note
+turns a top-level `#set page(margin: 1.5cm)` into `margin: (right: 4cm, rest: 1.5cm)`. The Visual
+view shows every note as a card in a gutter right of the text, beside the text it belongs to:
+edit the note in the card (Ctrl/Cmd+Enter or leaving the card saves, Escape cancels) or resolve
+(delete) it. On narrow panes the card pops up when you click the highlighted text.
 There is nothing extra to store or wire up: notes arrive with `onChange` / `change` and travel
 through git, diffs and collaboration like any other text. There are no threads; resolving a note
 means deleting it. To hide all notes in a final build, the document can say

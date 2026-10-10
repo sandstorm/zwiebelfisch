@@ -57,9 +57,9 @@ test('a margin note reaches the other user', async ({ browser, baseURL }, info) 
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
   await ann.getByTestId('typst-visual').locator('strong', { hasText: 'bold' }).dblclick();
   await ann.locator('.typst-editor__comment').click();
-  const field = ann.getByTestId('typst-margin-note').getByRole('textbox', { name: 'Note' });
+  const field = ann.getByTestId('typst-note-card').getByRole('textbox', { name: 'Note' });
   await field.fill('Shared note');
-  await field.press('Enter');
-  await expect(bob.getByTestId('typst-visual').getByTestId('typst-margin-note')).toHaveText('Shared note');
+  await field.press('ControlOrMeta+Enter');
+  await expect(bob.getByTestId('typst-note-card').getByRole('textbox', { name: 'Note' })).toHaveValue('Shared note');
   await expect(bob.getByTestId('typst-visual').locator('mark.typst-visual__note-range')).toHaveText('bold');
 });

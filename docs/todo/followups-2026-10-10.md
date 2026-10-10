@@ -22,12 +22,13 @@ Each line names the area; sources are the agents' final reports.
 - Toolbar acts on the last main-text selection while the cursor is in a raw box.
 - Text typed into a raw box that is modelled Typst (`= Heading`) stays raw until re-read.
 - "Insert into …" (image) uses the Source-view cursor; use the active view's cursor.
-- Margin notes (comments): the Visual-view note field edits raw Typst markup, not formatted text;
+- Margin notes (comments): the Visual-view note card edits raw Typst markup, not formatted text;
   Escape on a brand-new note leaves an empty `#margin-note[]`; a note that only becomes valid
   by escaping is saved as escaped plain text (its formatting is lost). (Anchors and editing
   after posting no longer apply: notes are text in the source.)
 - Visual view: a change to the text before the first block (`doc.lead`) still rebuilds the whole
-  editor DOM (ProseMirror re-renders on any doc attribute change), closing an open note field.
+  editor DOM (ProseMirror re-renders on any doc attribute change). (Open note cards are outside
+  the editor DOM since the notes gutter, so they survive it.)
 - Remote cursors on empty lines are not drawn.
 - Source-view diff chunks lack the word/markup cleanup the other views get.
 

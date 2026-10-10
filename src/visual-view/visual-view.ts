@@ -9,7 +9,7 @@ import type { ImageAssets } from './image-choices';
 import { posToSource, print, project, sourceToPos, syncDoc } from './projection';
 import { setBoxRenderer } from './raw-box';
 import type { BoxRenderer } from './rendered-box';
-import { editNoteAt } from './margin-notes';
+import { NotesGutter } from './notes-gutter';
 import { Toolbar } from './toolbar';
 
 export type { BoxRenderer, Snippet } from './rendered-box';
@@ -37,11 +37,15 @@ const FROM_DOCUMENT = 'typst-from-document';
 export class VisualView {
   private readonly editor: Editor;
   private readonly toolbar: Toolbar;
+  private readonly notes: NotesGutter;
   private readonly unsubscribe: () => void;
 
   constructor(parent: HTMLElement, private readonly document: TypstDocument, options: VisualViewOptions = {}) {
+    // the text and, right of it, the notes gutter
+    const body = parent.appendChild(parent.ownerDocument.createElement('div'));
+    body.className = 'typst-visual__body';
     this.editor = new Editor({
-      element: parent,
+      element: body,
       extensions: [...extensions, highlights],
       injectCSS: false,
       editorProps: { attributes: { class: 'typst-visual', 'data-testid': 'typst-visual' } },
@@ -50,9 +54,14 @@ export class VisualView {
     if (options.renderer) setBoxRenderer(this.editor, options.renderer);
     // Load the projection itself (not a JSON copy): its node identities are
     // what marks blocks as untouched.
+    this.notes = new NotesGutter(body);
     const { state } = this.editor;
     this.editor.view.updateState(
-      EditorState.create({ schema: state.schema, doc: project(document.text, state.schema), plugins: [...state.plugins, changesPlugin] }),
+      EditorState.create({
+        schema: state.schema,
+        doc: project(document.text, state.schema),
+        plugins: [...state.plugins, changesPlugin, this.notes.plugin],
+      }),
     );
     this.toolbar = new Toolbar(parent, this.editor, options.assets);
     this.unsubscribe = document.onChange((_changes, origin) => {
@@ -71,11 +80,12 @@ export class VisualView {
   }
 
   /**
-   * Opens the note editor of the margin note whose source contains `offset`
-   * (a point note, or the note part of a range note). False if there is none.
+   * Focuses the card (in the notes gutter) of the margin note whose source
+   * contains `offset` (a point note, or the note part of a range note). False
+   * if there is none.
    */
   editNote(offset: number): boolean {
-    return editNoteAt(this.editor.view, offset);
+    return this.notes.edit(offset);
   }
 
   /** Replaces the highlights of `layer` (source ranges); they follow edits until set again. */
@@ -102,6 +112,7 @@ export class VisualView {
     this.unsubscribe();
     this.toolbar.destroy();
     this.editor.destroy();
+    this.notes.destroy();
   }
 
   private afterTransaction(tr: Transaction): void {

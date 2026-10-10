@@ -37,7 +37,7 @@ describe('CommentAction', () => {
     expect(seen).not.toHaveBeenCalled();
   });
 
-  it('opens the new note in the Visual view', () => {
+  it('opens the new note\'s card in the Visual view', () => {
     const { doc, action, root } = setup('Hello world\n', (document, parent) => {
       const view = new VisualView(parent.appendChild(window.document.createElement('div')), document);
       view.reveal(6, 11);
@@ -45,10 +45,10 @@ describe('CommentAction', () => {
     });
     action.comment();
     expect(doc.text).toBe(`${IMPORT}Hello #margin-note[world][]\n`);
-    const field = root.querySelector<HTMLTextAreaElement>('[data-testid="typst-margin-note"] textarea')!;
+    const field = root.querySelector<HTMLTextAreaElement>('[data-testid="typst-note-card"] textarea')!;
     expect(document.activeElement).toBe(field);
     field.value = 'Check this';
-    field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true, cancelable: true }));
     expect(doc.text).toBe(`${IMPORT}Hello #margin-note[world][Check this]\n`);
   });
 

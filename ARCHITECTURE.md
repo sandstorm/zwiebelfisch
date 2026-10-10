@@ -31,7 +31,8 @@ src/
     snippet.ts              cut a page SVG down to the boxes of a source range (snippets for the Visual view)
   visual-view/              VisualView — Tiptap editor over the source-anchored projection,
                             formatting toolbar, raw boxes edited in a nested CodeMirror,
-                            shown rendered (snippet / image) while not focused
+                            shown rendered (snippet / image) while not focused, notes gutter
+                            (notes-gutter.ts, note-list.ts, card-layout.ts)
   editor/                   createTypstEditor() — composes the widget, Visual/Source tabs, status bar, scoped CSS,
                             ChangeTracking (base version + "Show changes" toggle), CollaborationLink
     project.ts              Project: the file model (one TypstDocument per .typ file, main protected)
@@ -42,6 +43,7 @@ src/
     version-controls.ts     "Save version" button, commit message, outcome; Show changes follows the last commit (GitLab rooms)
     comment-action.ts       "Comment" button / Ctrl+Alt+M: a drafting margin note at the selection of the active view
     add-margin-note.ts      addMarginNote(text, range): the source edits for a new note and the drafting import
+    page-margin.ts          noteMarginChanges(text): single-length page margins → room for notes (drafting 0.2.2 bug)
     paths.ts, insert-image.ts, upload.ts   pure helpers (names → paths, Typst path resolution, #image insertion, uploads)
   element/                  <typst-editor> custom element (shadow DOM) around createTypstEditor
   index.ts                  public API of the package; registers <typst-editor>
@@ -342,7 +344,7 @@ worker → main   {id, type:'compile', result} | {id, type:'click', jump} | {id,
   The worker (`FileReceiver`) removes paths missing since the previous call, and Typst diffs the
   text itself. Package files are not part of the map and stay loaded.
 
-### Comments = margin notes (`src/document/margin-note-syntax.ts`, `src/editor/comment-action.ts`, `add-margin-note.ts`, `src/visual-view/margin-notes.ts`)
+### Comments = margin notes (`src/document/margin-note-syntax.ts`, `src/editor/comment-action.ts`, `add-margin-note.ts`, `page-margin.ts`, `src/visual-view/margin-notes.ts`, `notes-gutter.ts`, `note-list.ts`, `card-layout.ts`)
 
 Comments are [`drafting`](https://typst.app/universe/package/drafting/) margin notes in the
 Typst source itself (`@preview/drafting:0.2.2`): `#margin-note[note]` (point, at a cursor) and
@@ -350,7 +352,7 @@ Typst source itself (`@preview/drafting:0.2.2`): `#margin-note[note]` (point, at
 the preview shows what the compiler draws, and git, diffs, undo and collaboration carry notes as
 ordinary text. No threads: a reply is more text in the note, resolving means deleting the call,
 and an author is whatever the note's text says. Hiding notes for the final output
-(`#set-margin-note-defaults(hidden: true)`) and wide enough page margins are up to the author.
+(`#set-margin-note-defaults(hidden: true)`) is up to the author.
 
 ```ts
 // margin-note-syntax.ts: the only module that knows drafting's call syntax
@@ -361,7 +363,12 @@ isNoteCallAt(source, from, to) → boolean            // one note call in markup
 safeNote(markup) → string | null                    // markup that cannot end or swallow its call
 addMarginNote(text, {from, to}) → {changes: TextChange[], note} | null   // note: offset of the new (empty) body
 new CommentAction(root, () => {document, view: {selection(), reveal(), editNote?()}} | null)   .button  .comment()  .destroy()
-VisualView.editNote(offset) → boolean   // opens the field of the note whose source holds offset
+VisualView.editNote(offset) → boolean   // focuses the gutter card of the note whose source holds offset
+// src/visual-view: the notes gutter
+new NotesGutter(body)   .plugin (add to the editor state)  .edit(offset) → boolean  .destroy()
+layoutCards([{anchor, height}], {gap, active?, top?}) → tops   // pure: cards beside anchors, no overlap
+findNotes(doc) / followNotes(prev, mapping, found, newKey) / setNoteText(tr, note, markup) / removeNote(tr, note)
+noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-list.ts, pure ProseMirror
 ```
 
 - **Syntax** (`margin-note-syntax.ts`): a note is `#margin-note(..named)[note]` or
@@ -376,19 +383,53 @@ VisualView.editNote(offset) → boolean   // opens the field of the note whose s
   after its last item, also after a trailing comma; `: margin-note` on a bare module import);
   else `#import "@preview/drafting:0.2.2": margin-note` goes first in the file (a drafting
   import below the note would not bind the name where the note is).
+- **Page margins** (`src/editor/page-margin.ts`, part of `addMarginNote`'s edits, same undo
+  step): drafting 0.2.2 crashes with "type relative length has no method `keys`" when the page
+  margin is a single length ([drafting.typ line 640](https://github.com/typst/packages/blob/main/packages/preview/drafting/0.2.2/drafting.typ#L640)
+  calls `page.margin.keys()` on anything but `auto`), and Typst turns uniform dictionaries
+  (`(rest: a)`, `(x: a, y: a)`) back into a length. So every top-level `#set page(.., margin: m)`
+  with such a literal `m` (a length, a sum of lengths, or a side dictionary with one value for
+  all four sides) becomes `margin: (right: R, rest: m)`: only the margin argument changes. R is
+  4cm (room for drafting's notes), or the next whole cm + 1 when `m` is an absolute length of
+  4cm or more (equal sides would be uniform again). `auto`, absent and non-uniform margins,
+  variables and spreads are never touched.
 - **`CommentAction`**: the widget's only comment UI — the "Comment" button and Ctrl/Cmd+Alt+M
   (captured at the widget root). Works on the shown `.typ` file in the current view
   (`EditingViews.shown()`), applies the edits as one `document.change`, then
-  `VisualView.editNote(note)` opens the new note's field, or the Source view puts the caret into `[]`.
-- **Visual view** (`margin-notes.ts`): see `marginNote` / `noteRange` below. A bubble shows the
-  note's markup; clicking it swaps in a text field (Enter or blur writes it back through
-  `safeNote`: brackets without a partner escaped, or all of it escaped as plain text if the
-  markup would still break the call; Escape cancels). The edit sets the `note` attribute of the
-  atom or mark. Everything else stays as written. An open field survives edits from elsewhere
-  (textblocks keep their DOM while they render the same, range-note widgets have position-free
-  keys and look their note's text up when they save); a field whose note is gone saves nothing.
-  `editNote(offset)` finds the note in the document: a point note whose call holds `offset`, or
-  among range notes whose text ends at the same place (nested) the one whose `][note]` holds it.
+  `VisualView.editNote(note)` focuses the new note's card, or the Source view puts the caret into `[]`.
+- **Visual view, in the text** (`margin-notes.ts`): see `marginNote` / `noteRange` below. A point
+  note is a small marker (tooltip: its note), a range note's text is highlighted.
+- **Visual view, notes gutter** (`notes-gutter.ts`, like the comment sidebar of Google Docs or
+  Tiptap's comments): a column right of the text (`.typst-visual__body` holds the editor DOM and
+  the gutter; the column only shows while the document has notes) with a card per note, in
+  document order: the highlighted text (range notes), the note's markup in a multi-line text
+  area, and "Resolve note".
+  - Editing: Mod+Enter or leaving the field writes the markup back through `safeNote` (brackets
+    without a partner escaped, or all of it escaped as plain text if the markup would still
+    break the call) as one transaction (one undo step) setting the `note` attribute of the atom
+    or mark; everything else stays as written. Escape restores the field. Mod+Enter and Escape put
+    the text cursor after the note. Resolve deletes a point note's atom, or only the `noteRange`
+    mark of a range note (its text stays), one undo step.
+  - State: a ProseMirror plugin keeps the notes as a list (`note-list.ts`: `findNotes` on every
+    doc change, `followNotes` maps the previous notes through the transaction's mapping to keep
+    each note's key; a range note may change at one end). The plugin decorates every anchor with
+    `data-note-key` (node decoration on a marker, inline decoration over a range) plus
+    `--active` / `--hover` classes. The active note is the one at the cursor (innermost range
+    note, or a selected marker), a focused card's, or a clicked marker's; hover comes from the
+    anchor or the card. Cards are DOM outside ProseMirror, reconciled by key: an open card keeps
+    its field and the user's text while the document changes from elsewhere and saves into its
+    own note; a card whose note is gone saves nothing.
+  - Layout (`card-layout.ts`, pure): cards start at their anchor's top, pushed down below the
+    previous card (gap 8px); the active card stays at its anchor and cards above it move up (not
+    above the gutter's top). Measuring (anchor rects, card heights; all reads, then writes) runs
+    in one `requestAnimationFrame` after a doc change, an active-note change, typing in a card,
+    or a resize of the body or the text (`ResizeObserver`, which also covers loaded images; plus
+    captured `load` events). No measuring in the projection.
+  - Narrow (body narrower than 640px): no column; only the active note's card shows, as a
+    popover below its anchor.
+  - `editNote(offset)` finds the note in the document: a point note whose call holds `offset`, or
+    among range notes whose text ends at the same place (nested) the one whose `][note]` holds it,
+    makes it active and focuses its card.
 - **Source view**: plain Typst, no extra decoration.
 - Engine tests compile both forms against the real package (`src/engine/fixtures/drafting-0.2.2`).
 - **Removed** with this design (it replaced the sidecar comments of docs/todo/comments.md):
@@ -404,7 +445,7 @@ new VisualView(parent, document, { renderer?, assets? })
 .reveal(from, to)    // select exactly what shows source range from..to (caret if empty)
 .setHighlights(layer, highlights)   // source ranges → inline decorations (sourceToPos, end with bias -1)
 .selection() → {from, to}           // posToSource; the end with bias -1
-.editNote(offset) → boolean         // opens the field of the margin note whose source holds offset
+.editNote(offset) → boolean         // focuses the gutter card of the margin note whose source holds offset
 .showChanges(base | null)   // track changes against base, following every edit
 .destroy()
 ```

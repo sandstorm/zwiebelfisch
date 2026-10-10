@@ -2,6 +2,7 @@ import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { DRAFTING, isNoteCallAt, MARGIN_NOTE, NOTE_HEAD, printNoteCall, rangeNoteSyntax } from '../document/margin-note-syntax';
 import type { TextChange } from '../document/typst-document';
+import { noteMarginChanges } from './page-margin';
 
 /** Where a new note goes in the edited text: its (still empty) body starts at `note`. */
 export interface AddedNote {
@@ -16,14 +17,15 @@ export interface AddedNote {
  * self-contained markup, e.g. half of `*bold*` or two paragraphs) gets a point
  * note `#margin-note[]` at its end. The file imports `margin-note` from
  * `drafting` exactly once afterwards: an existing drafting import is extended,
- * else one is added at the top.
+ * else one is added at the top. Page margins drafting 0.2.2 cannot handle (a
+ * single length) get room for notes on the right (see `noteMarginChanges`).
  *
  * Null where no note fits (the position is inside code).
  */
 export function addMarginNote(text: string, range: { from: number; to: number }): AddedNote | null {
   const note = noteEdit(text, range);
   if (!note) return null;
-  const changes = withImport(text, note);
+  const changes = [...withImport(text, note), ...noteMarginChanges(text)].sort((a, b) => a.from - b.from);
   // Every note edit ends with `[]` inserted at `range.to`: the body is just before that `]`.
   return { changes, note: mapOffset(changes, range.to) - 1 };
 }

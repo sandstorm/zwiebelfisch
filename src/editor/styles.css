@@ -5,6 +5,7 @@
   --te-jump: rgba(47, 111, 235, 0.25);
   --te-note: rgba(250, 190, 20, 0.28);
   --te-note-line: #e0a800;
+  --te-note-strong: rgba(250, 190, 20, 0.55);
   display: grid;
   /* editing view | preview */
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -185,39 +186,102 @@
 .typst-visual__image > .typst-visual__rendering { max-height: 24em; }
 .typst-visual__raw-inline > .typst-visual__rendering { display: inline-block; vertical-align: middle; }
 .typst-visual__link { color: var(--te-accent); text-decoration: underline; cursor: text; }
-/* drafting margin notes: highlighted text of a range note, and the note bubble */
+/* drafting margin notes in the text: highlighted text of a range note, a point note's marker */
 .typst-visual__note-range { background: var(--te-note); border-bottom: 2px solid var(--te-note-line); color: inherit; }
+.typst-visual__note-anchor--hover .typst-visual__note-range,
+.typst-visual__note-range .typst-visual__note-anchor--hover,
+.typst-visual__note-anchor--active .typst-visual__note-range,
+.typst-visual__note-range .typst-visual__note-anchor--active { background: var(--te-note-strong); }
 .typst-visual__note {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  max-width: 16em;
   margin: 0 2px;
-  padding: 0 5px;
+  padding: 1px 3px;
   border: 1px solid var(--te-note-line);
-  border-radius: 8px 8px 8px 2px;
+  border-radius: 6px 6px 6px 1px;
   background: #fff8e0;
   color: #6b5200;
-  font: 12px/1.5 system-ui, sans-serif;
   vertical-align: baseline;
   cursor: pointer;
 }
-.typst-visual__note-text { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.typst-visual__note--empty .typst-visual__note-text::before { content: "Note"; opacity: 0.6; }
-.typst-visual__note:focus-within { box-shadow: 0 0 0 2px var(--te-accent); background: white; }
+.typst-visual__note--empty { border-style: dashed; }
+.typst-visual__note.typst-visual__note-anchor--hover,
+.typst-visual__note.typst-visual__note-anchor--active { background: var(--te-note-strong); box-shadow: 0 0 0 2px var(--te-note-line); }
 .typst-visual__note-icon { flex: none; }
-.typst-visual__note-field {
-  width: 14em;
-  min-height: 1.5em;
+
+/* The Visual view's body: the text and, right of it, the notes gutter (cards placed by notes-gutter.ts) */
+.typst-visual__body { flex: 1 0 auto; display: flex; position: relative; }
+.typst-visual__body > .typst-visual { min-width: 0; }
+.typst-notes-gutter { display: none; }
+.typst-visual__body--notes > .typst-notes-gutter {
+  display: block;
+  position: relative;
+  flex: none;
+  width: 260px;
+  border-left: 1px solid var(--te-border);
+  background: #fafbfc;
+}
+.typst-note-card {
+  position: absolute;
+  top: 0;
+  left: 8px;
+  right: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--te-border);
+  border-radius: 8px;
+  background: white;
+  font: 13px/1.4 system-ui, sans-serif;
+  color: #24292f;
+  cursor: text;
+  transition: top 0.15s ease-out, box-shadow 0.15s, border-color 0.15s;
+}
+.typst-note-card--hover { border-color: var(--te-note-line); }
+.typst-note-card--active { border-color: var(--te-note-line); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); }
+.typst-note-card:focus-within { border-color: var(--te-accent); box-shadow: 0 0 0 2px var(--te-jump); }
+.typst-note-card__head { display: flex; align-items: center; gap: 5px; color: #6b5200; }
+.typst-note-card__icon { flex: none; }
+.typst-note-card__quote { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
+.typst-note-card--range .typst-note-card__quote { font-style: italic; }
+.typst-note-card--range .typst-note-card__quote::before { content: "\201C"; }
+.typst-note-card--range .typst-note-card__quote::after { content: "\201D"; }
+.typst-note-card__resolve {
+  flex: none;
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: #57606a;
+  cursor: pointer;
+}
+.typst-note-card__resolve:hover { border-color: var(--te-border); color: #1a7f37; background: #f1f8f3; }
+.typst-note-card__field {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.8em;
+  margin-top: 4px;
   padding: 0;
   border: none;
   outline: none;
   background: transparent;
   font: inherit;
-  color: #24292f;
+  color: inherit;
   resize: none;
   field-sizing: content;
 }
+/* Narrow panes: no gutter column; the active note's card pops up below its anchor */
+.typst-visual__body--narrow.typst-visual__body--notes > .typst-notes-gutter {
+  position: absolute;
+  top: 0;
+  right: 8px;
+  width: min(280px, calc(100% - 16px));
+  border: none;
+  background: none;
+  pointer-events: none;
+}
+.typst-visual__body--narrow .typst-note-card { display: none; left: 0; right: 0; pointer-events: auto; transition: none; z-index: 2; }
+.typst-visual__body--narrow .typst-note-card--active { display: block; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18); }
 .typst-visual__box-label {
   margin-bottom: 2px;
   font: 600 12px system-ui, sans-serif;
