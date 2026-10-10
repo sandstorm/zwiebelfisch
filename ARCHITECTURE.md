@@ -1161,8 +1161,7 @@ interface PreviewContributions {                             // what ExtensionCo
   snippet(path, from, to, text) → Promise<{svg, width, height, textHeight, padding} | null>   // the range as drawn, cut from its page
   exportPdf(entry: PdfEntry) → Promise<PdfResult>      // the files of the last update(), entry.sources replacing/adding texts
 }
-interface PreviewContext { ownerDocument, zoom(), setZoom(zoom), scale(), visiblePage() → {index, count},
-                           pdfExportOptions() }
+interface PreviewContext { ownerDocument, zoom(), setZoom(zoom), scale(), visiblePage() → {index, count} }
 
 new Preview(container)                       // implements PreviewContributions; renders a toolbar +
                                              // scrolling page area into container
