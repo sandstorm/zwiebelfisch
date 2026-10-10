@@ -1,35 +1,14 @@
 // @vitest-environment jsdom
 // Tests for source-view.ts.
+import { forEachDiagnostic, type Diagnostic as LintDiagnostic } from '@codemirror/lint';
+import { EditorView } from '@codemirror/view';
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { SourceViewHost } from '../../../hosts/source-view/source-view';
 import { DiagnosticCollection } from '../model/model';
-import { lint, toLintDiagnostics } from './source-view';
+import { lint } from './source-view';
 
 const base = { severity: 'error' as const, message: 'unknown variable: unknown', hints: [], from: 1, to: 8 };
-
-describe('toLintDiagnostics', () => {
-  it('keeps range, severity and message', () => {
-    expect(toLintDiagnostics([base], 20)).toEqual([
-      { from: 1, to: 8, severity: 'error', message: 'unknown variable: unknown', source: 'typst' },
-    ]);
-  });
-
-  it('appends hints to the message', () => {
-    const [result] = toLintDiagnostics([{ ...base, hints: ['did you mean `known`?', 'or this'] }], 20);
-    expect(result.message).toBe('unknown variable: unknown\nhint: did you mean `known`?\nhint: or this');
-  });
-
-  it('clamps ranges to the document length', () => {
-    const [result] = toLintDiagnostics([{ ...base, from: 15, to: 30 }], 10);
-    expect(result).toMatchObject({ from: 10, to: 10 });
-  });
-
-  it('keeps warnings as warnings', () => {
-    const [result] = toLintDiagnostics([{ ...base, severity: 'warning' }], 20);
-    expect(result.severity).toBe('warning');
-  });
-});
 
 describe('lint in the Source views', () => {
   function setup(diagnostics: DiagnosticCollection, document: TypstDocument) {
@@ -38,6 +17,14 @@ describe('lint in the Source views', () => {
     const parent = window.document.body.appendChild(window.document.createElement('div'));
     host.createView(parent, document);
     return () => [...parent.querySelectorAll('.cm-lintRange-error')].map((range) => range.textContent);
+  }
+
+  /** The lint diagnostics of the view in `parent`. */
+  function shown(parent: HTMLElement): LintDiagnostic[] {
+    const view = EditorView.findFromDOM(parent.querySelector<HTMLElement>('.cm-editor')!)!;
+    const found: LintDiagnostic[] = [];
+    forEachDiagnostic(view.state, (diagnostic, from, to) => found.push({ ...diagnostic, from, to }));
+    return found;
   }
 
   it("underlines its document's diagnostics, and only those", () => {
@@ -59,5 +46,18 @@ describe('lint in the Source views', () => {
     const errors = setup(diagnostics, document);
     await Promise.resolve();
     expect(errors()).toEqual(['unknown']);
+  });
+
+  it('keeps severity, folds the hints into the message, and clamps ranges to the text', () => {
+    const diagnostics = new DiagnosticCollection();
+    const document = new TypstDocument('#unknown\n');
+    const parent = window.document.body.appendChild(window.document.createElement('div'));
+    const host = new SourceViewHost();
+    host.registerExtension(lint(diagnostics));
+    host.createView(parent, document);
+    diagnostics.set(document, [{ ...base, severity: 'warning', hints: ['did you mean `known`?', 'or this'], from: 5, to: 30 }]);
+    expect(shown(parent)).toEqual([
+      expect.objectContaining({ from: 5, to: 9, severity: 'warning', message: 'unknown variable: unknown\nhint: did you mean `known`?\nhint: or this' }),
+    ]);
   });
 });
