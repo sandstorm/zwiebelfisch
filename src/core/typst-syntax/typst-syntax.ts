@@ -2,8 +2,7 @@
 // text names (`#import`, `#include`, `image(…)`, `read(…)`, …), the reading order they give the project's files, the
 // change that imports a name (calculateImportChange), and reading syntax nodes, string literals and embeddable code
 // as the Visual view's projectors and printers do (children, parenthesized, isClosedContent, decodeString, quote,
-// isEmbeddable). Entry of core/typst-syntax/. See ARCHITECTURE.md,
-// "File links".
+// isEmbeddable, markupSource). Entry of core/typst-syntax/. See ARCHITECTURE.md, "File links".
 // Why here: extensions never import each other, and this knowledge is about Typst, not about one feature. Only
 // syntax: where a path leads (the project, the file's current path) and what following it does (open, create) is the
 // document-links extension's, and showing links is the hosts' (`Workbench.registerDocumentLinkProvider`); applying
@@ -171,7 +170,11 @@ export function markupSource(code: string): string {
 }
 
 /** Functions whose first positional argument is a file path. */
-const CALLS = new Set<PathCall>(['image', 'read', 'json', 'csv', 'yaml', 'toml', 'xml', 'cbor', 'bibliography']);
+const CALLS: ReadonlySet<string> = new Set<PathCall>(['image', 'read', 'json', 'csv', 'yaml', 'toml', 'xml', 'cbor', 'bibliography']);
+
+function pathCall(callee: string): PathCall | null {
+  return CALLS.has(callee) ? (callee as PathCall) : null;
+}
 
 function pathsOf(node: SyntaxNode, text: string): PathInSource[] {
   if (node.name === 'ModuleImport' || node.name === 'ModuleInclude') return importPaths(node, text);
@@ -187,8 +190,8 @@ function importPaths(node: SyntaxNode, text: string): PathInSource[] {
 /** `image("…")`, `bibliography(("…", "…"))`, …: the first positional argument. */
 function callPaths(node: SyntaxNode, text: string): PathInSource[] {
   const callee = node.firstChild;
-  const name = callee?.name === 'Ident' ? (text.slice(callee.from, callee.to) as PathCall) : null;
-  const first = name && CALLS.has(name) ? firstPositional(node.getChild('Args')) : null;
+  const name = callee?.name === 'Ident' ? pathCall(text.slice(callee.from, callee.to)) : null;
+  const first = name ? firstPositional(node.getChild('Args')) : null;
   if (!name || !first) return [];
   const strings = first.name === 'Array' && name === 'bibliography' ? first.getChildren('Str') : first.name === 'Str' ? [first] : [];
   return onlyFiles(strings.map((string) => pathIn(string, text, name)));
