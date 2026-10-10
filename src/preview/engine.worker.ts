@@ -1,14 +1,18 @@
-import { createEngine } from '../engine/engine';
-import { defaultFonts } from '../engine/default-fonts';
-import wasmUrl from '../engine/wasm/typst_engine_bg.wasm?url';
-import type { Request, Response } from './protocol';
+import { createEngine, type Engine } from '../engine/engine';
+import { fetchFonts } from '../engine/fetch-fonts';
+import type { Init, Request, Response } from './protocol';
 
-const engine = createEngine(wasmUrl, defaultFonts());
+let engine: Promise<Engine> = Promise.reject(new Error('engine worker used before init'));
+engine.catch(() => {});
 /** Paths pushed by the previous compile, so files deleted since are removed. */
 let knownPaths = new Set<string>();
 
-self.onmessage = async (event: MessageEvent<Request>) => {
+self.onmessage = async (event: MessageEvent<Init | Request>) => {
   const request = event.data;
+  if (request.type === 'init') {
+    engine = createEngine(request.wasm, fetchFonts(request.fonts));
+    return;
+  }
   try {
     self.postMessage(handle(await engine, request));
   } catch (error) {
@@ -16,7 +20,7 @@ self.onmessage = async (event: MessageEvent<Request>) => {
   }
 };
 
-function handle(e: Awaited<typeof engine>, request: Request): Response {
+function handle(e: Engine, request: Request): Response {
   switch (request.type) {
     case 'compile': {
       const paths = new Set(Object.keys(request.files));

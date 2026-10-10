@@ -19,8 +19,10 @@ src/
     protocol.ts             request/response messages main ↔ worker
   visual-view/              VisualView — ProseMirror projection (schema, projection, view)
   editor/                   createTypstEditor() — composes the widget, Visual/Source tabs, status bar, scoped CSS
-  index.ts                  public API of the package
+  element/                  <typst-editor> custom element (shadow DOM) around createTypstEditor
+  index.ts                  public API of the package; registers <typst-editor>
 demo/                       dev/demo page (vite root)
+examples/plain-html/        <typst-editor> loaded from dist/lib without a bundler
 tests/e2e/                  Playwright specs (run against the static build)
 mise-tasks/                 every script (build, test, quality, …) — `mise tasks ls`
 docs/                       research and concepts (YYYY_MM_DD_slug.md)
@@ -155,9 +157,22 @@ Inside the crate:
   the last successful document. `source_jump` widens the resulting byte offset to the enclosing
   syntax leaf (`LinkedNode::leaf_at`) for highlighting. `jump_from_cursor` is the reverse.
 
+### `createTypstEditor` / `<typst-editor>` (`src/editor`, `src/element`)
+
+```ts
+createTypstEditor(host, { source, onChange? }) → { source (get/set), destroy() }
+<typst-editor value="…">inline source</typst-editor>   .value (get/set), 'change' event {detail:{value}}
+```
+
+- Setting `source`/`value` applies **one minimal edit**: only the range between the common prefix
+  and the common suffix changes (`minimalChange`), so cursors and undo history are preserved.
+- **Styles** go into `host.getRootNode()`: `document.head`, or the element's shadow root.
+  CodeMirror mounts its own styles into the same root. Embedding guide: [docs/embedding.md](docs/embedding.md).
+
 ### Worker protocol (`src/preview/protocol.ts`)
 
 ```
+main → worker   {type:'init', wasm}  (first, once; the URL is resolved on the main thread)
 main → worker   {id, type:'compile', files, main} | {id, type:'click', page, x, y} | {id, type:'cursor', path, offset}
 worker → main   {id, type:'compile', result} | {id, type:'click', jump} | {id, type:'cursor', positions} | {id, type:'error', message}
 ```
@@ -228,8 +243,9 @@ The interesting part is `projection.ts`, which exports two functions plus two sy
 | `mise run build:fonts` | default fonts from the pinned typst-assets crate → `src/engine/fonts/` |
 | `mise run dev` | Vite dev server for `demo/` on 127.0.0.1:5199 |
 | `mise run build` | engine + typecheck + static demo build → `dist/demo` |
+| `mise run build:lib` | library build → `dist/lib`: bundled ESM, worker, wasm, d.ts (`vite.lib.config.ts`, `tsconfig.lib.json`) |
 | `mise run test:unit` | vitest (node): engine against the real wasm, document model, (later) projection round-trips |
-| `mise run test:e2e` | builds, then Playwright against `dist/demo`, served through request interception (no port needed) |
+| `mise run test:e2e` | builds demo + lib, then Playwright against `dist/demo` and `examples/` (+ `dist/lib`), served through request interception (no port needed) |
 | `mise run quality` / `quality:report` | complexity gate and hot-spot table (see `.claude/skills/code-quality`) |
 
 **Version pins** are all exact:

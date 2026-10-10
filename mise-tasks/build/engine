@@ -4,7 +4,7 @@
 #MISE outputs=["src/engine/wasm/typst_engine_bg.wasm"]
 set -euo pipefail
 cargo build --manifest-path crates/typst-engine/Cargo.toml --target wasm32-unknown-unknown --release
-wasm-bindgen --target web --out-dir src/engine/wasm \
+wasm-bindgen --target web --omit-default-module-path --out-dir src/engine/wasm \
   crates/typst-engine/target/wasm32-unknown-unknown/release/typst_engine.wasm
 # -Oz plus dropping the name section (≈10 MB of function names); wasm features
 # are read from the module's target_features section.

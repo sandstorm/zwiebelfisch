@@ -11,7 +11,7 @@ describe('defaultFonts', () => {
     const fonts = defaultFonts();
     expect(fetch).toHaveBeenCalledTimes(readdirSync(new URL('./fonts/', import.meta.url)).length);
     expect(fetch.mock.calls.map(([url]) => url)).toContainEqual(
-      expect.stringMatching(/LibertinusSerif-Regular\.otf$/),
+      expect.stringMatching(/LibertinusSerif-Regular\.otf/),
     );
     expect(await Promise.all(fonts)).toContainEqual(new Uint8Array([1, 2, 3]));
   });
