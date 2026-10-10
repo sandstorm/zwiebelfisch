@@ -1,4 +1,4 @@
-import type { Box } from '../core/typst-engine/typst-engine';
+import type { Box } from '../../../core/typst-engine/typst-engine';
 
 /** A change bar: a vertical stretch of a page, in points from its top. */
 export interface ChangeBar {

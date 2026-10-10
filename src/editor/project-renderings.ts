@@ -1,7 +1,7 @@
 import type { TypstDocument } from '../core/typst-document/typst-document';
-import type { Preview } from '../preview/preview';
+import type { Preview } from '../features/preview/preview';
 import type { VisualViewOptions } from '../features/visual-view/visual-view';
-import type { FileContent } from '../preview/project-files';
+import type { FileContent } from '../features/preview/worker/project-files';
 import { extensionOf, fileKind, imageBlob, referencePath, resolvePath } from '../core/project/paths';
 import type { FileChange, Project } from '../core/project/project';
 import { uploadChanges } from './upload';

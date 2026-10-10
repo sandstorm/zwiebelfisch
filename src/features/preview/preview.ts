@@ -1,19 +1,19 @@
-import type { PlacedPresence } from '../core/typst-document/presence';
-import type { Box, Diagnostic, Jump, Page, Position } from '../core/typst-engine/typst-engine';
-import { changeBars, drawnRanges } from './change-bars';
-import { DEFAULT_FONT_URLS } from '../core/typst-engine/default-fonts';
-import wasmUrl from '../core/typst-engine/wasm/typst_engine_bg.wasm?url&no-inline';
-import { FileSender, type FileContent } from './project-files';
-import { isInside, mostVisible, percentOfPage } from './geometry';
+import type { PlacedPresence } from '../../core/typst-document/presence';
+import type { Box, Diagnostic, Jump, Page, Position } from '../../core/typst-engine/typst-engine';
+import { changeBars, drawnRanges } from './pages/change-bars';
+import { DEFAULT_FONT_URLS } from '../../core/typst-engine/default-fonts';
+import wasmUrl from '../../core/typst-engine/wasm/typst_engine_bg.wasm?url&no-inline';
+import { FileSender, type FileContent } from './worker/project-files';
+import { isInside, mostVisible, percentOfPage } from './pages/geometry';
 import { LatestOnly } from './latest-only';
-import { PageList } from './page-list';
-import { presenceMarkers } from './presence-markers';
-import { snippet, type Snippet } from './snippet';
-import type { Init, Request, Response } from './protocol';
+import { PageList } from './pages/page-list';
+import { presenceMarkers } from './pages/presence-markers';
+import { snippet, type Snippet } from './pages/snippet';
+import type { Init, Request, Response } from './worker/protocol';
 import { PreviewToolbar, type ZoomRequest } from './toolbar';
-import { stepZoom, zoomLabel, type Zoom } from './zoom';
+import { stepZoom, zoomLabel, type Zoom } from './pages/zoom';
 
-export type { Snippet } from './snippet';
+export type { Snippet } from './pages/snippet';
 
 export interface PreviewOptions {
   /** Called when the user clicks something in the preview that has a source location. */
@@ -45,7 +45,7 @@ const PRESENCE_INTERVAL_MS = 250;
  * mapping for click-to-source and source-to-preview reveal.
  */
 export class Preview {
-  private readonly worker = new Worker(new URL('./engine.worker.ts', import.meta.url), { type: 'module' });
+  private readonly worker = new Worker(new URL('./worker/engine.worker.ts', import.meta.url), { type: 'module' });
   private readonly pending = new Map<number, (response: Response) => void>();
   private readonly pane: HTMLElement;
   private readonly scroller: HTMLElement;

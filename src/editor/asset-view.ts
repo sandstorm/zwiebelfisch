@@ -1,4 +1,4 @@
-import type { FileContent } from '../preview/project-files';
+import type { FileContent } from '../features/preview/worker/project-files';
 import { displayName, fileKind, imageBlob } from '../core/project/paths';
 
 /**

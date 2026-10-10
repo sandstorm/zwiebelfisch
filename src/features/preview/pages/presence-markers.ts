@@ -1,5 +1,5 @@
-import { flagTextColor, initials, type PresenceUser } from '../core/typst-document/presence';
-import type { Position } from '../core/typst-engine/typst-engine';
+import { flagTextColor, initials, type PresenceUser } from '../../../core/typst-document/presence';
+import type { Position } from '../../../core/typst-engine/typst-engine';
 
 /** One user's marker on a page: where (percent of the page, at the text baseline), what it says, in which colors. */
 export interface PresenceMarker {

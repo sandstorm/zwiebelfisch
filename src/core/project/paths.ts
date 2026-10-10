@@ -1,4 +1,4 @@
-import type { FileContent } from '../../preview/project-files';
+import type { FileContent } from '../../features/preview/worker/project-files';
 
 /** What the widget can do with a file: edit it, preview it as an image, or only list it. */
 export type FileKind = 'typst' | 'image' | 'data';

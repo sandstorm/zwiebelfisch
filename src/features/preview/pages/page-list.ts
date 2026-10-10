@@ -1,4 +1,4 @@
-import type { Page } from '../core/typst-engine/typst-engine';
+import type { Page } from '../../../core/typst-engine/typst-engine';
 import { PX_PER_PT, type Zoom } from './zoom';
 
 export interface PageListOptions {

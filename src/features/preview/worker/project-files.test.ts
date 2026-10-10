@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { Engine } from '../core/typst-engine/typst-engine';
+import type { Engine } from '../../../core/typst-engine/typst-engine';
 import { FileSender, FileReceiver } from './project-files';
 
 const logo = new Uint8Array([1, 2, 3]);

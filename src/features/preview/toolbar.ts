@@ -1,4 +1,4 @@
-import { type Zoom } from './zoom';
+import { type Zoom } from './pages/zoom';
 
 /** What a toolbar button asks for: a zoom level, or one preset step in or out. */
 export type ZoomRequest = Zoom | 'in' | 'out';

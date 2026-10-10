@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { Page } from '../core/typst-engine/typst-engine';
+import type { Page } from '../../../core/typst-engine/typst-engine';
 import { PageList } from './page-list';
 
 /** Stands in for IntersectionObserver (missing in jsdom); tests decide what is near the viewport. */

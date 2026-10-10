@@ -1,5 +1,5 @@
 import { TypstDocument } from '../typst-document/typst-document';
-import type { FileContent } from '../../preview/project-files';
+import type { FileContent } from '../../features/preview/worker/project-files';
 import { fileKind } from './paths';
 
 /** Project files by absolute path (`/chapter.typ`, `/img/logo.png`): source text or bytes. */

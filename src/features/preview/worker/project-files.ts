@@ -1,4 +1,4 @@
-import type { Engine } from '../core/typst-engine/typst-engine';
+import type { Engine } from '../../../core/typst-engine/typst-engine';
 
 /** A project file: Typst source text, or bytes (images, data files, …). */
 export type FileContent = string | Uint8Array;
