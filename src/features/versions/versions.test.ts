@@ -18,10 +18,13 @@ function setup() {
     save: (message: string, author?: { name: string }) => void saved.push({ message, author }),
     onMessage: (listener: (message: ServerMessage) => void) => (messageListeners.add(listener), () => void messageListeners.delete(listener)),
   };
-  const bases: (string | null)[] = [];
+  const bases: Record<string, string | null>[] = [];
   const toolbar = document.createElement('div');
   document.body.append(toolbar);
-  const controls = new VersionControls(toolbar, versions, { path: '/main.typ', user: { name: 'Ann' }, setBase: (b) => bases.push(b) });
+  const controls = new VersionControls(toolbar, versions, {
+    user: { name: 'Ann' },
+    setBase: (b) => bases.push({ '/main.typ': b('/main.typ'), '/a.typ': b('/a.typ') }),
+  });
   cleanup.push(() => controls.destroy(), () => toolbar.remove());
   const button = toolbar.querySelector<HTMLButtonElement>('.typst-editor__save-version')!;
   const status = toolbar.querySelector('[role=status]')!;
@@ -40,11 +43,11 @@ function setup() {
 }
 
 describe('VersionControls', () => {
-  it('shows the changes against the last commit and follows it', () => {
+  it("shows every file's changes against the last commit and follows it", () => {
     const { bases, setBase } = setup();
-    expect(bases).toEqual(['v1']);
-    setBase({ '/main.typ': 'v2' });
-    expect(bases).toEqual(['v1', 'v2']);
+    expect(bases).toEqual([{ '/main.typ': 'v1', '/a.typ': null }]);
+    setBase({ '/main.typ': 'v2', '/a.typ': 'a2' });
+    expect(bases.at(-1)).toEqual({ '/main.typ': 'v2', '/a.typ': 'a2' });
   });
 
   it('asks for a commit message, saves as the user, and shows the outcome', () => {

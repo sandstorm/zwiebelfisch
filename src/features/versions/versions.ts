@@ -12,12 +12,10 @@ export interface Versions {
 }
 
 export interface VersionControlsOptions {
-  /** The file whose changes "Changes since …" shows (the main file). */
-  path: string;
   /** Who saves (the commit author, unless the server knows better from the token). */
   user?: { name: string };
-  /** Shows the changes against `base` from now on. */
-  setBase(base: string | null): void;
+  /** Shows every file's changes against `base(path)` (the last commit; null: new since) from now on. */
+  setBase(base: (path: string) => string | null): void;
 }
 
 /**
@@ -60,7 +58,7 @@ export class VersionControls {
       if (this.popover.isOpen) this.popover.close();
       else this.popover.open(this.button, DEFAULT_COMMIT_MESSAGE, false);
     });
-    const followBase = () => options.setBase(versions.base(options.path));
+    const followBase = () => options.setBase((path) => versions.base(path));
     followBase();
     this.unsubscribe = [versions.onBaseChange(followBase), versions.onMessage((message) => this.show(message))];
   }

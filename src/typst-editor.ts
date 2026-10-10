@@ -71,7 +71,9 @@ export interface TypstEditorOptions {
   /**
    * An earlier version of the main file (last saved, last commit) to show the
    * changes against: inline diff in the Source view, track changes in the
-   * Visual view, change bars in the preview. See also `setBase`.
+   * Visual view, change bars in the preview. Without it every Typst file is
+   * compared with its text as opened (a file created since is all new). See
+   * also `setBase`.
    */
   base?: string;
   /** How the toggle names `base`: "Changes since <baseLabel>" (default "the given version"). */
@@ -91,11 +93,12 @@ export interface TypstEditor {
   /** Shows `path` in the editing area (if the project has it). */
   open(path: string): void;
   /**
-   * Shows the changes of the main file against `base` (an earlier source)
-   * from now on; the "Changes since <label>" toggle names it (default "the
-   * given version"). null goes back to comparing with the text as opened.
+   * Shows the changes of the main file (or of `path`) against `base` (an
+   * earlier text) from now on; the one "Changes since <label>" toggle names it
+   * (default "the given version"). Other files keep their bases. null goes
+   * back to comparing every file with its text as opened.
    */
-  setBase(base: string | null, label?: string): void;
+  setBase(base: string | null, label?: string, path?: string): void;
   destroy(): void;
 }
 
@@ -129,7 +132,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
       return widget.active;
     },
     open: (path) => widget.open(path),
-    setBase: (base, label) => widget.changes.setBase(base === null ? null : { text: base, label: label ?? GIVEN_VERSION }),
+    setBase: (base, label, path) => widget.changes.setBase(base === null ? null : { text: base, label: label ?? GIVEN_VERSION }, path),
     destroy: () => widget.destroy(),
   };
 }
@@ -188,10 +191,9 @@ class Widget {
       // Publish the local selection from the editors' own updates: the DOM's selectionchange
       // fires before CodeMirror/ProseMirror read the new selection, so it would publish the previous one.
       onSelection: () => this.collaboration?.selectionChanged(),
-      onBaseChange: (document, base) => {
-        // accepting a change moves the base; it is still the same version for the reader
-        if (this.project.pathOf(document) === this.project.main) this.changes.setBase({ text: base, label: this.changes.label });
-      },
+      // accepting a change moves that file's base; it is still the same version for the reader
+      onBaseChange: (document, base) => this.changes.accept(document, base),
+      onCreate: (document, views) => this.changes.attach(document, [views.source, views.visual]),
     });
     // Drops anywhere on the widget (also the preview): never the browser opening the file instead.
     this.switcher = new FileSwitcher(this.left, host, {
@@ -200,10 +202,10 @@ class Widget {
     });
     this.assets = new AssetView(this.left, (path) => this.insertImage(path));
     this.unsubscribe = this.project.onChange((change) => this.changed(change));
-    this.open(main);
     this.commentAction = new CommentAction(host, () => this.views.shown());
     this.views.addTabAction(this.commentAction.button);
-    this.changes = this.mountChanges();
+    this.changes = this.mountChanges(); // before any views exist: they attach to it when created
+    this.open(main);
     if (options.collaboration) {
       this.collaboration = this.mountCollaboration(options.collaboration);
       this.showCursors();
@@ -229,17 +231,14 @@ class Widget {
     if (changed) this.options.onOpen?.(path);
   }
 
-  /** "Changes since …" for the main file: against `options.base`, else the text as opened; both views and the preview. */
+  /** "Changes since …" for every Typst file: the main file against `options.base`, else each file as opened. */
   private mountChanges(): ChangeTracking {
-    const main = this.project.main;
-    const document = this.project.document(main)!;
-    const views = this.views.viewsOf(document);
     const actions = this.host.ownerDocument.createElement('span');
     actions.className = 'typst-editor__tab-actions';
     this.views.addTabAction(actions);
     return new ChangeTracking(
       actions,
-      { document, views: [views.source, views.visual], preview: (ranges) => this.preview.showChanges(main, ranges) },
+      { project: this.project, preview: (path, ranges) => this.preview.showChanges(path, ranges) },
       this.options.base === undefined ? null : { text: this.options.base, label: this.options.baseLabel ?? GIVEN_VERSION },
     );
   }
@@ -267,8 +266,7 @@ class Widget {
     const toolbar = this.host.ownerDocument.createElement('span');
     toolbar.className = 'typst-editor__tab-actions';
     this.views.addTabAction(toolbar);
-    const main = this.project.main;
-    this.versions = new VersionControls(toolbar, versions, { path: main, user: this.options.user, setBase: (base) => this.changes.setBase(base === null ? null : { text: base, label: 'last saved version' }) });
+    this.versions = new VersionControls(toolbar, versions, { user: this.options.user, setBase: (base) => this.changes.setBases('last saved version', base) });
   }
 
   private showCursors(): void {
@@ -283,6 +281,7 @@ class Widget {
     this.views.retain(this.documents());
     this.open(this.project.has(this.active) ? this.active : this.project.main);
     if (!this.project.has(this.lastSource)) this.lastSource = this.project.main;
+    this.changes.refresh();
     this.refresh();
   }
 
