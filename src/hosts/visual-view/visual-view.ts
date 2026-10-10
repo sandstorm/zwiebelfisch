@@ -6,8 +6,8 @@ import { EditorState, TextSelection, type Transaction } from '@tiptap/pm/state';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { Node } from '@tiptap/pm/model';
-import type { Highlight, TypstDocument } from '../../core/typst-document/typst-document';
-import type { Contributed, Gutter, VisualViewContext, VisualViewContributions } from './contributions/contributions';
+import type { TypstDocument } from '../../core/typst-document/typst-document';
+import type { Contributed, Gutter, Highlight, VisualViewContext, VisualViewContributions } from './contributions/contributions';
 import { highlights, setHighlights } from './highlights';
 import { attachSpecs, editorExtensions, setBoxes } from './nodes/nodes';
 import { nodeGrammar, onDidChangeGrammar, posToSource, print, project, sourceToPos, syncDoc } from './projection/projection';
@@ -15,7 +15,7 @@ import { Toolbar } from './toolbar/toolbar';
 
 export {
   VisualViewContributions, setBoxDecorations, svg, type Action, type BoxAction, type BoxPicture, type BoxRenderer, type BoxRendererProvider, type BoxCodeExtensionProvider,
-  type BoxTools, type BoxToolsHost, type CodeBoxSpec, type ContributionContext, type EditorExtensionProvider, type Gutter, type HighlightProvider,
+  type BoxTools, type BoxToolsHost, type CodeBoxSpec, type ContributionContext, type EditorExtensionProvider, type Gutter, type Highlight, type HighlightProvider,
   type GutterProvider, type PriorityOptions, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem, type TypstMarkSpec,
   type TypstNodeSpec, type VisualViewContext, type VisualViewContribution,
 } from './contributions/contributions';

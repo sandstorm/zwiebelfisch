@@ -1,5 +1,5 @@
 // The diagnostics extension: the compile errors and warnings underlined in the Source views (source-view/: lint),
-// marked in the Visual views (highlights with the message as tooltip) and counted in the status bar (workbench/:
+// marked in the Visual views (visual-view/: highlights with the message as tooltip) and counted in the status bar (workbench/:
 // DiagnosticsStatus, with the list behind it). Entry of extensions/diagnostics/. See ARCHITECTURE.md, "Diagnostics
 // in the widget".
 // Why one DiagnosticCollection (model/): the preview reports a compilation's diagnostics once, for every file; the
@@ -9,8 +9,9 @@ import { ProjectPath } from '../../core/paths/paths';
 import type { Diagnostic } from '../../core/typst-engine/typst-engine';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './diagnostics.css?inline';
-import { DiagnosticCollection, diagnosticHighlight, summarizeDiagnostics } from './model/model';
+import { DiagnosticCollection, summarizeDiagnostics } from './model/model';
 import { lint } from './source-view/source-view';
+import { diagnosticHighlight } from './visual-view/visual-view';
 import { DiagnosticsStatus } from './workbench/workbench';
 
 /**

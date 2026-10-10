@@ -3,10 +3,10 @@
 import { EditorState } from '@codemirror/state';
 import { describe, expect, it } from 'vitest';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
-import { type Highlight, TypstDocument } from '../../core/typst-document/typst-document';
+import { TypstDocument } from '../../core/typst-document/typst-document';
 import type { Editor } from '@tiptap/core';
 import {
-  children, setBoxDecorations, starterKitPart, VisualView, VisualViewContributions, type TypstMarkSpec, type VisualViewContext, type VisualViewContribution,
+  children, setBoxDecorations, starterKitPart, VisualView, VisualViewContributions, type Highlight, type TypstMarkSpec, type VisualViewContext, type VisualViewContribution,
 } from './visual-view';
 
 /** A test-local construct beyond the host's minimum: `*strong*` as a bold mark (hidden syntax around visible text). */

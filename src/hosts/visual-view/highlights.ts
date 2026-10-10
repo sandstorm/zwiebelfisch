@@ -3,7 +3,7 @@ import { Extension } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey, type Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import type { Highlight } from '../../core/typst-document/typst-document';
+import type { Highlight } from './contributions/contributions';
 import { sourceToPos } from './projection/projection';
 
 type Layers = Record<string, DecorationSet>;

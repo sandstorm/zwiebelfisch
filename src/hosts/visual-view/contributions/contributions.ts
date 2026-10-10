@@ -5,7 +5,7 @@ import type { AnyExtension } from '@tiptap/core';
 import type { Plugin } from '@tiptap/pm/state';
 import { Disposable } from '../../../core/disposable/disposable';
 import type { Event } from '../../../core/event-emitter/event-emitter';
-import type { Highlight, TypstDocument } from '../../../core/typst-document/typst-document';
+import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import type { MarkGrammar, NodeGrammar } from '../projection/projection';
 import type { BoxAction, BoxCodeExtensionProvider, BoxRendererProvider, CodeBoxSpec } from './boxes';
 import type { ToolbarGroup, ToolbarItem } from './toolbar-items';
@@ -41,6 +41,19 @@ export interface Gutter {
 
 /** Makes a view's gutter in `body`, the element holding the text (`.typst-visual__body`). */
 export type GutterProvider = (view: VisualViewContext, body: HTMLElement) => Gutter;
+
+/**
+ * A styled stretch of the source (UTF-16 offsets) that the Visual view draws
+ * over its text, e.g. another user's selection or a diagnostic. `attributes`
+ * are set on the marked DOM (e.g. a style with the user's color). Views follow
+ * edits with their highlights until the owner sets them again.
+ */
+export interface Highlight {
+  from: number;
+  to: number;
+  className: string;
+  attributes?: Record<string, string>;
+}
 
 /** Styled source ranges of each document (diagnostics), kept up to date in its Visual views. */
 export interface HighlightProvider {

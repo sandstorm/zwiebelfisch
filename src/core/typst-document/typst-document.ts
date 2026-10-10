@@ -8,7 +8,6 @@ import { minimalChange } from './minimal-change';
 import type { TextChange } from './text-change';
 
 export { calculateImportChange, type ImportRequest } from './calculate-import-change';
-export type { Highlight } from './highlight';
 export type { TextChange } from './text-change';
 export { minimalChange } from './minimal-change';
 

@@ -52,8 +52,7 @@ src/                        the widget (TypeScript); the most important API on t
                             hex colors only in the color tokens (dark mode)
   core/                     the models everything builds on
     typst-document/         TypstDocument — the single source of truth (a string; no Yjs: collaboration binds a Y.Text
-                            from outside); TextChange (the one edit format, text-change.ts); Highlight (a styled source
-                            range views draw); calculateImportChange (the change that imports a name from a module, once;
+                            from outside); TextChange (the one edit format, text-change.ts); calculateImportChange (the change that imports a name from a module, once;
                             applies nothing: margin notes merge it into their own edit); minimal-change.ts
     typst-engine/           typed TS wrapper around the wasm (typst-engine.ts: createEngine), fetch-fonts.ts;
                             engine-assets.ts (wasm + default font URLs for the main thread); packages/ (withPackages,
@@ -140,7 +139,7 @@ src/                        the widget (TypeScript); the most important API on t
                             selections, also in raw boxes; perUserUndo: their edits out of the Source views'
                             undo history); workbench/ (presenceDecorations: who is in which file)
     diagnostics/            diagnostics.ts (the extension); model/ (DiagnosticCollection, describeDiagnostic,
-                            diagnosticHighlight, diagnostics-summary.ts); source-view/ (lint); workbench/
+                            diagnostics-summary.ts); source-view/ (lint); visual-view/ (diagnosticHighlight); workbench/
                             (DiagnosticsStatus: the status bar item)
     markup/                 strong, emphasis, links, raw text (inline code, code blocks; model: raw-code), quotes
     headings/               headings and their numbers (model: numbering patterns, HeadingCounter, the rules' code)
@@ -699,6 +698,9 @@ visualView.registerToolbarItem({ group, order?, action } | { group, order?, crea
 visualView.registerGutter((view, body) => { plugin?, destroy() }) → Disposable
 visualView.registerHighlights(layer, { provideHighlights(document), onDidChangeHighlights }) → Disposable
                                      // set on a view's creation and on every change of its document (diagnostics)
+                                     // Highlight { from, to, className, attributes? }: the host's own type (only the
+                                     // Visual view draws highlights; the Source view's contributions use CodeMirror
+                                     // decorations), exported from hosts/visual-view
 visualView.registerBoxRenderer((view) => BoxRenderer | null) → Disposable
 visualView.registerBoxCodeExtension((view) => codeMirrorExtension) → Disposable
                                      // a box's code gets its node decorations as the effect setBoxDecorations
@@ -1556,8 +1558,9 @@ documentLinks(): TypstExtension                       // one provider: the file 
 ```
 diagnostics.ts         the extension: preview.onDidChangeDiagnostics → DiagnosticCollection, status
 model/                 DiagnosticCollection (VS Code's name: set(document, diagnostics), get, onDidChange),
-                       SourceDiagnostic, describeDiagnostic, diagnosticHighlight, summarizeDiagnostics
+                       SourceDiagnostic, describeDiagnostic, summarizeDiagnostics
 source-view/           lint(collection): the Source views' CodeMirror lint
+visual-view/           diagnosticHighlight: a diagnostic as the Visual view's Highlight
 workbench/             DiagnosticsStatus: the status bar item
 ```
 
