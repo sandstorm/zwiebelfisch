@@ -54,3 +54,4 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [e2e-visual](e2e-visual.md) | done (branch task/e2e-visual) |
 | [fix-image-upload-ui](fix-image-upload-ui.md) | done (branch task/fix-image-upload-ui) |
 | [demo-examples](demo-examples.md) | done (branch task/demo-examples) |
+| [visual-toc-and-code](visual-toc-and-code.md) | done (branch task/visual-toc-and-code) |

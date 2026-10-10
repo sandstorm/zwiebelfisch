@@ -43,6 +43,8 @@
     "@lezer/common": "1.5.3",
     "@lezer/highlight": "1.2.5",
     "@tiptap/core": "3.31.4",
+    "@tiptap/extension-code": "3.31.4",
+    "@tiptap/extension-code-block": "3.31.4",
     "@tiptap/extension-document": "3.31.4",
     "@tiptap/extension-list": "3.31.4",
     "@tiptap/extension-table": "3.31.4",

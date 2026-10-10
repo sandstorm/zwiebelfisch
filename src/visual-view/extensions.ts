@@ -1,8 +1,11 @@
 import { Extension, Mark, Node, getSchema } from '@tiptap/core';
+import Code from '@tiptap/extension-code';
+import CodeBlock from '@tiptap/extension-code-block';
 import Document from '@tiptap/extension-document';
 import { ListItem } from '@tiptap/extension-list';
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
 import StarterKit from '@tiptap/starter-kit';
+import { codeBlockView } from './code-block-view';
 import { RawBoxNavigation, rawBoxView } from './raw-box';
 
 /**
@@ -17,20 +20,22 @@ import { RawBoxNavigation, rawBoxView } from './raw-box';
  *   the editor (a default separator is printed);
  * - doc `lead`/`trail`: whitespace before the first / after the last block;
  * - table `layout`: how the table's source is laid out around its cells
- *   (owned by the projection).
+ *   (owned by the projection);
+ * - code block `fence`: the backticks of its delimiters.
  */
 const SourceAnchors = Extension.create({
   name: 'typstSourceAnchors',
   addGlobalAttributes() {
     return [
       {
-        types: ['paragraph', 'heading', 'bulletList', 'orderedList', 'listItem'],
+        types: ['paragraph', 'heading', 'bulletList', 'orderedList', 'listItem', 'codeBlock'],
         attributes: {
           src: { default: null, rendered: false, keepOnSplit: false },
           sep: { default: null, rendered: false },
         },
       },
       { types: ['listItem'], attributes: { marker: { default: null, rendered: false } } },
+      { types: ['codeBlock'], attributes: { fence: { default: 3, rendered: false } } },
       { types: ['table'], attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } } },
       { types: ['hardBreak'], attributes: { src: { default: '\\\n', rendered: false, keepOnSplit: false } } },
     ];
@@ -86,6 +91,50 @@ const Image = Node.create({
     return rawBoxView;
   },
 });
+
+/**
+ * A standalone `#outline(..)` call: the table of contents. Its source is kept
+ * and edited like a raw block's; the box is headed "Table of contents" and
+ * shows the compiled outline when a renderer is set.
+ */
+const Outline = Node.create({
+  name: 'outline',
+  group: 'block',
+  atom: true,
+  selectable: true,
+  draggable: true,
+  addAttributes() {
+    return { src: { default: '#outline()', rendered: false }, sep: { default: null, rendered: false } };
+  },
+  renderHTML({ node }) {
+    return ['pre', { class: 'typst-visual__outline' }, node.attrs.src];
+  },
+  addNodeView() {
+    return rawBoxView;
+  },
+});
+
+/**
+ * Raw text in a block (```lang …```): plain text edited in place, under a
+ * field for its language.
+ */
+const TypstCodeBlock = CodeBlock.extend({
+  addNodeView() {
+    return codeBlockView;
+  },
+}).configure({ HTMLAttributes: { class: 'typst-visual__code-block' } });
+
+/**
+ * Inline raw text (`code`). Unlike Tiptap's code mark it combines with other
+ * formatting (Typst allows `*`code`*`). `fence` and `lang` remember the
+ * delimiters (```lang …```) so they print back as written.
+ */
+const TypstCode = Code.extend({
+  excludes: '',
+  addAttributes() {
+    return { fence: { default: 1, rendered: false }, lang: { default: null, rendered: false } };
+  },
+}).configure({ HTMLAttributes: { class: 'typst-visual__code-inline' } });
 
 /** Inline Typst the Visual view does not model (`#func[..]`, `$x$`, `@ref`, …), kept verbatim and editable as code. */
 const RawInline = Node.create({
@@ -153,6 +202,9 @@ export const extensions = [
   TableCell,
   TableHeader,
   Image,
+  Outline,
+  TypstCodeBlock,
+  TypstCode,
   TypstDocument,
   TypstListItem,
   SourceAnchors,
