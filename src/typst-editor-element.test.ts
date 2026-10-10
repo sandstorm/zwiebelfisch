@@ -5,7 +5,7 @@ import { EditorView } from '@codemirror/view';
 import { defineTypstEditorElement, type TypstEditorChangeDetail, type TypstEditorElement } from './typst-editor-element';
 import type { FileChange } from './typst-editor';
 
-vi.mock('./features/preview/preview', () => ({
+vi.mock('./hosts/preview/preview', () => ({
   Preview: class {
     update() {}
     reveal() {}

@@ -6,7 +6,7 @@
 import type { CollaborationOptions } from './features/collaboration/collaboration';
 import type { Diagnostic } from './core/typst-engine/typst-engine';
 import type { TypstDocument } from './core/typst-document/typst-document';
-import { Preview } from './features/preview/preview';
+import { Preview } from './hosts/preview/preview';
 import proseMirrorStyles from './features/visual-view/visual-view.css?inline';
 import { AssetView, FilePanel, filesPanelIcon } from './features/files/files';
 import fileStyles from './features/files/files.css?inline';

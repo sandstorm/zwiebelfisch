@@ -1,7 +1,7 @@
 // ProjectRenderings: what a document's Visual view renders and inserts (snippets, image URLs, uploads).
 // See typst-editor.ts.
 import type { TypstDocument } from '../core/typst-document/typst-document';
-import type { Preview } from '../features/preview/preview';
+import type { Preview } from '../hosts/preview/preview';
 import type { VisualViewOptions } from '../features/visual-view/visual-view';
 import { type FileChange, type FileContent, type Project } from '../core/project/project';
 import { type PathReference, ProjectPath } from '../core/paths/paths';

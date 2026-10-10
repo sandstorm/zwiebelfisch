@@ -1,4 +1,4 @@
-// SourceView: the CodeMirror 6 editing view of a TypstDocument. Entry of features/source-view/.
+// SourceView: the CodeMirror 6 editing view of a TypstDocument. Entry of hosts/source-view/.
 // See ARCHITECTURE.md, "SourceView".
 import { basicSetup } from 'codemirror';
 import { setDiagnostics } from '@codemirror/lint';

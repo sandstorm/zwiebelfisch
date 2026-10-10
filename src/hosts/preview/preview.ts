@@ -1,4 +1,4 @@
-// Preview: the worker-backed live preview with hit-testing, zoom and page numbers. Entry of features/preview/.
+// Preview: the worker-backed live preview with hit-testing, zoom and page numbers. Entry of hosts/preview/.
 // See ARCHITECTURE.md, "Preview".
 import type { Box, Diagnostic, Jump, Page, PdfResult, Position } from '../../core/typst-engine/typst-engine';
 import { isInside, mostVisible, PageList, percentOfPage, snippet, type Snippet, stepZoom, type Zoom, zoomLabel } from './pages/pages';

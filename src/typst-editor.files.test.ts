@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import { createTypstEditor, type TypstEditorOptions } from './typst-editor';
 
-vi.mock('./features/preview/preview', () => ({
+vi.mock('./hosts/preview/preview', () => ({
   Preview: class {
     update() {}
     reveal() {}

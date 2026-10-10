@@ -8,7 +8,7 @@ import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 import { addMarginNote } from '../comments/comments';
 import { Project } from '../../core/project/project';
-import { SourceView } from '../source-view/source-view';
+import { SourceView } from '../../hosts/source-view/source-view';
 import { VisualView } from '../visual-view/visual-view';
 import { Collaboration } from './collaboration';
 import { connect, connectAwareness } from './in-process';

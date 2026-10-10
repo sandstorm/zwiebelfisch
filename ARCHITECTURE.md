@@ -39,6 +39,15 @@ src/                        the widget (TypeScript); the most important API on t
     document-links/         DocumentLinkProvider: the file paths a Typst document names (find-links.ts, Lezer),
                             where they lead and following them (LinkWorkspace: what it needs from the widget);
                             reading-order.ts (main file, then its #includes depth first; a file's neighbours)
+  hosts/                    view hosts (docs/2026_10_10_extensions-architecture.md)
+    source-view/            SourceView — CodeMirror 6 editing view; typst-language, lint, presence, file-links, code-colors
+                            (Mod+click / Alt+Enter / tooltip on paths; also used by raw boxes)
+    preview/                Preview — worker-backed live preview + hit-testing, zoom, page numbers, PDF export;
+                            toolbar.ts, pdf-menu.ts ("Download PDF" + menu), latest-only.ts ("only the newest
+                            value" task runner)
+      worker/               worker.ts (startEngineWorker, main-thread side), engine.worker.ts (the worker),
+                            protocol.ts (messages), project-files.ts (FileSender/FileReceiver)
+      pages/                pages.ts: page-list (SVG only near the viewport), geometry, zoom, snippet
   features/                 one folder per feature, each entered through the file named like it
     visual-view/            VisualView — Tiptap editor over the source-anchored projection; visual-view.css
                             (ProseMirror core styles); decorations at the root: highlights, presence;
@@ -54,14 +63,6 @@ src/                        the widget (TypeScript); the most important API on t
       toolbar/              toolbar.ts, toolbar-action, toolbar-blocks, toolbar-menu, floating-bar
       notes-gutter/         notes-gutter.ts (comment column), note-card (a note's thread + reply box), note-list,
                             card-layout
-    source-view/            SourceView — CodeMirror 6 editing view; typst-language, lint, presence, file-links, code-colors
-                            (Mod+click / Alt+Enter / tooltip on paths; also used by raw boxes)
-    preview/                Preview — worker-backed live preview + hit-testing, zoom, page numbers, PDF export;
-                            toolbar.ts, pdf-menu.ts ("Download PDF" + menu), latest-only.ts ("only the newest
-                            value" task runner)
-      worker/               worker.ts (startEngineWorker, main-thread side), engine.worker.ts (the worker),
-                            protocol.ts (messages), project-files.ts (FileSender/FileReceiver)
-      pages/                pages.ts: page-list (SVG only near the viewport), geometry, zoom, snippet
     diagnostics/            DiagnosticsStatus (status bar), diagnostics-summary.ts
     labels/                 LabelIndex: the project's labels (kind, title, file) and reference counts; scan.ts (Lezer, .bib)
     spreadsheets/           SpreadsheetView (.ic files in IronCalc's workbook UI), workbook.ts (React + IronCalc,
@@ -104,14 +105,14 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
   a stylesheet may be `files/files.css`). Everything else in the folder is internal to it, and
   folders that grow get subfolders named after a concept (`projection/`, `worker/`), never generic
   ones. A folder beside a file of the same name (`typst-editor/` next to `typst-editor.ts`) holds
-  that file's internals. `core/` and `features/` only group.
+  that file's internals. `core/`, `hosts/` and `features/` only group.
 - **Imports from outside a folder go to its entry file**, which re-exports what others need.
   ESLint enforces this (`local/entry-imports`, `eslint-rules/entry-imports.js`); only TypeScript and
   CSS sources count (not the generated `wasm/`, `fonts/` or the `fixtures/`). The exceptions are
   listed once, with reasons, in `eslint.config.js` (`boundaries.exceptions`):
   - `features/collaboration/gitlab-protocol.ts` — anyone: import-free, shared with `server/` and
     `features/versions` (which must not load the lazily loaded collaboration chunk);
-  - `core/typst-engine/engine-assets.ts` — `features/preview/preview.ts`: the asset URLs; in the
+  - `core/typst-engine/engine-assets.ts` — `hosts/preview/preview.ts`: the asset URLs; in the
     entry, the worker bundle (which imports the entry) would emit every asset a second time;
   - `features/collaboration/in-process.ts` — test files;
   - `features/collaboration/shared-project.ts` — the server's tests.
@@ -647,7 +648,7 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - edits change only what they touch;
   - an outside change to a paragraph keeps the cursor position in it.
 
-### `SourceView` (`src/features/source-view`)
+### `SourceView` (`src/hosts/source-view`)
 
 ```ts
 new SourceView(parent, document, { onCursor?, documentLinks? })   // a DocumentLinkProvider, see "File links"
@@ -672,7 +673,7 @@ new SourceView(parent, document, { onCursor?, documentLinks? })   // a DocumentL
   edits. Also hidden: translating ChangeSets to and from `TextChange[]`, and the
   annotation that stops document-originated transactions from being written back.
 
-### `Preview` (`src/features/preview`)
+### `Preview` (`src/hosts/preview`)
 
 ```ts
 new Preview(container, { onJump?, onDiagnostics?, pdf? })   // renders a toolbar + scrolling page area into container;
@@ -728,7 +729,7 @@ new Preview(container, { onJump?, onDiagnostics?, pdf? })   // renders a toolbar
 - **Coordinates:** the SVG is scaled to the page element's width (zoom). Clicks are converted with
   `pt = (clientX − pageRect.left) × page.width / pageRect.width`.
 
-### Worker protocol (`src/features/preview/worker`)
+### Worker protocol (`src/hosts/preview/worker`)
 
 ```
 main → worker   {type:'init', wasm}  (first, once; the URL is resolved on the main thread)
@@ -873,7 +874,7 @@ new Layout(host, storageKey)   .editor  .preview            // the editing colum
   closed, opens only on the rail button and closes on Escape, a click outside, or `dismiss()`
   (the widget calls it after a file was chosen in the panel).
 
-### Dark mode (`src/typst-editor.css`, `src/features/source-view/code-colors.ts`)
+### Dark mode (`src/typst-editor.css`, `src/hosts/source-view/code-colors.ts`)
 
 - **Tokens.** Every color of the widget's stylesheets is a custom property on `.typst-editor`
   defined as `light-dark(light, dark)` (`--te-bg`, `--te-surface`, `--te-subtle`, `--te-text`,
@@ -925,7 +926,7 @@ new FilePanel(parent, dropTarget, { onOpen(path), onChange(change) → Promise<r
   top level) is relocated there; files from the computer dropped on a row are uploaded into that
   folder (the tree stops the drop, so the widget-wide handler does not upload them again).
 
-### File links (`src/core/document-links/`, `src/features/source-view/file-links.ts`, `src/features/visual-view/nodes/box-links.ts`)
+### File links (`src/core/document-links/`, `src/hosts/source-view/file-links.ts`, `src/features/visual-view/nodes/box-links.ts`)
 
 ```ts
 new DocumentLinkProvider(workspace: LinkWorkspace)        // one per document

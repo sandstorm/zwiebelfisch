@@ -3,7 +3,7 @@
 import { withoutNotes } from '../features/comments/comments';
 import type { Project } from '../core/project/project';
 import type { Diagnostic, PdfResult } from '../core/typst-engine/typst-engine';
-import type { PdfFile } from '../features/preview/preview';
+import type { PdfFile } from '../hosts/preview/preview';
 
 /** What makes the PDF: the preview's engine (`Preview.exportPdf`). */
 export interface PdfEngine {

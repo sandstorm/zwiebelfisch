@@ -1,7 +1,7 @@
 // DiagnosticsStatus: the status bar's error / warning count and the list behind it. Entry of features/diagnostics/.
 // See ARCHITECTURE.md, "Diagnostics in the widget".
 import type { Diagnostic } from '../../core/typst-engine/typst-engine';
-import { describeDiagnostic } from '../source-view/source-view';
+import { describeDiagnostic } from '../../hosts/source-view/source-view';
 import { inProject, type DiagnosticTarget, type DiagnosticsSummary } from './diagnostics-summary';
 
 export { summarizeDiagnostics } from './diagnostics-summary';
