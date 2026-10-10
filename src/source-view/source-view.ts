@@ -1,10 +1,10 @@
 import { basicSetup } from 'codemirror';
 import { setDiagnostics } from '@codemirror/lint';
 import { getOriginalDoc, unifiedMergeView, updateOriginalDoc } from '@codemirror/merge';
-import { Annotation, Compartment, EditorSelection, StateEffect, StateField, type ChangeSet, type ChangeSpec } from '@codemirror/state';
+import { Annotation, Compartment, EditorSelection, StateEffect, StateField, Transaction, type ChangeSet, type ChangeSpec } from '@codemirror/state';
 import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
 import type { Highlight } from '../document/highlight';
-import type { TextChange, TypstDocument } from '../document/typst-document';
+import { REMOTE_ORIGIN, type TextChange, type TypstDocument } from '../document/typst-document';
 import { toLintDiagnostics, type SourceDiagnostic } from './lint';
 import { typstLanguage } from './typst-language';
 
@@ -99,7 +99,9 @@ export class SourceView {
     this.view.dom.dataset.testid = 'typst-source';
     this.unsubscribe = document.onChange((changes, origin) => {
       if (origin === this) return;
-      this.view.dispatch({ changes: changes as ChangeSpec[], annotations: fromDocument.of(true) });
+      // Undo is per user: collaborators' edits never enter this view's history (it maps over them).
+      const annotations = [fromDocument.of(true), ...(origin === REMOTE_ORIGIN ? [Transaction.addToHistory.of(false)] : [])];
+      this.view.dispatch({ changes: changes as ChangeSpec[], annotations });
     });
   }
 

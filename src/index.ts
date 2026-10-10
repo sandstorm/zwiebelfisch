@@ -2,6 +2,7 @@ import { defineTypstEditorElement } from './element/typst-editor-element';
 
 export {
   createTypstEditor,
+  type CollaborationOptions,
   type EditorMode,
   type FileChange,
   type FileListMode,

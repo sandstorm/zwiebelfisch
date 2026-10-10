@@ -13,7 +13,9 @@ crates/typst-engine/        Rust → wasm: Typst compiler, SVG export, click/cur
 src/
   engine/                   typed TS wrapper around the wasm, default fonts (generated wasm/, fonts/ — gitignored),
                             withPackages (package download, tar reader), fixtures/ (test package archives)
-  document/                 TypstDocument — the single source of truth; Highlight (a styled source range views draw)
+  document/                 TypstDocument — the single source of truth (string or shared Y.Text); Highlight (a styled source range views draw)
+  collab/                   real-time collaboration (loaded on demand): Collaboration, SharedProject, SharedComments,
+                            RemoteCursors; in-process.ts (Y.Doc/awareness wiring for tests)
   comments/                 Comments (anchors + persistence), CommentsPanel (side panel), CommentsUI (wiring)
   diff/                     diffTexts — the text diff against a base version behind "Show changes"
   source-view/              SourceView — CodeMirror 6 editing view
@@ -31,7 +33,7 @@ src/
                             formatting toolbar, raw boxes edited in a nested CodeMirror,
                             shown rendered (snippet / image) while not focused
   editor/                   createTypstEditor() — composes the widget, Visual/Source tabs, status bar, scoped CSS,
-                            ChangeTracking (base version + "Show changes" toggle)
+                            ChangeTracking (base version + "Show changes" toggle), CollaborationLink
     project.ts              Project: the file model (one TypstDocument per .typ file, main protected)
     editing-views.ts        Visual/Source tabs, lazily one VisualView + SourceView per document
     file-switcher.ts        file bar: tabs, new/upload/rename/delete, drop (optional mode)
@@ -40,7 +42,8 @@ src/
     paths.ts, insert-image.ts, upload.ts   pure helpers (names → paths, Typst path resolution, #image insertion, uploads)
   element/                  <typst-editor> custom element (shadow DOM) around createTypstEditor
   index.ts                  public API of the package; registers <typst-editor>
-demo/                       dev/demo page (vite root)
+demo/                       dev/demo page (vite root); ?room=<name> joins ws://127.0.0.1:1234
+server/                     collaboration server (Node package, Hocuspocus; TypeScript run by Node directly)
 examples/plain-html/        <typst-editor> loaded from dist/lib without a bundler
 tests/e2e/                  Playwright specs (run against the static build)
 mise-tasks/                 every script (build, test, quality, …) — `mise tasks ls`
@@ -79,16 +82,29 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
 
 ```ts
 new TypstDocument(text)
+TypstDocument.fromYText(ytext)                   // shared: the text lives in an (integrated) Y.Text
 .text
 .change(changes: {from, to, insert}[], origin)   // all in pre-change coordinates (CodeMirror ChangeSet semantics)
+.setText(text, origin)                           // one minimal change
+.share(ytext | null)                             // (re)bind to a Y.Text, adopting its text as one REMOTE_ORIGIN change; null unshares
 .onChange((changes, origin) => …) → unsubscribe
+REMOTE_ORIGIN                                    // the origin of edits that arrived through the Y.Text
 ```
 
 - **Single source of truth.** Every view writes through `change()` and reads through `onChange()`.
 - **Echo suppression by origin.** A view passes itself as `origin` and ignores notifications whose
   origin is itself.
-- **Hidden:** how the text is stored. It is a string today. For collaboration it becomes a `Y.Text`
-  wrapper, and the interface stays the same: remote edits arrive with a "remote" origin.
+- **Hidden:** how the text is stored: a string, mirrored into a `Y.Text` when shared. A local
+  `change()` updates the string, applies the changes in one `ydoc.transact(…, document)` and
+  notifies with the caller's origin; the Y.Text observer skips that transaction. Every other
+  transaction (collaborators, a `Y.UndoManager`) becomes `onChange(changes, REMOTE_ORIGIN)`, the
+  event delta converted to pre-change changes (`deltaToChanges`, `y-delta.ts`). The views need no
+  change. `typst-document.ts` imports Yjs types only, so unshared widgets do not load Yjs.
+- **Undo is per user** (decision): each view keeps its own history. Remote changes never enter
+  it (the SourceView dispatches them with `addToHistory: false`; the VisualView already does that
+  for every outside change), and the histories map over them. A user's Undo reverts the last edit
+  of that view's history (the Source view's history also holds the same user's Visual edits), never
+  a collaborator's. No `Y.UndoManager`.
 
 ### `SourceView` (`src/source-view`)
 
@@ -255,9 +271,9 @@ Inside the crate:
 
 ```ts
 createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileChange?, onFilesChange?, onChange?,
-                           comments?, onCommentsChange?, user? })
+                           comments?, onCommentsChange?, user?, base?, collaboration? })
   → { source (get/set), files (get/set), activeFile, open(path), comments (get/set, JSON), destroy() }
-<typst-editor value="…" file-list="auto|show|hide">   .value, .files, .comments, .user;
+<typst-editor value="…" file-list="auto|show|hide">   .value, .files, .comments, .user, .collaboration;
   'change' {detail:{value}}, 'files-change' {detail: FileChange}, 'commentschange' {detail:{comments}}
 ```
 
@@ -322,7 +338,7 @@ new CommentsUI(comments, document, { root, views, activeView(), preview, path })
 ```
 
 - **Never in the Typst source.** The host persists `serialize()` beside the file (sidecar JSON
-  via `onCommentsChange`). Later: a `Y.Map` in the collaborative Y.Doc, a server sidecar.
+  via `onCommentsChange`). When collaborating they are also in the Y.Doc (`SharedComments`).
 - **Live anchors** are offsets mapped through every `TypstDocument` change (`mapRange`): text
   inserted inside a range belongs to it, at its edges it does not. A range whose text is deleted
   becomes an **orphan** (`range: null`, last quote kept). It comes back when exactly that text
@@ -469,12 +485,51 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - edits change only what they touch;
   - an outside change to a paragraph keeps the cursor position in it.
 
-## Planned modules
+### Collaboration (`src/collab`, `server/`)
 
-### Collaboration
+```ts
+createTypstEditor(host, { …, user?: {name, color?},
+  collaboration?: { doc: Y.Doc, awareness?: Awareness } | { url, room, token? } })
 
-`TypstDocument` is backed by `Y.Text`, with Hocuspocus as the server and GitLab as persistence
-(see the concept doc §6).
+Collaboration.start(options, { project, comments, user }) → Promise<Collaboration>   // url: waits for the first sync
+.sync()   .setCursor(path | null, range?)   .showCursors(path | null, views)   .destroy()
+```
+
+**Only text is shared** — ProseMirror/Tiptap and CodeMirror never sync directly; they keep
+following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
+
+| Y.Doc entry | Content | Kept in step by |
+|---|---|---|
+| `files`: `Y.Map<path, Y.Text>` | the text of every `.typ` file | `SharedProject` |
+| `comments`: `Y.Map<threadId, Y.Map>` | `{anchor: {from, to: RelativePosition JSON, quote}, resolved, comments: Y.Array}` (main file) | `SharedComments` |
+| awareness state | `user: {name, color}`, `cursor: {path, anchor, head}` (relative positions) | `RemoteCursors` |
+
+- **`SharedProject`**: binds each project document to its Y.Text (`TypstDocument.share`) and
+  keeps the *set* of files in step: local create / rename / delete (and `sync()` after
+  `Project.replace`) write the map in one transaction; remote map events become
+  `Project.apply(…)` (one delete + one add in one transaction = rename). Joining: the shared files
+  win, local files the room lacks are seeded. If two clients seeded a key concurrently, the loser
+  rebinds to the winner's Y.Text (one remote change; views and anchors survive). A rename is a new
+  Y.Text (its Yjs history starts over); the renaming client keeps its document and views.
+- **`SharedComments`**: `Comments` stays the model the UI talks to. Local changes (and anchors
+  moved by edits) are diffed against the map and written; remote changes are loaded with
+  `Comments.load`, anchors resolved from relative positions (the start sticks to the character
+  after it, the end to the one before, matching `mapRange`). Replies are a `Y.Array`, so
+  concurrent replies merge. A room without threads is seeded with the local ones.
+- **`RemoteCursors`**: publishes the local selection; draws the others' selections
+  (`typst-remote-selection`) and carets (`typst-remote-cursor`: one character with a colored
+  border and a name label, since views draw marks, not empty ranges) through `setHighlights(
+  'remote-cursors', …)` of the shown file's views, re-resolved once per microtask after text or
+  presence changes. Color: `--typst-remote-color` per highlight.
+- **Widget (`CollaborationLink`)**: `import()`s `src/collab` on demand (own chunk, ~37 kB gzip
+  with Yjs and the Hocuspocus provider), publishes the selection on `selectionchange` while focus
+  is in the editing area, and moves the cursors along when another file is shown.
+- **Server (`server/`)**: `collabConfiguration({ storage?, database?, authenticate?, debounce? })`
+  → Hocuspocus configuration; `createCollabServer({ port, … })`. Storage is the extension point
+  (`onLoadDocument` / `onStoreDocument`; default `@hocuspocus/extension-sqlite`), for GitLab
+  persistence next ([server-gitlab](docs/todo/server-gitlab.md)). `onAuthenticate` calls an
+  `Authenticate(token, room)` check; the stub `sharedToken(TYPST_COLLAB_TOKEN)` allows all when
+  unset. The server never looks inside the Y.Doc.
 
 ## Build and test
 
@@ -488,6 +543,9 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
 | `mise run build:lib` | library build → `dist/lib`: bundled ESM, worker, wasm, d.ts (`vite.lib.config.ts`, `tsconfig.lib.json`) |
 | `mise run test:unit` | vitest (node): engine against the real wasm, document model, (later) projection round-trips |
 | `mise run test:e2e` | builds demo + lib, then Playwright against `dist/demo` and `examples/` (+ `dist/lib`), served through request interception (no port needed) |
+| `mise run server:dev` | collaboration server on ws://127.0.0.1:1234 (SQLite in `server/.data/`; env `PORT`, `TYPST_COLLAB_DB`, `TYPST_COLLAB_TOKEN`) |
+| `mise run server:test` | server tests (vitest, Hocuspocus in-process via `openDirectConnection`, no port) |
+| `mise run test:e2e-collab` | starts the server in memory, then the two-user Playwright spec (`tests/e2e/collab.spec.ts`; skipped by `test:e2e`) |
 | `mise run quality` / `quality:report` | complexity gate and hot-spot table (see `.claude/skills/code-quality`) |
 
 **Version pins** are all exact:
@@ -495,6 +553,7 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
 - wasm-bindgen 0.2.129: the crate and the CLI must match.
 - binaryen (wasm-opt) 133.
 - Rust 1.99.0, Node 24.21.0, pnpm 10.34.6.
+- Yjs 13.6.33, y-protocols 1.0.7, Hocuspocus (server, provider, extension-sqlite) 4.7.0.
 
 ## Known limitations / next steps
 
@@ -517,3 +576,7 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   rectangle (e.g. a float). Every raw box asks again after every compile (one `boxes` walk each),
   also while the Visual view is hidden. Tables with headers, merged cells or `columns: (..)` stay
   raw boxes.
+- **Collaboration:** images and other non-`.typ` files are not shared. `{ doc }` mode needs the
+  widget and the host on the same Yjs instance (`dist/lib` bundles its own Yjs). In `{ doc }`
+  mode the host must pass a synced Y.Doc; with `{ url }` an unreachable server leaves the widget
+  local. Comments are shared for the main file only. Remote cursors at an empty line are not drawn.

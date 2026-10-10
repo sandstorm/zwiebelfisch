@@ -1,4 +1,4 @@
-import { createTypstEditor, type FileChange, type FileListMode, type ProjectFiles, type TypstEditor } from '../editor/typst-editor';
+import { createTypstEditor, type CollaborationOptions, type FileChange, type FileListMode, type ProjectFiles, type TypstEditor } from '../editor/typst-editor';
 import { inlineSource } from './inline-source';
 
 /** `detail` of the `change` event the element dispatches after every user edit. */
@@ -31,6 +31,8 @@ const Base = (typeof HTMLElement === 'undefined' ? class {} : HTMLElement) as ty
  * Review comments: the `comments` property (JSON, kept beside the source),
  * the `user` property (`{ name }`, the author of new comments), and a
  * `commentschange` event with `detail.comments` whenever they change.
+ * Collaboration: the `collaboration` property (see
+ * `TypstEditorOptions.collaboration`), read when the element connects.
  */
 export class TypstEditorElement extends Base {
   static readonly observedAttributes = ['value'];
@@ -39,8 +41,10 @@ export class TypstEditorElement extends Base {
   #value: string | null = null;
   #files: ProjectFiles = {};
   #comments: string | undefined;
-  /** Author of the comments written here; read when the element connects. */
-  user: { name: string } | undefined;
+  /** Author of the comments written here, and who others see when collaborating; read when the element connects. */
+  user: { name: string; color?: string } | undefined;
+  /** Real-time collaboration (see `TypstEditorOptions.collaboration`); read when the element connects. */
+  collaboration: CollaborationOptions | undefined;
   #base: string | null = null;
   #settingValue = false;
 
@@ -101,6 +105,7 @@ export class TypstEditorElement extends Base {
       onFilesChange: (change) => this.#filesChanged(change),
       comments: this.#comments,
       user: this.user,
+      collaboration: this.collaboration,
       onCommentsChange: (comments) => {
         this.#comments = comments;
         const detail: TypstEditorCommentsChangeDetail = { comments };

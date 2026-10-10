@@ -600,3 +600,30 @@
   cursor: pointer;
 }
 .typst-preview__marker.typst-comment-marker--active { outline: 2px solid white; box-shadow: 0 0 0 3px var(--te-comment-line); }
+
+/* ---- collaboration: other users' selections and carets (color per user via --typst-remote-color) ---- */
+.typst-remote-selection {
+  background: color-mix(in srgb, var(--typst-remote-color, #268bd2) 22%, transparent);
+}
+.typst-remote-cursor {
+  position: relative;
+  box-shadow: inset 2px 0 0 var(--typst-remote-color, #268bd2);
+}
+.typst-remote-cursor--end { box-shadow: inset -2px 0 0 var(--typst-remote-color, #268bd2); }
+.typst-remote-cursor::before {
+  content: attr(data-user);
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  padding: 0 4px;
+  border-radius: 3px 3px 3px 0;
+  background: var(--typst-remote-color, #268bd2);
+  color: white;
+  font: 11px/1.5 system-ui, sans-serif;
+  font-style: normal;
+  font-weight: normal;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+.typst-remote-cursor--end::before { left: auto; right: 0; border-radius: 3px 3px 0 3px; }

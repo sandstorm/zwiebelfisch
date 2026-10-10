@@ -1,0 +1,13 @@
+{
+  "name": "typst-editor-server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Collaboration server for the Typst editor widget (Hocuspocus)",
+  "dependencies": {
+    "@hocuspocus/extension-sqlite": "4.7.0",
+    "@hocuspocus/server": "4.7.0",
+    "y-protocols": "1.0.7",
+    "yjs": "13.6.33"
+  }
+}

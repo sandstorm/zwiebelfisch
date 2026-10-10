@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-#MISE description="Typecheck all TypeScript sources"
+#MISE description="Typecheck all TypeScript sources (widget, demo, tests, collaboration server)"
 #MISE depends=["build:engine"]
 set -euo pipefail
-exec pnpm exec tsc --noEmit
+pnpm exec tsc --noEmit
+pnpm exec tsc --noEmit -p server
+exec pnpm exec tsc --noEmit -p server/tsconfig.test.json

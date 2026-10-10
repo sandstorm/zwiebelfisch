@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Start the collaboration server (Hocuspocus) on ws://127.0.0.1:1234, SQLite in server/.data/"
+set -euo pipefail
+# Node runs the TypeScript sources directly (type stripping); env: PORT, TYPST_COLLAB_DB, TYPST_COLLAB_TOKEN
+exec node server/src/main.ts "$@"
