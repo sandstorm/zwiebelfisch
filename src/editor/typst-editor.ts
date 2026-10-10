@@ -5,7 +5,6 @@ import { VisualView } from '../visual-view/visual-view';
 import proseMirrorStyles from 'prosemirror-view/style/prosemirror.css?inline';
 import { DiagnosticsStatus } from './diagnostics-status';
 import { summarizeDiagnostics } from './diagnostics-summary';
-import { minimalChange } from './minimal-change';
 import styles from './styles.css?inline';
 
 const MAIN = '/main.typ';
@@ -78,8 +77,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
       return document.text;
     },
     set source(text: string) {
-      const change = minimalChange(document.text, text);
-      if (change) document.change([change], 'api');
+      document.setText(text, 'api');
     },
     destroy() {
       unsubscribe();

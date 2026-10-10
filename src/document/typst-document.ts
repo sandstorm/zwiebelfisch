@@ -1,3 +1,5 @@
+import { minimalChange } from './minimal-change';
+
 /** A replacement of `from..to` (UTF-16 offsets) by `insert`. */
 export interface TextChange {
   from: number;
@@ -39,6 +41,15 @@ export class TypstDocument {
       this.current = this.current.slice(0, from) + insert + this.current.slice(to);
     }
     for (const listener of this.listeners) listener(effective, origin);
+  }
+
+  /**
+   * Replaces the whole text, applied as the one minimal change between the
+   * old and new text so cursors, undo history and reparsing stay intact.
+   */
+  setText(text: string, origin: unknown): void {
+    const change = minimalChange(this.current, text);
+    if (change) this.change([change], origin);
   }
 
   /** Subscribes to changes; returns the unsubscribe function. */

@@ -36,3 +36,22 @@ describe('TypstDocument', () => {
     expect(listener).not.toHaveBeenCalled();
   });
 });
+
+describe('TypstDocument.setText', () => {
+  it('applies a whole new text as one minimal change', () => {
+    const doc = new TypstDocument('Hello brave world');
+    const listener = vi.fn();
+    doc.onChange(listener);
+    doc.setText('Hello new world', 'visual');
+    expect(doc.text).toBe('Hello new world');
+    expect(listener).toHaveBeenCalledWith([{ from: 6, to: 11, insert: 'new' }], 'visual');
+  });
+
+  it('does nothing when the text is unchanged', () => {
+    const doc = new TypstDocument('same');
+    const listener = vi.fn();
+    doc.onChange(listener);
+    doc.setText('same', 'visual');
+    expect(listener).not.toHaveBeenCalled();
+  });
+});

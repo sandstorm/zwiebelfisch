@@ -3,7 +3,7 @@ import { history, redo, undo } from 'prosemirror-history';
 import { keymap } from 'prosemirror-keymap';
 import { EditorState, TextSelection, type Transaction } from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
-import type { TextChange, TypstDocument } from '../document/typst-document';
+import type { TypstDocument } from '../document/typst-document';
 import { locate, print, project, syncBlocks } from './projection';
 import { schema } from './schema';
 
@@ -65,23 +65,11 @@ export class VisualView {
   private apply(tr: Transaction): void {
     this.view.updateState(this.view.state.apply(tr));
     if (!tr.docChanged || tr.getMeta(FROM_DOCUMENT)) return;
-    const change = minimalChange(this.document.text, print(this.view.state.doc));
-    if (change) this.document.change([change], this);
+    this.document.setText(print(this.view.state.doc), this);
   }
 
   private syncFromDocument(): void {
     const tr = syncBlocks(this.view.state.tr, project(this.document.text));
     if (tr.docChanged) this.view.dispatch(tr.setMeta(FROM_DOCUMENT, true).setMeta('addToHistory', false));
   }
-}
-
-/** The single replacement turning `before` into `after`, trimming the common prefix and suffix. */
-function minimalChange(before: string, after: string): TextChange | null {
-  if (before === after) return null;
-  let start = 0;
-  const max = Math.min(before.length, after.length);
-  while (start < max && before[start] === after[start]) start++;
-  let end = 0;
-  while (end < max - start && before[before.length - 1 - end] === after[after.length - 1 - end]) end++;
-  return { from: start, to: before.length - end, insert: after.slice(start, after.length - end) };
 }

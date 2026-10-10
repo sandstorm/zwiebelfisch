@@ -1,4 +1,4 @@
-import type { TextChange } from '../document/typst-document';
+import type { TextChange } from './typst-document';
 
 /**
  * The single change that turns `before` into `after`, covering only the part
