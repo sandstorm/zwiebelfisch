@@ -1,7 +1,6 @@
-/* The collaboration extension's styles: Other users' carets, selections and boxes in the Visual and Source views.
-   Registered by collaboration.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
-/* ---- collaboration: other users' carets, selections and boxes
-   (per user: --typst-remote-color, and --typst-remote-text for text on it) ---- */
+/* The collaboration extension's styles: other users' carets, selections and boxes in the Visual and Source views,
+   in each user's color (--typst-remote-color, and --typst-remote-text for text on it).
+   Registered by collaboration.ts (Workbench.registerStyleSheet). */
 .typst-remote-selection {
   background: color-mix(in srgb, var(--typst-remote-color, #268bd2) 22%, transparent);
 }

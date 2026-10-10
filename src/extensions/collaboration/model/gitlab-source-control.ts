@@ -79,7 +79,7 @@ export interface CommitStatus {
 }
 
 /** The message for `message`: the saved version, nothing to save, merged upstream changes, a conflict, a failure. */
-export function commitStatus(message: ServerMessage): CommitStatus {
+function commitStatus(message: ServerMessage): CommitStatus {
   switch (message.type) {
     case 'gitlab:saved':
       return { message: `Saved version ${message.sha.slice(0, 8)} (${message.author})`, severity: 'info' };

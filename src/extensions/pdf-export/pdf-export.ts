@@ -61,7 +61,7 @@ export function pdfExport(): TypstExtension {
  * (`PdfExportOption.apply`; the documents stay as they are). A document with errors gives no PDF but an error
  * saying so, never an older PDF.
  */
-export class PdfExport {
+class PdfExport {
   constructor(
     private readonly project: Project,
     private readonly preview: Pick<PreviewContributions, 'exportPdf' | 'pdfExportOptions'>,

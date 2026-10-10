@@ -14,6 +14,6 @@ export function zoomText(zoom: 'fit' | number, scale: number): string {
   return zoom === 'fit' ? `Fit · ${zoomLabel(scale)}` : zoomLabel(zoom);
 }
 
-export function zoomLabel(scale: number): string {
+function zoomLabel(scale: number): string {
   return `${Math.round(scale * 100)}%`;
 }

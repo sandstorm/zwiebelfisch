@@ -3,11 +3,11 @@
 import type { FileChange } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import { uploadChanges } from '../../../core/uploads/uploads';
-import type { FileDecoration, MenuContext, MenuItem, Workbench } from '../../../hosts/workbench/workbench';
+import type { FileDecoration, Memory, MenuContext, MenuItem, Workbench } from '../../../hosts/workbench/workbench';
 import { PopupMenu, type PopupMenuAnchor } from '../../../ui/popup-menu/popup-menu';
 import { filesUnder, type Folder, folderOf, relocate } from '../model/tree-model';
 import { icon } from './icons/icons';
-import { FileTree, type FolderMemory } from './tree/tree';
+import { FileTree } from './tree/tree';
 
 /** The menus the panel shows (VS Code's ids): "New" in its header, and the context menu of a row. */
 export const NEW_FILE_MENU = 'file/newFile';
@@ -28,12 +28,12 @@ export interface FilePanelOptions {
    */
   menus: { items(menuId: string, context: MenuContext): readonly MenuItem[]; run(command: string, resource: ProjectPath): void };
   /** Where the open folders are remembered (default: only while the panel lives). */
-  memory?: FolderMemory;
+  memory?: Memory<string[]>;
   /** The decorations of a file (badges, e.g. who else is in it), as they are at each `render` (default: none). */
   decorations?(path: ProjectPath): readonly FileDecoration[];
 }
 
-export interface FileListState {
+export interface FilePanelState {
   paths: ProjectPath[];
   main: ProjectPath;
   active: ProjectPath;
@@ -62,7 +62,7 @@ export class FilePanel {
     parent: HTMLElement,
     private readonly options: FilePanelOptions,
     /** What the panel shows until the next `render`. */
-    private state: FileListState,
+    private state: FilePanelState,
   ) {
     const doc = parent.ownerDocument;
     this.element = element(doc, 'div', 'typst-files');
@@ -97,21 +97,11 @@ export class FilePanel {
     this.render(state);
   }
 
-  render(state: FileListState): void {
+  render(state: FilePanelState): void {
     this.state = state;
     for (const folder of this.emptyFolders) if (filesUnder(state.paths, folder).length > 0) this.emptyFolders.delete(folder);
     this.tree.render({ ...state, folders: [...this.emptyFolders], decorations: (path) => this.options.decorations?.(path) ?? [] });
     this.newButton.hidden = this.options.menus.items(NEW_FILE_MENU, this.context(this.current())).length === 0;
-  }
-
-  /** The focused row (a file or folder), else the shown file: what the panel's operations act on by default. */
-  current(): ProjectPath {
-    return this.tree.current ?? this.state.active;
-  }
-
-  /** What a menu is shown for: the row `path` (`resource`), whether it is a folder, whether it holds the main file. */
-  context(path: ProjectPath): MenuContext {
-    return { view: 'files', resource: path, resourceKind: this.tree.isFolder(path) ? 'folder' : 'file', resourceIsMain: this.holdsMain(path) };
   }
 
   /** Asks for a name and creates that (empty) `.typ` file in the folder of `at` (default: the focused row), then opens it. */
@@ -190,6 +180,16 @@ export class FilePanel {
   destroy(): void {
     this.menu?.close();
     this.element.remove();
+  }
+
+  /** The focused row (a file or folder), else the shown file: what the panel's operations act on by default. */
+  private current(): ProjectPath {
+    return this.tree.current ?? this.state.active;
+  }
+
+  /** What a menu is shown for: the row `path` (`resource`), whether it is a folder, whether it holds the main file. */
+  private context(path: ProjectPath): MenuContext {
+    return { view: 'files', resource: path, resourceKind: this.tree.isFolder(path) ? 'folder' : 'file', resourceIsMain: this.holdsMain(path) };
   }
 
   /** The entries of `menuId` for the row `path`, as a popup menu at `anchor` (nothing while it has none). */

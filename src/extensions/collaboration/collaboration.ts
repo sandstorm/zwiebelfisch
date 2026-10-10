@@ -4,9 +4,10 @@
 // collaborate, so the Yjs side (model/model.ts: Collaboration, SharedProject, RemoteCursors, GitLabSourceControl, …) is a
 // chunk of its own that CollaborationLink loads on demand. Nothing here may import that chunk other than as a type.
 // The extension draws the other users' places itself, through the hosts' generic contribution points: CodeMirror
-// extensions in the Source views (source-view/; also what keeps other users' edits out of their undo history), highlights, decorations and box code extensions in the Visual views
-// (visual-view/), file decorations in the workbench (workbench/). It reads them from its own `Presences`. In a room
-// backed by a GitLab branch it registers the branch as a workbench source control.
+// extensions in the Source views (source-view/; also what keeps other users' edits out of their undo history),
+// highlights, decorations and box code extensions in the Visual views (visual-view/), file decorations in the
+// workbench (workbench/). It reads them from its own `Presences`. In a room backed by a GitLab branch it registers the
+// branch as a workbench source control.
 import type { Awareness } from 'y-protocols/awareness';
 import type * as Y from 'yjs';
 import type { CollaborationUser } from './model/remote-cursors';
@@ -28,7 +29,6 @@ export type CollaborationOptions =
   | { doc: Y.Doc; awareness?: Awareness }
   | { url: string; room: string; token?: string };
 
-
 /**
  * Real-time collaboration (`options`: see `CollaborationOptions`) as the workbench's `user`: shares the project,
  * publishes the local selection, draws the others' places in every file's views and marks the files they are in; in
@@ -46,7 +46,7 @@ export function collaboration(options: CollaborationOptions): TypstExtension {
         current: () => {
           const editor = workbench.activeTextEditor;
           const path = editor && project.pathOf(editor.document);
-          return path ? { path, view: { selection: () => editor.selection } } : null;
+          return path ? { path, selection: editor.selection } : null;
         },
         focused: () => workbench.isEditorFocused(),
         onSourceControl: (sourceControl) => subscriptions.push(workbench.registerSourceControl(sourceControl)),

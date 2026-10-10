@@ -2,7 +2,7 @@
 import type { Disposable } from '../../../core/disposable/disposable';
 import * as Y from 'yjs';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
-import { type Project } from '../../../core/project/project';
+import type { FileChange, Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import { FILES_MAP } from '../../../core/gitlab-protocol/gitlab-protocol';
 import { TextBinding } from './text-binding';
@@ -121,7 +121,7 @@ export class SharedProject {
     this.sync();
   }
 
-  private tryApply(change: Parameters<Project['apply']>[0]): boolean {
+  private tryApply(change: FileChange): boolean {
     if (this.project.check(change)) return false;
     this.project.apply(change);
     return true;

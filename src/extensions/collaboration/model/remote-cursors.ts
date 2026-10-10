@@ -81,11 +81,12 @@ export class RemoteCursors {
     this.scheduled = true;
     queueMicrotask(() => {
       this.scheduled = false;
-      if (!this.destroyed) this.render();
+      if (!this.destroyed) this.report();
     });
   };
 
-  private render(): void {
+  /** Tells `onPresence` the others' places, if they changed. */
+  private report(): void {
     const everyone = this.others();
     const json = JSON.stringify(everyone);
     if (json === this.reported) return;

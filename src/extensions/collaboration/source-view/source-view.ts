@@ -112,7 +112,7 @@ class CaretWidget extends WidgetType {
 }
 
 /** CSS custom properties for elements drawn in a user's color: the color and a readable text color on it. */
-export function presenceStyle(element: HTMLElement, user: PresenceUser): void {
+function presenceStyle(element: HTMLElement, user: PresenceUser): void {
   element.style.setProperty('--typst-remote-color', user.color);
   element.style.setProperty('--typst-remote-text', textColorOn(user.color));
 }

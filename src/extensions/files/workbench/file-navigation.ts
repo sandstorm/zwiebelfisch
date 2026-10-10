@@ -5,8 +5,8 @@ import { ProjectPath } from '../../../core/paths/paths';
 /**
  * Two identical link bars for the shown file, one for its start (`top`) and
  * one for its end (`bottom`): each links the file read before it (left) and
- * after it (right), as `neighbours` gives them. The host places them around
- * the editing view (see `EditingViews.setFrame`); a click opens that file.
+ * after it (right), as `neighbours` gives them. The workbench places them
+ * around the shown file (`Workbench.registerEditorFrame`); a click opens that file.
  */
 export class FileNavigation {
   readonly top: HTMLElement;
