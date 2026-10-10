@@ -196,9 +196,9 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   options stay as they are. The preview always compiles `main` with `project.files()`; `exportPdf` runs the
   `pdfExport.export` command; `onFilesChange` hears a change after the workbench and the extensions.
 - **Diagnostics**: the preview's `onDidChangeDiagnostics` is the one source. The `diagnostics` extension puts
-  each document's into a `DiagnosticCollection` its Source views underline (`lint`) and counts them in the
-  status bar; the workbench host still marks them in the Visual views itself (`EditingViews.setDiagnostics`),
-  until the Visual view's contribution points let the extension do that too.
+  each document's into a `DiagnosticCollection`, which its Source views underline (`lint`) and its Visual views
+  mark (`registerHighlights('diagnostics', …)`: `.typst-diagnostic` with the message as tooltip; an empty range
+  still marks one character), and counts them in the status bar.
 - **`Project`** (`core/project/project.ts`): files by path. `.typ` strings become a `TypstDocument` each (kept
   across renames, so open views survive); everything else is stored as given.
   `check(change)` → reason or null, `apply(change)`, `replace(files)`, `onChange(change)`
@@ -327,7 +327,7 @@ new WorkbenchHost(host, project, { mode?, theme?, allowFileChange?, onOpen? })
   to the listeners. A view inside that stops the drop keeps it.
 - **View contributions by extension:** `typstLanguage` (`typstLanguage()`, `codeColors`),
   `documentLinks` (`fileLinks` + a link provider; Visual: `boxLinks`), `collaboration` (`presence`),
-  `diagnostics` (`lint(collection)`); `projectRenderings` (Visual: `images`, `renderedBoxes`), `comments`
+  `diagnostics` (`lint(collection)`; Visual: highlights); `projectRenderings` (Visual: `images`, `renderedBoxes`), `comments`
   (Visual: `marginNotes`, `notesGutter`), `labels` (Visual: `references`), `styles` (Visual: `customStyles`);
   `previewControls` (`zoomControls`, `followCursor`, `pageNumber`), `pdfExport` (`pdfMenu`, the two PDF
   variants). The Visual view's constructs (`markup`, `headings`, `tables`, …) are in the list themselves: a
@@ -475,6 +475,8 @@ visualView.registerEditorExtension((view) => tiptapExtensions) → Disposable   
 visualView.registerToolbarGroup({ kind: 'group' | 'menu' | 'floating', id, order, … }) → Disposable
 visualView.registerToolbarItem({ group, order?, action } | { group, order?, create(toolbar) }) → Disposable
 visualView.registerGutter((view, body) => { plugin?, destroy() }) → Disposable
+visualView.registerHighlights(layer, { provideHighlights(document), onDidChangeHighlights }) → Disposable
+                                     // set on a view's creation and on every change of its document (diagnostics)
 visualView.registerBoxRenderer((view) => BoxRenderer | null) → Disposable
 visualView.registerBoxCodeExtension((view) => codeMirrorExtension) → Disposable
 

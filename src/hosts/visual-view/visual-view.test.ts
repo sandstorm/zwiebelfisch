@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 // Tests for visual-view.ts.
 import { describe, expect, it } from 'vitest';
-import { TypstDocument } from '../../core/typst-document/typst-document';
+import { EventEmitter } from '../../core/event-emitter/event-emitter';
+import { type Highlight, TypstDocument } from '../../core/typst-document/typst-document';
 import { createVisualView } from './test-support';
+import { VisualView, VisualViewContributions } from './visual-view';
 
 function setup(text: string) {
   const parent = document.createElement('div');
@@ -71,5 +73,27 @@ describe('VisualView', () => {
     const { doc, parent } = setup('= Title\n\nText\n');
     doc.setText('= Title\n\nText changed\n', 'source');
     expect(parent.querySelector('p')?.textContent).toBe('Text changed');
+  });
+});
+
+describe('VisualViewContributions.registerHighlights', () => {
+  it('sets a provider\'s highlights when a view is made and again when they change for its document only', () => {
+    const changed = new EventEmitter<TypstDocument>();
+    const ranges = new Map<TypstDocument, Highlight[]>();
+    const contributions = new VisualViewContributions();
+    contributions.registerHighlights('test', { provideHighlights: (document) => ranges.get(document) ?? [], onDidChangeHighlights: changed.event });
+    const doc = new TypstDocument('Hello world\n');
+    const other = new TypstDocument('Other\n');
+    ranges.set(doc, [{ from: 0, to: 5, className: 'marked' }]);
+    const parent = document.body.appendChild(document.createElement('div'));
+    const view = new VisualView(parent, doc, contributions);
+    expect(parent.querySelector('.marked')?.textContent).toBe('Hello');
+    ranges.set(doc, [{ from: 6, to: 11, className: 'marked' }]);
+    changed.fire(other);
+    expect(parent.querySelector('.marked')?.textContent).toBe('Hello');
+    changed.fire(doc);
+    expect(parent.querySelector('.marked')?.textContent).toBe('world');
+    view.destroy();
+    expect(changed.hasListeners).toBe(false);
   });
 });

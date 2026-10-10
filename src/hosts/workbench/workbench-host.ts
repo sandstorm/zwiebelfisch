@@ -5,7 +5,6 @@ import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter
 import { ProjectPath, type FileKind } from '../../core/paths/paths';
 import type { FileChange, Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
-import type { Diagnostic } from '../../core/typst-engine/typst-engine';
 import { Preview } from '../preview/preview';
 import { SourceViewHost } from '../source-view/source-view';
 import { VisualViewContributions } from '../visual-view/visual-view';
@@ -85,7 +84,6 @@ export class WorkbenchHost implements Workbench {
     this.#views = this.#createViews();
     this.#fileViews = new FileViews(this.#layout.editor);
     this.#preview = new Preview(this.#layout.preview, { onJump: (jump) => this.#jump(jump) });
-    this.#preview.onDidChangeDiagnostics((diagnostics) => this.#markDiagnostics(diagnostics));
     this.#unsubscribe = project.onChange((change) => this.#changed(change));
     this.#extensions = new ExtensionHost({
       project,
@@ -249,14 +247,6 @@ export class WorkbenchHost implements Workbench {
     const path = ProjectPath.parse(target.path);
     if (!path || !this.project.document(path)) return;
     this.open(path, { selection: target });
-  }
-
-  /** INTERIM (until the Visual view's contribution points): marks each document's diagnostics in its Visual view. The Source view underlines them through the diagnostics extension's `lint`. */
-  #markDiagnostics(diagnostics: readonly Diagnostic[]): void {
-    for (const document of this.#documents()) {
-      const path = this.project.pathOf(document);
-      this.#views.setDiagnostics(document, diagnostics.filter((d) => d.path === path));
-    }
   }
 
   #documents(): TypstDocument[] {

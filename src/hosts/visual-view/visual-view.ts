@@ -15,7 +15,7 @@ import { Toolbar } from './toolbar/toolbar';
 
 export {
   VisualViewContributions, svg, type Action, type BoxPicture, type BoxRenderer, type BoxRendererProvider, type BoxCodeExtensionProvider,
-  type BoxTools, type BoxToolsHost, type CodeBoxSpec, type ContributionContext, type EditorExtensionProvider, type Gutter,
+  type BoxTools, type BoxToolsHost, type CodeBoxSpec, type ContributionContext, type EditorExtensionProvider, type Gutter, type HighlightProvider,
   type GutterProvider, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem, type TypstMarkSpec,
   type TypstNodeSpec, type VisualViewContext, type VisualViewContribution,
 } from './contributions/contributions';
@@ -97,8 +97,17 @@ export class VisualView implements PresenceTarget {
     const unsubscribe = document.onChange((_changes, origin) => {
       if (origin !== this) this.syncFromDocument();
     });
-    // e.g. a style declared or removed changes what its calls project to
-    this.subscriptions = [new Disposable(unsubscribe), ...onDidChangeGrammar(schema, () => this.syncFromDocument())];
+    this.subscriptions = [
+      new Disposable(unsubscribe),
+      // e.g. a style declared or removed changes what its calls project to
+      ...onDidChangeGrammar(schema, () => this.syncFromDocument()),
+      ...contributed.highlights.map(({ layer, provider }) => {
+        this.setHighlights(layer, provider.provideHighlights(document));
+        return provider.onDidChangeHighlights((changed) => {
+          if (changed === document) this.setHighlights(layer, provider.provideHighlights(document));
+        });
+      }),
+    ];
   }
 
   /** Selects what shows source range `from`..`to` (a caret if empty) and scrolls to it. */

@@ -124,6 +124,22 @@ describe('the built-in extensions', () => {
     await vi.waitFor(() => expect(host.querySelector('.cm-lintRange-error')).not.toBeNull());
   });
 
+  it('marks the diagnostics in the Visual view, message and hints as tooltip, also in views made later', () => {
+    const { host, editor, preview } = setup({ mode: 'visual', source: 'Hello world.\n', files: { '/a.typ': '#foo\n\nText.\n' } });
+    preview.compiled([
+      { severity: 'error', message: 'unknown variable: foo', hints: ['did you mean bar?'], path: '/main.typ', from: 6, to: 11 },
+      // in raw code (a block atom), of a file whose views do not exist yet
+      { severity: 'warning', message: 'unused', hints: [], path: '/a.typ', from: 1, to: 4 },
+    ]);
+    const mark = host.querySelector<HTMLElement>('.ProseMirror .typst-diagnostic')!;
+    expect(mark.textContent).toBe('world');
+    expect(mark.dataset.severity).toBe('error');
+    expect(mark.title).toBe('unknown variable: foo\nhint: did you mean bar?');
+    editor.open('/a.typ');
+    const shown = [...host.querySelectorAll<HTMLElement>('.typst-editor__pane')].find((pane) => !pane.hidden)!;
+    expect(shown.querySelector<HTMLElement>('.typst-diagnostic')?.dataset.severity).toBe('warning');
+  });
+
   it('fills the preview toolbar: zoom, "Follow cursor", page number, then "Download PDF" unless told not to', () => {
     const { preview } = setup({ source: '= Hi' });
     expect(preview.toolbarItems).toHaveLength(4);

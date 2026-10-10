@@ -111,37 +111,6 @@ describe('EditingViews', () => {
   });
 });
 
-describe('EditingViews diagnostics', () => {
-  const error = { severity: 'error' as const, message: 'unknown variable: foo', hints: ['did you mean bar?'], from: 0, to: 0 };
-
-  it('marks diagnostics inline in the Visual view, message and hints as tooltip', () => {
-    const { parent, views } = setup();
-    const doc = new TypstDocument('Hello world.\n');
-    views.show(doc);
-    views.setDiagnostics(doc, [{ ...error, from: 6, to: 11 }]);
-    const mark = parent.querySelector<HTMLElement>('.ProseMirror .typst-diagnostic')!;
-    expect(mark.textContent).toBe('world');
-    expect(mark.dataset.severity).toBe('error');
-    expect(mark.title).toBe('unknown variable: foo\nhint: did you mean bar?');
-  });
-
-  it('marks block atoms (raw code) the diagnostic falls into', () => {
-    const { parent, views } = setup();
-    const doc = new TypstDocument('#foo\n\nText.\n');
-    views.show(doc);
-    views.setDiagnostics(doc, [{ ...error, from: 1, to: 4 }]);
-    expect(parent.querySelector('.ProseMirror .typst-diagnostic')).not.toBeNull();
-  });
-
-  it('applies diagnostics set before the views exist', () => {
-    const { parent, views } = setup();
-    const doc = new TypstDocument('Hello world.\n');
-    views.setDiagnostics(doc, [{ ...error, from: 0, to: 5 }]);
-    views.show(doc);
-    expect(parent.querySelector('.ProseMirror .typst-diagnostic')?.textContent).toBe('Hello');
-  });
-});
-
 describe('EditingViews selection reports', () => {
   it('reports a moved selection after the view has it (the collaboration cursor is never one step behind)', () => {
     const parent = document.createElement('div');

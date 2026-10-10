@@ -1,6 +1,6 @@
 // EditingViews: the Visual/Source tabs; lazily one VisualView and SourceView per document. See workbench.ts.
-import type { Highlight, Presence, TypstDocument } from '../../../core/typst-document/typst-document';
-import { describeDiagnostic, type SourceDiagnostic, type SourceView, SourceViewHost } from '../../source-view/source-view';
+import type { Presence, TypstDocument } from '../../../core/typst-document/typst-document';
+import { type SourceView, SourceViewHost } from '../../source-view/source-view';
 import { VisualView, VisualViewContributions } from '../../visual-view/visual-view';
 
 export type EditorMode = 'visual' | 'source';
@@ -64,7 +64,6 @@ export class EditingViews {
   private readonly tabs: HTMLElement;
   private readonly buttons: HTMLButtonElement[];
   private readonly views = new Map<TypstDocument, Views>();
-  private readonly diagnostics = new Map<TypstDocument, SourceDiagnostic[]>();
   private active: TypstDocument | null = null;
   private current: EditorMode;
   /** Tab-bar controls that only show in one view. */
@@ -158,20 +157,10 @@ export class EditingViews {
     views[this.current].reveal(from, to);
   }
 
-  /** Marks `diagnostics` in the Visual view of `document`, now or when it is created. */
-  setDiagnostics(document: TypstDocument, diagnostics: SourceDiagnostic[]): void {
-    this.diagnostics.set(document, diagnostics);
-    const views = this.views.get(document);
-    if (views) markDiagnostics(views, diagnostics);
-  }
-
   /** Destroys the views of every document not in `documents` (deleted files). */
   retain(documents: TypstDocument[]): void {
     for (const document of [...this.views.keys()]) {
       if (!documents.includes(document)) this.drop(document);
-    }
-    for (const document of [...this.diagnostics.keys()]) {
-      if (!documents.includes(document)) this.diagnostics.delete(document);
     }
   }
 
@@ -209,8 +198,6 @@ export class EditingViews {
       if (visual.focused()) this.options.onCursor?.(document, visual.selection().from);
       this.options.onSelection?.(editor);
     });
-    const diagnostics = this.diagnostics.get(document);
-    if (diagnostics) markDiagnostics(views, diagnostics);
     return views;
   }
 
@@ -253,20 +240,6 @@ export class EditingViews {
     if (content !== this.frame.top && content?.previousSibling !== this.frame.top) pane.insertBefore(this.frame.top, content);
     if (pane.lastChild !== this.frame.bottom) pane.append(this.frame.bottom);
   }
-}
-
-/**
- * The Visual view gets highlights with the diagnostic's text as tooltip (the Source view underlines them
- * itself: its `lint` contribution). An empty range (e.g. "expected expression" at a point) still marks one
- * character.
- */
-function markDiagnostics(views: Views, diagnostics: SourceDiagnostic[]): void {
-  views.visual.setHighlights('diagnostics', diagnostics.map((d): Highlight => ({
-    from: d.from,
-    to: Math.max(d.to, d.from + 1),
-    className: 'typst-diagnostic',
-    attributes: { 'data-severity': d.severity, title: describeDiagnostic(d) },
-  })));
 }
 
 function div(doc: Document, className: string): HTMLElement {

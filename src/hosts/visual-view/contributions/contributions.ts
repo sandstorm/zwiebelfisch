@@ -4,6 +4,8 @@
 import type { AnyExtension } from '@tiptap/core';
 import type { Plugin } from '@tiptap/pm/state';
 import { Disposable } from '../../../core/disposable/disposable';
+import type { Event } from '../../../core/event-emitter/event-emitter';
+import type { Highlight, TypstDocument } from '../../../core/typst-document/typst-document';
 import type { MarkGrammar, NodeGrammar } from '../projection/projection';
 import type { BoxCodeExtensionProvider, BoxRendererProvider, CodeBoxSpec } from './boxes';
 import type { ToolbarGroup, ToolbarItem } from './toolbar-items';
@@ -40,6 +42,14 @@ export interface Gutter {
 /** Makes a view's gutter in `body`, the element holding the text (`.typst-visual__body`). */
 export type GutterProvider = (view: VisualViewContext, body: HTMLElement) => Gutter;
 
+/** Styled source ranges of each document (diagnostics), kept up to date in its Visual views. */
+export interface HighlightProvider {
+  /** The highlights of `document` now (source offsets in its current text). */
+  provideHighlights(document: TypstDocument): readonly Highlight[];
+  /** Fires with a document whose highlights changed. */
+  readonly onDidChangeHighlights: Event<TypstDocument>;
+}
+
 /** What a contribution's `activate` gets: a part of the extension context (which offers more). */
 export interface ContributionContext {
   readonly visualView: VisualViewContributions;
@@ -67,6 +77,7 @@ export interface Contributed {
   readonly toolbarGroups: readonly ToolbarGroup[];
   readonly toolbarItems: readonly ToolbarItem[];
   readonly gutters: readonly GutterProvider[];
+  readonly highlights: readonly { readonly layer: string; readonly provider: HighlightProvider }[];
   readonly boxRenderers: readonly BoxRendererProvider[];
   readonly boxCodeExtensions: readonly BoxCodeExtensionProvider[];
 }
@@ -87,6 +98,7 @@ export class VisualViewContributions {
     toolbarGroups: [] as ToolbarGroup[],
     toolbarItems: [] as ToolbarItem[],
     gutters: [] as GutterProvider[],
+    highlights: [] as { layer: string; provider: HighlightProvider }[],
     boxRenderers: [] as BoxRendererProvider[],
     boxCodeExtensions: [] as BoxCodeExtensionProvider[],
   };
@@ -129,6 +141,14 @@ export class VisualViewContributions {
     return this.add(this.lists.gutters, provider);
   }
 
+  /**
+   * Highlights from `provider` in every view, as layer `layer` (one per provider): set when the view is created and
+   * again whenever the provider reports a change of its document; they follow edits in between.
+   */
+  registerHighlights(layer: string, provider: HighlightProvider): Disposable {
+    return this.add(this.lists.highlights, { layer, provider });
+  }
+
   /** What raw boxes of each view show instead of their code while not edited. */
   registerBoxRenderer(provider: BoxRendererProvider): Disposable {
     return this.add(this.lists.boxRenderers, provider);
@@ -149,6 +169,7 @@ export class VisualViewContributions {
       toolbarGroups: [...lists.toolbarGroups],
       toolbarItems: [...lists.toolbarItems],
       gutters: [...lists.gutters],
+      highlights: [...lists.highlights],
       boxRenderers: [...lists.boxRenderers],
       boxCodeExtensions: [...lists.boxCodeExtensions],
     };

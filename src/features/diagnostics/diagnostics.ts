@@ -1,24 +1,26 @@
-// The diagnostics extension: the compile errors and warnings underlined in the Source views (`lint`), and the
-// status bar's error / warning count with the list behind it (DiagnosticsStatus). Entry of features/diagnostics/.
+// The diagnostics extension: the compile errors and warnings underlined in the Source views (`lint`) and marked in
+// the Visual views (highlights with the message as tooltip), and the status bar's error / warning count with the list behind it (DiagnosticsStatus). Entry of features/diagnostics/.
 // See ARCHITECTURE.md, "Diagnostics in the widget".
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
+import type { Highlight } from '../../core/typst-document/typst-document';
 import type { Diagnostic } from '../../core/typst-engine/typst-engine';
-import { DiagnosticCollection, describeDiagnostic, lint } from '../../hosts/source-view/source-view';
+import { DiagnosticCollection, describeDiagnostic, lint, type SourceDiagnostic } from '../../hosts/source-view/source-view';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import { inProject, summarizeDiagnostics, type DiagnosticTarget, type DiagnosticsSummary } from './diagnostics-summary';
 
 export { summarizeDiagnostics } from './diagnostics-summary';
 
 /**
- * The preview's diagnostics, each document's in a DiagnosticCollection its Source views underline (`lint`), and the
+ * The preview's diagnostics, each document's in a DiagnosticCollection its Source views underline (`lint`) and its
+ * Visual views mark, and the
  * compile status in the status bar, for the Typst file shown last (while an image is shown, too). Clicking the
  * status, or a message, opens the file and reveals the range in the Source view.
  */
 export function diagnostics(): TypstExtension {
   return {
     id: 'diagnostics',
-    activate({ project, workbench, sourceView, preview, subscriptions }) {
+    activate({ project, workbench, sourceView, visualView, preview, subscriptions }) {
       const collection = new DiagnosticCollection();
       const status = new DiagnosticsStatus(workbench.ownerDocument, (target) => {
         const path = ProjectPath.parse(target.path);
@@ -41,6 +43,10 @@ export function diagnostics(): TypstExtension {
       };
       subscriptions.push(
         sourceView.registerExtension(lint(collection)),
+        visualView.registerHighlights('diagnostics', {
+          provideHighlights: (document) => collection.get(document).map(diagnosticHighlight),
+          onDidChangeHighlights: collection.onDidChange,
+        }),
         workbench.registerStatusBarItem(status.element),
         new Disposable(() => status.destroy()),
         workbench.onDidShowFile((path) => {
@@ -56,6 +62,19 @@ export function diagnostics(): TypstExtension {
         preview.onDidChangeDiagnostics(compiled),
       );
     },
+  };
+}
+
+/**
+ * How the Visual view marks a diagnostic: its text highlighted, the message as tooltip. An empty range (e.g.
+ * "expected expression" at a point) still marks one character.
+ */
+function diagnosticHighlight(diagnostic: SourceDiagnostic): Highlight {
+  return {
+    from: diagnostic.from,
+    to: Math.max(diagnostic.to, diagnostic.from + 1),
+    className: 'typst-diagnostic',
+    attributes: { 'data-severity': diagnostic.severity, title: describeDiagnostic(diagnostic) },
   };
 }
 
