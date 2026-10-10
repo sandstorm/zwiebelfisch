@@ -80,6 +80,17 @@ describe('raw boxes', () => {
     expect(selection.anchorNode?.textContent).toBe('Hello');
   });
 
+  it('live in the shadow root of the Visual view, so focus and selection are read there', () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const parent = document.createElement('div');
+    shadow.append(parent);
+    new VisualView(parent, new TypstDocument(RAW));
+    const cm = EditorView.findFromDOM(parent.querySelector<HTMLElement>('.typst-visual__raw-block .cm-content')!)!;
+    expect(cm.root).toBe(shadow);
+  });
+
   it('backspace in an emptied box removes it', () => {
     const { doc, parent, box } = setup(RAW);
     const cm = box('.typst-visual__raw-block');
