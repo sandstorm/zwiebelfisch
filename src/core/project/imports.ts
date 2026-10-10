@@ -24,16 +24,21 @@ export interface ImportRequest {
  */
 export function importChange(text: string, request: ImportRequest): TextChange | null {
   const use = request.use ?? text.length;
-  for (let node = typstParser.parse(text).topNode.firstChild; node; node = node.nextSibling) {
-    if (node.to > use) break;
+  for (let node = typstParser.parse(text).topNode.firstChild; node && node.to <= use; node = node.nextSibling) {
     if (node.name !== 'ModuleImport' || !importsModule(text, node, request)) continue;
-    const items = node.getChild('ImportItems');
-    if (node.getChild('Star') || (items && imports(text, items, request.name))) return null;
-    if (items) return addItem(items, request.name);
-    const str = node.getChild('Str')!;
-    if (str.to === node.to) return insert(str.to, `: ${request.name}`);
+    const change = extend(text, node, request.name);
+    if (change !== undefined) return change;
   }
   return insert(0, request.create());
+}
+
+/** For an import of the module: null if it brings `name` already, the edit adding it, or undefined if it cannot take it (`as`). */
+function extend(text: string, node: SyntaxNode, name: string): TextChange | null | undefined {
+  const items = node.getChild('ImportItems');
+  if (node.getChild('Star') || (items && imports(text, items, name))) return null;
+  if (items) return addItem(items, name);
+  const str = node.getChild('Str')!;
+  return str.to === node.to ? insert(str.to, `: ${name}`) : undefined;
 }
 
 function importsModule(text: string, node: SyntaxNode, request: ImportRequest): boolean {

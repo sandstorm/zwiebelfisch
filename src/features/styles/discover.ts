@@ -29,20 +29,24 @@ const DECLARATION = /^\/\/\/\s*@style\s+(paragraph|text)\b\s*(.*)$/;
  */
 export function scanStyles(text: string): FoundStyle[] {
   const styles: FoundStyle[] = [];
-  let declared: { kind: StyleKind; label: string } | null = null;
+  let declared: Declaration | null = null;
   for (let node = typstParser.parse(text).topNode.firstChild; node; node = node.nextSibling) {
-    if (node.name === 'LineComment') {
-      const match = DECLARATION.exec(text.slice(node.from, node.to).trim());
-      declared = match ? { kind: match[1] as StyleKind, label: match[2].trim() } : declared;
-    } else if (node.name === 'LetBinding' && declared) {
-      const name = styleFunction(text, node);
-      if (name) styles.push({ name, kind: declared.kind, label: declared.label || name });
-      declared = null;
-    } else if (node.name !== 'Hash' && !(node.name === 'Space' && !text.slice(node.from, node.to).includes('\n\n'))) {
-      declared = null;
-    }
+    const name = node.name === 'LetBinding' && declared ? styleFunction(text, node) : null;
+    if (name) styles.push({ name, kind: declared!.kind, label: declared!.label || name });
+    declared = nextDeclaration(text, node, declared);
   }
   return styles;
+}
+
+type Declaration = { kind: StyleKind; label: string };
+
+/** The `@style` declaration in force after `node`: set by its comment line, kept across other `///` lines, the `#` and line breaks. */
+function nextDeclaration(text: string, node: SyntaxNode, declared: Declaration | null): Declaration | null {
+  if (node.name === 'LineComment') {
+    const match = DECLARATION.exec(text.slice(node.from, node.to).trim());
+    return match ? { kind: match[1] as StyleKind, label: match[2].trim() } : declared;
+  }
+  return node.name === 'Hash' || node.name === 'Space' ? declared : null;
 }
 
 /** The styles declared in the project's Typst files, by file in the project's order. */
