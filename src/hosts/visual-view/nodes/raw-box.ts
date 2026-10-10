@@ -9,7 +9,7 @@ import type { Decoration, EditorView, NodeView } from '@tiptap/pm/view';
 import { minimalChange } from '../../../core/typst-document/typst-document';
 import type { DocumentLinkProvider } from '../../../core/document-links/document-links';
 import type { PathReference } from '../../../core/paths/paths';
-import { codeColors, documentLinks, remotePresence, showPresence, typstLanguage } from '../../source-view/source-view';
+import { codeColors, documentLinks, remotePresence, showPresence, typstLanguage } from '../../../features/source-view/source-view';
 import { imagePathLink } from './box-links';
 import { ImageTools } from '../images/images';
 import { boxCarets } from '../presence';

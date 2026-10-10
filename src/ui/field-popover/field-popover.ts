@@ -1,4 +1,5 @@
-// FieldPopover: a small popover with one text field, for links, images and labels. See visual-view.ts.
+// FieldPopover: a small popover with one text field (links, images, labels, commit messages). Entry of ui/field-popover/,
+// a feature-neutral widget. See ARCHITECTURE.md, "VisualView".
 /** What a field popover asks for and does with the answer. */
 export interface FieldPopoverOptions {
   /** Accessible name of the popover, e.g. "Link". */

@@ -5,8 +5,8 @@ import type { Node } from '@tiptap/pm/model';
 import { type EditorState, Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
-import type { ProjectLabels } from '../../labels/labels';
-import { FieldPopover } from '../field-popover';
+import type { ProjectLabels } from '../../../features/labels/labels';
+import { FieldPopover } from '../../../ui/field-popover/field-popover';
 import { labelName, renameLabel, setLabel } from './label-edits';
 import { labelPrefix, labelTarget } from './add-label';
 

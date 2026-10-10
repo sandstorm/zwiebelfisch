@@ -3,7 +3,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { calculateImportChange } from '../../../core/typst-document/typst-document';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import type { DocumentStyles, Style } from '../../styles/styles';
+import type { DocumentStyles, Style } from '../../../features/styles/styles';
 import { VisualView } from '../visual-view';
 import { ProjectPath } from '../../../core/paths/paths';
 

@@ -2,14 +2,14 @@
 // visual-view/toolbar/. See ARCHITECTURE.md, "VisualView".
 import { PathReference } from '../../../core/paths/paths';
 import { findParentNode, type Editor } from '@tiptap/core';
-import { FieldPopover } from '../field-popover';
+import { FieldPopover } from '../../../ui/field-popover/field-popover';
 import { type ImageAssets, ImageChoices, imageFileDrops, insertImages } from '../images/images';
 import { TextSelection, type Plugin } from '@tiptap/pm/state';
 import { textAlignAt, type TextAlignment } from '../nodes/nodes';
 import { svg, type Action } from './toolbar-action';
 import { BLOCKS as QUOTE_AND_TASKS, BREAKS, HEADER_ROW } from './toolbar-blocks';
-import { ToolbarMenu } from './toolbar-menu';
-import { type Anchor, FloatingBar } from './floating-bar';
+import { ToolbarMenu } from '../../../ui/toolbar-menu/toolbar-menu';
+import { type Anchor, FloatingBar } from '../../../ui/floating-bar/floating-bar';
 import { type MenuStyles, StyleMenu } from './style-menu';
 import { canStartNewLabel, startNewLabel } from '../references/references';
 

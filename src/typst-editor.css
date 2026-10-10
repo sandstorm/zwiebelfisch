@@ -1,5 +1,5 @@
 /* The widget's styles, scoped under .typst-editor and injected by createTypstEditor (also injected:
-   typst-editor/layout.css, features/files/files.css, features/visual-view/visual-view.css). See docs/embedding.md. */
+   typst-editor/layout.css, features/files/files.css, hosts/visual-view/visual-view.css). See docs/embedding.md. */
 /* Colors: tokens as light-dark(light, dark). The widget follows the page's color-scheme (a page that
    declares `color-scheme: light dark` gets it dark when the OS is); the `theme` option sets its own
    (data-theme). What light-dark() cannot express selects on data-scheme (typst-editor/color-scheme.ts). */

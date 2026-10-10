@@ -51,7 +51,7 @@ export { codeLanguage } from './raw-code';
 export { LABEL_CHAR, labelName } from './labels';
 export { alignArgs, setRules, withHorizontal, type Horizontal, type TextAlignment } from './alignment';
 import { alignArgs } from './alignment';
-import { noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../../comments/comments';
+import { noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../../../features/comments/comments';
 import { callAtomType } from './call-atoms';
 import { type BlockLabel, guardAfterReference, labelSyntax, referenceSyntax, splitTrailingLabel, labelAfterHeading } from './labels';
 import { isEmbeddable, markupSource } from './embedded-code';

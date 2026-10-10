@@ -17,7 +17,7 @@ export const thresholds = {
 // importing file's path from the repository root.
 export const boundaries = {
   srcRoot: fileURLToPath(new URL('src', import.meta.url)),
-  groupingFolders: ['core', 'features'],
+  groupingFolders: ['core', 'features', 'hosts', 'ui'],
   exceptions: [
     {
       target: 'features/collaboration/gitlab-protocol.ts',

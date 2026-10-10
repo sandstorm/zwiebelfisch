@@ -2,7 +2,7 @@
 // visual-view/notes-gutter/. See ARCHITECTURE.md, "Comments = margin notes".
 import { Plugin, PluginKey, TextSelection, type EditorState, type Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
-import { addReply, deleteMessage, editMessage, localDate, safeNote } from '../../comments/comments';
+import { addReply, deleteMessage, editMessage, localDate, safeNote } from '../../../features/comments/comments';
 import { layoutCards } from './card-layout';
 import { type CardActions, NoteCard } from './note-card';
 import { findNotes, followNotes, noteAtOffset, noteAtSelection, removeNote, setNoteText, type KeyedNote } from './note-list';

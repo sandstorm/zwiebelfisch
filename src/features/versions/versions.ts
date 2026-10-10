@@ -1,7 +1,7 @@
 // VersionControls: "Save version" with a commit message, and its outcome, in GitLab-backed rooms. Entry of
 // features/versions/. See ARCHITECTURE.md, "GitLab-backed rooms".
 import { DEFAULT_COMMIT_MESSAGE, type ServerMessage } from '../collaboration/gitlab-protocol';
-import { FieldPopover } from '../visual-view/visual-view';
+import { FieldPopover } from '../../ui/field-popover/field-popover';
 
 /** A room's versions (`RoomVersions` in features/collaboration), as far as the controls use them. */
 export interface Versions {

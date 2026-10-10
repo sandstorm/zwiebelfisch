@@ -1,6 +1,6 @@
 // StyleMenu: the toolbar's text style menu — normal text, headings, and the project's custom styles. See toolbar.ts.
 import type { ChainedCommands, Editor } from '@tiptap/core';
-import type { Style } from '../../styles/styles';
+import type { Style } from '../../../features/styles/styles';
 
 /** The custom styles the menu offers, and what happens around applying one. */
 export interface MenuStyles {

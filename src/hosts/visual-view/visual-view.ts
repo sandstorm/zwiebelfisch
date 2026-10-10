@@ -10,14 +10,13 @@ import type { ImageAssets } from './images/images';
 import { remotePresence, setPresence } from './presence';
 import { posToSource, print, project, type ProjectedStyles, sourceToPos, syncDoc } from './projection/projection';
 import { NotesGutter } from './notes-gutter/notes-gutter';
-import type { ProjectLabels } from '../labels/labels';
-import type { DocumentStyles, Style } from '../styles/styles';
+import type { ProjectLabels } from '../../features/labels/labels';
+import type { DocumentStyles, Style } from '../../features/styles/styles';
 import { referencesExtension } from './references/references';
 import { Toolbar } from './toolbar/toolbar';
 
 export type { BoxRenderer, Snippet } from './nodes/nodes';
 export type { ImageAssets } from './images/images';
-export { FieldPopover } from './field-popover';
 
 export interface VisualViewOptions {
   /** Shows images and compiled snippets in raw boxes while they are not edited (default: code only). */

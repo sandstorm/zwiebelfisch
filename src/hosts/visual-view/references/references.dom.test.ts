@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { Project } from '../../../core/project/project';
-import { LabelIndex } from '../../labels/labels';
+import { LabelIndex } from '../../../features/labels/labels';
 import { VisualView } from '../visual-view';
 import { ProjectPath } from '../../../core/paths/paths';
 

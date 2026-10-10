@@ -2,7 +2,7 @@
 // Tests for notes-gutter.ts and note-card.ts (through VisualView): cards, threads, replies, editing, resolve, layout.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { addMarginNote, localDate } from '../../comments/comments';
+import { addMarginNote, localDate } from '../../../features/comments/comments';
 import { VisualView, type VisualViewOptions } from '../visual-view';
 
 function setup(source: string, options: VisualViewOptions = {}) {

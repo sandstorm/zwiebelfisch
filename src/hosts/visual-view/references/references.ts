@@ -2,7 +2,7 @@
 // Entry of visual-view/references/. See ARCHITECTURE.md, "VisualView".
 import { Extension } from '@tiptap/core';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
-import type { ProjectLabels } from '../../labels/labels';
+import type { ProjectLabels } from '../../../features/labels/labels';
 import { labelTags } from './label-tags';
 import { referenceHints } from './reference-hints';
 import { referenceSuggestion } from './reference-suggestion';

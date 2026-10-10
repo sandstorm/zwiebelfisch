@@ -3,7 +3,7 @@
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import type { LabelInfo, ProjectLabels } from '../../labels/labels';
+import type { LabelInfo, ProjectLabels } from '../../../features/labels/labels';
 import { describeLabel } from './label-choices';
 
 const key = new PluginKey<DecorationSet>('typstReferenceHints');

@@ -2,7 +2,7 @@
 import { Mark, Node } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import type { NodeView } from '@tiptap/pm/view';
-import { NOTE_HEAD } from '../../comments/comments';
+import { NOTE_HEAD } from '../../../features/comments/comments';
 
 /**
  * `drafting` margin notes in the Visual view's schema.

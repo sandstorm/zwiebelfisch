@@ -7,7 +7,7 @@ import type { CollaborationOptions } from './features/collaboration/collaboratio
 import type { Diagnostic } from './core/typst-engine/typst-engine';
 import type { TypstDocument } from './core/typst-document/typst-document';
 import { Preview } from './features/preview/preview';
-import proseMirrorStyles from './features/visual-view/visual-view.css?inline';
+import proseMirrorStyles from './hosts/visual-view/visual-view.css?inline';
 import { AssetView, FilePanel, filesPanelIcon } from './features/files/files';
 import fileStyles from './features/files/files.css?inline';
 import { CommentAction } from './features/comments/comments';

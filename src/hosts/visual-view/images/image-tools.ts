@@ -3,7 +3,7 @@ import type { PathReference } from '../../../core/paths/paths';
 import type { Editor } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import type { EditorState, Transaction } from '@tiptap/pm/state';
-import { FieldPopover } from '../field-popover';
+import { FieldPopover } from '../../../ui/field-popover/field-popover';
 import { imageWidthCss } from './image-call';
 import { addCaption, imageInfo, removeCaption, resizeImage, setImageAlt } from './image-edits';
 import { imagePath } from '../projection/projection';
