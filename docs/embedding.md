@@ -104,18 +104,32 @@ const editor = createTypstEditor(host, {
 editor.files = { ...editor.files, '/chapters/outro.typ': '= Outro' };   // replaces the map, recompiles
 ```
 
-### The file bar (optional)
+### The file panel
 
-With one file the widget looks as before. As soon as the project has more than one file
-(`fileList: 'auto'`, the default; `'show'` / `'hide'` force it), a file bar appears above the
-editing view:
+A file panel on the left shows the project as a tree. With `fileList: 'auto'` (the default) it is
+open while the project has more than one file and collapsed to a narrow rail with a **Files**
+button otherwise; `'show'` opens it from the start, `'hide'` removes it (rail included; dropped
+files are then ignored). Once someone opens or closes it, that choice, the panel width and the
+open folders are kept for the browser session (`sessionStorage`, keyed by the main path). Below a
+widget width of 720px the open panel lies over the editing view and closes after a file is chosen.
 
-- one tab per file, the main file marked; `.typ` files open in their own Visual/Source views,
-  images open as a preview with an **Insert into …** button, data files as read-only text;
-- **New file**, **Upload** (or drop files onto the editor), **Rename**, **Delete** — the main
-  file cannot be renamed or deleted, folders are at most one level deep;
+- folders first, expandable; the main file marked, the shown file highlighted, icons by kind
+  (Typst / image / data), the initials of collaborators in each file (also on closed folders);
+  `.typ` files open in their own Visual/Source views, images open as a preview with an
+  **Insert into …** button, data files as read-only text;
+- **New file**, **New folder**, **Upload** (or drop files onto the editor, or onto a folder),
+  **Rename**, **Delete** on the focused row — a folder is renamed / deleted with every file in it
+  (one change each); the main file (and the folder holding it) cannot be renamed, moved or
+  deleted; drag rows onto folders to move them; a new folder exists in the panel only until a
+  file goes into it;
+- keyboard: arrow keys, Home/End, Enter (open / expand), F2 (rename), Delete;
 - clicking preview text that comes from another file opens that file; error entries in the status
-  bar open their file too.
+  bar open their file too;
+- **file links**: paths in `#import "…"`, `#include "…"`, `image("…")`, `read("…")`,
+  `bibliography("…")`, `json/csv/yaml/toml/xml/cbor("…")` open their file — Ctrl/⌘+click or
+  Alt+Enter in the Source view (the hover tooltip says so), "Open …" above a Visual raw box, the
+  path in an image box's heading. A missing `.typ` file can be created from there (through
+  `allowFileChange` like every other change).
 
 The host decides and persists:
 
@@ -133,7 +147,7 @@ editor.open('/logo.png');
 `editor.files` returns all files but the main one, with their current text.
 
 On `<typst-editor>` the same map is the `files` property, the `file-list` attribute sets the
-file bar mode, and every file change dispatches a `files-change` event (`detail`: the change). Bytes are copied to the compile worker
+file panel mode, and every file change dispatches a `files-change` event (`detail`: the change). Bytes are copied to the compile worker
 only when the `Uint8Array` changes, so reuse the same array for unchanged files.
 
 `#import "@preview/name:version"` works without configuration: the worker downloads the package
