@@ -1,7 +1,7 @@
 // DiagramEditor: a `.drawio.png` in the editing area, edited in diagrams.net's editor embedded in an iframe. It only
 // carries messages between the iframe and the EmbedSession (model/), follows the widget's color scheme, and shows
 // the picture when the editor cannot be loaded. See ../diagrams.ts.
-import type { ProjectPath } from '../../../core/paths/paths';
+import { ProjectPath } from '../../../core/paths/paths';
 import { EmbedSession, embedUrl, type EmbedAction } from '../model/embed-session';
 
 /** How long the editor may take to say it is ready before it counts as not loading (offline, blocked). */
@@ -48,7 +48,7 @@ export class DiagramEditor {
     this.#root = element(doc, 'div', 'typst-diagram');
     this.#root.dataset.testid = 'typst-diagram';
     const title = element(doc, 'h2', 'typst-diagram__title');
-    title.textContent = options.path.slice(1);
+    title.textContent = ProjectPath.displayName(options.path);
     this.#body = element(doc, 'div', 'typst-diagram__body');
     this.#status = element(doc, 'p', 'typst-diagram__status');
     this.#status.setAttribute('role', 'status');
@@ -125,7 +125,7 @@ export class DiagramEditor {
     this.#frame.remove();
     this.#frame = null;
     const image = element(this.#root.ownerDocument, 'img', 'typst-diagram__image');
-    image.alt = this.options.path.slice(1);
+    image.alt = ProjectPath.displayName(this.options.path);
     this.#imageUrl = URL.createObjectURL(new Blob([this.#session.content as BlobPart], { type: 'image/png' }));
     image.src = this.#imageUrl;
     this.#showStatus(null);

@@ -17,6 +17,8 @@ import { newDiagram } from './workbench/new-diagram';
 
 /** The command behind "New diagram…" (optional argument: the file or folder it goes next to / into). */
 const NEW_DIAGRAM = 'diagrams.newDiagram';
+/** The setting `diagrams.editorUrl`'s default. */
+const DIAGRAMS_NET = 'https://embed.diagrams.net/';
 const SHOW_AS_IMAGE = 'Show as image';
 
 /**
@@ -34,7 +36,7 @@ export function diagrams(): TypstExtension {
         properties: {
           'diagrams.editorUrl': {
             type: 'string',
-            default: 'https://embed.diagrams.net/',
+            default: DIAGRAMS_NET,
             description:
               'Where the diagram editor comes from: diagrams.net (default) or your own installation of the drawio web app (Apache-2.0), e.g. for use without internet access. Embed mode and its parameters are added.',
           },
@@ -42,7 +44,7 @@ export function diagrams(): TypstExtension {
       },
     },
     activate({ project, workspace, workbench, visualView, subscriptions }) {
-      const editorUrl = () => workspace.getConfiguration('diagrams').get<string>('editorUrl', 'https://embed.diagrams.net/');
+      const editorUrl = () => workspace.getConfiguration('diagrams').get<string>('editorUrl', DIAGRAMS_NET);
       subscriptions.push(
         workbench.registerStyleSheet(css),
         workbench.registerCustomEditorProvider('diagrams.editor', diagramEditor(workbench, editorUrl), { filenamePattern: DIAGRAM_FILES, priority: 110 }),

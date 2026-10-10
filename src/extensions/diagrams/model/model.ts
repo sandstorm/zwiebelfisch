@@ -3,11 +3,11 @@
 // See ../diagrams.ts.
 import type { ProjectPath } from '../../../core/paths/paths';
 
-/** The diagram files: PNGs with a diagrams.net diagram in them. */
-export const DIAGRAM_FILES = '*.drawio.png';
-
 /** The extension a diagram's name ends in. */
 export const DIAGRAM_EXTENSION = '.drawio.png';
+
+/** The diagram files, PNGs with a diagrams.net diagram in them, as a custom editor's file name pattern. */
+export const DIAGRAM_FILES = `*${DIAGRAM_EXTENSION}`;
 
 /** Whether `path` is a diagram file (by name, in any case). */
 export function isDiagram(path: ProjectPath): boolean {
