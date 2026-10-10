@@ -17,6 +17,8 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
 | `9562c65` | Public API: `files` includes the main file, `source` is a documented shortcut, `onChange(source)` gone; `<typst-editor>` takes one `options` property, `change` fires per file with `{ path, content }` (a rename fires twice: old path `null`, new path content) |
 | `bcfe4b1` | Docs: [extensions architecture](2026_10_10_extensions-architecture.md) |
 | `698c971`..`fff6775` | Hosts wave (H1 visual-view, H2 source-view + preview, H3 workbench + extension API), merged and integrated: `ExtensionContext { subscriptions, project, workbench, visualView, sourceView, preview, services }`; one `Disposable` + `EventEmitter` in `core/`; the widget composes `builtinExtensions` in `src/typst-editor/typst-editor.ts`; `ui/` holds FieldPopover, ToolbarMenu, FloatingBar. Built-in modules still in `hosts/*/builtins/`, features still in `features/` |
+| `1245fc5`..`79bd3d1` | Slices merged: 21 extensions in `src/extensions/`, `features/` and `hosts/*/builtins/` gone; `src/testing/` (test-only composition); `registerStyleSheet` + per-extension CSS; `core/uploads`, `core/gitlab-protocol`; `{ priority }` on registerNode / registerMark / registerBoxRenderer |
+| `d4641ef`..`4cf2443` | Wave 1: presence out of core + hosts; `registerDocumentLinkProvider` (merged, priority) read by both views; `preview-sync`; no services (`registerFileDecorationProvider`, `registerSourceControl`, `versions` → `source-control`, "Save to GitLab…"); one "Download PDF" + options popover, `registerPdfExportOption`, `exportPdf({ options })`; IronCalc dark mode (palette from tokens, resize nudge redraws the canvas) |
 
 ## Next steps, in order
 
@@ -118,6 +120,11 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    VS Code's built-in text editor), only registered through the custom-editor mechanism so the tabs
    become the generic "open with" switch. Extension layout is unchanged:
    `extensions/document-links/{source-view,visual-view}/` keep contributing to those hosts.
+   **Leftovers from wave 1** (fold into the next agents): preview toolbar items need `group` / `order`
+   (today list order; "Follow cursor" now first); a link's `command` → VS Code `Command { title,
+   command, arguments }` once commands are string ids; two identical `PdfEntry` types (host +
+   comments/model); `tests/e2e/collab.spec.ts` still checks `.typst-preview__presence` (always 0 now);
+   no unit test for the source-control extension wiring. User to check by eye: IronCalc dark palette.
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Rules wave also does:** core `onChange` → `onDidChange: Event` + `Disposable` everywhere
    (`Project`, `TypstDocument`, …) (user: yes).
