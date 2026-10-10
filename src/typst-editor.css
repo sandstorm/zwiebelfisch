@@ -150,7 +150,24 @@
 .typst-file-link__error { color: #cf222e; }
 .typst-file-link__error:empty { display: none; }
 .typst-visual__path--missing { color: #8c959f; cursor: default; text-decoration: line-through dotted; }
-.typst-visual__box-links { font-weight: 400; }
+.typst-visual__raw-block { position: relative; }
+/* "Open …" links of a raw block: shown over its top right corner only while it is hovered or focused, taking no space */
+.typst-visual__box-links {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  z-index: 1;
+  display: flex;
+  gap: 10px;
+  margin: 0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  font-weight: 400;
+  visibility: hidden;
+}
+.typst-visual__raw-block:is(:hover, :focus-within) > .typst-visual__box-links { visibility: visible; }
 .typst-visual__box-links[hidden] { display: none; }
 .typst-editor__tabs {
   display: flex;

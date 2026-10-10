@@ -524,7 +524,7 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   NodeView that hosts a nested CodeMirror (Typst highlighting, no own history). An image box is
   headed by "Image: <path>" (`imagePath(src)`; with `links` the path opens the file), an outline box
   by "Table of contents"; with a renderer, the outline shows its compiled snippet. With `links`
-  (`setBoxLinks`), a raw block naming files gets an "Open …" row (`box-links.ts`) and every box's
+  (`setBoxLinks`), a raw block naming files gets "Open …" links (`box-links.ts`; shown over its top right corner only on hover/focus) and every box's
   code the Source view's `fileLinks` extension.
   - **Rendered boxes** (`rendered-box.ts`, with a `BoxRenderer`): while not focused, a box shows
     an `<img>` instead of its code: an `image` box its file (`renderer.imageUrl(path)`, follows
@@ -798,7 +798,8 @@ fileLinks(links) → CodeMirror extension      linkInfo(doc, links, reference, {
   was avoided: browsers take it for the developer tools); the hover tooltip is `linkInfo`: "Open
   x (Ctrl+click or Alt+Enter)", or "x is not in the project" + "Create x" for a `.typ` file
   (showing the host's refusal).
-- **Visual view**: raw blocks naming files get a row of `linkInfo`s above their code (re-checked
+- **Visual view**: raw blocks naming files get a row of `linkInfo`s over their top right corner, only while
+  hovered or focused (re-checked
   on pointer enter, so a file created meanwhile becomes "Open"); an image box's path is a button;
   the nested CodeMirror of every raw box gets `fileLinks` too.
 - **Widget**: `open` shows the file (the panel selects it and opens its folders); `create` asks

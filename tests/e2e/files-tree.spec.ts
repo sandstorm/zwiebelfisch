@@ -41,8 +41,11 @@ test('Mod+click on the #import path in the Source view opens the file', async ({
   await expect(page.locator('[data-testid=typst-source]:visible')).toContainText('#let accent');
 });
 
-test('"Open template.typ" on a raw box in the Visual view opens the file', async ({ page }) => {
-  await page.getByTestId('typst-visual').getByRole('button', { name: 'Open template.typ' }).click();
+test('"Open template.typ" on a raw box in the Visual view shows on hover and opens the file', async ({ page }) => {
+  const open = page.getByTestId('typst-visual').getByRole('button', { name: 'Open template.typ' });
+  await expect(open).toBeHidden(); // takes no space while the pointer is elsewhere
+  await page.getByTestId('typst-visual').locator('.typst-visual__raw-block', { has: open }).hover();
+  await open.click();
   await expect(fileRow(page, 'template.typ')).toHaveAttribute('aria-selected', 'true');
 });
 

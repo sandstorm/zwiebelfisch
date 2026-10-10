@@ -1,10 +1,10 @@
-// File links on raw boxes: "Open template.typ" above a box whose code names project files, a clickable path
+// File links on raw boxes: "Open template.typ" on a box whose code names project files, a clickable path
 // in an image box's heading. See raw-box.ts and ARCHITECTURE.md, "File links".
 import { describeLink, type FileLinks, findPathReferences } from '../../../core/project/project';
 import { linkInfo } from '../../source-view/source-view';
 
 /**
- * The row of file links above a raw block: one "Open …" (or "… is not in the
+ * The row of file links on a raw block (CSS shows it over the box's corner only on hover or focus): one "Open …" (or "… is not in the
  * project" / "Create …") per distinct path its code names (`#import`,
  * `#include`, `read(..)`, …). Hidden while there is none. Shown again when
  * the pointer enters the box, so a file created meanwhile becomes "Open".
