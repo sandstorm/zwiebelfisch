@@ -1,6 +1,6 @@
 # Inspector sidebar: edit what the Visual view does not show, for the current selection
 
-Status: open (concept; decide the open questions first)
+Status: open (placement decided 2026-10-10; spike on dockview first)
 Depends on: restructure-src (lands in `features/inspector/`), comments-gutter (shares the right side)
 Touches: src/visual-view/** (selection → context), new features/inspector/, widget layout, toolbar (things move out of it)
 
@@ -44,16 +44,24 @@ and the things around it (innermost first), with document-wide settings at the b
   link URL editing, "Numbered headings" (from the toolbar), alignment (it can stay in the toolbar too).
   The toolbar keeps only frequent inline actions.
 
-## Open questions
-1. **Where it lives.** The widget is [editor | preview], and comments-gutter adds a notes column
-   to the right of the text. Options:
-   - (a) a third column between editor and preview, collapsible;
-   - (b) a tab in the gutter column: "Notes | Inspector";
-   - (c) a drawer over the preview.
-   Recommendation: (b), one right-hand side panel for the editor, so the layout stays two
-   columns plus a side panel.
-2. Is it open by default, or does it open when the selection has hidden properties (badge on a toggle)?
-3. Source view: show the Inspector there too (recommended, same contributors via the syntax tree)?
+## Decisions (user, 2026-10-10)
+1. **Placement:** one right-hand side panel for the editor with tabs **Notes | Inspector**, between
+   the editor and the preview. The notes gutter cards (comments-gutter) stay aligned next to the
+   text. The "Notes" tab lists all notes.
+2. **Both views**, if it is easy: the Source view feeds the same sections from the Lezer node at
+   the cursor. Otherwise start with the Visual view and keep the context interface view-neutral.
+3. **Spike first: [dockview](https://dockview.dev/) as the general docking mechanism?** It is
+   `dockview-core`: vanilla TypeScript, zero dependencies, with tabs, splits, drag & drop, floating
+   panels and popouts. Panels would be Visual/Source, Preview, Notes, Inspector, Files (the file bar),
+   and perhaps Diagnostics. Evaluate before building the panel layout by hand:
+   - licence (the core must be MIT, no paid parts needed) and bundle size gzip, against our ~8 MB wasm;
+   - **shadow DOM**: `<typst-editor>` renders into a shadow root. Do its CSS and drag & drop work
+     there (stylesheet adoption, `document`-level listeners, popout windows)?
+   - theming through CSS variables that match `--te-*`; small-width behaviour (embedding);
+   - layout persistence (serialise per user; host option for a fixed default layout);
+   - can the host restrict it (no docking for simple embeds: fixed two/three columns)?
+   Outcome: a short note here (adopt / not adopt + why). If adopted, the side-panel tabs are dockview
+   panels, and the widget's grid layout moves to dockview in its own task.
 
 ## Acceptance (once decided)
 - A contributor API with tests; sections for image/figure, code block, link, alignment, generic
