@@ -3,14 +3,12 @@
 // See ARCHITECTURE.md, "Comments = margin notes".
 import { Disposable } from '../../core/disposable/disposable';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
-import { marginNotes, notesGutter } from '../../hosts/visual-view/visual-view';
 import type { TextEditor, TypstExtension, Workbench } from '../../hosts/workbench/workbench';
-import { addMarginNote } from './add-margin-note';
+import { addMarginNote } from './model/model';
+import { marginNotes, notesGutter } from './visual-view/visual-view';
 
-export { addMarginNote, NOTE_STYLE } from './add-margin-note';
-export { NOTE_HEAD, noteCallSyntax, printNoteCall, rangeNoteSyntax, safeNote } from './margin-note-syntax';
-export { withoutNotes, type PdfEntry } from './without-notes';
-export { addReply, deleteMessage, editMessage, localDate, readThread, type NewMessage, type NoteMessage } from './note-thread';
+export { addMarginNote, addReply, localDate, NOTE_STYLE, withoutNotes, type PdfEntry } from './model/model';
+export { marginNotes, notesGutter } from './visual-view/visual-view';
 
 declare module '../../hosts/workbench/workbench' {
   interface CommandRegistry {

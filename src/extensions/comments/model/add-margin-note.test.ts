@@ -1,6 +1,6 @@
 // Tests for add-margin-note.ts.
 import { describe, expect, it } from 'vitest';
-import type { TextChange } from '../../core/typst-document/typst-document';
+import type { TextChange } from '../../../core/typst-document/typst-document';
 import { addMarginNote, NOTE_STYLE } from './add-margin-note';
 
 /** What a file without drafting gets at the top with its first note. */

@@ -17,7 +17,7 @@ export const thresholds = {
 // importing file's path from the repository root.
 export const boundaries = {
   srcRoot: fileURLToPath(new URL('src', import.meta.url)),
-  groupingFolders: ['core', 'features', 'hosts', 'ui'],
+  groupingFolders: ['core', 'extensions', 'features', 'hosts', 'ui'],
   exceptions: [
     {
       target: 'features/collaboration/gitlab-protocol.ts',
@@ -33,6 +33,11 @@ export const boundaries = {
       target: 'core/typst-engine/engine-assets.ts',
       importers: '^src/hosts/preview/preview\\.ts$',
       why: 'asset URLs (wasm, default fonts) for the main thread; in the entry, the worker bundle would emit every asset again',
+    },
+    {
+      target: 'hosts/visual-view/test-support.ts',
+      importers: '\\.test\\.ts$',
+      why: "tests of an extension's Visual-view contributions build views and schemas with the host's test helpers",
     },
     {
       target: 'features/collaboration/in-process.ts',

@@ -21,7 +21,7 @@ export {
 } from './contributions/contributions';
 // the toolkit specs' projectors and printers use (see projection/grammar.ts)
 export {
-  children, decodeString, isClosedContent, isEmbeddable, parenthesized, quote, type Around, type BlockCallProjector, type BlockLabel,
+  children, decodeString, isClosedContent, isEmbeddable, parenthesized, posToSource, print, quote, sourceToPos, type Around, type BlockCallProjector, type BlockLabel,
   type BlockPrinter, type BlockSyntaxProjector, type Call, type InlineCallProjector, type InlineProjector, type Placed, type Printer,
   type ProjectionContext, type RunProjector,
 } from './projection/projection';
@@ -29,8 +29,8 @@ export { starterKitPart } from './nodes/nodes';
 // the built-in contributions: the constructs are extensions of the widget's built-in list; the rest are activated by
 // the extension of their feature (until extensions/ takes them over)
 export {
-  alignment, boxLinks, customStyles, headingNumbers, headings, horizontalRule, images, lists, marginNotes, markup, notesGutter, outline,
-  pageBreak, references, renderedBoxes, tables, taskLists, type ImageAssets, type ImageUrls, type NotesGutterContribution, type Renderings,
+  alignment, boxLinks, customStyles, headingNumbers, headings, horizontalRule, images, lists, markup, outline,
+  pageBreak, references, renderedBoxes, tables, taskLists, type ImageAssets, type ImageUrls, type Renderings,
   type Snippet, type SnippetSource, type StyleSource,
 } from './builtins/builtins';
 

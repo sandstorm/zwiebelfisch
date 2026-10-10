@@ -1,7 +1,7 @@
 // Page margins that leave room for margin notes (drafting 0.2.2 workaround). See comments.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
-import type { TextChange } from '../../core/typst-document/typst-document';
+import type { TextChange } from '../../../core/typst-document/typst-document';
 
 /**
  * Page margins that `drafting` 0.2.2 can place notes in.

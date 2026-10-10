@@ -11,9 +11,10 @@ import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { ProjectLabels } from '../../features/labels/labels';
 import type { DocumentStyles } from '../../features/styles/styles';
 import {
-  alignment, boxLinks, customStyles, headingNumbers, headings, horizontalRule, images, lists, marginNotes, markup, notesGutter, outline,
+  alignment, boxLinks, customStyles, headingNumbers, headings, horizontalRule, images, lists, markup, outline,
   pageBreak, references, renderedBoxes, tables, taskLists, type ImageAssets, type Renderings,
 } from './builtins/builtins';
+import { marginNotes, notesGutter } from '../../extensions/comments/comments';
 import { VisualViewContributions } from './contributions/contributions';
 import { createSchema } from './nodes/nodes';
 import { posToSource, print, project as projectWith, sourceToPos } from './projection/projection';

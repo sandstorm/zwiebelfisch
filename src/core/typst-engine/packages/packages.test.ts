@@ -3,7 +3,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createEngine, type Engine } from '../typst-engine';
 import { fetchPreviewPackage, withPackages } from './packages';
-import { addMarginNote, addReply, withoutNotes } from '../../../features/comments/comments';
+import { addMarginNote, addReply, withoutNotes } from '../../../extensions/comments/comments';
 import type { TextChange } from '../../typst-document/typst-document';
 
 const wasm = readFileSync(new URL('../wasm/typst_engine_bg.wasm', import.meta.url));

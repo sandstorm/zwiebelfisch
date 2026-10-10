@@ -1,8 +1,8 @@
 // Tests for note-thread.ts.
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
-import { TypstDocument } from '../../core/typst-document/typst-document';
-import { connect } from '../collaboration/in-process';
+import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { connect } from '../../../features/collaboration/in-process';
 import { parseNoteCall, printNoteCall } from './margin-note-syntax';
 import { addReply, deleteMessage, editMessage, localDate, readThread } from './note-thread';
 

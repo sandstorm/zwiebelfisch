@@ -2,8 +2,8 @@
 import { EditorState, NodeSelection, TextSelection } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 import { findNotes, followNotes, noteAtOffset, noteAtSelection, removeNote, setNoteText, type KeyedNote } from './note-list';
-import { print } from '../../projection/projection';
-import { after, project } from '../../test-support';
+import { print } from '../../../../hosts/visual-view/visual-view';
+import { after, project } from '../../../../hosts/visual-view/test-support';
 
 const SOURCE = 'A #margin-note[key claim][first] and b#margin-note[second].\n\n#margin-note[#margin-note[x][inner]][outer] y\n';
 

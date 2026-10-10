@@ -4,7 +4,7 @@ import type { Project } from '../../core/project/project';
 import type { Diagnostic, PdfResult } from '../../core/typst-engine/typst-engine';
 import { type PdfFile, pdfMenu } from '../../hosts/preview/preview';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
-import { withoutNotes } from '../comments/comments';
+import { withoutNotes } from '../../extensions/comments/comments';
 
 declare module '../../hosts/workbench/workbench' {
   interface CommandRegistry {

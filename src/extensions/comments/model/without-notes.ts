@@ -1,7 +1,7 @@
 // withoutNotes: what to compile for a PDF without comments (margin notes removed). See comments.ts and
 // ARCHITECTURE.md, "Comments = margin notes".
 import { typstParser } from 'codemirror-lang-typst/lezer';
-import type { FileContent } from '../../core/project/project';
+import type { FileContent } from '../../../core/project/project';
 import { DRAFTING, noteCallSyntax, SET_DEFAULTS } from './margin-note-syntax';
 
 /** An entry to compile instead of the project's main file, and source texts that replace the project's for it. */

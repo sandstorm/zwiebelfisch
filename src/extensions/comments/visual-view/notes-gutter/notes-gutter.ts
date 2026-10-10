@@ -3,9 +3,8 @@
 import { Plugin, PluginKey, TextSelection, type EditorState, type Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 import type { TypstDocument } from '../../../../core/typst-document/typst-document';
-import { addReply, deleteMessage, editMessage, localDate, safeNote } from '../../../../features/comments/comments';
-import type { VisualViewContribution } from '../../contributions/contributions';
-import { layoutCards } from './card-layout';
+import { addReply, deleteMessage, editMessage, layoutCards, localDate, safeNote } from '../../model/model';
+import type { VisualViewContribution } from '../../../../hosts/visual-view/visual-view';
 import { type CardActions, NoteCard } from './note-card';
 import { findNotes, followNotes, noteAtOffset, noteAtSelection, removeNote, setNoteText, type KeyedNote } from './note-list';
 

@@ -2,7 +2,7 @@
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { DRAFTING, isNoteCallAt, MARGIN_NOTE, NOTE_HEAD, printNoteCall, rangeNoteSyntax, SET_DEFAULTS } from './margin-note-syntax';
-import { calculateImportChange, type TextChange } from '../../core/typst-document/typst-document';
+import { calculateImportChange, type TextChange } from '../../../core/typst-document/typst-document';
 import { noteMarginChanges } from './page-margin';
 
 /** Where a new note goes in the edited text: its (still empty) body starts at `note`. */

@@ -5,7 +5,7 @@
 // main file's text, for hosts that edit a single file.
 import type { CollaborationOptions } from '../features/collaboration/collaboration';
 import { collaboration } from '../features/collaboration/collaboration-link';
-import { comments } from '../features/comments/comments';
+import { comments } from '../extensions/comments/comments';
 import { diagnostics } from '../features/diagnostics/diagnostics';
 import { documentLinks } from '../features/document-links/document-links';
 import { assets, fileNavigation, files } from '../features/files/files';
