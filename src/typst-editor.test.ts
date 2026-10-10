@@ -96,6 +96,19 @@ describe('createTypstEditor: Changes since …', () => {
     expect(bars()).toEqual({ '/main.typ': null, '/a.typ': null });
   });
 
+  it("accepting a change in the Source view moves that file's base only", () => {
+    const { editor, toggle, tab, visible } = mount({ mode: 'source', files: { '/main.typ': 'Main\n', '/a.typ': 'Alpha\n' } });
+    editor.source = 'Main 2\n';
+    editor.files = { ...editor.files, '/a.typ': 'Alpha beta\n' };
+    toggle().click();
+    editor.open('/a.typ');
+    visible('button[name=accept]')[0].dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); // the merge view acts on mousedown
+    expect(bars()).toEqual({ '/main.typ': [{ from: 4, to: 6 }], '/a.typ': [] });
+    expect(toggle().textContent).toBe('Changes since opened');
+    tab('visual').click();
+    expect(visible('.typst-diff-insert')).toEqual([]);
+  });
+
   it('setBase applies to the main file by default, to another file with a path; one shared label', () => {
     const { editor, toggle, visible } = mount({ files: { '/main.typ': 'Hello big world\n', '/a.typ': 'Alpha beta\n' } });
     editor.setBase('Hello world\n', 'v1');
