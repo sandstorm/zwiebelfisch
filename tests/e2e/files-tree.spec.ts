@@ -91,3 +91,16 @@ test('narrow: the panel is an overlay that closes after choosing a file', async 
   await page.getByTestId('typst-panel-toggle-files').click();
   await expect(fileRow(page, 'template.typ')).toHaveAttribute('aria-selected', 'true');
 });
+
+test('an included file links the files before and after it in the main file\'s include order', async ({ page }) => {
+  const navigation = (name: string) => page.locator('typst-editor').getByRole('navigation', { name }).filter({ visible: true });
+  await expect(navigation('Previous file')).toHaveCount(0); // the main file has none
+  await openFile(page, 'chapters/method.typ');
+  await expect(navigation('Previous file')).toHaveText('← chapters/introduction.typ');
+  await expect(navigation('Next file')).toHaveText('chapters/results.typ →');
+  await navigation('Next file').getByRole('button').click();
+  await expect(fileRow(page, 'chapters/results.typ')).toHaveAttribute('aria-selected', 'true');
+  await expect(navigation('Next file')).toHaveCount(0); // the last one
+  await navigation('Previous file').getByRole('button').click();
+  await expect(fileRow(page, 'chapters/method.typ')).toHaveAttribute('aria-selected', 'true');
+});

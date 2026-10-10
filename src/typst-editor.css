@@ -221,6 +221,12 @@
 .typst-editor__tab[aria-selected='true'] { background: white; border-color: var(--te-border); }
 .typst-editor__pane { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: auto; }
 .typst-editor__pane[hidden] { display: none; }
+/* "← previous file" / "next file →" at the start and end of an included file (reading order of the main file) */
+.typst-editor__file-nav { flex: none; padding: 6px 32px; font: 12px system-ui, sans-serif; }
+.typst-editor__file-nav[hidden] { display: none; }
+.typst-editor__file-nav--next { text-align: right; }
+.typst-editor__file-nav-link { border: 0; padding: 0; background: none; color: var(--te-accent); font: inherit; cursor: pointer; }
+.typst-editor__file-nav-link:hover { text-decoration: underline; }
 .typst-visual {
   flex: 1;
   padding: 24px 32px;

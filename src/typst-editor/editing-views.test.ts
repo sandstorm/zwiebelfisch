@@ -183,3 +183,23 @@ describe('EditingViews cursor reports (the preview follows them)', () => {
     expect(cursors.at(-1)).toBe(6);
   });
 });
+
+describe('EditingViews frame', () => {
+  it('puts the frame elements first and last in the visible pane, following tab and document switches', () => {
+    const { parent, views, a, b, visible, tab } = setup();
+    const top = document.createElement('nav');
+    const bottom = document.createElement('nav');
+    views.setFrame(top, bottom);
+    views.show(a);
+    const pane = () => visible()[0];
+    expect([pane().firstElementChild, pane().lastElementChild]).toEqual([top, bottom]);
+    tab('Source').click();
+    expect(pane().querySelector('.cm-editor')).not.toBeNull();
+    expect([pane().firstElementChild, pane().lastElementChild]).toEqual([top, bottom]);
+    views.show(b);
+    expect(pane().contains(top)).toBe(true);
+    views.show(null);
+    expect([top.isConnected, bottom.isConnected]).toEqual([false, false]);
+    expect(parent.querySelectorAll('nav')).toHaveLength(0);
+  });
+});

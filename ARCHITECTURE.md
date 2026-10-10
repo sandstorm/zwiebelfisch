@@ -15,7 +15,8 @@ src/                        the widget (TypeScript); the most important API on t
   typst-editor/             what only typst-editor.ts uses: editing-views.ts (Visual/Source tabs, lazily one
                             VisualView + SourceView per document), project-renderings.ts (what a document's Visual
                             view renders and inserts: snippets, image URLs, uploads), collaboration-link.ts,
-                            pdf-export.ts (the project's PDF with / without comments)
+                            pdf-export.ts (the project's PDF with / without comments), file-navigation.ts
+                            ("← previous file" / "next file →" around an included file)
                             layout.ts + layout.css (side panels with rail buttons, editing area, preview)
   typst-editor-element/     inline-source.ts (source written inside the element → text)
   stylesheets.test.ts       every .css under src/ parses (lightningcss, no error recovery), no nested style rules,
@@ -29,7 +30,8 @@ src/                        the widget (TypeScript); the most important API on t
                             tar reader); fixtures/ (test package archives); generated wasm/, fonts/ (gitignored)
     project/                Project: the file model (one TypstDocument per .typ file, main protected); paths.ts
                             (names → paths, Typst path resolution, file kinds); FileContent; path-references.ts
-                            (the file paths a Typst text names; FileLinks)
+                            (the file paths a Typst text names; FileLinks); reading-order.ts (main file, then
+                            its #includes depth first; a file's neighbours in that order)
   features/                 one folder per feature, each entered through the file named like it
     visual-view/            VisualView — Tiptap editor over the source-anchored projection; visual-view.css
                             (ProseMirror core styles); decorations at the root: highlights, change-decorations,
@@ -161,6 +163,11 @@ createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileCha
 - **`EditingViews`**: one Visual/Source tab bar; a document's views are created the first time
   it is shown and then only hidden, so cursor and undo history survive switching. The mode is
   shared. With a single file the DOM is the same as before (tabs + two panes).
+  `setFrame(top, bottom)` keeps two elements first and last in the visible pane (they scroll with
+  the file). The widget puts `FileNavigation` there: for a file the main file `#include`s
+  (`neighbours(files, main, path)` from `reading-order.ts`, recomputed on open and every change),
+  a link to the file read before it at the top and to the one after it at the bottom; nothing
+  for the main file or files outside the include order.
 - **`FilePanel`** (see "File panel" below) lives in the `Layout`'s `files` panel: open by default
   when `fileList` is `show`, or `auto` with more than one file; `hide` removes it with its rail
   button. A requested change passes `project.check`, then the host's `allowFileChange` (async
