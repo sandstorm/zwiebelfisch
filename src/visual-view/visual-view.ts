@@ -1,11 +1,13 @@
 import { Editor } from '@tiptap/core';
 import { EditorState, TextSelection, type Transaction } from '@tiptap/pm/state';
 import type { Highlight } from '../document/highlight';
+import type { Presence, PresenceTarget } from '../document/presence';
 import type { TypstDocument } from '../document/typst-document';
 import { changesPlugin, setChangesBase } from './change-decorations';
 import { extensions } from './extensions';
 import { highlights, setHighlights } from './highlights';
 import type { ImageAssets } from './image-choices';
+import { remotePresence, setPresence } from './presence';
 import { posToSource, print, project, sourceToPos, syncDoc } from './projection';
 import { setBoxRenderer } from './raw-box';
 import type { BoxRenderer } from './rendered-box';
@@ -34,7 +36,7 @@ const FROM_DOCUMENT = 'typst-from-document';
  * replacement, so the cursor stays where it was. Unmodelled Typst shows as
  * raw boxes and is never rewritten.
  */
-export class VisualView {
+export class VisualView implements PresenceTarget {
   private readonly editor: Editor;
   private readonly toolbar: Toolbar;
   private readonly unsubscribe: () => void;
@@ -42,7 +44,7 @@ export class VisualView {
   constructor(parent: HTMLElement, private readonly document: TypstDocument, options: VisualViewOptions = {}) {
     this.editor = new Editor({
       element: parent,
-      extensions: [...extensions, highlights],
+      extensions: [...extensions, highlights, remotePresence],
       injectCSS: false,
       editorProps: { attributes: { class: 'typst-visual', 'data-testid': 'typst-visual' } },
       onTransaction: ({ transaction }) => this.afterTransaction(transaction),
@@ -81,6 +83,11 @@ export class VisualView {
   /** Replaces the highlights of `layer` (source ranges); they follow edits until set again. */
   setHighlights(layer: string, ranges: readonly Highlight[]): void {
     this.editor.view.dispatch(setHighlights(this.editor.state.tr, layer, ranges));
+  }
+
+  /** Shows other users' carets and selections (source offsets), replacing those shown; they follow edits. */
+  setPresence(presences: readonly Presence[]): void {
+    this.editor.view.dispatch(setPresence(this.editor.state.tr, presences));
   }
 
   /** The source range shown by the selection. */
