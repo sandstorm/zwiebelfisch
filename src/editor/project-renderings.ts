@@ -2,7 +2,7 @@ import type { TypstDocument } from '../document/typst-document';
 import type { Preview } from '../preview/preview';
 import type { VisualViewOptions } from '../visual-view/visual-view';
 import type { FileContent } from '../preview/project-files';
-import { displayName, fileKind, imageBlob, referencePath, resolvePath } from './paths';
+import { extensionOf, fileKind, imageBlob, referencePath, resolvePath } from './paths';
 import type { FileChange, Project } from './project';
 import { uploadChanges } from './upload';
 
@@ -75,13 +75,25 @@ export class ProjectRenderings {
     if (change.kind !== 'create' || fileKind(change.path) !== 'image') {
       return { error: `${upload.name} is not an image the document can show (PNG, JPEG, GIF, SVG or WebP).` };
     }
-    const existing = this.options.project.content(change.path);
-    if (existing !== undefined) {
-      if (sameContent(existing, change.content)) return { path: referencePath(file, change.path) };
-      return { error: `There is already a different ${displayName(change.path)} in the project. Rename the file and upload it again.` };
+    const target = this.placeFor(change.path, change.content);
+    if (this.options.project.has(target)) return { path: referencePath(file, target) };
+    const problem = await this.options.request({ ...change, path: target });
+    return problem === null ? { path: referencePath(file, target) } : { error: problem };
+  }
+
+  /**
+   * Where an upload of `content` named `path` goes: a file with the same
+   * content (`name.png`, `name-2.png`, …), else the first free one of those
+   * names (browsers name every pasted screenshot `image.png`).
+   */
+  private placeFor(path: string, content: FileContent): string {
+    const extension = extensionOf(path);
+    const stem = path.slice(0, path.length - extension.length);
+    for (let n = 1; ; n++) {
+      const candidate = n === 1 ? path : `${stem}-${n}${extension}`;
+      const existing = this.options.project.content(candidate);
+      if (existing === undefined || sameContent(existing, content)) return candidate;
     }
-    const problem = await this.options.request(change);
-    return problem === null ? { path: referencePath(file, change.path) } : { error: problem };
   }
 }
 

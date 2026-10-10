@@ -65,12 +65,13 @@ describe('ProjectRenderings', () => {
     });
   });
 
-  it('reuses an image that is already in the project with the same content, refuses a different one', async () => {
-    const { chapter, request } = setup({ '/cat.png': new Uint8Array([9]) });
-    expect(await chapter.assets!.upload(new File([new Uint8Array([9])], 'cat.png'))).toEqual({ path: '/cat.png' });
+  it('reuses an image already in the project with the same content; a different one gets a free name', async () => {
+    const { chapter, project, request } = setup({ '/image.png': new Uint8Array([9]), '/image-2.png': new Uint8Array([7]) });
+    expect(await chapter.assets!.upload(new File([new Uint8Array([9])], 'image.png'))).toEqual({ path: '/image.png' });
     expect(request).not.toHaveBeenCalled();
-    expect(await chapter.assets!.upload(new File([new Uint8Array([8])], 'cat.png'))).toEqual({
-      error: 'There is already a different cat.png in the project. Rename the file and upload it again.',
-    });
+    // e.g. a second pasted screenshot: browsers name them all image.png
+    expect(await chapter.assets!.upload(new File([new Uint8Array([8])], 'image.png'))).toEqual({ path: '/image-3.png' });
+    expect(project.content('/image-3.png')).toEqual(new Uint8Array([8]));
+    expect(await chapter.assets!.upload(new File([new Uint8Array([7])], 'image.png'))).toEqual({ path: '/image-2.png' });
   });
 });
