@@ -9,6 +9,7 @@ import type { ImageAssets } from './image-choices';
 import { posToSource, print, project, sourceToPos, syncDoc } from './projection';
 import { setBoxRenderer } from './raw-box';
 import type { BoxRenderer } from './rendered-box';
+import { editNoteAt } from './margin-notes';
 import { Toolbar } from './toolbar';
 
 export type { BoxRenderer, Snippet } from './rendered-box';
@@ -67,6 +68,14 @@ export class VisualView {
     const selection = TextSelection.between(doc.resolve(anchor), doc.resolve(head));
     this.editor.view.dispatch(this.editor.state.tr.setSelection(selection).scrollIntoView());
     this.editor.view.focus();
+  }
+
+  /**
+   * Opens the note editor of the margin note whose source contains `offset`
+   * (a point note, or the note part of a range note). False if there is none.
+   */
+  editNote(offset: number): boolean {
+    return editNoteAt(this.editor.view, sourceToPos(this.editor.state.doc, offset));
   }
 
   /** Replaces the highlights of `layer` (source ranges); they follow edits until set again. */

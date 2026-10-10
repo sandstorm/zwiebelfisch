@@ -25,6 +25,9 @@ const FIXTURES: Record<string, string> = {
   images: '#image("img/logo.png", width: 50%)\n\nText #image("i.png") inline\n',
   tables: '#table(\n  columns: 2,\n  stroke: none,\n  [a], [*b* c],\n  [], [- x\n  - y],\n)\n\n#table(columns: 1, [one\n\ntwo])\n',
   rawTables: '#table(columns: (1fr, 1fr), [a], [b])\n\n#table(columns: 2, [a], [b], [c])\n\n#table(columns: 1, table.header[H], [a])\n',
+  marginNotes:
+    '#import "@preview/drafting:0.2.2": margin-note\n\nSome text#margin-note[Is this right? -- Anna] and #margin-note[a *range*][the [note]] '
+    + 'plus #margin-note(side: left, dy: 1em)[left][x].\n\n#margin-note[alone]\n\n#margin-note[][] #margin-note[a\n\nb][c] #margin-note([a], [b])\n',
 };
 
 function edit(doc: Node, change: (state: EditorState) => EditorState['tr']): Node {
@@ -172,6 +175,85 @@ function expectPreciseMap(doc: Node): void {
     previous = offset;
   }
 }
+
+describe('margin notes', () => {
+  const notes = (doc: Node) => {
+    const found: { text: string; marks: string[] }[] = [];
+    doc.descendants((node) => {
+      if (node.isText) found.push({ text: node.text!, marks: node.marks.map((m) => `${m.type.name}:${m.attrs.call ?? ''}|${m.attrs.note ?? ''}`) });
+    });
+    return found;
+  };
+
+  it('projects a point note as a marginNote atom holding the call', () => {
+    const doc = project('Some text#margin-note[Is this right?] here.\n');
+    const paragraph = doc.child(0);
+    expect(paragraph.type.name).toBe('paragraph');
+    expect(paragraph.child(1).type.name).toBe('marginNote');
+    expect(paragraph.child(1).attrs.src).toBe('#margin-note[Is this right?]');
+  });
+
+  it('projects a range note as editable text with a noteRange mark', () => {
+    const doc = project('A #margin-note(side: left)[*key* claim][check this] here.\n');
+    expect(notes(doc)).toEqual([
+      { text: 'A ', marks: [] },
+      { text: 'key', marks: ['noteRange:#margin-note(side: left)|check this', 'bold:|'] },
+      { text: ' claim', marks: ['noteRange:#margin-note(side: left)|check this'] },
+      { text: ' here.', marks: [] },
+    ]);
+  });
+
+  it('makes a line holding only a note a paragraph', () => {
+    expect(project('#margin-note[alone]\n').child(0).type.name).toBe('paragraph');
+    expect(project('#margin-note[a][b]\n').child(0).type.name).toBe('paragraph');
+  });
+
+  it('keeps forms it does not model as raw inlines', () => {
+    const doc = project('x #margin-note[][] #margin-note[a\n\nb][c] #margin-note([a], [b])\n');
+    const raws: string[] = [];
+    doc.descendants((node) => {
+      if (node.type.name === 'rawInline') raws.push(node.attrs.src);
+    });
+    expect(raws).toEqual(['#margin-note[][]', '#margin-note[a\n\nb][c]', '#margin-note([a], [b])']);
+  });
+
+  it('typing inside the highlighted text keeps the call and the note as written', () => {
+    const source = 'A #margin-note(dy: 1em)[key claim][see *this*] here.\n';
+    const doc = edit(project(source), (s) => s.tr.insertText(' new', after(s.doc, 'key')));
+    expect(print(doc)).toBe('A #margin-note(dy: 1em)[key new claim][see *this*] here.\n');
+  });
+
+  it('prints an edited note of a range note in place', () => {
+    const source = 'A #margin-note[key][old] here.\n';
+    const doc = edit(project(source), (s) => {
+      const end = after(s.doc, 'key');
+      const mark = s.doc.nodeAt(end - 1)!.marks[0];
+      return s.tr.removeMark(end - 3, end, mark).addMark(end - 3, end, mark.type.create({ ...mark.attrs, note: 'new' }));
+    });
+    expect(print(doc)).toBe('A #margin-note[key][new] here.\n');
+  });
+
+  it('prints an edited point note in place', () => {
+    const source = 'Text#margin-note[old] more.\n';
+    const doc = edit(project(source), (s) => s.tr.setNodeAttribute(after(s.doc, 'Text'), 'src', '#margin-note[new]'));
+    expect(print(doc)).toBe('Text#margin-note[new] more.\n');
+  });
+
+  it('keeps nested range notes', () => {
+    const source = '#margin-note[a #margin-note[b][inner] c][outer]\n';
+    const doc = project(source);
+    expect(notes(doc).find((n) => n.text === 'b')!.marks).toHaveLength(2);
+    expect(print(edit(doc, (s) => s.tr.insertText('!', after(s.doc, 'a'))))).toBe('#margin-note[a! #margin-note[b][inner] c][outer]\n');
+  });
+
+  it('syncs a note changed in the source', () => {
+    const doc = project('Text#margin-note[old] and #margin-note[x][y].\n');
+    const target = project('Text#margin-note[new] and #margin-note[x][z].\n');
+    const synced = syncDoc(EditorState.create({ doc }).tr, target).doc;
+    expect(synced.eq(target)).toBe(true);
+    expect(print(synced)).toBe('Text#margin-note[new] and #margin-note[x][z].\n');
+  });
+});
 
 describe('source offset <-> document position', () => {
   describe('is precise, monotonic and stable for every fixture', () => {

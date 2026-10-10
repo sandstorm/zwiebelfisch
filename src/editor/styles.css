@@ -6,6 +6,8 @@
   --te-comment: rgba(250, 190, 20, 0.28);
   --te-comment-strong: rgba(250, 175, 0, 0.55);
   --te-comment-line: #e0a800;
+  --te-note: rgba(250, 190, 20, 0.28);
+  --te-note-line: #e0a800;
   display: grid;
   /* editing view | comments panel (auto: 0 while hidden) | preview */
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -167,6 +169,39 @@
 .typst-visual__raw-block:not(.typst-visual__image) > .typst-visual__rendering { margin: 0 auto; }
 .typst-visual__raw-inline > .typst-visual__rendering { display: inline-block; vertical-align: middle; }
 .typst-visual__link { color: var(--te-accent); text-decoration: underline; cursor: text; }
+/* drafting margin notes: highlighted text of a range note, and the note bubble */
+.typst-visual__note-range { background: var(--te-note); border-bottom: 2px solid var(--te-note-line); color: inherit; }
+.typst-visual__note {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  max-width: 16em;
+  margin: 0 2px;
+  padding: 0 5px;
+  border: 1px solid var(--te-note-line);
+  border-radius: 8px 8px 8px 2px;
+  background: #fff8e0;
+  color: #6b5200;
+  font: 12px/1.5 system-ui, sans-serif;
+  vertical-align: baseline;
+  cursor: pointer;
+}
+.typst-visual__note-text { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.typst-visual__note--empty .typst-visual__note-text::before { content: "Note"; opacity: 0.6; }
+.typst-visual__note:focus-within { box-shadow: 0 0 0 2px var(--te-accent); background: white; }
+.typst-visual__note-icon { flex: none; }
+.typst-visual__note-field {
+  width: 14em;
+  min-height: 1.5em;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  color: #24292f;
+  resize: none;
+  field-sizing: content;
+}
 .typst-visual__image-label {
   margin-bottom: 2px;
   font: 600 12px system-ui, sans-serif;

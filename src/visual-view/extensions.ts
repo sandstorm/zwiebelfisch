@@ -3,6 +3,7 @@ import Document from '@tiptap/extension-document';
 import { ListItem } from '@tiptap/extension-list';
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
 import StarterKit from '@tiptap/starter-kit';
+import { MarginNote, NoteRange } from './margin-notes';
 import { RawBoxNavigation, rawBoxView } from './raw-box';
 
 /**
@@ -161,6 +162,8 @@ export const extensions = [
   RawBoxNavigation,
   SoftBreak,
   TypstSource,
+  MarginNote,
+  NoteRange,
 ];
 
 /** The schema `extensions` produce; an `Editor` builds an equal but distinct instance. */
