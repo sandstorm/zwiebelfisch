@@ -92,12 +92,17 @@ export class Project {
     if (!this.entries.has(existing)) return `There is no file ${existing}.`;
     switch (change.kind) {
       case 'update':
-        return this.document(change.path) && typeof change.content !== 'string' ? `${change.path} must contain text.` : null;
+        return this.checkUpdate(change.path, change.content);
       case 'delete':
         return change.path === this.main ? 'The main file cannot be deleted.' : null;
       case 'rename':
         return this.checkRename(change.from, change.path);
     }
+  }
+
+  /** A Typst file takes only text; other files any content. */
+  private checkUpdate(path: string, content: FileContent): string | null {
+    return this.document(path) && typeof content !== 'string' ? `${path} must contain text.` : null;
   }
 
   /** Applies `change` and notifies listeners; throws when `check` refuses it. */
