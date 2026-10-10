@@ -13,7 +13,7 @@ export class FilenamePattern {
   /** The characters a matching name must have literally (a brace group counts its shortest alternative). */
   readonly specificity: number;
 
-  constructor(readonly glob: string) {
+  constructor(glob: string) {
     this.#byPath = glob.includes('/');
     this.#regex = new RegExp(`^${toRegexSource(glob)}$`, 'i');
     this.specificity = literalLength(glob);

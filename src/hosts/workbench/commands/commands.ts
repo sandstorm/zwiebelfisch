@@ -6,7 +6,7 @@
 import { Disposable } from '../../../core/disposable/disposable';
 
 /** A command's handler (VS Code's shape): the arguments the command documents, any result (a Promise is awaited). */
-export type CommandHandler = (...args: any[]) => unknown;
+type CommandHandler = (...args: any[]) => unknown;
 
 /**
  * The widget's commands and key bindings. Keys are handled on `root` in the capture phase, so a bound key is
