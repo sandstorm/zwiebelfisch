@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import '../visual-view/jsdom-setup';
 import { describe, expect, it, vi } from 'vitest';
-import { TypstDocument } from '../document/typst-document';
+import { undo } from '@codemirror/commands';
+import { EditorView } from '@codemirror/view';
+import { REMOTE_ORIGIN, TypstDocument } from '../document/typst-document';
 import { SourceView } from './source-view';
 
 function setup(text: string, onBaseChange = vi.fn()) {
@@ -48,6 +50,17 @@ describe('SourceView changes', () => {
     expect(changedLines(parent)).toBe(0);
     doc.setText('Hello there world\n', 'visual');
     expect(changedLines(parent)).toBeGreaterThan(0);
+  });
+});
+
+describe('SourceView history', () => {
+  it('undo reverts only local edits, not those of collaborators', () => {
+    const { doc, parent } = setup('one two\n');
+    const editor = EditorView.findFromDOM(parent.querySelector<HTMLElement>('.cm-editor')!)!;
+    editor.dispatch({ changes: { from: 0, to: 3, insert: 'ONE' }, userEvent: 'input.type' });
+    doc.change([{ from: 4, to: 7, insert: 'TWO' }], REMOTE_ORIGIN);
+    undo(editor);
+    expect(doc.text).toBe('one TWO\n');
   });
 });
 
