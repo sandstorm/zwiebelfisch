@@ -15,7 +15,8 @@ src/
                             withPackages (package download, tar reader), fixtures/ (test package archives)
   document/                 TypstDocument — the single source of truth (string or shared Y.Text); Highlight (a styled source range views draw)
   collab/                   real-time collaboration (loaded on demand): Collaboration, SharedProject, SharedComments,
-                            RemoteCursors; in-process.ts (Y.Doc/awareness wiring for tests)
+                            RemoteCursors, RoomVersions + SharedAssets (GitLab rooms); in-process.ts (Y.Doc/awareness
+                            wiring for tests); gitlab-protocol.ts (import-free, shared with the server)
   comments/                 Comments (anchors + persistence), CommentsPanel (side panel), CommentsUI (wiring)
   diff/                     diffTexts — the text diff against a base version behind "Show changes"
   source-view/              SourceView — CodeMirror 6 editing view
@@ -39,11 +40,14 @@ src/
     file-switcher.ts        file bar: tabs, new/upload/rename/delete, drop (optional mode)
     asset-view.ts           read-only image/data view with "Insert into …"
     project-renderings.ts   what a document's Visual view renders and inserts (snippets, image URLs, uploads)
+    version-controls.ts     "Save version" button, commit message, outcome; Show changes follows the last commit (GitLab rooms)
     paths.ts, insert-image.ts, upload.ts   pure helpers (names → paths, Typst path resolution, #image insertion, uploads)
   element/                  <typst-editor> custom element (shadow DOM) around createTypstEditor
   index.ts                  public API of the package; registers <typst-editor>
 demo/                       dev/demo page (vite root); ?room=<name> joins ws://127.0.0.1:1234
 server/                     collaboration server (Node package, Hocuspocus; TypeScript run by Node directly)
+  src/gitlab/               GitLab-backed rooms: GitLabExtension, GitLabRoom, GitLabProject (REST), merge, commit actions,
+                            HTTP endpoints, FakeGitLab (in-process, for tests and server:dev-fake-gitlab)
 examples/plain-html/        <typst-editor> loaded from dist/lib without a bundler
 tests/e2e/                  Playwright specs (run against the static build)
 mise-tasks/                 every script (build, test, quality, …) — `mise tasks ls`
@@ -493,6 +497,7 @@ createTypstEditor(host, { …, user?: {name, color?},
 
 Collaboration.start(options, { project, comments, user }) → Promise<Collaboration>   // url: waits for the first sync
 .sync()   .setCursor(path | null, range?)   .showCursors(path | null, views)   .destroy()
+.versions → RoomVersions | null      // GitLab rooms: .base(path), .onBaseChange(fn), .save(message, author?), .onMessage(fn)
 ```
 
 **Only text is shared** — ProseMirror/Tiptap and CodeMirror never sync directly; they keep
@@ -503,6 +508,8 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
 | `files`: `Y.Map<path, Y.Text>` | the text of every `.typ` file | `SharedProject` |
 | `comments`: `Y.Map<threadId, Y.Map>` | `{anchor: {from, to: RelativePosition JSON, quote}, resolved, comments: Y.Array}` (main file) | `SharedComments` |
 | awareness state | `user: {name, color}`, `cursor: {path, anchor, head}` (relative positions) | `RemoteCursors` |
+| `assets`: `Y.Map<path, sha \| Uint8Array>` | GitLab rooms only: the other files (blob sha, or uploaded bytes not committed yet) | `SharedAssets` (clients), `GitLabRoom` (server) |
+| `meta`: `Y.Map` | GitLab rooms only, written by the server: `baseSha`, `base` (path → text), `baseAssets` (path → sha), `lastCommits` (path → commit) | `GitLabRoom`; read by `RoomVersions` |
 
 - **`SharedProject`**: binds each project document to its Y.Text (`TypstDocument.share`) and
   keeps the *set* of files in step: local create / rename / delete (and `sync()` after
@@ -524,12 +531,59 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
 - **Widget (`CollaborationLink`)**: `import()`s `src/collab` on demand (own chunk, ~37 kB gzip
   with Yjs and the Hocuspocus provider), publishes the selection on `selectionchange` while focus
   is in the editing area, and moves the cursors along when another file is shown.
-- **Server (`server/`)**: `collabConfiguration({ storage?, database?, authenticate?, debounce? })`
-  → Hocuspocus configuration; `createCollabServer({ port, … })`. Storage is the extension point
-  (`onLoadDocument` / `onStoreDocument`; default `@hocuspocus/extension-sqlite`), for GitLab
-  persistence next ([server-gitlab](docs/todo/server-gitlab.md)). `onAuthenticate` calls an
-  `Authenticate(token, room)` check; the stub `sharedToken(TYPST_COLLAB_TOKEN)` allows all when
-  unset. The server never looks inside the Y.Doc.
+- **Server (`server/`)**: `collabConfiguration({ storage?, database?, authenticate?, debounce?, gitlab? })`
+  → Hocuspocus configuration; `createCollabServer({ port, … })`. Storage keeps every room's Yjs
+  state (`onLoadDocument` / `onStoreDocument`; default `@hocuspocus/extension-sqlite`).
+  `onAuthenticate` calls an `Authenticate(token, room) → {name?, email?}` check; the stub
+  `sharedToken(TYPST_COLLAB_TOKEN)` allows all when unset. The server looks inside the Y.Doc
+  only in GitLab rooms.
+
+#### GitLab-backed rooms (`server/src/gitlab`, `src/collab/room-versions.ts`, `shared-assets.ts`)
+
+A room named `gitlab:<project id or path>@<branch>` is that branch (`parseRoomName`). The server
+config (`gitlab: {url, token, webhookSecret?, authorEmail?, fetch?}`, from `TYPST_GITLAB_*` in
+`main.ts`) holds the only GitLab token. Protocol (`src/collab/gitlab-protocol.ts`):
+
+```
+client → server  stateless {type:'gitlab:save', message?, author?: {name, email?}}
+server → all     stateless {type:'gitlab:saved', sha, author} | {type:'gitlab:merged', sha} | {type:'gitlab:conflict', sha, files: [{path, ranges: [{from,to}]}]}
+server → saver   stateless {type:'gitlab:unchanged'} | {type:'gitlab:error', message}
+HTTP             GET /rooms/<room>/files/<path> (Authorization: Bearer <room token>) → bytes;  POST /gitlab/webhook (X-Gitlab-Token)
+```
+
+- **`GitLabExtension`** (Hocuspocus extension, priority below storage): `onLoadDocument` makes a
+  `GitLabRoom` per open GitLab room and `open()`s it; `onStateless` runs saves and routes the
+  outcome; `onRequest` → `handleHttp` (framework-free, `http.ts`): room files and push webhooks
+  (merge into the open rooms of that project + branch, tell their clients).
+- **`GitLabRoom`** (one per open room; operations queued one at a time; all state in the Y.Doc,
+  so it survives storage round trips):
+  - `open()`: no `meta` yet → load the branch head: tree (all pages) → `.typ` via the Files API
+    (text + `last_commit_id`), other files by blob sha → `files`, `assets`, `meta`. A stored room
+    instead pulls (below), ignoring GitLab being unreachable.
+  - `save(author, message)`: `commitActions(meta, files)` (update / create / delete, `move` for a
+    deleted+created pair with ≥ 50 % equal lines, uploads as base64, asset renames by sha) → one
+    `POST /repository/commits`. Optimistic concurrency per file: update/move/delete carry the
+    file's `last_commit_id`, so GitLab refuses if it changed upstream (GitLab checks it per action,
+    not against the branch head). On a refusal with a moved head: merge upstream, try again (3×);
+    a conflict ends the save. On success the committed snapshot becomes the base (uploads become
+    their blob sha); if the commit's parent is not our base (a push to other files landed between),
+    that upstream is merged right away.
+  - Merge (save, webhook, reopen): `mergeFiles(base, room, upstream)` per path: taken from
+    upstream where the room did not change it, kept where upstream did not; both changed →
+    `merge3` (node-diff3, by lines; adjacent-line changes conflict like diff3); changed vs deleted
+    → conflict. Any conflict → nothing applied, `gitlab:conflict` with the room's ranges.
+    Otherwise applied in one transaction as `textEdits` (changed lines narrowed to the differing
+    characters, so cursors and comment anchors elsewhere stay put) and `meta` = upstream.
+    Assets: upstream wins where the room did not change them.
+  - `BlobCache` (shared, LRU by bytes) keeps blob bytes by sha for the files endpoint.
+- **Widget**: `Collaboration` (server mode only) sees `meta.baseSha` after the first sync and adds
+  `RoomVersions` (base per path + `onBaseChange`, `save`, `onMessage` over the provider's
+  stateless channel) and `SharedAssets` (assets ↔ project's other files; repository files
+  fetched from the files endpoint, uploads as bytes; bytes → sha after a commit is not a
+  change). `CollaborationLink` passes `versions` to the widget, which mounts `VersionControls`
+  (`src/editor/version-controls.ts`): "Save version" + commit-message popover + status line, and
+  `ChangeTracking.setBase(base of main)` on every base change, so "Show changes" resets for
+  everyone after a save.
 
 ## Build and test
 
@@ -543,9 +597,11 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
 | `mise run build:lib` | library build → `dist/lib`: bundled ESM, worker, wasm, d.ts (`vite.lib.config.ts`, `tsconfig.lib.json`) |
 | `mise run test:unit` | vitest (node): engine against the real wasm, document model, (later) projection round-trips |
 | `mise run test:e2e` | builds demo + lib, then Playwright against `dist/demo` and `examples/` (+ `dist/lib`), served through request interception (no port needed) |
-| `mise run server:dev` | collaboration server on ws://127.0.0.1:1234 (SQLite in `server/.data/`; env `PORT`, `TYPST_COLLAB_DB`, `TYPST_COLLAB_TOKEN`) |
+| `mise run server:dev` | collaboration server on ws://127.0.0.1:1234 (SQLite in `server/.data/`; env `PORT`, `TYPST_COLLAB_DB`, `TYPST_COLLAB_TOKEN`; GitLab rooms with `TYPST_GITLAB_URL` + `TYPST_GITLAB_TOKEN`, see docs/embedding.md) |
 | `mise run server:test` | server tests (vitest, Hocuspocus in-process via `openDirectConnection`, no port) |
 | `mise run test:e2e-collab` | starts the server in memory, then the two-user Playwright spec (`tests/e2e/collab.spec.ts`; skipped by `test:e2e`) |
+| `mise run server:dev-fake-gitlab` | collaboration server with GitLab rooms against an in-memory fake GitLab (`gitlab:demo/report@<any branch>`) |
+| `mise run test:e2e-gitlab` | starts that server, then the GitLab room Playwright spec (`tests/e2e/gitlab.spec.ts`; skipped by `test:e2e`) |
 | `mise run quality` / `quality:report` | complexity gate and hot-spot table (see `.claude/skills/code-quality`) |
 
 **Version pins** are all exact:
@@ -553,7 +609,8 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
 - wasm-bindgen 0.2.129: the crate and the CLI must match.
 - binaryen (wasm-opt) 133.
 - Rust 1.99.0, Node 24.21.0, pnpm 10.34.6.
-- Yjs 13.6.33, y-protocols 1.0.7, Hocuspocus (server, provider, extension-sqlite) 4.7.0.
+- Yjs 13.6.33, y-protocols 1.0.7, Hocuspocus (server, provider, extension-sqlite) 4.7.0,
+  node-diff3 3.2.1 (server).
 
 ## Known limitations / next steps
 
@@ -576,7 +633,13 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
   rectangle (e.g. a float). Every raw box asks again after every compile (one `boxes` walk each),
   also while the Visual view is hidden. Tables with headers, merged cells or `columns: (..)` stay
   raw boxes.
-- **Collaboration:** images and other non-`.typ` files are not shared. `{ doc }` mode needs the
+- **GitLab rooms:** conflicts are reported (status line), not highlighted in the views yet;
+  "Show changes" covers the main file only; an asset changed on both sides keeps the room's
+  version and overwrites upstream on save; GitLab-side renames are seen as delete + create; no
+  GitLab sign-in yet (the token check is the stub, the author's name comes from the client); the
+  room's main file must exist in the repository (else the widget's empty main is committed).
+  `{ doc }` mode has no versions.
+- **Collaboration:** images and other non-`.typ` files are not shared (outside GitLab rooms). `{ doc }` mode needs the
   widget and the host on the same Yjs instance (`dist/lib` bundles its own Yjs). In `{ doc }`
   mode the host must pass a synced Y.Doc; with `{ url }` an unreachable server leaves the widget
   local. Comments are shared for the main file only. Remote cursors at an empty line are not drawn.

@@ -46,4 +46,4 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [visual-view-compiled-boxes](visual-view-compiled-boxes.md) | done |
 | [preview-ux](preview-ux.md) | done |
 | [collab-yjs](collab-yjs.md) | done |
-| [server-gitlab](server-gitlab.md) | in-progress (agent) |
+| [server-gitlab](server-gitlab.md) | done (branch task/server-gitlab) |
