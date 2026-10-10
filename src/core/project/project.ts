@@ -25,7 +25,8 @@ export type FileChange =
   | { kind: 'delete'; path: ProjectPath }
   | { kind: 'rename'; path: ProjectPath; from: ProjectPath };
 
-type Entry = { document: TypstDocument; subscription: Disposable } | { content: FileContent };
+/** A file: a Typst file's document (with the subscription that reports its edits), or any other file's content. */
+type Entry = { kind: 'document'; document: TypstDocument; subscription: Disposable } | { kind: 'content'; content: FileContent };
 
 /**
  * The files of a Typst project. Every `.typ` file is a `TypstDocument` that
@@ -61,18 +62,18 @@ export class Project {
 
   document(path: ProjectPath): TypstDocument | undefined {
     const entry = this.entries.get(path);
-    return entry && 'document' in entry ? entry.document : undefined;
+    return entry?.kind === 'document' ? entry.document : undefined;
   }
 
   pathOf(document: TypstDocument): ProjectPath | undefined {
-    for (const [path, entry] of this.entries) if ('document' in entry && entry.document === document) return path;
+    for (const [path, entry] of this.entries) if (entry.kind === 'document' && entry.document === document) return path;
     return undefined;
   }
 
   content(path: ProjectPath): FileContent | undefined {
     const entry = this.entries.get(path);
     if (!entry) return undefined;
-    return 'document' in entry ? entry.document.text : entry.content;
+    return entry.kind === 'document' ? entry.document.text : entry.content;
   }
 
   /** Every file with its current content: what the compiler gets. */
@@ -107,7 +108,7 @@ export class Project {
     if (change.kind === 'update') {
       const document = this.document(change.path);
       if (document) return document.setText(change.content as string, 'api');
-      this.entries.set(change.path, { content: change.content });
+      this.entries.set(change.path, { kind: 'content', content: change.content });
     }
     if (change.kind === 'create') this.add(change.path, change.content);
     if (change.kind === 'delete') this.remove(change.path);
@@ -150,11 +151,11 @@ export class Project {
   /** Sets the content of `path` for `replace`: an edit where the kind of entry stays, else a new file. */
   private put(path: ProjectPath, content: FileContent): void {
     const entry = this.entries.get(path);
-    if (entry && 'document' in entry && typeof content === 'string') return entry.document.setText(content, 'api');
+    if (entry?.kind === 'document' && typeof content === 'string') return entry.document.setText(content, 'api');
     const becomesDocument = ProjectPath.isTypst(path) && typeof content === 'string';
-    if (entry && 'content' in entry && !becomesDocument) {
+    if (entry?.kind === 'content' && !becomesDocument) {
       if (entry.content === content) return;
-      this.entries.set(path, { content });
+      this.entries.set(path, { kind: 'content', content });
       return this.emit({ kind: 'update', path, content });
     }
     if (entry) this.removeAndEmit(path);
@@ -170,7 +171,7 @@ export class Project {
   private add(path: ProjectPath, content: FileContent): void {
     this.remove(path);
     if (!ProjectPath.isTypst(path) || typeof content !== 'string') {
-      this.entries.set(path, { content });
+      this.entries.set(path, { kind: 'content', content });
       return;
     }
     const document = new TypstDocument(content);
@@ -178,12 +179,12 @@ export class Project {
       const current = this.pathOf(document);
       if (current) this.emit({ kind: 'update', path: current, content: document.text });
     });
-    this.entries.set(path, { document, subscription });
+    this.entries.set(path, { kind: 'document', document, subscription });
   }
 
   private remove(path: ProjectPath): void {
     const entry = this.entries.get(path);
-    if (entry && 'subscription' in entry) entry.subscription.dispose();
+    if (entry?.kind === 'document') entry.subscription.dispose();
     this.entries.delete(path);
   }
 
