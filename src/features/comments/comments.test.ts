@@ -2,7 +2,8 @@
 // Tests for comments.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../core/typst-document/typst-document';
-import { marginNotes, markup, notesGutter, VisualView, VisualViewContributions } from '../../hosts/visual-view/visual-view';
+import { markup } from '../../extensions/markup/markup';
+import { marginNotes, notesGutter, VisualView, VisualViewContributions } from '../../hosts/visual-view/visual-view';
 import { CommentAction, localDate, NOTE_STYLE, type NoteView } from './comments';
 
 const IMPORT = `#import "@preview/drafting:0.2.2": margin-note, set-margin-note-defaults\n${NOTE_STYLE}`;

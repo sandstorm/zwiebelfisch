@@ -10,9 +10,15 @@ import type { DocumentLinkProvider } from '../../core/document-links/document-li
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { ProjectLabels } from '../../features/labels/labels';
 import type { DocumentStyles } from '../../features/styles/styles';
+import { alignment } from '../../extensions/alignment/alignment';
+import { headingNumbers, headings } from '../../extensions/headings/headings';
+import { lists, taskLists } from '../../extensions/lists/lists';
+import { markup } from '../../extensions/markup/markup';
+import { outline } from '../../extensions/outline/outline';
+import { horizontalRule, pageBreak } from '../../extensions/page-layout/page-layout';
+import { tables } from '../../extensions/tables/tables';
 import {
-  alignment, boxLinks, customStyles, headingNumbers, headings, horizontalRule, images, lists, marginNotes, markup, notesGutter, outline,
-  pageBreak, references, renderedBoxes, tables, taskLists, type ImageAssets, type Renderings,
+  boxLinks, customStyles, images, marginNotes, notesGutter, references, renderedBoxes, type ImageAssets, type Renderings,
 } from './builtins/builtins';
 import { VisualViewContributions } from './contributions/contributions';
 import { createSchema } from './nodes/nodes';

@@ -2,7 +2,9 @@
 // Tests for editing-views.ts.
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { headings, markup, VisualViewContributions } from '../../visual-view/visual-view';
+import { headings } from '../../../extensions/headings/headings';
+import { markup } from '../../../extensions/markup/markup';
+import { VisualViewContributions } from '../../visual-view/visual-view';
 import { EditingViews } from './editing-views';
 
 // jsdom lacks layout; ProseMirror and CodeMirror only need these to exist.

@@ -25,13 +25,13 @@ export {
   type BlockPrinter, type BlockSyntaxProjector, type Call, type InlineCallProjector, type InlineProjector, type Placed, type Printer,
   type ProjectionContext, type RunProjector,
 } from './projection/projection';
+// the projection framework itself, for tests of the specs: project a source, print a doc, sync, map positions
+export { posToSource, print, project, sourceToPos, syncDoc } from './projection/projection';
 export { starterKitPart } from './nodes/nodes';
-// the built-in contributions: the constructs are extensions of the widget's built-in list; the rest are activated by
-// the extension of their feature (until extensions/ takes them over)
+// the features' built-in contributions, activated by the extension of their feature (until extensions/ takes them over)
 export {
-  alignment, boxLinks, customStyles, headingNumbers, headings, horizontalRule, images, lists, marginNotes, markup, notesGutter, outline,
-  pageBreak, references, renderedBoxes, tables, taskLists, type ImageAssets, type ImageUrls, type NotesGutterContribution, type Renderings,
-  type Snippet, type SnippetSource, type StyleSource,
+  boxLinks, customStyles, images, marginNotes, notesGutter, references, renderedBoxes, type ImageAssets, type ImageUrls,
+  type NotesGutterContribution, type Renderings, type Snippet, type SnippetSource, type StyleSource,
 } from './builtins/builtins';
 
 /** Marks transactions that mirror a document change, so they are not written back. */

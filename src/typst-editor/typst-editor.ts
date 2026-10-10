@@ -18,9 +18,13 @@ import { spreadsheets } from '../features/spreadsheets/spreadsheets';
 import { styles } from '../features/styles/styles';
 import { typstLanguage } from '../features/typst-language/typst-language';
 import { versions } from '../features/versions/versions';
-import {
-  alignment, headingNumbers, headings, horizontalRule, lists, markup, outline, pageBreak, tables, taskLists,
-} from '../hosts/visual-view/visual-view';
+import { alignment } from '../extensions/alignment/alignment';
+import { headingNumbers, headings } from '../extensions/headings/headings';
+import { lists, taskLists } from '../extensions/lists/lists';
+import { markup } from '../extensions/markup/markup';
+import { outline } from '../extensions/outline/outline';
+import { horizontalRule, pageBreak } from '../extensions/page-layout/page-layout';
+import { tables } from '../extensions/tables/tables';
 import proseMirrorStyles from '../hosts/visual-view/visual-view.css?inline';
 import { type EditorMode, type TypstExtension, WorkbenchHost, workbenchStyles } from '../hosts/workbench/workbench';
 import { type FileChange, Project, type ProjectFiles } from '../core/project/project';
