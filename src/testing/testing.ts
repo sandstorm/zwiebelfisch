@@ -36,11 +36,10 @@ function schemaFrom(registry: VisualViewContributions): Schema {
   return createSchema(nodes, marks);
 }
 
-
 /** What a document's raw boxes show while not edited, in tests: compiled snippets and image files. */
 export type Renderings = SnippetSource & ImageUrls;
 
-/** The options tests give a view, as a document's Visual view had them before contributions. */
+/** What a test gives a view: what the built-ins would get from the workbench, and the contributions under test. */
 export interface TestViewOptions {
   renderer?: Renderings;
   assets?: ImageAssets;
@@ -109,7 +108,7 @@ function contributions(options: TestViewOptions): VisualViewContributions {
  * of the rest of the extension context they use only the workbench's stylesheets and its prompts (`prompts`; default:
  * every question cancelled).
  */
-export function activate(contributions: readonly VisualViewContribution[], prompts: TestPrompts = new TestPrompts()): VisualViewContributions {
+function activate(contributions: readonly VisualViewContribution[], prompts: TestPrompts = new TestPrompts()): VisualViewContributions {
   const visualView = new VisualViewContributions();
   const subscriptions: { dispose(): unknown }[] = [];
   const workbench = {
@@ -145,6 +144,7 @@ export function builtins(options: Omit<TestViewOptions, 'contributions'> = {}): 
   ];
 }
 
+/** `doc` after the transaction `change` builds on a fresh state of it. */
 export function edit(doc: Node, change: (state: EditorState) => EditorState['tr']): Node {
   const state = EditorState.create({ doc });
   return state.apply(change(state)).doc;
@@ -182,7 +182,7 @@ function visibleChars(doc: Node): { pos: number; char: string }[] {
   return chars;
 }
 
-/** Checks the position map of `doc` exhaustively against its printed source (see projection.test.ts). */
+/** Checks the position map of `doc` exhaustively against its printed source (see typst-editor/typst-editor.projection.test.ts). */
 export function expectPreciseMap(doc: Node): void {
   const source = print(doc);
   for (const { pos, char } of visibleChars(doc)) {
