@@ -727,7 +727,8 @@ new Layout(host, storageKey)   .editor  .preview            // the editing colum
 ```
 
 - One grid on the host: side (rail + open panel) | editing column | preview; the status bar
-  spans all. The hand-built version of the `Layout` module planned by the dockview spike
+  spans all. The preview is half the widget, so opening or resizing a side panel narrows only the
+  editing column (down to min(20rem, 25%), then the preview gives way too). The hand-built version of the `Layout` module planned by the dockview spike
   (docs/2026_10_10_dockview-spike.md): panels have ids, one side panel is open at a time, the
   saved state (width, who opened or closed what) is opaque to the panels.
 - A panel's owner sets its default (`setDefault`: the file panel's `auto` follows the file count);

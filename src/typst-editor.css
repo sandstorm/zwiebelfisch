@@ -10,8 +10,10 @@
   --te-note-line: #e0a800;
   --te-note-strong: rgba(250, 190, 20, 0.55);
   display: grid;
-  /* side panels (typst-editor/layout.css) | editing view | preview */
-  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+  /* side panels (typst-editor/layout.css) | editing view | preview. The preview is half the widget,
+     so opening or resizing a side panel narrows only the editing view (it keeps min(20rem, 25%),
+     then the preview gives way too). */
+  grid-template-columns: auto minmax(min(20rem, 25%), 1fr) minmax(0, 50%);
   grid-template-rows: minmax(0, 1fr) auto;
   height: 100%;
   min-height: 0;
