@@ -1,7 +1,7 @@
 import type { CollaborationOptions } from '../collab/collaboration';
 import type { Diagnostic } from '../core/typst-engine/typst-engine';
 import { Preview } from '../preview/preview';
-import proseMirrorStyles from '../visual-view/prosemirror.css?inline';
+import proseMirrorStyles from '../features/visual-view/visual-view.css?inline';
 import { AssetView } from './asset-view';
 import { ChangeTracking } from './change-tracking';
 import { CommentAction } from './comment-action';

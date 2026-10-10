@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import '../visual-view/jsdom-setup';
+import '../features/visual-view/jsdom-setup';
 import { undo as undoSource } from '@codemirror/commands';
 import { EditorView } from '@codemirror/view';
 import type { Editor } from '@tiptap/core';
@@ -9,7 +9,7 @@ import * as Y from 'yjs';
 import { addMarginNote } from '../editor/add-margin-note';
 import { Project } from '../core/project/project';
 import { SourceView } from '../source-view/source-view';
-import { VisualView } from '../visual-view/visual-view';
+import { VisualView } from '../features/visual-view/visual-view';
 import { Collaboration } from './collaboration';
 import { connect, connectAwareness } from './in-process';
 
