@@ -192,7 +192,10 @@ describe('EditingViews frame', () => {
     views.setFrame(top, bottom);
     views.show(a);
     const pane = () => visible()[0];
-    expect([pane().firstElementChild, pane().lastElementChild]).toEqual([top, bottom]);
+    // Visual: below the toolbar, right before the text; last in the pane
+    expect(top.previousElementSibling?.getAttribute('role')).toBe('toolbar');
+    expect(top.nextElementSibling?.className).toBe('typst-visual__body');
+    expect(pane().lastElementChild).toBe(bottom);
     tab('Source').click();
     expect(pane().querySelector('.cm-editor')).not.toBeNull();
     expect([pane().firstElementChild, pane().lastElementChild]).toEqual([top, bottom]);

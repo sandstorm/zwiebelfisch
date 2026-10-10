@@ -104,9 +104,10 @@ export class EditingViews {
   }
 
   /**
-   * Shows `top` before and `bottom` after the visible view, in its scrolling
-   * pane (so they are at the start and end of the file), across tab and
-   * document switches; detached while no document is shown.
+   * Shows `top` right before and `bottom` right after the visible view's
+   * content (in the Visual view below its toolbar, above the first block), in
+   * its scrolling pane, so they are the first and last thing of the file;
+   * across tab and document switches; detached while no document is shown.
    */
   setFrame(top: HTMLElement, bottom: HTMLElement): void {
     this.frame = { top, bottom };
@@ -230,7 +231,9 @@ export class EditingViews {
       return;
     }
     const pane = views.panes[this.current];
-    if (pane.firstChild !== this.frame.top) pane.prepend(this.frame.top);
+    // the Visual view's toolbar stays on top; the Source view is all content
+    const content = this.current === 'visual' ? views.visual.content : pane.firstElementChild;
+    if (content !== this.frame.top && content?.previousSibling !== this.frame.top) pane.insertBefore(this.frame.top, content);
     if (pane.lastChild !== this.frame.bottom) pane.append(this.frame.bottom);
   }
 }
