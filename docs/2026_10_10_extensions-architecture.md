@@ -38,6 +38,7 @@ src/
   typst-editor/          createTypstEditor: the public API, the built-in extension list, options →
                          extension configuration. typst-editor.ts + .css inside the folder.
   typst-editor-element/  <typst-editor>, entry inside the folder.
+  testing/               test helpers composing the built-in extensions (testing.ts); only *.test.ts import it.
   index.ts               package entry.
 ```
 
@@ -118,33 +119,43 @@ registered specs (review blocker `projection.ts:467`). `projection.ts` imports n
 `projection.ts:53`). `VisualViewOptions` goes away (`visual-view.ts:22`). `Widget`'s 20 fields and
 `mount*` methods go away (`typst-editor.ts:170`).
 
-## Built-in extensions (first cut of the mapping)
+## Built-in extensions (as built)
 
-| Extension | Model | Contributions | From today |
-|---|---|---|---|
-| `markup` | — | Visual: headings, strong / emph, lists, code, quotes, links, raw code; toolbar marks/lists | `visual-view/nodes/*` basics, `projection/raw-code.ts`, `embedded-code.ts` |
-| `tables` | — | Visual: table nodes, floating table bar | `nodes.ts` table parts, `toolbar/floating-bar.ts` usage |
-| `heading-numbering` | `numbering`, `heading-numbering` | Visual: number gutter, toggle | `nodes/heading-numbers.ts`, `heading-numbering.ts`, `numbering.ts` |
-| `alignment` | `alignment` | Visual: `#align` blocks, toolbar Align ▾ | `nodes/text-align.ts`, `projection/alignment.ts` |
-| `task-lists` | checklist preamble | Visual: task list nodes | `nodes/task-list.ts`, `checklist-preamble.ts` |
-| `page-layout` | — | Visual: page break, horizontal rule (call atoms) | `nodes/page-break.ts`, `horizontal-rule.ts`, `projection/call-atoms.ts` |
-| `images` | image call / edits | Visual: image box, tools, insert + drop; Workbench: asset file view | `visual-view/images/*`, `files/asset-view.ts`, `typst-editor/project-renderings.ts` (images part) |
-| `rendered-boxes` | — | Visual: box renderer (snippets from the preview) | `nodes/rendered-box.ts`, `preview/pages/snippet.ts`, project-renderings (snippets part) |
-| `labels` | `LabelIndex`, `scan` (service) | Visual: reference chip, label tags, `@` suggestions, hints | `features/labels/*`, `visual-view/references/*`, `projection/labels.ts` |
-| `styles` | `StyleIndex`, `discover`, `new-style` (service) | Visual: styled block / style mark, style menu | `features/styles/*`, `nodes/styles.ts`, `toolbar/style-menu.ts` |
-| `comments` | margin-note syntax, threads, `addMarginNote`, `withoutNotes`, page margin | Visual: margin-note nodes, notes gutter, Comment action; Preview: PDF "without comments" | `features/comments/*`, `nodes/margin-notes.ts`, `visual-view/notes-gutter/*` |
-| `document-links` | (core) | Visual: box links; Source: file links | `nodes/box-links.ts`, `source-view/file-links.ts` |
-| `typst-language` | — | Source: syntax, colors (also used by raw boxes: a service) | `source-view/typst-language.ts`, `code-colors.ts` |
-| `diagnostics` | summary | Source: lint; Visual: highlights; Workbench: status bar | `features/diagnostics/*`, `source-view/lint.ts` |
-| `files` | tree model, upload | Workbench: side panel, file navigation (prev / next) | `features/files/*`, `typst-editor/file-navigation.ts` |
-| `spreadsheets` | typst-file, workbook | Workbench: `.ic` file view | `features/spreadsheets/*` |
-| `pdf-export` | — | Preview: Download PDF menu, variants | `preview/pdf-menu.ts`, `typst-editor/pdf-export.ts` |
-| `preview-controls` | zoom | Preview: zoom, follow cursor, page n / total | `preview/toolbar.ts`, `pages/zoom.ts` |
-| `collaboration` | shared project / assets, remote cursors, room versions (lazy chunk) | Visual + Source: presence; Workbench: presence dots | `features/collaboration/*`, `typst-editor/collaboration-link.ts`, both views' `presence.ts` |
-| `versions` | — | Workbench: Save version | `features/versions/*` |
+The result of the slices and the clean-up (2026-10-10). Every extension is `src/extensions/<name>/` with its entry
+`<name>.ts`; "CSS" means it has `<name>.css`, imported `?inline` and added with `workbench.registerStyleSheet` on
+activation. The widget's list (`typst-editor/typst-editor.ts`, `builtinExtensions`) carries no order between the
+Visual view's contributions: `priority` decides (task lists 110 over bullet lists, the image box renderer 110 over
+snippets); the order matters only for services (an extension reads those of the extensions before it).
 
-The mapping is a first cut; the agent that moves a slice may adjust it within these rules and says
-so in its report.
+| Extension (id) | `model/` | Contributions | Services / commands | CSS |
+|---|---|---|---|---|
+| `typstLanguage()` (`typst-language`) | — | Source: Typst syntax + code colors; Visual: the same in raw boxes (`registerBoxCodeExtension`) | — | — |
+| `documentLinks()` (`document-links`) | (core `document-links`) | Source: file links (`fileLinks`, `pathLinks`); Visual: links in raw boxes (`boxLinks`) | provides `documentLinks` | yes |
+| `collaboration(options, user?)` | `SharedProject`, `SharedAssets`, `RemoteCursors`, `RoomVersions` (lazy chunk; protocol in core `gitlab-protocol`) | Source + Visual: other users' carets and selections (also in raw boxes) | provides `collaboration` | yes |
+| `files()`, `fileNavigation()` (`files`, `file-navigation`) | tree model (uploads: core `uploads`) | Workbench: file panel (side panel), drops; editor frame "← previous / next file →" | reads `collaboration` | yes (`files.css`) |
+| `spreadsheets()` | `typst-file` (`name.ic.gen.typ`) | Workbench: `.ic` file view (IronCalc, loaded on demand) | — | yes |
+| `diagnostics()` | `DiagnosticCollection`, summary | Source: lint; Visual: highlights; Workbench: status bar item | — | yes |
+| `versions({ user })` | `versionStatus` | Workbench: "Save version" in the tab bar | reads `collaboration` | — |
+| `markup` | raw code (code delimiters) | Visual: strong, emphasis, links, inline code, code blocks, block quotes; selection bar, Insert items | — | yes |
+| `headings` | numbering patterns, `HeadingCounter` | Visual: headings, their numbers (editor extension) | — | yes |
+| `tables` | `TableLayout` | Visual: `#table(..)`, Insert table, the table bar | — | yes |
+| `images()` | image call edits, `uploadTarget` | Visual: image boxes + figures, tools, Insert image, drops; box renderer (110); Workbench: `image` / `data` file views | reads `documentLinks` | yes |
+| `renderedBoxes()` (`rendered-boxes`) | `Snippet`, sizes | Visual: box renderer (compiled snippets from the preview) | — | — |
+| `outline` | — | Visual: `#outline(..)` as a labelled box, Insert table of contents | — | — |
+| `pageLayout` (`page-layout`) | — | Visual: page break, horizontal rule | — | yes |
+| `lists` | cheq's preamble | Visual: bulleted, numbered and task lists (task lists 110), list buttons | — | yes |
+| `alignment` | alignment syntax | Visual: `#align` blocks, justified paragraphs, Align menu | — | — |
+| `comments({ user })` | margin-note syntax, threads, `addMarginNote`, `withoutNotes`, page margin, card layout | Visual: margin notes, notes gutter, Comment action; Workbench: Comment button (Source tab bar), Mod+Alt+M; Preview: PDF variants | commands `comments.addComment`, `comments.exportPdf` | yes |
+| `labels()` | `LabelIndex`, scan, reference syntax, label choices | Visual: reference chips + hints, label tags, `@` list, Add label | provides `labels` | yes |
+| `styles()` | `StyleIndex`, discover, `newStyle` | Visual: styled blocks, text styles, the style menu; "New style…" | provides `styles` | yes |
+| `previewControls({ followCursor })` (`preview-controls`) | zoom | Preview: zoom, Follow cursor, page n / total | — | yes |
+| `pdfExport({ download })` (`pdf-export`) | — | Preview: Download PDF + variants menu | command `pdfExport.export` | yes |
+
+Not extensions: the hosts' minimum (Visual view: paragraphs, text, raw boxes; the hosts' toolbar, highlights,
+presence targets) and its CSS (`typst-editor.css` with the color tokens, `hosts/visual-view/visual-view.css`,
+`hosts/workbench/layout/layout.css`). Shared code is core: `core/uploads` (files from the computer as `create`
+changes), `core/gitlab-protocol` (import-free, also the server's). Test helpers composing the built-ins live in
+`src/testing/` (only `*.test.ts` import it); hosts import neither `extensions/` nor `testing/`, also not in tests.
 
 ## Order of work (subagents; the main agent merges and checks)
 

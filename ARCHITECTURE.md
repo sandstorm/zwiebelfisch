@@ -25,7 +25,8 @@ src/                        the widget (TypeScript); the most important API on t
                             editing area, preview, status bar), editing-views/ (Visual/Source tabs, lazily one VisualView
                             + SourceView per document), color-scheme/ (`data-scheme`), extension-host/ (activation,
                             services), commands/ (commands, key bindings), file-views/ (views by file kind),
-                            file-drops/ (files dropped on the widget)
+                            file-drops/ (files dropped on the widget), style-sheets/ (StyleSheets: the widget's and
+                            the extensions' CSS in its shadow root or head, shared and reference-counted)
     source-view/            SourceViewHost (registerExtension, registerLinkProvider, createView: what
                             `ExtensionContext.sourceView` is) and SourceView (view.ts: CodeMirror 6 bound to a
                             TypstDocument); contribution.ts (the contribution types)
@@ -1192,7 +1193,7 @@ new Layout(host, storageKey)   .editor  .preview  .statusBar   // the editing co
 
 - **Tokens.** Every color of the widget's stylesheets is a custom property on `.typst-editor`
   defined as `light-dark(light, dark)` (`--te-bg`, `--te-surface`, `--te-subtle`, `--te-text`,
-  `--te-muted`, `--te-accent`, …; the change colors in `changes.css`). New CSS uses them;
+  `--te-muted`, `--te-accent`, …). New CSS, the extensions' too, uses them;
   `stylesheets.test.ts` fails on a hex color outside a token definition (exceptions: the vendored
   ProseMirror CSS, the fallback of a collaborator's color).
 - **Which one.** CSS `color-scheme` decides: by default the page's (inherited, also into
