@@ -50,7 +50,7 @@ export class Project {
 
   /** The main file, then other Typst files, then the rest; each group sorted. */
   paths(): ProjectPath[] {
-    const rank = (path: ProjectPath) => (path === this.main ? 0 : ProjectPath.kind(path) === 'typst' ? 1 : 2);
+    const rank = (path: ProjectPath) => (path === this.main ? 0 : ProjectPath.isTypst(path) ? 1 : 2);
     return [...this.entries.keys()].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
   }
 
@@ -146,7 +146,7 @@ export class Project {
 
   private checkRename(from: ProjectPath, to: ProjectPath): string | null {
     if (from === this.main) return 'The main file cannot be renamed.';
-    if ((ProjectPath.kind(from) === 'typst') !== (ProjectPath.kind(to) === 'typst')) {
+    if (ProjectPath.isTypst(from) !== ProjectPath.isTypst(to)) {
       return 'Typst files must keep the .typ ending, and other files cannot get it.';
     }
     return this.checkNew(to);
@@ -156,7 +156,7 @@ export class Project {
   private put(path: ProjectPath, content: FileContent): void {
     const entry = this.entries.get(path);
     if (entry && 'document' in entry && typeof content === 'string') return entry.document.setText(content, 'api');
-    const becomesDocument = ProjectPath.kind(path) === 'typst' && typeof content === 'string';
+    const becomesDocument = ProjectPath.isTypst(path) && typeof content === 'string';
     if (entry && 'content' in entry && !becomesDocument) {
       if (entry.content === content) return;
       this.entries.set(path, { content });
@@ -174,7 +174,7 @@ export class Project {
 
   private add(path: ProjectPath, content: FileContent): void {
     this.remove(path);
-    if (ProjectPath.kind(path) !== 'typst' || typeof content !== 'string') {
+    if (!ProjectPath.isTypst(path) || typeof content !== 'string') {
       this.entries.set(path, { content });
       return;
     }
@@ -211,5 +211,5 @@ function parseKey(key: string): ProjectPath {
 }
 
 function checkContent(path: ProjectPath, content: FileContent): string | null {
-  return ProjectPath.kind(path) === 'typst' && typeof content !== 'string' ? 'A .typ file must contain text.' : null;
+  return ProjectPath.isTypst(path) && typeof content !== 'string' ? 'A .typ file must contain text.' : null;
 }

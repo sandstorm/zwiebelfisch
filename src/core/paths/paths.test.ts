@@ -5,15 +5,13 @@ import { PathReference, ProjectPath } from './paths';
 const path = ProjectPath.of;
 const ref = PathReference.of;
 
-describe('ProjectPath.kind', () => {
-  it('tells Typst sources, images and other files apart', () => {
-    expect(ProjectPath.kind(path('/main.typ'))).toBe('typst');
-    expect(ProjectPath.kind(path('/img/Logo.PNG'))).toBe('image');
-    expect(ProjectPath.kind(path('/logo.svg'))).toBe('image');
-    expect(ProjectPath.kind(path('/data.csv'))).toBe('data');
-    expect(ProjectPath.kind(path('/sheets/budget.ic'))).toBe('spreadsheet');
-    expect(ProjectPath.kind(path('/budget.ic.json'))).toBe('data');
-    expect(ProjectPath.kind(path('/README'))).toBe('data');
+describe('ProjectPath.isTypst', () => {
+  it('tells Typst sources from every other file', () => {
+    expect(ProjectPath.isTypst(path('/main.typ'))).toBe(true);
+    expect(ProjectPath.isTypst(path('/chapters/intro.typ'))).toBe(true);
+    expect(ProjectPath.isTypst(path('/img/Logo.PNG'))).toBe(false);
+    expect(ProjectPath.isTypst(path('/budget.ic'))).toBe(false);
+    expect(ProjectPath.isTypst(path('/typ'))).toBe(false);
   });
 });
 

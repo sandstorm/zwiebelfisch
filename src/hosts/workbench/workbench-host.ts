@@ -1,8 +1,8 @@
-// WorkbenchHost: the widget's frame around a Project — layout, editing views, file views, preview — and the
+// WorkbenchHost: the widget's frame around a Project — layout, editing views, custom editors, preview — and the
 // extensions put into it. What createTypstEditor creates; extensions see it as `Workbench`. See workbench.ts.
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
-import { ProjectPath, type FileKind } from '../../core/paths/paths';
+import type { ProjectPath } from '../../core/paths/paths';
 import type { FileChange, Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import { Preview } from '../preview/preview';
@@ -11,24 +11,25 @@ import { VisualViewContributions } from '../visual-view/visual-view';
 import { ColorScheme } from './color-scheme/color-scheme';
 import { Commands } from './commands/commands';
 import { Configuration } from './configuration/configuration';
+import { CustomEditors } from './custom-editors/custom-editors';
 import { EditingViews, type EditorMode } from './editing-views/editing-views';
 import { ExtensionHost } from './extension-host/extension-host';
 import { DocumentLinks, documentLinkStyles, linkExtension, type LinkedText } from './document-links/document-links';
 import { FileDecorations } from './file-decorations/file-decorations';
 import { SourceControls } from './source-controls/source-controls';
 import { FileDrops } from './file-drops/file-drops';
-import { FileViews } from './file-views/file-views';
 import { Layout, type Memory } from './layout/layout';
 import { Menus } from './menus/menus';
 import { Notifications } from './notifications/notifications';
 import { QuickInput } from './quick-input/quick-input';
 import { StyleSheets } from './style-sheets/style-sheets';
 import type {
+  CustomEditorOptions,
+  CustomEditorProvider,
   DocumentLink,
   DocumentLinkProvider,
   FileDecoration,
   FileDecorationProvider,
-  FileViewProvider,
   InputBoxOptions,
   MenuContext,
   MenuItem,
@@ -74,7 +75,7 @@ export interface WorkbenchOptions {
 
 /**
  * The frame of the widget on `host`: shows the project's files (Typst files in the Visual / Source tabs, others in
- * the file views extensions register), keeps the preview compiling the main file, and runs the extensions. The Visual and Source views and the preview are its hosts (`ExtensionContext.visualView`,
+ * the custom editors extensions register), keeps the preview compiling the main file, and runs the extensions. The Visual and Source views and the preview are its hosts (`ExtensionContext.visualView`,
  * `sourceView`, `preview`). `activate` starts it: extensions first (their contributions are in place before any view exists),
  * then the main file is shown and compiled.
  */
@@ -82,7 +83,7 @@ export class WorkbenchHost implements Workbench {
   #active: ProjectPath;
   readonly #layout: Layout;
   readonly #views: EditingViews;
-  readonly #fileViews: FileViews;
+  readonly #customEditors: CustomEditors;
   readonly #fileDecorations = new FileDecorations();
   readonly #documentLinks = new DocumentLinks();
   readonly #sourceControls = new SourceControls();
@@ -137,7 +138,7 @@ export class WorkbenchHost implements Workbench {
     this.#editorActions = this.#createEditorActions();
     this.#notifications = new Notifications(host);
     this.#quickInput = new QuickInput(host);
-    this.#fileViews = new FileViews(this.#layout.editor);
+    this.#customEditors = new CustomEditors(this.#layout.editor);
     this.#preview = new Preview(this.#layout.preview);
     this.#unsubscribe = project.onChange((change) => this.#changed(change));
     this.#showDocumentLinks();
@@ -192,7 +193,7 @@ export class WorkbenchHost implements Workbench {
     const changed = path !== this.#active;
     this.#active = path;
     const document = this.project.document(path);
-    this.#fileViews.show(document ? null : { path, content: this.project.content(path)! });
+    this.#customEditors.show(document ? null : { path, content: this.project.content(path)! }, options.viewType);
     this.#views.show(document ?? null);
     if (document && options.selection) this.#views.reveal(options.selection.from, options.selection.to, options.mode);
     this.#shown.fire(path);
@@ -243,8 +244,8 @@ export class WorkbenchHost implements Workbench {
     });
   }
 
-  registerFileView(kind: Exclude<FileKind, 'typst'>, provider: FileViewProvider): Disposable {
-    return this.#fileViews.register(kind, provider);
+  registerCustomEditorProvider(viewType: string, provider: CustomEditorProvider, options: CustomEditorOptions): Disposable {
+    return this.#customEditors.register(viewType, provider, options);
   }
 
   registerCommand(id: string, handler: (...args: any[]) => unknown): Disposable {
@@ -335,7 +336,7 @@ export class WorkbenchHost implements Workbench {
     this.#unsubscribe();
     this.#extensions.dispose();
     this.#views.destroy();
-    this.#fileViews.dispose();
+    this.#customEditors.dispose();
     this.#fileDecorations.dispose();
     this.#sourceControls.dispose();
     this.#quickInput.dispose();

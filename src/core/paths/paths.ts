@@ -10,20 +10,6 @@ export type ProjectPath = string & { readonly __type: 'ProjectPath' };
 /** A path as written in Typst source (`img/logo.png`, `../template.typ`, `/data.csv`): relative to the file it is in. */
 export type PathReference = string & { readonly __type: 'PathReference' };
 
-/** What the widget can do with a file: edit it, preview it as an image, edit it as a spreadsheet (IronCalc, `.ic`), or only list it. */
-export type FileKind = 'typst' | 'image' | 'spreadsheet' | 'data';
-
-const IMAGE = /\.(png|jpe?g|gif|svg|webp)$/i;
-
-const IMAGE_TYPES: Record<string, string> = {
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.gif': 'image/gif',
-  '.svg': 'image/svg+xml',
-  '.webp': 'image/webp',
-};
-
 export const ProjectPath = {
   /** `value` as a project path; null when it is none (relative, `..`, empty segments, a backslash). */
   parse(value: string): ProjectPath | null {
@@ -75,10 +61,12 @@ export const ProjectPath = {
     return (target.startsWith(folder) ? target.slice(folder.length) : target) as PathReference;
   },
 
-  kind(path: ProjectPath): FileKind {
-    if (path.endsWith('.typ')) return 'typst';
-    if (path.endsWith('.ic')) return 'spreadsheet';
-    return IMAGE.test(path) ? 'image' : 'data';
+  /**
+   * Whether `path` is Typst source (`.typ`): text, one TypstDocument each, edited in the Visual / Source views. Every
+   * other file is bytes (or text) the project only stores; extensions decide by name what they do with it.
+   */
+  isTypst(path: ProjectPath): boolean {
+    return path.endsWith('.typ');
   },
 
   /** The path as shown to people: without the leading slash. */
@@ -91,12 +79,6 @@ export const ProjectPath = {
     const name = path.slice(path.lastIndexOf('/') + 1);
     const dot = name.lastIndexOf('.');
     return dot > 0 ? name.slice(dot) : '';
-  },
-
-  /** The image file `path` with `content` as a Blob of its media type, e.g. for an object URL. */
-  imageBlob(path: ProjectPath, content: string | Uint8Array): Blob {
-    const bytes = typeof content === 'string' ? new TextEncoder().encode(content) : content;
-    return new Blob([bytes as BlobPart], { type: IMAGE_TYPES[ProjectPath.extension(path).toLowerCase()] });
   },
 };
 

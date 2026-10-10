@@ -89,6 +89,8 @@
   min-width: 0;
 }
 .typst-editor__status-bar:empty { display: none; }
+/* A custom editor's panel (registerCustomEditorProvider): fills the editing area, a flex column for the editor. */
+.typst-editor__custom-editor { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 /* The workbench's overlays (notifications, input boxes, quick picks, menus) are placed in the widget. */
 .typst-editor { position: relative; }
 /* The editor/title menu: actions at the end of the Visual / Source tab bar (e.g. Comment, Save to GitLab…). */

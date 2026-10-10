@@ -153,7 +153,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
     },
     set files(next: ProjectFiles) {
       project.replace(next); // listeners hear about every file
-      // shown again: a file view shows the new content of a replaced file (a spreadsheet)
+      // shown again: a custom editor shows the new content of a replaced file (a spreadsheet)
       workbench.open(workbench.activeFile);
     },
     get source() {

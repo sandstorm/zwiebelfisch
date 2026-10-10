@@ -55,7 +55,7 @@ class FilePathLinks implements DocumentLinkProvider {
     if (this.project.has(target)) return { ...link, target };
     const name = ProjectPath.displayName(target);
     const tooltip = `${name} is not in the project`;
-    if (ProjectPath.kind(target) !== 'typst') return { ...link, tooltip };
+    if (!ProjectPath.isTypst(target)) return { ...link, tooltip };
     return { ...link, tooltip, command: { title: `Create ${name}`, command: CREATE_FILE, arguments: [target] } };
   }
 }

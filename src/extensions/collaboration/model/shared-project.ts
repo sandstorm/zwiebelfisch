@@ -55,7 +55,7 @@ export class SharedProject {
     this.ydoc.transact(() => {
       for (const path of this.project.paths()) {
         const document = this.project.document(path);
-        if (document && ProjectPath.kind(path) === 'typst') this.bind(path, document);
+        if (document && ProjectPath.isTypst(path)) this.bind(path, document);
       }
       for (const { path, text } of previous) {
         if (!this.project.document(path) && this.files.get(path) === text) this.files.delete(path);

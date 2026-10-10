@@ -56,7 +56,7 @@ export class SharedAssets {
 
   /** A local create / rename / delete of another file, into the map. */
   private push(change: FileChange): void {
-    if (change.kind === 'update' || ProjectPath.kind(change.path) === 'typst') return;
+    if (change.kind === 'update' || ProjectPath.isTypst(change.path)) return;
     this.ydoc.transact(() => {
       if (change.kind === 'create') this.assets.set(change.path, bytes(change.content));
       if (change.kind === 'delete') this.assets.delete(change.path);
@@ -93,7 +93,7 @@ export class SharedAssets {
 
   /** Puts the file at `path` with the map's `value` into the project (loading a repository file first). */
   private pull(path: ProjectPath, value: AssetValue): void {
-    if (ProjectPath.kind(path) === 'typst') return;
+    if (ProjectPath.isTypst(path)) return;
     if (value instanceof Uint8Array) {
       this.put(path, value);
       return;

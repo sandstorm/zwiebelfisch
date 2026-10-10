@@ -1,12 +1,13 @@
-// The images extension in the workbench: images and data files open read-only in the editing area (AssetView).
+// The images extension in the workbench: images and other files open read-only in the editing area (AssetView).
 // Entry of extensions/images/workbench/. See ../images.ts.
-import type { FileViewProvider } from '../../../hosts/workbench/workbench';
+import type { CustomEditorProvider } from '../../../hosts/workbench/workbench';
 import { AssetView } from './asset-view';
 
-/** Images and data files in the editing area, read-only (images get into the text by dragging or "Insert image"). */
-export const assetViews: FileViewProvider = {
-  createFileView: (parent) => {
-    const view = new AssetView(parent);
-    return { show: (path, content) => view.show(path, content), hide: () => view.hide(), dispose: () => view.destroy() };
+/** Images and other files in the editing area, read-only (images get into the text by dragging or "Insert image"). */
+export const assetEditor: CustomEditorProvider = {
+  resolveCustomEditor(document, panel) {
+    const view = new AssetView(panel.element);
+    view.show(document.path, document.content);
+    panel.onDidDispose(() => view.destroy());
   },
 };

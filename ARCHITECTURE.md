@@ -28,7 +28,8 @@ src/                        the widget (TypeScript); the most important API on t
                             (Visual/Source tabs, lazily one VisualView + SourceView per document), color-scheme/
                             (`data-scheme`), extension-host/ (activation), commands/ (commands, key bindings),
                             configuration/ (Configuration: declared settings, the host's values, changes),
-                            file-views/ (views by file kind), file-drops/ (files dropped on the widget), style-sheets/
+                            custom-editors/ (CustomEditors: the editor of a non-Typst file by file name pattern and priority;
+                            filename-pattern.ts: the globs), file-drops/ (files dropped on the widget), style-sheets/
                             (StyleSheets: the widget's and the extensions' CSS in its shadow root or head, shared and
                             reference-counted), document-links/ (DocumentLinks: the providers' links merged by
                             priority; link-extension.ts: links in a CodeMirror editor, the Source views' and raw
@@ -57,8 +58,8 @@ src/                        the widget (TypeScript); the most important API on t
                             engine-assets.ts (wasm + default font URLs for the main thread); packages/ (withPackages,
                             tar reader); fixtures/ (test package archives); generated wasm/, fonts/ (gitignored)
     paths/                  ProjectPath (where a file is) and PathReference (a path as written in Typst source),
-                            branded strings with their operations: parse, fromName, resolve, referenceTo, kind,
-                            displayName, extension, imageBlob
+                            branded strings with their operations: parse, fromName, resolve, referenceTo, isTypst
+                            (the only kind core knows: Typst source or not), displayName, extension
     project/                Project: which files a project has and which changes are allowed (one TypstDocument
                             per .typ file, main protected); FileChange, FileContent, ProjectFiles. No re-exports.
     document-links/         Typst syntax only: findFilePaths (the file paths a Typst text names, Lezer), readingOrder
@@ -87,7 +88,7 @@ src/                        the widget (TypeScript); the most important API on t
       workbench/            file-panel.ts (FilePanel: header with "New", its menus, the operations, uploads), file-navigation.ts ("← previous file"
                             / "next file →"), tree/ (FileTree: rows, keyboard, drag & drop, file decorations as
                             badges), icons/ (leaf)
-    spreadsheets/           spreadsheets: the `.ic` file view; every edit also stores `name.ic.gen.typ`
+    spreadsheets/           spreadsheets: the `.ic` custom editor; every edit also stores `name.ic.gen.typ`; "New spreadsheet…"
       model/                typst-file.ts (spreadsheetTypst → name.ic.gen.typ for Typst, typstPath), dark-theme.ts
                             (darkThemeVariables: IronCalc's palette from the widget's tokens)
       workbench/            spreadsheet-view.ts (SpreadsheetView), workbook.ts (React + IronCalc, loaded on demand),
@@ -108,7 +109,8 @@ src/                        the widget (TypeScript); the most important API on t
                             model/ (image-call.ts: arguments edited in place; upload.ts: uploadTarget),
                             visual-view/ (imagesVisualView: specs, tools, insertion, image-path-link: the path's
                             document link),
-                            workbench/ (AssetView: images and data files read-only, the `image` / `data` file views)
+                            model/image-files.ts (isImage, imageBlob: the media types), workbench/ (AssetView: images and other
+                            files read-only, the custom editors `images.preview` and `images.file`)
     rendered-boxes/         renderedBoxes(): raw boxes drawn as snippets from the preview; model/ (Snippet,
                             rendersInPlace, inlinePictureSize, snippetSize), visual-view/ (the box renderer)
     document-links/         documentLinks(): a DocumentLinkProvider: file paths as links (open, or create a missing .typ)
@@ -347,7 +349,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
   an `Error` "The document has n error(s): …" (the button shows it as an error message "No PDF: …"; while a PDF
   is being made it says "Making PDF…" and is disabled), never an older PDF. File name after the
   main file: `main.pdf`.
-- **Images into the text**: `AssetView` (the `images` extension's file view of `image` and `data` files) only previews. An image row dragged from the file panel
+- **Images into the text**: `AssetView` (the `images` extension's custom editors of images and other files) only previews. An image row dragged from the file panel
   (drag type `PROJECT_PATH_TYPE`, data: the project path) and dropped on the Visual view is
   inserted there as an image block (`imageFileDrops` → `ImageAssets.reference(path)`: relative
   when in the same folder tree, else project-absolute; not for non-images).
@@ -377,12 +379,13 @@ interface ExtensionContext {
                                         // onDidChangeDiagnostics, onDidRender, snippet, exportPdf (see "Preview")
 }
 interface Workbench {
-  ownerDocument; activeFile; user?: { name, color? }; open(path, { selection?, mode? }); onDidShowFile
+  ownerDocument; activeFile; user?: { name, color? }; open(path, { selection?, mode?, viewType? }); onDidShowFile
   applyChange(change) → reason | null
   registerSidePanel(id, { label, icon }) → SidePanel { body, setDefault, setAvailable, dismiss, dispose }
   registerStatusBarItem(element)  registerEditorFrame({ top, bottom })
   registerStyleSheet(css)           // the extension's CSS where the widget renders (head or shadow root)
-  registerFileView(kind, { createFileView(parent) → FileView { show(path, content), hide(), dispose() } })
+  registerCustomEditorProvider(viewType, { resolveCustomEditor(document: { path, content }, panel: { element, onDidDispose }) },
+                               { filenamePattern: '*.drawio.png', priority?: 'default' | 'option' | number })
   registerCommand(id: string, handler(...args))  executeCommand<T>(id, ...args) → Promise<T>
   registerKeybinding('Mod+Alt+KeyM', id)
   onDidDropFiles  remember(name) → Memory
@@ -490,11 +493,18 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   `explorer/context` — a file panel row's context menu (context `{ view: 'files', resource, resourceKind:
   'file' | 'folder', resourceIsMain }`; argument: the row), both shown by the `files` extension with
   `ui/popup-menu`. The tab bar takes nothing but menu entries (`registerTabBarItem` is gone).
-- **File views by kind.** `open(path)` shows a Typst file in the tabs and any other file in the view
-  registered for `ProjectPath.kind(path)` (`FileViews`: created on first use, one per provider, shown again
-  on every open so a replaced file shows its new content; nothing for a kind without a view). `images`
-  registers `image` + `data` (`AssetView`), `spreadsheets` registers `spreadsheet` (and stores its edits with
-  `applyChange`).
+- **Custom editors** (`CustomEditors`, `custom-editors/`; VS Code's custom editors, decided 2026-10-10): `open(path)` shows a
+  Typst file in the tabs and any other file in a custom editor: the one asked for (`open(path, { viewType })`), else
+  the one whose `filenamePattern` matches the file's name (a glob: `*`, `**`, `?`, `{a,b}`; with a `/` over the path;
+  case-insensitive) with the highest `priority` (`'default'` = 100; `'option'`: only when asked for), then the most
+  specific pattern (the characters a name must have: `*.drawio.png` over `*.png` over `*`), then the one registered
+  first. Nothing shows for a file no editor matches. Every open (also of the shown file: a replaced file shows its
+  new content) gets a new panel (`element`: a flex column `.typst-editor__custom-editor` in the editing area);
+  showing anything else disposes it: `onDidDispose` fires while the element is still in place (the editor stores what
+  is pending), then the element goes. The editors: `images` (`images.preview` for `*.{png,jpg,jpeg,gif,svg,webp}`,
+  `images.file` for `*`: any other file), `spreadsheets` (`spreadsheets.editor`, `*.ic`), `diagrams`
+  (`diagrams.editor`, `*.drawio.png`, priority 110); they store edits with `applyChange`. Core knows no kinds of
+  files besides Typst source (`ProjectPath.isTypst`): what a file is, is the editors' business, by name.
 - **Stylesheets** (`StyleSheets`, `style-sheets/`): the widget's own CSS (`styleSheet`: the Visual view's
   `visual-view.css`, `typst-editor.css`, the layout's `layout.css`) goes in first, as `<style
   id="typst-editor-styles">`, before the frame is built (the color scheme reads the resolved colors); each
@@ -514,7 +524,7 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   boxes), `documentLinks` (a `DocumentLinkProvider`), `collaboration` (`sourcePresence`; Visual: `visualPresence`:
   highlights, an editor extension and a box code extension; Workbench: `presenceDecorations`, the GitLab room's
   source control), `diagnostics` (`lint(collection)`;
-  Visual: highlights); `images` (Visual: `imagesVisualView`; Workbench: the `image` / `data` file views),
+  Visual: highlights); `images` (Visual: `imagesVisualView`; Workbench: the custom editors `images.preview` / `images.file`),
   `renderedBoxes` (Visual: `renderedBoxesVisualView`), `comments` (Visual: `marginNotes`, `notesGutter`; Preview:
   the PDF export option `comments.include`), `labels` (Visual: `references`), `styles` (Visual: `customStyles`); `sourceControl`
   ("Save to <label>…" in the tab bar's menu, its outcomes as messages); `previewSync` (`followCursor`; reveal, clicks), `previewControls`
@@ -541,7 +551,7 @@ ProjectPath.parse(value) → ProjectPath | null    ProjectPath.of(value) → Pro
 ProjectPath.fromName(typed, extension) → { path } | { error }    // "chapter 2" → /chapter 2.typ
 ProjectPath.resolve(file, reference) → ProjectPath | null         // as Typst resolves it; null: leaves the project
 ProjectPath.referenceTo(file, target) → PathReference             // relative in the same folder tree, else absolute
-ProjectPath.kind / displayName / extension / imageBlob            PathReference.of(written)
+ProjectPath.isTypst / displayName / extension                    PathReference.of(written)
 ```
 
 - **Branded strings, not classes**: free at runtime, usable as `Map`/`Record` keys, unchanged through
@@ -1272,8 +1282,9 @@ Concept: docs/2026_10_10_spreadsheets.md; task docs/todo/ironcalc.md. Calculatio
 IronCalc; Typst shows the results.
 
 ```ts
-spreadsheets(): TypstExtension   // registerFileView('spreadsheet', SpreadsheetView); edits → applyChange (file + typstPath)
-// workbench/: new SpreadsheetView(parent, onEdit(path, { bytes, typst }))   .show(path, content)   .hide()   .destroy()
+spreadsheets(): TypstExtension   // custom editor spreadsheets.editor (*.ic): a SpreadsheetView per panel; edits → applyChange
+                                 // (file + typstPath); command spreadsheets.newSpreadsheet ("New spreadsheet…" in file/newFile)
+// workbench/: new SpreadsheetView(panel.element, onEdit(path, { bytes, typst }))   .show(path, content)   .destroy()
 // model/ (pure):
 spreadsheetTypst(model, 'budget.ic') → Typst source   // `values` and `sheets` of the visible sheets
 typstPath('/budget.ic') → '/budget.ic.gen.typ'
@@ -1286,9 +1297,11 @@ followColorScheme(container, onDidChange) → Disposable   // sets / takes away 
   when it changed, its Typst file, both through `Workbench.applyChange`; a refusal is an error message ("budget.ic
   not saved: …").
 
-- A spreadsheet is a project file `name.ic` (`ProjectPath.kind` `spreadsheet`), in IronCalc's own format
+- A spreadsheet is a project file `name.ic` (the custom editor's pattern `*.ic`), in IronCalc's own format
   (`Model.from_bytes` / `toBytes`): the browser package has no `.xlsx`. An empty file opens as a
-  new workbook (so "New file" `budget.ic` makes one), which is saved at once.
+  new workbook, which is saved at once: "New spreadsheet…" (the file panel's "New", menu `file/newFile`, command
+  `spreadsheets.newSpreadsheet` with the row as argument) asks for a name (`.ic` added; in the row's folder),
+  creates the empty file and opens it.
 - `workbench/workbook.ts` is a separate chunk (`import()` from `spreadsheet-view.ts` on the first show; the
   folder's entry exports only its types): `@ironcalc/workbook` (React,
   i18next, lucide icons) and the engine's wasm. Its CSS (scoped `.ic-root`) goes into the

@@ -1,6 +1,7 @@
 // AssetView: the read-only view of a non-Typst file (image or data). See workbench.ts.
 import { type FileContent } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
+import { imageBlob, isImage } from '../model/model';
 
 /**
  * The read-only view of a project file that is not Typst source: an image
@@ -47,11 +48,11 @@ export class AssetView {
 
   private body(path: ProjectPath, content: FileContent): HTMLElement {
     const doc = this.root.ownerDocument;
-    if (ProjectPath.kind(path) === 'image') {
+    if (isImage(path)) {
       const image = doc.createElement('img');
       image.className = 'typst-asset__image';
       image.alt = ProjectPath.displayName(path);
-      this.objectUrl = URL.createObjectURL(ProjectPath.imageBlob(path, content));
+      this.objectUrl = URL.createObjectURL(imageBlob(path, content));
       image.src = this.objectUrl;
       return image;
     }

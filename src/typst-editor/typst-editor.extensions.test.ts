@@ -106,7 +106,7 @@ afterEach(() => {
   previews.length = 0;
 });
 
-describe('file views by kind', () => {
+describe('custom editors', () => {
   it('shows an image in the asset view, and a Typst file in the tabs again', () => {
     const { host, editor } = setup({ source: '= Hi', files: { '/logo.png': new Uint8Array([1]) } });
     URL.createObjectURL = vi.fn(() => 'blob:1');
@@ -116,15 +116,20 @@ describe('file views by kind', () => {
     expect(asset.hidden).toBe(false);
     expect(host.querySelector<HTMLElement>('.typst-editor__tabs')!.hidden).toBe(true);
     editor.open('/main.typ');
-    expect(asset.hidden).toBe(true);
+    expect(asset.isConnected).toBe(false);
     expect(host.querySelector<HTMLElement>('.typst-editor__tabs')!.hidden).toBe(false);
   });
 
-  it('shows a spreadsheet in the spreadsheet view', () => {
+  it('shows a spreadsheet in the spreadsheet editor, any other file read-only', () => {
     const { host, editor } = setup({ source: '= Hi', files: { '/data.ic': new Uint8Array() } });
     editor.open('/data.ic');
     expect(host.querySelector<HTMLElement>('[data-testid=typst-spreadsheet]')!.hidden).toBe(false);
     expect(host.querySelector('[data-testid=typst-asset]')).toBeNull();
+    editor.open('/main.typ');
+    editor.files = { ...editor.files, '/data.csv': 'a,b' };
+    editor.open('/data.csv');
+    expect(host.querySelector('[data-testid=typst-spreadsheet]')).toBeNull();
+    expect(host.querySelector('[data-testid=typst-asset] pre')?.textContent).toBe('a,b');
   });
 });
 

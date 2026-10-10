@@ -1,14 +1,14 @@
-// The workbench host: the widget's frame (side panels, editing area with the Visual / Source tabs and file views,
+// The workbench host: the widget's frame (side panels, editing area with the Visual / Source tabs and custom editors,
 // preview, status bar) and the extension API every feature uses to put itself into it. Entry of hosts/workbench/.
 // Why extensions: the frame knows no feature by name. A feature is a `TypstExtension` that registers what it adds
-// (a side panel, a file view, a command, a menu item, a link provider, a source control) once, at activation, and the
+// (a side panel, a custom editor, a command, a menu item, a link provider, a source control) once, at activation, and the
 // host disposes all of it on destroy. What every feature needs to talk to the user (messages, input boxes, quick
 // picks) is the workbench's, in VS Code's shapes, so features look and behave alike. Adding a feature is adding it to a list, not editing the frame. Extensions never
 // depend on each other: what one offers another goes through a generic contribution point of a host.
 // See ARCHITECTURE.md, "Extensions" and "Layout".
 import type { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
-import type { FileKind, ProjectPath } from '../../core/paths/paths';
+import type { ProjectPath } from '../../core/paths/paths';
 import type { FileChange, FileContent, Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { PreviewContributions } from '../preview/preview';
@@ -137,8 +137,9 @@ export interface Workbench {
   readonly user: User | undefined;
   /**
    * Shows `path` in the editing area (if the project has it): a Typst file in the Visual / Source tabs, any other
-   * file in the view registered for its kind (nothing without one). Opening the shown file again shows it again (a
-   * file view gets its current content). `selection` reveals a range of a Typst file, in the Source tab with `mode`.
+   * file in its custom editor (`registerCustomEditorProvider`; `viewType` picks one, else the default one; nothing
+   * without one). Opening the shown file again shows it again (its editor gets the current content in a new panel).
+   * `selection` reveals a range of a Typst file, in the Source tab with `mode`.
    */
   open(path: ProjectPath, options?: OpenOptions): void;
   /** After a file was shown in the editing area (also when the same file is shown again). */
@@ -164,8 +165,14 @@ export interface Workbench {
    * toolbar), scrolling with it, across tab and file switches; detached while no Typst file is shown. One frame at a time.
    */
   registerEditorFrame(frame: { top: HTMLElement; bottom: HTMLElement }): Disposable;
-  /** Shows files of `kind` (not `typst`: that is the Visual / Source tabs) with the view `provider` creates. One provider per kind. */
-  registerFileView(kind: Exclude<FileKind, 'typst'>, provider: FileViewProvider): Disposable;
+  /**
+   * Opens files whose name matches `options.filenamePattern` (not Typst files: they open in the Visual / Source tabs)
+   * in the editor `provider` puts into a panel of the editing area, until disposed (VS Code's custom editors).
+   * `viewType` names the editor (`<extension>.<name>`, unique), e.g. for `open(path, { viewType })`. When several
+   * match a file, the one of the highest `priority` opens it (`'default'`: 100; `'option'`: only when asked for by
+   * `viewType`), then the most specific pattern (`*.drawio.png` over `*.png`), then the one registered first.
+   */
+  registerCustomEditorProvider(viewType: string, provider: CustomEditorProvider, options: CustomEditorOptions): Disposable;
   /**
    * Registers `handler` as command `id` (`<extension>.<name>`, e.g. `pdfExport.export`) until disposed; an id
    * registered twice is an error. Other extensions and the host run it by id (`executeCommand`), never by importing it.
@@ -351,6 +358,8 @@ export interface OpenOptions {
   selection?: { from: number; to: number };
   /** Reveals in that tab (switching to it); default: the current one. */
   mode?: EditorMode;
+  /** The custom editor to open a file that is not Typst source in (its view type); default: the one its name picks. */
+  viewType?: string;
 }
 
 export interface SidePanelOptions {
@@ -457,17 +466,44 @@ export interface SourceControlStatus {
   readonly severity: MessageSeverity;
 }
 
-/** A view for one kind of file in the editing area; shown and hidden as files are opened. */
-export interface FileView {
-  /** Shows `path` (called on every open, also of the shown file: its content may have changed). */
-  show(path: ProjectPath, content: FileContent): void;
-  hide(): void;
-  dispose(): void;
+/** Where a custom editor opens files (VS Code: the `selector` and `priority` of `contributes.customEditors`). */
+export interface CustomEditorOptions {
+  /**
+   * The files it opens, as a glob over the file name: `*` (any characters but `/`), `**`, `?`, `{a,b}`, e.g.
+   * `*.drawio.png`, `*.{png,jpg}`; with a `/` over the path from the project root (`diagrams/*.png`). Case-insensitive.
+   */
+  readonly filenamePattern: string;
+  /**
+   * Who opens a file several editors match: a number (higher first), `'default'` (100, the default) or `'option'`
+   * (never by default, only when asked for with `open(path, { viewType })`).
+   */
+  readonly priority?: 'default' | 'option' | number;
 }
 
-export interface FileViewProvider {
-  /** Creates the view, into `parent` (the editing area), the first time a file of its kind is opened. */
-  createFileView(parent: HTMLElement): FileView;
+/** Shows (and edits) files in the editing area (VS Code's CustomReadonlyEditorProvider, without documents of its own). */
+export interface CustomEditorProvider {
+  /**
+   * Fills `panel` with the editor of `document`: called whenever such a file is opened, each time with a new panel.
+   * The editor stores what it changes through `Workbench.applyChange` (an `update` with the new content).
+   */
+  resolveCustomEditor(document: CustomDocument, panel: CustomEditorPanel): void;
+}
+
+/** The file a custom editor opens: where it is, and its content when it was opened. */
+export interface CustomDocument {
+  readonly path: ProjectPath;
+  readonly content: FileContent;
+}
+
+/** Where a custom editor shows one opened file (VS Code's WebviewPanel, with an element instead of a webview). */
+export interface CustomEditorPanel {
+  /** The editor's place in the editing area (a flex column filling it); removed once the panel is disposed. */
+  readonly element: HTMLElement;
+  /**
+   * Fires once, right before the panel goes: another file (or this one again) is shown, the provider is disposed, or
+   * the widget is destroyed. The editor stores what is pending (the element is still in place) and lets go of what it holds.
+   */
+  readonly onDidDispose: Event<void>;
 }
 
 /**

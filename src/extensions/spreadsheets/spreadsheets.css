@@ -1,4 +1,4 @@
-/* The spreadsheets extension's styles: the spreadsheet (.ic) file view, IronCalc's workbook UI in the dark.
+/* The spreadsheets extension's styles: the spreadsheet (.ic) custom editor, IronCalc's workbook UI in the dark.
    Registered by spreadsheets.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 /* Spreadsheets (.ic): IronCalc's workbook UI fills the editing column */
 .typst-sheet { flex: 1; min-height: 0; display: flex; flex-direction: column; }

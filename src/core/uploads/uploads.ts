@@ -13,7 +13,7 @@ export async function uploadChanges(files: File[]): Promise<FileChange[]> {
     files.map(async (file): Promise<FileChange | null> => {
       const path = ProjectPath.parse(`/${file.name.replace(/[/\\]/g, '_')}`); // null for a name like ".."
       if (path === null) return null;
-      const content = ProjectPath.kind(path) === 'typst' ? await file.text() : new Uint8Array(await file.arrayBuffer());
+      const content = ProjectPath.isTypst(path) ? await file.text() : new Uint8Array(await file.arrayBuffer());
       return { kind: 'create', path, content };
     }),
   );

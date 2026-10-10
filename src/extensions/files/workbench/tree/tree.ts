@@ -4,7 +4,7 @@ import { PROJECT_PATH_TYPE } from '../../../../core/project/project';
 import { ProjectPath } from '../../../../core/paths/paths';
 import type { FileDecoration } from '../../../../hosts/workbench/workbench';
 import { textColorOn } from '../../../../ui/color-scheme/color-scheme';
-import { icon } from '../icons/icons';
+import { fileIcon, icon } from '../icons/icons';
 import { ancestorsOf, buildTree, filesUnder, type Folder, folderOf, navigate, type Row, visibleRows } from '../../model/model';
 
 /** Where the tree remembers its open folders (e.g. for the browser session). */
@@ -143,7 +143,7 @@ export class FileTree {
       item.append(chevron(doc), icon(doc, row.expanded ? 'folder-open' : 'folder'), name);
     } else {
       item.setAttribute('aria-selected', String(row.path === state.active));
-      item.append(icon(doc, ProjectPath.kind(row.path)), name);
+      item.append(icon(doc, fileIcon(row.path)), name);
     }
     if (row.path === state.main) item.append(badge(doc));
     const decorations = decorationsOf(state, row);

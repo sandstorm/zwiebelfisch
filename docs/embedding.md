@@ -281,7 +281,7 @@ Existing `*.comments.json` sidecar files are not migrated.
 
 A project file ending in `.ic` is a spreadsheet: it opens in [IronCalc](https://www.ironcalc.com)'s
 workbook UI (formulas, formats, several sheets), loaded only when the first spreadsheet opens.
-Create one with **New file** `budget.ic`. Every edit is saved into the file and, for Typst, into
+Create one with **New → New spreadsheet…** in the file panel (or **New file** `budget.ic`). Every edit is saved into the file and, for Typst, into
 `budget.ic.gen.typ` next to it (generated: don't edit it). It defines two dictionaries by sheet
 name: `sheets`, every sheet as a table that looks like the spreadsheet (column widths, row
 heights, alignment, background colours, bold / italic / coloured text, borders), and `values`,
@@ -488,7 +488,7 @@ What `activate` gets (`ExtensionContext`; every type is exported from the packag
 | `subscriptions` | Push every registration here; disposed on `destroy`, in reverse order. |
 | `project` | The files: `files()`, `document(path)` (a Typst file's text), `onChange`. |
 | `workspace` | The settings: `getConfiguration('<section>').get('<key>')`, `onDidChangeConfiguration`. |
-| `workbench` | The frame: `registerStatusBarItem`, `registerSidePanel`, `registerMenuItem`, `registerStyleSheet` (your CSS, inside the shadow root too), `registerCommand` / `executeCommand` / `registerKeybinding`, `showInformationMessage` / `showWarningMessage` / `showErrorMessage`, `showInputBox`, `showQuickPick`, `registerDocumentLinkProvider`, `registerFileDecorationProvider`, `registerSourceControl`, `registerFileView`, `open(path)`, `applyChange(change)`, `activeTextEditor`, `onDidChangeTextEditorSelection`, `user`. |
+| `workbench` | The frame: `registerStatusBarItem`, `registerSidePanel`, `registerMenuItem`, `registerStyleSheet` (your CSS, inside the shadow root too), `registerCommand` / `executeCommand` / `registerKeybinding`, `showInformationMessage` / `showWarningMessage` / `showErrorMessage`, `showInputBox`, `showQuickPick`, `registerDocumentLinkProvider`, `registerFileDecorationProvider`, `registerSourceControl`, `registerCustomEditorProvider` (an editor for files by name pattern and priority, VS Code's custom editors), `open(path, { viewType? })`, `applyChange(change)`, `activeTextEditor`, `onDidChangeTextEditorSelection`, `user`. |
 | `preview` | `registerToolbarItem(item, { group, order })`, `registerPdfExportOption`, `createOverlay`, `reveal`, `onDidClickPage`, `onDidChangeDiagnostics`. |
 | `visualView`, `sourceView` | Node and mark specs, toolbar items, decorations of the Visual view; CodeMirror extensions of the Source view. |
 
@@ -518,6 +518,24 @@ Rules the built-ins follow, and yours should too:
   `MessageItem { title }`) or `undefined`; `showInputBox({ title, prompt, value, validateInput })` to the text
   or `undefined`; `showQuickPick(items, { placeHolder, canPickMany })` to the picked `QuickPickItem` (or
   string) or `undefined`.
+
+- **Files other than Typst open in custom editors** (VS Code's): `registerCustomEditorProvider(viewType, provider,
+  { filenamePattern, priority? })`. The pattern is a glob over the file name (`*.csv`, `*.{png,jpg}`; with a `/`
+  over the path). Of the editors matching a file, the highest `priority` opens it (`'default'`: 100, or a number;
+  `'option'` only through `open(path, { viewType })`), then the most specific pattern (`*.drawio.png` beats the
+  images' `*.{png,…}`, which beats `*`). Every open gets a new panel: fill `panel.element`, store edits with
+  `applyChange({ kind: 'update', path, content })`, and store what is pending in `panel.onDidDispose`. The built-ins:
+  `images.preview` (images), `images.file` (`*`: any other file, read-only), `spreadsheets.editor` (`*.ic`),
+  `diagrams.editor` (`*.drawio.png`, priority 110).
+
+  ```ts
+  workbench.registerCustomEditorProvider('csv.table', {
+    resolveCustomEditor(document, panel) {
+      const text = typeof document.content === 'string' ? document.content : new TextDecoder().decode(document.content);
+      panel.element.append(renderTable(text));            // yours
+    },
+  }, { filenamePattern: '*.csv' });
+  ```
 
 ```ts
 workbench.registerCommand('wordCount.countFile', async (path: ProjectPath) => {

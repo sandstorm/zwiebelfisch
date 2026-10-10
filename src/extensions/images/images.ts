@@ -2,7 +2,7 @@
 // "Insert image" with the project's images and uploads, and images / data files opened read-only in the editing
 // area. Entry of extensions/images/. See ARCHITECTURE.md, "createTypstEditor".
 // Why one extension: an image is one concept from the file in the project to the box in the text; the Visual
-// view's host only knows boxes, renderers and file views, and the file panel only knows files.
+// view's host only knows boxes, renderers and custom editors, and the file panel only knows files.
 import { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
@@ -11,16 +11,17 @@ import css from './images.css?inline';
 import { type FileChange, type Project } from '../../core/project/project';
 import { type PathReference, ProjectPath } from '../../core/paths/paths';
 import { uploadChanges } from '../../core/uploads/uploads';
-import { uploadTarget } from './model/model';
+import { IMAGE_FILES, imageBlob, isImage, uploadTarget } from './model/model';
 import { imagesVisualView, type ImageAssets, type ImageUrls } from './visual-view/visual-view';
-import { assetViews } from './workbench/workbench';
+import { assetEditor } from './workbench/workbench';
 
 export { imagesVisualView, type ImageAssets, type ImageLinks, type ImageUrls } from './visual-view/visual-view';
 
 /**
  * Images in every document's Visual view (`#image(..)` boxes showing the project's image file, "Insert image"
  * offering the project's images and uploads, which go through `Workbench.applyChange`; an image box's path is the
- * document link on it, from the workbench's link providers), and the read-only view of image and data files.
+ * document link on it, from the workbench's link providers), and the read-only view of image and other files: the
+ * custom editors `images.preview` (`*.{png,jpg,jpeg,gif,svg,webp}`) and `images.file` (`*`, any other file).
  */
 export function images(): TypstExtension {
   return {
@@ -31,8 +32,9 @@ export function images(): TypstExtension {
       const projectImages = new ProjectImages({ project, onDidChange: preview.onDidRender, request: (change) => workbench.applyChange(change) });
       subscriptions.push(
         new Disposable(() => projectImages.destroy()),
-        workbench.registerFileView('image', assetViews),
-        workbench.registerFileView('data', assetViews),
+        workbench.registerCustomEditorProvider('images.preview', assetEditor, { filenamePattern: IMAGE_FILES }),
+        // any other file (`*` is the least specific pattern: every other editor's wins)
+        workbench.registerCustomEditorProvider('images.file', assetEditor, { filenamePattern: '*' }),
       );
       imagesVisualView({
         assets: (document) => projectImages.forDocument(document).assets,
@@ -86,12 +88,12 @@ export class ProjectImages {
       assets: {
         list: () => {
           const file = path();
-          return file ? project.paths().filter((p) => ProjectPath.kind(p) === 'image').map((p) => ProjectPath.referenceTo(file, p)) : [];
+          return file ? project.paths().filter((p) => isImage(p)).map((p) => ProjectPath.referenceTo(file, p)) : [];
         },
         upload: (upload) => this.upload(upload, path()),
         reference: (image) => {
           const file = path();
-          return file && ProjectPath.kind(image) === 'image' && project.has(image) ? ProjectPath.referenceTo(file, image) : null;
+          return file && isImage(image) && project.has(image) ? ProjectPath.referenceTo(file, image) : null;
         },
       },
     };
@@ -103,13 +105,13 @@ export class ProjectImages {
   }
 
   private imageUrl(path: ProjectPath): string | null {
-    const content = ProjectPath.kind(path) === 'image' ? this.options.project.content(path) : undefined;
+    const content = isImage(path) ? this.options.project.content(path) : undefined;
     const cached = this.urls.get(path);
     if (cached?.content === content) return cached?.url ?? null;
     if (cached) URL.revokeObjectURL(cached.url);
     this.urls.delete(path);
     if (content === undefined) return null;
-    const url = URL.createObjectURL(ProjectPath.imageBlob(path, content));
+    const url = URL.createObjectURL(imageBlob(path, content));
     this.urls.set(path, { content, url });
     return url;
   }
@@ -117,7 +119,7 @@ export class ProjectImages {
   private async upload(upload: File, file: ProjectPath | undefined): Promise<{ path: PathReference } | { error: string }> {
     if (!file) return { error: 'This document is no longer part of the project.' };
     const [change] = await uploadChanges([upload]);
-    if (change?.kind !== 'create' || ProjectPath.kind(change.path) !== 'image') {
+    if (change?.kind !== 'create' || !isImage(change.path)) {
       return { error: `${upload.name} is not an image the document can show (PNG, JPEG, GIF, SVG or WebP).` };
     }
     const { project, request } = this.options;
