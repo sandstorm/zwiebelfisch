@@ -265,8 +265,9 @@
 .typst-visual__raw--rendered { background: transparent; }
 .typst-visual__rendering { display: block; max-width: 100%; height: auto; cursor: text; }
 .typst-visual__raw-block:not(.typst-visual__image) > .typst-visual__rendering { margin: 0 auto; }
-/* Image files show at their own size: keep a big photo from filling the whole view (aspect kept) */
-.typst-visual__image > .typst-visual__rendering { max-height: 24em; }
+/* Image files show at their own size: keep a big photo from filling the whole view (aspect kept;
+   the picture sits in the image frame, so not a direct child) */
+.typst-visual__image .typst-visual__rendering { max-height: min(24em, 40vh); object-fit: contain; }
 /* An inline snippet is sized in em of the text around it (see inlinePictureSize), so its box takes
    that text's size, not the code chip's; a squeezed one keeps its aspect */
 .typst-visual__raw-inline.typst-visual__raw--rendered { font-size: inherit; }

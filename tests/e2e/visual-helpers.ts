@@ -49,6 +49,30 @@ export async function caretAtEnd(block: Locator): Promise<void> {
 }
 
 /**
+ * Clicks into `block` and selects the first occurrence of `text` in it (within
+ * one text node), then waits until ProseMirror has seen the selection (as
+ * `caretAtEnd`). Not Home + arrow keys: Home is no line start in Firefox and
+ * WebKit on macOS.
+ */
+export async function selectText(block: Locator, text: string): Promise<void> {
+  await clickAndSettle(block);
+  await block.evaluate(async (element, text) => {
+    const doc = element.ownerDocument;
+    const walker = doc.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let node: Node | null;
+    while ((node = walker.nextNode()) && !node.textContent!.includes(text));
+    if (!node) throw new Error(`no text "${text}"`);
+    const start = node.textContent!.indexOf(text);
+    const seen = new Promise((resolve) => {
+      doc.addEventListener('selectionchange', resolve, { once: true });
+      setTimeout(resolve, 200);
+    });
+    doc.getSelection()!.setBaseAndExtent(node, start, node, start + text.length);
+    await seen;
+  }, text);
+}
+
+/**
  * Clicks `target` in the Visual view and waits out ProseMirror's 20 ms focus
  * timer (see `caretAtEnd`), so caret keys pressed next (Home, arrows) are not
  * undone halfway through by ProseMirror writing its own selection back.
@@ -67,6 +91,9 @@ export async function freshSelectedLine(page: Page): Promise<void> {
   // nothing, Firefox on macOS: to the document start); extend the selection explicitly.
   for (let i = 0; i < 'Fresh line'.length; i++) await page.keyboard.press('Shift+ArrowLeft');
   await expect.poll(selectedText(page)).toBe('Fresh line');
+  // ProseMirror reads the DOM selection on `selectionchange`, after the DOM has it: commands run
+  // right now (Mod+K) could still see part of it (Chromium linked "h line")
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 20))));
 }
 
 /**

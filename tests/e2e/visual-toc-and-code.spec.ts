@@ -1,7 +1,7 @@
 // End-to-end tests (Playwright, against the demo build): outlines and code blocks in the Visual view.
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
-import { caretAtEnd, clickAndSettle } from './visual-helpers';
+import { caretAtEnd, selectText } from './visual-helpers';
 
 type Editor = HTMLElement & { value: string };
 
@@ -49,10 +49,7 @@ test('Code block turns the current paragraph into a fenced block', async ({ page
 test('Code marks the selection as inline code, printed in backticks', async ({ page }) => {
   await load(page, 'Call print now\n');
   const paragraph = visual(page).locator('p').first();
-  await clickAndSettle(paragraph);
-  await page.keyboard.press('Home');
-  for (let i = 0; i < 'Call '.length; i++) await page.keyboard.press('ArrowRight');
-  for (let i = 0; i < 'print'.length; i++) await page.keyboard.press('Shift+ArrowRight');
+  await selectText(paragraph, 'print');
   await toolbar(page).getByRole('button', { name: 'Code', exact: true }).click();
   await expect(paragraph.locator('code')).toHaveText('print');
   await expect.poll(value(page)).toBe('Call `print` now\n');

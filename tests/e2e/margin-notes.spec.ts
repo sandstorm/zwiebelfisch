@@ -202,8 +202,9 @@ test('in the Source view, Comment (in the tab bar) wraps the selection and puts 
   await page.getByRole('tab', { name: 'Source' }).click();
   const source = page.getByTestId('typst-source');
   await source.locator('.cm-line', { hasText: 'This is' }).click();
-  await page.keyboard.press('Home');
-  await page.keyboard.press('Shift+End');
+  // CodeMirror's Home / End stop at the wrap points of a wrapped line first: repeat to reach its ends
+  for (let i = 0; i < 3; i++) await page.keyboard.press('Home');
+  for (let i = 0; i < 3; i++) await page.keyboard.press('Shift+End');
   await sourceCommentButton(page).click();
   await page.keyboard.type('Whole sentence?');
   await expect.poll(sourceText(page)).toMatch(/#margin-note\[This is .*\]\[Whole sentence\?\]/);

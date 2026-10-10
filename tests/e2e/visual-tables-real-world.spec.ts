@@ -1,16 +1,17 @@
 // End-to-end tests (Playwright, against the demo build): real-world tables in the Visual view (expression cells, table figures).
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
+import { caretAtEnd } from './visual-helpers';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
 const visual = (page: Page) => page.locator('[data-testid=typst-visual]:visible');
 const toolbar = (page: Page) => page.locator('[role=toolbar][aria-label=Formatting]:visible');
 
-/** The text of `path` in the editor's project. */
+/** The text of `path` in the demo's project (the demo page has no <typst-editor>: `window.editor`). */
 const fileText = (page: Page, path: string) => () =>
-  page.locator('typst-editor').evaluate((el: Editor, path) => {
-    const file = el.files[path];
+  page.evaluate((path) => {
+    const file = (window as unknown as { editor: Editor }).editor.files[path];
     return typeof file === 'string' ? file : new TextDecoder().decode(file);
   }, path);
 
@@ -24,16 +25,19 @@ test.describe('a table with expression cells (plain page, boxes rendered)', () =
     await page.locator('typst-editor').evaluate((el: Editor, source) => (el.value = source), SOURCE);
   });
 
-  test('is a Visual table: header cells, the expression a compiled box', async ({ page }) => {
+  // `ms(18)` is drawn by the body of `ms`: its glyphs carry spans there, not in the cell, so the
+  // preview has no picture for the cell's range and the box shows its code (followups-2026-10-10)
+  test('is a Visual table: header cells, the expression an editable code box', async ({ page }) => {
     const table = page.getByTestId('typst-visual').locator('table');
     await expect(table.locator('th')).toHaveText(['Pages', 'Cold']);
     const box = table.locator('td .typst-visual__raw-inline');
-    await expect(box.locator('img.typst-visual__rendering')).toBeVisible();
+    await expect(box.locator('.cm-content')).toHaveText('ms(18)');
+    await expect(box.locator('img.typst-visual__rendering')).toBeHidden();
   });
 
   test("editing the expression's code changes only it", async ({ page }) => {
     const box = page.getByTestId('typst-visual').locator('td .typst-visual__raw-inline');
-    await box.locator('img.typst-visual__rendering').click();
+    await box.locator('.cm-content').click();
     await page.keyboard.press('End');
     await page.keyboard.press('ArrowLeft');
     await page.keyboard.type('0');
@@ -60,8 +64,7 @@ test.describe('the advanced example', () => {
   test('typing in a cell or the caption changes only that; Add row keeps the indentation', async ({ page }) => {
     const before = await fileText(page, RESULTS)();
     const figure = visual(page).locator('figure').filter({ has: page.locator('table') });
-    await figure.locator('td', { hasText: '68.3×' }).locator('p').click();
-    await page.keyboard.press('End');
+    await caretAtEnd(figure.locator('td', { hasText: '68.3×' }).locator('p'));
     await page.keyboard.type('!');
     await expect.poll(fileText(page, RESULTS)).toBe(before.replace('[68.3×]', '[68.3×!]'));
     await toolbar(page).getByRole('button', { name: 'Add row' }).click();

@@ -58,9 +58,13 @@ test('highlights the clicked text in the preview', async ({ page }) => {
   const highlight = pages(page).first().locator('.typst-preview__highlight');
   await expect(highlight).toBeVisible();
   const box = (await highlight.boundingBox())!;
-  const glyph = (await pages(page).locator('svg use').first().boundingBox())!;
-  expect(box.x).toBeLessThanOrEqual(glyph.x + 1);
-  expect(box.x + box.width).toBeGreaterThan(glyph.x + glyph.width - 1);
+  // the glyph's origin, not its bounding box: Firefox reports a size-less <use> as large as the page
+  const origin = await pages(page).locator('svg use').first().evaluate((use: SVGUseElement) => {
+    const local = new DOMPoint(use.x.baseVal.value + 3, use.y.baseVal.value);
+    return local.matrixTransform((use.parentNode as SVGGraphicsElement).getScreenCTM()!).x;
+  });
+  expect(box.x).toBeLessThanOrEqual(origin);
+  expect(box.x + box.width).toBeGreaterThan(origin);
   // regression: the outline must be the clicked text, never the whole page
   const pageBox = (await pages(page).first().boundingBox())!;
   expect(box.height).toBeLessThan(pageBox.height / 4);
