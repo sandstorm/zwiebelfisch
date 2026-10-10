@@ -67,3 +67,4 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [collab-markers](collab-markers.md) | done (branch task/collab-markers) |
 | [comment-replies](comment-replies.md) | open |
 | [notes-pdf](notes-pdf.md) | open |
+| [labels-and-references](labels-and-references.md) | open |
