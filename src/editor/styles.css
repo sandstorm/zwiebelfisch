@@ -151,6 +151,36 @@
 .typst-visual__raw-block:focus-within,
 .typst-visual__raw-inline:focus-within { background: white; box-shadow: 0 0 0 2px var(--te-accent); color: #24292f; }
 .typst-visual .ProseMirror-selectednode { outline: 2px solid var(--te-accent); }
+.typst-visual__link { color: var(--te-accent); text-decoration: underline; cursor: text; }
+.typst-visual__image-label {
+  margin-bottom: 2px;
+  font: 600 12px system-ui, sans-serif;
+  color: #3d4451;
+}
+.typst-visual__table { border-collapse: collapse; margin: 0 0 0.7em; table-layout: fixed; }
+.typst-visual__table td,
+.typst-visual__table th { min-width: 3em; padding: 2px 8px; border: 1px solid var(--te-border); vertical-align: top; }
+.typst-visual__table td > :last-child,
+.typst-visual__table th > :last-child { margin-bottom: 0; }
+.typst-visual__table .selectedCell { background: #e3ecfd; }
+.typst-popover {
+  position: absolute;
+  top: 100%;
+  z-index: 2;
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--te-border);
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.12);
+  font: 13px system-ui, sans-serif;
+}
+.typst-popover[hidden] { display: none; }
+.typst-popover input { width: 260px; padding: 4px 6px; border: 1px solid var(--te-border); border-radius: 4px; font: inherit; }
+.typst-popover button { padding: 4px 10px; border: 1px solid var(--te-border); border-radius: 4px; background: #f6f8fa; font: inherit; cursor: pointer; }
+.typst-popover button[type='submit'] { border-color: var(--te-accent); background: var(--te-accent); color: white; }
+.typst-popover button[hidden] { display: none; }
 .typst-preview--stale { opacity: 0.45; filter: grayscale(0.6); transition: opacity 0.2s; }
 .typst-status {
   grid-column: 1 / -1;
