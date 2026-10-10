@@ -557,10 +557,6 @@ export interface ToolbarContext extends VisualViewContext {
   readonly root: HTMLElement;
   /** Disposed with the toolbar: popovers, listeners, plugins an item adds. */
   readonly subscriptions: Disposable[];
-  /** The element of group `id`: a floating bar (to hold a popover of its item), a menu, a group; null if not shown. */
-  element(group: string): HTMLElement | null;
-  /** Shows every button's state anew and places the floating bars. */
-  refresh(): void;
 }
 
 /** A button (or control) in toolbar group `group`, sorted by `order` (then registration order). */

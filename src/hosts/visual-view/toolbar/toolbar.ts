@@ -20,7 +20,6 @@ export class Toolbar {
   private readonly root: HTMLElement;
   private readonly refreshers: (() => void)[] = [];
   private readonly refresh = () => this.refreshers.forEach((fn) => fn());
-  private readonly elements = new Map<string, HTMLElement>();
   private readonly subscriptions: Disposable[] = [];
   private readonly destroyers: (() => void)[] = [];
 
@@ -63,18 +62,7 @@ export class Toolbar {
 
   /** What items made for this view get. */
   private context(view: VisualViewContext): ToolbarContext {
-    return {
-      document: view.document,
-      selection: () => view.selection(),
-      sourceToPos: view.sourceToPos,
-      posToSource: view.posToSource,
-      isBox: view.isBox,
-      editor: this.editor,
-      root: this.root,
-      subscriptions: this.subscriptions,
-      element: (group) => this.elements.get(group) ?? null,
-      refresh: () => this.refresh(),
-    };
+    return { ...view, editor: this.editor, root: this.root, subscriptions: this.subscriptions };
   }
 
   /** The items' buttons and controls by group, each group's sorted by `order` (then as registered). */
@@ -99,10 +87,8 @@ export class Toolbar {
       this.refreshers.push(() => menu.refresh());
       this.destroyers.push(() => menu.destroy());
       wrapper.append(menu.element);
-      this.elements.set(group.id, menu.element);
     } else {
       wrapper.append(...entries.map((entry) => (isAction(entry) ? this.button(entry) : this.control(entry))));
-      this.elements.set(group.id, wrapper);
     }
     this.root.append(wrapper);
   }
@@ -126,7 +112,6 @@ export class Toolbar {
       const actions = (entries.get(group.id) ?? []).filter(isAction);
       if (actions.length === 0) continue;
       const bar = new FloatingBar(container, group.label, actions.map((action) => this.button(action)));
-      this.elements.set(group.id, bar.element);
       this.destroyers.push(() => bar.destroy());
       const earlier = [...bars];
       const focused = () => this.editor.isFocused || bar.element.contains(bar.element.ownerDocument.activeElement);

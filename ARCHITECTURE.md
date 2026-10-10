@@ -810,8 +810,8 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
 - **Per view**: providers get a `VisualViewContext` (`document`, `selection()`, `sourceToPos(doc, offset, bias?)` /
   `posToSource(doc, pos, bias?)`: the position map over a document node of the view, e.g. a transaction's;
   `isBox(node)`: shown as a box of its own); a toolbar item's
-  `create(toolbar)` gets the `ToolbarContext` (the editor, the toolbar's root, `subscriptions`
-  disposed with it, `element(group)`, `refresh()`). Contributions are registered once and applied
+  `create(toolbar)` gets the `ToolbarContext` (the view's context, the editor, the toolbar's root, `subscriptions`
+  disposed with it). Contributions are registered once and applied
   to every view created afterwards.
 - **Schema** (the host's `nodes/nodes.ts` and the built-ins' specs):
   - **Blocks:** `paragraph`, `heading`, and `bulletList` / `orderedList` > `listItem` (a `marker`
