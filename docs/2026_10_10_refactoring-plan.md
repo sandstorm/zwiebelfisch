@@ -21,6 +21,7 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
 | `d4641ef`..`4cf2443` | Wave 1: presence out of core + hosts; `registerDocumentLinkProvider` (merged, priority) read by both views; `preview-sync`; no services (`registerFileDecorationProvider`, `registerSourceControl`, `versions` → `source-control`, "Save to GitLab…"); one "Download PDF" + options popover, `registerPdfExportOption`, `exportPdf({ options })`; IronCalc dark mode (palette from tokens, resize nudge redraws the canvas) |
 | `6f11f47`..`2399f41` | Wave 2: public extension API `createTypstEditor({ extensions: (builtins) => [...], settings })`; settings via `contributes.configuration` + `workspace.getConfiguration` (`pdfExport.download`, `files.panel`, `previewSync.followCursor`, `workbench.theme`); string async commands; `<typst-editor settings='{…}'>` thin adapter; preview toolbar `group` + `order`; UI services: messages, `showInputBox` / `showQuickPick` (FieldPopover deleted), `registerMenuItem` (`editor/title`, `file/newFile`, `explorer/context`) |
 | `23a1013`..wave-3 merge | Wave 3: custom editors (`registerCustomEditorProvider(viewType, provider, { filenamePattern, priority })`, `FileKind` gone → `ProjectPath.isTypst`); `diagrams` extension (`.drawio.png` in embedded diagrams.net, auto-save, dark mode, "New diagram…", "Edit diagram" via generic `registerBoxAction`); "New spreadsheet…"; one `PdfEntry` in `core/typst-engine`; status bar `alignment` + `priority`; source-control wiring test; collab e2e checks file decorations |
+| `7938ea3`..`cfe3430` | Rules wave: events `onDid…: Event`; Yjs out of core (collaboration's `TextBinding`, per-user undo in collaboration); `Highlight` → visual-view host; `core/typst-syntax`, `core/typst-packages`, `core/engine-assets`, `hosts/projection`; no DOM in core (lint); module boundaries (20 thin entries gone); re-exports 275 → 0 outside `src/index.ts` (`local/no-re-exports`); layer lint (`local/dependencies`); `quality:module-cycles` |
 
 ## Next steps, in order
 
@@ -130,7 +131,7 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Rules wave also does:** core `onChange` → `onDidChange: Event` + `Disposable` everywhere
    (`Project`, `TypstDocument`, …) (user: yes).
-4. **Lessons doc**: write `docs/2026_10_10_code-conventions.md` from "Decisions and conventions"
+4. **Lessons doc** (written: [2026_10_11_code-conventions.md](2026_10_11_code-conventions.md)): write it from "Decisions and conventions"
    below (refined), then **spawn subagents** (the user asked for it; workflow guideline < 10 agents)
    to check the rest of the codebase against it, one area each (core, visual-view, source-view +
    preview, files + collaboration + versions, widget + element + demo, server), and fix what they find.
