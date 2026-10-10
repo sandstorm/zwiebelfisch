@@ -135,6 +135,23 @@
 .typst-visual h1 { font-size: 1.6em; margin: 0.6em 0 0.3em; }
 .typst-visual h2 { font-size: 1.3em; margin: 0.6em 0 0.3em; }
 .typst-visual p { margin: 0 0 0.7em; }
+/* Heading numbers (from #set heading(numbering: ..)) in a gutter right of the text; not editable */
+.typst-visual--numbered { padding-right: 6em; }
+.typst-visual__numbered-heading { position: relative; }
+.typst-visual__numbered-heading::after {
+  content: attr(data-heading-number);
+  position: absolute;
+  top: 0;
+  left: 100%;
+  margin-left: 0.75em;
+  font-size: 0.8em;
+  font-weight: normal;
+  line-height: 1.9;
+  color: #8c959f;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
 .typst-visual__raw-block {
   margin: 0 0 0.7em;
   padding: 4px 8px;
@@ -320,6 +337,27 @@
 .typst-visual__table td > :last-child,
 .typst-visual__table th > :last-child { margin-bottom: 0; }
 .typst-visual__table .selectedCell { background: #e3ecfd; }
+.typst-visual__page-break {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0.4em 0 1.1em;
+  color: #6e7781;
+  font: 600 11px system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.typst-visual__page-break::before,
+.typst-visual__page-break::after { content: ''; flex: 1; border-top: 1px dashed currentColor; }
+.typst-visual__rule { padding: 0.4em 0 1.1em; }
+.typst-visual__quote { margin: 0 0 0.7em; padding: 0 0 0 1em; border-left: 3px solid var(--te-border); color: #3d4451; }
+.typst-visual__quote > :last-child { margin-bottom: 0; }
+.typst-visual ul[data-type='taskList'] { list-style: none; padding-left: 0.3em; }
+.typst-visual ul[data-type='taskList'] > li { display: flex; gap: 0.5em; align-items: baseline; }
+.typst-visual ul[data-type='taskList'] > li > label { flex: none; }
+.typst-visual ul[data-type='taskList'] > li > div { flex: 1; min-width: 0; }
+.typst-visual ul[data-type='taskList'] > li > div > p { margin: 0; }
+.typst-visual__rule hr { margin: 0; border: none; border-top: 1px solid #24292f; }
 .typst-popover {
   position: absolute;
   top: 100%;

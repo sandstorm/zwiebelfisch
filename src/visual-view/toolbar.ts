@@ -4,23 +4,8 @@ import { ImageChoices, type ImageAssets } from './image-choices';
 import type { Plugin } from '@tiptap/pm/state';
 import { imageFileDrops, insertImages } from './image-insertion';
 import { textAlignAt, type TextAlignment } from './text-align';
-
-/** A toolbar button: how it looks, what it does, and when it shows as on. */
-interface Action {
-  label: string;
-  /** Shortcut shown in the tooltip; `Mod` becomes ⌘ or Ctrl. */
-  shortcut?: string;
-  icon: string;
-  /** The command; also decides, dry-run, whether the button is enabled. */
-  run(chain: ChainedCommands): ChainedCommands;
-  /** Instead of running the command, e.g. to ask for a value first. */
-  click?(button: HTMLButtonElement): void;
-  /** Toggles show their state (`aria-pressed`); plain actions (undo) do not. */
-  active?(editor: Editor): boolean;
-}
-
-const svg = (body: string) =>
-  `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+import { svg, type Action } from './toolbar-action';
+import { BLOCKS as QUOTE_AND_TASKS, BREAKS, HEADER_ROW, NUMBERED_HEADINGS } from './toolbar-blocks';
 
 const ICONS = {
   undo: svg('<path d="M9 15 4 10l5-5"/><path d="M4 10h11a5 5 0 0 1 0 10h-3"/>'),
@@ -60,7 +45,7 @@ const MARKS: Action[] = [
   { label: 'Italic', shortcut: 'Mod+I', icon: ICONS.italic, run: (c) => c.toggleItalic(), active: (e) => e.isActive('italic') },
   { label: 'Code', shortcut: 'Mod+E', icon: ICONS.code, run: (c) => c.toggleCode(), active: (e) => e.isActive('code') },
 ];
-const BLOCKS: Action[] = [
+const LISTS: Action[] = [
   { label: 'Bulleted list', icon: ICONS.bulletList, run: (c) => c.toggleBulletList(), active: (e) => e.isActive('bulletList') },
   { label: 'Numbered list', icon: ICONS.orderedList, run: (c) => c.toggleOrderedList(), active: (e) => e.isActive('orderedList') },
   { label: 'Code block', icon: ICONS.codeBlock, run: (c) => c.toggleCodeBlock(), active: (e) => e.isActive('codeBlock') },
@@ -177,10 +162,13 @@ export class Toolbar {
     this.root.append(
       this.group(HISTORY),
       this.styleMenu(),
+      this.group([NUMBERED_HEADINGS]),
       this.group([...MARKS, link]),
-      this.group(BLOCKS),
+      this.group(LISTS),
+      this.group(QUOTE_AND_TASKS),
       this.group(ALIGNMENTS),
-      this.group([image, OUTLINE, ...TABLES]),
+      this.group([image, OUTLINE, ...TABLES, HEADER_ROW]),
+      this.group(BREAKS),
     );
     parent.prepend(this.root);
     editor.view.dom.addEventListener('keydown', this.linkShortcut);

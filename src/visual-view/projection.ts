@@ -28,6 +28,9 @@
  * `drafting` margin notes become a `marginNote` atom
  * (`#margin-note(..)[note]`) or, for `#margin-note(..)[text][note]`, a
  * `noteRange` mark over the projected text that holds the call and the note.
+ * Block nodes (see `call-atoms.ts`): `table.header(..)` rows as header
+ * cells, `#quote(block: true)[..]` as block quotes, `- [ ]` / `- [x]` items as
+ * task items, and `#pagebreak()` / full-width `#line(..)` as atoms.
  */
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
@@ -38,6 +41,7 @@ import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from './raw-code';
 export { codeLanguage } from './raw-code';
 import { alignArgs } from './alignment';
 import { noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../document/margin-note-syntax';
+import { callAtomType } from './call-atoms';
 
 /**
  * Nodes created by `project` and not modified since. ProseMirror nodes are
@@ -192,12 +196,10 @@ function toBlock(ctx: Context, segment: Segment, sep: string | null): Node {
   const [node] = segment.nodes;
   const src = ctx.source.slice(segment.from, segment.to);
   switch (segment.kind) {
-    case 'heading': {
-      const level = Math.min(6, (node.getChild('HeadingMarker')?.to ?? node.from + 1) - node.from);
-      const markup = node.getChild('Markup');
-      return textblock(ctx, { type: 'heading', attrs: { level, src, sep } }, segment.from, markup ? inline(ctx, children(markup)) : []);
-    }
+    case 'heading':
+      return heading(ctx, node, sep);
     case 'bullet':
+      return taskItem(ctx, node, sep) ?? listItem(ctx, node, sep);
     case 'ordered':
       return listItem(ctx, node, sep);
     case 'run':
@@ -225,6 +227,13 @@ function codeBlock(ctx: Context, node: SyntaxNode, sep: string | null): Node | n
   return textblock(ctx, { type: 'codeBlock', attrs, contentTo: code.to }, node.from, content);
 }
 
+function heading(ctx: Context, node: SyntaxNode, sep: string | null): Node {
+  const level = Math.min(6, (node.getChild('HeadingMarker')?.to ?? node.from + 1) - node.from);
+  const markup = node.getChild('Markup');
+  const src = ctx.source.slice(node.from, node.to);
+  return textblock(ctx, { type: 'heading', attrs: { level, src, sep } }, node.from, markup ? inline(ctx, children(markup)) : []);
+}
+
 /** Calls that belong in running text: `link(..)`, which is prose like a bare URL, and margin notes. */
 function isProseCall(ctx: Context, node: SyntaxNode): boolean {
   if (node.name !== 'FuncCall') return false;
@@ -243,13 +252,45 @@ function callee(ctx: Context, call: SyntaxNode): { name: string; args: SyntaxNod
   return { name: ident ? ctx.source.slice(ident.from, ident.to) : '', args: args ? children(args) : [] };
 }
 
-/** A run that is exactly one `#func(..)` call of a function modelled as a block (image, outline, table, figure with a label, align, par). */
+/** A run that is exactly one `#func(..)` call of a function modelled as a block (image, outline, table, figure with a label, align, par, quote, call atoms). */
 function blockCall(ctx: Context, segment: Segment, sep: string | null): Node | null {
   const [hash, call, ...rest] = segment.nodes;
   if (hash.name !== 'Hash' || call?.name !== 'FuncCall' || call.from !== hash.to) return null;
   const { name, args } = callee(ctx, call);
   const ends = name === 'figure' ? isLabelAfter(rest) : rest.length === 0;
-  return name in BLOCK_CALLS && ends ? BLOCK_CALLS[name](ctx, segment, args, sep) : null;
+  if (!ends) return null;
+  const projected = BLOCK_CALLS[name]?.(ctx, segment, args, sep);
+  if (projected) return projected;
+  const atom = callAtomType(name, args, (n) => ctx.source.slice(n.from, n.to));
+  return atom ? ctx.schema.nodes[atom].create({ src: ctx.source.slice(segment.from, segment.to), sep }) : null;
+}
+
+/** How a block quote's source lies around its content: `#quote(..)[` and `]`, with any whitespace inside. */
+interface QuoteLayout {
+  open: string;
+  close: string;
+}
+
+const NEW_QUOTE: QuoteLayout = { open: '#quote(block: true)[', close: ']' };
+
+/** `#quote(block: true, ..named)[content]`: a blockquote whose content is segmented like the document. */
+function blockquote(ctx: Context, call: Segment, args: SyntaxNode[], sep: string | null): Node | null {
+  const content = args.at(-1)!;
+  const parens = args.slice(0, -1);
+  if (!parenthesized(parens) || !isClosedContent(content) || !isBlockQuoteArgs(ctx, parens.slice(1, -1))) return null;
+  const markup = content.getChild('Markup')!;
+  const segments = segment(children(markup));
+  const from = segments[0]?.from ?? markup.from;
+  const to = segments.at(-1)?.to ?? markup.from;
+  const blocksInside = segments.length > 0 ? blocks(ctx, segments) : [textblock(ctx, { type: 'paragraph', attrs: { src: '' } }, from, [])];
+  const layout: QuoteLayout = { open: ctx.source.slice(call.from, from), close: ctx.source.slice(to, call.to) };
+  return ctx.schema.nodes.blockquote.create({ sep, layout }, blocksInside);
+}
+
+/** Named arguments only, `block: true` among them. */
+function isBlockQuoteArgs(ctx: Context, args: SyntaxNode[]): boolean {
+  const named = args.filter((a) => a.name !== 'Space' && a.name !== 'Comma');
+  return named.every((a) => a.name === 'Named') && named.some((a) => /^block\s*:\s*true$/.test(ctx.source.slice(a.from, a.to)));
 }
 
 /** Nothing, or one label after optional spaces. */
@@ -358,6 +399,7 @@ const BLOCK_CALLS: Record<string, (ctx: Context, call: Segment, args: SyntaxNode
   figure: (ctx, call, args, sep) => figure(ctx, call, args, sep),
   align: (ctx, call, args, sep) => alignment(ctx, call, args, sep),
   par: (ctx, call, args, sep) => justified(ctx, call, args, sep),
+  quote: (ctx, call, args, sep) => blockquote(ctx, call, args, sep),
 };
 
 /** How a table's source lies around its cells, for printing it back. */
@@ -367,25 +409,32 @@ interface TableLayout {
   gaps: string[];
   /** Named arguments other than `columns`, as written. */
   named: string[];
+  /** The first row is a `table.header(..)`. */
+  header: boolean;
 }
 
-/** `#table(columns: n, [..], ..)` whose positional arguments are all content blocks filling n columns. */
+/**
+ * `#table(columns: n, [..], ..)` whose positional arguments are all content
+ * blocks filling n columns, optionally starting with a one-row
+ * `table.header([..], ..)`.
+ */
 function table(ctx: Context, call: Segment, args: SyntaxNode[], sep: string | null): Node | null {
   const parsed = tableArgs(ctx, args);
   if (!parsed || parsed.cells.length === 0 || parsed.cells.length % parsed.columns !== 0) return null;
+  if (parsed.header !== 0 && parsed.header !== parsed.columns) return null;
   const { schema, source } = ctx;
   const gaps: string[] = [];
   let pos = call.from;
-  const cells = parsed.cells.map((block) => {
+  const cells = parsed.cells.map((block, index) => {
     const { content, from, to } = contentBlocks(ctx, block);
     gaps.push(source.slice(pos, from));
     pos = to;
-    return schema.nodes.tableCell.create(null, content);
+    return (index < parsed.header ? schema.nodes.tableHeader : schema.nodes.tableCell).create(null, content);
   });
   gaps.push(source.slice(pos, call.to));
   const rows: Node[] = [];
   for (let i = 0; i < cells.length; i += parsed.columns) rows.push(schema.nodes.tableRow.create(null, cells.slice(i, i + parsed.columns)));
-  const layout: TableLayout = { columns: parsed.columns, gaps, named: parsed.named };
+  const layout: TableLayout = { columns: parsed.columns, gaps, named: parsed.named, header: parsed.header > 0 };
   return schema.nodes.table.create({ sep, layout }, rows);
 }
 
@@ -430,16 +479,40 @@ function justified(ctx: Context, call: Segment, args: SyntaxNode[], sep: string 
   return textblock(ctx, { type: 'paragraph', attrs }, call.from, inline(ctx, content));
 }
 
-/** The arguments of a table call: an integer `columns`, other named arguments and closed content blocks only. */
-function tableArgs(ctx: Context, args: SyntaxNode[]): { columns: number; named: string[]; cells: SyntaxNode[] } | null {
+interface TableArgs {
+  columns: number;
+  named: string[];
+  /** Content blocks: the header's cells first. */
+  cells: SyntaxNode[];
+  /** How many of the cells are header cells. */
+  header: number;
+}
+
+/**
+ * The arguments of a table call: an integer `columns`, other named arguments
+ * and closed content blocks only, the first of them optionally in a
+ * `table.header(..)`.
+ */
+function tableArgs(ctx: Context, args: SyntaxNode[]): TableArgs | null {
   if (!parenthesized(args)) return null;
-  const result = { columns: 0, named: [] as string[], cells: [] as SyntaxNode[] };
+  const result: TableArgs = { columns: 0, named: [], cells: [], header: 0 };
   for (const arg of args.slice(1, -1)) {
     if (isClosedContent(arg)) result.cells.push(arg);
     else if (arg.name === 'Named') namedArg(ctx, arg, result);
-    else if (arg.name !== 'Space' && arg.name !== 'Comma') return null;
+    else if (!headerArg(ctx, arg, result) && arg.name !== 'Space' && arg.name !== 'Comma') return null;
   }
   return result.columns > 0 ? result : null;
+}
+
+/** Takes a `table.header([..], ..)` of closed content blocks before any cell as the header cells. */
+function headerArg(ctx: Context, arg: SyntaxNode, into: TableArgs): boolean {
+  const target = arg.name === 'FuncCall' ? arg.firstChild : null;
+  if (!target || ctx.source.slice(target.from, target.to) !== 'table.header' || into.cells.length > 0) return false;
+  const parts = children(arg.getChild('Args')!).filter((a) => !['LeftParen', 'RightParen', 'Space', 'Comma'].includes(a.name));
+  if (!parts.every(isClosedContent)) return false;
+  into.cells.push(...parts);
+  into.header = parts.length;
+  return true;
 }
 
 /** Whether an argument list is `(..)` alone: closed, and no trailing content block. */
@@ -479,6 +552,22 @@ function listItem(ctx: Context, node: SyntaxNode, sep: string | null): Node {
   );
 }
 
+/** `- [ ] text` / `- [x] text` (one paragraph, a space after the box): a task item; the box is hidden syntax. */
+function taskItem(ctx: Context, node: SyntaxNode, sep: string | null): Node | null {
+  const markup = node.getChild('Markup');
+  const box = markup ? TASK_BOX.exec(ctx.source.slice(markup.from, markup.to)) : null;
+  if (!markup || !box) return null;
+  const body = children(markup).filter((n) => n.from >= markup.from + box[0].length);
+  if (body.some((n) => n.name === 'Parbreak' || blockKind(n) !== null)) return null;
+  const from = markup.from + box[0].length;
+  const paragraph = textblock(ctx, { type: 'paragraph', attrs: { src: ctx.source.slice(from, markup.to) } }, from, inline(ctx, body));
+  const attrs = { marker: '-', checked: box[1] === 'x', src: ctx.source.slice(node.from, node.to), sep };
+  return pristineNode(ctx, 'taskItem', attrs, [paragraph]);
+}
+
+/** cheq's unchecked and checked boxes; others (`[/]`, `[-]`, …) stay text. */
+const TASK_BOX = /^\[([ x])\](?: |$)/;
+
 /** Wraps consecutive list items of the same kind into one list; the last item's separator moves to the list. */
 function groupLists(ctx: Context, blocks: Node[]): Node[] {
   const result: Node[] = [];
@@ -486,19 +575,24 @@ function groupLists(ctx: Context, blocks: Node[]): Node[] {
   const flush = () => {
     if (items.length === 0) return;
     const last = items.at(-1)!;
-    const listType = isOrdered(items[0]) ? ctx.schema.nodes.orderedList : ctx.schema.nodes.bulletList;
-    items[items.length - 1] = pristineNode(ctx, 'listItem', { ...last.attrs, sep: null }, last.content);
-    result.push(listType.create({ sep: last.attrs.sep }, items));
+    items[items.length - 1] = pristineNode(ctx, last.type.name, { ...last.attrs, sep: null }, last.content);
+    result.push(ctx.schema.nodes[listType(items[0])].create({ sep: last.attrs.sep }, items));
     items = [];
   };
   for (const block of blocks) {
-    const isItem = block.type.name === 'listItem';
-    if (!isItem || (items.length > 0 && isOrdered(items[0]) !== isOrdered(block))) flush();
+    const isItem = block.type.name === 'listItem' || block.type.name === 'taskItem';
+    if (!isItem || (items.length > 0 && listType(items[0]) !== listType(block))) flush();
     if (isItem) items.push(block);
     else result.push(block);
   }
   flush();
   return result;
+}
+
+/** The list a projected item belongs in. */
+function listType(item: Node): string {
+  if (item.type.name === 'taskItem') return 'taskList';
+  return isOrdered(item) ? 'orderedList' : 'bulletList';
 }
 
 function isOrdered(item: Node): boolean {
@@ -830,39 +924,49 @@ function printBlocks(out: Printer, container: Node, start: number, defaultSep: s
   });
 }
 
-/** Atom blocks that print their `src` as is. */
-const VERBATIM_BLOCKS = new Set(['rawBlock', 'image', 'outline']);
-
 /** Prints `node`, which starts at document position `pos`. */
 function printBlock(out: Printer, node: Node, parent: Node, pos: number): void {
   const pristineLayout = pristine.get(node);
   if (pristineLayout) return printLayout(out, node, pristineLayout, pos + 1);
   if (pristine.has(node)) return printPristineItem(out, node, pos);
-  if (VERBATIM_BLOCKS.has(node.type.name)) return out.shown(node.attrs.src, 'atom', pos, pos + 1);
-  const structured = STRUCTURED_BLOCKS[node.type.name];
-  if (structured) return structured(out, node, pos);
-  switch (node.type.name) {
-    case 'heading':
-      out.hidden(`${'='.repeat(node.attrs.level)} `);
-      return printTextblock(out, node, pos);
-    case 'bulletList':
-    case 'orderedList':
-      return printBlocks(out, node, pos + 1, '\n');
-    case 'listItem':
-      return printListItem(out, node, parent, pos);
-    case 'codeBlock':
-      return printCodeBlock(out, node, pos);
-    default:
-      return printTextblock(out, node, pos);
-  }
+  if (isSourceAtom(node)) return out.shown(node.attrs.src, 'atom', pos, pos + 1);
+  (PRINT_BLOCK[node.type.name] ?? printTextblock)(out, node, pos, parent);
 }
 
-/** Blocks printed with source around their children. */
-const STRUCTURED_BLOCKS: Record<string, (out: Printer, node: Node, pos: number) => void> = {
-  table: (out, node, pos) => printTable(out, node, pos),
-  figure: (out, node, pos) => printFigure(out, node, pos),
-  alignment: (out, node, pos) => printAlignment(out, node, pos),
+type BlockPrinter = (out: Printer, node: Node, pos: number, parent: Node) => void;
+
+const printList: BlockPrinter = (out, list, pos) => printBlocks(out, list, pos + 1, '\n');
+
+/** Printers of edited (non-pristine) blocks by node type; any other block is a textblock. */
+const PRINT_BLOCK: Record<string, BlockPrinter> = {
+  heading: (out, heading, pos) => {
+    out.hidden(`${'='.repeat(heading.attrs.level)} `);
+    printTextblock(out, heading, pos);
+  },
+  bulletList: printList,
+  orderedList: printList,
+  taskList: printList,
+  listItem: (out, item, pos, list) => printListItem(out, item, list, pos),
+  taskItem: (out, item, pos) => printItem(out, item, pos, `- [${item.attrs.checked ? 'x' : ' '}] `),
+  table: (out, table, pos) => printTable(out, table, pos),
+  figure: (out, figure, pos) => printFigure(out, figure, pos),
+  alignment: (out, block, pos) => printAlignment(out, block, pos),
+  codeBlock: (out, block, pos) => printCodeBlock(out, block, pos),
+  blockquote: (out, quote, pos) => printQuote(out, quote, pos),
 };
+
+/** `#quote(block: true)[..]` around the quote's blocks, or the source around them as projected. */
+function printQuote(out: Printer, quote: Node, pos: number): void {
+  const { open, close }: QuoteLayout = quote.attrs.layout ?? NEW_QUOTE;
+  out.hidden(open);
+  printBlocks(out, quote, pos + 1, '\n\n');
+  out.closing(close);
+}
+
+/** A block shown as a whole and printed as its `src`: raw blocks, images, page breaks, rules. */
+function isSourceAtom(node: Node): boolean {
+  return node.isBlock && node.isAtom && typeof node.attrs.src === 'string';
+}
 
 /** A pristine textblock: its `src`, with the content positions its layout assigns. */
 function printLayout(out: Printer, block: Node, { runs, tail, closing }: InlineLayout, start: number): void {
@@ -912,7 +1016,12 @@ function printCodeBlock(out: Printer, block: Node, pos: number): void {
 function printListItem(out: Printer, item: Node, list: Node, pos: number): void {
   const ordered = list.type.name === 'orderedList';
   const keepMarker = item.attrs.marker !== null && ORDERED_MARKER.test(item.attrs.marker) === ordered;
-  out.hidden(`${keepMarker ? item.attrs.marker : ordered ? '+' : '-'} `);
+  printItem(out, item, pos, `${keepMarker ? item.attrs.marker : ordered ? '+' : '-'} `);
+}
+
+/** `prefix` (the marker), the first child, then further children on following lines, indented. */
+function printItem(out: Printer, item: Node, pos: number, prefix: string): void {
+  out.hidden(prefix);
   item.forEach((child, offset, index) => {
     if (index === 0) return printBlock(out, child, item, pos + 1 + offset);
     out.hidden('\n');
@@ -939,7 +1048,8 @@ interface PlacedCell {
 /**
  * A table: its source around unchanged cell content while it still has the
  * projected shape, so editing a cell changes just that cell; otherwise
- * `#table(columns: n, ..named, [..], ..)`, one row per line.
+ * `#table(columns: n, ..named, [..], ..)`, one row per line, the first in
+ * `table.header(..)` if its cells are header cells.
  */
 function printTable(out: Printer, table: Node, pos: number): void {
   const rows: PlacedCell[][] = [];
@@ -963,14 +1073,16 @@ function printTable(out: Printer, table: Node, pos: number): void {
   }
   out.hidden(`#table(\n  columns: ${rows[0].length},\n`);
   for (const arg of layout?.named ?? []) out.hidden(`  ${arg},\n`);
-  for (const row of rows) {
+  const header = isHeaderRow(rows[0]);
+  rows.forEach((row, r) => {
+    const [open, close] = r === 0 && header ? ['table.header(', ')'] : ['', ''];
     row.forEach((cell, i) => {
-      out.hidden(i === 0 ? '  [' : ', [');
+      out.hidden(i === 0 ? `  ${open}[` : ', [');
       printCell(cell);
       out.closing(']');
     });
-    out.hidden(',\n');
-  }
+    out.hidden(`${close},\n`);
+  });
   out.hidden(')');
 }
 
@@ -995,9 +1107,14 @@ function printFigure(out: Printer, figure: Node, pos: number): void {
   out.hidden(layout.rest);
 }
 
-/** Whether the table still has the rows and columns its source `layout` was made for. */
-function hasShape(rows: unknown[][], { columns, gaps }: TableLayout): boolean {
-  return rows.every((row) => row.length === columns) && rows.length * columns === gaps.length - 1;
+/** Whether the table still has the rows, columns and header its source `layout` was made for. */
+function hasShape(rows: PlacedCell[][], { columns, gaps, header }: TableLayout): boolean {
+  return rows.every((row) => row.length === columns) && rows.length * columns === gaps.length - 1 && isHeaderRow(rows[0]) === header;
+}
+
+/** A row of header cells only (Tiptap's header row). */
+function isHeaderRow(row: PlacedCell[]): boolean {
+  return row.every(({ cell }) => cell.type.name === 'tableHeader');
 }
 
 /** Typst syntax around a formatted span, by mark: e.g. `*…*`, or `#strong[…]` where delimiters would not work. */

@@ -10,6 +10,10 @@ import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table
 import StarterKit from '@tiptap/starter-kit';
 import { codeBlockView } from './code-block-view';
 import { MarginNote, NoteRange } from './margin-notes';
+import { HeadingNumbers } from './nodes/heading-numbers';
+import { HorizontalRule } from './nodes/horizontal-rule';
+import { PageBreak } from './nodes/page-break';
+import { ChecklistPreamble, TypstTaskItem, TypstTaskList } from './nodes/task-list';
 import { RawBoxNavigation, rawBoxView } from './raw-box';
 import { TextAlign } from './text-align';
 
@@ -24,8 +28,8 @@ import { TextAlign } from './text-align';
  *   children (the container owns trailing whitespace) and on nodes created in
  *   the editor (a default separator is printed);
  * - doc `lead`/`trail`: whitespace before the first / after the last block;
- * - table `layout`: how the table's source is laid out around its cells
- *   (owned by the projection);
+ * - table and blockquote `layout`: how the source is laid out around their
+ *   content (owned by the projection);
  * - code block `fence`: the backticks of its delimiters.
  *
  * A block whose anchors change (as every re-projected block's `src` does
@@ -52,7 +56,7 @@ const SourceAnchors = Extension.create({
       },
       { types: ['listItem'], attributes: { marker: { default: null, rendered: false } } },
       { types: ['codeBlock'], attributes: { fence: { default: 3, rendered: false } } },
-      { types: ['table'], attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } } },
+      { types: ['table', 'blockquote'], attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } } },
       { types: ['hardBreak'], attributes: { src: { default: '\\\n', rendered: false, keepOnSplit: false } } },
     ];
   },
@@ -265,7 +269,7 @@ export const extensions = [
   StarterKit.configure({
     document: false,
     listItem: false,
-    blockquote: false,
+    blockquote: { HTMLAttributes: { class: 'typst-visual__quote' } },
     code: false,
     codeBlock: false,
     horizontalRule: false,
@@ -284,6 +288,12 @@ export const extensions = [
   TypstCode,
   Figure,
   FigureCaption,
+  PageBreak,
+  HorizontalRule,
+  TypstTaskList,
+  TypstTaskItem,
+  ChecklistPreamble,
+  HeadingNumbers,
   TypstDocument,
   TypstListItem,
   SourceAnchors,

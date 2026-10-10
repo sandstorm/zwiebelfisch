@@ -427,8 +427,13 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     `figure.layout` (an anchor attribute) is the source around the two: `open`, caption
     `before`/`open`/`close`, and `rest` (other arguments, `)`, a label).
   - `codeBlock` (Tiptap's, `language` + anchor `fence`): plain text (no marks), edited in place.
-  - `table` > `tableRow` > `tableCell` (Tiptap's MIT table extensions, not resizable); cells hold
-    blocks. `table.layout` (an anchor attribute) is the source around the cells.
+  - `table` > `tableRow` > `tableCell` / `tableHeader` (Tiptap's MIT table extensions, not
+    resizable); cells hold blocks. `table.layout` (an anchor attribute) is the source around the
+    cells.
+  - `taskList` > `taskItem` (Tiptap's, `checked`; one paragraph, not nested; `nodes/task-list.ts`).
+  - `blockquote` (Tiptap's; holds blocks; `layout` is the source around its content).
+  - `pageBreak`, `horizontalRule` (atom blocks keeping their call as `src`, shown as a labelled
+    dashed divider / a rule; `nodes/page-break.ts`, `nodes/horizontal-rule.ts`).
   - `alignment` (`text-align.ts`): `#align(args)[blocks]`, content `block+`. `args` is the
     literal alignment as written; `layout` (an anchor) is the source around the blocks.
     Paragraphs have a `justify` attribute (`true` / `false` / `null`) for
@@ -448,17 +453,21 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - Headings and list items are blocks of their own.
   - Every other run up to a `Parbreak` becomes a paragraph if it contains prose (Text, Strong,
     Emph, inline raw, bare URLs, `#link` calls, …) — unless it is exactly one raw element Typst
-    shows as a block (3+ backticks around a line break), which is a `codeBlock`. Otherwise it is an
-    `image` if it is exactly one `#image("literal path", ..)` call, an `outline` if it is exactly
-    one `#outline(..)` call, a `figure` if it is one
+    shows as a block (3+ backticks around a line break), which is a `codeBlock`. Otherwise, if it
+    is exactly one call (`BLOCK_CALLS`, then `callAtomType` in `call-atoms.ts`): an `image` for
+    `#image("literal path", ..)`, an `outline` for `#outline(..)`, a `figure` for
     `#figure(image("literal path", ..), ..named)` (optionally followed by a label) whose
-    `caption: [..]`, if any, is one paragraph, a `table` if it is exactly one
+    `caption: [..]`, if any, is one paragraph, a `table` for
     `#table(columns: <int>, ..named, [..], ..)` whose positional arguments are all closed content
-    blocks filling whole rows, an `alignment` if it is exactly one
-    `#align(<literal alignment>)[..]` (`left|center|right|start|end`, optionally `+` one
-    vertical alignment), a paragraph with `justify` if it is exactly one
-    `#par(justify: <bool>)[one paragraph]`, and a `rawBlock` (`#set`, `#let`, display math,
-    figures, …) else. Alignment content is segmented like a table cell.
+    blocks filling whole rows (the first row may be a `table.header(..)` of content blocks: header
+    cells), an `alignment` for `#align(<literal alignment>)[..]` (`left|center|right|start|end`,
+    optionally `+` one vertical alignment), a paragraph with `justify` for
+    `#par(justify: <bool>)[one paragraph]`, a `blockquote` for `#quote(block: true, ..named)[..]`,
+    a `pageBreak` for `#pagebreak(..)`, a `horizontalRule` for `#line(length: 100%, ..)` without
+    `start`/`end`/`angle`; a `rawBlock` (`#set`, `#let`, display math, …) else. Alignment, quote
+    and table-cell content is segmented like the document.
+  - A bullet item `- [ ] text` / `- [x] text` (one paragraph) is a `taskItem`; the box is hidden
+    syntax. Consecutive items of the same list type (bullet, ordered, task) form one list.
   - Inline, `#link("plain string")[one paragraph]` puts a `link` mark on its projected content
     (the call syntax is hidden); a bare URL is text with a `link` mark whose `href` is the text.
     Other links stay `rawInline`.
@@ -494,8 +503,11 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     - an edited code block prints ```` ```lang\ntext\n``` ````, keeping its fence unless the text
       needs a longer one; the language is cut to what Typst reads as a tag (`codeLanguage`).
   - Tables print their `layout` gaps around the cells' blocks while they keep the projected shape
-    (so a cell edit changes only that cell), else canonically: `#table(\n  columns: n,\n`, the
-    other named arguments, one `[..], [..],` line per row, `)`. Images and outlines print `src`.
+    and header state (so a cell edit changes only that cell), else canonically:
+    `#table(\n  columns: n,\n`, the other named arguments, one `[..], [..],` line per row (the
+    first in `table.header(..)` if it is a header row), `)`. Block atoms with a `src` (raw blocks,
+    images, outlines, page breaks, rules) print it. A quote prints its `layout` (new:
+    `#quote(block: true)[` / `]`) around its blocks; a task item `- [x] ` / `- [ ] ` and its paragraph.
   - Figures print their layout around the image call and the caption, so each changes on its
     own; an added caption prints `, caption: [..]` right after the image call, a removed one
     drops its argument with the comma before it. Editor-made figures print
@@ -503,6 +515,7 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - Alignment blocks print their `layout` around their blocks, with only `#align(args)`
     re-printed when `args` changed. New ones print `#align(x)[A\n\nB]`. An edited paragraph with
     `justify` prints `#par(justify: x)[..]` around its inline content.
+  - Edited blocks are printed through `PRINT_BLOCK` (by node type; textblocks by default).
 - **Position map:** `sourceToPos(doc, offset, bias?)` / `posToSource(doc, pos, bias?)` map between
   source offsets (UTF-16) and document positions at character precision, for any doc (pristine,
   edited or synced).
@@ -525,9 +538,11 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - It then copies the attributes over (`setNodeMarkup`) and marks nodes pristine again wherever
     the target node was pristine.
 - **Toolbar** (`toolbar.ts`, created by `VisualView` above the editor): undo/redo, a text style
-  menu (normal text, heading 1–3), bold/italic/code (Mod+E)/link, bulleted/numbered list, code
-  block, insert image, table of contents (an `#outline()` block at the cursor), insert table,
-  add/delete row/column. Each entry is a row in a table of Tiptap chain commands; after
+  menu (normal text, heading 1–3), numbered headings, bold/italic/code (Mod+E)/link,
+  bulleted/numbered list, code block, task list, quote, text alignment, insert image, table of
+  contents (an `#outline()` block at the cursor), insert table, add/delete row/column, header row,
+  insert page break, horizontal rule (the block-node entries live in `toolbar-blocks.ts`; `Action`
+  in `toolbar-action.ts`). Each entry is a row in a table of Tiptap chain commands; after
   every transaction the buttons show `aria-pressed` and are disabled when `editor.can()` says no.
   Mousedown is cancelled, so the text keeps focus and selection.
   - Link (and Mod+K in the text) and insert image ask for a value in a `FieldPopover`
@@ -591,13 +606,30 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     label/other arguments → `#image(..)` again, else only the caption goes), `resizeImage`,
     `setImageAlt`. `image-call.ts` edits one argument of the call in place (replace the value,
     append after the last argument, or remove with the preceding comma).
+- **Input rules** (Tiptap's, plus ours): `> ` quote, `[ ] ` / `[x] ` task item; `---` (`—-`,
+  `___ `, `*** `) becomes a rule only when it is the whole paragraph, since `---` is an em dash in
+  Typst markup.
+- **Task lists need cheq** (`checklist-preamble.ts`): Typst has no checkboxes; the Universe package
+  cheq (pinned 0.4.0) draws `- [ ]` items as boxes under `#show: checklist`.
+  `ensureChecklistPreamble(tr)` adds what is missing of its import and show rule to the top-level
+  raw blocks, once; the `ChecklistPreamble` plugin calls it when a Visual edit (not a sync from the
+  source) adds a task item, as an appended transaction (same undo step).
+- **Heading numbers** (`numbering.ts`, `heading-numbering.ts`, `nodes/heading-numbers.ts`):
+  `headingNumbers(doc)` follows top-level `#set heading(numbering: ..)` rules and Typst's heading
+  counter; `numberingFormatter(pattern)` applies Typst numbering patterns (`1 a A i I * ①`;
+  others → no numbers). A plugin draws them as node decorations (`data-heading-number`, CSS
+  `::after` in a gutter right of the text; the editor gets `typst-visual--numbered`). Command
+  `toggleHeadingNumbering` adds `#set heading(numbering: "1.")` after the leading raw blocks or
+  removes the numbering arguments. Rules in content blocks, show rules and numbering functions are
+  not followed (the preview is exact).
 - **Track changes** (`change-decorations.ts`): a ProseMirror plugin holds the projected base
   and, on every doc change, decorates `diffTexts(print(base), print(doc))` through
   `sourceToPos`: insertions as inline marks, deletions as struck-through `<del>` widgets with
   the deleted *visible* text (taken from the projected base), a change whose visible text is
   the same on both sides as a formatting change, and raw boxes inside a change outlined.
 - **Invariants (unit-tested):**
-  - `print(project(src)) === src` for every fixture (incl. links, images, figures, tables, unmodelled tables and figures);
+  - `print(project(src)) === src` for every fixture (incl. links, images, figures, tables, unmodelled
+    tables and figures, quotes, page breaks, rules, table headers, task lists);
   - edits change only what they touch;
   - an outside change to a paragraph keeps the cursor position in it.
 
@@ -736,8 +768,8 @@ HTTP             GET /rooms/<room>/files/<path> (Authorization: Bearer <room tok
 - **Snippets are cut from the compiled pages**, so they only appear after a successful compile,
   show only what lies on the first page the range draws on, and include whatever overlaps that
   rectangle (e.g. a float). Every raw box asks again after every compile (one `boxes` walk each),
-  also while the Visual view is hidden. Tables with headers, merged cells or `columns: (..)` stay
-  raw boxes.
+  also while the Visual view is hidden. Tables with merged cells, `table.cell`, header arguments
+  or `columns: (..)` stay raw boxes.
 - **GitLab rooms:** conflicts are reported (status line), not highlighted in the views yet;
   "Show changes" covers the main file only; an asset changed on both sides keeps the room's
   version and overwrites upstream on save; GitLab-side renames are seen as delete + create; no
