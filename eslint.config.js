@@ -5,6 +5,15 @@ import tseslint from 'typescript-eslint';
 import sonarjs from 'eslint-plugin-sonarjs';
 import entryImports from './eslint-rules/entry-imports.js';
 
+/** DOM globals core/ must not use, as values (no-restricted-globals) or types (no-restricted-types). */
+const DOM_GLOBALS = [
+  'window', 'document', 'navigator', 'location', 'history', 'localStorage', 'sessionStorage', 'requestAnimationFrame',
+  'cancelAnimationFrame', 'getComputedStyle', 'matchMedia', 'customElements', 'Node', 'Element', 'HTMLElement',
+  'SVGElement', 'Document', 'DocumentFragment', 'ShadowRoot', 'MutationObserver', 'ResizeObserver', 'IntersectionObserver',
+  'CustomEvent', 'MouseEvent', 'KeyboardEvent', 'DragEvent', 'DataTransfer', 'File', 'FileList', 'FileReader',
+];
+const NO_DOM = 'core/ uses no DOM (it runs in the engine worker and on the server too).';
+
 export const thresholds = {
   cognitive: 12,
   cyclomatic: 10,
@@ -84,6 +93,7 @@ export default tseslint.config(
     // core/ is the models everything builds on: no collaboration library (the collaboration extension binds a Y.Text
     // to a TypstDocument from outside), no view, host or extension.
     files: ['src/core/**/*.ts'],
+    plugins: { '@typescript-eslint': tseslint.plugin },
     rules: {
       'no-restricted-imports': [
         'error',
@@ -94,6 +104,9 @@ export default tseslint.config(
           ],
         },
       ],
+      // no DOM: core runs in the engine worker and the server's tests as well (fetch, Blob and streams are fine)
+      'no-restricted-globals': ['error', ...DOM_GLOBALS.map((name) => ({ name, message: NO_DOM }))],
+      '@typescript-eslint/no-restricted-types': ['error', { types: Object.fromEntries(DOM_GLOBALS.map((name) => [name, NO_DOM])) }],
     },
   },
   {

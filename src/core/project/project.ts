@@ -8,9 +8,6 @@ import { EventEmitter, type Event } from '../event-emitter/event-emitter';
 import { TypstDocument } from '../typst-document/typst-document';
 import { ProjectPath } from '../paths/paths';
 
-/** The drag data type of a project file dragged from the file panel; the data is its path. */
-export const PROJECT_PATH_TYPE = 'application/x-typst-project-path';
-
 /** A project file: Typst source text, or bytes (images, data files, …). */
 export type FileContent = string | Uint8Array;
 

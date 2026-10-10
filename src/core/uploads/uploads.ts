@@ -4,11 +4,18 @@
 import { type FileChange } from '../project/project';
 import { ProjectPath } from '../paths/paths';
 
+/** A file from the computer, as far as uploads read it (a DOM `File` is one; core names no DOM type). */
+export interface UploadedFile {
+  readonly name: string;
+  text(): Promise<string>;
+  arrayBuffer(): Promise<ArrayBuffer>;
+}
+
 /**
  * The create changes for uploaded files: each at the top of the project under its name (`/` and `\` replaced by
  * `_`; a name like `..` is left out), `.typ` files as text, everything else as bytes.
  */
-export async function uploadChanges(files: File[]): Promise<FileChange[]> {
+export async function uploadChanges(files: readonly UploadedFile[]): Promise<FileChange[]> {
   const changes = await Promise.all(
     files.map(async (file): Promise<FileChange | null> => {
       const path = ProjectPath.parse(`/${file.name.replace(/[/\\]/g, '_')}`); // null for a name like ".."

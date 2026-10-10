@@ -1,12 +1,18 @@
 // Tests for uploads.ts.
 import { describe, expect, it } from 'vitest';
-import { uploadChanges } from './uploads';
+import { uploadChanges, type UploadedFile } from './uploads';
+
+/** An uploaded file with `content` (what a DOM File gives). */
+function file(content: string | Uint8Array, name: string): UploadedFile {
+  const bytes = typeof content === 'string' ? new TextEncoder().encode(content) : content;
+  return { name, text: async () => new TextDecoder().decode(bytes), arrayBuffer: async () => bytes.slice().buffer };
+}
 
 describe('uploadChanges', () => {
   it('creates .typ uploads as text and everything else as bytes, at the top level', async () => {
     const changes = await uploadChanges([
-      new File(['= Hi'], 'part.typ'),
-      new File([new Uint8Array([1, 2])], 'logo.png'),
+      file('= Hi', 'part.typ'),
+      file(new Uint8Array([1, 2]), 'logo.png'),
     ]);
     expect(changes[0]).toEqual({ kind: 'create', path: '/part.typ', content: '= Hi' });
     expect(changes[1].path).toBe('/logo.png');
@@ -14,7 +20,7 @@ describe('uploadChanges', () => {
   });
 
   it('puts an upload at the top of the project, without folder separators in its name; leaves out a name like ".."', async () => {
-    const changes = await uploadChanges([new File(['x'], 'a/b\\c.png'), new File(['y'], '..')]);
+    const changes = await uploadChanges([file('x', 'a/b\\c.png'), file('y', '..')]);
     expect(changes.map((change) => change.path)).toEqual(['/a_b_c.png']);
   });
 });

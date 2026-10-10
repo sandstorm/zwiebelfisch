@@ -2,7 +2,7 @@
 import type { Editor } from '@tiptap/core';
 import type { ResolvedPos } from '@tiptap/pm/model';
 import { type PathReference, ProjectPath } from '../../../core/paths/paths';
-import { PROJECT_PATH_TYPE } from '../../../core/project/project';
+import { PROJECT_PATH_TYPE } from '../../../hosts/workbench/workbench';
 import { NodeSelection, Plugin, PluginKey } from '@tiptap/pm/state';
 import { imageSource } from './image-syntax';
 

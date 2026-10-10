@@ -66,7 +66,8 @@ src/                        the widget (TypeScript); the most important API on t
                             calculateImportChange (the change that imports a name from a module, once; applies
                             nothing: margin notes merge it into their own edit)
     uploads/                uploadChanges: files from the computer (picked, dropped) as `create` changes at the top
-                            of the project (`.typ` as text, the rest as bytes); used by files and images
+                            of the project (`.typ` as text, the rest as bytes); used by files and images; takes any
+                            `UploadedFile` (`name`, `text()`, `arrayBuffer()`: a DOM File is one, core names no DOM type)
     gitlab-protocol/        the rooms' Y.Doc map names (FILES_MAP, ASSETS_MAP, META_MAP) and GitLab rooms' messages
                             and file URLs: import-free, shared by collaboration and server/
     disposable/             Disposable (VS Code's shape: `new Disposable(fn)` disposes once; `Disposable.from(...)` in
@@ -196,7 +197,9 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
   `testing/`, which composes the built-in extensions; tests of the built-ins together (the projection's
   fixtures, the toolbar's items, the block nodes) are the widget's, `typst-editor/typst-editor.*.test.ts`. An
   extension's tests needing other extensions (a heading to put a label on) take them from `testing/` too,
-  never from the other extension.
+  never from the other extension. `core/` imports only `core/`, no Yjs (`yjs`, `y-*`, `@hocuspocus/*`) and uses no
+  DOM, neither as values nor as types (`no-restricted-globals`, `@typescript-eslint/no-restricted-types`), tests
+  included.
 - **Top comments.** Every source file starts with a comment: its context, `See <entry file /
   ARCHITECTURE.md section>`, or `Tests for X` (`mise run quality:top-comments`, part of `quality`).
 - Other languages and separate programs stay at the top level: `crates/`, `server/`, `demo/`,
@@ -360,7 +363,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
   is being made it says "Making PDF…" and is disabled), never an older PDF. File name after the
   main file: `main.pdf`.
 - **Images into the text**: `AssetView` (the `images` extension's custom editors of images and other files) only previews. An image row dragged from the file panel
-  (drag type `PROJECT_PATH_TYPE`, data: the project path) and dropped on the Visual view is
+  (drag type `PROJECT_PATH_TYPE` from the workbench host, data: the project path) and dropped on the Visual view is
   inserted there as an image block (`imageFileDrops` → `ImageAssets.reference(path)`: relative
   when in the same folder tree, else project-absolute; not for non-images).
 

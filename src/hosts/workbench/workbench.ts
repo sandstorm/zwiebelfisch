@@ -536,6 +536,12 @@ export interface TextEditorSelectionChangeEvent {
   readonly textEditor: TextEditor;
 }
 
+/**
+ * The drag data type (`DataTransfer`) of a project file dragged inside the widget, e.g. a row of the file panel; the
+ * data is its path. Any view may take such a drop (the Visual view inserts a dragged image).
+ */
+export const PROJECT_PATH_TYPE = 'application/x-typst-project-path';
+
 export { WorkbenchHost, type WorkbenchOptions } from './workbench-host';
 export type { EditorMode } from './editing-views/editing-views';
 export type { Memory } from './layout/layout';

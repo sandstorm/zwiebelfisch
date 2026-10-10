@@ -51,7 +51,10 @@ Controller: it subscribes views to the model's `onDid…` events and turns user 
 
 1. `core/**` and every `**/model/**`: no DOM globals, no editor-library imports. `core/**` imports only `core/` and
    no collaboration library (`yjs`, `y-*`, `@hocuspocus/*`): collaboration binds a Y.Text to a `TypstDocument` from
-   outside.
+   outside. ESLint checks core's DOM use as values (`no-restricted-globals`) and as types
+   (`@typescript-eslint/no-restricted-types`; e.g. uploads take an `UploadedFile`, not a `File`); the drag data type
+   of project files (`PROJECT_PATH_TYPE`) is the workbench host's. `fetch`, `Blob` and streams are no DOM (workers
+   have them). `model/` folders are not linted for it yet.
 2. `hosts/**` never import `extensions/**` (nor `typst-editor/`). They only offer contribution points.
 3. `extensions/<a>` never imports `extensions/<b>`. Extensions meet through `core` models, or
    through a generic contribution point of a host that any extension may use (document links, file
