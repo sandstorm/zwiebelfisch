@@ -62,3 +62,4 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [visual-text-align](visual-text-align.md) | done (branch task/visual-text-align) |
 | [comments-drafting](comments-drafting.md) | done |
 | [visual-block-nodes](visual-block-nodes.md) | done (branch task/visual-block-nodes) |
+| [collab-markers](collab-markers.md) | done (branch task/collab-markers) |
