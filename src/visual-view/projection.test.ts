@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState, TextSelection } from '@tiptap/pm/state';
 import { schema } from './extensions';
-import { posToSource, print, project as projectWith, sourceToPos, syncDoc } from './projection';
+import { imagePath, imageSource, posToSource, print, project as projectWith, sourceToPos, syncDoc } from './projection';
 
 const project = (source: string) => projectWith(source, schema);
 
@@ -21,6 +21,10 @@ const FIXTURES: Record<string, string> = {
   comments: '// a comment\nText /* inline */ more\n',
   unicode: 'Größe 😀 naïve\n',
   broken: '#set page(\n\n*unclosed\n',
+  links: 'See #link("https://typst.app")[the *site*] or https://typst.app/docs.\n#link("x")[] #link(url)[a]\n',
+  images: '#image("img/logo.png", width: 50%)\n\nText #image("i.png") inline\n',
+  tables: '#table(\n  columns: 2,\n  stroke: none,\n  [a], [*b* c],\n  [], [- x\n  - y],\n)\n\n#table(columns: 1, [one\n\ntwo])\n',
+  rawTables: '#table(columns: (1fr, 1fr), [a], [b])\n\n#table(columns: 2, [a], [b], [c])\n\n#table(columns: 1, table.header[H], [a])\n',
 };
 
 function edit(doc: Node, change: (state: EditorState) => EditorState['tr']): Node {
@@ -292,5 +296,194 @@ describe('syncDoc', () => {
   it('updates leading and trailing whitespace', () => {
     const tr = syncDoc(EditorState.create({ doc: project('A\n') }).tr, project('\nA\n\n'));
     expect(print(tr.doc)).toBe('\nA\n\n');
+  });
+});
+
+/** The position inside the first empty textblock of `doc`. */
+function insideEmptyBlock(doc: Node): number {
+  let found = -1;
+  doc.descendants((node, pos) => {
+    if (found < 0 && node.isTextblock && node.content.size === 0) found = pos + 1;
+    return found < 0;
+  });
+  if (found < 0) throw new Error('no empty textblock');
+  return found;
+}
+
+const linkMark = (href: string) => schema.marks.link.create({ href });
+const hrefsOf = (node: Node) => node.marks.filter((m) => m.type.name === 'link').map((m) => m.attrs.href as string);
+
+describe('links', () => {
+  it('projects #link("url")[text] and bare URLs as link marks over their text', () => {
+    const doc = project('See #link("https://typst.app")[the *site*] or https://typst.app/docs.');
+    const paragraph = doc.child(0);
+    expect(paragraph.textContent).toBe('See the site or https://typst.app/docs.');
+    const site = paragraph.child(2);
+    expect(site.text).toBe('site');
+    expect(hrefsOf(site)).toEqual(['https://typst.app']);
+    expect(site.marks.some((m) => m.type.name === 'bold')).toBe(true);
+    const bare = paragraph.child(4);
+    expect(bare.text).toBe('https://typst.app/docs');
+    expect(hrefsOf(bare)).toEqual(['https://typst.app/docs']);
+  });
+
+  it('keeps links it cannot model as raw inlines', () => {
+    for (const src of ['#link("x")[]', '#link(url)[a]', '#link("a\\nb")[c]', '#link("x")', '#link("x")[a\n\nb]']) {
+      const doc = project(`A ${src} b`);
+      expect(doc.child(0).child(1).type.name, src).toBe('rawInline');
+    }
+  });
+
+  it('re-prints an edited paragraph with its links intact', () => {
+    const source = 'x #link("https://a.org")[*a* b] and https://b.org/x y\n';
+    const doc = edit(project(source), (s) => s.tr.insertText('!', after(s.doc, ' y')));
+    expect(print(doc)).toBe('x #link("https://a.org")[*a* b] and https://b.org/x y!\n');
+  });
+
+  it('typing inside link text keeps the link', () => {
+    const doc = edit(project('#link("https://a.org")[site]\n'), (s) => s.tr.insertText('X', after(s.doc, 'si')));
+    expect(print(doc)).toBe('#link("https://a.org")[siXte]\n');
+  });
+
+  it('adding a link to text prints #link, quoting the URL', () => {
+    const doc = edit(project('Read the docs now\n'), (s) => {
+      const to = after(s.doc, 'docs');
+      return s.tr.addMark(to - 4, to, linkMark('https://x.org/?q="1"'));
+    });
+    expect(print(doc)).toBe('Read the #link("https://x.org/?q=\\"1\\"")[docs] now\n');
+  });
+
+  it('prints a link whose text is its URL as a bare URL, where Typst reads it back', () => {
+    const url = 'https://typst.app/docs';
+    // typed text, so the URL is not linked yet
+    const linked = (source: string) =>
+      edit(project(source), (s) => {
+        const at = after(s.doc, 'See ');
+        return s.tr.insertText(url, at).addMark(at, at + url.length, linkMark(url));
+      });
+    expect(print(linked('See  now\n'))).toBe(`See ${url} now\n`);
+    expect(print(linked('See .\n'))).toBe(`See #link("${url}")[https:\\//typst.app/docs].\n`);
+  });
+
+  it('removing a link leaves plain text', () => {
+    const doc = edit(project('A #link("https://a.org")[site] b\n'), (s) => {
+      const to = after(s.doc, 'site');
+      return s.tr.removeMark(to - 4, to, schema.marks.link);
+    });
+    expect(print(doc)).toBe('A site b\n');
+  });
+
+  it('escapes a parenthesis right after a function call, which would continue it', () => {
+    const doc = edit(project('Hi\n'), (s) => s.tr.insertText('(note)', after(s.doc, 'Hi')).addMark(1, 3, linkMark('https://a.org')));
+    expect(print(doc)).toBe('#link("https://a.org")[Hi]\\(note)\n');
+  });
+
+  it('keeps the position map precise around edited links', () => {
+    const doc = edit(project('A #link("https://a.org")[site] and https://b.org b\n'), (s) => s.tr.insertText('!', after(s.doc, ' b')));
+    expectPreciseMap(doc);
+  });
+});
+
+describe('images', () => {
+  it('projects a standalone #image call as an image block', () => {
+    const doc = project('#image("img/logo.png", width: 50%)\n\nText #image("i.png")\n');
+    expect(doc.child(0).type.name).toBe('image');
+    expect(doc.child(0).attrs.src).toBe('#image("img/logo.png", width: 50%)');
+    expect(doc.child(1).child(1).type.name).toBe('rawInline');
+  });
+
+  it('keeps other image calls raw', () => {
+    for (const src of ['#image(path)', '#image("a.png") #image("b.png")', '#image("a.png").x']) {
+      expect(project(src).child(0).type.name, src).not.toBe('image');
+    }
+  });
+
+  it('prints an image created in the editor', () => {
+    const doc = edit(project('Text\n'), (s) =>
+      s.tr.insert(s.doc.content.size, schema.nodes.image.create({ src: imageSource('a "b".png') })),
+    );
+    expect(print(doc)).toBe('Text\n\n#image("a \\"b\\".png")\n');
+    expectPreciseMap(doc);
+  });
+
+  it('reads the path of an image source', () => {
+    expect(imagePath('#image("img/a.png", width: 50%)')).toBe('img/a.png');
+    expect(imagePath('#image("a\\"b.png")')).toBe('a"b.png');
+    expect(imagePath('#image(x)')).toBeNull();
+  });
+});
+
+describe('tables', () => {
+  const source = '#table(\n  columns: 2,\n  stroke: none,\n  [a], [*b* c],\n  [], [- x\n  - y],\n)\n';
+
+  it('projects a table of content cells into rows and cells', () => {
+    const table = project(source).child(0);
+    expect(table.type.name).toBe('table');
+    expect(table.childCount).toBe(2);
+    expect(table.child(0).childCount).toBe(2);
+    expect(table.child(0).child(1).textContent).toBe('b c');
+    expect(table.child(1).child(0).child(0).type.name).toBe('paragraph');
+    expect(table.child(1).child(1).child(0).type.name).toBe('bulletList');
+  });
+
+  it('projects multi-paragraph cells as several blocks', () => {
+    const cell = project('#table(columns: 1, [one\n\ntwo])').child(0).child(0).child(0);
+    expect(cell.childCount).toBe(2);
+  });
+
+  it('keeps tables it cannot model raw', () => {
+    for (const src of [
+      '#table(columns: (1fr, 1fr), [a], [b])',
+      '#table(columns: 2, [a], [b], [c])',
+      '#table(columns: 1, table.header[H], [a])',
+      '#table([a], [b])',
+      '#table(columns: 1, [a]',
+    ]) {
+      expect(project(src).child(0).type.name, src).toBe('rawBlock');
+    }
+  });
+
+  it('editing a cell changes only that cell', () => {
+    const doc = edit(project(source), (s) => s.tr.insertText('!', after(s.doc, ' c')));
+    expect(print(doc)).toBe(source.replace('*b* c]', '*b* c!]'));
+    expectPreciseMap(doc);
+  });
+
+  it('typing into an empty cell fills its brackets', () => {
+    const doc = edit(project(source), (s) => s.tr.insertText('new', insideEmptyBlock(s.doc)));
+    expect(print(doc)).toBe(source.replace('[], [-', '[new], [-'));
+  });
+
+  it('re-prints a table whose shape changed, keeping its other arguments', () => {
+    const doc = edit(project(source), (s) => {
+      const table = s.doc.child(0);
+      const row = schema.nodes.tableRow.create(null, [
+        schema.nodes.tableCell.create(null, schema.nodes.paragraph.create(null, schema.text('e'))),
+        schema.nodes.tableCell.create(null, schema.nodes.paragraph.create()),
+      ]);
+      return s.tr.insert(table.nodeSize - 1, row);
+    });
+    expect(print(doc)).toBe('#table(\n  columns: 2,\n  stroke: none,\n  [a], [*b* c],\n  [], [- x\n  - y],\n  [e], [],\n)\n');
+    expectPreciseMap(doc);
+  });
+
+  it('prints a table created in the editor', () => {
+    const cell = (text?: string) => schema.nodes.tableCell.create(null, schema.nodes.paragraph.create(null, text ? schema.text(text) : null));
+    const table = schema.nodes.table.create(null, [
+      schema.nodes.tableRow.create(null, [cell('*'), cell()]),
+      schema.nodes.tableRow.create(null, [cell('- no list'), cell('x]')]),
+    ]);
+    const doc = edit(project('Text\n'), (s) => s.tr.insert(s.doc.content.size, table));
+    expect(print(doc)).toBe('Text\n\n#table(\n  columns: 2,\n  [\\*], [],\n  [\\- no list], [x\\]],\n)\n');
+    expectPreciseMap(doc);
+  });
+
+  it('syncs an outside change to a cell as a change in that cell', () => {
+    const state = EditorState.create({ doc: project(source) });
+    const changed = source.replace('[a]', '[ab]');
+    const tr = syncDoc(state.tr, project(changed));
+    expect(print(tr.doc)).toBe(changed);
+    expect(tr.doc.child(0).child(1)).toBe(state.doc.child(0).child(1));
+    expectPreciseMap(tr.doc);
   });
 });

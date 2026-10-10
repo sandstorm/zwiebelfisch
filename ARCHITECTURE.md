@@ -276,8 +276,11 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - **Blocks:** `paragraph`, `heading`, and `bulletList` / `orderedList` > `listItem` (a `marker`
     attribute; content `(paragraph | rawBlock) block*`, so nested lists made with Tab print
     indented), plus `rawBlock`.
-  - **Inline:** text with `bold` / `italic` marks; `softBreak` (a source newline that renders as a
-    space); `hardBreak` (`\`); `rawInline`.
+  - `image` (atom block; `src` is the whole `#image("path", ..)` call, edited like a raw block).
+  - `table` > `tableRow` > `tableCell` (Tiptap's MIT table extensions, not resizable); cells hold
+    blocks. `table.layout` (an anchor attribute) is the source around the cells.
+  - **Inline:** text with `bold` / `italic` / `link` (Tiptap's link mark, `href`) marks;
+    `softBreak` (a source newline that renders as a space); `hardBreak` (`\`); `rawInline`.
   - The `typstSource` mark remembers how escapes and shorthands (`\*`, `--`) were written.
   - Anchor attributes are added as Tiptap global attributes and are never rendered.
   - `project()` takes the schema as a parameter. Tiptap builds its own schema instance, and nodes
@@ -285,7 +288,15 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
 - **Segmentation:**
   - Headings and list items are blocks of their own.
   - Every other run up to a `Parbreak` becomes a paragraph if it contains prose (Text, Strong,
-    Emph, …), otherwise a `rawBlock` (`#set`, `#let`, display math, figures, …).
+    Emph, bare URLs, `#link` calls, …). Otherwise it is an `image` if it is exactly one
+    `#image("literal path", ..)` call, a `table` if it is exactly one
+    `#table(columns: <int>, ..named, [..], ..)` whose positional arguments are all closed content
+    blocks filling whole rows, and a `rawBlock` (`#set`, `#let`, display math, figures, …) else.
+  - Inline, `#link("plain string")[one paragraph]` puts a `link` mark on its projected content
+    (the call syntax is hidden); a bare URL is text with a `link` mark whose `href` is the text.
+    Other links stay `rawInline`.
+  - A table cell's markup is segmented like the document (paragraphs, lists, headings); an empty
+    cell is an empty paragraph.
   - A list item whose source has nested content keeps its body as a `rawBlock`.
 - **Separators:**
   - `attrs.sep` is the whitespace between siblings. It is part of node equality.
@@ -300,7 +311,13 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - Pristine nodes print `src`. Edited nodes are printed canonically:
     - text is escaped (`*`, `#`, `$`, `//`, …, and line-start markers);
     - marks become `*x*` / `_x_`, or `#strong[x]` / `#emph[x]` when the span touches a word
-      character or whitespace.
+      character or whitespace; longer spans open first, so they nest;
+    - a link becomes `#link("href")[..]`, or a bare URL when its text is its `href`, a plain
+      `http(s)://` URL between whitespace;
+    - text right after a `]` that would continue a call (`(`, `.field`) gets a backslash.
+  - Tables print their `layout` gaps around the cells' blocks while they keep the projected shape
+    (so a cell edit changes only that cell), else canonically: `#table(\n  columns: n,\n`, the
+    other named arguments, one `[..], [..],` line per row, `)`. Images print `src`.
 - **Position map:** `sourceToPos(doc, offset, bias?)` / `posToSource(doc, pos)` map between
   source offsets (UTF-16) and document positions at character precision, for any doc (pristine,
   edited or synced).
@@ -309,6 +326,8 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     whole; hidden syntax (delimiters, markers, separators, escape backslashes) maps to the next
     visible position in its block. Pristine textblocks keep the layout of their `src` from
     `project()` in the pristine map, so their verbatim source maps exactly, too.
+  - An empty textblock leaves a zero-width span where its content would go, and a table cell's
+    closing `]` maps to the end of that cell, so empty cells and list items map back and forth.
   - The table is private and cached per (immutable) doc. `bias: -1` maps a range end to just
     after the preceding visible character.
   - Invariants (unit-tested exhaustively on all fixtures and on edited docs): monotonic both
@@ -321,11 +340,17 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - It then copies the attributes over (`setNodeMarkup`) and marks nodes pristine again wherever
     the target node was pristine.
 - **Toolbar** (`toolbar.ts`, created by `VisualView` above the editor): undo/redo, a text style
-  menu (normal text, heading 1–3), bold/italic, bulleted/numbered list. Each entry is a row in a
-  table of Tiptap chain commands; after every transaction the buttons show `aria-pressed` and are
-  disabled when `editor.can()` says no. Mousedown is cancelled, so the text keeps focus and selection.
-- **Raw boxes** (`raw-box.ts`): `rawBlock` / `rawInline` render through a NodeView that hosts a
-  nested CodeMirror (Typst highlighting, no own history).
+  menu (normal text, heading 1–3), bold/italic/link, bulleted/numbered list, insert image, insert
+  table, add/delete row/column. Each entry is a row in a table of Tiptap chain commands; after
+  every transaction the buttons show `aria-pressed` and are disabled when `editor.can()` says no.
+  Mousedown is cancelled, so the text keeps focus and selection.
+  - Link (and Mod+K in the text) and insert image ask for a value in a `FieldPopover`
+    (`field-popover.ts`: one text field, Apply/Enter, optional Remove, Escape or a click outside
+    closes). Link with nothing selected inserts the URL as linked text; inside a link it edits or
+    removes the whole link.
+- **Raw boxes** (`raw-box.ts`): `rawBlock` / `rawInline` / `image` render through a NodeView that
+  hosts a nested CodeMirror (Typst highlighting, no own history). An image box is headed by
+  "Image: <path>" (`imagePath(src)`); the image itself is not rendered yet.
   - An edit sets `attrs.src` with an attribute step (positions and the outer selection stay put);
     the projection prints `src` verbatim, so the source changes exactly there.
   - An outside change of `src` (via `syncDoc`) reaches the box as one minimal change.
@@ -334,7 +359,7 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     selected box) move into a box; Backspace in an empty box deletes it.
   - Hidden: CodeMirror, the DOM ↔ box lookup, focus hand-over between the two editors.
 - **Invariants (unit-tested):**
-  - `print(project(src)) === src` for every fixture;
+  - `print(project(src)) === src` for every fixture (incl. links, images, tables, unmodelled tables);
   - edits change only what they touch;
   - an outside change to a paragraph keeps the cursor position in it.
 
@@ -381,3 +406,6 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
 - **Packages:** only `@preview` from packages.typst.org (no configurable registry, no `@local`);
   failed downloads are not retried until the worker restarts.
 - **No error display in the visual view** yet (diagnostics only reach the source view).
+- **Visual view images and raw boxes show code**, not the rendered image / snippet (see
+  [visual-view-compiled-boxes](docs/todo/visual-view-compiled-boxes.md)). Tables with headers,
+  merged cells or `columns: (..)` stay raw boxes.

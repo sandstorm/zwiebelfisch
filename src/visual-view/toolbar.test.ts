@@ -16,7 +16,7 @@ function setup(text: string) {
     style.value = value;
     style.dispatchEvent(new Event('change', { bubbles: true }));
   };
-  return { doc, view, toolbar, button, style, choose };
+  return { doc, view, toolbar, button, style, choose, parent };
 }
 
 describe('Visual view toolbar', () => {
@@ -73,6 +73,94 @@ describe('Visual view toolbar', () => {
     expect(doc.text).toBe('Hello world\n');
     button('Redo').click();
     expect(doc.text).toBe('*Hello world*\n');
+  });
+
+  describe('link popover', () => {
+    /** Opens the popover from the Link button, enters `value` and applies it (as Enter would). */
+    function linkTo(toolbar: HTMLElement, button: (label: string) => HTMLButtonElement, value: string) {
+      button('Link').click();
+      const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Link"]')!;
+      expect(popover.hidden).toBe(false);
+      const input = popover.querySelector('input')!;
+      input.value = value;
+      popover.requestSubmit();
+      return { popover, input };
+    }
+
+    it('links the selection', () => {
+      const { doc, view, toolbar, button } = setup('Hello world\n');
+      view.reveal(6, 11);
+      const { popover } = linkTo(toolbar, button, 'https://typst.app');
+      expect(doc.text).toBe('Hello #link("https://typst.app")[world]\n');
+      expect(popover.hidden).toBe(true);
+      expect(button('Link').getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('inserts the URL as linked text where nothing is selected', () => {
+      const { doc, view, toolbar, button } = setup('See  now\n');
+      view.reveal(4, 4);
+      linkTo(toolbar, button, 'https://typst.app');
+      expect(doc.text).toBe('See https://typst.app now\n');
+    });
+
+    it('edits and removes the link under the cursor', () => {
+      const source = 'A #link("https://a.org")[site] b\n';
+      const { doc, view, toolbar, button } = setup(source);
+      view.reveal(source.indexOf('ite'), source.indexOf('ite'));
+      const { popover, input } = linkTo(toolbar, button, 'https://b.org');
+      expect(doc.text).toBe('A #link("https://b.org")[site] b\n');
+      button('Link').click();
+      expect(input.value).toBe('https://b.org');
+      popover.querySelector<HTMLButtonElement>('button[data-action="remove"]')!.click();
+      expect(doc.text).toBe('A site b\n');
+      expect(popover.hidden).toBe(true);
+    });
+
+    it('opens with Mod+K in the text', () => {
+      const { parent, toolbar } = setup('Hello\n');
+      const editable = parent.querySelector<HTMLElement>('[contenteditable]')!;
+      const mac = /Mac/.test(navigator.platform);
+      const event = new KeyboardEvent('keydown', { key: 'k', metaKey: mac, ctrlKey: !mac, bubbles: true, cancelable: true });
+      editable.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(true);
+      expect(toolbar.querySelector<HTMLFormElement>('form[aria-label="Link"]')!.hidden).toBe(false);
+    });
+
+    it('closes on Escape without changing anything', () => {
+      const { doc, view, toolbar, button } = setup('Hello\n');
+      view.reveal(0, 5);
+      button('Link').click();
+      const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Link"]')!;
+      popover.querySelector('input')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      expect(popover.hidden).toBe(true);
+      expect(doc.text).toBe('Hello\n');
+    });
+  });
+
+  it('inserts an image block from a path', () => {
+    const { doc, view, toolbar, button } = setup('Text\n');
+    view.reveal(4, 4);
+    button('Insert image').click();
+    const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
+    popover.querySelector('input')!.value = 'img/logo.png';
+    popover.requestSubmit();
+    expect(doc.text).toBe('Text\n\n#image("img/logo.png")\n');
+  });
+
+  it('inserts a table and adds and deletes rows and columns', () => {
+    const { doc, view, button } = setup('Text\n');
+    expect(button('Add row').disabled).toBe(true);
+    view.reveal(4, 4);
+    button('Insert table').click();
+    expect(doc.text).toBe('Text\n\n#table(\n  columns: 2,\n  [], [],\n  [], [],\n)\n');
+    expect(button('Add row').disabled).toBe(false);
+    button('Add row').click();
+    expect(doc.text).toBe('Text\n\n#table(\n  columns: 2,\n  [], [],\n  [], [],\n  [], [],\n)\n');
+    button('Add column').click();
+    expect(doc.text).toContain('columns: 3,\n  [], [], [],\n');
+    button('Delete column').click();
+    button('Delete row').click();
+    expect(doc.text).toBe('Text\n\n#table(\n  columns: 2,\n  [], [],\n  [], [],\n)\n');
   });
 
   it('keeps the editor focused: mousedown on a button does not steal focus', () => {

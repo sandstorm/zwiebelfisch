@@ -42,7 +42,8 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [diff-rendering](diff-rendering.md) | open (after position map) |
 | [multi-file-ui](multi-file-ui.md) | done |
 | [visual-view-toolbar-and-raw-editing](visual-view-toolbar-and-raw-editing.md) | done |
-| [visual-view-links-images-tables](visual-view-links-images-tables.md) | open |
+| [visual-view-links-images-tables](visual-view-links-images-tables.md) | done (branch task/visual-view-links-images-tables) |
+| [visual-view-compiled-boxes](visual-view-compiled-boxes.md) | open |
 | [preview-ux](preview-ux.md) | done |
 | [collab-yjs](collab-yjs.md) | open (later) |
 | [server-gitlab](server-gitlab.md) | open (later) |
