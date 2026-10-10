@@ -69,7 +69,7 @@ describe('references and labels in the projection', () => {
   it('labels figures, tables and equations of the advanced example', () => {
     expect(labels(project(FIXTURES.results))).toEqual([
       { type: 'heading', name: 'results', gap: ' ' },
-      { type: 'rawBlock', name: 'tab:timings', gap: ' ' },
+      { type: 'figure', name: 'tab:timings', gap: ' ' }, // a figure with a table (tables-real-world)
       { type: 'figure', name: 'fig:compile-times', gap: ' ' },
     ]);
     expect(labels(project(FIXTURES.method))).toContainEqual({ type: 'rawBlock', name: 'eq:speedup', gap: ' ' });

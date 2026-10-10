@@ -195,14 +195,15 @@ const TypstCode = Code.extend({
 
 /**
  * `#figure(image(..), caption: [..])`: the image (an `image` node holding
- * the call without its `#`) and, optionally, the caption as rich text.
- * `layout` is how the figure's source lies around the two (owned by the
- * projection); other arguments and a label after the call live there.
+ * the call without its `#`) or a table (`table(..)`) and, optionally, the
+ * caption as rich text. `layout` is how the figure's source lies around the
+ * two (owned by the projection); other arguments and a label after the call
+ * live there.
  */
 const Figure = Node.create({
   name: 'figure',
   group: 'block',
-  content: 'image figureCaption?',
+  content: '(image | table) figureCaption?',
   isolating: true,
   addAttributes() {
     return { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } };
@@ -234,14 +235,17 @@ const FigureCaption = Node.create({
   },
 });
 
-/** Inline Typst the Visual view does not model (`#func[..]`, `$x$`, `<label>`, …), kept verbatim and editable as code. */
+/**
+ * Inline Typst the Visual view does not model (`#func[..]`, `$x$`, `<label>`, …), kept verbatim and editable as code.
+ * `code`: `src` is written in code, without `#` (a table cell that is an expression, like `ms(18)`).
+ */
 const RawInline = Node.create({
   name: 'rawInline',
   group: 'inline',
   inline: true,
   atom: true,
   addAttributes() {
-    return { src: { default: '', rendered: false } };
+    return { src: { default: '', rendered: false }, code: { default: false, rendered: false } };
   },
   renderHTML({ node }) {
     return ['code', { class: 'typst-visual__raw-inline' }, node.attrs.src];

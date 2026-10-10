@@ -34,7 +34,8 @@ src/                        the widget (TypeScript); the most important API on t
     visual-view/            VisualView — Tiptap editor over the source-anchored projection; visual-view.css
                             (ProseMirror core styles); decorations at the root: highlights, change-decorations,
                             presence; field-popover.ts (also used by versions/)
-      projection/           projection.ts (source ↔ document), raw-code, alignment, call-atoms, labels (label/ref syntax)
+      projection/           projection.ts (source ↔ document), raw-code, alignment, call-atoms, labels (label/ref syntax),
+                            embedded-code
       nodes/                nodes.ts (the schema: Tiptap extensions), raw-box, rendered-box, code-block-view,
                             page-break, horizontal-rule, task-list + checklist-preamble, heading numbers, text-align,
                             margin-notes, box-links (file links on raw boxes)
@@ -323,13 +324,15 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     indented), plus `rawBlock`.
   - `image` (atom block; `src` is the whole `#image("path", ..)` call, edited like a raw block);
     `outline` likewise for `#outline(..)` (the table of contents).
-  - `figure` > `image` (the call without `#`) + optional `figureCaption` (a textblock).
-    `figure.layout` (an anchor attribute) is the source around the two: `open`, caption
-    `before`/`open`/`close`, and `rest` (other arguments, `)`, a label).
+  - `figure` > (`image` (the call without `#`) | `table`) + optional `figureCaption` (a
+    textblock). `figure.layout` (an anchor attribute) is the source around the two: `open`,
+    caption `before`/`open`/`close`, and `rest` (other arguments, `)`, a label).
   - `codeBlock` (Tiptap's, `language` + anchor `fence`): plain text (no marks), edited in place.
   - `table` > `tableRow` > `tableCell` / `tableHeader` (Tiptap's MIT table extensions, not
     resizable); cells hold blocks. `table.layout` (an anchor attribute) is the source around the
-    cells.
+    cells plus the table's `TableStyle` (how its rows are written). A cell written as an
+    expression (`ms(18)`) holds one paragraph with one `rawInline` whose `code` attribute is set:
+    its `src` is code, without `#` (`embedded-code.ts`).
   - `taskList` > `taskItem` (Tiptap's, `checked`; one paragraph, not nested; `nodes/task-list.ts`).
   - `blockquote` (Tiptap's; holds blocks; `layout` is the source around its content).
   - `pageBreak`, `horizontalRule` (atom blocks keeping their call as `src`, shown as a labelled
@@ -366,11 +369,14 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     shows as a block (3+ backticks around a line break), which is a `codeBlock`. Otherwise, if it
     is exactly one call (`BLOCK_CALLS`, then `callAtomType` in `call-atoms.ts`): an `image` for
     `#image("literal path", ..)`, an `outline` for `#outline(..)`, a `figure` for
-    `#figure(image("literal path", ..), ..named)` (optionally followed by a label) whose
-    `caption: [..]`, if any, is one paragraph, a `table` for
-    `#table(columns: <int>, ..named, [..], ..)` whose positional arguments are all closed content
-    blocks filling whole rows (the first row may be a `table.header(..)` of content blocks: header
-    cells), an `alignment` for `#align(<literal alignment>)[..]` (`left|center|right|start|end`,
+    `#figure(image("literal path", ..) | table(..), ..named)` (optionally followed by a label;
+    the table modelled as below) whose `caption: [..]`, if any, is one paragraph, a `table` for
+    `#table(columns: <int>, ..named, cells)` whose `columns` comes before the cells and whose
+    positional arguments are cells filling whole rows (the first row may be a `table.header(..)`
+    of cells: header cells). A cell is a closed content block or an expression that reads the
+    same after a `#` in markup (`ms(18)`, `x.y`, `"s"`, `1pt`, `$x^2$`; `isEmbeddable`); other
+    `table.*` elements (`table.cell` with spans or not, `hline`, `vline`, `footer`), other
+    expressions (`-1`, `a + b`, `..xs`) and comments keep the table a `rawBlock`. Then an `alignment` for `#align(<literal alignment>)[..]` (`left|center|right|start|end`,
     optionally `+` one vertical alignment), a paragraph with `justify` for
     `#par(justify: <bool>)[one paragraph]`, a `blockquote` for `#quote(block: true, ..named)[..]`,
     a `pageBreak` for `#pagebreak(..)`, a `horizontalRule` for `#line(length: 100%, ..)` without
@@ -414,13 +420,23 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     - an edited code block prints ```` ```lang\ntext\n``` ````, keeping its fence unless the text
       needs a longer one; the language is cut to what Typst reads as a tag (`codeLanguage`).
   - Tables print their `layout` gaps around the cells' blocks while they keep the projected shape
-    and header state (so a cell edit changes only that cell), else canonically:
-    `#table(\n  columns: n,\n`, the other named arguments, one `[..], [..],` line per row (the
-    first in `table.header(..)` if it is a header row), `)`. Block atoms with a `src` (raw blocks,
+    and header state (so a cell edit changes only that cell). A cell written as an expression
+    prints its code bare while it holds just that box and the code is still one expression;
+    otherwise (text typed next to it, code that is no longer one expression) it prints as
+    content, `[#ms(18) more]`, and cleared as `[]`. A table whose shape changed (rows, columns,
+    header row) re-prints in its `TableStyle`: the source up to the first row verbatim (named
+    arguments, multi-line closures and all) with the new `columns` count, named arguments that
+    stood between rows, the separators between cells and between rows of its last rows (so
+    indentation and one-row-per-line or all-on-one-line stay), `table.header(..)` as written
+    (the bracket form `table.header[a][b]` only while it holds no bare cell) and everything after
+    the last row (trailing comma, `)`). Unchanged content cells print their blocks in `[..]`
+    (padding inside the brackets is lost), expression cells bare. Editor-made tables:
+    `#table(\n  columns: n,\n  [..], [..],\n)`, the first row in `table.header(..)` if it is a
+    header row. Block atoms with a `src` (raw blocks,
     images, outlines, page breaks, rules) print it. A quote prints its `layout` (new:
     `#quote(block: true)[` / `]`) around its blocks; a task item `- [x] ` / `- [ ] ` and its paragraph.
-  - Figures print their layout around the image call and the caption, so each changes on its
-    own; an added caption prints `, caption: [..]` right after the image call, a removed one
+  - Figures print their layout around the body (image call or table) and the caption, so each
+    changes on its own; an added caption prints `, caption: [..]` right after the image call, a removed one
     drops its argument with the comma before it. Editor-made figures print
     `#figure(image(..), caption: [..])`.
   - Alignment blocks print their `layout` around their blocks, with only `#align(args)`

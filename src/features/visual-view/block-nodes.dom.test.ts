@@ -98,7 +98,8 @@ describe('table header row', () => {
     view.reveal(source.indexOf('c'), source.indexOf('c'));
     expect(button('Header row').getAttribute('aria-pressed')).toBe('false');
     button('Header row').click();
-    expect(doc.text).toBe('Hi\n\n#table(\n  columns: 2,\n  table.header([a], [b]),\n  [c], [d],\n)\n');
+    // re-printed in the style it was written in: one line
+    expect(doc.text).toBe('Hi\n\n#table(columns: 2, table.header([a], [b]), [c], [d])\n');
     expect([...parent.querySelectorAll('th')].map((th) => th.textContent)).toEqual(['a', 'b']);
     expect(button('Header row').getAttribute('aria-pressed')).toBe('true');
     button('Header row').click();
@@ -175,4 +176,28 @@ describe('heading numbers', () => {
     expect(parent.querySelector('[aria-label="Numbered headings"]')).toBeNull();
   });
 
+});
+
+describe('real-world tables', () => {
+  const source =
+    '#figure(\n  table(\n    columns: 2,\n    table.header([*Pages*], [*Cold*]),\n    [1], ms(18),\n  ),\n  caption: [Times],\n) <tab:t>\n';
+
+  it('a figure table with expression cells is a table: cells, code boxes, the caption as text', () => {
+    const { parent } = setup(source);
+    expect(parent.querySelector('.typst-visual__raw-block')).toBeNull();
+    expect([...parent.querySelectorAll('th')].map((th) => th.textContent)).toEqual(['Pages', 'Cold']);
+    expect(parent.querySelector('td .typst-visual__raw-inline')?.textContent).toContain('ms(18)');
+    expect(parent.querySelector('figcaption')?.textContent).toBe('Times');
+  });
+
+  it('"Add row" and "Header row" keep the way the table is written', () => {
+    const { doc, view, button } = setup(source);
+    view.reveal(source.indexOf('[1]') + 1, source.indexOf('[1]') + 1);
+    button('Add row').click();
+    const added = source.replace('ms(18),\n', 'ms(18),\n    [], [],\n');
+    expect(doc.text).toBe(added);
+    view.reveal(source.indexOf('Pages'), source.indexOf('Pages'));
+    button('Header row').click();
+    expect(doc.text).toBe(added.replace('table.header([*Pages*], [*Cold*])', '[*Pages*], [*Cold*]'));
+  });
 });

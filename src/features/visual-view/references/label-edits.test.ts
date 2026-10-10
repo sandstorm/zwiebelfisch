@@ -28,7 +28,10 @@ describe('label edits', () => {
 
   it('renames a figure label together with its references in the same file', () => {
     const state = stateOf(results);
-    const figure = find(state.doc, 'figure').pos;
+    let figure = -1;
+    state.doc.descendants((node, pos) => {
+      if (node.type.name === 'figure' && node.attrs.label?.name === 'fig:compile-times') figure = pos;
+    });
     const renamed = print(renameLabel(state, figure, 'fig:times', true).doc);
     expect(renamed).toBe(results.replaceAll('fig:compile-times', 'fig:times'));
     expect(print(renameLabel(state, figure, 'fig:times', false).doc)).toBe(results.replace('<fig:compile-times>', '<fig:times>'));
