@@ -9,9 +9,10 @@ import { type BoxRenderer, extensions, setBoxLinks, setBoxRenderer } from './nod
 import { highlights, setHighlights } from './highlights';
 import type { ImageAssets } from './images/images';
 import { remotePresence, setPresence } from './presence';
-import { posToSource, print, project, sourceToPos, syncDoc } from './projection/projection';
+import { posToSource, print, project, type ProjectedStyles, sourceToPos, syncDoc } from './projection/projection';
 import { NotesGutter } from './notes-gutter/notes-gutter';
 import type { ProjectLabels } from '../labels/labels';
+import type { DocumentStyles, Style } from '../styles/styles';
 import { referencesExtension } from './references/references';
 import { Toolbar } from './toolbar/toolbar';
 
@@ -37,7 +38,15 @@ export interface VisualViewOptions {
   labels?: ProjectLabels;
   /** Makes file paths in raw boxes open their file ("Open template.typ", clickable image paths). */
   links?: FileLinks;
+  /**
+   * The project's custom styles: their calls show as styled, editable text, and the text style menu applies them
+   * (importing them where needed) and offers "New style…" (default: such calls stay raw boxes).
+   */
+  styles?: DocumentStyles;
 }
+
+/** The origin of the import a newly applied style adds to the document. */
+const STYLE_IMPORT = 'style-import';
 
 /** Marks transactions that mirror a document change, so they are not written back. */
 const FROM_DOCUMENT = 'typst-from-document';
@@ -58,8 +67,10 @@ export class VisualView implements PresenceTarget {
   private readonly toolbar: Toolbar;
   private readonly notes: NotesGutter;
   private readonly unsubscribe: () => void;
+  private readonly styles: DocumentStyles | undefined;
 
   constructor(parent: HTMLElement, private readonly document: TypstDocument, options: VisualViewOptions = {}) {
+    this.styles = options.styles;
     // the text and, right of it, the notes gutter
     const body = parent.appendChild(parent.ownerDocument.createElement('div'));
     body.className = 'typst-visual__body';
@@ -83,14 +94,20 @@ export class VisualView implements PresenceTarget {
     this.editor.view.updateState(
       EditorState.create({
         schema: state.schema,
-        doc: project(document.text, state.schema),
+        doc: project(document.text, state.schema, this.projectedStyles()),
         plugins: [...state.plugins, changesPlugin, this.notes.plugin],
       }),
     );
-    this.toolbar = new Toolbar(parent, this.editor, { assets: options.assets, comment: options.comment });
-    this.unsubscribe = document.onChange((_changes, origin) => {
+    this.toolbar = new Toolbar(parent, this.editor, { assets: options.assets, comment: options.comment, styles: this.menuStyles() });
+    const unsubscribeText = document.onChange((_changes, origin) => {
       if (origin !== this) this.syncFromDocument();
     });
+    // a style declared or removed changes what its calls project to
+    const unsubscribeStyles = this.styles?.onChange(() => this.syncFromDocument());
+    this.unsubscribe = () => {
+      unsubscribeText();
+      unsubscribeStyles?.();
+    };
   }
 
   /** Selects what shows source range `from`..`to` (a caret if empty) and scrolls to it. */
@@ -149,6 +166,24 @@ export class VisualView implements PresenceTarget {
     this.notes.destroy();
   }
 
+  /** The declared styles, as the projection models them. */
+  private projectedStyles(): ProjectedStyles {
+    return new Map(this.styles?.styles().map((style) => [style.name, { kind: style.kind, label: style.label }]));
+  }
+
+  /** The styles the toolbar's style menu offers: applying one imports it where it is now used. */
+  private menuStyles() {
+    const styles = this.styles;
+    if (!styles) return undefined;
+    return { styles: () => styles.styles(), onChange: (listener: () => void) => styles.onChange(listener), applied: (style: Style) => this.imported(style), create: styles.create };
+  }
+
+  /** Imports `style` (just applied at the selection) into the document, unless it is usable there already. */
+  private imported(style: Style): void {
+    const change = this.styles?.importChange(this.document.text, style, this.selection().from);
+    if (change) this.document.change([change], STYLE_IMPORT);
+  }
+
   private afterTransaction(tr: Transaction): void {
     if (!tr.docChanged || tr.getMeta(FROM_DOCUMENT)) return;
     this.document.setText(print(this.editor.state.doc), this);
@@ -156,7 +191,7 @@ export class VisualView implements PresenceTarget {
 
   private syncFromDocument(): void {
     const { state } = this.editor;
-    const tr = syncDoc(state.tr, project(this.document.text, state.schema));
+    const tr = syncDoc(state.tr, project(this.document.text, state.schema, this.projectedStyles()));
     if (tr.docChanged) this.editor.view.dispatch(tr.setMeta(FROM_DOCUMENT, true).setMeta('addToHistory', false));
   }
 }

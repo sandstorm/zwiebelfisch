@@ -19,11 +19,13 @@ import { ChecklistPreamble, TypstTaskItem, TypstTaskList } from './task-list';
 import { RawBoxNavigation, rawBoxView } from './raw-box';
 import { Reference } from '../references/references';
 import { TextAlign } from './text-align';
+import { StyledBlock, StyleMark } from './styles';
 
 export { hasHeadingNumbering } from './heading-numbering';
 export { setBoxLinks, setBoxRenderer } from './raw-box';
 export type { BoxRenderer, Snippet } from './rendered-box';
 export { textAlignAt, type TextAlignment } from './text-align';
+export type { AppliedStyle } from './styles';
 
 /**
  * The Visual view's Tiptap extensions, i.e. its ProseMirror schema plus
@@ -51,7 +53,7 @@ const ANCHORED_BLOCKS = ['paragraph', 'heading', 'bulletList', 'orderedList', 'l
 
 /** Blocks a label can follow: whatever a segment of markup projects to (see projection.ts). */
 const LABELLED_BLOCKS = [
-  'paragraph', 'heading', 'codeBlock', 'rawBlock', 'image', 'outline', 'figure', 'table', 'blockquote', 'alignment', 'pageBreak', 'horizontalRule',
+  'paragraph', 'heading', 'codeBlock', 'rawBlock', 'image', 'outline', 'figure', 'table', 'blockquote', 'alignment', 'pageBreak', 'horizontalRule', 'styledBlock',
 ];
 
 const SourceAnchors = Extension.create({
@@ -327,6 +329,8 @@ export const extensions = [
   MarginNote,
   NoteRange,
   Reference,
+  StyledBlock,
+  StyleMark,
 ];
 
 /** The schema `extensions` produce; an `Editor` builds an equal but distinct instance. */

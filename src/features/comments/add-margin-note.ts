@@ -3,6 +3,7 @@ import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { DRAFTING, isNoteCallAt, MARGIN_NOTE, NOTE_HEAD, printNoteCall, rangeNoteSyntax, SET_DEFAULTS } from './margin-note-syntax';
 import type { TextChange } from '../../core/typst-document/typst-document';
+import { importChange as importChangeOf } from '../../core/project/project';
 import { noteMarginChanges } from './page-margin';
 
 /** Where a new note goes in the edited text: its (still empty) body starts at `note`. */
@@ -125,50 +126,16 @@ function withImport(text: string, changes: TextChange[]): TextChange[] {
   return [extra, ...changes].sort((a, b) => a.from - b.from);
 }
 
-/**
- * Null when `margin-note` is imported from drafting before `use` already. An
- * import binds names only after itself, so only imports ending before `use`
- * are extended; otherwise one goes at the top.
- */
+/** Null when `margin-note` is imported from drafting before `use` already; else the edit that imports it (see `importChange`). */
 function importChange(text: string, use: number): TextChange | null {
-  for (const node of topLevel(text)) {
-    if (node.to > use) break;
-    if (node.name !== 'ModuleImport' || !isDrafting(text, node)) continue;
-    const items = node.getChild('ImportItems');
-    if (node.getChild('Star') || (items && importsMarginNote(text, items))) return null;
-    if (items) return addItem(items);
-    const str = node.getChild('Str')!;
-    if (str.to === node.to) return insert(str.to, `: ${MARGIN_NOTE}`);
-  }
-  return insert(0, newImport(text));
+  const version = DRAFTING.slice(0, DRAFTING.lastIndexOf(':') + 1);
+  return importChangeOf(text, { name: MARGIN_NOTE, matches: (module) => module.startsWith(version), create: () => newImport(text), use });
 }
 
 /** The import added at the top, with `NOTE_STYLE` unless `text` sets note defaults itself. */
 function newImport(text: string): string {
   if (text.includes(SET_DEFAULTS)) return `#import "${DRAFTING}": ${MARGIN_NOTE}\n`;
   return `#import "${DRAFTING}": ${MARGIN_NOTE}, ${SET_DEFAULTS}\n${NOTE_STYLE}`;
-}
-
-/** Adds `margin-note` after the last item of an import list, which may end with a comma. */
-function addItem(items: SyntaxNode): TextChange {
-  const last = items.lastChild!;
-  return last.name === 'Comma' ? insert(last.to, ` ${MARGIN_NOTE}`) : insert(last.to, `, ${MARGIN_NOTE}`);
-}
-
-/** Code at the top level of the file (what follows a `#`). */
-function topLevel(text: string): SyntaxNode[] {
-  const nodes: SyntaxNode[] = [];
-  for (let node = typstParser.parse(text).topNode.firstChild; node; node = node.nextSibling) nodes.push(node);
-  return nodes;
-}
-
-function isDrafting(text: string, node: SyntaxNode): boolean {
-  const str = node.getChild('Str');
-  return str !== null && text.startsWith(`"${DRAFTING.slice(0, DRAFTING.lastIndexOf(':') + 1)}`, str.from);
-}
-
-function importsMarginNote(text: string, items: SyntaxNode): boolean {
-  return items.getChildren('ImportItemPath').some((item) => text.slice(item.from, item.to) === MARGIN_NOTE);
 }
 
 /** Where pre-change `offset` ends up; inserts at `offset` itself go before it. */

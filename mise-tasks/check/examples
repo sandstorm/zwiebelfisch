@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#MISE description="Compile every demo example (demo/examples/*/main.typ) with the Typst CLI: fails on errors"
+#USAGE arg "[example]" help="Only this example (a folder name under demo/examples)"
+set -euo pipefail
+out="$(mktemp -d)"
+trap 'rm -rf "$out"' EXIT
+for dir in demo/examples/${usage_example:-*}/; do
+  name="$(basename "$dir")"
+  typst compile --root "$dir" "$dir/main.typ" "$out/$name.pdf"
+  echo "✓ $name"
+done

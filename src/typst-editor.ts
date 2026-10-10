@@ -20,6 +20,7 @@ import { FileNavigation } from './typst-editor/file-navigation';
 import { PdfExport } from './typst-editor/pdf-export';
 import { ProjectRenderings } from './typst-editor/project-renderings';
 import { LabelIndex } from './features/labels/labels';
+import { newStyle, STYLES_FILE, StyleIndex } from './features/styles/styles';
 import styles from './typst-editor.css?inline';
 import { VersionControls, type Versions } from './features/versions/versions';
 
@@ -184,6 +185,7 @@ class Widget {
   private readonly assets: AssetView;
   private readonly renderings: ProjectRenderings;
   private readonly labels: LabelIndex;
+  private readonly styles: StyleIndex;
   private readonly commentAction: CommentAction;
   readonly changes: ChangeTracking;
   private readonly collaboration: CollaborationLink | null = null;
@@ -214,6 +216,7 @@ class Widget {
     });
     this.pdfs = new PdfExport(this.project, this.preview);
     this.labels = new LabelIndex(this.project);
+    this.styles = new StyleIndex(this.project);
     this.renderings = new ProjectRenderings({ project: this.project, preview: this.preview, request: (change) => this.request(change) });
     this.views = this.mountViews();
     this.navigation = new FileNavigation(host.ownerDocument, (path) => this.open(path));
@@ -270,6 +273,7 @@ class Widget {
         user: this.options.user,
         comment: () => this.commentAction.comment(),
         labels: this.labels,
+        styles: { ...this.styles.forDocument(document), create: () => void this.newStyle() },
       }),
       links: (document) => this.fileLinks(document),
       onCursor: (document, offset) => {
@@ -337,6 +341,7 @@ class Widget {
     if (!this.project.has(this.lastSource)) this.lastSource = this.project.main;
     this.changes.refresh();
     this.labels.refresh();
+    this.styles.refresh();
     this.refresh();
   }
 
@@ -351,6 +356,7 @@ class Widget {
     this.assets.destroy();
     this.renderings.destroy();
     this.labels.destroy();
+    this.styles.destroy();
     this.preview.destroy();
     this.status.destroy();
     this.project.destroy();
@@ -409,6 +415,15 @@ class Widget {
         return problem;
       },
     };
+  }
+
+  /** "New style…": appends a paragraph style to start from to the styles file (created when missing) and shows it in the Source view. */
+  private async newStyle(): Promise<void> {
+    const file = this.project.document(STYLES_FILE);
+    const added = newStyle(file?.text ?? '');
+    if (file) file.change([{ from: file.text.length, to: file.text.length, insert: added.text.slice(file.text.length) }], 'new-style');
+    else if ((await this.request({ kind: 'create', path: STYLES_FILE, content: added.text })) !== null) return;
+    this.jump({ path: STYLES_FILE, from: added.from, to: added.to }, true);
   }
 
   /** Opens the file of `target` and reveals the range (in the source view on request). */

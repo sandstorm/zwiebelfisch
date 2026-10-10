@@ -5,6 +5,7 @@ import { fileKind } from './paths';
 
 export { displayName, extensionOf, fileKind, imageBlob, referencePath, resolvePath, toPath, type FileKind } from './paths';
 export { neighbours, readingOrder } from './reading-order';
+export { importChange, type ImportRequest } from './imports';
 export { describeLink, findPathReferences, pathReferenceAt, type FileLinks, type LinkTarget, type PathCall, type PathReference } from './path-references';
 
 /** The drag data type of a project file dragged from the file panel; the data is its path. */
