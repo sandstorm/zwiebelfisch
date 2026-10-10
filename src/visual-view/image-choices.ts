@@ -8,7 +8,8 @@ export interface ImageAssets {
 
 /**
  * The part of the "Insert image" popover that offers the project's images
- * (one button each) and an upload. Calls `choose` with the path to insert.
+ * (one button each) and an upload. Calls `choose` with the paths to insert,
+ * and shows why an upload was not added.
  */
 export class ImageChoices {
   readonly element: HTMLElement;
@@ -18,7 +19,7 @@ export class ImageChoices {
   constructor(
     doc: Document,
     private readonly assets: ImageAssets,
-    private readonly choose: (path: string) => void,
+    private readonly choose: (paths: string[], near?: number) => void,
   ) {
     this.element = doc.createElement('div');
     this.element.className = 'typst-popover__choices';
@@ -26,7 +27,7 @@ export class ImageChoices {
     this.list.className = 'typst-popover__files';
     this.list.addEventListener('click', (event) => {
       const path = (event.target as HTMLElement).closest<HTMLElement>('[data-path]')?.dataset.path;
-      if (path) choose(path);
+      if (path) choose([path]);
     });
     const picker = doc.createElement('input');
     picker.type = 'file';
@@ -36,7 +37,7 @@ export class ImageChoices {
     picker.addEventListener('change', () => {
       const file = picker.files?.[0];
       picker.value = '';
-      if (file) void this.upload(file);
+      if (file) void this.upload([file]);
     });
     const upload = doc.createElement('button');
     upload.type = 'button';
@@ -64,10 +65,20 @@ export class ImageChoices {
     );
   }
 
-  private async upload(file: File): Promise<void> {
+  /**
+   * Uploads `files` one by one, then chooses those that were added (to go
+   * near document position `near`, if given). Resolves to false when it
+   * shows why one was not added.
+   */
+  async upload(files: File[], near?: number): Promise<boolean> {
     this.error.textContent = '';
-    const result = await this.assets.upload(file);
-    if ('path' in result) this.choose(result.path);
-    else this.error.textContent = result.error;
+    const paths: string[] = [];
+    for (const file of files) {
+      const result = await this.assets.upload(file);
+      if ('path' in result) paths.push(result.path);
+      else this.error.textContent = result.error;
+    }
+    if (paths.length > 0) this.choose(paths, near);
+    return this.error.textContent === '';
   }
 }

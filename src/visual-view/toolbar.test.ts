@@ -232,6 +232,84 @@ describe('Visual view toolbar', () => {
     });
   });
 
+  describe('image files dropped or pasted into the text', () => {
+    const png = (name: string) => new File([new Uint8Array([1])], name, { type: 'image/png' });
+    const pdf = new File(['%PDF'], 'paper.pdf', { type: 'application/pdf' });
+
+    /** A drop / paste event carrying `files`, as the browser sends it. */
+    function fileEvent(type: 'drop' | 'paste', files: File[]) {
+      const event = new Event(type, { bubbles: true, cancelable: true });
+      const data = { files, types: ['Files'], getData: () => '' };
+      Object.defineProperty(event, type === 'drop' ? 'dataTransfer' : 'clipboardData', { value: data });
+      return event;
+    }
+
+    function withUploads(error?: string) {
+      const uploaded: string[] = [];
+      const assets = {
+        list: () => [],
+        upload: async (file: File) => (error ? { error } : (uploaded.push(file.name), { path: file.name })),
+      };
+      return { assets, uploaded };
+    }
+
+    const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+    it('a pasted image is uploaded and inserted after the paragraph with the cursor', async () => {
+      const { assets, uploaded } = withUploads();
+      const { doc, view, parent } = setup('One\n\nTwo\n', { assets });
+      view.reveal(1, 1);
+      const event = fileEvent('paste', [png('shot.png')]);
+      parent.querySelector('[contenteditable]')!.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(true);
+      await settle();
+      expect(uploaded).toEqual(['shot.png']);
+      expect(doc.text).toBe('One\n\n#image("shot.png")\n\nTwo\n');
+    });
+
+    it('dropped images are uploaded and inserted in order, instead of the browser opening the file', async () => {
+      const { assets, uploaded } = withUploads();
+      const { doc, view, parent } = setup('One\n', { assets });
+      view.reveal(3, 3);
+      const outside: Event[] = [];
+      parent.addEventListener('drop', (e) => outside.push(e));
+      const event = fileEvent('drop', [png('a.png'), pdf, png('b.png')]);
+      parent.querySelector('[contenteditable]')!.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(true);
+      expect(outside).toEqual([]); // not uploaded once more by the file bar
+      await settle();
+      expect(uploaded).toEqual(['a.png', 'b.png']);
+      expect(doc.text).toBe('One\n\n#image("a.png")\n\n#image("b.png")\n');
+    });
+
+    it('leaves drops without images alone (the file bar may take them)', () => {
+      const { assets } = withUploads();
+      const { doc, parent } = setup('One\n', { assets });
+      const event = fileEvent('drop', [pdf]);
+      parent.querySelector('[contenteditable]')!.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+      expect(doc.text).toBe('One\n');
+    });
+
+    it('shows why a dropped image was not added in the image popover', async () => {
+      const { assets } = withUploads('This change is not allowed here.');
+      const { doc, toolbar, parent } = setup('One\n', { assets });
+      parent.querySelector('[contenteditable]')!.dispatchEvent(fileEvent('drop', [png('a.png')]));
+      await settle();
+      const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
+      expect(popover.hidden).toBe(false);
+      expect(popover.querySelector('[role="alert"]')!.textContent).toBe('This change is not allowed here.');
+      expect(doc.text).toBe('One\n');
+    });
+
+    it('without assets, dropped files are left to the browser as before', () => {
+      const { parent } = setup('One\n');
+      const event = fileEvent('drop', [png('a.png')]);
+      parent.querySelector('[contenteditable]')!.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+    });
+  });
+
   it('inserts a table and adds and deletes rows and columns', () => {
     const { doc, view, button } = setup('Text\n');
     expect(button('Add row').disabled).toBe(true);

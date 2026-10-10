@@ -380,7 +380,7 @@
 .typst-files__error { color: #cf222e; }
 .typst-files__error:empty { display: none; }
 .typst-editor__tabs[hidden] { display: none; }
-.typst-editor__left.typst-editor--dropping { outline: 2px dashed var(--te-accent); outline-offset: -4px; }
+.typst-editor.typst-editor--dropping { outline: 2px dashed var(--te-accent); outline-offset: -4px; }
 /* Read-only view of images and data files */
 .typst-asset {
   flex: 1;

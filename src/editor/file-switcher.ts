@@ -221,27 +221,35 @@ function promptForm(doc: Document, prompt: Prompt, cancel: () => void): HTMLForm
   return form;
 }
 
-/** Calls `onFiles` with files dropped on `target` while `enabled()`; shows a drop hint meanwhile. */
+/**
+ * Calls `onFiles` with files dropped on `target` while `enabled()`; shows a
+ * drop hint meanwhile. Files dropped while not enabled are ignored: the
+ * browser never opens a dropped file in place of the page. A view inside
+ * that takes a drop itself stops its propagation.
+ */
 function acceptDrops(target: HTMLElement, enabled: () => boolean, onFiles: (files: File[]) => void): () => void {
   let depth = 0;
-  const carriesFiles = (event: DragEvent) => enabled() && !!event.dataTransfer?.types.includes('Files');
+  const carriesFiles = (event: DragEvent) => !!event.dataTransfer?.types.includes('Files');
   const setDepth = (next: number) => {
     depth = Math.max(0, next);
     target.classList.toggle('typst-editor--dropping', depth > 0);
   };
   const handlers: Record<string, (event: DragEvent) => void> = {
-    dragenter: (event) => carriesFiles(event) && setDepth(depth + 1),
-    dragleave: (event) => carriesFiles(event) && setDepth(depth - 1),
+    dragenter: (event) => carriesFiles(event) && enabled() && setDepth(depth + 1),
+    dragleave: (event) => carriesFiles(event) && enabled() && setDepth(depth - 1),
     dragover: (event) => carriesFiles(event) && event.preventDefault(),
     drop: (event) => {
       if (!carriesFiles(event)) return;
       event.preventDefault();
-      setDepth(0);
-      onFiles([...(event.dataTransfer?.files ?? [])]);
+      if (enabled()) onFiles([...(event.dataTransfer?.files ?? [])]);
     },
   };
+  // Captured, so the hint also goes when a view inside takes the drop.
+  const endHint = () => setDepth(0);
+  target.addEventListener('drop', endHint, true);
   for (const [type, handler] of Object.entries(handlers)) target.addEventListener(type, handler as EventListener);
   return () => {
+    target.removeEventListener('drop', endHint, true);
     for (const [type, handler] of Object.entries(handlers)) target.removeEventListener(type, handler as EventListener);
   };
 }
