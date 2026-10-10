@@ -5,14 +5,12 @@ import wasmUrl from '../engine/wasm/typst_engine_bg.wasm?url&no-inline';
 import { FileSender, type FileContent } from './project-files';
 import { isInside, mostVisible, percentOfPage } from './geometry';
 import { LatestOnly } from './latest-only';
-import { PreviewMarkers, type Marker } from './markers';
 import { PageList } from './page-list';
 import { snippet, type Snippet } from './snippet';
 import type { Init, Request, Response } from './protocol';
 import { PreviewToolbar, type ZoomRequest } from './toolbar';
 import { stepZoom, zoomLabel, type Zoom } from './zoom';
 
-export type { Marker } from './markers';
 export type { Snippet } from './snippet';
 
 export interface PreviewOptions {
@@ -60,7 +58,6 @@ export class Preview {
   private zoom: Zoom = 'fit';
   private nextId = 0;
   private readonly sender = new FileSender();
-  private readonly markers: PreviewMarkers;
   private frame = 0;
   /** The files and pages of the last successful compilation. */
   private compiled: { files: Record<string, FileContent>; pages: Page[] } = { files: {}, pages: [] };
@@ -77,7 +74,6 @@ export class Preview {
     this.pages.dataset.testid = 'typst-preview';
     this.toolbar = new PreviewToolbar(doc, (request) => this.setZoom(request));
     this.list = new PageList(this.pages, { root: this.scroller });
-    this.markers = new PreviewMarkers({ locate: (path, offset) => this.locate(path, offset), page: (index) => this.list.at(index) });
     this.scroller.append(this.pages);
     this.pane.append(this.toolbar.element, this.scroller);
     container.append(this.pane);
@@ -122,14 +118,6 @@ export class Preview {
   }
 
   /**
-   * Replaces the margin markers of `layer` (one per feature, e.g. comments).
-   * They are placed again after every compilation, so they follow the text.
-   */
-  setMarkers(layer: string, markers: readonly Marker[]): void {
-    this.markers.set(layer, markers);
-  }
-
-  /**
    * Marks where the given source ranges of `path` are drawn with change bars
    * in the page margin, after this and every following compilation, until
    * called with null. The ranges refer to the text last passed to `update()`;
@@ -165,7 +153,6 @@ export class Preview {
 
   destroy(): void {
     this.renderListeners.clear();
-    this.markers.destroy();
     this.worker.terminate();
     this.resizeObserver?.disconnect();
     cancelAnimationFrame(this.frame);
@@ -181,7 +168,6 @@ export class Preview {
     if (!failed) {
       this.clearHighlight();
       this.list.render(response.result.pages);
-      void this.markers.refresh();
       this.scheduleStatus();
       if (!superseded()) void this.drawChanges();
       this.compiled = { files, pages: response.result.pages };
@@ -196,11 +182,6 @@ export class Preview {
     const response = await this.request({ type: 'cursor', path, offset });
     if (superseded() || response.type !== 'cursor' || response.positions.length === 0) return;
     this.flash(response.positions[0]);
-  }
-
-  private async locate(path: string, offset: number): Promise<Position[]> {
-    const response = await this.request({ type: 'cursor', path, offset });
-    return response.type === 'cursor' ? response.positions : [];
   }
 
   private setZoom(request: ZoomRequest): void {
@@ -225,7 +206,7 @@ export class Preview {
 
   private async handleClick(event: MouseEvent): Promise<void> {
     const target = event.target as Element;
-    const hit = PreviewMarkers.isMarker(target) ? null : this.list.pageAt(target);
+    const hit = this.list.pageAt(target);
     if (!hit) return;
     const rect = hit.element.getBoundingClientRect();
     const scale = hit.page.width / rect.width;
