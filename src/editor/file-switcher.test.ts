@@ -36,6 +36,23 @@ describe('FileSwitcher', () => {
     expect(onOpen).toHaveBeenCalledWith('/chapter.typ');
   });
 
+  it('marks the files other users are in with their initials in their color', () => {
+    const { parent, switcher, tab } = setup();
+    const ann = { id: '1', user: { name: 'Ann Lee', color: '#b58900' }, anchor: 0, head: 0 };
+    const bob = { id: '2', user: { name: 'Bob', color: '#000080' }, anchor: 0, head: 0 };
+    switcher.showPresence([{ ...ann, path: '/chapter.typ' }, { ...bob, path: '/chapter.typ' }]);
+    const dots = [...tab('chapter.typ').querySelectorAll<HTMLElement>('.typst-files__user')];
+    expect(dots.map((dot) => [dot.textContent, dot.title])).toEqual([['AL', 'Ann Lee'], ['B', 'Bob']]);
+    expect(dots[0].style.getPropertyValue('--typst-remote-color')).toBe('#b58900');
+    expect(dots[1].style.getPropertyValue('--typst-remote-text')).toBe('#ffffff');
+    expect(tab('chapter.typ').querySelector('.typst-files__presence')!.getAttribute('aria-label')).toBe('Here: Ann Lee, Bob');
+    expect(tab('main.typ').querySelector('.typst-files__presence')).toBeNull();
+    switcher.render({ ...state, active: '/chapter.typ' });
+    expect(tab('chapter.typ').querySelectorAll('.typst-files__user')).toHaveLength(2);
+    switcher.showPresence([]);
+    expect(parent.querySelector('.typst-files__presence')).toBeNull();
+  });
+
   it('creates a .typ file from a typed name and opens it', async () => {
     const { parent, button, change, onOpen } = setup();
     button('New file').click();

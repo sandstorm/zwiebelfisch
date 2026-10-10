@@ -1,3 +1,4 @@
+import { initials, presenceStyle, type PlacedPresence, type PresenceUser } from '../document/presence';
 import { displayName, extensionOf, fileKind, toPath, type FileKind } from './paths';
 import { uploadChanges } from './upload';
 import type { FileChange } from './project';
@@ -49,6 +50,8 @@ export class FileSwitcher {
   private readonly picker: HTMLInputElement;
   private prompt: HTMLFormElement | null = null;
   private state: FileListState = { paths: [], main: '', active: '' };
+  /** Who else is in which file. */
+  private others = new Map<string, PresenceUser[]>();
   private readonly detachDrop: () => void;
 
   constructor(
@@ -90,10 +93,17 @@ export class FileSwitcher {
   render(state: FileListState): void {
     this.state = state;
     const doc = this.element.ownerDocument;
-    this.list.replaceChildren(...state.paths.map((path) => fileTab(doc, path, state)));
+    this.list.replaceChildren(...state.paths.map((path) => fileTab(doc, path, state, this.others.get(path) ?? [])));
     const fixed = state.active === state.main;
     this.rename.disabled = fixed;
     this.remove.disabled = fixed;
+  }
+
+  /** Marks the files other users are in with a colored dot with their initials each. */
+  showPresence(presences: readonly PlacedPresence[]): void {
+    this.others = new Map();
+    for (const { path, user } of presences) this.others.set(path, [...(this.others.get(path) ?? []), user]);
+    this.render(this.state);
   }
 
   destroy(): void {
@@ -177,7 +187,7 @@ export class FileSwitcher {
   }
 }
 
-function fileTab(doc: Document, path: string, state: FileListState): HTMLButtonElement {
+function fileTab(doc: Document, path: string, state: FileListState, others: readonly PresenceUser[]): HTMLButtonElement {
   const tab = element(doc, 'button', 'typst-files__tab');
   tab.type = 'button';
   tab.setAttribute('role', 'tab');
@@ -192,7 +202,23 @@ function fileTab(doc: Document, path: string, state: FileListState): HTMLButtonE
     badge.textContent = 'Main';
     tab.append(badge);
   }
+  if (others.length > 0) tab.append(presenceDots(doc, others));
   return tab;
+}
+
+/** One dot per user in the file: initials on their color, the name as tooltip. */
+function presenceDots(doc: Document, users: readonly PresenceUser[]): HTMLElement {
+  const dots = element(doc, 'span', 'typst-files__presence');
+  dots.setAttribute('aria-label', `Here: ${users.map((user) => user.name).join(', ')}`);
+  for (const user of users) {
+    const dot = element(doc, 'span', 'typst-files__user');
+    dot.textContent = initials(user.name);
+    dot.title = user.name;
+    dot.dataset.user = user.name;
+    presenceStyle(dot, user);
+    dots.append(dot);
+  }
+  return dots;
 }
 
 function promptForm(doc: Document, prompt: Prompt, cancel: () => void): HTMLFormElement {
