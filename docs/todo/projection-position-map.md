@@ -1,6 +1,6 @@
 # Projection: precise source offset ↔ ProseMirror position mapping
 
-Status: open
+Status: done (branch task/projection-position-map)
 Depends on: tiptap-migration (do it on the Tiptap schema)
 Touches: src/visual-view/projection.ts (+ tests)
 

@@ -37,7 +37,7 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [web-component-and-library-build](web-component-and-library-build.md) | done |
 | [multi-file-assets-packages](multi-file-assets-packages.md) | open |
 | [tiptap-migration](tiptap-migration.md) | done |
-| [projection-position-map](projection-position-map.md) | open |
+| [projection-position-map](projection-position-map.md) | done (branch task/projection-position-map) |
 | [comments](comments.md) | open (after position map) |
 | [diff-rendering](diff-rendering.md) | open (after position map) |
 | [visual-view-toolbar-and-raw-editing](visual-view-toolbar-and-raw-editing.md) | open (after projection) |
