@@ -16,7 +16,7 @@ export interface MenuStyles {
   create(): void;
 }
 
-/** The built-in entries, by `<option>` value. */
+/** The built-in entries, by `<option>` value; the headings only while the schema has them (the headings extension). */
 const BUILT_IN: Record<string, { label: string; run(chain: ChainedCommands, editor: Editor): ChainedCommands; level?: 1 | 2 | 3 }> = {
   // Normal text also takes the blocks out of a paragraph style
   paragraph: { label: 'Normal text', run: (c, editor) => (editor.isActive('styledBlock') ? c.unsetParagraphStyle() : c).setParagraph() },
@@ -75,7 +75,7 @@ export class StyleMenu {
 
   private build(custom: readonly Style[]): void {
     const doc = this.element.ownerDocument;
-    this.element.replaceChildren(...Object.entries(BUILT_IN).map(([value, { label }]) => new Option(label, value)));
+    this.element.replaceChildren(...this.builtIn().map(([value, { label }]) => new Option(label, value)));
     for (const [kind, title] of [['paragraph', 'Paragraph styles'], ['text', 'Text styles']] as const) {
       const styles = custom.filter((style) => style.kind === kind);
       if (styles.length === 0) continue;
@@ -109,9 +109,15 @@ export class StyleMenu {
 
   /** The option of the selection's style: a heading, else the paragraph style around it, else normal text. */
   private current(): string {
-    for (const [value, { level }] of Object.entries(BUILT_IN)) if (level && this.editor.isActive('heading', { level })) return value;
+    for (const [value, { level }] of this.builtIn()) if (level && this.editor.isActive('heading', { level })) return value;
     if (this.editor.isActive('styledBlock')) return `paragraph:${this.editor.getAttributes('styledBlock').name}`;
     return this.editor.isActive('paragraph') ? 'paragraph' : '';
+  }
+
+  /** The built-in entries this editor can apply. */
+  private builtIn(): [string, (typeof BUILT_IN)[string]][] {
+    const headings = this.editor.schema.nodes.heading !== undefined;
+    return Object.entries(BUILT_IN).filter(([, { level }]) => headings || level === undefined);
   }
 
   /** The custom style an option value stands for. */
