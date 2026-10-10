@@ -4,7 +4,7 @@
    Workbench.registerStyleSheet). See docs/embedding.md. */
 /* Colors: tokens as light-dark(light, dark). The widget follows the page's color-scheme (a page that
    declares `color-scheme: light dark` gets it dark when the OS is); the setting `workbench.theme` sets its own
-   (data-theme). What light-dark() cannot express selects on data-scheme (typst-editor/color-scheme.ts). */
+   (data-theme). What light-dark() cannot express selects on data-scheme (hosts/workbench/color-scheme/). */
 .typst-editor[data-theme='light'] { color-scheme: light; }
 .typst-editor[data-theme='dark'] { color-scheme: dark; }
 .typst-editor[data-theme='auto'] { color-scheme: light dark; }
@@ -314,8 +314,6 @@
 .typst-floating-bar > .typst-toolbar__button { width: 28px; height: 28px; }
 .typst-editor__tabs[hidden] { display: none; }
 .typst-editor.typst-editor--dropping { outline: 2px dashed var(--te-accent); outline-offset: -4px; }
-
-
 
 /* Popup menus (ui/popup-menu: context menus, "New ▾") */
 .typst-popup-menu {
