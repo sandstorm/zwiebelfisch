@@ -9,7 +9,7 @@ import * as Y from 'yjs';
 import { addMarginNote } from '../comments/comments';
 import { Project } from '../../core/project/project';
 import { presence, SourceViewHost } from '../../hosts/source-view/source-view';
-import { VisualView } from '../visual-view/visual-view';
+import { headings, marginNotes, markup, VisualView, VisualViewContributions } from '../../hosts/visual-view/visual-view';
 import { Collaboration } from './collaboration';
 import { connect, connectAwareness } from './in-process';
 import { ProjectPath } from '../../core/paths/paths';
@@ -39,7 +39,7 @@ async function user(name: string, files: Record<string, string>, peer?: { ydoc: 
   const visualParent = window.document.createElement('div');
   const sourceParent = window.document.createElement('div');
   window.document.body.append(visualParent, sourceParent);
-  const visual = new VisualView(visualParent, document);
+  const visual = new VisualView(visualParent, document, VisualViewContributions.from([markup, headings, marginNotes()]));
   const sourceViews = new SourceViewHost();
   sourceViews.registerExtension(presence);
   const source = sourceViews.createView(sourceParent, document);

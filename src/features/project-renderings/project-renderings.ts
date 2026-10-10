@@ -5,24 +5,31 @@ import { Disposable } from '../../core/disposable/disposable';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import type { PreviewContributions } from '../../hosts/preview/preview';
-import type { VisualViewOptions } from '../visual-view/visual-view';
+import { images, renderedBoxes, type ImageAssets, type Renderings } from '../../hosts/visual-view/visual-view';
 import { type FileChange, type FileContent, type Project } from '../../core/project/project';
 import { type PathReference, ProjectPath } from '../../core/paths/paths';
 import { uploadChanges } from '../files/files';
 
 /**
- * What every document's Visual view renders and inserts: compiled snippets from the preview, the project's image
- * files, and the images "Insert image" offers or uploads (uploads go through `Workbench.applyChange`).
+ * What every document's Visual view renders and inserts: images (`#image(..)` boxes showing the project's image
+ * file, "Insert image" offering the project's images and uploads, which go through `Workbench.applyChange`; an image
+ * box's path opens the file, with the `documentLinks` service), and raw boxes as compiled snippets from the preview.
  */
 export function projectRenderings(): TypstExtension {
   return {
     id: 'project-renderings',
-    activate({ project, workbench, preview, visualView, subscriptions }) {
+    activate(context) {
+      const { project, workbench, preview, services, subscriptions } = context;
       const renderings = new ProjectRenderings({ project, preview, request: (change) => workbench.applyChange(change) });
-      subscriptions.push(
-        new Disposable(() => renderings.destroy()),
-        visualView.registerDocumentOptions((document) => renderings.forDocument(document)),
-      );
+      subscriptions.push(new Disposable(() => renderings.destroy()));
+      const documentLinks = services.get('documentLinks');
+      images({
+        assets: (document) => renderings.forDocument(document).assets,
+        imageUrls: (document) => renderings.forDocument(document).renderer,
+        documentLinks,
+      }).activate(context);
+      // after images, whose renderer draws image boxes
+      renderedBoxes({ snippets: (document) => renderings.forDocument(document).renderer }).activate(context);
     },
   };
 }
@@ -46,8 +53,8 @@ export class ProjectRenderings {
 
   constructor(private readonly options: ProjectRenderingsOptions) {}
 
-  /** The Visual view options for `document` (it may be renamed later; paths follow). */
-  forDocument(document: TypstDocument): VisualViewOptions {
+  /** What the Visual view of `document` renders and inserts (it may be renamed later; paths follow). */
+  forDocument(document: TypstDocument): { renderer: Renderings; assets: ImageAssets } {
     const { project, preview } = this.options;
     const path = () => project.pathOf(document);
     return {
@@ -61,10 +68,7 @@ export class ProjectRenderings {
           const target = file && ProjectPath.resolve(file, reference);
           return target ? this.imageUrl(target) : null;
         },
-        onChange: (listener) => {
-          const subscription = preview.onDidRender(listener);
-          return () => subscription.dispose();
-        },
+        onDidChange: preview.onDidRender,
       },
       assets: {
         list: () => {

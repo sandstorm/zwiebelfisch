@@ -35,7 +35,11 @@ export function collaboration(options: CollaborationOptions, user?: Collaboratio
       const connected = new EventEmitter<RoomVersions>();
       let versions: RoomVersions | null = null;
       const link = new CollaborationLink(options, { project, user }, {
-        current: () => workbench.activeEditor,
+        current: () => {
+          const editor = workbench.activeTextEditor;
+          const path = editor && project.pathOf(editor.document);
+          return path ? { path, view: { selection: () => editor.selection } } : null;
+        },
         focused: () => workbench.isEditorFocused(),
         onVersions: (opened) => {
           versions = opened;
@@ -44,8 +48,8 @@ export function collaboration(options: CollaborationOptions, user?: Collaboratio
         onPresence: (presences) => presence.fire(presences),
       });
       const showCursors = () => {
-        const editor = workbench.activeEditor;
-        link.show(editor?.path ?? null, editor?.views ?? []);
+        const editor = workbench.activeTextEditor;
+        link.show((editor && project.pathOf(editor.document)) ?? null, editor ? [editor] : []);
       };
       subscriptions.push(
         sourceView.registerExtension(sourcePresence),
@@ -61,7 +65,7 @@ export function collaboration(options: CollaborationOptions, user?: Collaboratio
         }),
         workbench.onDidShowFile(showCursors),
         // fired from the editors' own updates, after their state has the new selection
-        workbench.onDidChangeEditorSelection(() => link.selectionChanged()),
+        workbench.onDidChangeTextEditorSelection(() => link.selectionChanged()),
       );
     },
   };

@@ -75,7 +75,7 @@ Styles that must live inside the shadow root:
   `src/features/files/files.css`): `createTypstEditor` injects them into
   `host.getRootNode()`, which is the shadow root here and `document.head` otherwise.
 - **ProseMirror** (Visual view) has no style mounting of its own. Its core CSS is vendored in
-  `src/features/visual-view/visual-view.css` and injected together with the widget styles, so it
+  `src/hosts/visual-view/visual-view.css` and injected together with the widget styles, so it
   ends up in the same place.
 
 Theming goes through the CSS custom properties on `.typst-editor` (`--te-border`, `--te-accent`, …).

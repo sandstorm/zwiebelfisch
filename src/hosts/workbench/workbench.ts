@@ -8,10 +8,10 @@ import type { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
 import type { FileKind, ProjectPath } from '../../core/paths/paths';
 import type { FileChange, FileContent, Project } from '../../core/project/project';
-import type { TypstDocument } from '../../core/typst-document/typst-document';
+import type { PresenceTarget, TypstDocument } from '../../core/typst-document/typst-document';
 import type { PreviewContributions } from '../preview/preview';
-import type { SourceView, SourceViewContributions } from '../source-view/source-view';
-import type { VisualView, VisualViewOptions } from '../../features/visual-view/visual-view';
+import type { SourceViewContributions } from '../source-view/source-view';
+import type { VisualViewContributions } from '../visual-view/visual-view';
 import type { EditorMode } from './editing-views/editing-views';
 import type { Memory } from './layout/layout';
 
@@ -29,6 +29,7 @@ export interface ExtensionContext {
   readonly subscriptions: { dispose(): unknown }[];
   readonly project: Project;
   readonly workbench: Workbench;
+  /** Node and mark specs, toolbar items, gutters, box renderers and editor extensions for every Visual view. */
   readonly visualView: VisualViewContributions;
   /** CodeMirror extensions and link providers for every Source view. */
   readonly sourceView: SourceViewContributions;
@@ -112,10 +113,13 @@ export interface Workbench {
   /** A value remembered for the browser session under this widget's key (`name` tells values apart). */
   remember<T>(name: string): Memory<T>;
 
-  /** INTERIM (until H1 / H2's view contribution points): the shown Typst file and its views; null while another kind of file is shown. */
-  readonly activeEditor: ActiveEditor | null;
-  /** INTERIM: the selection in a view of a document moved, or its text changed (the views already show the new selection). */
-  readonly onDidChangeEditorSelection: Event<TypstDocument>;
+  /** The editor of the Typst file shown in the editing area; null while another kind of file is shown. */
+  readonly activeTextEditor: TextEditor | null;
+  /**
+   * The selection in an editor moved, or its text changed (fired from the views' own updates, so `selection` is
+   * the new one already). Any document's editor, not only the active one: a hidden view follows the text, too.
+   */
+  readonly onDidChangeTextEditorSelection: Event<TextEditorSelectionChangeEvent>;
   /** Whether the user works in the editing area (the focus is inside it). */
   isEditorFocused(): boolean;
 }
@@ -159,21 +163,22 @@ export interface FileViewProvider {
   createFileView(parent: HTMLElement): FileView;
 }
 
-/** INTERIM: the shown Typst file, the view the user works in (by tab) and both of its views. */
-export interface ActiveEditor {
-  readonly path: ProjectPath;
+/**
+ * A Typst file's editor: its Visual and Source views, behind the Visual / Source tabs. One per document, for as
+ * long as its views live. As a `PresenceTarget`, it shows other users' carets in both views.
+ */
+export interface TextEditor extends PresenceTarget {
   readonly document: TypstDocument;
-  readonly view: VisualView | SourceView;
-  readonly views: readonly [VisualView, SourceView];
+  /** The tab the user works in: the view `selection` and `revealRange` use. */
+  readonly mode: EditorMode;
+  /** The selection in that view, as source offsets (`from === to` for a caret). */
+  readonly selection: { readonly from: number; readonly to: number };
+  /** Selects `from`..`to` (source offsets) in that view, scrolls it into view and focuses the view. */
+  revealRange(from: number, to: number): void;
 }
 
-/**
- * PLACEHOLDER — filled in by H1 at merge with the Visual view's contribution points (node specs, toolbar items,
- * gutters, decorations). Until then one interim bridge to today's `VisualViewOptions`.
- */
-export interface VisualViewContributions {
-  /** INTERIM: options for the Visual view of each document, merged in registration order, for the views created later. */
-  registerDocumentOptions(provider: (document: TypstDocument) => VisualViewOptions): Disposable;
+export interface TextEditorSelectionChangeEvent {
+  readonly textEditor: TextEditor;
 }
 
 export { WorkbenchHost, type WorkbenchOptions } from './workbench-host';

@@ -118,22 +118,31 @@ describe('WorkbenchHost', () => {
   it('opens a file at a range, in the Source tab when asked', () => {
     const { workbench } = setup(undefined, { mode: 'visual' });
     workbench.open(path('/a.typ'), { selection: { from: 0, to: 1 }, mode: 'source' });
-    expect(workbench.activeEditor?.path).toBe('/a.typ');
-    expect(workbench.activeEditor?.view).toBe(workbench.activeEditor?.views[1]);
+    const editor = workbench.activeTextEditor!;
+    expect(editor.document.text).toBe('A\n');
+    expect(editor.mode).toBe('source');
+    expect(editor.selection).toEqual({ from: 0, to: 1 });
+  });
+
+  it('tells about a moved selection in an editor, after it has the new one', () => {
+    const seen: { from: number; to: number }[] = [];
+    const { workbench } = setup(({ workbench }) => void workbench.onDidChangeTextEditorSelection(({ textEditor }) => seen.push(textEditor.selection)));
+    workbench.activeTextEditor!.revealRange(2, 4);
+    expect(seen.at(-1)).toEqual({ from: 2, to: 4 });
   });
 
   it('has no active editor while another kind of file is shown', () => {
     const { workbench } = setup();
-    expect(workbench.activeEditor?.document.text).toBe('= Main\n');
+    expect(workbench.activeTextEditor?.document.text).toBe('= Main\n');
     workbench.open(path('/logo.png'));
-    expect(workbench.activeEditor).toBeNull();
+    expect(workbench.activeTextEditor).toBeNull();
   });
 
-  it('gives the Visual view of each document the options the extensions register', () => {
-    const provider = vi.fn((_document: TypstDocument) => ({ user: { name: 'Ann' } }));
-    const { workbench } = setup(({ visualView, subscriptions }) => subscriptions.push(visualView.registerDocumentOptions(provider)));
+  it('applies the Visual view contributions to the Visual view of each document', () => {
+    const provider = vi.fn((_view: { document: TypstDocument }) => []);
+    const { workbench } = setup(({ visualView, subscriptions }) => subscriptions.push(visualView.registerEditorExtension(provider)));
     workbench.open(path('/a.typ'));
-    expect(provider.mock.calls.map(([document]) => document.text)).toEqual(['= Main\n', 'A\n']);
+    expect(provider.mock.calls.map(([view]) => view.document.text)).toEqual(['= Main\n', 'A\n']);
   });
 
   it('applies the Source view contributions to every Source view, and gives the extensions the preview', () => {

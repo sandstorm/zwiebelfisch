@@ -30,14 +30,14 @@ describe('entry-imports', () => {
   });
 
   it("fails on an import into a sibling subfolder's internals", () => {
-    const messages = lint('src/features/visual-view/toolbar/toolbar.ts', "import { x } from '../nodes/text-align';");
-    expect(messages).toEqual([expect.stringContaining('features/visual-view/nodes/nodes.ts')]);
+    const messages = lint('src/hosts/visual-view/toolbar/toolbar.ts', "import { x } from '../nodes/raw-box';");
+    expect(messages).toEqual([expect.stringContaining('hosts/visual-view/nodes/nodes.ts')]);
   });
 
   it("allows another folder's entry file and anything inside the own folder", () => {
     expect(lint('src/features/files/files.ts', "import { Preview } from '../../hosts/preview/preview';")).toEqual([]);
-    expect(lint('src/features/visual-view/nodes/raw-box.ts', "import { x } from '../projection/projection';")).toEqual([]);
-    expect(lint('src/features/visual-view/nodes/raw-box.ts', "import { x } from '../presence';")).toEqual([]);
+    expect(lint('src/hosts/visual-view/nodes/raw-box.ts', "import { x } from '../projection/projection';")).toEqual([]);
+    expect(lint('src/hosts/visual-view/nodes/raw-box.ts', "import { x } from '../presence';")).toEqual([]);
   });
 
   it('enters a host through its entry file only (hosts/ only groups)', () => {

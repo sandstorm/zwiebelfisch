@@ -2,14 +2,13 @@
 // extensions put into it. What createTypstEditor creates; extensions see it as `Workbench`. See workbench.ts.
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
-import { DocumentLinkProvider } from '../../core/document-links/document-links';
 import { ProjectPath, type FileKind } from '../../core/paths/paths';
 import type { FileChange, Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { Diagnostic } from '../../core/typst-engine/typst-engine';
 import { Preview } from '../preview/preview';
 import { SourceViewHost } from '../source-view/source-view';
-import type { VisualViewOptions } from '../../features/visual-view/visual-view';
+import { VisualViewContributions } from '../visual-view/visual-view';
 import { ColorScheme } from './color-scheme/color-scheme';
 import { Commands } from './commands/commands';
 import { EditingViews, type EditorMode } from './editing-views/editing-views';
@@ -18,7 +17,6 @@ import { FileDrops } from './file-drops/file-drops';
 import { FileViews } from './file-views/file-views';
 import { Layout, type Memory } from './layout/layout';
 import type {
-  ActiveEditor,
   CommandArguments,
   CommandRegistry,
   CommandResult,
@@ -26,8 +24,9 @@ import type {
   OpenOptions,
   SidePanel,
   SidePanelOptions,
+  TextEditor,
+  TextEditorSelectionChangeEvent,
   TypstExtension,
-  VisualViewContributions,
   Workbench,
 } from './workbench';
 
@@ -45,8 +44,8 @@ export interface WorkbenchOptions {
 /**
  * The frame of the widget on `host`: shows the project's files (Typst files in the Visual / Source tabs, others in
  * the file views extensions register), keeps the preview compiling the main file and in step with the cursor,
- * and runs the extensions. The Source views and the preview are its hosts (`ExtensionContext.sourceView` /
- * `preview`). `activate` starts it: extensions first (their contributions are in place before any view exists),
+ * and runs the extensions. The Visual and Source views and the preview are its hosts (`ExtensionContext.visualView`,
+ * `sourceView`, `preview`). `activate` starts it: extensions first (their contributions are in place before any view exists),
  * then the main file is shown and compiled.
  */
 export class WorkbenchHost implements Workbench {
@@ -58,16 +57,16 @@ export class WorkbenchHost implements Workbench {
   readonly #drops: FileDrops;
   readonly #scheme: ColorScheme;
   readonly #extensions: ExtensionHost;
+  readonly #visualView = new VisualViewContributions();
   readonly #sourceViews = new SourceViewHost();
   readonly #preview: Preview;
   #hasFrame = false;
-  readonly #visualOptions: ((document: TypstDocument) => VisualViewOptions)[] = [];
   readonly #shown = new EventEmitter<ProjectPath>();
-  readonly #selectionChanged = new EventEmitter<TypstDocument>();
+  readonly #selectionChanged = new EventEmitter<TextEditorSelectionChangeEvent>();
   readonly #unsubscribe: () => void;
 
   readonly onDidShowFile = this.#shown.event;
-  readonly onDidChangeEditorSelection = this.#selectionChanged.event;
+  readonly onDidChangeTextEditorSelection = this.#selectionChanged.event;
   readonly onDidDropFiles: Event<File[]>;
 
   constructor(
@@ -91,7 +90,7 @@ export class WorkbenchHost implements Workbench {
     this.#extensions = new ExtensionHost({
       project,
       workbench: this,
-      visualView: this.#visualViewContributions(),
+      visualView: this.#visualView,
       sourceView: this.#sourceViews,
       preview: this.#preview,
     });
@@ -187,11 +186,8 @@ export class WorkbenchHost implements Workbench {
     return this.#layout.remember<T>(name);
   }
 
-  get activeEditor(): ActiveEditor | null {
-    const shown = this.#views.shown();
-    if (!shown) return null;
-    const { visual, source } = this.#views.viewsOf(shown.document);
-    return { path: this.#active, document: shown.document, view: shown.view, views: [visual, source] };
+  get activeTextEditor(): TextEditor | null {
+    return this.#views.activeEditor();
   }
 
   isEditorFocused(): boolean {
@@ -219,26 +215,16 @@ export class WorkbenchHost implements Workbench {
   #createViews(): EditingViews {
     return new EditingViews(this.#layout.editor, {
       mode: this.options.mode,
+      visualView: this.#visualView,
       sourceViews: this.#sourceViews,
-      visualOptions: (document) => Object.assign({}, ...this.#visualOptions.map((options) => options(document))),
-      documentLinks: (document) => this.#documentLinks(document),
       onCursor: (document, offset) => {
         const path = this.project.pathOf(document);
         if (path) this.#preview.reveal(path, offset);
       },
       // Fired from the editors' own updates: the DOM's selectionchange fires before
       // CodeMirror/ProseMirror read the new selection, so a listener would see the previous one.
-      onSelection: (document) => this.#selectionChanged.fire(document),
+      onSelection: (textEditor) => this.#selectionChanged.fire({ textEditor }),
     });
-  }
-
-  #visualViewContributions(): VisualViewContributions {
-    return {
-      registerDocumentOptions: (provider) => {
-        this.#visualOptions.push(provider);
-        return new Disposable(() => this.#visualOptions.splice(this.#visualOptions.indexOf(provider), 1));
-      },
-    };
   }
 
   #compile(): void {
@@ -256,23 +242,6 @@ export class WorkbenchHost implements Workbench {
     const active = this.#active;
     if (change.kind === 'rename' && change.from === active) this.open(change.path);
     else this.open(this.project.has(active) ? active : this.project.main);
-  }
-
-  /** INTERIM (until the Visual view's contribution points): the links of `document` in its Visual view; its paths resolve from its current path and open here. The Source view gets them from the document-links extension. */
-  #documentLinks(document: TypstDocument): DocumentLinkProvider {
-    return new DocumentLinkProvider({
-      resolve: (reference) => {
-        const file = this.project.pathOf(document);
-        return file ? ProjectPath.resolve(file, reference) : null;
-      },
-      exists: (path) => this.project.has(path),
-      open: (path) => this.open(path),
-      create: async (path) => {
-        const problem = await this.applyChange({ kind: 'create', path, content: '' });
-        if (problem === null) this.open(path);
-        return problem;
-      },
-    });
   }
 
   /** A click in the preview: opens its file and reveals the range. A package file is no project file, and ignored. */

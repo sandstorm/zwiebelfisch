@@ -5,6 +5,7 @@ import { DocumentLinkProvider } from '../../core/document-links/document-links';
 import { ProjectPath } from '../../core/paths/paths';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import { fileLinks } from '../../hosts/source-view/source-view';
+import { boxLinks } from '../../hosts/visual-view/visual-view';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 
 declare module '../../hosts/workbench/workbench' {
@@ -15,13 +16,15 @@ declare module '../../hosts/workbench/workbench' {
 }
 
 /**
- * Links the file paths of every Typst file in the Source view: they resolve from the file's current path, open the
- * file in the workbench, and create a missing one through `Workbench.applyChange`. Provides the `documentLinks` service.
+ * Links the file paths of every Typst file in the Source view and in the Visual view's raw boxes: they resolve from
+ * the file's current path, open the file in the workbench, and create a missing one through `Workbench.applyChange`.
+ * Provides the `documentLinks` service (an image box's path is a link with it, too).
  */
 export function documentLinks(): TypstExtension {
   return {
     id: 'document-links',
-    activate({ project, workbench, sourceView, services, subscriptions }) {
+    activate(context) {
+      const { project, workbench, sourceView, services, subscriptions } = context;
       const provider = (document: TypstDocument) =>
         new DocumentLinkProvider({
           resolve: (reference) => {
@@ -41,6 +44,7 @@ export function documentLinks(): TypstExtension {
         sourceView.registerExtension(fileLinks),
         sourceView.registerLinkProvider(provider),
       );
+      boxLinks({ documentLinks: provider }).activate(context);
     },
   };
 }

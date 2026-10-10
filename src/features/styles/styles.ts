@@ -4,6 +4,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import { type FileChange, type Project } from '../../core/project/project';
 import { PathReference, ProjectPath } from '../../core/paths/paths';
 import { calculateImportChange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
+import { customStyles } from '../../hosts/visual-view/visual-view';
 import type { TypstExtension, Workbench } from '../../hosts/workbench/workbench';
 import { scanStyles, type FoundStyle, type Style } from './discover';
 import { newStyle, STYLES_FILE } from './new-style';
@@ -25,15 +26,11 @@ declare module '../../hosts/workbench/workbench' {
 export function styles(): TypstExtension {
   return {
     id: 'styles',
-    activate({ project, workbench, services, visualView, subscriptions }) {
+    activate(context) {
+      const { project, workbench, services, subscriptions } = context;
       const index = new StyleIndex(project);
-      subscriptions.push(
-        new Disposable(() => index.destroy()),
-        services.provide('styles', index),
-        visualView.registerDocumentOptions((document) => ({
-          styles: { ...index.forDocument(document), create: () => void addNewStyle(index, project, workbench) },
-        })),
-      );
+      subscriptions.push(new Disposable(() => index.destroy()), services.provide('styles', index));
+      customStyles({ styles: index, create: () => void addNewStyle(index, project, workbench) }).activate(context);
     },
   };
 }

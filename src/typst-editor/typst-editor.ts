@@ -18,7 +18,10 @@ import { spreadsheets } from '../features/spreadsheets/spreadsheets';
 import { styles } from '../features/styles/styles';
 import { typstLanguage } from '../features/typst-language/typst-language';
 import { versions } from '../features/versions/versions';
-import proseMirrorStyles from '../features/visual-view/visual-view.css?inline';
+import {
+  alignment, headingNumbers, headings, horizontalRule, lists, markup, outline, pageBreak, tables, taskLists,
+} from '../hosts/visual-view/visual-view';
+import proseMirrorStyles from '../hosts/visual-view/visual-view.css?inline';
 import { type EditorMode, type TypstExtension, WorkbenchHost, workbenchStyles } from '../hosts/workbench/workbench';
 import { type FileChange, Project, type ProjectFiles } from '../core/project/project';
 import { ProjectPath } from '../core/paths/paths';
@@ -183,11 +186,13 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
   };
 }
 
-/** The features of the widget, in activation order (an extension reads the services of those before it). */
+/**
+ * The features of the widget and the Typst constructs of the Visual view, in activation order: an extension reads
+ * the services of those before it, and the order of the Visual view's contributions is that of its schema (marks
+ * nest in it) and of its projectors (the first that takes a piece of syntax gets it).
+ */
 function builtinExtensions(options: TypstEditorOptions): TypstExtension[] {
   return [
-    labels(),
-    styles(),
     typstLanguage(),
     documentLinks(),
     ...(options.collaboration ? [collaboration(options.collaboration, options.user)] : []),
@@ -197,8 +202,22 @@ function builtinExtensions(options: TypstEditorOptions): TypstExtension[] {
     spreadsheets(),
     diagnostics(),
     versions({ user: options.user }),
-    comments({ user: options.user }),
+    markup,
+    headings,
+    tables,
+    // images, and raw boxes drawn as compiled snippets (after images, whose renderer draws image boxes)
     projectRenderings(),
+    outline,
+    pageBreak,
+    horizontalRule,
+    // before lists: its projector gets bullet items (`- [ ] ..`) first
+    taskLists,
+    lists,
+    headingNumbers,
+    alignment,
+    comments({ user: options.user }),
+    labels(),
+    styles(),
     // the preview's toolbar in this order: zoom, "Follow cursor", page number, then "Download PDF"
     previewControls({ followCursor: options.followCursor }),
     pdfExport({ download: options.pdfDownload }),

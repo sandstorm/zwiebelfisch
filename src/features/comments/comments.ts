@@ -3,7 +3,8 @@
 // See ARCHITECTURE.md, "Comments = margin notes".
 import { Disposable } from '../../core/disposable/disposable';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import { marginNotes, notesGutter } from '../../hosts/visual-view/visual-view';
+import type { TextEditor, TypstExtension, Workbench } from '../../hosts/workbench/workbench';
 import { addMarginNote } from './add-margin-note';
 
 export { addMarginNote, NOTE_STYLE } from './add-margin-note';
@@ -19,22 +20,41 @@ declare module '../../hosts/workbench/workbench' {
 }
 
 /**
- * Comments as margin notes, written as `user` (signs replies; only own messages can be edited): "Comment" in the
- * Visual view's toolbar and, for the Source view, in the tab bar; Ctrl/Cmd+Alt+M in both.
+ * Comments as margin notes, written as `user` (signs replies; only own messages can be edited): in the Visual view
+ * the notes in the text and a card per note in the notes gutter; "Comment" in the Visual view's toolbar and, for the
+ * Source view, in the tab bar; Ctrl/Cmd+Alt+M in both. A note added in the Visual view opens its card.
  */
 export function comments(options: { user?: { name: string } } = {}): TypstExtension {
   return {
     id: 'comments',
-    activate({ workbench, visualView, subscriptions }) {
-      const action = new CommentAction(workbench.ownerDocument, () => workbench.activeEditor);
+    activate(context) {
+      const { workbench, subscriptions } = context;
+      const notes = notesGutter({ user: options.user });
+      const action = new CommentAction(workbench.ownerDocument, () => noteTarget(workbench, notes));
       subscriptions.push(
         new Disposable(() => action.destroy()),
         workbench.registerCommand('comments.addComment', () => action.comment()),
         workbench.registerKeybinding('Mod+Alt+KeyM', 'comments.addComment'),
         // the Visual view has "Comment" in its own toolbar
         workbench.registerTabBarItem(action.button, { mode: 'source' }),
-        visualView.registerDocumentOptions(() => ({ user: options.user, comment: () => action.comment() })),
       );
+      marginNotes({ comment: () => action.comment() }).activate(context);
+      notes.activate(context);
+    },
+  };
+}
+
+/** Where "Comment" adds a note: the active editor; in its Visual tab, the new note's card opens. */
+function noteTarget(workbench: Workbench, notes: { editNote(document: TypstDocument, offset: number): boolean }): ReturnType<NoteTarget> {
+  const editor: TextEditor | null = workbench.activeTextEditor;
+  if (!editor) return null;
+  const { document } = editor;
+  return {
+    document,
+    view: {
+      selection: () => editor.selection,
+      reveal: (from, to) => editor.revealRange(from, to),
+      editNote: editor.mode === 'visual' ? (offset) => notes.editNote(document, offset) : undefined,
     },
   };
 }

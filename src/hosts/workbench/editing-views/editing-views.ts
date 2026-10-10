@@ -1,8 +1,7 @@
 // EditingViews: the Visual/Source tabs; lazily one VisualView and SourceView per document. See workbench.ts.
-import type { Highlight, TypstDocument } from '../../../core/typst-document/typst-document';
-import type { DocumentLinkProvider } from '../../../core/document-links/document-links';
+import type { Highlight, Presence, TypstDocument } from '../../../core/typst-document/typst-document';
 import { describeDiagnostic, type SourceDiagnostic, type SourceView, SourceViewHost } from '../../source-view/source-view';
-import { VisualView, type VisualViewOptions } from '../../../features/visual-view/visual-view';
+import { VisualView, VisualViewContributions } from '../../visual-view/visual-view';
 
 export type EditorMode = 'visual' | 'source';
 
@@ -11,12 +10,10 @@ export interface EditingViewsOptions {
   mode?: EditorMode;
   /** The cursor moved in a view of `document` the user works in (focused). */
   onCursor?(document: TypstDocument, offset: number): void;
-  /** The selection in a view of `document` moved, or its text changed (the views already show the new selection). */
-  onSelection?(document: TypstDocument): void;
-  /** Options for the Visual view of `document` (rendered raw boxes, images to insert). */
-  visualOptions?(document: TypstDocument): VisualViewOptions;
-  /** Where the file paths in `document` lead in the Visual view; default: plain text. */
-  documentLinks?(document: TypstDocument): DocumentLinkProvider;
+  /** The selection in a view of `editor`'s document moved, or its text changed (the views already show the new selection). */
+  onSelection?(editor: DocumentEditor): void;
+  /** What every document's Visual view shows and offers (default: paragraphs and raw Typst only). */
+  visualView?: VisualViewContributions;
   /** Makes the Source views, with what is registered there (language, lint, file links, …); default: plain ones. */
   sourceViews?: SourceViewHost;
 }
@@ -25,6 +22,37 @@ interface Views {
   panes: Record<EditorMode, HTMLElement>;
   visual: VisualView;
   source: SourceView;
+  editor: DocumentEditor;
+}
+
+/**
+ * A document's editor (`TextEditor` in workbench.ts): its two views, used through the tab chosen in the
+ * EditingViews that made it.
+ */
+export class DocumentEditor {
+  constructor(
+    readonly document: TypstDocument,
+    private readonly views: { readonly visual: VisualView; readonly source: SourceView },
+    private readonly tabs: { readonly mode: EditorMode },
+  ) {}
+
+  get mode(): EditorMode {
+    return this.tabs.mode;
+  }
+
+  get selection(): { from: number; to: number } {
+    return this.views[this.mode].selection();
+  }
+
+  revealRange(from: number, to: number): void {
+    this.views[this.mode].reveal(from, to);
+  }
+
+  /** In both views: the hidden one keeps them for when its tab is chosen. */
+  setPresence(presences: readonly Presence[]): void {
+    this.views.visual.setPresence(presences);
+    this.views.source.setPresence(presences);
+  }
 }
 
 /**
@@ -89,10 +117,9 @@ export class EditingViews {
     return views;
   }
 
-  /** The shown document and the view it is shown in; null while no document is shown. */
-  shown(): { document: TypstDocument; view: VisualView | SourceView } | null {
-    const views = this.active && this.views.get(this.active);
-    return views ? { document: this.active!, view: views[this.current] } : null;
+  /** The editor of the shown document; null while no document is shown. */
+  activeEditor(): DocumentEditor | null {
+    return (this.active && this.views.get(this.active)?.editor) ?? null;
   }
 
   /** Puts a control (e.g. the "Comment" button) at the end of the tab bar; with `mode`, it only shows in that view. Returns its removal. */
@@ -169,23 +196,19 @@ export class EditingViews {
     // After the tabs (and any earlier panes): only one pair is ever visible.
     this.parent.insertBefore(panes.visual, this.tabs.nextSibling);
     panes.visual.after(panes.source);
-    const documentLinks = this.options.documentLinks?.(document);
-    const views: Views = {
-      panes,
-      visual: new VisualView(panes.visual, document, {
-        ...this.options.visualOptions?.(document),
-        documentLinks,
-        onSelection: () => {
-          // like the source view's onCursor: where the user works, for the preview to follow
-          if (views.visual.focused()) this.options.onCursor?.(document, views.visual.selection().from);
-          this.options.onSelection?.(document);
-        },
-      }),
-      source: this.sourceViews.createView(panes.source, document, {
-        onCursor: (offset) => this.options.onCursor?.(document, offset),
-        onSelection: () => this.options.onSelection?.(document),
-      }),
-    };
+    const visual = new VisualView(panes.visual, document, this.options.visualView ?? new VisualViewContributions());
+    const source = this.sourceViews.createView(panes.source, document, {
+      onCursor: (offset) => this.options.onCursor?.(document, offset),
+      onSelection: () => this.options.onSelection?.(editor),
+    });
+    const editor = new DocumentEditor(document, { visual, source }, this);
+    const views: Views = { panes, visual, source, editor };
+    // disposed with the view
+    visual.onDidChangeSelection(() => {
+      // like the source view's onCursor: where the user works, for the preview to follow
+      if (visual.focused()) this.options.onCursor?.(document, visual.selection().from);
+      this.options.onSelection?.(editor);
+    });
     const diagnostics = this.diagnostics.get(document);
     if (diagnostics) markDiagnostics(views, diagnostics);
     return views;

@@ -3,7 +3,7 @@
 import { Disposable } from '../../core/disposable/disposable';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import { DEFAULT_COMMIT_MESSAGE, type ServerMessage } from '../collaboration/gitlab-protocol';
-import { FieldPopover } from '../visual-view/visual-view';
+import { FieldPopover } from '../../ui/field-popover/field-popover';
 
 /**
  * "Save version" next to the Visual / Source tabs, as `user`, once the collaboration session (the `collaboration`

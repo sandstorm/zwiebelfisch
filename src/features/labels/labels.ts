@@ -4,6 +4,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { FileChange, Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
+import { references } from '../../hosts/visual-view/visual-view';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import { referenceEdits, scanBibliography, scanTypst, type FoundLabel, type LabelKind, type Scan } from './scan';
 
@@ -17,17 +18,17 @@ declare module '../../hosts/workbench/workbench' {
   }
 }
 
-/** Keeps the project's labels indexed (the `labels` service) and offers them to every document's Visual view. */
+/**
+ * Keeps the project's labels indexed (the `labels` service); the Visual view shows references as chips with what they
+ * point to, labels as tags, and offers the labels after `@` (`references`).
+ */
 export function labels(): TypstExtension {
   return {
     id: 'labels',
-    activate({ project, services, visualView, subscriptions }) {
-      const index = new LabelIndex(project);
-      subscriptions.push(
-        new Disposable(() => index.destroy()),
-        services.provide('labels', index),
-        visualView.registerDocumentOptions(() => ({ labels: index })),
-      );
+    activate(context) {
+      const index = new LabelIndex(context.project);
+      context.subscriptions.push(new Disposable(() => index.destroy()), context.services.provide('labels', index));
+      references({ labels: index }).activate(context);
     },
   };
 }
