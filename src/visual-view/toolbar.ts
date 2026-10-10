@@ -1,5 +1,6 @@
 import type { ChainedCommands, Editor } from '@tiptap/core';
 import { FieldPopover } from './field-popover';
+import { ImageChoices, type ImageAssets } from './image-choices';
 import { imageSource } from './projection';
 
 /** A toolbar button: how it looks, what it does, and when it shows as on. */
@@ -90,7 +91,8 @@ function currentStyle(editor: Editor): string {
 /**
  * The Visual view's formatting toolbar: undo/redo, a paragraph style menu
  * (normal text, headings 1–3), bold/italic, link (Mod+K, asks for the URL in
- * a popover), the two list kinds, insert image (asks for its path) and table
+ * a popover), the two list kinds, insert image (asks for its path, or offers
+ * the project's images and an upload when given `assets`) and table
  * editing. Buttons reflect the selection (pressed, disabled) after every
  * transaction and never take the focus away from the text.
  */
@@ -100,6 +102,7 @@ export class Toolbar {
   private readonly refresh = () => this.refreshers.forEach((fn) => fn());
   private readonly linkPopover: FieldPopover;
   private readonly imagePopover: FieldPopover;
+  private readonly imageChoices: ImageChoices | null;
   private readonly linkShortcut = (event: KeyboardEvent) => {
     if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey) return;
     if ((event.target as Element).closest?.('.cm-editor')) return; // in a raw box
@@ -107,7 +110,11 @@ export class Toolbar {
     this.root.querySelector<HTMLButtonElement>('button[aria-label="Link"]')?.click();
   };
 
-  constructor(parent: HTMLElement, private readonly editor: Editor) {
+  constructor(
+    parent: HTMLElement,
+    private readonly editor: Editor,
+    assets?: ImageAssets,
+  ) {
     const doc = parent.ownerDocument;
     this.root = doc.createElement('div');
     this.root.className = 'typst-toolbar';
@@ -124,11 +131,20 @@ export class Toolbar {
       apply: (href) => applyLink(editor, href),
       remove: () => editor.chain().focus().extendMarkRange('link').unsetLink().run(),
     });
+    const insertImage = (path: string) =>
+      editor.chain().focus().insertContent({ type: 'image', attrs: { src: imageSource(path) } }).run();
+    this.imageChoices = assets
+      ? new ImageChoices(doc, assets, (path) => {
+          this.imagePopover.close();
+          insertImage(path);
+        })
+      : null;
     this.imagePopover = new FieldPopover(this.root, {
       label: 'Image',
       field: 'Image path',
       placeholder: 'images/figure.png',
-      apply: (path) => editor.chain().focus().insertContent({ type: 'image', attrs: { src: imageSource(path) } }).run(),
+      apply: insertImage,
+      extra: this.imageChoices?.element,
     });
     const link: Action = {
       label: 'Link',
@@ -142,7 +158,10 @@ export class Toolbar {
       label: 'Insert image',
       icon: ICONS.image,
       run: (c) => c.insertContent({ type: 'image' }),
-      click: (button) => this.toggle(this.imagePopover, button, '', false),
+      click: (button) => {
+        this.imageChoices?.refresh();
+        this.toggle(this.imagePopover, button, '', false);
+      },
     };
     this.root.append(
       this.group(HISTORY),

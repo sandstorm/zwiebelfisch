@@ -5,16 +5,20 @@ import type { TypstDocument } from '../document/typst-document';
 import { changesPlugin, setChangesBase } from './change-decorations';
 import { extensions } from './extensions';
 import { highlights, setHighlights } from './highlights';
+import type { ImageAssets } from './image-choices';
 import { posToSource, print, project, sourceToPos, syncDoc } from './projection';
 import { setBoxRenderer } from './raw-box';
 import type { BoxRenderer } from './rendered-box';
 import { Toolbar } from './toolbar';
 
 export type { BoxRenderer, Snippet } from './rendered-box';
+export type { ImageAssets } from './image-choices';
 
 export interface VisualViewOptions {
   /** Shows images and compiled snippets in raw boxes while they are not edited (default: code only). */
   renderer?: BoxRenderer;
+  /** Lets "Insert image" offer the project's images and upload new ones (default: it only asks for a path). */
+  assets?: ImageAssets;
 }
 
 /** Marks transactions that mirror a document change, so they are not written back. */
@@ -49,7 +53,7 @@ export class VisualView {
     this.editor.view.updateState(
       EditorState.create({ schema: state.schema, doc: project(document.text, state.schema), plugins: [...state.plugins, changesPlugin] }),
     );
-    this.toolbar = new Toolbar(parent, this.editor);
+    this.toolbar = new Toolbar(parent, this.editor, options.assets);
     this.unsubscribe = document.onChange((_changes, origin) => {
       if (origin !== this) this.syncFromDocument();
     });

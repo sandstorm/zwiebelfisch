@@ -196,6 +196,11 @@
 .typst-popover button { padding: 4px 10px; border: 1px solid var(--te-border); border-radius: 4px; background: #f6f8fa; font: inherit; cursor: pointer; }
 .typst-popover button[type='submit'] { border-color: var(--te-accent); background: var(--te-accent); color: white; }
 .typst-popover button[hidden] { display: none; }
+.typst-popover { flex-wrap: wrap; max-width: 360px; }
+.typst-popover__choices { flex-basis: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.typst-popover__files { display: flex; flex-direction: column; align-self: stretch; max-height: 160px; overflow: auto; }
+.typst-popover .typst-popover__files button { border: none; background: none; padding: 3px 6px; text-align: left; }
+.typst-popover .typst-popover__files button:hover { background: #eef2f7; }
 .typst-preview--stale { opacity: 0.45; filter: grayscale(0.6); transition: opacity 0.2s; }
 .typst-status {
   grid-column: 1 / -1;
