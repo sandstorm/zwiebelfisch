@@ -70,3 +70,4 @@ Touches: <paths this task is expected to change — keep overlaps with other ope
 | [labels-and-references](labels-and-references.md) | open |
 | [comment-replies](comment-replies.md) | done (branch task/comment-replies) |
 | [notes-pdf](notes-pdf.md) | done (branch task/notes-pdf) |
+| [labels-and-references](labels-and-references.md) | done (branch task/labels-and-references) |

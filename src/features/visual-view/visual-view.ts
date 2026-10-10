@@ -10,6 +10,8 @@ import type { ImageAssets } from './images/images';
 import { remotePresence, setPresence } from './presence';
 import { posToSource, print, project, sourceToPos, syncDoc } from './projection/projection';
 import { NotesGutter } from './notes-gutter/notes-gutter';
+import type { ProjectLabels } from '../labels/labels';
+import { referencesExtension } from './references/references';
 import { Toolbar } from './toolbar/toolbar';
 
 export type { BoxRenderer, Snippet } from './nodes/nodes';
@@ -27,6 +29,11 @@ export interface VisualViewOptions {
   user?: { name: string };
   /** Adds a comment (margin note) at the selection: the toolbar's "Comment" button (none without it). */
   comment?(): void;
+  /**
+   * The project's labels: typing `@` offers them, reference chips show what they point to (or that the label is
+   * missing), and a label can be renamed with its references in every file (default: label tags only).
+   */
+  labels?: ProjectLabels;
 }
 
 /** Marks transactions that mirror a document change, so they are not written back. */
@@ -53,7 +60,7 @@ export class VisualView implements PresenceTarget {
     body.className = 'typst-visual__body';
     this.editor = new Editor({
       element: body,
-      extensions: [...extensions, highlights, remotePresence],
+      extensions: [...extensions, highlights, remotePresence, referencesExtension({ labels: options.labels, document })],
       injectCSS: false,
       editorProps: { attributes: { class: 'typst-visual', 'data-testid': 'typst-visual' } },
       onTransaction: ({ transaction }) => {

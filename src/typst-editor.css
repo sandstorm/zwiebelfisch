@@ -228,6 +228,56 @@
 .typst-visual__note.typst-visual__note-anchor--hover,
 .typst-visual__note.typst-visual__note-anchor--active { background: var(--te-note-strong); box-shadow: 0 0 0 2px var(--te-note-line); }
 .typst-visual__note-icon { flex: none; }
+/* References (@key) as chips: the label, then what it labels (data-hint); a missing label underlined wavy */
+.typst-visual__ref {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4em;
+  margin: 0 1px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: #e8f0fb;
+  color: var(--te-accent);
+  font: 0.8em system-ui, sans-serif;
+  white-space: nowrap;
+  cursor: default;
+}
+.typst-visual__ref[data-hint]::after { content: attr(data-hint); color: #6e7781; }
+.typst-visual__ref-supplement { color: #24292f; }
+.typst-visual__ref--unknown { background: #fff1f0; color: #cf222e; text-decoration: underline wavy #cf222e; text-underline-offset: 3px; }
+/* Labels (<key>) as a tag on the block they label: in the text of headings and paragraphs, below other blocks */
+.typst-label-tag { position: relative; display: inline-block; margin-left: 0.5em; font: normal 12px/1.4 system-ui, sans-serif; vertical-align: middle; }
+.typst-label-tag--block { display: flex; justify-content: flex-end; margin: -0.5em 0 0.5em; }
+.typst-label-tag__name {
+  padding: 0 7px;
+  border: 1px solid var(--te-border);
+  border-radius: 9px;
+  background: #f6f8fa;
+  color: #57606a;
+  font: inherit;
+  cursor: pointer;
+}
+.typst-label-tag__name::before { content: '<'; opacity: 0.5; }
+.typst-label-tag__name::after { content: '>'; opacity: 0.5; }
+.typst-label-tag__name:hover { border-color: var(--te-accent); color: var(--te-accent); }
+/* The @ list: the project's labels below the typed @ */
+.typst-ref-suggestions {
+  position: absolute;
+  z-index: 3;
+  min-width: 220px;
+  max-width: 380px;
+  padding: 4px;
+  border: 1px solid var(--te-border);
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.12);
+  font: 13px system-ui, sans-serif;
+}
+.typst-ref-suggestions[hidden] { display: none; }
+.typst-ref-suggestions__option { display: flex; gap: 10px; align-items: baseline; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+.typst-ref-suggestions__option[aria-selected='true'] { background: #eef2f7; }
+.typst-ref-suggestions__name { font-family: ui-monospace, monospace; white-space: nowrap; }
+.typst-ref-suggestions__hint { overflow: hidden; color: #6e7781; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 
 /* The Visual view's body: the text and, right of it, the notes gutter (cards placed by notes-gutter.ts) */
 .typst-visual__body { flex: 1 0 auto; display: flex; position: relative; }
