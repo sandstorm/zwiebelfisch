@@ -3,7 +3,7 @@
 import type { ChainedCommands, Editor } from '@tiptap/core';
 import { FieldPopover } from '../field-popover';
 import { type ImageAssets, ImageChoices, imageFileDrops, insertImages } from '../images/images';
-import type { Plugin } from '@tiptap/pm/state';
+import { TextSelection, type Plugin } from '@tiptap/pm/state';
 import { textAlignAt, type TextAlignment } from '../nodes/nodes';
 import { svg, type Action } from './toolbar-action';
 import { BLOCKS as QUOTE_AND_TASKS, BREAKS, HEADER_ROW, NUMBERED_HEADINGS } from './toolbar-blocks';
@@ -35,6 +35,7 @@ const ICONS = {
   alignCenter: svg('<path d="M4 6h16M7 10h10M4 14h16M7 18h10"/>'),
   alignRight: svg('<path d="M4 6h16M10 10h10M4 14h16M10 18h10"/>'),
   alignJustify: svg('<path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>'),
+  comment: svg('<path d="M4 5h16v11h-9l-5 4v-4H4z"/>'),
 };
 
 const HISTORY: Action[] = [
@@ -90,6 +91,29 @@ function applyLink(editor: Editor, href: string): void {
   }
 }
 
+export interface ToolbarOptions {
+  /** Lets "Insert image" offer the project's images and upload new ones. */
+  assets?: ImageAssets;
+  /** Adds a comment (margin note) at the selection: shows the "Comment" button. */
+  comment?(): void;
+}
+
+/** "Comment": enabled with a caret or selection in text (not in a code block or on a selected box). */
+function commentAction(comment: () => void): Action {
+  return {
+    label: 'Comment',
+    shortcut: 'Mod+Alt+M',
+    icon: ICONS.comment,
+    run: (c) => c,
+    click: () => comment(),
+    enabled: (editor) => {
+      const { selection } = editor.state;
+      const { parent } = selection.$from;
+      return selection instanceof TextSelection && parent.inlineContent && !parent.type.spec.code;
+    },
+  };
+}
+
 /** Entries of the paragraph style menu, by `<option>` value. */
 const STYLES: Record<string, { label: string; run(chain: ChainedCommands): ChainedCommands; level?: 1 | 2 | 3 }> = {
   paragraph: { label: 'Normal text', run: (c) => c.setParagraph() },
@@ -111,8 +135,10 @@ function currentStyle(editor: Editor): string {
  * the URL in a popover), the two list kinds and code block, text alignment
  * (left, center, right, justify), insert image (asks for its path, or offers
  * the project's images and an upload when given `assets`), table of contents
- * (`#outline()`) and table editing. Buttons reflect the selection (pressed, disabled) after every
- * transaction and never take the focus away from the text.
+ * (`#outline()`), table editing and, given `comment`, "Comment" (adds a
+ * margin note; Mod+Alt+M is the widget's). Buttons reflect the selection
+ * (pressed, disabled) after every transaction and never take the focus away
+ * from the text.
  */
 export class Toolbar {
   private readonly root: HTMLElement;
@@ -132,7 +158,7 @@ export class Toolbar {
   constructor(
     parent: HTMLElement,
     private readonly editor: Editor,
-    assets?: ImageAssets,
+    { assets, comment }: ToolbarOptions = {},
   ) {
     const doc = parent.ownerDocument;
     this.root = doc.createElement('div');
@@ -171,6 +197,7 @@ export class Toolbar {
       this.group([image, OUTLINE, ...TABLES, HEADER_ROW]),
       this.group(BREAKS),
     );
+    if (comment) this.root.append(this.group([commentAction(comment)]));
     parent.prepend(this.root);
     editor.view.dom.addEventListener('keydown', this.linkShortcut);
     editor.on('transaction', this.refresh);
@@ -243,7 +270,7 @@ export class Toolbar {
     button.title = action.shortcut ? `${action.label} (${shortcutText(action.shortcut)})` : action.label;
     button.addEventListener('click', () => (action.click ? action.click(button) : action.run(this.editor.chain().focus()).run()));
     this.refreshers.push(() => {
-      button.disabled = !action.run(this.editor.can().chain()).run();
+      button.disabled = action.enabled ? !action.enabled(this.editor) : !action.run(this.editor.can().chain()).run();
       if (action.active) button.setAttribute('aria-pressed', String(action.active(this.editor)));
     });
     return button;
@@ -274,5 +301,5 @@ export class Toolbar {
 
 function shortcutText(shortcut: string): string {
   const mac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
-  return shortcut.replace('Mod', mac ? '⌘' : 'Ctrl').replace('Shift', mac ? '⇧' : 'Shift').replace(/\+/g, mac ? '' : '+');
+  return shortcut.replace('Mod', mac ? '⌘' : 'Ctrl').replace('Shift', mac ? '⇧' : 'Shift').replace('Alt', mac ? '⌥' : 'Alt').replace(/\+/g, mac ? '' : '+');
 }

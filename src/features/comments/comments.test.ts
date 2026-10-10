@@ -3,7 +3,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../core/typst-document/typst-document';
 import { VisualView } from '../visual-view/visual-view';
-import { CommentAction, type NoteView } from './comments';
+import { CommentAction, localDate, type NoteView } from './comments';
 
 const IMPORT = '#import "@preview/drafting:0.2.2": margin-note\n';
 
@@ -37,19 +37,25 @@ describe('CommentAction', () => {
     expect(seen).not.toHaveBeenCalled();
   });
 
-  it('opens the new note\'s card in the Visual view', () => {
-    const { doc, action, root } = setup('Hello world\n', (document, parent) => {
-      const view = new VisualView(parent.appendChild(window.document.createElement('div')), document);
+  it('opens the new note\'s card in the Visual view: the first message is signed with name and date', () => {
+    let comment = () => {};
+    const { doc, root, action } = setup('Hello world\n', (document, parent) => {
+      const view = new VisualView(parent.appendChild(window.document.createElement('div')), document, {
+        user: { name: 'Anna' },
+        comment: () => comment(),
+      });
       view.reveal(6, 11);
       return view;
     });
-    action.comment();
+    comment = () => action.comment();
+    // the Visual view's toolbar button
+    root.querySelector<HTMLButtonElement>('[role="toolbar"] button[aria-label="Comment"]')!.click();
     expect(doc.text).toBe(`${IMPORT}Hello #margin-note[world][]\n`);
-    const field = root.querySelector<HTMLTextAreaElement>('[data-testid="typst-note-card"] textarea')!;
+    const field = root.querySelector<HTMLTextAreaElement>('[data-testid="typst-note-card"] .typst-note-card__reply')!;
     expect(document.activeElement).toBe(field);
     field.value = 'Check this';
     field.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true, cancelable: true }));
-    expect(doc.text).toBe(`${IMPORT}Hello #margin-note[world][Check this]\n`);
+    expect(doc.text).toBe(`${IMPORT}Hello #margin-note[world][- *Anna* (${localDate()}): Check this]\n`);
   });
 
   it('does nothing where no note fits', () => {

@@ -168,7 +168,11 @@ class Widget {
     this.renderings = new ProjectRenderings({ project: this.project, preview: this.preview, request: (change) => this.request(change) });
     this.views = new EditingViews(this.left, {
       mode: options.mode,
-      visualOptions: (document) => this.renderings.forDocument(document),
+      visualOptions: (document) => ({
+        ...this.renderings.forDocument(document),
+        user: options.user,
+        comment: () => this.commentAction.comment(),
+      }),
       onCursor: (document, offset) => {
         const path = this.project.pathOf(document);
         if (path) void this.preview.reveal(path, offset);
@@ -185,8 +189,9 @@ class Widget {
     this.assets = new AssetView(this.left, (path) => this.insertImage(path));
     this.unsubscribe = this.project.onChange((change) => this.changed(change));
     this.open(main);
+    // the Visual view has "Comment" in its toolbar; the tab bar's button is for the Source view
     this.commentAction = new CommentAction(host, () => this.views.shown());
-    this.views.addTabAction(this.commentAction.button);
+    this.views.addTabAction(this.commentAction.button, 'source');
     this.changes = this.mountChanges();
     if (options.collaboration) {
       this.collaboration = this.mountCollaboration(options.collaboration);

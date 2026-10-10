@@ -283,12 +283,44 @@
   cursor: pointer;
 }
 .typst-note-card__resolve:hover { border-color: var(--te-border); color: #1a7f37; background: #f1f8f3; }
-.typst-note-card__field {
+/* the thread: one message per list item (name, date, text), oldest first */
+.typst-note-card__thread { margin: 4px 0 0; padding: 0; list-style: none; }
+.typst-note-card__thread[hidden] { display: none; }
+.typst-note-card__message { padding: 4px 0; }
+.typst-note-card__message + .typst-note-card__message { border-top: 1px solid #eef0f3; }
+.typst-note-card__meta { display: flex; align-items: center; gap: 6px; min-height: 18px; }
+.typst-note-card__author { font-weight: 600; }
+.typst-note-card__date { color: #6e7781; font-size: 12px; }
+.typst-note-card__text { display: block; white-space: pre-wrap; overflow-wrap: anywhere; }
+.typst-note-card__edit,
+.typst-note-card__delete,
+.typst-note-card__send,
+.typst-note-card__more {
+  display: inline-flex;
+  padding: 2px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: #57606a;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.typst-note-card__edit { margin-left: auto; }
+.typst-note-card__delete:hover { color: #cf222e; }
+.typst-note-card__edit:hover,
+.typst-note-card__send:hover,
+.typst-note-card__more:hover { border-color: var(--te-border); background: #f6f8fa; }
+.typst-note-card__more { padding: 0 4px; color: var(--te-accent); }
+/* the reply box (and a message being edited) */
+.typst-note-card__compose { display: flex; align-items: flex-end; gap: 4px; margin-top: 4px; border-top: 1px solid #eef0f3; padding-top: 4px; }
+.typst-note-card__thread[hidden] + .typst-note-card__compose { border-top: none; }
+.typst-note-card__field,
+.typst-note-card__reply {
   display: block;
   box-sizing: border-box;
   width: 100%;
-  min-height: 2.8em;
-  margin-top: 4px;
+  min-height: 1.6em;
   padding: 0;
   border: none;
   outline: none;
@@ -298,6 +330,8 @@
   resize: none;
   field-sizing: content;
 }
+.typst-note-card__field { min-height: 2.8em; }
+.typst-note-card__send { flex: none; }
 /* Narrow panes: no gutter column; the active note's card pops up below its anchor */
 .typst-visual__body--narrow.typst-visual__body--notes > .typst-notes-gutter {
   position: absolute;
@@ -776,6 +810,7 @@
   font-size: 13px;
   cursor: pointer;
 }
+.typst-editor__comment[hidden] { display: none; }
 .typst-editor__comment:hover { background: #eef1f5; }
 .typst-editor__comment:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 1px; }
 

@@ -11,6 +11,8 @@ export interface Action {
   run(chain: ChainedCommands): ChainedCommands;
   /** Instead of running the command, e.g. to ask for a value first. */
   click?(button: HTMLButtonElement): void;
+  /** Whether the button is enabled, instead of the dry run of `run`. */
+  enabled?(editor: Editor): boolean;
   /** Toggles show their state (`aria-pressed`); plain actions (undo) do not. */
   active?(editor: Editor): boolean;
 }

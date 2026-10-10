@@ -35,6 +35,8 @@ export class EditingViews {
   private readonly diagnostics = new Map<TypstDocument, SourceDiagnostic[]>();
   private active: TypstDocument | null = null;
   private current: EditorMode;
+  /** Tab-bar controls that only show in one view. */
+  private readonly modeActions = new Map<HTMLElement, EditorMode>();
 
   constructor(
     private readonly parent: HTMLElement,
@@ -87,9 +89,11 @@ export class EditingViews {
     return views ? { document: this.active!, view: views[this.current] } : null;
   }
 
-  /** Puts a control (e.g. the "Comment" button) at the end of the tab bar. */
-  addTabAction(element: HTMLElement): void {
+  /** Puts a control (e.g. the "Comment" button) at the end of the tab bar; with `mode`, it only shows in that view. */
+  addTabAction(element: HTMLElement, mode?: EditorMode): void {
+    if (mode) this.modeActions.set(element, mode);
     this.tabs.append(element);
+    this.layout();
   }
 
   /**
@@ -170,6 +174,7 @@ export class EditingViews {
 
   private layout(): void {
     for (const button of this.buttons) button.setAttribute('aria-selected', String(button.dataset.mode === this.current));
+    for (const [element, mode] of this.modeActions) element.hidden = mode !== this.current;
     for (const [document, { panes }] of this.views) {
       panes.visual.hidden = document !== this.active || this.current !== 'visual';
       panes.source.hidden = document !== this.active || this.current !== 'source';

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // Tests for toolbar.ts.
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { VisualView, type VisualViewOptions } from '../visual-view';
 
@@ -379,6 +379,29 @@ describe('Visual view toolbar', () => {
     button('Table of contents').click();
     expect(doc.text).toBe('= Intro\n\nText\n\n#outline()\n');
     expect(parent.querySelector('.typst-visual__outline .typst-visual__box-label')?.textContent).toBe('Table of contents');
+  });
+
+  describe('Comment', () => {
+    it('is there only with a `comment` option, and calls it', () => {
+      expect(setup('Hello\n').button('Comment')).toBeNull();
+      const comment = vi.fn();
+      const { view, button } = setup('Hello world\n', { comment });
+      view.reveal(6, 11);
+      expect(button('Comment').title).toMatch(/^Comment \((Ctrl\+Alt\+M|⌘⌥M)\)$/);
+      button('Comment').click();
+      expect(comment).toHaveBeenCalledOnce();
+    });
+
+    it('is enabled with a caret or a selection in text, not in a code block', () => {
+      const source = 'Hello world\n\n```\ncode\n```\n';
+      const { view, button } = setup(source, { comment: () => {} });
+      view.reveal(2, 2);
+      expect(button('Comment').disabled).toBe(false);
+      view.reveal(0, 5);
+      expect(button('Comment').disabled).toBe(false);
+      view.reveal(source.indexOf('code') + 1, source.indexOf('code') + 1);
+      expect(button('Comment').disabled).toBe(true);
+    });
   });
 
   it('keeps the editor focused: mousedown on a button does not steal focus', () => {
