@@ -39,5 +39,7 @@ async function handle({ engine, files, packages }: Session, request: Request): P
       return { id: request.id, type: 'click', jump: engine.jumpFromClick(request.page, request.x, request.y) };
     case 'cursor':
       return { id: request.id, type: 'cursor', positions: engine.jumpFromCursor(request.path, request.offset) };
+    case 'boxes':
+      return { id: request.id, type: 'boxes', boxes: engine.boxesForRanges(request.path, request.ranges) };
   }
 }
