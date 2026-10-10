@@ -1,9 +1,8 @@
 // @vitest-environment jsdom
-// Tests for page-list.ts (and the pt → px scale of zoom.ts).
+// Tests for page-list.ts.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Page } from '../../../core/typst-engine/typst-engine';
 import { PageList } from './page-list';
-import { PX_PER_PT } from './zoom';
 
 /** Stands in for IntersectionObserver (missing in jsdom); tests decide what is near the viewport. */
 class FakeObserver {
@@ -123,8 +122,4 @@ describe('PageList', () => {
     list.render([page(1), page(2)]);
     expect(svgs()).toEqual(['1', '2']);
   });
-});
-
-it('converts pt to CSS px at 96 dpi', () => {
-  expect(72 * PX_PER_PT).toBe(96);
 });

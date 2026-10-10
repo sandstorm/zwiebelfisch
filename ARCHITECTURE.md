@@ -56,7 +56,7 @@ src/                        the widget (TypeScript); the most important API on t
                             latest-only.ts ("only the newest value" task runner)
       worker/               worker.ts (startEngineWorker, main-thread side), engine.worker.ts (the worker),
                             protocol.ts (messages), project-files.ts (FileSender/FileReceiver)
-      pages/                page-list (SVG only near the viewport), overlays, geometry, zoom, snippet
+      pages/                page-list (SVG only near the viewport), overlays, geometry, snippet
   stylesheets.test.ts       every .css under src/ parses (lightningcss, no error recovery), no nested style rules,
                             every block closed (an unclosed rule silently nests the rest of the file),
                             hex colors only in the color tokens (dark mode)
@@ -230,6 +230,7 @@ shrink, not grow.
   | `core/**` | anything outside `core/`; Yjs (`yjs`, `y-*`, `@hocuspocus/*`); editor libraries; the DOM |
   | `extensions/<name>/model/**` | editor libraries (`@tiptap/*`, `prosemirror-*`, `@codemirror/*`, `codemirror`); the DOM; the extension's view folders (`visual-view/`, `source-view/`, `preview/`, `workbench/`) |
   | `hosts/**` | `extensions/`, `typst-editor/`, `testing/` (a host's tests use its own nodes and specs) |
+  | `ui/<name>/**` | anything outside `core/` and itself: hosts, extensions, other widgets |
   | `extensions/<a>/**` | `extensions/<b>/` (extensions meet through core models or a host's generic contribution point) |
   | anything but `*.test.ts` and `testing/` | `testing/` |
 
@@ -1160,8 +1161,7 @@ interface PreviewContributions {                             // what ExtensionCo
   snippet(path, from, to, text) → Promise<{svg, width, height, textHeight, padding} | null>   // the range as drawn, cut from its page
   exportPdf(entry: PdfEntry) → Promise<PdfResult>      // the files of the last update(), entry.sources replacing/adding texts
 }
-interface PreviewContext { ownerDocument, zoom(), setZoom(zoom), scale(), visiblePage() → {index, count},
-                           pdfExportOptions() }
+interface PreviewContext { ownerDocument, zoom(), setZoom(zoom), scale(), visiblePage() → {index, count} }
 
 new Preview(container)                       // implements PreviewContributions; renders a toolbar +
                                              // scrolling page area into container

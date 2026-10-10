@@ -1,7 +1,9 @@
 // PageList: page placeholders; SVG only for the pages near the viewport. See ../preview.ts.
 import type { Page } from '../../../core/typst-engine/typst-engine';
 import type { Zoom } from '../preview';
-import { PX_PER_PT } from './zoom';
+
+/** CSS pixels per Typst point (96 dpi / 72 pt per inch): the size of a page at 100 %. */
+const PX_PER_PT = 96 / 72;
 
 export interface PageListOptions {
   /** The scrolling element whose viewport decides which pages are near. */

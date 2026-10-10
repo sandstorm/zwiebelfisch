@@ -14,7 +14,8 @@ function setup() {
   const menu = new PopupMenu(container, 'File', [entry('Rename…', 'edit'), entry('Delete', 'edit'), entry('New file…', 'new')], { x: 10, y: 20 });
   const items = () => [...container.querySelectorAll<HTMLElement>('[role=menuitem]')];
   const key = (key: string) => (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
-  return { container, trigger, menu, ran, items, key };
+  const isOpen = () => container.querySelector('[role=menu]') !== null;
+  return { container, trigger, menu, ran, items, key, isOpen };
 }
 
 describe('PopupMenu', () => {
@@ -39,21 +40,21 @@ describe('PopupMenu', () => {
   });
 
   it('runs a chosen entry after closing, with the focus back on the trigger', () => {
-    const { menu, items, ran } = setup();
+    const { items, ran, isOpen } = setup();
     items()[1].click();
     expect(ran).toEqual(['Delete:true']);
-    expect(menu.isOpen).toBe(false);
+    expect(isOpen()).toBe(false);
     expect(items()).toHaveLength(0);
   });
 
   it('closes on Escape and on a press elsewhere', () => {
     const first = setup();
     first.key('Escape');
-    expect(first.menu.isOpen).toBe(false);
+    expect(first.isOpen()).toBe(false);
     expect(document.activeElement).toBe(first.trigger);
     const second = setup();
     document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-    expect(second.menu.isOpen).toBe(false);
+    expect(second.isOpen()).toBe(false);
     expect(second.ran).toEqual([]);
   });
 });

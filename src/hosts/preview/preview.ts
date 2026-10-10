@@ -55,7 +55,12 @@ export interface PreviewContributions {
   reveal(path: string, from: number, to: number): void;
   /** Someone clicked something in the preview that has a source location (outlined in the preview until the next click or compile). */
   readonly onDidClickPage: Event<PageClick>;
+  /**
+   * How the source range `from`..`to` of `path`, which holds `text`, is drawn: its page cut down to it. Null when it
+   * draws nothing or `text` is not what was compiled last.
+   */
   snippet(path: string, from: number, to: number, text: string): Promise<Snippet | null>;
+  /** A PDF of `entry.main` from the files last compiled, `entry.sources` replacing or adding text files for it. */
   exportPdf(entry: PdfEntry): Promise<PdfResult>;
 }
 
@@ -139,13 +144,13 @@ export type Zoom = 'fit' | number;
 
 /** A cut-out of a compiled page: standalone SVG markup and its size in points. */
 export interface Snippet {
-  svg: string;
-  width: number;
-  height: number;
+  readonly svg: string;
+  readonly width: number;
+  readonly height: number;
   /** Height of its tallest box (pt): one line of its biggest text, what an inline view scales by. */
-  textHeight: number;
+  readonly textHeight: number;
   /** Space (pt) kept around what is drawn (less where the page ends). */
-  padding: number;
+  readonly padding: number;
 }
 
 type RequestBody = Request extends infer R ? (R extends Request ? Omit<R, 'id'> : never) : never;
@@ -196,7 +201,7 @@ export class Preview implements PreviewContributions {
   readonly onDidChangeDiagnostics = this.diagnosed.event;
   readonly onDidClickPage = this.clicked.event;
 
-  constructor(private readonly container: HTMLElement) {
+  constructor(container: HTMLElement) {
     const doc = container.ownerDocument;
     this.pane = div(doc, 'typst-preview-pane');
     this.toolbar = div(doc, 'typst-preview__toolbar');
@@ -215,9 +220,7 @@ export class Preview implements PreviewContributions {
     this.scroller.addEventListener('scroll', () => this.scheduleStatus(), { passive: true });
     this.resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => this.scheduleStatus());
     this.resizeObserver?.observe(this.scroller);
-    this.compiles = new LatestOnly((compile, superseded) => this.compile(compile, superseded), {
-      onIdle: () => this.container.dispatchEvent(new CustomEvent('typst-preview-idle', { bubbles: true })),
-    });
+    this.compiles = new LatestOnly((compile, superseded) => this.compile(compile, superseded));
     this.reveals = new LatestOnly((reveal, superseded) => this.lookUp(reveal, superseded), {
       interval: REVEAL_INTERVAL_MS,
     });
@@ -237,7 +240,7 @@ export class Preview implements PreviewContributions {
    * runs are collapsed into one, and bytes that are the same `Uint8Array` as
    * last time are not sent to the worker again.
    */
-  update(files: Record<string, FileContent>, main = '/main.typ'): void {
+  update(files: Record<string, FileContent>, main: string): void {
     this.compiles.push({ files, main });
   }
 
