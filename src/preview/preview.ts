@@ -4,7 +4,11 @@ import type { Request, Response } from './protocol';
 export interface PreviewOptions {
   /** Called when the user clicks something in the preview that has a source location. */
   onJump?(jump: Extract<Jump, { kind: 'source' }>): void;
-  /** Called after every compilation with its errors and warnings. */
+  /**
+   * Called with the errors and warnings of the newest text passed to
+   * `update()`. Results of outdated texts are not reported, so the offsets
+   * always match the text that was last given.
+   */
   onDiagnostics?(diagnostics: Diagnostic[]): void;
 }
 
@@ -70,9 +74,12 @@ export class Preview {
       this.queued = null;
       const response = await this.request({ type: 'compile', files, main });
       if (response.type !== 'compile') continue;
-      // Keep showing the last good pages while the document has errors.
-      if (response.result.pages.length > 0) this.render(response.result.pages);
-      this.options.onDiagnostics?.(response.result.diagnostics);
+      // Keep showing the last good pages while the document has errors, dimmed as stale.
+      const failed = response.result.pages.length === 0;
+      if (!failed) this.render(response.result.pages);
+      this.pages.classList.toggle('typst-preview--stale', failed);
+      // A newer update is waiting: these diagnostics describe outdated text.
+      if (!this.queued) this.options.onDiagnostics?.(response.result.diagnostics);
     }
     this.compiling = false;
     this.container.dispatchEvent(new CustomEvent('typst-preview-idle', { bubbles: true }));
