@@ -1,6 +1,7 @@
 // End-to-end tests (Playwright, against the demo build): "Changes since …" in both views and the preview.
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
+import { caretAtEnd } from './visual-helpers';
 
 type Editor = { source: string; files: Record<string, string | Uint8Array>; open(path: string): void; setBase(base: string | null): void };
 
@@ -109,7 +110,9 @@ test.describe('the advanced example (chapters in their own files)', () => {
     await page.evaluate((path) => (window as unknown as { editor: Editor }).editor.open(path), CHAPTER);
     await page.getByRole('button', { name: 'Changes since opened' }).click();
     const visual = page.getByTestId('typst-visual').filter({ visible: true });
-    await visual.locator('p', { hasText: 'Writers want' }).click();
+    // not click() and type: within ProseMirror's 20 ms post-focus sync the keys land at its previous
+    // selection (the `#import` box at the top, which typing replaces); see caretAtEnd
+    await caretAtEnd(visual.locator('p', { hasText: 'Writers want' }));
     await page.keyboard.type(' and more ');
     await expect(visual.locator('.typst-diff-insert')).toContainText('and more');
     await expect(page.getByTestId('typst-preview').locator('.typst-preview__change-bar')).toHaveCount(1);
