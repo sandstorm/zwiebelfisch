@@ -17,6 +17,9 @@ export const IMAGE_FILES = `*.{${Object.keys(MEDIA_TYPES)
   .map((extension) => extension.slice(1))
   .join(',')}}`;
 
+/** The image files as a file input's `accept` (`.png,.jpg,…`). */
+export const IMAGE_ACCEPT = Object.keys(MEDIA_TYPES).join(',');
+
 /** Whether `path` is an image file (by its extension, in any case: `Logo.PNG`). */
 export function isImage(path: ProjectPath): boolean {
   return ProjectPath.extension(path).toLowerCase() in MEDIA_TYPES;
