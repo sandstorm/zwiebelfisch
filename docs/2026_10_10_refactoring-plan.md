@@ -15,6 +15,8 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
 | `a22fc3c` | Paths as types: `ProjectPath` / `PathReference`, branded strings, parsed at the edges (see ARCHITECTURE.md, "Paths") |
 | `75f0fa5` | Change tracking removed (`base` / `setBase`, diff view, change bars, decorations, `@codemirror/merge`); server keeps `meta.base` |
 | `9562c65` | Public API: `files` includes the main file, `source` is a documented shortcut, `onChange(source)` gone; `<typst-editor>` takes one `options` property, `change` fires per file with `{ path, content }` (a rename fires twice: old path `null`, new path content) |
+| `bcfe4b1` | Docs: [extensions architecture](2026_10_10_extensions-architecture.md) |
+| `698c971`..`fff6775` | Hosts wave (H1 visual-view, H2 source-view + preview, H3 workbench + extension API), merged and integrated: `ExtensionContext { subscriptions, project, workbench, visualView, sourceView, preview, services }`; one `Disposable` + `EventEmitter` in `core/`; the widget composes `builtinExtensions` in `src/typst-editor/typst-editor.ts`; `ui/` holds FieldPopover, ToolbarMenu, FloatingBar. Built-in modules still in `hosts/*/builtins/`, features still in `features/` |
 
 ## Next steps, in order
 
@@ -24,7 +26,10 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    feature, and every Typst construct beyond the host's minimum, is an extension in
    `extensions/<name>/` with `model/` (no DOM) and one folder per host it contributes to. Its "Order
    of work" (hosts → slices → rules → value types) replaces the old wave plan; the remaining review
-   findings are folded into it.
+   findings are folded into it. **Hosts: done. Next: slices** (move `features/*` and
+   `hosts/*/builtins/*` into `extensions/<name>/`).
+   Open question for the user: registration order decides priority in the Visual view (task lists
+   before lists, images before rendered boxes); keep it, or an explicit `priority` on specs?
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Lessons doc**: write `docs/2026_10_10_code-conventions.md` from "Decisions and conventions"
    below (refined), then **spawn subagents** (the user asked for it; workflow guideline < 10 agents)
