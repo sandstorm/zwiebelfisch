@@ -406,6 +406,10 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - `codeBlock` (Tiptap's, `language` + anchor `fence`): plain text (no marks), edited in place.
   - `table` > `tableRow` > `tableCell` (Tiptap's MIT table extensions, not resizable); cells hold
     blocks. `table.layout` (an anchor attribute) is the source around the cells.
+  - `alignment` (`text-align.ts`): `#align(args)[blocks]`, content `block+`. `args` is the
+    literal alignment as written; `layout` (an anchor) is the source around the blocks.
+    Paragraphs have a `justify` attribute (`true` / `false` / `null`) for
+    `#par(justify: ..)[text]`.
   - **Inline:** text with `bold` / `italic` / `link` (Tiptap's link mark, `href`) / `code`
     (Tiptap's, extended: combines with other marks; `fence` and `lang` remember ```lang …```) marks;
     `softBreak` (a source newline that renders as a space); `hardBreak` (`\`); `rawInline`.
@@ -423,7 +427,11 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     `#figure(image("literal path", ..), ..named)` (optionally followed by a label) whose
     `caption: [..]`, if any, is one paragraph, a `table` if it is exactly one
     `#table(columns: <int>, ..named, [..], ..)` whose positional arguments are all closed content
-    blocks filling whole rows, and a `rawBlock` (`#set`, `#let`, display math, figures, …) else.
+    blocks filling whole rows, an `alignment` if it is exactly one
+    `#align(<literal alignment>)[..]` (`left|center|right|start|end`, optionally `+` one
+    vertical alignment), a paragraph with `justify` if it is exactly one
+    `#par(justify: <bool>)[one paragraph]`, and a `rawBlock` (`#set`, `#let`, display math,
+    figures, …) else. Alignment content is segmented like a table cell.
   - Inline, `#link("plain string")[one paragraph]` puts a `link` mark on its projected content
     (the call syntax is hidden); a bare URL is text with a `link` mark whose `href` is the text.
     Other links stay `rawInline`.
@@ -462,6 +470,9 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     own; an added caption prints `, caption: [..]` right after the image call, a removed one
     drops its argument with the comma before it. Editor-made figures print
     `#figure(image(..), caption: [..])`.
+  - Alignment blocks print their `layout` around their blocks, with only `#align(args)`
+    re-printed when `args` changed. New ones print `#align(x)[A\n\nB]`. An edited paragraph with
+    `justify` prints `#par(justify: x)[..]` around its inline content.
 - **Position map:** `sourceToPos(doc, offset, bias?)` / `posToSource(doc, pos, bias?)` map between
   source offsets (UTF-16) and document positions at character precision, for any doc (pristine,
   edited or synced).
@@ -502,6 +513,18 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     heading holding the cursor (an empty paragraph is replaced): never replacing or splitting
     content — the initial selection is a node selection on the first raw block (often
     `#set page(..)`).
+- **Text alignment** (`text-align.ts`, `alignment.ts` for the Typst syntax):
+  - Commands `setTextAlign(left|center|right|justify)` and `unsetTextAlign`; shortcuts
+    Mod-Shift-L/E/R/J; four toolbar buttons pressed by `textAlignAt(state)`.
+  - Horizontal alignment wraps the selected blocks (in the doc, an alignment block or a table
+    cell) in one alignment block. A value equal to the surrounding alignment removes the wrapper
+    instead, a partly selected wrapper is split (lifted blocks get default separators), and a
+    wrapper with a vertical part keeps it.
+  - Justify is per paragraph (not headings or list items) and removes horizontal wrappers.
+  - The scope (default alignment) comes from enclosing alignment blocks and from
+    `#set align(..)` / `#set par(justify: ..)` in earlier raw-block siblings of each ancestor.
+    Commands only write what differs from it. A plugin decorates every textblock with its
+    effective `text-align`.
 - **Code blocks** (`code-block-view.ts`): a NodeView with a header holding a "Language" field
   (accepts only a valid tag, sets `language` as one types; Enter/Escape/ArrowDown go to the
   code) above a `<pre><code>` content DOM.

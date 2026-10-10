@@ -3,6 +3,7 @@ import { FieldPopover } from './field-popover';
 import { ImageChoices, type ImageAssets } from './image-choices';
 import type { Plugin } from '@tiptap/pm/state';
 import { imageFileDrops, insertImages } from './image-insertion';
+import { textAlignAt, type TextAlignment } from './text-align';
 
 /** A toolbar button: how it looks, what it does, and when it shows as on. */
 interface Action {
@@ -44,6 +45,10 @@ const ICONS = {
   addColumn: svg('<rect x="3" y="3" width="9" height="18" rx="2"/><path d="M15 12h5M17.5 9.5v5"/>'),
   deleteRow: svg('<rect x="3" y="4" width="18" height="9" rx="2"/><path d="M9.5 18.5h5"/>'),
   deleteColumn: svg('<rect x="3" y="3" width="9" height="18" rx="2"/><path d="M15 12h5"/>'),
+  alignLeft: svg('<path d="M4 6h16M4 10h10M4 14h16M4 18h10"/>'),
+  alignCenter: svg('<path d="M4 6h16M7 10h10M4 14h16M7 18h10"/>'),
+  alignRight: svg('<path d="M4 6h16M10 10h10M4 14h16M10 18h10"/>'),
+  alignJustify: svg('<path d="M4 6h16M4 10h16M4 14h16M4 18h16"/>'),
 };
 
 const HISTORY: Action[] = [
@@ -65,6 +70,21 @@ const OUTLINE: Action = {
   icon: ICONS.outline,
   run: (c) => c.insertContent({ type: 'outline', attrs: { src: '#outline()' } }),
 };
+
+/** Radio-like: the button of the selection's (effective) alignment is pressed. */
+const alignAction = (label: string, alignment: TextAlignment, shortcut: string, icon: string): Action => ({
+  label,
+  shortcut,
+  icon,
+  run: (c) => c.setTextAlign(alignment),
+  active: (e) => textAlignAt(e.state) === alignment,
+});
+const ALIGNMENTS: Action[] = [
+  alignAction('Align left', 'left', 'Mod+Shift+L', ICONS.alignLeft),
+  alignAction('Center', 'center', 'Mod+Shift+E', ICONS.alignCenter),
+  alignAction('Align right', 'right', 'Mod+Shift+R', ICONS.alignRight),
+  alignAction('Justify', 'justify', 'Mod+Shift+J', ICONS.alignJustify),
+];
 
 const TABLES: Action[] = [
   { label: 'Insert table', icon: ICONS.table, run: (c) => c.insertTable({ rows: 2, cols: 2, withHeaderRow: false }) },
@@ -102,9 +122,10 @@ function currentStyle(editor: Editor): string {
 /**
  * The Visual view's formatting toolbar: undo/redo, a paragraph style menu
  * (normal text, headings 1–3), bold/italic/inline code, link (Mod+K, asks for
- * the URL in a popover), the two list kinds and code block, insert image (asks
- * for its path, or offers the project's images and an upload when given
- * `assets`), table of contents (`#outline()`) and table editing. Buttons reflect the selection (pressed, disabled) after every
+ * the URL in a popover), the two list kinds and code block, text alignment
+ * (left, center, right, justify), insert image (asks for its path, or offers
+ * the project's images and an upload when given `assets`), table of contents
+ * (`#outline()`) and table editing. Buttons reflect the selection (pressed, disabled) after every
  * transaction and never take the focus away from the text.
  */
 export class Toolbar {
@@ -158,6 +179,7 @@ export class Toolbar {
       this.styleMenu(),
       this.group([...MARKS, link]),
       this.group(BLOCKS),
+      this.group(ALIGNMENTS),
       this.group([image, OUTLINE, ...TABLES]),
     );
     parent.prepend(this.root);
