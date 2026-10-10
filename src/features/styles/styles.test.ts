@@ -40,6 +40,16 @@ describe('StyleIndex', () => {
   });
 });
 
+describe('StyleIndex.homeFile (where New style… adds one)', () => {
+  it('is the file declaring the most styles, else /styles.typ', () => {
+    const helpers = '/// @style paragraph A\n#let a(body) = body\n/// @style text B\n#let b(body) = body\n';
+    const { index } = setup({ '/helpers.typ': helpers });
+    expect(index.homeFile()).toBe('/helpers.typ');
+    const none = new StyleIndex(new Project('/main.typ', { '/main.typ': '' }));
+    expect(none.homeFile()).toBe('/styles.typ');
+  });
+});
+
 describe('newStyle', () => {
   it('appends a declared paragraph style with a free name, and says where it is', () => {
     const first = newStyle('');

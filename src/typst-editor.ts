@@ -20,7 +20,7 @@ import { FileNavigation } from './typst-editor/file-navigation';
 import { PdfExport } from './typst-editor/pdf-export';
 import { ProjectRenderings } from './typst-editor/project-renderings';
 import { LabelIndex } from './features/labels/labels';
-import { newStyle, STYLES_FILE, StyleIndex } from './features/styles/styles';
+import { newStyle, StyleIndex } from './features/styles/styles';
 import styles from './typst-editor.css?inline';
 import { VersionControls, type Versions } from './features/versions/versions';
 
@@ -417,13 +417,17 @@ class Widget {
     };
   }
 
-  /** "New style…": appends a paragraph style to start from to the styles file (created when missing) and shows it in the Source view. */
+  /**
+   * "New style…": appends a paragraph style to start from to the file holding most styles (else
+   * `/styles.typ`, created when missing) and shows it in the Source view.
+   */
   private async newStyle(): Promise<void> {
-    const file = this.project.document(STYLES_FILE);
+    const path = this.styles.homeFile();
+    const file = this.project.document(path);
     const added = newStyle(file?.text ?? '');
     if (file) file.change([{ from: file.text.length, to: file.text.length, insert: added.text.slice(file.text.length) }], 'new-style');
-    else if ((await this.request({ kind: 'create', path: STYLES_FILE, content: added.text })) !== null) return;
-    this.jump({ path: STYLES_FILE, from: added.from, to: added.to }, true);
+    else if ((await this.request({ kind: 'create', path, content: added.text })) !== null) return;
+    this.jump({ path, from: added.from, to: added.to }, true);
   }
 
   /** Opens the file of `target` and reveals the range (in the source view on request). */

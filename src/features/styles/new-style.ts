@@ -1,7 +1,7 @@
 // newStyle: the stub "New style…" appends to the styles file. See styles.ts.
 import { scanStyles } from './discover';
 
-/** Where "New style…" puts new styles. */
+/** Where "New style…" puts new styles while the project declares none. */
 export const STYLES_FILE = '/styles.typ';
 
 /**
