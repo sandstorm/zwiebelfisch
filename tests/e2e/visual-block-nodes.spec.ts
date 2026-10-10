@@ -1,6 +1,7 @@
 // End-to-end tests (Playwright, against the demo build): block nodes in the Visual view (page break, rule, task lists).
 import { test, expect } from './fixtures';
 import type { Page } from '@playwright/test';
+import { caretAtEnd } from './visual-helpers';
 
 /** Block nodes modelled on Tiptap's: quote, page break, rule, table header, task list, heading numbers. */
 
@@ -18,8 +19,7 @@ test.beforeEach(async ({ page }) => {
 
 /** Puts the cursor at the end of the paragraph and opens a new empty one after it. */
 async function newParagraph(page: Page) {
-  await visual(page).locator('p', { hasText: 'First paragraph' }).click();
-  await page.keyboard.press('End');
+  await caretAtEnd(visual(page).locator('p', { hasText: 'First paragraph' }));
   await page.keyboard.press('Enter');
 }
 
@@ -40,8 +40,7 @@ test('"---" on an empty line becomes a rule, in text it stays text', async ({ pa
 });
 
 test('Insert page break shows a labelled divider and writes #pagebreak()', async ({ page }) => {
-  await visual(page).locator('p', { hasText: 'First paragraph' }).click();
-  await page.keyboard.press('End');
+  await caretAtEnd(visual(page).locator('p', { hasText: 'First paragraph' }));
   await toolbar(page).getByRole('button', { name: 'Insert page break' }).click();
   await expect(visual(page).locator('.typst-visual__page-break')).toHaveText('Page break');
   await expect.poll(sourceText(page)).toContain('First paragraph\n\n#pagebreak()');

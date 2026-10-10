@@ -34,10 +34,9 @@ export async function compiled(page: Page): Promise<void> {
  * toolbar clicks, which do not read the DOM selection, act on it.
  */
 export async function caretAtEnd(block: Locator): Promise<void> {
-  await block.click();
+  await clickAndSettle(block);
   await block.evaluate(async (element) => {
     const doc = element.ownerDocument;
-    await new Promise((resolve) => setTimeout(resolve, 25)); // after ProseMirror's 20 ms focus timer
     const seen = new Promise((resolve) => {
       doc.addEventListener('selectionchange', resolve, { once: true });
       setTimeout(resolve, 200); // the caret was there already: no event
@@ -47,6 +46,16 @@ export async function caretAtEnd(block: Locator): Promise<void> {
     selection.collapseToEnd();
     await seen;
   });
+}
+
+/**
+ * Clicks `target` in the Visual view and waits out ProseMirror's 20 ms focus
+ * timer (see `caretAtEnd`), so caret keys pressed next (Home, arrows) are not
+ * undone halfway through by ProseMirror writing its own selection back.
+ */
+export async function clickAndSettle(target: Locator): Promise<void> {
+  await target.click();
+  await target.evaluate(() => new Promise((resolve) => setTimeout(resolve, 25)));
 }
 
 /** Adds a new paragraph "Fresh line" after the first paragraph and selects it. */
