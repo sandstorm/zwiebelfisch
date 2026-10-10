@@ -35,6 +35,7 @@ export type {
   SourceControl,
   SourceControlState,
   SourceControlStatus,
+  StatusBarPlacement,
   TextDocument,
   TypstExtension,
   User,

@@ -50,7 +50,7 @@ export function diagnostics(): TypstExtension {
           provideHighlights: (document) => collection.get(document).map(diagnosticHighlight),
           onDidChangeHighlights: collection.onDidChange,
         }),
-        workbench.registerStatusBarItem(status.element),
+        workbench.registerStatusBarItem(status.element, { alignment: 'left', priority: 100 }),
         new Disposable(() => status.destroy()),
         workbench.onDidShowFile((path) => {
           if (project.document(path)) lastSource = path;

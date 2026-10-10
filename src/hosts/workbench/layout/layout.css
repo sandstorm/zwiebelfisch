@@ -81,14 +81,18 @@
   max-width: calc(100vw - 48px);
   box-shadow: 4px 0 16px rgba(0, 0, 0, 0.16);
 }
-/* Below everything: the status bar items (e.g. the compile status), left to right. */
+/* Below everything: the status bar items (e.g. the compile status), the left ones from the start, the right ones at
+   the end (StatusBar orders them; hidden while there is none). */
 .typst-editor__status-bar {
   grid-column: 1 / -1;
   grid-row: 2;
   display: flex;
   min-width: 0;
+  border-top: 1px solid var(--te-border);
 }
-.typst-editor__status-bar:empty { display: none; }
+.typst-editor__status-bar[hidden] { display: none; }
+.typst-editor__status-bar-left { flex: 1; display: flex; min-width: 0; }
+.typst-editor__status-bar-right { display: flex; }
 /* The workbench's overlays (notifications, input boxes, quick picks, menus) are placed in the widget. */
 .typst-editor { position: relative; }
 /* The editor/title menu: actions at the end of the Visual / Source tab bar (e.g. Comment, Save to GitLab…). */

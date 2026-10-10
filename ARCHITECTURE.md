@@ -33,6 +33,7 @@ src/                        the widget (TypeScript); the most important API on t
                             reference-counted), document-links/ (DocumentLinks: the providers' links merged by
                             priority; link-extension.ts: links in a CodeMirror editor, the Source views' and raw
                             boxes'), file-decorations/ (FileDecorations), source-controls/ (SourceControls),
+                            status-bar/ (StatusBar: the status bar items, left / right by priority),
                             menus/ (Menus: menu entries by menu id), notifications/ (Notifications: the messages),
                             quick-input/ (QuickInput: input box and quick pick)
     source-view/            SourceViewHost (registerExtension, createView: what
@@ -256,7 +257,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
   `styles`; then `previewSync`, `previewControls` and `pdfExport`. Extensions never depend on each other, so the
   order carries no meaning: where the Visual view's contributions compete, or document links overlap, `priority`
   decides (see "VisualView"; tested by projecting every fixture with the built-ins in reverse order); toolbar items
-  and menu entries (also the tab bar's) have `group` + `order`; only status bar items still go in activation order. `typst-editor.ts` names
+  and menu entries (also the tab bar's) have `group` + `order`, status bar items `alignment` + `priority`. `typst-editor.ts` names
   no feature: no per-feature option, only `exportPdf` (a documented shortcut for the command `pdfExport.export`).
 - **Public extension API** (decided 2026-10-10): `extensions(builtins) → list` makes the list from the built-ins
   (default: them): add the host's own, leave one out or replace it by `id`. A function rather than an array, so
@@ -380,7 +381,9 @@ interface Workbench {
   ownerDocument; activeFile; user?: { name, color? }; open(path, { selection?, mode? }); onDidShowFile
   applyChange(change) → reason | null
   registerSidePanel(id, { label, icon }) → SidePanel { body, setDefault, setAvailable, dismiss, dispose }
-  registerStatusBarItem(element)  registerEditorFrame({ top, bottom })
+  registerStatusBarItem(element, { alignment: 'left' | 'right', priority? })   // VS Code's StatusBarItem: higher priority
+                                    // further left within its side (default 0), equal: registration order
+  registerEditorFrame({ top, bottom })
   registerStyleSheet(css)           // the extension's CSS where the widget renders (head or shadow root)
   registerFileView(kind, { createFileView(parent) → FileView { show(path, content), hide(), dispose() } })
   registerCommand(id: string, handler(...args))  executeCommand<T>(id, ...args) → Promise<T>
@@ -1343,7 +1346,8 @@ new Layout(host, storageKey)   .editor  .preview  .statusBar   // the editing co
 ```
 
 - One grid on the host: side (rail + open panel) | editing column | preview; the status bar
-  (`Workbench.registerStatusBarItem`; hidden while empty) spans all. The preview is a share of the widget (default half; the separator on its left edge
+  (`Workbench.registerStatusBarItem`; `status-bar/StatusBar` places the items: a left and a right side, each by
+  priority, higher further left; hidden while empty) spans all. The preview is a share of the widget (default half; the separator on its left edge
   sets it, drag or arrow keys, 20–80%, saved with the layout, applied as `--te-preview-share`), so
   opening or resizing a side panel narrows only the editing column (down to min(20rem, 25%), then
   the preview gives way too). The hand-built version of the `Layout` module planned by the dockview spike
@@ -1484,7 +1488,7 @@ workbench/             DiagnosticsStatus: the status bar item
 those of the shown file and those elsewhere (other files, packages or no location: only listed),
 and computes the status label ("✓ compiled" / "1 error, 2 warnings") and the jump target
 (`{path, from, to}`: earliest error in the shown file, else in another project file, else the
-same for warnings). `DiagnosticsStatus` (the `diagnostics` extension: a status bar item, for the Typst file
+same for warnings). `DiagnosticsStatus` (the `diagnostics` extension: a status bar item, left, priority 100, for the Typst file
 shown last, from the preview's `onDidChangeDiagnostics`) renders it below both panes; clicking the
 label, or a listed diagnostic of a project file, opens that file and reveals the range in the
 source view, switching to the Source tab. Hovering or focusing the label lists the shown file's

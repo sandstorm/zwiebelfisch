@@ -462,7 +462,7 @@ export const wordCount: TypstExtension = {
     };
     show();
     subscriptions.push(
-      workbench.registerStatusBarItem(item),
+      workbench.registerStatusBarItem(item, { alignment: 'right', priority: 100 }),
       workbench.onDidShowFile(show),
       { dispose: project.onChange(show) },
       workspace.onDidChangeConfiguration((event) => {
@@ -488,7 +488,7 @@ What `activate` gets (`ExtensionContext`; every type is exported from the packag
 | `subscriptions` | Push every registration here; disposed on `destroy`, in reverse order. |
 | `project` | The files: `files()`, `document(path)` (a Typst file's text), `onChange`. |
 | `workspace` | The settings: `getConfiguration('<section>').get('<key>')`, `onDidChangeConfiguration`. |
-| `workbench` | The frame: `registerStatusBarItem`, `registerSidePanel`, `registerMenuItem`, `registerStyleSheet` (your CSS, inside the shadow root too), `registerCommand` / `executeCommand` / `registerKeybinding`, `showInformationMessage` / `showWarningMessage` / `showErrorMessage`, `showInputBox`, `showQuickPick`, `registerDocumentLinkProvider`, `registerFileDecorationProvider`, `registerSourceControl`, `registerFileView`, `open(path)`, `applyChange(change)`, `activeTextEditor`, `onDidChangeTextEditorSelection`, `user`. |
+| `workbench` | The frame: `registerStatusBarItem(element, { alignment, priority })` (VS Code's: `'left'` or `'right'`, a higher priority further left within its side), `registerSidePanel`, `registerMenuItem`, `registerStyleSheet` (your CSS, inside the shadow root too), `registerCommand` / `executeCommand` / `registerKeybinding`, `showInformationMessage` / `showWarningMessage` / `showErrorMessage`, `showInputBox`, `showQuickPick`, `registerDocumentLinkProvider`, `registerFileDecorationProvider`, `registerSourceControl`, `registerFileView`, `open(path)`, `applyChange(change)`, `activeTextEditor`, `onDidChangeTextEditorSelection`, `user`. |
 | `preview` | `registerToolbarItem(item, { group, order })`, `registerPdfExportOption`, `createOverlay`, `reveal`, `onDidClickPage`, `onDidChangeDiagnostics`. |
 | `visualView`, `sourceView` | Node and mark specs, toolbar items, decorations of the Visual view; CodeMirror extensions of the Source view. |
 
