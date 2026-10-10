@@ -173,7 +173,7 @@ export class Layout {
     };
   }
 
-  destroy(): void {
+  dispose(): void {
     for (const stop of this.cleanup) stop();
     this.side.remove();
     this.editor.remove();

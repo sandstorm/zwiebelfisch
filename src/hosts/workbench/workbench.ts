@@ -857,7 +857,7 @@ export class WorkbenchHost implements Workbench {
   destroy(): void {
     this.#subscription.dispose();
     this.#extensions.dispose();
-    this.#views.destroy();
+    this.#views.dispose();
     this.#customEditors.dispose();
     this.#fileDecorations.dispose();
     this.#sourceControls.dispose();
@@ -872,8 +872,8 @@ export class WorkbenchHost implements Workbench {
     for (const emitter of [this.#shown, this.#selectionChanged]) emitter.dispose();
     this.host.classList.remove('typst-editor');
     delete this.host.dataset.theme;
-    this.#scheme.destroy();
-    this.#layout.destroy();
+    this.#scheme.dispose();
+    this.#layout.dispose();
     this.#ownStyles.dispose();
   }
 

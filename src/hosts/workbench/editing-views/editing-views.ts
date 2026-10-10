@@ -139,7 +139,7 @@ export class EditingViews {
     }
   }
 
-  destroy(): void {
+  dispose(): void {
     for (const document of [...this.views.keys()]) this.drop(document);
     this.tabs.remove();
   }
