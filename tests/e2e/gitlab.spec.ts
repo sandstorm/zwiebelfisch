@@ -1,6 +1,6 @@
 // End-to-end tests (Playwright, against the demo build): GitLab-backed rooms (needs the fake GitLab server: mise run test:e2e-gitlab).
 import type { Browser, Page } from '@playwright/test';
-import { expect, serve, test } from './fixtures';
+import { expect, fileRow, openFile, serve, test } from './fixtures';
 
 // A room backed by a (fake, in-memory) GitLab branch. Needs the server with
 // the fake GitLab: run through `mise run test:e2e-gitlab`, which starts it
@@ -15,7 +15,7 @@ async function join(browser: Browser, baseURL: string, room: string, user: strin
   const page = await (await browser.newContext()).newPage();
   await serve(page, baseURL);
   await page.goto(`/?room=${encodeURIComponent(room)}&user=${user}`);
-  await expect(page.getByTestId('typst-files').getByRole('tab', { name: /introduction\.typ/ })).toBeVisible();
+  await expect(fileRow(page, 'chapters')).toBeVisible();
   return page;
 }
 
@@ -36,8 +36,9 @@ async function saveVersion(page: Page, message: string): Promise<void> {
 
 test('the branch is loaded with its files, images from the repository', async ({ browser, baseURL }, info) => {
   const { ann } = await users(browser, baseURL!, info.project.name);
-  await expect(ann.getByTestId('typst-files')).toContainText('template.typ');
-  await expect(ann.getByTestId('typst-files')).toContainText('compile-times.svg');
+  await expect(fileRow(ann, 'template.typ')).toBeVisible();
+  await fileRow(ann, 'assets').click();
+  await expect(fileRow(ann, 'assets/compile-times.svg')).toBeVisible();
   await expect(ann.locator('.typst-editor__right svg image, .typst-editor__right svg use').first()).toBeAttached();
 });
 
@@ -65,7 +66,7 @@ test('a simulated upstream commit (playground endpoint) is merged into the room'
   expect(response.ok()).toBe(true);
   for (const page of [ann, bob]) {
     await expect(page.locator('.typst-editor__version-status')).toHaveText('Merged new changes from GitLab');
-    await page.getByTestId('typst-files').getByRole('tab', { name: /introduction\.typ/ }).click();
+    await openFile(page, 'chapters/introduction.typ');
     await expect(visualText(page, 'a colleague added this paragraph on GitLab')).toBeVisible();
   }
 });

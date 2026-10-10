@@ -1,5 +1,5 @@
-// End-to-end tests (Playwright, against the demo build): the file bar.
-import { test, expect, clickGlyph } from './fixtures';
+// End-to-end tests (Playwright, against the demo build): the file panel (multi-file projects).
+import { test, expect, clickGlyph, fileRow } from './fixtures';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
@@ -8,8 +8,11 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
 });
 
-test('a single-file widget shows no file bar', async ({ page }) => {
-  await expect(page.locator('typst-editor').getByTestId('typst-files')).toBeHidden();
+test('a single-file widget keeps the file panel collapsed to its rail button', async ({ page }) => {
+  const editor = page.locator('typst-editor');
+  await expect(editor.getByTestId('typst-files')).toBeHidden();
+  await editor.getByTestId('typst-panel-toggle-files').click();
+  await expect(fileRow(editor, 'main.typ')).toHaveAttribute('aria-selected', 'true');
 });
 
 test('clicking text of another file in the preview opens that file; editing it updates the preview', async ({ page }) => {
@@ -26,7 +29,7 @@ test('clicking text of another file in the preview opens that file; editing it u
   await editor.getByRole('tab', { name: 'Source' }).click();
   // the first glyph of the second page is the "C" of "Chapter text" in chapter1.typ
   await clickGlyph(preview.locator('.typst-preview__page').nth(1).locator('svg use').first());
-  await expect(files.getByRole('tab', { name: /chapter1\.typ/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(fileRow(editor, 'chapter1.typ')).toHaveAttribute('aria-selected', 'true');
   const source = editor.locator('[data-testid=typst-source]:visible');
   await expect(source).toHaveCount(1);
   await expect(source.locator('.typst-source__jump')).toContainText('Chapter');
@@ -38,7 +41,7 @@ test('clicking text of another file in the preview opens that file; editing it u
   expect(await editor.evaluate((el: Editor) => el.files['/chapter1.typ'])).toContain('Third page');
 });
 
-test('creates and deletes a file from the file bar', async ({ page }) => {
+test('creates and deletes a file from the file panel', async ({ page }) => {
   const editor = page.locator('typst-editor');
   await editor.evaluate((el: Editor) => {
     el.files = { '/notes.typ': 'Notes' };
@@ -47,12 +50,12 @@ test('creates and deletes a file from the file bar', async ({ page }) => {
   await files.getByRole('button', { name: 'New file' }).click();
   await editor.getByRole('textbox', { name: 'Name of the new file' }).fill('appendix');
   await editor.getByRole('button', { name: 'Create' }).click();
-  await expect(files.getByRole('tab', { name: /appendix\.typ/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(fileRow(editor, 'appendix.typ')).toHaveAttribute('aria-selected', 'true');
 
   await files.getByRole('button', { name: 'Delete' }).click();
   await editor.getByRole('button', { name: 'Delete', exact: true }).last().click();
-  await expect(files.getByRole('tab', { name: /appendix\.typ/ })).toHaveCount(0);
-  await expect(files.getByRole('tab', { name: /main\.typ/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(fileRow(editor, 'appendix.typ')).toHaveCount(0);
+  await expect(fileRow(editor, 'main.typ')).toHaveAttribute('aria-selected', 'true');
 });
 
 test('the main file cannot be renamed or deleted', async ({ page }) => {
@@ -71,7 +74,7 @@ test('shows an image file and inserts it into the document', async ({ page }) =>
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10"/></svg>';
     el.files = { '/logo.svg': new TextEncoder().encode(svg) };
   });
-  await editor.getByTestId('typst-files').getByRole('tab', { name: /logo\.svg/ }).click();
+  await fileRow(editor, 'logo.svg').click();
   const asset = editor.getByTestId('typst-asset');
   await expect(asset.locator('img')).toBeVisible();
   await asset.getByRole('button', { name: 'Insert into main.typ' }).click();

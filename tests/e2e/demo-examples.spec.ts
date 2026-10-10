@@ -1,6 +1,6 @@
 // End-to-end tests (Playwright, against the demo build): the demo's examples.
 import type { Page } from '@playwright/test';
-import { test, expect } from './fixtures';
+import { test, expect, fileRow } from './fixtures';
 
 const examples = (page: Page) => page.getByRole('navigation', { name: 'Examples' });
 const preview = (page: Page) => page.getByTestId('typst-preview');
@@ -22,10 +22,12 @@ test('the simple example is one file with a table', async ({ page }) => {
 
 test('the advanced example is a multi-page project with chapters and an image', async ({ page }) => {
   await page.goto('/?example=advanced');
-  const files = page.getByTestId('typst-files');
-  await expect(files.getByRole('tab', { name: /template\.typ/ })).toBeVisible();
-  await expect(files.getByRole('tab', { name: /introduction\.typ/ })).toBeVisible();
-  await expect(files.getByRole('tab', { name: /compile-times\.svg/ })).toBeVisible();
+  await expect(fileRow(page, 'template.typ')).toBeVisible();
+  await expect(fileRow(page, 'chapters')).toHaveAttribute('aria-expanded', 'false');
+  await fileRow(page, 'chapters').click();
+  await expect(fileRow(page, 'chapters/introduction.typ')).toBeVisible();
+  await fileRow(page, 'assets').click();
+  await expect(fileRow(page, 'assets/compile-times.svg')).toBeVisible();
   await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
   await expect(preview(page).locator('.typst-preview__page')).toHaveCount(3);
 });
@@ -40,5 +42,5 @@ test('switching examples keeps the other URL parameters', async ({ page }) => {
 test('the older ?files opens the advanced example', async ({ page }) => {
   await page.goto('/?files');
   await expect(examples(page).getByRole('link', { name: 'Advanced' })).toHaveAttribute('aria-current', 'page');
-  await expect(page.getByTestId('typst-files').getByRole('tab', { name: /template\.typ/ })).toBeVisible();
+  await expect(fileRow(page, 'template.typ')).toBeVisible();
 });
