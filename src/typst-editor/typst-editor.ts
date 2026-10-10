@@ -59,7 +59,7 @@ export interface TypstEditorOptions {
    */
   onFilesChange?(change: FileChange): void;
   /** Called when another file is shown in the editing area (e.g. to put it into the page URL). */
-  onOpen?(path: string): void;
+  onOpen?(path: ProjectPath): void;
   /** Who works here: the name (and cursor color) others see when collaborating, who commits to GitLab and signs comments. */
   user?: User;
   /**
@@ -104,7 +104,7 @@ export interface TypstEditor {
    */
   settings: Settings;
   /** The path of the file shown in the editing area. */
-  readonly activeFile: string;
+  readonly activeFile: ProjectPath;
   /** Shows `path` in the editing area (if the project has it). */
   open(path: string): void;
   /**
