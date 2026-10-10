@@ -726,7 +726,6 @@ Inside the crate:
 ```ts
 new VisualView(parent, document, contributions: VisualViewContributions)
 .reveal(from, to)    // select exactly what shows source range from..to (caret if empty)
-.setHighlights(layer, highlights)   // source ranges → inline decorations (sourceToPos, end with bias -1)
 .selection() → {from, to}           // posToSource; the end with bias -1
 .onDidChangeSelection: Event<void>  // after the selection moved or the text changed
 .destroy()
@@ -740,7 +739,8 @@ visualView.registerToolbarGroup({ kind: 'group' | 'menu' | 'floating', id, order
 visualView.registerToolbarItem({ group, order?, action } | { group, order?, create(toolbar) }) → Disposable
 visualView.registerGutter((view, body) => { plugin?, destroy() }) → Disposable
 visualView.registerHighlights(layer, { provideHighlights(document), onDidChangeHighlights }) → Disposable
-                                     // set on a view's creation and on every change of its document (diagnostics)
+                                     // set on a view's creation and on every change of its document (diagnostics);
+                                     // source ranges → inline decorations (sourceToPos, end with bias -1)
                                      // Highlight { from, to, className, attributes? }: the host's own type (only the
                                      // Visual view draws highlights; the Source view's contributions use CodeMirror
                                      // decorations), exported from hosts/visual-view

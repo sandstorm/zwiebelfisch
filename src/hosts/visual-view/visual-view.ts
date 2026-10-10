@@ -101,11 +101,6 @@ export class VisualView {
     this.editor.view.focus();
   }
 
-  /** Replaces the highlights of `layer` (source ranges); they follow edits until set again. */
-  setHighlights(layer: string, ranges: readonly Highlight[]): void {
-    this.editor.view.dispatch(setHighlights(this.editor.state.tr, layer, ranges));
-  }
-
   /**
    * The source range the selection shows: where it starts, and where the
    * last character (or box) it covers ends; `from === to` for a caret.
@@ -122,6 +117,11 @@ export class VisualView {
     this.toolbar.destroy();
     this.editor.destroy();
     for (const gutter of this.gutters) gutter.destroy();
+  }
+
+  /** Replaces the highlights of `layer` (source ranges); they follow edits until set again. */
+  private setHighlights(layer: string, ranges: readonly Highlight[]): void {
+    this.editor.view.dispatch(setHighlights(this.editor.state.tr, layer, ranges));
   }
 
   private afterTransaction(tr: Transaction): void {
