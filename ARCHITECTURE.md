@@ -387,6 +387,9 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     attribute; content `(paragraph | rawBlock) block*`, so nested lists made with Tab print
     indented), plus `rawBlock`.
   - `image` (atom block; `src` is the whole `#image("path", ..)` call, edited like a raw block).
+  - `figure` > `image` (the call without `#`) + optional `figureCaption` (a textblock).
+    `figure.layout` (an anchor attribute) is the source around the two: `open`, caption
+    `before`/`open`/`close`, and `rest` (other arguments, `)`, a label).
   - `table` > `tableRow` > `tableCell` (Tiptap's MIT table extensions, not resizable); cells hold
     blocks. `table.layout` (an anchor attribute) is the source around the cells.
   - **Inline:** text with `bold` / `italic` / `link` (Tiptap's link mark, `href`) marks;
@@ -399,7 +402,9 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - Headings and list items are blocks of their own.
   - Every other run up to a `Parbreak` becomes a paragraph if it contains prose (Text, Strong,
     Emph, bare URLs, `#link` calls, …). Otherwise it is an `image` if it is exactly one
-    `#image("literal path", ..)` call, a `table` if it is exactly one
+    `#image("literal path", ..)` call, a `figure` if it is one
+    `#figure(image("literal path", ..), ..named)` (optionally followed by a label) whose
+    `caption: [..]`, if any, is one paragraph, a `table` if it is exactly one
     `#table(columns: <int>, ..named, [..], ..)` whose positional arguments are all closed content
     blocks filling whole rows, and a `rawBlock` (`#set`, `#let`, display math, figures, …) else.
   - Inline, `#link("plain string")[one paragraph]` puts a `link` mark on its projected content
@@ -428,6 +433,10 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - Tables print their `layout` gaps around the cells' blocks while they keep the projected shape
     (so a cell edit changes only that cell), else canonically: `#table(\n  columns: n,\n`, the
     other named arguments, one `[..], [..],` line per row, `)`. Images print `src`.
+  - Figures print their layout around the image call and the caption, so each changes on its
+    own; an added caption prints `, caption: [..]` right after the image call, a removed one
+    drops its argument with the comma before it. Editor-made figures print
+    `#figure(image(..), caption: [..])`.
 - **Position map:** `sourceToPos(doc, offset, bias?)` / `posToSource(doc, pos, bias?)` map between
   source offsets (UTF-16) and document positions at character precision, for any doc (pristine,
   edited or synced).
@@ -469,9 +478,9 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     path edits at once), any other box the compiled snippet of its source range
     (`renderer.snippet(from, to, src)` as an SVG data URL, sized in pt; refreshed on
     `renderer.onChange`). Boxes starting with `#set`/`#show`/`#let`/`#import`/`#include` or a
-    comment (`rendersInPlace`) and boxes whose snippet is null keep showing code. Focus inside
-    the box (click on the picture, arrow keys, Enter) shows the code; focus leaving shows the
-    picture again.
+    comment (`rendersInPlace`) and boxes whose snippet is null keep showing code. Focus in
+    the code (click on the picture — for images: double-click —, arrow keys, Enter) shows the
+    code; focus leaving it shows the picture again.
   - An edit sets `attrs.src` with an attribute step (positions and the outer selection stay put);
     the projection prints `src` verbatim, so the source changes exactly there.
   - An outside change of `src` (via `syncDoc`) reaches the box as one minimal change.
@@ -479,13 +488,24 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     in inline boxes) move into the outer editor; arrow keys in the outer editor (and Enter on a
     selected box) move into a box; Backspace in an empty box deletes it.
   - Hidden: CodeMirror, the DOM ↔ box lookup, focus hand-over between the two editors.
+- **Image tools** (`image-tools.ts`, added to every `image` box): the "Image: path" heading, a
+  frame around the rendered picture sized from the call's `width` (`imageWidthCss`), and,
+  while the image is selected (a click on the picture selects it; double-click, Enter or
+  "Edit code" open the code): resize handles (corners, sides) and an "Image" toolbar
+  (Add/Remove caption, Width 25/50/75/100 %, Alt text popover). A drag resizes live and writes
+  `width: NN%` (whole percent of the text width, any other unit replaced) on release.
+  - Every action is one transaction from `image-edits.ts` (one undo step): `addCaption`
+    (image → figure with an empty caption, cursor in it), `removeCaption` (a figure without
+    label/other arguments → `#image(..)` again, else only the caption goes), `resizeImage`,
+    `setImageAlt`. `image-call.ts` edits one argument of the call in place (replace the value,
+    append after the last argument, or remove with the preceding comma).
 - **Track changes** (`change-decorations.ts`): a ProseMirror plugin holds the projected base
   and, on every doc change, decorates `diffTexts(print(base), print(doc))` through
   `sourceToPos`: insertions as inline marks, deletions as struck-through `<del>` widgets with
   the deleted *visible* text (taken from the projected base), a change whose visible text is
   the same on both sides as a formatting change, and raw boxes inside a change outlined.
 - **Invariants (unit-tested):**
-  - `print(project(src)) === src` for every fixture (incl. links, images, tables, unmodelled tables);
+  - `print(project(src)) === src` for every fixture (incl. links, images, figures, tables, unmodelled tables and figures);
   - edits change only what they touch;
   - an outside change to a paragraph keeps the cursor position in it.
 
