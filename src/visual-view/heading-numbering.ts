@@ -63,16 +63,22 @@ export function hasHeadingNumbering(doc: Node): boolean {
  * as a block after the raw blocks the document starts with.
  */
 export function toggleHeadingNumbering(tr: Transaction): void {
-  if (!hasHeadingNumbering(tr.doc)) {
-    let pos = 0;
-    for (let i = 0; i < tr.doc.childCount && tr.doc.child(i).type.name === 'rawBlock'; i++) pos += tr.doc.child(i).nodeSize;
-    tr.insert(pos, tr.doc.type.schema.nodes.rawBlock.create({ src: HEADING_NUMBERING_RULE }));
-    return;
-  }
+  if (hasHeadingNumbering(tr.doc)) removeNumbering(tr);
+  else addNumbering(tr);
+}
+
+function addNumbering(tr: Transaction): void {
+  let pos = 0;
+  for (let i = 0; i < tr.doc.childCount && tr.doc.child(i).type.name === 'rawBlock'; i++) pos += tr.doc.child(i).nodeSize;
+  tr.insert(pos, tr.doc.type.schema.nodes.rawBlock.create({ src: HEADING_NUMBERING_RULE }));
+}
+
+function removeNumbering(tr: Transaction): void {
   const blocks: { block: Node; pos: number }[] = [];
-  tr.doc.forEach((block, pos) => blocks.push({ block, pos }));
+  tr.doc.forEach((block, pos) => {
+    if (block.type.name === 'rawBlock') blocks.push({ block, pos });
+  });
   for (const { block, pos } of blocks.reverse()) {
-    if (block.type.name !== 'rawBlock') continue;
     const src = withoutHeadingNumbering(block.attrs.src);
     if (src === block.attrs.src) continue;
     if (src.trim() === '') tr.delete(pos, pos + block.nodeSize);
