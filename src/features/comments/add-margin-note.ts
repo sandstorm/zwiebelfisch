@@ -102,8 +102,13 @@ function importChange(text: string, use: number): TextChange | null {
     const str = node.getChild('Str')!;
     if (str.to === node.to) return insert(str.to, `: ${MARGIN_NOTE}`);
   }
-  if (text.includes(SET_DEFAULTS)) return insert(0, `#import "${DRAFTING}": ${MARGIN_NOTE}\n`);
-  return insert(0, `#import "${DRAFTING}": ${MARGIN_NOTE}, ${SET_DEFAULTS}\n${NOTE_STYLE}`);
+  return insert(0, newImport(text));
+}
+
+/** The import added at the top, with `NOTE_STYLE` unless `text` sets note defaults itself. */
+function newImport(text: string): string {
+  if (text.includes(SET_DEFAULTS)) return `#import "${DRAFTING}": ${MARGIN_NOTE}\n`;
+  return `#import "${DRAFTING}": ${MARGIN_NOTE}, ${SET_DEFAULTS}\n${NOTE_STYLE}`;
 }
 
 /** Adds `margin-note` after the last item of an import list, which may end with a comma. */
