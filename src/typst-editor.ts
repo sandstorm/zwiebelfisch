@@ -35,6 +35,9 @@ export type { FileChange, ProjectFiles } from './core/project/project';
  */
 export type FileListMode = 'auto' | 'show' | 'hide';
 
+/** Light or dark colors, or `auto`: as the OS (prefers-color-scheme). */
+export type Theme = 'light' | 'dark' | 'auto';
+
 export interface TypstEditorOptions {
   /** Typst source of the main file (default: `files[main]`, else empty). */
   source?: string;
@@ -95,6 +98,12 @@ export interface TypstEditorOptions {
    * comments, or with them from its menu. Hosts can call `exportPdf` either way.
    */
   pdfDownload?: boolean;
+  /**
+   * Light or dark colors (default: as the page around the widget, through CSS `color-scheme`: light,
+   * unless the page declares dark; `color-scheme: light dark` there follows the OS). The preview's
+   * pages stay white either way.
+   */
+  theme?: Theme;
 }
 
 /** Which PDF `exportPdf` makes. */
@@ -204,6 +213,7 @@ class Widget {
     this.project = new Project(main, files);
     this.active = this.lastSource = main;
     host.classList.add('typst-editor');
+    if (options.theme) host.dataset.theme = options.theme;
     this.layout = new Layout(host, `typst-editor:${main}`);
     this.left = this.layout.editor;
     this.right = this.layout.preview;
@@ -366,6 +376,7 @@ class Widget {
     this.status.destroy();
     this.project.destroy();
     this.host.classList.remove('typst-editor');
+    delete this.host.dataset.theme;
     this.layout.destroy();
   }
 

@@ -68,6 +68,12 @@ Styles that must live inside the shadow root:
 Theming goes through the CSS custom properties on `.typst-editor` (`--te-border`, `--te-accent`, …).
 Custom properties inherit into shadow roots, so `typst-editor { --te-accent: rebeccapurple }` works.
 
+**Dark mode.** The editor takes the page's CSS `color-scheme`: light by default, dark where the page
+declares `color-scheme: dark`, and following the OS where it declares `color-scheme: light dark`.
+To choose regardless of the page, pass `theme: 'light' | 'dark' | 'auto'` (`auto`: as the OS) to
+`createTypstEditor`, or set the `theme` attribute on `<typst-editor>`. The colors are
+`light-dark(..)` tokens. The preview's pages stay white.
+
 ## 2. JavaScript API: `createTypstEditor`
 
 ```ts

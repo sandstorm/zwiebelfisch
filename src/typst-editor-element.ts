@@ -1,6 +1,6 @@
 // <typst-editor>: the editor as a custom element in a shadow root, around createTypstEditor.
 // See docs/embedding.md.
-import { createTypstEditor, type CollaborationOptions, type FileChange, type FileListMode, type PdfExportOptions, type ProjectFiles, type TypstEditor } from './typst-editor';
+import { createTypstEditor, type CollaborationOptions, type FileChange, type FileListMode, type PdfExportOptions, type ProjectFiles, type Theme, type TypstEditor } from './typst-editor';
 import { inlineSource } from './typst-editor-element/inline-source';
 
 /** `detail` of the `change` event the element dispatches after every user edit. */
@@ -30,7 +30,8 @@ const Base = (typeof HTMLElement === 'undefined' ? class {} : HTMLElement) as ty
  * Collaboration: the `collaboration` and `user` properties (see
  * `TypstEditorOptions`), read when the element connects.
  * `exportPdf({ comments })` gives the PDF as a Blob; the preview's "Download
- * PDF" button goes away with `pdf-download="hide"`.
+ * PDF" button goes away with `pdf-download="hide"`. Colors: as the page's `color-scheme`, or the
+ * `theme` attribute (`light` | `dark` | `auto`, read when the element connects).
  */
 export class TypstEditorElement extends Base {
   static readonly observedAttributes = ['value'];
@@ -95,6 +96,7 @@ export class TypstEditorElement extends Base {
       fileList: (this.getAttribute('file-list') ?? undefined) as FileListMode | undefined,
       base: this.#base ?? undefined,
       pdfDownload: this.getAttribute('pdf-download') !== 'hide',
+      theme: (this.getAttribute('theme') ?? undefined) as Theme | undefined,
       onChange: (value) => this.#changed(value),
       onFilesChange: (change) => this.#filesChanged(change),
       onOpen: (path) => this.dispatchEvent(new CustomEvent('open', { detail: { path }, bubbles: true, composed: true })),
