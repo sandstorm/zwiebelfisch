@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Typst Editor — plain HTML</title>
+    <!-- No bundler: the library build is loaded as a plain ES module.
+         Build it first with `mise run build:lib`, then serve the repository root. -->
+    <script type="module" src="../../dist/lib/typst-editor.js"></script>
+    <style>
+      body { margin: 0; padding: 16px; font-family: system-ui, sans-serif; }
+      typst-editor { height: 70vh; }
+      /* hide the raw source until the element is defined */
+      typst-editor:not(:defined) { visibility: hidden; }
+    </style>
+  </head>
+  <body>
+    <typst-editor id="editor">
+      #set page(width: 12cm, height: auto, margin: 1cm)
+
+      = Plain HTML
+
+      Embedded with a single `&lt;typst-editor&gt;` tag.
+    </typst-editor>
+    <p>Characters: <output id="length" data-testid="length"></output></p>
+    <script type="module">
+      const editor = document.getElementById('editor');
+      const length = document.getElementById('length');
+      const show = () => (length.value = String(editor.value.length));
+      editor.addEventListener('change', show);
+      customElements.whenDefined('typst-editor').then(show);
+    </script>
+  </body>
+</html>
