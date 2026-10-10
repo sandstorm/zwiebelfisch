@@ -1,3 +1,4 @@
+// Tests for snippet.ts.
 import { describe, expect, it } from 'vitest';
 import { cropSvg, snippet } from './snippet';
 

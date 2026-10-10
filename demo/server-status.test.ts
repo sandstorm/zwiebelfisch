@@ -1,3 +1,4 @@
+// Tests for server-status.ts.
 import { describe, expect, it } from 'vitest';
 import { GITLAB_ROOM, SERVER } from './playground';
 import { describeServer, probeServer, simulateUpstream } from './server-status';

@@ -1,3 +1,4 @@
+// End-to-end tests (Playwright, against the demo build): block nodes in the Visual view (page break, rule, task lists).
 import { test, expect } from './fixtures';
 import type { Page } from '@playwright/test';
 

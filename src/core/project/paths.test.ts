@@ -1,3 +1,4 @@
+// Tests for paths.ts.
 import { describe, expect, it } from 'vitest';
 import { displayName, fileKind, referencePath, resolvePath, toPath } from './paths';
 

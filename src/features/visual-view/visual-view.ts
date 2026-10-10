@@ -1,16 +1,14 @@
+// VisualView: the WYSIWYG editing view, a Tiptap editor over the source-anchored projection of a TypstDocument.
+// Entry of features/visual-view/. See ARCHITECTURE.md, "VisualView".
 import { Editor } from '@tiptap/core';
 import { EditorState, TextSelection, type Transaction } from '@tiptap/pm/state';
-import type { Highlight } from '../../core/typst-document/typst-document';
-import type { Presence, PresenceTarget } from '../../core/typst-document/typst-document';
-import type { TypstDocument } from '../../core/typst-document/typst-document';
+import type { Highlight, Presence, PresenceTarget, TypstDocument } from '../../core/typst-document/typst-document';
 import { changesPlugin, setChangesBase } from './change-decorations';
-import { extensions } from './nodes/nodes';
+import { type BoxRenderer, extensions, setBoxRenderer } from './nodes/nodes';
 import { highlights, setHighlights } from './highlights';
 import type { ImageAssets } from './images/images';
 import { remotePresence, setPresence } from './presence';
 import { posToSource, print, project, sourceToPos, syncDoc } from './projection/projection';
-import { setBoxRenderer } from './nodes/nodes';
-import type { BoxRenderer } from './nodes/nodes';
 import { NotesGutter } from './notes-gutter/notes-gutter';
 import { Toolbar } from './toolbar/toolbar';
 

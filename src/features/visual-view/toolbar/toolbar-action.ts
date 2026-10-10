@@ -1,3 +1,4 @@
+// Toolbar actions: a button's icon, command and state. See toolbar.ts.
 import type { ChainedCommands, Editor } from '@tiptap/core';
 
 /** A toolbar button: how it looks, what it does, and when it shows as on. */

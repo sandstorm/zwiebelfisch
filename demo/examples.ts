@@ -1,3 +1,4 @@
+// The demo's example projects: demo/examples/<name>/ as file maps (import.meta.glob).
 import type { ProjectFiles } from '../src';
 
 /**

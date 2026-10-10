@@ -1,0 +1,33 @@
+#!/usr/bin/env node
+//MISE description="Fail on a source file that does not start with a top comment (context, or See <entry file / ARCHITECTURE.md section>)"
+// Every TypeScript and CSS source file starts with a comment that says what it is for, or where
+// to read about it ("See typst-editor.ts", "Tests for …"). A shebang line may come first.
+// Checks the tracked files in src/, demo/, tests/, server/src/ and eslint-rules/; prints each
+// file without one and exits 1.
+import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+
+const SOURCES = ['src/**/*.ts', 'src/**/*.css', 'demo/**/*.ts', 'tests/**/*.ts', 'server/src/**/*.ts', 'eslint-rules/**/*.js'].map((glob) => `:(glob)${glob}`);
+
+const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '--', ...SOURCES], { encoding: 'utf8' })
+  .split('\n')
+  .filter(Boolean);
+
+/** Tool directives that may come first but say nothing to a reader (`// @vitest-environment jsdom`, …). */
+const DIRECTIVE = /^\s*(\/\/\s*@\S+.*|\/\/\/\s*<reference.*|\/\/MISE .*)\n/;
+
+/** Whether `text` starts with a comment, after an optional shebang, directives and blank lines. */
+function hasTopComment(text) {
+  let body = text.replace(/^#!.*\n/, '');
+  while (DIRECTIVE.test(body)) body = body.replace(DIRECTIVE, '');
+  body = body.trimStart();
+  return body.startsWith('//') || body.startsWith('/*');
+}
+
+const missing = files.filter((file) => !hasTopComment(readFileSync(file, 'utf8')));
+for (const file of missing) console.log(`${file}: no top comment (context, or "See <entry file>")`);
+if (missing.length > 0) {
+  console.log(`\n${missing.length} of ${files.length} files have no top comment.`);
+  process.exit(1);
+}
+console.log(`top comments: all ${files.length} source files have one`);

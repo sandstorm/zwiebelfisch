@@ -1,3 +1,4 @@
+// PageList: page placeholders; SVG only for the pages near the viewport. See pages.ts.
 import type { Page } from '../../../core/typst-engine/typst-engine';
 import { PX_PER_PT, type Zoom } from './zoom';
 

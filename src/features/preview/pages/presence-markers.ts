@@ -1,3 +1,4 @@
+// Where other users' initials markers go on the pages. See pages.ts.
 import { flagTextColor, initials, type PresenceUser } from '../../../core/typst-document/typst-document';
 import type { Position } from '../../../core/typst-engine/typst-engine';
 

@@ -1,3 +1,4 @@
+// End-to-end tests (Playwright, against the demo build): raw boxes shown compiled in the Visual view.
 import type { Locator, Page } from '@playwright/test';
 import { test, expect } from './fixtures';
 

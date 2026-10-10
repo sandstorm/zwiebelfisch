@@ -1,3 +1,4 @@
+// Tests for geometry.ts.
 import { describe, expect, it } from 'vitest';
 import { isInside, mostVisible, percentOfPage } from './geometry';
 

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Tests for changes.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../core/typst-document/typst-document';
 import { ChangeTracking } from './changes';

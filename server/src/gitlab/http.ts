@@ -1,3 +1,4 @@
+// The server's small HTTP layer: requests and responses as plain values, routed to endpoints (webhooks, playground).
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
 /** An HTTP request, as much of it as the endpoints need. */

@@ -1,3 +1,4 @@
+// Tests for shared-assets.ts.
 import { describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
 import { Project } from '../../core/project/project';

@@ -1,3 +1,4 @@
+// Tests for engine-assets.ts.
 import { readdirSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { defaultFonts } from './engine-assets';

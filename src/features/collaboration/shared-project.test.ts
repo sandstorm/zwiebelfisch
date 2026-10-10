@@ -1,3 +1,4 @@
+// Tests for shared-project.ts.
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 import { Project } from '../../core/project/project';

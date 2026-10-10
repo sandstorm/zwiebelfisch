@@ -1,3 +1,4 @@
+// Tests for card-layout.ts.
 import { describe, expect, it } from 'vitest';
 import { layoutCards } from './card-layout';
 

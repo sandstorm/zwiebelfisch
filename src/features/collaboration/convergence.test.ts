@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Tests that two users' edits in both views converge (collaboration over in-process Y.Docs).
 import { undo as undoSource } from '@codemirror/commands';
 import { EditorView } from '@codemirror/view';
 import type { Editor } from '@tiptap/core';

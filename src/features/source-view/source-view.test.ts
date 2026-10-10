@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Tests for source-view.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { undo } from '@codemirror/commands';
 import { EditorView } from '@codemirror/view';

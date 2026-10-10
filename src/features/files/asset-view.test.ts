@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Tests for asset-view.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { AssetView, formatSize } from './asset-view';
 

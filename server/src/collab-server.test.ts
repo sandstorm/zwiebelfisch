@@ -1,3 +1,4 @@
+// Tests for the collaboration server (collab-server.ts), in-process.
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';

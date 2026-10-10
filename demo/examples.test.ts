@@ -1,3 +1,4 @@
+// Tests that every demo example compiles without errors (examples.ts, against the built wasm).
 import { readFileSync, readdirSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createEngine, type Engine } from '../src/core/typst-engine/typst-engine';

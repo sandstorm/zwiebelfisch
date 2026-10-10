@@ -1,19 +1,17 @@
+// createTypstEditor: the widget. Composes a Project, the editing views (typst-editor/editing-views.ts), the
+// preview, the file bar, the status bar and the features. See ARCHITECTURE.md, "createTypstEditor".
 import type { CollaborationOptions } from './features/collaboration/collaboration';
 import type { Diagnostic } from './core/typst-engine/typst-engine';
 import { Preview } from './features/preview/preview';
 import proseMirrorStyles from './features/visual-view/visual-view.css?inline';
-import { AssetView } from './features/files/files';
+import { AssetView, FileSwitcher, insertImage } from './features/files/files';
 import { ChangeTracking } from './features/changes/changes';
 import { CommentAction } from './features/comments/comments';
 import { CollaborationLink } from './typst-editor/collaboration-link';
 import changeStyles from './features/changes/changes.css?inline';
-import { DiagnosticsStatus } from './features/diagnostics/diagnostics';
-import { summarizeDiagnostics } from './features/diagnostics/diagnostics';
+import { DiagnosticsStatus, summarizeDiagnostics } from './features/diagnostics/diagnostics';
 import { EditingViews, type EditorMode } from './typst-editor/editing-views';
-import { FileSwitcher } from './features/files/files';
-import { insertImage } from './features/files/files';
-import { referencePath } from './core/project/project';
-import { Project, type FileChange, type ProjectFiles } from './core/project/project';
+import { type FileChange, Project, type ProjectFiles, referencePath } from './core/project/project';
 import { ProjectRenderings } from './typst-editor/project-renderings';
 import styles from './typst-editor.css?inline';
 import { VersionControls, type Versions } from './features/versions/versions';

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Tests for playground-bar.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { GITLAB_ROOM } from './playground';
 import { renderPlaygroundBar, type BarActions } from './playground-bar';

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Tests for collaboration-link.ts.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';

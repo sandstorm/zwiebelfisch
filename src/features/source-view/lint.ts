@@ -1,3 +1,4 @@
+// Compile diagnostics as CodeMirror lint diagnostics, and their wording. See source-view.ts.
 import type { Diagnostic as LintDiagnostic } from '@codemirror/lint';
 
 /** A compiler diagnostic located in the text shown by a SourceView (UTF-16 offsets). */

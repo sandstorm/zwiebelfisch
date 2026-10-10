@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Tests for toolbar.ts.
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { VisualView, type VisualViewOptions } from '../visual-view';

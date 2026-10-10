@@ -1,3 +1,4 @@
+// Tests for project-files.ts.
 import { describe, expect, it, vi } from 'vitest';
 import type { Engine } from '../../../core/typst-engine/typst-engine';
 import { FileSender, FileReceiver } from './project-files';

@@ -1,3 +1,4 @@
+// Tests for heading-numbering.ts.
 import { EditorState } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 import { hasHeadingNumbering, headingNumbers, toggleHeadingNumbering, withoutHeadingNumbering } from './heading-numbering';

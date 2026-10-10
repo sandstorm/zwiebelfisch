@@ -1,3 +1,4 @@
+// Function calls shown as fixed widgets (page break, horizontal rule). See projection.ts.
 import type { SyntaxNode } from '@lezer/common';
 
 /**

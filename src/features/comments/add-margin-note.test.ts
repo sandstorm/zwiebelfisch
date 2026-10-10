@@ -1,3 +1,4 @@
+// Tests for add-margin-note.ts.
 import { describe, expect, it } from 'vitest';
 import type { TextChange } from '../../core/typst-document/typst-document';
 import { addMarginNote } from './add-margin-note';

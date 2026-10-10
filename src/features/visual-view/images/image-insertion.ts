@@ -1,3 +1,4 @@
+// Inserting image blocks: from the toolbar, and from files dropped on the editor. See images.ts.
 import type { Editor } from '@tiptap/core';
 import type { ResolvedPos } from '@tiptap/pm/model';
 import { NodeSelection, Plugin, PluginKey } from '@tiptap/pm/state';

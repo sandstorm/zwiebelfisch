@@ -1,3 +1,5 @@
+// GitLabExtension: the Hocuspocus extension behind `gitlab:<project>@<branch>` rooms (load, save version, webhooks).
+// See ARCHITECTURE.md, "GitLab-backed rooms".
 import type { Document, Extension, onLoadDocumentPayload, onRequestPayload, onStatelessPayload } from '@hocuspocus/server';
 import {
   DEFAULT_COMMIT_MESSAGE,

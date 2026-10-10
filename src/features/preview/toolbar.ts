@@ -1,3 +1,4 @@
+// PreviewToolbar: zoom buttons, zoom label and "page n / total". See preview.ts.
 import { type Zoom } from './pages/pages';
 
 /** What a toolbar button asks for: a zoom level, or one preset step in or out. */

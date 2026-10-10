@@ -1,3 +1,4 @@
+// Margin notes (drafting) in the schema: point notes and range notes. See nodes.ts and features/comments.
 import { Mark, Node } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import type { NodeView } from '@tiptap/pm/view';

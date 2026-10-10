@@ -1,3 +1,4 @@
+// Tests for playground.ts.
 import { describe, expect, it } from 'vitest';
 import { exampleFiles } from './examples';
 import { GITLAB_ROOM, SERVER, changesQuery, editorOptions, exampleLink, modeQuery, otherUser, playgroundFromQuery, userQuery } from './playground';

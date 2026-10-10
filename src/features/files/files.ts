@@ -1,7 +1,8 @@
+// FileSwitcher: the file bar of multi-file projects (tabs, new, upload, rename, delete, drop). Entry of
+// features/files/. See ARCHITECTURE.md, "createTypstEditor".
 import { initials, presenceStyle, type PlacedPresence, type PresenceUser } from '../../core/typst-document/typst-document';
-import { displayName, extensionOf, fileKind, toPath, type FileKind } from '../../core/project/project';
+import { displayName, extensionOf, type FileChange, fileKind, type FileKind, toPath } from '../../core/project/project';
 import { uploadChanges } from './upload';
-import type { FileChange } from '../../core/project/project';
 
 export { AssetView } from './asset-view';
 export { insertImage } from './insert-image';

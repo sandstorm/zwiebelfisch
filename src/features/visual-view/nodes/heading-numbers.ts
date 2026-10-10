@@ -1,3 +1,4 @@
+// HeadingNumbers: each heading's number in a gutter right of the text, and the toggle command. See nodes.ts.
 import { Extension } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';

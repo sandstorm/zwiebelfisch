@@ -1,3 +1,4 @@
+// Task lists (checklists, rendered by the cheq package). See nodes.ts.
 import { Extension } from '@tiptap/core';
 import { TaskItem, TaskList } from '@tiptap/extension-list';
 import { Plugin } from '@tiptap/pm/state';

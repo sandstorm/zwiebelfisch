@@ -1,3 +1,4 @@
+// Tests for latest-only.ts.
 import { describe, expect, it } from 'vitest';
 import { LatestOnly } from './latest-only';
 

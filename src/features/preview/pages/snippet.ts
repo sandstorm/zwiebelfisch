@@ -1,3 +1,4 @@
+// Snippets: a page SVG cut down to the boxes of a source range (shown in the Visual view). See pages.ts.
 import type { Box, Page } from '../../../core/typst-engine/typst-engine';
 
 /** A cut-out of a compiled page: standalone SVG markup and its size in points. */

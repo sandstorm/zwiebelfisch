@@ -1,3 +1,4 @@
+// End-to-end tests (Playwright, against the demo build): outlines and code blocks in the Visual view.
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
 

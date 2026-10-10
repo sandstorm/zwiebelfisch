@@ -1,3 +1,4 @@
+// A minimal .tar.gz reader for package archives. See packages.ts.
 const BLOCK = 512;
 
 /**

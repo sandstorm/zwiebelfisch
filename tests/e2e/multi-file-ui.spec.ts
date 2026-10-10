@@ -1,3 +1,4 @@
+// End-to-end tests (Playwright, against the demo build): the file bar.
 import { test, expect, clickGlyph } from './fixtures';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };

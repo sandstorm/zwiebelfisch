@@ -1,3 +1,4 @@
+// End-to-end tests (Playwright, against the demo build): the default fonts.
 import { test, expect } from './fixtures';
 
 test('loads the default fonts as separate assets and renders glyphs', async ({ page }) => {

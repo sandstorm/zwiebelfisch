@@ -1,3 +1,4 @@
+// Tests for margin-note-syntax.ts.
 import { describe, expect, it } from 'vitest';
 import { isNoteCallAt, parseNoteCall, printNoteCall, safeNote } from './margin-note-syntax';
 

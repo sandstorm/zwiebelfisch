@@ -1,3 +1,5 @@
+// Heading numbers as Typst computes them from `#set heading(numbering: ..)`, and the edit that switches
+// numbering on or off. See heading-numbers.ts.
 import type { Node } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
 import { numberingFormatter } from './numbering';

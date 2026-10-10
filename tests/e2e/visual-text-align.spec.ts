@@ -1,3 +1,4 @@
+// End-to-end tests (Playwright, against the demo build): text alignment in the Visual view.
 import { test, expect } from './fixtures';
 import type { Page } from '@playwright/test';
 

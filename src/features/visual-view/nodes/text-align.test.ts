@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Tests for text-align.ts.
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { VisualView } from '../visual-view';

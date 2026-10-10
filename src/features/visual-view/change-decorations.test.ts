@@ -1,3 +1,4 @@
+// Tests for change-decorations.ts.
 import { describe, expect, it } from 'vitest';
 import { schema } from './nodes/nodes';
 import { changeDecorations, type ChangeKind } from './change-decorations';

@@ -1,3 +1,4 @@
+// Project paths: file kinds, display names, new names, and Typst path resolution. See project.ts.
 import type { FileContent } from './project';
 
 /** What the widget can do with a file: edit it, preview it as an image, or only list it. */

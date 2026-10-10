@@ -1,3 +1,4 @@
+// FileSender / FileReceiver: the project's file map across the worker boundary, bytes sent only once. See worker.ts.
 import type { FileContent } from '../../../core/project/project';
 import type { Engine } from '../../../core/typst-engine/typst-engine';
 

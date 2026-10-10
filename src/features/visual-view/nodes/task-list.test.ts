@@ -1,3 +1,4 @@
+// Tests for task lists: their projection and the checklist preamble (task-list.ts, checklist-preamble.ts).
 import { EditorState } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 import { CHECKLIST_PREAMBLE, ensureChecklistPreamble } from './checklist-preamble';

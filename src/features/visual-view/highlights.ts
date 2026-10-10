@@ -1,3 +1,4 @@
+// Highlights (jump flashes, diagnostics) as ProseMirror decorations over source ranges. See visual-view.ts.
 import { Extension } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey, type Transaction } from '@tiptap/pm/state';

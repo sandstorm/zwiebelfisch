@@ -1,5 +1,5 @@
-import type { TypstDocument } from '../core/typst-document/typst-document';
-import type { Highlight } from '../core/typst-document/typst-document';
+// EditingViews: the Visual/Source tabs; lazily one VisualView and SourceView per document. See typst-editor.ts.
+import type { Highlight, TypstDocument } from '../core/typst-document/typst-document';
 import { describeDiagnostic, SourceView, type SourceDiagnostic } from '../features/source-view/source-view';
 import { VisualView, type VisualViewOptions } from '../features/visual-view/visual-view';
 

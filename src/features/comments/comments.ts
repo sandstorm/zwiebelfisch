@@ -1,3 +1,5 @@
+// Comments are drafting margin notes in the source: the "Comment" button / Ctrl+Alt+M (CommentAction), and the
+// note syntax the Visual view reads. Entry of features/comments/. See ARCHITECTURE.md, "Comments = margin notes".
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import { addMarginNote } from './add-margin-note';
 

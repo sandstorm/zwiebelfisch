@@ -1,3 +1,4 @@
+// insertImage: the source edit that inserts `#image(..)` for a project image. See files.ts.
 import type { TextChange } from '../../core/typst-document/typst-document';
 
 /**

@@ -1,6 +1,6 @@
-import { createEngine, type Engine } from '../../../core/typst-engine/typst-engine';
-import { fetchFonts } from '../../../core/typst-engine/typst-engine';
-import { withPackages, type PackageProject } from '../../../core/typst-engine/typst-engine';
+// The engine worker: hosts the Typst engine off the main thread and answers the preview's requests.
+// See worker.ts and ARCHITECTURE.md, "Worker protocol".
+import { createEngine, type Engine, fetchFonts, type PackageProject, withPackages } from '../../../core/typst-engine/typst-engine';
 import { FileReceiver } from './project-files';
 import type { Init, Request, Response } from './protocol';
 

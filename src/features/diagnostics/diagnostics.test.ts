@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Tests for diagnostics.ts.
 import { describe, expect, it, vi } from 'vitest';
 import type { Diagnostic } from '../../core/typst-engine/typst-engine';
 import { DiagnosticsStatus } from './diagnostics';

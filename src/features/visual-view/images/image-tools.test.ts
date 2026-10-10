@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Tests for image-tools.ts.
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { resizedPercent } from './image-tools';

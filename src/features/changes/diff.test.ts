@@ -1,3 +1,4 @@
+// Tests for diff.ts.
 import { describe, expect, it } from 'vitest';
 import { diffTexts, type Change } from './diff';
 

@@ -1,3 +1,4 @@
+// End-to-end tests (Playwright, against the demo build): uploading and inserting images.
 import type { Locator, Page } from '@playwright/test';
 import { deflateSync } from 'node:zlib';
 import { test, expect } from './fixtures';

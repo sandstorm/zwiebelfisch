@@ -1,3 +1,4 @@
+// The page break node: `#pagebreak()`. See nodes.ts.
 import { Node } from '@tiptap/core';
 
 declare module '@tiptap/core' {

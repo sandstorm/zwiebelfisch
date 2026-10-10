@@ -1,3 +1,4 @@
+// End-to-end tests (Playwright, against the demo build): comments as margin notes and the notes gutter.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { test, expect } from './fixtures';

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Tests for raw-box.ts.
 import { EditorView } from '@codemirror/view';
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';

@@ -1,3 +1,4 @@
+// Tests for commit-actions.ts.
 import { describe, expect, it } from 'vitest';
 import { blobSha } from './blob-sha.ts';
 import { commitActions } from './commit-actions.ts';

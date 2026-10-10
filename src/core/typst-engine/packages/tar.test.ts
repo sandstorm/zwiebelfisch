@@ -1,3 +1,4 @@
+// Tests for tar.ts.
 import { readFileSync } from 'node:fs';
 import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';

@@ -1,3 +1,4 @@
+// Tests for createEngine (typst-engine.ts), against the built wasm.
 import { readFileSync, readdirSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createEngine, type Engine } from './typst-engine';

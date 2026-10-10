@@ -1,3 +1,4 @@
+// Tests for presence-markers.ts.
 import { describe, expect, it } from 'vitest';
 import { presenceMarkers } from './presence-markers';
 

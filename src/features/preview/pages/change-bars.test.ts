@@ -1,3 +1,4 @@
+// Tests for change-bars.ts.
 import { describe, expect, it } from 'vitest';
 import { changeBars, drawnRanges } from './change-bars';
 

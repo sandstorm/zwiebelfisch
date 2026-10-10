@@ -1,3 +1,4 @@
+// Tests for inline-source.ts.
 import { describe, expect, it } from 'vitest';
 import { inlineSource } from './inline-source';
 

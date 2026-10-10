@@ -1,3 +1,4 @@
+// Tests for room-versions.ts.
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 import { META_MAP } from './gitlab-protocol';

@@ -1,11 +1,11 @@
+// SourceView: the CodeMirror 6 editing view of a TypstDocument. Entry of features/source-view/.
+// See ARCHITECTURE.md, "SourceView".
 import { basicSetup } from 'codemirror';
 import { setDiagnostics } from '@codemirror/lint';
 import { getOriginalDoc, unifiedMergeView, updateOriginalDoc } from '@codemirror/merge';
 import { Annotation, Compartment, EditorSelection, StateEffect, StateField, Transaction, type ChangeSet, type ChangeSpec } from '@codemirror/state';
 import { Decoration, EditorView, type DecorationSet } from '@codemirror/view';
-import type { Highlight } from '../../core/typst-document/typst-document';
-import type { Presence, PresenceTarget } from '../../core/typst-document/typst-document';
-import { REMOTE_ORIGIN, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
+import { type Highlight, type Presence, type PresenceTarget, REMOTE_ORIGIN, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
 import { toLintDiagnostics, type SourceDiagnostic } from './lint';
 import { remotePresence, showPresence } from './presence';
 import { typstLanguage } from './typst-language';

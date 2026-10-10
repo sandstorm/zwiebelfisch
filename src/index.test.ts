@@ -1,3 +1,4 @@
+// Tests for the package exports (index.ts).
 import { describe, expect, it } from 'vitest';
 
 describe('package entry', () => {

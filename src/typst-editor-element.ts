@@ -1,3 +1,5 @@
+// <typst-editor>: the editor as a custom element in a shadow root, around createTypstEditor.
+// See docs/embedding.md.
 import { createTypstEditor, type CollaborationOptions, type FileChange, type FileListMode, type ProjectFiles, type TypstEditor } from './typst-editor';
 import { inlineSource } from './typst-editor-element/inline-source';
 

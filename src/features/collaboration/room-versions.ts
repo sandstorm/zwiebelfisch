@@ -1,3 +1,5 @@
+// RoomVersions: "Save version" and upstream changes in GitLab-backed rooms, over stateless messages.
+// See collaboration.ts.
 import type * as Y from 'yjs';
 import { META_MAP, type ClientMessage, type RoomMeta, type ServerMessage } from './gitlab-protocol';
 

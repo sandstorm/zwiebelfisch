@@ -1,17 +1,13 @@
+// Preview: the worker-backed live preview with hit-testing, zoom and page numbers. Entry of features/preview/.
+// See ARCHITECTURE.md, "Preview".
 import type { PlacedPresence } from '../../core/typst-document/typst-document';
 import type { Box, Diagnostic, Jump, Page, Position } from '../../core/typst-engine/typst-engine';
-import { changeBars, drawnRanges } from './pages/pages';
+import { changeBars, drawnRanges, isInside, mostVisible, PageList, percentOfPage, presenceMarkers, snippet, type Snippet, stepZoom, type Zoom, zoomLabel } from './pages/pages';
 import { DEFAULT_FONT_URLS, ENGINE_WASM_URL } from '../../core/typst-engine/engine-assets';
 import type { FileContent } from '../../core/project/project';
-import { FileSender } from './worker/worker';
-import { isInside, mostVisible, percentOfPage } from './pages/pages';
+import { FileSender, type Init, type Request, type Response, startEngineWorker } from './worker/worker';
 import { LatestOnly } from './latest-only';
-import { PageList } from './pages/pages';
-import { presenceMarkers } from './pages/pages';
-import { snippet, type Snippet } from './pages/pages';
-import { startEngineWorker, type Init, type Request, type Response } from './worker/worker';
 import { PreviewToolbar, type ZoomRequest } from './toolbar';
-import { stepZoom, zoomLabel, type Zoom } from './pages/pages';
 
 export type { Snippet } from './pages/pages';
 

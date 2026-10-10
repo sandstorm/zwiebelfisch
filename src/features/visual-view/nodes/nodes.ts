@@ -1,3 +1,5 @@
+// The Visual view's schema: its Tiptap extensions (nodes, marks, editing behaviour), and the node views of raw
+// and rendered boxes. Entry of visual-view/nodes/. See ARCHITECTURE.md, "VisualView".
 import { Extension, Mark, Node, getSchema } from '@tiptap/core';
 import Code from '@tiptap/extension-code';
 import CodeBlock from '@tiptap/extension-code-block';

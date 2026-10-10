@@ -1,3 +1,4 @@
+// Helpers for the Visual view specs: locators and source text.
 import type { Locator, Page } from '@playwright/test';
 import { expect } from './fixtures';
 

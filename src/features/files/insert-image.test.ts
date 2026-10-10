@@ -1,3 +1,4 @@
+// Tests for insert-image.ts.
 import { describe, expect, it } from 'vitest';
 import { insertImage } from './insert-image';
 

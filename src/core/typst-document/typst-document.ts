@@ -1,3 +1,5 @@
+// TypstDocument: the single source of truth of one Typst file (a string, or a shared Y.Text), and what the views
+// share about it (Highlight, Presence). Entry of core/typst-document/. See ARCHITECTURE.md, "TypstDocument".
 import type * as Y from 'yjs';
 import { minimalChange } from './minimal-change';
 import { deltaToChanges, type DeltaOp } from './y-delta';

@@ -1,3 +1,4 @@
+// Toolbar entries for block nodes (page break, horizontal rule, header row, …). See toolbar.ts.
 import { findParentNode, type Editor } from '@tiptap/core';
 import { hasHeadingNumbering } from '../nodes/nodes';
 import { svg, type Action } from './toolbar-action';

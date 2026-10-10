@@ -1,3 +1,4 @@
+// Tests for lint.ts.
 import { describe, expect, it } from 'vitest';
 import { toLintDiagnostics } from './lint';
 

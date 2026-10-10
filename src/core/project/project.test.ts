@@ -1,3 +1,4 @@
+// Tests for project.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { Project } from './project';
 

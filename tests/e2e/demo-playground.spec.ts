@@ -1,3 +1,4 @@
+// End-to-end tests (Playwright, against the demo build): the demo playground's modes and bar.
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
 

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Tests for margin-notes.ts.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { VisualView } from '../visual-view';

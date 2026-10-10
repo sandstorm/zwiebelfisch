@@ -1,3 +1,5 @@
+// ChangeTracking: the base version and the "Show changes" toggle; both views and the preview mark what changed.
+// Entry of features/changes/. See ARCHITECTURE.md, "diffTexts".
 import { diffTexts } from './diff';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 

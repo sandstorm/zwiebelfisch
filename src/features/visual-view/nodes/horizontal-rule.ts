@@ -1,3 +1,4 @@
+// The horizontal rule node: `#line(length: 100%)`. See nodes.ts.
 import { InputRule, Node } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
 

@@ -1,3 +1,4 @@
+// The package's public API: createTypstEditor and <typst-editor> (registered on import). See ARCHITECTURE.md.
 import { defineTypstEditorElement } from './typst-editor-element';
 
 export {

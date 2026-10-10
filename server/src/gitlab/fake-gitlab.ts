@@ -1,3 +1,4 @@
+// FakeGitLab: an in-memory GitLab REST API (repository files, commits, branches) for tests and the playground.
 import { createHash } from 'node:crypto';
 import { blobSha } from './blob-sha.ts';
 import type { Fetch } from './gitlab-api.ts';

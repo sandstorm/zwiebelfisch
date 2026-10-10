@@ -1,3 +1,4 @@
+// Tests for zoom.ts.
 import { describe, expect, it } from 'vitest';
 import { PX_PER_PT, stepZoom, zoomLabel } from './zoom';
 

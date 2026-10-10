@@ -1,3 +1,4 @@
+// Tests for numbering.ts.
 import { describe, expect, it } from 'vitest';
 import { numberingFormatter } from './numbering';
 

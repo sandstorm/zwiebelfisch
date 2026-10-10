@@ -1,3 +1,4 @@
+// End-to-end tests (Playwright, against the demo build): multi-file projects and packages.
 import { readFileSync } from 'node:fs';
 import { test, expect } from './fixtures';
 

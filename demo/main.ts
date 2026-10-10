@@ -1,13 +1,12 @@
-import { createTypstEditor } from '../src';
-import { editorOptions, playgroundFromQuery, userQuery } from './playground';
-import { renderPlaygroundBar } from './playground-bar';
-import { probeServer, simulateUpstream } from './server-status';
-
 // The demo playground (docs/demo-playground.md). Its state is the URL:
 // `?example=hello|simple|advanced`, `?room=<name>` (Collaborate mode) or
 // `?room=gitlab:demo/report@<branch>` (GitLab mode) on the local playground
 // server (`mise run demo`), `&user=<name>`. Without `room` (Local mode, the
 // default and what the static e2e build uses) it never talks to a server.
+import { createTypstEditor } from '../src';
+import { editorOptions, playgroundFromQuery, userQuery } from './playground';
+import { renderPlaygroundBar } from './playground-bar';
+import { probeServer, simulateUpstream } from './server-status';
 
 const params = new URLSearchParams(location.search);
 const state = playgroundFromQuery(params);

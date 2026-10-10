@@ -1,3 +1,4 @@
+// Tests for minimal-change.ts.
 import { describe, expect, it } from 'vitest';
 import { minimalChange } from './minimal-change';
 

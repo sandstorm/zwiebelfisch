@@ -1,3 +1,4 @@
+// Tests for image-call.ts.
 import { describe, expect, it } from 'vitest';
 import { imageAlt, imageArg, imageWidthCss, withImageArg, withImageWidth, withoutHash, withHash, withImageAlt } from './image-call';
 

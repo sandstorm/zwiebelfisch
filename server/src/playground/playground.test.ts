@@ -1,3 +1,4 @@
+// Tests for the playground server (playground.ts).
 import { Readable } from 'node:stream';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Hocuspocus, type onRequestPayload } from '@hocuspocus/server';

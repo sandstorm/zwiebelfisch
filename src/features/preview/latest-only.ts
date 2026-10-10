@@ -1,3 +1,4 @@
+// LatestOnly: a task runner that only processes the newest value (compiles, cursor reveals). See preview.ts.
 export interface LatestOnlyOptions {
   /** Minimum time in ms between the start of two runs (default 0). */
   interval?: number;

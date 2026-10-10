@@ -1,3 +1,4 @@
+// RenderedBox: a raw box shown compiled (snippet or image) while it is not edited. See raw-box.ts.
 import type { Node } from '@tiptap/pm/model';
 import { imagePath } from '../projection/projection';
 

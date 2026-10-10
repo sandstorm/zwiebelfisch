@@ -1,3 +1,4 @@
+// The GitLab commit actions (create, update, delete, move) that turn a repository tree into the room's files. See gitlab-room.ts.
 import type { RoomMeta } from '../../../src/features/collaboration/gitlab-protocol.ts';
 import { blobSha } from './blob-sha.ts';
 import type { CommitAction } from './gitlab-api.ts';

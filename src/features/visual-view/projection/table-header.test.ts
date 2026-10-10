@@ -1,3 +1,4 @@
+// Tests for the projection of table header rows (projection.ts).
 import type { Node } from '@tiptap/pm/model';
 import { describe, expect, it } from 'vitest';
 import { print } from './projection';

@@ -1,3 +1,4 @@
+// CollaborationLink: connects the widget to a Collaboration (loaded on demand). See typst-editor.ts.
 import type { Collaboration, CollaborationOptions, RoomVersions, Shared } from '../features/collaboration/collaboration';
 import type { PlacedPresence, PresenceTarget } from '../core/typst-document/typst-document';
 

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Tests for presence.ts.
 import { describe, expect, it } from 'vitest';
 import { caretElement, flagTextColor, initials } from './presence';
 

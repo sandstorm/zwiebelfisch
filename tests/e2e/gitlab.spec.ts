@@ -1,3 +1,4 @@
+// End-to-end tests (Playwright, against the demo build): GitLab-backed rooms (needs the fake GitLab server: mise run test:e2e-gitlab).
 import type { Browser, Page } from '@playwright/test';
 import { expect, serve, test } from './fixtures';
 

@@ -1,3 +1,4 @@
+// Tests for project-renderings.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { Project, type FileChange } from '../core/project/project';
 import { ProjectRenderings } from './project-renderings';

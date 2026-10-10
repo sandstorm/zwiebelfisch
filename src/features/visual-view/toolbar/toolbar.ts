@@ -1,8 +1,9 @@
+// Toolbar: the Visual view's formatting toolbar (styles, marks, lists, alignment, insert). Entry of
+// visual-view/toolbar/. See ARCHITECTURE.md, "VisualView".
 import type { ChainedCommands, Editor } from '@tiptap/core';
 import { FieldPopover } from '../field-popover';
-import { ImageChoices, type ImageAssets } from '../images/images';
+import { type ImageAssets, ImageChoices, imageFileDrops, insertImages } from '../images/images';
 import type { Plugin } from '@tiptap/pm/state';
-import { imageFileDrops, insertImages } from '../images/images';
 import { textAlignAt, type TextAlignment } from '../nodes/nodes';
 import { svg, type Action } from './toolbar-action';
 import { BLOCKS as QUOTE_AND_TASKS, BREAKS, HEADER_ROW, NUMBERED_HEADINGS } from './toolbar-blocks';

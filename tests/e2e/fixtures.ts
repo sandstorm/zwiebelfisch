@@ -1,3 +1,4 @@
+// Playwright fixtures: the static demo build served through request interception (no dev server, no port).
 import { test as base, expect, type Locator, type Page } from '@playwright/test';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';

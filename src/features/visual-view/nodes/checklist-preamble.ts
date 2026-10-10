@@ -1,3 +1,4 @@
+// Makes sure a document with task lists has cheq's import and `#show: checklist` exactly once. See task-list.ts.
 import type { Node } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
 

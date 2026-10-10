@@ -1,3 +1,4 @@
+// ImageTools: resize handles, width presets, alt text and caption on an image box. See images.ts.
 import type { Editor } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import type { EditorState, Transaction } from '@tiptap/pm/state';

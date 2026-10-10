@@ -1,3 +1,4 @@
+// Tests for image-edits.ts.
 import { describe, expect, it } from 'vitest';
 import { EditorState, NodeSelection, type Transaction } from '@tiptap/pm/state';
 import { minimalChange } from '../../../core/typst-document/typst-document';

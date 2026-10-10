@@ -1,3 +1,4 @@
+// Tests for typst-document.ts.
 import { describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
 import { REMOTE_ORIGIN, TypstDocument, type TextChange } from './typst-document';

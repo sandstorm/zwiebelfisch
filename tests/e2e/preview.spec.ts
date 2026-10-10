@@ -1,3 +1,4 @@
+// End-to-end tests (Playwright, against the demo build): the live preview and click-to-source.
 import { test, expect, clickGlyph } from './fixtures';
 
 test.beforeEach(async ({ page }) => {

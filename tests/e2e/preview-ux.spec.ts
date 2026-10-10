@@ -1,3 +1,4 @@
+// End-to-end tests (Playwright, against the demo build): preview zoom, page numbers and reveal.
 import type { Page } from '@playwright/test';
 import { test, expect, clickGlyph } from './fixtures';
 

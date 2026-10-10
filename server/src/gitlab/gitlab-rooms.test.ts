@@ -1,3 +1,4 @@
+// Tests for GitLab-backed rooms: the collaboration server with a FakeGitLab, in-process.
 import { Hocuspocus, type Document, type Extension, type onStatelessPayload } from '@hocuspocus/server';
 import { afterEach, describe, expect, it } from 'vitest';
 import * as Y from 'yjs';

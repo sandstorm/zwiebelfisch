@@ -1,3 +1,4 @@
+// Tests for typst-language.ts.
 import { ensureSyntaxTree, getIndentation } from '@codemirror/language';
 import { EditorState } from '@codemirror/state';
 import { describe, expect, it } from 'vitest';

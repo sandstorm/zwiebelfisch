@@ -1,3 +1,4 @@
+// summarizeDiagnostics: compile diagnostics counted and sorted per file. See diagnostics.ts.
 import type { Diagnostic } from '../../core/typst-engine/typst-engine';
 
 /** A range in a project file. */

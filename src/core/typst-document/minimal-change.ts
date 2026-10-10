@@ -1,3 +1,4 @@
+// minimalChange: the one replacement between two texts. See typst-document.ts.
 import type { TextChange } from './typst-document';
 
 /**

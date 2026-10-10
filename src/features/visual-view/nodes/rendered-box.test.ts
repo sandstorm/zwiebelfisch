@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
+// Tests for rendered-box.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import type { BoxRenderer } from './rendered-box';
-import { rendersInPlace } from './rendered-box';
+import { type BoxRenderer, rendersInPlace } from './rendered-box';
 import { VisualView } from '../visual-view';
 
 const MATH_DOC = 'Intro\n\n$ x^2 $\n\nOutro\n';

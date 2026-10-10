@@ -1,3 +1,4 @@
+// End-to-end tests (Playwright, against the demo build): two users in one room (needs the collaboration server: mise run test:e2e-collab).
 import type { Browser, Page } from '@playwright/test';
 import { expect, serve, test } from './fixtures';
 

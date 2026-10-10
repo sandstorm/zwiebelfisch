@@ -1,3 +1,4 @@
+// Tests for packages.ts.
 import { readFileSync, readdirSync } from 'node:fs';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createEngine, type Engine } from '../typst-engine';

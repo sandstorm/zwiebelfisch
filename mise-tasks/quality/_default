@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Code-quality gate: fail on complexity/length/nesting above thresholds"
+#MISE description="Code-quality gate: complexity/length/nesting thresholds, folder boundaries (ESLint), top comments"
+#MISE depends=["quality:top-comments"]
 set -euo pipefail
 exec pnpm exec eslint .

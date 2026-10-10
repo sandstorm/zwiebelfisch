@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Tests for files.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { FileSwitcher } from './files';
 import type { FileChange } from '../../core/project/project';

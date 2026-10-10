@@ -1,3 +1,4 @@
+// Tests for the projection of quotes (projection.ts).
 import { describe, expect, it } from 'vitest';
 import { print } from './projection';
 import { after, edit, expectPreciseMap, find, project, schema } from '../test-support';

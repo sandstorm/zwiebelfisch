@@ -1,3 +1,4 @@
+// End-to-end tests (Playwright, against the demo build): the <typst-editor> element from the library build.
 import { test, expect } from './fixtures';
 
 // examples/plain-html loads dist/lib/typst-editor.js without any bundler.

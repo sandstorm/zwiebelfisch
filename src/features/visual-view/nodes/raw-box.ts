@@ -1,3 +1,4 @@
+// Raw boxes: Typst the Visual view does not model, edited as code in a nested CodeMirror. See nodes.ts.
 import { defaultKeymap } from '@codemirror/commands';
 import { defaultHighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import type { Transaction as CodeTransaction } from '@codemirror/state';
@@ -7,8 +8,7 @@ import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { Decoration, EditorView, NodeView } from '@tiptap/pm/view';
 import { minimalChange } from '../../../core/typst-document/typst-document';
-import { remotePresence, showPresence } from '../../source-view/source-view';
-import { typstLanguage } from '../../source-view/source-view';
+import { remotePresence, showPresence, typstLanguage } from '../../source-view/source-view';
 import { ImageTools } from '../images/images';
 import { boxCarets } from '../presence';
 import { posToSource } from '../projection/projection';

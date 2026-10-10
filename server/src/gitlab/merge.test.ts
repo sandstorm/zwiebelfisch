@@ -1,3 +1,4 @@
+// Tests for merge.ts.
 import { describe, expect, it } from 'vitest';
 import { applyEdits, merge3, mergeFiles, textEdits } from './merge.ts';
 

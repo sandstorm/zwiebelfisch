@@ -1,3 +1,4 @@
+// Tests for remote-cursors.ts.
 import { afterEach, describe, expect, it } from 'vitest';
 import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';

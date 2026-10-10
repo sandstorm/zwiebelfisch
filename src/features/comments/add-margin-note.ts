@@ -1,3 +1,4 @@
+// addMarginNote: the source edits for a new drafting margin note (and its import). See comments.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { DRAFTING, isNoteCallAt, MARGIN_NOTE, NOTE_HEAD, printNoteCall, rangeNoteSyntax } from './margin-note-syntax';

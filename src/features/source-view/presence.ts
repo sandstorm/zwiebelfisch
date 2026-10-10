@@ -1,3 +1,5 @@
+// Other users' carets and selections in a CodeMirror editor (also used by the Visual view's raw boxes).
+// See source-view.ts.
 import { StateEffect, StateField, type EditorState, type Extension, type Range } from '@codemirror/state';
 import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view';
 import { caretElement, type Presence, type PresenceUser } from '../../core/typst-document/typst-document';

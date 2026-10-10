@@ -1,3 +1,4 @@
+// Reads a project folder from disk into the widget's file map (the fake repository of the playground).
 import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, relative, sep } from 'node:path';

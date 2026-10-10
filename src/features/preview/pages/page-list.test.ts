@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Tests for page-list.ts.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Page } from '../../../core/typst-engine/typst-engine';
 import { PageList } from './page-list';

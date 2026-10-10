@@ -1,3 +1,4 @@
+// Tests for note-list.ts.
 import { EditorState, NodeSelection, TextSelection } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 import { findNotes, followNotes, noteAtOffset, noteAtSelection, removeNote, setNoteText, type KeyedNote } from './note-list';

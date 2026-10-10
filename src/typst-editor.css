@@ -1,3 +1,5 @@
+/* The widget's styles, scoped under .typst-editor and injected by createTypstEditor (feature styles:
+   features/changes/changes.css, features/visual-view/visual-view.css). See docs/embedding.md. */
 .typst-editor {
   --te-border: #d9dce1;
   --te-preview-bg: #eef0f3;

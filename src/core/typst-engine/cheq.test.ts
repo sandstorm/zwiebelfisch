@@ -1,3 +1,4 @@
+// Tests that the engine compiles checklists with the cheq package (fixture archive).
 import { readFileSync, readdirSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createEngine, type Engine } from './typst-engine';

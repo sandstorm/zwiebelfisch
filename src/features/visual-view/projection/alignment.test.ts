@@ -1,3 +1,4 @@
+// Tests for alignment.ts.
 import { describe, expect, it } from 'vitest';
 import { alignArgs, setRules, withHorizontal } from './alignment';
 

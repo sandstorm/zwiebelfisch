@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Tests for the block nodes (page break, rule, task lists) in a VisualView (jsdom).
 import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../core/typst-document/typst-document';

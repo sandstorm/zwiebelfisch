@@ -1,3 +1,5 @@
+// Project: the file model of the widget: one TypstDocument per .typ file, the other files as bytes, the
+// protected main file. Entry of core/project/. See ARCHITECTURE.md, "createTypstEditor".
 import { TypstDocument } from '../typst-document/typst-document';
 import { fileKind } from './paths';
 
