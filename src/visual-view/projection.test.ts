@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState, TextSelection } from '@tiptap/pm/state';
 import { schema } from './extensions';
-import { locate, print, project as projectWith, syncDoc } from './projection';
+import { posToSource, print, project as projectWith, sourceToPos, syncDoc } from './projection';
 
 const project = (source: string) => projectWith(source, schema);
 
@@ -132,13 +132,132 @@ describe('projection', () => {
   });
 });
 
-describe('locate', () => {
-  it('finds the top-level block containing a source offset', () => {
-    const source = '= Title\n\nFirst para.\n\n- a\n- b\n';
+/** Every position in `doc` whose next character is plain, visible text (not an atom or a decoded escape). */
+function visibleChars(doc: Node): { pos: number; char: string }[] {
+  const chars: { pos: number; char: string }[] = [];
+  doc.descendants((node, pos) => {
+    if (node.isText && !node.marks.some((m) => m.type.name === 'typstSource')) {
+      for (let i = 0; i < node.text!.length; i++) chars.push({ pos: pos + i, char: node.text![i] });
+    }
+  });
+  return chars;
+}
+
+/** Checks the position map of `doc` exhaustively against its printed source. */
+function expectPreciseMap(doc: Node): void {
+  const source = print(doc);
+  for (const { pos, char } of visibleChars(doc)) {
+    const offset = posToSource(doc, pos);
+    expect(source[offset], `char at position ${pos}`).toBe(char);
+    expect(sourceToPos(doc, offset)).toBe(pos);
+  }
+  let previous = -1;
+  for (let offset = 0; offset <= source.length; offset++) {
+    const pos = sourceToPos(doc, offset);
+    expect(pos, `monotonic at offset ${offset}`).toBeGreaterThanOrEqual(previous);
+    expect(pos).toBeLessThanOrEqual(doc.content.size);
+    // lands on the same visible character: mapping back and forth again is stable
+    expect(sourceToPos(doc, posToSource(doc, pos)), `round trip of offset ${offset}`).toBe(pos);
+    previous = pos;
+  }
+  previous = -1;
+  for (let pos = 0; pos <= doc.content.size; pos++) {
+    const offset = posToSource(doc, pos);
+    expect(offset, `monotonic at position ${pos}`).toBeGreaterThanOrEqual(previous);
+    expect(offset).toBeLessThanOrEqual(source.length);
+    previous = offset;
+  }
+}
+
+describe('source offset <-> document position', () => {
+  describe('is precise, monotonic and stable for every fixture', () => {
+    for (const [name, source] of Object.entries(FIXTURES)) {
+      it(name, () => expectPreciseMap(project(source)));
+    }
+  });
+
+  it('maps text one to one', () => {
+    const doc = project('Hello world');
+    expect(sourceToPos(doc, 0)).toBe(1);
+    expect(sourceToPos(doc, 6)).toBe(7);
+    expect(posToSource(doc, 7)).toBe(6);
+    expect(sourceToPos(doc, 11)).toBe(12);
+    expect(posToSource(doc, 12)).toBe(11);
+  });
+
+  it('snaps hidden syntax to the next visible position', () => {
+    const source = 'An *important* point';
     const doc = project(source);
-    const pos = locate(doc, source.indexOf('para'));
-    expect(doc.resolve(pos).parent.textContent).toBe('First para.');
-    expect(doc.resolve(locate(doc, source.indexOf('b\n'))).node(1).type.name).toBe('bulletList');
+    const bold = after(doc, 'important') - 'important'.length;
+    expect(sourceToPos(doc, source.indexOf('*'))).toBe(bold);
+    expect(posToSource(doc, bold)).toBe(source.indexOf('important'));
+    expect(sourceToPos(doc, source.lastIndexOf('*'))).toBe(after(doc, 'important'));
+  });
+
+  it('maps an atom (raw inline, decoded escape) to the position before it', () => {
+    const source = 'A #emph[func] call and \\* star';
+    const doc = project(source);
+    const raw = after(doc, 'A ');
+    expect(sourceToPos(doc, source.indexOf('emph'))).toBe(raw);
+    expect(posToSource(doc, raw)).toBe(source.indexOf('#'));
+    expect(posToSource(doc, raw + 1)).toBe(source.indexOf(' call'));
+    expect(sourceToPos(doc, source.indexOf('*'))).toBe(after(doc, 'call and '));
+  });
+
+  it('maps heading and list markers and separators to the following text', () => {
+    const source = '= Title\n\n- one\n- two\n';
+    const doc = project(source);
+    expect(sourceToPos(doc, 0)).toBe(after(doc, 'Title') - 'Title'.length);
+    expect(sourceToPos(doc, source.indexOf('- two'))).toBe(after(doc, 'two') - 'two'.length);
+    expect(sourceToPos(doc, source.indexOf('\n\n'))).toBe(after(doc, 'one') - 'one'.length);
+  });
+
+  it('maps the end of a range to just after its last visible character', () => {
+    const source = 'ab\n\n*cd*\n\nef';
+    const doc = project(source);
+    expect(sourceToPos(doc, 2)).toBe(after(doc, 'cd') - 2);
+    expect(sourceToPos(doc, 2, -1)).toBe(after(doc, 'ab'));
+    expect(posToSource(doc, after(doc, 'ab'))).toBe(2);
+    expect(sourceToPos(doc, source.indexOf('\n\nef'), -1)).toBe(after(doc, 'cd'));
+    expect(sourceToPos(doc, 0, -1)).toBe(1);
+  });
+
+  it('places the end of the source at the end of the last block', () => {
+    const doc = project('Text\n\n');
+    expect(sourceToPos(doc, 6)).toBe(after(doc, 'Text'));
+  });
+
+  it('stays precise in edited blocks, where text is escaped and marks re-printed', () => {
+    const typed = edit(project('Hi\n'), (s) => s.tr.insertText(' *a* #b', after(s.doc, 'Hi')));
+    expect(print(typed)).toBe('Hi \\*a\\* \\#b\n');
+    expectPreciseMap(typed);
+
+    const bolded = edit(project('= Report\n\nab cd ef\n'), (s) => {
+      const cd = after(s.doc, 'cd');
+      const report = after(s.doc, 'Report');
+      return s.tr.addMark(cd - 2, cd, schema.marks.bold.create()).addMark(report - 6, report, schema.marks.italic.create());
+    });
+    expect(print(bolded)).toBe('= _Report_\n\nab *cd* ef\n');
+    expectPreciseMap(bolded);
+  });
+
+  it('stays precise in indented nested lists', () => {
+    const doc = edit(project('- one\n- two\n'), (s) => {
+      const nested = schema.nodes.bulletList.create(null, [
+        schema.nodes.listItem.create(null, schema.nodes.paragraph.create(null, schema.text('deep'))),
+      ]);
+      return s.tr.insert(after(s.doc, 'one') + 1, nested);
+    });
+    expect(print(doc)).toBe('- one\n  - deep\n- two\n');
+    expectPreciseMap(doc);
+    expect(posToSource(doc, after(doc, 'de'))).toBe(print(doc).indexOf('ep'));
+  });
+
+  it('stays precise after syncing an outside change', () => {
+    const state = EditorState.create({ doc: project('A *b* c\n\nOther -- text\n') });
+    const synced = state.apply(syncDoc(state.tr, project('A *bb* c\n\nOther -- text!\n'))).doc;
+    expectPreciseMap(synced);
+    expect(posToSource(synced, after(synced, 'text'))).toBe('A *bb* c\n\nOther -- text'.length);
   });
 });
 

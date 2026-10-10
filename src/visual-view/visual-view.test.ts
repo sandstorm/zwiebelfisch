@@ -38,6 +38,13 @@ describe('VisualView', () => {
     expect(press(editable, 'i').defaultPrevented).toBe(true);
   });
 
+  it('reveals a source range by selecting exactly what shows it', () => {
+    const source = '= Title\n\nSome *bold* text.\n';
+    const { view } = setup(source);
+    view.reveal(source.indexOf('bold'), source.indexOf('bold') + 4);
+    expect(window.getSelection()?.toString()).toBe('bold');
+  });
+
   it('follows document changes made elsewhere', () => {
     const { doc, parent } = setup('= Title\n\nText\n');
     doc.setText('= Title\n\nText changed\n', 'source');

@@ -2,7 +2,7 @@ import { Editor } from '@tiptap/core';
 import { EditorState, TextSelection, type Transaction } from '@tiptap/pm/state';
 import type { TypstDocument } from '../document/typst-document';
 import { extensions } from './extensions';
-import { locate, print, project, syncDoc } from './projection';
+import { print, project, sourceToPos, syncDoc } from './projection';
 
 /** Marks transactions that mirror a document change, so they are not written back. */
 const FROM_DOCUMENT = 'typst-from-document';
@@ -39,13 +39,12 @@ export class VisualView {
     });
   }
 
-  /** Selects the block containing source offset `from` and scrolls to it. */
-  reveal(from: number, _to: number): void {
+  /** Selects what shows source range `from`..`to` (a caret if empty) and scrolls to it. */
+  reveal(from: number, to: number): void {
     const { doc } = this.editor.state;
-    const $pos = doc.resolve(locate(doc, from));
-    const start = $pos.before(1);
-    const end = start + $pos.node(1).nodeSize;
-    const selection = TextSelection.between(doc.resolve(start + 1), doc.resolve(end - 1));
+    const anchor = sourceToPos(doc, from);
+    const head = to > from ? Math.max(anchor, sourceToPos(doc, to, -1)) : anchor;
+    const selection = TextSelection.between(doc.resolve(anchor), doc.resolve(head));
     this.editor.view.dispatch(this.editor.state.tr.setSelection(selection).scrollIntoView());
     this.editor.view.focus();
   }
