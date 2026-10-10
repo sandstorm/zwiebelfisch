@@ -1,85 +1,108 @@
-// The Visual view's schema: its Tiptap extensions (nodes, marks, editing behaviour), and the node views of raw
-// and rendered boxes. Entry of visual-view/nodes/. See ARCHITECTURE.md, "VisualView".
-import { Extension, Mark, Node, getSchema } from '@tiptap/core';
-import Code from '@tiptap/extension-code';
-import CodeBlock from '@tiptap/extension-code-block';
-import { DOMSerializer, type Node as PMNode } from '@tiptap/pm/model';
-import { Plugin } from '@tiptap/pm/state';
-import type { EditorView, NodeView } from '@tiptap/pm/view';
+// The Visual view's schema: the host's own nodes (document, paragraph, text, line breaks, raw Typst), the
+// contributed specs' extensions, and what the host adds to every contributed node (source anchors, labels, raw box
+// node views). Entry of visual-view/nodes/. See ARCHITECTURE.md, "VisualView".
+import { Extension, Mark, Node, getSchema, type AnyExtension, type Attribute } from '@tiptap/core';
 import Document from '@tiptap/extension-document';
-import { ListItem } from '@tiptap/extension-list';
-import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
-import StarterKit from '@tiptap/starter-kit';
-import { codeBlockView } from './code-block-view';
-import { MarginNote, NoteRange } from './margin-notes';
-import { HeadingNumbers } from './heading-numbers';
-import { HorizontalRule } from './horizontal-rule';
-import { PageBreak } from './page-break';
-import { ChecklistPreamble, TypstTaskItem, TypstTaskList } from './task-list';
+import { DOMSerializer, type Node as PMNode, type Schema } from '@tiptap/pm/model';
+import { Plugin } from '@tiptap/pm/state';
+import type { EditorView, NodeView, NodeViewConstructor } from '@tiptap/pm/view';
+import StarterKit, { type StarterKitOptions } from '@tiptap/starter-kit';
+import { attachGrammar, type MarkGrammar, type NodeGrammar } from '../projection/projection';
 import { RawBoxNavigation, rawBoxView } from './raw-box';
-import { Reference } from '../references/references';
-import { TextAlign } from './text-align';
-import { StyledBlock, StyleMark } from './styles';
 
-export { hasHeadingNumbering } from './heading-numbering';
-export { setBoxLinks, setBoxRenderer } from './raw-box';
-export type { BoxRenderer, Snippet } from './rendered-box';
-export { textAlignAt, type TextAlignment } from './text-align';
-export type { AppliedStyle } from './styles';
+export { setBoxes, type Boxes } from './raw-box';
+export { boxCaretsSpec, type BoxCaret } from './box-carets';
 
 /**
- * The Visual view's Tiptap extensions, i.e. its ProseMirror schema plus
- * editing behaviour (keymaps, input rules, list handling, undo).
+ * The Tiptap extensions of a Visual view whose schema holds `nodes` and
+ * `marks` besides the host's own: the specs' extensions in registration
+ * order, between the host's base (paragraph, text, history) and its raw
+ * Typst nodes. Each spec's node type also gets what the spec asks the host
+ * for (see `NodeGrammar`):
  *
- * Source-anchoring attributes (never rendered; part of node equality, so
- * re-projections compare exactly):
- * - `src`: the node's original Typst source;
- * - `sep`: whitespace between this node and its next sibling — `null` on last
- *   children (the container owns trailing whitespace) and on nodes created in
- *   the editor (a default separator is printed);
- * - doc `lead`/`trail`: whitespace before the first / after the last block;
- * - table and blockquote `layout`: how the source is laid out around their
- *   content (owned by the projection);
- * - code block `fence`: the backticks of its delimiters.
- *
- * `label` (`{ name, gap }` or null) is the label after a block (`= Intro
- * <intro>`): printed after it, shown as a tag (see `references/`).
- *
- * A block whose anchors change (as every re-projected block's `src` does
- * after an edit from elsewhere) keeps its DOM, so what is inside, like an
- * open note editor, survives; see `keepWhileRenderedSame`.
+ * - its source-anchoring `attributes` (never rendered; part of node
+ *   equality, so re-projections compare exactly; `src`: the node's original
+ *   Typst; `sep`: the whitespace to its next sibling, `null` on last children
+ *   and on nodes made in the editor (a default separator is printed));
+ * - `label` (`{ name, gap }` or null) if `labelled`: the label after the
+ *   block (`= Intro <intro>`), printed after it;
+ * - with `keepsDom`, a node view keeping the block's DOM while a new version
+ *   renders the same: a block whose anchors change (as every re-projected
+ *   block's `src` does after an edit from elsewhere) keeps its DOM, so what is
+ *   inside, like an open note editor, survives;
+ * - with `box: 'code'`, the raw box node view (`raw-box.ts`).
  */
-const ANCHORED_BLOCKS = ['paragraph', 'heading', 'bulletList', 'orderedList', 'listItem'];
+export function editorExtensions(nodes: readonly NodeGrammar[], marks: readonly MarkGrammar[]): AnyExtension[] {
+  const specs = [...HOST_NODES, ...nodes];
+  const contributed = [...nodes, ...marks].map((spec) => spec.extension).filter((extension) => extension !== undefined);
+  return [HostBase, ...new Set(contributed), TypstDocument, RawBlock, RawInline, RawBoxNavigation, SoftBreak, TypstSource, sourceAnchors(specs)];
+}
 
-/** Blocks a label can follow: whatever a segment of markup projects to (see projection.ts). */
-const LABELLED_BLOCKS = [
-  'paragraph', 'heading', 'codeBlock', 'rawBlock', 'image', 'outline', 'figure', 'table', 'blockquote', 'alignment', 'pageBreak', 'horizontalRule', 'styledBlock',
+/** Makes `nodes` and `marks` (and the host's own specs) what `project` and `print` use for documents of `schema`. */
+export function attachSpecs(schema: Schema, nodes: readonly NodeGrammar[], marks: readonly MarkGrammar[]): void {
+  attachGrammar(schema, [...HOST_NODES, ...nodes], marks);
+}
+
+/** A schema of `nodes` and `marks` with its grammar attached (an `Editor` builds an equal but distinct instance). */
+export function createSchema(nodes: readonly NodeGrammar[], marks: readonly MarkGrammar[]): Schema {
+  const schema = getSchema(editorExtensions(nodes, marks));
+  attachSpecs(schema, nodes, marks);
+  return schema;
+}
+
+const STARTER_KIT_PARTS = [
+  'blockquote', 'bold', 'bulletList', 'code', 'codeBlock', 'document', 'dropcursor', 'gapcursor', 'hardBreak', 'heading', 'undoRedo',
+  'horizontalRule', 'italic', 'listItem', 'listKeymap', 'link', 'orderedList', 'paragraph', 'strike', 'text', 'underline', 'trailingNode',
+] as const;
+
+/**
+ * Some of Tiptap's StarterKit as one extension named `name`: the parts in
+ * `parts` (with their options), no others. (The parts' own packages are not
+ * dependencies of this package; StarterKit is.)
+ */
+export function starterKitPart(name: string, parts: Partial<StarterKitOptions>): AnyExtension {
+  const options = Object.fromEntries(STARTER_KIT_PARTS.map((part) => [part, part in parts ? parts[part] : false]));
+  return StarterKit.extend({ name }).configure(options);
+}
+
+/** The host's base: paragraphs, text, line breaks (`\`), history, drop and gap cursors. */
+const HostBase = starterKitPart('typstBase', { paragraph: {}, text: undefined, hardBreak: {}, undoRedo: {}, dropcursor: {}, gapcursor: undefined });
+
+const ANCHORS: Record<string, Attribute> = {
+  src: { default: null, rendered: false, keepOnSplit: false },
+  sep: { default: null, rendered: false },
+};
+
+/** The host's own nodes, as the projection and the schema see them. */
+const HOST_NODES: NodeGrammar[] = [
+  { name: 'paragraph', attributes: ANCHORS, keepsDom: true, labelled: true },
+  { name: 'hardBreak', attributes: { src: { default: '\\\n', rendered: false, keepOnSplit: false } } },
+  { name: 'rawBlock', labelled: true, box: 'code' },
+  { name: 'rawInline', box: 'code' },
 ];
 
-const SourceAnchors = Extension.create({
-  name: 'typstSourceAnchors',
-  addProseMirrorPlugins() {
-    const views = Object.fromEntries(ANCHORED_BLOCKS.map((type) => [type, keepWhileRenderedSame]));
-    return [new Plugin({ props: { nodeViews: views } })];
-  },
-  addGlobalAttributes() {
-    return [
-      {
-        // code blocks have their own node view (code-block-view.ts), so they are anchored but not kept
-        types: [...ANCHORED_BLOCKS, 'codeBlock'],
-        attributes: {
-          src: { default: null, rendered: false, keepOnSplit: false },
-          sep: { default: null, rendered: false },
-        },
-      },
-      { types: ['listItem'], attributes: { marker: { default: null, rendered: false } } },
-      { types: ['codeBlock'], attributes: { fence: { default: 3, rendered: false } } },
-      { types: ['table', 'blockquote'], attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } } },
-      { types: ['hardBreak'], attributes: { src: { default: '\\\n', rendered: false, keepOnSplit: false } } },
-      { types: LABELLED_BLOCKS, attributes: { label: { default: null, rendered: false, keepOnSplit: false } } },
-    ];
-  },
-});
+/** What the specs ask the host for: source anchors and labels (global attributes), kept DOM and raw box node views. */
+function sourceAnchors(specs: readonly NodeGrammar[]): AnyExtension {
+  return Extension.create({
+    name: 'typstSourceAnchors',
+    addProseMirrorPlugins() {
+      const editor = this.editor;
+      const views: Record<string, NodeViewConstructor> = {};
+      for (const spec of specs) {
+        if (spec.keepsDom) views[spec.name] = keepWhileRenderedSame;
+        if (spec.box === 'code') views[spec.name] = (node, _view, getPos, decorations) => rawBoxView(node, editor, getPos, decorations);
+      }
+      return [new Plugin({ props: { nodeViews: views } })];
+    },
+    addGlobalAttributes() {
+      const label = { label: { default: null, rendered: false, keepOnSplit: false } };
+      return [
+        ...specs.filter((spec) => spec.attributes).map((spec) => ({ types: [spec.name], attributes: { ...spec.attributes } })),
+        { types: specs.filter((spec) => spec.labelled).map((spec) => spec.name), attributes: label },
+      ];
+    },
+  });
+}
 
 /**
  * The block as its schema renders it, kept (and its content updated in place)
@@ -101,18 +124,16 @@ function keepWhileRenderedSame(initial: PMNode, view: EditorView): NodeView {
   };
 }
 
+/** The document: `lead` / `trail` are the source before the first block and after the last one. */
 const TypstDocument = Document.extend({
   addAttributes() {
     return { lead: { default: '', rendered: false }, trail: { default: '\n', rendered: false } };
   },
 });
 
-/** A list item's first child may be verbatim Typst (an item whose body the Visual view cannot model). */
-const TypstListItem = ListItem.extend({ content: '(paragraph | rawBlock) block*' });
-
 /**
- * Block-level Typst the Visual view does not model (`#set`, `#let`, display
- * math, figures, …), kept verbatim and editable as code in a raw box.
+ * Block-level Typst no spec models (`#set`, `#let`, display math, …), kept
+ * verbatim and editable as code in a raw box.
  */
 const RawBlock = Node.create({
   name: 'rawBlock',
@@ -125,120 +146,10 @@ const RawBlock = Node.create({
   renderHTML({ node }) {
     return ['pre', { class: 'typst-visual__raw-block' }, node.attrs.src];
   },
-  addNodeView() {
-    return rawBoxView;
-  },
 });
 
 /**
- * A standalone `#image("path", ..)` call. Its source is kept and edited like a
- * raw block's; the box shows which image it is.
- */
-const Image = Node.create({
-  name: 'image',
-  group: 'block',
-  atom: true,
-  selectable: true,
-  draggable: true,
-  addAttributes() {
-    return { src: { default: '#image("")', rendered: false }, sep: { default: null, rendered: false } };
-  },
-  renderHTML({ node }) {
-    return ['pre', { class: 'typst-visual__image' }, node.attrs.src];
-  },
-  addNodeView() {
-    return rawBoxView;
-  },
-});
-
-/**
- * A standalone `#outline(..)` call: the table of contents. Its source is kept
- * and edited like a raw block's; the box is headed "Table of contents" and
- * shows the compiled outline when a renderer is set.
- */
-const Outline = Node.create({
-  name: 'outline',
-  group: 'block',
-  atom: true,
-  selectable: true,
-  draggable: true,
-  addAttributes() {
-    return { src: { default: '#outline()', rendered: false }, sep: { default: null, rendered: false } };
-  },
-  renderHTML({ node }) {
-    return ['pre', { class: 'typst-visual__outline' }, node.attrs.src];
-  },
-  addNodeView() {
-    return rawBoxView;
-  },
-});
-
-/**
- * Raw text in a block (```lang …```): plain text edited in place, under a
- * field for its language.
- */
-const TypstCodeBlock = CodeBlock.extend({
-  addNodeView() {
-    return codeBlockView;
-  },
-}).configure({ HTMLAttributes: { class: 'typst-visual__code-block' } });
-
-/**
- * Inline raw text (`code`). Unlike Tiptap's code mark it combines with other
- * formatting (Typst allows `*`code`*`). `fence` and `lang` remember the
- * delimiters (```lang …```) so they print back as written.
- */
-const TypstCode = Code.extend({
-  excludes: '',
-  addAttributes() {
-    return { fence: { default: 1, rendered: false }, lang: { default: null, rendered: false } };
-  },
-}).configure({ HTMLAttributes: { class: 'typst-visual__code-inline' } });
-
-/**
- * `#figure(image(..), caption: [..])`: the image (an `image` node holding
- * the call without its `#`) or a table (`table(..)`) and, optionally, the
- * caption as rich text. `layout` is how the figure's source lies around the
- * two (owned by the projection); other arguments and a label after the call
- * live there.
- */
-const Figure = Node.create({
-  name: 'figure',
-  group: 'block',
-  content: '(image | table) figureCaption?',
-  isolating: true,
-  addAttributes() {
-    return { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } };
-  },
-  renderHTML() {
-    return ['figure', { class: 'typst-visual__figure' }, 0];
-  },
-});
-
-/** A figure's caption: one paragraph of rich text. Enter leaves the figure. */
-const FigureCaption = Node.create({
-  name: 'figureCaption',
-  content: 'inline*',
-  addAttributes() {
-    return { src: { default: null, rendered: false } };
-  },
-  renderHTML() {
-    return ['figcaption', { class: 'typst-visual__caption' }, 0];
-  },
-  addKeyboardShortcuts() {
-    return {
-      Enter: () => {
-        const { $from } = this.editor.state.selection;
-        if ($from.parent.type.name !== 'figureCaption') return false;
-        const after = $from.after($from.depth - 1);
-        return this.editor.chain().insertContentAt(after, { type: 'paragraph' }).setTextSelection(after + 1).run();
-      },
-    };
-  },
-});
-
-/**
- * Inline Typst the Visual view does not model (`#func[..]`, `$x$`, `<label>`, …), kept verbatim and editable as code.
+ * Inline Typst no spec models (`#func[..]`, `$x$`, `<label>`, …), kept verbatim and editable as code.
  * `code`: `src` is written in code, without `#` (a table cell that is an expression, like `ms(18)`).
  */
 const RawInline = Node.create({
@@ -251,9 +162,6 @@ const RawInline = Node.create({
   },
   renderHTML({ node }) {
     return ['code', { class: 'typst-visual__raw-inline' }, node.attrs.src];
-  },
-  addNodeView() {
-    return rawBoxView;
   },
 });
 
@@ -287,51 +195,3 @@ const TypstSource = Mark.create({
     return ['span', 0];
   },
 });
-
-export const extensions = [
-  StarterKit.configure({
-    document: false,
-    listItem: false,
-    blockquote: { HTMLAttributes: { class: 'typst-visual__quote' } },
-    code: false,
-    codeBlock: false,
-    horizontalRule: false,
-    strike: false,
-    underline: false,
-    link: { openOnClick: false, autolink: false, HTMLAttributes: { class: 'typst-visual__link', target: null, rel: null } },
-    trailingNode: false,
-  }),
-  Table.configure({ resizable: false, HTMLAttributes: { class: 'typst-visual__table' } }),
-  TableRow,
-  TableCell,
-  TableHeader,
-  Image,
-  Outline,
-  TypstCodeBlock,
-  TypstCode,
-  Figure,
-  FigureCaption,
-  PageBreak,
-  HorizontalRule,
-  TypstTaskList,
-  TypstTaskItem,
-  ChecklistPreamble,
-  HeadingNumbers,
-  TypstDocument,
-  TypstListItem,
-  SourceAnchors,
-  RawBlock,
-  RawInline,
-  RawBoxNavigation,
-  SoftBreak,
-  TypstSource,
-  TextAlign,
-  MarginNote,
-  NoteRange,
-  Reference,
-  StyledBlock,
-  StyleMark,
-];
-
-/** The schema `extensions` produce; an `Editor` builds an equal but distinct instance. */
-export const schema = getSchema(extensions);

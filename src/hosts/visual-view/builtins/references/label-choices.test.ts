@@ -1,0 +1,52 @@
+// Tests for label-choices.ts: which labels the @ list offers, and how a label is described.
+import { describe, expect, it } from 'vitest';
+import type { LabelInfo } from '../../../../features/labels/labels';
+import { describeLabel, labelChoices } from './label-choices';
+import { ProjectPath } from '../../../../core/paths/paths';
+
+const path = ProjectPath.of;
+
+const LABELS: LabelInfo[] = [
+  { name: 'intro', kind: 'heading', title: 'Introduction', path: path('/chapters/introduction.typ') },
+  { name: 'method', kind: 'heading', title: 'Method', path: path('/chapters/method.typ') },
+  { name: 'eq:speedup', kind: 'equation', title: null, path: path('/chapters/method.typ') },
+  { name: 'results', kind: 'heading', title: 'Results', path: path('/chapters/results.typ') },
+  { name: 'tab:timings', kind: 'table', title: 'Median compile times (illustrative numbers).', path: path('/chapters/results.typ') },
+  { name: 'fig:compile-times', kind: 'figure', title: 'Cold (dark) and incremental (light) compile times for 1, 10, 50 and 100 pages.', path: path('/chapters/results.typ') },
+  { name: 'knuth1984', kind: 'bibliography', title: null, path: path('/refs.bib') },
+  { name: 'intro', kind: 'heading', title: 'Duplicate', path: path('/other.typ') },
+];
+
+const names = (query: string) => labelChoices(LABELS, query).map((l) => l.name);
+
+describe('labelChoices', () => {
+  it('offers every label (once per name) for an empty query', () => {
+    expect(names('')).toEqual(['intro', 'method', 'eq:speedup', 'results', 'tab:timings', 'fig:compile-times', 'knuth1984']);
+  });
+
+  it('puts names starting with the query first, then names and titles containing it; ignores case', () => {
+    expect(names('fig')).toEqual(['fig:compile-times']);
+    expect(names('ti')).toEqual(['tab:timings', 'fig:compile-times', 'intro']);
+    expect(names('RES')).toEqual(['results']);
+    expect(names('compile')).toEqual(['fig:compile-times', 'tab:timings']);
+    expect(names('zzz')).toEqual([]);
+  });
+
+  it('offers at most `limit` labels', () => {
+    expect(labelChoices(LABELS, '', 3)).toHaveLength(3);
+  });
+});
+
+describe('describeLabel', () => {
+  it('names the kind and the title, shortened', () => {
+    expect(describeLabel(LABELS[0])).toBe('Section · Introduction');
+    expect(describeLabel(LABELS[2])).toBe('Equation');
+    expect(describeLabel(LABELS[4])).toBe('Table · Median compile times (illustrative…');
+    expect(describeLabel(LABELS[5])).toBe('Figure · Cold (dark) and incremental (light)…');
+  });
+
+  it('has nothing to say about bibliography keys and unknown elements', () => {
+    expect(describeLabel(LABELS[6])).toBeNull();
+    expect(describeLabel({ name: 'p', kind: null, title: null, path: path('/a.typ') })).toBeNull();
+  });
+});

@@ -3,14 +3,14 @@
 import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../core/typst-document/typst-document';
-import { VisualView } from './visual-view';
+import { createVisualView } from './test-support';
 
 /** A Visual view over `text`, its toolbar, and its Tiptap editor (for typing). */
 function setup(text: string) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = new VisualView(parent, doc);
+  const view = createVisualView(parent, doc);
   const button = (label: string) => {
     // the toolbar, its menus and the floating bars (the table edits float above the table)
     const found = parent.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);

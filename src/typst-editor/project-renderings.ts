@@ -2,7 +2,7 @@
 // See typst-editor.ts.
 import type { TypstDocument } from '../core/typst-document/typst-document';
 import type { Preview } from '../features/preview/preview';
-import type { VisualViewOptions } from '../hosts/visual-view/visual-view';
+import type { ImageAssets, Renderings } from '../hosts/visual-view/visual-view';
 import { type FileChange, type FileContent, type Project } from '../core/project/project';
 import { type PathReference, ProjectPath } from '../core/paths/paths';
 import { uploadChanges } from '../features/files/files';
@@ -26,8 +26,8 @@ export class ProjectRenderings {
 
   constructor(private readonly options: ProjectRenderingsOptions) {}
 
-  /** The Visual view options for `document` (it may be renamed later; paths follow). */
-  forDocument(document: TypstDocument): VisualViewOptions {
+  /** What the Visual view of `document` renders and inserts (it may be renamed later; paths follow). */
+  forDocument(document: TypstDocument): { renderer: Renderings; assets: ImageAssets } {
     const { project, preview } = this.options;
     const path = () => project.pathOf(document);
     return {

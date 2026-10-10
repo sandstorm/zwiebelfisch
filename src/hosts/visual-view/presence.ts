@@ -5,19 +5,10 @@ import { Plugin, PluginKey, type Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { caretElement, flagTextColor, type Presence, type PresenceUser } from '../../core/typst-document/typst-document';
 import { rangeDecorations } from './highlights';
-import { posToSource, sourceToPos } from './projection/projection';
+import { boxCaretsSpec, type BoxCaret } from './nodes/nodes';
+import { nodeGrammar, posToSource, sourceToPos } from './projection/projection';
 
 const key = new PluginKey<DecorationSet>('typst-presence');
-
-/** A remote caret inside a box, as the box's decoration hands it to the box: `offset` counts from the box's source start. */
-export interface BoxCaret {
-  id: string;
-  user: PresenceUser;
-  offset: number;
-}
-
-/** Inline atoms shown as a box of their own (block atoms always are). */
-const INLINE_BOXES = new Set(['rawInline', 'marginNote']);
 
 /**
  * Other users' places in the Visual view, in the style of Tiptap's
@@ -50,11 +41,6 @@ export const remotePresence = Extension.create({
 /** Marks `tr` to show `presences` (source offsets), replacing the ones shown. */
 export function setPresence(tr: Transaction, presences: readonly Presence[]): Transaction {
   return tr.setMeta(key, presences);
-}
-
-/** The remote carets inside a box, from the decorations its node view is given. */
-export function boxCarets(decorations: readonly Decoration[]): BoxCaret[] {
-  return decorations.flatMap((decoration) => (decoration.spec as { boxCarets?: BoxCaret[] }).boxCarets ?? []);
 }
 
 function presenceDecorations(doc: Node, presences: readonly Presence[]): DecorationSet {
@@ -99,7 +85,7 @@ function boxOutline(pos: number, node: Node, carets: BoxCaret[]): Decoration {
     'data-user': carets.map((c) => c.user.name).join(', '),
     style: `--typst-remote-color: ${color}; --typst-remote-text: ${flagTextColor(color)}`,
   };
-  return Decoration.node(pos, pos + node.nodeSize, attrs, { boxCarets: carets });
+  return Decoration.node(pos, pos + node.nodeSize, attrs, boxCaretsSpec(carets));
 }
 
 /**
@@ -120,6 +106,7 @@ function boxAt(doc: Node, offset: number): { pos: number; node: Node; start: num
   return found;
 }
 
+/** Block atoms, and inline atoms whose spec shows them as a box of their own (raw inline Typst, a margin note). */
 function isBox(node: Node): boolean {
-  return node.isBlock ? node.isAtom : INLINE_BOXES.has(node.type.name);
+  return node.isBlock ? node.isAtom : node.isAtom && nodeGrammar(node)?.box !== undefined;
 }

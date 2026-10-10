@@ -2,7 +2,7 @@
 // Tests for comments.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../core/typst-document/typst-document';
-import { VisualView } from '../../hosts/visual-view/visual-view';
+import { builtins, VisualView, VisualViewContributions } from '../../hosts/visual-view/visual-view';
 import { CommentAction, localDate, NOTE_STYLE, type NoteView } from './comments';
 
 const IMPORT = `#import "@preview/drafting:0.2.2": margin-note, set-margin-note-defaults\n${NOTE_STYLE}`;
@@ -40,12 +40,11 @@ describe('CommentAction', () => {
   it('opens the new note\'s card in the Visual view: the first message is signed with name and date', () => {
     let comment = () => {};
     const { doc, root, action } = setup('Hello world\n', (document, parent) => {
-      const view = new VisualView(parent.appendChild(window.document.createElement('div')), document, {
-        user: { name: 'Anna' },
-        comment: () => comment(),
-      });
+      const visual = builtins({ user: { name: 'Anna' }, comment: () => comment() });
+      const view = new VisualView(parent.appendChild(window.document.createElement('div')), document, VisualViewContributions.from(visual.contributions));
       view.reveal(6, 11);
-      return view;
+      // as the widget makes it: the Visual view's notes gutter opens the new note's card
+      return { selection: () => view.selection(), reveal: (from, to) => view.reveal(from, to), editNote: (offset) => visual.editNote(document, offset) };
     });
     comment = () => action.comment();
     // the Visual view's toolbar button

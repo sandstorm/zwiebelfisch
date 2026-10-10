@@ -2,16 +2,16 @@
 // Tests for toolbar.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { VisualView, type VisualViewOptions } from '../visual-view';
+import { createVisualView, type TestViewOptions } from '../test-support';
 import { PathReference } from '../../../core/paths/paths';
 
 const ref = PathReference.of;
 
-function setup(text: string, options: VisualViewOptions = {}) {
+function setup(text: string, options: TestViewOptions = {}) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = new VisualView(parent, doc, options);
+  const view = createVisualView(parent, doc, options);
   const toolbar = parent.querySelector<HTMLElement>('[role="toolbar"]')!;
   // the formatting toolbar first, then the menus' items and the floating bars (selection, table)
   const button = (label: string) => parent.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;

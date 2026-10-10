@@ -1,7 +1,5 @@
-// Typst label and reference syntax for the projection: which label belongs to which block, and printing both.
-// See projection.ts.
+// Which label (`<name>`) belongs to which block, and printing it back after the block. See projection.ts.
 import type { SyntaxNode } from '@lezer/common';
-import type { Node } from '@tiptap/pm/model';
 
 /** A block's label: its name, and the source between the block and `<name>` (`' '`, `''`, `'\n'`). */
 export interface BlockLabel {
@@ -12,11 +10,6 @@ export interface BlockLabel {
 /** `<name>` after its gap. */
 export function labelSyntax({ name, gap }: BlockLabel): string {
   return `${gap}<${name}>`;
-}
-
-/** `@target` and the supplement as written (`[..]`), if any. */
-export function referenceSyntax(target: string, supplement: string | null): string {
-  return `@${target}${supplement ?? ''}`;
 }
 
 /**
@@ -34,44 +27,18 @@ export function splitTrailingLabel(run: SyntaxNode[]): { content: SyntaxNode[]; 
 }
 
 /**
- * Whether `nodes[index]` is a label that labels `heading`: only spaces (no
- * paragraph break) between the two, and nothing but spaces after it up to a
- * paragraph break, the end or the next block. (`= A <a> text` is not: Typst
- * reads that label as part of the line.)
+ * Whether `nodes[index]` is a label that labels `block` (a heading): only
+ * spaces (no paragraph break) between the two, and nothing but spaces after
+ * it up to a paragraph break, the end or the next block. (`= A <a> text` is
+ * not: Typst reads that label as part of the line.)
  */
-export function labelAfterHeading(nodes: SyntaxNode[], index: number, heading: SyntaxNode, blockKinds: Record<string, unknown>): boolean {
+export function labelAfterBlock(nodes: SyntaxNode[], index: number, block: SyntaxNode, isBlock: (node: SyntaxNode) => boolean): boolean {
   if (nodes[index].name !== 'Label') return false;
   let before = index - 1;
   while (before >= 0 && nodes[before].name === 'Space') before--;
-  if (nodes[before] !== heading) return false;
+  if (nodes[before] !== block) return false;
   let next = index + 1;
   while (nodes[next]?.name === 'Space') next++;
   const following = nodes[next];
-  return !following || following.name === 'Parbreak' || following.name in blockKinds;
-}
-
-/** The characters of a label's name (a regular expression character class). */
-export const LABEL_CHAR = '[\\p{L}\\p{N}_\\-:.]';
-
-/** Characters Typst reads as part of a reference's name; `.` and `:` only when more name characters follow. */
-const CONTINUES_REFERENCE = /^(?:[\p{L}\p{N}_-]|[.:][\p{L}\p{N}_-])/u;
-
-/**
- * `input` as a label name Typst accepts and a reference can point to: spaces
- * become `-`, other characters a label cannot hold are dropped, and so are a
- * trailing `.` / `:` (which `@name.` would leave out). Null if nothing is left.
- */
-export function labelName(input: string): string | null {
-  const name = input.trim().replace(/\s+/g, '-').replace(new RegExp(`(?!${LABEL_CHAR}).`, 'gu'), '').replace(/[.:]+$/, '');
-  return name || null;
-}
-
-/**
- * Text printed right after a reference without supplement must not extend
- * its name (`@intro` + `s` would read `@intros`): a backslash escapes the
- * first character.
- */
-export function guardAfterReference(previous: Node, text: string): string {
-  const extends_ = previous.type.name === 'reference' && previous.attrs.supplement === null && CONTINUES_REFERENCE.test(text);
-  return extends_ ? `\\${text}` : text;
+  return !following || following.name === 'Parbreak' || isBlock(following);
 }

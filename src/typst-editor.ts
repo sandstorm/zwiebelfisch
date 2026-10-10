@@ -8,9 +8,10 @@ import type { Diagnostic } from './core/typst-engine/typst-engine';
 import type { TypstDocument } from './core/typst-document/typst-document';
 import { Preview } from './features/preview/preview';
 import proseMirrorStyles from './hosts/visual-view/visual-view.css?inline';
+import { builtins, VisualViewContributions, type Builtins } from './hosts/visual-view/visual-view';
 import { AssetView, FilePanel, filesPanelIcon } from './features/files/files';
 import fileStyles from './features/files/files.css?inline';
-import { CommentAction } from './features/comments/comments';
+import { CommentAction, type NoteTarget } from './features/comments/comments';
 import { ColorScheme } from './typst-editor/color-scheme';
 import { CollaborationLink } from './typst-editor/collaboration-link';
 import { DiagnosticsStatus, summarizeDiagnostics } from './features/diagnostics/diagnostics';
@@ -194,6 +195,8 @@ class Widget {
   private readonly labels: LabelIndex;
   private readonly styles: StyleIndex;
   private readonly commentAction: CommentAction;
+  /** What the Visual views show and offer: the built-in contributions, configured from the options. */
+  private readonly visual: Builtins;
   private readonly scheme: ColorScheme;
   private readonly collaboration: CollaborationLink | null = null;
   private versions: VersionControls | null = null;
@@ -227,6 +230,7 @@ class Widget {
     this.labels = new LabelIndex(this.project);
     this.styles = new StyleIndex(this.project);
     this.renderings = new ProjectRenderings({ project: this.project, preview: this.preview, request: (change) => this.request(change) });
+    this.visual = this.visualBuiltins();
     this.views = this.mountViews();
     this.navigation = new FileNavigation(host.ownerDocument, (path) => this.open(path));
     this.views.setFrame(this.navigation.top, this.navigation.bottom);
@@ -244,7 +248,7 @@ class Widget {
     this.spreadsheets = new SpreadsheetView(this.left, (path, edit) => this.saveSpreadsheet(path, edit));
     this.unsubscribe = this.project.onChange((change) => this.changed(change));
     // the Visual view has "Comment" in its toolbar; the tab bar's button is for the Source view
-    this.commentAction = new CommentAction(host, () => this.views.shown());
+    this.commentAction = new CommentAction(host, () => this.noteTarget());
     this.views.addTabAction(this.commentAction.button, 'source');
     this.open(main);
     if (options.collaboration) {
@@ -278,13 +282,7 @@ class Widget {
   private mountViews(): EditingViews {
     return new EditingViews(this.left, {
       mode: this.options.mode,
-      visualOptions: (document) => ({
-        ...this.renderings.forDocument(document),
-        user: this.options.user,
-        comment: () => this.commentAction.comment(),
-        labels: this.labels,
-        styles: { ...this.styles.forDocument(document), create: () => void this.newStyle() },
-      }),
+      visualView: VisualViewContributions.from(this.visual.contributions),
       documentLinks: (document) => this.documentLinks(document),
       onCursor: (document, offset) => {
         const path = this.project.pathOf(document);
@@ -294,6 +292,29 @@ class Widget {
       // fires before CodeMirror/ProseMirror read the new selection, so it would publish the previous one.
       onSelection: () => this.collaboration?.selectionChanged(),
     });
+  }
+
+  /** The Visual views' built-in contributions, configured from the options and the project's indexes. */
+  private visualBuiltins(): Builtins {
+    return builtins({
+      renderer: (document) => this.renderings.forDocument(document).renderer,
+      assets: (document) => this.renderings.forDocument(document).assets,
+      documentLinks: (document) => this.documentLinks(document),
+      user: this.options.user,
+      comment: () => this.commentAction.comment(),
+      labels: this.labels,
+      styles: this.styles,
+      createStyle: () => void this.newStyle(),
+    });
+  }
+
+  /** Where "Comment" adds a note: the shown document; in the Visual view, the new note's card opens. */
+  private noteTarget(): ReturnType<NoteTarget> {
+    const shown = this.views.shown();
+    if (!shown) return null;
+    const { document, view } = shown;
+    const editNote = this.views.mode === 'visual' ? (offset: number) => this.visual.editNote(document, offset) : undefined;
+    return { document, view: { selection: () => view.selection(), reveal: (from, to) => view.reveal(from, to), editNote } };
   }
 
   /** Shares the project; the others' carets show in the shown file's views and the file panel. */

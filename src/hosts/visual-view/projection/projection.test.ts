@@ -2,10 +2,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState, TextSelection } from '@tiptap/pm/state';
-import { schema } from '../nodes/nodes';
-import { codeLanguage, hasFigureExtras, imagePath, imageSource, posToSource, print, project as projectWith, sourceToPos, syncDoc } from './projection';
-import { PathReference } from '../../../core/paths/paths';
-
+import { schema } from '../test-support';
+import { posToSource, print, project as projectWith, sourceToPos, syncDoc } from './projection';
 
 const project = (source: string) => projectWith(source, schema);
 
@@ -526,19 +524,6 @@ describe('images', () => {
     }
   });
 
-  it('prints an image created in the editor', () => {
-    const doc = edit(project('Text\n'), (s) =>
-      s.tr.insert(s.doc.content.size, schema.nodes.image.create({ src: imageSource(PathReference.of('a "b".png')) })),
-    );
-    expect(print(doc)).toBe('Text\n\n#image("a \\"b\\".png")\n');
-    expectPreciseMap(doc);
-  });
-
-  it('reads the path of an image source', () => {
-    expect(imagePath('#image("img/a.png", width: 50%)')).toBe('img/a.png');
-    expect(imagePath('#image("a\\"b.png")')).toBe('a"b.png');
-    expect(imagePath('#image(x)')).toBeNull();
-  });
 });
 
 describe('tables', () => {
@@ -700,12 +685,6 @@ describe('code blocks', () => {
     expect(project(print(empty)).child(1).type.name).toBe('codeBlock');
   });
 
-  it('accepts only what Typst reads as a language tag', () => {
-    expect(codeLanguage('rust')).toBe('rust');
-    expect(codeLanguage('my-lang_2')).toBe('my-lang_2');
-    expect(codeLanguage('c++')).toBe('c');
-    expect(codeLanguage(' 1x')).toBe('');
-  });
 });
 
 describe('inline code', () => {
@@ -865,15 +844,4 @@ describe('figures', () => {
     expect(tr.doc.child(0).child(0)).toBe(state.doc.child(0).child(0));
   });
 
-  it('tells whether a figure has more than its image and caption', () => {
-    const extras = (text: string) => hasFigureExtras(project(text).child(0));
-    expect(extras('#figure(image("a.png"), caption: [x])')).toBe(false);
-    expect(extras('#figure(\n  image("a.png"),\n  caption: [x],\n)')).toBe(false);
-    expect(extras('#figure(image("a.png"), caption: [x]) <a>')).toBe(true);
-    expect(extras('#figure(image("a.png"), placement: top)')).toBe(true);
-  });
-
-  it('reads the image path of a figure body', () => {
-    expect(imagePath('image("img/a.png", width: 50%)')).toBe('img/a.png');
-  });
 });

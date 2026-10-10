@@ -1,16 +1,64 @@
 /**
- * Shared helpers for projection tests: project with the Visual view's schema,
- * apply an edit, find text, and check the position map exhaustively.
+ * Shared helpers for Visual view tests: the built-ins' schema, project with
+ * it, apply an edit, find text, check the position map exhaustively, and make
+ * a view with the built-ins configured from options.
  */
-import type { Node } from '@tiptap/pm/model';
+import type { Node, Schema } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
 import { expect } from 'vitest';
-import { schema } from './nodes/nodes';
+import type { DocumentLinkProvider } from '../../core/document-links/document-links';
+import type { TypstDocument } from '../../core/typst-document/typst-document';
+import type { ProjectLabels } from '../../features/labels/labels';
+import type { DocumentStyles } from '../../features/styles/styles';
+import { builtins, type ImageAssets, type Renderings } from './builtins/builtins';
+import { VisualViewContributions } from './contributions/contributions';
+import { createSchema } from './nodes/nodes';
 import { posToSource, print, project as projectWith, sourceToPos } from './projection/projection';
+import { VisualView } from './visual-view';
 
-export { schema };
+/** The schema of a view with the built-ins (no styles declared). */
+export const schema: Schema = schemaWith();
+
+/** The schema of a view with the built-ins configured from `options`. */
+export function schemaWith(options: TestViewOptions = {}): Schema {
+  const { nodes, marks } = contributions(options).visualView.contributed();
+  return createSchema(nodes, marks);
+}
 
 export const project = (source: string): Node => projectWith(source, schema);
+
+/** The options tests give a view, as a document's Visual view had them before contributions. */
+export interface TestViewOptions {
+  renderer?: Renderings;
+  assets?: ImageAssets;
+  user?: { name: string };
+  comment?(): void;
+  labels?: ProjectLabels;
+  documentLinks?: DocumentLinkProvider;
+  /** The project's styles, as one document sees them; `create` is "New style…". */
+  styles?: DocumentStyles;
+}
+
+/** A Visual view of `document` with the built-ins configured from `options`, and the way to its notes' cards. */
+export function createVisualView(parent: HTMLElement, document: TypstDocument, options: TestViewOptions = {}): VisualView & { editNote(offset: number): boolean } {
+  const { visualView, editNote } = contributions(options);
+  return Object.assign(new VisualView(parent, document, visualView), { editNote: (offset: number) => editNote(document, offset) });
+}
+
+function contributions(options: TestViewOptions) {
+  const { styles } = options;
+  const configured = builtins({
+    renderer: options.renderer && (() => options.renderer),
+    assets: options.assets && (() => options.assets),
+    documentLinks: options.documentLinks && (() => options.documentLinks),
+    user: options.user,
+    comment: options.comment,
+    labels: options.labels,
+    styles: styles && { styles: () => styles.styles(), onChange: (listener) => styles.onChange(listener), forDocument: () => styles },
+    createStyle: styles?.create,
+  });
+  return { visualView: VisualViewContributions.from(configured.contributions), editNote: configured.editNote };
+}
 
 export function edit(doc: Node, change: (state: EditorState) => EditorState['tr']): Node {
   const state = EditorState.create({ doc });

@@ -2,6 +2,7 @@
 // Tests for editing-views.ts.
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../core/typst-document/typst-document';
+import { builtins, VisualViewContributions } from '../hosts/visual-view/visual-view';
 import { EditingViews } from './editing-views';
 
 // jsdom lacks layout; ProseMirror and CodeMirror only need these to exist.
@@ -12,7 +13,7 @@ Element.prototype.scrollIntoView = () => {};
 function setup(mode?: 'visual' | 'source') {
   const parent = document.createElement('div');
   document.body.append(parent);
-  const views = new EditingViews(parent, { mode });
+  const views = new EditingViews(parent, { mode, visualView: VisualViewContributions.from(builtins().contributions) });
   const a = new TypstDocument('= A\n');
   const b = new TypstDocument('= B\n');
   const visible = () => [...parent.querySelectorAll<HTMLElement>('.typst-editor__pane')].filter((p) => !p.hidden);

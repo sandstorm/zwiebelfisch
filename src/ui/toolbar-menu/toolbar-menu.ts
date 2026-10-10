@@ -11,7 +11,7 @@
  */
 export class ToolbarMenu {
   readonly element: HTMLElement;
-  readonly trigger: HTMLButtonElement;
+  private readonly trigger: HTMLButtonElement;
   private readonly list: HTMLElement;
   private readonly glyph: HTMLElement;
   /** Closes on a mousedown outside; the composed path sees through shadow roots (`<typst-editor>`). */
@@ -61,29 +61,30 @@ export class ToolbarMenu {
     this.refresh();
   }
 
-  get isOpen(): boolean {
-    return !this.list.hidden;
-  }
-
+  /** Shows `icon()` on the trigger as it is now. */
   refresh(): void {
     this.glyph.innerHTML = this.icon();
-  }
-
-  open(): void {
-    this.list.hidden = false;
-    this.trigger.setAttribute('aria-expanded', 'true');
-    this.element.ownerDocument.addEventListener('mousedown', this.outside, true);
-  }
-
-  close(): void {
-    this.list.hidden = true;
-    this.trigger.setAttribute('aria-expanded', 'false');
-    this.element.ownerDocument.removeEventListener('mousedown', this.outside, true);
   }
 
   destroy(): void {
     this.close();
     this.element.remove();
+  }
+
+  private get isOpen(): boolean {
+    return !this.list.hidden;
+  }
+
+  private open(): void {
+    this.list.hidden = false;
+    this.trigger.setAttribute('aria-expanded', 'true');
+    this.element.ownerDocument.addEventListener('mousedown', this.outside, true);
+  }
+
+  private close(): void {
+    this.list.hidden = true;
+    this.trigger.setAttribute('aria-expanded', 'false');
+    this.element.ownerDocument.removeEventListener('mousedown', this.outside, true);
   }
 
   private navigate(event: KeyboardEvent): void {

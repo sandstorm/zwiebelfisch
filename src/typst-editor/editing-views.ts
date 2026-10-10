@@ -2,7 +2,7 @@
 import type { Highlight, TypstDocument } from '../core/typst-document/typst-document';
 import type { DocumentLinkProvider } from '../core/document-links/document-links';
 import { describeDiagnostic, SourceView, type SourceDiagnostic } from '../features/source-view/source-view';
-import { VisualView, type VisualViewOptions } from '../hosts/visual-view/visual-view';
+import { VisualView, VisualViewContributions } from '../hosts/visual-view/visual-view';
 
 export type EditorMode = 'visual' | 'source';
 
@@ -13,9 +13,9 @@ export interface EditingViewsOptions {
   onCursor?(document: TypstDocument, offset: number): void;
   /** The selection in a view of `document` moved, or its text changed (the views already show the new selection). */
   onSelection?(document: TypstDocument): void;
-  /** Options for the Visual view of `document` (rendered raw boxes, images to insert). */
-  visualOptions?(document: TypstDocument): VisualViewOptions;
-  /** Where the file paths in `document` lead (both views open them); default: plain text. */
+  /** What every document's Visual view shows and offers (default: paragraphs and raw Typst only). */
+  visualView?: VisualViewContributions;
+  /** Where the file paths in `document` lead in its Source view (the Visual view's come with `visualView`); default: plain text. */
   documentLinks?(document: TypstDocument): DocumentLinkProvider;
 }
 
@@ -161,21 +161,18 @@ export class EditingViews {
     const documentLinks = this.options.documentLinks?.(document);
     const views: Views = {
       panes,
-      visual: new VisualView(panes.visual, document, {
-        ...this.options.visualOptions?.(document),
-        documentLinks,
-        onSelection: () => {
-          // like the source view's onCursor: where the user works, for the preview to follow
-          if (views.visual.focused()) this.options.onCursor?.(document, views.visual.selection().from);
-          this.options.onSelection?.(document);
-        },
-      }),
+      visual: new VisualView(panes.visual, document, this.options.visualView ?? new VisualViewContributions()),
       source: new SourceView(panes.source, document, {
         documentLinks,
         onCursor: (offset) => this.options.onCursor?.(document, offset),
         onSelection: () => this.options.onSelection?.(document),
       }),
     };
+    views.visual.onDidChangeSelection(() => {
+      // like the source view's onCursor: where the user works, for the preview to follow
+      if (views.visual.focused()) this.options.onCursor?.(document, views.visual.selection().from);
+      this.options.onSelection?.(document);
+    });
     const diagnostics = this.diagnostics.get(document);
     if (diagnostics) markDiagnostics(views, diagnostics);
     return views;

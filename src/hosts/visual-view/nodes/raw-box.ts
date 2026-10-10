@@ -1,55 +1,54 @@
-// Raw boxes: Typst the Visual view does not model, edited as code in a nested CodeMirror. See nodes.ts.
+// Raw boxes: Typst the Visual view does not model, edited as code in a nested CodeMirror; contributions add
+// pictures (box renderers), headings, tools and code extensions. See nodes.ts.
 import { defaultKeymap } from '@codemirror/commands';
-import type { Transaction as CodeTransaction } from '@codemirror/state';
+import type { Extension as CodeExtension, Transaction as CodeTransaction } from '@codemirror/state';
 import { EditorView as CodeView, keymap, type KeyBinding } from '@codemirror/view';
-import { Extension, type Editor, type NodeViewRenderer } from '@tiptap/core';
+import { Extension, type Editor } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { Decoration, EditorView, NodeView } from '@tiptap/pm/view';
 import { minimalChange } from '../../../core/typst-document/typst-document';
-import type { DocumentLinkProvider } from '../../../core/document-links/document-links';
-import type { PathReference } from '../../../core/paths/paths';
-import { codeColors, documentLinks, remotePresence, showPresence, typstLanguage } from '../../../features/source-view/source-view';
-import { imagePathLink } from './box-links';
-import { ImageTools } from '../images/images';
-import { boxCarets } from '../presence';
-import { posToSource } from '../projection/projection';
-import { RenderedBox, type BoxRenderer } from './rendered-box';
+import { codeColors, remotePresence, showPresence, typstLanguage } from '../../../features/source-view/source-view';
+import type { BoxRenderer, BoxTools, BoxToolsHost, CodeBoxSpec, VisualViewContext } from '../contributions/contributions';
+import { nodeGrammar, posToSource } from '../projection/projection';
+import { boxCarets } from './box-carets';
+import { RenderedBox } from './rendered-box';
 
 type Side = -1 | 1;
 
 /** The open raw boxes by their DOM, so arrow keys in the outer editor can move into them. */
 const boxes = new WeakMap<globalThis.Node, RawBox>();
 
-const RAW_TYPES = new Set(['rawBlock', 'rawInline', 'image', 'outline']);
-
-/** Boxes headed by what they show, by node type: the heading's text from the source. */
-const LABELS: Record<string, { className: string; text(src: string): string }> = {
-  outline: { className: 'typst-visual__outline', text: () => 'Table of contents' },
-};
-
-/** What the raw boxes of an editor show while not edited (see `setBoxRenderer`). */
-const renderers = new WeakMap<Editor, BoxRenderer>();
-
-/** Where the paths in the raw boxes of an editor lead (see `setBoxLinks`). */
-const fileLinksOf = new WeakMap<Editor, DocumentLinkProvider>();
-
-/**
- * Makes the file paths in the raw boxes of `editor` open their file: links
- * above a raw block naming files, a clickable path in an image box's heading,
- * Mod+click / Alt+Enter in the code. Set it before the boxes are created.
- */
-export function setBoxLinks(editor: Editor, links: DocumentLinkProvider): void {
-  fileLinksOf.set(editor, links);
+/** What the raw boxes of one view get from the contributions (see `setBoxes`). */
+export interface Boxes {
+  readonly view: VisualViewContext;
+  /** Draw boxes instead of their code; the first that `renders` a box draws it. */
+  readonly renderers: readonly BoxRenderer[];
+  /** Extensions of every box's code editor. */
+  readonly codeExtensions: readonly CodeExtension[];
+  /** What a box of a node type shows besides its code, by type name. */
+  readonly specs: ReadonlyMap<string, CodeBoxSpec>;
 }
 
-/**
- * Lets the raw boxes of `editor` show compiled snippets and images instead
- * of their code while they are not being edited. Set it before the boxes are
- * created.
- */
-export function setBoxRenderer(editor: Editor, renderer: BoxRenderer): void {
-  renderers.set(editor, renderer);
+/** What the boxes of an editor get (see `setBoxes`). */
+const boxesOf = new WeakMap<Editor, Boxes>();
+
+/** Gives the raw boxes of `editor` what contributions add to them. Set it before the boxes are created. */
+export function setBoxes(editor: Editor, contributed: Boxes): void {
+  boxesOf.set(editor, contributed);
+}
+
+/** What contributions add to a box of `node` in `editor`: its spec's heading and tools, code extensions, the renderer drawing it. */
+function contributionsFor(editor: Editor, node: Node): Partial<Pick<Boxes, 'view'>> & { spec?: CodeBoxSpec; codeExtensions: readonly CodeExtension[]; renderer?: BoxRenderer } {
+  const contributed = boxesOf.get(editor);
+  if (!contributed) return { codeExtensions: [] };
+  const renderer = contributed.renderers.find((candidate) => candidate.renders(node));
+  return { spec: contributed.specs.get(node.type.name), codeExtensions: contributed.codeExtensions, renderer, view: contributed.view };
+}
+
+/** Whether `node` shows as a raw box (its spec asks for a code box). */
+function isCodeBox(node: Node): boolean {
+  return nodeGrammar(node)?.box === 'code';
 }
 
 const sharedTheme = {
@@ -70,73 +69,46 @@ const inlineTheme = CodeView.theme({
 });
 
 /**
- * A raw box (`rawBlock` / `rawInline` / `image` / `outline`): Typst the Visual view does not model,
- * edited in place in a nested CodeMirror with Typst highlighting.
+ * A raw box (a node whose spec has `box: 'code'`: `rawBlock`, `rawInline`, an image call, an outline):
+ * Typst the Visual view does not model, edited in place in a nested CodeMirror with Typst highlighting.
  *
  * The box's text is the node's `src` attribute, which the projection prints
  * verbatim: every edit sets `src` (an attribute step, so positions and the
  * outer selection stay put), and outside changes to `src` flow back into the
  * box as one minimal change. Undo/redo go to the Visual view's history;
  * arrow keys at the edges, Escape (and Enter in inline boxes) leave the box;
- * Backspace in an empty box deletes it. With a renderer (`setBoxRenderer`),
- * the box shows the image or its compiled snippet instead of the code until
- * the code gets focus. An `outline` box is headed "Table of contents". An
- * `image` box adds its `ImageTools` (path heading, resize handles,
- * caption/width/alt toolbar); clicking its picture selects the image rather
- * than opening the code (double-click, Enter or "Edit code" do).
+ * Backspace in an empty box deletes it. With a box renderer that draws it,
+ * the box shows its picture instead of the code until the code gets focus.
+ * Its spec's `codeBox` may head it (an outline: "Table of contents") and add
+ * tools (an image: resize handles, a toolbar); clicking the picture of a box
+ * with tools selects the box rather than opening the code (double-click,
+ * Enter or the tools' "Edit code" do).
  */
 class RawBox implements NodeView {
   readonly dom: HTMLElement;
-  /** Above the code of an outline box: what it shows (an image box's heading is part of its tools). */
+  private readonly spec: CodeBoxSpec | undefined;
+  /** Above the code: what the box shows. */
   private readonly label: HTMLElement | null;
   private readonly code: CodeView;
-  private readonly rendered: RenderedBox | null = null;
-  private readonly image: ImageTools | null = null;
+  private readonly rendered: RenderedBox | null;
+  private readonly tools: BoxTools | null;
   /** Set while mirroring `src` into the box, so that change is not sent back. */
   private mirroring = false;
 
   constructor(private node: Node, private readonly editor: Editor, private readonly getPos: () => number | undefined, decorations: readonly Decoration[]) {
     const inline = node.isInline;
+    const { spec, codeExtensions, renderer, view } = contributionsFor(editor, node);
+    this.spec = spec;
     this.dom = editor.view.dom.ownerDocument.createElement(inline ? 'span' : 'div');
     this.dom.className = inline ? 'typst-visual__raw-inline' : 'typst-visual__raw-block';
-    const isImage = node.type.name === 'image';
-    if (isImage) this.dom.classList.add('typst-visual__image');
     this.label = this.createLabel(node);
-    const links = fileLinksOf.get(editor);
     const wrapper = this.dom.appendChild(this.dom.ownerDocument.createElement(inline ? 'span' : 'div'));
     wrapper.className = 'typst-visual__code';
-    this.code = new CodeView({
-      parent: wrapper,
-      // The box is not attached yet, so CodeMirror cannot find its root itself; in a shadow root
-      // (<typst-editor>) it would read focus and selection from the document and style the wrong tree.
-      root: editor.view.root,
-      doc: node.attrs.src,
-      extensions: [
-        keymap.of([...this.keys(inline), ...defaultKeymap]),
-        typstLanguage(),
-        codeColors,
-        inline ? inlineTheme : [blockTheme, CodeView.lineWrapping],
-        CodeView.contentAttributes.of({ 'aria-label': 'Typst code' }),
-        remotePresence,
-        links ? documentLinks(links) : [],
-      ],
-      dispatchTransactions: (trs, view) => this.forward(trs, view),
-    });
+    this.code = this.createCode(wrapper, inline, codeExtensions);
     boxes.set(this.dom, this);
     this.showCarets(decorations);
-    const renderer = renderers.get(editor);
-    if (renderer) {
-      const host = { dom: this.dom, code: wrapper, source: () => this.source(), activate: () => (isImage ? this.select() : this.focus(-1)) };
-      this.rendered = new RenderedBox(host, renderer);
-    }
-    if (isImage) this.image = this.imageTools(wrapper, links);
-  }
-
-  /** The tools of an image box; its path in the heading opens the file when there are `links`. */
-  private imageTools(code: HTMLElement, links: DocumentLinkProvider | undefined): ImageTools {
-    const pathLabel = links && ((path: PathReference) => imagePathLink(this.dom.ownerDocument, links, path));
-    const host = { dom: this.dom, code, picture: this.rendered?.picture ?? null, editor: this.editor, getPos: this.getPos, editCode: () => this.focus(-1), pathLabel };
-    return new ImageTools(host, this.node);
+    this.rendered = renderer ? this.createRendered(wrapper, renderer) : null;
+    this.tools = view && spec?.tools ? spec.tools(this.toolsHost(wrapper, view), node) : null;
   }
 
   /** Focuses the box with the cursor at its start (entered moving forward) or its end. */
@@ -157,14 +129,14 @@ class RawBox implements NodeView {
     }
     this.updateLabel();
     this.showCarets(decorations);
-    this.image?.update(node);
-    this.rendered?.update(node);
+    this.tools?.update(node);
+    this.rendered?.update();
     return true;
   }
 
   selectNode(): void {
     this.dom.classList.add('ProseMirror-selectednode');
-    this.image?.refresh();
+    this.tools?.select();
   }
 
   deselectNode(): void {
@@ -180,9 +152,42 @@ class RawBox implements NodeView {
   }
 
   destroy(): void {
-    this.image?.destroy();
+    this.tools?.destroy();
     this.rendered?.destroy();
     this.code.destroy();
+  }
+
+  /** The nested code editor, in `parent`. */
+  private createCode(parent: HTMLElement, inline: boolean, contributed: readonly CodeExtension[]): CodeView {
+    return new CodeView({
+      parent,
+      // The box is not attached yet, so CodeMirror cannot find its root itself; in a shadow root
+      // (<typst-editor>) it would read focus and selection from the document and style the wrong tree.
+      root: this.editor.view.root,
+      doc: this.node.attrs.src,
+      extensions: [
+        keymap.of([...this.keys(inline), ...defaultKeymap]),
+        typstLanguage(),
+        codeColors,
+        inline ? inlineTheme : [blockTheme, CodeView.lineWrapping],
+        CodeView.contentAttributes.of({ 'aria-label': 'Typst code' }),
+        remotePresence,
+        contributed,
+      ],
+      dispatchTransactions: (trs, view) => this.forward(trs, view),
+    });
+  }
+
+  /** The picture `renderer` draws in place of the code; clicking it selects a box with tools, else edits the code. */
+  private createRendered(code: HTMLElement, renderer: BoxRenderer): RenderedBox {
+    const activate = () => (this.spec?.tools ? this.select() : this.focus(-1));
+    return new RenderedBox({ dom: this.dom, code, source: () => this.source(), activate }, renderer);
+  }
+
+  /** What the box's tools get: the box, its picture (if rendered), the editor and view, how to edit the code. */
+  private toolsHost(code: HTMLElement, view: VisualViewContext): BoxToolsHost {
+    const picture = this.rendered?.picture ?? null;
+    return { dom: this.dom, code, picture, editor: this.editor, view, getPos: this.getPos, editCode: () => this.focus(-1) };
   }
 
   /** Draws the other users' carets in this box (see the Visual view's presence) into its code. */
@@ -198,7 +203,7 @@ class RawBox implements NodeView {
   }
 
   private createLabel(node: Node): HTMLElement | null {
-    const label = LABELS[node.type.name];
+    const label = this.spec?.label;
     if (!label) return null;
     this.dom.classList.add(label.className);
     const element = this.dom.appendChild(this.dom.ownerDocument.createElement('div'));
@@ -208,10 +213,10 @@ class RawBox implements NodeView {
   }
 
   private updateLabel(): void {
-    if (this.label) this.label.textContent = LABELS[this.node.type.name].text(this.node.attrs.src);
+    if (this.label) this.label.textContent = this.spec!.label!.text(this.node.attrs.src);
   }
 
-  /** Selects the box as a whole in the outer editor (an image: shows its tools). */
+  /** Selects the box as a whole in the outer editor (a box with tools: shows them). */
   private select(): void {
     const pos = this.getPos();
     if (pos === undefined) return;
@@ -269,8 +274,10 @@ class RawBox implements NodeView {
   }
 }
 
-
-export const rawBoxView: NodeViewRenderer = ({ node, editor, getPos, decorations }) => new RawBox(node, editor, getPos, decorations);
+/** The node view of a raw box in `editor`. */
+export function rawBoxView(node: Node, editor: Editor, getPos: () => number | undefined, decorations: readonly Decoration[]): NodeView {
+  return new RawBox(node, editor, getPos, decorations);
+}
 
 /** The raw box at `pos` in the outer editor, if one is shown there. */
 function boxAt(view: EditorView, pos: number): RawBox | undefined {
@@ -301,7 +308,7 @@ function enterBlockBox({ state, view }: Editor, dir: Direction, side: Side): boo
   const { $head } = state.selection;
   if ($head.depth === 0 || !view.endOfTextblock(dir)) return false;
   const next = Selection.near(state.doc.resolve(side > 0 ? $head.after() : $head.before()), side);
-  return next instanceof NodeSelection && RAW_TYPES.has(next.node.type.name) && focusBox(view, next.from, side);
+  return next instanceof NodeSelection && isCodeBox(next.node) && focusBox(view, next.from, side);
 }
 
 function focusBox(view: EditorView, pos: number, side: Side): boolean {
@@ -321,8 +328,7 @@ export const RawBoxNavigation = Extension.create({
       ArrowDown: () => enterBox(this.editor, 'down'),
       Enter: () => {
         const { selection } = this.editor.state;
-        return selection instanceof NodeSelection && RAW_TYPES.has(selection.node.type.name)
-          && focusBox(this.editor.view, selection.from, 1);
+        return selection instanceof NodeSelection && isCodeBox(selection.node) && focusBox(this.editor.view, selection.from, 1);
       },
     };
   },

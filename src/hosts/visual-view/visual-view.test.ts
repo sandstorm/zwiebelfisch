@@ -2,13 +2,13 @@
 // Tests for visual-view.ts.
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../core/typst-document/typst-document';
-import { VisualView } from './visual-view';
+import { createVisualView } from './test-support';
 
 function setup(text: string) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = new VisualView(parent, doc);
+  const view = createVisualView(parent, doc);
   const editable = parent.querySelector<HTMLElement>('[contenteditable]')!;
   return { doc, view, editable, parent };
 }

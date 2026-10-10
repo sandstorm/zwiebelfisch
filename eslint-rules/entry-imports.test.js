@@ -30,7 +30,7 @@ describe('entry-imports', () => {
   });
 
   it("fails on an import into a sibling subfolder's internals", () => {
-    const messages = lint('src/hosts/visual-view/toolbar/toolbar.ts', "import { x } from '../nodes/text-align';");
+    const messages = lint('src/hosts/visual-view/toolbar/toolbar.ts', "import { x } from '../nodes/raw-box';");
     expect(messages).toEqual([expect.stringContaining('hosts/visual-view/nodes/nodes.ts')]);
   });
 
