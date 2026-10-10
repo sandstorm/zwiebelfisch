@@ -80,3 +80,31 @@ describe('fetchPreviewPackage', () => {
     await expect(fetchPreviewPackage('@local/mine:1.0.0')).rejects.toThrow(/@preview/);
   });
 });
+
+describe('the drafting package (margin notes)', () => {
+  const drafting = new Uint8Array(readFileSync(new URL('./fixtures/drafting-0.2.2.tar.gz', import.meta.url)));
+
+  it('compiles point and range margin notes', async () => {
+    const bare = await createEngine(wasm, fonts);
+    const project = withPackages(bare, async () => drafting);
+    bare.setSource(
+      '/main.typ',
+      [
+        '#import "@preview/drafting:0.2.2": margin-note',
+        '#set page(margin: (x: 4cm))',
+        'Some text#margin-note[Is this still right?]',
+        'and #margin-note[a range][with a note] plus #margin-note(side: left)[left][note]',
+      ].join('\n'),
+    );
+    const { pages, diagnostics } = await project.compile('/main.typ');
+    expect(diagnostics).toEqual([]);
+    expect(pages).toHaveLength(1);
+  });
+
+  it('compiles a note in a document without page setup', async () => {
+    const bare = await createEngine(wasm, fonts);
+    const project = withPackages(bare, async () => drafting);
+    bare.setSource('/main.typ', '#import "@preview/drafting:0.2.2": margin-note\nText#margin-note[note]');
+    expect((await project.compile('/main.typ')).diagnostics).toEqual([]);
+  });
+});
