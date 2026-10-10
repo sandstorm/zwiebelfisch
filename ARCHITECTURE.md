@@ -51,10 +51,10 @@ src/                        the widget (TypeScript); the most important API on t
                             every block closed (an unclosed rule silently nests the rest of the file),
                             hex colors only in the color tokens (dark mode)
   core/                     the models everything builds on
-    typst-document/         TypstDocument — the single source of truth (string or shared Y.Text); TextChange (the
-                            one edit format, text-change.ts); Highlight (a styled source range views draw);
-                            calculateImportChange (the change that imports a name from a module, once;
-                            applies nothing: margin notes merge it into their own edit); minimal-change.ts, y-delta.ts
+    typst-document/         TypstDocument — the single source of truth (a string; no Yjs: collaboration binds a Y.Text
+                            from outside); TextChange (the one edit format, text-change.ts); Highlight (a styled source
+                            range views draw); calculateImportChange (the change that imports a name from a module, once;
+                            applies nothing: margin notes merge it into their own edit); minimal-change.ts
     typst-engine/           typed TS wrapper around the wasm (typst-engine.ts: createEngine), fetch-fonts.ts;
                             engine-assets.ts (wasm + default font URLs for the main thread); packages/ (withPackages,
                             tar reader); fixtures/ (test package archives); generated wasm/, fonts/ (gitignored)
@@ -131,11 +131,14 @@ src/                        the widget (TypeScript); the most important API on t
                             entry in the Source tab); preview/
                             (registerIncludeComments: the PDF export option `comments.include`)
     collaboration/          collaboration.ts (eager: the extension), collaboration-link.ts (CollaborationLink: loads
-                            model/ on demand); presence/ (Presence, PlacedPresence, Presences: everyone's places, eager);
-                            model/ (the lazily loaded chunk: Collaboration, SharedProject, SharedAssets, RemoteCursors,
+                            model/ on demand), remote-origin.ts (REMOTE_ORIGIN, eager); presence/ (Presence,
+                            PlacedPresence, Presences: everyone's places, eager);
+                            model/ (the lazily loaded chunk: Collaboration, SharedProject, TextBinding (+ y-delta.ts),
+                            SharedAssets, RemoteCursors,
                             GitLabSourceControl (the protocol: core/gitlab-protocol); in-process.ts, Y.Doc/awareness
                             wiring for tests); source-view/ and visual-view/ (drawing the other users' carets and
-                            selections, also in raw boxes); workbench/ (presenceDecorations: who is in which file)
+                            selections, also in raw boxes; perUserUndo: their edits out of the Source views'
+                            undo history); workbench/ (presenceDecorations: who is in which file)
     diagnostics/            diagnostics.ts (the extension); model/ (DiagnosticCollection, describeDiagnostic,
                             diagnosticHighlight, diagnostics-summary.ts); source-view/ (lint); workbench/
                             (DiagnosticsStatus: the status bar item)
@@ -579,29 +582,32 @@ ProjectPath.isTypst / displayName / extension                    PathReference.o
 
 ```ts
 new TypstDocument(text)
-TypstDocument.fromYText(ytext)                   // shared: the text lives in an (integrated) Y.Text
 .text
 .change(changes: {from, to, insert}[], origin)   // all in pre-change coordinates (CodeMirror ChangeSet semantics)
 .setText(text, origin)                           // one minimal change
-.share(ytext | null)                             // (re)bind to a Y.Text, adopting its text as one REMOTE_ORIGIN change; null unshares
-.onDidChange: Event<{ contentChanges, origin }>   // subscribe → Disposable
-REMOTE_ORIGIN                                    // the origin of edits that arrived through the Y.Text
+.onDidChange: Event<{ contentChanges, origin }>   // subscribe → Disposable; in the order the changes were made
 ```
 
 - **Single source of truth.** Every view writes through `change()` and reads through `onDidChange`.
 - **Echo suppression by origin.** A view passes itself as `origin` and ignores notifications whose
   origin is itself.
-- **Hidden:** how the text is stored: a string, mirrored into a `Y.Text` when shared. A local
-  `change()` updates the string, applies the changes in one `ydoc.transact(…, document)` and
-  notifies with the caller's origin; the Y.Text observer skips that transaction. Every other
-  transaction (collaborators, a `Y.UndoManager`) fires `onDidChange` with `REMOTE_ORIGIN`, the
-  event delta converted to pre-change changes (`deltaToChanges`, `y-delta.ts`). The views need no
-  change. `typst-document.ts` imports Yjs types only, so unshared widgets do not load Yjs.
+- **Ordered delivery** (VS Code's delivery queue): a change made by a listener while the document tells
+  about another is told once every listener has heard the first, so each listener sees the changes in the
+  order they were made (the collaboration's `TextBinding` relies on it: it is subscribed after the views).
+- **No collaboration in core** (decided 2026-10-11; ESLint: core imports no `yjs`, `y-*`, `@hocuspocus/*`).
+  The collaboration extension binds a document to a shared `Y.Text` from outside, like y-codemirror binds an
+  editor: `TextBinding` (`extensions/collaboration/model/text-binding.ts`) first adopts the Y.Text's text
+  (`setText`, one minimal change), then writes each local change into the Y.Text in one transaction of its own
+  and turns every other transaction (another user) into `change(…, REMOTE_ORIGIN)`, the event delta converted to
+  pre-change changes (`deltaToChanges`, `y-delta.ts`). `REMOTE_ORIGIN` is the collaboration's
+  (`remote-origin.ts`). The views need no change.
 - **Undo is per user** (decision): each view keeps its own history. Remote changes never enter
-  it (the SourceView dispatches them with `addToHistory: false`; the VisualView already does that
-  for every outside change), and the histories map over them. A user's Undo reverts the last edit
-  of that view's history (the Source view's history also holds the same user's Visual edits), never
-  a collaborator's. No `Y.UndoManager`.
+  it, and the histories map over them. The VisualView never adds an outside change to its history; the
+  SourceView adds changes from elsewhere (the same user's Visual edits) and marks their transactions with
+  `fromDocument` (`{ origin }`, exported by the Source view host); the collaboration's `perUserUndo`
+  (a `transactionExtender` it registers with `sourceView.registerExtension`) sets `addToHistory: false` on
+  those with `REMOTE_ORIGIN`. A user's Undo reverts the last edit of that view's history, never a
+  collaborator's. No `Y.UndoManager`.
 
 ### `typst-engine` (Rust crate + `src/core/typst-engine`)
 
@@ -1053,6 +1059,7 @@ interface SourceViewContributions {                          // what ExtensionCo
 }
 type SourceViewExtension = Extension | ((view: SourceViewContext) => Extension)
 interface SourceViewContext { document }
+fromDocument: Annotation<{ origin }>         // on transactions mirroring a document change made elsewhere
 
 new SourceViewHost()                         // implements SourceViewContributions
 .createView(parent, document, { onSelection? }) → SourceView
@@ -1064,7 +1071,9 @@ SourceView
 ```
 
 - **The host keeps the mechanism**: CodeMirror bound to a `TypstDocument` in both directions (`basicSetup`,
-  line wrapping, the reveal highlight) and selection reporting. Everything
+  line wrapping, the reveal highlight) and selection reporting. Changes from elsewhere are dispatched with
+  `fromDocument.of({ origin })` and enter the view's undo history; what to keep out of it is a contribution's
+  policy (collaboration's `perUserUndo`). Everything
   else is a contribution. A contribution is registered once and applies to every view, those made before
   (their `Compartment` is reconfigured; state of extensions kept in the new configuration survives, e.g.
   the carets shown) and those made later; disposing it removes it from all of them. A function extension
@@ -1742,10 +1751,12 @@ collaboration.ts        eager entry: collaboration(options) (the extension; the 
                         the host adds it, see "createTypstEditor")
 collaboration-link.ts   CollaborationLink: import()s model/ on demand, publishes the selection, reports the places
 presence/               eager, pure: Presence, PlacedPresence, PresenceSource, Presences (everyone's places), initials
+remote-origin.ts        REMOTE_ORIGIN: the origin of the changes that arrive through a Y.Text (eager, a leaf)
 model/                  the lazily loaded chunk (Yjs, Hocuspocus; no DOM): Collaboration (model.ts), SharedProject,
-                        SharedAssets, RemoteCursors, GitLabSourceControl (their protocol: core/gitlab-protocol, also
+                        TextBinding (a TypstDocument bound to its Y.Text; y-delta.ts), SharedAssets, RemoteCursors, GitLabSourceControl (their protocol: core/gitlab-protocol, also
                         the server's)
 source-view/            sourcePresence: carets + selections in a CodeMirror editor (remotePresence, setPresence);
+                        perUserUndo (other users' edits out of the Source views' undo history);
                         caretElement, presenceStyle (the caret's DOM, also the Visual view's)
 visual-view/            visualPresence: selections as highlights, carets and box outlines (an editor extension),
                         boxPresence for raw boxes' code
@@ -1774,7 +1785,7 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
 | `assets`: `Y.Map<path, sha \| Uint8Array>` | GitLab rooms only: the other files (blob sha, or uploaded bytes not committed yet) | `SharedAssets` (clients), `GitLabRoom` (server) |
 | `meta`: `Y.Map` | GitLab rooms only, written by the server: `baseSha`, `base` (path → text), `baseAssets` (path → sha), `lastCommits` (path → commit) | `GitLabRoom`; read by `GitLabSourceControl.isGitLabRoom` |
 
-- **`SharedProject`**: binds each project document to its Y.Text (`TypstDocument.share`) and
+- **`SharedProject`**: binds each project document to its Y.Text (a `TextBinding` each) and
   keeps the *set* of files in step: local create / rename / delete (and `sync()` after
   `Project.replace`) write the map in one transaction; remote map events become
   `Project.apply(…)` (one delete + one add in one transaction = rename). Joining: the shared files

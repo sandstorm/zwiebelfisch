@@ -4,7 +4,7 @@
 // collaborate, so the Yjs side (model/model.ts: Collaboration, SharedProject, RemoteCursors, GitLabSourceControl, …) is a
 // chunk of its own that CollaborationLink loads on demand. Nothing here may import that chunk other than as a type.
 // The extension draws the other users' places itself, through the hosts' generic contribution points: CodeMirror
-// extensions in the Source views (source-view/), highlights, decorations and box code extensions in the Visual views
+// extensions in the Source views (source-view/; also what keeps other users' edits out of their undo history), highlights, decorations and box code extensions in the Visual views
 // (visual-view/), file decorations in the workbench (workbench/). It reads them from its own `Presences`. In a room
 // backed by a GitLab branch it registers the branch as a workbench source control.
 import type { CollaborationOptions, CollaborationUser } from './model/model';
@@ -13,7 +13,7 @@ import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './collaboration.css?inline';
 import { CollaborationLink } from './collaboration-link';
 import { Presences } from './presence/presence';
-import { sourcePresence } from './source-view/source-view';
+import { perUserUndo, sourcePresence } from './source-view/source-view';
 import { visualPresence } from './visual-view/visual-view';
 import { presenceDecorations } from './workbench/workbench';
 
@@ -47,6 +47,7 @@ export function collaboration(options: CollaborationOptions): TypstExtension {
       subscriptions.push(
         presences,
         sourceView.registerExtension(sourcePresence(presences)),
+        sourceView.registerExtension(perUserUndo),
         workbench.registerFileDecorationProvider(presenceDecorations(presences)),
         new Disposable(() => link.destroy()),
         // fired from the editors' own updates, after their state has the new selection

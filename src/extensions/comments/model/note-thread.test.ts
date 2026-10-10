@@ -1,7 +1,7 @@
 // Tests for note-thread.ts.
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
-import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { minimalChange } from '../../../core/typst-document/typst-document';
 import { parseNoteCall, printNoteCall } from './margin-note-syntax';
 import { addReply, deleteMessage, editMessage, localDate, readThread } from './note-thread';
 
@@ -153,18 +153,21 @@ describe('concurrent replies', () => {
       const [docA, docB] = [new Y.Doc(), new Y.Doc()];
       docA.getText('main').insert(0, `Text #margin-note[key][${note}] more.\n`);
       sync(docA, docB);
-      const [a, b] = [TypstDocument.fromYText(docA.getText('main')), TypstDocument.fromYText(docB.getText('main'))];
-      const reply = (document: TypstDocument, message: ReturnType<typeof anna>) => {
-        const call = /#margin-note\[key\]\[[\s\S]*\]/.exec(document.text)!;
+      const [a, b] = [docA.getText('main'), docB.getText('main')];
+      /** Replies in the shared text as an editor bound to it would: the one minimal change between old and new. */
+      const reply = (shared: Y.Text, message: ReturnType<typeof anna>) => {
+        const text = shared.toString();
+        const call = /#margin-note\[key\]\[[\s\S]*\]/.exec(text)!;
         const parsed = parseNoteCall(call[0])!;
-        const next = printNoteCall({ ...parsed, note: addReply(parsed.note, message) });
-        document.setText(document.text.replace(call[0], next), 'test');
+        const change = minimalChange(text, text.replace(call[0], printNoteCall({ ...parsed, note: addReply(parsed.note, message) })))!;
+        shared.delete(change.from, change.to - change.from);
+        shared.insert(change.from, change.insert);
       };
       reply(a, anna('From A'));
       reply(b, bob('From B'));
       sync(docA, docB);
-      expect(a.text).toBe(b.text);
-      const merged = parseNoteCall(/#margin-note\[key\]\[[\s\S]*\]/.exec(a.text)![0])!.note;
+      expect(a.toString()).toBe(b.toString());
+      const merged = parseNoteCall(/#margin-note\[key\]\[[\s\S]*\]/.exec(a.toString())![0])!.note;
       expect(readThread(merged).slice(-2).map((m) => m.text).sort()).toEqual(['From A', 'From B']);
       expect(readThread(merged)).toHaveLength(readThread(note).length + 2);
     });

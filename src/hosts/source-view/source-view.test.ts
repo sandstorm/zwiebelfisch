@@ -2,11 +2,11 @@
 // Tests for source-view.ts: the host's contribution points, and the Source view it makes (view.ts).
 import { describe, expect, it } from 'vitest';
 import { undo } from '@codemirror/commands';
-import { StateEffect, StateField } from '@codemirror/state';
+import { EditorState, StateEffect, StateField, Transaction } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, type DecorationSet } from '@codemirror/view';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
-import { REMOTE_ORIGIN, TypstDocument } from '../../core/typst-document/typst-document';
-import { SourceViewHost, type SourceViewExtension } from './source-view';
+import { TypstDocument } from '../../core/typst-document/typst-document';
+import { fromDocument, SourceViewHost, type SourceViewExtension } from './source-view';
 
 function setup(text: string, host = new SourceViewHost()) {
   const parent = document.createElement('div');
@@ -18,10 +18,24 @@ function setup(text: string, host = new SourceViewHost()) {
 }
 
 describe('SourceView history', () => {
-  it('undo reverts only local edits, not those of collaborators', () => {
+  it("changes from elsewhere enter the view's history, marked with their origin", () => {
     const { doc, editor } = setup('one two\n');
+    const origins: unknown[] = [];
+    editor().dispatch({ effects: StateEffect.appendConfig.of(EditorState.transactionExtender.of((tr) => (origins.push(tr.annotation(fromDocument)?.origin), null))) });
+    doc.change([{ from: 4, to: 7, insert: 'TWO' }], 'visual');
+    expect(origins).toEqual(['visual']);
+    undo(editor());
+    expect(doc.text).toBe('one two\n');
+  });
+
+  it('a contribution keeps changes of some origin out of the history (as collaboration does with other users\' edits)', () => {
+    const host = new SourceViewHost();
+    host.registerExtension(
+      EditorState.transactionExtender.of((tr) => (tr.annotation(fromDocument)?.origin === 'other user' ? { annotations: Transaction.addToHistory.of(false) } : null)),
+    );
+    const { doc, editor } = setup('one two\n', host);
     editor().dispatch({ changes: { from: 0, to: 3, insert: 'ONE' }, userEvent: 'input.type' });
-    doc.change([{ from: 4, to: 7, insert: 'TWO' }], REMOTE_ORIGIN);
+    doc.change([{ from: 4, to: 7, insert: 'TWO' }], 'other user');
     undo(editor());
     expect(doc.text).toBe('one TWO\n');
   });

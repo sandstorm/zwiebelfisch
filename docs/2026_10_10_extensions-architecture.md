@@ -49,7 +49,9 @@ Controller: it subscribes views to the model's `onDid…` events and turns user 
 
 ### Dependency rules (ESLint, part of `mise run quality`)
 
-1. `core/**` and every `**/model/**`: no DOM globals, no editor-library imports.
+1. `core/**` and every `**/model/**`: no DOM globals, no editor-library imports. `core/**` imports only `core/` and
+   no collaboration library (`yjs`, `y-*`, `@hocuspocus/*`): collaboration binds a Y.Text to a `TypstDocument` from
+   outside.
 2. `hosts/**` never import `extensions/**` (nor `typst-editor/`). They only offer contribution points.
 3. `extensions/<a>` never imports `extensions/<b>`. Extensions meet through `core` models, or
    through a generic contribution point of a host that any extension may use (document links, file
@@ -142,7 +144,7 @@ items.
 |---|---|---|---|---|
 | `typstLanguage()` (`typst-language`) | — | Source: Typst syntax + code colors; Visual: the same in raw boxes (`registerBoxCodeExtension`) | — | — |
 | `documentLinks()` (`document-links`) | (core `document-links`: `findFilePaths`) | Workbench: a `DocumentLinkProvider` (the views show its links) | command `documentLinks.createFile` | — |
-| `collaboration(options)` (added by the host, not a built-in) | `SharedProject`, `SharedAssets`, `RemoteCursors`, `GitLabSourceControl` (lazy chunk; protocol in core `gitlab-protocol`); `presence/` (eager) | Source + Visual: other users' carets and selections (also in raw boxes); Workbench: file decorations, the GitLab room's source control | — | yes |
+| `collaboration(options)` (added by the host, not a built-in) | `SharedProject`, `TextBinding` (a TypstDocument bound to its Y.Text from outside; core knows no Yjs), `SharedAssets`, `RemoteCursors`, `GitLabSourceControl` (lazy chunk; protocol in core `gitlab-protocol`); `presence/` (eager) | Source + Visual: other users' carets and selections (also in raw boxes), Source: `perUserUndo` (their edits out of the undo history, via the host's `fromDocument` origin); Workbench: file decorations, the GitLab room's source control | — | yes |
 | `files()`, `fileNavigation()` (`files`, `file-navigation`) | tree model (uploads: core `uploads`) | Setting `files.panel`; Workbench: file panel (side panel, file decorations of any provider), drops; editor frame "← previous / next file →" | — | yes (`files.css`) |
 | `spreadsheets()` | `typst-file` (`name.ic.gen.typ`) | Workbench: custom editor `spreadsheets.editor` for `*.ic` (IronCalc, loaded on demand), "New spreadsheet…" in `file/newFile` | command `spreadsheets.newSpreadsheet` | yes |
 | `diagrams()` | `EmbedSession` (embed protocol), PNG round trip, empty diagram | Setting `diagrams.editorUrl`; Workbench: custom editor `diagrams.editor` for `*.drawio.png` (priority 110), "New diagram…" in `file/newFile`; Visual: box action "Edit diagram" | command `diagrams.newDiagram` | yes |

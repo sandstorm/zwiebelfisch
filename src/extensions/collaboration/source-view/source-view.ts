@@ -1,10 +1,20 @@
 // The collaboration's part of the Source views: other users' carets and selections in a CodeMirror editor (the
-// Source views, and the code of the Visual view's raw boxes). See collaboration.ts.
-import { Facet, StateEffect, StateField, type EditorState, type Extension, type Range } from '@codemirror/state';
+// Source views, and the code of the Visual view's raw boxes), and their edits kept out of the undo history.
+// See collaboration.ts.
+import { EditorState, Facet, StateEffect, StateField, Transaction, type Extension, type Range } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet } from '@codemirror/view';
-import type { SourceViewExtension } from '../../../hosts/source-view/source-view';
+import { fromDocument, type SourceViewExtension } from '../../../hosts/source-view/source-view';
+import { REMOTE_ORIGIN } from '../remote-origin';
 import type { Presence, PresenceSource, PresenceUser } from '../presence/presence';
 import { textColorOn } from '../../../ui/color-scheme/color-scheme';
+
+/**
+ * Undo is per user: other users' edits (changes with `REMOTE_ORIGIN`) never enter a Source view's history; it maps
+ * over them, so Undo reverts the local user's last edit only (also one made in the Visual view).
+ */
+export const perUserUndo: Extension = EditorState.transactionExtender.of((tr) =>
+  tr.annotation(fromDocument)?.origin === REMOTE_ORIGIN ? { annotations: Transaction.addToHistory.of(false) } : null,
+);
 
 /** Draws the other users' carets and selections in every Source view, as `presences` has them; they follow edits. */
 export function sourcePresence(presences: PresenceSource): SourceViewExtension {

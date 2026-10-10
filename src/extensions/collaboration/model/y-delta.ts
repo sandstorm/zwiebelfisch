@@ -1,5 +1,5 @@
-// Y.Text deltas as TextChanges, for a TypstDocument over a shared Y.Text. See typst-document.ts.
-import type { TextChange } from './text-change';
+// Y.Text deltas as TextChanges, for a TypstDocument bound to a shared Y.Text. See text-binding.ts.
+import type { TextChange } from '../../../core/typst-document/typst-document';
 
 /** One step of a Y.Text event delta (Quill delta format; text only). */
 export interface DeltaOp {

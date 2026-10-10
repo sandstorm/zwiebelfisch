@@ -12,7 +12,7 @@ import { VisualView, VisualViewContributions } from '../../hosts/visual-view/vis
 import { Collaboration } from './model/model';
 import { connect, connectAwareness } from './model/in-process';
 import { Presences } from './presence/presence';
-import { sourcePresence } from './source-view/source-view';
+import { perUserUndo, sourcePresence } from './source-view/source-view';
 import { visualPresence } from './visual-view/visual-view';
 import { ProjectPath } from '../../core/paths/paths';
 
@@ -25,7 +25,7 @@ afterEach(() => cleanup.splice(0).forEach((fn) => fn()));
 /**
  * One user's widget, reduced to what collaboration touches: the project, both
  * editing views of the main file (with nothing contributed but this extension's
- * drawing of the others' places: what the views do not model shows as raw Typst), and the Collaboration
+ * drawing of the others' places and its per-user undo: what the views do not model shows as raw Typst), and the Collaboration
  * joining the room `peer` is in (already synced, as with a server).
  */
 async function user(name: string, files: Record<string, string>, peer?: { ydoc: Y.Doc; awareness: Awareness }) {
@@ -47,6 +47,7 @@ async function user(name: string, files: Record<string, string>, peer?: { ydoc: 
   const visual = new VisualView(visualParent, document, VisualViewContributions.from([visualPresence(presences, () => [document])]));
   const sourceViews = new SourceViewHost();
   sourceViews.registerExtension(sourcePresence(presences));
+  sourceViews.registerExtension(perUserUndo);
   const source = sourceViews.createView(sourceParent, document);
   cleanup.push(() => {
     disconnect();

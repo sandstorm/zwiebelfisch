@@ -1,11 +1,11 @@
 // SourceView: one CodeMirror 6 editor bound to a TypstDocument, with what its host contributes. See source-view.ts.
 import { basicSetup } from 'codemirror';
-import { Annotation, Compartment, EditorSelection, StateEffect, StateField, Transaction, type ChangeSet, type ChangeSpec, type Extension } from '@codemirror/state';
+import { Compartment, EditorSelection, StateEffect, StateField, type ChangeSet, type ChangeSpec, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
-import { REMOTE_ORIGIN, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
-import type { SourceViewContext } from './contribution';
+import type { TextChange, TypstDocument } from '../../core/typst-document/typst-document';
+import { fromDocument, type SourceViewContext } from './contribution';
 
 export interface SourceViewOptions {
   /** Called after the selection moved or the text changed; `selection()` already returns the new selection. */
@@ -48,10 +48,7 @@ export class SourceView {
     this.view.dom.dataset.testid = 'typst-source';
     this.subscriptions = [
       document.onDidChange(({ contentChanges, origin }) => {
-        if (origin === this) return;
-        // Undo is per user: collaborators' edits never enter this view's history (it maps over them).
-        const annotations = [fromDocument.of(true), ...(origin === REMOTE_ORIGIN ? [Transaction.addToHistory.of(false)] : [])];
-        this.view.dispatch({ changes: contentChanges as ChangeSpec[], annotations });
+        if (origin !== this) this.view.dispatch({ changes: contentChanges as ChangeSpec[], annotations: fromDocument.of({ origin }) });
       }),
       contributions.onDidChange(() => this.view.dispatch({ effects: this.contributed.reconfigure(contributions.extensionsFor(context)) })),
     ];
@@ -79,9 +76,6 @@ export class SourceView {
     this.view.destroy();
   }
 }
-
-/** Marks transactions that mirror a document change, so they are not sent back. */
-const fromDocument = Annotation.define<boolean>();
 
 /** The range `reveal` highlights, until the next reveal; it follows edits. */
 const setHighlight = StateEffect.define<{ from: number; to: number } | null>();

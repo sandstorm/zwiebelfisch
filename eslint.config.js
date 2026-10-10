@@ -81,6 +81,22 @@ export default tseslint.config(
     },
   },
   {
+    // core/ is the models everything builds on: no collaboration library (the collaboration extension binds a Y.Text
+    // to a TypstDocument from outside), no view, host or extension.
+    files: ['src/core/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            { group: ['yjs', 'y-*', '@hocuspocus/*'], message: 'core/ knows no Yjs: the collaboration extension binds documents from outside.' },
+            { group: ['**/hosts/**', '**/extensions/**', '**/ui/**', '**/testing/testing', '**/typst-editor/**'], message: 'core/ imports only core/.' },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // test bodies are long by nature; complexity limits still apply
     files: ['**/*.test.ts', 'tests/**/*.ts'],
     rules: { 'max-lines-per-function': 'off' },

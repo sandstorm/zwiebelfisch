@@ -5,16 +5,17 @@ import type { TypstDocument } from '../../../core/typst-document/typst-document'
 import { type Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import { FILES_MAP } from '../../../core/gitlab-protocol/gitlab-protocol';
+import { TextBinding } from './text-binding';
 
 interface Binding {
   path: ProjectPath;
-  text: Y.Text;
+  binding: TextBinding;
 }
 
 /**
  * Shares the Typst files of a `Project` through a Y.Doc: one `Y.Text` per
  * `.typ` file in the map `files` (path → text). Every document of the project
- * is bound to its Y.Text (`TypstDocument.share`), so text edits flow both
+ * is bound to its Y.Text (`TextBinding`), so text edits flow both
  * ways on their own; this class keeps the *set* of files in step: files
  * created, renamed or deleted on either side.
  *
@@ -58,8 +59,8 @@ export class SharedProject {
         const document = this.project.document(path);
         if (document && ProjectPath.isTypst(path)) this.bind(path, document);
       }
-      for (const { path, text } of previous) {
-        if (!this.project.document(path) && this.files.get(path) === text) this.files.delete(path);
+      for (const { path, binding } of previous) {
+        if (!this.project.document(path) && this.files.get(path) === binding.text) this.files.delete(path);
       }
     }, this);
     for (const [document, binding] of this.bindings) {
@@ -82,12 +83,16 @@ export class SharedProject {
       this.files.set(path, text);
       text.insert(0, document.text);
     }
-    if (this.bindings.get(document)?.text !== text) document.share(text);
-    this.bindings.set(document, { path, text });
+    let binding = this.bindings.get(document)?.binding;
+    if (binding?.text !== text) {
+      binding?.dispose();
+      binding = new TextBinding(text, document);
+    }
+    this.bindings.set(document, { path, binding });
   }
 
   private unbind(document: TypstDocument): void {
-    document.share(null);
+    this.bindings.get(document)?.binding.dispose();
     this.bindings.delete(document);
   }
 

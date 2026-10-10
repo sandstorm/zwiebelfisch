@@ -10,7 +10,7 @@ import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { SourceViewContext, SourceViewExtension } from './contribution';
 import { type Contributions, SourceView, type SourceViewOptions } from './view';
 
-export type { SourceViewContext, SourceViewExtension } from './contribution';
+export { fromDocument, type SourceViewContext, type SourceViewExtension } from './contribution';
 export type { SourceView, SourceViewOptions } from './view';
 
 /** The Source view's contribution points (what `ExtensionContext.sourceView` offers). */
