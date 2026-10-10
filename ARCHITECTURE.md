@@ -24,7 +24,12 @@ src/
     geometry.ts, zoom.ts    pure helpers: overlay boxes, visibility, current page, zoom steps
     toolbar.ts              zoom buttons, zoom label, "page n / total"
   visual-view/              VisualView — Tiptap editor over the source-anchored projection
-  editor/                   createTypstEditor() — composes the widget, Visual/Source tabs, status bar, scoped CSS
+  editor/                   createTypstEditor() — composes the widget, status bar, scoped CSS
+    project.ts              Project: the file model (one TypstDocument per .typ file, main protected)
+    editing-views.ts        Visual/Source tabs, lazily one VisualView + SourceView per document
+    file-switcher.ts        file bar: tabs, new/upload/rename/delete, drop (optional mode)
+    asset-view.ts           read-only image/data view with "Insert into …"
+    paths.ts, insert-image.ts, upload.ts   pure helpers (names → paths, #image insertion, uploads)
   element/                  <typst-editor> custom element (shadow DOM) around createTypstEditor
   index.ts                  public API of the package; registers <typst-editor>
 demo/                       dev/demo page (vite root)
@@ -131,12 +136,13 @@ new Preview(container, { onJump?, onDiagnostics? })   // renders a toolbar + scr
 
 ### Diagnostics in the widget (`src/editor`)
 
-`summarizeDiagnostics(diagnostics, main)` (pure, unit-tested) splits a compile's diagnostics into
-those of the main file (sent to `SourceView.setDiagnostics`) and those elsewhere (other files or
-no location: only listed), and computes the status label ("✓ compiled" / "1 error, 2 warnings")
-and the jump target (earliest error in the main file, else earliest warning).
-`DiagnosticsStatus` renders it as a status bar below both panes; clicking the label reveals the
-target in the source.
+`summarizeDiagnostics(diagnostics, file)` (pure, unit-tested) splits a compile's diagnostics into
+those of the shown file and those elsewhere (other files, packages or no location: only listed),
+and computes the status label ("✓ compiled" / "1 error, 2 warnings") and the jump target
+(`{path, from, to}`: earliest error in the shown file, else in another project file, else the
+same for warnings). `DiagnosticsStatus` renders it as a status bar below both panes; clicking the
+label, or a listed diagnostic of a project file, opens that file and reveals the range in the
+source view. Every document's SourceView gets the diagnostics of its own path.
 
 ### `typst-engine` (Rust crate + `src/engine`)
 
@@ -192,15 +198,34 @@ Inside the crate:
 ### `createTypstEditor` / `<typst-editor>` (`src/editor`, `src/element`)
 
 ```ts
-createTypstEditor(host, { source, main?, files?, mode?, onChange? }) → { source (get/set), files (get/set), destroy() }
-<typst-editor value="…">inline source</typst-editor>   .value (get/set), .files (get/set), 'change' event {detail:{value}}
+createTypstEditor(host, { source?, main?, files?, mode?, fileList?, allowFileChange?, onFilesChange?, onChange? })
+  → { source (get/set), files (get/set), activeFile, open(path), destroy() }
+<typst-editor value="…" file-list="auto|show|hide">   .value, .files, 'change' {detail:{value}}, 'files-change' {detail: FileChange}
 ```
 
-- `source` is the text of the edited file at `main` (default `/main.typ`). `files`
-  (`ProjectFiles = Record<path, string | Uint8Array>`) are the project's other files — included
-  or imported `.typ`, images, data — read-only in the widget. Assigning `files` replaces the map
-  and recompiles. `@preview` packages need no entry.
-- Preview clicks that land in another file are ignored (no file switcher yet).
+- `source` is the text of the main file at `main` (default `/main.typ`; falls back to
+  `files[main]`). `files` (`ProjectFiles = Record<path, string | Uint8Array>`) are the project's
+  other files. Assigning `files` replaces them (documents of paths that stay are kept and get the
+  new text as one edit) and recompiles. `@preview` packages need no entry.
+- **Composition** (`Widget`, private): `Project` + `EditingViews` + `FileSwitcher` + `AssetView`
+  + `Preview` + `DiagnosticsStatus`. The preview always compiles `main` with `project.files()`.
+- **`Project`** (`project.ts`): files by path. `.typ` strings become a `TypstDocument` each (kept
+  across renames, so open views survive); everything else is stored as given.
+  `check(change)` → reason or null, `apply(change)`, `replace(files)`, `onChange(change)`
+  (structural changes and every document edit as `update`). The main file cannot be renamed or
+  deleted; `.typ` files keep their ending.
+  `FileChange = {kind:'create', path, content} | {kind:'update', path, content} | {kind:'delete', path} | {kind:'rename', from, path}`.
+- **`EditingViews`**: one Visual/Source tab bar; a document's views are created the first time
+  it is shown and then only hidden, so cursor and undo history survive switching. The mode is
+  shared. With a single file the DOM is the same as before (tabs + two panes).
+- **`FileSwitcher`**: only turns gestures into `FileChange`s (names via `toPath`: one folder
+  level, default extension) and shows refusals inline. Hidden unless `fileList` is `show`, or
+  `auto` with more than one file. A requested change passes `project.check`, then the host's
+  `allowFileChange` (async allowed; re-checked afterwards), then is applied.
+- Preview clicks into another project file open it, then reveal. Clicks into packages are ignored.
+- **Insert image** (`AssetView`): `#image("…")` as its own paragraph after the line of the last
+  source-view cursor (else at the end) of the last shown `.typ` file, relative path when in the
+  same folder tree, else project-absolute.
 
 - Setting `source`/`value` applies **one minimal edit**: only the range between the common prefix
   and the common suffix changes (`minimalChange`), so cursors and undo history are preserved.
@@ -318,8 +343,8 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
 - **All 17 default fonts (9.7 MB, 6.4 MB gzip) load before the first render.** Next step: lazy
   fonts — ship a JSON index of `FontInfo` so the `FontBook` is complete up front and fetch font
   data on first use (compile, see which fonts were missing, fetch, recompile).
-- **Only the main file is editable.** Other files come in through `files`; there is no file tree
-  or upload UI yet, and jumps into other files are dropped.
+- **Multi-file UI:** one folder level; no folder tree. The visual view has no cursor API, so
+  "Insert into …" uses the last source-view cursor, else the end of the file.
 - **Packages:** only `@preview` from packages.typst.org (no configurable registry, no `@local`);
   failed downloads are not retried until the worker restarts.
 - **No error display in the visual view** yet (diagnostics only reach the source view).

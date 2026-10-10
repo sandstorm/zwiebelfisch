@@ -1,6 +1,6 @@
 # Multi-file UI (optional mode)
 
-Status: open
+Status: done (branch task/multi-file-ui)
 Depends on: multi-file-assets-packages (engine + widget API for file maps)
 Touches: src/editor/** (file switcher), src/document/** (one TypstDocument per file), src/preview/** (jump into other files)
 
