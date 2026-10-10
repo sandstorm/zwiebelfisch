@@ -1,12 +1,11 @@
 // End-to-end tests (Playwright, against the demo build): real-world tables in the Visual view (expression cells, table figures).
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
-import { caretAtEnd } from './visual-helpers';
+import { caretAtEnd, tableBar } from './visual-helpers';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
 const visual = (page: Page) => page.locator('[data-testid=typst-visual]:visible');
-const toolbar = (page: Page) => page.locator('[role=toolbar][aria-label=Formatting]:visible');
 
 /** The text of `path` in the demo's project (the demo page has no <typst-editor>: `window.editor`). */
 const fileText = (page: Page, path: string) => () =>
@@ -67,7 +66,7 @@ test.describe('the advanced example', () => {
     await caretAtEnd(figure.locator('td', { hasText: '68.3×' }).locator('p'));
     await page.keyboard.type('!');
     await expect.poll(fileText(page, RESULTS)).toBe(before.replace('[68.3×]', '[68.3×!]'));
-    await toolbar(page).getByRole('button', { name: 'Add row' }).click();
+    await tableBar(page).getByRole('button', { name: 'Add row' }).click();
     await expect.poll(fileText(page, RESULTS)).toContain('[68.3×!],\n    [], [], [], [],\n  ),');
   });
 });

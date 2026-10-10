@@ -2,6 +2,7 @@
 import type { Locator, Page } from '@playwright/test';
 import { deflateSync } from 'node:zlib';
 import { test, expect, fileRow } from './fixtures';
+import { chooseFrom } from './visual-helpers';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
@@ -89,7 +90,7 @@ test('uploading an image with Insert image keeps the layout and the page setup',
   const before = await layout(page);
   const editor = page.locator('typst-editor');
   // No click into the text first: the selection is still on the #set page block.
-  await editor.getByRole('toolbar', { name: 'Formatting' }).getByRole('button', { name: 'Insert image' }).click();
+  await chooseFrom(editor.getByRole('toolbar', { name: 'Formatting' }), 'Insert', 'Insert image');
   const form = editor.getByRole('form', { name: 'Image' });
   await expect(form).toBeVisible();
   expect(await layout(page).then((l) => l.overflow)).toBeLessThanOrEqual(0); // the popover does not stick out

@@ -11,9 +11,9 @@ function setup(text: string) {
   document.body.append(parent);
   const doc = new TypstDocument(text);
   const view = new VisualView(parent, doc);
-  const toolbar = parent.querySelector<HTMLElement>('[role="toolbar"]')!;
   const button = (label: string) => {
-    const found = toolbar.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
+    // the toolbar, its menus and the floating bars (the table edits float above the table)
+    const found = parent.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
     if (!found) throw new Error(`no button "${label}"`);
     return found;
   };

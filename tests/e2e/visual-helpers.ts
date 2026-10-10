@@ -8,6 +8,18 @@ export const visual = (page: Page) => page.getByTestId('typst-visual');
 /** The Visual view's formatting toolbar. */
 export const toolbar = (page: Page) => page.getByRole('toolbar', { name: 'Formatting' });
 
+/** Opens the toolbar menu `menu` ("Insert", "Align") of the toolbar `bar` and chooses `item` in it. */
+export async function chooseFrom(bar: Locator, menu: 'Insert' | 'Align', item: string): Promise<void> {
+  await bar.getByRole('button', { name: menu, exact: true }).click();
+  await bar.getByRole('menuitem', { name: item, exact: true }).click();
+}
+
+/** The bar of bold, italic, code, link (and comment) floating above the text selection. */
+export const selectionBar = (page: Page) => page.getByRole('toolbar', { name: 'Selection' });
+
+/** The bar of table edits (rows, columns, header row) floating above the table holding the cursor. */
+export const tableBar = (page: Page) => page.getByRole('toolbar', { name: 'Table' });
+
 /** The main file's text, from the demo's editor API (CodeMirror renders lines as separate elements). */
 export const sourceText = (page: Page) => () =>
   page.evaluate(() => (window as unknown as { editor: { source: string } }).editor.source);

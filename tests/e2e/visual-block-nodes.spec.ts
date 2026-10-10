@@ -1,7 +1,7 @@
 // End-to-end tests (Playwright, against the demo build): block nodes in the Visual view (page break, rule, task lists).
 import { test, expect } from './fixtures';
 import type { Page } from '@playwright/test';
-import { caretAtEnd } from './visual-helpers';
+import { caretAtEnd, chooseFrom, tableBar } from './visual-helpers';
 
 /** Block nodes modelled on Tiptap's: quote, page break, rule, table header, task list, heading numbers. */
 
@@ -41,7 +41,7 @@ test('"---" on an empty line becomes a rule, in text it stays text', async ({ pa
 
 test('Insert page break shows a labelled divider and writes #pagebreak()', async ({ page }) => {
   await caretAtEnd(visual(page).locator('p', { hasText: 'First paragraph' }));
-  await toolbar(page).getByRole('button', { name: 'Insert page break' }).click();
+  await chooseFrom(toolbar(page), 'Insert', 'Insert page break');
   await expect(visual(page).locator('.typst-visual__page-break')).toHaveText('Page break');
   await expect.poll(sourceText(page)).toContain('First paragraph\n\n#pagebreak()');
 });
@@ -49,7 +49,7 @@ test('Insert page break shows a labelled divider and writes #pagebreak()', async
 test('Header row turns the first table row into table.header(..)', async ({ page }) => {
   await setSource(page, '#table(columns: 2, [a], [b], [c], [d])\n');
   await visual(page).locator('td', { hasText: 'c' }).click();
-  await toolbar(page).getByRole('button', { name: 'Header row' }).click();
+  await tableBar(page).getByRole('button', { name: 'Header row' }).click();
   await expect(visual(page).locator('th')).toHaveText(['a', 'b']);
   await expect.poll(sourceText(page)).toContain('table.header([a], [b]),');
 });

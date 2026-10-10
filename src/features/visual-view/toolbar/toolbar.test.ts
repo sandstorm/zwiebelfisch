@@ -10,7 +10,8 @@ function setup(text: string, options: VisualViewOptions = {}) {
   const doc = new TypstDocument(text);
   const view = new VisualView(parent, doc, options);
   const toolbar = parent.querySelector<HTMLElement>('[role="toolbar"]')!;
-  const button = (label: string) => toolbar.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
+  // the formatting toolbar first, then the menus' items and the floating bars (selection, table)
+  const button = (label: string) => parent.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
   const style = toolbar.querySelector<HTMLSelectElement>('select')!;
   const choose = (value: string) => {
     style.value = value;
@@ -80,7 +81,7 @@ describe('Visual view toolbar', () => {
     /** Opens the popover from the Link button, enters `value` and applies it (as Enter would). */
     function linkTo(toolbar: HTMLElement, button: (label: string) => HTMLButtonElement, value: string) {
       button('Link').click();
-      const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Link"]')!;
+      const popover = toolbar.parentElement!.querySelector<HTMLFormElement>('form[aria-label="Link"]')!;
       expect(popover.hidden).toBe(false);
       const input = popover.querySelector('input')!;
       input.value = value;
@@ -124,14 +125,14 @@ describe('Visual view toolbar', () => {
       const event = new KeyboardEvent('keydown', { key: 'k', metaKey: mac, ctrlKey: !mac, bubbles: true, cancelable: true });
       editable.dispatchEvent(event);
       expect(event.defaultPrevented).toBe(true);
-      expect(toolbar.querySelector<HTMLFormElement>('form[aria-label="Link"]')!.hidden).toBe(false);
+      expect(toolbar.parentElement!.querySelector<HTMLFormElement>('form[aria-label="Link"]')!.hidden).toBe(false);
     });
 
     it('closes on Escape without changing anything', () => {
       const { doc, view, toolbar, button } = setup('Hello\n');
       view.reveal(0, 5);
       button('Link').click();
-      const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Link"]')!;
+      const popover = toolbar.parentElement!.querySelector<HTMLFormElement>('form[aria-label="Link"]')!;
       popover.querySelector('input')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       expect(popover.hidden).toBe(true);
       expect(doc.text).toBe('Hello\n');
@@ -342,12 +343,12 @@ describe('Visual view toolbar', () => {
     });
   });
 
-  it('keeps the image popover inside the toolbar when its button is near the right edge', () => {
+  it('keeps the image popover (at the Insert menu) inside the toolbar when the menu is near the right edge', () => {
     const { toolbar, button } = setup('Text\n', { assets: { list: () => [], upload: async () => ({ error: 'unused' }), reference: () => null } });
     const popover = toolbar.querySelector<HTMLFormElement>('form[aria-label="Image"]')!;
     Object.defineProperty(toolbar, 'clientWidth', { value: 300 });
     Object.defineProperty(popover, 'offsetWidth', { value: 200 });
-    Object.defineProperty(button('Insert image'), 'offsetLeft', { value: 250 });
+    Object.defineProperty(button('Insert'), 'offsetLeft', { value: 250 });
     button('Insert image').click();
     expect(popover.style.left).toBe('100px');
   });

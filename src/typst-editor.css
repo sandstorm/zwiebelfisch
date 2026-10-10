@@ -716,6 +716,44 @@
 .typst-toolbar__button:disabled { color: #b8bec8; cursor: default; }
 .typst-toolbar__button:focus-visible,
 .typst-toolbar__style:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 1px; }
+/* Toolbar menus (Insert ▾, Align ▾): a trigger with a caret, a list of labelled items below it */
+.typst-toolbar__menu { position: relative; }
+.typst-toolbar__menu-button { width: auto; gap: 2px; padding: 0 4px 0 7px; }
+.typst-toolbar__menu-icon { display: inline-flex; }
+.typst-toolbar__caret { width: 0; height: 0; border: 4px solid transparent; border-top-color: currentColor; margin-top: 4px; }
+.typst-toolbar__menu-button[aria-expanded='true'] { background: #eef1f5; }
+.typst-toolbar__menu-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  min-width: 190px;
+  padding: 4px;
+  border: 1px solid var(--te-border);
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
+}
+.typst-toolbar__menu-list[hidden] { display: none; }
+.typst-toolbar__button.typst-toolbar__menu-item { width: auto; justify-content: flex-start; gap: 10px; padding: 0 10px 0 6px; font-size: 13px; white-space: nowrap; }
+/* Bars floating in the text: above a selection (marks, link, comment) and above a table (rows, columns) */
+.typst-floating-bar {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--te-border);
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  transform: translateY(-100%);
+  font-family: system-ui, sans-serif;
+}
+.typst-floating-bar[hidden] { display: none; }
+.typst-floating-bar > .typst-toolbar__button { width: 28px; height: 28px; }
 .typst-toolbar__style {
   height: 32px;
   min-width: 132px;

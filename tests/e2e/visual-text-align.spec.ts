@@ -1,7 +1,7 @@
 // End-to-end tests (Playwright, against the demo build): text alignment in the Visual view.
 import { test, expect } from './fixtures';
 import type { Page } from '@playwright/test';
-import { caretAtEnd } from './visual-helpers';
+import { caretAtEnd, chooseFrom } from './visual-helpers';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -24,17 +24,17 @@ const freshParagraph = (page: Page) => page.getByTestId('typst-visual').locator(
 
 test('Center wraps the paragraph in #align(center) and shows it centered', async ({ page }) => {
   await freshLine(page);
-  await toolbar(page).getByRole('button', { name: 'Center' }).click();
-  await expect(toolbar(page).getByRole('button', { name: 'Center' })).toHaveAttribute('aria-pressed', 'true');
+  await chooseFrom(toolbar(page), 'Align', 'Center');
+  await expect(toolbar(page).getByRole('menuitem', { name: 'Center', includeHidden: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(freshParagraph(page)).toHaveCSS('text-align', 'center');
   await expect(await source(page)).toContainText('#align(center)[Fresh line]');
 });
 
 test('Align right, then Align left removes the wrapper again', async ({ page }) => {
   await freshLine(page);
-  await toolbar(page).getByRole('button', { name: 'Align right' }).click();
+  await chooseFrom(toolbar(page), 'Align', 'Align right');
   await expect(freshParagraph(page)).toHaveCSS('text-align', 'right');
-  await toolbar(page).getByRole('button', { name: 'Align left' }).click();
+  await chooseFrom(toolbar(page), 'Align', 'Align left');
   const src = await source(page);
   await expect(src).toContainText('Fresh line');
   await expect(src).not.toContainText('#align(');
@@ -42,7 +42,7 @@ test('Align right, then Align left removes the wrapper again', async ({ page }) 
 
 test('Justify wraps the paragraph in #par(justify: true)', async ({ page }) => {
   await freshLine(page);
-  await toolbar(page).getByRole('button', { name: 'Justify' }).click();
+  await chooseFrom(toolbar(page), 'Align', 'Justify');
   await expect(freshParagraph(page)).toHaveCSS('text-align', 'justify');
   await expect(await source(page)).toContainText('#par(justify: true)[Fresh line]');
 });
@@ -52,14 +52,14 @@ test('Mod+Shift+E centers and Mod+Shift+L aligns left', async ({ page }) => {
   await page.keyboard.press('ControlOrMeta+Shift+E');
   await expect(freshParagraph(page)).toHaveCSS('text-align', 'center');
   await page.keyboard.press('ControlOrMeta+Shift+L');
-  await expect(toolbar(page).getByRole('button', { name: 'Align left' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(toolbar(page).getByRole('menuitem', { name: 'Align left', includeHidden: true })).toHaveAttribute('aria-pressed', 'true');
   // left is the document's default, so the paragraph has no alignment of its own: CSS's `start`, left in LTR text
   await expect(freshParagraph(page)).toHaveCSS('text-align', /^(left|start)$/);
 });
 
 test('one undo reverts an alignment', async ({ page }) => {
   await freshLine(page);
-  await toolbar(page).getByRole('button', { name: 'Center' }).click();
+  await chooseFrom(toolbar(page), 'Align', 'Center');
   await toolbar(page).getByRole('button', { name: 'Undo' }).click();
   await expect(await source(page)).not.toContainText('#align(center)');
 });

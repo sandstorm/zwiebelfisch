@@ -1,7 +1,7 @@
 // End-to-end tests (Playwright, against the demo build): figures and image resizing in the Visual view.
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
-import { caretAtEnd } from './visual-helpers';
+import { caretAtEnd, chooseFrom } from './visual-helpers';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
@@ -44,7 +44,7 @@ test('a figure shows its image and its caption as editable rich text; label and 
 test('insert an image, add a caption, type it, drag a handle: the source gets the caption and width: …%', async ({ page }) => {
   await load(page, 'Text\n');
   await visual(page).locator('p').first().click();
-  await page.getByRole('toolbar', { name: 'Formatting' }).getByRole('button', { name: 'Insert image' }).click();
+  await chooseFrom(page.getByRole('toolbar', { name: 'Formatting' }), 'Insert', 'Insert image');
   await page.getByRole('form', { name: 'Image' }).getByRole('button', { name: 'logo.svg' }).click();
   await expect.poll(value(page)).toContain('#image("logo.svg")');
 

@@ -44,7 +44,7 @@ src/                        the widget (TypeScript); the most important API on t
       images/               images.ts: image choices, insertion, image tools (resize, alt, caption), image-call edits
       references/           references.ts: the `reference` node (@key chips), label tags, reference hints, the @ list
                             (reference-suggestion), label-edits, label-choices
-      toolbar/              toolbar.ts, toolbar-action, toolbar-blocks
+      toolbar/              toolbar.ts, toolbar-action, toolbar-blocks, toolbar-menu, floating-bar
       notes-gutter/         notes-gutter.ts (comment column), note-card (a note's thread + reply box), note-list,
                             card-layout
     source-view/            SourceView — CodeMirror 6 editing view; typst-language, lint, presence, file-links
@@ -472,17 +472,22 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
     `src` would make the whole block look different.
   - It then copies the attributes over (`setNodeMarkup`) and marks nodes pristine again wherever
     the target node was pristine.
-- **Toolbar** (`toolbar.ts`, created by `VisualView` above the editor): undo/redo, a text style
-  menu (normal text, heading 1–3), bold/italic/code (Mod+E)/link,
-  bulleted/numbered list, code block, task list, quote, text alignment, insert image, table of
-  contents (an `#outline()` block at the cursor), insert table, add/delete row/column, header row,
-  insert page break, horizontal rule (the block-node entries live in `toolbar-blocks.ts`; `Action`
-  in `toolbar-action.ts`), and "Comment" when the view has a `comment` option (enabled with a
-  caret or selection in text outside code blocks). Each entry is a row in a table of Tiptap chain
-  commands; after every transaction the buttons show `aria-pressed` and are disabled when
+- **Toolbar** (`toolbar.ts`, created by `VisualView` above the editor), kept short: undo/redo, a
+  text style menu (normal text, heading 1–3), bulleted/numbered/task list, an **Align** menu
+  (left, center, right, justify; its icon is the current alignment) and an **Insert** menu (image,
+  table, table of contents — an `#outline()` block —, code block, quote, horizontal rule, page
+  break), and "Comment" when the view has a `comment` option (enabled with a caret or selection
+  in text outside code blocks). Menus: `toolbar-menu.ts` (`role="menu"` of toolbar buttons;
+  Escape, outside click, arrow keys). Two bars float in the text column (`floating-bar.ts`,
+  placed in `.typst-visual__body` so they scroll with the text, shown while the text or the bar
+  has focus): **Selection** (bold, italic, code (Mod+E), link, comment) above a text selection
+  or a link holding the cursor — the only place of the mark buttons —, and **Table** (add/delete
+  row/column, header row) above a table holding the cursor (not while the Selection bar shows).
+  Entries are `Action`s (`toolbar-action.ts`; block-node entries in `toolbar-blocks.ts`): Tiptap
+  chain commands; after every transaction the buttons show `aria-pressed` and are disabled when
   `editor.can()` (or the action's own `enabled`) says no.
   Mousedown is cancelled, so the text keeps focus and selection.
-  - Link (and Mod+K in the text) and insert image ask for a value in a `FieldPopover`
+  - Link (and Mod+K in the text; its popover sits in the Selection bar, also shown for a caret then) and insert image (popover at the Insert menu) ask for a value in a `FieldPopover`
     (`field-popover.ts`: one text field, Apply/Enter, optional Remove, Escape or a click outside
     closes). Link with nothing selected inserts the URL as linked text; inside a link it edits or
     removes the whole link.
@@ -515,7 +520,7 @@ lives in `projection.ts`, which is plain ProseMirror and knows nothing about Tip
   - Without `labels`: tags only (rename and remove of the label itself).
 - **Text alignment** (`text-align.ts`, `alignment.ts` for the Typst syntax):
   - Commands `setTextAlign(left|center|right|justify)` and `unsetTextAlign`; shortcuts
-    Mod-Shift-L/E/R/J; four toolbar buttons pressed by `textAlignAt(state)`.
+    Mod-Shift-L/E/R/J; four items of the toolbar's Align menu, pressed by `textAlignAt(state)`.
   - Horizontal alignment wraps the selected blocks (in the doc, an alignment block or a table
     cell) in one alignment block. A value equal to the surrounding alignment removes the wrapper
     instead, a partly selected wrapper is split (lifted blocks get default separators), and a

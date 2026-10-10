@@ -1,7 +1,7 @@
 // End-to-end tests (Playwright, against the demo build): outlines and code blocks in the Visual view.
 import type { Page } from '@playwright/test';
 import { test, expect } from './fixtures';
-import { caretAtEnd, selectText } from './visual-helpers';
+import { caretAtEnd, chooseFrom, selectionBar, selectText } from './visual-helpers';
 
 type Editor = HTMLElement & { value: string };
 
@@ -41,7 +41,7 @@ test('the language field changes the fence tag', async ({ page }) => {
 test('Code block turns the current paragraph into a fenced block', async ({ page }) => {
   await load(page, 'Intro\n\nlet a = 1\n');
   await visual(page).locator('p', { hasText: 'let a = 1' }).click();
-  await toolbar(page).getByRole('button', { name: 'Code block' }).click();
+  await chooseFrom(toolbar(page), 'Insert', 'Code block');
   await expect(visual(page).locator('.typst-visual__code-block pre code')).toHaveText('let a = 1');
   await expect.poll(value(page)).toBe('Intro\n\n```\nlet a = 1\n```\n');
 });
@@ -50,7 +50,7 @@ test('Code marks the selection as inline code, printed in backticks', async ({ p
   await load(page, 'Call print now\n');
   const paragraph = visual(page).locator('p').first();
   await selectText(paragraph, 'print');
-  await toolbar(page).getByRole('button', { name: 'Code', exact: true }).click();
+  await selectionBar(page).getByRole('button', { name: 'Code', exact: true }).click();
   await expect(paragraph.locator('code')).toHaveText('print');
   await expect.poll(value(page)).toBe('Call `print` now\n');
 });
@@ -67,7 +67,7 @@ test('inline code from the source is edited as text and keeps its delimiters', a
 test('Table of contents inserts #outline(), shown compiled with its label', async ({ page }) => {
   await load(page, '= Intro\n\nText\n\n= Details\n');
   await caretAtEnd(visual(page).locator('p', { hasText: 'Text' }));
-  await toolbar(page).getByRole('button', { name: 'Table of contents' }).click();
+  await chooseFrom(toolbar(page), 'Insert', 'Table of contents');
   await expect.poll(value(page)).toBe('= Intro\n\nText\n\n#outline()\n\n= Details\n');
   const box = visual(page).locator('.typst-visual__outline');
   await expect(box.locator('.typst-visual__box-label')).toHaveText('Table of contents');
