@@ -1,6 +1,7 @@
 import type { Diagnostic, Jump, Page, Position } from '../engine/engine';
 import { DEFAULT_FONT_URLS } from '../engine/default-fonts';
 import wasmUrl from '../engine/wasm/typst_engine_bg.wasm?url&no-inline';
+import { FileSender, type FileContent } from './project-files';
 import type { Init, Request, Response } from './protocol';
 
 export interface PreviewOptions {
@@ -29,7 +30,8 @@ export class Preview {
   private readonly pages: HTMLElement;
   private nextId = 0;
   private compiling = false;
-  private queued: { files: Record<string, string>; main: string } | null = null;
+  private queued: { files: Record<string, FileContent>; main: string } | null = null;
+  private readonly sender = new FileSender();
   private pageSizes: Page[] = [];
 
   constructor(
@@ -49,11 +51,14 @@ export class Preview {
   }
 
   /**
-   * Shows the given project files (path → Typst source), compiling `main`.
+   * Shows the given project files, compiling `main`. Files map absolute
+   * paths (`/main.typ`, `/img/logo.png`) to Typst source text or to bytes.
+   * `@preview` packages the document imports are downloaded on first use.
    * Cheap to call on every keystroke: updates arriving while a compilation
-   * runs are collapsed into one.
+   * runs are collapsed into one, and bytes that are the same `Uint8Array` as
+   * last time are not sent to the worker again.
    */
-  update(files: Record<string, string>, main = '/main.typ'): void {
+  update(files: Record<string, FileContent>, main = '/main.typ'): void {
     this.queued = { files, main };
     if (!this.compiling) void this.drain();
   }
@@ -75,7 +80,7 @@ export class Preview {
     while (this.queued) {
       const { files, main } = this.queued;
       this.queued = null;
-      const response = await this.request({ type: 'compile', files, main });
+      const response = await this.request({ type: 'compile', files: this.sender.encode(files), main });
       if (response.type !== 'compile') continue;
       // Keep showing the last good pages while the document has errors, dimmed as stale.
       const failed = response.result.pages.length === 0;
