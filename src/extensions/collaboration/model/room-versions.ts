@@ -1,7 +1,7 @@
 // RoomVersions: "Save version" and upstream changes in GitLab-backed rooms, over stateless messages.
 // See model.ts.
 import type * as Y from 'yjs';
-import { META_MAP, type ClientMessage, type ServerMessage } from './gitlab-protocol';
+import { META_MAP, type ClientMessage, type ServerMessage } from '../../../core/gitlab-protocol/gitlab-protocol';
 
 /** Stateless messages to and from the server (the Hocuspocus provider's). */
 export interface StatelessChannel {

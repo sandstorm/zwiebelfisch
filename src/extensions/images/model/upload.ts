@@ -1,12 +1,7 @@
-// Where an uploaded image goes in the project: its path from the file name, and the name it gets next to the
-// project's other files. See model.ts.
+// Where an uploaded image goes in the project: the name it gets next to the project's other files (its path from
+// the file name is core/uploads'). See model.ts.
 import type { FileContent } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
-
-/** The project path of an uploaded file named `name`: at the top, `/` and `\` replaced; null for a name like "..". */
-export function uploadPath(name: string): ProjectPath | null {
-  return ProjectPath.parse(`/${name.replace(/[/\\]/g, '_')}`);
-}
 
 /**
  * Where an upload of `content` named `path` goes: a file with the same

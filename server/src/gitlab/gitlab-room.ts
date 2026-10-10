@@ -1,7 +1,7 @@
 // GitLabRoom: one GitLab-backed room: loads the branch into the Y.Doc, commits versions, merges upstream pushes.
 // See ARCHITECTURE.md, "GitLab-backed rooms".
 import * as Y from 'yjs';
-import { ASSETS_MAP, FILES_MAP, META_MAP, type RoomMeta, type ServerMessage } from '../../../src/extensions/collaboration/model/gitlab-protocol.ts';
+import { ASSETS_MAP, FILES_MAP, META_MAP, type RoomMeta, type ServerMessage } from '../../../src/core/gitlab-protocol/gitlab-protocol.ts';
 import type { BlobCache } from './blob-cache.ts';
 import { blobSha } from './blob-sha.ts';
 import { commitActions, type RoomFiles } from './commit-actions.ts';

@@ -3,7 +3,8 @@
 import type { PlacedPresence, PresenceUser } from '../../../core/typst-document/typst-document';
 import { type FileChange } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
-import { filesUnder, type Folder, relocate, uploadChanges } from '../model/model';
+import { uploadChanges } from '../../../core/uploads/uploads';
+import { filesUnder, type Folder, relocate } from '../model/model';
 import { icon, type IconName } from './icons/icons';
 import { FileTree, type FolderMemory } from './tree/tree';
 

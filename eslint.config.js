@@ -20,11 +20,6 @@ export const boundaries = {
   groupingFolders: ['core', 'extensions', 'hosts', 'ui'],
   exceptions: [
     {
-      target: 'extensions/collaboration/model/gitlab-protocol.ts',
-      importers: '.',
-      why: 'import-free room protocol shared with the server and with the versions extension (which must not load the lazily loaded collaboration chunk, model/)',
-    },
-    {
       target: 'core/typst-engine/engine-assets.ts',
       importers: '^src/hosts/preview/preview\\.ts$',
       why: 'asset URLs (wasm, default fonts) for the main thread; in the entry, the worker bundle would emit every asset again',

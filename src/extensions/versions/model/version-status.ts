@@ -1,5 +1,5 @@
 // versionStatus: what the status line says about a message of the server on versions. Pure. See model.ts.
-import type { ServerMessage } from '../../collaboration/model/gitlab-protocol';
+import type { ServerMessage } from '../../../core/gitlab-protocol/gitlab-protocol';
 
 /** The status line for `message`: the saved version, nothing to save, merged upstream changes, a conflict, a failure. */
 export function versionStatus(message: ServerMessage): string {

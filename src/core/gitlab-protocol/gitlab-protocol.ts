@@ -1,7 +1,7 @@
 // The protocol of the rooms (the Y.Doc's maps) and of GitLab-backed rooms (stateless messages, file URLs), shared
-// by the widget (the collaboration and versions extensions) and the collaboration server (server/src). No imports:
-// the server's Node runtime loads this file directly. Imported directly rather than through model.ts (the lazily
-// loaded chunk): an exception to the entry-file rule, listed in eslint.config.js.
+// by the widget (the collaboration and versions extensions) and the collaboration server (server/src). Entry of
+// core/gitlab-protocol/. No imports: the server's Node runtime loads this file directly. In core, so that versions
+// reads it without loading collaboration's lazily loaded chunk (extensions/collaboration/model/).
 
 /** The Y.Doc map of the shared Typst files: path → Y.Text (see SharedProject; the server reads and merges them). */
 export const FILES_MAP = 'files';

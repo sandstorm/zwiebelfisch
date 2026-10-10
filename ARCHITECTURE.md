@@ -56,6 +56,10 @@ src/                        the widget (TypeScript); the most important API on t
     document-links/         DocumentLinkProvider: the file paths a Typst document names (find-links.ts, Lezer),
                             where they lead and following them (LinkWorkspace: what it needs from the widget);
                             reading-order.ts (main file, then its #includes depth first; a file's neighbours)
+    uploads/                uploadChanges: files from the computer (picked, dropped) as `create` changes at the top
+                            of the project (`.typ` as text, the rest as bytes); used by files and images
+    gitlab-protocol/        the rooms' Y.Doc map names (FILES_MAP, ASSETS_MAP, META_MAP) and GitLab rooms' messages
+                            and file URLs: import-free, shared by collaboration, versions and server/
     disposable/             Disposable (VS Code's shape: `new Disposable(fn)` disposes once; `Disposable.from(...)` in
                             reverse order)
     event-emitter/          EventEmitter<T> (`event` to subscribe, `fire`), Event<T>
@@ -69,7 +73,7 @@ src/                        the widget (TypeScript); the most important API on t
                             through the file named like it. Extensions never import each other.
     files/                  files (the file panel in a side panel), fileNavigation (editor frame); files.css (each
                             extension with styles has its <name>.css, registered with Workbench.registerStyleSheet)
-      model/                tree-model.ts (the tree as data, keyboard moves, relocate), upload.ts (uploadChanges)
+      model/                tree-model.ts (the tree as data, keyboard moves, relocate)
       workbench/            file-panel.ts (FilePanel: header, prompts, uploads), file-navigation.ts ("← previous file"
                             / "next file →"), tree/ (FileTree: rows, keyboard, drag & drop, presence), icons/ (leaf)
     spreadsheets/           spreadsheets: the `.ic` file view; every edit also stores `name.ic.gen.typ`
@@ -85,7 +89,7 @@ src/                        the widget (TypeScript); the most important API on t
       model/                zoom.ts (stepZoom over the presets, zoomText / zoomLabel)
       preview/              zoom-controls.ts (zoomControls), follow-cursor.ts (followCursor), page-number.ts (pageNumber)
     images/                 images(): image boxes + figures, "Insert image", ProjectImages (object URLs, uploads);
-                            model/ (image-call.ts: arguments edited in place; upload.ts: uploadPath, uploadTarget),
+                            model/ (image-call.ts: arguments edited in place; upload.ts: uploadTarget),
                             visual-view/ (imagesVisualView: specs, tools, insertion, image-path-link),
                             workbench/ (AssetView: images and data files read-only, the `image` / `data` file views)
     rendered-boxes/         renderedBoxes(): raw boxes drawn as snippets from the preview; model/ (Snippet,
@@ -102,8 +106,8 @@ src/                        the widget (TypeScript); the most important API on t
                             (CommentsPdf: the PDF variants "Without comments" / "With comments", comments.exportPdf)
     collaboration/          collaboration.ts (eager: the extension, the `collaboration` service), collaboration-link.ts
                             (CollaborationLink: loads model/ on demand); model/ (the lazily loaded chunk: Collaboration,
-                            SharedProject, SharedAssets, RemoteCursors, RoomVersions; gitlab-protocol.ts, import-free,
-                            shared with the server; in-process.ts, Y.Doc/awareness wiring for tests); source-view/ and
+                            SharedProject, SharedAssets, RemoteCursors, RoomVersions (the protocol: core/gitlab-protocol);
+                            in-process.ts, Y.Doc/awareness wiring for tests); source-view/ and
                             visual-view/ (drawing the other users' carets and selections, also in raw boxes)
     diagnostics/            diagnostics.ts (the extension); model/ (DiagnosticCollection, describeDiagnostic,
                             diagnosticHighlight, diagnostics-summary.ts); source-view/ (lint); workbench/
@@ -152,8 +156,6 @@ docs/                       research and concepts (YYYY_MM_DD_slug.md)
   ESLint enforces this (`local/entry-imports`, `eslint-rules/entry-imports.js`); only TypeScript and
   CSS sources count (not the generated `wasm/`, `fonts/` or the `fixtures/`). The exceptions are
   listed once, with reasons, in `eslint.config.js` (`boundaries.exceptions`):
-  - `extensions/collaboration/model/gitlab-protocol.ts` — anyone: import-free, shared with `server/` and
-    the versions extension (`extensions/versions`, which must not load the lazily loaded collaboration chunk, `model/`);
   - `core/typst-engine/engine-assets.ts` — `hosts/preview/preview.ts`: the asset URLs; in the
     entry, the worker bundle (which imports the entry) would emit every asset a second time;
   - `extensions/collaboration/model/in-process.ts` — test files;
@@ -283,7 +285,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, fileList?, allowFileCha
   extension) gives every document's Visual view its `ImageUrls` (image files resolved like Typst
   (`ProjectPath.resolve`) and shown as object URLs, made once per content and revoked when replaced; refreshed on
   `Preview.onDidRender`) and `ImageAssets` (the project's images as `PathReference`s (`ProjectPath.referenceTo`);
-  uploads become a `create` change (`uploadPath`, `uploadTarget` in `model/`) that goes through `allowFileChange`
+  uploads become a `create` change (`uploadChanges` of `core/uploads`, `uploadTarget` in `model/`) that goes through `allowFileChange`
   like the file panel's; an upload equal to an existing file (`name.png`, `name-2.png`, …) reuses it, a different
   one gets the first free of those names — every pasted screenshot is `image.png`; refusals — not an image Typst
   shows, the host's veto — come back as an error the popover shows). The `renderedBoxes` extension gives each
@@ -1469,7 +1471,7 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
 collaboration.ts        eager entry: collaboration(options, user?) (the extension), CollaborationSession (the service)
 collaboration-link.ts   CollaborationLink: import()s model/ on demand, publishes the selection, shows the cursors
 model/                  the lazily loaded chunk (Yjs, Hocuspocus; no DOM): Collaboration (model.ts), SharedProject,
-                        SharedAssets, RemoteCursors, RoomVersions; gitlab-protocol.ts (import-free, also the server's)
+                        SharedAssets, RemoteCursors, RoomVersions (their protocol: core/gitlab-protocol, also the server's)
 source-view/            presence: carets + selections in a CodeMirror editor (remotePresence, setPresence)
 visual-view/            presence: VisualViewContribution (decorations, box outlines; boxPresence for raw boxes' code)
 ```
@@ -1542,7 +1544,7 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
 
 A room named `gitlab:<project id or path>@<branch>` is that branch (`parseRoomName`). The server
 config (`gitlab: {url, token, webhookSecret?, authorEmail?, fetch?}`, from `TYPST_GITLAB_*` in
-`main.ts`) holds the only GitLab token. Protocol (`src/extensions/collaboration/model/gitlab-protocol.ts`, with the
+`main.ts`) holds the only GitLab token. Protocol (`src/core/gitlab-protocol/gitlab-protocol.ts`, with the
 Y.Doc's map names `FILES_MAP`, `ASSETS_MAP`, `META_MAP`):
 
 ```

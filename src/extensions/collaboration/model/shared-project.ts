@@ -3,7 +3,7 @@ import * as Y from 'yjs';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { type Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
-import { FILES_MAP } from './gitlab-protocol';
+import { FILES_MAP } from '../../../core/gitlab-protocol/gitlab-protocol';
 
 interface Binding {
   path: ProjectPath;

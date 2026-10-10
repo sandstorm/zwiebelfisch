@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Tests for version-controls.ts.
 import { afterEach, describe, expect, it } from 'vitest';
-import type { ServerMessage } from '../../collaboration/model/gitlab-protocol';
+import type { ServerMessage } from '../../../core/gitlab-protocol/gitlab-protocol';
 import { VersionControls } from './version-controls';
 
 const cleanup: (() => void)[] = [];

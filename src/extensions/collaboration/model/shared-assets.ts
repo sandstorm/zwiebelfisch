@@ -2,7 +2,7 @@
 import * as Y from 'yjs';
 import { type FileChange, type Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
-import { ASSETS_MAP } from './gitlab-protocol';
+import { ASSETS_MAP } from '../../../core/gitlab-protocol/gitlab-protocol';
 
 type AssetValue = string | Uint8Array;
 

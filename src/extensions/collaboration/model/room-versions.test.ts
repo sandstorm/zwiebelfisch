@@ -1,7 +1,7 @@
 // Tests for room-versions.ts.
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
-import { META_MAP } from './gitlab-protocol';
+import { META_MAP } from '../../../core/gitlab-protocol/gitlab-protocol';
 import { RoomVersions } from './room-versions';
 
 function setup() {

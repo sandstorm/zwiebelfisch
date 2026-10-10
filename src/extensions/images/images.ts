@@ -10,7 +10,8 @@ import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './images.css?inline';
 import { type FileChange, type Project } from '../../core/project/project';
 import { type PathReference, ProjectPath } from '../../core/paths/paths';
-import { uploadPath, uploadTarget } from './model/model';
+import { uploadChanges } from '../../core/uploads/uploads';
+import { uploadTarget } from './model/model';
 import { imagesVisualView, type ImageAssets, type ImageUrls } from './visual-view/visual-view';
 import { assetViews } from './workbench/workbench';
 
@@ -108,12 +109,12 @@ export class ProjectImages {
 
   private async upload(upload: File, file: ProjectPath | undefined): Promise<{ path: PathReference } | { error: string }> {
     if (!file) return { error: 'This document is no longer part of the project.' };
-    const path = uploadPath(upload.name);
-    if (!path || ProjectPath.kind(path) !== 'image') {
+    const [change] = await uploadChanges([upload]);
+    if (change?.kind !== 'create' || ProjectPath.kind(change.path) !== 'image') {
       return { error: `${upload.name} is not an image the document can show (PNG, JPEG, GIF, SVG or WebP).` };
     }
     const { project, request } = this.options;
-    const content = new Uint8Array(await upload.arrayBuffer());
+    const { path, content } = change;
     const target = uploadTarget(path, content, (candidate) => project.content(candidate));
     if (project.has(target)) return { path: ProjectPath.referenceTo(file, target) };
     const problem = await request({ kind: 'create', path: target, content });

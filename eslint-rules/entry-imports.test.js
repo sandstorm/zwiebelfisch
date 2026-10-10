@@ -48,7 +48,8 @@ describe('entry-imports', () => {
   });
 
   it('allows the listed exceptions, and only for their importers', () => {
-    expect(lint('server/src/gitlab/merge.ts', "import { x } from '../../../src/extensions/collaboration/model/gitlab-protocol.ts';")).toEqual([]);
+    expect(lint('server/src/gitlab/gitlab-rooms.test.ts', "import { x } from '../../../src/extensions/collaboration/model/shared-project.ts';")).toEqual([]);
+    expect(lint('server/src/gitlab/gitlab-room.ts', "import { x } from '../../../src/extensions/collaboration/model/shared-project.ts';")).toHaveLength(1);
     expect(lint('src/typst-editor/typst-editor.files.test.ts', "import { x } from '../extensions/collaboration/model/in-process';")).toEqual([]);
     expect(lint('src/typst-editor/typst-editor.ts', "import { x } from '../extensions/collaboration/model/in-process';")).toHaveLength(1);
   });
