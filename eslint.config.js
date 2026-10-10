@@ -39,6 +39,11 @@ function noDom(message) {
 export const layers = [
   { importers: '^src/core/', forbidden: '^src/(?!core/)', message: 'core/ imports only core/.' },
   {
+    importers: '^src/ui/([^/]+)/',
+    forbidden: '^src/(?!core/|ui/$1/)',
+    message: 'ui/ imports only core/: a feature-neutral widget knows no host, extension or other widget.',
+  },
+  {
     importers: '^src/hosts/',
     forbidden: '^src/(extensions|typst-editor|testing)/',
     message: "hosts never import extensions/, testing/ or typst-editor/ (a host's tests use its own nodes and specs).",

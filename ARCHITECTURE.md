@@ -229,6 +229,7 @@ shrink, not grow.
   | `core/**` | anything outside `core/`; Yjs (`yjs`, `y-*`, `@hocuspocus/*`); editor libraries; the DOM |
   | `extensions/<name>/model/**` | editor libraries (`@tiptap/*`, `prosemirror-*`, `@codemirror/*`, `codemirror`); the DOM; the extension's view folders (`visual-view/`, `source-view/`, `preview/`, `workbench/`) |
   | `hosts/**` | `extensions/`, `typst-editor/`, `testing/` (a host's tests use its own nodes and specs) |
+  | `ui/<name>/**` | anything outside `core/` and itself: hosts, extensions, other widgets |
   | `extensions/<a>/**` | `extensions/<b>/` (extensions meet through core models or a host's generic contribution point) |
   | anything but `*.test.ts` and `testing/` | `testing/` |
 
