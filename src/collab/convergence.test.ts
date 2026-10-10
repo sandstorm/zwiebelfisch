@@ -6,7 +6,7 @@ import type { Editor } from '@tiptap/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
-import { Comments } from '../comments/comments';
+import { addMarginNote } from '../editor/add-margin-note';
 import { Project } from '../editor/project';
 import { SourceView } from '../source-view/source-view';
 import { VisualView } from '../visual-view/visual-view';
@@ -19,7 +19,7 @@ afterEach(() => cleanup.splice(0).forEach((fn) => fn()));
 
 /**
  * One user's widget, reduced to what collaboration touches: the project, both
- * editing views of the main file, the comments, and the Collaboration
+ * editing views of the main file, and the Collaboration
  * joining the room `peer` is in (already synced, as with a server).
  */
 async function user(name: string, files: Record<string, string>, peer?: { ydoc: Y.Doc; awareness: Awareness }) {
@@ -32,8 +32,7 @@ async function user(name: string, files: Record<string, string>, peer?: { ydoc: 
   }
   const project = new Project(MAIN, files);
   const document = project.document(MAIN)!;
-  const comments = new Comments(document, { user: { name } });
-  const collaboration = await Collaboration.start({ doc: ydoc, awareness }, { project, comments, user: { name } });
+  const collaboration = await Collaboration.start({ doc: ydoc, awareness }, { project, user: { name } });
   const visualParent = window.document.createElement('div');
   const sourceParent = window.document.createElement('div');
   window.document.body.append(visualParent, sourceParent);
@@ -49,7 +48,7 @@ async function user(name: string, files: Record<string, string>, peer?: { ydoc: 
   });
   const tiptap = (visualParent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
   const codemirror = EditorView.findFromDOM(sourceParent.querySelector<HTMLElement>('.cm-editor')!)!;
-  return { ydoc, awareness, disconnect, project, document, comments, collaboration, tiptap, codemirror, visualParent, sourceParent };
+  return { ydoc, awareness, disconnect, project, document, collaboration, tiptap, codemirror, visualParent, sourceParent };
 }
 
 type User = Awaited<ReturnType<typeof user>>;
@@ -104,20 +103,20 @@ describe('collaboration', () => {
     expect(a.tiptap.state.doc.textContent).toBe(b.tiptap.state.doc.textContent);
   });
 
-  it('review comments survive edits by the other user', async () => {
+  it('a margin note reaches the other user and survives their edits', async () => {
     const a = await user('Ann', { [MAIN]: START });
     const b = await user('Bob', {}, a);
     const from = START.indexOf('Second');
-    const id = a.comments.add({ from, to: from + 6 }, 'Rename?')!;
-    typeSource(b, 0, '#set text(size: 11pt)\n');
+    const added = addMarginNote(a.document.text, { from, to: from + 6 })!;
+    a.document.change(added.changes, 'test');
+    typeSource(a, a.document.text.indexOf('][]') + 2, 'Rename? Ann');
+    typeSource(b, b.document.text.indexOf('First'), 'The ');
     typeVisual(b, 'Second', ' More.');
-    b.comments.reply(id, 'Fine as is');
     for (const u of [a, b]) {
-      const [thread] = u.comments.threads();
-      expect(thread.quote).toBe('Second');
-      expect(u.document.text.slice(thread.range!.from, thread.range!.to)).toBe('Second');
-      expect(thread.comments.map((c) => c.author)).toEqual(['Ann', 'Bob']);
+      expect(u.document.text).toContain('The First paragraph.');
+      expect(u.document.text).toContain('#margin-note[Second][Rename? Ann] paragraph. More.');
     }
+    expect(a.document.text).toBe(b.document.text);
   });
 
   it('undo is per user, in both views', async () => {

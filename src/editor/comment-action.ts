@@ -26,7 +26,7 @@ export class CommentAction {
     this.button = commentButton(root.ownerDocument);
     this.button.addEventListener('mousedown', (event) => event.preventDefault()); // keep the editor's selection
     this.button.addEventListener('click', () => this.comment());
-    // Capture: the shortcut is ours before an editor (or an older listener) sees it.
+    // Capture: the shortcut is ours before an editor sees it.
     root.addEventListener('keydown', this.handleKey, true);
   }
 

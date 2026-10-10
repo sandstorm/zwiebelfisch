@@ -2,7 +2,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
-import { Comments } from '../comments/comments';
 import { CollaborationLink } from './collaboration-link';
 import { Project } from './project';
 
@@ -14,13 +13,12 @@ function setup() {
   const ydoc = new Y.Doc();
   const awareness = new Awareness(ydoc);
   const project = new Project(MAIN, { [MAIN]: 'Hello world' });
-  const comments = new Comments(project.document(MAIN)!);
   const area = document.createElement('div');
   const input = document.createElement('textarea');
   area.append(input);
   document.body.append(area);
   const view = { selection: () => ({ from: 6, to: 11 }) };
-  const link = new CollaborationLink({ doc: ydoc, awareness }, { project, comments, user: { name: 'Ann' } }, area, { current: () => ({ path: MAIN, view }) });
+  const link = new CollaborationLink({ doc: ydoc, awareness }, { project, user: { name: 'Ann' } }, area, { current: () => ({ path: MAIN, view }) });
   cleanup.push(() => link.destroy(), () => awareness.destroy(), () => area.remove());
   return { ydoc, awareness, link, input, project };
 }
