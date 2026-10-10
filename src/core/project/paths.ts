@@ -18,7 +18,7 @@ export function displayName(path: string): string {
 
 /**
  * Turns a name someone typed ("chapter 2", "parts/intro.typ") into a project
- * path. Adds `extension` when the name has none. At most one folder level.
+ * path. Adds `extension` when the name has none. Folders may nest.
  */
 export function toPath(name: string, extension: string): { path: string } | { error: string } {
   const trimmed = name.trim().replace(/^\.?\/+/, '');
@@ -27,7 +27,6 @@ export function toPath(name: string, extension: string): { path: string } | { er
   if (trimmed.includes('\\') || segments.some((s) => s === '' || s === '.' || s === '..')) {
     return { error: 'Names cannot contain "\\", "..", or empty folder names.' };
   }
-  if (segments.length > 2) return { error: 'Files can be at most one folder deep.' };
   const last = segments[segments.length - 1];
   return { path: `/${trimmed}${last.includes('.') ? '' : extension}` };
 }

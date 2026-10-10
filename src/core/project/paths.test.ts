@@ -18,16 +18,16 @@ describe('toPath', () => {
     expect(toPath('  /parts/intro.typ ', '.typ')).toEqual({ path: '/parts/intro.typ' });
     expect(toPath('./notes.typ', '.typ')).toEqual({ path: '/notes.typ' });
     expect(toPath('logo', '.png')).toEqual({ path: '/logo.png' });
+    expect(toPath('a/b/c', '.typ')).toEqual({ path: '/a/b/c.typ' });
   });
 
   it('keeps an explicit extension', () => {
     expect(toPath('table.csv', '.typ')).toEqual({ path: '/table.csv' });
   });
 
-  it('rejects empty names, parent references and deep folders', () => {
+  it('rejects empty names, parent references and empty folder names', () => {
     expect(toPath('  ', '.typ')).toEqual({ error: 'Please enter a name.' });
     expect(toPath('../secret.typ', '.typ')).toHaveProperty('error');
-    expect(toPath('a/b/c.typ', '.typ')).toHaveProperty('error');
     expect(toPath('folder/', '.typ')).toHaveProperty('error');
     expect(toPath('a\\b.typ', '.typ')).toHaveProperty('error');
   });

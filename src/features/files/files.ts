@@ -1,18 +1,28 @@
-// FileSwitcher: the file bar of multi-file projects (tabs, new, upload, rename, delete, drop). Entry of
-// features/files/. See ARCHITECTURE.md, "createTypstEditor".
-import { initials, presenceStyle, type PlacedPresence, type PresenceUser } from '../../core/typst-document/typst-document';
-import { displayName, extensionOf, type FileChange, fileKind, type FileKind, toPath } from '../../core/project/project';
+// FilePanel: the project's files as a tree in the left side panel (new file / folder, upload, rename,
+// delete, drag & drop, presence). Entry of features/files/. See ARCHITECTURE.md, "File panel".
+import type { PlacedPresence, PresenceUser } from '../../core/typst-document/typst-document';
+import { displayName, extensionOf, type FileChange, toPath } from '../../core/project/project';
+import { icon, type IconName } from './icons';
+import { FileTree, filesUnder, type FolderMemory, relocate } from './tree/tree';
 import { uploadChanges } from './upload';
 
 export { AssetView } from './asset-view';
 export { insertImage } from './insert-image';
 export { uploadChanges } from './upload';
+export type { FolderMemory } from './tree/tree';
 
-export interface FileSwitcherOptions {
+/** The file panel's icon (e.g. for the button that opens it). */
+export function filesPanelIcon(doc: Document): SVGSVGElement {
+  return icon(doc, 'files');
+}
+
+export interface FilePanelOptions {
   /** Someone picked a file. */
   onOpen(path: string): void;
   /** Someone asked for `change`. Resolves to why it was refused (shown to them), or null once applied. */
   onChange(change: FileChange): Promise<string | null>;
+  /** Where the open folders are remembered (default: only while the panel lives). */
+  memory?: FolderMemory;
 }
 
 export interface FileListState {
@@ -30,26 +40,18 @@ interface Prompt {
   submit(value: string): Promise<string | null>;
 }
 
-const ICONS: Record<FileKind | 'add' | 'upload' | 'rename' | 'delete', string> = {
-  typst: '<path d="M4 1.5h5.5L13 5v9.5H4z"/><path d="M9.5 1.5V5H13M6.5 8.5h4M6.5 11h4"/>',
-  image: '<rect x="2" y="3" width="12" height="10" rx="1.5"/><circle cx="6" cy="6.5" r="1.2"/><path d="m2.5 12 3.5-3.5 2.5 2.5 2-2 3 3"/>',
-  data: '<path d="M4 1.5h5.5L13 5v9.5H4z"/><path d="M9.5 1.5V5H13"/>',
-  add: '<path d="M8 3v10M3 8h10"/>',
-  upload: '<path d="M8 11V3M4.5 6.5 8 3l3.5 3.5M3 13h10"/>',
-  rename: '<path d="m10.5 2.5 3 3L6 13H3v-3z"/>',
-  delete: '<path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.7 9h5.6l.7-9"/>',
-};
-
 /**
- * The file bar shown above the editing views of a multi-file project: one tab
- * per file (the main file marked), plus "New file", "Upload", "Rename" and
- * "Delete". Names are asked for inline, and refused changes show why. Files
- * dropped on `dropTarget` are uploaded. It only turns gestures into
+ * The file panel: a "Files" header with New file, New folder, Upload, Rename
+ * and Delete, and the project as a `FileTree`. Names are asked for inline,
+ * refused changes show why. Rename and Delete act on the focused row (a file,
+ * or a folder with everything in it); the main file (and a folder holding it)
+ * stays. New files and uploads go into the focused folder. Files dropped on
+ * `dropTarget` are uploaded while `acceptDrops`. It only turns gestures into
  * `FileChange`s; whether they happen is up to `onChange`.
  */
-export class FileSwitcher {
+export class FilePanel {
   readonly element: HTMLElement;
-  private readonly list: HTMLElement;
+  private readonly tree: FileTree;
   private readonly rename: HTMLButtonElement;
   private readonly remove: HTMLButtonElement;
   private readonly picker: HTMLInputElement;
@@ -57,51 +59,58 @@ export class FileSwitcher {
   private state: FileListState = { paths: [], main: '', active: '' };
   /** Who else is in which file. */
   private others = new Map<string, PresenceUser[]>();
+  /** Folders made with "New folder" that hold no file yet. */
+  private emptyFolders = new Set<string>();
+  /** Where the next upload goes. */
+  private uploadFolder = '';
   private readonly detachDrop: () => void;
+  /** Whether files dropped anywhere on `dropTarget` are uploaded (else ignored). */
+  acceptDrops = true;
 
   constructor(
     parent: HTMLElement,
     dropTarget: HTMLElement,
-    private readonly options: FileSwitcherOptions,
+    private readonly options: FilePanelOptions,
   ) {
     const doc = parent.ownerDocument;
     this.element = element(doc, 'div', 'typst-files');
     this.element.dataset.testid = 'typst-files';
-    this.list = element(doc, 'div', 'typst-files__list');
-    this.list.setAttribute('role', 'tablist');
-    this.list.setAttribute('aria-label', 'Files');
-    this.list.addEventListener('click', (event) => {
-      const path = (event.target as HTMLElement).closest<HTMLElement>('[data-path]')?.dataset.path;
-      if (path) options.onOpen(path);
-    });
+    const header = element(doc, 'div', 'typst-files__header');
+    const title = element(doc, 'span', 'typst-files__title');
+    title.textContent = 'Files';
     this.picker = doc.createElement('input');
     this.picker.type = 'file';
     this.picker.multiple = true;
     this.picker.hidden = true;
-    this.picker.addEventListener('change', () => void this.upload([...(this.picker.files ?? [])]));
+    this.picker.addEventListener('change', () => void this.upload([...(this.picker.files ?? [])], this.uploadFolder));
     const actions = element(doc, 'div', 'typst-files__actions');
     actions.append(
-      withText(iconButton(doc, 'add', 'New file', () => this.askCreate())),
-      withText(iconButton(doc, 'upload', 'Upload', () => this.picker.click())),
-      (this.rename = iconButton(doc, 'rename', 'Rename', () => this.askRename())),
-      (this.remove = iconButton(doc, 'delete', 'Delete', () => this.askDelete())),
+      iconButton(doc, 'add', 'New file', () => this.askCreate()),
+      iconButton(doc, 'add-folder', 'New folder', () => this.askFolder()),
+      iconButton(doc, 'upload', 'Upload', () => this.pick()),
+      (this.rename = iconButton(doc, 'rename', 'Rename', () => this.askRename(this.tree.current))),
+      (this.remove = iconButton(doc, 'delete', 'Delete', () => this.askDelete(this.tree.current))),
     );
-    this.element.append(this.list, actions, this.picker);
-    parent.prepend(this.element);
-    this.detachDrop = acceptDrops(dropTarget, () => !this.element.hidden, (files) => void this.upload(files));
-  }
-
-  set visible(visible: boolean) {
-    this.element.hidden = !visible;
+    header.append(title, actions, this.picker);
+    this.element.append(header);
+    this.tree = new FileTree(this.element, {
+      onOpen: (path) => options.onOpen(path),
+      onRename: (path) => this.askRename(path),
+      onDelete: (path) => this.askDelete(path),
+      onMove: (source, folder) => void this.move(source, folder),
+      onUpload: (files, folder) => void this.upload(files, folder),
+      memory: options.memory,
+    });
+    this.tree.element.addEventListener('focusin', () => this.updateButtons());
+    parent.append(this.element);
+    this.detachDrop = acceptDrops(dropTarget, () => this.acceptDrops, (files) => void this.upload(files, ''));
   }
 
   render(state: FileListState): void {
     this.state = state;
-    const doc = this.element.ownerDocument;
-    this.list.replaceChildren(...state.paths.map((path) => fileTab(doc, path, state, this.others.get(path) ?? [])));
-    const fixed = state.active === state.main;
-    this.rename.disabled = fixed;
-    this.remove.disabled = fixed;
+    for (const folder of this.emptyFolders) if (filesUnder(state.paths, folder).length > 0) this.emptyFolders.delete(folder);
+    this.tree.render({ ...state, folders: [...this.emptyFolders], presence: this.others });
+    this.updateButtons();
   }
 
   /** Marks the files other users are in with a colored dot with their initials each. */
@@ -116,60 +125,123 @@ export class FileSwitcher {
     this.element.remove();
   }
 
+  /** Rename and Delete are off for the main file and a folder holding it. */
+  private updateButtons(): void {
+    const fixed = this.holdsMain(this.tree.current);
+    this.rename.disabled = fixed;
+    this.remove.disabled = fixed;
+  }
+
+  private holdsMain(path: string): boolean {
+    return path === this.state.main || this.state.main.startsWith(`${path}/`);
+  }
+
+  /** The focused folder as the start of a name: 'chapters/' ('' at the top level). */
+  private folderPrefix(): string {
+    const folder = this.tree.folder;
+    return folder === '' ? '' : `${displayName(folder)}/`;
+  }
+
+  private pick(): void {
+    this.uploadFolder = this.tree.folder;
+    this.picker.click();
+  }
+
   private askCreate(): void {
     this.ask({
       message: 'Name of the new file',
-      value: '',
+      value: this.folderPrefix(),
       confirm: 'Create',
       submit: async (name) => {
         const target = toPath(name, '.typ');
         if ('error' in target) return target.error;
-        return this.request({ kind: 'create', path: target.path, content: '' }, target.path);
+        return this.request([{ kind: 'create', path: target.path, content: '' }], target.path);
       },
     });
   }
 
-  private askRename(): void {
-    const from = this.state.active;
+  private askFolder(): void {
+    this.ask({
+      message: 'Name of the new folder',
+      value: this.folderPrefix(),
+      confirm: 'Create',
+      submit: async (name) => {
+        const target = toPath(name, '');
+        if ('error' in target) return target.error;
+        if (this.state.paths.includes(target.path) || this.tree.isFolder(target.path)) return `${displayName(target.path)} already exists.`;
+        this.emptyFolders.add(target.path);
+        this.render(this.state);
+        this.tree.focus(target.path);
+        return null;
+      },
+    });
+  }
+
+  private askRename(from: string): void {
+    if (this.holdsMain(from)) return;
+    const folder = this.tree.isFolder(from);
     this.ask({
       message: `Rename ${displayName(from)} to`,
       value: displayName(from),
       confirm: 'Rename',
       submit: async (name) => {
-        const target = toPath(name, extensionOf(from));
+        const target = toPath(name, folder ? '' : extensionOf(from));
         if ('error' in target) return target.error;
-        if (target.path === from) return null;
-        return this.request({ kind: 'rename', from, path: target.path }, target.path);
+        return this.relocate(from, target.path);
       },
     });
   }
 
-  private askDelete(): void {
-    const path = this.state.active;
+  private askDelete(path: string): void {
+    if (this.holdsMain(path)) return;
+    const files = this.tree.isFolder(path) ? filesUnder(this.state.paths, path) : [path];
+    const what = files.length === 1 && files[0] === path ? displayName(path) : `${displayName(path)} and the ${files.length} files in it`;
     this.ask({
-      message: `Delete ${displayName(path)}? This cannot be undone.`,
+      message: `Delete ${what}? This cannot be undone.`,
       confirm: 'Delete',
       danger: true,
-      submit: () => this.request({ kind: 'delete', path }, this.state.main),
+      submit: async () => {
+        this.emptyFolders.delete(path);
+        this.render(this.state);
+        return this.request(files.map((file) => ({ kind: 'delete', path: file })), this.state.main);
+      },
     });
   }
 
-  private async upload(files: File[]): Promise<void> {
-    this.picker.value = '';
-    let opened: string | null = null;
-    for (const change of await uploadChanges(files)) {
-      const error = await this.options.onChange(change);
-      if (error) return this.ask({ message: error, confirm: 'OK', submit: async () => null });
-      opened = change.path;
-    }
-    if (opened) this.options.onOpen(opened);
+  /** A row dragged onto `folder`. */
+  private async move(source: string, folder: string): Promise<void> {
+    const target = `${folder}/${source.slice(source.lastIndexOf('/') + 1)}`;
+    const error = await this.relocate(source, target);
+    if (error) this.ask({ message: error, confirm: 'OK', submit: async () => null });
   }
 
-  /** Asks for `change`, then opens `open` if it was applied. */
-  private async request(change: FileChange, open: string): Promise<string | null> {
-    const error = await this.options.onChange(change);
-    if (!error) this.options.onOpen(open);
+  /** Moves a file, or a folder with its files, to `target`; opens the moved file. */
+  private async relocate(source: string, target: string): Promise<string | null> {
+    if (this.holdsMain(source)) return 'The main file stays where it is.';
+    const renames = relocate(this.state.paths, source, target);
+    if (this.emptyFolders.delete(source)) this.emptyFolders.add(target);
+    const open = renames.find((r) => r.from === this.state.active)?.path ?? (renames.length === 1 ? renames[0].path : this.state.active);
+    const error = await this.request(renames.map((r) => ({ kind: 'rename', ...r })), open);
+    if (!error && renames.length !== 1) this.tree.focus(target);
     return error;
+  }
+
+  private async upload(files: File[], folder: string): Promise<void> {
+    this.picker.value = '';
+    const changes = (await uploadChanges(files)).map((change) => ({ ...change, path: folder + change.path }));
+    const error = await this.request(changes, changes[changes.length - 1]?.path ?? null);
+    if (error) this.ask({ message: error, confirm: 'OK', submit: async () => null });
+  }
+
+  /** Asks for `changes` one after the other (stopping at a refusal), then opens `open` if all were applied. */
+  private async request(changes: FileChange[], open: string | null): Promise<string | null> {
+    for (const change of changes) {
+      const error = await this.options.onChange(change);
+      if (error) return error;
+    }
+    if (open !== null && changes.length > 0) this.options.onOpen(open);
+    this.render(this.state);
+    return null;
   }
 
   private ask(prompt: Prompt): void {
@@ -181,49 +253,17 @@ export class FileSwitcher {
       if (error === null) this.closePrompt();
       else form.querySelector('.typst-files__error')!.textContent = error;
     });
-    this.element.after(form);
+    this.tree.element.before(form);
     this.prompt = form;
-    (form.querySelector('input') ?? form.querySelector('button'))?.focus();
+    const input = form.querySelector('input');
+    (input ?? form.querySelector('button'))?.focus();
+    input?.setSelectionRange(input.value.length, input.value.length);
   }
 
   private closePrompt(): void {
     this.prompt?.remove();
     this.prompt = null;
   }
-}
-
-function fileTab(doc: Document, path: string, state: FileListState, others: readonly PresenceUser[]): HTMLButtonElement {
-  const tab = element(doc, 'button', 'typst-files__tab');
-  tab.type = 'button';
-  tab.setAttribute('role', 'tab');
-  tab.setAttribute('aria-selected', String(path === state.active));
-  tab.dataset.path = path;
-  tab.title = displayName(path);
-  const name = element(doc, 'span', 'typst-files__name');
-  name.textContent = displayName(path);
-  tab.append(icon(doc, fileKind(path)), name);
-  if (path === state.main) {
-    const badge = element(doc, 'span', 'typst-files__badge');
-    badge.textContent = 'Main';
-    tab.append(badge);
-  }
-  if (others.length > 0) tab.append(presenceDots(doc, others));
-  return tab;
-}
-
-/** One dot per user in the file: initials on their color, the name as tooltip. */
-function presenceDots(doc: Document, users: readonly PresenceUser[]): HTMLElement {
-  const dots = element(doc, 'span', 'typst-files__presence');
-  dots.setAttribute('aria-label', `Here: ${users.map((user) => user.name).join(', ')}`);
-  for (const user of users) {
-    const dot = element(doc, 'span', 'typst-files__user');
-    dot.textContent = initials(user.name);
-    dot.title = user.name;
-    dot.dataset.user = user.name;
-    presenceStyle(dot, user);
-    dots.append(dot);
-  }
-  return dots;
 }
 
 function promptForm(doc: Document, prompt: Prompt, cancel: () => void): HTMLFormElement {
@@ -285,29 +325,14 @@ function acceptDrops(target: HTMLElement, enabled: () => boolean, onFiles: (file
   };
 }
 
-function iconButton(doc: Document, kind: keyof typeof ICONS, label: string, onClick: () => void) {
+function iconButton(doc: Document, name: IconName, label: string, onClick: () => void) {
   const button = element(doc, 'button', 'typst-files__action');
   button.type = 'button';
   button.title = label;
   button.setAttribute('aria-label', label);
-  button.append(icon(doc, kind));
+  button.append(icon(doc, name));
   button.addEventListener('click', onClick);
   return button;
-}
-
-/** Shows the button's label next to its icon. */
-function withText(button: HTMLButtonElement): HTMLButtonElement {
-  button.append(button.title);
-  return button;
-}
-
-function icon(doc: Document, kind: keyof typeof ICONS): SVGSVGElement {
-  const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 16 16');
-  svg.setAttribute('aria-hidden', 'true');
-  svg.classList.add('typst-files__icon');
-  svg.innerHTML = ICONS[kind];
-  return svg;
 }
 
 function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, className: string) {
@@ -315,3 +340,4 @@ function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, c
   node.className = className;
   return node;
 }
+
