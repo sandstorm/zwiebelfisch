@@ -28,7 +28,7 @@ function setup(text = TEXT) {
     executeCommand: vi.fn(async () => undefined),
   };
   const parent = document.body.appendChild(document.createElement('div'));
-  const view = new EditorView({ parent, doc: text, extensions: linkExtension(linked, () => path('/main.typ')) });
+  const view = new EditorView({ parent, doc: text, extensions: linkExtension(linked, 'typst', () => path('/main.typ')) });
   return { linked, parent, view };
 }
 
@@ -75,7 +75,7 @@ describe('linkExtension', () => {
   it('has no links in a text that is in no file', () => {
     const { linked } = setup();
     const parent = document.body.appendChild(document.createElement('div'));
-    new EditorView({ parent, doc: TEXT, extensions: linkExtension(linked, () => null) });
+    new EditorView({ parent, doc: TEXT, extensions: linkExtension(linked, 'typst', () => null) });
     expect(parent.querySelector('.typst-source__path')).toBeNull();
   });
 });

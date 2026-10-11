@@ -24,7 +24,7 @@ extensions/<name>/
   [`files`], [file panel; `files.newFile` / `newFolder` / `upload` / `rename` / `delete`; read-only fallback editor `files.file` (`priority: 'fallback'`) for any other file; setting `files.panel`; search group "Files"], [side panel, menus, custom editor, search provider],
   [`fileNavigation`], ["← previous file" / "next file →" in reading order; "← Back to …" / "Forward to … →" above supplementary files, over every change of the shown file (`fileNavigation.back` / `forward`, VS Code's keys)], [editor frame, commands, key bindings],
   [`spreadsheets`], [`.ic` in IronCalc (`spreadsheets.editor`); every edit also writes `name.ic.gen.typ`; "New spreadsheet…"; "Insert spreadsheet" (a new one with a starter table, as a figure)], [custom editor, `file/newFile`, toolbar],
-  [`textFiles`], [csv, json, yaml, toml, xml, bib, txt, md, mmd in CodeMirror (`textFiles.editor`); search group "Text" over these and the Typst files (async, in slices)], [custom editor, search provider],
+  [`textFiles`], [csv, json, yaml, toml, xml, bib, txt, md, mmd in CodeMirror (`textFiles.editor`, with the document links for each file's language id); search group "Text" over these and the Typst files (async, in slices)], [custom editor, search provider],
   [`diagrams`], [`.drawio.png` in diagrams.net's embedded editor (`diagrams.editor`, priority 110); "New diagram…"; "Insert diagram" (a new one as a figure); "Edit diagram"; setting `diagrams.editorUrl`], [custom editor, toolbar, box action],
   [`mermaid`], ["Insert Mermaid diagram" (a new `.mmd` with a starter flowchart, as a figure drawn by `@preview/merman`, with the import); "Edit diagram" on a box reading a `.mmd`], [toolbar, box action],
   [`diagnostics`], [errors underlined (Source), highlighted (Visual), counted in the status bar], [source view, highlights, status bar],
@@ -64,7 +64,7 @@ Exported from the package, not in the list; a host adds them.
 #table(
   columns: (auto, auto, auto),
   table.header[Contribution point][Provided by][Read by],
-  [document links], [`documentLinks`], [the views, `images`, `diagrams` and `mermaid` ("Edit diagram")],
+  [document links], [`documentLinks` (`typst`)], [the views, `textFiles`' editor, `images`, `diagrams` and `mermaid` ("Edit diagram")],
   [file decorations], [`collaboration`, `sourceControl`], [`files`],
   [source controls], [`collaboration` (GitLab rooms)], [`sourceControl`],
   [PDF export options], [`comments`], [`pdfExport`],

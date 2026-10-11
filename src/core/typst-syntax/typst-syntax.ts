@@ -7,7 +7,7 @@
 // core/typst-syntax/. See docs/30_architecture/02_core.typ.
 // Why here: extensions never import each other, and this knowledge is about Typst, not about one feature. Only
 // syntax: where a path leads (the project, the file's current path) and what following it does (open, create) is the
-// document-links extension's, and showing links is the hosts' (`languages.registerDocumentLinkProvider`); applying
+// document-links extension's, and showing links is the hosts' (`languages.registerDocumentLinkProvider` for `typst`); applying
 // a change is the caller's.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';

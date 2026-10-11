@@ -1,14 +1,14 @@
-// linkExtension: the document links of a CodeMirror editor's text (a Source view, a raw box's code), like IntelliJ:
+// linkExtension: the document links of a CodeMirror editor's text (a Source view, a raw box's code, a text file), like IntelliJ:
 // marked, Mod+click / Alt+Enter follow them, the hover offers "Open …" or what the link's command does. See
 // languages.ts.
 import type { EditorState, Extension, Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, hoverTooltip, keymap, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import { ProjectPath } from '../../core/paths/paths';
-import type { DocumentLink, LinkTargets, TypstText } from './languages';
+import type { DocumentLink, LinkTargets, TextDocument } from './languages';
 
 /** What the links come from, and where following one goes. */
 export interface LinkActions extends LinkTargets {
-  provideDocumentLinks(document: TypstText): readonly DocumentLink[];
+  provideDocumentLinks(document: TextDocument): readonly DocumentLink[];
   resolveDocumentLink(link: DocumentLink): DocumentLink;
 }
 
@@ -20,21 +20,21 @@ const linkMark = Decoration.mark({ class: 'typst-source__path' });
 /**
  * Makes the links of the editor's text navigable: while the modifier is held, a hovered link shows as one; Mod+click
  * or Alt+Enter on it opens its target, and the hover tooltip offers "Open …", or says what the link's tooltip says
- * and offers its command (e.g. "Create chapter.typ"). `path`: the file the text is in, now (a file can be renamed);
- * null: none, the text has no links.
+ * and offers its command (e.g. "Create chapter.typ"). `languageId`: the text's language; `path`: the file the text
+ * is in, now (a file can be renamed); null: none, the text has no links.
  */
-export function linkExtension(actions: LinkActions, path: () => ProjectPath | null): Extension {
+export function linkExtension(actions: LinkActions, languageId: string, path: () => ProjectPath | null): Extension {
   const links = ViewPlugin.fromClass(
     class {
       links: readonly DocumentLink[];
       decorations: DecorationSet;
       constructor(view: EditorView) {
-        this.links = linksOf(view.state, actions, path());
+        this.links = linksOf(view.state, actions, languageId, path());
         this.decorations = decorate(this.links);
       }
       update(update: ViewUpdate) {
         if (!update.docChanged) return;
-        this.links = linksOf(update.state, actions, path());
+        this.links = linksOf(update.state, actions, languageId, path());
         this.decorations = decorate(this.links);
       }
     },
@@ -102,8 +102,8 @@ export function linkInfo(doc: Document, link: DocumentLink, actions: Pick<LinkAc
 }
 
 /** The links of the editor's text, in the file at `path` (none: no links). */
-function linksOf(state: EditorState, actions: LinkActions, path: ProjectPath | null): readonly DocumentLink[] {
-  return path ? actions.provideDocumentLinks({ path, text: state.doc.toString() }).filter((link) => link.range.to <= state.doc.length) : [];
+function linksOf(state: EditorState, actions: LinkActions, languageId: string, path: ProjectPath | null): readonly DocumentLink[] {
+  return path ? actions.provideDocumentLinks({ path, languageId, text: state.doc.toString() }).filter((link) => link.range.to <= state.doc.length) : [];
 }
 
 function decorate(links: readonly DocumentLink[]): DecorationSet {

@@ -1,10 +1,12 @@
-// Tests for languages.ts (LanguagesHost): merging the providers' links, resolving them through their provider.
+// Tests for languages.ts (LanguagesHost): merging the links of the providers for a document's language, resolving them
+// through their provider.
 import { describe, expect, it } from 'vitest';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceRange } from '../../core/typst-document/typst-document';
 import { type DocumentLink, type DocumentLinkProvider, LanguagesHost } from './languages';
 
-const document = { path: ProjectPath.of('/main.typ'), text: 'aaaa bbbb cccc' };
+const document = { path: ProjectPath.of('/main.typ'), languageId: 'typst', text: 'aaaa bbbb cccc' };
+const targets = { open() {}, executeCommand: async () => undefined };
 
 /** Links at the given ranges, each with `tooltip: name`. */
 function provider(name: string, ranges: [number, number][], resolve?: DocumentLinkProvider['resolveDocumentLink']): DocumentLinkProvider {
@@ -18,24 +20,34 @@ const describeLinks = (links: readonly DocumentLink[]) => links.map(({ range, to
 
 describe('LanguagesHost', () => {
   it("merges the providers' links in text order; of overlapping ones the higher priority's wins (equal: registered first)", () => {
-    const links = new LanguagesHost();
-    links.registerDocumentLinkProvider(provider('first', [[0, 4], [10, 14]]));
-    links.registerDocumentLinkProvider(provider('second', [[2, 6], [5, 9]]));
-    links.registerDocumentLinkProvider(provider('high', [[12, 13]]), { priority: 110 });
+    const links = new LanguagesHost(targets);
+    links.registerDocumentLinkProvider({}, provider('first', [[0, 4], [10, 14]]));
+    links.registerDocumentLinkProvider({}, provider('second', [[2, 6], [5, 9]]));
+    links.registerDocumentLinkProvider({}, provider('high', [[12, 13]]), { priority: 110 });
     expect(describeLinks(links.provideDocumentLinks(document))).toEqual(['first@0-4', 'second@5-9', 'high@12-13']);
   });
 
+  it('asks only the providers whose selector matches the document: by language, any of a list, or all', () => {
+    const links = new LanguagesHost(targets);
+    links.registerDocumentLinkProvider({ language: 'typst' }, provider('typst', [[0, 1]]));
+    links.registerDocumentLinkProvider({ language: 'json' }, provider('json', [[2, 3]]));
+    links.registerDocumentLinkProvider([{ language: 'markdown' }, { language: 'json' }], provider('either', [[4, 5]]));
+    links.registerDocumentLinkProvider({}, provider('all', [[6, 7]]));
+    expect(describeLinks(links.provideDocumentLinks(document))).toEqual(['typst@0-1', 'all@6-7']);
+    expect(describeLinks(links.provideDocumentLinks({ ...document, languageId: 'json' }))).toEqual(['json@2-3', 'either@4-5', 'all@6-7']);
+  });
+
   it('stops asking a provider once its registration is disposed', () => {
-    const links = new LanguagesHost();
-    const registration = links.registerDocumentLinkProvider(provider('only', [[0, 4]]));
+    const links = new LanguagesHost(targets);
+    const registration = links.registerDocumentLinkProvider({}, provider('only', [[0, 4]]));
     registration.dispose();
     expect(links.provideDocumentLinks(document)).toEqual([]);
   });
 
   it('resolves a link through the provider that gave it (again after resolving)', () => {
-    const links = new LanguagesHost();
-    links.registerDocumentLinkProvider(provider('plain', [[0, 4]]));
-    links.registerDocumentLinkProvider(provider('resolving', [[5, 9]], (link) => ({ ...link, target: ProjectPath.of('/a.typ') })));
+    const links = new LanguagesHost(targets);
+    links.registerDocumentLinkProvider({}, provider('plain', [[0, 4]]));
+    links.registerDocumentLinkProvider({}, provider('resolving', [[5, 9]], (link) => ({ ...link, target: ProjectPath.of('/a.typ') })));
     const [plain, resolving] = links.provideDocumentLinks(document);
     expect(links.resolveDocumentLink(plain)).toBe(plain);
     const resolved = links.resolveDocumentLink(resolving);

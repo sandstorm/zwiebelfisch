@@ -114,7 +114,10 @@ const POINTS: Readonly<Record<string, Describer>> = {
     return { title: String(viewType), details: [`"${String(displayName)}"`, String(filenamePattern), `priority ${String(priority)}`], rank: [role, -value] };
   },
   'window.registerFileDecorationProvider': ([provider]) => named(provider, 'file decorations'),
-  'languages.registerDocumentLinkProvider': ([provider, options]) => prioritized(named(provider, 'document links'), record(options).priority),
+  'languages.registerDocumentLinkProvider': ([selector, provider, options]) => {
+    const languages = [selector].flat().map((filter) => String(record(filter).language ?? '*'));
+    return prioritized({ ...named(provider, 'document links'), details: [`language ${languages.join(', ')}`] }, record(options).priority);
+  },
   'preview.registerToolbarItem': ([item, placement]) => {
     const { group, order } = record(placement);
     const place = String(group);

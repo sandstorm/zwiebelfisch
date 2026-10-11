@@ -43,7 +43,7 @@ export type {
 } from './hosts/window/window';
 export { ProgressLocation } from './hosts/window/window';
 export type { Scm, SourceControl, SourceControlState } from './hosts/scm/scm';
-export type { DocumentLink, DocumentLinkProvider, Languages, TypstText } from './hosts/languages/languages';
+export type { DocumentFilter, DocumentLink, DocumentLinkProvider, DocumentSelector, Languages, TextDocument } from './hosts/languages/languages';
 export type { ConfigurationChangeEvent, ConfigurationProperty, Settings, Workspace, WorkspaceConfiguration } from './hosts/workspace/workspace';
 export type { PdfExportOption, PreviewContributions, PreviewToolbarItem, ToolbarPlacement } from './hosts/preview/preview';
 export type { SourceViewContext, SourceViewContributions } from './hosts/source-view/source-view';

@@ -89,7 +89,7 @@ function diagramIn(project: Project, languages: Languages): (src: string, docume
     if (!file) return null;
     // the providers read Typst markup; a figure's body is written in code (`image(..)`, no `#`)
     const markup = src.startsWith('#') ? src : `#${src}`;
-    for (const link of languages.provideDocumentLinks({ path: file, text: markup })) {
+    for (const link of languages.provideDocumentLinks({ path: file, languageId: 'typst', text: markup })) {
       const target = languages.resolveDocumentLink(link).target;
       if (target && isDiagram(target)) return target;
     }

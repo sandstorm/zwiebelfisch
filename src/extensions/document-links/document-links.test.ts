@@ -5,7 +5,7 @@ import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
 import type { ExtensionContext } from '../../hosts/workbench/workbench';
 import type { Command } from '../../hosts/commands/commands';
-import type { DocumentLinkProvider } from '../../hosts/languages/languages';
+import type { DocumentLinkProvider, DocumentSelector } from '../../hosts/languages/languages';
 import { documentLinks } from './document-links';
 
 const path = ProjectPath.of;
@@ -15,27 +15,31 @@ const TEXT = '#import "template.typ": t\n#include "missing.typ"\n#image("gone.pn
 function setup() {
   const project = new Project(path('/main.typ'), { '/main.typ': TEXT, '/template.typ': '' });
   let provider: DocumentLinkProvider | null = null;
+  let selector: DocumentSelector | null = null;
   const commands = new Map<string, (...args: unknown[]) => unknown>();
   const workspace = { applyEdit: vi.fn(async () => null as string | null) };
   const workbench = { open: vi.fn() };
   const context = {
     project,
-    languages: { registerDocumentLinkProvider: (registered: DocumentLinkProvider) => ((provider = registered), new Disposable(() => {})) },
+    languages: {
+      registerDocumentLinkProvider: (registeredFor: DocumentSelector, registered: DocumentLinkProvider) => ((selector = registeredFor), (provider = registered), new Disposable(() => {})),
+    },
     commands: { registerCommand: (id: string, handler: (...args: unknown[]) => unknown) => (commands.set(id, handler), new Disposable(() => {})) },
     workspace,
     workbench,
     subscriptions: [],
   };
   documentLinks().activate(context as unknown as ExtensionContext);
-  const links = provider!.provideDocumentLinks({ path: path('/main.typ'), text: TEXT });
+  const links = provider!.provideDocumentLinks({ path: path('/main.typ'), languageId: 'typst', text: TEXT });
   const resolved = links.map((link) => provider!.resolveDocumentLink!(link));
   const run = async (command: Command) => commands.get(command.command)!(...(command.arguments ?? []));
-  return { workspace, workbench, links, resolved, run };
+  return { selector, workspace, workbench, links, resolved, run };
 }
 
 describe('documentLinks', () => {
-  it('links the file paths of a text, by their range', () => {
-    const { links } = setup();
+  it('links the file paths of Typst text, by their range', () => {
+    const { selector, links } = setup();
+    expect(selector).toEqual({ language: 'typst' });
     expect(links.map(({ range }) => TEXT.slice(range.from, range.to))).toEqual(['template.typ', 'missing.typ', 'gone.png', '../up.typ']);
   });
 

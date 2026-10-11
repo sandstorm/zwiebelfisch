@@ -102,7 +102,7 @@ export interface ExtensionContext {
   readonly window: WindowApi;
   /** The source controls (VS Code's `scm`). */
   readonly scm: Scm;
-  /** The document links of Typst text (VS Code's `languages`). */
+  /** The document links of texts by their language (VS Code's `languages`). */
   readonly languages: Languages;
   /** The project's changes (`applyEdit`) and the settings (VS Code's `workspace` namespace). */
   readonly workspace: Workspace;
@@ -287,7 +287,10 @@ export class WorkbenchHost implements Workbench {
   readonly #tabs: EditorTabs;
   /** The window, for the widget's `activeFile`. */
   readonly window: WindowHost;
-  readonly #languages = new LanguagesHost();
+  readonly #languages = new LanguagesHost({
+    open: (path) => this.open(path),
+    executeCommand: (id, ...args) => this.commands.executeCommand(id, ...args),
+  });
   readonly #scm = new ScmHost();
   readonly #menus = new Menus();
   readonly #editorTitle: EditorTitleMenu;
@@ -575,10 +578,9 @@ export class WorkbenchHost implements Workbench {
     this.#layout.setDefaultPanel('right', this.#workspace.getConfiguration('workbench').get<string | null>('rightSidePanel'));
   }
 
-  /** The registered document links in every Source view and in the code of every raw box (paths from its file's). */
+  /** The registered document links in every Source view and in the code of every raw box (Typst, in its file). */
   #showDocumentLinks(): void {
-    const targets = { open: (path: ProjectPath) => this.open(path), executeCommand: (id: string, ...args: unknown[]) => this.commands.executeCommand(id, ...args) };
-    const links = (document: TypstDocument) => this.#languages.codeMirrorExtension(targets, () => this.project.pathOf(document) ?? null);
+    const links = (document: TypstDocument) => this.#languages.createDocumentLinksCodeMirrorExtension('typst', () => this.project.pathOf(document) ?? null);
     this.#sourceViews.registerCodeMirrorExtension((view) => links(view.document));
     this.#visualView.registerRawBoxCodeMirrorExtension((view) => links(view.document));
   }
