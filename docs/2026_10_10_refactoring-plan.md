@@ -201,6 +201,15 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    **Block / inline styles** (user, 2026-10-11; after the longer-names merge): custom styles are
    `/// @style block Note` and `/// @style inline Keyword` (not `paragraph` / `text`), in the code
    (kind values, Visual view wording, menu) and the docs; the guide says what each wraps.
+   **GitLab rooms stay; nobody forgets to save** (user, 2026-10-11; the cost analysis' "cut GitLab
+   rooms" is rejected): (1) always visible — status bar item "Not in GitLab: 3 files · 14 min (Ann,
+   Bob)" / "Saved · 01234567" (click: save dialog) and M / A / D file decorations in the tree;
+   (2) server-side auto-commit on the branch itself (no side branch, no squashing) when the room is
+   idle N min (default 10) or the last user leaves; generated message ("Edits by Ann, Bob:
+   chapters/intro.typ, …"), author = most edits, `Co-authored-by:` for the others; on by default,
+   configurable per server; a conflict blocks it and shows prominently for everyone; manual "Save to
+   GitLab…" stays for a meaningful message; (3) leaving as the last user with auto-commit off →
+   beforeunload warning.
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Rules wave also does:** core `onChange` → `onDidChange: Event` + `Disposable` everywhere
    (`Project`, `TypstDocument`, …) (user: yes).
