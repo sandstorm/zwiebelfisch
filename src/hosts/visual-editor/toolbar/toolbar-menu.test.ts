@@ -1,13 +1,23 @@
 // @vitest-environment jsdom
 // Tests for ToolbarMenu (toolbar-menu.ts).
 import { describe, expect, it, vi } from 'vitest';
-import { ToolbarMenu } from './toolbar-menu';
+import { ToolbarMenu, type MenuContent, type MenuItems } from './toolbar-menu';
 
 function item(label: string, onClick = () => {}) {
   const button = document.createElement('button');
   button.setAttribute('aria-label', label);
   button.addEventListener('click', onClick);
   return button;
+}
+
+/** A menu with icon `icon()` holding `buttons()` as of when it opens (the same items while that is the same array). */
+function content(icon: () => string, buttons: () => HTMLButtonElement[]): MenuContent {
+  let items: MenuItems = { buttons: [], refresh: () => {} };
+  return {
+    icon,
+    hasItems: () => buttons().length > 0,
+    items: () => (items.buttons === buttons() ? items : (items = { buttons: buttons(), refresh: () => {} })),
+  };
 }
 
 /** The menu's trigger, as the toolbar row shows it. */
@@ -17,7 +27,7 @@ function setup() {
   const chosen = vi.fn();
   let icon = '<svg>left</svg>';
   const items = [item('Align left', () => chosen('left')), item('Center', () => chosen('center'))];
-  const menu = new ToolbarMenu(document, 'Align', { icon: () => icon }, items);
+  const menu = new ToolbarMenu(document, 'Align', content(() => icon, () => items));
   document.body.append(menu.element);
   const list = menu.element.querySelector<HTMLElement>('[role="menu"]')!;
   return { menu, trigger: trigger(menu), list, items, chosen, setIcon: (next: string) => (icon = next) };
@@ -55,6 +65,21 @@ describe('ToolbarMenu', () => {
     expect(document.activeElement).toBe(items[0]);
   });
 
+  it('holds the items as of when it opens, and hides while it has none', () => {
+    let labels: string[] = [];
+    const menu = new ToolbarMenu(document, 'Styles', content(() => '', () => labels.map((label) => item(label))));
+    document.body.append(menu.element);
+    expect(menu.element.hidden).toBe(true);
+    labels = ['Key'];
+    menu.refresh();
+    expect(menu.element.hidden).toBe(false);
+    trigger(menu).click();
+    labels = ['Key', 'Term'];
+    trigger(menu).click();
+    trigger(menu).click();
+    expect([...menu.element.querySelectorAll('[role="menuitem"]')].map((i) => i.textContent)).toEqual(['Key', 'Term']);
+  });
+
   it('shows the icon given as of the last refresh (e.g. the current alignment)', () => {
     const { menu, trigger, setIcon } = setup();
     expect(trigger.innerHTML).toContain('left');
@@ -71,7 +96,7 @@ describe('ToolbarMenu in a shadow root (as in <typst-editor>)', () => {
     const root = host.attachShadow({ mode: 'open' });
     const chosen = vi.fn();
     const choice = item('Insert image', chosen);
-    const menu = new ToolbarMenu(document, 'Insert', { icon: () => '' }, [choice]);
+    const menu = new ToolbarMenu(document, 'Insert', content(() => '', () => [choice]));
     root.append(menu.element);
     trigger(menu).click();
     // the document sees the shadow host as the target; the composed path still holds the item

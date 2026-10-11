@@ -1,7 +1,7 @@
 // End-to-end tests (Playwright, against the demo build): the Visual editor's toolbar.
 import { test } from './fixtures';
 import { expect, type Page } from '@playwright/test';
-import { caretAtEnd, compiled, freshSelectedLine, selectionBar, sourceText, toolbar, visual } from './visual-helpers';
+import { caretAtEnd, chooseFrom, compiled, freshSelectedLine, selectionBar, selectText, sourceText, toolbar, visual } from './visual-helpers';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -132,4 +132,18 @@ test('arrow down on the last line of a raw block moves into the next block', asy
   await page.keyboard.press('ArrowDown');
   await page.keyboard.type('X');
   await expect(visual(page).locator('h1')).toHaveText('XTypst in five minutes');
+});
+
+test("the selection bar's Styles menu toggles the simple example's inline style Key on the selected word", async ({ page }) => {
+  const paragraph = visual(page).locator('p', { hasText: 'Typst is a markup language' });
+  await selectText(paragraph, 'markup');
+  await chooseFrom(selectionBar(page), 'Styles', 'Key');
+  await expect.poll(sourceText(page)).toContain('Typst is a #key[markup] language');
+  await expect(paragraph.locator('.typst-styles__inline')).toHaveText('markup');
+  await selectText(paragraph.locator('.typst-styles__inline'), 'markup');
+  await selectionBar(page).getByRole('button', { name: 'Styles', exact: true }).click();
+  const key = selectionBar(page).getByRole('menuitem', { name: 'Key', exact: true });
+  await expect(key).toHaveAttribute('aria-pressed', 'true');
+  await key.click();
+  await expect.poll(sourceText(page)).toContain('Typst is a markup language');
 });

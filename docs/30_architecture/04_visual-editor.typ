@@ -57,7 +57,7 @@ Typst no spec models, and nodes whose spec sets `view.box: 'code'` (images, outl
 
 == Toolbar <architecture-visual-editor-toolbar>
 
-- Laid out from contributed groups (a button group, a menu, a bar floating in the text) sorted by `order`, and items by `group` + `order`. Groups without items are left out.
+- Laid out from contributed groups (a button group, a menu, a bar floating in the text) sorted by `order`, and items by `group` + `order`. Groups without items are left out. A menu with a `bar` sits among that floating bar's items; its items may be provided anew each time it opens (`provideActions`: the project's inline styles).
 - The host's own: `history` (undo/redo, 10), `text-style` (20, once a provider exists), the `insert` menu (50), the floating `selection` bar.
 - Buttons are `ToolbarAction`s: a Tiptap chain command, dry-run to disable the button: in the row after every transaction, in a menu when it opens and while it is open, in a floating bar while it shows; the text style menu's options when it is pressed or focused (what is not shown is not asked). They never take the focus from the text.
 

@@ -116,6 +116,7 @@ Typst compiles #term[incrementally]: it redoes only what an edit touches.
 - *block* wraps whole blocks (paragraphs, lists, headings), shown as a named frame: *Note* wraps the selected paragraphs in `#note[…]`.
 - *inline* wraps a run of text inside a paragraph, shown underlined: *Term* wraps the selection in `#term[…]`.
 - The text style menu offers both and adds the import where needed.
+- The bar above a text selection offers the inline styles too: Styles → *Term* (✓ where the selection has it: takes it off).
 - *Normal text* removes a block style. "New style…" adds a block style to `styles.typ`.
 - The preview shows the real look.
 
