@@ -10,7 +10,7 @@ export type DiagramOf = (src: string, document: TypstDocument) => ProjectPath | 
 
 /**
  * "Edit diagram" on every box whose Typst names a diagram file of the project: `diagramOf` finds it (from the
- * workbench's document links, so the extension parses no Typst), `open` shows it in the diagram editor.
+ * document links (`languages`), so the extension parses no Typst), `open` shows it in the diagram editor.
  */
 export function editDiagramAction(diagramOf: DiagramOf, open: (path: ProjectPath) => void): BoxAction {
   return {

@@ -38,8 +38,9 @@ describe('Project', () => {
     expect(p.files()['/logo.png']).toBe(logo);
   });
 
-  it('refuses bytes for the main file, as replace does', () => {
+  it('refuses bytes for any Typst file, as replace does', () => {
     expect(() => new Project(path('/main.typ'), { '/main.typ': new Uint8Array([1]) })).toThrow(/must contain text/);
+    expect(() => new Project(path('/main.typ'), { '/chapter.typ': new Uint8Array([1]) })).toThrow(/chapter\.typ must contain text/);
   });
 
   it('creates the main file when it is missing', () => {
@@ -134,6 +135,7 @@ describe('Project', () => {
     expect(p.paths()).toEqual(['/main.typ', path('/extra.typ')]);
     expect(p.document(path('/main.typ'))!.text).toBe('= Main');
     expect(() => p.replace({ '/main.typ': new Uint8Array([1]) })).toThrow(/must contain text/);
+    expect(() => p.replace({ '/extra.typ': new Uint8Array([1]) })).toThrow(/must contain text/);
     expect(p.paths()).toEqual(['/main.typ', path('/extra.typ')]);
   });
 

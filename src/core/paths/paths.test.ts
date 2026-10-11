@@ -17,22 +17,22 @@ describe('ProjectPath.isTypst', () => {
 
 describe('ProjectPath.fromName', () => {
   it('turns a typed name into a project path, adding the default extension', () => {
-    expect(ProjectPath.fromName('chapter 2', '.typ')).toEqual({ path: '/chapter 2.typ' });
-    expect(ProjectPath.fromName('  /parts/intro.typ ', '.typ')).toEqual({ path: '/parts/intro.typ' });
-    expect(ProjectPath.fromName('./notes.typ', '.typ')).toEqual({ path: '/notes.typ' });
-    expect(ProjectPath.fromName('logo', '.png')).toEqual({ path: '/logo.png' });
-    expect(ProjectPath.fromName('a/b/c', '.typ')).toEqual({ path: '/a/b/c.typ' });
+    expect(ProjectPath.fromName('chapter 2', '.typ')).toEqual({ kind: 'valid', path: '/chapter 2.typ' });
+    expect(ProjectPath.fromName('  /parts/intro.typ ', '.typ')).toEqual({ kind: 'valid', path: '/parts/intro.typ' });
+    expect(ProjectPath.fromName('./notes.typ', '.typ')).toEqual({ kind: 'valid', path: '/notes.typ' });
+    expect(ProjectPath.fromName('logo', '.png')).toEqual({ kind: 'valid', path: '/logo.png' });
+    expect(ProjectPath.fromName('a/b/c', '.typ')).toEqual({ kind: 'valid', path: '/a/b/c.typ' });
   });
 
   it('keeps an explicit extension', () => {
-    expect(ProjectPath.fromName('table.csv', '.typ')).toEqual({ path: '/table.csv' });
+    expect(ProjectPath.fromName('table.csv', '.typ')).toEqual({ kind: 'valid', path: '/table.csv' });
   });
 
   it('rejects empty names, parent references and empty folder names', () => {
-    expect(ProjectPath.fromName('  ', '.typ')).toEqual({ error: 'Please enter a name.' });
-    expect(ProjectPath.fromName('../secret.typ', '.typ')).toHaveProperty('error');
-    expect(ProjectPath.fromName('folder/', '.typ')).toHaveProperty('error');
-    expect(ProjectPath.fromName('a\\b.typ', '.typ')).toHaveProperty('error');
+    expect(ProjectPath.fromName('  ', '.typ')).toEqual({ kind: 'invalid', error: 'Please enter a name.' });
+    expect(ProjectPath.fromName('../secret.typ', '.typ')).toHaveProperty('kind', 'invalid');
+    expect(ProjectPath.fromName('folder/', '.typ')).toHaveProperty('kind', 'invalid');
+    expect(ProjectPath.fromName('a\\b.typ', '.typ')).toHaveProperty('kind', 'invalid');
   });
 });
 

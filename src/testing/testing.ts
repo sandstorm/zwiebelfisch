@@ -18,7 +18,7 @@ import { tables } from '../extensions/tables/tables';
 import { imagesVisualView, type ImageAssets, type ImageLinks, type ImageUrls } from '../extensions/images/images';
 import { renderedBoxesVisualView, type SnippetSource } from '../extensions/rendered-boxes/rendered-boxes';
 import { createSchema, VisualView, VisualViewContributions, type ContributionContext, type VisualViewContribution } from '../hosts/visual-view/visual-view';
-import type { InputBoxOptions, MessageItem, QuickPickItem, QuickPickOptions, Workbench } from '../hosts/workbench/workbench';
+import type { InputBoxOptions, MessageItem, QuickPickItem, QuickPickOptions, Window } from '../hosts/window/window';
 import { posToSource, print, project as projectWith, sourceToPos } from '../hosts/projection/projection';
 
 /** The schema of a view with the built-ins configured from `options`. */
@@ -51,11 +51,11 @@ export interface TestViewOptions {
 }
 
 /**
- * The workbench's input box, quick pick and messages in a test: each question takes the next of `answers` (an input
+ * The window's input box, quick pick and messages in a test: each question takes the next of `answers` (an input
  * box the text, a quick pick the label of the item or its index; undefined cancels), and `asked` / `told` keep what
  * was asked and said.
  */
-export class TestPrompts implements Pick<Workbench, 'showInputBox' | 'showQuickPick' | 'showErrorMessage'> {
+export class TestPrompts implements Pick<Window, 'showInputBox' | 'showQuickPick' | 'showErrorMessage'> {
   readonly answers: (string | number | undefined)[] = [];
   readonly asked: { options?: InputBoxOptions | QuickPickOptions; items?: readonly (string | QuickPickItem)[] }[] = [];
   readonly told: string[] = [];
@@ -78,7 +78,7 @@ export class TestPrompts implements Pick<Workbench, 'showInputBox' | 'showQuickP
     const answer = this.answers.shift();
     if (typeof answer === 'number') return list[answer];
     return list.find((item) => (typeof item === 'string' ? item : item.label) === answer);
-  }) as Workbench['showQuickPick'];
+  }) as Window['showQuickPick'];
 
   showErrorMessage = async <T extends string | MessageItem>(message: string): Promise<T | undefined> => {
     this.told.push(message);
@@ -105,19 +105,15 @@ function contributions(options: TestViewOptions): VisualViewContributions {
 
 /**
  * `contributions` activated in order, for their Visual-view contributions. The built-in constructs are extensions:
- * of the rest of the extension context they use only the workbench's stylesheets and its prompts (`prompts`; default:
- * every question cancelled).
+ * of the rest of the extension context they use only the workbench's stylesheets and the window's prompts (`prompts`;
+ * default: every question cancelled).
  */
 function activate(contributions: readonly VisualViewContribution[], prompts: TestPrompts = new TestPrompts()): VisualViewContributions {
   const visualView = new VisualViewContributions();
   const subscriptions: { dispose(): unknown }[] = [];
-  const workbench = {
-    registerStyleSheet: () => new Disposable(() => {}),
-    showInputBox: prompts.showInputBox,
-    showQuickPick: prompts.showQuickPick,
-    showErrorMessage: prompts.showErrorMessage,
-  };
-  for (const contribution of contributions) contribution.activate({ visualView, subscriptions, workbench } as ContributionContext);
+  const workbench = { registerStyleSheet: () => new Disposable(() => {}) };
+  const window = { showInputBox: prompts.showInputBox, showQuickPick: prompts.showQuickPick, showErrorMessage: prompts.showErrorMessage };
+  for (const contribution of contributions) contribution.activate({ visualView, subscriptions, workbench, window } as ContributionContext);
   return visualView;
 }
 
@@ -127,9 +123,9 @@ function activate(contributions: readonly VisualViewContribution[], prompts: Tes
  */
 export function builtins(options: Omit<TestViewOptions, 'contributions'> = {}): VisualViewContribution[] {
   return [
-    markup,
-    headings,
-    tables,
+    markup(),
+    headings(),
+    tables(),
     imagesVisualView({
       assets: options.assets && (() => options.assets),
       imageUrls: options.renderer && (() => options.renderer),
@@ -137,10 +133,10 @@ export function builtins(options: Omit<TestViewOptions, 'contributions'> = {}): 
       prompts: options.prompts ?? new TestPrompts(),
     }),
     renderedBoxesVisualView({ snippets: options.renderer && (() => options.renderer) }),
-    outline,
-    pageLayout,
-    lists,
-    alignment,
+    outline(),
+    pageLayout(),
+    lists(),
+    alignment(),
   ];
 }
 

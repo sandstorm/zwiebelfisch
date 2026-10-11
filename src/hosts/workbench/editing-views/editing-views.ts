@@ -1,6 +1,6 @@
 // EditingViews: the Visual/Source tabs; lazily one VisualView and SourceView per document. See workbench.ts.
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
-import type { EditorMode, TextEditor } from '../workbench';
+import type { EditorMode, TextEditor } from '../../window/window';
 import { type SourceView, SourceViewHost } from '../../source-view/source-view';
 import { VisualView, VisualViewContributions } from '../../visual-view/visual-view';
 
@@ -171,8 +171,8 @@ export class EditingViews {
 
   private drop(document: TypstDocument): void {
     const views = this.views.get(document)!;
-    views.visual.destroy();
-    views.source.destroy();
+    views.visual.dispose();
+    views.source.dispose();
     views.panes.visual.remove();
     views.panes.source.remove();
     this.views.delete(document);

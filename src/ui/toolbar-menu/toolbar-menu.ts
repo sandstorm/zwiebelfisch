@@ -66,7 +66,7 @@ export class ToolbarMenu {
     this.glyph.innerHTML = this.icon();
   }
 
-  destroy(): void {
+  dispose(): void {
     this.close();
     this.element.remove();
   }

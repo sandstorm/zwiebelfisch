@@ -1,6 +1,6 @@
 // An image box's path as a link to the file (the document link on it). See ../images.ts.
 import { type PathReference, ProjectPath } from '../../../core/paths/paths';
-import type { DocumentLink } from '../../../hosts/workbench/workbench';
+import type { DocumentLink } from '../../../hosts/languages/languages';
 
 /** An image box's path as a button that opens the link's target, or the path marked as leading nowhere (with the link's tooltip). */
 export function imagePathLink(link: DocumentLink | null, path: PathReference, doc: Document, open: (target: ProjectPath) => void): Node {

@@ -1,9 +1,10 @@
 // FilePanel: the file panel's view — a "Files" header with its "New" menu, the project as a FileTree with a context
 // menu per row, uploads. It turns gestures into FileChanges and leaves to its owner whether they happen. See ../files.ts.
 import type { FileChange } from '../../../core/project/project';
-import { ProjectPath } from '../../../core/paths/paths';
+import { type NamedPath, ProjectPath } from '../../../core/paths/paths';
 import { uploadChanges } from '../../../core/uploads/uploads';
-import type { FileDecoration, Memory, MenuContext, MenuItem, Workbench } from '../../../hosts/workbench/workbench';
+import type { FileDecoration, Window } from '../../../hosts/window/window';
+import type { Memento, MenuContext, MenuItem } from '../../../hosts/workbench/workbench';
 import { PopupMenu, type PopupMenuAnchor } from '../../../ui/popup-menu/popup-menu';
 import { filesUnder, type Folder, folderOf, relocate } from '../model/tree-model';
 import { icon } from './icons/icons';
@@ -13,8 +14,11 @@ import { FileTree } from './tree/tree';
 export const NEW_FILE_MENU = 'file/newFile';
 export const CONTEXT_MENU = 'explorer/context';
 
-/** What the panel asks the user with, and tells them: the workbench's input box and messages. */
-export type FilePanelPrompts = Pick<Workbench, 'showInputBox' | 'showWarningMessage' | 'showErrorMessage'>;
+/** "New file": a Typst file unless the name has another ending. */
+const NEW_FILE_ENDINGS = { Typst: ['typ'], 'All files': ['*'] };
+
+/** What the panel asks the user with, and tells them: the window's input box, save dialog and messages. */
+export type FilePanelPrompts = Pick<Window, 'showInputBox' | 'showSaveDialog' | 'showWarningMessage' | 'showErrorMessage'>;
 
 export interface FilePanelOptions {
   /** Someone picked a file. */
@@ -27,10 +31,12 @@ export interface FilePanelOptions {
    * command with the row (or the focused row) as argument.
    */
   menus: { items(menuId: string, context: MenuContext): readonly MenuItem[]; run(command: string, resource: ProjectPath): void };
-  /** Where the open folders are remembered (default: only while the panel lives). */
-  memory?: Memory<string[]>;
+  /** Where the open folders are kept (key `openFolders`; default: only while the panel lives). */
+  state?: Memento;
   /** The decorations of a file (badges, e.g. who else is in it), as they are at each `render` (default: none). */
   decorations?(path: ProjectPath): readonly FileDecoration[];
+  /** The icon of a file that is no Typst file, SVG markup (`window.getFileIcon`; default: the same for every file). */
+  icon?(path: ProjectPath): string | undefined;
 }
 
 export interface FilePanelState {
@@ -44,7 +50,7 @@ export interface FilePanelState {
  * have a context menu (`explorer/context`: right click, Shift+F10, the context menu key). The operations behind the
  * entries (`newFile`, `newFolder`, `upload`, `rename`, `delete`) act on a row: a file, or a folder with everything in
  * it; new files and uploads go into the row's folder. The main file (and a folder holding it) stays where it is.
- * Names are asked for in the workbench's input box, refusals are error messages. It only turns gestures into
+ * Names are asked for in the window's input box, refusals are error messages. It only turns gestures into
  * `FileChange`s; whether they happen is up to `onChange`.
  */
 export class FilePanel {
@@ -91,7 +97,7 @@ export class FilePanel {
       onMove: (source, folder) => void this.move(source, folder),
       onUpload: (files, folder) => void this.uploadInto(files, folder),
       onContextMenu: (path, anchor) => this.showMenu(CONTEXT_MENU, path, anchor),
-      memory: options.memory,
+      state: options.state,
     });
     parent.append(this.element);
     this.render(state);
@@ -100,21 +106,23 @@ export class FilePanel {
   render(state: FilePanelState): void {
     this.state = state;
     for (const folder of this.emptyFolders) if (filesUnder(state.paths, folder).length > 0) this.emptyFolders.delete(folder);
-    this.tree.render({ ...state, folders: [...this.emptyFolders], decorations: (path) => this.options.decorations?.(path) ?? [] });
+    this.tree.render({
+      ...state,
+      folders: [...this.emptyFolders],
+      decorations: (path) => this.options.decorations?.(path) ?? [],
+      icon: (path) => this.options.icon?.(path),
+    });
     this.newButton.hidden = this.options.menus.items(NEW_FILE_MENU, this.context(this.current())).length === 0;
   }
 
-  /** Asks for a name and creates that (empty) `.typ` file in the folder of `at` (default: the focused row), then opens it. */
+  /**
+   * Asks for a name (`showSaveDialog`: `.typ` added to a name without an ending) and creates that empty file in the
+   * folder of `at` (default: the focused row), then opens it.
+   */
   async newFile(at: ProjectPath = this.current()): Promise<void> {
-    const name = await this.options.prompts.showInputBox({
-      title: 'New file',
-      prompt: 'Name of the new file',
-      ...this.startIn(this.folderOf(at)),
-      placeHolder: 'e.g. chapter-2',
-      validateInput: (value) => this.problemWith(ProjectPath.fromName(value, '.typ')),
-    });
-    const target = name === undefined ? null : ProjectPath.fromName(name, '.typ');
-    if (target && 'path' in target) await this.request([{ kind: 'create', path: target.path, content: '' }], target.path);
+    const folder = this.folderOf(at);
+    const target = await this.options.prompts.showSaveDialog({ title: 'New file', defaultUri: folder ?? undefined, filters: NEW_FILE_ENDINGS });
+    if (target) await this.request([{ kind: 'create', path: target, content: '' }], target);
   }
 
   /** Asks for a name and makes that (empty) folder in the folder of `at`; it lives in the panel until a file goes in. */
@@ -127,7 +135,7 @@ export class FilePanel {
       validateInput: (value) => this.problemWith(ProjectPath.fromName(value, '')),
     });
     const target = name === undefined ? null : ProjectPath.fromName(name, '');
-    if (!target || !('path' in target)) return;
+    if (!target || target.kind === 'invalid') return;
     this.emptyFolders.add(target.path);
     this.render(this.state);
     this.tree.focus(target.path);
@@ -159,7 +167,7 @@ export class FilePanel {
       validateInput: (value) => this.problemWith(ProjectPath.fromName(value, extension), from),
     });
     const target = name === undefined ? null : ProjectPath.fromName(name, extension);
-    if (!target || !('path' in target) || target.path === from) return;
+    if (!target || target.kind === 'invalid' || target.path === from) return;
     const error = await this.relocate(from, target.path);
     if (error) void this.options.prompts.showErrorMessage(error);
   }
@@ -177,7 +185,7 @@ export class FilePanel {
     await this.request(files.map((file) => ({ kind: 'delete', path: file })), this.state.main);
   }
 
-  destroy(): void {
+  dispose(): void {
     this.menu?.close();
     this.element.remove();
   }
@@ -218,8 +226,8 @@ export class FilePanel {
   }
 
   /** What is wrong with a name typed for a new or renamed (from `from`) file or folder; null if nothing. */
-  private problemWith(target: { path: ProjectPath } | { error: string }, from?: ProjectPath): string | null {
-    if ('error' in target) return target.error;
+  private problemWith(target: NamedPath, from?: ProjectPath): string | null {
+    if (target.kind === 'invalid') return target.error;
     if (target.path === from) return null;
     const taken = this.state.paths.includes(target.path) || this.tree.isFolder(target.path);
     return taken ? `${ProjectPath.displayName(target.path)} already exists.` : null;

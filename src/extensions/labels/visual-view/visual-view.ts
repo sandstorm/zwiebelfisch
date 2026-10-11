@@ -16,7 +16,7 @@ export interface ReferencesOptions {
    * missing), and a label can be renamed with its references in every file.
    */
   labels: ProjectLabels;
-  /** Where a label tag asks what to do and for the new name: the workbench's quick pick and input box. */
+  /** Where a label tag asks what to do and for the new name: the window's quick pick and input box. */
   prompts: LabelPrompts;
 }
 

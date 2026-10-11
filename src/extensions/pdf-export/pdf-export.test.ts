@@ -26,11 +26,13 @@ function setup(result: Partial<PdfResult> = {}, main = path('/main.typ'), option
     project,
     subscriptions: [],
     workspace: { getConfiguration: () => ({ get: (_key: string, fallback: unknown) => fallback }), onDidChangeConfiguration: () => new Disposable(() => {}) },
+    commands: {
+      registerCommand: (id: string, handler: (...args: unknown[]) => unknown) => (commands.set(id, handler), new Disposable(() => commands.delete(id))),
+    },
+    window: { showErrorMessage: async () => undefined },
+    workspaceState: { get: (_key: string, fallback?: unknown) => fallback, update: async () => {}, keys: () => [] },
     workbench: {
       registerStyleSheet: () => new Disposable(() => {}),
-      registerCommand: (id: string, handler: (...args: unknown[]) => unknown) => (commands.set(id, handler), new Disposable(() => commands.delete(id))),
-      remember: () => ({ load: () => null, save: () => {} }),
-      showErrorMessage: async () => undefined,
     },
     preview: {
       exportPdf,

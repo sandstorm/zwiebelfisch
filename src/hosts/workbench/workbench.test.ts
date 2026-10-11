@@ -22,7 +22,7 @@ vi.mock('../preview/preview', async (importOriginal) => ({
       this.toolbarItems.push(item);
       return new Disposable(() => this.toolbarItems.splice(this.toolbarItems.indexOf(item), 1));
     }
-    destroy() {}
+    dispose() {}
   },
 }));
 
@@ -32,8 +32,9 @@ function setup(activate: (context: ExtensionContext) => void = () => {}, options
   const host = document.body.appendChild(document.createElement('div'));
   const project = new Project(path('/main.typ'), { '/main.typ': '= Main\n', '/a.typ': 'A\n', '/logo.png': new Uint8Array([1]) });
   const workbench = new WorkbenchHost(host, project, { mode: 'source', ...options });
-  workbench.activate([{ id: 'test', activate }]);
-  return { host, project, workbench };
+  let context: ExtensionContext | null = null;
+  workbench.activate([{ id: 'test', activate: (given) => activate((context = given)) }]);
+  return { host, project, workbench, context: context! };
 }
 
 afterEach(() => {
@@ -60,15 +61,11 @@ describe('WorkbenchHost', () => {
     expect(onOpen.mock.calls).toEqual([['/a.typ']]);
   });
 
-  it('applies a change only if the project and then the host allow it', async () => {
+  it("gives extensions the host's veto on changes (workspace.applyEdit)", async () => {
     const allowFileChange = vi.fn(async () => false);
-    const { workbench, project } = setup(undefined, { allowFileChange });
-    expect(await workbench.applyChange({ kind: 'delete', path: path('/main.typ') })).toMatch(/main file/i);
-    expect(allowFileChange).not.toHaveBeenCalled();
-    expect(await workbench.applyChange({ kind: 'delete', path: path('/a.typ') })).toBe('This change is not allowed here.');
-    allowFileChange.mockResolvedValue(true);
-    expect(await workbench.applyChange({ kind: 'delete', path: path('/a.typ') })).toBeNull();
-    expect(project.has(path('/a.typ'))).toBe(false);
+    const { project, context } = setup(undefined, { allowFileChange });
+    expect(await context.workspace.applyEdit({ kind: 'delete', path: path('/a.typ') })).toBe('This change is not allowed here.');
+    expect(project.has(path('/a.typ'))).toBe(true);
   });
 
   it('keeps a renamed shown file shown, and falls back to the main file when it is deleted', () => {
@@ -80,27 +77,27 @@ describe('WorkbenchHost', () => {
     expect(workbench.activeFile).toBe('/main.typ');
   });
 
-  it('puts side panels and status bar items into the frame, and takes them out on destroy', () => {
-    const { host, workbench } = setup(({ workbench, subscriptions }) => {
+  it('puts side panels and status bar items into the frame, and takes them out on dispose', () => {
+    const { host, workbench } = setup(({ window, workbench, subscriptions }) => {
       const doc = workbench.ownerDocument;
       const panel = workbench.registerSidePanel('outline', { label: 'Outline', icon: doc.createElement('span') });
       panel.body.textContent = 'outline';
       panel.setDefault(true);
       const status = doc.createElement('span');
       status.textContent = 'status';
-      subscriptions.push(panel, workbench.registerStatusBarItem(status, { alignment: 'left' }));
+      subscriptions.push(panel, window.registerStatusBarItem(status, { alignment: 'left' }));
     });
     expect(host.querySelector('[data-panel=outline]')!.textContent).toBe('outline');
     expect(host.querySelector('.typst-editor__status-bar')!.textContent).toBe('status');
-    workbench.destroy();
+    workbench.dispose();
     expect(host.children).toHaveLength(0);
   });
 
   it("shows the editor/title menu in the tab bar: the entries whose `when` holds for the tab and file, in order; a click runs the command", () => {
     const ran: string[] = [];
     const later = { registration: new Disposable(() => {}) };
-    const { host, workbench } = setup(({ workbench, subscriptions }) => {
-      const register = (id: string) => workbench.registerCommand(id, () => ran.push(id));
+    const { host, workbench } = setup(({ commands, workbench, subscriptions }) => {
+      const register = (id: string) => commands.registerCommand(id, () => ran.push(id));
       subscriptions.push(
         register('test.always'),
         register('test.visual'),
@@ -138,8 +135,8 @@ describe('WorkbenchHost', () => {
   });
 
   it('shows messages, resolving to the item chosen', async () => {
-    const { host, workbench } = setup();
-    const answer = workbench.showWarningMessage('Delete a.typ?', 'Delete');
+    const { host, context } = setup();
+    const answer = context.window.showWarningMessage('Delete a.typ?', 'Delete');
     const message = host.querySelector<HTMLElement>('[data-testid=typst-notifications] [role=alert]')!;
     expect(message.textContent).toContain('Delete a.typ?');
     message.querySelector<HTMLButtonElement>('.typst-notification__item')!.click();
@@ -148,8 +145,8 @@ describe('WorkbenchHost', () => {
   });
 
   it('asks for text in an input box', async () => {
-    const { host, workbench } = setup();
-    const answer = workbench.showInputBox({ title: 'Rename', prompt: 'New name', value: 'a.typ' });
+    const { host, context } = setup();
+    const answer = context.window.showInputBox({ title: 'Rename', prompt: 'New name', value: 'a.typ' });
     const form = host.querySelector<HTMLFormElement>('form[aria-label="Rename"]')!;
     form.querySelector('input')!.value = 'b.typ';
     form.requestSubmit();
@@ -171,9 +168,9 @@ describe('WorkbenchHost', () => {
   });
 
   it('opens a file at a range, in the Source tab when asked', () => {
-    const { workbench } = setup(undefined, { mode: 'visual' });
+    const { workbench, context } = setup(undefined, { mode: 'visual' });
     workbench.open(path('/a.typ'), { selection: { from: 0, to: 1 }, mode: 'source' });
-    const editor = workbench.activeTextEditor!;
+    const editor = context.window.activeTextEditor!;
     expect(editor.document.text).toBe('A\n');
     expect(editor.mode).toBe('source');
     expect(editor.selection).toEqual({ from: 0, to: 1 });
@@ -181,16 +178,16 @@ describe('WorkbenchHost', () => {
 
   it('tells about a moved selection in an editor, after it has the new one', () => {
     const seen: { from: number; to: number }[] = [];
-    const { workbench } = setup(({ workbench }) => void workbench.onDidChangeTextEditorSelection(({ textEditor }) => seen.push(textEditor.selection)));
-    workbench.activeTextEditor!.revealRange(2, 4);
+    const { context } = setup(({ window }) => void window.onDidChangeTextEditorSelection(({ textEditor }) => seen.push(textEditor.selection)));
+    context.window.activeTextEditor!.revealRange(2, 4);
     expect(seen.at(-1)).toEqual({ from: 2, to: 4 });
   });
 
   it('has no active editor while another kind of file is shown', () => {
-    const { workbench } = setup();
-    expect(workbench.activeTextEditor?.document.text).toBe('= Main\n');
+    const { workbench, context } = setup();
+    expect(context.window.activeTextEditor?.document.text).toBe('= Main\n');
     workbench.open(path('/logo.png'));
-    expect(workbench.activeTextEditor).toBeNull();
+    expect(context.window.activeTextEditor).toBeNull();
   });
 
   it('applies the Visual view contributions to the Visual view of each document', () => {
@@ -213,7 +210,7 @@ describe('WorkbenchHost', () => {
     workbench.open(path('/a.typ'));
     expect(host.querySelectorAll('.cm-editor.contributed')).toHaveLength(2);
     expect((preview as unknown as { toolbarItems: unknown[] }).toolbarItems).toEqual([item]);
-    workbench.destroy();
+    workbench.dispose();
     expect((preview as unknown as { toolbarItems: unknown[] }).toolbarItems).toEqual([]);
   });
 
@@ -250,12 +247,12 @@ describe('WorkbenchHost', () => {
 
   it('runs commands by id, resolving to their result', async () => {
     const created: unknown[] = [];
-    const { workbench } = setup(({ workbench, subscriptions }) =>
-      subscriptions.push(workbench.registerCommand('test.create', async (name: string) => (created.push(name), `made ${name}`))),
+    const { workbench } = setup(({ commands, subscriptions }) =>
+      subscriptions.push(commands.registerCommand('test.create', async (name: string) => (created.push(name), `made ${name}`))),
     );
-    await expect(workbench.executeCommand('test.create', 'a.typ')).resolves.toBe('made a.typ');
+    await expect(workbench.commands.executeCommand('test.create', 'a.typ')).resolves.toBe('made a.typ');
     expect(created).toEqual(['a.typ']);
-    await expect(workbench.executeCommand('test.unknown')).rejects.toThrow(/No command test.unknown/);
+    await expect(workbench.commands.executeCommand('test.unknown')).rejects.toThrow(/No command test.unknown/);
   });
 
   it('gives extensions who works here', () => {
@@ -273,9 +270,9 @@ describe('WorkbenchHost', () => {
 
   it("shows the links of the registered providers in the Source views and raw boxes' code, with the path of their file", () => {
     const seen: string[] = [];
-    const { host } = setup(({ workbench, subscriptions }) =>
+    const { host } = setup(({ languages, subscriptions }) =>
       subscriptions.push(
-        workbench.registerDocumentLinkProvider({
+        languages.registerDocumentLinkProvider({
           provideDocumentLinks: ({ path, text }) => (seen.push(path), [{ range: { from: 2, to: text.length - 1 } }]),
         }),
       ),

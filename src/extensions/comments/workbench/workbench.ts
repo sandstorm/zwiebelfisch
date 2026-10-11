@@ -2,7 +2,9 @@
 // Source view's "Comment" (a tab bar menu entry). See ARCHITECTURE.md, "Comments = margin notes".
 import { Disposable } from '../../../core/disposable/disposable';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
-import type { TextEditor, Workbench } from '../../../hosts/workbench/workbench';
+import type { Commands } from '../../../hosts/commands/commands';
+import type { TextEditor, Window } from '../../../hosts/window/window';
+import type { Workbench } from '../../../hosts/workbench/workbench';
 import { calculateMarginNoteChanges } from '../model/add-margin-note';
 
 /** The command that adds a margin note at the selection of the view the user works in. */
@@ -14,8 +16,12 @@ export interface NoteCards {
   editNote(document: TypstDocument, offset: number): boolean;
 }
 
-/** What "Comment" uses of the workbench: where to register, and the editor the user works in. */
-export type CommentWorkbench = Pick<Workbench, 'registerCommand' | 'registerKeybinding' | 'registerMenuItem' | 'activeTextEditor'>;
+/** What "Comment" uses of the extension API: where to register, and the editor the user works in. */
+export interface CommentContext {
+  readonly commands: Pick<Commands, 'registerCommand' | 'registerKeybinding'>;
+  readonly window: Pick<Window, 'activeTextEditor'>;
+  readonly workbench: Pick<Workbench, 'registerMenuItem'>;
+}
 
 const COMMENT_ICON =
   '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"/></svg>';
@@ -25,13 +31,13 @@ const COMMENT_ICON =
  * it, and the tab bar (menu `editor/title`) offers it in the Source tab (the Visual view has "Comment" in its own
  * toolbar).
  */
-export function registerAddComment(workbench: CommentWorkbench, cards: NoteCards): Disposable {
+export function registerAddComment({ commands, window, workbench }: CommentContext, cards: NoteCards): Disposable {
   return Disposable.from(
-    workbench.registerCommand(ADD_COMMENT, () => {
-      const editor = workbench.activeTextEditor;
+    commands.registerCommand(ADD_COMMENT, () => {
+      const editor = window.activeTextEditor;
       if (editor) addComment(editor, cards);
     }),
-    workbench.registerKeybinding('Mod+Alt+KeyM', ADD_COMMENT),
+    commands.registerKeybinding('Mod+Alt+KeyM', ADD_COMMENT),
     workbench.registerMenuItem('editor/title', {
       command: ADD_COMMENT,
       title: 'Comment',

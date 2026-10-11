@@ -1,7 +1,8 @@
 // What the pdf-export extension adds to the preview: "Download PDF" and its options popover (downloadPdf).
 // See ../pdf-export.ts.
 import type { PdfExportOption, PreviewToolbarItem } from '../../../hosts/preview/preview';
-import type { Memory, Workbench } from '../../../hosts/workbench/workbench';
+import type { Window } from '../../../hosts/window/window';
+import type { Memento } from '../../../hosts/workbench/workbench';
 
 /** What the button downloads: the PDF made with the given option values, and the name to save it under. */
 export interface PdfDownloads {
@@ -12,21 +13,24 @@ export interface PdfDownloads {
 }
 
 /** Where the button tells why there is no PDF. */
-export type PdfMessages = Pick<Workbench, 'showErrorMessage'>;
+export type PdfMessages = Pick<Window, 'showErrorMessage'>;
 
 /**
  * "Download PDF". With export options registered it opens a popover with a checkbox per option (as this viewer left
- * them last time, else their defaults) and "Download"; without any it downloads at once. While a PDF is being made
+ * them last time, kept in `state` under `options`, else their defaults) and "Download"; without any it downloads at
+ * once. While a PDF is being made
  * the buttons are disabled ("Making PDF…"); a failure is an error message, and nothing is downloaded.
  */
-export function downloadPdf(pdfs: PdfDownloads, memory: Memory<Record<string, boolean>>, messages: PdfMessages): PreviewToolbarItem {
+export function downloadPdf(pdfs: PdfDownloads, state: Memento, messages: PdfMessages): PreviewToolbarItem {
   return (preview) => {
-    const button = new DownloadPdfButton(preview.ownerDocument, pdfs, memory, messages);
-    return { elements: [button.element], update: () => button.describe(), dispose: () => button.destroy() };
+    const button = new DownloadPdfButton(preview.ownerDocument, pdfs, state, messages);
+    return { elements: [button.element], update: () => button.describe(), dispose: () => button.dispose() };
   };
 }
 
 const LABEL = 'Download PDF';
+/** Where the viewer's choices are kept. */
+const OPTIONS_KEY = 'options';
 
 class DownloadPdfButton {
   readonly element: HTMLElement;
@@ -37,7 +41,7 @@ class DownloadPdfButton {
   constructor(
     private readonly doc: Document,
     private readonly pdfs: PdfDownloads,
-    private readonly memory: Memory<Record<string, boolean>>,
+    private readonly state: Memento,
     private readonly messages: PdfMessages,
   ) {
     this.element = doc.createElement('span');
@@ -73,7 +77,7 @@ class DownloadPdfButton {
     }
   }
 
-  destroy(): void {
+  dispose(): void {
     this.doc.removeEventListener('mousedown', this.closeOutside, true);
     this.element.remove();
   }
@@ -110,7 +114,7 @@ class DownloadPdfButton {
     const input = this.doc.createElement('input');
     input.type = 'checkbox';
     input.checked = checked;
-    input.addEventListener('change', () => this.memory.save({ ...this.remembered(), [option.id]: input.checked }));
+    input.addEventListener('change', () => void this.state.update(OPTIONS_KEY, { ...this.remembered(), [option.id]: input.checked }));
     if (option.description) label.title = option.description;
     label.append(input, option.label);
     return { id: option.id, label, input };
@@ -118,7 +122,7 @@ class DownloadPdfButton {
 
   /** The values this viewer chose, read from storage: only booleans count. */
   private remembered(): Record<string, boolean> {
-    const saved: unknown = this.memory.load();
+    const saved = this.state.get<unknown>(OPTIONS_KEY);
     if (typeof saved !== 'object' || saved === null) return {};
     return Object.fromEntries(Object.entries(saved).filter((entry): entry is [string, boolean] => typeof entry[1] === 'boolean'));
   }

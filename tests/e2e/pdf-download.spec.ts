@@ -17,7 +17,7 @@ test.beforeEach(async ({ page }) => {
 const pdfControls = (page: Page) => page.getByTestId('typst-pdf');
 /** The error messages shown ("No PDF: …"). */
 const errors = (page: Page) => page.getByTestId('typst-notifications').getByRole('alert');
-type Editor = { source: string; exportPdf(options?: { options?: Record<string, boolean> }): Promise<Blob> };
+type Editor = { source: string; exportPdf(options?: Record<string, boolean>): Promise<Blob> };
 const setSource = (page: Page, text: string) =>
   page.evaluate((t) => ((window as unknown as { editor: Editor }).editor.source = t), text);
 
@@ -77,7 +77,7 @@ test('a document with errors gives a message, not a PDF', async ({ page }) => {
 
 test('hosts get the PDF as a Blob from exportPdf', async ({ page }) => {
   const result = await page.evaluate(async () => {
-    const blob = await (window as unknown as { editor: Editor }).editor.exportPdf({ options: { 'comments.include': true } });
+    const blob = await (window as unknown as { editor: Editor }).editor.exportPdf({ 'comments.include': true });
     return { type: blob.type, head: new TextDecoder().decode((await blob.arrayBuffer()).slice(0, 5)) };
   });
   expect(result).toEqual({ type: 'application/pdf', head: '%PDF-' });

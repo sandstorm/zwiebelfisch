@@ -10,19 +10,21 @@ import { TASK_ITEM, TASK_LIST, TASK_LIST_ACTION } from './visual-view/task-lists
 const TASK_LISTS_PRIORITY = 110;
 
 /** Bulleted, numbered and task lists. */
-export const lists: TypstExtension = {
-  id: 'lists',
-  activate({ workbench, visualView, subscriptions }) {
-    subscriptions.push(workbench.registerStyleSheet(css));
-    subscriptions.push(
-      visualView.registerNode(BULLET_LIST),
-      visualView.registerNode(ORDERED_LIST),
-      visualView.registerNode(LIST_ITEM),
-      // a task item is a bullet item (`- [ ] ..`): its projector is asked before the bullet list's
-      visualView.registerNode(TASK_LIST, { priority: TASK_LISTS_PRIORITY }),
-      visualView.registerNode(TASK_ITEM, { priority: TASK_LISTS_PRIORITY }),
-      visualView.registerToolbarGroup({ kind: 'group', id: 'lists', order: 30 }),
-      ...[...LIST_ACTIONS, TASK_LIST_ACTION].map((action, i) => visualView.registerToolbarItem({ group: 'lists', order: 10 * (i + 1), action })),
-    );
-  },
-};
+export function lists(): TypstExtension {
+  return {
+    id: 'lists',
+    activate({ workbench, visualView, subscriptions }) {
+      subscriptions.push(workbench.registerStyleSheet(css));
+      subscriptions.push(
+        visualView.registerNode(BULLET_LIST),
+        visualView.registerNode(ORDERED_LIST),
+        visualView.registerNode(LIST_ITEM),
+        // a task item is a bullet item (`- [ ] ..`): its projector is asked before the bullet list's
+        visualView.registerNode(TASK_LIST, { priority: TASK_LISTS_PRIORITY }),
+        visualView.registerNode(TASK_ITEM, { priority: TASK_LISTS_PRIORITY }),
+        visualView.registerToolbarGroup({ kind: 'group', id: 'lists', order: 30 }),
+        ...[...LIST_ACTIONS, TASK_LIST_ACTION].map((action, i) => visualView.registerToolbarItem({ group: 'lists', order: 10 * (i + 1), action })),
+      );
+    },
+  };
+}

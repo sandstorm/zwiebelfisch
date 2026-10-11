@@ -2,7 +2,7 @@
 import { Hocuspocus, type Document, type Extension, type onStatelessPayload } from '@hocuspocus/server';
 import { afterEach, describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
-import { ASSETS_MAP, META_MAP, roomFilePath, type ServerMessage } from '../../../src/core/gitlab-protocol/gitlab-protocol.ts';
+import { ASSETS_MAP, META_MAP, roomFilePath, type ServerMessage } from '../../../src/core/room-protocol/room-protocol.ts';
 import { connect } from '../../../src/extensions/collaboration/model/in-process.ts';
 import { SharedProject } from '../../../src/extensions/collaboration/model/shared-project.ts';
 import { Project } from '../../../src/core/project/project.ts';
@@ -12,7 +12,7 @@ import { collabConfiguration } from '../collab-server.ts';
 import { blobSha } from './blob-sha.ts';
 import { FakeGitLab } from './fake-gitlab.ts';
 import type { GitLabExtension } from './gitlab-extension.ts';
-import type { HttpResponse } from './http.ts';
+import type { HttpResponse } from '../http.ts';
 
 const path = ProjectPath.of;
 
@@ -92,7 +92,7 @@ function widgetClient(doc: Y.Doc) {
   const project = new Project(MAIN, {});
   const shared = new SharedProject(project, ydoc);
   cleanup.push(() => {
-    shared.destroy();
+    shared.dispose();
     disconnect();
   });
   return project;

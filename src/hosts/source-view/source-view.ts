@@ -130,7 +130,7 @@ export class SourceView {
     return { from, to };
   }
 
-  destroy(): void {
+  dispose(): void {
     for (const subscription of this.subscriptions) subscription.dispose();
     this.view.destroy();
   }

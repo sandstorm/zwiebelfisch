@@ -6,7 +6,8 @@ import { untarGz } from './tar';
 /** Returns the `.tar.gz` archive of a package spec like `@preview/name:0.1.0`. */
 export type PackageFetcher = (spec: string) => Promise<Uint8Array>;
 
-export interface PackageProject {
+/** An engine's compile and PDF export, downloading the packages a document imports on the way. */
+export interface PackageEngine {
   /**
    * Compiles `main`; packages the document imports that the engine does not
    * have yet are downloaded, added, and the document compiled again. A package
@@ -21,7 +22,7 @@ export interface PackageProject {
  * Lets documents compiled by `engine` import packages, fetched on first use
  * with `fetchPackage` (default: from packages.typst.org, cached).
  */
-export function withPackages(engine: Engine, fetchPackage: PackageFetcher = fetchPreviewPackage): PackageProject {
+export function withPackages(engine: Engine, fetchPackage: PackageFetcher = fetchPreviewPackage): PackageEngine {
   const failed = new Map<string, string>();
   const load = async (spec: string) => {
     try {

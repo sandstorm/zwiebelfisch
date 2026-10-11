@@ -1,6 +1,6 @@
 // Three-way merge of Typst texts (node-diff3): an upstream push merged into the room's edits, with conflict ranges.
 import { diff3Merge, diffPatch } from 'node-diff3';
-import type { ConflictRange, FileConflict } from '../../../src/core/gitlab-protocol/gitlab-protocol.ts';
+import type { ConflictRange, FileConflict } from '../../../src/core/room-protocol/room-protocol.ts';
 
 /** A replacement in pre-change coordinates (UTF-16). */
 export interface TextEdit {

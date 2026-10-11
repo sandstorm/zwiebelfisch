@@ -3,10 +3,10 @@
 // option by option. So it passes one `options` property through, maps one `settings` attribute (JSON) onto the
 // settings the extensions declare, and forwards the editor's callbacks as DOM events from one table; the content
 // (`value`, `files`) is all it knows by name, as with `<input>`. See docs/embedding.md.
-import { createTypstEditor, type PdfExportOptions, type TypstEditor, type TypstEditorOptions } from '../typst-editor/typst-editor';
+import { createTypstEditor, type TypstEditor, type TypstEditorOptions } from '../typst-editor/typst-editor';
 import type { FileChange, FileContent, ProjectFiles } from '../core/project/project';
 import type { ProjectPath } from '../core/paths/paths';
-import type { Settings } from '../hosts/workbench/workbench';
+import type { Settings } from '../hosts/workspace/workspace';
 import { inlineSource } from './inline-source';
 
 /**
@@ -42,7 +42,7 @@ const EVENTS: Record<string, Forward> = {
  *   current content; setting them replaces it without events, as with `<input>`.
  * - Events (bubbling, composed): `change` for every file whose content changes (`TypstEditorChangeDetail`),
  *   `files-change` with every `FileChange` (`onFilesChange`), `open` with `{ path }` (`onOpen`).
- * - `executeCommand(id, ...args)` runs an extension's command; `exportPdf({ options })` gives the PDF as a Blob.
+ * - `executeCommand(id, ...args)` runs an extension's command; `exportPdf(options?)` gives the PDF as a Blob.
  */
 export class TypstEditorElement extends Base() {
   static readonly observedAttributes = ['value', 'settings'];
@@ -113,7 +113,7 @@ export class TypstEditorElement extends Base() {
   }
 
   /** The project as a PDF, with the export options as given (see `TypstEditor.exportPdf`); rejects while not connected. */
-  exportPdf(options?: PdfExportOptions): Promise<Blob> {
+  exportPdf(options?: Record<string, boolean>): Promise<Blob> {
     if (!this.#editor) return Promise.reject(new Error('<typst-editor> is not connected'));
     return this.#editor.exportPdf(options);
   }
@@ -141,7 +141,7 @@ export class TypstEditorElement extends Base() {
       this.#files = this.#editor.files;
       this.#settings = this.#editor.settings;
     }
-    this.#editor?.destroy();
+    this.#editor?.dispose();
     this.#editor = null;
     this.shadowRoot?.replaceChildren();
   }

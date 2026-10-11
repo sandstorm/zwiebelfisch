@@ -3,7 +3,7 @@ import type { PathReference } from '../../../core/paths/paths';
 import type { Node } from '@tiptap/pm/model';
 import type { EditorState, Transaction } from '@tiptap/pm/state';
 import type { BoxTools, BoxToolsHost } from '../../../hosts/visual-view/visual-view';
-import type { Workbench } from '../../../hosts/workbench/workbench';
+import type { Window } from '../../../hosts/window/window';
 import { imageWidthCss } from '../model/image-call';
 import { type DragStart, resizedPercent } from '../model/resize';
 import { addCaption, imageInfo, removeCaption, resizeImage, setImageAlt } from './image-edits';
@@ -13,8 +13,8 @@ import { imagePath } from './image-syntax';
 export interface ImageToolsHost extends BoxToolsHost {
   /** The image's path (in the call `src`) in the heading, e.g. as a link to the file (default: the text). */
   pathLabel?: ((path: PathReference, src: string) => globalThis.Node) | null;
-  /** Where "Alt text" asks for the text (the workbench's input box; default: no "Alt text"). */
-  prompts?: Pick<Workbench, 'showInputBox'>;
+  /** Where "Alt text" asks for the text (the window's input box; default: no "Alt text"). */
+  prompts?: Pick<Window, 'showInputBox'>;
 }
 
 /** Width presets offered as buttons (keyboard-friendly resizing). */
@@ -103,7 +103,7 @@ export class ImageTools implements BoxTools {
     for (const [i, button] of this.presetButtons.entries()) button.setAttribute('aria-pressed', String(info?.width === `${PRESETS[i]}%`));
   }
 
-  destroy(): void {
+  dispose(): void {
     this.stopDrag?.();
   }
 
@@ -114,7 +114,7 @@ export class ImageTools implements BoxTools {
   }
 
   /** Asks for the alt text (an empty one removes it) and sets it. */
-  private async askAlt(prompts: Pick<Workbench, 'showInputBox'>): Promise<void> {
+  private async askAlt(prompts: Pick<Window, 'showInputBox'>): Promise<void> {
     const pos = this.host.getPos();
     const alt = (pos === undefined ? null : imageInfo(this.host.editor.state, pos)?.alt) ?? '';
     const text = await prompts.showInputBox({

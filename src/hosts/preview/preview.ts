@@ -3,11 +3,11 @@
 // Why a host: the preview keeps the mechanism — the engine worker and its protocol, coalesced compiles, the
 // lazily rendered page list, hit-testing (`onDidClickPage`), scrolling and reveal. What sits on top of it is
 // contributed: toolbar items (zoom, "Follow cursor", page number, "Download PDF"), the options a PDF export offers,
-// overlays on the pages, and the policy of when to reveal what (the preview-sync extension follows the cursor and
+// and the policy of when to reveal what (the preview-sync extension follows the cursor and
 // jumps to the source of a click). So a feature adds to the preview without the preview knowing it.
 import { Disposable } from '../../core/disposable/disposable';
 import { type Event, EventEmitter } from '../../core/event-emitter/event-emitter';
-import type { Box, Diagnostic, Page, PdfEntry, PdfResult, Position } from '../../core/typst-engine/typst-engine';
+import type { Diagnostic, Page, PdfEntry, PdfResult, Position } from '../../core/typst-engine/typst-engine';
 import { isInside, mostVisible } from './pages/geometry';
 import { overlay, OverlayLayer } from './pages/overlays';
 import { PageList } from './pages/page-list';
@@ -38,8 +38,6 @@ export interface PreviewContributions {
   registerPdfExportOption(option: PdfExportOption, options?: { priority?: number }): Disposable;
   /** The registered PDF export options, in the order an export applies them. */
   pdfExportOptions(): readonly PdfExportOption[];
-  /** A layer of boxes drawn over the pages, as elements of class `className`. */
-  createOverlay(className: string): PageOverlay;
   /**
    * The errors and warnings of each compilation of the newest files given to the preview (results of outdated
    * files are not reported, so the offsets match the text last given).
@@ -82,7 +80,7 @@ export interface ToolbarItemView {
   readonly elements: readonly HTMLElement[];
   /** Called (at most once per frame) after the view changed: scrolled, resized, zoomed, new pages. */
   update?(): void;
-  /** Called when the item is unregistered or the preview destroyed; the toolbar removes `elements`. */
+  /** Called when the item is unregistered or the preview disposed; the toolbar removes `elements`. */
   dispose?(): void;
 }
 
@@ -108,12 +106,12 @@ export interface PageClick {
 }
 
 /**
- * A choice offered when exporting a PDF (a checkbox next to "Download"; `exportPdf({ options })` for hosts), e.g.
+ * A choice offered when exporting a PDF (a checkbox next to "Download"; `exportPdf(options)` for hosts), e.g.
  * whether the PDF includes the comments. Each option changes what is compiled, never the documents. Options are
  * checkboxes for now; a later `choices?: { value, label }[]` would make `default` and `value` one of them.
  */
 export interface PdfExportOption {
-  /** `<extension>.<name>`, e.g. `comments.include`: the key in `exportPdf({ options })` and in what is remembered. */
+  /** `<extension>.<name>`, e.g. `comments.include`: the key in `exportPdf(options)` and in what is remembered. */
   readonly id: string;
   /** The checkbox's label ("Include comments"). */
   readonly label: string;
@@ -126,17 +124,6 @@ export interface PdfExportOption {
    * `PreviewContributions.registerPdfExportOption` for the order). Called for every option, also when it is off.
    */
   apply(entry: PdfEntry, value: boolean): PdfEntry;
-}
-
-/**
- * Marks drawn over the pages (`Preview.createOverlay`), each a box in points on its page, kept in place at
- * any zoom and through lazy rendering and recompiles, until set again or disposed.
- */
-export interface PageOverlay {
-  /** Replaces the boxes shown. */
-  set(boxes: readonly Box[]): void;
-  /** Removes the boxes, for good. */
-  dispose(): void;
 }
 
 /** Preview zoom: fit the pane width, or a fixed scale where 1 = 100 % (1 pt = 1/72 in). */
@@ -185,9 +172,8 @@ export class Preview implements PreviewContributions {
   private readonly items: { view: ToolbarItemView; group: string; order: number }[] = [];
   /** The PDF export options, with their priority, in registration order. */
   private readonly exportOptions: { option: PdfExportOption; priority: number }[] = [];
-  private readonly overlays = new Set<OverlayLayer>();
   /** Outlines the clicked text, until the next click or successful compile. */
-  private readonly clickHighlight: PageOverlay;
+  private readonly clickHighlight: OverlayLayer;
   private zoom: Zoom = 'fit';
   private nextId = 0;
   private readonly sender = new FileSender();
@@ -210,7 +196,7 @@ export class Preview implements PreviewContributions {
     this.pages = div(doc, 'typst-preview');
     this.pages.dataset.testid = 'typst-preview';
     this.list = new PageList(this.pages, { root: this.scroller });
-    this.clickHighlight = this.createOverlay('typst-preview__highlight');
+    this.clickHighlight = new OverlayLayer(this.list, 'typst-preview__highlight');
     this.context = this.itemContext(doc);
     this.scroller.append(this.pages);
     this.pane.append(this.toolbar, this.scroller);
@@ -304,19 +290,7 @@ export class Preview implements PreviewContributions {
     return [...this.exportOptions].sort((a, b) => b.priority - a.priority).map((entry) => entry.option);
   }
 
-  createOverlay(className: string): PageOverlay {
-    const layer = new OverlayLayer(this.list, className);
-    this.overlays.add(layer);
-    return {
-      set: (boxes) => layer.set(boxes),
-      dispose: () => {
-        layer.set([]);
-        this.overlays.delete(layer);
-      },
-    };
-  }
-
-  destroy(): void {
+  dispose(): void {
     this.rendered.dispose();
     this.diagnosed.dispose();
     this.clicked.dispose();
@@ -324,7 +298,7 @@ export class Preview implements PreviewContributions {
     this.worker.terminate();
     this.resizeObserver?.disconnect();
     cancelAnimationFrame(this.frame);
-    this.list.destroy();
+    this.list.dispose();
     this.pane.remove();
   }
 
@@ -354,7 +328,7 @@ export class Preview implements PreviewContributions {
     if (!failed) {
       this.clickHighlight.set([]);
       this.list.render(response.result.pages);
-      for (const layer of this.overlays) layer.redraw();
+      this.clickHighlight.redraw();
       this.scheduleStatus();
       this.compiled = { files, pages: response.result.pages };
       this.rendered.fire();

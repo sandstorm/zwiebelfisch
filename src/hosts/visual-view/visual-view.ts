@@ -110,12 +110,12 @@ export class VisualView {
     return { from, to: selection.empty ? from : Math.max(from, posToSource(doc, selection.to, -1)) };
   }
 
-  destroy(): void {
+  dispose(): void {
     for (const subscription of [...this.subscriptions].reverse()) subscription.dispose();
     this.selectionChanged.dispose();
-    this.toolbar.destroy();
+    this.toolbar.dispose();
     this.editor.destroy();
-    for (const gutter of this.gutters) gutter.destroy();
+    for (const gutter of this.gutters) gutter.dispose();
   }
 
   /** Replaces the highlights of `layer` (source ranges); they follow edits until set again. */
@@ -174,7 +174,7 @@ export type EditorExtensionProvider = (view: VisualViewContext) => AnyExtension 
 export interface Gutter {
   /** Added to the view's editor state. */
   readonly plugin?: Plugin;
-  destroy(): void;
+  dispose(): void;
 }
 
 /** Makes a view's gutter in `body`, the element holding the text (`.typst-visual__body`). */
@@ -473,7 +473,7 @@ export interface BoxTools {
   update(node: Node): void;
   /** The box was selected. */
   select(): void;
-  destroy(): void;
+  dispose(): void;
 }
 
 /**
@@ -527,7 +527,7 @@ export interface ToolbarControl {
   readonly element: HTMLElement;
   /** Shows the selection's state; called after every transaction, focus and blur. */
   refresh(): void;
-  destroy?(): void;
+  dispose?(): void;
 }
 
 /**

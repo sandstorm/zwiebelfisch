@@ -44,7 +44,7 @@ export class FloatingBar {
     this.element.style.top = `${anchor.top - box.top - 6}px`;
   }
 
-  destroy(): void {
+  dispose(): void {
     this.element.remove();
   }
 }

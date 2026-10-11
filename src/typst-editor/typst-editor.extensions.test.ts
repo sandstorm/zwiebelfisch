@@ -7,7 +7,8 @@ import type { Diagnostic } from '../core/typst-engine/typst-engine';
 import type { PageClick, PdfExportOption, PreviewContext, PreviewToolbarItem } from '../hosts/preview/preview';
 import type { Disposable } from '../core/disposable/disposable';
 import { EventEmitter } from '../core/event-emitter/event-emitter';
-import type { SourceControl, SourceControlState, TypstExtension } from '../hosts/workbench/workbench';
+import type { TypstExtension } from '../hosts/workbench/workbench';
+import type { SourceControl, SourceControlState } from '../hosts/scm/scm';
 import { createTypstEditor, type TypstEditorOptions } from './typst-editor';
 
 const exportPdf = vi.fn(async () => ({ pdf: new Uint8Array([37, 80, 68, 70]), diagnostics: [], missingPackages: [] }));
@@ -63,7 +64,7 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
       };
       registerPdfExportOption = registry(this.pdfOptions);
       pdfExportOptions = () => this.pdfOptions;
-      destroy() {}
+      dispose() {}
     },
   };
 });
@@ -250,18 +251,18 @@ describe('the built-in extensions', () => {
     expect(preview.revealed.at(-1)).toEqual(['/main.typ', 3, 3]);
   });
 
-  it('offers "Save to <label>…" in the tab bar for a registered source control: asks for the message, commits, tells the outcome', async () => {
+  it('offers "Save to <label>…" in the tab bar for a registered source control: asks for the message, commits, says while busy', async () => {
     const changed = new EventEmitter<void>();
     const committed: string[] = [];
     const gitlab: SourceControl & { state: SourceControlState } = {
       id: 'gitlab',
       label: 'GitLab',
       defaultCommitMessage: 'Edit via Typst editor',
-      state: { busy: false, status: null },
+      state: { busy: false },
       onDidChange: changed.event,
       commit(message) {
         committed.push(message);
-        this.state = { busy: true, status: null };
+        this.state = { busy: true };
         changed.fire();
       },
     };
@@ -269,7 +270,7 @@ describe('the built-in extensions', () => {
     // what the collaboration extension does for a GitLab room; source-control knows only the registry
     const room: TypstExtension = {
       id: 'room',
-      activate: ({ workbench, subscriptions }) => subscriptions.push((registration = workbench.registerSourceControl(gitlab))),
+      activate: ({ scm, subscriptions }) => subscriptions.push((registration = scm.registerSourceControl(gitlab))),
     };
     const { host } = setup({ source: '= Hi', extensions: (builtins) => [...builtins, room] });
     const action = () => host.querySelector<HTMLButtonElement>('.typst-editor__tab-action[data-command="sourceControl.commit"]');
@@ -289,10 +290,8 @@ describe('the built-in extensions', () => {
     await vi.waitFor(() => expect(notifications()).toEqual(['Saving to GitLab is under way.']));
     expect(host.querySelector('form.typst-quick-input')).toBeNull();
 
-    gitlab.state = { busy: false, status: { message: 'Saving failed: no token', severity: 'error' } };
+    gitlab.state = { busy: false };
     changed.fire();
-    expect(notifications()).toEqual(['Saving to GitLab is under way.', 'Saving failed: no token']);
-    expect(host.querySelector('.typst-notification--error')!.textContent).toContain('Saving failed: no token');
     expect(action()!.textContent).toBe('Save to GitLab…');
 
     registration!.dispose();
@@ -332,10 +331,10 @@ describe('the built-in extensions', () => {
   it('exports the PDF through the pdf-export extension, with the options other extensions register', async () => {
     const { editor, preview } = setup({ source: '= Hi' });
     expect(preview.pdfOptions.map((option) => option.id)).toEqual(['comments.include']);
-    const blob = await editor.exportPdf({ options: { 'comments.include': true } });
+    const blob = await editor.exportPdf({ 'comments.include': true });
     expect(blob.type).toBe('application/pdf');
     expect(exportPdf).toHaveBeenCalledWith({ main: '/main.typ', sources: {} });
-    await expect(editor.exportPdf({ options: { nope: true } })).rejects.toThrow('Unknown PDF export option: nope');
+    await expect(editor.exportPdf({ nope: true })).rejects.toThrow('Unknown PDF export option: nope');
   });
 
   it("runs the host's own extensions with the built-ins, with their settings, and leaves out built-ins by id", async () => {
@@ -344,9 +343,9 @@ describe('the built-in extensions', () => {
     const counter: TypstExtension = {
       id: 'word-count',
       contributes: { configuration: { properties: { 'wordCount.label': { type: 'string', default: 'words', description: 'The label.' } } } },
-      activate: ({ workspace, workbench, subscriptions }) => {
+      activate: ({ workspace, commands, subscriptions }) => {
         seen.push(workspace.getConfiguration('wordCount').get('label'));
-        subscriptions.push(workbench.registerCommand('wordCount.count', () => 2));
+        subscriptions.push(commands.registerCommand('wordCount.count', () => 2));
       },
     };
     const { editor, preview } = setup({
@@ -363,9 +362,9 @@ describe('the built-in extensions', () => {
     warn.mockRestore();
   });
 
-  it('removes everything it added on destroy', () => {
+  it('removes everything it added on dispose', () => {
     const { host, editor } = setup({ source: '= Hi', files: { '/a.typ': 'A' } });
-    editor.destroy();
+    editor.dispose();
     expect(host.children).toHaveLength(0);
     expect(host.classList.contains('typst-editor')).toBe(false);
   });

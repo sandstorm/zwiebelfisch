@@ -7,10 +7,12 @@ import { HEADING } from './visual-view/visual-view';
 import { HeadingNumbers } from './visual-view/heading-numbers';
 
 /** Headings and their numbers. */
-export const headings: TypstExtension = {
-  id: 'headings',
-  activate({ workbench, visualView, subscriptions }) {
-    subscriptions.push(workbench.registerStyleSheet(css));
-    subscriptions.push(visualView.registerNode(HEADING), visualView.registerEditorExtension(() => HeadingNumbers));
-  },
-};
+export function headings(): TypstExtension {
+  return {
+    id: 'headings',
+    activate({ workbench, visualView, subscriptions }) {
+      subscriptions.push(workbench.registerStyleSheet(css));
+      subscriptions.push(visualView.registerNode(HEADING), visualView.registerEditorExtension(() => HeadingNumbers));
+    },
+  };
+}

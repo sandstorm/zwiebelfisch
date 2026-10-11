@@ -6,9 +6,11 @@ import type { TypstExtension } from '../../hosts/workbench/workbench';
 import { INSERT_OUTLINE, OUTLINE } from './visual-view/visual-view';
 
 /** The table of contents. */
-export const outline: TypstExtension = {
-  id: 'outline',
-  activate({ visualView, subscriptions }) {
-    subscriptions.push(visualView.registerNode(OUTLINE), visualView.registerToolbarItem({ group: 'insert', order: 30, action: INSERT_OUTLINE }));
-  },
-};
+export function outline(): TypstExtension {
+  return {
+    id: 'outline',
+    activate({ visualView, subscriptions }) {
+      subscriptions.push(visualView.registerNode(OUTLINE), visualView.registerToolbarItem({ group: 'insert', order: 30, action: INSERT_OUTLINE }));
+    },
+  };
+}

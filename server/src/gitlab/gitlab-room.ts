@@ -1,7 +1,7 @@
 // GitLabRoom: one GitLab-backed room: loads the branch into the Y.Doc, commits versions, merges upstream pushes.
 // See ARCHITECTURE.md, "GitLab-backed rooms".
 import * as Y from 'yjs';
-import { ASSETS_MAP, FILES_MAP, META_MAP, type RoomMeta, type ServerMessage } from '../../../src/core/gitlab-protocol/gitlab-protocol.ts';
+import { ASSETS_MAP, FILES_MAP, META_MAP, type RoomMeta, type ServerMessage } from '../../../src/core/room-protocol/room-protocol.ts';
 import type { BlobCache } from './blob-cache.ts';
 import { blobSha } from './blob-sha.ts';
 import { commitActions, type RoomFiles } from './commit-actions.ts';
@@ -19,7 +19,7 @@ export interface Author {
 /**
  * One room backed by a GitLab branch: the room's Y.Doc holds the `.typ` files
  * (`files`), the other files (`assets`: blob sha or uploaded bytes) and the
- * repository state they are based on (`meta`, see gitlab-protocol.ts).
+ * repository state they are based on (`meta`, see room-protocol.ts).
  *
  * Operations on a room run one after another. Everything the room knows lives
  * in the Y.Doc, so a room stored and loaded again (any storage) continues

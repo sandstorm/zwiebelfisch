@@ -10,8 +10,6 @@
 // branch as a workbench source control.
 import type { Awareness } from 'y-protocols/awareness';
 import type * as Y from 'yjs';
-import type { CollaborationUser } from './model/remote-cursors';
-import { Disposable } from '../../core/disposable/disposable';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './collaboration.css?inline';
 import { CollaborationLink } from './collaboration-link';
@@ -38,18 +36,19 @@ export type CollaborationOptions =
 export function collaboration(options: CollaborationOptions): TypstExtension {
   return {
     id: 'collaboration',
-    activate({ project, workbench, sourceView, visualView, subscriptions }) {
+    activate({ project, window, scm, workbench, sourceView, visualView, subscriptions }) {
       subscriptions.push(workbench.registerStyleSheet(css));
       const presences = new Presences((document) => project.pathOf(document));
-      const user: CollaborationUser | undefined = workbench.user;
+      const user = workbench.user;
       const link = new CollaborationLink(options, { project, user }, {
         current: () => {
-          const editor = workbench.activeTextEditor;
+          const editor = window.activeTextEditor;
           const path = editor && project.pathOf(editor.document);
           return path ? { path, selection: editor.selection } : null;
         },
         focused: () => workbench.isEditorFocused(),
-        onSourceControl: (sourceControl) => subscriptions.push(workbench.registerSourceControl(sourceControl)),
+        onSourceControl: (sourceControl) => subscriptions.push(scm.registerSourceControl(sourceControl)),
+        tell: (message, severity) => void { info: window.showInformationMessage, warning: window.showWarningMessage, error: window.showErrorMessage }[severity].call(window, message),
         onPresence: (all) => presences.set(all),
       });
       const documents = () => project.paths().flatMap((path) => project.document(path) ?? []);
@@ -58,10 +57,10 @@ export function collaboration(options: CollaborationOptions): TypstExtension {
         presences,
         sourceView.registerExtension(sourcePresence(presences)),
         sourceView.registerExtension(perUserUndo),
-        workbench.registerFileDecorationProvider(presenceDecorations(presences)),
-        new Disposable(() => link.destroy()),
+        window.registerFileDecorationProvider(presenceDecorations(presences)),
+        link,
         // fired from the editors' own updates, after their state has the new selection
-        workbench.onDidChangeTextEditorSelection(() => link.selectionChanged()),
+        window.onDidChangeTextEditorSelection(() => link.selectionChanged()),
       );
     },
   };

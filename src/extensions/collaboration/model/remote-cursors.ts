@@ -3,17 +3,11 @@
 import type { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 import { ProjectPath } from '../../../core/paths/paths';
+import type { User } from '../../../core/user/user';
 import type { PlacedPresence } from '../presence/presence';
 
-/** Who is editing here, as others see it. */
-export interface CollaborationUser {
-  name: string;
-  /** A CSS color for their cursor and selection (default: picked from the name). */
-  color?: string;
-}
-
 export interface RemoteCursorsOptions {
-  user: CollaborationUser;
+  user: User;
   /** The shared text of `path` (where cursors are anchored). */
   text(path: ProjectPath): Y.Text | undefined;
   /** Called with every other user's place, in any file, whenever one changes (the views, the file panel). */
@@ -68,7 +62,7 @@ export class RemoteCursors {
     this.awareness.setLocalStateField('cursor', cursor);
   }
 
-  destroy(): void {
+  dispose(): void {
     this.destroyed = true;
     this.awareness.off('change', this.schedule);
     this.awareness.doc.off('update', this.schedule);
@@ -108,7 +102,7 @@ export class RemoteCursors {
   private placeOf(id: string, state: Record<string, unknown>): PlacedPresence | null {
     const place = this.cursorPlace(state.cursor as CursorState | null | undefined);
     if (!place) return null;
-    const user = state.user as CollaborationUser | undefined;
+    const user = state.user as User | undefined;
     const name = user?.name ?? '';
     return { id, user: { name, color: user?.color ?? colorFor(name) }, ...place };
   }

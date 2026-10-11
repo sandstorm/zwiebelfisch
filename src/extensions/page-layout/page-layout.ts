@@ -8,15 +8,17 @@ import { HORIZONTAL_RULE, INSERT_HORIZONTAL_RULE } from './visual-view/horizonta
 import { INSERT_PAGE_BREAK, PAGE_BREAK } from './visual-view/page-break';
 
 /** Page breaks and horizontal rules. */
-export const pageLayout: TypstExtension = {
-  id: 'page-layout',
-  activate({ workbench, visualView, subscriptions }) {
-    subscriptions.push(workbench.registerStyleSheet(css));
-    subscriptions.push(
-      visualView.registerNode(PAGE_BREAK),
-      visualView.registerNode(HORIZONTAL_RULE),
-      visualView.registerToolbarItem({ group: 'insert', order: 60, action: INSERT_PAGE_BREAK }),
-      visualView.registerToolbarItem({ group: 'insert', order: 70, action: INSERT_HORIZONTAL_RULE }),
-    );
-  },
-};
+export function pageLayout(): TypstExtension {
+  return {
+    id: 'page-layout',
+    activate({ workbench, visualView, subscriptions }) {
+      subscriptions.push(workbench.registerStyleSheet(css));
+      subscriptions.push(
+        visualView.registerNode(PAGE_BREAK),
+        visualView.registerNode(HORIZONTAL_RULE),
+        visualView.registerToolbarItem({ group: 'insert', order: 60, action: INSERT_PAGE_BREAK }),
+        visualView.registerToolbarItem({ group: 'insert', order: 70, action: INSERT_HORIZONTAL_RULE }),
+      );
+    },
+  };
+}

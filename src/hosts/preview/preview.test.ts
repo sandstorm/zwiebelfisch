@@ -12,7 +12,7 @@ const option = (id: string): PdfExportOption => ({ id, label: id, default: false
 
 describe('Preview.registerPdfExportOption', () => {
   let preview: Preview;
-  afterEach(() => preview.destroy());
+  afterEach(() => preview.dispose());
 
   it('lists the options by priority, equal priorities in registration order, until disposed', () => {
     preview = new Preview(document.createElement('div'));

@@ -100,7 +100,7 @@ describe('SourceViewHost contributions', () => {
     expect(marked(parent, '.drawn')).toEqual(['bold']);
   });
 
-  it('stops applying contributions to a destroyed view', () => {
+  it('stops applying contributions to a disposed view', () => {
     const host = new SourceViewHost();
     const made: string[] = [];
     host.registerExtension(({ document }) => {
@@ -108,7 +108,7 @@ describe('SourceViewHost contributions', () => {
       return [];
     });
     const { view } = setup('text\n', host);
-    view.destroy();
+    view.dispose();
     host.registerExtension(firstWord);
     expect(made).toEqual(['text\n']);
   });

@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
-import { META_MAP } from '../../../core/gitlab-protocol/gitlab-protocol';
+import { META_MAP } from '../../../core/room-protocol/room-protocol';
 import { GitLabSourceControl } from './gitlab-source-control';
 
 function setup() {
@@ -10,10 +10,11 @@ function setup() {
   const messages = new EventEmitter<string>();
   const channel = { send: (payload: string) => void sent.push(payload), onDidReceiveMessage: messages.event };
   const receive = (payload: string) => messages.fire(payload);
-  const sourceControl = new GitLabSourceControl(channel, { name: 'Ann' });
+  const told: { message: string; severity: string }[] = [];
+  const sourceControl = new GitLabSourceControl(channel, (message, severity) => told.push({ message, severity }), { name: 'Ann' });
   let changes = 0;
   sourceControl.onDidChange(() => changes++);
-  return { sent, receive, sourceControl, changes: () => changes };
+  return { sent, receive, sourceControl, told, changes: () => changes };
 }
 
 describe('GitLabSourceControl', () => {
@@ -24,28 +25,32 @@ describe('GitLabSourceControl', () => {
     expect(GitLabSourceControl.isGitLabRoom(ydoc)).toBe(true);
   });
 
-  it('commits as its author, busy until the server answers, whose answer becomes the status', () => {
-    const { sent, receive, sourceControl, changes } = setup();
+  it('commits as its author, busy until the server answers; tells the answer and the news', () => {
+    const { sent, receive, sourceControl, told, changes } = setup();
     expect(sourceControl).toMatchObject({ id: 'gitlab', label: 'GitLab', defaultCommitMessage: 'Edit via Typst editor' });
     sourceControl.commit('Fix typo');
     expect(JSON.parse(sent[0])).toEqual({ type: 'gitlab:save', message: 'Fix typo', author: { name: 'Ann' } });
-    expect(sourceControl.state).toEqual({ busy: true, status: null });
+    expect(sourceControl.state).toEqual({ busy: true });
     receive('{"type":"gitlab:merged","sha":"s"}');
-    expect(sourceControl.state).toEqual({ busy: true, status: { message: 'Merged new changes from GitLab', severity: 'info' } });
+    expect(sourceControl.state).toEqual({ busy: true });
     receive('{"type":"other"}');
     receive('not json');
     receive('{"type":"gitlab:saved","sha":"0123456789abcdef","author":"Ann"}');
-    expect(sourceControl.state).toEqual({ busy: false, status: { message: 'Saved version 01234567 (Ann)', severity: 'info' } });
-    expect(changes()).toBe(3);
+    expect(sourceControl.state).toEqual({ busy: false });
+    expect(told).toEqual([
+      { message: 'Merged new changes from GitLab', severity: 'info' },
+      { message: 'Saved version 01234567 (Ann)', severity: 'info' },
+    ]);
+    expect(changes()).toBe(2);
   });
 });
 
-describe('GitLabSourceControl status', () => {
-  /** The status after the server sent `message`. */
+describe('GitLabSourceControl messages', () => {
+  /** What it told after the server sent `message`. */
   function statusAfter(message: object) {
-    const { receive, sourceControl } = setup();
+    const { receive, told } = setup();
     receive(JSON.stringify(message));
-    return sourceControl.state.status;
+    return told[0];
   }
 
   it('says when there was nothing to save, upstream was merged, or saving failed', () => {

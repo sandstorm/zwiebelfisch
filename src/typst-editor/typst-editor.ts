@@ -7,7 +7,8 @@
 import { comments } from '../extensions/comments/comments';
 import { diagnostics } from '../extensions/diagnostics/diagnostics';
 import { diagrams } from '../extensions/diagrams/diagrams';
-import { fileNavigation, files } from '../extensions/files/files';
+import { fileNavigation } from '../extensions/file-navigation/file-navigation';
+import { files } from '../extensions/files/files';
 import { labels } from '../extensions/labels/labels';
 import { pdfExport } from '../extensions/pdf-export/pdf-export';
 import { previewControls } from '../extensions/preview-controls/preview-controls';
@@ -27,7 +28,10 @@ import { outline } from '../extensions/outline/outline';
 import { pageLayout } from '../extensions/page-layout/page-layout';
 import { tables } from '../extensions/tables/tables';
 import proseMirrorStyles from '../hosts/visual-view/visual-view.css?inline';
-import { type EditorMode, type Settings, type TypstExtension, type User, WorkbenchHost } from '../hosts/workbench/workbench';
+import { type TypstExtension, WorkbenchHost } from '../hosts/workbench/workbench';
+import type { EditorMode } from '../hosts/window/window';
+import type { Settings } from '../hosts/workspace/workspace';
+import type { User } from '../core/user/user';
 import { type FileChange, Project, type ProjectFiles } from '../core/project/project';
 import { ProjectPath } from '../core/paths/paths';
 import widgetStyles from './typst-editor.css?inline';
@@ -76,16 +80,6 @@ export interface TypstEditorOptions {
   extensions?(builtins: readonly TypstExtension[]): readonly TypstExtension[];
 }
 
-/** Which PDF `exportPdf` makes. */
-export interface PdfExportOptions {
-  /**
-   * The export options by id, the others at their default (an id no extension registered rejects). Built in:
-   * `comments.include`, the margin notes as the preview shows them (default false: the final version, notes left
-   * out).
-   */
-  options?: Record<string, boolean>;
-}
-
 export interface TypstEditor {
   /**
    * Every file of the project, the main file included, with its current content. Assigning replaces them all
@@ -113,12 +107,14 @@ export interface TypstEditor {
    */
   executeCommand<T = unknown>(id: string, ...args: unknown[]): Promise<T>;
   /**
-   * The project as a PDF (`application/pdf`), from the current text, with the export options as given
-   * (`{ options: { 'comments.include': true } }`): the command `pdfExport.export`. Rejects with an error naming the
+   * The project as a PDF (`application/pdf`), from the current text, with the export options by id, the others at
+   * their default (`{ 'comments.include': true }`; an id no extension registered rejects). Built in:
+   * `comments.include`, the margin notes as the preview shows them (default false: the final version, notes left
+   * out). The one feature shortcut on the widget: the command `pdfExport.export`. Rejects with an error naming the
    * problem when the document has errors.
    */
-  exportPdf(options?: PdfExportOptions): Promise<Blob>;
-  destroy(): void;
+  exportPdf(options?: Record<string, boolean>): Promise<Blob>;
+  dispose(): void;
 }
 
 /**
@@ -161,7 +157,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
       return document.text;
     },
     set source(text: string) {
-      document.setText(text, 'api');
+      project.apply({ kind: 'update', path: main, content: text });
     },
     get settings() {
       return workbench.settings;
@@ -176,12 +172,12 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
       const parsed = ProjectPath.parse(path);
       if (parsed) workbench.open(parsed);
     },
-    executeCommand: (id, ...args) => workbench.executeCommand(id, ...args),
-    exportPdf: (pdf = {}) => workbench.executeCommand('pdfExport.export', pdf.options),
-    destroy: () => {
+    executeCommand: (id, ...args) => workbench.commands.executeCommand(id, ...args),
+    exportPdf: (options) => workbench.commands.executeCommand('pdfExport.export', options),
+    dispose: () => {
       subscription.dispose();
-      workbench.destroy();
-      project.destroy();
+      workbench.dispose();
+      project.dispose();
     },
   };
 }
@@ -203,15 +199,15 @@ function builtinExtensions(): TypstExtension[] {
     diagrams(),
     diagnostics(),
     sourceControl(),
-    markup,
-    headings,
-    tables,
+    markup(),
+    headings(),
+    tables(),
     images(),
     renderedBoxes(),
-    outline,
-    pageLayout,
-    lists,
-    alignment,
+    outline(),
+    pageLayout(),
+    lists(),
+    alignment(),
     comments(),
     labels(),
     styles(),

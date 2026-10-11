@@ -4,7 +4,6 @@
 // in the widget".
 // Why one DiagnosticCollection (model/): the preview reports a compilation's diagnostics once, for every file; the
 // collection splits them by document, and each view of a document reads its own from there, whenever it is made.
-import { Disposable } from '../../core/disposable/disposable';
 import type { Diagnostic } from '../../core/typst-engine/typst-engine';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './diagnostics.css?inline';
@@ -22,7 +21,7 @@ import { DiagnosticsStatus } from './workbench/workbench';
 export function diagnostics(): TypstExtension {
   return {
     id: 'diagnostics',
-    activate({ project, workbench, sourceView, visualView, preview, subscriptions }) {
+    activate({ project, window, workbench, sourceView, visualView, preview, subscriptions }) {
       subscriptions.push(workbench.registerStyleSheet(css));
       const collection = new DiagnosticCollection();
       const status = new DiagnosticsStatus(workbench.ownerDocument, (target) => {
@@ -49,8 +48,8 @@ export function diagnostics(): TypstExtension {
           provideHighlights: (document) => collection.get(document).map(diagnosticHighlight),
           onDidChangeHighlights: collection.onDidChange,
         }),
-        workbench.registerStatusBarItem(status.element, { alignment: 'left', priority: 100 }),
-        new Disposable(() => status.destroy()),
+        window.registerStatusBarItem(status.element, { alignment: 'left', priority: 100 }),
+        status,
         workbench.onDidShowFile((path) => {
           if (project.document(path)) lastSource = path;
           show();

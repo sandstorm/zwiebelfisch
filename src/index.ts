@@ -5,48 +5,38 @@
 // and docs/embedding.md.
 import { defineTypstEditorElement } from './typst-editor-element/typst-editor-element';
 
-export { createTypstEditor, type PdfExportOptions, type TypstEditor, type TypstEditorOptions } from './typst-editor/typst-editor';
+export { createTypstEditor, type TypstEditor, type TypstEditorOptions } from './typst-editor/typst-editor';
 export { TypstEditorElement, defineTypstEditorElement, type TypstEditorChangeDetail } from './typst-editor-element/typst-editor-element';
 export type { FileChange, FileContent, ProjectFiles } from './core/project/project';
 export { ProjectPath } from './core/paths/paths';
+export type { User } from './core/user/user';
 export type { PdfEntry } from './core/typst-engine/typst-engine';
 export { Disposable } from './core/disposable/disposable';
 export { EventEmitter, type Event } from './core/event-emitter/event-emitter';
+export type { ExtensionContext, ExtensionContributions, Memento, MenuContext, MenuItem, OpenOptions, SidePanel, SidePanelOptions, TypstExtension, Workbench } from './hosts/workbench/workbench';
+export type { Command, Commands } from './hosts/commands/commands';
 export type {
-  Command,
-  ConfigurationChangeEvent,
-  ConfigurationProperty,
   CustomDocument,
   CustomEditorOptions,
   CustomEditorPanel,
   CustomEditorProvider,
-  DocumentLink,
-  DocumentLinkProvider,
   EditorMode,
-  ExtensionContext,
-  ExtensionContributions,
   FileDecoration,
   FileDecorationProvider,
   InputBoxOptions,
-  MenuContext,
-  MenuItem,
   MessageItem,
   MessageSeverity,
-  OpenOptions,
   QuickPickItem,
   QuickPickOptions,
-  Settings,
-  SourceControl,
-  SourceControlState,
-  SourceControlStatus,
+  SaveDialogOptions,
   StatusBarPlacement,
-  TextDocument,
-  TypstExtension,
-  User,
-  Workbench,
-  Workspace,
-  WorkspaceConfiguration,
-} from './hosts/workbench/workbench';
+  TextEditor,
+  TextEditorSelectionChangeEvent,
+  Window,
+} from './hosts/window/window';
+export type { Scm, SourceControl, SourceControlState } from './hosts/scm/scm';
+export type { DocumentLink, DocumentLinkProvider, Languages, TextDocument } from './hosts/languages/languages';
+export type { ConfigurationChangeEvent, ConfigurationProperty, Settings, Workspace, WorkspaceConfiguration } from './hosts/workspace/workspace';
 export type { PdfExportOption, PreviewContributions, PreviewToolbarItem, ToolbarPlacement } from './hosts/preview/preview';
 export type { SourceViewContributions } from './hosts/source-view/source-view';
 export type { VisualViewContributions } from './hosts/visual-view/visual-view';

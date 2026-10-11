@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-// Tests for file-panel.ts (the file panel, its tree and its menus), with the workbench's prompts and menus faked.
+// Tests for file-panel.ts (the file panel, its tree and its menus), with the window's prompts and the workbench's menus faked.
 import { describe, expect, it, vi } from 'vitest';
 import { FilePanel, type FilePanelPrompts } from './file-panel';
 import type { FileChange } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
-import type { FileDecoration, InputBoxOptions, MenuContext, MenuItem } from '../../../hosts/workbench/workbench';
+import type { MenuContext, MenuItem } from '../../../hosts/workbench/workbench';
+import type { FileDecoration, InputBoxOptions, SaveDialogOptions } from '../../../hosts/window/window';
 
 const path = ProjectPath.of;
 
@@ -34,14 +35,20 @@ function setup(onChange: (change: FileChange) => Promise<string | null> = async 
   document.body.append(parent);
   const onOpen = vi.fn();
   const change = vi.fn(onChange);
-  const memory = { load: vi.fn(() => null), save: vi.fn() };
+  const memory = { keys: () => [], get: vi.fn((_key: string, fallback?: unknown) => fallback), update: vi.fn(async () => {}) };
   /** What the user answers, in order: input boxes and warnings ('Delete' confirms). */
   const answers: (string | undefined)[] = [];
   const asked: InputBoxOptions[] = [];
+  const saves: SaveDialogOptions[] = [];
   const warned: string[] = [];
   const errors: string[] = [];
   const prompts = {
     showInputBox: async (options: InputBoxOptions) => (asked.push(options), answers.shift()),
+    showSaveDialog: async (options: SaveDialogOptions) => {
+      saves.push(options);
+      const answer = answers.shift();
+      return answer === undefined ? undefined : ProjectPath.of(`/${answer}`);
+    },
     showWarningMessage: async (message: string) => (warned.push(message), answers.shift()),
     showErrorMessage: async (message: string) => (errors.push(message), undefined),
   } as unknown as FilePanelPrompts;
@@ -53,15 +60,16 @@ function setup(onChange: (change: FileChange) => Promise<string | null> = async 
       onChange: change,
       prompts,
       menus: { items: (menuId, context) => (menus[menuId] ?? []).filter((item) => item.when?.(context) ?? true), run: (command, resource) => void ran.push([command, resource]) },
-      memory,
+      state: memory,
       decorations: (file) => decorations[file] ?? [],
+      icon: (file) => (file.endsWith('.png') ? '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="4"/></svg>' : undefined),
     },
     initial,
   );
   const items = () => [...parent.querySelectorAll<HTMLElement>('[role=treeitem]')];
   const item = (name: string) => items().find((t) => t.title === name)!;
   const menuItems = () => [...parent.querySelectorAll<HTMLElement>('[role=menu] [role=menuitem]')].map((entry) => entry.textContent);
-  return { parent, panel, onOpen, change, items, item, memory, answers, asked, warned, errors, ran, menuItems };
+  return { parent, panel, onOpen, change, items, item, memory, answers, asked, saves, warned, errors, ran, menuItems };
 }
 
 function press(target: HTMLElement, key: string, init: KeyboardEventInit = {}) {
@@ -96,7 +104,7 @@ describe('FilePanel', () => {
       ['data.csv', '1'],
       ['main.typ', '1'],
     ]);
-    expect(memory.save).toHaveBeenLastCalledWith([path('/chapters')]);
+    expect(memory.update).toHaveBeenLastCalledWith('openFolders', [path('/chapters')]);
   });
 
   it('opens the folders around the shown file', () => {
@@ -110,6 +118,14 @@ describe('FilePanel', () => {
     const { item } = setup(undefined, nested);
     expect(item('data.csv').classList.contains('typst-files__row--file')).toBe(true);
     expect(item('chapters').classList.contains('typst-files__row--folder')).toBe(true);
+  });
+
+  it('shows a Typst icon for Typst files, the icon a custom editor gives other files, else the icon for any file', () => {
+    const { item } = setup(undefined, { ...state, paths: [path('/main.typ'), path('/logo.png'), path('/data.csv')] });
+    const iconOf = (name: string) => item(name).querySelector('svg.typst-files__icon')!;
+    expect(iconOf('logo.png').querySelector('circle')).not.toBeNull();
+    expect(iconOf('main.typ').innerHTML).not.toBe(iconOf('data.csv').innerHTML);
+    expect(iconOf('data.csv').querySelector('circle')).toBeNull();
   });
 
   it("shows the files' decorations as badges in their colors, propagated ones on closed folders too", () => {
@@ -180,49 +196,36 @@ describe('FilePanel', () => {
   });
 
   describe('operations', () => {
-    it('newFile asks for a name and creates that .typ file, then opens it', async () => {
-      const { panel, change, onOpen, answers, asked } = setup();
-      answers.push('chapter 2');
+    it('newFile asks where the new file goes (a save dialog: Typst unless named otherwise), creates it and opens it', async () => {
+      const { panel, change, onOpen, answers, saves } = setup();
+      answers.push('chapter 2.typ');
       await panel.newFile();
-      expect(asked[0]).toMatchObject({ title: 'New file', prompt: 'Name of the new file', value: '' });
+      expect(saves[0]).toEqual({ title: 'New file', defaultUri: undefined, filters: { Typst: ['typ'], 'All files': ['*'] } });
       expect(change).toHaveBeenCalledWith({ kind: 'create', path: '/chapter 2.typ', content: '' });
       expect(onOpen).toHaveBeenCalledWith('/chapter 2.typ');
     });
 
-    it('checks the name as it is typed: empty, unusable, taken', async () => {
-      const { panel, asked } = setup();
-      await panel.newFile();
-      const validate = asked[0].validateInput!;
-      expect(validate('')).toBe('Please enter a name.');
-      expect(validate('a/../b')).toMatch(/cannot contain/);
-      expect(validate('chapter')).toBe('chapter.typ already exists.');
-      expect(validate('appendix')).toBeNull();
-    });
-
-    it('starts new names in the folder of the row (the caret after it)', async () => {
-      const { panel, item, asked } = setup(undefined, nested);
+    it('starts new names in the folder of the row', async () => {
+      const { panel, item, saves } = setup(undefined, nested);
       item('chapters').click();
       await panel.newFile();
       await panel.newFile(path('/img/logo.png'));
-      expect(asked.map(({ value, valueSelection }) => [value, valueSelection])).toEqual([
-        ['chapters/', [9, 9]],
-        ['img/', [4, 4]],
-      ]);
+      expect(saves.map(({ defaultUri }) => defaultUri)).toEqual(['/chapters', '/img']);
     });
 
     it('makes a new (empty) folder that new files can go into', async () => {
-      const { panel, change, item, answers, asked } = setup();
+      const { panel, change, item, answers, saves } = setup();
       answers.push('drafts');
       await panel.newFolder();
       expect(item('drafts').getAttribute('aria-expanded')).toBe('false');
       expect(change).not.toHaveBeenCalled();
       await panel.newFile();
-      expect(asked[1].value).toBe('drafts/');
+      expect(saves[0].defaultUri).toBe('/drafts');
     });
 
     it('tells why a change was refused (an error message)', async () => {
       const { panel, answers, errors, onOpen } = setup(async () => 'This change is not allowed here.');
-      answers.push('appendix');
+      answers.push('appendix.typ');
       await panel.newFile();
       expect(errors).toEqual(['This change is not allowed here.']);
       expect(onOpen).not.toHaveBeenCalled();

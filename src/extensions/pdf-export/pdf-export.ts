@@ -33,11 +33,11 @@ export function pdfExport(): TypstExtension {
         },
       },
     },
-    activate({ project, workspace, workbench, preview, subscriptions }) {
+    activate({ project, commands, window, workspace, workspaceState, workbench, preview, subscriptions }) {
       subscriptions.push(workbench.registerStyleSheet(css));
       const pdfs = new PdfExport(project, preview);
-      subscriptions.push(workbench.registerCommand('pdfExport.export', (values?: Record<string, boolean>) => pdfs.blob(values)));
-      const download = downloadPdf(pdfs, workbench.remember('pdf-export.options'), workbench);
+      subscriptions.push(commands.registerCommand('pdfExport.export', (values?: Record<string, boolean>) => pdfs.blob(values)));
+      const download = downloadPdf(pdfs, workspaceState, window);
       let button: Disposable | null = null;
       const show = () => {
         const wanted = workspace.getConfiguration('pdfExport').get('download', true);

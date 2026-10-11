@@ -105,7 +105,7 @@ const editor = createTypstEditor(host, {
 
 editor.source;               // the main file's current text
 editor.source = '= New\n';   // replace (minimal edit, reported to onFilesChange as an update)
-editor.destroy();
+editor.dispose();
 ```
 
 `source` is a shortcut for the main file's text, for hosts with a single file. Everything else
@@ -117,8 +117,8 @@ shadow root when `host` is inside one.
 ## 3. Other files, images and packages
 
 `files` holds every file of the project by absolute path, the main file included: Typst text as
-a string, anything else (images, CSV, …) as a `Uint8Array`. The main file (`main`) is the one that
-is compiled; it cannot be renamed or deleted. `source`, if given, wins over `files[main]`.
+a string, anything else (images, CSV, …) as a `Uint8Array` (a `.typ` file given as bytes throws). The
+main file (`main`) is the one that is compiled; it cannot be renamed or deleted. `source`, if given, wins over `files[main]`.
 
 ```ts
 const editor = createTypstEditor(host, {
@@ -182,8 +182,8 @@ editor.open('/logo.png');
 `onOpen(path)` (on `<typst-editor>`: the `open` event, `detail.path`) reports when another file is
 shown, e.g. to keep it in the page URL. The demo stores it in the fragment (`#/chapters/intro.typ`,
 `demo/open-file-hash.ts`). The setting `previewSync.followCursor: false` has the preview not follow the cursor.
-The viewer can switch "Follow cursor" in the preview toolbar; without the setting, that choice is remembered in
-localStorage and wins over the default.
+The viewer can switch "Follow cursor" in the preview toolbar; without the setting, that choice is kept for this
+viewer (localStorage) and wins over the default.
 
 `onFilesChange` reports every change to any file, the main file included: every edit of a `.typ`
 file (`kind: 'update'`, with the full text), create / rename / delete, collaborators' changes,
@@ -250,13 +250,13 @@ default (not what the viewer chose), and an id no extension registered rejects:
 
 ```ts
 const blob = await editor.exportPdf();                                          // without comments
-const draft = await editor.exportPdf({ options: { 'comments.include': true } }); // with them
+const draft = await editor.exportPdf({ 'comments.include': true });            // with them
 createTypstEditor(host, { settings: { 'pdfExport.download': false } });   // no button (exportPdf still works)
 ```
 
-`exportPdf` is a shortcut for the command `pdfExport.export`
+`exportPdf(options?)` is the one feature shortcut on the widget: the command `pdfExport.export`
 (`editor.executeCommand('pdfExport.export', { 'comments.include': true })`). On `<typst-editor>`:
-`element.exportPdf({ options })`, and `settings='{"pdfExport.download": false}'` removes the button.
+`element.exportPdf(options?)`, and `settings='{"pdfExport.download": false}'` removes the button.
 
 Without comments, the document is not changed: the export compiles copies of the `.typ` files
 with every note call removed (a range note keeps its text, without the highlight), through a
@@ -442,12 +442,14 @@ Your own extensions declare settings the same way (section 7).
 Everything the editor does beyond its frame is an **extension**, the built-in features too: an object with an
 `id` and an `activate(context)` that registers what it adds (a status bar item, a preview toolbar item, a PDF
 export option, a command, …) and pushes each registration into `context.subscriptions`, which the editor disposes
-on `destroy`. The names and shapes are VS Code's (`registerCommand`, `onDidChange…`, `Disposable`,
-`getConfiguration`). Give the editor your extensions through `extensions`, a function that makes the list from the
-built-in ones:
+on `dispose`. The names and shapes are VS Code's: the context has its namespaces (`commands`, `window`, `scm`,
+`languages`, `workspace`) next to the editor's own frame (`workbench`) and views (`visualView`, `sourceView`,
+`preview`), and uses `registerCommand`, `onDidChange…`, `Disposable`, `getConfiguration`. Write an extension as a
+function that makes it (`wordCount()`, as every built-in), so it can take options later. Give the editor your
+extensions through `extensions`, a function that makes the list from the built-in ones:
 
 ```ts
-createTypstEditor(host, { extensions: (builtins) => [...builtins, wordCount] });                 // add
+createTypstEditor(host, { extensions: (builtins) => [...builtins, wordCount()] });               // add
 createTypstEditor(host, { extensions: (builtins) => builtins.filter((e) => e.id !== 'pdf-export') }); // leave out
 createTypstEditor(host, { extensions: (builtins) => [...builtins.filter((e) => e.id !== 'files'), myFiles] }); // replace
 ```
@@ -458,41 +460,43 @@ the host can run.
 ```ts
 import { createTypstEditor, type TypstExtension } from 'typst-editor';
 
-export const wordCount: TypstExtension = {
-  id: 'word-count',
-  contributes: {
-    configuration: {
-      properties: {
-        'wordCount.label': { type: 'string', default: 'words', description: 'Shown after the number.' },
+export function wordCount(): TypstExtension {
+  return {
+    id: 'word-count',
+    contributes: {
+      configuration: {
+        properties: {
+          'wordCount.label': { type: 'string', default: 'words', description: 'Shown after the number.' },
+        },
       },
     },
-  },
-  activate({ project, workspace, workbench, subscriptions }) {
-    const item = workbench.ownerDocument.createElement('span');
-    const count = () => {
-      const text = workbench.activeTextEditor?.document.text ?? '';
-      return text.split(/\s+/).filter(Boolean).length;
-    };
-    const show = () => {
-      item.textContent = `${count()} ${workspace.getConfiguration('wordCount').get<string>('label')}`;
-    };
-    show();
-    subscriptions.push(
-      workbench.registerStatusBarItem(item, { alignment: 'right', priority: 100 }),
-      workbench.onDidShowFile(show),
-      project.onDidChangeFile(show),
-      workspace.onDidChangeConfiguration((event) => {
-        if (event.affectsConfiguration('wordCount.label')) show();
-      }),
-      workbench.registerCommand('wordCount.count', () => count()),
-    );
-  },
-};
+    activate({ project, commands, window, workspace, workbench, subscriptions }) {
+      const item = workbench.ownerDocument.createElement('span');
+      const count = () => {
+        const text = window.activeTextEditor?.document.text ?? '';
+        return text.split(/\s+/).filter(Boolean).length;
+      };
+      const show = () => {
+        item.textContent = `${count()} ${workspace.getConfiguration('wordCount').get<string>('label')}`;
+      };
+      show();
+      subscriptions.push(
+        window.registerStatusBarItem(item, { alignment: 'right', priority: 100 }),
+        workbench.onDidShowFile(show),
+        project.onDidChangeFile(show),
+        workspace.onDidChangeConfiguration((event) => {
+          if (event.affectsConfiguration('wordCount.label')) show();
+        }),
+        commands.registerCommand('wordCount.count', () => count()),
+      );
+    },
+  };
+}
 
 const editor = createTypstEditor(host, {
   source: '= Hello\n\nSome words here.',
   settings: { 'wordCount.label': 'Wörter' },
-  extensions: (builtins) => [...builtins, wordCount],
+  extensions: (builtins) => [...builtins, wordCount()],
 });
 await editor.executeCommand<number>('wordCount.count');   // 5
 ```
@@ -501,19 +505,24 @@ What `activate` gets (`ExtensionContext`; every type is exported from the packag
 
 | | |
 |---|---|
-| `subscriptions` | Push every registration here; disposed on `destroy`, in reverse order. |
+| `subscriptions` | Push every registration here; disposed on `dispose`, in reverse order. |
+| `globalState`, `workspaceState` | Values your extension keeps (VS Code's `Memento`: `get(key, default)`, `update(key, value)`), apart from other extensions': `globalState` for this viewer across widgets and visits (localStorage), `workspaceState` for this project during the browser session (sessionStorage). |
 | `project` | The files: `files()`, `document(path)` (a Typst file's text), `onDidChangeFile` (an `Event<FileChange>`: subscribing returns a `Disposable`). |
-| `workspace` | The settings: `getConfiguration('<section>').get('<key>')`, `onDidChangeConfiguration`. |
-| `workbench` | The frame: `registerStatusBarItem(element, { alignment, priority })` (VS Code's: `'left'` or `'right'`, a higher priority further left within its side), `registerSidePanel`, `registerMenuItem`, `registerStyleSheet` (your CSS, inside the shadow root too), `registerCommand` / `executeCommand` / `registerKeybinding`, `showInformationMessage` / `showWarningMessage` / `showErrorMessage`, `showInputBox`, `showQuickPick`, `registerDocumentLinkProvider`, `registerFileDecorationProvider`, `registerSourceControl`, `registerCustomEditorProvider` (an editor for files by name pattern and priority, VS Code's custom editors), `open(path, { viewType? })`, `applyChange(change)`, `activeTextEditor`, `onDidChangeTextEditorSelection`, `user`. |
-| `preview` | `registerToolbarItem(item, { group, order })`, `registerPdfExportOption`, `createOverlay`, `reveal`, `onDidClickPage`, `onDidChangeDiagnostics`. |
+| `commands` | `registerCommand(id, handler)`, `executeCommand(id, ...args)`, `registerKeybinding('Mod+Alt+KeyM', id)`. |
+| `window` | `showInformationMessage` / `showWarningMessage` / `showErrorMessage`, `showInputBox`, `showQuickPick`, `showSaveDialog({ title, defaultUri, filters })` (where a new file goes: a `ProjectPath`, existing names refused), `registerStatusBarItem(element, { alignment, priority })` (VS Code's: `'left'` or `'right'`, a higher priority further left within its side), `registerCustomEditorProvider` (an editor for files by name pattern and priority, VS Code's custom editors), `registerFileDecorationProvider` / `getFileDecorations`, `activeTextEditor`, `onDidChangeTextEditorSelection`. |
+| `scm` | `registerSourceControl`, `sourceControls`, `onDidChangeSourceControls`. |
+| `languages` | `registerDocumentLinkProvider`, `provideDocumentLinks`, `resolveDocumentLink`. |
+| `workspace` | `applyEdit(change)` (through the host's `allowFileChange`; resolves to the reason it was refused, or null), the settings: `getConfiguration('<section>').get('<key>')`, `onDidChangeConfiguration`. |
+| `workbench` | The frame: `open(path, { viewType? })`, `activeFile`, `onDidShowFile`, `registerSidePanel(id, { label, icon, order? })`, `registerEditorFrame`, `registerMenuItem` / `getMenuItems`, `registerStyleSheet` (your CSS, inside the shadow root too), `onDidDropFiles`, `user`. |
+| `preview` | `registerToolbarItem(item, { group, order })`, `registerPdfExportOption`, `reveal`, `onDidClickPage`, `onDidChangeDiagnostics`. |
 | `visualView`, `sourceView` | Node and mark specs, toolbar items, decorations of the Visual view; CodeMirror extensions of the Source view. |
 
 Rules the built-ins follow, and yours should too:
 
 - **Extensions never depend on each other.** What one offers another goes through a generic contribution point
   (document links, file decorations, source controls) or a command by id, never an import.
-- **Commands** are plain string ids `<extension>.<name>`. `executeCommand<T>(id, ...args)` calls the handler at
-  once and resolves to its result; it rejects for an unknown id or a failing handler.
+- **Commands** are plain string ids `<extension>.<name>`. `commands.executeCommand<T>(id, ...args)` calls the
+  handler at once and resolves to its result; it rejects for an unknown id or a failing handler.
 - **Order never decides who wins**: toolbar items have a `group` and an `order` (the preview toolbar's groups are
   sorted by name: the built-ins use `1_sync`, `2_view`, `3_export`); Visual view nodes, marks and box renderers a
   `priority` (default 100, higher first).
@@ -522,7 +531,7 @@ Rules the built-ins follow, and yours should too:
 - **Buttons on Visual view boxes**: `visualView.registerBoxAction({ title, when?(node, view), run(node, view) })` adds
   a button to every raw box `when` holds for (its Typst is `node.attrs.src`), shown in the box's tools (an image's
   toolbar) or above its code; `diagrams`' "Edit diagram" is one.
-- **Buttons are menu entries.** `registerMenuItem(menuId, { command, title?, icon?, group?, order?, when?(context)
+- **Buttons are menu entries.** `workbench.registerMenuItem(menuId, { command, title?, icon?, group?, order?, when?(context)
   })` puts a command where the user finds it; `when` decides per menu context. Menu ids (VS Code's):
 
   | Menu | Where | Context | Command gets |
@@ -532,36 +541,37 @@ Rules the built-ins follow, and yours should too:
   | `explorer/context` | A file panel row's context menu | as `file/newFile` | the row |
 
   Entries sort with group `navigation` first, the other groups by name, then `order`.
-- **Talk to the user through the workbench**, not your own popups: `showInformationMessage` /
+- **Talk to the user through `window`**, not your own popups: `showInformationMessage` /
   `showWarningMessage` / `showErrorMessage(message, ...items)` resolve to the button pressed (a string or a
   `MessageItem { title }`) or `undefined`; `showInputBox({ title, prompt, value, validateInput })` to the text
   or `undefined`; `showQuickPick(items, { placeHolder, canPickMany })` to the picked `QuickPickItem` (or
   string) or `undefined`.
 
-- **Files other than Typst open in custom editors** (VS Code's): `registerCustomEditorProvider(viewType, provider,
-  { filenamePattern, priority? })`. The pattern is a glob over the file name (`*.csv`, `*.{png,jpg}`; with a `/`
+- **Files other than Typst open in custom editors** (VS Code's): `window.registerCustomEditorProvider(viewType, provider,
+  { filenamePattern, priority?, icon? })` (`icon`: SVG markup, 16×16 strokes in `currentColor`, shown on the file
+  panel's rows of the files it opens). The pattern is a glob over the file name (`*.csv`, `*.{png,jpg}`; with a `/`
   over the path). Of the editors matching a file, the highest `priority` opens it (`'default'`: 100, or a number;
-  `'option'` only through `open(path, { viewType })`), then the most specific pattern (`*.drawio.png` beats the
-  images' `*.{png,…}`, which beats `*`). Every open gets a new panel: fill `panel.element`, store edits with
-  `applyChange({ kind: 'update', path, content })`, and store what is pending in `panel.onDidDispose`. The built-ins:
+  `'option'` only through `workbench.open(path, { viewType })`), then the most specific pattern (`*.drawio.png` beats
+  the images' `*.{png,…}`, which beats `*`). Every open gets a new panel: fill `panel.element`, store edits with
+  `workspace.applyEdit({ kind: 'update', path, content })`, and store what is pending in `panel.onDidDispose`. The built-ins:
   `images.preview` (images), `images.file` (`*`: any other file, read-only), `spreadsheets.editor` (`*.ic`),
   `diagrams.editor` (`*.drawio.png`, priority 110). The built-in "New …" entries (`file/newFile`): "New file…",
   "New spreadsheet…" (`spreadsheets.newSpreadsheet`), "New diagram…" (`diagrams.newDiagram`), "New folder…",
   "Upload files…".
 
   ```ts
-  workbench.registerCustomEditorProvider('csv.table', {
+  window.registerCustomEditorProvider('csv.table', {
     resolveCustomEditor(document, panel) {
       const text = typeof document.content === 'string' ? document.content : new TextDecoder().decode(document.content);
       panel.element.append(renderTable(text));            // yours
     },
-  }, { filenamePattern: '*.csv' });
+  }, { filenamePattern: '*.csv', icon: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor"><path d="M2 3h12v10H2zM2 7h12M6 3v10"/></svg>' });
   ```
 
 ```ts
-workbench.registerCommand('wordCount.countFile', async (path: ProjectPath) => {
+commands.registerCommand('wordCount.countFile', async (path: ProjectPath) => {
   const words = (project.document(path)?.text ?? '').split(/\s+/).filter(Boolean).length;
-  const choice = await workbench.showInformationMessage(`${path}: ${words} words`, 'Open');
+  const choice = await window.showInformationMessage(`${path}: ${words} words`, 'Open');
   if (choice === 'Open') workbench.open(path);
 });
 workbench.registerMenuItem('explorer/context', {
@@ -570,6 +580,14 @@ workbench.registerMenuItem('explorer/context', {
 ```
 
 ## Migrating from the earlier API
+
+- `editor.destroy()` → `editor.dispose()`; `exportPdf({ options: { … } })` → `exportPdf({ … })`.
+- Extensions: the `Workbench` members moved to VS Code's namespaces on the context: `registerCommand` /
+  `executeCommand` / `registerKeybinding` → `commands`; messages, `showInputBox`, `showQuickPick`,
+  `registerStatusBarItem`, `registerCustomEditorProvider`, file decorations, `activeTextEditor`,
+  `onDidChangeTextEditorSelection` → `window`; `registerSourceControl` → `scm` (its `state` is `{ busy }`: tell
+  outcomes with `window.show…Message`); document links → `languages`; `applyChange` → `workspace.applyEdit`;
+  `remember(name)` → `globalState` / `workspaceState`. Extensions are factories (`markup()`).
 
 - Per-feature options are settings now (section 6): `pdfDownload: false` → `settings: { 'pdfExport.download':
   false }`, `fileList` → `'files.panel'`, `followCursor` → `'previewSync.followCursor'`, `theme` →

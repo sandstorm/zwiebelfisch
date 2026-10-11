@@ -16,7 +16,7 @@ export function labels(): TypstExtension {
       context.subscriptions.push(context.workbench.registerStyleSheet(css));
       const index = new LabelIndex(context.project);
       context.subscriptions.push(index);
-      references({ labels: index, prompts: context.workbench }).activate(context);
+      references({ labels: index, prompts: context.window }).activate(context);
     },
   };
 }

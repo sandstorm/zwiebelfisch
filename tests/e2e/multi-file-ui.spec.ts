@@ -50,8 +50,8 @@ test('creates and deletes a file from the file panel', async ({ page }) => {
   const files = editor.getByTestId('typst-files');
   await files.getByRole('button', { name: 'New', exact: true }).click();
   await editor.getByRole('menu', { name: 'New' }).getByRole('menuitem', { name: 'New file…' }).click();
-  await editor.getByRole('textbox', { name: 'Name of the new file' }).fill('appendix');
-  await editor.getByRole('textbox', { name: 'Name of the new file' }).press('Enter');
+  await editor.getByRole('textbox', { name: 'File name' }).fill('appendix');
+  await editor.getByRole('textbox', { name: 'File name' }).press('Enter');
   await expect(fileRow(editor, 'appendix.typ')).toHaveAttribute('aria-selected', 'true');
 
   // the row's context menu, then the confirmation (a warning message)

@@ -3,8 +3,11 @@
 import { Disposable } from '../../../core/disposable/disposable';
 import type { ExtensionContext, TypstExtension } from '../workbench';
 
-/** Everything of a context but what the host adds per extension (`subscriptions`). */
-export type SharedContext = Omit<ExtensionContext, 'subscriptions'>;
+/** What the host gives each extension of its own: its storage, scoped by its id. */
+export type OwnContext = Pick<ExtensionContext, 'globalState' | 'workspaceState'>;
+
+/** Everything of a context but what the host adds per extension (`subscriptions`, its storage). */
+export type SharedContext = Omit<ExtensionContext, 'subscriptions' | keyof OwnContext>;
 
 /**
  * Runs a list of extensions: each is activated once, in list order, with its own `subscriptions`; `dispose`
@@ -14,7 +17,10 @@ export type SharedContext = Omit<ExtensionContext, 'subscriptions'>;
 export class ExtensionHost {
   readonly #activated: { dispose(): unknown }[][] = [];
 
-  constructor(private readonly shared: SharedContext) {}
+  constructor(
+    private readonly shared: SharedContext,
+    private readonly own: (id: string) => OwnContext,
+  ) {}
 
   activate(extensions: readonly TypstExtension[]): void {
     const ids = new Set<string>();
@@ -23,7 +29,7 @@ export class ExtensionHost {
       ids.add(extension.id);
       const subscriptions: { dispose(): unknown }[] = [];
       this.#activated.push(subscriptions);
-      extension.activate({ ...this.shared, subscriptions });
+      extension.activate({ ...this.shared, ...this.own(extension.id), subscriptions });
     }
   }
 

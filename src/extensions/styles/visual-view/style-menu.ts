@@ -68,7 +68,7 @@ export class StyleMenu {
     this.element.value = this.current();
   }
 
-  destroy(): void {
+  dispose(): void {
     this.subscription.dispose();
     this.element.remove();
   }

@@ -7,7 +7,7 @@ import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import type { Highlight, HighlightProvider, VisualViewContext, VisualViewContribution } from '../../../hosts/visual-view/visual-view';
-import { textColorOn } from '../../../ui/color-scheme/color-scheme';
+import { textColorOn } from '../../../core/color-scheme/color-scheme';
 import type { Presence, PresenceSource, PresenceUser } from '../presence/presence';
 import { caretElement } from '../source-view/source-view';
 import { boxCaretsSpec, boxPresence, type BoxCaret } from './box-carets';

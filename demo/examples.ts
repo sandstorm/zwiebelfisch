@@ -50,20 +50,14 @@ function dataUrlBytes(url: string): Uint8Array {
   return Uint8Array.from(atob(url.slice(url.indexOf(',') + 1)), (char) => char.charCodeAt(0));
 }
 
-/**
- * The example a URL asks for: `?example=<name>`; the older `?files` (a
- * multi-file project) means `advanced`; anything else the default.
- */
+/** The example a URL asks for: `?example=<name>`; anything else the default. */
 export function exampleFromQuery(params: URLSearchParams): ExampleName {
-  const asked = EXAMPLES.find(({ name }) => name === params.get('example'));
-  if (asked) return asked.name;
-  return params.has('files') ? 'advanced' : DEFAULT_EXAMPLE;
+  return EXAMPLES.find(({ name }) => name === params.get('example'))?.name ?? DEFAULT_EXAMPLE;
 }
 
 /** The query that opens example `name`, keeping the other parameters (`room`, `user`). */
 export function exampleQuery(name: ExampleName, params: URLSearchParams): string {
   const next = new URLSearchParams(params);
-  next.delete('files');
   next.set('example', name);
   return `?${next}`;
 }

@@ -5,7 +5,7 @@
 import { Node } from '@tiptap/core';
 import { Disposable } from '../../../core/disposable/disposable';
 import { PathReference } from '../../../core/paths/paths';
-import type { QuickPickItem } from '../../../hosts/workbench/workbench';
+import type { QuickPickItem } from '../../../hosts/window/window';
 import { parenthesized } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type Action, type BoxRenderer, type ToolbarContext, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 import type { ImageAssets, ImagePrompts, ImagesOptions, ImageUrls } from '../images';

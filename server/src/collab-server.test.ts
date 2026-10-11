@@ -56,7 +56,7 @@ describe('collaboration server', () => {
     const project = new Project(path('/main.typ'), { '/main.typ': 'Hello', '/ch1.typ': 'One' });
     const shared = new SharedProject(project, client);
     project.document(path('/main.typ'))!.setText('Hello world', 'test');
-    shared.destroy();
+    shared.dispose();
     disconnect();
     await connection.disconnect();
 

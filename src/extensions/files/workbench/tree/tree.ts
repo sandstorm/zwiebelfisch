@@ -1,8 +1,9 @@
 // FileTree: the project's files as an expandable tree (keyboard, drag & drop, decorations). See ../file-panel.ts and ARCHITECTURE.md, "File panel".
 import { ProjectPath } from '../../../../core/paths/paths';
-import { PROJECT_PATH_TYPE, type FileDecoration, type Memory } from '../../../../hosts/workbench/workbench';
-import { textColorOn } from '../../../../ui/color-scheme/color-scheme';
-import { fileIcon, icon } from '../icons/icons';
+import { type Memento, PROJECT_PATH_TYPE } from '../../../../hosts/workbench/workbench';
+import type { FileDecoration } from '../../../../hosts/window/window';
+import { textColorOn } from '../../../../core/color-scheme/color-scheme';
+import { icon, markupIcon } from '../icons/icons';
 import { ancestorsOf, buildTree, filesUnder, type Folder, folderOf, type Move, navigate, type Row, visibleRows } from '../../model/tree-model';
 
 export interface FileTreeOptions {
@@ -18,8 +19,8 @@ export interface FileTreeOptions {
   onUpload(files: File[], folder: Folder): void;
   /** The context menu of a row was asked for: a right click (at its point), Shift+F10 or the context menu key (below the row). */
   onContextMenu(path: ProjectPath, anchor: { x: number; y: number } | HTMLElement): void;
-  /** Where the open folders are remembered (e.g. for the browser session). */
-  memory?: Memory<string[]>;
+  /** Where the open folders are kept (key `openFolders`), e.g. the workspace state. */
+  state?: Memento;
 }
 
 export interface TreeState {
@@ -30,6 +31,8 @@ export interface TreeState {
   active: ProjectPath;
   /** The decorations of a file (badges such as who else is in it). */
   decorations(path: ProjectPath): readonly FileDecoration[];
+  /** The icon of a file that is no Typst file (SVG markup; undefined: the panel's icon for any file). */
+  icon(path: ProjectPath): string | undefined;
 }
 
 /**
@@ -53,7 +56,7 @@ export class FileTree {
     this.element.className = 'typst-files__tree';
     this.element.setAttribute('role', 'tree');
     this.element.setAttribute('aria-label', 'Files');
-    this.expanded = new Set((options.memory?.load() ?? []).flatMap((folder) => ProjectPath.parse(folder) ?? []));
+    this.expanded = new Set(openFolders(options.state?.get<unknown>(OPEN_FOLDERS)));
     this.element.addEventListener('click', (event) => this.click(event));
     this.element.addEventListener('keydown', (event) => this.key(event));
     this.element.addEventListener('contextmenu', (event) => this.contextMenu(event));
@@ -94,7 +97,7 @@ export class FileTree {
   private setExpanded(folder: ProjectPath, open: boolean): void {
     if (open) this.expanded.add(folder);
     else this.expanded.delete(folder);
-    this.options.memory?.save([...this.expanded]);
+    void this.options.state?.update(OPEN_FOLDERS, [...this.expanded]);
     this.draw();
   }
 
@@ -126,7 +129,7 @@ export class FileTree {
       item.append(chevron(doc), icon(doc, row.expanded ? 'folder-open' : 'folder'), name);
     } else {
       item.setAttribute('aria-selected', String(row.path === state.active));
-      item.append(icon(doc, fileIcon(row.path)), name);
+      item.append(fileIcon(doc, state, row.path), name);
     }
     if (row.path === state.main) item.append(badge(doc));
     const decorations = decorationsOf(state, row);
@@ -229,6 +232,13 @@ export class FileTree {
   }
 }
 
+/** The icon of the file `path`: the Typst icon, the one its custom editor gives, else the panel's icon for any file. */
+function fileIcon(doc: Document, state: TreeState, path: ProjectPath): Element {
+  if (ProjectPath.isTypst(path)) return icon(doc, 'typst');
+  const markup = state.icon(path);
+  return markup ? markupIcon(doc, markup) : icon(doc, 'data');
+}
+
 /** The decorations of a file, or those of the files in a closed folder that propagate (each once). */
 function decorationsOf({ decorations, paths }: TreeState, row: Row): FileDecoration[] {
   if (row.kind === 'file') return [...decorations(row.path)];
@@ -270,4 +280,12 @@ function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, c
   const node = doc.createElement(tag);
   node.className = className;
   return node;
+}
+
+/** Where the tree keeps its open folders. */
+const OPEN_FOLDERS = 'openFolders';
+
+/** The open folders kept, read as data from storage: only project paths count. */
+function openFolders(kept: unknown): ProjectPath[] {
+  return Array.isArray(kept) ? kept.flatMap((folder) => (typeof folder === 'string' ? (ProjectPath.parse(folder) ?? []) : [])) : [];
 }

@@ -6,7 +6,7 @@ import Code from '@tiptap/extension-code';
 import CodeBlock from '@tiptap/extension-code-block';
 import type { Mark, Node } from '@tiptap/pm/model';
 import { Disposable } from '../../../core/disposable/disposable';
-import type { Workbench } from '../../../hosts/workbench/workbench';
+import type { Window } from '../../../hosts/window/window';
 import { children, decodeString, isClosedContent, parenthesized, quote } from '../../../core/typst-syntax/typst-syntax';
 import { starterKitPart, svg, type Action, type ToolbarContext, type TypstMarkSpec, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 import type { Around, Call, Placed, Printer, ProjectionContext } from '../../../hosts/projection/projection';
@@ -234,8 +234,8 @@ export const MARK_ACTIONS: Record<'bold' | 'italic' | 'code', Action> = {
 export const INSERT_CODE_BLOCK: Action = { label: 'Code block', icon: ICONS.codeBlock, run: (c) => c.toggleCodeBlock(), active: (e) => e.isActive('codeBlock') };
 export const INSERT_QUOTE: Action = { label: 'Quote', shortcut: 'Mod+Shift+B', icon: ICONS.quote, run: (c) => c.toggleBlockquote(), active: (e) => e.isActive('blockquote') };
 
-/** Where "Link" asks for the URL: the workbench's input box. */
-export type LinkPrompt = Pick<Workbench, 'showInputBox'>;
+/** Where "Link" asks for the URL: the window's input box. */
+export type LinkPrompt = Pick<Window, 'showInputBox'>;
 
 /**
  * "Link" in the selection's bar, and Mod+K in the text (not in a raw box): asks

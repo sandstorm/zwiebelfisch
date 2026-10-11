@@ -13,24 +13,26 @@ import {
  * cover the same text, a link is outermost (Tiptap's link mark has priority 1000), then bold, italic; inline code
  * prints innermost whatever the schema's order (`raw`).
  */
-export const markup: TypstExtension = {
-  id: 'markup',
-  activate({ workbench, visualView, subscriptions }) {
-    subscriptions.push(workbench.registerStyleSheet(css));
-    subscriptions.push(
-      visualView.registerMark(BOLD),
-      visualView.registerMark(ITALIC),
-      visualView.registerMark(LINK),
-      visualView.registerMark(CODE),
-      visualView.registerNode(CODE_BLOCK),
-      visualView.registerNode(BLOCKQUOTE),
-      // in the bar above a selection, their only place
-      ...[MARK_ACTIONS.bold, MARK_ACTIONS.italic, MARK_ACTIONS.code].map((action, i) =>
-        visualView.registerToolbarItem({ group: 'selection', order: 10 * (i + 1), action }),
-      ),
-      visualView.registerToolbarItem({ group: 'selection', order: 40, create: (toolbar) => linkAction(toolbar, workbench) }),
-      visualView.registerToolbarItem({ group: 'insert', order: 40, action: INSERT_CODE_BLOCK }),
-      visualView.registerToolbarItem({ group: 'insert', order: 50, action: INSERT_QUOTE }),
-    );
-  },
-};
+export function markup(): TypstExtension {
+  return {
+    id: 'markup',
+    activate({ window, workbench, visualView, subscriptions }) {
+      subscriptions.push(workbench.registerStyleSheet(css));
+      subscriptions.push(
+        visualView.registerMark(BOLD),
+        visualView.registerMark(ITALIC),
+        visualView.registerMark(LINK),
+        visualView.registerMark(CODE),
+        visualView.registerNode(CODE_BLOCK),
+        visualView.registerNode(BLOCKQUOTE),
+        // in the bar above a selection, their only place
+        ...[MARK_ACTIONS.bold, MARK_ACTIONS.italic, MARK_ACTIONS.code].map((action, i) =>
+          visualView.registerToolbarItem({ group: 'selection', order: 10 * (i + 1), action }),
+        ),
+        visualView.registerToolbarItem({ group: 'selection', order: 40, create: (toolbar) => linkAction(toolbar, window) }),
+        visualView.registerToolbarItem({ group: 'insert', order: 40, action: INSERT_CODE_BLOCK }),
+        visualView.registerToolbarItem({ group: 'insert', order: 50, action: INSERT_QUOTE }),
+      );
+    },
+  };
+}

@@ -10,16 +10,17 @@ import type { ProjectPath } from '../../../core/paths/paths';
 import type { CollaborationOptions } from '../collaboration';
 import type { PlacedPresence } from '../presence/presence';
 import type { Project } from '../../../core/project/project';
-import { roomFilePath } from '../../../core/gitlab-protocol/gitlab-protocol';
-import { RemoteCursors, type CollaborationUser } from './remote-cursors';
-import { GitLabSourceControl, type StatelessChannel } from './gitlab-source-control';
+import { roomFilePath } from '../../../core/room-protocol/room-protocol';
+import type { User } from '../../../core/user/user';
+import { RemoteCursors } from './remote-cursors';
+import { GitLabSourceControl, type StatelessChannel, type Tell } from './gitlab-source-control';
 import { SharedAssets } from './shared-assets';
 import { SharedProject } from './shared-project';
 
 /** What gets shared: the project's Typst files (margin notes are part of their text). */
 export interface Shared {
   project: Project;
-  user?: CollaborationUser;
+  user?: User;
 }
 
 /**
@@ -44,11 +45,11 @@ export class Collaboration {
     ydoc: Y.Doc,
     awareness: Awareness | null,
     shared: Shared,
-    private readonly server: { provider: HocuspocusProvider; files: (path: ProjectPath) => Promise<Uint8Array> } | null,
+    private readonly server: { provider: HocuspocusProvider; files: (path: ProjectPath) => Promise<Uint8Array>; tell: Tell } | null,
   ) {
     const { project, user } = shared;
     if (server && GitLabSourceControl.isGitLabRoom(ydoc)) {
-      this.sourceControl = new GitLabSourceControl(statelessChannel(server.provider), user && { name: user.name });
+      this.sourceControl = new GitLabSourceControl(statelessChannel(server.provider), server.tell, user && { name: user.name });
       this.assets = new SharedAssets(project, ydoc, server.files);
     }
     this.sharedProject = new SharedProject(project, ydoc);
@@ -59,9 +60,10 @@ export class Collaboration {
 
   /**
    * Starts sharing `shared`. With a server, this connects and waits for the
-   * first sync, so a room's existing text wins over the local one.
+   * first sync, so a room's existing text wins over the local one; the room's source control tells its outcomes
+   * and news with `tell` (default: not at all).
    */
-  static async start(options: CollaborationOptions, shared: Shared): Promise<Collaboration> {
+  static async start(options: CollaborationOptions, shared: Shared, tell: Tell = () => {}): Promise<Collaboration> {
     if ('doc' in options) return new Collaboration(options.doc, options.awareness ?? null, shared, null);
     const ydoc = new Y.Doc();
     const provider = new HocuspocusProvider({ url: options.url, name: options.room, token: options.token ?? null, document: ydoc });
@@ -69,7 +71,7 @@ export class Collaboration {
       if (provider.isSynced) resolve();
       else provider.on('synced', () => resolve());
     });
-    return new Collaboration(ydoc, provider.awareness, shared, { provider, files: roomFiles(options) });
+    return new Collaboration(ydoc, provider.awareness, shared, { provider, files: roomFiles(options), tell });
   }
 
   /** Tells the others where the local user's selection is (a source range in `path`), or nowhere. */
@@ -77,12 +79,12 @@ export class Collaboration {
     this.cursors?.setLocal(path, range);
   }
 
-  destroy(): void {
+  dispose(): void {
     this.presenceChanged.dispose();
     this.sourceControl?.dispose();
-    this.cursors?.destroy();
-    this.assets?.destroy();
-    this.sharedProject.destroy();
+    this.cursors?.dispose();
+    this.assets?.dispose();
+    this.sharedProject.dispose();
     this.server?.provider.destroy();
     this.server?.provider.document.destroy();
   }

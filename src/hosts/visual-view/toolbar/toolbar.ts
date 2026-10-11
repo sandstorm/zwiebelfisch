@@ -21,7 +21,7 @@ export class Toolbar {
   private readonly refreshers: (() => void)[] = [];
   private readonly refresh = () => this.refreshers.forEach((fn) => fn());
   private readonly subscriptions: Disposable[] = [];
-  private readonly destroyers: (() => void)[] = [];
+  private readonly disposers: (() => void)[] = [];
 
   constructor(
     parent: HTMLElement,
@@ -51,9 +51,9 @@ export class Toolbar {
     this.refresh();
   }
 
-  destroy(): void {
+  dispose(): void {
     for (const subscription of [...this.subscriptions].reverse()) subscription.dispose();
-    for (const destroy of this.destroyers) destroy();
+    for (const dispose of this.disposers) dispose();
     this.editor.off('transaction', this.refresh);
     this.editor.off('focus', this.refresh);
     this.editor.off('blur', this.refresh);
@@ -85,7 +85,7 @@ export class Toolbar {
       const buttons = entries.filter(isAction).map((action) => this.button(action));
       const menu = new ToolbarMenu(this.root.ownerDocument, group.label, () => group.icon(this.editor), buttons);
       this.refreshers.push(() => menu.refresh());
-      this.destroyers.push(() => menu.destroy());
+      this.disposers.push(() => menu.dispose());
       wrapper.append(menu.element);
     } else {
       wrapper.append(...entries.map((entry) => (isAction(entry) ? this.button(entry) : this.control(entry))));
@@ -95,7 +95,7 @@ export class Toolbar {
 
   private control(control: ToolbarControl): HTMLElement {
     this.refreshers.push(() => control.refresh());
-    if (control.destroy) this.destroyers.push(() => control.destroy!());
+    if (control.dispose) this.disposers.push(() => control.dispose!());
     return control.element;
   }
 
@@ -112,7 +112,7 @@ export class Toolbar {
       const actions = (entries.get(group.id) ?? []).filter(isAction);
       if (actions.length === 0) continue;
       const bar = new FloatingBar(container, group.label, actions.map((action) => this.button(action)));
-      this.destroyers.push(() => bar.destroy());
+      this.disposers.push(() => bar.dispose());
       const earlier = [...bars];
       const focused = () => this.editor.isFocused || bar.element.contains(bar.element.ownerDocument.activeElement);
       const anchor = (): Anchor => {
