@@ -4,7 +4,7 @@
 // registers them for images.ts. See docs/30_architecture/08_built-in-extensions.typ.
 import { Node } from '@tiptap/core';
 import { Disposable } from '../../../core/disposable/disposable';
-import { PathReference, type ProjectPath } from '../../../core/paths/paths';
+import { PathReference, ProjectPath } from '../../../core/paths/paths';
 import type { DocumentLink } from '../../../hosts/languages/languages';
 import type { QuickPickItem, WindowApi } from '../../../hosts/window/window';
 import type { Event } from '../../../core/event-emitter/event-emitter';
@@ -12,10 +12,9 @@ import type { TypstDocument } from '../../../core/typst-document/typst-document'
 import { hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type ToolbarAction, type RawBoxRenderer, type ToolbarContext, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
 import { imageFileDrops, insertImages } from './image-insertion';
-import { imagePathLink } from './image-path-link';
 import { imagePath } from './image-syntax';
 import { ImageTools } from './image-tools';
-import { imagePicker, uploadImages } from './image-uploads';
+import { IMAGE_ACCEPT } from '../model/image-files';
 
 /**
  * `#image("literal path", ..)` blocks, edited as code in a box headed "Image:
@@ -193,4 +192,56 @@ function insertImage(toolbar: ToolbarContext, assets: ImageAssets, prompts: Imag
     run: (c) => c.insertContent({ type: 'image' }),
     click: () => void choose(),
   };
+}
+
+// --- Image uploads: image files from the computer, picked for "Insert image" or dropped, added to the project one by one
+
+/** Uploads `files` one by one: the paths of those added, and why the others were not. */
+async function uploadImages(assets: ImageAssets, files: readonly File[]): Promise<{ paths: PathReference[]; errors: string[] }> {
+  const paths: PathReference[] = [];
+  const errors: string[] = [];
+  for (const file of files) {
+    const result = await assets.upload(file);
+    if ('path' in result) paths.push(result.path);
+    else errors.push(result.error);
+  }
+  return { paths, errors };
+}
+
+/** A hidden file input for the image formats Typst can show (others would only be refused after picking); `choose` gets what was picked. */
+function imagePicker(doc: Document, choose: (files: File[]) => void): HTMLInputElement {
+  const picker = doc.createElement('input');
+  picker.type = 'file';
+  picker.accept = IMAGE_ACCEPT;
+  picker.multiple = true;
+  picker.hidden = true;
+  picker.dataset.testid = 'typst-image-picker';
+  picker.addEventListener('change', () => {
+    const files = [...(picker.files ?? [])];
+    picker.value = '';
+    if (files.length > 0) choose(files);
+  });
+  return picker;
+}
+
+// --- An image box's path as a link to the file (the document link on it)
+
+/** An image box's path as a button that opens the link's target, or the path marked as leading nowhere (with the link's tooltip). */
+function imagePathLink(link: DocumentLink | null, path: PathReference, doc: Document, open: (target: ProjectPath) => void): HTMLElement {
+  const target = link?.target;
+  if (!target) {
+    const missing = doc.createElement('span');
+    missing.className = 'typst-images__path typst-images__path--missing';
+    missing.textContent = path;
+    missing.title = link?.tooltip ?? 'Outside the project';
+    return missing;
+  }
+  const button = doc.createElement('button');
+  button.type = 'button';
+  button.className = 'typst-images__path';
+  button.textContent = path;
+  button.title = `Open ${ProjectPath.displayName(target)}`;
+  button.addEventListener('mousedown', (event) => event.preventDefault());
+  button.addEventListener('click', () => open(target));
+  return button;
 }

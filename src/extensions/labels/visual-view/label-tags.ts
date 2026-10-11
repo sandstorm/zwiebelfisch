@@ -1,15 +1,14 @@
 // Label tags: a block's label (`= Intro <intro>`) drawn as a small tag on the block, renamed or removed through the
-// window's quick pick and input box; a new label typed into a draft tag right where it will show.
-// See visual-view.ts.
+// window's quick pick and input box; a new label typed into a draft tag right where it will show, on the block the
+// selection would label. See visual-view.ts.
 import type { Node } from '@tiptap/pm/model';
-import { type EditorState, Plugin, PluginKey } from '@tiptap/pm/state';
+import { type EditorState, NodeSelection, Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import type { QuickPickItem, WindowApi } from '../../../hosts/window/window';
 import { renameLabel, setLabel } from './label-edits';
 import { labelName } from '../model/reference-syntax';
 import type { ProjectLabels } from '../model/label-index';
-import { labelPrefix, labelTarget } from './add-label';
 
 /** Where a tag asks what to do with its label, and for the new name. */
 export type LabelPrompts = Pick<WindowApi, 'showQuickPick' | 'showInputBox'>;
@@ -218,4 +217,33 @@ async function renameTag({ view, name, block, options }: Tag, prompts: LabelProm
   if (next === null || next === name || pos === null) return;
   view.dispatch(renameLabel(view.state, pos, next, references !== null));
   if (references) options.labels.renameReferences(name, next, options.document);
+}
+
+// --- A new label: which block the selection would label, and a name to start from
+
+/**
+ * The block a new label goes on: a figure the selection is in (its image or
+ * caption), else the selected block or the innermost block around the
+ * selection that can carry a label (paragraph, heading, table, code block,
+ * raw block, …). Null when there is none.
+ */
+function labelTarget(state: EditorState): { pos: number; node: Node } | null {
+  const { selection } = state;
+  const candidates: { pos: number; node: Node }[] = [];
+  if (selection instanceof NodeSelection) candidates.push({ pos: selection.from, node: selection.node });
+  const { $from } = selection;
+  for (let depth = $from.depth; depth > 0; depth--) candidates.push({ pos: $from.before(depth), node: $from.node(depth) });
+  return candidates.find((c) => c.node.type.name === 'figure') ?? candidates.find((c) => canHaveLabel(c.node)) ?? null;
+}
+
+/** Whether `node`'s type has the `label` attribute (its spec is `labelled`). */
+function canHaveLabel(node: Node): boolean {
+  return 'label' in node.attrs;
+}
+
+/** How a new label for `node` starts, by Typst custom: `fig:` / `tab:` for figures, `sec:` for headings, else nothing. */
+function labelPrefix(node: Node): string {
+  if (node.type.name === 'heading') return 'sec:';
+  if (node.type.name !== 'figure') return '';
+  return node.firstChild?.type.name === 'table' ? 'tab:' : 'fig:';
 }

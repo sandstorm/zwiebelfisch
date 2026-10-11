@@ -1,6 +1,7 @@
 // The diagram inside a `.drawio.png`: diagrams.net stores the diagram's XML in a `tEXt` chunk named `mxfile`
 // (URI-encoded), so the file is an ordinary PNG for Typst and an editable diagram for diagrams.net. Reading and
-// writing that chunk, and PNGs as data URIs (how the embedded editor takes and gives them). See ../diagrams.ts.
+// writing that chunk, PNGs as data URIs (how the embedded editor takes and gives them), and the empty diagram "New
+// diagram…" writes. See ../diagrams.ts.
 
 const SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
 /** The keyword of the chunk holding the diagram (diagrams.net also reads `mxGraphModel`). */
@@ -124,4 +125,19 @@ function concat(parts: readonly Uint8Array[]): Uint8Array {
     offset += part.length;
   }
   return result;
+}
+
+// --- The empty diagram: a valid PNG (one transparent pixel, so Typst shows nothing yet) with an empty diagrams.net
+// diagram in it
+
+/** A diagram with one empty page, as diagrams.net writes it. */
+export const EMPTY_DIAGRAM_XML =
+  '<mxfile><diagram id="page-1" name="Page-1"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel></diagram></mxfile>';
+
+/** A 1×1 transparent PNG. */
+const BLANK_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAXpeqz8AAAAASUVORK5CYII=';
+
+/** The bytes of a new, empty `.drawio.png`. */
+export function emptyDiagram(): Uint8Array {
+  return writeDiagramXml(fromDataUri(BLANK_PNG)!, EMPTY_DIAGRAM_XML);
 }

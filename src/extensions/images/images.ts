@@ -12,7 +12,7 @@ import css from './images.css?inline';
 import { IMAGE_FILES, imageBlob, isImage } from './model/image-files';
 import { uploadTarget } from './model/upload';
 import { imagesVisualView, type ImageAssets, type ImageUrls } from './visual-view/visual-view';
-import { assetEditor } from './workbench/workbench';
+import { assetEditor } from './workbench/asset-view';
 
 /**
  * Images in every document's Visual view (`#image(..)` boxes showing the project's image file, "Insert image"

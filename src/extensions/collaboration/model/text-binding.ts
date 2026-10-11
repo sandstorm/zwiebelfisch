@@ -1,9 +1,8 @@
 // TextBinding: a TypstDocument bound to a shared Y.Text, both ways (as y-codemirror binds an editor). See model.ts.
 import type * as Y from 'yjs';
-import type { TextChange, TypstDocument } from '../../../core/typst-document/typst-document';
+import { SourceRange, type TextChange, type TypstDocument } from '../../../core/typst-document/typst-document';
 import type { Disposable } from '../../../core/disposable/disposable';
 import { REMOTE_ORIGIN } from '../remote-origin';
-import { deltaToChanges, type DeltaOp } from './y-delta';
 
 /**
  * Keeps `document` and `text` (an integrated Y.Text, part of a Y.Doc) equal: the document first adopts the
@@ -47,4 +46,41 @@ export class TextBinding {
     if (event.transaction.origin === this) return;
     this.document.change(deltaToChanges(event.delta as DeltaOp[]), REMOTE_ORIGIN);
   };
+}
+
+// --- Y.Text deltas as TextChanges
+
+/** One step of a Y.Text event delta (Quill delta format; text only). */
+interface DeltaOp {
+  retain?: number;
+  delete?: number;
+  insert?: string | object;
+}
+
+/**
+ * Converts a Y.Text delta (sequential retain / delete / insert) into
+ * non-overlapping changes in coordinates of the text before it, the shape
+ * `TypstDocument.change` and CodeMirror use. A deletion and an insertion at
+ * the same spot become one replacement. Embeds are not expected in Typst
+ * source and count as nothing.
+ */
+function deltaToChanges(delta: readonly DeltaOp[]): TextChange[] {
+  const changes: { from: number; to: number; insert: string }[] = [];
+  let position = 0;
+  const at = (from: number) => {
+    const last = changes[changes.length - 1];
+    if (last && last.to === from) return last;
+    const change = { from, to: from, insert: '' };
+    changes.push(change);
+    return change;
+  };
+  for (const op of delta) {
+    if (op.retain !== undefined) position += op.retain;
+    if (op.delete !== undefined) {
+      at(position).to = position + op.delete;
+      position += op.delete;
+    }
+    if (typeof op.insert === 'string') at(position).insert += op.insert;
+  }
+  return changes.map(({ from, to, insert }) => ({ ...SourceRange.of({ from, to }), insert }));
 }

@@ -1,4 +1,4 @@
-// Tests for text-binding.ts.
+// Tests for text-binding.ts: the binding both ways, and how a remote Y.Text edit becomes a document change.
 import { describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
 import { SourceOffset, SourceRange, type TextChange, TypstDocument } from '../../../core/typst-document/typst-document';
@@ -60,6 +60,42 @@ describe('TextBinding', () => {
     const [{ contentChanges, origin }] = listener.mock.calls[0];
     expect(origin).toBe(REMOTE_ORIGIN);
     expect(applyChanges(before, contentChanges)).toBe('Bye world!');
+  });
+
+  describe('a remote edit of the Y.Text becomes one document change', () => {
+    /** The changes the document bound to a Y.Text holding `initial` hears when another transaction runs `edit` on it. */
+    function remoteChanges(initial: string, edit: (text: Y.Text) => void): { changes: readonly TextChange[]; text: string } {
+      const ydoc = new Y.Doc();
+      const text = ydoc.getText('t');
+      text.insert(0, initial);
+      const document = bound(text);
+      const listener = vi.fn();
+      document.onDidChange(listener);
+      ydoc.transact(() => edit(text), 'remote');
+      expect(listener).toHaveBeenCalledTimes(1);
+      return { changes: listener.mock.calls[0][0].contentChanges, text: document.text };
+    }
+
+    it('insertions and deletions, in coordinates of the text before the edit', () => {
+      const result = remoteChanges('abcdefghij', (text) => {
+        text.insert(2, 'XY');
+        text.delete(7, 2);
+      });
+      expect(result.changes).toEqual([
+        { from: 2, to: 2, insert: 'XY' },
+        { from: 5, to: 7, insert: '' },
+      ]);
+      expect(result.text).toBe('abXYcdehij');
+    });
+
+    it('a deletion and an insertion at the same spot, as one replacement', () => {
+      for (const edit of [
+        (text: Y.Text) => (text.delete(1, 3), text.insert(1, 'x')),
+        (text: Y.Text) => (text.insert(1, 'x'), text.delete(2, 3)),
+      ]) {
+        expect(remoteChanges('abcdef', edit)).toEqual({ changes: [{ from: 1, to: 4, insert: 'x' }], text: 'axef' });
+      }
+    });
   });
 
   it('converges under concurrent edits', () => {

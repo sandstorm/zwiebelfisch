@@ -2,7 +2,7 @@
 // is the asking and creating, which "Insert diagram" shares. See ../diagrams.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 import type { ExtensionContext } from '../../../hosts/workbench/workbench';
-import { emptyDiagram } from '../model/empty-diagram';
+import { emptyDiagram } from '../model/png';
 import { DIAGRAM_EDITOR, DIAGRAM_EXTENSION } from '../model/model';
 
 /**

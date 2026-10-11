@@ -1,10 +1,9 @@
-// Tests for task lists: their conversion and the checklist preamble (task-lists.ts, checklist-preamble.ts).
-import { EditorState } from '@tiptap/pm/state';
+// @vitest-environment jsdom
+// Tests for task lists (task-lists.ts): their conversion and the checklist preamble an added task item brings along.
 import { describe, expect, it } from 'vitest';
 import { CHECKLIST_PREAMBLE } from '../model/checklist-preamble';
-import { ensureChecklistPreamble } from './checklist-preamble';
 import { serializeToTypst } from '../../../hosts/prosemirror-typst/prosemirror-typst';
-import { after, edit, expectPreciseMap, find, parseTypst, schema } from '../../../testing/testing';
+import { after, createEditor, edit, expectPreciseMap, find, parseTypst, schema } from '../../../testing/testing';
 
 const PREAMBLE = '#import "@preview/cheq:0.4.0": checklist\n#show: checklist';
 
@@ -77,33 +76,39 @@ describe('task lists', () => {
   });
 });
 
-describe('ensureChecklistPreamble', () => {
-  const ensure = (source: string) => {
-    const tr = EditorState.create({ doc: parseTypst(source) }).tr;
-    ensureChecklistPreamble(tr);
-    return serializeToTypst(tr.doc);
+describe('the checklist preamble', () => {
+  /** `source` after an edit in the editor that appends the task item "new" (or, with `fromSource`, a change from the source). */
+  const addTask = (source: string, { fromSource = false } = {}) => {
+    const editor = createEditor(source);
+    const { state } = editor;
+    const task = state.schema.nodes.taskItem.create({ checked: false }, state.schema.nodes.paragraph.create(null, state.schema.text('new')));
+    const tr = state.tr.insert(state.doc.content.size, state.schema.nodes.taskList.create(null, task));
+    if (fromSource) tr.setMeta('addToHistory', false);
+    editor.view.dispatch(tr);
+    return serializeToTypst(editor.state.doc);
   };
 
-  it('adds the import and the show rule at the top', () => {
+  it('an added task item brings the import and the show rule, at the top', () => {
     expect(CHECKLIST_PREAMBLE).toBe(PREAMBLE);
-    expect(ensure('= Title\n\n- [ ] a\n')).toBe(`${PREAMBLE}\n\n= Title\n\n- [ ] a\n`);
+    expect(addTask('= Title\n')).toBe(`${PREAMBLE}\n\n= Title\n\n- [ ] new\n`);
   });
 
   it('adds nothing when both are there, in any form', () => {
-    for (const source of [
-      `${PREAMBLE}\n\n- [ ] a\n`,
-      '#set page(width: 10cm)\n#import "@preview/cheq:0.3.1": *\n\n#show: checklist.with(fill: luma(95%))\n\n- [ ] a\n',
-    ]) {
-      expect(ensure(source)).toBe(source);
+    for (const source of [`${PREAMBLE}\n\nText\n`, '#set page(width: 10cm)\n#import "@preview/cheq:0.3.1": *\n\n#show: checklist.with(fill: luma(95%))\n\nText\n']) {
+      expect(addTask(source)).toBe(`${source}\n- [ ] new\n`);
     }
   });
 
   it('adds only the show rule, right after an existing import', () => {
     const source = '#import "@preview/cheq:0.4.0": checklist\n\n= Title\n';
-    expect(ensure(source)).toBe('#import "@preview/cheq:0.4.0": checklist\n\n#show: checklist\n\n= Title\n');
+    expect(addTask(source)).toBe('#import "@preview/cheq:0.4.0": checklist\n\n#show: checklist\n\n= Title\n\n- [ ] new\n');
   });
 
   it('adds only the import when the show rule is there', () => {
-    expect(ensure('#show: checklist\n\nText\n')).toBe('#import "@preview/cheq:0.4.0": checklist\n\n#show: checklist\n\nText\n');
+    expect(addTask('#show: checklist\n\nText\n')).toBe('#import "@preview/cheq:0.4.0": checklist\n\n#show: checklist\n\nText\n\n- [ ] new\n');
+  });
+
+  it('leaves task items that come from the source alone', () => {
+    expect(addTask('Text\n', { fromSource: true })).toBe('Text\n\n- [ ] new\n');
   });
 });
