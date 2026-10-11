@@ -3,7 +3,7 @@ import { Extension } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey, type Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import type { Highlight } from './visual-view';
+import type { SourceHighlight } from './visual-view';
 import { sourceToPos } from '../projection/projection';
 
 type Layers = Record<string, DecorationSet>;
@@ -25,7 +25,7 @@ export const highlights = Extension.create({
           init: () => ({}),
           apply(tr, layers) {
             const mapped = tr.docChanged ? mapLayers(layers, tr) : layers;
-            const set = tr.getMeta(key) as { layer: string; highlights: readonly Highlight[] } | undefined;
+            const set = tr.getMeta(key) as { layer: string; highlights: readonly SourceHighlight[] } | undefined;
             return set ? { ...mapped, [set.layer]: toDecorations(tr.doc, set.highlights) } : mapped;
           },
         },
@@ -38,7 +38,7 @@ export const highlights = Extension.create({
 });
 
 /** Marks `tr` to replace the highlights of `layer`. */
-export function setHighlights(tr: Transaction, layer: string, highlights: readonly Highlight[]): Transaction {
+export function setHighlights(tr: Transaction, layer: string, highlights: readonly SourceHighlight[]): Transaction {
   return tr.setMeta(key, { layer, highlights });
 }
 
@@ -46,7 +46,7 @@ function mapLayers(layers: Layers, tr: Transaction): Layers {
   return Object.fromEntries(Object.entries(layers).map(([layer, set]) => [layer, set.map(tr.mapping, tr.doc)]));
 }
 
-function toDecorations(doc: Node, highlights: readonly Highlight[]): DecorationSet {
+function toDecorations(doc: Node, highlights: readonly SourceHighlight[]): DecorationSet {
   return DecorationSet.create(doc, highlights.flatMap((highlight) => rangeDecorations(doc, highlight)));
 }
 
@@ -55,7 +55,7 @@ function toDecorations(doc: Node, highlights: readonly Highlight[]): DecorationS
  * `attributes`: inline over the text, plus the block atoms (raw code boxes)
  * in range, which inline decorations skip.
  */
-function rangeDecorations(doc: Node, { from, to, className, attributes }: Highlight): Decoration[] {
+function rangeDecorations(doc: Node, { from, to, className, attributes }: SourceHighlight): Decoration[] {
   const start = sourceToPos(doc, from);
   const end = Math.max(start, sourceToPos(doc, to, -1));
   if (start >= end) return [];

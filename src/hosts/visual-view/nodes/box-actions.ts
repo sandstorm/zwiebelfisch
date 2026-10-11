@@ -1,7 +1,7 @@
 // BoxActionBar: the buttons of the contributed box actions (`registerBoxAction`) that apply to one raw box,
 // kept up to date with its node. See raw-box.ts.
 import type { Node } from '@tiptap/pm/model';
-import type { BoxAction, VisualViewContext } from '../visual-view';
+import type { RawBoxAction, VisualViewContext } from '../visual-view';
 
 /**
  * A raw box's action buttons (`.typst-visual__box-actions`): one per contributed action whose `when` holds for the
@@ -12,11 +12,11 @@ export class BoxActionBar {
   readonly element: HTMLElement;
   private node: Node;
   /** The actions shown now. */
-  private shown: readonly BoxAction[] = [];
+  private shown: readonly RawBoxAction[] = [];
 
   constructor(
     doc: Document,
-    private readonly actions: readonly BoxAction[],
+    private readonly actions: readonly RawBoxAction[],
     private readonly view: VisualViewContext,
     node: Node,
   ) {

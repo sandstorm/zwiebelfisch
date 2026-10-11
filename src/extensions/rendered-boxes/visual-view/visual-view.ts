@@ -2,7 +2,7 @@
 // edited. See ../rendered-boxes.ts and docs/architecture/built-in-extensions.typ.
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import { SourceRange } from '../../../core/typst-document/typst-document';
-import type { BoxRenderer } from '../../../hosts/visual-view/visual-view';
+import type { RawBoxRenderer } from '../../../hosts/visual-view/visual-view';
 import { rendersInPlace, snippetSize, type Snippet } from '../model/model';
 
 /** Where a document's snippets come from: the compiled pages. */
@@ -22,7 +22,7 @@ export interface SnippetSource {
  * inline boxes in em of the text around them (see `inlinePictureSize`). Boxes that draw nothing in place (`#set`,
  * `#let`, comments: see `rendersInPlace`) and boxes whose snippet is null keep showing code.
  */
-export function snippetRenderer(source: SnippetSource): BoxRenderer {
+export function snippetRenderer(source: SnippetSource): RawBoxRenderer {
   return {
     className: 'typst-rendered-boxes__snippet',
     renders: () => true,

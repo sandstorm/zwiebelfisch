@@ -10,7 +10,7 @@ import type { QuickPickItem, Window } from '../../../hosts/window/window';
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type Action, type BoxRenderer, type ToolbarContext, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
+import { svg, type Action, type RawBoxRenderer, type ToolbarContext, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
 import { imageFileDrops, insertImages } from './image-insertion';
 import { imagePathLink } from './image-path-link';
 import { imagePath } from './image-syntax';
@@ -127,7 +127,7 @@ function imageSpec(options: ImagesOptions): TypstNodeSpec {
 }
 
 /** Image boxes show their file (following path edits at once). */
-function imageRenderer(urls: ImageUrls): BoxRenderer {
+function imageRenderer(urls: ImageUrls): RawBoxRenderer {
   return {
     renders: (node) => node.type.name === 'image',
     render: async (node) => {

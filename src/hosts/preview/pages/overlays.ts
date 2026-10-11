@@ -1,5 +1,5 @@
 // Overlays on the preview's pages: elements positioned in percent of their page. See ../preview.ts.
-import type { Box } from '../../../core/typst-engine/typst-engine';
+import type { PageRect } from '../../../core/typst-engine/typst-engine';
 import { percentOfPage } from './geometry';
 import type { PageList } from './page-list';
 
@@ -9,7 +9,7 @@ import type { PageList } from './page-list';
  * rendering; `redraw` puts them on the pages again after the pages were rendered anew.
  */
 export class OverlayLayer {
-  private boxes: readonly Box[] = [];
+  private boxes: readonly PageRect[] = [];
   private elements: HTMLElement[] = [];
 
   constructor(
@@ -17,7 +17,7 @@ export class OverlayLayer {
     private readonly className: string,
   ) {}
 
-  set(boxes: readonly Box[]): void {
+  set(boxes: readonly PageRect[]): void {
     this.boxes = boxes;
     this.redraw();
   }

@@ -1,7 +1,7 @@
 // withPackages: Typst packages (@preview/…) downloaded on first use and added to the engine. Entry of
 // core/typst-packages/. See docs/architecture/core.typ.
 import { SourceRange } from '../typst-document/typst-document';
-import type { CompileResult, Diagnostic, Engine, PdfResult } from '../typst-engine/typst-engine';
+import type { CompileResult, TypstDiagnostic, Engine, PdfResult } from '../typst-engine/typst-engine';
 import { untarGz } from './tar';
 
 /** Returns the `.tar.gz` archive of a package spec like `@preview/name:0.1.0`. */
@@ -59,8 +59,8 @@ function addPackage(engine: Engine, spec: string, files: Map<string, Uint8Array>
   }
 }
 
-function withFailures<R extends { diagnostics: Diagnostic[]; missingPackages: string[] }>(result: R, failed: Map<string, string>): R {
-  const failures: Diagnostic[] = result.missingPackages.map((spec) => ({
+function withFailures<R extends { diagnostics: TypstDiagnostic[]; missingPackages: string[] }>(result: R, failed: Map<string, string>): R {
+  const failures: TypstDiagnostic[] = result.missingPackages.map((spec) => ({
     severity: 'error',
     message: `could not download package ${spec}: ${failed.get(spec)}`,
     hints: [],

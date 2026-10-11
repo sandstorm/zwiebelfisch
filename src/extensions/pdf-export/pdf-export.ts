@@ -7,7 +7,7 @@
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
-import type { Diagnostic, PdfEntry } from '../../core/typst-engine/typst-engine';
+import type { TypstDiagnostic, PdfEntry } from '../../core/typst-engine/typst-engine';
 import type { PdfExportOption, PreviewContributions } from '../../hosts/preview/preview';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './pdf-export.css?inline';
@@ -98,7 +98,7 @@ class PdfExport {
   }
 }
 
-function failure(diagnostics: Diagnostic[]): string {
+function failure(diagnostics: TypstDiagnostic[]): string {
   const errors = diagnostics.filter((d) => d.severity === 'error');
   if (errors.length === 0) return 'The document did not compile.';
   if (errors.length === 1) return `The document has 1 error: ${errors[0].message}`;

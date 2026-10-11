@@ -4,7 +4,7 @@
 // See docs/architecture/built-in-extensions.typ.
 // Why one DiagnosticCollection (model/): the preview reports a compilation's diagnostics once, for every file; the
 // collection splits them by document, and each view of a document reads its own from there, whenever it is made.
-import type { Diagnostic } from '../../core/typst-engine/typst-engine';
+import type { TypstDiagnostic } from '../../core/typst-engine/typst-engine';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './diagnostics.css?inline';
 import { DiagnosticCollection } from './model/model';
@@ -30,11 +30,11 @@ export function diagnostics(): TypstExtension {
       /** The Typst file shown last: whose diagnostics the status counts. */
       let lastSource = project.main;
       /** The newest compilation's (null before the first). */
-      let latest: readonly Diagnostic[] | null = null;
+      let latest: readonly TypstDiagnostic[] | null = null;
       const show = () => {
         if (latest) status.show(summarizeDiagnostics(latest, lastSource));
       };
-      const compiled = (diagnostics: readonly Diagnostic[]) => {
+      const compiled = (diagnostics: readonly TypstDiagnostic[]) => {
         latest = diagnostics;
         for (const path of project.paths()) {
           const document = project.document(path);

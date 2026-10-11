@@ -4,8 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { calculateImportChange } from '../../../core/typst-syntax/typst-syntax';
-import type { ProjectStyles } from '../model/style-index';
-import type { Style } from '../model/discover';
+import type { ProjectStyles } from '../model/typst-style-index';
+import type { TypstStyle } from '../model/discover';
 import { createVisualView } from '../../../testing/testing';
 import { VisualView, VisualViewHost } from '../../../hosts/visual-view/visual-view';
 import { ProjectPath } from '../../../core/paths/paths';
@@ -17,10 +17,10 @@ const path = ProjectPath.of;
 Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
 Range.prototype.getBoundingClientRect = () => new DOMRect();
 
-const NOTE: Style = { name: 'note', kind: 'paragraph', label: 'Note', path: path('/styles.typ') };
-const KEY: Style = { name: 'key', kind: 'text', label: 'Keyword', path: path('/styles.typ') };
+const NOTE: TypstStyle = { name: 'note', kind: 'paragraph', label: 'Note', path: path('/styles.typ') };
+const KEY: TypstStyle = { name: 'key', kind: 'text', label: 'Keyword', path: path('/styles.typ') };
 
-function setup(text: string, initial: Style[] = [NOTE, KEY], create = () => {}) {
+function setup(text: string, initial: TypstStyle[] = [NOTE, KEY], create = () => {}) {
   let list = initial;
   const changed = new EventEmitter<void>();
   const styles: ProjectStyles = {
@@ -38,7 +38,7 @@ function setup(text: string, initial: Style[] = [NOTE, KEY], create = () => {}) 
     menu.value = value;
     menu.dispatchEvent(new Event('change', { bubbles: true }));
   };
-  const declare = (next: Style[]) => {
+  const declare = (next: TypstStyle[]) => {
     list = next;
     changed.fire();
   };

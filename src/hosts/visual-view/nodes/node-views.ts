@@ -7,7 +7,7 @@ import { Plugin } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView, type NodeView, type NodeViewConstructor } from '@tiptap/pm/view';
 import { documentExtensions, type TypstMarkSpec } from '../../projection/projection';
 import type { TypstNodeSpec } from '../visual-view';
-import { RawBoxNavigation, rawBoxViews, type Boxes } from './raw-box';
+import { RawBoxNavigation, rawBoxViews, type RawBoxes } from './raw-box';
 
 /**
  * The Tiptap extensions of a Visual view whose schema holds `nodes` and `marks`
@@ -21,7 +21,7 @@ import { RawBoxNavigation, rawBoxViews, type Boxes } from './raw-box';
  * - with `box: 'code'`, the raw box node view (`raw-box.ts`) with what `boxes` contribute;
  * - with `ownsPseudoElements`, `data-typst-pseudo="own"` on its DOM.
  */
-export function editorExtensions(nodes: readonly TypstNodeSpec[], marks: readonly TypstMarkSpec[], boxes: Boxes): AnyExtension[] {
+export function editorExtensions(nodes: readonly TypstNodeSpec[], marks: readonly TypstMarkSpec[], boxes: RawBoxes): AnyExtension[] {
   return [...documentExtensions(nodes, marks), RawBoxNavigation, nodeViews(boxes)];
 }
 
@@ -40,7 +40,7 @@ export function nodeViewSpecs(nodes: readonly TypstNodeSpec[]): Map<string, NonN
 }
 
 /** Kept DOM, raw box node views and the own-pseudo-elements mark, as the specs' `view` asks. */
-function nodeViews(boxes: Boxes): AnyExtension {
+function nodeViews(boxes: RawBoxes): AnyExtension {
   return Extension.create({
     name: 'typstNodeViews',
     addProseMirrorPlugins() {

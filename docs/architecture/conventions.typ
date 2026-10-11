@@ -67,7 +67,7 @@ How code is written here. `mise run quality` enforces what it can (@architecture
 == Naming and types <architecture-conventions-naming>
 
 - *Names say what something does.* A function that computes a change without applying it says so: `calculateImportChange`, not `addImport`.
-- *CQRS-like vocabulary*: commands (`FileChange`, `TextChange`) go out, `onDid…` events come back, indexes (`LabelIndex`, `StyleIndex`) are read models, a `calculate…` function is the pure decide step.
+- *CQRS-like vocabulary*: commands (`FileChange`, `TextChange`) go out, `onDid…` events come back, indexes (`LabelIndex`, `TypstStyleIndex`) are read models, a `calculate…` function is the pure decide step.
 - *Value types instead of bare strings and numbers*: branded types (`string & { __type: 'X' }`, `number & { __type: 'X' }`) with a same-named companion object (`ProjectPath.parse` / `resolve`, `SourceOffset.of`): `ProjectPath`, `PathReference`, `SourceOffset` / `SourceRange`, `PageIndex`, `Pt`, `Px`. Parse at the edges (public API, Yjs, awareness, drag data, storage, engine results); typed inside. Plain DTOs crossing to the host or the engine may stay string-keyed. A framework's own numbers stay as they are (ProseMirror positions); conversions between units live in one place (`sourceToPos` / `posToSource`, `pointOnPage`).
 - *Discriminated unions use `kind`*: `{ kind, … }`. Wire messages (room protocol, worker protocol) use `type`.
 - *No "main file vs. the rest" special cases* in the API.

@@ -1,5 +1,5 @@
 // The messages between the preview and the engine worker. See worker.ts and docs/architecture/preview.typ.
-import type { Box, CompileResult, Jump, PageIndex, PdfResult, Position, Pt } from '../../../core/typst-engine/typst-engine';
+import type { PageRect, CompileResult, Jump, PageIndex, PdfResult, Position, Pt } from '../../../core/typst-engine/typst-engine';
 import type { SourceOffset, SourceRange } from '../../../core/typst-document/typst-document';
 import type { EncodedFiles } from './project-files';
 
@@ -28,6 +28,6 @@ export type Response =
   | { id: number; type: 'compile'; result: CompileResult }
   | { id: number; type: 'click'; jump: Jump | null }
   | { id: number; type: 'cursor'; positions: Position[] }
-  | { id: number; type: 'boxes'; boxes: Box[] }
+  | { id: number; type: 'boxes'; boxes: PageRect[] }
   | { id: number; type: 'pdf'; result: PdfResult }
   | { id: number; type: 'error'; message: string };

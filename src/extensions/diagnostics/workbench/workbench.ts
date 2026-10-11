@@ -1,6 +1,6 @@
 // DiagnosticsStatus: the diagnostics' part of the workbench: the status bar's compile status ("✓ compiled",
 // "2 errors") with the messages behind it. See ../diagnostics.ts.
-import type { Diagnostic } from '../../../core/typst-engine/typst-engine';
+import type { TypstDiagnostic } from '../../../core/typst-engine/typst-engine';
 import { describeDiagnostic } from '../model/model';
 import { targetOf, type DiagnosticTarget, type DiagnosticsSummary } from '../model/diagnostics-summary';
 
@@ -59,7 +59,7 @@ export class DiagnosticsStatus {
     this.element.remove();
   }
 
-  private detail(diagnostic: Diagnostic): HTMLLIElement {
+  private detail(diagnostic: TypstDiagnostic): HTMLLIElement {
     const doc = this.element.ownerDocument;
     const item = doc.createElement('li');
     item.dataset.severity = diagnostic.severity;
@@ -73,7 +73,7 @@ export class DiagnosticsStatus {
     return item;
   }
 
-  private item(diagnostic: Diagnostic): HTMLLIElement {
+  private item(diagnostic: TypstDiagnostic): HTMLLIElement {
     const doc = this.element.ownerDocument;
     const item = doc.createElement('li');
     item.dataset.severity = diagnostic.severity;

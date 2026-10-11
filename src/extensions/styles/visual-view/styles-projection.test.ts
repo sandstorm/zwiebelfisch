@@ -3,15 +3,15 @@ import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../../core/paths/paths';
-import type { Style } from '../model/discover';
-import type { ProjectStyles } from '../model/style-index';
+import type { TypstStyle } from '../model/discover';
+import type { ProjectStyles } from '../model/typst-style-index';
 import { print, project as projectWith } from '../../../hosts/projection/projection';
 import { after, edit, expectPreciseMap, find, schemaWith } from '../../../testing/testing';
 import { customStyles } from './visual-view';
 
-const style = (name: string, kind: Style['kind'], label: string): Style => ({ name, kind, label, path: ProjectPath.of('/styles.typ') });
+const style = (name: string, kind: TypstStyle['kind'], label: string): TypstStyle => ({ name, kind, label, path: ProjectPath.of('/styles.typ') });
 /** A project's styles that are `list`, never changing. */
-function declaring(list: Style[]): ProjectStyles {
+function declaring(list: TypstStyle[]): ProjectStyles {
   return { styles: () => list, onDidChange: new EventEmitter<void>().event, calculateImportChange: () => null };
 }
 

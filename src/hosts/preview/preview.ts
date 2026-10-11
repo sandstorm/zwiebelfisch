@@ -9,7 +9,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import { type Event, EventEmitter } from '../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../core/paths/paths';
 import type { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
-import type { Diagnostic, Page, PageIndex, PdfEntry, PdfResult, Position, Pt } from '../../core/typst-engine/typst-engine';
+import type { TypstDiagnostic, Page, PageIndex, PdfEntry, PdfResult, Position, Pt } from '../../core/typst-engine/typst-engine';
 import { isInside, measure, mostVisible, pointOnPage, Px } from './pages/geometry';
 import { overlay, OverlayLayer } from './pages/overlays';
 import { PageList } from './pages/page-list';
@@ -45,7 +45,7 @@ export interface PreviewContributions {
    * The errors and warnings of each compilation of the newest files given to the preview (results of outdated
    * files are not reported, so the offsets match the text last given).
    */
-  readonly onDidChangeDiagnostics: Event<readonly Diagnostic[]>;
+  readonly onDidChangeDiagnostics: Event<readonly TypstDiagnostic[]>;
   /** After every successful compilation (snippets may have changed). */
   readonly onDidRender: Event<void>;
   /**
@@ -183,7 +183,7 @@ export class Preview implements PreviewContributions {
   /** The files and pages of the last successful compilation. */
   private compiled: { files: Record<string, FileContent>; pages: Page[] } = { files: {}, pages: [] };
   private readonly rendered = new EventEmitter<void>();
-  private readonly diagnosed = new EventEmitter<readonly Diagnostic[]>();
+  private readonly diagnosed = new EventEmitter<readonly TypstDiagnostic[]>();
   private readonly clicked = new EventEmitter<PageClick>();
   readonly onDidRender = this.rendered.event;
   readonly onDidChangeDiagnostics = this.diagnosed.event;

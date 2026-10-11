@@ -40,7 +40,7 @@ extensions/<name>/
   [`alignment`], [`#align(..)[..]`, `#par(justify: ..)[..]`, the Align menu], [nodes, toolbar],
   [`comments`], [margin notes in the text and a notes gutter; `comments.addComment` (Mod+Alt+M); PDF option `comments.include`], [node, mark, gutter, command, PDF option],
   [`labels`], [`LabelIndex`; reference chips, label tags, the `@` list, "Add label"], [nodes, toolbar],
-  [`styles`], [`StyleIndex` of the project's `/// @style` declarations; styled text; "New style…"], [node, mark, text style provider],
+  [`styles`], [`TypstStyleIndex` of the project's `/// @style` declarations; styled text; "New style…"], [node, mark, text style provider],
   [`previewSync`], [preview follows the cursor; a click selects the source; setting `previewSync.followCursor`], [preview toolbar, `reveal`, `onDidClickPage`],
   [`previewControls`], [zoom, page number], [preview toolbar],
   [`pdfExport`], [`pdfExport.export` → Blob; "Download PDF" with the options popover; setting `pdfExport.download`], [command, preview toolbar],

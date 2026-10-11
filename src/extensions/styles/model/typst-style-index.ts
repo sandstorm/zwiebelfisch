@@ -1,4 +1,4 @@
-// StyleIndex: the read model of the custom styles a project declares, kept up to date, and how a document imports
+// TypstStyleIndex: the read model of the custom styles a project declares, kept up to date, and how a document imports
 // one. See ../styles.ts.
 import type { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
@@ -6,20 +6,20 @@ import { PathReference, ProjectPath } from '../../../core/paths/paths';
 import type { FileChange, Project } from '../../../core/project/project';
 import type { SourceOffset, TextChange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { calculateImportChange } from '../../../core/typst-syntax/typst-syntax';
-import { scanStyles, type FoundStyle, type Style } from './discover';
+import { scanStyles, type FoundStyle, type TypstStyle } from './discover';
 import { STYLES_FILE } from './new-style';
 
-/** What the Visual view needs to know about the project's styles (see `StyleIndex`). */
+/** What the Visual view needs to know about the project's styles (see `TypstStyleIndex`). */
 export interface ProjectStyles {
   /** The project's styles, by file (in the project's order) and then in source order. */
-  styles(): readonly Style[];
+  styles(): readonly TypstStyle[];
   /** Whenever `styles()` changed. */
   readonly onDidChange: Event<void>;
   /**
    * The change to `document` that imports `style` for a use at offset `use`; null when nothing is needed (declared
    * in that file, imported already).
    */
-  calculateImportChange(document: TypstDocument, style: Style, use: SourceOffset): TextChange | null;
+  calculateImportChange(document: TypstDocument, style: TypstStyle, use: SourceOffset): TextChange | null;
 }
 
 /**
@@ -27,11 +27,11 @@ export interface ProjectStyles {
  * whenever it changes; listeners hear about changes of the style list only,
  * not about every keystroke.
  */
-export class StyleIndex implements ProjectStyles {
+export class TypstStyleIndex implements ProjectStyles {
   private readonly scans = new Map<ProjectPath, FoundStyle[]>();
   private readonly changed = new EventEmitter<void>();
   readonly onDidChange: Event<void> = this.changed.event;
-  private list: Style[] = [];
+  private list: TypstStyle[] = [];
   private readonly subscription: Disposable;
 
   constructor(private readonly project: Project) {
@@ -40,12 +40,12 @@ export class StyleIndex implements ProjectStyles {
     this.subscription = project.onDidChangeFile((change) => this.update(change));
   }
 
-  styles(): readonly Style[] {
+  styles(): readonly TypstStyle[] {
     return this.list;
   }
 
   /** Imports are written relative to the document's (current) path, never into the file declaring the style. */
-  calculateImportChange(document: TypstDocument, style: Style, use: SourceOffset): TextChange | null {
+  calculateImportChange(document: TypstDocument, style: TypstStyle, use: SourceOffset): TextChange | null {
     const path = this.project.pathOf(document);
     if (!path || path === style.path) return null;
     const module = ProjectPath.referenceTo(path, style.path);
@@ -95,7 +95,7 @@ export class StyleIndex implements ProjectStyles {
     if (ProjectPath.isTypst(path) && typeof content === 'string') this.scans.set(path, scanStyles(content));
   }
 
-  private collect(): Style[] {
+  private collect(): TypstStyle[] {
     return this.project.paths().flatMap((path) => this.scans.get(path)?.map((style) => ({ ...style, path })) ?? []);
   }
 }

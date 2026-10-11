@@ -59,13 +59,13 @@ export interface Engine {
    * image whose syntax node starts in one. Empty ranges and code that draws
    * nothing yield nothing.
    */
-  boxesForRanges(path: string, ranges: readonly SourceRange[]): Box[];
+  boxesForRanges(path: string, ranges: readonly SourceRange[]): PageRect[];
 }
 
 export interface CompileResult {
   /** Empty when compilation failed. */
   pages: Page[];
-  diagnostics: Diagnostic[];
+  diagnostics: TypstDiagnostic[];
   /**
    * Imported packages (`@namespace/name:version`) of which the engine has no
    * files. Add their files and compile again; `withPackages` does that.
@@ -86,7 +86,7 @@ export interface PdfEntry {
 export interface PdfResult {
   /** The PDF file; null when compilation failed (see `diagnostics`). */
   pdf: Uint8Array | null;
-  diagnostics: Diagnostic[];
+  diagnostics: TypstDiagnostic[];
   /** As in `CompileResult`: add these packages and export again. */
   missingPackages: string[];
 }
@@ -100,7 +100,7 @@ export interface Page {
 }
 
 /** A compile error or warning, at `from..to` of its file. */
-export interface Diagnostic extends SourceRange {
+export interface TypstDiagnostic extends SourceRange {
   severity: 'error' | 'warning';
   message: string;
   hints: string[];
@@ -115,7 +115,7 @@ export interface Position {
 }
 
 /** A rectangle on a page, from its top-left corner. */
-export interface Box {
+export interface PageRect {
   page: PageIndex;
   x: Pt;
   y: Pt;
@@ -132,7 +132,7 @@ export type Jump =
       from: SourceOffset;
       to: SourceOffset;
       /** Where the clicked source node is drawn: one box per line/page; empty for non-text. */
-      boxes: Box[];
+      boxes: PageRect[];
     }
   | { kind: 'url'; url: string }
   | ({ kind: 'position' } & Position);
@@ -179,7 +179,7 @@ export async function createEngine(
 }
 
 /** A report of the wasm (JSON) with its diagnostics' paths parsed: a package file has no project path. */
-function parseReport<R extends { diagnostics: Diagnostic[] }>(json: string): R {
+function parseReport<R extends { diagnostics: TypstDiagnostic[] }>(json: string): R {
   const report = JSON.parse(json) as R;
   for (const d of report.diagnostics) d.path = d.path === null ? null : ProjectPath.parse(d.path);
   return report;

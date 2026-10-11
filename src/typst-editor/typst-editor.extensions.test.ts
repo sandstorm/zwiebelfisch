@@ -4,7 +4,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import { ProjectPath } from '../core/paths/paths';
-import { type Diagnostic, PageIndex } from '../core/typst-engine/typst-engine';
+import { type TypstDiagnostic, PageIndex } from '../core/typst-engine/typst-engine';
 import type { PageClick, PdfExportOption, PreviewContext, PreviewToolbarItem } from '../hosts/preview/preview';
 import type { Disposable } from '../core/disposable/disposable';
 import { EventEmitter } from '../core/event-emitter/event-emitter';
@@ -18,7 +18,7 @@ interface FakePreview {
   toolbarItems: PreviewToolbarItem[];
   pdfOptions: PdfExportOption[];
   revealed: [string, SourceRange][];
-  compiled(diagnostics: Diagnostic[]): void;
+  compiled(diagnostics: TypstDiagnostic[]): void;
   click(click: PageClick): void;
 }
 const previews: FakePreview[] = [];
@@ -36,14 +36,14 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
       readonly toolbarItems: unknown[] = [];
       readonly pdfOptions: unknown[] = [];
       readonly revealed: unknown[] = [];
-      readonly #diagnostics = new EventEmitter<readonly Diagnostic[]>();
+      readonly #diagnostics = new EventEmitter<readonly TypstDiagnostic[]>();
       readonly onDidChangeDiagnostics = this.#diagnostics.event;
       readonly #clicks = new EventEmitter<PageClick>();
       readonly onDidClickPage = this.#clicks.event;
       constructor() {
         previews.push(this as never);
       }
-      compiled(diagnostics: Diagnostic[]) {
+      compiled(diagnostics: TypstDiagnostic[]) {
         this.#diagnostics.fire(diagnostics);
       }
       click(click: PageClick) {

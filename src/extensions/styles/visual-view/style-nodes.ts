@@ -68,7 +68,7 @@ export const StyledBlock = Node.create({
  * with arguments, `#key(..)[`). Drawn with a dotted underline, the style's
  * name as tooltip and the class `typst-styles--<name>`. One text style at a time.
  */
-export const StyleMark = Mark.create({
+export const TypstStyleMark = Mark.create({
   name: 'style',
   // outside bold and italic (100) where it covers the same text (`#key[*x*]`), inside links (120) and notes
   priority: 110,

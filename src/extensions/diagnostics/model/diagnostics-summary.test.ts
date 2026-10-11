@@ -1,14 +1,14 @@
 // Tests for diagnostics-summary.ts.
 import { describe, expect, it } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
-import type { Diagnostic } from '../../../core/typst-engine/typst-engine';
+import type { TypstDiagnostic } from '../../../core/typst-engine/typst-engine';
 import { summarizeDiagnostics } from './diagnostics-summary';
 import { SourceOffset, SourceRange } from '../../../core/typst-document/typst-document';
 
 const MAIN = ProjectPath.of('/main.typ');
 const LIB = ProjectPath.of('/lib.typ');
 
-function diag(overrides: Partial<Diagnostic>): Diagnostic {
+function diag(overrides: Partial<TypstDiagnostic>): TypstDiagnostic {
   return { severity: 'error', message: 'boom', hints: [], path: MAIN, from: SourceOffset.of(0), to: SourceOffset.of(1), ...overrides };
 }
 

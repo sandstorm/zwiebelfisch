@@ -1,9 +1,9 @@
-// Tests for style-index.ts (StyleIndex) and new-style.ts (calculateNewStyleChange).
+// Tests for typst-style-index.ts (TypstStyleIndex) and new-style.ts (calculateNewStyleChange).
 import { describe, expect, it, vi } from 'vitest';
 import { Project } from '../../../core/project/project';
 import { scanStyles } from './discover';
 import { calculateNewStyleChange } from './new-style';
-import { StyleIndex } from './style-index';
+import { TypstStyleIndex } from './typst-style-index';
 import { ProjectPath } from '../../../core/paths/paths';
 import { SourceOffset } from '../../../core/typst-document/typst-document';
 
@@ -13,11 +13,11 @@ const STYLES = '/// @style paragraph Note\n#let note(body) = block(body)\n';
 
 function setup(files: Record<string, string> = {}) {
   const project = new Project(path('/main.typ'), { '/main.typ': '= Doc\n', '/styles.typ': STYLES, ...files });
-  const index = new StyleIndex(project);
+  const index = new TypstStyleIndex(project);
   return { project, index };
 }
 
-describe('StyleIndex', () => {
+describe('TypstStyleIndex', () => {
   it('collects the styles of every Typst file, with the file they are declared in, in the project\'s order', () => {
     const project = new Project(path('/main.typ'), {
       '/main.typ': '= Doc\n',
@@ -25,7 +25,7 @@ describe('StyleIndex', () => {
       '/more/terms.typ': '/// @style text Term\n#let term(body) = emph(body)\n',
       '/logo.png': new Uint8Array([1]),
     });
-    expect(new StyleIndex(project).styles().map((s) => [s.name, s.path])).toEqual([
+    expect(new TypstStyleIndex(project).styles().map((s) => [s.name, s.path])).toEqual([
       ['term', '/more/terms.typ'],
       ['note', '/styles.typ'],
     ]);
@@ -61,12 +61,12 @@ describe('StyleIndex', () => {
   });
 });
 
-describe('StyleIndex.homeFile (where New style… adds one)', () => {
+describe('TypstStyleIndex.homeFile (where New style… adds one)', () => {
   it('is the file declaring the most styles, else /styles.typ', () => {
     const helpers = '/// @style paragraph A\n#let a(body) = body\n/// @style text B\n#let b(body) = body\n';
     const { index } = setup({ '/helpers.typ': helpers });
     expect(index.homeFile()).toBe(path('/helpers.typ'));
-    const none = new StyleIndex(new Project(path('/main.typ'), { '/main.typ': '' }));
+    const none = new TypstStyleIndex(new Project(path('/main.typ'), { '/main.typ': '' }));
     expect(none.homeFile()).toBe(path('/styles.typ'));
   });
 });

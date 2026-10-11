@@ -4,10 +4,10 @@ import { Mark, Node } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { withHash } from '../../core/typst-syntax/typst-syntax';
 import { createSchema, print, project, starterKitPart, type TypstMarkSpec } from '../projection/projection';
-import { type BoxRendererProvider, type TypstNodeSpec, VisualViewHost } from './visual-view';
+import { type RawBoxRendererProvider, type TypstNodeSpec, VisualViewHost } from './visual-view';
 
 const mark = (name: string, tiptap: TypstMarkSpec['tiptap']): TypstMarkSpec => ({ name, tiptap, typst: { toTypst: () => ({ open: '', close: '' }) } });
-const renderer = (): BoxRendererProvider => () => null;
+const renderer = (): RawBoxRendererProvider => () => null;
 
 describe('VisualViewHost priority', () => {
   it('asks box renderers by priority: one registered later with a higher priority comes first', () => {

@@ -1,7 +1,7 @@
 // summarizeDiagnostics: compile diagnostics counted and sorted per file. See model.ts.
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { SourceRange } from '../../../core/typst-document/typst-document';
-import type { Diagnostic } from '../../../core/typst-engine/typst-engine';
+import type { TypstDiagnostic } from '../../../core/typst-engine/typst-engine';
 
 /** A range in a project file. */
 export interface DiagnosticTarget extends SourceRange {
@@ -18,13 +18,13 @@ export interface DiagnosticsSummary {
    */
   target: DiagnosticTarget | null;
   /** Diagnostics of the shown file: listed behind the status, each jumping to its range. */
-  inFile: Diagnostic[];
+  inFile: TypstDiagnostic[];
   /** Diagnostics in other files or without location: only listed in the status. */
-  elsewhere: Diagnostic[];
+  elsewhere: TypstDiagnostic[];
 }
 
 /** Condenses one compilation's diagnostics into what the status indicator shows while `file` is open. */
-export function summarizeDiagnostics(diagnostics: readonly Diagnostic[], file: ProjectPath): DiagnosticsSummary {
+export function summarizeDiagnostics(diagnostics: readonly TypstDiagnostic[], file: ProjectPath): DiagnosticsSummary {
   const errors = diagnostics.filter((d) => d.severity === 'error').length;
   const warnings = diagnostics.length - errors;
   return {
@@ -39,7 +39,7 @@ export function summarizeDiagnostics(diagnostics: readonly Diagnostic[], file: P
 }
 
 /** Where a diagnostic is in the project; null in a package file or without location. */
-export function targetOf({ path, from, to }: Diagnostic): DiagnosticTarget | null {
+export function targetOf({ path, from, to }: TypstDiagnostic): DiagnosticTarget | null {
   return path && { path, from, to };
 }
 
@@ -48,7 +48,7 @@ function count(n: number, noun: string): string {
   return `${n} ${noun}${n === 1 ? '' : 's'}`;
 }
 
-function firstTarget(diagnostics: readonly Diagnostic[], file: ProjectPath): DiagnosticTarget | null {
+function firstTarget(diagnostics: readonly TypstDiagnostic[], file: ProjectPath): DiagnosticTarget | null {
   for (const severity of ['error', 'warning']) {
     const candidates = diagnostics.flatMap((d) => (d.severity === severity ? (targetOf(d) ?? []) : []));
     const inFile = candidates.filter((target) => target.path === file);

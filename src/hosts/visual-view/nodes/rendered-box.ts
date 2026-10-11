@@ -2,7 +2,7 @@
 import type { Node } from '@tiptap/pm/model';
 import type { Disposable } from '../../../core/disposable/disposable';
 import type { SourceOffset } from '../../../core/typst-document/typst-document';
-import type { BoxPicture, BoxRenderer } from '../visual-view';
+import type { BoxPicture, RawBoxRenderer } from '../visual-view';
 
 /** The raw box a `RenderedBox` belongs to. */
 export interface BoxHost {
@@ -35,7 +35,7 @@ export class RenderedBox {
 
   constructor(
     private readonly host: BoxHost,
-    private readonly renderer: BoxRenderer,
+    private readonly renderer: RawBoxRenderer,
   ) {
     const { dom, code } = host;
     this.picture = dom.ownerDocument.createElement('img');

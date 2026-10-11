@@ -1,12 +1,12 @@
 // The styles extension: the paragraph and text styles a project declares (`/// @style …`), in the Visual view.
 // Entry of extensions/styles/. Why an extension: a style is a Typst function declared in some file of the project,
-// never a registry of the editor's own, so one read model (StyleIndex) follows the whole
+// never a registry of the editor's own, so one read model (TypstStyleIndex) follows the whole
 // project, and every document's Visual view shows the styles' calls as styled text and applies them from the text
 // style menu, importing a style where it is used. See docs/guide/features.typ.
 import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
 import css from './styles.css?inline';
 import { calculateNewStyleChange } from './model/new-style';
-import { StyleIndex } from './model/style-index';
+import { TypstStyleIndex } from './model/typst-style-index';
 import { customStyles } from './visual-view/visual-view';
 
 /**
@@ -18,7 +18,7 @@ export function styles(): TypstExtension {
     id: 'styles',
     activate(context) {
       context.subscriptions.push(context.workbench.registerStyleSheet(css));
-      const index = new StyleIndex(context.project);
+      const index = new TypstStyleIndex(context.project);
       context.subscriptions.push(index);
       customStyles({ styles: index, create: () => void addNewStyle(index, context) }).activate(context);
     },
@@ -30,7 +30,7 @@ export function styles(): TypstExtension {
  * most styles (else `/styles.typ`, created when missing; a refusal is an error message) and shows it in the Source
  * view.
  */
-async function addNewStyle(index: StyleIndex, { project, window, workspace, workbench }: ExtensionContext): Promise<void> {
+async function addNewStyle(index: TypstStyleIndex, { project, window, workspace, workbench }: ExtensionContext): Promise<void> {
   const label = await window.showInputBox({
     title: 'New style',
     prompt: 'Name of the paragraph style',

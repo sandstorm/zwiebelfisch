@@ -6,7 +6,7 @@ import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { SourceOffset, TypstDocument } from '../../../core/typst-document/typst-document';
-import type { Highlight, HighlightProvider, VisualViewContext, VisualViewContribution } from '../../../hosts/visual-view/visual-view';
+import type { SourceHighlight, SourceHighlightProvider, VisualViewContext, VisualViewContribution } from '../../../hosts/visual-view/visual-view';
 import { textColorOn } from '../../../core/color-scheme/color-scheme';
 import type { PlacedPresence, PresenceSource, PresenceUser } from '../presence/presence';
 import { caretElement } from '../source-view/source-view';
@@ -31,7 +31,7 @@ export function visualPresence(presences: PresenceSource, documents: () => reado
 }
 
 /** The others' selections in a document, tinted in their colors. */
-function selections(presences: PresenceSource, documents: () => readonly TypstDocument[]): HighlightProvider {
+function selections(presences: PresenceSource, documents: () => readonly TypstDocument[]): SourceHighlightProvider {
   const onDidChangeHighlights: Event<TypstDocument> = (listener) =>
     presences.onDidChange(() => {
       for (const document of documents()) listener(document);
@@ -39,7 +39,7 @@ function selections(presences: PresenceSource, documents: () => readonly TypstDo
   return { provideHighlights: (document) => presences.presencesIn(document).flatMap(selection), onDidChangeHighlights };
 }
 
-function selection({ user, anchor, head }: PlacedPresence): Highlight[] {
+function selection({ user, anchor, head }: PlacedPresence): SourceHighlight[] {
   if (anchor === head) return [];
   const attributes = { 'data-user': user.name, style: `--typst-remote-color: ${user.color}` };
   const [from, to] = anchor < head ? [anchor, head] : [head, anchor];

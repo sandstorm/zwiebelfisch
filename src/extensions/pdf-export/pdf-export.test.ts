@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
-import type { Diagnostic, PdfEntry, PdfResult } from '../../core/typst-engine/typst-engine';
+import type { TypstDiagnostic, PdfEntry, PdfResult } from '../../core/typst-engine/typst-engine';
 import type { PdfExportOption, PreviewContext, PreviewToolbarItem } from '../../hosts/preview/preview';
 import type { ExtensionContext } from '../../hosts/workbench/workbench';
 import { pdfExport } from './pdf-export';
@@ -66,7 +66,7 @@ const bytes = (blob: Blob) =>
     reader.readAsArrayBuffer(blob);
   });
 
-const error = (message: string): Diagnostic => ({ severity: 'error', message, hints: [], path: path('/main.typ'), from: SourceOffset.of(0), to: SourceOffset.of(1) });
+const error = (message: string): TypstDiagnostic => ({ severity: 'error', message, hints: [], path: path('/main.typ'), from: SourceOffset.of(0), to: SourceOffset.of(1) });
 
 /** An option that, when on, adds a source naming itself and what it was applied to. */
 const marker = (id: string, value = false): PdfExportOption => ({
