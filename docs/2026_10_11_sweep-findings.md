@@ -19,6 +19,19 @@
   `toDOM`); framework classes `TypstToProseMirrorParser` / `ProseMirrorToTypstSerializer`; what spec
   functions receive: `TypstParseContext` / `TypstSerializeState` (today `ProjectionContext` /
   `Printer`; "projector" / "printer" wording goes). Done in the follow-up, before the types are public.
+- **Which framework a contribution belongs to must be obvious** (user; same follow-up). Five
+  vocabularies: ours (VS Code-shaped, unprefixed), Tiptap (ProseMirror only through Tiptap, e.g.
+  `addProseMirrorPlugins`), CodeMirror, Lezer + the Typst grammar of `codemirror-lang-typst`, the Typst
+  language. Rules: (1) our API unprefixed; (2) a member taking / returning a framework object names it
+  — `registerTiptapExtension` (was `registerEditorExtension`), `sourceView.registerCodeMirrorExtension`
+  (was `registerExtension`), `registerRawBoxCodeMirrorExtension` (was `registerBoxCodeExtension`);
+  (3) specs group fields by owner: `{ name, typst: { parseTypst: { syntaxNodes: { Heading: … }, calls:
+  { pagebreak: … } }, toTypst, labelled }, tiptap: Node.create(…) /* attributes, keepsDom, priority
+  live here */, view: { box, tools } }`; (4) framework types used directly, never aliased
+  (`AnyExtension`, `Node`, CodeMirror `Extension`, Lezer `SyntaxNode`); our `Call` is a documented
+  helper over Lezer's call node. `docs/embedding.md`: per contribution point a table "what / whose
+  concept / framework docs link", and the grammar version extensions are written against
+  (`codemirror-lang-typst` stays pinned: its node names become public API).
 
 Eight agents reviewed every area against [the code conventions](2026_10_11_code-conventions.md) on
 2026-10-11 and fixed what was clear (about 70 small commits, merged at `c103841`). These are the
