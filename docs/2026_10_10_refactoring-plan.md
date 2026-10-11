@@ -242,6 +242,11 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    chapters `01_getting-started.typ`, `02_…` in reading order; all references (main.typ, site.typ,
    code top comments, quality check, README, demo example) follow. After the running docs-touching
    agents merge, before distilling the notes.
+   **Search everywhere** (user, 2026-10-11): double Shift opens one quick pick over files, headings,
+   labels / figures / tables (caption), commands (with display names), text in all files, custom
+   styles (apply), comments (open notes), settings (toggle / change); prefixes narrow it. No errors,
+   no Cmd+Shift+O (browser conflicts). Extensions register search providers (VS Code style); a
+   bibliography provider later.
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Rules wave also does:** core `onChange` → `onDidChange: Event` + `Disposable` everywhere
    (`Project`, `TypstDocument`, …) (user: yes).
