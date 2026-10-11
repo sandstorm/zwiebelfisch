@@ -19,6 +19,7 @@ export const GITLAB_ROOM_PREFIX = 'gitlab:';
  * | `base`        | `Record<path, string>`: the `.typ` files at `baseSha` |
  * | `baseAssets`  | `Record<path, blobSha>`: the other files at `baseSha` |
  * | `lastCommits` | `Record<path, commitSha>`: per `.typ` file, the commit that last changed it (optimistic concurrency) |
+ * | `changes`     | `RoomChanges \| null`: what the room has that the branch has not (kept up to date while people edit) |
  */
 export const META_MAP = 'meta';
 
@@ -36,6 +37,22 @@ export interface RoomMeta {
   base: Record<string, string>;
   baseAssets: Record<string, string>;
   lastCommits: Record<string, string>;
+}
+
+/** What the room has that its branch has not (`changes` in the meta map; null or missing: nothing). */
+export interface RoomChanges {
+  /** The files that differ from the base, by path. */
+  files: ChangedFile[];
+  /** When the first of these edits was made (milliseconds since the epoch, the server's clock). */
+  since: number;
+  /** Who made them, by name, in the order of their first edit. */
+  editors: string[];
+}
+
+/** A file of the room that differs from the base: new, changed, or gone (a rename is both). */
+export interface ChangedFile {
+  path: string;
+  kind: 'added' | 'modified' | 'deleted';
 }
 
 /** Client → server stateless messages. */

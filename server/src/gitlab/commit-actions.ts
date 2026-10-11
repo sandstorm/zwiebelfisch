@@ -1,5 +1,5 @@
 // The GitLab commit actions (create, update, delete, move) that turn a repository tree into the room's files. See gitlab-room.ts.
-import type { RoomMeta } from '../../../src/core/room-protocol/room-protocol.ts';
+import type { ChangedFile, RoomMeta } from '../../../src/core/room-protocol/room-protocol.ts';
 import { blobSha } from './blob-sha.ts';
 import type { CommitAction } from './gitlab-api.ts';
 
@@ -18,6 +18,14 @@ export interface RoomFiles {
  */
 export function commitActions(meta: RoomMeta, files: RoomFiles): CommitAction[] {
   return [...textActions(meta, files.texts), ...assetActions(meta.baseAssets, files.assets)];
+}
+
+/** The files a commit of `actions` changes, by path (a move: its old path deleted, its new one added). */
+export function changedFiles(actions: readonly CommitAction[]): ChangedFile[] {
+  const kinds = { create: 'added', update: 'modified', delete: 'deleted', move: 'added' } as const;
+  const files: ChangedFile[] = actions.map((action) => ({ path: action.path, kind: kinds[action.action] }));
+  for (const action of actions) if (action.action === 'move') files.push({ path: action.previousPath, kind: 'deleted' });
+  return files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
 
 function textActions(meta: RoomMeta, texts: Record<string, string>): CommitAction[] {
