@@ -3,10 +3,12 @@
 //! separate assets, either right away or lazily: Typst's font book needs every
 //! face's [`FontInfo`] up front, but a face's data only when a document uses
 //! it, so a lazy font's file is loaded by [`World::font`] on first use.
+//! Font files among the project's files (`.ttf`, `.otf`, `.ttc`, `.otc`) are
+//! fonts too, as on typst.app: described when set, dropped when removed.
 //! Packages are pushed in as files; the world only remembers which ones a
 //! compilation asked for but did not have.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::{Mutex, OnceLock};
 
 use typst::diag::{FileError, FileResult, PackageError};
@@ -77,10 +79,19 @@ enum File {
 
 pub struct MemoryWorld {
     library: LazyHash<Library>,
+    /// The faces of `fonts`, then those of `project_fonts`.
     book: LazyHash<FontBook>,
-    /// One per face of the book, in the same order.
+    /// The faces added with `add_font` / `add_lazy_font`, in book order.
     fonts: Vec<FontSlot>,
+    /// The book of `fonts` alone.
+    added_book: FontBook,
     lazy_files: Vec<LazyFile>,
+    /// The faces of the project's font files by path; their data is the
+    /// file's. A file is described once per `set_binary`, the book rebuilt
+    /// from these on every change (cheap: no font is parsed again).
+    project_fonts: BTreeMap<String, Vec<Font>>,
+    /// The faces of `project_fonts` in book order (after `fonts`).
+    project_faces: Vec<Font>,
     files: HashMap<FileId, File>,
     /// Packages with at least one file present.
     packages: HashSet<PackageSpec>,
@@ -96,7 +107,10 @@ impl MemoryWorld {
             library: LazyHash::new(Library::default()),
             book: LazyHash::new(FontBook::new()),
             fonts: Vec::new(),
+            added_book: FontBook::new(),
             lazy_files: Vec::new(),
+            project_fonts: BTreeMap::new(),
+            project_faces: Vec::new(),
             files: HashMap::new(),
             packages: HashSet::new(),
             missing: Mutex::new(HashSet::new()),
@@ -110,9 +124,10 @@ impl MemoryWorld {
         let faces: Vec<Font> = Font::iter(Bytes::new(data)).collect();
         let added = faces.len();
         for font in faces {
-            self.book.push(font.info().clone());
+            self.added_book.push(font.info().clone());
             self.fonts.push(FontSlot { font: OnceLock::from(Some(font)), lazy: None });
         }
+        self.rebuild_book();
         added
     }
 
@@ -121,15 +136,17 @@ impl MemoryWorld {
         let file = self.lazy_files.len();
         self.lazy_files.push(LazyFile { loader, data: OnceLock::new() });
         for face in faces {
-            self.book.push(face.info);
+            self.added_book.push(face.info);
             self.fonts.push(FontSlot { font: OnceLock::new(), lazy: Some((file, face.index)) });
         }
+        self.rebuild_book();
     }
 
     /// Sets the text of a source file. Reuses the existing [`Source`] so that
     /// Typst can reparse incrementally and keep spans of unchanged nodes stable.
     pub fn set_source(&mut self, id: FileId, text: &str) {
         self.note_package(id);
+        self.forget_font(id);
         match self.files.get_mut(&id) {
             Some(File::Source(source)) => {
                 source.replace(text);
@@ -140,13 +157,38 @@ impl MemoryWorld {
         }
     }
 
+    /// Sets the data of a binary file; a project font file's faces replace
+    /// its previous ones in the book.
     pub fn set_binary(&mut self, id: FileId, data: Vec<u8>) {
         self.note_package(id);
-        self.files.insert(id, File::Binary(Bytes::new(data)));
+        let bytes = Bytes::new(data);
+        if is_project_font(id) {
+            self.project_fonts.insert(file_path(id), Font::iter(bytes.clone()).collect());
+            self.rebuild_book();
+        }
+        self.files.insert(id, File::Binary(bytes));
     }
 
     pub fn remove(&mut self, id: FileId) {
         self.files.remove(&id);
+        self.forget_font(id);
+    }
+
+    /// Drops the faces of a project font file that is removed or no font any more.
+    fn forget_font(&mut self, id: FileId) {
+        if is_project_font(id) && self.project_fonts.remove(&file_path(id)).is_some() {
+            self.rebuild_book();
+        }
+    }
+
+    /// The book: `fonts`, then the faces of `project_fonts` by path.
+    fn rebuild_book(&mut self) {
+        self.project_faces = self.project_fonts.values().flatten().cloned().collect();
+        let mut book = self.added_book.clone();
+        for font in &self.project_faces {
+            book.push(font.info().clone());
+        }
+        self.book = LazyHash::new(book);
     }
 
     pub fn set_main(&mut self, id: FileId) {
@@ -206,6 +248,16 @@ pub fn file_id(path: &str) -> Option<FileId> {
     Some(RootedPath::new(root, vpath).intern())
 }
 
+/// Whether a file is a font of the project (not of a package): `.ttf`,
+/// `.otf`, `.ttc` or `.otc`, in any case, as Typst's own font search.
+fn is_project_font(id: FileId) -> bool {
+    let rooted = id.get();
+    matches!(rooted.root(), VirtualRoot::Project)
+        && rooted.vpath().extension().is_some_and(|extension| {
+            ["ttf", "otf", "ttc", "otc"].iter().any(|font| extension.eq_ignore_ascii_case(font))
+        })
+}
+
 /// The inverse of [`file_id`].
 pub fn file_path(id: FileId) -> String {
     let rooted = id.get();
@@ -246,7 +298,9 @@ impl World for MemoryWorld {
     }
 
     fn font(&self, index: usize) -> Option<Font> {
-        let slot = self.fonts.get(index)?;
+        let Some(slot) = self.fonts.get(index) else {
+            return self.project_faces.get(index - self.fonts.len()).cloned();
+        };
         slot.font
             .get_or_init(|| {
                 let (file, face) = slot.lazy?;

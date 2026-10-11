@@ -19,10 +19,10 @@
   tint: rgb("#eef5f7"),
 )
 
-/// sandstorm.de's font (Gabarito), only when the build has it: Typst warns about an unknown font
-/// family, and the demo's engine has only Typst's default fonts. `mise run docs:pdf` downloads it
-/// (docs:fonts) and passes `--input brand-fonts=true`. Code keeps Typst's DejaVu Sans Mono.
-#let brand-fonts = sys.inputs.at("brand-fonts", default: "false") == "true"
+/// sandstorm.de's font: Gabarito, in fonts/ (SIL Open Font License 1.1, fonts/OFL.txt). A project
+/// font: the editor uses it as typst.app does, `mise run docs:pdf` passes `--font-path docs/fonts`.
+/// Code keeps Typst's DejaVu Sans Mono (the site's Ubuntu Mono lacks box-drawing characters).
+#let font = "Gabarito"
 
 #let company = "Sandstorm Media GmbH"
 
@@ -43,7 +43,7 @@
     noteBorderColor: colors.sand.to-hex(),
     noteTextColor: colors.ink.to-hex(),
   ),
-  typography: if brand-fonts { (font: "Gabarito") },
+  typography: (font: font),
 )
 
 /// The first page: logo, book title, company.
@@ -99,9 +99,9 @@
   // Paged-only styling: the HTML site gets its look from style.css.
   show: body => context {
     if target() != "paged" { return body }
-    set text(font: "Gabarito", size: 10.5pt) if brand-fonts
+    set text(font: font, size: 10.5pt)
     // Gabarito has no italics
-    show emph: set text(weight: "semibold", fill: colors.dark) if brand-fonts
+    show emph: set text(weight: "semibold", fill: colors.dark)
     set text(fill: colors.ink)
     set page(
       paper: "a4",

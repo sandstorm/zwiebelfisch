@@ -1,6 +1,6 @@
 // DocsFolder: the docs/ folder as the docs-files plugin (plugin.ts) writes and watches it. Node only.
 // Every path comes from the page, so each one goes through the guard here: relative to docs/, no "..", no hidden
-// files, nothing in the build outputs (docs/fonts/), no symlink leading out. See docs/30_architecture/11_development.typ.
+// files, no symlink leading out. See docs/30_architecture/11_development.typ.
 import { randomBytes } from 'node:crypto';
 import { watch } from 'node:fs';
 import { lstat, mkdir, readdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
@@ -28,11 +28,7 @@ export class DocsFolder {
 
   readonly root: string;
 
-  /** `outputs`: generated folders below `root` (gitignored, e.g. `fonts`), neither written nor reported. */
-  constructor(
-    root: string,
-    private readonly outputs: readonly string[] = [],
-  ) {
+  constructor(root: string) {
     this.root = resolve(root);
   }
 
@@ -130,7 +126,6 @@ export class DocsFolder {
     if (/[\\\0]/.test(path) || path.startsWith('/') || /^[a-z]:/i.test(path)) return 'Not a relative path';
     const segments = path.split('/');
     if (segments.some((segment) => segment === '' || segment.startsWith('.'))) return 'Empty, "..", or hidden path segment';
-    if (this.outputs.includes(segments[0])) return 'A build output';
     return null;
   }
 

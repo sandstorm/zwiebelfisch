@@ -73,7 +73,8 @@ Typst's font book needs every face's `FontInfo` (family, variant, coverage) befo
 - *Font index*: `mise run build:fonts` copies the 17 default font files and writes `fonts/index.json` (file name → `FontInfo[]`, 16 KB), computed by the engine's own wasm, so it matches the pinned Typst.
 - `addLazyFont({ name, faces, load })`: the faces go into the book; the first `World::font` call for one of them calls `load()` and keeps the result. Synchronous, inside the compile: no second compile, and only the faces used are fetched.
 - *A file that cannot be loaded* (`load()` returns null, e.g. the download failed): its faces stay absent and Typst falls back to another font. The compile or PDF export that needed it reports a warning without location ("Font file NewCMMath-Book.otf could not be loaded; Typst used another font."), shown like any other diagnostic. Once per file: `load()` is not called again.
-- `addFont(data)`: all faces of a file, data at once (a host's own fonts).
+- `addFont(data)`: all faces of a file, data at once (a host's own fonts). Cannot be removed.
+- *Project fonts*: a project file ending in `.ttf`, `.otf`, `.ttc` or `.otc` (any folder, any case; not a package's) is a font as well, as on typst.app. The engine reads its faces in `setBinary` (only that file's: the preview sends bytes only when they change) and drops them in `remove`; the font book is the added fonts, then the project fonts by path, rebuilt from the faces it has. Nothing else to call: whoever hands the engine the project's files hands it the project's fonts.
 - The preview's worker loads a file with a synchronous `XMLHttpRequest` (allowed in workers only); a compile waits for it.
 
 #table(

@@ -11,8 +11,8 @@ export default defineConfig({
   worker: { format: 'es' },
   // the demo's IronCalc spreadsheets (examples.ts imports them inline)
   assetsInclude: ['**/*.ic'],
-  // dev server and vite preview, not in a build: the Documentation example saves to docs/ (docs/fonts/ is build:fonts' output)
-  plugins: [docsFiles({ root: fileURLToPath(new URL('docs', import.meta.url)), outputs: ['fonts'] })],
+  // dev server and vite preview, not in a build: the Documentation example saves to docs/
+  plugins: [docsFiles({ root: fileURLToPath(new URL('docs', import.meta.url)) })],
   test: {
     root: '.',
     include: ['src/**/*.test.ts', 'demo/**/*.test.ts', 'eslint-rules/**/*.test.js'],

@@ -6,7 +6,7 @@ import type { ProjectFiles } from '../src';
  * project's files: `examples/<name>/main.typ` → `/main.typ`,
  * `examples/<name>/chapters/a.typ` → `/chapters/a.typ`. Typst files are text,
  * everything else (images, Mermaid diagrams, spreadsheets) is passed as bytes. "Documentation"
- * is this project's own docs/ (its Typst files, Mermaid diagrams and images): on the dev server and in vite preview
+ * is this project's own docs/ (its Typst files, Mermaid diagrams, images and fonts): on the dev server and in vite preview
  * its edits are saved there (docs-files/), in a static build nowhere.
  */
 export const EXAMPLES = [
@@ -27,8 +27,8 @@ const sources = import.meta.glob<string>(['./examples/**/*.{typ,svg,mmd}', '../d
   eager: true,
 });
 
-/** Binary files (IronCalc spreadsheets, images) as `data:` URLs: `?raw` would decode them as UTF-8. */
-const binaries = import.meta.glob<string>(['./examples/**/*.ic', '../docs/**/*.{png,jpg,jpeg,gif,webp}', '!../docs/fonts/**'], {
+/** Binary files (IronCalc spreadsheets, images, fonts) as `data:` URLs: `?raw` would decode them as UTF-8. */
+const binaries = import.meta.glob<string>(['./examples/**/*.ic', '../docs/**/*.{png,jpg,jpeg,gif,webp,ttf}'], {
   query: '?inline',
   import: 'default',
   eager: true,

@@ -45,6 +45,10 @@ export interface TypstEngine {
    */
   addLazyFont(font: LazyFont): void;
   setSource(path: string, text: string): void;
+  /**
+   * Adds or replaces a binary file. A project font file (`.ttf`, `.otf`, `.ttc`, `.otc`, in any folder) is also a font
+   * of the compile, as on typst.app, until it is removed; only the changed file's faces are read again.
+   */
   setBinary(path: string, data: Uint8Array): void;
   remove(path: string): void;
   compile(main: string): CompileResult;

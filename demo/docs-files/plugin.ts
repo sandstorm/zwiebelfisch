@@ -22,13 +22,13 @@ export interface DocsFilesRequest {
 }
 
 /**
- * The plugin for the docs folder `root` (`outputs`: its generated subfolders, which stay untouched). It serves the
+ * The plugin for the docs folder `root`. It serves the
  * file API and the event stream of changes on disk at `DOCS_FILES_ENDPOINT` to the server's own page (its origin, and
  * the session token it puts into the page), the same on the dev server and in `vite preview`. On the dev server, a
  * change in `root` is no reload: the page keeps its editor and applies the change itself.
  */
-export function docsFiles(options: { root: string; outputs?: string[] }): Plugin {
-  const folder = new DocsFolder(options.root, options.outputs);
+export function docsFiles(options: { root: string }): Plugin {
+  const folder = new DocsFolder(options.root);
   const token = randomBytes(24).toString('hex');
   const meta = { tag: 'meta', attrs: { name: DOCS_FILES_META, content: token }, injectTo: 'head' } as const;
   return {
