@@ -1,6 +1,7 @@
 // TextStyleMenu: the toolbar's text style menu — "Normal text" and what the text style providers contribute
 // (headings, custom styles). See toolbar.ts and docs/architecture/visual-view.typ.
 import type { ChainedCommands, Editor } from '@tiptap/core';
+import type { EditorState } from '@tiptap/pm/state';
 import type { Disposable } from '../../../core/disposable/disposable';
 import type { TextStyle, TextStyleProvider, ToolbarControl, VisualViewContext } from '../visual-view';
 
@@ -86,7 +87,8 @@ export class TextStyleMenu implements ToolbarControl {
   private command(id: string, chain: ChainedCommands): ChainedCommands | undefined {
     if (id === NORMAL_TEXT) {
       const styled = this.entries.find((entry) => entry.remove && entry.isActive?.(this.editor));
-      return (styled ? styled.remove!(chain) : chain).setParagraph();
+      // setParagraph fails on blocks that are paragraphs already, e.g. those a paragraph style was just taken off
+      return (styled ? styled.remove!(chain) : chain).command(({ state, commands }) => onlyParagraphs(state) || commands.setParagraph());
     }
     return this.entry(id)?.apply(chain, this.editor);
   }
@@ -101,4 +103,14 @@ export class TextStyleMenu implements ToolbarControl {
   private entry(id: string): TextStyle | undefined {
     return this.entries.find((entry) => entry.id === id);
   }
+}
+
+/** Whether every text block the selection touches is a paragraph (Normal text has nothing to change there). */
+function onlyParagraphs({ doc, selection }: EditorState): boolean {
+  let only = true;
+  doc.nodesBetween(selection.from, selection.to, (node) => {
+    if (node.isTextblock && node.type.name !== NORMAL_TEXT) only = false;
+    return only;
+  });
+  return only;
 }

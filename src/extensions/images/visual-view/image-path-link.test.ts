@@ -2,6 +2,7 @@
 // Tests for image-path-link.ts: an image box's path as the document link on it.
 import { describe, expect, it, vi } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
+import { findFilePaths } from '../../../core/typst-syntax/typst-syntax';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import type { DocumentLink, TextDocument } from '../../../hosts/languages/languages';
 import { createVisualView } from '../../../testing/testing';
@@ -37,5 +38,17 @@ describe("an image box's path", () => {
     const label = parent.querySelector('.typst-images__label')!;
     expect(label.querySelector('button')).toBeNull();
     expect(label.querySelector('.typst-images__path--missing')!.getAttribute('title')).toBe('gone.png is not in the project');
+  });
+
+  it("links in a figure too, whose body is written in code (`image(..)`, no `#`)", () => {
+    // the paths as the document-links extension finds them: in Typst markup
+    const links = {
+      provideDocumentLinks: ({ text }: TextDocument): DocumentLink[] => findFilePaths(text).map(({ from, to }) => ({ range: { from, to }, target: path('/logo.png') })),
+      open: vi.fn(),
+    };
+    const parent = document.body.appendChild(document.createElement('div'));
+    createVisualView(parent, new TypstDocument('#figure(image("logo.png"), caption: [Logo])\n'), { links });
+    parent.querySelector<HTMLButtonElement>('.typst-images__label button.typst-images__path')!.click();
+    expect(links.open).toHaveBeenCalledWith(path('/logo.png'));
   });
 });

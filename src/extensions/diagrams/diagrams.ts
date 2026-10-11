@@ -84,7 +84,9 @@ function diagramIn(project: Project, languages: Languages): (src: string, docume
   return (src, document) => {
     const file = project.pathOf(document);
     if (!file) return null;
-    for (const link of languages.provideDocumentLinks({ path: file, text: src })) {
+    // the providers read Typst markup; a figure's body is written in code (`image(..)`, no `#`)
+    const markup = src.startsWith('#') ? src : `#${src}`;
+    for (const link of languages.provideDocumentLinks({ path: file, text: markup })) {
       const target = languages.resolveDocumentLink(link).target;
       if (target && isDiagram(target)) return target;
     }

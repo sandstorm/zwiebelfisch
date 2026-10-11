@@ -7,6 +7,9 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   // relative base: asset URLs become new URL('…', import.meta.url), not '/assets/…'
   base: './',
+  // library mode leaves process.env.NODE_ENV to the consumer's bundler; a plain <script type="module"> has none,
+  // so the bundled React (IronCalc's spreadsheets) would throw "process is not defined"
+  define: { 'process.env.NODE_ENV': JSON.stringify('production') },
   build: {
     outDir: 'dist/lib',
     emptyOutDir: true,
