@@ -222,6 +222,13 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    **Custom editor fallback** (user): explicit named value, `priority: 'fallback'` next to
    `'default'` / `'option'` (VS Code style); numbers only order editors, no special meaning below 100.
    **Devtools in the demo** (user): reachable from the playground bar (a toggle that sets `&devtools`).
+   **Decided 2026-10-11 (user):** `.drawio.png` keeps "Diagram | Image"; remembered editor choice in
+   memory only; fonts load on demand only (no early prefetch); a font that fails to load → warning in
+   the compile results; wasm / fonts in dist/lib with content-hashed names (no brotli step); leave
+   warning also while a conflict blocks auto-commit; GitLab unreachable → persistent status bar
+   warning; deleted files keep no D mark; `pristine` → WeakMap `unchangedNodes` + method
+   `unchangedNode(type, attrs, content)`; `registerBoxRenderer` / `registerBoxAction` /
+   `setBoxDecorations` → `…RawBox…`; then distill the working notes into the Typst docs.
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Rules wave also does:** core `onChange` → `onDidChange: Event` + `Disposable` everywhere
    (`Project`, `TypstDocument`, …) (user: yes).
