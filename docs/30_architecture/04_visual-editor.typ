@@ -47,7 +47,7 @@ Typst no spec models, and nodes whose spec sets `view.box: 'code'` (images, outl
 - A nested CodeMirror edits the node's `src`. Each edit is an attribute step; the serializer prints `src` verbatim, so the source changes exactly there.
 - An outside change of `src` reaches the box as one minimal change.
 - Undo and redo run the Visual editor's history. Arrow keys, Escape and Enter move between box and text.
-- With a box renderer, the box shows a picture until its code gets focus (the preview's boxes of its range, @architecture-preview-concepts). Until the renderer has one (before the first compile) it shows its code; a picture is decoded before it replaces the code or the one before (no blank in between) and fades in.
+- With a box renderer, the box shows a picture until its code gets focus (the preview's boxes of its range, @architecture-preview-concepts); while focused it shows only its code, inline boxes as block boxes (the picture stays in the box, hidden, and shows again without a new render). Until the renderer has one (before the first compile) it shows its code; a picture is decoded before it replaces the code or the one before (no blank in between) and fades in.
 - The spec's `view.title` heads the box; `view.tools` add tools (an image's resize handles and toolbar).
 - The picture is a link to where the box's Typst leads (`VisualEditorLinks`): its tooltip says where; with Mod held it shows as one; Mod+click on it, or Alt+Enter on the selected box, follows it. Other clicks still select the box or edit its code.
 - `setRawBoxDecorations`: the box's node decorations, handed to its code (another user's caret inside the box).
