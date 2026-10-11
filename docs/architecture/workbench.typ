@@ -28,7 +28,7 @@ createTypstEditor ─► WorkbenchHost(host, project, options).activate(extensio
   columns: (auto, 3fr, 2fr),
   table.header[Namespace][Offers][Tie-breaker],
   [`commands`], [commands by id (`<extension>.<verb>`), key bindings], [—],
-  [`window`], [messages, input box, quick pick, save dialog, status bar items, custom editors, file decorations, `activeFile`, `activeTextEditor`], [status bar: `alignment` + `priority`; custom editors: the user's choice, then `priority` (`'fallback'`: only files no other editor matches), then pattern specificity],
+  [`window`], [messages, input box, quick pick, save dialog, progress (`withProgress`), status bar items, custom editors, file decorations, `activeFile`, `activeTextEditor`], [status bar: `alignment` + `priority`; custom editors: the user's choice, then `priority` (`'fallback'`: only files no other editor matches), then pattern specificity],
   [`scm`], [source controls], [— (all listed; a duplicate id throws)],
   [`languages`], [document link providers], [`priority` (default 100)],
   [`workspace`], [`applyEdit`, settings (`getConfiguration`, `onDidChangeConfiguration`)], [—],
@@ -42,6 +42,22 @@ createTypstEditor ─► WorkbenchHost(host, project, options).activate(extensio
 + Extensions activate in list order (`ExtensionHost`; a duplicate id throws).
 + The main file is shown (in the view `mode` names) and compiled. Views are created later, on demand, with what was registered.
 + `dispose()` disposes the extensions in reverse list order, each one's subscriptions in reverse, then the frame.
+
+== Loading <architecture-workbench-loading>
+
+What the widget shows depends on what has arrived. Nothing in the editing area waits for the engine.
+
+#table(
+  columns: (auto, 1fr),
+  table.header[Arrived][Shown],
+  [the JS (main chunk, CSS inlined)], [the frame and the shown file's text, editable: `createTypstEditor` is synchronous, the views read only `TypstDocument`s],
+  [the engine worker's chunk, then the wasm (22 MB, streamed)], [the preview's loader: "Loading the Typst compiler… 3.1 / 6.6 MB", also in the status bar],
+  [the engine, compiling], [the loader: "Compiling…" (the status bar: the compile status); font files and packages as they download ("Downloading \@preview/merman 0.4.0…")],
+  [the first pages], [the pages; raw boxes show their pictures instead of their code],
+)
+
+- *`window.withProgress(options, task)`* (VS Code's): shows a task until its promise settles. `ProgressLocation.Window`: a spinner and "title: message" on the status bar's right. `ProgressLocation.EditingArea` (ours): a note over the editing area in its grid cell, the editing area `inert` and `aria-busy` meanwhile; for what the views must wait for (collaboration: "Connecting to the room…" until the room's text is there).
+- The workbench shows the preview's `PreviewProgress` (@architecture-preview-concepts) with `withProgress(Window)`, except the first compile; a compiler that cannot be loaded becomes an error message.
 
 == Changes and settings <architecture-workbench-changes>
 

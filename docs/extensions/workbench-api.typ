@@ -50,11 +50,13 @@ workbench.registerMenuItem('explorer/context', {
   [`showInputBox({ title, prompt, value, valueSelection, placeHolder, validateInput })`], [The text, or `undefined` on Escape],
   [`showQuickPick(items, { title, placeHolder, canPickMany })`], [The `QuickPickItem` (or string) picked, the checked items with `canPickMany`, or `undefined`],
   [`showSaveDialog({ title, defaultUri, filters })`], [A new file's `ProjectPath`, or `undefined`],
+  [`withProgress({ location, title }, (progress) => task)`], [What the task resolves to; shown until it settles],
 )
 
 - Messages are not modal. An information message without items closes by itself; warnings and errors stay.
 - One input box or quick pick at a time: a new one cancels the open one.
 - `showSaveDialog` refuses names of existing files and names without one of the `filters` endings (`{ Diagrams: ['drawio.png'] }`; `'*'`: any). Creating the file is the caller's job (`workspace.applyEdit`).
+- `withProgress`: `ProgressLocation.Window` puts a spinner with "title: message" into the status bar; `ProgressLocation.EditingArea` lays a note over the editing area, which takes no input until the task settles. `progress.report({ message, increment })`: `increment` is percent done since the last report.
 - `defaultUri`: a file or folder starts the name in that folder; a path the project has no file at, with one of the `filters` endings, is proposed as the name (`ProjectPath.unique(path, exists)` makes it free: `table-2.ic`).
 
 ```ts

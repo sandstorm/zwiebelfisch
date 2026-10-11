@@ -3,8 +3,8 @@
 // items, custom editors, file decorations), and the file and editor the user works in. Entry of
 // hosts/window/. See docs/architecture/workbench.typ.
 // Why one namespace in VS Code's shapes: features look and behave alike when they ask and tell the same way, and
-// they never make popovers of their own. The parts (notifications/, quick-input/, status-bar/, custom-editors/,
-// file-decorations/) are deep modules of their own; WindowHost puts them where the workbench's frame says.
+// they never make popovers of their own. The parts (notifications/, quick-input/, status-bar/, progress/,
+// custom-editors/, file-decorations/) are deep modules of their own; WindowHost puts them where the workbench's frame says.
 import { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../core/paths/paths';
@@ -13,6 +13,7 @@ import type { SourceRange, TypstDocument } from '../../core/typst-document/typst
 import { type CustomEditorChoice, CustomEditors } from './custom-editors/custom-editors';
 import { FileDecorations } from './file-decorations/file-decorations';
 import { Notifications } from './notifications/notifications';
+import { ProgressIndicators } from './progress/progress';
 import { QuickInput } from './quick-input/quick-input';
 import { showSaveDialog } from './save-dialog/save-dialog';
 import { StatusBar } from './status-bar/status-bar';
@@ -52,6 +53,12 @@ export interface WindowApi {
    * cancelled; creating the file is the caller's (`workspace.applyEdit`).
    */
   showSaveDialog(options?: SaveDialogOptions): Promise<ProjectPath | undefined>;
+  /**
+   * Shows that `task` runs, where `options.location` says, until the promise it returns settles (VS Code's
+   * `window.withProgress`); resolves or rejects as it does. The task tells how it goes with `progress.report({ message,
+   * increment })` (`increment`: percent done since the last report; none: no bar of known length).
+   */
+  withProgress<R>(options: ProgressOptions, task: (progress: Progress<ProgressReport>) => Promise<R>): Promise<R>;
 
   /**
    * Puts `element` into the status bar below everything, until disposed: on the side `placement.alignment` says, the
@@ -161,6 +168,34 @@ export interface SaveDialogOptions {
    * allows any (`{ 'All files': ['*'] }`). The first one is added to a name without an ending. Default: any, none added.
    */
   filters?: Readonly<Record<string, readonly string[]>>;
+}
+
+/**
+ * Where `withProgress` shows a task (VS Code's ProgressLocation): `Window`, a spinner with "title: message" in the
+ * status bar; `EditingArea` (not VS Code's), a note over the editing area with the title, the message and a bar, the
+ * editing area taking no input meanwhile, for a task the views must wait for (the room's text before it is shown).
+ */
+export const ProgressLocation = { Window: 10, EditingArea: 20 } as const;
+export type ProgressLocation = (typeof ProgressLocation)[keyof typeof ProgressLocation];
+
+/** How `withProgress` shows a task (VS Code's ProgressOptions, without cancelling). */
+export interface ProgressOptions {
+  readonly location: ProgressLocation;
+  /** What runs ("Connecting to the room…"). */
+  readonly title?: string;
+}
+
+/** What a task reports (VS Code's `{ message, increment }`). */
+export interface ProgressReport {
+  /** How it goes ("3.1 / 6.6 MB"); replaces the one before. */
+  readonly message?: string;
+  /** Percent done since the last report; the increments add up to 100. */
+  readonly increment?: number;
+}
+
+/** Where a task reports to (VS Code's Progress). */
+export interface Progress<T> {
+  report(value: T): void;
 }
 
 /**
@@ -304,6 +339,7 @@ export class WindowHost implements WindowApi {
   readonly #notifications: Notifications;
   readonly #quickInput: QuickInput;
   readonly #statusBar: StatusBar;
+  readonly #progress: ProgressIndicators;
   readonly #customEditors: CustomEditors;
   readonly #fileDecorations = new FileDecorations();
   readonly #fileChanges: Disposable;
@@ -317,6 +353,7 @@ export class WindowHost implements WindowApi {
     this.#notifications = new Notifications(options.host);
     this.#quickInput = new QuickInput(options.host);
     this.#statusBar = new StatusBar(options.statusBar);
+    this.#progress = new ProgressIndicators({ statusBar: this.#statusBar, editingArea: options.editingArea });
     this.#customEditors = new CustomEditors(options.editingArea);
     this.#fileChanges = options.onDidChangeFile((change) => this.#customEditors.followFileChange(change));
     this.onDidChangeTextEditorSelection = options.onDidChangeTextEditorSelection;
@@ -347,6 +384,10 @@ export class WindowHost implements WindowApi {
 
   showSaveDialog(options?: SaveDialogOptions): Promise<ProjectPath | undefined> {
     return showSaveDialog((input) => this.showInputBox(input), (path) => this.options.exists(path), options);
+  }
+
+  withProgress<R>(options: ProgressOptions, task: (progress: Progress<ProgressReport>) => Promise<R>): Promise<R> {
+    return this.#progress.run(options, task);
   }
 
   registerStatusBarItem(element: HTMLElement, placement: StatusBarPlacement): Disposable {
@@ -391,6 +432,6 @@ export class WindowHost implements WindowApi {
   }
 
   dispose(): void {
-    Disposable.from(this.#fileChanges, this.#notifications, this.#quickInput, this.#customEditors, this.#fileDecorations).dispose();
+    Disposable.from(this.#fileChanges, this.#notifications, this.#quickInput, this.#progress, this.#customEditors, this.#fileDecorations).dispose();
   }
 }
