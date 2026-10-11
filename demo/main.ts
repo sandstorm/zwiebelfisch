@@ -3,7 +3,9 @@
 // `?room=gitlab:demo/report@<branch>` (GitLab mode) on the local playground
 // server (`mise run demo`), `&user=<name>`. Without `room` (Local mode, the
 // default and what the static e2e build uses) it never talks to a server.
+// `&devtools` adds ProseMirror's dev tools to the Visual view (devtools.ts).
 import { collaboration, createTypstEditor } from '../src';
+import { devtools } from './devtools';
 import { OpenFileHash } from './open-file-hash';
 import { editorOptions, playgroundFromQuery, userQuery } from './playground';
 import { renderPlaygroundBar } from './playground-bar';
@@ -32,7 +34,7 @@ async function start(): Promise<void> {
   const { files, collaboration: room } = editorOptions(state, server);
   const editor = createTypstEditor(document.getElementById('editor')!, {
     files,
-    extensions: (builtins) => (room ? [...builtins, collaboration(room)] : builtins),
+    extensions: (builtins) => [...builtins, ...(room ? [collaboration(room)] : []), ...(params.has('devtools') ? [devtools()] : [])],
     user: { name: state.user },
     onOpen: (path) => hash.opened(path),
     onFilesChange: () => hash.filesChanged(),

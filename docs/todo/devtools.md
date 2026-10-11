@@ -1,6 +1,6 @@
 # Devtools: seeing what the editor does
 
-Status: planned (decided 2026-10-11)
+Status: step 1 done (`demo/devtools.ts`, `?devtools`); step 2 planned (decided 2026-10-11)
 Touches: package.json (dev dependency), demo/, later a new `src/extensions/devtools/`
 
 ## 1. ProseMirror dev tools in the demo (now)
