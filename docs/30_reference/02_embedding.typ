@@ -171,6 +171,8 @@ createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensio
 
 A right side panel ("Devtools" on the right rail) showing what the widget is made of while it runs. Always there; the setting `devtools.enabled: false` removes it (@reference-configuration-devtools).
 
+On top, a line with the Typst engine's memory after the last compile that changed it: `Typst engine memory: 312 MB of 4 GB (8%)`, with `peak …` when it held more before (a crashed engine is replaced by a new, small one). Opened, it lists the latest 20 changes, newest first: when, how much, by how much. The engine's wasm memory grows and never shrinks; at 4 GB the engine crashes and the preview starts a new one. A long document levels off (the docs book at about 780 MB); a value that keeps growing with every edit is a leak.
+
 ```ts
 createTypstEditor(host, { settings: { 'devtools.enabled': false } });
 ```
@@ -180,8 +182,8 @@ createTypstEditor(host, { settings: { 'devtools.enabled': false } });
   table.header[Tab][Shows],
   [Document], [The shown file's ProseMirror document as a tree (@architecture-prosemirror-typst): each node with its source range, `box` for raw boxes and other atoms, marks, its text or kept `src`; the tooltip has positions, attributes and the source. The path to the selection is highlighted; a click selects the node's source.],
   [Contributions], [Every `register…` call and declared setting, in its contribution point's terms (`heading · priority 100 · parses Heading`, `Mod+Alt+KeyM → comments.addComment`, a panel by its side and order); by extension (activation order) or by contribution point, competitors in the order the host resolves them. `late`: made after activation; struck through: disposed. The tooltip: the arguments in full and the line that registered it.],
-  [Events], [Every `onDid…` event of the extension context as it fires (the latest 300), its value pretty-printed as it was then; filter by name, Pause, Clear.],
+  [Events], [Every `onDid…` event of the extension context as it fires while the panel is shown (all of them; none while it is hidden, the log then stays as it was), its value pretty-printed as it was then; filter by name, Pause, Clear.],
 )
 
 - It sees only what any extension sees: `createTypstEditor` gives it the final list (the host's extensions included), and each extension's `activate` gets a context whose namespaces record every registration (and its `dispose`). The hosts keep no listing for it.
-- It records while switched off too, so switched on later it shows everything since the start.
+- Contributions and the engine's memory are recorded from the start, also while the panel is hidden or switched off: they cannot be asked for later. Events are logged only while the panel is shown (`SidePanel.visible`): they are many, and each costs a formatted value.

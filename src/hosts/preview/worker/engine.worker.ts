@@ -42,7 +42,7 @@ async function handle({ engine, files, pages, packages }: Session, request: Engi
   switch (request.type) {
     case 'compile': {
       const result = await files.update(request.files, () => packages.compile(request.main));
-      return { id: request.id, type: 'compile', result: { ...result, pages: pages.encode(result.pages) } };
+      return { id: request.id, type: 'compile', result: { ...result, pages: pages.encode(result.pages) }, memoryInUse: engine.memoryInUse };
     }
     case 'pdf':
       return { id: request.id, type: 'pdf', result: await files.withSources(request.sources, () => packages.exportPdf(request.main)) };

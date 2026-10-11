@@ -48,7 +48,8 @@ export type LoadEvent =
   | { kind: 'font'; name: string | null };
 
 export type EngineResponse =
-  | { id: number; type: 'compile'; result: Omit<CompileResult, 'pages'> & { pages: EncodedPage[] } }
+  /** `memoryInUse`: the engine's `TypstEngine.memoryInUse` after the compile. */
+  | { id: number; type: 'compile'; result: Omit<CompileResult, 'pages'> & { pages: EncodedPage[] }; memoryInUse: number }
   | { id: number; type: 'click'; jump: SourceJump | null }
   | { id: number; type: 'cursor'; positions: Position[] }
   | { id: number; type: 'boxes'; boxes: PageRect[] }

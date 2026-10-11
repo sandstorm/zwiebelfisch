@@ -244,6 +244,39 @@ describe('WorkbenchLayout', () => {
     expect(isOpen()).toBe(true);
   });
 
+  it('tells whether a panel is visible: shown, open as the narrow overlay, not when removed or another one shows', () => {
+    const { layout, sidePanel, toggle, setWidth, right } = setup({ observe: true });
+    const changes: boolean[] = [];
+    sidePanel.onDidChangeVisibility(() => changes.push(sidePanel.visible));
+    expect(sidePanel.visible).toBe(false);
+    sidePanel.setDefault(true);
+    toggle.click();
+    toggle.click();
+    expect(changes).toEqual([true, false, true]);
+
+    setWidth(600);
+    toggle.click();
+    expect(sidePanel.visible).toBe(true);
+    sidePanel.dismiss();
+    sidePanel.setAvailable(false);
+    toggle.click();
+    expect(changes).toEqual([true, false, true, false, true, false]);
+    setWidth(1200);
+    expect(sidePanel.visible).toBe(false);
+    sidePanel.setAvailable(true);
+    expect(changes.at(-1)).toBe(true);
+
+    const preview = right();
+    const devtools = right('devtools', 'Devtools');
+    const devtoolsChanges: boolean[] = [];
+    devtools.onDidChangeVisibility(() => devtoolsChanges.push(devtools.visible));
+    layout.setDefaultPanel('right', 'devtools');
+    expect([preview.visible, devtools.visible]).toEqual([false, true]);
+    layout.setDefaultPanel('right', 'preview');
+    expect([preview.visible, devtools.visible]).toEqual([true, false]);
+    expect(devtoolsChanges).toEqual([true, false]);
+  });
+
   it('when narrow, the right side stays beside the editing area', () => {
     const { layout, setWidth, right } = setup({ observe: true });
     const preview = right();

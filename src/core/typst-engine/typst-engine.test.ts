@@ -3,7 +3,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { type FontInfo, type TypstEngine, PageIndex, Pt, createEngine } from './typst-engine';
+import { type FontInfo, type TypstEngine, ENGINE_MEMORY_LIMIT, PageIndex, Pt, createEngine } from './typst-engine';
 import { SourceOffset, SourceRange } from '../typst-document/typst-document';
 import { withPackages } from '../typst-packages/typst-packages';
 
@@ -45,6 +45,15 @@ describe('TypstEngine', () => {
     const { pages, diagnostics } = engine.compile('/main.typ');
     expect(diagnostics).toEqual([]);
     expect(pages[0].svg).toContain('<path');
+  });
+
+  it("tells the wasm's memory, which a compile may grow and never shrinks", () => {
+    const before = engine.memoryInUse;
+    engine.setSource('/main.typ', '#for i in range(2000) [Paragraph #i. #parbreak()]');
+    engine.compile('/main.typ');
+    expect(before).toBeGreaterThan(0);
+    expect(engine.memoryInUse).toBeGreaterThanOrEqual(before);
+    expect(engine.memoryInUse).toBeLessThanOrEqual(ENGINE_MEMORY_LIMIT);
   });
 
   it('accepts fonts added after creation', async () => {

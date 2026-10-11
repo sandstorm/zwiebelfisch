@@ -199,3 +199,13 @@
 .typst-devtools__fold > summary.typst-devtools__value {
   white-space: normal;
 }
+
+.typst-devtools__memory {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--te-divider);
+}
+
+.typst-devtools__memory > summary {
+  cursor: pointer;
+  color: var(--te-muted);
+}

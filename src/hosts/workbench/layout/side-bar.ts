@@ -1,5 +1,6 @@
 // See WorkbenchLayout in workbench-layout.ts.
 
+import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { SidePanel, SidePanelOptions } from '../workbench';
 
 /**
@@ -78,10 +79,15 @@ export class SideBar {
     button.addEventListener('click', () => this.#choose(this.#shown === id ? null : id));
     this.#place(button, options.order ?? 0, options.alignment === 'bottom');
     this.#panel.insertBefore(body, this.#resizer);
-    this.#panels.set(id, { body, button, fallback: false, available: true });
+    const entry: PanelEntry = { body, button, fallback: false, available: true, visible: false, visibility: new EventEmitter<void>() };
+    this.#panels.set(id, entry);
     this.layout();
     return {
       body,
+      get visible() {
+        return entry.visible;
+      },
+      onDidChangeVisibility: entry.visibility.event,
       setDefault: (open) => this.#update(id, { fallback: open }),
       setAvailable: (available) => this.#update(id, { available }),
       dismiss: () => this.#dismiss(),
@@ -124,6 +130,13 @@ export class SideBar {
     }
     this.#panel.hidden = id === null;
     this.#applySize();
+    // told after the layout is done, so a listener sees it as it is
+    for (const [panelId, panel] of this.#panels) {
+      const visible = panelId === id && panel.available;
+      if (visible === panel.visible) continue;
+      panel.visible = visible;
+      panel.visibility.fire();
+    }
   }
 
   dispose(): void {
@@ -178,6 +191,7 @@ export class SideBar {
     if (!panel) return;
     panel.body.remove();
     panel.button.remove();
+    panel.visibility.dispose();
     this.#panels.delete(id);
     if (this.#shown === id) this.#shown = null;
     this.layout();
@@ -279,6 +293,9 @@ interface PanelEntry {
   button: HTMLButtonElement;
   fallback: boolean;
   available: boolean;
+  /** As told last through `visibility`. */
+  visible: boolean;
+  visibility: EventEmitter<void>;
 }
 
 /**

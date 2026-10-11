@@ -72,10 +72,14 @@ export class Preview implements PreviewContributions {
   private readonly diagnosed = new EventEmitter<readonly TypstDiagnostic[]>();
   private readonly clicked = new EventEmitter<PageClick>();
   private readonly viewOptionsChanged = new EventEmitter<void>();
+  private readonly engineMemoryChanged = new EventEmitter<void>();
+  /** The engine's memory as its last compile answered. */
+  private memoryInUse = 0;
   readonly onDidChangeViewOptions = this.viewOptionsChanged.event;
   readonly onDidRender = this.rendered.event;
   readonly onDidChangeDiagnostics = this.diagnosed.event;
   readonly onDidClickPage = this.clicked.event;
+  readonly onDidChangeEngineMemory = this.engineMemoryChanged.event;
   /** The CSS of the pane, toolbar and pages, for the workbench to put where the widget renders. */
   readonly styleSheet: string = css;
 
@@ -179,6 +183,10 @@ export class Preview implements PreviewContributions {
     throw new Error(response.type === 'error' ? response.message : 'unexpected answer from the engine');
   }
 
+  get engineMemory(): number {
+    return this.memoryInUse;
+  }
+
   registerToolbarItem(item: PreviewToolbarItem, placement: ToolbarPlacement): Disposable {
     const made = item(this.context);
     const entry = { made, group: placement.group, order: placement.order ?? 0 };
@@ -235,6 +243,7 @@ export class Preview implements PreviewContributions {
     this.diagnosed.dispose();
     this.clicked.dispose();
     this.viewOptionsChanged.dispose();
+    this.engineMemoryChanged.dispose();
     for (const { made } of [...this.items]) this.removeItem(made);
     this.engine.dispose();
     this.resizeObserver?.disconnect();
@@ -274,6 +283,10 @@ export class Preview implements PreviewContributions {
     const response = await this.engine.request({ type: 'compile', files: compiled.files, main: compiled.main });
     if (response.type !== 'compile') return;
     this.loading.compiled();
+    if (response.memoryInUse !== this.memoryInUse) {
+      this.memoryInUse = response.memoryInUse;
+      this.engineMemoryChanged.fire();
+    }
     const { pages } = response.result;
     // Keep showing the last good pages while the document has errors, dimmed as stale.
     const failed = pages.length === 0;
@@ -437,6 +450,14 @@ export interface PreviewContributions {
   readonly onDidClickPage: Event<PageClick>;
   /** Removes the outline of the last click now (e.g. once the user moved on from what was clicked). */
   clearClickHighlight(): void;
+  /**
+   * The bytes of memory the engine (its wasm, in the worker) held after the last compile; 0 before the first. It
+   * grows and never shrinks, up to 4 GiB, where the engine crashes and the preview starts a new one. For looking at
+   * it (devtools); nothing needs to act on it.
+   */
+  readonly engineMemory: number;
+  /** `engineMemory` changed: after a compile that made the engine grow, or the first of a new engine. */
+  readonly onDidChangeEngineMemory: Event<void>;
   /**
    * Shades where source ranges `ranges` of `path`, which holds `text`, are drawn (glyph runs, shapes, images), in the
    * selection color; replaces the ranges set before, an empty list clears them. Drawn once a compile of `text` is

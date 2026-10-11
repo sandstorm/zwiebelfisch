@@ -1,17 +1,20 @@
 // The devtools' side panel. See devtools in ../devtools.ts.
 import type { SourceRange } from '../../../core/typst-document/typst-document';
+import type { EngineMemoryLog } from '../model/engine-memory';
 import type { ContributionLog } from '../recording/contributions';
 import type { EventLog } from '../recording/event-log';
 import { ContributionsTab } from './contributions-tab';
 import { DocumentTab, type ShownDocument } from './document-tab';
 import { element, type Tab } from './dom';
 import { EventsTab } from './events-tab';
+import { MemoryLine } from './memory-line';
 
 /**
- * The panel in `body`; `changed(tab)` redraws that tab (once per frame) if it is the one shown, `changed()` the one shown.
+ * The panel in `body`; `changed(tab)` redraws that tab (once per frame) if it is the one shown, `changed()` the one shown,
+ * `changed('memory')` the line about the engine's memory.
  *
- * Three tabs (the document of the shown file, the contributions, the events), each drawn by its own `Tab`. It draws
- * what it is given; the extension wires it to its context.
+ * The engine's memory in a line on top, then three tabs (the document of the shown file, the contributions, the
+ * events), each drawn by its own `Tab`. It draws what it is given; the extension wires it to its context.
  */
 export class DevtoolsPanel {
   #tab: DevtoolsTab = 'document';
@@ -20,6 +23,7 @@ export class DevtoolsPanel {
   readonly #tabStrip: HTMLElement;
   readonly #content: HTMLElement;
   readonly #tabs: Record<DevtoolsTab, Tab>;
+  readonly #memory: MemoryLine;
 
   constructor(
     private readonly body: HTMLElement,
@@ -33,6 +37,8 @@ export class DevtoolsPanel {
     };
     const root = element(doc, 'div', 'typst-devtools');
     root.dataset.testid = 'typst-devtools';
+    this.#memory = new MemoryLine(doc, options.memory);
+    root.append(this.#memory.element);
     this.#tabStrip = root.appendChild(element(doc, 'div', 'typst-devtools__tabs'));
     this.#tabStrip.setAttribute('role', 'tablist');
     for (const tab of TABS) {
@@ -53,10 +59,11 @@ export class DevtoolsPanel {
     this.#tabs[tab].update();
   }
 
-  changed(tab: DevtoolsTab = this.#tab): void {
-    if (tab !== this.#tab || this.#frame) return;
+  changed(part: DevtoolsTab | 'memory' = this.#tab): void {
+    if (part === 'memory') return this.#memory.update();
+    if (part !== this.#tab || this.#frame) return;
     const view = this.#doc.defaultView;
-    if (!view) return this.#tabs[tab].update();
+    if (!view) return this.#tabs[part].update();
     this.#frame = view.requestAnimationFrame(() => {
       this.#frame = 0;
       this.#tabs[this.#tab].update();
@@ -72,6 +79,7 @@ export class DevtoolsPanel {
 export interface DevtoolsPanelOptions {
   readonly contributions: ContributionLog;
   readonly events: EventLog;
+  readonly memory: EngineMemoryLog;
   document(): ShownDocument;
   /** Shows `range` of the shown file in its editor. */
   reveal(range: SourceRange): void;

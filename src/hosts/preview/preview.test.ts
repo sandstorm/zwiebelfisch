@@ -464,3 +464,27 @@ describe('Preview after the engine crashed', () => {
     expect(engine.workers).toHaveLength(3);
   });
 });
+
+describe('Preview.engineMemory', () => {
+  let preview: Preview;
+  afterEach(() => {
+    preview.dispose();
+    engine.answer = () => null;
+  });
+
+  it("is the engine's memory as each compile answers it, told when it changes", async () => {
+    const answers = [10e6, 30e6, 30e6];
+    engine.answer = (request) =>
+      request.type === 'compile' ? { type: 'compile', result: { pages: [], diagnostics: [], missingPackages: [] }, memoryInUse: answers.shift() } : null;
+    preview = new Preview(document.createElement('div'));
+    const told: number[] = [];
+    preview.onDidChangeEngineMemory(() => told.push(preview.engineMemory));
+    expect(preview.engineMemory).toBe(0);
+    for (const [index, text] of ['a', 'b', 'c'].entries()) {
+      preview.update({ '/main.typ': text }, '/main.typ');
+      await vi.waitFor(() => expect(answers).toHaveLength(2 - index));
+    }
+    await vi.waitFor(() => expect(told).toEqual([10e6, 30e6]));
+    expect(preview.engineMemory).toBe(30e6);
+  });
+});
