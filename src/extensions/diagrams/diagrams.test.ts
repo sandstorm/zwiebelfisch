@@ -74,7 +74,7 @@ describe('diagrams', () => {
     await done;
     const created = project.content(path('/img/Architecture.drawio.png'));
     expect(readDiagramXml(created as Uint8Array)).toBe(readDiagramXml(emptyDiagram()));
-    expect(workbench.activeFile).toBe('/img/Architecture.drawio.png');
+    expect(workbench.window.activeFile).toBe('/img/Architecture.drawio.png');
     expect(frame()).not.toBeNull();
   });
 });

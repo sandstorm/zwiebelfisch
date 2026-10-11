@@ -48,7 +48,7 @@ export function wordCount(): TypstExtension {
       show();
       subscriptions.push(
         window.registerStatusBarItem(item, { alignment: 'right', priority: 100 }),
-        workbench.onDidShowFile(show),
+        window.onDidChangeActiveFile(show),
         project.onDidChangeFile(show),
         workspace.onDidChangeConfiguration((event) => {
           if (event.affectsConfiguration('wordCount.label')) show();
@@ -78,7 +78,7 @@ What `activate` gets (`ExtensionContext`):
   [`globalState`, `workspaceState`], [Values the extension keeps], [@extensions-workbench-api-state],
   [`project`], [The files: `files()`, `paths()`, `document(path)`, `content(path)`, `onDidChangeFile`], [@extensions-workbench-api-files],
   [`commands`], [Commands by id, key bindings], [@extensions-workbench-api-commands],
-  [`window`], [Messages, quick input, status bar, custom editors, file decorations, the active editor], [@extensions-workbench-api],
+  [`window`], [Messages, quick input, status bar, custom editors, file decorations, the active file and editor], [@extensions-workbench-api],
   [`workspace`], [`applyEdit`, settings], [@extensions-workbench-api-settings],
   [`workbench`], [The frame: `open`, side panels, menus, style sheets, dropped files, `user`], [@extensions-workbench-api],
   [`scm`], [Source controls], [@extensions-workbench-api-scm],

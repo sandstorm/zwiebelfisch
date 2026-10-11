@@ -152,7 +152,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
     set files(next: ProjectFiles) {
       project.replace(next); // listeners hear about every file
       // shown again: a custom editor shows the new content of a replaced file (a spreadsheet)
-      workbench.open(workbench.activeFile);
+      workbench.open(workbench.window.activeFile);
     },
     get source() {
       return document.text;
@@ -167,7 +167,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
       workbench.settings = settings;
     },
     get activeFile() {
-      return workbench.activeFile;
+      return workbench.window.activeFile;
     },
     open: (path) => {
       const parsed = ProjectPath.parse(path);

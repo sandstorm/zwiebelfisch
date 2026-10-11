@@ -11,12 +11,12 @@ import { FileNavigation } from './workbench/file-navigation';
 export function fileNavigation(): TypstExtension {
   return {
     id: 'file-navigation',
-    activate({ project, workbench, subscriptions }) {
+    activate({ project, window, workbench, subscriptions }) {
       subscriptions.push(workbench.registerStyleSheet(css));
       const navigation = new FileNavigation(workbench.ownerDocument, (path) => workbench.open(path));
       // recomputed on every open and every change: an #include may have been added, moved or removed
-      const show = () => navigation.show(neighbours((path) => project.document(path)?.text, project.main, workbench.activeFile));
-      subscriptions.push(workbench.registerEditorFrame(navigation), workbench.onDidShowFile(show), project.onDidChangeFile(show));
+      const show = () => navigation.show(neighbours((path) => project.document(path)?.text, project.main, window.activeFile));
+      subscriptions.push(workbench.registerEditorFrame(navigation), window.onDidChangeActiveFile(show), project.onDidChangeFile(show));
     },
   };
 }

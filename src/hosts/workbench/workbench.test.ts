@@ -45,12 +45,12 @@ afterEach(() => {
 describe('WorkbenchHost', () => {
   it('shows the main file once the extensions are active, and tells them about every file shown', () => {
     const shown: string[] = [];
-    const { workbench } = setup(({ workbench }) => void workbench.onDidShowFile((file) => shown.push(file)));
+    const { workbench } = setup(({ window }) => void window.onDidChangeActiveFile((file) => shown.push(file)));
     workbench.open(path('/a.typ'));
     workbench.open(path('/a.typ'));
     workbench.open(path('/missing.typ'));
     expect(shown).toEqual(['/main.typ', '/a.typ', '/a.typ']);
-    expect(workbench.activeFile).toBe('/a.typ');
+    expect(workbench.window.activeFile).toBe('/a.typ');
   });
 
   it('reports a change of the shown file to the host (onOpen), not the same file again', () => {
@@ -72,9 +72,9 @@ describe('WorkbenchHost', () => {
     const { workbench, project } = setup();
     workbench.open(path('/a.typ'));
     project.apply({ kind: 'rename', from: path('/a.typ'), path: path('/b.typ') });
-    expect(workbench.activeFile).toBe('/b.typ');
+    expect(workbench.window.activeFile).toBe('/b.typ');
     project.apply({ kind: 'delete', path: path('/b.typ') });
-    expect(workbench.activeFile).toBe('/main.typ');
+    expect(workbench.window.activeFile).toBe('/main.typ');
   });
 
   it('puts side panels and status bar items into the frame, and takes them out on dispose', () => {

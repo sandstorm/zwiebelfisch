@@ -61,7 +61,7 @@ function save({ project, window, workspace }: ExtensionContext, path: ProjectPat
  * (`window.showSaveDialog`) and creates that empty spreadsheet (an empty workbook, saved by the editor on opening),
  * then opens it.
  */
-async function newSpreadsheet({ window, workspace, workbench }: ExtensionContext, resource = workbench.activeFile): Promise<void> {
+async function newSpreadsheet({ window, workspace, workbench }: ExtensionContext, resource = window.activeFile): Promise<void> {
   const target = await window.showSaveDialog({ title: 'New spreadsheet', defaultUri: resource, filters: { Spreadsheets: ['ic'] } });
   if (!target) return;
   const problem = await workspace.applyEdit({ kind: 'create', path: target, content: new Uint8Array() });

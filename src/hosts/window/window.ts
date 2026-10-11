@@ -1,6 +1,6 @@
 // The window namespace of the extension API (VS Code's `window`): what every feature needs to talk to the user
 // (messages, input box, quick pick), and the places of the widget's window a feature puts things into (status bar
-// items, custom editors of non-Typst files, file decorations), and the editor the user works in. Entry of
+// items, custom editors of non-Typst files, file decorations), and the file and editor the user works in. Entry of
 // hosts/window/. See docs/architecture/workbench.typ.
 // Why one namespace in VS Code's shapes: features look and behave alike when they ask and tell the same way, and
 // they never make popovers of their own. The parts (notifications/, quick-input/, status-bar/, custom-editors/,
@@ -82,6 +82,10 @@ export interface WindowApi {
    */
   getFileIcon(path: ProjectPath): string | undefined;
 
+  /** The file shown in the editing area. */
+  readonly activeFile: ProjectPath;
+  /** After a file was shown in the editing area (also when the same file is shown again). */
+  readonly onDidChangeActiveFile: Event<ProjectPath>;
   /** The editor of the Typst file shown in the editing area; null while another kind of file is shown. */
   readonly activeTextEditor: TextEditor | null;
   /**
@@ -258,6 +262,10 @@ export interface WindowOptions {
   readonly statusBar: HTMLElement;
   /** The editing area: a custom editor's panel goes into it. */
   readonly editingArea: HTMLElement;
+  /** The file shown in the editing area (the workbench decides). */
+  activeFile(): ProjectPath;
+  /** A file was shown in the editing area (fired by the workbench). */
+  readonly onDidChangeActiveFile: Event<ProjectPath>;
   /** The editor of the Typst file shown now (the workbench's editing views). */
   activeTextEditor(): TextEditor | null;
   /** The selection in any editor changed (fired by the workbench's editing views). */
@@ -276,6 +284,7 @@ export class WindowHost implements WindowApi {
   readonly #fileDecorations = new FileDecorations();
   readonly onDidChangeFileDecorations = this.#fileDecorations.onDidChange;
   readonly onDidChangeTextEditorSelection: Event<TextEditorSelectionChangeEvent>;
+  readonly onDidChangeActiveFile: Event<ProjectPath>;
   /** The CSS of messages, input boxes, quick picks and custom editors' panels, for the workbench to put where the widget renders. */
   readonly styleSheet: string = css;
 
@@ -285,6 +294,7 @@ export class WindowHost implements WindowApi {
     this.#statusBar = new StatusBar(options.statusBar);
     this.#customEditors = new CustomEditors(options.editingArea);
     this.onDidChangeTextEditorSelection = options.onDidChangeTextEditorSelection;
+    this.onDidChangeActiveFile = options.onDidChangeActiveFile;
   }
 
   showInformationMessage<T extends string | MessageItem>(message: string, ...items: T[]): Promise<T | undefined> {
@@ -339,6 +349,10 @@ export class WindowHost implements WindowApi {
 
   getFileIcon(path: ProjectPath): string | undefined {
     return this.#customEditors.iconOf(path);
+  }
+
+  get activeFile(): ProjectPath {
+    return this.options.activeFile();
   }
 
   get activeTextEditor(): TextEditor | null {

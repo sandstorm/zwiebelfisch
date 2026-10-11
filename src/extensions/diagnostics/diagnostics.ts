@@ -50,7 +50,7 @@ export function diagnostics(): TypstExtension {
         }),
         window.registerStatusBarItem(status.element, { alignment: 'left', priority: 100 }),
         status,
-        workbench.onDidShowFile((path) => {
+        window.onDidChangeActiveFile((path) => {
           if (project.document(path)) lastSource = path;
           show();
         }),

@@ -23,11 +23,11 @@ createTypstEditor ─► WorkbenchHost(host, project, options).activate(extensio
   columns: (auto, 3fr, 2fr),
   table.header[Namespace][Offers][Tie-breaker],
   [`commands`], [commands by id (`<extension>.<verb>`), key bindings], [—],
-  [`window`], [messages, input box, quick pick, save dialog, status bar items, custom editors, file decorations, `activeTextEditor`], [status bar: `alignment` + `priority`; custom editors: `priority`, then pattern specificity],
+  [`window`], [messages, input box, quick pick, save dialog, status bar items, custom editors, file decorations, `activeFile`, `activeTextEditor`], [status bar: `alignment` + `priority`; custom editors: `priority`, then pattern specificity],
   [`scm`], [source controls], [— (all listed; a duplicate id throws)],
   [`languages`], [document link providers], [`priority` (default 100)],
   [`workspace`], [`applyEdit`, settings (`getConfiguration`, `onDidChangeConfiguration`)], [—],
-  [`workbench`], [`open`, `activeFile`, side panels, editor frame, menus, style sheets, dropped files, `user`], [menus: `group` + `order`; side panels: `order`],
+  [`workbench`], [`open`, side panels, editor frame, menus, style sheets, dropped files, `user`], [menus: `group` + `order`; side panels: `order`],
 )
 
 == Lifecycle <architecture-workbench-lifecycle>

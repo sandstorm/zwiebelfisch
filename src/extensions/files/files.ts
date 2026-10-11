@@ -56,7 +56,7 @@ export function files(): TypstExtension {
       const { project, window, workspace, workbench, subscriptions } = context;
       const mode = () => workspace.getConfiguration('files').get<PanelMode>('panel', 'auto');
       const side = workbench.registerSidePanel('files', { label: 'Files', icon: icon(workbench.ownerDocument, 'files'), order: 10 });
-      const state = () => ({ paths: project.paths(), main: project.main, active: workbench.activeFile });
+      const state = () => ({ paths: project.paths(), main: project.main, active: window.activeFile });
       const panel = new FilePanel(side.body, {
         onOpen: (path) => {
           workbench.open(path);
@@ -89,7 +89,7 @@ export function files(): TypstExtension {
         window.registerCustomEditorProvider('files.file', fileInfoEditor, { filenamePattern: '*' }),
         new Disposable(() => drops?.dispose()),
         registerOperations(context, panel),
-        workbench.onDidShowFile(render),
+        window.onDidChangeActiveFile(render),
         window.onDidChangeFileDecorations(() => panel.render(state())),
         workbench.onDidChangeMenu((menuId) => menuId === NEW_FILE_MENU && panel.render(state())),
         workspace.onDidChangeConfiguration((event) => {
