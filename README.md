@@ -11,8 +11,7 @@ Requires [mise](https://mise.jdx.dev); it pins every tool.
 ```sh
 mise install            # the pinned tools
 mise run install        # JS dependencies and Playwright browsers
-mise run build:fonts    # Typst's default fonts, once
-mise run demo           # the demo on http://127.0.0.1:5199/ and a local collaboration server
+mise run demo           # builds engine and fonts, then the demo on http://127.0.0.1:5199/ and a local server
 ```
 
 | Command | What it does |

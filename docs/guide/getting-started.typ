@@ -9,11 +9,10 @@ Requires #link("https://mise.jdx.dev")[mise]. It pins every tool: Node, pnpm, th
 ```sh
 mise install            # the pinned tools
 mise run install        # JS dependencies and Playwright browsers
-mise run build:fonts    # Typst's default fonts, once
-mise run demo           # builds the engine, then starts the demo and a local server
+mise run demo           # builds the engine and fonts, then starts the demo and a local server
 ```
 
-- The first engine build compiles the Typst compiler to wasm. Later runs skip it until `crates/typst-engine` changes.
+- The first engine build compiles the Typst compiler to wasm, and Typst's default fonts are copied next to it. Later runs skip both until `crates/typst-engine` changes.
 - Other tasks (tests, checks, builds): @architecture-development.
 
 == The demo <guide-getting-started-demo>
