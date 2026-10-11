@@ -12,7 +12,7 @@ async function join(browser: Browser, baseURL: string, room: string, user: strin
   const page = await (await browser.newContext()).newPage();
   await serve(page, baseURL);
   await page.goto(`/?room=${room}&user=${user}`);
-  await expect(page.getByTestId('typst-visual')).toContainText('Hello Typst');
+  await expect(page.getByTestId('typst-visual')).toContainText('Typst in five minutes');
   return page;
 }
 
@@ -26,12 +26,12 @@ async function users(browser: Browser, baseURL: string, project: string) {
 test('an edit in one Source editor shows up in the other user’s Visual and Source editors', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
   await ann.getByRole('tab', { name: 'Source' }).click();
-  await ann.getByTestId('typst-source').locator('.cm-line', { hasText: 'This is' }).click();
+  await ann.getByTestId('typst-source').locator('.cm-line', { hasText: 'Typst is a markup' }).click();
   await ann.keyboard.press('Home');
   await ann.keyboard.type('Together: ');
-  await expect(bob.getByTestId('typst-visual')).toContainText('Together: This is');
+  await expect(bob.getByTestId('typst-visual')).toContainText('Together: Typst is');
   await bob.getByRole('tab', { name: 'Source' }).click();
-  await expect(bob.getByTestId('typst-source')).toContainText('Together: This is');
+  await expect(bob.getByTestId('typst-source')).toContainText('Together: Typst is');
 });
 
 test('edits from both Visual editors converge', async ({ browser, baseURL }, info) => {
@@ -39,20 +39,20 @@ test('edits from both Visual editors converge', async ({ browser, baseURL }, inf
   await ann.getByTestId('typst-visual').locator('h1').click();
   await ann.keyboard.press('End');
   await ann.keyboard.type(' (Ann)');
-  await bob.getByTestId('typst-visual').locator('li', { hasText: 'second item' }).click();
+  await bob.getByTestId('typst-visual').locator('li', { hasText: 'Type something.' }).click();
   await bob.keyboard.press('End');
   await bob.keyboard.type(' (Bob)');
   for (const page of [ann, bob]) {
-    await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Hello Typst (Ann)');
-    await expect(page.getByTestId('typst-visual').locator('li', { hasText: 'second item' })).toHaveText('second item (Bob)');
+    await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Typst in five minutes (Ann)');
+    await expect(page.getByTestId('typst-visual').locator('li', { hasText: 'Type something.' })).toHaveText('Type something. (Bob)');
   }
 });
 
 test('the other user’s selection is shown with their name', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
-  await ann.getByTestId('typst-visual').locator('strong', { hasText: 'bold' }).dblclick();
+  await ann.getByTestId('typst-visual').locator('strong', { hasText: 'stars' }).dblclick();
   const selection = bob.getByTestId('typst-visual').locator('.typst-collaboration__selection');
-  await expect(selection).toHaveText('bold');
+  await expect(selection).toHaveText('stars');
   await expect(selection.first()).toHaveAttribute('data-user', 'Ann');
 });
 
@@ -72,7 +72,7 @@ test('the other user’s caret shows with their name in both editors, where they
       range.setEndBefore(caret);
       return range.toString();
     });
-  await expect.poll(textBefore).toBe('Hello Typst');
+  await expect.poll(textBefore).toBe('Typst in five minutes');
   await ann.keyboard.press('Home');
   await expect.poll(textBefore).toBe('');
   // the collaboration extension's file decoration: Ann's initial on her file in Bob's file tree (the panel may be closed)
@@ -80,7 +80,7 @@ test('the other user’s caret shows with their name in both editors, where they
   await expect(decoration).toHaveText('A');
   await expect(decoration).toHaveAttribute('title', 'Ann');
   await bob.getByRole('tab', { name: 'Source' }).click();
-  const line = bob.getByTestId('typst-source').locator('.cm-line', { hasText: 'Hello Typst' });
+  const line = bob.getByTestId('typst-source').locator('.cm-line', { hasText: 'Typst in five minutes' });
   const sourceCaret = line.locator('.typst-collaboration__caret[data-user="Ann"]');
   await expect(sourceCaret).toHaveCount(1);
   await sourceCaret.hover({ force: true });
@@ -98,13 +98,13 @@ test('a caret on an empty line shows in the other user’s Source editor', async
 
 test('a margin note reaches the other user', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
-  await ann.getByTestId('typst-visual').locator('strong', { hasText: 'bold' }).dblclick();
+  await ann.getByTestId('typst-visual').locator('strong', { hasText: 'stars' }).dblclick();
   await ann.getByRole('toolbar', { name: 'Formatting' }).getByRole('button', { name: 'Comment' }).click();
   const field = ann.getByTestId('typst-note-card').getByRole('textbox', { name: 'Comment' });
   await field.fill('Shared note');
   await field.press('ControlOrMeta+Enter');
   await expect(bob.getByTestId('typst-note-card').locator('.typst-comments__card-text')).toHaveText(['Shared note']);
-  await expect(bob.getByTestId('typst-visual').locator('mark.typst-comments__range')).toHaveText('bold');
+  await expect(bob.getByTestId('typst-visual').locator('mark.typst-comments__range')).toHaveText('stars');
 });
 
 test('a reply from the other user: both see the thread in the card and in the PDF margin', async ({ browser, baseURL }, info) => {
@@ -114,7 +114,7 @@ test('a reply from the other user: both see the thread in the card and in the PD
   for (const page of [ann, bob]) {
     await page.route('https://packages.typst.org/preview/drafting-0.2.2.tar.gz', (route) => route.fulfill({ body: drafting, contentType: 'application/gzip' }));
   }
-  await ann.getByTestId('typst-visual').locator('strong', { hasText: 'bold' }).dblclick();
+  await ann.getByTestId('typst-visual').locator('strong', { hasText: 'stars' }).dblclick();
   await ann.keyboard.press('ControlOrMeta+Alt+KeyM');
   const annField = ann.getByTestId('typst-note-card').getByRole('textbox', { name: 'Comment' });
   await annField.fill('Is this right?');

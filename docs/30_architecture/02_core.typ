@@ -79,9 +79,9 @@ Typst's font book needs every face's `FontInfo` (family, variant, coverage) befo
 
 #table(
   columns: (auto, auto, auto),
-  table.header[First render of the hello example][Font files][Font bytes (gzip)],
+  table.header[First render of the simple example][Font files][Font bytes (gzip)],
   [all fonts up front], [17], [9.7 MB (6.4 MB)],
-  [lazy], [4 + the index], [2.4 MB (1.7 MB)],
+  [lazy], [5 + the index], [2.7 MB (1.9 MB)],
 )
 
 === Engine size <architecture-core-engine-size>

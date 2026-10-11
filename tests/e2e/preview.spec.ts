@@ -25,18 +25,18 @@ test('clicking text in the preview selects its source', async ({ page }) => {
   await page.getByRole('tab', { name: 'Source' }).click();
   const svg = page.getByTestId('typst-preview').locator('.typst-preview__page svg').first();
   await expect(svg).toBeVisible();
-  // the first glyph on the page is the "H" of the heading "Hello Typst"
+  // the first glyph on the page is the "T" of the heading "Typst in five minutes"
   await clickGlyph(svg.locator('use').first());
-  await expect(page.getByTestId('typst-source').locator('.typst-source__jump')).toHaveText('Hello Typst');
+  await expect(page.getByTestId('typst-source').locator('.typst-source__jump')).toHaveText('Typst in five minutes');
 });
 
 test('clicking text in the preview selects exactly that text in the visual editor', async ({ page }) => {
   await expect(page.getByTestId('typst-visual')).toBeVisible();
   const svg = page.getByTestId('typst-preview').locator('.typst-preview__page svg').first();
   await expect(svg).toBeVisible();
-  // the first glyph on the page is the "H" of the heading "Hello Typst"
+  // the first glyph on the page is the "T" of the heading "Typst in five minutes"
   await clickGlyph(svg.locator('use').first());
-  await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toBe('Hello Typst');
+  await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toBe('Typst in five minutes');
 });
 
 test('shows compiler errors in the source and the status, and clears them when fixed', async ({ page }) => {

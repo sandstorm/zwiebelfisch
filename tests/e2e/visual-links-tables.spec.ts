@@ -31,7 +31,8 @@ test('Mod+K asks for the URL; an empty one unlinks', async ({ page }) => {
   await input.getByLabel('URL (empty removes the link)').fill('');
   await input.getByLabel('URL (empty removes the link)').press('Enter');
   await expect(visual(page).locator('a', { hasText: 'Fresh line' })).toHaveCount(0);
-  await expect.poll(sourceText(page)).not.toContain('#link(');
+  // the demo's own link to typst.app/docs stays
+  await expect.poll(sourceText(page)).not.toContain('#link("https://typst.app")');
 });
 
 test('Insert image adds an #image block with the entered path', async ({ page }) => {
@@ -48,7 +49,8 @@ test('Insert image adds an #image block with the entered path', async ({ page })
 test('Insert table adds a 2x2 #table; typing into a cell fills it', async ({ page }) => {
   await caretAtEnd(visual(page).locator('p').first());
   await chooseFrom(toolbar(page), 'Insert', 'Insert table');
-  await expect(visual(page).locator('table td')).toHaveCount(4);
+  // the new table comes before the demo's own
+  await expect(visual(page).locator('table').first().locator('td')).toHaveCount(4);
   await page.keyboard.type('Cell');
   await expect.poll(sourceText(page)).toContain('#table(\n  columns: 2,\n  [Cell], [],\n  [], [],\n)');
 });
@@ -60,7 +62,8 @@ test('table buttons add and delete rows and columns', async ({ page }) => {
   await bar.getByRole('button', { name: 'Add row' }).click();
   await expect.poll(sourceText(page)).toContain('  [], [],\n  [], [],\n  [], [],\n)');
   await bar.getByRole('button', { name: 'Add column' }).click();
-  await expect.poll(sourceText(page)).toContain('columns: 3,');
+  // the demo's own table has three columns, too
+  await expect.poll(async () => (await sourceText(page)()).split('columns: 3,').length).toBe(3);
   await bar.getByRole('button', { name: 'Delete column' }).click();
   await bar.getByRole('button', { name: 'Delete row' }).click();
   await expect.poll(sourceText(page)).toContain('#table(\n  columns: 2,\n  [], [],\n  [], [],\n)');

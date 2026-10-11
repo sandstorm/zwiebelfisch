@@ -25,7 +25,7 @@ test('Local mode is the default and needs no server', async ({ page }) => {
   await page.goto('/');
   await expect(modes(page).getByRole('link', { name: 'Local' })).toHaveAttribute('aria-current', 'page');
   await expect(status(page)).toContainText('no server needed');
-  await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Hello Typst');
+  await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Typst in five minutes');
   await expect(bar(page).getByRole('button', { name: 'Simulate upstream commit' })).toHaveCount(0);
   await expect(bar(page).getByTestId('second-window')).toHaveCount(0);
   expect(requests.filter((url) => url.startsWith(SERVER))).toEqual([]);
@@ -51,14 +51,14 @@ test('the name field reloads as that user', async ({ page }) => {
 
 test('Collaborate without a server: says how to start it and edits a local copy', async ({ page }) => {
   await noServer(page);
-  await page.goto('/?room=playground-hello');
+  await page.goto('/?room=playground-simple');
   await expect(page).toHaveURL(/user=Ann/);
   await expect(status(page)).toContainText('not reachable');
   await expect(status(page).locator('code')).toHaveText('mise run demo');
-  await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Hello Typst');
+  await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Typst in five minutes');
   const second = bar(page).getByTestId('second-window');
   await expect(second).toHaveText('Open a second window as Bob');
-  await expect(second).toHaveAttribute('href', /room=playground-hello/);
+  await expect(second).toHaveAttribute('href', /room=playground-simple/);
   await expect(second).toHaveAttribute('href', /user=Bob/);
 });
 

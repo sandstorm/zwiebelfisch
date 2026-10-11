@@ -101,7 +101,7 @@ Alpha #margin-note[Beta][Gamma note] Delta#margin-note[Point note] #todo[Helper 
   });
 
   describe('page margins (drafting 0.2.2 needs a margin that differs by side)', () => {
-    const demo = readFileSync(new URL('../../../../demo/examples/hello/main.typ', import.meta.url), 'utf8');
+    const demo = readFileSync(new URL('../../../../demo/examples/simple/main.typ', import.meta.url), 'utf8');
     const compile = async (text: string) => {
       const bare = await engineWithFonts();
       const project = withPackages(bare, async () => drafting);
@@ -119,12 +119,12 @@ Alpha #margin-note[Beta][Gamma note] Delta#margin-note[Point note] #todo[Helper 
 
     it('compiles point and range notes in the demo after adding them', async () => {
       let text = demo;
-      for (const where of [(t: string) => t.indexOf('Hello Typst') + 5, (t: string) => t.length - 1]) {
+      for (const where of [(t: string) => t.indexOf('Typst in five') + 5, (t: string) => t.length - 1]) {
         const at = where(text);
         text = apply(text, calculateMarginNoteChanges(text, SourceRange.of({ from: at, to: at }))!.changes);
       }
       expect(text.split('set-margin-note-defaults(')).toHaveLength(2);
-      const word = text.indexOf('Typst', text.indexOf('= Hello'));
+      const word = text.indexOf('Typst', text.indexOf('= Typst'));
       text = apply(text, calculateMarginNoteChanges(text, SourceRange.of({ from: word, to: word + 5 }))!.changes);
       expect(text).toMatch(/margin: \(right: 4cm, rest: 1\.5cm\)/);
       expect(await compile(text)).toEqual([]);

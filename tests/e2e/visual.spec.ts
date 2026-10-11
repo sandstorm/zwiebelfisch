@@ -9,8 +9,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('shows the document in the visual editor by default', async ({ page }) => {
-  await expect(visual(page).locator('h1')).toHaveText('Hello Typst');
-  await expect(visual(page).locator('strong')).toHaveText('bold');
+  await expect(visual(page).locator('h1')).toHaveText('Typst in five minutes');
+  await expect(visual(page).locator('strong').first()).toHaveText('stars');
   await expect(visual(page).locator('.typst-visual__raw-block').first()).toContainText('#set page');
 });
 
@@ -18,7 +18,7 @@ test('typing in the visual editor updates the Typst source', async ({ page }) =>
   await caretAtEnd(visual(page).locator('h1'));
   await page.keyboard.type(' World');
   await page.getByRole('tab', { name: 'Source' }).click();
-  await expect(page.getByTestId('typst-source')).toContainText('= Hello Typst World');
+  await expect(page.getByTestId('typst-source')).toContainText('= Typst in five minutes World');
 });
 
 test('bold via keyboard shortcut becomes *…* in the source', async ({ page }) => {
@@ -27,7 +27,7 @@ test('bold via keyboard shortcut becomes *…* in the source', async ({ page }) 
   await page.keyboard.press('ControlOrMeta+b');
   await page.keyboard.type('new');
   await page.getByRole('tab', { name: 'Source' }).click();
-  await expect(page.getByTestId('typst-source')).toContainText('source. *new*');
+  await expect(page.getByTestId('typst-source')).toContainText('code. *new*');
 });
 
 test('Mod-i makes typed text italic instead of triggering a browser shortcut', async ({ page }) => {
@@ -49,5 +49,5 @@ test('markdown-style input rules: "## " starts a heading', async ({ page }) => {
 test('clicking the preview selects the block in the visual editor', async ({ page }) => {
   await clickFirstGlyph(page);
   // the jump arrives asynchronously from the engine worker
-  await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toBe('Hello Typst');
+  await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toBe('Typst in five minutes');
 });

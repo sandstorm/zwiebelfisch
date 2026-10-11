@@ -108,7 +108,7 @@ export async function freshSelectedLine(page: Page): Promise<void> {
 }
 
 /**
- * Clicks the first glyph of the preview's first page (the "H" of the demo's heading).
+ * Clicks the first glyph of the preview's first page (the "T" of the demo's heading).
  *
  * Not `use.click()`: a glyph is a `<use>` of a `<symbol>` without a size, and
  * Firefox reports such a `<use>` as large as the whole page, so Playwright

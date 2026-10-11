@@ -5,15 +5,8 @@ import { test, fileRow } from './fixtures';
 const examples = (page: Page) => page.getByRole('navigation', { name: 'Examples' });
 const preview = (page: Page) => page.getByTestId('typst-preview');
 
-test('without ?example the demo opens the default document', async ({ page }) => {
+test('without ?example the demo opens the simple example, one file', async ({ page }) => {
   await page.goto('/');
-  await expect(examples(page).getByRole('link', { name: 'Hello' })).toHaveAttribute('aria-current', 'page');
-  await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Hello Typst');
-  await expect(page.getByTestId('typst-files')).toBeHidden();
-});
-
-test('the simple example is one file with a table', async ({ page }) => {
-  await page.goto('/?example=simple');
   await expect(examples(page).getByRole('link', { name: 'Simple' })).toHaveAttribute('aria-current', 'page');
   await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Typst in five minutes');
   await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);

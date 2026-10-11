@@ -1,7 +1,7 @@
 // The demo playground: the widget on one page, to try it out, for the e2e tests, and to write these docs in.
 //
 // Its whole state is the URL (playground.ts), so a reload, a second window or a shared link shows the same:
-// `?example=hello|simple|advanced|docs`, `?room=<name>` (Collaborate mode) or `?room=gitlab:demo/report@<branch>`
+// `?example=simple|advanced|docs`, `?room=<name>` (Collaborate mode) or `?room=gitlab:demo/report@<branch>`
 // (GitLab mode, a fake GitLab) on the local playground server (`mise run demo`), `&user=<name>`, and `&devtools` for
 // the library's optional devtools. Without `room` (Local mode, the default and what the static e2e build uses) it
 // never talks to a server. The shown file is the URL's fragment (open-file-hash.ts). The playground bar above the

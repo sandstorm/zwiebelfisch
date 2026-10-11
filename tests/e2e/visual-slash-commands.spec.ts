@@ -45,7 +45,8 @@ test('arrow keys choose, Escape closes and keeps the text', async ({ page }) => 
   await expect(list(page)).toHaveCount(0);
   await page.keyboard.type('te');
   await expect(list(page)).toHaveCount(0);
-  await expect.poll(sourceText(page)).toContain('/quote');
+  // a line of its own: the demo mentions `/quote`, too
+  await expect.poll(sourceText(page)).toMatch(/\n\/quote\n/);
 });
 
 test('a click on an entry runs it', async ({ page }) => {

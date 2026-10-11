@@ -37,7 +37,7 @@ export const GITLAB_ROOM = 'gitlab:demo/report@main';
  *
  * | parameter  | |
  * |------------|---|
- * | `example`  | hello / simple / advanced / docs (see examples.ts) |
+ * | `example`  | simple / advanced / docs (see examples.ts) |
  * | `room`     | none: Local mode; `gitlab:…`: GitLab mode; else Collaborate mode in that room |
  * | `user`     | the name others see (default Ann in a room, so the second window can be Bob) |
  * | `devtools` | present: the devtools side panel (the library's optional `devtools` extension) |

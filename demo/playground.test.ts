@@ -8,7 +8,7 @@ const parsed = (search: string) => Object.fromEntries(new URLSearchParams(search
 
 describe('playgroundFromQuery', () => {
   it('is local without a room: the static e2e build needs no server', () => {
-    expect(playgroundFromQuery(query(''))).toEqual({ example: 'hello', mode: 'local', room: null, user: 'Demo user', devtools: false });
+    expect(playgroundFromQuery(query(''))).toEqual({ example: 'simple', mode: 'local', room: null, user: 'Demo user', devtools: false });
   });
 
   it('a plain room collaborates, a gitlab: room is GitLab mode', () => {
@@ -48,7 +48,7 @@ describe('modeQuery', () => {
 
   it('Collaborate joins the playground room of the current example', () => {
     expect(parsed(modeQuery('collab', query('?example=simple')))).toEqual({ example: 'simple', room: 'playground-simple' });
-    expect(parsed(modeQuery('collab', query('')))).toEqual({ room: 'playground-hello' });
+    expect(parsed(modeQuery('collab', query('')))).toEqual({ room: 'playground-simple' });
   });
 
   it('GitLab joins the fake repository', () => {
@@ -58,7 +58,7 @@ describe('modeQuery', () => {
 
 describe('exampleLink', () => {
   it('moves along to the new example’s playground room', () => {
-    expect(parsed(exampleLink('advanced', query('?room=playground-hello&user=Ann')))).toEqual({
+    expect(parsed(exampleLink('advanced', query('?room=playground-simple&user=Ann')))).toEqual({
       room: 'playground-advanced',
       user: 'Ann',
       example: 'advanced',
@@ -91,7 +91,7 @@ describe('editorOptions', () => {
 
   it('collaborate mode seeds the room with the example', () => {
     expect(editorOptions(state('?room=r1'), 'plain')).toEqual({
-      files: exampleFiles('hello'),
+      files: exampleFiles('simple'),
       collaboration: { url: SERVER.ws, room: 'r1' },
     });
   });
@@ -105,6 +105,6 @@ describe('editorOptions', () => {
 
 
   it('falls back to a local copy of the example when the server is not reachable', () => {
-    expect(editorOptions(state(`?room=${encodeURIComponent(GITLAB_ROOM)}`), 'offline')).toEqual({ files: exampleFiles('hello') });
+    expect(editorOptions(state(`?room=${encodeURIComponent(GITLAB_ROOM)}`), 'offline')).toEqual({ files: exampleFiles('simple') });
   });
 });

@@ -10,7 +10,6 @@ import type { ProjectFiles } from '../src';
  * its edits are saved there (docs-files/), in a static build nowhere.
  */
 export const EXAMPLES = [
-  { name: 'hello', label: 'Hello', folder: './examples/hello' },
   { name: 'simple', label: 'Simple', folder: './examples/simple' },
   { name: 'advanced', label: 'Advanced', folder: './examples/advanced' },
   { name: 'docs', label: 'Documentation', folder: '../docs' },
@@ -19,7 +18,7 @@ export const EXAMPLES = [
 export type ExampleName = (typeof EXAMPLES)[number]['name'];
 
 /** The example shown without `?example`; the e2e specs rely on its content. */
-export const DEFAULT_EXAMPLE: ExampleName = 'hello';
+export const DEFAULT_EXAMPLE: ExampleName = 'simple';
 
 /** The files of an example project, keyed by absolute project path. */
 export function exampleFiles(name: ExampleName): ProjectFiles {

@@ -5,7 +5,7 @@ import { test } from './fixtures';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/?devtools');
-  await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Hello Typst');
+  await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Typst in five minutes');
   await page.getByTestId('typst-panel-toggle-devtools').click();
 });
 
@@ -26,7 +26,7 @@ test('the document tab shows the Visual editor as nodes with their source ranges
   await expect(heading).toBeVisible();
   await heading.click();
   // the heading's text is selected in the Visual editor, and the row is on the selection's path
-  await expect.poll(() => page.evaluate(() => getSelection()?.toString())).toBe('Hello Typst');
+  await expect.poll(() => page.evaluate(() => getSelection()?.toString())).toBe('Typst in five minutes');
   await expect(devtools.locator('.typst-devtools__row--selected').first()).toContainText('heading');
 });
 
