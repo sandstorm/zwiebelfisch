@@ -1,6 +1,6 @@
 // The devtools' Contributions tab: every contribution in its point's terms, grouped by extension or by contribution
 // point (who competes there, in the order the host resolves them). See devtools-panel.ts.
-import type { Contribution, ContributionLog } from '../model/contributions';
+import type { Contribution, ContributionLog } from '../recording/contributions';
 import { element, type TabView } from './dom';
 
 type Grouping = 'extension' | 'point';

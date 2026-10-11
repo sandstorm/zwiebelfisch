@@ -1,7 +1,7 @@
 // The Visual views the devtools read the document from: a Tiptap extension in every view (through the public
 // `visualView.registerTiptapExtension`) keeps each view's editor by its document. See ../devtools.ts.
 import { Extension, type Editor } from '@tiptap/core';
-import type { VisualViewContext } from '../../../src';
+import type { VisualViewContext } from '../../../hosts/visual-view/visual-view';
 import { documentRows, type DocumentRow } from '../model/document-tree';
 
 type TypstDocument = VisualViewContext['document'];

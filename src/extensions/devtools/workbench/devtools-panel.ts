@@ -1,8 +1,8 @@
 // The devtools' side panel: three tabs over the models (the document of the shown file, the contributions, the
 // events), each drawn by its own view. It draws what it is given; ../devtools.ts wires it to the extension context.
-import type { SourceRange } from '../../../src';
-import type { ContributionLog } from '../model/contributions';
-import type { EventLog } from '../model/event-log';
+import type { SourceRange } from '../../../core/typst-document/typst-document';
+import type { ContributionLog } from '../recording/contributions';
+import type { EventLog } from '../recording/event-log';
 import { ContributionsTab } from './contributions-tab';
 import { DocumentTab, type ShownDocument } from './document-tab';
 import { element, type TabView } from './dom';

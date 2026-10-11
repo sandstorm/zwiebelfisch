@@ -1,9 +1,10 @@
 // What each extension contributes, recorded as it activates (and later): every `register…` call on its context's
 // namespaces and the settings it declares, each described in its contribution point's terms (contribution-points.ts),
 // with where it was made and whether it was disposed since. See ../devtools.ts.
-import { EventEmitter, type Event, type ExtensionContext, type TypstExtension } from '../../../src';
+import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
+import type { ExtensionContext, TypstExtension } from '../../../hosts/workbench/workbench';
 import { describeContribution, describeSetting, type Description } from './contribution-points';
-import { formatValue } from './describe';
+import { formatValue } from '../model/describe';
 
 /** One contribution: who made it, where (`visualView.registerNode`, `contributes.configuration`), and what it is. */
 export interface Contribution extends Description {

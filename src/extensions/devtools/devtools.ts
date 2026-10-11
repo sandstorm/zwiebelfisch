@@ -1,14 +1,15 @@
-// The devtools: a side panel showing what the widget is made of while it runs: the Typst ↔ ProseMirror conversion
-// of the shown file (each node with its source range), every contribution in its point's terms (by extension or by
-// point), and the events as they fire, their values in full. Built on the package's public API alone (src/index.ts), so it sees what any outside extension sees; the
-// demo adds it with `?devtools`. Not part of the library. See docs/architecture/development.typ.
+// The devtools extension: a right side panel showing what the widget is made of while it runs: the Typst ↔
+// ProseMirror conversion of the shown file (each node with its source range), every contribution in its point's terms
+// (by extension or by point), and the events as they fire, their values in full. Optional, not a built-in: a host adds
+// it (the demo with `?devtools`). It uses only what any extension gets (its context), so it sees what any outside
+// extension sees. Entry of extensions/devtools/. See docs/guide/embedding.typ ("Devtools").
 // Why it wraps the list: an extension sees only its own context, so the contributions of the others are recorded by
-// wrapping their `activate` (model/contributions.ts), not by a listing in the hosts.
-import type { TypstExtension } from '../../src';
+// wrapping their `activate` (recording/contributions.ts), not by a listing in the hosts.
+import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './devtools.css?inline';
-import { ContributionLog } from './model/contributions';
 import { describeValue } from './model/describe';
-import { EventLog, subscribeToEvents } from './model/event-log';
+import { ContributionLog } from './recording/contributions';
+import { EventLog, subscribeToEvents } from './recording/event-log';
 import { DocumentViews } from './visual-view/document-views';
 import { DevtoolsPanel } from './workbench/devtools-panel';
 import type { ShownDocument } from './workbench/document-tab';
@@ -40,7 +41,7 @@ function devtoolsExtension(contributions: ContributionLog): TypstExtension {
         if (!shown) return { kind: 'none', path, reason: 'No Visual view of this file yet: open the Visual tab.' };
         return { kind: 'rows', path, ...shown, source: (range) => describeValue(document.text.slice(range.from, range.to)) };
       };
-      const side = workbench.registerSidePanel('devtools', { label: 'Devtools', icon: icon(workbench.ownerDocument), order: 1000 });
+      const side = workbench.registerSidePanel('devtools', { label: 'Devtools', icon: icon(workbench.ownerDocument), side: 'right' });
       const panel = new DevtoolsPanel(side.body, {
         contributions,
         events,

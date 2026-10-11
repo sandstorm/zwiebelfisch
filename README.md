@@ -29,7 +29,7 @@ mise run demo           # builds engine and fonts, then the demo on http://127.0
 
 - `?example=hello|simple|advanced|docs`: the project to open (`docs` edits this documentation live).
 - `?room=<name>` collaborates in a room; `?room=gitlab:demo/report@main` opens a fake GitLab branch.
-- `&devtools`: ProseMirror's dev tools on the Visual view.
+- `&devtools`: the devtools side panel (the library's optional `devtools` extension): document, contributions, events.
 
 ## Documentation
 

@@ -1,6 +1,6 @@
 // The Visual view's ProseMirror document as rows, each with the source range it shows: what the Typst ↔ ProseMirror
 // conversion (docs/architecture/prosemirror-typst.typ) made of the shown file. See ../devtools.ts.
-import type { SourceOffset, SourceRange } from '../../../src';
+import type { SourceOffset, SourceRange } from '../../../core/typst-document/typst-document';
 import { describeValue } from './describe';
 
 /** A ProseMirror node, as far as the tree reads it (ProseMirror's `Node` is one). */

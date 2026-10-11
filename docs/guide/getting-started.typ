@@ -28,7 +28,7 @@ The page's state is its URL:
   [`?room=<name>`], [Collaborate mode: joins a room on the local server.],
   [`?room=gitlab:demo/report@main`], [GitLab mode: a branch of the fake repository.],
   [`&user=<name>`], [The name others see; signs comments and commits.],
-  [`&devtools`], [The devtools side panel: document, contributions, events (@architecture-development-devtools).],
+  [`&devtools`], [The devtools side panel on the right: document, contributions, events (@guide-embedding-devtools).],
   [`#/chapters/intro.typ`], [The file shown.],
 )
 

@@ -1,8 +1,8 @@
 // What a contribution is, in its contribution point's own terms: a node by its name, Tiptap priority and the Typst it
 // parses, a keybinding as `Ctrl+Alt+M → comments.addComment`, a setting by its type and default. The registration's
-// arguments are read as they are given (by shape: the devtools see the public API only). See contributions.ts.
+// arguments are read as they are given (by shape: the devtools see what any extension sees). See contributions.ts.
 import { flattenExtensions, getExtensionField, type AnyExtension } from '@tiptap/core';
-import { describeArguments, describeValue, nameOf } from './describe';
+import { describeArguments, describeValue, nameOf } from '../model/describe';
 
 /** A contribution described: what it is (`heading`), facts about it, and where it stands among its point's. */
 export interface Description {
@@ -81,8 +81,9 @@ const POINTS: Readonly<Record<string, Describer>> = {
   'sourceView.registerCodeMirrorExtension': ([extension]) => named(extension, 'CodeMirror extensions'),
   'workbench.registerStyleSheet': ([css]) => ({ title: 'style sheet', details: [size(String(css))] }),
   'workbench.registerSidePanel': ([id, options]) => {
-    const { label, order } = record(options);
-    return { title: String(id), details: [`"${String(label)}"`, `order ${num(order, 0)}`], rank: [num(order, 0)] };
+    const { label, side, order } = record(options);
+    const where = side === 'right' ? 'right' : 'left';
+    return { title: String(id), details: [`"${String(label)}"`, where, `order ${num(order, 0)}`], rank: [where, num(order, 0)] };
   },
   'workbench.registerEditorFrame': () => ({ title: 'editor frame', details: [] }),
   'workbench.registerMenuItem': ([menuId, item]) => {

@@ -1,7 +1,8 @@
 // The events of an extension context as they fire, the latest few hundred, with their values pretty-printed. See
 // ../devtools.ts.
-import type { Event, ExtensionContext } from '../../../src';
-import { formatValue, type FormattedValue } from './describe';
+import type { Event } from '../../../core/event-emitter/event-emitter';
+import type { ExtensionContext } from '../../../hosts/workbench/workbench';
+import { formatValue, type FormattedValue } from '../model/describe';
 
 /** One event that fired: when (ms since the epoch), which (`window.onDidChangeActiveFile`), and its value as it was then. */
 export interface LoggedEvent {

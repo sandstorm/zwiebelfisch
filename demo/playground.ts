@@ -30,7 +30,7 @@ const USERS = ['Ann', 'Bob', 'Cleo', 'Dan'];
  * | `example`  | hello / simple / advanced / docs (see examples.ts) |
  * | `room`     | none: Local mode; `gitlab:…`: GitLab mode; else Collaborate mode in that room |
  * | `user`     | the name others see (default Ann in a room, so the second window can be Bob) |
- * | `devtools` | present: the devtools side panel (devtools/devtools.ts) |
+ * | `devtools` | present: the devtools side panel (the library's optional `devtools` extension) |
  *
  * The rooms live on the local collaboration server (`mise run demo`).
  */

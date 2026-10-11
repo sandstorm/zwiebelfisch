@@ -5,7 +5,7 @@
 // plain functions that read Typst calls from Lezer's syntax nodes included, so an outside extension can add a Typst
 // construct as the built-ins do —, Disposable and EventEmitter, the value types (ProjectPath, FileContent,
 // SourceOffset / SourceRange, PageIndex, Pt: made where values come in, e.g. to `open` a file at a range), and the
-// collaboration extension, which a host adds with its connection. The only file that re-exports. See docs/guide/embedding.typ and docs/extensions/overview.typ.
+// optional extensions: collaboration, which a host adds with its connection, and devtools, which wraps the list. The only file that re-exports. See docs/guide/embedding.typ and docs/extensions/overview.typ.
 import { defineTypstEditorElement } from './typst-editor-element/typst-editor-element';
 
 export { createTypstEditor, type TypstEditor, type TypstEditorOptions } from './typst-editor/typst-editor';
@@ -97,6 +97,7 @@ export {
   withHash,
 } from './core/typst-syntax/typst-syntax';
 export { collaboration, type CollaborationOptions } from './extensions/collaboration/collaboration';
+export { devtools } from './extensions/devtools/devtools';
 
 // Importing the package makes <typst-editor> available (no-op without a DOM).
 defineTypstEditorElement();
