@@ -7,22 +7,22 @@ State at writing: HEAD `3b1b3b48`, all checks green (typecheck, quality, 1895 un
 E2E has not been run for most of the day's work: `mise run test:e2e-all chromium` (run
 `mise run build:packages` first: the start page imports drafting, cheq and merman).
 
-## Running background agents (merge when they finish)
+## Done this session (all merged, checks green: 1934 unit tests)
 
-| Task | Workflow | Notes |
-|---|---|---|
-| "Go to Section" does nothing in the Visual editor (bug) | `w48qwv7ni` (wf_150926b9-c38) | Reproduce through the widget, fix root cause, all reference kinds |
-| Desktop-dropped `.ic`/`.drawio`/`.mmd` not inserted (bug) | `wsuc7v8yg` (wf_08de6abd-c39) | Root cause in the drop mechanism, both editors |
+- Getting started = Docker + the demo; mise setup is "Setup" in `11_development.typ`.
+- Comment styling lives in the comments extension (`note-defaults.ts`; preview prelude, `/.with-comments.typ`);
+  first note imports only `margin-note`. Page-margin workaround stays (drafting reads the document's `set page`).
+- Go to Section: `VisualEditor.reveal` scrolled before focusing (ProseMirror scrolls only with focus); fixed.
+- Desktop drops go through drop edit providers in both editors (`document-drops.ts`, workbench `#upload`).
+  `uploadTarget` moved from `extensions/images/model/upload.ts` to `core/uploads/uploads.ts` — user to confirm.
+
+E2E to run: `margin-notes.spec.ts`, `visual-toolbar.spec.ts`, `links.spec.ts`, `file-drops.spec.ts`
+(`mise run build:packages` first, then `mise run test:e2e-all chromium`).
 
 Merge routine: `git merge --no-edit <worktree branch>`; resolve conflicts by combining both sides; stage only the
 resolved paths by name; run typecheck, quality, test:unit (and server:test) BEFORE committing; new test files
 often lack preview-mock members (`registerViewOption`, `viewOptions`, `setViewOptionValues`,
 `onDidChangeViewOptions`) — add them.
-
-Done: Getting started is Docker + the demo; the mise setup is "Setup" in `11_development.typ` (`aa5b2bb8`).
-Done: comment styling lives in the comments extension (`note-defaults.ts`; preview prelude + `/.with-comments.typ`);
-the page-margin workaround stays (drafting reads the document's own `set page`; no prelude can fix it).
-E2E to run: `margin-notes.spec.ts`, `visual-toolbar.spec.ts`.
 
 ## Open questions / approvals the user has not answered yet
 
