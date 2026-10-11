@@ -1,6 +1,6 @@
 // The lists extension's part of the Visual editor. See lists in ../lists.ts.
 import { BulletList, ListItem, ListKeymap, OrderedList } from '@tiptap/extension-list';
-import { Extension } from '@tiptap/core';
+import { Extension, wrappingInputRule } from '@tiptap/core';
 import type { SyntaxNode } from '@lezer/common';
 import { Fragment, type Node } from '@tiptap/pm/model';
 import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
@@ -49,18 +49,29 @@ export const LIST_ACTIONS: ToolbarAction[] = [
   { label: 'Numbered list', icon: ICONS.orderedList, run: (c) => c.toggleOrderedList(), active: (e) => e.isActive('orderedList') },
 ];
 
-/** Tiptap's lists (with the source anchors), items and list keymap. */
+/** Tiptap's lists (with the source anchors, typed as in Typst), items and list keymap. */
 function tiptapLists(): Extension {
   return Extension.create({
     name: 'typstLists',
     addExtensions: () => [
-      ...[BulletList, OrderedList].map((list) =>
-        list.extend({
-          addAttributes() {
-            return { ...this.parent?.(), ...ANCHORS };
-          },
-        }),
-      ),
+      BulletList.extend({
+        addAttributes() {
+          return { ...this.parent?.(), ...ANCHORS };
+        },
+        // Typst's `- ` only: Markdown's `+ ` and `* ` mean other things in Typst
+        addInputRules() {
+          return [wrappingInputRule({ find: /^\s*-\s$/, type: this.type })];
+        },
+      }),
+      OrderedList.extend({
+        addAttributes() {
+          return { ...this.parent?.(), ...ANCHORS };
+        },
+        // Typst's `+ `, and Tiptap's `1. `
+        addInputRules() {
+          return [wrappingInputRule({ find: /^\s*\+\s$/, type: this.type }), ...(this.parent?.() ?? [])];
+        },
+      }),
       TypstListItem,
       ListKeymap,
     ],

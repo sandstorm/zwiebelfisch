@@ -38,7 +38,21 @@ test('Mod-i makes typed text italic instead of triggering a browser shortcut', a
   await expect(visual(page).locator('em', { hasText: 'slanted' })).toBeVisible();
 });
 
-test('markdown-style input rules: "## " starts a heading', async ({ page }) => {
+test('typing shortcuts follow Typst: "== " starts a heading, *…* is bold, _…_ italic', async ({ page }) => {
+  await caretAtEnd(visual(page).locator('p').first());
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('== Section');
+  await expect(visual(page).locator('h2', { hasText: 'Section' })).toBeVisible();
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('A *bold* and _slanted_ word');
+  await expect(visual(page).locator('strong', { hasText: 'bold' })).toBeVisible();
+  await expect(visual(page).locator('em', { hasText: 'slanted' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Source' }).click();
+  await expect(page.getByTestId('typst-source')).toContainText('== Section');
+  await expect(page.getByTestId('typst-source')).toContainText('A *bold* and _slanted_ word');
+});
+
+test('Markdown\'s "## " still starts a heading', async ({ page }) => {
   await caretAtEnd(visual(page).locator('p').first());
   await page.keyboard.press('Enter');
   await page.keyboard.type('## Section');

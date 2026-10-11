@@ -30,6 +30,18 @@ test('"> " starts a quote; typed text lands in #quote(block: true)[..]', async (
   await expect.poll(sourceText(page)).toContain('\n\n#quote(block: true)[Wise words]');
 });
 
+test('"- " starts a bulleted list, "+ " a numbered one', async ({ page }) => {
+  await newParagraph(page);
+  await page.keyboard.type('- bullet');
+  await expect(visual(page).locator('ul li')).toHaveText('bullet');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('+ first');
+  await expect(visual(page).locator('ol li')).toHaveText('first');
+  await expect.poll(sourceText(page)).toContain('\n\n- bullet\n');
+  await expect.poll(sourceText(page)).toContain('\n+ first\n');
+});
+
 test('"---" on an empty line becomes a rule, in text it stays text', async ({ page }) => {
   await newParagraph(page);
   await page.keyboard.type('---');

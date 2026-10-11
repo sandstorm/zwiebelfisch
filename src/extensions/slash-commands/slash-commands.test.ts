@@ -4,7 +4,7 @@
 import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../core/typst-document/typst-document';
-import { after, createVisualEditor, TestPrompts } from '../../testing/testing';
+import { after, createVisualEditor, TestPrompts, type } from '../../testing/testing';
 import { slashCommands } from './slash-commands';
 
 function setup(text: string, cursorAfter: string, prompts = new TestPrompts()) {
@@ -16,16 +16,6 @@ function setup(text: string, cursorAfter: string, prompts = new TestPrompts()) {
   const list = parent.querySelector<HTMLElement>('[data-testid="typst-suggest"][data-trigger="/"]')!;
   const options = () => (list.hidden ? [] : [...list.querySelectorAll('[role="option"]')].map((o) => o.querySelector('.typst-visual__suggest-label')!.textContent));
   return { doc, editor, list, options, prompts };
-}
-
-/** Types `text` at the selection as the browser would (text input handlers run). */
-function type(editor: Editor, text: string): void {
-  const { view } = editor;
-  for (const char of text) {
-    const { from, to } = view.state.selection;
-    const insert = () => view.state.tr.insertText(char, from, to);
-    if (!view.someProp('handleTextInput', (f) => f(view, from, to, char, insert))) view.dispatch(insert());
-  }
 }
 
 function press(editor: Editor, key: string): void {
