@@ -384,9 +384,10 @@ describe('WorkbenchHost', () => {
     const seen: string[] = [];
     const { host, workbench } = setup(({ languages, subscriptions }) =>
       subscriptions.push(
-        languages.registerDocumentLinkProvider({
-          provideDocumentLinks: ({ path, text }) => (seen.push(path), [{ range: SourceRange.of({ from: 2, to: text.length - 1 }) }]),
-        }),
+        languages.registerDocumentLinkProvider(
+          { language: 'typst' },
+          { provideDocumentLinks: ({ path, text }) => (seen.push(path), [{ range: SourceRange.of({ from: 2, to: text.length - 1 }) }]) },
+        ),
       ),
     );
     expect(seen).toContain('/main.typ');

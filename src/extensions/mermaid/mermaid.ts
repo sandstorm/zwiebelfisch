@@ -36,7 +36,7 @@ function mermaidIn(project: Project, languages: Languages): (src: string, docume
     if (!file) return null;
     // the providers read Typst markup; a figure's body is written in code (`mermaid(..)`, no `#`)
     const markup = src.startsWith('#') ? src : `#${src}`;
-    for (const link of languages.provideDocumentLinks({ path: file, text: markup })) {
+    for (const link of languages.provideDocumentLinks({ path: file, languageId: 'typst', text: markup })) {
       const target = languages.resolveDocumentLink(link).target;
       if (target && isMermaid(target)) return target;
     }

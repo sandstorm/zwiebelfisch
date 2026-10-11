@@ -1,7 +1,7 @@
 // TextFileEditor: a text file (data, bibliography, notes) in the editing area, edited in plain CodeMirror; edits are
 // saved debounced, changes made elsewhere are shown unless local typing is pending. See ../text-files.ts.
 import { basicSetup } from 'codemirror';
-import { Transaction, type ChangeSpec } from '@codemirror/state';
+import { Transaction, type ChangeSpec, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { ProjectPath } from '../../../core/paths/paths';
 
@@ -14,6 +14,8 @@ export interface TextFileEditorOptions {
   readonly text: string;
   /** Stores the whole text (the file's new content). */
   save(text: string): void;
+  /** More of CodeMirror (the document links). */
+  readonly extensions?: Extension;
 }
 
 /**
@@ -46,6 +48,7 @@ export class TextFileEditor {
       extensions: [
         basicSetup,
         EditorView.lineWrapping,
+        options.extensions ?? [],
         EditorView.contentAttributes.of({ 'aria-label': ProjectPath.displayName(options.path) }),
         EditorView.updateListener.of((update) => {
           if (update.docChanged && !update.transactions.some((tr) => tr.annotation(Transaction.remote))) this.#scheduleSave();

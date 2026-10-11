@@ -1,9 +1,10 @@
-// The languages namespace of the extension API (VS Code's `languages`, as far as Typst text needs it): the document
-// links of every registered DocumentLinkProvider, merged, and how CodeMirror editors show them (the Source views and
-// the code of the Visual view's raw boxes get `codeMirrorExtension`). Entry of hosts/languages/.
-// See docs/30_architecture/07_workbench.typ.
+// The languages namespace of the extension API (VS Code's `languages`, as far as it is used): the document links of
+// every registered DocumentLinkProvider whose selector matches a document, merged, and how CodeMirror editors show
+// them (the Source views, the code of the Visual view's raw boxes, an extension's own editor). Entry of
+// hosts/languages/. See docs/30_architecture/07_workbench.typ.
 // Why providers: finding links is a feature's policy (which paths, what a missing file offers); showing and following
-// them is the same in every view, so the views read every provider's links and know none of them.
+// them is the same in every view, so the views read every provider's links and know none of them. Why `languageId`:
+// the host knows no language; whoever hands a text over says which language it is in.
 import type { Extension } from '@codemirror/state';
 import { Disposable } from '../../core/disposable/disposable';
 import type { ProjectPath } from '../../core/paths/paths';
@@ -12,31 +13,47 @@ import type { Command } from '../commands/commands';
 import css from './languages.css?inline';
 import { linkExtension } from './link-extension';
 
-/** The language features of Typst text as extensions use them (VS Code's `languages` namespace: document links). */
+/** The language features of texts as extensions use them (VS Code's `languages` namespace: document links). */
 export interface Languages {
   /**
-   * Adds links to Typst text until disposed: the Source views and the code of the Visual view's raw boxes show
-   * them (Mod+click, Alt+Enter, hover). The links of every provider are merged; where links overlap, the provider
-   * of the higher `priority` wins (default 100, higher first; equal: registration order).
+   * Adds links to the documents `selector` matches until disposed: the Source views, the code of the Visual view's
+   * raw boxes and the text files' editor show them (Mod+click, Alt+Enter, hover). The links of every matching
+   * provider are merged; where links overlap, the provider of the higher `priority` wins (default 100, higher first;
+   * equal: registration order).
    */
-  registerDocumentLinkProvider(provider: DocumentLinkProvider, options?: { priority?: number }): Disposable;
+  registerDocumentLinkProvider(selector: DocumentSelector, provider: DocumentLinkProvider, options?: { priority?: number }): Disposable;
   /**
-   * The links of `document` from every provider, merged as the views show them, in text order (VS Code's
+   * The links of `document` from every matching provider, merged as the editors show them, in text order (VS Code's
    * `vscode.executeLinkProvider`), for an extension that shows links itself (an image box's path).
    */
-  provideDocumentLinks(document: TypstText): readonly DocumentLink[];
+  provideDocumentLinks(document: TextDocument): readonly DocumentLink[];
   /** `link` (from `provideDocumentLinks`) with what its provider fills in on demand: target, tooltip, command. */
   resolveDocumentLink(link: DocumentLink): DocumentLink;
+  /**
+   * Shows the links of a CodeMirror editor's text as the Source views do, for an extension's own editor: the text is
+   * in `languageId`; `path` is the file it is in, now (null: none, no links).
+   */
+  createDocumentLinksCodeMirrorExtension(languageId: string, path: () => ProjectPath | null): Extension;
 }
 
 /**
- * The Typst text a link provider reads, and the file it is in: a whole file's text, or the
- * code of one raw box in it.
+ * A text a link provider reads (VS Code's TextDocument, as far as links need it): a whole file's text, or a part of
+ * one, e.g. the code of a raw box in a Typst file.
  */
-export interface TypstText {
+export interface TextDocument {
   /** The file the text is in: relative paths in it resolve from here. */
   readonly path: ProjectPath;
+  /** The text's language, said by whoever hands it over: `typst` (Typst files, raw boxes), `json`, `markdown`, … */
+  readonly languageId: string;
   readonly text: string;
+}
+
+/** Which documents a provider is for (VS Code's DocumentSelector): those any of its filters matches. */
+export type DocumentSelector = DocumentFilter | readonly DocumentFilter[];
+
+/** Documents by their language (VS Code's DocumentFilter); no `language`: every document. */
+export interface DocumentFilter {
+  readonly language?: string;
 }
 
 /** A range of a text that leads somewhere (VS Code's DocumentLink). */
@@ -54,10 +71,10 @@ export interface DocumentLink {
   readonly command?: Command;
 }
 
-/** Finds the links in Typst text (VS Code's DocumentLinkProvider). */
+/** Finds the links in a text (VS Code's DocumentLinkProvider). */
 export interface DocumentLinkProvider {
   /** The links in `document` (cheap ones: `resolveDocumentLink` may fill in the rest when one is shown or followed). */
-  provideDocumentLinks(document: TypstText): readonly DocumentLink[];
+  provideDocumentLinks(document: TextDocument): readonly DocumentLink[];
   /** A link this provider gave, with its target, tooltip or command filled in. */
   resolveDocumentLink?(link: DocumentLink): DocumentLink;
 }
@@ -74,19 +91,22 @@ export interface LinkTargets {
 const DEFAULT_PRIORITY = 100;
 
 /**
- * The registered link providers. A text's links are those of every provider; where links of two providers overlap,
- * the one of the higher `priority` wins (equal: the one registered first). Each link remembers its provider, which
- * resolves it on demand (`resolveDocumentLink`).
+ * The registered link providers. A text's links are those of every provider whose selector matches it; where links
+ * of two providers overlap, the one of the higher `priority` wins (equal: the one registered first). Each link
+ * remembers its provider, which resolves it on demand (`resolveDocumentLink`). `targets` is what following a link
+ * does, in every editor that shows links.
  */
 export class LanguagesHost implements Languages {
-  readonly #providers: { provider: DocumentLinkProvider; priority: number }[] = [];
+  readonly #providers: { selector: DocumentSelector; provider: DocumentLinkProvider; priority: number }[] = [];
   readonly #providerOf = new WeakMap<DocumentLink, DocumentLinkProvider>();
 
   /** The CSS of the links' hover (`.typst-file-link`), for the workbench to put where the widget renders. */
   readonly styleSheet: string = css;
 
-  registerDocumentLinkProvider(provider: DocumentLinkProvider, options: { priority?: number } = {}): Disposable {
-    const entry = { provider, priority: options.priority ?? DEFAULT_PRIORITY };
+  constructor(private readonly targets: LinkTargets) {}
+
+  registerDocumentLinkProvider(selector: DocumentSelector, provider: DocumentLinkProvider, options: { priority?: number } = {}): Disposable {
+    const entry = { selector, provider, priority: options.priority ?? DEFAULT_PRIORITY };
     this.#providers.push(entry);
     return new Disposable(() => {
       const index = this.#providers.indexOf(entry);
@@ -94,10 +114,11 @@ export class LanguagesHost implements Languages {
     });
   }
 
-  provideDocumentLinks(document: TypstText): DocumentLink[] {
+  provideDocumentLinks(document: TextDocument): DocumentLink[] {
     const accepted: DocumentLink[] = [];
+    const matching = this.#providers.filter(({ selector }) => matches(selector, document));
     // the sort is stable: equal priorities in registration order
-    for (const { provider } of [...this.#providers].sort((a, b) => b.priority - a.priority)) {
+    for (const { provider } of matching.sort((a, b) => b.priority - a.priority)) {
       for (const link of provider.provideDocumentLinks(document)) {
         if (accepted.some((other) => overlap(other, link))) continue;
         this.#providerOf.set(link, provider);
@@ -114,13 +135,19 @@ export class LanguagesHost implements Languages {
     return resolved;
   }
 
-  /**
-   * Makes the links of a CodeMirror editor's text navigable (see `linkExtension`): `path` is the file the text is in,
-   * now (null: none, no links); `targets` does what following one does.
-   */
-  codeMirrorExtension(targets: LinkTargets, path: () => ProjectPath | null): Extension {
-    return linkExtension({ ...targets, provideDocumentLinks: (document) => this.provideDocumentLinks(document), resolveDocumentLink: (link) => this.resolveDocumentLink(link) }, path);
+  createDocumentLinksCodeMirrorExtension(languageId: string, path: () => ProjectPath | null): Extension {
+    const actions = {
+      ...this.targets,
+      provideDocumentLinks: (document: TextDocument) => this.provideDocumentLinks(document),
+      resolveDocumentLink: (link: DocumentLink) => this.resolveDocumentLink(link),
+    };
+    return linkExtension(actions, languageId, path);
   }
+}
+
+function matches(selector: DocumentSelector, document: TextDocument): boolean {
+  const filters: readonly DocumentFilter[] = Array.isArray(selector) ? selector : [selector];
+  return filters.some((filter) => filter.language === undefined || filter.language === document.languageId);
 }
 
 function overlap(a: DocumentLink, b: DocumentLink): boolean {

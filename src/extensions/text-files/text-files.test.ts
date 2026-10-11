@@ -6,6 +6,7 @@ import { EditorView } from '@codemirror/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import { Project, type FileChange } from '../../core/project/project';
+import { SourceRange } from '../../core/typst-document/typst-document';
 import type { WindowApi } from '../../hosts/window/window';
 import { WorkbenchHost } from '../../hosts/workbench/workbench';
 import { textFiles } from './text-files';
@@ -70,6 +71,24 @@ describe('text files', () => {
     workbench.open(path('/refs.bib'));
     project.apply({ kind: 'update', path: path('/refs.bib'), content: new TextEncoder().encode('@book{ä}\n') });
     expect(view().state.doc.toString()).toBe('@book{ä}\n');
+  });
+
+  it('shows the document links of the providers for its language (by ending: a .bib is bibtex)', () => {
+    const host = document.body.appendChild(document.createElement('div'));
+    const project = new Project(path('/main.typ'), { '/main.typ': '= Main\n', '/refs.bib': '@book{a}\n' });
+    const workbench = new WorkbenchHost(host, project);
+    const linkAt = (from: number, to: number) => ({ provideDocumentLinks: () => [{ range: SourceRange.of({ from, to }) }] });
+    workbench.activate([
+      textFiles(),
+      {
+        id: 'links',
+        activate: ({ languages, subscriptions }) =>
+          subscriptions.push(languages.registerDocumentLinkProvider({ language: 'bibtex' }, linkAt(1, 5)), languages.registerDocumentLinkProvider({ language: 'typst' }, linkAt(6, 7))),
+      },
+    ]);
+    workbench.open(path('/refs.bib'));
+    const marked = [...host.querySelectorAll('[data-testid=typst-text-file] .typst-source__path')].map((mark) => mark.textContent);
+    expect(marked).toEqual(['book']);
   });
 
   it('a refused save is an error message', async () => {

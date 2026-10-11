@@ -64,7 +64,11 @@ describe('describeContribution', () => {
   it('providers: their name, priority and trigger', () => {
     function images() {}
     expect(describeAt('visualView.registerRawBoxRenderer', images, { priority: 110 })).toEqual({ title: 'images', details: ['priority 110'], rank: [-110] });
-    expect(describeAt('languages.registerDocumentLinkProvider', { provideDocumentLinks: () => [] })).toEqual({ title: 'document links', details: ['priority 100'], rank: [-100] });
+    expect(describeAt('languages.registerDocumentLinkProvider', { language: 'typst' }, { provideDocumentLinks: () => [] })).toEqual({
+      title: 'document links',
+      details: ['language typst', 'priority 100'],
+      rank: [-100],
+    });
     expect(describeAt('visualView.registerCompletionItemProvider', { provideCompletionItems: () => [] }, { char: '@', allowedPrefixes: [' ', '('] })).toEqual({
       title: 'trigger "@"',
       details: ['after " ", "("'],

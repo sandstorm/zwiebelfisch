@@ -42,7 +42,7 @@ createView(parent, document, { onSelection? }) → SourceView    // the workbenc
   [`typstLanguage`], [Typst syntax highlighting and indentation (`codemirror-lang-typst`, without its linter), code colors.],
   [`diagnostics`], [`lint`: the compiler's diagnostics underlined.],
   [`collaboration`], [Other users' carets and selections; `perUserUndo`.],
-  [workbench], [Document links of every provider (@architecture-workbench).],
+  [workbench], [Document links of every provider for `typst` (@architecture-workbench).],
 )
 
 Writing one: @extensions-source-view-and-preview.

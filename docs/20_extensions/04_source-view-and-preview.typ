@@ -18,11 +18,11 @@ subscriptions.push(
 
 == Document links <extensions-source-view-and-preview-links>
 
-`languages.registerDocumentLinkProvider(provider, { priority? })` adds links to Typst text. The Source views and the code of raw boxes show them: Ctrl+click or Alt+Enter (⌘-click or ⌥↩ on Mac) follows a link, hovering shows it.
+`languages.registerDocumentLinkProvider(selector, provider, { priority? })` adds links to the texts `selector` matches. The Source views, the code of raw boxes and the text files' editor show them: Ctrl+click or Alt+Enter (⌘-click or ⌥↩ on Mac) follows a link, hovering shows it.
 
 ```ts
-languages.registerDocumentLinkProvider({
-  provideDocumentLinks(document) {   // TypstText: path, text
+languages.registerDocumentLinkProvider({ language: 'typst' }, {
+  provideDocumentLinks(document) {   // TextDocument: path, languageId, text
     return [...document.text.matchAll(/TODO/g)].map((m) => ({
       range: SourceRange.of({ from: m.index, to: m.index + 4 }),
       tooltip: 'Open the to-do list',
@@ -32,10 +32,13 @@ languages.registerDocumentLinkProvider({
 });
 ```
 
+- `TextDocument`: `path` (the file the text is in), `languageId`, `text` (a whole file's, or a part of one: a raw box's code). Language ids: `typst` for Typst files and raw boxes; the text files by ending: `csv`, `json`, `yaml`, `toml`, `xml`, `bibtex`, `plaintext`, `markdown`, `mermaid`. Whoever hands a text over names its language; the host knows none.
+- `DocumentSelector`: a `DocumentFilter` `{ language? }` or a list of them; a filter without `language` matches every text.
 - `DocumentLink`: `range` (a `SourceRange` in the text given), `target?` (a project file), `tooltip?`, `command?` (a `Command { title, command, arguments? }` the hover offers, e.g. creating a missing file).
 - Keep `provideDocumentLinks` cheap; `resolveDocumentLink(link)` may fill in `target`, `tooltip` or `command` when a link is shown or followed.
-- Where links of several providers overlap, the higher `priority` wins (default 100; equal: registration order).
+- Only the providers whose selector matches a text are asked; where links of several providers overlap, the higher `priority` wins (default 100; equal: registration order).
 - An extension that shows links itself (an image box's path) reads `languages.provideDocumentLinks(document)` and `languages.resolveDocumentLink(link)`.
+- An extension's own CodeMirror editor shows them as the Source views do with `languages.createDocumentLinksCodeMirrorExtension(languageId, () => path)`.
 
 == Preview <extensions-source-view-and-preview-preview>
 

@@ -2,13 +2,13 @@
 // links, which open the file or offer to create a missing Typst file. Entry of extensions/document-links/. See
 // docs/20_extensions/04_source-view-and-preview.typ.
 // Why an extension: finding paths is Typst syntax (core/typst-syntax), showing and following links is the hosts'
-// (every view shows the links of every `DocumentLinkProvider`); where a path leads in this project, and that a missing
+// (every view shows the links of every `DocumentLinkProvider` for its language); where a path leads in this project, and that a missing
 // Typst file may be created, is this extension's policy.
 import { findFilePaths } from '../../core/typst-syntax/typst-syntax';
 import { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
-import type { DocumentLink, DocumentLinkProvider, TypstText } from '../../hosts/languages/languages';
+import type { DocumentLink, DocumentLinkProvider, TextDocument } from '../../hosts/languages/languages';
 
 /**
  * Links the file paths of all Typst text (the Source views, raw boxes, an image box's path): they resolve from the
@@ -20,7 +20,7 @@ export function documentLinks(): TypstExtension {
     id: 'document-links',
     activate({ project, commands, languages, workspace, workbench, subscriptions }) {
       subscriptions.push(
-        languages.registerDocumentLinkProvider(new FilePathLinks(project)),
+        languages.registerDocumentLinkProvider({ language: 'typst' }, new FilePathLinks(project)),
         commands.registerCommand(CREATE_FILE, async (path: string) => {
           const target = ProjectPath.parse(path);
           if (!target) throw new Error(`Not a project path: ${path}`);
@@ -42,7 +42,7 @@ class FilePathLinks implements DocumentLinkProvider {
 
   constructor(private readonly project: Project) {}
 
-  provideDocumentLinks({ path, text }: TypstText): DocumentLink[] {
+  provideDocumentLinks({ path, text }: TextDocument): DocumentLink[] {
     return findFilePaths(text).map(({ path: reference, from, to }) => {
       const link: DocumentLink = { range: { from, to } };
       this.#targets.set(link, ProjectPath.resolve(path, reference));

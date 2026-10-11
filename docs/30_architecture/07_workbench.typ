@@ -31,7 +31,7 @@
   [`commands`], [commands by id (`<extension>.<verb>`), key bindings], [—],
   [`window`], [messages, input box, quick pick, save dialog, contributed menus (`showContextMenu`), progress (`withProgress`), search everywhere's providers, status bar items, custom editors, file decorations, `activeFile`, `activeTextEditor`], [status bar: `alignment` + `priority`; custom editors: the user's choice, then `priority` (`'fallback'`: only files no other editor matches), then pattern specificity; search providers: `order`, then `id`],
   [`scm`], [source controls], [— (all listed; a duplicate id throws)],
-  [`languages`], [document link providers], [`priority` (default 100)],
+  [`languages`], [document link providers for a `DocumentSelector` (by `languageId`)], [`priority` (default 100)],
   [`workspace`], [`applyEdit`, settings (`getConfiguration`, `onDidChangeConfiguration`)], [—],
   [`workbench`], [`open`, side panels (left and right), editor frame, menus, style sheets, dropped files, `user`], [menus: `group` + `order`; side panels: `order` within their side],
 )
