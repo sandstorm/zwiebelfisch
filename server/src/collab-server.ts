@@ -5,6 +5,11 @@ import { Server, type Configuration, type Extension } from '@hocuspocus/server';
 import { sharedToken, type Authenticate } from './auth.ts';
 import { GitLabExtension, type GitLabOptions } from './gitlab/gitlab-extension.ts';
 
+/** The WebSocket server (not listening yet: call `listen()`). */
+export function createCollabServer(options: CollabOptions & { port: number; address?: string }): Server {
+  return new Server({ ...collabConfiguration(options), port: options.port, address: options.address ?? '127.0.0.1' });
+}
+
 export interface CollabOptions {
   /**
    * Where rooms are loaded from and stored to: a Hocuspocus extension with
@@ -49,9 +54,4 @@ export function collabConfiguration(options: CollabOptions = {}): Partial<Config
       return { user: await authenticate(token, documentName) };
     },
   };
-}
-
-/** The WebSocket server (not listening yet: call `listen()`). */
-export function createCollabServer(options: CollabOptions & { port: number; address?: string }): Server {
-  return new Server({ ...collabConfiguration(options), port: options.port, address: options.address ?? '127.0.0.1' });
 }

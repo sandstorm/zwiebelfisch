@@ -2,20 +2,6 @@
 import { diff3Merge, diffPatch } from 'node-diff3';
 import type { ConflictRange, FileConflict } from '../../../src/core/room-protocol/room-protocol.ts';
 
-/** A replacement in pre-change coordinates (UTF-16). */
-export interface TextEdit {
-  from: number;
-  to: number;
-  insert: string;
-}
-
-/** The lines of `text`, each with its line break (so joining them gives `text` back). */
-function lines(text: string): string[] {
-  return text.match(/[^\n]*\n|[^\n]+$/g) ?? [];
-}
-
-const length = (parts: string[]) => parts.reduce((sum, part) => sum + part.length, 0);
-
 /**
  * Three-way merge by lines (diff3): the changes from `base` to `current` and
  * from `base` to `upstream`, combined. Where both changed the same lines
@@ -36,6 +22,13 @@ export function merge3(base: string, current: string, upstream: string): { merge
   return conflicts.length ? { conflicts } : { merged: merged.join('') };
 }
 
+/** A replacement in pre-change coordinates (UTF-16). */
+export interface TextEdit {
+  from: number;
+  to: number;
+  insert: string;
+}
+
 /**
  * Small edits that turn `from` into `to`: changed lines, each narrowed to
  * the characters that differ, so text around them (and positions anchored
@@ -50,24 +43,12 @@ export function textEdits(from: string, to: string): TextEdit[] {
   });
 }
 
-/** The edit replacing `removed` (at `start`) by `inserted`, without their common prefix and suffix. */
-function narrow(start: number, removed: string, inserted: string): TextEdit {
-  let prefix = 0;
-  const max = Math.min(removed.length, inserted.length);
-  while (prefix < max && removed[prefix] === inserted[prefix]) prefix++;
-  let suffix = 0;
-  while (suffix < max - prefix && removed[removed.length - 1 - suffix] === inserted[inserted.length - 1 - suffix]) suffix++;
-  return { from: start + prefix, to: start + removed.length - suffix, insert: inserted.slice(prefix, inserted.length - suffix) };
-}
-
 /** `text` with `edits` (ascending, pre-change coordinates) applied. */
 export function applyEdits(text: string, edits: TextEdit[]): string {
   let result = text;
   for (const edit of [...edits].reverse()) result = result.slice(0, edit.from) + edit.insert + result.slice(edit.to);
   return result;
 }
-
-type Texts = Record<string, string>;
 
 /**
  * Merges upstream's changes to a set of files (path → text) into the room's
@@ -96,3 +77,22 @@ export function mergeFiles(base: Texts, current: Texts, upstream: Texts): { chan
   }
   return { changes, conflicts };
 }
+
+/** The lines of `text`, each with its line break (so joining them gives `text` back). */
+function lines(text: string): string[] {
+  return text.match(/[^\n]*\n|[^\n]+$/g) ?? [];
+}
+
+const length = (parts: string[]) => parts.reduce((sum, part) => sum + part.length, 0);
+
+/** The edit replacing `removed` (at `start`) by `inserted`, without their common prefix and suffix. */
+function narrow(start: number, removed: string, inserted: string): TextEdit {
+  let prefix = 0;
+  const max = Math.min(removed.length, inserted.length);
+  while (prefix < max && removed[prefix] === inserted[prefix]) prefix++;
+  let suffix = 0;
+  while (suffix < max - prefix && removed[removed.length - 1 - suffix] === inserted[inserted.length - 1 - suffix]) suffix++;
+  return { from: start + prefix, to: start + removed.length - suffix, insert: inserted.slice(prefix, inserted.length - suffix) };
+}
+
+type Texts = Record<string, string>;

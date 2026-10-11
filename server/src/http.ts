@@ -1,8 +1,12 @@
-// The server's small HTTP layer: requests and responses as plain values, and Node's as them. Used by the GitLab
-// endpoints (gitlab/http-endpoints.ts) and the playground. See docs/30_architecture/09_server.typ.
+// The server's small HTTP layer. See docs/30_architecture/09_server.typ.
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
-/** An HTTP request, as much of it as the endpoints need. */
+/**
+ * An HTTP request, as much of it as the endpoints need.
+ *
+ * Requests and responses as plain values, and Node's as them. Used by the GitLab endpoints (gitlab/http-endpoints.ts)
+ * and the playground.
+ */
 export interface HttpRequest {
   method: string;
   /** Path and query. */
@@ -16,8 +20,6 @@ export interface HttpResponse {
   headers: Record<string, string>;
   body: string | Uint8Array;
 }
-
-const CORS = { 'Access-Control-Allow-Origin': '*' };
 
 /** A response anyone may read (CORS `*`), plain text unless `headers` say otherwise. */
 export const respond = (status: number, body: string | Uint8Array = '', headers: Record<string, string> = {}): HttpResponse => ({
@@ -41,6 +43,8 @@ export function sendResponse(response: ServerResponse, result: HttpResponse): vo
   response.writeHead(result.status, result.headers);
   response.end(result.body);
 }
+
+const CORS = { 'Access-Control-Allow-Origin': '*' };
 
 function headerValue(value: string | string[] | undefined): string | null {
   return (Array.isArray(value) ? value[0] : value) ?? null;

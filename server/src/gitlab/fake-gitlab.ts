@@ -7,22 +7,6 @@ import type { Fetch } from './gitlab-api.ts';
 // snapshots, and the REST endpoints GitLabProject calls (API v4), answered
 // through an injected `fetch`. No network, no ports.
 
-interface Commit {
-  sha: string;
-  parent: string | null;
-  files: Map<string, Uint8Array>;
-  message: string;
-  author: { name: string; email: string };
-}
-
-type Files = Record<string, string | Uint8Array | null>;
-
-const encoder = new TextEncoder();
-const bytes = (content: string | Uint8Array) => (typeof content === 'string' ? encoder.encode(content) : content);
-const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
-  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...headers } });
-const fail = (status: number, message: string) => json({ message }, status);
-
 export class FakeGitLab {
   readonly url = 'https://gitlab.test';
   readonly token = 'server-token';
@@ -213,6 +197,21 @@ export class FakeGitLab {
   }
 }
 
+type Files = Record<string, string | Uint8Array | null>;
+
+interface Commit {
+  sha: string;
+  parent: string | null;
+  files: Map<string, Uint8Array>;
+  message: string;
+  author: { name: string; email: string };
+}
+
+const fail = (status: number, message: string) => json({ message }, status);
+
+const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
+  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...headers } });
+
 /** The branch a request is about (its head, a commit to it), or null. */
 function branchOf(method: string, path: string, body: string | undefined): string | null {
   const match = path.match(/^\/repository\/branches\/([^/]+)$/);
@@ -229,3 +228,7 @@ interface GitLabAction {
   encoding?: 'text' | 'base64';
   last_commit_id?: string;
 }
+
+const bytes = (content: string | Uint8Array) => (typeof content === 'string' ? encoder.encode(content) : content);
+
+const encoder = new TextEncoder();

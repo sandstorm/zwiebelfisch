@@ -1,12 +1,6 @@
 // Editors: who edited a GitLab room since its last commit, how often, and since when. See gitlab-room.ts.
 import type { Author } from './gitlab-room.ts';
 
-/** The edits since a point in time: per editor (by name) who they are and how many edits, and when the first was. */
-export interface EditTally {
-  readonly since: number | null;
-  readonly editors: ReadonlyMap<string, { readonly author: Author; readonly edits: number }>;
-}
-
 /**
  * The edits of a room not committed yet, by editor (a name; the first author seen under it): counted per change
  * of the room's Y.Doc. A commit takes the tally (`take`) and puts it back if it did not happen (`restore`), so
@@ -56,8 +50,11 @@ export class Editors {
   }
 }
 
-/** How many paths a generated commit message names; it counts the others. */
-const NAMED_PATHS = 3;
+/** The edits since a point in time: per editor (by name) who they are and how many edits, and when the first was. */
+export interface EditTally {
+  readonly since: number | null;
+  readonly editors: ReadonlyMap<string, { readonly author: Author; readonly edits: number }>;
+}
 
 /**
  * The author and message of a commit the server makes by itself: by whoever made the most edits (the first of them
@@ -83,3 +80,6 @@ export function withCoAuthors(message: string, edits: EditTally, author: Author)
   if (!others.length) return message;
   return `${message}\n\n${others.map(({ author: { name, email } }) => `Co-authored-by: ${name} <${email}>`).join('\n')}`;
 }
+
+/** How many paths a generated commit message names; it counts the others. */
+const NAMED_PATHS = 3;

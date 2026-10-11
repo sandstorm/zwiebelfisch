@@ -3,12 +3,6 @@ import type { ChangedFile, RoomMeta } from '../../../src/core/room-protocol/room
 import { blobSha } from './blob-sha.ts';
 import type { CommitAction } from './gitlab-api.ts';
 
-/** The room's files as they are now: `.typ` texts, and the other files (blob sha, or uploaded bytes). */
-export interface RoomFiles {
-  texts: Record<string, string>;
-  assets: Record<string, string | Uint8Array>;
-}
-
 /**
  * The actions of one commit that turns the repository at the room's base
  * into the room's files: updates, creations, deletions, and moves (a deleted
@@ -18,6 +12,12 @@ export interface RoomFiles {
  */
 export function commitActions(meta: RoomMeta, files: RoomFiles): CommitAction[] {
   return [...textActions(meta, files.texts), ...assetActions(meta.baseAssets, files.assets)];
+}
+
+/** The room's files as they are now: `.typ` texts, and the other files (blob sha, or uploaded bytes). */
+export interface RoomFiles {
+  texts: Record<string, string>;
+  assets: Record<string, string | Uint8Array>;
 }
 
 /** The files a commit of `actions` changes, by path (a move: its old path deleted, its new one added). */
@@ -44,31 +44,6 @@ function textActions(meta: RoomMeta, texts: Record<string, string>): CommitActio
   for (const path of created) actions.push({ action: 'create', path, content: texts[path] });
   for (const path of deleted) actions.push({ action: 'delete', path, lastCommitId: lastCommits[path] });
   return actions;
-}
-
-function assetActions(base: Record<string, string>, assets: Record<string, string | Uint8Array>): CommitAction[] {
-  const actions: CommitAction[] = [];
-  const deleted = Object.keys(base).filter((path) => !(path in assets));
-  for (const [path, value] of Object.entries(assets)) {
-    const action = assetAction(base, deleted, path, value);
-    if (action) actions.push(action);
-  }
-  for (const path of deleted) actions.push({ action: 'delete', path });
-  return actions;
-}
-
-/** The action for one of the room's other files, if it changed; a rename takes its source out of `deleted`. */
-function assetAction(base: Record<string, string>, deleted: string[], path: string, value: string | Uint8Array): CommitAction | null {
-  if (typeof value !== 'string') {
-    if (base[path] === blobSha(value)) return null;
-    return { action: path in base ? 'update' : 'create', path, content: value };
-  }
-  if (base[path] === value) return null;
-  // A repository file under a new path: a rename (moved without new content).
-  const source = deleted.findIndex((old) => base[old] === value);
-  if (source < 0) return null;
-  const [from] = deleted.splice(source, 1);
-  return { action: 'move', path, previousPath: from };
 }
 
 /** Pairs of (deleted, created) paths whose contents are similar enough to call it a rename; best pairs first. */
@@ -104,4 +79,29 @@ function similarity(a: string, b: string): number {
     }
   }
   return (2 * shared) / (left.length + right.length);
+}
+
+function assetActions(base: Record<string, string>, assets: Record<string, string | Uint8Array>): CommitAction[] {
+  const actions: CommitAction[] = [];
+  const deleted = Object.keys(base).filter((path) => !(path in assets));
+  for (const [path, value] of Object.entries(assets)) {
+    const action = assetAction(base, deleted, path, value);
+    if (action) actions.push(action);
+  }
+  for (const path of deleted) actions.push({ action: 'delete', path });
+  return actions;
+}
+
+/** The action for one of the room's other files, if it changed; a rename takes its source out of `deleted`. */
+function assetAction(base: Record<string, string>, deleted: string[], path: string, value: string | Uint8Array): CommitAction | null {
+  if (typeof value !== 'string') {
+    if (base[path] === blobSha(value)) return null;
+    return { action: path in base ? 'update' : 'create', path, content: value };
+  }
+  if (base[path] === value) return null;
+  // A repository file under a new path: a rename (moved without new content).
+  const source = deleted.findIndex((old) => base[old] === value);
+  if (source < 0) return null;
+  const [from] = deleted.splice(source, 1);
+  return { action: 'move', path, previousPath: from };
 }

@@ -21,50 +21,6 @@ import { GitLabRoom, type Author } from './gitlab-room.ts';
 import { nodeRequest, sendResponse, type HttpRequest, type HttpResponse } from '../http.ts';
 import { handleHttp } from './http-endpoints.ts';
 
-export interface GitLabOptions extends GitLabConfig {
-  /** The secret GitLab sends as `X-Gitlab-Token` with push webhooks (unset: no webhook endpoint). */
-  webhookSecret?: string;
-  /** The commit author's email when the saving user's is not known (default `typst-editor@localhost`). */
-  authorEmail?: string;
-  /**
-   * Minutes without edits after which a room commits its changes by itself (also 20 s after the last user left);
-   * `false`: never, only "Save to GitLab…". Default 10.
-   */
-  autoCommit?: number | false;
-}
-
-const DEFAULT_AUTHOR_EMAIL = 'typst-editor@localhost';
-const DEFAULT_AUTO_COMMIT = 10;
-
-/**
- * The `autoCommit` option from its environment variable (`TYPST_GITLAB_AUTO_COMMIT`): `off` (or `false`, `0`), or
- * minutes (fractions allowed); unset or empty: the default. Throws on anything else.
- */
-export function parseAutoCommit(value: string | undefined): number | false | undefined {
-  const text = value?.trim().toLowerCase();
-  if (!text) return undefined;
-  if (text === 'off' || text === 'false' || text === '0') return false;
-  const minutes = Number(text);
-  if (!Number.isFinite(minutes) || minutes <= 0) throw new Error(`TYPST_GITLAB_AUTO_COMMIT: "off" or minutes, not "${value}"`);
-  return minutes;
-}
-
-/** The project and branch of a GitLab room name (`gitlab:<project id or path>@<branch>`), or null. */
-export function parseRoomName(name: string): { project: string; branch: string } | null {
-  if (!name.startsWith(GITLAB_ROOM_PREFIX)) return null;
-  const rest = name.slice(GITLAB_ROOM_PREFIX.length);
-  const at = rest.indexOf('@');
-  if (at <= 0 || at === rest.length - 1) return null;
-  return { project: rest.slice(0, at), branch: rest.slice(at + 1) };
-}
-
-interface OpenRoom {
-  room: GitLabRoom;
-  document: Document;
-  project: string;
-  branch: string;
-}
-
 /**
  * GitLab-backed rooms (`gitlab:<project>@<branch>`) for the collaboration
  * server, as a Hocuspocus extension: loads a branch into a new room, merges
@@ -189,12 +145,48 @@ export class GitLabExtension implements Extension {
   }
 }
 
-/** The connection context of a Hocuspocus transaction origin (`{ source: 'connection', connection }` or `{ source: 'local', context }`). */
-function contextOf(origin: unknown): Record<string, unknown> | undefined {
-  const value = origin as { source?: unknown; connection?: { context?: unknown }; context?: unknown } | null;
-  const context = value?.source === 'connection' ? value.connection?.context : value?.source === 'local' ? value.context : undefined;
-  return typeof context === 'object' && context !== null ? (context as Record<string, unknown>) : undefined;
+export interface GitLabOptions extends GitLabConfig {
+  /** The secret GitLab sends as `X-Gitlab-Token` with push webhooks (unset: no webhook endpoint). */
+  webhookSecret?: string;
+  /** The commit author's email when the saving user's is not known (default `typst-editor@localhost`). */
+  authorEmail?: string;
+  /**
+   * Minutes without edits after which a room commits its changes by itself (also 20 s after the last user left);
+   * `false`: never, only "Save to GitLab…". Default 10.
+   */
+  autoCommit?: number | false;
 }
+
+/**
+ * The `autoCommit` option from its environment variable (`TYPST_GITLAB_AUTO_COMMIT`): `off` (or `false`, `0`), or
+ * minutes (fractions allowed); unset or empty: the default. Throws on anything else.
+ */
+export function parseAutoCommit(value: string | undefined): number | false | undefined {
+  const text = value?.trim().toLowerCase();
+  if (!text) return undefined;
+  if (text === 'off' || text === 'false' || text === '0') return false;
+  const minutes = Number(text);
+  if (!Number.isFinite(minutes) || minutes <= 0) throw new Error(`TYPST_GITLAB_AUTO_COMMIT: "off" or minutes, not "${value}"`);
+  return minutes;
+}
+
+/** The project and branch of a GitLab room name (`gitlab:<project id or path>@<branch>`), or null. */
+export function parseRoomName(name: string): { project: string; branch: string } | null {
+  if (!name.startsWith(GITLAB_ROOM_PREFIX)) return null;
+  const rest = name.slice(GITLAB_ROOM_PREFIX.length);
+  const at = rest.indexOf('@');
+  if (at <= 0 || at === rest.length - 1) return null;
+  return { project: rest.slice(0, at), branch: rest.slice(at + 1) };
+}
+
+interface OpenRoom {
+  room: GitLabRoom;
+  document: Document;
+  project: string;
+  branch: string;
+}
+
+const DEFAULT_AUTO_COMMIT = 10;
 
 function parseMessage(payload: string): ClientMessage | null {
   try {
@@ -203,3 +195,12 @@ function parseMessage(payload: string): ClientMessage | null {
     return null;
   }
 }
+
+/** The connection context of a Hocuspocus transaction origin (`{ source: 'connection', connection }` or `{ source: 'local', context }`). */
+function contextOf(origin: unknown): Record<string, unknown> | undefined {
+  const value = origin as { source?: unknown; connection?: { context?: unknown }; context?: unknown } | null;
+  const context = value?.source === 'connection' ? value.connection?.context : value?.source === 'local' ? value.context : undefined;
+  return typeof context === 'object' && context !== null ? (context as Record<string, unknown>) : undefined;
+}
+
+const DEFAULT_AUTHOR_EMAIL = 'typst-editor@localhost';

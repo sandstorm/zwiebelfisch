@@ -1,6 +1,4 @@
-// GitLabRoom: one GitLab-backed room: loads the branch into the Y.Doc, commits versions (on a save, or by itself when
-// the room is idle or left), merges upstream pushes, and keeps the room's uncommitted changes and conflicts in its
-// meta map. See docs/30_architecture/09_server.typ.
+// GitLabRoom. See docs/30_architecture/09_server.typ.
 import * as Y from 'yjs';
 import {
   ASSETS_MAP,
@@ -19,40 +17,6 @@ import { automaticCommit, Editors, withCoAuthors, type EditTally } from './edito
 import { GitLabError, type GitLabProject } from './gitlab-api.ts';
 import { mergeFiles, textEdits } from './merge.ts';
 
-/** How often a save merges upstream and tries again when the branch keeps moving. */
-const SAVE_ATTEMPTS = 3;
-
-/** Milliseconds between an edit and the room's `changes` telling it (edits within it are told together). */
-const CHANGES_DELAY = 500;
-
-/** Milliseconds the room waits after the last user left before it commits by itself (they may be back: a reload). */
-export const LEAVE_DELAY = 20_000;
-
-const MINUTE = 60_000;
-
-export interface Author {
-  name: string;
-  email: string;
-}
-
-export interface RoomOptions {
-  blobs: BlobCache;
-  /** Who made a change of the room's Y.Doc, from the change's transaction origin (never asked for the room's own); null: unknown. */
-  editorOf(origin: unknown): Author | null;
-  /** The email of an editor known by name only (one stored with the room). */
-  authorEmail: string;
-  /**
-   * Minutes without edits after which the room commits its changes by itself; it does so, too, a little while after
-   * the last user left (`left`). Null: never.
-   */
-  autoCommit: number | null;
-  /** Tells everyone in the room the outcome of a commit the room made by itself. */
-  broadcast(message: ServerMessage): void;
-}
-
-/** Who commits when nobody is known to have edited (a stored room's edits, made before the server started). */
-const NOBODY = 'Typst editor';
-
 /**
  * One room backed by a GitLab branch: the room's Y.Doc holds the `.typ` files
  * (`files`), the other files (`assets`: blob sha or uploaded bytes) and the
@@ -70,6 +34,9 @@ const NOBODY = 'Typst editor';
  * Operations on a room run one after another. Everything the room knows lives
  * in the Y.Doc, so a room stored and loaded again (any storage) continues
  * where it was; only the number of edits per editor starts over.
+ *
+ * One GitLab-backed room: loads the branch into the Y.Doc, commits versions (on a save, or by itself when the room is
+ * idle or left), merges upstream pushes, and keeps the room's uncommitted changes and conflicts in its meta map.
  */
 export class GitLabRoom {
   private queue: Promise<unknown> = Promise.resolve();
@@ -384,14 +351,48 @@ export class GitLabRoom {
   }
 }
 
+/** Milliseconds the room waits after the last user left before it commits by itself (they may be back: a reload). */
+export const LEAVE_DELAY = 20_000;
+
+export interface Author {
+  name: string;
+  email: string;
+}
+
+export interface RoomOptions {
+  blobs: BlobCache;
+  /** Who made a change of the room's Y.Doc, from the change's transaction origin (never asked for the room's own); null: unknown. */
+  editorOf(origin: unknown): Author | null;
+  /** The email of an editor known by name only (one stored with the room). */
+  authorEmail: string;
+  /**
+   * Minutes without edits after which the room commits its changes by itself; it does so, too, a little while after
+   * the last user left (`left`). Null: never.
+   */
+  autoCommit: number | null;
+  /** Tells everyone in the room the outcome of a commit the room made by itself. */
+  broadcast(message: ServerMessage): void;
+}
+
+/** Who commits when nobody is known to have edited (a stored room's edits, made before the server started). */
+const NOBODY = 'Typst editor';
+
+/** Milliseconds between an edit and the room's `changes` telling it (edits within it are told together). */
+const CHANGES_DELAY = 500;
+
+const MINUTE = 60_000;
+
+/** The author and message of a commit of `edits`, which changes the files at `paths`. */
+type Compose = (edits: EditTally, paths: string[]) => { author: Author; message: string };
+
 /** What went wrong in a commit: GitLab's answer, or that it could not be reached (fetch failed). */
 function failureMessage(error: unknown): string {
   const message = String((error as Error)?.message ?? error);
   return error instanceof GitLabError ? message : `GitLab could not be reached (${message})`;
 }
 
-/** The author and message of a commit of `edits`, which changes the files at `paths`. */
-type Compose = (edits: EditTally, paths: string[]) => { author: Author; message: string };
+/** How often a save merges upstream and tries again when the branch keeps moving. */
+const SAVE_ATTEMPTS = 3;
 
 function replace(text: Y.Text, edit: { from: number; to: number; insert: string }): void {
   if (edit.to > edit.from) text.delete(edit.from, edit.to - edit.from);

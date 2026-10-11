@@ -1,47 +1,4 @@
 // GitLabProject: the GitLab REST calls a room needs (tree, blobs, commits). See gitlab-extension.ts.
-/** A `fetch` (injected, so tests can answer in-process). */
-export type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
-
-export interface GitLabConfig {
-  /** The GitLab instance, e.g. `https://gitlab.com`. */
-  url: string;
-  /** A token with `api` scope for the projects the rooms edit (server-side; never sent to clients). */
-  token: string;
-  fetch?: Fetch;
-}
-
-/** A file of the repository (absolute project path, `/chapter.typ`) and its blob. */
-export interface TreeEntry {
-  path: string;
-  sha: string;
-}
-
-export interface RepositoryFile {
-  content: Uint8Array;
-  /** The commit that last changed the file (up to the ref it was read at). */
-  lastCommitId: string;
-}
-
-export type CommitAction =
-  | { action: 'create' | 'update'; path: string; content: string | Uint8Array; lastCommitId?: string }
-  | { action: 'move'; path: string; previousPath: string; content?: string | Uint8Array; lastCommitId?: string }
-  | { action: 'delete'; path: string; lastCommitId?: string };
-
-export interface CommitRequest {
-  branch: string;
-  message: string;
-  author: { name: string; email: string };
-  actions: CommitAction[];
-}
-
-export class GitLabError extends Error {
-  readonly status: number;
-
-  constructor(status: number, message: string) {
-    super(message);
-    this.status = status;
-  }
-}
 
 /**
  * The few GitLab REST calls (API v4) a room needs, for one project. Hidden:
@@ -118,6 +75,50 @@ export class GitLabProject {
     const response = await this.fetch(this.api + path, { ...init, headers });
     if (!response.ok) throw new GitLabError(response.status, await errorMessage(response));
     return response;
+  }
+}
+
+/** A `fetch` (injected, so tests can answer in-process). */
+export type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
+
+export interface GitLabConfig {
+  /** The GitLab instance, e.g. `https://gitlab.com`. */
+  url: string;
+  /** A token with `api` scope for the projects the rooms edit (server-side; never sent to clients). */
+  token: string;
+  fetch?: Fetch;
+}
+
+/** A file of the repository (absolute project path, `/chapter.typ`) and its blob. */
+export interface TreeEntry {
+  path: string;
+  sha: string;
+}
+
+export interface RepositoryFile {
+  content: Uint8Array;
+  /** The commit that last changed the file (up to the ref it was read at). */
+  lastCommitId: string;
+}
+
+export type CommitAction =
+  | { action: 'create' | 'update'; path: string; content: string | Uint8Array; lastCommitId?: string }
+  | { action: 'move'; path: string; previousPath: string; content?: string | Uint8Array; lastCommitId?: string }
+  | { action: 'delete'; path: string; lastCommitId?: string };
+
+export interface CommitRequest {
+  branch: string;
+  message: string;
+  author: { name: string; email: string };
+  actions: CommitAction[];
+}
+
+export class GitLabError extends Error {
+  readonly status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
   }
 }
 

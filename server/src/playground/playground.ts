@@ -1,5 +1,4 @@
-// The playground's server side (mise run demo): a fake GitLab holding the advanced example, and the endpoints that
-// simulate an upstream push or a GitLab outage. See docs/30_architecture/11_development.typ.
+// The playground's server side (mise run demo). See docs/30_architecture/11_development.typ.
 import { randomUUID } from 'node:crypto';
 import type { Extension, onRequestPayload } from '@hocuspocus/server';
 import type { CollabOptions } from '../collab-server.ts';
@@ -11,21 +10,13 @@ import { nodeRequest, respond, sendResponse, type HttpRequest, type HttpResponse
 // fake GitLab, plus dev-only HTTP endpoints the playground bar calls. Never
 // part of a real deployment (server/src/main.ts does not load this file).
 
-/** The fake repository's project path; the demo's GitLab mode opens `PLAYGROUND_ROOM`. */
-export const PLAYGROUND_PROJECT = 'demo/report';
-export const PLAYGROUND_ROOM = `gitlab:${PLAYGROUND_PROJECT}@main`;
-
-/** What a simulated upstream commit does: add a paragraph, or revise the first heading (to provoke a conflict). */
-export type UpstreamChange = 'append' | 'heading';
-
-/** Handles a request the way the GitLab extension does (here: its push webhook). */
-type Deliver = (request: HttpRequest) => Promise<HttpResponse | null>;
-
 /**
  * The collaboration server's options for the playground: GitLab rooms backed
  * by `gitlab` (with a webhook, so simulated pushes merge right away) and the
  * playground endpoints. Plain rooms work as on every server. `appendTo` is the
  * file simulated upstream commits change; `autoCommit` as for GitLab rooms.
+ *
+ * A fake GitLab holding the advanced example, and the endpoints that simulate an upstream push or a GitLab outage.
  */
 export function playgroundOptions(gitlab: FakeGitLab, options: { appendTo: string; autoCommit?: number | false }): CollabOptions {
   const webhookSecret = randomUUID();
@@ -34,6 +25,13 @@ export function playgroundOptions(gitlab: FakeGitLab, options: { appendTo: strin
     extensions: [new PlaygroundEndpoints(gitlab, { appendTo: options.appendTo, webhookSecret })],
   };
 }
+
+/** The fake repository's project path; the demo's GitLab mode opens `PLAYGROUND_ROOM`. */
+export const PLAYGROUND_PROJECT = 'demo/report';
+export const PLAYGROUND_ROOM = `gitlab:${PLAYGROUND_PROJECT}@main`;
+
+/** What a simulated upstream commit does: add a paragraph, or revise the first heading (to provoke a conflict). */
+export type UpstreamChange = 'append' | 'heading';
 
 /**
  * Dev-only HTTP endpoints (CORS `*`, so the demo on another port may call them):
@@ -122,6 +120,11 @@ export function upstreamEdit(text: string, change: UpstreamChange, n: number): s
   return `${text.replace(/\n*$/, '')}\n\n${paragraph}`;
 }
 
+/** Handles a request the way the GitLab extension does (here: its push webhook). */
+type Deliver = (request: HttpRequest) => Promise<HttpResponse | null>;
+
+const json = (body: unknown): HttpResponse => respond(200, JSON.stringify(body), { 'Content-Type': 'application/json' });
+
 /** The request GitLab sends to the push webhook. */
 function pushWebhook(project: string, branch: string, secret: string): HttpRequest {
   const event = { object_kind: 'push', ref: `refs/heads/${branch}`, project: { path_with_namespace: project } };
@@ -132,5 +135,3 @@ function pushWebhook(project: string, branch: string, secret: string): HttpReque
     body: async () => JSON.stringify(event),
   };
 }
-
-const json = (body: unknown): HttpResponse => respond(200, JSON.stringify(body), { 'Content-Type': 'application/json' });

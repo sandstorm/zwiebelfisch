@@ -45,6 +45,20 @@ async function roomFile(request: HttpRequest, room: string, path: string, endpoi
   return respond(200, content, { 'Content-Type': contentType(path), 'Cache-Control': 'private, no-cache' });
 }
 
+function contentType(path: string): string {
+  return TYPES[path.slice(path.lastIndexOf('.') + 1).toLowerCase()] ?? 'application/octet-stream';
+}
+
+const TYPES: Record<string, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  svg: 'image/svg+xml',
+  webp: 'image/webp',
+  pdf: 'application/pdf',
+};
+
 async function webhook(request: HttpRequest, endpoints: HttpEndpoints): Promise<HttpResponse> {
   if (request.method !== 'POST') return respond(405, 'Method not allowed');
   if (request.header('x-gitlab-token') !== endpoints.webhookSecret) return respond(401, 'Unauthorized');
@@ -72,18 +86,4 @@ function pushTarget(event: PushEvent): { projects: string[]; branch: string } | 
   if (event.object_kind !== 'push' || !event.ref?.startsWith('refs/heads/')) return null;
   const projects = [event.project_id ?? event.project?.id, event.project?.path_with_namespace].filter((id) => id !== undefined).map(String);
   return { projects, branch: event.ref.slice('refs/heads/'.length) };
-}
-
-const TYPES: Record<string, string> = {
-  png: 'image/png',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  gif: 'image/gif',
-  svg: 'image/svg+xml',
-  webp: 'image/webp',
-  pdf: 'application/pdf',
-};
-
-function contentType(path: string): string {
-  return TYPES[path.slice(path.lastIndexOf('.') + 1).toLowerCase()] ?? 'application/octet-stream';
 }
