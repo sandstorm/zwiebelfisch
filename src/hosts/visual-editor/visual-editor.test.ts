@@ -44,6 +44,21 @@ describe('VisualEditor', () => {
   });
 
 
+  it('reveals a source range scrolled into view also while the focus is elsewhere (a link followed from another file)', () => {
+    const source = 'Title\n\nSome *bold* text.\n';
+    const { view, editable } = setup(source);
+    const outside = document.body.appendChild(document.createElement('input'));
+    outside.focus();
+    const scrolledTo: number[] = [];
+    const pm = (editable as HTMLElement & { editor: Editor }).editor.view;
+    // ProseMirror scrolls to the DOM's selection: called only when that is in the editor
+    pm.setProps({ handleScrollToSelection: (v) => scrolledTo.push(v.state.selection.head) > 0 });
+    view.reveal(SourceRange.of({ from: source.indexOf('text'), to: source.indexOf('text') }));
+    expect(scrolledTo).toEqual([pm.state.selection.head]);
+    expect(document.activeElement).toBe(editable);
+    expect(view.selection().from).toBe(source.indexOf('text'));
+  });
+
   it('reports the selection as the source range it shows', () => {
     const source = 'Title\n\nSome *bold* text.\n';
     const { view } = setup(source);

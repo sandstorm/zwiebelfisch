@@ -109,8 +109,9 @@ export class VisualEditor {
     const anchor = sourceToPos(doc, from);
     const head = to > from ? Math.max(anchor, sourceToPos(doc, to, -1)) : anchor;
     const selection = TextSelection.between(doc.resolve(anchor), doc.resolve(head));
-    this.tiptap.view.dispatch(this.tiptap.state.tr.setSelection(selection).scrollIntoView());
+    // focused first: ProseMirror scrolls to the DOM's selection, which it moves only while it has the focus
     this.tiptap.view.focus();
+    this.tiptap.view.dispatch(this.tiptap.state.tr.setSelection(selection).scrollIntoView());
   }
 
   /** Inserts what Typst `source` is read as at the selection (`insertTypst`); focuses the editor. */

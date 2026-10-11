@@ -43,6 +43,40 @@ test.describe('in the advanced example', () => {
   });
 });
 
+test.describe('references to sections in the documentation', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/?example=docs');
+    await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/, { timeout: 30_000 });
+  });
+
+  const heading = (page: Page, text: string) => visual(page).locator('h2', { hasText: text });
+
+  test('⌘/Ctrl+click on a reference to a section far down the same file (opened from the file panel) scrolls there', async ({ page }) => {
+    await openFile(page, '10_guide/02_features.typ');
+    const chip = visual(page).locator('.typst-labels__ref[data-target="guide-features-help"]').first();
+    await chip.hover();
+    await expect(hint(page)).toHaveText(/^Go to Section · Help in 10_guide\/02_features\.typ\s*\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
+    await expect(heading(page, 'Help')).not.toBeInViewport();
+    await chip.click({ modifiers: ['ControlOrMeta'] });
+    await expect(heading(page, 'Help')).toBeInViewport();
+    await expect(fileRow(page, '10_guide/02_features.typ')).toHaveAttribute('aria-selected', 'true');
+  });
+
+  test('⌘/Ctrl+click on a reference to a section in another chapter opens it there; so does Alt+Enter', async ({ page }) => {
+    await openFile(page, '10_guide/01_getting-started.typ');
+    const chip = visual(page).locator('.typst-labels__ref[data-target="guide-features-mermaid"]').first();
+    await chip.click({ modifiers: ['ControlOrMeta'] });
+    await expect(fileRow(page, '10_guide/02_features.typ')).toHaveAttribute('aria-selected', 'true');
+    await expect(heading(page, 'Mermaid diagrams')).toBeInViewport();
+
+    await openFile(page, '10_guide/01_getting-started.typ');
+    await visual(page).locator('.typst-labels__ref[data-target="guide-features-spreadsheets"]').first().click();
+    await page.keyboard.press('Alt+Enter');
+    await expect(fileRow(page, '10_guide/02_features.typ')).toHaveAttribute('aria-selected', 'true');
+    await expect(heading(page, 'Spreadsheets')).toBeInViewport();
+  });
+});
+
 test('⌘/Ctrl+click on a web link opens its address in a new tab; a plain click edits', async ({ page }) => {
   await page.context().route('https://typst.app/**', (route) => route.fulfill({ contentType: 'text/html', body: '<title>Typst</title>' }));
   await page.goto('/examples/plain-html/');

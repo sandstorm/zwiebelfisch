@@ -33,9 +33,9 @@ const LABEL = CH2.indexOf('<fig:setup>');
 /** ⌘ on Mac, Ctrl elsewhere: both held. */
 const MOD = { ctrlKey: true, metaKey: true };
 
-function setup(viewType?: string) {
+function setup(viewType?: string, files: Record<string, string> = { '/main.typ': MAIN, '/ch2.typ': CH2 }) {
   const host = document.body.appendChild(document.createElement('div'));
-  const editor = createTypstEditor(host, { files: { '/main.typ': MAIN, '/ch2.typ': CH2 }, viewType });
+  const editor = createTypstEditor(host, { files, viewType });
   const pane = () => [...host.querySelectorAll<HTMLElement>('.typst-editor__pane')].find((p) => !p.hidden)!;
   const visual = () => (pane().querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor.view;
   const source = () => EditorView.findFromDOM(pane().querySelector<HTMLElement>('.cm-editor')!)!;
@@ -160,5 +160,107 @@ describe('links in the Visual editor', () => {
     expect(document.querySelector('.typst-link-hint')).toBeNull();
     anchor.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0, ...MOD }));
     expect(open).toHaveBeenCalledWith('https://typst.app/', '_blank', 'noopener');
+  });
+});
+
+describe('following a reference in the Visual editor goes to its label, scrolled there, for every kind of label', () => {
+  const BOOK = {
+    '/main.typ': [
+      '= Introduction <sec:intro>',
+      'First words.',
+      'See @sec:intro, @sec:method, @fig:a, @tab:b, @eq:c and @knuth.',
+      '#figure(rect(), caption: [A rectangle]) <fig:a>',
+      'After the figure.',
+      '#figure(table(columns: 1, [x]), caption: [A table]) <tab:b>',
+      'After the table.',
+      '$ x = 1 $ <eq:c>',
+      'After the equation.',
+      '#include "method.typ"',
+      '#bibliography("refs.bib")',
+      '',
+    ].join('\n\n'),
+    '/method.typ': 'Some words first.\n\n= Method <sec:method>\n\nHow it was done.\n',
+    '/refs.bib': '@book{knuth, title={The Art of Computer Programming}}\n',
+  };
+
+  /**
+   * The widget showing main.typ, method.typ visited before (so its editor is there to watch), the focus in main.typ's
+   * text (as after typing) or `elsewhere` (as after opening the file from the file panel).
+   */
+  function book(focus: 'text' | 'elsewhere') {
+    const widget = setup(undefined, BOOK);
+    const scrolled = new Map<string, number[]>();
+    for (const path of ['/method.typ', '/main.typ']) {
+      widget.editor.open(path);
+      // ProseMirror scrolls to the selection the DOM has: only while that is in the editor, it asks this prop
+      const seen: number[] = [];
+      widget.visual().setProps({ handleScrollToSelection: (view) => seen.push(view.state.selection.head) > 0 });
+      scrolled.set(path, seen);
+    }
+    if (focus === 'text') widget.visual().focus();
+    else widget.host.appendChild(document.createElement('input')).focus();
+    return { ...widget, scrolled };
+  }
+
+  /** Follows the reference chip to `target` in the shown file: Mod+click on it, or Alt+Enter on it selected. */
+  function follow({ visual, host }: ReturnType<typeof book>, target: string, how: 'click' | 'key') {
+    const view = visual();
+    let pos = -1;
+    view.state.doc.descendants((node, at) => {
+      if (node.type.name === 'reference' && node.attrs.target === target) pos = at;
+    });
+    if (how === 'click') {
+      view.posAtCoords = () => ({ pos, inside: pos });
+      const chip = host.querySelector<HTMLElement>(`[data-target="${target}"]`)!;
+      chip.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0, ...MOD }));
+    } else {
+      (view.dom as HTMLElement & { editor: Editor }).editor.commands.setNodeSelection(pos);
+      view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', altKey: true, bubbles: true, cancelable: true }));
+    }
+  }
+
+  /** Where the cursor of the shown Visual editor is: the text of its block, and how far into it. */
+  function cursor(visual: ReturnType<typeof book>['visual']) {
+    const { selection, doc } = visual().state;
+    const $head = doc.resolve(selection.head);
+    return { empty: selection.empty, block: $head.parent.textContent, offset: $head.parentOffset };
+  }
+
+  for (const how of ['click', 'key'] as const) {
+    it(`a section in another file (${how}): its file, the cursor at the end of the heading (by its label tag)`, () => {
+      const widget = book('text');
+      follow(widget, 'sec:method', how);
+      expect(widget.editor.activeFile).toBe('/method.typ');
+      expect(cursor(widget.visual)).toEqual({ empty: true, block: 'Method', offset: 'Method'.length });
+      expect(widget.scrolled.get('/method.typ')).toEqual([widget.visual().state.selection.head]);
+      expect(document.activeElement).toBe(widget.visual().dom);
+    });
+
+    it(`a section in the same file (${how}), the focus elsewhere before`, () => {
+      const widget = book('elsewhere');
+      follow(widget, 'sec:intro', how);
+      expect(widget.editor.activeFile).toBe('/main.typ');
+      expect(cursor(widget.visual)).toEqual({ empty: true, block: 'Introduction', offset: 'Introduction'.length });
+      expect(widget.scrolled.get('/main.typ')).toEqual([widget.visual().state.selection.head]);
+      expect(document.activeElement).toBe(widget.visual().dom);
+    });
+  }
+
+  it.each([
+    ['fig:a', 'After the figure.'],
+    ['tab:b', 'After the table.'],
+    ['eq:c', 'After the equation.'],
+  ])('%s: the cursor right below the box (by its label tag), scrolled there', (target, below) => {
+    const widget = book('elsewhere');
+    follow(widget, target, 'click');
+    expect(widget.editor.activeFile).toBe('/main.typ');
+    expect(cursor(widget.visual)).toEqual({ empty: true, block: below, offset: 0 });
+    expect(widget.scrolled.get('/main.typ')).toEqual([widget.visual().state.selection.head]);
+  });
+
+  it('a bibliography key opens the bibliography', () => {
+    const widget = book('text');
+    follow(widget, 'knuth', 'click');
+    expect(widget.editor.activeFile).toBe('/refs.bib');
   });
 });
