@@ -7,6 +7,7 @@
 import { comments } from '../extensions/comments/comments';
 import { diagnostics } from '../extensions/diagnostics/diagnostics';
 import { diagrams } from '../extensions/diagrams/diagrams';
+import { mermaid } from '../extensions/mermaid/mermaid';
 import { fileNavigation } from '../extensions/file-navigation/file-navigation';
 import { files } from '../extensions/files/files';
 import { labels } from '../extensions/labels/labels';
@@ -200,6 +201,7 @@ function builtinExtensions(): TypstExtension[] {
     spreadsheets(),
     textFiles(),
     diagrams(),
+    mermaid(),
     diagnostics(),
     sourceControl(),
     markup(),

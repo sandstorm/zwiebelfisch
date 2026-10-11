@@ -216,6 +216,8 @@ flowchart LR
 ```
 ````
 
+- Insert → Insert Mermaid diagram (or `/mermaid`): creates a `.mmd` with a starter flowchart (proposed: `diagrams/diagram.mmd` next to the file), inserts its figure with the import and opens it in the text editor.
+- A box reading a `.mmd` file has "Edit diagram": it opens the file.
 - In the Visual view an inline diagram is a code block (language `mermaid`); the preview shows the diagram.
 - The first use downloads 3.3 MB (then cached by the browser) and adds about a second to the compile; a diagram edit takes about 0.3 s.
 
