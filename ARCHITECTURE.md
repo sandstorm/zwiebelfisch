@@ -84,7 +84,7 @@ src/                        the widget (TypeScript); the most important API on t
     uploads/                uploadChanges: files from the computer (picked, dropped) as `create` changes at the top
                             of the project (`.typ` as text, the rest as bytes); used by files and images; takes any
                             `UploadedFile` (`name`, `text()`, `arrayBuffer()`: a DOM File is one, core names no DOM type)
-    gitlab-protocol/        the rooms' Y.Doc map names (FILES_MAP, ASSETS_MAP, META_MAP) and GitLab rooms' messages
+    room-protocol/          the rooms' Y.Doc map names (FILES_MAP, ASSETS_MAP, META_MAP) and GitLab rooms' messages
                             and file URLs: import-free, shared by collaboration and server/
     disposable/             Disposable (VS Code's shape: `new Disposable(fn)` disposes once; `Disposable.from(...)` in
                             reverse order)
@@ -155,7 +155,7 @@ src/                        the widget (TypeScript); the most important API on t
                             PlacedPresence, Presences: everyone's places, eager);
                             model/ (the lazily loaded chunk: Collaboration, SharedProject, TextBinding (+ y-delta.ts),
                             SharedAssets, RemoteCursors,
-                            GitLabSourceControl (the protocol: core/gitlab-protocol); in-process.ts, Y.Doc/awareness
+                            GitLabSourceControl (the protocol: core/room-protocol); in-process.ts, Y.Doc/awareness
                             wiring for tests); source-view/ and visual-view/ (drawing the other users' carets and
                             selections, also in raw boxes; perUserUndo: their edits out of the Source views'
                             undo history); workbench/ (presenceDecorations: who is in which file)
@@ -1801,7 +1801,7 @@ collaboration-link.ts   CollaborationLink: import()s model/ on demand, publishes
 presence/               eager, pure: Presence, PlacedPresence, PresenceSource, Presences (everyone's places), initials
 remote-origin.ts        REMOTE_ORIGIN: the origin of the changes that arrive through a Y.Text (eager, a leaf)
 model/                  the lazily loaded chunk (Yjs, Hocuspocus; no DOM): Collaboration (model.ts), SharedProject,
-                        TextBinding (a TypstDocument bound to its Y.Text; y-delta.ts), SharedAssets, RemoteCursors, GitLabSourceControl (their protocol: core/gitlab-protocol, also
+                        TextBinding (a TypstDocument bound to its Y.Text; y-delta.ts), SharedAssets, RemoteCursors, GitLabSourceControl (their protocol: core/room-protocol, also
                         the server's)
 source-view/            sourcePresence: carets + selections in a CodeMirror editor (remotePresence, setPresence);
                         perUserUndo (other users' edits out of the Source views' undo history);
@@ -1880,7 +1880,7 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
 
 A room named `gitlab:<project id or path>@<branch>` is that branch (`parseRoomName`). The server
 config (`gitlab: {url, token, webhookSecret?, authorEmail?, fetch?}`, from `TYPST_GITLAB_*` in
-`main.ts`) holds the only GitLab token. Protocol (`src/core/gitlab-protocol/gitlab-protocol.ts`, with the
+`main.ts`) holds the only GitLab token. Protocol (`src/core/room-protocol/room-protocol.ts`, with the
 Y.Doc's map names `FILES_MAP`, `ASSETS_MAP`, `META_MAP`):
 
 ```

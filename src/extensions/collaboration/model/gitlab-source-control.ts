@@ -3,7 +3,7 @@
 import type * as Y from 'yjs';
 import type { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
-import { DEFAULT_COMMIT_MESSAGE, META_MAP, type ClientMessage, type ServerMessage } from '../../../core/gitlab-protocol/gitlab-protocol';
+import { DEFAULT_COMMIT_MESSAGE, META_MAP, type ClientMessage, type ServerMessage } from '../../../core/room-protocol/room-protocol';
 
 /** Stateless messages to and from the server (the Hocuspocus provider's). */
 export interface StatelessChannel {

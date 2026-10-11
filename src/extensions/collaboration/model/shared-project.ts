@@ -4,7 +4,7 @@ import * as Y from 'yjs';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import type { FileChange, Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
-import { FILES_MAP } from '../../../core/gitlab-protocol/gitlab-protocol';
+import { FILES_MAP } from '../../../core/room-protocol/room-protocol';
 import { TextBinding } from './text-binding';
 
 interface Binding {

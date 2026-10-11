@@ -10,7 +10,7 @@ import type { ProjectPath } from '../../../core/paths/paths';
 import type { CollaborationOptions } from '../collaboration';
 import type { PlacedPresence } from '../presence/presence';
 import type { Project } from '../../../core/project/project';
-import { roomFilePath } from '../../../core/gitlab-protocol/gitlab-protocol';
+import { roomFilePath } from '../../../core/room-protocol/room-protocol';
 import { RemoteCursors, type CollaborationUser } from './remote-cursors';
 import { GitLabSourceControl, type StatelessChannel } from './gitlab-source-control';
 import { SharedAssets } from './shared-assets';

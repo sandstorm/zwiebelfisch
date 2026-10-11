@@ -3,7 +3,7 @@ import type { Disposable } from '../../../core/disposable/disposable';
 import * as Y from 'yjs';
 import { type FileChange, type Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
-import { ASSETS_MAP } from '../../../core/gitlab-protocol/gitlab-protocol';
+import { ASSETS_MAP } from '../../../core/room-protocol/room-protocol';
 
 type AssetValue = string | Uint8Array;
 
