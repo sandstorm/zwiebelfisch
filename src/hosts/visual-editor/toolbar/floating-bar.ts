@@ -4,7 +4,7 @@ import type { Anchor } from '../visual-editor';
 
 /**
  * A `role="toolbar"` bar positioned just above an anchor in the Visual
- * view's text: placed in `container` (the scrolling text column, which is
+ * editor's text: placed in `container` (the scrolling text column, which is
  * `position: relative`), so it scrolls with the text. `show(anchor)` places it
  * centred over the anchor and kept inside the container; null hides it.
  * Mouse presses on it keep the focus (and selection) in the text.

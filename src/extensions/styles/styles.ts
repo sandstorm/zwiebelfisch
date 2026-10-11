@@ -13,7 +13,7 @@ import { styleSearch } from './workbench/style-search';
 
 /**
  * Keeps the project's custom styles indexed; every document's Visual editor shows and applies
- * them and offers "New style…"; search everywhere applies them too (in either view).
+ * them and offers "New style…"; search everywhere applies them too (in either editor).
  */
 export function styles(): TypstExtension {
   return {
@@ -33,7 +33,7 @@ export function styles(): TypstExtension {
 /**
  * "New style…": asks for the style's name, appends a block style of that name to start from to the file holding
  * most styles (else `/styles.typ`, created when missing; a refusal is an error message) and shows it in the Source
- * view.
+ * editor.
  */
 async function addNewStyle(index: TypstStyleIndex, { project, window, workspace, workbench }: ExtensionContext): Promise<void> {
   const label = await window.showInputBox({

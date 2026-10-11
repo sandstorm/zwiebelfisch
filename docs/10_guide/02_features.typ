@@ -19,7 +19,7 @@ Each side has a rail (`▣`): a button per panel. The left side holds the files,
 - *Preview:* updates while typing. On errors it dims and keeps the last good pages. Hidden, it keeps compiling: errors, raw boxes' pictures and shading stay current.
 - Click in the preview: the editing view selects that text, opening its file if needed.
 - "Follow cursor" (preview toolbar): the preview scrolls to the text being edited.
-- Selected text (either view) is shaded in the preview, too; a caret shades nothing.
+- Selected text (either editor) is shaded in the preview, too; a caret shades nothing.
 - Zoom (fit width by default, 25–400 %) and "page n / total" in the preview toolbar.
 - Drag a side's separator (or use the arrow keys on it): the left side sets the file panel's width, the right side gets 20–80 % of the width.
 - *Errors and warnings:* underlined in both editors, the message as tooltip. The status bar counts them and jumps to them.

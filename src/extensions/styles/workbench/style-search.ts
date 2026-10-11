@@ -21,6 +21,7 @@ const STYLE_APPLY = 'style-apply';
 export function styleSearch(styles: ProjectStyles, applier: Pick<StyleApplier, 'apply'>, window: Pick<WindowApi, 'activeTextEditor' | 'showInformationMessage'>): SearchProvider {
   const apply = (style: TypstStyle) => {
     const editor = window.activeTextEditor;
+    // not one text edit for both: the Visual editor's menu wraps whole blocks and toggles inline styles
     const applied = editor && (editor.viewType === VISUAL_EDITOR ? applier.apply(editor.document, style) : wrapInSource(editor, style, styles));
     if (!applied) void window.showInformationMessage(`${style.label} cannot be applied here: select text in a Typst file.`);
   };

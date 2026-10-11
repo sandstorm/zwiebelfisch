@@ -1,7 +1,7 @@
 // The images extension: `#image(..)` blocks (also as figures' bodies) in the Visual editor showing the project's image files,
 // "Insert image" with the project's images and uploads, and image files opened read-only in the editing area. Entry of extensions/images/. See docs/30_architecture/08_built-in-extensions.typ.
 // Why one extension: an image is one concept from the file in the project to the box in the text; the Visual
-// view's host only knows boxes, renderers and custom editors, and the file panel only knows files.
+// editor's host only knows boxes, renderers and custom editors, and the file panel only knows files.
 import type { Event } from '../../core/event-emitter/event-emitter';
 import { type PathReference, ProjectPath } from '../../core/paths/paths';
 import type { FileChange, FileContent, Project } from '../../core/project/project';

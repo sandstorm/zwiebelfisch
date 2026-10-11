@@ -26,6 +26,7 @@ export function commentSearch({ project, workbench, window }: CommentSearchConte
   const open = (path: ProjectPath, { at }: FoundNote) => {
     workbench.open(path, { selection: { from: at, to: at } });
     const editor = window.activeTextEditor;
+    // only a Visual editor has cards; its reveal cannot tell itself apart from the user moving the caret
     if (editor?.viewType === VISUAL_EDITOR) cards.editNote(editor.document, at);
   };
   return {
