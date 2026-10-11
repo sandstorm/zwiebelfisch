@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 // Tests for commands.ts.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Commands } from './commands';
+import { CommandsHost } from './commands';
 
 function setup() {
   const root = document.body.appendChild(document.createElement('div'));
   const inner = root.appendChild(document.createElement('div'));
-  return { root, inner, commands: new Commands(root) };
+  return { root, inner, commands: new CommandsHost(root) };
 }
 
 function press(target: HTMLElement, init: KeyboardEventInit) {
@@ -17,24 +17,24 @@ function press(target: HTMLElement, init: KeyboardEventInit) {
 
 afterEach(() => vi.restoreAllMocks());
 
-describe('Commands', () => {
+describe('CommandsHost', () => {
   it('runs a registered command with its arguments, until it is disposed', async () => {
     const { commands } = setup();
-    const registration = commands.register('test.add', (a: number, b: number) => a + b);
-    await expect(commands.execute<number>('test.add', 2, 3)).resolves.toBe(5);
-    expect(() => commands.register('test.add', () => 0)).toThrow(/registered already/);
+    const registration = commands.registerCommand('test.add', (a: number, b: number) => a + b);
+    await expect(commands.executeCommand<number>('test.add', 2, 3)).resolves.toBe(5);
+    expect(() => commands.registerCommand('test.add', () => 0)).toThrow(/registered already/);
     registration.dispose();
-    await expect(commands.execute('test.add', 2, 3)).rejects.toThrow(/No command test.add/);
+    await expect(commands.executeCommand('test.add', 2, 3)).rejects.toThrow(/No command test.add/);
   });
 
   it('calls the handler synchronously, and resolves to what an async handler resolves to', async () => {
     const { commands } = setup();
     const calls: string[] = [];
-    commands.register('test.async', async () => {
+    commands.registerCommand('test.async', async () => {
       calls.push('handler');
       return 'done';
     });
-    const result = commands.execute('test.async');
+    const result = commands.executeCommand('test.async');
     calls.push('after execute');
     expect(calls).toEqual(['handler', 'after execute']);
     await expect(result).resolves.toBe('done');
@@ -42,19 +42,19 @@ describe('Commands', () => {
 
   it('rejects when the handler throws or rejects', async () => {
     const { commands } = setup();
-    commands.register('test.throws', () => {
+    commands.registerCommand('test.throws', () => {
       throw new Error('broken');
     });
-    commands.register('test.rejects', () => Promise.reject(new Error('later')));
-    await expect(commands.execute('test.throws')).rejects.toThrow('broken');
-    await expect(commands.execute('test.rejects')).rejects.toThrow('later');
+    commands.registerCommand('test.rejects', () => Promise.reject(new Error('later')));
+    await expect(commands.executeCommand('test.throws')).rejects.toThrow('broken');
+    await expect(commands.executeCommand('test.rejects')).rejects.toThrow('later');
   });
 
   it('runs a bound key anywhere inside, before (and instead of) the editors', () => {
     const { inner, commands } = setup();
     const run = vi.fn();
-    commands.register('test.run', run);
-    commands.bind('Mod+Alt+KeyM', 'test.run');
+    commands.registerCommand('test.run', run);
+    commands.registerKeybinding('Mod+Alt+KeyM', 'test.run');
     const editor = vi.fn();
     inner.addEventListener('keydown', editor);
     const event = press(inner, { code: 'KeyM', altKey: true, ctrlKey: true });
@@ -68,8 +68,8 @@ describe('Commands', () => {
   it('logs a bound command that fails, the key still taken', async () => {
     const { inner, commands } = setup();
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-    commands.register('test.fails', () => Promise.reject(new Error('nope')));
-    commands.bind('Mod+KeyK', 'test.fails');
+    commands.registerCommand('test.fails', () => Promise.reject(new Error('nope')));
+    commands.registerKeybinding('Mod+KeyK', 'test.fails');
     expect(press(inner, { code: 'KeyK', ctrlKey: true }).defaultPrevented).toBe(true);
     await vi.waitFor(() => expect(error).toHaveBeenCalledWith('Command test.fails failed:', expect.objectContaining({ message: 'nope' })));
   });
@@ -77,19 +77,19 @@ describe('Commands', () => {
   it('leaves other keys to the editors, and bound keys once the binding or the command is gone', () => {
     const { inner, commands } = setup();
     const run = vi.fn();
-    const command = commands.register('test.run', run);
-    const binding = commands.bind('Mod+Alt+KeyM', 'test.run');
+    const command = commands.registerCommand('test.run', run);
+    const binding = commands.registerKeybinding('Mod+Alt+KeyM', 'test.run');
     press(inner, { code: 'KeyM', ctrlKey: true });
     press(inner, { code: 'KeyN', altKey: true, ctrlKey: true });
     binding.dispose();
     press(inner, { code: 'KeyM', altKey: true, ctrlKey: true });
-    commands.bind('Mod+Alt+KeyM', 'test.run');
+    commands.registerKeybinding('Mod+Alt+KeyM', 'test.run');
     command.dispose();
     expect(press(inner, { code: 'KeyM', altKey: true, ctrlKey: true }).defaultPrevented).toBe(false);
     expect(run).not.toHaveBeenCalled();
   });
 
   it('refuses unknown modifiers', () => {
-    expect(() => setup().commands.bind('Hyper+KeyM', 'test.run')).toThrow(/Unknown modifier Hyper/);
+    expect(() => setup().commands.registerKeybinding('Hyper+KeyM', 'test.run')).toThrow(/Unknown modifier Hyper/);
   });
 });

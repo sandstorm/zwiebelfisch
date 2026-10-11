@@ -3,7 +3,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
-import type { ExtensionContext, MenuItem, SourceControl, SourceControlState } from '../../../hosts/workbench/workbench';
+import type { ExtensionContext, MenuItem } from '../../../hosts/workbench/workbench';
+import type { SourceControl, SourceControlState } from '../../../hosts/scm/scm';
 import { sourceControl as sourceControlExtension } from '../source-control';
 import { commit, tellStatus, type SourceControlUi } from './workbench';
 
@@ -32,14 +33,18 @@ function ui(controls: SourceControl[], answers: { input?: string; pick?: number 
   const told: string[] = [];
   const asked: unknown[] = [];
   const fake: SourceControlUi = {
-    get sourceControls() {
-      return controls;
+    scm: {
+      get sourceControls() {
+        return controls;
+      },
     },
-    showInputBox: async (options) => (asked.push(options), answers.input),
-    showQuickPick: (async (items: readonly unknown[]) => items[answers.pick ?? -1]) as SourceControlUi['showQuickPick'],
-    showInformationMessage: async (message: string) => (told.push(`info: ${message}`), undefined),
-    showWarningMessage: async (message: string) => (told.push(`warning: ${message}`), undefined),
-    showErrorMessage: async (message: string) => (told.push(`error: ${message}`), undefined),
+    window: {
+      showInputBox: async (options) => (asked.push(options), answers.input),
+      showQuickPick: (async (items: readonly unknown[]) => items[answers.pick ?? -1]) as SourceControlUi['window']['showQuickPick'],
+      showInformationMessage: async (message: string) => (told.push(`info: ${message}`), undefined),
+      showWarningMessage: async (message: string) => (told.push(`warning: ${message}`), undefined),
+      showErrorMessage: async (message: string) => (told.push(`error: ${message}`), undefined),
+    },
   };
   return { fake, told, asked };
 }
@@ -75,7 +80,7 @@ describe('tellStatus', () => {
   it('tells each new status once, as a message of its severity', () => {
     const { sourceControl, update } = control();
     const { fake, told } = ui([sourceControl]);
-    const subscription = tellStatus(fake, sourceControl);
+    const subscription = tellStatus(fake.window, sourceControl);
     const saved = { message: 'Saved version 01234567 (Ann)', severity: 'info' } as const;
     update({ busy: false, status: saved });
     update({ busy: false, status: saved });
@@ -95,19 +100,20 @@ describe('sourceControl extension', () => {
     const commands = new Map<string, () => unknown>();
     const { fake, told } = ui(controls, { input: 'Saved' });
     const workbench = {
-      ...fake,
-      get sourceControls() {
-        return controls;
-      },
-      onDidChangeSourceControls: changed.event,
-      registerCommand: (id: string, handler: () => unknown) => (commands.set(id, handler), new Disposable(() => commands.delete(id))),
       registerMenuItem: vi.fn((_menuId: string, item: MenuItem) => {
         menu.push(item);
         return new Disposable(() => menu.splice(menu.indexOf(item), 1));
       }),
     };
+    const scm = {
+      get sourceControls() {
+        return controls;
+      },
+      onDidChangeSourceControls: changed.event,
+    };
+    const registry = { registerCommand: (id: string, handler: () => unknown) => (commands.set(id, handler), new Disposable(() => commands.delete(id))) };
     const subscriptions: { dispose(): unknown }[] = [];
-    sourceControlExtension().activate({ workbench, subscriptions } as unknown as ExtensionContext);
+    sourceControlExtension().activate({ commands: registry, window: fake.window, scm, workbench, subscriptions } as unknown as ExtensionContext);
     expect(menu).toEqual([]);
     controls.push(sourceControl);
     changed.fire();

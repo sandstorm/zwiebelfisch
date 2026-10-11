@@ -6,7 +6,7 @@
 // workbench as options, so the panel is tested without one.
 import { Disposable } from '../../core/disposable/disposable';
 import type { ProjectPath } from '../../core/paths/paths';
-import type { TypstExtension, Workbench } from '../../hosts/workbench/workbench';
+import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
 import css from './files.css?inline';
 import { CONTEXT_MENU, FilePanel, NEW_FILE_MENU, type FilePanelOptions } from './workbench/file-panel';
 import { icon } from './workbench/icons/icons';
@@ -27,7 +27,7 @@ const CHANGE_ENTRIES = [
 
 /**
  * The file panel in a side panel: shows the project and the shown file, opens what is picked, asks for every
- * change through `Workbench.applyChange`, uploads files dropped on the widget, and shows the files' decorations
+ * change through `workspace.applyEdit`, uploads files dropped on the widget, and shows the files' decorations
  * from every `FileDecorationProvider` (e.g. where collaborators are). The setting `files.panel` says when it is open.
  * Its operations are commands (`files.newFile`, `files.newFolder`, `files.upload`, `files.rename`, `files.delete`,
  * each on a row), offered in two menus any extension may add to: `file/newFile` ("New" in the panel's header) and `explorer/context` (a row's context menu;
@@ -49,7 +49,8 @@ export function files(): TypstExtension {
         },
       },
     },
-    activate({ project, workspace, workbench, subscriptions }) {
+    activate(context) {
+      const { project, window, workspace, workbench, subscriptions } = context;
       subscriptions.push(workbench.registerStyleSheet(css));
       const mode = () => workspace.getConfiguration('files').get<PanelMode>('panel', 'auto');
       const side = workbench.registerSidePanel('files', { label: 'Files', icon: icon(workbench.ownerDocument, 'files'), order: 10 });
@@ -59,11 +60,11 @@ export function files(): TypstExtension {
           workbench.open(path);
           side.dismiss();
         },
-        onChange: (change) => workbench.applyChange(change),
-        prompts: workbench,
-        menus: panelMenus(workbench),
+        onChange: (change) => workspace.applyEdit(change),
+        prompts: window,
+        menus: panelMenus(context),
         memory: workbench.remember('folders'),
-        decorations: (path) => workbench.getFileDecorations(path),
+        decorations: (path) => window.getFileDecorations(path),
       }, state());
       // shown on every open, which also follows every create / rename / delete
       // listening only while there is a panel: the widget shows its drop hint while anyone listens
@@ -82,9 +83,9 @@ export function files(): TypstExtension {
         side,
         panel,
         new Disposable(() => drops?.dispose()),
-        registerOperations(workbench, panel),
+        registerOperations(context, panel),
         workbench.onDidShowFile(render),
-        workbench.onDidChangeFileDecorations(() => panel.render(state())),
+        window.onDidChangeFileDecorations(() => panel.render(state())),
         workbench.onDidChangeMenu((menuId) => menuId === NEW_FILE_MENU && panel.render(state())),
         workspace.onDidChangeConfiguration((event) => {
           if (event.affectsConfiguration('files.panel')) render();
@@ -95,13 +96,13 @@ export function files(): TypstExtension {
 }
 
 /** The panel's operations as commands, and its own entries in "New" and in a row's context menu. */
-function registerOperations(workbench: Workbench, panel: FilePanel): Disposable {
+function registerOperations({ commands, workbench }: ExtensionContext, panel: FilePanel): Disposable {
   return Disposable.from(
-    workbench.registerCommand('files.newFile', (resource?: ProjectPath) => panel.newFile(resource)),
-    workbench.registerCommand('files.newFolder', (resource?: ProjectPath) => panel.newFolder(resource)),
-    workbench.registerCommand('files.upload', (resource?: ProjectPath) => panel.upload(resource)),
-    workbench.registerCommand('files.rename', (resource?: ProjectPath) => panel.rename(resource)),
-    workbench.registerCommand('files.delete', (resource?: ProjectPath) => panel.delete(resource)),
+    commands.registerCommand('files.newFile', (resource?: ProjectPath) => panel.newFile(resource)),
+    commands.registerCommand('files.newFolder', (resource?: ProjectPath) => panel.newFolder(resource)),
+    commands.registerCommand('files.upload', (resource?: ProjectPath) => panel.upload(resource)),
+    commands.registerCommand('files.rename', (resource?: ProjectPath) => panel.rename(resource)),
+    commands.registerCommand('files.delete', (resource?: ProjectPath) => panel.delete(resource)),
     ...NEW_ENTRIES.flatMap((entry) => [
       workbench.registerMenuItem(NEW_FILE_MENU, { ...entry, group: 'navigation' }),
       workbench.registerMenuItem(CONTEXT_MENU, { ...entry, group: 'navigation' }),
@@ -111,9 +112,9 @@ function registerOperations(workbench: Workbench, panel: FilePanel): Disposable 
 }
 
 /** The panel's menus: their entries (any extension's) and how one runs: its command by id, with the row as argument. */
-function panelMenus(workbench: Workbench): FilePanelOptions['menus'] {
+function panelMenus({ commands, workbench }: ExtensionContext): FilePanelOptions['menus'] {
   return {
     items: (menuId, context) => workbench.getMenuItems(menuId, context),
-    run: (command, resource) => void workbench.executeCommand(command, resource).catch((error: unknown) => console.error(`Command ${command} failed:`, error)),
+    run: (command, resource) => void commands.executeCommand(command, resource).catch((error: unknown) => console.error(`Command ${command} failed:`, error)),
   };
 }

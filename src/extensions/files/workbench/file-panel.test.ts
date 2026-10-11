@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-// Tests for file-panel.ts (the file panel, its tree and its menus), with the workbench's prompts and menus faked.
+// Tests for file-panel.ts (the file panel, its tree and its menus), with the window's prompts and the workbench's menus faked.
 import { describe, expect, it, vi } from 'vitest';
 import { FilePanel, type FilePanelPrompts } from './file-panel';
 import type { FileChange } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
-import type { FileDecoration, InputBoxOptions, MenuContext, MenuItem } from '../../../hosts/workbench/workbench';
+import type { MenuContext, MenuItem } from '../../../hosts/workbench/workbench';
+import type { FileDecoration, InputBoxOptions } from '../../../hosts/window/window';
 
 const path = ProjectPath.of;
 

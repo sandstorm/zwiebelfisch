@@ -1,6 +1,6 @@
 // Notifications: the messages extensions show (`showInformationMessage`, `showWarningMessage`, `showErrorMessage`),
-// in a small area at the bottom right of the widget. See workbench.ts.
-import type { MessageItem, MessageSeverity } from '../workbench';
+// in a small area at the bottom right of the widget. See window.ts.
+import type { MessageItem, MessageSeverity } from '../window';
 
 /** How long an information message without items stays. */
 const INFO_TIMEOUT_MS = 8000;

@@ -1,10 +1,10 @@
 // CustomEditors: which editor shows a file that is not Typst source, by file name pattern and priority
-// (`Workbench.registerCustomEditorProvider`, VS Code's custom editors), and the one panel shown. See workbench.ts.
+// (`window.registerCustomEditorProvider`, VS Code's custom editors), and the one panel shown. See window.ts.
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { FileContent } from '../../../core/project/project';
-import type { CustomEditorOptions, CustomEditorPanel, CustomEditorProvider } from '../workbench';
+import type { CustomEditorOptions, CustomEditorPanel, CustomEditorProvider } from '../window';
 import { FilenamePattern } from './filename-pattern';
 
 /** The priority of a `'default'` editor (and of one registered without a priority). */

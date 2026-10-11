@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
-import { WorkbenchHost, type TypstExtension } from '../../hosts/workbench/workbench';
+import { type TypstExtension, WorkbenchHost } from '../../hosts/workbench/workbench';
 import { files } from './files';
 
 vi.mock('../../hosts/preview/preview', async (importOriginal) => ({
@@ -61,9 +61,9 @@ describe('files', () => {
     const seen: unknown[] = [];
     const { contextMenu } = setup({
       id: 'test',
-      activate: ({ workbench, subscriptions }) =>
+      activate: ({ commands, workbench, subscriptions }) =>
         subscriptions.push(
-          workbench.registerCommand('test.copyPath', (resource) => seen.push(resource)),
+          commands.registerCommand('test.copyPath', (resource) => seen.push(resource)),
           workbench.registerMenuItem('explorer/context', { command: 'test.copyPath', title: 'Copy path', group: 'z', when: (context) => context.resourceKind === 'file' }),
         ),
     });

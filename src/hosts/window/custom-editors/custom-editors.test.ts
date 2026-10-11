@@ -2,7 +2,7 @@
 // Tests for custom-editors.ts and filename-pattern.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
-import type { CustomDocument, CustomEditorPanel, CustomEditorProvider } from '../workbench';
+import type { CustomDocument, CustomEditorPanel, CustomEditorProvider } from '../window';
 import { CustomEditors } from './custom-editors';
 import { FilenamePattern } from './filename-pattern';
 

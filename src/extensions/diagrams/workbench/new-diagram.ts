@@ -1,19 +1,19 @@
 // "New diagram…": asks for a name and creates an empty `.drawio.png` there, then opens it. See ../diagrams.ts.
 import { type NamedPath, ProjectPath } from '../../../core/paths/paths';
 import type { Project } from '../../../core/project/project';
-import type { Workbench } from '../../../hosts/workbench/workbench';
+import type { ExtensionContext } from '../../../hosts/workbench/workbench';
 import { DIAGRAM_EXTENSION } from '../model/model';
 import { emptyDiagram } from '../model/empty-diagram';
 
 /**
  * Asks for the new diagram's name in the folder of `resource` (a file's folder, or the folder itself; default: the
- * shown file's), adding `.drawio.png`; creates the empty diagram through `applyChange` and opens it. A refusal is an
+ * shown file's), adding `.drawio.png`; creates the empty diagram through `workspace.applyEdit` and opens it. A refusal is an
  * error message.
  */
-export async function newDiagram(project: Project, workbench: Workbench, resource = workbench.activeFile): Promise<void> {
+export async function newDiagram({ project, window, workspace, workbench }: ExtensionContext, resource = workbench.activeFile): Promise<void> {
   const folder = project.has(resource) ? resource.slice(0, resource.lastIndexOf('/')) : resource;
   const value = folder === '' ? '' : `${folder.slice(1)}/`;
-  const name = await workbench.showInputBox({
+  const name = await window.showInputBox({
     title: 'New diagram',
     prompt: 'Name of the new diagram',
     value,
@@ -23,8 +23,8 @@ export async function newDiagram(project: Project, workbench: Workbench, resourc
   });
   const target = name === undefined ? null : diagramPath(name);
   if (!target || target.kind === 'invalid' || problemWith(project, target)) return;
-  const problem = await workbench.applyChange({ kind: 'create', path: target.path, content: emptyDiagram() });
-  if (problem) void workbench.showErrorMessage(`${ProjectPath.displayName(target.path)} not created: ${problem}`);
+  const problem = await workspace.applyEdit({ kind: 'create', path: target.path, content: emptyDiagram() });
+  if (problem) void window.showErrorMessage(`${ProjectPath.displayName(target.path)} not created: ${problem}`);
   else workbench.open(target.path);
 }
 

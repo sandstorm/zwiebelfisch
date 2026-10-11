@@ -9,7 +9,7 @@ import { createVisualView, TestPrompts } from '../../../testing/testing';
 import { VisualView, VisualViewContributions } from '../../../hosts/visual-view/visual-view';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { ProjectPath } from '../../../core/paths/paths';
-import type { InputBoxOptions } from '../../../hosts/workbench/workbench';
+import type { InputBoxOptions } from '../../../hosts/window/window';
 import { references } from './visual-view';
 
 const path = ProjectPath.of;

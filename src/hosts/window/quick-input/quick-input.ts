@@ -1,6 +1,6 @@
 // QuickInput: what `showInputBox` and `showQuickPick` show: a small box over the widget, below what the user just
-// used. See workbench.ts.
-import type { InputBoxOptions, QuickPickItem, QuickPickOptions } from '../workbench';
+// used. See window.ts.
+import type { InputBoxOptions, QuickPickItem, QuickPickOptions } from '../window';
 
 /** Elements taller than this (an editor's whole text) are no anchor: the box goes to their top instead. */
 const MAX_ANCHOR_HEIGHT = 120;

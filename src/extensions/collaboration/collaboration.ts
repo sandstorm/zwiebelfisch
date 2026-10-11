@@ -36,18 +36,18 @@ export type CollaborationOptions =
 export function collaboration(options: CollaborationOptions): TypstExtension {
   return {
     id: 'collaboration',
-    activate({ project, workbench, sourceView, visualView, subscriptions }) {
+    activate({ project, window, scm, workbench, sourceView, visualView, subscriptions }) {
       subscriptions.push(workbench.registerStyleSheet(css));
       const presences = new Presences((document) => project.pathOf(document));
       const user = workbench.user;
       const link = new CollaborationLink(options, { project, user }, {
         current: () => {
-          const editor = workbench.activeTextEditor;
+          const editor = window.activeTextEditor;
           const path = editor && project.pathOf(editor.document);
           return path ? { path, selection: editor.selection } : null;
         },
         focused: () => workbench.isEditorFocused(),
-        onSourceControl: (sourceControl) => subscriptions.push(workbench.registerSourceControl(sourceControl)),
+        onSourceControl: (sourceControl) => subscriptions.push(scm.registerSourceControl(sourceControl)),
         onPresence: (all) => presences.set(all),
       });
       const documents = () => project.paths().flatMap((path) => project.document(path) ?? []);
@@ -56,10 +56,10 @@ export function collaboration(options: CollaborationOptions): TypstExtension {
         presences,
         sourceView.registerExtension(sourcePresence(presences)),
         sourceView.registerExtension(perUserUndo),
-        workbench.registerFileDecorationProvider(presenceDecorations(presences)),
+        window.registerFileDecorationProvider(presenceDecorations(presences)),
         link,
         // fired from the editors' own updates, after their state has the new selection
-        workbench.onDidChangeTextEditorSelection(() => link.selectionChanged()),
+        window.onDidChangeTextEditorSelection(() => link.selectionChanged()),
       );
     },
   };

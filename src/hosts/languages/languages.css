@@ -1,5 +1,5 @@
-/* The workbench's document links: links (from the registered DocumentLinkProviders) in the Source view and raw boxes,
-   and their hover. Added by the WorkbenchHost; colors from the widget's --te-* tokens. */
+/* The document links of the languages host: links (from the registered DocumentLinkProviders) in the Source view and
+   raw boxes, and their hover. Added by the WorkbenchHost (LanguagesHost.styleSheet); colors from the --te-* tokens. */
 /* like IntelliJ: a link shows as one (underline, pointer) only while Mod is held and it is hovered */
 .typst-source--mod .typst-source__path:hover { text-decoration: underline; text-decoration-color: var(--te-accent); color: var(--te-accent); cursor: pointer; }
 .typst-file-link { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; font: 12px system-ui, sans-serif; }

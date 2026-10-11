@@ -28,7 +28,9 @@ import { outline } from '../extensions/outline/outline';
 import { pageLayout } from '../extensions/page-layout/page-layout';
 import { tables } from '../extensions/tables/tables';
 import proseMirrorStyles from '../hosts/visual-view/visual-view.css?inline';
-import { type EditorMode, type Settings, type TypstExtension, WorkbenchHost } from '../hosts/workbench/workbench';
+import { type TypstExtension, WorkbenchHost } from '../hosts/workbench/workbench';
+import type { EditorMode } from '../hosts/window/window';
+import type { Settings } from '../hosts/workspace/workspace';
 import type { User } from '../core/user/user';
 import { type FileChange, Project, type ProjectFiles } from '../core/project/project';
 import { ProjectPath } from '../core/paths/paths';
@@ -170,8 +172,8 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
       const parsed = ProjectPath.parse(path);
       if (parsed) workbench.open(parsed);
     },
-    executeCommand: (id, ...args) => workbench.executeCommand(id, ...args),
-    exportPdf: (options) => workbench.executeCommand('pdfExport.export', options),
+    executeCommand: (id, ...args) => workbench.commands.executeCommand(id, ...args),
+    exportPdf: (options) => workbench.commands.executeCommand('pdfExport.export', options),
     dispose: () => {
       subscription.dispose();
       workbench.dispose();

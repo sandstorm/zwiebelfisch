@@ -1,7 +1,8 @@
-// Tests for configuration.ts: declared settings, the host's values, changes.
+// Tests for workspace.ts (WorkspaceHost): changes through the host's veto; declared settings, the host's values, changes.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ConfigurationChangeEvent } from '../workbench';
-import { Configuration } from './configuration';
+import { ProjectPath } from '../../core/paths/paths';
+import { Project } from '../../core/project/project';
+import { type ConfigurationChangeEvent, WorkspaceHost } from './workspace';
 
 const PROPERTIES = {
   'pdfExport.download': { type: 'boolean', default: true, description: 'Download button.' },
@@ -10,7 +11,7 @@ const PROPERTIES = {
 } as const;
 
 function setup(values = {}) {
-  const configuration = new Configuration(values);
+  const configuration = new WorkspaceHost(new Project(ProjectPath.of('/main.typ'), {}), { settings: values });
   configuration.declare(PROPERTIES);
   const events: ConfigurationChangeEvent[] = [];
   configuration.onDidChangeConfiguration((event) => events.push(event));
@@ -19,7 +20,31 @@ function setup(values = {}) {
 
 afterEach(() => vi.restoreAllMocks());
 
-describe('Configuration', () => {
+const path = ProjectPath.of;
+
+describe('WorkspaceHost.applyEdit', () => {
+  it('applies a change only if the project and then the host allow it', async () => {
+    const project = new Project(path('/main.typ'), { '/main.typ': '= Main\n', '/a.typ': 'A\n' });
+    const allowFileChange = vi.fn(async () => false);
+    const workspace = new WorkspaceHost(project, { allowFileChange });
+    expect(await workspace.applyEdit({ kind: 'delete', path: path('/main.typ') })).toMatch(/main file/i);
+    expect(allowFileChange).not.toHaveBeenCalled();
+    expect(await workspace.applyEdit({ kind: 'delete', path: path('/a.typ') })).toBe('This change is not allowed here.');
+    allowFileChange.mockResolvedValue(true);
+    expect(await workspace.applyEdit({ kind: 'delete', path: path('/a.typ') })).toBeNull();
+    expect(project.has(path('/a.typ'))).toBe(false);
+  });
+
+  it('asks the project again once the host decided', async () => {
+    const project = new Project(path('/main.typ'), { '/main.typ': '' });
+    const workspace = new WorkspaceHost(project, {
+      allowFileChange: async () => (project.apply({ kind: 'create', path: path('/b.typ'), content: '' }), true),
+    });
+    expect(await workspace.applyEdit({ kind: 'create', path: path('/b.typ'), content: 'B' })).toMatch(/already exists/);
+  });
+});
+
+describe('WorkspaceHost settings', () => {
   it("reads a section's settings: the host's value, else the declared default", () => {
     const { configuration } = setup({ 'pdfExport.download': false });
     expect(configuration.getConfiguration('pdfExport').get('download')).toBe(false);

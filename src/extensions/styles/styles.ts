@@ -3,8 +3,7 @@
 // never a registry of the editor's own, so one read model (StyleIndex) follows the whole
 // project, and every document's Visual view shows the styles' calls as styled text and applies them from the text
 // style menu, importing a style where it is used. See ARCHITECTURE.md, "Custom styles".
-import type { Project } from '../../core/project/project';
-import type { TypstExtension, Workbench } from '../../hosts/workbench/workbench';
+import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
 import css from './styles.css?inline';
 import { calculateNewStyleChange } from './model/new-style';
 import { StyleIndex } from './model/style-index';
@@ -19,10 +18,9 @@ export function styles(): TypstExtension {
     id: 'styles',
     activate(context) {
       context.subscriptions.push(context.workbench.registerStyleSheet(css));
-      const { project, workbench, subscriptions } = context;
-      const index = new StyleIndex(project);
-      subscriptions.push(index);
-      customStyles({ styles: index, create: () => void addNewStyle(index, project, workbench) }).activate(context);
+      const index = new StyleIndex(context.project);
+      context.subscriptions.push(index);
+      customStyles({ styles: index, create: () => void addNewStyle(index, context) }).activate(context);
     },
   };
 }
@@ -32,8 +30,8 @@ export function styles(): TypstExtension {
  * most styles (else `/styles.typ`, created when missing; a refusal is an error message) and shows it in the Source
  * view.
  */
-async function addNewStyle(index: StyleIndex, project: Project, workbench: Workbench): Promise<void> {
-  const label = await workbench.showInputBox({
+async function addNewStyle(index: StyleIndex, { project, window, workspace, workbench }: ExtensionContext): Promise<void> {
+  const label = await window.showInputBox({
     title: 'New style',
     prompt: 'Name of the paragraph style',
     value: 'New style',
@@ -45,8 +43,8 @@ async function addNewStyle(index: StyleIndex, project: Project, workbench: Workb
   const { change, definition } = calculateNewStyleChange(file?.text ?? '', label.trim());
   if (file) file.change([change], 'new-style');
   else {
-    const problem = await workbench.applyChange({ kind: 'create', path, content: change.insert });
-    if (problem !== null) return void workbench.showErrorMessage(`The style was not added: ${problem}`);
+    const problem = await workspace.applyEdit({ kind: 'create', path, content: change.insert });
+    if (problem !== null) return void window.showErrorMessage(`The style was not added: ${problem}`);
   }
   workbench.open(path, { selection: definition, mode: 'source' });
 }

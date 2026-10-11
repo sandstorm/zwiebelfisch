@@ -1,10 +1,17 @@
 // What the source-control extension does in the workbench: commit to a source control, asking for the message, and
 // tell its outcomes and news as messages. See ../source-control.ts.
 import type { Disposable } from '../../../core/disposable/disposable';
-import type { SourceControl, Workbench } from '../../../hosts/workbench/workbench';
+import type { Scm, SourceControl } from '../../../hosts/scm/scm';
+import type { Window } from '../../../hosts/window/window';
 
-/** What committing and telling need of the workbench. */
-export type SourceControlUi = Pick<Workbench, 'sourceControls' | 'showInputBox' | 'showQuickPick' | 'showInformationMessage' | 'showWarningMessage' | 'showErrorMessage'>;
+/** What telling needs of the window: its messages. */
+export type SourceControlMessages = Pick<Window, 'showInformationMessage' | 'showWarningMessage' | 'showErrorMessage'>;
+
+/** What committing needs of the extension API: the source controls, and the window to ask and tell. */
+export interface SourceControlUi {
+  readonly scm: Pick<Scm, 'sourceControls'>;
+  readonly window: Pick<Window, 'showInputBox' | 'showQuickPick'> & SourceControlMessages;
+}
 
 /** The tab bar's entry for the registered source controls: "Save to GitLab…" ("Saving to GitLab…" meanwhile). */
 export function commitTitle(controls: readonly SourceControl[]): string {
@@ -17,18 +24,18 @@ export function commitTitle(controls: readonly SourceControl[]): string {
  * Commits the project: to the one registered source control, or the one picked, with the message the user enters
  * (its default offered). While a commit is under way it only says so.
  */
-export async function commit(ui: SourceControlUi): Promise<void> {
-  const controls = ui.sourceControls;
+export async function commit({ scm, window }: SourceControlUi): Promise<void> {
+  const controls = scm.sourceControls;
   const control =
     controls.length > 1
-      ? (await ui.showQuickPick(controls.map((each) => ({ label: `Save to ${each.label}…`, control: each })), { title: 'Save', placeHolder: 'Where to save' }))?.control
+      ? (await window.showQuickPick(controls.map((each) => ({ label: `Save to ${each.label}…`, control: each })), { title: 'Save', placeHolder: 'Where to save' }))?.control
       : controls[0];
   if (!control) return;
   if (control.state.busy) {
-    void ui.showInformationMessage(`Saving to ${control.label} is under way.`);
+    void window.showInformationMessage(`Saving to ${control.label} is under way.`);
     return;
   }
-  const message = await ui.showInputBox({
+  const message = await window.showInputBox({
     title: `Save to ${control.label}`,
     prompt: 'Commit message',
     value: control.defaultCommitMessage ?? '',
@@ -39,14 +46,14 @@ export async function commit(ui: SourceControlUi): Promise<void> {
 }
 
 /** Tells each new status of `control` as a message of its severity, until disposed. */
-export function tellStatus(ui: SourceControlUi, control: SourceControl): Disposable {
+export function tellStatus(messages: SourceControlMessages, control: SourceControl): Disposable {
   let told = control.state.status;
   return control.onDidChange(() => {
     const { status } = control.state;
     if (status === told) return;
     told = status;
     if (!status) return;
-    const show = { info: ui.showInformationMessage, warning: ui.showWarningMessage, error: ui.showErrorMessage }[status.severity];
-    void show.call(ui, status.message);
+    const show = { info: messages.showInformationMessage, warning: messages.showWarningMessage, error: messages.showErrorMessage }[status.severity];
+    void show.call(messages, status.message);
   });
 }

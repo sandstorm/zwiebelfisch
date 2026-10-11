@@ -62,7 +62,7 @@ describe('diagrams', () => {
   it('"New diagram…" in the file panel\'s "New" asks for a name in the row\'s folder, creates an empty diagram and opens it', async () => {
     const { host, workbench, project, frame } = setup();
     expect(workbench.getMenuItems('file/newFile').map((item) => [item.command, item.title])).toEqual([['diagrams.newDiagram', 'New diagram…']]);
-    const done = workbench.executeCommand('diagrams.newDiagram', path('/img/flow.drawio.png'));
+    const done = workbench.commands.executeCommand('diagrams.newDiagram', path('/img/flow.drawio.png'));
     const form = host.querySelector<HTMLFormElement>('form[aria-label="New diagram"]')!;
     const input = form.querySelector('input')!;
     expect(input.value).toBe('img/');

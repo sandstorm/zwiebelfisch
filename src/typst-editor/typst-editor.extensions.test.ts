@@ -7,7 +7,8 @@ import type { Diagnostic } from '../core/typst-engine/typst-engine';
 import type { PageClick, PdfExportOption, PreviewContext, PreviewToolbarItem } from '../hosts/preview/preview';
 import type { Disposable } from '../core/disposable/disposable';
 import { EventEmitter } from '../core/event-emitter/event-emitter';
-import type { SourceControl, SourceControlState, TypstExtension } from '../hosts/workbench/workbench';
+import type { TypstExtension } from '../hosts/workbench/workbench';
+import type { SourceControl, SourceControlState } from '../hosts/scm/scm';
 import { createTypstEditor, type TypstEditorOptions } from './typst-editor';
 
 const exportPdf = vi.fn(async () => ({ pdf: new Uint8Array([37, 80, 68, 70]), diagnostics: [], missingPackages: [] }));
@@ -269,7 +270,7 @@ describe('the built-in extensions', () => {
     // what the collaboration extension does for a GitLab room; source-control knows only the registry
     const room: TypstExtension = {
       id: 'room',
-      activate: ({ workbench, subscriptions }) => subscriptions.push((registration = workbench.registerSourceControl(gitlab))),
+      activate: ({ scm, subscriptions }) => subscriptions.push((registration = scm.registerSourceControl(gitlab))),
     };
     const { host } = setup({ source: '= Hi', extensions: (builtins) => [...builtins, room] });
     const action = () => host.querySelector<HTMLButtonElement>('.typst-editor__tab-action[data-command="sourceControl.commit"]');
@@ -344,9 +345,9 @@ describe('the built-in extensions', () => {
     const counter: TypstExtension = {
       id: 'word-count',
       contributes: { configuration: { properties: { 'wordCount.label': { type: 'string', default: 'words', description: 'The label.' } } } },
-      activate: ({ workspace, workbench, subscriptions }) => {
+      activate: ({ workspace, commands, subscriptions }) => {
         seen.push(workspace.getConfiguration('wordCount').get('label'));
-        subscriptions.push(workbench.registerCommand('wordCount.count', () => 2));
+        subscriptions.push(commands.registerCommand('wordCount.count', () => 2));
       },
     };
     const { editor, preview } = setup({

@@ -1,19 +1,15 @@
 // linkExtension: the document links of a CodeMirror editor's text (a Source view, a raw box's code), like IntelliJ:
 // marked, Mod+click / Alt+Enter follow them, the hover offers "Open …" or what the link's command does. See
-// document-links.ts.
+// languages.ts.
 import type { EditorState, Extension, Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, hoverTooltip, keymap, ViewPlugin, type ViewUpdate } from '@codemirror/view';
-import { ProjectPath } from '../../../core/paths/paths';
-import type { DocumentLink, TextDocument } from '../workbench';
+import { ProjectPath } from '../../core/paths/paths';
+import type { DocumentLink, LinkTargets, TextDocument } from './languages';
 
-/** What the links come from, and where following one goes: the workbench's side of them. */
-export interface LinkActions {
+/** What the links come from, and where following one goes. */
+export interface LinkActions extends LinkTargets {
   provideDocumentLinks(document: TextDocument): readonly DocumentLink[];
   resolveDocumentLink(link: DocumentLink): DocumentLink;
-  /** Shows a link's target. */
-  open(target: ProjectPath): void;
-  /** Runs a link's command (`Workbench.executeCommand`). */
-  executeCommand(command: string, ...args: unknown[]): Promise<unknown>;
 }
 
 const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);

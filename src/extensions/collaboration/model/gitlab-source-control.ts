@@ -1,4 +1,4 @@
-// GitLabSourceControl: the GitLab branch behind a room as a source control (`Workbench.registerSourceControl`):
+// GitLabSourceControl: the GitLab branch behind a room as a source control (`scm.registerSourceControl`):
 // commit asks the server to commit over stateless messages, and the server's answers become its state. See model.ts.
 import type * as Y from 'yjs';
 import type { Disposable } from '../../../core/disposable/disposable';
@@ -15,7 +15,7 @@ export interface StatelessChannel {
 /**
  * The commits of a room backed by a GitLab branch, as a client sees them: `commit` asks the server to commit the
  * room's changes as `author`; the server's answers (saved, nothing to save, a conflict, a failure) and its news
- * (upstream changes merged) show in `state`. Shaped as the workbench's `SourceControl`.
+ * (upstream changes merged) show in `state`. Shaped as the scm host's `SourceControl`.
  */
 export class GitLabSourceControl {
   readonly id = 'gitlab';
@@ -67,7 +67,7 @@ export class GitLabSourceControl {
   }
 }
 
-/** A commit under way, and the last outcome or news as a message (the workbench's `SourceControlState`). */
+/** A commit under way, and the last outcome or news as a message (the scm host's `SourceControlState`). */
 export interface CommitState {
   readonly busy: boolean;
   readonly status: CommitStatus | null;

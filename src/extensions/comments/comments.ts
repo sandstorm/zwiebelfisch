@@ -22,10 +22,10 @@ export function comments(): TypstExtension {
     id: 'comments',
     activate(context) {
       context.subscriptions.push(context.workbench.registerStyleSheet(css));
-      const { project, workbench, preview, subscriptions } = context;
+      const { project, commands, workbench, preview, subscriptions } = context;
       const notes = notesGutter({ user: workbench.user });
-      subscriptions.push(registerAddComment(workbench, notes), registerIncludeComments(preview, project));
-      marginNotes({ comment: () => workbench.executeCommand(ADD_COMMENT).catch((error: unknown) => console.error(error)) }).activate(context);
+      subscriptions.push(registerAddComment(context, notes), registerIncludeComments(preview, project));
+      marginNotes({ comment: () => commands.executeCommand(ADD_COMMENT).catch((error: unknown) => console.error(error)) }).activate(context);
       notes.activate(context);
     },
   };

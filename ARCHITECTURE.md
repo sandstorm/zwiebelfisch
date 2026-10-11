@@ -20,24 +20,32 @@ src/                        the widget (TypeScript); the most important API on t
   typst-editor-element/     typst-editor-element.ts: <typst-editor> custom element (shadow DOM) around
                             createTypstEditor; inline-source.ts (source written inside the element → text)
   hosts/                    view hosts: mechanism + contribution points, no feature knowledge
-    workbench/              the widget's frame and the extension API (workbench.ts: TypstExtension, ExtensionContext,
-                            Workspace (settings), Workbench, Command, DocumentLinkProvider, FileDecorationProvider,
-                            SourceControl, EditorMode, Memory; and WorkbenchHost, what createTypstEditor creates, which
-                            adds its own layout CSS); layout/ (layout.ts +
+    workbench/              the widget's frame, the extension API's entry and the composition of the hosts (workbench.ts:
+                            TypstExtension, ExtensionContext, Workbench (the frame: open, side panels, editor frame,
+                            menus, style sheets, drops, user), MenuItem, Memory; and WorkbenchHost, what createTypstEditor
+                            creates, which makes the other hosts and adds its own layout CSS); layout/ (layout.ts +
                             layout.css: side panels with rail buttons, editing area, preview, status bar), editing-views/
                             (Visual/Source tabs, lazily one VisualView + SourceView per document), color-scheme/
-                            (`data-scheme`), extension-host/ (activation), commands/ (commands, key bindings),
-                            configuration/ (Configuration: declared settings, the host's values, changes),
-                            custom-editors/ (CustomEditors: the editor of a non-Typst file by file name pattern and priority;
-                            filename-pattern.ts: the globs), file-drops/ (files dropped on the widget), style-sheets/
-                            (StyleSheets: the widget's and the extensions' CSS in its shadow root or head, shared and
-                            reference-counted), document-links/ (DocumentLinks: the providers' links merged by
-                            priority; link-extension.ts: links in a CodeMirror editor, the Source views' and raw
-                            boxes'), file-decorations/ (FileDecorations), source-controls/ (SourceControls),
-                            status-bar/ (StatusBar: the status bar items, left / right by priority),
-                            menus/ (Menus: menu entries by menu id; EditorTitleMenu: `editor/title` in the tab bar),
-                            notifications/ (Notifications: the messages), quick-input/ (QuickInput: input box and quick pick),
-                            memory/ (SessionMemory: `remember`, the values kept for the browser session)
+                            (`data-scheme`), extension-host/ (activation), file-drops/ (files dropped on the widget),
+                            style-sheets/ (StyleSheets: the widget's and the extensions' CSS in its shadow root or head,
+                            shared and reference-counted), menus/ (Menus: menu entries by menu id; EditorTitleMenu:
+                            `editor/title` in the tab bar), memory/ (SessionMemory: `remember`, the values kept for the
+                            browser session)
+    commands/               VS Code's `commands` namespace: Commands, Command (as data), CommandsHost (commands by id,
+                            key bindings on the widget)
+    window/                 VS Code's `window` namespace: Window and its types (messages, input box, quick pick, status
+                            bar placement, custom editors, file decorations, TextEditor, EditorMode), WindowHost;
+                            notifications/ (Notifications: the messages), quick-input/ (QuickInput: input box and quick
+                            pick), status-bar/ (StatusBar: the items, left / right by priority), custom-editors/
+                            (CustomEditors: the editor of a non-Typst file by file name pattern and priority;
+                            filename-pattern.ts: the globs), file-decorations/ (FileDecorations)
+    scm/                    VS Code's `scm` namespace: Scm, SourceControl, ScmHost (the registered source controls)
+    languages/              VS Code's `languages` namespace (document links): Languages, DocumentLinkProvider,
+                            LanguagesHost (the providers' links merged by priority); link-extension.ts: links in a
+                            CodeMirror editor, the Source views' and raw boxes'; languages.css (their hover)
+    workspace/              VS Code's `workspace` namespace: Workspace (applyEdit, getConfiguration,
+                            onDidChangeConfiguration), the settings' types, WorkspaceHost (changes through the host's
+                            veto; declared settings, the host's values, changes)
     visual-view/            VisualView (Tiptap over the projection) and its contribution points, all in visual-view.ts:
                             VisualViewContributions, TypstNodeSpec / TypstMarkSpec, toolbar items and groups, box
                             renderers / tools / actions, gutters, highlights, VisualViewContext, svg, starterKitPart,
@@ -356,7 +364,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
 - **`EditingViews`** (`hosts/workbench/editing-views/`): one Visual/Source tab bar; a document's views are
   created the first time it is shown and then only hidden, so cursor and undo history survive switching. The
   mode is shared. With a single file the DOM is the same as before (tabs + two panes). Per document a
-  `DocumentEditor` (`Workbench.activeTextEditor`, a `TextEditor`) stands for both views: `selection` and
+  `DocumentEditor` (`window.activeTextEditor`, a `TextEditor`) stands for both views: `selection` and
   `revealRange` use the current tab.
   `setFrame({ top, bottom })` (`Workbench.registerEditorFrame`) keeps two elements first and last in the
   visible pane (they scroll with the file). The `fileNavigation` extension puts `FileNavigation` there: for a
@@ -366,7 +374,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
   nothing for the main file or files outside the include order.
 - **`FilePanel`** (see "File panel" below; the `files` extension) lives in the side panel `files`: open by
   default when the setting `files.panel` is `show`, or `auto` with more than one file; `hide` removes it with its
-  rail button (all three follow a change of the setting). A requested change goes through `Workbench.applyChange`: `project.check`, then the host's
+  rail button (all three follow a change of the setting). A requested change goes through `workspace.applyEdit`: `project.check`, then the host's
   `allowFileChange` (async allowed; re-checked afterwards), then it is applied. Files dropped anywhere on
   the widget (`Workbench.onDidDropFiles`) are uploaded unless `files.panel` is `hide` (then ignored) — never
   left to the browser, which would open the file in place of the page (the workbench prevents that, also
@@ -375,9 +383,9 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
 - **File links** (see below): the `documentLinks` extension registers one `DocumentLinkProvider` with the
   workbench (paths resolve from the file's path; a link opens its file with `Workbench.open`; a missing `.typ`
   file's link offers "Create …": the command `documentLinks.createFile(path)`, a `create` change through
-  `applyChange`, then `open`). The workbench shows the
+  `workspace.applyEdit`, then `open`). The workbench shows the
   links of every provider in the Source views and the raw boxes' code; `images` shows an image box's path as its
-  link (`Workbench.provideDocumentLinks` / `resolveDocumentLink`).
+  link (`languages.provideDocumentLinks` / `resolveDocumentLink`).
 - **Preview sync** (the `previewSync` extension): a click in the preview selects its source (another project
   file is opened first; clicks into packages are ignored), and while "Follow cursor" is on the preview scrolls to
   the selection the user moves (the setting `previewSync.followCursor` if the host set it, else the viewer's last
@@ -418,7 +426,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
 - **Styles** go into `host.getRootNode()`: `document.head`, or the element's shadow root.
   CodeMirror mounts its own styles into the same root. Embedding guide: [docs/embedding.md](docs/embedding.md).
 
-### Extensions (`src/hosts/workbench`)
+### Extensions (`src/hosts/workbench`, `commands`, `window`, `scm`, `languages`, `workspace`)
 
 ```ts
 interface TypstExtension {
@@ -428,47 +436,63 @@ interface TypstExtension {
 interface ExtensionContext {
   subscriptions: { dispose() }[]        // disposed with the widget: extensions in reverse list order, each in reverse
   project: Project
-  workspace: Workspace                  // getConfiguration(section?) → { get(key, default?), has(key), inspect(key) },
-                                        // onDidChangeConfiguration: Event<{ affectsConfiguration(section) }>
-  workbench: Workbench                  // the frame's contribution points (below)
+  commands: Commands                    // VS Code's namespaces, each a host of its own (below)
+  window: Window
+  scm: Scm
+  languages: Languages
+  workspace: Workspace
+  workbench: Workbench                  // the frame (below)
   visualView: VisualViewContributions   // registerNode, registerMark, registerToolbarGroup / Item, registerGutter,
                                         // registerBoxRenderer, registerEditorExtension, … (see "VisualView")
   sourceView: SourceViewContributions   // registerExtension(cm | context → cm) (see "SourceView")
   preview: PreviewContributions         // registerToolbarItem, registerPdfExportOption, reveal, onDidClickPage,
                                         // onDidChangeDiagnostics, onDidRender, snippet, exportPdf (see "Preview")
 }
-interface Workbench {
-  ownerDocument; activeFile; user?: { name, color? }; open(path, { selection?, mode?, viewType? }); onDidShowFile
-  applyChange(change) → reason | null
-  registerSidePanel(id, { label, icon, order? }) → SidePanel { body, setDefault, setAvailable, dismiss, dispose }
-  registerStatusBarItem(element, { alignment: 'left' | 'right', priority? })   // VS Code's StatusBarItem: higher priority
-                                    // further left within its side (default 0), equal: registration order
-  registerEditorFrame({ top, bottom })
-  registerStyleSheet(css)           // the extension's CSS where the widget renders (head or shadow root)
-  registerCustomEditorProvider(viewType, { resolveCustomEditor(document: { path, content }, panel: { element, onDidDispose }) },
-                               { filenamePattern: '*.drawio.png', priority?: 'default' | 'option' | number })
+interface Commands {                    // hosts/commands
   registerCommand(id: string, handler(...args))  executeCommand<T>(id, ...args) → Promise<T>
   registerKeybinding('Mod+Alt+KeyM', id)
-  onDidDropFiles  remember(name) → Memory
+}
+interface Window {                      // hosts/window
   showInformationMessage / showWarningMessage / showErrorMessage(message, ...items: (string | { title })[])
                                     // → Promise<item | undefined>
   showInputBox({ title?, value?, valueSelection?, prompt?, placeHolder?, validateInput?(value) → message }) → Promise<string | undefined>
   showQuickPick(items: (string | { label, description?, detail?, picked? })[] | Promise<…>, { title?, placeHolder?, canPickMany? })
                                     // → Promise<item | undefined>, with canPickMany Promise<item[] | undefined>
-  registerMenuItem(menuId, { command, title?, icon?, when?(context) → boolean, group?, order? })
-  getMenuItems(menuId, context?) → MenuItem[]   onDidChangeMenu: Event<menuId>
+  registerStatusBarItem(element, { alignment: 'left' | 'right', priority? })   // VS Code's StatusBarItem: higher priority
+                                    // further left within its side (default 0), equal: registration order
+  registerCustomEditorProvider(viewType, { resolveCustomEditor(document: { path, content }, panel: { element, onDidDispose }) },
+                               { filenamePattern: '*.drawio.png', priority?: 'default' | 'option' | number })
   registerFileDecorationProvider({ provideFileDecoration(path) → FileDecoration | FileDecoration[] | undefined,
                                    onDidChangeFileDecorations })   getFileDecorations(path)   onDidChangeFileDecorations
                                     // FileDecoration { badge?, tooltip?, color?, propagate? }
+  activeTextEditor: TextEditor | null  onDidChangeTextEditorSelection: Event<{ textEditor }>
+}
+interface Scm {                         // hosts/scm
+  registerSourceControl({ id, label, defaultCommitMessage?, state: { busy, status: { message, severity } | null },
+                          onDidChange, commit(message) })
+  sourceControls   onDidChangeSourceControls
+}
+interface Languages {                   // hosts/languages
   registerDocumentLinkProvider({ provideDocumentLinks(document: TextDocument { path, text }) → DocumentLink[],
                                  resolveDocumentLink?(link) → DocumentLink }, { priority? })
   provideDocumentLinks(document) → DocumentLink[]   resolveDocumentLink(link) → DocumentLink
                                     // DocumentLink { range: {from, to}, target?: ProjectPath, tooltip?,
                                     //                command?: Command { title, command: id, arguments? } }
-  registerSourceControl({ id, label, defaultCommitMessage?, state: { busy, status: { message, severity } | null },
-                          onDidChange, commit(message) })
-  sourceControls   onDidChangeSourceControls
-  activeTextEditor: TextEditor | null  onDidChangeTextEditorSelection: Event<{ textEditor }>  isEditorFocused()
+}
+interface Workspace {                   // hosts/workspace
+  applyEdit(change: FileChange) → Promise<reason | null>      // the project's check, then the host's allowFileChange
+  getConfiguration(section?) → { get(key, default?), has(key), inspect(key) }
+  onDidChangeConfiguration: Event<{ affectsConfiguration(section) }>
+}
+interface Workbench {                   // hosts/workbench: the frame
+  ownerDocument; activeFile; user?: { name, color? }; open(path, { selection?, mode?, viewType? }); onDidShowFile
+  registerSidePanel(id, { label, icon, order? }) → SidePanel { body, setDefault, setAvailable, dismiss, dispose }
+  registerEditorFrame({ top, bottom })
+  registerStyleSheet(css)           // the extension's CSS where the widget renders (head or shadow root)
+  onDidDropFiles  remember(name) → Memory
+  registerMenuItem(menuId, { command, title?, icon?, when?(context) → boolean, group?, order? })
+  getMenuItems(menuId, context?) → MenuItem[]   onDidChangeMenu: Event<menuId>
+  isEditorFocused()
 }
 interface TextEditor {   // a Typst file's Visual + Source views (one per document)
   document; mode   // the tab the user works in
@@ -476,7 +500,7 @@ interface TextEditor {   // a Typst file's Visual + Source views (one per docume
   revealRange(from, to)
 }
 new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, onOpen?, styleSheet? })
-  .activate(extensions)  .settings (get/set)  .dispose()      // + everything of Workbench
+  .activate(extensions)  .settings (get/set)  .commands  .dispose()      // + everything of Workbench
 ```
 
 - **Why.** The frame knows no feature by name (review finding `typst-editor.ts:170`): a feature is a
@@ -488,6 +512,11 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   views (`VisualView`, `SourceView`, `Preview`), `ui/` widgets, contributed parts (`Gutter`, `BoxTools`,
   `ToolbarControl`), `Project` and the widget (`TypstEditor.dispose`); only what a library calls keeps its name
   (ProseMirror NodeViews and plugin views, CodeMirror view plugins: `destroy`).
+- **VS Code's namespaces, each a host** (decided 2026-10-11): `commands`, `window`, `scm`, `languages` and
+  `workspace` are modules of their own (`hosts/<name>/`), each an interface and a host class implementing it
+  directly (`CommandsHost`, `WindowHost`, …), no forwarding facade; `workbench` keeps only the frame (which file is
+  shown, side panels, the editor frame, menus, style sheets, drops, the user). The `WorkbenchHost` makes them and
+  puts them into every context; the widget's handle reaches commands through `WorkbenchHost.commands`.
 - **Lifecycle.** The workbench host makes its view hosts first: `VisualViewContributions` and a `SourceViewHost`
   (both handed to `EditingViews`) and the `Preview`; they are the context's `visualView`, `sourceView` and
   `preview`. `WorkbenchHost.activate(list)`: first every extension's declared settings
@@ -502,7 +531,7 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   (`registerDocumentLinkProvider`: the `documentLinks` extension's paths, read by the views and by `images`),
   file decorations (`registerFileDecorationProvider`: `collaboration`'s presence, shown by `files`), source
   controls (`registerSourceControl`: `collaboration`'s GitLab room, shown by `sourceControl`). VS Code's shapes.
-- **Commands** (`Commands`, VS Code's shape, decided 2026-10-10): plain string ids `<extension>.<name>` (no
+- **Commands** (`CommandsHost`, `hosts/commands`, VS Code's shape, decided 2026-10-10): plain string ids `<extension>.<name>` (no
   registry type, no declaration merging: the caller knows a command by its id and the arguments it documents).
   `executeCommand<T>(id, ...args)` calls the handler synchronously (`Promise.resolve(handler(...))`, so the user's
   gesture, the selection and the focus are as at the call) and resolves to its (awaited) result; an unknown id or a
@@ -511,7 +540,7 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   `sourceControl.commit()`, `files.newFile` / `newFolder` / `upload` / `rename` / `delete`,
   `spreadsheets.newSpreadsheet`, `diagrams.newDiagram` (each with an optional row). Hosts run them through `editor.executeCommand`; menu entries name them by id (a menu or key binding logs a
   rejection with `console.error`; the command tells the user itself).
-- **Settings** (`Configuration`, `configuration/`, VS Code's configuration, decided 2026-10-10): declared by the
+- **Settings** (`WorkspaceHost`, `hosts/workspace`, VS Code's configuration, decided 2026-10-10): declared by the
   extensions (`contributes.configuration`, an id declared twice throws) and by the workbench itself
   (`workbench.theme`); the values come from the host (`settings`) and replace each other as a whole
   (`WorkbenchHost.settings = …`: ids left out go back to their default). A value counts only with the declared
@@ -519,23 +548,27 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   `inspect(key)` → `{ key, defaultValue, globalValue? }` tells whether the host set one (preview-sync: a host value
   wins over the viewer's remembered choice, the default does not); `onDidChangeConfiguration` fires once per
   replacement that changes any effective value, `affectsConfiguration('pdfExport')` / `('pdfExport.download')`.
-- **Document links** (`DocumentLinks`, `document-links/`): the links of every provider for a `TextDocument`
+- **Changes** (`workspace.applyEdit`, `WorkspaceHost`): the project's `check`, then the host's `allowFileChange`
+  (may be async), then the project's `check` again (it may have changed meanwhile), then `apply`; resolves to the
+  refusal in words for people, or null. Every change an extension asks for goes this way.
+- **Document links** (`LanguagesHost`, `hosts/languages`): the links of every provider for a `TextDocument`
   (`{ path, text }`: a whole file's, or a raw box's code with the path of its file); overlapping ones go to the
   provider of the higher `priority` (default 100; equal: registered first). A link remembers its provider, which
   `resolveDocumentLink` asks to fill in `target`, `tooltip` and `command` when the link is shown or followed. The
-  workbench registers `linkExtension` with every Source view and every raw box's code (see "File links").
-- **File decorations** (`FileDecorations`): `getFileDecorations(path)` gives every provider's, in registration
+  workbench registers `LanguagesHost.editorExtension` (`linkExtension`) with every Source view and every raw box's
+  code (see "File links").
+- **File decorations** (`FileDecorations`, `hosts/window/file-decorations`): `getFileDecorations(path)` gives every provider's, in registration
   order; `onDidChangeFileDecorations` fires for any provider's change, and when one comes or goes.
-- **Source controls** (`SourceControls`): registered once per `id`, listed in order; `commit(message)` starts a
+- **Source controls** (`ScmHost`, `hosts/scm`): registered once per `id`, listed in order; `commit(message)` starts a
   commit whose outcome shows in `state` (`busy` meanwhile; `status`: the last outcome or news as `{ message,
   severity }`, which the `sourceControl` extension tells as a message whenever it is a new object).
-- **Messages** (`Notifications`, `notifications/`; VS Code's `window.show…Message`): a small area at the bottom
+- **Messages** (`Notifications`, `hosts/window/notifications/`; VS Code's `window.show…Message`): a small area at the bottom
   right of the widget, newest last, at most three (a new one closes the oldest). Not modal and never takes the
   focus. Information is `role=status` and closes by itself after 8 s (not while it has items, the pointer or the
   focus); warnings and errors are `role=alert` and stay. Each has its items as buttons and a close button; the
   promise resolves to the item chosen, else undefined. Features tell refusals and failures this way (a refused
   upload, rename or new file, "No PDF: …", a failed save to GitLab) and ask for confirmations (Delete).
-- **Input box and quick pick** (`QuickInput`, `quick-input/`; VS Code's `window.showInputBox` / `showQuickPick`):
+- **Input box and quick pick** (`QuickInput`, `hosts/window/quick-input/`; VS Code's `window.showInputBox` / `showQuickPick`):
   one box at a time over the widget (a new one cancels the open one). Placed below what the user last pressed
   or typed in (a capture listener on the widget: a toolbar button, a menu entry, a file row); when that is an
   editor (`contenteditable`, CodeMirror's content), below the selection; without either, at the top in the
@@ -559,7 +592,7 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   `explorer/context` — a file panel row's context menu (context `{ view: 'files', resource, resourceKind:
   'file' | 'folder', resourceIsMain }`; argument: the row), both shown by the `files` extension with
   `ui/popup-menu`. The tab bar takes nothing but menu entries (`registerTabBarItem` is gone).
-- **Custom editors** (`CustomEditors`, `custom-editors/`; VS Code's custom editors, decided 2026-10-10): `open(path)` shows a
+- **Custom editors** (`CustomEditors`, `hosts/window/custom-editors/`; VS Code's custom editors, decided 2026-10-10): `open(path)` shows a
   Typst file in the tabs and any other file in a custom editor: the one asked for (`open(path, { viewType })`), else
   the one whose `filenamePattern` matches the file's name (a glob: `*`, `**`, `?`, `{a,b}`; with a `/` over the path;
   case-insensitive) with the highest `priority` (`'default'` = 100; `'option'`: only when asked for), then the most
@@ -569,7 +602,7 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   showing anything else disposes it: `onDidDispose` fires while the element is still in place (the editor stores what
   is pending), then the element goes. The editors: `images` (`images.preview` for `*.{png,jpg,jpeg,gif,svg,webp}`,
   `images.file` for `*`: any other file), `spreadsheets` (`spreadsheets.editor`, `*.ic`), `diagrams`
-  (`diagrams.editor`, `*.drawio.png`, priority 110); they store edits with `applyChange`. Core knows no kinds of
+  (`diagrams.editor`, `*.drawio.png`, priority 110); they store edits with `workspace.applyEdit`. Core knows no kinds of
   files besides Typst source (`ProjectPath.isTypst`): what a file is, is the editors' business, by name.
 - **Stylesheets** (`StyleSheets`, `style-sheets/`): the widget's own CSS (`styleSheet`: the Visual view's
   `visual-view.css`, `typst-editor.css`, the layout's `layout.css`) goes in first, as `<style
@@ -579,7 +612,7 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   root share each distinct stylesheet (one `<style>`, reference-counted); disposing the last registration
   removes it, so `dispose` leaves no CSS behind. Class names stay the extensions' own; colors come from the
   `--te-*` tokens on `.typst-editor` (base stylesheet), so extension sheets follow light and dark.
-- **Keys** (`Commands`): `registerKeybinding(key, command)` handles `key` on the widget in the capture phase,
+- **Keys** (`CommandsHost`, `hosts/commands`): `registerKeybinding(key, command)` handles `key` on the widget in the capture phase,
   so the command runs before an editor sees the key, which then never does (`preventDefault` is decided at once;
   a failing command is logged). `key`: modifiers (`Mod` = Ctrl or
   Cmd, `Ctrl`, `Meta`, `Alt`, `Shift`) and a `KeyboardEvent.code`.
@@ -992,7 +1025,7 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
   disabled when `editor.can()` (or the action's own `enabled`) says no.
   Mousedown is cancelled, so the text keeps focus and selection.
   - Link (in the Selection bar, and Mod+K in the text) asks for the URL in the workbench's input box
-    (`Workbench.showInputBox`, placed at the selection; `markup` passes the workbench to `linkAction`).
+    (`window.showInputBox`, placed at the selection; `markup` passes the window to `linkAction`).
     Link with nothing selected inserts the URL as linked text; inside a link it edits the whole link,
     and an empty URL removes it.
   - Insert image: without `assets` an input box for the path; with `assets` (`ImageAssets`: `list()`,
@@ -1061,7 +1094,7 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
     it is created before its box is attached, so it could not find that root itself and would
     read focus and selection from the document.
 - **Image tools** (`extensions/images/visual-view/image-tools.ts`, the image spec's `codeBox.tools`): the "Image: path"
-  heading (the path is the document link on it, from `Workbench.provideDocumentLinks`: it opens the file, or says
+  heading (the path is the document link on it, from `languages.provideDocumentLinks`: it opens the file, or says
   the file is missing: `imagePathLink`), a
   frame around the rendered picture sized from the call's `width` (`imageWidthCss`), and,
   while the image is selected (a click on the picture selects it; double-click, Enter or
@@ -1141,8 +1174,7 @@ SourceView
     error source; its indentation service is wrapped so that Enter right after a closed construct like
     `#set page(..)` does not indent, which 0.6.0 gets wrong).
   - `codeColors` (`extensions/typst-language/source-view/code-colors.ts`) — see "Dark mode".
-  - the workbench's document links (`hosts/workbench/document-links/`, the links of every
-    `DocumentLinkProvider`) — see "File links".
+  - the document links (`hosts/languages/`, the links of every `DocumentLinkProvider`) — see "File links".
   - `lint(diagnostics)` (`extensions/diagnostics/source-view/`, see "Diagnostics in the widget").
   - `sourcePresence(presences)` (`extensions/collaboration/source-view/`, y-codemirror style): each caret is a
     widget (bar + dot, also on empty lines); its name flag shows on hover and for 2.5 s after the caret moved (the
@@ -1210,7 +1242,7 @@ new Preview(container)                       // implements PreviewContributions;
   by the time it opens (label, `description` as tooltip; checked as this viewer left it, else its default; each
   change saved to the memory at once) and "Download" (Escape, a second click or a click outside closes it);
   without options it downloads at once. While a PDF is made the buttons are disabled and the button says "Making
-  PDF…" (`aria-busy`); a rejection is an error message "No PDF: <message>" (`Workbench.showErrorMessage`). The
+  PDF…" (`aria-busy`); a rejection is an error message "No PDF: <message>" (`window.showErrorMessage`). The
   options stay a popover of their own (not a quick pick with `canPickMany`): the user decided on one button with
   an options popover, whose choices are saved as they are ticked, and "Download" says what happens. The file is
   saved through an object-URL link.
@@ -1355,7 +1387,7 @@ customStyles({ styles, create }): VisualViewContribution   // styledBlock + styl
   style a style by its class. The preview shows the real look.
 - **"New style…"** (the extension's entry) asks for the style's name in the input box (default "New style"),
   appends a paragraph style stub of that name to the file declaring most styles (`homeFile()`; else
-  `/styles.typ`, created through the usual `applyChange` when missing; a refusal is an error message) and shows
+  `/styles.typ`, created through the usual `workspace.applyEdit` when missing; a refusal is an error message) and shows
   it in the Source view (`Workbench.open(path, { selection, mode: 'source' })`).
 
 ### Spreadsheets (`src/extensions/spreadsheets`)
@@ -1364,7 +1396,7 @@ Concept: docs/2026_10_10_spreadsheets.md; task docs/todo/ironcalc.md. Calculatio
 IronCalc; Typst shows the results.
 
 ```ts
-spreadsheets(): TypstExtension   // custom editor spreadsheets.editor (*.ic): a SpreadsheetView per panel; edits → applyChange
+spreadsheets(): TypstExtension   // custom editor spreadsheets.editor (*.ic): a SpreadsheetView per panel; edits → workspace.applyEdit
                                  // (file + typstPath); command spreadsheets.newSpreadsheet ("New spreadsheet…" in file/newFile)
 // workbench/: new SpreadsheetView(panel.element, onEdit(path, { bytes, typst }))   .show(path, content)   .dispose()
 // model/ (pure):
@@ -1376,7 +1408,7 @@ followColorScheme(container, onDidChange) → Disposable   // sets / takes away 
 ```
 
 - The view only reports edits; the extension's entry (`save`) decides what the project gets: the `.ic` file and,
-  when it changed, its Typst file, both through `Workbench.applyChange`; a refusal is an error message ("budget.ic
+  when it changed, its Typst file, both through `workspace.applyEdit`; a refusal is an error message ("budget.ic
   not saved: …").
 
 - A spreadsheet is a project file `name.ic` (the custom editor's pattern `*.ic`), in IronCalc's own format
@@ -1447,7 +1479,7 @@ newDiagram(project, workbench, resource?)
 - **Protocol** (diagrams.net embed mode, JSON): the editor sends `init`, the session answers `load` with the file as
   `xmlpng` (a data URI; an empty file or no PNG: an empty `xml`) and `autosave: 1`. Every `autosave` (and `save`)
   asks for `export` as `xmlpng`, one at a time (changes during an export ask for one more when it returns); every
-  exported PNG is saved `SAVE_DELAY` (800 ms) after the last one, through `Workbench.applyChange({ kind: 'update',
+  exported PNG is saved `SAVE_DELAY` (800 ms) after the last one, through `workspace.applyEdit({ kind: 'update',
   content })` (the last export wins; a refusal is an error message). An export with the diagram the file holds
   already is not saved (the editor reports its loaded state). `flush` (the panel's `onDidDispose`: another file
   shown, dispose; a scheme change) saves the pending export at once and, if the diagram changed after the last
@@ -1476,7 +1508,7 @@ new Layout(host, storageKey)   .editor  .preview  .statusBar   // the editing co
 ```
 
 - One grid on the host: side (rail + open panel) | editing column | preview; the status bar
-  (`Workbench.registerStatusBarItem`; `status-bar/StatusBar` places the items: a left and a right side, each by
+  (`window.registerStatusBarItem`; `status-bar/StatusBar` places the items: a left and a right side, each by
   priority, higher further left; hidden while empty) spans all. The preview is a share of the widget (default half; the separator on its left edge
   sets it, drag or arrow keys, 20–80%, saved with the layout, applied as `--te-preview-share`), so
   opening or resizing a side panel narrows only the editing column (down to min(20rem, 25%), then
@@ -1550,7 +1582,7 @@ new FilePanel(parent, { onOpen(path), onChange(change) → Promise<reason | null
 - **Tree**: folders first, then files, both by name (`Intl.Collator`, numeric). `role=tree`, one
   `treeitem` per visible row (`aria-level`, `aria-expanded`, `aria-selected` on the shown file;
   roving tabindex). Open folders are remembered (`memory`, the Layout's session store); the
-  folders around the shown file open when it changes. The files' decorations (`Workbench.getFileDecorations`, from
+  folders around the shown file open when it changes. The files' decorations (`window.getFileDecorations`, from
   every `FileDecorationProvider`, e.g. who else is in a file) as badges in their color, and on a closed folder the
   propagating ones of the files inside (each once); drawn again on `onDidChangeFileDecorations`.
 - **The focused row** (click, keyboard, right click; else the shown file) is what F2 / Delete and
@@ -1561,14 +1593,14 @@ new FilePanel(parent, { onOpen(path), onChange(change) → Promise<reason | null
   top level) is relocated there; files from the computer dropped on a row are uploaded into that
   folder (the tree stops the drop, so the widget-wide handler does not upload them again).
 
-### File links (`src/core/typst-syntax/`, `src/hosts/workbench/document-links/`, `src/extensions/document-links/`)
+### File links (`src/core/typst-syntax/`, `src/hosts/languages/`, `src/extensions/document-links/`)
 
 ```ts
 // core/typst-syntax (Typst syntax only)
 findFilePaths(text, { from?, to? }) → PathInSource[]   // { path: PathReference, from, to, call }; call: import | include | image | …
 neighbours(read, main, path) → { previous, next } | null   // in reading order: main, then its #includes depth first
 // the workbench (see "Extensions")
-workbench.registerDocumentLinkProvider({ provideDocumentLinks({ path, text }) → DocumentLink[], resolveDocumentLink?(link) },
+languages.registerDocumentLinkProvider({ provideDocumentLinks({ path, text }) → DocumentLink[], resolveDocumentLink?(link) },
                                        { priority? }) → Disposable
 // DocumentLink { range: {from, to}, target?: ProjectPath, tooltip?, command?: Command { title, command, arguments? } }
 linkExtension({ path(), provideDocumentLinks, resolveDocumentLink, open(target), executeCommand(id, ...args) })
@@ -1589,7 +1621,7 @@ documentLinks(): TypstExtension                       // one provider: the file 
 - **The `documentLinks` extension** is one provider: a path's link resolves from its file's path; an existing file
   is its `target`; a missing one gets the tooltip "x is not in the project", and a missing `.typ` file the command
   "Create x" (VS Code's `Command`: `documentLinks.createFile(path)`, a `create` change through
-  `Workbench.applyChange`, then `open`; rejects with the host's refusal); a
+  `workspace.applyEdit`, then `open`; rejects with the host's refusal); a
   path leaving the project resolves to nothing (marked, but no hover).
 - **Source view and raw boxes** (`linkExtension`, registered by the workbench host with every Source view and, through
   `registerBoxCodeExtension`, every raw box's code; the text's path is its file's, a box's text is its code): links
@@ -1600,7 +1632,7 @@ documentLinks(): TypstExtension                       // one provider: the file 
   (`executeCommand(command, ...arguments)`) and shows the rejection's message.
   The links are computed again on every change of the text.
 - **Image boxes**: the `images` extension shows an image box's path as the first link in its code
-  (`Workbench.provideDocumentLinks` + `resolveDocumentLink`): a button opening the target, or the path marked
+  (`languages.provideDocumentLinks` + `resolveDocumentLink`): a button opening the target, or the path marked
   missing with the link's tooltip.
 - **Workbench**: `open` shows the file (the panel selects it and opens its folders).
 
@@ -1741,7 +1773,7 @@ noteAtSelection(notes, selection) / noteAtOffset(notes, doc, offset)   // note-l
   view's toolbar has the button (`marginNotes({ comment })` runs the command);
   the tab bar has it for the Source view only (an `editor/title` menu entry with `when: editorMode ===
   'source'`, group `navigation`, its icon). Works on the
-  shown `.typ` file in the current tab (`Workbench.activeTextEditor`), applies the edits as one
+  shown `.typ` file in the current tab (`window.activeTextEditor`), applies the edits as one
   `document.change`, then in the Visual tab the notes gutter's `editNote(document, note)` (the extension owns
   the gutter) focuses the new note's reply box, or the Source view puts the caret into `[]`.
 - **Visual view, in the text** (`visual-view/margin-notes.ts`): see `marginNote` / `noteRange` below. A point
@@ -1869,7 +1901,7 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
   `model/model.ts` on demand
   (own chunk, ~37 kB gzip
   with Yjs and the Hocuspocus provider), publishes the selection when the editing views report a change
-  (`Workbench.onDidChangeTextEditorSelection` → `selectionChanged()`, once per microtask, while focus is in the
+  (`window.onDidChangeTextEditorSelection` → `selectionChanged()`, once per microtask, while focus is in the
   editing area (`Workbench.isEditorFocused`);
   not on the DOM's `selectionchange`, which fires before CodeMirror/ProseMirror read the new
   selection and so published the previous one).
@@ -1926,7 +1958,7 @@ HTTP             GET /rooms/<room>/files/<path> (Authorization: Bearer <room tok
   changes to save": info; a conflict: warning; "Saving failed: …": error), also for other clients' saves and
   upstream merges) and `SharedAssets` (assets ↔ project's other files; repository files
   fetched from the files endpoint, uploads as bytes; bytes → sha after a commit is not a
-  change). The extension registers the source control with `Workbench.registerSourceControl`; the
+  change). The extension registers the source control with `scm.registerSourceControl`; the
   `source-control` extension (only the UI over registered source controls) puts "Save to GitLab…" ("Saving to
   GitLab…" while busy) into the tab bar's menu (`editor/title`, command `sourceControl.commit`: the commit message
   in the input box, the default offered; several source controls: a quick pick first) and tells each new status as

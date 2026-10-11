@@ -16,7 +16,7 @@ import {
 export function markup(): TypstExtension {
   return {
     id: 'markup',
-    activate({ workbench, visualView, subscriptions }) {
+    activate({ window, workbench, visualView, subscriptions }) {
       subscriptions.push(workbench.registerStyleSheet(css));
       subscriptions.push(
         visualView.registerMark(BOLD),
@@ -29,7 +29,7 @@ export function markup(): TypstExtension {
         ...[MARK_ACTIONS.bold, MARK_ACTIONS.italic, MARK_ACTIONS.code].map((action, i) =>
           visualView.registerToolbarItem({ group: 'selection', order: 10 * (i + 1), action }),
         ),
-        visualView.registerToolbarItem({ group: 'selection', order: 40, create: (toolbar) => linkAction(toolbar, workbench) }),
+        visualView.registerToolbarItem({ group: 'selection', order: 40, create: (toolbar) => linkAction(toolbar, window) }),
         visualView.registerToolbarItem({ group: 'insert', order: 40, action: INSERT_CODE_BLOCK }),
         visualView.registerToolbarItem({ group: 'insert', order: 50, action: INSERT_QUOTE }),
       );

@@ -1,18 +1,18 @@
 // Label tags: a block's label (`= Intro <intro>`) drawn as a small tag on the block, renamed or removed through the
-// workbench's quick pick and input box; a new label typed into a draft tag right where it will show.
+// window's quick pick and input box; a new label typed into a draft tag right where it will show.
 // See visual-view.ts.
 import type { Node } from '@tiptap/pm/model';
 import { type EditorState, Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
-import type { QuickPickItem, Workbench } from '../../../hosts/workbench/workbench';
+import type { QuickPickItem, Window } from '../../../hosts/window/window';
 import { renameLabel, setLabel } from './label-edits';
 import { labelName } from '../model/reference-syntax';
 import type { ProjectLabels } from '../model/label-index';
 import { labelPrefix, labelTarget } from './add-label';
 
 /** Where a tag asks what to do with its label, and for the new name. */
-export type LabelPrompts = Pick<Workbench, 'showQuickPick' | 'showInputBox'>;
+export type LabelPrompts = Pick<Window, 'showQuickPick' | 'showInputBox'>;
 
 /** What the tags need: the project's labels (renaming updates their references by default), the view's document. */
 export interface LabelTagsOptions {

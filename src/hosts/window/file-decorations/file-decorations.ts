@@ -1,9 +1,9 @@
-// FileDecorations: the decorations every registered provider gives a file (`Workbench.registerFileDecorationProvider`),
-// for the views that list files. See workbench.ts.
+// FileDecorations: the decorations every registered provider gives a file (`window.registerFileDecorationProvider`),
+// for the views that list files. See window.ts.
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
-import type { FileDecoration, FileDecorationProvider } from '../workbench';
+import type { FileDecoration, FileDecorationProvider } from '../window';
 
 /** The registered file decoration providers, asked in registration order, and one event for all their changes. */
 export class FileDecorations {

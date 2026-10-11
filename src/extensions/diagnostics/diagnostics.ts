@@ -21,7 +21,7 @@ import { DiagnosticsStatus } from './workbench/workbench';
 export function diagnostics(): TypstExtension {
   return {
     id: 'diagnostics',
-    activate({ project, workbench, sourceView, visualView, preview, subscriptions }) {
+    activate({ project, window, workbench, sourceView, visualView, preview, subscriptions }) {
       subscriptions.push(workbench.registerStyleSheet(css));
       const collection = new DiagnosticCollection();
       const status = new DiagnosticsStatus(workbench.ownerDocument, (target) => {
@@ -48,7 +48,7 @@ export function diagnostics(): TypstExtension {
           provideHighlights: (document) => collection.get(document).map(diagnosticHighlight),
           onDidChangeHighlights: collection.onDidChange,
         }),
-        workbench.registerStatusBarItem(status.element, { alignment: 'left', priority: 100 }),
+        window.registerStatusBarItem(status.element, { alignment: 'left', priority: 100 }),
         status,
         workbench.onDidShowFile((path) => {
           if (project.document(path)) lastSource = path;

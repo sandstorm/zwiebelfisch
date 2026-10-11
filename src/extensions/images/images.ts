@@ -9,7 +9,9 @@ import type { FileChange, FileContent, Project } from '../../core/project/projec
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import { uploadChanges } from '../../core/uploads/uploads';
 import type { VisualViewContribution } from '../../hosts/visual-view/visual-view';
-import type { DocumentLink, TypstExtension, Workbench } from '../../hosts/workbench/workbench';
+import type { DocumentLink } from '../../hosts/languages/languages';
+import type { Window } from '../../hosts/window/window';
+import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './images.css?inline';
 import { IMAGE_FILES, imageBlob, isImage } from './model/image-files';
 import { uploadTarget } from './model/upload';
@@ -18,22 +20,22 @@ import { assetEditor } from './workbench/workbench';
 
 /**
  * Images in every document's Visual view (`#image(..)` boxes showing the project's image file, "Insert image"
- * offering the project's images and uploads, which go through `Workbench.applyChange`; an image box's path is the
- * document link on it, from the workbench's link providers), and the read-only view of image and other files: the
+ * offering the project's images and uploads, which go through `workspace.applyEdit`; an image box's path is the
+ * document link on it, from the link providers (`languages`)), and the read-only view of image and other files: the
  * custom editors `images.preview` (`*.{png,jpg,jpeg,gif,svg,webp}`) and `images.file` (`*`, any other file).
  */
 export function images(): TypstExtension {
   return {
     id: 'images',
     activate(context) {
-      const { project, workbench, preview, subscriptions } = context;
-      const projectImages = new ProjectImages({ project, onDidChange: preview.onDidRender, applyChange: (change) => workbench.applyChange(change) });
+      const { project, workspace, window, languages, workbench, preview, subscriptions } = context;
+      const projectImages = new ProjectImages({ project, onDidChange: preview.onDidRender, applyEdit: (change) => workspace.applyEdit(change) });
       subscriptions.push(
         workbench.registerStyleSheet(css),
         projectImages,
-        workbench.registerCustomEditorProvider('images.preview', assetEditor, { filenamePattern: IMAGE_FILES }),
+        window.registerCustomEditorProvider('images.preview', assetEditor, { filenamePattern: IMAGE_FILES }),
         // any other file (`*` is the least specific pattern: every other editor's wins)
-        workbench.registerCustomEditorProvider('images.file', assetEditor, { filenamePattern: '*' }),
+        window.registerCustomEditorProvider('images.file', assetEditor, { filenamePattern: '*' }),
       );
       imagesVisualView({
         assets: (document) => projectImages.forDocument(document).assets,
@@ -41,12 +43,12 @@ export function images(): TypstExtension {
         imageLinks: (document) => ({
           linkOf: (src) => {
             const file = project.pathOf(document);
-            const [link] = file ? workbench.provideDocumentLinks({ path: file, text: src }) : [];
-            return link ? workbench.resolveDocumentLink(link) : null;
+            const [link] = file ? languages.provideDocumentLinks({ path: file, text: src }) : [];
+            return link ? languages.resolveDocumentLink(link) : null;
           },
           open: (target) => workbench.open(target),
         }),
-        prompts: workbench,
+        prompts: window,
       }).activate(context);
     },
   };
@@ -75,8 +77,8 @@ export function imagesVisualView(options: ImagesOptions = {}): VisualViewContrib
   };
 }
 
-/** Where images ask (an image, a path, alt text) and tell why an upload was refused: the workbench's. */
-export type ImagePrompts = Pick<Workbench, 'showQuickPick' | 'showInputBox' | 'showErrorMessage'>;
+/** Where images ask (an image, a path, alt text) and tell why an upload was refused: the window's. */
+export type ImagePrompts = Pick<Window, 'showQuickPick' | 'showInputBox' | 'showErrorMessage'>;
 
 /** Where image files are shown from: the host's project files, as URLs. */
 export interface ImageUrls {
@@ -119,8 +121,8 @@ export interface ProjectImagesOptions {
   project: Project;
   /** Fires whenever image files may have changed (a new compile). */
   onDidChange: Event<void>;
-  /** Applies a change (an uploaded image) if allowed; resolves to the reason it was not, or null (`Workbench.applyChange`). */
-  applyChange(change: FileChange): Promise<string | null>;
+  /** Applies a change (an uploaded image) if allowed; resolves to the reason it was not, or null (`workspace.applyEdit`). */
+  applyEdit(change: FileChange): Promise<string | null>;
 }
 
 /**
@@ -184,11 +186,11 @@ export class ProjectImages {
     if (change?.kind !== 'create' || !isImage(change.path)) {
       return { error: `${upload.name} is not an image the document can show (PNG, JPEG, GIF, SVG or WebP).` };
     }
-    const { project, applyChange } = this.options;
+    const { project, applyEdit } = this.options;
     const { path, content } = change;
     const target = uploadTarget(path, content, (candidate) => project.content(candidate));
     if (project.has(target)) return { path: ProjectPath.referenceTo(file, target) };
-    const problem = await applyChange({ kind: 'create', path: target, content });
+    const problem = await applyEdit({ kind: 'create', path: target, content });
     return problem === null ? { path: ProjectPath.referenceTo(file, target) } : { error: problem };
   }
 }

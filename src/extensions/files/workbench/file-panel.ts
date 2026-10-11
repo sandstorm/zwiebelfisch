@@ -3,7 +3,8 @@
 import type { FileChange } from '../../../core/project/project';
 import { type NamedPath, ProjectPath } from '../../../core/paths/paths';
 import { uploadChanges } from '../../../core/uploads/uploads';
-import type { FileDecoration, Memory, MenuContext, MenuItem, Workbench } from '../../../hosts/workbench/workbench';
+import type { FileDecoration, Window } from '../../../hosts/window/window';
+import type { Memory, MenuContext, MenuItem } from '../../../hosts/workbench/workbench';
 import { PopupMenu, type PopupMenuAnchor } from '../../../ui/popup-menu/popup-menu';
 import { filesUnder, type Folder, folderOf, relocate } from '../model/tree-model';
 import { icon } from './icons/icons';
@@ -13,8 +14,8 @@ import { FileTree } from './tree/tree';
 export const NEW_FILE_MENU = 'file/newFile';
 export const CONTEXT_MENU = 'explorer/context';
 
-/** What the panel asks the user with, and tells them: the workbench's input box and messages. */
-export type FilePanelPrompts = Pick<Workbench, 'showInputBox' | 'showWarningMessage' | 'showErrorMessage'>;
+/** What the panel asks the user with, and tells them: the window's input box and messages. */
+export type FilePanelPrompts = Pick<Window, 'showInputBox' | 'showWarningMessage' | 'showErrorMessage'>;
 
 export interface FilePanelOptions {
   /** Someone picked a file. */
@@ -44,7 +45,7 @@ export interface FilePanelState {
  * have a context menu (`explorer/context`: right click, Shift+F10, the context menu key). The operations behind the
  * entries (`newFile`, `newFolder`, `upload`, `rename`, `delete`) act on a row: a file, or a folder with everything in
  * it; new files and uploads go into the row's folder. The main file (and a folder holding it) stays where it is.
- * Names are asked for in the workbench's input box, refusals are error messages. It only turns gestures into
+ * Names are asked for in the window's input box, refusals are error messages. It only turns gestures into
  * `FileChange`s; whether they happen is up to `onChange`.
  */
 export class FilePanel {

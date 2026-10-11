@@ -2,8 +2,8 @@
 // Tests for link-extension.ts: document links in a CodeMirror editor.
 import { describe, expect, it, vi } from 'vitest';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
-import { ProjectPath } from '../../../core/paths/paths';
-import type { DocumentLink } from '../workbench';
+import { ProjectPath } from '../../core/paths/paths';
+import type { DocumentLink } from './languages';
 import { linkExtension, linkInfo, type LinkActions } from './link-extension';
 
 const path = ProjectPath.of;

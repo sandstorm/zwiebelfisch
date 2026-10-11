@@ -6,7 +6,8 @@
 // policy. Without this extension the preview neither follows nor jumps.
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
-import type { TypstExtension, Workspace } from '../../hosts/workbench/workbench';
+import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Workspace } from '../../hosts/workspace/workspace';
 import { followCursor } from './preview/preview';
 import css from './preview-sync.css?inline';
 
@@ -31,11 +32,11 @@ export function previewSync(): TypstExtension {
         },
       },
     },
-    activate({ project, workspace, workbench, preview, subscriptions }) {
+    activate({ project, window, workspace, workbench, preview, subscriptions }) {
       subscriptions.push(workbench.registerStyleSheet(css));
       let following = configuredFollow(workspace);
       const revealSelection = () => {
-        const editor = workbench.activeTextEditor;
+        const editor = window.activeTextEditor;
         const path = editor && project.pathOf(editor.document);
         if (path) preview.reveal(path, editor.selection.from, editor.selection.to);
       };
@@ -55,8 +56,8 @@ export function previewSync(): TypstExtension {
           toggle = preview.registerToolbarItem(followCursor({ on: following, onChange }), { group: '1_sync', order: 10 });
         }),
         // where the user works: the shown file's editor, focused (not a collaborator's edit in a hidden view)
-        workbench.onDidChangeTextEditorSelection(({ textEditor }) => {
-          if (following && textEditor === workbench.activeTextEditor && workbench.isEditorFocused()) revealSelection();
+        window.onDidChangeTextEditorSelection(({ textEditor }) => {
+          if (following && textEditor === window.activeTextEditor && workbench.isEditorFocused()) revealSelection();
         }),
         preview.onDidClickPage((click) => {
           const path = ProjectPath.parse(click.path);

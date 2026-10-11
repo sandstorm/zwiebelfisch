@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../../core/paths/paths';
-import type { FileDecoration, FileDecorationProvider } from '../workbench';
+import type { FileDecoration, FileDecorationProvider } from '../window';
 import { FileDecorations } from './file-decorations';
 
 const path = ProjectPath.of;

@@ -6,7 +6,7 @@
 import { createTypstEditor, type TypstEditor, type TypstEditorOptions } from '../typst-editor/typst-editor';
 import type { FileChange, FileContent, ProjectFiles } from '../core/project/project';
 import type { ProjectPath } from '../core/paths/paths';
-import type { Settings } from '../hosts/workbench/workbench';
+import type { Settings } from '../hosts/workspace/workspace';
 import { inlineSource } from './inline-source';
 
 /**

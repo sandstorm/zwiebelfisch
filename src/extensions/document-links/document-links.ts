@@ -7,23 +7,24 @@
 import { findFilePaths } from '../../core/typst-syntax/typst-syntax';
 import { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
-import type { DocumentLink, DocumentLinkProvider, TextDocument, TypstExtension } from '../../hosts/workbench/workbench';
+import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { DocumentLink, DocumentLinkProvider, TextDocument } from '../../hosts/languages/languages';
 
 /**
  * Links the file paths of all Typst text (the Source views, raw boxes, an image box's path): they resolve from the
  * file's path, open an existing file, and offer to create a missing Typst file: the command
- * `documentLinks.createFile(path)` creates it through `Workbench.applyChange` and opens it, or rejects saying why not.
+ * `documentLinks.createFile(path)` creates it through `workspace.applyEdit` and opens it, or rejects saying why not.
  */
 export function documentLinks(): TypstExtension {
   return {
     id: 'document-links',
-    activate({ project, workbench, subscriptions }) {
+    activate({ project, commands, languages, workspace, workbench, subscriptions }) {
       subscriptions.push(
-        workbench.registerDocumentLinkProvider(new FilePathLinks(project)),
-        workbench.registerCommand(CREATE_FILE, async (path: string) => {
+        languages.registerDocumentLinkProvider(new FilePathLinks(project)),
+        commands.registerCommand(CREATE_FILE, async (path: string) => {
           const target = ProjectPath.parse(path);
           if (!target) throw new Error(`Not a project path: ${path}`);
-          const problem = await workbench.applyChange({ kind: 'create', path: target, content: '' });
+          const problem = await workspace.applyEdit({ kind: 'create', path: target, content: '' });
           if (problem !== null) throw new Error(problem);
           workbench.open(target);
         }),

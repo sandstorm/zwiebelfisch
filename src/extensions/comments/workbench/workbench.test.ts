@@ -3,29 +3,31 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../../core/disposable/disposable';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import type { TextEditor } from '../../../hosts/workbench/workbench';
+import type { TextEditor } from '../../../hosts/window/window';
 import { VisualView, VisualViewContributions } from '../../../hosts/visual-view/visual-view';
 import { localDate } from '../model/note-thread';
 import { NOTE_STYLE } from '../model/add-margin-note';
 import { marginNotes } from '../visual-view/margin-notes';
 import { notesGutter } from '../visual-view/notes-gutter/notes-gutter';
-import { ADD_COMMENT, registerAddComment, type CommentWorkbench, type NoteCards } from './workbench';
+import { ADD_COMMENT, registerAddComment, type CommentContext, type NoteCards } from './workbench';
 
 const IMPORT = `#import "@preview/drafting:0.2.2": margin-note, set-margin-note-defaults\n${NOTE_STYLE}`;
 
 /** A workbench showing `editor`, with comments.addComment registered: `comment()` runs the command. */
 function setup(editor: TextEditor | null, cards: NoteCards = { editNote: () => false }) {
   const commands = new Map<string, () => unknown>();
-  const workbench: CommentWorkbench = {
-    activeTextEditor: editor,
-    registerCommand: (id, handler) => {
-      commands.set(id, handler);
-      return new Disposable(() => commands.delete(id));
+  const context: CommentContext = {
+    window: { activeTextEditor: editor },
+    commands: {
+      registerCommand: (id, handler) => {
+        commands.set(id, handler);
+        return new Disposable(() => commands.delete(id));
+      },
+      registerKeybinding: () => new Disposable(() => {}),
     },
-    registerKeybinding: () => new Disposable(() => {}),
-    registerMenuItem: () => new Disposable(() => {}),
+    workbench: { registerMenuItem: () => new Disposable(() => {}) },
   };
-  registerAddComment(workbench, cards);
+  registerAddComment(context, cards);
   return { comment: () => commands.get(ADD_COMMENT)!() };
 }
 

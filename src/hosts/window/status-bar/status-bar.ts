@@ -1,7 +1,7 @@
-// StatusBar: the items extensions put into the status bar (`Workbench.registerStatusBarItem`), placed as VS Code
-// places its StatusBarItems. See workbench.ts and ARCHITECTURE.md, "Layout".
+// StatusBar: the items extensions put into the status bar (`window.registerStatusBarItem`), placed as VS Code
+// places its StatusBarItems. See window.ts and ARCHITECTURE.md, "Layout".
 import { Disposable } from '../../../core/disposable/disposable';
-import type { StatusBarPlacement } from '../workbench';
+import type { StatusBarPlacement } from '../window';
 
 interface Entry {
   readonly element: HTMLElement;

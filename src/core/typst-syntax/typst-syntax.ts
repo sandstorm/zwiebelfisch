@@ -5,7 +5,7 @@
 // isEmbeddable, markupSource). Entry of core/typst-syntax/. See ARCHITECTURE.md, "File links".
 // Why here: extensions never import each other, and this knowledge is about Typst, not about one feature. Only
 // syntax: where a path leads (the project, the file's current path) and what following it does (open, create) is the
-// document-links extension's, and showing links is the hosts' (`Workbench.registerDocumentLinkProvider`); applying
+// document-links extension's, and showing links is the hosts' (`languages.registerDocumentLinkProvider`); applying
 // a change is the caller's.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
