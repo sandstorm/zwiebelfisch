@@ -96,7 +96,7 @@ export class Preview implements PreviewContributions {
     this.scroller.addEventListener('scroll', () => this.scheduleStatus(), { passive: true });
     this.resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => this.scheduleStatus());
     this.resizeObserver?.observe(this.scroller);
-    this.compiles = new LatestOnly((compile, superseded) => this.compile(compile, superseded));
+    this.compiles = new LatestOnly((compile, superseded) => this.compile(compile, superseded), { interval: COMPILE_INTERVAL_MS });
     this.reveals = new LatestOnly((reveal, superseded) => this.lookUp(reveal, superseded), {
       interval: REVEAL_INTERVAL_MS,
     });
@@ -120,9 +120,9 @@ export class Preview implements PreviewContributions {
    * Shows the given project files, compiling `main`. Files map absolute
    * paths (`/main.typ`, `/img/logo.png`) to Typst source text or to bytes.
    * `@preview` packages the document imports are downloaded on first use.
-   * Cheap to call on every keystroke: updates arriving while a compilation
-   * runs are collapsed into one, and bytes that are the same `Uint8Array` as
-   * last time are not sent to the worker again.
+   * Cheap to call on every keystroke: a compile starts at most every 150 ms,
+   * updates arriving meanwhile are collapsed into one, and bytes that are the
+   * same `Uint8Array` as last time are not sent to the worker again.
    */
   update(files: Record<string, FileContent>, main: string): void {
     this.compiles.push({ files, main });
@@ -507,6 +507,11 @@ function div(doc: Document, className: string): HTMLElement {
 /** Minimum time between two cursor → preview lookups while the cursor moves. */
 const REVEAL_INTERVAL_MS = 80;
 
+/**
+ * At most this often a compile starts while typing: each one swaps a page's SVG and redraws the raw boxes, so at
+ * one compile per keystroke a fast engine (a short document) would do that per keystroke.
+ */
+const COMPILE_INTERVAL_MS = 150;
 
 /** Toolbar order (see `ToolbarPlacement`): the group `navigation` first, the other groups by name, then `order`. */
 function byPlacement(a: { group: string; order: number }, b: { group: string; order: number }): number {
