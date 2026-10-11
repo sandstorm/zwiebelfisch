@@ -34,7 +34,7 @@ import css from './visual-editor.css?inline';
 export class VisualEditor {
   /** The text and the gutters beside it, below the toolbar: what scrolls as the document's content. */
   readonly content: HTMLElement;
-  private readonly editor: Editor;
+  private readonly tiptap: Editor;
   private readonly toolbar: Toolbar;
   private readonly gutters: Gutter[];
   private readonly selectionChanged = new EventEmitter<void>();
@@ -47,24 +47,24 @@ export class VisualEditor {
     const views = nodeViewSpecs(contributed.nodes);
     // block atoms, and inline atoms shown as a box of their own (raw inline Typst, a margin note)
     const isBox = (node: Node) => node.isAtom && (node.isBlock || views.get(node.type.name)?.box !== undefined);
-    const view: VisualEditorContext = { document, selection: () => this.selection(), sourceToPos, posToSource, isBox };
+    const editor: VisualEditorContext = { document, selection: () => this.selection(), sourceToPos, posToSource, isBox };
     // the text and, right of it, the gutters
     const body = parent.appendChild(parent.ownerDocument.createElement('div'));
     body.className = 'typst-visual__body';
     this.content = body;
-    this.editor = new Editor({
+    this.tiptap = new Editor({
       element: body,
       extensions: [
-        ...editorExtensions(contributed.nodes, contributed.marks, boxes(view, contributed, views)),
+        ...editorExtensions(contributed.nodes, contributed.marks, boxes(editor, contributed, views)),
         highlights,
-        suggestions(contributed.completionItemProviders, (editor, query) => ({
-          ...view,
-          editor,
+        suggestions(contributed.completionItemProviders, (tiptap, query) => ({
+          ...editor,
+          editor: tiptap,
           query,
           toolbarActions: (group) => this.toolbar.actions(group),
           textStyles: () => this.toolbar.textStyles(),
         })),
-        ...contributed.tiptapExtensions.flatMap((provider) => provider(view)),
+        ...contributed.tiptapExtensions.flatMap((provider) => provider(editor)),
       ],
       injectCSS: false,
       editorProps: { attributes: { class: 'typst-visual', 'data-testid': 'typst-visual' } },
@@ -73,18 +73,18 @@ export class VisualEditor {
         if (transaction.selectionSet || transaction.docChanged) this.selectionChanged.fire();
       },
     });
-    const { schema } = this.editor;
+    const { schema } = this.tiptap;
     attachGrammar(schema, contributed.nodes, contributed.marks);
-    this.gutters = contributed.gutters.map((provider) => provider(view, body));
+    this.gutters = contributed.gutters.map((provider) => provider(editor, body));
     // Load the parsed document itself (not a JSON copy): its node identities are what marks blocks as untouched.
-    this.editor.view.updateState(
+    this.tiptap.view.updateState(
       EditorState.create({
         schema,
         doc: parseTypst(document.text, schema),
-        plugins: [...this.editor.state.plugins, ...this.gutters.flatMap((gutter) => (gutter.plugin ? [gutter.plugin] : []))],
+        plugins: [...this.tiptap.state.plugins, ...this.gutters.flatMap((gutter) => (gutter.plugin ? [gutter.plugin] : []))],
       }),
     );
-    this.toolbar = new Toolbar(parent, this.editor, view, { groups: contributed.toolbarGroups, items: contributed.toolbarItems, textStyles: contributed.textStyles });
+    this.toolbar = new Toolbar(parent, this.tiptap, editor, { groups: contributed.toolbarGroups, items: contributed.toolbarItems, textStyles: contributed.textStyles });
     this.subscriptions = [
       document.onDidChange(({ origin }) => {
         if (origin !== this) this.syncFromDocument();
@@ -102,12 +102,12 @@ export class VisualEditor {
 
   /** Selects what shows source range `range` (a caret if empty) and scrolls to it. */
   reveal({ from, to }: SourceRange): void {
-    const { doc } = this.editor.state;
+    const { doc } = this.tiptap.state;
     const anchor = sourceToPos(doc, from);
     const head = to > from ? Math.max(anchor, sourceToPos(doc, to, -1)) : anchor;
     const selection = TextSelection.between(doc.resolve(anchor), doc.resolve(head));
-    this.editor.view.dispatch(this.editor.state.tr.setSelection(selection).scrollIntoView());
-    this.editor.view.focus();
+    this.tiptap.view.dispatch(this.tiptap.state.tr.setSelection(selection).scrollIntoView());
+    this.tiptap.view.focus();
   }
 
   /**
@@ -115,7 +115,7 @@ export class VisualEditor {
    * last character (or box) it covers ends; `from === to` for a caret.
    */
   selection(): SourceRange {
-    const { doc, selection } = this.editor.state;
+    const { doc, selection } = this.tiptap.state;
     const from = posToSource(doc, selection.from);
     const end = posToSource(doc, selection.to, -1);
     return { from, to: selection.empty || end < from ? from : end };
@@ -125,24 +125,24 @@ export class VisualEditor {
     for (const subscription of [...this.subscriptions].reverse()) subscription.dispose();
     this.selectionChanged.dispose();
     this.toolbar.dispose();
-    this.editor.destroy();
+    this.tiptap.destroy();
     for (const gutter of this.gutters) gutter.dispose();
   }
 
   /** Replaces the highlights of `layer` (source ranges); they follow edits until set again. */
   private setHighlights(layer: string, ranges: readonly SourceHighlight[]): void {
-    this.editor.view.dispatch(setHighlights(this.editor.state.tr, layer, ranges));
+    this.tiptap.view.dispatch(setHighlights(this.tiptap.state.tr, layer, ranges));
   }
 
   private afterTransaction(tr: Transaction): void {
     if (!tr.docChanged || tr.getMeta(FROM_DOCUMENT)) return;
-    this.document.setText(serializeToTypst(this.editor.state.doc), this);
+    this.document.setText(serializeToTypst(this.tiptap.state.doc), this);
   }
 
   private syncFromDocument(): void {
-    const { state } = this.editor;
+    const { state } = this.tiptap;
     const tr = applyTypstChanges(state.tr, parseTypst(this.document.text, state.schema));
-    if (tr.docChanged) this.editor.view.dispatch(tr.setMeta(FROM_DOCUMENT, true).setMeta('addToHistory', false));
+    if (tr.docChanged) this.tiptap.view.dispatch(tr.setMeta(FROM_DOCUMENT, true).setMeta('addToHistory', false));
   }
 }
 
@@ -204,7 +204,7 @@ export interface Gutter {
 }
 
 /** Makes a view's gutter in `body`, the element holding the text (`.typst-visual__body`). */
-export type GutterProvider = (view: VisualEditorContext, body: HTMLElement) => Gutter;
+export type GutterProvider = (editor: VisualEditorContext, body: HTMLElement) => Gutter;
 
 /**
  * A styled stretch of the source (UTF-16 offsets) that the Visual editor draws
@@ -260,13 +260,13 @@ export interface PriorityOptions {
 export interface Contributed {
   readonly nodes: readonly TypstNodeSpec[];
   readonly marks: readonly TypstMarkSpec[];
-  readonly tiptapExtensions: readonly ((view: VisualEditorContext) => AnyExtension | readonly AnyExtension[])[];
+  readonly tiptapExtensions: readonly ((editor: VisualEditorContext) => AnyExtension | readonly AnyExtension[])[];
   readonly toolbarGroups: readonly ToolbarGroup[];
   readonly toolbarItems: readonly ToolbarItem[];
   readonly gutters: readonly GutterProvider[];
   readonly highlights: readonly { readonly layer: string; readonly provider: SourceHighlightProvider }[];
   readonly rawBoxRenderers: readonly RawBoxRendererProvider[];
-  readonly rawBoxCodeMirrorExtensions: readonly ((view: VisualEditorContext) => Extension)[];
+  readonly rawBoxCodeMirrorExtensions: readonly ((editor: VisualEditorContext) => Extension)[];
   readonly rawBoxActions: readonly RawBoxAction[];
   readonly textStyles: readonly TextStyleProvider[];
   readonly completionItemProviders: readonly { readonly provider: CompletionItemProvider; readonly trigger: CompletionTrigger }[];
@@ -298,7 +298,7 @@ export interface VisualEditorContributions {
    * Tiptap extensions made for each view (they may use its document): decorations, plugins (drops, appended
    * transactions), commands not tied to a node. Their hooks see the view's editor (`this.editor`).
    */
-  registerTiptapExtension(provider: (view: VisualEditorContext) => AnyExtension | readonly AnyExtension[]): Disposable;
+  registerTiptapExtension(provider: (editor: VisualEditorContext) => AnyExtension | readonly AnyExtension[]): Disposable;
   /** A place for toolbar items: a group, a menu or a floating bar. */
   registerToolbarGroup(group: ToolbarGroup): Disposable;
   /** A button or control in a toolbar group (one the host or a contribution registered). */
@@ -328,7 +328,7 @@ export interface VisualEditorContributions {
    */
   registerRawBoxRenderer(provider: RawBoxRendererProvider, options?: PriorityOptions): Disposable;
   /** CodeMirror extensions for the code of every raw box of each view (e.g. links on file paths). */
-  registerRawBoxCodeMirrorExtension(provider: (view: VisualEditorContext) => Extension): Disposable;
+  registerRawBoxCodeMirrorExtension(provider: (editor: VisualEditorContext) => Extension): Disposable;
   /**
    * A button on every raw box `action.when` holds for (any box: a contribution need not own the box's node type),
    * in registration order: with the box's tools (an image box's toolbar), else above its code.
@@ -345,12 +345,12 @@ export class VisualEditorHost implements VisualEditorContributions {
   private readonly lists = {
     nodes: [] as TypstNodeSpec[],
     marks: [] as TypstMarkSpec[],
-    tiptapExtensions: [] as ((view: VisualEditorContext) => AnyExtension | readonly AnyExtension[])[],
+    tiptapExtensions: [] as ((editor: VisualEditorContext) => AnyExtension | readonly AnyExtension[])[],
     toolbarGroups: [] as ToolbarGroup[],
     toolbarItems: [] as ToolbarItem[],
     gutters: [] as GutterProvider[],
     highlights: [] as { layer: string; provider: SourceHighlightProvider }[],
-    rawBoxCodeMirrorExtensions: [] as ((view: VisualEditorContext) => Extension)[],
+    rawBoxCodeMirrorExtensions: [] as ((editor: VisualEditorContext) => Extension)[],
     rawBoxActions: [] as RawBoxAction[],
     textStyles: [] as TextStyleProvider[],
     completionItemProviders: [] as { provider: CompletionItemProvider; trigger: CompletionTrigger }[],
@@ -374,7 +374,7 @@ export class VisualEditorHost implements VisualEditorContributions {
     return this.add(this.lists.marks, spec);
   }
 
-  registerTiptapExtension(provider: (view: VisualEditorContext) => AnyExtension | readonly AnyExtension[]): Disposable {
+  registerTiptapExtension(provider: (editor: VisualEditorContext) => AnyExtension | readonly AnyExtension[]): Disposable {
     return this.add(this.lists.tiptapExtensions, provider);
   }
 
@@ -402,7 +402,7 @@ export class VisualEditorHost implements VisualEditorContributions {
     return this.add(this.rawBoxRenderers, { value: provider, priority: options.priority ?? DEFAULT_PRIORITY });
   }
 
-  registerRawBoxCodeMirrorExtension(provider: (view: VisualEditorContext) => Extension): Disposable {
+  registerRawBoxCodeMirrorExtension(provider: (editor: VisualEditorContext) => Extension): Disposable {
     return this.add(this.lists.rawBoxCodeMirrorExtensions, provider);
   }
 
@@ -488,7 +488,7 @@ export interface RawBoxRenderer {
 }
 
 /** The renderer of one view's boxes (null: none for this view). */
-export type RawBoxRendererProvider = (view: VisualEditorContext) => RawBoxRenderer | null;
+export type RawBoxRendererProvider = (editor: VisualEditorContext) => RawBoxRenderer | null;
 
 /**
  * The decorations the Visual editor gives a raw box's node (e.g. one marking another user's caret inside the box),
@@ -505,9 +505,9 @@ export interface RawBoxToolsHost {
   readonly code: HTMLElement;
   /** The rendered picture (the tools may move it, e.g. into a frame), or null without a renderer. */
   readonly picture: HTMLImageElement | null;
-  readonly editor: Editor;
+  readonly tiptap: Editor;
   /** The view the box is in. */
-  readonly view: VisualEditorContext;
+  readonly editor: VisualEditorContext;
   /** The box's document position, while it is in the document. */
   getPos(): number | undefined;
   /** Shows and focuses the code. */
@@ -536,9 +536,9 @@ export interface RawBoxAction {
   /** The button's text. */
   readonly title: string;
   /** Whether the box of `node` (its Typst: `node.attrs.src`) in `view` offers it; asked whenever the node changes. Default: every box. */
-  when?(node: Node, view: VisualEditorContext): boolean;
+  when?(node: Node, editor: VisualEditorContext): boolean;
   /** Runs it for the box of `node` (the box's node now). */
-  run(node: Node, view: VisualEditorContext): void;
+  run(node: Node, editor: VisualEditorContext): void;
 }
 
 // The toolbar: buttons (actions), controls, groups, menus and floating bars.
@@ -631,7 +631,7 @@ export interface TextStyle {
 
 /** The text style menu's entries of one view; the menu asks again whenever `onDidChangeTextStyles` fires. */
 export interface TextStyleProvider {
-  provideTextStyles(view: VisualEditorContext): readonly TextStyle[];
+  provideTextStyles(editor: VisualEditorContext): readonly TextStyle[];
   readonly onDidChangeTextStyles?: Event<void>;
 }
 
@@ -703,14 +703,14 @@ export type ToolbarItem =
       create(toolbar: ToolbarContext): ToolbarAction | ToolbarControl;
     };
 
-/** What the raw boxes of `view` get from the contributions. */
-function boxes(view: VisualEditorContext, contributed: Contributed, views: RawBoxes['views']): RawBoxes {
+/** What the raw boxes of `editor` get from the contributions. */
+function boxes(editor: VisualEditorContext, contributed: Contributed, nodeViews: RawBoxes['nodeViews']): RawBoxes {
   return {
-    view,
-    renderers: contributed.rawBoxRenderers.map((provider) => provider(view)).filter((renderer) => renderer !== null),
-    codeExtensions: contributed.rawBoxCodeMirrorExtensions.map((provider) => provider(view)),
+    editor,
+    renderers: contributed.rawBoxRenderers.map((provider) => provider(editor)).filter((renderer) => renderer !== null),
+    codeExtensions: contributed.rawBoxCodeMirrorExtensions.map((provider) => provider(editor)),
     actions: contributed.rawBoxActions,
-    views,
+    nodeViews,
   };
 }
 

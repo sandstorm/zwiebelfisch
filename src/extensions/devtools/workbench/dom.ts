@@ -1,7 +1,7 @@
 // What the devtools' panel (devtools-panel.ts) and its tabs share: a tab's shape, making elements.
 
 /** A tab's content: its element, kept while the tab is shown (with its inputs and what is expanded), and `update`, redrawing it. */
-export interface TabView {
+export interface Tab {
   readonly element: HTMLElement;
   update(): void;
 }

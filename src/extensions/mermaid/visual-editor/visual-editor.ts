@@ -37,9 +37,9 @@ export type MermaidOf = (src: string, document: TypstDocument) => ProjectPath | 
 export function editMermaidAction(mermaidOf: MermaidOf, open: (path: ProjectPath) => void): RawBoxAction {
   return {
     title: 'Edit diagram',
-    when: (node, view) => mermaidOf(node.attrs.src, view.document) !== null,
-    run: (node, view) => {
-      const diagram = mermaidOf(node.attrs.src, view.document);
+    when: (node, editor) => mermaidOf(node.attrs.src, editor.document) !== null,
+    run: (node, editor) => {
+      const diagram = mermaidOf(node.attrs.src, editor.document);
       if (diagram) open(diagram);
     },
   };

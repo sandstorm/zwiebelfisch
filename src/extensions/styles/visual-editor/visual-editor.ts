@@ -72,22 +72,22 @@ export interface StyleApplier extends VisualEditorContribution {
   apply(document: TypstDocument, style: TypstStyle): boolean;
 }
 
-/** A `StyleApplier` over the views of every document (each followed from its creation to its end). */
+/** A `StyleApplier` over the Visual editors of every document (each followed from its creation to its end). */
 export function styleApplier(source: ProjectStyles): StyleApplier {
-  const views = new Map<TypstDocument, { view: VisualEditorContext; editor: Editor }>();
+  const editors = new Map<TypstDocument, { editor: VisualEditorContext; tiptap: Editor }>();
   return {
     id: 'styles-applier',
     activate({ visualEditor, subscriptions }) {
       subscriptions.push(
-        visualEditor.registerTiptapExtension((view) =>
+        visualEditor.registerTiptapExtension((editor) =>
           Extension.create({
             name: 'typstStyleApplier',
             addProseMirrorPlugins() {
-              const editor = this.editor;
+              const tiptap = this.editor;
               // a plugin view lives exactly as long as the editor's view (Tiptap's onCreate comes a tick later)
               const follow = () => {
-                views.set(view.document, { view, editor });
-                return { destroy: () => views.get(view.document)?.editor === editor && views.delete(view.document) };
+                editors.set(editor.document, { editor, tiptap });
+                return { destroy: () => editors.get(editor.document)?.tiptap === tiptap && editors.delete(editor.document) };
               };
               return [new Plugin({ view: follow })];
             },
@@ -96,12 +96,12 @@ export function styleApplier(source: ProjectStyles): StyleApplier {
       );
     },
     apply(document, style) {
-      const shown = views.get(document);
+      const shown = editors.get(document);
       if (!shown) return false;
-      const { view, editor } = shown;
-      const entry = textStyle(style, view, source);
-      if (entry.enabled && !entry.enabled(editor)) return false;
-      const applied = entry.apply(editor.chain().focus(), editor).run();
+      const { editor, tiptap } = shown;
+      const entry = textStyle(style, editor, source);
+      if (entry.enabled && !entry.enabled(tiptap)) return false;
+      const applied = entry.apply(tiptap.chain().focus(), tiptap).run();
       if (applied) entry.applied?.();
       return applied;
     },
@@ -182,19 +182,19 @@ function parseStyleCall(p: TypstParseContext, call: SyntaxNode, marks: readonly 
  */
 function textStyles({ styles: source, create }: StylesOptions): TextStyleProvider {
   return {
-    provideTextStyles: (view) => [...source.styles().map((style) => textStyle(style, view, source)), { id: 'new-style', label: 'New style…', order: 1000, apply: (chain) => chain, applied: create }],
+    provideTextStyles: (editor) => [...source.styles().map((style) => textStyle(style, editor, source)), { id: 'new-style', label: 'New style…', order: 1000, apply: (chain) => chain, applied: create }],
     onDidChangeTextStyles: source.onDidChange,
   };
 }
 
 /** The menu entry of `style`, in `view`. */
-function textStyle(style: TypstStyle, view: VisualEditorContext, source: ProjectStyles): TextStyle {
+function textStyle(style: TypstStyle, editor: VisualEditorContext, source: ProjectStyles): TextStyle {
   const applied = { name: style.name, label: style.label };
   const entry = {
     label: style.label,
     applied: () => {
-      const change = source.calculateImportChange(view.document, style, view.selection().from);
-      if (change) view.document.change([change], STYLE_IMPORT);
+      const change = source.calculateImportChange(editor.document, style, editor.selection().from);
+      if (change) editor.document.change([change], STYLE_IMPORT);
     },
   };
   if (style.kind === 'block') {

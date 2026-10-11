@@ -16,13 +16,13 @@ export function notesGutter(options: NotesGutterOptions = {}): NotesGutterContri
     id: 'notes-gutter',
     activate({ visualEditor, subscriptions }) {
       subscriptions.push(
-        visualEditor.registerGutter((view, body) => {
+        visualEditor.registerGutter((editor, body) => {
           const gutter = new NotesGutter(body, options);
-          gutters.set(view.document, gutter);
+          gutters.set(editor.document, gutter);
           return {
             plugin: gutter.plugin,
             dispose: () => {
-              if (gutters.get(view.document) === gutter) gutters.delete(view.document);
+              if (gutters.get(editor.document) === gutter) gutters.delete(editor.document);
               gutter.dispose();
             },
           };

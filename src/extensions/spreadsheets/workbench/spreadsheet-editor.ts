@@ -1,4 +1,4 @@
-// SpreadsheetView. See ../spreadsheets.ts.
+// SpreadsheetEditor. See ../spreadsheets.ts.
 import { FileContent } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import type { MountedWorkbook, WorkbookEdit } from './workbook';
@@ -12,7 +12,7 @@ import type { MountedWorkbook, WorkbookEdit } from './workbook';
  *
  * A spreadsheet file in the editing area — its title and IronCalc's workbook UI, loaded on demand (workbook.ts).
  */
-export class SpreadsheetView {
+export class SpreadsheetEditor {
   private readonly root: HTMLElement;
   private readonly title: HTMLElement;
   private readonly body: HTMLElement;

@@ -51,7 +51,7 @@ export class Preview implements PreviewContributions {
   /** What toolbar items see of the preview. */
   private readonly context: PreviewContext;
   /** The toolbar's items in toolbar order. */
-  private readonly items: { view: ToolbarItemView; group: string; order: number }[] = [];
+  private readonly items: { made: ToolbarItemElements; group: string; order: number }[] = [];
   /** The PDF export options, with their priority, in registration order. */
   private readonly exportOptions: { option: PdfExportOption; priority: number }[] = [];
   /** Outlines the clicked text, until the next click, successful compile or `clearClickHighlight`. */
@@ -175,14 +175,14 @@ export class Preview implements PreviewContributions {
   }
 
   registerToolbarItem(item: PreviewToolbarItem, placement: ToolbarPlacement): Disposable {
-    const view = item(this.context);
-    const entry = { view, group: placement.group, order: placement.order ?? 0 };
+    const made = item(this.context);
+    const entry = { made, group: placement.group, order: placement.order ?? 0 };
     // the sort is stable: equal places stay in registration order
     this.items.push(entry);
     this.items.sort(byPlacement);
-    this.toolbar.append(...this.items.flatMap((each) => each.view.elements));
+    this.toolbar.append(...this.items.flatMap((each) => each.made.elements));
     this.scheduleStatus();
-    return new Disposable(() => this.removeItem(view));
+    return new Disposable(() => this.removeItem(made));
   }
 
   registerPdfExportOption(option: PdfExportOption, options: { priority?: number } = {}): Disposable {
@@ -204,7 +204,7 @@ export class Preview implements PreviewContributions {
     this.rendered.dispose();
     this.diagnosed.dispose();
     this.clicked.dispose();
-    for (const { view } of [...this.items]) this.removeItem(view);
+    for (const { made } of [...this.items]) this.removeItem(made);
     this.worker.terminate();
     this.resizeObserver?.disconnect();
     cancelAnimationFrame(this.frame);
@@ -222,8 +222,8 @@ export class Preview implements PreviewContributions {
     };
   }
 
-  private removeItem(item: ToolbarItemView): void {
-    const index = this.items.findIndex((entry) => entry.view === item);
+  private removeItem(item: ToolbarItemElements): void {
+    const index = this.items.findIndex((entry) => entry.made === item);
     if (index < 0) return;
     this.items.splice(index, 1);
     for (const element of item.elements) element.remove();
@@ -295,7 +295,7 @@ export class Preview implements PreviewContributions {
   }
 
   private updateStatus(): void {
-    for (const { view } of this.items) view.update?.();
+    for (const { made } of this.items) made.update?.();
   }
 
   private async handleClick(event: MouseEvent): Promise<void> {
@@ -401,7 +401,7 @@ export interface PreviewContributions {
 }
 
 /** A control in the preview's toolbar: made once, for the preview it is registered with. */
-export type PreviewToolbarItem = (preview: PreviewContext) => ToolbarItemView;
+export type PreviewToolbarItem = (preview: PreviewContext) => ToolbarItemElements;
 
 /**
  * Where a toolbar item goes, as in VS Code's menus: the groups in the order of their names (the group `navigation`
@@ -413,7 +413,7 @@ export interface ToolbarPlacement {
 }
 
 /** A toolbar item as made for one preview. */
-export interface ToolbarItemView {
+export interface ToolbarItemElements {
   /** Its elements, placed in the toolbar in this order, where its `ToolbarPlacement` puts it. */
   readonly elements: readonly HTMLElement[];
   /** Called (at most once per frame) after the view changed: scrolled, resized, zoomed, new pages. */

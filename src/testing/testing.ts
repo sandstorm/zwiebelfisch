@@ -36,7 +36,7 @@ import { attachGrammar, createSchema, documentExtensions, posToSource, serialize
  * module (an extension's tests compose it with the others here, never by importing another extension); only
  * `*.test.ts` files may import it (eslint.config.js). Hosts' own tests use the host minimum and their own specs.
  */
-export function schemaWith(options: TestViewOptions = {}): Schema {
+export function schemaWith(options: TestEditorOptions = {}): Schema {
   return schemaFrom(contributions(options));
 }
 
@@ -57,7 +57,7 @@ export const TEST_DOCUMENT_PATH = ProjectPath.of('/main.typ');
  * What a test gives a view: the parts of the extension context the built-ins use (the project's files, the preview's
  * snippets, the document links, the window's prompts), and the contributions under test.
  */
-export interface TestViewOptions {
+export interface TestEditorOptions {
   /** The project's other files (images as bytes), by path; the view's document is `TEST_DOCUMENT_PATH`. Default: none. */
   files?: Readonly<Record<string, FileContent>>;
   /** Applies a change (an uploaded image): resolves to why it was refused, or null. Default: the file is added. */
@@ -116,7 +116,7 @@ export const schema: Schema = schemaWith();
 export const parseTypst = (source: string, withSchema: Schema = schema): Node => parseTypstWith(source, withSchema);
 
 /** A Visual editor of `document` with the built-ins configured from `options`. */
-export function createVisualEditor(parent: HTMLElement, document: TypstDocument, options: TestViewOptions = {}): VisualEditor {
+export function createVisualEditor(parent: HTMLElement, document: TypstDocument, options: TestEditorOptions = {}): VisualEditor {
   return new VisualEditor(parent, document, contributions(options));
 }
 
@@ -124,7 +124,7 @@ export function createVisualEditor(parent: HTMLElement, document: TypstDocument,
  * A Tiptap editor of `source` with the built-ins configured from `options` (their schema and commands, without the
  * Visual editor's node views and toolbar): for tests of a construct's commands. Needs a DOM (jsdom).
  */
-export function createEditor(source: string, options: TestViewOptions = {}): Editor {
+export function createEditor(source: string, options: TestEditorOptions = {}): Editor {
   const { nodes, marks } = contributions(options).contributed();
   const editor = new Editor({ extensions: documentExtensions(nodes, marks), injectCSS: false });
   attachGrammar(editor.schema, nodes, marks);
@@ -133,7 +133,7 @@ export function createEditor(source: string, options: TestViewOptions = {}): Edi
 }
 
 /** The built-ins and `options.contributions`, activated. */
-function contributions(options: TestViewOptions): VisualEditorHost {
+function contributions(options: TestEditorOptions): VisualEditorHost {
   return activate([...builtins(), ...(options.contributions ?? [])], options);
 }
 
@@ -144,7 +144,7 @@ function contributions(options: TestViewOptions): VisualEditorHost {
  * Registrations other than the Visual editor's (style sheets, commands, custom editors, search providers) are accepted
  * and ignored.
  */
-function activate(contributions: readonly VisualEditorContribution[], options: TestViewOptions = {}): VisualEditorHost {
+function activate(contributions: readonly VisualEditorContribution[], options: TestEditorOptions = {}): VisualEditorHost {
   const visualEditor = new VisualEditorHost();
   const context = { visualEditor, subscriptions: [], ...testContext(options) };
   for (const contribution of contributions) contribution.activate(context as unknown as ContributionContext);
@@ -152,7 +152,7 @@ function activate(contributions: readonly VisualEditorContribution[], options: T
 }
 
 /** The parts of an extension context the built-ins use, made from `options`. */
-function testContext(options: TestViewOptions) {
+function testContext(options: TestEditorOptions) {
   const project = testProject(options);
   const prompts = options.prompts ?? new TestPrompts();
   const added = async (change: FileChange) => (change.kind === 'create' && project.add(change.path, change.content), null);
@@ -173,7 +173,7 @@ function testContext(options: TestViewOptions) {
   };
 }
 
-function testLanguages(options: TestViewOptions): Pick<Languages, 'provideDocumentLinks' | 'resolveDocumentLink'> {
+function testLanguages(options: TestEditorOptions): Pick<Languages, 'provideDocumentLinks' | 'resolveDocumentLink'> {
   return {
     provideDocumentLinks: options.links?.provideDocumentLinks ?? (() => []),
     resolveDocumentLink: options.links?.resolveDocumentLink ?? ((link) => link),
@@ -181,7 +181,7 @@ function testLanguages(options: TestViewOptions): Pick<Languages, 'provideDocume
 }
 
 /** A project holding the view's document (whatever document it is) and `options.files`. */
-function testProject(options: TestViewOptions): Pick<Project, 'pathOf' | 'paths' | 'has' | 'content'> & { add(path: ProjectPath, content: FileContent): void } {
+function testProject(options: TestEditorOptions): Pick<Project, 'pathOf' | 'paths' | 'has' | 'content'> & { add(path: ProjectPath, content: FileContent): void } {
   const files = new Map(Object.entries(options.files ?? {}).map(([path, content]) => [ProjectPath.of(path), content]));
   return {
     pathOf: () => TEST_DOCUMENT_PATH,
@@ -197,7 +197,7 @@ function ignored(): Disposable {
   return new Disposable(() => {});
 }
 
-function testPreview(options: TestViewOptions): Pick<PreviewContributions, 'snippet' | 'onDidRender'> {
+function testPreview(options: TestEditorOptions): Pick<PreviewContributions, 'snippet' | 'onDidRender'> {
   return { snippet: options.preview?.snippet ?? (async () => null), onDidRender: options.preview?.onDidRender ?? new EventEmitter<void>().event };
 }
 

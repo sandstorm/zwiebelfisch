@@ -7,8 +7,8 @@ The plain Typst editor: CodeMirror 6 bound to a `TypstDocument`. Module `src/hos
 What `ExtensionContext.sourceEditor` is. One contribution point:
 
 ```ts
-registerCodeMirrorExtension(extension: Extension | ((view: SourceEditorContext) => Extension)): Disposable
-createView(parent, document, { onSelection? }) → SourceEditor    // the workbench calls it
+registerCodeMirrorExtension(extension: Extension | ((editor: SourceEditorContext) => Extension)): Disposable
+createEditor(parent, document, { onSelection? }) → SourceEditor    // the workbench calls it
 ```
 
 - A contribution applies to every view: those made later and those already open. Open views reconfigure a `Compartment`, so state the new configuration keeps survives.

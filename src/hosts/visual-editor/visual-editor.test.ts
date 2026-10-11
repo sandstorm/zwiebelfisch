@@ -131,8 +131,8 @@ describe('VisualEditor contexts', () => {
     const contributions = new VisualEditorHost();
     const seen: { pos: number; offset: number; boxes: string[] }[] = [];
     const seenBy: VisualEditorContext[] = [];
-    contributions.registerTiptapExtension((view) => {
-      seenBy.push(view);
+    contributions.registerTiptapExtension((editor) => {
+      seenBy.push(editor);
       return [];
     });
     const parent = document.body.appendChild(document.createElement('div'));

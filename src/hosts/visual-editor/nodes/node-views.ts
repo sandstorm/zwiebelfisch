@@ -42,7 +42,7 @@ function nodeViews(boxes: RawBoxes): AnyExtension {
       const rawBox = rawBoxViews(this.editor, boxes);
       const nodeViews: Record<string, NodeViewConstructor> = {};
       const own = new Set<string>();
-      for (const [name, view] of boxes.views) {
+      for (const [name, view] of boxes.nodeViews) {
         if (view.keepsDom) nodeViews[name] = keepWhileRenderedSame;
         if (view.box === 'code') nodeViews[name] = rawBox;
         if (view.ownsPseudoElements) own.add(name);

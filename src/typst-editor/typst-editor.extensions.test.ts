@@ -109,9 +109,9 @@ function toolbarControls(items: readonly PreviewToolbarItem[]): string[] {
     visiblePage: () => ({ index: PageIndex.of(0), count: 0 }),
   } satisfies PreviewContext;
   return items.map((item) => {
-    const view = item(context);
-    view.dispose?.();
-    return view.elements.map((element) => element.dataset.testid || element.className).filter(Boolean).join(' ');
+    const made = item(context);
+    made.dispose?.();
+    return made.elements.map((element) => element.dataset.testid || element.className).filter(Boolean).join(' ');
   });
 }
 

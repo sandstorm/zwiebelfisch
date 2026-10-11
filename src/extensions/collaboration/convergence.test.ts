@@ -49,7 +49,7 @@ async function user(name: string, files: Record<string, string>, peer?: { ydoc: 
   const sourceEditors = new SourceEditorHost();
   sourceEditors.registerCodeMirrorExtension(sourcePresence(presences));
   sourceEditors.registerCodeMirrorExtension(perUserUndo);
-  const source = sourceEditors.createView(sourceParent, document);
+  const source = sourceEditors.createEditor(sourceParent, document);
   cleanup.push(() => {
     disconnect();
     collaboration.dispose();

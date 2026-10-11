@@ -101,7 +101,7 @@ The modules with the most complexity. Lines: TypeScript without blank and commen
   [host `workbench`], [1140 / 960], [135], [1], [layout, the namespaces, the editors of `*.typ`],
   [ext `files`], [710 / 535], [128], [6], [its own tree widget and panel],
   [host `preview`], [870 / 650], [120], [2], [worker, pages, overlays, snippets; carries the engine (@architecture-core-engine-size)],
-  [ext `images`], [740 / 370], [116], [1], [image node and resize tools, uploads, the asset viewer; calls figures' commands],
+  [ext `images`], [740 / 370], [116], [1], [image node and resize tools, uploads, the image editor; calls figures' commands],
 )
 
 - To re-measure: `mise run quality:report 100000` lists every function; add up per `src/<layer>/<name>/`.

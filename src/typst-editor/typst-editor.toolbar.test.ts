@@ -5,13 +5,13 @@ import { File } from 'node:buffer';
 import { describe, expect, it, vi } from 'vitest';
 import { SourceRange, TypstDocument } from '../core/typst-document/typst-document';
 import type { FileChange } from '../core/project/project';
-import { createVisualEditor, TestPrompts, type TestViewOptions } from '../testing/testing';
+import { createVisualEditor, TestPrompts, type TestEditorOptions } from '../testing/testing';
 
 /** An image file's content (what it holds does not matter here). */
 const IMAGE = new Uint8Array([1]);
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-function setup(text: string, options: TestViewOptions = {}) {
+function setup(text: string, options: TestEditorOptions = {}) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
@@ -227,7 +227,7 @@ describe('Visual editor toolbar', () => {
     function withUploads(error?: string) {
       const uploaded: string[] = [];
       const applyEdit = async (change: FileChange) => (error ?? (uploaded.push(change.path.slice(1)), null));
-      const options: TestViewOptions = { files: { '/img/logo.png': IMAGE, '/data.csv': 'a,b' }, applyEdit };
+      const options: TestEditorOptions = { files: { '/img/logo.png': IMAGE, '/data.csv': 'a,b' }, applyEdit };
       return { options, uploaded };
     }
 

@@ -32,7 +32,7 @@ extensions/<name>/
   [`markup`], [strong, emphasis, links, inline code, code blocks, quotes], [nodes, marks, toolbar],
   [`headings`], [headings, their numbers, `headings.toggleNumbering`; search group "Headings"], [node, text style provider, search provider],
   [`tables`], [`#table(..)`, "Insert table", the table bar], [node, toolbar],
-  [`images`], [image boxes, "Insert image", image files read-only (`images.preview`)], [node, toolbar, custom editor],
+  [`images`], [image boxes, "Insert image", image files read-only (`images.editor`)], [node, toolbar, custom editor],
   [`figures`], [`#figure(..)` around any `figureBody` node, caption as rich text; search group "Figures" (by caption, tables and listings too)], [nodes, search provider],
   [`renderedBoxes`], [raw boxes drawn as snippets from the preview], [box renderer],
   [`outline`], [`#outline(..)` as a box, "Table of contents"], [node, toolbar],

@@ -1,12 +1,12 @@
 // The devtools' Contributions tab. See devtools-panel.ts.
 import type { Contribution, ContributionLog } from '../recording/contributions';
-import { element, type TabView } from './dom';
+import { element, type Tab } from './dom';
 
 /**
  * Every contribution in its point's terms, grouped by extension or by contribution point (who competes there, in the
  * order the host resolves them).
  */
-export class ContributionsTab implements TabView {
+export class ContributionsTab implements Tab {
   readonly element: HTMLElement;
   #grouping: Grouping = 'extension';
   /** The groups folded (by grouping and name), kept across redraws. */

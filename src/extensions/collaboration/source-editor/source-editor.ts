@@ -18,12 +18,12 @@ export const perUserUndo: Extension = EditorState.transactionExtender.of((tr) =>
 );
 
 /** Draws the other users' carets and selections in every Source editor, as `presences` has them; they follow edits. */
-export function sourcePresence(presences: PresenceSource): (view: SourceEditorContext) => Extension {
-  return (view) => [
+export function sourcePresence(presences: PresenceSource): (editor: SourceEditorContext) => Extension {
+  return (editor) => [
     remotePresence,
-    initialPresences.of(presences.presencesIn(view.document)),
-    ViewPlugin.define((editor) => {
-      const subscription = presences.onDidChange(() => editor.dispatch({ effects: setPresence.of(presences.presencesIn(view.document)) }));
+    initialPresences.of(presences.presencesIn(editor.document)),
+    ViewPlugin.define((view) => {
+      const subscription = presences.onDidChange(() => view.dispatch({ effects: setPresence.of(presences.presencesIn(editor.document)) }));
       return { destroy: () => subscription.dispose() };
     }),
   ];

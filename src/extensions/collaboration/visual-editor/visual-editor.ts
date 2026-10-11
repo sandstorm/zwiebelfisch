@@ -25,7 +25,7 @@ export function visualPresence(presences: PresenceSource, documents: () => reado
     activate({ visualEditor, subscriptions }) {
       subscriptions.push(
         visualEditor.registerHighlights('collaboration.selections', selections(presences, documents)),
-        visualEditor.registerTiptapExtension((view) => remoteCarets(view, presences)),
+        visualEditor.registerTiptapExtension((editor) => remoteCarets(editor, presences)),
         visualEditor.registerRawBoxCodeMirrorExtension(() => boxPresence),
       );
     },
@@ -54,8 +54,8 @@ function selection({ user, anchor, head }: PlacedPresence): SourceHighlight[] {
  * whole (a raw box, an image, a page break, a margin note) outlines that box in the user's color with the name
  * instead; the box gets the caret's offset in its own source (`boxCaretsSpec`).
  */
-function remoteCarets(view: VisualEditorContext, presences: PresenceSource): Extension {
-  const decorations = (doc: Node) => caretDecorations(view, doc, presences.presencesIn(view.document));
+function remoteCarets(editor: VisualEditorContext, presences: PresenceSource): Extension {
+  const decorations = (doc: Node) => caretDecorations(editor, doc, presences.presencesIn(editor.document));
   return Extension.create({
     name: 'typstRemotePresence',
     addProseMirrorPlugins() {
@@ -80,11 +80,11 @@ function remoteCarets(view: VisualEditorContext, presences: PresenceSource): Ext
   });
 }
 
-function caretDecorations(view: VisualEditorContext, doc: Node, presences: readonly PlacedPresence[]): DecorationSet {
+function caretDecorations(editor: VisualEditorContext, doc: Node, presences: readonly PlacedPresence[]): DecorationSet {
   const boxes = new Map<number, { node: Node; carets: BoxCaret[] }>();
   const decorations: Decoration[] = [];
   for (const { id, user, head } of presences) {
-    const box = boxAt(view, doc, head);
+    const box = boxAt(editor, doc, head);
     if (box) {
       const entry = boxes.get(box.pos) ?? { node: box.node, carets: [] };
       entry.carets.push({ id, user, offset: head - box.start });
@@ -92,7 +92,7 @@ function caretDecorations(view: VisualEditorContext, doc: Node, presences: reado
     } else {
       // A caret sticks to the text before it: at the end of a line, the hidden line break or
       // blank line after it must not carry it to the start of the next one.
-      decorations.push(caret(view.sourceToPos(doc, head, -1), id, user));
+      decorations.push(caret(editor.sourceToPos(doc, head, -1), id, user));
     }
   }
   for (const [pos, { node, carets }] of boxes) decorations.push(boxOutline(pos, node, carets));
@@ -104,13 +104,13 @@ function caretDecorations(view: VisualEditorContext, doc: Node, presences: reado
  * up to its line end, an inline box strictly inside (a caret right before or
  * after it is drawn as a caret).
  */
-function boxAt(view: VisualEditorContext, doc: Node, offset: SourceOffset): { pos: number; node: Node; start: SourceOffset } | null {
+function boxAt(editor: VisualEditorContext, doc: Node, offset: SourceOffset): { pos: number; node: Node; start: SourceOffset } | null {
   let found: { pos: number; node: Node; start: SourceOffset } | null = null;
   doc.descendants((node, pos) => {
     if (found) return false;
-    if (!view.isBox(node)) return true;
-    const start = view.posToSource(doc, pos);
-    const end = view.posToSource(doc, pos + node.nodeSize);
+    if (!editor.isBox(node)) return true;
+    const start = editor.posToSource(doc, pos);
+    const end = editor.posToSource(doc, pos + node.nodeSize);
     if (node.isBlock ? start <= offset && offset <= end : start < offset && offset < end) found = { pos, node, start };
     return false;
   });

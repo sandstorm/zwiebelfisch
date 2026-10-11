@@ -586,8 +586,8 @@ export class WorkbenchHost implements Workbench {
   /** The registered document links in every Source editor and in the code of every raw box (Typst, in its file). */
   #showDocumentLinks(): void {
     const links = (document: TypstDocument) => this.#languages.createDocumentLinksCodeMirrorExtension('typst', () => this.project.pathOf(document) ?? null);
-    this.#sourceEditors.registerCodeMirrorExtension((view) => links(view.document));
-    this.#visualEditor.registerRawBoxCodeMirrorExtension((view) => links(view.document));
+    this.#sourceEditors.registerCodeMirrorExtension((editor) => links(editor.document));
+    this.#visualEditor.registerRawBoxCodeMirrorExtension((editor) => links(editor.document));
   }
 
   /** `data-theme` from the setting `workbench.theme` (none: as the page), and the scheme the colors resolve to now. */

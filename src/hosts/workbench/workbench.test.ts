@@ -303,10 +303,10 @@ describe('WorkbenchHost', () => {
   });
 
   it('applies the Visual editor contributions to the Visual editor of each document', () => {
-    const provider = vi.fn((_view: { document: TypstDocument }) => []);
+    const provider = vi.fn((_editor: { document: TypstDocument }) => []);
     const { workbench } = setup(({ visualEditor, subscriptions }) => subscriptions.push(visualEditor.registerTiptapExtension(provider)), { viewType: VISUAL_EDITOR });
     workbench.open(path('/a.typ'));
-    expect(provider.mock.calls.map(([view]) => view.document.text)).toEqual(['= Main\n', 'A\n']);
+    expect(provider.mock.calls.map(([editor]) => editor.document.text)).toEqual(['= Main\n', 'A\n']);
   });
 
   it('applies the Source editor contributions to every Source editor, and gives the extensions the preview', () => {

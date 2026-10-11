@@ -31,7 +31,7 @@ function builtins(parent: HTMLElement) {
   const files = provider();
   const sheets = provider();
   const diagrams = provider();
-  editors.register('images.preview', images.provider, { displayName: 'Image', filenamePattern: '*.{png,jpg,jpeg,gif,svg,webp}' });
+  editors.register('images.editor', images.provider, { displayName: 'Image', filenamePattern: '*.{png,jpg,jpeg,gif,svg,webp}' });
   editors.register('files.file', files.provider, { displayName: 'File', filenamePattern: '*', priority: 'fallback' });
   editors.register('spreadsheets.editor', sheets.provider, { displayName: 'Editor', filenamePattern: '*.ic' });
   editors.register('diagrams.editor', diagrams.provider, { displayName: 'Diagram', filenamePattern: '*.drawio.png', priority: 110 });
@@ -124,7 +124,7 @@ describe('CustomEditors', () => {
     show(editors, '/a.png');
     const [first] = images.opened;
     expect(first.panel.element.parentElement).toBe(parent);
-    expect(first.panel.element.dataset.viewType).toBe('images.preview');
+    expect(first.panel.element.dataset.viewType).toBe('images.editor');
     show(editors, '/a.png');
     expect(first.disposed).toBe(true);
     expect(first.panel.element.parentElement).toBeNull();
@@ -160,10 +160,10 @@ describe('CustomEditors', () => {
     expect(choices('/a.png')).toEqual(['Image']);
     expect(choices('/data.csv')).toEqual([]);
     expect(show(editors, '/a.drawio.png')).toBe('diagrams.editor');
-    expect(show(editors, '/a.drawio.png', 'images.preview')).toBe('images.preview');
-    expect(show(editors, '/b.drawio.png')).toBe('images.preview');
+    expect(show(editors, '/a.drawio.png', 'images.editor')).toBe('images.editor');
+    expect(show(editors, '/b.drawio.png')).toBe('images.editor');
     // a choice the file does not offer is passed over
-    expect(show(editors, '/b.drawio.png', 'spreadsheets.editor')).toBe('images.preview');
+    expect(show(editors, '/b.drawio.png', 'spreadsheets.editor')).toBe('images.editor');
     expect(show(editors, '/x.ic')).toBe('spreadsheets.editor');
     expect(show(editors, '/b.drawio.png', 'diagrams.editor')).toBe('diagrams.editor');
     expect(images.opened).toHaveLength(3);

@@ -29,8 +29,8 @@ export class Toolbar {
 
   constructor(
     parent: HTMLElement,
-    private readonly editor: Editor,
-    private readonly view: VisualEditorContext,
+    private readonly tiptap: Editor,
+    private readonly editor: VisualEditorContext,
     private readonly options: { groups: readonly ToolbarGroup[]; items: readonly ToolbarItem[]; textStyles: readonly TextStyleProvider[] },
   ) {
     const { groups, items, textStyles } = options;
@@ -43,18 +43,18 @@ export class Toolbar {
     this.root.addEventListener('mousedown', (event) => {
       if ((event.target as HTMLElement).closest('button')) event.preventDefault();
     });
-    const context = this.context(view);
+    const context = this.context(editor);
     const all = [...HOST_GROUPS, ...groups];
-    const textStyleMenu: ToolbarItem[] = textStyles.length > 0 ? [{ group: 'text-style', create: (toolbar) => new TextStyleMenu(doc, editor, toolbar, textStyles) }] : [];
+    const textStyleMenu: ToolbarItem[] = textStyles.length > 0 ? [{ group: 'text-style', create: (toolbar) => new TextStyleMenu(doc, tiptap, toolbar, textStyles) }] : [];
     const entries = this.entries([...HOST_ITEMS, ...textStyleMenu, ...items], context);
     this.entriesByGroup = entries;
     const sorted = (kinds: ToolbarGroup['kind'][]) => [...all].filter((group) => kinds.includes(group.kind)).sort((a, b) => a.order - b.order);
     for (const group of sorted(['group', 'menu'])) this.rowGroup(group, entries.get(group.id) ?? []);
     parent.prepend(this.root);
     this.floatingBars(sorted(['floating']), entries);
-    editor.on('transaction', this.refresh);
-    editor.on('focus', this.refresh);
-    editor.on('blur', this.refresh);
+    tiptap.on('transaction', this.refresh);
+    tiptap.on('focus', this.refresh);
+    tiptap.on('blur', this.refresh);
     this.refresh();
   }
 
@@ -65,21 +65,21 @@ export class Toolbar {
 
   /** The text style menu's entries, sorted as shown (without "Normal text"). */
   textStyles(): readonly TextStyle[] {
-    return textStyleEntries(this.options.textStyles, this.view);
+    return textStyleEntries(this.options.textStyles, this.editor);
   }
 
   dispose(): void {
     for (const subscription of [...this.subscriptions].reverse()) subscription.dispose();
     for (const dispose of this.disposers) dispose();
-    this.editor.off('transaction', this.refresh);
-    this.editor.off('focus', this.refresh);
-    this.editor.off('blur', this.refresh);
+    this.tiptap.off('transaction', this.refresh);
+    this.tiptap.off('focus', this.refresh);
+    this.tiptap.off('blur', this.refresh);
     this.root.remove();
   }
 
   /** What items made for this view get. */
-  private context(view: VisualEditorContext): ToolbarContext {
-    return { ...view, editor: this.editor, root: this.root, subscriptions: this.subscriptions };
+  private context(editor: VisualEditorContext): ToolbarContext {
+    return { ...editor, editor: this.tiptap, root: this.root, subscriptions: this.subscriptions };
   }
 
   /** The items' buttons and controls by group, each group's sorted by `order` (then as registered). */
@@ -100,7 +100,7 @@ export class Toolbar {
     wrapper.className = 'typst-toolbar__group';
     if (group.kind === 'menu') {
       const buttons = entries.filter(isAction).map((action) => this.button(action));
-      const menu = new ToolbarMenu(this.root.ownerDocument, group.label, () => group.icon(this.editor), buttons);
+      const menu = new ToolbarMenu(this.root.ownerDocument, group.label, () => group.icon(this.tiptap), buttons);
       this.refreshers.push(() => menu.refresh());
       this.disposers.push(() => menu.dispose());
       wrapper.append(menu.element);
@@ -122,7 +122,7 @@ export class Toolbar {
    * bar has the focus; only the first with an anchor shows.
    */
   private floatingBars(groups: readonly ToolbarGroup[], entries: Map<string, (ToolbarAction | ToolbarControl)[]>): void {
-    const container = this.editor.view.dom.parentElement!;
+    const container = this.tiptap.view.dom.parentElement!;
     const bars: (() => boolean)[] = [];
     for (const group of groups) {
       if (group.kind !== 'floating') continue;
@@ -131,10 +131,10 @@ export class Toolbar {
       const bar = new FloatingBar(container, group.label, actions.map((action) => this.button(action)));
       this.disposers.push(() => bar.dispose());
       const earlier = [...bars];
-      const focused = () => this.editor.isFocused || bar.element.contains(bar.element.ownerDocument.activeElement);
+      const focused = () => this.tiptap.isFocused || bar.element.contains(bar.element.ownerDocument.activeElement);
       const anchor = (): Anchor => {
-        if (!focused() || earlier.some((shown) => shown()) || !actions.some((action) => action.visible?.(this.editor) ?? true)) return null;
-        return group.anchor(this.editor, actions.some((action) => action.showsBar?.(this.editor)));
+        if (!focused() || earlier.some((shown) => shown()) || !actions.some((action) => action.visible?.(this.tiptap) ?? true)) return null;
+        return group.anchor(this.tiptap, actions.some((action) => action.showsBar?.(this.tiptap)));
       };
       this.refreshers.push(() => bar.show(anchor()));
       bars.push(() => !bar.element.hidden);
@@ -149,11 +149,11 @@ export class Toolbar {
     button.innerHTML = action.icon;
     button.setAttribute('aria-label', action.label);
     button.title = action.shortcut ? `${action.label} (${shortcutText(action.shortcut)})` : action.label;
-    button.addEventListener('click', () => (action.click ? action.click() : action.run?.(this.editor.chain().focus()).run()));
+    button.addEventListener('click', () => (action.click ? action.click() : action.run?.(this.tiptap.chain().focus()).run()));
     this.refreshers.push(() => {
-      button.disabled = action.enabled ? !action.enabled(this.editor) : action.run !== undefined && !action.run(this.editor.can().chain()).run();
-      if (action.active) button.setAttribute('aria-pressed', String(action.active(this.editor)));
-      if (action.visible) button.hidden = !action.visible(this.editor);
+      button.disabled = action.enabled ? !action.enabled(this.tiptap) : action.run !== undefined && !action.run(this.tiptap.can().chain()).run();
+      if (action.active) button.setAttribute('aria-pressed', String(action.active(this.tiptap)));
+      if (action.visible) button.hidden = !action.visible(this.tiptap);
     });
     return button;
   }

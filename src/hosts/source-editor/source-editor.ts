@@ -19,17 +19,17 @@ import css from './source-editor.css?inline';
  * registered once and applied to every editor made before or after, so a feature never tracks editors.
  */
 export class SourceEditorHost implements SourceEditorContributions {
-  private readonly extensions: (Extension | ((view: SourceEditorContext) => Extension))[] = [];
+  private readonly extensions: (Extension | ((editor: SourceEditorContext) => Extension))[] = [];
   private readonly changed = new EventEmitter<void>();
   /** How a view gets its contributions: it asks for them now and again on every change. */
   private readonly contributions: Contributions = {
-    extensionsFor: (view) => this.extensionsFor(view),
+    extensionsFor: (editor) => this.extensionsFor(editor),
     onDidChange: this.changed.event,
   };
   /** The CSS of the views (a revealed range), for the workbench to put where the widget renders. */
   readonly styleSheet: string = css;
 
-  registerCodeMirrorExtension(extension: Extension | ((view: SourceEditorContext) => Extension)): Disposable {
+  registerCodeMirrorExtension(extension: Extension | ((editor: SourceEditorContext) => Extension)): Disposable {
     this.extensions.push(extension);
     this.changed.fire();
     return new Disposable(() => {
@@ -39,12 +39,12 @@ export class SourceEditorHost implements SourceEditorContributions {
   }
 
   /** A Source editor of `document` in `parent`, with every contribution registered now or later. */
-  createView(parent: HTMLElement, document: TypstDocument, options: SourceEditorOptions = {}): SourceEditor {
+  createEditor(parent: HTMLElement, document: TypstDocument, options: SourceEditorOptions = {}): SourceEditor {
     return new SourceEditor(parent, document, options, this.contributions);
   }
 
-  private extensionsFor(view: SourceEditorContext): Extension {
-    return this.extensions.map((extension) => (typeof extension === 'function' ? extension(view) : extension));
+  private extensionsFor(editor: SourceEditorContext): Extension {
+    return this.extensions.map((extension) => (typeof extension === 'function' ? extension(editor) : extension));
   }
 }
 
@@ -52,9 +52,9 @@ export class SourceEditorHost implements SourceEditorContributions {
 export interface SourceEditorContributions {
   /**
    * Adds CodeMirror extensions to every Source editor, the existing ones included, until disposed: the same value for
-   * all of them, or made per view from what the view shows (`SourceEditorContext`).
+   * all of them, or made per editor from what the editor shows (`SourceEditorContext`).
    */
-  registerCodeMirrorExtension(extension: Extension | ((view: SourceEditorContext) => Extension)): Disposable;
+  registerCodeMirrorExtension(extension: Extension | ((editor: SourceEditorContext) => Extension)): Disposable;
 }
 
 /** What a contribution knows about the one Source editor it is applied to. */
@@ -83,7 +83,7 @@ export const SOURCE_EDITOR = 'sourceEditor';
 
 /**
  * The plain-Typst editing view (CodeMirror 6), kept in sync with a
- * TypstDocument in both directions. Made by `SourceEditorHost.createView`.
+ * TypstDocument in both directions. Made by `SourceEditorHost.createEditor`.
  */
 export class SourceEditor {
   private readonly view: EditorView;
@@ -141,7 +141,7 @@ export class SourceEditor {
 
 /** What a view needs from its host: the contributed extensions for it, and word when they change. */
 interface Contributions {
-  extensionsFor(view: SourceEditorContext): Extension;
+  extensionsFor(editor: SourceEditorContext): Extension;
   readonly onDidChange: Event<void>;
 }
 

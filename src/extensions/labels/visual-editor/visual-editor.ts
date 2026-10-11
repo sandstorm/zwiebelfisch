@@ -26,7 +26,7 @@ export function references(options: ReferencesOptions): VisualEditorContribution
     activate({ visualEditor, subscriptions }) {
       subscriptions.push(
         visualEditor.registerNode(REFERENCE),
-        visualEditor.registerTiptapExtension((view) => referencesExtension(labels, view.document, prompts)),
+        visualEditor.registerTiptapExtension((editor) => referencesExtension(labels, editor.document, prompts)),
         visualEditor.registerCompletionItemProvider(labelCompletions(labels), { char: '@', allowedPrefixes: [' ', '\u00a0', '(', '[', '{'] }),
         visualEditor.registerToolbarItem({ group: 'insert', order: 80, create: addLabel }),
         // after the marks and the link, before the comment (50)

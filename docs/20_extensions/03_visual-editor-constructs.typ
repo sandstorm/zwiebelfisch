@@ -223,8 +223,8 @@ createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensio
   [`registerRawBoxAction({ title, when?, run })`], [A button on every raw box `when` holds for (its Typst: `node.attrs.src`), in the box's tools or above its code; "Edit diagram" (diagrams, Mermaid) is one],
   [`registerGutter(provider)`], [A column beside the text, per view (the notes gutter)],
   [`registerHighlights(layer, provider)`], [Styled source ranges drawn over the text (diagnostics, others' selections)],
-  [`registerTiptapExtension(view => extension)`], [Per-view plugins, decorations, commands; hooks see `this.editor`],
-  [`registerRawBoxCodeMirrorExtension(view => extension)`], [CodeMirror extensions for the code of every raw box],
+  [`registerTiptapExtension(editor => extension)`], [Per-editor plugins, decorations, commands; hooks see `this.editor`],
+  [`registerRawBoxCodeMirrorExtension(editor => extension)`], [CodeMirror extensions for the code of every raw box],
 )
 
 - `insertTypstBlocks(editor, source)` (a plain function): inserts what Typst `source` is read as after the cursor's block, as the view reads any Typst (a figure of an image becomes a figure, the rest raw boxes). For Insert entries whose result is easier written as Typst ("Insert spreadsheet", "Insert diagram", "Insert Mermaid diagram").

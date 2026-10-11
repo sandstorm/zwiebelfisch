@@ -17,7 +17,7 @@ function withPresence(text: string) {
   host.registerCodeMirrorExtension(sourcePresence(presences));
   const parent = document.createElement('div');
   document.body.append(parent);
-  host.createView(parent, doc);
+  host.createEditor(parent, doc);
   const view = { setPresence: (here: readonly Presence[]) => presences.set(here.map((presence) => ({ ...presence, path: MAIN, anchor: SourceOffset.of(presence.anchor), head: SourceOffset.of(presence.head) }))) };
   return { doc, view, parent, presences };
 }
@@ -64,7 +64,7 @@ describe('presence in the Source editor', () => {
     const host = new SourceEditorHost();
     host.registerCodeMirrorExtension(sourcePresence(presences));
     const parent = document.body.appendChild(document.createElement('div'));
-    host.createView(parent, doc);
+    host.createEditor(parent, doc);
     expect(marked(parent, '.typst-collaboration__selection')).toEqual(['bold']);
   });
 

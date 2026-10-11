@@ -2,19 +2,19 @@
 
 == Source editor <extensions-source-editor-and-preview-source>
 
-`sourceEditor.registerCodeMirrorExtension(extension)` adds a CodeMirror `Extension` to every Source editor, the existing ones included. Pass the same value for all views, or a function that makes one per view from its `SourceEditorContext` (`document`).
+`sourceEditor.registerCodeMirrorExtension(extension)` adds a CodeMirror `Extension` to every Source editor, the existing ones included. Pass the same value for all editors, or a function that makes one per editor from its `SourceEditorContext` (`document`).
 
 ```ts
 import { EditorView } from '@codemirror/view';
 
 subscriptions.push(
   sourceEditor.registerCodeMirrorExtension(EditorView.lineWrapping),
-  sourceEditor.registerCodeMirrorExtension((view) => myLint(view.document)), // per view
+  sourceEditor.registerCodeMirrorExtension((editor) => myLint(editor.document)), // per editor
 );
 ```
 
 - The Source editor itself only keeps text and selection in sync with its document. The Typst language, colors, lint, links and other users' carets are all contributions.
-- The code in the Visual editor's raw boxes is CodeMirror too: `visualEditor.registerRawBoxCodeMirrorExtension(view => extension)`. The typst-language extension registers its syntax in both.
+- The code in the Visual editor's raw boxes is CodeMirror too: `visualEditor.registerRawBoxCodeMirrorExtension(editor => extension)`. The typst-language extension registers its syntax in both.
 
 == Document links <extensions-source-editor-and-preview-links>
 

@@ -12,7 +12,7 @@ function setup(text: string, host = new SourceEditorHost()) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = host.createView(parent, doc);
+  const view = host.createEditor(parent, doc);
   const editor = () => EditorView.findFromDOM(parent.querySelector<HTMLElement>('.cm-editor')!)!;
   return { doc, view, parent, editor };
 }

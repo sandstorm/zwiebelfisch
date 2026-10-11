@@ -15,7 +15,7 @@ describe('lint in the Source editors', () => {
     const host = new SourceEditorHost();
     host.registerCodeMirrorExtension(lint(diagnostics));
     const parent = window.document.body.appendChild(window.document.createElement('div'));
-    host.createView(parent, document);
+    host.createEditor(parent, document);
     return () => [...parent.querySelectorAll('.cm-lintRange-error')].map((range) => range.textContent);
   }
 
@@ -54,7 +54,7 @@ describe('lint in the Source editors', () => {
     const parent = window.document.body.appendChild(window.document.createElement('div'));
     const host = new SourceEditorHost();
     host.registerCodeMirrorExtension(lint(diagnostics));
-    host.createView(parent, document);
+    host.createEditor(parent, document);
     diagnostics.set(document, [{ ...base, severity: 'warning', hints: ['did you mean `known`?', 'or this'], from: SourceOffset.of(5), to: SourceOffset.of(30) }]);
     expect(shown(parent)).toEqual([
       expect.objectContaining({ from: 5, to: 9, severity: 'warning', message: 'unknown variable: unknown\nhint: did you mean `known`?\nhint: or this' }),

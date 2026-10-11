@@ -19,7 +19,7 @@ export class BoxActionBar {
   constructor(
     doc: Document,
     private readonly actions: readonly RawBoxAction[],
-    private readonly view: VisualEditorContext,
+    private readonly editor: VisualEditorContext,
     node: Node,
   ) {
     this.node = node;
@@ -34,7 +34,7 @@ export class BoxActionBar {
   update(node: Node): void {
     this.node = node;
     const doc = this.element.ownerDocument;
-    const shown = this.actions.filter((action) => action.when?.(node, this.view) ?? true);
+    const shown = this.actions.filter((action) => action.when?.(node, this.editor) ?? true);
     if (shown.length === this.shown.length && shown.every((action, i) => action === this.shown[i])) return;
     this.shown = shown;
     this.element.replaceChildren(
@@ -42,7 +42,7 @@ export class BoxActionBar {
         const button = doc.createElement('button');
         button.type = 'button';
         button.textContent = action.title;
-        button.addEventListener('click', () => action.run(this.node, this.view));
+        button.addEventListener('click', () => action.run(this.node, this.editor));
         return button;
       }),
     );

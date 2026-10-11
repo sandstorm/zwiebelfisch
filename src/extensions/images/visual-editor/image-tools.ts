@@ -85,7 +85,7 @@ export class ImageTools implements RawBoxTools {
   /** Brings the buttons up to date with the document (caption or not, current width). */
   private refresh(): void {
     const pos = this.host.getPos();
-    const info = pos === undefined ? null : imageInfo(this.host.editor.state, pos);
+    const info = pos === undefined ? null : imageInfo(this.host.tiptap.state, pos);
     const caption = this.captionCommand();
     this.captionButton.hidden = caption === null;
     this.captionButton.textContent = caption === 'removeFigureCaption' ? 'Remove caption' : 'Add caption';
@@ -99,39 +99,39 @@ export class ImageTools implements RawBoxTools {
   private toggleCaption(): void {
     const pos = this.host.getPos();
     const command = this.captionCommand();
-    if (pos !== undefined && command) this.host.editor.commands[command](pos);
-    this.host.editor.view.focus();
+    if (pos !== undefined && command) this.host.tiptap.commands[command](pos);
+    this.host.tiptap.view.focus();
     this.refresh();
   }
 
   /** What the caption button does now: the figures extension's command that applies, if that extension is there. */
   private captionCommand(): 'addFigureCaption' | 'removeFigureCaption' | null {
     const pos = this.host.getPos();
-    const { editor } = this.host;
+    const { tiptap } = this.host;
     // another extension's commands: guarded, the figures may be left out
-    if (pos === undefined || !('addFigureCaption' in editor.commands)) return null;
-    if (editor.can().removeFigureCaption(pos)) return 'removeFigureCaption';
-    return editor.can().addFigureCaption(pos) ? 'addFigureCaption' : null;
+    if (pos === undefined || !('addFigureCaption' in tiptap.commands)) return null;
+    if (tiptap.can().removeFigureCaption(pos)) return 'removeFigureCaption';
+    return tiptap.can().addFigureCaption(pos) ? 'addFigureCaption' : null;
   }
 
   /** Asks for the alt text (an empty one removes it) and sets it. */
   private async askAlt(prompts: Pick<WindowApi, 'showInputBox'>): Promise<void> {
     const pos = this.host.getPos();
-    const alt = (pos === undefined ? null : imageInfo(this.host.editor.state, pos)?.alt) ?? '';
+    const alt = (pos === undefined ? null : imageInfo(this.host.tiptap.state, pos)?.alt) ?? '';
     const text = await prompts.showInputBox({
       title: 'Alt text',
       prompt: alt ? 'Alt text (empty removes it)' : 'Alt text',
       value: alt,
       placeHolder: 'What the image shows',
     });
-    if (text === undefined) return this.host.editor.view.focus();
+    if (text === undefined) return this.host.tiptap.view.focus();
     this.run((state, at) => setImageAlt(state, at, text.trim()));
   }
 
   /** Dispatches the edit for this image (if it applies) and returns the focus to the text. */
   private run(edit: (state: EditorState, pos: number) => Transaction | null): void {
     const pos = this.host.getPos();
-    const { view } = this.host.editor;
+    const { view } = this.host.tiptap;
     const tr = pos === undefined ? null : edit(view.state, pos);
     if (tr) view.dispatch(tr.scrollIntoView());
     view.focus();

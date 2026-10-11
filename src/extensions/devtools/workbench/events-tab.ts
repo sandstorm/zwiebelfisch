@@ -1,12 +1,12 @@
 // The devtools' Events tab. See devtools-panel.ts.
 import type { EventLog, LoggedEvent } from '../recording/event-log';
-import { element, type TabView } from './dom';
+import { element, type Tab } from './dom';
 
 /**
  * The event log, latest first, each value pretty-printed (long ones folded), filtered by event name, paused and
  * cleared.
  */
-export class EventsTab implements TabView {
+export class EventsTab implements Tab {
   readonly element: HTMLElement;
   #query = '';
   /** The events whose folded value is open, kept across redraws. */

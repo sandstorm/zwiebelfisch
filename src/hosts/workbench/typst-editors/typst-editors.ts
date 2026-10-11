@@ -15,9 +15,9 @@ import type { CustomEditorPanel, TextEditor, WindowApi } from '../../window/wind
  */
 export class TypstEditors {
   readonly #editors = new Map<TypstDocument, DocumentEditor>();
-  /** The editor whose view is shown, if any. */
+  /** The document editor shown, if any. */
   #active: DocumentEditor | null = null;
-  /** Shown above and below the visible view (see `setFrame`). */
+  /** Shown above and below the visible editor (see `setFrame`). */
   #frame: { top: HTMLElement; bottom: HTMLElement } | null = null;
   readonly #visualEditor: VisualEditorHost;
   readonly #sourceEditors: SourceEditorHost;
@@ -46,15 +46,15 @@ export class TypstEditors {
     );
   }
 
-  /** The editor of the document shown; null while no view of these is shown. */
+  /** The editor of the document shown; null while none of these editors is shown. */
   get activeTextEditor(): DocumentEditor | null {
     return this.#active;
   }
 
   /**
-   * Shows `top` right before and `bottom` right after the visible view's content (in the Visual editor below its
+   * Shows `top` right before and `bottom` right after the visible editor's content (in the Visual editor below its
    * toolbar, above the first block), in its scrolling panel, so they are the first and last thing of the file; across
-   * view and document switches; detached while no view is shown. null removes the frame.
+   * editor and document switches; detached while none of these editors is shown. null removes the frame.
    */
   setFrame(frame: { top: HTMLElement; bottom: HTMLElement } | null): void {
     this.#removeFrame();
@@ -63,19 +63,19 @@ export class TypstEditors {
   }
 
   #resolve(viewType: string, document: TypstDocument, panel: CustomEditorPanel): void {
-    let editor = this.#editors.get(document);
-    if (!editor) this.#editors.set(document, (editor = new DocumentEditor(document)));
-    const owner = editor;
+    let documentEditor = this.#editors.get(document);
+    if (!documentEditor) this.#editors.set(document, (documentEditor = new DocumentEditor(document)));
+    const owner = documentEditor;
     const element = panel.element;
     element.classList.add('typst-editor__pane');
     const selected = () => this.options.onSelection?.(owner);
-    const view =
+    const editor =
       viewType === VISUAL_EDITOR
         ? new VisualEditor(element, document, this.#visualEditor)
-        : this.#sourceEditors.createView(element, document, { onSelection: selected });
-    // disposed with the view
-    if (view instanceof VisualEditor) view.onDidChangeSelection(selected);
-    editor.views.set(viewType, { view, panel });
+        : this.#sourceEditors.createEditor(element, document, { onSelection: selected });
+    // disposed with the editor
+    if (editor instanceof VisualEditor) editor.onDidChangeSelection(selected);
+    owner.editors.set(viewType, { editor, panel });
     const followVisibility = () => {
       if (panel.visible) this.#shown(owner, viewType);
       else if (this.#active === owner && owner.viewType === viewType) this.#shown(null, viewType);
@@ -84,9 +84,9 @@ export class TypstEditors {
     panel.onDidChangeViewState(followVisibility);
     panel.onDidDispose(() => {
       if (this.#active === owner && owner.viewType === viewType) this.#shown(null, viewType);
-      view.dispose();
-      owner.views.delete(viewType);
-      if (owner.views.size === 0) this.#editors.delete(document);
+      editor.dispose();
+      owner.editors.delete(viewType);
+      if (owner.editors.size === 0) this.#editors.delete(document);
     });
   }
 
@@ -98,11 +98,11 @@ export class TypstEditors {
   }
 
   #placeFrame(): void {
-    const shown = this.#active?.views.get(this.#active.viewType);
+    const shown = this.#active?.editors.get(this.#active.viewType);
     if (!this.#frame || !shown) return;
     const pane = shown.panel.element;
     // the Visual editor's toolbar stays on top; the Source editor is all content
-    const content = shown.view instanceof VisualEditor ? shown.view.content : pane.firstElementChild;
+    const content = shown.editor instanceof VisualEditor ? shown.editor.content : pane.firstElementChild;
     pane.insertBefore(this.#frame.top, content);
     pane.append(this.#frame.bottom);
   }
@@ -118,28 +118,28 @@ export interface TypstEditorsOptions {
   visualEditor?: VisualEditorHost;
   /** Makes the Source editors, with what is registered there (language, lint, file links, …); default: plain ones. */
   sourceEditors?: SourceEditorHost;
-  /** The selection in a view of `editor`'s document moved, or its text changed (the view already has the new selection). */
+  /** The selection in an editor of `editor`'s document moved, or its text changed (the editor already has the new selection). */
   onSelection?(editor: DocumentEditor): void;
 }
 
-/** A document's editor: the views it has (made when first shown), used through the one shown last. */
+/** A document's editor: the Visual and Source editors it has (made when first shown), used through the one shown last. */
 export class DocumentEditor implements TextEditor {
   /** By view type. */
-  readonly views = new Map<string, ShownView>();
+  readonly editors = new Map<string, ShownEditor>();
   viewType: string = VISUAL_EDITOR;
 
   constructor(readonly document: TypstDocument) {}
 
   get selection(): SourceRange {
-    return this.views.get(this.viewType)!.view.selection();
+    return this.editors.get(this.viewType)!.editor.selection();
   }
 
   revealRange(range: SourceRange): void {
-    this.views.get(this.viewType)!.view.reveal(range);
+    this.editors.get(this.viewType)!.editor.reveal(range);
   }
 }
 
-interface ShownView {
-  readonly view: VisualEditor | SourceEditor;
+interface ShownEditor {
+  readonly editor: VisualEditor | SourceEditor;
   readonly panel: CustomEditorPanel;
 }

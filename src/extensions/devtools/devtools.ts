@@ -4,7 +4,7 @@ import css from './devtools.css?inline';
 import { describeValue } from './model/describe';
 import { ContributionLog } from './recording/contributions';
 import { EventLog, subscribeToEvents } from './recording/event-log';
-import { DocumentViews } from './visual-editor/document-views';
+import { LoadedVisualEditors } from './visual-editor/loaded-visual-editors';
 import { DevtoolsPanel } from './workbench/devtools-panel';
 import type { ShownDocument } from './workbench/document-tab';
 
@@ -31,13 +31,13 @@ function devtoolsExtension(contributions: ContributionLog): TypstExtension {
     activate(context) {
       const { project, window, workbench, visualEditor, subscriptions } = context;
       const events = new EventLog();
-      // told after activation only: views are made once a file is shown
-      const views = new DocumentViews(() => panel.changed('document'));
+      // told after activation only: editors are made once a file is shown
+      const visualEditors = new LoadedVisualEditors(() => panel.changed('document'));
       const shownDocument = (): ShownDocument => {
         const path = window.activeFile;
         const document = project.document(path);
         if (!document) return { kind: 'none', path, reason: 'Not Typst source: no document.' };
-        const shown = views.rows(document);
+        const shown = visualEditors.rows(document);
         if (!shown) return { kind: 'none', path, reason: 'No Visual editor of this file yet: open the Visual tab.' };
         return { kind: 'rows', path, ...shown, source: (range) => describeValue(document.text.slice(range.from, range.to)) };
       };
@@ -52,7 +52,7 @@ function devtoolsExtension(contributions: ContributionLog): TypstExtension {
         workbench.registerStyleSheet(css),
         side,
         panel,
-        visualEditor.registerTiptapExtension(views.tiptapExtension),
+        visualEditor.registerTiptapExtension(visualEditors.tiptapExtension),
         window.onDidChangeActiveFile(() => panel.changed('document')),
         contributions.onDidChange(() => panel.changed('contributions')),
         subscribeToEvents(context, (event, value) => {

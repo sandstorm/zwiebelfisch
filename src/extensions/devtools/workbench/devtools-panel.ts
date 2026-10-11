@@ -4,39 +4,39 @@ import type { ContributionLog } from '../recording/contributions';
 import type { EventLog } from '../recording/event-log';
 import { ContributionsTab } from './contributions-tab';
 import { DocumentTab, type ShownDocument } from './document-tab';
-import { element, type TabView } from './dom';
+import { element, type Tab } from './dom';
 import { EventsTab } from './events-tab';
 
 /**
  * The panel in `body`; `changed(tab)` redraws that tab (once per frame) if it is the one shown.
  *
  * Three tabs over the models (the document of the shown file, the contributions, the events), each drawn by its own
- * view. It draws what it is given; ../devtools.ts wires it to the extension context.
+ * `Tab`. It draws what it is given; ../devtools.ts wires it to the extension context.
  */
 export class DevtoolsPanel {
   #tab: DevtoolsTab = 'document';
   #frame = 0;
   readonly #doc: Document;
-  readonly #tabs: HTMLElement;
+  readonly #tabStrip: HTMLElement;
   readonly #content: HTMLElement;
-  readonly #views: Record<DevtoolsTab, TabView>;
+  readonly #tabs: Record<DevtoolsTab, Tab>;
 
   constructor(
     private readonly body: HTMLElement,
     options: DevtoolsPanelOptions,
   ) {
     const doc = (this.#doc = body.ownerDocument);
-    this.#views = {
+    this.#tabs = {
       document: new DocumentTab(doc, options.document, options.reveal),
       contributions: new ContributionsTab(doc, options.contributions),
       events: new EventsTab(doc, options.events),
     };
     const root = element(doc, 'div', 'typst-devtools');
     root.dataset.testid = 'typst-devtools';
-    this.#tabs = root.appendChild(element(doc, 'div', 'typst-devtools__tabs'));
-    this.#tabs.setAttribute('role', 'tablist');
+    this.#tabStrip = root.appendChild(element(doc, 'div', 'typst-devtools__tabs'));
+    this.#tabStrip.setAttribute('role', 'tablist');
     for (const tab of TABS) {
-      const button = this.#tabs.appendChild(element(doc, 'button', 'typst-devtools__tab', tab.label));
+      const button = this.#tabStrip.appendChild(element(doc, 'button', 'typst-devtools__tab', tab.label));
       button.setAttribute('role', 'tab');
       button.addEventListener('click', () => this.show(tab.id));
     }
@@ -48,18 +48,18 @@ export class DevtoolsPanel {
 
   show(tab: DevtoolsTab): void {
     this.#tab = tab;
-    TABS.forEach(({ id }, index) => this.#tabs.children[index].setAttribute('aria-selected', String(id === tab)));
-    this.#content.replaceChildren(this.#views[tab].element);
-    this.#views[tab].update();
+    TABS.forEach(({ id }, index) => this.#tabStrip.children[index].setAttribute('aria-selected', String(id === tab)));
+    this.#content.replaceChildren(this.#tabs[tab].element);
+    this.#tabs[tab].update();
   }
 
   changed(tab: DevtoolsTab): void {
     if (tab !== this.#tab || this.#frame) return;
     const view = this.#doc.defaultView;
-    if (!view) return this.#views[tab].update();
+    if (!view) return this.#tabs[tab].update();
     this.#frame = view.requestAnimationFrame(() => {
       this.#frame = 0;
-      this.#views[this.#tab].update();
+      this.#tabs[this.#tab].update();
     });
   }
 

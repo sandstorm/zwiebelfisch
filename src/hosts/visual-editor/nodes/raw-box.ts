@@ -13,18 +13,18 @@ import { BoxActionBar } from './box-actions';
 import { RenderedBox } from './rendered-box';
 
 /**
- * The node views of raw boxes in `editor`, with what `boxes` contribute to them.
+ * The node views of raw boxes in `tiptap`, with what `boxes` contribute to them.
  *
  * Typst the Visual editor does not model, edited as code in a nested CodeMirror; contributions add pictures (box
  * renderers), headings, tools and code extensions.
  */
-export function rawBoxViews(editor: Editor, boxes: RawBoxes): NodeViewConstructor {
-  return (node, _view, getPos, decorations) => new RawBox(node, getPos, decorations, { editor, boxes });
+export function rawBoxViews(tiptap: Editor, boxes: RawBoxes): NodeViewConstructor {
+  return (node, _view, getPos, decorations) => new RawBox(node, getPos, decorations, { tiptap, boxes });
 }
 
 /** What the raw boxes of one view get from the contributions. */
 export interface RawBoxes {
-  readonly view: VisualEditorContext;
+  readonly editor: VisualEditorContext;
   /** Draw boxes instead of their code; the first that `renders` a box draws it. */
   readonly renderers: readonly RawBoxRenderer[];
   /** Extensions of every box's code editor. */
@@ -32,7 +32,7 @@ export interface RawBoxes {
   /** Buttons on the boxes they apply to. */
   readonly actions: readonly RawBoxAction[];
   /** What the specs ask the view for, by node type name (a box's title and tools). */
-  readonly views: ReadonlyMap<string, NonNullable<TypstNodeSpec['view']>>;
+  readonly nodeViews: ReadonlyMap<string, NonNullable<TypstNodeSpec['view']>>;
 }
 
 /** Keyboard entry into raw boxes: arrow keys at their edges, Enter on a selected box. */
@@ -81,20 +81,20 @@ class RawBox implements NodeView {
   private readonly actionBar: BoxActionBar | null;
   /** Set while mirroring `src` into the box, so that change is not sent back. */
   private mirroring = false;
-  private readonly editor: Editor;
+  private readonly tiptap: Editor;
 
   constructor(
     private node: Node,
     private readonly getPos: () => number | undefined,
     decorations: readonly Decoration[],
-    { editor, boxes: { view, renderers, codeExtensions, actions, views } }: { editor: Editor; boxes: RawBoxes },
+    { tiptap, boxes: { editor, renderers, codeExtensions, actions, nodeViews } }: { tiptap: Editor; boxes: RawBoxes },
   ) {
-    this.editor = editor;
+    this.tiptap = tiptap;
     const inline = node.isInline;
-    const spec = views.get(node.type.name);
+    const spec = nodeViews.get(node.type.name);
     const renderer = renderers.find((candidate) => candidate.renders(node));
     this.spec = spec;
-    this.dom = editor.view.dom.ownerDocument.createElement(inline ? 'span' : 'div');
+    this.dom = tiptap.view.dom.ownerDocument.createElement(inline ? 'span' : 'div');
     this.dom.className = inline ? 'typst-visual__raw-inline' : 'typst-visual__raw-block';
     this.label = this.createLabel(node);
     const wrapper = this.dom.appendChild(this.dom.ownerDocument.createElement(inline ? 'span' : 'div'));
@@ -103,8 +103,8 @@ class RawBox implements NodeView {
     boxes.set(this.dom, this);
     this.showDecorations(decorations);
     this.rendered = renderer ? this.createRendered(wrapper, renderer) : null;
-    this.actionBar = actions.length > 0 ? new BoxActionBar(this.dom.ownerDocument, actions, view, node) : null;
-    this.tools = spec?.tools ? spec.tools(this.toolsHost(wrapper, view), node) : null;
+    this.actionBar = actions.length > 0 ? new BoxActionBar(this.dom.ownerDocument, actions, editor, node) : null;
+    this.tools = spec?.tools ? spec.tools(this.toolsHost(wrapper, editor), node) : null;
     this.placeActionBar(wrapper);
   }
 
@@ -167,7 +167,7 @@ class RawBox implements NodeView {
       parent,
       // The box is not attached yet, so CodeMirror cannot find its root itself; in a shadow root
       // (<typst-editor>) it would read focus and selection from the document and style the wrong tree.
-      root: this.editor.view.root,
+      root: this.tiptap.view.root,
       doc: this.node.attrs.src,
       extensions: [
         keymap.of([...this.keys(inline), ...defaultKeymap]),
@@ -186,10 +186,10 @@ class RawBox implements NodeView {
   }
 
   /** What the box's tools get: the box, its picture (if rendered), the editor and view, how to edit the code. */
-  private toolsHost(code: HTMLElement, view: VisualEditorContext): RawBoxToolsHost {
+  private toolsHost(code: HTMLElement, editor: VisualEditorContext): RawBoxToolsHost {
     const picture = this.rendered?.picture ?? null;
     const actions = this.actionBar?.element ?? this.dom.ownerDocument.createElement('span');
-    return { dom: this.dom, code, picture, editor: this.editor, view, getPos: this.getPos, editCode: () => this.focus(-1), actions };
+    return { dom: this.dom, code, picture, tiptap: this.tiptap, editor, getPos: this.getPos, editCode: () => this.focus(-1), actions };
   }
 
   /** Hands the box's decorations (e.g. other users' carets in it) to its code's extensions (`setRawBoxDecorations`). */
@@ -200,7 +200,7 @@ class RawBox implements NodeView {
   /** The node and where its source starts, while the box is in the document. */
   private source(): { node: Node; from: SourceOffset } | null {
     const pos = this.getPos();
-    return pos === undefined ? null : { node: this.node, from: posToSource(this.editor.state.doc, pos) };
+    return pos === undefined ? null : { node: this.node, from: posToSource(this.tiptap.state.doc, pos) };
   }
 
   private createLabel(node: Node): HTMLElement | null {
@@ -221,7 +221,7 @@ class RawBox implements NodeView {
   private select(): void {
     const pos = this.getPos();
     if (pos === undefined) return;
-    const outer = this.editor.view;
+    const outer = this.tiptap.view;
     outer.dispatch(outer.state.tr.setSelection(NodeSelection.create(outer.state.doc, pos)));
     outer.focus();
   }
@@ -230,7 +230,7 @@ class RawBox implements NodeView {
     view.update(trs);
     const pos = this.getPos();
     if (this.mirroring || pos === undefined || !trs.some((tr) => tr.docChanged)) return;
-    const outer = this.editor.view;
+    const outer = this.tiptap.view;
     outer.dispatch(outer.state.tr.setNodeAttribute(pos, 'src', view.state.doc.toString()));
   }
 
@@ -240,9 +240,9 @@ class RawBox implements NodeView {
     const atStart = () => head().empty && head().head === 0;
     const atEnd = () => head().empty && head().head === doc().length;
     return [
-      { key: 'Mod-z', run: () => (this.editor.commands.undo(), true) },
-      { key: 'Mod-y', run: () => (this.editor.commands.redo(), true) },
-      { key: 'Mod-Shift-z', run: () => (this.editor.commands.redo(), true) },
+      { key: 'Mod-z', run: () => (this.tiptap.commands.undo(), true) },
+      { key: 'Mod-y', run: () => (this.tiptap.commands.redo(), true) },
+      { key: 'Mod-Shift-z', run: () => (this.tiptap.commands.redo(), true) },
       { key: 'ArrowLeft', run: () => atStart() && this.leave(-1) },
       { key: 'ArrowRight', run: () => atEnd() && this.leave(1) },
       { key: 'ArrowUp', run: () => head().empty && doc().lineAt(head().head).number === 1 && this.leave(-1) },
@@ -257,7 +257,7 @@ class RawBox implements NodeView {
   private leave(side: Side): boolean {
     const pos = this.getPos();
     if (pos === undefined) return false;
-    const outer = this.editor.view;
+    const outer = this.tiptap.view;
     const $edge = outer.state.doc.resolve(side < 0 ? pos : pos + this.node.nodeSize);
     outer.dispatch(outer.state.tr.setSelection(Selection.near($edge, side)).scrollIntoView());
     outer.focus();
@@ -267,7 +267,7 @@ class RawBox implements NodeView {
   private remove(): boolean {
     const pos = this.getPos();
     if (pos === undefined) return false;
-    const outer = this.editor.view;
+    const outer = this.tiptap.view;
     const tr = outer.state.tr.delete(pos, pos + this.node.nodeSize);
     outer.dispatch(tr.setSelection(Selection.near(tr.doc.resolve(Math.min(pos, tr.doc.content.size)))).scrollIntoView());
     outer.focus();

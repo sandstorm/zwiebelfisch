@@ -5,7 +5,7 @@ import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/wor
 import css from './spreadsheets.css?inline';
 import { typstPath } from './model/typst-file';
 import { insertSpreadsheet } from './visual-editor/insert-spreadsheet';
-import { SpreadsheetView } from './workbench/spreadsheet-view';
+import { SpreadsheetEditor } from './workbench/spreadsheet-editor';
 import type { WorkbookEdit } from './workbench/workbook';
 
 /**
@@ -13,12 +13,12 @@ import type { WorkbookEdit } from './workbench/workbook';
  * "New spreadsheet…" (`spreadsheets.newSpreadsheet`) in the menu `file/newFile` asks for a name and opens the new one;
  * "Insert spreadsheet" in the Visual editor's Insert menu also puts its table into the text as a figure.
  *
- * A spreadsheet file (`.ic`) shown and edited in IronCalc's workbook UI (SpreadsheetView, the custom editor
+ * A spreadsheet file (`.ic`) shown and edited in IronCalc's workbook UI (SpreadsheetEditor, the custom editor
  * `spreadsheets.editor`); every edit saves the file and the Typst file documents import. "New spreadsheet…" in the file
  * panel's "New"; "Insert spreadsheet" in the Visual editor's Insert menu.
  *
  * Why the extension stores the Typst file: documents import `name.ic.gen.typ`, never the workbook, so the Typst side
- * needs no spreadsheet engine; the view only reports edits, the extension decides what the project gets.
+ * needs no spreadsheet engine; the editor only reports edits, the extension decides what the project gets.
  */
 export function spreadsheets(): TypstExtension {
   return {
@@ -32,9 +32,9 @@ export function spreadsheets(): TypstExtension {
           'spreadsheets.editor',
           {
             resolveCustomEditor(document, panel) {
-              const view = new SpreadsheetView(panel.element, (path, edit) => save(context, path, edit));
-              void view.show(document.path, document.content);
-              panel.onDidDispose(() => view.dispose());
+              const editor = new SpreadsheetEditor(panel.element, (path, edit) => save(context, path, edit));
+              void editor.show(document.path, document.content);
+              panel.onDidDispose(() => editor.dispose());
             },
           },
           { filenamePattern: '*.ic', displayName: 'Spreadsheet', icon: SPREADSHEET_ICON },
@@ -60,7 +60,7 @@ function save({ project, window, workspace }: ExtensionContext, path: ProjectPat
   store(project.has(target) ? { kind: 'update', path: target, content } : { kind: 'create', path: target, content });
 }
 
-/** The icon of spreadsheet files (where views list files). */
+/** The icon of spreadsheet files (where side panels list files). */
 const SPREADSHEET_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M2 6h12M2 9.5h12M6 6v7.5M10 6v7.5"/></svg>';
 
 /**

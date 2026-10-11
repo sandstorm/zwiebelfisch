@@ -1,12 +1,12 @@
 // The devtools' Document tab. See devtools-panel.ts.
 import type { SourceRange } from '../../../core/typst-document/typst-document';
 import type { DocumentRow } from '../model/document-tree';
-import { element, type TabView } from './dom';
+import { element, type Tab } from './dom';
 
 /**
  * The shown file's ProseMirror document as a tree, each node with its source range; a click selects a node's source.
  */
-export class DocumentTab implements TabView {
+export class DocumentTab implements Tab {
   readonly element: HTMLElement;
 
   constructor(

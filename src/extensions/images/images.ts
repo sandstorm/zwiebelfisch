@@ -9,13 +9,13 @@ import css from './images.css?inline';
 import { IMAGE_FILES, imageBlob, isImage } from './model/image-files';
 import { uploadTarget } from './model/upload';
 import { imagesVisualEditor, type ImageAssets, type ImageUrls } from './visual-editor/visual-editor';
-import { assetEditor } from './workbench/asset-view';
+import { imageEditor } from './workbench/image-editor';
 
 /**
  * Images in every document's Visual editor (`#image(..)` boxes showing the project's image file, "Insert image"
  * offering the project's images and uploads, which go through `workspace.applyEdit`; an image box's path is the
  * document link on it, from the link providers (`languages`)), and the read-only view of image files: the custom
- * editor `images.preview` (`*.{png,jpg,jpeg,gif,svg,webp}`).
+ * editor `images.editor` (`*.{png,jpg,jpeg,gif,svg,webp}`).
  *
  * `#image(..)` blocks (also as figures' bodies) in the Visual editor showing the project's image files, "Insert image"
  * with the project's images and uploads, and image files opened read-only in the editing area.
@@ -32,7 +32,7 @@ export function images(): TypstExtension {
       subscriptions.push(
         workbench.registerStyleSheet(css),
         projectImages,
-        window.registerCustomEditorProvider('images.preview', assetEditor, { filenamePattern: IMAGE_FILES, displayName: 'Image', icon: IMAGE_ICON }),
+        window.registerCustomEditorProvider('images.editor', imageEditor, { filenamePattern: IMAGE_FILES, displayName: 'Image', icon: IMAGE_ICON }),
       );
       imagesVisualEditor({
         assets: (document) => projectImages.forDocument(document).assets,

@@ -13,9 +13,9 @@ import type { RawBoxAction } from '../../../hosts/visual-editor/visual-editor';
 export function editDiagramAction(diagramOf: DiagramOf, open: (path: ProjectPath) => void): RawBoxAction {
   return {
     title: 'Edit diagram',
-    when: (node, view) => diagramOf(node.attrs.src, view.document) !== null,
-    run: (node, view) => {
-      const diagram = diagramOf(node.attrs.src, view.document);
+    when: (node, editor) => diagramOf(node.attrs.src, editor.document) !== null,
+    run: (node, editor) => {
+      const diagram = diagramOf(node.attrs.src, editor.document);
       if (diagram) open(diagram);
     },
   };

@@ -1,25 +1,25 @@
-// The images extension in the workbench: image files open read-only in the editing area (assetEditor, showing an
-// AssetView). See ../images.ts.
+// The images extension in the workbench: image files open read-only in the editing area (imageEditor, showing an
+// ImageEditor). See ../images.ts.
 import { FileContent } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import type { CustomEditorProvider } from '../../../hosts/window/window';
 import { imageBlob } from '../model/image-files';
 
 /** Image files in the editing area, read-only (images get into the text by dragging or "Insert image"). */
-export const assetEditor: CustomEditorProvider = {
+export const imageEditor: CustomEditorProvider = {
   resolveCustomEditor(document, panel) {
-    const view = new AssetView(panel.element);
-    view.show(document.path, document.content);
-    panel.onDidDispose(() => view.dispose());
+    const editor = new ImageEditor(panel.element);
+    editor.show(document.path, document.content);
+    panel.onDidDispose(() => editor.dispose());
   },
 };
 
 /**
- * The read-only view of an image file of the project: its name, size and the
- * picture. (Images get into the text by dragging them from the file panel, or
+ * The read-only editor of an image file of the project: its name, size and the
+ * picture. (Images get into the text by dragging them from the files side panel, or
  * with "Insert image".)
  */
-class AssetView {
+class ImageEditor {
   private readonly root: HTMLElement;
   private objectUrl: string | null = null;
 

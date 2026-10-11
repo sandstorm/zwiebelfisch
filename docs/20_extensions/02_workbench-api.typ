@@ -171,7 +171,7 @@ The built-in ones, to beat or to leave alone:
   [`sourceEditor` (`SOURCE_EDITOR`)], [`*.typ`: the Source editor, retained], [default],
   [`diagrams.editor`], [`*.drawio.png`], [110],
   [`spreadsheets.editor`], [`*.ic`], [default],
-  [`images.preview`], [`*.{png,jpg,jpeg,gif,svg,webp}`], [default],
+  [`images.editor`], [`*.{png,jpg,jpeg,gif,svg,webp}`], [default],
   [`textFiles.editor`], [`*.{csv,json,yaml,yml,toml,xml,bib,txt,md,mmd}`], [default],
   [`files.file`], [`*`: any other file, read-only (name, size, type)], [`'fallback'`],
 )

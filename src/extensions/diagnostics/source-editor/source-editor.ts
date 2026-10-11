@@ -11,7 +11,7 @@ import { describeDiagnostic, type DiagnosticCollection, type SourceDiagnostic } 
  * Underlines the diagnostics `diagnostics` holds for a view's document, with the message and hints on
  * hover; they follow later edits until the document's diagnostics are set again.
  */
-export function lint(diagnostics: DiagnosticCollection): (view: SourceEditorContext) => Extension {
+export function lint(diagnostics: DiagnosticCollection): (editor: SourceEditorContext) => Extension {
   return ({ document }) => ViewPlugin.define((view) => new LintShown(view, document, diagnostics));
 }
 

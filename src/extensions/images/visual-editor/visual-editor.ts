@@ -33,7 +33,7 @@ export function imagesVisualEditor(options: ImagesOptions): VisualEditorContribu
         visualEditor.registerNode(imageSpec(options)),
         visualEditor.registerToolbarItem({ group: 'insert', order: 10, create: (toolbar) => insertImage(toolbar, options.assets(toolbar.document), options.prompts) }),
         // image boxes are raw boxes, too: drawn as their image file rather than as a compiled snippet (priority 100)
-        visualEditor.registerRawBoxRenderer((view) => imageRenderer(options.imageUrls(view.document)), { priority: 110 }),
+        visualEditor.registerRawBoxRenderer((editor) => imageRenderer(options.imageUrls(editor.document)), { priority: 110 }),
       );
     },
   };
@@ -100,7 +100,7 @@ function imageSpec(options: ImagesOptions): TypstNodeSpec {
     view: {
       box: 'code',
       tools: (host, node) => {
-        const links = options.imageLinks(host.view.document);
+        const links = options.imageLinks(host.editor.document);
         const pathLabel = (path: PathReference, src: string) => imagePathLink(links.linkOf(src), path, host.dom.ownerDocument, (target) => links.open(target));
         return new ImageTools({ ...host, pathLabel, prompts: options.prompts }, node);
       },
