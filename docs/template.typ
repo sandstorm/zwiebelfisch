@@ -1,29 +1,139 @@
-// The look of the documentation, for the book (main.typ, PDF) and the HTML site (site.typ).
-// Use: `#show: book`. Writers need nothing from here: plain headings, `@label` references,
-// raw blocks and tables.
+// The look of the documentation, for the book (main.typ, PDF) and the HTML site (site.typ):
+// Sandstorm's, after sandstorm.de. Use: `#show: book`. Writers need nothing from here: plain
+// headings, `@label` references, raw blocks and tables.
 //
 // Labels: a chapter's label is its path without `.typ`, `/` → `-`
 // (`architecture/workbench.typ` → `<architecture-workbench>`); a section inside appends a word
 // (`<architecture-workbench-menus>`).
 
+/// sandstorm.de's colors; style.css has the same.
+#let colors = (
+  primary: rgb("#257792"),
+  dark: rgb("#0f4a60"),
+  sand: rgb("#f8c666"),
+  ink: rgb("#222222"),
+  muted: rgb("#605d5d"),
+  line: rgb("#c2dbe4"),
+  tint: rgb("#eef5f7"),
+)
+
+/// sandstorm.de's font (Gabarito), only when the build has it: Typst warns about an unknown font
+/// family, and the demo's engine has only Typst's default fonts. `mise run docs:pdf` downloads it
+/// (docs:fonts) and passes `--input brand-fonts=true`. Code keeps Typst's DejaVu Sans Mono.
+#let brand-fonts = sys.inputs.at("brand-fonts", default: "false") == "true"
+
+#let company = "Sandstorm Media GmbH"
+
+/// The first page: logo, book title, company.
+#let title-page(it) = page(header: none, footer: none, margin: (x: 2.6cm, y: 2.4cm), {
+  image("assets/sandstorm-logo.svg", width: 5.5cm)
+  v(1fr)
+  text(fill: colors.primary, weight: "bold", size: 11pt, tracking: 0.12em, upper[Documentation])
+  v(0.4em)
+  text(fill: colors.dark, size: 34pt, weight: "bold", it)
+  v(0.2em)
+  line(length: 3.2cm, stroke: 5pt + colors.sand)
+  v(2fr)
+  text(fill: colors.muted, size: 9pt)[#company · #link("https://sandstorm.de")[sandstorm.de]]
+})
+
+/// The current chapter (level 2) on pages that do not start one; the book's title before the first.
+#let running-header(book-title) = context {
+  let page = here().page()
+  let starts = query(heading.where(level: 1).or(heading.where(level: 2)))
+    .any(h => h.location().page() == page)
+  if starts { return }
+  let chapters = query(heading.where(level: 2).before(here()))
+  set text(size: 8.5pt, fill: colors.muted)
+  grid(
+    columns: (1fr, auto),
+    book-title,
+    if chapters != () {
+      let chapter = chapters.last()
+      text(fill: colors.primary, numbering(chapter.numbering, ..counter(heading).at(chapter.location())))
+      h(0.5em)
+      chapter.body
+    },
+  )
+  v(-0.5em)
+  line(length: 100%, stroke: 0.5pt + colors.line)
+}
+
+#let footer = context {
+  set text(size: 8.5pt, fill: colors.muted)
+  grid(
+    columns: (1fr, auto),
+    company,
+    text(fill: colors.primary, weight: "bold", counter(page).display()),
+  )
+}
+
 #let book(body) = {
   set text(lang: "en")
   // `@label` references need numbered headings ("Section 3.2").
   set heading(numbering: "1.1")
-  set table(stroke: 0.5pt + luma(180), inset: 6pt)
   show table.cell.where(y: 0): strong
 
   // Paged-only styling: the HTML site gets its look from style.css.
   show: body => context {
     if target() != "paged" { return body }
-    set page(paper: "a4", margin: 2.2cm, numbering: "1")
-    set par(justify: true)
-    show table: set par(justify: false)
+    set text(font: "Gabarito", size: 10.5pt) if brand-fonts
+    // Gabarito has no italics
+    show emph: set text(weight: "semibold", fill: colors.dark) if brand-fonts
+    set text(fill: colors.ink)
+    set page(
+      paper: "a4",
+      margin: (x: 2.4cm, top: 2.6cm, bottom: 2.4cm),
+      header: running-header(document.title),
+      footer: footer,
+    )
+    set par(justify: true, leading: 0.68em, spacing: 1.15em)
+
+    show title: it => title-page(it) + counter(page).update(1)
+
     // a new page for every part (level 1) and chapter (level 2, see main.typ)
-    show heading.where(level: 1, outlined: true): it => pagebreak(weak: true) + it
-    show heading.where(level: 2): it => pagebreak(weak: true) + it
-    show raw: set text(size: 0.85em)
-    show raw.where(block: true): block.with(fill: luma(245), inset: 8pt, radius: 3pt, width: 100%)
+    show heading: set text(fill: colors.dark)
+    show heading: set block(above: 1.6em, below: 0.8em)
+    show heading: it => {
+      if it.numbering == none { return it }
+      let number = text(fill: colors.primary, counter(heading).display(it.numbering))
+      block(number + h(0.6em) + it.body)
+    }
+    show heading.where(level: 1, outlined: true): it => {
+      pagebreak(weak: true)
+      v(4cm)
+      set text(size: 28pt)
+      it
+      line(length: 3.2cm, stroke: 5pt + colors.sand)
+    }
+    show heading.where(level: 2): set text(size: 20pt)
+    show heading.where(level: 2): it => pagebreak(weak: true) + v(1cm) + it
+    show heading.where(level: 3): set text(size: 13.5pt)
+    show heading.where(level: 4): set text(size: 11pt)
+
+    show outline.entry.where(level: 1): set block(above: 1.4em)
+    show outline.entry.where(level: 1): set text(weight: "bold", fill: colors.dark)
+
+    show link: set text(fill: colors.primary)
+    show ref: set text(fill: colors.primary)
+
+    show raw: set text(size: 0.95em)
+    show raw.where(block: false): box.with(fill: colors.tint, inset: (x: 2pt), outset: (y: 2.5pt), radius: 2pt)
+    show raw.where(block: true): block.with(
+      fill: colors.tint,
+      inset: (x: 10pt, y: 9pt),
+      radius: (right: 3pt),
+      stroke: (left: 2pt + colors.primary),
+      width: 100%,
+    )
+
+    set table(
+      inset: (x: 7pt, y: 6pt),
+      stroke: (_, y) => (bottom: 0.5pt + colors.line),
+      fill: (_, y) => if y == 0 { colors.line } else if calc.even(y) { colors.tint },
+    )
+    show table: set par(justify: false)
+    show table.cell.where(y: 0): set text(fill: colors.dark)
     body
   }
   body

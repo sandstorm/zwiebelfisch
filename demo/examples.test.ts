@@ -72,14 +72,15 @@ describe('demo examples', () => {
     expect(files['/data/compile-times.ic.gen.typ']).toMatch(/^\/\/ Generated from compile-times\.ic/);
   });
 
-  it('the documentation example is docs/: book, template, HTML entry and chapters, as text', () => {
+  it('the documentation example is docs/: book, template, HTML entry and chapters as text, the logo as bytes', () => {
     const files = exampleFiles('docs');
     expect(Object.keys(files)).toEqual(
       expect.arrayContaining(['/main.typ', '/template.typ', '/site.typ', '/architecture/workbench.typ']),
     );
+    expect(files['/assets/sandstorm-logo.svg']).toBeInstanceOf(Uint8Array);
     for (const [path, content] of Object.entries(files)) {
-      expect(path).toMatch(/\.typ$/);
-      expect(typeof content).toBe('string');
+      if (path.endsWith('.typ')) expect(typeof content).toBe('string');
+      else expect(path).toMatch(/\.svg$/);
     }
   });
 });
