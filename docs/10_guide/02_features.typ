@@ -2,7 +2,38 @@
 
 = Features <guide-features>
 
-The examples are from a report measuring compile times, as in the demo's advanced example (`?example=advanced`). Settings: @guide-configuration.
+This project is both an *authoring environment* and *embeddable WYSIWYG Editor* for typst files at once.
+
+== Basic Features
+
+- *Visual editor:* edits Typst projects like a word processor, including styling, headlines, lists, \...
+
+- Typographic *rendering preview*, displaying the full source document. 
+
+- for nerds, a *Source Editor* where you can write the Typst file directly is also included :-)
+
+- *Standard word processor styling and shortcuts* supported (via https://tiptap.dev/ and #link("https://prosemirror.net/")[https:\//prosemirror.net/])
+
+- Support for *code blocks with syntax highlighting*, via ```` ``` ```` for multiline code and ``` ` ``` for inline code
+
+- Support for *images*
+- *Full Typst support:* If an element is not supported natively, f.e. maths like $E=m*c^2$, we always fall back to the raw Typst source.
+- *Bidirectional navigation*: click any part of the preview to jump to the corresponding source, and double-click any part of the interactive editor to highlight this in the preview.  
+
+== Advanced Featurs
+
+- Support for *Custom Styles*, so you can easily create inline styles and *Block Styles* for things like custom call-outs. 
+
+- Support for *draw.io diagrams*, which can be directly edited inline and embedded.
+
+- Support for *Spreadsheets* (based on #link("https://www.ironcalc.com/")[IronCalc]), which can be edited inline, including calculations, and then embedded (fully or partially) into the Typst file
+  - spreadsheet styling is transferred to Typst
+- Support for *mermaid diagrams* if you prefer text-based diagrams.
+- Support for *multi-file* projects.
+- Support for *collaborative real-time editing*.
+- *GitLab* integration: Edit any Typst project from Gitlab, and write back changes.  
+
+
 
 == Editors and preview <guide-features-editors>
 

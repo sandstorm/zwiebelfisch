@@ -1,3 +1,5 @@
+#import "/template.typ": mermaid
+
 = Getting started <guide-getting-started>
 
 A Typst editor for the browser: a Visual editor (WYSIWYG), a Source editor and a live preview. The Typst compiler runs as WebAssembly in a worker; no server is needed except for collaboration and GitLab integration.
@@ -11,13 +13,20 @@ docker build -t typst-editor-demo .
 docker run --rm -p 127.0.0.1:5199:5199 -p 127.0.0.1:1234:1234 typst-editor-demo
 ```
 
-Then open `http://127.0.0.1:5199/`. You get the demo (@guide-getting-started-demo) and the collaboration server with a fake GitLab. Nothing is saved: the rooms live in memory, and the Documentation example does not write to `docs/`. Ctrl-C stops both. The first build takes a while, as it compiles the Typst compiler to wasm. With mise: `mise run docker:build` and `mise run docker:run`.
+Then open #link("http://127.0.0.1:5199/")[`http://127.0.0.1:5199/`]. You get the demo (@guide-getting-started-demo) and the collaboration server with a fake GitLab. Nothing is saved: the rooms live in memory, and the Documentation example does not write to `docs/`. Ctrl-C stops both. The first build takes a while, as it compiles the Typst compiler to wasm. With mise: `mise run docker:build` and `mise run docker:run`.
 
 == The demo <guide-getting-started-demo>
 
-The Docker image (@guide-getting-started-docker) serves the demo on `http://127.0.0.1:5199/` with a collaboration server and a fake GitLab on `ws://127.0.0.1:1234`. To work on the code, run it from a checkout instead: `mise run demo` (@architecture-development-setup).
+The Docker image (@guide-getting-started-docker) serves the demo on #link("http://127.0.0.1:5199/")[`http://127.0.0.1:5199/`] with a collaboration server and a fake GitLab on `ws://127.0.0.1:1234`. To work on the code, run it from a checkout instead: `mise run demo` (@architecture-development-setup).
 
-The screen (layout figure: @guide-features-editors):
+The screen:
+
+
+
+#figure(
+  mermaid(read("../diagrams/workbench-layout.mmd"), width: 75%),
+  caption: [The editor: left rail and side panel, editing area, the right side (preview or devtools) and its rail, status bar.],
+)
 
 #table(
   columns: 2,
@@ -41,7 +50,9 @@ The examples:
 
 Main features:
 
-- Visual editing like a word processor; what it does not model shows as a raw box (@guide-features-visual).
+- Visual editing like a word processor.
+- All Typst features supported.
+- what it does not model shows as a raw box (@guide-features-visual).
 - Source editing with highlighting; both editors edit the same text (@guide-features-editors).
 - Live preview; a click in it jumps to the text (@guide-features-editors).
 - Images, figures and tables (@guide-features-images, @guide-features-tables).
