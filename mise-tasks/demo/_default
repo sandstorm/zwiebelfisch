@@ -27,7 +27,7 @@ cat <<EOF
 
 Typst editor playground
   Local          $demo/
-  Collaborate    $demo/?room=playground-hello&user=Ann   (second window: &user=Bob)
+  Collaborate    $demo/?room=playground-simple&user=Ann   (second window: &user=Bob)
   GitLab (fake)  $demo/?room=gitlab%3Ademo%2Freport%40main&user=Ann
   Server         ws://127.0.0.1:1234  (plain rooms, and gitlab:demo/report@<any branch>)
 Ctrl-C stops both.

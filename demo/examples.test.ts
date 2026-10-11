@@ -61,28 +61,25 @@ describe('demo examples', () => {
   );
 
   it('keeps the default document the e2e specs expect', () => {
-    const files = exampleFiles('hello');
+    const files = exampleFiles('simple');
     expect(Object.keys(files)).toEqual(['/main.typ']);
     expect(files['/main.typ']).toMatch(/^#set page\(width: 16cm, height: auto, margin: 1\.5cm\)\n/);
-    expect(files['/main.typ']).toContain('\n= Hello Typst\n');
+    expect(files['/main.typ']).toContain('\n= Typst in five minutes\n');
   });
 
-  it('the default document loads only the fonts it uses: the first render downloads 4 of 17 font files', async () => {
+  it('the default document loads only the fonts it uses: the first render downloads 5 of 17 font files', async () => {
     const loaded: string[] = [];
     const fresh = await engineWithFonts(loaded);
-    fresh.setSource('/main.typ', exampleFiles('hello')['/main.typ'] as string);
+    fresh.setSource('/main.typ', exampleFiles('simple')['/main.typ'] as string);
     expect(fresh.compile('/main.typ').diagnostics).toEqual([]);
-    // 2.4 MB (1.7 MB gzipped) instead of all 9.7 MB (6.4 MB gzipped)
+    // 2.7 MB (1.9 MB gzipped) instead of all 9.7 MB (6.4 MB gzipped)
     expect(loaded.sort()).toEqual([
+      'DejaVuSansMono.ttf',
       'LibertinusSerif-Bold.otf',
       'LibertinusSerif-Italic.otf',
       'LibertinusSerif-Regular.otf',
       'NewCMMath-Book.otf',
     ]);
-  });
-
-  it('the simple example is a single file', () => {
-    expect(Object.keys(exampleFiles('simple'))).toEqual(['/main.typ']);
   });
 
   it('the advanced example has a template, chapters and an SVG image given as bytes', async () => {
@@ -147,11 +144,11 @@ describe('demo examples', () => {
 
 describe('exampleFromQuery', () => {
   it.each([
-    ['', 'hello'],
+    ['', 'simple'],
     ['?example=simple', 'simple'],
     ['?example=advanced&room=r&user=u', 'advanced'],
     ['?example=docs', 'docs'],
-    ['?example=nope', 'hello'],
+    ['?example=nope', 'simple'],
   ])('"%s" → %s', (query, name) => {
     expect(exampleFromQuery(new URLSearchParams(query))).toBe(name);
   });

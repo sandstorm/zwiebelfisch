@@ -50,7 +50,7 @@ test('clicking keeps working when zoomed in', async ({ page }) => {
   await page.getByRole('tab', { name: 'Source' }).click();
   await page.getByTestId('typst-preview-toolbar').getByRole('button', { name: 'Zoom in' }).click();
   await clickGlyph(pages(page).locator('svg use').first());
-  await expect(page.getByTestId('typst-source').locator('.typst-source__jump')).toHaveText('Hello Typst');
+  await expect(page.getByTestId('typst-source').locator('.typst-source__jump')).toHaveText('Typst in five minutes');
 });
 
 test('highlights the clicked text in the preview', async ({ page }) => {
@@ -79,7 +79,7 @@ test("a double click's highlights go with the next edit or once the selection mo
   // Source editor: an edit removes the outline in the preview and the highlight in the source
   await page.getByRole('tab', { name: 'Source' }).click();
   await clickGlyph(heading, { clickCount: 2 });
-  await expect(jump).toHaveText('Hello Typst');
+  await expect(jump).toHaveText('Typst in five minutes');
   await expect(outline).toBeVisible();
   await page.keyboard.press('End');
   await page.keyboard.type('!');

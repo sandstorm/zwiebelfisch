@@ -49,8 +49,8 @@ test('text style "Normal text" turns a heading back into a paragraph', async ({ 
   await caretAtEnd(visual(page).locator('h1'));
   await toolbar(page).getByLabel('Text style').selectOption({ label: 'Normal text' });
   const src = await source(page);
-  await expect(src).not.toContainText('= Hello Typst');
-  await expect(src).toContainText('Hello Typst');
+  await expect(src).not.toContainText('= Typst in five minutes');
+  await expect(src).toContainText('Typst in five minutes');
 });
 
 test('Bulleted list button makes a - item', async ({ page }) => {
@@ -87,8 +87,8 @@ test('raw blocks are editable in place and change only their source', async ({ p
 test('arrow down on the last line of a raw block moves into the next block', async ({ page }) => {
   await visual(page).locator('.typst-visual__raw-block').first().locator('.cm-content').click();
   await page.keyboard.press('ControlOrMeta+Home');
-  await page.keyboard.press('ArrowDown');
-  await page.keyboard.press('ArrowDown');
+  // the demo's first raw block has three lines: #set page, #set text, #show link
+  for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowDown');
   await page.keyboard.type('X');
-  await expect(visual(page).locator('h1')).toHaveText('XHello Typst');
+  await expect(visual(page).locator('h1')).toHaveText('XTypst in five minutes');
 });

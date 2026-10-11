@@ -50,9 +50,9 @@ const marginGlyphs = (page: Page) => () =>
     return [...svg.querySelectorAll('use')].filter((glyph) => glyph.getBoundingClientRect().left >= margin).length;
   });
 
-/** Selects the demo's bold word and comments on it (`#margin-note[*bold*][..]`), writing `note` into the new card. */
-async function commentOnBold(page: Page, note: string) {
-  await visual(page).locator('strong', { hasText: 'bold' }).dblclick();
+/** Selects the demo's first strong word and comments on it (`#margin-note[*stars*][..]`), writing `note` into the new card. */
+async function commentOnStrong(page: Page, note: string) {
+  await visual(page).locator('strong', { hasText: 'stars' }).dblclick();
   await commentButton(page).click();
   await expect(noteField(page)).toBeFocused();
   await noteField(page).fill(note);
@@ -60,17 +60,17 @@ async function commentOnBold(page: Page, note: string) {
 }
 
 test('a comment on selected text becomes a range note with a card in the gutter, beside its text', async ({ page }) => {
-  await commentOnBold(page, 'Check this');
+  await commentOnStrong(page, 'Check this');
 
-  await expect(highlight(page)).toHaveText('bold');
+  await expect(highlight(page)).toHaveText('stars');
   await expect(cards(page)).toHaveCount(1);
   await expect(messageTexts(page)).toHaveText(['Check this']);
   await expect(cards(page).first().locator('.typst-comments__card-author')).toHaveText('Demo user');
-  await expect(cards(page).first().locator('.typst-comments__card-quote')).toHaveText('bold');
+  await expect(cards(page).first().locator('.typst-comments__card-quote')).toHaveText('stars');
   // the card sits at the height of its highlighted text
   await expect.poll(() => offset(cards(page).first(), highlight(page))).toBeLessThan(4);
 
-  await expect.poll(sourceText(page)).toContain(`#margin-note[*bold*][${signed('Check this')}]`);
+  await expect.poll(sourceText(page)).toContain(`#margin-note[*stars*][${signed('Check this')}]`);
   expect((await sourceText(page)()).split(IMPORT).length).toBe(2);
   // drafting's look in the PDF comes with the import, once
   expect((await sourceText(page)()).split('#set-margin-note-defaults(').length).toBe(2);
@@ -79,11 +79,11 @@ test('a comment on selected text becomes a range note with a card in the gutter,
   await expect.poll(marginGlyphs(page)).toBeGreaterThan(0);
 
   await page.getByRole('tab', { name: 'Source' }).click();
-  await expect(page.getByTestId('typst-source').locator('.cm-content')).toContainText(`#margin-note[*bold*][${signed('Check this')}]`);
+  await expect(page.getByTestId('typst-source').locator('.cm-content')).toContainText(`#margin-note[*stars*][${signed('Check this')}]`);
 });
 
 test('a comment at the cursor becomes a point note; a second note does not repeat the import', async ({ page }) => {
-  await visual(page).locator('p', { hasText: 'This is' }).click();
+  await visual(page).locator('p', { hasText: 'Typst is a markup' }).click();
   await page.keyboard.press('End');
   await page.keyboard.press('ControlOrMeta+Alt+KeyM');
   await expect(noteField(page)).toBeFocused();
@@ -105,7 +105,7 @@ test('a comment at the cursor becomes a point note; a second note does not repea
 
 test('cards of notes on the same line do not overlap', async ({ page }) => {
   for (const note of ['One', 'Two']) {
-    await visual(page).locator('p', { hasText: 'This is' }).click();
+    await visual(page).locator('p', { hasText: 'Typst is a markup' }).click();
     await page.keyboard.press('End');
     await commentButton(page).click();
     await noteField(page, note === 'One' ? 0 : 1).fill(`${note}\nwith a second line`);
@@ -119,7 +119,7 @@ test('cards of notes on the same line do not overlap', async ({ page }) => {
 });
 
 test('editing an own message updates the source and the preview', async ({ page }) => {
-  await commentOnBold(page, 'Short');
+  await commentOnStrong(page, 'Short');
   await expect.poll(marginGlyphs(page)).toBeGreaterThan(0);
   const before = await marginGlyphs(page)();
 
@@ -130,7 +130,7 @@ test('editing an own message updates the source and the preview', async ({ page 
   await field.fill('A much longer note than before');
   // leaving the field saves, too
   await visual(page).locator('h1').click();
-  await expect.poll(sourceText(page)).toContain(`#margin-note[*bold*][${signed('A much longer note than before')}]`);
+  await expect.poll(sourceText(page)).toContain(`#margin-note[*stars*][${signed('A much longer note than before')}]`);
   await expect.poll(marginGlyphs(page)).toBeGreaterThan(before);
 
   await edit.click();
@@ -140,20 +140,20 @@ test('editing an own message updates the source and the preview', async ({ page 
 });
 
 test('a reply appends a message to the thread, in the card and in the source', async ({ page }) => {
-  await commentOnBold(page, 'Is this right?');
+  await commentOnStrong(page, 'Is this right?');
   await cards(page).first().locator('.typst-comments__card-head').click();
   await expect(noteField(page)).toBeFocused();
   await noteField(page).fill('Yes: #1 [checked]');
   await noteField(page).press('ControlOrMeta+Enter');
   await expect(messageTexts(page)).toHaveText(['Is this right?', 'Yes: #1 [checked]']);
-  await expect.poll(sourceText(page)).toContain(`#margin-note[*bold*][${signed('Is this right?')}\n${signed('Yes: \\#1 \\[checked\\]')}]`);
+  await expect.poll(sourceText(page)).toContain(`#margin-note[*stars*][${signed('Is this right?')}\n${signed('Yes: \\#1 \\[checked\\]')}]`);
   // the last own message can be deleted again
   await cards(page).first().getByRole('button', { name: 'Delete message' }).click();
   await expect(messageTexts(page)).toHaveText(['Is this right?']);
 });
 
 test('resolving a range note keeps its text; resolving a point note removes it', async ({ page }) => {
-  await commentOnBold(page, 'Range');
+  await commentOnStrong(page, 'Range');
   await visual(page).locator('h1').click();
   await page.keyboard.press('End');
   await commentButton(page).click();
@@ -164,16 +164,16 @@ test('resolving a range note keeps its text; resolving a point note removes it',
   await cards(page).nth(1).getByRole('button', { name: 'Resolve note' }).click();
   await expect(cards(page)).toHaveCount(1);
   await expect(highlight(page)).toHaveCount(0);
-  await expect.poll(sourceText(page)).toContain('This is *bold* and');
+  await expect.poll(sourceText(page)).toContain('*stars* make text strong');
 
   await cards(page).first().getByRole('button', { name: 'Resolve note' }).click();
   await expect(cards(page)).toHaveCount(0);
   await expect.poll(sourceText(page)).not.toContain('#margin-note[');
-  await expect(visual(page).locator('h1')).toHaveText('Hello Typst');
+  await expect(visual(page).locator('h1')).toHaveText('Typst in five minutes');
 });
 
 test('a highlight and its card highlight each other', async ({ page }) => {
-  await commentOnBold(page, 'Linked');
+  await commentOnStrong(page, 'Linked');
   await visual(page).locator('h1').click();
   await expect(cards(page).first()).not.toHaveClass(/typst-comments__card--active/);
 
@@ -187,7 +187,7 @@ test('a highlight and its card highlight each other', async ({ page }) => {
 
 test('on a narrow pane, a card pops up below its highlight', async ({ page }) => {
   await page.setViewportSize({ width: 800, height: 900 });
-  await commentOnBold(page, 'Narrow');
+  await commentOnStrong(page, 'Narrow');
   await visual(page).locator('h1').click();
   await expect(cards(page).first()).toBeHidden();
 
@@ -201,12 +201,12 @@ test('in the Source editor, Comment (in the tab bar) wraps the selection and put
   await expect(sourceCommentButton(page)).toBeHidden();
   await page.getByRole('tab', { name: 'Source' }).click();
   const source = page.getByTestId('typst-source');
-  await source.locator('.cm-line', { hasText: 'This is' }).click();
+  await source.locator('.cm-line', { hasText: 'Typst is a markup' }).click();
   // CodeMirror's Home / End stop at the wrap points of a wrapped line first: repeat to reach its ends
   for (let i = 0; i < 3; i++) await page.keyboard.press('Home');
   for (let i = 0; i < 3; i++) await page.keyboard.press('Shift+End');
   await sourceCommentButton(page).click();
   await page.keyboard.type('Whole sentence?');
-  await expect.poll(sourceText(page)).toMatch(/#margin-note\[This is .*\]\[Whole sentence\?\]/);
+  await expect.poll(sourceText(page)).toMatch(/#margin-note\[Typst is a markup .*\]\[Whole sentence\?\]/);
   await expect.poll(sourceText(page)).toMatch(new RegExp(`^${IMPORT.replace(/[.*()[\]]/g, '\\$&')}\n`));
 });

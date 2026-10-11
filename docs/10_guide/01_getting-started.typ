@@ -35,8 +35,7 @@ The examples:
 #table(
   columns: 2,
   [Example], [Shows],
-  [Hello], [One page: emphasis, a list, an equation.],
-  [Simple], [Typst in five minutes: lists, math, a link, a table.],
+  [Simple], [Start here, it opens first: Typst in five minutes (lists, math, a link, a table) and what to type in the Visual editor: `# ` for a heading, `- ` for a list, `/` for commands, `@` for references.],
   [Advanced], [A report in several files: template, chapters, a helper module with custom styles, an outline, an SVG logo and chart, an IronCalc spreadsheet as a table, a Mermaid diagram, equations, figures with labels and references. GitLab mode always uses it.],
   [Documentation], [This documentation. With `mise run demo` edits are saved to `docs/`.],
 )
@@ -61,7 +60,7 @@ The page's state is its URL:
 #table(
   columns: 2,
   [Query], [Effect],
-  [`?example=hello|simple|advanced|docs`], [The project. `docs` is this documentation: edits are saved to `docs/` when running `mise run demo` (@architecture-development-writing-docs); in a static build nothing is saved.],
+  [`?example=simple|advanced|docs`], [The project. `docs` is this documentation: edits are saved to `docs/` when running `mise run demo` (@architecture-development-writing-docs); in a static build nothing is saved.],
   [`?room=<name>`], [Collaborate mode: joins a room on the local server.],
   [`?room=gitlab:demo/report@main`], [GitLab mode: a branch of the fake repository.],
   [`&user=<name>`], [The name others see; signs comments and commits.],

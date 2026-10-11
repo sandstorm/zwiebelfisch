@@ -28,7 +28,7 @@ mise run demo           # builds engine and fonts, then the demo on http://127.0
 `mise run demo` serves http://127.0.0.1:5199/ plus a local collaboration server with a fake GitLab
 (`mise run demo:build`: the same on the production build, so it loads as in production).
 
-- `?example=hello|simple|advanced|docs`: the project to open (`docs` edits this documentation live).
+- `?example=simple|advanced|docs`: the project to open (`docs` edits this documentation live).
 - `?room=<name>` collaborates in a room; `?room=gitlab:demo/report@main` opens a fake GitLab branch.
 - `&devtools`: the devtools side panel (the library's optional `devtools` extension): document, contributions, events.
 

@@ -10,9 +10,10 @@ test('loads only the default fonts the document uses, as separate assets, and re
   await page.goto('/');
   const svg = page.getByTestId('typst-preview').locator('.typst-preview__page svg').first();
   await expect(svg.locator('use').first()).toBeAttached();
-  // the hello example: Libertinus Serif regular, bold and italic, and the math font (demo/examples.test.ts)
-  await expect.poll(() => fonts.length).toBe(4);
-  for (const name of ['LibertinusSerif-Regular', 'LibertinusSerif-Bold', 'LibertinusSerif-Italic', 'NewCMMath-Book']) {
+  // the simple example: Libertinus Serif regular, bold and italic, the math font and DejaVu Sans Mono for raw text
+  // (demo/examples.test.ts)
+  await expect.poll(() => fonts.length).toBe(5);
+  for (const name of ['LibertinusSerif-Regular', 'LibertinusSerif-Bold', 'LibertinusSerif-Italic', 'NewCMMath-Book', 'DejaVuSansMono']) {
     expect(fonts.some((url) => url.includes(name))).toBe(true);
   }
 });
@@ -25,13 +26,13 @@ test('loads a font the document starts using later', async ({ page }) => {
   await page.goto('/');
   const preview = page.getByTestId('typst-preview');
   await expect(preview.locator('.typst-preview__page svg use').first()).toBeAttached();
-  await expect.poll(() => fonts.length).toBe(4);
+  await expect.poll(() => fonts.length).toBe(5);
   await page.getByRole('tab', { name: 'Source' }).click();
   await page.getByTestId('typst-source').locator('.cm-content').click();
   await page.keyboard.press('ControlOrMeta+End');
-  // raw text is set in DejaVu Sans Mono
-  await page.keyboard.type('\n\nSome `code`');
-  await expect.poll(() => fonts.some((url) => url.includes('DejaVuSansMono'))).toBe(true);
+  // strong and emphasised text is set in Libertinus Serif Bold Italic
+  await page.keyboard.type('\n\nSome *_strong emphasis_*');
+  await expect.poll(() => fonts.some((url) => url.includes('LibertinusSerif-BoldItalic'))).toBe(true);
   await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
 });
 

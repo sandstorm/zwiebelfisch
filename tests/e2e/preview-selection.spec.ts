@@ -7,7 +7,7 @@ import { compiled, visual } from './visual-helpers';
 const preview = (page: Page) => page.getByTestId('typst-preview');
 const shading = (page: Page) => preview(page).locator('.typst-preview__selection');
 
-/** Selects line `line` (from 1) of the main file in the Source editor: the demo's line 4 is its heading. */
+/** Selects line `line` (from 1) of the main file in the Source editor: the demo's line 5 is its heading. */
 async function selectLine(page: Page, line: number) {
   await page.getByTestId('typst-source').locator('.cm-content').click();
   await page.keyboard.press('ControlOrMeta+Home');
@@ -23,7 +23,7 @@ test.beforeEach(async ({ page }) => {
 
 test('shades the text selected in the Source editor, and nothing once the selection collapses', async ({ page }) => {
   await page.getByRole('tab', { name: 'Source' }).click();
-  await selectLine(page, 4);
+  await selectLine(page, 5);
   await expect(shading(page).first()).toBeVisible();
   // in the preview's pages, translucent, over the text
   const box = (await shading(page).first().boundingBox())!;
@@ -51,7 +51,7 @@ test('a click in the preview is outlined, not shaded too; selecting elsewhere sh
   await expect(shading(page)).toHaveCount(0);
 
   // the heading's line with its `= `: more than the click selected
-  await selectLine(page, 4);
+  await selectLine(page, 5);
   await expect(preview(page).locator('.typst-preview__highlight')).toHaveCount(0);
   await expect(shading(page).first()).toBeVisible();
 });

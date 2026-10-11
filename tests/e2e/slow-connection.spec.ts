@@ -29,7 +29,7 @@ const statusBarProgress = (page: Page) => page.getByTestId('typst-progress');
 test('the text shows and takes typing before the compiler is there; the preview says it loads it, then shows the pages', async ({ page }) => {
   const wasm = await holdBack(page, /\.wasm$/);
   await page.goto('/');
-  await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Hello Typst');
+  await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Typst in five minutes');
   await expect(loader(page).getByRole('status')).toHaveText('Loading the Typst compiler…');
   await expect(loader(page).getByRole('progressbar')).toBeVisible();
   await expect(statusBarProgress(page)).toHaveCount(0);
@@ -53,13 +53,13 @@ test('the Visual editor takes typing while the compiler loads; raw boxes show th
   await page.goto('/');
   const visual = page.getByTestId('typst-visual');
   // the equation is a raw box: its code first
-  const equation = visual.locator('.typst-visual__raw-block', { hasText: 'sum_(k=1)^n' });
-  await expect(equation.locator('.typst-visual__code')).toContainText('sum_(k=1)^n');
+  const equation = visual.locator('.typst-visual__raw-block', { hasText: 'integral_0^1' });
+  await expect(equation.locator('.typst-visual__code')).toContainText('integral_0^1');
   await expect(equation.locator('img.typst-visual__rendering')).toBeHidden();
   await visual.locator('h1').click();
   await page.keyboard.press('End');
   await page.keyboard.type(' again');
-  await expect(visual.locator('h1')).toHaveText('Hello Typst again');
+  await expect(visual.locator('h1')).toHaveText('Typst in five minutes again');
 
   wasm.release();
   await expect(equation.locator('img.typst-visual__rendering')).toBeVisible();
