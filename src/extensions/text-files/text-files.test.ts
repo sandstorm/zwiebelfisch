@@ -39,9 +39,9 @@ function setup(allowFileChange?: (change: FileChange) => boolean) {
 }
 
 describe('text files', () => {
-  it('opens data, bibliography, text and Markdown files in the text editor, with its icon', () => {
+  it('opens data, bibliography, text, Markdown and Mermaid files in the text editor, with its icon', () => {
     const { host, project, workbench, window } = setup();
-    for (const name of ['data.csv', 'data.json', 'conf.yaml', 'conf.yml', 'Cargo.toml', 'feed.xml', 'notes.txt', 'README.md']) {
+    for (const name of ['data.csv', 'data.json', 'conf.yaml', 'conf.yml', 'Cargo.toml', 'feed.xml', 'notes.txt', 'README.md', 'flow.mmd']) {
       project.apply({ kind: 'create', path: path(`/${name}`), content: `${name}\n` });
       workbench.open(path(`/${name}`));
       const editor = host.querySelector('[data-view-type="textFiles.editor"] [data-testid=typst-text-file]');

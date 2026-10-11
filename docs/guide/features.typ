@@ -80,7 +80,7 @@ How each file opens:
   [File], [Opens in],
   [`.typ`], [Its own Visual and Source views.],
   [Images], [A preview; drag into the Visual view to insert.],
-  [`.csv`, `.json`, `.yaml`, `.yml`, `.toml`, `.xml`, `.bib`, `.txt`, `.md`], [A plain text editor, saved 800 ms after the last keystroke.],
+  [`.csv`, `.json`, `.yaml`, `.yml`, `.toml`, `.xml`, `.bib`, `.txt`, `.md`, `.mmd`], [A plain text editor, saved 800 ms after the last keystroke.],
   [`.ic`], [A spreadsheet (@guide-features-spreadsheets).],
   [`.drawio.png`], [The diagram editor (@guide-features-diagrams).],
   [Anything else], [Name, size and type.],
