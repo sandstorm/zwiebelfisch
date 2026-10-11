@@ -2,6 +2,18 @@
 
 Every operation is a mise task (`mise-tasks/`, `mise tasks ls`). Tools are pinned to exact versions in `mise.toml` and `package.json`.
 
+== Setup <architecture-development-setup>
+
+To work on the code, you need #link("https://mise.jdx.dev")[mise]. It pins every tool: Node, pnpm, the Typst CLI, Rust (with the `wasm32` target), wasm-bindgen and binaryen.
+
+```sh
+mise install            # the pinned tools
+mise run install        # JS dependencies and Playwright browsers
+mise run demo           # builds the engine and fonts, then starts the demo
+```
+
+`mise run demo` serves the demo (@guide-getting-started-demo) on `http://127.0.0.1:5199/` and the collaboration server with a fake GitLab on `ws://127.0.0.1:1234`; Ctrl-C stops both. Unlike the Docker image, it saves edits of the Documentation example to `docs/` (@architecture-development-writing-docs).
+
 == Tasks <architecture-development-tasks>
 
 #table(

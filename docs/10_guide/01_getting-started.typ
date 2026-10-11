@@ -13,21 +13,9 @@ docker run --rm -p 127.0.0.1:5199:5199 -p 127.0.0.1:1234:1234 typst-editor-demo
 
 Then open `http://127.0.0.1:5199/`. You get the demo (@guide-getting-started-demo) and the collaboration server with a fake GitLab. Nothing is saved: the rooms live in memory, and the Documentation example does not write to `docs/`. Ctrl-C stops both. The first build takes a while, as it compiles the Typst compiler to wasm. With mise: `mise run docker:build` and `mise run docker:run`.
 
-== Custom Compilation <guide-getting-started-setup>
-
-(TODO: Custom compilation should be advanced Dev Topic.)
-
-To work on the code, you need #link("https://mise.jdx.dev")[mise]. It pins every tool: Node, pnpm, the Typst CLI, Rust (with the `wasm32` target), wasm-bindgen and binaryen.
-
-```sh
-mise install            # the pinned tools
-mise run install        # JS dependencies and Playwright browsers
-mise run demo           # builds the engine and fonts, then 
-```
-
 == The demo <guide-getting-started-demo>
 
-`mise run demo` starts the demo on `http://127.0.0.1:5199/` and a collaboration server with a fake GitLab on `ws://127.0.0.1:1234`. Ctrl-C stops both.
+The Docker image (@guide-getting-started-docker) serves the demo on `http://127.0.0.1:5199/` with a collaboration server and a fake GitLab on `ws://127.0.0.1:1234`. To work on the code, run it from a checkout instead: `mise run demo` (@architecture-development-setup).
 
 The screen (layout figure: @guide-features-editors):
 
