@@ -316,6 +316,8 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
   decides (see "VisualView"; tested by projecting every fixture with the built-ins in reverse order); toolbar items
   and menu entries (also the tab bar's) have `group` + `order`, status bar items `alignment` + `priority`. `typst-editor.ts` names
   no feature: no per-feature option, only `exportPdf` (a documented shortcut for the command `pdfExport.export`).
+  Every extension is made by a factory (`markup()`, `images()`, `collaboration(options)`), never a constant, so
+  one can take options later without a break.
 - **Public extension API** (decided 2026-10-10): `extensions(builtins) → list` makes the list from the built-ins
   (default: them): add the host's own, leave one out or replace it by `id`. A function rather than an array, so
   "add one" cannot be mistaken for "replace all", and neither the built-in list nor each factory has to be

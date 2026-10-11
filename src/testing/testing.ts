@@ -127,9 +127,9 @@ function activate(contributions: readonly VisualViewContribution[], prompts: Tes
  */
 export function builtins(options: Omit<TestViewOptions, 'contributions'> = {}): VisualViewContribution[] {
   return [
-    markup,
-    headings,
-    tables,
+    markup(),
+    headings(),
+    tables(),
     imagesVisualView({
       assets: options.assets && (() => options.assets),
       imageUrls: options.renderer && (() => options.renderer),
@@ -137,10 +137,10 @@ export function builtins(options: Omit<TestViewOptions, 'contributions'> = {}): 
       prompts: options.prompts ?? new TestPrompts(),
     }),
     renderedBoxesVisualView({ snippets: options.renderer && (() => options.renderer) }),
-    outline,
-    pageLayout,
-    lists,
-    alignment,
+    outline(),
+    pageLayout(),
+    lists(),
+    alignment(),
   ];
 }
 

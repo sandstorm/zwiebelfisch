@@ -7,15 +7,17 @@ import css from './tables.css?inline';
 import { INSERT_TABLE, TABLE, TABLE_BAR, TABLE_EDITS } from './visual-view/visual-view';
 
 /** Tables, "Insert table" and the table bar. */
-export const tables: TypstExtension = {
-  id: 'tables',
-  activate({ workbench, visualView, subscriptions }) {
-    subscriptions.push(workbench.registerStyleSheet(css));
-    subscriptions.push(
-      visualView.registerNode(TABLE),
-      visualView.registerToolbarItem({ group: 'insert', order: 20, action: INSERT_TABLE }),
-      visualView.registerToolbarGroup(TABLE_BAR),
-      ...TABLE_EDITS.map((action, i) => visualView.registerToolbarItem({ group: 'table', order: 10 * (i + 1), action })),
-    );
-  },
-};
+export function tables(): TypstExtension {
+  return {
+    id: 'tables',
+    activate({ workbench, visualView, subscriptions }) {
+      subscriptions.push(workbench.registerStyleSheet(css));
+      subscriptions.push(
+        visualView.registerNode(TABLE),
+        visualView.registerToolbarItem({ group: 'insert', order: 20, action: INSERT_TABLE }),
+        visualView.registerToolbarGroup(TABLE_BAR),
+        ...TABLE_EDITS.map((action, i) => visualView.registerToolbarItem({ group: 'table', order: 10 * (i + 1), action })),
+      );
+    },
+  };
+}

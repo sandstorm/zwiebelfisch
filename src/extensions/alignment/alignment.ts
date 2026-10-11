@@ -6,14 +6,16 @@ import type { TypstExtension } from '../../hosts/workbench/workbench';
 import { ALIGN_MENU, ALIGNMENT, ALIGNMENTS, JUSTIFIED_PARAGRAPH } from './visual-view/visual-view';
 
 /** Aligned blocks, justified paragraphs and the Align menu. */
-export const alignment: TypstExtension = {
-  id: 'alignment',
-  activate({ visualView, subscriptions }) {
-    subscriptions.push(
-      visualView.registerNode(ALIGNMENT),
-      visualView.registerNode(JUSTIFIED_PARAGRAPH),
-      visualView.registerToolbarGroup(ALIGN_MENU),
-      ...ALIGNMENTS.map((action, i) => visualView.registerToolbarItem({ group: 'align', order: 10 * (i + 1), action })),
-    );
-  },
-};
+export function alignment(): TypstExtension {
+  return {
+    id: 'alignment',
+    activate({ visualView, subscriptions }) {
+      subscriptions.push(
+        visualView.registerNode(ALIGNMENT),
+        visualView.registerNode(JUSTIFIED_PARAGRAPH),
+        visualView.registerToolbarGroup(ALIGN_MENU),
+        ...ALIGNMENTS.map((action, i) => visualView.registerToolbarItem({ group: 'align', order: 10 * (i + 1), action })),
+      );
+    },
+  };
+}
