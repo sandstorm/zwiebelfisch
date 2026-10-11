@@ -19,8 +19,8 @@
   gap: 4px;
   padding: 6px 4px;
 }
-/* buttons that run something (search everywhere) at the rail's far end */
-.typst-editor__rail-actions { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: auto; }
+/* the rail's bottom group (side panels with alignment: 'bottom') at its far end */
+.typst-editor__rail-bottom { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: auto; }
 .typst-editor__rail-button {
   display: inline-flex;
   align-items: center;

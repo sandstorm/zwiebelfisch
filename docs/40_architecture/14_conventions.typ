@@ -56,6 +56,7 @@ How code is written here. `mise run quality` enforces what it can (@architecture
   [box renderers, link providers, PDF options, custom editors], [our `priority` (default 100, higher first)],
   [toolbar and menu items], [`group` + `order`],
   [status bar items], [`alignment` + `priority`],
+  [side panels' rail buttons], [`side` + `alignment` + `order`],
   [Source editor extensions], [CodeMirror's `Prec`],
 )
 

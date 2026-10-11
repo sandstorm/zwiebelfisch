@@ -222,7 +222,9 @@ export interface SidePanelOptions {
   icon: Element;
   /** The side whose rail gets the button; default `'left'`. */
   side?: 'left' | 'right';
-  /** The rail button's place among the others of its side (lower first; equal: registration order); default 0. */
+  /** The rail's group the button goes into: `'top'` (the default) or `'bottom'`, at the rail's far end. */
+  alignment?: 'top' | 'bottom';
+  /** The rail button's place among the others of its side and group (lower first; equal: registration order); default 0. */
   order?: number;
 }
 
@@ -587,8 +589,8 @@ export class WorkbenchHost implements Workbench {
 
   /**
    * Search everywhere's ways in besides double Shift: the command `workbench.action.searchEverywhere` (its argument:
-   * the text to start with, e.g. a prefix) and a button at the bottom of the left rail; and its built-in groups, the
-   * declared commands and the settings.
+   * the text to start with, e.g. a prefix) and a button among the left rail's side panels (`SEARCH_EVERYWHERE_ORDER`);
+   * and its built-in groups, the declared commands and the settings.
    */
   #registerSearch(): Disposable {
     const command = 'workbench.action.searchEverywhere';
@@ -599,7 +601,7 @@ export class WorkbenchHost implements Workbench {
     button.dataset.testid = 'typst-search-everywhere';
     button.innerHTML = SEARCH_ICON;
     button.addEventListener('click', () => void this.commands.executeCommand(command));
-    this.#layout.addRailAction('left', button);
+    this.#layout.addRailAction('left', button, SEARCH_EVERYWHERE_ORDER);
     return Disposable.from(
       new Disposable(() => button.remove()),
       this.commands.registerCommand(command, (value?: string) => this.window.showSearchEverywhere(typeof value === 'string' ? value : '')),
@@ -725,6 +727,9 @@ function previewIcon(doc: Document): SVGSVGElement {
   svg.innerHTML = '<path d="M4 1.5h5.5L12.5 4.5v10h-8.5z"/><path d="M9.5 1.5v3h3M6.5 8h4M6.5 10.5h4"/>';
   return svg;
 }
+
+/** Search everywhere's place among the left rail's side panels (their `order`): after Files (10), before Help (20). */
+const SEARCH_EVERYWHERE_ORDER = 15;
 
 /** Search everywhere's rail button: a magnifier. */
 const SEARCH_ICON =

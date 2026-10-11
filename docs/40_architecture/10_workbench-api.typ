@@ -92,7 +92,7 @@ if (choice === 'Open') workbench.open(path);
 
 == Search everywhere <architecture-workbench-api-search>
 
-Double Shift anywhere in the widget, the magnifier at the bottom of the left rail, or `workbench.action.searchEverywhere` open one quick pick over what every search provider finds, a group each: `window.registerSearchProvider(provider)`.
+Double Shift anywhere in the widget, the magnifier on the left rail (order 15: after Files, before Help), or `workbench.action.searchEverywhere` open one quick pick over what every search provider finds, a group each: `window.registerSearchProvider(provider)`.
 
 ```ts
 window.registerSearchProvider({
@@ -136,7 +136,7 @@ The built-in providers:
   columns: 2,
   [Member], [What],
   [`window.registerStatusBarItem(element, { alignment, priority })`], [`'left'` or `'right'`; within a side the higher `priority` further left],
-  [`workbench.registerSidePanel(id, { label, icon, side, order })`], [A side panel and its rail button on `side` (`'left'`, the default, or `'right'`, after the built-in `preview`); returns `SidePanel` (`body`, `setDefault(open)`, `setAvailable`, `dismiss`). One panel per side shows; ids are unique across both sides],
+  [`workbench.registerSidePanel(id, { label, icon, side, alignment, order })`], [A side panel and its rail button on `side` (`'left'`, the default, or `'right'`, after the built-in `preview`), in the rail's `alignment` group (`'top'`, the default, or `'bottom'`, at the rail's far end), by `order` there (lower first, default 0); returns `SidePanel` (`body`, `setDefault(open)`, `setAvailable`, `dismiss`). One panel per side shows; ids are unique across both sides],
   [`workbench.registerEditorFrame({ top, bottom })`], [Elements before and after the shown file's editor: inside a Typst editor's content, scrolling with it; around any other editor's panel; one frame at a time],
   [`workbench.registerStyleSheet(css)`], [Your CSS where the widget renders (inside a `<typst-editor>`'s shadow root too); use the `--te-*` color tokens],
   [`workbench.ownerDocument`], [The document to create elements in],

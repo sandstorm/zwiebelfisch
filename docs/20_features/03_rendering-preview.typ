@@ -8,7 +8,7 @@ The preview on the right shows the pages as Typst compiles them, the whole docum
 - On errors it dims and keeps the last good pages. Errors and warnings are underlined in both editors, the message as tooltip; the status bar counts them and jumps to them.
 - Hidden, it keeps compiling: errors, raw boxes' pictures and shading stay current.
 - Zoom (fit width by default, 25–400 %) and "page n / total" are in its toolbar.
-- The preview is the right side's panel: its button on the right rail hides the right side (the editing area takes its room) and shows it again; where a host adds others (the devtools), the rail switches between them. Drag the separator (or use the arrow keys on it): the right side gets 20–80 % of the width. What you picked is remembered for the browser session.
+- The preview is the right side's panel: its button on the right rail hides the right side (the editing area takes its room) and shows it again; where there are others (the devtools, at the bottom of the rail), the rail switches between them. Drag the separator (or use the arrow keys on it): the right side gets 20–80 % of the width. What you picked is remembered for the browser session.
 - Following the cursor, shading the selection and clicking into the preview: @features-bidirectional-navigation. Downloading the PDF: @features-pdf.
 
 == How to configure
