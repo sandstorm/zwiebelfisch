@@ -112,9 +112,9 @@ adds one to `styles.typ`.]
 
 == A spreadsheet as a table
 
-#import "data/budget.ic.gen.typ": sheets, values
+#import "data/budget.ic.gen.typ": sheets, names
 
-The trip in @tab:budget costs #values.Budget.at(4).at(1) € in total. Open
+The trip in @tab:budget costs #names.Total € in total. Open
 `data/budget.ic` to edit it in the spreadsheet editor: the table and the total
 here follow.
 

@@ -13,13 +13,15 @@ beforeAll(async () => {
 
 const [formulas, references, inTheDocument] = SPREADSHEET_HELP.sections;
 
-/** A workbook with numbers in A1:B20 of `Sheet1`, `Sheet2` and `Q1 2026`. */
+/** A workbook with numbers in A1:B20 of `Sheet1`, `Sheet2` and `Q1 2026`; the names `Total` (B20) and `Costs` (B1:B20). */
 function workbook(): Model {
   const model = new Model('table', 'en', 'UTC', 'en');
   model.newSheet();
   model.newSheet();
   model.renameSheet(2, 'Q1 2026');
   for (const sheet of [0, 1, 2]) for (let row = 1; row <= 20; row++) for (const column of [1, 2]) model.setUserInput(sheet, row, column, String(row * column));
+  model.newDefinedName('Total', undefined, 'Sheet1!$B$20');
+  model.newDefinedName('Costs', undefined, 'Sheet1!$B$1:$B$20');
   return model;
 }
 
