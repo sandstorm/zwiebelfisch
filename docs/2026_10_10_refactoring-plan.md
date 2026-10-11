@@ -135,16 +135,24 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    saved as file updates (collaboration: whole file, last save wins, as images). The read-only
    fallback for every other file (`*`: name, size, type) moves from `images` to the `files`
    extension; `images` keeps only `images.preview`.
-   **READMEs instead of ARCHITECTURE.md** (user, 2026-10-11): one-page README per main area
-   (`src/README.md` big picture: layers, dependency rules, a keystroke's flow, links;
-   `src/core/`, `src/extensions/` (what an extension is, the five vocabularies), and one per host:
-   `workbench`, `visual-view`, `projection`, `source-view`, `preview`): the area's job, its 3–6 core
-   concepts and how they connect, an ASCII diagram where it shows a flow better than prose
-   (projection round trip, preview ↔ worker, extension activation). Each README is *the* place for
-   its area, next to its code; `ARCHITECTURE.md` goes once they explain everything (its content
-   moved, not duplicated; links and the `mise run quality:top-comments` "See ARCHITECTURE.md"
-   references updated). Written by parallel subagents after the API-shape wave and its follow-up;
-   the main agent reviews for consistency.
+   **Documentation as Typst** (user, 2026-10-11; replaces the README-per-area idea): all
+   documentation is one Typst project in `docs/`; Markdown only for a rudimentary root `README.md`.
+   `docs/main.typ` + `template.typ` (tiny); Part 1 `guide/` (getting-started, embedding, features,
+   collaboration), Part 2 `extensions/` (overview with the five vocabularies, workbench API,
+   visual-view constructs, source-view and preview), Part 3 `architecture/` (overview with layers +
+   a keystroke's journey, core, projection, visual-view, source-view, preview, workbench,
+   built-in-extensions, server, conventions, development). Each Part-3 chapter one page: job, 3–6
+   concepts, how they connect. Cross-references as Typst labels; code top comments point to the
+   chapter (`See docs/architecture/workbench.typ`, enforced by the top-comments check). The demo
+   gets a "Documentation" example loading `docs/**/*.typ` (edit live, nothing saved);
+   `mise run docs:pdf` (Typst CLI pinned via mise), `docs:html` later. Diagrams: draw.io
+   (`.drawio.png`, edited with our own diagrams extension) or mermaid / d2 later; ASCII in raw
+   blocks until then. Working notes (dated plans, research, code review, findings, `docs/todo/`)
+   are distilled into the Typst docs, then deleted (this plan last, when the refactoring is done);
+   `ARCHITECTURE.md` and `docs/embedding.md` go once their content lives there. Runs after the
+   follow-up merge: a skeleton agent (main, template, demo example, docs:pdf), then writers per
+   part in parallel, then an integrator (top comments, deletions, README). Later waves update the
+   docs in the same commit as the code.
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Rules wave also does:** core `onChange` → `onDidChange: Event` + `Disposable` everywhere
    (`Project`, `TypstDocument`, …) (user: yes).
