@@ -1,14 +1,13 @@
+#import "../template.typ": mermaid
+
 = Workbench <architecture-workbench>
 
 `src/hosts/workbench/` and VS Code's namespaces in `src/hosts/{commands,window,scm,languages,workspace}/`. The widget's frame, the extension API's entry, and the composition of all hosts. The frame knows no feature by name: a feature is a `TypstExtension`.
 
-```
-createTypstEditor ─► WorkbenchHost(host, project, options).activate(extensions)
-                     ├─ namespaces: CommandsHost  WindowHost  ScmHost  LanguagesHost  WorkspaceHost
-                     ├─ view hosts: VisualViewHost  SourceViewHost  Preview
-                     ├─ frame:      WorkbenchLayout  EditorTabs  TypstEditors  Menus  StyleSheets  FileDrops  ColorScheme
-                     └─ ExtensionHost: activate(context) per extension, in list order
-```
+#figure(
+  mermaid(read("../diagrams/workbench-composition.mmd"), width: 85%),
+  caption: [What `createTypstEditor` composes.],
+)
 
 == Concepts <architecture-workbench-concepts>
 

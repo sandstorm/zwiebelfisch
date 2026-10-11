@@ -1,3 +1,5 @@
+#import "../template.typ": mermaid
+
 = Server <architecture-server>
 
 `server/` (Node package, Hocuspocus; TypeScript run by Node directly). Relays, authenticates and stores collaboration rooms. Looks inside a room only when it is backed by a GitLab branch.
@@ -22,16 +24,10 @@
 
 == GitLab rooms <architecture-server-gitlab>
 
-```
-open      no meta: load the branch head (.typ as text, others as blob sha) → files, assets, meta
-          stored room: pull upstream (merge), ignoring GitLab being unreachable
-save      client: stateless gitlab:save → commitActions(meta, files) → one POST /repository/commits
-          refused with a moved head: merge upstream, retry (3 attempts); a conflict ends the save
-auto      idle autoCommit minutes after the last edit, or LEAVE_DELAY (20 s) after the last user left
-          (beforeUnloadDocument waits; someone back: no commit) → the same commit, automaticCommit's author + message
-webhook   POST /gitlab/webhook (X-Gitlab-Token) → merge into the open rooms of that branch
-answers   gitlab:saved / merged / conflict to everyone; gitlab:unchanged / error to the saver (auto: errors to everyone)
-```
+#figure(
+  mermaid(read("../diagrams/gitlab-room.mmd"), width: 100%),
+  caption: [A GitLab room: open, save, auto-commit, webhook and the answers.],
+)
 
 - *Optimistic concurrency per file*: update / move / delete carry the file's `last_commit_id`, so GitLab refuses an action whose file changed upstream.
 - *Commit actions*: a deleted + created pair with at least half the content equal is a `move` (git's rename rule); uploads go as base64.

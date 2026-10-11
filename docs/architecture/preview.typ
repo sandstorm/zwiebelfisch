@@ -1,3 +1,5 @@
+#import "../template.typ": mermaid
+
 = Preview <architecture-preview>
 
 `src/hosts/preview/`. Compiles the project in a worker and shows the pages as SVG. Keeps the mechanism; extensions add the controls and decide when to use it.
@@ -26,16 +28,10 @@
 
 == Flow <architecture-preview-flow>
 
-```
-project change ─► update(files) ─► LatestOnly ─► worker: compile ─► pages + diagnostics
-                                                                     │
-        page list: swap pages whose hash changed ◄───────────────────┤
-        onDidRender, onDidChangeDiagnostics (only if no newer update) ◄┘
-click ─► px→pt ─► worker: click ─► onDidClickPage ─► previewSync selects the source
-edit, selection moved away ─► previewSync ─► clearClickHighlight
-cursor ─► previewSync ─► reveal ─► worker: cursor ─► scroll if off-screen
-selection (60 ms at rest) ─► previewSync ─► setSelectionHighlight ─► worker: boxes ─► shading
-```
+#figure(
+  mermaid(read("../diagrams/preview-flow.mmd"), width: 100%),
+  caption: [Compile, click, cursor and selection between the views, previewSync, the preview and its worker.],
+)
 
 == Rules <architecture-preview-rules>
 

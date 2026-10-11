@@ -68,6 +68,7 @@ mise run server:test   # when server/ or core/room-protocol changed
 
 - One Typst project in `docs/`: `main.typ` (the book, and the chapter list `parts`), `site.typ` (one HTML page per chapter), `template.typ`.
 - A chapter's label is its path, `/` → `-` (`<architecture-workbench>`); a section appends a word. Cross-references are `@label`.
+- Diagrams are Mermaid files in `diagrams/`, drawn by merman in the docs' colors: `#figure(mermaid(read("../diagrams/x.mmd"), width: 80%), caption: […])` with `mermaid` from `template.typ`.
 - Live while writing: `mise run demo`, then `?example=docs`.
 
 == Open work <architecture-development-open-work>
