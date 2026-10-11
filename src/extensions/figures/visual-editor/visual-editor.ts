@@ -1,4 +1,4 @@
-// What the figures extension contributes to the Visual editor. See ../figures.ts.
+// The figure and caption nodes, and the commands that add and remove a caption. See figures in ../figures.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { Node } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
@@ -42,12 +42,7 @@ const Figure = Node.create({
   },
 });
 
-/**
- * Figures: read from `#figure(..)` calls, written around their body and caption.
- *
- * `#figure(body, caption: [..])` of a body any spec offers (`figureBody`: an image, a table), read with the caption as
- * rich text and printed back around their parts, and the commands that add and remove a caption.
- */
+/** `#figure(body, caption: [..])` of a body any spec offers (`figureBody`), printed back around its parts. */
 export const FIGURE: TypstNodeSpec = {
   name: 'figure',
   tiptap: Figure,

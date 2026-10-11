@@ -1,4 +1,5 @@
-// The figures of Typst source with their caption, kind and label (search everywhere lists them). See ../figures.ts.
+// The figures of Typst source with their caption, kind and label (search everywhere lists them). See figures in
+// ../figures.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { callArguments, calleeName, namedArgument } from '../../../core/typst-syntax/typst-syntax';
