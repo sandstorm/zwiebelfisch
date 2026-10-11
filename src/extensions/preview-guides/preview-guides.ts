@@ -9,7 +9,9 @@ import type { TypstExtension } from '../../hosts/workbench/workbench';
  * a background of its own keeps it, and the guides move to the foreground (one sets both: no guides). "Box outlines"
  * outlines every block and box (headings, figures, lists, equations, `#block`, `#box`) by set rules, so what a
  * document sets itself wins. Typst draws the outline around the inset, widened by the outset; the inset and the
- * spacing around a block are not drawn on their own (docs/30_architecture/08_built-in-extensions.typ says why).
+ * spacing around a block are not drawn on their own. It also shades every `v(…)` as Typst laid it out (`1fr` too),
+ * between two placed markers that take no space; weak spacing that collapsed into a paragraph's or block's spacing
+ * shows nothing. docs/30_architecture/08_built-in-extensions.typ says why and what is left out (`h`).
  *
  * Both are Typst run before the main file in the preview only (`PreviewViewOption`); the documents and their PDFs
  * stay as they are. The colors are mid-tones, readable on the inverted pages of the dark mode too. The pictures of
@@ -82,13 +84,53 @@ const PAGE_GUIDES: PreviewViewOption = {
     ]),
 };
 
+/**
+ * Shades each `v(…)` from where its spacing starts to where it ends, as laid out: a placed marker before it draws a
+ * band down to the next end marker after it. Placed content takes no space and Typst's flow looks past it when weak
+ * spacing collapses, so the layout stays as it is. Its start is placed, not a tag: tags move past spacing to the next
+ * content. A tight list, enum or term list starts with a `v` that is kept only right after a paragraph; a marker in
+ * front of it would drop it, so that one is left alone (the state is set by the list, cleared by every `v`).
+ */
+const SPACING = [
+  '#let preview-guides-hatch = tiling(size: (4pt, 4pt), {',
+  '  place(rect(width: 4pt, height: 4pt, fill: rgb(20, 184, 166, 15%)))',
+  '  place(line(start: (0pt, 4pt), end: (4pt, 0pt), stroke: 0.5pt + rgb(20, 184, 166, 60%)))',
+  '})',
+  '#let preview-guides-list = state("preview-guides-list", false)',
+  '#show list: it => { if it.tight { preview-guides-list.update(true) }; it }',
+  '#show enum: it => { if it.tight { preview-guides-list.update(true) }; it }',
+  '#show terms: it => { if it.tight { preview-guides-list.update(true) }; it }',
+  '#show v: it => {',
+  '  context if not preview-guides-list.get() {',
+  '    place(context {',
+  '      let start = here().position()',
+  '      let ends = query(selector(<preview-guides-v-end>).after(here()))',
+  '      let end = if ends != () { ends.first().location().position() }',
+  '      // spacing broken across pages is cut at the page end, negative spacing overlaps: no band',
+  '      if end != none and end.page == start.page and end.y > start.y {',
+  '        set block(stroke: none)',
+  '        rect(width: 100%, height: end.y - start.y, fill: preview-guides-hatch, stroke: (y: 0.5pt + rgb(20, 184, 166, 80%)))',
+  '      }',
+  '    })',
+  '  }',
+  '  it',
+  '  preview-guides-list.update(false)',
+  '  place[#metadata(none)<preview-guides-v-end>]',
+  '}',
+];
+
 const BOX_OUTLINES: PreviewViewOption = {
   id: 'previewGuides.boxOutlines',
   label: 'Box outlines',
-  description: 'An outline around every block and box (in the preview only)',
+  description: 'An outline around every block and box, and the vertical spacing shaded (in the preview only)',
   default: false,
-  // 1pt is Typst's own default: a document's stroke that names no thickness folds with this one and keeps it
-  apply: (entry, on) => withLines(entry, on, ['#set block(stroke: 1pt + rgb(217, 70, 239, 50%))', '#set box(stroke: 1pt + rgb(217, 70, 239, 50%))']),
+  apply: (entry, on) =>
+    withLines(entry, on, [
+      // 1pt is Typst's own default: a document's stroke that names no thickness folds with this one and keeps it
+      '#set block(stroke: 1pt + rgb(217, 70, 239, 50%))',
+      '#set box(stroke: 1pt + rgb(217, 70, 239, 50%))',
+      ...SPACING,
+    ]),
 };
 
 /** `entry` with `lines` added to its prelude while the option is `on`. */

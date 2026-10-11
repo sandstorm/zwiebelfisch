@@ -1,16 +1,21 @@
 // Tests for preview-guides.ts: the view options' Typst, compiled as the preview compiles it (a prelude, then the main
 // file included).
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { Disposable } from '../../core/disposable/disposable';
 import { type FontInfo, type TypstEngine, createEngine } from '../../core/typst-engine/typst-engine';
-import { SourceOffset } from '../../core/typst-document/typst-document';
+import { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
+import { withPackages } from '../../core/typst-packages/typst-packages';
 import type { PreviewViewOption } from '../../hosts/preview/preview';
 import type { ExtensionContext } from '../../hosts/workbench/workbench';
 import { previewGuides } from './preview-guides';
 
 const engineFiles = new URL('../../core/typst-engine/', import.meta.url);
 const fontIndex: Record<string, FontInfo[]> = JSON.parse(readFileSync(new URL('fonts/index.json', engineFiles), 'utf8'));
+/** merman, which the docs' template imports, as the e2e tests cache it (too big for a fixture). */
+const merman = new URL('../../../.cache/typst-packages/merman-0.4.0.tar.gz', import.meta.url);
 
 /** The options the extension registers, by id. */
 function registered(): Record<string, PreviewViewOption> {
@@ -150,6 +155,115 @@ describe('the view options compiled', () => {
     // the red block keeps its stroke (Typst's red), 1pt as Typst's default
     expect(svg).toMatch(/stroke="#ff4136"[^>]*stroke-width="1"/);
   });
+
+  /** The heights of a page's spacing bands (the paths filled with the hatch), in points, in the order drawn. */
+  function bandsOf(svg: string): number[] {
+    const bands = [...svg.matchAll(/<path fill="url\(#[^"]+\)"[^>]*d="M 0 0h [\d.]+v ([\d.]+)h/g)];
+    return bands.map((band) => Math.round(Number(band[1]) * 10) / 10);
+  }
+
+  /**
+   * The page count and where the main file's glyphs are drawn, after compiling `main` with the options `on`: the
+   * glyph runs of each of its characters (no shape's syntax node fits in one character, so no outline or band).
+   */
+  async function layoutOf(main: string, on: readonly PreviewViewOption[]) {
+    const { pages, diagnostics } = await compile(main, on);
+    expect(diagnostics).toEqual([]);
+    const characters = Array.from(main, (_, from) => SourceRange.of({ from, to: from + 1 }));
+    // to a thousandth of a point: the bands' frames change the floating-point sums, not where anything is
+    const glyphs = engine.boxesForRanges('/main.typ', characters).map(({ page, ...box }) => [page, ...Object.values(box).map((value) => Math.round(value * 1000) / 1000)]);
+    return { pages: pages.length, glyphs };
+  }
+
+  // docs/template.typ's title page and heading rules, and spacing that collapses, is dropped, splits lists or overflows
+  const SPACED = `#let title-page(it) = page(header: none, footer: none, margin: (x: 2.6cm, y: 2.4cm), {
+  rect(width: 5.5cm, height: 1cm)
+  v(1fr)
+  text(fill: blue, weight: "bold", size: 11pt, tracking: 0.12em, upper[Documentation])
+  v(0.4em)
+  text(size: 34pt, weight: "bold", it)
+  v(0.2em)
+  line(length: 3.2cm, stroke: 5pt + yellow)
+  v(2fr)
+  text(size: 9pt)[Company · #link("https://sandstorm.de")[sandstorm.de]]
+})
+#set page(paper: "a6", header: [Head], footer: [Foot])
+#set heading(numbering: "1.1")
+#show heading.where(level: 1): it => {
+  pagebreak(weak: true)
+  v(4cm)
+  it
+  line(length: 3.2cm, stroke: 5pt + yellow)
+}
+#show heading.where(level: 2): it => pagebreak(weak: true) + v(1cm) + it
+#title-page[Book]
+= Part
+Text #v(1em, weak: true) after weak.
+#v(10pt, weak: true)
+#v(20pt, weak: true)
+Para.
+== Chapter
+Before the list
+- item
+#v(8pt, weak: true)
+- item2
++ one
++ two #v(4pt) more
+/ Term: description
+#figure(rect(height: 1cm), caption: [Caption])
+#quote(block: true, attribution: [Me])[Quoted]
+#block(height: 2cm)[top #v(1fr) bottom]
+#v(1em)
+#pagebreak()
+#v(30pt, weak: true)
+Top.
+#v(40pt)
+#v(1fr)
+After.
+#v(400pt)
+Overflow.
+`;
+
+  it('shades vertical spacing as laid out, moving nothing: fixed, fr, weak, at a page top, in show rules', async () => {
+    // the document's own set rules take the outlines away, which are drawn shapes too
+    const unstroked = `#set block(stroke: none)\n#set box(stroke: none)\n${SPACED}`;
+    const plain = await layoutOf(unstroked, []);
+    expect(plain.pages).toBe(5);
+    expect(await layoutOf(unstroked, [OUTLINES])).toEqual(plain);
+    expect(await layoutOf(unstroked, [GUIDES, OUTLINES])).toEqual(plain);
+
+    const bands = (await compile(SPACED, [OUTLINES])).pages.map((page) => bandsOf(page.svg));
+    // the title page: 1fr, 0.4em and 0.2em of 11pt, 2fr (twice the 1fr)
+    const [fr, , , twoFr] = bands[0];
+    expect(bands[0]).toEqual([fr, 4.4, 2.2, twoFr]);
+    expect(twoFr).toBeCloseTo(2 * fr, 0);
+    // a part: 4cm; its weak spacing collapsed into the paragraphs' spacing, nothing of its own laid out
+    expect(bands[1]).toEqual([113.4]);
+    // a chapter: 1cm, 4pt in the enum, the 1fr in the block, the 1em after it; not the weak v between list items nor
+    // the figure's caption gap (both collapsed into the spacing around blocks)
+    expect(bands[2]).toEqual([28.3, 4, expect.any(Number), 11]);
+    // dropped at the page top, then 40pt; the 1fr gets nothing as the 400pt runs past the page's bottom
+    expect(bands[3]).toEqual([40, 400]);
+    expect(bands[4]).toEqual([]);
+  });
+
+  it.skipIf(!existsSync(merman))('lays out this documentation\'s book on as many pages with the outlines and bands', async () => {
+    const docs = fileURLToPath(new URL('../../../docs/', import.meta.url));
+    for (const path of readdirSync(docs, { recursive: true, encoding: 'utf8' })) {
+      const file = join(docs, path);
+      if (!statSync(file).isFile()) continue;
+      if (path.endsWith('.typ')) engine.setSource(`/${path}`, readFileSync(file, 'utf8'));
+      else engine.setBinary(`/${path}`, new Uint8Array(readFileSync(file)));
+    }
+    const packages = withPackages(engine, async () => new Uint8Array(readFileSync(merman)));
+    const plain = await packages.compile('/main.typ');
+    expect(plain.diagnostics.filter((diagnostic) => diagnostic.severity === 'error')).toEqual([]);
+    engine.setSource('/view.typ', entry([GUIDES, OUTLINES]));
+    const viewed = await packages.compile('/view.typ');
+    expect(viewed.diagnostics).toEqual(plain.diagnostics);
+    expect(viewed.pages).toHaveLength(plain.pages.length);
+    expect(viewed.pages.filter((page) => bandsOf(page.svg).length > 0).length).toBeGreaterThan(10);
+  }, 120_000);
 
   it('reports errors in the main file at the same place as without options', async () => {
     const broken = 'Text\n#unknown-thing\n';
