@@ -37,7 +37,9 @@ export function images(): TypstExtension {
         imageLinks: (document) => ({
           linkOf: (src) => {
             const file = project.pathOf(document);
-            const [link] = file ? languages.provideDocumentLinks({ path: file, text: src }) : [];
+            // the providers read Typst markup; a figure's body is written in code (`image(..)`, no `#`)
+            const markup = src.startsWith('#') ? src : `#${src}`;
+            const [link] = file ? languages.provideDocumentLinks({ path: file, text: markup }) : [];
             return link ? languages.resolveDocumentLink(link) : null;
           },
           open: (target) => workbench.open(target),
