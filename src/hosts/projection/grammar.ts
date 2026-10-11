@@ -19,18 +19,26 @@ export class Grammar {
   readonly anchors = new Set(['src', 'sep', 'lead', 'trail', 'label']);
 
   constructor(nodes: readonly DocumentNodeSpec[], marks: readonly TypstMarkSpec[]) {
-    for (const spec of nodes) {
-      const merged = this.nodes.get(spec.name);
-      this.nodes.set(spec.name, { ...merged, ...spec, typst: { ...merged?.typst, ...spec.typst } });
-      for (const anchor of spec.typst?.anchors ?? []) this.anchors.add(anchor);
-    }
+    for (const spec of nodes) this.addNode(spec);
     for (const spec of marks) this.marks.set(spec.name, { ...this.marks.get(spec.name), ...spec });
-    for (const typst of [...nodes.map((spec) => spec.typst), ...marks.map((spec) => spec.typst)]) {
-      const add = <T>(map: Map<string, T[]>, key: string, value: T) => map.set(key, [...(map.get(key) ?? []), value]);
-      for (const [name, rule] of Object.entries(typst?.parseTypst?.syntaxNodes ?? {})) add(this.syntaxNodes, name, rule);
-      for (const [name, rule] of Object.entries(typst?.parseTypst?.calls ?? {})) add(this.calls, name, rule);
+    for (const { typst } of [...nodes, ...marks]) {
+      this.addRules(typst?.parseTypst ?? {});
       if (typst?.onDidChange) this.onDidChanges.push(typst.onDidChange);
     }
+  }
+
+  /** Merges `spec` into the node spec of the same name; its anchors join `anchors`. */
+  private addNode(spec: DocumentNodeSpec): void {
+    const merged = this.nodes.get(spec.name);
+    this.nodes.set(spec.name, { ...merged, ...spec, typst: { ...merged?.typst, ...spec.typst } });
+    for (const anchor of spec.typst?.anchors ?? []) this.anchors.add(anchor);
+  }
+
+  /** Adds a spec's parse rules to the tables of syntax nodes and calls. */
+  private addRules(rules: TypstParseRules): void {
+    const add = <T>(map: Map<string, T[]>, key: string, value: T) => map.set(key, [...(map.get(key) ?? []), value]);
+    for (const [name, rule] of Object.entries(rules.syntaxNodes ?? {})) add(this.syntaxNodes, name, rule);
+    for (const [name, rule] of Object.entries(rules.calls ?? {})) add(this.calls, name, rule);
   }
 
   /** The grammar `attach` gave `schema`. */

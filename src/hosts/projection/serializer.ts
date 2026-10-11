@@ -255,8 +255,7 @@ function printInline(out: TypstSerializeState, grammar: Grammar, block: Node, st
       open.push({ mark, close: syntax.close });
     });
     text = guardCall(printedSoFar, text, piece.escaped);
-    const previous = pieces[i - 1]?.node;
-    if (piece.escaped && previous) text = grammar.node(previous.type)?.typst?.escapeAfter?.(previous, text) ?? text;
+    if (piece.escaped) text = escapeAfter(grammar, pieces[i - 1]?.node, text);
     printedSoFar += text;
     printPiece(out, piece, text);
   });
@@ -290,6 +289,12 @@ function spanEnd(pieces: Piece[], start: number, mark: Mark): number {
   let end = start;
   while (end + 1 < pieces.length && mark.isInSet(pieces[end + 1].marks)) end++;
   return end;
+}
+
+/** `text` as the node printed before it needs it escaped (its spec's `escapeAfter`), if any. */
+function escapeAfter(grammar: Grammar, previous: Node | undefined, text: string): string {
+  if (!previous) return text;
+  return grammar.node(previous.type)?.typst?.escapeAfter?.(previous, text) ?? text;
 }
 
 /** Text right after `]` would continue a function call if it starts with `(` or `.field`; escapes that. */
