@@ -277,15 +277,29 @@ function readingOrder(read: ReadText, main: ProjectPath): ProjectPath[] {
     const text = read(path);
     if (text === undefined || order.includes(path)) return;
     order.push(path);
-    for (const reference of findFilePaths(text)) {
-      if (reference.call !== 'include') continue;
-      const target = ProjectPath.resolve(path, reference.path);
+    for (const reference of includes(path, text)) {
+      const target = ProjectPath.resolve(path, reference);
       if (target !== null) visit(target);
     }
   };
   visit(main);
   return order;
 }
+
+/**
+ * The paths `text`, the text of `path`, `#include`s. The reading order is asked for after every change and reads every
+ * file, but typing changes one file at a time: each path's last text is remembered with its includes, so only the
+ * changed file is parsed again.
+ */
+function includes(path: ProjectPath, text: string): readonly PathReference[] {
+  const known = INCLUDES.get(path);
+  if (known?.text === text) return known.includes;
+  const found = findFilePaths(text).flatMap((reference) => (reference.call === 'include' ? [reference.path] : []));
+  INCLUDES.set(path, { text, includes: found });
+  return found;
+}
+
+const INCLUDES = new Map<ProjectPath, { text: string; includes: readonly PathReference[] }>();
 
 function importsModule(text: string, node: SyntaxNode, request: ImportRequest): boolean {
   const str = node.getChild('Str');
