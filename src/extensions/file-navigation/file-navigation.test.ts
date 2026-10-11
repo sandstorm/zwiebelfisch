@@ -113,3 +113,21 @@ describe('file navigation: back and forward', () => {
     expect(links()).toEqual(['← Back to main.typ']);
   });
 });
+
+describe('file navigation: reading order', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('follows an include written while typing once the typing pauses', () => {
+    vi.useFakeTimers();
+    const { host, project, workbench } = setup();
+    project.apply({ kind: 'create', path: path('/appendix.typ'), content: '= Appendix\n' });
+    workbench.open(path('/chapter.typ'));
+    const links = () => [...host.querySelectorAll<HTMLElement>('nav.typst-file-navigation--bottom button')].map((button) => button.textContent);
+    expect(links()).toEqual(['← main.typ']);
+    project.document(path('/main.typ'))!.setText('= Main\n#include "chapter.typ"\n#include "appendix.typ"\n', 'typing');
+    vi.advanceTimersByTime(200);
+    expect(links()).toEqual(['← main.typ']);
+    vi.advanceTimersByTime(100);
+    expect(links()).toEqual(['← main.typ', 'appendix.typ →']);
+  });
+});
