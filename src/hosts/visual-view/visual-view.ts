@@ -535,11 +535,11 @@ export interface Action {
   /** Shortcut shown in the tooltip; `Mod` becomes ⌘ or Ctrl. */
   shortcut?: string;
   icon: string;
-  /** The command; also decides, dry-run, whether the button is enabled. */
-  run(chain: ChainedCommands): ChainedCommands;
-  /** Instead of running the command, e.g. to ask for a value first. */
+  /** The command; also decides, dry-run, whether the button is enabled. An action with `click` has none. */
+  run?(chain: ChainedCommands): ChainedCommands;
+  /** Instead of running a command, e.g. to ask for a value first. */
   click?(button: HTMLButtonElement): void;
-  /** Whether the button is enabled, instead of the dry run of `run`. */
+  /** Whether the button is enabled, instead of the dry run of `run` (default for an action without `run`: enabled). */
   enabled?(editor: Editor): boolean;
   /** Toggles show their state (`aria-pressed`); plain actions (undo) do not. */
   active?(editor: Editor): boolean;

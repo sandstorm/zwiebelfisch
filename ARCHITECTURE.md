@@ -1010,8 +1010,10 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
   Tiptap chain commands; after every transaction the buttons show `aria-pressed` and are
   disabled when `editor.can()` (or the action's own `enabled`) says no.
   Mousedown is cancelled, so the text keeps focus and selection.
-  - Link (in the Selection bar, and Mod+K in the text) asks for the URL in the workbench's input box
-    (`Workbench.showInputBox`, placed at the selection; `markup` passes the workbench to `linkAction`).
+  - Link (in the Selection bar, and Mod+K in the text: a keymap, `linkShortcut`, so a raw box's code keeps its own
+    keys) asks for the URL in the workbench's input box (`Workbench.showInputBox`, placed at the selection; `markup`
+    passes the workbench to `linkAction`); enabled where a link mark may go (`editor.can().setMark('link')`, not in
+    code). An `Action` with `click` has no `run` (no placeholder command for the dry run).
     Link with nothing selected inserts the URL as linked text; inside a link it edits the whole link,
     and an empty URL removes it.
   - Insert image (`ImageAssets`: `list()`, `upload(file)` → `{ path } | { error }`): a quick pick (`showQuickPick`)

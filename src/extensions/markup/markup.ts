@@ -5,7 +5,7 @@
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './markup.css?inline';
 import {
-  BLOCKQUOTE, BOLD, CODE, CODE_BLOCK, INSERT_CODE_BLOCK, INSERT_QUOTE, ITALIC, LINK, linkAction, MARK_ACTIONS,
+  BLOCKQUOTE, BOLD, CODE, CODE_BLOCK, INSERT_CODE_BLOCK, INSERT_QUOTE, ITALIC, LINK, linkAction, linkShortcut, MARK_ACTIONS,
 } from './visual-view/visual-view';
 
 /** Links' mark priority: outside bold and italic (100) where they cover the same text. */
@@ -32,6 +32,7 @@ export const markup: TypstExtension = {
         visualView.registerToolbarItem({ group: 'selection', order: 10 * (i + 1), action }),
       ),
       visualView.registerToolbarItem({ group: 'selection', order: 40, create: (toolbar) => linkAction(toolbar, workbench) }),
+      visualView.registerEditorExtension(linkShortcut(workbench)),
       visualView.registerToolbarItem({ group: 'insert', order: 40, action: INSERT_CODE_BLOCK }),
       visualView.registerToolbarItem({ group: 'insert', order: 50, action: INSERT_QUOTE }),
     );

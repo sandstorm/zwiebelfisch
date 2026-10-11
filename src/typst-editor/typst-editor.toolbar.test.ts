@@ -95,6 +95,19 @@ describe('Visual view toolbar', () => {
       expect(prompts.asked).toHaveLength(1);
     });
 
+    it('is not offered where no link may go (a code block): button disabled, Mod+K left alone', () => {
+      const prompts = new TestPrompts();
+      const source = '```\ncode here\n```\n';
+      const { view, button, parent } = setup(source, { prompts });
+      view.reveal(source.indexOf('code'), source.indexOf(' here'));
+      expect(button('Link').disabled).toBe(true);
+      const mac = /Mac/.test(navigator.platform);
+      const event = new KeyboardEvent('keydown', { key: 'k', metaKey: mac, ctrlKey: !mac, bubbles: true, cancelable: true });
+      parent.querySelector<HTMLElement>('[contenteditable]')!.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(false);
+      expect(prompts.asked).toHaveLength(0);
+    });
+
     it('changes nothing when cancelled', async () => {
       const prompts = new TestPrompts();
       const { doc, view, button } = setup('Hello\n', { prompts });

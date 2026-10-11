@@ -135,9 +135,9 @@ export class Toolbar {
     button.innerHTML = action.icon;
     button.setAttribute('aria-label', action.label);
     button.title = action.shortcut ? `${action.label} (${shortcutText(action.shortcut)})` : action.label;
-    button.addEventListener('click', () => (action.click ? action.click(button) : action.run(this.editor.chain().focus()).run()));
+    button.addEventListener('click', () => (action.click ? action.click(button) : action.run?.(this.editor.chain().focus()).run()));
     this.refreshers.push(() => {
-      button.disabled = action.enabled ? !action.enabled(this.editor) : !action.run(this.editor.can().chain()).run();
+      button.disabled = action.enabled ? !action.enabled(this.editor) : action.run !== undefined && !action.run(this.editor.can().chain()).run();
       if (action.active) button.setAttribute('aria-pressed', String(action.active(this.editor)));
     });
     return button;
@@ -145,7 +145,7 @@ export class Toolbar {
 }
 
 function isAction(entry: Action | ToolbarControl): entry is Action {
-  return 'run' in entry;
+  return !('element' in entry);
 }
 
 function shortcutText(shortcut: string): string {

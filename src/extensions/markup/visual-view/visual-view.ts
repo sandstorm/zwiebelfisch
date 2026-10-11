@@ -1,14 +1,13 @@
 // What the markup extension contributes to the Visual view: the specs of strong and emphasis, links, raw text
 // (inline code, code blocks) and block quotes, and their toolbar entries. See markup.ts.
 import type { SyntaxNode } from '@lezer/common';
-import type { Editor } from '@tiptap/core';
+import { Extension, type Editor } from '@tiptap/core';
 import Code from '@tiptap/extension-code';
 import CodeBlock from '@tiptap/extension-code-block';
 import type { Mark, Node } from '@tiptap/pm/model';
-import { Disposable } from '../../../core/disposable/disposable';
 import type { Workbench } from '../../../hosts/workbench/workbench';
 import { children, decodeString, isClosedContent, parenthesized, quote } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type Action, type ToolbarContext, type TypstMarkSpec, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import { svg, type Action, type EditorExtensionProvider, type ToolbarContext, type TypstMarkSpec, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 import { starterKitPart, type Around, type Call, type Placed, type Printer, type ProjectionContext } from '../../../hosts/projection/projection';
 import { codeBlockView } from './code-block-view';
 import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from '../model/raw-code';
@@ -238,43 +237,55 @@ export const INSERT_QUOTE: Action = { label: 'Quote', shortcut: 'Mod+Shift+B', i
 export type LinkPrompt = Pick<Workbench, 'showInputBox'>;
 
 /**
- * "Link" in the selection's bar, and Mod+K in the text (not in a raw box): asks
- * for the URL in an input box at the selection. With nothing selected it
- * inserts the URL as linked text; inside a link it edits the whole link, and an
- * empty URL removes it.
+ * "Link" in the selection's bar (also Mod+K: `linkShortcut`): asks for the URL in an input box at the selection.
+ * Enabled where a link may go (not in code).
  */
 export function linkAction(toolbar: ToolbarContext, prompt: LinkPrompt): Action {
   const { editor } = toolbar;
-  const ask = async () => {
-    const inLink = editor.isActive('link');
-    const href = await prompt.showInputBox({
-      title: 'Link',
-      prompt: inLink ? 'URL (empty removes the link)' : 'URL',
-      value: editor.getAttributes('link').href ?? '',
-      placeHolder: 'https://…',
-    });
-    if (href === undefined) return void editor.commands.focus();
-    if (href.trim() !== '') applyLink(editor, href.trim());
-    else if (inLink) editor.chain().focus().extendMarkRange('link').unsetLink().run();
-    else editor.commands.focus();
-  };
-  const shortcut = (event: KeyboardEvent) => {
-    if (event.key.toLowerCase() !== 'k' || !(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey) return;
-    if ((event.target as Element).closest?.('.cm-editor')) return; // in a raw box
-    event.preventDefault();
-    void ask();
-  };
-  editor.view.dom.addEventListener('keydown', shortcut);
-  toolbar.subscriptions.push(new Disposable(() => editor.view.dom.removeEventListener('keydown', shortcut)));
   return {
     label: 'Link',
     shortcut: 'Mod+K',
     icon: ICONS.link,
-    run: (c) => c.setLink({ href: 'https://typst.app' }),
-    click: () => void ask(),
+    click: () => void askLink(editor, prompt),
+    enabled: (e) => e.can().setMark('link'),
     active: (e) => e.isActive('link'),
     showsBar: (e) => e.isActive('link'),
   };
+}
+
+/** Mod+K in the text (a raw box's code keeps its own keys): "Link", as in the selection's bar. */
+export function linkShortcut(prompt: LinkPrompt): EditorExtensionProvider {
+  return () =>
+    Extension.create({
+      name: 'typstLinkShortcut',
+      addKeyboardShortcuts() {
+        return {
+          'Mod-k': ({ editor }) => {
+            if (!editor.can().setMark('link')) return false;
+            void askLink(editor, prompt);
+            return true;
+          },
+        };
+      },
+    });
+}
+
+/**
+ * Asks for the URL of a link at the selection: with nothing selected it inserts the URL as linked text; inside a
+ * link it edits the whole link, and an empty URL removes it.
+ */
+async function askLink(editor: Editor, prompt: LinkPrompt): Promise<void> {
+  const inLink = editor.isActive('link');
+  const href = await prompt.showInputBox({
+    title: 'Link',
+    prompt: inLink ? 'URL (empty removes the link)' : 'URL',
+    value: editor.getAttributes('link').href ?? '',
+    placeHolder: 'https://…',
+  });
+  if (href === undefined) return void editor.commands.focus();
+  if (href.trim() !== '') applyLink(editor, href.trim());
+  else if (inLink) editor.chain().focus().extendMarkRange('link').unsetLink().run();
+  else editor.commands.focus();
 }
 
 /** Links the selection (or the link around the cursor) to `href`; with nothing selected, inserts `href` as linked text. */
