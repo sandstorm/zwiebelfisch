@@ -18,6 +18,7 @@ The examples are from a report measuring compile times, as in the demo's advance
 - *Preview:* updates while typing. On errors it dims and keeps the last good pages.
 - Click in the preview: the editing view selects that text, opening its file if needed.
 - "Follow cursor" (preview toolbar): the preview scrolls to the text being edited.
+- Selected text (either view) is shaded in the preview, too; a caret shades nothing.
 - Zoom (fit width by default, 25–400 %) and "page n / total" in the preview toolbar.
 - Drag the separator `┃` (or use the arrow keys on it): the preview gets 20–80 % of the width.
 - *Errors and warnings:* underlined in both views, the message as tooltip. The status bar counts them and jumps to them.

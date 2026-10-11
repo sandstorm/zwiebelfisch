@@ -31,6 +31,8 @@
   --te-selected: light-dark(#e7efff, #1c2d4a);
   --te-selected-strong: light-dark(#dbe7ff, #22406e);
   --te-jump: light-dark(rgba(47, 111, 235, 0.25), rgba(68, 147, 248, 0.3));
+  /* the editor's selection shown elsewhere (the preview): translucent, so the text stays readable */
+  --te-selection-highlight: light-dark(rgba(47, 111, 235, 0.2), rgba(68, 147, 248, 0.32));
   --te-hint: light-dark(#4b6a9b, #8fb3ec);
   --te-purple: light-dark(#8250df, #ab7df8);
   --te-danger: light-dark(#cf222e, #f85149);

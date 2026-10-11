@@ -20,6 +20,8 @@ interface FakePreview {
   revealed: [string, SourceRange][];
   /** How often the click outline was removed. */
   cleared: number;
+  /** Every `setSelectionHighlight(path, ranges)` (the text left out). */
+  shaded: [string, readonly SourceRange[]][];
   compiled(diagnostics: TypstDiagnostic[]): void;
   click(click: PageClick): void;
 }
@@ -39,6 +41,7 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
       readonly pdfOptions: unknown[] = [];
       readonly revealed: unknown[] = [];
       cleared = 0;
+      readonly shaded: unknown[] = [];
       readonly #diagnostics = new EventEmitter<readonly TypstDiagnostic[]>();
       readonly onDidChangeDiagnostics = this.#diagnostics.event;
       readonly #clicks = new EventEmitter<PageClick>();
@@ -58,6 +61,9 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
       }
       reveal(...args: unknown[]) {
         this.revealed.push(args);
+      }
+      setSelectionHighlight(path: string, ranges: unknown[]) {
+        this.shaded.push([path, ranges]);
       }
       snippet = async () => null;
       onDidRender = () => new Disposable(() => {});
@@ -353,6 +359,53 @@ describe('the built-in extensions', () => {
     preview.click(click);
     editor.files = { '/main.typ': '= Hi\n\nOther\n' };
     expect(preview.cleared).toBe(3);
+  });
+
+  it('shades the selection of the shown file in the preview (Source or Visual view) once it rests, and clears it when collapsed', () => {
+    vi.useFakeTimers();
+    try {
+      const { preview, source } = setup({ source: '= Hi\n\nText more\n', settings: { 'previewSync.followCursor': false } });
+      // a drag: only where it rests is shaded
+      source().dispatch({ selection: { anchor: 6, head: 8 } });
+      source().dispatch({ selection: { anchor: 6, head: 10 } });
+      expect(preview.shaded).toEqual([]);
+      vi.advanceTimersByTime(100);
+      expect(preview.shaded).toEqual([['/main.typ', [{ from: 6, to: 10 }]]]);
+      source().dispatch({ selection: { anchor: 7 } });
+      expect(preview.shaded.at(-1)).toEqual(['/main.typ', []]);
+      // the Visual view: its selection in the source
+      const { preview: visual, host } = setup({ mode: 'visual', source: 'Hello world.\n' });
+      const tiptap = (host.querySelector('.ProseMirror') as HTMLElement & { editor: { commands: { setTextSelection(range: { from: number; to: number }): void } } }).editor;
+      tiptap.commands.setTextSelection({ from: 7, to: 12 });
+      vi.advanceTimersByTime(100);
+      expect(visual.shaded.at(-1)).toEqual(['/main.typ', [{ from: 6, to: 11 }]]);
+      tiptap.commands.setTextSelection({ from: 3, to: 3 });
+      expect(visual.shaded.at(-1)).toEqual(['/main.typ', []]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not shade what a click in the preview selected (its outline marks it), nor anything while previewSync.highlightSelection is off", () => {
+    vi.useFakeTimers();
+    try {
+      const { editor, preview, source } = setup({ source: '= Hi\n\nText more\n' });
+      preview.click({ path: ProjectPath.of('/main.typ'), from: SourceOffset.of(6), to: SourceOffset.of(10) });
+      vi.advanceTimersByTime(100);
+      expect(preview.shaded).toEqual([]);
+      // moved on: the outline goes, the new selection is shaded
+      source().dispatch({ selection: { anchor: 6, head: 15 } });
+      vi.advanceTimersByTime(100);
+      expect(preview.cleared).toBe(1);
+      expect(preview.shaded).toEqual([['/main.typ', [{ from: 6, to: 15 }]]]);
+      editor.settings = { 'previewSync.highlightSelection': false };
+      expect(preview.shaded.at(-1)).toEqual(['/main.typ', []]);
+      source().dispatch({ selection: { anchor: 0, head: 4 } });
+      vi.advanceTimersByTime(100);
+      expect(preview.shaded).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('does not follow while "Follow cursor" is off', () => {

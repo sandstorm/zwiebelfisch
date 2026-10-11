@@ -47,6 +47,7 @@ Colors and dark mode in detail: @guide-embedding-theming.
   columns: 3,
   [Setting], [Values (default)], [Effect],
   [`previewSync.followCursor`], [`true`, `false` (unset)], [Whether the preview follows the cursor ("Follow cursor" in its toolbar). Unset: what this viewer chose last (kept across visits), else `true`.],
+  [`previewSync.highlightSelection`], [`true`, `false` (`true`)], [Whether the text selected in the Visual or Source view is shaded in the preview. Independent of "Follow cursor".],
 )
 
 === PDF <guide-configuration-pdf>

@@ -6,7 +6,7 @@
   columns: (auto, 1fr),
   table.header[Host (mechanism)][Extensions (policy)],
   [engine worker, coalesced compiles, lazy page list], [toolbar items: zoom, page number (`previewControls`), "Follow cursor" (`previewSync`), "Download PDF" (`pdfExport`)],
-  [hit-testing, `onDidClickPage`, `reveal`, `clearClickHighlight`], [when to reveal, where a click leads, how long its outline stays (`previewSync`)],
+  [hit-testing, `onDidClickPage`, `reveal`, `clearClickHighlight`, `setSelectionHighlight`], [when to reveal, what to shade, where a click leads, how long its outline stays (`previewSync`)],
   [PDF export with every registered option], [the options (`comments.include`) and how they are offered (`pdfExport`)],
   [snippets of a source range], [raw boxes drawn as pictures (`renderedBoxes`)],
 )
@@ -19,6 +19,8 @@
 - *`PageList`* (`pages/`): a placeholder per page sized by `aspect-ratio`. An `IntersectionObserver` (one viewport above and below) decides which pages carry SVG. Only near pages whose `hash` changed get new markup.
 - *Units*: the engine's `PageIndex` and `Pt`; the DOM's CSS pixels as `Px` (`pages/geometry.ts`: `measure(element)`, `pointOnPage`); the zoom is a plain factor (1 = 100 %, 96 px per 72 pt).
 - *Hit-testing*: a click is converted px → pt (`pointOnPage`) and sent as `click`; the clicked source run is outlined until the next click, a successful compile or `clearClickHighlight()` and, in a project file (not a package's), fires `onDidClickPage`. `reveal(path, range)` (a `ProjectPath`, a `SourceRange`) asks `cursor` and scrolls the preview's own scroller (never `scrollIntoView`), only if the spot is off-screen.
+- *Overlays* (`pages/overlays.ts`): boxes in pt, placed on their page in percent, so they survive zoom and lazy rendering. Two layers: the click's outline (`typst-preview__highlight`, fill and outline) and the selection shading (`typst-preview__selection`, a translucent fill in `--te-selection-highlight`, no outline). Both keep their colors in dark mode (outside the inverted content).
+- *Selection shading*: `setSelectionHighlight(path, ranges, text)` keeps the newest ranges (`LatestOnly`); once the compiles given before ran and the compiled text of `path` is `text`, it asks `boxes` and shades them. After every successful compile it asks again (the old boxes stay until then); while other text is compiled it shades nothing. An empty list clears it at once.
 - *Snippets*: `snippet(path, range, text)` cuts the range's boxes out of the last compiled page. No extra compile. Null when `text` is no longer what was compiled.
 
 == Flow <architecture-preview-flow>
@@ -31,11 +33,13 @@ project change ─► update(files) ─► LatestOnly ─► worker: compile ─
 click ─► px→pt ─► worker: click ─► onDidClickPage ─► previewSync selects the source
 edit, selection moved away ─► previewSync ─► clearClickHighlight
 cursor ─► previewSync ─► reveal ─► worker: cursor ─► scroll if off-screen
+selection (60 ms at rest) ─► previewSync ─► setSelectionHighlight ─► worker: boxes ─► shading
 ```
 
 == Rules <architecture-preview-rules>
 
 - A failed compile keeps the last good pages, dimmed (`typst-preview--stale`).
+- A click's own selection is outlined, not shaded too: previewSync shades a selection only when it is not the clicked range; moving on removes the outline and shades the new selection.
 - Diagnostics are never stale: they fire only when no newer `update()` waits.
 - `exportPdf(entry)` and `snippet` wait for running compiles, so they see the newest text. `entry.sources` replace or add text files for that export only.
 - Toolbar items are placed by `group` + `order` (`navigation` first, then groups by name). Their `update()` runs at most once per frame. PDF options apply by `priority` (default 100, higher first).

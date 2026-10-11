@@ -50,6 +50,7 @@ The preview keeps the mechanism: the engine worker, compiles, the page list, hit
   [`reveal(path, range)`], [Scrolls to where a source range is drawn, if off-screen; throttled, cheap on every cursor move],
   [`onDidClickPage`], [A click on something with a source location in a project file: `{ path, from, to }`; outlined until the next click or compile],
   [`clearClickHighlight()`], [Removes the outline of the last click now],
+  [`setSelectionHighlight(path, ranges, text)`], [Shades where `ranges` of `path` are drawn (selection color, no outline), once the pages show a compile of `text`; looked up again after each compile; replaces the ranges before, `[]` clears],
   [`onDidChangeDiagnostics`], [Errors and warnings of each compile of the newest files; `path` is a `ProjectPath`, `null` without location or in a package file],
   [`onDidRender`], [After every successful compile],
   [`snippet(path, range, text)`], [How a source range is drawn: its page cut down to it, as SVG; `null` when it draws nothing or `text` is outdated],
