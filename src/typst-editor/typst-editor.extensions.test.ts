@@ -237,7 +237,7 @@ describe('the built-in extensions', () => {
 
   it('fills the preview toolbar: "Follow cursor", zoom, page number, then "Download PDF" while pdfExport.download is on', () => {
     const { editor, preview } = setup({ source: '= Hi' });
-    const all = ['typst-preview__follow', 'typst-preview-zoom', 'typst-preview-page-number', 'typst-pdf'];
+    const all = ['typst-preview-sync__follow', 'typst-preview-zoom', 'typst-preview-page-number', 'typst-pdf'];
     expect(toolbarControls(preview.toolbarItems)).toEqual(all);
     expect(toolbarControls(setup({ source: '= Hi', settings: { 'pdfExport.download': false } }).preview.toolbarItems)).toEqual(all.slice(0, 3));
     editor.settings = { 'pdfExport.download': false };

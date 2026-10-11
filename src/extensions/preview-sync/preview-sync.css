@@ -1,7 +1,7 @@
 /* The preview-sync extension's styles: the "Follow cursor" switch in the preview toolbar.
    Registered by preview-sync.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
-/* "Follow cursor": an on/off switch (track and thumb), not a plain button */
-.typst-preview__toolbar > .typst-preview__follow {
+/* "Follow cursor": an on/off switch (track and thumb), not a plain button (as specific as the toolbar's button rule) */
+button.typst-preview-sync__follow {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -10,7 +10,7 @@
   padding: 2px 4px;
   background: none;
 }
-.typst-preview__switch {
+.typst-preview-sync__switch {
   position: relative;
   flex: none;
   width: 26px;
@@ -19,7 +19,7 @@
   background: var(--te-control);
   transition: background 0.15s;
 }
-.typst-preview__switch::after {
+.typst-preview-sync__switch::after {
   content: '';
   position: absolute;
   top: 2px;
@@ -30,6 +30,6 @@
   background: var(--te-surface);
   transition: transform 0.15s;
 }
-.typst-preview__follow[aria-checked='true'] > .typst-preview__switch { background: var(--te-accent); }
-.typst-preview__follow[aria-checked='true'] > .typst-preview__switch::after { transform: translateX(12px); }
-.typst-preview__follow:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 1px; border-radius: 4px; }
+.typst-preview-sync__follow[aria-checked='true'] > .typst-preview-sync__switch { background: var(--te-accent); }
+.typst-preview-sync__follow[aria-checked='true'] > .typst-preview-sync__switch::after { transform: translateX(12px); }
+.typst-preview-sync__follow:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 1px; border-radius: 4px; }
