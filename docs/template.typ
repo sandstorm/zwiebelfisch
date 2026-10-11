@@ -52,8 +52,8 @@
   v(1fr)
   text(fill: colors.primary, weight: "bold", size: 11pt, tracking: 0.12em, upper[Documentation])
   v(0.4em)
-  text(fill: colors.dark, size: 34pt, weight: "bold", it)
-  v(0.2em)
+  // the title's own spacing below is in em of 34pt: too far from the bar
+  block(below: 12pt, text(fill: colors.dark, size: 34pt, weight: "bold", it))
   line(length: 3.2cm, stroke: 5pt + colors.sand)
   v(2fr)
   text(fill: colors.muted, size: 9pt)[#company · #link("https://sandstorm.de")[sandstorm.de]]
@@ -124,9 +124,9 @@
     show heading.where(level: 1, outlined: true): it => {
       pagebreak(weak: true)
       v(4cm)
-      set text(size: 28pt)
-      it
-      line(length: 3.2cm, stroke: 5pt + colors.sand)
+      // the bar as a block right below: a line alone is a paragraph, a 28pt line high with the spacing around it
+      block(below: 16pt, text(size: 28pt, it))
+      block(above: 16pt, line(length: 3.2cm, stroke: 5pt + colors.sand))
     }
     show heading.where(level: 2): set text(size: 20pt)
     show heading.where(level: 2): it => pagebreak(weak: true) + v(1cm) + it
