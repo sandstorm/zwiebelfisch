@@ -15,6 +15,10 @@
   is the one knob for schema order, mark nesting, keymaps *and* which projector claims a syntax. Our
   own `priority` stays only where Tiptap has nothing (box renderers, link providers, PDF options,
   custom editors). The wave running at the time builds the opposite; a follow-up replaces it.
+- Projection naming (user): spec fields `parseTypst` / `toTypst` (as ProseMirror's `parseDOM` /
+  `toDOM`); framework classes `TypstToProseMirrorParser` / `ProseMirrorToTypstSerializer`; what spec
+  functions receive: `TypstParseContext` / `TypstSerializeState` (today `ProjectionContext` /
+  `Printer`; "projector" / "printer" wording goes). Done in the follow-up, before the types are public.
 
 Eight agents reviewed every area against [the code conventions](2026_10_11_code-conventions.md) on
 2026-10-11 and fixed what was clear (about 70 small commits, merged at `c103841`). These are the
