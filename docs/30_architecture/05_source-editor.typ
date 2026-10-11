@@ -1,6 +1,6 @@
 = Source editor <architecture-source-editor>
 
-The plain Typst editor: CodeMirror 6 bound to a `TypstDocument`. Module `src/hosts/source-editor/`, one file.
+The plain Typst editor: CodeMirror 6 bound to a `TypstDocument`. Module `src/hosts/source-editor/`: the entry, and `code-colors.ts` for `codeColors`.
 
 == SourceEditorHost <architecture-source-editor-host>
 
@@ -24,7 +24,15 @@ createEditor(parent, document, { onSelection? }) → SourceEditor    // the work
 .dispose()
 ```
 
-- *Mechanism kept:* `basicSetup`, line wrapping, the reveal highlight, selection reporting.
+- *Mechanism kept:* `basicSetup`, `codeColors`, line wrapping, the reveal highlight, selection reporting.
+
+== codeColors <architecture-source-editor-code-colors>
+
+`codeColors` (a CodeMirror `Extension`, exported by the entry) is CodeMirror's default look in the widget, for every CodeMirror in it: the Source editors, the raw boxes' code (the Visual editor host) and the text files' editor (`textFiles`).
+
+- CodeMirror's default highlight style, its colors from the `--te-syn-*` tokens of `typst-editor.css` (light: CodeMirror's own).
+- CodeMirror's light or dark theme (cursor, selection, gutters, panels, tooltips), following the color of the text around the editor: the page's color-scheme, the widget's `workbench.theme`, the OS. Checked when the editor is placed or resized, when the OS scheme changes and when the widget's `data-scheme` changes.
+- No editor restyles CodeMirror on top of it.
 - *To the document:* an editor's own edits become `TextChange[]` with the editor as `origin`.
 - *From the document:* changes with another origin are dispatched with the annotation `fromDocument.of({ origin })` and are not written back.
 
@@ -39,7 +47,7 @@ createEditor(parent, document, { onSelection? }) → SourceEditor    // the work
 #table(
   columns: (auto, 1fr),
   table.header[Extension][Contribution],
-  [`typstLanguage`], [Typst syntax highlighting and indentation (`codemirror-lang-typst`, without its linter), code colors.],
+  [`typstLanguage`], [Typst syntax highlighting and indentation (`codemirror-lang-typst`, without its linter).],
   [`diagnostics`], [`lint`: the compiler's diagnostics underlined.],
   [`collaboration`], [Other users' carets and selections; `perUserUndo`.],
   [workbench], [Document links of every provider for `typst` (@architecture-workbench).],

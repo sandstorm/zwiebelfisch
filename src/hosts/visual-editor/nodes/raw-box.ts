@@ -8,6 +8,7 @@ import type { Decoration, EditorView, NodeView, NodeViewConstructor } from '@tip
 import { minimalChange, type SourceOffset } from '../../../core/typst-document/typst-document';
 import { setRawBoxDecorations, type RawBoxLink, type RawBoxRenderer, type RawBoxTools, type RawBoxToolsHost, type TypstNodeSpec, type VisualEditorContext } from '../visual-editor';
 import { posToSource } from '../../prosemirror-typst/prosemirror-typst';
+import { codeColors } from '../../source-editor/source-editor';
 import { RenderedBox } from './rendered-box';
 
 /**
@@ -177,6 +178,7 @@ class RawBox implements NodeView {
       extensions: [
         keymap.of([...this.keys(inline), ...defaultKeymap]),
         inline ? inlineTheme : [blockTheme, CodeView.lineWrapping],
+        codeColors,
         CodeView.contentAttributes.of({ 'aria-label': 'Typst code' }),
         contributed,
       ],

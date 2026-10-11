@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-// Tests for code-colors.ts.
+// Tests for codeColors (source-editor.ts, code-colors.ts).
 import { EditorView } from '@codemirror/view';
 import { describe, expect, it } from 'vitest';
-import { codeColors, typstHighlightStyle } from './code-colors';
+import { highlightStyle } from './code-colors';
+import { codeColors } from './source-editor';
 
 /** Lets the color check run (it waits a microtask: no dispatch while the view is being built). */
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -29,7 +30,7 @@ describe('codeColors', () => {
   });
 
   it('colors the syntax from the widget tokens, with the light colors as fallback', () => {
-    const rules = typstHighlightStyle.module!.getRules();
+    const rules = highlightStyle.module!.getRules();
     expect(rules).toContain('var(--te-syn-keyword, #708)');
     expect(rules).toContain('var(--te-syn-comment, #940)');
   });

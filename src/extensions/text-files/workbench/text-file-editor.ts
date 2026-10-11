@@ -3,12 +3,14 @@ import { basicSetup } from 'codemirror';
 import { Transaction, type ChangeSpec, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { ProjectPath } from '../../../core/paths/paths';
+import { codeColors } from '../../../hosts/source-editor/source-editor';
 
 /**
- * The text file `path` in CodeMirror (its basic setup, no language): the text is saved `SAVE_DELAY` ms after the
- * last edit, and at once by `dispose`. `reload` shows the file as changed elsewhere (another user, the host): while
- * an edit of this editor waits to be saved it is ignored, since that save replaces the whole file anyway (the last
- * save wins); otherwise the text changes in place, cursor and the user's undo history kept.
+ * The text file `path` in CodeMirror (its basic setup and look, `codeColors`, as in the Source editor; no language):
+ * the text is saved `SAVE_DELAY` ms after the last edit, and at once by `dispose`. `reload` shows the file as changed
+ * elsewhere (another user, the host): while an edit of this editor waits to be saved it is ignored, since that save
+ * replaces the whole file anyway (the last save wins); otherwise the text changes in place, cursor and the user's undo
+ * history kept.
  */
 export class TextFileEditor {
   readonly #root: HTMLElement;
@@ -33,6 +35,7 @@ export class TextFileEditor {
       doc: options.text,
       extensions: [
         basicSetup,
+        codeColors,
         EditorView.lineWrapping,
         options.extensions ?? [],
         EditorView.contentAttributes.of({ 'aria-label': ProjectPath.displayName(options.path) }),

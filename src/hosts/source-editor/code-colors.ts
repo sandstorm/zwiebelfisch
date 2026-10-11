@@ -1,16 +1,15 @@
-// codeColors: CodeMirror in the widget's color scheme, light or dark (Source editors, raw boxes).
-// See typstLanguage in ../typst-language.ts.
-import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+// The parts of codeColors: CodeMirror's look in the widget's color scheme, light or dark. See codeColors in source-editor.ts.
+import { HighlightStyle } from '@codemirror/language';
 import { Compartment, type Extension } from '@codemirror/state';
 import { EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import { tags as t } from '@lezer/highlight';
-import { isLightText } from '../../../core/color-scheme/color-scheme';
+import { isLightText } from '../../core/color-scheme/color-scheme';
 
 /** A token of typst-editor.css (`--te-syn-*`), with CodeMirror's default light color as fallback. */
 const token = (name: string, light: string) => `var(--te-syn-${name}, ${light})`;
 
 /** CodeMirror's default highlight style, its colors taken from the widget's tokens. */
-export const typstHighlightStyle = HighlightStyle.define([
+export const highlightStyle = HighlightStyle.define([
   { tag: t.meta, color: token('meta', '#404740') },
   { tag: t.link, textDecoration: 'underline' },
   { tag: t.heading, textDecoration: 'underline', fontWeight: 'bold' },
@@ -93,5 +92,5 @@ const follower = ViewPlugin.fromClass(
   },
 );
 
-/** Syntax colors and CodeMirror's light or dark theme, following the widget's color scheme. */
-export const codeColors: Extension = [syntaxHighlighting(typstHighlightStyle), scheme.of([]), follower];
+/** CodeMirror's light or dark theme, whichever the widget's color scheme around the editor is. */
+export const followColorScheme: Extension = [scheme.of([]), follower];
