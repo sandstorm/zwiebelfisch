@@ -1,4 +1,4 @@
-// lint: the diagnostics' part of the Source editors: compile diagnostics underlined (CodeMirror lint). See ../diagnostics.ts.
+// Compile diagnostics underlined in the Source editors (CodeMirror lint). See diagnostics in ../diagnostics.ts.
 import { type Diagnostic as LintDiagnostic, setDiagnostics } from '@codemirror/lint';
 import type { Extension } from '@codemirror/state';
 import { type EditorView, ViewPlugin } from '@codemirror/view';

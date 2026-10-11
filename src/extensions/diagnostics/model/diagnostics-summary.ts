@@ -1,4 +1,4 @@
-// summarizeDiagnostics: compile diagnostics counted and sorted per file. See model.ts.
+// Compile diagnostics counted and sorted per file, for the status bar. See diagnostics in ../diagnostics.ts.
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { SourceRange } from '../../../core/typst-document/typst-document';
 import type { TypstDiagnostic } from '../../../core/typst-engine/typst-engine';

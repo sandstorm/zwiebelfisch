@@ -1,4 +1,3 @@
-// The diagnostics extension. Entry of extensions/diagnostics/. See docs/30_architecture/08_built-in-extensions.typ.
 import type { TypstDiagnostic } from '../../core/typst-engine/typst-engine';
 import { SOURCE_EDITOR } from '../../hosts/source-editor/source-editor';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
@@ -10,16 +9,14 @@ import { diagnosticHighlight } from './visual-editor/visual-editor';
 import { DiagnosticsStatus } from './workbench/workbench';
 
 /**
- * The preview's diagnostics, each document's in a DiagnosticCollection its Source editors underline (`lint`) and its
- * Visual editors mark, and the compile status in the status bar, for the Typst file shown last (while an image is
- * shown, too). Clicking the status, or a message, opens the file and reveals the range in the Source editor.
+ * Compile errors and warnings where the user looks: underlined in the Source editors (source-editor/, CodeMirror
+ * lint), highlighted in the Visual editors with the message as tooltip (visual-editor/), and counted in the status bar
+ * with the list behind it (DiagnosticsStatus in workbench/). The status is for the Typst file shown last, also while
+ * an image is shown. Clicking the status or a message opens the file in the Source editor at the range.
  *
- * The compile errors and warnings underlined in the Source editors (source-editor/: lint), marked in the Visual editors
- * (visual-editor/: highlights with the message as tooltip) and counted in the status bar (workbench/:
- * DiagnosticsStatus, with the list behind it).
- *
- * Why one DiagnosticCollection (model/): the preview reports a compilation's diagnostics once, for every file; the
- * collection splits them by document, and each editor of a document reads its own from there, whenever it is made.
+ * Compiling is the preview's; it reports a compilation's diagnostics once, for every file. A DiagnosticCollection
+ * (model/) splits them by document, and each editor of a document reads its own from there, whenever it is made.
+ * See docs/30_architecture/08_built-in-extensions.typ.
  */
 export function diagnostics(): TypstExtension {
   return {
