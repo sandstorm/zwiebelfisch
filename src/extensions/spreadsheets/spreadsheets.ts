@@ -1,8 +1,10 @@
-import type { FileChange } from '../../core/project/project';
+import type { FileChange, Project } from '../../core/project/project';
 import { ProjectPath } from '../../core/paths/paths';
+import { findFilePaths } from '../../core/typst-syntax/typst-syntax';
+import type { DocumentLinkProvider } from '../../hosts/languages/languages';
 import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
 import css from './spreadsheets.css?inline';
-import { typstPath } from './model/typst-file';
+import { spreadsheetPath, typstPath } from './model/typst-file';
 import { insertSpreadsheet } from './visual-editor/insert-spreadsheet';
 import { SpreadsheetEditor } from './workbench/spreadsheet-editor';
 import { SPREADSHEET_HELP } from './workbench/spreadsheet-help';
@@ -16,7 +18,9 @@ import type { WorkbookEdit } from './workbench/workbook';
  * engine, and the editor only reports edits: what the project gets is decided here. "New spreadsheet…" (menu
  * `file/newFile`) creates an empty one; "Insert spreadsheet" (Insert menu) creates one with a starter table and puts
  * its table into the text as a figure. `.ic` files are the language `ironcalc`, with the help sheet "Spreadsheet
- * formulas".
+ * formulas". A path to a spreadsheet's Typst file in Typst text (`#import "budget.ic.gen.typ": sheets`) is a document
+ * link "Edit spreadsheet" to the spreadsheet (priority 110, over the plain file link), so ⌘/Ctrl+click or Alt+Enter
+ * opens IronCalc rather than the generated file.
  *
  * IronCalc (React, its UI and a 2 MB engine) is loaded only when a spreadsheet is first shown or inserted
  * (workbench/workbook.ts). See docs/10_guide/02_features.typ, "Spreadsheets".
@@ -29,7 +33,7 @@ export function spreadsheets(): TypstExtension {
       languages: [{ id: 'ironcalc', extensions: ['.ic'] }],
     },
     activate(context) {
-      const { commands, window, workbench, visualEditor, languages, subscriptions } = context;
+      const { project, commands, window, workbench, visualEditor, languages, subscriptions } = context;
       subscriptions.push(
         workbench.registerStyleSheet(css),
         window.registerCustomEditorProvider(
@@ -46,9 +50,25 @@ export function spreadsheets(): TypstExtension {
         commands.registerCommand(NEW_SPREADSHEET, (resource?: ProjectPath) => newSpreadsheet(context, resource)),
         workbench.registerMenuItem('file/newFile', { command: NEW_SPREADSHEET, title: 'New spreadsheet…', group: 'navigation', order: 15 }),
         languages.registerHelpProvider({ language: 'ironcalc' }, { provideHelp: () => SPREADSHEET_HELP }),
+        languages.registerDocumentLinkProvider({ language: 'typst' }, spreadsheetLinks(project), { priority: 110 }),
         visualEditor.registerToolbarItem(insertSpreadsheet(context, async (fileName) => (await import('./workbench/workbook')).newWorkbook(fileName))),
       );
     },
+  };
+}
+
+/**
+ * The paths of spreadsheets' Typst files in Typst text as links "Edit spreadsheet" to the spreadsheet, when it is in the
+ * project (else the path keeps its plain file link).
+ */
+function spreadsheetLinks(project: Pick<Project, 'has'>): DocumentLinkProvider {
+  return {
+    provideDocumentLinks: ({ path, text }) =>
+      findFilePaths(text).flatMap(({ path: reference, from, to }) => {
+        const resolved = ProjectPath.resolve(path, reference);
+        const target = resolved && spreadsheetPath(resolved);
+        return target && project.has(target) ? [{ range: { from, to }, target, tooltip: 'Edit spreadsheet' }] : [];
+      }),
   };
 }
 

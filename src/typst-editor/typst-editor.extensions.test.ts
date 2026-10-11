@@ -9,6 +9,8 @@ import type { PageClick, PdfExportOption, PreviewContext, PreviewToolbarItem } f
 import type { Disposable } from '../core/disposable/disposable';
 import { EventEmitter } from '../core/event-emitter/event-emitter';
 import type { TypstExtension } from '../hosts/workbench/workbench';
+import type { Languages } from '../hosts/languages/languages';
+import type { Editor } from '@tiptap/core';
 import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
 import { VISUAL_EDITOR } from '../hosts/visual-editor/visual-editor';
 import type { SourceControl, SourceControlState } from '../hosts/scm/scm';
@@ -207,6 +209,50 @@ describe('diagrams', () => {
     modClick(flow);
     expect(editor.activeFile).toBe('/img/flow.drawio.png');
     expect(host.querySelector('[data-testid=typst-diagram]')).not.toBeNull();
+  });
+});
+
+describe('spreadsheets', () => {
+  const SOURCE = '#import "data/budget.ic.gen.typ": sheets, values\n\n#sheets.Sheet1\n';
+  const GENERATED = '#let values = (:)\n#let sheets = (:)\n';
+  const FILES = { '/data/budget.ic': new Uint8Array(), '/data/budget.ic.gen.typ': GENERATED };
+
+  /** The widget, and the merged document links of its main file (as every editor gets them), resolved. */
+  function withLinks(options: TypstEditorOptions) {
+    let languages: Languages | null = null;
+    const probe: TypstExtension = { id: 'probe', activate: (context) => void (languages = context.languages) };
+    const shown = setup({ ...options, extensions: (builtinExtensions) => [...builtinExtensions, probe] });
+    const links = () =>
+      languages!.provideDocumentLinks({ path: ProjectPath.of('/main.typ'), languageId: 'typst', text: SOURCE }).map((link) => languages!.resolveDocumentLink(link));
+    return { ...shown, links };
+  }
+
+  it('makes the path of a spreadsheet\'s Typst file a link "Edit spreadsheet" to the spreadsheet', () => {
+    const { links } = withLinks({ source: SOURCE, files: FILES });
+    expect(links()).toEqual([{ range: { from: 9, to: 31 }, target: '/data/budget.ic', tooltip: 'Edit spreadsheet' }]);
+  });
+
+  it('leaves the plain file link when the spreadsheet is not in the project', () => {
+    const { links } = withLinks({ source: SOURCE, files: { '/data/budget.ic.gen.typ': GENERATED } });
+    expect(links()).toEqual([{ range: { from: 9, to: 31 }, target: '/data/budget.ic.gen.typ' }]);
+  });
+
+  it('Alt+Enter in the Source editor on the import path opens the spreadsheet', () => {
+    const { editor, host, source } = setup({ source: SOURCE, files: FILES });
+    const view = source();
+    view.dispatch({ selection: { anchor: SOURCE.indexOf('budget') } });
+    view.contentDOM.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', altKey: true, bubbles: true, cancelable: true }));
+    expect(editor.activeFile).toBe('/data/budget.ic');
+    expect(host.querySelector<HTMLElement>('[data-testid=typst-spreadsheet]')!.hidden).toBe(false);
+  });
+
+  it('Alt+Enter on the Visual editor\'s raw box of the import line opens the spreadsheet', () => {
+    const { editor, host } = setup({ viewType: VISUAL_EDITOR, source: SOURCE, files: FILES });
+    const tiptap = (host.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
+    tiptap.commands.setNodeSelection(0);
+    expect(tiptap.state.doc.nodeAt(0)?.attrs.src).toContain('budget.ic.gen.typ');
+    tiptap.view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', altKey: true, bubbles: true, cancelable: true }));
+    expect(editor.activeFile).toBe('/data/budget.ic');
   });
 });
 

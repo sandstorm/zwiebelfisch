@@ -1,4 +1,4 @@
-// Generated from compile-times.ic on every edit of the spreadsheet: do not edit by hand.
+// Generated from compile-times.ic (next to this file) on every edit of the spreadsheet: edit compile-times.ic, not this file.
 // #import "compile-times.ic.gen.typ": sheets, values
 // #sheets.Sheet1                  the sheet as a table
 // #values.Sheet1.at(1).at(0)      cell A2 as displayed (a string)
