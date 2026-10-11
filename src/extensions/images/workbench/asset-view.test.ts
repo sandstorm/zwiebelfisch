@@ -28,14 +28,4 @@ describe('AssetView', () => {
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:logo');
     expect(parent.contains(root)).toBe(false);
   });
-
-  it('shows the text of data files and a note for other bytes', () => {
-    const { root, view } = setup();
-    view.show(path('/data.csv'), 'a,b');
-    expect(root.querySelector('pre')?.textContent).toBe('a,b');
-    expect(root.querySelector('.typst-asset__size')?.textContent).toBe('3 B');
-    view.show(path('/font.otf'), new Uint8Array(3 * 1024 * 1024));
-    expect(root.querySelector('.typst-asset__note')).not.toBeNull();
-    expect(root.querySelector('.typst-asset__size')?.textContent).toBe('3.0 MB');
-  });
 });

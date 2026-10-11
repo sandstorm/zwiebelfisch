@@ -118,10 +118,12 @@ src/                        the widget (TypeScript); the most important API on t
                             entry files: the extension's files import each other directly. Extensions never import
                             each other.
     files/                  files (the file panel in a side panel; the commands files.newFile / newFolder / upload /
-                            rename / delete in the menus file/newFile and explorer/context); files.css (each extension
+                            rename / delete in the menus file/newFile and explorer/context; the custom editor files.file
+                            for any other file: name, size, type); files.css (each extension
                             with styles has its <name>.css, registered with Workbench.registerStyleSheet)
       model/                tree-model.ts (the tree as data, keyboard moves, relocate)
-      workbench/            file-panel.ts (FilePanel: header with "New", its menus, the operations, uploads), tree/
+      workbench/            file-panel.ts (FilePanel: header with "New", its menus, the operations, uploads),
+                            file-info.ts (fileInfoEditor: a file no other editor opens, read-only), tree/
                             (FileTree: rows, keyboard, drag & drop, file decorations as badges), icons/ (leaf)
     file-navigation/        fileNavigation (editor frame): workbench/file-navigation.ts ("← previous file" / "next file →")
     spreadsheets/           spreadsheets: the `.ic` custom editor; every edit also stores `name.ic.gen.typ`; "New spreadsheet…"
@@ -152,8 +154,8 @@ src/                        the widget (TypeScript); the most important API on t
                             model/ (image-call.ts: arguments edited in place; upload.ts: uploadTarget; resize.ts: resizedPercent),
                             visual-view/ (imagesVisualView and its options ImageAssets / ImageUrls / ImageLinks, specs,
                             tools, insertion, image-path-link: the path's document link),
-                            model/image-files.ts (isImage, imageBlob: the media types), workbench/ (AssetView: images and other
-                            files read-only, the custom editors `images.preview` and `images.file`)
+                            model/image-files.ts (isImage, imageBlob: the media types), workbench/ (AssetView: image files
+                            read-only, the custom editor `images.preview`)
     figures/                figures(): `#figure(body, caption: [..])` of any `figureBody` node (images, tables), the
                             caption as rich text, the commands addFigureCaption / removeFigureCaption; visual-view/
                             (Figure, FigureCaption, projecting, printing, the caption edits); figures.css
@@ -429,7 +431,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
   an `Error` "The document has n error(s): …" (the button shows it as an error message "No PDF: …"; while a PDF
   is being made it says "Making PDF…" and is disabled), never an older PDF. File name after the
   main file: `main.pdf`.
-- **Images into the text**: `AssetView` (the `images` extension's custom editors of images and other files) only previews. An image row dragged from the file panel
+- **Images into the text**: `AssetView` (the `images` extension's custom editor of image files) only previews. An image row dragged from the file panel
   (drag type `PROJECT_PATH_TYPE` from the workbench host, data: the project path) and dropped on the Visual view is
   inserted there as an image block (`imageFileDrops` → `ImageAssets.reference(path)`: relative
   when in the same folder tree, else project-absolute; not for non-images).
@@ -631,8 +633,8 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   first. Nothing shows for a file no editor matches. Every open (also of the shown file: a replaced file shows its
   new content) gets a new panel (`element`: a flex column `.typst-editor__custom-editor` in the editing area);
   showing anything else disposes it: `onDidDispose` fires while the element is still in place (the editor stores what
-  is pending), then the element goes. The editors: `images` (`images.preview` for `*.{png,jpg,jpeg,gif,svg,webp}`,
-  `images.file` for `*`: any other file), `spreadsheets` (`spreadsheets.editor`, `*.ic`), `diagrams`
+  is pending), then the element goes. The editors: `images` (`images.preview` for `*.{png,jpg,jpeg,gif,svg,webp}`), `files`
+  (`files.file` for `*`: any other file, read-only: name, size, type), `spreadsheets` (`spreadsheets.editor`, `*.ic`), `diagrams`
   (`diagrams.editor`, `*.drawio.png`, priority 110); they store edits with `workspace.applyEdit`. Core knows no kinds of
   files besides Typst source (`ProjectPath.isTypst`): what a file is, is the editors' business, by name. An editor
   may give the files it opens by default an `icon` (SVG markup, 16×16 strokes); views that list files ask for it
@@ -656,7 +658,7 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   boxes), `documentLinks` (a `DocumentLinkProvider`), `collaboration` (`sourcePresence`; Visual: `visualPresence`:
   highlights, an editor extension and a box code extension; Workbench: `presenceDecorations`, the GitLab room's
   source control), `diagnostics` (`lint(collection)`;
-  Visual: highlights); `images` (Visual: `imagesVisualView`; Workbench: the custom editors `images.preview` / `images.file`),
+  Visual: highlights); `images` (Visual: `imagesVisualView`; Workbench: the custom editor `images.preview`),
   `renderedBoxes` (Visual: `snippetRenderer`), `comments` (Visual: `marginNotes`, `notesGutter`; Preview:
   the PDF export option `comments.include`), `labels` (Visual: `references`), `styles` (Visual: `customStyles`); `sourceControl`
   ("Save to <label>…" in the tab bar's menu, its outcomes as messages); `previewSync` (`followCursor`; reveal, clicks), `previewControls`
@@ -1612,7 +1614,7 @@ new Layout(host, memento)      .editor  .preview  .statusBar   // the editing co
 ### File panel (`src/extensions/files`, `src/extensions/file-navigation`)
 
 ```ts
-files()  fileNavigation(): TypstExtension   // the side panel, the frame links (images / data files: the images extension)
+files()  fileNavigation(): TypstExtension   // the side panel and the custom editor files.file (`*`); the frame links
 // setting files.panel: 'auto' | 'show' | 'hide' (default auto)
 // commands (each on a row, default: the focused one): files.newFile, files.newFolder, files.upload, files.rename, files.delete
 // menus: file/newFile ("New" in the header), explorer/context (a row's context menu); context
@@ -1629,6 +1631,8 @@ new FilePanel(parent, { onOpen(path), onChange(change) → Promise<reason | null
 //                relocate(paths, source, target) → renames, filesUnder, folderOf, ancestorsOf; uploadChanges
 ```
 
+- **Any other file** (`files.file`, pattern `*`: every other editor's pattern wins over it) opens read-only: its
+  name, size and type (its ending, `OTF file`); no icon of its own, so the panel draws its own icon for any file.
 - **Only gestures → `FileChange`s** (names via `ProjectPath.fromName`: any folder depth, default extension).
   Names are asked in the workbench's input box (`validateInput`: an unusable or taken name says so while typing;
   a new name starts with the row's folder, `chapters/`; a rename selects the name without the extension, as VS

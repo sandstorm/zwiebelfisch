@@ -1,6 +1,5 @@
 // The images extension: `#image(..)` blocks (also as figures' bodies) in the Visual view showing the project's image files,
-// "Insert image" with the project's images and uploads, and images / data files opened read-only in the editing
-// area. Entry of extensions/images/. See ARCHITECTURE.md, "createTypstEditor".
+// "Insert image" with the project's images and uploads, and image files opened read-only in the editing area. Entry of extensions/images/. See ARCHITECTURE.md, "createTypstEditor".
 // Why one extension: an image is one concept from the file in the project to the box in the text; the Visual
 // view's host only knows boxes, renderers and custom editors, and the file panel only knows files.
 import type { Event } from '../../core/event-emitter/event-emitter';
@@ -18,8 +17,8 @@ import { assetEditor } from './workbench/workbench';
 /**
  * Images in every document's Visual view (`#image(..)` boxes showing the project's image file, "Insert image"
  * offering the project's images and uploads, which go through `workspace.applyEdit`; an image box's path is the
- * document link on it, from the link providers (`languages`)), and the read-only view of image and other files: the
- * custom editors `images.preview` (`*.{png,jpg,jpeg,gif,svg,webp}`) and `images.file` (`*`, any other file).
+ * document link on it, from the link providers (`languages`)), and the read-only view of image files: the custom
+ * editor `images.preview` (`*.{png,jpg,jpeg,gif,svg,webp}`).
  */
 export function images(): TypstExtension {
   return {
@@ -31,8 +30,6 @@ export function images(): TypstExtension {
         workbench.registerStyleSheet(css),
         projectImages,
         window.registerCustomEditorProvider('images.preview', assetEditor, { filenamePattern: IMAGE_FILES, icon: IMAGE_ICON }),
-        // any other file (`*` is the least specific pattern: every other editor's wins)
-        window.registerCustomEditorProvider('images.file', assetEditor, { filenamePattern: '*', icon: FILE_ICON }),
       );
       imagesVisualView({
         assets: (document) => projectImages.forDocument(document).assets,
@@ -53,8 +50,6 @@ export function images(): TypstExtension {
 
 /** The icon of image files (where views list files). */
 const IMAGE_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"/><circle cx="6" cy="6.5" r="1.2"/><path d="m2.5 12 3.5-3.5 2.5 2.5 2-2 3 3"/></svg>';
-/** The icon of any other file the project stores (data). */
-const FILE_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 1.5h5.5L13 5v9.5H4z"/><path d="M9.5 1.5V5H13M6 9h1M6 11.5h1M8.5 9H10M8.5 11.5H10"/></svg>';
 
 export interface ProjectImagesOptions {
   project: Project;

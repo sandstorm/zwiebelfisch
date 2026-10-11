@@ -554,7 +554,7 @@ Rules the built-ins follow, and yours should too:
   `'option'` only through `workbench.open(path, { viewType })`), then the most specific pattern (`*.drawio.png` beats
   the images' `*.{png,…}`, which beats `*`). Every open gets a new panel: fill `panel.element`, store edits with
   `workspace.applyEdit({ kind: 'update', path, content })`, and store what is pending in `panel.onDidDispose`. The built-ins:
-  `images.preview` (images), `images.file` (`*`: any other file, read-only), `spreadsheets.editor` (`*.ic`),
+  `images.preview` (images), `files.file` (`*`: any other file, read-only: name, size, type), `spreadsheets.editor` (`*.ic`),
   `diagrams.editor` (`*.drawio.png`, priority 110). The built-in "New …" entries (`file/newFile`): "New file…",
   "New spreadsheet…" (`spreadsheets.newSpreadsheet`), "New diagram…" (`diagrams.newDiagram`), "New folder…",
   "Upload files…".

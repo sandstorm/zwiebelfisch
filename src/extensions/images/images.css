@@ -75,7 +75,7 @@ figure > .typst-visual__image { margin-bottom: 0.2em; }
 figure .typst-visual__image-frame { margin: 0 auto; }
 figure .typst-visual__image-tools { justify-content: center; }
 .typst-visual__image-frame > .typst-visual__rendering { cursor: default; }
-/* Read-only view of images and data files */
+/* Read-only view of image files */
 .typst-asset {
   flex: 1;
   min-height: 0;
@@ -96,13 +96,3 @@ figure .typst-visual__image-tools { justify-content: center; }
   background: repeating-conic-gradient(var(--te-chip) 0 25%, var(--te-surface) 0 50%) 0 0 / 16px 16px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
 }
-.typst-asset__text {
-  align-self: stretch;
-  margin: 0;
-  padding: 12px;
-  border-radius: 6px;
-  background: var(--te-subtle);
-  font: 12px/1.5 ui-monospace, monospace;
-  white-space: pre-wrap;
-}
-.typst-asset__note { color: var(--te-muted); }

@@ -1,12 +1,12 @@
-// AssetView: the read-only view of a non-Typst file (image or data). See workbench.ts.
+// AssetView: the read-only view of an image file. See workbench.ts.
 import type { FileContent } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
-import { imageBlob, isImage } from '../model/image-files';
+import { imageBlob } from '../model/image-files';
 
 /**
- * The read-only view of a project file that is not Typst source: an image
- * preview, the text of a data file, or just its size. (Images get into the
- * text by dragging them from the file panel, or with "Insert image".)
+ * The read-only view of an image file of the project: its name, size and the
+ * picture. (Images get into the text by dragging them from the file panel, or
+ * with "Insert image".)
  */
 export class AssetView {
   private readonly root: HTMLElement;
@@ -19,7 +19,7 @@ export class AssetView {
     parent.append(this.root);
   }
 
-  /** Shows `path`. */
+  /** Shows image `path`. */
   show(path: ProjectPath, content: FileContent): void {
     this.release();
     const doc = this.root.ownerDocument;
@@ -30,34 +30,17 @@ export class AssetView {
     size.className = 'typst-asset__size';
     size.textContent = formatSize(typeof content === 'string' ? new TextEncoder().encode(content).length : content.length);
     title.append(size);
-    this.root.replaceChildren(title, this.body(path, content));
+    const image = doc.createElement('img');
+    image.className = 'typst-asset__image';
+    image.alt = ProjectPath.displayName(path);
+    this.objectUrl = URL.createObjectURL(imageBlob(path, content));
+    image.src = this.objectUrl;
+    this.root.replaceChildren(title, image);
   }
 
   dispose(): void {
     this.release();
     this.root.remove();
-  }
-
-  private body(path: ProjectPath, content: FileContent): HTMLElement {
-    const doc = this.root.ownerDocument;
-    if (isImage(path)) {
-      const image = doc.createElement('img');
-      image.className = 'typst-asset__image';
-      image.alt = ProjectPath.displayName(path);
-      this.objectUrl = URL.createObjectURL(imageBlob(path, content));
-      image.src = this.objectUrl;
-      return image;
-    }
-    if (typeof content === 'string') {
-      const text = doc.createElement('pre');
-      text.className = 'typst-asset__text';
-      text.textContent = content;
-      return text;
-    }
-    const note = doc.createElement('p');
-    note.className = 'typst-asset__note';
-    note.textContent = 'This file is used by the document but cannot be shown here.';
-    return note;
   }
 
   private release(): void {

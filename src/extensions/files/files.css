@@ -1,4 +1,4 @@
-/* The files extension's styles: the file panel (header with "New", the file tree). Registered by files.ts
+/* The files extension's styles: the file panel (header with "New", the file tree), the view of other files. Registered by files.ts
    (Workbench.registerStyleSheet). */
 .typst-files {
   display: flex;
@@ -95,3 +95,19 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+/* A file no other editor opens (files.file): name, size, type */
+.typst-file-info {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+}
+.typst-file-info__title { margin: 0; font-size: 15px; font-weight: 600; color: var(--te-text); }
+.typst-file-info__facts { display: grid; grid-template-columns: auto auto; gap: 4px 16px; margin: 0; font-size: 13px; }
+.typst-file-info__facts dt { color: var(--te-muted); }
+.typst-file-info__facts dd { margin: 0; color: var(--te-text); }
+.typst-file-info__note { margin: 0; color: var(--te-muted); }

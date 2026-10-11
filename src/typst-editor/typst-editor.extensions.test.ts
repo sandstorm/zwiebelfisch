@@ -129,10 +129,10 @@ describe('custom editors', () => {
     expect(host.querySelector<HTMLElement>('[data-testid=typst-spreadsheet]')!.hidden).toBe(false);
     expect(host.querySelector('[data-testid=typst-asset]')).toBeNull();
     editor.open('/main.typ');
-    editor.files = { ...editor.files, '/data.csv': 'a,b' };
-    editor.open('/data.csv');
+    editor.files = { ...editor.files, '/font.otf': new Uint8Array(3) };
+    editor.open('/font.otf');
     expect(host.querySelector('[data-testid=typst-spreadsheet]')).toBeNull();
-    expect(host.querySelector('[data-testid=typst-asset] pre')?.textContent).toBe('a,b');
+    expect(host.querySelector('[data-testid=typst-file-info]')?.textContent).toContain('OTF file');
   });
 });
 

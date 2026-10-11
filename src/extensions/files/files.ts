@@ -1,6 +1,6 @@
 // The files extension: the file panel (the project's files as a tree in the left side panel: new file / folder,
-// upload, rename, delete as commands in its menus, drag & drop, file decorations). Entry of extensions/files/. See
-// ARCHITECTURE.md, "File panel".
+// upload, rename, delete as commands in its menus, drag & drop, file decorations), and the read-only view of files
+// no other editor opens. Entry of extensions/files/. See ARCHITECTURE.md, "File panel".
 // Why a controller and views: the extension is a controller over the workbench's contribution points (a side panel,
 // commands, menus) and the project; the views (workbench/) and the pure tree model (model/) get what they need of the
 // workbench as options, so the panel is tested without one.
@@ -8,6 +8,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
 import css from './files.css?inline';
+import { fileInfoEditor } from './workbench/file-info';
 import { CONTEXT_MENU, FilePanel, NEW_FILE_MENU, type FilePanelOptions } from './workbench/file-panel';
 import { icon } from './workbench/icons/icons';
 
@@ -32,6 +33,8 @@ const CHANGE_ENTRIES = [
  * Its operations are commands (`files.newFile`, `files.newFolder`, `files.upload`, `files.rename`, `files.delete`,
  * each on a row), offered in two menus any extension may add to: `file/newFile` ("New" in the panel's header) and `explorer/context` (a row's context menu;
  * context: `resource`, `resourceKind` 'file' | 'folder', `resourceIsMain`; the command gets the row).
+ * A file no other editor opens shows its name, size and type, read-only (the custom editor `files.file`: `*` is the
+ * least specific pattern, every other editor wins; no icon: the panel draws its own).
  */
 export function files(): TypstExtension {
   return {
@@ -43,15 +46,13 @@ export function files(): TypstExtension {
             type: 'string',
             enum: ['auto', 'show', 'hide'],
             default: 'auto',
-            description:
-              'When the file panel is open: auto while the project has more than one file, else collapsed to its rail button (until someone opens or closes it); show: open; hide: none at all (and dropped files are ignored).',
+            description: 'When the file panel is open: auto while the project has more than one file, else collapsed to its rail button (until someone opens or closes it); show: open; hide: none at all (and dropped files are ignored).',
           },
         },
       },
     },
     activate(context) {
       const { project, window, workspace, workbench, subscriptions } = context;
-      subscriptions.push(workbench.registerStyleSheet(css));
       const mode = () => workspace.getConfiguration('files').get<PanelMode>('panel', 'auto');
       const side = workbench.registerSidePanel('files', { label: 'Files', icon: icon(workbench.ownerDocument, 'files'), order: 10 });
       const state = () => ({ paths: project.paths(), main: project.main, active: workbench.activeFile });
@@ -81,8 +82,10 @@ export function files(): TypstExtension {
       };
       render();
       subscriptions.push(
+        workbench.registerStyleSheet(css),
         side,
         panel,
+        window.registerCustomEditorProvider('files.file', fileInfoEditor, { filenamePattern: '*' }),
         new Disposable(() => drops?.dispose()),
         registerOperations(context, panel),
         workbench.onDidShowFile(render),
