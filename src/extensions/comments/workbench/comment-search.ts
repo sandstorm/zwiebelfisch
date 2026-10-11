@@ -1,4 +1,4 @@
-// The margin notes of every Typst file in search everywhere. See ../comments.ts and docs/10_guide/02_features.typ.
+// The margin notes of every Typst file in search everywhere. See comments in ../comments.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 import type { Project } from '../../../core/project/project';
 import { VISUAL_EDITOR } from '../../../hosts/visual-editor/visual-editor';

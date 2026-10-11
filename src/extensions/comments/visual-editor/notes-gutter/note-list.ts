@@ -1,4 +1,4 @@
-// The margin notes of a document as a list, followed across edits. See notes-gutter.ts.
+// The margin notes of a document as a list, followed across edits. See NotesGutter in notes-gutter.ts.
 import type { Mark as PMMark, Node as PMNode } from '@tiptap/pm/model';
 import { NodeSelection, type Selection, type Transaction } from '@tiptap/pm/state';
 import type { Mappable } from '@tiptap/pm/transform';
