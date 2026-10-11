@@ -1,5 +1,5 @@
 // The read-only editor of a file no other editor opens (the custom editor `files.file`, pattern `*`): its name, size
-// and type. See ../files.ts.
+// and type. See files in ../files.ts.
 import type { CustomEditorProvider } from '../../../hosts/window/window';
 import { ProjectPath } from '../../../core/paths/paths';
 import { FileContent } from '../../../core/project/project';

@@ -1,12 +1,11 @@
-// The file tree as data. See ../files.ts.
+// The file tree as data: folders from paths, the rows shown, keyboard moves, moving files. Pure. See files in
+// ../files.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 
 /**
  * The project's files as a tree: folders come from the paths, plus `folders`
  * (empty folders made in the panel). Each folder lists its folders first,
  * then its files, both by name (numbers by value: 2 before 10).
- *
- * Folders from paths, the rows shown for the expanded folders, keyboard moves, and moving files or folders. Pure.
  */
 export function buildTree(paths: readonly ProjectPath[], folders: Iterable<ProjectPath> = []): TreeEntry {
   const root: TreeEntry = { kind: 'folder', path: null, name: '', children: [] };

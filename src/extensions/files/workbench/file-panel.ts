@@ -1,4 +1,4 @@
-// FilePanel. See ../files.ts.
+// The file panel's view. See files in ../files.ts.
 import type { FileChange } from '../../../core/project/project';
 import { type NamedPath, ProjectPath } from '../../../core/paths/paths';
 import { uploadChanges } from '../../../core/uploads/uploads';
@@ -15,9 +15,6 @@ import { FileTree } from './tree/tree';
  * it; new files and uploads go into the row's folder. The main file (and a folder holding it) stays where it is.
  * Names are asked for in the window's input box, refusals are error messages. It only turns gestures into
  * `FileChange`s; whether they happen is up to `onChange`.
- *
- * The file panel's view — a "Files" header with its "New" menu, the project as a FileTree with a context menu per row,
- * uploads. It turns gestures into FileChanges and leaves to its owner whether they happen.
  */
 export class FilePanel {
   private readonly element: HTMLElement;

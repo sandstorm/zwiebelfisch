@@ -1,4 +1,4 @@
-// The file panel's own icons (16×16 strokes, currentColor). See ../file-panel.ts.
+// The file panel's own icons (16×16 strokes, currentColor). See FilePanel in ../file-panel.ts.
 
 /**
  * Typst files, other files without an icon of their own, folders, "New"; and the icons custom editors give the files
