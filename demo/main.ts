@@ -3,8 +3,10 @@
 // `?room=gitlab:demo/report@<branch>` (GitLab mode) on the local playground
 // server (`mise run demo`), `&user=<name>`. Without `room` (Local mode, the
 // default and what the static e2e build uses) it never talks to a server.
-// `&devtools` adds the devtools side panel (the library's optional `devtools`).
-import { collaboration, createTypstEditor, devtools } from '../src';
+// `&devtools` adds the devtools side panel (the library's optional `devtools`). The Documentation example in Local
+// mode saves to docs/ when the page comes from the dev server (docs-files/).
+import { collaboration, createTypstEditor, devtools, type ProjectFiles } from '../src';
+import { connectDocsSync, type DocsSync } from './docs-files/docs-sync';
 import { OpenFileHash } from './open-file-hash';
 import { editorOptions, playgroundFromQuery, userQuery } from './playground';
 import { renderPlaygroundBar } from './playground-bar';
@@ -32,6 +34,7 @@ async function start(): Promise<void> {
   if (server) bar.setServer(server);
   const hash = new OpenFileHash();
   const { files, collaboration: room } = editorOptions(state, server);
+  const docs = state.example === 'docs' && state.mode === 'local' ? docsSync(files ?? {}) : null;
   const editor = createTypstEditor(document.getElementById('editor')!, {
     files,
     extensions: (builtinExtensions) => {
@@ -40,11 +43,23 @@ async function start(): Promise<void> {
     },
     user: { name: state.user },
     onOpen: (path) => hash.opened(path),
-    onFilesChange: () => hash.filesChanged(),
+    allowFileChange: (change) => docs?.allowFileChange(change) ?? true,
+    onFilesChange: (change) => {
+      hash.filesChanged();
+      docs?.filesChanged(change);
+    },
   });
   hash.attach(editor);
+  docs?.attach(editor);
   Object.assign(window, { editor });
   if (server) watchServer(server !== 'offline');
+}
+
+/** The docs example's saving to docs/ (dev server), or null and a line saying that nothing is saved (static build). */
+function docsSync(files: ProjectFiles): DocsSync | null {
+  const sync = connectDocsSync(files, (text, level) => bar.setSaveStatus(text, level));
+  bar.setSaveStatus(sync ? 'Edits are saved to docs/' : 'Edits are not saved (static build; mise run demo saves them to docs/)', 'muted');
+  return sync;
 }
 
 /** Keeps the status current while in a room (`joined`) or after falling back to the local copy. */

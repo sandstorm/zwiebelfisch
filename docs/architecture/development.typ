@@ -23,6 +23,7 @@ Every operation is a mise task (`mise-tasks/`, `mise tasks ls`). Tools are pinne
   [`server:test`], [the server's vitest suite, Hocuspocus in-process, no port],
   [`test:e2e`], [builds demo and library, then Playwright in chromium, firefox, webkit (or one: `test:e2e chromium`)],
   [`test:e2e-collab`], [in-memory server + the two-user spec (`tests/e2e/collab.spec.ts`)],
+  [`test:e2e-docs`], [the Vite dev server + the docs-editing spec (`tests/e2e/docs-editing.spec.ts`): edits a heading in the Documentation example, checks the file in `docs/`, restores it],
   [`test:e2e-gitlab`], [fake-GitLab server + the GitLab room spec (`tests/e2e/gitlab.spec.ts`); a failed save (the playground's GitLab outage), the leave warning while a conflict blocks the commit; with `TYPST_GITLAB_AUTO_COMMIT=off` also the leave warning without one],
   [`test:all`], [`test:unit`, `server:test`, `test:e2e`],
   [`server:dev`], [the collaboration server with SQLite in `server/.data/` (@architecture-server)],
@@ -68,7 +69,17 @@ mise run server:test   # when server/ or core/room-protocol changed
 
 - One Typst project in `docs/`: `main.typ` (the book, and the chapter list `parts`), `site.typ` (one HTML page per chapter), `template.typ`.
 - A chapter's label is its path, `/` → `-` (`<architecture-workbench>`); a section appends a word. Cross-references are `@label`.
-- Live while writing: `mise run demo`, then `?example=docs`.
+- Live while writing: `mise run demo` (or `mise run dev`), then `?example=docs` (@architecture-development-writing-docs).
+
+== Writing the docs in the demo <architecture-development-writing-docs>
+
+On the dev server the Documentation example edits the files in `docs/` of the checkout, so the demo is the editor for this book: write, watch the preview, commit.
+
+- *Saving*: an edit is written once the typing pauses (300 ms per file; at once when the page is hidden). A create, rename, delete or image upload in the file panel happens on disk first, and the editor refuses it if the disk did. The end of the playground bar says what happened: "Saving…", "Saved to docs/guide/features.typ", or why not.
+- *Changes on disk* (a checkout, another editor) show up in the editor without a reload. A file with unsaved edits in the editor keeps them; the bar says so, and the next edit saves over the disk's version.
+- *What it may touch*: files under `docs/`, by relative path: no `..`, no hidden files, no symlinks, nothing in `docs/fonts/` (generated). Only the dev server's own page may write: its origin, with a token the server puts into the page at each start.
+- *A static build* (`mise run build`, the e2e build) has no file API: edits stay in the page, and the bar says so.
+- The code, in `demo/docs-files/`: `plugin.ts` (the Vite plugin, dev server only: the endpoint `/__docs-files`, and the watcher's events for `docs/` as an HMR event instead of a reload), `docs-folder.ts` (the path guard, atomic writes), `docs-sync.ts` (the page: debounced writes, changes from disk, the conflict rule). A file travels as text or bytes by its extension.
 
 == Open work <architecture-development-open-work>
 

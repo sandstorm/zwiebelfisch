@@ -86,4 +86,15 @@ describe('playground bar', () => {
     await vi.waitFor(() => expect(status().textContent).toContain('HTTP 404: nope'));
     expect(status().dataset.level).toBe('warn');
   });
+
+  it('the save status (the Documentation example) appears at the end of the bar once set, and shows the latest', () => {
+    const { bar, root } = render('?example=docs');
+    expect(root.querySelector('[data-testid="save-status"]')).toBeNull();
+    bar.setSaveStatus('Saving…', 'muted');
+    bar.setSaveStatus('Saved to docs/main.typ', 'ok');
+    const save = root.querySelector<HTMLElement>('[data-testid="save-status"]')!;
+    expect(root.lastElementChild).toBe(save);
+    expect(save.textContent).toBe('Saved to docs/main.typ');
+    expect(save.dataset.level).toBe('ok');
+  });
 });
