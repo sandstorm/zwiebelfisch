@@ -5,6 +5,7 @@
 // extensions that never know each other; both know only this registry.
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
+import type { ProjectPath } from '../../core/paths/paths';
 
 /** The source controls as extensions use them (VS Code's `scm` namespace). */
 export interface Scm {
@@ -29,13 +30,36 @@ export interface SourceControl {
   readonly defaultCommitMessage?: string;
   /** What it is doing. */
   readonly state: SourceControlState;
-  /** `state` changed. */
+  /** The files whose changes it has not committed (VS Code: the resource states of its resource groups). */
+  readonly resourceStates?: readonly SourceControlResourceState[];
+  /**
+   * What it shows in the status bar (VS Code's `statusBarCommands`), e.g. how much is not committed. Clicking one
+   * commits: whoever shows source controls asks for the message, as for any commit.
+   */
+  readonly statusBarCommands?: readonly SourceControlStatusBarCommand[];
+  /** `state`, `resourceStates` or `statusBarCommands` changed. */
   readonly onDidChange: Event<void>;
   /**
    * Commits the project's current state with `message` (VS Code: its accept-input command). `state.busy` meanwhile;
    * the source control tells the outcome itself (`window.show…Message`), as it tells its news.
    */
   commit(message: string): void;
+}
+
+/** A file with changes not committed (VS Code's SourceControlResourceState). */
+export interface SourceControlResourceState {
+  /** The file (VS Code: `resourceUri`). A file that is gone has no row where files are listed; it still counts. */
+  readonly path: ProjectPath;
+  /** How views that list files mark it, as a file decoration: a badge ("M"), what it means, a CSS color. */
+  readonly decorations?: { readonly badge?: string; readonly tooltip?: string; readonly color?: string };
+}
+
+/** A status bar entry of a source control (VS Code: a `Command` of `statusBarCommands`); a click commits. */
+export interface SourceControlStatusBarCommand {
+  readonly title: string;
+  readonly tooltip?: string;
+  /** `'warning'`: drawn to stand out, for what needs the user (VS Code: `statusBarItem.warningBackground`). */
+  readonly backgroundColor?: 'warning';
 }
 
 export interface SourceControlState {

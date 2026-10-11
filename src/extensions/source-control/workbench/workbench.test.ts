@@ -1,21 +1,30 @@
 // @vitest-environment jsdom
-// Tests for workbench.ts (commit) and the extension's wiring (../source-control.ts) over a fake workbench.
+// Tests for workbench.ts (commit, status bar entries, file decorations) and the extension's wiring (../source-control.ts)
+// over a fake workbench.
 import { describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { ExtensionContext, MenuItem } from '../../../hosts/workbench/workbench';
-import type { SourceControl, SourceControlState } from '../../../hosts/scm/scm';
+import { ProjectPath } from '../../../core/paths/paths';
+import type { SourceControl, SourceControlResourceState, SourceControlState, SourceControlStatusBarCommand } from '../../../hosts/scm/scm';
+import type { FileDecorationProvider } from '../../../hosts/window/window';
 import { sourceControl as sourceControlExtension } from '../source-control';
 import { commit, type SourceControlUi } from './workbench';
 
 function control(id = 'gitlab', label = 'GitLab') {
   const committed: string[] = [];
   const changed = new EventEmitter<void>();
-  const sourceControl: SourceControl & { state: SourceControlState } = {
+  const sourceControl: SourceControl & {
+    state: SourceControlState;
+    resourceStates: SourceControlResourceState[];
+    statusBarCommands: SourceControlStatusBarCommand[];
+  } = {
     id,
     label,
     defaultCommitMessage: 'Edit via Typst editor',
     state: { busy: false },
+    resourceStates: [],
+    statusBarCommands: [],
     onDidChange: changed.event,
     commit: (message) => {
       committed.push(message);
@@ -26,7 +35,11 @@ function control(id = 'gitlab', label = 'GitLab') {
     sourceControl.state = state;
     changed.fire();
   };
-  return { sourceControl, committed, update };
+  const show = (shown: Pick<typeof sourceControl, 'resourceStates' | 'statusBarCommands'>) => {
+    Object.assign(sourceControl, shown);
+    changed.fire();
+  };
+  return { sourceControl, committed, update, show };
 }
 
 function ui(controls: SourceControl[], answers: { input?: string; pick?: number } = {}) {
@@ -74,29 +87,47 @@ describe('commit', () => {
   });
 });
 
+/** The extension activated over a fake workbench with `controls` registered (`changed` fires when they change). */
+function activate(controls: SourceControl[], answers: { input?: string } = {}) {
+  const changed = new EventEmitter<void>();
+  const menu: MenuItem[] = [];
+  const statusBar: HTMLElement[] = [];
+  const decorations: FileDecorationProvider[] = [];
+  const commands = new Map<string, () => unknown>();
+  const { fake, told } = ui(controls, answers);
+  const workbench = {
+    ownerDocument: document,
+    registerStyleSheet: () => new Disposable(() => {}),
+    registerMenuItem: vi.fn((_menuId: string, item: MenuItem) => {
+      menu.push(item);
+      return new Disposable(() => menu.splice(menu.indexOf(item), 1));
+    }),
+  };
+  const window = {
+    ...fake.window,
+    registerStatusBarItem: (element: HTMLElement) => (statusBar.push(element), new Disposable(() => statusBar.splice(statusBar.indexOf(element), 1))),
+    registerFileDecorationProvider: (provider: FileDecorationProvider) => (decorations.push(provider), new Disposable(() => decorations.splice(decorations.indexOf(provider), 1))),
+  };
+  const scm = {
+    get sourceControls() {
+      return controls;
+    },
+    onDidChangeSourceControls: changed.event,
+  };
+  const registry = { registerCommand: (id: string, handler: () => unknown) => (commands.set(id, handler), new Disposable(() => commands.delete(id))) };
+  const subscriptions: { dispose(): unknown }[] = [];
+  sourceControlExtension().activate({ commands: registry, window, scm, workbench, subscriptions } as unknown as ExtensionContext);
+  const dispose = () => {
+    for (const subscription of subscriptions.reverse()) subscription.dispose();
+  };
+  return { changed, menu, statusBar, decorations, commands, told, workbench, dispose };
+}
+
 describe('sourceControl extension', () => {
   it('shows "Save to <label>…" in the tab bar while a source control is registered, and commits from it', async () => {
     const { sourceControl, committed, update } = control();
     const controls: SourceControl[] = [];
-    const changed = new EventEmitter<void>();
-    const menu: MenuItem[] = [];
-    const commands = new Map<string, () => unknown>();
-    const { fake, told } = ui(controls, { input: 'Saved' });
-    const workbench = {
-      registerMenuItem: vi.fn((_menuId: string, item: MenuItem) => {
-        menu.push(item);
-        return new Disposable(() => menu.splice(menu.indexOf(item), 1));
-      }),
-    };
-    const scm = {
-      get sourceControls() {
-        return controls;
-      },
-      onDidChangeSourceControls: changed.event,
-    };
-    const registry = { registerCommand: (id: string, handler: () => unknown) => (commands.set(id, handler), new Disposable(() => commands.delete(id))) };
-    const subscriptions: { dispose(): unknown }[] = [];
-    sourceControlExtension().activate({ commands: registry, window: fake.window, scm, workbench, subscriptions } as unknown as ExtensionContext);
+    const { changed, menu, commands, told, workbench, dispose } = activate(controls, { input: 'Saved' });
     expect(menu).toEqual([]);
     controls.push(sourceControl);
     changed.fire();
@@ -111,7 +142,47 @@ describe('sourceControl extension', () => {
     controls.pop();
     changed.fire();
     expect(menu).toEqual([]);
-    for (const subscription of subscriptions.reverse()) subscription.dispose();
+    dispose();
     expect(commands.size).toBe(0);
+  });
+
+  it('shows the status bar entries while there are any; a click commits to that source control', async () => {
+    const { sourceControl, committed, show } = control();
+    const { statusBar, dispose } = activate([sourceControl], { input: 'From the status bar' });
+    expect(statusBar).toEqual([]);
+    show({ resourceStates: [], statusBarCommands: [{ title: 'Not in GitLab: 1 file · 3 min (Ann)', tooltip: 'M main.typ' }] });
+    expect(statusBar).toHaveLength(1);
+    const button = () => statusBar[0].querySelector('button')!;
+    expect([button().textContent, button().title]).toEqual(['Not in GitLab: 1 file · 3 min (Ann)', 'M main.typ']);
+    const first = button();
+    show({ resourceStates: [], statusBarCommands: [{ title: 'Saved · 01234567' }] });
+    expect(button()).toBe(first);
+    expect(button().textContent).toBe('Saved · 01234567');
+    expect(button().classList.contains('typst-source-control__entry--warning')).toBe(false);
+    show({ resourceStates: [], statusBarCommands: [{ title: 'Conflict with GitLab: main.typ', backgroundColor: 'warning' }, { title: 'Saved · 01234567' }] });
+    expect([...statusBar[0].children].map((entry) => [entry.textContent, entry.classList.contains('typst-source-control__entry--warning')])).toEqual([
+      ['Conflict with GitLab: main.typ', true],
+      ['Saved · 01234567', false],
+    ]);
+    button().click();
+    await vi.waitFor(() => expect(committed).toEqual(['From the status bar']));
+    show({ resourceStates: [], statusBarCommands: [] });
+    expect(statusBar).toEqual([]);
+    dispose();
+  });
+
+  it('decorates the files of the resource states, also on closed folders, and tells when they change', () => {
+    const { sourceControl, show } = control();
+    const { decorations, dispose } = activate([sourceControl]);
+    const [provider] = decorations;
+    let told = 0;
+    provider.onDidChangeFileDecorations(() => told++);
+    const path = ProjectPath.of('/chapters/intro.typ');
+    show({ resourceStates: [{ path, decorations: { badge: 'M', tooltip: 'Changed', color: '#b58900' } }, { path: ProjectPath.of('/plain.typ') }], statusBarCommands: [] });
+    expect(told).toBe(1);
+    expect(provider.provideFileDecoration(path)).toEqual([{ badge: 'M', tooltip: 'Changed', color: '#b58900', propagate: true }]);
+    expect(provider.provideFileDecoration(ProjectPath.of('/plain.typ'))).toEqual([]);
+    dispose();
+    expect(decorations).toEqual([]);
   });
 });

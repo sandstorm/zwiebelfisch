@@ -50,7 +50,7 @@ export class Collaboration {
   ) {
     const { project, user } = shared;
     if (server && GitLabSourceControl.isGitLabRoom(ydoc)) {
-      this.sourceControl = new GitLabSourceControl(statelessChannel(server.provider), server.tell, user && { name: user.name });
+      this.sourceControl = new GitLabSourceControl(ydoc, statelessChannel(server.provider), server.tell, user && { name: user.name });
       this.assets = new SharedAssets(project, ydoc, server.files);
     }
     this.sharedProject = new SharedProject(project, ydoc);
@@ -73,6 +73,14 @@ export class Collaboration {
       else provider.on('synced', () => resolve());
     });
     return new Collaboration(ydoc, provider.awareness, shared, { provider, files: roomFiles(options), tell });
+  }
+
+  /**
+   * Whether leaving now would leave changes behind that nobody commits: the room's source control has changes the
+   * server does not commit by itself, and nobody else is in the room.
+   */
+  get leavesChangesUncommitted(): boolean {
+    return !!this.sourceControl?.changesStayUncommitted && !this.cursors?.hasOthers;
   }
 
   /** Tells the others where the local user's selection is (a source range in `path`), or nowhere. */

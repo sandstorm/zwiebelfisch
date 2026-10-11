@@ -74,6 +74,16 @@ describe('RemoteCursors', () => {
     expect(here()).toEqual([]);
   });
 
+  it('knows whether anybody else is in the room, with a cursor or without', () => {
+    const alone = client('Ann');
+    expect(alone.cursors.hasOthers).toBe(false);
+    const { a, b } = room('Hello');
+    b.awareness.setLocalStateField('user', { name: 'Bob' });
+    expect(a.cursors.hasOthers).toBe(true);
+    b.awareness.setLocalState(null);
+    expect(a.cursors.hasOthers).toBe(false);
+  });
+
   it('reports everyone, in any file, once per change', async () => {
     const { a, b } = room('Hello world');
     a.cursors.setLocal(OTHER, SourceRange.of({ from: 8, to: 8 }));

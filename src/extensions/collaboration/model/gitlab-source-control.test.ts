@@ -1,20 +1,24 @@
 // Tests for gitlab-source-control.ts.
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { META_MAP } from '../../../core/room-protocol/room-protocol';
 import { GitLabSourceControl } from './gitlab-source-control';
 
+afterEach(() => void vi.useRealTimers());
+
 function setup() {
+  const ydoc = new Y.Doc();
+  const meta = ydoc.getMap(META_MAP);
   const sent: string[] = [];
   const messages = new EventEmitter<string>();
   const channel = { send: (payload: string) => void sent.push(payload), onDidReceiveMessage: messages.event };
   const receive = (payload: string) => messages.fire(payload);
   const told: { message: string; severity: string }[] = [];
-  const sourceControl = new GitLabSourceControl(channel, (message, severity) => told.push({ message, severity }), { name: 'Ann' });
+  const sourceControl = new GitLabSourceControl(ydoc, channel, (message, severity) => told.push({ message, severity }), { name: 'Ann' });
   let changes = 0;
   sourceControl.onDidChange(() => changes++);
-  return { sent, receive, sourceControl, told, changes: () => changes };
+  return { meta, sent, receive, sourceControl, told, changes: () => changes };
 }
 
 describe('GitLabSourceControl', () => {
@@ -36,12 +40,101 @@ describe('GitLabSourceControl', () => {
     receive('{"type":"other"}');
     receive('not json');
     receive('{"type":"gitlab:saved","sha":"0123456789abcdef","author":"Ann"}');
+    receive('{"type":"gitlab:saved","sha":"fedcba9876543210","author":"Bob","automatic":true}');
     expect(sourceControl.state).toEqual({ busy: false });
     expect(told).toEqual([
       { message: 'Merged new changes from GitLab', severity: 'info' },
       { message: 'Saved version 01234567 (Ann)', severity: 'info' },
+      { message: 'Saved version fedcba98 automatically (Bob)', severity: 'info' },
     ]);
-    expect(changes()).toBe(2);
+    expect(changes()).toBe(3);
+  });
+});
+
+describe('GitLabSourceControl: what is not in GitLab', () => {
+  const T0 = Date.parse('2026-10-11T10:00:00Z');
+
+  it('shows the room\'s changes as M / A / D resource states and in the status bar, its age kept up to date', () => {
+    vi.useFakeTimers({ now: T0 + 30_000, toFake: ['setInterval', 'clearInterval', 'Date'] });
+    const { meta, sourceControl, changes } = setup();
+    meta.set('baseSha', '0123456789abcdef');
+    expect(sourceControl.resourceStates).toEqual([]);
+    expect(sourceControl.statusBarCommands).toEqual([{ title: 'Saved · 01234567', tooltip: expect.stringContaining('Everything is in GitLab') }]);
+
+    const files = [
+      { path: '/chapters/intro.typ', kind: 'modified' },
+      { path: '/new.typ', kind: 'added' },
+      { path: '/old.typ', kind: 'deleted' },
+      { path: '/x.typ', kind: 'renamed' },
+    ];
+    meta.set('changes', { files, since: T0, editors: ['Ann', 'Bob'] });
+    expect(sourceControl.resourceStates.map((state) => [state.path, state.decorations.badge])).toEqual([
+      ['/chapters/intro.typ', 'M'],
+      ['/new.typ', 'A'],
+      ['/old.typ', 'D'],
+    ]);
+    meta.set('autoCommit', 10);
+    expect(sourceControl.statusBarCommands).toEqual([
+      {
+        title: 'Not in GitLab: 3 files · < 1 min (Ann, Bob)',
+        tooltip:
+          'Not in GitLab yet:\nM chapters/intro.typ\nA new.typ\nD old.typ\nSaved by itself after 10 min without edits, and when the last person leaves.\nClick to save.',
+      },
+    ]);
+    meta.set('autoCommit', null);
+    expect(sourceControl.statusBarCommands[0].tooltip).toContain('Not saved by itself: save before you leave.');
+    const before = changes();
+    vi.advanceTimersByTime(14 * 60_000);
+    expect(changes()).toBe(before + 14);
+    expect(sourceControl.statusBarCommands[0].title).toBe('Not in GitLab: 3 files · 14 min (Ann, Bob)');
+    vi.advanceTimersByTime(60 * 60_000);
+    expect(sourceControl.statusBarCommands[0].title).toBe('Not in GitLab: 3 files · 1 h 14 min (Ann, Bob)');
+
+    meta.set('changes', null);
+    expect(sourceControl.resourceStates).toEqual([]);
+    const clean = changes();
+    vi.advanceTimersByTime(10 * 60_000);
+    expect(changes()).toBe(clean);
+    sourceControl.dispose();
+  });
+
+  it('shows a conflict with upstream as long as the room has it: "!" on its files, a warning entry first', () => {
+    const { meta, sourceControl } = setup();
+    meta.set('baseSha', '0123456789abcdef');
+    meta.set('changes', { files: [{ path: '/main.typ', kind: 'modified' }, { path: '/a.typ', kind: 'added' }], since: Date.now(), editors: ['Ann'] });
+    meta.set('conflict', { sha: 'fedcba9876543210', paths: ['/main.typ'] });
+    expect(sourceControl.resourceStates.map((state) => [state.path, state.decorations.badge])).toEqual([
+      ['/main.typ', '!'],
+      ['/a.typ', 'A'],
+    ]);
+    const [warning, changes] = sourceControl.statusBarCommands;
+    expect(warning).toEqual({ title: 'Conflict with GitLab: main.typ', tooltip: expect.stringContaining('commit fedcba98'), backgroundColor: 'warning' });
+    expect(changes.title).toBe('Not in GitLab: 2 files · < 1 min (Ann)');
+    meta.set('conflict', { sha: 's', paths: ['/a.typ', '/b.typ', '/c.typ'] });
+    expect(sourceControl.statusBarCommands[0].title).toBe('Conflict with GitLab: a.typ, b.typ and 1 more');
+    meta.set('conflict', null);
+    expect(sourceControl.statusBarCommands.map((command) => command.title)).toEqual(['Not in GitLab: 2 files · < 1 min (Ann)']);
+    expect(sourceControl.resourceStates.map((state) => state.decorations.badge)).toEqual(['M', 'A']);
+  });
+
+  it('knows when its changes stay uncommitted: there are some, and the server does not commit by itself', () => {
+    const { meta, sourceControl } = setup();
+    meta.set('autoCommit', null);
+    expect(sourceControl.changesStayUncommitted).toBe(false);
+    meta.set('changes', { files: [{ path: '/main.typ', kind: 'modified' }], since: Date.now(), editors: [] });
+    expect(sourceControl.changesStayUncommitted).toBe(true);
+    meta.set('autoCommit', 10);
+    expect(sourceControl.changesStayUncommitted).toBe(false);
+  });
+
+  it('ignores changes it cannot read', () => {
+    const { meta, sourceControl } = setup();
+    meta.set('baseSha', 'abc');
+    meta.set('changes', { files: 'x', since: 1, editors: [] });
+    expect(sourceControl.statusBarCommands[0].title).toBe('Saved · abc');
+    meta.set('changes', { files: [{ path: 'no-slash', kind: 'added' }], since: Date.now(), editors: [] });
+    expect(sourceControl.resourceStates).toEqual([]);
+    expect(sourceControl.statusBarCommands[0].title).toBe('Not in GitLab: 1 file · < 1 min');
   });
 });
 

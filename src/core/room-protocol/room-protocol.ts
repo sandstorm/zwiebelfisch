@@ -19,6 +19,9 @@ export const GITLAB_ROOM_PREFIX = 'gitlab:';
  * | `base`        | `Record<path, string>`: the `.typ` files at `baseSha` |
  * | `baseAssets`  | `Record<path, blobSha>`: the other files at `baseSha` |
  * | `lastCommits` | `Record<path, commitSha>`: per `.typ` file, the commit that last changed it (optimistic concurrency) |
+ * | `changes`     | `RoomChanges \| null`: what the room has that the branch has not (kept up to date while people edit) |
+ * | `conflict`    | `RoomConflict \| null`: upstream changes that conflict with the room's; nothing is committed until resolved |
+ * | `autoCommit`  | `number \| null`: the minutes without edits after which the server commits by itself (also when the last user leaves); null: never |
  */
 export const META_MAP = 'meta';
 
@@ -36,6 +39,28 @@ export interface RoomMeta {
   base: Record<string, string>;
   baseAssets: Record<string, string>;
   lastCommits: Record<string, string>;
+}
+
+/** What the room has that its branch has not (`changes` in the meta map; null or missing: nothing). */
+export interface RoomChanges {
+  /** The files that differ from the base, by path. */
+  files: ChangedFile[];
+  /** When the first of these edits was made (milliseconds since the epoch, the server's clock). */
+  since: number;
+  /** Who made them, by name, in the order of their first edit. */
+  editors: string[];
+}
+
+/** A file of the room that differs from the base: new, changed, or gone (a rename is both). */
+export interface ChangedFile {
+  path: string;
+  kind: 'added' | 'modified' | 'deleted';
+}
+
+/** Upstream changes that could not be merged into the room (`conflict` in the meta map): which commit, which files. */
+export interface RoomConflict {
+  sha: string;
+  paths: string[];
 }
 
 /** Client → server stateless messages. */
@@ -61,8 +86,8 @@ export interface FileConflict {
 
 /** Server → client stateless messages. */
 export type ServerMessage =
-  /** A version was committed (sent to everyone in the room). */
-  | { type: 'gitlab:saved'; sha: string; author: string }
+  /** A version was committed (sent to everyone in the room); `automatic`: by the server, not on a client's save. */
+  | { type: 'gitlab:saved'; sha: string; author: string; automatic?: boolean }
   /** The save of this client had nothing to commit. */
   | { type: 'gitlab:unchanged' }
   /** Upstream changes were merged into the room (sent to everyone). */

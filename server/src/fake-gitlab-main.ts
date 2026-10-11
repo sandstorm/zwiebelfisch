@@ -5,8 +5,10 @@
 // images). No real GitLab, no secrets, nothing stored. Any branch works:
 // gitlab:demo/report@<branch> starts at main.
 //   PORT (default 1234)
+//   TYPST_GITLAB_AUTO_COMMIT (default 10) minutes without edits before a room commits by itself; `off`: never
 // See docs/architecture/development.typ.
 import { createCollabServer } from './collab-server.ts';
+import { parseAutoCommit } from './gitlab/gitlab-extension.ts';
 import { FakeGitLab } from './gitlab/fake-gitlab.ts';
 import { PLAYGROUND_PROJECT, playgroundOptions } from './playground/playground.ts';
 import { readProjectFiles } from './playground/project-files.ts';
@@ -16,6 +18,6 @@ gitlab.autoBranches = true;
 
 const server = createCollabServer({
   port: Number(process.env.PORT ?? 1234),
-  ...playgroundOptions(gitlab, { appendTo: '/chapters/introduction.typ' }),
+  ...playgroundOptions(gitlab, { appendTo: '/chapters/introduction.typ', autoCommit: parseAutoCommit(process.env.TYPST_GITLAB_AUTO_COMMIT) }),
 });
 await server.listen();

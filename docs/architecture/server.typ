@@ -17,7 +17,7 @@
   [`files`], [`Y.Map<path, Y.Text>`: every `.typ` file], [all],
   [awareness], [`user`, `cursor` (relative positions)], [all],
   [`assets`], [`Y.Map<path, sha | Uint8Array>`: other files (blob sha, or uploaded bytes not committed yet)], [GitLab],
-  [`meta`], [written by the server: `baseSha`, `base`, `baseAssets`, `lastCommits`], [GitLab],
+  [`meta`], [written by the server: `baseSha`, `base`, `baseAssets`, `lastCommits`; `changes` (what is not in GitLab yet), `conflict` (until resolved), `autoCommit` (minutes or null)], [GitLab],
 )
 
 == GitLab rooms <architecture-server-gitlab>
@@ -27,13 +27,19 @@ open      no meta: load the branch head (.typ as text, others as blob sha) → f
           stored room: pull upstream (merge), ignoring GitLab being unreachable
 save      client: stateless gitlab:save → commitActions(meta, files) → one POST /repository/commits
           refused with a moved head: merge upstream, retry (3 attempts); a conflict ends the save
+auto      idle autoCommit minutes after the last edit, or LEAVE_DELAY (20 s) after the last user left
+          (beforeUnloadDocument waits; someone back: no commit) → the same commit, automaticCommit's author + message
 webhook   POST /gitlab/webhook (X-Gitlab-Token) → merge into the open rooms of that branch
-answers   gitlab:saved / merged / conflict to everyone; gitlab:unchanged / error to the saver
+answers   gitlab:saved / merged / conflict to everyone; gitlab:unchanged / error to the saver (auto: errors to everyone)
 ```
 
 - *Optimistic concurrency per file*: update / move / delete carry the file's `last_commit_id`, so GitLab refuses an action whose file changed upstream.
 - *Commit actions*: a deleted + created pair with at least half the content equal is a `move` (git's rename rule); uploads go as base64.
 - *Merge* (`merge.ts`): per path, take upstream where the room did not change it, keep the room's where upstream did not; both changed → `merge3` (node-diff3, by lines); changed vs. deleted → conflict. Any conflict: nothing applied, `gitlab:conflict` with the room's ranges. Otherwise one transaction of minimal text edits, so cursors elsewhere stay put.
+- *Uncommitted changes* (`meta.changes`, `RoomChanges`): the files that differ from the base (`added` / `modified` / `deleted`, from the commit actions), since when, and the editors' names in the order of their first edit. Written 0.5 s after an edit and right after each commit or merge; null when clean.
+- *Editors*: every Y.Doc change not made by the room itself is an edit, by the connection's authenticated `user.name`, else the `user.name` its client publishes in the awareness (neither: counted, not named). A commit takes the edits it contains (`Editors.take`); edits made meanwhile stay. Every commit lists the other editors as `Co-authored-by:` (emails as for the author).
+- *Auto-commit* (`GitLabOptions.autoCommit`, default 10 minutes, `false`: off): author = most edits; message "Edits by Ann, Bob: a.typ, b.typ, c.typ and 2 more".
+- *Conflict*: a failed merge writes `meta.conflict` (`{ sha, paths }`); every new base (merge, commit) clears it.
 - *Files endpoint*: `GET /rooms/<room>/files/<path>` with the room token as Bearer → the bytes of a repository file, from a shared LRU `BlobCache`.
 
 == Entry points <architecture-server-entry-points>

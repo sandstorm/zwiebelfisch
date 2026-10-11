@@ -1,8 +1,8 @@
 // Tests for GitLab-backed rooms: the collaboration server with a FakeGitLab, in-process.
 import { Hocuspocus, type Document, type Extension, type onStatelessPayload } from '@hocuspocus/server';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
-import { ASSETS_MAP, META_MAP, roomFilePath, type ServerMessage } from '../../../src/core/room-protocol/room-protocol.ts';
+import { ASSETS_MAP, META_MAP, roomFilePath, type RoomChanges, type ServerMessage } from '../../../src/core/room-protocol/room-protocol.ts';
 import { connect } from '../../../src/extensions/collaboration/model/in-process.ts';
 import { SharedProject } from '../../../src/extensions/collaboration/model/shared-project.ts';
 import { Project } from '../../../src/core/project/project.ts';
@@ -11,7 +11,8 @@ import { sharedToken } from '../auth.ts';
 import { collabConfiguration } from '../collab-server.ts';
 import { blobSha } from './blob-sha.ts';
 import { FakeGitLab } from './fake-gitlab.ts';
-import type { GitLabExtension } from './gitlab-extension.ts';
+import { parseAutoCommit, type GitLabExtension } from './gitlab-extension.ts';
+import { LEAVE_DELAY } from './gitlab-room.ts';
 import type { HttpResponse } from '../http.ts';
 
 const path = ProjectPath.of;
@@ -29,21 +30,28 @@ const MAIN_TEXT = '= Report\n\nFirst paragraph.\n\nSecond paragraph.\n\nThird pa
 const cleanup: (() => unknown)[] = [];
 afterEach(async () => {
   for (const fn of cleanup.splice(0).reverse()) await fn();
+  vi.useRealTimers();
 });
+
+/** Fake timers and clock (from 10:00), for what the rooms do after a while. */
+function fakeTime() {
+  vi.useFakeTimers({ now: new Date('2026-10-11T10:00:00Z'), toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] });
+}
+const AT_TEN = Date.parse('2026-10-11T10:00:00Z');
 
 function initialFiles() {
   return { [MAIN]: MAIN_TEXT, '/ch1.typ': '= One\n\nText of one.\n', '/old.typ': 'old\n', '/img/logo.png': LOGO };
 }
 
-/** A server with GitLab rooms and an open room (`doc` is the server's Y.Doc of it). */
-async function setup(options: { files?: Record<string, string | Uint8Array>; storage?: Extension } = {}) {
+/** A server with GitLab rooms and an open room (`doc` is the server's Y.Doc of it); no auto-commit unless asked for. */
+async function setup(options: { files?: Record<string, string | Uint8Array>; storage?: Extension; autoCommit?: number | false } = {}) {
   const gitlab = new FakeGitLab(PROJECT, options.files ?? initialFiles());
   const server = new Hocuspocus(
     collabConfiguration({
       quiet: true,
       storage: options.storage,
       authenticate: sharedToken('room-token'),
-      gitlab: { url: gitlab.url, token: gitlab.token, fetch: gitlab.fetch, webhookSecret: 'hook-secret' },
+      gitlab: { url: gitlab.url, token: gitlab.token, fetch: gitlab.fetch, webhookSecret: 'hook-secret', autoCommit: options.autoCommit ?? false },
     }),
   );
   const extension = server.configuration.extensions.find((e) => e.extensionName === 'gitlab') as GitLabExtension;
@@ -52,7 +60,14 @@ async function setup(options: { files?: Record<string, string | Uint8Array>; sto
   const doc = connection.document!;
   const sent: ServerMessage[] = [];
   doc.broadcastStateless = (payload: string) => void sent.push(JSON.parse(payload));
-  return { gitlab, server, extension, connection, doc, sent, ...helpers(extension, doc, sent) };
+  /** Changes `doc` as `name` would, through a connection of their own (authenticated with name and email). */
+  const editAs = async (name: string, change: (doc: Y.Doc) => void) => {
+    const own = await server.openDirectConnection(ROOM, { user: { name, email: `${name.toLowerCase()}@example.com` } });
+    cleanup.push(() => own.disconnect());
+    await own.transact(change);
+    return own;
+  };
+  return { gitlab, server, extension, connection, doc, sent, editAs, ...helpers(extension, doc, sent) };
 }
 
 function helpers(extension: GitLabExtension, doc: Document, sent: ServerMessage[]) {
@@ -66,8 +81,16 @@ function helpers(extension: GitLabExtension, doc: Document, sent: ServerMessage[
       return [...sent];
     },
     text: (path: string) => doc.getMap<Y.Text>('files').get(path)?.toString(),
+    changes: () => (doc.getMap(META_MAP).get('changes') ?? null) as RoomChanges | null,
     paths: () => [...doc.getMap('files').keys()].sort(),
-    meta: () => doc.getMap(META_MAP).toJSON() as { baseSha: string; base: Record<string, string>; baseAssets: Record<string, string> },
+    meta: () =>
+      doc.getMap(META_MAP).toJSON() as {
+        baseSha: string;
+        base: Record<string, string>;
+        baseAssets: Record<string, string>;
+        conflict?: { sha: string; paths: string[] } | null;
+        autoCommit: number | null;
+      },
     edit(path: string, from: string, to: string) {
       const text = doc.getMap<Y.Text>('files').get(path)!;
       const at = text.toString().indexOf(from);
@@ -148,7 +171,7 @@ describe('GitLab rooms: loading', () => {
     // The same repository, pushed to while the room was closed.
     const gitlab = first.gitlab;
     gitlab.push('main', { [MAIN]: MAIN_TEXT.replace('Third', 'Last') });
-    const server = new Hocuspocus(collabConfiguration({ quiet: true, storage, gitlab: { url: gitlab.url, token: gitlab.token, fetch: gitlab.fetch } }));
+    const server = new Hocuspocus(collabConfiguration({ quiet: true, storage, gitlab: { url: gitlab.url, token: gitlab.token, fetch: gitlab.fetch, autoCommit: false } }));
     const again = await server.openDirectConnection(ROOM);
     cleanup.push(() => again.disconnect());
     expect((again.document!.getMap('files').get(MAIN) as Y.Text).toString()).toBe(MAIN_TEXT.replace('= Report', '= Room report').replace('Third', 'Last'));
@@ -277,6 +300,200 @@ describe('GitLab rooms: upstream changes', () => {
     expect(text(MAIN)).toBe(mine);
     expect(gitlab.head('main').sha).toBe(upstream);
     expect(meta().baseSha).toBe(before);
+  });
+});
+
+describe('GitLab rooms: what is not in GitLab yet', () => {
+  /** Replaces `from` by `to` in the shared text of `path` of `doc`. */
+  const replace = (doc: Y.Doc, path: string, from: string, to: string) => {
+    const text = doc.getMap<Y.Text>('files').get(path)!;
+    const at = text.toString().indexOf(from);
+    text.delete(at, from.length);
+    text.insert(at, to);
+  };
+
+  it('tells the room which files changed, since when and by whom, shortly after the edits', async () => {
+    fakeTime();
+    const { editAs, changes, save } = await setup();
+    await editAs('Ann', (doc) => replace(doc, MAIN, 'First', 'Opening'));
+    expect(changes()).toBeNull();
+    await vi.advanceTimersByTimeAsync(500);
+    expect(changes()).toEqual({ files: [{ path: MAIN, kind: 'modified' }], since: AT_TEN, editors: ['Ann'] });
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    await editAs('Bob', (doc) => {
+      const files = doc.getMap<Y.Text>('files');
+      files.delete('/old.typ');
+      files.set('/new.typ', new Y.Text('new\n'));
+      doc.getMap(ASSETS_MAP).set('/img/upload.png', new Uint8Array([1]));
+    });
+    await editAs('Ann', (doc) => replace(doc, MAIN, 'Opening', 'Start'));
+    await vi.advanceTimersByTimeAsync(500);
+    expect(changes()).toEqual({
+      files: [
+        { path: '/img/upload.png', kind: 'added' },
+        { path: MAIN, kind: 'modified' },
+        { path: '/new.typ', kind: 'added' },
+        { path: '/old.typ', kind: 'deleted' },
+      ],
+      since: AT_TEN,
+      editors: ['Ann', 'Bob'],
+    });
+
+    expect((await save())[0].type).toBe('gitlab:saved');
+    expect(changes()).toBeNull();
+  });
+
+  it('is clean again when the edits are undone, and starts over with the next edit', async () => {
+    fakeTime();
+    const { editAs, changes } = await setup();
+    await editAs('Ann', (doc) => replace(doc, MAIN, 'First', 'Opening'));
+    await vi.advanceTimersByTimeAsync(500);
+    await editAs('Bob', (doc) => replace(doc, MAIN, 'Opening', 'First'));
+    await vi.advanceTimersByTimeAsync(500);
+    expect(changes()).toBeNull();
+    await vi.advanceTimersByTimeAsync(60_000);
+    await editAs('Bob', (doc) => replace(doc, MAIN, 'First', '1st'));
+    await vi.advanceTimersByTimeAsync(500);
+    expect(changes()).toMatchObject({ since: AT_TEN + 61_000, editors: ['Bob'] });
+  });
+
+  it('names a client by the name it publishes in the awareness when the connection does not know it (else nobody)', async () => {
+    fakeTime();
+    const { extension, doc, changes } = await setup();
+    const connection = { context: {} };
+    const states = new Map([[7, { user: { name: 'Cleo', color: '#fff' } }]]);
+    await extension.onAwarenessUpdate({ connection, added: [7], updated: [], removed: [], awareness: { getStates: () => states } } as never);
+    doc.transact(() => replace(doc, MAIN, 'First', 'Opening'), { source: 'connection', connection });
+    doc.transact(() => replace(doc, MAIN, 'Second', '2nd'), { source: 'connection', connection: { context: {} } });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(changes()?.editors).toEqual(['Cleo']);
+  });
+
+  it('names the other editors as co-authors of a save', async () => {
+    const { gitlab, editAs, save } = await setup();
+    await editAs('Bob', (doc) => replace(doc, MAIN, 'First', 'Opening'));
+    await editAs('Cleo', (doc) => replace(doc, MAIN, 'Second', '2nd'));
+    await save('Reword', { name: 'Ann', email: 'ann@example.com' });
+    expect(gitlab.head('main').message).toBe('Reword\n\nCo-authored-by: Bob <bob@example.com>\nCo-authored-by: Cleo <cleo@example.com>');
+  });
+
+  it('keeps the editors when a commit fails', async () => {
+    fakeTime();
+    const { gitlab, editAs, changes, save } = await setup();
+    await editAs('Ann', (doc) => replace(doc, MAIN, 'First', 'Opening'));
+    gitlab.failNextCommit = { status: 500, message: 'down' };
+    expect((await save())[0]).toEqual({ type: 'gitlab:error', message: expect.stringContaining('down') });
+    expect(changes()).toMatchObject({ since: AT_TEN, editors: ['Ann'] });
+  });
+});
+
+describe('GitLab rooms: auto-commit', () => {
+  const MINUTE = 60_000;
+  const replace = (doc: Y.Doc, path: string, from: string, to: string) => {
+    const text = doc.getMap<Y.Text>('files').get(path)!;
+    const at = text.toString().indexOf(from);
+    text.delete(at, from.length);
+    text.insert(at, to);
+  };
+
+  it('commits on the branch itself after the room was idle: by who edited most, the others as co-authors', async () => {
+    fakeTime();
+    const { gitlab, editAs, changes, sent, meta } = await setup({ autoCommit: 10 });
+    expect(meta().autoCommit).toBe(10);
+    const parent = gitlab.head('main').sha;
+    await editAs('Ann', (doc) => replace(doc, MAIN, 'First', 'Opening'));
+    await editAs('Bob', (doc) => doc.getMap<Y.Text>('files').set('/chapters/new.typ', new Y.Text('new\n')));
+    await vi.advanceTimersByTimeAsync(9 * MINUTE);
+    await editAs('Bob', (doc) => replace(doc, '/chapters/new.typ', 'new', 'newer'));
+    await vi.advanceTimersByTimeAsync(9 * MINUTE);
+    expect(gitlab.head('main').sha).toBe(parent);
+
+    await vi.advanceTimersByTimeAsync(1 * MINUTE);
+    const head = gitlab.head('main');
+    expect(head.parent).toBe(parent);
+    expect(head.message).toBe('Edits by Ann, Bob: chapters/new.typ, main.typ\n\nCo-authored-by: Ann <ann@example.com>');
+    expect(head.author).toEqual({ name: 'Bob', email: 'bob@example.com' });
+    expect(gitlab.text()['/chapters/new.typ']).toBe('newer\n');
+    expect(sent).toEqual([{ type: 'gitlab:saved', sha: head.sha, author: 'Bob', automatic: true }]);
+    expect(changes()).toBeNull();
+  });
+
+  it('names at most three files in the message', async () => {
+    fakeTime();
+    const { gitlab, editAs } = await setup({ autoCommit: 1 });
+    await editAs('Ann', (doc) => {
+      for (const name of ['a', 'b', 'c', 'd', 'e']) doc.getMap<Y.Text>('files').set(`/${name}.typ`, new Y.Text(name));
+    });
+    await vi.advanceTimersByTimeAsync(MINUTE);
+    expect(gitlab.head('main').message).toBe('Edits by Ann: a.typ, b.typ, c.typ and 2 more');
+  });
+
+  it('commits a little while after the last user left, unless someone is back by then', async () => {
+    fakeTime();
+    const { gitlab, connection, editAs } = await setup({ autoCommit: 10 });
+    const parent = gitlab.head('main').sha;
+    const ann = await editAs('Ann', (doc) => replace(doc, MAIN, 'First', 'Opening'));
+    await connection.disconnect();
+    const leaving = ann.disconnect();
+    await vi.advanceTimersByTimeAsync(LEAVE_DELAY - 1000);
+    // back before the delay is over (a reload): no commit
+    const back = await editAs('Ann', () => {});
+    await vi.advanceTimersByTimeAsync(2000);
+    await leaving;
+    expect(gitlab.head('main').sha).toBe(parent);
+
+    const leavingAgain = back.disconnect();
+    await vi.advanceTimersByTimeAsync(LEAVE_DELAY);
+    await leavingAgain;
+    expect(gitlab.head('main').message).toBe('Edits by Ann: main.typ');
+    await vi.advanceTimersByTimeAsync(5000);
+  });
+
+  it('never commits by itself when off', async () => {
+    fakeTime();
+    const { gitlab, connection, editAs, meta } = await setup({ autoCommit: false });
+    expect(meta().autoCommit).toBeNull();
+    const parent = gitlab.head('main').sha;
+    const ann = await editAs('Ann', (doc) => replace(doc, MAIN, 'First', 'Opening'));
+    await vi.advanceTimersByTimeAsync(60 * MINUTE);
+    await connection.disconnect();
+    await ann.disconnect();
+    await vi.advanceTimersByTimeAsync(LEAVE_DELAY);
+    expect(gitlab.head('main').sha).toBe(parent);
+  });
+
+  it('is blocked by a conflict, which stays in the room until a merge succeeds', async () => {
+    fakeTime();
+    const { gitlab, editAs, sent, meta, changes } = await setup({ autoCommit: 10 });
+    await editAs('Ann', (doc) => replace(doc, MAIN, 'Second paragraph.', 'Mine.'));
+    const upstream = gitlab.push('main', { [MAIN]: MAIN_TEXT.replace('Second paragraph.', 'Theirs.') });
+    await vi.advanceTimersByTimeAsync(10 * MINUTE);
+    expect(sent).toEqual([expect.objectContaining({ type: 'gitlab:conflict', sha: upstream })]);
+    expect(meta().conflict).toEqual({ sha: upstream, paths: [MAIN] });
+    expect(gitlab.head('main').sha).toBe(upstream);
+    expect(changes()?.files).toEqual([{ path: MAIN, kind: 'modified' }]);
+
+    // the lines are made to match: the next idle commit merges and commits the rest
+    await editAs('Ann', (doc) => {
+      replace(doc, MAIN, 'Mine.', 'Theirs.');
+      replace(doc, MAIN, 'First', 'Opening');
+    });
+    sent.length = 0;
+    await vi.advanceTimersByTimeAsync(10 * MINUTE);
+    expect(meta().conflict).toBeNull();
+    expect(sent).toEqual([expect.objectContaining({ type: 'gitlab:saved', automatic: true })]);
+    expect(gitlab.text()[MAIN]).toBe(MAIN_TEXT.replace('Second paragraph.', 'Theirs.').replace('First', 'Opening'));
+  });
+
+  it('reads its setting from the environment', () => {
+    expect(parseAutoCommit(undefined)).toBeUndefined();
+    expect(parseAutoCommit(' ')).toBeUndefined();
+    expect(parseAutoCommit('off')).toBe(false);
+    expect(parseAutoCommit('0')).toBe(false);
+    expect(parseAutoCommit('5')).toBe(5);
+    expect(parseAutoCommit('0.5')).toBe(0.5);
+    expect(() => parseAutoCommit('soon')).toThrow(/TYPST_GITLAB_AUTO_COMMIT/);
   });
 });
 

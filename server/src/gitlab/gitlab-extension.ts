@@ -1,6 +1,14 @@
 // GitLabExtension: the Hocuspocus extension behind `gitlab:<project>@<branch>` rooms (load, save version, webhooks).
 // See docs/architecture/server.typ.
-import type { Document, Extension, onLoadDocumentPayload, onRequestPayload, onStatelessPayload } from '@hocuspocus/server';
+import type {
+  beforeUnloadDocumentPayload,
+  Document,
+  Extension,
+  onAwarenessUpdatePayload,
+  onLoadDocumentPayload,
+  onRequestPayload,
+  onStatelessPayload,
+} from '@hocuspocus/server';
 import {
   DEFAULT_COMMIT_MESSAGE,
   GITLAB_ROOM_PREFIX,
@@ -19,6 +27,27 @@ export interface GitLabOptions extends GitLabConfig {
   webhookSecret?: string;
   /** The commit author's email when the saving user's is not known (default `typst-editor@localhost`). */
   authorEmail?: string;
+  /**
+   * Minutes without edits after which a room commits its changes by itself (also 20 s after the last user left);
+   * `false`: never, only "Save to GitLab…". Default 10.
+   */
+  autoCommit?: number | false;
+}
+
+const DEFAULT_AUTHOR_EMAIL = 'typst-editor@localhost';
+const DEFAULT_AUTO_COMMIT = 10;
+
+/**
+ * The `autoCommit` option from its environment variable (`TYPST_GITLAB_AUTO_COMMIT`): `off` (or `false`, `0`), or
+ * minutes (fractions allowed); unset or empty: the default. Throws on anything else.
+ */
+export function parseAutoCommit(value: string | undefined): number | false | undefined {
+  const text = value?.trim().toLowerCase();
+  if (!text) return undefined;
+  if (text === 'off' || text === 'false' || text === '0') return false;
+  const minutes = Number(text);
+  if (!Number.isFinite(minutes) || minutes <= 0) throw new Error(`TYPST_GITLAB_AUTO_COMMIT: "off" or minutes, not "${value}"`);
+  return minutes;
 }
 
 /** The project and branch of a GitLab room name (`gitlab:<project id or path>@<branch>`), or null. */
@@ -54,6 +83,8 @@ export class GitLabExtension implements Extension {
   private readonly blobs = new BlobCache();
   private readonly options: GitLabOptions;
   private readonly authenticate: Authenticate;
+  /** The name each connection's client goes by in the room's awareness (`user.name`), by connection context. */
+  private readonly awarenessNames = new WeakMap<object, string>();
 
   constructor(options: GitLabOptions, authenticate: Authenticate) {
     this.options = options;
@@ -63,13 +94,34 @@ export class GitLabExtension implements Extension {
   async onLoadDocument({ documentName, document }: onLoadDocumentPayload): Promise<void> {
     const name = parseRoomName(documentName);
     if (!name) return;
-    const room = new GitLabRoom(document, new GitLabProject(this.options, name.project), name.branch, this.blobs);
+    const room = new GitLabRoom(document, new GitLabProject(this.options, name.project), name.branch, {
+      blobs: this.blobs,
+      editorOf: (origin) => this.editorOf(origin),
+      authorEmail: this.authorEmail(),
+      autoCommit: this.options.autoCommit === false ? null : (this.options.autoCommit ?? DEFAULT_AUTO_COMMIT),
+      broadcast: (message) => document.broadcastStateless(JSON.stringify(message)),
+    });
     await room.open();
     this.rooms.set(documentName, { room, document, ...name });
   }
 
+  /** The last user left: the room commits by itself first (after a while, unless someone is back). */
+  async beforeUnloadDocument({ documentName, document }: beforeUnloadDocumentPayload): Promise<void> {
+    await this.rooms.get(documentName)?.room.left(() => document.getConnectionsCount() === 0);
+  }
+
   async afterUnloadDocument({ documentName }: { documentName: string }): Promise<void> {
+    this.rooms.get(documentName)?.room.dispose();
     this.rooms.delete(documentName);
+  }
+
+  /** Remembers the name a connection's client publishes in the awareness (`user.name`), the name of its edits. */
+  async onAwarenessUpdate({ connection, added, updated, awareness }: onAwarenessUpdatePayload): Promise<void> {
+    if (!connection?.context) return;
+    for (const id of [...added, ...updated]) {
+      const name = (awareness.getStates().get(id) as { user?: { name?: unknown } } | undefined)?.user?.name;
+      if (typeof name === 'string' && name.trim()) this.awarenessNames.set(connection.context, name.trim());
+    }
   }
 
   async onStateless({ documentName, payload, connection }: onStatelessPayload): Promise<void> {
@@ -119,9 +171,32 @@ export class GitLabExtension implements Extension {
   private author(message: ClientMessage, user: AuthenticatedUser | undefined): Author {
     return {
       name: user?.name ?? message.author?.name ?? 'Typst editor',
-      email: user?.email ?? message.author?.email ?? this.options.authorEmail ?? 'typst-editor@localhost',
+      email: user?.email ?? message.author?.email ?? this.authorEmail(),
     };
   }
+
+  /**
+   * Who made a change, by its Hocuspocus transaction origin: a client's connection, or a server-side direct
+   * connection. The name the connection authenticated with, else the one its client publishes in the awareness;
+   * null when neither is known.
+   */
+  private editorOf(origin: unknown): Author | null {
+    const context = contextOf(origin);
+    const user = context?.user as AuthenticatedUser | undefined;
+    const name = user?.name ?? (context && this.awarenessNames.get(context));
+    return name ? { name, email: user?.email ?? this.authorEmail() } : null;
+  }
+
+  private authorEmail(): string {
+    return this.options.authorEmail ?? DEFAULT_AUTHOR_EMAIL;
+  }
+}
+
+/** The connection context of a Hocuspocus transaction origin (`{ source: 'connection', connection }` or `{ source: 'local', context }`). */
+function contextOf(origin: unknown): Record<string, unknown> | undefined {
+  const value = origin as { source?: unknown; connection?: { context?: unknown }; context?: unknown } | null;
+  const context = value?.source === 'connection' ? value.connection?.context : value?.source === 'local' ? value.context : undefined;
+  return typeof context === 'object' && context !== null ? (context as Record<string, unknown>) : undefined;
 }
 
 function parseMessage(payload: string): ClientMessage | null {
