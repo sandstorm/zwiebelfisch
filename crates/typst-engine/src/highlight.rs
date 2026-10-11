@@ -3,10 +3,11 @@
 
 use std::collections::HashSet;
 
-use typst::foundations::Content;
+use typst::foundations::{Content, StyleChain};
 use typst::introspection::{Location, Tag};
 use typst::layout::{Abs, Frame, FrameItem, Point, Transform};
 use typst::model::{CiteGroup, EnumElem, ListElem, ParElem, TermsElem};
+use typst::pdf::{ArtifactElem, ArtifactKind};
 use typst::syntax::Span;
 use typst::text::TextItem;
 use typst_layout::PagedDocument;
@@ -67,21 +68,13 @@ fn boxes(
     mut whole: impl FnMut(Span) -> bool,
 ) -> Vec<PageBox> {
     let mut boxes = Vec::new();
-    // The elements passing `whole` that are open at the current item; tags
-    // come in document order, and an element may end on a later page.
-    let mut open: HashSet<Location> = HashSet::new();
+    let mut open = OpenElements::default();
     for (page, p) in document.pages().iter().enumerate() {
         walk_items(&p.frame, Transform::identity(), &mut |ts, pos, item| match item {
-            FrameItem::Tag(Tag::Start(elem, _)) => {
-                if !is_grouping(elem) && whole(elem.span()) {
-                    open.extend(elem.location());
-                }
-            }
-            FrameItem::Tag(Tag::End(location, ..)) => {
-                open.remove(location);
-            }
+            FrameItem::Tag(Tag::Start(elem, _)) => open.start(elem, &mut whole),
+            FrameItem::Tag(Tag::End(location, ..)) => open.end(*location),
             FrameItem::Text(text) => {
-                let inside = !open.is_empty();
+                let inside = open.any();
                 let mut run: Option<Rect> = None;
                 for ((glyph, offset), rect) in glyph_rects(ts, pos, text) {
                     if inside || keep(glyph, offset) {
@@ -94,17 +87,62 @@ fn boxes(
                     boxes.push(r.on_page(page));
                 }
             }
-            FrameItem::Shape(shape, span) if graphics && (!open.is_empty() || keep(*span, 0)) => {
+            FrameItem::Shape(shape, span) if graphics && (open.any() || keep(*span, 0)) => {
                 let bbox = shape.bbox(true);
                 boxes.push(Rect::transformed(ts, pos + bbox.min, pos + bbox.max).on_page(page));
             }
-            FrameItem::Image(_, size, span) if graphics && (!open.is_empty() || keep(*span, 0)) => {
+            FrameItem::Image(_, size, span) if graphics && (open.any() || keep(*span, 0)) => {
                 boxes.push(Rect::transformed(ts, pos, pos + size.to_point()).on_page(page));
             }
             _ => {}
         });
     }
     boxes
+}
+
+/// The elements passing `whole` that are open at the current item, as the
+/// tags of the pages come in document order: an element may end on a later
+/// page. A page's header, footer and background never count for an element
+/// opened in its body (one that breaks across the page is open meanwhile):
+/// inside one, only elements opened there count.
+#[derive(Default)]
+struct OpenElements {
+    open: HashSet<Location>,
+    /// Per marginal entered: its location and the elements open outside it.
+    marginals: Vec<(Location, HashSet<Location>)>,
+}
+
+impl OpenElements {
+    fn start(&mut self, elem: &Content, whole: &mut impl FnMut(Span) -> bool) {
+        let Some(location) = elem.location() else { return };
+        if is_marginal(elem) {
+            self.marginals.push((location, std::mem::take(&mut self.open)));
+        } else if !is_grouping(elem) && whole(elem.span()) {
+            self.open.insert(location);
+        }
+    }
+
+    fn end(&mut self, location: Location) {
+        if self.marginals.last().is_some_and(|(marginal, _)| *marginal == location) {
+            self.open = self.marginals.pop().map(|(_, outside)| outside).unwrap_or_default();
+        } else {
+            self.open.remove(&location);
+        }
+    }
+
+    fn any(&self) -> bool {
+        !self.open.is_empty()
+    }
+}
+
+/// Whether `elem` is a page's header, footer or background: Typst lays them
+/// out as artifacts of these kinds (typst-layout's `pages/run.rs`). A page's
+/// foreground is no artifact, so it is not recognized.
+fn is_marginal(elem: &Content) -> bool {
+    elem.to_packed::<ArtifactElem>().is_some_and(|artifact| {
+        let kind = artifact.kind.get(StyleChain::default());
+        matches!(kind, ArtifactKind::Header | ArtifactKind::Footer | ArtifactKind::Background)
+    })
 }
 
 /// Whether realization made `elem` from a run of siblings (a paragraph, a
