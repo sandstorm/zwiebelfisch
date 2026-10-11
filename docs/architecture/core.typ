@@ -71,7 +71,8 @@ The Typst compiler, SVG and PDF export and hit-testing: Rust (`crates/typst-engi
 Typst's font book needs every face's `FontInfo` (family, variant, coverage) before a compile; a face's data only when the layout uses it (`World::font(index)`).
 
 - *Font index*: `mise run build:fonts` copies the 17 default font files and writes `fonts/index.json` (file name → `FontInfo[]`, 16 KB), computed by the engine's own wasm, so it matches the pinned Typst.
-- `addLazyFont({ faces, load })`: the faces go into the book; the first `World::font` call for one of them calls `load()` and keeps the result (null: the faces stay absent, Typst falls back). Synchronous, inside the compile: no second compile, and only the faces used are fetched.
+- `addLazyFont({ name, faces, load })`: the faces go into the book; the first `World::font` call for one of them calls `load()` and keeps the result. Synchronous, inside the compile: no second compile, and only the faces used are fetched.
+- *A file that cannot be loaded* (`load()` returns null, e.g. the download failed): its faces stay absent and Typst falls back to another font. The compile or PDF export that needed it reports a warning without location ("Font file NewCMMath-Book.otf could not be loaded; Typst used another font."), shown like any other diagnostic. Once per file: `load()` is not called again.
 - `addFont(data)`: all faces of a file, data at once (a host's own fonts).
 - The preview's worker loads a file with a synchronous `XMLHttpRequest` (allowed in workers only); a compile waits for it.
 

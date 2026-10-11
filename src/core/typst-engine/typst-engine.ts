@@ -1,7 +1,7 @@
 // The typed TypeScript side of the typst-engine wasm (crates/typst-engine): createEngine and the engine's
 // data types. Entry of core/typst-engine/. See docs/architecture/core.typ.
 import { ProjectPath } from '../paths/paths';
-import type { SourceOffset, SourceRange } from '../typst-document/typst-document';
+import { type SourceOffset, SourceRange } from '../typst-document/typst-document';
 import init, { Engine as WasmEngine, type InitInput } from './wasm/typst_engine';
 
 // Asset URLs (wasm, default fonts and their index) are core/engine-assets, not here: the worker imports this file.
@@ -41,6 +41,7 @@ export interface TypstEngine {
   /**
    * Adds the faces of a font file whose data is loaded only when a compile first uses one of them (Typst's font
    * book needs every face's `FontInfo` up front, the data only for faces it lays out). Throws if `faces` is empty.
+   * If the file cannot be loaded, the compile or export that needed it reports a warning, once per file.
    */
   addLazyFont(font: LazyFont): void;
   setSource(path: string, text: string): void;
@@ -153,11 +154,13 @@ export interface FontInfo {
 
 /** A font file the engine knows the faces of, with its data loaded on first use. */
 export interface LazyFont {
+  /** The file's name (e.g. `NewCMMath-Book.otf`), for the warning when it cannot be loaded. */
+  readonly name: string;
   /** The file's faces, as the font index lists them (`mise run build:fonts`). */
   readonly faces: readonly FontInfo[];
   /**
-   * The file's data, or null if it cannot be loaded (its faces then count as absent, and Typst falls back to other
-   * fonts). Called at most once, synchronously in the middle of a compile.
+   * The file's data, or null if it cannot be loaded (its faces then count as absent, Typst falls back to other
+   * fonts, and that compile reports a warning). Called at most once, synchronously in the middle of a compile.
    */
   load(): Uint8Array | null;
 }
@@ -169,21 +172,34 @@ export interface LazyFont {
 export async function createEngine(wasm: InitInput | Promise<InitInput>): Promise<TypstEngine> {
   await init({ module_or_path: wasm });
   const engine = new WasmEngine();
+  /** Lazy font files that failed to load since the last report: the next compile or export reports them. */
+  let unloadedFonts: string[] = [];
+  const report = <R extends { diagnostics: TypstDiagnostic[] }>(json: string): R => {
+    const result = parseReport<R>(json);
+    result.diagnostics.push(...unloadedFonts.map(fontWarning));
+    unloadedFonts = [];
+    return result;
+  };
   return {
     addFont: (data) => {
       if (engine.addFont(data) === 0) throw new Error('no font found in the given data');
     },
     addLazyFont: (font) => {
-      if (engine.addLazyFont(JSON.stringify(font.faces), font) === 0) throw new Error('a lazy font needs faces');
+      const load = () => {
+        const data = font.load();
+        if (data === null) unloadedFonts.push(font.name);
+        return data;
+      };
+      if (engine.addLazyFont(JSON.stringify(font.faces), { load }) === 0) throw new Error('a lazy font needs faces');
     },
     setSource: (path, text) => assertValidPath(engine.setSource(path, text), path),
     setBinary: (path, data) => assertValidPath(engine.setBinary(path, data), path),
     remove: (path) => engine.remove(path),
-    compile: (main) => parseReport<CompileResult>(engine.compile(main)),
+    compile: (main) => report<CompileResult>(engine.compile(main)),
     exportPdf: (main) => {
       const exported = engine.exportPdf(main);
       try {
-        return { pdf: exported.pdf() ?? null, ...parseReport<Omit<PdfResult, 'pdf'>>(exported.report()) };
+        return { pdf: exported.pdf() ?? null, ...report<Omit<PdfResult, 'pdf'>>(exported.report()) };
       } finally {
         exported.free();
       }
@@ -203,6 +219,17 @@ function parseReport<R extends { diagnostics: TypstDiagnostic[] }>(json: string)
   const report = JSON.parse(json) as R;
   for (const d of report.diagnostics) d.path = d.path === null ? null : ProjectPath.parse(d.path);
   return report;
+}
+
+/** A font file's data was not there when the layout needed it; it is not asked for again. */
+function fontWarning(name: string): TypstDiagnostic {
+  return {
+    severity: 'warning',
+    message: `Font file ${name} could not be loaded; Typst used another font.`,
+    hints: [],
+    path: null,
+    ...SourceRange.of({ from: 0, to: 0 }),
+  };
 }
 
 function assertValidPath(ok: boolean, path: string): void {

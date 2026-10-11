@@ -18,7 +18,7 @@ self.onmessage = async (event: MessageEvent<Init | EngineRequest>) => {
   const request = event.data;
   if (request.type === 'init') {
     session = createEngine(request.wasm).then((engine) => {
-      for (const { url, faces } of request.fonts) engine.addLazyFont({ faces, load: () => loadSync(url) });
+      for (const { name, url, faces } of request.fonts) engine.addLazyFont({ name, faces, load: () => loadSync(url) });
       return { engine, files: new FileReceiver(engine), packages: withPackages(engine) };
     });
     return;

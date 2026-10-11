@@ -14,7 +14,7 @@ const fontFile = (name: string) => new Uint8Array(readFileSync(new URL(name, fon
 async function engineWithFonts(loaded: string[] = []): Promise<TypstEngine> {
   const engine = await createEngine(wasm);
   for (const [name, faces] of Object.entries(fontIndex)) {
-    engine.addLazyFont({ faces, load: () => (loaded.push(name), fontFile(name)) });
+    engine.addLazyFont({ name, faces, load: () => (loaded.push(name), fontFile(name)) });
   }
   return engine;
 }
@@ -248,21 +248,44 @@ describe('TypstEngine lazy fonts', () => {
     expect(new TextDecoder('latin1').decode(pdf!)).toContain('NewCMMath');
   });
 
-  it('falls back to other fonts when a file cannot be loaded, and does not ask again', async () => {
+  it('falls back to other fonts when a file cannot be loaded, warns once, and does not ask again', async () => {
     const engine = await createEngine(wasm);
     let asked = 0;
     const regular = 'LibertinusSerif-Regular.otf';
-    engine.addLazyFont({ faces: fontIndex[regular], load: () => (asked++, null) });
+    engine.addLazyFont({ name: regular, faces: fontIndex[regular], load: () => (asked++, null) });
     engine.addFont(fontFile('DejaVuSansMono.ttf'));
     engine.setSource('/main.typ', 'Hello');
-    expect(engine.compile('/main.typ').pages[0].svg).toContain('<path');
-    engine.compile('/main.typ');
+    const first = engine.compile('/main.typ');
+    expect(first.pages[0].svg).toContain('<path');
+    expect(first.diagnostics).toEqual([
+      {
+        severity: 'warning',
+        message: 'Font file LibertinusSerif-Regular.otf could not be loaded; Typst used another font.',
+        hints: [],
+        path: null,
+        from: 0,
+        to: 0,
+      },
+    ]);
+    expect(engine.compile('/main.typ').diagnostics).toEqual([]);
+    expect(engine.exportPdf('/main.typ').diagnostics).toEqual([]);
     expect(asked).toBe(1);
+  });
+
+  it('warns about a font file that cannot be loaded in the PDF export that needed it', async () => {
+    const engine = await createEngine(wasm);
+    const math = 'NewCMMath-Book.otf';
+    engine.addLazyFont({ name: math, faces: fontIndex[math], load: () => null });
+    engine.addFont(fontFile('LibertinusSerif-Regular.otf'));
+    engine.setSource('/main.typ', '$ x^2 $');
+    expect(engine.exportPdf('/main.typ').diagnostics.map((d) => d.message)).toContain(
+      'Font file NewCMMath-Book.otf could not be loaded; Typst used another font.',
+    );
   });
 
   it('rejects a lazy font without faces', async () => {
     const engine = await createEngine(wasm);
-    expect(() => engine.addLazyFont({ faces: [], load: () => null })).toThrow(/faces/);
+    expect(() => engine.addLazyFont({ name: 'empty.otf', faces: [], load: () => null })).toThrow(/faces/);
   });
 });
 

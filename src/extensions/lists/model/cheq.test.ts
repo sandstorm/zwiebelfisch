@@ -19,7 +19,7 @@ const fontIndex: Record<string, FontInfo[]> = JSON.parse(readFileSync(new URL('i
 async function engineWithFonts(): Promise<TypstEngine> {
   const engine = await createEngine(wasm);
   for (const [name, faces] of Object.entries(fontIndex)) {
-    engine.addLazyFont({ faces, load: () => new Uint8Array(readFileSync(new URL(name, fontDir))) });
+    engine.addLazyFont({ name, faces, load: () => new Uint8Array(readFileSync(new URL(name, fontDir))) });
   }
   return engine;
 }
