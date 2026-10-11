@@ -581,6 +581,14 @@ workbench.registerMenuItem('explorer/context', {
 
 ## Migrating from the earlier API
 
+- `editor.destroy()` → `editor.dispose()`; `exportPdf({ options: { … } })` → `exportPdf({ … })`.
+- Extensions: the `Workbench` members moved to VS Code's namespaces on the context: `registerCommand` /
+  `executeCommand` / `registerKeybinding` → `commands`; messages, `showInputBox`, `showQuickPick`,
+  `registerStatusBarItem`, `registerCustomEditorProvider`, file decorations, `activeTextEditor`,
+  `onDidChangeTextEditorSelection` → `window`; `registerSourceControl` → `scm` (its `state` is `{ busy }`: tell
+  outcomes with `window.show…Message`); document links → `languages`; `applyChange` → `workspace.applyEdit`;
+  `remember(name)` → `globalState` / `workspaceState`. Extensions are factories (`markup()`).
+
 - Per-feature options are settings now (section 6): `pdfDownload: false` → `settings: { 'pdfExport.download':
   false }`, `fileList` → `'files.panel'`, `followCursor` → `'previewSync.followCursor'`, `theme` →
   `'workbench.theme'`. On `<typst-editor>`, the attributes `file-list`, `pdf-download` and `theme` are one
