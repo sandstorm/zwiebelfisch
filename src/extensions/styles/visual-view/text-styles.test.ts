@@ -2,7 +2,7 @@
 // Tests for the custom styles' entries of the text style menu (visual-view.ts), through the Visual view.
 import { describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
-import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { calculateImportChange } from '../../../core/typst-syntax/typst-syntax';
 import type { ProjectStyles } from '../model/style-index';
 import type { Style } from '../model/discover';
@@ -55,14 +55,14 @@ describe('custom styles in the text style menu', () => {
 
   it('a paragraph style wraps the paragraph and is imported once; Normal text unwraps it', () => {
     const { doc, view, menu, choose } = setup('One\n\nTwo\n');
-    view.reveal(1, 1);
+    view.reveal(SourceRange.of({ from: 1, to: 1 }));
     choose('paragraph:note');
     expect(doc.text).toBe('#import "styles.typ": note\n\n#note[One]\n\nTwo\n');
     expect(menu.value).toBe('paragraph:note');
-    view.reveal(doc.text.indexOf('Two'), doc.text.indexOf('Two'));
+    view.reveal(SourceRange.of({ from: doc.text.indexOf('Two'), to: doc.text.indexOf('Two') }));
     choose('paragraph:note');
     expect(doc.text).toBe('#import "styles.typ": note\n\n#note[One]\n\n#note[Two]\n');
-    view.reveal(doc.text.indexOf('One'), doc.text.indexOf('One'));
+    view.reveal(SourceRange.of({ from: doc.text.indexOf('One'), to: doc.text.indexOf('One') }));
     choose('paragraph');
     expect(doc.text).toBe('#import "styles.typ": note\n\nOne\n\n#note[Two]\n');
     expect(menu.value).toBe('paragraph');
@@ -71,7 +71,7 @@ describe('custom styles in the text style menu', () => {
   it('a text style toggles on the selection, marked ✓ where it is on', () => {
     const { doc, view, menu, choose } = setup('#import "styles.typ": note\n\nA term here\n');
     const from = doc.text.indexOf('term');
-    view.reveal(from, from + 4);
+    view.reveal(SourceRange.of({ from: from, to: from + 4 }));
     choose('text:key');
     expect(doc.text).toBe('#import "styles.typ": note, key\n\nA #key[term] here\n');
     const option = [...menu.options].find((o) => o.value === 'text:key')!;
@@ -82,7 +82,7 @@ describe('custom styles in the text style menu', () => {
 
   it('a text style needs a selection', () => {
     const { view, menu } = setup('A term\n');
-    view.reveal(2, 2);
+    view.reveal(SourceRange.of({ from: 2, to: 2 }));
     expect([...menu.options].find((o) => o.value === 'text:key')!.disabled).toBe(true);
   });
 

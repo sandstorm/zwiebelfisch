@@ -4,6 +4,7 @@ import type { Node } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
 import { schema } from '../../../testing/testing';
 import { posToSource, print, project as projectWith, sourceToPos } from '../../../hosts/projection/projection';
+import { SourceOffset } from '../../../core/typst-document/typst-document';
 
 const project = (source: string) => projectWith(source, schema);
 
@@ -47,7 +48,7 @@ function expectPreciseMap(doc: Node): void {
   });
   let previous = -1;
   for (let offset = 0; offset <= source.length; offset++) {
-    const pos = sourceToPos(doc, offset);
+    const pos = sourceToPos(doc, SourceOffset.of(offset));
     expect(pos).toBeGreaterThanOrEqual(previous);
     expect(sourceToPos(doc, posToSource(doc, pos))).toBe(pos);
     previous = pos;

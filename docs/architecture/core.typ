@@ -18,6 +18,7 @@ new TypstDocument(text)
 .onDidChange: Event<{ contentChanges, origin }>
 ```
 
+- *Source offsets:* `SourceOffset` (a branded number, UTF-16 code units into the text) and `SourceRange` (`{ from, to }` of them); `TextChange` is a `SourceRange` plus `insert`. Made with `SourceOffset.of(n)` / `SourceRange.of({ from, to })` where offsets come in (string indices, Lezer nodes, CodeMirror, Yjs, the engine). Never a ProseMirror position: only the projection's `sourceToPos` / `posToSource` convert (@architecture-projection-position-map).
 - *Echo suppression:* a view passes itself as `origin` and ignores events with its own origin.
 - *Ordered delivery:* a change made by a listener while others are being told is queued, so every listener sees changes in the order they were made.
 - `minimalChange(before, after)`: the one change between common prefix and suffix, so cursors and undo history survive a whole new text.
@@ -62,7 +63,7 @@ The Typst compiler, SVG and PDF export and hit-testing: Rust (`crates/typst-engi
 - `typst-engine`: `createEngine(wasm, fonts)`; `setSource`, `setBinary`, `remove`; `compile`, `exportPdf`; `jumpFromClick`, `jumpFromCursor`, `boxesForRanges`.
 - `engine-assets`: the wasm and font URLs for the main thread, apart so the worker bundle does not copy them.
 - `typst-packages`: `withPackages(engine)` compiles, downloads the missing `@preview` packages, compiles again.
-- Conventions: UTF-16 offsets, 0-based pages, pt from the page's top-left, project or package paths (`@preview/name:0.1.0/lib.typ`).
+- Conventions: UTF-16 offsets (`SourceOffset`), 0-based pages, pt from the page's top-left, project or package paths (`@preview/name:0.1.0/lib.typ`).
 - A diagnostic's path is parsed where the wasm's report is read: a `ProjectPath`, or `null` without location or in a package file.
 
 == Typst syntax <architecture-core-syntax>

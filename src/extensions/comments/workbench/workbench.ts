@@ -1,7 +1,7 @@
 // What the comments extension contributes to the frame: the command that adds a note, its key binding and the
 // Source view's "Comment" (a tab bar menu entry). See docs/guide/features.typ.
 import { Disposable } from '../../../core/disposable/disposable';
-import type { TypstDocument } from '../../../core/typst-document/typst-document';
+import type { SourceOffset, TypstDocument } from '../../../core/typst-document/typst-document';
 import type { Commands } from '../../../hosts/commands/commands';
 import type { TextEditor, Window } from '../../../hosts/window/window';
 import type { Workbench } from '../../../hosts/workbench/workbench';
@@ -13,7 +13,7 @@ export const ADD_COMMENT = 'comments.addComment';
 /** The notes' cards in the Visual views: the notes gutter. */
 export interface NoteCards {
   /** Focuses the card of the note whose source holds `offset` in `document`'s Visual view; false if there is none. */
-  editNote(document: TypstDocument, offset: number): boolean;
+  editNote(document: TypstDocument, offset: SourceOffset): boolean;
 }
 
 /** What "Comment" uses of the extension API: where to register, and the editor the user works in. */
@@ -58,5 +58,5 @@ function addComment(editor: TextEditor, cards: NoteCards): void {
   const added = calculateMarginNoteChanges(document.text, editor.selection);
   if (!added) return;
   document.change(added.changes, ADD_COMMENT);
-  if (editor.mode !== 'visual' || !cards.editNote(document, added.note)) editor.revealRange(added.note, added.note);
+  if (editor.mode !== 'visual' || !cards.editNote(document, added.note)) editor.revealRange({ from: added.note, to: added.note });
 }

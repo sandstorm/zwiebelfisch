@@ -8,6 +8,7 @@ import type { PlacedPresence } from './presence/presence';
 import { CollaborationLink } from './collaboration-link';
 import { Project } from '../../core/project/project';
 import { ProjectPath } from '../../core/paths/paths';
+import { SourceRange } from '../../core/typst-document/typst-document';
 
 const path = ProjectPath.of;
 
@@ -24,7 +25,7 @@ function setup(onPresence?: (presences: readonly PlacedPresence[]) => void) {
   area.append(input);
   document.body.append(area);
   const focused = () => area.contains(document.activeElement);
-  const link = new CollaborationLink({ doc: ydoc, awareness }, { project, user: { name: 'Ann' } }, { current: () => ({ path: MAIN, selection: { from: 6, to: 11 } }), focused, onPresence });
+  const link = new CollaborationLink({ doc: ydoc, awareness }, { project, user: { name: 'Ann' } }, { current: () => ({ path: MAIN, selection: SourceRange.of({ from: 6, to: 11 }) }), focused, onPresence });
   cleanup.push(() => link.dispose(), () => awareness.destroy(), () => area.remove());
   return { ydoc, awareness, link, input, project };
 }

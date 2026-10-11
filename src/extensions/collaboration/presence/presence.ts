@@ -3,7 +3,7 @@
 // the lazily loaded chunk (model/). See ../collaboration.ts.
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
-import type { TypstDocument } from '../../../core/typst-document/typst-document';
+import type { SourceOffset, TypstDocument } from '../../../core/typst-document/typst-document';
 import type { User } from '../../../core/user/user';
 
 /** Who another user is, as the views show them: with the CSS color of their caret, selection and markers. */
@@ -11,7 +11,7 @@ export type PresenceUser = Required<User>;
 
 /**
  * Another user's place in a text: their caret (`head`) and selection (`anchor`..`head`, empty for a plain caret),
- * in source offsets (UTF-16). `id` tells users apart (two may share a name).
+ * as offsets in the text an editor shows (a file's, or a raw box's code). `id` tells users apart (two may share a name).
  */
 export interface Presence {
   id: string;
@@ -20,9 +20,11 @@ export interface Presence {
   head: number;
 }
 
-/** A presence together with the file it is in. */
+/** A presence in a file: its offsets are in the file's text. */
 export interface PlacedPresence extends Presence {
   path: ProjectPath;
+  anchor: SourceOffset;
+  head: SourceOffset;
 }
 
 /** Where the other users are, as the contributions that draw them read it. */

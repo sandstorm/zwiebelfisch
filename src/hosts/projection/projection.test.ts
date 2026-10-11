@@ -6,6 +6,7 @@ import { EditorState } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 import { children, hasOnlyArguments, withHash } from '../../core/typst-syntax/typst-syntax';
 import { createSchema, posToSource, print, project as projectWith, sourceToPos, starterKitPart, type DocumentNodeSpec, type TypstMarkSpec } from './projection';
+import { SourceOffset } from '../../core/typst-document/typst-document';
 
 /** `*x*` as a bold mark: hidden syntax around visible text. */
 const STRONG: TypstMarkSpec = {
@@ -98,8 +99,8 @@ describe('projection framework', () => {
     const source = 'An *important* point';
     const doc = projectWith(source, withSpecs);
     const bold = after(doc, 'important') - 'important'.length;
-    expect(sourceToPos(doc, source.indexOf('*'))).toBe(bold);
+    expect(sourceToPos(doc, SourceOffset.of(source.indexOf('*')))).toBe(bold);
     expect(posToSource(doc, bold)).toBe(source.indexOf('important'));
-    expect(sourceToPos(doc, source.lastIndexOf('*'))).toBe(after(doc, 'important'));
+    expect(sourceToPos(doc, SourceOffset.of(source.lastIndexOf('*')))).toBe(after(doc, 'important'));
   });
 });

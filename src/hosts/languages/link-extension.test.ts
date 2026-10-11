@@ -5,6 +5,7 @@ import { EditorView, runScopeHandlers } from '@codemirror/view';
 import { ProjectPath } from '../../core/paths/paths';
 import type { DocumentLink } from './languages';
 import { linkExtension, linkInfo, type LinkActions } from './link-extension';
+import { SourceRange } from '../../core/typst-document/typst-document';
 
 const path = ProjectPath.of;
 
@@ -17,7 +18,7 @@ function setup(text = TEXT) {
     provideDocumentLinks: ({ text }) =>
       ['template.typ', 'missing.typ'].flatMap((name) => {
         const from = text.indexOf(name);
-        return from < 0 ? [] : [{ range: { from, to: from + name.length } }];
+        return from < 0 ? [] : [{ range: SourceRange.of({ from, to: from + name.length }) }];
       }),
     resolveDocumentLink: (link) =>
       text.slice(link.range.from, link.range.to) === 'template.typ'
@@ -80,7 +81,7 @@ describe('linkExtension', () => {
 });
 
 describe('linkInfo (the hover)', () => {
-  const link: DocumentLink = { range: { from: 0, to: 1 } };
+  const link: DocumentLink = { range: SourceRange.of({ from: 0, to: 1 }) };
 
   const actions = () => ({ open: vi.fn(), executeCommand: vi.fn(async (): Promise<unknown> => undefined) });
 

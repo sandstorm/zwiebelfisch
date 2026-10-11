@@ -47,7 +47,7 @@ The framework knows only paragraphs, text, line breaks, escapes, shorthands and 
 
 == Position map <architecture-projection-position-map>
 
-`sourceToPos(doc, offset, bias?)` and `posToSource(doc, pos, bias?)` map between source offsets and document positions, character-exact, for any document.
+`sourceToPos(doc, offset: SourceOffset, bias?)` → ProseMirror position and `posToSource(doc, pos, bias?)` → `SourceOffset` map between source offsets and document positions, character-exact, for any document. The only conversion between the two: positions stay ProseMirror's plain numbers, offsets are typed.
 
 - Printing records, for each stretch of output, the document range showing it: text one to one, atoms as a whole, hidden syntax to the next visible position in its block.
 - Cached per document (documents are immutable).

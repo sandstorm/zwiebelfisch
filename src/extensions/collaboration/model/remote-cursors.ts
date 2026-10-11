@@ -3,6 +3,7 @@
 import type { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 import { ProjectPath } from '../../../core/paths/paths';
+import { SourceOffset, type SourceRange } from '../../../core/typst-document/typst-document';
 import type { User } from '../../../core/user/user';
 import type { PlacedPresence } from '../presence/presence';
 
@@ -51,7 +52,7 @@ export class RemoteCursors {
   }
 
   /** Publishes where the local user is: a source range in `path`, or nowhere (null). */
-  setLocal(path: ProjectPath | null, range?: { from: number; to: number }): void {
+  setLocal(path: ProjectPath | null, range?: SourceRange): void {
     const text = path && range ? this.options.text(path) : undefined;
     if (!path || !range || !text) {
       this.awareness.setLocalStateField('cursor', null);
@@ -108,7 +109,7 @@ export class RemoteCursors {
   }
 
   /** Where another client's cursor is: null when its file is no shared one (any more), or its positions are gone. */
-  private cursorPlace(cursor: CursorState | null | undefined): { path: ProjectPath; anchor: number; head: number } | null {
+  private cursorPlace(cursor: CursorState | null | undefined): { path: ProjectPath; anchor: SourceOffset; head: SourceOffset } | null {
     const path = cursor ? ProjectPath.parse(cursor.path) : null;
     const text = path ? this.options.text(path) : undefined;
     if (!cursor || !path || !text) return null;
@@ -117,9 +118,9 @@ export class RemoteCursors {
     return anchor === null || head === null ? null : { path, anchor, head };
   }
 
-  private resolve(json: unknown, text: Y.Text): number | null {
+  private resolve(json: unknown, text: Y.Text): SourceOffset | null {
     const absolute = Y.createAbsolutePositionFromRelativePosition(Y.createRelativePositionFromJSON(json), text.doc!);
-    return absolute?.type === text ? absolute.index : null;
+    return absolute?.type === text ? SourceOffset.of(absolute.index) : null;
   }
 }
 

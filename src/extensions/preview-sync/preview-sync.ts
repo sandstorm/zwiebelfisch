@@ -37,7 +37,7 @@ export function previewSync(): TypstExtension {
       const revealSelection = () => {
         const editor = window.activeTextEditor;
         const path = editor && project.pathOf(editor.document);
-        if (path) preview.reveal(path, editor.selection.from, editor.selection.to);
+        if (path) preview.reveal(path, editor.selection);
       };
       const onChange = (on: boolean) => {
         following = on;

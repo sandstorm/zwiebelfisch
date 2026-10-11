@@ -11,12 +11,13 @@ import { EventEmitter } from '../core/event-emitter/event-emitter';
 import type { TypstExtension } from '../hosts/workbench/workbench';
 import type { SourceControl, SourceControlState } from '../hosts/scm/scm';
 import { createTypstEditor, type TypstEditorOptions } from './typst-editor';
+import { SourceOffset, type SourceRange } from '../core/typst-document/typst-document';
 
 const exportPdf = vi.fn(async () => ({ pdf: new Uint8Array([37, 80, 68, 70]), diagnostics: [], missingPackages: [] }));
 interface FakePreview {
   toolbarItems: PreviewToolbarItem[];
   pdfOptions: PdfExportOption[];
-  revealed: [string, number, number][];
+  revealed: [string, SourceRange][];
   compiled(diagnostics: Diagnostic[]): void;
   click(click: PageClick): void;
 }
@@ -214,7 +215,7 @@ describe('the built-in extensions', () => {
 
   it('counts the diagnostics in the status bar and underlines them in the Source view', async () => {
     const { host, preview } = setup({ source: '= Hi' });
-    preview.compiled([{ severity: 'error', message: 'oops', hints: [], path: ProjectPath.of('/main.typ'), from: 0, to: 1 }]);
+    preview.compiled([{ severity: 'error', message: 'oops', hints: [], path: ProjectPath.of('/main.typ'), from: SourceOffset.of(0), to: SourceOffset.of(1) }]);
     const status = host.querySelector('.typst-editor__status-bar [data-testid=typst-status]')!;
     expect(status.textContent).toContain('1 error');
     await vi.waitFor(() => expect(host.querySelector('.cm-lintRange-error')).not.toBeNull());
@@ -223,9 +224,9 @@ describe('the built-in extensions', () => {
   it('marks the diagnostics in the Visual view, message and hints as tooltip, also in views made later', () => {
     const { host, editor, preview } = setup({ mode: 'visual', source: 'Hello world.\n', files: { '/a.typ': '#foo\n\nText.\n' } });
     preview.compiled([
-      { severity: 'error', message: 'unknown variable: foo', hints: ['did you mean bar?'], path: ProjectPath.of('/main.typ'), from: 6, to: 11 },
+      { severity: 'error', message: 'unknown variable: foo', hints: ['did you mean bar?'], path: ProjectPath.of('/main.typ'), from: SourceOffset.of(6), to: SourceOffset.of(11) },
       // in raw code (a block atom), of a file whose views do not exist yet
-      { severity: 'warning', message: 'unused', hints: [], path: ProjectPath.of('/a.typ'), from: 1, to: 4 },
+      { severity: 'warning', message: 'unused', hints: [], path: ProjectPath.of('/a.typ'), from: SourceOffset.of(1), to: SourceOffset.of(4) },
     ]);
     const mark = host.querySelector<HTMLElement>('.ProseMirror .typst-diagnostic')!;
     expect(mark.textContent).toBe('world');
@@ -253,7 +254,7 @@ describe('the built-in extensions', () => {
     editor.settings = { 'previewSync.followCursor': true };
     source().focus();
     source().dispatch({ selection: { anchor: 3 } });
-    expect(preview.revealed.at(-1)).toEqual(['/main.typ', 3, 3]);
+    expect(preview.revealed.at(-1)).toEqual(['/main.typ', { from: 3, to: 3 }]);
   });
 
   it('offers "Save to <label>…" in the tab bar for a registered source control: asks for the message, commits, says while busy', async () => {
@@ -319,8 +320,8 @@ describe('the built-in extensions', () => {
     expect(preview.revealed).toEqual([]);
     source().focus();
     source().dispatch({ selection: { anchor: 3 } });
-    expect(preview.revealed.at(-1)).toEqual(['/main.typ', 3, 3]);
-    preview.click({ path: ProjectPath.of('/main.typ'), from: 6, to: 10 });
+    expect(preview.revealed.at(-1)).toEqual(['/main.typ', { from: 3, to: 3 }]);
+    preview.click({ path: ProjectPath.of('/main.typ'), from: SourceOffset.of(6), to: SourceOffset.of(10) });
     expect(source().state.selection.main).toMatchObject({ from: 6, to: 10 });
   });
 

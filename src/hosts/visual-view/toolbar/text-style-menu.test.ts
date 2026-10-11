@@ -2,7 +2,7 @@
 // Tests for TextStyleMenu (text-style-menu.ts), through the Visual view, with providers and a mark defined here.
 import { describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
-import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import { starterKitPart, type TypstMarkSpec } from '../../projection/projection';
 import { VisualView, VisualViewHost, type TextStyle, type TextStyleProvider } from '../visual-view';
@@ -77,7 +77,7 @@ describe('the text style menu', () => {
   it('applies a toggle on the selection, marks it ✓ where on, and tells the entry', () => {
     const applied = vi.fn();
     const { doc, view, menu, choose, option } = setup('Hello world\n', [{ provideTextStyles: () => [{ ...BOLD, applied }] }]);
-    view.reveal(0, 'Hello'.length);
+    view.reveal(SourceRange.of({ from: 0, to: 'Hello'.length }));
     choose('bold');
     expect(doc.text).toBe('*Hello* world\n');
     expect(applied).toHaveBeenCalled();
@@ -88,7 +88,7 @@ describe('the text style menu', () => {
 
   it("shows the selection's block style, and Normal text takes it off", () => {
     const { doc, view, menu, choose } = setup('*Hello*\n', [{ provideTextStyles: () => [LOUD] }]);
-    view.reveal(1, 3);
+    view.reveal(SourceRange.of({ from: 1, to: 3 }));
     expect(menu!.value).toBe('loud');
     choose('paragraph');
     expect(doc.text).toBe('Hello\n');

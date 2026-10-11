@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Tests for source-view.ts: other users' places drawn in the Source views.
 import { describe, expect, it } from 'vitest';
-import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { SourceOffset, TypstDocument } from '../../../core/typst-document/typst-document';
 import { SourceViewHost } from '../../../hosts/source-view/source-view';
 import { ProjectPath } from '../../../core/paths/paths';
 import { Presences, type Presence } from '../presence/presence';
@@ -18,7 +18,7 @@ function withPresence(text: string) {
   const parent = document.createElement('div');
   document.body.append(parent);
   host.createView(parent, doc);
-  const view = { setPresence: (here: readonly Presence[]) => presences.set(here.map((presence) => ({ ...presence, path: MAIN }))) };
+  const view = { setPresence: (here: readonly Presence[]) => presences.set(here.map((presence) => ({ ...presence, path: MAIN, anchor: SourceOffset.of(presence.anchor), head: SourceOffset.of(presence.head) }))) };
   return { doc, view, parent, presences };
 }
 
@@ -50,7 +50,7 @@ describe('presence in the Source view', () => {
     const { doc, view, parent } = withPresence('Some bold text\n');
     view.setPresence([{ ...ann, anchor: 5, head: 9 }]);
     expect(marked(parent, '.typst-remote-selection[data-user="Ann"]')).toEqual(['bold']);
-    doc.change([{ from: 0, to: 0, insert: 'Really. ' }], 'visual');
+    doc.change([{ from: SourceOffset.of(0), to: SourceOffset.of(0), insert: 'Really. ' }], 'visual');
     expect(marked(parent, '.typst-remote-selection')).toEqual(['bold']);
     expect(carets(parent)).toEqual(['Really. Some bold']);
     view.setPresence([]);
@@ -60,7 +60,7 @@ describe('presence in the Source view', () => {
   it('draws the places known when the view is made, and only those in its file', () => {
     const doc = new TypstDocument('Some bold text\n');
     const presences = new Presences((document) => (document === doc ? MAIN : undefined));
-    presences.set([{ ...ann, anchor: 5, head: 9, path: MAIN }, { ...ann, id: '2', anchor: 0, head: 4, path: ProjectPath.of('/a.typ') }]);
+    presences.set([{ ...ann, anchor: SourceOffset.of(5), head: SourceOffset.of(9), path: MAIN }, { ...ann, id: '2', anchor: SourceOffset.of(0), head: SourceOffset.of(4), path: ProjectPath.of('/a.typ') }]);
     const host = new SourceViewHost();
     host.registerCodeMirrorExtension(sourcePresence(presences));
     const parent = document.body.appendChild(document.createElement('div'));

@@ -1,9 +1,9 @@
 // Tests for model.ts: the diagnostics of each document, and how the views word one.
 import { describe, expect, it } from 'vitest';
-import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { DiagnosticCollection, describeDiagnostic } from './model';
 
-const error = { severity: 'error' as const, message: 'unknown variable: foo', hints: ['try bar'], from: 3, to: 6 };
+const error = { severity: 'error' as const, message: 'unknown variable: foo', hints: ['try bar'], ...SourceRange.of({ from: 3, to: 6 }) };
 
 describe('DiagnosticCollection', () => {
   it('keeps the diagnostics per document and tells which one changed', () => {

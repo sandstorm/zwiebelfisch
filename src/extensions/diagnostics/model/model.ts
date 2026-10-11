@@ -1,15 +1,13 @@
 // The diagnostics' read model: each document's compile diagnostics (DiagnosticCollection), how every view words
 // one, and the status summary (diagnostics-summary.ts). No DOM, no editor library. See ../diagnostics.ts.
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
-import type { TypstDocument } from '../../../core/typst-document/typst-document';
+import type { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 
-/** A compiler diagnostic located in a document's text (UTF-16 offsets). */
-export interface SourceDiagnostic {
+/** A compiler diagnostic located in a document's text. */
+export interface SourceDiagnostic extends SourceRange {
   severity: 'error' | 'warning';
   message: string;
   hints: string[];
-  from: number;
-  to: number;
 }
 
 /** The diagnostics of each document, for every view of it (VS Code's DiagnosticCollection). */

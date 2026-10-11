@@ -1,5 +1,5 @@
 // Y.Text deltas as TextChanges, for a TypstDocument bound to a shared Y.Text. See text-binding.ts.
-import type { TextChange } from '../../../core/typst-document/typst-document';
+import { SourceRange, type TextChange } from '../../../core/typst-document/typst-document';
 
 /** One step of a Y.Text event delta (Quill delta format; text only). */
 export interface DeltaOp {
@@ -16,9 +16,9 @@ export interface DeltaOp {
  * source and count as nothing.
  */
 export function deltaToChanges(delta: readonly DeltaOp[]): TextChange[] {
-  const changes: TextChange[] = [];
+  const changes: { from: number; to: number; insert: string }[] = [];
   let position = 0;
-  const at = (from: number): TextChange => {
+  const at = (from: number) => {
     const last = changes[changes.length - 1];
     if (last && last.to === from) return last;
     const change = { from, to: from, insert: '' };
@@ -33,5 +33,5 @@ export function deltaToChanges(delta: readonly DeltaOp[]): TextChange[] {
     }
     if (typeof op.insert === 'string') at(position).insert += op.insert;
   }
-  return changes;
+  return changes.map(({ from, to, insert }) => ({ ...SourceRange.of({ from, to }), insert }));
 }

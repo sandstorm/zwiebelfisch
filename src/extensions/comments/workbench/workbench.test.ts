@@ -2,7 +2,7 @@
 // Tests for workbench.ts: the command comments.addComment.
 import { describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../../core/disposable/disposable';
-import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import type { TextEditor } from '../../../hosts/window/window';
 import { VisualView, VisualViewHost } from '../../../hosts/visual-view/visual-view';
 import { localDate } from '../model/note-thread';
@@ -32,7 +32,7 @@ function setup(editor: TextEditor | null, cards: NoteCards = { editNote: () => f
 }
 
 function sourceEditor(document: TypstDocument, selection: { from: number; to: number }): TextEditor {
-  return { document, mode: 'source', selection, revealRange: vi.fn() };
+  return { document, mode: 'source', selection: SourceRange.of(selection), revealRange: vi.fn() };
 }
 
 describe('comments.addComment', () => {
@@ -42,7 +42,7 @@ describe('comments.addComment', () => {
     setup(editor).comment();
     expect(doc.text).toBe(`${IMPORT}Hello #margin-note[world][]\n`);
     const body = doc.text.lastIndexOf('[]') + 1;
-    expect(editor.revealRange).toHaveBeenCalledWith(body, body);
+    expect(editor.revealRange).toHaveBeenCalledWith({ from: body, to: body });
   });
 
   it('opens the new note\'s card in the Visual view: the first message is signed with name and date', () => {
@@ -52,14 +52,14 @@ describe('comments.addComment', () => {
     const notes = notesGutter({ user: { name: 'Anna' } });
     const contributions = VisualViewHost.from([marginNotes({ comment: () => comment() }), notes]);
     const view = new VisualView(root.appendChild(document.createElement('div')), doc, contributions);
-    view.reveal(6, 11);
+    view.reveal(SourceRange.of({ from: 6, to: 11 }));
     const editor: TextEditor = {
       document: doc,
       mode: 'visual',
       get selection() {
         return view.selection();
       },
-      revealRange: (from, to) => view.reveal(from, to),
+      revealRange: (range) => view.reveal(range),
     };
     // as the widget wires it: the notes gutter opens the new note's card
     comment = setup(editor, notes).comment;

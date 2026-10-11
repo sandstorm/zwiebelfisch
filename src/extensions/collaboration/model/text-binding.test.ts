@@ -1,7 +1,7 @@
 // Tests for text-binding.ts.
 import { describe, expect, it, vi } from 'vitest';
 import * as Y from 'yjs';
-import { TypstDocument, type TextChange } from '../../../core/typst-document/typst-document';
+import { SourceOffset, SourceRange, type TextChange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { REMOTE_ORIGIN } from '../remote-origin';
 import { TextBinding } from './text-binding';
 
@@ -41,7 +41,7 @@ describe('TextBinding', () => {
     a.onDidChange(listener);
     const transactions = vi.fn();
     ya.on('afterTransaction', transactions);
-    const changes = [{ from: 0, to: 5, insert: 'Bye' }, { from: 11, to: 11, insert: '!' }];
+    const changes = [{ ...SourceRange.of({ from: 0, to: 5 }), insert: 'Bye' }, { ...SourceRange.of({ from: 11, to: 11 }), insert: '!' }];
     a.change(changes, 'visual');
     expect(ya.getText('t').toString()).toBe('Bye world!');
     expect(transactions).toHaveBeenCalledTimes(1);
@@ -54,7 +54,7 @@ describe('TextBinding', () => {
     const before = b.text;
     const listener = vi.fn();
     b.onDidChange(listener);
-    a.change([{ from: 0, to: 5, insert: 'Bye' }, { from: 11, to: 11, insert: '!' }], 'visual');
+    a.change([{ from: SourceOffset.of(0), to: SourceOffset.of(5), insert: 'Bye' }, { from: SourceOffset.of(11), to: SourceOffset.of(11), insert: '!' }], 'visual');
     expect(b.text).toBe('Bye world!');
     expect(listener).toHaveBeenCalledTimes(1);
     const [{ contentChanges, origin }] = listener.mock.calls[0];
@@ -69,8 +69,8 @@ describe('TextBinding', () => {
     Y.applyUpdate(yb, Y.encodeStateAsUpdate(ya));
     const a = bound(ya.getText('t'));
     const b = bound(yb.getText('t'));
-    a.change([{ from: 0, to: 3, insert: 'ONE' }], 'a');
-    b.change([{ from: 8, to: 13, insert: 'THREE' }], 'b');
+    a.change([{ from: SourceOffset.of(0), to: SourceOffset.of(3), insert: 'ONE' }], 'a');
+    b.change([{ from: SourceOffset.of(8), to: SourceOffset.of(13), insert: 'THREE' }], 'b');
     Y.applyUpdate(yb, Y.encodeStateAsUpdate(ya));
     Y.applyUpdate(ya, Y.encodeStateAsUpdate(yb));
     expect(a.text).toBe('ONE two THREE');
@@ -86,7 +86,7 @@ describe('TextBinding', () => {
     new TextBinding(ydoc.getText('t'), doc);
     expect(doc.text).toBe('shared text');
     expect(listener).toHaveBeenCalledWith({ contentChanges: [{ from: 0, to: 5, insert: 'shared' }], origin: REMOTE_ORIGIN });
-    doc.change([{ from: 0, to: 0, insert: '> ' }], 'test');
+    doc.change([{ from: SourceOffset.of(0), to: SourceOffset.of(0), insert: '> ' }], 'test');
     expect(ydoc.getText('t').toString()).toBe('> shared text');
   });
 
@@ -96,7 +96,7 @@ describe('TextBinding', () => {
     const doc = new TypstDocument('');
     new TextBinding(ydoc.getText('t'), doc).dispose();
     ydoc.getText('t').insert(0, 'x');
-    doc.change([{ from: 3, to: 3, insert: 'd' }], 'test');
+    doc.change([{ from: SourceOffset.of(3), to: SourceOffset.of(3), insert: 'd' }], 'test');
     expect(doc.text).toBe('abcd');
     expect(ydoc.getText('t').toString()).toBe('xabc');
   });
@@ -106,11 +106,11 @@ describe('TextBinding', () => {
     const doc = new TypstDocument('abc');
     // a listener that runs before the binding and answers a change with one of its own
     doc.onDidChange(({ origin }) => {
-      if (origin === 'typing') doc.change([{ from: 0, to: 0, insert: '>' }], 'normalise');
+      if (origin === 'typing') doc.change([{ from: SourceOffset.of(0), to: SourceOffset.of(0), insert: '>' }], 'normalise');
     });
     ydoc.getText('t').insert(0, 'abc');
     new TextBinding(ydoc.getText('t'), doc);
-    doc.change([{ from: 3, to: 3, insert: '!' }], 'typing');
+    doc.change([{ from: SourceOffset.of(3), to: SourceOffset.of(3), insert: '!' }], 'typing');
     expect(doc.text).toBe('>abc!');
     expect(ydoc.getText('t').toString()).toBe('>abc!');
   });

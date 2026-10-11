@@ -5,6 +5,7 @@ import { Project } from '../../../core/project/project';
 import { connect } from './in-process';
 import { SharedProject } from './shared-project';
 import { ProjectPath } from '../../../core/paths/paths';
+import { SourceOffset } from '../../../core/typst-document/typst-document';
 
 const path = ProjectPath.of;
 
@@ -41,7 +42,7 @@ describe('SharedProject', () => {
     expect(b.project.document(MAIN)!.text).toBe(a.project.document(MAIN)!.text);
     a.project.document(MAIN)!.setText('Hello world', 'test');
     expect(b.project.document(MAIN)!.text).toBe('Hello world');
-    b.project.document(MAIN)!.change([{ from: 0, to: 0, insert: '> ' }], 'test');
+    b.project.document(MAIN)!.change([{ from: SourceOffset.of(0), to: SourceOffset.of(0), insert: '> ' }], 'test');
     expect(a.project.document(MAIN)!.text).toBe('> Hello world');
   });
 

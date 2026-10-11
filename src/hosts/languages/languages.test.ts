@@ -1,6 +1,7 @@
 // Tests for languages.ts (LanguagesHost): merging the providers' links, resolving them through their provider.
 import { describe, expect, it } from 'vitest';
 import { ProjectPath } from '../../core/paths/paths';
+import { SourceRange } from '../../core/typst-document/typst-document';
 import { type DocumentLink, type DocumentLinkProvider, LanguagesHost } from './languages';
 
 const document = { path: ProjectPath.of('/main.typ'), text: 'aaaa bbbb cccc' };
@@ -8,7 +9,7 @@ const document = { path: ProjectPath.of('/main.typ'), text: 'aaaa bbbb cccc' };
 /** Links at the given ranges, each with `tooltip: name`. */
 function provider(name: string, ranges: [number, number][], resolve?: DocumentLinkProvider['resolveDocumentLink']): DocumentLinkProvider {
   return {
-    provideDocumentLinks: () => ranges.map(([from, to]) => ({ range: { from, to }, tooltip: name })),
+    provideDocumentLinks: () => ranges.map(([from, to]) => ({ range: SourceRange.of({ from, to }), tooltip: name })),
     resolveDocumentLink: resolve,
   };
 }

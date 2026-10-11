@@ -6,8 +6,8 @@ The word-processor view: a Tiptap 3 editor over the projection (@architecture-pr
 
 ```ts
 new VisualView(parent, document, contributions: VisualViewHost)
-.reveal(from, to)              // select what shows source range from..to
-.selection() → { from, to }    // the source range the selection shows
+.reveal(range: SourceRange)    // select what shows the source range
+.selection() → SourceRange     // the source range the selection shows
 .onDidChangeSelection: Event<void>
 .dispose()
 ```

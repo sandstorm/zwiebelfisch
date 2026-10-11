@@ -2,7 +2,7 @@
 // Tests for toolbar.ts, with the host's own items (undo, redo) and an item defined here. The built-in extensions'
 // items are tested together in typst-editor/typst-editor.toolbar.test.ts.
 import { describe, expect, it } from 'vitest';
-import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import { starterKitPart, type TypstMarkSpec } from '../../projection/projection';
 import { svg, VisualView, VisualViewHost, type VisualViewContribution } from '../visual-view';
@@ -50,7 +50,7 @@ describe('Visual view toolbar', () => {
 
   it("shows a contributed item's state and runs its command", () => {
     const { doc, view, button } = setup('Hello world\n');
-    view.reveal(0, 'Hello world'.length);
+    view.reveal(SourceRange.of({ from: 0, to: 'Hello world'.length }));
     button('Bold').click();
     expect(doc.text).toBe('*Hello world*\n');
     expect(button('Bold').getAttribute('aria-pressed')).toBe('true');
@@ -59,7 +59,7 @@ describe('Visual view toolbar', () => {
   it('undo and redo revert and reapply the last edit', () => {
     const { doc, view, button } = setup('Hello world\n');
     expect(button('Undo').disabled).toBe(true);
-    view.reveal(0, 'Hello world'.length);
+    view.reveal(SourceRange.of({ from: 0, to: 'Hello world'.length }));
     button('Bold').click();
     expect(button('Undo').disabled).toBe(false);
     button('Undo').click();

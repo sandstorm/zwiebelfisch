@@ -1,12 +1,11 @@
 // summarizeDiagnostics: compile diagnostics counted and sorted per file. See model.ts.
 import type { ProjectPath } from '../../../core/paths/paths';
+import type { SourceRange } from '../../../core/typst-document/typst-document';
 import type { Diagnostic } from '../../../core/typst-engine/typst-engine';
 
 /** A range in a project file. */
-export interface DiagnosticTarget {
+export interface DiagnosticTarget extends SourceRange {
   path: ProjectPath;
-  from: number;
-  to: number;
 }
 
 export interface DiagnosticsSummary {

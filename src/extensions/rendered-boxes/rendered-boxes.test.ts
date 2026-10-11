@@ -7,6 +7,7 @@ import { Project } from '../../core/project/project';
 import { VisualViewHost } from '../../hosts/visual-view/visual-view';
 import type { ExtensionContext } from '../../hosts/workbench/workbench';
 import { renderedBoxes } from './rendered-boxes';
+import { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
 
 const path = ProjectPath.of;
 
@@ -17,12 +18,12 @@ describe('renderedBoxes', () => {
     const visualView = new VisualViewHost();
     renderedBoxes().activate({ project, preview, visualView, subscriptions: [] } as unknown as ExtensionContext);
     const document = project.document(path('/chapters/one.typ'))!;
-    const renderer = visualView.contributed().boxRenderers[0]({ document, selection: () => ({ from: 0, to: 0 }), sourceToPos: () => 0, posToSource: () => 0, isBox: () => false })!;
+    const renderer = visualView.contributed().boxRenderers[0]({ document, selection: () => SourceRange.of({ from: 0, to: 0 }), sourceToPos: () => 0, posToSource: () => SourceOffset.of(0), isBox: () => false })!;
     const box = { attrs: { src: '$x$' }, isInline: false } as unknown as Node;
-    await renderer.render(box, 0);
-    expect(preview.snippet).toHaveBeenCalledWith(path('/chapters/one.typ'), 0, 3, '$x$');
+    await renderer.render(box, SourceOffset.of(0));
+    expect(preview.snippet).toHaveBeenCalledWith(path('/chapters/one.typ'), { from: 0, to: 3 }, '$x$');
     project.apply({ kind: 'rename', from: path('/chapters/one.typ'), path: path('/chapters/first.typ') });
-    await renderer.render(box, 0);
-    expect(preview.snippet).toHaveBeenLastCalledWith(path('/chapters/first.typ'), 0, 3, '$x$');
+    await renderer.render(box, SourceOffset.of(0));
+    expect(preview.snippet).toHaveBeenLastCalledWith(path('/chapters/first.typ'), { from: 0, to: 3 }, '$x$');
   });
 });

@@ -7,7 +7,7 @@ import { Extension, type Editor } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { Decoration, EditorView, NodeView, NodeViewConstructor } from '@tiptap/pm/view';
-import { minimalChange } from '../../../core/typst-document/typst-document';
+import { minimalChange, type SourceOffset } from '../../../core/typst-document/typst-document';
 import { setBoxDecorations, type BoxAction, type BoxRenderer, type BoxTools, type BoxToolsHost, type TypstNodeSpec, type VisualViewContext } from '../visual-view';
 import { posToSource } from '../../projection/projection';
 import { BoxActionBar } from './box-actions';
@@ -194,7 +194,7 @@ class RawBox implements NodeView {
   }
 
   /** The node and where its source starts, while the box is in the document. */
-  private source(): { node: Node; from: number } | null {
+  private source(): { node: Node; from: SourceOffset } | null {
     const pos = this.getPos();
     return pos === undefined ? null : { node: this.node, from: posToSource(this.editor.state.doc, pos) };
   }

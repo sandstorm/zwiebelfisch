@@ -2,7 +2,7 @@
 // Tests for image-path-link.ts: an image box's path as the document link on it.
 import { describe, expect, it, vi } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
-import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import type { DocumentLink, TextDocument } from '../../../hosts/languages/languages';
 import { createVisualView } from '../../../testing/testing';
 
@@ -12,7 +12,7 @@ const path = ProjectPath.of;
 function setup(text: string) {
   const links = {
     provideDocumentLinks: ({ text: src }: TextDocument): DocumentLink[] => [
-      src.includes('logo.png') ? { range: { from: 8, to: 16 }, target: path('/logo.png') } : { range: { from: 8, to: 16 }, tooltip: 'gone.png is not in the project' },
+      src.includes('logo.png') ? { range: SourceRange.of({ from: 8, to: 16 }), target: path('/logo.png') } : { range: SourceRange.of({ from: 8, to: 16 }), tooltip: 'gone.png is not in the project' },
     ],
     open: vi.fn(),
   };

@@ -3,7 +3,8 @@
 // renderer drawing image boxes.
 import { describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
-import { TypstDocument } from '../../../core/typst-document/typst-document';
+import type { ProjectPath } from '../../../core/paths/paths';
+import { type SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import type { PreviewContributions } from '../../../hosts/preview/preview';
 import { inlinePictureSize } from '../model/model';
 import { createVisualView } from '../../../testing/testing';
@@ -17,7 +18,7 @@ type Preview = Pick<PreviewContributions, 'snippet' | 'onDidRender'>;
 function fakeRenderer(overrides: Partial<Preview> = {}) {
   const rendered = new EventEmitter<void>();
   const renderer = {
-    snippet: vi.fn(async (_path: string, _from: number, _to: number, text: string) => (text.startsWith('$') ? { svg: SVG, width: 30, height: 12, textHeight: 12, padding: 0 } : null)),
+    snippet: vi.fn(async (_path: ProjectPath, _range: SourceRange, text: string) => (text.startsWith('$') ? { svg: SVG, width: 30, height: 12, textHeight: 12, padding: 0 } : null)),
     onDidRender: rendered.event,
     ...overrides,
   };
@@ -45,7 +46,7 @@ describe('rendered raw boxes', () => {
     const { parent } = await setup(MATH_DOC, renderer);
     const box = parent.querySelector('.typst-visual__raw-block')!;
     const { picture, code } = parts(box);
-    expect(renderer.snippet).toHaveBeenCalledWith('/main.typ', MATH_DOC.indexOf('$'), MATH_DOC.indexOf('$') + 7, '$ x^2 $');
+    expect(renderer.snippet).toHaveBeenCalledWith('/main.typ', { from: MATH_DOC.indexOf('$'), to: MATH_DOC.indexOf('$') + 7 }, '$ x^2 $');
     expect(picture?.hidden).toBe(false);
     expect(decodeURIComponent(picture!.src)).toContain(SVG);
     expect(picture!.style.width).toBe('30pt');

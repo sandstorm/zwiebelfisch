@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Tests for visual-view.ts (and box-carets.ts): other users' places drawn in a Visual view and in its boxes.
 import { describe, expect, it } from 'vitest';
-import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { SourceOffset, SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { ProjectPath } from '../../../core/paths/paths';
 import { createVisualView } from '../../../testing/testing';
 import { Presences, type Presence } from '../presence/presence';
@@ -20,8 +20,9 @@ function setup(text: string) {
   const presences = new Presences((document) => (document === doc ? MAIN : undefined));
   const visual = createVisualView(parent, doc, { contributions: [visualPresence(presences, () => [doc])] });
   const view = {
-    reveal: (from: number, to: number) => visual.reveal(from, to),
-    setPresence: (here: readonly Presence[]) => presences.set(here.map((presence) => ({ ...presence, path: MAIN }))),
+    reveal: (from: number, to: number) => visual.reveal(SourceRange.of({ from, to })),
+    setPresence: (here: readonly Presence[]) =>
+      presences.set(here.map((presence) => ({ ...presence, path: MAIN, anchor: SourceOffset.of(presence.anchor), head: SourceOffset.of(presence.head) }))),
   };
   return { doc, view, parent };
 }

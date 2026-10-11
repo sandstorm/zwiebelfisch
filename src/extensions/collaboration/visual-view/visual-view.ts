@@ -5,10 +5,10 @@ import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { Event } from '../../../core/event-emitter/event-emitter';
-import type { TypstDocument } from '../../../core/typst-document/typst-document';
+import type { SourceOffset, TypstDocument } from '../../../core/typst-document/typst-document';
 import type { Highlight, HighlightProvider, VisualViewContext, VisualViewContribution } from '../../../hosts/visual-view/visual-view';
 import { textColorOn } from '../../../core/color-scheme/color-scheme';
-import type { Presence, PresenceSource, PresenceUser } from '../presence/presence';
+import type { PlacedPresence, PresenceSource, PresenceUser } from '../presence/presence';
 import { caretElement } from '../source-view/source-view';
 import { boxCaretsSpec, boxPresence, type BoxCaret } from './box-carets';
 
@@ -39,10 +39,11 @@ function selections(presences: PresenceSource, documents: () => readonly TypstDo
   return { provideHighlights: (document) => presences.presencesIn(document).flatMap(selection), onDidChangeHighlights };
 }
 
-function selection({ user, anchor, head }: Presence): Highlight[] {
+function selection({ user, anchor, head }: PlacedPresence): Highlight[] {
   if (anchor === head) return [];
   const attributes = { 'data-user': user.name, style: `--typst-remote-color: ${user.color}` };
-  return [{ from: Math.min(anchor, head), to: Math.max(anchor, head), className: 'typst-remote-selection', attributes }];
+  const [from, to] = anchor < head ? [anchor, head] : [head, anchor];
+  return [{ from, to, className: 'typst-remote-selection', attributes }];
 }
 
 const key = new PluginKey<DecorationSet>('typst-presence');
@@ -79,7 +80,7 @@ function remoteCarets(view: VisualViewContext, presences: PresenceSource): Exten
   });
 }
 
-function caretDecorations(view: VisualViewContext, doc: Node, presences: readonly Presence[]): DecorationSet {
+function caretDecorations(view: VisualViewContext, doc: Node, presences: readonly PlacedPresence[]): DecorationSet {
   const boxes = new Map<number, { node: Node; carets: BoxCaret[] }>();
   const decorations: Decoration[] = [];
   for (const { id, user, head } of presences) {
@@ -123,8 +124,8 @@ function boxOutline(pos: number, node: Node, carets: BoxCaret[]): Decoration {
  * up to its line end, an inline box strictly inside (a caret right before or
  * after it is drawn as a caret).
  */
-function boxAt(view: VisualViewContext, doc: Node, offset: number): { pos: number; node: Node; start: number } | null {
-  let found: { pos: number; node: Node; start: number } | null = null;
+function boxAt(view: VisualViewContext, doc: Node, offset: SourceOffset): { pos: number; node: Node; start: SourceOffset } | null {
+  let found: { pos: number; node: Node; start: SourceOffset } | null = null;
   doc.descendants((node, pos) => {
     if (found) return false;
     if (!view.isBox(node)) return true;

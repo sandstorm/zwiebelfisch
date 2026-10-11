@@ -5,6 +5,7 @@ import { findNotes, followNotes, noteAtOffset, noteAtSelection, removeNote, setN
 import { print } from '../../../../hosts/projection/projection';
 import { after, project as projectWith, schemaWith } from '../../../../testing/testing';
 import { marginNotes } from '../margin-notes';
+import { SourceOffset } from '../../../../core/typst-document/typst-document';
 
 const schema = schemaWith({ contributions: [marginNotes({ comment: () => {} })] });
 const project = (source: string) => projectWith(source, schema);
@@ -89,10 +90,10 @@ describe('finding a note', () => {
   it('noteAtOffset: the note whose source holds the offset', () => {
     const doc = project(SOURCE);
     const notes = keyed(doc);
-    expect(noteAtOffset(notes, doc, SOURCE.indexOf('first'))?.key).toBe('k0');
-    expect(noteAtOffset(notes, doc, SOURCE.indexOf('second'))?.key).toBe('k1');
-    expect(noteAtOffset(notes, doc, SOURCE.indexOf('inner'))?.key).toBe('k3');
-    expect(noteAtOffset(notes, doc, SOURCE.indexOf('outer'))?.key).toBe('k2');
-    expect(noteAtOffset(notes, doc, 0)).toBeUndefined();
+    expect(noteAtOffset(notes, doc, SourceOffset.of(SOURCE.indexOf('first')))?.key).toBe('k0');
+    expect(noteAtOffset(notes, doc, SourceOffset.of(SOURCE.indexOf('second')))?.key).toBe('k1');
+    expect(noteAtOffset(notes, doc, SourceOffset.of(SOURCE.indexOf('inner')))?.key).toBe('k3');
+    expect(noteAtOffset(notes, doc, SourceOffset.of(SOURCE.indexOf('outer')))?.key).toBe('k2');
+    expect(noteAtOffset(notes, doc, SourceOffset.of(0))).toBeUndefined();
   });
 });

@@ -1,6 +1,7 @@
 // The typed TypeScript side of the typst-engine wasm (crates/typst-engine): createEngine and the engine's
 // data types. Entry of core/typst-engine/. See docs/architecture/core.typ.
 import { ProjectPath } from '../paths/paths';
+import type { SourceOffset, SourceRange } from '../typst-document/typst-document';
 import init, { Engine as WasmEngine, type InitInput } from './wasm/typst_engine';
 
 // Asset URLs (wasm, default fonts) are core/engine-assets, not here: the worker imports this file. Packages
@@ -30,7 +31,7 @@ export interface Engine {
   /** What is at a point of the last compiled document, or null for empty space. */
   jumpFromClick(page: number, x: number, y: number): Jump | null;
   /** Where the text at `offset` appears in the last compiled document. */
-  jumpFromCursor(path: string, offset: number): Position[];
+  jumpFromCursor(path: string, offset: SourceOffset): Position[];
   /**
    * Where the given source ranges of `path` are drawn in the last compiled
    * document: one box per run of glyphs (per line and page) whose character
@@ -38,7 +39,7 @@ export interface Engine {
    * image whose syntax node starts in one. Empty ranges and code that draws
    * nothing yield nothing.
    */
-  boxesForRanges(path: string, ranges: readonly { from: number; to: number }[]): Box[];
+  boxesForRanges(path: string, ranges: readonly SourceRange[]): Box[];
 }
 
 export interface CompileResult {
@@ -78,14 +79,13 @@ export interface Page {
   svg: string;
 }
 
-export interface Diagnostic {
+/** A compile error or warning, at `from..to` of its file. */
+export interface Diagnostic extends SourceRange {
   severity: 'error' | 'warning';
   message: string;
   hints: string[];
   /** The project file it is in; null when it has no location, or is in a package file. */
   path: ProjectPath | null;
-  from: number;
-  to: number;
 }
 
 export interface Position {
@@ -108,9 +108,9 @@ export type Jump =
   | {
       kind: 'source';
       path: string;
-      offset: number;
-      from: number;
-      to: number;
+      offset: SourceOffset;
+      from: SourceOffset;
+      to: SourceOffset;
       /** Where the clicked source node is drawn: one box per line/page; empty for non-text. */
       boxes: Box[];
     }

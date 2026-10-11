@@ -5,7 +5,7 @@ import { undo } from '@codemirror/commands';
 import { EditorState, StateEffect, StateField, Transaction, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, type DecorationSet } from '@codemirror/view';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
-import { TypstDocument } from '../../core/typst-document/typst-document';
+import { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import { fromDocument, SourceViewHost, type SourceViewContext } from './source-view';
 
 function setup(text: string, host = new SourceViewHost()) {
@@ -22,7 +22,7 @@ describe('SourceView history', () => {
     const { doc, editor } = setup('one two\n');
     const origins: unknown[] = [];
     editor().dispatch({ effects: StateEffect.appendConfig.of(EditorState.transactionExtender.of((tr) => (origins.push(tr.annotation(fromDocument)?.origin), null))) });
-    doc.change([{ from: 4, to: 7, insert: 'TWO' }], 'visual');
+    doc.change([{ from: SourceOffset.of(4), to: SourceOffset.of(7), insert: 'TWO' }], 'visual');
     expect(origins).toEqual(['visual']);
     undo(editor());
     expect(doc.text).toBe('one two\n');
@@ -35,7 +35,7 @@ describe('SourceView history', () => {
     );
     const { doc, editor } = setup('one two\n', host);
     editor().dispatch({ changes: { from: 0, to: 3, insert: 'ONE' }, userEvent: 'input.type' });
-    doc.change([{ from: 4, to: 7, insert: 'TWO' }], 'other user');
+    doc.change([{ from: SourceOffset.of(4), to: SourceOffset.of(7), insert: 'TWO' }], 'other user');
     undo(editor());
     expect(doc.text).toBe('one TWO\n');
   });
@@ -47,10 +47,10 @@ const marked = (parent: HTMLElement, selector: string) =>
 describe('SourceView reveal', () => {
   it('selects and highlights the range; the highlight follows edits', () => {
     const { doc, view, parent } = setup('Some bold text\n');
-    view.reveal(5, 9);
+    view.reveal(SourceRange.of({ from: 5, to: 9 }));
     expect(view.selection()).toEqual({ from: 5, to: 9 });
     expect(marked(parent, '.typst-source__jump')).toEqual(['bold']);
-    doc.change([{ from: 0, to: 0, insert: 'Really. ' }], 'visual');
+    doc.change([{ from: SourceOffset.of(0), to: SourceOffset.of(0), insert: 'Really. ' }], 'visual');
     expect(marked(parent, '.typst-source__jump')).toEqual(['bold']);
   });
 });

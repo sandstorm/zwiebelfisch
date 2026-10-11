@@ -6,6 +6,7 @@ import type { PlacedPresence } from '../presence/presence';
 import { connect, connectAwareness } from './in-process';
 import { RemoteCursors } from './remote-cursors';
 import { ProjectPath } from '../../../core/paths/paths';
+import { SourceRange } from '../../../core/typst-document/typst-document';
 
 const path = ProjectPath.of;
 
@@ -40,7 +41,7 @@ const settle = () => new Promise<void>((resolve) => queueMicrotask(resolve));
 describe('RemoteCursors', () => {
   it("reports another user's selection and caret, with name and color, and their file", async () => {
     const { a, here } = room('Hello brave world');
-    a.cursors.setLocal(PATH, { from: 6, to: 11 });
+    a.cursors.setLocal(PATH, SourceRange.of({ from: 6, to: 11 }));
     await settle();
     expect(here()).toEqual([
       { id: String(a.awareness.clientID), user: { name: 'Ann', color: '#c00' }, anchor: 6, head: 11, path: PATH },
@@ -49,7 +50,7 @@ describe('RemoteCursors', () => {
 
   it('keeps cursors on their characters while the text changes', async () => {
     const { a, b, here } = room('Hello world');
-    a.cursors.setLocal(PATH, { from: 6, to: 6 });
+    a.cursors.setLocal(PATH, SourceRange.of({ from: 6, to: 6 }));
     b.ydoc.getMap<Y.Text>('files').get(PATH)!.insert(0, '>> ');
     await settle();
     expect(here()).toEqual([expect.objectContaining({ anchor: 9, head: 9 })]);
@@ -57,14 +58,14 @@ describe('RemoteCursors', () => {
 
   it('shows a caret on an empty line', async () => {
     const { a, here } = room('Hello\n\nworld');
-    a.cursors.setLocal(PATH, { from: 6, to: 6 });
+    a.cursors.setLocal(PATH, SourceRange.of({ from: 6, to: 6 }));
     await settle();
     expect(here()).toEqual([expect.objectContaining({ anchor: 6, head: 6 })]);
   });
 
   it('reports nobody for oneself, and nobody once they leave', async () => {
     const { a, here } = room('Hello world');
-    a.cursors.setLocal(PATH, { from: 1, to: 1 });
+    a.cursors.setLocal(PATH, SourceRange.of({ from: 1, to: 1 }));
     await settle();
     expect(here()).toHaveLength(1);
     expect(a.everywhere.at(-1) ?? []).toEqual([]);
@@ -75,7 +76,7 @@ describe('RemoteCursors', () => {
 
   it('reports everyone, in any file, once per change', async () => {
     const { a, b } = room('Hello world');
-    a.cursors.setLocal(OTHER, { from: 8, to: 8 });
+    a.cursors.setLocal(OTHER, SourceRange.of({ from: 8, to: 8 }));
     await settle();
     expect(b.everywhere.at(-1)).toEqual([expect.objectContaining({ path: OTHER, head: 8, user: { name: 'Ann', color: '#c00' } })]);
     const reports = b.everywhere.length;

@@ -12,18 +12,15 @@
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { PathReference, ProjectPath } from '../paths/paths';
-import type { TextChange } from '../typst-document/typst-document';
+import { SourceOffset, SourceRange, type TextChange } from '../typst-document/typst-document';
 
 /** What names the path: `#import`, `#include`, or the function whose first argument it is. */
 export type PathCall = 'import' | 'include' | 'image' | 'read' | 'json' | 'csv' | 'yaml' | 'toml' | 'xml' | 'cbor' | 'bibliography';
 
-/** A file path written in Typst source, as written (relative to that file, or `/` from the project root). */
-export interface PathInSource {
+/** A file path written in Typst source, as written (relative to that file, or `/` from the project root); `from..to` is its text (inside the quotes). */
+export interface PathInSource extends SourceRange {
   /** The path as Typst reads it (escapes decoded). */
   path: PathReference;
-  /** The range of the path's text (inside the quotes). */
-  from: number;
-  to: number;
   call: PathCall;
 }
 
@@ -69,7 +66,7 @@ export interface ImportRequest {
   /** The text of a new import, added at the top when no import of the module can take the name (with its newline). */
   create(): string;
   /** Where the name is used: only imports ending before it count (an import binds names only after itself). Default: the end. */
-  use?: number;
+  use?: SourceOffset;
 }
 
 /**
@@ -150,9 +147,9 @@ export function hasOnlyArguments(call: SyntaxNode): boolean {
 }
 
 /** The source range of `node` with the `#` right before it, if it has one (`#table(..)` in markup; not `table(..)` as an argument). */
-export function withHash(node: SyntaxNode): { from: number; to: number } {
+export function withHash(node: SyntaxNode): SourceRange {
   const hash = node.prevSibling;
-  return { from: hash?.name === 'Hash' && hash.to === node.from ? hash.from : node.from, to: node.to };
+  return SourceRange.of({ from: hash?.name === 'Hash' && hash.to === node.from ? hash.from : node.from, to: node.to });
 }
 
 /** Whether `node` is a content block `[..]` with its closing bracket. */
@@ -255,7 +252,7 @@ function firstPositional(args: SyntaxNode | null): SyntaxNode | null {
 function pathIn(string: SyntaxNode, text: string, call: PathCall): PathInSource {
   const from = string.from + 1;
   const to = Math.max(from, text[string.to - 1] === '"' && string.to - 1 > string.from ? string.to - 1 : string.to);
-  return { path: PathReference.of(unescape(text.slice(from, to))), from, to, call };
+  return { path: PathReference.of(unescape(text.slice(from, to))), ...SourceRange.of({ from, to }), call };
 }
 
 /** Not packages, not empty. */
@@ -296,5 +293,5 @@ function addItem(items: SyntaxNode, name: string): TextChange {
 }
 
 function insert(at: number, text: string): TextChange {
-  return { from: at, to: at, insert: text };
+  return { from: SourceOffset.of(at), to: SourceOffset.of(at), insert: text };
 }

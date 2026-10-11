@@ -15,6 +15,7 @@ import { Presences } from './presence/presence';
 import { perUserUndo, sourcePresence } from './source-view/source-view';
 import { visualPresence } from './visual-view/visual-view';
 import { ProjectPath } from '../../core/paths/paths';
+import { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
 
 const path = ProjectPath.of;
 
@@ -118,7 +119,7 @@ describe('collaboration', () => {
     const b = await user('Bob', {}, a);
     const from = START.indexOf('First');
     const IMPORT = '#import "@preview/drafting:0.2.2": margin-note\n';
-    a.document.change([{ from: 0, to: 0, insert: IMPORT }, { from, to: from + 5, insert: '#margin-note[First][]' }], 'test');
+    a.document.change([{ from: SourceOffset.of(0), to: SourceOffset.of(0), insert: IMPORT }, { from: SourceOffset.of(from), to: SourceOffset.of(from + 5), insert: '#margin-note[First][]' }], 'test');
     typeSource(a, a.document.text.indexOf('][]') + 2, 'Rename? Ann');
     typeSource(b, b.document.text.indexOf('Second'), 'The ');
     typeVisual(b, 'Second', ' More.');
@@ -153,7 +154,7 @@ describe('collaboration', () => {
     const a = await user('Ann', { [MAIN]: START });
     const b = await user('Bob', {}, a);
     const from = START.indexOf('paragraph');
-    a.collaboration.setCursor(MAIN, { from, to: from + 9 });
+    a.collaboration.setCursor(MAIN, SourceRange.of({ from: from, to: from + 9 }));
     await settle();
     for (const parent of [b.visualParent, b.sourceParent]) {
       const selection = [...parent.querySelectorAll('.typst-remote-selection')].map((e) => e.textContent).join('');

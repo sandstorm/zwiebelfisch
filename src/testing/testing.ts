@@ -12,7 +12,7 @@ import { Disposable } from '../core/disposable/disposable';
 import { EventEmitter } from '../core/event-emitter/event-emitter';
 import { ProjectPath } from '../core/paths/paths';
 import type { FileChange, FileContent, Project } from '../core/project/project';
-import type { TypstDocument } from '../core/typst-document/typst-document';
+import { SourceOffset, type TypstDocument } from '../core/typst-document/typst-document';
 import { alignment } from '../extensions/alignment/alignment';
 import { figures } from '../extensions/figures/figures';
 import { headings } from '../extensions/headings/headings';
@@ -255,7 +255,7 @@ export function expectPreciseMap(doc: Node): void {
   }
   let previous = -1;
   for (let offset = 0; offset <= source.length; offset++) {
-    const pos = sourceToPos(doc, offset);
+    const pos = sourceToPos(doc, SourceOffset.of(offset));
     expect(pos, `monotonic at offset ${offset}`).toBeGreaterThanOrEqual(previous);
     expect(pos).toBeLessThanOrEqual(doc.content.size);
     expect(sourceToPos(doc, posToSource(doc, pos)), `round trip of offset ${offset}`).toBe(pos);

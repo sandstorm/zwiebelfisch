@@ -3,6 +3,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createEngine, type Engine } from '../../../core/typst-engine/typst-engine';
 import { withPackages } from '../../../core/typst-packages/typst-packages';
+import { SourceRange } from '../../../core/typst-document/typst-document';
 
 /**
  * The Visual view's task lists rely on the Universe package cheq (pinned at
@@ -31,7 +32,7 @@ describe('cheq checklists', () => {
     expect(diagnostics).toEqual([]);
     expect(pages).toHaveLength(1);
     const from = source.indexOf('[ ]');
-    return engine.boxesForRanges('/main.typ', [{ from, to: from + 3 }]);
+    return engine.boxesForRanges('/main.typ', [SourceRange.of({ from: from, to: from + 3 })]);
   }
 
   it('compiles task items under the show rule without the brackets as text', async () => {

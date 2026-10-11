@@ -4,7 +4,7 @@ import type { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
 import { PathReference, ProjectPath } from '../../../core/paths/paths';
 import type { FileChange, Project } from '../../../core/project/project';
-import type { TextChange, TypstDocument } from '../../../core/typst-document/typst-document';
+import type { SourceOffset, TextChange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { calculateImportChange } from '../../../core/typst-syntax/typst-syntax';
 import { scanStyles, type FoundStyle, type Style } from './discover';
 import { STYLES_FILE } from './new-style';
@@ -19,7 +19,7 @@ export interface ProjectStyles {
    * The change to `document` that imports `style` for a use at offset `use`; null when nothing is needed (declared
    * in that file, imported already).
    */
-  calculateImportChange(document: TypstDocument, style: Style, use: number): TextChange | null;
+  calculateImportChange(document: TypstDocument, style: Style, use: SourceOffset): TextChange | null;
 }
 
 /**
@@ -45,7 +45,7 @@ export class StyleIndex implements ProjectStyles {
   }
 
   /** Imports are written relative to the document's (current) path, never into the file declaring the style. */
-  calculateImportChange(document: TypstDocument, style: Style, use: number): TextChange | null {
+  calculateImportChange(document: TypstDocument, style: Style, use: SourceOffset): TextChange | null {
     const path = this.project.pathOf(document);
     if (!path || path === style.path) return null;
     const module = ProjectPath.referenceTo(path, style.path);

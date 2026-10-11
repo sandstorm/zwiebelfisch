@@ -3,12 +3,12 @@
 import { forEachDiagnostic, type Diagnostic as LintDiagnostic } from '@codemirror/lint';
 import { EditorView } from '@codemirror/view';
 import { describe, expect, it } from 'vitest';
-import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { SourceOffset, SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { SourceViewHost } from '../../../hosts/source-view/source-view';
 import { DiagnosticCollection } from '../model/model';
 import { lint } from './source-view';
 
-const base = { severity: 'error' as const, message: 'unknown variable: unknown', hints: [], from: 1, to: 8 };
+const base = { severity: 'error' as const, message: 'unknown variable: unknown', hints: [], ...SourceRange.of({ from: 1, to: 8 }) };
 
 describe('lint in the Source views', () => {
   function setup(diagnostics: DiagnosticCollection, document: TypstDocument) {
@@ -55,7 +55,7 @@ describe('lint in the Source views', () => {
     const host = new SourceViewHost();
     host.registerCodeMirrorExtension(lint(diagnostics));
     host.createView(parent, document);
-    diagnostics.set(document, [{ ...base, severity: 'warning', hints: ['did you mean `known`?', 'or this'], from: 5, to: 30 }]);
+    diagnostics.set(document, [{ ...base, severity: 'warning', hints: ['did you mean `known`?', 'or this'], from: SourceOffset.of(5), to: SourceOffset.of(30) }]);
     expect(shown(parent)).toEqual([
       expect.objectContaining({ from: 5, to: 9, severity: 'warning', message: 'unknown variable: unknown\nhint: did you mean `known`?\nhint: or this' }),
     ]);

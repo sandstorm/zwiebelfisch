@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Tests for add-label.ts and the draft tag (label-tags.ts), through the toolbar's Insert ▾ → "Add label".
 import { describe, expect, it } from 'vitest';
-import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { createVisualView, TestPrompts } from '../../../testing/testing';
 import { Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
@@ -39,20 +39,20 @@ describe('Add label', () => {
   it('labels the figure the cursor is in (its caption), suggesting tab: for a table figure', () => {
     const { doc, view, add } = setup(TABLE_FIGURE);
     const at = doc.text.indexOf('Timings');
-    view.reveal(at, at);
+    view.reveal(SourceRange.of({ from: at, to: at }));
     expect(add('tab:timings')).toBe('tab:');
     expect(doc.text).toBe('#figure(table(columns: 1, [a]), caption: [Timings]) <tab:timings>\n\nText\n');
   });
 
   it('labels a heading (sec:) or a paragraph; off where the block has a label already', () => {
     const { doc, view, item, add } = setup('= Intro\n\nText\n');
-    view.reveal(2, 2);
+    view.reveal(SourceRange.of({ from: 2, to: 2 }));
     expect(add('sec:intro')).toBe('sec:');
     expect(doc.text).toBe('= Intro <sec:intro>\n\nText\n');
-    view.reveal(3, 3);
+    view.reveal(SourceRange.of({ from: 3, to: 3 }));
     expect(item.disabled).toBe(true);
     const text = doc.text.indexOf('Text');
-    view.reveal(text, text);
+    view.reveal(SourceRange.of({ from: text, to: text }));
     expect(item.disabled).toBe(false);
     expect(add('plain')).toBe('');
     expect(doc.text).toBe('= Intro <sec:intro>\n\nText <plain>\n');
@@ -60,7 +60,7 @@ describe('Add label', () => {
 
   it('makes the name a valid label', () => {
     const { doc, view, add } = setup('Text\n');
-    view.reveal(1, 1);
+    view.reveal(SourceRange.of({ from: 1, to: 1 }));
     add('my label!');
     expect(doc.text).toBe('Text <my-label>\n');
   });
@@ -68,7 +68,7 @@ describe('Add label', () => {
   it('the draft tag shows where the label will go; Escape drops it without a change', () => {
     const { parent, doc, view, item, draft, key } = setup(TABLE_FIGURE);
     const at = doc.text.indexOf('Timings');
-    view.reveal(at, at);
+    view.reveal(SourceRange.of({ from: at, to: at }));
     item.click();
     const input = draft()!;
     // below the figure, where its tag will be

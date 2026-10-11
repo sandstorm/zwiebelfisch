@@ -8,6 +8,7 @@
 import { Disposable } from '../../core/disposable/disposable';
 import { type Event, EventEmitter } from '../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../core/paths/paths';
+import type { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
 import type { Diagnostic, Page, PdfEntry, PdfResult, Position } from '../../core/typst-engine/typst-engine';
 import { isInside, mostVisible } from './pages/geometry';
 import { overlay, OverlayLayer } from './pages/overlays';
@@ -47,21 +48,20 @@ export interface PreviewContributions {
   /** After every successful compilation (snippets may have changed). */
   readonly onDidRender: Event<void>;
   /**
-   * Scrolls the preview to where the source range `from`..`to` of `path` is drawn (its start), only if that is
-   * off-screen; nothing is marked there. Cheap to call on every cursor move: calls are throttled and only the
-   * newest is looked up.
+   * Scrolls the preview to where source range `range` of `path` is drawn (its start), only if that is off-screen;
+   * nothing is marked there. Cheap to call on every cursor move: calls are throttled and only the newest is looked up.
    */
-  reveal(path: ProjectPath, from: number, to: number): void;
+  reveal(path: ProjectPath, range: SourceRange): void;
   /**
    * Someone clicked something in the preview that has a source location in a project file (outlined in the preview
    * until the next click or compile; package files are outlined but not reported).
    */
   readonly onDidClickPage: Event<PageClick>;
   /**
-   * How the source range `from`..`to` of `path`, which holds `text`, is drawn: its page cut down to it. Null when it
-   * draws nothing or `text` is not what was compiled last.
+   * How source range `range` of `path`, which holds `text`, is drawn: its page cut down to it. Null when it draws
+   * nothing or `text` is not what was compiled last.
    */
-  snippet(path: ProjectPath, from: number, to: number, text: string): Promise<Snippet | null>;
+  snippet(path: ProjectPath, range: SourceRange, text: string): Promise<Snippet | null>;
   /** A PDF of `entry.main` from the files last compiled, `entry.sources` replacing or adding text files for it. */
   exportPdf(entry: PdfEntry): Promise<PdfResult>;
 }
@@ -102,10 +102,8 @@ export interface PreviewContext {
 }
 
 /** A click in the preview on something with a source location: the source range of what was clicked (e.g. a text run). */
-export interface PageClick {
+export interface PageClick extends SourceRange {
   readonly path: ProjectPath;
-  readonly from: number;
-  readonly to: number;
 }
 
 /**
@@ -145,7 +143,7 @@ export interface Snippet {
 
 type RequestBody = Request extends infer R ? (R extends Request ? Omit<R, 'id'> : never) : never;
 type Compile = { files: Record<string, FileContent>; main: string };
-type Reveal = { path: ProjectPath; from: number };
+type Reveal = { path: ProjectPath; from: SourceOffset };
 
 /** Minimum time between two cursor → preview lookups while the cursor moves. */
 const REVEAL_INTERVAL_MS = 80;
@@ -233,24 +231,24 @@ export class Preview implements PreviewContributions {
     this.compiles.push({ files, main });
   }
 
-  reveal(path: ProjectPath, from: number, _to: number): void {
+  reveal(path: ProjectPath, { from }: SourceRange): void {
     this.reveals.push({ path, from });
   }
 
   /**
-   * How the source range `from`..`to` of `path` looks in the document: its
-   * page cut down to where that range draws text, shapes or images (first page
-   * only). Null when it draws nothing, or when `text` is not what that range
-   * held at the last successful compilation (it was edited, or the document
-   * has errors). Waits for running compilations, so it answers for the newest
+   * How source range `range` of `path` looks in the document: its page cut
+   * down to where that range draws text, shapes or images (first page only).
+   * Null when it draws nothing, or when `text` is not what that range held at
+   * the last successful compilation (it was edited, or the document has
+   * errors). Waits for running compilations, so it answers for the newest
    * text passed to `update()`.
    */
-  async snippet(path: ProjectPath, from: number, to: number, text: string): Promise<Snippet | null> {
+  async snippet(path: ProjectPath, range: SourceRange, text: string): Promise<Snippet | null> {
     await this.compiles.idle();
     const { files, pages } = this.compiled;
     const compiled = files[path];
-    if (typeof compiled !== 'string' || compiled.slice(from, to) !== text) return null;
-    const response = await this.request({ type: 'boxes', path, ranges: [{ from, to }] });
+    if (typeof compiled !== 'string' || compiled.slice(range.from, range.to) !== text) return null;
+    const response = await this.request({ type: 'boxes', path, ranges: [range] });
     return response.type === 'boxes' ? snippet(pages, response.boxes) : null;
   }
 

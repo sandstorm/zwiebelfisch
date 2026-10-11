@@ -3,7 +3,7 @@
 import type { Editor } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { describe, expect, it, vi } from 'vitest';
-import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { print } from '../../../hosts/projection/projection';
 import { after, createVisualView, edit, expectPreciseMap, project as projectWith, schemaWith } from '../../../testing/testing';
 import { marginNotes, type MarginNotesOptions } from './margin-notes';
@@ -137,7 +137,7 @@ describe('Comment in the toolbar', () => {
   it('calls the `comment` option', () => {
     const comment = vi.fn();
     const { view, button } = setup('Hello world\n', { comment });
-    view.reveal(6, 11);
+    view.reveal(SourceRange.of({ from: 6, to: 11 }));
     expect(button('Comment').title).toMatch(/^Comment \((Ctrl\+Alt\+M|⌘⌥M)\)$/);
     button('Comment').click();
     expect(comment).toHaveBeenCalledOnce();
@@ -146,11 +146,11 @@ describe('Comment in the toolbar', () => {
   it('is enabled with a caret or a selection in text, not in a code block', () => {
     const source = 'Hello world\n\n```\ncode\n```\n';
     const { view, button } = setup(source, { comment: () => {} });
-    view.reveal(2, 2);
+    view.reveal(SourceRange.of({ from: 2, to: 2 }));
     expect(button('Comment').disabled).toBe(false);
-    view.reveal(0, 5);
+    view.reveal(SourceRange.of({ from: 0, to: 5 }));
     expect(button('Comment').disabled).toBe(false);
-    view.reveal(source.indexOf('code') + 1, source.indexOf('code') + 1);
+    view.reveal(SourceRange.of({ from: source.indexOf('code') + 1, to: source.indexOf('code') + 1 }));
     expect(button('Comment').disabled).toBe(true);
   });
 });
