@@ -104,9 +104,8 @@ Each item names the mode and example to use, the steps to take and what you shou
 
 | ✓ | Feature | Steps (mode / example) | Expected | Automated |
 |---|---|---|---|---|
-| ☐ | Review comments | Select text and press **Comment** (Ctrl/Cmd+Alt+M). Reply, resolve and reopen the thread. | The thread shows in the side panel, with a highlight in both views and a marker in the preview margin. | comments.spec |
+| ☐ | Review comments | Select text and press **Comment** (Ctrl/Cmd+Alt+M). Reply, then press **Resolve**. | The note is a card beside its text in the Visual view and shows in the preview margin. Resolve deletes it. | comments.spec |
 | ☐ | Comments while collaborating | In Collaborate mode, comment in one window. | The thread appears in the second window. | collab.spec |
-| ☐ | *Soon:* comments as margin notes | Branch `task/comments-drafting`: comments become drafting margin notes in the source. Add checks here once it is merged. | | |
 
 ### Collaboration (server needed: `mise run demo`)
 
@@ -123,10 +122,10 @@ Each item names the mode and example to use, the steps to take and what you shou
 | ✓ | Feature | Steps (mode / example) | Expected | Automated |
 |---|---|---|---|---|
 | ☐ | Loading a branch | GitLab (fake). | The file panel lists `main.typ`, `template.typ`, `helpers.typ`, the `chapters` and `assets` folders. Images come from the server. | gitlab.spec |
-| ☐ | Save version | Click **Save version**, enter a message and click **Apply**. | Both windows say "Saved version <sha> (Ann)". Saving again says "No changes to save". | gitlab.spec |
+| ☐ | Save to GitLab | Click **Save to GitLab…**, enter a message and press Enter. | Both windows say "Saved version <sha> (Ann)". Saving again says "No changes to save". | gitlab.spec |
 | ☐ | Upstream merge | In `main.typ` (Source tab), add a paragraph `Again.` after `#pagebreak()`. Choose "add a paragraph" and click **Simulate upstream commit**. | The status shows the fake commit. Both windows say "Merged new changes from GitLab", and the paragraph appears in the Introduction. Your edit is kept. | gitlab.spec, playground.test.ts |
 | ☐ | Upstream conflict | Edit the "Introduction" heading. Choose "revise a heading" and click **Simulate upstream commit**. | "Changes on GitLab conflict with edits in /chapters/introduction.typ; not saved". The room keeps your text, with no conflict markers. Make the heading match and save again to resolve it. | gitlab-rooms.test.ts |
-| ☐ | Uploads in a GitLab room | Upload an image and click **Save version**. | The image is part of the commit and shows in the second window. | gitlab-rooms.test.ts |
+| ☐ | Uploads in a GitLab room | Upload an image and click **Save to GitLab…**. | The image is part of the commit and shows in the second window. | gitlab-rooms.test.ts |
 | ☐ | Fresh branch | Open `?room=gitlab%3Ademo%2Freport%40try-1`. | The branch starts at `main`, and its saves do not touch `main`. | gitlab.spec |
 
 ### Embedding
