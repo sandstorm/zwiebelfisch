@@ -26,7 +26,7 @@ const OUTLINES = options['previewGuides.boxOutlines'];
 
 /** The file the preview compiles with `on` applied in turn: their prelude, then `/main.typ` included. */
 function entry(on: readonly PreviewViewOption[]): string {
-  const { prelude } = on.reduce((made, option) => option.apply(made), { prelude: [] as readonly string[] });
+  const { prelude } = on.reduce((made, option) => option.apply(made, true), { prelude: [] as readonly string[] });
   return `${prelude.join('\n')}\n#include "/main.typ"\n`;
 }
 
@@ -38,6 +38,9 @@ describe('previewGuides', () => {
     ]);
     // drawn by the prelude itself: no package to download
     expect(entry([GUIDES])).not.toContain('#import');
+    // off: nothing added
+    const start = { prelude: [] };
+    expect([GUIDES.apply(start, false), OUTLINES.apply(start, false)]).toEqual([start, start]);
   });
 });
 

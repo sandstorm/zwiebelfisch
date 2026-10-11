@@ -65,7 +65,7 @@ export interface WindowApi {
   /**
    * Pops up the menu `menuId` at `options.anchor` (as VS Code's workbench shows a contributed menu, e.g.
    * `explorer/context`): the entries registered for it (`workbench.registerMenuItem`) whose `when` holds in
-   * `options.context`, sorted, a separator between groups. Choosing one runs its command with `options.args`, after
+   * `options.context`, sorted, a separator between groups, a check mark at the entries whose `toggled` holds. Choosing one runs its command with `options.args`, after
    * the menu closed and gave the focus back. Nothing is shown while no entry applies. One at a time: a new menu closes
    * the open one; so do Escape and a press elsewhere.
    */
@@ -256,6 +256,8 @@ export interface ContributedMenuItem {
   readonly command: string;
   readonly title?: string;
   readonly group?: string;
+  /** Whether it is checked, asked with the menu's context; without: not a checkbox. */
+  readonly toggled?: (context: Readonly<Record<string, unknown>>) => boolean;
 }
 
 /**

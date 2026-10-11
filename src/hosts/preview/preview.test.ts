@@ -189,7 +189,7 @@ describe('Preview view options', () => {
     engine.answer = () => null;
   });
 
-  const view = (id: string, line: string, on = false): PreviewViewOption => ({ id, label: id, default: on, apply: (entry) => ({ prelude: [...entry.prelude, line] }) });
+  const view = (id: string, line: string, on = false): PreviewViewOption => ({ id, label: id, default: on, apply: (entry, value) => (value ? { prelude: [...entry.prelude, line] } : entry) });
 
   /** A preview whose engine compiles `/main.typ`; `compiled` lists what each compile request asked for. */
   function setup(diagnostics: object[] = []) {
@@ -249,6 +249,25 @@ describe('Preview view options', () => {
     guides.dispose();
     await vi.waitFor(() => expect(compiled.length).toBe(count + 1));
     expect(last().main).toBe('/main.typ');
+  });
+
+  it('applies an option also while it is off (one that adds Typst when off)', async () => {
+    const { last } = setup();
+    preview.registerViewOption({ id: 'a.notes', label: 'Notes', default: true, apply: (entry, on) => (on ? entry : { prelude: [...entry.prelude, '#let hidden = true'] }) });
+    preview.update({ '/main.typ': 'Hi' }, '/main.typ');
+    await vi.waitFor(() => expect(last().main).toBe('/main.typ'));
+    preview.setViewOptionValues({ 'a.notes': false });
+    await vi.waitFor(() => expect(last().files[last().main]).toBe('#let hidden = true\n#include "/main.typ"\n'));
+  });
+
+  it('tells when options are registered or go', () => {
+    setup();
+    let changes = 0;
+    preview.onDidChangeViewOptions(() => changes++);
+    const guides = preview.registerViewOption(view('a.guides', ''));
+    guides.dispose();
+    guides.dispose();
+    expect(changes).toBe(2);
   });
 
   it('refuses a second option with the same id', () => {

@@ -54,11 +54,12 @@ The preview keeps the mechanism: the engine worker, compiles, the page list, hit
 #table(
   columns: 2,
   [Member], [What],
-  [`registerToolbarItem(item, { group, order })`], [A toolbar control. Groups sort by name; the built-ins: `1_sync` ("Follow cursor"), `2_view` (zoom, View, page number), `3_export` ("Download PDF")],
+  [`registerToolbarItem(item, { group, order })`], [A toolbar control. Groups sort by name; the built-ins: `1_sync` ("Follow cursor"), `2_view` (zoom, page number), `3_export` ("Download PDF")],
   [`registerPdfExportOption(option, { priority })`], [A checkbox offered with PDF exports],
   [`pdfExportOptions()`], [The registered options, in the order an export applies them],
-  [`registerViewOption(option, { priority })`], [A way to look at the pages in the preview only (a toggle in the View menu)],
+  [`registerViewOption(option, { priority })`], [A way to look at the pages in the preview only (a checkbox entry in the View menu)],
   [`viewOptions()`], [The registered view options, in the order the preview applies them],
+  [`onDidChangeViewOptions`], [A view option was registered or disposed],
   [`setViewOptionValues(values)`], [Which view options are on, by id; the others at their default],
   [`reveal(path, range)`], [Scrolls to where a source range is drawn, if off-screen; throttled, cheap on every cursor move],
   [`onDidClickPage`], [A click on something with a source location in a project file: `{ path, from, to }`; outlined until the next click or compile],
@@ -108,19 +109,19 @@ preview.registerPdfExportOption({
 
 === View options <extensions-source-editor-and-preview-view>
 
-A `PreviewViewOption` changes how the preview shows the document, never the documents nor their PDFs: `id` (`<extension>.<name>`), `label`, `description?`, `default`, and `apply(entry)`, called only while the option is on. It returns a new `PreviewEntry` (`prelude`: lines of Typst markup run before the main file). Each option adds its own lines, so options compose.
+A `PreviewViewOption` changes how the preview shows the document, never the documents nor their PDFs: `id` (`<extension>.<name>`), `label`, `description?`, `default`, and `apply(entry, value)`, called for every option with its value, as a PDF export option's. It returns a new `PreviewEntry` (`prelude`: lines of Typst markup run before the main file), or `entry` itself where the value changes nothing. Each option adds its own lines, so options compose.
 
 ```ts
 preview.registerViewOption({
   id: 'previewGuides.boxOutlines',
   label: 'Box outlines',
   default: false,
-  apply: (entry) => ({ ...entry, prelude: [...entry.prelude, '#set block(stroke: 1pt + rgb(217, 70, 239, 50%))'] }),
+  apply: (entry, on) => (on ? { ...entry, prelude: [...entry.prelude, '#set block(stroke: 1pt + rgb(217, 70, 239, 50%))'] } : entry),
 });
 ```
 
-- While any option is on, the preview compiles a file of its own: the prelude, then `#include` of the main file. The main file is included, not copied: diagnostics, clicks, the cursor's place and snippets stay in the project's files. An error in the prelude is reported without a path; a click on what it draws (an outline) is not reported. With every option off the main file is compiled as before.
+- While the options' prelude has lines, the preview compiles a file of its own: the prelude, then `#include` of the main file. The main file is included, not copied: diagnostics, clicks, the cursor's place and snippets stay in the project's files. An error in the prelude is reported without a path; a click on what it draws (an outline) is not reported. With an empty prelude the main file is compiled as before. An option may add lines while it is off: "Comments" (`comments.show`, on by default) hides drafting's margin notes by show rules when off.
 - The prelude's lines are imports, `let`, `set` and `show` rules: they must make no content (it would come before the document's first page). Set rules are defaults, so what a document sets itself wins. A page background or foreground set by the document replaces the prelude's (`previewGuides` therefore draws in the foreground when the background was replaced). Names are the option's own (`preview-guides-…`): every option's lines share the file.
-- The preview applies the options that are on by `priority` (default 100, higher first), each to what the ones before made. An `id` registered twice throws.
-- Which options are on is the View menu's (`previewControls`): it hands this viewer's choices to `setViewOptionValues(values)` (ids of options registered later included) and remembers them in its `globalState`. Changing the values or the options compiles again.
+- The preview applies the options by `priority` (default 100, higher first), each to what the ones before made. An `id` registered twice throws.
+- Every option appears in the View menu at the top right of the editing area (menu `view`, group `preview`, checked while on): `previewControls` registers an entry per option (following `onDidChangeViewOptions`), hands this viewer's choices to `setViewOptionValues(values)` (ids of options registered later included) and remembers them in its `globalState`. Changing the values or the options compiles again.
 - Raw boxes' pictures are cut from the preview's pages (`snippet`), so they show what the options draw; compiling them apart would be a second compile per edit.

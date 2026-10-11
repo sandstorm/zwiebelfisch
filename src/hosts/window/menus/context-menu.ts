@@ -3,7 +3,8 @@ import type { ContextMenuOptions, ContributedMenuItem, MenuAnchor } from '../win
 
 /**
  * What `showContextMenu` shows. One menu at a time over the widget `host` (a new one closes the open one): a
- * `role="menu"` list of the menu's entries, a separator between groups, fixed at its anchor and kept inside the
+ * `role="menu"` list of the menu's entries, a separator between groups, an entry with `toggled` as a checkbox entry
+ * (`menuitemcheckbox`, a check mark while it holds), fixed at its anchor and kept inside the
  * viewport. The first entry gets the focus; arrow keys, Home and End move it. Choosing an entry, Escape, Tab or a press
  * elsewhere closes the menu and gives the focus back to the element that had it; a chosen entry's command runs after
  * that (a failing one is logged: it tells the user itself). A menu without entries is not shown.
@@ -22,7 +23,13 @@ export class ContextMenu {
     const items = this.sources.items(menuId, options.context ?? {});
     if (items.length === 0) return;
     const args = options.args ?? [];
-    const entries = items.map((item) => ({ label: item.title ?? item.command, group: item.group, run: () => this.#run(item.command, args) }));
+    const context = options.context ?? {};
+    const entries = items.map((item) => ({
+      label: item.title ?? item.command,
+      group: item.group,
+      checked: item.toggled?.(context),
+      run: () => this.#run(item.command, args),
+    }));
     this.#open = new MenuList(this.host, options.title, entries, options.anchor);
   }
 
@@ -56,6 +63,8 @@ class MenuList {
     this.#element = element(doc, 'div', 'typst-context-menu');
     this.#element.setAttribute('role', 'menu');
     this.#element.setAttribute('aria-label', label);
+    // a column for the check marks, so every entry's label starts at the same place
+    this.#element.classList.toggle('typst-context-menu--checks', entries.some((entry) => entry.checked !== undefined));
     entries.forEach((entry, index) => {
       if (index > 0 && (entry.group ?? '') !== (entries[index - 1].group ?? '')) this.#element.append(separator(doc));
       this.#element.append(this.#item(doc, entry));
@@ -79,9 +88,13 @@ class MenuList {
   #item(doc: Document, entry: Entry): HTMLButtonElement {
     const item = element(doc, 'button', 'typst-context-menu__item');
     item.type = 'button';
-    item.setAttribute('role', 'menuitem');
+    item.setAttribute('role', entry.checked === undefined ? 'menuitem' : 'menuitemcheckbox');
+    if (entry.checked !== undefined) item.setAttribute('aria-checked', String(entry.checked));
     item.tabIndex = -1;
-    item.textContent = entry.label;
+    const check = element(doc, 'span', 'typst-context-menu__check');
+    check.setAttribute('aria-hidden', 'true');
+    check.textContent = entry.checked ? '✓' : '';
+    item.append(check, entry.label);
     item.addEventListener('click', () => {
       this.close();
       entry.run();
@@ -120,6 +133,8 @@ class MenuList {
 interface Entry {
   readonly label: string;
   readonly group?: string;
+  /** Checked or not for a checkbox entry; undefined for any other. */
+  readonly checked?: boolean;
   run(): void;
 }
 

@@ -18,7 +18,6 @@ import { EditorTabs } from './editor-tabs/editor-tabs';
 import { ExtensionHost } from './extension-host/extension-host';
 import { FileDrops } from './file-drops/file-drops';
 import { WorkbenchLayout } from './layout/workbench-layout';
-import { EditorTitleMenu } from './menus/editor-title-menu';
 import { Menus } from './menus/menus';
 import { StorageMemento } from './memento/memento';
 import { StyleSheets } from './style-sheets/style-sheets';
@@ -162,10 +161,10 @@ export interface Workbench {
   /**
    * Adds `item` to the menu `menuId` until disposed (VS Code's `contributes.menus`). Whoever shows a menu renders
    * the items whose `when` holds there, sorted by `group` and `order`, and runs an item's command with the menu's
-   * arguments. The workbench shows `editor/title`: the editing area's tab bar, while the shown file has several
-   * editors (context: `activeCustomEditorId` (the view type of the editor shown), `resource` (the shown file); no
-   * arguments). Other ids are menus that extensions show (`window.showContextMenu`), documented there (the file
-   * panel: `file/newFile`, `explorer/context`).
+   * arguments. The workbench shows two: `editor/title`, buttons at the right end of the editing area's tab bar, and
+   * `view`, the "View" menu after them (context of both: `activeCustomEditorId` (the view type of the editor shown),
+   * `resource` (the shown file); no arguments). Other ids are menus that extensions show (`window.showContextMenu`),
+   * documented there (the file panel: `file/newFile`, `explorer/context`).
    */
   registerMenuItem(menuId: string, item: MenuItem): Disposable;
   /** The items of `menuId` to show in `context` (those whose `when` holds), sorted, for a side panel or editor that shows that menu. */
@@ -190,6 +189,11 @@ export interface MenuItem {
    * 'folder'`); default: always. Asked each time the menu is shown.
    */
   readonly when?: (context: MenuContext) => boolean;
+  /**
+   * Whether the entry is checked (VS Code's `toggled`), for an entry that turns something on or off; asked each time
+   * the menu is shown. A menu shows it as a check mark (`role="menuitemcheckbox"`); default: not a checkbox.
+   */
+  readonly toggled?: (context: MenuContext) => boolean;
   /** Entries are grouped by this: `navigation` first, the others by name, a separator between groups; default ''. */
   readonly group?: string;
   /** The place in its group (lower first; equal: registration order); default 0. */
@@ -306,7 +310,6 @@ export class WorkbenchHost implements Workbench {
   });
   readonly #scm = new ScmHost();
   readonly #menus = new Menus();
-  readonly #editorTitle: EditorTitleMenu;
   readonly #workspace: WorkspaceHost;
   readonly #drops: FileDrops;
   readonly #scheme: ColorScheme;
@@ -357,12 +360,12 @@ export class WorkbenchHost implements Workbench {
     this.commands = new CommandsHost(host);
     this.#drops = new FileDrops(host);
     this.onDidDropFiles = this.#drops.onDidDrop;
-    this.#editorTitle = new EditorTitleMenu(host.ownerDocument, this.#menus, {
+    this.#tabs = new EditorTabs(this.#layout.editor, this.#menus, {
+      onDidChoose: (viewType) => this.open(this.#active, { viewType }),
       context: () => ({ activeCustomEditorId: this.#activeCustomEditorId, resource: this.#active }),
       executeCommand: (command) => this.commands.executeCommand(command),
+      showContextMenu: (menuId, menuOptions) => this.window.showContextMenu(menuId, menuOptions),
     });
-    this.#tabs = new EditorTabs(doc, this.#editorTitle.element, (viewType) => this.open(this.#active, { viewType }));
-    this.#layout.editor.append(this.#tabs.element);
     this.#typstEditors = new TypstEditors(project, {
       visualEditor: this.#visualEditor,
       sourceEditors: this.#sourceEditors,
@@ -445,7 +448,6 @@ export class WorkbenchHost implements Workbench {
     this.#tabs.update(this.window.customEditorChoices(path), this.#activeCustomEditorId);
     this.#placeFrame();
     this.#shown.fire(path);
-    this.#editorTitle.update();
     if (changed) this.options.onOpen?.(path);
   }
 
@@ -496,7 +498,6 @@ export class WorkbenchHost implements Workbench {
     this.window.dispose();
     this.#tabs.dispose();
     this.#scm.dispose();
-    this.#editorTitle.dispose();
     this.#menus.dispose();
     this.#preview.dispose();
     this.commands.dispose();

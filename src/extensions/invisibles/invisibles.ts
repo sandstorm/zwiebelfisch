@@ -18,7 +18,8 @@ import { invisibleMarks } from './visual-editor/invisible-marks';
  * registered while the marks are on.
  *
  * They start as the setting `invisibles.show` says, else as this viewer chose last (`globalState`), else off. The
- * command `invisibles.toggle` turns them on or off, from search everywhere or the button in the editor's tab bar.
+ * command `invisibles.toggle` turns them on or off, from search everywhere or "Invisible characters" in the View menu
+ * (menu `view`, group `editor`, checked while they are shown).
  * See docs/10_guide/02_features.typ, "Invisible characters".
  */
 export function invisibles(): TypstExtension {
@@ -29,19 +30,16 @@ export function invisibles(): TypstExtension {
       let shown = configuredShown(workspace, globalState);
       const changed = new EventEmitter<boolean>();
       let codeMirror: Disposable | null = null;
-      let button: Disposable | null = null;
       const show = (on: boolean) => {
         shown = on;
         codeMirror?.dispose();
         codeMirror = on ? sourceEditor.registerSharedCodeMirrorExtension(highlightWhitespace()) : null;
-        // made anew to say what it does now; its place stays (group + order)
-        button?.dispose();
-        button = workbench.registerMenuItem('editor/title', { command: TOGGLE, title: on ? 'Hide invisibles' : 'Show invisibles', icon: PILCROW_ICON, group: 'view' });
         changed.fire(on);
       };
       show(shown);
       subscriptions.push(
         workbench.registerStyleSheet(css),
+        workbench.registerMenuItem('view', { command: TOGGLE, title: 'Invisible characters', group: 'editor', toggled: () => shown }),
         visualEditor.registerTiptapExtension(() => invisibleMarks({ shown: () => shown, onDidChange: changed.event })),
         commands.registerCommand(TOGGLE, () => {
           void globalState.update(SHOWN_KEY, !shown);
@@ -52,7 +50,6 @@ export function invisibles(): TypstExtension {
         }),
         new Disposable(() => {
           codeMirror?.dispose();
-          button?.dispose();
           changed.dispose();
         }),
       );
@@ -87,7 +84,3 @@ function configuredShown(workspace: Workspace, globalState: Memento): boolean {
 
 /** Where the viewer's last choice is kept (`globalState`). */
 const SHOWN_KEY = 'show';
-
-/** The tab bar button's icon: a pilcrow. */
-const PILCROW_ICON =
-  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9.5H6a3 3 0 0 1 0-6h5.5M8.5 3.5v10M11 3.5v10"/></svg>';

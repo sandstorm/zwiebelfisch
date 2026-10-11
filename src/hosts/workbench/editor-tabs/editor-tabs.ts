@@ -1,36 +1,39 @@
 // See WorkbenchHost in ../workbench.ts.
+import { EditorTitleMenu, type EditorTitleMenuOptions } from '../menus/editor-title-menu';
+import type { Menus } from '../menus/menus';
 
 /**
  * The tab bar of the editing area: a tab per editor the shown file can be shown in ("open with"; Visual / Source for
- * a Typst file), the shown one selected, and the editor/title menu at its end. Hidden unless the file has several.
- * Choosing another tab asks for the file in that editor (`onDidChoose`).
+ * a Typst file), the shown one selected, and at its end the editor/title menu and "View" (`EditorTitleMenu`). The tabs
+ * show while the file has several editors, the bar while it has tabs or buttons. Choosing another tab asks for the
+ * file in that editor (`onDidChoose`).
  */
 export class EditorTabs {
-  readonly element: HTMLElement;
+  readonly #element: HTMLElement;
   readonly #tabs: HTMLElement;
+  readonly #actions: EditorTitleMenu;
 
-  constructor(
-    doc: Document,
-    /** The editor/title menu, at the end of the bar. */
-    actions: HTMLElement,
-    private readonly onDidChoose: (viewType: string) => void,
-  ) {
-    this.element = doc.createElement('div');
-    this.element.className = 'typst-editor__tabs';
+  /** Appends the bar to `container` (the editing area). */
+  constructor(container: HTMLElement, menus: Menus, options: EditorTabsOptions) {
+    const doc = container.ownerDocument;
+    this.#element = doc.createElement('div');
+    this.#element.className = 'typst-editor__tabs';
     this.#tabs = doc.createElement('div');
     this.#tabs.className = 'typst-editor__tab-list';
     this.#tabs.setAttribute('role', 'tablist');
-    this.element.append(this.#tabs, actions);
+    this.#actions = new EditorTitleMenu(doc, menus, { ...options, onDidUpdate: () => this.#fit() });
+    this.#element.append(this.#tabs, this.#actions.element);
+    container.append(this.#element);
     this.#tabs.addEventListener('click', (event) => {
       const tab = (event.target as HTMLElement).closest<HTMLElement>('[role=tab]');
-      if (tab?.dataset.viewType && tab.getAttribute('aria-selected') !== 'true') this.onDidChoose(tab.dataset.viewType);
+      if (tab?.dataset.viewType && tab.getAttribute('aria-selected') !== 'true') options.onDidChoose(tab.dataset.viewType);
     });
   }
 
-  /** Shows a tab per editor in `editors`, `shown` selected; hides the bar unless there are several. */
+  /** Shows a tab per editor in `editors`, `shown` selected (the tabs hidden unless there are several), and the menus for it. */
   update(editors: readonly EditorTab[], shown: string | undefined): void {
-    const doc = this.element.ownerDocument;
-    this.element.hidden = editors.length < 2;
+    const doc = this.#element.ownerDocument;
+    this.#tabs.hidden = editors.length < 2;
     this.#tabs.replaceChildren(
       ...editors.map(({ viewType, displayName }) => {
         const tab = doc.createElement('button');
@@ -43,11 +46,22 @@ export class EditorTabs {
         return tab;
       }),
     );
+    this.#actions.update();
   }
 
   dispose(): void {
-    this.element.remove();
+    this.#actions.dispose();
+    this.#element.remove();
   }
+
+  #fit(): void {
+    this.#element.hidden = this.#tabs.hidden && this.#actions.element.childElementCount === 0;
+  }
+}
+
+export interface EditorTabsOptions extends Omit<EditorTitleMenuOptions, 'onDidUpdate'> {
+  /** The user chose the tab of another editor (its view type). */
+  onDidChoose(viewType: string): void;
 }
 
 /** An editor the shown file can be switched to. */

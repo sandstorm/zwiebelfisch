@@ -69,7 +69,7 @@ describe('demo examples', () => {
       const preview = { registerViewOption: (option: PreviewViewOption) => (options.push(option), new Disposable(() => {})) };
       previewGuides().activate({ preview, subscriptions: [] } as unknown as ExtensionContext);
       const guides = options.find(({ id }) => id === 'previewGuides.pageGuides')!;
-      const { prelude } = guides.apply({ prelude: [] });
+      const { prelude } = guides.apply({ prelude: [] }, true);
       const files = { ...exampleFiles(name), '/view.typ': `${prelude.join('\n')}\n#include "/main.typ"\n` };
       const { pages, diagnostics } = await compile(files, '/view.typ');
       expect(diagnostics).toEqual([]);

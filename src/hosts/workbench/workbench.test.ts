@@ -156,6 +156,50 @@ describe('WorkbenchHost', () => {
     expect(press.defaultPrevented).toBe(true); // the editor keeps its selection
   });
 
+  it('shows "View" at the end of the tab bar while the menu `view` has entries, for any editor; it pops up the menu with check marks', async () => {
+    const ran: string[] = [];
+    let wrapped = false;
+    const view = { registration: new Disposable(() => {}) };
+    const { host, workbench } = setup(({ commands, workbench, subscriptions }) => {
+      subscriptions.push(
+        commands.registerCommand('test.wrap', () => ran.push('wrap')),
+        workbench.registerMenuItem('editor/title', { command: 'test.wrap', title: 'Wrap', when: (context) => context.resource === '/a.typ' }),
+      );
+      view.registration = Disposable.from(
+        workbench.registerMenuItem('view', { command: 'test.wrap', title: 'Wrap lines', group: 'editor', toggled: () => wrapped }),
+        workbench.registerMenuItem('view', { command: 'test.zoom', title: 'Zoom', group: 'preview', when: (context) => context.activeCustomEditorId === SOURCE_EDITOR }),
+      );
+    });
+    const bar = host.querySelector<HTMLElement>('.typst-editor__tabs')!;
+    const actions = () => [...bar.querySelectorAll<HTMLButtonElement>('[role=toolbar][aria-label="Editor actions"] button')];
+    const viewButton = () => actions().find((button) => button.textContent === 'View');
+    expect(actions().map((button) => button.textContent)).toEqual(['View']);
+    // a file with one editor: no tabs, the bar stays for "View"
+    workbench.open(path('/logo.png'));
+    expect(bar.hidden).toBe(false);
+    expect(bar.querySelector<HTMLElement>('[role=tablist]')!.hidden).toBe(true);
+    workbench.open(path('/a.typ'));
+    expect(actions().map((button) => button.textContent)).toEqual(['Wrap', 'View']);
+    expect(viewButton()!.getAttribute('aria-haspopup')).toBe('menu');
+
+    wrapped = true;
+    viewButton()!.click();
+    const menu = host.querySelector<HTMLElement>('[role=menu][aria-label="View"]')!;
+    expect([...menu.children].map((child) => [child.getAttribute('role'), child.getAttribute('aria-checked'), child.textContent])).toEqual([
+      ['menuitemcheckbox', 'true', '✓Wrap lines'],
+      ['separator', null, ''],
+      ['menuitem', null, 'Zoom'],
+    ]);
+    menu.querySelector<HTMLElement>('[role=menuitemcheckbox]')!.click();
+    await Promise.resolve();
+    expect(ran).toEqual(['wrap']);
+
+    view.registration.dispose();
+    expect(viewButton()).toBeUndefined();
+    workbench.open(path('/logo.png'));
+    expect(bar.hidden).toBe(true);
+  });
+
   it('names the shown editor in the editor/title context (`activeCustomEditorId`) for any file, not only Typst files', () => {
     const { host, workbench } = setup(({ commands, window, workbench, subscriptions }) => {
       for (const [viewType, displayName] of [['test.image', 'Image'], ['test.pixels', 'Pixels']]) {

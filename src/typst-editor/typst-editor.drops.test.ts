@@ -25,6 +25,7 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => ({
     registerViewOption = () => ({ dispose() {} });
     viewOptions = () => [];
     setViewOptionValues() {}
+    onDidChangeViewOptions = () => ({ dispose() {} });
     setSelectionHighlight() {}
     dispose() {}
   },

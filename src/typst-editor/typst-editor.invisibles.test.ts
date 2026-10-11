@@ -20,6 +20,7 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => ({
     registerPdfExportOption = () => ({ dispose() {} });
     registerViewOption = () => ({ dispose() {} });
     viewOptions = () => [];
+    onDidChangeViewOptions = () => ({ dispose() {} });
     setViewOptionValues() {}
     pdfExportOptions = () => [];
     dispose() {}
@@ -123,13 +124,18 @@ describe('the choice', () => {
     expect(setup({ settings: { 'invisibles.show': false } }).count('.typst-invisibles__space')).toBe(0);
   });
 
-  it('is a button in the tab bar, saying what it does', async () => {
-    const { host, editor } = setup();
-    const button = () => host.querySelector<HTMLButtonElement>(`[data-command="${TOGGLE}"]`)!;
-    expect(button().title).toBe('Show invisibles');
-    button().click();
+  it('is "Invisible characters" in the View menu, checked while they are shown', async () => {
+    const { host, editor, count } = setup();
+    const entry = () => {
+      host.querySelector<HTMLButtonElement>('.typst-editor__view-menu')!.click();
+      const menu = host.querySelector<HTMLElement>('[role=menu][aria-label="View"]')!;
+      return [...menu.querySelectorAll<HTMLElement>('[role=menuitemcheckbox]')].find((item) => item.textContent!.endsWith('Invisible characters'))!;
+    };
+    expect(entry().getAttribute('aria-checked')).toBe('false');
+    entry().click();
     await Promise.resolve();
-    expect(button().title).toBe('Hide invisibles');
+    expect(count('.typst-invisibles__space')).toBe(4);
+    expect(entry().getAttribute('aria-checked')).toBe('true');
     expect(editor.settings).toEqual({});
   });
 });

@@ -84,6 +84,8 @@
 }
 .typst-context-menu__item:hover,
 .typst-context-menu__item:focus { background: var(--te-hover); outline: none; }
+.typst-context-menu__check { display: none; }
+.typst-context-menu--checks .typst-context-menu__check { display: inline-block; width: 1.25em; color: var(--te-accent); }
 .typst-context-menu__separator { height: 1px; margin: 4px 2px; background: var(--te-divider); }
 /* Input boxes and quick picks (showInputBox, showQuickPick): below what the user just used. */
 .typst-quick-input {
