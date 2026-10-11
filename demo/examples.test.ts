@@ -51,7 +51,8 @@ describe('demo examples', () => {
     const { pages, diagnostics } = await compile(exampleFiles(name));
     expect(diagnostics).toEqual([]);
     expect(pages.length).toBeGreaterThan(0);
-  });
+    // the documentation book takes seconds alone, more while the other test files run
+  }, 30_000);
 
   it('keeps the default document the e2e specs expect', () => {
     const files = exampleFiles('hello');

@@ -30,6 +30,9 @@ export type {
   InputBoxOptions,
   MessageItem,
   MessageSeverity,
+  Progress,
+  ProgressOptions,
+  ProgressReport,
   QuickPickItem,
   QuickPickOptions,
   SaveDialogOptions,
@@ -38,6 +41,7 @@ export type {
   TextEditorSelectionChangeEvent,
   WindowApi,
 } from './hosts/window/window';
+export { ProgressLocation } from './hosts/window/window';
 export type { Scm, SourceControl, SourceControlState } from './hosts/scm/scm';
 export type { DocumentLink, DocumentLinkProvider, Languages, TypstText } from './hosts/languages/languages';
 export type { ConfigurationChangeEvent, ConfigurationProperty, Settings, Workspace, WorkspaceConfiguration } from './hosts/workspace/workspace';
