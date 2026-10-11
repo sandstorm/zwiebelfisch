@@ -63,6 +63,7 @@ describe('custom styles in the text style menu', () => {
     choose('paragraph:note');
     expect(doc.text).toBe('#import "styles.typ": note\n\n#note[One]\n\n#note[Two]\n');
     view.reveal(doc.text.indexOf('One'), doc.text.indexOf('One'));
+    expect([...menu.options].find((o) => o.value === 'paragraph')!.disabled).toBe(false);
     choose('paragraph');
     expect(doc.text).toBe('#import "styles.typ": note\n\nOne\n\n#note[Two]\n');
     expect(menu.value).toBe('paragraph');

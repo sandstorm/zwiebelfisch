@@ -87,9 +87,11 @@ describe('the text style menu', () => {
   });
 
   it("shows the selection's block style, and Normal text takes it off", () => {
-    const { doc, view, menu, choose } = setup('*Hello*\n', [{ provideTextStyles: () => [LOUD] }]);
+    const { doc, view, menu, choose, option } = setup('*Hello*\n', [{ provideTextStyles: () => [LOUD] }]);
     view.reveal(1, 3);
     expect(menu!.value).toBe('loud');
+    // the blocks are paragraphs already: taking the style off is all Normal text does
+    expect(option('paragraph').disabled).toBe(false);
     choose('paragraph');
     expect(doc.text).toBe('Hello\n');
     expect(menu!.value).toBe('paragraph');
