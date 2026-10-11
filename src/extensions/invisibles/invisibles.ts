@@ -20,7 +20,7 @@ import { invisibleMarks } from './visual-editor/invisible-marks';
  * They start as the setting `invisibles.show` says, else as this viewer chose last (`globalState`), else off. The
  * command `invisibles.toggle` turns them on or off, from search everywhere or "Invisible characters" in the View menu
  * (menu `view`, group `editor`, checked while they are shown).
- * See docs/20_features/17_invisible-characters.typ.
+ * See docs/20_features/20_invisible-characters.typ.
  */
 export function invisibles(): TypstExtension {
   return {

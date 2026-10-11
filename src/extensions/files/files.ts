@@ -20,7 +20,7 @@ import { icon } from './workbench/icons/icons';
  *
  * This entry is the controller over the workbench and the project. The views (FilePanel in workbench/) and the pure
  * tree model (model/) get what they need as options, so the panel is tested without a workbench.
- * See docs/20_features/14_files.typ.
+ * See docs/20_features/13_files.typ.
  */
 export function files(): TypstExtension {
   return {

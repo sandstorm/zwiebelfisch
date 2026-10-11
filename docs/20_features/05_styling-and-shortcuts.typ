@@ -26,7 +26,7 @@ In the Visual editor "twice" is bold, "one-word" italic, "Typst" a link, then a 
   [Undo, redo], [Ctrl+Z, Ctrl+Shift+Z (⌘Z, ⌘⇧Z on Mac).],
   [Copy and paste], [What you copy is its Typst source; pasted text is read as Typst (a figure pasted from a `.typ` file stays a figure). The imports it needs come along (`#import "@preview/merman:0.4.0": mermaid` at the top), in either view. Pasted labels keep their references (@features-labels-and-references). Ctrl+Shift+V (⌘⇧V on Mac) pastes the characters as they are.],
   [Tab, Shift+Tab], [Stay in the text: nest or un-nest a list item, go to the next or previous table cell (Tab in the last one adds a row), indent or outdent a code block's line or a raw box's code. Elsewhere they do nothing. To move the focus on with the keyboard: Escape, then Tab (or Shift+Tab).],
-  [Anything from the Insert or text style menu], [Type `/` at a line start or after a space, then part of its name: `/table`, `/h2`, `/quote`. Other words find entries, too (`/spreadsheet` → Insert table). ↑ / ↓ choose, Enter or Tab inserts (the `/…` goes), Escape closes. An empty line holding the cursor hints "Type / for commands".],
+  [Anything from the Insert or text style menu], [Type `/` at a line start or after a space, then part of its name: `/table`, `/h2`, `/quote` (@features-slash-commands).],
 )
 
 Headings: @features-table-of-contents. Code blocks: @features-code-blocks. Math: @features-full-typst-support. Styles of the document's own: @features-custom-styles.

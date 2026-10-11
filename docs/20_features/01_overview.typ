@@ -22,13 +22,17 @@ Each feature has a chapter of its own: what it does, why one needs it, how to co
 - *Labels and cross-references* to headings, figures and tables (@features-labels-and-references)
 - *Page layout:* page breaks and rules (@features-page-layout)
 - *Full Typst support:* If an element is not supported natively, f.e. maths like $E=m*c^2$, we always fall back to the raw Typst source. (@features-full-typst-support)
-- *Bidirectional navigation*: click any part of the preview to jump to the corresponding source, and select any part of the interactive editor to highlight this in the preview. (@features-bidirectional-navigation)
 - *Files:* a file panel for every file of the project (@features-files)
-- *Search everywhere:* files, headings, labels, commands, text; press Shift twice (@features-search-everywhere)
-- *Help:* a cheat sheet for the file you edit (@features-help)
-- *Invisible characters*, as a word processor's formatting marks (@features-invisible-characters)
 - *Spelling*, checked in the document's language (@features-spelling)
 - *PDF* download (@features-pdf)
+
+== User experience <features-overview-ux>
+
+- *Slash commands:* type `/` in the Visual editor for everything the Insert and text style menus offer (@features-slash-commands)
+- *Search everywhere:* files, headings, labels, commands, text; press Shift twice (@features-search-everywhere)
+- *Bidirectional navigation*: click any part of the preview to jump to the corresponding source, and select any part of the interactive editor to highlight this in the preview. (@features-bidirectional-navigation)
+- *Help:* a cheat sheet for the file you edit (@features-help)
+- *Invisible characters*, as a word processor's formatting marks (@features-invisible-characters)
 
 == Advanced Features <features-overview-advanced>
 
