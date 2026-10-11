@@ -130,8 +130,8 @@ describe('raw boxes', () => {
     const actions: VisualViewContribution = {
       id: 'test',
       activate: ({ visualView }) => {
-        visualView.registerBoxAction({ title: 'Make bigger', when: (node) => node.attrs.src.includes('12pt'), run });
-        visualView.registerBoxAction({ title: 'Never', when: () => false, run });
+        visualView.registerRawBoxAction({ title: 'Make bigger', when: (node) => node.attrs.src.includes('12pt'), run });
+        visualView.registerRawBoxAction({ title: 'Never', when: () => false, run });
       },
     };
     const { parent, box, doc } = setup(RAW, [actions]);

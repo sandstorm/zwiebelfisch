@@ -3,7 +3,7 @@
 import { EditorState, type Extension as CodeExtension } from '@codemirror/state';
 import type { Decoration } from '@tiptap/pm/view';
 import type { PresenceUser } from '../presence/presence';
-import { setBoxDecorations } from '../../../hosts/visual-view/visual-view';
+import { setRawBoxDecorations } from '../../../hosts/visual-view/visual-view';
 import { remotePresence, setPresence } from '../source-view/source-view';
 
 /** A remote caret inside a box, as the box's decoration hands it to the box: `offset` counts from the box's source start. */
@@ -20,12 +20,12 @@ export function boxCaretsSpec(carets: BoxCaret[]): { boxCarets: BoxCaret[] } {
 
 /**
  * Draws the remote carets a raw box's decorations carry (`boxCaretsSpec`) in the box's code, as the Source views
- * draw theirs: whenever the box is given its decorations (`setBoxDecorations`), its carets replace those shown.
+ * draw theirs: whenever the box is given its decorations (`setRawBoxDecorations`), its carets replace those shown.
  */
 export const boxPresence: CodeExtension = [
   remotePresence,
   EditorState.transactionExtender.of((tr) => {
-    const given = tr.effects.filter((effect) => effect.is(setBoxDecorations));
+    const given = tr.effects.filter((effect) => effect.is(setRawBoxDecorations));
     if (given.length === 0) return null;
     const carets = boxCarets(given[given.length - 1].value).map(({ id, user, offset }) => ({ id, user, anchor: offset, head: offset }));
     return { effects: setPresence.of(carets) };

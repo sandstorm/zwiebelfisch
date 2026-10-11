@@ -2,7 +2,7 @@
 import type { Node } from '@tiptap/pm/model';
 import type { Disposable } from '../../../core/disposable/disposable';
 import type { SourceOffset } from '../../../core/typst-document/typst-document';
-import type { BoxPicture, RawBoxRenderer } from '../visual-view';
+import type { RawBoxPicture, RawBoxRenderer } from '../visual-view';
 
 /** The raw box a `RenderedBox` belongs to. */
 export interface BoxHost {
@@ -84,7 +84,7 @@ export class RenderedBox {
     this.toggle();
   }
 
-  private show(picture: BoxPicture, src: string): void {
+  private show(picture: RawBoxPicture, src: string): void {
     if (this.picture.getAttribute('src') !== picture.url) this.picture.src = picture.url;
     const { style } = this.picture;
     style.width = picture.width ?? '';

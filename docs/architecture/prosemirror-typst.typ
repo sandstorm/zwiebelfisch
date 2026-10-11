@@ -39,11 +39,11 @@ The framework knows only paragraphs, text, line breaks, escapes, shorthands and 
 - A label right after a heading, or ending a run, becomes the block's `label` attribute.
 - Rules get a `TypstParseContext`: the source, the schema, and the framework's steps (`inline`, `blocks`, `textblock`, `raw`).
 
-== Source anchors and pristine nodes <architecture-prosemirror-typst-anchors>
+== Source anchors and nodes unchanged since parsed <architecture-prosemirror-typst-anchors>
 
 - *Anchors:* attributes that are never rendered and remember the source: `src` (the node's Typst), `sep` (whitespace to the next sibling), the document's `lead` and `trail`, `label`, and each spec's `anchors`.
-- *Pristine:* a private `WeakMap` holds the nodes `parseTypst` made. ProseMirror keeps the identity of unchanged nodes, so membership means "still equal to `src`".
-- Pristine nodes print `src`. Edited nodes print through their spec's `toTypst` (textblocks by default: their inline content, escaped). Block atoms print `src`.
+- *Unchanged since parsed:* a private `WeakMap` (`unchangedNodes`) holds the nodes `parseTypst` made. ProseMirror keeps the identity of unchanged nodes, so membership means "still equal to `src`".
+- Nodes unchanged since parsed print `src`. Edited nodes print through their spec's `toTypst` (textblocks by default: their inline content, escaped). Block atoms print `src`.
 - Editor-made nodes have `sep: null` and get the default separator.
 
 == Position map <architecture-prosemirror-typst-position-map>
@@ -60,4 +60,4 @@ The framework knows only paragraphs, text, line breaks, escapes, shorthands and 
 
 1. Diff both with the anchor attributes stripped, so a changed `src` does not replace a whole block.
 2. Replace only the innermost changed range: a cursor elsewhere in the paragraph stays put.
-3. Copy the attributes over and mark nodes pristine again where the target's were.
+3. Copy the attributes over and mark nodes unchanged since parsed again where the target's were.

@@ -5,7 +5,7 @@ import type { Mark, Node } from '@tiptap/pm/model';
 import { TypstConversions } from './typst-conversions';
 import type { Around, TypstSerializeState } from './prosemirror-typst';
 import { labelSyntax } from './labels';
-import { type InlineLayout, pristine } from './pristine';
+import { type InlineLayout, unchangedNodes } from './unchanged-nodes';
 import { markupSource } from '../../core/typst-syntax/typst-syntax';
 
 /** A stretch of printed source and the document range showing it (empty for hidden syntax). */
@@ -44,7 +44,7 @@ export function printed(doc: Node): Printed {
   return result;
 }
 
-/** Forgets the printed form of `doc` (its pristine nodes changed). */
+/** Forgets the printed form of `doc` (nodes in it changed since parsed). */
 export function forgetPrinted(doc: Node): void {
   printedDocs.delete(doc);
 }
@@ -133,16 +133,16 @@ class ProseMirrorToTypstSerializer implements TypstSerializeState {
   }
 
   private unlabelled(node: Node, parent: Node, pos: number): void {
-    const pristineLayout = pristine.get(node);
-    if (pristineLayout) return this.layout(node, pristineLayout, pos + 1);
-    if (pristine.has(node)) return this.pristineItem(node, pos);
+    const unchangedLayout = unchangedNodes.get(node);
+    if (unchangedLayout) return this.layout(node, unchangedLayout, pos + 1);
+    if (unchangedNodes.has(node)) return this.unchangedItem(node, pos);
     if (isSourceAtom(node)) return this.shown(node.attrs.src, 'atom', pos, pos + 1);
     const toTypst = this.grammar.node(node.type)?.typst?.toTypst;
     if (toTypst) toTypst(this, node, pos, parent);
     else this.textblock(node, pos);
   }
 
-  /** A pristine textblock: its `src`, with the content positions its layout assigns. */
+  /** A textblock unchanged since parsed: its `src`, with the content positions its layout assigns. */
   private layout(block: Node, { runs, tail, closing }: InlineLayout, start: number): void {
     const src: string = block.attrs.src;
     let from = 0;
@@ -159,8 +159,8 @@ class ProseMirrorToTypstSerializer implements TypstSerializeState {
     this.closing(src.slice(from + tail, from + tail + closing));
   }
 
-  /** A pristine list item: its marker, then its only child, which is pristine, too. */
-  private pristineItem(item: Node, pos: number): void {
+  /** A list item unchanged since parsed: its marker, then its only child, which is unchanged, too. */
+  private unchangedItem(item: Node, pos: number): void {
     const src: string = item.attrs.src;
     const body: string = item.firstChild?.attrs.src ?? '';
     if (item.childCount !== 1 || !src.endsWith(body)) return this.shown(src, 'atom', pos, pos + item.nodeSize);

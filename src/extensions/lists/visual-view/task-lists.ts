@@ -97,7 +97,7 @@ function parseTaskItem(p: TypstParseContext, node: SyntaxNode, sep: string | nul
   const from = markup.from + box[0].length;
   const paragraph = p.textblock({ type: 'paragraph', attrs: { src: p.source.slice(from, markup.to) } }, from, p.inline(body));
   const attrs = { marker: '-', checked: box[1] === 'x', src: p.text(node), sep };
-  return p.pristine('taskItem', attrs, [paragraph]);
+  return p.unchangedNode('taskItem', attrs, [paragraph]);
 }
 
 const ICON = svg('<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m4.5 8 1 1 2-2"/><rect x="3" y="14" width="6" height="6" rx="1"/><path d="M13 8h8M13 17h8"/>');

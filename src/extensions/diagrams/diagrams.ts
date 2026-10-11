@@ -55,7 +55,7 @@ export function diagrams(): TypstExtension {
         window.registerCustomEditorProvider(DIAGRAM_EDITOR, diagramEditor(context, editorUrl), { filenamePattern: DIAGRAM_FILES, displayName: 'Diagram', priority: 110, icon: DIAGRAM_ICON }),
         commands.registerCommand(NEW_DIAGRAM, (resource?: ProjectPath) => newDiagram(context, resource)),
         workbench.registerMenuItem('file/newFile', { command: NEW_DIAGRAM, title: 'New diagram…', group: 'navigation', order: 16 }),
-        visualView.registerBoxAction(editDiagramAction(diagramIn(project, languages), (path) => workbench.open(path, { viewType: DIAGRAM_EDITOR }))),
+        visualView.registerRawBoxAction(editDiagramAction(diagramIn(project, languages), (path) => workbench.open(path, { viewType: DIAGRAM_EDITOR }))),
       );
     },
   };

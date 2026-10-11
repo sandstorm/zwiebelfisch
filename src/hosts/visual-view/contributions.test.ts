@@ -14,9 +14,9 @@ describe('VisualViewHost priority', () => {
     const registry = new VisualViewHost();
     const snippets = renderer();
     const images = renderer();
-    registry.registerBoxRenderer(snippets);
-    registry.registerBoxRenderer(images, { priority: 110 });
-    expect(registry.contributed().boxRenderers).toEqual([images, snippets]);
+    registry.registerRawBoxRenderer(snippets);
+    registry.registerRawBoxRenderer(images, { priority: 110 });
+    expect(registry.contributed().rawBoxRenderers).toEqual([images, snippets]);
   });
 
   it('takes a disposed registration out', () => {

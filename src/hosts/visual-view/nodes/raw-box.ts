@@ -8,7 +8,7 @@ import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { Decoration, EditorView, NodeView, NodeViewConstructor } from '@tiptap/pm/view';
 import { minimalChange, type SourceOffset } from '../../../core/typst-document/typst-document';
-import { setBoxDecorations, type RawBoxAction, type RawBoxRenderer, type RawBoxTools, type RawBoxToolsHost, type TypstNodeSpec, type VisualViewContext } from '../visual-view';
+import { setRawBoxDecorations, type RawBoxAction, type RawBoxRenderer, type RawBoxTools, type RawBoxToolsHost, type TypstNodeSpec, type VisualViewContext } from '../visual-view';
 import { posToSource } from '../../prosemirror-typst/prosemirror-typst';
 import { BoxActionBar } from './box-actions';
 import { RenderedBox } from './rendered-box';
@@ -188,9 +188,9 @@ class RawBox implements NodeView {
     return { dom: this.dom, code, picture, editor: this.editor, view, getPos: this.getPos, editCode: () => this.focus(-1), actions };
   }
 
-  /** Hands the box's decorations (e.g. other users' carets in it) to its code's extensions (`setBoxDecorations`). */
+  /** Hands the box's decorations (e.g. other users' carets in it) to its code's extensions (`setRawBoxDecorations`). */
   private showDecorations(decorations: readonly Decoration[]): void {
-    this.code.dispatch({ effects: setBoxDecorations.of(decorations) });
+    this.code.dispatch({ effects: setRawBoxDecorations.of(decorations) });
   }
 
   /** The node and where its source starts, while the box is in the document. */

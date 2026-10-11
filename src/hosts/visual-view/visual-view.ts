@@ -152,9 +152,9 @@ export class VisualView {
 function boxes(view: VisualViewContext, contributed: Contributed, views: RawBoxes['views']): RawBoxes {
   return {
     view,
-    renderers: contributed.boxRenderers.map((provider) => provider(view)).filter((renderer) => renderer !== null),
+    renderers: contributed.rawBoxRenderers.map((provider) => provider(view)).filter((renderer) => renderer !== null),
     codeExtensions: contributed.rawBoxCodeMirrorExtensions.map((provider) => provider(view)),
-    actions: contributed.boxActions,
+    actions: contributed.rawBoxActions,
     views,
   };
 }
@@ -257,9 +257,9 @@ export interface Contributed {
   readonly toolbarItems: readonly ToolbarItem[];
   readonly gutters: readonly GutterProvider[];
   readonly highlights: readonly { readonly layer: string; readonly provider: SourceHighlightProvider }[];
-  readonly boxRenderers: readonly RawBoxRendererProvider[];
+  readonly rawBoxRenderers: readonly RawBoxRendererProvider[];
   readonly rawBoxCodeMirrorExtensions: readonly ((view: VisualViewContext) => Extension)[];
-  readonly boxActions: readonly RawBoxAction[];
+  readonly rawBoxActions: readonly RawBoxAction[];
   readonly textStyles: readonly TextStyleProvider[];
   readonly completionItemProviders: readonly { readonly provider: CompletionItemProvider; readonly trigger: CompletionTrigger }[];
 }
@@ -318,14 +318,14 @@ export interface VisualViewContributions {
    * (default 100, higher first; equal: registration order), and the first that `renders` a box draws it: the image
    * renderer (110) draws image boxes, compiled snippets (100) the rest.
    */
-  registerBoxRenderer(provider: RawBoxRendererProvider, options?: PriorityOptions): Disposable;
+  registerRawBoxRenderer(provider: RawBoxRendererProvider, options?: PriorityOptions): Disposable;
   /** CodeMirror extensions for the code of every raw box of each view (e.g. links on file paths). */
   registerRawBoxCodeMirrorExtension(provider: (view: VisualViewContext) => Extension): Disposable;
   /**
    * A button on every raw box `action.when` holds for (any box: a contribution need not own the box's node type),
    * in registration order: with the box's tools (an image box's toolbar), else above its code.
    */
-  registerBoxAction(action: RawBoxAction): Disposable;
+  registerRawBoxAction(action: RawBoxAction): Disposable;
 }
 
 /**
@@ -333,7 +333,7 @@ export interface VisualViewContributions {
  * The workbench host has one; tests make their own (`from`).
  */
 export class VisualViewHost implements VisualViewContributions {
-  private readonly boxRenderers: Ranked<RawBoxRendererProvider>[] = [];
+  private readonly rawBoxRenderers: Ranked<RawBoxRendererProvider>[] = [];
   private readonly lists = {
     nodes: [] as TypstNodeSpec[],
     marks: [] as TypstMarkSpec[],
@@ -343,7 +343,7 @@ export class VisualViewHost implements VisualViewContributions {
     gutters: [] as GutterProvider[],
     highlights: [] as { layer: string; provider: SourceHighlightProvider }[],
     rawBoxCodeMirrorExtensions: [] as ((view: VisualViewContext) => Extension)[],
-    boxActions: [] as RawBoxAction[],
+    rawBoxActions: [] as RawBoxAction[],
     textStyles: [] as TextStyleProvider[],
     completionItemProviders: [] as { provider: CompletionItemProvider; trigger: CompletionTrigger }[],
   };
@@ -390,16 +390,16 @@ export class VisualViewHost implements VisualViewContributions {
     return this.add(this.lists.highlights, { layer, provider });
   }
 
-  registerBoxRenderer(provider: RawBoxRendererProvider, options: PriorityOptions = {}): Disposable {
-    return this.add(this.boxRenderers, { value: provider, priority: options.priority ?? DEFAULT_PRIORITY });
+  registerRawBoxRenderer(provider: RawBoxRendererProvider, options: PriorityOptions = {}): Disposable {
+    return this.add(this.rawBoxRenderers, { value: provider, priority: options.priority ?? DEFAULT_PRIORITY });
   }
 
   registerRawBoxCodeMirrorExtension(provider: (view: VisualViewContext) => Extension): Disposable {
     return this.add(this.lists.rawBoxCodeMirrorExtensions, provider);
   }
 
-  registerBoxAction(action: RawBoxAction): Disposable {
-    return this.add(this.lists.boxActions, action);
+  registerRawBoxAction(action: RawBoxAction): Disposable {
+    return this.add(this.lists.rawBoxActions, action);
   }
 
   registerTextStyleProvider(provider: TextStyleProvider): Disposable {
@@ -417,9 +417,9 @@ export class VisualViewHost implements VisualViewContributions {
       toolbarItems: [...lists.toolbarItems],
       gutters: [...lists.gutters],
       highlights: [...lists.highlights],
-      boxRenderers: [...this.boxRenderers].sort((a, b) => b.priority - a.priority).map((entry) => entry.value),
+      rawBoxRenderers: [...this.rawBoxRenderers].sort((a, b) => b.priority - a.priority).map((entry) => entry.value),
       rawBoxCodeMirrorExtensions: [...lists.rawBoxCodeMirrorExtensions],
-      boxActions: [...lists.boxActions],
+      rawBoxActions: [...lists.rawBoxActions],
       textStyles: [...lists.textStyles],
       completionItemProviders: [...lists.completionItemProviders],
     };
@@ -461,7 +461,7 @@ export interface VisualViewContext {
 // Raw boxes: what contributions add to Typst kept verbatim (edited as code).
 
 /** A picture a box shows instead of its code: a URL and CSS lengths ('' or absent: automatic). */
-export interface BoxPicture {
+export interface RawBoxPicture {
   url: string;
   width?: string;
   height?: string;
@@ -476,7 +476,7 @@ export interface RawBoxRenderer {
   /** Whether it draws boxes of `node`'s kind. */
   renders(node: Node): boolean;
   /** The picture of the box `node` whose source starts at `from`; null: show the code. */
-  render(node: Node, from: SourceOffset): Promise<BoxPicture | null>;
+  render(node: Node, from: SourceOffset): Promise<RawBoxPicture | null>;
   /** Draws a box again as soon as its node changes (an image follows its path), not only on `onDidChange`. */
   readonly followsEdits?: boolean;
   /** A class of the renderer's own on the picture (`<img>`), for its CSS (compiled snippets inverted in the dark). */
@@ -493,7 +493,7 @@ export type RawBoxRendererProvider = (view: VisualViewContext) => RawBoxRenderer
  * dispatched to the box's code editor when the box is made and on every update of its node: how a box code
  * extension learns what is drawn on its box (a transaction extender or state field reads the effect).
  */
-export const setBoxDecorations = StateEffect.define<readonly Decoration[]>();
+export const setRawBoxDecorations = StateEffect.define<readonly Decoration[]>();
 
 /** The box tools of a code box belong to. */
 export interface RawBoxToolsHost {
@@ -511,7 +511,7 @@ export interface RawBoxToolsHost {
   /** Shows and focuses the code. */
   editCode(): void;
   /**
-   * The box's action buttons (`registerBoxAction`), kept up to date by the host: the tools put the element where
+   * The box's action buttons (`registerRawBoxAction`), kept up to date by the host: the tools put the element where
    * they show their buttons (else the box shows it above the code).
    */
   readonly actions: HTMLElement;

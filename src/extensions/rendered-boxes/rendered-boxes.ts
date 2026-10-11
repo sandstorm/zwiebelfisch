@@ -18,7 +18,7 @@ export function renderedBoxes(): TypstExtension {
     activate({ project, preview, visualView, workbench, subscriptions }) {
       subscriptions.push(
         workbench.registerStyleSheet(css),
-        visualView.registerBoxRenderer(({ document }) =>
+        visualView.registerRawBoxRenderer(({ document }) =>
           snippetRenderer({
             snippet: async (range, text) => {
               const file = project.pathOf(document);
