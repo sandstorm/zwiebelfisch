@@ -237,6 +237,63 @@ ${element}`;
     expect(positions[0].page).toBe(1);
   });
 
+  describe('a cursor in an element whose text is drawn elsewhere too, or on what draws no text', () => {
+    const PAGE = '#set page(width: 200pt, height: 200pt, margin: 10pt)';
+    const CHAPTER = [
+      'Some words first.',
+      '= Method <method>',
+      'How it was done.',
+      '#figure(rect(height: 20pt), caption: [A box]) <fig:box>',
+      '$ x = 1 $ <eq:one>',
+    ].join('\n\n');
+    /** The outline of headings and figures on page 0, the chapter (another file) from page 1 on. */
+    function compiled(): void {
+      engine.setSource('/main.typ', `${PAGE}\n#outline()\n#outline(target: figure)\n#pagebreak()\n#include "chapter.typ"`);
+      engine.setSource('/chapter.typ', CHAPTER);
+      expect(engine.compile('/main.typ').diagnostics).toEqual([]);
+    }
+    const at = (text: string, after = 0) => SourceOffset.of(CHAPTER.indexOf(text) + after);
+    const where = (offset: SourceOffset) => engine.jumpFromCursor('/chapter.typ', offset);
+
+    it("a heading's text: where the heading is drawn, not its entry in the outline before", () => {
+      compiled();
+      const [first, ...rest] = where(at('Method', 3));
+      expect(rest).toEqual([]);
+      expect(first.page).toBe(1);
+      // the same spot as the text before it on that page shows
+      expect(first.y).toBeGreaterThan(where(at('Some words'))[0].y);
+    });
+
+    it("a figure's caption: where the figure is drawn, not its entry in the outline of figures", () => {
+      compiled();
+      expect(where(at('A box', 2)).map(({ page }) => page)).toEqual([1]);
+    });
+
+    it.each([
+      ['heading', '<method>', 'Some words', 'Method'],
+      ['figure', '<fig:box>', 'How it was done', 'A box'],
+      ['equation', '<eq:one>', 'A box', 'x = 1'],
+    ])('the label of a %s (%s): where it starts', (_, label, before, inside) => {
+      compiled();
+      const [start, ...rest] = where(at(label));
+      expect(rest).toEqual([]);
+      expect(start.page).toBe(1);
+      // below what comes before it, above its own text
+      expect(start.y).toBeGreaterThan(where(at(before, 1))[0].y);
+      expect(start.y).toBeLessThan(where(at(inside, 1))[0].y);
+    });
+
+    it("a heading's marker, which draws no text: where the heading starts", () => {
+      compiled();
+      expect(where(at('= Method'))).toEqual(where(at('<method>')));
+    });
+
+    it('nothing where no element is and nothing is drawn', () => {
+      compiled();
+      expect(where(at('\n\n= Method', 1))).toEqual([]);
+    });
+  });
+
   it('compiles a document that includes and imports other files', () => {
     engine.setSource('/chapters/intro.typ', '= Intro\n#import "../lib.typ": name\nHello #name');
     engine.setSource('/lib.typ', '#let name = "Ada"');

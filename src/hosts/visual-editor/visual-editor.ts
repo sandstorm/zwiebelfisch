@@ -1,7 +1,7 @@
 import { Editor, type AnyExtension, type ChainedCommands, type Range } from '@tiptap/core';
 import { StateEffect, type Extension } from '@codemirror/state';
 import type { Node, ResolvedPos } from '@tiptap/pm/model';
-import { EditorState, NodeSelection, TextSelection, type Transaction } from '@tiptap/pm/state';
+import { EditorState, NodeSelection, type Selection, TextSelection, type Transaction } from '@tiptap/pm/state';
 import type { Decoration } from '@tiptap/pm/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
@@ -42,6 +42,12 @@ export class VisualEditor {
   /** After the selection moved or the text changed; `selection()` already returns the new selection. */
   readonly onDidChangeSelection: Event<void> = this.selectionChanged.event;
   private readonly subscriptions: Disposable[];
+  /**
+   * What `reveal` selected, while the selection is the one it made: `selection()` says that range, not what the
+   * selection shows of it (the caret below a figure for its label, which no position in the text is), so who follows
+   * the selection (the preview) goes where was asked.
+   */
+  private revealed: { selection: Selection; range: SourceRange } | null = null;
 
   constructor(parent: HTMLElement, private readonly document: TypstDocument, contributions: VisualEditorHost) {
     const contributed = contributions.contributed();
@@ -73,6 +79,7 @@ export class VisualEditor {
       injectCSS: false,
       editorProps: { attributes: { class: 'typst-visual', 'data-testid': 'typst-visual' } },
       onTransaction: ({ transaction }) => {
+        if (transaction.docChanged || !this.revealed?.selection.eq(transaction.selection)) this.revealed = null;
         this.afterTransaction(transaction);
         if (transaction.selectionSet || transaction.docChanged) this.selectionChanged.fire();
       },
@@ -111,7 +118,9 @@ export class VisualEditor {
     const selection = TextSelection.between(doc.resolve(anchor), doc.resolve(head));
     // focused first: ProseMirror scrolls to the DOM's selection, which it moves only while it has the focus
     this.tiptap.view.focus();
-    this.tiptap.view.dispatch(this.tiptap.state.tr.setSelection(selection).scrollIntoView());
+    const tr = this.tiptap.state.tr.setSelection(selection).scrollIntoView();
+    this.revealed = { selection: tr.selection, range: { from, to } };
+    this.tiptap.view.dispatch(tr);
   }
 
   /** Inserts what Typst `source` is read as at the selection (`insertTypst`); focuses the editor. */
@@ -121,10 +130,12 @@ export class VisualEditor {
 
   /**
    * The source range the selection shows: where it starts, and where the
-   * last character (or box) it covers ends; `from === to` for a caret.
+   * last character (or box) it covers ends; `from === to` for a caret. After
+   * `reveal`, until the selection moves or the text changes, the range revealed.
    */
   selection(): SourceRange {
     const { doc, selection } = this.tiptap.state;
+    if (this.revealed?.selection.eq(selection)) return this.revealed.range;
     const from = posToSource(doc, selection.from);
     const end = posToSource(doc, selection.to, -1);
     return { from, to: selection.empty || end < from ? from : end };

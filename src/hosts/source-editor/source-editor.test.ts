@@ -61,6 +61,17 @@ describe('SourceEditor reveal', () => {
     expect(marked(parent, '.typst-source__jump')).toEqual([]);
   });
 
+  it('has the focus when it tells about the new selection (who follows the focused editor sees it), also from elsewhere', () => {
+    const parent = document.body.appendChild(document.createElement('div'));
+    const focused: boolean[] = [];
+    const view = new SourceEditorHost().createEditor(parent, new TypstDocument('Some bold text\n'), {
+      onSelection: () => focused.push(parent.contains(document.activeElement)),
+    });
+    document.body.appendChild(document.createElement('input')).focus();
+    view.reveal(SourceRange.of({ from: 5, to: 9 }));
+    expect(focused).toEqual([true]);
+  });
+
   it('removes the highlight when the selection moves away', () => {
     const { view, parent, editor } = setup('Some bold text\n');
     view.reveal(SourceRange.of({ from: 5, to: 9 }));

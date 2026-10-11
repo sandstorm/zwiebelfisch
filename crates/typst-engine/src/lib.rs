@@ -23,7 +23,7 @@ use typst::diag::{Severity, SourceDiagnostic};
 use typst::layout::{Abs, Point};
 use typst_layout::PagedDocument;
 use typst::introspection::PagedPosition;
-use typst::syntax::{FileId, LinkedNode, Side, Source, Span};
+use typst::syntax::{FileId, LinkedNode, Side, Source, Span, SyntaxKind};
 use typst::utils::hash128;
 use typst::{World, WorldExt};
 use typst_ide::Jump;
@@ -253,14 +253,15 @@ impl Engine {
     }
 
     /// Returns the preview positions (`PositionJson[]` as JSON) showing the
-    /// text at `offset` in `path`; empty if it is not visible text.
+    /// cursor at `offset` in `path`, the one it is shown at first; empty if
+    /// nothing there is drawn (see `cursor_positions`).
     #[wasm_bindgen(js_name = jumpFromCursor)]
     pub fn jump_from_cursor(&self, path: &str, offset: usize) -> String {
         let positions = (|| {
             let document = self.document.as_ref()?;
             let source = self.world.loaded_source(file_id(path)?)?;
             let byte = source.lines().utf16_to_byte(offset)?;
-            Some(typst_ide::jump_from_cursor(document, source, byte))
+            Some(cursor_positions(document, source, byte))
         })()
         .unwrap_or_default();
         to_json(&positions.iter().map(position_json).collect::<Vec<_>>())
@@ -383,6 +384,47 @@ impl Engine {
             to,
         }
     }
+}
+
+/// Where the cursor at `byte` of `source` is shown in `document`: where its
+/// text is drawn (`typst_ide::jump_from_cursor`, one position per page), from
+/// where the element around it starts on (a heading, a figure, an equation):
+/// a copy of the text drawn before, as an outline's entry of a heading, is not
+/// where the cursor is. Where nothing is drawn for the text at the cursor (a
+/// label, a heading's `=`, a figure's call), the element's start.
+fn cursor_positions(document: &PagedDocument, source: &Source, byte: usize) -> Vec<PagedPosition> {
+    let drawn = typst_ide::jump_from_cursor(document, source, byte);
+    let Some(start) = element_start(document, source, byte) else {
+        return drawn;
+    };
+    let after: Vec<PagedPosition> = drawn
+        .into_iter()
+        .filter(|position| (position.page, position.point.y) >= (start.page, start.point.y))
+        .collect();
+    if after.is_empty() { vec![start] } else { after }
+}
+
+/// Where the innermost element the document places (`Locatable`) around the
+/// cursor at `byte` starts; for a label in markup, the element it labels.
+fn element_start(document: &PagedDocument, source: &Source, byte: usize) -> Option<PagedPosition> {
+    let root = LinkedNode::new(source.root());
+    let is_text = |leaf: &LinkedNode| matches!(leaf.kind(), SyntaxKind::Text | SyntaxKind::MathText);
+    let leaf = root
+        .leaf_at(byte, Side::Before)
+        .filter(is_text)
+        .or_else(|| root.leaf_at(byte, Side::After))?;
+    let labelled = leaf.kind() == SyntaxKind::Label && leaf.parent_kind() == Some(SyntaxKind::Markup);
+    let node = if labelled { leaf.prev_sibling()? } else { leaf };
+    // the spans of the node and its ancestors, innermost first
+    let spans: Vec<Span> = std::iter::successors(Some(&node), |node| node.parent()).map(|node| node.span()).collect();
+    let elements = document.introspector().elements();
+    // the first element (in document order) of the innermost span that has one
+    let (_, index) = elements
+        .all()
+        .enumerate()
+        .filter_map(|(index, element)| Some((spans.iter().position(|span| *span == element.span())?, index)))
+        .min()?;
+    Some(*elements.get_pos_by_idx(index))
 }
 
 fn utf16(source: &Source, byte: usize) -> usize {

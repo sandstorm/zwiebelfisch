@@ -38,7 +38,11 @@ export interface TypstEngine {
   exportPdf(main: string): PdfResult;
   /** What is at a point of the last compiled document, or null for empty space. */
   jumpFromClick(page: PageIndex, x: Pt, y: Pt): SourceJump | null;
-  /** Where the text at `offset` appears in the last compiled document. */
+  /**
+   * Where the cursor at `offset` is shown in the last compiled document, where it is shown first: where its text is
+   * drawn (one position per page), from the start of the element around it on (not a heading's entry in an outline
+   * before); where that element starts if no text is drawn there (a label: the element it labels). Empty if none.
+   */
   jumpFromCursor(path: string, offset: SourceOffset): Position[];
   /**
    * Where the given source ranges of `path` are drawn in the last compiled

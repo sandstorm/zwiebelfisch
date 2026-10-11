@@ -161,11 +161,12 @@ export class SourceEditor {
   reveal({ from, to }: SourceRange): void {
     const length = this.view.state.doc.length;
     const range = { from: Math.min(from, length), to: Math.min(to, length) };
+    // focused first, as the Visual editor: who follows the selection of the focused editor (the preview) sees it move
+    this.view.focus();
     this.view.dispatch({
       selection: EditorSelection.single(range.from, range.to),
       effects: [setHighlight.of(range), EditorView.scrollIntoView(range.from, { y: 'center' })],
     });
-    this.view.focus();
   }
 
   /** Puts `text` in place of the selection, the cursor after it, scrolled into view; focuses the editor. */

@@ -6,12 +6,13 @@ The word-processor editor: a Tiptap 3 editor over the Typst ↔ ProseMirror conv
 
 ```ts
 new VisualEditor(parent, document, contributions: VisualEditorHost)
-.reveal(range: SourceRange)    // select what shows the source range
-.selection() → SourceRange     // the source range the selection shows
+.reveal(range: SourceRange)    // focus, select what shows the source range, scroll to it
+.selection() → SourceRange     // the source range the selection shows; after reveal, the range revealed
 .onDidChangeSelection: Event<void>
 .dispose()
 ```
 
+- *Reveal:* the editor takes the focus first (ProseMirror scrolls to the DOM's selection, which it moves only while focused), then selects. What it selects may show the range only roughly: a figure's label is shown as the caret below the figure. Until the selection moves or the text changes, `selection()` says the range revealed, so who follows the selection (the preview) goes where was asked, not to the text after the figure.
 - *Write-back:* after every transaction that changed the document, `document.setText(serializeToTypst(doc), this)`: one minimal change.
 - *Read-back:* a change with another origin is parsed again and applied with `applyTypstChanges`, outside the undo history.
 - *Mechanism kept:* paragraphs, text, raw boxes, the toolbar's frame (undo/redo, *Insert* menu, *Selection* bar), highlights, completion lists, the clipboard. Every other construct and feature is a contribution.

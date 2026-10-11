@@ -1,17 +1,23 @@
 // @vitest-environment jsdom
 // Tests for typst-editor.ts: references, links to labels and web links followed in the composed widget, in the Source
-// and the Visual editor (⌘/Ctrl+click, Alt+Enter, the hover); preview mocked: no worker in jsdom.
+// and the Visual editor (⌘/Ctrl+click, Alt+Enter, the hover), and where the preview goes; preview mocked: no worker in
+// jsdom (where its engine places a source offset: typst-engine.test.ts).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import type { Editor } from '@tiptap/core';
 import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
 import { createTypstEditor } from './typst-editor';
 
+/** What the preview was asked to reveal: the file and offset. */
+const revealed = vi.hoisted(() => [] as [string, number][]);
+
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   Preview: class {
     update() {}
-    reveal() {}
+    reveal(path: string, { from }: { from: number }) {
+      revealed.push([path, from]);
+    }
     snippet = async () => null;
     onDidRender = () => ({ dispose() {} });
     onDidClickPage = () => ({ dispose() {} });
@@ -64,6 +70,7 @@ afterEach(() => {
   document.body.replaceChildren();
   sessionStorage.clear();
   vi.restoreAllMocks();
+  revealed.length = 0;
 });
 
 describe('links in the Source editor', () => {
@@ -262,5 +269,40 @@ describe('following a reference in the Visual editor goes to its label, scrolled
     const widget = book('text');
     follow(widget, 'knuth', 'click');
     expect(widget.editor.activeFile).toBe('/refs.bib');
+  });
+
+  describe('the preview goes to the label, once (its engine places a label where its element starts)', () => {
+    const label = (path: string, name: string) => BOOK[path as keyof typeof BOOK].indexOf(`<${name}>`);
+
+    for (const how of ['click', 'key'] as const) {
+      it.each([
+        ['sec:method', '/method.typ'],
+        ['sec:intro', '/main.typ'],
+        ['fig:a', '/main.typ'],
+        ['tab:b', '/main.typ'],
+        ['eq:c', '/main.typ'],
+      ])(`Visual editor, %s (${how})`, (target, path) => {
+        const widget = book('elsewhere');
+        revealed.length = 0;
+        follow(widget, target, how);
+        expect(revealed).toEqual([[path, label(path, target)]]);
+      });
+    }
+
+    it.each([
+      ['sec:method', '/method.typ', 'text'],
+      ['fig:a', '/main.typ', 'text'],
+      ['sec:intro', '/main.typ', 'elsewhere'],
+    ] as const)('Source editor, %s in %s (Alt+Enter; the focus in the %s before)', (target, path, focus) => {
+      const widget = setup(SOURCE_EDITOR, BOOK);
+      widget.editor.open('/method.typ');
+      widget.editor.open('/main.typ');
+      const view = widget.source();
+      view.dispatch({ selection: { anchor: BOOK['/main.typ'].indexOf(`@${target}`) + 2 } });
+      if (focus === 'text') view.focus();
+      revealed.length = 0;
+      view.contentDOM.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', altKey: true, bubbles: true, cancelable: true }));
+      expect(revealed).toEqual([[path, label(path, target)]]);
+    });
   });
 });

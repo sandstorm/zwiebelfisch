@@ -22,7 +22,7 @@ createEditor(parent, document, { onSelection? }) → SourceEditor    // the work
 == SourceEditor <architecture-source-editor-class>
 
 ```ts
-.reveal(range: SourceRange)    // select, scroll to the center, highlight until an edit or the selection moves
+.reveal(range: SourceRange)    // focus, select, scroll to the center, highlight until an edit or the selection moves
 .selection() → SourceRange
 .dispose()
 ```

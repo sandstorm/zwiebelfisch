@@ -67,6 +67,24 @@ describe('VisualEditor', () => {
     expect(view.selection()).toEqual({ from, to: from + 4 });
   });
 
+  it('reports a revealed range no position shows exactly as revealed (to whom it tells), until the selection moves or the text changes', () => {
+    const source = 'Title\n\nSome text.\n';
+    // between the paragraphs (as a figure's label is): the cursor goes to the start of the next one
+    const gap = SourceOffset.of(source.indexOf('\n\nSome') + 1);
+    const { doc, view, editable } = setup(source);
+    const told: SourceRange[] = [];
+    view.onDidChangeSelection(() => told.push(view.selection()));
+    view.reveal(SourceRange.of({ from: gap, to: gap }));
+    expect([told, view.selection()]).toEqual([[{ from: gap, to: gap }], { from: gap, to: gap }]);
+    const pm = (editable as HTMLElement & { editor: Editor }).editor;
+    pm.commands.setTextSelection(pm.state.selection.from + 1);
+    expect(view.selection().from).toBe(source.indexOf('Some') + 1);
+
+    view.reveal(SourceRange.of({ from: gap, to: gap }));
+    doc.setText('Title\n\nSome text, changed.\n', 'source');
+    expect(view.selection().from).toBe(source.indexOf('Some'));
+  });
+
   it('follows document changes made elsewhere', () => {
     const { doc, parent } = setup('Title\n\nText\n');
     doc.setText('Title\n\nText changed\n', 'source');
