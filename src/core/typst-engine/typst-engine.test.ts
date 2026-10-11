@@ -203,6 +203,25 @@ ${figure}`;
     expect(Math.min(...picture.map((b) => b.y))).toBeLessThan(Math.min(...caption.map((b) => b.y)));
   });
 
+  it.each([
+    ['a raw block shown as a block', `#show raw.where(block: true): block.with(fill: luma(240))\n\`\`\`\n${'line\n'.repeat(16)}\`\`\``],
+    ['a table', `#table(columns: 2, ${'[cell], [cell], '.repeat(10)})`],
+  ])('returns no boxes of the page marginals for %s that breaks across pages', (_, element) => {
+    const source = `#set page(width: 200pt, height: 200pt, margin: 50pt, header: [Head], footer: [Foot], background: place(top + left, dx: 5pt, dy: 5pt)[Back])
+Intro
+
+${element}`;
+    engine.setSource('/main.typ', source);
+    expect(engine.compile('/main.typ').diagnostics).toEqual([]);
+    const from = source.indexOf(element);
+    const boxes = engine.boxesForRanges('/main.typ', [SourceRange.of({ from, to: from + element.length })]);
+    expect(new Set(boxes.map((b) => b.page)).size).toBeGreaterThan(1);
+    for (const b of boxes) {
+      expect(b.y).toBeGreaterThanOrEqual(45); // below header and background
+      expect(b.y + b.h).toBeLessThanOrEqual(155); // above the footer
+    }
+  });
+
   it('returns nothing for a click on empty space', () => {
     engine.setSource('/main.typ', '#set page(width: 200pt, height: 100pt, margin: 0pt)\nHi');
     engine.compile('/main.typ');
