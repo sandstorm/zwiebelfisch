@@ -65,7 +65,7 @@ test('/diagram: a new .drawio.png as a figure, opened in the diagram editor', as
   await expect(editor(page).getByTestId('typst-status')).toHaveText(/✓/);
 });
 
-test('/mermaid: a new .mmd with a starter flowchart as a figure with the merman import, opened in the text editor; "Edit diagram" opens it again', async ({ page }) => {
+test('/mermaid: a new .mmd with a starter flowchart as a figure with the merman import, opened in the text editor; ⌘/Ctrl+click on its picture ("Edit diagram") opens it again', async ({ page }) => {
   await caretInParagraph(page);
   await page.keyboard.press('Enter');
   await page.keyboard.type('/mermaid');
@@ -81,6 +81,9 @@ test('/mermaid: a new .mmd with a starter flowchart as a figure with the merman 
   await expect(editor(page).getByTestId('typst-status')).toHaveText(/✓/, { timeout: 30_000 });
 
   await editor(page).getByTestId('typst-files').locator('[role=treeitem][title="main.typ"]').click();
-  await visual(page).getByRole('button', { name: 'Edit diagram' }).click();
+  const picture = visual(page).locator('.typst-visual__raw-block', { hasText: 'diagram.mmd' }).locator('img.typst-visual__rendering');
+  await picture.hover();
+  await expect(picture).toHaveAttribute('title', /^Edit diagram \(/);
+  await picture.click({ modifiers: ['ControlOrMeta'] });
   await expect(text.locator('.cm-content')).toContainText('flowchart LR');
 });

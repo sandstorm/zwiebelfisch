@@ -94,6 +94,12 @@ describe('linkInfo (the hover)', () => {
     expect(open).toHaveBeenCalledWith(path('/template.typ'));
   });
 
+  it('offers to open the target as its tooltip says, if it has one', () => {
+    const dom = linkInfo(document, { ...link, target: path('/flow.drawio.png'), tooltip: 'Edit diagram' }, actions())!;
+    expect(dom.querySelector('button')!.textContent).toBe('Edit diagram');
+    expect(dom.textContent).toBe('Edit diagram(Ctrl+click or Alt+Enter)');
+  });
+
   it("shows the tooltip and runs the command with its arguments, showing why it failed", async () => {
     const { open, executeCommand } = actions();
     executeCommand.mockRejectedValueOnce(new Error('This change is not allowed here.'));

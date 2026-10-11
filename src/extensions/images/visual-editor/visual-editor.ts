@@ -242,7 +242,7 @@ function imagePathLink(link: DocumentLink | null, path: PathReference, doc: Docu
   button.type = 'button';
   button.className = 'typst-images__path';
   button.textContent = path;
-  button.title = `Open ${ProjectPath.displayName(target)}`;
+  button.title = link.tooltip ?? `Open ${ProjectPath.displayName(target)}`;
   button.addEventListener('mousedown', (event) => event.preventDefault());
   button.addEventListener('click', () => open(target));
   return button;

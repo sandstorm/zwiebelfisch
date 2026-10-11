@@ -12,7 +12,7 @@ export const DIAGRAM_EXTENSION = '.drawio.png';
 /** The diagram files, PNGs with a diagrams.net diagram in them, as a custom editor's file name pattern. */
 export const DIAGRAM_FILES = `*${DIAGRAM_EXTENSION}`;
 
-/** The custom editor's view type: diagrams open in it when asked to be edited, even if the user chose the image preview. */
+/** The custom editor's view type: new and inserted diagrams open in it, even if the user chose the image preview. */
 export const DIAGRAM_EDITOR = 'diagrams.editor';
 
 /** Whether `path` is a diagram file (by name, in any case). */

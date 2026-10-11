@@ -74,7 +74,6 @@ describe('describeContribution', () => {
       details: ['after " ", "("'],
       rank: ['@'],
     });
-    expect(describeAt('visualEditor.registerRawBoxAction', { title: 'Edit diagram', when: () => true, run() {} }).details).toEqual(['on some boxes']);
     expect(describeAt('preview.registerPdfExportOption', { id: 'comments.include', label: 'Include comments', default: false, apply: () => ({}) }, { priority: 50 })).toEqual({
       title: 'comments.include',
       details: ['"Include comments"', 'default false', 'priority 50'],

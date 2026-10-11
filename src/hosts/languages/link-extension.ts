@@ -2,13 +2,14 @@
 import type { EditorState, Extension, Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, hoverTooltip, keymap, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import { ProjectPath } from '../../core/paths/paths';
-import type { DocumentLink, LinkTargets, TextDocument } from './languages';
+import type { DocumentLink, FollowableLink, LinkTargets, TextDocument } from './languages';
 
 /**
  * Makes the links of the editor's text navigable: while the modifier is held, a hovered link shows as one; Mod+click
- * or Alt+Enter on it opens its target, and the hover tooltip offers "Open …", or says what the link's tooltip says
- * and offers its command (e.g. "Create chapter.typ"). `languageId`: the text's language; `path`: the file the text
- * is in, now (a file can be renamed); null: none, the text has no links.
+ * or Alt+Enter on it opens its target, and the hover tooltip offers to open it ("Open …", or the link's tooltip, as
+ * VS Code's "Follow link"), or says what the link's tooltip says and offers its command (e.g. "Create chapter.typ").
+ * `languageId`: the text's language; `path`: the file the text is in, now (a file can be renamed); null: none, the
+ * text has no links.
  *
  * The document links of a CodeMirror editor's text (a Source editor, a raw box's code, a text file), like IntelliJ:
  * marked, Mod+click / Alt+Enter follow them, the hover offers "Open …" or what the link's command does.
@@ -68,20 +69,17 @@ export interface LinkActions extends LinkTargets {
 }
 
 /**
- * What a (resolved) link offers, as a small piece of DOM: "Open …" for its target (with the Mod+click hint), its
- * tooltip, and a button for its command that shows the error's message when the command rejects. Null when it offers
- * nothing.
+ * What a (resolved) link offers, as a small piece of DOM: a button opening its target ("Open …", or its tooltip:
+ * "Edit diagram") with the Mod+click hint, else its tooltip; and a button for its command that shows the error's
+ * message when the command rejects. Null when it offers nothing.
  */
 export function linkInfo(doc: Document, link: DocumentLink, actions: Pick<LinkActions, 'open' | 'executeCommand'>): HTMLElement | null {
   const { target, tooltip, command } = link;
   if (!target && !tooltip && !command) return null;
   const info = doc.createElement('span');
   info.className = 'typst-file-link';
-  if (target) {
-    info.append(button(doc, `Open ${ProjectPath.displayName(target)}`, () => actions.open(target)));
-    info.append(note(doc, `(${MOD_CLICK} or Alt+Enter)`));
-  }
-  if (tooltip) info.append(note(doc, tooltip));
+  if (target) info.append(button(doc, followLabel(link, target), () => actions.open(target)), note(doc, FOLLOW_HINT));
+  else if (tooltip) info.append(note(doc, tooltip));
   if (command) {
     const error = note(doc, '');
     error.classList.add('typst-file-link__error');
@@ -95,6 +93,24 @@ export function linkInfo(doc: Document, link: DocumentLink, actions: Pick<LinkAc
     info.append(button(doc, command.title, run), error);
   }
   return info;
+}
+
+/**
+ * The first of `links` (in text order) that leads to a file, followed as in text: titled as the hover offers it, with
+ * the Mod+click hint; null: none leads to a file.
+ */
+export function primaryLink(links: readonly DocumentLink[], actions: Pick<LinkActions, 'resolveDocumentLink' | 'open'>): FollowableLink | null {
+  for (const link of links) {
+    const resolved = actions.resolveDocumentLink(link);
+    const target = resolved.target;
+    if (target) return { title: `${followLabel(resolved, target)} ${FOLLOW_HINT}`, isFollowEvent: isMod, follow: () => actions.open(target) };
+  }
+  return null;
+}
+
+/** What following a link to `target` does, in words: its tooltip, else "Open <file>". */
+function followLabel(link: DocumentLink, target: ProjectPath): string {
+  return link.tooltip ?? `Open ${ProjectPath.displayName(target)}`;
 }
 
 /** The links of the editor's text, in the file at `path` (none: no links). */
@@ -142,5 +158,5 @@ function note(doc: Document, text: string): HTMLElement {
   return element;
 }
 
-/** The modifier that turns a click on a link into "follow", as people read it. */
-const MOD_CLICK = MAC ? '⌘+click' : 'Ctrl+click';
+/** How to follow a link, as people read it: the modifier that turns a click into "follow", or the key. */
+const FOLLOW_HINT = `(${MAC ? '⌘+click' : 'Ctrl+click'} or Alt+Enter)`;

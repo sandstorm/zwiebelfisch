@@ -211,7 +211,7 @@ The 100-page document took #values.Runs.at(4).at(4) ms (median, @tab:runs).
 - A `.drawio.png` is a PNG with a diagrams.net diagram inside: Typst shows it as an image, the editor opens it in diagrams.net.
 - File panel → New → "New diagram…" creates one and opens it.
 - Insert → Insert diagram (or `/diagram`): creates one (proposed: `diagrams/diagram.drawio.png` next to the file), inserts `#figure(image("…"), caption: [ ])` and opens it.
-- A selected image showing a diagram has "Edit diagram".
+- The picture of a diagram in the Visual editor is a link, "Edit diagram": Ctrl+click (⌘-click on Mac) on it, or Alt+Enter on the selected image, opens it in diagrams.net. Hovering says so; with Ctrl (⌘) held it shows as a link.
 - Every change is saved into the file as you draw; there is no Save button.
 
 == Mermaid diagrams <guide-features-mermaid>
@@ -243,7 +243,7 @@ flowchart LR
 ````
 
 - Insert → Insert Mermaid diagram (or `/mermaid`): creates a `.mmd` with a starter flowchart (proposed: `diagrams/diagram.mmd` next to the file), inserts its figure with the import and opens it in the text editor.
-- A box reading a `.mmd` file has "Edit diagram": it opens the file.
+- The picture of a box reading a `.mmd` file is a link, "Edit diagram": Ctrl+click (⌘-click on Mac) on it, or Alt+Enter on the selected box, opens the file.
 - In the Visual editor an inline diagram is a code block (language `mermaid`); the preview shows the diagram.
 - The first use downloads 3.3 MB (then cached by the browser) and adds about a second to the compile; a diagram edit takes about 0.3 s.
 
@@ -280,10 +280,10 @@ File links:
 #bibliography("references.bib")
 ```
 
-- Paths in `#import`, `#include`, `image`, `read`, `bibliography`, `json` / `csv` / `yaml` / `toml` / `xml` / `cbor` open their file: Ctrl+click or Alt+Enter (⌘-click or ⌥↩ on Mac) in the Source editor, "Open …" above a raw box in the Visual editor.
+- Paths in `#import`, `#include`, `image`, `read`, `bibliography`, `json` / `csv` / `yaml` / `toml` / `xml` / `cbor` open their file: Ctrl+click or Alt+Enter (⌘-click or ⌥↩ on Mac) in the Source editor and in a raw box's code. In the Visual editor a box's picture follows the first path that leads to a file the same way (Alt+Enter on the selected box); hovering says where.
 - A missing `.typ` file can be created from there.
 - A file the main file includes gets "← previous file" / "next file →" links in reading order.
-- Back and forward, as in VS Code: after any change of the shown file (a link, "Edit diagram", a click in the preview, the file panel, …), "← Back to _file_" above a supplementary file (a Mermaid diagram, a spreadsheet, a text file, …) returns to it, in the editor it was shown in, with its selection (Typst files). After going back, "Forward to _file_ →" returns. Typst files show the reading order instead; the keys work everywhere. Keys: Ctrl+Alt+- back, Ctrl+Shift+- forward (⌃- / ⌃⇧- on Mac). The last 50 files; renamed files keep their place, deleted ones drop out.
+- Back and forward, as in VS Code: after any change of the shown file (a link, a click in the preview, the file panel, …), "← Back to _file_" above a supplementary file (a Mermaid diagram, a spreadsheet, a text file, …) returns to it, in the editor it was shown in, with its selection (Typst files). After going back, "Forward to _file_ →" returns. Typst files show the reading order instead; the keys work everywhere. Keys: Ctrl+Alt+- back, Ctrl+Shift+- forward (⌃- / ⌃⇧- on Mac). The last 50 files; renamed files keep their place, deleted ones drop out.
 
 == Help <guide-features-help>
 

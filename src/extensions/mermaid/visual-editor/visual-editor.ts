@@ -1,7 +1,6 @@
 // The mermaid extension in the Visual editor. See ../mermaid.ts.
 import { PathReference, ProjectPath } from '../../../core/paths/paths';
-import type { TypstDocument } from '../../../core/typst-document/typst-document';
-import { insertTypst, svg, type RawBoxAction, type ToolbarContext, type ToolbarItem } from '../../../hosts/visual-editor/visual-editor';
+import { insertTypst, svg, type ToolbarContext, type ToolbarItem } from '../../../hosts/visual-editor/visual-editor';
 import type { ExtensionContext } from '../../../hosts/workbench/workbench';
 import { calculateMermaidFigure, MERMAID_EXTENSION, STARTER_FLOWCHART } from '../model/mermaid-figure';
 
@@ -11,8 +10,7 @@ import { calculateMermaidFigure, MERMAID_EXTENSION, STARTER_FLOWCHART } from '..
  * `#figure(mermaid(read("…"), width: 100%), caption: [ ])` after the cursor's block with the import of merman it
  * needs, and opens the file (in whichever editor `.mmd` files open: the text editor), where the diagram is written.
  *
- * "Insert Mermaid diagram" in the Insert menu (and so among the slash commands), and "Edit diagram" on a box whose
- * Typst reads a `.mmd` file.
+ * "Insert Mermaid diagram" in the Insert menu (and so among the slash commands).
  */
 export function insertMermaid(context: InsertContext): ToolbarItem {
   return {
@@ -29,21 +27,6 @@ export function insertMermaid(context: InsertContext): ToolbarItem {
 
 /** What inserting a diagram uses of the extension context. */
 export type InsertContext = Pick<ExtensionContext, 'project' | 'window' | 'workspace' | 'workbench'>;
-
-/** The Mermaid file the Typst `src` of a box in `document` reads, or null. */
-export type MermaidOf = (src: string, document: TypstDocument) => ProjectPath | null;
-
-/** "Edit diagram" on every box whose Typst reads a Mermaid file of the project (`mermaidOf`); `open` shows the file. */
-export function editMermaidAction(mermaidOf: MermaidOf, open: (path: ProjectPath) => void): RawBoxAction {
-  return {
-    title: 'Edit diagram',
-    when: (node, editor) => mermaidOf(node.attrs.src, editor.document) !== null,
-    run: (node, editor) => {
-      const diagram = mermaidOf(node.attrs.src, editor.document);
-      if (diagram) open(diagram);
-    },
-  };
-}
 
 const ICON = svg('<circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M7 6h10M6 8l5 8.3M18 8l-5 8.3"/>');
 

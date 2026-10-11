@@ -2,8 +2,10 @@
 // Tests for raw-box.ts.
 import { EditorView } from '@codemirror/view';
 import { describe, expect, it, vi } from 'vitest';
+import type { Editor } from '@tiptap/core';
+import { Disposable } from '../../../core/disposable/disposable';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { VisualEditor, VisualEditorHost, type VisualEditorContribution } from '../visual-editor';
+import { VisualEditor, VisualEditorHost, type RawBoxLink, type VisualEditorContribution } from '../visual-editor';
 
 function setup(text: string, contributions: readonly VisualEditorContribution[] = []) {
   const parent = document.createElement('div');
@@ -125,23 +127,60 @@ describe('raw boxes', () => {
     expect(doc.text).toBe('Hello\n');
   });
 
-  it('show the contributed actions that apply to them above the code, kept up to date with the source', () => {
-    const run = vi.fn();
-    const actions: VisualEditorContribution = {
-      id: 'test',
-      activate: ({ visualEditor }) => {
-        visualEditor.registerRawBoxAction({ title: 'Make bigger', when: (node) => node.attrs.src.includes('12pt'), run });
-        visualEditor.registerRawBoxAction({ title: 'Never', when: () => false, run });
-      },
-    };
-    const { parent, box, doc } = setup(RAW, [actions]);
-    const raw = parent.querySelector<HTMLElement>('.typst-visual__raw-block')!;
-    const bar = raw.querySelector<HTMLElement>('.typst-visual__box-actions')!;
-    expect(bar.nextElementSibling?.classList.contains('typst-visual__code')).toBe(true);
-    expect([...bar.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['Make bigger']);
-    bar.querySelector('button')!.click();
-    expect(run).toHaveBeenCalledWith(expect.objectContaining({ attrs: expect.objectContaining({ src: '#set text(size: 12pt)' }) }), expect.objectContaining({ document: doc }));
-    box('.typst-visual__raw-block').dispatch({ changes: { from: 16, to: 20, insert: '14pt' } });
-    expect(bar.querySelectorAll('button')).toHaveLength(0);
+  it("pictures follow the box's link: its tooltip on hover, Mod+click; plain clicks still edit the code", async () => {
+    const { parent, linkOf, follow } = setupLinked(RAW);
+    const picture = await shownPicture(parent);
+    picture.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(picture.title).toBe('Edit (Ctrl+click or Alt+Enter)');
+    expect(linkOf).toHaveBeenLastCalledWith('#set text(size: 12pt)', expect.any(TypstDocument));
+    picture.dispatchEvent(new MouseEvent('mousemove', modifier));
+    expect(picture.classList.contains('typst-visual__rendering--link')).toBe(true);
+    document.dispatchEvent(new KeyboardEvent('keyup', {}));
+    expect(picture.classList.contains('typst-visual__rendering--link')).toBe(false);
+    picture.dispatchEvent(new MouseEvent('mousedown', { ...modifier, button: 0, cancelable: true }));
+    expect(follow).toHaveBeenCalledTimes(1);
+    expect(picture.hidden).toBe(false);
+    picture.dispatchEvent(new MouseEvent('mousedown', { button: 0, cancelable: true }));
+    expect(follow).toHaveBeenCalledTimes(1);
+    expect(picture.hidden).toBe(true);
+  });
+
+  it('Alt+Enter on a selected box follows its link', () => {
+    const { parent, follow } = setupLinked(RAW);
+    const tiptap = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
+    tiptap.commands.setNodeSelection(0);
+    tiptap.view.dom.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', altKey: true, bubbles: true, cancelable: true }));
+    expect(follow).toHaveBeenCalledTimes(1);
+    expect(parent.querySelector('.typst-visual__code')).not.toBeNull();
+  });
+
+  it('pictures of boxes without a link only say nothing and edit the code', async () => {
+    const { parent, follow } = setupLinked(RAW, () => null);
+    const picture = await shownPicture(parent);
+    picture.dispatchEvent(new MouseEvent('mouseenter'));
+    expect(picture.title).toBe('');
+    picture.dispatchEvent(new MouseEvent('mousedown', { ...modifier, button: 0, cancelable: true }));
+    expect(follow).not.toHaveBeenCalled();
+    expect(picture.hidden).toBe(true);
   });
 });
+
+const modifier = { ctrlKey: true, metaKey: true };
+
+/** Raw boxes drawn as a picture, each leading where `link` says ("Edit"; Ctrl or ⌘ held follows). */
+function setupLinked(text: string, link: (follow: () => void) => RawBoxLink | null = (follow) => ({ title: 'Edit (Ctrl+click or Alt+Enter)', isFollowEvent: (event) => event.ctrlKey, follow })) {
+  const follow = vi.fn();
+  const linkOf = vi.fn(() => link(follow));
+  const visualEditor = new VisualEditorHost({ linkOf });
+  visualEditor.registerRawBoxRenderer(() => ({ renders: () => true, render: async () => ({ url: 'data:image/png;base64,' }), onDidChange: () => new Disposable(() => {}) }));
+  const parent = document.body.appendChild(document.createElement('div'));
+  new VisualEditor(parent, new TypstDocument(text), visualEditor);
+  return { parent, linkOf, follow };
+}
+
+/** The first box's picture, once it shows. */
+async function shownPicture(parent: HTMLElement): Promise<HTMLImageElement> {
+  const picture = parent.querySelector<HTMLImageElement>('.typst-visual__rendering')!;
+  await vi.waitFor(() => expect(picture.hidden).toBe(false));
+  return picture;
+}

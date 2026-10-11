@@ -189,7 +189,7 @@ describe('diagrams', () => {
     ]);
   });
 
-  it('offers "Edit diagram" on an image box showing a diagram of the project, which opens it', () => {
+  it('makes the picture of an image box showing a diagram a link "Edit diagram": Mod+click opens the diagram', () => {
     URL.createObjectURL = vi.fn(() => 'blob:1');
     URL.revokeObjectURL = vi.fn();
     const { host, editor } = setup({
@@ -197,15 +197,41 @@ describe('diagrams', () => {
       source: '#image("img/flow.drawio.png")\n\n#image("img/logo.png")\n',
       files: { '/img/flow.drawio.png': diagram(), '/img/logo.png': new Uint8Array([1]) },
     });
-    const [flow, logo] = [...host.querySelectorAll<HTMLElement>('.typst-images__box')];
-    const actions = (box: HTMLElement) => [...box.querySelectorAll('.typst-images__tools .typst-visual__box-actions button')].map((b) => b.textContent);
-    expect(actions(flow)).toEqual(['Edit diagram']);
-    expect(actions(logo)).toEqual([]);
-    flow.querySelector<HTMLButtonElement>('.typst-visual__box-actions button')!.click();
+    const [flow, logo] = [...host.querySelectorAll<HTMLElement>('.typst-images__box')].map(hovered);
+    expect(flow.title).toMatch(/^Edit diagram \((⌘|Ctrl)\+click or Alt\+Enter\)$/);
+    expect(logo.title).toMatch(/^Open img\/logo\.png \(/);
+    expect(host.querySelector('.typst-visual__box-actions, .typst-images__tools button[aria-label="Edit diagram"]')).toBeNull();
+    modClick(flow);
     expect(editor.activeFile).toBe('/img/flow.drawio.png');
     expect(host.querySelector('[data-testid=typst-diagram]')).not.toBeNull();
   });
 });
+
+describe('mermaid', () => {
+  it('makes the picture of a figure reading a .mmd file a link "Edit diagram": Mod+click opens the file', () => {
+    const { host, editor } = setup({
+      viewType: VISUAL_EDITOR,
+      source: '#figure(mermaid(read("loop.mmd")), caption: [Loop])\n',
+      files: { '/loop.mmd': 'flowchart LR\n  A --> B\n' },
+    });
+    const picture = hovered(host.querySelector<HTMLElement>('.typst-visual__raw-block')!);
+    expect(picture.title).toMatch(/^Edit diagram \(/);
+    modClick(picture);
+    expect(editor.activeFile).toBe('/loop.mmd');
+  });
+});
+
+/** The picture of `box`, after the mouse entered it. */
+function hovered(box: HTMLElement): HTMLImageElement {
+  const picture = box.querySelector<HTMLImageElement>('.typst-visual__rendering')!;
+  picture.dispatchEvent(new MouseEvent('mouseenter'));
+  return picture;
+}
+
+/** A click on `element` holding the link modifier (⌘ on Mac, Ctrl elsewhere: both held). */
+function modClick(element: HTMLElement) {
+  element.dispatchEvent(new MouseEvent('mousedown', { button: 0, ctrlKey: true, metaKey: true, bubbles: true, cancelable: true }));
+}
 
 describe('the built-in extensions', () => {
   it('uploads files dropped on the widget, unless the file list is hidden', async () => {

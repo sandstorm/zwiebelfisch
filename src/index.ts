@@ -67,7 +67,6 @@ export type {
   CompletionItem,
   CompletionItemProvider,
   CompletionTrigger,
-  RawBoxAction,
   RawBoxPicture,
   RawBoxRenderer,
   RawBoxRendererProvider,

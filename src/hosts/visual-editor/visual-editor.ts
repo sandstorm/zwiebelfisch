@@ -55,7 +55,7 @@ export class VisualEditor {
     this.tiptap = new Editor({
       element: body,
       extensions: [
-        ...editorExtensions(contributed.nodes, contributed.marks, boxes(editor, contributed, views)),
+        ...editorExtensions(contributed.nodes, contributed.marks, boxes(editor, contributed, views, contributions.links)),
         highlights,
         suggestions(contributed.completionItemProviders, (tiptap, query) => ({
           ...editor,
@@ -283,7 +283,6 @@ export interface Contributed {
   readonly highlights: readonly { readonly layer: string; readonly provider: SourceHighlightProvider }[];
   readonly rawBoxRenderers: readonly RawBoxRendererProvider[];
   readonly rawBoxCodeMirrorExtensions: readonly ((editor: VisualEditorContext) => Extension)[];
-  readonly rawBoxActions: readonly RawBoxAction[];
   readonly textStyles: readonly TextStyleProvider[];
   readonly completionItemProviders: readonly { readonly provider: CompletionItemProvider; readonly trigger: CompletionTrigger }[];
 }
@@ -345,16 +344,12 @@ export interface VisualEditorContributions {
   registerRawBoxRenderer(provider: RawBoxRendererProvider, options?: PriorityOptions): Disposable;
   /** CodeMirror extensions for the code of every raw box of each editor (e.g. links on file paths). */
   registerRawBoxCodeMirrorExtension(provider: (editor: VisualEditorContext) => Extension): Disposable;
-  /**
-   * A button on every raw box `action.when` holds for (any box: a contribution need not own the box's node type),
-   * in registration order: with the box's tools (an image box's toolbar), else above its code.
-   */
-  registerRawBoxAction(action: RawBoxAction): Disposable;
 }
 
 /**
- * Keeps what is registered through `VisualEditorContributions` and hands it to each editor it creates (`contributed`).
- * The workbench host has one; tests make their own (`from`).
+ * Keeps what is registered through `VisualEditorContributions` and hands it to each editor it creates (`contributed`),
+ * with where raw boxes' pictures lead (`links`; null: nowhere). The workbench host has one; tests make their own
+ * (`from`).
  */
 export class VisualEditorHost implements VisualEditorContributions {
   private readonly rawBoxRenderers: Ranked<RawBoxRendererProvider>[] = [];
@@ -367,12 +362,13 @@ export class VisualEditorHost implements VisualEditorContributions {
     gutters: [] as GutterProvider[],
     highlights: [] as { layer: string; provider: SourceHighlightProvider }[],
     rawBoxCodeMirrorExtensions: [] as ((editor: VisualEditorContext) => Extension)[],
-    rawBoxActions: [] as RawBoxAction[],
     textStyles: [] as TextStyleProvider[],
     completionItemProviders: [] as { provider: CompletionItemProvider; trigger: CompletionTrigger }[],
   };
   /** The CSS of the editors (ProseMirror's own first), for the workbench to put where the widget renders. */
   readonly styleSheet: string = proseMirrorCss + css;
+
+  constructor(readonly links: RawBoxLinks | null = null) {}
 
   /** A registry with `contributions` activated, for as long as it lives (for an editor without the workbench, as in tests). */
   static from(contributions: readonly VisualEditorContribution[]): VisualEditorHost {
@@ -422,10 +418,6 @@ export class VisualEditorHost implements VisualEditorContributions {
     return this.add(this.lists.rawBoxCodeMirrorExtensions, provider);
   }
 
-  registerRawBoxAction(action: RawBoxAction): Disposable {
-    return this.add(this.lists.rawBoxActions, action);
-  }
-
   registerTextStyleProvider(provider: TextStyleProvider): Disposable {
     return this.add(this.lists.textStyles, provider);
   }
@@ -443,7 +435,6 @@ export class VisualEditorHost implements VisualEditorContributions {
       highlights: [...lists.highlights],
       rawBoxRenderers: [...this.rawBoxRenderers].sort((a, b) => b.priority - a.priority).map((entry) => entry.value),
       rawBoxCodeMirrorExtensions: [...lists.rawBoxCodeMirrorExtensions],
-      rawBoxActions: [...lists.rawBoxActions],
       textStyles: [...lists.textStyles],
       completionItemProviders: [...lists.completionItemProviders],
     };
@@ -528,11 +519,6 @@ export interface RawBoxToolsHost {
   getPos(): number | undefined;
   /** Shows and focuses the code. */
   editCode(): void;
-  /**
-   * The box's action buttons (`registerRawBoxAction`), kept up to date by the host: the tools put the element where
-   * they show their buttons (else the box shows it above the code).
-   */
-  readonly actions: HTMLElement;
 }
 
 /** Tools on a code box (an image's resize handles and toolbar); a click on the picture then selects the box. */
@@ -545,16 +531,21 @@ export interface RawBoxTools {
 }
 
 /**
- * A button any contribution adds to the raw boxes it applies to (an image box of a diagram: "Edit diagram"), shown
- * with the box's tools (an image box's toolbar), or above the code of a box without tools.
+ * Where the pictures of raw boxes lead, from the document links of their Typst (the workbench's `languages`): a box's
+ * picture follows its primary link as a link in the Source editor does. The workbench gives it to the host.
  */
-export interface RawBoxAction {
-  /** The button's text. */
+export interface RawBoxLinks {
+  /** The primary link of the box whose Typst is `src` (code: a figure's body, without `#`), in `document`; null: none. */
+  linkOf(src: string, document: TypstDocument): RawBoxLink | null;
+}
+
+/** Where a box's picture leads. */
+export interface RawBoxLink {
+  /** The picture's tooltip: what following it does and how ("Edit diagram (⌘+click or Alt+Enter)"). */
   readonly title: string;
-  /** Whether the box of `node` (its Typst: `node.attrs.src`) in `editor` offers it; asked whenever the node changes. Default: every box. */
-  when?(node: Node, editor: VisualEditorContext): boolean;
-  /** Runs it for the box of `node` (the box's node now). */
-  run(node: Node, editor: VisualEditorContext): void;
+  /** Whether a click with `event`'s modifiers follows it (⌘ on Mac, else Ctrl). */
+  isFollowEvent(event: MouseEvent | KeyboardEvent): boolean;
+  follow(): void;
 }
 
 // The toolbar: buttons (actions), controls, groups, menus and floating bars.
@@ -720,12 +711,12 @@ export type ToolbarItem =
     };
 
 /** What the raw boxes of `editor` get from the contributions. */
-function boxes(editor: VisualEditorContext, contributed: Contributed, nodeViews: RawBoxes['nodeViews']): RawBoxes {
+function boxes(editor: VisualEditorContext, contributed: Contributed, nodeViews: RawBoxes['nodeViews'], links: RawBoxLinks | null): RawBoxes {
   return {
     editor,
     renderers: contributed.rawBoxRenderers.map((provider) => provider(editor)).filter((renderer) => renderer !== null),
     codeExtensions: contributed.rawBoxCodeMirrorExtensions.map((provider) => provider(editor)),
-    actions: contributed.rawBoxActions,
+    linkOf: (src) => links?.linkOf(src, editor.document) ?? null,
     nodeViews,
   };
 }

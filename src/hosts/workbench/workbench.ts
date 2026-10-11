@@ -310,7 +310,14 @@ export class WorkbenchHost implements Workbench {
   readonly #extensions: ExtensionHost;
   readonly #styleSheets: StyleSheets;
   readonly #ownStyles: Disposable;
-  readonly #visualEditor = new VisualEditorHost();
+  /** Raw boxes' pictures follow the primary link of the box's Typst (see `#showDocumentLinks`). */
+  readonly #visualEditor = new VisualEditorHost({
+    linkOf: (src, document) => {
+      const path = this.project.pathOf(document);
+      // the providers read Typst markup; a figure's body is written in code (`image(..)`, no `#`)
+      return path ? this.#languages.primaryLink({ path, languageId: 'typst', text: src.startsWith('#') ? src : `#${src}` }) : null;
+    },
+  });
   readonly #sourceEditors = new SourceEditorHost();
   readonly #preview: Preview;
   #previewFailed = false;
@@ -593,7 +600,7 @@ export class WorkbenchHost implements Workbench {
 
   /**
    * The Typst files' language, `typst` (`.typ`), and its registered document links in every Source editor and in the
-   * code of every raw box (in its file).
+   * code of every raw box (in its file); a raw box's picture follows the primary one (`#visualEditor`).
    */
   #showDocumentLinks(): void {
     this.#languages.declare([{ id: 'typst', extensions: ['.typ'] }]);

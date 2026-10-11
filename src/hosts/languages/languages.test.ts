@@ -1,6 +1,6 @@
 // Tests for languages.ts (LanguagesHost): merging the links of the providers for a document's language, resolving them
-// through their provider; the declared languages by ending; the help sheets by language.
-import { describe, expect, it } from 'vitest';
+// through their provider; a document's primary link; the declared languages by ending; the help sheets by language.
+import { describe, expect, it, vi } from 'vitest';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceRange } from '../../core/typst-document/typst-document';
 import { type DocumentLink, type DocumentLinkProvider, LanguagesHost } from './languages';
@@ -53,6 +53,25 @@ describe('LanguagesHost', () => {
     const resolved = links.resolveDocumentLink(resolving);
     expect(resolved.target).toBe(ProjectPath.of('/a.typ'));
     expect(links.resolveDocumentLink(resolved).target).toBe(ProjectPath.of('/a.typ'));
+  });
+
+  it('gives the primary link of a document: the first leading to a file, titled as the hover offers it, opening it', () => {
+    const open = vi.fn();
+    const links = new LanguagesHost({ ...targets, open });
+    const to = (file: string) => (link: DocumentLink) => ({ ...link, target: ProjectPath.of(file) });
+    links.registerDocumentLinkProvider({}, provider('nowhere', [[0, 4]]));
+    links.registerDocumentLinkProvider({}, { provideDocumentLinks: () => [{ range: SourceRange.of({ from: 5, to: 9 }) }], resolveDocumentLink: to('/flow.drawio.png') });
+    links.registerDocumentLinkProvider({}, provider('Edit diagram', [[10, 14]], to('/b.mmd')));
+    const primary = links.primaryLink(document)!;
+    expect(primary.title).toMatch(/^Open flow\.drawio\.png \((⌘|Ctrl)\+click or Alt\+Enter\)$/);
+    expect(primary.isFollowEvent({ ctrlKey: true, metaKey: true } as MouseEvent)).toBe(true);
+    expect(primary.isFollowEvent({ ctrlKey: false, metaKey: false } as MouseEvent)).toBe(false);
+    primary.follow();
+    expect(open).toHaveBeenCalledWith(ProjectPath.of('/flow.drawio.png'));
+    const tooltipped = new LanguagesHost(targets);
+    tooltipped.registerDocumentLinkProvider({}, provider('Edit diagram', [[10, 14]], to('/b.mmd')));
+    expect(tooltipped.primaryLink(document)?.title).toMatch(/^Edit diagram \(/);
+    expect(new LanguagesHost(targets).primaryLink(document)).toBeNull();
   });
 
   it('names the language of a file by the longest declared ending, in any case; undefined without one', () => {

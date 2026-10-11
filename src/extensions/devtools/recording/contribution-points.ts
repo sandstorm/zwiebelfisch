@@ -71,10 +71,6 @@ const POINTS: Readonly<Record<string, Describer>> = {
   'visualEditor.registerHighlights': ([layer, provider]) => ({ title: `layer ${String(layer)}`, details: optional(nameOf(provider), String) }),
   'visualEditor.registerRawBoxRenderer': ([provider, options]) => prioritized(named(provider, 'renderer'), record(options).priority),
   'visualEditor.registerRawBoxCodeMirrorExtension': ([provider]) => named(provider, 'CodeMirror extensions'),
-  'visualEditor.registerRawBoxAction': ([action]) => {
-    const { title, when } = record(action);
-    return { title: String(title), details: [typeof when === 'function' ? 'on some boxes' : 'on every box'] };
-  },
   'sourceEditor.registerCodeMirrorExtension': ([extension]) => named(extension, 'CodeMirror extensions'),
   'workbench.registerStyleSheet': ([css]) => ({ title: 'style sheet', details: [size(String(css))] }),
   'workbench.registerSidePanel': ([id, options]) => {

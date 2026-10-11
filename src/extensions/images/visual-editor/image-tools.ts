@@ -13,7 +13,7 @@ import { imagePath } from './image-syntax';
  * frame around the rendered picture showing the image's width with drag
  * handles to change it, and, while the image is selected, a small toolbar
  * (add/remove caption where the figures extension's commands are there,
- * preset widths, alt text, the box actions others contribute, edit the code).
+ * preset widths, alt text, edit the code).
  *
  * Every change is one transaction (see "Image edits" below), so one undo step
  * that rewrites only the argument concerned. A drag changes the width live in the
@@ -61,9 +61,7 @@ export class ImageTools implements RawBoxTools {
     const prompts = host.prompts;
     const altButtons = prompts ? [this.button('Alt text', () => void this.askAlt(prompts))] : [];
     const codeButton = this.button('Edit code', () => host.editCode());
-    // the box actions of other contributions ("Edit diagram") go before "Edit code", as buttons of the toolbar
-    host.actions.classList.add('typst-images__actions');
-    this.tools.append(this.captionButton, ...this.presetButtons, ...altButtons, host.actions, codeButton);
+    this.tools.append(this.captionButton, ...this.presetButtons, ...altButtons, codeButton);
     host.dom.insertBefore(this.tools, host.code);
     this.update(node);
   }

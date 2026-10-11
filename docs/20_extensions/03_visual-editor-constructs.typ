@@ -220,7 +220,6 @@ createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensio
   [`registerTextStyleProvider(provider)`], [Entries of the text style menu (heading levels, custom styles), with `keywords` as toolbar actions],
   [`registerCompletionItemProvider(provider, trigger)`], [A list that pops up while a trigger character and a query are typed (@extensions-visual-editor-constructs-completion)],
   [`registerRawBoxRenderer(provider, { priority })`], [What raw boxes show instead of their code; the first by `priority` that `renders` a box draws it (images 110, compiled snippets 100); its `className` goes on the picture, for its CSS],
-  [`registerRawBoxAction({ title, when?, run })`], [A button on every raw box `when` holds for (its Typst: `node.attrs.src`), in the box's tools or above its code; "Edit diagram" (diagrams, Mermaid) is one],
   [`registerGutter(provider)`], [A column beside the text, per editor (the notes gutter)],
   [`registerHighlights(layer, provider)`], [Styled source ranges drawn over the text (diagnostics, others' selections)],
   [`registerTiptapExtension(editor => extension)`], [Per-editor plugins, decorations, commands; hooks see `this.editor`],
@@ -231,6 +230,7 @@ createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensio
 - Contributions register once; the host applies them to every editor it creates (editors are made lazily, per document). Disposing a registration takes it out of editors created later.
 - Per-editor things (the document, a popover) come through the `…Provider` functions, which get the `VisualEditorContext`: `document`, `selection()` (a `SourceRange`), `sourceToPos`, `posToSource` (the only way between `SourceOffset`s and ProseMirror positions), `isBox(node)`.
 - `setRawBoxDecorations`: the effect through which a raw box's CodeMirror extension learns what the Visual editor draws on its box.
+- A box's picture leads where its Typst links to: its primary document link (@extensions-source-editor-and-preview-links) — the first, in text order, that leads to a file. The tooltip says what following it does ("Open logo.png", or the link's `tooltip`: "Edit diagram") and how; Ctrl+click (⌘-click on Mac) on the picture, or Alt+Enter on the selected box, follows it. An action on a box is therefore a document link on its Typst: diagrams and Mermaid mark their files' paths "Edit diagram" with a provider of priority 110.
 
 == Completion lists <extensions-visual-editor-constructs-completion>
 

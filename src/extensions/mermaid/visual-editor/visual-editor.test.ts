@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // Tests for visual-editor.ts in a Visual editor with the built-in constructs (testing/): "Insert Mermaid diagram" (the
-// name asked, the file created, the figure and import inserted, the file opened) and "Edit diagram" on its box.
+// name asked, the file created, the figure and import inserted, the file opened).
 import { describe, expect, it } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
 import { Project, type FileChange } from '../../../core/project/project';
@@ -8,7 +8,7 @@ import { SourceRange } from '../../../core/typst-document/typst-document';
 import type { SaveDialogOptions } from '../../../hosts/window/window';
 import { createVisualEditor } from '../../../testing/testing';
 import { STARTER_FLOWCHART } from '../model/mermaid-figure';
-import { editMermaidAction, insertMermaid, type InsertContext } from './visual-editor';
+import { insertMermaid, type InsertContext } from './visual-editor';
 
 const path = ProjectPath.of;
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -25,18 +25,13 @@ function setup(text: string, answer: string | undefined) {
     workspace: { applyEdit: async (change: FileChange) => (project.apply(change), null) },
     workbench: { open: (target: ProjectPath) => void opened.push(target) },
   } as unknown as InsertContext;
-  // the box's file: any `.mmd` its Typst names (the extension asks the document links)
-  const mermaidOf = (src: string) => {
-    const read = /read\("(.+\.mmd)"\)/.exec(src);
-    return read ? path(`/${read[1]}`) : null;
-  };
   const parent = window.document.body.appendChild(window.document.createElement('div'));
   const view = createVisualEditor(parent, document, {
     contributions: [
       {
         id: 'test',
         activate: ({ visualEditor, subscriptions }) =>
-          subscriptions.push(visualEditor.registerToolbarItem(insertMermaid(context)), visualEditor.registerRawBoxAction(editMermaidAction(mermaidOf, (target) => opened.push(target)))),
+          subscriptions.push(visualEditor.registerToolbarItem(insertMermaid(context))),
       },
     ],
   });
@@ -66,13 +61,5 @@ describe('Insert Mermaid diagram', () => {
     await click();
     expect(project.paths()).toEqual(['/main.typ']);
     expect(document.text).toBe('Text\n');
-  });
-
-  it('puts "Edit diagram" on a box reading a .mmd file, opening it', () => {
-    const { parent, opened } = setup('Text\n\n#figure(mermaid(read("loop.mmd")), caption: [Loop])\n\n#box[other]\n', undefined);
-    const edit = [...parent.querySelectorAll<HTMLButtonElement>('button')].filter((b) => b.textContent === 'Edit diagram');
-    expect(edit).toHaveLength(1);
-    edit[0].click();
-    expect(opened).toEqual(['/loop.mmd']);
   });
 });

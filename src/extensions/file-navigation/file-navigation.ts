@@ -19,7 +19,7 @@ import { HistoryLinks, KEYBINDINGS } from './workbench/history-links';
  * Why one extension for both: they share the editor frame (one per widget) and the bar's look; neither needs the file
  * panel, so a host may keep them without it.
  *
- * Why the history listens to the shown file rather than to the ways of opening one (links, "Edit diagram", the preview,
+ * Why the history listens to the shown file rather than to the ways of opening one (links, the preview,
  * the file panel, …): every way ends in `workbench.open`, so every change of the shown file counts, as in VS Code,
  * without any feature knowing about the history.
  */

@@ -18,7 +18,7 @@ subscriptions.push(
 
 == Document links <extensions-source-editor-and-preview-links>
 
-`languages.registerDocumentLinkProvider(selector, provider, { priority? })` adds links to the texts `selector` matches. The Source editors, the code of raw boxes and the text files' editor show them: Ctrl+click or Alt+Enter (⌘-click or ⌥↩ on Mac) follows a link, hovering shows it.
+`languages.registerDocumentLinkProvider(selector, provider, { priority? })` adds links to the texts `selector` matches. The Source editors, the code of raw boxes and the text files' editor show them: Ctrl+click or Alt+Enter (⌘-click or ⌥↩ on Mac) follows a link, hovering shows it ("Open …", or the link's `tooltip` for a link with a `target`, as VS Code's "Follow link"). The picture of a raw box follows the box's primary link: the first in text order that leads to a file.
 
 ```ts
 languages.registerDocumentLinkProvider({ language: 'typst' }, {
@@ -34,7 +34,8 @@ languages.registerDocumentLinkProvider({ language: 'typst' }, {
 
 - `TextDocument`: `path` (the file the text is in), `languageId`, `text` (a whole file's, or a part of one: a raw box's code). Language ids: `typst` for Typst files and raw boxes; the text files by ending: `csv`, `json`, `yaml`, `toml`, `xml`, `bibtex`, `plaintext`, `markdown`, `mermaid`. Whoever hands a text over names its language; the host knows none.
 - `DocumentSelector`: a `DocumentFilter` `{ language? }` or a list of them; a filter without `language` matches every text.
-- `DocumentLink`: `range` (a `SourceRange` in the text given), `target?` (a project file), `tooltip?`, `command?` (a `Command { title, command, arguments? }` the hover offers, e.g. creating a missing file).
+- `DocumentLink`: `range` (a `SourceRange` in the text given), `target?` (a project file), `tooltip?` (what following it does: "Edit diagram"; without a target, what the hover says), `command?` (a `Command { title, command, arguments? }` the hover offers, e.g. creating a missing file).
+- A more specific link for the same path (diagrams' and Mermaid's "Edit diagram" over the plain file link) comes from a provider of a higher `priority`: it replaces the other where they overlap, so it is also a box's primary link.
 - Keep `provideDocumentLinks` cheap; `resolveDocumentLink(link)` may fill in `target`, `tooltip` or `command` when a link is shown or followed.
 - Only the providers whose selector matches a text are asked; where links of several providers overlap, the higher `priority` wins (default 100; equal: registration order).
 - An extension that shows links itself (an image box's path) reads `languages.provideDocumentLinks(document)` and `languages.resolveDocumentLink(link)`.

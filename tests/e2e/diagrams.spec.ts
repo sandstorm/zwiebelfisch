@@ -84,7 +84,7 @@ test('"New diagram…" opens the embedded editor; drawing saves the .drawio.png 
   await expect.poll(previewPicture(page)).not.toBe(before);
 });
 
-test('"Edit diagram" on the image box opens the diagram; a change is saved when the file is closed right away', async ({ page }) => {
+test('⌘/Ctrl+click on the image box\'s picture ("Edit diagram") opens the diagram; a change is saved when the file is closed right away', async ({ page }) => {
   await newDiagram(page);
   const stub = editor(page).getByTestId('typst-diagram').frameLocator('iframe');
   await expect(stub.locator('#status')).toHaveText(/^loaded/);
@@ -95,9 +95,10 @@ test('"Edit diagram" on the image box opens the diagram; a change is saved when 
   await fileRow(editor(page), 'main.typ').click();
   await expect.poll(diagramBytes(page)).not.toBe(empty);
 
-  const box = editor(page).getByTestId('typst-visual').locator('.typst-images__box');
-  await box.locator('img.typst-visual__rendering').click();
-  await box.getByRole('toolbar', { name: 'Image' }).getByRole('button', { name: 'Edit diagram' }).click();
+  const picture = editor(page).getByTestId('typst-visual').locator('.typst-images__box img.typst-visual__rendering');
+  await picture.hover();
+  await expect(picture).toHaveAttribute('title', /^Edit diagram \((⌘|Ctrl)\+click or Alt\+Enter\)$/);
+  await picture.click({ modifiers: ['ControlOrMeta'] });
   await expect(editor(page).getByTestId('typst-diagram').frameLocator('iframe').locator('#status')).toHaveText(/^loaded/);
 });
 

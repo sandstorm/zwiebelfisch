@@ -38,6 +38,9 @@
 .typst-visual__rendering[hidden] { display: none; }
 .typst-visual__raw--rendered { background: transparent; }
 .typst-visual__rendering { display: block; max-width: 100%; height: auto; cursor: text; }
+/* A picture leads where its box links to: while Mod is held over it, it shows as a link, as links in the Source editor
+   (pointer, accent color); specific enough for pictures that boxes' tools frame */
+.typst-visual__raw--rendered .typst-visual__rendering.typst-visual__rendering--link { cursor: pointer; outline: 1px solid var(--te-accent); outline-offset: 2px; }
 /* A picture fades in where the code was (the first snippets after the first compile, or leaving the code), so boxes
    swapping their code for pictures at once do not flash. */
 .typst-visual__raw--rendered .typst-visual__rendering { animation: typst-visual-fade-in 0.15s ease-out; }
@@ -56,18 +59,6 @@
   margin-bottom: 2px;
   font: 600 12px system-ui, sans-serif;
   color: var(--te-text-2);
-}
-/* Contributed box actions (registerRawBoxAction) above the code of a box without tools; tools place them themselves */
-.typst-visual__box-actions { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; font: 12px system-ui, sans-serif; }
-.typst-visual__box-actions:empty { display: none; }
-.typst-visual__box-actions > button {
-  padding: 2px 8px;
-  border: 1px solid var(--te-border);
-  border-radius: 4px;
-  background: var(--te-surface);
-  color: var(--te-text);
-  font: inherit;
-  cursor: pointer;
 }
 .typst-toolbar {
   position: sticky;

@@ -59,7 +59,6 @@
 }
 .typst-images__box.ProseMirror-selectednode:has(.typst-images__picture:not([hidden])) > .typst-images__tools,
 .typst-images__tools:focus-within { display: flex; }
-.typst-images__actions { display: contents; }
 .typst-images__tools button {
   padding: 2px 8px;
   border: 1px solid var(--te-border);

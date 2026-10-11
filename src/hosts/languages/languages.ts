@@ -6,7 +6,7 @@ import { ProjectPath } from '../../core/paths/paths';
 import type { SourceRange } from '../../core/typst-document/typst-document';
 import type { Command } from '../commands/commands';
 import css from './languages.css?inline';
-import { linkExtension } from './link-extension';
+import { linkExtension, primaryLink } from './link-extension';
 
 /**
  * The language features of texts as extensions use them (VS Code's `languages` namespace: document links, the
@@ -151,6 +151,16 @@ export interface LinkTargets {
   executeCommand(command: string, ...args: unknown[]): Promise<unknown>;
 }
 
+/** A link as something other than its text follows it (a raw box's picture). */
+export interface FollowableLink {
+  /** What following it does and how, as the hover says it: "Edit diagram (⌘+click or Alt+Enter)". */
+  readonly title: string;
+  /** Whether a click with `event`'s modifiers follows it, as on links in text (⌘ on Mac, else Ctrl). */
+  isFollowEvent(event: MouseEvent | KeyboardEvent): boolean;
+  /** Opens its target. */
+  follow(): void;
+}
+
 /**
  * The registered link providers. A text's links are those of every provider whose selector matches it; where links
  * of two providers overlap, the one of the higher `priority` wins (equal: the one registered first). Each link
@@ -230,6 +240,15 @@ export class LanguagesHost implements Languages {
       resolveDocumentLink: (link: DocumentLink) => this.resolveDocumentLink(link),
     };
     return linkExtension(actions, languageId, path);
+  }
+
+  /**
+   * The primary link of `document`: the first, in text order, that leads to a file. A provider makes its link the
+   * primary one on a range by its `priority` (overlapping links: the higher wins), so no link needs a mark. For what
+   * shows a text other than as text (a raw box's picture), to follow it as the editors follow links.
+   */
+  primaryLink(document: TextDocument): FollowableLink | null {
+    return primaryLink(this.provideDocumentLinks(document), { resolveDocumentLink: (link) => this.resolveDocumentLink(link), open: (target) => this.targets.open(target) });
   }
 }
 
