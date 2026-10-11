@@ -72,9 +72,9 @@ const POINTS: Readonly<Record<string, Describer>> = {
   },
   'visualView.registerGutter': ([provider]) => named(provider, 'gutter'),
   'visualView.registerHighlights': ([layer, provider]) => ({ title: `layer ${String(layer)}`, details: optional(nameOf(provider), String) }),
-  'visualView.registerBoxRenderer': ([provider, options]) => prioritized(named(provider, 'renderer'), record(options).priority),
+  'visualView.registerRawBoxRenderer': ([provider, options]) => prioritized(named(provider, 'renderer'), record(options).priority),
   'visualView.registerRawBoxCodeMirrorExtension': ([provider]) => named(provider, 'CodeMirror extensions'),
-  'visualView.registerBoxAction': ([action]) => {
+  'visualView.registerRawBoxAction': ([action]) => {
     const { title, when } = record(action);
     return { title: String(title), details: [typeof when === 'function' ? 'on some boxes' : 'on every box'] };
   },

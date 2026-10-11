@@ -113,13 +113,13 @@ describe('ContributionLog', () => {
 
   it('groups by contribution point, each in the order its host resolves them: by priority, else registration order', () => {
     const log = new ContributionLog();
-    const visualView = { registerBoxRenderer: (_provider: unknown, _options?: { priority?: number }) => ({ dispose() {} }) };
+    const visualView = { registerRawBoxRenderer: (_provider: unknown, _options?: { priority?: number }) => ({ dispose() {} }) };
     const renderers = (id: string, priority?: number) =>
-      log.instrument({ id, activate: (context) => void (context as unknown as { visualView: typeof visualView }).visualView.registerBoxRenderer(function render() {}, { priority }) });
+      log.instrument({ id, activate: (context) => void (context as unknown as { visualView: typeof visualView }).visualView.registerRawBoxRenderer(function render() {}, { priority }) });
     for (const extension of [renderers('snippets'), renderers('images', 110), renderers('diagrams')]) {
       extension.activate({ subscriptions: [], visualView } as unknown as ExtensionContext);
     }
-    expect([...log.byPoint()].map(([point, entries]) => [point, entries.map((entry) => entry.extension)])).toEqual([['visualView.registerBoxRenderer', ['images', 'snippets', 'diagrams']]]);
+    expect([...log.byPoint()].map(([point, entries]) => [point, entries.map((entry) => entry.extension)])).toEqual([['visualView.registerRawBoxRenderer', ['images', 'snippets', 'diagrams']]]);
   });
 
   it('records nothing for a registration that throws', () => {

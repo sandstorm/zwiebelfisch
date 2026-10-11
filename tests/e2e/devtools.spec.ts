@@ -33,7 +33,7 @@ test('the contributions tab says what each extension contributed, by extension o
 
   await devtools.getByRole('button', { name: 'By contribution point' }).click();
   // the box renderers in the order they are asked: images (110) before compiled snippets (100)
-  const renderers = group(/^visualView\.registerBoxRenderer/).locator('.typst-devtools__contribution');
+  const renderers = group(/^visualView\.registerRawBoxRenderer/).locator('.typst-devtools__contribution');
   await expect(renderers.first()).toContainText('priority 110');
   await expect(renderers.nth(1)).toContainText('priority 100');
 });

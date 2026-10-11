@@ -53,7 +53,7 @@ describe('devtools', () => {
   it('groups the contributions by point: the competing ones in the order the host resolves them', () => {
     const contributions = mount().tab('Contributions');
     [...contributions.querySelectorAll('button')].find((button) => button.textContent === 'By contribution point')!.click();
-    const renderers = [...contributions.querySelectorAll('details')].find((group) => group.querySelector('summary')?.textContent?.startsWith('visualView.registerBoxRenderer'))!;
+    const renderers = [...contributions.querySelectorAll('details')].find((group) => group.querySelector('summary')?.textContent?.startsWith('visualView.registerRawBoxRenderer'))!;
     const rows = [...renderers.querySelectorAll('.typst-devtools__contribution')].map((row) => row.textContent);
     // the image renderer (110) before the compiled snippets (100)
     expect(rows).toEqual([expect.stringMatching(/^images.*priority 110$/), expect.stringMatching(/^rendered-boxes.*priority 100$/)]);

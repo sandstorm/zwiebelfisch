@@ -62,14 +62,14 @@ describe('describeContribution', () => {
 
   it('providers: their name, priority and trigger', () => {
     function images() {}
-    expect(describeAt('visualView.registerBoxRenderer', images, { priority: 110 })).toEqual({ title: 'images', details: ['priority 110'], rank: [-110] });
+    expect(describeAt('visualView.registerRawBoxRenderer', images, { priority: 110 })).toEqual({ title: 'images', details: ['priority 110'], rank: [-110] });
     expect(describeAt('languages.registerDocumentLinkProvider', { provideDocumentLinks: () => [] })).toEqual({ title: 'document links', details: ['priority 100'], rank: [-100] });
     expect(describeAt('visualView.registerCompletionItemProvider', { provideCompletionItems: () => [] }, { char: '@', allowedPrefixes: [' ', '('] })).toEqual({
       title: 'trigger "@"',
       details: ['after " ", "("'],
       rank: ['@'],
     });
-    expect(describeAt('visualView.registerBoxAction', { title: 'Edit diagram', when: () => true, run() {} }).details).toEqual(['on some boxes']);
+    expect(describeAt('visualView.registerRawBoxAction', { title: 'Edit diagram', when: () => true, run() {} }).details).toEqual(['on some boxes']);
     expect(describeAt('preview.registerPdfExportOption', { id: 'comments.include', label: 'Include comments', default: false, apply: () => ({}) }, { priority: 50 })).toEqual({
       title: 'comments.include',
       details: ['"Include comments"', 'default false', 'priority 50'],
