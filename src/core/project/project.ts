@@ -129,11 +129,12 @@ export class Project {
     this.changed.dispose();
   }
 
-  /** Host-given files by path; a key that is no path, or bytes for the main file, is the host's mistake: throws. */
+  /** Host-given files by path; a key that is no path, or bytes for a Typst file, is the host's mistake: throws. */
   private parse(files: ProjectFiles): Map<ProjectPath, FileContent> {
     const parsed = new Map(Object.entries(files).map(([key, content]) => [parseKey(key), content]));
-    const main = parsed.get(this.main);
-    if (main !== undefined && typeof main !== 'string') throw new Error(`The main file ${this.main} must contain text.`);
+    for (const [path, content] of parsed) {
+      if (ProjectPath.isTypst(path) && typeof content !== 'string') throw new Error(`The Typst file ${path} must contain text.`);
+    }
     return parsed;
   }
 
@@ -158,8 +159,7 @@ export class Project {
   private put(path: ProjectPath, content: FileContent): void {
     const entry = this.entries.get(path);
     if (entry?.kind === 'document' && typeof content === 'string') return entry.document.setText(content, 'api');
-    const becomesDocument = ProjectPath.isTypst(path) && typeof content === 'string';
-    if (entry?.kind === 'content' && !becomesDocument) {
+    if (entry?.kind === 'content' && !ProjectPath.isTypst(path)) {
       if (entry.content === content) return;
       this.entries.set(path, { kind: 'content', content });
       return this.changed.fire({ kind: 'update', path, content });
@@ -176,11 +176,11 @@ export class Project {
 
   private add(path: ProjectPath, content: FileContent): void {
     this.remove(path);
-    if (!ProjectPath.isTypst(path) || typeof content !== 'string') {
+    if (!ProjectPath.isTypst(path)) {
       this.entries.set(path, { kind: 'content', content });
       return;
     }
-    const document = new TypstDocument(content);
+    const document = new TypstDocument(content as string);
     const subscription = document.onDidChange(() => {
       const current = this.pathOf(document);
       if (current) this.changed.fire({ kind: 'update', path: current, content: document.text });

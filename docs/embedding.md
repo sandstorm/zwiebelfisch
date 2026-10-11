@@ -117,8 +117,8 @@ shadow root when `host` is inside one.
 ## 3. Other files, images and packages
 
 `files` holds every file of the project by absolute path, the main file included: Typst text as
-a string, anything else (images, CSV, …) as a `Uint8Array`. The main file (`main`) is the one that
-is compiled; it cannot be renamed or deleted. `source`, if given, wins over `files[main]`.
+a string, anything else (images, CSV, …) as a `Uint8Array` (a `.typ` file given as bytes throws). The
+main file (`main`) is the one that is compiled; it cannot be renamed or deleted. `source`, if given, wins over `files[main]`.
 
 ```ts
 const editor = createTypstEditor(host, {

@@ -335,12 +335,13 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
   each document's into a `DiagnosticCollection`, which its Source views underline (`lint`) and its Visual views
   mark (`registerHighlights('diagnostics', …)`: `.typst-diagnostic` with the message as tooltip; an empty range
   still marks one character), and counts them in the status bar.
-- **`Project`** (`core/project/project.ts`): files by path. `.typ` strings become a `TypstDocument` each (kept
-  across renames, so open views survive); everything else is stored as given.
+- **`Project`** (`core/project/project.ts`): files by path. `.typ` files are text and become a `TypstDocument` each
+  (kept across renames, so open views survive; bytes for one throw, in the constructor as in `replace`, and
+  `check` refuses them); everything else is stored as given.
   `check(change)` → reason or null, `apply(change)`, `replace(files)`, `onDidChangeFile: Event<FileChange>`
   (structural changes and every document edit as `update`; `replace` reports a `delete`, `create`
   or `update` per file, so subscribers never need to be refreshed by hand). The main file cannot be renamed or
-  deleted, and is always text (bytes for it throw, in the constructor as in `replace`); `.typ` files keep their ending.
+  deleted; `.typ` files keep their ending.
   `FileChange = {kind:'create', path, content} | {kind:'update', path, content} | {kind:'delete', path} | {kind:'rename', from, path}`.
 - **Visual view contributions**: the workbench host has one `VisualViewContributions` (`ExtensionContext.visualView`)
   and makes every document's Visual view from it. The Typst constructs (`markup`, `headings`, `tables`,
