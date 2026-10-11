@@ -38,6 +38,12 @@ describe('CollaborationLink', () => {
     await vi.waitFor(() => expect(ydoc.getMap<Y.Text>('files').get(MAIN)?.toString()).toBe('Hello world'));
   });
 
+  it('is ready once the project is shared', async () => {
+    const { ydoc, link } = setup();
+    await link.ready;
+    expect(ydoc.getMap<Y.Text>('files').get(MAIN)?.toString()).toBe('Hello world');
+  });
+
   it('publishes the selection the views report while the user works in the widget', async () => {
     const { ydoc, awareness, input, link } = setup();
     await vi.waitFor(() => expect(ydoc.getMap('files').size).toBe(1));
