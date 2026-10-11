@@ -45,7 +45,7 @@ mise run demo           # builds engine and fonts, then the demo on http://127.0
 
 One Typst project in [`docs/`](docs/), starting at [`docs/main.typ`](docs/main.typ):
 
-- **Guide** (`docs/10_guide/`): getting started.
+- **Getting started** (`docs/10_getting-started/`): trying the demo.
 - **Features** (`docs/20_features/`): one chapter per feature, for users.
 - **Reference** (`docs/30_reference/`): configuration, embedding, the collaboration server, for technical users.
 - **Architecture** (`docs/40_architecture/`): how the code is built, writing an extension, conventions, development.

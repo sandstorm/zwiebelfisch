@@ -7,7 +7,7 @@
 // extension of the demo's own). The playground bar above the editor switches all of this (playground-bar.ts).
 //
 // The Documentation example in Local mode saves to docs/ when the page comes from the dev server or vite preview
-// (docs-files/plugin.ts). See docs/10_guide/01_getting-started.typ, "The demo".
+// (docs-files/plugin.ts). See docs/10_getting-started/01_getting-started.typ, "The demo".
 import { collaboration, createTypstEditor, type ProjectFiles } from '../src';
 import { connectDocsSync, type DocsSync } from './docs-files/docs-sync';
 import { openFileHash } from './open-file-hash';

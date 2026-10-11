@@ -12,7 +12,7 @@ mise run install        # JS dependencies and Playwright browsers
 mise run demo           # builds the engine and fonts, then starts the demo
 ```
 
-`mise run demo` serves the demo (@guide-getting-started-demo) on `http://127.0.0.1:5199/` and the collaboration server with a fake GitLab on `ws://127.0.0.1:1234`; Ctrl-C stops both. Unlike the Docker image, it saves edits of the Documentation example to `docs/` (@architecture-development-writing-docs).
+`mise run demo` serves the demo (@getting-started-demo) on `http://127.0.0.1:5199/` and the collaboration server with a fake GitLab on `ws://127.0.0.1:1234`; Ctrl-C stops both. Unlike the Docker image, it saves edits of the Documentation example to `docs/` (@architecture-development-writing-docs).
 
 == Tasks <architecture-development-tasks>
 
@@ -21,10 +21,10 @@ mise run demo           # builds the engine and fonts, then starts the demo
   table.header[Task][What it does],
   [`install`], [JS dependencies (frozen lockfile) and Playwright's browsers],
   [`deps:lock`], [after a `package.json` change: install and update `pnpm-lock.yaml`],
-  [`demo`], [the playground: Vite + the collaboration server with a fake GitLab on `ws://127.0.0.1:1234` (@guide-getting-started-demo); builds engine and fonts first. Its arguments go to Vite (`demo preview`: the last build)],
+  [`demo`], [the playground: Vite + the collaboration server with a fake GitLab on `ws://127.0.0.1:1234` (@getting-started-demo); builds engine and fonts first. Its arguments go to Vite (`demo preview`: the last build)],
   [`demo:build`], [the playground on the built demo: `build:demo`, then `demo preview` (`vite preview` on 127.0.0.1:5199, same server): loading as in production, few bundled files],
   [`docker:build`], [the image `typst-editor-demo` (`Dockerfile`): installs the `mise.toml` tools, runs `build:demo`; the runtime is Node with the built demo and the playground server, which serves `dist/demo` itself (`TYPST_DEMO_DIST`, `server/src/playground/static-files.ts`) on 5199, no Vite. Docker is all it needs],
-  [`docker:run`], [runs the image on 127.0.0.1:5199 and :1234, like `demo:build` without saving the Documentation example; Ctrl-C stops it (@guide-getting-started-docker)],
+  [`docker:run`], [runs the image on 127.0.0.1:5199 and :1234, like `demo:build` without saving the Documentation example; Ctrl-C stops it (@getting-started-docker)],
   [`build:engine`], [Rust → wasm (`cargo`, `wasm-bindgen`, `wasm-opt -Oz`) into `src/core/typst-engine/wasm/`; skipped when the Rust sources are unchanged],
   [`build:fonts`], [the default fonts of the pinned typst-assets crate into `src/core/typst-engine/fonts/`, and their index `index.json` (@architecture-core-engine-fonts)],
   [`build:packages`], [the `@preview/…` packages the demo examples import, downloaded once into `.cache/typst-packages/` (not committed); `test:unit` runs it],
@@ -97,7 +97,7 @@ The profiles land in `.cache/perf/` (`*.cpuprofile`: Chrome DevTools' Performanc
 
 == The docs <architecture-development-docs>
 
-- One Typst project in `docs/`: `main.typ` (the book: each part's `=` heading, then one `#include` per chapter, in reading order), `site.typ` (one HTML page per chapter, read from `main.typ`'s includes), `template.typ`. Parts and chapters are numbered so the files sort in reading order: `10_guide/` (Guide: getting started), `20_features/` (Features: one chapter per feature, for users), `30_reference/` (Reference: configuration, embedding, the collaboration server, for technical users), `40_architecture/` (Architecture: how the code is built and extended, for the developers of the editor); one chapter is one file, `20_features/07_images.typ`.
+- One Typst project in `docs/`: `main.typ` (the book: each part's `=` heading, then one `#include` per chapter, in reading order; Getting started is a part of its own, its file's `=` heading the part's), `site.typ` (one HTML page per chapter, read from `main.typ`'s includes), `template.typ`. Parts and chapters are numbered so the files sort in reading order: `10_getting-started/` (Getting started: trying the demo), `20_features/` (Features: one chapter per feature, for users), `30_reference/` (Reference: configuration, embedding, the collaboration server, for technical users), `40_architecture/` (Architecture: how the code is built and extended, for the developers of the editor); one chapter is one file, `20_features/07_images.typ`.
 - Every feature chapter has the same sections: "What it does" (an example, and how the Visual editor and the preview show it), "Why" (left out when obvious), "How to configure" (settings, view options, host options, or "Nothing to configure."). They are left out of the outline (`#set heading(outlined: false)` below the chapter's heading).
 - A chapter's label is its path without the numbers, `/` → `-` (`<architecture-workbench>`); a section appends a word. Cross-references are `@label`.
 - The font, Gabarito (SIL Open Font License, `fonts/OFL.txt`), is in `fonts/`: a project font for the editor (@architecture-core-engine-fonts), `--font-path docs/fonts` for `docs:pdf` / `docs:html`.

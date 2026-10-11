@@ -82,7 +82,7 @@ GitLab rooms need both `TYPST_GITLAB_URL` and `TYPST_GITLAB_TOKEN`.
 
 == Trying it locally <reference-collaboration-server-demo>
 
-`mise run demo` starts the demo with a server whose GitLab is an in-memory fake holding the advanced example (@guide-getting-started-demo).
+`mise run demo` starts the demo with a server whose GitLab is an in-memory fake holding the advanced example (@getting-started-demo).
 
 - *Collaborate:* pick it in the playground bar, then "Open a second window as Bob".
 - *GitLab (fake):* pick it, or open `?room=gitlab:demo/report@main`. Any other branch name starts a fresh branch from `main`.

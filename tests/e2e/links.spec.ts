@@ -64,13 +64,13 @@ test.describe('references to sections in the documentation', () => {
   });
 
   test('⌘/Ctrl+click on a reference to a chapter in another file opens it there; so does Alt+Enter', async ({ page }) => {
-    await openFile(page, '10_guide/01_getting-started.typ');
+    await openFile(page, '10_getting-started/01_getting-started.typ');
     const chip = visual(page).locator('.typst-labels__ref[data-target="features-mermaid-diagrams"]').first();
     await chip.click({ modifiers: ['ControlOrMeta'] });
     await expect(fileRow(page, '20_features/23_mermaid-diagrams.typ')).toHaveAttribute('aria-selected', 'true');
     await expect(heading(page, 'h1', 'Mermaid diagrams')).toBeInViewport();
 
-    await openFile(page, '10_guide/01_getting-started.typ');
+    await openFile(page, '10_getting-started/01_getting-started.typ');
     await visual(page).locator('.typst-labels__ref[data-target="features-spreadsheets"]').first().click();
     await page.keyboard.press('Alt+Enter');
     await expect(fileRow(page, '20_features/22_spreadsheets.typ')).toHaveAttribute('aria-selected', 'true');

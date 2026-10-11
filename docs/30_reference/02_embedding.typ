@@ -9,6 +9,35 @@ Two ways in, same options (@reference-configuration):
   [`createTypstEditor(host, options)` (@reference-embedding-api)], [Your code drives the editor: the returned handle (commands, `exportPdf`, `dispose`) and callbacks. It fills `host` in your page's DOM; its styles go into the page's document (or the shadow root `host` is in).],
 )
 
+== A first editor <reference-embedding-first-editor>
+
+`mise run build:lib` builds the library into `dist/lib` (@reference-embedding-library). It is not on npm yet: copy `dist/lib`, or depend on the repository folder, whose `package.json` exports it as `typst-editor`.
+
+Without a bundler:
+
+```html
+<script type="module" src="/vendor/typst-editor/typst-editor.js"></script>
+
+<typst-editor style="height: 600px">
+  = Hello
+
+  Some *Typst*.
+</typst-editor>
+```
+
+From JavaScript:
+
+```ts
+import { createTypstEditor } from 'typst-editor';
+
+const editor = createTypstEditor(document.getElementById('editor')!, {
+  source: '= Hello\n',
+  onFilesChange: (change) => save(change),
+});
+```
+
+A complete page: `examples/plain-html/index.html`. After `mise run build:lib`, serve the repository root and open `/examples/plain-html/`.
+
 == The library build <reference-embedding-library>
 
 `mise run build:lib` writes `dist/lib`:

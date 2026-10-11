@@ -1,10 +1,10 @@
 #import "/template.typ": mermaid
 
-= Getting started <guide-getting-started>
+= Getting started <getting-started>
 
 A Typst editor for the browser: a Visual editor (WYSIWYG), a Source editor and a live preview. The Typst compiler runs as WebAssembly in a worker; no server is needed except for collaboration and GitLab integration.
 
-== Trying it with Docker <guide-getting-started-docker>
+=== Trying it with Docker <getting-started-docker>
 
 To try the demo without installing anything else:
 
@@ -13,11 +13,11 @@ docker build -t typst-editor-demo .
 docker run --rm -p 127.0.0.1:5199:5199 -p 127.0.0.1:1234:1234 typst-editor-demo
 ```
 
-Then open #link("http://127.0.0.1:5199/")[`http://127.0.0.1:5199/`]. You get the demo (@guide-getting-started-demo) and the collaboration server with a fake GitLab. Nothing is saved: the rooms live in memory, and the Documentation example does not write to `docs/`. Ctrl-C stops both. The first build takes a while, as it compiles the Typst compiler to wasm. With mise: `mise run docker:build` and `mise run docker:run`.
+Then open #link("http://127.0.0.1:5199/")[`http://127.0.0.1:5199/`]. You get the demo (@getting-started-demo) and the collaboration server with a fake GitLab. Nothing is saved: the rooms live in memory, and the Documentation example does not write to `docs/`. Ctrl-C stops both. The first build takes a while, as it compiles the Typst compiler to wasm. With mise: `mise run docker:build` and `mise run docker:run`.
 
-== The demo <guide-getting-started-demo>
+=== The demo <getting-started-demo>
 
-The Docker image (@guide-getting-started-docker) serves the demo on #link("http://127.0.0.1:5199/")[`http://127.0.0.1:5199/`] with a collaboration server and a fake GitLab on `ws://127.0.0.1:1234`. To work on the code, run it from a checkout instead: `mise run demo` (@architecture-development-setup).
+The Docker image (@getting-started-docker) serves the demo on #link("http://127.0.0.1:5199/")[`http://127.0.0.1:5199/`] with a collaboration server and a fake GitLab on `ws://127.0.0.1:1234`. To work on the code, run it from a checkout instead: `mise run demo` (@architecture-development-setup).
 
 The screen:
 
@@ -76,34 +76,5 @@ The page's state is its URL:
   [`&user=<name>`], [The name others see; signs comments and commits.],
   [`#/chapters/intro.typ:12`], [The file shown and the cursor's line (1-based): a reload or a shared link opens the file with the cursor at the start of that line. It follows while you work.],
 )
-
-== A first editor <guide-getting-started-first-editor>
-
-`mise run build:lib` builds the library into `dist/lib` (@reference-embedding-library). It is not on npm yet: copy `dist/lib`, or depend on the repository folder, whose `package.json` exports it as `typst-editor`.
-
-Without a bundler:
-
-```html
-<script type="module" src="/vendor/typst-editor/typst-editor.js"></script>
-
-<typst-editor style="height: 600px">
-  = Hello
-
-  Some *Typst*.
-</typst-editor>
-```
-
-From JavaScript:
-
-```ts
-import { createTypstEditor } from 'typst-editor';
-
-const editor = createTypstEditor(document.getElementById('editor')!, {
-  source: '= Hello\n',
-  onFilesChange: (change) => save(change),
-});
-```
-
-A complete page: `examples/plain-html/index.html`. After `mise run build:lib`, serve the repository root and open `/examples/plain-html/`.
 
 Next: what users get (@features-overview), every setting and option (@reference-configuration), the collaboration server (@reference-collaboration-server), embedding and events (@reference-embedding), how it is built and adding features (@architecture-overview, @architecture-extensions-overview).

@@ -10,11 +10,8 @@
 
 // a chapter's `=` heading sits below its part
 
-= Guide
-#[
-  #set heading(offset: 1)
-  #include "10_guide/01_getting-started.typ"
-]
+// a part of its own: its `=` heading is the part's, its sections stay on the part's pages
+#include "10_getting-started/01_getting-started.typ"
 
 = Features
 #[

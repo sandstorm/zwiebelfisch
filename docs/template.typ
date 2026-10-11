@@ -93,7 +93,8 @@
 #let book(body) = {
   set text(lang: "en")
   // `@label` references need numbered headings ("Section 3.2").
-  set heading(numbering: "1.1")
+  // levels a heading skips count 0: Getting started's sections (a part without chapters) are 1.1, not 1.0.1
+  set heading(numbering: (..levels) => levels.pos().filter(n => n != 0).map(str).join("."))
   show table.cell.where(y: 0): strong
 
   // Paged-only styling: the HTML site gets its look from style.css.
