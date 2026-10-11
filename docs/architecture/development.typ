@@ -70,6 +70,26 @@ mise run server:test   # when server/ or core/room-protocol changed
 - A chapter's label is its path, `/` → `-` (`<architecture-workbench>`); a section appends a word. Cross-references are `@label`.
 - Live while writing: `mise run demo`, then `?example=docs`.
 
+== Devtools <architecture-development-devtools>
+
+`demo/devtools/`: a side panel ("Devtools" on the rail) showing what the widget is made of while it runs. The demo adds it with `?devtools`; not in the library, not a built-in.
+
+#table(
+  columns: (auto, 1fr),
+  table.header[Tab][Shows],
+  [Projection], [The shown file's ProseMirror document as a tree (@architecture-projection): each node with its source range, `box` for raw boxes and other atoms, marks, its text or kept `src`; the tooltip has positions, attributes and the source. The path to the selection is highlighted; a click selects the node's source.],
+  [Contributions], [By extension, in activation order: every `register…` call (`visualView.registerNode · heading`, `commands.registerCommand · files.newFile`) and the declared settings (`contributes.configuration`).],
+  [Events], [Every `onDid…` event of the extension context as it fires, with its value in one line; the latest 300.],
+)
+
+- *Public API only* (`src/index.ts`): it sees what any outside extension sees.
+- *Contributions* are recorded by wrapping the list: `devtools(extensions)` returns each extension with its `activate` getting a context whose namespaces are recording proxies, plus the devtools extension itself. No listing in the hosts.
+- *Projection*: a Tiptap extension in every Visual view (`registerTiptapExtension`) keeps the view's editor; ranges come from the view's `posToSource`.
+
+```ts
+createTypstEditor(host, { extensions: (builtins) => devtools(builtins) });
+```
+
 == Open work <architecture-development-open-work>
 
 - *Verification*: run every Playwright spec in all three browsers, plus `test:e2e-collab` and `test:e2e-gitlab`; many have never run in a browser. Try a real GitLab.
@@ -83,4 +103,3 @@ mise run server:test   # when server/ or core/room-protocol changed
 - *Size*: lazy font loading (a font index up front, data on first use); a smaller wasm needs a Typst fork with feature flags.
 - *Custom styles*: swatches in the style menu; a style panel for a `template` function's set and show rules, so the Visual view looks like the document; templates from Typst Universe.
 - *Server*: a Rust (`yrs`) or Go server is an open question; the widget depends only on the room protocol.
-- *Devtools extension*: a dev-only side panel showing the parsed document, every contribution by extension and events as they fire, built only on the public API.
