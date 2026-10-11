@@ -1,0 +1,123 @@
+/* The devtools' side panel (workbench/devtools-panel.ts), in the widget's color tokens. See devtools.ts. */
+.typst-devtools {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  font-size: 12px;
+  color: var(--te-text);
+}
+
+.typst-devtools__tabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-bottom: 1px solid var(--te-divider);
+}
+
+.typst-devtools__tab,
+.typst-devtools__button {
+  font: inherit;
+  color: var(--te-muted);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+
+.typst-devtools__tab:hover,
+.typst-devtools__button:hover {
+  background: var(--te-hover);
+}
+
+.typst-devtools__tab[aria-selected='true'] {
+  color: var(--te-text);
+  background: var(--te-selected);
+}
+
+.typst-devtools__button {
+  border-color: var(--te-border);
+}
+
+.typst-devtools__content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 0;
+}
+
+.typst-devtools__note {
+  margin: 4px 8px;
+  color: var(--te-muted);
+}
+
+.typst-devtools__tree,
+.typst-devtools__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: ui-monospace, monospace;
+}
+
+.typst-devtools__row--selected > .typst-devtools__node {
+  background: var(--te-accent-faint);
+}
+
+.typst-devtools__node {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+  padding: 1px 4px;
+  font: inherit;
+  text-align: start;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.typst-devtools__node:hover {
+  background: var(--te-hover);
+}
+
+.typst-devtools__name,
+.typst-devtools__point {
+  color: var(--te-purple);
+}
+
+.typst-devtools__range,
+.typst-devtools__time,
+.typst-devtools__count {
+  color: var(--te-faint);
+}
+
+.typst-devtools__badge,
+.typst-devtools__mark {
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--te-chip);
+  color: var(--te-muted);
+}
+
+.typst-devtools__detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.typst-devtools__extension {
+  margin: 0 8px 4px;
+}
+
+.typst-devtools__extension > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.typst-devtools__entry {
+  display: flex;
+  gap: 6px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}

@@ -28,7 +28,7 @@ The page's state is its URL:
   [`?room=<name>`], [Collaborate mode: joins a room on the local server.],
   [`?room=gitlab:demo/report@main`], [GitLab mode: a branch of the fake repository.],
   [`&user=<name>`], [The name others see; signs comments and commits.],
-  [`&devtools`], [ProseMirror's dev tools on the Visual view.],
+  [`&devtools`], [The devtools side panel: projection, contributions, events (@architecture-development-devtools).],
   [`#/chapters/intro.typ`], [The file shown.],
 )
 
