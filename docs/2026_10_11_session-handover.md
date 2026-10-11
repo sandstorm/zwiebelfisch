@@ -16,7 +16,11 @@ E2E has not been run for most of the day's work: `mise run test:e2e-all chromium
 - Desktop drops go through drop edit providers in both editors (`document-drops.ts`, workbench `#upload`).
   `uploadTarget` moved from `extensions/images/model/upload.ts` to `core/uploads/uploads.ts` — user to confirm.
 
-E2E to run: `margin-notes.spec.ts`, `visual-toolbar.spec.ts`, `links.spec.ts`, `file-drops.spec.ts`
+- Preview jumped oddly after following a link: engine `jumpFromCursor` drops drawn copies before the element (outline),
+  maps labels to their element; Visual `selection()` reports the revealed range; Source focuses before selecting.
+  Needs `mise run build:engine` after pulling.
+
+E2E to run: `margin-notes.spec.ts`, `visual-toolbar.spec.ts`, `links.spec.ts`, `file-drops.spec.ts`, `preview-links.spec.ts`
 (`mise run build:packages` first, then `mise run test:e2e-all chromium`).
 
 Merge routine: `git merge --no-edit <worktree branch>`; resolve conflicts by combining both sides; stage only the
