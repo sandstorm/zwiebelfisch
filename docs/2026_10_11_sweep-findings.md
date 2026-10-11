@@ -26,7 +26,9 @@
   with plain, public **functional helpers** over Lezer nodes in `core/typst-syntax` (e.g.
   `calleeName`, `positionalArguments`, `namedArgument`, `trailingContent`, `stringValue`,
   `hasOnlyArguments` — the set and names sized by what the extensions use today; judged by obviousness —
-  plain functions, no new types), exported from `src/index.ts` for everybody. Five
+  plain functions, no new types), exported from `src/index.ts` for everybody.
+- `DocumentNodeSpec` (accepted by the user): the projection's base spec (`name`, `tiptap`, `typst`);
+  the Visual view's `TypstNodeSpec` extends it with `view` (a split forced by the layer rule). Five
   vocabularies: ours (VS Code-shaped, unprefixed), Tiptap (ProseMirror only through Tiptap, e.g.
   `addProseMirrorPlugins`), CodeMirror, Lezer + the Typst grammar of `codemirror-lang-typst`, the Typst
   language. Rules: (1) our API unprefixed; (2) a member taking / returning a framework object names it
