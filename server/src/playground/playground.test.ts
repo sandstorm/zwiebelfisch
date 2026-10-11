@@ -97,8 +97,21 @@ describe('playground endpoints', () => {
     expect(Object.keys(gitlab.text('fresh')).sort()).toEqual(Object.keys(files()).sort());
   });
 
+  it('a simulated outage makes the branch unreachable until it is over', async () => {
+    const { gitlab, server, playground } = await setup();
+    const room = encodeURIComponent(PLAYGROUND_ROOM);
+    const response = await request(server, playground, 'POST', `/playground/outage?room=${room}`);
+    expect(response.json()).toEqual({ branch: 'main', reachable: false });
+    expect(gitlab.unreachable.has('main')).toBe(true);
+    await expect(gitlab.fetch(`${gitlab.url}/api/v4/projects/${encodeURIComponent(PLAYGROUND_PROJECT)}/repository/branches/main`, { headers: { 'PRIVATE-TOKEN': gitlab.token } })).rejects.toThrow('fetch failed');
+    expect((await request(server, playground, 'POST', `/playground/outage?room=${room}&on=false`)).json()).toEqual({ branch: 'main', reachable: true });
+    expect(gitlab.unreachable.size).toBe(0);
+  });
+
   it.each([
     ['POST', '/playground/upstream?room=plain-room', 400],
+    ['POST', '/playground/outage?room=plain-room', 400],
+    ['GET', `/playground/outage?room=${encodeURIComponent(PLAYGROUND_ROOM)}`, 405],
     ['POST', `/playground/upstream?room=${encodeURIComponent('gitlab:other/project@main')}`, 404],
     ['GET', `/playground/upstream?room=${encodeURIComponent(PLAYGROUND_ROOM)}`, 405],
   ])('%s %s → %i', async (method, url, status) => {

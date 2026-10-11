@@ -115,6 +115,30 @@ test('a conflict with upstream is shown to everyone, also to who joins later, un
   await expect(ann.getByTestId('typst-files').locator('[data-path="/chapters/introduction.typ"] .typst-files__decoration[title^="Conflicts"]')).toHaveText('!');
 });
 
+test('a save that cannot reach GitLab stays a warning for everyone, also who joins later, until a save succeeds', async ({ browser, baseURL, request }, info) => {
+  const { room, ann, bob } = await users(browser, baseURL!, info.project.name);
+  await ann.getByRole('tab', { name: 'Source' }).click();
+  await ann.getByTestId('typst-source').locator('.cm-line', { hasText: '#pagebreak()' }).click();
+  await ann.keyboard.press('End');
+  await ann.keyboard.type(' Unsaved.');
+  await expect(scmStatus(ann)).toHaveText('Not in GitLab: 1 file · < 1 min (Ann)');
+  // the fake GitLab cannot be reached for this branch
+  const outage = (on: boolean) => request.post(`${SERVER}/playground/outage?room=${encodeURIComponent(room)}&on=${on}`);
+  expect((await outage(true)).ok()).toBe(true);
+
+  await saveToGitLab(ann, 'Try');
+  await expect(messages(ann)).toContainText('Saving failed: GitLab could not be reached');
+  const cleo = await join(browser, baseURL!, room, 'Cleo');
+  for (const page of [ann, bob, cleo]) {
+    await expect(scmStatus(page).first()).toHaveText('Saving to GitLab failed');
+    await expect(scmStatus(page).first()).toHaveClass(/typst-source-control__entry--warning/);
+  }
+
+  expect((await outage(false)).ok()).toBe(true);
+  await saveToGitLab(ann, 'Try again');
+  for (const page of [ann, bob, cleo]) await expect(scmStatus(page)).toHaveText(/^Saved · [0-9a-f]{8}$/);
+});
+
 test('leaving as the last user with unsaved changes asks first, when the server does not save by itself', async ({ browser, baseURL }, info) => {
   test.skip(process.env.TYPST_GITLAB_AUTO_COMMIT !== 'off', 'needs the server without auto-commit: TYPST_GITLAB_AUTO_COMMIT=off mise run test:e2e-gitlab');
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
@@ -139,6 +163,25 @@ test('leaving as the last user with unsaved changes asks first, when the server 
   await bob.getByTestId('typst-source').or(bob.getByTestId('typst-visual')).first().click();
   const dialog = bob.waitForEvent('dialog');
   await bob.close({ runBeforeUnload: true });
+  expect((await dialog).type()).toBe('beforeunload');
+  await (await dialog).accept();
+});
+
+test('leaving as the last user while a conflict blocks saving asks first, also when the server saves by itself', async ({ browser, baseURL, request }, info) => {
+  const room = `gitlab:demo/report@e2e-${info.project.name}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  const ann = await join(browser, baseURL!, room, 'Ann');
+  await openFile(ann, 'chapters/introduction.typ');
+  await ann.getByRole('tab', { name: 'Source' }).click();
+  await ann.getByTestId('typst-source').locator('.cm-line', { hasText: '= Introduction' }).click();
+  await ann.keyboard.press('End');
+  await ann.keyboard.type(' mine');
+  await expect(scmStatus(ann)).toHaveText('Not in GitLab: 1 file · < 1 min (Ann)');
+  const response = await request.post(`${SERVER}/playground/upstream?room=${encodeURIComponent(room)}&change=heading`);
+  expect(response.ok()).toBe(true);
+  await expect(scmStatus(ann).first()).toHaveText('Conflict with GitLab: chapters/introduction.typ');
+
+  const dialog = ann.waitForEvent('dialog');
+  await ann.close({ runBeforeUnload: true });
   expect((await dialog).type()).toBe('beforeunload');
   await (await dialog).accept();
 });

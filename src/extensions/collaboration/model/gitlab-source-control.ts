@@ -1,7 +1,7 @@
 // GitLabSourceControl: the GitLab branch behind a room as a source control (`scm.registerSourceControl`):
 // commit asks the server to commit over stateless messages; the server's answers and news are told as messages; what
-// the room has that the branch has not (the server's `meta.changes`) and a conflict with upstream (`meta.conflict`) are
-// its resource states and status bar entries. See model.ts.
+// the room has that the branch has not (the server's `meta.changes`), a conflict with upstream (`meta.conflict`) and a
+// failed commit (`meta.commitFailure`) are its resource states and status bar entries. See model.ts.
 import type * as Y from 'yjs';
 import type { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
@@ -11,6 +11,7 @@ import {
   META_MAP,
   type ChangedFile,
   type ClientMessage,
+  type CommitFailure,
   type RoomChanges,
   type RoomConflict,
   type ServerMessage,
@@ -48,7 +49,8 @@ const MINUTE = 60_000;
  * conflict, a failure) and its news (upstream changes merged) are told with `tell`. What the room has that the branch
  * has not (written by the server into the room's meta map) is shown as resource states (M / A / D) and in the status
  * bar ("Not in GitLab: 3 files · 14 min (Ann, Bob)", or "Saved · 01234567"); a conflict with upstream, as long as it
- * lasts, as "!" on its files and a warning entry before that. Shaped as the scm host's `SourceControl`.
+ * lasts, as "!" on its files and a warning entry before that; a failed commit (GitLab unreachable), until the next
+ * commit or merge, as a warning entry, too. Shaped as the scm host's `SourceControl`.
  */
 export class GitLabSourceControl {
   readonly id = 'gitlab';
@@ -92,18 +94,27 @@ export class GitLabSourceControl {
     return this.#resourceStates;
   }
 
-  /** Whether the room has changes not in GitLab that the server does not commit by itself (its auto-commit is off). */
+  /**
+   * Whether the room has changes not in GitLab that the server does not commit by itself: its auto-commit is off, a
+   * conflict with upstream blocks every commit, or its last commit failed (GitLab unreachable).
+   */
   get changesStayUncommitted(): boolean {
-    return this.#changes() !== null && typeof this.#meta.get('autoCommit') !== 'number';
+    if (this.#changes() === null) return false;
+    return typeof this.#meta.get('autoCommit') !== 'number' || this.#conflict() !== null || this.#commitFailure() !== null;
   }
 
   /**
-   * "Not in GitLab: 3 files · 14 min (Ann, Bob)" while the room has changes, else "Saved · <commit>"; while upstream
-   * conflicts, "Conflict with GitLab: main.typ" (a warning) before it.
+   * "Not in GitLab: 3 files · 14 min (Ann, Bob)" while the room has changes, else "Saved · <commit>"; before it, as
+   * warnings, "Conflict with GitLab: main.typ" while upstream conflicts and "Saving to GitLab failed" after a failed
+   * commit.
    */
   get statusBarCommands(): readonly StatusBarCommand[] {
     const conflict = this.#conflict();
-    const warning: StatusBarCommand[] = conflict ? [{ title: conflictTitle(conflict), tooltip: conflictTooltip(conflict), backgroundColor: 'warning' }] : [];
+    const failure = this.#commitFailure();
+    const warning: StatusBarCommand[] = [
+      ...(conflict ? [{ title: conflictTitle(conflict), tooltip: conflictTooltip(conflict), backgroundColor: 'warning' as const }] : []),
+      ...(failure ? [{ title: 'Saving to GitLab failed', tooltip: failureTooltip(failure, Date.now()), backgroundColor: 'warning' as const }] : []),
+    ];
     const changes = this.#changes();
     if (changes) return [...warning, { title: notInGitLab(changes, Date.now()), tooltip: changesTooltip(changes, this.#meta.get('autoCommit')) }];
     const sha = this.#meta.get('baseSha');
@@ -162,6 +173,13 @@ export class GitLabSourceControl {
     return paths.length ? { sha: conflict.sha, paths } : null;
   }
 
+  /** `meta.commitFailure`, as the server wrote it (checked). */
+  #commitFailure(): CommitFailure | null {
+    const failure = this.#meta.get('commitFailure') as Partial<CommitFailure> | null | undefined;
+    if (!failure || typeof failure.message !== 'string' || typeof failure.at !== 'number') return null;
+    return { message: failure.message, at: failure.at };
+  }
+
   #receive(message: ServerMessage): void {
     const { text, severity } = said(message);
     this.tell(text, severity);
@@ -194,6 +212,14 @@ function conflictTooltip(conflict: RoomConflict): string {
     `Changes on GitLab (commit ${conflict.sha.slice(0, 8)}) conflict with edits here in:`,
     ...conflict.paths.map((path) => `! ${path.slice(1)}`),
     'Nothing is saved to GitLab until the lines match: change them here or on GitLab.',
+  ].join('\n');
+}
+
+function failureTooltip(failure: CommitFailure, now: number): string {
+  return [
+    `The last save to GitLab (${age(now - failure.at)} ago) failed:`,
+    failure.message,
+    'The changes stay here. Click to try again.',
   ].join('\n');
 }
 

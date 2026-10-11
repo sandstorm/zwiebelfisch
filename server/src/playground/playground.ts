@@ -1,5 +1,5 @@
 // The playground's server side (mise run demo): a fake GitLab holding the advanced example, and the endpoints that
-// simulate an upstream push. See docs/architecture/development.typ.
+// simulate an upstream push or a GitLab outage. See docs/architecture/development.typ.
 import { randomUUID } from 'node:crypto';
 import type { Extension, onRequestPayload } from '@hocuspocus/server';
 import type { CollabOptions } from '../collab-server.ts';
@@ -44,6 +44,9 @@ export function playgroundOptions(gitlab: FakeGitLab, options: { appendTo: strin
  *   commits a change to that branch of the fake repository, as a colleague
  *   pushing would, then delivers GitLab's push webhook, so the open room
  *   merges it (or reports a conflict). Answers `{ sha, path, message }`.
+ * - `POST /playground/outage?room=gitlab:<project>@<branch>[&on=false]`: GitLab
+ *   cannot be reached for that branch (its commits fail as when the network is
+ *   down) until called with `on=false`. Answers `{ branch, reachable }`.
  */
 export class PlaygroundEndpoints implements Extension {
   readonly extensionName = 'playground';
@@ -74,20 +77,39 @@ export class PlaygroundEndpoints implements Extension {
     if (url.pathname === '/playground/upstream') {
       return request.method === 'POST' ? this.upstream(url.searchParams, deliver) : respond(405, 'Method not allowed');
     }
+    if (url.pathname === '/playground/outage') {
+      return request.method === 'POST' ? this.outage(url.searchParams) : respond(405, 'Method not allowed');
+    }
     return null;
   }
 
-  private async upstream(query: URLSearchParams, deliver: Deliver): Promise<HttpResponse> {
+  /** The fake GitLab's branch a request names (`room=gitlab:<project>@<branch>`), or why not. */
+  private target(query: URLSearchParams): { branch: string } | HttpResponse {
     const target = parseRoomName(query.get('room') ?? '');
     if (!target) return respond(400, 'room must be a GitLab room: gitlab:<project>@<branch>');
     if (target.project !== this.gitlab.project) return respond(404, `The fake GitLab has only the project ${this.gitlab.project}`);
+    return target;
+  }
+
+  private outage(query: URLSearchParams): HttpResponse {
+    const target = this.target(query);
+    if (!('branch' in target)) return target;
+    const reachable = query.get('on') === 'false';
+    if (reachable) this.gitlab.unreachable.delete(target.branch);
+    else this.gitlab.unreachable.add(target.branch);
+    return json({ branch: target.branch, reachable });
+  }
+
+  private async upstream(query: URLSearchParams, deliver: Deliver): Promise<HttpResponse> {
+    const target = this.target(query);
+    if (!('branch' in target)) return target;
     const change: UpstreamChange = query.get('change') === 'heading' ? 'heading' : 'append';
     const n = ++this.commits;
     const path = this.options.appendTo;
     const current = this.gitlab.text(this.gitlab.hasBranch(target.branch) ? target.branch : 'main')[path] ?? '';
     const message = `${change === 'heading' ? 'Revise a heading' : 'Add a paragraph'} (simulated upstream commit ${n})`;
     const sha = this.gitlab.push(target.branch, { [path]: upstreamEdit(current, change, n) }, message);
-    await deliver(pushWebhook(target.project, target.branch, this.options.webhookSecret));
+    await deliver(pushWebhook(this.gitlab.project, target.branch, this.options.webhookSecret));
     return json({ sha, path, message });
   }
 }

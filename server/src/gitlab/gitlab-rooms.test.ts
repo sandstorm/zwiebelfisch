@@ -89,6 +89,7 @@ function helpers(extension: GitLabExtension, doc: Document, sent: ServerMessage[
         base: Record<string, string>;
         baseAssets: Record<string, string>;
         conflict?: { sha: string; paths: string[] } | null;
+        commitFailure?: { message: string; at: number } | null;
         autoCommit: number | null;
       },
     edit(path: string, from: string, to: string) {
@@ -494,6 +495,58 @@ describe('GitLab rooms: auto-commit', () => {
     expect(parseAutoCommit('5')).toBe(5);
     expect(parseAutoCommit('0.5')).toBe(0.5);
     expect(() => parseAutoCommit('soon')).toThrow(/TYPST_GITLAB_AUTO_COMMIT/);
+  });
+});
+
+describe('GitLab rooms: failed commits', () => {
+  it('keeps a save that could not reach GitLab in the room, for everyone, until the next commit', async () => {
+    fakeTime();
+    const { gitlab, save, edit, meta, doc } = await setup();
+    edit(MAIN, 'First', 'Opening');
+    gitlab.unreachable.add('main');
+    const message = 'GitLab could not be reached (fetch failed)';
+    expect(await save()).toEqual([{ type: 'gitlab:error', message }]);
+    expect(meta().commitFailure).toEqual({ message, at: AT_TEN });
+    // who joins later gets it with the room
+    const later = new Y.Doc();
+    Y.applyUpdate(later, Y.encodeStateAsUpdate(doc));
+    expect(later.getMap(META_MAP).get('commitFailure')).toEqual({ message, at: AT_TEN });
+
+    gitlab.unreachable.delete('main');
+    expect((await save())[0].type).toBe('gitlab:saved');
+    expect(meta().commitFailure).toBeNull();
+  });
+
+  it('tells everyone when a commit by itself fails; a merge clears it', async () => {
+    fakeTime();
+    const { gitlab, editAs, sent, meta, extension, save } = await setup({ autoCommit: 10 });
+    await editAs('Ann', (doc) => {
+      const text = doc.getMap<Y.Text>('files').get(MAIN)!;
+      text.insert(0, 'Hello. ');
+    });
+    gitlab.failNextCommit = { status: 500, message: 'down for maintenance' };
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+    expect(sent).toEqual([{ type: 'gitlab:error', message: expect.stringContaining('down for maintenance') }]);
+    expect(meta().commitFailure).toEqual({ message: expect.stringContaining('down for maintenance'), at: AT_TEN + 10 * 60_000 });
+
+    gitlab.push('main', { '/ch1.typ': 'pushed' });
+    await extension.handle(pushEvent());
+    expect(meta().commitFailure).toBeNull();
+    // no changes left when the test's users leave
+    expect((await save())[0].type).toBe('gitlab:saved');
+  });
+
+  it('gives way to a conflict: GitLab answered, the conflict is what blocks the commit now', async () => {
+    const { gitlab, save, edit, meta } = await setup();
+    edit(MAIN, 'Second paragraph.', 'Mine.');
+    gitlab.unreachable.add('main');
+    await save();
+    expect(meta().commitFailure).not.toBeNull();
+    gitlab.unreachable.delete('main');
+    gitlab.push('main', { [MAIN]: MAIN_TEXT.replace('Second paragraph.', 'Theirs.') });
+    expect((await save())[0].type).toBe('gitlab:conflict');
+    expect(meta().commitFailure).toBeNull();
+    expect(meta().conflict).not.toBeNull();
   });
 });
 

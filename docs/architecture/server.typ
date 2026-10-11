@@ -17,7 +17,7 @@
   [`files`], [`Y.Map<path, Y.Text>`: every `.typ` file], [all],
   [awareness], [`user`, `cursor` (relative positions)], [all],
   [`assets`], [`Y.Map<path, sha | Uint8Array>`: other files (blob sha, or uploaded bytes not committed yet)], [GitLab],
-  [`meta`], [written by the server: `baseSha`, `base`, `baseAssets`, `lastCommits`; `changes` (what is not in GitLab yet), `conflict` (until resolved), `autoCommit` (minutes or null)], [GitLab],
+  [`meta`], [written by the server: `baseSha`, `base`, `baseAssets`, `lastCommits`; `changes` (what is not in GitLab yet), `conflict` (until resolved), `commitFailure` (until the next commit or merge), `autoCommit` (minutes or null)], [GitLab],
 )
 
 == GitLab rooms <architecture-server-gitlab>
@@ -40,6 +40,7 @@ answers   gitlab:saved / merged / conflict to everyone; gitlab:unchanged / error
 - *Editors*: every Y.Doc change not made by the room itself is an edit, by the connection's authenticated `user.name`, else the `user.name` its client publishes in the awareness (neither: counted, not named). A commit takes the edits it contains (`Editors.take`); edits made meanwhile stay. Every commit lists the other editors as `Co-authored-by:` (emails as for the author).
 - *Auto-commit* (`GitLabOptions.autoCommit`, default 10 minutes, `false`: off): author = most edits; message "Edits by Ann, Bob: a.typ, b.typ, c.typ and 2 more".
 - *Conflict*: a failed merge writes `meta.conflict` (`{ sha, paths }`); every new base (merge, commit) clears it.
+- *Failed commit* (GitLab unreachable, or refusing the commit; manual or auto): the room writes `meta.commitFailure` (`{ message, at }`), so everyone sees it, also who joins later; every new base (merge, commit) and a conflict (GitLab answered) clear it. A failed auto-commit is tried again after the next edit.
 - *Files endpoint*: `GET /rooms/<room>/files/<path>` with the room token as Bearer → the bytes of a repository file, from a shared LRU `BlobCache`.
 
 == Entry points <architecture-server-entry-points>
@@ -48,7 +49,7 @@ answers   gitlab:saved / merged / conflict to everyone; gitlab:unchanged / error
   columns: (auto, 1fr, 2fr),
   table.header[File][Task][Configuration],
   [`main.ts`], [`server:dev`], [environment variables: @guide-collaboration-server, @guide-collaboration-gitlab],
-  [`fake-gitlab-main.ts`], [`demo`, `server:dev-fake-gitlab`, `test:e2e-gitlab`], [`PORT`; plain rooms + `gitlab:demo/report@<any branch>` holding `demo/examples/advanced`; `GET /playground`, `POST /playground/upstream` (simulates a push)],
+  [`fake-gitlab-main.ts`], [`demo`, `server:dev-fake-gitlab`, `test:e2e-gitlab`], [`PORT`; plain rooms + `gitlab:demo/report@<any branch>` holding `demo/examples/advanced`; `GET /playground`, `POST /playground/upstream` (simulates a push), `POST /playground/outage` (GitLab unreachable for a branch)],
 )
 
 The widget's side (`collaboration` extension, `GitLabSourceControl`): @guide-collaboration and @architecture-built-in-extensions.

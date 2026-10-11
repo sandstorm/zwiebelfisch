@@ -21,6 +21,7 @@ export const GITLAB_ROOM_PREFIX = 'gitlab:';
  * | `lastCommits` | `Record<path, commitSha>`: per `.typ` file, the commit that last changed it (optimistic concurrency) |
  * | `changes`     | `RoomChanges \| null`: what the room has that the branch has not (kept up to date while people edit) |
  * | `conflict`    | `RoomConflict \| null`: upstream changes that conflict with the room's; nothing is committed until resolved |
+ * | `commitFailure` | `CommitFailure \| null`: the last commit failed (GitLab unreachable or refusing it); cleared by the next commit or merge, or a conflict |
  * | `autoCommit`  | `number \| null`: the minutes without edits after which the server commits by itself (also when the last user leaves); null: never |
  */
 export const META_MAP = 'meta';
@@ -61,6 +62,13 @@ export interface ChangedFile {
 export interface RoomConflict {
   sha: string;
   paths: string[];
+}
+
+/** Why the room's last commit failed, and when (`commitFailure` in the meta map): GitLab unreachable, or refusing it. */
+export interface CommitFailure {
+  message: string;
+  /** Milliseconds since the epoch, the server's clock. */
+  at: number;
 }
 
 /** Client → server stateless messages. */

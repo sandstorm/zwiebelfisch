@@ -117,13 +117,51 @@ describe('GitLabSourceControl: what is not in GitLab', () => {
     expect(sourceControl.resourceStates.map((state) => state.decorations.badge)).toEqual(['M', 'A']);
   });
 
-  it('knows when its changes stay uncommitted: there are some, and the server does not commit by itself', () => {
+  it('shows a failed commit as a warning entry until the server clears it, after a conflict\'s', () => {
+    vi.useFakeTimers({ now: T0 + 3 * 60_000, toFake: ['setInterval', 'clearInterval', 'Date'] });
+    const { meta, sourceControl } = setup();
+    meta.set('baseSha', '0123456789abcdef');
+    meta.set('changes', { files: [{ path: '/main.typ', kind: 'modified' }], since: T0, editors: ['Ann'] });
+    meta.set('commitFailure', { message: 'GitLab could not be reached (fetch failed)', at: T0 });
+    expect(sourceControl.statusBarCommands).toEqual([
+      {
+        title: 'Saving to GitLab failed',
+        tooltip: 'The last save to GitLab (3 min ago) failed:\nGitLab could not be reached (fetch failed)\nThe changes stay here. Click to try again.',
+        backgroundColor: 'warning',
+      },
+      expect.objectContaining({ title: 'Not in GitLab: 1 file · 3 min (Ann)' }),
+    ]);
+    meta.set('conflict', { sha: 's', paths: ['/main.typ'] });
+    expect(sourceControl.statusBarCommands.map((command) => command.title)).toEqual([
+      'Conflict with GitLab: main.typ',
+      'Saving to GitLab failed',
+      'Not in GitLab: 1 file · 3 min (Ann)',
+    ]);
+    meta.set('conflict', null);
+    meta.set('commitFailure', { message: 42 });
+    expect(sourceControl.statusBarCommands.map((command) => command.title)).toEqual(['Not in GitLab: 1 file · 3 min (Ann)']);
+    meta.set('commitFailure', null);
+    expect(sourceControl.statusBarCommands).toHaveLength(1);
+    sourceControl.dispose();
+  });
+
+  it('knows when its changes stay uncommitted: there are some, and the server does not (or cannot) commit them by itself', () => {
     const { meta, sourceControl } = setup();
     meta.set('autoCommit', null);
     expect(sourceControl.changesStayUncommitted).toBe(false);
     meta.set('changes', { files: [{ path: '/main.typ', kind: 'modified' }], since: Date.now(), editors: [] });
     expect(sourceControl.changesStayUncommitted).toBe(true);
     meta.set('autoCommit', 10);
+    expect(sourceControl.changesStayUncommitted).toBe(false);
+    // a conflict blocks the server's commits
+    meta.set('conflict', { sha: 's', paths: ['/main.typ'] });
+    expect(sourceControl.changesStayUncommitted).toBe(true);
+    meta.set('conflict', null);
+    expect(sourceControl.changesStayUncommitted).toBe(false);
+    // so does a failed commit (GitLab unreachable)
+    meta.set('commitFailure', { message: 'down', at: 1 });
+    expect(sourceControl.changesStayUncommitted).toBe(true);
+    meta.set('commitFailure', null);
     expect(sourceControl.changesStayUncommitted).toBe(false);
   });
 

@@ -13,7 +13,6 @@ import {
   DEFAULT_COMMIT_MESSAGE,
   GITLAB_ROOM_PREFIX,
   type ClientMessage,
-  type ServerMessage,
 } from '../../../src/core/room-protocol/room-protocol.ts';
 import type { Authenticate, AuthenticatedUser } from '../auth.ts';
 import { BlobCache } from './blob-cache.ts';
@@ -128,9 +127,7 @@ export class GitLabExtension implements Extension {
     const open = this.rooms.get(documentName);
     const message = parseMessage(payload);
     if (!open || message?.type !== 'gitlab:save') return;
-    const result = await open.room
-      .save(this.author(message, connection.context?.user), message.message?.trim() || DEFAULT_COMMIT_MESSAGE)
-      .catch((error: unknown): ServerMessage => ({ type: 'gitlab:error', message: String((error as Error)?.message ?? error) }));
+    const result = await open.room.save(this.author(message, connection.context?.user), message.message?.trim() || DEFAULT_COMMIT_MESSAGE);
     if (result.type === 'gitlab:unchanged' || result.type === 'gitlab:error') connection.sendStateless(JSON.stringify(result));
     else open.document.broadcastStateless(JSON.stringify(result));
   }
