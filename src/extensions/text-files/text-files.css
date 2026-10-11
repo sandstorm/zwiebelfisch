@@ -8,7 +8,8 @@
 .typst-text-files .cm-editor .cm-content { caret-color: var(--te-text); }
 .typst-text-files .cm-editor .cm-cursor { border-left-color: var(--te-text); }
 .typst-text-files .cm-editor .cm-gutters { background: var(--te-subtle); color: var(--te-faint); border-right-color: var(--te-border); }
-.typst-text-files .cm-editor .cm-activeLine { background: var(--te-hover); }
+/* translucent: CodeMirror draws the selection behind the lines, so an opaque line would hide a selection within it */
+.typst-text-files .cm-editor .cm-activeLine { background: color-mix(in srgb, var(--te-hover) 50%, transparent); }
 .typst-text-files .cm-editor .cm-activeLineGutter { background: var(--te-hover); color: var(--te-text); }
 .typst-text-files .cm-editor .cm-scroller .cm-selectionLayer .cm-selectionBackground { background: var(--te-selected); }
 .typst-text-files .cm-editor.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground { background: var(--te-selected-strong); }
