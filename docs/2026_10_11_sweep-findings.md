@@ -174,6 +174,8 @@ snippet, exportPdf).
 
 ## H. Names that should be longer (user: refactor later, as its own step)
 
+**Done (2026-10-11):** as listed, except `Rect` (no target name), `TextDocument` (raw-box code is no `TypstDocument`), `pristine` (a WeakMap and a node factory, no predicate), `Call` / `Renderings` (gone), `Position` / `Span` (value-types wave).
+
 Proposed 2026-10-11; one agent alone (touches many files), after the current waves:
 1. **Words used for two things:** preview `Box` / `PercentBox` / `Rect` → `PageRect` / `PageRectPercent`;
    Visual view `BoxRenderer` / `BoxAction` / `BoxTools` / `Boxes` → `RawBoxRenderer` / `RawBoxAction` /
