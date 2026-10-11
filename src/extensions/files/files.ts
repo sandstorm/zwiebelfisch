@@ -88,7 +88,7 @@ const PANEL_SETTING = {
   type: 'string',
   enum: ['auto', 'show', 'hide'],
   default: 'auto',
-  description: 'When the file panel is open: auto while the project has more than one file, else collapsed to its rail button (until someone opens or closes it); show: open; hide: none at all (and dropped files are ignored).',
+  description: 'When the file panel is open: auto while the project has more than one file, else collapsed to its rail button (until someone opens or closes it); show: open; hide: none at all (and files dropped beside the text are ignored).',
 } as const;
 
 /** When the file panel is open (the setting `files.panel`). */

@@ -2,12 +2,11 @@ import type { Event } from '../../core/event-emitter/event-emitter';
 import { type PathReference, ProjectPath } from '../../core/paths/paths';
 import type { FileChange, FileContent, Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
-import { uploadChanges } from '../../core/uploads/uploads';
+import { uploadChanges, uploadTarget } from '../../core/uploads/uploads';
 import type { DocumentDropEditProvider } from '../../hosts/languages/languages';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './images.css?inline';
 import { IMAGE_FILES, imageBlob, isImage } from './model/image-files';
-import { uploadTarget } from './model/upload';
 import { imageSource } from './visual-editor/image-syntax';
 import { imagesVisualEditor, type ImageAssets, type ImageUrls } from './visual-editor/visual-editor';
 import { imageEditor } from './workbench/image-editor';
@@ -16,9 +15,9 @@ import { imageEditor } from './workbench/image-editor';
  * Images, from the file in the project to the box in the text. In the Visual editor an `#image("path", ..)` block
  * (also a figure's body) is a box that shows the project's image file in place of its code, with tools to resize it,
  * set its alt text and add a caption (ImageTools in visual-editor/image-tools.ts). "Insert image" offers the project's
- * images and uploads; image files dropped on or pasted into the text are uploaded and inserted too, and an image
- * dragged from the file panel becomes `#image("path")` where it is dropped (a drop edit provider). Uploads go through
- * `workspace.applyEdit`. Image files open read-only in the editing area (the custom editor `images.editor`).
+ * images and uploads; image files pasted into the text are uploaded and inserted too, and an image dropped into the
+ * text (from the file panel, or from the computer once the workbench uploaded it) becomes `#image("path")` where it
+ * is dropped (a drop edit provider). Uploads go through `workspace.applyEdit`. Image files open read-only in the editing area (the custom editor `images.editor`).
  *
  * An image is one concept, so it is one extension: the Visual editor knows only raw boxes, their renderers and tools,
  * the window only custom editors, and the file panel only files. The path on an image box is the document link the

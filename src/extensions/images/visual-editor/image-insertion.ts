@@ -1,4 +1,4 @@
-// Inserting image blocks: from the toolbar, and from files dropped on or pasted into the editor. See images in
+// Inserting image blocks: from the toolbar, and from files pasted into the editor. See images in
 // ../images.ts.
 import type { Editor } from '@tiptap/core';
 import type { ResolvedPos } from '@tiptap/pm/model';
@@ -7,47 +7,29 @@ import { NodeSelection, Plugin, PluginKey } from '@tiptap/pm/state';
 import { imageSource } from './image-syntax';
 
 /**
- * Inserts image blocks showing `paths` next to the selection, or next to
- * document position `near` (e.g. where files were dropped): after the
- * selected block, or after the paragraph / heading holding that position.
- * It never replaces or splits anything; only an empty paragraph is taken
- * over. The cursor ends up after the images, in a focused editor.
+ * Inserts image blocks showing `paths` next to the selection: after the
+ * selected block, or after the paragraph / heading holding it. It never
+ * replaces or splits anything; only an empty paragraph is taken over. The
+ * cursor ends up after the images, in a focused editor.
  */
-export function insertImages(editor: Editor, paths: PathReference[], near?: number): void {
-  const { state } = editor;
+export function insertImages(editor: Editor, paths: PathReference[]): void {
   const content = paths.map((path) => ({ type: 'image', attrs: { src: imageSource(path) } }));
-  const { selection } = state;
-  const target =
-    near === undefined
-      ? selection instanceof NodeSelection && selection.node.isBlock
-        ? { from: selection.to, to: selection.to }
-        : besideTextblock(selection.$to)
-      : // Uploads take a while: the document may have shrunk since.
-        besideTextblock(state.doc.resolve(Math.min(near, state.doc.content.size)));
+  const { selection } = editor.state;
+  const target = selection instanceof NodeSelection && selection.node.isBlock ? { from: selection.to, to: selection.to } : besideTextblock(selection.$to);
   editor.chain().focus().insertContentAt(target, content).run();
 }
 
 /**
- * Takes image files dropped on or pasted into the editor: calls `onImages`
- * with them (and, for a drop, the document position under the mouse). The
- * event goes no further, so the browser does not open a dropped file in
- * place of the page and the file panel does not add it once more. Events
- * without image files are left to others (e.g. the file panel; a project
- * file dragged from it is the workbench's drop, see images in ../images.ts).
+ * Takes image files pasted into the editor: calls `onImages` with them.
+ * Pastes without image files are left to others. Dropped files are the
+ * workbench's (uploaded, then made into text by the drop edit providers,
+ * see images in ../images.ts).
  */
-export function imageFileDrops(onImages: (files: File[], near?: number) => void): Plugin {
+export function imageFilePastes(onImages: (files: File[]) => void): Plugin {
   return new Plugin({
     key: new PluginKey('typstImageFiles'),
     props: {
       handleDOMEvents: {
-        drop: (view, event) => {
-          const files = imageFiles(event.dataTransfer);
-          if (files.length === 0) return false;
-          event.preventDefault();
-          event.stopPropagation();
-          onImages(files, view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos);
-          return true;
-        },
         paste: (_view, event) => {
           const files = imageFiles(event.clipboardData);
           if (files.length === 0) return false;

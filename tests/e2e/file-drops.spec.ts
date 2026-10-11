@@ -1,5 +1,5 @@
-// End-to-end tests (Playwright, against the demo build): project files dragged from the file panel into the text
-// become what their extension makes of them, with the imports they need.
+// End-to-end tests (Playwright, against the demo build): project files dragged from the file panel, and files from the
+// desktop dropped, into the text become what their extension makes of them, with the imports they need.
 import { expect } from '@playwright/test';
 import { test, fileRow } from './fixtures';
 
@@ -19,4 +19,29 @@ test("a spreadsheet dragged from the file panel into the simple example's text b
   await expect(source.locator('.cm-line').first()).toHaveText('#import "data/budget.ic.gen.typ": sheets');
   await expect(source).toContainText('and `backticks` show code.#figure(sheets.Budget, caption: [ ])');
   await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
+});
+
+test('files from the desktop dropped into the Visual and the Source editor are uploaded and become what their extension makes of them', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/, { timeout: 30_000 });
+  /** A drop's data holding the file `name` with `text`, as the browser builds it for a file from the desktop. */
+  const desktopFile = (name: string, text: string) =>
+    page.evaluateHandle(([fileName, content]) => {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([content], fileName));
+      return transfer;
+    }, [name, text] as const);
+
+  const visual = page.locator('[data-testid=typst-visual]:visible');
+  const paragraph = visual.locator('p', { hasText: 'Typst is a markup language for documents' });
+  await paragraph.dispatchEvent('drop', { dataTransfer: await desktopFile('sequence.mmd', 'sequenceDiagram\n  A->>B: hi\n') });
+  await expect(fileRow(page, 'sequence.mmd')).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Source' }).click();
+  const source = page.locator('[data-testid=typst-source]:visible');
+  await expect(source).toContainText('#figure(mermaid(read("sequence.mmd"), width: 100%), caption: [ ])');
+
+  await source.locator('.cm-content').dispatchEvent('drop', { dataTransfer: await desktopFile('photo.png', 'not really a png') });
+  await expect(fileRow(page, 'photo.png')).toBeVisible();
+  await expect(source).toContainText('#image("photo.png")');
 });

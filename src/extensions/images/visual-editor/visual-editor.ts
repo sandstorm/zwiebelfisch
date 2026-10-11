@@ -8,7 +8,7 @@ import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type ToolbarAction, type RawBoxRenderer, type ToolbarContext, type TypstNodeSpec, type VisualEditorContribution } from '../../../hosts/visual-editor/visual-editor';
-import { imageFileDrops, insertImages } from './image-insertion';
+import { imageFilePastes, insertImages } from './image-insertion';
 import { imagePath } from './image-syntax';
 import { ImageTools } from './image-tools';
 import { IMAGE_ACCEPT } from '../model/image-files';
@@ -18,7 +18,7 @@ import { IMAGE_ACCEPT } from '../model/image-files';
  * path", with tools (resize handles, width, alt text; a caption where the
  * figures extension offers one) and the image file in place of the code, also
  * as a figure's body; "Insert image" (a path, or the project's images and
- * uploads), and image files dropped on or pasted into the text.
+ * uploads), and image files pasted into the text.
  */
 export function imagesVisualEditor(options: ImagesOptions): VisualEditorContribution {
   return {
@@ -122,19 +122,19 @@ const Image = Node.create({
 
 /**
  * "Insert image": a quick pick of the project's images, "Upload image…" and "Enter a path…" (an input box). Image
- * files dropped on or pasted into the text are uploaded and inserted too; refused uploads are error messages.
+ * files pasted into the text are uploaded and inserted too; refused uploads are error messages.
  */
 function insertImage(toolbar: ToolbarContext, assets: ImageAssets, prompts: ImagePrompts): ToolbarAction {
   const { editor, root } = toolbar;
-  const upload = async (files: File[], near?: number) => {
+  const upload = async (files: File[]) => {
     const { paths, errors } = await uploadImages(assets, files);
-    if (paths.length > 0) insertImages(editor, paths, near);
+    if (paths.length > 0) insertImages(editor, paths);
     for (const error of errors) void prompts.showErrorMessage(error);
   };
   const picker = root.appendChild(imagePicker(root.ownerDocument, (files) => void upload(files)));
-  const drops = imageFileDrops((files, near) => upload(files, near));
-  editor.registerPlugin(drops);
-  toolbar.subscriptions.push(new Disposable(() => (editor.unregisterPlugin(drops.spec.key!), picker.remove())));
+  const pastes = imageFilePastes((files) => void upload(files));
+  editor.registerPlugin(pastes);
+  toolbar.subscriptions.push(new Disposable(() => (editor.unregisterPlugin(pastes.spec.key!), picker.remove())));
   const enterPath = async () => {
     const path = await prompts.showInputBox({ title: 'Insert image', prompt: 'Image path', placeHolder: 'images/figure.png' });
     if (path?.trim()) insertImages(editor, [PathReference.of(path.trim())]);

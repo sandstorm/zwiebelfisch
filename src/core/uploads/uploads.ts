@@ -1,4 +1,4 @@
-import { type FileChange } from '../project/project';
+import { type FileChange, type FileContent } from '../project/project';
 import { ProjectPath } from '../paths/paths';
 
 /**
@@ -6,9 +6,10 @@ import { ProjectPath } from '../paths/paths';
  * `_`; a name like `..` is left out), `.typ` files as text, everything else as bytes.
  *
  * Files from the computer (picked or dropped) enter the project here, so every feature names and reads them the same
- * way: a file name becomes a ProjectPath at the top of the project, and the kind decides text or bytes. Used by the
- * file panel (extensions/files) and image uploads (extensions/images); applying the changes is theirs.
- * See docs/30_architecture/02_core.typ.
+ * way: a file name becomes a ProjectPath at the top of the project, and the kind decides text or bytes. Uploads that
+ * go into a text (files dropped into a Typst editor, pasted images) take the place `uploadTarget` finds. Used by the
+ * workbench (files dropped into the Typst editors), the file panel (extensions/files) and image uploads
+ * (extensions/images); applying the changes is theirs. See docs/30_architecture/02_core.typ.
  */
 export async function uploadChanges(files: readonly UploadedFile[]): Promise<FileChange[]> {
   const changes = await Promise.all(
@@ -22,9 +23,29 @@ export async function uploadChanges(files: readonly UploadedFile[]): Promise<Fil
   return changes.filter((change) => change !== null);
 }
 
+/**
+ * Where an upload of `content` named `path` goes: a file with the same content (`name.png`, `name-2.png`, …), else
+ * the first free one of those names (browsers name every pasted screenshot `image.png`). `contentOf` reads the
+ * project's files.
+ */
+export function uploadTarget(path: ProjectPath, content: FileContent, contentOf: (path: ProjectPath) => FileContent | undefined): ProjectPath {
+  const extension = ProjectPath.extension(path);
+  const stem = path.slice(0, path.length - extension.length);
+  for (let n = 1; ; n++) {
+    const candidate = n === 1 ? path : ProjectPath.of(`${stem}-${n}${extension}`);
+    const existing = contentOf(candidate);
+    if (existing === undefined || sameContent(existing, content)) return candidate;
+  }
+}
+
 /** A file from the computer, as far as uploads read it (a DOM `File` is one; core names no DOM type). */
 export interface UploadedFile {
   readonly name: string;
   text(): Promise<string>;
   arrayBuffer(): Promise<ArrayBuffer>;
+}
+
+function sameContent(a: FileContent, b: FileContent): boolean {
+  if (typeof a === 'string' || typeof b === 'string') return a === b;
+  return a.length === b.length && a.every((byte, i) => byte === b[i]);
 }

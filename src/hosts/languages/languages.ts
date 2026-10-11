@@ -17,8 +17,8 @@ import { pasteExtension } from './paste-extension';
  * a raw box's code, an extension's own editor) shows the merged links of all providers for its language, knowing none
  * of them. Help works the same way: a language's sheet comes from its extension, the help panel shows it; so do known
  * imports: an extension says where the names of its constructs come from, whoever adds imports reads them. And drops:
- * a file dragged from the file panel into a Typst editor becomes what an extension makes of it (a spreadsheet: its
- * figure and import), the editors only insert it. And copy and paste: an extension changes what a paste of Typst puts in (a label already taken gets a new name) or
+ * a file dragged from the file panel (or from the desktop, once the workbench uploaded it) into a Typst editor becomes
+ * what an extension makes of it (a spreadsheet: its figure and import), the editors only insert it. And copy and paste: an extension changes what a paste of Typst puts in (a label already taken gets a new name) or
  * what else it changes (the imports the text needs), the editors do the paste, in one undo step.
  *
  * The host knows no language itself. Whoever hands a text over says its language (`languageId`), and the extensions
