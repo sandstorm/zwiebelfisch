@@ -73,7 +73,8 @@ createTypstEditor(host, {
 - *What is not in GitLab yet* is always visible: the status bar says "Not in GitLab: 3 files · 14 min (Ann, Bob)" (how many files, since the first edit, who edited), or "Saved · 01234567" (the branch's commit). The file panel marks changed files M, new ones A (a deleted file has no row; it counts). A click on the status saves.
 - *Saving:* "Save to GitLab…" in the tab bar (or a click on the status) asks for a commit message (default "Edit via Typst editor"). The server commits every change since the last commit, uploads included, as one commit by the saving user; the others who edited since are `Co-authored-by:`.
 - *Saving by itself* (on by default): when nobody edited for 10 minutes, and 20 s after the last user left (a reload in between does not count). One commit on the branch itself (no side branch, no squashing), by whoever made the most edits, the others as co-authors: "Edits by Ann, Bob: chapters/intro.typ, results.typ" (at most three files named). Use "Save to GitLab…" for a meaningful message.
-- *Leaving:* the last user leaving with changes not in GitLab gets the browser's "Leave site?" question when nothing would save them: saving by itself is off, or a conflict blocks it. The changes stay in the room either way.
+- *Saving fails* (GitLab unreachable, or refusing the commit; a click or by itself): everyone sees the message, and the status bar warns "Saving to GitLab failed" (also who joins later) until a save or a merge of changes on GitLab succeeds. The changes stay in the room; a click on the warning saves again.
+- *Leaving:* the last user leaving with changes not in GitLab gets the browser's "Leave site?" question when nothing would save them: saving by itself is off, a conflict blocks it, or the last save failed. The changes stay in the room either way.
 - Everyone in the room sees the outcome: "Saved version 01234567 (Ann)", "Saved version 01234567 automatically (Bob)", "No changes to save", "Saving failed: …".
 - *Changes on GitLab* (pushes, merges) are merged into the room file by file, three-way: when someone saves, and on push with the webhook.
 - *Conflicts:* where the room and GitLab changed the same lines, nothing is merged or committed, also not by itself. Everyone sees "Changes on GitLab conflict with edits in …", and until it is resolved a warning "Conflict with GitLab: main.typ" in the status bar and "!" on the files (also who joins later). The room keeps its text, without conflict markers. Make the lines match (here or on GitLab), then save again; saving by itself retries after the next edits.
@@ -100,5 +101,6 @@ GitLab rooms need both `TYPST_GITLAB_URL` and `TYPST_GITLAB_TOKEN`.
 - *Collaborate:* pick it in the playground bar, then "Open a second window as Bob".
 - *GitLab (fake):* pick it, or open `?room=gitlab:demo/report@main`. Any other branch name starts a fresh branch from `main`.
 - "Simulate upstream commit" pushes a change to the fake repository: try merges and conflicts.
+- `curl -X POST 'http://localhost:1234/playground/outage?room=gitlab:demo/report@main'` makes the fake GitLab unreachable for that branch (`&on=false` ends it): try a failing save.
 - The fake repository lives in memory: restart `mise run demo` to reset it.
 - `TYPST_GITLAB_AUTO_COMMIT` works here too, e.g. `0.5` to watch saving by itself.

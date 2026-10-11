@@ -30,6 +30,11 @@ export class FakeGitLab {
   readonly requests: string[] = [];
   /** Answer the next commit request with this error (a race with a push, a server error). */
   failNextCommit: { status: number; message: string; push?: Files } | null = null;
+  /**
+   * Branches GitLab cannot be reached for: a request about one (its head, a commit to it) fails as when the network
+   * is down (`fetch` rejects). Per branch, so a test's outage leaves the others' branches alone.
+   */
+  readonly unreachable = new Set<string>();
   /** Branches nobody created yet start at `main` when first asked for (one fresh branch per e2e test). */
   autoBranches = false;
   private readonly commits = new Map<string, Commit>();
@@ -75,6 +80,8 @@ export class FakeGitLab {
     const target = new URL(url.slice(prefix.length), 'http://x');
     const method = init.method ?? 'GET';
     this.requests.push(`${method} ${target.pathname}${target.search}`);
+    const branch = branchOf(method, target.pathname, init.body as string | undefined);
+    if (branch !== null && this.unreachable.has(branch)) throw new TypeError('fetch failed');
     return this.route(method, target, init.body as string | undefined);
   };
 
@@ -204,6 +211,14 @@ export class FakeGitLab {
     this.commits.set(sha, commit);
     return commit;
   }
+}
+
+/** The branch a request is about (its head, a commit to it), or null. */
+function branchOf(method: string, path: string, body: string | undefined): string | null {
+  const match = path.match(/^\/repository\/branches\/([^/]+)$/);
+  if (match) return decodeURIComponent(match[1]);
+  if (method === 'POST' && path === '/repository/commits') return (JSON.parse(body ?? '{}') as { branch?: string }).branch ?? null;
+  return null;
 }
 
 interface GitLabAction {

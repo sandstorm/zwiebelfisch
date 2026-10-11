@@ -6,6 +6,7 @@ import {
   ASSETS_MAP,
   FILES_MAP,
   META_MAP,
+  type CommitFailure,
   type RoomChanges,
   type RoomConflict,
   type RoomMeta,
@@ -63,7 +64,8 @@ const NOBODY = 'Typst editor';
  * each commit or merge. Every commit names the other editors as co-authors.
  * With `options.autoCommit` the room commits by itself when nobody edited for
  * that long, and when the last user left. Upstream changes that conflict with
- * the room's stay in `meta.conflict` until a merge succeeds.
+ * the room's stay in `meta.conflict` until a merge succeeds; a failed commit
+ * stays in `meta.commitFailure` until the next commit or merge.
  *
  * Operations on a room run one after another. Everything the room knows lives
  * in the Y.Doc, so a room stored and loaded again (any storage) continues
@@ -122,7 +124,7 @@ export class GitLabRoom {
    * (as for `pull`) and tries again; a conflict ends the save.
    */
   save(author: Author, message: string): Promise<ServerMessage> {
-    return this.run(() => this.commitAttempts((edits) => ({ author, message: withCoAuthors(message, edits, author) })));
+    return this.run(() => this.commitNow((edits) => ({ author, message: withCoAuthors(message, edits, author) })));
   }
 
   /**
@@ -132,7 +134,7 @@ export class GitLabRoom {
   private autoSave(): Promise<ServerMessage> {
     const fallback = { name: NOBODY, email: this.options.authorEmail };
     return this.run(async () => {
-      const result = await this.commitAttempts((edits, paths) => automaticCommit(edits, paths, fallback));
+      const result = await this.commitNow((edits, paths) => automaticCommit(edits, paths, fallback));
       return result.type === 'gitlab:saved' ? { ...result, automatic: true } : result;
     });
   }
@@ -195,8 +197,21 @@ export class GitLabRoom {
   /** Commits by itself, if there is anything to commit, and tells the room how it went. */
   private async autoCommitNow(): Promise<void> {
     if (this.disposed || !this.hasChanges()) return;
-    const result = await this.autoSave().catch((error: unknown): ServerMessage => ({ type: 'gitlab:error', message: String((error as Error)?.message ?? error) }));
+    const result = await this.autoSave();
     if (result.type !== 'gitlab:unchanged') this.options.broadcast(result);
+  }
+
+  /**
+   * Commits as `commitAttempts` does. A failure (GitLab unreachable or refusing the commit) is the outcome, and stays
+   * in `meta.commitFailure` for everyone (also who joins later) until the next commit or merge.
+   */
+  private async commitNow(compose: Compose): Promise<ServerMessage> {
+    const result = await this.commitAttempts(compose).catch((error: unknown): ServerMessage => ({ type: 'gitlab:error', message: failureMessage(error) }));
+    if (result.type === 'gitlab:error') {
+      const failure: CommitFailure = { message: result.message, at: Date.now() };
+      this.doc.transact(() => this.doc.getMap(META_MAP).set('commitFailure', failure), this);
+    }
+    return result;
   }
 
   /** Commit attempts until one is done or a conflict ends them; `compose` names the author and message. */
@@ -266,7 +281,12 @@ export class GitLabRoom {
     const { changes, conflicts } = mergeFiles(meta.base, current.texts, upstream.base);
     if (conflicts.length) {
       const conflict: RoomConflict = { sha: head, paths: conflicts.map((file) => file.path) };
-      this.doc.transact(() => this.doc.getMap(META_MAP).set('conflict', conflict), this);
+      // GitLab answered: the conflict is what keeps the changes from it now
+      this.doc.transact(() => {
+        const map = this.doc.getMap(META_MAP);
+        map.set('conflict', conflict);
+        if (map.get('commitFailure')) map.set('commitFailure', null);
+      }, this);
       return { type: 'gitlab:conflict', sha: head, files: conflicts };
     }
     this.doc.transact(() => {
@@ -355,12 +375,19 @@ export class GitLabRoom {
     return Object.fromEntries(['baseSha', 'base', 'baseAssets', 'lastCommits'].map((key) => [key, map.get(key)])) as unknown as RoomMeta;
   }
 
-  /** A new base (loaded, merged or committed): any conflict is resolved. */
+  /** A new base (loaded, merged or committed): any conflict is resolved, any failed commit is over. */
   private writeMeta(meta: RoomMeta): void {
     const map = this.doc.getMap(META_MAP);
     for (const [key, value] of Object.entries(meta)) map.set(key, value);
     if (map.get('conflict')) map.set('conflict', null);
+    if (map.get('commitFailure')) map.set('commitFailure', null);
   }
+}
+
+/** What went wrong in a commit: GitLab's answer, or that it could not be reached (fetch failed). */
+function failureMessage(error: unknown): string {
+  const message = String((error as Error)?.message ?? error);
+  return error instanceof GitLabError ? message : `GitLab could not be reached (${message})`;
 }
 
 /** The author and message of a commit of `edits`, which changes the files at `paths`. */
