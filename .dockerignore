@@ -1,0 +1,17 @@
+# What the image builds itself or must never contain (Dockerfile): dependencies, build output, caches, local secrets.
+**/node_modules
+**/target
+dist
+.cache
+.claude
+.git
+.idea
+test-results
+playwright-report
+src/core/typst-engine/wasm
+src/core/typst-engine/fonts
+server/.data
+.env
+mise.local.toml
+**/*.log
+**/.DS_Store

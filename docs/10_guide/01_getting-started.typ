@@ -2,9 +2,20 @@
 
 A Typst editor for the browser: a Visual editor (WYSIWYG), a Source editor and a live preview. The Typst compiler runs as WebAssembly in a worker; no server is needed except for collaboration.
 
+== Trying it with Docker <guide-getting-started-docker>
+
+To try the demo without installing anything else:
+
+```sh
+docker build -t typst-editor-demo .
+docker run --rm -p 127.0.0.1:5199:5199 -p 127.0.0.1:1234:1234 typst-editor-demo
+```
+
+Then open `http://127.0.0.1:5199/`. You get the demo as in production and the collaboration server with a fake GitLab, the same as `mise run demo:build` (@guide-getting-started-demo). Nothing is saved: the rooms live in memory, and the Documentation example does not write to `docs/`. Ctrl-C stops both. The first build takes a while, as it compiles the Typst compiler to wasm. With mise: `mise run docker:build` and `mise run docker:run`.
+
 == Setup <guide-getting-started-setup>
 
-Requires #link("https://mise.jdx.dev")[mise]. It pins every tool: Node, pnpm, the Typst CLI, Rust (with the `wasm32` target), wasm-bindgen and binaryen.
+To work on the code, you need #link("https://mise.jdx.dev")[mise]. It pins every tool: Node, pnpm, the Typst CLI, Rust (with the `wasm32` target), wasm-bindgen and binaryen.
 
 ```sh
 mise install            # the pinned tools
