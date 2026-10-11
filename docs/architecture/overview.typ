@@ -33,7 +33,7 @@ Typing one letter in the Visual view:
 
 ```
  VisualView (Tiptap)            keystroke → ProseMirror transaction
-   │ print(doc)                 untouched nodes print their source verbatim
+   │ serializeToTypst(doc)      untouched nodes print their source verbatim
    ▼
  TypstDocument.setText(text, visualView)   one minimal TextChange
    │ onDidChange({ contentChanges, origin })     listeners in subscription order
@@ -46,7 +46,7 @@ Typing one letter in the Visual view:
    └──► TextBinding              (collaboration) into the shared Y.Text
 ```
 
-The way back is the same with the roles swapped: a Source view edit reaches the Visual view through `onDidChange`, which re-projects the text and applies the smallest replacement (`syncDoc`, see @architecture-projection-sync).
+The way back is the same with the roles swapped: a Source view edit reaches the Visual view through `onDidChange`, which re-projects the text and applies the smallest replacement (`applyTypstChanges`, see @architecture-projection-sync).
 
 == One edit format, one source of truth <architecture-overview-truth>
 

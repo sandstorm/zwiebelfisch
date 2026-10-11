@@ -1,4 +1,4 @@
-// Which nodes are still exactly what `project` made of their source, and how a textblock's source lines up with
+// Which nodes are still exactly what `parseTypst` made of their source, and how a textblock's source lines up with
 // its content. Shared by projecting, printing and syncing. See projection.ts.
 import type { Node } from '@tiptap/pm/model';
 
@@ -12,7 +12,7 @@ export interface InlineLayout {
 }
 
 /**
- * Nodes created by `project` and not modified since. ProseMirror nodes are
+ * Nodes created by `parseTypst` and not modified since. ProseMirror nodes are
  * immutable and unchanged nodes keep their identity across transactions, so
  * membership means "the node still corresponds exactly to its `src`".
  * Textblocks also remember how their `src` lines up with their content.

@@ -7,12 +7,12 @@ import { after, edit, expectPreciseMap, find, schemaWith, TestPrompts } from '..
 import { Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import { LabelIndex } from '../model/label-index';
-import { print, project as projectWith, syncDoc } from '../../../hosts/projection/projection';
+import { serializeToTypst, parseTypst as parseTypstWith, applyTypstChanges } from '../../../hosts/projection/projection';
 import { references as referencesContribution } from './visual-view';
 
 const noLabels = new LabelIndex(new Project(ProjectPath.of('/main.typ'), { '/main.typ': '' }));
 const schema = schemaWith({ contributions: [referencesContribution({ labels: noLabels, prompts: new TestPrompts() })] });
-const project = (source: string): Node => projectWith(source, schema);
+const parseTypst = (source: string): Node => parseTypstWith(source, schema);
 
 const chapter = (name: string) => readFileSync(new URL(`../../../../demo/examples/advanced/chapters/${name}.typ`, import.meta.url), 'utf8');
 
@@ -54,15 +54,15 @@ describe('references and labels in the projection', () => {
   describe('round-trip byte for byte, with a precise position map', () => {
     for (const [name, source] of Object.entries(FIXTURES)) {
       it(name, () => {
-        const doc = project(source);
-        expect(print(doc)).toBe(source);
+        const doc = parseTypst(source);
+        expect(serializeToTypst(doc)).toBe(source);
         expectPreciseMap(doc);
       });
     }
   });
 
   it('projects the advanced example: references are chips, the heading label is an attribute', () => {
-    const doc = project(FIXTURES.introduction);
+    const doc = parseTypst(FIXTURES.introduction);
     expect(references(doc)).toEqual([
       { target: 'method', supplement: null },
       { target: 'results', supplement: null },
@@ -75,41 +75,41 @@ describe('references and labels in the projection', () => {
   });
 
   it('labels figures, tables and equations of the advanced example', () => {
-    expect(labels(project(FIXTURES.results))).toEqual([
+    expect(labels(parseTypst(FIXTURES.results))).toEqual([
       { type: 'heading', name: 'results', gap: ' ' },
       { type: 'figure', name: 'tab:timings', gap: ' ' }, // a figure with a table (tables-real-world)
       { type: 'figure', name: 'fig:compile-times', gap: ' ' },
       { type: 'rawBlock', name: 'tab:runs', gap: ' ' }, // a figure of the spreadsheet's table: code the view does not model
     ]);
-    expect(labels(project(FIXTURES.method))).toContainEqual({ type: 'rawBlock', name: 'eq:speedup', gap: ' ' });
+    expect(labels(parseTypst(FIXTURES.method))).toContainEqual({ type: 'rawBlock', name: 'eq:speedup', gap: ' ' });
   });
 
   it('keeps supplements and stops references before trailing punctuation', () => {
-    expect(references(project(FIXTURES.refs))).toEqual([
+    expect(references(parseTypst(FIXTURES.refs))).toEqual([
       { target: 'method', supplement: null },
       { target: 'results', supplement: null },
       { target: 'fig:compile-times', supplement: null },
       { target: 'key', supplement: '[Chapter]' },
       { target: 'eq:speedup', supplement: null },
     ]);
-    expect(references(project(FIXTURES.punctuation)).map((r) => r.target)).toEqual(['fig:x', 'a:b', 'c', 'd', 'e', 'f']);
+    expect(references(parseTypst(FIXTURES.punctuation)).map((r) => r.target)).toEqual(['fig:x', 'a:b', 'c', 'd', 'e', 'f']);
   });
 
   it('finds references in headings, lists, table cells, captions and formatting', () => {
-    expect(references(project(FIXTURES.refsEverywhere)).map((r) => r.target)).toEqual(['intro', 'intro', 'fig:x', 'a', 'b', 'intro', 'x']);
+    expect(references(parseTypst(FIXTURES.refsEverywhere)).map((r) => r.target)).toEqual(['intro', 'intro', 'fig:x', 'a', 'b', 'intro', 'x']);
   });
 
   it('a paragraph of only a reference is a paragraph', () => {
-    expect(project('@intro\n').child(0).type.name).toBe('paragraph');
+    expect(parseTypst('@intro\n').child(0).type.name).toBe('paragraph');
   });
 
   it('labels headings with and without space and on the next line; paragraphs at their end only', () => {
-    expect(labels(project(FIXTURES.headingLabels))).toEqual([
+    expect(labels(parseTypst(FIXTURES.headingLabels))).toEqual([
       { type: 'heading', name: 'intro', gap: ' ' },
       { type: 'heading', name: 'tight', gap: '' },
       { type: 'heading', name: 'next', gap: '\n' },
     ]);
-    const paragraphs = project(FIXTURES.paragraphLabels);
+    const paragraphs = parseTypst(FIXTURES.paragraphLabels);
     expect(labels(paragraphs)).toEqual([
       { type: 'paragraph', name: 'para', gap: ' ' },
       { type: 'paragraph', name: 'tight', gap: '' },
@@ -119,7 +119,7 @@ describe('references and labels in the projection', () => {
   });
 
   it('labels code blocks, tables and table cells; a label followed by text stays inline', () => {
-    const doc = project(FIXTURES.otherLabels);
+    const doc = parseTypst(FIXTURES.otherLabels);
     expect(labels(doc).map((l) => `${l.type}:${l.name}`)).toEqual(['codeBlock:code', 'table:tab', 'paragraph:cell']);
     expect(doc.lastChild!.type.name).toBe('paragraph');
     expect(doc.lastChild!.child(0).attrs.src).toBe('<a>');
@@ -128,36 +128,36 @@ describe('references and labels in the projection', () => {
   describe('edits', () => {
     it('editing a labelled heading keeps its label', () => {
       const source = '= Introduction <intro>\n\nText\n';
-      const doc = edit(project(source), (s) => s.tr.insertText(' and goals', after(s.doc, 'Introduction')));
-      expect(print(doc)).toBe('= Introduction and goals <intro>\n\nText\n');
+      const doc = edit(parseTypst(source), (s) => s.tr.insertText(' and goals', after(s.doc, 'Introduction')));
+      expect(serializeToTypst(doc)).toBe('= Introduction and goals <intro>\n\nText\n');
     });
 
     it('editing a labelled paragraph keeps its label', () => {
-      const doc = edit(project('Some text<p>\n'), (s) => s.tr.insertText(' more', after(s.doc, 'text')));
-      expect(print(doc)).toBe('Some text more<p>\n');
+      const doc = edit(parseTypst('Some text<p>\n'), (s) => s.tr.insertText(' more', after(s.doc, 'text')));
+      expect(serializeToTypst(doc)).toBe('Some text more<p>\n');
     });
 
     it('a new label is printed after one space; a removed label takes its gap along', () => {
-      const added = edit(project('= Intro\n\nText\n'), (s) => s.tr.setNodeAttribute(0, 'label', { name: 'intro', gap: ' ' }));
-      expect(print(added)).toBe('= Intro <intro>\n\nText\n');
-      const removed = edit(project('= Intro\n<intro>\n\nText\n'), (s) => s.tr.setNodeAttribute(0, 'label', null));
-      expect(print(removed)).toBe('= Intro\n\nText\n');
+      const added = edit(parseTypst('= Intro\n\nText\n'), (s) => s.tr.setNodeAttribute(0, 'label', { name: 'intro', gap: ' ' }));
+      expect(serializeToTypst(added)).toBe('= Intro <intro>\n\nText\n');
+      const removed = edit(parseTypst('= Intro\n<intro>\n\nText\n'), (s) => s.tr.setNodeAttribute(0, 'label', null));
+      expect(serializeToTypst(removed)).toBe('= Intro\n\nText\n');
     });
 
     it('a renamed figure label keeps the figure', () => {
       const source = '#figure(image("a.png"), caption: [A]) <fig:a>\n';
-      const doc = edit(project(source), (s) => s.tr.setNodeAttribute(0, 'label', { name: 'fig:b', gap: ' ' }));
-      expect(print(doc)).toBe('#figure(image("a.png"), caption: [A]) <fig:b>\n');
+      const doc = edit(parseTypst(source), (s) => s.tr.setNodeAttribute(0, 'label', { name: 'fig:b', gap: ' ' }));
+      expect(serializeToTypst(doc)).toBe('#figure(image("a.png"), caption: [A]) <fig:b>\n');
     });
 
     it('editing text around a reference keeps it', () => {
-      const doc = edit(project('See @method for details.\n'), (s) => s.tr.insertText(' all', after(s.doc, 'for')));
-      expect(print(doc)).toBe('See @method for all details.\n');
+      const doc = edit(parseTypst('See @method for details.\n'), (s) => s.tr.insertText(' all', after(s.doc, 'for')));
+      expect(serializeToTypst(doc)).toBe('See @method for all details.\n');
     });
 
     it('text typed right after a reference cannot extend it', () => {
       const typed = (text: string) =>
-        print(edit(project('See @method\n'), (s) => s.tr.insertText(text, find(s.doc, 'reference').pos + 1)));
+        serializeToTypst(edit(parseTypst('See @method\n'), (s) => s.tr.insertText(text, find(s.doc, 'reference').pos + 1)));
       expect(typed('s')).toBe('See @method\\s\n');
       expect(typed('.x')).toBe('See @method\\.x\n');
       expect(typed('. Next')).toBe('See @method. Next\n');
@@ -166,20 +166,20 @@ describe('references and labels in the projection', () => {
     });
 
     it('prints an inserted reference, with its supplement', () => {
-      const doc = edit(project('See x\n'), (s) => {
+      const doc = edit(parseTypst('See x\n'), (s) => {
         const at = after(s.doc, 'See ');
         return s.tr.insert(at, [schema.nodes.reference.create({ target: 'intro' }), schema.nodes.reference.create({ target: 'b', supplement: '[Part]' })]);
       });
-      expect(print(doc)).toBe('See @intro@b[Part]x\n');
-      expect(references(project(print(doc))).map((r) => r.target)).toEqual(['intro', 'b']);
+      expect(serializeToTypst(doc)).toBe('See @intro@b[Part]x\n');
+      expect(references(parseTypst(serializeToTypst(doc))).map((r) => r.target)).toEqual(['intro', 'b']);
     });
   });
 
   it('syncing a renamed label from the source updates the attribute in place', () => {
-    const state = EditorState.create({ doc: project('= Intro <intro>\n\nSee @intro.\n') });
-    const tr = syncDoc(state.tr, project('= Intro <start>\n\nSee @start.\n'));
+    const state = EditorState.create({ doc: parseTypst('= Intro <intro>\n\nSee @intro.\n') });
+    const tr = applyTypstChanges(state.tr, parseTypst('= Intro <start>\n\nSee @start.\n'));
     expect(labels(tr.doc)).toEqual([{ type: 'heading', name: 'start', gap: ' ' }]);
     expect(references(tr.doc)).toEqual([{ target: 'start', supplement: null }]);
-    expect(print(tr.doc)).toBe('= Intro <start>\n\nSee @start.\n');
+    expect(serializeToTypst(tr.doc)).toBe('= Intro <start>\n\nSee @start.\n');
   });
 });

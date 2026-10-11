@@ -5,14 +5,14 @@ import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import type { PlacedNode, TypstParseContext, BlockLabel } from './projection';
-import type { Grammar } from './grammar';
+import type { TypstConversions } from './typst-conversions';
 import { labelAfterBlock, splitTrailingLabel } from './labels';
 import { layout, pristine } from './pristine';
 import { calleeName, children } from '../../core/typst-syntax/typst-syntax';
 import { type SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
 
 /** Projects `source` into a document of `schema`, through the grammar attached to it. */
-export function parseDocument(source: string, schema: Schema, grammar: Grammar): Node {
+export function parseDocument(source: string, schema: Schema, grammar: TypstConversions): Node {
   return new TypstToProseMirrorParser(schema, source, grammar).document();
 }
 
@@ -65,7 +65,7 @@ class TypstToProseMirrorParser implements TypstParseContext {
   constructor(
     readonly schema: Schema,
     readonly source: string,
-    private readonly grammar: Grammar,
+    private readonly grammar: TypstConversions,
   ) {}
 
   document(): Node {

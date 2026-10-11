@@ -12,8 +12,8 @@ new VisualView(parent, document, contributions: VisualViewHost)
 .dispose()
 ```
 
-- *Write-back:* after every transaction that changed the document, `document.setText(print(doc), this)`: one minimal change.
-- *Read-back:* a change with another origin is projected again and applied with `syncDoc`, outside the undo history.
+- *Write-back:* after every transaction that changed the document, `document.setText(serializeToTypst(doc), this)`: one minimal change.
+- *Read-back:* a change with another origin is projected again and applied with `applyTypstChanges`, outside the undo history.
 - *Mechanism kept:* paragraphs, text, raw boxes, the toolbar's frame (undo/redo, *Insert* menu, *Selection* bar), highlights. Every other construct and feature is a contribution.
 
 == VisualViewHost <architecture-visual-view-host>

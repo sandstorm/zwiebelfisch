@@ -1,4 +1,4 @@
-// Grammar: what the framework knows about Typst constructs: the registered node and mark specs (their types are in
+// TypstConversions: what the framework knows about Typst constructs: the registered node and mark specs (their types are in
 // projection.ts), and the tables derived from their parse rules (which syntax and calls become what) and from their
 // Typst (how edited nodes are written). See projection.ts.
 import type { NodeType, Schema } from '@tiptap/pm/model';
@@ -9,7 +9,7 @@ type SyntaxNodeRule = NonNullable<TypstParseRules['syntaxNodes']>[string];
 type CallRule = NonNullable<TypstParseRules['calls']>[string];
 
 /** The specs of a schema, merged by name, and the lookups the framework derives from them. */
-export class Grammar {
+export class TypstConversions {
   private readonly nodes = new Map<string, DocumentNodeSpec>();
   private readonly marks = new Map<string, TypstMarkSpec>();
   private readonly syntaxNodes = new Map<string, SyntaxNodeRule[]>();
@@ -42,14 +42,14 @@ export class Grammar {
   }
 
   /** The grammar `attach` gave `schema`. */
-  static of(schema: Schema): Grammar {
-    const grammar = schema.cached.typstGrammar as Grammar | undefined;
+  static of(schema: Schema): TypstConversions {
+    const grammar = schema.cached.typstGrammar as TypstConversions | undefined;
     if (!grammar) throw new Error('No Typst grammar attached to this schema (see attachGrammar)');
     return grammar;
   }
 
   /** Makes `grammar` the one the parser and the serializer use for documents of `schema`. */
-  static attach(schema: Schema, grammar: Grammar): void {
+  static attach(schema: Schema, grammar: TypstConversions): void {
     schema.cached.typstGrammar = grammar;
   }
 

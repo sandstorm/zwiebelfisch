@@ -10,7 +10,7 @@ import type { Decoration } from '@tiptap/pm/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
-import { attachGrammar, onDidChangeGrammar, posToSource, print, project, sourceToPos, syncDoc, type DocumentNodeSpec, type TypstMarkSpec } from '../projection/projection';
+import { attachGrammar, onDidChangeGrammar, posToSource, serializeToTypst, parseTypst, sourceToPos, applyTypstChanges, type DocumentNodeSpec, type TypstMarkSpec } from '../projection/projection';
 import { highlights, setHighlights } from './highlights';
 import { editorExtensions, nodeViewSpecs } from './nodes/node-views';
 import type { RawBoxes } from './nodes/raw-box';
@@ -74,7 +74,7 @@ export class VisualView {
     this.editor.view.updateState(
       EditorState.create({
         schema,
-        doc: project(document.text, schema),
+        doc: parseTypst(document.text, schema),
         plugins: [...this.editor.state.plugins, ...this.gutters.flatMap((gutter) => (gutter.plugin ? [gutter.plugin] : []))],
       }),
     );
@@ -130,12 +130,12 @@ export class VisualView {
 
   private afterTransaction(tr: Transaction): void {
     if (!tr.docChanged || tr.getMeta(FROM_DOCUMENT)) return;
-    this.document.setText(print(this.editor.state.doc), this);
+    this.document.setText(serializeToTypst(this.editor.state.doc), this);
   }
 
   private syncFromDocument(): void {
     const { state } = this.editor;
-    const tr = syncDoc(state.tr, project(this.document.text, state.schema));
+    const tr = applyTypstChanges(state.tr, parseTypst(this.document.text, state.schema));
     if (tr.docChanged) this.editor.view.dispatch(tr.setMeta(FROM_DOCUMENT, true).setMeta('addToHistory', false));
   }
 }

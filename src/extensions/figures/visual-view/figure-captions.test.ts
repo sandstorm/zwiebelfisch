@@ -4,13 +4,13 @@
 import type { Editor } from '@tiptap/core';
 import type { NodeSelection } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
-import { print } from '../../../hosts/projection/projection';
+import { serializeToTypst } from '../../../hosts/projection/projection';
 import { createEditor, find } from '../../../testing/testing';
 
 /** An editor of `source`, and the position of its first image. */
 function setup(source: string): { editor: Editor; text: () => string; image: () => number } {
   const editor = createEditor(source);
-  return { editor, text: () => print(editor.state.doc), image: () => find(editor.state.doc, 'image').pos };
+  return { editor, text: () => serializeToTypst(editor.state.doc), image: () => find(editor.state.doc, 'image').pos };
 }
 
 describe('figure captions', () => {

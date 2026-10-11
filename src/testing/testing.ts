@@ -30,7 +30,7 @@ import { VisualView, VisualViewHost, type ContributionContext, type VisualViewCo
 import type { InputBoxOptions, MessageItem, QuickPickItem, QuickPickOptions, Window } from '../hosts/window/window';
 import type { Workbench } from '../hosts/workbench/workbench';
 import type { Workspace } from '../hosts/workspace/workspace';
-import { attachGrammar, createSchema, documentExtensions, posToSource, print, project as projectWith, sourceToPos } from '../hosts/projection/projection';
+import { attachGrammar, createSchema, documentExtensions, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos } from '../hosts/projection/projection';
 
 /** The schema of a view with the built-ins configured from `options`. */
 export function schemaWith(options: TestViewOptions = {}): Schema {
@@ -110,7 +110,7 @@ export class TestPrompts implements Pick<Window, 'showInputBox' | 'showQuickPick
 export const schema: Schema = schemaWith();
 
 /** `source` projected with `withSchema` (default: the built-ins' `schema`). */
-export const project = (source: string, withSchema: Schema = schema): Node => projectWith(source, withSchema);
+export const parseTypst = (source: string, withSchema: Schema = schema): Node => parseTypstWith(source, withSchema);
 
 /** A Visual view of `document` with the built-ins configured from `options`. */
 export function createVisualView(parent: HTMLElement, document: TypstDocument, options: TestViewOptions = {}): VisualView {
@@ -125,7 +125,7 @@ export function createEditor(source: string, options: TestViewOptions = {}): Edi
   const { nodes, marks } = contributions(options).contributed();
   const editor = new Editor({ extensions: documentExtensions(nodes, marks), injectCSS: false });
   attachGrammar(editor.schema, nodes, marks);
-  editor.view.updateState(EditorState.create({ schema: editor.schema, doc: projectWith(source, editor.schema), plugins: editor.state.plugins }));
+  editor.view.updateState(EditorState.create({ schema: editor.schema, doc: parseTypstWith(source, editor.schema), plugins: editor.state.plugins }));
   return editor;
 }
 
@@ -247,7 +247,7 @@ function visibleChars(doc: Node): { pos: number; char: string }[] {
 
 /** Checks the position map of `doc` exhaustively against its printed source (see typst-editor/typst-editor.projection.test.ts). */
 export function expectPreciseMap(doc: Node): void {
-  const source = print(doc);
+  const source = serializeToTypst(doc);
   for (const { pos, char } of visibleChars(doc)) {
     const offset = posToSource(doc, pos);
     expect(source[offset], `char at position ${pos}`).toBe(char);

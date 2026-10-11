@@ -3,8 +3,8 @@ import { EditorState } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 import { CHECKLIST_PREAMBLE } from '../model/checklist-preamble';
 import { ensureChecklistPreamble } from './checklist-preamble';
-import { print } from '../../../hosts/projection/projection';
-import { after, edit, expectPreciseMap, find, project, schema } from '../../../testing/testing';
+import { serializeToTypst } from '../../../hosts/projection/projection';
+import { after, edit, expectPreciseMap, find, parseTypst, schema } from '../../../testing/testing';
 
 const PREAMBLE = '#import "@preview/cheq:0.4.0": checklist\n#show: checklist';
 
@@ -18,14 +18,14 @@ describe('task lists', () => {
   describe('round-trip byte for byte, with a precise position map', () => {
     for (const [name, source] of Object.entries(FIXTURES)) {
       it(name, () => {
-        expect(print(project(source))).toBe(source);
-        expectPreciseMap(project(source));
+        expect(serializeToTypst(parseTypst(source))).toBe(source);
+        expectPreciseMap(parseTypst(source));
       });
     }
   });
 
   it('projects "- [ ] " and "- [x] " items as task items, the box hidden', () => {
-    const doc = project(FIXTURES.tasks);
+    const doc = parseTypst(FIXTURES.tasks);
     const list = doc.child(1);
     expect(list.type.name).toBe('taskList');
     expect(list.childCount).toBe(2);
@@ -39,7 +39,7 @@ describe('task lists', () => {
   });
 
   it('keeps other boxes, enum items and nested bodies as they are', () => {
-    const doc = project(FIXTURES.notTasks);
+    const doc = parseTypst(FIXTURES.notTasks);
     expect(doc.child(0).type.name).toBe('bulletList');
     expect(doc.child(0).child(0).textContent).toBe('[X] upper');
     expect(doc.child(1).type.name).toBe('orderedList');
@@ -48,40 +48,40 @@ describe('task lists', () => {
   });
 
   it('splits a mixed list into task lists and bullet lists', () => {
-    const doc = project(FIXTURES.mixed);
+    const doc = parseTypst(FIXTURES.mixed);
     expect([0, 1, 2].map((i) => doc.child(i).type.name)).toEqual(['taskList', 'bulletList', 'taskList']);
   });
 
   it('checking a box changes just the [ ] in the source', () => {
-    const doc = edit(project(FIXTURES.tasks), (s) => {
+    const doc = edit(parseTypst(FIXTURES.tasks), (s) => {
       const { node, pos } = find(s.doc, 'taskItem');
       return s.tr.setNodeMarkup(pos, undefined, { ...node.attrs, checked: true });
     });
-    expect(print(doc)).toBe(FIXTURES.tasks.replace('- [ ] todo', '- [x] todo'));
+    expect(serializeToTypst(doc)).toBe(FIXTURES.tasks.replace('- [ ] todo', '- [x] todo'));
     expectPreciseMap(doc);
   });
 
   it('typing in a task keeps its box', () => {
-    const doc = edit(project(FIXTURES.mixed), (s) => s.tr.insertText('!', after(s.doc, 'c')));
-    expect(print(doc)).toBe('- [ ] a\n- b\n- [x] c!\n');
+    const doc = edit(parseTypst(FIXTURES.mixed), (s) => s.tr.insertText('!', after(s.doc, 'c')));
+    expect(serializeToTypst(doc)).toBe('- [ ] a\n- b\n- [x] c!\n');
   });
 
   it('prints task items created in the editor', () => {
-    const doc = edit(project('Text\n'), (s) => {
+    const doc = edit(parseTypst('Text\n'), (s) => {
       const item = (checked: boolean, text: string) =>
         schema.nodes.taskItem.create({ checked }, schema.nodes.paragraph.create(null, schema.text(text)));
       return s.tr.insert(s.doc.content.size, schema.nodes.taskList.create(null, [item(false, '[a]'), item(true, 'b')]));
     });
-    expect(print(doc)).toBe('Text\n\n- [ ] \\[a\\]\n- [x] b\n');
+    expect(serializeToTypst(doc)).toBe('Text\n\n- [ ] \\[a\\]\n- [x] b\n');
     expectPreciseMap(doc);
   });
 });
 
 describe('ensureChecklistPreamble', () => {
   const ensure = (source: string) => {
-    const tr = EditorState.create({ doc: project(source) }).tr;
+    const tr = EditorState.create({ doc: parseTypst(source) }).tr;
     ensureChecklistPreamble(tr);
-    return print(tr.doc);
+    return serializeToTypst(tr.doc);
   };
 
   it('adds the import and the show rule at the top', () => {

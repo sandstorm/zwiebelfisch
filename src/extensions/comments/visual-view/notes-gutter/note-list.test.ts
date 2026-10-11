@@ -2,24 +2,24 @@
 import { EditorState, NodeSelection, TextSelection } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 import { findNotes, followNotes, noteAtOffset, noteAtSelection, removeNote, setNoteText, type KeyedNote } from './note-list';
-import { print } from '../../../../hosts/projection/projection';
-import { after, project as projectWith, schemaWith } from '../../../../testing/testing';
+import { serializeToTypst } from '../../../../hosts/projection/projection';
+import { after, parseTypst as parseTypstWith, schemaWith } from '../../../../testing/testing';
 import { marginNotes } from '../margin-notes';
 import { SourceOffset } from '../../../../core/typst-document/typst-document';
 
 const schema = schemaWith({ contributions: [marginNotes({ comment: () => {} })] });
-const project = (source: string) => projectWith(source, schema);
+const parseTypst = (source: string) => parseTypstWith(source, schema);
 
 const SOURCE = 'A #margin-note[key claim][first] and b#margin-note[second].\n\n#margin-note[#margin-note[x][inner]][outer] y\n';
 
-function keyed(doc = project(SOURCE)): KeyedNote[] {
+function keyed(doc = parseTypst(SOURCE)): KeyedNote[] {
   let n = 0;
   return followNotes([], { map: (p: number) => p }, findNotes(doc), () => `k${n++}`);
 }
 
 describe('findNotes', () => {
   it('lists point and range notes in document order, outer before inner', () => {
-    const notes = findNotes(project(SOURCE));
+    const notes = findNotes(parseTypst(SOURCE));
     expect(notes.map(({ kind, note, text }) => [kind, note, text])).toEqual([
       ['range', 'first', 'key claim'],
       ['point', 'second', ''],
@@ -32,7 +32,7 @@ describe('findNotes', () => {
 describe('followNotes', () => {
   it('keeps the keys of notes when text before them changes', () => {
     const before = keyed();
-    const state = EditorState.create({ doc: project(SOURCE) });
+    const state = EditorState.create({ doc: parseTypst(SOURCE) });
     const tr = state.tr.insertText('XX', 1);
     const next = followNotes(before, tr.mapping, findNotes(tr.doc), () => 'new');
     expect(next.map((n) => n.key)).toEqual(['k0', 'k1', 'k2', 'k3']);
@@ -41,7 +41,7 @@ describe('followNotes', () => {
 
   it('keeps the key of a range note whose text changes at one end', () => {
     const before = keyed();
-    const state = EditorState.create({ doc: project(SOURCE) });
+    const state = EditorState.create({ doc: parseTypst(SOURCE) });
     const end = after(state.doc, 'key claim');
     const tr = state.tr.delete(end - 5, end); // "claim"
     const next = followNotes(before, tr.mapping, findNotes(tr.doc), () => 'new');
@@ -50,7 +50,7 @@ describe('followNotes', () => {
 
   it('gives a new note a new key and drops removed ones', () => {
     const before = keyed();
-    const state = EditorState.create({ doc: project(SOURCE) });
+    const state = EditorState.create({ doc: parseTypst(SOURCE) });
     const point = before[1];
     const tr = state.tr.delete(point.from, point.to).insert(1, state.schema.nodes.marginNote.create({ note: 'added' }));
     const next = followNotes(before, tr.mapping, findNotes(tr.doc), () => 'new');
@@ -60,8 +60,8 @@ describe('followNotes', () => {
 
 describe('note edits', () => {
   const edited = (change: (state: EditorState, notes: KeyedNote[]) => EditorState['tr']) => {
-    const state = EditorState.create({ doc: project(SOURCE) });
-    return print(state.apply(change(state, keyed(state.doc))).doc);
+    const state = EditorState.create({ doc: parseTypst(SOURCE) });
+    return serializeToTypst(state.apply(change(state, keyed(state.doc))).doc);
   };
 
   it('setNoteText changes only the note of a point or range note', () => {
@@ -79,7 +79,7 @@ describe('note edits', () => {
 
 describe('finding a note', () => {
   it('noteAtSelection: the innermost range note around the cursor, or a selected point note', () => {
-    const doc = project(SOURCE);
+    const doc = parseTypst(SOURCE);
     const notes = keyed(doc);
     expect(noteAtSelection(notes, TextSelection.create(doc, after(doc, 'key')))?.note).toBe('first');
     expect(noteAtSelection(notes, TextSelection.create(doc, after(doc, 'x') - 1))?.note).toBe('inner');
@@ -88,7 +88,7 @@ describe('finding a note', () => {
   });
 
   it('noteAtOffset: the note whose source holds the offset', () => {
-    const doc = project(SOURCE);
+    const doc = parseTypst(SOURCE);
     const notes = keyed(doc);
     expect(noteAtOffset(notes, doc, SourceOffset.of(SOURCE.indexOf('first')))?.key).toBe('k0');
     expect(noteAtOffset(notes, doc, SourceOffset.of(SOURCE.indexOf('second')))?.key).toBe('k1');
