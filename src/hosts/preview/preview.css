@@ -1,5 +1,5 @@
-/* The preview host's styles: its pane, toolbar, pages (inverted in the dark), the highlight of a revealed spot and
-   the dimming of a failed compile. Added by the workbench (Preview.styleSheet). See preview.ts. */
+/* The preview host's styles: its pane, toolbar, pages (inverted in the dark), the outline of a click, the shading of
+   highlighted source ranges and the dimming of a failed compile. Added by the workbench (Preview.styleSheet). See preview.ts. */
 .typst-preview-pane { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .typst-preview__toolbar {
   display: flex;
@@ -59,6 +59,15 @@
   border-radius: 3px;
   background: var(--te-jump);
   outline: 1px solid var(--te-accent);
+  pointer-events: none;
+}
+/* setSelectionHighlight: a plain translucent fill, as a text selection (no outline: that marks a click) */
+.typst-preview__selection {
+  position: absolute;
+  margin: -1px;
+  padding: 1px;
+  border-radius: 2px;
+  background: var(--te-selection-highlight);
   pointer-events: none;
 }
 .typst-preview__follow-spot { position: absolute; width: 1px; height: 1.4em; margin-top: -1.2em; pointer-events: none; }

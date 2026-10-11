@@ -61,6 +61,13 @@ export interface PreviewContributions {
   /** Removes the outline of the last click now (e.g. once the user moved on from what was clicked). */
   clearClickHighlight(): void;
   /**
+   * Shades where source ranges `ranges` of `path`, which holds `text`, are drawn (glyph runs, shapes, images), in the
+   * selection color; replaces the ranges set before, an empty list clears them. Drawn once a compile of `text` is
+   * shown, nothing while the pages show other text; after every later compile the boxes are looked up anew. Cheap to
+   * call on every selection change: only the newest ranges are looked up.
+   */
+  setSelectionHighlight(path: ProjectPath, ranges: readonly SourceRange[], text: string): void;
+  /**
    * How source range `range` of `path`, which holds `text`, is drawn: its page cut down to it. Null when it draws
    * nothing or `text` is not what was compiled last.
    */
@@ -147,6 +154,7 @@ export interface RenderedSnippet {
 type RequestBody = EngineRequest extends infer R ? (R extends EngineRequest ? Omit<R, 'id'> : never) : never;
 type Compile = { files: Record<string, FileContent>; main: string };
 type Reveal = { path: ProjectPath; from: SourceOffset };
+type Highlight = { path: ProjectPath; ranges: readonly SourceRange[]; text: string };
 
 /** Minimum time between two cursor → preview lookups while the cursor moves. */
 const REVEAL_INTERVAL_MS = 80;
@@ -169,6 +177,7 @@ export class Preview implements PreviewContributions {
   private readonly list: PageList;
   private readonly compiles: LatestOnly<Compile>;
   private readonly reveals: LatestOnly<Reveal>;
+  private readonly highlights: LatestOnly<Highlight>;
   private readonly resizeObserver: ResizeObserver | null;
   /** What toolbar items see of the preview. */
   private readonly context: PreviewContext;
@@ -178,6 +187,9 @@ export class Preview implements PreviewContributions {
   private readonly exportOptions: { option: PdfExportOption; priority: number }[] = [];
   /** Outlines the clicked text, until the next click, successful compile or `clearClickHighlight`. */
   private readonly clickHighlight: OverlayLayer;
+  /** Shades the ranges of `setSelectionHighlight`, looked up again after every successful compile. */
+  private readonly selectionHighlight: OverlayLayer;
+  private selection: Highlight | null = null;
   private zoom: Zoom = 'fit';
   private nextId = 0;
   private readonly sender = new FileSender();
@@ -203,6 +215,7 @@ export class Preview implements PreviewContributions {
     this.pages.dataset.testid = 'typst-preview';
     this.list = new PageList(this.pages, { root: this.scroller });
     this.clickHighlight = new OverlayLayer(this.list, 'typst-preview__highlight');
+    this.selectionHighlight = new OverlayLayer(this.list, 'typst-preview__selection');
     this.context = this.itemContext(doc);
     this.scroller.append(this.pages);
     this.pane.append(this.toolbar, this.scroller);
@@ -216,6 +229,7 @@ export class Preview implements PreviewContributions {
     this.reveals = new LatestOnly((reveal, superseded) => this.lookUp(reveal, superseded), {
       interval: REVEAL_INTERVAL_MS,
     });
+    this.highlights = new LatestOnly((highlight, superseded) => this.shade(highlight, superseded));
 
     this.worker.postMessage({ type: 'init', wasm: ENGINE_WASM_URL, fonts: DEFAULT_FONTS } satisfies Init);
     this.worker.onmessage = (event: MessageEvent<EngineResponse>) => {
@@ -242,6 +256,12 @@ export class Preview implements PreviewContributions {
 
   clearClickHighlight(): void {
     this.clickHighlight.set([]);
+  }
+
+  setSelectionHighlight(path: ProjectPath, ranges: readonly SourceRange[], text: string): void {
+    this.selection = ranges.length === 0 ? null : { path, ranges, text };
+    if (this.selection) this.highlights.push(this.selection);
+    else this.selectionHighlight.set([]);
   }
 
   /**
@@ -338,9 +358,11 @@ export class Preview implements PreviewContributions {
     if (!failed) {
       this.clickHighlight.set([]);
       this.list.render(response.result.pages);
-      this.clickHighlight.redraw();
+      // the boxes of the text before until those of the new text are known (no flicker while typing)
+      this.selectionHighlight.redraw();
       this.scheduleStatus();
       this.compiled = { files, pages: response.result.pages };
+      if (this.selection) this.highlights.push(this.selection);
       this.rendered.fire();
     }
     this.pages.classList.toggle('typst-preview--stale', failed);
@@ -352,6 +374,16 @@ export class Preview implements PreviewContributions {
     const response = await this.request({ type: 'cursor', path, offset: from });
     if (superseded() || response.type !== 'cursor' || response.positions.length === 0) return;
     this.follow(response.positions[0]);
+  }
+
+  /** Shades where `highlight` is drawn, once the compiles of what was given before ran; nothing if other text is shown. */
+  private async shade(highlight: Highlight, superseded: () => boolean): Promise<void> {
+    await this.compiles.idle();
+    const compiled = this.compiled.files[highlight.path];
+    const response = compiled === highlight.text ? await this.request({ type: 'boxes', path: highlight.path, ranges: [...highlight.ranges] }) : null;
+    // a newer highlight (or none) was set meanwhile
+    if (superseded() || this.selection !== highlight) return;
+    this.selectionHighlight.set(response?.type === 'boxes' ? response.boxes : []);
   }
 
   private setZoom(zoom: Zoom): void {

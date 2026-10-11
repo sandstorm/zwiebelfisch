@@ -43,7 +43,7 @@ extensions/<name>/
   [`labels`], [`LabelIndex`; reference chips, label tags, the `@` list, "Add label"], [nodes, toolbar, completion items],
   [`styles`], [`TypstStyleIndex` of the project's `/// @style` declarations; styled text; "New style…"], [node, mark, text style provider],
   [`slashCommands`], [`/` lists the Insert menu's entries and the text styles, found by label and `keywords`], [completion items (reads toolbar and text styles)],
-  [`previewSync`], [preview follows the cursor; a click selects the source, its outline goes with the next edit or selection move; setting `previewSync.followCursor`], [preview toolbar, `reveal`, `onDidClickPage`, `clearClickHighlight`],
+  [`previewSync`], [preview follows the cursor; shades the selection; a click selects the source, its outline goes with the next edit or selection move; settings `previewSync.followCursor`, `previewSync.highlightSelection`], [preview toolbar, `reveal`, `setSelectionHighlight`, `onDidClickPage`, `clearClickHighlight`],
   [`previewControls`], [zoom, page number], [preview toolbar],
   [`pdfExport`], [`pdfExport.export` → Blob; "Download PDF" with the options popover; setting `pdfExport.download`], [command, preview toolbar],
 )
