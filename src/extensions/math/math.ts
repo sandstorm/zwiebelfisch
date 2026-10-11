@@ -12,7 +12,7 @@ import { insertDisplayMath, insertInlineMath, MathInput } from './visual-editor/
  *
  * For an empty start, Insert → "Inline math" (`$$`) and "Display math" (`$  $`) insert the box with the cursor inside
  * its code (the host's `editRawBox`); the slash commands find them under "math", "equation", "formula".
- * See docs/10_guide/02_features.typ, "Writing".
+ * See docs/20_features/12_full-typst-support.typ.
  */
 export function math(): TypstExtension {
   return {

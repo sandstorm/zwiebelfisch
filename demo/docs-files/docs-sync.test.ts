@@ -43,7 +43,7 @@ class FakeEditor {
   }
 }
 
-function setup(files: ProjectFiles = { '/main.typ': '= Docs\n', '/10_guide/02_features.typ': '= Features\n', '/assets/logo.svg': new Uint8Array([60]) }) {
+function setup(files: ProjectFiles = { '/main.typ': '= Docs\n', '/20_features/02_visual-editor.typ': '= Features\n', '/assets/logo.svg': new Uint8Array([60]) }) {
   const api = {
     write: vi.fn<DocsFilesApi['write']>(async () => {}),
     delete: vi.fn<DocsFilesApi['delete']>(async () => {}),
@@ -68,15 +68,15 @@ afterEach(() => {
 describe('saving edits', () => {
   it('writes a file once its edits pause (300 ms), each file on its own, and reports it', async () => {
     const { api, editor, lastReport } = setup();
-    editor.edit('/10_guide/02_features.typ', '= F');
+    editor.edit('/20_features/02_visual-editor.typ', '= F');
     await vi.advanceTimersByTimeAsync(200);
-    editor.edit('/10_guide/02_features.typ', '= Fe');
+    editor.edit('/20_features/02_visual-editor.typ', '= Fe');
     editor.edit('/main.typ', '= D');
     await vi.advanceTimersByTimeAsync(299);
     expect(api.write).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     expect(api.write.mock.calls.map(([p, bytes]) => [p, text(bytes)])).toEqual([
-      ['10_guide/02_features.typ', '= Fe'],
+      ['20_features/02_visual-editor.typ', '= Fe'],
       ['main.typ', '= D'],
     ]);
     expect(lastReport()).toBe('Saved to docs/main.typ');
@@ -122,8 +122,8 @@ describe('create, rename, delete in the file panel', () => {
     const png = new Uint8Array([137, 80]);
     expect(await sync.allowFileChange({ kind: 'create', path: path('/assets/shot.png'), content: png })).toBe(true);
     expect(api.write).toHaveBeenCalledWith('assets/shot.png', png, null);
-    expect(await sync.allowFileChange({ kind: 'rename', path: path('/10_guide/all.typ'), from: path('/10_guide/02_features.typ') })).toBe(true);
-    expect(api.rename).toHaveBeenCalledWith('10_guide/02_features.typ', '10_guide/all.typ');
+    expect(await sync.allowFileChange({ kind: 'rename', path: path('/20_features/all.typ'), from: path('/20_features/02_visual-editor.typ') })).toBe(true);
+    expect(api.rename).toHaveBeenCalledWith('20_features/02_visual-editor.typ', '20_features/all.typ');
     api.delete.mockRejectedValueOnce(new Error('Outside docs/'));
     expect(await sync.allowFileChange({ kind: 'delete', path: path('/main.typ') })).toBe(false);
     expect(report).toHaveBeenLastCalledWith('Not saved: docs/main.typ (Outside docs/)', 'warn');
@@ -145,28 +145,28 @@ describe('create, rename, delete in the file panel', () => {
 
   it('an edit still waiting when its file is renamed is written to the new path, after the rename', async () => {
     const { api, sync, editor } = setup();
-    editor.edit('/10_guide/02_features.typ', '= Edited\n');
-    const rename: FileChange = { kind: 'rename', path: path('/10_guide/renamed.typ'), from: path('/10_guide/02_features.typ') };
+    editor.edit('/20_features/02_visual-editor.typ', '= Edited\n');
+    const rename: FileChange = { kind: 'rename', path: path('/20_features/renamed.typ'), from: path('/20_features/02_visual-editor.typ') };
     expect(await sync.allowFileChange(rename)).toBe(true);
     editor.rename(rename);
     await vi.advanceTimersByTimeAsync(1000);
     expect(api.rename).toHaveBeenCalledBefore(api.write);
-    expect(api.write.mock.calls.map(([p, bytes]) => [p, text(bytes)])).toEqual([['10_guide/renamed.typ', '= Edited\n']]);
+    expect(api.write.mock.calls.map(([p, bytes]) => [p, text(bytes)])).toEqual([['20_features/renamed.typ', '= Edited\n']]);
   });
 });
 
 describe('changes on disk', () => {
   it('replace the file in the editor when it has no unsaved edits, and are not written back', async () => {
     const { api, sync, editor, lastReport } = setup();
-    sync.external({ path: '10_guide/02_features.typ', text: '= From git\n' });
-    expect(editor.files['/10_guide/02_features.typ']).toBe('= From git\n');
-    expect(lastReport()).toBe('Updated docs/10_guide/02_features.typ from disk');
+    sync.external({ path: '20_features/02_visual-editor.typ', text: '= From git\n' });
+    expect(editor.files['/20_features/02_visual-editor.typ']).toBe('= From git\n');
+    expect(lastReport()).toBe('Updated docs/20_features/02_visual-editor.typ from disk');
     sync.external({ path: 'assets/logo.svg', text: '<svg/>' });
     expect(text(editor.files['/assets/logo.svg'] as Uint8Array)).toBe('<svg/>');
-    sync.external({ path: '10_guide/new.typ', text: '= New\n' });
-    expect(editor.files['/10_guide/new.typ']).toBe('= New\n');
-    sync.external({ path: '10_guide/new.typ', deleted: true });
-    expect(editor.files['/10_guide/new.typ']).toBeUndefined();
+    sync.external({ path: '20_features/new.typ', text: '= New\n' });
+    expect(editor.files['/20_features/new.typ']).toBe('= New\n');
+    sync.external({ path: '20_features/new.typ', deleted: true });
+    expect(editor.files['/20_features/new.typ']).toBeUndefined();
     await vi.advanceTimersByTimeAsync(1000);
     expect(api.write).not.toHaveBeenCalled();
     expect(api.delete).not.toHaveBeenCalled();
@@ -207,15 +207,15 @@ describe('changes on disk', () => {
     const { api, sync, editor, report } = setup();
     sync.snapshot([
       { path: 'main.typ', text: '= Docs\n' },
-      { path: '10_guide/02_features.typ', text: '= Features, newer\n' },
-      { path: '10_guide/03_new.typ', text: '= New\n' },
+      { path: '20_features/02_visual-editor.typ', text: '= Features, newer\n' },
+      { path: '20_features/03_new.typ', text: '= New\n' },
       { path: 'notes.md', text: '# Notes' },
     ]);
-    expect(editor.files).toEqual({ '/main.typ': '= Docs\n', '/10_guide/02_features.typ': '= Features, newer\n', '/10_guide/03_new.typ': '= New\n' });
+    expect(editor.files).toEqual({ '/main.typ': '= Docs\n', '/20_features/02_visual-editor.typ': '= Features, newer\n', '/20_features/03_new.typ': '= New\n' });
     expect(report).not.toHaveBeenCalledWith(expect.stringMatching(/main\.typ/), expect.anything());
     // the same snapshot again (a reconnect) changes nothing
     report.mockClear();
-    sync.snapshot([{ path: 'main.typ', text: '= Docs\n' }, { path: '10_guide/02_features.typ', text: '= Features, newer\n' }, { path: '10_guide/03_new.typ', text: '= New\n' }]);
+    sync.snapshot([{ path: 'main.typ', text: '= Docs\n' }, { path: '20_features/02_visual-editor.typ', text: '= Features, newer\n' }, { path: '20_features/03_new.typ', text: '= New\n' }]);
     expect(report).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1000);
     expect(api.write).not.toHaveBeenCalled();

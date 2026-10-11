@@ -22,7 +22,7 @@ new TypstDocument(text)
 - *Echo suppression:* an editor passes itself as `origin` and ignores events with its own origin.
 - *Ordered delivery:* a change made by a listener while others are being told is queued, so every listener sees changes in the order they were made.
 - `minimalChange(before, after)`: the one change between common prefix and suffix, so cursors and undo history survive a whole new text.
-- *No collaboration here:* the collaboration extension binds a `Y.Text` to a document from outside (@guide-collaboration).
+- *No collaboration here:* the collaboration extension binds a `Y.Text` to a document from outside (@reference-collaboration-server).
 
 == Project <architecture-core-project>
 

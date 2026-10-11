@@ -15,7 +15,7 @@ import type { DocumentLink, DocumentLinkProvider, TextDocument } from '../../hos
  * code and pictures; the images extension asks for the link on an image box's path). Where a path leads in this
  * project, and that a missing Typst file may be created, is this extension's policy. Other extensions put their own
  * links on some paths with a higher priority (the diagrams' "Edit diagram").
- * See docs/20_extensions/04_source-editor-and-preview.typ.
+ * See docs/40_architecture/12_source-editor-and-preview.typ.
  */
 export function documentLinks(): TypstExtension {
   return {

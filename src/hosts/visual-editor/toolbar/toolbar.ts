@@ -1,4 +1,4 @@
-// See VisualEditor in ../visual-editor.ts and docs/30_architecture/04_visual-editor.typ, "Toolbar".
+// See VisualEditor in ../visual-editor.ts and docs/40_architecture/04_visual-editor.typ, "Toolbar".
 import { TextSelection } from '@tiptap/pm/state';
 import type { Editor } from '@tiptap/core';
 import { FloatingBar } from './floating-bar';

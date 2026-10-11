@@ -33,7 +33,7 @@ function noDom(message) {
   };
 }
 
-// The layers (docs/30_architecture/10_conventions.typ, "Layers"), on resolved files
+// The layers (docs/40_architecture/14_conventions.typ, "Layers"), on resolved files
 // (eslint-rules/dependencies.js): `importers` may not import `forbidden` (regular expressions over paths from the
 // repository root; `$1` is what `importers` captured). Tests included, unless a rule says otherwise.
 export const layers = [
@@ -126,7 +126,7 @@ export default tseslint.config(
     rules: { 'local/no-re-exports': 'off' },
   },
   {
-    // Files read general to specific (docs/30_architecture/10_conventions.typ): the main element first, helpers below
+    // Files read general to specific (docs/40_architecture/14_conventions.typ): the main element first, helpers below
     // their users. Only what is needed while the module loads (a constant spread into an export, a class instantiated at
     // the top level) must come first; uses inside functions, and types, may refer to what follows.
     files: ['src/**/*.ts', 'demo/**/*.ts', 'server/src/**/*.ts'],

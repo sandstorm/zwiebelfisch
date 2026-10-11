@@ -14,8 +14,7 @@ import { calculatePastedImports, copiedImports, IMPORTS_TYPE, parseCopiedImports
  * unknown).
  *
  * The editors do the paste; this extension is a paste edit provider (`languages.registerDocumentPasteEditProvider`):
- * it adds the imports to the clipboard on a copy and the import change to a paste. See docs/10_guide/02_features.typ,
- * "Writing".
+ * it adds the imports to the clipboard on a copy and the import change to a paste. See docs/20_features/05_styling-and-shortcuts.typ.
  */
 export function imports(): TypstExtension {
   return {

@@ -2,7 +2,7 @@
 // Measures typing in the Visual editor of the whole widget (`mise run perf:typing`): per keystroke, the time the
 // keystroke's own handling blocks (sync) and the main thread's work in all (sync, timers, compile answers), with a CPU
 // profile summed up by module and function. The engine runs in-process (in-process-worker.ts) and is counted apart.
-// See docs/30_architecture/11_development.typ, "Performance".
+// See docs/40_architecture/15_development.typ, "Performance".
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import type { Editor } from '@tiptap/core';
@@ -40,14 +40,14 @@ interface Scenario {
 
 const ADVANCED = 'demo/examples/advanced';
 const DOCS = 'docs';
-const FEATURES = '/10_guide/02_features.typ';
+const SEARCH = '/20_features/15_search-everywhere.typ';
 const scenarios: Scenario[] = [
   { name: 'advanced, paragraph', folder: ADVANCED, path: '/chapters/introduction.typ', after: 'while they type', inside: 'paragraph' },
   { name: 'advanced, list item', folder: ADVANCED, path: '/chapters/introduction.typ', after: 'length of a document', inside: 'listItem' },
   { name: 'advanced, table cell', folder: ADVANCED, path: '/chapters/results.typ', after: '4.5×', inside: 'tableCell' },
-  { name: 'docs, paragraph', folder: DOCS, path: FEATURES, after: 'One panel per side shows', inside: 'paragraph' },
-  { name: 'docs, list item', folder: DOCS, path: FEATURES, after: 'line numbers, search', inside: 'listItem' },
-  { name: 'docs, table cell', folder: DOCS, path: FEATURES, after: 'jumps to the heading', inside: 'tableCell' },
+  { name: 'docs, paragraph', folder: DOCS, path: SEARCH, after: 'One list finds everything', inside: 'paragraph' },
+  { name: 'docs, list item', folder: DOCS, path: SEARCH, after: 'a prefix shows only its groups', inside: 'listItem' },
+  { name: 'docs, table cell', folder: DOCS, path: SEARCH, after: 'jumps to the heading', inside: 'tableCell' },
 ];
 const only = process.env.TYPST_PERF_SCENARIO;
 const layoutReads = new LayoutReads(root);

@@ -8,7 +8,7 @@ import { untarGz } from './tar';
  *
  * The engine compiles synchronously and cannot wait for a download. So it reports the packages it misses; this
  * wrapper downloads them, adds their files and compiles again. A package that fails is reported as a diagnostic and
- * not tried again. The preview's worker wraps its engine with it. See docs/30_architecture/02_core.typ.
+ * not tried again. The preview's worker wraps its engine with it. See docs/40_architecture/02_core.typ.
  */
 export function withPackages(engine: TypstEngine, fetchPackage: PackageFetcher = fetchPreviewPackage, onDidChangeDownloads?: DownloadsListener): PackageEngine {
   const failed = new Map<string, string>();

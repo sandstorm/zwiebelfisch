@@ -7,7 +7,7 @@ import { INSERT_OUTLINE, OUTLINE } from './visual-editor/visual-editor';
  *
  * The box keeps the call's source and edits it like any raw box. Where a box renderer draws pictures (the
  * rendered-boxes extension), it shows the compiled outline.
- * See docs/10_guide/02_features.typ, "Headings and table of contents".
+ * See docs/20_features/09_table-of-contents.typ.
  */
 export function outline(): TypstExtension {
   return {

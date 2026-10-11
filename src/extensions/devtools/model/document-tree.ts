@@ -5,7 +5,7 @@ import { describeValue } from './describe';
 /**
  * The rows of `doc`'s nodes in document order (depth first), with their source ranges through `mapping`.
  *
- * What the Typst ↔ ProseMirror conversion (docs/30_architecture/03_prosemirror-typst.typ) made of the shown file.
+ * What the Typst ↔ ProseMirror conversion (docs/40_architecture/03_prosemirror-typst.typ) made of the shown file.
  */
 export function documentRows<N extends DocumentNode<N>>(doc: N, mapping: DocumentMapping<N>): DocumentRow[] {
   const rows: DocumentRow[] = [];

@@ -31,7 +31,7 @@ import css from './visual-editor.css?inline';
  * highlights, completion lists and Tab staying in the text (`tab-keys.ts`; Escape, then Tab leaves). Every other construct (headings, tables, labels, comments, …) and feature is contributed through
  * `VisualEditorHost`, which hands what is registered to each editor it creates. It is one of the two built-in custom
  * editors for `*.typ`, next to the Source editor; the workbench's `TypstEditors` makes it.
- * See docs/30_architecture/04_visual-editor.typ.
+ * See docs/40_architecture/04_visual-editor.typ.
  */
 export class VisualEditor {
   /** The text column below the toolbar (with what floats in it): what scrolls as the document's content. */

@@ -15,7 +15,7 @@ import init, { Engine as WasmEngine, type InitInput, onPanic } from './wasm/typs
  * a new wasm instance (a new worker) compiles again.
  *
  * Left to others: the URLs of the wasm and the default fonts (core/engine-assets, so the worker bundle does not copy
- * them) and downloading packages (core/typst-packages). See docs/30_architecture/02_core.typ, "The Typst engine".
+ * them) and downloading packages (core/typst-packages). See docs/40_architecture/02_core.typ, "The Typst engine".
  */
 export interface TypstEngine {
   /** Adds all faces of an OpenType/TrueType font (or collection). Throws if `data` is no font. */

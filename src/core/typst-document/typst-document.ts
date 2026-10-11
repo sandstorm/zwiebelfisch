@@ -9,7 +9,7 @@ import { EventEmitter, type Event } from '../event-emitter/event-emitter';
  * is told (that change is told once everyone has heard the first one).
  *
  * Sharing the text with others is not done here: the collaboration extension binds a Y.Text to a document from
- * outside, like y-codemirror binds one to an editor. See docs/30_architecture/02_core.typ, "TypstDocument".
+ * outside, like y-codemirror binds one to an editor. See docs/40_architecture/02_core.typ, "TypstDocument".
  */
 export class TypstDocument {
   private current: string;

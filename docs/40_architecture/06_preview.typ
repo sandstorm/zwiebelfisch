@@ -46,4 +46,4 @@
 - Toolbar items are placed by `group` + `order` (`navigation` first, then groups by name). Their `update()` runs at most once per frame. PDF options and view options apply by `priority` (default 100, higher first).
 - Changing the view options or their values compiles the last files again.
 
-Contribution points in detail: @extensions-source-editor-and-preview.
+Contribution points in detail: @architecture-source-editor-and-preview.

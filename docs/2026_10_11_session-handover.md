@@ -1,7 +1,7 @@
 # Session handover (2026-10-11, branch task/api-extensibility)
 
 Temporary working note for the next session after a context compaction. Distill into the Typst docs
-(Open work in `docs/30_architecture/11_development.typ`) and delete when the items are done.
+(Open work in `docs/40_architecture/15_development.typ`) and delete when the items are done.
 
 State at writing: HEAD `3b1b3b48`, all checks green (typecheck, quality, 1895 unit tests, server tests).
 E2E has not been run for most of the day's work: `mise run test:e2e-all chromium` (run
@@ -9,7 +9,7 @@ E2E has not been run for most of the day's work: `mise run test:e2e-all chromium
 
 ## Done this session (all merged, checks green: 1934 unit tests)
 
-- Getting started = Docker + the demo; mise setup is "Setup" in `11_development.typ`.
+- Getting started = Docker + the demo; mise setup is "Setup" in `15_development.typ`.
 - Comment styling lives in the comments extension (`note-defaults.ts`; preview prelude, `/.with-comments.typ`);
   first note imports only `margin-note`. Page-margin workaround stays (drafting reads the document's `set page`).
 - Go to Section: `VisualEditor.reveal` scrolled before focusing (ProseMirror scrolls only with focus); fixed.

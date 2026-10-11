@@ -11,7 +11,7 @@ import type { TypstExtension } from '../../hosts/workbench/workbench';
  * document sets itself wins. Typst draws the outline around the inset, widened by the outset; the inset and the
  * spacing around a block are not drawn on their own. It also shades every `v(…)` as Typst laid it out (`1fr` too),
  * between two placed markers that take no space; weak spacing that collapsed into a paragraph's or block's spacing
- * shows nothing. docs/30_architecture/08_built-in-extensions.typ says why and what is left out (`h`).
+ * shows nothing. docs/40_architecture/08_built-in-extensions.typ says why and what is left out (`h`).
  *
  * Both are Typst run before the main file in the preview only (`PreviewViewOption`); the documents and their PDFs
  * stay as they are. The colors are mid-tones, readable on the inverted pages of the dark mode too. The pictures of

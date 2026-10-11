@@ -51,7 +51,7 @@ import widgetStyles from './typst-editor.css?inline';
  * options stay the same when features come and go. `<typst-editor>` wraps this function as a custom element.
  *
  * Styles go into the root node `host` is attached to: `document.head`, or the shadow root `host` lives in. Attach
- * `host` before calling this. See docs/10_guide/05_embedding.typ, "createTypstEditor".
+ * `host` before calling this. See docs/30_reference/02_embedding.typ, "createTypstEditor".
  */
 export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions): TypstEditor {
   const main = ProjectPath.of(options.main ?? '/main.typ');
@@ -143,7 +143,7 @@ export interface TypstEditorOptions {
   user?: User;
   /**
    * The settings by full id, as the extensions declare them, e.g. `{ 'pdfExport.download': false, 'files.panel':
-   * 'show', 'workbench.theme': 'dark' }` (see docs/10_guide/03_configuration.typ for the built-in ones). Unset ones have their
+   * 'show', 'workbench.theme': 'dark' }` (see docs/30_reference/01_configuration.typ for the built-in ones). Unset ones have their
    * default; unknown ids and values of the wrong type are ignored (with a console warning). Changeable later through
    * `TypstEditor.settings`.
    */

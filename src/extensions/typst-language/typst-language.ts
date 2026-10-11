@@ -14,7 +14,7 @@ import { TYPST_HELP } from './workbench/typst-help';
  *
  * The Source editor and the raw boxes are plain CodeMirror hosts, colored by the Source editor host's `codeColors`;
  * that their text is Typst is contributed here once for both. Errors come from the compiler only (the diagnostics
- * extension), not from the syntax: see `typstSyntax`. See docs/30_architecture/05_source-editor.typ.
+ * extension), not from the syntax: see `typstSyntax`. See docs/40_architecture/05_source-editor.typ.
  */
 export function typstLanguage(): TypstExtension {
   return {

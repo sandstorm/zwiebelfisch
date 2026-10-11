@@ -27,14 +27,14 @@ The clipboard holds Typst (`clipboard.ts`), so text moves between the Visual edi
 - Our own HTML is not read back: it leaves out what is never rendered (a raw box's `src`). Other HTML (a web page, a word processor) goes through ProseMirror's paste and the schema's HTML rules.
 - *Mod+Shift+V* pastes plain characters (escaped when written): the key down before the paste says so, as ProseMirror's own Shift.
 - Raw boxes paste into their code, as CodeMirror does; in code blocks the text goes in as it is.
-- What a paste changes besides is not the host's: the paste edit providers (`languages.registerDocumentPasteEditProvider`, @extensions-workbench-api-paste), which the workbench hands to the host (`VisualEditorPasteEdits`), change the pasted Typst before it is read (a label already taken gets a new name) and the rest of the text (the imports it needs); a copy or cut lets them add to the clipboard. Their edits go into the paste's transaction, before the slice replaces the selection.
+- What a paste changes besides is not the host's: the paste edit providers (`languages.registerDocumentPasteEditProvider`, @architecture-workbench-api-paste), which the workbench hands to the host (`VisualEditorPasteEdits`), change the pasted Typst before it is read (a label already taken gets a new name) and the rest of the text (the imports it needs); a copy or cut lets them add to the clipboard. Their edits go into the paste's transaction, before the slice replaces the selection.
 
 == VisualEditorHost <architecture-visual-editor-host>
 
 What `ExtensionContext.visualEditor` is. Contributions register once, at activation; the host applies them to every editor it creates later. No contribution tracks editors.
 
-- Constructs: `registerNode`, `registerMark` (@extensions-visual-editor-constructs).
-- Around them: Tiptap extensions per editor, toolbar groups and items, text style providers, completion item providers, highlights, box renderers, raw-box CodeMirror extensions (@extensions-visual-editor-constructs-more).
+- Constructs: `registerNode`, `registerMark` (@architecture-visual-editor-constructs).
+- Around them: Tiptap extensions per editor, toolbar groups and items, text style providers, completion item providers, highlights, box renderers, raw-box CodeMirror extensions (@architecture-visual-editor-constructs-more).
 - Who wins where they compete: @architecture-conventions-api.
 - Where its links lead (`VisualEditorLinks`, given by the workbench, not contributed): a raw box's picture the primary document link of the box's Typst, the text (a reference chip, a link mark) the link at the source offset under the pointer or at the cursor (`languages`), so the host knows no links. Hovered, one shows as links do in every editor (`FollowableLink.hover`, the languages host's): the same hint after the same delay (`.typst-link-hint`, role=tooltip, describing the chip, the link's text or the picture), with Mod held the link look (`typst-link--mod`), no `title`; Mod+click or Alt+Enter follows it, a plain click edits.
 
@@ -68,4 +68,4 @@ Typst no spec models, and nodes whose spec sets `view.box: 'code'` (images, outl
 - The items are asked for synchronously on every keystroke and filtered by the host; a list without matches is not open, so its keys go on to the editor.
 - Providers get the editor's toolbar entries and text styles (`toolbarActions(group)`, `textStyles()`): the slash commands offer what other extensions registered without knowing them.
 
-Writing a construct: @extensions-visual-editor-constructs.
+Writing a construct: @architecture-visual-editor-constructs.

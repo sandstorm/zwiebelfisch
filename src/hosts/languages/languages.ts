@@ -22,7 +22,7 @@ import { pasteExtension } from './paste-extension';
  * what else it changes (the imports the text needs), the editors do the paste, in one undo step.
  *
  * The host knows no language itself. Whoever hands a text over says its language (`languageId`), and the extensions
- * declare which file endings are which language (`contributes.languages`). See docs/30_architecture/07_workbench.typ.
+ * declare which file endings are which language (`contributes.languages`). See docs/40_architecture/07_workbench.typ.
  */
 export interface Languages {
   /**

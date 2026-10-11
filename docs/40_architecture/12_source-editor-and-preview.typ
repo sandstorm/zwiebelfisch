@@ -1,6 +1,6 @@
-= Source editor and preview <extensions-source-editor-and-preview>
+= Source editor and preview <architecture-source-editor-and-preview>
 
-== Source editor <extensions-source-editor-and-preview-source>
+== Source editor <architecture-source-editor-and-preview-source>
 
 `sourceEditor.registerCodeMirrorExtension(extension)` adds a CodeMirror `Extension` to every Source editor, the existing ones included. Pass the same value for all editors, or a function that makes one per editor from its `SourceEditorContext` (`document`).
 
@@ -21,7 +21,7 @@ subscriptions.push(
 new EditorView({ parent, doc, extensions: [basicSetup, codeColors, sourceEditor.createSharedCodeMirrorExtension()] });
 ```
 
-== Document links <extensions-source-editor-and-preview-links>
+== Document links <architecture-source-editor-and-preview-links>
 
 `languages.registerDocumentLinkProvider(selector, provider, { priority? })` adds links to the texts `selector` matches. The Source editors, the code of raw boxes and the text files' editor show them: Ctrl+click or Alt+Enter (⌘-click or ⌥↩ on Mac) follows a link, hovering shows it ("Open …", or the link's `tooltip` for a link with a `target`, as VS Code's "Follow link"); a plain click edits. The Visual editor follows them the same way: the picture of a raw box its primary link (the first in text order that leads somewhere), the text the link under the pointer or at the cursor (a reference chip, a link mark), its tooltip as the hover.
 
@@ -47,7 +47,7 @@ languages.registerDocumentLinkProvider({ language: 'typst' }, {
 - An extension that shows links itself (an image box's path) reads `languages.provideDocumentLinks(document)` and `languages.resolveDocumentLink(link)`.
 - An extension's own CodeMirror editor shows them as the Source editors do with `languages.createDocumentLinksCodeMirrorExtension(languageId, () => path)`.
 
-== Preview <extensions-source-editor-and-preview-preview>
+== Preview <architecture-source-editor-and-preview-preview>
 
 The preview keeps the mechanism: the engine worker, compiles, the page list, hit-testing, scrolling. What sits on top is contributed.
 
@@ -71,7 +71,7 @@ The preview keeps the mechanism: the engine worker, compiles, the page list, hit
   [`exportPdf(entry)`], [A PDF of `entry.main` from the files last compiled],
 )
 
-=== Toolbar items <extensions-source-editor-and-preview-toolbar>
+=== Toolbar items <architecture-source-editor-and-preview-toolbar>
 
 A `PreviewToolbarItem` is a function: it gets the preview (`ownerDocument`, `zoom()`, `setZoom`, `scale()`, `visiblePage()`: a `PageIndex`, counted from 0, and the page count) and returns its `elements`, an optional `update()` (at most once per frame after scrolling, resizing, zooming, new pages) and `dispose()`.
 
@@ -89,7 +89,7 @@ const pageNumber: PreviewToolbarItem = (preview) => {
 preview.registerToolbarItem(pageNumber, { group: '2_view', order: 20 });
 ```
 
-=== PDF export options <extensions-source-editor-and-preview-pdf>
+=== PDF export options <architecture-source-editor-and-preview-pdf>
 
 A `PdfExportOption` changes what is compiled, never the documents: `id` (`<extension>.<name>`), `label`, `description?`, `default`, and `apply(entry, value)`, which returns a new `PdfEntry` (`main`, `sources`: `.typ` texts replacing or adding files).
 
@@ -107,7 +107,7 @@ preview.registerPdfExportOption({
 - An `id` registered twice throws.
 - The host passes values by id: `editor.exportPdf({ 'comments.include': true })`; an unknown id rejects.
 
-=== View options <extensions-source-editor-and-preview-view>
+=== View options <architecture-source-editor-and-preview-view>
 
 A `PreviewViewOption` changes how the preview shows the document, never the documents nor their PDFs: `id` (`<extension>.<name>`), `label`, `description?`, `default`, and `apply(entry, value)`, called for every option with its value, as a PDF export option's. It returns a new `PreviewEntry` (`prelude`: lines of Typst markup run before the main file), or `entry` itself where the value changes nothing. Each option adds its own lines, so options compose.
 

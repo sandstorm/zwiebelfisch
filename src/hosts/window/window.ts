@@ -27,7 +27,7 @@ import css from './window.css?inline';
  *
  * Each part is a module in a subfolder (notifications/, quick-input/, save-dialog/, menus/, progress/, search/,
  * status-bar/, custom-editors/, file-decorations/). WindowHost puts them where the workbench's frame says. Which file
- * the editing area shows and which entries a menu has stay the workbench's. See docs/30_architecture/07_workbench.typ.
+ * the editing area shows and which entries a menu has stay the workbench's. See docs/40_architecture/07_workbench.typ.
  */
 export interface WindowApi {
   /**

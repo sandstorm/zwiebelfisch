@@ -18,7 +18,7 @@ import type { EngineRequest, EngineResponse, Init, LoadEvent, WorkerProgress } f
  * after that. Then this stops the worker, answers every open request with the error and tells `onDidCrash`; `start`
  * starts a new one, which knows no files yet. engine.worker.ts is the worker itself, and nothing on the main thread
  * imports it. The engine and its packages are core's (`core/typst-engine`, `core/typst-packages`). See
- * docs/30_architecture/06_preview.typ, "Concepts".
+ * docs/40_architecture/06_preview.typ, "Concepts".
  */
 export class EngineWorker {
   private worker: Worker | null = null;

@@ -9,7 +9,7 @@ import { ProjectPath } from '../paths/paths';
  * way: a file name becomes a ProjectPath at the top of the project, and the kind decides text or bytes. Uploads that
  * go into a text (files dropped into a Typst editor, pasted images) take the place `uploadTarget` finds. Used by the
  * workbench (files dropped into the Typst editors), the file panel (extensions/files) and image uploads
- * (extensions/images); applying the changes is theirs. See docs/30_architecture/02_core.typ.
+ * (extensions/images); applying the changes is theirs. See docs/40_architecture/02_core.typ.
  */
 export async function uploadChanges(files: readonly UploadedFile[]): Promise<FileChange[]> {
   const changes = await Promise.all(

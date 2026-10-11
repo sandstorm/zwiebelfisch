@@ -22,7 +22,7 @@ import css from './source-editor.css?inline';
  * registered once and applies to every editor, open or made later, so no feature tracks editors. What is not about
  * Typst (shown whitespace) is shared with every CodeMirror in the widget that takes the shared ones
  * (`createSharedCodeMirrorExtension`: the raw boxes, the text files' editor). Undo is CodeMirror's history; a
- * contribution decides what stays out of it (`fromDocument`). See docs/30_architecture/05_source-editor.typ.
+ * contribution decides what stays out of it (`fromDocument`). See docs/40_architecture/05_source-editor.typ.
  */
 export class SourceEditorHost implements SourceEditorContributions {
   private readonly extensions: (Extension | ((editor: SourceEditorContext) => Extension))[] = [];

@@ -30,7 +30,7 @@ import css from './preview.css?inline';
  *
  * When the engine crashes (a bug in Typst, memory running out), the preview starts a new one and compiles the newest
  * files again, and tells (`PreviewProgress` `failed`). If that crashes again before the next `update()`, it stays off
- * until then: the same files would crash it again. See docs/30_architecture/06_preview.typ.
+ * until then: the same files would crash it again. See docs/40_architecture/06_preview.typ.
  */
 export class Preview implements PreviewContributions {
   private readonly engine: EngineWorker;

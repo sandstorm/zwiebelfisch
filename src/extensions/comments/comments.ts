@@ -21,7 +21,7 @@ import { ADD_COMMENT, registerAddComment } from './workbench/workbench';
  * only decides what it compiles. The preview gets the view option `comments.show` ("Comments" in the View menu,
  * default on), which hides the notes in the preview only. The notes' look is the extension's: the preview and the PDF
  * set it when they compile, the documents hold plain drafting (NOTE_STYLE in preview/preview.ts). `model/` knows the
- * note syntax (margin-note-syntax.ts) and the thread format (note-thread.ts). See docs/10_guide/02_features.typ.
+ * note syntax (margin-note-syntax.ts) and the thread format (note-thread.ts). See docs/20_features/25_comments.typ.
  */
 export function comments(): TypstExtension {
   return {

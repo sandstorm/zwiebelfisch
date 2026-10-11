@@ -23,7 +23,7 @@ import { SharedProject } from './shared-project';
  * their own; they keep following their TypstDocument. RemoteCursors carries the users' places over awareness. In a room
  * backed by a GitLab branch (the server put a `baseSha` into the Y.Doc's `meta` map), SharedAssets shares the other
  * files too, and GitLabSourceControl commits to the branch. The widget reaches all this through CollaborationLink
- * (../collaboration-link.ts). See docs/10_guide/04_collaboration.typ.
+ * (../collaboration-link.ts). See docs/30_reference/03_collaboration-server.typ.
  */
 export class Collaboration {
   private readonly sharedProject: SharedProject;

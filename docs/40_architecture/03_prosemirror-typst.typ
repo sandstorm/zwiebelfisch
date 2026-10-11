@@ -29,7 +29,7 @@ The framework knows only paragraphs, text, line breaks, escapes, shorthands and 
 - `createSchema(nodes, marks)` (tests) or `documentExtensions` + `attachGrammar` (the Visual editor) put the specs on the schema. `parseTypst` and `serializeToTypst` find them there.
 - Order: the priority of each spec's Tiptap extension (default 100, higher first). Of rules for the same syntax, the higher one is asked first.
 - A second spec of the same name extends the first.
-- Writing a spec: @extensions-visual-editor-constructs.
+- Writing a spec: @architecture-visual-editor-constructs.
 
 == Parsing <architecture-prosemirror-typst-parse>
 

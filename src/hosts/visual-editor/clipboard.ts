@@ -19,7 +19,7 @@ import type { VisualEditorPasteEdits } from './visual-editor';
  * the text before and make other changes of the document's text in the same step (a copy gave them the clipboard).
  * Mod+Shift+V pastes the text as plain characters, written escaped. Other HTML (a web page, a word processor) goes
  * through ProseMirror's paste and the schema's HTML rules. Its priority puts its text serializer before Tiptap's.
- * See docs/30_architecture/04_visual-editor.typ.
+ * See docs/40_architecture/04_visual-editor.typ.
  */
 export function clipboard(document: TypstDocument, pasteEdits: VisualEditorPasteEdits | null): AnyExtension {
   return Extension.create({
