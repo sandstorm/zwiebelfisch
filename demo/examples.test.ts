@@ -6,7 +6,9 @@ import { type FontInfo, type TypstEngine, createEngine } from '../src/core/typst
 import { withPackages } from '../src/core/typst-packages/typst-packages';
 import { neighbours } from '../src/core/typst-syntax/typst-syntax';
 import { ProjectPath } from '../src/core/paths/paths';
-import type { ProjectFiles } from '../src';
+import { Disposable } from '../src/core/disposable/disposable';
+import type { ExtensionContext, PreviewViewOption, ProjectFiles } from '../src';
+import { previewGuides } from '../src/extensions/preview-guides/preview-guides';
 import { EXAMPLES, exampleFiles, exampleFromQuery, exampleQuery } from './examples';
 
 const engineDir = new URL('../src/core/typst-engine/', import.meta.url);
@@ -38,15 +40,15 @@ describe('demo examples', () => {
     engine = await engineWithFonts();
   });
 
-  /** Compiles a project on its own: the files of earlier projects are removed first. */
-  function compile(files: ProjectFiles) {
+  /** Compiles a project on its own (from `main`): the files of earlier projects are removed first. */
+  function compile(files: ProjectFiles, main = '/main.typ') {
     loaded.forEach((path) => engine.remove(path));
     loaded = Object.keys(files);
     for (const [path, content] of Object.entries(files)) {
       if (typeof content === 'string') engine.setSource(path, content);
       else engine.setBinary(path, content);
     }
-    return withPackages(engine, cachedPackage).compile('/main.typ');
+    return withPackages(engine, cachedPackage).compile(main);
   }
 
   // the docs draw seven Mermaid diagrams (merman's wasm): seconds, more under a parallel test run
@@ -56,6 +58,23 @@ describe('demo examples', () => {
       const { pages, diagnostics } = await compile(exampleFiles(name));
       expect(diagnostics).toEqual([]);
       expect(pages.length).toBeGreaterThan(0);
+    },
+    30_000,
+  );
+
+  it.each(EXAMPLES.map(({ name }) => name))(
+    '%s compiles with the preview\'s page guides, drawn on every page',
+    async (name) => {
+      const options: PreviewViewOption[] = [];
+      const preview = { registerViewOption: (option: PreviewViewOption) => (options.push(option), new Disposable(() => {})) };
+      previewGuides().activate({ preview, subscriptions: [] } as unknown as ExtensionContext);
+      const guides = options.find(({ id }) => id === 'previewGuides.pageGuides')!;
+      const { prelude } = guides.apply({ prelude: [] });
+      const files = { ...exampleFiles(name), '/view.typ': `${prelude.join('\n')}\n#include "/main.typ"\n` };
+      const { pages, diagnostics } = await compile(files, '/view.typ');
+      expect(diagnostics).toEqual([]);
+      expect(pages.length).toBeGreaterThan(0);
+      for (const page of pages) expect(page.svg).toContain('#3b82f6');
     },
     30_000,
   );
