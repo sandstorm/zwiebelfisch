@@ -579,11 +579,20 @@ export interface ToolbarControl {
  * floating bars, only the first (by `order`) with an anchor shows. The host's
  * own: `history` (undo/redo, order 10), `text-style` (the text style menu, 20;
  * see `TextStyle`), the `insert` menu ("Insert", 50) and the `selection` bar
- * (above a text selection, 10).
+ * (above a text selection, 10). A menu without items is left out.
  */
 export type ToolbarGroup =
   | { readonly kind: 'group'; readonly id: string; readonly order: number }
-  | { readonly kind: 'menu'; readonly id: string; readonly order: number; readonly label: string; icon(editor: Editor): string }
+  | {
+      readonly kind: 'menu';
+      readonly id: string;
+      /** Its place in the row, or among the items of its `bar`. */
+      readonly order: number;
+      readonly label: string;
+      icon(editor: Editor): string;
+      /** The floating bar it is in (`selection`); none: the toolbar row. */
+      readonly bar?: string;
+    }
   | {
       readonly kind: 'floating';
       readonly id: string;
@@ -695,6 +704,12 @@ export type ToolbarItem =
       readonly order?: number;
       /** The item for one editor, when it keeps state there (a popover) or is a control of its own. */
       create(toolbar: ToolbarContext): ToolbarAction | ToolbarControl;
+    }
+  | {
+      readonly group: string;
+      readonly order?: number;
+      /** In a menu: buttons that come and go while the editor lives (one per inline style), asked again as it shows and opens. */
+      provideActions(toolbar: ToolbarContext): readonly ToolbarAction[];
     };
 
 /** What the raw boxes of `editor` get from the contributions. */

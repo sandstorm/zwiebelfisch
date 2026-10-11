@@ -7,8 +7,8 @@ export const visual = (page: Page) => page.getByTestId('typst-visual');
 /** The Visual editor's formatting toolbar. */
 export const toolbar = (page: Page) => page.getByRole('toolbar', { name: 'Formatting' });
 
-/** Opens the toolbar menu `menu` ("Insert", "Align") of the toolbar `bar` and chooses `item` in it. */
-export async function chooseFrom(bar: Locator, menu: 'Insert' | 'Align', item: string): Promise<void> {
+/** Opens the toolbar menu `menu` ("Insert", "Align", "Styles") of the toolbar `bar` and chooses `item` in it. */
+export async function chooseFrom(bar: Locator, menu: 'Insert' | 'Align' | 'Styles', item: string): Promise<void> {
   await bar.getByRole('button', { name: menu, exact: true }).click();
   await bar.getByRole('menuitem', { name: item, exact: true }).click();
 }

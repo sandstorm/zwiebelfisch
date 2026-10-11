@@ -108,3 +108,34 @@ describe('Visual editor toolbar', () => {
     expect(button('Unbold').hidden).toBe(false);
   });
 });
+
+describe('a menu in a floating bar', () => {
+  it("sits among the bar's items by its order, holds the actions provided when it opens, and is left out without any", () => {
+    let words: string[] = [];
+    const menus: VisualEditorContribution = {
+      id: 'menus',
+      activate: ({ visualEditor }) => {
+        visualEditor.registerToolbarGroup({ kind: 'menu', id: 'words', bar: 'selection', order: 20, label: 'Words', icon: () => svg('') });
+        visualEditor.registerToolbarItem({ group: 'words', provideActions: () => words.map((word) => ({ label: word, icon: svg(''), run: (c) => c.insertContent(word) })) });
+        visualEditor.registerToolbarItem({ group: 'selection', order: 10, action: { label: 'First', icon: svg(''), run: (c) => c } });
+        visualEditor.registerToolbarItem({ group: 'selection', order: 30, action: { label: 'Last', icon: svg(''), run: (c) => c } });
+      },
+    };
+    const parent = document.body.appendChild(document.createElement('div'));
+    const doc = new TypstDocument('Hello world\n');
+    const view = new VisualEditor(parent, doc, VisualEditorHost.from([menus]));
+    const bar = parent.querySelector<HTMLElement>('[role="toolbar"][aria-label="Selection"]')!;
+    const trigger = bar.querySelector<HTMLButtonElement>('button[aria-label="Words"]')!;
+    const labels = [...bar.children].map((child) => (child.matches('button') ? child : child.querySelector('button'))!.getAttribute('aria-label'));
+    expect(labels).toEqual(['First', 'Words', 'Last']);
+    expect(parent.querySelector('.typst-toolbar [aria-label="Words"]')).toBeNull(); // not in the row
+    view.reveal(SourceRange.of({ from: 0, to: 5 }));
+    expect(trigger.parentElement!.hidden).toBe(true);
+    words = ['Hi'];
+    view.reveal(SourceRange.of({ from: 0, to: 4 }));
+    expect(trigger.parentElement!.hidden).toBe(false);
+    trigger.click();
+    bar.querySelector<HTMLButtonElement>('[role="menuitem"][aria-label="Hi"]')!.click();
+    expect(doc.text).toBe('Hio world\n');
+  });
+});

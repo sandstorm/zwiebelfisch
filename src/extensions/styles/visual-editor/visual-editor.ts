@@ -6,7 +6,17 @@ import { Plugin } from '@tiptap/pm/state';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { calleeName, children, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
 import type { PlacedNode, TypstMarkSpec, TypstSerializeState, TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
-import type { TextStyle, TextStyleProvider, TypstNodeSpec, VisualEditorContext, VisualEditorContribution } from '../../../hosts/visual-editor/visual-editor';
+import {
+  svg,
+  type TextStyle,
+  type TextStyleProvider,
+  type ToolbarAction,
+  type ToolbarContext,
+  type ToolbarGroup,
+  type TypstNodeSpec,
+  type VisualEditorContext,
+  type VisualEditorContribution,
+} from '../../../hosts/visual-editor/visual-editor';
 import type { ProjectStyles } from '../model/typst-style-index';
 import type { TypstStyle, TypstStyleKind } from '../model/discover';
 import { StyledBlock, TypstStyleMark } from './style-nodes';
@@ -19,7 +29,8 @@ import { StyledBlock, TypstStyleMark } from './style-nodes';
  * declared or removed parses every Visual editor's document again. The text style menu lists the
  * project's styles and "New style…" (after normal text and what other
  * extensions contribute) and applies them, importing a style where it is now
- * used.
+ * used. The inline styles are also the "Styles" menu of the bar above a text
+ * selection, toggled there as in the text style menu.
  */
 export function customStyles(options: StylesOptions): VisualEditorContribution {
   const declared = declaredStyles(options.styles);
@@ -49,10 +60,18 @@ export function customStyles(options: StylesOptions): VisualEditorContribution {
           },
         }),
         visualEditor.registerTextStyleProvider(textStyles(options)),
+        visualEditor.registerToolbarGroup(INLINE_STYLES_MENU),
+        visualEditor.registerToolbarItem({ group: INLINE_STYLES_MENU.id, provideActions: (toolbar) => inlineStyleActions(options.styles, toolbar) }),
       );
     },
   };
 }
+
+/** A letter over a line: an inline style. */
+const STYLE_ICON = svg('<path d="m7 15 5-11 5 11"/><path d="M9 11h6"/><path d="M5 20h14"/>');
+
+/** "Styles ▾" in the bar above a text selection, after the marks: the inline styles (left out while there are none). */
+const INLINE_STYLES_MENU: ToolbarGroup = { kind: 'menu', id: 'inline-styles', bar: 'selection', order: 40, label: 'Styles', icon: () => STYLE_ICON };
 
 export interface StylesOptions {
   /** The project's styles: their calls show as styled, editable text. */
@@ -95,15 +114,31 @@ export function styleApplier(source: ProjectStyles): StyleApplier {
     },
     apply(document, style) {
       const shown = editors.get(document);
-      if (!shown) return false;
-      const { editor, tiptap } = shown;
-      const entry = textStyle(style, editor, source);
-      if (entry.enabled && !entry.enabled(tiptap)) return false;
-      const applied = entry.apply(tiptap.chain().focus(), tiptap).run();
-      if (applied) entry.applied?.();
-      return applied;
+      return shown ? applyTextStyle(textStyle(style, shown.editor, source), shown.tiptap) : false;
     },
   };
+}
+
+/**
+ * The inline styles as buttons of the Styles menu in the selection bar: pressed where the selection has the style; a
+ * click toggles it as the text style menu's entry does.
+ */
+function inlineStyleActions(source: ProjectStyles, toolbar: ToolbarContext): ToolbarAction[] {
+  return source
+    .styles()
+    .filter((style) => style.kind === 'inline')
+    .map((style) => {
+      const entry = textStyle(style, toolbar, source);
+      return { label: entry.label, icon: STYLE_ICON, enabled: entry.enabled, active: entry.isActive, click: () => void applyTextStyle(entry, toolbar.editor) };
+    });
+}
+
+/** Applies a text style menu `entry` to the selection of `tiptap` (with what follows, the import); false where it does not apply. */
+function applyTextStyle(entry: TextStyle, tiptap: Editor): boolean {
+  if (entry.enabled && !entry.enabled(tiptap)) return false;
+  const applied = entry.apply(tiptap.chain().focus(), tiptap).run();
+  if (applied) entry.applied?.();
+  return applied;
 }
 
 /** The declared styles by function name, as of now (made anew when the list changes). */

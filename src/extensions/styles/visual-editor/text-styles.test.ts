@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
-// Tests for the custom styles' entries of the text style menu and the style applier (visual-editor.ts), through the Visual editor.
+// Tests for the custom styles' entries of the text style menu, the Styles menu of the selection bar and the style applier (visual-editor.ts), through the Visual editor.
+import simpleStyles from '../../../../demo/examples/simple/styles.typ?raw';
 import { describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { calculateImportChange } from '../../../core/typst-syntax/typst-syntax';
 import type { ProjectStyles } from '../model/typst-style-index';
-import type { TypstStyle } from '../model/discover';
+import { scanStyles, type TypstStyle } from '../model/discover';
 import { createVisualEditor } from '../../../testing/testing';
 import { VisualEditor, VisualEditorHost } from '../../../hosts/visual-editor/visual-editor';
 import { ProjectPath } from '../../../core/paths/paths';
@@ -104,6 +105,50 @@ describe('custom styles in the text style menu', () => {
     const { choose } = setup('Text\n', [NOTE], create);
     choose('new-style');
     expect(create).toHaveBeenCalled();
+  });
+});
+
+describe('the Styles menu of the selection bar', () => {
+  /** The simple demo example's styles: block Tip, inline Key. */
+  const SIMPLE = scanStyles(simpleStyles).map((style) => ({ ...style, path: path('/styles.typ') }));
+  const bar = (parent: HTMLElement) => parent.querySelector<HTMLElement>('[role="toolbar"][aria-label="Selection"]')!;
+  const stylesMenu = (parent: HTMLElement) => bar(parent).querySelector<HTMLButtonElement>('button[aria-label="Styles"]');
+  const items = (parent: HTMLElement) => [...bar(parent).querySelectorAll<HTMLButtonElement>('[role="menuitem"]')];
+  /** Opens the menu afresh (closes it first when open). */
+  const open = (parent: HTMLElement) => {
+    if (stylesMenu(parent)!.getAttribute('aria-expanded') === 'true') stylesMenu(parent)!.click();
+    stylesMenu(parent)!.click();
+    return items(parent);
+  };
+
+  it('lists the inline styles of the simple example (Key), not the block styles', () => {
+    const { parent, view, doc } = setup('A term here\n', SIMPLE);
+    view.reveal(SourceRange.of({ from: doc.text.indexOf('term'), to: doc.text.indexOf('term') + 4 }));
+    expect(stylesMenu(parent)!.closest<HTMLElement>('.typst-toolbar__menu')!.hidden).toBe(false);
+    expect(open(parent).map((item) => item.getAttribute('aria-label'))).toEqual(['Key']);
+  });
+
+  it('toggles an inline style on the selection as the text style menu does: wraps, imports, shows it pressed, unwraps', () => {
+    const { parent, view, doc } = setup('#import "styles.typ": note\n\nA term here\n');
+    const from = doc.text.indexOf('term');
+    view.reveal(SourceRange.of({ from, to: from + 4 }));
+    const [key] = open(parent);
+    expect(key.getAttribute('aria-pressed')).toBe('false');
+    key.click();
+    expect(doc.text).toBe('#import "styles.typ": note, key\n\nA #key[term] here\n');
+    expect(open(parent)[0].getAttribute('aria-pressed')).toBe('true');
+    open(parent)[0].click();
+    expect(doc.text).toBe('#import "styles.typ": note, key\n\nA term here\n');
+  });
+
+  it('is left out while the project has no inline styles, and follows the styles as they are declared', () => {
+    const { parent, view, doc, declare } = setup('A term here\n', [NOTE]);
+    view.reveal(SourceRange.of({ from: 2, to: 6 }));
+    expect(stylesMenu(parent)!.closest<HTMLElement>('.typst-toolbar__menu')!.hidden).toBe(true);
+    declare([NOTE, KEY]);
+    view.reveal(SourceRange.of({ from: 2, to: doc.text.indexOf(' here') }));
+    expect(stylesMenu(parent)!.closest<HTMLElement>('.typst-toolbar__menu')!.hidden).toBe(false);
+    expect(open(parent).map((item) => item.getAttribute('aria-label'))).toEqual(['Keyword']);
   });
 });
 
