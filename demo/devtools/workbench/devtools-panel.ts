@@ -1,25 +1,25 @@
-// The devtools' side panel: three tabs over the models (the projection of the shown file, the contributions by
+// The devtools' side panel: three tabs over the models (the document of the shown file, the contributions by
 // extension, the events). It draws what it is given; ../devtools.ts wires it to the extension context.
 import type { SourceRange } from '../../../src';
 import type { ContributionLog } from '../model/contributions';
 import type { EventLog, LoggedEvent } from '../model/event-log';
-import type { ProjectionRow } from '../model/projection-tree';
+import type { DocumentRow } from '../model/document-tree';
 
-/** The projection of the shown file: its rows and the selection (positions), or why there are none. */
-export type ShownProjection =
-  | { readonly kind: 'rows'; readonly path: string; readonly rows: readonly ProjectionRow[]; readonly selection: { from: number; to: number }; source(range: SourceRange): string }
+/** The document of the shown file: its rows and the selection (positions), or why there are none. */
+export type ShownDocument =
+  | { readonly kind: 'rows'; readonly path: string; readonly rows: readonly DocumentRow[]; readonly selection: { from: number; to: number }; source(range: SourceRange): string }
   | { readonly kind: 'none'; readonly path: string; readonly reason: string };
 
 export interface DevtoolsPanelOptions {
   readonly contributions: ContributionLog;
   readonly events: EventLog;
-  projection(): ShownProjection;
+  document(): ShownDocument;
   /** Shows `range` of the shown file in its editor. */
   reveal(range: SourceRange): void;
 }
 
 const TABS = [
-  { id: 'projection', label: 'Projection' },
+  { id: 'document', label: 'Document' },
   { id: 'contributions', label: 'Contributions' },
   { id: 'events', label: 'Events' },
 ] as const;
@@ -28,7 +28,7 @@ export type DevtoolsTab = (typeof TABS)[number]['id'];
 
 /** The panel in `body`; `changed(tab)` redraws that tab (once per frame) if it is the one shown. */
 export class DevtoolsPanel {
-  #tab: DevtoolsTab = 'projection';
+  #tab: DevtoolsTab = 'document';
   #frame = 0;
   readonly #doc: Document;
   readonly #tabs: HTMLElement;
@@ -51,7 +51,7 @@ export class DevtoolsPanel {
     this.#content = root.appendChild(element(this.#doc, 'div', 'typst-devtools__content'));
     this.#content.setAttribute('role', 'tabpanel');
     body.append(root);
-    this.show('projection');
+    this.show('document');
   }
 
   show(tab: DevtoolsTab): void {
@@ -76,21 +76,21 @@ export class DevtoolsPanel {
   }
 
   #render(): void {
-    const draw = { projection: () => this.#projection(), contributions: () => this.#contributions(), events: () => this.#events() }[this.#tab];
+    const draw = { document: () => this.#document(), contributions: () => this.#contributions(), events: () => this.#events() }[this.#tab];
     this.#content.replaceChildren(...draw());
   }
 
-  #projection(): Node[] {
-    const shown = this.options.projection();
+  #document(): Node[] {
+    const shown = this.options.document();
     const header = element(this.#doc, 'p', 'typst-devtools__note', shown.path);
     if (shown.kind === 'none') return [header, element(this.#doc, 'p', 'typst-devtools__note', shown.reason)];
     const list = element(this.#doc, 'ol', 'typst-devtools__tree');
-    for (const row of shown.rows) list.append(this.#projectionRow(row, shown));
+    for (const row of shown.rows) list.append(this.#documentRow(row, shown));
     header.append(` · selection ${shown.selection.from}–${shown.selection.to} · ${shown.rows.length} nodes`);
     return [header, list];
   }
 
-  #projectionRow(row: ProjectionRow, shown: Extract<ShownProjection, { kind: 'rows' }>): HTMLElement {
+  #documentRow(row: DocumentRow, shown: Extract<ShownDocument, { kind: 'rows' }>): HTMLElement {
     const item = element(this.#doc, 'li', 'typst-devtools__row');
     const { from, to } = shown.selection;
     if (row.pos <= from && to <= row.end) item.classList.add('typst-devtools__row--selected');

@@ -1,10 +1,10 @@
 // The Visual view's ProseMirror document as rows, each with the source range it shows: what the Typst ↔ ProseMirror
-// conversion (docs/architecture/projection.typ) made of the shown file. See ../devtools.ts.
+// conversion (docs/architecture/prosemirror-typst.typ) made of the shown file. See ../devtools.ts.
 import type { SourceOffset, SourceRange } from '../../../src';
 import { describeValue } from './describe';
 
 /** A ProseMirror node, as far as the tree reads it (ProseMirror's `Node` is one). */
-export interface ProjectionNode<N> {
+export interface DocumentNode<N> {
   readonly type: { readonly name: string };
   readonly attrs: Readonly<Record<string, unknown>>;
   readonly marks: readonly { readonly type: { readonly name: string } }[];
@@ -15,7 +15,7 @@ export interface ProjectionNode<N> {
 }
 
 /** One node of the document. */
-export interface ProjectionRow {
+export interface DocumentRow {
   /** 0: a child of the document. */
   readonly depth: number;
   readonly name: string;
@@ -35,14 +35,14 @@ export interface ProjectionRow {
 }
 
 /** How positions map to the source, and which nodes are boxes: the Visual view's (`VisualViewContext`), for one document. */
-export interface ProjectionMapping<N> {
+export interface DocumentMapping<N> {
   posToSource(pos: number, bias?: 1 | -1): SourceOffset;
   isBox(node: N): boolean;
 }
 
 /** The rows of `doc`'s nodes in document order (depth first), with their source ranges through `mapping`. */
-export function projectionRows<N extends ProjectionNode<N>>(doc: N, mapping: ProjectionMapping<N>): ProjectionRow[] {
-  const rows: ProjectionRow[] = [];
+export function documentRows<N extends DocumentNode<N>>(doc: N, mapping: DocumentMapping<N>): DocumentRow[] {
+  const rows: DocumentRow[] = [];
   const visit = (parent: N, start: number, depth: number) =>
     parent.forEach((node, offset) => {
       const pos = start + offset;
@@ -53,7 +53,7 @@ export function projectionRows<N extends ProjectionNode<N>>(doc: N, mapping: Pro
   return rows;
 }
 
-function row<N extends ProjectionNode<N>>(node: N, pos: number, depth: number, mapping: ProjectionMapping<N>): ProjectionRow {
+function row<N extends DocumentNode<N>>(node: N, pos: number, depth: number, mapping: DocumentMapping<N>): DocumentRow {
   const from = mapping.posToSource(pos);
   // a node with content ends where its content ends (after it, the separator to the next node follows)
   const inner = !node.isText && node.nodeSize > 1;

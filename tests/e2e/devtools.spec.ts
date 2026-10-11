@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
   await page.getByTestId('typst-panel-toggle-devtools').click();
 });
 
-test('the projection tab shows the Visual view as nodes with their source ranges; a click selects one', async ({ page }) => {
+test('the document tab shows the Visual view as nodes with their source ranges; a click selects one', async ({ page }) => {
   const devtools = page.getByTestId('typst-devtools');
   const heading = devtools.locator('.typst-devtools__node').filter({ hasText: /^heading\d+–\d+/ }).first();
   await expect(heading).toBeVisible();

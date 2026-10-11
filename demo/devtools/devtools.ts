@@ -1,4 +1,4 @@
-// The devtools: a side panel showing what the widget is made of while it runs: the Typst ↔ ProseMirror projection
+// The devtools: a side panel showing what the widget is made of while it runs: the Typst ↔ ProseMirror conversion
 // of the shown file (each node with its source range), every contribution by extension, and the events as they
 // fire. Built on the package's public API alone (src/index.ts), so it sees what any outside extension sees; the
 // demo adds it with `?devtools`. Not part of the library. See docs/architecture/development.typ.
@@ -9,8 +9,8 @@ import css from './devtools.css?inline';
 import { ContributionLog } from './model/contributions';
 import { describeValue } from './model/describe';
 import { EventLog, subscribeToEvents } from './model/event-log';
-import { ProjectionViews } from './visual-view/projection-views';
-import { DevtoolsPanel, type ShownProjection } from './workbench/devtools-panel';
+import { DocumentViews } from './visual-view/document-views';
+import { DevtoolsPanel, type ShownDocument } from './workbench/devtools-panel';
 
 /**
  * `extensions` with their contributions recorded, followed by the devtools extension (`devtools`), whose side panel
@@ -30,11 +30,11 @@ function devtoolsExtension(contributions: ContributionLog): TypstExtension {
       const { project, window, workbench, visualView, subscriptions } = context;
       const events = new EventLog();
       // told after activation only: views are made once a file is shown
-      const views = new ProjectionViews(() => panel.changed('projection'));
-      const projection = (): ShownProjection => {
+      const views = new DocumentViews(() => panel.changed('document'));
+      const shownDocument = (): ShownDocument => {
         const path = window.activeFile;
         const document = project.document(path);
-        if (!document) return { kind: 'none', path, reason: 'Not Typst source: no projection.' };
+        if (!document) return { kind: 'none', path, reason: 'Not Typst source: no document.' };
         const shown = views.rows(document);
         if (!shown) return { kind: 'none', path, reason: 'No Visual view of this file yet: open the Visual tab.' };
         return { kind: 'rows', path, ...shown, source: (range) => describeValue(document.text.slice(range.from, range.to)) };
@@ -43,7 +43,7 @@ function devtoolsExtension(contributions: ContributionLog): TypstExtension {
       const panel = new DevtoolsPanel(side.body, {
         contributions,
         events,
-        projection,
+        document: shownDocument,
         reveal: (selection) => workbench.open(window.activeFile, { selection }),
       });
       subscriptions.push(
@@ -51,7 +51,7 @@ function devtoolsExtension(contributions: ContributionLog): TypstExtension {
         side,
         panel,
         visualView.registerTiptapExtension(views.tiptapExtension),
-        window.onDidChangeActiveFile(() => panel.changed('projection')),
+        window.onDidChangeActiveFile(() => panel.changed('document')),
         subscribeToEvents(context, (event, value) => {
           events.add(event, value);
           panel.changed('events');

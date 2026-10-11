@@ -47,12 +47,12 @@ describe('devtools', () => {
     }
   });
 
-  it("shows the shown file's projection: each node with its source range, boxes marked", async () => {
+  it("shows the shown file's document: each node with its source range, boxes marked", async () => {
     const { tab } = mount();
     // Tiptap tells a view's extensions it was created after a timeout
     await new Promise((resolve) => setTimeout(resolve));
-    const projection = tab('Projection');
-    const rows = [...projection.querySelectorAll('.typst-devtools__node')].map((row) => row.textContent);
+    const document = tab('Document');
+    const rows = [...document.querySelectorAll('.typst-devtools__node')].map((row) => row.textContent);
     expect(rows[0]).toMatch(/^heading0–7/);
     expect(rows).toContainEqual(expect.stringMatching(/^rawBlock9–15box"#foo\(\)"/));
   });

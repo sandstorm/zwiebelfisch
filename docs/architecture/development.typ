@@ -77,14 +77,14 @@ mise run server:test   # when server/ or core/room-protocol changed
 #table(
   columns: (auto, 1fr),
   table.header[Tab][Shows],
-  [Projection], [The shown file's ProseMirror document as a tree (@architecture-projection): each node with its source range, `box` for raw boxes and other atoms, marks, its text or kept `src`; the tooltip has positions, attributes and the source. The path to the selection is highlighted; a click selects the node's source.],
+  [Document], [The shown file's ProseMirror document as a tree (@architecture-prosemirror-typst): each node with its source range, `box` for raw boxes and other atoms, marks, its text or kept `src`; the tooltip has positions, attributes and the source. The path to the selection is highlighted; a click selects the node's source.],
   [Contributions], [By extension, in activation order: every `register…` call (`visualView.registerNode · heading`, `commands.registerCommand · files.newFile`) and the declared settings (`contributes.configuration`).],
   [Events], [Every `onDid…` event of the extension context as it fires, with its value in one line; the latest 300.],
 )
 
 - *Public API only* (`src/index.ts`): it sees what any outside extension sees.
 - *Contributions* are recorded by wrapping the list: `devtools(extensions)` returns each extension with its `activate` getting a context whose namespaces are recording proxies, plus the devtools extension itself. No listing in the hosts.
-- *Projection*: a Tiptap extension in every Visual view (`registerTiptapExtension`) keeps the view's editor; ranges come from the view's `posToSource`.
+- *Document*: a Tiptap extension in every Visual view (`registerTiptapExtension`) keeps the view's editor; ranges come from the view's `posToSource`.
 
 ```ts
 createTypstEditor(host, { extensions: (builtins) => devtools(builtins) });
