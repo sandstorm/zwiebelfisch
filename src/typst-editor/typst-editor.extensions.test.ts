@@ -251,18 +251,18 @@ describe('the built-in extensions', () => {
     expect(preview.revealed.at(-1)).toEqual(['/main.typ', 3, 3]);
   });
 
-  it('offers "Save to <label>…" in the tab bar for a registered source control: asks for the message, commits, tells the outcome', async () => {
+  it('offers "Save to <label>…" in the tab bar for a registered source control: asks for the message, commits, says while busy', async () => {
     const changed = new EventEmitter<void>();
     const committed: string[] = [];
     const gitlab: SourceControl & { state: SourceControlState } = {
       id: 'gitlab',
       label: 'GitLab',
       defaultCommitMessage: 'Edit via Typst editor',
-      state: { busy: false, status: null },
+      state: { busy: false },
       onDidChange: changed.event,
       commit(message) {
         committed.push(message);
-        this.state = { busy: true, status: null };
+        this.state = { busy: true };
         changed.fire();
       },
     };
@@ -290,10 +290,8 @@ describe('the built-in extensions', () => {
     await vi.waitFor(() => expect(notifications()).toEqual(['Saving to GitLab is under way.']));
     expect(host.querySelector('form.typst-quick-input')).toBeNull();
 
-    gitlab.state = { busy: false, status: { message: 'Saving failed: no token', severity: 'error' } };
+    gitlab.state = { busy: false };
     changed.fire();
-    expect(notifications()).toEqual(['Saving to GitLab is under way.', 'Saving failed: no token']);
-    expect(host.querySelector('.typst-notification--error')!.textContent).toContain('Saving failed: no token');
     expect(action()!.textContent).toBe('Save to GitLab…');
 
     registration!.dispose();

@@ -34,7 +34,7 @@ export type {
   TextEditorSelectionChangeEvent,
   Window,
 } from './hosts/window/window';
-export type { Scm, SourceControl, SourceControlState, SourceControlStatus } from './hosts/scm/scm';
+export type { Scm, SourceControl, SourceControlState } from './hosts/scm/scm';
 export type { DocumentLink, DocumentLinkProvider, Languages, TextDocument } from './hosts/languages/languages';
 export type { ConfigurationChangeEvent, ConfigurationProperty, Settings, Workspace, WorkspaceConfiguration } from './hosts/workspace/workspace';
 export type { PdfExportOption, PreviewContributions, PreviewToolbarItem, ToolbarPlacement } from './hosts/preview/preview';

@@ -27,28 +27,20 @@ export interface SourceControl {
   readonly label: string;
   /** The commit message offered (VS Code: the input box's placeholder). */
   readonly defaultCommitMessage?: string;
-  /** What it is doing, and what happened last. */
+  /** What it is doing. */
   readonly state: SourceControlState;
   /** `state` changed. */
   readonly onDidChange: Event<void>;
-  /** Commits the project's current state with `message` (VS Code: its accept-input command); the outcome shows in `state`. */
+  /**
+   * Commits the project's current state with `message` (VS Code: its accept-input command). `state.busy` meanwhile;
+   * the source control tells the outcome itself (`window.show…Message`), as it tells its news.
+   */
   commit(message: string): void;
 }
 
 export interface SourceControlState {
   /** A commit is under way (no second one meanwhile). */
   readonly busy: boolean;
-  /**
-   * The last outcome or piece of news ("Saved version 01234567 (Ann)", "Merged new changes from GitLab"), told to
-   * the user once, when it changes (a new object); null for none.
-   */
-  readonly status: SourceControlStatus | null;
-}
-
-/** An outcome or a piece of news of a source control, told as a message. */
-export interface SourceControlStatus {
-  readonly message: string;
-  readonly severity: 'info' | 'warning' | 'error';
 }
 
 /** The source controls in registration order, and word when one comes or goes. */

@@ -2,7 +2,7 @@
 // the lazily loaded chunk, model/). See collaboration.ts.
 import type { CollaborationOptions } from './collaboration';
 import type { Collaboration, Shared } from './model/model';
-import type { GitLabSourceControl } from './model/gitlab-source-control';
+import type { GitLabSourceControl, Tell } from './model/gitlab-source-control';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { PlacedPresence } from './presence/presence';
 
@@ -20,6 +20,8 @@ export interface LinkedWidget {
   focused(): boolean;
   /** Called once connected, in a room backed by a GitLab branch: what commits to it. */
   onSourceControl?(sourceControl: GitLabSourceControl): void;
+  /** Tells the user what the room's source control has to say (its outcomes and news). */
+  tell?: Tell;
   /** The other users' places changed (every file; e.g. for the file panel). */
   onPresence?(presences: readonly PlacedPresence[]): void;
 }
@@ -32,7 +34,7 @@ export interface LinkedWidget {
  */
 export class CollaborationLink {
   private collaboration: Collaboration | null = null;
-  private destroyed = false;
+  private disposed = false;
   private scheduled = false;
 
   constructor(
@@ -44,14 +46,14 @@ export class CollaborationLink {
   }
 
   dispose(): void {
-    this.destroyed = true;
+    this.disposed = true;
     this.collaboration?.dispose();
   }
 
   private async start(options: CollaborationOptions, shared: Shared): Promise<void> {
     const { Collaboration } = await import('./model/model');
-    const collaboration = await Collaboration.start(options, shared);
-    if (this.destroyed) {
+    const collaboration = await Collaboration.start(options, shared, this.widget.tell);
+    if (this.disposed) {
       collaboration.dispose();
       return;
     }

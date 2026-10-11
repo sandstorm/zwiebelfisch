@@ -48,6 +48,7 @@ export function collaboration(options: CollaborationOptions): TypstExtension {
         },
         focused: () => workbench.isEditorFocused(),
         onSourceControl: (sourceControl) => subscriptions.push(scm.registerSourceControl(sourceControl)),
+        tell: (message, severity) => void { info: window.showInformationMessage, warning: window.showWarningMessage, error: window.showErrorMessage }[severity].call(window, message),
         onPresence: (all) => presences.set(all),
       });
       const documents = () => project.paths().flatMap((path) => project.document(path) ?? []);

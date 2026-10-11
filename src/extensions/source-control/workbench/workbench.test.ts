@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
-// Tests for workbench.ts (commit, tellStatus) and the extension's wiring (../source-control.ts) over a fake workbench.
+// Tests for workbench.ts (commit) and the extension's wiring (../source-control.ts) over a fake workbench.
 import { describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { ExtensionContext, MenuItem } from '../../../hosts/workbench/workbench';
 import type { SourceControl, SourceControlState } from '../../../hosts/scm/scm';
 import { sourceControl as sourceControlExtension } from '../source-control';
-import { commit, tellStatus, type SourceControlUi } from './workbench';
+import { commit, type SourceControlUi } from './workbench';
 
 function control(id = 'gitlab', label = 'GitLab') {
   const committed: string[] = [];
@@ -15,11 +15,11 @@ function control(id = 'gitlab', label = 'GitLab') {
     id,
     label,
     defaultCommitMessage: 'Edit via Typst editor',
-    state: { busy: false, status: null },
+    state: { busy: false },
     onDidChange: changed.event,
     commit: (message) => {
       committed.push(message);
-      update({ busy: true, status: null });
+      update({ busy: true });
     },
   };
   const update = (state: SourceControlState) => {
@@ -42,8 +42,6 @@ function ui(controls: SourceControl[], answers: { input?: string; pick?: number 
       showInputBox: async (options) => (asked.push(options), answers.input),
       showQuickPick: (async (items: readonly unknown[]) => items[answers.pick ?? -1]) as SourceControlUi['window']['showQuickPick'],
       showInformationMessage: async (message: string) => (told.push(`info: ${message}`), undefined),
-      showWarningMessage: async (message: string) => (told.push(`warning: ${message}`), undefined),
-      showErrorMessage: async (message: string) => (told.push(`error: ${message}`), undefined),
     },
   };
   return { fake, told, asked };
@@ -61,7 +59,7 @@ describe('commit', () => {
   it('commits nothing when cancelled, and only says so while a commit is under way', async () => {
     const { sourceControl, committed, update } = control();
     await commit(ui([sourceControl]).fake);
-    update({ busy: true, status: null });
+    update({ busy: true });
     const busy = ui([sourceControl], { input: 'x' });
     await commit(busy.fake);
     expect(committed).toEqual([]);
@@ -73,21 +71,6 @@ describe('commit', () => {
     const second = control('b', 'B');
     await commit(ui([first.sourceControl, second.sourceControl], { pick: 1, input: 'msg' }).fake);
     expect([first.committed, second.committed]).toEqual([[], ['msg']]);
-  });
-});
-
-describe('tellStatus', () => {
-  it('tells each new status once, as a message of its severity', () => {
-    const { sourceControl, update } = control();
-    const { fake, told } = ui([sourceControl]);
-    const subscription = tellStatus(fake.window, sourceControl);
-    const saved = { message: 'Saved version 01234567 (Ann)', severity: 'info' } as const;
-    update({ busy: false, status: saved });
-    update({ busy: false, status: saved });
-    update({ busy: false, status: { message: 'Saving failed: no token', severity: 'error' } });
-    subscription.dispose();
-    update({ busy: false, status: { message: 'Merged new changes from GitLab', severity: 'info' } });
-    expect(told).toEqual(['info: Saved version 01234567 (Ann)', 'error: Saving failed: no token']);
   });
 });
 
@@ -122,8 +105,8 @@ describe('sourceControl extension', () => {
     await commands.get('sourceControl.commit')!();
     expect(committed).toEqual(['Saved']);
     expect(menu.map((item) => item.title)).toEqual(['Saving to GitLab…']);
-    update({ busy: false, status: { message: 'No changes to save', severity: 'info' } });
-    expect(told).toEqual(['info: No changes to save']);
+    update({ busy: false });
+    expect(told).toEqual([]);
     expect(menu.map((item) => item.title)).toEqual(['Save to GitLab…']);
     controls.pop();
     changed.fire();

@@ -1,22 +1,22 @@
 // The source-control extension: the UI over the registered source controls (`scm`): "Save to <label>…" in the tab bar
-// (menu `editor/title`), which asks for a commit message and commits, and their outcomes and news as messages.
+// (menu `editor/title`), which asks for a commit message and commits; a source control tells its outcomes itself.
 // Entry of extensions/source-control/. See ARCHITECTURE.md, "GitLab-backed rooms".
 // Why apart from what commits: a source control (the GitLab branch behind a collaboration room) registers itself
 // (`scm.registerSourceControl`), and this extension only shows what is registered; neither knows the other.
 import { Disposable } from '../../core/disposable/disposable';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import type { SourceControl } from '../../hosts/scm/scm';
-import { commit, commitTitle, tellStatus } from './workbench/workbench';
+import { commit, commitTitle } from './workbench/workbench';
 
 /**
- * While a source control is registered: the command `sourceControl.commit` as "Save to <label>…" in the tab bar, and
- * every source control's outcomes and news as messages.
+ * While a source control is registered: the command `sourceControl.commit` as "Save to <label>…" in the tab bar
+ * ("Saving to <label>…" while it is busy).
  */
 export function sourceControl(): TypstExtension {
   return {
     id: 'source-control',
     activate(context) {
-      const { commands, window, scm, workbench, subscriptions } = context;
+      const { commands, scm, workbench, subscriptions } = context;
       const followed = new Map<SourceControl, Disposable>();
       let entry: Disposable | null = null;
       const showEntry = () => {
@@ -32,7 +32,7 @@ export function sourceControl(): TypstExtension {
           followed.delete(control);
         }
         for (const control of registered) {
-          if (!followed.has(control)) followed.set(control, Disposable.from(tellStatus(window, control), control.onDidChange(showEntry)));
+          if (!followed.has(control)) followed.set(control, control.onDidChange(showEntry));
         }
         showEntry();
       };

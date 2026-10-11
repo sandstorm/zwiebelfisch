@@ -126,9 +126,9 @@ src/                        the widget (TypeScript); the most important API on t
                             diagram's XML in a PNG's tEXt chunk, data URIs), empty-diagram.ts
       workbench/            diagram-editor.ts (DiagramEditor: the iframe, scheme, offline), new-diagram.ts
       visual-view/          editDiagramAction (a box action)
-    source-control/         sourceControl(): the UI over the workbench's source controls: "Save to <label>…" in the
-                            tab bar (menu editor/title, command sourceControl.commit)
-      workbench/            commit (the commit message in the input box), tellStatus (outcomes and news as messages)
+    source-control/         sourceControl(): the UI over the registered source controls (`scm`): "Save to <label>…" in
+                            the tab bar (menu editor/title, command sourceControl.commit)
+      workbench/            commit (the commit message in the input box)
     pdf-export/             pdfExport: the `pdfExport.export` command (PdfExport: the project's PDF, with every
                             registered export option applied) and the preview's "Download PDF" with its options popover
       preview/              preview.ts (downloadPdf: "Download PDF" + popover: a checkbox per option, "Download";
@@ -473,8 +473,8 @@ interface Window {                      // hosts/window
   activeTextEditor: TextEditor | null  onDidChangeTextEditorSelection: Event<{ textEditor }>
 }
 interface Scm {                         // hosts/scm
-  registerSourceControl({ id, label, defaultCommitMessage?, state: { busy, status: { message, severity } | null },
-                          onDidChange, commit(message) })
+  registerSourceControl({ id, label, defaultCommitMessage?, state: { busy }, onDidChange, commit(message) })
+                                    // the source control tells its outcomes and news itself (window.show…Message)
   sourceControls   onDidChangeSourceControls
 }
 interface Languages {                   // hosts/languages
@@ -572,8 +572,8 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
 - **File decorations** (`FileDecorations`, `hosts/window/file-decorations`): `getFileDecorations(path)` gives every provider's, in registration
   order; `onDidChangeFileDecorations` fires for any provider's change, and when one comes or goes.
 - **Source controls** (`ScmHost`, `hosts/scm`): registered once per `id`, listed in order; `commit(message)` starts a
-  commit whose outcome shows in `state` (`busy` meanwhile; `status`: the last outcome or news as `{ message,
-  severity }`, which the `sourceControl` extension tells as a message whenever it is a new object).
+  commit, `state.busy` meanwhile. The source control tells its outcome and news itself, as messages (decided
+  2026-10-11: a state field compared by identity was a news channel through the host).
 - **Messages** (`Notifications`, `hosts/window/notifications/`; VS Code's `window.show…Message`): a small area at the bottom
   right of the widget, newest last, at most three (a new one closes the oldest). Not modal and never takes the
   focus. Information is `role=status` and closes by itself after 8 s (not while it has items, the pointer or the
@@ -1874,7 +1874,7 @@ createTypstEditor(host, { …, user?: {name, color?},
 Collaboration.start(options, { project, user }) → Promise<Collaboration>   // url: waits for the first sync
 .setCursor(path | null, range?)   .dispose()
 .onDidChangePresence: Event<PlacedPresence[]>      // everyone else, in every file, once per change
-.sourceControl → GitLabSourceControl | null   // GitLab rooms: a workbench SourceControl (commit(message), state)
+.sourceControl → GitLabSourceControl | null   // GitLab rooms: an scm SourceControl (commit(message), state, tell)
 
 new Presences(pathOf)   .set(placed)   .presencesIn(document)   .presencesAt(path)   .onDidChange
 ```
@@ -1972,17 +1972,16 @@ HTTP             GET /rooms/<room>/files/<path> (Authorization: Bearer <room tok
     Assets: upstream wins where the room did not change them.
   - `BlobCache` (shared, LRU by bytes) keeps blob bytes by sha for the files endpoint.
 - **Widget**: `Collaboration` (server mode only) sees `meta.baseSha` after the first sync and adds
-  `GitLabSourceControl` (a workbench `SourceControl`, VS Code's shape: `commit(message)` sends `gitlab:save` as the
-  collaboration `user` over the provider's stateless channel; `state` is `busy` until the answer and `status` the
-  outcome as a message (`commitStatus`: "Saved version 01234567 (Ann)", "Merged new changes from GitLab", "No
-  changes to save": info; a conflict: warning; "Saving failed: …": error), also for other clients' saves and
-  upstream merges) and `SharedAssets` (assets ↔ project's other files; repository files
+  `GitLabSourceControl` (an scm `SourceControl`, VS Code's shape: `commit(message)` sends `gitlab:save` as the
+  collaboration `user` over the provider's stateless channel; `state` is `busy` until the answer; it tells every
+  answer and piece of news as a message through the `tell` the extension gives it (the window's messages): "Saved
+  version 01234567 (Ann)", "Merged new changes from GitLab", "No changes to save": info; a conflict: warning;
+  "Saving failed: …": error; also for other clients' saves and upstream merges, to everyone in the room) and `SharedAssets` (assets ↔ project's other files; repository files
   fetched from the files endpoint, uploads as bytes; bytes → sha after a commit is not a
   change). The extension registers the source control with `scm.registerSourceControl`; the
   `source-control` extension (only the UI over registered source controls) puts "Save to GitLab…" ("Saving to
   GitLab…" while busy) into the tab bar's menu (`editor/title`, command `sourceControl.commit`: the commit message
-  in the input box, the default offered; several source controls: a quick pick first) and tells each new status as
-  a message of its severity, to everyone in the room.
+  in the input box, the default offered; several source controls: a quick pick first).
 
 ### Demo playground (`demo/`, `server/src/playground`)
 
