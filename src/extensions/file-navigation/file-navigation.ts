@@ -1,4 +1,3 @@
-// The file-navigation extension. Entry of extensions/file-navigation/. See docs/10_guide/02_features.typ.
 import { neighbours } from '../../core/typst-syntax/typst-syntax';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceRange } from '../../core/typst-document/typst-document';
@@ -10,18 +9,17 @@ import { FileNavigation } from './workbench/file-navigation';
 import { HistoryLinks, KEYBINDINGS } from './workbench/history-links';
 
 /**
- * The links around the shown file: previous / next file in reading order, back / forward in the files the user was in.
+ * Links around the shown file that lead to other files. "← previous file" / "next file →" sit above and below a file
+ * the main file includes, in its reading order. "← Back to …" / "Forward to … →" sit above a supplementary file (a
+ * diagram, a spreadsheet, …) and lead through the files the user came from (VS Code's Go Back / Go Forward); their
+ * keys work in every file.
  *
- * The links around the shown file that lead to other files. "← previous file" / "next file →" above and below a file
- * the main file includes, in its reading order; "← Back to …" / "Forward to … →" above any file, the files the user
- * came from (VS Code's Go Back / Go Forward, also by key).
+ * Both are one extension because they share the editor frame (one per widget) and the bar's look. Neither needs the
+ * file panel, so a host may keep them without it.
  *
- * Why one extension for both: they share the editor frame (one per widget) and the bar's look; neither needs the file
- * panel, so a host may keep them without it.
- *
- * Why the history listens to the shown file rather than to the ways of opening one (links, the preview,
- * the file panel, …): every way ends in `workbench.open`, so every change of the shown file counts, as in VS Code,
- * without any feature knowing about the history.
+ * The history listens to the shown file, not to the ways of opening one (links, the preview, the file panel, …).
+ * Every way ends in `workbench.open`, so every change of the shown file counts, as in VS Code, and no feature needs to
+ * know about the history. See docs/10_guide/02_features.typ.
  */
 export function fileNavigation(): TypstExtension {
   return {

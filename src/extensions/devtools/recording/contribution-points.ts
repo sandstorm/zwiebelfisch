@@ -1,4 +1,4 @@
-// What a contribution is, in its contribution point's own terms. See contributions.ts.
+// What a contribution is, in its contribution point's own terms. See ContributionLog in contributions.ts.
 import { flattenExtensions, getExtensionField, type AnyExtension } from '@tiptap/core';
 import { describeArguments, describeValue, nameOf } from '../model/describe';
 
@@ -6,8 +6,7 @@ import { describeArguments, describeValue, nameOf } from '../model/describe';
  * `args` of a registration through `point` (`visualEditor.registerNode`), described; the generic summary for unknown points.
  *
  * A node by its name, Tiptap priority and the Typst it parses, a keybinding as `Ctrl+Alt+M → comments.addComment`, a
- * setting by its type and default. The registration's arguments are read as they are given (by shape: the devtools see
- * what any extension sees).
+ * setting by its type and default. The arguments are read by their shape, as any extension would see them.
  */
 export function describeContribution(point: string, args: readonly unknown[]): Description {
   const describe = POINTS[point];

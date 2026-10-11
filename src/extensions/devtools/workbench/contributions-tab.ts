@@ -1,4 +1,4 @@
-// The devtools' Contributions tab. See devtools-panel.ts.
+// The devtools' Contributions tab. See DevtoolsPanel in devtools-panel.ts.
 import type { Contribution, ContributionLog } from '../recording/contributions';
 import { element, type Tab } from './dom';
 

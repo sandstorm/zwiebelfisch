@@ -1,4 +1,4 @@
-// What the comments extension contributes to the frame. See docs/10_guide/02_features.typ.
+// The command that adds a note, its key binding and the Source editor's "Comment". See comments in ../comments.ts.
 import { Disposable } from '../../../core/disposable/disposable';
 import type { SourceOffset, TypstDocument } from '../../../core/typst-document/typst-document';
 import type { Commands } from '../../../hosts/commands/commands';
@@ -12,8 +12,6 @@ import { calculateMarginNoteChanges } from '../model/add-margin-note';
  * "Comment" in the frame: the command `comments.addComment` adds a note in the active editor, Ctrl/Cmd+Alt+M runs
  * it, and the tab bar (menu `editor/title`) offers it in the Source tab (the Visual editor has "Comment" in its own
  * toolbar).
- *
- * The command that adds a note, its key binding and the Source editor's "Comment" (a tab bar menu entry).
  */
 export function registerAddComment({ commands, window, workbench }: CommentContext, cards: NoteCards): Disposable {
   return Disposable.from(

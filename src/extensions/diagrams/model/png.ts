@@ -1,11 +1,8 @@
-// The diagram inside a `.drawio.png`. See ../diagrams.ts.
+// The diagram inside a `.drawio.png`. See diagrams in ../diagrams.ts.
 
 /**
- * The diagram's XML stored in the PNG `png`, or null when it holds none (or is no PNG).
- *
- * Diagrams.net stores the diagram's XML in a `tEXt` chunk named `mxfile` (URI-encoded), so the file is an ordinary PNG
- * for Typst and an editable diagram for diagrams.net. Reading and writing that chunk, PNGs as data URIs (how the
- * embedded editor takes and gives them), and the empty diagram "New diagram…" writes.
+ * The diagram's XML stored in the PNG `png`, or null when it holds none (or is no PNG). Diagrams.net keeps it in a
+ * `tEXt` chunk named `mxfile` (URI-encoded).
  */
 export function readDiagramXml(png: Uint8Array): string | null {
   for (const chunk of chunks(png)) {

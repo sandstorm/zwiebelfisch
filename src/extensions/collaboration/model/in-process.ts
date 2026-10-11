@@ -1,4 +1,4 @@
-// Test wiring: Y.Docs and awarenesses connected in-process, without a server. See model.ts.
+// Test wiring: Y.Docs and awarenesses connected in-process, without a server. See Collaboration in model.ts.
 import { applyAwarenessUpdate, encodeAwarenessUpdate, type Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 

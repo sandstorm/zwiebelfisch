@@ -1,4 +1,4 @@
-// "Insert diagram" in the Visual editor's Insert menu (and so among the slash commands). See ../diagrams.ts.
+// "Insert diagram" in the Visual editor's Insert menu (and so among the slash commands). See diagrams in ../diagrams.ts.
 import { PathReference, ProjectPath } from '../../../core/paths/paths';
 import { quote } from '../../../core/typst-syntax/typst-syntax';
 import { insertTypst, svg, type ToolbarContext, type ToolbarItem } from '../../../hosts/visual-editor/visual-editor';
@@ -10,8 +10,6 @@ import { createDiagram } from '../workbench/new-diagram';
  * "Insert diagram": asks for the new diagram's name (proposing a free `diagrams/diagram.drawio.png` next to the
  * document), creates the empty diagram (as "New diagram…"), inserts `#figure(image("…"), caption: [ ])` after the
  * cursor's block and opens the diagram in the diagram editor, where it is drawn.
- *
- * A new `.drawio.png` as a figure in the text, then opened in the diagram editor.
  */
 export function insertDiagram(context: InsertContext): ToolbarItem {
   return {

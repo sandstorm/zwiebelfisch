@@ -1,4 +1,4 @@
-// NoteCard: one margin note's card in the notes gutter: its thread, a reply box, editing own messages. See notes-gutter.ts.
+// One margin note's card in the notes gutter. See NotesGutter in notes-gutter.ts.
 import { readThread, type NoteMessage } from '../../model/note-thread';
 import type { KeyedNote } from './note-list';
 

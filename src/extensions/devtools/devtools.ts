@@ -1,4 +1,3 @@
-// The devtools extension. Entry of extensions/devtools/. See docs/10_guide/05_embedding.typ ("Devtools").
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './devtools.css?inline';
 import { describeValue } from './model/describe';
@@ -9,16 +8,19 @@ import { DevtoolsPanel } from './workbench/devtools-panel';
 import type { ShownDocument } from './workbench/document-tab';
 
 /**
- * `extensions` with their contributions recorded, followed by the devtools extension (`devtools`), whose side panel
- * shows them. Give it the whole list: `createTypstEditor(host, { extensions: (builtins) => devtools(builtins) })`.
+ * `extensions` with their contributions recorded, followed by the devtools extension, whose right side panel shows
+ * what the widget is made of while it runs. Give it the whole list:
+ * `createTypstEditor(host, { extensions: (builtins) => devtools(builtins) })`. Not a built-in: a host adds it (the demo
+ * with `?devtools`).
  *
- * A right side panel showing what the widget is made of while it runs: the Typst ↔ ProseMirror conversion of the shown
- * file (each node with its source range), every contribution in its point's terms (by extension or by point), and the
- * events as they fire, their values in full. Optional, not a built-in: a host adds it (the demo with `?devtools`). It
- * uses only what any extension gets (its context), so it sees what any outside extension sees.
+ * The panel has three tabs: the shown file's ProseMirror document, each node with its source range (what the Typst ↔
+ * ProseMirror conversion made of the file); every contribution in its point's terms, by extension or by point; and the
+ * events as they fire, with their values in full.
  *
- * Why it wraps the list: an extension sees only its own context, so the contributions of the others are recorded by
- * wrapping their `activate` (recording/contributions.ts), not by a listing in the hosts.
+ * It uses only what any extension gets, so it sees what an outside extension sees. That is why it wraps the list: an
+ * extension sees only its own context, so the others' contributions are recorded by wrapping their `activate`
+ * (ContributionLog in recording/contributions.ts), not by a listing in the hosts. See docs/10_guide/05_embedding.typ,
+ * "Devtools".
  */
 export function devtools(extensions: readonly TypstExtension[]): TypstExtension[] {
   const contributions = new ContributionLog();

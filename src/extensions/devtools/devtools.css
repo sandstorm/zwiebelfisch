@@ -1,4 +1,5 @@
-/* The devtools' side panel (workbench/devtools-panel.ts), in the widget's color tokens. See devtools.ts. */
+/* The devtools' side panel (workbench/devtools-panel.ts), in the widget's color tokens. See devtools in devtools.ts,
+   which registers it. */
 .typst-devtools {
   display: flex;
   flex-direction: column;

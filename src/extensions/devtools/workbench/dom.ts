@@ -1,4 +1,4 @@
-// What the devtools' panel (devtools-panel.ts) and its tabs share: a tab's shape, making elements.
+// What the devtools' panel and its tabs share: a tab's shape, making elements. See DevtoolsPanel in devtools-panel.ts.
 
 /** A tab's content: its element, kept while the tab is shown (with its inputs and what is expanded), and `update`, redrawing it. */
 export interface Tab {

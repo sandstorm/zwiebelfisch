@@ -1,4 +1,4 @@
-// The devtools' Document tab. See devtools-panel.ts.
+// The devtools' Document tab. See DevtoolsPanel in devtools-panel.ts.
 import type { SourceRange } from '../../../core/typst-document/typst-document';
 import type { DocumentRow } from '../model/document-tree';
 import { element, type Tab } from './dom';

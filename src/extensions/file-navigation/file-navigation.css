@@ -1,6 +1,6 @@
-/* The file-navigation extension's styles: "← Back to …" / "Forward to … →" above any file (muted: there, not in the
-   way), "← previous file" / "next file →" at the start and end of an included file (reading order of the main file).
-   See file-navigation.ts, which registers it (Workbench.registerStyleSheet). */
+/* The file-navigation extension's styles: "← Back to …" / "Forward to … →" above a supplementary file (muted: there,
+   not in the way), "← previous file" / "next file →" at the start and end of an included file (reading order of the
+   main file). See fileNavigation in file-navigation.ts, which registers it. */
 .typst-file-navigation__top { flex: none; }
 .typst-file-navigation { flex: none; display: flex; gap: 16px; padding: 6px 32px; font: 12px system-ui, sans-serif; }
 .typst-file-navigation[hidden] { display: none; }

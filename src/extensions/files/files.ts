@@ -1,4 +1,3 @@
-// The files extension. Entry of extensions/files/. See docs/10_guide/02_features.typ.
 import { Disposable } from '../../core/disposable/disposable';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
@@ -9,22 +8,19 @@ import { fileSearch } from './workbench/file-search';
 import { icon } from './workbench/icons/icons';
 
 /**
- * The file panel in a side panel: shows the project and the shown file, opens what is picked, asks for every
- * change through `workspace.applyEdit`, uploads files dropped on the widget, and shows the files' decorations
- * from every `FileDecorationProvider` (e.g. where collaborators are). The setting `files.panel` says when it is open.
- * Its operations are commands (`files.newFile`, `files.newFolder`, `files.upload`, `files.rename`, `files.delete`,
- * each on a row), offered in two menus any extension may add to: `file/newFile` ("New" in the panel's header) and `explorer/context` (a row's context menu;
- * context: `resource`, `resourceKind` 'file' | 'folder', `resourceIsMain`; the command gets the row).
- * A file no other editor opens shows its name, size and type, read-only (the custom editor `files.file`: `*` is the
- * least specific pattern, every other editor wins; no icon: the panel draws its own).
+ * The project's files as a tree in the left side panel, the files in search everywhere ("Files", prefix `/`), and a
+ * read-only editor for any file no other editor opens (`files.file`, `priority: 'fallback'`: its name, size and type).
  *
- * The file panel (the project's files as a tree in the left side panel: new file / folder, upload, rename, delete as
- * commands in its menus, drag & drop, file decorations), the files in search everywhere, and the read-only editor of
- * files no other editor opens.
+ * The panel shows the project and the shown file, opens what is picked and uploads files dropped on the widget. It
+ * changes nothing itself: every change goes through `workspace.applyEdit`. Its operations are commands
+ * (`files.newFile`, `files.newFolder`, `files.upload`, `files.rename`, `files.delete`, each on a row), offered in two
+ * menus any extension may add to: `file/newFile` ("New" in the panel's header) and `explorer/context` (a row's context
+ * menu; context: `resource`, `resourceKind` 'file' | 'folder', `resourceIsMain`; the command gets the row). Its badges
+ * come from every FileDecorationProvider (e.g. where collaborators are). The setting `files.panel` says when it is open.
  *
- * Why a controller and views: the extension is a controller over the workbench's contribution points (a side panel,
- * commands, menus) and the project; the views (workbench/) and the pure tree model (model/) get what they need of the
- * workbench as options, so the panel is tested without one.
+ * This entry is the controller over the workbench and the project. The views (FilePanel in workbench/) and the pure
+ * tree model (model/) get what they need as options, so the panel is tested without a workbench.
+ * See docs/10_guide/02_features.typ.
  */
 export function files(): TypstExtension {
   return {

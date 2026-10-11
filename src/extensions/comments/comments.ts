@@ -1,4 +1,3 @@
-// The comments extension. Entry of extensions/comments/. See docs/10_guide/02_features.typ.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './comments.css?inline';
 import { registerIncludeComments } from './preview/preview';
@@ -8,16 +7,18 @@ import { commentSearch } from './workbench/comment-search';
 import { ADD_COMMENT, registerAddComment } from './workbench/workbench';
 
 /**
- * Comments as margin notes, written as the workbench's `user` (signs replies; only own messages can be edited): in
- * the Visual editor the notes in the text and a card per note in the notes gutter; "Comment" in the Visual editor's
- * toolbar and, for the Source editor, in the tab bar; Ctrl/Cmd+Alt+M in both (the command `comments.addComment`). A note
- * added in the Visual editor opens its card. PDF exports get the option `comments.include` (default off: the notes are
- * left out). Search everywhere finds the notes by text and author.
+ * Comments as `drafting` margin notes in the Typst source itself, not in a store beside it. So the preview, git, undo
+ * and collaboration carry them as ordinary text, and a margin note written by hand is a comment too.
  *
- * Why: comments are drafting margin notes in the Typst source itself, not a store beside it, so the preview, git, undo
- * and collaboration carry them as ordinary text. The extension shows them in the Visual editor
- * (notes in the text, a card per note in the notes gutter), adds them ("Comment", Ctrl/Cmd+Alt+M) and lets a PDF leave
- * them out (the export option `comments.include`).
+ * In the Visual editor a note shows in the text (a marker, or a highlighted range: visual-editor/margin-notes.ts) and
+ * as a card in the notes gutter, with its thread of replies (NotesGutter). Replies are signed as the workbench's
+ * `user`; only own messages can be edited. "Comment" (the command `comments.addComment`, Ctrl/Cmd+Alt+M) adds a note:
+ * in the Visual editor's toolbar, and in the tab bar for the Source editor. A note added in the Visual editor opens
+ * its card. Search everywhere finds the notes by text and author ("Comments", prefix `!`).
+ *
+ * PDF exports get the option `comments.include` (default off). The PDF itself is the pdfExport extension's; this one
+ * only decides what it compiles. `model/` knows the note syntax (margin-note-syntax.ts) and the thread format
+ * (note-thread.ts). See docs/10_guide/02_features.typ.
  */
 export function comments(): TypstExtension {
   return {

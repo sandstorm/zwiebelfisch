@@ -1,4 +1,4 @@
-// The project's files in search everywhere. See ../files.ts and docs/10_guide/02_features.typ.
+// The project's files in search everywhere. See files in ../files.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 import type { Project } from '../../../core/project/project';
 import type { SearchProvider } from '../../../hosts/window/window';

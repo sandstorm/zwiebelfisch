@@ -1,12 +1,7 @@
-// The diagrams extension's model. See ../diagrams.ts.
+// What a diagram file is. See diagrams in ../diagrams.ts.
 import type { ProjectPath } from '../../../core/paths/paths';
 
-/**
- * The extension a diagram's name ends in.
- *
- * The embed protocol as pure state (embed-session.ts), the diagram inside a PNG (png.ts, also the empty diagram). No
- * DOM, no editor library.
- */
+/** The extension a diagram's name ends in. */
 export const DIAGRAM_EXTENSION = '.drawio.png';
 
 /** The diagram files, PNGs with a diagrams.net diagram in them, as a custom editor's file name pattern. */

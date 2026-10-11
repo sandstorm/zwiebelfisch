@@ -1,4 +1,4 @@
-// The Visual editor's ProseMirror document as rows, each with the source range it shows. See ../devtools.ts.
+// The Visual editor's ProseMirror document as rows, each with the source range it shows. See devtools in ../devtools.ts.
 import type { SourceOffset, SourceRange } from '../../../core/typst-document/typst-document';
 import { describeValue } from './describe';
 

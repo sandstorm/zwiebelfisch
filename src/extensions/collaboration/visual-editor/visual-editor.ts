@@ -1,4 +1,4 @@
-// The collaboration's part of the Visual editor. See ../collaboration.ts.
+// The collaboration's part of the Visual editor. See collaboration in ../collaboration.ts.
 import { Extension } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
@@ -15,9 +15,6 @@ import { boxCaretsSpec, boxPresence, type BoxCaret } from './box-carets';
  * Draws the other users' places in every Visual editor, as `presences` has them: their selections as highlights,
  * their carets in the editor and in the code of its raw boxes; they follow edits. `documents`: the project's
  * documents now (any of them may have editors).
- *
- * Other users' selections (highlights), carets (decorations), and their carets inside boxes (drawn in a raw box's
- * code).
  */
 export function visualPresence(presences: PresenceSource, documents: () => readonly TypstDocument[]): VisualEditorContribution {
   return {

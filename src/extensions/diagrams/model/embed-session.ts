@@ -1,4 +1,4 @@
-// EmbedSession. See ../diagrams.ts.
+// The embed protocol of diagrams.net, as pure state. See diagrams in ../diagrams.ts.
 import { fromDataUri, isPng, readDiagramXml, toDataUri, writeDiagramXml } from './png';
 
 /**
@@ -8,9 +8,7 @@ import { fromDataUri, isPng, readDiagramXml, toDataUri, writeDiagramXml } from '
  * is closed, the widget disposed) saves the pending export at once, and a diagram changed since the last export
  * into the last PNG (its picture follows with the next export).
  *
- * One conversation with diagrams.net's embed mode (https://www.drawio.com/doc/faq/embed-mode, `proto=json`) as pure
- * state: what to send the editor for each message it sends, and when to save the file. The view only carries messages
- * between the iframe and this.
+ * Embed mode: https://www.drawio.com/doc/faq/embed-mode (`proto=json`).
  */
 export class EmbedSession {
   #saved: Saved;

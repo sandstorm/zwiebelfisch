@@ -1,4 +1,4 @@
-// The devtools' Events tab. See devtools-panel.ts.
+// The devtools' Events tab. See DevtoolsPanel in devtools-panel.ts.
 import type { EventLog, LoggedEvent } from '../recording/event-log';
 import { element, type Tab } from './dom';
 

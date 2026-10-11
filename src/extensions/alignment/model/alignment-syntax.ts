@@ -1,13 +1,9 @@
 
+// Typst's alignment syntax, as far as the Visual editor edits it. See alignment in ../alignment.ts.
+
 /**
- * The parts of an `#align(..)` argument; null unless it is a literal alignment.
- *
- * Typst's alignment syntax, as far as the Visual editor edits it: the argument
- * of `#align(..)` and the set rules that change the default alignment.
- *
- * Only literal alignments count: `left`, `center`, `right`, `start`, `end`,
- * optionally combined with one vertical alignment (`top + center`). `start`
- * and `end` read as left and right (left-to-right text).
+ * The parts of an `#align(..)` argument; null unless it is a literal alignment: `left`, `center`, `right`, `start` or
+ * `end`, optionally with one vertical alignment (`top + center`). `start` and `end` read as left and right.
  */
 export function alignArgs(args: string): { horizontal: Horizontal | null; vertical: boolean } | null {
   const parts = args.split('+').map((part) => part.trim());

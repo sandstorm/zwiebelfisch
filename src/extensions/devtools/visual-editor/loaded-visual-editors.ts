@@ -1,13 +1,11 @@
-// The Visual editors the devtools read the document from. See ../devtools.ts.
+// The Visual editors the devtools read the document from. See devtools in ../devtools.ts.
 import { Extension, type Editor } from '@tiptap/core';
 import type { VisualEditorContext } from '../../../hosts/visual-editor/visual-editor';
 import { documentRows, type DocumentRow } from '../model/document-tree';
 
 /**
  * The Visual editors loaded now (visible or hidden), by document; `onChange` hears every transaction of any of them.
- *
- * A Tiptap extension in every Visual editor (through the public `visualEditor.registerTiptapExtension`) keeps each
- * one's Tiptap editor by its document.
+ * `tiptapExtension`, registered in every Visual editor, keeps each one's Tiptap editor by its document.
  */
 export class LoadedVisualEditors {
   readonly #editors = new Map<TypstDocument, { tiptap: Editor; editor: VisualEditorContext }>();

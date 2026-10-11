@@ -1,4 +1,3 @@
-// The headings extension. See docs/30_architecture/08_built-in-extensions.typ.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './headings.css?inline';
 import { calculateNumberingToggle } from './model/heading-numbering';
@@ -7,13 +6,15 @@ import { HeadingNumbers } from './visual-editor/heading-numbers';
 import { headingSearch } from './workbench/heading-search';
 
 /**
- * Headings and their numbers. The command `headings.toggleNumbering` adds `#set heading(numbering: "1.")` after the
- * code the active editor's document starts with, or removes the document's heading numbering.
+ * `= Title` headings in the Visual editor (Heading 1–3 in the text style menu) with their numbers in a gutter right of
+ * the text, the command `headings.toggleNumbering`, and every Typst file's headings in search everywhere ("Headings",
+ * prefix `#`).
  *
- * `= Title` headings in the Visual editor (Heading 1–3 in the text style menu), and their numbers as the document's
- * `#set heading(numbering: ..)` rules make Typst number them (with the command `headings.toggleNumbering`), and every
- * Typst file's headings in search everywhere. Why one extension: the numbers are a view of the headings, nothing
- * without them.
+ * The editor computes the numbers as Typst would from the document's `#set heading(numbering: ..)` rules (HeadingCounter
+ * in model/heading-numbering.ts, an approximation; the preview shows the real ones). The numbers are a view of the
+ * headings, nothing without them, so both are one extension. The command adds `#set heading(numbering: "1.")` after
+ * the code the active editor's document starts with, or removes the document's heading numbering.
+ * See docs/30_architecture/08_built-in-extensions.typ.
  */
 export function headings(): TypstExtension {
   return {

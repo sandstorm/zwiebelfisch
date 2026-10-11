@@ -1,15 +1,17 @@
-// The alignment extension. See docs/30_architecture/08_built-in-extensions.typ.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import { ALIGN_MENU, ALIGNMENT, ALIGNMENTS, JUSTIFIED_PARAGRAPH } from './visual-editor/visual-editor';
 
 /**
- * Aligned blocks, justified paragraphs and the Align menu.
+ * Text alignment in the Visual editor, as Typst writes it: `#align(..)[..]` blocks, `#par(justify: ..)[..]` around one
+ * paragraph, the Align menu and Mod-Shift-L/E/R/J.
  *
- * Text alignment as Typst writes it — `#align(..)[..]` blocks and `#par(justify: ..)[..]` paragraphs — in the Visual
- * editor, with the Align menu and Mod-Shift-L/E/R/J.
+ * The Visual editor itself knows only paragraphs, text and raw Typst. This extension adds the `alignment` node and
+ * gives the host's paragraphs a `justify` flag (a second `paragraph` spec that extends the host's). `#set align(..)` and
+ * `#set par(justify: ..)` stay raw Typst; they are only read, to show the alignment they set. An `#align` with anything
+ * but a literal alignment stays raw too.
  *
- * Why an extension: the Visual editor's host models only paragraphs, text and raw Typst; this one also teaches the
- * host's paragraphs their `justify` (a second paragraph spec extends the host's).
+ * `model/` reads and writes the alignment syntax; `visual-editor/` holds the node, its commands and the menu (see
+ * TextAlign in visual-editor/text-align.ts). See docs/30_architecture/08_built-in-extensions.typ.
  */
 export function alignment(): TypstExtension {
   return {

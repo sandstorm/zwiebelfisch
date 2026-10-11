@@ -1,20 +1,18 @@
-// The help extension. Entry of extensions/help/. See docs/10_guide/02_features.typ.
 import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
 import css from './help.css?inline';
 import { snippetDrops, TYPST_SNIPPET_TYPE } from './visual-editor/snippet-drops';
 import { HelpPanel } from './workbench/help-panel';
 
 /**
- * The left side panel "Help" (its rail button next to Files): the cheat sheets for the language of the shown file
- * (`languages.getLanguageId`, `languages.provideHelp`), following the shown file; "No help for this file type" without
- * any. A row is something to write: dragged into an editor it lands where it is dropped (the Source and text editors
- * take it as text; the Visual editor reads a Typst row as Typst, `insertTypst`); Enter puts it at the cursor of the
- * shown Typst editor (`help.insertAtCursor`, `TextEditor.insertSnippet`; with another kind of file shown it is copied
- * instead); its context menu (`help/row`) offers "Insert at cursor" and "Copy" (`help.copy`).
+ * The left side panel "Help" (its rail button next to Files): the cheat sheets for the language of the shown file,
+ * following the shown file ("No help for this file type" without any). A row is something to write. Dragged into an
+ * editor, it lands where it is dropped (the Source and text editors take it as text; the Visual editor reads a Typst
+ * row as Typst). Enter puts it at the cursor of the shown Typst editor (`help.insertAtCursor`), or copies it while
+ * another kind of file is shown. Its context menu (`help/row`) offers "Insert at cursor" and "Copy" (`help.copy`).
  *
- * Why an extension, and the sheets elsewhere: a language's sheet is its extension's (`languages.registerHelpProvider`:
- * Typst in typst-language, Mermaid in mermaid, …); the panel only renders their data, so a language brings its help
- * without the panel knowing it.
+ * The sheets are not here. A language's sheet belongs to its extension (`languages.registerHelpProvider`: Typst in
+ * typst-language, Mermaid in mermaid, …). The panel only renders what `languages.provideHelp` gives for the shown
+ * file's language, so a language brings its help without the panel knowing it. See docs/10_guide/02_features.typ.
  */
 export function help(): TypstExtension {
   return {

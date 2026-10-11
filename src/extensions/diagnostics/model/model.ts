@@ -1,12 +1,10 @@
-// The diagnostics' read model. See ../diagnostics.ts.
+// Each document's diagnostics, and how every editor words one. No DOM, no editor library. See diagnostics in
+// ../diagnostics.ts.
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 
 /**
  * The diagnostics of each document, for every editor of it (VS Code's DiagnosticCollection).
- *
- * Each document's compile diagnostics (DiagnosticCollection), how every editor words one, and the status summary
- * (diagnostics-summary.ts). No DOM, no editor library.
  */
 export class DiagnosticCollection {
   private readonly entries = new WeakMap<TypstDocument, readonly SourceDiagnostic[]>();

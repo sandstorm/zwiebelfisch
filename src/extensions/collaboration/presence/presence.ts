@@ -1,4 +1,4 @@
-// Presence. See ../collaboration.ts.
+// Other users' places as offsets, outside the lazily loaded model/ (no Yjs, no DOM). See collaboration in ../collaboration.ts.
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { SourceOffset, TypstDocument } from '../../../core/typst-document/typst-document';
@@ -7,9 +7,6 @@ import type { User } from '../../../core/user/user';
 /**
  * Another user's place in a text: their caret (`head`) and selection (`anchor`..`head`, empty for a plain caret),
  * as offsets in the text an editor shows (a file's, or a raw box's code). `id` tells users apart (two may share a name).
- *
- * Other users' carets and selections as source ranges, and where the editors read them (`Presences`). Pure (no Yjs, no
- * DOM): the eager part of the extension uses it, so it is not in the lazily loaded chunk (model/).
  */
 export interface Presence {
   id: string;

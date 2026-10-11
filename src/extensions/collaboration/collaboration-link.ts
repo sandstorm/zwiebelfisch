@@ -1,4 +1,4 @@
-// CollaborationLink. See collaboration.ts.
+// The eager half of collaboration. See collaboration in collaboration.ts.
 import type { CollaborationOptions } from './collaboration';
 import type { Collaboration, SharedRoom } from './model/model';
 import type { GitLabSourceControl, Tell } from './model/gitlab-source-control';
@@ -7,13 +7,9 @@ import type { SourceRange } from '../../core/typst-document/typst-document';
 import type { PlacedPresence } from './presence/presence';
 
 /**
- * The widget's side of collaboration. Loads the collaboration code (Yjs,
- * Hocuspocus) on demand, so widgets without collaboration never download it;
- * publishes the local selection when the editors report a change (`selectionChanged`), and tells
- * the widget where everyone else is.
- *
- * The widget's side of a Collaboration, which it loads on demand (so this file must stay outside the lazily loaded
- * chunk, model/).
+ * The widget's side of a Collaboration: loads it on demand (so this file stays outside model/, the lazily loaded
+ * chunk), publishes the local selection when the editors report a change (`selectionChanged`), and tells the widget
+ * where everyone else is.
  */
 export class CollaborationLink {
   private collaboration: Collaboration | null = null;

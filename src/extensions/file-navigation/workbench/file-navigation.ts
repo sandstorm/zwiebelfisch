@@ -1,12 +1,12 @@
-// FileNavigation: "← previous file" and "next file →" above and below an included file, in the main file's
-// reading order. See ../file-navigation.ts and core/typst-syntax/typst-syntax.ts (neighbours).
+// "← previous file" and "next file →" above and below an included file, in the main file's reading order. See
+// fileNavigation in ../file-navigation.ts; the order is `neighbours` in src/core/typst-syntax/typst-syntax.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 
 /**
  * Two identical link bars for the shown file, one for its start (`top`) and
  * one for its end (`bottom`): each links the file read before it (left) and
  * after it (right), as `neighbours` gives them. The workbench places them
- * around the shown file (`Workbench.registerEditorFrame`); a click opens that file.
+ * around the shown file (`workbench.registerEditorFrame`); a click opens that file.
  */
 export class FileNavigation {
   readonly top: HTMLElement;

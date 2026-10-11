@@ -1,4 +1,4 @@
-// The figures of every Typst file in search everywhere. See ../figures.ts and docs/10_guide/02_features.typ.
+// The figures of every Typst file in search everywhere. See figures in ../figures.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 import type { Project } from '../../../core/project/project';
 import type { SearchProvider } from '../../../hosts/window/window';

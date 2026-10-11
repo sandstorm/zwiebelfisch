@@ -1,4 +1,5 @@
-// The collaboration's part of the Source editors. See ../collaboration.ts.
+// Other users' places in CodeMirror (Source editors, raw boxes' code) and per-user undo. See collaboration in
+// ../collaboration.ts.
 import { EditorState, Facet, StateEffect, StateField, Transaction, type Extension, type Range } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet } from '@codemirror/view';
 import { fromDocument, type SourceEditorContext } from '../../../hosts/source-editor/source-editor';
@@ -9,9 +10,6 @@ import { textColorOn } from '../../../core/color-scheme/color-scheme';
 /**
  * Undo is per user: other users' edits (changes with `REMOTE_ORIGIN`) never enter a Source editor's history; it maps
  * over them, so Undo reverts the local user's last edit only (also one made in the Visual editor).
- *
- * Other users' carets and selections in a CodeMirror editor (the Source editors, and the code of the Visual editor's
- * raw boxes), and their edits kept out of the undo history.
  */
 export const perUserUndo: Extension = EditorState.transactionExtender.of((tr) =>
   tr.annotation(fromDocument)?.origin === REMOTE_ORIGIN ? { annotations: Transaction.addToHistory.of(false) } : null,

@@ -1,5 +1,5 @@
 // Image files: which project files are images Typst (and the browser) can show, by name, and their media types.
-// See ../images.ts.
+// See images in ../images.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 import { FileContent } from '../../../core/project/project';
 

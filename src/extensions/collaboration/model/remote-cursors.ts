@@ -1,5 +1,4 @@
-// RemoteCursors: other users' carets and selections over Yjs awareness, reported as presences.
-// See model.ts.
+// Other users' carets and selections over Yjs awareness. See Collaboration in model.ts.
 import type { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 import { ProjectPath } from '../../../core/paths/paths';
@@ -8,9 +7,8 @@ import type { User } from '../../../core/user/user';
 import type { PlacedPresence } from '../presence/presence';
 
 /**
- * Presence: publishes the local user's selection through y-protocols
- * awareness, and reports the other users' places, in every file, through
- * `onPresence` (only when they changed). Positions travel as Y relative
+ * Publishes the local user's selection through y-protocols awareness, and reports the other users' places, in every
+ * file, through `onPresence` (only when they changed). Positions travel as Y relative
  * positions, so they stay on their characters while anyone edits; they are
  * resolved again after every change of the shared texts and every presence
  * update (once per microtask, after the editors have taken the change).

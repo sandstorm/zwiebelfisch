@@ -1,4 +1,4 @@
-// TextBinding: a TypstDocument bound to a shared Y.Text, both ways (as y-codemirror binds an editor). See model.ts.
+// A TypstDocument bound to a shared Y.Text, both ways (as y-codemirror binds an editor). See Collaboration in model.ts.
 import type * as Y from 'yjs';
 import { SourceRange, type TextChange, type TypstDocument } from '../../../core/typst-document/typst-document';
 import type { Disposable } from '../../../core/disposable/disposable';
