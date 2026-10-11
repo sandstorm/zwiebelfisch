@@ -39,11 +39,6 @@ function noDom(message) {
 export const layers = [
   { importers: '^src/core/', forbidden: '^src/(?!core/)', message: 'core/ imports only core/.' },
   {
-    importers: '^src/ui/([^/]+)/',
-    forbidden: '^src/(?!core/|ui/$1/)',
-    message: 'ui/ imports only core/: a feature-neutral widget knows no host, extension or other widget.',
-  },
-  {
     importers: '^src/hosts/',
     forbidden: '^src/(extensions|typst-editor|typst-editor-element|testing)/',
     message: "hosts never import extensions/, testing/ or typst-editor/ (a host's tests use its own nodes and specs).",
@@ -60,8 +55,8 @@ export const layers = [
   },
   {
     importers: '^src/extensions/[^/]+/model/',
-    forbidden: '^src/(hosts|ui|typst-editor|typst-editor-element)/',
-    message: "model/ builds on core/ only: hosts and ui/ are views (the extension's view folders use them).",
+    forbidden: '^src/(hosts|typst-editor|typst-editor-element)/',
+    message: "model/ builds on core/ only: hosts are views (the extension's view folders use them).",
   },
   {
     importers: '^(?!src/testing/)(?!.*\\.test\\.ts$)',
@@ -89,7 +84,7 @@ export const reExportExceptions = [
 // importing file's path from the repository root.
 export const boundaries = {
   srcRoot: fileURLToPath(new URL('src', import.meta.url)),
-  groupingFolders: ['core', 'extensions', 'hosts', 'ui'],
+  groupingFolders: ['core', 'extensions', 'hosts'],
   exceptions: [
     {
       target: 'extensions/collaboration/model/shared-project.ts',

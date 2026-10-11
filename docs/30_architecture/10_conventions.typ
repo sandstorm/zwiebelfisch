@@ -15,7 +15,7 @@ How code is written here. `mise run quality` enforces what it can (@architecture
 
 == Modules and folders <architecture-conventions-modules>
 
-- A module is `core/<name>/`, `hosts/<name>/`, `extensions/<name>/`, `ui/<name>/`, `typst-editor/`, `typst-editor-element/` or `testing/`. From outside, only its *entry file* may be imported. The entry lives inside its folder.
+- A module is `core/<name>/`, `hosts/<name>/`, `extensions/<name>/`, `typst-editor/`, `typst-editor-element/` or `testing/`. From outside, only its *entry file* may be imported. The entry lives inside its folder.
 - *The entry defines the API*; the most important code lives there. Internal files import the entry's types; they may use its values at runtime, never while modules load.
 - Subfolders (`model/`, `visual-view/`, `worker/`) are layer or concept folders without entries; files import each other directly.
 - *No re-exports* (`export … from`, forwarding an imported name), except `src/index.ts`, the package entry. An outside caller needing an internal name means the code belongs in the entry, or the concept is a module of its own (`core/typst-syntax`, `hosts/prosemirror-typst`). Split a concept out when its types and class form an API of their own, so entries don't grow into type collections.
@@ -28,10 +28,9 @@ How code is written here. `mise run quality` enforces what it can (@architecture
   columns: (auto, 1fr, 1fr),
   table.header[Layer][May use][Must not use],
   [`core/`], [other `core/` modules], [the DOM, editor libraries, Yjs, anything outside `core/`],
-  [`ui/<name>/`], [the DOM, `core/`], [hosts, extensions, other widgets],
-  [`hosts/`], [the DOM, editor libraries, `core/`, `ui/`], [extensions, `typst-editor/`, `testing/`],
-  [`extensions/<name>/`], [hosts' entries, `core/`, `ui/`], [other extensions],
-  [`extensions/<name>/model/`], [`core/`], [the DOM, editor libraries, hosts, `ui/`, the extension's view folders],
+  [`hosts/`], [the DOM, editor libraries, `core/`], [extensions, `typst-editor/`, `testing/`],
+  [`extensions/<name>/`], [hosts' entries, `core/`], [other extensions],
+  [`extensions/<name>/model/`], [`core/`], [the DOM, editor libraries, hosts, the extension's view folders],
   [`typst-editor/`, `typst-editor-element/`], [every module's entry], [—],
   [`testing/`], [every module's entry], [being imported by non-test code],
 )
@@ -44,7 +43,7 @@ How code is written here. `mise run quality` enforces what it can (@architecture
 
 - *VS Code's names and shapes* where a concept matches: `activate`, `subscriptions`, `register…Provider`, `provide…` / `resolve…`, `onDid<Verb>`, `executeCommand`, `getConfiguration`, `showInputBox`, `showQuickPick`, `show…Message`. Rename ours to them; never "ours, in VS Code terms" comments.
 - *Contributions register once, at activation*; hosts apply them to every view made later. Each returns a `Disposable` pushed to `context.subscriptions`.
-- *One disposal verb*: `dispose()` for everything with a lifetime (hosts, views, `ui/` widgets, `Project`, the widget). Only what a library calls keeps its name (ProseMirror node views, CodeMirror view plugins: `destroy`).
+- *One disposal verb*: `dispose()` for everything with a lifetime (hosts, views, `Project`, the widget). Only what a library calls keeps its name (ProseMirror node views, CodeMirror view plugins: `destroy`).
 - *Competing contributions* have an explicit tie-breaker. Registration order counts only within one extension, never between extensions.
 
 #table(
@@ -61,8 +60,8 @@ How code is written here. `mise run quality` enforces what it can (@architecture
 - *Events*: `readonly onDid<Verb>: Event<T>`; subscribing returns a `Disposable`. Never `onChange(listener) → unsubscribe`. An event about one object takes it as an argument (`onDidChangeGrammar(schema, listener)`). Option callbacks passed in (`onFilesChange`) are fine.
 - *Commands*: string ids `<extension>.<verb>`; `executeCommand<T>(id, ...args): Promise<T>`; the handler runs synchronously, so user activation, selection and focus stay intact. A shortcut on the widget handle exists only when documented (`exportPdf`).
 - *Settings*: declared in `contributes.configuration` (`<extension>.<key>`, type, default, description), read with `getConfiguration`, followed with `onDidChangeConfiguration`. `createTypstEditor` takes content and host wiring only, no per-feature options.
-- *CSS*: every host and `ui/` module brings its own `<name>.css`. The workbench adds the hosts' (`styleSheet`); whoever uses a `ui/` widget registers the widget's (`PopupMenu.styleSheet`). `typst-editor.css` keeps only the `--te-*` tokens and the frame. An extension brings `<name>.css` and registers it (`registerStyleSheet`), with class names of its own (`typst-<extension>`, `typst-<extension>__…`, `typst-<extension>--…`; on a host's element too, e.g. through Tiptap's `HTMLAttributes` or a renderer's `className`) and colors from the `--te-*` tokens. It never styles a host's classes; the widget's `data-scheme` is the one shared hook. Order: tokens and frame, hosts, extensions.
-- *Talking to the user* goes through `window` (`show…Message`, `showInputBox`, `showQuickPick`, `showSaveDialog`), never hand-made popovers.
+- *CSS*: every host brings its own `<name>.css`, which the workbench adds (`styleSheet`). `typst-editor.css` keeps only the `--te-*` tokens and the frame. An extension brings `<name>.css` and registers it (`registerStyleSheet`), with class names of its own (`typst-<extension>`, `typst-<extension>__…`, `typst-<extension>--…`; on a host's element too, e.g. through Tiptap's `HTMLAttributes` or a renderer's `className`) and colors from the `--te-*` tokens. It never styles a host's classes; the widget's `data-scheme` is the one shared hook. Order: tokens and frame, hosts, extensions.
+- *Talking to the user* goes through `window` (`show…Message`, `showInputBox`, `showQuickPick`, `showSaveDialog`, `showContextMenu` for a contributed menu), never hand-made popovers or menus.
 
 == Naming and types <architecture-conventions-naming>
 

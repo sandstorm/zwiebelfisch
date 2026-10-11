@@ -28,13 +28,11 @@ describe('layers', () => {
     expect(await broken('src/hosts/workbench/workbench.ts', "import { Preview } from '../preview/preview';")).toEqual([]);
   });
 
-  it('keeps ui/ to core/: no host, extension or testing/ (popup-menu is the only widget)', async () => {
-    const file = 'src/ui/popup-menu/popup-menu.ts';
-    expect(await broken(file, "import { Preview } from '../../hosts/preview/preview';")).toEqual(['local/dependencies']);
-    expect(await broken(file, "import { files } from '../../extensions/files/files';")).toEqual(['local/dependencies']);
-    expect(await broken('src/ui/popup-menu/popup-menu.test.ts', "import { schema } from '../../testing/testing';")).toEqual(['local/dependencies']);
-    expect(await broken(file, "import { Disposable } from '../../core/disposable/disposable';")).toEqual([]);
-    expect(await broken('src/ui/popup-menu/popup-menu.test.ts', "import { PopupMenu } from './popup-menu';")).toEqual([]);
+  it("enters a host's concept folder only through the host's entry (the window's menus: window.showContextMenu)", async () => {
+    const file = 'src/extensions/files/workbench/file-panel.ts';
+    expect(await broken(file, "import { ContextMenu } from '../../../hosts/window/menus/context-menu';")).toEqual(['local/entry-imports']);
+    expect(await broken(file, "import type { WindowApi } from '../../../hosts/window/window';")).toEqual([]);
+    expect(await broken('src/hosts/window/window.ts', "import { ContextMenu } from './menus/context-menu';")).toEqual([]);
   });
 
   it('lets only tests import testing/', async () => {
@@ -52,13 +50,12 @@ describe('layers', () => {
     expect(await broken(file, 'export const width = window.innerWidth;')).toEqual(['no-restricted-globals']);
   });
 
-  it("keeps an extension's model/ pure: no editor library, no DOM, no view folder, no host or ui/", async () => {
+  it("keeps an extension's model/ pure: no editor library, no DOM, no view folder, no host", async () => {
     const file = 'src/extensions/labels/model/label-index.ts';
     expect(await broken(file, "import { Node } from '@tiptap/pm/model';")).toEqual(['no-restricted-imports']);
     expect(await broken(file, 'export const body = document.body;')).toEqual(['no-restricted-globals']);
     expect(await broken(file, 'export let element: HTMLElement | undefined;')).toEqual(['@typescript-eslint/no-restricted-types']);
     expect(await broken(file, "import { references } from '../visual-view/visual-view';")).toEqual(['local/dependencies']);
-    expect(await broken(file, "import { PopupMenu } from '../../../ui/popup-menu/popup-menu';")).toEqual(['local/dependencies']);
     expect(await broken(file, "import type { Workbench } from '../../../hosts/workbench/workbench';")).toEqual(['local/dependencies']);
     expect(await broken(file, "import { ProjectPath } from '../../../core/paths/paths';")).toEqual([]);
     expect(await broken(file, "import { scan } from './scan';")).toEqual([]);
