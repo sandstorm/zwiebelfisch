@@ -1,8 +1,8 @@
 // Tests for languages.ts (LanguagesHost): merging the links of the providers for a document's language, resolving them
-// through their provider; a document's primary link; the declared languages by ending; the help sheets by language.
+// through their provider; a document's primary link and the link at an offset; the declared languages by ending; the help sheets by language.
 import { describe, expect, it, vi } from 'vitest';
 import { ProjectPath } from '../../core/paths/paths';
-import { SourceRange } from '../../core/typst-document/typst-document';
+import { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
 import { type DocumentLink, type DocumentLinkProvider, LanguagesHost } from './languages';
 
 const document = { path: ProjectPath.of('/main.typ'), languageId: 'typst', text: 'aaaa bbbb cccc' };
@@ -55,7 +55,7 @@ describe('LanguagesHost', () => {
     expect(links.resolveDocumentLink(resolved).target).toBe(ProjectPath.of('/a.typ'));
   });
 
-  it('gives the primary link of a document: the first leading to a file, titled as the hover offers it, opening it', () => {
+  it('gives the primary link of a document: the first leading somewhere, titled as the hover offers it, opening it', () => {
     const open = vi.fn();
     const links = new LanguagesHost({ ...targets, open });
     const to = (file: string) => (link: DocumentLink) => ({ ...link, target: ProjectPath.of(file) });
@@ -67,11 +67,44 @@ describe('LanguagesHost', () => {
     expect(primary.isFollowEvent({ ctrlKey: true, metaKey: true } as MouseEvent)).toBe(true);
     expect(primary.isFollowEvent({ ctrlKey: false, metaKey: false } as MouseEvent)).toBe(false);
     primary.follow();
-    expect(open).toHaveBeenCalledWith(ProjectPath.of('/flow.drawio.png'));
+    expect(open).toHaveBeenCalledWith(ProjectPath.of('/flow.drawio.png'), undefined);
     const tooltipped = new LanguagesHost(targets);
     tooltipped.registerDocumentLinkProvider({}, provider('Edit diagram', [[10, 14]], to('/b.mmd')));
     expect(tooltipped.primaryLink(document)?.title).toMatch(/^Edit diagram \(/);
     expect(new LanguagesHost(targets).primaryLink(document)).toBeNull();
+  });
+
+  it('gives the link at an offset (both ends included) that leads somewhere, resolved anew each time, following it to its selection', () => {
+    const open = vi.fn();
+    const links = new LanguagesHost({ ...targets, open });
+    let at = 3;
+    const provide = vi.fn(() => [{ range: SourceRange.of({ from: 5, to: 9 }) }, { range: SourceRange.of({ from: 10, to: 14 }) }]);
+    const resolve = vi.fn((link: DocumentLink) =>
+      link.range.from === 5 ? { ...link, target: ProjectPath.of('/ch2.typ'), selection: SourceRange.of({ from: at, to: at }), tooltip: 'Go to Figure · Setup' } : link,
+    );
+    links.registerDocumentLinkProvider({}, { provideDocumentLinks: provide, resolveDocumentLink: resolve });
+    expect(links.linkAt(document, SourceOffset.of(4))).toBeNull();
+    expect(links.linkAt(document, SourceOffset.of(12))).toBeNull(); // leads nowhere
+    const link = links.linkAt(document, SourceOffset.of(9))!;
+    expect(link.title).toMatch(/^Go to Figure · Setup \((⌘|Ctrl)\+click or Alt\+Enter\)$/);
+    at = 7; // the label moved since
+    link.follow();
+    expect(open).toHaveBeenCalledWith(ProjectPath.of('/ch2.typ'), { from: 7, to: 7 });
+    expect(links.linkAt(document, SourceOffset.of(5))).not.toBeNull();
+    expect(provide).toHaveBeenCalledTimes(1); // the same text: its links are kept
+    links.linkAt({ ...document, text: 'aaaa bbbb cccc!' }, SourceOffset.of(5));
+    expect(provide).toHaveBeenCalledTimes(2);
+  });
+
+  it('titles a link to a URL by its address and opens it', () => {
+    const open = vi.fn();
+    const links = new LanguagesHost({ ...targets, open });
+    const url = new URL('https://typst.app/docs');
+    links.registerDocumentLinkProvider({}, { provideDocumentLinks: () => [{ range: SourceRange.of({ from: 0, to: 4 }), target: url }] });
+    const link = links.linkAt(document, SourceOffset.of(2))!;
+    expect(link.title).toMatch(/^Open https:\/\/typst\.app\/docs \(/);
+    link.follow();
+    expect(open).toHaveBeenCalledWith(url, undefined);
   });
 
   it('names the language of a file by the longest declared ending, in any case; undefined without one', () => {

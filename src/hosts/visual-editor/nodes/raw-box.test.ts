@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Editor } from '@tiptap/core';
 import { Disposable } from '../../../core/disposable/disposable';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { VisualEditor, VisualEditorHost, type RawBoxLink, type VisualEditorContribution } from '../visual-editor';
+import { VisualEditor, VisualEditorHost, type FollowableLink, type VisualEditorContribution } from '../visual-editor';
 
 function setup(text: string, contributions: readonly VisualEditorContribution[] = []) {
   const parent = document.createElement('div');
@@ -168,10 +168,10 @@ describe('raw boxes', () => {
 const modifier = { ctrlKey: true, metaKey: true };
 
 /** Raw boxes drawn as a picture, each leading where `link` says ("Edit"; Ctrl or ⌘ held follows). */
-function setupLinked(text: string, link: (follow: () => void) => RawBoxLink | null = (follow) => ({ title: 'Edit (Ctrl+click or Alt+Enter)', isFollowEvent: (event) => event.ctrlKey, follow })) {
+function setupLinked(text: string, link: (follow: () => void) => FollowableLink | null = (follow) => ({ title: 'Edit (Ctrl+click or Alt+Enter)', isFollowEvent: (event) => event.ctrlKey, follow })) {
   const follow = vi.fn();
   const linkOf = vi.fn(() => link(follow));
-  const visualEditor = new VisualEditorHost({ linkOf });
+  const visualEditor = new VisualEditorHost({ linkOf, linkAt: () => null });
   visualEditor.registerRawBoxRenderer(() => ({ renders: () => true, render: async () => ({ url: 'data:image/png;base64,' }), onDidChange: () => new Disposable(() => {}) }));
   const parent = document.body.appendChild(document.createElement('div'));
   new VisualEditor(parent, new TypstDocument(text), visualEditor);

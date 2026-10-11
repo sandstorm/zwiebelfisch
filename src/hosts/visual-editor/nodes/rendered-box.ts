@@ -3,7 +3,7 @@
 import type { Node } from '@tiptap/pm/model';
 import type { Disposable } from '../../../core/disposable/disposable';
 import type { SourceOffset } from '../../../core/typst-document/typst-document';
-import type { RawBoxLink, RawBoxPicture, RawBoxRenderer } from '../visual-editor';
+import type { FollowableLink, RawBoxPicture, RawBoxRenderer } from '../visual-editor';
 
 /**
  * The rendered face of a raw box: its renderer's picture, shown instead of
@@ -80,7 +80,7 @@ export class RenderedBox {
   private followLinkOnHover(): void {
     const picture = this.picture;
     const doc = picture.ownerDocument;
-    let link: RawBoxLink | null = null;
+    let link: FollowableLink | null = null;
     const track = (event: MouseEvent | KeyboardEvent) => picture.classList.toggle('typst-visual__rendering--link', link?.isFollowEvent(event) ?? false);
     picture.addEventListener('mouseenter', (event) => {
       link = this.host.link();
@@ -144,7 +144,7 @@ export interface BoxHost {
   /** The picture was clicked (focus the code, or select the box). */
   activate(): void;
   /** Where the box leads now, or nowhere. */
-  link(): RawBoxLink | null;
+  link(): FollowableLink | null;
 }
 
 /** Once the image at `url` is decoded (or failed to; then the box shows it as the browser does), where the browser can tell. */

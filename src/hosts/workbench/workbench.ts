@@ -300,7 +300,7 @@ export class WorkbenchHost implements Workbench {
   /** The window, for the widget's `activeFile`. */
   readonly window: WindowHost;
   readonly #languages = new LanguagesHost({
-    open: (path) => this.open(path),
+    open: (target, selection) => (typeof target === 'string' ? this.open(target, { selection }) : this.#openExternal(target)),
     executeCommand: (id, ...args) => this.commands.executeCommand(id, ...args),
   });
   readonly #scm = new ScmHost();
@@ -312,12 +312,16 @@ export class WorkbenchHost implements Workbench {
   readonly #extensions: ExtensionHost;
   readonly #styleSheets: StyleSheets;
   readonly #ownStyles: Disposable;
-  /** Raw boxes' pictures follow the primary link of the box's Typst (see `#showDocumentLinks`). */
+  /** Raw boxes' pictures follow the primary link of the box's Typst, the text the link under the pointer. */
   readonly #visualEditor = new VisualEditorHost({
     linkOf: (src, document) => {
       const path = this.project.pathOf(document);
       // the providers read Typst markup; a figure's body is written in code (`image(..)`, no `#`)
       return path ? this.#languages.primaryLink({ path, languageId: 'typst', text: src.startsWith('#') ? src : `#${src}` }) : null;
+    },
+    linkAt: (document, offset) => {
+      const path = this.project.pathOf(document);
+      return path ? this.#languages.linkAt({ path, languageId: 'typst', text: document.text }, offset) : null;
     },
   });
   readonly #sourceEditors = new SourceEditorHost();
@@ -442,6 +446,11 @@ export class WorkbenchHost implements Workbench {
     this.#shown.fire(path);
     this.#editorTitle.update();
     if (changed) this.options.onOpen?.(path);
+  }
+
+  /** Opens a link's web or mail address in a new tab, cut off from this page; any other scheme (`javascript:`) is ignored. */
+  #openExternal(url: URL): void {
+    if (EXTERNAL_SCHEMES.has(url.protocol)) this.host.ownerDocument.defaultView?.open(url.href, '_blank', 'noopener');
   }
 
   registerSidePanel(id: string, options: SidePanelOptions): SidePanel {
@@ -602,7 +611,8 @@ export class WorkbenchHost implements Workbench {
 
   /**
    * The Typst files' language, `typst` (`.typ`), and its registered document links in every Source editor and in the
-   * code of every raw box (in its file); a raw box's picture follows the primary one (`#visualEditor`).
+   * code of every raw box (in its file); a raw box's picture follows the primary one, the Visual editor's text the one
+   * under the pointer (`#visualEditor`).
    */
   #showDocumentLinks(): void {
     this.#languages.declare([{ id: 'typst', extensions: ['.typ'] }]);
@@ -668,3 +678,6 @@ function previewIcon(doc: Document): SVGSVGElement {
 /** Search everywhere's rail button: a magnifier. */
 const SEARCH_ICON =
   '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3.5 3.5"/></svg>';
+
+/** The schemes of the external links the widget opens. */
+const EXTERNAL_SCHEMES = new Set(['http:', 'https:', 'mailto:']);

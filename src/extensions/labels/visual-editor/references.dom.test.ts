@@ -66,7 +66,7 @@ describe('references in the Visual editor', () => {
     expect(chip(parent, 'method').textContent).toBe('method');
     expect(chip(parent, 'method').dataset.hint).toBe('Section · Method');
     expect(chip(parent, 'fig:compile-times').dataset.hint).toBe('Figure · Cold (dark) and incremental (light)…');
-    expect(chip(parent, 'results').title).toBe('Section · Results (in chapters/results.typ)');
+    expect(chip(parent, 'results').hasAttribute('title')).toBe(false); // the hover is its document link's
     expect(parent.querySelector('.typst-labels__ref--unknown')).toBeNull();
   });
 

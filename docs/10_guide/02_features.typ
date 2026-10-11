@@ -67,7 +67,7 @@ with the #link("https://typst.app")[Typst] compiler (`typst compile`).
   columns: 2,
   [Construct], [How],
   [Bold, italic, underline, inline code], [Ctrl+B, Ctrl+I, Ctrl+U, Ctrl+E (⌘B, ⌘I, ⌘U, ⌘E on Mac), or the bar over a selection. Underline is `#underline[..]`; one with arguments (`stroke:`, `offset:`) stays a raw box.],
-  [Link], [Ctrl+K (⌘K on Mac), or "Link" in the bar over a selection.],
+  [Link], [Ctrl+K (⌘K on Mac), or "Link" in the bar over a selection. Ctrl+click (⌘-click on Mac) on a link, or Alt+Enter in it, opens its address in a new tab; a plain click edits it.],
   [Lists], [List buttons: bulleted, numbered, task list (`- [ ] todo`). Tab nests.],
   [Quote], [Ctrl+Shift+B (⌘⇧B on Mac), or Insert → Quote.],
   [Code block], [Insert → Code block. Its language is a field.],
@@ -166,7 +166,8 @@ All runs used the machine in @fig:setup.
 - Insert → Add label: type the name into a new tag (`fig:`, `tab:` or `sec:` to start with).
 - Select text in a block without a label: the selection's bar offers Add label, too.
 - Click a tag: "Rename…" (updates the references in every file), "Rename without updating references…", "Remove label".
-- A reference shows as a chip naming its target ("Figure · The measurement setup."); a reference to a missing label is marked.
+- A reference shows as a chip naming its target; a reference to a missing label is marked.
+- A reference, and `#link(<label>)[..]`, leads to its label, in whichever file: hovering says where ("Go to Figure · The measurement setup in method.typ (⌘+click or Alt+Enter)"); Ctrl+click (⌘-click on Mac) on it, or Alt+Enter on the selected chip or with the cursor in it, opens that file at the label. In the Source editor and the Visual editor alike; a plain click edits.
 - Type `@` for a list of the project's labels, found by name or by what they label. Enter, Tab or a click inserts the reference; so does a space or punctuation right after a whole name (`@intro.`).
 
 == Page layout <guide-features-page-layout>
@@ -284,7 +285,8 @@ File links:
 #bibliography("references.bib")
 ```
 
-- Paths in `#import`, `#include`, `image`, `read`, `bibliography`, `json` / `csv` / `yaml` / `toml` / `xml` / `cbor` open their file: Ctrl+click or Alt+Enter (⌘-click or ⌥↩ on Mac) in the Source editor and in a raw box's code. In the Visual editor a box's picture follows the first path that leads to a file the same way (Alt+Enter on the selected box); hovering says where.
+- Paths in `#import`, `#include`, `image`, `read`, `bibliography`, `json` / `csv` / `yaml` / `toml` / `xml` / `cbor` open their file: Ctrl+click or Alt+Enter (⌘-click or ⌥↩ on Mac) in the Source editor and in a raw box's code. In the Visual editor a box's picture follows its first link the same way (Alt+Enter on the selected box); hovering says where.
+- Every link follows this rule: references and links to labels (@guide-features-labels), web and mail addresses (bare URLs, `#link("https://…")`, opened in a new tab).
 - A missing `.typ` file can be created from there.
 - A file the main file includes gets "← previous file" / "next file →" links in reading order.
 - Back and forward, as in VS Code: after any change of the shown file (a link, a click in the preview, the file panel, …), "← Back to _file_" above a supplementary file (a Mermaid diagram, a spreadsheet, a text file, …) returns to it, in the editor it was shown in, with its selection (Typst files). After going back, "Forward to _file_ →" returns. Typst files show the reading order instead; the keys work everywhere. Keys: Ctrl+Alt+- back, Ctrl+Shift+- forward (⌃- / ⌃⇧- on Mac). The last 50 files; renamed files keep their place, deleted ones drop out.

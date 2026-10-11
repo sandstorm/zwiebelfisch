@@ -6,7 +6,7 @@ import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { Decoration, EditorView, NodeView, NodeViewConstructor } from '@tiptap/pm/view';
 import { minimalChange, type SourceOffset } from '../../../core/typst-document/typst-document';
-import { setRawBoxDecorations, type RawBoxLink, type RawBoxRenderer, type RawBoxTools, type RawBoxToolsHost, type TypstNodeSpec, type VisualEditorContext } from '../visual-editor';
+import { setRawBoxDecorations, type FollowableLink, type RawBoxRenderer, type RawBoxTools, type RawBoxToolsHost, type TypstNodeSpec, type VisualEditorContext } from '../visual-editor';
 import { posToSource } from '../../prosemirror-typst/prosemirror-typst';
 import { codeColors } from '../../source-editor/source-editor';
 import { RenderedBox } from './rendered-box';
@@ -33,7 +33,7 @@ export interface RawBoxes {
   /** Extensions of every box's code editor. */
   readonly codeExtensions: readonly CodeExtension[];
   /** Where the picture of the box whose Typst is `src` leads (the primary document link of its Typst), or nowhere. */
-  linkOf(src: string): RawBoxLink | null;
+  linkOf(src: string): FollowableLink | null;
   /** What the specs ask the editor for, by node type name (a box's title and tools). */
   readonly nodeViews: ReadonlyMap<string, NonNullable<TypstNodeSpec['view']>>;
 }
