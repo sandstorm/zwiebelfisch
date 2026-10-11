@@ -14,6 +14,8 @@ export class ToolbarMenu {
   private readonly trigger: HTMLButtonElement;
   private readonly list: HTMLElement;
   private readonly glyph: HTMLElement;
+  /** The icon on the trigger. */
+  private shown = '';
   /** Closes on a mousedown outside; the composed path sees through shadow roots (`<typst-editor>`). */
   private readonly outside = (event: MouseEvent) => {
     if (!event.composedPath().includes(this.element)) this.close();
@@ -63,7 +65,9 @@ export class ToolbarMenu {
 
   /** Shows `icon()` on the trigger as it is now. */
   refresh(): void {
-    this.glyph.innerHTML = this.icon();
+    // after every transaction: parse the icon only when it changed
+    const icon = this.icon();
+    if (icon !== this.shown) this.glyph.innerHTML = this.shown = icon;
   }
 
   dispose(): void {
