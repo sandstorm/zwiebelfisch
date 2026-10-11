@@ -3,6 +3,9 @@
 
 == What it does
 
+#import "../template.typ": screenshot
+#screenshot("styling-and-shortcuts", width: 60%)
+
 The Visual editor's formatting works as in a word processor (#link("https://tiptap.dev/")[Tiptap] on #link("https://prosemirror.net/")[ProseMirror]): the usual shortcuts, a bar over a selection, an Insert menu and a text style menu. Each writes Typst:
 
 ```typ

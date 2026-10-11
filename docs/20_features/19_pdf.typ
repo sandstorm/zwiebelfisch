@@ -3,6 +3,9 @@
 
 == What it does
 
+#import "../template.typ": screenshot
+#screenshot("pdf", width: 60%)
+
 "Download PDF" in the preview toolbar opens the export options; "Download" saves the document as a PDF, named after the main file (`main.pdf`).
 
 - "Include comments": off, the final version, notes removed (a range note keeps its text); on, the margin notes as the preview shows them (@features-comments). Choices are kept for the browser session.

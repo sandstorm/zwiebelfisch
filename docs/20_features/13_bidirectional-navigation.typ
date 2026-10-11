@@ -3,6 +3,9 @@
 
 == What it does
 
+#import "../template.typ": screenshot
+#screenshot("bidirectional-navigation")
+
 The editors and the preview show the same place, both ways. Reading page 12 of the preview, a click on a typo there puts the cursor on it in the editor, opening its chapter's file if needed; writing in a chapter, the preview scrolls along.
 
 - *Preview → editor:* a click on text in the preview selects that text in the editor, opening its file if needed. The preview outlines what the click selected until the next edit or until the selection moves away.

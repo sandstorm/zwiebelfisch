@@ -3,6 +3,9 @@
 
 == What it does
 
+#import "../template.typ": screenshot
+#screenshot("multi-file-projects")
+
 A book's main file pulls in its chapters; chapters read data, images and the bibliography from other files:
 
 ```typ

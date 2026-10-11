@@ -3,6 +3,9 @@
 
 == What it does
 
+#import "../template.typ": screenshot
+#screenshot("invisible-characters", width: 70%)
+
 Shows what is normally blank, as a word processor's formatting marks. The paragraph `Typst  is~fast.` (two spaces after "Typst") shows in the Visual editor as `Typst··is°fast.¶`.
 
 - Visual editor: `·` for a space (each one, also several in a row), `°` for a non-breaking space (Typst `~`), `→` for a tab, `↵` for a line break (`\`), `¶` at the end of each paragraph and heading.

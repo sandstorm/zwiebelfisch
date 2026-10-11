@@ -3,6 +3,9 @@
 
 == What it does
 
+#import "../template.typ": screenshot
+#screenshot("spreadsheets")
+
 The measured runs live in `data/runs.ic`, a spreadsheet edited in #link("https://www.ironcalc.com")[IronCalc]; the report shows the sheet as a table and quotes one value:
 
 ```typ

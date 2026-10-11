@@ -3,6 +3,9 @@
 
 == What it does
 
+#import "../template.typ": screenshot
+#screenshot("tables", width: 60%)
+
 A Typst `#table`, edited cell by cell in the Visual editor:
 
 ```typ

@@ -3,6 +3,9 @@
 
 == What it does
 
+#import "../template.typ": screenshot
+#screenshot("mermaid-diagrams")
+
 Mermaid diagrams are text, drawn by the #link("https://typst.app/universe/package/merman/")[merman] package while Typst compiles.
 
 From a file (`diagrams/measurement.mmd`, opens in the text editor):

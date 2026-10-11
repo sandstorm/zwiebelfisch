@@ -5,6 +5,9 @@
 
 == What it does
 
+#import "../template.typ": screenshot
+#screenshot("comments")
+
 Comments are #link("https://typst.app/universe/package/drafting/")[drafting] margin notes in the Typst source: they travel through saves, git, diffs and collaboration like any other text.
 
 Select "grows linearly", press Ctrl+Alt+M (⌘⌥M on Mac), type the note; a co-author replies on the card. The file then holds:

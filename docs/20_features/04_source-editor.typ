@@ -3,6 +3,9 @@
 
 == What it does
 
+#import "../template.typ": screenshot
+#screenshot("source-editor", width: 60%)
+
 The Source tab of a Typst file shows its text as written, in #link("https://codemirror.net/")[CodeMirror]: Typst highlighting, line numbers, search.
 
 ```typ

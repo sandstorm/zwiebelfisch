@@ -3,6 +3,9 @@
 
 == What it does
 
+#import "../template.typ": screenshot
+#screenshot("page-layout")
+
 ```typ
 #set page(paper: "a4", margin: 2.5cm)
 #outline()
