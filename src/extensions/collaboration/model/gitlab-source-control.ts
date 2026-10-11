@@ -1,4 +1,4 @@
-// GitLabSourceControl. See model.ts.
+// The commits of a GitLab-backed room. See Collaboration in model.ts.
 import type * as Y from 'yjs';
 import type { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
@@ -21,12 +21,8 @@ import {
  * has not (written by the server into the room's meta map) is shown as resource states (M / A / D) and in the status
  * bar ("Not in GitLab: 3 files · 14 min (Ann, Bob)", or "Saved · 01234567"); a conflict with upstream, as long as it
  * lasts, as "!" on its files and a warning entry before that; a failed commit (GitLab unreachable), until the next
- * commit or merge, as a warning entry, too. Shaped as the scm host's `SourceControl`.
- *
- * The GitLab branch behind a room as a source control (`scm.registerSourceControl`): commit asks the server to commit
- * over stateless messages; the server's answers and news are told as messages; what the room has that the branch has
- * not (the server's `meta.changes`), a conflict with upstream (`meta.conflict`) and a failed commit
- * (`meta.commitFailure`) are its resource states and status bar entries.
+ * commit or merge, as a warning entry, too. Shaped as the scm host's `SourceControl`; the server talks to it over
+ * stateless messages and the `meta` map (`changes`, `conflict`, `commitFailure`).
  */
 export class GitLabSourceControl {
   readonly id = 'gitlab';

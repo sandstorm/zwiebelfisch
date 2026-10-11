@@ -1,4 +1,4 @@
-// SharedAssets: the project's non-Typst files in a GitLab-backed room. See model.ts.
+// The project's other files in a GitLab-backed room. See Collaboration in model.ts.
 import type { Disposable } from '../../../core/disposable/disposable';
 import * as Y from 'yjs';
 import { type FileChange, FileContent, type Project } from '../../../core/project/project';

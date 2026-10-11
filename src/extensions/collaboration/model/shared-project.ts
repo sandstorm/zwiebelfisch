@@ -1,4 +1,4 @@
-// SharedProject: the Project's Typst files as Y.Texts in a Y.Doc. See model.ts.
+// The project's Typst files as Y.Texts. See Collaboration in model.ts.
 import type { Disposable } from '../../../core/disposable/disposable';
 import * as Y from 'yjs';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
@@ -17,8 +17,8 @@ import { TextBinding } from './text-binding';
  * Joining: the shared files win. Local Typst files the Y.Doc does not have
  * yet are added to it, so the first client seeds the room. The Y.Doc should
  * be synced with the server before (else two seeds race; the loser's
- * documents then adopt the winner's text). Images and other files are not
- * shared. A rename is a new Y.Text under the new path (the old one is
+ * documents then adopt the winner's text). Other files are SharedAssets'
+ * (GitLab-backed rooms only). A rename is a new Y.Text under the new path (the old one is
  * deleted); the other clients see it as a rename.
  */
 export class SharedProject {

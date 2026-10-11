@@ -1,16 +1,11 @@
-// The collaboration's part of the workbench. See ../collaboration.ts.
+// Other users' places as file decorations, and the warning before leaving. See collaboration in ../collaboration.ts.
 import { Disposable } from '../../../core/disposable/disposable';
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { FileDecorationProvider } from '../../../hosts/window/window';
 import { initials, type PresenceSource } from '../presence/presence';
 
-/**
- * One decoration per other user in a file: their initials in their color, their name as tooltip; closed folders show them, too.
- *
- * Where the other users are, as file decorations (the file panel shows them as badges with their initials), and the
- * browser's warning when leaving would leave changes uncommitted.
- */
+/** One decoration per other user in a file: their initials in their color, their name as tooltip; closed folders show them, too. */
 export function presenceDecorations(presences: PresenceSource): FileDecorationProvider {
   const onDidChangeFileDecorations: Event<readonly ProjectPath[] | undefined> = (listener) => presences.onDidChange(() => listener(undefined));
   return {

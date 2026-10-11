@@ -1,4 +1,3 @@
-// Collaboration. See ../collaboration.ts and docs/10_guide/04_collaboration.typ.
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import type { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
@@ -17,15 +16,14 @@ import { SharedAssets } from './shared-assets';
 import { SharedProject } from './shared-project';
 
 /**
- * Real-time collaboration for one widget: the Typst files' text through a
- * Y.Doc (one per project), the users' cursors
- * through awareness. Only text is shared — the editors never sync
- * directly; they keep following their TypstDocument. In a room backed by a
- * GitLab branch (the server put a base into its `meta` map) the other files
- * are shared too, and `sourceControl` commits to the branch.
+ * The lazily loaded side of collaboration for one widget: one Y.Doc per project, from a Hocuspocus server or from the
+ * host. No DOM, no editor library.
  *
- * Real-time editing over Yjs (a Hocuspocus server, or a Y.Doc the host connects): the lazily loaded chunk of the
- * collaboration extension (no DOM, no editor library).
+ * SharedProject keeps a Y.Text per Typst file and binds each document to it (TextBinding). The editors never sync on
+ * their own; they keep following their TypstDocument. RemoteCursors carries the users' places over awareness. In a room
+ * backed by a GitLab branch (the server put a `baseSha` into the Y.Doc's `meta` map), SharedAssets shares the other
+ * files too, and GitLabSourceControl commits to the branch. The widget reaches all this through CollaborationLink
+ * (../collaboration-link.ts). See docs/10_guide/04_collaboration.typ.
  */
 export class Collaboration {
   private readonly sharedProject: SharedProject;
