@@ -3,9 +3,9 @@ import type { PreviewProgress } from '../preview';
 import type { LoadEvent } from '../worker/protocol';
 
 /**
- * The preview's loading, most important first: a failed engine, the engine's download, packages and fonts downloading
- * during a compile, then "Compiling…" until the first compile answered. Null once nothing is pending. Made from the
- * worker's load events, as one `PreviewProgress`; no DOM.
+ * The preview's loading, most important first: a failed or crashed engine, the engine's download, packages and fonts
+ * downloading during a compile, then "Compiling…" until the first compile answered. Null once nothing is pending. Made
+ * from the worker's load events and what the preview tells, as one `PreviewProgress`; no DOM.
  */
 export class LoadState {
   #engine: Engine = { kind: 'loading', loaded: 0, total: null };
@@ -34,6 +34,18 @@ export class LoadState {
     }
   }
 
+  /** The engine crashed; `restarting`: a new one is started, else it stays off. */
+  crashed(message: string, restarting: boolean): void {
+    this.#engine = { kind: 'crashed', message, restarting };
+    this.#packages = [];
+    this.#font = null;
+  }
+
+  /** A new engine is loading (after a crash). */
+  started(): void {
+    this.#engine = { kind: 'loading', loaded: 0, total: null };
+  }
+
   /** A compile answered (pages or errors): "Compiling…" is no longer shown. */
   compiled(): void {
     this.#compiled = true;
@@ -42,6 +54,10 @@ export class LoadState {
   current(): PreviewProgress | null {
     const engine = this.#engine;
     if (engine.kind === 'failed') return { kind: 'failed', title: 'The Typst compiler could not be loaded.', detail: engine.message, fraction: null };
+    if (engine.kind === 'crashed') {
+      const title = engine.restarting ? 'The Typst compiler crashed and was restarted.' : 'The Typst compiler crashed again; it starts again with the next edit.';
+      return { kind: 'failed', title, detail: engine.message, fraction: null };
+    }
     if (engine.kind === 'loading') return engineProgress(engine.loaded, engine.total);
     if (this.#packages.length > 0) {
       return { kind: 'packages', title: `Downloading ${this.#packages.map(packageName).join(', ')}…`, detail: null, fraction: null };
@@ -52,7 +68,11 @@ export class LoadState {
   }
 }
 
-type Engine = { kind: 'loading'; loaded: number; total: number | null } | { kind: 'ready' } | { kind: 'failed'; message: string };
+type Engine =
+  | { kind: 'loading'; loaded: number; total: number | null }
+  | { kind: 'ready' }
+  | { kind: 'failed'; message: string }
+  | { kind: 'crashed'; message: string; restarting: boolean };
 
 function engineProgress(loaded: number, total: number | null): PreviewProgress {
   const title = 'Loading the Typst compiler…';

@@ -65,6 +65,8 @@ The Typst compiler, SVG and PDF export and hit-testing: Rust (`crates/typst-engi
 - `typst-packages`: `withPackages(engine, fetchPackage?, onDidChangeDownloads?)` compiles, downloads the missing `@preview` packages, compiles again; `onDidChangeDownloads` hears which packages are on the way.
 - Conventions: UTF-16 offsets (`SourceOffset`), 0-based pages (`PageIndex`; people see `index + 1`), points from the page's top-left (`Pt`), project or package paths (`@preview/name:0.1.0/lib.typ`).
 - A diagnostic's path is parsed where the wasm's report is read: a `ProjectPath`, or `null` without location or in a package file.
+- *Memory*: Typst memoizes (comemo) in one global cache that only `comemo::evict` shrinks. The engine evicts after every `compile` and `exportPdf` what the last 10 did not use, as `typst watch` does. Without it, every compile of an edited document added to the cache (7 MB per compile of a 200-section document; the docs book reached the wasm's 4 GB after about 300 compiles) until an allocation failed.
+- *Crashes*: a panic (a bug in Typst or the engine; e.g. `#range(200000000)`: `capacity overflow`) or memory running out traps the wasm in the middle of a call. What that call left half done (a Rust borrow held, a lock taken) makes every later call fail, so the instance is lost: from then on every call of every engine throws the first call's `TypstEngineCrash`. Its message is the panic's (the engine's `onPanic` hook tells it to JS before the trap; Rust's stderr goes nowhere in the browser), else the trap's error and the memory in use. It is also logged (`console.error`). Only a new instance compiles again: the preview starts a new worker (@architecture-preview-concepts).
 
 === Fonts <architecture-core-engine-fonts>
 

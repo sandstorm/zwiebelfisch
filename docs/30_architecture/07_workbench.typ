@@ -58,7 +58,7 @@ What the widget shows depends on what has arrived. Nothing in the editing area w
 )
 
 - *`window.withProgress(options, task)`* (VS Code's): shows a task until its promise settles. `ProgressLocation.Window`: a spinner and "title: message" on the status bar's right. `ProgressLocation.EditingArea` (ours): a note over the editing area in its grid cell, the editing area `inert` and `aria-busy` meanwhile; for what the editors must wait for (collaboration: "Connecting to the room…" until the room's text is there).
-- What the preview loads (`PreviewProgress`, @architecture-preview-concepts) shows in the preview's pane only, never in the status bar; the workbench turns a compiler that cannot be loaded into an error message.
+- What the preview loads (`PreviewProgress`, @architecture-preview-concepts) shows in the preview's pane only, never in the status bar; the workbench turns a compiler that cannot be loaded or crashed into an error message.
 
 == Changes and settings <architecture-workbench-changes>
 

@@ -1,5 +1,5 @@
 // PageSender / PageReceiver: the compiled pages across the worker boundary, each page's SVG sent only once. See
-// startEngineWorker in worker.ts.
+// EngineWorker in worker.ts.
 import type { Page } from '../../../core/typst-engine/typst-engine';
 
 /**

@@ -10,6 +10,8 @@
 //!   top-left corner.
 //! - Structured results are returned as JSON strings (see the `*Json` types)
 //!   so the boundary needs no serde glue on the JS side.
+//! - A panic aborts (the wasm traps) and leaves the module unusable: every
+//!   later call fails. `onPanic` tells JS the panic's message first.
 
 mod highlight;
 mod world;
@@ -46,6 +48,58 @@ pub struct Engine {
 pub fn describe_font_json(data: &[u8]) -> String {
     to_json(&describe_font(data))
 }
+
+#[wasm_bindgen]
+extern "C" {
+    /// A JS object told about a panic (`createEngine` in typst-engine.ts
+    /// passes one).
+    pub type PanicListener;
+
+    /// Called with the panic's message and where it was raised (`capacity
+    /// overflow (at ecow-0.2.6/src/vec.rs:1227)`), before the wasm traps.
+    #[wasm_bindgen(method)]
+    fn panicked(this: &PanicListener, message: &str);
+}
+
+thread_local! {
+    static PANIC_LISTENER: std::cell::RefCell<Option<PanicListener>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Makes `listener` the one told about a panic (replacing the one before).
+/// Without one, a panic's message is lost: Rust's stderr goes nowhere here.
+#[wasm_bindgen(js_name = onPanic)]
+pub fn on_panic(listener: PanicListener) {
+    PANIC_LISTENER.with(|cell| *cell.borrow_mut() = Some(listener));
+    std::panic::set_hook(Box::new(|info| {
+        let payload = info.payload_as_str().unwrap_or("panic");
+        let message = match info.location() {
+            Some(location) => format!("{payload} (at {}:{})", crate_path(location.file()), location.line()),
+            None => payload.to_string(),
+        };
+        PANIC_LISTENER.with(|cell| {
+            if let Ok(listener) = cell.try_borrow()
+                && let Some(listener) = listener.as_ref()
+            {
+                listener.panicked(&message);
+            }
+        });
+    }));
+}
+
+/// `ecow-0.2.6/src/vec.rs` for a file of a crate from the registry: not where
+/// the build machine keeps it.
+fn crate_path(file: &str) -> &str {
+    file.split_once("/registry/src/")
+        .and_then(|(_, rest)| rest.split_once('/'))
+        .map_or(file, |(_, path)| path)
+}
+
+/// How many compilations a memoized result survives unused: `compile` and
+/// `exportPdf` evict the older ones, as `typst watch` does after each
+/// compilation. Typst memoizes (comemo) in a global cache that only `evict`
+/// shrinks: without it, every compilation of an edited document adds to it,
+/// until the wasm's 4 GB are used up and an allocation fails.
+const CACHE_MAX_AGE: usize = 10;
 
 #[derive(Serialize)]
 struct CompileJson {
@@ -204,6 +258,7 @@ impl Engine {
             }
         };
         let missing_packages = self.world.take_missing_packages();
+        typst::comemo::evict(CACHE_MAX_AGE);
         to_json(&CompileJson { pages, diagnostics, missing_packages })
     }
 
@@ -232,6 +287,7 @@ impl Engine {
             }
         };
         let missing_packages = self.world.take_missing_packages();
+        typst::comemo::evict(CACHE_MAX_AGE);
         PdfExport { pdf, report: to_json(&PdfReportJson { diagnostics, missing_packages }) }
     }
 

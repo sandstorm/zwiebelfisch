@@ -41,4 +41,19 @@ describe('LoadState', () => {
     state.apply({ kind: 'engine', loaded: 5, total: 10 });
     expect(state.current()).toEqual({ kind: 'failed', title: 'The Typst compiler could not be loaded.', detail: '/engine.wasm: HTTP 404', fraction: null });
   });
+
+  it('tells a crash, whether a new engine starts, and a new engine loading after it', () => {
+    const state = new LoadState();
+    state.apply({ kind: 'ready' });
+    state.apply({ kind: 'packages', specs: ['@preview/merman:0.4.0'] });
+    state.compiled();
+    state.crashed('capacity overflow', true);
+    expect(state.current()).toEqual({ kind: 'failed', title: 'The Typst compiler crashed and was restarted.', detail: 'capacity overflow', fraction: null });
+    state.started();
+    expect(state.current()?.title).toBe('Loading the Typst compiler…');
+    state.apply({ kind: 'ready' });
+    expect(state.current()).toBeNull();
+    state.crashed('capacity overflow', false);
+    expect(state.current()).toMatchObject({ kind: 'failed', title: 'The Typst compiler crashed again; it starts again with the next edit.' });
+  });
 });
