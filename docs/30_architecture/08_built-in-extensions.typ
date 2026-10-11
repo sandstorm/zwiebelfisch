@@ -30,7 +30,7 @@ extensions/<name>/
   [`mermaid`], ["Insert Mermaid diagram" (a new `.mmd` with a starter flowchart, as a figure drawn by `@preview/merman`, with the import); "Edit diagram" (the link on a `.mmd` path, priority 110: ⌘/Ctrl+click on its box's picture); the help sheet "Mermaid basics" (language `mermaid`)], [toolbar, document link provider, help provider],
   [`diagnostics`], [errors underlined (Source), highlighted (Visual), counted in the status bar], [source editor, highlights, status bar],
   [`sourceControl`], ["Save to _label_…" over the registered source controls (`sourceControl.commit`); their status bar entries and resource states (file decorations)], [`editor/title`, status bar, file decorations],
-  [`markup`], [strong, emphasis, links, inline code, code blocks, quotes], [nodes, marks, toolbar],
+  [`markup`], [strong, emphasis, underline, links, inline code, code blocks, quotes], [nodes, marks, toolbar],
   [`headings`], [headings, their numbers, `headings.toggleNumbering`; search group "Headings"], [node, text style provider, search provider],
   [`tables`], [`#table(..)`, "Insert table", the table bar], [node, toolbar],
   [`images`], [image boxes, "Insert image", image files read-only (`images.editor`)], [node, toolbar, custom editor],

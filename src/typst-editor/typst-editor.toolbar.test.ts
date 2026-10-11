@@ -33,6 +33,18 @@ describe('Visual editor toolbar', () => {
     expect(doc.text).toBe('*_Hello world_*\n');
   });
 
+  it('underline wraps the selection in #underline[..], inside bold', () => {
+    const { doc, view, button } = setup('Hello world\n');
+    view.reveal(SourceRange.of({ from: 6, to: 11 }));
+    button('Underline').click();
+    expect(doc.text).toBe('Hello #underline[world]\n');
+    expect(button('Underline').getAttribute('aria-pressed')).toBe('true');
+    button('Bold').click();
+    expect(doc.text).toBe('Hello *#underline[world]*\n');
+    button('Underline').click();
+    expect(doc.text).toBe('Hello *world*\n');
+  });
+
   it('turns a paragraph into a bullet list and a numbered list', () => {
     const { doc, view, button } = setup('Hello world\n');
     view.reveal(SourceRange.of({ from: 0, to: 'Hello world'.length }));

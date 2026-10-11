@@ -11,13 +11,13 @@ import { starterKitPart, type Around, type PlacedNode, type TypstMarkSpec, type 
 import { codeBlockView } from './code-block-view';
 import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from '../model/raw-code';
 
-// ------------------------------------------------------------- strong, emph
+// --------------------------------------------------- strong, emph, underline
 
-/** Tiptap's bold, italic, link and blockquote (StarterKit's), configured for Typst: each spec brings its own. */
+/** Tiptap's bold, italic, underline, link and blockquote (StarterKit's), configured for Typst: each spec brings its own. */
 const Bold = starterKitPart('typstBold', { bold: {} });
 
 /**
- * The specs of strong and emphasis, links, raw text (inline code, code blocks) and block quotes, and their toolbar
+ * The specs of strong, emphasis and underline, links, raw text (inline code, code blocks) and block quotes, and their toolbar
  * entries.
  */
 export const BOLD: TypstMarkSpec = {
@@ -51,6 +51,26 @@ function delimitedSyntax(delimiter: string, func: string, { before, after, first
 }
 
 const WORD = /[\p{L}\p{N}_]/u;
+
+const Underline = starterKitPart('typstUnderline', { underline: {} });
+
+/**
+ * `#underline[x]` (no other arguments, one paragraph): its content with the mark; other `underline` calls (`stroke:`,
+ * `offset:`, parentheses) stay raw, so an edited one prints back as it was written.
+ */
+export const UNDERLINE: TypstMarkSpec = {
+  name: 'underline',
+  tiptap: Underline,
+  typst: { parseTypst: { calls: { underline: { inline: parseUnderlineCall } } }, toTypst: () => ({ open: '#underline[', close: ']' }) },
+};
+
+function parseUnderlineCall(p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[]): PlacedNode[] | null {
+  const blocks = trailingContent(call);
+  if (blocks?.length !== 1 || p.source.slice(call.from, blocks[0].from) !== 'underline') return null;
+  const content = children(blocks[0].getChild('Markup')!);
+  if (content.length === 0 || !p.isOneParagraph(content)) return null;
+  return p.inline(content, p.schema.marks.underline.create().addToSet(marks));
+}
 
 // -------------------------------------------------------------------- links
 
@@ -248,16 +268,18 @@ const NEW_QUOTE: QuoteLayout = { open: '#quote(block: true)[', close: ']' };
 const ICONS = {
   bold: svg('<path d="M7 5h6a3.5 3.5 0 0 1 0 7H7z"/><path d="M7 12h7a3.5 3.5 0 0 1 0 7H7z"/>'),
   italic: svg('<path d="M10 5h8"/><path d="M6 19h8"/><path d="M14 5 10 19"/>'),
+  underline: svg('<path d="M7 4v7a5 5 0 0 0 10 0V4"/><path d="M5 20h14"/>'),
   code: svg('<path d="m8 7-5 5 5 5"/><path d="m16 7 5 5-5 5"/>'),
   link: svg('<path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/>'),
   codeBlock: svg('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="m10 9-3 3 3 3"/><path d="m14 9 3 3-3 3"/>'),
   quote: svg('<path d="M4 6v12"/><path d="M9 7h11M9 12h11M9 17h7"/>'),
 };
 
-/** Bold, italic, inline code: in the bar above the selection, their only place. */
-export const MARK_ACTIONS: Record<'bold' | 'italic' | 'code', ToolbarAction> = {
+/** Bold, italic, underline, inline code: in the bar above the selection, their only place. */
+export const MARK_ACTIONS: Record<'bold' | 'italic' | 'underline' | 'code', ToolbarAction> = {
   bold: { label: 'Bold', shortcut: 'Mod+B', icon: ICONS.bold, run: (c) => c.toggleBold(), active: (e) => e.isActive('bold') },
   italic: { label: 'Italic', shortcut: 'Mod+I', icon: ICONS.italic, run: (c) => c.toggleItalic(), active: (e) => e.isActive('italic') },
+  underline: { label: 'Underline', shortcut: 'Mod+U', icon: ICONS.underline, run: (c) => c.toggleUnderline(), active: (e) => e.isActive('underline') },
   code: { label: 'Code', shortcut: 'Mod+E', icon: ICONS.code, run: (c) => c.toggleCode(), active: (e) => e.isActive('code') },
 };
 

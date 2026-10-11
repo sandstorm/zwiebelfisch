@@ -37,6 +37,21 @@ test('Italic button wraps the selection in _…_', async ({ page }) => {
   await expect(await source(page)).toContainText('_Fresh line_');
 });
 
+test('Underline button wraps the selection in #underline[…], shown underlined', async ({ page }) => {
+  await freshSelectedLine(page);
+  await selectionBar(page).getByRole('button', { name: 'Underline' }).click();
+  await expect(selectionBar(page).getByRole('button', { name: 'Underline' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(visual(page).locator('u', { hasText: 'Fresh line' })).toBeVisible();
+  await expect(await source(page)).toContainText('#underline[Fresh line]');
+});
+
+test('Ctrl+U (⌘U on Mac) underlines the selection, inside bold', async ({ page }) => {
+  await freshSelectedLine(page);
+  await page.keyboard.press('ControlOrMeta+B');
+  await page.keyboard.press('ControlOrMeta+U');
+  await expect(await source(page)).toContainText('*#underline[Fresh line]*');
+});
+
 for (const [label, prefix] of [['Heading 1', '= '], ['Heading 2', '== '], ['Heading 3', '=== ']] as const) {
   test(`text style "${label}" makes the line a ${prefix.trim()} heading`, async ({ page }) => {
     await freshSelectedLine(page);

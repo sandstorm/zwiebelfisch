@@ -19,6 +19,7 @@ export const TYPST_HELP: HelpSheet = {
       rows: [
         { snippet: '_emphasis_', description: 'Italic' },
         { snippet: '*strong*', description: 'Bold' },
+        { snippet: '#underline[underlined]', description: 'Underlined' },
       ],
     },
     {

@@ -62,7 +62,7 @@ with the #link("https://typst.app")[Typst] compiler (`typst compile`).
 #table(
   columns: 2,
   [Construct], [How],
-  [Bold, italic, inline code], [Ctrl+B, Ctrl+I, Ctrl+E (⌘B, ⌘I, ⌘E on Mac), or the bar over a selection.],
+  [Bold, italic, underline, inline code], [Ctrl+B, Ctrl+I, Ctrl+U, Ctrl+E (⌘B, ⌘I, ⌘U, ⌘E on Mac), or the bar over a selection. Underline is `#underline[..]`; one with arguments (`stroke:`, `offset:`) stays a raw box.],
   [Link], [Ctrl+K (⌘K on Mac), or "Link" in the bar over a selection.],
   [Lists], [List buttons: bulleted, numbered, task list (`- [ ] todo`). Tab nests.],
   [Quote], [Ctrl+Shift+B (⌘⇧B on Mac), or Insert → Quote.],

@@ -24,6 +24,7 @@ const FIXTURES: Record<string, string> = {
   comments: '// a comment\nText /* inline */ more\n',
   unicode: 'Größe 😀 naïve\n',
   broken: '#set page(\n\n*unclosed\n',
+  underline: 'An #underline[under *lined*] word, *#underline[x]*, #underline(stroke: red)[kept] #underline()[y] #underline[]\n',
   links: 'See #link("https://typst.app")[the *site*] or https://typst.app/docs.\n#link("x")[] #link(url)[a]\n',
   images: '#image("img/logo.png", width: 50%)\n\nText #image("i.png") inline\n',
   tables: '#table(\n  columns: 2,\n  stroke: none,\n  [a], [*b* c],\n  [], [- x\n  - y],\n)\n\n#table(columns: 1, [one\n\ntwo])\n',
@@ -583,6 +584,43 @@ describe('inline code', () => {
     const doc = edit(parseTypst('Use `*x*` now\n'), (s) => s.tr.removeMark(0, s.doc.content.size, schema.marks.code));
     expect(serializeToTypst(doc)).toBe('Use \\*x\\* now\n');
     expect(parseTypst(serializeToTypst(doc)).textContent).toBe('Use *x* now');
+  });
+});
+
+describe('underline', () => {
+  const marksOf = (node: Node) => node.marks.map((m) => m.type.name);
+
+  it('parses #underline[..] as text with an underline mark, nesting with other marks', () => {
+    const paragraph = parseTypst('A #underline[b *c*] and *#underline[d]* and #link("https://a.org")[#underline[e]]').child(0);
+    expect(paragraph.textContent).toBe('A b c and d and e');
+    expect(marksOf(paragraph.child(1))).toEqual(['underline']);
+    expect(marksOf(paragraph.child(2))).toEqual(['bold', 'underline']);
+    expect(marksOf(paragraph.child(4))).toEqual(['bold', 'underline']);
+    expect(marksOf(paragraph.child(6))).toEqual(['link', 'underline']);
+  });
+
+  it('keeps underline calls with arguments, parentheses or no text as raw inlines', () => {
+    for (const src of ['#underline(stroke: red)[a]', '#underline(offset: 2pt)[a]', '#underline()[a]', '#underline([a])', '#underline[]', '#underline[a][b]']) {
+      expect(parseTypst(`A ${src} b`).child(0).child(1).type.name, src).toBe('rawInline');
+    }
+  });
+
+  it('typing inside underlined text keeps the call', () => {
+    expect(editInline('A #underline[ab] *#underline[cd]* c\n', (s) => s.tr.insertText('X', after(s.doc, 'a')).insertText('Y', after(s.doc, 'c') + 1)))
+      .toBe('A #underline[aXb] *#underline[cYd]* c\n');
+  });
+
+  it('underlining text prints #underline[..], inside bold over the same span, around shorter formatting', () => {
+    expect(editInline('Hello world\n', (s) => s.tr.addMark(7, 12, schema.marks.underline.create()))).toBe('Hello #underline[world]\n');
+    expect(editInline('Hello world\n', (s) => s.tr.addMark(7, 12, schema.marks.underline.create()).addMark(7, 12, schema.marks.bold.create())))
+      .toBe('Hello *#underline[world]*\n');
+    expect(editInline('Hello world\n', (s) => s.tr.addMark(1, 12, schema.marks.underline.create()).addMark(7, 12, schema.marks.italic.create())))
+      .toBe('#underline[Hello _world_]\n');
+  });
+
+  it('removing the underline leaves plain text', () => {
+    const doc = edit(parseTypst('A #underline[*b*] c\n'), (s) => s.tr.removeMark(0, s.doc.content.size, schema.marks.underline));
+    expect(serializeToTypst(doc)).toBe('A *b* c\n');
   });
 });
 
