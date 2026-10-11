@@ -48,7 +48,7 @@ test('the documentation example is docs/ as a book with parts and chapters', asy
 test('switching examples keeps the other URL parameters', async ({ page }) => {
   await page.goto('/?example=simple&user=Ada');
   await examples(page).getByRole('link', { name: 'Advanced' }).click();
-  await expect(page).toHaveURL(/\?example=advanced&user=Ada$/);
+  await expect(page).toHaveURL(/\?example=advanced&user=Ada(#.*)?$/);
   await expect(examples(page).getByRole('link', { name: 'Advanced' })).toHaveAttribute('aria-current', 'page');
 });
 
@@ -61,4 +61,27 @@ test('the advanced example declares custom styles: styled text in the Visual edi
   const menu = page.locator('[role=toolbar][aria-label=Formatting]:visible').getByRole('combobox', { name: 'Text style' });
   await expect(menu.locator('optgroup[label="Block styles"] option')).toHaveText(['Note']);
   await expect(menu.locator('optgroup[label="Inline styles"] option')).toHaveText(['Term']);
+});
+
+test('the URL keeps the shown file and the cursor\'s line: a reload opens them there', async ({ page }) => {
+  const chapter = '/chapters/introduction.typ';
+  await page.goto(`/?example=advanced#${chapter}`);
+  const visual = page.locator('[data-testid=typst-visual]:visible');
+  await visual.getByText('This report measures').first().click();
+  await page.keyboard.press('Home');
+  await page.keyboard.type('Now ');
+  await expect(page).toHaveURL(/#\/chapters\/introduction\.typ:10$/);
+
+  await page.reload();
+  await expect(page).toHaveURL(/#\/chapters\/introduction\.typ:10$/);
+  await expect(visual.getByText('This report measures').first()).toBeInViewport();
+  // the cursor is at the start of line 10 (the edit before the reload was not saved: Local mode)
+  await page.keyboard.type('Z');
+  const text = () => page.evaluate((path) => (window as unknown as { editor: { files: Record<string, string> } }).editor.files[path], chapter);
+  await expect.poll(async () => (await text()).split('\n')[9]).toMatch(/^ZThis report measures/);
+});
+
+test('a URL naming a file the example does not have opens the main file and names it', async ({ page }) => {
+  await page.goto('/?example=advanced#/extensions/visual-view-constructs.typ');
+  await expect(page).toHaveURL(/#\/main\.typ:\d+$/);
 });

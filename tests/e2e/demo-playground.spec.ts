@@ -93,10 +93,10 @@ test('the playground bar toggles the devtools, keeping the rest of the URL', asy
   await expect(toggle).not.toBeChecked();
   // a click, not check(): the page reloads
   await toggle.click();
-  await expect(page).toHaveURL(/\?example=simple&devtools#\/main\.typ$/);
+  await expect(page).toHaveURL(/\?example=simple&devtools#\/main\.typ(:\d+)?$/);
   await expect(page.getByTestId('typst-panel-toggle-devtools')).toBeVisible();
   await expect(toggle).toBeChecked();
   await toggle.click();
-  await expect(page).toHaveURL(/\?example=simple#\/main\.typ$/);
+  await expect(page).toHaveURL(/\?example=simple#\/main\.typ(:\d+)?$/);
   await expect(page.getByTestId('typst-panel-toggle-devtools')).toHaveCount(0);
 });

@@ -66,7 +66,7 @@ The page's state is its URL:
   [`?room=gitlab:demo/report@main`], [GitLab mode: a branch of the fake repository.],
   [`&user=<name>`], [The name others see; signs comments and commits.],
   [`&devtools`], [The devtools side panel on the right: document, contributions, events (@guide-embedding-devtools).],
-  [`#/chapters/intro.typ`], [The file shown.],
+  [`#/chapters/intro.typ:12`], [The file shown and the cursor's line (1-based): a reload or a shared link opens the file with the cursor at the start of that line. It follows while you work.],
 )
 
 == A first editor <guide-getting-started-first-editor>
