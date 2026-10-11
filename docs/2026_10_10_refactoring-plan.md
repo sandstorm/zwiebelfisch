@@ -129,6 +129,16 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    parameters (`noSaveBtn`, `saveAndExit=0`, `dark=1`) and export reply; e2e specs changed in waves
    1–3 (pdf-download, gitlab, web-component, multi-file-ui, image-upload, margin-notes, visual-*,
    collab, spreadsheets, diagrams).
+   **READMEs instead of ARCHITECTURE.md** (user, 2026-10-11): one-page README per main area
+   (`src/README.md` big picture: layers, dependency rules, a keystroke's flow, links;
+   `src/core/`, `src/extensions/` (what an extension is, the five vocabularies), and one per host:
+   `workbench`, `visual-view`, `projection`, `source-view`, `preview`): the area's job, its 3–6 core
+   concepts and how they connect, an ASCII diagram where it shows a flow better than prose
+   (projection round trip, preview ↔ worker, extension activation). Each README is *the* place for
+   its area, next to its code; `ARCHITECTURE.md` goes once they explain everything (its content
+   moved, not duplicated; links and the `mise run quality:top-comments` "See ARCHITECTURE.md"
+   references updated). Written by parallel subagents after the API-shape wave and its follow-up;
+   the main agent reviews for consistency.
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Rules wave also does:** core `onChange` → `onDidChange: Event` + `Disposable` everywhere
    (`Project`, `TypstDocument`, …) (user: yes).
