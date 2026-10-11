@@ -19,13 +19,14 @@
   `toDOM`); framework classes `TypstToProseMirrorParser` / `ProseMirrorToTypstSerializer`; what spec
   functions receive: `TypstParseContext` / `TypstSerializeState` (today `ProjectionContext` /
   `Printer`; "projector" / "printer" wording goes). Done in the follow-up, before the types are public.
-- **Which framework a contribution belongs to must be obvious** (user; same follow-up). The four rules are confirmed; the Typst-grammar part (`parseTypst: { syntaxNodes, calls }` grouping, the grammar as public dependency) is **still open — the user is thinking about it**; the follow-up leaves the parse side as it is until then. Part of that open question: our `Call` is
-  shallow today (`{ node, name, args: raw Lezer children, from, to }`) while 11 extensions walk call
-  arguments by hand (33 raw-arg uses, 23 named-arg lookups). Options: (a) drop it, specs get Lezer's
-  `FuncCall` node only; (b) a deep `TypstCall` — `positional(i)` / `named(name)` → `TypstArgument`
-  (`string()`, `length()`, `boolean()`, `content()`, `source()`), `body`, and `hasOnly(positional, named)`
-  as the one "can every argument be modelled, else stay a raw box" check — keeping `node` as the Lezer
-  escape hatch. Recommendation (under "overall complexity as low as possible"): (b), minimal — only the readers the 11 extensions use today, and kept only if the total code (TypstCall + migrated projectors) shrinks; otherwise (a). Five
+- **Which framework a contribution belongs to must be obvious** (user; same follow-up). The four rules are confirmed, and the Typst-grammar part is decided too (user): the parse side
+  groups as `parseTypst: { syntaxNodes: { Heading: … }, calls: { pagebreak: … } }`; the grammar of
+  `codemirror-lang-typst` is a public dependency (pinned, version named in the docs). **`Call` is
+  dropped**: specs receive Lezer's `SyntaxNode` (the `FuncCall`) and nothing of ours; walking is done
+  with plain, public **functional helpers** over Lezer nodes in `core/typst-syntax` (e.g.
+  `calleeName`, `positionalArguments`, `namedArgument`, `trailingContent`, `stringValue`,
+  `hasOnlyArguments` — the set and names sized by what the extensions use today, total lines must
+  shrink), exported from `src/index.ts` for everybody. Five
   vocabularies: ours (VS Code-shaped, unprefixed), Tiptap (ProseMirror only through Tiptap, e.g.
   `addProseMirrorPlugins`), CodeMirror, Lezer + the Typst grammar of `codemirror-lang-typst`, the Typst
   language. Rules: (1) our API unprefixed; (2) a member taking / returning a framework object names it
