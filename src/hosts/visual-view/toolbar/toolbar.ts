@@ -1,10 +1,10 @@
 // Toolbar: the Visual view's formatting toolbar, laid out from the contributed groups and items. See ARCHITECTURE.md, "VisualView".
 import { TextSelection } from '@tiptap/pm/state';
 import type { Editor } from '@tiptap/core';
-import { type Anchor, FloatingBar } from '../../../ui/floating-bar/floating-bar';
-import { ToolbarMenu } from '../../../ui/toolbar-menu/toolbar-menu';
+import { FloatingBar } from './floating-bar';
+import { ToolbarMenu } from './toolbar-menu';
 import type { Disposable } from '../../../core/disposable/disposable';
-import { svg, type Action, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem, type VisualViewContext } from '../visual-view';
+import { svg, type Action, type Anchor, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem, type VisualViewContext } from '../visual-view';
 
 /**
  * The Visual view's formatting toolbar: a row of groups and menus sorted by

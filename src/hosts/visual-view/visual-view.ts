@@ -10,7 +10,6 @@ import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import { attachGrammar, nodeGrammar, onDidChangeGrammar, posToSource, print, project, sourceToPos, syncDoc, type MarkGrammar, type NodeGrammar } from '../projection/projection';
-import type { Anchor } from '../../ui/floating-bar/floating-bar';
 import { highlights, setHighlights } from './highlights';
 import { editorExtensions } from './nodes/node-views';
 import type { Boxes } from './nodes/raw-box';
@@ -548,6 +547,9 @@ export type ToolbarGroup =
       /** Where the bar floats (null: hidden); `held` when an item asks to show it (see `Action.showsBar`). */
       anchor(editor: Editor, held: boolean): Anchor;
     };
+
+/** Where a floating bar points: a viewport rectangle (e.g. a selection's or a table's), or nothing (hidden). */
+export type Anchor = { top: number; left: number; right: number } | null;
 
 /** What an item created per view gets: the view, its editor, the toolbar. */
 export interface ToolbarContext extends VisualViewContext {

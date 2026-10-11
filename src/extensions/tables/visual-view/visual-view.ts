@@ -2,8 +2,7 @@
 // table nodes), "Insert table" and the bar over a table. See tables.ts.
 import { Extension, findParentNode, type Editor } from '@tiptap/core';
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
-import type { Anchor } from '../../../ui/floating-bar/floating-bar';
-import { svg, type Action, type ToolbarGroup, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import { svg, type Action, type Anchor, type ToolbarGroup, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 import { printTable } from './table-printing';
 import { projectTable } from './table-projection';
 

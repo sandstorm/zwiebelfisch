@@ -42,7 +42,8 @@ src/                        the widget (TypeScript); the most important API on t
                             VisualViewContributions, TypstNodeSpec / TypstMarkSpec, toolbar items and groups, box
                             renderers / tools / actions, gutters, highlights, VisualViewContext, svg; nodes/
                             (node-views.ts: kept DOM and raw box node views over the projection's schema; the raw
-                            box), toolbar/, highlights.ts
+                            box), toolbar/ (Toolbar; ToolbarMenu: a menu button of toolbar buttons; FloatingBar: a
+                            bar above an anchor in the text), highlights.ts
     projection/             the source-anchored projection between Typst text and the Visual view's ProseMirror
                             document, and the minimum schema it needs (projection.ts: project, print, syncDoc, the
                             position maps, the spec contract NodeGrammar / MarkGrammar / ProjectionContext / Printer,
@@ -94,8 +95,7 @@ src/                        the widget (TypeScript); the most important API on t
                             reverse order)
     event-emitter/          EventEmitter<T> (`event` to subscribe, `fire`), Event<T>
   ui/                       feature-neutral DOM widgets, one folder each: popup-menu/ (PopupMenu: a role=menu at a
-                            point or below a button, e.g. the file panel's menus), toolbar-menu/ (ToolbarMenu: a menu
-                            button of toolbar buttons), floating-bar/ (FloatingBar: a bar above an anchor in the text),
+                            point or below a button, e.g. the file panel's menus),
                             color-scheme/ (isLightText: light or dark, from a resolved text color; textColorOn: black
                             or white text on a color)
   extensions/               one vertical slice per concept (docs/2026_10_10_extensions-architecture.md): <name>.ts
@@ -977,9 +977,9 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
   current alignment), the **Insert** menu (image, table, table of contents — an `#outline()`
   block —, code block, quote, page break, horizontal rule, add label (`labels`)), and "Comment" (`comments`,
   60) when the margin notes get a `comment` (enabled with a caret or selection in text outside
-  code blocks). Menus: `ToolbarMenu` (`ui/toolbar-menu/`, `role="menu"` of toolbar buttons;
+  code blocks). Menus: `ToolbarMenu` (`toolbar/toolbar-menu.ts`, `role="menu"` of toolbar buttons;
   Escape, outside click, arrow keys). Bars float in the text column (`FloatingBar`,
-  `ui/floating-bar/`, placed in `.typst-visual__body` so they scroll with the text, shown while
+  `toolbar/floating-bar.ts`, placed in `.typst-visual__body` so they scroll with the text, shown while
   the text or the bar has focus; of the floating bars only the first, by `order`, with an anchor
   shows): **Selection** (`selection`, 10: bold, italic, code (Mod+E), link, comment) above a text
   selection or where an item asks for it (`Action.showsBar`: a link holding the cursor) — the
