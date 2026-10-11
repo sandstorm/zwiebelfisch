@@ -27,6 +27,7 @@ class CodeBlockView implements NodeView {
     const doc = editor.view.dom.ownerDocument;
     this.dom = doc.createElement('div');
     this.dom.className = 'typst-markup__code-block';
+    this.dom.setAttribute('spellcheck', 'false');
     this.header = this.dom.appendChild(doc.createElement('div'));
     this.header.className = 'typst-markup__code-header';
     this.header.contentEditable = 'false';

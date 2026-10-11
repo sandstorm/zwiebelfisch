@@ -99,6 +99,7 @@ function draftElement(view: EditorView, pos: number, prefix: string, inline: boo
   input.className = 'typst-labels__tag-input';
   input.setAttribute('aria-label', 'New label');
   input.placeholder = 'label';
+  input.spellcheck = false;
   input.value = prefix;
   input.size = Math.max(8, prefix.length + 6);
   let done = false;

@@ -42,6 +42,14 @@ Colors and dark mode in detail: @guide-embedding-theming.
   [`files.panel`], [`'auto'`, `'show'`, `'hide'` (`'auto'`)], [`auto`: the file panel is open while the project has more than one file, else collapsed to its button (until someone opens or closes it). `show`: open. `hide`: no panel at all; dropped files are ignored.],
 )
 
+=== Writing <guide-configuration-writing>
+
+#table(
+  columns: 3,
+  [Setting], [Values (default)], [Effect],
+  [`spellcheck.enabled`], [`true`, `false` (`true`)], [Whether the browser checks the spelling in the Visual editor, in the language of the document's `set text(lang: ..)` (@guide-features-spelling).],
+)
+
 === Preview <guide-configuration-preview>
 
 #table(

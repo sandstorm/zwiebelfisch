@@ -119,5 +119,6 @@ The modules with the most complexity. Lines: TypeScript without blank and commen
 - *Search everywhere*: a bibliography group (`.bib` keys and titles; opening a text file at a line); recently opened files first; commands always listed while registered (no `enablement`), "Save to GitLab…" and "Download PDF" are no declared commands yet; a setting changed there is gone with the page.
 - *Custom styles*: swatches in the style menu; a style panel for a `template` function's set and show rules, so the Visual editor looks like the document; templates from Typst Universe.
 - *Text diagrams*: Mermaid only (merman). D2 is not supported (`@preview/tiago` is too experimental); if needed, a converter with the official `@terrastruct/d2` writing `name.d2.gen.svg`.
+- *Spelling*: the browser's checker knows no project words and no Typst; a checker with a project dictionary (Hunspell dictionaries, words added from the editor) would replace the `spellcheck` extension. Nested editable text in other languages (`#text(lang: "en")[..]`) is checked in the document's language.
 - *Diagnostics*: Typst only (the compile results). Other file kinds would get VS Code's `languages.createDiagnosticCollection`.
 - *Server*: a Rust (`yrs`) or Go server is an open question; the widget depends only on the room protocol.
