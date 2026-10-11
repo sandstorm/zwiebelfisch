@@ -1,14 +1,11 @@
-// TypstConversions. See prosemirror-typst.ts.
+// See prosemirror-typst.ts.
 import type { NodeType, Schema } from '@tiptap/pm/model';
 import type { Event } from '../../core/event-emitter/event-emitter';
 import type { DocumentNodeSpec, TypstMarkSpec, TypstParseRules } from './prosemirror-typst';
 
 /**
- * The specs of a schema, merged by name, and the lookups the framework derives from them.
- *
- * What the framework knows about Typst constructs: the registered node and mark specs (their types are in
- * prosemirror-typst.ts), and the tables derived from their parse rules (which syntax and calls become what) and from
- * their Typst (how edited nodes are written).
+ * The specs of a schema, merged by name, and the tables the framework derives from them: which syntax and calls
+ * become what (their parse rules), and how edited nodes are written (their Typst).
  */
 export class TypstConversions {
   private readonly nodes = new Map<string, DocumentNodeSpec>();

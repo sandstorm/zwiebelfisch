@@ -1,5 +1,5 @@
-// The Tiptap nodes and marks of the minimum schema besides StarterKit's parts. See prosemirror-typst.ts
-// (`documentExtensions`) and docs/30_architecture/03_prosemirror-typst.typ.
+// The Tiptap nodes and marks of the minimum schema besides StarterKit's parts. See documentExtensions in
+// prosemirror-typst.ts.
 import { Extension, Mark, Node, type AnyExtension } from '@tiptap/core';
 import Document from '@tiptap/extension-document';
 import type { DocumentNodeSpec } from './prosemirror-typst';

@@ -1,5 +1,3 @@
-// The Visual editor host's document model. Entry of hosts/prosemirror-typst/. See
-// docs/30_architecture/03_prosemirror-typst.typ.
 import type { SyntaxNode } from '@lezer/common';
 import { flattenExtensions, getExtensionField, getSchema, type AnyExtension } from '@tiptap/core';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
@@ -15,37 +13,20 @@ import { unchangedNodes } from './unchanged-nodes';
 import { RawBlock, RawInline, SoftBreak, sourceAnchors, TypstDocument, TypstSource } from './schema';
 
 /**
- * A schema of the minimum schema, `nodes` and `marks`, with their grammar attached.
+ * The schema of `nodes` and `marks`: the minimum schema plus the specs' Tiptap extensions, with their grammar
+ * attached. Tests use it; the Visual editor uses `documentExtensions` and `attachGrammar`.
  *
- * The source-anchored conversion between Typst text and the Visual editor's
- * ProseMirror document: the framework, which knows no Typst construct beyond
- * paragraphs, text and raw Typst. Every other construct comes in as a spec
- * (`DocumentNodeSpec` / `TypstMarkSpec`, below): its Tiptap extension, which
- * syntax and calls it reads, how an edited one is written back
- * (`TypstToProseMirrorParser`, `ProseMirrorToTypstSerializer`). `createSchema` makes the schema of a set
- * of specs (the minimum schema below, plus the specs' Tiptap extensions) with
- * the specs attached; an editor built from `documentExtensions` gets them with
- * `attachGrammar`.
+ * This module converts between Typst text and the Visual editor's ProseMirror document, so that an edit changes only
+ * the source of what it touched. Every node remembers the source it came from. `parseTypst` reads text into a
+ * document; `serializeToTypst` writes it back, where untouched nodes print their source byte for byte and only edited
+ * ones are printed anew. So `serializeToTypst(parseTypst(text)) === text` for any text. `sourceToPos` and
+ * `posToSource` map between source offsets and document positions, down to the character. `applyTypstChanges` turns
+ * the shown document into a fresh parse with the smallest replacement.
  *
- *   parseTypst(text, schema) → doc        every node remembers the source it came from
- *   serializeToTypst(doc)    → text       untouched nodes print their original source
- *                                         byte for byte; only edited ones are re-printed
- *   sourceToPos(doc, offset) / posToSource(doc, pos)
- *                                         map between source offsets and document
- *                                         positions, down to the character
- *   applyTypstChanges(tr, target) → tr    turns the current doc into a fresh parse
- *                                         with the smallest possible replacement
- *
- * Hence `serializeToTypst(parseTypst(text)) === text` for any input, and an edit in the
- * Visual editor changes only the source of what it touched. Syntax no spec
- * models becomes `rawBlock` / `rawInline` atoms holding their verbatim source.
- * Labels (`<key>`) after a heading, or ending a block's run, are that block's
- * `label` attribute (see `labels.ts`).
- *
- * The minimum schema is the conversion's own: document, paragraph, text, hard
- * and soft breaks, raw Typst (block and inline), the `typstSource` mark, history
- * and drop / gap cursors. A module of its own: the host builds on it, the specs contributed to the Visual editor
- * are written against its types, and it is tested without a view.
+ * The framework knows only paragraphs, text, breaks and raw Typst (the minimum schema). Every other construct is a
+ * spec (`DocumentNodeSpec`, `TypstMarkSpec`) that an extension contributes to the Visual editor: which syntax it
+ * reads, how an edited node is written. Syntax no spec takes stays raw Typst (`rawBlock`, `rawInline`), kept verbatim.
+ * Plain ProseMirror: no view, tested without a DOM. See docs/30_architecture/03_prosemirror-typst.typ.
  */
 export function createSchema(nodes: readonly DocumentNodeSpec[], marks: readonly TypstMarkSpec[]): Schema {
   const schema = getSchema(documentExtensions(nodes, marks));

@@ -5,10 +5,7 @@ import type { Node } from '@tiptap/pm/model';
  * Nodes created by `parseTypst` and not modified since. ProseMirror nodes are
  * immutable and unchanged nodes keep their identity across transactions, so
  * membership means "the node still corresponds exactly to its `src`".
- * Textblocks also remember how their `src` lines up with their content.
- *
- * Which nodes are still exactly what `parseTypst` made of their source, and how a textblock's source lines up with its
- * content. Shared by parsing, printing and syncing.
+ * Textblocks also remember how their `src` lines up with their content. Shared by parsing, printing and syncing.
  */
 export const unchangedNodes = new WeakMap<Node, InlineLayout | null>();
 
