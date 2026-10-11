@@ -1,5 +1,4 @@
-// CollaborationLink: the widget's side of a Collaboration, which it loads on demand (so this file must stay outside
-// the lazily loaded chunk, model/). See collaboration.ts.
+// CollaborationLink. See collaboration.ts.
 import type { CollaborationOptions } from './collaboration';
 import type { Collaboration, SharedRoom } from './model/model';
 import type { GitLabSourceControl, Tell } from './model/gitlab-source-control';
@@ -7,31 +6,14 @@ import type { ProjectPath } from '../../core/paths/paths';
 import type { SourceRange } from '../../core/typst-document/typst-document';
 import type { PlacedPresence } from './presence/presence';
 
-/** The file the local user works in, and what they have selected there. */
-export interface CurrentSelection {
-  path: ProjectPath;
-  selection: SourceRange;
-}
-
-/** What the link asks of the widget, and tells it. */
-export interface LinkedWidget {
-  /** Where the local user's selection is (null: not in a Typst file). */
-  current(): CurrentSelection | null;
-  /** Whether the user works in the widget's editing area (only then is the selection published). */
-  focused(): boolean;
-  /** Called once connected, in a room backed by a GitLab branch: what commits to it. */
-  onSourceControl?(sourceControl: GitLabSourceControl): void;
-  /** Tells the user what the room's source control has to say (its outcomes and news). */
-  tell?: Tell;
-  /** The other users' places changed (every file; e.g. for the file panel). */
-  onPresence?(presences: readonly PlacedPresence[]): void;
-}
-
 /**
  * The widget's side of collaboration. Loads the collaboration code (Yjs,
  * Hocuspocus) on demand, so widgets without collaboration never download it;
  * publishes the local selection when the views report a change (`selectionChanged`), and tells
  * the widget where everyone else is.
+ *
+ * The widget's side of a Collaboration, which it loads on demand (so this file must stay outside the lazily loaded
+ * chunk, model/).
  */
 export class CollaborationLink {
   private collaboration: Collaboration | null = null;
@@ -88,4 +70,24 @@ export class CollaborationLink {
       this.collaboration.setCursor(current?.path ?? null, current?.selection);
     });
   }
+}
+
+/** The file the local user works in, and what they have selected there. */
+export interface CurrentSelection {
+  path: ProjectPath;
+  selection: SourceRange;
+}
+
+/** What the link asks of the widget, and tells it. */
+export interface LinkedWidget {
+  /** Where the local user's selection is (null: not in a Typst file). */
+  current(): CurrentSelection | null;
+  /** Whether the user works in the widget's editing area (only then is the selection published). */
+  focused(): boolean;
+  /** Called once connected, in a room backed by a GitLab branch: what commits to it. */
+  onSourceControl?(sourceControl: GitLabSourceControl): void;
+  /** Tells the user what the room's source control has to say (its outcomes and news). */
+  tell?: Tell;
+  /** The other users' places changed (every file; e.g. for the file panel). */
+  onPresence?(presences: readonly PlacedPresence[]): void;
 }

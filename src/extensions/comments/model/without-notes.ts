@@ -45,12 +45,6 @@ function draftingImport(text: string): string | null {
   return at < 0 ? null : text.slice(at + 1, text.indexOf('"', at + 1));
 }
 
-function freePath(files: Record<string, unknown>, path: string): string {
-  let free = path;
-  for (let n = 2; free in files; n++) free = path.replace(/\.typ$/, `-${n}.typ`);
-  return free;
-}
-
 /** `text` with every margin note call removed, keeping the text of range notes. */
 function stripNotes(text: string): string {
   const cuts: [number, number][] = [];
@@ -80,4 +74,10 @@ function aloneOnItsLine(text: string, from: number, to: number): [number, number
   const end = text.indexOf('\n', to);
   const alone = end >= 0 && !text.slice(start, from).trim() && !text.slice(to, end).trim();
   return alone ? [start, end + 1] : [from, to];
+}
+
+function freePath(files: Record<string, unknown>, path: string): string {
+  let free = path;
+  for (let n = 2; free in files; n++) free = path.replace(/\.typ$/, `-${n}.typ`);
+  return free;
 }

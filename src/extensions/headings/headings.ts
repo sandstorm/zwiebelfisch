@@ -1,7 +1,4 @@
-// The headings extension: `= Title` headings in the Visual editor (Heading 1–3 in the text style menu), and their
-// numbers as the document's `#set heading(numbering: ..)` rules make Typst number them (with the command
-// `headings.toggleNumbering`), and every Typst file's headings in search everywhere. See
-// docs/30_architecture/08_built-in-extensions.typ. Why one extension: the numbers are a view of the headings, nothing without them.
+// The headings extension. See docs/30_architecture/08_built-in-extensions.typ.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './headings.css?inline';
 import { calculateNumberingToggle } from './model/heading-numbering';
@@ -9,12 +6,14 @@ import { HEADING, HEADING_STYLES } from './visual-editor/visual-editor';
 import { HeadingNumbers } from './visual-editor/heading-numbers';
 import { headingSearch } from './workbench/heading-search';
 
-/** Switches heading numbering in the active editor's document on or off (no button: for hosts, menus and search everywhere). */
-export const TOGGLE_NUMBERING = 'headings.toggleNumbering';
-
 /**
  * Headings and their numbers. The command `headings.toggleNumbering` adds `#set heading(numbering: "1.")` after the
  * code the active editor's document starts with, or removes the document's heading numbering.
+ *
+ * `= Title` headings in the Visual editor (Heading 1–3 in the text style menu), and their numbers as the document's
+ * `#set heading(numbering: ..)` rules make Typst number them (with the command `headings.toggleNumbering`), and every
+ * Typst file's headings in search everywhere. Why one extension: the numbers are a view of the headings, nothing
+ * without them.
  */
 export function headings(): TypstExtension {
   return {
@@ -36,3 +35,6 @@ export function headings(): TypstExtension {
     },
   };
 }
+
+/** Switches heading numbering in the active editor's document on or off (no button: for hosts, menus and search everywhere). */
+export const TOGGLE_NUMBERING = 'headings.toggleNumbering';

@@ -7,24 +7,6 @@ import { SourceOffset, type SourceRange } from '../../../core/typst-document/typ
 import type { User } from '../../../core/user/user';
 import type { PlacedPresence } from '../presence/presence';
 
-export interface RemoteCursorsOptions {
-  user: User;
-  /** The shared text of `path` (where cursors are anchored). */
-  text(path: ProjectPath): Y.Text | undefined;
-  /** Called with every other user's place, in any file, whenever one changes (the views, the file panel). */
-  onPresence?(presences: readonly PlacedPresence[]): void;
-}
-
-/** What a client publishes in its awareness state (field `cursor`; `user` follows the y-codemirror convention). */
-interface CursorState {
-  /** A project path, as another client sent it: parsed before use. */
-  path: string;
-  anchor: unknown;
-  head: unknown;
-}
-
-const PALETTE = ['#d33682', '#2aa198', '#6c71c4', '#cb4b16', '#268bd2', '#859900', '#b58900', '#dc322f'];
-
 /**
  * Presence: publishes the local user's selection through y-protocols
  * awareness, and reports the other users' places, in every file, through
@@ -129,9 +111,27 @@ export class RemoteCursors {
   }
 }
 
+export interface RemoteCursorsOptions {
+  user: User;
+  /** The shared text of `path` (where cursors are anchored). */
+  text(path: ProjectPath): Y.Text | undefined;
+  /** Called with every other user's place, in any file, whenever one changes (the views, the file panel). */
+  onPresence?(presences: readonly PlacedPresence[]): void;
+}
+
 /** A stable color for a user without one. */
 function colorFor(name: string): string {
   let hash = 0;
   for (const char of name) hash = (hash * 31 + char.charCodeAt(0)) | 0;
   return PALETTE[Math.abs(hash) % PALETTE.length];
+}
+
+const PALETTE = ['#d33682', '#2aa198', '#6c71c4', '#cb4b16', '#268bd2', '#859900', '#b58900', '#dc322f'];
+
+/** What a client publishes in its awareness state (field `cursor`; `user` follows the y-codemirror convention). */
+interface CursorState {
+  /** A project path, as another client sent it: parsed before use. */
+  path: string;
+  anchor: unknown;
+  head: unknown;
 }

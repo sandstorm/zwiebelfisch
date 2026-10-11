@@ -1,12 +1,4 @@
-// The file-navigation extension: the links around the shown file that lead to other files. "← previous file" /
-// "next file →" above and below a file the main file includes, in its reading order; "← Back to …" / "Forward to … →"
-// above any file, the files the user came from (VS Code's Go Back / Go Forward, also by key). Entry of
-// extensions/file-navigation/. See docs/10_guide/02_features.typ.
-// Why one extension for both: they share the editor frame (one per widget) and the bar's look; neither needs the
-// file panel, so a host may keep them without it.
-// Why the history listens to the shown file rather than to the ways of opening one (links, "Edit diagram", the
-// preview, the file panel, …): every way ends in `workbench.open`, so every change of the shown file counts, as in
-// VS Code, without any feature knowing about the history.
+// The file-navigation extension. Entry of extensions/file-navigation/. See docs/10_guide/02_features.typ.
 import { neighbours } from '../../core/typst-syntax/typst-syntax';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceRange } from '../../core/typst-document/typst-document';
@@ -17,12 +9,20 @@ import { type NavigationLocation, NavigationHistory } from './model/navigation-h
 import { FileNavigation } from './workbench/file-navigation';
 import { HistoryLinks, KEYBINDINGS } from './workbench/history-links';
 
-/** Goes back to the file shown before (with its editor and selection), if any. */
-const BACK = 'fileNavigation.back';
-/** Goes forward again, after going back. */
-const FORWARD = 'fileNavigation.forward';
-
-/** The links around the shown file: previous / next file in reading order, back / forward in the files the user was in. */
+/**
+ * The links around the shown file: previous / next file in reading order, back / forward in the files the user was in.
+ *
+ * The links around the shown file that lead to other files. "← previous file" / "next file →" above and below a file
+ * the main file includes, in its reading order; "← Back to …" / "Forward to … →" above any file, the files the user
+ * came from (VS Code's Go Back / Go Forward, also by key).
+ *
+ * Why one extension for both: they share the editor frame (one per widget) and the bar's look; neither needs the file
+ * panel, so a host may keep them without it.
+ *
+ * Why the history listens to the shown file rather than to the ways of opening one (links, "Edit diagram", the preview,
+ * the file panel, …): every way ends in `workbench.open`, so every change of the shown file counts, as in VS Code,
+ * without any feature knowing about the history.
+ */
 export function fileNavigation(): TypstExtension {
   return {
     id: 'file-navigation',
@@ -89,3 +89,8 @@ function within(range: SourceRange, text: string | undefined): SourceRange | und
   if (text === undefined) return undefined;
   return SourceRange.of({ from: Math.min(range.from, text.length), to: Math.min(range.to, text.length) });
 }
+
+/** Goes back to the file shown before (with its editor and selection), if any. */
+const BACK = 'fileNavigation.back';
+/** Goes forward again, after going back. */
+const FORWARD = 'fileNavigation.forward';

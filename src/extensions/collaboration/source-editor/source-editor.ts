@@ -1,6 +1,4 @@
-// The collaboration's part of the Source editors: other users' carets and selections in a CodeMirror editor (the
-// Source editors, and the code of the Visual editor's raw boxes), and their edits kept out of the undo history.
-// See collaboration.ts.
+// The collaboration's part of the Source editors. See collaboration.ts.
 import { EditorState, Facet, StateEffect, StateField, Transaction, type Extension, type Range } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet } from '@codemirror/view';
 import { fromDocument, type SourceEditorContext } from '../../../hosts/source-editor/source-editor';
@@ -11,6 +9,9 @@ import { textColorOn } from '../../../core/color-scheme/color-scheme';
 /**
  * Undo is per user: other users' edits (changes with `REMOTE_ORIGIN`) never enter a Source editor's history; it maps
  * over them, so Undo reverts the local user's last edit only (also one made in the Visual editor).
+ *
+ * Other users' carets and selections in a CodeMirror editor (the Source editors, and the code of the Visual editor's
+ * raw boxes), and their edits kept out of the undo history.
  */
 export const perUserUndo: Extension = EditorState.transactionExtender.of((tr) =>
   tr.annotation(fromDocument)?.origin === REMOTE_ORIGIN ? { annotations: Transaction.addToHistory.of(false) } : null,
@@ -28,16 +29,8 @@ export function sourcePresence(presences: PresenceSource): (view: SourceEditorCo
   ];
 }
 
-/** What a new editor shows before the first `setPresence` (the places when it was made). */
-const initialPresences = Facet.define<readonly Presence[], readonly Presence[]>({ combine: (values) => values.at(-1) ?? [] });
-
 /** Shows these presences (offsets in the editor's text) in an editor with `remotePresence`, replacing the ones shown. */
 export const setPresence = StateEffect.define<readonly Presence[]>();
-
-/** A presence as shown: `moves` counts how often its caret moved (a move shows the name flag again). */
-interface Shown extends Presence {
-  moves: number;
-}
 
 /**
  * Other users' carets and selections in a CodeMirror view, in the style of
@@ -56,6 +49,32 @@ export const remotePresence: Extension = StateField.define<readonly Shown[]>({
   },
   provide: (field) => EditorView.decorations.compute([field], (state) => decorations(state, state.field(field))),
 });
+
+/**
+ * A remote caret: a thin bar in the user's color with a flag naming them (the look of Tiptap's CollaborationCaret /
+ * y-codemirror). Styling decides whether the flag always shows or only on hover and right after a move.
+ */
+export function caretElement(doc: Document, user: PresenceUser): HTMLElement {
+  const caret = doc.createElement('span');
+  caret.className = 'typst-collaboration__caret';
+  caret.dataset.user = user.name;
+  caret.setAttribute('aria-hidden', 'true');
+  caret.contentEditable = 'false';
+  presenceStyle(caret, user);
+  const flag = doc.createElement('span');
+  flag.className = 'typst-collaboration__caret-flag';
+  flag.textContent = user.name;
+  caret.append(flag);
+  return caret;
+}
+
+/** What a new editor shows before the first `setPresence` (the places when it was made). */
+const initialPresences = Facet.define<readonly Presence[], readonly Presence[]>({ combine: (values) => values.at(-1) ?? [] });
+
+/** A presence as shown: `moves` counts how often its caret moved (a move shows the name flag again). */
+interface Shown extends Presence {
+  moves: number;
+}
 
 /** The new presences, clamped to the text; a caret that moved (or is new) counts one more move. */
 function arrive(before: readonly Shown[], presences: readonly Presence[], length: number): Shown[] {
@@ -115,22 +134,4 @@ class CaretWidget extends WidgetType {
 function presenceStyle(element: HTMLElement, user: PresenceUser): void {
   element.style.setProperty('--typst-remote-color', user.color);
   element.style.setProperty('--typst-remote-text', textColorOn(user.color));
-}
-
-/**
- * A remote caret: a thin bar in the user's color with a flag naming them (the look of Tiptap's CollaborationCaret /
- * y-codemirror). Styling decides whether the flag always shows or only on hover and right after a move.
- */
-export function caretElement(doc: Document, user: PresenceUser): HTMLElement {
-  const caret = doc.createElement('span');
-  caret.className = 'typst-collaboration__caret';
-  caret.dataset.user = user.name;
-  caret.setAttribute('aria-hidden', 'true');
-  caret.contentEditable = 'false';
-  presenceStyle(caret, user);
-  const flag = doc.createElement('span');
-  flag.className = 'typst-collaboration__caret-flag';
-  flag.textContent = user.name;
-  caret.append(flag);
-  return caret;
 }

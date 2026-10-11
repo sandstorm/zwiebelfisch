@@ -1,12 +1,14 @@
-// The Visual editors the devtools read the document from: a Tiptap extension in every view (through the public
-// `visualEditor.registerTiptapExtension`) keeps each view's editor by its document. See ../devtools.ts.
+// The Visual editors the devtools read the document from. See ../devtools.ts.
 import { Extension, type Editor } from '@tiptap/core';
 import type { VisualEditorContext } from '../../../hosts/visual-editor/visual-editor';
 import { documentRows, type DocumentRow } from '../model/document-tree';
 
-type TypstDocument = VisualEditorContext['document'];
-
-/** The Visual editors alive now, by document; `onChange` hears every transaction of any of them. */
+/**
+ * The Visual editors alive now, by document; `onChange` hears every transaction of any of them.
+ *
+ * A Tiptap extension in every view (through the public `visualEditor.registerTiptapExtension`) keeps each view's editor
+ * by its document.
+ */
 export class DocumentViews {
   readonly #views = new Map<TypstDocument, { editor: Editor; view: VisualEditorContext }>();
 
@@ -41,3 +43,5 @@ export class DocumentViews {
     return { rows, selection: { from: selection.from, to: selection.to } };
   }
 }
+
+type TypstDocument = VisualEditorContext['document'];

@@ -1,15 +1,11 @@
-// The devtools' Contributions tab: every contribution in its point's terms, grouped by extension or by contribution
-// point (who competes there, in the order the host resolves them). See devtools-panel.ts.
+// The devtools' Contributions tab. See devtools-panel.ts.
 import type { Contribution, ContributionLog } from '../recording/contributions';
 import { element, type TabView } from './dom';
 
-type Grouping = 'extension' | 'point';
-
-const GROUPINGS: readonly { readonly id: Grouping; readonly label: string; readonly title: string }[] = [
-  { id: 'extension', label: 'By extension', title: 'Each extension with what it contributes, in activation and registration order' },
-  { id: 'point', label: 'By contribution point', title: 'Each contribution point with the contributions competing there, in the order the host resolves them' },
-];
-
+/**
+ * Every contribution in its point's terms, grouped by extension or by contribution point (who competes there, in the
+ * order the host resolves them).
+ */
 export class ContributionsTab implements TabView {
   readonly element: HTMLElement;
   #grouping: Grouping = 'extension';
@@ -77,3 +73,10 @@ export class ContributionsTab implements TabView {
     return item;
   }
 }
+
+type Grouping = 'extension' | 'point';
+
+const GROUPINGS: readonly { readonly id: Grouping; readonly label: string; readonly title: string }[] = [
+  { id: 'extension', label: 'By extension', title: 'Each extension with what it contributes, in activation and registration order' },
+  { id: 'point', label: 'By contribution point', title: 'Each contribution point with the contributions competing there, in the order the host resolves them' },
+];

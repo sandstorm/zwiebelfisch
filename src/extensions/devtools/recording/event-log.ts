@@ -4,15 +4,6 @@ import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { ExtensionContext } from '../../../hosts/workbench/workbench';
 import { formatValue, type FormattedValue } from '../model/describe';
 
-/** One event that fired: when (ms since the epoch), which (`window.onDidChangeActiveFile`), and its value as it was then. */
-export interface LoggedEvent {
-  /** Unique in the log, in firing order. */
-  readonly id: number;
-  readonly time: number;
-  readonly event: string;
-  readonly value: FormattedValue;
-}
-
 /** The last `capacity` events, oldest first; while `paused`, none are added. */
 export class EventLog {
   #entries: LoggedEvent[] = [];
@@ -44,6 +35,15 @@ export class EventLog {
   clear(): void {
     this.#entries = [];
   }
+}
+
+/** One event that fired: when (ms since the epoch), which (`window.onDidChangeActiveFile`), and its value as it was then. */
+export interface LoggedEvent {
+  /** Unique in the log, in firing order. */
+  readonly id: number;
+  readonly time: number;
+  readonly event: string;
+  readonly value: FormattedValue;
 }
 
 /**

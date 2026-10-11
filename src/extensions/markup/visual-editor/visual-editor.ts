@@ -1,5 +1,4 @@
-// What the markup extension contributes to the Visual editor: the specs of strong and emphasis, links, raw text
-// (inline code, code blocks) and block quotes, and their toolbar entries. See markup.ts.
+// What the markup extension contributes to the Visual editor. See markup.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { Extension, type AnyExtension, type Editor } from '@tiptap/core';
 import Code from '@tiptap/extension-code';
@@ -12,61 +11,28 @@ import { starterKitPart, type Around, type PlacedNode, type TypstMarkSpec, type 
 import { codeBlockView } from './code-block-view';
 import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from '../model/raw-code';
 
-/** Tiptap's bold, italic, link and blockquote (StarterKit's), configured for Typst: each spec brings its own. */
-const Bold = starterKitPart('typstBold', { bold: {} });
-const Italic = starterKitPart('typstItalic', { italic: {} });
-const Link = starterKitPart('typstLink', {
-  link: { openOnClick: false, autolink: false, HTMLAttributes: { class: 'typst-markup__link', target: null, rel: null } },
-}).extend({
-  // the link mark StarterKit adds comes with priority 1000 (outside everything): outside bold and italic (100) only
-  addExtensions() {
-    return (this.parent?.() ?? []).map((link: AnyExtension) => link.extend({ priority: 120 }));
-  },
-});
-const Blockquote = starterKitPart('typstBlockquote', { blockquote: { HTMLAttributes: { class: 'typst-markup__quote' } } }).extend({
-  // `sep`: the whitespace to the next block; `layout`: how the call around its blocks is written
-  addGlobalAttributes: () => [{ types: ['blockquote'], attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } } }],
-});
-
-/**
- * Inline raw text (`code`). Unlike Tiptap's code mark it combines with other
- * formatting (Typst allows `*`code`*`). `fence` and `lang` remember the
- * delimiters (```lang …```) so they print back as written.
- */
-const TypstCode = Code.extend({
-  excludes: '',
-  addAttributes() {
-    return { fence: { default: 1, rendered: false }, lang: { default: null, rendered: false } };
-  },
-}).configure({ HTMLAttributes: { class: 'typst-markup__code-inline' } });
-
-/**
- * Raw text in a block (```lang …```): plain text edited in place, under a
- * field for its language.
- */
-const TypstCodeBlock = CodeBlock.extend({
-  addAttributes() {
-    return {
-      ...this.parent?.(),
-      src: { default: null, rendered: false, keepOnSplit: false },
-      sep: { default: null, rendered: false },
-      fence: { default: 3, rendered: false },
-    };
-  },
-  addNodeView() {
-    return codeBlockView;
-  },
-}).configure({ HTMLAttributes: { class: 'typst-markup__code-block' } });
-
 // ------------------------------------------------------------- strong, emph
 
-const WORD = /[\p{L}\p{N}_]/u;
+/** Tiptap's bold, italic, link and blockquote (StarterKit's), configured for Typst: each spec brings its own. */
+const Bold = starterKitPart('typstBold', { bold: {} });
 
-/** `*x*`, or `#strong[x]` where a delimiter would touch a word character or the span starts or ends with a space. */
-function delimitedSyntax(delimiter: string, func: string, { before, after, first, last }: Around): { open: string; close: string } {
-  const needsFunction = (before !== undefined && WORD.test(before)) || (after !== undefined && WORD.test(after)) || /^\s/.test(first) || /\s$/.test(last);
-  return needsFunction ? { open: `#${func}[`, close: ']' } : { open: delimiter, close: delimiter };
-}
+/**
+ * The specs of strong and emphasis, links, raw text (inline code, code blocks) and block quotes, and their toolbar
+ * entries.
+ */
+export const BOLD: TypstMarkSpec = {
+  name: 'bold',
+  tiptap: Bold,
+  typst: { parseTypst: { syntaxNodes: { Strong: { inline: delimited('bold') } } }, toTypst: (_mark, around) => delimitedSyntax('*', 'strong', around) },
+};
+
+const Italic = starterKitPart('typstItalic', { italic: {} });
+
+export const ITALIC: TypstMarkSpec = {
+  name: 'italic',
+  tiptap: Italic,
+  typst: { parseTypst: { syntaxNodes: { Emph: { inline: delimited('italic') } } }, toTypst: (_mark, around) => delimitedSyntax('_', 'emph', around) },
+};
 
 /** `*…*` / `_…_` with both delimiters present: its content with the mark; null (raw) for unclosed ones. */
 function delimited(markName: string) {
@@ -78,22 +44,24 @@ function delimited(markName: string) {
   };
 }
 
-export const BOLD: TypstMarkSpec = {
-  name: 'bold',
-  tiptap: Bold,
-  typst: { parseTypst: { syntaxNodes: { Strong: { inline: delimited('bold') } } }, toTypst: (_mark, around) => delimitedSyntax('*', 'strong', around) },
-};
+/** `*x*`, or `#strong[x]` where a delimiter would touch a word character or the span starts or ends with a space. */
+function delimitedSyntax(delimiter: string, func: string, { before, after, first, last }: Around): { open: string; close: string } {
+  const needsFunction = (before !== undefined && WORD.test(before)) || (after !== undefined && WORD.test(after)) || /^\s/.test(first) || /\s$/.test(last);
+  return needsFunction ? { open: `#${func}[`, close: ']' } : { open: delimiter, close: delimiter };
+}
 
-export const ITALIC: TypstMarkSpec = {
-  name: 'italic',
-  tiptap: Italic,
-  typst: { parseTypst: { syntaxNodes: { Emph: { inline: delimited('italic') } } }, toTypst: (_mark, around) => delimitedSyntax('_', 'emph', around) },
-};
+const WORD = /[\p{L}\p{N}_]/u;
 
 // -------------------------------------------------------------------- links
 
-/** Bare URL characters, not ending in punctuation that Typst would leave out of the link. */
-const BARE_URL = /^https?:\/\/[\w\-.~:/?#@!$&'*+,;=%]*[\w\-~/#@$&+=%]$/;
+const Link = starterKitPart('typstLink', {
+  link: { openOnClick: false, autolink: false, HTMLAttributes: { class: 'typst-markup__link', target: null, rel: null } },
+}).extend({
+  // the link mark StarterKit adds comes with priority 1000 (outside everything): outside bold and italic (100) only
+  addExtensions() {
+    return (this.parent?.() ?? []).map((link: AnyExtension) => link.extend({ priority: 120 }));
+  },
+});
 
 /**
  * Links: a bare URL is text with a `link` mark whose `href` is the text;
@@ -127,7 +95,22 @@ function parseLinkCall(p: TypstParseContext, call: SyntaxNode, marks: readonly M
   return p.inline(content, p.schema.marks.link.create({ href }).addToSet(marks));
 }
 
+/** Bare URL characters, not ending in punctuation that Typst would leave out of the link. */
+const BARE_URL = /^https?:\/\/[\w\-.~:/?#@!$&'*+,;=%]*[\w\-~/#@$&+=%]$/;
+
 // ----------------------------------------------------------------- raw text
+
+/**
+ * Inline raw text (`code`). Unlike Tiptap's code mark it combines with other
+ * formatting (Typst allows `*`code`*`). `fence` and `lang` remember the
+ * delimiters (```lang …```) so they print back as written.
+ */
+const TypstCode = Code.extend({
+  excludes: '',
+  addAttributes() {
+    return { fence: { default: 1, rendered: false }, lang: { default: null, rendered: false } };
+  },
+}).configure({ HTMLAttributes: { class: 'typst-markup__code-inline' } });
 
 /** Inline raw text on one line: its text with a `code` mark remembering the delimiters (empty and multi-line raw stays raw). */
 export const CODE: TypstMarkSpec = {
@@ -151,6 +134,24 @@ export const CODE: TypstMarkSpec = {
     toTypst: (mark, { text }) => inlineCodeDelimiters(text, mark.attrs.lang, mark.attrs.fence),
   },
 };
+
+/**
+ * Raw text in a block (```lang …```): plain text edited in place, under a
+ * field for its language.
+ */
+const TypstCodeBlock = CodeBlock.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      src: { default: null, rendered: false, keepOnSplit: false },
+      sep: { default: null, rendered: false },
+      fence: { default: 3, rendered: false },
+    };
+  },
+  addNodeView() {
+    return codeBlockView;
+  },
+}).configure({ HTMLAttributes: { class: 'typst-markup__code-block' } });
 
 /**
  * Raw text Typst shows as a block (3+ backticks around a line break): a code
@@ -191,13 +192,10 @@ export const CODE_BLOCK: TypstNodeSpec = {
 
 // ------------------------------------------------------------------- quotes
 
-/** How a block quote's source lies around its content: `#quote(..)[` and `]`, with any whitespace inside. */
-interface QuoteLayout {
-  open: string;
-  close: string;
-}
-
-const NEW_QUOTE: QuoteLayout = { open: '#quote(block: true)[', close: ']' };
+const Blockquote = starterKitPart('typstBlockquote', { blockquote: { HTMLAttributes: { class: 'typst-markup__quote' } } }).extend({
+  // `sep`: the whitespace to the next block; `layout`: how the call around its blocks is written
+  addGlobalAttributes: () => [{ types: ['blockquote'], attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } } }],
+});
 
 /**
  * `#quote(block: true, ..named)[content]` (Tiptap's blockquote): its content
@@ -230,12 +228,20 @@ function isBlockQuoteArgs(p: TypstParseContext, call: SyntaxNode): boolean {
   return callArguments(call).every((a) => a.name === 'Named') && block !== null && p.text(block) === 'true';
 }
 
+/** How a block quote's source lies around its content: `#quote(..)[` and `]`, with any whitespace inside. */
+interface QuoteLayout {
+  open: string;
+  close: string;
+}
+
 /** `open`, the container's blocks, `close`. */
 function writeAround(state: TypstSerializeState, block: Node, pos: number, { open, close }: QuoteLayout): void {
   state.hidden(open);
   state.blocks(block, pos + 1, '\n\n');
   state.closing(close);
 }
+
+const NEW_QUOTE: QuoteLayout = { open: '#quote(block: true)[', close: ']' };
 
 // ------------------------------------------------------------------ toolbar
 

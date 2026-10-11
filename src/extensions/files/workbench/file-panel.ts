@@ -1,5 +1,4 @@
-// FilePanel: the file panel's view — a "Files" header with its "New" menu, the project as a FileTree with a context
-// menu per row, uploads. It turns gestures into FileChanges and leaves to its owner whether they happen. See ../files.ts.
+// FilePanel. See ../files.ts.
 import type { FileChange } from '../../../core/project/project';
 import { type NamedPath, ProjectPath } from '../../../core/paths/paths';
 import { uploadChanges } from '../../../core/uploads/uploads';
@@ -9,38 +8,6 @@ import { filesUnder, type Folder, folderOf, relocate } from '../model/tree-model
 import { icon } from './icons/icons';
 import { FileTree } from './tree/tree';
 
-/** The menus the panel shows (VS Code's ids): "New" in its header, and the context menu of a row. */
-export const NEW_FILE_MENU = 'file/newFile';
-export const CONTEXT_MENU = 'explorer/context';
-
-/** "New file": a Typst file unless the name has another ending. */
-const NEW_FILE_ENDINGS = { Typst: ['typ'], 'All files': ['*'] };
-
-/** What the panel asks the user with, and tells them: the window's input box, save dialog, menus and messages. */
-export type FilePanelPrompts = Pick<WindowApi, 'showInputBox' | 'showSaveDialog' | 'showContextMenu' | 'showWarningMessage' | 'showErrorMessage'>;
-
-export interface FilePanelOptions {
-  /** Someone picked a file. */
-  onOpen(path: ProjectPath): void;
-  /** Someone asked for `change`. Resolves to why it was refused (an error message then), or null once applied. */
-  onChange(change: FileChange): Promise<string | null>;
-  prompts: FilePanelPrompts;
-  /** Whether a menu the panel shows (`file/newFile`) has entries in `context` ("New" is hidden while it has none). */
-  hasMenuItems(menuId: string, context: MenuContext): boolean;
-  /** Where the open folders are kept (key `openFolders`; default: only while the panel lives). */
-  state?: Memento;
-  /** The decorations of a file (badges, e.g. who else is in it), as they are at each `render` (default: none). */
-  decorations?(path: ProjectPath): readonly FileDecoration[];
-  /** The icon of a file that is no Typst file, SVG markup (`window.getFileIcon`; default: the same for every file). */
-  icon?(path: ProjectPath): string | undefined;
-}
-
-export interface FilePanelState {
-  paths: ProjectPath[];
-  main: ProjectPath;
-  active: ProjectPath;
-}
-
 /**
  * The file panel: a "Files" header with "New" (the menu `file/newFile`), and the project as a `FileTree` whose rows
  * have a context menu (`explorer/context`: right click, Shift+F10, the context menu key). The operations behind the
@@ -48,6 +15,9 @@ export interface FilePanelState {
  * it; new files and uploads go into the row's folder. The main file (and a folder holding it) stays where it is.
  * Names are asked for in the window's input box, refusals are error messages. It only turns gestures into
  * `FileChange`s; whether they happen is up to `onChange`.
+ *
+ * The file panel's view — a "Files" header with its "New" menu, the project as a FileTree with a context menu per row,
+ * uploads. It turns gestures into FileChanges and leaves to its owner whether they happen.
  */
 export class FilePanel {
   private readonly element: HTMLElement;
@@ -264,8 +234,40 @@ export class FilePanel {
   }
 }
 
+/** The menus the panel shows (VS Code's ids): "New" in its header, and the context menu of a row. */
+export const NEW_FILE_MENU = 'file/newFile';
+export const CONTEXT_MENU = 'explorer/context';
+
+/** What the panel asks the user with, and tells them: the window's input box, save dialog, menus and messages. */
+export type FilePanelPrompts = Pick<WindowApi, 'showInputBox' | 'showSaveDialog' | 'showContextMenu' | 'showWarningMessage' | 'showErrorMessage'>;
+
+export interface FilePanelOptions {
+  /** Someone picked a file. */
+  onOpen(path: ProjectPath): void;
+  /** Someone asked for `change`. Resolves to why it was refused (an error message then), or null once applied. */
+  onChange(change: FileChange): Promise<string | null>;
+  prompts: FilePanelPrompts;
+  /** Whether a menu the panel shows (`file/newFile`) has entries in `context` ("New" is hidden while it has none). */
+  hasMenuItems(menuId: string, context: MenuContext): boolean;
+  /** Where the open folders are kept (key `openFolders`; default: only while the panel lives). */
+  state?: Memento;
+  /** The decorations of a file (badges, e.g. who else is in it), as they are at each `render` (default: none). */
+  decorations?(path: ProjectPath): readonly FileDecoration[];
+  /** The icon of a file that is no Typst file, SVG markup (`window.getFileIcon`; default: the same for every file). */
+  icon?(path: ProjectPath): string | undefined;
+}
+
+export interface FilePanelState {
+  paths: ProjectPath[];
+  main: ProjectPath;
+  active: ProjectPath;
+}
+
 function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, className: string): HTMLElementTagNameMap[K] {
   const node = doc.createElement(tag);
   node.className = className;
   return node;
 }
+
+/** "New file": a Typst file unless the name has another ending. */
+const NEW_FILE_ENDINGS = { Typst: ['typ'], 'All files': ['*'] };

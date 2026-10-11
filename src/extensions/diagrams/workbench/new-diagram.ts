@@ -1,5 +1,4 @@
-// "New diagram…": asks where the new `.drawio.png` goes, creates an empty diagram there and opens it; `createDiagram`
-// is the asking and creating, which "Insert diagram" shares. See ../diagrams.ts.
+// "New diagram…". See ../diagrams.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 import type { ExtensionContext } from '../../../hosts/workbench/workbench';
 import { emptyDiagram } from '../model/png';
@@ -8,6 +7,9 @@ import { DIAGRAM_EDITOR, DIAGRAM_EXTENSION } from '../model/model';
 /**
  * Asks for the new diagram's name in the folder of `resource` (a file's folder, or the folder itself; default: the
  * shown file's), ending in `.drawio.png` (`window.showSaveDialog`); creates the empty diagram and opens it.
+ *
+ * Asks where the new `.drawio.png` goes, creates an empty diagram there and opens it; `createDiagram` is the asking and
+ * creating, which "Insert diagram" shares.
  */
 export async function newDiagram(context: ExtensionContext, resource = context.window.activeFile): Promise<void> {
   const target = await createDiagram(context, 'New diagram', resource);

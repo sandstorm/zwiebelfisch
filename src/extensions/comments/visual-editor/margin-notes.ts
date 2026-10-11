@@ -10,12 +10,6 @@ import { children } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type ToolbarAction, type TypstNodeSpec, type VisualEditorContribution } from '../../../hosts/visual-editor/visual-editor';
 import type { PlacedNode, TypstMarkSpec, TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 
-export interface MarginNotesOptions {
-  /** Adds a comment (margin note) at the selection: the "Comment" button in the toolbar and the selection's bar. */
-  comment(): void;
-}
-
-
 /**
  * `drafting` margin notes in the Visual editor. A margin note call (as
  * `noteCallSyntax` defines it) belongs in running text:
@@ -48,6 +42,29 @@ export function marginNotes(options: MarginNotesOptions): VisualEditorContributi
   };
 }
 
+export interface MarginNotesOptions {
+  /** Adds a comment (margin note) at the selection: the "Comment" button in the toolbar and the selection's bar. */
+  comment(): void;
+}
+
+/** "Comment": enabled with a caret or selection in text (not in a code block or on a selected box). */
+function commentAction(comment: () => void): ToolbarAction {
+  return {
+    label: 'Comment',
+    shortcut: 'Mod+Alt+M',
+    icon: COMMENT_ICON,
+    run: (c) => c,
+    click: () => comment(),
+    enabled: (editor) => {
+      const { selection } = editor.state;
+      const { parent } = selection.$from;
+      return selection instanceof TextSelection && parent.inlineContent && !parent.type.spec.code;
+    },
+  };
+}
+
+const COMMENT_ICON = svg('<path d="M4 5h16v11h-9l-5 4v-4H4z"/>');
+
 const MarginNote = Node.create({
   name: 'marginNote',
   group: 'inline',
@@ -65,25 +82,6 @@ const MarginNote = Node.create({
   },
 });
 
-const NoteRange = Mark.create({
-  name: 'noteRange',
-  // outermost where it covers the same text as another mark (links: 120)
-  priority: 130,
-  inclusive: false,
-  excludes: '',
-  addAttributes() {
-    return {
-      head: { default: NOTE_HEAD, rendered: false },
-      note: { default: '', rendered: false },
-      // tells apart notes in one textblock (numbered by the parser), so equal neighbours do not merge
-      id: { default: null, rendered: false },
-    };
-  },
-  renderHTML() {
-    return ['mark', { class: 'typst-comments__range' }, 0];
-  },
-});
-
 const POINT_NOTE: TypstNodeSpec = {
   name: 'marginNote',
   tiptap: MarginNote,
@@ -93,26 +91,6 @@ const POINT_NOTE: TypstNodeSpec = {
   },
   view: { box: 'widget' },
 };
-
-const NOTE_RANGE: TypstMarkSpec = {
-  name: 'noteRange',
-  tiptap: NoteRange,
-  typst: { toTypst: (mark) => rangeNoteSyntax(mark.attrs.head, mark.attrs.note) },
-};
-
-/**
- * `#margin-note(..named)[note]` → a `marginNote` atom holding the call's head
- * and note; `#margin-note(..named)[text][note]` → `text` with a `noteRange`
- * mark holding them. Null for calls that are not margin notes.
- */
-function parseMarginNote(p: TypstParseContext, call: SyntaxNode, marks: readonly PMMark[]): PMNode | PlacedNode[] | null {
-  const syntax = noteCallSyntax(p.source, call);
-  if (!syntax) return null;
-  const { head, text, note } = syntax;
-  if (!text) return p.schema.nodes.marginNote.create({ head, note }, null, marks);
-  const mark = p.schema.marks.noteRange.create({ head, note, id: p.serial() });
-  return p.inline(children(text.getChild('Markup')!), mark.addToSet(marks));
-}
 
 /** A point note in the text: a speech-bubble icon with the note as its tooltip. */
 class PointNoteMarker implements NodeView {
@@ -148,20 +126,41 @@ class PointNoteMarker implements NodeView {
 const NOTE_ICON =
   '<svg class="typst-comments__note-icon" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"/></svg>';
 
-const COMMENT_ICON = svg('<path d="M4 5h16v11h-9l-5 4v-4H4z"/>');
-
-/** "Comment": enabled with a caret or selection in text (not in a code block or on a selected box). */
-function commentAction(comment: () => void): ToolbarAction {
-  return {
-    label: 'Comment',
-    shortcut: 'Mod+Alt+M',
-    icon: COMMENT_ICON,
-    run: (c) => c,
-    click: () => comment(),
-    enabled: (editor) => {
-      const { selection } = editor.state;
-      const { parent } = selection.$from;
-      return selection instanceof TextSelection && parent.inlineContent && !parent.type.spec.code;
-    },
-  };
+/**
+ * `#margin-note(..named)[note]` → a `marginNote` atom holding the call's head
+ * and note; `#margin-note(..named)[text][note]` → `text` with a `noteRange`
+ * mark holding them. Null for calls that are not margin notes.
+ */
+function parseMarginNote(p: TypstParseContext, call: SyntaxNode, marks: readonly PMMark[]): PMNode | PlacedNode[] | null {
+  const syntax = noteCallSyntax(p.source, call);
+  if (!syntax) return null;
+  const { head, text, note } = syntax;
+  if (!text) return p.schema.nodes.marginNote.create({ head, note }, null, marks);
+  const mark = p.schema.marks.noteRange.create({ head, note, id: p.serial() });
+  return p.inline(children(text.getChild('Markup')!), mark.addToSet(marks));
 }
+
+const NoteRange = Mark.create({
+  name: 'noteRange',
+  // outermost where it covers the same text as another mark (links: 120)
+  priority: 130,
+  inclusive: false,
+  excludes: '',
+  addAttributes() {
+    return {
+      head: { default: NOTE_HEAD, rendered: false },
+      note: { default: '', rendered: false },
+      // tells apart notes in one textblock (numbered by the parser), so equal neighbours do not merge
+      id: { default: null, rendered: false },
+    };
+  },
+  renderHTML() {
+    return ['mark', { class: 'typst-comments__range' }, 0];
+  },
+});
+
+const NOTE_RANGE: TypstMarkSpec = {
+  name: 'noteRange',
+  tiptap: NoteRange,
+  typst: { toTypst: (mark) => rangeNoteSyntax(mark.attrs.head, mark.attrs.note) },
+};

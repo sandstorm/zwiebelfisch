@@ -5,6 +5,8 @@ import { TextSelection } from '@tiptap/pm/state';
 import type { NodeView, ViewMutationRecord } from '@tiptap/pm/view';
 import { codeLanguage } from '../model/raw-code';
 
+export const codeBlockView: NodeViewRenderer = ({ node, editor, getPos }) => new CodeBlockView(node, editor, getPos);
+
 /**
  * A code block: its text edited in place (monospace, plain text), under a
  * small header with a field for its language. The field accepts only what
@@ -80,5 +82,3 @@ class CodeBlockView implements NodeView {
     view.focus();
   }
 }
-
-export const codeBlockView: NodeViewRenderer = ({ node, editor, getPos }) => new CodeBlockView(node, editor, getPos);

@@ -1,12 +1,16 @@
-// The lists extension: bulleted, numbered and task lists in the Visual editor, with their toolbar buttons. See
-// docs/30_architecture/08_built-in-extensions.typ. Why one extension: a task list is a bullet list in Typst (`- [ ] todo`), so the two
-// share their syntax and their toolbar group; task lists' Tiptap priority puts their parse rule first.
+// The lists extension. See docs/30_architecture/08_built-in-extensions.typ.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './lists.css?inline';
 import { BULLET_LIST, LIST_ACTIONS, LIST_ITEM, ORDERED_LIST } from './visual-editor/visual-editor';
 import { TASK_ITEM, TASK_LIST, TASK_LIST_ACTION } from './visual-editor/task-lists';
 
-/** Bulleted, numbered and task lists. */
+/**
+ * Bulleted, numbered and task lists.
+ *
+ * Bulleted, numbered and task lists in the Visual editor, with their toolbar buttons. Why one extension: a task list is
+ * a bullet list in Typst (`- [ ] todo`), so the two share their syntax and their toolbar group; task lists' Tiptap
+ * priority puts their parse rule first.
+ */
 export function lists(): TypstExtension {
   return {
     id: 'lists',

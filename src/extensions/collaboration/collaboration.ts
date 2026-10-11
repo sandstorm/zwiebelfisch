@@ -1,14 +1,4 @@
-// The collaboration extension: real-time editing of the project with others (Yjs). Entry of
-// extensions/collaboration/. See docs/10_guide/04_collaboration.typ.
-// Why this entry is small and eager: the widget loads it with every other extension, but most widgets never
-// collaborate, so the Yjs side (model/model.ts: Collaboration, SharedProject, RemoteCursors, GitLabSourceControl, …) is a
-// chunk of its own that CollaborationLink loads on demand. Nothing here may import that chunk other than as a type.
-// The extension draws the other users' places itself, through the hosts' generic contribution points: CodeMirror
-// extensions in the Source editors (source-editor/; also what keeps other users' edits out of their undo history),
-// highlights, decorations and box code extensions in the Visual editors (visual-editor/), file decorations in the
-// workbench (workbench/). It reads them from its own `Presences`. Until the room's text is in the project, the
-// editing area shows "Connecting to the room…" and takes no input (window.withProgress). In a room backed by a GitLab branch it registers the
-// branch as a workbench source control, and has the browser warn before the last user leaves changes nobody commits.
+// The collaboration extension. Entry of extensions/collaboration/. See docs/10_guide/04_collaboration.typ.
 import type { Awareness } from 'y-protocols/awareness';
 import type * as Y from 'yjs';
 import { ProgressLocation } from '../../hosts/window/window';
@@ -21,20 +11,24 @@ import { visualPresence } from './visual-editor/visual-editor';
 import { leaveWarning, presenceDecorations } from './workbench/workbench';
 
 /**
- * Where the shared state lives: a Y.Doc the host connects itself (any
- * provider; pass it synced, and its awareness for remote cursors), or a
- * Hocuspocus server the widget connects to.
- */
-export type CollaborationOptions =
-  | { doc: Y.Doc; awareness?: Awareness }
-  | { url: string; room: string; token?: string };
-
-/**
  * Real-time collaboration (`options`: see `CollaborationOptions`) as the workbench's `user`: shares the project,
  * publishes the local selection, draws the others' places in every file's views and marks the files they are in; in
  * a GitLab-backed room, the user commits through the room's source control, and the browser asks before the last user
  * leaves changes the server does not commit by itself. Not a built-in: the host adds it with its
  * connection (`createTypstEditor({ extensions: (builtinExtensions) => [...builtinExtensions, collaboration({ url, room })] })`).
+ *
+ * Real-time editing of the project with others (Yjs).
+ *
+ * Why this entry is small and eager: the widget loads it with every other extension, but most widgets never
+ * collaborate, so the Yjs side (model/model.ts: Collaboration, SharedProject, RemoteCursors, GitLabSourceControl, …) is
+ * a chunk of its own that CollaborationLink loads on demand. Nothing here may import that chunk other than as a type.
+ * The extension draws the other users' places itself, through the hosts' generic contribution points: CodeMirror
+ * extensions in the Source editors (source-editor/; also what keeps other users' edits out of their undo history),
+ * highlights, decorations and box code extensions in the Visual editors (visual-editor/), file decorations in the
+ * workbench (workbench/). It reads them from its own `Presences`. Until the room's text is in the project, the editing
+ * area shows "Connecting to the room…" and takes no input (window.withProgress). In a room backed by a GitLab branch it
+ * registers the branch as a workbench source control, and has the browser warn before the last user leaves changes
+ * nobody commits.
  */
 export function collaboration(options: CollaborationOptions): TypstExtension {
   return {
@@ -72,3 +66,12 @@ export function collaboration(options: CollaborationOptions): TypstExtension {
     },
   };
 }
+
+/**
+ * Where the shared state lives: a Y.Doc the host connects itself (any
+ * provider; pass it synced, and its awareness for remote cursors), or a
+ * Hocuspocus server the widget connects to.
+ */
+export type CollaborationOptions =
+  | { doc: Y.Doc; awareness?: Awareness }
+  | { url: string; room: string; token?: string };

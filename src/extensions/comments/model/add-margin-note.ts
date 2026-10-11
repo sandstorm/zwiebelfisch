@@ -6,12 +6,6 @@ import { SourceOffset, type SourceRange, type TextChange } from '../../../core/t
 import { calculateImportChange } from '../../../core/typst-syntax/typst-syntax';
 import { calculatePageMarginChanges } from './page-margin';
 
-/** Where a new note goes in the edited text: its (still empty) body starts at `note`. */
-export interface MarginNoteChanges {
-  changes: TextChange[];
-  note: SourceOffset;
-}
-
 /**
  * The edits that add a `drafting` margin note at `range` of Typst `text`:
  * a selection becomes the highlighted text of a range note,
@@ -33,6 +27,12 @@ export function calculateMarginNoteChanges(text: string, range: SourceRange): Ma
   const changes = [...withImport(text, note), ...calculatePageMarginChanges(text)].sort((a, b) => a.from - b.from);
   // Every note edit ends with `[]` inserted where the call ends: the body is just before that `]`.
   return { changes, note: SourceOffset.of(mapOffset(changes, note.at(-1)!.from) - 1) };
+}
+
+/** Where a new note goes in the edited text: its (still empty) body starts at `note`. */
+export interface MarginNoteChanges {
+  changes: TextChange[];
+  note: SourceOffset;
 }
 
 /**
@@ -96,10 +96,6 @@ function delimitedMarkup(node: SyntaxNode): SyntaxNode | null {
   return markup && first && last && first !== last && first.name === last.name ? markup : null;
 }
 
-function insert(at: number, text: string): TextChange {
-  return { from: SourceOffset.of(at), to: SourceOffset.of(at), insert: text };
-}
-
 /** Whether inserting `parts` (offset, text; ascending) into `text` yields one margin note call that ends with the last part. */
 function fits(text: string, ...parts: [number, string][]): boolean {
   let result = '';
@@ -111,6 +107,10 @@ function fits(text: string, ...parts: [number, string][]): boolean {
   const end = result.length;
   result += text.slice(last);
   return isNoteCallAt(result, parts[0][0], end);
+}
+
+function insert(at: number, text: string): TextChange {
+  return { from: SourceOffset.of(at), to: SourceOffset.of(at), insert: text };
 }
 
 /**

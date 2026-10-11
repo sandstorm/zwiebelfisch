@@ -4,17 +4,6 @@ import type { ProjectPath } from '../../../core/paths/paths';
 import type { FileChange } from '../../../core/project/project';
 import type { SourceRange } from '../../../core/typst-document/typst-document';
 
-/** Where the user was: a file, the editor it was shown in, and the selection there (a Typst file's). */
-export interface NavigationLocation {
-  readonly path: ProjectPath;
-  /** The custom editor it was shown in (e.g. `sourceEditor`); undefined: the one it opens in. */
-  readonly viewType?: string;
-  readonly selection?: SourceRange;
-}
-
-/** How many locations are kept, the current one included; the oldest go first. */
-export const HISTORY_LIMIT = 50;
-
 /**
  * The files shown one after another, oldest first, and the one shown now among them. Opening another file drops what
  * lay ahead (as a browser's history). A location's editor and selection are those it had when the user left it.
@@ -96,3 +85,14 @@ export class NavigationHistory {
     this.#index = merged.indexOf(current);
   }
 }
+
+/** Where the user was: a file, the editor it was shown in, and the selection there (a Typst file's). */
+export interface NavigationLocation {
+  readonly path: ProjectPath;
+  /** The custom editor it was shown in (e.g. `sourceEditor`); undefined: the one it opens in. */
+  readonly viewType?: string;
+  readonly selection?: SourceRange;
+}
+
+/** How many locations are kept, the current one included; the oldest go first. */
+export const HISTORY_LIMIT = 50;

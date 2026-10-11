@@ -11,11 +11,6 @@ const IMPORT = '#import "@preview/cheq:0.4.0": checklist';
 const SHOW = '#show: checklist';
 export const CHECKLIST_PREAMBLE = `${IMPORT}\n${SHOW}`;
 
-/** Any version, importing `checklist` (or everything). */
-const HAS_IMPORT = /#import\s+"@preview\/cheq:[^"]*"\s*:\s*(?:\*|[^\n]*\bchecklist\b)/;
-/** `#show: checklist` or `#show: checklist.with(..)`. */
-const HAS_SHOW = /#show\s*:\s*checklist\b/;
-
 /** Code to insert as a block of its own: after the code block `after` (an index), or at the very top (null). */
 export interface ChecklistPreambleChange {
   after: number | null;
@@ -35,3 +30,8 @@ export function calculateChecklistPreambleChange(codeBlocks: readonly string[]):
   if (importIndex < 0) return { after: null, code: hasShow ? IMPORT : CHECKLIST_PREAMBLE };
   return hasShow ? null : { after: importIndex, code: SHOW };
 }
+
+/** Any version, importing `checklist` (or everything). */
+const HAS_IMPORT = /#import\s+"@preview\/cheq:[^"]*"\s*:\s*(?:\*|[^\n]*\bchecklist\b)/;
+/** `#show: checklist` or `#show: checklist.with(..)`. */
+const HAS_SHOW = /#show\s*:\s*checklist\b/;

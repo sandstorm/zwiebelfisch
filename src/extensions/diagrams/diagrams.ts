@@ -1,10 +1,4 @@
-// The diagrams extension: `.drawio.png` files — PNGs with a diagrams.net diagram in them, so Typst shows them as
-// images (`#image("flow.drawio.png")`) and diagrams.net edits them again — opened in diagrams.net's editor embedded
-// in an iframe, saved as they change; "New diagram…"; "Insert diagram" (a new one as a figure in the text); "Edit
-// diagram" on a box showing one. Entry of extensions/diagrams/. See docs/10_guide/02_features.typ.
-// Why an extension: the editor is a custom editor (higher priority than the images' view of PNGs), the new-file
-// entry a menu item, "Insert diagram" a toolbar item, "Edit diagram" a box action, its document links come from whichever provider: the hosts' generic
-// contribution points; the protocol (model/) is pure state, so it is tested without an iframe.
+// The diagrams extension. Entry of extensions/diagrams/. See docs/10_guide/02_features.typ.
 import { ProjectPath } from '../../core/paths/paths';
 import { FileContent, type Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
@@ -18,20 +12,22 @@ import { editDiagramAction } from './visual-editor/visual-editor';
 import { DiagramEditor } from './workbench/diagram-editor';
 import { newDiagram } from './workbench/new-diagram';
 
-/** The command behind "New diagram…" (optional argument: the file or folder it goes next to / into). */
-const NEW_DIAGRAM = 'diagrams.newDiagram';
-/** The setting `diagrams.editorUrl`'s default. */
-const DIAGRAMS_NET = 'https://embed.diagrams.net/';
-const SHOW_AS_IMAGE = 'Show as image';
-/** The icon of diagram files (where views list files). */
-const DIAGRAM_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2" width="5" height="4" rx="1"/><rect x="9.5" y="10" width="5" height="4" rx="1"/><path d="M4 6v6h5.5"/></svg>';
-
 /**
  * Diagrams (`*.drawio.png`) in the editing area: the custom editor `diagrams.editor` (priority 110, over the images'
  * `*.png`), diagrams.net from the setting `diagrams.editorUrl`, light or dark as the widget; every change is saved
  * (`workspace.applyEdit`, debounced; pending changes when the file is closed). Without the editor (offline) an
  * error message offers the picture. "New diagram…" (`diagrams.newDiagram`) in the menu `file/newFile`; "Insert
  * diagram" in the Visual editor's Insert menu; "Edit diagram" on Visual editor boxes that show a diagram of the project.
+ *
+ * `.drawio.png` files — PNGs with a diagrams.net diagram in them, so Typst shows them as images
+ * (`#image("flow.drawio.png")`) and diagrams.net edits them again — opened in diagrams.net's editor embedded in an
+ * iframe, saved as they change; "New diagram…"; "Insert diagram" (a new one as a figure in the text); "Edit diagram" on
+ * a box showing one.
+ *
+ * Why an extension: the editor is a custom editor (higher priority than the images' view of PNGs), the new-file entry a
+ * menu item, "Insert diagram" a toolbar item, "Edit diagram" a box action, its document links come from whichever
+ * provider: the hosts' generic contribution points; the protocol (model/) is pure state, so it is tested without an
+ * iframe.
  */
 export function diagrams(): TypstExtension {
   return {
@@ -64,6 +60,11 @@ export function diagrams(): TypstExtension {
   };
 }
 
+/** The command behind "New diagram…" (optional argument: the file or folder it goes next to / into). */
+const NEW_DIAGRAM = 'diagrams.newDiagram';
+/** The setting `diagrams.editorUrl`'s default. */
+const DIAGRAMS_NET = 'https://embed.diagrams.net/';
+
 /** A DiagramEditor per opened diagram, saving into the project; a refused save is an error message. */
 function diagramEditor({ window, workspace, workbench }: ExtensionContext, editorUrl: () => string): CustomEditorProvider {
   return {
@@ -81,6 +82,10 @@ function diagramEditor({ window, workspace, workbench }: ExtensionContext, edito
     },
   };
 }
+
+const SHOW_AS_IMAGE = 'Show as image';
+/** The icon of diagram files (where views list files). */
+const DIAGRAM_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2" width="5" height="4" rx="1"/><rect x="9.5" y="10" width="5" height="4" rx="1"/><path d="M4 6v6h5.5"/></svg>';
 
 /** The diagram of the project a box's Typst names: the first document link (any provider's) that leads to one. */
 function diagramIn(project: Project, languages: Languages): (src: string, document: TypstDocument) => ProjectPath | null {

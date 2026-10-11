@@ -1,9 +1,4 @@
-// The files extension: the file panel (the project's files as a tree in the left side panel: new file / folder,
-// upload, rename, delete as commands in its menus, drag & drop, file decorations), the files in search everywhere,
-// and the read-only view of files no other editor opens. Entry of extensions/files/. See docs/10_guide/02_features.typ.
-// Why a controller and views: the extension is a controller over the workbench's contribution points (a side panel,
-// commands, menus) and the project; the views (workbench/) and the pure tree model (model/) get what they need of the
-// workbench as options, so the panel is tested without one.
+// The files extension. Entry of extensions/files/. See docs/10_guide/02_features.typ.
 import { Disposable } from '../../core/disposable/disposable';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
@@ -12,34 +7,6 @@ import { fileInfoEditor } from './workbench/file-info';
 import { CONTEXT_MENU, FilePanel, NEW_FILE_MENU } from './workbench/file-panel';
 import { fileSearch } from './workbench/file-search';
 import { icon } from './workbench/icons/icons';
-
-/** When the file panel is open (the setting `files.panel`). */
-type PanelMode = 'auto' | 'show' | 'hide';
-
-/** The panel's own entries: in "New" (`file/newFile`) and in a row's context menu (`explorer/context`). */
-const NEW_ENTRIES = [
-  { command: 'files.newFile', title: 'New file…', order: 10 },
-  { command: 'files.newFolder', title: 'New folder…', order: 20 },
-  { command: 'files.upload', title: 'Upload files…', order: 30 },
-] as const;
-const PANEL_SETTING = {
-  type: 'string',
-  enum: ['auto', 'show', 'hide'],
-  default: 'auto',
-  description: 'When the file panel is open: auto while the project has more than one file, else collapsed to its rail button (until someone opens or closes it); show: open; hide: none at all (and dropped files are ignored).',
-} as const;
-/** The operations as people find them (search everywhere): on the focused row of the panel, else the shown file. */
-const COMMANDS = [
-  { command: 'files.newFile', title: 'New file…', category: 'Files' },
-  { command: 'files.newFolder', title: 'New folder…', category: 'Files' },
-  { command: 'files.upload', title: 'Upload files…', category: 'Files' },
-  { command: 'files.rename', title: 'Rename…', category: 'Files' },
-  { command: 'files.delete', title: 'Delete…', category: 'Files' },
-];
-const CHANGE_ENTRIES = [
-  { command: 'files.rename', title: 'Rename…', order: 10 },
-  { command: 'files.delete', title: 'Delete', order: 20 },
-] as const;
 
 /**
  * The file panel in a side panel: shows the project and the shown file, opens what is picked, asks for every
@@ -50,6 +17,14 @@ const CHANGE_ENTRIES = [
  * context: `resource`, `resourceKind` 'file' | 'folder', `resourceIsMain`; the command gets the row).
  * A file no other editor opens shows its name, size and type, read-only (the custom editor `files.file`: `*` is the
  * least specific pattern, every other editor wins; no icon: the panel draws its own).
+ *
+ * The file panel (the project's files as a tree in the left side panel: new file / folder, upload, rename, delete as
+ * commands in its menus, drag & drop, file decorations), the files in search everywhere, and the read-only view of
+ * files no other editor opens.
+ *
+ * Why a controller and views: the extension is a controller over the workbench's contribution points (a side panel,
+ * commands, menus) and the project; the views (workbench/) and the pure tree model (model/) get what they need of the
+ * workbench as options, so the panel is tested without one.
  */
 export function files(): TypstExtension {
   return {
@@ -104,6 +79,25 @@ export function files(): TypstExtension {
   };
 }
 
+/** The operations as people find them (search everywhere): on the focused row of the panel, else the shown file. */
+const COMMANDS = [
+  { command: 'files.newFile', title: 'New file…', category: 'Files' },
+  { command: 'files.newFolder', title: 'New folder…', category: 'Files' },
+  { command: 'files.upload', title: 'Upload files…', category: 'Files' },
+  { command: 'files.rename', title: 'Rename…', category: 'Files' },
+  { command: 'files.delete', title: 'Delete…', category: 'Files' },
+];
+
+const PANEL_SETTING = {
+  type: 'string',
+  enum: ['auto', 'show', 'hide'],
+  default: 'auto',
+  description: 'When the file panel is open: auto while the project has more than one file, else collapsed to its rail button (until someone opens or closes it); show: open; hide: none at all (and dropped files are ignored).',
+} as const;
+
+/** When the file panel is open (the setting `files.panel`). */
+type PanelMode = 'auto' | 'show' | 'hide';
+
 /** The panel's operations as commands, and its own entries in "New" and in a row's context menu. */
 function registerOperations({ commands, workbench }: ExtensionContext, panel: FilePanel): Disposable {
   return Disposable.from(
@@ -119,3 +113,15 @@ function registerOperations({ commands, workbench }: ExtensionContext, panel: Fi
     ...CHANGE_ENTRIES.map((entry) => workbench.registerMenuItem(CONTEXT_MENU, { ...entry, group: 'modification', when: (context) => !context.resourceIsMain })),
   );
 }
+
+/** The panel's own entries: in "New" (`file/newFile`) and in a row's context menu (`explorer/context`). */
+const NEW_ENTRIES = [
+  { command: 'files.newFile', title: 'New file…', order: 10 },
+  { command: 'files.newFolder', title: 'New folder…', order: 20 },
+  { command: 'files.upload', title: 'Upload files…', order: 30 },
+] as const;
+
+const CHANGE_ENTRIES = [
+  { command: 'files.rename', title: 'Rename…', order: 10 },
+  { command: 'files.delete', title: 'Delete', order: 20 },
+] as const;

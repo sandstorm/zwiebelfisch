@@ -1,6 +1,4 @@
-// Collaboration: real-time editing over Yjs (a Hocuspocus server, or a Y.Doc the host connects): the lazily loaded
-// chunk of the collaboration extension (no DOM, no editor library). See
-// ../collaboration.ts and docs/10_guide/04_collaboration.typ.
+// Collaboration. See ../collaboration.ts and docs/10_guide/04_collaboration.typ.
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import type { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
@@ -18,12 +16,6 @@ import { GitLabSourceControl, type StatelessChannel, type Tell } from './gitlab-
 import { SharedAssets } from './shared-assets';
 import { SharedProject } from './shared-project';
 
-/** What gets shared: the project's Typst files (margin notes are part of their text). */
-export interface SharedRoom {
-  project: Project;
-  user?: User;
-}
-
 /**
  * Real-time collaboration for one widget: the Typst files' text through a
  * Y.Doc (one per project), the users' cursors
@@ -31,6 +23,9 @@ export interface SharedRoom {
  * directly; they keep following their TypstDocument. In a room backed by a
  * GitLab branch (the server put a base into its `meta` map) the other files
  * are shared too, and `sourceControl` commits to the branch.
+ *
+ * Real-time editing over Yjs (a Hocuspocus server, or a Y.Doc the host connects): the lazily loaded chunk of the
+ * collaboration extension (no DOM, no editor library).
  */
 export class Collaboration {
   private readonly sharedProject: SharedProject;
@@ -97,6 +92,12 @@ export class Collaboration {
     this.server?.provider.destroy();
     this.server?.provider.document.destroy();
   }
+}
+
+/** What gets shared: the project's Typst files (margin notes are part of their text). */
+export interface SharedRoom {
+  project: Project;
+  user?: User;
 }
 
 function statelessChannel(provider: HocuspocusProvider): StatelessChannel {

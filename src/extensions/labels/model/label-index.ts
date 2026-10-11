@@ -6,26 +6,6 @@ import type { FileChange, Project } from '../../../core/project/project';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { calculateReferenceRenames, scanBibliography, scanTypst, type FoundLabel, type Scan } from './scan';
 
-/** A label of the project: its name, what it labels (null: something else), that element's title, and its file. */
-export interface LabelInfo extends FoundLabel {
-  path: ProjectPath;
-}
-
-/** What the Visual editor needs to know about the project's labels (see `LabelIndex`). */
-export interface ProjectLabels {
-  /** Every label of the project, by file (in the project's order) and then in source order. */
-  labels(): readonly LabelInfo[];
-  /** How many references (`@name`) to label `name` the project has. */
-  referenceCount(name: string): number;
-  /** Renames the references to `from` in every Typst file except `except`, one change per file. */
-  renameReferences(from: string, to: string, except?: TypstDocument): void;
-  /** Whenever `labels()` changed. */
-  readonly onDidChange: Event<void>;
-}
-
-/** The origin of the changes `renameReferences` makes. */
-const RENAME_ORIGIN = 'rename-references';
-
 /**
  * The labels of a project's files — Typst labels (`<intro>`, with what they
  * label: a heading and its text, a figure and its caption, …) and the keys of
@@ -97,3 +77,23 @@ export class LabelIndex implements ProjectLabels {
     return this.project.paths().flatMap((path) => this.scans.get(path)?.labels.map((label) => ({ ...label, path })) ?? []);
   }
 }
+
+/** A label of the project: its name, what it labels (null: something else), that element's title, and its file. */
+export interface LabelInfo extends FoundLabel {
+  path: ProjectPath;
+}
+
+/** What the Visual editor needs to know about the project's labels (see `LabelIndex`). */
+export interface ProjectLabels {
+  /** Every label of the project, by file (in the project's order) and then in source order. */
+  labels(): readonly LabelInfo[];
+  /** How many references (`@name`) to label `name` the project has. */
+  referenceCount(name: string): number;
+  /** Renames the references to `from` in every Typst file except `except`, one change per file. */
+  renameReferences(from: string, to: string, except?: TypstDocument): void;
+  /** Whenever `labels()` changed. */
+  readonly onDidChange: Event<void>;
+}
+
+/** The origin of the changes `renameReferences` makes. */
+const RENAME_ORIGIN = 'rename-references';

@@ -7,11 +7,6 @@ import { ProjectPath } from '../../../core/paths/paths';
 import { FILES_MAP } from '../../../core/room-protocol/room-protocol';
 import { TextBinding } from './text-binding';
 
-interface Binding {
-  path: ProjectPath;
-  binding: TextBinding;
-}
-
 /**
  * Shares the Typst files of a `Project` through a Y.Doc: one `Y.Text` per
  * `.typ` file in the map `files` (path → text). Every document of the project
@@ -126,4 +121,9 @@ export class SharedProject {
     this.project.apply(change);
     return true;
   }
+}
+
+interface Binding {
+  path: ProjectPath;
+  binding: TextBinding;
 }

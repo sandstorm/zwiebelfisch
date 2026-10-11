@@ -1,4 +1,10 @@
+import type { SyntaxNode } from '@lezer/common';
+import { typstParser } from 'codemirror-lang-typst/lezer';
+import { callArguments, calleeName, children, trailingContent } from '../../../core/typst-syntax/typst-syntax';
+
 /**
+ * `src` split into a note call's parts; null unless it is exactly one margin note call.
+ *
  * The source syntax of `drafting` margin notes, the one place that knows it:
  *
  *   #margin-note(..named)[note]          a point note
@@ -9,9 +15,15 @@
  * without syntax errors, a non-empty one-paragraph `text` and nothing after
  * the last `]`. Every other `margin-note` call is ordinary code.
  */
-import type { SyntaxNode } from '@lezer/common';
-import { typstParser } from 'codemirror-lang-typst/lezer';
-import { callArguments, calleeName, children, trailingContent } from '../../../core/typst-syntax/typst-syntax';
+export function parseNoteCall(src: string): NoteCall | null {
+  const hash = typstParser.parse(src).topNode.firstChild;
+  const call = hash?.nextSibling;
+  if (hash?.name !== 'Hash' || hash.from !== 0 || call?.to !== src.length || call.nextSibling) return null;
+  const syntax = noteCallSyntax(src, call);
+  if (!syntax) return null;
+  const { head, text, note } = syntax;
+  return text ? { head, text: src.slice(text.from + 1, text.to - 1), note } : { head, note };
+}
 
 /** The package margin notes come from; its import is added with the first note. */
 export const DRAFTING = '@preview/drafting:0.2.2';
@@ -48,17 +60,6 @@ export function printNoteCall({ head, text, note }: NoteCall): string {
   return open + text + close;
 }
 
-/** `src` split into a note call's parts; null unless it is exactly one margin note call. */
-export function parseNoteCall(src: string): NoteCall | null {
-  const hash = typstParser.parse(src).topNode.firstChild;
-  const call = hash?.nextSibling;
-  if (hash?.name !== 'Hash' || hash.from !== 0 || call?.to !== src.length || call.nextSibling) return null;
-  const syntax = noteCallSyntax(src, call);
-  if (!syntax) return null;
-  const { head, text, note } = syntax;
-  return text ? { head, text: src.slice(text.from + 1, text.to - 1), note } : { head, note };
-}
-
 /**
  * The parts of `call`, a `FuncCall` right after a `#` in parsed `source`, if
  * it is a margin note; null for any other call.
@@ -71,12 +72,6 @@ export function noteCallSyntax(source: string, call: SyntaxNode): NoteCallSyntax
   if (text && !isOneParagraph(text)) return null;
   const note = blocks.at(-1)!;
   return { head: source.slice(call.from - 1, blocks[0].from), text, note: source.slice(note.from + 1, note.to - 1) };
-}
-
-/** A call of `margin-note` right after its `#`. */
-function callsMarginNote(source: string, call: SyntaxNode): boolean {
-  const hash = call.prevSibling;
-  return call.name === 'FuncCall' && hash?.name === 'Hash' && hash.to === call.from && calleeName(call, source) === MARGIN_NOTE;
 }
 
 /**
@@ -104,28 +99,15 @@ export function safeNote(note: string): string | null {
   return null;
 }
 
-/** Escapes `[` and `]` without a partner. */
-function balanceBrackets(markup: string): string {
-  const open: number[] = [];
-  const escape = new Set<number>();
-  for (let i = 0; i < markup.length; i++) {
-    if (markup[i] === '\\') i++;
-    else if (markup[i] === '[') open.push(i);
-    else if (markup[i] === ']' && open.pop() === undefined) escape.add(i);
-  }
-  for (const i of open) escape.add(i);
-  return [...markup].map((c, i) => (escape.has(i) ? `\\${c}` : c)).join('');
-}
-
 /** Escapes every character that starts markup or code, so `text` reads back as itself. */
 export function escapeText(text: string): string {
   return text.replace(/[\\`$#*_<@[\]]|\/(?=[/*])/g, (c) => `\\${c}`);
 }
 
-/** A content block with markup that is not empty and has no paragraph break. */
-function isOneParagraph(block: SyntaxNode): boolean {
-  const markup = block.getChild('Markup');
-  return markup !== null && markup.firstChild !== null && !children(markup).some((n) => n.name === 'Parbreak');
+/** A call of `margin-note` right after its `#`. */
+function callsMarginNote(source: string, call: SyntaxNode): boolean {
+  const hash = call.prevSibling;
+  return call.name === 'FuncCall' && hash?.name === 'Hash' && hash.to === call.from && calleeName(call, source) === MARGIN_NOTE;
 }
 
 function hasError(node: SyntaxNode): boolean {
@@ -139,6 +121,25 @@ function hasError(node: SyntaxNode): boolean {
   return found;
 }
 
+/** A content block with markup that is not empty and has no paragraph break. */
+function isOneParagraph(block: SyntaxNode): boolean {
+  const markup = block.getChild('Markup');
+  return markup !== null && markup.firstChild !== null && !children(markup).some((n) => n.name === 'Parbreak');
+}
+
 function isMarkup(node: SyntaxNode | null): boolean {
   return node?.name === 'Markup' || node?.name === 'Typst';
+}
+
+/** Escapes `[` and `]` without a partner. */
+function balanceBrackets(markup: string): string {
+  const open: number[] = [];
+  const escape = new Set<number>();
+  for (let i = 0; i < markup.length; i++) {
+    if (markup[i] === '\\') i++;
+    else if (markup[i] === '[') open.push(i);
+    else if (markup[i] === ']' && open.pop() === undefined) escape.add(i);
+  }
+  for (const i of open) escape.add(i);
+  return [...markup].map((c, i) => (escape.has(i) ? `\\${c}` : c)).join('');
 }

@@ -1,8 +1,25 @@
-// What a contribution is, in its contribution point's own terms: a node by its name, Tiptap priority and the Typst it
-// parses, a keybinding as `Ctrl+Alt+M → comments.addComment`, a setting by its type and default. The registration's
-// arguments are read as they are given (by shape: the devtools see what any extension sees). See contributions.ts.
+// What a contribution is, in its contribution point's own terms. See contributions.ts.
 import { flattenExtensions, getExtensionField, type AnyExtension } from '@tiptap/core';
 import { describeArguments, describeValue, nameOf } from '../model/describe';
+
+/**
+ * `args` of a registration through `point` (`visualEditor.registerNode`), described; the generic summary for unknown points.
+ *
+ * A node by its name, Tiptap priority and the Typst it parses, a keybinding as `Ctrl+Alt+M → comments.addComment`, a
+ * setting by its type and default. The registration's arguments are read as they are given (by shape: the devtools see
+ * what any extension sees).
+ */
+export function describeContribution(point: string, args: readonly unknown[]): Description {
+  const describe = POINTS[point];
+  if (describe) {
+    try {
+      return describe(args as Arguments);
+    } catch {
+      // arguments of a shape this does not know: the generic summary
+    }
+  }
+  return { title: describeArguments(args) || '(no name)', details: [] };
+}
 
 /** A contribution described: what it is (`heading`), facts about it, and where it stands among its point's. */
 export interface Description {
@@ -17,32 +34,12 @@ export interface Description {
   readonly rank?: readonly (string | number)[];
 }
 
-/** `args` of a registration through `point` (`visualEditor.registerNode`), described; the generic summary for unknown points. */
-export function describeContribution(point: string, args: readonly unknown[]): Description {
-  const describe = POINTS[point];
-  if (describe) {
-    try {
-      return describe(args as Arguments);
-    } catch {
-      // arguments of a shape this does not know: the generic summary
-    }
-  }
-  return { title: describeArguments(args) || '(no name)', details: [] };
-}
-
 /** A setting an extension declares (`contributes.configuration`): its id, type and default. */
 export function describeSetting(id: string, property: unknown): Description {
   const { type, default: value, enum: values } = record(property);
   const types = Array.isArray(type) ? type.join(' | ') : String(type);
   return { title: id, details: [types, `default ${describeValue(value)}`, ...(Array.isArray(values) ? [`one of ${values.map((item) => describeValue(item)).join(', ')}`] : [])] };
 }
-
-/** Tiptap's default priority of an extension, and the hosts' of providers. */
-const DEFAULT_PRIORITY = 100;
-
-// The arguments, read by shape: each describer picks what it knows.
-type Arguments = readonly [unknown?, unknown?, unknown?];
-type Describer = (args: Arguments) => Description;
 
 const POINTS: Readonly<Record<string, Describer>> = {
   'contributes.configuration': ([id, property]) => describeSetting(String(id), property),
@@ -133,6 +130,11 @@ const POINTS: Readonly<Record<string, Describer>> = {
   },
 };
 
+type Describer = (args: Arguments) => Description;
+
+// The arguments, read by shape: each describer picks what it knows.
+type Arguments = readonly [unknown?, unknown?, unknown?];
+
 /** A node or mark spec: its name, its Tiptap extension's priority, the Typst syntax and calls it parses. */
 function typstSpec(spec: unknown): Description {
   const { name, tiptap, typst, view } = record(spec);
@@ -148,6 +150,10 @@ function typstSpec(spec: unknown): Description {
   return { title: String(name), details, rank: [-(priority ?? DEFAULT_PRIORITY)] };
 }
 
+function record(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
+}
+
 /**
  * The Tiptap priority of node or mark type `name`, as Tiptap resolves it: of the extension of that name among
  * `extension` and those it adds (`addExtensions`: a spec's extension may bring several), its own or the one it
@@ -159,30 +165,29 @@ function tiptapPriority(extension: AnyExtension, name: string): number {
   return getExtensionField<number | undefined>(own, 'priority') ?? DEFAULT_PRIORITY;
 }
 
-/** A provider by its name (a named function, a class instance's class), else `fallback`. */
-function named(provider: unknown, fallback: string): Description {
-  return { title: nameOf(provider) ?? fallback, details: [] };
-}
-
-function prioritized(description: Description, priority: unknown): Description {
-  const value = num(priority, DEFAULT_PRIORITY);
-  return { ...description, details: [...description.details, `priority ${value}`], rank: [-value] };
-}
-
-function record(value: unknown): Record<string, unknown> {
-  return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
-}
+/** Tiptap's default priority of an extension, and the hosts' of providers. */
+const DEFAULT_PRIORITY = 100;
 
 function keys(value: unknown): string[] {
   return Object.keys(record(value));
+}
+
+function optional<T>(value: T | undefined | null, show: (value: T) => string): string[] {
+  return value === undefined || value === null ? [] : [show(value)];
+}
+
+/** A provider by its name (a named function, a class instance's class), else `fallback`. */
+function named(provider: unknown, fallback: string): Description {
+  return { title: nameOf(provider) ?? fallback, details: [] };
 }
 
 function num(value: unknown, fallback: number): number {
   return typeof value === 'number' ? value : fallback;
 }
 
-function optional<T>(value: T | undefined | null, show: (value: T) => string): string[] {
-  return value === undefined || value === null ? [] : [show(value)];
+function prioritized(description: Description, priority: unknown): Description {
+  const value = num(priority, DEFAULT_PRIORITY);
+  return { ...description, details: [...description.details, `priority ${value}`], rank: [-value] };
 }
 
 function size(text: string): string {

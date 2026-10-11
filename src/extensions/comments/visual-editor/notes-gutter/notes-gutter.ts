@@ -9,21 +9,6 @@ import type { VisualEditorContribution } from '../../../../hosts/visual-editor/v
 import { type CardActions, NoteCard } from './note-card';
 import { findNotes, followNotes, noteAtOffset, noteAtSelection, removeNote, setNoteText, type KeyedNote } from './note-list';
 
-export interface NotesGutterOptions {
-  /** Who writes replies: the name signs them, and only own messages can be edited (default: "Anonymous"). */
-  user?: { name: string };
-}
-
-/** The notes gutter as a contribution, and a way to its cards (the Comment action opens the new note's card). */
-export interface NotesGutterContribution extends VisualEditorContribution {
-  /**
-   * Focuses the card of the margin note whose source contains `offset` (a
-   * point note, or the note part of a range note) in the Visual editor of
-   * `document`. False if there is none.
-   */
-  editNote(document: TypstDocument, offset: SourceOffset): boolean;
-}
-
 /** A notes gutter (see `NotesGutter`) beside the text of every Visual editor. */
 export function notesGutter(options: NotesGutterOptions = {}): NotesGutterContribution {
   const gutters = new Map<TypstDocument, NotesGutter>();
@@ -46,6 +31,21 @@ export function notesGutter(options: NotesGutterOptions = {}): NotesGutterContri
     },
     editNote: (document, offset) => gutters.get(document)?.edit(offset) ?? false,
   };
+}
+
+export interface NotesGutterOptions {
+  /** Who writes replies: the name signs them, and only own messages can be edited (default: "Anonymous"). */
+  user?: { name: string };
+}
+
+/** The notes gutter as a contribution, and a way to its cards (the Comment action opens the new note's card). */
+export interface NotesGutterContribution extends VisualEditorContribution {
+  /**
+   * Focuses the card of the margin note whose source contains `offset` (a
+   * point note, or the note part of a range note) in the Visual editor of
+   * `document`. False if there is none.
+   */
+  editNote(document: TypstDocument, offset: SourceOffset): boolean;
 }
 
 /**
@@ -267,8 +267,10 @@ class NotesGutter {
  * there the column still fits, leaving 300px and more for the text.
  */
 const NARROW_PX = 560;
-const CARD_GAP_PX = 8;
+
 const POPOVER_GAP_PX = 4;
+
+const CARD_GAP_PX = 8;
 
 // ------------------------------------------------------------------ plugin
 

@@ -1,5 +1,4 @@
-// The collaboration's part of the Visual editor: other users' selections (highlights), carets (decorations), and their
-// carets inside boxes (drawn in a raw box's code). See collaboration.ts.
+// The collaboration's part of the Visual editor. See collaboration.ts.
 import { Extension } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
@@ -16,6 +15,9 @@ import { boxCaretsSpec, boxPresence, type BoxCaret } from './box-carets';
  * Draws the other users' places in every Visual editor, as `presences` has them: their selections as highlights,
  * their carets in the view and in the code of its raw boxes; they follow edits. `documents`: the project's
  * documents now (any of them may have views).
+ *
+ * Other users' selections (highlights), carets (decorations), and their carets inside boxes (drawn in a raw box's
+ * code).
  */
 export function visualPresence(presences: PresenceSource, documents: () => readonly TypstDocument[]): VisualEditorContribution {
   return {
@@ -45,8 +47,6 @@ function selection({ user, anchor, head }: PlacedPresence): SourceHighlight[] {
   const [from, to] = anchor < head ? [anchor, head] : [head, anchor];
   return [{ from, to, className: 'typst-collaboration__selection', attributes }];
 }
-
-const key = new PluginKey<DecorationSet>('typst-presence');
 
 /**
  * Other users' carets in one Visual editor, in the style of Tiptap's CollaborationCaret: a caret is a widget (a bar in
@@ -99,6 +99,24 @@ function caretDecorations(view: VisualEditorContext, doc: Node, presences: reado
   return DecorationSet.create(doc, decorations);
 }
 
+/**
+ * The box whose source holds `offset`: a block atom from its first character
+ * up to its line end, an inline box strictly inside (a caret right before or
+ * after it is drawn as a caret).
+ */
+function boxAt(view: VisualEditorContext, doc: Node, offset: SourceOffset): { pos: number; node: Node; start: SourceOffset } | null {
+  let found: { pos: number; node: Node; start: SourceOffset } | null = null;
+  doc.descendants((node, pos) => {
+    if (found) return false;
+    if (!view.isBox(node)) return true;
+    const start = view.posToSource(doc, pos);
+    const end = view.posToSource(doc, pos + node.nodeSize);
+    if (node.isBlock ? start <= offset && offset <= end : start < offset && offset < end) found = { pos, node, start };
+    return false;
+  });
+  return found;
+}
+
 /** The caret widget; its key keeps the DOM while the same user moves. */
 function caret(pos: number, id: string, user: PresenceUser): Decoration {
   return Decoration.widget(pos, (editor) => caretElement(editor.dom.ownerDocument, user), {
@@ -119,20 +137,4 @@ function boxOutline(pos: number, node: Node, carets: BoxCaret[]): Decoration {
   return Decoration.node(pos, pos + node.nodeSize, attrs, boxCaretsSpec(carets));
 }
 
-/**
- * The box whose source holds `offset`: a block atom from its first character
- * up to its line end, an inline box strictly inside (a caret right before or
- * after it is drawn as a caret).
- */
-function boxAt(view: VisualEditorContext, doc: Node, offset: SourceOffset): { pos: number; node: Node; start: SourceOffset } | null {
-  let found: { pos: number; node: Node; start: SourceOffset } | null = null;
-  doc.descendants((node, pos) => {
-    if (found) return false;
-    if (!view.isBox(node)) return true;
-    const start = view.posToSource(doc, pos);
-    const end = view.posToSource(doc, pos + node.nodeSize);
-    if (node.isBlock ? start <= offset && offset <= end : start < offset && offset < end) found = { pos, node, start };
-    return false;
-  });
-  return found;
-}
+const key = new PluginKey<DecorationSet>('typst-presence');

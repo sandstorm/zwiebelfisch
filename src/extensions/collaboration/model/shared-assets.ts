@@ -5,8 +5,6 @@ import { type FileChange, FileContent, type Project } from '../../../core/projec
 import { ProjectPath } from '../../../core/paths/paths';
 import { ASSETS_MAP } from '../../../core/room-protocol/room-protocol';
 
-type AssetValue = string | Uint8Array;
-
 /**
  * Shares the project's other files (images, data) in a GitLab-backed room
  * through the Y.Doc map `assets`: path → blob sha (a file of the repository,
@@ -123,3 +121,5 @@ export class SharedAssets {
     return true;
   }
 }
+
+type AssetValue = string | Uint8Array;

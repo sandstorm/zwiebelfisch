@@ -1,5 +1,4 @@
-// DiagnosticsStatus: the diagnostics' part of the workbench: the status bar's compile status ("✓ compiled",
-// "2 errors") with the messages behind it. See ../diagnostics.ts.
+// DiagnosticsStatus. See ../diagnostics.ts.
 import type { TypstDiagnostic } from '../../../core/typst-engine/typst-engine';
 import { describeDiagnostic } from '../model/model';
 import { targetOf, type DiagnosticTarget, type DiagnosticsSummary } from '../model/diagnostics-summary';
@@ -10,6 +9,9 @@ import { targetOf, type DiagnosticTarget, type DiagnosticsSummary } from '../mod
  * messages of the shown file (each jumps to its range). Diagnostics of other files
  * (which the shown editor cannot mark) are listed next to it, and those in
  * project files jump there when clicked.
+ *
+ * The diagnostics' part of the workbench: the status bar's compile status ("✓ compiled", "2 errors") with the messages
+ * behind it.
  */
 export class DiagnosticsStatus {
   /** The status, for the host's status bar. */

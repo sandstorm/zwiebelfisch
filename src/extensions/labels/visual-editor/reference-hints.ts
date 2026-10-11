@@ -7,8 +7,6 @@ import { ProjectPath } from '../../../core/paths/paths';
 import { describeLabel } from '../model/label-description';
 import type { LabelInfo, ProjectLabels } from '../model/label-index';
 
-const key = new PluginKey<DecorationSet>('typstReferenceHints');
-
 /**
  * Decorates every reference chip with what its label labels (`data-hint`, and
  * a hover tooltip with it and the file; nothing extra is drawn inline) or, when the project
@@ -37,6 +35,8 @@ export function referenceHints(labels: ProjectLabels): Plugin {
     },
   });
 }
+
+const key = new PluginKey<DecorationSet>('typstReferenceHints');
 
 function hints(doc: Node, labels: readonly LabelInfo[]): DecorationSet {
   const byName = new Map<string, LabelInfo>();

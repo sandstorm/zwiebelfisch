@@ -1,18 +1,4 @@
 // Card layout: where the notes gutter puts its cards, near their anchors without overlap. See notes-gutter.ts.
-/** A card in the notes gutter: where its anchor is and how tall it is (same unit, e.g. px). */
-export interface CardBox {
-  anchor: number;
-  height: number;
-}
-
-export interface CardLayoutOptions {
-  /** Space between two cards. */
-  gap: number;
-  /** Index of the card that sits exactly at its anchor; cards above it move up to make room. */
-  active?: number;
-  /** No card starts above this (default: no limit). */
-  top?: number;
-}
 
 /**
  * The top of each card (in input order) so that cards follow their anchors
@@ -42,4 +28,19 @@ export function layoutCards(cards: readonly CardBox[], { gap, active, top = -Inf
   function bottom(i: number): number {
     return tops[i] + cards[i].height;
   }
+}
+
+/** A card in the notes gutter: where its anchor is and how tall it is (same unit, e.g. px). */
+export interface CardBox {
+  anchor: number;
+  height: number;
+}
+
+export interface CardLayoutOptions {
+  /** Space between two cards. */
+  gap: number;
+  /** Index of the card that sits exactly at its anchor; cards above it move up to make room. */
+  active?: number;
+  /** No card starts above this (default: no limit). */
+  top?: number;
 }

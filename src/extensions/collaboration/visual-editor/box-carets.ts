@@ -6,16 +6,16 @@ import type { PresenceUser } from '../presence/presence';
 import { setRawBoxDecorations } from '../../../hosts/visual-editor/visual-editor';
 import { remotePresence, setPresence } from '../source-editor/source-editor';
 
+/** The decoration spec that carries `carets` to a box (see `boxPresence`). */
+export function boxCaretsSpec(carets: BoxCaret[]): { boxCarets: BoxCaret[] } {
+  return { boxCarets: carets };
+}
+
 /** A remote caret inside a box, as the box's decoration hands it to the box: `offset` counts from the box's source start. */
 export interface BoxCaret {
   id: string;
   user: PresenceUser;
   offset: number;
-}
-
-/** The decoration spec that carries `carets` to a box (see `boxPresence`). */
-export function boxCaretsSpec(carets: BoxCaret[]): { boxCarets: BoxCaret[] } {
-  return { boxCarets: carets };
 }
 
 /**

@@ -12,6 +12,20 @@ import { posToSource, serializeToTypst, sourceToPos } from '../../../../hosts/pr
  * no DOM.
  */
 
+/** The notes of `doc` in document order (an outer range note before the notes inside it). */
+export function findNotes(doc: PMNode): DocNote[] {
+  const notes: DocNote[] = [];
+  doc.descendants((node, pos) => {
+    if (node.type.name === 'marginNote') notes.push({ kind: 'point', from: pos, to: pos + 1, note: node.attrs.note, text: '' });
+    if (!node.inlineContent) return true;
+    for (const { mark, from, to } of noteSpans(node, pos + 1)) {
+      notes.push({ kind: 'range', from, to, note: mark.attrs.note, text: doc.textBetween(from, to, ' ', ' '), mark });
+    }
+    return true;
+  });
+  return notes.sort((a, b) => a.from - b.from || b.to - a.to);
+}
+
 /** A margin note in the document: `from`..`to` is a point note's atom, or the highlighted text of a range note. */
 export interface DocNote {
   kind: 'point' | 'range';
@@ -28,20 +42,6 @@ export interface DocNote {
 /** A note with a key that stays the same while the note is edited and text around it changes. */
 export interface KeyedNote extends DocNote {
   key: string;
-}
-
-/** The notes of `doc` in document order (an outer range note before the notes inside it). */
-export function findNotes(doc: PMNode): DocNote[] {
-  const notes: DocNote[] = [];
-  doc.descendants((node, pos) => {
-    if (node.type.name === 'marginNote') notes.push({ kind: 'point', from: pos, to: pos + 1, note: node.attrs.note, text: '' });
-    if (!node.inlineContent) return true;
-    for (const { mark, from, to } of noteSpans(node, pos + 1)) {
-      notes.push({ kind: 'range', from, to, note: mark.attrs.note, text: doc.textBetween(from, to, ' ', ' '), mark });
-    }
-    return true;
-  });
-  return notes.sort((a, b) => a.from - b.from || b.to - a.to);
 }
 
 /**
@@ -99,6 +99,27 @@ export function noteAtOffset<T extends DocNote>(notes: readonly T[], doc: PMNode
   return notes.find((n) => n.kind === 'range' && n.to === found.pos && n.mark?.attrs.id === found.id);
 }
 
+/** The stretches of a textblock (content starting at `start`) covered by each range note. */
+function noteSpans(block: PMNode, start: number): NoteSpan[] {
+  const done: NoteSpan[] = [];
+  let open: NoteSpan[] = [];
+  block.forEach((child, offset) => {
+    const pos = start + offset;
+    const notes = child.marks.filter((m) => m.type.name === 'noteRange');
+    done.push(...open.filter((span) => !span.mark.isInSet(notes)));
+    open = open.filter((span) => span.mark.isInSet(notes));
+    for (const mark of notes) if (!open.some((span) => span.mark.eq(mark))) open.push({ mark, from: pos, to: pos });
+    for (const span of open) span.to = pos + child.nodeSize;
+  });
+  return [...done, ...open];
+}
+
+interface NoteSpan {
+  mark: PMMark;
+  from: number;
+  to: number;
+}
+
 /** A point note at `pos`, or the range note `id` whose text ends at `pos`. */
 function noteAt(doc: PMNode, offset: SourceOffset): { pos: number; id?: unknown } | null {
   // hidden syntax maps to the next visible position: the end of the range note's text, or a point note's atom
@@ -117,25 +138,4 @@ function noteAt(doc: PMNode, offset: SourceOffset): { pos: number; id?: unknown 
     cursor = at + close.length;
   }
   return null;
-}
-
-interface NoteSpan {
-  mark: PMMark;
-  from: number;
-  to: number;
-}
-
-/** The stretches of a textblock (content starting at `start`) covered by each range note. */
-function noteSpans(block: PMNode, start: number): NoteSpan[] {
-  const done: NoteSpan[] = [];
-  let open: NoteSpan[] = [];
-  block.forEach((child, offset) => {
-    const pos = start + offset;
-    const notes = child.marks.filter((m) => m.type.name === 'noteRange');
-    done.push(...open.filter((span) => !span.mark.isInSet(notes)));
-    open = open.filter((span) => span.mark.isInSet(notes));
-    for (const mark of notes) if (!open.some((span) => span.mark.eq(mark))) open.push({ mark, from: pos, to: pos });
-    for (const span of open) span.to = pos + child.nodeSize;
-  });
-  return [...done, ...open];
 }

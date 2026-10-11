@@ -27,13 +27,6 @@ export function insertImages(editor: Editor, paths: PathReference[], near?: numb
   editor.chain().focus().insertContentAt(target, content).run();
 }
 
-/** Where a block goes for `$pos`: after its textblock (instead of an empty one), else right there. */
-function besideTextblock($pos: ResolvedPos): { from: number; to: number } {
-  if (!$pos.parent.isTextblock || $pos.depth === 0) return { from: $pos.pos, to: $pos.pos };
-  const after = $pos.after();
-  return $pos.parent.content.size === 0 ? { from: $pos.before(), to: after } : { from: after, to: after };
-}
-
 /**
  * Takes image files dropped on or pasted into the editor: calls `onImages`
  * with them (and, for a drop, the document position under the mouse). The
@@ -86,6 +79,13 @@ export function imageFileDrops(
       },
     },
   });
+}
+
+/** Where a block goes for `$pos`: after its textblock (instead of an empty one), else right there. */
+function besideTextblock($pos: ResolvedPos): { from: number; to: number } {
+  if (!$pos.parent.isTextblock || $pos.depth === 0) return { from: $pos.pos, to: $pos.pos };
+  const after = $pos.after();
+  return $pos.parent.content.size === 0 ? { from: $pos.before(), to: after } : { from: after, to: after };
 }
 
 function imageFiles(data: DataTransfer | null): File[] {

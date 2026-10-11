@@ -3,6 +3,12 @@ import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { SourceOffset, type TextChange } from '../../../core/typst-document/typst-document';
 
+export interface Scan {
+  labels: FoundLabel[];
+  /** How often each label is referenced (`@name`). */
+  references: Map<string, number>;
+}
+
 /** What a label labels, as far as a cheap look at the source tells. */
 export type LabelKind = 'heading' | 'figure' | 'table' | 'listing' | 'equation' | 'bibliography';
 
@@ -11,12 +17,6 @@ export interface FoundLabel {
   name: string;
   kind: LabelKind | null;
   title: string | null;
-}
-
-export interface Scan {
-  labels: FoundLabel[];
-  /** How often each label is referenced (`@name`). */
-  references: Map<string, number>;
 }
 
 /** The labels and references in Typst source. */
@@ -72,29 +72,6 @@ function labelAt(label: SyntaxNode, text: string): FoundLabel {
   return { name, kind: null, title: null };
 }
 
-/** A figure's kind (by what it shows: an image, a table, raw text) and its caption. */
-function figure(call: SyntaxNode, text: string): { kind: LabelKind; title: string | null } {
-  const args: SyntaxNode[] = [];
-  for (let arg = call.getChild('Args')?.firstChild ?? null; arg; arg = arg.nextSibling) args.push(arg);
-  const body = args.find((arg) => !NOT_BODY.has(arg.name));
-  const caption = args.find((arg) => arg.name === 'Named' && callee(arg, text) === 'caption');
-  return { kind: figureKind(body, text), title: plainText(caption?.getChild('ContentBlock')?.getChild('Markup') ?? null, text) };
-}
-
-function figureKind(body: SyntaxNode | undefined, text: string): LabelKind {
-  if (!body) return 'figure';
-  return FIGURE_KINDS[body.name === 'FuncCall' ? callee(body, text) : body.name] ?? 'figure';
-}
-
-const NOT_BODY = new Set(['LeftParen', 'RightParen', 'Comma', 'Space', 'Named']);
-const FIGURE_KINDS: Record<string, LabelKind> = { table: 'table', Raw: 'listing' };
-
-/** The identifier a call or named argument starts with. */
-function callee(node: SyntaxNode, text: string): string {
-  const ident = node.getChild('Ident') ?? node.firstChild;
-  return ident ? text.slice(ident.from, ident.to) : '';
-}
-
 /** The text a reader sees of some markup, roughly: its words, formatting and code left out; null if there is none. */
 function plainText(markup: SyntaxNode | null, text: string): string | null {
   if (!markup) return null;
@@ -112,3 +89,27 @@ function plainText(markup: SyntaxNode | null, text: string): string | null {
 }
 
 const WORDS = new Set(['Text', 'SmartQuote', 'Shorthand', 'Ref']);
+
+/** The identifier a call or named argument starts with. */
+function callee(node: SyntaxNode, text: string): string {
+  const ident = node.getChild('Ident') ?? node.firstChild;
+  return ident ? text.slice(ident.from, ident.to) : '';
+}
+
+/** A figure's kind (by what it shows: an image, a table, raw text) and its caption. */
+function figure(call: SyntaxNode, text: string): { kind: LabelKind; title: string | null } {
+  const args: SyntaxNode[] = [];
+  for (let arg = call.getChild('Args')?.firstChild ?? null; arg; arg = arg.nextSibling) args.push(arg);
+  const body = args.find((arg) => !NOT_BODY.has(arg.name));
+  const caption = args.find((arg) => arg.name === 'Named' && callee(arg, text) === 'caption');
+  return { kind: figureKind(body, text), title: plainText(caption?.getChild('ContentBlock')?.getChild('Markup') ?? null, text) };
+}
+
+const NOT_BODY = new Set(['LeftParen', 'RightParen', 'Comma', 'Space', 'Named']);
+
+function figureKind(body: SyntaxNode | undefined, text: string): LabelKind {
+  if (!body) return 'figure';
+  return FIGURE_KINDS[body.name === 'FuncCall' ? callee(body, text) : body.name] ?? 'figure';
+}
+
+const FIGURE_KINDS: Record<string, LabelKind> = { table: 'table', Raw: 'listing' };

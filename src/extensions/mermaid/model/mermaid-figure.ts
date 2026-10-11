@@ -1,8 +1,19 @@
-// A Mermaid diagram in a document as a figure: the starter flowchart a new `.mmd` file begins with, the figure that
-// draws it with the merman package, and the import of `mermaid` it needs. See ../mermaid.ts.
+// A Mermaid diagram in a document as a figure. See ../mermaid.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 import type { SourceOffset, TextChange } from '../../../core/typst-document/typst-document';
 import { calculateImportChange, quote } from '../../../core/typst-syntax/typst-syntax';
+
+/**
+ * The figure of a Mermaid file in a document, and the change that imports `mermaid` (null: imported already).
+ *
+ * The starter flowchart a new `.mmd` file begins with, the figure that draws it with the merman package, and the import
+ * of `mermaid` it needs.
+ */
+export interface MermaidFigure {
+  /** `#figure(mermaid(read("diagram.mmd"), width: 100%), caption: [ ])`. */
+  readonly source: string;
+  readonly importChange: TextChange | null;
+}
 
 /** The package that draws Mermaid diagrams while Typst compiles (the version the docs and the demo use). */
 export const MERMAN = '@preview/merman:0.4.0';
@@ -12,13 +23,6 @@ export const STARTER_FLOWCHART = 'flowchart LR\n  Start[Start] --> Step[Do somet
 
 /** The extension of Mermaid files. */
 export const MERMAID_EXTENSION = '.mmd';
-
-/** The figure of a Mermaid file in a document, and the change that imports `mermaid` (null: imported already). */
-export interface MermaidFigure {
-  /** `#figure(mermaid(read("diagram.mmd"), width: 100%), caption: [ ])`. */
-  readonly source: string;
-  readonly importChange: TextChange | null;
-}
 
 /**
  * The figure drawing the Mermaid file `diagram` in Typst `text` (of the document `file`), used at `use`, and the

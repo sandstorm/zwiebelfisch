@@ -1,5 +1,4 @@
-// What the headings extension contributes to the Visual editor: the heading spec (`= Title` as Tiptap's heading node,
-// with the label right after it) and its levels in the text style menu. See headings.ts.
+// What the headings extension contributes to the Visual editor. See headings.ts.
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import type { TextStyleProvider, TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
 import { starterKitPart } from '../../../hosts/prosemirror-typst/prosemirror-typst';
@@ -10,6 +9,9 @@ import { starterKitPart } from '../../../hosts/prosemirror-typst/prosemirror-typ
  * next, followed by a paragraph break, the end or a block (`= A <a> text` is
  * not: Typst reads that label as part of the line). An edited heading prints
  * its level's `=` and its text.
+ *
+ * The heading spec (`= Title` as Tiptap's heading node, with the label right after it) and its levels in the text style
+ * menu.
  */
 export const HEADING: TypstNodeSpec = {
   name: 'heading',

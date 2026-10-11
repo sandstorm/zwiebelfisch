@@ -1,5 +1,4 @@
-// The devtools' side panel: three tabs over the models (the document of the shown file, the contributions, the
-// events), each drawn by its own view. It draws what it is given; ../devtools.ts wires it to the extension context.
+// The devtools' side panel.
 import type { SourceRange } from '../../../core/typst-document/typst-document';
 import type { ContributionLog } from '../recording/contributions';
 import type { EventLog } from '../recording/event-log';
@@ -8,23 +7,12 @@ import { DocumentTab, type ShownDocument } from './document-tab';
 import { element, type TabView } from './dom';
 import { EventsTab } from './events-tab';
 
-export interface DevtoolsPanelOptions {
-  readonly contributions: ContributionLog;
-  readonly events: EventLog;
-  document(): ShownDocument;
-  /** Shows `range` of the shown file in its editor. */
-  reveal(range: SourceRange): void;
-}
-
-const TABS = [
-  { id: 'document', label: 'Document' },
-  { id: 'contributions', label: 'Contributions' },
-  { id: 'events', label: 'Events' },
-] as const;
-
-export type DevtoolsTab = (typeof TABS)[number]['id'];
-
-/** The panel in `body`; `changed(tab)` redraws that tab (once per frame) if it is the one shown. */
+/**
+ * The panel in `body`; `changed(tab)` redraws that tab (once per frame) if it is the one shown.
+ *
+ * Three tabs over the models (the document of the shown file, the contributions, the events), each drawn by its own
+ * view. It draws what it is given; ../devtools.ts wires it to the extension context.
+ */
 export class DevtoolsPanel {
   #tab: DevtoolsTab = 'document';
   #frame = 0;
@@ -80,3 +68,19 @@ export class DevtoolsPanel {
     this.body.replaceChildren();
   }
 }
+
+export interface DevtoolsPanelOptions {
+  readonly contributions: ContributionLog;
+  readonly events: EventLog;
+  document(): ShownDocument;
+  /** Shows `range` of the shown file in its editor. */
+  reveal(range: SourceRange): void;
+}
+
+export type DevtoolsTab = (typeof TABS)[number]['id'];
+
+const TABS = [
+  { id: 'document', label: 'Document' },
+  { id: 'contributions', label: 'Contributions' },
+  { id: 'events', label: 'Events' },
+] as const;

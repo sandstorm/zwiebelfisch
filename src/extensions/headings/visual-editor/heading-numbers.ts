@@ -5,8 +5,6 @@ import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { HeadingCounter } from '../model/heading-numbering';
 
-const key = new PluginKey<DecorationSet>('typstHeadingNumbers');
-
 /**
  * Shows each heading's number, as the document's `#set heading(numbering:
  * ..)` makes Typst number it, in a gutter right of the text: a node
@@ -33,6 +31,8 @@ export const HeadingNumbers = Extension.create({
     ];
   },
 });
+
+const key = new PluginKey<DecorationSet>('typstHeadingNumbers');
 
 function numberDecorations(doc: Node): DecorationSet {
   const decorations = headingNumbers(doc).map(({ pos, number }) =>

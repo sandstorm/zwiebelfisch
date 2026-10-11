@@ -1,9 +1,5 @@
-// The document-links extension: the file paths in Typst text (`#include "ch1.typ"`, `image("logo.png")`) as document
-// links, which open the file or offer to create a missing Typst file. Entry of extensions/document-links/. See
+// The document-links extension. Entry of extensions/document-links/. See
 // docs/20_extensions/04_source-editor-and-preview.typ.
-// Why an extension: finding paths is Typst syntax (core/typst-syntax), showing and following links is the hosts'
-// (every view shows the links of every `DocumentLinkProvider` for its language); where a path leads in this project, and that a missing
-// Typst file may be created, is this extension's policy.
 import { findFilePaths } from '../../core/typst-syntax/typst-syntax';
 import { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
@@ -14,6 +10,13 @@ import type { DocumentLink, DocumentLinkProvider, TextDocument } from '../../hos
  * Links the file paths of all Typst text (the Source editors, raw boxes, an image box's path): they resolve from the
  * file's path, open an existing file, and offer to create a missing Typst file: the command
  * `documentLinks.createFile(path)` creates it through `workspace.applyEdit` and opens it, or rejects saying why not.
+ *
+ * The file paths in Typst text (`#include "ch1.typ"`, `image("logo.png")`) as document links, which open the file or
+ * offer to create a missing Typst file.
+ *
+ * Why an extension: finding paths is Typst syntax (core/typst-syntax), showing and following links is the hosts' (every
+ * view shows the links of every `DocumentLinkProvider` for its language); where a path leads in this project, and that
+ * a missing Typst file may be created, is this extension's policy.
  */
 export function documentLinks(): TypstExtension {
   return {
@@ -32,8 +35,6 @@ export function documentLinks(): TypstExtension {
     },
   };
 }
-
-const CREATE_FILE = 'documentLinks.createFile';
 
 /** The file paths of a text as links; resolved, a link opens its file, or says it is missing (and offers to create a Typst file). */
 class FilePathLinks implements DocumentLinkProvider {
@@ -60,3 +61,5 @@ class FilePathLinks implements DocumentLinkProvider {
     return { ...link, tooltip, command: { title: `Create ${name}`, command: CREATE_FILE, arguments: [target] } };
   }
 }
+
+const CREATE_FILE = 'documentLinks.createFile';

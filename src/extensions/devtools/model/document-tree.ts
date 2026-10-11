@@ -1,7 +1,23 @@
-// The Visual editor's ProseMirror document as rows, each with the source range it shows: what the Typst ↔ ProseMirror
-// conversion (docs/30_architecture/03_prosemirror-typst.typ) made of the shown file. See ../devtools.ts.
+// The Visual editor's ProseMirror document as rows, each with the source range it shows. See ../devtools.ts.
 import type { SourceOffset, SourceRange } from '../../../core/typst-document/typst-document';
 import { describeValue } from './describe';
+
+/**
+ * The rows of `doc`'s nodes in document order (depth first), with their source ranges through `mapping`.
+ *
+ * What the Typst ↔ ProseMirror conversion (docs/30_architecture/03_prosemirror-typst.typ) made of the shown file.
+ */
+export function documentRows<N extends DocumentNode<N>>(doc: N, mapping: DocumentMapping<N>): DocumentRow[] {
+  const rows: DocumentRow[] = [];
+  const visit = (parent: N, start: number, depth: number) =>
+    parent.forEach((node, offset) => {
+      const pos = start + offset;
+      rows.push(row(node, pos, depth, mapping));
+      if (!node.isText) visit(node, pos + 1, depth + 1);
+    });
+  visit(doc, 0, 0);
+  return rows;
+}
 
 /** A ProseMirror node, as far as the tree reads it (ProseMirror's `Node` is one). */
 export interface DocumentNode<N> {
@@ -38,19 +54,6 @@ export interface DocumentRow {
 export interface DocumentMapping<N> {
   posToSource(pos: number, bias?: 1 | -1): SourceOffset;
   isBox(node: N): boolean;
-}
-
-/** The rows of `doc`'s nodes in document order (depth first), with their source ranges through `mapping`. */
-export function documentRows<N extends DocumentNode<N>>(doc: N, mapping: DocumentMapping<N>): DocumentRow[] {
-  const rows: DocumentRow[] = [];
-  const visit = (parent: N, start: number, depth: number) =>
-    parent.forEach((node, offset) => {
-      const pos = start + offset;
-      rows.push(row(node, pos, depth, mapping));
-      if (!node.isText) visit(node, pos + 1, depth + 1);
-    });
-  visit(doc, 0, 0);
-  return rows;
 }
 
 function row<N extends DocumentNode<N>>(node: N, pos: number, depth: number, mapping: DocumentMapping<N>): DocumentRow {

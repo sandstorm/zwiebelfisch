@@ -7,15 +7,6 @@ import type { Workbench } from '../../../hosts/workbench/workbench';
 import { findNotes, type FoundNote } from '../model/find-notes';
 import type { NoteCards } from './workbench';
 
-/** Longer first messages are cut (at a word) in the list. */
-const MAX_LABEL = 80;
-
-export interface CommentSearchContext {
-  readonly project: Pick<Project, 'paths' | 'document'>;
-  readonly workbench: Pick<Workbench, 'open'>;
-  readonly window: Pick<WindowApi, 'activeTextEditor'>;
-}
-
 /**
  * "Comments" (prefix `!`): the margin notes of every Typst file, by their first message, with who wrote in the thread
  * (matched too) and the file; picking one opens the file at the note and, in the Visual editor, its card. A file is read
@@ -53,9 +44,10 @@ export function commentSearch({ project, workbench, window }: CommentSearchConte
   };
 }
 
-/** Who wrote in the thread, each once, in order. */
-function authors({ messages }: FoundNote): string {
-  return [...new Set(messages.flatMap(({ author }) => author ?? []))].join(', ');
+export interface CommentSearchContext {
+  readonly project: Pick<Project, 'paths' | 'document'>;
+  readonly workbench: Pick<Workbench, 'open'>;
+  readonly window: Pick<WindowApi, 'activeTextEditor'>;
 }
 
 function shorten(text: string): string {
@@ -63,4 +55,12 @@ function shorten(text: string): string {
   if (line.length <= MAX_LABEL) return line;
   const cut = line.slice(0, MAX_LABEL);
   return `${cut.slice(0, Math.max(cut.lastIndexOf(' '), MAX_LABEL / 2)).trimEnd()}…`;
+}
+
+/** Longer first messages are cut (at a word) in the list. */
+const MAX_LABEL = 80;
+
+/** Who wrote in the thread, each once, in order. */
+function authors({ messages }: FoundNote): string {
+  return [...new Set(messages.flatMap(({ author }) => author ?? []))].join(', ');
 }

@@ -2,27 +2,6 @@
 import { readThread, type NoteMessage } from '../../model/note-thread';
 import type { KeyedNote } from './note-list';
 
-/** What a card asks the gutter to do with its note (nothing happens if the note is gone). */
-export interface CardActions {
-  /** Appends `text` as a message of the current user. */
-  reply(key: string, text: string): void;
-  /** Replaces the text of message `index`. */
-  edit(key: string, index: number, text: string): void;
-  /** Deletes message `index` (the whole note if it is the only one). */
-  deleteMessage(key: string, index: number): void;
-  /** Resolves the note: deletes it. */
-  remove(key: string): void;
-  /** Editing is over: the text cursor goes after the note. */
-  done(key: string): void;
-  activate(key: string): void;
-  hover(key: string | null): void;
-  resized(): void;
-}
-
-/** Threads longer than this show the first message, "n more" and the last two. */
-const COLLAPSE_ABOVE = 4;
-const SHOWN_AT_END = 2;
-
 /**
  * One note's card: what it highlights, its thread (name, date and text per
  * message, oldest first, long threads collapsed), and a reply box (Mod+Enter
@@ -214,6 +193,42 @@ export class NoteCard {
   }
 }
 
+/** What a card asks the gutter to do with its note (nothing happens if the note is gone). */
+export interface CardActions {
+  /** Appends `text` as a message of the current user. */
+  reply(key: string, text: string): void;
+  /** Replaces the text of message `index`. */
+  edit(key: string, index: number, text: string): void;
+  /** Deletes message `index` (the whole note if it is the only one). */
+  deleteMessage(key: string, index: number): void;
+  /** Resolves the note: deletes it. */
+  remove(key: string): void;
+  /** Editing is over: the text cursor goes after the note. */
+  done(key: string): void;
+  activate(key: string): void;
+  hover(key: string | null): void;
+  resized(): void;
+}
+
+const ICON =
+  '<svg class="typst-comments__card-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"/></svg>';
+const CHECK =
+  '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg>';
+
+const SEND =
+  '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8l11-5-4 11-2-4.5z"/></svg>';
+
+const CARD_HTML =
+  `<div class="typst-comments__card-head">${ICON}<span class="typst-comments__card-quote"></span>`
+  + `<button type="button" class="typst-comments__card-resolve" data-action="resolve" aria-label="Resolve note" title="Resolve: delete the note (Typst: removes the margin-note call)">${CHECK}</button></div>`
+  + '<ol class="typst-comments__card-thread" hidden></ol>'
+  + '<div class="typst-comments__card-compose"><textarea class="typst-comments__card-reply" rows="1" aria-label="Comment" placeholder="Write a comment…"></textarea>'
+  + `<button type="button" class="typst-comments__card-send" data-action="send" aria-label="Send" title="Send (Ctrl+Enter)">${SEND}</button></div>`;
+
+/** Threads longer than this show the first message, "n more" and the last two. */
+const COLLAPSE_ABOVE = 4;
+const SHOWN_AT_END = 2;
+
 function span(doc: Document, className: string, text: string): HTMLElement {
   const element = doc.createElement('span');
   element.className = className;
@@ -221,21 +236,12 @@ function span(doc: Document, className: string, text: string): HTMLElement {
   return element;
 }
 
-const ICON =
-  '<svg class="typst-comments__card-icon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"/></svg>';
-const CHECK =
-  '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg>';
 const PENCIL =
   '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M3 13l.6-2.6L10.5 3.5l2 2-6.9 6.9z"/></svg>';
+
+const EDIT_BUTTON = `<button type="button" class="typst-comments__card-edit" data-action="edit" aria-label="Edit message" title="Edit">${PENCIL}</button>`;
+
 const TRASH =
   '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.5h5.8l.6-8.5"/></svg>';
-const SEND =
-  '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8l11-5-4 11-2-4.5z"/></svg>';
-const EDIT_BUTTON = `<button type="button" class="typst-comments__card-edit" data-action="edit" aria-label="Edit message" title="Edit">${PENCIL}</button>`;
+
 const DELETE_BUTTON = `<button type="button" class="typst-comments__card-delete" data-action="delete" aria-label="Delete message" title="Delete">${TRASH}</button>`;
-const CARD_HTML =
-  `<div class="typst-comments__card-head">${ICON}<span class="typst-comments__card-quote"></span>`
-  + `<button type="button" class="typst-comments__card-resolve" data-action="resolve" aria-label="Resolve note" title="Resolve: delete the note (Typst: removes the margin-note call)">${CHECK}</button></div>`
-  + '<ol class="typst-comments__card-thread" hidden></ol>'
-  + '<div class="typst-comments__card-compose"><textarea class="typst-comments__card-reply" rows="1" aria-label="Comment" placeholder="Write a comment…"></textarea>'
-  + `<button type="button" class="typst-comments__card-send" data-action="send" aria-label="Send" title="Send (Ctrl+Enter)">${SEND}</button></div>`;

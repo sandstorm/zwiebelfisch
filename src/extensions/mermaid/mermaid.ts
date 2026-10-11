@@ -1,9 +1,4 @@
-// The mermaid extension: Mermaid diagrams as figures drawn by the merman package while Typst compiles — "Insert
-// Mermaid diagram" (a new `.mmd` file with a starter flowchart, its figure and the import in the text) and "Edit
-// diagram" on a box reading one. Entry of extensions/mermaid/. See docs/10_guide/02_features.typ.
-// Why an extension: the entry is a toolbar item and the edit a box action, the `.mmd` file opens in whichever editor
-// its pattern has (the text editor) and the file a box reads is found through the document links: the hosts' generic
-// contribution points, no other extension named. Typst draws the diagram, so there is nothing to render here.
+// The mermaid extension. Entry of extensions/mermaid/. See docs/10_guide/02_features.typ.
 import type { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
@@ -15,6 +10,13 @@ import { editMermaidAction, insertMermaid } from './visual-editor/visual-editor'
 /**
  * "Insert Mermaid diagram" in the Visual editor's Insert menu; "Edit diagram" on Visual editor boxes whose Typst reads a
  * Mermaid file of the project (`read("x.mmd")`), opening it.
+ *
+ * Mermaid diagrams as figures drawn by the merman package while Typst compiles — "Insert Mermaid diagram" (a new `.mmd`
+ * file with a starter flowchart, its figure and the import in the text) and "Edit diagram" on a box reading one.
+ *
+ * Why an extension: the entry is a toolbar item and the edit a box action, the `.mmd` file opens in whichever editor
+ * its pattern has (the text editor) and the file a box reads is found through the document links: the hosts' generic
+ * contribution points, no other extension named. Typst draws the diagram, so there is nothing to render here.
  */
 export function mermaid(): TypstExtension {
   return {

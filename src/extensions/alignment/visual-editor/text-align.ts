@@ -13,17 +13,6 @@ import { alignArgs, setRules, withHorizontal, type Horizontal, type TextAlignmen
  */
 const BLOCK_CONTAINER = 'blockContainer';
 
-declare module '@tiptap/core' {
-  interface Commands<ReturnType> {
-    alignment: {
-      /** Aligns the selected blocks (left, center, right) or justifies the selected paragraphs. */
-      setTextAlign: (alignment: TextAlignment) => ReturnType;
-      /** Lets the selected blocks follow the document's alignment again. */
-      unsetTextAlign: () => ReturnType;
-    };
-  }
-}
-
 /**
  * Text alignment in the Visual editor, as Typst writes it:
  *
@@ -90,6 +79,17 @@ export function textAlignAt(state: EditorState): TextAlignment {
   const { $from } = state.selection;
   if ($from.parent.isTextblock) return effective(scopeAt($from, $from.depth - 1), $from.parent);
   return scopeAt($from).horizontal;
+}
+
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    alignment: {
+      /** Aligns the selected blocks (left, center, right) or justifies the selected paragraphs. */
+      setTextAlign: (alignment: TextAlignment) => ReturnType;
+      /** Lets the selected blocks follow the document's alignment again. */
+      unsetTextAlign: () => ReturnType;
+    };
+  }
 }
 
 // --------------------------------------------------------------------- scope

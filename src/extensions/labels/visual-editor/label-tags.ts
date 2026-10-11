@@ -1,6 +1,4 @@
-// Label tags: a block's label (`= Intro <intro>`) drawn as a small tag on the block, renamed or removed through the
-// window's quick pick and input box; a new label typed into a draft tag right where it will show, on the block the
-// selection would label. See visual-editor.ts.
+// Label tags. See visual-editor.ts.
 import type { Node } from '@tiptap/pm/model';
 import { type EditorState, NodeSelection, Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
@@ -10,31 +8,16 @@ import { renameLabel, setLabel } from './label-edits';
 import { labelName } from '../model/reference-syntax';
 import type { ProjectLabels } from '../model/label-index';
 
-/** Where a tag asks what to do with its label, and for the new name. */
-export type LabelPrompts = Pick<WindowApi, 'showQuickPick' | 'showInputBox'>;
-
-/** What the tags need: the project's labels (renaming updates their references by default), the view's document. */
-export interface LabelTagsOptions {
-  labels: ProjectLabels;
-  /** The document this view shows: its references are renamed in the view, the other files' by `labels`. */
-  document: TypstDocument;
-  prompts: LabelPrompts;
-}
-
-/** The tags drawn, and the block a new label is being typed for (its position), if any. */
-interface TagsState {
-  decorations: DecorationSet;
-  draft: number | null;
-}
-
-const key = new PluginKey<TagsState>('typstLabelTags');
-
 /**
  * Draws every labelled block's label as a tag: at the end of a heading's or
  * paragraph's text, or below other blocks (figures, equations, tables). A
  * click on the tag offers to rename the label (with every reference to it in
  * the project, or alone) or remove it; each is one undo step here.
  * `startNewLabel` draws a draft tag with a field at the same place instead.
+ *
+ * A block's label (`= Intro <intro>`) drawn as a small tag on the block, renamed or removed through the window's quick
+ * pick and input box; a new label typed into a draft tag right where it will show, on the block the selection would
+ * label.
  */
 export function labelTags(options: LabelTagsOptions): Plugin {
   return new Plugin<TagsState>({
@@ -50,6 +33,17 @@ export function labelTags(options: LabelTagsOptions): Plugin {
     },
     props: { decorations: (state) => key.getState(state)!.decorations },
   });
+}
+
+/** Where a tag asks what to do with its label, and for the new name. */
+export type LabelPrompts = Pick<WindowApi, 'showQuickPick' | 'showInputBox'>;
+
+/** What the tags need: the project's labels (renaming updates their references by default), the view's document. */
+export interface LabelTagsOptions {
+  labels: ProjectLabels;
+  /** The document this view shows: its references are renamed in the view, the other files' by `labels`. */
+  document: TypstDocument;
+  prompts: LabelPrompts;
 }
 
 /**
@@ -71,6 +65,14 @@ export function canStartNewLabel(state: EditorState): number | null {
   const target = labelTarget(state);
   return target && !target.node.attrs.label ? target.pos : null;
 }
+
+/** The tags drawn, and the block a new label is being typed for (its position), if any. */
+interface TagsState {
+  decorations: DecorationSet;
+  draft: number | null;
+}
+
+const key = new PluginKey<TagsState>('typstLabelTags');
 
 function tags(doc: Node, draft: number | null, options: LabelTagsOptions): DecorationSet {
   const decorations: Decoration[] = [];
@@ -132,25 +134,6 @@ function draftElement(view: EditorView, pos: number, prefix: string, inline: boo
   return wrap;
 }
 
-/** The position of the block a tag at `widget` belongs to: the textblock it ends, or the block before it. */
-function blockAt(view: EditorView, widget: number | undefined, inline: boolean): number | null {
-  if (widget === undefined) return null;
-  const $pos = view.state.doc.resolve(widget);
-  if (inline) return $pos.depth > 0 ? $pos.before() : null;
-  return $pos.nodeBefore ? widget - $pos.nodeBefore.nodeSize : null;
-}
-
-/** One drawn tag: the label's name, where it is drawn, how to find its block now, and the view's options. */
-interface Tag {
-  view: EditorView;
-  name: string;
-  /** Drawn in the text (at the end of a textblock) rather than below a block. */
-  inline: boolean;
-  /** The position of the labelled block in the current document. */
-  block(): number | null;
-  options: LabelTagsOptions;
-}
-
 function tagElement(tag: Tag): HTMLElement {
   const { view, name, inline } = tag;
   const doc = view.dom.ownerDocument;
@@ -166,6 +149,17 @@ function tagElement(tag: Tag): HTMLElement {
   button.addEventListener('mousedown', (event) => event.preventDefault());
   button.addEventListener('click', () => void editTag(tag));
   return wrap;
+}
+
+/** One drawn tag: the label's name, where it is drawn, how to find its block now, and the view's options. */
+interface Tag {
+  view: EditorView;
+  name: string;
+  /** Drawn in the text (at the end of a textblock) rather than below a block. */
+  inline: boolean;
+  /** The position of the labelled block in the current document. */
+  block(): number | null;
+  options: LabelTagsOptions;
 }
 
 /**
@@ -190,17 +184,17 @@ function countedReferences({ name, options }: Tag): string | null {
   return count > 0 ? `${count} reference${count === 1 ? '' : 's'}` : null;
 }
 
-function removeLabel({ view, block }: Tag): void {
-  const pos = block();
-  if (pos !== null) view.dispatch(setLabel(view.state, pos, null));
-}
-
 /** What a tag offers: rename (with the references, if `references` says how many), rename only the label, remove. */
 function tagChoices(references: string | null): (QuickPickItem & { action: 'rename' | 'renameOnly' | 'remove' })[] {
   const rename = { label: 'Rename…', description: references ? `and update ${references}` : undefined, action: 'rename' as const };
   const renameOnly = { label: 'Rename without updating references…', action: 'renameOnly' as const };
   const remove = { label: 'Remove label', action: 'remove' as const };
   return references ? [rename, renameOnly, remove] : [rename, remove];
+}
+
+function removeLabel({ view, block }: Tag): void {
+  const pos = block();
+  if (pos !== null) view.dispatch(setLabel(view.state, pos, null));
 }
 
 /** Asks for the new name of the tag's label and renames it; with `references` (how many), them too. */
@@ -217,6 +211,14 @@ async function renameTag({ view, name, block, options }: Tag, prompts: LabelProm
   if (next === null || next === name || pos === null) return;
   view.dispatch(renameLabel(view.state, pos, next, references !== null));
   if (references) options.labels.renameReferences(name, next, options.document);
+}
+
+/** The position of the block a tag at `widget` belongs to: the textblock it ends, or the block before it. */
+function blockAt(view: EditorView, widget: number | undefined, inline: boolean): number | null {
+  if (widget === undefined) return null;
+  const $pos = view.state.doc.resolve(widget);
+  if (inline) return $pos.depth > 0 ? $pos.before() : null;
+  return $pos.nodeBefore ? widget - $pos.nodeBefore.nodeSize : null;
 }
 
 // --- A new label: which block the selection would label, and a name to start from

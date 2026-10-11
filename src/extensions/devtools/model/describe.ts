@@ -1,5 +1,17 @@
-// Values as text for the devtools: pretty-printed over several lines (an event's value, a contribution's arguments),
-// or as one short line (a document node's attributes). See ../devtools.ts.
+// Values as text for the devtools. See ../devtools.ts.
+
+/**
+ * `value` as text, JSON-like: strings quoted, plain objects, arrays, maps and sets opened `limits.depth` levels deep;
+ * class instances by their class and their public fields and getters (`DocumentEditor { viewType: "visualEditor",
+ * selection: { from: 0, to: 3 } }`), methods left out; elements as `<svg>`, functions as `ƒ name`, bytes by their length.
+ *
+ * Pretty-printed over several lines (an event's value, a contribution's arguments), or as one short line (a document
+ * node's attributes).
+ */
+export function formatValue(value: unknown, limits: Limits = FULL): FormattedValue {
+  const shape = new Shaper(limits).shape(value, 0, new Set());
+  return { line: cut(inline(shape), MAX_LINE), text: pretty(shape, '') };
+}
 
 /** How much of a value is shown: nesting levels opened, entries per object, characters per string. */
 export interface Limits {
@@ -8,31 +20,10 @@ export interface Limits {
   readonly text: number;
 }
 
-/** For values read in full (events, a contribution's arguments): several levels deep. */
-const FULL: Limits = { depth: 4, items: 25, text: 2000 };
-/** For one line: one level deep, short strings. */
-const ONE_LINE: Limits = { depth: 1, items: 4, text: 60 };
-
-/** The longest line `formatValue` gives as `line`; the longest object it keeps on one line in `text`. */
-const MAX_LINE = 160;
-const MAX_INLINE_OBJECT = 72;
-/** At most this many values are looked at per formatting, so a large structure stays cheap. */
-const BUDGET = 600;
-
 /** A value as text: `line` in one line (shortened with `…` where too long), `text` pretty-printed, indented. */
 export interface FormattedValue {
   readonly line: string;
   readonly text: string;
-}
-
-/**
- * `value` as text, JSON-like: strings quoted, plain objects, arrays, maps and sets opened `limits.depth` levels deep;
- * class instances by their class and their public fields and getters (`DocumentEditor { viewType: "visualEditor",
- * selection: { from: 0, to: 3 } }`), methods left out; elements as `<svg>`, functions as `ƒ name`, bytes by their length.
- */
-export function formatValue(value: unknown, limits: Limits = FULL): FormattedValue {
-  const shape = new Shaper(limits).shape(value, 0, new Set());
-  return { line: cut(inline(shape), MAX_LINE), text: pretty(shape, '') };
 }
 
 /** `value` in one short line, one level deep: `{ kind: "update", path: "/main.typ", change: {…} }`. */
@@ -51,17 +42,8 @@ export function nameOf(value: unknown): string | undefined {
   return typeof value === 'object' && value !== null ? className(value) : undefined;
 }
 
-/** A value laid out: text, or an object's entries (keyed, or a list's items) between brackets. */
-type Shape =
-  | { readonly kind: 'text'; readonly text: string }
-  | { readonly kind: 'entries'; readonly prefix: string; readonly brackets: '{}' | '[]'; readonly entries: readonly Entry[]; readonly more: number };
-
-interface Entry {
-  readonly key?: string;
-  readonly value: Shape;
-}
-
-const text = (value: string): Shape => ({ kind: 'text', text: value });
+/** For values read in full (events, a contribution's arguments): several levels deep. */
+const FULL: Limits = { depth: 4, items: 25, text: 2000 };
 
 class Shaper {
   #budget = BUDGET;
@@ -94,12 +76,24 @@ class Shaper {
   }
 }
 
-/** How an object is written around its entries: `Map(2) {…}`, `Set(2) […]`, `[…]`, `DocumentEditor {…}`, `{…}`. */
-function containerOf(value: object): { prefix: string; brackets: '{}' | '[]'; size?: number } {
-  if (Array.isArray(value)) return { prefix: '', brackets: '[]', size: value.length };
-  if (value instanceof Set) return { prefix: `Set(${value.size})`, brackets: '[]', size: value.size };
-  if (value instanceof Map) return { prefix: `Map(${value.size})`, brackets: '{}', size: value.size };
-  return { prefix: className(value) ?? '', brackets: '{}' };
+/** At most this many values are looked at per formatting, so a large structure stays cheap. */
+const BUDGET = 600;
+
+/** A value laid out: text, or an object's entries (keyed, or a list's items) between brackets. */
+type Shape =
+  | { readonly kind: 'text'; readonly text: string }
+  | { readonly kind: 'entries'; readonly prefix: string; readonly brackets: '{}' | '[]'; readonly entries: readonly Entry[]; readonly more: number };
+
+interface Entry {
+  readonly key?: string;
+  readonly value: Shape;
+}
+
+const text = (value: string): Shape => ({ kind: 'text', text: value });
+
+/** `value` cut to `max` characters, saying how long it was. */
+function cutText(value: string, max: number): string {
+  return value.length > max ? `${value.slice(0, max)}… (${value.length} characters)` : value;
 }
 
 /** Objects shown as one piece of text: elements, bytes, dates, errors, regular expressions. */
@@ -114,6 +108,25 @@ function leafOf(value: object): string | undefined {
   return undefined;
 }
 
+function isElement(value: object): value is { nodeName: string } {
+  return 'nodeType' in value && 'nodeName' in value && typeof value.nodeName === 'string';
+}
+
+/** The class of a class instance; undefined for plain objects and arrays. */
+function className(value: object): string | undefined {
+  const prototype = Object.getPrototypeOf(value) as { constructor?: { name?: string } } | null;
+  const name = prototype?.constructor?.name;
+  return prototype === null || name === 'Object' || name === 'Array' || !name ? undefined : name;
+}
+
+/** How an object is written around its entries: `Map(2) {…}`, `Set(2) […]`, `[…]`, `DocumentEditor {…}`, `{…}`. */
+function containerOf(value: object): { prefix: string; brackets: '{}' | '[]'; size?: number } {
+  if (Array.isArray(value)) return { prefix: '', brackets: '[]', size: value.length };
+  if (value instanceof Set) return { prefix: `Set(${value.size})`, brackets: '[]', size: value.size };
+  if (value instanceof Map) return { prefix: `Map(${value.size})`, brackets: '{}', size: value.size };
+  return { prefix: className(value) ?? '', brackets: '{}' };
+}
+
 /** The entries of an object as shown: an array's items, a map's or set's entries, an object's public fields and getters. */
 function entriesOf(value: object): [string | undefined, unknown][] {
   if (Array.isArray(value)) return value.map((item) => [undefined, item]);
@@ -124,6 +137,10 @@ function entriesOf(value: object): [string | undefined, unknown][] {
   const fields = Object.entries(value).filter(([key, item]) => isPublic(key) && typeof item !== 'function');
   const own = new Set(fields.map(([key]) => key));
   return [...fields, ...getterValues(value).filter(([key]) => !own.has(key))];
+}
+
+function isPublic(key: string): boolean {
+  return !key.startsWith('_') && key !== 'constructor';
 }
 
 /** The public getters of a class instance (its prototypes'), with their values but those that throw or are functions. */
@@ -143,15 +160,10 @@ function getterValues(value: object): [string, unknown][] {
   });
 }
 
-function isPublic(key: string): boolean {
-  return !key.startsWith('_') && key !== 'constructor';
-}
-
-/** The class of a class instance; undefined for plain objects and arrays. */
-function className(value: object): string | undefined {
-  const prototype = Object.getPrototypeOf(value) as { constructor?: { name?: string } } | null;
-  const name = prototype?.constructor?.name;
-  return prototype === null || name === 'Object' || name === 'Array' || !name ? undefined : name;
+/** `line` with its line breaks as ⏎, cut to `max` characters. */
+function cut(line: string, max: number): string {
+  const flat = line.replace(/\n/g, '⏎');
+  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
 }
 
 function inline(shape: Shape): string {
@@ -162,6 +174,9 @@ function inline(shape: Shape): string {
   const body = items.length === 0 ? `${open}${close}` : shape.brackets === '{}' ? `{ ${items.join(', ')} }` : `[${items.join(', ')}]`;
   return shape.prefix ? `${shape.prefix} ${body}` : body;
 }
+
+/** The longest line `formatValue` gives as `line`; the longest object it keeps on one line in `text`. */
+const MAX_LINE = 160;
 
 /** `shape` over several lines, two spaces per level; short objects of plain values stay on one line. */
 function pretty(shape: Shape, indent: string): string {
@@ -175,8 +190,10 @@ function pretty(shape: Shape, indent: string): string {
   return `${shape.prefix ? `${shape.prefix} ` : ''}${open}\n${lines.join(',\n')}\n${indent}${close}`;
 }
 
-/** The keys that name a contribution, the first one present wins. */
-const NAME_KEYS = ['id', 'name', 'command', 'viewType', 'label', 'title'] as const;
+const MAX_INLINE_OBJECT = 72;
+
+/** For one line: one level deep, short strings. */
+const ONE_LINE: Limits = { depth: 1, items: 4, text: 60 };
 
 function namesOf(arg: unknown): string[] {
   if (typeof arg === 'string') return [arg.length <= ONE_LINE.text && !arg.includes('\n') ? arg : `(${arg.length} characters)`];
@@ -187,17 +204,5 @@ function namesOf(arg: unknown): string[] {
   return [...(name === undefined ? [] : [name]), ...(typeof record.priority === 'number' ? [`priority ${record.priority}`] : [])];
 }
 
-function isElement(value: object): value is { nodeName: string } {
-  return 'nodeType' in value && 'nodeName' in value && typeof value.nodeName === 'string';
-}
-
-/** `value` cut to `max` characters, saying how long it was. */
-function cutText(value: string, max: number): string {
-  return value.length > max ? `${value.slice(0, max)}… (${value.length} characters)` : value;
-}
-
-/** `line` with its line breaks as ⏎, cut to `max` characters. */
-function cut(line: string, max: number): string {
-  const flat = line.replace(/\n/g, '⏎');
-  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
-}
+/** The keys that name a contribution, the first one present wins. */
+const NAME_KEYS = ['id', 'name', 'command', 'viewType', 'label', 'title'] as const;

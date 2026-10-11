@@ -1,29 +1,16 @@
-// What each extension contributes, recorded as it activates (and later): every `register…` call on its context's
-// namespaces and the settings it declares, each described in its contribution point's terms (contribution-points.ts),
-// with where it was made and whether it was disposed since. See ../devtools.ts.
+// What each extension contributes, recorded as it activates (and later). See ../devtools.ts.
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
 import type { ExtensionContext, TypstExtension } from '../../../hosts/workbench/workbench';
 import { describeContribution, describeSetting, type Description } from './contribution-points';
 import { formatValue } from '../model/describe';
 
-/** One contribution: who made it, where (`visualEditor.registerNode`, `contributes.configuration`), and what it is. */
-export interface Contribution extends Description {
-  readonly extension: string;
-  readonly point: string;
-  /** What the registration was given, pretty-printed. */
-  readonly arguments: string;
-  /** The line of code that registered it (a stack frame: file, line, column), if the browser tells. */
-  readonly location: string | undefined;
-  /** Made after its extension's `activate` returned (in a listener, a later step). */
-  readonly late: boolean;
-  /** Disposed since: no longer in effect. */
-  readonly disposed: boolean;
-}
-
 /**
  * The contributions of the extensions it `instrument`s, in the order they were made. Instrumenting wraps an
  * extension's `activate`: its context's namespaces become proxies that pass every call through and record each
  * `register…` call, and the registration's result tells when it is disposed. Nothing else changes for the extension.
+ *
+ * Every `register…` call on its context's namespaces and the settings it declares, each described in its contribution
+ * point's terms (contribution-points.ts), with where it was made and whether it was disposed since.
  */
 export class ContributionLog {
   readonly #entries: (Contribution & { disposed: boolean })[] = [];
@@ -74,28 +61,48 @@ export class ContributionLog {
   }
 }
 
+/** One contribution: who made it, where (`visualEditor.registerNode`, `contributes.configuration`), and what it is. */
+export interface Contribution extends Description {
+  readonly extension: string;
+  readonly point: string;
+  /** What the registration was given, pretty-printed. */
+  readonly arguments: string;
+  /** The line of code that registered it (a stack frame: file, line, column), if the browser tells. */
+  readonly location: string | undefined;
+  /** Made after its extension's `activate` returned (in a listener, a later step). */
+  readonly late: boolean;
+  /** Disposed since: no longer in effect. */
+  readonly disposed: boolean;
+}
+
+/** The second frame of `stack` (V8: `    at f (url:1:2)`, Firefox and Safari: `f@url:1:2`), without the frame's function. */
+export function callerOf(stack: string | undefined): string | undefined {
+  const frames = (stack ?? '').split('\n').filter((line) => /:\d+:\d+\)?\s*$/.test(line));
+  const frame = frames[1]?.trim();
+  if (!frame) return undefined;
+  const location = /\(([^()]+)\)$/.exec(frame)?.[1] ?? frame.replace(/^at /, '').replace(/^[^@]*@/, '');
+  // the dev server's cache busting (`?t=…`, `?v=…`) says nothing about where
+  return location.replace(/\?[^:]*(?=:\d+:\d+$)/, '');
+}
+
 /** Records a registration made through `point` with `args`; returns what to call when it is disposed. */
 type Recorder = (point: string, args: readonly unknown[], location: string | undefined) => () => void;
-
-function group(entries: readonly Contribution[], key: (entry: Contribution) => string): Map<string, Contribution[]> {
-  const grouped = new Map<string, Contribution[]>();
-  for (const entry of entries) grouped.set(key(entry), [...(grouped.get(key(entry)) ?? []), entry]);
-  return grouped;
-}
-
-function compareRanks(a: readonly (string | number)[], b: readonly (string | number)[]): number {
-  for (let index = 0; index < Math.min(a.length, b.length); index++) {
-    const [x, y] = [a[index], b[index]];
-    if (x === y) continue;
-    return typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y));
-  }
-  return 0;
-}
 
 /** `context` with each namespace that has `register…` methods replaced by a recording proxy. */
 function recordingContext(context: ExtensionContext, record: Recorder): ExtensionContext {
   const entries = Object.entries(context).map(([key, value]) => [key, isNamespace(value) ? recordingNamespace(key, value, record) : value]);
   return Object.fromEntries(entries) as ExtensionContext;
+}
+
+/** Whether `value` is an object with `register…` methods (own or inherited), found without calling any getter. */
+function isNamespace(value: unknown): value is object {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const isMethod = (layer: object, key: string) => key.startsWith('register') && typeof Object.getOwnPropertyDescriptor(layer, key)?.value === 'function';
+  for (let layer: object | null = value; layer && layer !== Object.prototype; layer = Object.getPrototypeOf(layer) as object | null) {
+    const own = layer;
+    if (Object.getOwnPropertyNames(own).some((key) => isMethod(own, key))) return true;
+  }
+  return false;
 }
 
 /**
@@ -139,23 +146,17 @@ function reportingDisposal(result: unknown, disposed: () => void): unknown {
   });
 }
 
-/** The second frame of `stack` (V8: `    at f (url:1:2)`, Firefox and Safari: `f@url:1:2`), without the frame's function. */
-export function callerOf(stack: string | undefined): string | undefined {
-  const frames = (stack ?? '').split('\n').filter((line) => /:\d+:\d+\)?\s*$/.test(line));
-  const frame = frames[1]?.trim();
-  if (!frame) return undefined;
-  const location = /\(([^()]+)\)$/.exec(frame)?.[1] ?? frame.replace(/^at /, '').replace(/^[^@]*@/, '');
-  // the dev server's cache busting (`?t=…`, `?v=…`) says nothing about where
-  return location.replace(/\?[^:]*(?=:\d+:\d+$)/, '');
+function group(entries: readonly Contribution[], key: (entry: Contribution) => string): Map<string, Contribution[]> {
+  const grouped = new Map<string, Contribution[]>();
+  for (const entry of entries) grouped.set(key(entry), [...(grouped.get(key(entry)) ?? []), entry]);
+  return grouped;
 }
 
-/** Whether `value` is an object with `register…` methods (own or inherited), found without calling any getter. */
-function isNamespace(value: unknown): value is object {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
-  const isMethod = (layer: object, key: string) => key.startsWith('register') && typeof Object.getOwnPropertyDescriptor(layer, key)?.value === 'function';
-  for (let layer: object | null = value; layer && layer !== Object.prototype; layer = Object.getPrototypeOf(layer) as object | null) {
-    const own = layer;
-    if (Object.getOwnPropertyNames(own).some((key) => isMethod(own, key))) return true;
+function compareRanks(a: readonly (string | number)[], b: readonly (string | number)[]): number {
+  for (let index = 0; index < Math.min(a.length, b.length); index++) {
+    const [x, y] = [a[index], b[index]];
+    if (x === y) continue;
+    return typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y));
   }
-  return false;
+  return 0;
 }

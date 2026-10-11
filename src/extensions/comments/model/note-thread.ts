@@ -1,4 +1,8 @@
+import { escapeText, safeNote } from './margin-note-syntax';
+
 /**
+ * The messages of `note`, oldest first: [] for an empty note, one anonymous message for a note that is no thread.
+ *
  * A margin note's body as a thread of messages, the one place that knows the
  * format (plain drafting, no helper code):
  *
@@ -32,7 +36,11 @@
  * after the last item (so concurrent replies merge into two items), an edit
  * replaces one message's text.
  */
-import { escapeText, safeNote } from './margin-note-syntax';
+export function readThread(note: string): NoteMessage[] {
+  const items = threadItems(note);
+  if (items) return items.map((item) => itemMessage(note, item));
+  return note.trim() === '' ? [] : [{ author: null, date: null, text: note }];
+}
 
 /** One message of a note's thread; `author` and `date` are null for an anonymous message (markup). */
 export interface NoteMessage {
@@ -48,13 +56,6 @@ export interface NewMessage {
   author: string;
   date: string;
   text: string;
-}
-
-/** The messages of `note`, oldest first: [] for an empty note, one anonymous message for a note that is no thread. */
-export function readThread(note: string): NoteMessage[] {
-  const items = threadItems(note);
-  if (items) return items.map((item) => itemMessage(note, item));
-  return note.trim() === '' ? [] : [{ author: null, date: null, text: note }];
 }
 
 /**
@@ -79,11 +80,6 @@ export function addReply(note: string, reply: NewMessage): string {
   // only an insertion (concurrent replies merge): after an inline first item, siblings start the line
   const { end, indent } = items.at(-1)!;
   return `${note.slice(0, end)}\n${replyItem(indent, reply)}${note.slice(end)}`;
-}
-
-/** A list item for `reply`, its marker indented by `indent`. */
-function replyItem(indent: string, reply: NewMessage): string {
-  return `${indent}- ${header(reply)}${plainText(reply.text.trim(), `${indent}${INDENT}`)}`;
 }
 
 /**
@@ -123,6 +119,11 @@ export function deleteMessage(note: string, index: number): string | null {
 export function localDate(date = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/** A list item for `reply`, its marker indented by `indent`. */
+function replyItem(indent: string, reply: NewMessage): string {
+  return `${indent}- ${header(reply)}${plainText(reply.text.trim(), `${indent}${INDENT}`)}`;
 }
 
 // ---------------------------------------------------------------- parsing

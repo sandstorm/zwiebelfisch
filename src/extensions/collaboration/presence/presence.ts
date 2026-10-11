@@ -1,17 +1,15 @@
-// Presence: other users' carets and selections as source ranges, and where the views read them (`Presences`).
-// Pure (no Yjs, no DOM): the eager part of the extension uses it, so it is not in
-// the lazily loaded chunk (model/). See ../collaboration.ts.
+// Presence. See ../collaboration.ts.
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { SourceOffset, TypstDocument } from '../../../core/typst-document/typst-document';
 import type { User } from '../../../core/user/user';
 
-/** Who another user is, as the views show them: with the CSS color of their caret, selection and markers. */
-export type PresenceUser = Required<User>;
-
 /**
  * Another user's place in a text: their caret (`head`) and selection (`anchor`..`head`, empty for a plain caret),
  * as offsets in the text an editor shows (a file's, or a raw box's code). `id` tells users apart (two may share a name).
+ *
+ * Other users' carets and selections as source ranges, and where the views read them (`Presences`). Pure (no Yjs, no
+ * DOM): the eager part of the extension uses it, so it is not in the lazily loaded chunk (model/).
  */
 export interface Presence {
   id: string;
@@ -19,6 +17,9 @@ export interface Presence {
   anchor: number;
   head: number;
 }
+
+/** Who another user is, as the views show them: with the CSS color of their caret, selection and markers. */
+export type PresenceUser = Required<User>;
 
 /** A presence in a file: its offsets are in the file's text. */
 export interface PlacedPresence extends Presence {

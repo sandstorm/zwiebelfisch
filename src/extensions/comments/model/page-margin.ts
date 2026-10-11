@@ -32,27 +32,39 @@ export function calculatePageMarginChanges(text: string): TextChange[] {
   return changes;
 }
 
-/** Notes need about this much room (drafting's default note width fits). */
-const NOTE_MARGIN_CM = 4;
+/** The identifier naming `node` (a set rule's function, a named argument's key). */
+function name(text: string, node: SyntaxNode): string {
+  const ident = node.getChild('Ident');
+  return ident ? slice(text, ident) : '';
+}
 
-/** Centimetres per absolute unit. */
-const CM: Record<string, number> = { cm: 1, mm: 0.1, in: 2.54, pt: 2.54 / 72 };
+function slice(text: string, node: SyntaxNode): string {
+  return text.slice(node.from, node.to);
+}
 
-/** The side keys of a margin dictionary and the sides each one sets. */
-const SIDES: Record<string, string[]> = {
-  left: ['left'],
-  right: ['right'],
-  top: ['top'],
-  bottom: ['bottom'],
-  x: ['left', 'right'],
-  y: ['top', 'bottom'],
-  rest: ['left', 'right', 'top', 'bottom'],
-};
+/** The value of the named argument `key` in `args`, if it is there. */
+function namedArgument(text: string, args: SyntaxNode | null, key: string): SyntaxNode | null {
+  const named = args?.getChildren('Named').find((arg) => name(text, arg) === key);
+  return named ? argumentValue(named) : null;
+}
+
+function argumentValue(named: SyntaxNode): SyntaxNode | null {
+  const value = named.lastChild;
+  return value && value.name !== 'Colon' && value.name !== 'Space' ? value : null;
+}
 
 /** The value all four sides get, if `value` is a literal margin Typst reads as one length; else null. */
 function uniformMargin(text: string, value: SyntaxNode): SyntaxNode | null {
   if (isLength(value)) return value;
   return value.name === 'Dict' ? uniformDict(text, value) : null;
+}
+
+/** A length literal or a sum of them (`1.5cm`, `10%`, `1cm + 5%`). */
+function isLength(node: SyntaxNode): boolean {
+  if (node.name === 'Numeric') return true;
+  if (node.name !== 'Binary') return false;
+  const [left, op, right, ...rest] = children(node).filter((child) => child.name !== 'Space');
+  return rest.length === 0 && ['Plus', 'Minus'].includes(op?.name ?? '') && isLength(left) && isLength(right);
 }
 
 /** The one length a margin dictionary of side keys gives all four sides; null if it is not that. */
@@ -70,13 +82,16 @@ function uniformDict(text: string, dict: SyntaxNode): SyntaxNode | null {
   return sides.size === 4 && values.size === 1 ? argumentValue(entries[0]) : null;
 }
 
-/** A length literal or a sum of them (`1.5cm`, `10%`, `1cm + 5%`). */
-function isLength(node: SyntaxNode): boolean {
-  if (node.name === 'Numeric') return true;
-  if (node.name !== 'Binary') return false;
-  const [left, op, right, ...rest] = children(node).filter((child) => child.name !== 'Space');
-  return rest.length === 0 && ['Plus', 'Minus'].includes(op?.name ?? '') && isLength(left) && isLength(right);
-}
+/** The side keys of a margin dictionary and the sides each one sets. */
+const SIDES: Record<string, string[]> = {
+  left: ['left'],
+  right: ['right'],
+  top: ['top'],
+  bottom: ['bottom'],
+  x: ['left', 'right'],
+  y: ['top', 'bottom'],
+  rest: ['left', 'right', 'top', 'bottom'],
+};
 
 /** The right margin for notes, wider than `uniform` (which is what the other sides keep). */
 function rightMargin(text: string, uniform: SyntaxNode): string {
@@ -85,23 +100,8 @@ function rightMargin(text: string, uniform: SyntaxNode): string {
   return cm < NOTE_MARGIN_CM ? `${NOTE_MARGIN_CM}cm` : `${Math.ceil(cm - 1e-9) + 1}cm`;
 }
 
-/** The value of the named argument `key` in `args`, if it is there. */
-function namedArgument(text: string, args: SyntaxNode | null, key: string): SyntaxNode | null {
-  const named = args?.getChildren('Named').find((arg) => name(text, arg) === key);
-  return named ? argumentValue(named) : null;
-}
+/** Centimetres per absolute unit. */
+const CM: Record<string, number> = { cm: 1, mm: 0.1, in: 2.54, pt: 2.54 / 72 };
 
-function argumentValue(named: SyntaxNode): SyntaxNode | null {
-  const value = named.lastChild;
-  return value && value.name !== 'Colon' && value.name !== 'Space' ? value : null;
-}
-
-/** The identifier naming `node` (a set rule's function, a named argument's key). */
-function name(text: string, node: SyntaxNode): string {
-  const ident = node.getChild('Ident');
-  return ident ? slice(text, ident) : '';
-}
-
-function slice(text: string, node: SyntaxNode): string {
-  return text.slice(node.from, node.to);
-}
+/** Notes need about this much room (drafting's default note width fits). */
+const NOTE_MARGIN_CM = 4;

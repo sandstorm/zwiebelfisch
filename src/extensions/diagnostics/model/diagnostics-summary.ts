@@ -3,6 +3,21 @@ import type { ProjectPath } from '../../../core/paths/paths';
 import type { SourceRange } from '../../../core/typst-document/typst-document';
 import type { TypstDiagnostic } from '../../../core/typst-engine/typst-engine';
 
+/** Condenses one compilation's diagnostics into what the status indicator shows while `file` is open. */
+export function summarizeDiagnostics(diagnostics: readonly TypstDiagnostic[], file: ProjectPath): DiagnosticsSummary {
+  const errors = diagnostics.filter((d) => d.severity === 'error').length;
+  const warnings = diagnostics.length - errors;
+  return {
+    severity: errors > 0 ? 'error' : warnings > 0 ? 'warning' : 'ok',
+    label: diagnostics.length === 0
+      ? '✓ compiled'
+      : [count(errors, 'error'), count(warnings, 'warning')].filter(Boolean).join(', '),
+    target: firstTarget(diagnostics, file),
+    inFile: diagnostics.filter((d) => d.path === file),
+    elsewhere: diagnostics.filter((d) => d.path !== file),
+  };
+}
+
 /** A range in a project file. */
 export interface DiagnosticTarget extends SourceRange {
   path: ProjectPath;
@@ -21,21 +36,6 @@ export interface DiagnosticsSummary {
   inFile: TypstDiagnostic[];
   /** Diagnostics in other files or without location: only listed in the status. */
   elsewhere: TypstDiagnostic[];
-}
-
-/** Condenses one compilation's diagnostics into what the status indicator shows while `file` is open. */
-export function summarizeDiagnostics(diagnostics: readonly TypstDiagnostic[], file: ProjectPath): DiagnosticsSummary {
-  const errors = diagnostics.filter((d) => d.severity === 'error').length;
-  const warnings = diagnostics.length - errors;
-  return {
-    severity: errors > 0 ? 'error' : warnings > 0 ? 'warning' : 'ok',
-    label: diagnostics.length === 0
-      ? '✓ compiled'
-      : [count(errors, 'error'), count(warnings, 'warning')].filter(Boolean).join(', '),
-    target: firstTarget(diagnostics, file),
-    inFile: diagnostics.filter((d) => d.path === file),
-    elsewhere: diagnostics.filter((d) => d.path !== file),
-  };
 }
 
 /** Where a diagnostic is in the project; null in a package file or without location. */

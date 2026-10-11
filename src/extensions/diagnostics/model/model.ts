@@ -1,16 +1,13 @@
-// The diagnostics' read model: each document's compile diagnostics (DiagnosticCollection), how every view words
-// one, and the status summary (diagnostics-summary.ts). No DOM, no editor library. See ../diagnostics.ts.
+// The diagnostics' read model. See ../diagnostics.ts.
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 
-/** A compiler diagnostic located in a document's text. */
-export interface SourceDiagnostic extends SourceRange {
-  severity: 'error' | 'warning';
-  message: string;
-  hints: string[];
-}
-
-/** The diagnostics of each document, for every view of it (VS Code's DiagnosticCollection). */
+/**
+ * The diagnostics of each document, for every view of it (VS Code's DiagnosticCollection).
+ *
+ * Each document's compile diagnostics (DiagnosticCollection), how every view words one, and the status summary
+ * (diagnostics-summary.ts). No DOM, no editor library.
+ */
 export class DiagnosticCollection {
   private readonly entries = new WeakMap<TypstDocument, readonly SourceDiagnostic[]>();
   private readonly changed = new EventEmitter<TypstDocument>();
@@ -26,6 +23,13 @@ export class DiagnosticCollection {
   get(document: TypstDocument): readonly SourceDiagnostic[] {
     return this.entries.get(document) ?? [];
   }
+}
+
+/** A compiler diagnostic located in a document's text. */
+export interface SourceDiagnostic extends SourceRange {
+  severity: 'error' | 'warning';
+  message: string;
+  hints: string[];
 }
 
 /** A diagnostic's message with its hints, one per line, as every view shows it. */

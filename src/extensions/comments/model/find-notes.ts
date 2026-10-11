@@ -5,12 +5,6 @@ import { SourceOffset } from '../../../core/typst-document/typst-document';
 import { noteCallSyntax } from './margin-note-syntax';
 import { readThread, type NoteMessage } from './note-thread';
 
-/** A margin note: its messages (oldest first) and where its note part starts (inside the last `[`). */
-export interface FoundNote {
-  readonly messages: readonly NoteMessage[];
-  readonly at: SourceOffset;
-}
-
 /** Every margin note of `text` (as the Visual editor knows them) with at least one message, in source order. */
 export function findNotes(text: string): FoundNote[] {
   const notes: FoundNote[] = [];
@@ -25,4 +19,10 @@ export function findNotes(text: string): FoundNote[] {
     },
   });
   return notes;
+}
+
+/** A margin note: its messages (oldest first) and where its note part starts (inside the last `[`). */
+export interface FoundNote {
+  readonly messages: readonly NoteMessage[];
+  readonly at: SourceOffset;
 }

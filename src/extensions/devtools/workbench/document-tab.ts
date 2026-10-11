@@ -1,14 +1,11 @@
-// The devtools' Document tab: the shown file's ProseMirror document as a tree, each node with its source range; a
-// click selects a node's source. See devtools-panel.ts.
+// The devtools' Document tab. See devtools-panel.ts.
 import type { SourceRange } from '../../../core/typst-document/typst-document';
 import type { DocumentRow } from '../model/document-tree';
 import { element, type TabView } from './dom';
 
-/** The document of the shown file: its rows and the selection (positions), or why there are none. */
-export type ShownDocument =
-  | { readonly kind: 'rows'; readonly path: string; readonly rows: readonly DocumentRow[]; readonly selection: { from: number; to: number }; source(range: SourceRange): string }
-  | { readonly kind: 'none'; readonly path: string; readonly reason: string };
-
+/**
+ * The shown file's ProseMirror document as a tree, each node with its source range; a click selects a node's source.
+ */
 export class DocumentTab implements TabView {
   readonly element: HTMLElement;
 
@@ -49,3 +46,8 @@ export class DocumentTab implements TabView {
     return item;
   }
 }
+
+/** The document of the shown file: its rows and the selection (positions), or why there are none. */
+export type ShownDocument =
+  | { readonly kind: 'rows'; readonly path: string; readonly rows: readonly DocumentRow[]; readonly selection: { from: number; to: number }; source(range: SourceRange): string }
+  | { readonly kind: 'none'; readonly path: string; readonly reason: string };

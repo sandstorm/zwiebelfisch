@@ -8,19 +8,6 @@ import { imageAlt, imageArg, imageWidthCss, withImageAlt, withImageWidth } from 
 import { type DragStart, resizedPercent } from '../model/resize';
 import { imagePath } from './image-syntax';
 
-/** The image box the tools belong to (its picture moves into the resize frame). */
-export interface ImageToolsHost extends RawBoxToolsHost {
-  /** The image's path (in the call `src`) in the heading, e.g. as a link to the file (default: the text). */
-  pathLabel?: ((path: PathReference, src: string) => globalThis.Node) | null;
-  /** Where "Alt text" asks for the text (the window's input box; default: no "Alt text"). */
-  prompts?: Pick<WindowApi, 'showInputBox'>;
-}
-
-/** Width presets offered as buttons (keyboard-friendly resizing). */
-const PRESETS = [25, 50, 75, 100];
-/** Resize handles: corners and sides; `w` in the name means it sits on the left. */
-const HANDLES = ['nw', 'ne', 'sw', 'se', 'w', 'e'];
-
 /**
  * What an image box offers besides its code: the "Image: path" heading, a
  * frame around the rendered picture showing the image's width with drag
@@ -209,6 +196,20 @@ export class ImageTools implements RawBoxTools {
     this.badge!.textContent = `${percent}%`;
   }
 }
+
+/** The image box the tools belong to (its picture moves into the resize frame). */
+export interface ImageToolsHost extends RawBoxToolsHost {
+  /** The image's path (in the call `src`) in the heading, e.g. as a link to the file (default: the text). */
+  pathLabel?: ((path: PathReference, src: string) => globalThis.Node) | null;
+  /** Where "Alt text" asks for the text (the window's input box; default: no "Alt text"). */
+  prompts?: Pick<WindowApi, 'showInputBox'>;
+}
+
+/** Resize handles: corners and sides; `w` in the name means it sits on the left. */
+const HANDLES = ['nw', 'ne', 'sw', 'se', 'w', 'e'];
+
+/** Width presets offered as buttons (keyboard-friendly resizing). */
+const PRESETS = [25, 50, 75, 100];
 
 // --- Image edits ---------------------------------------------------------
 // What the tools read from and change in an image block (bare, or the body of

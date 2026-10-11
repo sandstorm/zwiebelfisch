@@ -1,4 +1,7 @@
+
 /**
+ * The parts of an `#align(..)` argument; null unless it is a literal alignment.
+ *
  * Typst's alignment syntax, as far as the Visual editor edits it: the argument
  * of `#align(..)` and the set rules that change the default alignment.
  *
@@ -6,15 +9,6 @@
  * optionally combined with one vertical alignment (`top + center`). `start`
  * and `end` read as left and right (left-to-right text).
  */
-
-export type Horizontal = 'left' | 'center' | 'right';
-/** What the Visual editor's alignment buttons show and set. */
-export type TextAlignment = Horizontal | 'justify';
-
-const HORIZONTAL: Record<string, Horizontal> = { left: 'left', center: 'center', right: 'right', start: 'left', end: 'right' };
-const VERTICAL = new Set(['top', 'horizon', 'bottom']);
-
-/** The parts of an `#align(..)` argument; null unless it is a literal alignment. */
 export function alignArgs(args: string): { horizontal: Horizontal | null; vertical: boolean } | null {
   const parts = args.split('+').map((part) => part.trim());
   const horizontal = parts.filter((part) => part in HORIZONTAL);
@@ -22,6 +16,10 @@ export function alignArgs(args: string): { horizontal: Horizontal | null; vertic
   if (horizontal.length > 1 || vertical.length > 1 || horizontal.length + vertical.length !== parts.length) return null;
   return { horizontal: horizontal.length > 0 ? HORIZONTAL[horizontal[0]] : null, vertical: vertical.length > 0 };
 }
+
+export type Horizontal = 'left' | 'center' | 'right';
+/** What the Visual editor's alignment buttons show and set. */
+export type TextAlignment = Horizontal | 'justify';
 
 /** `args` (a literal alignment) with its horizontal part set to `horizontal`, keeping the rest as written. */
 export function withHorizontal(args: string, horizontal: Horizontal): string {
@@ -46,3 +44,6 @@ export function setRules(code: string): { horizontal?: Horizontal; justify?: boo
   }
   return rules;
 }
+
+const HORIZONTAL: Record<string, Horizontal> = { left: 'left', center: 'center', right: 'right', start: 'left', end: 'right' };
+const VERTICAL = new Set(['top', 'horizon', 'bottom']);

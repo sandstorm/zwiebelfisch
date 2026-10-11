@@ -1,8 +1,4 @@
-// The comments extension. Why: comments are drafting margin notes in the Typst source itself, not a store beside
-// it, so the preview, git, undo and collaboration carry them as ordinary text. The extension shows them in the
-// Visual editor (notes in the text, a card per note in the notes gutter), adds them ("Comment", Ctrl/Cmd+Alt+M) and
-// lets a PDF leave them out (the export option `comments.include`). Entry of extensions/comments/. See
-// docs/10_guide/02_features.typ.
+// The comments extension. Entry of extensions/comments/. See docs/10_guide/02_features.typ.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './comments.css?inline';
 import { registerIncludeComments } from './preview/preview';
@@ -17,6 +13,11 @@ import { ADD_COMMENT, registerAddComment } from './workbench/workbench';
  * toolbar and, for the Source editor, in the tab bar; Ctrl/Cmd+Alt+M in both (the command `comments.addComment`). A note
  * added in the Visual editor opens its card. PDF exports get the option `comments.include` (default off: the notes are
  * left out). Search everywhere finds the notes by text and author.
+ *
+ * Why: comments are drafting margin notes in the Typst source itself, not a store beside it, so the preview, git, undo
+ * and collaboration carry them as ordinary text. The extension shows them in the Visual editor
+ * (notes in the text, a card per note in the notes gutter), adds them ("Comment", Ctrl/Cmd+Alt+M) and lets a PDF leave
+ * them out (the export option `comments.include`).
  */
 export function comments(): TypstExtension {
   return {

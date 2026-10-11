@@ -1,11 +1,11 @@
-// The devtools' Events tab: the event log, latest first, each value pretty-printed (long ones folded), filtered by
-// event name, paused and cleared. See devtools-panel.ts.
+// The devtools' Events tab. See devtools-panel.ts.
 import type { EventLog, LoggedEvent } from '../recording/event-log';
 import { element, type TabView } from './dom';
 
-/** Values of more lines than this are folded (`<details>`), their first line shown. */
-const FOLD_LINES = 6;
-
+/**
+ * The event log, latest first, each value pretty-printed (long ones folded), filtered by event name, paused and
+ * cleared.
+ */
 export class EventsTab implements TabView {
   readonly element: HTMLElement;
   #query = '';
@@ -76,3 +76,6 @@ export class EventsTab implements TabView {
     return details;
   }
 }
+
+/** Values of more lines than this are folded (`<details>`), their first line shown. */
+const FOLD_LINES = 6;

@@ -1,31 +1,16 @@
-// DiagramEditor: a `.drawio.png` in the editing area, edited in diagrams.net's editor embedded in an iframe. It only
-// carries messages between the iframe and the EmbedSession (model/), follows the widget's color scheme, and shows
-// the picture when the editor cannot be loaded. See ../diagrams.ts.
+// DiagramEditor. See ../diagrams.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 import { EmbedSession, embedUrl, type EmbedAction } from '../model/embed-session';
-
-/** How long the editor may take to say it is ready before it counts as not loading (offline, blocked). */
-const LOAD_TIMEOUT = 20_000;
-
-export interface DiagramEditorOptions {
-  readonly path: ProjectPath;
-  /** The file's bytes when opened. */
-  readonly content: Uint8Array;
-  /** Where diagrams.net is (the setting `diagrams.editorUrl`; relative to the page if relative). */
-  readonly editorUrl: string;
-  /** Stores the diagram (a PNG with the diagram's XML in it). */
-  save(png: Uint8Array): void;
-  /** Tells the user the editor did not load; resolves to whether they want to see the picture instead. */
-  failed(): Promise<boolean>;
-  /** Default: 20 s. */
-  readonly loadTimeout?: number;
-}
 
 /**
  * The diagram `path` in diagrams.net's embedded editor (embed mode, JSON protocol, auto-save): changes are exported
  * as PNG and saved as they happen (`EmbedSession`). Light or dark as the widget (`data-scheme`); a change of scheme
  * saves what is pending and loads the editor again. Without an answer from the editor in time (or offline) it
  * says so (`failed`) and, if asked to, shows the picture instead. `dispose` saves what is pending.
+ *
+ * A `.drawio.png` in the editing area, edited in diagrams.net's editor embedded in an iframe. It only carries messages
+ * between the iframe and the EmbedSession (model/), follows the widget's color scheme, and shows the picture when the
+ * editor cannot be loaded.
  */
 export class DiagramEditor {
   readonly #root: HTMLElement;
@@ -143,8 +128,25 @@ export class DiagramEditor {
   }
 }
 
+export interface DiagramEditorOptions {
+  readonly path: ProjectPath;
+  /** The file's bytes when opened. */
+  readonly content: Uint8Array;
+  /** Where diagrams.net is (the setting `diagrams.editorUrl`; relative to the page if relative). */
+  readonly editorUrl: string;
+  /** Stores the diagram (a PNG with the diagram's XML in it). */
+  save(png: Uint8Array): void;
+  /** Tells the user the editor did not load; resolves to whether they want to see the picture instead. */
+  failed(): Promise<boolean>;
+  /** Default: 20 s. */
+  readonly loadTimeout?: number;
+}
+
 function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, className: string): HTMLElementTagNameMap[K] {
   const created = doc.createElement(tag);
   created.className = className;
   return created;
 }
+
+/** How long the editor may take to say it is ready before it counts as not loading (offline, blocked). */
+const LOAD_TIMEOUT = 20_000;

@@ -7,9 +7,6 @@ import { describeLabel } from '../model/label-description';
 import type { ProjectLabels } from '../model/label-index';
 import { findLabel, type LabelKind } from '../model/scan';
 
-/** Labels search everywhere leaves to others: figures (the figures' own group finds them by caption), bibliography keys. */
-const ELSEWHERE = new Set<LabelKind | null>(['figure', 'table', 'listing', 'bibliography']);
-
 /**
  * "Labels" (prefix `@`, as references are written): the Typst labels of headings, equations and anything else but
  * figures, by name, with what they label ("Section · Introduction") and their file; picking one opens the file at the
@@ -35,3 +32,6 @@ export function labelSearch(labels: Pick<ProjectLabels, 'labels'>, project: Pick
         })),
   };
 }
+
+/** Labels search everywhere leaves to others: figures (the figures' own group finds them by caption), bibliography keys. */
+const ELSEWHERE = new Set<LabelKind | null>(['figure', 'table', 'listing', 'bibliography']);

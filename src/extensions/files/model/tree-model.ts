@@ -1,6 +1,30 @@
-// The file tree as data: folders from paths, the rows shown for the expanded folders, keyboard moves, and
-// moving files or folders. Pure. See ../files.ts.
+// The file tree as data. See ../files.ts.
 import { ProjectPath } from '../../../core/paths/paths';
+
+/**
+ * The project's files as a tree: folders come from the paths, plus `folders`
+ * (empty folders made in the panel). Each folder lists its folders first,
+ * then its files, both by name (numbers by value: 2 before 10).
+ *
+ * Folders from paths, the rows shown for the expanded folders, keyboard moves, and moving files or folders. Pure.
+ */
+export function buildTree(paths: readonly ProjectPath[], folders: Iterable<ProjectPath> = []): TreeEntry {
+  const root: TreeEntry = { kind: 'folder', path: null, name: '', children: [] };
+  const index = new Map<Folder, TreeEntry>([[null, root]]);
+  const folder = (path: Folder): TreeEntry => {
+    let entry = index.get(path);
+    if (!entry && path !== null) {
+      entry = { kind: 'folder', path, name: ProjectPath.name(path), children: [] };
+      index.set(path, entry);
+      folder(folderOf(path)).children.push(entry);
+    }
+    return entry!;
+  };
+  for (const path of folders) folder(path);
+  for (const path of paths) folder(folderOf(path)).children.push({ kind: 'file', path, name: ProjectPath.name(path), children: [] });
+  for (const entry of index.values()) entry.children.sort(compare);
+  return root;
+}
 
 /** A folder (a path, like a file's, without a trailing slash), or null for the top level. */
 export type Folder = ProjectPath | null;
@@ -31,31 +55,6 @@ export interface Row {
 export interface TreeKeyMove {
   kind: 'focus' | 'expand' | 'collapse' | 'open';
   path: ProjectPath;
-}
-
-const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
-
-/**
- * The project's files as a tree: folders come from the paths, plus `folders`
- * (empty folders made in the panel). Each folder lists its folders first,
- * then its files, both by name (numbers by value: 2 before 10).
- */
-export function buildTree(paths: readonly ProjectPath[], folders: Iterable<ProjectPath> = []): TreeEntry {
-  const root: TreeEntry = { kind: 'folder', path: null, name: '', children: [] };
-  const index = new Map<Folder, TreeEntry>([[null, root]]);
-  const folder = (path: Folder): TreeEntry => {
-    let entry = index.get(path);
-    if (!entry && path !== null) {
-      entry = { kind: 'folder', path, name: ProjectPath.name(path), children: [] };
-      index.set(path, entry);
-      folder(folderOf(path)).children.push(entry);
-    }
-    return entry!;
-  };
-  for (const path of folders) folder(path);
-  for (const path of paths) folder(folderOf(path)).children.push({ kind: 'file', path, name: ProjectPath.name(path), children: [] });
-  for (const entry of index.values()) entry.children.sort(compare);
-  return root;
 }
 
 /** The rows shown when the folders in `expanded` are open, top to bottom. */
@@ -108,12 +107,13 @@ export function navigate(rows: readonly Row[], current: ProjectPath | null, key:
   return Object.hasOwn(KEYS, key) ? KEYS[key](rows, index) : null;
 }
 
-const FOCUS_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
-
-/** Focus on `target`, unless it is missing or already focused. */
-function focusOn(rows: readonly Row[], index: number, target: number): TreeKeyMove | null {
-  return target !== index && rows[target] ? { kind: 'focus', path: rows[target].path } : null;
+function compare(a: TreeEntry, b: TreeEntry): number {
+  return Number(b.kind === 'folder') - Number(a.kind === 'folder') || collator.compare(a.name, b.name);
 }
+
+const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
+const FOCUS_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
 
 const KEYS: Record<string, (rows: readonly Row[], index: number) => TreeKeyMove | null> = {
   ArrowDown: (rows, i) => focusOn(rows, i, i + 1),
@@ -139,6 +139,7 @@ const KEYS: Record<string, (rows: readonly Row[], index: number) => TreeKeyMove 
   },
 };
 
-function compare(a: TreeEntry, b: TreeEntry): number {
-  return Number(b.kind === 'folder') - Number(a.kind === 'folder') || collator.compare(a.name, b.name);
+/** Focus on `target`, unless it is missing or already focused. */
+function focusOn(rows: readonly Row[], index: number, target: number): TreeKeyMove | null {
+  return target !== index && rows[target] ? { kind: 'focus', path: rows[target].path } : null;
 }

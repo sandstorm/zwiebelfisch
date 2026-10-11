@@ -1,5 +1,4 @@
-// Task lists (checklists, rendered by the cheq package): `- [ ] todo` / `- [x] done`, and cheq's import and show rule
-// that a Visual-editor edit adding a task item brings along. See visual-editor.ts.
+// Task lists (checklists, rendered by the cheq package). See visual-editor.ts.
 import { Extension } from '@tiptap/core';
 import { TaskItem, TaskList } from '@tiptap/extension-list';
 import type { SyntaxNode } from '@lezer/common';
@@ -9,6 +8,51 @@ import { children } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
 import type { TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import { calculateChecklistPreambleChange } from '../model/checklist-preamble';
+
+const TaskLists = Extension.create({
+  name: 'typstTaskLists',
+  addExtensions: () => [TypstTaskList.configure({ HTMLAttributes: { class: 'typst-lists__tasks' } }), TypstTaskItem, ChecklistPreamble],
+});
+
+/**
+ * Task lists: a bullet item `- [ ] text` / `- [x] text` (one paragraph) is a
+ * task item, the box hidden syntax; consecutive ones form a task list.
+ * Tiptap's TaskList / TaskItem (one paragraph, no nesting; the `[ ] ` input
+ * rule and clickable checkboxes are Tiptap's). Their Tiptap priority is higher
+ * than bullet lists' (`TASK_LISTS_PRIORITY`), so their parse rule gets bullet items first.
+ *
+ * `- [ ] todo` / `- [x] done`, and cheq's import and show rule that a Visual-editor edit adding a task item brings
+ * along.
+ */
+export const TASK_LIST: TypstNodeSpec = {
+  name: 'taskList',
+  tiptap: TaskLists,
+  typst: { toTypst: (state, list, pos) => state.blocks(list, pos + 1, '\n') },
+};
+
+export const TASK_ITEM: TypstNodeSpec = {
+  name: 'taskItem',
+  typst: {
+    parseTypst: { syntaxNodes: { ListItem: { block: parseTaskItem, standsAlone: true } } },
+    toTypst: (state, item, pos) => state.item(item, pos, `- [${item.attrs.checked ? 'x' : ' '}] `),
+    anchors: ['marker'],
+    container: () => 'taskList',
+  },
+};
+
+/** cheq's unchecked and checked boxes; others (`[/]`, `[-]`, …) stay text. */
+export const TASK_BOX = /^\[([ x])\](?: |$)/;
+
+const ICON = svg('<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m4.5 8 1 1 2-2"/><rect x="3" y="14" width="6" height="6" rx="1"/><path d="M13 8h8M13 17h8"/>');
+
+/** "Task list", after the other lists in the toolbar's `lists` group. */
+export const TASK_LIST_ACTION: ToolbarAction = {
+  label: 'Task list',
+  shortcut: 'Mod+Shift+9',
+  icon: ICON,
+  run: (c) => c.toggleTaskList(),
+  active: (e) => e.isActive('taskList'),
+};
 
 /**
  * Task lists' Tiptap priority, over bullet lists (default 100), whose syntax they share: a task item is a bullet item
@@ -57,37 +101,6 @@ const ChecklistPreamble = Extension.create({
   },
 });
 
-const TaskLists = Extension.create({
-  name: 'typstTaskLists',
-  addExtensions: () => [TypstTaskList.configure({ HTMLAttributes: { class: 'typst-lists__tasks' } }), TypstTaskItem, ChecklistPreamble],
-});
-
-/**
- * Task lists: a bullet item `- [ ] text` / `- [x] text` (one paragraph) is a
- * task item, the box hidden syntax; consecutive ones form a task list.
- * Tiptap's TaskList / TaskItem (one paragraph, no nesting; the `[ ] ` input
- * rule and clickable checkboxes are Tiptap's). Their Tiptap priority is higher
- * than bullet lists' (`TASK_LISTS_PRIORITY`), so their parse rule gets bullet items first.
- */
-export const TASK_LIST: TypstNodeSpec = {
-  name: 'taskList',
-  tiptap: TaskLists,
-  typst: { toTypst: (state, list, pos) => state.blocks(list, pos + 1, '\n') },
-};
-
-export const TASK_ITEM: TypstNodeSpec = {
-  name: 'taskItem',
-  typst: {
-    parseTypst: { syntaxNodes: { ListItem: { block: parseTaskItem, standsAlone: true } } },
-    toTypst: (state, item, pos) => state.item(item, pos, `- [${item.attrs.checked ? 'x' : ' '}] `),
-    anchors: ['marker'],
-    container: () => 'taskList',
-  },
-};
-
-/** cheq's unchecked and checked boxes; others (`[/]`, `[-]`, …) stay text. */
-export const TASK_BOX = /^\[([ x])\](?: |$)/;
-
 /** `- [ ] text` / `- [x] text` (one paragraph, a space after the box): a task item; null for other bullet items. */
 function parseTaskItem(p: TypstParseContext, node: SyntaxNode, sep: string | null): Node | null {
   const markup = node.getChild('Markup');
@@ -100,17 +113,6 @@ function parseTaskItem(p: TypstParseContext, node: SyntaxNode, sep: string | nul
   const attrs = { marker: '-', checked: box[1] === 'x', src: p.text(node), sep };
   return p.unchangedNode('taskItem', attrs, [paragraph]);
 }
-
-const ICON = svg('<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m4.5 8 1 1 2-2"/><rect x="3" y="14" width="6" height="6" rx="1"/><path d="M13 8h8M13 17h8"/>');
-
-/** "Task list", after the other lists in the toolbar's `lists` group. */
-export const TASK_LIST_ACTION: ToolbarAction = {
-  label: 'Task list',
-  shortcut: 'Mod+Shift+9',
-  icon: ICON,
-  run: (c) => c.toggleTaskList(),
-  active: (e) => e.isActive('taskList'),
-};
 
 // --- The checklist preamble (whether and where it is missing is the model's calculateChecklistPreambleChange)
 

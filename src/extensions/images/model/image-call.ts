@@ -1,63 +1,15 @@
-/**
- * Reading and editing the arguments of an image call, `#image("path", ..)`
- * (an image block) or `image("path", ..)` (the body of a figure). Edits
- * replace only the text of the argument they touch, so a resize or a new alt
- * text is a minimal source change and everything else stays as written. See ../images.ts.
- */
+// See ../images.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 
-/** A named argument of the call: where its value is, and where the argument before it ends. */
-interface NamedArg {
-  value: { from: number; to: number };
-  from: number;
-  to: number;
-  /** The end of the previous argument (always there: the path comes first). */
-  previousEnd: number;
-}
-
-/** The argument list of the call in `source` (markup form), if it is exactly one closed `#image(..)` call. */
-function imageCallArgs(source: string): SyntaxNode | null {
-  if (!/^#image\(/.test(source)) return null;
-  const func = typstParser.parse(source).topNode.getChild('FuncCall');
-  const args = func?.getChild('Args');
-  return args?.lastChild?.name === 'RightParen' && func!.to === source.length ? args : null;
-}
-
-/** The arguments in an argument list, without spaces and commas. */
-function argNodes(args: SyntaxNode): SyntaxNode[] {
-  const result: SyntaxNode[] = [];
-  for (let arg = args.firstChild!.nextSibling; arg && arg.to < args.to; arg = arg.nextSibling) {
-    if (arg.name !== 'Space' && arg.name !== 'Comma') result.push(arg);
-  }
-  return result;
-}
-
-/** The name of a named argument that has a value; null for any other argument. */
-function argName(source: string, arg: SyntaxNode): string | null {
-  const name = arg.name === 'Named' ? arg.getChild('Ident') : null;
-  return name && arg.lastChild!.from > name.to ? source.slice(name.from, name.to) : null;
-}
-
-/** The parsed argument list of `call`; null if it is not one closed `image(..)` call. */
-function parseArgs(call: string): { named: Map<string, NamedArg>; lastEnd: number } | null {
-  // Parsed in markup form; positions are reported in `call`'s own.
-  const offset = call.startsWith('#') ? 0 : 1;
-  const source = offset ? `#${call}` : call;
-  const args = imageCallArgs(source);
-  if (!args) return null;
-  const shift = (node: SyntaxNode) => ({ from: node.from - offset, to: node.to - offset });
-  const named = new Map<string, NamedArg>();
-  let lastEnd = args.firstChild!.to - offset;
-  for (const arg of argNodes(args)) {
-    const name = argName(source, arg);
-    if (name !== null) named.set(name, { value: shift(arg.lastChild!), ...shift(arg), previousEnd: lastEnd });
-    lastEnd = arg.to - offset;
-  }
-  return { named, lastEnd };
-}
-
-/** The source of argument `name` of the image call `call`, or null if it has none. */
+/**
+ * The source of argument `name` of the image call `call`, or null if it has none.
+ *
+ * Reading and editing the arguments of an image call, `#image("path", ..)`
+ * (an image block) or `image("path", ..)` (the body of a figure). Edits
+ * replace only the text of the argument they touch, so a resize or a new alt
+ * text is a minimal source change and everything else stays as written.
+ */
 export function imageArg(call: string, name: string): string | null {
   const arg = parseArgs(call)?.named.get(name);
   return arg ? call.slice(arg.value.from, arg.value.to) : null;
@@ -96,9 +48,6 @@ export function withImageAlt(call: string, alt: string): string {
   return withImageArg(call, 'alt', alt ? literal : null);
 }
 
-/** Lengths CSS reads the same way as Typst. */
-const CSS_LENGTH = /^\d+(?:\.\d+)?(?:%|pt|mm|cm|in|em)$/;
-
 /** The image's `width` as a CSS width ('' when it has none, or one CSS cannot show). */
 export function imageWidthCss(call: string): string {
   const width = imageArg(call, 'width');
@@ -114,3 +63,56 @@ export function withoutHash(call: string): string {
 export function withHash(call: string): string {
   return call.startsWith('#') ? call : `#${call}`;
 }
+
+/** The parsed argument list of `call`; null if it is not one closed `image(..)` call. */
+function parseArgs(call: string): { named: Map<string, NamedArg>; lastEnd: number } | null {
+  // Parsed in markup form; positions are reported in `call`'s own.
+  const offset = call.startsWith('#') ? 0 : 1;
+  const source = offset ? `#${call}` : call;
+  const args = imageCallArgs(source);
+  if (!args) return null;
+  const shift = (node: SyntaxNode) => ({ from: node.from - offset, to: node.to - offset });
+  const named = new Map<string, NamedArg>();
+  let lastEnd = args.firstChild!.to - offset;
+  for (const arg of argNodes(args)) {
+    const name = argName(source, arg);
+    if (name !== null) named.set(name, { value: shift(arg.lastChild!), ...shift(arg), previousEnd: lastEnd });
+    lastEnd = arg.to - offset;
+  }
+  return { named, lastEnd };
+}
+
+/** A named argument of the call: where its value is, and where the argument before it ends. */
+interface NamedArg {
+  value: { from: number; to: number };
+  from: number;
+  to: number;
+  /** The end of the previous argument (always there: the path comes first). */
+  previousEnd: number;
+}
+
+/** The argument list of the call in `source` (markup form), if it is exactly one closed `#image(..)` call. */
+function imageCallArgs(source: string): SyntaxNode | null {
+  if (!/^#image\(/.test(source)) return null;
+  const func = typstParser.parse(source).topNode.getChild('FuncCall');
+  const args = func?.getChild('Args');
+  return args?.lastChild?.name === 'RightParen' && func!.to === source.length ? args : null;
+}
+
+/** The arguments in an argument list, without spaces and commas. */
+function argNodes(args: SyntaxNode): SyntaxNode[] {
+  const result: SyntaxNode[] = [];
+  for (let arg = args.firstChild!.nextSibling; arg && arg.to < args.to; arg = arg.nextSibling) {
+    if (arg.name !== 'Space' && arg.name !== 'Comma') result.push(arg);
+  }
+  return result;
+}
+
+/** The name of a named argument that has a value; null for any other argument. */
+function argName(source: string, arg: SyntaxNode): string | null {
+  const name = arg.name === 'Named' ? arg.getChild('Ident') : null;
+  return name && arg.lastChild!.from > name.to ? source.slice(name.from, name.to) : null;
+}
+
+/** Lengths CSS reads the same way as Typst. */
+const CSS_LENGTH = /^\d+(?:\.\d+)?(?:%|pt|mm|cm|in|em)$/;

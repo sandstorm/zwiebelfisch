@@ -1,7 +1,4 @@
-// Images in the Visual editor: `#image(..)` blocks (also as a figure's body), what "Insert image" offers (the host's project
-// files, uploads), inserting image blocks (toolbar, file drops), the image file in place of the code, and the tools
-// on an image box (resize, alt text, the figures' caption), which edit the call's source minimally; `imagesVisualEditor`
-// registers them for images.ts. See docs/30_architecture/08_built-in-extensions.typ.
+// Images in the Visual editor. See docs/30_architecture/08_built-in-extensions.typ.
 import { Node } from '@tiptap/core';
 import { Disposable } from '../../../core/disposable/disposable';
 import { PathReference, ProjectPath } from '../../../core/paths/paths';
@@ -22,6 +19,11 @@ import { IMAGE_ACCEPT } from '../model/image-files';
  * figures extension offers one) and the image file in place of the code, also
  * as a figure's body; "Insert image" (a path, or the project's images and
  * uploads), and image files dropped on or pasted into the text.
+ *
+ * `#image(..)` blocks (also as a figure's body), what "Insert image" offers (the host's project files, uploads),
+ * inserting image blocks (toolbar, file drops), the image file in place of the code, and the tools on an image box
+ * (resize, alt text, the figures' caption), which edit the call's source minimally; `imagesVisualEditor` registers them
+ * for images.ts.
  */
 export function imagesVisualEditor(options: ImagesOptions): VisualEditorContribution {
   return {
@@ -78,25 +80,6 @@ export interface ImageAssets {
   reference(path: ProjectPath): PathReference | null;
 }
 
-/**
- * A standalone `#image("path", ..)` call. Its source is kept and edited like a
- * raw block's; the box shows which image it is. A figure may hold it as its
- * body (`figureBody`), the call then written without `#`.
- */
-const Image = Node.create({
-  name: 'image',
-  group: 'block figureBody',
-  atom: true,
-  selectable: true,
-  draggable: true,
-  addAttributes() {
-    return { src: { default: '#image("")', rendered: false }, sep: { default: null, rendered: false } };
-  },
-  renderHTML({ node }) {
-    return ['pre', { class: 'typst-images__box' }, node.attrs.src];
-  },
-});
-
 function imageSpec(options: ImagesOptions): TypstNodeSpec {
   return {
     name: 'image',
@@ -125,28 +108,24 @@ function imageSpec(options: ImagesOptions): TypstNodeSpec {
   };
 }
 
-/** Image boxes show their file (following path edits at once). */
-function imageRenderer(urls: ImageUrls): RawBoxRenderer {
-  return {
-    renders: (node) => node.type.name === 'image',
-    render: async (node) => {
-      const path = imagePath(node.attrs.src);
-      const url = path === null ? null : urls.imageUrl(path);
-      return url === null ? null : { url };
-    },
-    followsEdits: true,
-    className: 'typst-images__picture',
-    onDidChange: urls.onDidChange,
-  };
-}
-
-const ICON = svg('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 17-5-5-9 8"/>');
-
-/** An entry of the "Insert image" pick: one of the project's images, or what else to do. */
-type ImageChoice = QuickPickItem & { readonly path?: PathReference };
-
-const UPLOAD: ImageChoice = { label: 'Upload image…' };
-const ENTER_PATH: ImageChoice = { label: 'Enter a path…' };
+/**
+ * A standalone `#image("path", ..)` call. Its source is kept and edited like a
+ * raw block's; the box shows which image it is. A figure may hold it as its
+ * body (`figureBody`), the call then written without `#`.
+ */
+const Image = Node.create({
+  name: 'image',
+  group: 'block figureBody',
+  atom: true,
+  selectable: true,
+  draggable: true,
+  addAttributes() {
+    return { src: { default: '#image("")', rendered: false }, sep: { default: null, rendered: false } };
+  },
+  renderHTML({ node }) {
+    return ['pre', { class: 'typst-images__box' }, node.attrs.src];
+  },
+});
 
 /**
  * "Insert image": a quick pick of the project's images, "Upload image…" and "Enter a path…" (an input box). Image
@@ -191,6 +170,29 @@ function insertImage(toolbar: ToolbarContext, assets: ImageAssets, prompts: Imag
     keywords: ['picture', 'photo', 'figure'],
     run: (c) => c.insertContent({ type: 'image' }),
     click: () => void choose(),
+  };
+}
+
+/** An entry of the "Insert image" pick: one of the project's images, or what else to do. */
+type ImageChoice = QuickPickItem & { readonly path?: PathReference };
+
+const UPLOAD: ImageChoice = { label: 'Upload image…' };
+const ENTER_PATH: ImageChoice = { label: 'Enter a path…' };
+
+const ICON = svg('<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 17-5-5-9 8"/>');
+
+/** Image boxes show their file (following path edits at once). */
+function imageRenderer(urls: ImageUrls): RawBoxRenderer {
+  return {
+    renders: (node) => node.type.name === 'image',
+    render: async (node) => {
+      const path = imagePath(node.attrs.src);
+      const url = path === null ? null : urls.imageUrl(path);
+      return url === null ? null : { url };
+    },
+    followsEdits: true,
+    className: 'typst-images__picture',
+    onDidChange: urls.onDidChange,
   };
 }
 

@@ -6,35 +6,6 @@ import { textColorOn } from '../../../../core/color-scheme/color-scheme';
 import { icon, markupIcon } from '../icons/icons';
 import { ancestorsOf, buildTree, filesUnder, type Folder, folderOf, type TreeKeyMove, navigate, type Row, visibleRows } from '../../model/tree-model';
 
-export interface FileTreeOptions {
-  /** A file was chosen (click, Enter). */
-  onOpen(path: ProjectPath): void;
-  /** F2 on a row (a file or a folder). */
-  onRename(path: ProjectPath): void;
-  /** Delete on a row (a file or a folder). */
-  onDelete(path: ProjectPath): void;
-  /** A row (file or folder) was dragged onto `folder` (null: the top level). */
-  onMove(source: ProjectPath, folder: Folder): void;
-  /** Files from the computer were dropped onto `folder`. */
-  onUpload(files: File[], folder: Folder): void;
-  /** The context menu of a row was asked for: a right click (at its point), Shift+F10 or the context menu key (below the row). */
-  onContextMenu(path: ProjectPath, anchor: { x: number; y: number } | HTMLElement): void;
-  /** Where the open folders are kept (key `openFolders`), e.g. the workspace state. */
-  state?: Memento;
-}
-
-export interface TreeState {
-  paths: readonly ProjectPath[];
-  /** Empty folders that exist only in the panel so far. */
-  folders: readonly ProjectPath[];
-  main: ProjectPath;
-  active: ProjectPath;
-  /** The decorations of a file (badges such as who else is in it). */
-  decorations(path: ProjectPath): readonly FileDecoration[];
-  /** The icon of a file that is no Typst file (SVG markup; undefined: the panel's icon for any file). */
-  icon(path: ProjectPath): string | undefined;
-}
-
 /**
  * The project's files as a tree (`role=tree`, one `treeitem` per visible row):
  * folders first, expandable (open folders are remembered), the main file
@@ -232,19 +203,47 @@ export class FileTree {
   }
 }
 
-/** The icon of the file `path`: the Typst icon, the one its custom editor gives, else the panel's icon for any file. */
-function fileIcon(doc: Document, state: TreeState, path: ProjectPath): Element {
-  if (ProjectPath.isTypst(path)) return icon(doc, 'typst');
-  const markup = state.icon(path);
-  return markup ? markupIcon(doc, markup) : icon(doc, 'data');
+export interface FileTreeOptions {
+  /** A file was chosen (click, Enter). */
+  onOpen(path: ProjectPath): void;
+  /** F2 on a row (a file or a folder). */
+  onRename(path: ProjectPath): void;
+  /** Delete on a row (a file or a folder). */
+  onDelete(path: ProjectPath): void;
+  /** A row (file or folder) was dragged onto `folder` (null: the top level). */
+  onMove(source: ProjectPath, folder: Folder): void;
+  /** Files from the computer were dropped onto `folder`. */
+  onUpload(files: File[], folder: Folder): void;
+  /** The context menu of a row was asked for: a right click (at its point), Shift+F10 or the context menu key (below the row). */
+  onContextMenu(path: ProjectPath, anchor: { x: number; y: number } | HTMLElement): void;
+  /** Where the open folders are kept (key `openFolders`), e.g. the workspace state. */
+  state?: Memento;
 }
 
-/** The decorations of a file, or those of the files in a closed folder that propagate (each once). */
-function decorationsOf({ decorations, paths }: TreeState, row: Row): FileDecoration[] {
-  if (row.kind === 'file') return [...decorations(row.path)];
-  if (row.expanded) return [];
-  const inside = filesUnder(paths, row.path).flatMap((path) => decorations(path).filter((decoration) => decoration.propagate));
-  return [...new Map(inside.map((decoration) => [JSON.stringify([decoration.badge, decoration.tooltip, decoration.color]), decoration])).values()];
+export interface TreeState {
+  paths: readonly ProjectPath[];
+  /** Empty folders that exist only in the panel so far. */
+  folders: readonly ProjectPath[];
+  main: ProjectPath;
+  active: ProjectPath;
+  /** The decorations of a file (badges such as who else is in it). */
+  decorations(path: ProjectPath): readonly FileDecoration[];
+  /** The icon of a file that is no Typst file (SVG markup; undefined: the panel's icon for any file). */
+  icon(path: ProjectPath): string | undefined;
+}
+
+/** The open folders kept, read as data from storage: only project paths count. */
+function openFolders(kept: unknown): ProjectPath[] {
+  return Array.isArray(kept) ? kept.flatMap((folder) => (typeof folder === 'string' ? (ProjectPath.parse(folder) ?? []) : [])) : [];
+}
+
+/** Where the tree keeps its open folders. */
+const OPEN_FOLDERS = 'openFolders';
+
+function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, className: string) {
+  const node = doc.createElement(tag);
+  node.className = className;
+  return node;
 }
 
 function chevron(doc: Document): SVGSVGElement {
@@ -253,10 +252,25 @@ function chevron(doc: Document): SVGSVGElement {
   return svg;
 }
 
+/** The icon of the file `path`: the Typst icon, the one its custom editor gives, else the panel's icon for any file. */
+function fileIcon(doc: Document, state: TreeState, path: ProjectPath): Element {
+  if (ProjectPath.isTypst(path)) return icon(doc, 'typst');
+  const markup = state.icon(path);
+  return markup ? markupIcon(doc, markup) : icon(doc, 'data');
+}
+
 function badge(doc: Document): HTMLElement {
   const main = element(doc, 'span', 'typst-files__badge');
   main.textContent = 'Main';
   return main;
+}
+
+/** The decorations of a file, or those of the files in a closed folder that propagate (each once). */
+function decorationsOf({ decorations, paths }: TreeState, row: Row): FileDecoration[] {
+  if (row.kind === 'file') return [...decorations(row.path)];
+  if (row.expanded) return [];
+  const inside = filesUnder(paths, row.path).flatMap((path) => decorations(path).filter((decoration) => decoration.propagate));
+  return [...new Map(inside.map((decoration) => [JSON.stringify([decoration.badge, decoration.tooltip, decoration.color]), decoration])).values()];
 }
 
 /** One badge per decoration, in its color, its tooltip as title; the row names them all. */
@@ -274,18 +288,4 @@ function badges(doc: Document, decorations: readonly FileDecoration[]): HTMLElem
     badges.append(dot);
   }
   return badges;
-}
-
-function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, className: string) {
-  const node = doc.createElement(tag);
-  node.className = className;
-  return node;
-}
-
-/** Where the tree keeps its open folders. */
-const OPEN_FOLDERS = 'openFolders';
-
-/** The open folders kept, read as data from storage: only project paths count. */
-function openFolders(kept: unknown): ProjectPath[] {
-  return Array.isArray(kept) ? kept.flatMap((folder) => (typeof folder === 'string' ? (ProjectPath.parse(folder) ?? []) : [])) : [];
 }

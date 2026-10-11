@@ -1,7 +1,4 @@
-// The markup extension: the Typst markup most text is made of — strong and emphasis, links, raw text (inline code,
-// code blocks) and block quotes — in the Visual editor, with their toolbar entries. See docs/30_architecture/08_built-in-extensions.typ.
-// Why an extension: the Visual editor's host models only paragraphs, text and raw Typst; every construct beyond that
-// is contributed, so the host stays small and a construct can be left out or replaced on its own.
+// The markup extension. See docs/30_architecture/08_built-in-extensions.typ.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './markup.css?inline';
 import {
@@ -12,6 +9,12 @@ import {
  * Strong, emphasis, links, inline code, code blocks and block quotes: their nodes, marks and buttons. Where marks
  * cover the same text, a link is outermost (its Tiptap priority, 120), then bold, italic; inline code is written
  * innermost whatever the schema's order (`raw`).
+ *
+ * The Typst markup most text is made of — strong and emphasis, links, raw text (inline code, code blocks) and block
+ * quotes — in the Visual editor, with their toolbar entries.
+ *
+ * Why an extension: the Visual editor's host models only paragraphs, text and raw Typst; every construct beyond that is
+ * contributed, so the host stays small and a construct can be left out or replaced on its own.
  */
 export function markup(): TypstExtension {
   return {

@@ -1,26 +1,12 @@
-// The diagram inside a `.drawio.png`: diagrams.net stores the diagram's XML in a `tEXt` chunk named `mxfile`
-// (URI-encoded), so the file is an ordinary PNG for Typst and an editable diagram for diagrams.net. Reading and
-// writing that chunk, PNGs as data URIs (how the embedded editor takes and gives them), and the empty diagram "New
-// diagram…" writes. See ../diagrams.ts.
+// The diagram inside a `.drawio.png`. See ../diagrams.ts.
 
-const SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
-/** The keyword of the chunk holding the diagram (diagrams.net also reads `mxGraphModel`). */
-const KEYWORDS = ['mxfile', 'mxGraphModel'];
-
-/** One chunk of a PNG: its type, its data, and where it starts and ends in the file. */
-interface Chunk {
-  readonly type: string;
-  readonly data: Uint8Array;
-  readonly start: number;
-  readonly end: number;
-}
-
-/** Whether `bytes` start like a PNG. */
-export function isPng(bytes: Uint8Array): boolean {
-  return SIGNATURE.every((byte, i) => bytes[i] === byte);
-}
-
-/** The diagram's XML stored in the PNG `png`, or null when it holds none (or is no PNG). */
+/**
+ * The diagram's XML stored in the PNG `png`, or null when it holds none (or is no PNG).
+ *
+ * Diagrams.net stores the diagram's XML in a `tEXt` chunk named `mxfile` (URI-encoded), so the file is an ordinary PNG
+ * for Typst and an editable diagram for diagrams.net. Reading and writing that chunk, PNGs as data URIs (how the
+ * embedded editor takes and gives them), and the empty diagram "New diagram…" writes.
+ */
 export function readDiagramXml(png: Uint8Array): string | null {
   for (const chunk of chunks(png)) {
     if (chunk.type !== 'tEXt') continue;
@@ -34,6 +20,11 @@ export function readDiagramXml(png: Uint8Array): string | null {
     }
   }
   return null;
+}
+
+/** Whether `bytes` start like a PNG. */
+export function isPng(bytes: Uint8Array): boolean {
+  return SIGNATURE.every((byte, i) => bytes[i] === byte);
 }
 
 /** `png` with `xml` as its diagram: any diagram it held is replaced; the picture stays as it is. */
@@ -77,6 +68,26 @@ function chunks(png: Uint8Array): Chunk[] {
   return result;
 }
 
+/** One chunk of a PNG: its type, its data, and where it starts and ends in the file. */
+interface Chunk {
+  readonly type: string;
+  readonly data: Uint8Array;
+  readonly start: number;
+  readonly end: number;
+}
+
+const SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10];
+
+/** The bytes as characters (a big diagram's chunk goes in slices: arguments are limited). */
+function latin1(bytes: Uint8Array): string {
+  let text = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) text += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return text;
+}
+
+/** The keyword of the chunk holding the diagram (diagrams.net also reads `mxGraphModel`). */
+const KEYWORDS = ['mxfile', 'mxGraphModel'];
+
 function startsWithKeyword(data: Uint8Array, keyword: string): boolean {
   return latin1(data.subarray(0, keyword.length + 1)) === `${keyword}\0`;
 }
@@ -92,7 +103,9 @@ function encodeChunk(type: string, data: Uint8Array): Uint8Array {
   return bytes;
 }
 
-let crcTable: Uint32Array | null = null;
+function ascii(text: string): Uint8Array {
+  return Uint8Array.from(text, (char) => char.charCodeAt(0));
+}
 
 /** The CRC-32 PNG chunks carry (over type and data). */
 function crc32(bytes: Uint8Array): number {
@@ -106,16 +119,7 @@ function crc32(bytes: Uint8Array): number {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
-/** The bytes as characters (a big diagram's chunk goes in slices: arguments are limited). */
-function latin1(bytes: Uint8Array): string {
-  let text = '';
-  for (let i = 0; i < bytes.length; i += 0x8000) text += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-  return text;
-}
-
-function ascii(text: string): Uint8Array {
-  return Uint8Array.from(text, (char) => char.charCodeAt(0));
-}
+let crcTable: Uint32Array | null = null;
 
 function concat(parts: readonly Uint8Array[]): Uint8Array {
   const result = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 0));
@@ -134,10 +138,10 @@ function concat(parts: readonly Uint8Array[]): Uint8Array {
 export const EMPTY_DIAGRAM_XML =
   '<mxfile><diagram id="page-1" name="Page-1"><mxGraphModel><root><mxCell id="0"/><mxCell id="1" parent="0"/></root></mxGraphModel></diagram></mxfile>';
 
-/** A 1×1 transparent PNG. */
-const BLANK_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAXpeqz8AAAAASUVORK5CYII=';
-
 /** The bytes of a new, empty `.drawio.png`. */
 export function emptyDiagram(): Uint8Array {
   return writeDiagramXml(fromDataUri(BLANK_PNG)!, EMPTY_DIAGRAM_XML);
 }
+
+/** A 1×1 transparent PNG. */
+const BLANK_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAXpeqz8AAAAASUVORK5CYII=';

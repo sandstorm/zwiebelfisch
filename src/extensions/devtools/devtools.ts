@@ -1,10 +1,4 @@
-// The devtools extension: a right side panel showing what the widget is made of while it runs: the Typst ↔
-// ProseMirror conversion of the shown file (each node with its source range), every contribution in its point's terms
-// (by extension or by point), and the events as they fire, their values in full. Optional, not a built-in: a host adds
-// it (the demo with `?devtools`). It uses only what any extension gets (its context), so it sees what any outside
-// extension sees. Entry of extensions/devtools/. See docs/10_guide/05_embedding.typ ("Devtools").
-// Why it wraps the list: an extension sees only its own context, so the contributions of the others are recorded by
-// wrapping their `activate` (recording/contributions.ts), not by a listing in the hosts.
+// The devtools extension. Entry of extensions/devtools/. See docs/10_guide/05_embedding.typ ("Devtools").
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './devtools.css?inline';
 import { describeValue } from './model/describe';
@@ -17,13 +11,19 @@ import type { ShownDocument } from './workbench/document-tab';
 /**
  * `extensions` with their contributions recorded, followed by the devtools extension (`devtools`), whose side panel
  * shows them. Give it the whole list: `createTypstEditor(host, { extensions: (builtins) => devtools(builtins) })`.
+ *
+ * A right side panel showing what the widget is made of while it runs: the Typst ↔ ProseMirror conversion of the shown
+ * file (each node with its source range), every contribution in its point's terms (by extension or by point), and the
+ * events as they fire, their values in full. Optional, not a built-in: a host adds it (the demo with `?devtools`). It
+ * uses only what any extension gets (its context), so it sees what any outside extension sees.
+ *
+ * Why it wraps the list: an extension sees only its own context, so the contributions of the others are recorded by
+ * wrapping their `activate` (recording/contributions.ts), not by a listing in the hosts.
  */
 export function devtools(extensions: readonly TypstExtension[]): TypstExtension[] {
   const contributions = new ContributionLog();
   return [...extensions, devtoolsExtension(contributions)].map((extension) => contributions.instrument(extension));
 }
-
-const ICON = '<path d="M14.7 6.3a4 4 0 0 1-5.4 5.4l-5.6 5.6a1.4 1.4 0 0 1-2-2l5.6-5.6a4 4 0 0 1 5.4-5.4L10 7l1 2 2 1z"/>';
 
 function devtoolsExtension(contributions: ContributionLog): TypstExtension {
   return {
@@ -73,3 +73,5 @@ function icon(doc: Document): SVGSVGElement {
   svg.innerHTML = ICON;
   return svg;
 }
+
+const ICON = '<path d="M14.7 6.3a4 4 0 0 1-5.4 5.4l-5.6 5.6a1.4 1.4 0 0 1-2-2l5.6-5.6a4 4 0 0 1 5.4-5.4L10 7l1 2 2 1z"/>';

@@ -1,7 +1,4 @@
-// GitLabSourceControl: the GitLab branch behind a room as a source control (`scm.registerSourceControl`):
-// commit asks the server to commit over stateless messages; the server's answers and news are told as messages; what
-// the room has that the branch has not (the server's `meta.changes`), a conflict with upstream (`meta.conflict`) and a
-// failed commit (`meta.commitFailure`) are its resource states and status bar entries. See model.ts.
+// GitLabSourceControl. See model.ts.
 import type * as Y from 'yjs';
 import type { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
@@ -17,32 +14,6 @@ import {
   type ServerMessage,
 } from '../../../core/room-protocol/room-protocol';
 
-/** Stateless messages to and from the server (the Hocuspocus provider's). */
-export interface StatelessChannel {
-  send(payload: string): void;
-  /** Fires with every message from the server. */
-  readonly onDidReceiveMessage: Event<string>;
-}
-
-/** Tells the user something, as a message of `severity` (the window's messages). */
-export type Tell = (message: string, severity: 'info' | 'warning' | 'error') => void;
-
-/** A file with changes not in GitLab, and its badge in the file panel (the scm host's `SourceControlResourceState`). */
-export interface ResourceState {
-  readonly path: ProjectPath;
-  readonly decorations: { readonly badge: string; readonly tooltip: string; readonly color: string };
-}
-
-/** A status bar entry (the scm host's `SourceControlStatusBarCommand`). */
-export interface StatusBarCommand {
-  readonly title: string;
-  readonly tooltip: string;
-  readonly backgroundColor?: 'warning';
-}
-
-/** How often the status bar entry's age ("14 min") is brought up to date. */
-const MINUTE = 60_000;
-
 /**
  * The commits of a room backed by a GitLab branch, as a client sees them: `commit` asks the server to commit the
  * room's changes as `author` (`state.busy` until it answers); the server's answers (saved, nothing to save, a
@@ -51,6 +22,11 @@ const MINUTE = 60_000;
  * bar ("Not in GitLab: 3 files · 14 min (Ann, Bob)", or "Saved · 01234567"); a conflict with upstream, as long as it
  * lasts, as "!" on its files and a warning entry before that; a failed commit (GitLab unreachable), until the next
  * commit or merge, as a warning entry, too. Shaped as the scm host's `SourceControl`.
+ *
+ * The GitLab branch behind a room as a source control (`scm.registerSourceControl`): commit asks the server to commit
+ * over stateless messages; the server's answers and news are told as messages; what the room has that the branch has
+ * not (the server's `meta.changes`), a conflict with upstream (`meta.conflict`) and a failed commit
+ * (`meta.commitFailure`) are its resource states and status bar entries.
  */
 export class GitLabSourceControl {
   readonly id = 'gitlab';
@@ -193,13 +169,42 @@ export class GitLabSourceControl {
   }
 }
 
-/** The badges of changed and conflicting files, as VS Code's explorer shows them. */
-const DECORATIONS: Record<ChangedFile['kind'] | 'conflict', ResourceState['decorations']> = {
-  modified: { badge: 'M', tooltip: 'Changed, not in GitLab yet', color: '#b58900' },
-  added: { badge: 'A', tooltip: 'New, not in GitLab yet', color: '#859900' },
-  deleted: { badge: 'D', tooltip: 'Deleted, not in GitLab yet', color: '#dc322f' },
-  conflict: { badge: '!', tooltip: 'Conflicts with changes on GitLab: not saved until the lines match', color: '#dc322f' },
-};
+/** Stateless messages to and from the server (the Hocuspocus provider's). */
+export interface StatelessChannel {
+  send(payload: string): void;
+  /** Fires with every message from the server. */
+  readonly onDidReceiveMessage: Event<string>;
+}
+
+/** Tells the user something, as a message of `severity` (the window's messages). */
+export type Tell = (message: string, severity: 'info' | 'warning' | 'error') => void;
+
+/** A file with changes not in GitLab, and its badge in the file panel (the scm host's `SourceControlResourceState`). */
+export interface ResourceState {
+  readonly path: ProjectPath;
+  readonly decorations: { readonly badge: string; readonly tooltip: string; readonly color: string };
+}
+
+/** A status bar entry (the scm host's `SourceControlStatusBarCommand`). */
+export interface StatusBarCommand {
+  readonly title: string;
+  readonly tooltip: string;
+  readonly backgroundColor?: 'warning';
+}
+
+/** Whether a commit is under way (the scm host's `SourceControlState`). */
+export interface CommitState {
+  readonly busy: boolean;
+}
+
+function parse(payload: string): ServerMessage | null {
+  try {
+    const message = JSON.parse(payload) as ServerMessage;
+    return typeof message?.type === 'string' && message.type.startsWith('gitlab:') ? message : null;
+  } catch {
+    return null;
+  }
+}
 
 /** "Conflict with GitLab: main.typ" (at most two files named). */
 function conflictTitle(conflict: RoomConflict): string {
@@ -223,19 +228,22 @@ function failureTooltip(failure: CommitFailure, now: number): string {
   ].join('\n');
 }
 
-/** "Not in GitLab: 3 files · 14 min (Ann, Bob)": how many files, for how long (at `now`), by whom. */
-function notInGitLab(changes: RoomChanges, now: number): string {
-  const count = changes.files.length;
-  const by = changes.editors.length ? ` (${changes.editors.join(', ')})` : '';
-  return `Not in GitLab: ${count} ${count === 1 ? 'file' : 'files'} · ${age(now - changes.since)}${by}`;
-}
-
 /** "< 1 min", "14 min", "2 h", "2 h 5 min". */
 function age(ms: number): string {
   const minutes = Math.max(0, Math.floor(ms / MINUTE));
   if (minutes < 1) return '< 1 min';
   if (minutes < 60) return `${minutes} min`;
   return minutes % 60 ? `${Math.floor(minutes / 60)} h ${minutes % 60} min` : `${minutes / 60} h`;
+}
+
+/** How often the status bar entry's age ("14 min") is brought up to date. */
+const MINUTE = 60_000;
+
+/** "Not in GitLab: 3 files · 14 min (Ann, Bob)": how many files, for how long (at `now`), by whom. */
+function notInGitLab(changes: RoomChanges, now: number): string {
+  const count = changes.files.length;
+  const by = changes.editors.length ? ` (${changes.editors.join(', ')})` : '';
+  return `Not in GitLab: ${count} ${count === 1 ? 'file' : 'files'} · ${age(now - changes.since)}${by}`;
 }
 
 /** The changed files, one per line with its badge, when they are saved by themselves (`autoCommit` minutes), and what a click does. */
@@ -248,10 +256,13 @@ function changesTooltip(changes: RoomChanges, autoCommit: unknown): string {
   return ['Not in GitLab yet:', ...lines, automatic, 'Click to save.'].join('\n');
 }
 
-/** Whether a commit is under way (the scm host's `SourceControlState`). */
-export interface CommitState {
-  readonly busy: boolean;
-}
+/** The badges of changed and conflicting files, as VS Code's explorer shows them. */
+const DECORATIONS: Record<ChangedFile['kind'] | 'conflict', ResourceState['decorations']> = {
+  modified: { badge: 'M', tooltip: 'Changed, not in GitLab yet', color: '#b58900' },
+  added: { badge: 'A', tooltip: 'New, not in GitLab yet', color: '#859900' },
+  deleted: { badge: 'D', tooltip: 'Deleted, not in GitLab yet', color: '#dc322f' },
+  conflict: { badge: '!', tooltip: 'Conflicts with changes on GitLab: not saved until the lines match', color: '#dc322f' },
+};
 
 /** What to tell for `message`: the saved version, nothing to save, merged upstream changes, a conflict, a failure. */
 function said(message: ServerMessage): { text: string; severity: Parameters<Tell>[1] } {
@@ -266,14 +277,5 @@ function said(message: ServerMessage): { text: string; severity: Parameters<Tell
       return { text: `Changes on GitLab conflict with edits in ${message.files.map((file) => file.path).join(', ')}; not saved`, severity: 'warning' };
     case 'gitlab:error':
       return { text: `Saving failed: ${message.message}`, severity: 'error' };
-  }
-}
-
-function parse(payload: string): ServerMessage | null {
-  try {
-    const message = JSON.parse(payload) as ServerMessage;
-    return typeof message?.type === 'string' && message.type.startsWith('gitlab:') ? message : null;
-  } catch {
-    return null;
   }
 }

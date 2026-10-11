@@ -1,6 +1,4 @@
-// What the comments extension contributes to the preview: the PDF export option "Include comments". The PDF itself
-// is the pdf-export extension's; comments only decide what it compiles.
-// See docs/10_guide/02_features.typ.
+// What the comments extension contributes to the preview. See docs/10_guide/02_features.typ.
 import type { Disposable } from '../../../core/disposable/disposable';
 import type { Project } from '../../../core/project/project';
 import type { PdfEntry } from '../../../core/typst-engine/typst-engine';
@@ -10,6 +8,9 @@ import { withoutNotes } from '../model/without-notes';
 /**
  * `comments.include` (default off: the final version): with it the PDF shows the margin notes as the preview does;
  * without, they are left out of copies of the sources (`withoutNotes`), the documents stay as they are.
+ *
+ * The PDF export option "Include comments". The PDF itself is the pdf-export extension's; comments only decide what it
+ * compiles.
  */
 export function registerIncludeComments(preview: Pick<PreviewContributions, 'registerPdfExportOption'>, project: Project): Disposable {
   return preview.registerPdfExportOption({

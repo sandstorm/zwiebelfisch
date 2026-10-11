@@ -1,5 +1,4 @@
-// References and labels in the Visual editor: `@key` chips, label tags on blocks, the `@` list of labels, "Add
-// label" (Insert menu, selection bar). See docs/10_guide/02_features.typ.
+// References and labels in the Visual editor. See docs/10_guide/02_features.typ.
 import { Extension } from '@tiptap/core';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { guardAfterReference, referenceSyntax } from '../model/reference-syntax';
@@ -11,22 +10,14 @@ import { canStartNewLabel, labelTags, startNewLabel, type LabelPrompts } from '.
 import { referenceHints } from './reference-hints';
 import { Reference } from './reference-node';
 
-export interface ReferencesOptions {
-  /**
-   * The project's labels: typing `@` offers them, reference chips show what they point to (or that the label is
-   * missing), and a label can be renamed with its references in every file.
-   */
-  labels: ProjectLabels;
-  /** Where a label tag asks what to do and for the new name: the window's quick pick and input box. */
-  prompts: LabelPrompts;
-}
-
 /**
  * References (`@key`, `@key[supplement]`) as `reference` chips with hints
  * (what they point to, or that the label is missing); a block's label shown
  * as a tag (rename, with the references in every file, or remove); the `@`
  * list of labels to insert references from; "Add label" in the Insert menu
  * and, where the selection's block can take a new label, in the selection's bar.
+ *
+ * `@key` chips, label tags on blocks, the `@` list of labels, "Add label" (Insert menu, selection bar).
  */
 export function references(options: ReferencesOptions): VisualEditorContribution {
   const { labels, prompts } = options;
@@ -43,6 +34,16 @@ export function references(options: ReferencesOptions): VisualEditorContribution
       );
     },
   };
+}
+
+export interface ReferencesOptions {
+  /**
+   * The project's labels: typing `@` offers them, reference chips show what they point to (or that the label is
+   * missing), and a label can be renamed with its references in every file.
+   */
+  labels: ProjectLabels;
+  /** Where a label tag asks what to do and for the new name: the window's quick pick and input box. */
+  prompts: LabelPrompts;
 }
 
 /** `@key` / `@key[supplement]`: a `reference` atom; the supplement is kept as written. */
@@ -77,9 +78,6 @@ function referencesExtension(labels: ProjectLabels, document: TypstDocument, pro
   });
 }
 
-/** Typed right after `@name`, the whole name of a label, these make it a reference, too: `@intro ` like choosing `intro`. */
-const ENDS_REFERENCE = [' ', '\u00a0', ',', ';', '!', '?', ')', ']', '.', ':'];
-
 /**
  * The `@` list: the project's labels (each name once), found by name or by what they label; choosing one inserts a
  * reference chip in place of `@query`.
@@ -104,7 +102,8 @@ function labelCompletions(labels: ProjectLabels): CompletionItemProvider {
   };
 }
 
-const ICON = svg('<path d="M3 12V4h8l9 8-8 8z"/><circle cx="7.5" cy="8.5" r="1.2"/>');
+/** Typed right after `@name`, the whole name of a label, these make it a reference, too: `@intro ` like choosing `intro`. */
+const ENDS_REFERENCE = [' ', '\u00a0', ',', ';', '!', '?', ')', ']', '.', ':'];
 
 /**
  * "Add label": a label (`<fig:logo>`) on the figure or block the selection is in, typed into a draft tag
@@ -121,6 +120,8 @@ function addLabel(toolbar: ToolbarContext): ToolbarAction {
     click: () => startNewLabel(toolbar.editor.view),
   };
 }
+
+const ICON = svg('<path d="M3 12V4h8l9 8-8 8z"/><circle cx="7.5" cy="8.5" r="1.2"/>');
 
 /**
  * The selection bar's "Add label": shown only where it applies, so the bar stays small; a block's existing

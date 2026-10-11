@@ -2,13 +2,6 @@
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { SourceRange } from '../../../core/typst-document/typst-document';
 
-/** A heading: its level (`==` → 2), its text as written (whitespace collapsed), and where that text is. */
-export interface FoundHeading {
-  readonly level: number;
-  readonly title: string;
-  readonly range: SourceRange;
-}
-
 /** Every heading of `text` in source order (`= Title` markup; headings with empty text left out). */
 export function findHeadings(text: string): FoundHeading[] {
   const headings: FoundHeading[] = [];
@@ -23,4 +16,11 @@ export function findHeadings(text: string): FoundHeading[] {
     },
   });
   return headings;
+}
+
+/** A heading: its level (`==` → 2), its text as written (whitespace collapsed), and where that text is. */
+export interface FoundHeading {
+  readonly level: number;
+  readonly title: string;
+  readonly range: SourceRange;
 }

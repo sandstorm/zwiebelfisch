@@ -25,9 +25,6 @@ export function numberingFormatter(pattern: string): ((numbers: readonly number[
   };
 }
 
-/** Represents a number in a numeral system; null where the system cannot (Typst then falls back to Arabic). */
-type NumeralSystem = (n: number) => string | null;
-
 function parse(pattern: string): { pieces: [string, NumeralSystem][]; suffix: string } | null {
   const pieces: [string, NumeralSystem][] = [];
   let pending = '';
@@ -44,8 +41,11 @@ function parse(pattern: string): { pieces: [string, NumeralSystem][]; suffix: st
   return pieces.length > 0 ? { pieces, suffix: pending } : null;
 }
 
-const SYMBOLS = ['*', '†', '‡', '§', '¶', '‖'];
-const CIRCLED = Array.from('⓪①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳㉑㉒㉓㉔㉕㉖㉗㉘㉙㉚㉛㉜㉝㉞㉟㊱㊲㊳㊴㊵㊶㊷㊸㊹㊺㊻㊼㊽㊾㊿');
+/** Represents a number in a numeral system; null where the system cannot (Typst then falls back to Arabic). */
+type NumeralSystem = (n: number) => string | null;
+
+/** Typst's other counting symbols (Greek, Hebrew, CJK, kana, Hangul, Indic, …). */
+const UNSUPPORTED = new Set(Array.from('⓵αΑաԱא一壹あいアイㄱ가١أ۱१༡১ক'));
 
 const SYSTEMS: Record<string, NumeralSystem> = {
   '1': (n) => String(n),
@@ -57,9 +57,6 @@ const SYSTEMS: Record<string, NumeralSystem> = {
   '①': (n) => CIRCLED[n] ?? null,
 };
 
-/** Typst's other counting symbols (Greek, Hebrew, CJK, kana, Hangul, Indic, …). */
-const UNSUPPORTED = new Set(Array.from('⓵αΑաԱא一壹あいアイㄱ가١أ۱१༡১ক'));
-
 /** Bijective base 26: A … Z, AA, AB, …; no zero. */
 function latin(n: number): string | null {
   if (n <= 0) return null;
@@ -67,11 +64,6 @@ function latin(n: number): string | null {
   for (let rest = n; rest > 0; rest = Math.floor((rest - 1) / 26)) text = String.fromCharCode(65 + ((rest - 1) % 26)) + text;
   return text;
 }
-
-const ROMAN: [number, string][] = [
-  [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'],
-  [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
-];
 
 /** Roman numerals; zero is N, as in Typst. */
 function roman(n: number): string {
@@ -83,3 +75,11 @@ function roman(n: number): string {
   }
   return text;
 }
+
+const ROMAN: [number, string][] = [
+  [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'],
+  [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
+];
+
+const SYMBOLS = ['*', '†', '‡', '§', '¶', '‖'];
+const CIRCLED = Array.from('⓪①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳㉑㉒㉓㉔㉕㉖㉗㉘㉙㉚㉛㉜㉝㉞㉟㊱㊲㊳㊴㊵㊶㊷㊸㊹㊺㊻㊼㊽㊾㊿');
