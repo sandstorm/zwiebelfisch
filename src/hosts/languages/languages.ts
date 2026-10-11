@@ -1,5 +1,3 @@
-// The languages namespace of the extension API (VS Code's `languages`, as far as it is used). Entry of
-// hosts/languages/. See docs/30_architecture/07_workbench.typ.
 import type { Extension } from '@codemirror/state';
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
@@ -9,18 +7,16 @@ import css from './languages.css?inline';
 import { linkExtension, primaryLink } from './link-extension';
 
 /**
- * The language features of texts as extensions use them (VS Code's `languages` namespace: document links, the
- * languages files are in, and help on them).
+ * What the widget knows about the languages of texts (VS Code's `languages` namespace, the parts we use): document
+ * links, the language of a file, and help sheets.
  *
- * The document links of every registered DocumentLinkProvider whose selector matches a document, merged, and how
- * CodeMirror editors show them (the Source editors, the code of the Visual editor's raw boxes, an extension's own
- * editor); the language of a file by its ending, as the extensions declare them (`contributes.languages`); the help
- * sheets of every HelpProvider for a language.
+ * Finding links is a feature's policy: which paths count, what a missing file offers. Showing and following links is
+ * the same in every editor. So extensions register link providers, and every CodeMirror editor (the Source editor,
+ * a raw box's code, an extension's own editor) shows the merged links of all providers for its language, knowing none
+ * of them. Help works the same way: a language's sheet comes from its extension, the help panel shows it.
  *
- * Why providers: finding links is a feature's policy (which paths, what a missing file offers); showing and following
- * them is the same in every editor, so the editors read every provider's links and know none of them. The same for help:
- * a language's sheet is its extension's, showing it is the help panel's. Why `languageId`: the host knows no language;
- * whoever hands a text over says which language it is in, and the extensions declare which endings are which.
+ * The host knows no language itself. Whoever hands a text over says its language (`languageId`), and the extensions
+ * declare which file endings are which language (`contributes.languages`). See docs/30_architecture/07_workbench.typ.
  */
 export interface Languages {
   /**
@@ -162,10 +158,8 @@ export interface FollowableLink {
 }
 
 /**
- * The registered link providers. A text's links are those of every provider whose selector matches it; where links
- * of two providers overlap, the one of the higher `priority` wins (equal: the one registered first). Each link
- * remembers its provider, which resolves it on demand (`resolveDocumentLink`). `targets` is what following a link
- * does, in every editor that shows links. Also the declared languages by ending, and the help providers.
+ * The `Languages` of one widget. Each link remembers its provider, which resolves it on demand
+ * (`resolveDocumentLink`). `targets` is what following a link does, in every editor that shows links.
  */
 export class LanguagesHost implements Languages {
   readonly #providers: { selector: DocumentSelector; provider: DocumentLinkProvider; priority: number }[] = [];

@@ -1,4 +1,4 @@
-// linkExtension. See languages.ts.
+// See Languages in languages.ts.
 import type { EditorState, Extension, Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, hoverTooltip, keymap, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import { ProjectPath } from '../../core/paths/paths';
@@ -10,9 +10,6 @@ import type { DocumentLink, FollowableLink, LinkTargets, TextDocument } from './
  * VS Code's "Follow link"), or says what the link's tooltip says and offers its command (e.g. "Create chapter.typ").
  * `languageId`: the text's language; `path`: the file the text is in, now (a file can be renamed); null: none, the
  * text has no links.
- *
- * The document links of a CodeMirror editor's text (a Source editor, a raw box's code, a text file), like IntelliJ:
- * marked, Mod+click / Alt+Enter follow them, the hover offers "Open …" or what the link's command does.
  */
 export function linkExtension(actions: LinkActions, languageId: string, path: () => ProjectPath | null): Extension {
   const links = ViewPlugin.fromClass(
