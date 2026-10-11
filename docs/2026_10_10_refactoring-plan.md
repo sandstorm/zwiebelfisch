@@ -180,7 +180,8 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    **Mermaid via `@preview/merman` (user, 2026-10-11; research: it compiles in our engine, 3.45 MB
    first download, ~200–420 ms per changed diagram, closest to Mermaid):** `.mmd` in the text-files
    editor, a docs section (`#render(read("x.mmd"))` and ```` ```mermaid ```` blocks), one diagram in the
-   advanced demo. D2 (`@preview/tiago`) not now. The converter design below is only the fallback if
+   advanced demo. D2: not supported for now — `@preview/tiago` (Diago) is too experimental (user); if D2 is needed
+   later, the converter fallback with the official `@terrastruct/d2` is the path. The converter design below is only the fallback if
    fidelity falls short.
    **Text diagrams converter (fallback design, user 2026-10-11):** no Typst package; the
    **automatic converter is the must**, a special editor is **open** (later candidates: inline render
