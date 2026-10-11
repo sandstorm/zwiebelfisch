@@ -13,6 +13,11 @@ can (`mise run quality`); the rest is for authors and reviewers.
   learn, and needs a clear reason to exist. Prefer the frameworks' own concepts and plain code; a few
   more obvious lines beat a clever indirection. Size helpers by what is used today, never by what
   might be.
+- **A new concept of ours only where two areas meet** (Typst ↔ ProseMirror in the projection, Typst ↔
+  CodeMirror in raw boxes, our extension API ↔ a framework). Inside one area, use that area's own
+  concepts and plain functions. **Every new concept is proposed to the user first**, with what it
+  replaces and how much it actually brings; nobody (agents included) adds one without that yes.
+  Renames, moves and plain functions are not new concepts.
 - **Deep modules.** A module hides a lot behind a small interface. Don't split a deep class into
   shallow ones (`Project` stays one class; its change rules stay private methods).
 - **Information hiding.** Expose what callers need, nothing for tests' or one caller's convenience.
