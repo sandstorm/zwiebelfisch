@@ -139,7 +139,7 @@ export class DocumentEditor implements TextEditor {
   }
 
   insertSnippet(snippet: string): void {
-    this.views.get(this.viewType)!.view.insert(snippet);
+    this.editors.get(this.viewType)!.editor.insert(snippet);
   }
 }
 

@@ -112,7 +112,7 @@ export class VisualEditor {
 
   /** Inserts what Typst `source` is read as at the selection (`insertTypst`); focuses the editor. */
   insert(source: string): void {
-    insertTypst(this.editor, source);
+    insertTypst(this.tiptap, source);
   }
 
   /**
