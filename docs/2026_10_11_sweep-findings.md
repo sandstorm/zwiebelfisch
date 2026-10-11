@@ -19,7 +19,7 @@
   `toDOM`); framework classes `TypstToProseMirrorParser` / `ProseMirrorToTypstSerializer`; what spec
   functions receive: `TypstParseContext` / `TypstSerializeState` (today `ProjectionContext` /
   `Printer`; "projector" / "printer" wording goes). Done in the follow-up, before the types are public.
-- **Which framework a contribution belongs to must be obvious** (user; same follow-up). Five
+- **Which framework a contribution belongs to must be obvious** (user; same follow-up). The four rules are confirmed; the Typst-grammar part (`parseTypst: { syntaxNodes, calls }` grouping, the grammar as public dependency) is **still open — the user is thinking about it**; the follow-up leaves the parse side as it is until then. Five
   vocabularies: ours (VS Code-shaped, unprefixed), Tiptap (ProseMirror only through Tiptap, e.g.
   `addProseMirrorPlugins`), CodeMirror, Lezer + the Typst grammar of `codemirror-lang-typst`, the Typst
   language. Rules: (1) our API unprefixed; (2) a member taking / returning a framework object names it
