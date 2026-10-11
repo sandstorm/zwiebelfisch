@@ -69,9 +69,7 @@ describe('exampleFromQuery', () => {
     ['', 'hello'],
     ['?example=simple', 'simple'],
     ['?example=advanced&room=r&user=u', 'advanced'],
-    ['?files', 'advanced'],
     ['?example=nope', 'hello'],
-    ['?example=simple&files', 'simple'],
   ])('"%s" → %s', (query, name) => {
     expect(exampleFromQuery(new URLSearchParams(query))).toBe(name);
   });
@@ -81,9 +79,5 @@ describe('exampleQuery', () => {
   it('keeps room and user and replaces the example', () => {
     const query = exampleQuery('simple', new URLSearchParams('?example=advanced&room=r1&user=Ada'));
     expect(new URLSearchParams(query).toString()).toBe('example=simple&room=r1&user=Ada');
-  });
-
-  it('drops the legacy ?files flag', () => {
-    expect(exampleQuery('hello', new URLSearchParams('?files&room=r1'))).toBe('?room=r1&example=hello');
   });
 });

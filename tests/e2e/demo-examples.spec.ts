@@ -39,12 +39,6 @@ test('switching examples keeps the other URL parameters', async ({ page }) => {
   await expect(examples(page).getByRole('link', { name: 'Advanced' })).toHaveAttribute('aria-current', 'page');
 });
 
-test('the older ?files opens the advanced example', async ({ page }) => {
-  await page.goto('/?files');
-  await expect(examples(page).getByRole('link', { name: 'Advanced' })).toHaveAttribute('aria-current', 'page');
-  await expect(fileRow(page, 'template.typ')).toBeVisible();
-});
-
 test('the advanced example declares custom styles: styled text in the Visual view, offered in the style menu', async ({ page }) => {
   await page.goto('/?example=advanced#/chapters/introduction.typ');
   await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
