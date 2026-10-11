@@ -1,10 +1,10 @@
-// Tests for plugin.ts: who may use the file API, and what each request does.
+// Tests for plugin.ts: who may use the file API and the event stream, and what each request does.
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DocsFolder } from './docs-folder';
-import { docsFiles, handleDocsFilesRequest, type DocsFilesRequest } from './plugin';
+import { docsFiles, handleDocsFilesRequest, mayStream, type DocsFilesRequest } from './plugin';
 import { DOCS_FILES_HEADER } from './protocol';
 
 const TOKEN = 'session-token';
@@ -66,26 +66,40 @@ describe('docs-files requests', () => {
   });
 });
 
+describe('the event stream', () => {
+  const headers = { host: '127.0.0.1:5199' };
+  it('opens with the token in the query, from the same origin (no Origin) or the server’s own', () => {
+    expect(mayStream(TOKEN, { url: `/?token=${TOKEN}`, headers })).toBe(true);
+    expect(mayStream(TOKEN, { url: `/?token=${TOKEN}`, headers: { ...headers, origin: 'http://127.0.0.1:5199' } })).toBe(true);
+  });
+
+  it.each([
+    ['without the token', '/', {}],
+    ['with a wrong token', '/?token=guess', {}],
+    ['from another origin', `/?token=${TOKEN}`, { origin: 'http://evil.test' }],
+  ])('refuses %s', (_, url, extra) => {
+    expect(mayStream(TOKEN, { url, headers: { ...headers, ...extra } })).toBe(false);
+  });
+});
+
 describe('the docs-files plugin', () => {
-  it('runs on the dev server only: not in a build, not in vitest', () => {
+  it('runs on the dev server and in vite preview (both serve): not in a build, not in vitest', () => {
     const plugin = docsFiles({ root });
     const apply = plugin.apply as (config: object, env: { command: string; mode: string }) => boolean;
     expect(apply({}, { command: 'serve', mode: 'development' })).toBe(true);
+    expect(apply({}, { command: 'serve', mode: 'production' })).toBe(true);
     expect(apply({}, { command: 'build', mode: 'production' })).toBe(false);
     expect(apply({}, { command: 'serve', mode: 'test' })).toBe(false);
   });
 
-  it('turns a change in docs/ into its event instead of Vite’s update, and leaves other files to Vite', async () => {
+  it('keeps a change in docs/ from Vite’s update (no reload; the page hears of it on the stream), and leaves other files to Vite', () => {
     const plugin = docsFiles({ root });
-    const send = vi.fn();
     const invalidateModule = vi.fn();
-    const context = { environment: { name: 'client', hot: { send }, moduleGraph: { invalidateModule } } };
-    const hotUpdate = plugin.hotUpdate as (this: unknown, options: { file: string; modules: unknown[] }) => Promise<unknown[] | undefined>;
-    await writeFile(join(root, 'a.typ'), '= Changed\n');
-    expect(await hotUpdate.call(context, { file: join(root, 'a.typ'), modules: ['module'] })).toEqual([]);
+    const context = { environment: { name: 'client', moduleGraph: { invalidateModule } } };
+    const hotUpdate = plugin.hotUpdate as (this: unknown, options: { file: string; modules: unknown[] }) => unknown[] | undefined;
+    expect(hotUpdate.call(context, { file: join(root, 'a.typ'), modules: ['module'] })).toEqual([]);
     expect(invalidateModule).toHaveBeenCalledWith('module');
-    expect(send).toHaveBeenCalledWith('docs-files:change', { path: 'a.typ', text: '= Changed\n' });
-    expect(await hotUpdate.call(context, { file: join(base, 'main.ts'), modules: ['other'] })).toBeUndefined();
+    expect(hotUpdate.call(context, { file: join(base, 'main.ts'), modules: ['other'] })).toBeUndefined();
   });
 
   it('puts the session token into the page', () => {
@@ -94,4 +108,77 @@ describe('the docs-files plugin', () => {
     expect(tags[0].attrs).toMatchObject({ name: 'docs-files-token' });
     expect(tags[0].attrs.content).toMatch(/^[0-9a-f]{48}$/);
   });
+
+  it('in vite preview, serves the built page with the same token, and the event stream: the snapshot, then changes', async () => {
+    await mkdir(join(base, 'dist'));
+    await writeFile(join(base, 'dist/index.html'), '<html><head><title>Demo</title></head><body></body></html>');
+    const plugin = docsFiles({ root });
+    const { content: token } = (plugin.transformIndexHtml as unknown as () => { attrs: Record<string, string> }[])()[0].attrs;
+    const preview = previewServer();
+    await (plugin.configurePreviewServer as (server: unknown) => Promise<void>)(preview.server);
+
+    const page = await preview.get('/?example=docs');
+    expect(page.headers['content-type']).toMatch(/^text\/html/);
+    expect(page.body).toContain(`<meta name="docs-files-token" content="${token}">\n</head>`);
+    expect((await preview.get('/assets/main.js')).passedOn).toBe(true);
+
+    expect((await preview.get('/__docs-files?token=guess')).status).toBe(403);
+    const stream = await preview.get(`/__docs-files?token=${token}`);
+    expect(stream.headers['content-type']).toBe('text/event-stream');
+    expect(stream.body).toBe('event: snapshot\ndata: [{"path":"a.typ","text":"= A\\n"}]\n\n');
+    await writeFile(join(root, 'b.typ'), '= B\n');
+    await vi.waitFor(() => expect(stream.body).toContain('event: change\ndata: {"path":"b.typ","text":"= B\\n"}\n\n'));
+    preview.close();
+  });
 });
+
+/** A stand-in for Vite's preview server (root `base/demo`, out dir `../dist`): its middlewares, called as a request would. */
+function previewServer() {
+  const stack: { prefix: string; handle: (req: unknown, res: unknown, next: () => void) => void }[] = [];
+  const closed: (() => void)[] = [];
+  const server = {
+    config: { root: join(base, 'demo'), build: { outDir: '../dist' } },
+    middlewares: {
+      use(prefix: string | ((...args: never[]) => void), handle?: (...args: never[]) => void) {
+        if (typeof prefix === 'string') stack.push({ prefix, handle: handle as never });
+        else stack.push({ prefix: '', handle: prefix as never });
+      },
+    },
+    httpServer: { once: (_event: 'close', listener: () => void) => closed.push(listener) },
+  };
+  /** A GET to `url`: what the first middleware that takes it answers (`passedOn`: none did); a stream answers what it has sent so far. */
+  async function get(url: string) {
+    const response = { status: 200, headers: {} as Record<string, string>, body: '', passedOn: false };
+    const req = { method: 'GET', url, headers: { host: '127.0.0.1:5199' }, [Symbol.asyncIterator]: async function* () {} };
+    for (const { prefix, handle } of stack) {
+      if (!url.startsWith(prefix)) continue;
+      let next = false;
+      const done = new Promise<void>((resolve) => {
+        const res = {
+          set statusCode(status: number) {
+            response.status = status;
+          },
+          setHeader: (name: string, value: string) => (response.headers[name] = value),
+          writeHead: (status: number, headers: Record<string, string>) => Object.assign(response, { status, headers }),
+          write: (chunk: string) => {
+            response.body += chunk;
+            resolve();
+          },
+          end: (chunk = '') => {
+            response.body += chunk;
+            resolve();
+          },
+          once: () => {},
+        };
+        handle({ ...req, url: url.slice(prefix.length) || '/' }, res, () => {
+          next = true;
+          resolve();
+        });
+      });
+      await done;
+      if (!next) return response;
+    }
+    return { ...response, passedOn: true };
+  }
+  return { server, get, close: () => closed.forEach((listener) => listener()) };
+}

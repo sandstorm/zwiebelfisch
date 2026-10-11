@@ -1,8 +1,16 @@
 // The demo page's half of writing the docs in the demo: the Documentation example's edits go to docs/ through the
-// docs-files dev-server plugin (plugin.ts), and changes made on disk come back into the editor. See
+// docs-files plugin (plugin.ts; dev server or `vite preview`), and changes made on disk come back into the editor. See
 // docs/30_architecture/11_development.typ ("Writing the docs in the demo").
 import { type FileChange, FileContent, type ProjectFiles } from '../../src';
-import { DOCS_FILES_ENDPOINT, DOCS_FILES_EVENT, DOCS_FILES_HEADER, DOCS_FILES_META, type DiskChange } from './protocol';
+import {
+  DOCS_FILES_CHANGE,
+  DOCS_FILES_ENDPOINT,
+  DOCS_FILES_HEADER,
+  DOCS_FILES_META,
+  DOCS_FILES_SNAPSHOT,
+  DOCS_FILES_TOKEN_PARAM,
+  type DiskChange,
+} from './protocol';
 
 /** The plugin's file API, by paths relative to docs/ (`10_guide/02_features.typ`). */
 export interface DocsFilesApi {
@@ -100,6 +108,17 @@ export class DocsSync {
     this.report(`Updated docs${path} from disk`, 'muted');
   }
 
+  /**
+   * What is on disk now (the plugin's snapshot, on each connection): every file that differs comes in as a change on
+   * disk, and a file it knew on disk that is no longer there as deleted. A built page starts from the files of its
+   * build, which may be older.
+   */
+  snapshot(files: DiskChange[]): void {
+    const present = new Set(files.map((change) => `/${change.path}`));
+    for (const change of files) this.external(change);
+    for (const path of [...this.#disk.keys()]) if (!present.has(path)) this.external({ path: relative(path), deleted: true });
+  }
+
   /** Writes every file waiting for its pause now, without waiting for earlier writes (the page may be going away). */
   flush(): void {
     for (const path of [...this.#timers.keys()]) {
@@ -183,23 +202,28 @@ export class DocsSync {
 }
 
 /**
- * The sync for the dev server's page, wired to the plugin (its token in the page, its events over Vite's HMR
- * connection) and to the page going away; null in a static build, which has no plugin.
+ * The sync for the page the plugin served, wired to the plugin (its token in the page, its event stream) and to the
+ * page going away; null in a static build, which has no plugin.
  */
 export function connectDocsSync(files: ProjectFiles, report: SaveReport): DocsSync | null {
-  const api = httpDocsFilesApi(document);
-  if (!api) return null;
-  const sync = new DocsSync(api, files, report);
-  import.meta.hot?.on(DOCS_FILES_EVENT, (change: DiskChange) => sync.external(change));
+  const token = docsFilesToken(document);
+  if (!token) return null;
+  const sync = new DocsSync(httpDocsFilesApi(token), files, report);
+  const events = new EventSource(`${DOCS_FILES_ENDPOINT}?${new URLSearchParams({ [DOCS_FILES_TOKEN_PARAM]: token })}`);
+  events.addEventListener(DOCS_FILES_SNAPSHOT, (event) => sync.snapshot(JSON.parse(event.data) as DiskChange[]));
+  events.addEventListener(DOCS_FILES_CHANGE, (event) => sync.external(JSON.parse(event.data) as DiskChange));
   addEventListener('pagehide', () => sync.flush());
   document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' && sync.flush());
   return sync;
 }
 
-/** The plugin's file API over HTTP, if `document` came from the dev server (it carries the token). */
-export function httpDocsFilesApi(document: Document, send: typeof fetch = fetch): DocsFilesApi | null {
-  const token = document.querySelector<HTMLMetaElement>(`meta[name="${DOCS_FILES_META}"]`)?.content;
-  if (!token) return null;
+/** The plugin's session token, if `document` came from a server with the plugin (a static build has none). */
+export function docsFilesToken(document: Document): string | null {
+  return document.querySelector<HTMLMetaElement>(`meta[name="${DOCS_FILES_META}"]`)?.content || null;
+}
+
+/** The plugin's file API over HTTP, with its session `token`. */
+export function httpDocsFilesApi(token: string, send: typeof fetch = fetch): DocsFilesApi {
   const call = async (method: string, query: Record<string, string>, body?: Uint8Array) => {
     const response = await send(`${DOCS_FILES_ENDPOINT}?${new URLSearchParams(query)}`, {
       method,

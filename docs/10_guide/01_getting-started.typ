@@ -19,12 +19,14 @@ mise run demo           # builds the engine and fonts, then starts the demo and 
 
 `mise run demo` starts the demo on `http://127.0.0.1:5199/` and a collaboration server with a fake GitLab on `ws://127.0.0.1:1234`. Ctrl-C stops both. `mise run dev` starts the demo alone (Local mode only).
 
+`mise run demo:build` builds the demo first (the production bundle, as the end-to-end tests use it) and serves the build with `vite preview`, on the same addresses and with the same server. It loads as a deployed widget does: a few bundled files instead of the dev server's many modules. A change to the code needs another `mise run demo:build`.
+
 The page's state is its URL:
 
 #table(
   columns: 2,
   [Query], [Effect],
-  [`?example=hello|simple|advanced|docs`], [The project. `docs` is this documentation: edits are saved to `docs/` when running `mise run demo` / `dev` (@architecture-development-writing-docs); in a static build nothing is saved.],
+  [`?example=hello|simple|advanced|docs`], [The project. `docs` is this documentation: edits are saved to `docs/` when running `mise run demo`, `demo:build` or `dev` (@architecture-development-writing-docs); in a static build nothing is saved.],
   [`?room=<name>`], [Collaborate mode: joins a room on the local server.],
   [`?room=gitlab:demo/report@main`], [GitLab mode: a branch of the fake repository.],
   [`&user=<name>`], [The name others see; signs comments and commits.],

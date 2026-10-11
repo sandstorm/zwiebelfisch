@@ -16,6 +16,7 @@ mise run demo           # builds engine and fonts, then the demo on http://127.0
 
 | Command | What it does |
 |---|---|
+| `mise run demo:build` | the demo as in production (built bundle, `vite preview`) on the same ports, with the local server |
 | `mise run build:lib` | the library → `dist/lib` |
 | `mise run typecheck`, `mise run quality`, `mise run test:unit` | the checks before a commit |
 | `mise run docs:pdf` | the documentation as a book → `dist/docs/typst-editor.pdf` |
@@ -25,7 +26,8 @@ mise run demo           # builds engine and fonts, then the demo on http://127.0
 ## Demo
 
 `mise run demo` serves http://127.0.0.1:5199/ plus a local collaboration server with a fake GitLab
-(`mise run dev`: the page alone, Local mode only).
+(`mise run dev`: the page alone, Local mode only). `mise run demo:build` builds the demo first and serves the build
+(`vite preview`) the same way, so it loads as in production: a few bundled files instead of many modules.
 
 - `?example=hello|simple|advanced|docs`: the project to open (`docs` edits this documentation live).
 - `?room=<name>` collaborates in a room; `?room=gitlab:demo/report@main` opens a fake GitLab branch.
@@ -40,4 +42,4 @@ One Typst project in [`docs/`](docs/), starting at [`docs/main.typ`](docs/main.t
 - **Architecture** (`docs/30_architecture/`): how the code is built, conventions, development.
 
 Read it as a PDF (`mise run docs:pdf`), as HTML (`mise run docs:html`), or edit it live in the demo's
-Documentation example (`mise run demo`, then `?example=docs`).
+Documentation example (`mise run demo` or `mise run demo:build`, then `?example=docs`).

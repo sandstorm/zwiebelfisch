@@ -165,19 +165,15 @@ describe('WorkbenchHost', () => {
     expect(workbench.getMenuItems('other/menu')).toEqual([]);
   });
 
-  it('shows what the preview loads in the status bar, but not the first compile; a compiler that fails to load as an error', async () => {
+  it('shows what the preview loads in the preview pane only, not in the status bar; a compiler that fails to load as an error', () => {
     const { host } = setup();
     const progress = (kind: PreviewProgress['kind'], title: string, detail: string | null = null): PreviewProgress => ({ kind, title, detail, fraction: null });
-    const entry = () => host.querySelector<HTMLElement>('.typst-editor__status-bar [data-testid=typst-progress]');
     made.preview!.onDidChangeProgress!(progress('engine', 'Loading the Typst compiler…', '3.1 / 6.6 MB'));
-    expect(entry()!.textContent).toBe('Loading the Typst compiler… 3.1 / 6.6 MB');
     made.preview!.onDidChangeProgress!(progress('packages', 'Downloading @preview/merman 0.4.0…'));
-    expect(entry()!.textContent).toBe('Downloading @preview/merman 0.4.0…');
-    made.preview!.onDidChangeProgress!(progress('compiling', 'Compiling…'));
-    await vi.waitFor(() => expect(entry()).toBeNull());
+    expect(host.querySelector('.typst-editor__status-bar [data-testid=typst-progress]')).toBeNull();
+    expect(host.querySelector('.typst-editor__status-bar')!.textContent).not.toContain('Loading');
     made.preview!.onDidChangeProgress!(progress('failed', 'The Typst compiler could not be loaded.', 'HTTP 404'));
     made.preview!.onDidChangeProgress!(progress('failed', 'The Typst compiler could not be loaded.', 'HTTP 404'));
-    await vi.waitFor(() => expect(entry()).toBeNull());
     const errors = host.querySelectorAll('[data-testid=typst-notifications] [role=alert]');
     expect([...errors].map((error) => error.textContent)).toEqual([expect.stringContaining('The Typst compiler could not be loaded. HTTP 404')]);
   });

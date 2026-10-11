@@ -6,10 +6,12 @@ export default defineConfig({
   root: 'demo',
   build: { outDir: '../dist/demo', emptyOutDir: true },
   server: { host: '127.0.0.1', port: 5199, strictPort: true },
+  // `mise run demo:build`: the built demo on the dev server's address (the playground server expects it there)
+  preview: { host: '127.0.0.1', port: 5199, strictPort: true },
   worker: { format: 'es' },
   // the demo's IronCalc spreadsheets (examples.ts imports them inline)
   assetsInclude: ['**/*.ic'],
-  // dev server only: the Documentation example saves to docs/ (docs/fonts/ is build:fonts' output)
+  // dev server and vite preview, not in a build: the Documentation example saves to docs/ (docs/fonts/ is build:fonts' output)
   plugins: [docsFiles({ root: fileURLToPath(new URL('docs', import.meta.url)), outputs: ['fonts'] })],
   test: {
     root: '.',

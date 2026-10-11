@@ -1,6 +1,6 @@
 // End-to-end tests (Playwright, against the demo build): the widget over a slow connection — the text first, editable,
-// then what the preview still loads, then the pages (docs/30_architecture/07_workbench.typ, "Loading"). Requests are held
-// back until the test lets them through.
+// then what the preview still loads (in its pane only, not in the status bar), then the pages
+// (docs/30_architecture/07_workbench.typ, "Loading"). Requests are held back until the test lets them through.
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { expect, type Page, type Route } from '@playwright/test';
@@ -23,8 +23,8 @@ async function holdBack(page: Page, url: string | RegExp, serve: (route: Route) 
 
 const preview = (page: Page) => page.getByTestId('typst-preview');
 const loader = (page: Page) => page.getByTestId('typst-preview-loader');
-/** The status bar's progress entry (window.withProgress). */
-const progress = (page: Page) => page.getByTestId('typst-progress');
+/** What the preview loads shows in its pane only: the status bar has no progress entry for it. */
+const statusBarProgress = (page: Page) => page.getByTestId('typst-progress');
 
 test('the text shows and takes typing before the compiler is there; the preview says it loads it, then shows the pages', async ({ page }) => {
   const wasm = await holdBack(page, /\.wasm$/);
@@ -32,7 +32,7 @@ test('the text shows and takes typing before the compiler is there; the preview 
   await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Hello Typst');
   await expect(loader(page).getByRole('status')).toHaveText('Loading the Typst compiler…');
   await expect(loader(page).getByRole('progressbar')).toBeVisible();
-  await expect(progress(page)).toContainText('Loading the Typst compiler…');
+  await expect(statusBarProgress(page)).toHaveCount(0);
 
   await page.getByRole('tab', { name: 'Source' }).click();
   await page.getByTestId('typst-source').locator('.cm-content').click();
@@ -45,7 +45,6 @@ test('the text shows and takes typing before the compiler is there; the preview 
   wasm.release();
   await expect(preview(page).locator('.typst-preview__page svg').first()).toBeVisible();
   await expect(loader(page)).toBeHidden();
-  await expect(progress(page)).toHaveCount(0);
   await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
 });
 
@@ -71,10 +70,9 @@ test('the preview says when it loads fonts', async ({ page }) => {
   const fonts = await holdBack(page, /\.(otf|ttf)$/);
   await page.goto('/');
   await expect(loader(page).getByRole('status')).toHaveText('Loading fonts…');
-  await expect(progress(page)).toContainText('Loading fonts…');
+  await expect(statusBarProgress(page)).toHaveCount(0);
   fonts.release();
   await expect(preview(page).locator('.typst-preview__page svg').first()).toBeVisible();
-  await expect(progress(page)).toHaveCount(0);
 });
 
 test('the preview names a package while it downloads', async ({ page }) => {
@@ -84,9 +82,8 @@ test('the preview names a package while it downloads', async ({ page }) => {
   );
   await page.goto('/?example=advanced');
   await expect(loader(page).getByRole('status')).toHaveText('Downloading @preview/merman 0.4.0…', { timeout: 30_000 });
-  await expect(progress(page)).toContainText('Downloading @preview/merman 0.4.0…');
+  await expect(statusBarProgress(page)).toHaveCount(0);
   merman.release();
   await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/, { timeout: 30_000 });
   await expect(preview(page).locator('.typst-preview__page').first()).toBeVisible();
-  await expect(progress(page)).toHaveCount(0);
 });

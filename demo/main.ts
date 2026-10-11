@@ -4,7 +4,7 @@
 // server (`mise run demo`), `&user=<name>`. Without `room` (Local mode, the
 // default and what the static e2e build uses) it never talks to a server.
 // `&devtools` adds the devtools side panel (the library's optional `devtools`). The Documentation example in Local
-// mode saves to docs/ when the page comes from the dev server (docs-files/).
+// mode saves to docs/ when the page comes from the dev server or vite preview (docs-files/).
 import { collaboration, createTypstEditor, devtools, type ProjectFiles } from '../src';
 import { connectDocsSync, type DocsSync } from './docs-files/docs-sync';
 import { OpenFileHash } from './open-file-hash';
@@ -55,10 +55,10 @@ async function start(): Promise<void> {
   if (server) watchServer(server !== 'offline');
 }
 
-/** The docs example's saving to docs/ (dev server), or null and a line saying that nothing is saved (static build). */
+/** The docs example's saving to docs/ (dev server, vite preview), or null and a line saying that nothing is saved (static build). */
 function docsSync(files: ProjectFiles): DocsSync | null {
   const sync = connectDocsSync(files, (text, level) => bar.setSaveStatus(text, level));
-  bar.setSaveStatus(sync ? 'Edits are saved to docs/' : 'Edits are not saved (static build; mise run demo saves them to docs/)', 'muted');
+  bar.setSaveStatus(sync ? 'Edits are saved to docs/' : 'Edits are not saved (static build; mise run demo or demo:build saves them to docs/)', 'muted');
   return sync;
 }
 
