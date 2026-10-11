@@ -1,8 +1,8 @@
-// HistoryLinks: "← Back to …" and "Forward to … →" above the shown file. See ../file-navigation.ts.
+// "← Back to …" and "Forward to … →" above a supplementary file. See fileNavigation in ../file-navigation.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 
 /**
- * One link bar, above the shown file in any editor (`Workbench.registerEditorFrame`): back to the file the user came
+ * One link bar, above the shown file (`workbench.registerEditorFrame`): back to the file the user came
  * from (left), and forward again once they went back (right); a click runs `go`. Hidden with nowhere to go.
  */
 export class HistoryLinks {

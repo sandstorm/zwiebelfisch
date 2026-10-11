@@ -1,5 +1,4 @@
-// NavigationHistory: the files the user was in, for "Back to …" / "Forward to …" (VS Code's Go Back / Go Forward),
-// as data. See ../file-navigation.ts and docs/10_guide/02_features.typ.
+// The files the user was in, for "Back to …" / "Forward to …", as data. See fileNavigation in ../file-navigation.ts.
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { FileChange } from '../../../core/project/project';
 import type { SourceRange } from '../../../core/typst-document/typst-document';
