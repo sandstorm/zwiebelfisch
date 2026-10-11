@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 #MISE description="Build the documentation book (docs/main.typ) as dist/docs/typst-editor.pdf"
-#MISE depends=["docs:fonts"]
-#MISE sources=["docs/**/*.typ", "docs/diagrams/*.mmd", "docs/assets/*"]
+#MISE sources=["docs/**/*.typ", "docs/diagrams/*.mmd", "docs/assets/*", "docs/fonts/*.ttf"]
 #MISE outputs=["dist/docs/typst-editor.pdf"]
 # One Typst project in docs/: main.typ is the book, site.typ the HTML pages (mise run docs:html).
 set -euo pipefail
 mkdir -p dist/docs
-typst compile --root docs --font-path docs/fonts --input brand-fonts=true docs/main.typ dist/docs/typst-editor.pdf "$@"
+typst compile --root docs --font-path docs/fonts docs/main.typ dist/docs/typst-editor.pdf "$@"
 echo "docs: dist/docs/typst-editor.pdf"

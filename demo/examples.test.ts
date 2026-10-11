@@ -103,7 +103,7 @@ describe('demo examples', () => {
     expect(files['/data/compile-times.ic.gen.typ']).toMatch(/^\/\/ Generated from compile-times\.ic/);
   });
 
-  it('the documentation example is docs/: book, template, HTML entry and chapters as text, the logo and the diagrams as bytes', () => {
+  it('the documentation example is docs/: book, template, HTML entry and chapters as text, the logo, the diagrams and the fonts as bytes', () => {
     const files = exampleFiles('docs');
     expect(Object.keys(files)).toEqual(
       expect.arrayContaining(['/main.typ', '/template.typ', '/site.typ', '/30_architecture/07_workbench.typ']),
@@ -112,9 +112,23 @@ describe('demo examples', () => {
     expect(files['/diagrams/keystroke.mmd']).toBeInstanceOf(Uint8Array);
     for (const [path, content] of Object.entries(files)) {
       if (path.endsWith('.typ')) expect(typeof content).toBe('string');
-      else expect(path).toMatch(/\.(svg|mmd)$/);
+      else expect(path).toMatch(/\.(svg|mmd|ttf)$/);
     }
   });
+
+  it('the documentation example sets its text in its own font, Gabarito, given as project files', async () => {
+    const files = exampleFiles('docs');
+    const fonts = Object.keys(files).filter((path) => path.endsWith('.ttf'));
+    expect(fonts.sort()).toEqual(['/fonts/Gabarito-Bold.ttf', '/fonts/Gabarito-Regular.ttf', '/fonts/Gabarito-SemiBold.ttf']);
+    const onDisk = readFileSync(new URL('../docs/fonts/Gabarito-Regular.ttf', import.meta.url));
+    expect(files['/fonts/Gabarito-Regular.ttf']).toEqual(new Uint8Array(onDisk));
+    expect(files['/template.typ']).toMatch(/#let font = "Gabarito"/);
+    // without them, Typst would not know the family the template sets
+    const withoutFonts = Object.fromEntries(Object.entries(files).filter(([path]) => !fonts.includes(path)));
+    expect((await compile(withoutFonts)).diagnostics).toContainEqual(
+      expect.objectContaining({ severity: 'warning', message: expect.stringContaining('unknown font family: gabarito') }),
+    );
+  }, 30_000);
 
   it('the documentation reads in the order of its numbered files: main.typ includes every chapter, previous / next follow', () => {
     const files = exampleFiles('docs');

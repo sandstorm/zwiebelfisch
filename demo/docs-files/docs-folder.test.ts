@@ -14,9 +14,8 @@ beforeEach(async () => {
   base = await mkdtemp(join(tmpdir(), 'docs-folder-'));
   root = join(base, 'docs');
   await mkdir(join(root, '10_guide'), { recursive: true });
-  await mkdir(join(root, 'fonts'));
   await writeFile(join(root, '10_guide/02_features.typ'), '= Features\n');
-  folder = new DocsFolder(root, ['fonts']);
+  folder = new DocsFolder(root);
 });
 
 afterEach(async () => {
@@ -33,7 +32,6 @@ describe('the path guard', () => {
     ['a backslash', '10_guide\\02_features.typ'],
     ['a hidden file', '.env'],
     ['a hidden folder', '.git/config'],
-    ['a build output', 'fonts/x.ttf'],
     ['a drive letter', 'C:/x.typ'],
     ['nothing', ''],
   ])('refuses %s', async (_, path) => {
@@ -108,11 +106,9 @@ describe('changes on disk for the page', () => {
     expect(await folder.changeFor(join(root, '10_guide/moved.typ'))).toBeNull();
   });
 
-  it('says nothing about hidden files (its temporary files), build outputs, folders or files outside', async () => {
+  it('says nothing about hidden files (its temporary files), folders or files outside', async () => {
     await writeFile(join(root, '.abc.docs-files.tmp'), 'x');
-    await writeFile(join(root, 'fonts/a.ttf'), 'x');
     expect(await folder.changeFor(join(root, '.abc.docs-files.tmp'))).toBeNull();
-    expect(await folder.changeFor(join(root, 'fonts/a.ttf'))).toBeNull();
     expect(await folder.changeFor(join(root, '10_guide'))).toBeNull();
     expect(await folder.changeFor(join(base, 'elsewhere.typ'))).toBeNull();
     expect(folder.contains(join(base, 'docs-other/x.typ'))).toBe(false);

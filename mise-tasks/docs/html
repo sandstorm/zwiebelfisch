@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 #MISE description="Build the documentation as HTML pages (docs/site.typ, Typst's bundle export) into dist/docs/html/"
-#MISE depends=["docs:fonts"]
-#MISE sources=["docs/**/*.typ", "docs/diagrams/*.mmd", "docs/style.css", "docs/assets/*"]
+#MISE sources=["docs/**/*.typ", "docs/diagrams/*.mmd", "docs/style.css", "docs/assets/*", "docs/fonts/*"]
 #MISE outputs=["dist/docs/html/index.html"]
 # One page per chapter plus index.html. Bundle and HTML export are experimental in Typst 0.15,
 # hence --features; Typst warns about that on every run.
 set -euo pipefail
 rm -rf dist/docs/html
-typst compile --root docs --features bundle,html --format bundle docs/site.typ dist/docs/html "$@"
-# the web fonts style.css loads (docs:fonts downloads them, so they are no asset of site.typ)
+typst compile --root docs --font-path docs/fonts --features bundle,html --format bundle docs/site.typ dist/docs/html "$@"
+# the web fonts style.css loads (no asset of site.typ), with their license
 mkdir -p dist/docs/html/fonts
-cp docs/fonts/*.ttf dist/docs/html/fonts/
+cp docs/fonts/*.ttf docs/fonts/OFL.txt dist/docs/html/fonts/
 echo "docs: dist/docs/html/index.html"

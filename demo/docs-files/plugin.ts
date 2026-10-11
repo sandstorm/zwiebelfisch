@@ -20,13 +20,12 @@ export interface DocsFilesRequest {
 }
 
 /**
- * The plugin for the docs folder `root` (`outputs`: its generated subfolders, which stay untouched). It serves the
- * file API at `DOCS_FILES_ENDPOINT` to the dev server's own page (its origin, and the session token it puts into the
- * page), and turns the watcher's events for `root` into `DOCS_FILES_EVENT`s instead of Vite's reload: the page keeps
- * its editor and applies the change itself.
+ * The plugin for the docs folder `root`. It serves the file API at `DOCS_FILES_ENDPOINT` to the dev server's own page
+ * (its origin, and the session token it puts into the page), and turns the watcher's events for `root` into
+ * `DOCS_FILES_EVENT`s instead of Vite's reload: the page keeps its editor and applies the change itself.
  */
-export function docsFiles(options: { root: string; outputs?: string[] }): Plugin {
-  const folder = new DocsFolder(options.root, options.outputs);
+export function docsFiles(options: { root: string }): Plugin {
+  const folder = new DocsFolder(options.root);
   const token = randomBytes(24).toString('hex');
   return {
     name: 'docs-files',

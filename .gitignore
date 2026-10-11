@@ -9,7 +9,6 @@ playwright-report/
 target/
 src/core/typst-engine/wasm/
 src/core/typst-engine/fonts/
-docs/fonts/
 # leftovers from before the src/ restructure (engine output used to live in src/engine);
 # kept so old checkouts don't see 20 MB of wasm as untracked. Delete src/engine/ and these lines.
 src/engine/wasm/
