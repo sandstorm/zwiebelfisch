@@ -64,11 +64,8 @@ test('the workbook follows the widget into dark mode and back, its grid included
   await expect(workbook).toBeVisible();
   await expect.poll(gridLightness(page)).toBeGreaterThan(200);
 
-  // the page turns dark; the widget checks its scheme when the OS one changes
-  const switchTo = async (scheme: 'dark' | 'light') => {
-    await editor(page).evaluate((el, scheme) => (el.style.colorScheme = scheme), scheme);
-    await page.emulateMedia({ colorScheme: scheme });
-  };
+  // the example's "Dark" checkbox sets the setting `workbench.theme` (the example fixes it to light otherwise)
+  const switchTo = (scheme: 'dark' | 'light') => page.getByTestId('dark').setChecked(scheme === 'dark');
   await switchTo('dark');
   await expect(editor(page).locator('.typst-editor')).toHaveAttribute('data-scheme', 'dark');
   await expect
