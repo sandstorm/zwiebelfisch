@@ -45,8 +45,7 @@ export class SpreadsheetView {
       const { mountWorkbook } = await import('./workbook');
       if (generation !== this.generation) return;
       this.body.textContent = '';
-      const fileName = path.slice(path.lastIndexOf('/') + 1);
-      const mounted = await mountWorkbook(this.body, bytes, fileName, (edit) => this.onEdit(path, edit));
+      const mounted = await mountWorkbook(this.body, bytes, ProjectPath.name(path), (edit) => this.onEdit(path, edit));
       if (generation === this.generation) this.mounted = mounted;
       else mounted.dispose();
     } catch (error) {

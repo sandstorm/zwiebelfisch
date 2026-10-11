@@ -77,9 +77,14 @@ export const ProjectPath = {
     return path.slice(1);
   },
 
+  /** The last segment: the file's (or folder's) name (`/chapters/intro.typ` → `intro.typ`). */
+  name(path: ProjectPath): string {
+    return path.slice(path.lastIndexOf('/') + 1);
+  },
+
   /** The extension including the dot (`.typ`), or '' when there is none. */
   extension(path: ProjectPath): string {
-    const name = path.slice(path.lastIndexOf('/') + 1);
+    const name = ProjectPath.name(path);
     const dot = name.lastIndexOf('.');
     return dot > 0 ? name.slice(dot) : '';
   },

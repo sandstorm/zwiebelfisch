@@ -46,14 +46,14 @@ export function buildTree(paths: readonly ProjectPath[], folders: Iterable<Proje
   const folder = (path: Folder): TreeEntry => {
     let entry = index.get(path);
     if (!entry && path !== null) {
-      entry = { kind: 'folder', path, name: nameOf(path), children: [] };
+      entry = { kind: 'folder', path, name: ProjectPath.name(path), children: [] };
       index.set(path, entry);
       folder(folderOf(path)).children.push(entry);
     }
     return entry!;
   };
   for (const path of folders) folder(path);
-  for (const path of paths) folder(folderOf(path)).children.push({ kind: 'file', path, name: nameOf(path), children: [] });
+  for (const path of paths) folder(folderOf(path)).children.push({ kind: 'file', path, name: ProjectPath.name(path), children: [] });
   for (const entry of index.values()) entry.children.sort(compare);
   return root;
 }
@@ -138,10 +138,6 @@ const KEYS: Record<string, (rows: readonly Row[], index: number) => Move | null>
     return row.expanded ? { kind: 'collapse', path: row.path } : { kind: 'expand', path: row.path };
   },
 };
-
-function nameOf(path: ProjectPath): string {
-  return path.slice(path.lastIndexOf('/') + 1);
-}
 
 function compare(a: TreeEntry, b: TreeEntry): number {
   return Number(b.kind === 'folder') - Number(a.kind === 'folder') || collator.compare(a.name, b.name);

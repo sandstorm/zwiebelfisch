@@ -53,6 +53,7 @@ Two branded strings: free at runtime, usable as keys, unchanged through `postMes
 - `resolve(file, reference)` resolves as Typst does; `referenceTo(file, target)` writes the reverse.
 - Parsed once, at the edges (public API, Yjs keys, drag data, storage, engine paths). Inside, every path is typed.
 - `isTypst(path)` is the only file kind core knows.
+- `name(path)` is the last segment (`intro.typ`); `displayName(path)` the path without its leading slash, as shown to people.
 
 == The Typst engine <architecture-core-engine>
 
