@@ -265,15 +265,7 @@ generated entry that also sets drafting's `hidden: true` for notes written some 
 drops the highlighted text of range notes as well. A document that sets
 `set-margin-note-defaults(hidden: false)` itself shows those other notes again.
 
-**Breaking change.** The earlier sidecar comments are gone. These APIs were removed:
-
-- `createTypstEditor` options `comments` and `onCommentsChange`, and the `comments`
-  getter/setter on the returned editor;
-- on `<typst-editor>`: the `comments` property and the `commentschange` event;
-- the exported types `CommentsData` and `TypstEditorCommentsChangeDetail`;
-- the `comments` map in the collaboration Y.Doc (rooms that still hold one simply ignore it).
-
-`user` stays: it is the name others see when collaborating, the author of commits to GitLab and the
+`user` is the name others see when collaborating, the author of commits to GitLab and the
 signature of comments (without it, comments are signed "Anonymous").
 
 ## Spreadsheets

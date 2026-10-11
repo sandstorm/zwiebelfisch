@@ -111,8 +111,9 @@ can (`mise run quality`); the rest is for authors and reviewers.
 - Every source file starts with a comment: its context and `See <entry / ARCHITECTURE.md section>`,
   or `Tests for X` (`mise run quality:top-comments`).
 - Comments say *why*, or what a name cannot; no history ("was …", "moved from …"), no restating code.
-- **No migration notes** ("migrating from the earlier API", "renamed from …") in docs or code while
-  the API is unreleased: docs describe only what is.
+- **No migration notes, no backwards compatibility** ("migrating from the earlier API", "breaking
+  change", "renamed from …", compatibility shims): the project is in its infancy, there is no
+  "earlier". Docs and code describe only what is.
 - Tests go through the public interface of their module; model tests run without jsdom.
 - Host tests use the host's own minimum plus specs defined in the test; tests that need the whole
   widget live in `typst-editor/` or use `testing/`.
