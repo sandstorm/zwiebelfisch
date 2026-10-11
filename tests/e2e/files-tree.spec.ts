@@ -70,7 +70,7 @@ test('a file dragged onto a folder moves into it', async ({ page }) => {
 
 test('the panel can be collapsed and resized', async ({ page }) => {
   const files = page.getByTestId('typst-files');
-  const separator = page.getByRole('separator', { name: 'Panel width' });
+  const separator = page.getByRole('separator', { name: 'Left panel width' });
   const before = (await files.boundingBox())!.width;
   await separator.focus();
   await page.keyboard.press('ArrowRight');

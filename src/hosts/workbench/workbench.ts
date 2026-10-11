@@ -1,5 +1,5 @@
-// The workbench host: the widget's frame (side panels, editing area with its custom editors and the tabs between
-// them, preview, status bar), the extension API every feature uses to put itself into it, and the composition of the
+// The workbench host: the widget's frame (side panels on the left and the right, the preview being the right side's
+// built-in one; the editing area with its custom editors and the tabs between them; the status bar), the extension API every feature uses to put itself into it, and the composition of the
 // other hosts. Entry of hosts/workbench/.
 // Why extensions: the frame knows no feature by name. A feature is a `TypstExtension` that registers what it adds
 // (a side panel, a custom editor, a command, a menu item, a link provider, a source control) once, at activation, and the
@@ -119,7 +119,10 @@ export interface Workbench {
    * with the colors of the `--te-*` tokens (light and dark). Widgets in one root share each stylesheet.
    */
   registerStyleSheet(css: string): Disposable;
-  /** Adds a side panel with its rail button (one panel is open at a time); disposing removes both. */
+  /**
+   * Adds a side panel with its rail button on `options.side` (one panel per side is shown at a time); disposing removes
+   * both. Ids are unique across both sides; the right side has the preview (`preview`) built in.
+   */
   registerSidePanel(id: string, options: SidePanelOptions): SidePanel;
   /**
    * Shows `top` right before and `bottom` right after the shown Typst file's content (in the Visual tab below its
@@ -187,18 +190,23 @@ export interface SidePanelOptions {
   label: string;
   /** The rail button's icon. */
   icon: Element;
-  /** The rail button's place among the others (lower first; equal: registration order); default 0. */
+  /** The side whose rail gets the button; default `'left'`. */
+  side?: 'left' | 'right';
+  /** The rail button's place among the others of its side (lower first; equal: registration order); default 0. */
   order?: number;
 }
 
 /** A registered side panel: the element its content goes into, and how it opens. */
 export interface SidePanel {
   readonly body: HTMLElement;
-  /** Opens it by default (unless someone opened or closed it this session, or the widget is narrow). */
+  /**
+   * Shows it by default: unless the viewer picked a panel of its side (or hid the side) this session, the side names
+   * another default (the right side's: the setting `workbench.rightSidePanel`), or the widget is narrow (left side).
+   */
   setDefault(open: boolean): void;
   /** Shows or removes it and its rail button altogether (e.g. the setting `files.panel: 'hide'`). */
   setAvailable(available: boolean): void;
-  /** Closes it if it lies over the editing area (narrow widget), e.g. after something was chosen in it. */
+  /** Closes it if it lies over the editing area (narrow widget, left side), e.g. after something was chosen in it. */
   dismiss(): void;
   dispose(): void;
 }
@@ -314,14 +322,16 @@ export class WorkbenchHost implements Workbench {
       onSelection: (textEditor) => this.#selectionChanged.fire({ textEditor }),
     });
     this.window = this.#createWindow();
-    this.#preview = new Preview(this.#layout.preview);
+    this.#preview = this.#createPreview();
     // the hosts' CSS after the tokens and the frame, before the extensions'
     const hosts = [this.window, this.#languages, this.#preview, this.#sourceViews, this.#visualView];
     this.#ownStyles = Disposable.from(frameStyles, ...hosts.map((part) => this.#styleSheets.add(part.styleSheet)));
     this.#subscription = project.onDidChangeFile((change) => this.#changed(change));
     this.#showDocumentLinks();
+    this.#applyRightSidePanel();
     this.#workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('workbench.theme')) this.#applyTheme();
+      if (event.affectsConfiguration('workbench.rightSidePanel')) this.#applyRightSidePanel();
     });
     this.#extensions = new ExtensionHost(
       {
@@ -457,6 +467,21 @@ export class WorkbenchHost implements Workbench {
     return window;
   }
 
+  /**
+   * The preview, in the right side's built-in panel `preview` (registered before any extension, so first among equal
+   * orders). It compiles whether shown or not: diagnostics, raw box snippets and the selection highlight never wait
+   * for it to be shown.
+   */
+  #createPreview(): Preview {
+    const panel = this.#layout.addPanel('preview', { label: 'Preview', icon: previewIcon(this.host.ownerDocument), side: 'right' });
+    return new Preview(panel.body);
+  }
+
+  /** The right side's default panel from the setting `workbench.rightSidePanel`. */
+  #applyRightSidePanel(): void {
+    this.#layout.setDefaultPanel('right', this.#workspace.getConfiguration('workbench').get<string | null>('rightSidePanel'));
+  }
+
   /** The registered document links in every Source view and in the code of every raw box (paths from its file's). */
   #showDocumentLinks(): void {
     const targets = { open: (path: ProjectPath) => this.open(path), executeCommand: (id: string, ...args: unknown[]) => this.commands.executeCommand(id, ...args) };
@@ -490,6 +515,18 @@ export class WorkbenchHost implements Workbench {
   }
 }
 
+/** The preview's rail button: a page. */
+function previewIcon(doc: Document): SVGSVGElement {
+  const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 16 16');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '1.3');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.innerHTML = '<path d="M4 1.5h5.5L12.5 4.5v10h-8.5z"/><path d="M9.5 1.5v3h3M6.5 8h4M6.5 10.5h4"/>';
+  return svg;
+}
+
 /** The workbench's own settings. */
 const WORKBENCH_SETTINGS = {
   'workbench.theme': {
@@ -498,5 +535,11 @@ const WORKBENCH_SETTINGS = {
     default: null,
     description:
       'Light or dark colors, or `auto`: as the OS. Default (null): as the page around the widget, through CSS `color-scheme`. In dark mode the preview shows the pages inverted; the PDF stays as it is.',
+  },
+  'workbench.rightSidePanel': {
+    type: ['string', 'null'],
+    default: 'preview',
+    description:
+      "The side panel the right side shows until the viewer picks one with its rail: `preview`, or an extension's panel id (e.g. `devtools`); null: the right side starts hidden (the editing area takes its room). A panel id not registered: the right panel that asks for it (`setDefault`), if any.",
   },
 } as const;

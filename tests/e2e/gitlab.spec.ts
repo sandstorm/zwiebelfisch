@@ -49,7 +49,7 @@ test('the branch is loaded with its files, images from the repository', async ({
   await expect(fileRow(ann, 'template.typ')).toBeVisible();
   await fileRow(ann, 'assets').click();
   await expect(fileRow(ann, 'assets/compile-times.svg')).toBeVisible();
-  await expect(ann.locator('.typst-editor__right svg image, .typst-editor__right svg use').first()).toBeAttached();
+  await expect(ann.locator('[data-testid=typst-preview] svg image, [data-testid=typst-preview] svg use').first()).toBeAttached();
 });
 
 test('Save to GitLab commits, and everyone in the room is told', async ({ browser, baseURL }, info) => {

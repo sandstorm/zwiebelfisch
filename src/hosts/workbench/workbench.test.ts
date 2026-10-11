@@ -11,7 +11,9 @@ import { type ExtensionContext, WorkbenchHost, type WorkbenchOptions } from './w
 vi.mock('../preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   Preview: class {
-    constructor(_parent: HTMLElement, readonly options: object) {}
+    constructor(parent: HTMLElement) {
+      parent.append(Object.assign(document.createElement('div'), { className: 'mock-preview' }));
+    }
     readonly toolbarItems: unknown[] = [];
     update() {}
     reveal() {}
@@ -91,6 +93,30 @@ describe('WorkbenchHost', () => {
     expect(host.querySelector('.typst-editor__status-bar')!.textContent).toBe('status');
     workbench.dispose();
     expect(host.children).toHaveLength(0);
+  });
+
+  it("puts the preview into the right side's built-in panel, first on its rail and shown by default", () => {
+    const { host } = setup(({ workbench }) => {
+      workbench.registerSidePanel('devtools', { label: 'Devtools', icon: workbench.ownerDocument.createElement('span'), side: 'right' });
+    });
+    const right = host.querySelector<HTMLElement>('.typst-editor__side--right')!;
+    expect([...right.querySelectorAll<HTMLElement>('.typst-editor__rail-button')].map((button) => button.title)).toEqual(['Preview', 'Devtools']);
+    const preview = right.querySelector<HTMLElement>('[data-panel=preview]')!;
+    expect(preview.querySelector('.mock-preview')).not.toBeNull();
+    expect(preview.hidden).toBe(false);
+    expect(right.querySelector<HTMLElement>('[data-panel=devtools]')!.hidden).toBe(true);
+  });
+
+  it('shows the right side panel the setting workbench.rightSidePanel names, none for null', () => {
+    const { host, workbench } = setup(({ workbench }) => {
+      workbench.registerSidePanel('devtools', { label: 'Devtools', icon: workbench.ownerDocument.createElement('span'), side: 'right' });
+    }, { settings: { 'workbench.rightSidePanel': 'devtools' } });
+    const shown = () => [...host.querySelectorAll<HTMLElement>('.typst-editor__side--right .typst-editor__panel-body')].filter((body) => !body.hidden).map((body) => body.dataset.panel);
+    expect(shown()).toEqual(['devtools']);
+    workbench.settings = { 'workbench.rightSidePanel': null };
+    expect(shown()).toEqual([]);
+    workbench.settings = {};
+    expect(shown()).toEqual(['preview']);
   });
 
   it("shows the editor/title menu in the tab bar: the entries whose `when` holds for the tab and file, in order; a click runs the command", () => {
@@ -282,7 +308,7 @@ describe('WorkbenchHost', () => {
   it('tells whether the user works in the editing area', () => {
     const { host, workbench } = setup();
     expect(workbench.isEditorFocused()).toBe(false);
-    host.querySelector<HTMLElement>('.typst-editor__left .cm-content')!.focus();
+    host.querySelector<HTMLElement>('.typst-editor__editor-area .cm-content')!.focus();
     expect(workbench.isEditorFocused()).toBe(true);
   });
 

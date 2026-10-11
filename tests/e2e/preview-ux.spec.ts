@@ -150,7 +150,7 @@ test.describe('a 30-page document', () => {
 test('dragging the separator between editor and preview resizes both', async ({ page }) => {
   const preview = page.getByTestId('typst-preview');
   const before = (await preview.boundingBox())!;
-  const split = page.getByRole('separator', { name: 'Preview width' });
+  const split = page.getByRole('separator', { name: 'Right panel width' });
   const box = (await split.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
@@ -158,4 +158,23 @@ test('dragging the separator between editor and preview resizes both', async ({ 
   await page.mouse.up();
   const after = (await preview.boundingBox())!;
   expect(after.width).toBeGreaterThan(before.width + 100);
+});
+
+test("the preview's rail button hides the right side (the editor takes its room); hidden, it keeps compiling", async ({ page }) => {
+  const editingArea = page.locator('.typst-editor__editor-area');
+  const before = (await editingArea.boundingBox())!.width;
+  const toggle = page.getByTestId('typst-panel-toggle-preview');
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  await toggle.click();
+  await expect(page.getByTestId('typst-preview')).toBeHidden();
+  expect((await editingArea.boundingBox())!.width).toBeGreaterThan(before + 200);
+  await setSource(page, '= Hidden\n\n#unknown-function()\n');
+  await expect(page.getByTestId('typst-status')).not.toHaveText(/✓ compiled/);
+  await setSource(page, '= Shown again\n');
+  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
+  await page.reload();
+  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
+  await expect(page.getByTestId('typst-preview')).toBeHidden(); // remembered for the session
+  await page.getByTestId('typst-panel-toggle-preview').click();
+  await expect(pages(page).locator('svg').first()).toBeVisible();
 });
