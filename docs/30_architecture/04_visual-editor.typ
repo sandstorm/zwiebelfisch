@@ -14,7 +14,18 @@ new VisualEditor(parent, document, contributions: VisualEditorHost)
 
 - *Write-back:* after every transaction that changed the document, `document.setText(serializeToTypst(doc), this)`: one minimal change.
 - *Read-back:* a change with another origin is parsed again and applied with `applyTypstChanges`, outside the undo history.
-- *Mechanism kept:* paragraphs, text, raw boxes, the toolbar's frame (undo/redo, *Insert* menu, *Selection* bar), highlights, completion lists. Every other construct and feature is a contribution.
+- *Mechanism kept:* paragraphs, text, raw boxes, the toolbar's frame (undo/redo, *Insert* menu, *Selection* bar), highlights, completion lists, the clipboard. Every other construct and feature is a contribution.
+
+== Clipboard <architecture-visual-editor-clipboard>
+
+The clipboard holds Typst (`clipboard.ts`), so text moves between the Visual editor, the Source editor and other editors as it is written.
+
+- *Copy, cut:* `text/plain` is the selection's Typst: the source range it shows (`posToSource`), byte for byte, if that reads as what is selected; else the selection printed anew (part of a bold word: `*bo*`). `text/x-typst` holds the same text and says it is Typst. ProseMirror's `text/html` goes along for rich targets.
+- *Paste:* Typst (`text/x-typst`), plain text, and HTML that is one code block (VS Code copies `white-space: pre`) are read with the editor's specs (`parseTypst`) and replace the selection in one transaction: a paragraph at either end joins the text there, blocks stay blocks, what no spec models becomes raw boxes. One undo step.
+- Our own HTML is not read back: it leaves out what is never rendered (a raw box's `src`). Other HTML (a web page, a word processor) goes through ProseMirror's paste and the schema's HTML rules.
+- *Mod+Shift+V* pastes plain characters (escaped when written): the key down before the paste says so, as ProseMirror's own Shift.
+- Raw boxes paste into their code, as CodeMirror does; in code blocks the text goes in as it is.
+- The imports a paste needs are not the host's: the `imports` extension appends them to the paste's transaction (@architecture-built-in-extensions).
 
 == VisualEditorHost <architecture-visual-editor-host>
 

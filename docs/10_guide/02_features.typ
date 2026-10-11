@@ -73,6 +73,7 @@ with the #link("https://typst.app")[Typst] compiler (`typst compile`).
   [Code block], [Insert → Code block. Its language is a field.],
   [Alignment], [Align menu, or Ctrl+Shift+L / E / R / J (⌘⇧L / E / R / J on Mac): `#align(center)[..]`, `#par(justify: true)[..]`.],
   [Undo, redo], [Ctrl+Z, Ctrl+Shift+Z (⌘Z, ⌘⇧Z on Mac).],
+  [Copy and paste], [What you copy is its Typst source; pasted text is read as Typst (a figure pasted from a `.typ` file stays a figure). The imports it needs come along (`#import "@preview/merman:0.4.0": mermaid` at the top), in either view. Ctrl+Shift+V (⌘⇧V on Mac) pastes the characters as they are.],
   [Anything from the Insert or text style menu], [Type `/` at a line start or after a space, then part of its name: `/table`, `/h2`, `/quote`. Other words find entries, too (`/spreadsheet` → Insert table). ↑ / ↓ choose, Enter or Tab inserts (the `/…` goes), Escape closes. An empty line holding the cursor hints "Type / for commands".],
 )
 

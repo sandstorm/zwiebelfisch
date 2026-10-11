@@ -3,7 +3,7 @@ import type { Project } from '../../core/project/project';
 import { findFilePaths } from '../../core/typst-syntax/typst-syntax';
 import type { DocumentLinkProvider } from '../../hosts/languages/languages';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
-import { isMermaid } from './model/mermaid-figure';
+import { isMermaid, MERMAN } from './model/mermaid-figure';
 import { insertMermaid } from './visual-editor/visual-editor';
 import { MERMAID_HELP } from './workbench/mermaid-help';
 
@@ -13,9 +13,11 @@ import { MERMAID_HELP } from './workbench/mermaid-help';
  * "Insert Mermaid diagram" (Insert menu) creates a `.mmd` file with a starter flowchart and inserts its figure and the
  * import. In Typst text, the path of a project's `.mmd` file (`read("x.mmd")`) becomes the link "Edit diagram"
  * (priority 110, over the plain file link), so ⌘/Ctrl+click on the path or on the box's picture opens the file.
- * `.mmd` files get the help sheet "Mermaid basics".
+ * `.mmd` files get the help sheet "Mermaid basics". `mermaid` is declared to come from merman, so a figure pasted from
+ * elsewhere gets its import.
  *
- * All of it goes through the hosts' generic points: a toolbar item, a document link provider, a help provider. The file
+ * All of it goes through the hosts' generic points: a toolbar item, a document link provider, a help provider, a known
+ * import (`languages.registerKnownImport`). The file
  * opens in whatever editor `.mmd` has (the text-files extension's). Typst draws the diagram, so nothing is rendered
  * here. See docs/10_guide/02_features.typ, "Mermaid diagrams".
  */
@@ -28,6 +30,7 @@ export function mermaid(): TypstExtension {
         visualEditor.registerToolbarItem(insertMermaid(context)),
         languages.registerDocumentLinkProvider({ language: 'typst' }, mermaidLinks(project), { priority: 110 }),
         languages.registerHelpProvider({ language: 'mermaid' }, { provideHelp: () => MERMAID_HELP }),
+        languages.registerKnownImport({ language: 'typst' }, { name: 'mermaid', module: MERMAN }),
       );
     },
   };

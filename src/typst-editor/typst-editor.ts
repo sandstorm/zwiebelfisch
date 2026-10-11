@@ -5,6 +5,7 @@ import { mermaid } from '../extensions/mermaid/mermaid';
 import { fileNavigation } from '../extensions/file-navigation/file-navigation';
 import { files } from '../extensions/files/files';
 import { help } from '../extensions/help/help';
+import { imports } from '../extensions/imports/imports';
 import { labels } from '../extensions/labels/labels';
 import { pdfExport } from '../extensions/pdf-export/pdf-export';
 import { previewControls } from '../extensions/preview-controls/preview-controls';
@@ -198,6 +199,7 @@ export interface TypstEditor {
 function builtinExtensions(): TypstExtension[] {
   return [
     typstLanguage(),
+    imports(),
     documentLinks(),
     files(),
     fileNavigation(),
