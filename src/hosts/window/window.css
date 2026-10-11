@@ -1,4 +1,5 @@
-/* The window host's styles: messages (show…Message), input boxes and quick picks, a custom editor's panel. Added by
+/* The window host's styles: messages (show…Message), input boxes and quick picks, a custom editor's panel, progress
+   (withProgress). Added by
    the workbench (WindowHost.styleSheet). See window.ts. */
 /* A custom editor's panel (registerCustomEditorProvider): fills the editing area, a flex column for the editor. */
 .typst-editor__custom-editor { flex: 1; min-height: 0; display: flex; flex-direction: column; }
@@ -106,3 +107,67 @@
 .typst-quick-pick__item[aria-selected='true'] { background: var(--te-selected); color: var(--te-text); }
 .typst-quick-pick__description { color: var(--te-muted); font-size: 12px; }
 .typst-quick-pick__detail { flex-basis: 100%; color: var(--te-muted); font-size: 12px; }
+/* withProgress, ProgressLocation.Window: a spinner and the text in the status bar. */
+.typst-editor__progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  color: var(--te-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.typst-editor__progress-spinner {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--te-border);
+  border-top-color: var(--te-accent);
+  border-radius: 50%;
+  animation: typst-editor-spin 0.8s linear infinite;
+}
+@keyframes typst-editor-spin { to { transform: rotate(360deg); } }
+/* withProgress, ProgressLocation.EditingArea: a note over the editing area, in its grid cell (the frame's column 2,
+   typst-editor.css), while the area is inert. */
+.typst-editor__editing-progress {
+  grid-column: 2;
+  grid-row: 1;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  background: var(--te-bg);
+  color: var(--te-muted);
+  font: 13px/1.4 system-ui, sans-serif;
+  text-align: center;
+}
+.typst-editor__editing-progress-title { color: var(--te-text-2); }
+.typst-editor__editing-progress-bar {
+  position: relative;
+  overflow: hidden;
+  width: min(220px, 70%);
+  height: 4px;
+  border-radius: 2px;
+  background: var(--te-border);
+}
+.typst-editor__editing-progress-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--te-progress, 35%);
+  background: var(--te-accent);
+}
+.typst-editor__editing-progress-bar:not([aria-valuenow])::after { animation: typst-editor-indeterminate 1.2s ease-in-out infinite; }
+@keyframes typst-editor-indeterminate {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
+.typst-editor__editing-progress-message:empty { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .typst-editor__progress-spinner { animation: none; border-color: var(--te-accent); }
+  .typst-editor__editing-progress-bar:not([aria-valuenow])::after { animation: none; width: 100%; opacity: 0.5; }
+}

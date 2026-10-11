@@ -17,9 +17,11 @@ import { snippet } from './pages/snippet';
 import { DEFAULT_FONTS, ENGINE_WASM_URL } from '../../core/engine-assets/engine-assets';
 import type { FileContent } from '../../core/project/project';
 import { FileSender } from './worker/project-files';
-import type { Init, EngineRequest, EngineResponse } from './worker/protocol';
+import type { Init, EngineRequest, EngineResponse, WorkerProgress } from './worker/protocol';
 import { startEngineWorker } from './worker/worker';
 import { LatestOnly } from './latest-only';
+import { LoadState } from './progress/load-state';
+import { Loader } from './progress/loader';
 import css from './preview.css?inline';
 
 /**
@@ -151,6 +153,26 @@ export interface RenderedSnippet {
   readonly padding: Pt;
 }
 
+/**
+ * What the preview waits for: the engine's wasm downloading (`engine`, with the bytes), the first compile
+ * (`compiling`), packages or fonts downloading during a compile, or the engine that could not be loaded (`failed`).
+ * The pane shows it while it has no pages; the workbench shows it in the status bar.
+ */
+export interface PreviewProgress {
+  readonly kind: 'engine' | 'compiling' | 'packages' | 'fonts' | 'failed';
+  /** What is going on, as people read it: "Loading the Typst compiler…", "Downloading @preview/merman 0.4.0…". */
+  readonly title: string;
+  /** How far, or why it failed: "3.1 / 6.6 MB"; null: nothing to add. */
+  readonly detail: string | null;
+  /** Done so far, from 0 to 1; null: unknown. */
+  readonly fraction: number | null;
+}
+
+export interface PreviewOptions {
+  /** Called whenever what the preview waits for changes (null: nothing any more). */
+  onDidChangeProgress?(progress: PreviewProgress | null): void;
+}
+
 type RequestBody = EngineRequest extends infer R ? (R extends EngineRequest ? Omit<R, 'id'> : never) : never;
 type Compile = { files: Record<string, FileContent>; main: string };
 type Reveal = { path: ProjectPath; from: SourceOffset };
@@ -170,6 +192,8 @@ const REVEAL_INTERVAL_MS = 80;
 export class Preview implements PreviewContributions {
   private readonly worker = startEngineWorker();
   private readonly pending = new Map<number, (response: EngineResponse) => void>();
+  private readonly loading = new LoadState();
+  private readonly loader: Loader;
   private readonly pane: HTMLElement;
   private readonly toolbar: HTMLElement;
   private readonly scroller: HTMLElement;
@@ -205,7 +229,10 @@ export class Preview implements PreviewContributions {
   /** The CSS of the pane, toolbar and pages, for the workbench to put where the widget renders. */
   readonly styleSheet: string = css;
 
-  constructor(container: HTMLElement) {
+  constructor(
+    container: HTMLElement,
+    private readonly options: PreviewOptions = {},
+  ) {
     const doc = container.ownerDocument;
     this.pane = div(doc, 'typst-preview-pane');
     this.toolbar = div(doc, 'typst-preview__toolbar');
@@ -217,7 +244,8 @@ export class Preview implements PreviewContributions {
     this.clickHighlight = new OverlayLayer(this.list, 'typst-preview__highlight');
     this.selectionHighlight = new OverlayLayer(this.list, 'typst-preview__selection');
     this.context = this.itemContext(doc);
-    this.scroller.append(this.pages);
+    this.loader = new Loader(doc);
+    this.scroller.append(this.pages, this.loader.element);
     this.pane.append(this.toolbar, this.scroller);
     container.append(this.pane);
 
@@ -232,10 +260,17 @@ export class Preview implements PreviewContributions {
     this.highlights = new LatestOnly((highlight, superseded) => this.shade(highlight, superseded));
 
     this.worker.postMessage({ type: 'init', wasm: ENGINE_WASM_URL, fonts: DEFAULT_FONTS } satisfies Init);
-    this.worker.onmessage = (event: MessageEvent<EngineResponse>) => {
-      this.pending.get(event.data.id)?.(event.data);
-      this.pending.delete(event.data.id);
+    this.worker.onmessage = (event: MessageEvent<EngineResponse | WorkerProgress>) => {
+      const message = event.data;
+      if (message.type === 'progress') {
+        this.loading.apply(message.event);
+        this.progressChanged();
+        return;
+      }
+      this.pending.get(message.id)?.(message);
+      this.pending.delete(message.id);
     };
+    this.progressChanged();
   }
 
   /**
@@ -353,6 +388,7 @@ export class Preview implements PreviewContributions {
   private async compile({ files, main }: Compile, superseded: () => boolean): Promise<void> {
     const response = await this.request({ type: 'compile', files: this.sender.encode(files), main });
     if (response.type !== 'compile') return;
+    this.loading.compiled();
     // Keep showing the last good pages while the document has errors, dimmed as stale.
     const failed = response.result.pages.length === 0;
     if (!failed) {
@@ -366,8 +402,16 @@ export class Preview implements PreviewContributions {
       this.rendered.fire();
     }
     this.pages.classList.toggle('typst-preview--stale', failed);
+    this.progressChanged();
     // A newer update is waiting: these diagnostics describe outdated text.
     if (!superseded()) this.diagnosed.fire(response.result.diagnostics);
+  }
+
+  /** Shows what the preview waits for: in the pane while it has no pages, and to whoever listens. */
+  private progressChanged(): void {
+    const progress = this.loading.current();
+    this.loader.show(this.compiled.pages.length === 0 ? progress : null);
+    this.options.onDidChangeProgress?.(progress);
   }
 
   private async lookUp({ path, from }: Reveal, superseded: () => boolean): Promise<void> {

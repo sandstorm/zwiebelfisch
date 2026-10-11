@@ -37,13 +37,18 @@ export class CollaborationLink {
   private collaboration: Collaboration | null = null;
   private disposed = false;
   private scheduled = false;
+  /**
+   * Settles once the project is shared: the collaboration code loaded and, with a server, the room synced (its text
+   * is in the project), or once that failed (logged). Until then, what the views show may still be replaced.
+   */
+  readonly ready: Promise<void>;
 
   constructor(
     options: CollaborationOptions,
     shared: SharedRoom,
     private readonly widget: LinkedWidget,
   ) {
-    void this.start(options, shared);
+    this.ready = this.start(options, shared).catch((error: unknown) => console.error('collaboration could not start:', error));
   }
 
   dispose(): void {

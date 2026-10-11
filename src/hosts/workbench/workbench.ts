@@ -18,11 +18,11 @@ import type { SourceRange, TypstDocument } from '../../core/typst-document/typst
 import type { User } from '../../core/user/user';
 import { type Commands, CommandsHost } from '../commands/commands';
 import { type Languages, LanguagesHost } from '../languages/languages';
-import { Preview, type PreviewContributions } from '../preview/preview';
+import { Preview, type PreviewContributions, type PreviewProgress } from '../preview/preview';
 import { type Scm, ScmHost } from '../scm/scm';
 import { SourceViewHost, type SourceViewContributions } from '../source-view/source-view';
 import { VisualViewHost, type VisualViewContributions } from '../visual-view/visual-view';
-import { type EditorMode, type TextEditorSelectionChangeEvent, type WindowApi, WindowHost } from '../window/window';
+import { type EditorMode, ProgressLocation, type TextEditorSelectionChangeEvent, type WindowApi, WindowHost } from '../window/window';
 import { type ConfigurationProperty, type Settings, type Workspace, WorkspaceHost } from '../workspace/workspace';
 import { ColorScheme } from './color-scheme/color-scheme';
 import { EditorTabs } from './editor-tabs/editor-tabs';
@@ -283,6 +283,9 @@ export class WorkbenchHost implements Workbench {
   readonly #visualView = new VisualViewHost();
   readonly #sourceViews = new SourceViewHost();
   readonly #preview: Preview;
+  /** The status bar entry of what the preview loads (`#showPreviewProgress`), while it loads something. */
+  #previewProgress: { report(message: string): void; done(): void } | null = null;
+  #previewFailed = false;
   #frame: { top: HTMLElement; bottom: HTMLElement } | null = null;
   readonly #shown = new EventEmitter<ProjectPath>();
   readonly #selectionChanged = new EventEmitter<TextEditorSelectionChangeEvent>();
@@ -479,7 +482,36 @@ export class WorkbenchHost implements Workbench {
    */
   #createPreview(): Preview {
     const panel = this.#layout.addPanel('preview', { label: 'Preview', icon: previewIcon(this.host.ownerDocument), side: 'right' });
-    return new Preview(panel.body);
+    return new Preview(panel.body, { onDidChangeProgress: (progress) => this.#showPreviewProgress(progress) });
+  }
+
+  /**
+   * What the preview loads, in the status bar too (it may be hidden, and its pane shows it only until the first
+   * pages): the compiler's download, packages, fonts. Not the first compile: the compile status says that. A compiler
+   * that cannot be loaded is an error message.
+   */
+  #showPreviewProgress(progress: PreviewProgress | null): void {
+    const failed = progress?.kind === 'failed';
+    if (failed && !this.#previewFailed) void this.window.showErrorMessage(`${progress.title} ${progress.detail ?? ''}`.trim());
+    this.#previewFailed = failed;
+    const message = statusBarMessage(progress);
+    if (message === null) {
+      this.#previewProgress?.done();
+      this.#previewProgress = null;
+      return;
+    }
+    this.#previewProgress ??= this.#startProgress();
+    this.#previewProgress.report(message);
+  }
+
+  /** A status bar progress entry, reported to and ended from outside (`window.withProgress` runs a task). */
+  #startProgress(): { report(message: string): void; done(): void } {
+    const entry = { report: (_message: string) => {}, done: () => {} };
+    void this.window.withProgress({ location: ProgressLocation.Window }, (progress) => {
+      entry.report = (message) => progress.report({ message });
+      return new Promise<void>((resolve) => (entry.done = resolve));
+    });
+    return entry;
   }
 
   /**
@@ -534,6 +566,12 @@ export class WorkbenchHost implements Workbench {
     if (change.kind === 'rename' && change.from === active) this.open(change.path);
     else this.open(this.project.has(active) ? active : this.project.main);
   }
+}
+
+/** What of the preview's progress the status bar shows: not the first compile (the compile status says that), nor a failure. */
+function statusBarMessage(progress: PreviewProgress | null): string | null {
+  if (!progress || progress.kind === 'compiling' || progress.kind === 'failed') return null;
+  return [progress.title, progress.detail].filter(Boolean).join(' ');
 }
 
 /** The preview's rail button: a page. */

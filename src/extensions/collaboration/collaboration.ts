@@ -6,10 +6,12 @@
 // The extension draws the other users' places itself, through the hosts' generic contribution points: CodeMirror
 // extensions in the Source views (source-view/; also what keeps other users' edits out of their undo history),
 // highlights, decorations and box code extensions in the Visual views (visual-view/), file decorations in the
-// workbench (workbench/). It reads them from its own `Presences`. In a room backed by a GitLab branch it registers the
+// workbench (workbench/). It reads them from its own `Presences`. Until the room's text is in the project, the
+// editing area shows "Connecting to the room…" and takes no input (window.withProgress). In a room backed by a GitLab branch it registers the
 // branch as a workbench source control, and has the browser warn before the last user leaves changes nobody commits.
 import type { Awareness } from 'y-protocols/awareness';
 import type * as Y from 'yjs';
+import { ProgressLocation } from '../../hosts/window/window';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './collaboration.css?inline';
 import { CollaborationLink } from './collaboration-link';
@@ -63,6 +65,8 @@ export function collaboration(options: CollaborationOptions): TypstExtension {
         // fired from the editors' own updates, after their state has the new selection
         window.onDidChangeTextEditorSelection(() => link.selectionChanged()),
       );
+      // what is typed before the room's text is there would be replaced by it
+      void window.withProgress({ location: ProgressLocation.EditingArea, title: 'Connecting to the room…' }, () => link.ready);
       const view = workbench.ownerDocument.defaultView;
       if (view) subscriptions.push(leaveWarning(view, () => link.leavesChangesUncommitted()));
     },

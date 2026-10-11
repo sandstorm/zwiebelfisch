@@ -10,6 +10,9 @@ import type { Disposable } from '../core/disposable/disposable';
 import { EventEmitter } from '../core/event-emitter/event-emitter';
 import type { TypstExtension } from '../hosts/workbench/workbench';
 import type { SourceControl, SourceControlState } from '../hosts/scm/scm';
+import * as Y from 'yjs';
+import { collaboration } from '../extensions/collaboration/collaboration';
+import { FILES_MAP } from '../core/room-protocol/room-protocol';
 import { createTypstEditor, type TypstEditorOptions } from './typst-editor';
 import { SourceOffset, type SourceRange } from '../core/typst-document/typst-document';
 
@@ -454,5 +457,21 @@ describe('the built-in extensions', () => {
     editor.dispose();
     expect(host.children).toHaveLength(0);
     expect(host.classList.contains('typst-editor')).toBe(false);
+  });
+});
+
+describe('collaboration', () => {
+  it('shows "Connecting to the room…" over the editing area, which takes no input, until the room\'s text is there', async () => {
+    const room = new Y.Doc();
+    const shared = new Y.Text();
+    room.getMap<Y.Text>(FILES_MAP).set('/main.typ', shared);
+    shared.insert(0, 'Room text');
+    const { host, source } = setup({ source: 'Local text', extensions: (builtins) => [...builtins, collaboration({ doc: room })] });
+    const area = host.querySelector('.typst-editor__editor-area')!;
+    expect(host.querySelector('[data-testid=typst-editing-progress] [role=status]')?.textContent).toBe('Connecting to the room…');
+    expect(area.hasAttribute('inert')).toBe(true);
+    await vi.waitFor(() => expect(host.querySelector('[data-testid=typst-editing-progress]')).toBeNull());
+    expect(area.hasAttribute('inert')).toBe(false);
+    expect(source().state.doc.toString()).toBe('Room text');
   });
 });

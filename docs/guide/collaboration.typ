@@ -22,7 +22,7 @@ On `<typst-editor>`: `extensions` and `user` go into `options` before the elemen
 #table(
   columns: 2,
   [`collaboration(…)`], [Connection],
-  [`{ url, room, token? }`], [A #link("https://tiptap.dev/docs/hocuspocus")[Hocuspocus] server, e.g. this repository's (@guide-collaboration-server). The widget shows the local text until the room has synced.],
+  [`{ url, room, token? }`], [A #link("https://tiptap.dev/docs/hocuspocus")[Hocuspocus] server, e.g. this repository's (@guide-collaboration-server). Until the room has synced, the editing area shows "Connecting to the room…" and takes no input: the room's text replaces the local one.],
   [`{ doc, awareness? }`], [A `Y.Doc` you connected and synced yourself (y-websocket, y-webrtc, …); `awareness` for remote cursors. It must come from the widget's Yjs instance: bundle the widget from source with your Yjs. `dist/lib` bundles its own copy.],
 )
 

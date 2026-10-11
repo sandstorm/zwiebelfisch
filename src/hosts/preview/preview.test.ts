@@ -1,13 +1,17 @@
 // @vitest-environment jsdom
-// Tests for preview.ts: the PDF export options registry, the click outline and the selection shading (the engine worker is replaced by a
-// stub that answers what `engine.answer` returns).
+// Tests for preview.ts: the PDF export options registry, the click outline, the selection shading and the loader (the
+// engine worker is replaced by a stub that answers what `engine.answer` returns; `engine.tell` sends its load events).
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Preview, type PageClick, type PdfExportOption } from './preview';
-import type { EngineRequest } from './worker/protocol';
+import { Preview, type PageClick, type PdfExportOption, type PreviewProgress } from './preview';
+import type { EngineRequest, LoadEvent } from './worker/protocol';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceRange } from '../../core/typst-document/typst-document';
 
-const engine = vi.hoisted(() => ({ answer: (_request: { type: string }): object | null => null }));
+const engine = vi.hoisted(() => ({
+  answer: (_request: { type: string }): object | null => null,
+  /** Sends a load event from the worker started last. */
+  tell: (_event: unknown): void => {},
+}));
 
 vi.mock('./worker/worker', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./worker/worker')>()),
@@ -20,6 +24,7 @@ vi.mock('./worker/worker', async (importOriginal) => ({
       },
       terminate() {},
     };
+    engine.tell = (event) => worker.onmessage?.({ data: { type: 'progress', event } });
     return worker;
   },
 }));
@@ -141,5 +146,63 @@ describe('Preview.setSelectionHighlight', () => {
     expect(shaded()).toHaveLength(1);
     preview.clearClickHighlight();
     expect(shaded()).toHaveLength(1);
+  });
+});
+
+describe('Preview loader', () => {
+  let preview: Preview;
+  afterEach(() => {
+    preview.dispose();
+    engine.answer = () => null;
+  });
+
+  it('shows the engine download, then "Compiling…", and goes once the first pages are there', async () => {
+    const container = document.createElement('div');
+    const reported: (PreviewProgress | null)[] = [];
+    preview = new Preview(container, { onDidChangeProgress: (progress) => reported.push(progress) });
+    const loader = container.querySelector<HTMLElement>('[data-testid="typst-preview-loader"]')!;
+    const status = loader.querySelector('[role="status"]')!;
+    const bar = loader.querySelector('[role="progressbar"]')!;
+    expect(loader.hidden).toBe(false);
+    expect(status.textContent).toBe('Loading the Typst compiler…');
+
+    engine.tell({ kind: 'engine', loaded: 3_100_000, total: 6_600_000 } satisfies LoadEvent);
+    expect(loader.textContent).toContain('3.1 / 6.6 MB');
+    expect(bar.getAttribute('aria-valuenow')).toBe('47');
+    expect(bar.getAttribute('aria-valuetext')).toBe('3.1 / 6.6 MB');
+
+    engine.tell({ kind: 'ready' } satisfies LoadEvent);
+    expect(status.textContent).toBe('Compiling…');
+    expect(bar.hasAttribute('aria-valuenow')).toBe(false);
+
+    const page = { hash: 'a', width: 100, height: 100, svg: '<svg></svg>' };
+    engine.answer = () => ({ type: 'compile', result: { pages: [page], diagnostics: [], missingPackages: [] } });
+    preview.update({ '/main.typ': 'Hi' }, '/main.typ');
+    await vi.waitFor(() => expect(container.querySelector('.typst-preview__page')).not.toBeNull());
+    expect(loader.hidden).toBe(true);
+    expect(reported.map((progress) => progress?.kind ?? null)).toEqual(['engine', 'engine', 'compiling', null]);
+  });
+
+  it('says so when the engine cannot be loaded', () => {
+    const container = document.createElement('div');
+    preview = new Preview(container);
+    engine.tell({ kind: 'failed', message: 'HTTP 404' } satisfies LoadEvent);
+    const loader = container.querySelector<HTMLElement>('[data-testid="typst-preview-loader"]')!;
+    expect(loader.textContent).toContain('The Typst compiler could not be loaded.');
+    expect(loader.textContent).toContain('HTTP 404');
+    expect(loader.querySelector<HTMLElement>('[role="progressbar"]')!.hidden).toBe(true);
+  });
+
+  it('shows a package download over the empty pane, but not once there are pages', async () => {
+    const container = document.createElement('div');
+    preview = new Preview(container);
+    const loader = container.querySelector<HTMLElement>('[data-testid="typst-preview-loader"]')!;
+    engine.tell({ kind: 'ready' } satisfies LoadEvent);
+    engine.tell({ kind: 'packages', specs: ['@preview/merman:0.4.0'] } satisfies LoadEvent);
+    expect(loader.textContent).toContain('Downloading @preview/merman 0.4.0…');
+    const page = { hash: 'a', width: 100, height: 100, svg: '<svg></svg>' };
+    engine.answer = () => ({ type: 'compile', result: { pages: [page], diagnostics: [], missingPackages: [] } });
+    preview.update({ '/main.typ': 'Hi' }, '/main.typ');
+    await vi.waitFor(() => expect(loader.hidden).toBe(true));
   });
 });

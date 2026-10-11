@@ -62,7 +62,7 @@ The Typst compiler, SVG and PDF export and hit-testing: Rust (`crates/typst-engi
 
 - `typst-engine`: `createEngine(wasm)`; `addFont`, `addLazyFont`; `setSource`, `setBinary`, `remove`; `compile`, `exportPdf`; `jumpFromClick`, `jumpFromCursor`, `boxesForRanges`.
 - `engine-assets`: the wasm URL and `DEFAULT_FONTS` (URL and faces per file) for the main thread, apart so the worker bundle does not copy them.
-- `typst-packages`: `withPackages(engine)` compiles, downloads the missing `@preview` packages, compiles again.
+- `typst-packages`: `withPackages(engine, fetchPackage?, onDidChangeDownloads?)` compiles, downloads the missing `@preview` packages, compiles again; `onDidChangeDownloads` hears which packages are on the way.
 - Conventions: UTF-16 offsets (`SourceOffset`), 0-based pages (`PageIndex`; people see `index + 1`), points from the page's top-left (`Pt`), project or package paths (`@preview/name:0.1.0/lib.typ`).
 - A diagnostic's path is parsed where the wasm's report is read: a `ProjectPath`, or `null` without location or in a package file.
 

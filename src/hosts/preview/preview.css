@@ -1,5 +1,5 @@
 /* The preview host's styles: its pane, toolbar, pages (inverted in the dark), the outline of a click, the shading of
-   highlighted source ranges and the dimming of a failed compile. Added by the workbench (Preview.styleSheet). See preview.ts. */
+   highlighted source ranges, the dimming of a failed compile and the loader. Added by the workbench (Preview.styleSheet). See preview.ts. */
 .typst-preview-pane { flex: 1; display: flex; flex-direction: column; min-height: 0; background: var(--te-preview-bg); }
 .typst-preview__toolbar {
   display: flex;
@@ -19,7 +19,7 @@
   font: inherit;
   cursor: pointer;
 }
-.typst-preview__scroller { flex: 1; min-height: 0; overflow: auto; }
+.typst-preview__scroller { position: relative; flex: 1; min-height: 0; overflow: auto; }
 .typst-preview {
   display: flex;
   flex-direction: column;
@@ -72,3 +72,44 @@
 }
 .typst-preview__follow-spot { position: absolute; width: 1px; height: 1.4em; margin-top: -1.2em; pointer-events: none; }
 .typst-preview--stale { opacity: 0.45; filter: grayscale(0.6); transition: opacity 0.2s; }
+/* The loader (progress/loader.ts): over the empty pages until the first ones come, so nothing moves then. */
+.typst-preview__loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  color: var(--te-muted);
+  font: 13px/1.4 system-ui, sans-serif;
+  text-align: center;
+  pointer-events: none;
+}
+.typst-preview__loader[hidden] { display: none; }
+.typst-preview__loader-title { color: var(--te-text-2); }
+.typst-preview__loader--failed .typst-preview__loader-title { color: var(--te-danger); font-weight: 600; }
+.typst-preview__loader-bar {
+  position: relative;
+  overflow: hidden;
+  width: min(220px, 70%);
+  height: 4px;
+  border-radius: 2px;
+  background: var(--te-border);
+}
+.typst-preview__loader-bar[hidden] { display: none; }
+.typst-preview__loader-fill { height: 100%; width: 0; background: var(--te-accent); transition: width 0.2s linear; }
+.typst-preview__loader-bar--indeterminate > .typst-preview__loader-fill {
+  width: 35%;
+  animation: typst-preview-indeterminate 1.2s ease-in-out infinite;
+}
+@keyframes typst-preview-indeterminate {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .typst-preview__loader-fill { transition: none; }
+  .typst-preview__loader-bar--indeterminate > .typst-preview__loader-fill { animation: none; width: 100%; opacity: 0.5; }
+}
+.typst-preview__loader-detail { min-height: 1.4em; font-variant-numeric: tabular-nums; }

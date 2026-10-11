@@ -2,8 +2,9 @@
 // See worker.ts and docs/architecture/preview.typ.
 import { createEngine, type TypstEngine } from '../../../core/typst-engine/typst-engine';
 import { type PackageEngine, withPackages } from '../../../core/typst-packages/typst-packages';
+import { downloadWasm } from './download';
 import { FileReceiver } from './project-files';
-import type { Init, EngineRequest, EngineResponse } from './protocol';
+import type { Init, EngineRequest, EngineResponse, LoadEvent, WorkerProgress } from './protocol';
 
 interface Session {
   engine: TypstEngine;
@@ -17,10 +18,13 @@ session.catch(() => {});
 self.onmessage = async (event: MessageEvent<Init | EngineRequest>) => {
   const request = event.data;
   if (request.type === 'init') {
-    session = createEngine(request.wasm).then((engine) => {
-      for (const { name, url, faces } of request.fonts) engine.addLazyFont({ name, faces, load: () => loadSync(url) });
-      return { engine, files: new FileReceiver(engine), packages: withPackages(engine) };
+    const wasm = downloadWasm(request.wasm, (loaded, total) => tell({ kind: 'engine', loaded, total }));
+    session = createEngine(wasm).then((engine) => {
+      for (const { name, url, faces } of request.fonts) engine.addLazyFont({ name, faces, load: () => loadFont(name, url) });
+      tell({ kind: 'ready' });
+      return { engine, files: new FileReceiver(engine), packages: withPackages(engine, undefined, (specs) => tell({ kind: 'packages', specs })) };
     });
+    session.catch((error: unknown) => tell({ kind: 'failed', message: error instanceof Error ? error.message : String(error) }));
     return;
   }
   try {
@@ -47,10 +51,24 @@ async function handle({ engine, files, packages }: Session, request: EngineReque
   }
 }
 
+/** Tells the preview how loading goes (the main thread gets it while this thread still works). */
+function tell(event: LoadEvent): void {
+  self.postMessage({ type: 'progress', event } satisfies WorkerProgress);
+}
+
 /**
  * A font file's data, downloaded synchronously: the engine asks for it in the middle of a compile and cannot wait.
  * Allowed in a worker (and only there); the worker has nothing else to do meanwhile.
  */
+function loadFont(name: string, url: string): Uint8Array | null {
+  tell({ kind: 'font', name });
+  try {
+    return loadSync(url);
+  } finally {
+    tell({ kind: 'font', name: null });
+  }
+}
+
 function loadSync(url: string): Uint8Array | null {
   const request = new XMLHttpRequest();
   request.open('GET', url, false);

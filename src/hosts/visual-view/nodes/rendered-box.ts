@@ -19,7 +19,9 @@ export interface BoxHost {
 /**
  * The rendered face of a raw box: its renderer's picture, shown instead of
  * the code while the box does not have focus. Clicking the picture activates
- * the box.
+ * the box. Until the renderer has a picture (the preview's first compile), the
+ * box shows its code; a picture is decoded before it replaces the code or the
+ * picture before it, so the box never shows a blank picture in between.
  *
  * Owns the `<img>`, the switching between it and the code, and the refreshes:
  * whenever the renderer reports a change and, for renderers that follow
@@ -78,6 +80,7 @@ export class RenderedBox {
     const source = this.host.source();
     if (!source) return;
     const picture = await this.renderer.render(source.node, source.from);
+    if (picture && picture.url !== this.picture.getAttribute('src')) await decoded(this.picture.ownerDocument, picture.url);
     if (request !== this.requests) return;
     this.url = picture?.url ?? null;
     if (picture) this.show(picture, source.node.attrs.src);
@@ -104,4 +107,11 @@ export class RenderedBox {
     this.host.code.hidden = rendered;
     this.host.dom.classList.toggle('typst-visual__raw--rendered', rendered);
   }
+}
+
+/** Once the image at `url` is decoded (or failed to; then the box shows it as the browser does), where the browser can tell. */
+async function decoded(doc: Document, url: string): Promise<void> {
+  const image = doc.createElement('img');
+  image.src = url;
+  if (typeof image.decode === 'function') await image.decode().catch(() => {});
 }

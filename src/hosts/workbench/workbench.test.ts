@@ -6,13 +6,18 @@ import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
 import { SourceRange, type TypstDocument } from '../../core/typst-document/typst-document';
+import type { PreviewOptions, PreviewProgress } from '../preview/preview';
 import { type ExtensionContext, WorkbenchHost, type WorkbenchOptions } from './workbench';
+
+/** The options the workbench gave the (mocked) preview made last: how it hears the preview's progress. */
+const made = vi.hoisted(() => ({ preview: null as PreviewOptions | null }));
 
 vi.mock('../preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   Preview: class {
-    constructor(parent: HTMLElement) {
+    constructor(parent: HTMLElement, options: PreviewOptions) {
       parent.append(Object.assign(document.createElement('div'), { className: 'mock-preview' }));
+      made.preview = options;
     }
     readonly toolbarItems: unknown[] = [];
     update() {}
@@ -158,6 +163,33 @@ describe('WorkbenchHost', () => {
     expect(workbench.getMenuItems('test/menu').map((item) => item.title)).toEqual(['n', 'a', 'b', 'c']);
     expect(workbench.getMenuItems('test/menu', { show: false })).toEqual([]);
     expect(workbench.getMenuItems('other/menu')).toEqual([]);
+  });
+
+  it('shows what the preview loads in the status bar, but not the first compile; a compiler that fails to load as an error', async () => {
+    const { host } = setup();
+    const progress = (kind: PreviewProgress['kind'], title: string, detail: string | null = null): PreviewProgress => ({ kind, title, detail, fraction: null });
+    const entry = () => host.querySelector<HTMLElement>('.typst-editor__status-bar [data-testid=typst-progress]');
+    made.preview!.onDidChangeProgress!(progress('engine', 'Loading the Typst compiler…', '3.1 / 6.6 MB'));
+    expect(entry()!.textContent).toBe('Loading the Typst compiler… 3.1 / 6.6 MB');
+    made.preview!.onDidChangeProgress!(progress('packages', 'Downloading @preview/merman 0.4.0…'));
+    expect(entry()!.textContent).toBe('Downloading @preview/merman 0.4.0…');
+    made.preview!.onDidChangeProgress!(progress('compiling', 'Compiling…'));
+    await vi.waitFor(() => expect(entry()).toBeNull());
+    made.preview!.onDidChangeProgress!(progress('failed', 'The Typst compiler could not be loaded.', 'HTTP 404'));
+    made.preview!.onDidChangeProgress!(progress('failed', 'The Typst compiler could not be loaded.', 'HTTP 404'));
+    await vi.waitFor(() => expect(entry()).toBeNull());
+    const errors = host.querySelectorAll('[data-testid=typst-notifications] [role=alert]');
+    expect([...errors].map((error) => error.textContent)).toEqual([expect.stringContaining('The Typst compiler could not be loaded. HTTP 404')]);
+  });
+
+  it('shows the text and takes edits while the preview still loads the compiler', () => {
+    const { host, project } = setup();
+    made.preview!.onDidChangeProgress!({ kind: 'engine', title: 'Loading the Typst compiler…', detail: null, fraction: null });
+    const content = host.querySelector<HTMLElement>('.typst-editor__editor-area .cm-content')!;
+    expect(content.textContent).toContain('= Main');
+    const view = EditorView.findFromDOM(content)!;
+    view.dispatch({ changes: { from: view.state.doc.length, insert: 'typed' } });
+    expect(project.document(path('/main.typ'))!.text).toBe('= Main\ntyped');
   });
 
   it('shows messages, resolving to the item chosen', async () => {

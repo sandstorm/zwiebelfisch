@@ -60,7 +60,7 @@ mise run server:test   # when server/ or core/room-protocol changed
 == Tests <architecture-development-tests>
 
 - *Unit* (vitest, `*.test.ts` next to the code): node by default; DOM tests opt in with `// @vitest-environment jsdom` (setup: `tests/jsdom-setup.ts`). Model tests never need jsdom.
-- *End-to-end* (Playwright, `tests/e2e/*.spec.ts`): against the static build `dist/demo` and `examples/` (+ `dist/lib`), served through request interception, so no port is opened.
+- *End-to-end* (Playwright, `tests/e2e/*.spec.ts`): against the static build `dist/demo` and `examples/` (+ `dist/lib`), served through request interception, so no port is opened. A slow connection is a route that holds requests back until the test releases them (`tests/e2e/slow-connection.spec.ts`: the wasm, fonts, a package).
 - Test packages (`greet`, `drafting`, `cheq`) sit next to the tests using them.
 - Agents in the sandbox cannot launch a browser or bind ports: they write Playwright specs, and the user runs `mise run test:e2e`.
 - The playground's logic is unit-tested without a browser or port: `demo/playground*.test.ts`, `demo/server-status.test.ts`, `server/src/playground/playground.test.ts`.
@@ -87,7 +87,7 @@ On the dev server the Documentation example edits the files in `docs/` of the ch
 - *Verification*: run every Playwright spec in all three browsers, plus `test:e2e-collab` and `test:e2e-gitlab`; many have never run in a browser. Try a real GitLab.
 - *Auth*: GitLab sign-in, a real token check in `onAuthenticate`, the commit author from the verified identity.
 - *GitLab rooms*: highlight conflict ranges in the views (the data is sent); report an asset changed on both sides (the room's version wins today); don't commit an empty main file when the repository lacks it.
-- *Collaboration*: tell the user when the server is unreachable (the widget stays local silently); share non-`.typ` files outside GitLab rooms; `{ doc }` mode needs the host's Yjs instance, which `dist/lib` does not share.
+- *Collaboration*: tell the user when the server is unreachable (the editing area stays at "Connecting to the room…"; a host that probes first, as the demo, falls back to local); share non-`.typ` files outside GitLab rooms; `{ doc }` mode needs the host's Yjs instance, which `dist/lib` does not share.
 - *Files*: empty folders live only in the panel; a folder rename, move or delete is one change per file and may stop half-way at a refusal; dragging an image into the Source view does nothing; file links don't follow paths built at run time.
 - *Packages*: only `@preview` from packages.typst.org (no `@local`, no other registry); a failed download is retried only after the worker restarts.
 - *Visual view*: tables with merged cells, `table.cell`, header arguments or a computed `columns` stay raw boxes; the toolbar acts on the last main-text selection while the cursor is in a raw box; text typed into a raw box that is modelled Typst stays raw until re-read; a change before the first block re-renders the whole editor; margin-note cards edit raw markup. Undo after "Insert spreadsheet" / "Insert Mermaid diagram" takes back the figure, not the import it added.

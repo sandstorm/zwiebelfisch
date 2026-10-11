@@ -25,6 +25,27 @@ export type EngineRequest =
   /** A PDF of `main`, with `sources` replacing or adding text files for this export only. */
   | { id: number; type: 'pdf'; main: string; sources: Record<string, string> };
 
+/**
+ * What the worker tells unasked while it loads: not an answer to a request (no id). The preview turns these into its
+ * `PreviewProgress`.
+ */
+export interface WorkerProgress {
+  type: 'progress';
+  event: LoadEvent;
+}
+
+export type LoadEvent =
+  /** `loaded` bytes of the engine's wasm arrived, of `total` (null: unknown). */
+  | { kind: 'engine'; loaded: number; total: number | null }
+  /** The engine is ready for requests. */
+  | { kind: 'ready' }
+  /** The engine could not be loaded: every request fails. */
+  | { kind: 'failed'; message: string }
+  /** The packages (`@preview/name:version`) being downloaded now; empty: none any more. */
+  | { kind: 'packages'; specs: readonly string[] }
+  /** A font file is being downloaded (its name), or none any more (null). */
+  | { kind: 'font'; name: string | null };
+
 export type EngineResponse =
   | { id: number; type: 'compile'; result: CompileResult }
   | { id: number; type: 'click'; jump: SourceJump | null }
