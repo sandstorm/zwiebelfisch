@@ -1,4 +1,4 @@
-= Overview <extensions-overview>
+= Extensions overview <extensions-overview>
 
 Every feature of the editor is an extension, the built-in ones too. An extension is an object:
 

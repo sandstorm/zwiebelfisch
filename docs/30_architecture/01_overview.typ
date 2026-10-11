@@ -1,6 +1,6 @@
 #import "../template.typ": mermaid
 
-= Overview <architecture-overview>
+= Architecture overview <architecture-overview>
 
 == Layers <architecture-overview-layers>
 
