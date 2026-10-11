@@ -1,8 +1,10 @@
 // The package's public API: createTypstEditor, <typst-editor> (registered on import), and what writing an extension
 // takes: the types an extension implements or declares (everything else it reaches through its ExtensionContext is
-// typed without importing), Disposable and EventEmitter, ProjectPath (paths are parsed, e.g. to `open` one), and the
-// collaboration extension, which a host adds with its connection. The only file that re-exports. See ARCHITECTURE.md
-// and docs/embedding.md.
+// typed without importing) — the Visual view's contribution types (node and mark specs, their projection grammar,
+// toolbar items, box renderers and actions, gutters, highlights, text styles; experimental) included, so an outside
+// extension can add a Typst construct as the built-ins do —, Disposable and EventEmitter, ProjectPath (paths are
+// parsed, e.g. to `open` one), and the collaboration extension, which a host adds with its connection. The only file
+// that re-exports. See ARCHITECTURE.md and docs/embedding.md.
 import { defineTypstEditorElement } from './typst-editor-element/typst-editor-element';
 
 export { createTypstEditor, type PdfExportOptions, type TypstEditor, type TypstEditorOptions } from './typst-editor/typst-editor';
@@ -48,8 +50,53 @@ export type {
   WorkspaceConfiguration,
 } from './hosts/workbench/workbench';
 export type { PdfExportOption, PreviewContributions, PreviewToolbarItem, ToolbarPlacement } from './hosts/preview/preview';
-export type { SourceViewContributions } from './hosts/source-view/source-view';
-export type { VisualViewContributions } from './hosts/visual-view/visual-view';
+export type { SourceViewContext, SourceViewContributions, SourceViewExtension } from './hosts/source-view/source-view';
+export type {
+  Action,
+  Anchor,
+  BoxAction,
+  BoxCodeExtensionProvider,
+  BoxPicture,
+  BoxRenderer,
+  BoxRendererProvider,
+  BoxTools,
+  BoxToolsHost,
+  CodeBoxSpec,
+  EditorExtensionProvider,
+  Gutter,
+  GutterProvider,
+  Highlight,
+  HighlightProvider,
+  PriorityOptions,
+  TextStyle,
+  TextStyleProvider,
+  ToolbarContext,
+  ToolbarControl,
+  ToolbarGroup,
+  ToolbarItem,
+  TypstMarkSpec,
+  TypstNodeSpec,
+  VisualViewContext,
+  VisualViewContributions,
+} from './hosts/visual-view/visual-view';
+export { setBoxDecorations } from './hosts/visual-view/visual-view';
+export type {
+  Around,
+  BlockCallProjector,
+  BlockLabel,
+  BlockPrinter,
+  BlockSyntaxProjector,
+  Call,
+  InlineCallProjector,
+  InlineProjector,
+  MarkGrammar,
+  NodeGrammar,
+  Placed,
+  Printer,
+  ProjectionContext,
+  ProjectionSpec,
+  RunProjector,
+} from './hosts/projection/projection';
 export { collaboration, type CollaborationOptions } from './extensions/collaboration/collaboration';
 
 // Importing the package makes <typst-editor> available (no-op without a DOM).
