@@ -90,6 +90,8 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
       readonly #viewOptions: PreviewViewOption[] = [];
       readonly #viewOptionsChanged = new EventEmitter<void>();
       readonly onDidChangeViewOptions = this.#viewOptionsChanged.event;
+      engineMemory = 0;
+      onDidChangeEngineMemory = () => new Disposable(() => {});
       viewValues: Readonly<Record<string, boolean>> = {};
       registerViewOption = (option: PreviewViewOption) => {
         const registration = registry(this.#viewOptions)(option);

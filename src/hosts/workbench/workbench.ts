@@ -228,9 +228,16 @@ export interface SidePanelOptions {
   order?: number;
 }
 
-/** A registered side panel: the element its content goes into, and how it opens. */
+/** A registered side panel: the element its content goes into, how it opens, and whether it is shown. */
 export interface SidePanel {
   readonly body: HTMLElement;
+  /**
+   * Whether it is shown now: its side shows it (an overlay over the narrow widget's editing area while it is open,
+   * too). An unavailable panel is not.
+   */
+  readonly visible: boolean;
+  /** Fires when `visible` changes, e.g. to do work for the panel only while it is seen. */
+  readonly onDidChangeVisibility: Event<void>;
   /**
    * Shows it by default: unless the viewer picked a panel of its side (or hid the side) this session, the side names
    * another default (the right side's: the setting `workbench.rightSidePanel`), or the widget is narrow (left side).

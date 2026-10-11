@@ -28,6 +28,8 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => ({
     viewOptions = () => [];
     setViewOptionValues() {}
     onDidChangeViewOptions = () => ({ dispose() {} });
+    engineMemory = 0;
+    onDidChangeEngineMemory = () => ({ dispose() {} });
     setSelectionHighlight() {}
     dispose() {}
   },

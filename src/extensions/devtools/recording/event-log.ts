@@ -1,23 +1,19 @@
-// The events of an extension context as they fire, the latest few hundred, with their values pretty-printed. See
-// devtools in ../devtools.ts.
+// The events of an extension context as they fire, with their values pretty-printed. See devtools in ../devtools.ts.
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { ExtensionContext } from '../../../hosts/workbench/workbench';
 import { formatValue, type FormattedValue } from '../model/describe';
 
-/** The last `capacity` events, oldest first; while `paused`, none are added. */
+/** Every event added since the last `clear`, oldest first; while `paused`, none are added. */
 export class EventLog {
   #entries: LoggedEvent[] = [];
   #next = 0;
   /** While true, `add` keeps nothing: the log stays as it is, to read. */
   paused = false;
 
-  constructor(private readonly capacity = 300) {}
-
   /** Logs `event` with `value` (formatted now: a value changing later is shown as it was); false while paused. */
   add(event: string, value: unknown, time = Date.now()): boolean {
     if (this.paused) return false;
     this.#entries.push({ id: this.#next++, time, event, value: formatValue(value) });
-    if (this.#entries.length > this.capacity) this.#entries = this.#entries.slice(-this.capacity);
     return true;
   }
 

@@ -1,12 +1,31 @@
 // @vitest-environment jsdom
 // Tests for the devtools extension (extensions/devtools/devtools.ts) in the widget, every extension instrumented
-// (preview mocked: no worker in jsdom).
+// (preview mocked: no worker in jsdom; `engine.compiled(bytes)` tells the engine's memory after a compile).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createTypstEditor, type TypstEditorOptions } from './typst-editor';
+
+const engine = vi.hoisted(() => {
+  const listeners = new Set<() => void>();
+  return {
+    memory: 0,
+    listeners,
+    compiled(bytes: number) {
+      this.memory = bytes;
+      listeners.forEach((listener) => listener());
+    },
+  };
+});
 
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   Preview: class {
+    get engineMemory() {
+      return engine.memory;
+    }
+    onDidChangeEngineMemory(listener: () => void) {
+      engine.listeners.add(listener);
+      return { dispose: () => engine.listeners.delete(listener) };
+    }
     update() {}
     reveal() {}
     snippet = async () => null;
@@ -28,14 +47,30 @@ function mount(options: Partial<TypstEditorOptions> = {}) {
   const host = document.body.appendChild(document.createElement('div'));
   const editor = createTypstEditor(host, { source: '= Hello\n\n#foo()', ...options });
   const panel = host.querySelector<HTMLElement>('[data-testid=typst-devtools]')!;
+  const toggle = host.querySelector<HTMLElement>('[data-testid=typst-panel-toggle-devtools]')!;
+  /** Shows the devtools panel (instead of the preview), or the preview again. */
+  const show = (shown = true) => {
+    if ((toggle.getAttribute('aria-pressed') === 'true') !== shown) toggle.click();
+  };
   const tab = (name: string) => {
+    show();
     [...panel.querySelectorAll<HTMLButtonElement>('[role=tab]')].find((button) => button.textContent === name)!.click();
     return panel.querySelector<HTMLElement>('[role=tabpanel]')!;
   };
-  return { host, editor, tab };
+  const memory = () => panel.querySelector<HTMLDetailsElement>('[data-testid=typst-devtools-memory]')!;
+  return { host, editor, tab, show, memory };
 }
 
-afterEach(() => document.body.replaceChildren());
+/** The panel redraws once per frame. */
+const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+
+afterEach(() => {
+  document.body.replaceChildren();
+  // the panel picked is remembered for the session
+  sessionStorage.clear();
+  engine.memory = 0;
+  engine.listeners.clear();
+});
 
 describe('devtools', () => {
   it('leaves the widget working: the built-ins activate through the recording context', () => {
@@ -53,17 +88,29 @@ describe('devtools', () => {
     expect(right.querySelector<HTMLElement>('[data-panel=preview]')!.hidden).toBe(true);
   });
 
-  it('is switched off and on with the setting devtools.enabled, showing what was recorded meanwhile', () => {
-    const { host, editor } = mount({ settings: { 'devtools.enabled': false } });
+  it('is switched off and on with the setting devtools.enabled, showing the memory recorded meanwhile', () => {
+    const { host, editor, memory } = mount({ settings: { 'devtools.enabled': false } });
     const toggle = host.querySelector<HTMLElement>('[data-testid=typst-panel-toggle-devtools]')!;
     expect(toggle.hidden).toBe(true);
-    editor.source = '= Meanwhile';
+    engine.compiled(300 * 2 ** 20);
     editor.settings = {};
     expect(toggle.hidden).toBe(false);
     toggle.click();
-    const panel = host.querySelector<HTMLElement>('[data-testid=typst-devtools]')!;
-    [...panel.querySelectorAll<HTMLButtonElement>('[role=tab]')].find((button) => button.textContent === 'Events')!.click();
-    expect(panel.textContent).toContain('content: "= Meanwhile"');
+    expect(memory().querySelector('summary')!.textContent).toBe('Typst engine memory: 300 MB of 4 GB (7%)');
+  });
+
+  it("shows the engine's memory after each compile that changed it: how it grew, and the peak after a new engine", () => {
+    const { show, memory } = mount();
+    show();
+    expect(memory().textContent).toBe('Typst engine memory: nothing compiled yet');
+    engine.compiled(200 * 2 ** 20);
+    engine.compiled(780 * 2 ** 20);
+    expect(memory().querySelector('summary')!.textContent).toBe('Typst engine memory: 780 MB of 4 GB (19%)');
+    // the engine crashed; the new one starts small
+    engine.compiled(50 * 2 ** 20);
+    expect(memory().querySelector('summary')!.textContent).toBe('Typst engine memory: 50 MB of 4 GB (1%), peak 780 MB');
+    const changes = [...memory().querySelectorAll('li')].map((row) => row.textContent!.replace(/^[\d:]{8}/, ''));
+    expect(changes).toEqual(['50 MB−730 MB', '780 MB+580 MB', '200 MB+200 MB']);
   });
 
   it("records the host's extensions too", () => {
@@ -102,10 +149,27 @@ describe('devtools', () => {
     expect(rows).toContainEqual(expect.stringMatching(/^rawBlock9–15box"#foo\(\)"/));
   });
 
-  it('logs the events as they fire, their values in full; filters them by name', () => {
-    const { editor, tab } = mount();
-    editor.source = '= Changed';
+  it('logs the events only while the panel is shown, all of them', async () => {
+    const { editor, tab, show } = mount();
+    editor.source = '= While hidden';
     const events = tab('Events');
+    expect(events.textContent).not.toContain('While hidden');
+    for (let i = 0; i < 400; i++) editor.source = `= Shown ${i}`;
+    await frame();
+    expect(events.querySelectorAll('.typst-devtools__event').length).toBeGreaterThan(400);
+    expect(events.textContent).toContain('content: "= Shown 0"');
+    show(false);
+    editor.source = '= Hidden again';
+    show();
+    expect(events.textContent).toContain('content: "= Shown 399"');
+    expect(events.textContent).not.toContain('Hidden again');
+  });
+
+  it('logs the events as they fire, their values in full; filters them by name', async () => {
+    const { editor, tab } = mount();
+    const events = tab('Events');
+    editor.source = '= Changed';
+    await frame();
     expect(events.textContent).toContain('project.onDidChangeFile');
     const change = [...events.querySelectorAll<HTMLElement>('.typst-devtools__event')].find((row) => row.textContent?.includes('project.onDidChangeFile'))!;
     expect(change.textContent).toContain('kind: "update"');

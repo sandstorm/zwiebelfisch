@@ -104,4 +104,4 @@ export type EngineCall = { type: 'compile'; files: Record<string, FileContent>; 
 type WithoutId<R> = R extends unknown ? Omit<R, 'id'> : never;
 
 /** An answer of the engine; a compile's with every page's SVG. */
-export type EngineAnswer = Exclude<EngineResponse, { type: 'compile' }> | { id: number; type: 'compile'; result: CompileResult };
+export type EngineAnswer = Exclude<EngineResponse, { type: 'compile' }> | { id: number; type: 'compile'; result: CompileResult; memoryInUse: number };

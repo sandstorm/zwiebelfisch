@@ -67,6 +67,7 @@ The preview keeps the mechanism: the engine worker, compiles, the page list, hit
   [`setSelectionHighlight(path, ranges, text)`], [Shades where `ranges` of `path` are drawn (selection color, no outline), once the pages show a compile of `text`; looked up again after each compile; replaces the ranges before, `[]` clears],
   [`onDidChangeDiagnostics`], [Errors and warnings of each compile of the newest files; `path` is a `ProjectPath`, `null` without location or in a package file],
   [`onDidRender`], [After every successful compile],
+  [`engineMemory`, `onDidChangeEngineMemory`], [The bytes of wasm memory the engine held after the last compile (0 before the first), and when that changed: it grows, never shrinks, and the engine crashes at 4 GB. To look at (devtools); nothing needs to act on it],
   [`snippet(path, range, text)`], [How a source range is drawn: its page cut down to it, as SVG; `null` when it draws nothing or `text` is outdated],
   [`exportPdf(entry)`], [A PDF of `entry.main` from the files last compiled],
 )

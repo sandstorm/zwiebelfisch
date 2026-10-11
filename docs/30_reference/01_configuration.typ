@@ -89,7 +89,7 @@ Export options, by id, for `editor.exportPdf(options)` and the command `pdfExpor
 #table(
   columns: 3,
   [Setting], [Values (default)], [Effect],
-  [`devtools.enabled`], [`true`, `false` (`true`)], [Whether the devtools panel is on the right rail: the shown document, every contribution, the events (@reference-embedding-devtools). They are recorded either way.],
+  [`devtools.enabled`], [`true`, `false` (`true`)], [Whether the devtools panel is on the right rail: the memory of the Typst engine, the shown document, every contribution, the events while it is shown (@reference-embedding-devtools).],
 )
 
 == Options <reference-configuration-options>

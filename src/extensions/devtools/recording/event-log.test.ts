@@ -31,14 +31,17 @@ class Window {
 }
 
 describe('EventLog', () => {
-  it('keeps the latest `capacity` events, oldest first, with their values as they were then', () => {
-    const log = new EventLog(2);
+  it('keeps every event, oldest first, with their values as they were then, until cleared', () => {
+    const log = new EventLog();
     const change = { kind: 'update', path: '/x.typ' };
     log.add('a', 1, 10);
     log.add('b', change, 20);
     log.add('c', 'text', 30);
     change.path = '/y.typ';
-    expect(log.entries.map(({ id, time, event, value }) => [id, time, event, value.text])).toEqual([
+    for (let i = 0; i < 400; i++) log.add('d', i, 40);
+    expect(log.entries).toHaveLength(403);
+    expect(log.entries.slice(0, 3).map(({ id, time, event, value }) => [id, time, event, value.text])).toEqual([
+      [0, 10, 'a', '1'],
       [1, 20, 'b', '{ kind: "update", path: "/x.typ" }'],
       [2, 30, 'c', '"text"'],
     ]);

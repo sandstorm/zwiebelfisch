@@ -56,7 +56,15 @@ export interface TypstEngine {
    * nothing yield nothing.
    */
   boxesForRanges(path: string, ranges: readonly SourceRange[]): PageRect[];
+  /**
+   * The bytes of memory the wasm holds now. It grows while the engine needs more (its caches, the documents) and never
+   * shrinks; at `ENGINE_MEMORY_LIMIT` the engine crashes.
+   */
+  readonly memoryInUse: number;
 }
+
+/** The most memory a wasm instance can hold (32-bit addresses): 4 GiB. */
+export const ENGINE_MEMORY_LIMIT = 2 ** 32;
 
 /**
  * What every call of a `TypstEngine` throws once the engine crashed (and all others of this wasm instance with it).
@@ -245,6 +253,9 @@ export async function createEngine(wasm: InitInput | Promise<InitInput>): Promis
     jumpFromCursor: (path, offset) => JSON.parse(call(() => engine.jumpFromCursor(path, offset))),
     boxesForRanges: (path, ranges) =>
       JSON.parse(call(() => engine.boxesForRanges(path, new Uint32Array(ranges.flatMap(({ from, to }) => [from, to]))))),
+    get memoryInUse() {
+      return memory.buffer.byteLength;
+    },
   };
 }
 
