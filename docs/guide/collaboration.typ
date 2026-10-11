@@ -70,7 +70,8 @@ createTypstEditor(host, {
 ```
 
 - *Loading:* the first user to open the room makes the server load the branch. `.typ` files become shared text; the widget fetches the other files from the server (`GET /rooms/<room>/files/<path>`, token as `Authorization: Bearer`).
-- *Saving:* "Save to GitLab…" in the tab bar asks for a commit message (default "Edit via Typst editor"). The server commits every change since the last commit, uploads included, as one commit by the saving user.
+- *What is not in GitLab yet* is always visible: the status bar says "Not in GitLab: 3 files · 14 min (Ann, Bob)" (how many files, since the first edit, who edited), or "Saved · 01234567" (the branch's commit). The file panel marks changed files M, new ones A (a deleted file has no row; it counts). A click on the status saves.
+- *Saving:* "Save to GitLab…" in the tab bar (or a click on the status) asks for a commit message (default "Edit via Typst editor"). The server commits every change since the last commit, uploads included, as one commit by the saving user.
 - Everyone in the room sees the outcome: "Saved version 01234567 (Ann)", "No changes to save", "Saving failed: …".
 - *Changes on GitLab* (pushes, merges) are merged into the room file by file, three-way: when someone saves, and on push with the webhook.
 - *Conflicts:* where the room and GitLab changed the same lines, nothing is merged or committed. Everyone sees "Changes on GitLab conflict with edits in …"; the room keeps its text, without conflict markers. Make the lines match (here or on GitLab), then save again.

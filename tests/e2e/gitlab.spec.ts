@@ -37,6 +37,13 @@ async function saveToGitLab(page: Page, message: string): Promise<void> {
 /** The messages shown to `page`'s user (outcomes and news of the source control). */
 const messages = (page: Page) => page.getByTestId('typst-notifications');
 
+/** The source control's status bar entry ("Not in GitLab: …" / "Saved · …"). */
+const scmStatus = (page: Page) => page.locator('.typst-source-control__entry');
+
+/** The M / A / D badge of `path` in the file panel (the panel may be closed). */
+const changeBadge = (page: Page, path: string) =>
+  page.getByTestId('typst-files').locator(`[data-path="${path}"] .typst-files__decoration[title$="not in GitLab yet"]`);
+
 test('the branch is loaded with its files, images from the repository', async ({ browser, baseURL }, info) => {
   const { ann } = await users(browser, baseURL!, info.project.name);
   await expect(fileRow(ann, 'template.typ')).toBeVisible();
@@ -55,10 +62,26 @@ test('Save to GitLab commits, and everyone in the room is told', async ({ browse
   await ann.keyboard.press('Enter');
   await ann.keyboard.type('Again.');
   await expect(visualText(bob, 'Again.')).toBeVisible();
+  // always visible: what is not in GitLab yet, for everyone
+  for (const page of [ann, bob]) {
+    await expect(scmStatus(page)).toHaveText('Not in GitLab: 1 file · < 1 min (Ann)');
+    await expect(changeBadge(page, '/main.typ')).toHaveText('M');
+  }
 
   await saveToGitLab(ann, 'Add a line');
   await expect(messages(ann)).toContainText('Saved version');
   await expect(messages(bob)).toContainText('Saved version');
+  for (const page of [ann, bob]) {
+    await expect(scmStatus(page)).toHaveText(/^Saved · [0-9a-f]{8}$/);
+    await expect(changeBadge(page, '/main.typ')).toHaveCount(0);
+  }
+});
+
+test('a click on the status bar entry opens the save dialog', async ({ browser, baseURL }, info) => {
+  const { ann } = await users(browser, baseURL!, info.project.name);
+  await expect(scmStatus(ann)).toHaveText(/^Saved · /);
+  await scmStatus(ann).click();
+  await expect(ann.getByRole('form', { name: 'Save to GitLab' })).toBeVisible();
 });
 
 test('a simulated upstream commit (playground endpoint) is merged into the room', async ({ browser, baseURL, request }, info) => {
