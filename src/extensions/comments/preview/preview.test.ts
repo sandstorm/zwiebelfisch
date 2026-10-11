@@ -138,6 +138,12 @@ Alpha #margin-note[Beta][Gamma note] Delta#margin-note[Point note] #todo[Helper 
       expect(drawn(await compiled(engine, noted))[0][0]).toBeGreaterThan(hidden[0][0]);
     }, 60_000);
 
+    it('keeps boxes without a body (cheq\'s checkboxes) while hiding the notes', async () => {
+      const engine = await engineWithDrafting();
+      const boxes = `${noted}#box(width: 1em, height: 1em, stroke: black) #box()\n`;
+      expect(drawn(await compiled(engine, boxes, prelude(boxes, false)))[0][1]).toBeGreaterThan(0);
+    }, 60_000);
+
     it('draws the notes in the editor\'s look on the same pages, and a document\'s own defaults win', async () => {
       const engine = await engineWithDrafting();
       const styled = await compiled(engine, noted, prelude(noted, true));

@@ -60,7 +60,7 @@ const NOTE_STYLE = `
 
 /** Typst that draws drafting's margin notes as nothing, keeping the text of range notes; it imports nothing. */
 const HIDE_NOTES: PreviewEntry['prelude'] = [
-  '#let comments-margin-note(it) = it.has("body") and it.body.func() == [].func() and it.body.children.any(part => part.func() == place and part.body.has("label") and part.body.label == <margin-note>)',
+  '#let comments-margin-note(it) = type(it.body) == content and it.body.func() == [].func() and it.body.children.any(part => part.func() == place and part.body.has("label") and part.body.label == <margin-note>)',
   '#show box: it => if comments-margin-note(it) { none } else { it }',
   // a range note's text between its marks; an inline note of its own (a box, not underlined) goes
   '#show <inline-note>: it => if it.func() != underline { none } else if it.body.func() != [].func() { it } else { it.body.children.map(part => if part.func() == highlight { part.body.body } else if part.func() == underline { part.body }).join() }',
