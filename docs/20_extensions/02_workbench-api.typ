@@ -252,6 +252,26 @@ languages.registerDocumentDropEditProvider({ language: 'typst' }, {
 - `insertText` goes in at the drop position: the Source editor inserts it there, the Visual editor reads it as Typst (inline content into the text, blocks after the block there, as `insertTypst`). `additionalEdit` (changes of `text` before the drop, in its coordinates) goes into the same transaction: one undo step.
 - Files from the desktop are not drops of project files: images upload them themselves, the rest goes to `workbench.onDidDropFiles`.
 
+== Copy and paste <extensions-workbench-api-paste>
+
+An extension takes part in copy and paste of a language's text with a paste edit provider (VS Code's `DocumentPasteEditProvider`). The editors do the paste: the Visual editor for Typst it reads as Typst, the Source editors for any paste.
+
+```ts
+languages.registerDocumentPasteEditProvider({ language: 'typst' }, {
+  prepareDocumentPaste(document, copied, dataTransfer) {
+    dataTransfer.setData('application/x-my-data', JSON.stringify(whatAPasteNeeds(document, copied)));
+  },
+  provideDocumentPasteEdits(document, ranges, text, dataTransfer) {
+    return { insertText: text.replaceAll('<old>', '<new>'), additionalEdits: [{ from: 0, to: 0, insert: '#import "x.typ": y\n' }] };
+  },
+});
+```
+
+- `prepareDocumentPaste?(document, copied, dataTransfer)`: on a copy or cut from `document` (a `TextDocument`: `path`, `languageId`, `text`), after the editor has put the copied text (`copied`) on the clipboard; adds what a paste will need.
+- `provideDocumentPasteEdits(document, ranges, text, dataTransfer)`: on a paste of `text` in place of `ranges` (the selection; `document` as it is before the paste). Returns a `DocumentPasteEdit`, or undefined for none: `insertText`, what goes in instead of `text`, and `additionalEdits?`, other `TextChange`s of the text before the paste. They go into the paste's transaction: one undo step.
+- The providers of a paste run in registration order, each given the text the ones before left. Additional edits that overlap the pasted ranges or an earlier edit are dropped; one at the same place as a pasted range goes before the pasted text.
+- The built-in ones: `imports` (the imports a paste needs), `labels` (new names for pasted labels the project has).
+
 == File decorations <extensions-workbench-api-decorations>
 
 `window.registerFileDecorationProvider({ provideFileDecoration(path), onDidChangeFileDecorations })` puts badges on file rows: `FileDecoration { badge?, tooltip?, color?, propagate? }` (`propagate`: also on the closed folders around the file). Several providers may decorate one file. Side panels that list files read `window.getFileDecorations(path)` and `window.getFileIcon(path)`.

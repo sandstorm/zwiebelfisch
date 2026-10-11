@@ -1,7 +1,7 @@
 // What copied Typst needs imported, and the imports pasted Typst gets. See imports in ../imports.ts.
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { PathReference, ProjectPath } from '../../../core/paths/paths';
-import { SourceOffset, type TextChange } from '../../../core/typst-document/typst-document';
+import { minimalChange, SourceOffset, type SourceRange, type TextChange } from '../../../core/typst-document/typst-document';
 import { calculateImportChange, importedNames, quote } from '../../../core/typst-syntax/typst-syntax';
 
 /** An import copied Typst needs: the module (a project file's path, or a package as written) and the item as written (`a as b`). */
@@ -38,17 +38,18 @@ export function parseCopiedImports(json: string): CopiedImport[] {
 }
 
 /**
- * The changes, each applying to the text after the ones before it, that import into the Typst file `file` (its text
- * `after` the paste; `before` it) the names the paste newly uses and the file does not define or import yet: from
- * `copied` (the source file's imports), else from `known` (what extensions declare). A name is added to an import of
- * its module (a file that resolves to the same path, a package of any version), else a new import goes at the top.
- * Never a duplicate.
+ * The change of the Typst file `path` (its `text` before the paste) importing the names that the pasted `text`, going
+ * in place of `ranges`, newly uses and the file does not define or import yet: from `copied` (the source file's imports), else
+ * from `known` (what extensions declare). A name is added to an import of its module (a file that resolves to the
+ * same path, a package of any version), else a new import goes at the top. Never a duplicate; none: nothing to import.
  */
 export function calculatePastedImports(
-  { file, before, after }: { file: ProjectPath; before: string; after: string },
+  { path: file, text: before }: { path: ProjectPath; text: string },
+  { ranges, text: pasted }: { ranges: readonly SourceRange[]; text: string },
   copied: readonly CopiedImport[],
   known: readonly { name: string; module: string }[],
 ): TextChange[] {
+  const after = [...ranges].sort((a, b) => b.from - a.from).reduce((text, { from, to }) => text.slice(0, from) + pasted + text.slice(to), before);
   const old = namesUsed(before);
   const bound = namesBound(after);
   const sources = [...copied, ...known.map(({ name, module }) => ({ module, item: name }))];
@@ -56,15 +57,13 @@ export function calculatePastedImports(
     const found = old.has(name) || bound.has(name) ? undefined : sources.find((source) => bindingOf(source.item) === name);
     return found ? [found] : [];
   });
-  const changes: TextChange[] = [];
-  let text = after;
+  let text = before;
   for (const { module, item } of wanted) {
     const change = importChange(text, file, module, item);
-    if (!change) continue;
-    changes.push(change);
-    text = text.slice(0, change.from) + change.insert + text.slice(change.to);
+    if (change) text = text.slice(0, change.from) + change.insert + text.slice(change.to);
   }
-  return changes;
+  const change = minimalChange(before, text);
+  return change ? [change] : [];
 }
 
 /** The change importing `item` from `module` into Typst `text` (the file `file`), or null if it is imported already. */

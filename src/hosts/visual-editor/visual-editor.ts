@@ -60,7 +60,7 @@ export class VisualEditor {
         highlights,
         TabKeys,
         ...(contributions.links ? [textLinks(document, contributions.links, isBox)] : []),
-        clipboard,
+        clipboard(document, contributions.pasteEdits),
         suggestions(contributed.completionItemProviders, (tiptap, query) => ({
           ...editor,
           editor: tiptap,
@@ -352,7 +352,8 @@ export interface VisualEditorContributions {
 
 /**
  * Keeps what is registered through `VisualEditorContributions` and hands it to each editor it creates (`contributed`),
- * with where its links lead (`links`; null: nowhere). The workbench has one; tests make their own (`from`).
+ * with where its links lead (`links`; null: nowhere) and who takes part in copy and paste (`pasteEdits`; null: nobody).
+ * The workbench has one; tests make their own (`from`).
  */
 export class VisualEditorHost implements VisualEditorContributions {
   private readonly rawBoxRenderers: Ranked<RawBoxRendererProvider>[] = [];
@@ -370,7 +371,10 @@ export class VisualEditorHost implements VisualEditorContributions {
   /** The CSS of the editors (ProseMirror's own first), for the workbench to put where the widget renders. */
   readonly styleSheet: string = proseMirrorCss + css;
 
-  constructor(readonly links: VisualEditorLinks | null = null) {}
+  constructor(
+    readonly links: VisualEditorLinks | null = null,
+    readonly pasteEdits: VisualEditorPasteEdits | null = null,
+  ) {}
 
   /** A registry with `contributions` activated, for as long as it lives (for an editor without the workbench, as in tests). */
   static from(contributions: readonly VisualEditorContribution[]): VisualEditorHost {
@@ -537,6 +541,26 @@ export interface VisualEditorLinks {
   linkOf(src: string, document: TypstDocument): FollowableLink | null;
   /** The link at `offset` of `document`'s text that leads somewhere; null: none. Asked as the pointer moves. */
   linkAt(document: TypstDocument, offset: SourceOffset): FollowableLink | null;
+}
+
+/**
+ * Who takes part in copy and paste of Typst in the Visual editor (the workbench's `languages`: the paste edit
+ * providers of Typst): a copy or cut adds to the clipboard, a paste changes the text that goes in and may change the
+ * document elsewhere, in the paste's step. The workbench gives it to the host.
+ */
+export interface VisualEditorPasteEdits {
+  /** On a copy or cut of `copied` (Typst) from `document`: adds what a paste will need to the clipboard `dataTransfer`. */
+  prepareDocumentPaste(document: TypstDocument, copied: string, dataTransfer: DataTransfer): void;
+  /**
+   * The text a paste of Typst `text` into `document` in place of `ranges` puts in, and the other changes of the
+   * document's text it makes (of the text before the paste, overlapping neither the ranges nor each other).
+   */
+  provideDocumentPasteEdits(
+    document: TypstDocument,
+    ranges: readonly SourceRange[],
+    text: string,
+    dataTransfer: DataTransfer,
+  ): { readonly insertText: string; readonly additionalEdits: readonly TextChange[] };
 }
 
 /** Where a link of the Visual editor leads. */

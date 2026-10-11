@@ -84,7 +84,7 @@ with the #link("https://typst.app")[Typst] compiler (`typst compile`).
   [Code block], [Insert → Code block. Its language is a field. Tab / Shift+Tab indent / outdent by two spaces.],
   [Alignment], [Align menu, or Ctrl+Shift+L / E / R / J (⌘⇧L / E / R / J on Mac): `#align(center)[..]`, `#par(justify: true)[..]`.],
   [Undo, redo], [Ctrl+Z, Ctrl+Shift+Z (⌘Z, ⌘⇧Z on Mac).],
-  [Copy and paste], [What you copy is its Typst source; pasted text is read as Typst (a figure pasted from a `.typ` file stays a figure). The imports it needs come along (`#import "@preview/merman:0.4.0": mermaid` at the top), in either view. Ctrl+Shift+V (⌘⇧V on Mac) pastes the characters as they are.],
+  [Copy and paste], [What you copy is its Typst source; pasted text is read as Typst (a figure pasted from a `.typ` file stays a figure). The imports it needs come along (`#import "@preview/merman:0.4.0": mermaid` at the top), in either view. A pasted label the project has already gets `-1`, `-2`, … (`<fig:setup-1>`), and the references to it in the pasted text with it. Ctrl+Shift+V (⌘⇧V on Mac) pastes the characters as they are.],
   [Tab, Shift+Tab], [Stay in the text: nest or un-nest a list item, go to the next or previous table cell (Tab in the last one adds a row), indent or outdent a code block's line or a raw box's code. Elsewhere they do nothing. To move the focus on with the keyboard: Escape, then Tab (or Shift+Tab).],
   [Anything from the Insert or text style menu], [Type `/` at a line start or after a space, then part of its name: `/table`, `/h2`, `/quote`. Other words find entries, too (`/spreadsheet` → Insert table). ↑ / ↓ choose, Enter or Tab inserts (the `/…` goes), Escape closes. An empty line holding the cursor hints "Type / for commands".],
 )
@@ -184,6 +184,7 @@ All runs used the machine in @fig:setup.
 - Insert → Add label: type the name into a new tag (`fig:`, `tab:` or `sec:` to start with).
 - Select text in a block without a label: the selection's bar offers Add label, too.
 - Click a tag: "Rename…" (updates the references in every file), "Rename without updating references…", "Remove label".
+- Copy and paste never makes two labels of one name: a pasted label the project has already gets `-1`, `-2`, … (`<fig:setup-1>`), and the references to it inside the pasted text (`@fig:setup-1`) with it; references to labels not pasted keep pointing to the originals. A cut and pasted label keeps its name.
 - A reference shows as a chip naming its target; a reference to a missing label is marked.
 - A reference, and `#link(<label>)[..]`, leads to its label, in whichever file: hovering says where ("Go to Figure · The measurement setup in method.typ (⌘+click or Alt+Enter)"); Ctrl+click (⌘-click on Mac) on it, or Alt+Enter on the selected chip or with the cursor in it, opens that file at the label. In the Source editor and the Visual editor alike; a plain click edits.
 - Type `@` for a list of the project's labels, found by name or by what they label. Enter, Tab or a click inserts the reference; so does a space or punctuation right after a whole name (`@intro.`).
