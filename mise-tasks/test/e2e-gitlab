@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Start the collaboration server with a fake GitLab, then run the GitLab room Playwright spec against the demo build"
+#MISE description="Start the collaboration server with a fake GitLab, then run the GitLab room Playwright spec against the demo build (TYPST_GITLAB_AUTO_COMMIT=off: also the leave-warning test)"
 #MISE depends=["build"]
 set -euo pipefail
 node server/src/fake-gitlab-main.ts &

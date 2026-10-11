@@ -115,6 +115,34 @@ test('a conflict with upstream is shown to everyone, also to who joins later, un
   await expect(ann.getByTestId('typst-files').locator('[data-path="/chapters/introduction.typ"] .typst-files__decoration[title^="Conflicts"]')).toHaveText('!');
 });
 
+test('leaving as the last user with unsaved changes asks first, when the server does not save by itself', async ({ browser, baseURL }, info) => {
+  test.skip(process.env.TYPST_GITLAB_AUTO_COMMIT !== 'off', 'needs the server without auto-commit: TYPST_GITLAB_AUTO_COMMIT=off mise run test:e2e-gitlab');
+  const { ann, bob } = await users(browser, baseURL!, info.project.name);
+  await ann.getByRole('tab', { name: 'Source' }).click();
+  await ann.getByTestId('typst-source').locator('.cm-line', { hasText: '#pagebreak()' }).click();
+  await ann.keyboard.press('End');
+  await ann.keyboard.type(' Unsaved.');
+  await expect(scmStatus(bob)).toHaveText('Not in GitLab: 1 file · < 1 min (Ann)');
+  const annInTree = bob.getByTestId('typst-files').locator('[data-path="/main.typ"] .typst-files__decoration[title="Ann"]');
+  await expect(annInTree).toHaveCount(1);
+
+  // Bob is still there: Ann leaves without a question
+  ann.on('dialog', (dialog) => {
+    throw new Error(`unexpected ${dialog.type()} dialog`);
+  });
+  const annClosed = ann.waitForEvent('close');
+  await ann.close({ runBeforeUnload: true });
+  await annClosed;
+  await expect(annInTree).toHaveCount(0);
+
+  // Bob is the last one: the browser asks
+  await bob.getByTestId('typst-source').or(bob.getByTestId('typst-visual')).first().click();
+  const dialog = bob.waitForEvent('dialog');
+  await bob.close({ runBeforeUnload: true });
+  expect((await dialog).type()).toBe('beforeunload');
+  await (await dialog).accept();
+});
+
 test('saving without changes says so', async ({ browser, baseURL }, info) => {
   const { ann } = await users(browser, baseURL!, info.project.name);
   await saveToGitLab(ann, 'Nothing');

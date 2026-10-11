@@ -1,5 +1,7 @@
 // The collaboration's part of the workbench: where the other users are, as file decorations (the file panel shows
-// them as badges with their initials). See ../collaboration.ts.
+// them as badges with their initials), and the browser's warning when leaving would leave changes uncommitted.
+// See ../collaboration.ts.
+import { Disposable } from '../../../core/disposable/disposable';
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { FileDecorationProvider } from '../../../hosts/window/window';
@@ -13,4 +15,19 @@ export function presenceDecorations(presences: PresenceSource): FileDecorationPr
       presences.presencesAt(path).map(({ user }) => ({ badge: initials(user.name), tooltip: user.name, color: user.color, propagate: true })),
     onDidChangeFileDecorations,
   };
+}
+
+/**
+ * Has the browser ask before the page in `view` is left (its own "Leave site?" dialog) while `uncommitted()` says
+ * leaving would leave changes behind that nobody commits.
+ */
+export function leaveWarning(view: Window, uncommitted: () => boolean): Disposable {
+  const listener = (event: BeforeUnloadEvent) => {
+    if (!uncommitted()) return;
+    event.preventDefault();
+    // browsers that predate preventDefault() here ask when returnValue is set
+    event.returnValue = true;
+  };
+  view.addEventListener('beforeunload', listener);
+  return new Disposable(() => view.removeEventListener('beforeunload', listener));
 }

@@ -92,6 +92,11 @@ export class GitLabSourceControl {
     return this.#resourceStates;
   }
 
+  /** Whether the room has changes not in GitLab that the server does not commit by itself (its auto-commit is off). */
+  get changesStayUncommitted(): boolean {
+    return this.#changes() !== null && typeof this.#meta.get('autoCommit') !== 'number';
+  }
+
   /**
    * "Not in GitLab: 3 files · 14 min (Ann, Bob)" while the room has changes, else "Saved · <commit>"; while upstream
    * conflicts, "Conflict with GitLab: main.typ" (a warning) before it.

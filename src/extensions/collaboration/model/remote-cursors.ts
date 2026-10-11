@@ -51,6 +51,11 @@ export class RemoteCursors {
     this.schedule();
   }
 
+  /** Whether another client is in the room (with a cursor or without). */
+  get hasOthers(): boolean {
+    return [...this.awareness.getStates().keys()].some((client) => client !== this.awareness.clientID);
+  }
+
   /** Publishes where the local user is: a source range in `path`, or nowhere (null). */
   setLocal(path: ProjectPath | null, range?: SourceRange): void {
     const text = path && range ? this.options.text(path) : undefined;

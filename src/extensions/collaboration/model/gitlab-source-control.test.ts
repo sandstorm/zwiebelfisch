@@ -117,6 +117,16 @@ describe('GitLabSourceControl: what is not in GitLab', () => {
     expect(sourceControl.resourceStates.map((state) => state.decorations.badge)).toEqual(['M', 'A']);
   });
 
+  it('knows when its changes stay uncommitted: there are some, and the server does not commit by itself', () => {
+    const { meta, sourceControl } = setup();
+    meta.set('autoCommit', null);
+    expect(sourceControl.changesStayUncommitted).toBe(false);
+    meta.set('changes', { files: [{ path: '/main.typ', kind: 'modified' }], since: Date.now(), editors: [] });
+    expect(sourceControl.changesStayUncommitted).toBe(true);
+    meta.set('autoCommit', 10);
+    expect(sourceControl.changesStayUncommitted).toBe(false);
+  });
+
   it('ignores changes it cannot read', () => {
     const { meta, sourceControl } = setup();
     meta.set('baseSha', 'abc');

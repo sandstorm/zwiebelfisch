@@ -23,7 +23,7 @@ Every operation is a mise task (`mise-tasks/`, `mise tasks ls`). Tools are pinne
   [`server:test`], [the server's vitest suite, Hocuspocus in-process, no port],
   [`test:e2e`], [builds demo and library, then Playwright in chromium, firefox, webkit (or one: `test:e2e chromium`)],
   [`test:e2e-collab`], [in-memory server + the two-user spec (`tests/e2e/collab.spec.ts`)],
-  [`test:e2e-gitlab`], [fake-GitLab server + the GitLab room spec (`tests/e2e/gitlab.spec.ts`)],
+  [`test:e2e-gitlab`], [fake-GitLab server + the GitLab room spec (`tests/e2e/gitlab.spec.ts`); with `TYPST_GITLAB_AUTO_COMMIT=off` also the leave warning],
   [`test:all`], [`test:unit`, `server:test`, `test:e2e`],
   [`server:dev`], [the collaboration server with SQLite in `server/.data/` (@architecture-server)],
   [`server:dev-fake-gitlab`], [the playground server alone],

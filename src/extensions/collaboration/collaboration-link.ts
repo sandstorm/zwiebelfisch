@@ -63,6 +63,11 @@ export class CollaborationLink {
     if (collaboration.sourceControl) this.widget.onSourceControl?.(collaboration.sourceControl);
   }
 
+  /** Whether leaving now would leave changes behind that nobody commits (see `Collaboration.leavesChangesUncommitted`). */
+  leavesChangesUncommitted(): boolean {
+    return this.collaboration?.leavesChangesUncommitted ?? false;
+  }
+
   /**
    * The local selection moved (called by the editing views after their state
    * has the new selection). Publishes it once per burst, when the user works

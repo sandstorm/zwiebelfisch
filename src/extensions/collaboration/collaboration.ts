@@ -7,7 +7,7 @@
 // extensions in the Source views (source-view/; also what keeps other users' edits out of their undo history),
 // highlights, decorations and box code extensions in the Visual views (visual-view/), file decorations in the
 // workbench (workbench/). It reads them from its own `Presences`. In a room backed by a GitLab branch it registers the
-// branch as a workbench source control.
+// branch as a workbench source control, and has the browser warn before the last user leaves changes nobody commits.
 import type { Awareness } from 'y-protocols/awareness';
 import type * as Y from 'yjs';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
@@ -16,7 +16,7 @@ import { CollaborationLink } from './collaboration-link';
 import { Presences } from './presence/presence';
 import { perUserUndo, sourcePresence } from './source-view/source-view';
 import { visualPresence } from './visual-view/visual-view';
-import { presenceDecorations } from './workbench/workbench';
+import { leaveWarning, presenceDecorations } from './workbench/workbench';
 
 /**
  * Where the shared state lives: a Y.Doc the host connects itself (any
@@ -30,7 +30,8 @@ export type CollaborationOptions =
 /**
  * Real-time collaboration (`options`: see `CollaborationOptions`) as the workbench's `user`: shares the project,
  * publishes the local selection, draws the others' places in every file's views and marks the files they are in; in
- * a GitLab-backed room, the user commits through the room's source control. Not a built-in: the host adds it with its
+ * a GitLab-backed room, the user commits through the room's source control, and the browser asks before the last user
+ * leaves changes the server does not commit by itself. Not a built-in: the host adds it with its
  * connection (`createTypstEditor({ extensions: (builtinExtensions) => [...builtinExtensions, collaboration({ url, room })] })`).
  */
 export function collaboration(options: CollaborationOptions): TypstExtension {
@@ -62,6 +63,8 @@ export function collaboration(options: CollaborationOptions): TypstExtension {
         // fired from the editors' own updates, after their state has the new selection
         window.onDidChangeTextEditorSelection(() => link.selectionChanged()),
       );
+      const view = workbench.ownerDocument.defaultView;
+      if (view) subscriptions.push(leaveWarning(view, () => link.leavesChangesUncommitted()));
     },
   };
 }

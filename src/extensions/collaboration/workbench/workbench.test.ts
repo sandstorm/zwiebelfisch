@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
 import { Presences } from '../presence/presence';
-import { presenceDecorations } from './workbench';
+import { leaveWarning, presenceDecorations } from './workbench';
 import { SourceOffset } from '../../../core/typst-document/typst-document';
 
 describe('presenceDecorations', () => {
@@ -16,5 +16,23 @@ describe('presenceDecorations', () => {
     expect(changes).toEqual([undefined]);
     expect(provider.provideFileDecoration(main)).toEqual([{ badge: 'AL', tooltip: 'Ann Lee', color: '#b58900', propagate: true }]);
     expect(provider.provideFileDecoration(ProjectPath.of('/a.typ'))).toEqual([]);
+  });
+});
+
+describe('leaveWarning', () => {
+  it('has the browser ask before leaving only while changes would stay uncommitted, until disposed', () => {
+    const view = new EventTarget() as Window;
+    let uncommitted = false;
+    const warning = leaveWarning(view, () => uncommitted);
+    const leave = () => {
+      const event = new Event('beforeunload', { cancelable: true });
+      view.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    expect(leave()).toBe(false);
+    uncommitted = true;
+    expect(leave()).toBe(true);
+    warning.dispose();
+    expect(leave()).toBe(false);
   });
 });
