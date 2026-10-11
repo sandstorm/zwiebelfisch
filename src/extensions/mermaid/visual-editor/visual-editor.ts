@@ -1,4 +1,4 @@
-// The mermaid extension in the Visual editor. See ../mermaid.ts.
+// The mermaid extension in the Visual editor. See mermaid in ../mermaid.ts.
 import { PathReference, ProjectPath } from '../../../core/paths/paths';
 import { insertTypst, svg, type ToolbarContext, type ToolbarItem } from '../../../hosts/visual-editor/visual-editor';
 import type { ExtensionContext } from '../../../hosts/workbench/workbench';
@@ -8,9 +8,8 @@ import { calculateMermaidFigure, MERMAID_EXTENSION, STARTER_FLOWCHART } from '..
  * "Insert Mermaid diagram": asks for the new file's name (`window.showSaveDialog`, proposing a free
  * `diagrams/diagram.mmd` next to the document), creates it with a starter flowchart, inserts
  * `#figure(mermaid(read("…"), width: 100%), caption: [ ])` after the cursor's block with the import of merman it
- * needs, and opens the file (in whichever editor `.mmd` files open: the text editor), where the diagram is written.
- *
- * "Insert Mermaid diagram" in the Insert menu (and so among the slash commands).
+ * needs, and opens the file (in whichever editor `.mmd` files open), where the diagram is written. It is in the Insert
+ * menu, and so among the slash commands.
  */
 export function insertMermaid(context: InsertContext): ToolbarItem {
   return {

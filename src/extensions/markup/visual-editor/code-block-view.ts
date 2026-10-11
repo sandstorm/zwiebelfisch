@@ -1,4 +1,4 @@
-// The node view of code blocks: the language tag and the code. See visual-editor.ts.
+// The node view of code blocks: the language tag and the code. See markup in ../markup.ts.
 import type { Editor, NodeViewRenderer } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { TextSelection } from '@tiptap/pm/state';

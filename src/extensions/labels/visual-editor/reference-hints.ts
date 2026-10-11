@@ -1,5 +1,5 @@
 // Reference hints: what a reference chip points to ("Section · Method"), or that its label does not exist.
-// See visual-editor.ts.
+// See labels in ../labels.ts.
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';

@@ -1,5 +1,5 @@
 // Printing an edited table: its source around unchanged cells, or re-printed in the style it was written in.
-// See visual-editor.ts.
+// See tables in ../tables.ts.
 import type { Node } from '@tiptap/pm/model';
 import { isEmbeddable } from '../../../core/typst-syntax/typst-syntax';
 import type { TypstSerializeState } from '../../../hosts/prosemirror-typst/prosemirror-typst';

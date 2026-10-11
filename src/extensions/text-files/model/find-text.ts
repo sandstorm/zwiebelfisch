@@ -1,4 +1,4 @@
-// Text search in one file: the lines holding a query, as search everywhere shows them. See ../text-files.ts.
+// Text search in one file: the lines holding a query, as search everywhere shows them. See textFiles in ../text-files.ts.
 
 /** Every line of `text` holding `query` (case-insensitive), up to `limit` of them, in order. */
 export function findText(text: string, query: string, limit: number): TextMatch[] {

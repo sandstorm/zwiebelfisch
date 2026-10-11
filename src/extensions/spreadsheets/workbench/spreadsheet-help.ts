@@ -1,11 +1,9 @@
-// The help sheet of spreadsheets. See ../spreadsheets.ts.
+// The help sheet of spreadsheets. See spreadsheets in ../spreadsheets.ts.
 import type { HelpSheet } from '../../../hosts/languages/languages';
 
 /**
  * "Spreadsheet formulas": what to type into IronCalc's cells, and how a spreadsheet reaches a Typst document (its
  * Typst file, `name.ic.gen.typ`: `sheets`, `values`).
- *
- * Why here: the help panel renders any language's sheet; what the generated Typst file offers is this extension's.
  */
 export const SPREADSHEET_HELP: HelpSheet = {
   title: 'Spreadsheet formulas',

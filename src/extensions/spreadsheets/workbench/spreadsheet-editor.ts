@@ -1,4 +1,4 @@
-// SpreadsheetEditor. See ../spreadsheets.ts.
+// SpreadsheetEditor: a spreadsheet file in the editing area. See spreadsheets in ../spreadsheets.ts.
 import { FileContent } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import type { MountedWorkbook, WorkbookEdit } from './workbook';
@@ -9,8 +9,6 @@ import type { MountedWorkbook, WorkbookEdit } from './workbook';
  * Edits go to `onEdit` with the path, the new bytes and the spreadsheet's
  * Typst file (tables and values, see `spreadsheetTypst`); the host stores
  * both (the Typst file at `typstPath`).
- *
- * A spreadsheet file in the editing area — its title and IronCalc's workbook UI, loaded on demand (workbook.ts).
  */
 export class SpreadsheetEditor {
   private readonly root: HTMLElement;

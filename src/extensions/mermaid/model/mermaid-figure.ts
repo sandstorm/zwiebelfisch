@@ -1,14 +1,10 @@
-// A Mermaid diagram in a document as a figure. See ../mermaid.ts.
+// A Mermaid diagram in a document as a figure: the starter flowchart, the figure and the import of `mermaid` it
+// needs. See mermaid in ../mermaid.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 import type { SourceOffset, TextChange } from '../../../core/typst-document/typst-document';
 import { calculateImportChange, quote } from '../../../core/typst-syntax/typst-syntax';
 
-/**
- * The figure of a Mermaid file in a document, and the change that imports `mermaid` (null: imported already).
- *
- * The starter flowchart a new `.mmd` file begins with, the figure that draws it with the merman package, and the import
- * of `mermaid` it needs.
- */
+/** The figure of a Mermaid file in a document, and the change that imports `mermaid` (null: imported already). */
 export interface MermaidFigure {
   /** `#figure(mermaid(read("diagram.mmd"), width: 100%), caption: [ ])`. */
   readonly source: string;

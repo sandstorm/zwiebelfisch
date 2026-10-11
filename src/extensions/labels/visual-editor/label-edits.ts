@@ -1,4 +1,4 @@
-// Edits of references and labels as transactions (each one undo step). See visual-editor.ts.
+// Edits of references and labels as transactions (each one undo step). See labels in ../labels.ts.
 import type { EditorState, Transaction } from '@tiptap/pm/state';
 import { TextSelection } from '@tiptap/pm/state';
 

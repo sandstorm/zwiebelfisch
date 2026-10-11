@@ -1,4 +1,4 @@
-// References and labels in the Visual editor. See docs/10_guide/02_features.typ.
+// References and labels in the Visual editor. See labels in ../labels.ts.
 import { Extension } from '@tiptap/core';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { guardAfterReference, referenceSyntax } from '../model/reference-syntax';
@@ -11,13 +11,8 @@ import { referenceHints } from './reference-hints';
 import { Reference } from './reference-node';
 
 /**
- * References (`@key`, `@key[supplement]`) as `reference` chips with hints
- * (what they point to, or that the label is missing); a block's label shown
- * as a tag (rename, with the references in every file, or remove); the `@`
- * list of labels to insert references from; "Add label" in the Insert menu
- * and, where the selection's block can take a new label, in the selection's bar.
- *
- * `@key` chips, label tags on blocks, the `@` list of labels, "Add label" (Insert menu, selection bar).
+ * `@key` chips with hints, label tags on blocks, the `@` list of labels, and "Add label" (in the Insert menu and, where
+ * the selection's block can take a label, in the selection's bar).
  */
 export function references(options: ReferencesOptions): VisualEditorContribution {
   const { labels, prompts } = options;

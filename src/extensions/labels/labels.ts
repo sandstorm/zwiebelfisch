@@ -1,4 +1,3 @@
-// The labels extension. Entry of extensions/labels/. See docs/10_guide/02_features.typ.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './labels.css?inline';
 import { LabelIndex } from './model/label-index';
@@ -6,10 +5,15 @@ import { references } from './visual-editor/visual-editor';
 import { labelSearch } from './workbench/label-search';
 
 /**
- * Keeps the project's labels indexed and contributes references and labels to the Visual editor. Why an extension:
- * Typst labels (`<intro>`) and references (`@intro`) span files, so one read model (LabelIndex) follows the whole
- * project, and every document's Visual editor shows references as chips with what they point to, labels as tags, and
- * offers the labels after `@`; search everywhere finds them too.
+ * Labels and the references to them, across the whole project.
+ *
+ * A label (`<intro>`) and the references to it (`@intro`) are often in different files. So one LabelIndex reads every
+ * `.typ` and `.bib` file of the project and follows each change. Every Visual editor uses it: references show as chips
+ * that say what they point to (or that the label is missing), labels as tags on their blocks (rename with every
+ * reference, or remove), and `@` lists the labels. Search everywhere lists them as "Labels".
+ *
+ * The text stays plain Typst; chips and tags are only how the Visual editor draws it. Figures' labels are searched
+ * through the figures extension, by caption. See docs/10_guide/02_features.typ, "Labels and cross-references".
  */
 export function labels(): TypstExtension {
   return {

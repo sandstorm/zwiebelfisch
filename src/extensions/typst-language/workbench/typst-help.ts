@@ -1,10 +1,8 @@
-// The help sheet of Typst. See ../typst-language.ts.
+// The help sheet of Typst. See typstLanguage in ../typst-language.ts.
 import type { HelpSheet } from '../../../hosts/languages/languages';
 
 /**
  * "Typst basics": the markup, math and code a document is written in (Typst 0.15), each row ready to insert.
- *
- * Why here: the sheet belongs to the language (the help panel renders any language's sheet, `languages.registerHelpProvider`).
  */
 export const TYPST_HELP: HelpSheet = {
   title: 'Typst basics',

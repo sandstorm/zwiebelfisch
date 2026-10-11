@@ -1,4 +1,4 @@
-// calculateNewStyleChange: the stub "New style…" appends to the styles file. See ../styles.ts.
+// calculateNewStyleChange: the stub "New style…" appends to the styles file. See styles in ../styles.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 import { SourceOffset, SourceRange, type TextChange } from '../../../core/typst-document/typst-document';
 import { scanStyles } from './discover';

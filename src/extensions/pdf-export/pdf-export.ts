@@ -1,4 +1,3 @@
-// The pdf-export extension. Entry of extensions/pdf-export/. See docs/30_architecture/08_built-in-extensions.typ.
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
@@ -9,18 +8,16 @@ import css from './pdf-export.css?inline';
 import { downloadPdf } from './preview/preview';
 
 /**
- * The command `pdfExport.export(options?: Record<string, boolean>): Promise<Blob>`: the project's PDF as it is now,
- * with the export options set as given (by id; the others at their default); rejects naming the errors, or an
- * unknown option. And, while the setting `pdfExport.download` is on (default), "Download PDF" in the preview's
- * toolbar: a popover with a checkbox per registered export option (remembered for this viewer) and "Download", or,
- * without options, the download at once.
+ * The project's PDF: the command `pdfExport.export` for hosts, and "Download PDF" in the preview's toolbar for users.
  *
- * The project's PDF, made by PdfExport (the command `pdfExport.export`), and the preview's "Download PDF" with a
- * popover of the export options other extensions register (comments: include them or not).
+ * `pdfExport.export(options?: Record<string, boolean>): Promise<Blob>` gives the PDF as the project is now, with the
+ * export options set by id (the others at their default). It rejects with the errors, or for an unknown option. While
+ * the setting `pdfExport.download` is on (the default), the toolbar has "Download PDF": a popover with a checkbox per
+ * export option (remembered for this viewer), or, without options, the download at once.
  *
- * Why an extension: the preview's engine can make a PDF and keeps the options registered with it, but how they are
- * offered (one button, a checkbox each, remembered per viewer) and whether a widget has a download button at all is
- * this extension's policy.
+ * The preview host compiles the PDF and keeps the export options that other extensions register (comments: include
+ * them or not). How they are offered, and whether there is a button at all, is decided here.
+ * See docs/20_extensions/04_source-editor-and-preview.typ, "PDF export options".
  */
 export function pdfExport(): TypstExtension {
   return {

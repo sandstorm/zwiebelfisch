@@ -1,3 +1,6 @@
+// mountWorkbook and newWorkbook: IronCalc's workbook UI (React) over a spreadsheet's bytes, and a new spreadsheet with
+// the starter table. Imported on demand only, as it brings React, the UI and the 2 MB engine. See spreadsheets in
+// ../spreadsheets.ts.
 import { IronCalc, init, Model } from '@ironcalc/workbook';
 import styles from '@ironcalc/workbook/style.css?inline';
 import { createElement } from 'react';
@@ -13,10 +16,6 @@ import { followColorScheme } from './color-scheme';
  * root); its menus open inside the container. After every edit (cells,
  * sheets, formats, sizes) `onEdit` gets the new bytes and the Typst file;
  * `fileName` (e.g. `budget.ic`) is named in that file's header.
- *
- * mountWorkbook: IronCalc's workbook UI (React) over a spreadsheet's bytes; newWorkbook: a new spreadsheet with the
- * starter table. Loaded on demand (spreadsheet-editor.ts, "Insert spreadsheet"): it brings React, the UI and the 2 MB
- * engine, which nothing else needs.
  */
 export async function mountWorkbook(
   container: HTMLElement,

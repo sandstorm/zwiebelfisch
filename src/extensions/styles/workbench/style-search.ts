@@ -1,5 +1,5 @@
-// The project's custom styles in search everywhere: applied to the selection. See ../styles.ts and
-// docs/10_guide/02_features.typ.
+// The project's custom styles in search everywhere: applied to the selection. See styles in
+// ../styles.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 import type { TextChange } from '../../../core/typst-document/typst-document';
 import { VISUAL_EDITOR } from '../../../hosts/visual-editor/visual-editor';

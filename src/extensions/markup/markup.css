@@ -1,5 +1,5 @@
-/* The markup extension's styles: Links, inline code, code blocks and block quotes in the Visual editor.
-   See markup.ts, which registers it (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
+/* The markup extension's styles: links, inline code, code blocks and block quotes in the Visual editor.
+   See markup.ts, which registers it; colors from the widget's --te-* tokens. */
 .typst-markup__link { color: var(--te-accent); text-decoration: underline; cursor: text; }
 /* Code: inline code and code blocks (plain text edited in place, with a language field) */
 .typst-markup__code-inline {

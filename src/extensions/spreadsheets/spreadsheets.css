@@ -1,5 +1,5 @@
 /* The spreadsheets extension's styles: the spreadsheet (.ic) custom editor, IronCalc's workbook UI in the dark.
-   See spreadsheets.ts, which registers it (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
+   See spreadsheets.ts, which registers it; colors from the widget's --te-* tokens. */
 /* Spreadsheets (.ic): IronCalc's workbook UI fills the editing column */
 .typst-spreadsheets { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .typst-spreadsheets__title { margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--te-border); font-size: 13px; font-weight: 600; color: var(--te-text); }

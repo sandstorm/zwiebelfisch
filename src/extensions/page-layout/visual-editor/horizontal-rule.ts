@@ -1,5 +1,5 @@
 // The horizontal rule: a full-width `#line(length: 100%)` shown as a rule, "Horizontal rule" and `---`.
-// See ../page-layout.ts.
+// See pageLayout in ../page-layout.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { InputRule, Node } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';

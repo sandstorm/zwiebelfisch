@@ -1,5 +1,5 @@
-/* The tables extension's styles: Tables in the Visual editor.
-   See tables.ts, which registers it (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
+/* The tables extension's styles: tables in the Visual editor.
+   See tables.ts, which registers it; colors from the widget's --te-* tokens. */
 .typst-tables__table { border-collapse: collapse; margin: 0 0 0.7em; table-layout: fixed; }
 .typst-tables__table td,
 .typst-tables__table th { min-width: 3em; padding: 2px 8px; border: 1px solid var(--te-border); vertical-align: top; }

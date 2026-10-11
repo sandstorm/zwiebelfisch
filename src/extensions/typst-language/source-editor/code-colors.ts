@@ -1,4 +1,5 @@
-// codeColors: CodeMirror in the widget's color scheme, light or dark (Source editors, raw boxes). See ../typst-language.ts and docs/10_guide/05_embedding.typ.
+// codeColors: CodeMirror in the widget's color scheme, light or dark (Source editors, raw boxes).
+// See typstLanguage in ../typst-language.ts.
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { Compartment, type Extension } from '@codemirror/state';
 import { EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';

@@ -1,4 +1,4 @@
-// What the source-control extension does in the workbench. See ../source-control.ts.
+// What the source-control extension does in the workbench. See sourceControl in ../source-control.ts.
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { Scm, SourceControl } from '../../../hosts/scm/scm';
 import type { FileDecoration, FileDecorationProvider, WindowApi } from '../../../hosts/window/window';
@@ -6,9 +6,6 @@ import type { FileDecoration, FileDecorationProvider, WindowApi } from '../../..
 /**
  * Commits the project with the message the user enters (its default offered): to `control`, else to the one
  * registered source control or the one picked. While a commit is under way it only says so.
- *
- * Commit to a source control (asking for the message), its status bar entries, and its resource states as file
- * decorations.
  */
 export async function commit({ scm, window }: SourceControlUi, control?: SourceControl): Promise<void> {
   const controls = scm.sourceControls;

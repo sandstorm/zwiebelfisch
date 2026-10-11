@@ -1,4 +1,4 @@
-// Custom styles in the Visual editor. See docs/10_guide/02_features.typ.
+// Custom styles in the Visual editor. See styles in ../styles.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { Extension, type Editor } from '@tiptap/core';
 import type { Mark, Node } from '@tiptap/pm/model';
@@ -20,8 +20,6 @@ import { StyledBlock, TypstStyleMark } from './style-nodes';
  * project's styles and "New style…" (after normal text and what other
  * extensions contribute) and applies them, importing a style where it is now
  * used.
- *
- * Declared block styles as styled blocks (`#note[..]`), inline styles as a mark (`#key[..]`), and the text style menu.
  */
 export function customStyles(options: StylesOptions): VisualEditorContribution {
   const declared = declaredStyles(options.styles);

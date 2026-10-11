@@ -1,4 +1,3 @@
-// The mermaid extension. Entry of extensions/mermaid/. See docs/10_guide/02_features.typ.
 import { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
 import { findFilePaths } from '../../core/typst-syntax/typst-syntax';
@@ -9,17 +8,16 @@ import { insertMermaid } from './visual-editor/visual-editor';
 import { MERMAID_HELP } from './workbench/mermaid-help';
 
 /**
- * "Insert Mermaid diagram" in the Visual editor's Insert menu; the paths of the project's Mermaid files in Typst
- * (`read("x.mmd")`) as links "Edit diagram" (priority 110, over the plain file links), so ⌘/Ctrl+click on a box
- * reading one (or on its path) opens it; the help sheet "Mermaid basics" for `.mmd` files (language `mermaid`).
+ * Mermaid diagrams as figures, drawn by the Typst package merman while Typst compiles.
  *
- * Mermaid diagrams as figures drawn by the merman package while Typst compiles — "Insert Mermaid diagram" (a new `.mmd`
- * file with a starter flowchart, its figure and the import in the text) and "Edit diagram" (⌘/Ctrl+click) on a box
- * reading one.
+ * "Insert Mermaid diagram" (Insert menu) creates a `.mmd` file with a starter flowchart and inserts its figure and the
+ * import. In Typst text, the path of a project's `.mmd` file (`read("x.mmd")`) becomes the link "Edit diagram"
+ * (priority 110, over the plain file link), so ⌘/Ctrl+click on the path or on the box's picture opens the file.
+ * `.mmd` files get the help sheet "Mermaid basics".
  *
- * Why an extension: the entry is a toolbar item and the edit a document link (which the Visual editor's boxes follow
- * from their picture), the `.mmd` file opens in whichever editor its pattern has (the text editor): the hosts' generic
- * contribution points, no other extension named. Typst draws the diagram, so there is nothing to render here.
+ * All of it goes through the hosts' generic points: a toolbar item, a document link provider, a help provider. The file
+ * opens in whatever editor `.mmd` has (the text-files extension's). Typst draws the diagram, so nothing is rendered
+ * here. See docs/10_guide/02_features.typ, "Mermaid diagrams".
  */
 export function mermaid(): TypstExtension {
   return {

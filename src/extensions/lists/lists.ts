@@ -1,15 +1,15 @@
-// The lists extension. See docs/30_architecture/08_built-in-extensions.typ.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './lists.css?inline';
 import { BULLET_LIST, LIST_ACTIONS, LIST_ITEM, ORDERED_LIST } from './visual-editor/visual-editor';
 import { TASK_ITEM, TASK_LIST, TASK_LIST_ACTION } from './visual-editor/task-lists';
 
 /**
- * Bulleted, numbered and task lists.
+ * Bulleted, numbered and task lists in the Visual editor, with their toolbar buttons.
  *
- * Bulleted, numbered and task lists in the Visual editor, with their toolbar buttons. Why one extension: a task list is
- * a bullet list in Typst (`- [ ] todo`), so the two share their syntax and their toolbar group; task lists' Tiptap
- * priority puts their parse rule first.
+ * A task item is a bullet item in Typst (`- [ ] todo`), so all lists live in one extension and share a toolbar group.
+ * Task lists get a higher Tiptap priority, so their parse rule claims those items before bullet lists do. Typst draws
+ * the boxes only with the Universe package cheq: an edit that adds a task item also adds cheq's import and show rule
+ * if they are missing (model/checklist-preamble.ts). See docs/30_architecture/08_built-in-extensions.typ.
  */
 export function lists(): TypstExtension {
   return {
