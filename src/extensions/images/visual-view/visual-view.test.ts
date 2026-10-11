@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests for image-path-link.ts: an image box's path as the document link on it.
+// Tests for visual-view.ts: an image box's path as the document link on it.
 import { describe, expect, it, vi } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
 import { findFilePaths } from '../../../core/typst-syntax/typst-syntax';

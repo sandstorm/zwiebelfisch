@@ -4,7 +4,7 @@
 // registers them for images.ts. See docs/30_architecture/08_built-in-extensions.typ.
 import { Node } from '@tiptap/core';
 import { Disposable } from '../../../core/disposable/disposable';
-import { PathReference, type ProjectPath } from '../../../core/paths/paths';
+import { PathReference, ProjectPath } from '../../../core/paths/paths';
 import type { DocumentLink } from '../../../hosts/languages/languages';
 import type { QuickPickItem, WindowApi } from '../../../hosts/window/window';
 import type { Event } from '../../../core/event-emitter/event-emitter';
@@ -12,7 +12,6 @@ import type { TypstDocument } from '../../../core/typst-document/typst-document'
 import { hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type ToolbarAction, type RawBoxRenderer, type ToolbarContext, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
 import { imageFileDrops, insertImages } from './image-insertion';
-import { imagePathLink } from './image-path-link';
 import { imagePath } from './image-syntax';
 import { ImageTools } from './image-tools';
 import { imagePicker, uploadImages } from './image-uploads';
@@ -193,4 +192,26 @@ function insertImage(toolbar: ToolbarContext, assets: ImageAssets, prompts: Imag
     run: (c) => c.insertContent({ type: 'image' }),
     click: () => void choose(),
   };
+}
+
+// --- An image box's path as a link to the file (the document link on it)
+
+/** An image box's path as a button that opens the link's target, or the path marked as leading nowhere (with the link's tooltip). */
+function imagePathLink(link: DocumentLink | null, path: PathReference, doc: Document, open: (target: ProjectPath) => void): HTMLElement {
+  const target = link?.target;
+  if (!target) {
+    const missing = doc.createElement('span');
+    missing.className = 'typst-images__path typst-images__path--missing';
+    missing.textContent = path;
+    missing.title = link?.tooltip ?? 'Outside the project';
+    return missing;
+  }
+  const button = doc.createElement('button');
+  button.type = 'button';
+  button.className = 'typst-images__path';
+  button.textContent = path;
+  button.title = `Open ${ProjectPath.displayName(target)}`;
+  button.addEventListener('mousedown', (event) => event.preventDefault());
+  button.addEventListener('click', () => open(target));
+  return button;
 }
