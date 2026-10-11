@@ -7,7 +7,7 @@ import { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-docum
 import { Node as TiptapNode, type Editor } from '@tiptap/core';
 import { children, withHash } from '../../core/typst-syntax/typst-syntax';
 import { starterKitPart, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
-import { setBoxDecorations, VisualView, VisualViewHost, type SourceHighlight, type TypstNodeSpec, type VisualViewContext, type VisualViewContribution } from './visual-view';
+import { setRawBoxDecorations, VisualView, VisualViewHost, type SourceHighlight, type TypstNodeSpec, type VisualViewContext, type VisualViewContribution } from './visual-view';
 
 /** A test-local construct beyond the host's minimum: `*strong*` as a bold mark (hidden syntax around visible text). */
 const STRONG: TypstMarkSpec = {
@@ -148,12 +148,12 @@ describe('VisualView contexts', () => {
     view.dispose();
   });
 
-  it("gives a raw box's code its decorations (setBoxDecorations), when made and on every update", () => {
+  it("gives a raw box's code its decorations (setRawBoxDecorations), when made and on every update", () => {
     const contributions = new VisualViewHost();
     const given: number[] = [];
     contributions.registerRawBoxCodeMirrorExtension(() =>
       EditorState.transactionExtender.of((tr) => {
-        for (const effect of tr.effects) if (effect.is(setBoxDecorations)) given.push(effect.value.length);
+        for (const effect of tr.effects) if (effect.is(setRawBoxDecorations)) given.push(effect.value.length);
         return null;
       }),
     );

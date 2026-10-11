@@ -32,7 +32,7 @@ export function imagesVisualView(options: ImagesOptions): VisualViewContribution
         visualView.registerNode(imageSpec(options)),
         visualView.registerToolbarItem({ group: 'insert', order: 10, create: (toolbar) => insertImage(toolbar, options.assets(toolbar.document), options.prompts) }),
         // image boxes are raw boxes, too: drawn as their image file rather than as a compiled snippet (priority 100)
-        visualView.registerBoxRenderer((view) => imageRenderer(options.imageUrls(view.document)), { priority: 110 }),
+        visualView.registerRawBoxRenderer((view) => imageRenderer(options.imageUrls(view.document)), { priority: 110 }),
       );
     },
   };

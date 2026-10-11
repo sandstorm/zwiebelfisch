@@ -52,7 +52,7 @@
   font: 600 12px system-ui, sans-serif;
   color: var(--te-text-2);
 }
-/* Contributed box actions (registerBoxAction) above the code of a box without tools; tools place them themselves */
+/* Contributed box actions (registerRawBoxAction) above the code of a box without tools; tools place them themselves */
 .typst-visual__box-actions { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; font: 12px system-ui, sans-serif; }
 .typst-visual__box-actions:empty { display: none; }
 .typst-visual__box-actions > button {

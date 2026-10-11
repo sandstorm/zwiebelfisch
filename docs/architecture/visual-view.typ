@@ -37,7 +37,7 @@ Typst no spec models, and nodes whose spec sets `view.box: 'code'` (images, outl
 - Undo and redo run the Visual view's history. Arrow keys, Escape and Enter move between box and text.
 - With a box renderer, the box shows a picture until its code gets focus.
 - The spec's `view.title` heads the box; `view.tools` add tools (an image's resize handles and toolbar).
-- `setBoxDecorations`: the box's node decorations, handed to its code (another user's caret inside the box).
+- `setRawBoxDecorations`: the box's node decorations, handed to its code (another user's caret inside the box).
 
 == Toolbar <architecture-visual-view-toolbar>
 

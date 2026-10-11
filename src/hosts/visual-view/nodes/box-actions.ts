@@ -1,4 +1,4 @@
-// BoxActionBar: the buttons of the contributed box actions (`registerBoxAction`) that apply to one raw box,
+// BoxActionBar: the buttons of the contributed box actions (`registerRawBoxAction`) that apply to one raw box,
 // kept up to date with its node. See raw-box.ts.
 import type { Node } from '@tiptap/pm/model';
 import type { RawBoxAction, VisualViewContext } from '../visual-view';
