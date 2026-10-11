@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Build the demo and the library, then run end-to-end tests (Playwright), in all browsers or one"
-#MISE depends=["build", "build:lib"]
+#MISE depends=["build", "build:lib", "build:packages"]
 #USAGE arg "[browser]" help="Only this browser (default: all)" default="all" {
 #USAGE   choices "all" "chromium" "firefox" "webkit"
 #USAGE }

@@ -37,7 +37,9 @@ test('Align right, then Align left removes the wrapper again', async ({ page }) 
   await chooseFrom(toolbar(page), 'Align', 'Align left');
   const src = await source(page);
   await expect(src).toContainText('Fresh line');
-  await expect(src).not.toContainText('#align(');
+  // the demo has an #align(center)[..] of its own further down
+  await expect(src).not.toContainText('#align(right)');
+  await expect(src).not.toContainText('[Fresh line]');
 });
 
 test('Justify wraps the paragraph in #par(justify: true)', async ({ page }) => {

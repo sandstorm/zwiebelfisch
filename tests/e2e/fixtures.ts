@@ -7,6 +7,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 const DEMO = join(ROOT, 'dist/demo');
 /** Served from the repository root, so examples can reference ../../dist/lib. */
 const FROM_ROOT = ['/examples/', '/dist/lib/'];
+const PACKAGES = join(ROOT, '.cache/typst-packages');
 
 /**
  * Serves every request to the baseURL host from disk: the examples and the
@@ -19,8 +20,16 @@ export const test = base.extend({
   },
 });
 
-/** Serves the build to `page` (for pages beyond the `page` fixture, e.g. a second user). */
+/**
+ * Serves the build to `page` (for pages beyond the `page` fixture, e.g. a second user), and the Universe packages the
+ * examples import from the downloads of `mise run build:packages` where they are there (the default example imports
+ * three), else from packages.typst.org. A spec's own route for a package takes precedence.
+ */
 export async function serve(page: Page, baseURL: string): Promise<void> {
+  await page.route('https://packages.typst.org/preview/*.tar.gz', (route) => {
+    const file = join(PACKAGES, new URL(route.request().url()).pathname.slice('/preview/'.length));
+    return existsSync(file) ? route.fulfill({ path: file, contentType: 'application/gzip' }) : route.fallback();
+  });
   await page.route(`${baseURL}/**`, (route) => {
     const pathname = new URL(route.request().url()).pathname;
     const dir = FROM_ROOT.some((prefix) => pathname.startsWith(prefix)) ? ROOT : DEMO;

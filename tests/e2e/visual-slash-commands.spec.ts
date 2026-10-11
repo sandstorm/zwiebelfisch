@@ -53,7 +53,8 @@ test('a click on an entry runs it', async ({ page }) => {
   await newLine(page);
   await page.keyboard.type('/rule');
   await list(page).getByRole('option', { name: /Horizontal rule/ }).click();
-  await expect.poll(sourceText(page)).toContain('#line(length: 100%)');
+  // the demo has a rule of its own further down
+  await expect.poll(async () => (await sourceText(page)()).split('#line(length: 100%)').length).toBe(3);
   await expect.poll(sourceText(page)).not.toContain('/rule');
 });
 

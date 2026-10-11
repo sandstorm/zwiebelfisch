@@ -19,7 +19,7 @@ const cards = (page: Page) => page.getByTestId('typst-note-card');
 /** The reply box of card `i` ("Comment" while the note is empty). */
 const noteField = (page: Page, i = 0) => cards(page).nth(i).getByRole('textbox', { name: /^(Comment|Reply)$/ });
 const messageTexts = (page: Page, i = 0) => cards(page).nth(i).locator('.typst-comments__card-text');
-const highlight = (page: Page) => visual(page).locator('mark.typst-comments__range');
+const highlight = (page: Page) => visual(page).locator('mark.typst-comments__range', { hasText: 'stars' });
 /** "Comment" in the Visual editor's formatting toolbar. */
 const commentButton = (page: Page) => page.getByRole('toolbar', { name: 'Formatting' }).getByRole('button', { name: 'Comment' });
 /** "Comment" in the tab bar (its menu `editor/title`), shown with the Source editor. */
@@ -40,8 +40,9 @@ const offset = async (card: ReturnType<typeof cards>, anchor: ReturnType<typeof 
 
 /**
  * How many glyphs the first preview page draws in its right margin. The demo's
- * `margin: 1.5cm` becomes `(right: 4cm, rest: 1.5cm)` with the first note (drafting 0.2.2
- * fails on a single-length margin), so the note margin is the last 4cm of 16cm.
+ * page has `margin: (right: 4cm, rest: 1.5cm)` (drafting 0.2.2 fails on a
+ * single-length margin), so the note margin is the last 4cm of 16cm. The demo
+ * has a note of its own (with a card, after every note the tests add).
  */
 const marginGlyphs = (page: Page) => () =>
   page.getByTestId('typst-preview').locator('.typst-preview__page svg').first().evaluate((svg) => {
@@ -60,10 +61,12 @@ async function commentOnStrong(page: Page, note: string) {
 }
 
 test('a comment on selected text becomes a range note with a card in the gutter, beside its text', async ({ page }) => {
+  await expect.poll(marginGlyphs(page)).toBeGreaterThan(0);
+  const demoNote = await marginGlyphs(page)();
   await commentOnStrong(page, 'Check this');
 
   await expect(highlight(page)).toHaveText('stars');
-  await expect(cards(page)).toHaveCount(1);
+  await expect(cards(page)).toHaveCount(2);
   await expect(messageTexts(page)).toHaveText(['Check this']);
   await expect(cards(page).first().locator('.typst-comments__card-author')).toHaveText('Demo user');
   await expect(cards(page).first().locator('.typst-comments__card-quote')).toHaveText('stars');
@@ -75,8 +78,8 @@ test('a comment on selected text becomes a range note with a card in the gutter,
   // drafting's look in the PDF comes with the import, once
   expect((await sourceText(page)()).split('#set-margin-note-defaults(').length).toBe(2);
   expect(await sourceText(page)()).toContain('margin: (right: 4cm, rest: 1.5cm)');
-  // the text now ends 4cm before the page edge: whatever is drawn beyond is the note
-  await expect.poll(marginGlyphs(page)).toBeGreaterThan(0);
+  // the text ends 4cm before the page edge: whatever is drawn beyond is a note
+  await expect.poll(marginGlyphs(page)).toBeGreaterThan(demoNote);
 
   await page.getByRole('tab', { name: 'Source' }).click();
   await expect(page.getByTestId('typst-source').locator('.cm-content')).toContainText(`#margin-note[*stars*][${signed('Check this')}]`);
@@ -94,7 +97,7 @@ test('a comment at the cursor becomes a point note; a second note does not repea
 
   await visual(page).locator('h1').click();
   await commentButton(page).click();
-  await expect(cards(page)).toHaveCount(2);
+  await expect(cards(page)).toHaveCount(3);
   // the new note is above the first one: its card comes first and has the focus
   await expect(noteField(page, 0)).toBeFocused();
   await noteField(page, 0).fill('Second');
@@ -111,7 +114,7 @@ test('cards of notes on the same line do not overlap', async ({ page }) => {
     await noteField(page, note === 'One' ? 0 : 1).fill(`${note}\nwith a second line`);
     await page.keyboard.press('ControlOrMeta+Enter');
   }
-  await expect(cards(page)).toHaveCount(2);
+  await expect(cards(page)).toHaveCount(3);
   await expect.poll(async () => {
     const [a, b] = await Promise.all([cards(page).nth(0).boundingBox(), cards(page).nth(1).boundingBox()]);
     return b!.y - (a!.y + a!.height);
@@ -159,16 +162,16 @@ test('resolving a range note keeps its text; resolving a point note removes it',
   await commentButton(page).click();
   await noteField(page, 0).fill('Point');
   await noteField(page, 0).press('ControlOrMeta+Enter');
-  await expect(cards(page)).toHaveCount(2);
+  await expect(cards(page)).toHaveCount(3);
 
   await cards(page).nth(1).getByRole('button', { name: 'Resolve note' }).click();
-  await expect(cards(page)).toHaveCount(1);
+  await expect(cards(page)).toHaveCount(2);
   await expect(highlight(page)).toHaveCount(0);
   await expect.poll(sourceText(page)).toContain('*stars* make text strong');
 
   await cards(page).first().getByRole('button', { name: 'Resolve note' }).click();
-  await expect(cards(page)).toHaveCount(0);
-  await expect.poll(sourceText(page)).not.toContain('#margin-note[');
+  await expect(cards(page)).toHaveCount(1);
+  await expect.poll(sourceText(page)).not.toContain('*Demo user*');
   await expect(visual(page).locator('h1')).toHaveText('Typst in five minutes');
 });
 

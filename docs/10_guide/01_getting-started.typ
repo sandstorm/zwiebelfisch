@@ -35,7 +35,7 @@ The examples:
 #table(
   columns: 2,
   [Example], [Shows],
-  [Simple], [Start here, it opens first: Typst in five minutes (lists, math, a link, a table) and what to type in the Visual editor: `# ` for a heading, `- ` for a list, `/` for commands, `@` for references.],
+  [Simple], [Start here, it opens first: one page with the main features, each with what to try. Typst in five minutes (lists, math, a link, a table); what to type in the Visual editor (`# ` for a heading, `/` for commands, `@` for references) and one of everything it edits (quote, code block, task list, alignment, rule, table of contents, figures, references); custom styles from `styles.typ`; an IronCalc spreadsheet as a table, one value quoted in the text; a Mermaid and a draw.io diagram; a margin comment with a reply.],
   [Advanced], [A report in several files: template, chapters, a helper module with custom styles, an outline, an SVG logo and chart, an IronCalc spreadsheet as a table, a Mermaid diagram, equations, figures with labels and references. GitLab mode always uses it.],
   [Documentation], [This documentation. With `mise run demo` edits are saved to `docs/`.],
 )
