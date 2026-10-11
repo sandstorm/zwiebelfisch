@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
 import { findFilePaths } from '../../../core/typst-syntax/typst-syntax';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
-import type { DocumentLink, TextDocument } from '../../../hosts/languages/languages';
+import type { DocumentLink, TypstText } from '../../../hosts/languages/languages';
 import { createVisualView } from '../../../testing/testing';
 
 const path = ProjectPath.of;
@@ -12,7 +12,7 @@ const path = ProjectPath.of;
 /** An image box of `text`, whose path links to /logo.png when the call names it, else to a missing file. */
 function setup(text: string) {
   const links = {
-    provideDocumentLinks: ({ text: src }: TextDocument): DocumentLink[] => [
+    provideDocumentLinks: ({ text: src }: TypstText): DocumentLink[] => [
       src.includes('logo.png') ? { range: SourceRange.of({ from: 8, to: 16 }), target: path('/logo.png') } : { range: SourceRange.of({ from: 8, to: 16 }), tooltip: 'gone.png is not in the project' },
     ],
     open: vi.fn(),
@@ -43,7 +43,7 @@ describe("an image box's path", () => {
   it("links in a figure too, whose body is written in code (`image(..)`, no `#`)", () => {
     // the paths as the document-links extension finds them: in Typst markup
     const links = {
-      provideDocumentLinks: ({ text }: TextDocument): DocumentLink[] => findFilePaths(text).map(({ from, to }) => ({ range: { from, to }, target: path('/logo.png') })),
+      provideDocumentLinks: ({ text }: TypstText): DocumentLink[] => findFilePaths(text).map(({ from, to }) => ({ range: { from, to }, target: path('/logo.png') })),
       open: vi.fn(),
     };
     const parent = document.body.appendChild(document.createElement('div'));

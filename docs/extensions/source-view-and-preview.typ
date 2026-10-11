@@ -22,7 +22,7 @@ subscriptions.push(
 
 ```ts
 languages.registerDocumentLinkProvider({
-  provideDocumentLinks(document) {   // TextDocument: path, text
+  provideDocumentLinks(document) {   // TypstText: path, text
     return [...document.text.matchAll(/TODO/g)].map((m) => ({
       range: SourceRange.of({ from: m.index, to: m.index + 4 }),
       tooltip: 'Open the to-do list',

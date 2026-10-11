@@ -24,16 +24,16 @@ export interface Languages {
    * The links of `document` from every provider, merged as the views show them, in text order (VS Code's
    * `vscode.executeLinkProvider`), for an extension that shows links itself (an image box's path).
    */
-  provideDocumentLinks(document: TextDocument): readonly DocumentLink[];
+  provideDocumentLinks(document: TypstText): readonly DocumentLink[];
   /** `link` (from `provideDocumentLinks`) with what its provider fills in on demand: target, tooltip, command. */
   resolveDocumentLink(link: DocumentLink): DocumentLink;
 }
 
 /**
- * The Typst text a link provider reads (VS Code's TextDocument, as far as links need it): a whole file's, or the
+ * The Typst text a link provider reads, and the file it is in: a whole file's text, or the
  * code of one raw box in it.
  */
-export interface TextDocument {
+export interface TypstText {
   /** The file the text is in: relative paths in it resolve from here. */
   readonly path: ProjectPath;
   readonly text: string;
@@ -57,7 +57,7 @@ export interface DocumentLink {
 /** Finds the links in Typst text (VS Code's DocumentLinkProvider). */
 export interface DocumentLinkProvider {
   /** The links in `document` (cheap ones: `resolveDocumentLink` may fill in the rest when one is shown or followed). */
-  provideDocumentLinks(document: TextDocument): readonly DocumentLink[];
+  provideDocumentLinks(document: TypstText): readonly DocumentLink[];
   /** A link this provider gave, with its target, tooltip or command filled in. */
   resolveDocumentLink?(link: DocumentLink): DocumentLink;
 }
@@ -94,7 +94,7 @@ export class LanguagesHost implements Languages {
     });
   }
 
-  provideDocumentLinks(document: TextDocument): DocumentLink[] {
+  provideDocumentLinks(document: TypstText): DocumentLink[] {
     const accepted: DocumentLink[] = [];
     // the sort is stable: equal priorities in registration order
     for (const { provider } of [...this.#providers].sort((a, b) => b.priority - a.priority)) {

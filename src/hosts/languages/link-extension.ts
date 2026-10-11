@@ -4,11 +4,11 @@
 import type { EditorState, Extension, Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, hoverTooltip, keymap, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import { ProjectPath } from '../../core/paths/paths';
-import type { DocumentLink, LinkTargets, TextDocument } from './languages';
+import type { DocumentLink, LinkTargets, TypstText } from './languages';
 
 /** What the links come from, and where following one goes. */
 export interface LinkActions extends LinkTargets {
-  provideDocumentLinks(document: TextDocument): readonly DocumentLink[];
+  provideDocumentLinks(document: TypstText): readonly DocumentLink[];
   resolveDocumentLink(link: DocumentLink): DocumentLink;
 }
 

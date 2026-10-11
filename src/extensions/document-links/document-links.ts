@@ -8,7 +8,7 @@ import { findFilePaths } from '../../core/typst-syntax/typst-syntax';
 import { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
-import type { DocumentLink, DocumentLinkProvider, TextDocument } from '../../hosts/languages/languages';
+import type { DocumentLink, DocumentLinkProvider, TypstText } from '../../hosts/languages/languages';
 
 /**
  * Links the file paths of all Typst text (the Source views, raw boxes, an image box's path): they resolve from the
@@ -42,7 +42,7 @@ class FilePathLinks implements DocumentLinkProvider {
 
   constructor(private readonly project: Project) {}
 
-  provideDocumentLinks({ path, text }: TextDocument): DocumentLink[] {
+  provideDocumentLinks({ path, text }: TypstText): DocumentLink[] {
     return findFilePaths(text).map(({ path: reference, from, to }) => {
       const link: DocumentLink = { range: { from, to } };
       this.#targets.set(link, ProjectPath.resolve(path, reference));
