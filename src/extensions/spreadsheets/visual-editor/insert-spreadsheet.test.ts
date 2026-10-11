@@ -39,12 +39,13 @@ function setup(text: string, answer: string | undefined, files: Record<string, s
     parent.querySelector<HTMLButtonElement>('button[aria-label="Insert spreadsheet"]')!.click();
     await settle();
   };
-  return { project, document, asked, opened, told, newWorkbook, click };
+  const undo = () => parent.querySelector<HTMLButtonElement>('button[aria-label="Undo"]')!.click();
+  return { project, document, asked, opened, told, newWorkbook, click, undo };
 }
 
 describe('Insert spreadsheet', () => {
-  it('proposes a free name next to the document, creates the spreadsheet and its Typst file, inserts the figure with its import, opens it', async () => {
-    const { project, document, asked, opened, newWorkbook, click } = setup('= Results\n\nThe runs:\n', '/data/table-2.ic', { '/data/table.ic': '' });
+  it('proposes a free name next to the document, creates the spreadsheet and its Typst file, inserts the figure with its import (one undo step), opens it', async () => {
+    const { project, document, asked, opened, newWorkbook, click, undo } = setup('= Results\n\nThe runs:\n', '/data/table-2.ic', { '/data/table.ic': '' });
     await click();
     expect(asked).toEqual([{ title: 'Insert spreadsheet', defaultUri: '/data/table-2.ic', filters: { Spreadsheets: ['ic'] } }]);
     expect(newWorkbook).toHaveBeenCalledWith('table-2.ic');
@@ -52,6 +53,8 @@ describe('Insert spreadsheet', () => {
     expect(project.content(path('/data/table-2.ic.gen.typ'))).toBe(WORKBOOK.typst);
     expect(document.text).toBe('#import "data/table-2.ic.gen.typ": sheets\n\n= Results\n\nThe runs:\n\n#figure(sheets.Sheet1, caption: [ ])\n');
     expect(opened).toEqual(['/data/table-2.ic']);
+    undo();
+    expect(document.text).toBe('= Results\n\nThe runs:\n');
   });
 
   it('changes nothing when the name is not given', async () => {

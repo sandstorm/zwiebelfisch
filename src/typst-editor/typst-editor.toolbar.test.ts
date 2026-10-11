@@ -307,36 +307,6 @@ describe('Visual editor toolbar', () => {
       expect(prompts.told).toEqual(['This change is not allowed here.']);
       expect(doc.text).toBe('One\n');
     });
-
-    /** A file-panel row (project path) dragged over or dropped on the text. */
-    function rowEvent(type: 'dragover' | 'drop', path: string) {
-      const event = new Event(type, { bubbles: true, cancelable: true });
-      const data = { files: [], types: ['application/x-typst-project-path'], getData: () => path, dropEffect: 'none' };
-      Object.defineProperty(event, 'dataTransfer', { value: data });
-      return event;
-    }
-
-    it('an image dragged from the file panel is inserted where it is dropped, without an upload', () => {
-      const { options, uploaded } = withUploads();
-      const { doc, view, parent } = setup('One\n\nTwo\n', options);
-      view.reveal(SourceRange.of({ from: 1, to: 1 }));
-      const editable = parent.querySelector('[contenteditable]')!;
-      const over = rowEvent('dragover', '/img/logo.png');
-      editable.dispatchEvent(over);
-      expect(over.defaultPrevented).toBe(true); // the browser lets it drop
-      const drop = rowEvent('drop', '/img/logo.png');
-      editable.dispatchEvent(drop);
-      expect(drop.defaultPrevented).toBe(true);
-      expect(uploaded).toEqual([]);
-      expect(doc.text).toBe('One\n\n#image("img/logo.png")\n\nTwo\n');
-    });
-
-    it('a dragged file that is no image is not inserted', () => {
-      const { options } = withUploads();
-      const { doc, parent } = setup('One\n', options);
-      parent.querySelector('[contenteditable]')!.dispatchEvent(rowEvent('drop', '/data.csv'));
-      expect(doc.text).toBe('One\n');
-    });
   });
 
   it('inserts a table and adds and deletes rows and columns', () => {

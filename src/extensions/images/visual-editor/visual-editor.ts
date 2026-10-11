@@ -71,8 +71,6 @@ export interface ImageAssets {
   list(): PathReference[];
   /** Adds `file` to the project; resolves to the path to write in `#image(..)`, or why it was not added (in words for people). */
   upload(file: File): Promise<{ path: PathReference } | { error: string }>;
-  /** The path to write in `#image(..)` in this document for the project file `path` (e.g. dragged from the file panel); null if it is no image. */
-  reference(path: ProjectPath): PathReference | null;
 }
 
 function imageSpec(options: ImagesOptions): TypstNodeSpec {
@@ -124,8 +122,7 @@ const Image = Node.create({
 
 /**
  * "Insert image": a quick pick of the project's images, "Upload image…" and "Enter a path…" (an input box). Image
- * files dropped on or pasted into the text are uploaded and inserted too, and an image dragged from the file panel is
- * inserted where it is dropped; refused uploads are error messages.
+ * files dropped on or pasted into the text are uploaded and inserted too; refused uploads are error messages.
  */
 function insertImage(toolbar: ToolbarContext, assets: ImageAssets, prompts: ImagePrompts): ToolbarAction {
   const { editor, root } = toolbar;
@@ -135,14 +132,7 @@ function insertImage(toolbar: ToolbarContext, assets: ImageAssets, prompts: Imag
     for (const error of errors) void prompts.showErrorMessage(error);
   };
   const picker = root.appendChild(imagePicker(root.ownerDocument, (files) => void upload(files)));
-  const drops = imageFileDrops(
-    (files, near) => upload(files, near),
-    (path, near) => {
-      const reference = assets.reference(path);
-      if (reference !== null) insertImages(editor, [reference], near);
-      return reference !== null;
-    },
-  );
+  const drops = imageFileDrops((files, near) => upload(files, near));
   editor.registerPlugin(drops);
   toolbar.subscriptions.push(new Disposable(() => (editor.unregisterPlugin(drops.spec.key!), picker.remove())));
   const enterPath = async () => {

@@ -13,6 +13,7 @@ import { VisualEditorHost, type VisualEditorContributions } from '../visual-edit
 import { type TextEditorSelectionChangeEvent, type WindowApi, WindowHost } from '../window/window';
 import { type ConfigurationProperty, type Settings, type Workspace, WorkspaceHost } from '../workspace/workspace';
 import { ColorScheme } from './color-scheme/color-scheme';
+import { type DropEdits, sourceEditorDrops, visualEditorDrops } from './document-drops/document-drops';
 import { EditorTabs } from './editor-tabs/editor-tabs';
 import { ExtensionHost } from './extension-host/extension-host';
 import { FileDrops } from './file-drops/file-drops';
@@ -250,7 +251,7 @@ export interface Memento {
 
 /**
  * The drag data type (`DataTransfer`) of a project file dragged inside the widget, e.g. a row of the file panel; the
- * data is its path. Any editor may take such a drop (the Visual editor inserts a dragged image).
+ * data is its path. Any editor may take such a drop (the Typst editors insert what the drop edit providers make of it).
  */
 export const PROJECT_PATH_TYPE = 'application/x-typst-project-path';
 
@@ -375,7 +376,7 @@ export class WorkbenchHost implements Workbench {
     const hosts = [this.window, this.#languages, this.#preview, this.#sourceEditors, this.#visualEditor];
     this.#ownStyles = Disposable.from(frameStyles, ...hosts.map((part) => this.#styleSheets.add(part.styleSheet)));
     this.#subscription = project.onDidChangeFile((change) => this.#changed(change));
-    this.#extendCodeMirrors();
+    this.#extendEditors();
     this.#search = this.#registerSearch();
     this.#applyRightSidePanel();
     this.#workspace.onDidChangeConfiguration((event) => {
@@ -612,14 +613,22 @@ export class WorkbenchHost implements Workbench {
   /**
    * The Typst files' language, `typst` (`.typ`), and its registered document links in every Source editor and in the
    * code of every raw box (in its file); a raw box's picture follows the primary one, the Visual editor's text the one
-   * under the pointer (`#visualEditor`). The raw boxes' code takes the shared CodeMirror extensions, too.
+   * under the pointer (`#visualEditor`). The raw boxes' code takes the shared CodeMirror extensions, too. A project
+   * file (a row of the file panel) dropped into a Visual or Source editor becomes what the drop edit providers
+   * (`languages.registerDocumentDropEditProvider`) make of it, inserted where it was dropped.
    */
-  #extendCodeMirrors(): void {
+  #extendEditors(): void {
     this.#languages.declare([{ id: 'typst', extensions: ['.typ'] }]);
     const links = (document: TypstDocument) => this.#languages.createDocumentLinksCodeMirrorExtension('typst', () => this.project.pathOf(document) ?? null);
     this.#sourceEditors.registerCodeMirrorExtension((editor) => links(editor.document));
     this.#visualEditor.registerRawBoxCodeMirrorExtension((editor) => links(editor.document));
     this.#visualEditor.registerRawBoxCodeMirrorExtension(() => this.#sourceEditors.createSharedCodeMirrorExtension());
+    const edits: DropEdits = (document, offset, file) => {
+      const path = this.project.pathOf(document);
+      return path ? this.#languages.provideDocumentDropEdit({ path, languageId: 'typst', text: document.text }, offset, file) : null;
+    };
+    this.#visualEditor.registerTiptapExtension(({ document }) => visualEditorDrops(document, edits));
+    this.#sourceEditors.registerCodeMirrorExtension(({ document }) => sourceEditorDrops(document, edits));
   }
 
   /** `data-theme` from the setting `workbench.theme` (none: as the page), and the scheme the colors resolve to now. */
