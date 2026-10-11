@@ -19,8 +19,9 @@ import { ADD_COMMENT, registerAddComment } from './workbench/workbench';
  *
  * PDF exports get the option `comments.include` (default off). The PDF itself is the pdfExport extension's; this one
  * only decides what it compiles. The preview gets the view option `comments.show` ("Comments" in the View menu,
- * default on), which hides the notes in the preview only. `model/` knows the note syntax (margin-note-syntax.ts) and the thread format
- * (note-thread.ts). See docs/10_guide/02_features.typ.
+ * default on), which hides the notes in the preview only. The notes' look is the extension's: the preview and the PDF
+ * set it when they compile, the documents hold plain drafting (NOTE_STYLE in preview/preview.ts). `model/` knows the
+ * note syntax (margin-note-syntax.ts) and the thread format (note-thread.ts). See docs/10_guide/02_features.typ.
  */
 export function comments(): TypstExtension {
   return {
@@ -33,7 +34,7 @@ export function comments(): TypstExtension {
       subscriptions.push(
         registerAddComment(context, notes),
         registerIncludeComments(preview, project),
-        registerShowComments(preview),
+        registerShowComments(preview, project),
         window.registerSearchProvider(commentSearch(context, notes)),
       );
       marginNotes({ comment: () => commands.executeCommand(ADD_COMMENT).catch((error: unknown) => console.error(error)) }).activate(context);

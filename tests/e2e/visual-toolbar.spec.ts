@@ -126,7 +126,7 @@ test('raw blocks are editable in place and change only their source', async ({ p
 });
 
 test('arrow down on the last line of a raw block moves into the next block', async ({ page }) => {
-  // the demo's first raw block (imports, set and show rules) ends in the `)` of #set-margin-note-defaults
+  // the demo's first raw block (imports, set and show rules) ends in `#show link: underline`
   await visual(page).locator('.typst-visual__raw-block').first().locator('.cm-line').last().click();
   await page.keyboard.press('Home');
   await page.keyboard.press('ArrowDown');

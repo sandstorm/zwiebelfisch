@@ -91,7 +91,7 @@ describe('demo examples', () => {
     ]);
     const main = files['/main.typ'] as string;
     // the drafting import on top (a comment's import is not repeated), room for notes on the right, one long page
-    expect(main).toMatch(/^#import "@preview\/drafting:0\.2\.2": margin-note, set-margin-note-defaults\n#set page\(width: 16cm, height: auto, margin: \(right: 4cm, rest: 1\.5cm\)\)\n/);
+    expect(main).toMatch(/^#import "@preview\/drafting:0\.2\.2": margin-note\n#set page\(width: 16cm, height: auto, margin: \(right: 4cm, rest: 1\.5cm\)\)\n/);
     expect(main.match(/^= .*$/gm)).toEqual(['= Typst in five minutes']);
     expect(main).not.toContain('#pagebreak');
     expect(main.match(/#margin-note\[/g)).toHaveLength(1);
