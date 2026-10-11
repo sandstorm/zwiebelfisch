@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 // Tests for typst-editor.ts: project files dragged from the file panel into the Visual and the Source editor, made into
-// Typst by the built-in extensions' drop edit providers (which one wins), with their imports (preview mocked: no worker
-// in jsdom).
+// Typst by the built-in extensions' drop edit providers (which one wins), with their imports; files from the computer
+// dropped there, uploaded first (preview mocked: no worker in jsdom). Files to upload are Node's (jsdom's have no
+// `arrayBuffer`).
+import { File as NodeFile } from 'node:buffer';
 import { EditorView as CodeMirrorView } from '@codemirror/view';
 import { EditorView as ProseMirrorView } from '@tiptap/pm/view';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -50,6 +52,15 @@ function rowDrop(path: string): Event {
   Object.defineProperty(event, 'dataTransfer', { value: { files: [], types: [PROJECT_PATH_TYPE], getData: (type: string) => (type === PROJECT_PATH_TYPE ? path : ''), dropEffect: 'none' } });
   return event;
 }
+
+/** A drop of `files` from the computer, as the browser sends it. */
+function desktopDrop(...files: NodeFile[]): Event {
+  const event = new Event('drop', { bubbles: true, cancelable: true });
+  Object.defineProperty(event, 'dataTransfer', { value: { files, types: ['Files'], getData: () => '', dropEffect: 'none' } });
+  return event;
+}
+
+const file = (name: string, content: string | Uint8Array = BYTES) => new NodeFile([content], name);
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -111,5 +122,66 @@ describe('a project file dropped into the Visual editor', () => {
     host.querySelector('[contenteditable]')!.dispatchEvent(rowDrop('/img/logo.png'));
     expect(editor.source).toBe('One\n\n#image("img/logo.png")\n\nTwo\n');
     expect(onFilesChange.mock.calls.map(([change]) => change.path)).toEqual(['/main.typ']);
+  });
+});
+
+describe('a file from the computer dropped into the text', () => {
+  const SPREADSHEET = { '/budget.ic': BYTES, '/budget.ic.gen.typ': FILES['/data/budget.ic.gen.typ'] };
+
+  /** A widget showing `main` in `viewType` (a spreadsheet with its Typst file at the top), and every file change it reports. */
+  function setup(viewType: string, main: string, options: Partial<Parameters<typeof createTypstEditor>[1]> = {}) {
+    const host = document.body.appendChild(document.createElement('div'));
+    const changes: string[] = [];
+    const editor = createTypstEditor(host, { viewType, files: { ...FILES, ...SPREADSHEET, '/main.typ': main }, onFilesChange: (change) => changes.push(change.path), ...options });
+    return { host, editor, changes };
+  }
+
+  it('is uploaded and becomes what the drop edit providers make of it, in the Source editor at the drop position', async () => {
+    const { host, editor, changes } = setup(SOURCE_EDITOR, 'One\nTwo\n');
+    const view = CodeMirrorView.findFromDOM(host.querySelector<HTMLElement>('.cm-editor')!)!;
+    vi.spyOn(CodeMirrorView.prototype, 'posAtCoords').mockReturnValue(4);
+    const drop = desktopDrop(file('flow.mmd', 'flowchart LR\n'), file('sketch.drawio.png'), file('cat.png', new Uint8Array([2])), file('budget.ic'), file('todo.txt', 'n'));
+    view.contentDOM.dispatchEvent(drop);
+    expect(drop.defaultPrevented).toBe(true);
+    await vi.waitFor(() => expect(changes).toContain('/todo.txt'));
+    // the spreadsheet is there already (same content): its file is used, not uploaded once more
+    expect(changes.filter((path) => path !== '/main.typ')).toEqual(['/flow.mmd', '/sketch.drawio.png', '/cat.png', '/todo.txt']);
+    expect(new TextDecoder().decode(editor.files['/flow.mmd'] as Uint8Array)).toBe('flowchart LR\n');
+    expect(editor.source).toBe(
+      '#import "budget.ic.gen.typ": sheets\n#import "@preview/merman:0.4.0": mermaid\n\nOne\n' +
+        '#figure(mermaid(read("flow.mmd"), width: 100%), caption: [ ])#figure(image("sketch.drawio.png"), caption: [ ])#image("cat.png")#figure(sheets.Budget, caption: [ ])Two\n',
+    );
+    editor.dispose();
+  });
+
+  it('is uploaded and inserted in the Visual editor after the paragraph it was dropped on, in order', async () => {
+    const { host, editor, changes } = setup(VISUAL_EDITOR, 'One\n\nTwo\n');
+    vi.spyOn(ProseMirrorView.prototype, 'posAtCoords').mockReturnValue({ pos: 2, inside: -1 });
+    const outside: Event[] = [];
+    host.addEventListener('drop', (event) => outside.push(event));
+    const drop = desktopDrop(file('a.png'), file('budget.ic'), file('flow.mmd', 'flowchart LR\n'));
+    host.querySelector('[contenteditable]')!.dispatchEvent(drop);
+    expect(drop.defaultPrevented).toBe(true);
+    // not uploaded once more by the file panel
+    expect(outside).toEqual([]);
+    await vi.waitFor(() => expect(editor.source).toContain('mermaid(read'));
+    expect(changes.filter((path) => path !== '/main.typ')).toEqual(['/a.png', '/flow.mmd']);
+    expect(editor.source).toBe(
+      '#import "@preview/merman:0.4.0": mermaid\n#import "budget.ic.gen.typ": sheets\n\nOne\n\n#image("a.png")\n\n#figure(sheets.Budget, caption: [ ])\n\n' +
+        '#figure(mermaid(read("flow.mmd"), width: 100%), caption: [ ])\n\nTwo\n',
+    );
+    editor.dispose();
+  });
+
+  it('a second file of the same name and other content gets a free name; a refused upload is an error message', async () => {
+    const { host, editor } = setup(SOURCE_EDITOR, 'Text\n', { allowFileChange: (change) => change.path !== '/secret.png' });
+    const view = CodeMirrorView.findFromDOM(host.querySelector<HTMLElement>('.cm-editor')!)!;
+    vi.spyOn(CodeMirrorView.prototype, 'posAtCoords').mockReturnValue(5);
+    view.contentDOM.dispatchEvent(desktopDrop(file('budget.ic', new Uint8Array([3])), file('secret.png')));
+    await vi.waitFor(() => expect(host.textContent).toContain('This change is not allowed here.'));
+    expect(Object.keys(editor.files)).toContain('/budget-2.ic');
+    // no Typst file of that spreadsheet yet: no sheet to show
+    expect(editor.source).toBe('Text\n');
+    editor.dispose();
   });
 });

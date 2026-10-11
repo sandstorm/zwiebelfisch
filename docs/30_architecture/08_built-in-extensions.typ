@@ -35,7 +35,7 @@ extensions/<name>/
   [`math`], [typing math: the closing `$` of `$…$` makes the raw box the parser makes for it (inline; display math `$ … $` alone in a paragraph: a block); Insert → "Inline math" (`$$`) and "Display math" (`$  $`), the cursor inside the new box's code (`editRawBox`)], [Tiptap extension (an input rule), toolbar],
   [`headings`], [headings, their numbers, `headings.toggleNumbering`; search group "Headings"], [node, text style provider, search provider],
   [`tables`], [`#table(..)`, "Insert table", the table bar], [node, toolbar],
-  [`images`], [image boxes, "Insert image", image files dropped or pasted (uploaded), image files read-only (`images.editor`); a project image dropped into the text becomes `#image("…")`], [node, toolbar, custom editor, drop edit provider],
+  [`images`], [image boxes, "Insert image", image files pasted (uploaded), image files read-only (`images.editor`); an image dropped into the text (from the file panel or the desktop) becomes `#image("…")`], [node, toolbar, custom editor, drop edit provider],
   [`figures`], [`#figure(..)` around any `figureBody` node, caption as rich text; search group "Figures" (by caption, tables and listings too)], [nodes, search provider],
   [`renderedBoxes`], [raw boxes drawn as snippets from the preview], [box renderer],
   [`outline`], [`#outline(..)` as a box, "Table of contents"], [node, toolbar],

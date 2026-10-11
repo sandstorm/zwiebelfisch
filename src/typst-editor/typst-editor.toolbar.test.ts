@@ -241,15 +241,14 @@ describe('Visual editor toolbar', () => {
     });
   });
 
-  describe('image files dropped or pasted into the text', () => {
+  describe('image files pasted into the text', () => {
     const png = (name: string) => new File([new Uint8Array([1])], name, { type: 'image/png' });
     const pdf = new File(['%PDF'], 'paper.pdf', { type: 'application/pdf' });
 
-    /** A drop / paste event carrying `files`, as the browser sends it. */
-    function fileEvent(type: 'drop' | 'paste', files: File[]) {
-      const event = new Event(type, { bubbles: true, cancelable: true });
-      const data = { files, types: ['Files'], getData: () => '' };
-      Object.defineProperty(event, type === 'drop' ? 'dataTransfer' : 'clipboardData', { value: data });
+    /** A paste event carrying `files`, as the browser sends it. */
+    function paste(files: File[]) {
+      const event = new Event('paste', { bubbles: true, cancelable: true });
+      Object.defineProperty(event, 'clipboardData', { value: { files, types: ['Files'], getData: () => '' } });
       return event;
     }
 
@@ -261,12 +260,11 @@ describe('Visual editor toolbar', () => {
       return { options, uploaded };
     }
 
-
     it('a pasted image is uploaded and inserted after the paragraph with the cursor', async () => {
       const { options, uploaded } = withUploads();
       const { doc, view, parent } = setup('One\n\nTwo\n', options);
       view.reveal(SourceRange.of({ from: 1, to: 1 }));
-      const event = fileEvent('paste', [png('shot.png')]);
+      const event = paste([png('shot.png')]);
       parent.querySelector('[contenteditable]')!.dispatchEvent(event);
       expect(event.defaultPrevented).toBe(true);
       await settle();
@@ -274,35 +272,20 @@ describe('Visual editor toolbar', () => {
       expect(doc.text).toBe('One\n\n#image("shot.png")\n\nTwo\n');
     });
 
-    it('dropped images are uploaded and inserted in order, instead of the browser opening the file', async () => {
-      const { options, uploaded } = withUploads();
-      const { doc, view, parent } = setup('One\n', options);
-      view.reveal(SourceRange.of({ from: 3, to: 3 }));
-      const outside: Event[] = [];
-      parent.addEventListener('drop', (e) => outside.push(e));
-      const event = fileEvent('drop', [png('a.png'), pdf, png('b.png')]);
-      parent.querySelector('[contenteditable]')!.dispatchEvent(event);
-      expect(event.defaultPrevented).toBe(true);
-      expect(outside).toEqual([]); // not uploaded once more by the file panel
-      await settle();
-      expect(uploaded).toEqual(['a.png', 'b.png']);
-      expect(doc.text).toBe('One\n\n#image("a.png")\n\n#image("b.png")\n');
-    });
-
-    it('leaves drops without images alone (the file panel may take them)', () => {
+    it('leaves pastes without images alone', () => {
       const { options } = withUploads();
       const { doc, parent } = setup('One\n', options);
-      const event = fileEvent('drop', [pdf]);
+      const event = paste([pdf]);
       parent.querySelector('[contenteditable]')!.dispatchEvent(event);
       expect(event.defaultPrevented).toBe(false);
       expect(doc.text).toBe('One\n');
     });
 
-    it('tells why a dropped image was not added (an error message)', async () => {
+    it('tells why a pasted image was not added (an error message)', async () => {
       const { options } = withUploads('This change is not allowed here.');
       const prompts = new TestPrompts();
       const { doc, parent } = setup('One\n', { ...options, prompts });
-      parent.querySelector('[contenteditable]')!.dispatchEvent(fileEvent('drop', [png('a.png')]));
+      parent.querySelector('[contenteditable]')!.dispatchEvent(paste([png('a.png')]));
       await settle();
       expect(prompts.told).toEqual(['This change is not allowed here.']);
       expect(doc.text).toBe('One\n');

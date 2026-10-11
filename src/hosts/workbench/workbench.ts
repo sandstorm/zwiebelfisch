@@ -3,6 +3,7 @@ import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter
 import type { ProjectPath } from '../../core/paths/paths';
 import type { FileChange, Project } from '../../core/project/project';
 import type { SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
+import { uploadChanges, uploadTarget } from '../../core/uploads/uploads';
 import type { User } from '../../core/user/user';
 import { type Commands, CommandsHost } from '../commands/commands';
 import { type LanguageContribution, type Languages, LanguagesHost } from '../languages/languages';
@@ -13,7 +14,7 @@ import { VisualEditorHost, type VisualEditorContributions } from '../visual-edit
 import { type TextEditorSelectionChangeEvent, type WindowApi, WindowHost } from '../window/window';
 import { type ConfigurationProperty, type Settings, type Workspace, WorkspaceHost } from '../workspace/workspace';
 import { ColorScheme } from './color-scheme/color-scheme';
-import { type DropEdits, sourceEditorDrops, visualEditorDrops } from './document-drops/document-drops';
+import { type DocumentDrops, sourceEditorDrops, visualEditorDrops } from './document-drops/document-drops';
 import { EditorTabs } from './editor-tabs/editor-tabs';
 import { ExtensionHost } from './extension-host/extension-host';
 import { FileDrops } from './file-drops/file-drops';
@@ -153,8 +154,9 @@ export interface Workbench {
    */
   registerEditorFrame(frame: { top: HTMLElement; bottom: HTMLElement }): Disposable;
   /**
-   * Files from the computer dropped anywhere on the widget (and not taken by an editor inside, such as the Visual editor
-   * taking images). The widget never lets the browser open a dropped file; it shows the drop hint while anyone listens.
+   * Files from the computer dropped anywhere on the widget and not taken by an editor inside (the Typst editors upload
+   * the files dropped into their text themselves). The widget never lets the browser open a dropped file; it shows the
+   * drop hint while anyone listens.
    */
   readonly onDidDropFiles: Event<File[]>;
 
@@ -629,7 +631,8 @@ export class WorkbenchHost implements Workbench {
    * code of every raw box (in its file); a raw box's picture follows the primary one, the Visual editor's text the one
    * under the pointer (`#visualEditor`). The raw boxes' code takes the shared CodeMirror extensions, too. A project
    * file (a row of the file panel) dropped into a Visual or Source editor becomes what the drop edit providers
-   * (`languages.registerDocumentDropEditProvider`) make of it, inserted where it was dropped.
+   * (`languages.registerDocumentDropEditProvider`) make of it, inserted where it was dropped; so does a file from the
+   * computer, once uploaded (`#upload`): the providers know only project files.
    * Copy and paste in every Source editor run the paste edit providers of Typst (in the Visual editor: `#visualEditor`).
    */
   #extendEditors(): void {
@@ -641,12 +644,32 @@ export class WorkbenchHost implements Workbench {
     );
     this.#visualEditor.registerRawBoxCodeMirrorExtension((editor) => links(editor.document));
     this.#visualEditor.registerRawBoxCodeMirrorExtension(() => this.#sourceEditors.createSharedCodeMirrorExtension());
-    const edits: DropEdits = (document, offset, file) => {
-      const path = this.project.pathOf(document);
-      return path ? this.#languages.provideDocumentDropEdit({ path, languageId: 'typst', text: document.text }, offset, file) : null;
+    const drops: DocumentDrops = {
+      edit: (document, offset, file) => {
+        const path = this.project.pathOf(document);
+        return path ? this.#languages.provideDocumentDropEdit({ path, languageId: 'typst', text: document.text }, offset, file) : null;
+      },
+      upload: (files) => this.#upload(files),
     };
-    this.#visualEditor.registerTiptapExtension(({ document }) => visualEditorDrops(document, edits));
-    this.#sourceEditors.registerCodeMirrorExtension(({ document }) => sourceEditorDrops(document, edits));
+    this.#visualEditor.registerTiptapExtension(({ document }) => visualEditorDrops(document, drops));
+    this.#sourceEditors.registerCodeMirrorExtension(({ document }) => sourceEditorDrops(document, drops));
+  }
+
+  /**
+   * Adds `files` from the computer to the project (`workspace.applyEdit`), each at the top under its name, or under the
+   * first free one of `name-2.ext`, … unless a file of that name has the same content (`uploadTarget`); a refusal is
+   * an error message. Resolves to the files' paths in the project, without the refused ones.
+   */
+  async #upload(files: File[]): Promise<ProjectPath[]> {
+    const paths: ProjectPath[] = [];
+    for (const change of await uploadChanges(files)) {
+      if (change.kind !== 'create') continue;
+      const path = uploadTarget(change.path, change.content, (candidate) => this.project.content(candidate));
+      const problem = this.project.has(path) ? null : await this.#workspace.applyEdit({ ...change, path });
+      if (problem) void this.window.showErrorMessage(problem);
+      else paths.push(path);
+    }
+    return paths;
   }
 
   /** `data-theme` from the setting `workbench.theme` (none: as the page), and the scheme the colors resolve to now. */

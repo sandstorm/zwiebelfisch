@@ -233,7 +233,7 @@ languages.registerKnownImport({ language: 'typst' }, { name: 'mermaid', module: 
 
 == Drop edits <extensions-workbench-api-drop-edits>
 
-A project file dragged from the file panel into a Typst file (the Visual or the Source editor) becomes what an extension makes of it (VS Code's `DocumentDropEditProvider`):
+A project file dragged from the file panel, or a file from the desktop once uploaded, dropped into a Typst file (the Visual or the Source editor) becomes what an extension makes of it (VS Code's `DocumentDropEditProvider`):
 
 ```ts
 languages.registerDocumentDropEditProvider({ language: 'typst' }, {
@@ -250,7 +250,7 @@ languages.registerDocumentDropEditProvider({ language: 'typst' }, {
 - `document` is the text dropped into (`path`, `languageId`, `text`); `position` the source offset of the drop; `file` the dropped `ProjectPath`.
 - The providers are asked by `priority` (default 100, higher first; equal: registration order); the first edit wins. Diagrams (110) win over images for `.drawio.png`, spreadsheets (110) over the Typst files' `#include` for `.ic.gen.typ`.
 - `insertText` goes in at the drop position: the Source editor inserts it there, the Visual editor reads it as Typst (inline content into the text, blocks after the block there, as `insertTypst`). `additionalEdit` (changes of `text` before the drop, in its coordinates) goes into the same transaction: one undo step.
-- Files from the desktop are not drops of project files: images upload them themselves, the rest goes to `workbench.onDidDropFiles`.
+- Files from the desktop dropped into the text are uploaded first (to the top of the project; a file of the same name and content is used as it is, another content gets the next free name, `name-2.ext`, …), then each is a drop of that project file, the first where they were dropped, the others after it. A refused upload is an error message. Files dropped elsewhere on the widget go to `workbench.onDidDropFiles`.
 
 == Copy and paste <extensions-workbench-api-paste>
 

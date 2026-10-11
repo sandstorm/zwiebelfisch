@@ -299,7 +299,7 @@ The file panel shows the project as a tree: folders first, the main file marked,
   - another Typst file: `#include "…"`, its content in place, the way a book's main file pulls in its chapters (not the file itself);
   - anything else: nothing.
 
-  The Visual editor puts a figure after the paragraph you drop it on, the Source editor right where you drop it. One undo takes back the figure and its import.
+  The Visual editor puts a figure after the paragraph you drop it on, the Source editor right where you drop it. One undo takes back the figure and its import. Files dropped from the desktop into the text are uploaded to the project's top folder first, then become the same.
 - Keyboard: arrows, Home / End, Enter, F2 (rename), Delete, Shift+F10 (menu).
 - The main file and its folder cannot be renamed, moved or deleted.
 - Fonts: as on typst.app, every `.ttf`, `.otf`, `.ttc` or `.otc` file in the project, in any folder, is a font the document can use (`#set text(font: "Gabarito")`), besides Typst's default fonts. Upload it like any other file (collaborators and GitLab get it like an image); a change or a deletion applies at the next compile.

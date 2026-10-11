@@ -40,7 +40,7 @@ Colors and dark mode in detail: @guide-embedding-theming.
 #table(
   columns: 3,
   [Setting], [Values (default)], [Effect],
-  [`files.panel`], [`'auto'`, `'show'`, `'hide'` (`'auto'`)], [`auto`: the file panel is open while the project has more than one file, else collapsed to its button (until someone opens or closes it). `show`: open. `hide`: no panel at all; dropped files are ignored.],
+  [`files.panel`], [`'auto'`, `'show'`, `'hide'` (`'auto'`)], [`auto`: the file panel is open while the project has more than one file, else collapsed to its button (until someone opens or closes it). `show`: open. `hide`: no panel at all; files dropped beside the text are ignored.],
 )
 
 === Writing <guide-configuration-writing>
