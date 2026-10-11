@@ -18,8 +18,10 @@ test('without ?example the demo opens the simple example: a page with a spreadsh
   await fileRow(page, 'diagrams').click();
   await expect(fileRow(page, 'diagrams/editor.drawio.png')).toBeVisible();
   await expect(fileRow(page, 'diagrams/workflow.mmd')).toBeVisible();
-  // the comment's card, and the custom styles in the text style menu
+  // the comment's card (opened from its marker), and the custom styles in the text style menu
+  await page.getByTestId('typst-visual').locator('[data-testid="typst-note-marker"][title^="Ada:"]').click();
   await expect(page.getByTestId('typst-note-card').locator('.typst-comments__card-author')).toHaveText(['Ada', 'Grace']);
+  await page.keyboard.press('Escape');
   const menu = page.locator('[role=toolbar][aria-label=Formatting]:visible').getByRole('combobox', { name: 'Text style' });
   await expect(menu.locator('optgroup[label="Block styles"] option')).toHaveText(['Tip']);
   await expect(menu.locator('optgroup[label="Inline styles"] option')).toHaveText(['Key']);
