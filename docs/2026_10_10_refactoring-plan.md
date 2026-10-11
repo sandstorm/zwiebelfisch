@@ -145,7 +145,9 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    concepts, how they connect. Cross-references as Typst labels; code top comments point to the
    chapter (`See docs/architecture/workbench.typ`, enforced by the top-comments check). The demo
    gets a "Documentation" example loading `docs/**/*.typ` (edit live, nothing saved);
-   `mise run docs:pdf` (Typst CLI pinned via mise), `docs:html` later. Diagrams: draw.io
+   `mise run docs:pdf` and `mise run docs:html` (Typst CLI pinned via mise; HTML export is
+   experimental: `--features html --format html`, one HTML file for now); the template keeps paged-only
+   styling behind `context target()` so both outputs work. Diagrams: draw.io
    (`.drawio.png`, edited with our own diagrams extension) or mermaid / d2 later; ASCII in raw
    blocks until then. Working notes (dated plans, research, code review, findings, `docs/todo/`)
    are distilled into the Typst docs, then deleted (this plan last, when the refactoring is done);
