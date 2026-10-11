@@ -184,6 +184,7 @@ The 100-page document took #values.Runs.at(4).at(4) ms (median, @tab:runs).
 
 - A `.drawio.png` is a PNG with a diagrams.net diagram inside: Typst shows it as an image, the editor opens it in diagrams.net.
 - File panel → New → "New diagram…" creates one and opens it.
+- Insert → Insert diagram (or `/diagram`): creates one (proposed: `diagrams/diagram.drawio.png` next to the file), inserts `#figure(image("…"), caption: [ ])` and opens it.
 - A selected image showing a diagram has "Edit diagram".
 - Every change is saved into the file as you draw; there is no Save button.
 

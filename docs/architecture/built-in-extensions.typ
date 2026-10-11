@@ -25,7 +25,7 @@ extensions/<name>/
   [`fileNavigation`], ["← previous file" / "next file →" in reading order], [editor frame],
   [`spreadsheets`], [`.ic` in IronCalc (`spreadsheets.editor`); every edit also writes `name.ic.gen.typ`; "New spreadsheet…"; "Insert spreadsheet" (a new one with a starter table, as a figure)], [custom editor, `file/newFile`, toolbar],
   [`textFiles`], [csv, json, yaml, toml, xml, bib, txt, md in CodeMirror (`textFiles.editor`)], [custom editor],
-  [`diagrams`], [`.drawio.png` in diagrams.net's embedded editor (`diagrams.editor`, priority 110); "New diagram…"; "Edit diagram"; setting `diagrams.editorUrl`], [custom editor, box action],
+  [`diagrams`], [`.drawio.png` in diagrams.net's embedded editor (`diagrams.editor`, priority 110); "New diagram…"; "Insert diagram" (a new one as a figure); "Edit diagram"; setting `diagrams.editorUrl`], [custom editor, toolbar, box action],
   [`diagnostics`], [errors underlined (Source), highlighted (Visual), counted in the status bar], [source view, highlights, status bar],
   [`sourceControl`], ["Save to _label_…" over the registered source controls (`sourceControl.commit`); their status bar entries and resource states (file decorations)], [`editor/title`, status bar, file decorations],
   [`markup`], [strong, emphasis, links, inline code, code blocks, quotes], [nodes, marks, toolbar],
@@ -59,7 +59,7 @@ Not built in: `collaboration(options)`. The host adds it with its connection. It
   [source controls], [`collaboration` (GitLab rooms)], [`sourceControl`],
   [PDF export options], [`comments`], [`pdfExport`],
   [text style menu], [`headings`, `styles`], [the Visual view toolbar, `slashCommands`],
-  [Insert menu], [`images`, `tables`, `spreadsheets`, `outline`, `markup`, `pageLayout`, `labels`], [the Visual view toolbar, `slashCommands`],
+  [Insert menu], [`images`, `diagrams`, `tables`, `spreadsheets`, `outline`, `markup`, `pageLayout`, `labels`], [the Visual view toolbar, `slashCommands`],
   [node group `figureBody`], [`images`, `tables`], [`figures`],
   [menu `file/newFile`], [`files`, `spreadsheets`, `diagrams`], [`files`],
 )
