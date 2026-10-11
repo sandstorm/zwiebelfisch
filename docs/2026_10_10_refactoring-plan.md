@@ -195,6 +195,9 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    SVG and says why (`window.showErrorMessage` or a status bar item). "Edit diagram" on an image box opens the
    source. Pending: the research agent's bundle sizes / licenses / headless Mermaid, one extension
    or two — then the user's go.
+   **No generic diagnostics for now** (user, 2026-10-11): diagnostics stay Typst-only (the preview's
+   compile results). VS Code's `languages.createDiagnosticCollection` model is the path if other
+   file kinds need error display later.
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Rules wave also does:** core `onChange` → `onDidChange: Event` + `Disposable` everywhere
    (`Project`, `TypstDocument`, …) (user: yes).
