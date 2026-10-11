@@ -9,7 +9,7 @@ import { calculateImportChange } from '../../../core/typst-syntax/typst-syntax';
 import { scanStyles, type FoundStyle, type TypstStyle } from './discover';
 import { STYLES_FILE } from './new-style';
 
-/** What the Visual view needs to know about the project's styles (see `TypstStyleIndex`). */
+/** What the Visual editor needs to know about the project's styles (see `TypstStyleIndex`). */
 export interface ProjectStyles {
   /** The project's styles, by file (in the project's order) and then in source order. */
   styles(): readonly TypstStyle[];

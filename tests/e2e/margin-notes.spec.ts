@@ -20,9 +20,9 @@ const cards = (page: Page) => page.getByTestId('typst-note-card');
 const noteField = (page: Page, i = 0) => cards(page).nth(i).getByRole('textbox', { name: /^(Comment|Reply)$/ });
 const messageTexts = (page: Page, i = 0) => cards(page).nth(i).locator('.typst-comments__card-text');
 const highlight = (page: Page) => visual(page).locator('mark.typst-comments__range');
-/** "Comment" in the Visual view's formatting toolbar. */
+/** "Comment" in the Visual editor's formatting toolbar. */
 const commentButton = (page: Page) => page.getByRole('toolbar', { name: 'Formatting' }).getByRole('button', { name: 'Comment' });
-/** "Comment" in the tab bar (its menu `editor/title`), shown with the Source view. */
+/** "Comment" in the tab bar (its menu `editor/title`), shown with the Source editor. */
 const sourceCommentButton = (page: Page) => page.getByRole('toolbar', { name: 'Editor actions' }).getByRole('button', { name: 'Comment' });
 /** The demo signs as "Demo user" (Local mode), with the local date. */
 const today = (() => {
@@ -197,7 +197,7 @@ test('on a narrow pane, a card pops up below its highlight', async ({ page }) =>
   expect(card!.y).toBeGreaterThanOrEqual(mark!.y + mark!.height);
 });
 
-test('in the Source view, Comment (in the tab bar) wraps the selection and puts the cursor into the note', async ({ page }) => {
+test('in the Source editor, Comment (in the tab bar) wraps the selection and puts the cursor into the note', async ({ page }) => {
   await expect(sourceCommentButton(page)).toBeHidden();
   await page.getByRole('tab', { name: 'Source' }).click();
   const source = page.getByTestId('typst-source');

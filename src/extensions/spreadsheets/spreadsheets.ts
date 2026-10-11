@@ -1,6 +1,6 @@
 // The spreadsheets extension: a spreadsheet file (`.ic`) shown and edited in IronCalc's workbook UI
 // (SpreadsheetView, the custom editor `spreadsheets.editor`); every edit saves the file and the Typst file documents
-// import. "New spreadsheet…" in the file panel's "New"; "Insert spreadsheet" in the Visual view's Insert menu.
+// import. "New spreadsheet…" in the file panel's "New"; "Insert spreadsheet" in the Visual editor's Insert menu.
 // Entry of extensions/spreadsheets/. See docs/10_guide/02_features.typ.
 // Why the extension stores the Typst file: documents import `name.ic.gen.typ`, never the workbook, so the Typst
 // side needs no spreadsheet engine; the view only reports edits, the extension decides what the project gets.
@@ -9,7 +9,7 @@ import { ProjectPath } from '../../core/paths/paths';
 import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
 import css from './spreadsheets.css?inline';
 import { typstPath } from './model/typst-file';
-import { insertSpreadsheet } from './visual-view/insert-spreadsheet';
+import { insertSpreadsheet } from './visual-editor/insert-spreadsheet';
 import { SpreadsheetView } from './workbench/spreadsheet-view';
 import type { WorkbookEdit } from './workbench/workbook';
 
@@ -22,14 +22,14 @@ const NEW_SPREADSHEET = 'spreadsheets.newSpreadsheet';
 /**
  * Spreadsheet files (`*.ic`) in the editing area: IronCalc's workbook UI; every edit is stored with its Typst file.
  * "New spreadsheet…" (`spreadsheets.newSpreadsheet`) in the menu `file/newFile` asks for a name and opens the new one;
- * "Insert spreadsheet" in the Visual view's Insert menu also puts its table into the text as a figure.
+ * "Insert spreadsheet" in the Visual editor's Insert menu also puts its table into the text as a figure.
  */
 export function spreadsheets(): TypstExtension {
   return {
     id: 'spreadsheets',
     contributes: { commands: [{ command: NEW_SPREADSHEET, title: 'New spreadsheet…', category: 'Spreadsheets' }] },
     activate(context) {
-      const { commands, window, workbench, visualView, subscriptions } = context;
+      const { commands, window, workbench, visualEditor, subscriptions } = context;
       subscriptions.push(
         workbench.registerStyleSheet(css),
         window.registerCustomEditorProvider(
@@ -45,7 +45,7 @@ export function spreadsheets(): TypstExtension {
         ),
         commands.registerCommand(NEW_SPREADSHEET, (resource?: ProjectPath) => newSpreadsheet(context, resource)),
         workbench.registerMenuItem('file/newFile', { command: NEW_SPREADSHEET, title: 'New spreadsheet…', group: 'navigation', order: 15 }),
-        visualView.registerToolbarItem(insertSpreadsheet(context, async (fileName) => (await import('./workbench/workbook')).newWorkbook(fileName))),
+        visualEditor.registerToolbarItem(insertSpreadsheet(context, async (fileName) => (await import('./workbench/workbook')).newWorkbook(fileName))),
       );
     },
   };

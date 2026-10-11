@@ -27,7 +27,7 @@ export interface FormattedValue {
 
 /**
  * `value` as text, JSON-like: strings quoted, plain objects, arrays, maps and sets opened `limits.depth` levels deep;
- * class instances by their class and their public fields and getters (`DocumentEditor { viewType: "visualView.editor",
+ * class instances by their class and their public fields and getters (`DocumentEditor { viewType: "visualEditor",
  * selection: { from: 0, to: 3 } }`), methods left out; elements as `<svg>`, functions as `ƒ name`, bytes by their length.
  */
 export function formatValue(value: unknown, limits: Limits = FULL): FormattedValue {

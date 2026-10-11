@@ -1,4 +1,4 @@
-// Test helpers that compose the widget's built-in extensions: the Visual view's schema with the built-ins, project
+// Test helpers that compose the widget's built-in extensions: the Visual editor's schema with the built-ins, project
 // with it, a view with the built-ins activated with a test's extension context (project files, preview snippets,
 // document links, prompts); and the helpers such tests use on a parsed document (apply an edit, find text, check
 // the position map exhaustively). Entry of testing/: test-only, so it may import any
@@ -26,7 +26,7 @@ import { renderedBoxes } from '../extensions/rendered-boxes/rendered-boxes';
 import type { Commands } from '../hosts/commands/commands';
 import type { Languages } from '../hosts/languages/languages';
 import type { PreviewContributions } from '../hosts/preview/preview';
-import { VisualView, VisualViewHost, type ContributionContext, type VisualViewContribution } from '../hosts/visual-view/visual-view';
+import { VisualEditor, VisualEditorHost, type ContributionContext, type VisualEditorContribution } from '../hosts/visual-editor/visual-editor';
 import type { InputBoxOptions, MessageItem, QuickPickItem, QuickPickOptions, WindowApi } from '../hosts/window/window';
 import type { Workbench } from '../hosts/workbench/workbench';
 import type { Workspace } from '../hosts/workspace/workspace';
@@ -38,11 +38,11 @@ export function schemaWith(options: TestViewOptions = {}): Schema {
 }
 
 /** The schema of a view with only `list` (built-in constructs or features), activated in that order. */
-export function schemaOf(list: readonly VisualViewContribution[]): Schema {
+export function schemaOf(list: readonly VisualEditorContribution[]): Schema {
   return schemaFrom(activate(list));
 }
 
-function schemaFrom(registry: VisualViewHost): Schema {
+function schemaFrom(registry: VisualEditorHost): Schema {
   const { nodes, marks } = registry.contributed();
   return createSchema(nodes, marks);
 }
@@ -66,7 +66,7 @@ export interface TestViewOptions {
   /** What the user answers when the view asks (link URL, image, alt text, …); default: every question cancelled. */
   prompts?: TestPrompts;
   /** The contributions of the extension under test, activated after the built-ins (as the widget's features are). */
-  contributions?: readonly VisualViewContribution[];
+  contributions?: readonly VisualEditorContribution[];
 }
 
 /**
@@ -112,14 +112,14 @@ export const schema: Schema = schemaWith();
 /** `source` parsed with `withSchema` (default: the built-ins' `schema`). */
 export const parseTypst = (source: string, withSchema: Schema = schema): Node => parseTypstWith(source, withSchema);
 
-/** A Visual view of `document` with the built-ins configured from `options`. */
-export function createVisualView(parent: HTMLElement, document: TypstDocument, options: TestViewOptions = {}): VisualView {
-  return new VisualView(parent, document, contributions(options));
+/** A Visual editor of `document` with the built-ins configured from `options`. */
+export function createVisualEditor(parent: HTMLElement, document: TypstDocument, options: TestViewOptions = {}): VisualEditor {
+  return new VisualEditor(parent, document, contributions(options));
 }
 
 /**
  * A Tiptap editor of `source` with the built-ins configured from `options` (their schema and commands, without the
- * Visual view's node views and toolbar): for tests of a construct's commands. Needs a DOM (jsdom).
+ * Visual editor's node views and toolbar): for tests of a construct's commands. Needs a DOM (jsdom).
  */
 export function createEditor(source: string, options: TestViewOptions = {}): Editor {
   const { nodes, marks } = contributions(options).contributed();
@@ -130,22 +130,22 @@ export function createEditor(source: string, options: TestViewOptions = {}): Edi
 }
 
 /** The built-ins and `options.contributions`, activated. */
-function contributions(options: TestViewOptions): VisualViewHost {
+function contributions(options: TestViewOptions): VisualEditorHost {
   return activate([...builtins(), ...(options.contributions ?? [])], options);
 }
 
 /**
- * `contributions` activated in order, for their Visual-view contributions, with an extension context made from
+ * `contributions` activated in order, for their Visual-editor contributions, with an extension context made from
  * `options`: a project of `TEST_DOCUMENT_PATH` and `options.files`, a preview with `options.preview`'s snippets,
  * `options.links`, the window's `options.prompts` (default: every question cancelled) and `options.applyEdit`.
- * Registrations other than the Visual view's (style sheets, commands, custom editors, search providers) are accepted
+ * Registrations other than the Visual editor's (style sheets, commands, custom editors, search providers) are accepted
  * and ignored.
  */
-function activate(contributions: readonly VisualViewContribution[], options: TestViewOptions = {}): VisualViewHost {
-  const visualView = new VisualViewHost();
-  const context = { visualView, subscriptions: [], ...testContext(options) };
+function activate(contributions: readonly VisualEditorContribution[], options: TestViewOptions = {}): VisualEditorHost {
+  const visualEditor = new VisualEditorHost();
+  const context = { visualEditor, subscriptions: [], ...testContext(options) };
   for (const contribution of contributions) contribution.activate(context as unknown as ContributionContext);
-  return visualView;
+  return visualEditor;
 }
 
 /** The parts of an extension context the built-ins use, made from `options`. */
@@ -204,8 +204,8 @@ if (typeof URL.createObjectURL !== 'function') {
   Object.assign(URL, { createObjectURL: () => `blob:test/${next++}`, revokeObjectURL: () => {} });
 }
 
-/** The built-ins' Visual-view contributions, in the order the widget's built-in extensions activate them. */
-export function builtins(): VisualViewContribution[] {
+/** The built-ins' Visual-editor contributions, in the order the widget's built-in extensions activate them. */
+export function builtins(): VisualEditorContribution[] {
   return [markup(), headings(), tables(), images(), figures(), renderedBoxes(), outline(), pageLayout(), lists(), alignment()];
 }
 

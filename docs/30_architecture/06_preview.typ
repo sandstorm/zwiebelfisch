@@ -42,4 +42,4 @@
 - `exportPdf(entry)` and `snippet` wait for running compiles, so they see the newest text. `entry.sources` replace or add text files for that export only.
 - Toolbar items are placed by `group` + `order` (`navigation` first, then groups by name). Their `update()` runs at most once per frame. PDF options apply by `priority` (default 100, higher first).
 
-Contribution points in detail: @extensions-source-view-and-preview.
+Contribution points in detail: @extensions-source-editor-and-preview.

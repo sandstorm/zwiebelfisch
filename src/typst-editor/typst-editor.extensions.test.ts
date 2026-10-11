@@ -9,8 +9,8 @@ import type { PageClick, PdfExportOption, PreviewContext, PreviewToolbarItem } f
 import type { Disposable } from '../core/disposable/disposable';
 import { EventEmitter } from '../core/event-emitter/event-emitter';
 import type { TypstExtension } from '../hosts/workbench/workbench';
-import { SOURCE_VIEW_TYPE } from '../hosts/source-view/source-view';
-import { VISUAL_VIEW_TYPE } from '../hosts/visual-view/visual-view';
+import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
+import { VISUAL_EDITOR } from '../hosts/visual-editor/visual-editor';
 import type { SourceControl, SourceControlState } from '../hosts/scm/scm';
 import * as Y from 'yjs';
 import { collaboration } from '../extensions/collaboration/collaboration';
@@ -91,7 +91,7 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
 function setup(options: TypstEditorOptions) {
   const host = document.createElement('div');
   document.body.append(host);
-  const editor = createTypstEditor(host, { viewType: SOURCE_VIEW_TYPE, ...options });
+  const editor = createTypstEditor(host, { viewType: SOURCE_EDITOR, ...options });
   const source = () => {
     const visible = [...host.querySelectorAll<HTMLElement>('.typst-editor__pane')].find((pane) => !pane.hidden && pane.querySelector('.cm-editor'));
     return EditorView.findFromDOM(visible!.querySelector<HTMLElement>('.cm-editor')!)!;
@@ -178,7 +178,7 @@ describe('diagrams', () => {
     const { host } = setup({ source: '= Hi', settings: { 'files.panel': 'show' } });
     const panel = host.querySelector<HTMLElement>('[data-testid=typst-files]')!;
     panel.querySelector<HTMLButtonElement>('button[aria-label=New]')!.click();
-    // the Visual view's toolbar menus are role=menu too
+    // the Visual editor's toolbar menus are role=menu too
     const entries = [...host.querySelectorAll('[role=menu] [role=menuitem]')].filter((entry) => !entry.closest('.typst-toolbar'));
     expect(entries.map((entry) => entry.textContent)).toEqual([
       'New file…',
@@ -193,7 +193,7 @@ describe('diagrams', () => {
     URL.createObjectURL = vi.fn(() => 'blob:1');
     URL.revokeObjectURL = vi.fn();
     const { host, editor } = setup({
-      viewType: VISUAL_VIEW_TYPE,
+      viewType: VISUAL_EDITOR,
       source: '#image("img/flow.drawio.png")\n\n#image("img/logo.png")\n',
       files: { '/img/flow.drawio.png': diagram(), '/img/logo.png': new Uint8Array([1]) },
     });
@@ -222,7 +222,7 @@ describe('the built-in extensions', () => {
     expect(Object.keys(hidden.editor.files)).toEqual(['/main.typ']);
   });
 
-  it('adds a comment on Ctrl/Cmd+Alt+M in the Source view, before the editor sees the key', () => {
+  it('adds a comment on Ctrl/Cmd+Alt+M in the Source editor, before the editor sees the key', () => {
     const { editor, source } = setup({ source: 'Hi\n' });
     const view = source();
     view.dispatch({ selection: { anchor: 2 } });
@@ -230,7 +230,7 @@ describe('the built-in extensions', () => {
     expect(editor.source).toContain('Hi#margin-note[]');
   });
 
-  it('counts the diagnostics in the status bar and underlines them in the Source view', async () => {
+  it('counts the diagnostics in the status bar and underlines them in the Source editor', async () => {
     const { host, preview } = setup({ source: '= Hi' });
     preview.compiled([{ severity: 'error', message: 'oops', hints: [], path: ProjectPath.of('/main.typ'), from: SourceOffset.of(0), to: SourceOffset.of(1) }]);
     const status = host.querySelector('.typst-editor__status-bar [data-testid=typst-status]')!;
@@ -238,8 +238,8 @@ describe('the built-in extensions', () => {
     await vi.waitFor(() => expect(host.querySelector('.cm-lintRange-error')).not.toBeNull());
   });
 
-  it('marks the diagnostics in the Visual view, message and hints as tooltip, also in views made later', () => {
-    const { host, editor, preview } = setup({ viewType: VISUAL_VIEW_TYPE, source: 'Hello world.\n', files: { '/a.typ': '#foo\n\nText.\n' } });
+  it('marks the diagnostics in the Visual editor, message and hints as tooltip, also in views made later', () => {
+    const { host, editor, preview } = setup({ viewType: VISUAL_EDITOR, source: 'Hello world.\n', files: { '/a.typ': '#foo\n\nText.\n' } });
     preview.compiled([
       { severity: 'error', message: 'unknown variable: foo', hints: ['did you mean bar?'], path: ProjectPath.of('/main.typ'), from: SourceOffset.of(6), to: SourceOffset.of(11) },
       // in raw code (a block atom), of a file whose views do not exist yet
@@ -366,7 +366,7 @@ describe('the built-in extensions', () => {
     expect(preview.cleared).toBe(3);
   });
 
-  it('shades the selection of the shown file in the preview (Source or Visual view) once it rests, and clears it when collapsed', () => {
+  it('shades the selection of the shown file in the preview (Source or Visual editor) once it rests, and clears it when collapsed', () => {
     vi.useFakeTimers();
     try {
       const { preview, source } = setup({ source: '= Hi\n\nText more\n', settings: { 'previewSync.followCursor': false } });
@@ -378,8 +378,8 @@ describe('the built-in extensions', () => {
       expect(preview.shaded).toEqual([['/main.typ', [{ from: 6, to: 10 }]]]);
       source().dispatch({ selection: { anchor: 7 } });
       expect(preview.shaded.at(-1)).toEqual(['/main.typ', []]);
-      // the Visual view: its selection in the source
-      const { preview: visual, host } = setup({ viewType: VISUAL_VIEW_TYPE, source: 'Hello world.\n' });
+      // the Visual editor: its selection in the source
+      const { preview: visual, host } = setup({ viewType: VISUAL_EDITOR, source: 'Hello world.\n' });
       const tiptap = (host.querySelector('.ProseMirror') as HTMLElement & { editor: { commands: { setTextSelection(range: { from: number; to: number }): void } } }).editor;
       tiptap.commands.setTextSelection({ from: 7, to: 12 });
       vi.advanceTimersByTime(100);

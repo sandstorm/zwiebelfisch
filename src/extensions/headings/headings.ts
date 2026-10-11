@@ -1,12 +1,12 @@
-// The headings extension: `= Title` headings in the Visual view (Heading 1–3 in the text style menu), and their
+// The headings extension: `= Title` headings in the Visual editor (Heading 1–3 in the text style menu), and their
 // numbers as the document's `#set heading(numbering: ..)` rules make Typst number them (with the command
 // `headings.toggleNumbering`), and every Typst file's headings in search everywhere. See
 // docs/30_architecture/08_built-in-extensions.typ. Why one extension: the numbers are a view of the headings, nothing without them.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './headings.css?inline';
 import { calculateNumberingToggle } from './model/heading-numbering';
-import { HEADING, HEADING_STYLES } from './visual-view/visual-view';
-import { HeadingNumbers } from './visual-view/heading-numbers';
+import { HEADING, HEADING_STYLES } from './visual-editor/visual-editor';
+import { HeadingNumbers } from './visual-editor/heading-numbers';
 import { headingSearch } from './workbench/heading-search';
 
 /** Switches heading numbering in the active editor's document on or off (no button: for hosts, menus and search everywhere). */
@@ -20,7 +20,7 @@ export function headings(): TypstExtension {
   return {
     id: 'headings',
     contributes: { commands: [{ command: TOGGLE_NUMBERING, title: 'Number headings on / off', category: 'Headings' }] },
-    activate({ project, commands, window, workbench, visualView, subscriptions }) {
+    activate({ project, commands, window, workbench, visualEditor, subscriptions }) {
       subscriptions.push(workbench.registerStyleSheet(css), window.registerSearchProvider(headingSearch(project, workbench)));
       subscriptions.push(
         commands.registerCommand(TOGGLE_NUMBERING, () => {
@@ -29,9 +29,9 @@ export function headings(): TypstExtension {
         }),
       );
       subscriptions.push(
-        visualView.registerNode(HEADING),
-        visualView.registerTextStyleProvider(HEADING_STYLES),
-        visualView.registerTiptapExtension(() => HeadingNumbers),
+        visualEditor.registerNode(HEADING),
+        visualEditor.registerTextStyleProvider(HEADING_STYLES),
+        visualEditor.registerTiptapExtension(() => HeadingNumbers),
       );
     },
   };

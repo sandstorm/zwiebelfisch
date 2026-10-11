@@ -1,7 +1,7 @@
 // Typst syntax several extensions need, read from the Lezer syntax tree (codemirror-lang-typst): the file paths a
 // text names (`#import`, `#include`, `image(…)`, `read(…)`, …), the reading order they give the project's files, the
 // change that imports a name (calculateImportChange), the names imports bind (importedNames), and reading syntax
-// nodes, calls, string literals and embeddable code as the Visual view's specs do (children, calleeName,
+// nodes, calls, string literals and embeddable code as the Visual editor's specs do (children, calleeName,
 // callArguments, namedArgument, trailingContent, hasOnlyArguments, withHash, isClosedContent, decodeString, quote,
 // isEmbeddable, markupSource: plain functions over Lezer nodes, public for every extension). Entry of
 // core/typst-syntax/. See docs/30_architecture/02_core.typ.
@@ -129,7 +129,7 @@ function itemParts(item: SyntaxNode): { path: SyntaxNode; binding: SyntaxNode } 
   return path && binding ? { path, binding } : null;
 }
 
-// Reading Typst syntax (Lezer nodes of codemirror-lang-typst's grammar) as the Visual view's parse functions and
+// Reading Typst syntax (Lezer nodes of codemirror-lang-typst's grammar) as the Visual editor's parse functions and
 // toTypst functions need it. A call is the grammar's `FuncCall`: its callee (`Ident`, or `FieldAccess` for
 // `table.header`) and its `Args`, which hold `(`, the arguments (`Named` for `key: value`), separators, `)` and the
 // trailing content blocks `[..]`.

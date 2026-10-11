@@ -1,5 +1,5 @@
 /**
- * The source-anchored conversion between Typst text and the Visual view's
+ * The source-anchored conversion between Typst text and the Visual editor's
  * ProseMirror document: the framework, which knows no Typst construct beyond
  * paragraphs, text and raw Typst. Every other construct comes in as a spec
  * (`DocumentNodeSpec` / `TypstMarkSpec`, below): its Tiptap extension, which
@@ -19,15 +19,15 @@
  *                                         with the smallest possible replacement
  *
  * Hence `serializeToTypst(parseTypst(text)) === text` for any input, and an edit in the
- * Visual view changes only the source of what it touched. Syntax no spec
+ * Visual editor changes only the source of what it touched. Syntax no spec
  * models becomes `rawBlock` / `rawInline` atoms holding their verbatim source.
  * Labels (`<key>`) after a heading, or ending a block's run, are that block's
  * `label` attribute (see `labels.ts`).
  *
  * The minimum schema is the conversion's own: document, paragraph, text, hard
  * and soft breaks, raw Typst (block and inline), the `typstSource` mark, history
- * and drop / gap cursors. The Visual view host's document model, a module of its
- * own: the host builds on it, the specs contributed to the Visual view are
+ * and drop / gap cursors. The Visual editor host's document model, a module of its
+ * own: the host builds on it, the specs contributed to the Visual editor are
  * written against its types, and it is tested without a view.
  * Entry of hosts/prosemirror-typst/. See docs/30_architecture/03_prosemirror-typst.typ.
  */
@@ -159,7 +159,7 @@ export interface TypstNodeConversion {
 }
 
 /**
- * A node type of the Visual view's document: its Tiptap extension (`Node.create(..)`: schema, attributes, node view,
+ * A node type of the Visual editor's document: its Tiptap extension (`Node.create(..)`: schema, attributes, node view,
  * commands, keymap, priority; omitted if another spec's extension defines it too) and its Typst. A second spec of
  * the same name extends the first (another `toTypst`, more parse rules).
  */
@@ -192,7 +192,7 @@ export interface TypstMarkConversion {
   readonly onDidChange?: Event<void>;
 }
 
-/** A mark type of the Visual view's document (bold, a link, a margin note's range): its Tiptap extension and its Typst. */
+/** A mark type of the Visual editor's document (bold, a link, a margin note's range): its Tiptap extension and its Typst. */
 export interface TypstMarkSpec {
   readonly name: string;
   /** `Mark.create(..)`; omitted if another spec's extension defines it too. */

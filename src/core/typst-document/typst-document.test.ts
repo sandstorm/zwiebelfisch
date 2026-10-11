@@ -17,8 +17,8 @@ describe('TypstDocument', () => {
     const listener = vi.fn();
     doc.onDidChange(listener);
     const changes = [{ ...SourceRange.of({ from: 1, to: 2 }), insert: 'X' }];
-    doc.change(changes, 'source-view');
-    expect(listener).toHaveBeenCalledWith({ contentChanges: changes, origin: 'source-view' });
+    doc.change(changes, 'source-editor');
+    expect(listener).toHaveBeenCalledWith({ contentChanges: changes, origin: 'source-editor' });
   });
 
   it('stops notifying after unsubscribing', () => {

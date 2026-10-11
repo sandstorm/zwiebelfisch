@@ -1,3 +1,0 @@
-/* The Source view host's styles: the briefly highlighted range of a reveal. Added by the workbench
-   (SourceViewHost.styleSheet). See source-view.ts. */
-.typst-source__jump { background: var(--te-jump); border-radius: 2px; }

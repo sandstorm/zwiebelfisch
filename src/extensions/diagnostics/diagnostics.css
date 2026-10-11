@@ -1,4 +1,4 @@
-/* The diagnostics extension's styles: The status bar's diagnostics summary and messages, and diagnostics underlined in the Visual view.
+/* The diagnostics extension's styles: The status bar's diagnostics summary and messages, and diagnostics underlined in the Visual editor.
    Registered by diagnostics.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 .typst-diagnostics__status {
   flex: 1;
@@ -69,7 +69,7 @@
   text-decoration: underline dotted;
   cursor: pointer;
 }
-/* ---- diagnostics in the Visual view (tooltip: message + hints) ---- */
+/* ---- diagnostics in the Visual editor (tooltip: message + hints) ---- */
 .typst-diagnostics__highlight {
   text-decoration: underline wavy var(--te-warning);
   text-decoration-skip-ink: none;

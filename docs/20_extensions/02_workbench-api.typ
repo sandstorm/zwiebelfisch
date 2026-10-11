@@ -111,8 +111,8 @@ The built-in providers:
   [Labels], [`@`], [30], [`labels`: labels of headings, equations and the rest, not of figures or bibliography keys; opens at the label],
   [Figures], [`@`], [31], [`figures`: figures, tables and listings by caption (and label); opens at the figure],
   [Commands], [`>`], [40], [the workbench: `contributes.commands`; runs],
-  [Styles], [`*`], [50], [`styles`: applies to the selection (Visual view: as its menu; Source view: `#name[selection]`), with the import],
-  [Comments], [`!`], [60], [`comments`: notes by first message and authors; opens at the note, in the Visual view its card],
+  [Styles], [`*`], [50], [`styles`: applies to the selection (Visual editor: as its menu; Source editor: `#name[selection]`), with the import],
+  [Comments], [`!`], [60], [`comments`: notes by first message and authors; opens at the note, in the Visual editor its card],
   [Settings], [`:`], [70], [the workbench: booleans switch, `enum` settings ask for the value (for this widget, until the host sets the settings again)],
   [Text], [`%`], [90], [`textFiles`: lines of every Typst and text file holding the query (from 2 characters, at most 200); opens with the match selected],
 )
@@ -124,7 +124,7 @@ The built-in providers:
   [Member], [What],
   [`window.registerStatusBarItem(element, { alignment, priority })`], [`'left'` or `'right'`; within a side the higher `priority` further left],
   [`workbench.registerSidePanel(id, { label, icon, side, order })`], [A side panel and its rail button on `side` (`'left'`, the default, or `'right'`, after the built-in `preview`); returns `SidePanel` (`body`, `setDefault(open)`, `setAvailable`, `dismiss`). One panel per side shows; ids are unique across both sides],
-  [`workbench.registerEditorFrame({ top, bottom })`], [Elements before and after the shown file's editor: inside a Typst view's content, scrolling with it; around any other editor's panel; one frame at a time],
+  [`workbench.registerEditorFrame({ top, bottom })`], [Elements before and after the shown file's editor: inside a Typst editor's content, scrolling with it; around any other editor's panel; one frame at a time],
   [`workbench.registerStyleSheet(css)`], [Your CSS where the widget renders (inside a `<typst-editor>`'s shadow root too); use the `--te-*` color tokens],
   [`workbench.ownerDocument`], [The document to create elements in],
   [`workbench.user`], [Who works here, as the host said; `undefined`: anonymous],
@@ -136,8 +136,8 @@ The built-in providers:
 - *Read* through `project`: `files()`, `paths()`, `has(path)`, `document(path)` (a Typst file's `TypstDocument`, `.text`), `content(path)`, `onDidChangeFile` (an `Event<FileChange>`).
 - *Change* through `workspace.applyEdit(change)`, never `project.apply`. It checks the project's rules, then the host's `allowFileChange`, and resolves to the reason it was refused, or `null`.
 - `FileChange`: `{ kind: 'create' | 'update', path, content }`, `{ kind: 'delete', path }`, `{ kind: 'rename', path, from }`.
-- *Show* with `workbench.open(path, { selection?, viewType? })` (`selection`: a `SourceRange` of a Typst file; `viewType`: the editor, e.g. `SOURCE_VIEW_TYPE`, `'sourceView.editor'`); `window.activeFile` and `window.onDidChangeActiveFile` say what is shown.
-- *The Typst editor*: `window.activeTextEditor` (`document`, `viewType`: the view it was shown in last, `VISUAL_VIEW_TYPE` or `SOURCE_VIEW_TYPE`, `selection` as a `SourceRange`, `revealRange(range)`; `null` while another kind of file is shown) and `window.onDidChangeTextEditorSelection`.
+- *Show* with `workbench.open(path, { selection?, viewType? })` (`selection`: a `SourceRange` of a Typst file; `viewType`: the editor, e.g. `SOURCE_EDITOR`, `'sourceEditor'`); `window.activeFile` and `window.onDidChangeActiveFile` say what is shown.
+- *The Typst editor*: `window.activeTextEditor` (`document`, `viewType`: the view it was shown in last, `VISUAL_EDITOR` or `SOURCE_EDITOR`, `selection` as a `SourceRange`, `revealRange(range)`; `null` while another kind of file is shown) and `window.onDidChangeTextEditorSelection`.
 - *Dropped files*: `workbench.onDidDropFiles` gets the `File[]` dropped on the widget that no view took.
 
 == Custom editors <extensions-workbench-api-custom-editors>
@@ -167,8 +167,8 @@ The built-in ones, to beat or to leave alone:
 #table(
   columns: 3,
   [View type], [Pattern], [Priority],
-  [`visualView.editor` (`VISUAL_VIEW_TYPE`)], [`*.typ`: the Visual view, retained], [default (registered first)],
-  [`sourceView.editor` (`SOURCE_VIEW_TYPE`)], [`*.typ`: the Source view, retained], [default],
+  [`visualEditor` (`VISUAL_EDITOR`)], [`*.typ`: the Visual editor, retained], [default (registered first)],
+  [`sourceEditor` (`SOURCE_EDITOR`)], [`*.typ`: the Source editor, retained], [default],
   [`diagrams.editor`], [`*.drawio.png`], [110],
   [`spreadsheets.editor`], [`*.ic`], [default],
   [`images.preview`], [`*.{png,jpg,jpeg,gif,svg,webp}`], [default],

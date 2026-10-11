@@ -1,4 +1,4 @@
-// End-to-end tests (Playwright, against the demo build): outlines and code blocks in the Visual view.
+// End-to-end tests (Playwright, against the demo build): outlines and code blocks in the Visual editor.
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
 import { caretAtEnd, chooseFrom, selectionBar, selectText } from './visual-helpers';

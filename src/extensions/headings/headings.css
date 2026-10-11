@@ -1,4 +1,4 @@
-/* The headings extension's styles: Headings in the Visual view, and their numbers in a gutter right of the text.
+/* The headings extension's styles: Headings in the Visual editor, and their numbers in a gutter right of the text.
    Registered by headings.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 h1.typst-headings__heading { font-size: 1.6em; margin: 0.6em 0 0.3em; }
 h2.typst-headings__heading { font-size: 1.3em; margin: 0.6em 0 0.3em; }

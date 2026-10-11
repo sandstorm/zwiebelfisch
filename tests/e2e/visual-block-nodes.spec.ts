@@ -1,4 +1,4 @@
-// End-to-end tests (Playwright, against the demo build): block nodes in the Visual view (page break, rule, task lists).
+// End-to-end tests (Playwright, against the demo build): block nodes in the Visual editor (page break, rule, task lists).
 import { test } from './fixtures';
 import { expect, type Page } from '@playwright/test';
 import { caretAtEnd, chooseFrom, tableBar } from './visual-helpers';

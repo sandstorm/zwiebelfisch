@@ -11,7 +11,7 @@ export interface FoundNote {
   readonly at: SourceOffset;
 }
 
-/** Every margin note of `text` (as the Visual view knows them) with at least one message, in source order. */
+/** Every margin note of `text` (as the Visual editor knows them) with at least one message, in source order. */
 export function findNotes(text: string): FoundNote[] {
   const notes: FoundNote[] = [];
   typstParser.parse(text).iterate({

@@ -1,10 +1,10 @@
-// Helpers for the Visual view specs: locators and source text.
+// Helpers for the Visual editor specs: locators and source text.
 import { expect, type Locator, type Page } from '@playwright/test';
 
-/** The Visual view's editing area. */
+/** The Visual editor's editing area. */
 export const visual = (page: Page) => page.getByTestId('typst-visual');
 
-/** The Visual view's formatting toolbar. */
+/** The Visual editor's formatting toolbar. */
 export const toolbar = (page: Page) => page.getByRole('toolbar', { name: 'Formatting' });
 
 /** Opens the toolbar menu `menu` ("Insert", "Align") of the toolbar `bar` and chooses `item` in it. */
@@ -32,7 +32,7 @@ export async function compiled(page: Page): Promise<void> {
 }
 
 /**
- * Clicks into `block` (a paragraph or heading of the Visual view) and puts
+ * Clicks into `block` (a paragraph or heading of the Visual editor) and puts
  * the caret at its very end.
  *
  * Not `End`: that goes to the end of the visual line, and the demo's first
@@ -84,7 +84,7 @@ export async function selectText(block: Locator, text: string): Promise<void> {
 }
 
 /**
- * Clicks `target` in the Visual view and waits out ProseMirror's 20 ms focus
+ * Clicks `target` in the Visual editor and waits out ProseMirror's 20 ms focus
  * timer (see `caretAtEnd`), so caret keys pressed next (Home, arrows) are not
  * undone halfway through by ProseMirror writing its own selection back.
  */

@@ -11,7 +11,7 @@ test('renders the Typst document in the preview', async ({ page }) => {
   await expect(firstPage).toBeVisible();
 });
 
-test('updates the preview while typing in the source view', async ({ page }) => {
+test('updates the preview while typing in the source editor', async ({ page }) => {
   await page.getByRole('tab', { name: 'Source' }).click();
   const preview = page.getByTestId('typst-preview');
   await expect(preview.locator('.typst-preview__page')).toHaveCount(1);
@@ -30,7 +30,7 @@ test('clicking text in the preview selects its source', async ({ page }) => {
   await expect(page.getByTestId('typst-source').locator('.typst-source__jump')).toHaveText('Hello Typst');
 });
 
-test('clicking text in the preview selects exactly that text in the visual view', async ({ page }) => {
+test('clicking text in the preview selects exactly that text in the visual editor', async ({ page }) => {
   await expect(page.getByTestId('typst-visual')).toBeVisible();
   const svg = page.getByTestId('typst-preview').locator('.typst-preview__page svg').first();
   await expect(svg).toBeVisible();
@@ -65,7 +65,7 @@ test('clicking the error count selects the first error in the source', async ({ 
   await source.locator('.cm-content').click();
   await page.keyboard.press('ControlOrMeta+End');
   await page.keyboard.type('\n#unknown');
-  // from the Visual view, which does not mark errors, the count switches to the Source view
+  // from the Visual editor, which does not mark errors, the count switches to the Source editor
   await page.getByRole('tab', { name: 'Visual' }).click();
   await expect(source).toBeHidden();
   await page.getByTestId('typst-status').getByRole('button', { name: /1 error/ }).click();
@@ -73,7 +73,7 @@ test('clicking the error count selects the first error in the source', async ({ 
   await expect(source.locator('.typst-source__jump')).toHaveText('unknown');
 });
 
-test('hovering the error count lists the message; the Visual view marks the error inline', async ({ page }) => {
+test('hovering the error count lists the message; the Visual editor marks the error inline', async ({ page }) => {
   const source = page.getByTestId('typst-source');
   await page.getByRole('tab', { name: 'Source' }).click();
   await source.locator('.cm-content').click();

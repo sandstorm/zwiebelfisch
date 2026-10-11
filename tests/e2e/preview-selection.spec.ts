@@ -1,4 +1,4 @@
-// End-to-end tests (Playwright, against the demo build): the selection of the Source and Visual views shaded in the
+// End-to-end tests (Playwright, against the demo build): the selection of the Source and Visual editors shaded in the
 // preview (preview-sync's `previewSync.highlightSelection`, the preview's `setSelectionHighlight`).
 import { expect, type Page } from '@playwright/test';
 import { test, clickGlyph } from './fixtures';
@@ -7,7 +7,7 @@ import { compiled, visual } from './visual-helpers';
 const preview = (page: Page) => page.getByTestId('typst-preview');
 const shading = (page: Page) => preview(page).locator('.typst-preview__selection');
 
-/** Selects line `line` (from 1) of the main file in the Source view: the demo's line 4 is its heading. */
+/** Selects line `line` (from 1) of the main file in the Source editor: the demo's line 4 is its heading. */
 async function selectLine(page: Page, line: number) {
   await page.getByTestId('typst-source').locator('.cm-content').click();
   await page.keyboard.press('ControlOrMeta+Home');
@@ -21,7 +21,7 @@ test.beforeEach(async ({ page }) => {
   await compiled(page);
 });
 
-test('shades the text selected in the Source view, and nothing once the selection collapses', async ({ page }) => {
+test('shades the text selected in the Source editor, and nothing once the selection collapses', async ({ page }) => {
   await page.getByRole('tab', { name: 'Source' }).click();
   await selectLine(page, 4);
   await expect(shading(page).first()).toBeVisible();
@@ -33,7 +33,7 @@ test('shades the text selected in the Source view, and nothing once the selectio
   await expect(shading(page)).toHaveCount(0);
 });
 
-test('shades the text selected in the Visual view, and nothing once the selection collapses', async ({ page }) => {
+test('shades the text selected in the Visual editor, and nothing once the selection collapses', async ({ page }) => {
   await page.getByRole('tab', { name: 'Visual' }).click();
   const heading = visual(page).locator('h1, h2').first();
   await heading.selectText();

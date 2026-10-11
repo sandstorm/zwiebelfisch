@@ -1,4 +1,4 @@
-// linkExtension: the document links of a CodeMirror editor's text (a Source view, a raw box's code, a text file), like IntelliJ:
+// linkExtension: the document links of a CodeMirror editor's text (a Source editor, a raw box's code, a text file), like IntelliJ:
 // marked, Mod+click / Alt+Enter follow them, the hover offers "Open …" or what the link's command does. See
 // languages.ts.
 import type { EditorState, Extension, Range } from '@codemirror/state';

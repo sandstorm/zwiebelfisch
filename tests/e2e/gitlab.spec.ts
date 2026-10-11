@@ -19,7 +19,7 @@ async function join(browser: Browser, baseURL: string, room: string, user: strin
   return page;
 }
 
-/** Text in the Visual view of the file shown (each opened file keeps a hidden Visual view of its own). */
+/** Text in the Visual editor of the file shown (each opened file keeps a hidden Visual editor of its own). */
 const visualText = (page: Page, text: string) => page.getByTestId('typst-visual').getByText(text);
 
 async function users(browser: Browser, baseURL: string, project: string) {
@@ -54,7 +54,7 @@ test('the branch is loaded with its files, images from the repository', async ({
 
 test('Save to GitLab commits, and everyone in the room is told', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
-  // the main file's Visual view is all raw boxes, so Ann types in Source
+  // the main file's Visual editor is all raw boxes, so Ann types in Source
   await ann.getByRole('tab', { name: 'Source' }).click();
   await ann.getByTestId('typst-source').locator('.cm-line', { hasText: '#pagebreak()' }).click();
   await ann.keyboard.press('End');

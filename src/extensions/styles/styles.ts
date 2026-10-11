@@ -1,18 +1,18 @@
-// The styles extension: the block and inline styles a project declares (`/// @style …`), in the Visual view.
+// The styles extension: the block and inline styles a project declares (`/// @style …`), in the Visual editor.
 // Entry of extensions/styles/. Why an extension: a style is a Typst function declared in some file of the project,
 // never a registry of the editor's own, so one read model (TypstStyleIndex) follows the whole
-// project, and every document's Visual view shows the styles' calls as styled text and applies them from the text
+// project, and every document's Visual editor shows the styles' calls as styled text and applies them from the text
 // style menu, importing a style where it is used. See docs/10_guide/02_features.typ.
-import { SOURCE_VIEW_TYPE } from '../../hosts/source-view/source-view';
+import { SOURCE_EDITOR } from '../../hosts/source-editor/source-editor';
 import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
 import css from './styles.css?inline';
 import { calculateNewStyleChange } from './model/new-style';
 import { TypstStyleIndex } from './model/typst-style-index';
-import { customStyles, styleApplier } from './visual-view/visual-view';
+import { customStyles, styleApplier } from './visual-editor/visual-editor';
 import { styleSearch } from './workbench/style-search';
 
 /**
- * Keeps the project's custom styles indexed; every document's Visual view shows and applies
+ * Keeps the project's custom styles indexed; every document's Visual editor shows and applies
  * them and offers "New style…"; search everywhere applies them too (in either view).
  */
 export function styles(): TypstExtension {
@@ -51,5 +51,5 @@ async function addNewStyle(index: TypstStyleIndex, { project, window, workspace,
     const problem = await workspace.applyEdit({ kind: 'create', path, content: change.insert });
     if (problem !== null) return void window.showErrorMessage(`The style was not added: ${problem}`);
   }
-  workbench.open(path, { selection: definition, viewType: SOURCE_VIEW_TYPE });
+  workbench.open(path, { selection: definition, viewType: SOURCE_EDITOR });
 }

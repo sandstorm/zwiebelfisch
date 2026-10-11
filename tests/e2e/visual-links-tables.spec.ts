@@ -1,4 +1,4 @@
-// End-to-end tests (Playwright, against the demo build): links and tables in the Visual view.
+// End-to-end tests (Playwright, against the demo build): links and tables in the Visual editor.
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
 import { caretAtEnd, chooseFrom, compiled, freshSelectedLine, selectionBar, sourceText, tableBar, toolbar, visual } from './visual-helpers';

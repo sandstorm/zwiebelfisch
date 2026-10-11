@@ -65,7 +65,7 @@ export const ProjectPath = {
   },
 
   /**
-   * Whether `path` is Typst source (`.typ`): text, one TypstDocument each, edited in the Visual / Source views. Every
+   * Whether `path` is Typst source (`.typ`): text, one TypstDocument each, edited in the Visual / Source editors. Every
    * other file is bytes (or text) the project only stores; extensions decide by name what they do with it.
    */
   isTypst(path: ProjectPath): boolean {

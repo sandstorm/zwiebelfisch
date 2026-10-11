@@ -1,5 +1,5 @@
 // Small building blocks the chapters import with `#import "../helpers.typ": …`.
-// `/// @style …` declares a function as a custom style: the Visual view's text style menu offers it.
+// `/// @style …` declares a function as a custom style: the Visual editor's text style menu offers it.
 
 #import "template.typ": accent
 

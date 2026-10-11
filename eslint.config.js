@@ -50,7 +50,7 @@ export const layers = [
   },
   {
     importers: '^src/extensions/([^/]+)/model/',
-    forbidden: '^src/extensions/$1/(visual-view|source-view|preview|workbench)/',
+    forbidden: '^src/extensions/$1/(visual-editor|source-editor|preview|workbench)/',
     message: 'model/ imports no view folder of its extension (the views import the model, not the other way).',
   },
   {

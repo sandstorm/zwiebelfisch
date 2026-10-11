@@ -76,7 +76,7 @@ test("a double click's highlights go with the next edit or once the selection mo
   const jump = page.getByTestId('typst-source').locator('.typst-source__jump');
   const heading = pages(page).locator('svg use').first();
 
-  // Source view: an edit removes the outline in the preview and the highlight in the source
+  // Source editor: an edit removes the outline in the preview and the highlight in the source
   await page.getByRole('tab', { name: 'Source' }).click();
   await clickGlyph(heading, { clickCount: 2 });
   await expect(jump).toHaveText('Hello Typst');
@@ -86,7 +86,7 @@ test("a double click's highlights go with the next edit or once the selection mo
   await expect(jump).toHaveCount(0);
   await expect(outline).toHaveCount(0);
 
-  // Visual view: moving the selection away removes the outline; so does an edit
+  // Visual editor: moving the selection away removes the outline; so does an edit
   await page.getByRole('tab', { name: 'Visual' }).click();
   await clickGlyph(heading, { clickCount: 2 });
   await expect(outline).toBeVisible();

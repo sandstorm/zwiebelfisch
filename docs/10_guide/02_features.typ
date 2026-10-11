@@ -13,8 +13,8 @@ The examples are from a report measuring compile times, as in the demo's advance
 
 Each side has a rail (`▣`): a button per panel. The left side holds the files, the right side the preview (and, where a host adds them, panels such as the devtools). One panel per side shows; clicking the shown one's button hides that side and the editing view takes its room. What you picked is remembered for the browser session.
 
-- *Visual view:* edits the Typst like a word processor. What it does not model (math, function calls) shows as a raw box: its code while focused, its compiled look otherwise.
-- *Source view:* the Typst text: highlighting, line numbers, search.
+- *Visual editor:* edits the Typst like a word processor. What it does not model (math, function calls) shows as a raw box: its code while focused, its compiled look otherwise.
+- *Source editor:* the Typst text: highlighting, line numbers, search.
 - Both views edit the same text; cursor and undo history survive a tab switch. Untouched source stays byte for byte.
 - *Preview:* updates while typing. On errors it dims and keeps the last good pages. Hidden, it keeps compiling: errors, raw boxes' pictures and shading stay current.
 - Click in the preview: the editing view selects that text, opening its file if needed.
@@ -22,7 +22,7 @@ Each side has a rail (`▣`): a button per panel. The left side holds the files,
 - Selected text (either view) is shaded in the preview, too; a caret shades nothing.
 - Zoom (fit width by default, 25–400 %) and "page n / total" in the preview toolbar.
 - Drag a side's separator (or use the arrow keys on it): the left side sets the file panel's width, the right side gets 20–80 % of the width.
-- *Errors and warnings:* underlined in both views, the message as tooltip. The status bar counts them and jumps to them.
+- *Errors and warnings:* underlined in both editors, the message as tooltip. The status bar counts them and jumps to them.
 
 == Search everywhere <guide-features-search>
 
@@ -109,7 +109,7 @@ Typst compiles #term[incrementally]: it redoes only what an edit touches.
 ```
 
 - Text style menu: Heading 1–3. Or type `# `, `## `, `### ` at a line start.
-- Numbers appear in the Visual view as `#set heading(numbering: ..)` makes Typst number them.
+- Numbers appear in the Visual editor as `#set heading(numbering: ..)` makes Typst number them.
 - Insert → Table of contents: `#outline()`, shown compiled.
 
 == Images and figures <guide-features-images>
@@ -148,7 +148,7 @@ All runs used the machine in @fig:setup.
 - Insert → Insert table: a 2 × 2 `#table`.
 - The bar over a table: Add row, Add column, Delete row, Delete column, Header row.
 - `columns` is a number or an array of column sizes (`(auto, 2fr, 1fr)`, any size per entry). Add column adds an entry: `1fr` if every column is a fraction, else `auto`; Delete column removes its entry.
-- A table the Visual view cannot edit as one stays a raw box: `columns` as a variable or computed (`cols`, `(..xs, 1fr)`), merged cells (`table.cell`), lines, a footer, comments between cells.
+- A table the Visual editor cannot edit as one stays a raw box: `columns` as a variable or computed (`cols`, `(..xs, 1fr)`), merged cells (`table.cell`), lines, a footer, comments between cells.
 - Tables computed in a spreadsheet: @guide-features-spreadsheets.
 
 == Labels and cross-references <guide-features-labels>
@@ -177,7 +177,7 @@ All runs used the machine in @fig:setup.
 
 - Page break: Ctrl+Enter (⌘↩ on Mac), or Insert → Insert page break.
 - Horizontal rule: Insert → Horizontal rule.
-- Page size and margins are Typst code (`#set page(..)`): a raw box in the Visual view, or the Source view.
+- Page size and margins are Typst code (`#set page(..)`): a raw box in the Visual editor, or the Source editor.
 
 == Spreadsheets <guide-features-spreadsheets>
 
@@ -244,7 +244,7 @@ flowchart LR
 
 - Insert → Insert Mermaid diagram (or `/mermaid`): creates a `.mmd` with a starter flowchart (proposed: `diagrams/diagram.mmd` next to the file), inserts its figure with the import and opens it in the text editor.
 - A box reading a `.mmd` file has "Edit diagram": it opens the file.
-- In the Visual view an inline diagram is a code block (language `mermaid`); the preview shows the diagram.
+- In the Visual editor an inline diagram is a code block (language `mermaid`); the preview shows the diagram.
 - The first use downloads 3.3 MB (then cached by the browser) and adds about a second to the compile; a diagram edit takes about 0.3 s.
 
 == Files <guide-features-files>
@@ -264,8 +264,8 @@ How each file opens (a file with several editors gets a tab each, like Visual / 
 #table(
   columns: 2,
   [File], [Opens in],
-  [`.typ`], [Its own Visual and Source views.],
-  [Images], [A preview; drag into the Visual view to insert.],
+  [`.typ`], [Its own Visual and Source editors.],
+  [Images], [A preview; drag into the Visual editor to insert.],
   [`.csv`, `.json`, `.yaml`, `.yml`, `.toml`, `.xml`, `.bib`, `.txt`, `.md`, `.mmd`], [A plain text editor, saved as you type.],
   [`.ic`], [A spreadsheet (@guide-features-spreadsheets).],
   [`.drawio.png`], [The diagram editor (@guide-features-diagrams); its "Image" tab shows the picture.],
@@ -280,7 +280,7 @@ File links:
 #bibliography("references.bib")
 ```
 
-- Paths in `#import`, `#include`, `image`, `read`, `bibliography`, `json` / `csv` / `yaml` / `toml` / `xml` / `cbor` open their file: Ctrl+click or Alt+Enter (⌘-click or ⌥↩ on Mac) in the Source view, "Open …" above a raw box in the Visual view.
+- Paths in `#import`, `#include`, `image`, `read`, `bibliography`, `json` / `csv` / `yaml` / `toml` / `xml` / `cbor` open their file: Ctrl+click or Alt+Enter (⌘-click or ⌥↩ on Mac) in the Source editor, "Open …" above a raw box in the Visual editor.
 - A missing `.typ` file can be created from there.
 - A file the main file includes gets "← previous file" / "next file →" links in reading order.
 - Back and forward, as in VS Code: after any change of the shown file (a link, "Edit diagram", a click in the preview, the file panel, …), "← Back to _file_" above a supplementary file (a Mermaid diagram, a spreadsheet, a text file, …) returns to it, in the view it was shown in, with its selection (Typst files). After going back, "Forward to _file_ →" returns. Typst files show the reading order instead; the keys work everywhere. Keys: Ctrl+Alt+- back, Ctrl+Shift+- forward (⌃- / ⌃⇧- on Mac). The last 50 files; renamed files keep their place, deleted ones drop out.
@@ -299,14 +299,14 @@ Cold compile time #margin-note[grows linearly][- *Ada* (2026-10-10): Linear up t
 - *Grace* (2026-10-11): Running it tonight.] with the page count.
 ```
 
-What Grace sees in the Visual view: "grows linearly" highlighted, and beside it a card in the notes gutter:
+What Grace sees in the Visual editor: "grows linearly" highlighted, and beside it a card in the notes gutter:
 
 #figure(
   mermaid(read("../diagrams/comment-card.mmd"), width: 65%),
   caption: [A comment card.],
 )
 
-- Add: "Comment" (Visual view toolbar or selection bar, Source view tab bar) or Ctrl+Alt+M (⌘⌥M on Mac). Without a selection: a point note at the cursor.
+- Add: "Comment" (Visual editor toolbar or selection bar, Source editor tab bar) or Ctrl+Alt+M (⌘⌥M on Mac). Without a selection: a point note at the cursor.
 - A note is a thread: one list item per message, signed with your name and the date.
 - On the card: reply (Ctrl+Enter sends, ⌘↩ on Mac), edit your own and unsigned messages, delete your last one, Resolve (deletes the note).
 - The preview shows the notes in the page margin.

@@ -1,6 +1,6 @@
 # Typst editor
 
-A Typst editor for the browser: a Visual view (WYSIWYG), a Source view and a live preview. The Typst
+A Typst editor for the browser: a Visual editor (WYSIWYG), a Source editor and a live preview. The Typst
 compiler runs as WebAssembly in a worker. Embed it as `<typst-editor>` or with `createTypstEditor`.
 Every feature is an extension. Real-time collaboration (optional) needs the server in `server/`.
 

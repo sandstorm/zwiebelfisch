@@ -81,7 +81,7 @@ Bundlers:
 
 ```js
 const editor = document.createElement('typst-editor');
-editor.options = { main: '/thesis.typ', files, viewType: 'sourceView.editor', user: { name: 'Ada' } };
+editor.options = { main: '/thesis.typ', files, viewType: 'sourceEditor', user: { name: 'Ada' } };
 editor.setAttribute('settings', JSON.stringify({ 'files.panel': 'show' }));
 document.body.append(editor);   // options are read now
 ```

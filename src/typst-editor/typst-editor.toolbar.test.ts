@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-// The Visual view's toolbar with the built-in extensions' items (integration: src/testing composes the built-ins).
+// The Visual editor's toolbar with the built-in extensions' items (integration: src/testing composes the built-ins).
 // Files to upload are Node's (jsdom's have no `arrayBuffer`).
 import { File } from 'node:buffer';
 import { describe, expect, it, vi } from 'vitest';
 import { SourceRange, TypstDocument } from '../core/typst-document/typst-document';
 import type { FileChange } from '../core/project/project';
-import { createVisualView, TestPrompts, type TestViewOptions } from '../testing/testing';
+import { createVisualEditor, TestPrompts, type TestViewOptions } from '../testing/testing';
 
 /** An image file's content (what it holds does not matter here). */
 const IMAGE = new Uint8Array([1]);
@@ -15,14 +15,14 @@ function setup(text: string, options: TestViewOptions = {}) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = createVisualView(parent, doc, options);
+  const view = createVisualEditor(parent, doc, options);
   const toolbar = parent.querySelector<HTMLElement>('[role="toolbar"]')!;
   // the formatting toolbar first, then the menus' items and the floating bars (selection, table)
   const button = (label: string) => parent.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
   return { doc, view, toolbar, button, parent };
 }
 
-describe('Visual view toolbar', () => {
+describe('Visual editor toolbar', () => {
   it('bold and italic wrap the selection', () => {
     const { doc, view, button } = setup('Hello world\n');
     view.reveal(SourceRange.of({ from: 0, to: 'Hello world'.length }));

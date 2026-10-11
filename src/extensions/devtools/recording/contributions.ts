@@ -6,7 +6,7 @@ import type { ExtensionContext, TypstExtension } from '../../../hosts/workbench/
 import { describeContribution, describeSetting, type Description } from './contribution-points';
 import { formatValue } from '../model/describe';
 
-/** One contribution: who made it, where (`visualView.registerNode`, `contributes.configuration`), and what it is. */
+/** One contribution: who made it, where (`visualEditor.registerNode`, `contributes.configuration`), and what it is. */
 export interface Contribution extends Description {
   readonly extension: string;
   readonly point: string;

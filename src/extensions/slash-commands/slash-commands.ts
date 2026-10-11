@@ -1,11 +1,11 @@
-// The slash-commands extension: `/` at a line start or after a space lists what the Visual view's Insert menu and
+// The slash-commands extension: `/` at a line start or after a space lists what the Visual editor's Insert menu and
 // text style menu offer; the empty line holding the cursor says so. Entry of extensions/slash-commands/. Why an
 // extension: it only reads what other extensions register (through the host's completion context), so the list grows
 // with them and it can be left out, hint included. See docs/10_guide/02_features.typ.
 import { Extension, type Editor } from '@tiptap/core';
 import { Plugin, type EditorState } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import type { CompletionItem, CompletionItemProvider, TextStyle, ToolbarAction } from '../../hosts/visual-view/visual-view';
+import type { CompletionItem, CompletionItemProvider, TextStyle, ToolbarAction } from '../../hosts/visual-editor/visual-editor';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './slash-commands.css?inline';
 
@@ -16,11 +16,11 @@ import css from './slash-commands.css?inline';
 export function slashCommands(): TypstExtension {
   return {
     id: 'slash-commands',
-    activate({ workbench, visualView, subscriptions }) {
+    activate({ workbench, visualEditor, subscriptions }) {
       subscriptions.push(
         workbench.registerStyleSheet(css),
-        visualView.registerCompletionItemProvider(SLASH_COMMANDS, { char: '/' }),
-        visualView.registerTiptapExtension(() => SlashCommandsHint),
+        visualEditor.registerCompletionItemProvider(SLASH_COMMANDS, { char: '/' }),
+        visualEditor.registerTiptapExtension(() => SlashCommandsHint),
       );
     },
   };

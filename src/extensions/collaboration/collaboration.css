@@ -1,4 +1,4 @@
-/* The collaboration extension's styles: other users' carets, selections and boxes in the Visual and Source views,
+/* The collaboration extension's styles: other users' carets, selections and boxes in the Visual and Source editors,
    in each user's color (--typst-remote-color, and --typst-remote-text for text on it).
    Registered by collaboration.ts (Workbench.registerStyleSheet). */
 .typst-collaboration__selection {
@@ -33,7 +33,7 @@
   left: -1px;
   border-radius: 3px 3px 3px 0;
 }
-/* Source view (y-codemirror): a dot on the bar; the name on hover and for a moment after each move. */
+/* Source editor (y-codemirror): a dot on the bar; the name on hover and for a moment after each move. */
 .typst-collaboration__caret--transient { pointer-events: auto; }
 .typst-collaboration__caret--transient::before {
   content: '';
@@ -55,7 +55,7 @@
   0%, 70% { opacity: 1; }
   100% { opacity: 0; }
 }
-/* Visual view: a box (raw code, image, page break, note) someone's caret is in; its name flag only on boxes whose
+/* Visual editor: a box (raw code, image, page break, note) someone's caret is in; its name flag only on boxes whose
    own ::after is free (the host marks the others data-typst-pseudo="own"). */
 .typst-collaboration__box {
   position: relative;

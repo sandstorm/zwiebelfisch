@@ -31,9 +31,9 @@ describe('entry-imports', () => {
   });
 
   it('opens a module to its own files, subfolders included: they have no entries of their own', () => {
-    expect(lint('src/hosts/visual-view/toolbar/toolbar.ts', "import { x } from '../nodes/raw-box';")).toEqual([]);
+    expect(lint('src/hosts/visual-editor/toolbar/toolbar.ts', "import { x } from '../nodes/raw-box';")).toEqual([]);
     expect(lint('src/extensions/labels/labels.ts', "import { x } from './model/label-index';")).toEqual([]);
-    expect(lint('src/extensions/labels/visual-view/reference-node.ts', "import { x } from '../model/label-index';")).toEqual([]);
+    expect(lint('src/extensions/labels/visual-editor/reference-node.ts', "import { x } from '../model/label-index';")).toEqual([]);
   });
 
   it("fails on an import of another module's subfolder file, also from a module in the same group", () => {

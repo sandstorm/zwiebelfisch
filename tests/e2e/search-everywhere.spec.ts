@@ -23,7 +23,7 @@ async function doubleShift(page: Page): Promise<void> {
   await page.keyboard.press('Shift');
 }
 
-test('double Shift in the Visual view opens it; # narrows to headings; Enter opens the other file at the heading', async ({ page }) => {
+test('double Shift in the Visual editor opens it; # narrows to headings; Enter opens the other file at the heading', async ({ page }) => {
   await setup(page);
   await editor(page).getByTestId('typst-visual').locator('p').first().click();
   await doubleShift(page);
@@ -37,7 +37,7 @@ test('double Shift in the Visual view opens it; # narrows to headings; Enter ope
   await expect(editor(page).getByTestId('typst-visual').locator('h1:visible')).toHaveText('Method');
 });
 
-test('double Shift in the Source view; % finds text in every file and selects the match', async ({ page }) => {
+test('double Shift in the Source editor; % finds text in every file and selects the match', async ({ page }) => {
   await setup(page);
   await editor(page).getByRole('tab', { name: 'Source' }).click();
   const source = editor(page).locator('[data-testid=typst-source]:visible');

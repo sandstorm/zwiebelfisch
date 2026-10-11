@@ -13,8 +13,8 @@ import type { CustomEditorProvider } from '../../hosts/window/window';
 import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
 import css from './diagrams.css?inline';
 import { DIAGRAM_EDITOR, DIAGRAM_FILES, isDiagram } from './model/model';
-import { insertDiagram } from './visual-view/insert-diagram';
-import { editDiagramAction } from './visual-view/visual-view';
+import { insertDiagram } from './visual-editor/insert-diagram';
+import { editDiagramAction } from './visual-editor/visual-editor';
 import { DiagramEditor } from './workbench/diagram-editor';
 import { newDiagram } from './workbench/new-diagram';
 
@@ -31,7 +31,7 @@ const DIAGRAM_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
  * `*.png`), diagrams.net from the setting `diagrams.editorUrl`, light or dark as the widget; every change is saved
  * (`workspace.applyEdit`, debounced; pending changes when the file is closed). Without the editor (offline) an
  * error message offers the picture. "New diagram…" (`diagrams.newDiagram`) in the menu `file/newFile`; "Insert
- * diagram" in the Visual view's Insert menu; "Edit diagram" on Visual view boxes that show a diagram of the project.
+ * diagram" in the Visual editor's Insert menu; "Edit diagram" on Visual editor boxes that show a diagram of the project.
  */
 export function diagrams(): TypstExtension {
   return {
@@ -50,15 +50,15 @@ export function diagrams(): TypstExtension {
       },
     },
     activate(context) {
-      const { project, commands, window, languages, workspace, workbench, visualView, subscriptions } = context;
+      const { project, commands, window, languages, workspace, workbench, visualEditor, subscriptions } = context;
       const editorUrl = () => workspace.getConfiguration('diagrams').get<string>('editorUrl', DIAGRAMS_NET);
       subscriptions.push(
         workbench.registerStyleSheet(css),
         window.registerCustomEditorProvider(DIAGRAM_EDITOR, diagramEditor(context, editorUrl), { filenamePattern: DIAGRAM_FILES, displayName: 'Diagram', priority: 110, icon: DIAGRAM_ICON }),
         commands.registerCommand(NEW_DIAGRAM, (resource?: ProjectPath) => newDiagram(context, resource)),
         workbench.registerMenuItem('file/newFile', { command: NEW_DIAGRAM, title: 'New diagram…', group: 'navigation', order: 16 }),
-        visualView.registerToolbarItem(insertDiagram(context)),
-        visualView.registerRawBoxAction(editDiagramAction(diagramIn(project, languages), (path) => workbench.open(path, { viewType: DIAGRAM_EDITOR }))),
+        visualEditor.registerToolbarItem(insertDiagram(context)),
+        visualEditor.registerRawBoxAction(editDiagramAction(diagramIn(project, languages), (path) => workbench.open(path, { viewType: DIAGRAM_EDITOR }))),
       );
     },
   };

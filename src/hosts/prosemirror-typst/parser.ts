@@ -1,4 +1,4 @@
-// Parsing Typst text into the Visual view's document (TypstToProseMirrorParser): markup is segmented into blocks,
+// Parsing Typst text into the Visual editor's document (TypstToProseMirrorParser): markup is segmented into blocks,
 // and every block and piece of inline syntax goes to the specs' parse rules for it; what none models stays raw.
 // See prosemirror-typst.ts.
 import type { SyntaxNode } from '@lezer/common';

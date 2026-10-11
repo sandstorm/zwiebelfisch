@@ -71,7 +71,7 @@ describe('stylesheets', () => {
         expect(openBlocks(readFileSync(path, 'utf8'))).toBe(0);
       });
 
-      if (relative(SRC, path) !== 'hosts/visual-view/prosemirror.css') {
+      if (relative(SRC, path) !== 'hosts/visual-editor/prosemirror.css') {
         it('takes its colors from the tokens (light and dark)', () => {
           expect(untokenizedColors(readFileSync(path, 'utf8'))).toEqual([]);
         });

@@ -1,4 +1,4 @@
-/* The styles extension's styles: Custom styles in the Visual view (styled blocks, inline styles).
+/* The styles extension's styles: Custom styles in the Visual editor (styled blocks, inline styles).
    Registered by styles.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 /* Custom styles (extensions/styles): a block style's blocks in a frame with its name; text in an inline style
    underlined dotted, its name as tooltip. Hosts style one by its class, typst-styles--<name>. */

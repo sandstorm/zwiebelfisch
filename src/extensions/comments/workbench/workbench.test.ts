@@ -3,13 +3,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../../core/disposable/disposable';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
-import { SOURCE_VIEW_TYPE } from '../../../hosts/source-view/source-view';
+import { SOURCE_EDITOR } from '../../../hosts/source-editor/source-editor';
 import type { TextEditor } from '../../../hosts/window/window';
-import { VISUAL_VIEW_TYPE, VisualView, VisualViewHost } from '../../../hosts/visual-view/visual-view';
+import { VISUAL_EDITOR, VisualEditor, VisualEditorHost } from '../../../hosts/visual-editor/visual-editor';
 import { localDate } from '../model/note-thread';
 import { NOTE_STYLE } from '../model/add-margin-note';
-import { marginNotes } from '../visual-view/margin-notes';
-import { notesGutter } from '../visual-view/notes-gutter/notes-gutter';
+import { marginNotes } from '../visual-editor/margin-notes';
+import { notesGutter } from '../visual-editor/notes-gutter/notes-gutter';
 import { ADD_COMMENT, registerAddComment, type CommentContext, type NoteCards } from './workbench';
 
 const IMPORT = `#import "@preview/drafting:0.2.2": margin-note, set-margin-note-defaults\n${NOTE_STYLE}`;
@@ -33,11 +33,11 @@ function setup(editor: TextEditor | null, cards: NoteCards = { editNote: () => f
 }
 
 function sourceEditor(document: TypstDocument, selection: { from: number; to: number }): TextEditor {
-  return { document, viewType: SOURCE_VIEW_TYPE, selection: SourceRange.of(selection), revealRange: vi.fn() };
+  return { document, viewType: SOURCE_EDITOR, selection: SourceRange.of(selection), revealRange: vi.fn() };
 }
 
 describe('comments.addComment', () => {
-  it('wraps the selection in the Source view and puts the caret into the note', () => {
+  it('wraps the selection in the Source editor and puts the caret into the note', () => {
     const doc = new TypstDocument('Hello world\n');
     const editor = sourceEditor(doc, { from: 6, to: 11 });
     setup(editor).comment();
@@ -46,17 +46,17 @@ describe('comments.addComment', () => {
     expect(editor.revealRange).toHaveBeenCalledWith({ from: body, to: body });
   });
 
-  it('opens the new note\'s card in the Visual view: the first message is signed with name and date', () => {
+  it('opens the new note\'s card in the Visual editor: the first message is signed with name and date', () => {
     const root = document.body.appendChild(document.createElement('div'));
     const doc = new TypstDocument('Hello world\n');
     let comment = () => {};
     const notes = notesGutter({ user: { name: 'Anna' } });
-    const contributions = VisualViewHost.from([marginNotes({ comment: () => comment() }), notes]);
-    const view = new VisualView(root.appendChild(document.createElement('div')), doc, contributions);
+    const contributions = VisualEditorHost.from([marginNotes({ comment: () => comment() }), notes]);
+    const view = new VisualEditor(root.appendChild(document.createElement('div')), doc, contributions);
     view.reveal(SourceRange.of({ from: 6, to: 11 }));
     const editor: TextEditor = {
       document: doc,
-      viewType: VISUAL_VIEW_TYPE,
+      viewType: VISUAL_EDITOR,
       get selection() {
         return view.selection();
       },
@@ -64,7 +64,7 @@ describe('comments.addComment', () => {
     };
     // as the widget wires it: the notes gutter opens the new note's card
     comment = setup(editor, notes).comment;
-    // the Visual view's toolbar button
+    // the Visual editor's toolbar button
     root.querySelector<HTMLButtonElement>('[role="toolbar"] button[aria-label="Comment"]')!.click();
     expect(doc.text).toBe(`${IMPORT}Hello #margin-note[world][]\n`);
     const field = root.querySelector<HTMLTextAreaElement>('[data-testid="typst-note-card"] .typst-comments__card-reply')!;

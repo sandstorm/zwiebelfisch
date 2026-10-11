@@ -7,7 +7,7 @@ import type { SourceRange } from '../../../core/typst-document/typst-document';
 /** Where the user was: a file, the editor it was shown in, and the selection there (a Typst file's). */
 export interface NavigationLocation {
   readonly path: ProjectPath;
-  /** The custom editor it was shown in (e.g. `sourceView.editor`); undefined: the one it opens in. */
+  /** The custom editor it was shown in (e.g. `sourceEditor`); undefined: the one it opens in. */
   readonly viewType?: string;
   readonly selection?: SourceRange;
 }

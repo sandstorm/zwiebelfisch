@@ -2,7 +2,7 @@
 
 = Typst ↔ ProseMirror <architecture-prosemirror-typst>
 
-Turns Typst text into the Visual view's ProseMirror document and back, so that an edit changes only the source of what it touched. Plain ProseMirror: no view, no Tiptap editor, tested without a DOM. Module `src/hosts/prosemirror-typst/`.
+Turns Typst text into the Visual editor's ProseMirror document and back, so that an edit changes only the source of what it touched. Plain ProseMirror: no view, no Tiptap editor, tested without a DOM. Module `src/hosts/prosemirror-typst/`.
 Shaped like prosemirror-markdown: a schema plus a parser (`TypstToProseMirrorParser`) and a serializer (`ProseMirrorToTypstSerializer`).
 
 #figure(
@@ -26,10 +26,10 @@ The framework knows only paragraphs, text, line breaks, escapes, shorthands and 
   [`typst.labelled`, `anchors`, `container`], [Takes a trailing label; attributes kept like `src`; the container of consecutive items (list items → their list).],
 )
 
-- `createSchema(nodes, marks)` (tests) or `documentExtensions` + `attachGrammar` (the Visual view) put the specs on the schema. `parseTypst` and `serializeToTypst` find them there.
+- `createSchema(nodes, marks)` (tests) or `documentExtensions` + `attachGrammar` (the Visual editor) put the specs on the schema. `parseTypst` and `serializeToTypst` find them there.
 - Order: the priority of each spec's Tiptap extension (default 100, higher first). Of rules for the same syntax, the higher one is asked first.
 - A second spec of the same name extends the first.
-- Writing a spec: @extensions-visual-view-constructs.
+- Writing a spec: @extensions-visual-editor-constructs.
 
 == Parsing <architecture-prosemirror-typst-parse>
 

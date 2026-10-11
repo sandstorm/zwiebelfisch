@@ -20,7 +20,7 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-/** The shown file's Visual view (each file has its own). */
+/** The shown file's Visual editor (each file has its own). */
 const visual = (page: Page) => page.locator('typst-editor [data-testid="typst-visual"]:visible');
 const value = (page: Page) => () => page.locator('typst-editor').evaluate((el: Editor) => el.value);
 const methodFile = (page: Page) => () => page.locator('typst-editor').evaluate((el: Editor) => el.files['/method.typ'] as string);

@@ -48,7 +48,7 @@ test('the text shows and takes typing before the compiler is there; the preview 
   await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
 });
 
-test('the Visual view takes typing while the compiler loads; raw boxes show their code until their pictures come', async ({ page }) => {
+test('the Visual editor takes typing while the compiler loads; raw boxes show their code until their pictures come', async ({ page }) => {
   const wasm = await holdBack(page, /\.wasm$/);
   await page.goto('/');
   const visual = page.getByTestId('typst-visual');

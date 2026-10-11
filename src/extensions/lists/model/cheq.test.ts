@@ -6,7 +6,7 @@ import { withPackages } from '../../../core/typst-packages/typst-packages';
 import { SourceRange } from '../../../core/typst-document/typst-document';
 
 /**
- * The Visual view's task lists rely on the Universe package cheq (pinned at
+ * The Visual editor's task lists rely on the Universe package cheq (pinned at
  * the version `checklist-preamble.ts` imports): `- [ ] ..` / `- [x] ..` items
  * must compile and draw checkboxes instead of the bracket characters.
  */

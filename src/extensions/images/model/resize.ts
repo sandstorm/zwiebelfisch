@@ -1,5 +1,5 @@
 // Resizing an image by dragging a handle: the width it gets, in whole percent of the text width. Pure: the image tools
-// (visual-view/image-tools.ts) measure the pixels. See ../images.ts.
+// (visual-editor/image-tools.ts) measure the pixels. See ../images.ts.
 
 /** Where a resize drag started: the image's width and the text width (px), and whether the image is centered. */
 export interface DragStart {

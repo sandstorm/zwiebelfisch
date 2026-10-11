@@ -5,7 +5,7 @@
 //   `typst-editor/`, `typst-editor-element/`, `testing/`. `core/`, `hosts/` and `extensions/` only group modules.
 // - A module's entry file is named like it, `x/x.ts` (a stylesheet may be `x/x.css`), and lives inside it. From
 //   outside the module only the entry may be imported.
-// - Inside a module everything is open: layer and concept subfolders (`model/`, `visual-view/`, `nodes/`, …)
+// - Inside a module everything is open: layer and concept subfolders (`model/`, `visual-editor/`, `nodes/`, …)
 //   have no entry files of their own, and files import each other directly.
 // - Only TypeScript and CSS sources count. Generated or data files (wasm/, fonts/, fixtures/) are not
 //   modules with an interface.

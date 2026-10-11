@@ -33,8 +33,8 @@ describe('calculateMarginNoteChanges', () => {
     expect(noted('A *bold* claim.\n', 2, 14)).toBe(`${IMPORT}A #margin-note[*bold* claim][|].\n`);
   });
 
-  it('takes in the delimiters of formatting the selection starts or ends with (as the Visual view prints a range note)', () => {
-    // the Visual view maps a selected bold word to the text between the stars
+  it('takes in the delimiters of formatting the selection starts or ends with (as the Visual editor prints a range note)', () => {
+    // the Visual editor maps a selected bold word to the text between the stars
     expect(noted('This is *bold* and\n', 9, 13)).toBe(`${IMPORT}This is #margin-note[*bold*][|] and\n`);
     expect(noted('A *bold* claim.\n', 3, 14)).toBe(`${IMPORT}A #margin-note[*bold* claim][|].\n`);
     expect(noted('A claim in _italics_.\n', 2, 19)).toBe(`${IMPORT}A #margin-note[claim in _italics_][|].\n`);

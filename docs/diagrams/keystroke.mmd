@@ -1,7 +1,7 @@
 flowchart TD
-  visual["`VisualView (Tiptap)
+  visual["`VisualEditor (Tiptap)
   keystroke → ProseMirror transaction`"]
-  document["`TypstDocument.setText(text, visualView)
+  document["`TypstDocument.setText(text, visualEditor)
   one minimal TextChange
   onDidChange({ contentChanges, origin }):
   listeners in subscription order`"]
@@ -10,7 +10,7 @@ flowchart TD
   worker["`worker
   compile (newest only) → changed pages swapped`"]
   host["host"]
-  source["SourceView"]
+  source["SourceEditor"]
   binding["`TextBinding
   (collaboration)`"]
   visual -- "`serializeToTypst(doc)

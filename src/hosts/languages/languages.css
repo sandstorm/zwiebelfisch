@@ -1,4 +1,4 @@
-/* The document links of the languages host: links (from the registered DocumentLinkProviders) in the Source view,
+/* The document links of the languages host: links (from the registered DocumentLinkProviders) in the Source editor,
    raw boxes and extensions' editors, and their hover. Added by the WorkbenchHost (LanguagesHost.styleSheet); colors from the --te-* tokens. */
 /* like IntelliJ: a link shows as one (underline, pointer) only while Mod is held and it is hovered */
 .typst-source--mod .typst-source__path:hover { text-decoration: underline; text-decoration-color: var(--te-accent); color: var(--te-accent); cursor: pointer; }

@@ -9,7 +9,7 @@ import { DRAFTING, noteCallSyntax, SET_DEFAULTS } from './margin-note-syntax';
  * The project as compiled for a PDF without comments; the documents
  * themselves are not touched.
  *
- * - Every margin note call (as the Visual view knows them) is removed from
+ * - Every margin note call (as the Visual editor knows them) is removed from
  *   the copies: a point note entirely, a range note down to its text, which
  *   stays without the highlight. (drafting's `hidden: true` alone would drop
  *   that text too.)

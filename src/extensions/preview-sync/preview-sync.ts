@@ -21,7 +21,7 @@ import css from './preview-sync.css?inline';
  * the preview opens its file with the clicked range selected (package files are no project files: ignored); the
  * preview's outline of the click goes with the next edit or once the selection moves away from that range.
  * While the setting `previewSync.highlightSelection` is on (default), whatever is selected in the shown file (Visual or
- * Source view, independent of "Follow cursor") is shaded in the preview, a moment after the selection settles; a caret
+ * Source editor, independent of "Follow cursor") is shaded in the preview, a moment after the selection settles; a caret
  * shades nothing. A click's own selection is not shaded: its outline marks it already.
  */
 export function previewSync(): TypstExtension {
@@ -32,7 +32,7 @@ export function previewSync(): TypstExtension {
       subscriptions.push(workbench.registerStyleSheet(css));
       let following = configuredFollow(workspace, globalState);
       // The outline of a click in the preview marks what the click selected, while that is what the user looks at:
-      // it goes with the first edit (in any view) or once the selection moves elsewhere, as the Source view's own
+      // it goes with the first edit (in any view) or once the selection moves elsewhere, as the Source editor's own
       // reveal highlight does; otherwise it would stay behind on outdated text.
       let clicked: SourceRange | null = null;
       const clearClick = () => {
@@ -104,7 +104,7 @@ const contributes: TypstExtension['contributes'] = {
       'previewSync.highlightSelection': {
         type: 'boolean',
         default: true,
-        description: 'Whether the text selected in the Visual or Source view is shaded in the preview.',
+        description: 'Whether the text selected in the Visual or Source editor is shaded in the preview.',
       },
     },
   },

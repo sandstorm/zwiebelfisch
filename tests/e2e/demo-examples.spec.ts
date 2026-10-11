@@ -52,7 +52,7 @@ test('switching examples keeps the other URL parameters', async ({ page }) => {
   await expect(examples(page).getByRole('link', { name: 'Advanced' })).toHaveAttribute('aria-current', 'page');
 });
 
-test('the advanced example declares custom styles: styled text in the Visual view, offered in the style menu', async ({ page }) => {
+test('the advanced example declares custom styles: styled text in the Visual editor, offered in the style menu', async ({ page }) => {
   await page.goto('/?example=advanced#/chapters/introduction.typ');
   await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
   const visual = page.locator('[data-testid=typst-visual]:visible');

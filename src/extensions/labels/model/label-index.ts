@@ -11,7 +11,7 @@ export interface LabelInfo extends FoundLabel {
   path: ProjectPath;
 }
 
-/** What the Visual view needs to know about the project's labels (see `LabelIndex`). */
+/** What the Visual editor needs to know about the project's labels (see `LabelIndex`). */
 export interface ProjectLabels {
   /** Every label of the project, by file (in the project's order) and then in source order. */
   labels(): readonly LabelInfo[];

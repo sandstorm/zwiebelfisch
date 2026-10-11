@@ -53,8 +53,8 @@ export interface TypstEditorOptions {
    */
   source?: string;
   /**
-   * The editor the main file opens in, by view type: `SOURCE_VIEW_TYPE` (`'sourceView.editor'`) or
-   * `VISUAL_VIEW_TYPE` (`'visualView.editor'`, the default). Typst files open in it until the user picks the other tab.
+   * The editor the main file opens in, by view type: `SOURCE_EDITOR` (`'sourceEditor'`) or
+   * `VISUAL_EDITOR` (`'visualEditor'`, the default). Typst files open in it until the user picks the other tab.
    */
   viewType?: string;
   /**
@@ -188,7 +188,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
 }
 
 /**
- * The features of the widget and the Typst constructs of the Visual view. Extensions never depend on each other, and
+ * The features of the widget and the Typst constructs of the Visual editor. Extensions never depend on each other, and
  * the order carries no meaning: where contributions compete their `priority` decides (box renderers, overlapping
  * document links, custom editors; for parse rules of the same syntax and mark nesting, that of the specs' Tiptap
  * extensions); toolbar and menu items (the tab bar's too) have a `group` + `order`, status bar items an `alignment` +

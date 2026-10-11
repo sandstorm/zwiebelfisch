@@ -9,7 +9,7 @@ extensions/<name>/
   <name>.ts       entry: the factory (images()) and the controller; activate() registers everything
   <name>.css      its own styles, registered with workbench.registerStyleSheet
   model/          pure: no DOM, no editor libraries
-  workbench/ visual-view/ source-view/ preview/    one folder per host it contributes to
+  workbench/ visual-editor/ source-editor/ preview/    one folder per host it contributes to
 ```
 
 - Factories without options (`markup()`, `images()`): settings and `workbench.user` configure them. Only `collaboration(options)` takes the host's connection.
@@ -19,7 +19,7 @@ extensions/<name>/
 #table(
   columns: (auto, 2fr, 1fr),
   table.header[Extension][What it adds][Through],
-  [`typstLanguage`], [Typst highlighting and code colors in Source views and raw boxes], [source view, raw-box CodeMirror],
+  [`typstLanguage`], [Typst highlighting and code colors in Source editors and raw boxes], [source editor, raw-box CodeMirror],
   [`documentLinks`], [file paths in Typst text as links; command `documentLinks.createFile`], [link provider],
   [`files`], [file panel; `files.newFile` / `newFolder` / `upload` / `rename` / `delete`; read-only fallback editor `files.file` (`priority: 'fallback'`) for any other file; setting `files.panel`; search group "Files"], [side panel, menus, custom editor, search provider],
   [`fileNavigation`], ["← previous file" / "next file →" in reading order; "← Back to …" / "Forward to … →" above supplementary files, over every change of the shown file (`fileNavigation.back` / `forward`, VS Code's keys)], [editor frame, commands, key bindings],
@@ -27,7 +27,7 @@ extensions/<name>/
   [`textFiles`], [csv, json, yaml, toml, xml, bib, txt, md, mmd in CodeMirror (`textFiles.editor`, with the document links for each file's language id); search group "Text" over these and the Typst files (async, in slices)], [custom editor, search provider],
   [`diagrams`], [`.drawio.png` in diagrams.net's embedded editor (`diagrams.editor`, priority 110); "New diagram…"; "Insert diagram" (a new one as a figure); "Edit diagram"; setting `diagrams.editorUrl`], [custom editor, toolbar, box action],
   [`mermaid`], ["Insert Mermaid diagram" (a new `.mmd` with a starter flowchart, as a figure drawn by `@preview/merman`, with the import); "Edit diagram" on a box reading a `.mmd`], [toolbar, box action],
-  [`diagnostics`], [errors underlined (Source), highlighted (Visual), counted in the status bar], [source view, highlights, status bar],
+  [`diagnostics`], [errors underlined (Source), highlighted (Visual), counted in the status bar], [source editor, highlights, status bar],
   [`sourceControl`], ["Save to _label_…" over the registered source controls (`sourceControl.commit`); their status bar entries and resource states (file decorations)], [`editor/title`, status bar, file decorations],
   [`markup`], [strong, emphasis, links, inline code, code blocks, quotes], [nodes, marks, toolbar],
   [`headings`], [headings, their numbers, `headings.toggleNumbering`; search group "Headings"], [node, text style provider, search provider],
@@ -41,7 +41,7 @@ extensions/<name>/
   [`alignment`], [`#align(..)[..]`, `#par(justify: ..)[..]`, the Align menu], [nodes, toolbar],
   [`comments`], [margin notes in the text and a notes gutter; `comments.addComment` (Ctrl+Alt+M, ⌘⌥M on Mac); PDF option `comments.include`; search group "Comments"], [node, mark, gutter, command, PDF option, search provider],
   [`labels`], [`LabelIndex`; reference chips, label tags, the `@` list, "Add label"; search group "Labels" (not figures', not bibliography keys)], [nodes, toolbar, completion items, search provider],
-  [`styles`], [`TypstStyleIndex` of the project's `/// @style` declarations; styled text; "New style…"; search group "Styles" (applies to the selection in either view; the Visual views followed by a Tiptap extension)], [node, mark, text style provider, Tiptap extension, search provider],
+  [`styles`], [`TypstStyleIndex` of the project's `/// @style` declarations; styled text; "New style…"; search group "Styles" (applies to the selection in either view; the Visual editors followed by a Tiptap extension)], [node, mark, text style provider, Tiptap extension, search provider],
   [`slashCommands`], [`/` lists the Insert menu's entries and the text styles, found by label and `keywords`; the hint "Type / for commands" in the empty paragraph holding the cursor (not in table cells)], [completion items (reads toolbar and text styles), Tiptap extension (a decoration)],
   [`previewSync`], [preview follows the cursor; shades the selection; a click selects the source, its outline goes with the next edit or selection move; settings `previewSync.followCursor`, `previewSync.highlightSelection`], [preview toolbar, `reveal`, `setSelectionHighlight`, `onDidClickPage`, `clearClickHighlight`],
   [`previewControls`], [zoom, page number], [preview toolbar],
@@ -56,7 +56,7 @@ Exported from the package, not in the list; a host adds them.
   columns: (auto, 2fr, 1fr),
   table.header[Extension][What it adds][Through],
   [`collaboration(options)`], [The host's connection: shares the project over Yjs, draws other users' places in every view (CodeMirror extensions, highlights, file decorations), registers a GitLab room's source control (see @architecture-server)], [CodeMirror extensions, highlights, file decorations, source control],
-  [`devtools(extensions)`], [Wraps the whole list: records every extension's contributions (proxies around its context's namespaces) and shows them with the shown document and the events in a right side panel (@guide-embedding-devtools). `model/` describes values and the document as text; `recording/` wraps the contexts and describes each contribution point's arguments (by shape: a new point shows its arguments' names until it is described there); `workbench/` draws a view per tab; `visual-view/` keeps each Visual view's editor (`registerTiptapExtension`)], [right side panel, Tiptap extension, every contribution point (recorded)],
+  [`devtools(extensions)`], [Wraps the whole list: records every extension's contributions (proxies around its context's namespaces) and shows them with the shown document and the events in a right side panel (@guide-embedding-devtools). `model/` describes values and the document as text; `recording/` wraps the contexts and describes each contribution point's arguments (by shape: a new point shows its arguments' names until it is described there); `workbench/` draws a view per tab; `visual-editor/` keeps each Visual editor's editor (`registerTiptapExtension`)], [right side panel, Tiptap extension, every contribution point (recorded)],
 )
 
 == How they meet <architecture-built-in-extensions-meeting>
@@ -68,12 +68,12 @@ Exported from the package, not in the list; a host adds them.
   [file decorations], [`collaboration`, `sourceControl`], [`files`],
   [source controls], [`collaboration` (GitLab rooms)], [`sourceControl`],
   [PDF export options], [`comments`], [`pdfExport`],
-  [text style menu], [`headings`, `styles`], [the Visual view toolbar, `slashCommands`],
-  [Insert menu], [`images`, `diagrams`, `mermaid`, `tables`, `spreadsheets`, `outline`, `markup`, `pageLayout`, `labels`], [the Visual view toolbar, `slashCommands`],
+  [text style menu], [`headings`, `styles`], [the Visual editor toolbar, `slashCommands`],
+  [Insert menu], [`images`, `diagrams`, `mermaid`, `tables`, `spreadsheets`, `outline`, `markup`, `pageLayout`, `labels`], [the Visual editor toolbar, `slashCommands`],
   [node group `figureBody`], [`images`, `tables`], [`figures`],
   [menu `file/newFile`], [`files`, `spreadsheets`, `diagrams`], [`files`],
   [search providers], [`files`, `headings`, `labels`, `figures`, `styles`, `comments`, `textFiles`; the workbench (commands, settings)], [search everywhere (the window)],
   [`contributes.commands`], [`files`, `headings`, `comments`, `diagrams`, `spreadsheets`], [the workbench's "Commands" group],
 )
 
-Schema names of other extensions are read only as data and always guarded (`schema.nodes.x`, `editor.can()`). Writing a construct: @extensions-visual-view-constructs.
+Schema names of other extensions are read only as data and always guarded (`schema.nodes.x`, `editor.can()`). Writing a construct: @extensions-visual-editor-constructs.

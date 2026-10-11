@@ -1,24 +1,24 @@
-// TypstEditors: the Visual and Source views as the two built-in custom editors of `*.typ` (`visualView.editor`,
-// `sourceView.editor`), the TextEditor of each document over them, and the editor frame. See workbench.ts and
+// TypstEditors: the Visual and Source editors as the two built-in custom editors of `*.typ` (`visualEditor`,
+// `sourceEditor`), the TextEditor of each document over them, and the editor frame. See workbench.ts and
 // docs/30_architecture/07_workbench.typ.
 import { Disposable } from '../../../core/disposable/disposable';
 import type { Project } from '../../../core/project/project';
 import type { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
-import { SOURCE_VIEW_TYPE, type SourceView, SourceViewHost } from '../../source-view/source-view';
-import { VISUAL_VIEW_TYPE, VisualView, VisualViewHost } from '../../visual-view/visual-view';
+import { SOURCE_EDITOR, type SourceEditor, SourceEditorHost } from '../../source-editor/source-editor';
+import { VISUAL_EDITOR, VisualEditor, VisualEditorHost } from '../../visual-editor/visual-editor';
 import type { CustomEditorPanel, TextEditor, WindowApi } from '../../window/window';
 
 export interface TypstEditorsOptions {
-  /** What every document's Visual view shows and offers (default: paragraphs and raw Typst only). */
-  visualView?: VisualViewHost;
-  /** Makes the Source views, with what is registered there (language, lint, file links, …); default: plain ones. */
-  sourceViews?: SourceViewHost;
+  /** What every document's Visual editor shows and offers (default: paragraphs and raw Typst only). */
+  visualEditor?: VisualEditorHost;
+  /** Makes the Source editors, with what is registered there (language, lint, file links, …); default: plain ones. */
+  sourceEditors?: SourceEditorHost;
   /** The selection in a view of `editor`'s document moved, or its text changed (the view already has the new selection). */
   onSelection?(editor: DocumentEditor): void;
 }
 
 interface ShownView {
-  readonly view: VisualView | SourceView;
+  readonly view: VisualEditor | SourceEditor;
   readonly panel: CustomEditorPanel;
 }
 
@@ -26,7 +26,7 @@ interface ShownView {
 export class DocumentEditor implements TextEditor {
   /** By view type. */
   readonly views = new Map<string, ShownView>();
-  viewType: string = VISUAL_VIEW_TYPE;
+  viewType: string = VISUAL_EDITOR;
 
   constructor(readonly document: TypstDocument) {}
 
@@ -40,7 +40,7 @@ export class DocumentEditor implements TextEditor {
 }
 
 /**
- * Per document, a Visual and a Source view, each made the first time the document is shown in it, in its custom
+ * Per document, a Visual and a Source editor, each made the first time the document is shown in it, in its custom
  * editor's panel; kept (with cursor, scroll and undo history) while hidden, disposed with the panel (the file deleted).
  */
 export class TypstEditors {
@@ -49,23 +49,23 @@ export class TypstEditors {
   #active: DocumentEditor | null = null;
   /** Shown above and below the visible view (see `setFrame`). */
   #frame: { top: HTMLElement; bottom: HTMLElement } | null = null;
-  readonly #visualView: VisualViewHost;
-  readonly #sourceViews: SourceViewHost;
+  readonly #visualEditor: VisualEditorHost;
+  readonly #sourceEditors: SourceEditorHost;
 
   constructor(
     private readonly project: Project,
     private readonly options: TypstEditorsOptions = {},
   ) {
-    this.#visualView = options.visualView ?? new VisualViewHost();
-    this.#sourceViews = options.sourceViews ?? new SourceViewHost();
+    this.#visualEditor = options.visualEditor ?? new VisualEditorHost();
+    this.#sourceEditors = options.sourceEditors ?? new SourceEditorHost();
   }
 
-  /** Registers the Visual and the Source view as the custom editors of `*.typ`, Visual first: the default. */
+  /** Registers the Visual and the Source editor as the custom editors of `*.typ`, Visual first: the default. */
   register(window: Pick<WindowApi, 'registerCustomEditorProvider'>): Disposable {
     return Disposable.from(
       ...[
-        { viewType: VISUAL_VIEW_TYPE, displayName: 'Visual' },
-        { viewType: SOURCE_VIEW_TYPE, displayName: 'Source' },
+        { viewType: VISUAL_EDITOR, displayName: 'Visual' },
+        { viewType: SOURCE_EDITOR, displayName: 'Source' },
       ].map(({ viewType, displayName }) =>
         window.registerCustomEditorProvider(
           viewType,
@@ -82,7 +82,7 @@ export class TypstEditors {
   }
 
   /**
-   * Shows `top` right before and `bottom` right after the visible view's content (in the Visual view below its
+   * Shows `top` right before and `bottom` right after the visible view's content (in the Visual editor below its
    * toolbar, above the first block), in its scrolling panel, so they are the first and last thing of the file; across
    * view and document switches; detached while no view is shown. null removes the frame.
    */
@@ -100,11 +100,11 @@ export class TypstEditors {
     element.classList.add('typst-editor__pane');
     const selected = () => this.options.onSelection?.(owner);
     const view =
-      viewType === VISUAL_VIEW_TYPE
-        ? new VisualView(element, document, this.#visualView)
-        : this.#sourceViews.createView(element, document, { onSelection: selected });
+      viewType === VISUAL_EDITOR
+        ? new VisualEditor(element, document, this.#visualEditor)
+        : this.#sourceEditors.createView(element, document, { onSelection: selected });
     // disposed with the view
-    if (view instanceof VisualView) view.onDidChangeSelection(selected);
+    if (view instanceof VisualEditor) view.onDidChangeSelection(selected);
     editor.views.set(viewType, { view, panel });
     const followVisibility = () => {
       if (panel.visible) this.#shown(owner, viewType);
@@ -131,8 +131,8 @@ export class TypstEditors {
     const shown = this.#active?.views.get(this.#active.viewType);
     if (!this.#frame || !shown) return;
     const pane = shown.panel.element;
-    // the Visual view's toolbar stays on top; the Source view is all content
-    const content = shown.view instanceof VisualView ? shown.view.content : pane.firstElementChild;
+    // the Visual editor's toolbar stays on top; the Source editor is all content
+    const content = shown.view instanceof VisualEditor ? shown.view.content : pane.firstElementChild;
     pane.insertBefore(this.#frame.top, content);
     pane.append(this.#frame.bottom);
   }

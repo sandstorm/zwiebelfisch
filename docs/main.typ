@@ -25,8 +25,8 @@
   #set heading(offset: 1)
   #include "20_extensions/01_overview.typ"
   #include "20_extensions/02_workbench-api.typ"
-  #include "20_extensions/03_visual-view-constructs.typ"
-  #include "20_extensions/04_source-view-and-preview.typ"
+  #include "20_extensions/03_visual-editor-constructs.typ"
+  #include "20_extensions/04_source-editor-and-preview.typ"
 ]
 
 = Architecture
@@ -35,8 +35,8 @@
   #include "30_architecture/01_overview.typ"
   #include "30_architecture/02_core.typ"
   #include "30_architecture/03_prosemirror-typst.typ"
-  #include "30_architecture/04_visual-view.typ"
-  #include "30_architecture/05_source-view.typ"
+  #include "30_architecture/04_visual-editor.typ"
+  #include "30_architecture/05_source-editor.typ"
   #include "30_architecture/06_preview.typ"
   #include "30_architecture/07_workbench.typ"
   #include "30_architecture/08_built-in-extensions.typ"

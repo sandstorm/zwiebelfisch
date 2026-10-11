@@ -1,4 +1,4 @@
-// The images extension: `#image(..)` blocks (also as figures' bodies) in the Visual view showing the project's image files,
+// The images extension: `#image(..)` blocks (also as figures' bodies) in the Visual editor showing the project's image files,
 // "Insert image" with the project's images and uploads, and image files opened read-only in the editing area. Entry of extensions/images/. See docs/30_architecture/08_built-in-extensions.typ.
 // Why one extension: an image is one concept from the file in the project to the box in the text; the Visual
 // view's host only knows boxes, renderers and custom editors, and the file panel only knows files.
@@ -11,11 +11,11 @@ import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './images.css?inline';
 import { IMAGE_FILES, imageBlob, isImage } from './model/image-files';
 import { uploadTarget } from './model/upload';
-import { imagesVisualView, type ImageAssets, type ImageUrls } from './visual-view/visual-view';
+import { imagesVisualEditor, type ImageAssets, type ImageUrls } from './visual-editor/visual-editor';
 import { assetEditor } from './workbench/asset-view';
 
 /**
- * Images in every document's Visual view (`#image(..)` boxes showing the project's image file, "Insert image"
+ * Images in every document's Visual editor (`#image(..)` boxes showing the project's image file, "Insert image"
  * offering the project's images and uploads, which go through `workspace.applyEdit`; an image box's path is the
  * document link on it, from the link providers (`languages`)), and the read-only view of image files: the custom
  * editor `images.preview` (`*.{png,jpg,jpeg,gif,svg,webp}`).
@@ -31,7 +31,7 @@ export function images(): TypstExtension {
         projectImages,
         window.registerCustomEditorProvider('images.preview', assetEditor, { filenamePattern: IMAGE_FILES, displayName: 'Image', icon: IMAGE_ICON }),
       );
-      imagesVisualView({
+      imagesVisualEditor({
         assets: (document) => projectImages.forDocument(document).assets,
         imageUrls: (document) => projectImages.forDocument(document).urls,
         imageLinks: (document) => ({
@@ -62,7 +62,7 @@ export interface ProjectImagesOptions {
 }
 
 /**
- * The project's image files as a document's Visual view shows and inserts
+ * The project's image files as a document's Visual editor shows and inserts
  * them: as object URLs (made once per file content and revoked when replaced
  * or on dispose), and as the images "Insert image" offers or uploads, with
  * paths as written in that document.
@@ -72,7 +72,7 @@ export class ProjectImages {
 
   constructor(private readonly options: ProjectImagesOptions) {}
 
-  /** The images of `document`'s Visual view (it may be renamed later; paths follow). */
+  /** The images of `document`'s Visual editor (it may be renamed later; paths follow). */
   forDocument(document: TypstDocument): { urls: ImageUrls; assets: ImageAssets } {
     const { project, onDidChange } = this.options;
     const path = () => project.pathOf(document);

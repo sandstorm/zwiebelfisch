@@ -82,10 +82,10 @@ What `activate` gets (`ExtensionContext`):
   [`workspace`], [`applyEdit`, settings], [@extensions-workbench-api-settings],
   [`workbench`], [The frame: `open`, side panels, menus, style sheets, dropped files, `user`], [@extensions-workbench-api],
   [`scm`], [Source controls], [@extensions-workbench-api-scm],
-  [`languages`], [Document links in texts, by language], [@extensions-source-view-and-preview-links],
-  [`visualView`], [Nodes, marks, toolbar, boxes, gutters, highlights (experimental)], [@extensions-visual-view-constructs],
-  [`sourceView`], [CodeMirror extensions], [@extensions-source-view-and-preview],
-  [`preview`], [Toolbar items, PDF export options, reveal, clicks, diagnostics], [@extensions-source-view-and-preview-preview],
+  [`languages`], [Document links in texts, by language], [@extensions-source-editor-and-preview-links],
+  [`visualEditor`], [Nodes, marks, toolbar, boxes, gutters, highlights (experimental)], [@extensions-visual-editor-constructs],
+  [`sourceEditor`], [CodeMirror extensions], [@extensions-source-editor-and-preview],
+  [`preview`], [Toolbar items, PDF export options, reveal, clicks, diagnostics], [@extensions-source-editor-and-preview-preview],
 )
 
 == Settings <extensions-overview-settings>
@@ -108,12 +108,12 @@ What `activate` gets (`ExtensionContext`):
   columns: 2,
   [Contribution], [Ordered by],
   [Menu items, preview toolbar items], [`group` (by name, `navigation` first), then `order`],
-  [Visual view toolbar items], [their group's `order`, then the item's `order`],
+  [Visual editor toolbar items], [their group's `order`, then the item's `order`],
   [Status bar items], [`alignment`, then `priority` (higher further left)],
   [Box renderers, document links, PDF export options], [`priority`, default 100, higher first],
   [Custom editors], [the user's choice (a tab), then `priority`, then the most specific pattern],
   [Search providers' groups], [`order` (default 100, lower first), then `id`],
-  [Visual view nodes and marks], [their Tiptap extension's `priority` (Tiptap's: default 100, higher first)],
+  [Visual editor nodes and marks], [their Tiptap extension's `priority` (Tiptap's: default 100, higher first)],
 )
 
 Equal ranks fall back to registration order, which counts only within one extension: never rely on it across extensions.
@@ -126,9 +126,9 @@ An extension meets up to five vocabularies. Every name says whose it is:
   columns: 3,
   [Vocabulary], [Names look like], [Where],
   [Ours (VS Code-shaped, unprefixed)], [`registerCommand`, `onDidChange…`, `Disposable`, `getConfiguration`, `registerNode`, `TypstParseContext`], [The whole extension API],
-  [Tiptap (ProseMirror only through Tiptap)], [`Node.create`, `priority`, `addProseMirrorPlugins`, `ChainedCommands`], [Visual view nodes, marks, toolbar commands],
-  [CodeMirror], [`Extension`, `EditorView`], [Source view, code of raw boxes],
-  [Lezer + the Typst grammar of codemirror-lang-typst], [`SyntaxNode`; node names `FuncCall`, `Heading`, `Strong`], [Parse rules of Visual view constructs],
+  [Tiptap (ProseMirror only through Tiptap)], [`Node.create`, `priority`, `addProseMirrorPlugins`, `ChainedCommands`], [Visual editor nodes, marks, toolbar commands],
+  [CodeMirror], [`Extension`, `EditorView`], [Source editor, code of raw boxes],
+  [Lezer + the Typst grammar of codemirror-lang-typst], [`SyntaxNode`; node names `FuncCall`, `Heading`, `Strong`], [Parse rules of Visual editor constructs],
   [The Typst language], [`#callout(title: "Tip")[…]`], [What parse rules read and `toTypst` writes],
 )
 

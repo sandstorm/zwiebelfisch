@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
 });
 
-test('following the link to an .mmd offers the way back; back restores the Source view at the link, forward returns', async ({ page }) => {
+test('following the link to an .mmd offers the way back; back restores the Source editor at the link, forward returns', async ({ page }) => {
   const history = page.locator('nav.typst-file-navigation--history:visible');
   await expect(history).toHaveCount(0);
   await openFile(page, 'chapters/method.typ');

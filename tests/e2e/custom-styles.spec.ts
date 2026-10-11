@@ -1,4 +1,4 @@
-// End-to-end tests (Playwright, against the plain-HTML example): custom block and inline styles in the Visual view.
+// End-to-end tests (Playwright, against the plain-HTML example): custom block and inline styles in the Visual editor.
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
 import { caretAtEnd, selectText } from './visual-helpers';

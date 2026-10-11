@@ -48,7 +48,7 @@ Colors and dark mode in detail: @guide-embedding-theming.
   columns: 3,
   [Setting], [Values (default)], [Effect],
   [`previewSync.followCursor`], [`true`, `false` (unset)], [Whether the preview follows the cursor ("Follow cursor" in its toolbar). Unset: what this viewer chose last (kept across visits), else `true`.],
-  [`previewSync.highlightSelection`], [`true`, `false` (`true`)], [Whether the text selected in the Visual or Source view is shaded in the preview. Independent of "Follow cursor".],
+  [`previewSync.highlightSelection`], [`true`, `false` (`true`)], [Whether the text selected in the Visual or Source editor is shaded in the preview. Independent of "Follow cursor".],
 )
 
 === PDF <guide-configuration-pdf>
@@ -85,7 +85,7 @@ Export options, by id, for `editor.exportPdf(options)` and the command `pdfExpor
   [`files`], [`{ [path]: string | Uint8Array }` (`{}`)], [Every file by absolute path (@guide-embedding-files): Typst text as `string`, anything else (images, CSV, …) as `Uint8Array`. `@preview` packages need no entry.],
   [`main`], [path (`'/main.typ'`)], [The compiled file. Cannot be renamed or deleted.],
   [`source`], [`string`], [The main file's text; wins over `files[main]`. For single-file hosts. Without either, the main file starts empty.],
-  [`viewType`], [`VISUAL_VIEW_TYPE` (`'visualView.editor'`), `SOURCE_VIEW_TYPE` (`'sourceView.editor'`), or another custom editor's view type (the Visual view)], [The editor the main file opens in. Typst files keep opening in it until the user picks another tab.],
+  [`viewType`], [`VISUAL_EDITOR` (`'visualEditor'`), `SOURCE_EDITOR` (`'sourceEditor'`), or another custom editor's view type (the Visual editor)], [The editor the main file opens in. Typst files keep opening in it until the user picks another tab.],
   [`user`], [`{ name, color? }` (name "Anonymous")], [Who signs comments, commits to GitLab and is shown to collaborators. `color`: their cursor color (CSS; default: made from the name).],
   [`settings`], [`{ [id]: value }` (`{}`)], [The settings (@guide-configuration-settings).],
   [`allowFileChange(change)`], [`boolean | Promise<boolean>` (all allowed)], [Veto for every create, rename, delete and upload the user asks for. `false`: refused, the user sees a message.],

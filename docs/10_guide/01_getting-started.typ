@@ -1,6 +1,6 @@
 = Getting started <guide-getting-started>
 
-A Typst editor for the browser: a Visual view (WYSIWYG), a Source view and a live preview. The Typst compiler runs as WebAssembly in a worker; no server is needed except for collaboration.
+A Typst editor for the browser: a Visual editor (WYSIWYG), a Source editor and a live preview. The Typst compiler runs as WebAssembly in a worker; no server is needed except for collaboration.
 
 == Setup <guide-getting-started-setup>
 

@@ -23,7 +23,7 @@ async function users(browser: Browser, baseURL: string, project: string) {
   return { ann, bob };
 }
 
-test('an edit in one Source view shows up in the other user’s Visual and Source views', async ({ browser, baseURL }, info) => {
+test('an edit in one Source editor shows up in the other user’s Visual and Source editors', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
   await ann.getByRole('tab', { name: 'Source' }).click();
   await ann.getByTestId('typst-source').locator('.cm-line', { hasText: 'This is' }).click();
@@ -34,7 +34,7 @@ test('an edit in one Source view shows up in the other user’s Visual and Sourc
   await expect(bob.getByTestId('typst-source')).toContainText('Together: This is');
 });
 
-test('edits from both Visual views converge', async ({ browser, baseURL }, info) => {
+test('edits from both Visual editors converge', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
   await ann.getByTestId('typst-visual').locator('h1').click();
   await ann.keyboard.press('End');
@@ -87,7 +87,7 @@ test('the other user’s caret shows with their name in both views, where they m
   await expect(sourceCaret.locator('.typst-collaboration__caret-flag')).toHaveCSS('opacity', '1');
 });
 
-test('a caret on an empty line shows in the other user’s Source view', async ({ browser, baseURL }, info) => {
+test('a caret on an empty line shows in the other user’s Source editor', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
   await ann.getByRole('tab', { name: 'Source' }).click();
   await ann.getByTestId('typst-source').locator('.cm-line', { hasText: /^$/ }).first().click();

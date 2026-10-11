@@ -1,6 +1,6 @@
 // The languages namespace of the extension API (VS Code's `languages`, as far as it is used): the document links of
 // every registered DocumentLinkProvider whose selector matches a document, merged, and how CodeMirror editors show
-// them (the Source views, the code of the Visual view's raw boxes, an extension's own editor). Entry of
+// them (the Source editors, the code of the Visual editor's raw boxes, an extension's own editor). Entry of
 // hosts/languages/. See docs/30_architecture/07_workbench.typ.
 // Why providers: finding links is a feature's policy (which paths, what a missing file offers); showing and following
 // them is the same in every view, so the views read every provider's links and know none of them. Why `languageId`:
@@ -16,7 +16,7 @@ import { linkExtension } from './link-extension';
 /** The language features of texts as extensions use them (VS Code's `languages` namespace: document links). */
 export interface Languages {
   /**
-   * Adds links to the documents `selector` matches until disposed: the Source views, the code of the Visual view's
+   * Adds links to the documents `selector` matches until disposed: the Source editors, the code of the Visual editor's
    * raw boxes and the text files' editor show them (Mod+click, Alt+Enter, hover). The links of every matching
    * provider are merged; where links overlap, the provider of the higher `priority` wins (default 100, higher first;
    * equal: registration order).
@@ -30,7 +30,7 @@ export interface Languages {
   /** `link` (from `provideDocumentLinks`) with what its provider fills in on demand: target, tooltip, command. */
   resolveDocumentLink(link: DocumentLink): DocumentLink;
   /**
-   * Shows the links of a CodeMirror editor's text as the Source views do, for an extension's own editor: the text is
+   * Shows the links of a CodeMirror editor's text as the Source editors do, for an extension's own editor: the text is
    * in `languageId`; `path` is the file it is in, now (null: none, no links).
    */
   createDocumentLinksCodeMirrorExtension(languageId: string, path: () => ProjectPath | null): Extension;
@@ -87,7 +87,7 @@ export interface LinkTargets {
   executeCommand(command: string, ...args: unknown[]): Promise<unknown>;
 }
 
-/** The default `priority` of a provider (as for the Visual view's contributions). */
+/** The default `priority` of a provider (as for the Visual editor's contributions). */
 const DEFAULT_PRIORITY = 100;
 
 /**

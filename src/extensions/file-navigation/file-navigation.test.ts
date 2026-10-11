@@ -6,8 +6,8 @@ import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
 import { SourceRange } from '../../core/typst-document/typst-document';
-import { SOURCE_VIEW_TYPE } from '../../hosts/source-view/source-view';
-import { VISUAL_VIEW_TYPE } from '../../hosts/visual-view/visual-view';
+import { SOURCE_EDITOR } from '../../hosts/source-editor/source-editor';
+import { VISUAL_EDITOR } from '../../hosts/visual-editor/visual-editor';
 import type { ExtensionContext } from '../../hosts/workbench/workbench';
 import { WorkbenchHost } from '../../hosts/workbench/workbench';
 import { fileNavigation } from './file-navigation';
@@ -36,7 +36,7 @@ function setup() {
     '/chapter.typ': '= Chapter\nSome text.\n',
     '/flow.mmd': 'graph TD\n',
   });
-  const workbench = new WorkbenchHost(host, project, { viewType: SOURCE_VIEW_TYPE });
+  const workbench = new WorkbenchHost(host, project, { viewType: SOURCE_EDITOR });
   let context!: ExtensionContext;
   const probe = {
     id: 'probe',
@@ -82,10 +82,10 @@ describe('file navigation: back and forward', () => {
 
   it('restores the view the file was shown in', async () => {
     const { workbench, context } = setup();
-    workbench.open(path('/chapter.typ'), { viewType: 'visualView.editor' });
-    workbench.open(path('/main.typ'), { viewType: 'sourceView.editor' });
+    workbench.open(path('/chapter.typ'), { viewType: 'visualEditor' });
+    workbench.open(path('/main.typ'), { viewType: 'sourceEditor' });
     await context.commands.executeCommand('fileNavigation.back');
-    expect(context.window.activeTextEditor!.viewType).toBe(VISUAL_VIEW_TYPE);
+    expect(context.window.activeTextEditor!.viewType).toBe(VISUAL_EDITOR);
   });
 
   it('runs as the commands and by VS Code’s keys', async () => {

@@ -28,7 +28,7 @@ test.beforeEach(async ({ page }) => {
   await expect(visual(page).locator('p')).toHaveText('The runs:');
 });
 
-/** Puts the caret at the end of the Visual view's paragraph. */
+/** Puts the caret at the end of the Visual editor's paragraph. */
 async function caretInParagraph(page: Page): Promise<void> {
   await visual(page).locator('p').click();
   await page.keyboard.press('End');

@@ -32,7 +32,7 @@ test('the tree works with the keyboard', async ({ page }) => {
   await expect(page.getByRole('textbox', { name: 'Rename chapters/introduction.typ to' })).toHaveValue('chapters/introduction.typ');
 });
 
-test('Mod+click on the #import path in the Source view opens the file', async ({ page }) => {
+test('Mod+click on the #import path in the Source editor opens the file', async ({ page }) => {
   await page.getByRole('tab', { name: 'Source' }).click();
   const path = page.locator('[data-testid=typst-source]:visible .typst-source__path', { hasText: 'template.typ' });
   await path.hover();
@@ -42,7 +42,7 @@ test('Mod+click on the #import path in the Source view opens the file', async ({
   await expect(page.locator('[data-testid=typst-source]:visible')).toContainText('#let accent');
 });
 
-test('a raw box in the Visual view has no "Open …" row; its path shows the link tooltip and opens the file', async ({ page }) => {
+test('a raw box in the Visual editor has no "Open …" row; its path shows the link tooltip and opens the file', async ({ page }) => {
   const visual = page.locator('[data-testid=typst-visual]:visible');
   await expect(visual.getByRole('button', { name: 'Open template.typ' })).toHaveCount(0);
   const path = visual.locator('.typst-visual__raw-block .typst-source__path', { hasText: 'template.typ' });

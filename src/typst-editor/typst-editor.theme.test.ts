@@ -2,7 +2,7 @@
 // Tests for typst-editor.ts: the setting `workbench.theme` (light, dark, auto; default: as the page). Preview mocked: no worker in jsdom.
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SOURCE_VIEW_TYPE } from '../hosts/source-view/source-view';
+import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
 import { createTypstEditor } from './typst-editor';
 
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({
@@ -23,7 +23,7 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => ({
 
 function mount(theme?: 'light' | 'dark' | 'auto') {
   const host = document.body.appendChild(document.createElement('div'));
-  return { host, editor: createTypstEditor(host, { source: '= Hello', viewType: SOURCE_VIEW_TYPE, settings: theme ? { 'workbench.theme': theme } : {} }) };
+  return { host, editor: createTypstEditor(host, { source: '= Hello', viewType: SOURCE_EDITOR, settings: theme ? { 'workbench.theme': theme } : {} }) };
 }
 
 afterEach(() => document.body.replaceChildren());

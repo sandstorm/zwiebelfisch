@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests that two users' edits in both views converge (collaboration over in-process Y.Docs).
+// Tests that two users' edits in both editors converge (collaboration over in-process Y.Docs).
 import { undo as undoSource } from '@codemirror/commands';
 import { EditorView } from '@codemirror/view';
 import type { Editor } from '@tiptap/core';
@@ -7,13 +7,13 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 import { Project } from '../../core/project/project';
-import { SourceViewHost } from '../../hosts/source-view/source-view';
-import { VisualView, VisualViewHost } from '../../hosts/visual-view/visual-view';
+import { SourceEditorHost } from '../../hosts/source-editor/source-editor';
+import { VisualEditor, VisualEditorHost } from '../../hosts/visual-editor/visual-editor';
 import { Collaboration } from './model/model';
 import { connect, connectAwareness } from './model/in-process';
 import { Presences } from './presence/presence';
-import { perUserUndo, sourcePresence } from './source-view/source-view';
-import { visualPresence } from './visual-view/visual-view';
+import { perUserUndo, sourcePresence } from './source-editor/source-editor';
+import { visualPresence } from './visual-editor/visual-editor';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
 
@@ -45,11 +45,11 @@ async function user(name: string, files: Record<string, string>, peer?: { ydoc: 
   const visualParent = window.document.createElement('div');
   const sourceParent = window.document.createElement('div');
   window.document.body.append(visualParent, sourceParent);
-  const visual = new VisualView(visualParent, document, VisualViewHost.from([visualPresence(presences, () => [document])]));
-  const sourceViews = new SourceViewHost();
-  sourceViews.registerCodeMirrorExtension(sourcePresence(presences));
-  sourceViews.registerCodeMirrorExtension(perUserUndo);
-  const source = sourceViews.createView(sourceParent, document);
+  const visual = new VisualEditor(visualParent, document, VisualEditorHost.from([visualPresence(presences, () => [document])]));
+  const sourceEditors = new SourceEditorHost();
+  sourceEditors.registerCodeMirrorExtension(sourcePresence(presences));
+  sourceEditors.registerCodeMirrorExtension(perUserUndo);
+  const source = sourceEditors.createView(sourceParent, document);
   cleanup.push(() => {
     disconnect();
     collaboration.dispose();
@@ -64,7 +64,7 @@ async function user(name: string, files: Record<string, string>, peer?: { ydoc: 
 
 type User = Awaited<ReturnType<typeof user>>;
 
-/** Types `text` in the Visual view at the end of the paragraph containing `word`. */
+/** Types `text` in the Visual editor at the end of the paragraph containing `word`. */
 function typeVisual(u: User, word: string, text: string) {
   let at = -1;
   u.tiptap.state.doc.descendants((node, pos) => {
@@ -73,7 +73,7 @@ function typeVisual(u: User, word: string, text: string) {
   u.tiptap.chain().setTextSelection(at).insertContent(text).run();
 }
 
-/** Types `text` in the Source view at `offset`, as a user edit. */
+/** Types `text` in the Source editor at `offset`, as a user edit. */
 function typeSource(u: User, offset: number, text: string) {
   u.codemirror.dispatch({ changes: { from: offset, insert: text }, userEvent: 'input.type' });
 }
@@ -82,7 +82,7 @@ const START = '= Title\n\nFirst paragraph.\n\nSecond paragraph.\n';
 const settle = () => new Promise<void>((resolve) => queueMicrotask(resolve));
 
 describe('collaboration', () => {
-  it('edits from the Visual and Source views of two users converge', async () => {
+  it('edits from the Visual and Source editors of two users converge', async () => {
     const a = await user('Ann', { [MAIN]: START });
     const b = await user('Bob', {}, a);
     expect(b.document.text).toBe(START);
@@ -131,7 +131,7 @@ describe('collaboration', () => {
     expect(a.document.text).toBe(b.document.text);
   });
 
-  it('undo is per user, in both views', async () => {
+  it('undo is per user, in both editors', async () => {
     const a = await user('Ann', { [MAIN]: START });
     const b = await user('Bob', {}, a);
     typeSource(a, a.document.text.indexOf('First'), 'A1 ');
@@ -139,10 +139,10 @@ describe('collaboration', () => {
     typeVisual(a, 'Second', ' A2');
     typeSource(b, 0, '// B2\n');
 
-    // Ann's Source view undoes her last edit (A2, made in her Visual view), not Bob's later B2.
+    // Ann's Source editor undoes her last edit (A2, made in her Visual editor), not Bob's later B2.
     undoSource(a.codemirror);
     expect(a.document.text).toBe('// B2\n= Title\n\nA1 First paragraph.\n\nSecond paragraph. B1\n');
-    // Bob's Visual view undoes his last Visual edit (B1); Ann's edits stay.
+    // Bob's Visual editor undoes his last Visual edit (B1); Ann's edits stay.
     b.tiptap.commands.undo();
     expect(b.document.text).toBe('// B2\n= Title\n\nA1 First paragraph.\n\nSecond paragraph.\n');
     undoSource(a.codemirror);
@@ -150,7 +150,7 @@ describe('collaboration', () => {
     expect(a.document.text).toBe(b.document.text);
   });
 
-  it("shows the other user's cursor in both views", async () => {
+  it("shows the other user's cursor in both editors", async () => {
     const a = await user('Ann', { [MAIN]: START });
     const b = await user('Bob', {}, a);
     const from = START.indexOf('paragraph');

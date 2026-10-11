@@ -1,16 +1,16 @@
 // @vitest-environment jsdom
-// Tests for slash-commands.ts in a Visual view with the built-in constructs (testing/): what `/` lists and what
+// Tests for slash-commands.ts in a Visual editor with the built-in constructs (testing/): what `/` lists and what
 // choosing runs.
 import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../core/typst-document/typst-document';
-import { after, createVisualView, TestPrompts } from '../../testing/testing';
+import { after, createVisualEditor, TestPrompts } from '../../testing/testing';
 import { slashCommands } from './slash-commands';
 
 function setup(text: string, cursorAfter: string, prompts = new TestPrompts()) {
   const parent = document.body.appendChild(document.createElement('div'));
   const doc = new TypstDocument(text);
-  createVisualView(parent, doc, { contributions: [slashCommands()], prompts });
+  createVisualEditor(parent, doc, { contributions: [slashCommands()], prompts });
   const editor = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
   editor.commands.setTextSelection(after(editor.state.doc, cursorAfter));
   const list = parent.querySelector<HTMLElement>('[data-testid="typst-suggest"][data-trigger="/"]')!;

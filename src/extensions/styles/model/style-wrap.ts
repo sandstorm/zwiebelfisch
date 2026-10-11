@@ -1,4 +1,4 @@
-// calculateStyleWrap: a style applied in the Source view, as text. See ../styles.ts.
+// calculateStyleWrap: a style applied in the Source editor, as text. See ../styles.ts.
 import { SourceOffset, type SourceRange, type TextChange } from '../../../core/typst-document/typst-document';
 
 /**

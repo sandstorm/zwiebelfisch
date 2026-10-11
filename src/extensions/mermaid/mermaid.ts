@@ -10,20 +10,20 @@ import type { TypstDocument } from '../../core/typst-document/typst-document';
 import type { Languages } from '../../hosts/languages/languages';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import { isMermaid } from './model/mermaid-figure';
-import { editMermaidAction, insertMermaid } from './visual-view/visual-view';
+import { editMermaidAction, insertMermaid } from './visual-editor/visual-editor';
 
 /**
- * "Insert Mermaid diagram" in the Visual view's Insert menu; "Edit diagram" on Visual view boxes whose Typst reads a
+ * "Insert Mermaid diagram" in the Visual editor's Insert menu; "Edit diagram" on Visual editor boxes whose Typst reads a
  * Mermaid file of the project (`read("x.mmd")`), opening it.
  */
 export function mermaid(): TypstExtension {
   return {
     id: 'mermaid',
     activate(context) {
-      const { project, languages, workbench, visualView, subscriptions } = context;
+      const { project, languages, workbench, visualEditor, subscriptions } = context;
       subscriptions.push(
-        visualView.registerToolbarItem(insertMermaid(context)),
-        visualView.registerRawBoxAction(editMermaidAction(mermaidIn(project, languages), (path) => workbench.open(path))),
+        visualEditor.registerToolbarItem(insertMermaid(context)),
+        visualEditor.registerRawBoxAction(editMermaidAction(mermaidIn(project, languages), (path) => workbench.open(path))),
       );
     },
   };

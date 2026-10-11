@@ -1,4 +1,4 @@
-// End-to-end tests (Playwright, against the demo build): the Visual view.
+// End-to-end tests (Playwright, against the demo build): the Visual editor.
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
 import { caretAtEnd, clickFirstGlyph, compiled, visual } from './visual-helpers';
@@ -8,13 +8,13 @@ test.beforeEach(async ({ page }) => {
   await compiled(page);
 });
 
-test('shows the document in the visual view by default', async ({ page }) => {
+test('shows the document in the visual editor by default', async ({ page }) => {
   await expect(visual(page).locator('h1')).toHaveText('Hello Typst');
   await expect(visual(page).locator('strong')).toHaveText('bold');
   await expect(visual(page).locator('.typst-visual__raw-block').first()).toContainText('#set page');
 });
 
-test('typing in the visual view updates the Typst source', async ({ page }) => {
+test('typing in the visual editor updates the Typst source', async ({ page }) => {
   await caretAtEnd(visual(page).locator('h1'));
   await page.keyboard.type(' World');
   await page.getByRole('tab', { name: 'Source' }).click();
@@ -46,7 +46,7 @@ test('markdown-style input rules: "## " starts a heading', async ({ page }) => {
   await expect(page.getByTestId('typst-source')).toContainText('== Section');
 });
 
-test('clicking the preview selects the block in the visual view', async ({ page }) => {
+test('clicking the preview selects the block in the visual editor', async ({ page }) => {
   await clickFirstGlyph(page);
   // the jump arrives asynchronously from the engine worker
   await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toBe('Hello Typst');

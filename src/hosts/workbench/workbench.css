@@ -91,7 +91,7 @@
 .typst-editor__status-bar-right { display: flex; }
 /* The workbench's overlays (notifications, input boxes, quick picks, menus) are placed in the widget. */
 .typst-editor { position: relative; }
-/* The editing area: the tab bar (the shown file's editors), the Visual / Source views' panels, a dragged file over the widget. */
+/* The editing area: the tab bar (the shown file's editors), the Visual / Source editors' panels, a dragged file over the widget. */
 .typst-editor__editor-area .cm-editor { flex: 1; min-height: 0; }
 .typst-editor__editor-area .cm-scroller { overflow: auto; }
 .typst-editor__tabs {

@@ -7,8 +7,8 @@ import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
 import { SourceRange, type TypstDocument } from '../../core/typst-document/typst-document';
 import type { PreviewOptions, PreviewProgress } from '../preview/preview';
-import { SOURCE_VIEW_TYPE } from '../source-view/source-view';
-import { VISUAL_VIEW_TYPE } from '../visual-view/visual-view';
+import { SOURCE_EDITOR } from '../source-editor/source-editor';
+import { VISUAL_EDITOR } from '../visual-editor/visual-editor';
 import { type ExtensionContext, WorkbenchHost, type WorkbenchOptions } from './workbench';
 
 /** The options the workbench gave the (mocked) preview made last: how it hears the preview's progress. */
@@ -40,7 +40,7 @@ const path = ProjectPath.of;
 function setup(activate: (context: ExtensionContext) => void = () => {}, options: WorkbenchOptions = {}) {
   const host = document.body.appendChild(document.createElement('div'));
   const project = new Project(path('/main.typ'), { '/main.typ': '= Main\n', '/a.typ': 'A\n', '/logo.png': new Uint8Array([1]) });
-  const workbench = new WorkbenchHost(host, project, { viewType: SOURCE_VIEW_TYPE, ...options });
+  const workbench = new WorkbenchHost(host, project, { viewType: SOURCE_EDITOR, ...options });
   let context: ExtensionContext | null = null;
   workbench.activate([{ id: 'test', activate: (given) => activate((context = given)) }]);
   return { host, project, workbench, context: context! };
@@ -135,7 +135,7 @@ describe('WorkbenchHost', () => {
         register('test.always'),
         register('test.visual'),
         register('test.other'),
-        workbench.registerMenuItem('editor/title', { command: 'test.visual', title: 'Visual only', when: (context) => context.activeCustomEditorId === VISUAL_VIEW_TYPE }),
+        workbench.registerMenuItem('editor/title', { command: 'test.visual', title: 'Visual only', when: (context) => context.activeCustomEditorId === VISUAL_EDITOR }),
         workbench.registerMenuItem('editor/title', { command: 'test.always', title: 'Always', group: 'navigation', icon: '<svg></svg>' }),
         workbench.registerMenuItem('editor/title', { command: 'test.other', title: 'In a.typ', when: (context) => context.resource === '/a.typ' }),
       );
@@ -240,7 +240,7 @@ describe('WorkbenchHost', () => {
     });
   });
 
-  it('puts the editor frame into a Typst view’s content, around any other editor’s panel, and takes it away', () => {
+  it('puts the editor frame into a Typst editor’s content, around any other editor’s panel, and takes it away', () => {
     let frame!: { top: HTMLElement; bottom: HTMLElement };
     let registered!: Disposable;
     const { host, workbench } = setup(({ workbench, window }) => {
@@ -248,44 +248,44 @@ describe('WorkbenchHost', () => {
       registered = workbench.registerEditorFrame(frame);
       window.registerCustomEditorProvider('test.image', { resolveCustomEditor: () => {} }, { filenamePattern: '*.png', displayName: 'Image' });
     });
-    const source = host.querySelector('.typst-editor__custom-editor[data-view-type="sourceView.editor"]')!;
+    const source = host.querySelector('.typst-editor__custom-editor[data-view-type="sourceEditor"]')!;
     expect(frame.top.parentElement).toBe(source);
     expect(source.lastElementChild).toBe(frame.bottom);
     workbench.open(path('/logo.png'));
     const image = host.querySelector('.typst-editor__custom-editor[data-view-type="test.image"]')!;
     expect([frame.top.nextElementSibling, frame.bottom.previousElementSibling]).toEqual([image, image]);
     workbench.open(path('/a.typ'));
-    expect(frame.top.closest('[data-view-type="sourceView.editor"]:not([hidden])')).not.toBeNull();
+    expect(frame.top.closest('[data-view-type="sourceEditor"]:not([hidden])')).not.toBeNull();
     workbench.open(path('/logo.png'));
     registered.dispose();
     expect([frame.top.isConnected, frame.bottom.isConnected]).toEqual([false, false]);
   });
 
-  it('opens a file at a range, in the Source view when asked, which then stays the choice for Typst files', () => {
-    const { host, workbench, context } = setup(undefined, { viewType: VISUAL_VIEW_TYPE });
-    workbench.open(path('/a.typ'), { selection: SourceRange.of({ from: 0, to: 1 }), viewType: 'sourceView.editor' });
+  it('opens a file at a range, in the Source editor when asked, which then stays the choice for Typst files', () => {
+    const { host, workbench, context } = setup(undefined, { viewType: VISUAL_EDITOR });
+    workbench.open(path('/a.typ'), { selection: SourceRange.of({ from: 0, to: 1 }), viewType: 'sourceEditor' });
     const editor = context.window.activeTextEditor!;
     expect(editor.document.text).toBe('A\n');
-    expect(editor.viewType).toBe(SOURCE_VIEW_TYPE);
+    expect(editor.viewType).toBe(SOURCE_EDITOR);
     expect(editor.selection).toEqual({ from: 0, to: 1 });
     expect(host.querySelector('[role=tab][aria-selected=true]')!.textContent).toBe('Source');
     workbench.open(path('/main.typ'));
-    expect(context.window.activeTextEditor!.viewType).toBe(SOURCE_VIEW_TYPE);
+    expect(context.window.activeTextEditor!.viewType).toBe(SOURCE_EDITOR);
   });
 
-  it('shows Typst files in the Visual and the Source view, custom editors with tabs, kept while hidden', () => {
-    const { host, workbench, context } = setup(undefined, { viewType: VISUAL_VIEW_TYPE });
+  it('shows Typst files in the Visual and the Source editor, custom editors with tabs, kept while hidden', () => {
+    const { host, workbench, context } = setup(undefined, { viewType: VISUAL_EDITOR });
     const tabs = () => [...host.querySelectorAll<HTMLElement>('[role=tab]')];
     expect(tabs().map((tab) => [tab.textContent, tab.getAttribute('aria-selected')])).toEqual([['Visual', 'true'], ['Source', 'false']]);
-    const visual = host.querySelector('.typst-editor__custom-editor[data-view-type="visualView.editor"]')!;
+    const visual = host.querySelector('.typst-editor__custom-editor[data-view-type="visualEditor"]')!;
     tabs()[1].click();
-    expect(context.window.activeTextEditor!.viewType).toBe(SOURCE_VIEW_TYPE);
+    expect(context.window.activeTextEditor!.viewType).toBe(SOURCE_EDITOR);
     expect(host.querySelector<HTMLElement>('.typst-editor__tabs')!.hidden).toBe(false);
     workbench.open(path('/logo.png'));
     expect(host.querySelector<HTMLElement>('.typst-editor__tabs')!.hidden).toBe(true);
-    workbench.open(path('/main.typ'), { viewType: 'visualView.editor' });
-    expect(host.querySelector('.typst-editor__custom-editor[data-view-type="visualView.editor"]')).toBe(visual);
-    expect(host.querySelectorAll('.typst-editor__custom-editor[data-view-type$="View.editor"]')).toHaveLength(2);
+    workbench.open(path('/main.typ'), { viewType: 'visualEditor' });
+    expect(host.querySelector('.typst-editor__custom-editor[data-view-type="visualEditor"]')).toBe(visual);
+    expect(host.querySelectorAll('.typst-editor__custom-editor[data-view-type$="Editor"]')).toHaveLength(2);
   });
 
   it('tells about a moved selection in an editor, after it has the new one', () => {
@@ -302,20 +302,20 @@ describe('WorkbenchHost', () => {
     expect(context.window.activeTextEditor).toBeNull();
   });
 
-  it('applies the Visual view contributions to the Visual view of each document', () => {
+  it('applies the Visual editor contributions to the Visual editor of each document', () => {
     const provider = vi.fn((_view: { document: TypstDocument }) => []);
-    const { workbench } = setup(({ visualView, subscriptions }) => subscriptions.push(visualView.registerTiptapExtension(provider)), { viewType: VISUAL_VIEW_TYPE });
+    const { workbench } = setup(({ visualEditor, subscriptions }) => subscriptions.push(visualEditor.registerTiptapExtension(provider)), { viewType: VISUAL_EDITOR });
     workbench.open(path('/a.typ'));
     expect(provider.mock.calls.map(([view]) => view.document.text)).toEqual(['= Main\n', 'A\n']);
   });
 
-  it('applies the Source view contributions to every Source view, and gives the extensions the preview', () => {
+  it('applies the Source editor contributions to every Source editor, and gives the extensions the preview', () => {
     const item = () => ({ elements: [] });
     let preview: ExtensionContext['preview'] | null = null;
     const { host, workbench } = setup((context) => {
       preview = context.preview;
       context.subscriptions.push(
-        context.sourceView.registerCodeMirrorExtension(EditorView.editorAttributes.of({ class: 'contributed' })),
+        context.sourceEditor.registerCodeMirrorExtension(EditorView.editorAttributes.of({ class: 'contributed' })),
         context.preview.registerToolbarItem(item, { group: 'test' }),
       );
     });
@@ -380,7 +380,7 @@ describe('WorkbenchHost', () => {
     expect(workbench.isEditorFocused()).toBe(true);
   });
 
-  it("shows the links of the registered providers in the Source views and raw boxes' code, with the path of their file", () => {
+  it("shows the links of the registered providers in the Source editors and raw boxes' code, with the path of their file", () => {
     const seen: string[] = [];
     const { host, workbench } = setup(({ languages, subscriptions }) =>
       subscriptions.push(
@@ -393,7 +393,7 @@ describe('WorkbenchHost', () => {
     expect(seen).toContain('/main.typ');
     const marked = (root: Element) => [...root.querySelectorAll('.typst-source__path')].map((mark) => mark.textContent).join('');
     expect(marked(host.querySelector('[data-testid=typst-source]')!)).toBe('Main');
-    workbench.open(path('/main.typ'), { viewType: 'visualView.editor' });
+    workbench.open(path('/main.typ'), { viewType: 'visualEditor' });
     // the box holds "= Main" without the line break
     expect(marked(host.querySelector('.typst-visual__raw-block')!)).toBe('Mai');
   });
@@ -403,7 +403,7 @@ describe('WorkbenchHost: search everywhere', () => {
   function setupSearch() {
     const host = document.body.appendChild(document.createElement('div'));
     const project = new Project(path('/main.typ'), { '/main.typ': '= Main\n' });
-    const workbench = new WorkbenchHost(host, project, { viewType: SOURCE_VIEW_TYPE, settings: { 'test.color': 'blue' } });
+    const workbench = new WorkbenchHost(host, project, { viewType: SOURCE_EDITOR, settings: { 'test.color': 'blue' } });
     const ran: string[] = [];
     workbench.activate([
       {

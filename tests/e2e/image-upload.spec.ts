@@ -63,7 +63,7 @@ async function layout(page: Page) {
   return { left, right, overflow };
 }
 
-/** The editing view still shows main.typ: Visual view and toolbar visible, no asset view, preview beside it. */
+/** The editing view still shows main.typ: Visual editor and toolbar visible, no asset view, preview beside it. */
 async function expectLayoutIntact(page: Page, before: Awaited<ReturnType<typeof layout>>) {
   const editor = page.locator('typst-editor');
   await expect(editor.getByTestId('typst-visual')).toBeVisible();

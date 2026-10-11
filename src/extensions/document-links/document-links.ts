@@ -1,6 +1,6 @@
 // The document-links extension: the file paths in Typst text (`#include "ch1.typ"`, `image("logo.png")`) as document
 // links, which open the file or offer to create a missing Typst file. Entry of extensions/document-links/. See
-// docs/20_extensions/04_source-view-and-preview.typ.
+// docs/20_extensions/04_source-editor-and-preview.typ.
 // Why an extension: finding paths is Typst syntax (core/typst-syntax), showing and following links is the hosts'
 // (every view shows the links of every `DocumentLinkProvider` for its language); where a path leads in this project, and that a missing
 // Typst file may be created, is this extension's policy.
@@ -11,7 +11,7 @@ import type { TypstExtension } from '../../hosts/workbench/workbench';
 import type { DocumentLink, DocumentLinkProvider, TextDocument } from '../../hosts/languages/languages';
 
 /**
- * Links the file paths of all Typst text (the Source views, raw boxes, an image box's path): they resolve from the
+ * Links the file paths of all Typst text (the Source editors, raw boxes, an image box's path): they resolve from the
  * file's path, open an existing file, and offer to create a missing Typst file: the command
  * `documentLinks.createFile(path)` creates it through `workspace.applyEdit` and opens it, or rejects saying why not.
  */

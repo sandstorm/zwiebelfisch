@@ -20,12 +20,12 @@ test('the devtools are on the right side in place of the preview, which keeps co
   await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg').first()).toBeVisible();
 });
 
-test('the document tab shows the Visual view as nodes with their source ranges; a click selects one', async ({ page }) => {
+test('the document tab shows the Visual editor as nodes with their source ranges; a click selects one', async ({ page }) => {
   const devtools = page.getByTestId('typst-devtools');
   const heading = devtools.locator('.typst-devtools__node').filter({ hasText: /^heading\d+–\d+/ }).first();
   await expect(heading).toBeVisible();
   await heading.click();
-  // the heading's text is selected in the Visual view, and the row is on the selection's path
+  // the heading's text is selected in the Visual editor, and the row is on the selection's path
   await expect.poll(() => page.evaluate(() => getSelection()?.toString())).toBe('Hello Typst');
   await expect(devtools.locator('.typst-devtools__row--selected').first()).toContainText('heading');
 });
@@ -38,14 +38,14 @@ test('the contributions tab says what each extension contributed, by extension o
   await expect(files).toContainText('commands.registerCommand');
   await expect(files).toContainText('files.newFile');
   await expect(files).toContainText('files.panel');
-  const heading = group(/^headings/).locator('.typst-devtools__contribution').filter({ hasText: 'visualView.registerNode' });
+  const heading = group(/^headings/).locator('.typst-devtools__contribution').filter({ hasText: 'visualEditor.registerNode' });
   await expect(heading).toContainText('parses Heading');
-  await expect(heading).toHaveAttribute('title', /^visualView\.registerNode: heading\nby headings/);
+  await expect(heading).toHaveAttribute('title', /^visualEditor\.registerNode: heading\nby headings/);
   await expect(group(/^comments/)).toContainText('→ comments.addComment');
 
   await devtools.getByRole('button', { name: 'By contribution point' }).click();
   // the box renderers in the order they are asked: images (110) before compiled snippets (100)
-  const renderers = group(/^visualView\.registerRawBoxRenderer/).locator('.typst-devtools__contribution');
+  const renderers = group(/^visualEditor\.registerRawBoxRenderer/).locator('.typst-devtools__contribution');
   await expect(renderers.first()).toContainText('priority 110');
   await expect(renderers.nth(1)).toContainText('priority 100');
 });

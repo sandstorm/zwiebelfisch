@@ -1,4 +1,4 @@
-// The Visual view's ProseMirror document as rows, each with the source range it shows: what the Typst ↔ ProseMirror
+// The Visual editor's ProseMirror document as rows, each with the source range it shows: what the Typst ↔ ProseMirror
 // conversion (docs/30_architecture/03_prosemirror-typst.typ) made of the shown file. See ../devtools.ts.
 import type { SourceOffset, SourceRange } from '../../../core/typst-document/typst-document';
 import { describeValue } from './describe';
@@ -34,7 +34,7 @@ export interface DocumentRow {
   readonly attributes: string;
 }
 
-/** How positions map to the source, and which nodes are boxes: the Visual view's (`VisualViewContext`), for one document. */
+/** How positions map to the source, and which nodes are boxes: the Visual editor's (`VisualEditorContext`), for one document. */
 export interface DocumentMapping<N> {
   posToSource(pos: number, bias?: 1 | -1): SourceOffset;
   isBox(node: N): boolean;

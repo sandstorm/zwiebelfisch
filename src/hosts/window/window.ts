@@ -86,9 +86,9 @@ export interface WindowApi {
   registerStatusBarItem(element: HTMLElement, placement: StatusBarPlacement): Disposable;
   /**
    * Opens files whose name matches `options.filenamePattern` in the editor `provider` puts into a panel of the editing
-   * area, until disposed (VS Code's custom editors; the Typst files' Visual and Source views are two of them,
-   * `visualView.editor` and `sourceView.editor`). `viewType` names the editor (`<extension>.<name>`, unique), e.g. for
-   * `workbench.open(path, { viewType })`. When several match a file, the editing area's tabs switch between them
+   * area, until disposed (VS Code's custom editors; the Typst files' Visual and Source editors are two of them,
+   * `visualEditor` and `sourceEditor`). `viewType` names the editor (unique; an extension's `<extension>.<name>`),
+   * e.g. for `workbench.open(path, { viewType })`. When several match a file, the editing area's tabs switch between them
    * (`displayName`), and the one the user chose last opens it; before any choice, the one of the highest `priority`
    * (`'default'`: 100), then the most specific pattern (`*.drawio.png` over `*.png`), then the one registered first;
    * a `'fallback'` editor only when no other matches, an `'option'` editor only when chosen.
@@ -373,19 +373,19 @@ export interface CustomEditorPanel {
 }
 
 /**
- * A Typst file's editor: its Visual and Source views (the custom editors `visualView.editor` and `sourceView.editor`).
- * One per document, for as long as one of its views lives.
+ * A Typst file's editor: its Visual and Source editors (the custom editors `visualEditor` and `sourceEditor`).
+ * One per document, for as long as one of them lives.
  */
 export interface TextEditor {
   readonly document: TypstDocument;
   /**
-   * The custom editor the document was shown in last (its view type: `VISUAL_VIEW_TYPE` or `SOURCE_VIEW_TYPE`), the
-   * view `selection` and `revealRange` use.
+   * The custom editor the document was shown in last (its view type: `VISUAL_EDITOR` or `SOURCE_EDITOR`), the
+   * editor `selection` and `revealRange` use.
    */
   readonly viewType: string;
-  /** The selection in that view, in the source (`from === to` for a caret). */
+  /** The selection in that editor, in the source (`from === to` for a caret). */
   readonly selection: SourceRange;
-  /** Selects `range` in that view, scrolls it into view and focuses the view. */
+  /** Selects `range` in that editor, scrolls it into view and focuses the editor. */
   revealRange(range: SourceRange): void;
 }
 

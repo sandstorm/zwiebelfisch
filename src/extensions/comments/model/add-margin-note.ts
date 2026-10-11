@@ -16,7 +16,7 @@ export interface MarginNoteChanges {
  * The edits that add a `drafting` margin note at `range` of Typst `text`:
  * a selection becomes the highlighted text of a range note,
  * `#margin-note[selection][]` (bold or italic text the selection starts or
- * ends with goes inside whole: `#margin-note[*bold*][]`, as the Visual view
+ * ends with goes inside whole: `#margin-note[*bold*][]`, as the Visual editor
  * prints it); a collapsed range (or a selection that is not
  * self-contained markup, e.g. half of `*bold*` or two paragraphs) gets a point
  * note `#margin-note[]` at its end. The file imports `margin-note` from
@@ -37,7 +37,7 @@ export function calculateMarginNoteChanges(text: string, range: SourceRange): Ma
 
 /**
  * drafting's look of notes in the PDF, set right after an import the editor
- * adds: small text in a box tinted like the Visual view's notes (which is also
+ * adds: small text in a box tinted like the Visual editor's notes (which is also
  * the range highlight), a thin amber border and connector.
  */
 export const NOTE_STYLE = `#${SET_DEFAULTS}(
@@ -65,10 +65,10 @@ function noteEdit(text: string, range: { from: number; to: number }): TextChange
 
 /**
  * `range` grown over the delimiters of bold and italic text it starts or ends
- * with (`bold` in `*bold*` becomes `*bold*`). The Visual view maps a selected
+ * with (`bold` in `*bold*` becomes `*bold*`). The Visual editor maps a selected
  * bold word to the text between the stars, and prints a range note around its
  * formatting (the note's mark is the outermost), so a note made like this
- * keeps its source when the Visual view prints it again.
+ * keeps its source when the Visual editor prints it again.
  */
 function aroundFormatting(text: string, { from, to }: { from: number; to: number }): { from: number; to: number } {
   const tree = typstParser.parse(text);

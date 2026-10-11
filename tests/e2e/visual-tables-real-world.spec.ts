@@ -1,4 +1,4 @@
-// End-to-end tests (Playwright, against the demo build): real-world tables in the Visual view (expression cells, table figures).
+// End-to-end tests (Playwright, against the demo build): real-world tables in the Visual editor (expression cells, table figures).
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
 import { caretAtEnd, tableBar } from './visual-helpers';

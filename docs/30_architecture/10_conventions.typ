@@ -18,7 +18,7 @@ How code is written here. `mise run quality` enforces what it can (@architecture
 
 - A module is `core/<name>/`, `hosts/<name>/`, `extensions/<name>/`, `typst-editor/`, `typst-editor-element/` or `testing/`. From outside, only its *entry file* may be imported. The entry lives inside its folder.
 - *The entry defines the API*; the most important code lives there. Internal files import the entry's types; they may use its values at runtime, never while modules load.
-- Subfolders (`model/`, `visual-view/`, `worker/`) are layer or concept folders without entries; files import each other directly.
+- Subfolders (`model/`, `visual-editor/`, `worker/`) are layer or concept folders without entries; files import each other directly.
 - *No re-exports* (`export … from`, forwarding an imported name), except `src/index.ts`, the package entry. An outside caller needing an internal name means the code belongs in the entry, or the concept is a module of its own (`core/typst-syntax`, `hosts/prosemirror-typst`). Split a concept out when its types and class form an API of their own, so entries don't grow into type collections.
 - Folders are named after a concept, never `utils/`, `impl/`, `helpers/`.
 - *No cycles between modules*.
@@ -44,7 +44,7 @@ How code is written here. `mise run quality` enforces what it can (@architecture
 
 - *VS Code's names and shapes* where a concept matches: `activate`, `subscriptions`, `register…Provider`, `provide…` / `resolve…`, `onDid<Verb>`, `executeCommand`, `getConfiguration`, `showInputBox`, `showQuickPick`, `show…Message`. Rename ours to them; never "ours, in VS Code terms" comments.
 - *Extensions are factories* (`markup()`, `collaboration(options)`), so options can come later without a break.
-- *Contributions register once, at activation*; hosts apply them to every view made later. Each returns a `Disposable` pushed to `context.subscriptions`.
+- *Contributions register once, at activation*; hosts apply them to every editor made later. Each returns a `Disposable` pushed to `context.subscriptions`.
 - *One disposal verb*: `dispose()` for everything with a lifetime (hosts, views, `Project`, the widget). Only what a library calls keeps its name (ProseMirror node views, CodeMirror view plugins: `destroy`).
 - *Competing contributions* have an explicit tie-breaker. Registration order counts only within one extension, never between extensions.
 
@@ -55,7 +55,7 @@ How code is written here. `mise run quality` enforces what it can (@architecture
   [box renderers, link providers, PDF options, custom editors], [our `priority` (default 100, higher first)],
   [toolbar and menu items], [`group` + `order`],
   [status bar items], [`alignment` + `priority`],
-  [Source view extensions], [CodeMirror's `Prec`],
+  [Source editor extensions], [CodeMirror's `Prec`],
 )
 
 - *Name the framework* a member takes or returns: `registerTiptapExtension`, `registerCodeMirrorExtension`, `registerRawBoxCodeMirrorExtension`. Framework types are used directly, never aliased (Tiptap's `Node`, CodeMirror's `Extension`, Lezer's `SyntaxNode`).

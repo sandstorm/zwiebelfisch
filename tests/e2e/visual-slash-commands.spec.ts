@@ -1,4 +1,4 @@
-// End-to-end tests (Playwright, against the demo build): the slash commands, `/` in the Visual view.
+// End-to-end tests (Playwright, against the demo build): the slash commands, `/` in the Visual editor.
 import { test } from './fixtures';
 import { expect, type Page } from '@playwright/test';
 import { caretAtEnd, compiled, sourceText, visual } from './visual-helpers';

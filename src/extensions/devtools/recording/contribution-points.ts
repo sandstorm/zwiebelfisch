@@ -17,7 +17,7 @@ export interface Description {
   readonly rank?: readonly (string | number)[];
 }
 
-/** `args` of a registration through `point` (`visualView.registerNode`), described; the generic summary for unknown points. */
+/** `args` of a registration through `point` (`visualEditor.registerNode`), described; the generic summary for unknown points. */
 export function describeContribution(point: string, args: readonly unknown[]): Description {
   const describe = POINTS[point];
   if (describe) {
@@ -48,14 +48,14 @@ const POINTS: Readonly<Record<string, Describer>> = {
   'contributes.configuration': ([id, property]) => describeSetting(String(id), property),
   'commands.registerCommand': ([id]) => ({ title: String(id), details: [] }),
   'commands.registerKeybinding': ([key, command]) => ({ title: `${String(key)} → ${String(command)}`, details: [] }),
-  'visualView.registerNode': ([spec]) => typstSpec(spec),
-  'visualView.registerMark': ([spec]) => typstSpec(spec),
-  'visualView.registerTiptapExtension': ([provider]) => named(provider, 'Tiptap extensions'),
-  'visualView.registerToolbarGroup': ([group]) => {
+  'visualEditor.registerNode': ([spec]) => typstSpec(spec),
+  'visualEditor.registerMark': ([spec]) => typstSpec(spec),
+  'visualEditor.registerTiptapExtension': ([provider]) => named(provider, 'Tiptap extensions'),
+  'visualEditor.registerToolbarGroup': ([group]) => {
     const { id, kind, label, order } = record(group);
     return { title: String(id), details: [String(kind), ...optional(label, (value) => `"${value}"`), `order ${num(order, 0)}`], rank: [num(order, 0)] };
   },
-  'visualView.registerToolbarItem': ([item]) => {
+  'visualEditor.registerToolbarItem': ([item]) => {
     const { group, order, action } = record(item);
     const { label, shortcut } = record(action);
     return {
@@ -64,21 +64,21 @@ const POINTS: Readonly<Record<string, Describer>> = {
       rank: [String(group), num(order, 0)],
     };
   },
-  'visualView.registerTextStyleProvider': ([provider]) => named(provider, 'text styles'),
-  'visualView.registerCompletionItemProvider': ([provider, trigger]) => {
+  'visualEditor.registerTextStyleProvider': ([provider]) => named(provider, 'text styles'),
+  'visualEditor.registerCompletionItemProvider': ([provider, trigger]) => {
     const { char, allowedPrefixes } = record(trigger);
     const prefixes = Array.isArray(allowedPrefixes) ? [`after ${allowedPrefixes.map((prefix) => JSON.stringify(prefix)).join(', ')}`] : [];
     return { title: `trigger "${String(char)}"`, details: [...optional(nameOf(provider), String), ...prefixes], rank: [String(char)] };
   },
-  'visualView.registerGutter': ([provider]) => named(provider, 'gutter'),
-  'visualView.registerHighlights': ([layer, provider]) => ({ title: `layer ${String(layer)}`, details: optional(nameOf(provider), String) }),
-  'visualView.registerRawBoxRenderer': ([provider, options]) => prioritized(named(provider, 'renderer'), record(options).priority),
-  'visualView.registerRawBoxCodeMirrorExtension': ([provider]) => named(provider, 'CodeMirror extensions'),
-  'visualView.registerRawBoxAction': ([action]) => {
+  'visualEditor.registerGutter': ([provider]) => named(provider, 'gutter'),
+  'visualEditor.registerHighlights': ([layer, provider]) => ({ title: `layer ${String(layer)}`, details: optional(nameOf(provider), String) }),
+  'visualEditor.registerRawBoxRenderer': ([provider, options]) => prioritized(named(provider, 'renderer'), record(options).priority),
+  'visualEditor.registerRawBoxCodeMirrorExtension': ([provider]) => named(provider, 'CodeMirror extensions'),
+  'visualEditor.registerRawBoxAction': ([action]) => {
     const { title, when } = record(action);
     return { title: String(title), details: [typeof when === 'function' ? 'on some boxes' : 'on every box'] };
   },
-  'sourceView.registerCodeMirrorExtension': ([extension]) => named(extension, 'CodeMirror extensions'),
+  'sourceEditor.registerCodeMirrorExtension': ([extension]) => named(extension, 'CodeMirror extensions'),
   'workbench.registerStyleSheet': ([css]) => ({ title: 'style sheet', details: [size(String(css))] }),
   'workbench.registerSidePanel': ([id, options]) => {
     const { label, side, order } = record(options);

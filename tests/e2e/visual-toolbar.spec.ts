@@ -1,4 +1,4 @@
-// End-to-end tests (Playwright, against the demo build): the Visual view's toolbar.
+// End-to-end tests (Playwright, against the demo build): the Visual editor's toolbar.
 import { test } from './fixtures';
 import { expect, type Page } from '@playwright/test';
 import { caretAtEnd, compiled, freshSelectedLine, selectionBar, sourceText, toolbar, visual } from './visual-helpers';

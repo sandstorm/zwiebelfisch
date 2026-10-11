@@ -2,7 +2,7 @@
 // Tests for typst-editor.ts: the file panel and file links in the composed widget (preview mocked: no worker in jsdom).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
-import { SOURCE_VIEW_TYPE } from '../hosts/source-view/source-view';
+import { SOURCE_EDITOR } from '../hosts/source-editor/source-editor';
 import { createTypstEditor, type TypstEditorOptions } from './typst-editor';
 
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({
@@ -24,7 +24,7 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => ({
 function setup(options: TypstEditorOptions) {
   const host = document.createElement('div');
   document.body.append(host);
-  const editor = createTypstEditor(host, { viewType: SOURCE_VIEW_TYPE, ...options });
+  const editor = createTypstEditor(host, { viewType: SOURCE_EDITOR, ...options });
   const items = () => [...host.querySelectorAll<HTMLElement>('[role=treeitem]')];
   const item = (title: string) => items().find((t) => t.title === title);
   const source = () => {
@@ -98,7 +98,7 @@ describe('the file panel in the widget', () => {
 describe('file links in the widget', () => {
   const files = { '/template.typ': '#let template(doc) = doc', '/chapters/intro.typ': '#image("../logo.png")' };
 
-  it('Mod+click on an #import path in the Source view opens the file and the panel shows it', () => {
+  it('Mod+click on an #import path in the Source editor opens the file and the panel shows it', () => {
     const { editor, source, item } = setup({ source: '#import "template.typ": template\n= Hello', files });
     const view = source();
     view.posAtCoords = () => 10;

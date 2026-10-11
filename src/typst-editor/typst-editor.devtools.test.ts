@@ -53,17 +53,17 @@ describe('devtools', () => {
   it('lists the contributions by extension in their points\' terms, settings included, each with its details as tooltip', () => {
     const contributions = mount().tab('Contributions');
     const text = contributions.textContent;
-    for (const expected of ['files', 'contributes.configuration', 'files.panel', 'default "auto"', 'commands.registerCommand', 'files.newFile', 'visualView.registerNode', 'heading', 'parses Heading', 'Mod+Alt+KeyM → comments.addComment', 'devtools', 'workbench.registerSidePanel']) {
+    for (const expected of ['files', 'contributes.configuration', 'files.panel', 'default "auto"', 'commands.registerCommand', 'files.newFile', 'visualEditor.registerNode', 'heading', 'parses Heading', 'Mod+Alt+KeyM → comments.addComment', 'devtools', 'workbench.registerSidePanel']) {
       expect(text).toContain(expected);
     }
-    const heading = [...contributions.querySelectorAll<HTMLElement>('.typst-devtools__contribution')].find((row) => row.textContent?.startsWith('visualView.registerNodeheading'))!;
-    expect(heading.title).toMatch(/^visualView\.registerNode: heading\nby headings, registered at .+\n\n\[/);
+    const heading = [...contributions.querySelectorAll<HTMLElement>('.typst-devtools__contribution')].find((row) => row.textContent?.startsWith('visualEditor.registerNodeheading'))!;
+    expect(heading.title).toMatch(/^visualEditor\.registerNode: heading\nby headings, registered at .+\n\n\[/);
   });
 
   it('groups the contributions by point: the competing ones in the order the host resolves them', () => {
     const contributions = mount().tab('Contributions');
     [...contributions.querySelectorAll('button')].find((button) => button.textContent === 'By contribution point')!.click();
-    const renderers = [...contributions.querySelectorAll('details')].find((group) => group.querySelector('summary')?.textContent?.startsWith('visualView.registerRawBoxRenderer'))!;
+    const renderers = [...contributions.querySelectorAll('details')].find((group) => group.querySelector('summary')?.textContent?.startsWith('visualEditor.registerRawBoxRenderer'))!;
     const rows = [...renderers.querySelectorAll('.typst-devtools__contribution')].map((row) => row.textContent);
     // the image renderer (110) before the compiled snippets (100)
     expect(rows).toEqual([expect.stringMatching(/^images.*priority 110$/), expect.stringMatching(/^rendered-boxes.*priority 100$/)]);

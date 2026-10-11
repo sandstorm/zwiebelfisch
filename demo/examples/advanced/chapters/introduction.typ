@@ -22,4 +22,4 @@ files. Open them in the file panel on the left, or Ctrl+click a path such as
 `"template.typ"`.
 
 Notes like this one and terms like #term[incrementally] are custom styles
-declared in `helpers.typ`: pick them in the Visual view's text style menu.]
+declared in `helpers.typ`: pick them in the Visual editor's text style menu.]

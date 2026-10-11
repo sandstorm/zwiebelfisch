@@ -1,5 +1,5 @@
 /**
- * Typst's alignment syntax, as far as the Visual view edits it: the argument
+ * Typst's alignment syntax, as far as the Visual editor edits it: the argument
  * of `#align(..)` and the set rules that change the default alignment.
  *
  * Only literal alignments count: `left`, `center`, `right`, `start`, `end`,
@@ -8,7 +8,7 @@
  */
 
 export type Horizontal = 'left' | 'center' | 'right';
-/** What the Visual view's alignment buttons show and set. */
+/** What the Visual editor's alignment buttons show and set. */
 export type TextAlignment = Horizontal | 'justify';
 
 const HORIZONTAL: Record<string, Horizontal> = { left: 'left', center: 'center', right: 'right', start: 'left', end: 'right' };

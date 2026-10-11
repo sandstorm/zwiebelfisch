@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
-import { VisualViewHost } from '../../hosts/visual-view/visual-view';
+import { VisualEditorHost } from '../../hosts/visual-editor/visual-editor';
 import type { ExtensionContext } from '../../hosts/workbench/workbench';
 import { renderedBoxes } from './rendered-boxes';
 import { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
@@ -15,11 +15,11 @@ describe('renderedBoxes', () => {
   it('asks the preview for snippets of the document under its current path', async () => {
     const project = new Project(path('/main.typ'), { '/main.typ': '= Hi\n', '/chapters/one.typ': '$x$\n' });
     const preview = { snippet: vi.fn(async () => ({ svg: '<svg/>', width: 1, height: 1, textHeight: 1, padding: 0 })), onDidRender: vi.fn(() => new Disposable(() => {})) };
-    const visualView = new VisualViewHost();
+    const visualEditor = new VisualEditorHost();
     const workbench = { registerStyleSheet: () => new Disposable(() => {}) };
-    renderedBoxes().activate({ project, preview, visualView, workbench, subscriptions: [] } as unknown as ExtensionContext);
+    renderedBoxes().activate({ project, preview, visualEditor, workbench, subscriptions: [] } as unknown as ExtensionContext);
     const document = project.document(path('/chapters/one.typ'))!;
-    const renderer = visualView.contributed().rawBoxRenderers[0]({ document, selection: () => SourceRange.of({ from: 0, to: 0 }), sourceToPos: () => 0, posToSource: () => SourceOffset.of(0), isBox: () => false })!;
+    const renderer = visualEditor.contributed().rawBoxRenderers[0]({ document, selection: () => SourceRange.of({ from: 0, to: 0 }), sourceToPos: () => 0, posToSource: () => SourceOffset.of(0), isBox: () => false })!;
     const box = { attrs: { src: '$x$' }, isInline: false } as unknown as Node;
     await renderer.render(box, SourceOffset.of(0));
     expect(preview.snippet).toHaveBeenCalledWith(path('/chapters/one.typ'), { from: 0, to: 3 }, '$x$');

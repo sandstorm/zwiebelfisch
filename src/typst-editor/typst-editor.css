@@ -45,7 +45,7 @@
   --te-note-strong: light-dark(rgba(250, 190, 20, 0.55), rgba(210, 153, 34, 0.5));
   --te-note-bg: light-dark(#fff8e0, #3a2e0c);
   --te-note-text: light-dark(#6b5200, #e3b341);
-  /* syntax highlighting (extensions/typst-language/source-view/code-colors.ts); light: CodeMirror's default colors */
+  /* syntax highlighting (extensions/typst-language/source-editor/code-colors.ts); light: CodeMirror's default colors */
   --te-syn-meta: light-dark(#404740, #8b949e);
   --te-syn-keyword: light-dark(#770088, #ff7b72);
   --te-syn-atom: light-dark(#221199, #79c0ff);

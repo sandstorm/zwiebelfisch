@@ -1,7 +1,7 @@
 // The margin notes of every Typst file in search everywhere. See ../comments.ts and docs/10_guide/02_features.typ.
 import { ProjectPath } from '../../../core/paths/paths';
 import type { Project } from '../../../core/project/project';
-import { VISUAL_VIEW_TYPE } from '../../../hosts/visual-view/visual-view';
+import { VISUAL_EDITOR } from '../../../hosts/visual-editor/visual-editor';
 import type { SearchProvider, WindowApi } from '../../../hosts/window/window';
 import type { Workbench } from '../../../hosts/workbench/workbench';
 import { findNotes, type FoundNote } from '../model/find-notes';
@@ -18,7 +18,7 @@ export interface CommentSearchContext {
 
 /**
  * "Comments" (prefix `!`): the margin notes of every Typst file, by their first message, with who wrote in the thread
- * (matched too) and the file; picking one opens the file at the note and, in the Visual view, its card. A file is read
+ * (matched too) and the file; picking one opens the file at the note and, in the Visual editor, its card. A file is read
  * again only when it changed.
  */
 export function commentSearch({ project, workbench, window }: CommentSearchContext, cards: NoteCards): SearchProvider {
@@ -26,7 +26,7 @@ export function commentSearch({ project, workbench, window }: CommentSearchConte
   const open = (path: ProjectPath, { at }: FoundNote) => {
     workbench.open(path, { selection: { from: at, to: at } });
     const editor = window.activeTextEditor;
-    if (editor?.viewType === VISUAL_VIEW_TYPE) cards.editNote(editor.document, at);
+    if (editor?.viewType === VISUAL_EDITOR) cards.editNote(editor.document, at);
   };
   return {
     id: 'comments.notes',

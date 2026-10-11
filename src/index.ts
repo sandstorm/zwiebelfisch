@@ -1,11 +1,11 @@
 // The package's public API: createTypstEditor, <typst-editor> (registered on import), and what writing an extension
 // takes: the types an extension implements or declares (everything else it reaches through its ExtensionContext is
-// typed without importing) — the Visual view's contribution types (node and mark specs with their Typst parse rules
+// typed without importing) — the Visual editor's contribution types (node and mark specs with their Typst parse rules
 // and toTypst, toolbar items, box renderers and actions, gutters, highlights, text styles; experimental) and the
 // plain functions that read Typst calls from Lezer's syntax nodes included, so an outside extension can add a Typst
 // construct as the built-ins do —, Disposable and EventEmitter, the value types (ProjectPath, FileContent,
 // SourceOffset / SourceRange, PageIndex, Pt: made where values come in, e.g. to `open` a file at a range), the
-// Typst views' view types (VISUAL_VIEW_TYPE, SOURCE_VIEW_TYPE: to open a file in one, or tell which one is shown), and the
+// Typst editors' view types (VISUAL_EDITOR, SOURCE_EDITOR: to open a file in one, or tell which one is shown), and the
 // optional extensions: collaboration, which a host adds with its connection, and devtools, which wraps the list. The only file that re-exports. See docs/10_guide/05_embedding.typ and docs/20_extensions/01_overview.typ.
 import { defineTypstEditorElement } from './typst-editor-element/typst-editor-element';
 
@@ -46,7 +46,7 @@ export type { Scm, SourceControl, SourceControlState } from './hosts/scm/scm';
 export type { DocumentFilter, DocumentLink, DocumentLinkProvider, DocumentSelector, Languages, TextDocument } from './hosts/languages/languages';
 export type { ConfigurationChangeEvent, ConfigurationProperty, Settings, Workspace, WorkspaceConfiguration } from './hosts/workspace/workspace';
 export type { PdfExportOption, PreviewContributions, PreviewToolbarItem, ToolbarPlacement } from './hosts/preview/preview';
-export { SOURCE_VIEW_TYPE, type SourceViewContext, type SourceViewContributions } from './hosts/source-view/source-view';
+export { SOURCE_EDITOR, type SourceEditorContext, type SourceEditorContributions } from './hosts/source-editor/source-editor';
 export type {
   ToolbarAction,
   Anchor,
@@ -72,10 +72,10 @@ export type {
   ToolbarGroup,
   ToolbarItem,
   TypstNodeSpec,
-  VisualViewContext,
-  VisualViewContributions,
-} from './hosts/visual-view/visual-view';
-export { VISUAL_VIEW_TYPE, insertTypstBlocks, setRawBoxDecorations } from './hosts/visual-view/visual-view';
+  VisualEditorContext,
+  VisualEditorContributions,
+} from './hosts/visual-editor/visual-editor';
+export { VISUAL_EDITOR, insertTypstBlocks, setRawBoxDecorations } from './hosts/visual-editor/visual-editor';
 export type {
   Around,
   BlockLabel,

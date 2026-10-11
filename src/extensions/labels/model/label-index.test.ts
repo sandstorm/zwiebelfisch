@@ -107,7 +107,7 @@ describe('LabelIndex', () => {
     results.onDidChange(changes);
     index.renameReferences('fig:compile-times', 'fig:times', intro);
     expect(results.text).toContain('@fig:times shows the same data');
-    expect(results.text).toContain('<fig:compile-times>'); // the label itself is the Visual view's to change
+    expect(results.text).toContain('<fig:compile-times>'); // the label itself is the Visual editor's to change
     expect(changes).toHaveBeenCalledTimes(1);
     expect(intro.text).toContain('@fig:compile-times sums them up');
     index.renameReferences('fig:compile-times', 'fig:times');
