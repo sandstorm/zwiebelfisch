@@ -1,4 +1,4 @@
-import { defaultKeymap } from '@codemirror/commands';
+import { defaultKeymap, indentLess, indentMore } from '@codemirror/commands';
 import type { Extension as CodeExtension, Transaction as CodeTransaction } from '@codemirror/state';
 import { EditorView as CodeView, keymap, type KeyBinding } from '@codemirror/view';
 import { Extension, type Editor } from '@tiptap/core';
@@ -67,7 +67,7 @@ export const RawBoxNavigation = Extension.create({
  * outer selection stay put), and outside changes to `src` flow back into the
  * box as one minimal change. Undo/redo go to the Visual editor's history;
  * arrow keys at the edges, Escape (and Enter in inline boxes) leave the box;
- * Backspace in an empty box deletes it. With a box renderer that draws it,
+ * Backspace in an empty box deletes it; Tab indents a block box's code. With a box renderer that draws it,
  * the box shows its picture instead of the code until the code gets focus;
  * the picture leads where the box's Typst links to, as a link in the Source
  * editor (the tooltip says where; Mod+click on it, or Alt+Enter on the
@@ -258,6 +258,8 @@ class RawBox implements NodeView {
       { key: 'ArrowUp', run: () => head().empty && doc().lineAt(head().head).number === 1 && this.leave(-1) },
       { key: 'ArrowDown', run: () => head().empty && doc().lineAt(head().head).number === doc().lines && this.leave(1) },
       { key: 'Escape', run: () => this.leave(1) },
+      // stays in the editor: a block's code indents, an inline box's ignores it (Escape, then Tab leaves; see tab-keys.ts)
+      { key: 'Tab', run: (view) => inline || indentMore(view), shift: (view) => inline || indentLess(view) },
       { key: 'Enter', run: () => inline && this.leave(1) },
       { key: 'Backspace', run: () => doc().length === 0 && this.remove() },
     ];

@@ -70,9 +70,10 @@ with the #link("https://typst.app")[Typst] compiler (`typst compile`).
   [Link], [Ctrl+K (⌘K on Mac), or "Link" in the bar over a selection. Ctrl+click (⌘-click on Mac) on a link, or Alt+Enter in it, opens its address in a new tab; a plain click edits it.],
   [Lists], [List buttons: bulleted, numbered, task list (`- [ ] todo`). Or type at a line start, as in Typst: `- ` bulleted, `+ ` numbered (also `1. `). Tab nests.],
   [Quote], [Ctrl+Shift+B (⌘⇧B on Mac), Insert → Quote, or `> ` at a line start (Typst has no quote markup: it writes `#quote(block: true)[..]`).],
-  [Code block], [Insert → Code block. Its language is a field.],
+  [Code block], [Insert → Code block. Its language is a field. Tab / Shift+Tab indent / outdent by two spaces.],
   [Alignment], [Align menu, or Ctrl+Shift+L / E / R / J (⌘⇧L / E / R / J on Mac): `#align(center)[..]`, `#par(justify: true)[..]`.],
   [Undo, redo], [Ctrl+Z, Ctrl+Shift+Z (⌘Z, ⌘⇧Z on Mac).],
+  [Tab, Shift+Tab], [Stay in the text: nest or un-nest a list item, go to the next or previous table cell (Tab in the last one adds a row), indent or outdent a code block's line or a raw box's code. Elsewhere they do nothing. To move the focus on with the keyboard: Escape, then Tab (or Shift+Tab).],
   [Anything from the Insert or text style menu], [Type `/` at a line start or after a space, then part of its name: `/table`, `/h2`, `/quote`. Other words find entries, too (`/spreadsheet` → Insert table). ↑ / ↓ choose, Enter or Tab inserts (the `/…` goes), Escape closes. An empty line holding the cursor hints "Type / for commands".],
 )
 
