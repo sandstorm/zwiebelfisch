@@ -1,5 +1,5 @@
 // LoadState: what the preview still waits for — the engine's wasm, the first compile, packages, fonts — from the
-// worker's load events, as one `PreviewProgress`. No DOM. See ../preview.ts and docs/architecture/preview.typ.
+// worker's load events, as one `PreviewProgress`. No DOM. See ../preview.ts and docs/30_architecture/06_preview.typ.
 import type { PreviewProgress } from '../preview';
 import type { LoadEvent } from '../worker/protocol';
 

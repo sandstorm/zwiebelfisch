@@ -1,5 +1,5 @@
 // Loader: the preview pane's "Loading the Typst compiler… 3.1 / 6.6 MB" while it has no pages yet. See ../preview.ts
-// and docs/architecture/preview.typ.
+// and docs/30_architecture/06_preview.typ.
 import type { PreviewProgress } from '../preview';
 
 /**

@@ -1,6 +1,6 @@
 // downloadWasm: the engine's wasm as a streamed response that reports how much has arrived, so the preview can show
 // the download while the browser compiles the module as it comes in. See engine.worker.ts and
-// docs/architecture/preview.typ.
+// docs/30_architecture/06_preview.typ.
 
 /** How much of a download has arrived: bytes so far, and of how many (null: unknown). */
 export type DownloadListener = (loaded: number, total: number | null) => void;

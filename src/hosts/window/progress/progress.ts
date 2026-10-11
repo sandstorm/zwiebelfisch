@@ -1,6 +1,6 @@
 // Progress: what `window.withProgress` shows while a task runs — a status bar entry (`ProgressLocation.Window`), or a
 // note over the editing area that holds input back (`ProgressLocation.EditingArea`). See window.ts and
-// docs/architecture/workbench.typ.
+// docs/30_architecture/07_workbench.typ.
 import { Disposable } from '../../../core/disposable/disposable';
 import { type ProgressOptions, type ProgressReport, ProgressLocation } from '../window';
 import type { StatusBar } from '../status-bar/status-bar';

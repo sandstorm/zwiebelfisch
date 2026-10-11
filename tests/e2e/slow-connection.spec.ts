@@ -1,5 +1,5 @@
 // End-to-end tests (Playwright, against the demo build): the widget over a slow connection — the text first, editable,
-// then what the preview still loads, then the pages (docs/architecture/workbench.typ, "Loading"). Requests are held
+// then what the preview still loads, then the pages (docs/30_architecture/07_workbench.typ, "Loading"). Requests are held
 // back until the test lets them through.
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
