@@ -10,7 +10,8 @@ How code is written here. `mise run quality` enforces what it can (@architecture
 - *Deep modules*: a lot hidden behind a small interface. Don't split a deep class into shallow ones (`Project` stays one class).
 - *Information hiding*: expose what callers need. No member exists only for tests or for one caller's convenience.
 - *No pass-through layers*: a host does not take data from one extension only to hand it back to it.
-- *The most important API at the top* of a file, with a _why_ comment at the top of the entry.
+- *Files read general to specific*: the file's main element (the class, function or spec it is named after, usually its first export) comes first, then the other exports, then private helpers in the order they are used (function declarations are hoisted). A constant or class needed while the module loads (spread into an export, passed to `Extension.create(…)`) sits directly above its user, as small as possible; ESLint's `no-use-before-define` checks that.
+- *The _why_ is the main element's doc comment*, so it is read above the fold together with the code it explains. The file's top keeps at most one short line of context and its `See …` pointer.
 - *Remove what does not work* rather than polish it.
 - *Editing stays inline*: popovers, tags and bars at the content (image tools, label tags, the Align menu, the table bar). No inspector panel.
 
@@ -77,7 +78,7 @@ How code is written here. `mise run quality` enforces what it can (@architecture
 
 == Comments and tests <architecture-conventions-comments>
 
-- Every source file starts with a comment: its context and where to read more (`See <entry file>`, `See docs/30_architecture/07_workbench.typ`), or `Tests for X`. `quality:top-comments` checks that every `docs/…` file named exists.
+- Every source file names its context: a top comment (one short line and where to read more: `See <entry file>`, `See docs/30_architecture/07_workbench.typ`; `Tests for X`), or the doc comment of its main element. `quality:top-comments` checks that a file has one of them and that every `docs/…` file named exists.
 - Comments say _why_, or what a name cannot. No history ("was …", "moved from …"), no restating the code.
 - *No migration notes, no backwards compatibility*: no "renamed from", no shims. Code and docs describe only what is.
 - Tests go through the exported interface of the unit under test (an entry, or a file inside the module). Model tests run without jsdom.

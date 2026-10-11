@@ -1,12 +1,11 @@
 #!/usr/bin/env node
-//MISE description="Fail on a source file without a top comment (context, or See <entry file / docs chapter>) or naming a docs file that does not exist"
-// Every TypeScript and CSS source file starts with a comment that says what it is for, or where
-// to read about it ("See typst-editor.ts", "See docs/30_architecture/07_workbench.typ", "Tests for …").
-// A shebang line may come first. The JSDoc of the first declaration (directly followed by
-// `export …`) does not count. A file naming a docs file (`docs/….typ`, `docs/….md`) that does
-// not exist fails too, so chapters can move without leaving stale pointers.
-// Checks the tracked files in src/, demo/, tests/, server/src/ and eslint-rules/; prints each
-// failing file and exits 1.
+//MISE description="Fail on a source file that names no context (a top comment, or its main element's doc comment) or names a docs file that does not exist"
+// Every TypeScript and CSS source file names its context: a top comment (one short line and where to read more:
+// "See typst-editor.ts", "See docs/30_architecture/07_workbench.typ"; "Tests for …"), or the doc comment of its main
+// element, the first `export` declaration, which carries the file's why (docs/30_architecture/10_conventions.typ).
+// A shebang line may come first. A file naming a docs file (`docs/….typ`, `docs/….md`) that does not exist fails
+// too, so chapters can move without leaving stale pointers.
+// Checks the tracked files in src/, demo/, tests/, server/src/ and eslint-rules/; prints each failing file and exits 1.
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 
@@ -51,6 +50,17 @@ function hasTopComment(text) {
   return comment !== undefined && !(comment.jsdoc && DECLARATION.test(comment.rest));
 }
 
+/** The first exported declaration: the file's main element (not `export { … }` or `export … from`). */
+const MAIN_ELEMENT = /^export\s+(?!\{|\*|type\s*\{)/m;
+
+/** Whether the main element of `text` (its first export) has a doc comment, directly above it or its decorators. */
+function hasMainDoc(text) {
+  const main = MAIN_ELEMENT.exec(text);
+  if (!main) return false;
+  const above = text.slice(0, main.index).replace(/(^@.*\n)+$/m, '').trimEnd();
+  return above.endsWith('*/') && above.lastIndexOf('/**') > above.lastIndexOf('*/', above.length - 3);
+}
+
 /** Docs files a source names: `docs/<path>.typ` or `docs/<path>.md`. */
 const DOCS_FILE = /\bdocs\/[\w./-]+\.(?:typ|md)\b/g;
 
@@ -62,9 +72,9 @@ function missingDocs(text) {
 let failures = 0;
 for (const file of files) {
   const text = readFileSync(file, 'utf8');
-  if (!hasTopComment(text)) {
+  if (!hasTopComment(text) && !hasMainDoc(text)) {
     failures++;
-    console.log(`${file}: no top comment (context, or "See <entry file>"; a declaration's doc comment does not count)`);
+    console.log(`${file}: names no context (a top comment, or a doc comment on its main element, the first export)`);
   }
   for (const path of missingDocs(text)) {
     failures++;
@@ -75,4 +85,4 @@ if (failures > 0) {
   console.log(`\n${failures} problems in ${files.length} files.`);
   process.exit(1);
 }
-console.log(`top comments: all ${files.length} source files have one, every docs file they name exists`);
+console.log(`top comments: all ${files.length} source files name their context, every docs file they name exists`);

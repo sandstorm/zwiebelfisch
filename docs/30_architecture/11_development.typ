@@ -18,7 +18,7 @@ Every operation is a mise task (`mise-tasks/`, `mise tasks ls`). Tools are pinne
   [`build`], [typecheck, engine, fonts, library, then the static demo → `dist/demo`],
   [`build:lib`], [the library → `dist/lib`: ESM, worker, wasm, fonts (content-hashed names), d.ts],
   [`typecheck`], [`tsc` over the widget, demo, tests and server],
-  [`quality`], [ESLint (complexity, module boundaries, layers), `quality:top-comments`, `quality:module-cycles`],
+  [`quality`], [ESLint (complexity, module boundaries, layers, definition order), `quality:top-comments`, `quality:module-cycles`],
   [`quality:report`], [every function ranked by complexity (hot spots)],
   [`test:unit`], [vitest over `src/`, `demo/`, `eslint-rules/`; the engine runs as real wasm],
   [`server:test`], [the server's vitest suite, Hocuspocus in-process, no port],

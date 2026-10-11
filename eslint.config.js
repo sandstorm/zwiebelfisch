@@ -126,6 +126,19 @@ export default tseslint.config(
     rules: { 'local/no-re-exports': 'off' },
   },
   {
+    // Files read general to specific (docs/30_architecture/10_conventions.typ): the main element first, helpers below
+    // their users. Only what is needed while the module loads (a constant spread into an export, a class instantiated at
+    // the top level) must come first; uses inside functions, and types, may refer to what follows.
+    files: ['src/**/*.ts', 'demo/**/*.ts', 'server/src/**/*.ts'],
+    plugins: { '@typescript-eslint': tseslint.plugin },
+    rules: {
+      '@typescript-eslint/no-use-before-define': [
+        'error',
+        { functions: false, classes: false, variables: false, enums: false, typedefs: false, ignoreTypeReferences: true },
+      ],
+    },
+  },
+  {
     // Layers: which folders may import which (the list `layers` above).
     files: ['**/*.ts'],
     rules: { 'local/dependencies': ['error', { rules: layers }] },

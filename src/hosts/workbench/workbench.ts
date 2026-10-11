@@ -1,15 +1,5 @@
-// The workbench host: the widget's frame (side panels on the left and the right, the preview being the right side's
-// built-in one; the editing area with its custom editors and the tabs between them; the status bar), the extension API every feature uses to put itself into it, and the composition of the
-// other hosts. Entry of hosts/workbench/.
-// Why extensions: the frame knows no feature by name. A feature is a `TypstExtension` that registers what it adds
-// (a side panel, a custom editor, a command, a menu item, a link provider, a source control) once, at activation, and the
-// host disposes all of it on dispose. Even the Typst files' Visual and Source editors are custom editors (registered
-// here, before the extensions), so the editing area treats every file alike. The API is VS Code's namespaces, each a host of its own (`commands`, `window`,
-// `scm`, `languages`, `workspace`); `workbench` is only the frame. Adding a feature is adding it to a list, not
-// editing the frame. Extensions never depend on each other: what one offers another goes through a generic
-// contribution point of a host.
-// See docs/30_architecture/07_workbench.typ.
-// WorkbenchHost (below the API) is what createTypstEditor creates; extensions see it as `Workbench`.
+// The workbench host: the widget's frame, the extension API, and the composition of the other hosts. Entry of
+// hosts/workbench/. See docs/30_architecture/07_workbench.typ.
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../core/paths/paths';
@@ -41,6 +31,14 @@ import css from './workbench.css?inline';
 /**
  * A feature of the widget: activated once, in list order; what it registers goes into `context.subscriptions`.
  * Hosts write their own the same way and give them to `createTypstEditor({ extensions })`.
+ *
+ * Why extensions: the frame knows no feature by name. A feature registers what it adds (a side panel, a custom
+ * editor, a command, a menu item, a link provider, a source control) once, at activation, and the host disposes all
+ * of it on dispose. Even the Typst files' Visual and Source editors are custom editors (registered by the workbench,
+ * before the extensions), so the editing area treats every file alike. The API is VS Code's namespaces, each a host of
+ * its own (`commands`, `window`, `scm`, `languages`, `workspace`); `workbench` is only the frame. Adding a feature is
+ * adding it to a list, not editing the frame. Extensions never depend on each other: what one offers another goes
+ * through a generic contribution point of a host.
  */
 export interface TypstExtension {
   /** Unique in the list (e.g. `files`); a host replaces a built-in by leaving out the one with this id. */
@@ -276,10 +274,12 @@ export interface WorkbenchOptions {
 
 /**
  * The frame of the widget on `host`: shows the project's files in custom editors (Typst files in the Visual and the
- * Source editor, others in those extensions register, tabs between them), keeps the preview compiling the main file, and runs the extensions. It
- * makes the other hosts: VS Code's namespaces (`commands`, `window`, `scm`, `languages`, `workspace`) and the views'
- * (`visualEditor`, `sourceEditor`, `preview`). `activate` starts it: extensions first (their contributions are in place
- * before any view exists), then the main file is shown and compiled.
+ * Source editor, others in those extensions register, tabs between them; side panels on the left and the right, the
+ * preview being the right side's built-in one; the status bar), keeps the preview compiling the main file, and runs
+ * the extensions. It makes the other hosts: VS Code's namespaces (`commands`, `window`, `scm`, `languages`,
+ * `workspace`) and the views' (`visualEditor`, `sourceEditor`, `preview`). `activate` starts it: extensions first
+ * (their contributions are in place before any view exists), then the main file is shown and compiled.
+ * createTypstEditor creates it; extensions see it as `Workbench`.
  */
 export class WorkbenchHost implements Workbench {
   #active: ProjectPath;
@@ -615,22 +615,6 @@ export class WorkbenchHost implements Workbench {
   }
 }
 
-/** The preview's rail button: a page. */
-function previewIcon(doc: Document): SVGSVGElement {
-  const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('viewBox', '0 0 16 16');
-  svg.setAttribute('fill', 'none');
-  svg.setAttribute('stroke', 'currentColor');
-  svg.setAttribute('stroke-width', '1.3');
-  svg.setAttribute('aria-hidden', 'true');
-  svg.innerHTML = '<path d="M4 1.5h5.5L12.5 4.5v10h-8.5z"/><path d="M9.5 1.5v3h3M6.5 8h4M6.5 10.5h4"/>';
-  return svg;
-}
-
-/** Search everywhere's rail button: a magnifier. */
-const SEARCH_ICON =
-  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3.5 3.5"/></svg>';
-
 /** The workbench's own settings. */
 const WORKBENCH_SETTINGS = {
   'workbench.theme': {
@@ -647,3 +631,19 @@ const WORKBENCH_SETTINGS = {
       "The side panel the right side shows until the viewer picks one with its rail: `preview`, or an extension's panel id (e.g. `devtools`); null: the right side starts hidden (the editing area takes its room). A panel id not registered: the right panel that asks for it (`setDefault`), if any.",
   },
 } as const;
+
+/** The preview's rail button: a page. */
+function previewIcon(doc: Document): SVGSVGElement {
+  const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 16 16');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '1.3');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.innerHTML = '<path d="M4 1.5h5.5L12.5 4.5v10h-8.5z"/><path d="M9.5 1.5v3h3M6.5 8h4M6.5 10.5h4"/>';
+  return svg;
+}
+
+/** Search everywhere's rail button: a magnifier. */
+const SEARCH_ICON =
+  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3.5 3.5"/></svg>';
