@@ -174,6 +174,9 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    **When everything else is done (user, 2026-10-11):** our own devtools extension (todo step 2:
    projection view, contributions by extension, events as they fire; public API only), then lazy
    font loading and a smaller wasm.
+   **No inspector side panel** (user, 2026-10-11): editing stays inline with popovers (image tools,
+   label tags, Align menu, table bar, caption buttons). Remove the inspector from the docs' open
+   work in the next docs-touching step.
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Rules wave also does:** core `onChange` → `onDidChange: Event` + `Disposable` everywhere
    (`Project`, `TypstDocument`, …) (user: yes).
