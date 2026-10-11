@@ -1,36 +1,8 @@
-// <typst-editor>: the editor as a custom element in a shadow root, around createTypstEditor.
-// Why use it rather than createTypstEditor: for pages that would otherwise need glue code. It works from plain HTML
-// and from any framework that renders elements (React, Vue, server templates): the text goes inside the tag, settings
-// in an attribute, changes come back as DOM events, and the editor lives and dies with the element (connect, move,
-// remove). Its shadow root keeps the page's CSS and the editor's apart. Call createTypstEditor yourself when your code
-// wants the editor directly: the returned handle (commands, exportPdf, dispose) and callbacks instead of events, with
-// the editor's styles in your page's document.
-// Why a thin adapter: the element must offer everything createTypstEditor has without listing (and forgetting) it
-// option by option. So it passes one `options` property through, maps one `settings` attribute (JSON) onto the
-// settings the extensions declare, and forwards the editor's callbacks as DOM events from one table; the content
-// (`value`, `files`) is all it knows by name, as with `<input>`. See docs/10_guide/05_embedding.typ.
+// <typst-editor>. See docs/10_guide/05_embedding.typ.
 import { createTypstEditor, type TypstEditor, type TypstEditorOptions } from '../typst-editor/typst-editor';
 import type { FileChange, FileContent, ProjectFiles } from '../core/project/project';
 import type { ProjectPath } from '../core/paths/paths';
 import type { Settings } from '../hosts/workspace/workspace';
-
-/**
- * `detail` of the `change` event: what the file at `path` holds after a change. `content` is null when the
- * file is gone (deleted, or renamed away: a rename is one `change` for each of the two paths).
- */
-export interface TypstEditorChangeDetail {
-  path: ProjectPath;
-  content: FileContent | null;
-}
-
-/** The events (type, `detail`) a call of the editor's callback makes; `files`: every file now. */
-type Forward = (value: never, files: () => ProjectFiles) => [type: string, detail: unknown][];
-
-/** The editor's callbacks the element forwards as DOM events. */
-const EVENTS: Record<string, Forward> = {
-  onFilesChange: (change: FileChange, files) => [['files-change', change], ...changedFiles(change, files).map((detail): [string, unknown] => ['change', detail])],
-  onOpen: (path: ProjectPath) => [['open', { path }]],
-};
 
 /**
  * `<typst-editor>`: the editor widget as a custom element, rendered in an open
@@ -48,6 +20,20 @@ const EVENTS: Record<string, Forward> = {
  * - Events (bubbling, composed): `change` for every file whose content changes (`TypstEditorChangeDetail`),
  *   `files-change` with every `FileChange` (`onFilesChange`), `open` with `{ path }` (`onOpen`).
  * - `executeCommand(id, ...args)` runs an extension's command; `exportPdf(options?)` gives the PDF as a Blob.
+ *
+ * The editor as a custom element in a shadow root, around createTypstEditor.
+ *
+ * Why use it rather than createTypstEditor: for pages that would otherwise need glue code. It works from plain HTML and
+ * from any framework that renders elements (React, Vue, server templates): the text goes inside the tag, settings in an
+ * attribute, changes come back as DOM events, and the editor lives and dies with the element (connect, move, remove).
+ * Its shadow root keeps the page's CSS and the editor's apart. Call createTypstEditor yourself when your code wants the
+ * editor directly: the returned handle (commands, exportPdf, dispose) and callbacks instead of events, with the
+ * editor's styles in your page's document.
+ *
+ * Why a thin adapter: the element must offer everything createTypstEditor has without listing (and forgetting) it
+ * option by option. So it passes one `options` property through, maps one `settings` attribute (JSON) onto the settings
+ * the extensions declare, and forwards the editor's callbacks as DOM events from one table; the content (`value`,
+ * `files`) is all it knows by name, as with `<input>`.
  */
 export class TypstEditorElement extends Base() {
   static readonly observedAttributes = ['value', 'settings'];
@@ -196,13 +182,36 @@ export class TypstEditorElement extends Base() {
   }
 }
 
+/**
+ * `detail` of the `change` event: what the file at `path` holds after a change. `content` is null when the
+ * file is gone (deleted, or renamed away: a rename is one `change` for each of the two paths).
+ */
+export interface TypstEditorChangeDetail {
+  path: ProjectPath;
+  content: FileContent | null;
+}
+
 /** Registers the element under `name` (default `typst-editor`); does nothing if it already is. */
 export function defineTypstEditorElement(name = 'typst-editor'): void {
   if (typeof customElements === 'undefined' || customElements.get(name)) return;
   customElements.define(name, class extends TypstEditorElement {});
 }
 
+/** HTMLElement, or a plain class where there is no DOM (SSR, unit tests), so this module can be imported there. */
+function Base(): typeof HTMLElement {
+  return (typeof HTMLElement === 'undefined' ? class {} : HTMLElement) as typeof HTMLElement;
+}
+
 const hostStyles = ':host { display: block; height: 24rem; } :host([hidden]) { display: none; }';
+
+/** The editor's callbacks the element forwards as DOM events. */
+const EVENTS: Record<string, Forward> = {
+  onFilesChange: (change: FileChange, files) => [['files-change', change], ...changedFiles(change, files).map((detail): [string, unknown] => ['change', detail])],
+  onOpen: (path: ProjectPath) => [['open', { path }]],
+};
+
+/** The events (type, `detail`) a call of the editor's callback makes; `files`: every file now. */
+type Forward = (value: never, files: () => ProjectFiles) => [type: string, detail: unknown][];
 
 /** What each path touched by `change` holds now (`files`: every file now). */
 function changedFiles(change: FileChange, files: () => ProjectFiles): TypstEditorChangeDetail[] {
@@ -215,18 +224,6 @@ function changedFiles(change: FileChange, files: () => ProjectFiles): TypstEdito
     case 'rename':
       return [{ path: change.from, content: null }, { path: change.path, content: files()[change.path] ?? null }];
   }
-}
-
-function parseSettings(json: string | null): Settings {
-  if (json === null) return {};
-  try {
-    const parsed: unknown = JSON.parse(json);
-    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) return parsed as Settings;
-  } catch {
-    // reported below
-  }
-  console.warn(`<typst-editor>: the settings attribute is not a JSON object: ${json}`);
-  return {};
 }
 
 /**
@@ -242,9 +239,16 @@ function inlineSource(text: string): string {
   return lines.map((line) => (line.slice(indent).trimEnd() === '' ? '' : line.slice(indent))).join('\n') + '\n';
 }
 
-/** HTMLElement, or a plain class where there is no DOM (SSR, unit tests), so this module can be imported there. */
-function Base(): typeof HTMLElement {
-  return (typeof HTMLElement === 'undefined' ? class {} : HTMLElement) as typeof HTMLElement;
+function parseSettings(json: string | null): Settings {
+  if (json === null) return {};
+  try {
+    const parsed: unknown = JSON.parse(json);
+    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) return parsed as Settings;
+  } catch {
+    // reported below
+  }
+  console.warn(`<typst-editor>: the settings attribute is not a JSON object: ${json}`);
+  return {};
 }
 
 declare global {

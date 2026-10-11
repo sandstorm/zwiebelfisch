@@ -1,9 +1,4 @@
-// createTypstEditor: the widget. A Project in the workbench host (hosts/workbench), with the built-in extensions
-// (or the list the host makes from them) and the host's settings. See docs/10_guide/05_embedding.typ.
-// Why the API looks like this: a Typst document is a project of files, and the main file is one of them. So the
-// host gives and gets every file through one map (`files`, `onFilesChange`); `source` is only a shortcut for the
-// main file's text, for hosts that edit a single file. Everything a feature offers to configure is a setting the
-// feature's extension declares (`settings: { 'pdfExport.download': false }`), so this file knows no feature by name.
+// createTypstEditor: the widget. See docs/10_guide/05_embedding.typ.
 import { comments } from '../extensions/comments/comments';
 import { diagnostics } from '../extensions/diagnostics/diagnostics';
 import { diagrams } from '../extensions/diagrams/diagrams';
@@ -37,6 +32,79 @@ import type { User } from '../core/user/user';
 import { type FileChange, Project, type ProjectFiles } from '../core/project/project';
 import { ProjectPath } from '../core/paths/paths';
 import widgetStyles from './typst-editor.css?inline';
+
+/**
+ * Mounts the editor widget into `host`: an editing view on the left and the
+ * live preview on the right. Clicking the preview reveals the source; moving
+ * the cursor reveals the spot in the preview. Compiler errors are underlined in
+ * the source and counted in a status bar that jumps to the first one. A file
+ * panel on the left shows the project as a tree (open with more than one file).
+ *
+ * Styles go into the root node `host` is attached to: `document.head`, or the
+ * shadow root when `host` lives in one. Attach `host` before calling this.
+ *
+ * A Project in the workbench host (hosts/workbench), with the built-in extensions (or the list the host makes from
+ * them) and the host's settings.
+ *
+ * Why the API looks like this: a Typst document is a project of files, and the main file is one of them. So the host
+ * gives and gets every file through one map (`files`, `onFilesChange`); `source` is only a shortcut for the main file's
+ * text, for hosts that edit a single file. Everything a feature offers to configure is a setting the feature's
+ * extension declares (`settings: { 'pdfExport.download': false }`), so this file knows no feature by name.
+ */
+export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions): TypstEditor {
+  const main = ProjectPath.of(options.main ?? '/main.typ');
+  const project = new Project(main, { ...options.files, ...(options.source === undefined ? {} : { [main]: options.source }) });
+  const workbench = new WorkbenchHost(host, project, {
+    viewType: options.viewType,
+    user: options.user,
+    settings: options.settings,
+    allowFileChange: options.allowFileChange,
+    onOpen: options.onOpen,
+    // the tokens and the frame; the workbench adds the hosts', each extension its own (registerStyleSheet)
+    styleSheet: widgetStyles,
+  });
+  const builtins = builtinExtensions();
+  workbench.activate(options.extensions?.(builtins) ?? builtins);
+  // after the workbench's and the extensions' listeners: the host hears about a change once the widget shows it
+  const subscription = project.onDidChangeFile((change) => options.onFilesChange?.(change));
+  const document = project.document(main)!;
+  return {
+    get files() {
+      return project.files();
+    },
+    set files(next: ProjectFiles) {
+      project.replace(next); // listeners hear about every file
+      // shown again: a custom editor shows the new content of a replaced file (a spreadsheet)
+      workbench.open(workbench.window.activeFile);
+    },
+    get source() {
+      return document.text;
+    },
+    set source(text: string) {
+      project.apply({ kind: 'update', path: main, content: text });
+    },
+    get settings() {
+      return workbench.settings;
+    },
+    set settings(settings: Settings) {
+      workbench.settings = settings;
+    },
+    get activeFile() {
+      return workbench.window.activeFile;
+    },
+    open: (path) => {
+      const parsed = ProjectPath.parse(path);
+      if (parsed) workbench.open(parsed);
+    },
+    executeCommand: (id, ...args) => workbench.commands.executeCommand(id, ...args),
+    exportPdf: (options) => workbench.commands.executeCommand('pdfExport.export', options),
+    dispose: () => {
+      subscription.dispose();
+      workbench.dispose();
+      project.dispose();
+    },
+  };
+}
 
 export interface TypstEditorOptions {
   /**
@@ -120,71 +188,6 @@ export interface TypstEditor {
    */
   exportPdf(options?: Record<string, boolean>): Promise<Blob>;
   dispose(): void;
-}
-
-/**
- * Mounts the editor widget into `host`: an editing view on the left and the
- * live preview on the right. Clicking the preview reveals the source; moving
- * the cursor reveals the spot in the preview. Compiler errors are underlined in
- * the source and counted in a status bar that jumps to the first one. A file
- * panel on the left shows the project as a tree (open with more than one file).
- *
- * Styles go into the root node `host` is attached to: `document.head`, or the
- * shadow root when `host` lives in one. Attach `host` before calling this.
- */
-export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions): TypstEditor {
-  const main = ProjectPath.of(options.main ?? '/main.typ');
-  const project = new Project(main, { ...options.files, ...(options.source === undefined ? {} : { [main]: options.source }) });
-  const workbench = new WorkbenchHost(host, project, {
-    viewType: options.viewType,
-    user: options.user,
-    settings: options.settings,
-    allowFileChange: options.allowFileChange,
-    onOpen: options.onOpen,
-    // the tokens and the frame; the workbench adds the hosts', each extension its own (registerStyleSheet)
-    styleSheet: widgetStyles,
-  });
-  const builtins = builtinExtensions();
-  workbench.activate(options.extensions?.(builtins) ?? builtins);
-  // after the workbench's and the extensions' listeners: the host hears about a change once the widget shows it
-  const subscription = project.onDidChangeFile((change) => options.onFilesChange?.(change));
-  const document = project.document(main)!;
-  return {
-    get files() {
-      return project.files();
-    },
-    set files(next: ProjectFiles) {
-      project.replace(next); // listeners hear about every file
-      // shown again: a custom editor shows the new content of a replaced file (a spreadsheet)
-      workbench.open(workbench.window.activeFile);
-    },
-    get source() {
-      return document.text;
-    },
-    set source(text: string) {
-      project.apply({ kind: 'update', path: main, content: text });
-    },
-    get settings() {
-      return workbench.settings;
-    },
-    set settings(settings: Settings) {
-      workbench.settings = settings;
-    },
-    get activeFile() {
-      return workbench.window.activeFile;
-    },
-    open: (path) => {
-      const parsed = ProjectPath.parse(path);
-      if (parsed) workbench.open(parsed);
-    },
-    executeCommand: (id, ...args) => workbench.commands.executeCommand(id, ...args),
-    exportPdf: (options) => workbench.commands.executeCommand('pdfExport.export', options),
-    dispose: () => {
-      subscription.dispose();
-      workbench.dispose();
-      project.dispose();
-    },
-  };
 }
 
 /**

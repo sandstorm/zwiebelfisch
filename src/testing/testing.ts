@@ -1,9 +1,4 @@
-// Test helpers that compose the widget's built-in extensions: the Visual editor's schema with the built-ins, project
-// with it, a view with the built-ins activated with a test's extension context (project files, preview snippets,
-// document links, prompts); and the helpers such tests use on a parsed document (apply an edit, find text, check
-// the position map exhaustively). Entry of testing/: test-only, so it may import any
-// module (an extension's tests compose it with the others here, never by importing another extension); only
-// `*.test.ts` files may import it (eslint.config.js). Hosts' own tests use the host minimum and their own specs.
+// Test helpers that compose the widget's built-in extensions. Entry of testing/.
 import { Editor } from '@tiptap/core';
 import type { Node, Schema } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
@@ -32,7 +27,15 @@ import type { Workbench } from '../hosts/workbench/workbench';
 import type { Workspace } from '../hosts/workspace/workspace';
 import { attachGrammar, createSchema, documentExtensions, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos } from '../hosts/prosemirror-typst/prosemirror-typst';
 
-/** The schema of a view with the built-ins configured from `options`. */
+/**
+ * The schema of a view with the built-ins configured from `options`.
+ *
+ * The Visual editor's schema with the built-ins, project with it, a view with the built-ins activated with a test's
+ * extension context (project files, preview snippets, document links, prompts); and the helpers such tests use on a
+ * parsed document (apply an edit, find text, check the position map exhaustively). Test-only, so it may import any
+ * module (an extension's tests compose it with the others here, never by importing another extension); only
+ * `*.test.ts` files may import it (eslint.config.js). Hosts' own tests use the host minimum and their own specs.
+ */
 export function schemaWith(options: TestViewOptions = {}): Schema {
   return schemaFrom(contributions(options));
 }
