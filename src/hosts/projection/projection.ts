@@ -32,7 +32,7 @@
  * Entry of hosts/projection/. See ARCHITECTURE.md, "VisualView".
  */
 import type { SyntaxNode } from '@lezer/common';
-import { getSchema, type AnyExtension } from '@tiptap/core';
+import { flattenExtensions, getExtensionField, getSchema, type AnyExtension } from '@tiptap/core';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
 import StarterKit, { type StarterKitOptions } from '@tiptap/starter-kit';
@@ -292,11 +292,17 @@ export function print(doc: Node): string {
 /**
  * Makes `nodes` and `marks` (after the minimum schema's own) the specs `project`
  * and `print` use for documents of `schema` (a schema made from
- * `documentExtensions` of them). Specs of the same name merge, the later one
- * winning.
+ * `documentExtensions` of them), in Tiptap's order: by the priority of the
+ * Tiptap extension defining each one's type (`priority`, default 100, higher
+ * first; equal ones as given). Their parse rules are asked in that order; of
+ * specs of the same name, the later one wins.
  */
 export function attachGrammar(schema: Schema, nodes: readonly DocumentNodeSpec[], marks: readonly TypstMarkSpec[]): void {
-  Grammar.attach(schema, new Grammar([...BASE_NODES, ...nodes], marks));
+  const defining = flattenExtensions([...nodes, ...marks].flatMap((spec) => (spec.tiptap ? [spec.tiptap] : [])));
+  const priorities = new Map(defining.map((extension) => [extension.name, getExtensionField<number>(extension, 'priority') || 100]));
+  const inTiptapOrder = <T extends { name: string }>(specs: readonly T[]) =>
+    [...specs].sort((a, b) => (priorities.get(b.name) ?? 100) - (priorities.get(a.name) ?? 100));
+  Grammar.attach(schema, new Grammar([...BASE_NODES, ...inTiptapOrder(nodes)], inTiptapOrder(marks)));
 }
 
 /** The spec of `node`'s type in the grammar attached to its schema (specs of one name merged), if there is one. */

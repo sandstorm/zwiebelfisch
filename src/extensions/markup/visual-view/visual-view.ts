@@ -1,7 +1,7 @@
 // What the markup extension contributes to the Visual view: the specs of strong and emphasis, links, raw text
 // (inline code, code blocks) and block quotes, and their toolbar entries. See markup.ts.
 import type { SyntaxNode } from '@lezer/common';
-import { Extension, type Editor } from '@tiptap/core';
+import { Extension, type AnyExtension, type Editor } from '@tiptap/core';
 import Code from '@tiptap/extension-code';
 import CodeBlock from '@tiptap/extension-code-block';
 import type { Mark, Node } from '@tiptap/pm/model';
@@ -17,6 +17,11 @@ const Bold = starterKitPart('typstBold', { bold: {} });
 const Italic = starterKitPart('typstItalic', { italic: {} });
 const Link = starterKitPart('typstLink', {
   link: { openOnClick: false, autolink: false, HTMLAttributes: { class: 'typst-visual__link', target: null, rel: null } },
+}).extend({
+  // the link mark StarterKit adds comes with priority 1000 (outside everything): outside bold and italic (100) only
+  addExtensions() {
+    return (this.parent?.() ?? []).map((link: AnyExtension) => link.extend({ priority: 120 }));
+  },
 });
 const Blockquote = starterKitPart('typstBlockquote', { blockquote: { HTMLAttributes: { class: 'typst-visual__quote' } } }).extend({
   // `sep`: the whitespace to the next block; `layout`: how the call around its blocks is written

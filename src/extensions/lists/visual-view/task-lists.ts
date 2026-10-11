@@ -9,13 +9,21 @@ import { svg, type Action, type TypstNodeSpec } from '../../../hosts/visual-view
 import type { TypstParseContext } from '../../../hosts/projection/projection';
 import { countTaskItems, ensureChecklistPreamble } from './checklist-preamble';
 
+/**
+ * Task lists' Tiptap priority, over bullet lists (default 100), whose syntax they share: a task item is a bullet item
+ * (`- [ ] ..`), so its parse rule is asked before the bullet list's.
+ */
+const TASK_LISTS_PRIORITY = 110;
+
 const TypstTaskList = TaskList.extend({
+  priority: TASK_LISTS_PRIORITY,
   addAttributes() {
     return { ...this.parent?.(), sep: { default: null, rendered: false } };
   },
 });
 
 const TypstTaskItem = TaskItem.extend({
+  priority: TASK_LISTS_PRIORITY,
   addAttributes() {
     return {
       ...this.parent?.(),
@@ -57,8 +65,8 @@ const TaskLists = Extension.create({
  * Task lists: a bullet item `- [ ] text` / `- [x] text` (one paragraph) is a
  * task item, the box hidden syntax; consecutive ones form a task list.
  * Tiptap's TaskList / TaskItem (one paragraph, no nesting; the `[ ] ` input
- * rule and clickable checkboxes are Tiptap's). Registered with a higher
- * priority than bullet lists (lists.ts), so its parse rule gets bullet items first.
+ * rule and clickable checkboxes are Tiptap's). Their Tiptap priority is higher
+ * than bullet lists' (`TASK_LISTS_PRIORITY`), so their parse rule gets bullet items first.
  */
 export const TASK_LIST: TypstNodeSpec = {
   name: 'taskList',

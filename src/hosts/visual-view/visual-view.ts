@@ -228,8 +228,9 @@ export interface VisualViewContribution {
 }
 
 /**
- * Who wins where contributions compete: higher `priority` first (default 100, as Tiptap's extension priority), and
- * equal priorities in registration order. Registration order alone never carries meaning between extensions.
+ * Who wins where box renderers compete: higher `priority` first (default 100, as Tiptap's extension priority), and
+ * equal priorities in registration order. Registration order alone never carries meaning between extensions. (Nodes
+ * and marks compete by their Tiptap extensions' own priority.)
  */
 export interface PriorityOptions {
   readonly priority?: number;
@@ -239,8 +240,8 @@ export interface PriorityOptions {
 const DEFAULT_PRIORITY = 100;
 
 /**
- * Everything registered: nodes, marks and box renderers by priority (see `PriorityOptions`), the rest in
- * registration order. What the host applies to each view it creates.
+ * Everything registered: box renderers by priority (see `PriorityOptions`), the rest in registration order. What the
+ * host applies to each view it creates.
  */
 export interface Contributed {
   readonly nodes: readonly TypstNodeSpec[];
@@ -265,19 +266,19 @@ export interface Contributed {
  */
 export interface VisualViewContributions {
   /**
-   * A node type and its Typst: schema, projection, printing, box. `priority` (default 100, higher first; equal:
-   * registration order) orders the schema (a group's first node type is its default) and the projectors: of specs
-   * claiming the same syntax or call, the higher one is asked first (task lists, 110, before bullet lists, both
-   * `- ..`). Of two specs of the same name, the later one in that order extends the earlier.
+   * A node type: its Tiptap extension, its Typst, what the view does for it (see `TypstNodeSpec`). The priority of
+   * its Tiptap extension (Tiptap's: default 100, higher first) orders the schema (a group's first node type is its
+   * default), keymaps and plugins, and the specs' parse rules: of specs reading the same syntax or call, the higher
+   * one is asked first (task lists, 110, before bullet lists, both `- ..`). Of two specs of the same name, the later
+   * one in that order extends the earlier.
    */
-  registerNode(spec: TypstNodeSpec, options?: PriorityOptions): Disposable;
+  registerNode(spec: TypstNodeSpec): Disposable;
   /**
-   * A mark type and its Typst. `priority` (default 100, higher first; equal: registration order) orders the schema,
-   * which is how marks nest: a higher one is outside a lower one (a comment's range outside a link, a link outside
-   * bold); it also orders the projectors, as for nodes. It is the mark's only priority: the host gives it to the
-   * mark's Tiptap extension, replacing the extension's own (Tiptap's link mark comes with 1000).
+   * A mark type and its Typst (see `TypstMarkSpec`). The priority of its Tiptap extension orders the schema, which is
+   * how marks nest: a higher one is outside a lower one (a comment's range, 130, outside a link, 120, outside bold,
+   * 100); it also orders the parse rules, as for nodes.
    */
-  registerMark(spec: TypstMarkSpec, options?: PriorityOptions): Disposable;
+  registerMark(spec: TypstMarkSpec): Disposable;
   /** Tiptap extensions made for each view (they may use its document). */
   registerEditorExtension(provider: EditorExtensionProvider): Disposable;
   /** A place for toolbar items: a group, a menu or a floating bar. */
@@ -316,12 +317,10 @@ export interface VisualViewContributions {
  * The workbench host has one; tests make their own (`from`).
  */
 export class VisualViewHost implements VisualViewContributions {
-  private readonly ranked = {
-    nodes: [] as Ranked<TypstNodeSpec>[],
-    marks: [] as Ranked<TypstMarkSpec>[],
-    boxRenderers: [] as Ranked<BoxRendererProvider>[],
-  };
+  private readonly boxRenderers: Ranked<BoxRendererProvider>[] = [];
   private readonly lists = {
+    nodes: [] as TypstNodeSpec[],
+    marks: [] as TypstMarkSpec[],
     editorExtensions: [] as EditorExtensionProvider[],
     toolbarGroups: [] as ToolbarGroup[],
     toolbarItems: [] as ToolbarItem[],
@@ -340,14 +339,12 @@ export class VisualViewHost implements VisualViewContributions {
     return visualView;
   }
 
-  registerNode(spec: TypstNodeSpec, options: PriorityOptions = {}): Disposable {
-    return this.add(this.ranked.nodes, rank(spec, options));
+  registerNode(spec: TypstNodeSpec): Disposable {
+    return this.add(this.lists.nodes, spec);
   }
 
-  registerMark(spec: TypstMarkSpec, options: PriorityOptions = {}): Disposable {
-    const ranked = rank(spec, options);
-    const tiptap = spec.tiptap && withPriority(spec.tiptap, spec.name, ranked.priority);
-    return this.add(this.ranked.marks, { ...ranked, value: { ...spec, tiptap } });
+  registerMark(spec: TypstMarkSpec): Disposable {
+    return this.add(this.lists.marks, spec);
   }
 
   registerEditorExtension(provider: EditorExtensionProvider): Disposable {
@@ -371,7 +368,7 @@ export class VisualViewHost implements VisualViewContributions {
   }
 
   registerBoxRenderer(provider: BoxRendererProvider, options: PriorityOptions = {}): Disposable {
-    return this.add(this.ranked.boxRenderers, rank(provider, options));
+    return this.add(this.boxRenderers, { value: provider, priority: options.priority ?? DEFAULT_PRIORITY });
   }
 
   registerBoxCodeExtension(provider: BoxCodeExtensionProvider): Disposable {
@@ -390,14 +387,14 @@ export class VisualViewHost implements VisualViewContributions {
   contributed(): Contributed {
     const lists = this.lists;
     return {
-      nodes: byPriority(this.ranked.nodes),
-      marks: byPriority(this.ranked.marks),
+      nodes: [...lists.nodes],
+      marks: [...lists.marks],
       editorExtensions: [...lists.editorExtensions],
       toolbarGroups: [...lists.toolbarGroups],
       toolbarItems: [...lists.toolbarItems],
       gutters: [...lists.gutters],
       highlights: [...lists.highlights],
-      boxRenderers: byPriority(this.ranked.boxRenderers),
+      boxRenderers: [...this.boxRenderers].sort((a, b) => b.priority - a.priority).map((entry) => entry.value),
       boxCodeExtensions: [...lists.boxCodeExtensions],
       boxActions: [...lists.boxActions],
       textStyles: [...lists.textStyles],
@@ -413,32 +410,10 @@ export class VisualViewHost implements VisualViewContributions {
   }
 }
 
-/** A registered value and its priority. */
+/** A registered value and its priority (the sort by it is stable: equal priorities stay in registration order). */
 interface Ranked<T> {
   readonly value: T;
   readonly priority: number;
-}
-
-function rank<T>(value: T, options: PriorityOptions): Ranked<T> {
-  return { value, priority: options.priority ?? DEFAULT_PRIORITY };
-}
-
-/**
- * `extension` with `priority` on its mark type `name`, wherever it is defined: the extension itself, or one it adds
- * (a StarterKit part). Tiptap orders a schema's marks by their extensions' priorities.
- */
-function withPriority(extension: AnyExtension, name: string, priority: number): AnyExtension {
-  if (extension.type === 'mark' && extension.name === name) return extension.extend({ priority });
-  return extension.extend({
-    addExtensions() {
-      return (this.parent?.() ?? []).map((child: AnyExtension) => withPriority(child, name, priority));
-    },
-  });
-}
-
-/** The values, higher priority first; equal priorities in registration order (the sort is stable). */
-function byPriority<T>(ranked: readonly Ranked<T>[]): T[] {
-  return [...ranked].sort((a, b) => b.priority - a.priority).map((entry) => entry.value);
 }
 
 /** One Visual view, as contributions made for it see it (see the `…Provider` types). */
