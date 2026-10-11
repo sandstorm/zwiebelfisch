@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+#MISE description="Measure typing in the Visual editor (whole widget, real engine in-process): ms per keystroke and where they go; CPU profiles in .cache/perf/"
+#MISE depends=["build:engine", "build:fonts", "build:packages"]
+#USAGE arg "[scenario]" help="Only the scenarios whose name contains this (e.g. 'docs', 'table cell')" default=""
+set -euo pipefail
+# tests/perf/typing.perf.ts; open a .cpuprofile in Chrome DevTools' Performance panel
+TYPST_PERF=1 TYPST_PERF_SCENARIO="$usage_scenario" exec pnpm exec vitest run

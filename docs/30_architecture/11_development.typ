@@ -22,6 +22,7 @@ Every operation is a mise task (`mise-tasks/`, `mise tasks ls`). Tools are pinne
   [`quality:report`], [every function ranked by complexity (hot spots)],
   [`test:unit`], [vitest over `src/`, `demo/`, `eslint-rules/`; the engine runs as real wasm],
   [`server:test`], [the server's vitest suite, Hocuspocus in-process, no port],
+  [`perf:typing`], [typing in the Visual editor of the whole widget, measured per keystroke (@architecture-development-performance); `perf:typing docs` runs only the scenarios naming `docs`],
   [`test:e2e`], [builds demo and library, then Playwright in chromium, firefox, webkit (or one: `test:e2e chromium`)],
   [`test:e2e-collab`], [in-memory server + the two-user spec (`tests/e2e/collab.spec.ts`)],
   [`test:e2e-docs`], [the Vite dev server + the docs-editing spec (`tests/e2e/docs-editing.spec.ts`): edits a heading in the Documentation example, checks the file in `docs/`, restores it],
@@ -65,6 +66,16 @@ mise run server:test   # when server/ or core/room-protocol changed
 - Test packages (`greet`, `drafting`, `cheq`) sit next to the tests using them.
 - Agents in the sandbox cannot launch a browser or bind ports: they write Playwright specs, and the user runs `mise run test:e2e`.
 - The playground's logic is unit-tested without a browser or port: `demo/playground*.test.ts`, `demo/server-status.test.ts`, `server/src/playground/playground.test.ts`.
+
+== Performance <architecture-development-performance>
+
+`mise run perf:typing` (`tests/perf/typing.perf.ts`) types into the Visual editor of the whole widget, built-ins and the real engine, in jsdom: a paragraph, a list item and a table cell of the advanced example and of these docs (86 pages), one character every 80 ms. Per keystroke it prints:
+
+- *sync*: what the keystroke itself blocks (the transaction, the write-back and every listener of the document);
+- *main thread*: all the work on the main thread in that time (the keystroke, timers, compile answers, raw boxes' pictures, the preview's pages), by module and by function (inclusive, from a CPU profile);
+- *engine*: what the worker's thread does in a browser (`tests/perf/in-process-worker.ts` runs the engine in-process and counts it apart).
+
+The profiles land in `.cache/perf/` (`*.cpuprofile`: Chrome DevTools' Performance panel opens them). jsdom has no layout and parses SVG slowly: the preview's pages cost more here than in a browser, and style, layout and paint are not measured at all. What only a browser shows: record typing in DevTools' Performance panel and look at the long tasks after a keystroke and after a compile (`Preview.compile` → `PageList.render`: the page's SVG swapped in, then Recalculate Style, Layout, Paint).
 
 == The docs <architecture-development-docs>
 
