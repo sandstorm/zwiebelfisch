@@ -22,7 +22,7 @@ extensions/<name>/
   [`typstLanguage`], [Typst highlighting and code colors in Source views and raw boxes], [source view, raw-box CodeMirror],
   [`documentLinks`], [file paths in Typst text as links; command `documentLinks.createFile`], [link provider],
   [`files`], [file panel; `files.newFile` / `newFolder` / `upload` / `rename` / `delete`; read-only fallback editor `files.file` (`priority: 'fallback'`) for any other file; setting `files.panel`], [side panel, menus, custom editor],
-  [`fileNavigation`], ["← previous file" / "next file →" in reading order; "← Back to …" / "Forward to … →" over every change of the shown file (`fileNavigation.back` / `forward`, VS Code's keys)], [editor frame, commands, key bindings],
+  [`fileNavigation`], ["← previous file" / "next file →" in reading order; "← Back to …" / "Forward to … →" above supplementary files, over every change of the shown file (`fileNavigation.back` / `forward`, VS Code's keys)], [editor frame, commands, key bindings],
   [`spreadsheets`], [`.ic` in IronCalc (`spreadsheets.editor`); every edit also writes `name.ic.gen.typ`; "New spreadsheet…"; "Insert spreadsheet" (a new one with a starter table, as a figure)], [custom editor, `file/newFile`, toolbar],
   [`textFiles`], [csv, json, yaml, toml, xml, bib, txt, md in CodeMirror (`textFiles.editor`)], [custom editor],
   [`diagrams`], [`.drawio.png` in diagrams.net's embedded editor (`diagrams.editor`, priority 110); "New diagram…"; "Insert diagram" (a new one as a figure); "Edit diagram"; setting `diagrams.editorUrl`], [custom editor, toolbar, box action],

@@ -8,7 +8,7 @@
 // preview, the file panel, …): every way ends in `workbench.open`, so every change of the shown file counts, as in
 // VS Code, without any feature knowing about the history.
 import { neighbours } from '../../core/typst-syntax/typst-syntax';
-import type { ProjectPath } from '../../core/paths/paths';
+import { ProjectPath } from '../../core/paths/paths';
 import { SourceRange } from '../../core/typst-document/typst-document';
 import type { TextEditor } from '../../hosts/window/window';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
@@ -57,7 +57,10 @@ export function fileNavigation(): TypstExtension {
       // recomputed on every open and every change: an #include may have been added, moved or removed
       const show = () => {
         readingOrder.show(neighbours((path) => project.document(path)?.text, project.main, window.activeFile));
-        links.show(history.back?.path ?? null, history.forward?.path ?? null);
+        // the links only above supplementary files (a diagram, a spreadsheet, …): Typst files have the reading order;
+        // the keys go back and forward everywhere
+        const typst = ProjectPath.isTypst(window.activeFile);
+        links.show(typst ? null : (history.back?.path ?? null), typst ? null : (history.forward?.path ?? null));
       };
       const opened = (path: ProjectPath) => {
         if (!going) history.open(here(), path);

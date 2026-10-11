@@ -259,7 +259,7 @@ File links:
 - Paths in `#import`, `#include`, `image`, `read`, `bibliography`, `json` / `csv` / `yaml` / `toml` / `xml` / `cbor` open their file: Ctrl+click or Alt+Enter (⌘-click or ⌥↩ on Mac) in the Source view, "Open …" above a raw box in the Visual view.
 - A missing `.typ` file can be created from there.
 - A file the main file includes gets "← previous file" / "next file →" links in reading order.
-- Back and forward, as in VS Code: after any change of the shown file (a link, "Edit diagram", a click in the preview, the file panel, …), "← Back to _file_" above the editor (any editor) returns to it, in the view it was shown in, with its selection (Typst files). After going back, "Forward to _file_ →" returns. Keys: Ctrl+Alt+- back, Ctrl+Shift+- forward (⌃- / ⌃⇧- on Mac). The last 50 files; renamed files keep their place, deleted ones drop out.
+- Back and forward, as in VS Code: after any change of the shown file (a link, "Edit diagram", a click in the preview, the file panel, …), "← Back to _file_" above a supplementary file (a Mermaid diagram, a spreadsheet, a text file, …) returns to it, in the view it was shown in, with its selection (Typst files). After going back, "Forward to _file_ →" returns. Typst files show the reading order instead; the keys work everywhere. Keys: Ctrl+Alt+- back, Ctrl+Shift+- forward (⌃- / ⌃⇧- on Mac). The last 50 files; renamed files keep their place, deleted ones drop out.
 
 == Comments <guide-features-comments>
 

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests for file-navigation.ts in a workbench: "Back to …" / "Forward to …" above any editor, going back with the
+// Tests for file-navigation.ts in a workbench: "Back to …" / "Forward to …" above supplementary files, going back with the
 // editor and selection the file was left with, the keys, renames and deletions (preview mocked: no worker in jsdom).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../core/disposable/disposable';
@@ -60,8 +60,8 @@ describe('file navigation: back and forward', () => {
     expect(links()).toEqual([]);
   });
 
-  it('offers the way back above another kind of editor; back restores the file with its selection, then forward', () => {
-    const { host, workbench, context, history, links, click } = setup();
+  it('offers the way back above a supplementary file; back restores the file with its selection, then forward', async () => {
+    const { workbench, context, history, links, click } = setup();
     workbench.open(path('/chapter.typ'));
     context.window.activeTextEditor!.revealRange(SourceRange.of({ from: 3, to: 10 }));
     workbench.open(path('/flow.mmd'));
@@ -71,19 +71,18 @@ describe('file navigation: back and forward', () => {
     click('← Back to chapter.typ');
     expect(context.window.activeFile).toBe('/chapter.typ');
     expect(context.window.activeTextEditor!.selection).toEqual({ from: 3, to: 10 });
-    expect(links()).toEqual(['← Back to main.typ', 'Forward to flow.mmd →']);
-    // inside the Source view, before its content
-    expect(host.querySelector('[data-view-type="sourceView.editor"]:not([hidden]) .typst-file-navigation--history')).toBe(history());
-    click('Forward to flow.mmd →');
+    // no links above a Typst file (it has the reading order); the keys and commands still go both ways
+    expect(links()).toEqual([]);
+    await context.commands.executeCommand('fileNavigation.forward');
     expect(context.window.activeFile).toBe('/flow.mmd');
     expect(links()).toEqual(['← Back to chapter.typ']);
   });
 
-  it('restores the view the file was shown in', () => {
-    const { workbench, context, click } = setup();
+  it('restores the view the file was shown in', async () => {
+    const { workbench, context } = setup();
     workbench.open(path('/chapter.typ'), { viewType: 'visualView.editor' });
     workbench.open(path('/main.typ'), { viewType: 'sourceView.editor' });
-    click('← Back to chapter.typ');
+    await context.commands.executeCommand('fileNavigation.back');
     expect(context.window.activeTextEditor!.mode).toBe('visual');
   });
 

@@ -27,7 +27,8 @@ test('following the link to an .mmd offers the way back; back restores the Sourc
   await expect(fileRow(page, 'chapters/method.typ')).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('tab', { name: 'Source' })).toHaveAttribute('aria-selected', 'true');
   await expect(source.locator('.cm-activeLine')).toContainText('measurement.mmd');
-  await expect(history.getByRole('button', { name: 'Forward to diagrams/measurement.mmd →' })).toBeVisible();
+  // a Typst file shows no history links (it has the reading order); the keys still go forward
+  await expect(history).toBeHidden();
 
   await page.keyboard.press('Control+Shift+Minus');
   await expect(fileRow(page, 'diagrams/measurement.mmd')).toHaveAttribute('aria-selected', 'true');
