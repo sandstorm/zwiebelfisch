@@ -20,7 +20,7 @@ test('the simple example is one file with a table', async ({ page }) => {
   await expect(page.getByTestId('typst-files')).toBeHidden();
 });
 
-test('the advanced example is a multi-page project with chapters and an image', async ({ page }) => {
+test('the advanced example is a multi-page project with chapters, an image and a Mermaid diagram', async ({ page }) => {
   await page.goto('/?example=advanced');
   await expect(fileRow(page, 'template.typ')).toBeVisible();
   await expect(fileRow(page, 'chapters')).toHaveAttribute('aria-expanded', 'false');
@@ -28,8 +28,11 @@ test('the advanced example is a multi-page project with chapters and an image', 
   await expect(fileRow(page, 'chapters/introduction.typ')).toBeVisible();
   await fileRow(page, 'assets').click();
   await expect(fileRow(page, 'assets/compile-times.svg')).toBeVisible();
-  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
-  await expect(preview(page).locator('.typst-preview__page')).toHaveCount(3);
+  await fileRow(page, 'diagrams').click();
+  await expect(fileRow(page, 'diagrams/measurement.mmd')).toBeVisible();
+  // the Mermaid figure needs the merman package, downloaded from packages.typst.org
+  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/, { timeout: 30_000 });
+  await expect(preview(page).locator('.typst-preview__page')).toHaveCount(4);
 });
 
 test('the documentation example is docs/ as a book with parts and chapters', async ({ page }) => {

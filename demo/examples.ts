@@ -5,7 +5,7 @@ import type { ProjectFiles } from '../src';
  * The demo's example projects. Each one is a folder whose files become the
  * project's files: `examples/<name>/main.typ` → `/main.typ`,
  * `examples/<name>/chapters/a.typ` → `/chapters/a.typ`. Typst files are text,
- * everything else (images, spreadsheets) is passed as bytes. "Documentation"
+ * everything else (images, Mermaid diagrams, spreadsheets) is passed as bytes. "Documentation"
  * is this project's own docs/ (its Typst files), editable but never saved.
  */
 export const EXAMPLES = [
@@ -20,7 +20,7 @@ export type ExampleName = (typeof EXAMPLES)[number]['name'];
 /** The example shown without `?example`; the e2e specs rely on its content. */
 export const DEFAULT_EXAMPLE: ExampleName = 'hello';
 
-const sources = import.meta.glob<string>(['./examples/**/*.{typ,svg}', '../docs/**/*.typ'], {
+const sources = import.meta.glob<string>(['./examples/**/*.{typ,svg,mmd}', '../docs/**/*.typ'], {
   query: '?raw',
   import: 'default',
   eager: true,

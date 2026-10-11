@@ -1,0 +1,6 @@
+flowchart LR
+  generate[Generate a document of p pages] --> cold[Compile from scratch]
+  cold --> edit[Change one word on the last page]
+  edit --> incremental[Compile again]
+  incremental --> report[Report both times]
+  report -->|next size| generate

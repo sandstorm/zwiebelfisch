@@ -26,6 +26,7 @@ describe('LabelIndex', () => {
       { name: 'intro', kind: 'heading', title: 'Introduction', path: path('/chapters/introduction.typ') },
       { name: 'method', kind: 'heading', title: 'Method', path: path('/chapters/method.typ') },
       { name: 'eq:speedup', kind: 'equation', title: null, path: path('/chapters/method.typ') },
+      { name: 'fig:measurement', kind: 'figure', title: 'One round of the measurement, per document size.', path: path('/chapters/method.typ') },
       { name: 'results', kind: 'heading', title: 'Results', path: path('/chapters/results.typ') },
       { name: 'tab:timings', kind: 'table', title: 'Median compile times (illustrative numbers).', path: path('/chapters/results.typ') },
       {

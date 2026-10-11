@@ -97,8 +97,10 @@ describe('references in the Visual view', () => {
     const list = parent.querySelector<HTMLElement>('[data-testid="typst-ref-suggestions"]')!;
     expect(list.hidden).toBe(false);
     const options = () => [...list.querySelectorAll('[role="option"]')].map((o) => o.querySelector('.typst-labels__suggestions-name')!.textContent);
-    expect(options()).toEqual(['intro', 'method', 'eq:speedup', 'results', 'tab:timings', 'fig:compile-times', 'tab:runs']);
+    expect(options()).toEqual(['intro', 'method', 'eq:speedup', 'fig:measurement', 'results', 'tab:timings', 'fig:compile-times', 'tab:runs']);
     type(editor, 'fig');
+    expect(options()).toEqual(['fig:measurement', 'fig:compile-times']);
+    type(editor, ':c');
     expect(options()).toEqual(['fig:compile-times']);
     expect(press(editor, 'Enter')).toBe(true);
     expect(text(path('/chapters/introduction.typ'))).toContain('one picture. See @fig:compile-times\n');

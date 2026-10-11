@@ -1,7 +1,9 @@
-// Tests that every demo example compiles without errors (examples.ts, against the built wasm).
+// Tests that every demo example compiles without errors (examples.ts, against the built wasm), with the packages
+// they import from .cache/typst-packages (mise run build:packages).
 import { readFileSync, readdirSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createEngine, type Engine } from '../src/core/typst-engine/typst-engine';
+import { withPackages } from '../src/core/typst-packages/typst-packages';
 import type { ProjectFiles } from '../src';
 import { EXAMPLES, exampleFiles, exampleFromQuery, exampleQuery } from './examples';
 
@@ -9,6 +11,13 @@ const engineDir = new URL('../src/core/typst-engine/', import.meta.url);
 const wasm = readFileSync(new URL('wasm/typst_engine_bg.wasm', engineDir));
 const fontDir = new URL('fonts/', engineDir);
 const fonts = readdirSync(fontDir).map((name) => new Uint8Array(readFileSync(new URL(name, fontDir))));
+const packageDir = new URL('../.cache/typst-packages/', import.meta.url);
+
+/** `@preview/name:1.0.0` from the downloads of `mise run build:packages`, as the demo would fetch it. */
+async function cachedPackage(spec: string): Promise<Uint8Array> {
+  const [, name, version] = /^@preview\/(.+):(.+)$/.exec(spec)!;
+  return new Uint8Array(readFileSync(new URL(`${name}-${version}.tar.gz`, packageDir)));
+}
 
 describe('demo examples', () => {
   let engine: Engine;
@@ -25,11 +34,11 @@ describe('demo examples', () => {
       if (typeof content === 'string') engine.setSource(path, content);
       else engine.setBinary(path, content);
     }
-    return engine.compile('/main.typ');
+    return withPackages(engine, cachedPackage).compile('/main.typ');
   }
 
-  it.each(EXAMPLES.map(({ name }) => name))('%s compiles without errors or warnings', (name) => {
-    const { pages, diagnostics } = compile(exampleFiles(name));
+  it.each(EXAMPLES.map(({ name }) => name))('%s compiles without errors or warnings', async (name) => {
+    const { pages, diagnostics } = await compile(exampleFiles(name));
     expect(diagnostics).toEqual([]);
     expect(pages.length).toBeGreaterThan(0);
   });
@@ -45,7 +54,7 @@ describe('demo examples', () => {
     expect(Object.keys(exampleFiles('simple'))).toEqual(['/main.typ']);
   });
 
-  it('the advanced example has a template, chapters and an SVG image given as bytes', () => {
+  it('the advanced example has a template, chapters and an SVG image given as bytes', async () => {
     const files = exampleFiles('advanced');
     expect(Object.keys(files)).toEqual(
       expect.arrayContaining(['/main.typ', '/template.typ', '/chapters/introduction.typ']),
@@ -53,7 +62,7 @@ describe('demo examples', () => {
     const svgs = Object.entries(files).filter(([path]) => path.endsWith('.svg'));
     expect(svgs.length).toBeGreaterThan(0);
     for (const [, content] of svgs) expect(content).toBeInstanceOf(Uint8Array);
-    expect(compile(files).pages.length).toBeGreaterThan(1);
+    expect((await compile(files)).pages.length).toBeGreaterThan(1);
   });
 
   it('the advanced example has an IronCalc spreadsheet, byte for byte, and its Typst file', () => {

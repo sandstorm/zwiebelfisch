@@ -13,6 +13,7 @@ Every operation is a mise task (`mise-tasks/`, `mise tasks ls`). Tools are pinne
   [`demo`], [the playground: Vite + the collaboration server with a fake GitLab on `ws://127.0.0.1:1234` (@guide-getting-started-demo); builds engine and fonts first],
   [`build:engine`], [Rust → wasm (`cargo`, `wasm-bindgen`, `wasm-opt -Oz`) into `src/core/typst-engine/wasm/`; skipped when the Rust sources are unchanged],
   [`build:fonts`], [the default fonts of the pinned typst-assets crate into `src/core/typst-engine/fonts/`],
+  [`build:packages`], [the `@preview/…` packages the demo examples import, downloaded once into `.cache/typst-packages/` (not committed); `test:unit` runs it],
   [`build`], [typecheck, engine, fonts, library, then the static demo → `dist/demo`],
   [`build:lib`], [the library → `dist/lib`: ESM, worker, wasm, d.ts],
   [`typecheck`], [`tsc` over the widget, demo, tests and server],
