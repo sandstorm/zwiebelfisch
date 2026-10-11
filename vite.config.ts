@@ -1,4 +1,6 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
+import { docsFiles } from './demo/docs-files/plugin.ts';
 
 export default defineConfig({
   root: 'demo',
@@ -7,6 +9,8 @@ export default defineConfig({
   worker: { format: 'es' },
   // the demo's IronCalc spreadsheets (examples.ts imports them inline)
   assetsInclude: ['**/*.ic'],
+  // dev server only: the Documentation example saves to docs/ (docs/fonts/ is build:fonts' output)
+  plugins: [docsFiles({ root: fileURLToPath(new URL('docs', import.meta.url)), outputs: ['fonts'] })],
   test: {
     root: '.',
     include: ['src/**/*.test.ts', 'demo/**/*.test.ts', 'eslint-rules/**/*.test.js'],

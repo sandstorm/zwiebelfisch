@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+#MISE description="Start the demo dev server and run the docs-editing Playwright spec against it (edits docs/guide/getting-started.typ, restores it)"
+#MISE depends=["build:engine", "build:fonts"]
+set -euo pipefail
+pnpm exec vite &
+server=$!
+trap 'kill "$server"' EXIT
+# wait until Vite accepts connections (up to 30 s)
+for _ in $(seq 300); do
+  if (exec 3<>/dev/tcp/127.0.0.1/5199) 2>/dev/null; then break; fi
+  sleep 0.1
+done
+# one worker: every browser edits the same file
+TYPST_DOCS_E2E=1 pnpm exec playwright test tests/e2e/docs-editing.spec.ts --workers=1 "$@"

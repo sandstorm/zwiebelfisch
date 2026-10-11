@@ -24,7 +24,7 @@ The page's state is its URL:
 #table(
   columns: 2,
   [Query], [Effect],
-  [`?example=hello|simple|advanced|docs`], [The project. `docs` is this documentation: edit live, nothing is saved.],
+  [`?example=hello|simple|advanced|docs`], [The project. `docs` is this documentation: edits are saved to `docs/` when running `mise run demo` / `dev` (@architecture-development-writing-docs); in a static build nothing is saved.],
   [`?room=<name>`], [Collaborate mode: joins a room on the local server.],
   [`?room=gitlab:demo/report@main`], [GitLab mode: a branch of the fake repository.],
   [`&user=<name>`], [The name others see; signs comments and commits.],

@@ -13,6 +13,8 @@ export interface BarActions {
 export interface PlaygroundBar {
   /** Shows what is known about the server now. */
   setServer(state: ServerState): void;
+  /** Shows, at the end of the bar, what became of the last edit (the Documentation example: saved to docs/ or not). */
+  setSaveStatus(text: string, level: 'muted' | 'ok' | 'warn'): void;
 }
 
 /**
@@ -29,10 +31,16 @@ export function renderPlaygroundBar(root: HTMLElement, params: URLSearchParams, 
   const upstream = state.mode === 'gitlab' ? upstreamControls(actions, status) : null;
   if (upstream) root.append(upstream.element);
   root.append(status.element);
+  const save = el('span', { class: 'demo-bar__save', 'aria-live': 'polite', 'data-testid': 'save-status' });
   return {
     setServer(server) {
       status.server(server);
       if (upstream) upstream.button.disabled = server !== 'gitlab';
+    },
+    setSaveStatus(text, level) {
+      if (!save.isConnected) root.append(save);
+      save.textContent = text;
+      save.dataset.level = level;
     },
   };
 }
