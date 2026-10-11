@@ -3,7 +3,7 @@
 // ../spreadsheets.ts.
 import { PathReference, ProjectPath } from '../../../core/paths/paths';
 import type { SourceOffset, TextChange } from '../../../core/typst-document/typst-document';
-import { calculateImportChange, importedNames, quote } from '../../../core/typst-syntax/typst-syntax';
+import { calculateImportChange, decodeString, importedNames, quote } from '../../../core/typst-syntax/typst-syntax';
 import { typstPath } from './typst-file';
 
 /**
@@ -88,3 +88,20 @@ function freeBinding(imported: readonly { module: string; binding: string }[], s
 function field(sheet: string): string {
   return /^[\p{L}_][\p{L}\p{N}_-]*$/u.test(sheet) ? `.${sheet}` : `.at(${quote(sheet)})`;
 }
+
+/** The spreadsheet a project file stands for when dropped into a document: `budget.ic` itself, or of its Typst file `budget.ic.gen.typ`; null: neither. */
+export function droppedSpreadsheet(file: ProjectPath): ProjectPath | null {
+  const name = file.toLowerCase();
+  if (name.endsWith(SPREADSHEET)) return file;
+  const generated = typstPath(SPREADSHEET);
+  return name.endsWith(generated) && name.length > generated.length ? (file.slice(0, -(generated.length - SPREADSHEET.length)) as ProjectPath) : null;
+}
+
+/** The name of the first sheet in a spreadsheet's Typst file (`spreadsheetTypst`: the first key of `sheets`); null: none. */
+export function firstSheet(typst: string): string | null {
+  const key = /^#let sheets = \(\s*("(?:[^"\\\n]|\\["\\])*")\s*:/m.exec(typst);
+  return key && decodeString(key[1]);
+}
+
+/** The ending of spreadsheet files. */
+const SPREADSHEET = '.ic';

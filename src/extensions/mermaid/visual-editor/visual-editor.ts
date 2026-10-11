@@ -8,7 +8,7 @@ import { calculateMermaidFigure, MERMAID_EXTENSION, STARTER_FLOWCHART } from '..
  * "Insert Mermaid diagram": asks for the new file's name (`window.showSaveDialog`, proposing a free
  * `diagrams/diagram.mmd` next to the document), creates it with a starter flowchart, inserts
  * `#figure(mermaid(read("…"), width: 100%), caption: [ ])` after the cursor's block with the import of merman it
- * needs, and opens the file (in whichever editor `.mmd` files open), where the diagram is written. It is in the Insert
+ * needs (one undo step), and opens the file (in whichever editor `.mmd` files open), where the diagram is written. It is in the Insert
  * menu, and so among the slash commands.
  */
 export function insertMermaid(context: InsertContext): ToolbarItem {
@@ -48,12 +48,9 @@ async function insert({ project, window, workspace, workbench }: InsertContext, 
   const at = project.pathOf(document);
   if (!at) return;
   const { source, importChange } = calculateMermaidFigure(document.text, at, target, toolbar.selection().from);
-  if (importChange) document.change([importChange], INSERT_MERMAID);
-  insertTypst(editor, source);
+  insertTypst(editor, source, undefined, importChange ? [importChange] : []);
   workbench.open(target);
 }
 
 /** Where a new diagram is proposed, relative to the document. */
 const PROPOSED = PathReference.of(`diagrams/diagram${MERMAID_EXTENSION}`);
-/** The origin of the import change (the document's listeners see who changed it). */
-const INSERT_MERMAID = 'mermaid.insertDiagram';

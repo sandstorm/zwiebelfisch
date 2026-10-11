@@ -1,11 +1,11 @@
 import { ProjectPath } from '../../core/paths/paths';
 import { FileContent, type Project } from '../../core/project/project';
 import { findFilePaths } from '../../core/typst-syntax/typst-syntax';
-import type { DocumentLinkProvider } from '../../hosts/languages/languages';
+import type { DocumentDropEditProvider, DocumentLinkProvider } from '../../hosts/languages/languages';
 import type { CustomEditorProvider } from '../../hosts/window/window';
 import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
 import css from './diagrams.css?inline';
-import { DIAGRAM_EDITOR, DIAGRAM_FILES, isDiagram } from './model/model';
+import { DIAGRAM_EDITOR, DIAGRAM_FILES, diagramFigure, isDiagram } from './model/model';
 import { insertDiagram } from './visual-editor/insert-diagram';
 import { DiagramEditor } from './workbench/diagram-editor';
 import { newDiagram } from './workbench/new-diagram';
@@ -18,7 +18,8 @@ import { newDiagram } from './workbench/new-diagram';
  * over the images' editor of PNGs) embeds diagrams.net from the setting `diagrams.editorUrl` in an iframe, light or
  * dark as the widget, and saves every change (debounced; what is pending when the file is closed). Offline, an error
  * message offers the picture instead. "New diagram…" is in the menu `file/newFile`, "Insert diagram" in the Visual
- * editor's Insert menu (a new diagram as a figure). The paths of the project's diagrams in Typst are document links
+ * editor's Insert menu (a new diagram as a figure); a diagram dragged from the file panel into the text becomes the same
+ * figure (a drop edit provider, priority 110, over the images' `#image(..)`). The paths of the project's diagrams in Typst are document links
  * "Edit diagram" (priority 110, over the plain file links), so ⌘/Ctrl+click on a box's picture or on the path opens
  * the diagram.
  *
@@ -51,10 +52,16 @@ export function diagrams(): TypstExtension {
         workbench.registerMenuItem('file/newFile', { command: NEW_DIAGRAM, title: 'New diagram…', group: 'navigation', order: 16 }),
         visualEditor.registerToolbarItem(insertDiagram(context)),
         languages.registerDocumentLinkProvider({ language: 'typst' }, diagramLinks(project), { priority: 110 }),
+        languages.registerDocumentDropEditProvider({ language: 'typst' }, diagramDrops, { priority: 110 }),
       );
     },
   };
 }
+
+/** A diagram dropped into a Typst file: its figure, as "Insert diagram" writes it. */
+const diagramDrops: DocumentDropEditProvider = {
+  provideDocumentDropEdits: ({ path }, _position, file) => (isDiagram(file) ? { insertText: diagramFigure(ProjectPath.referenceTo(path, file)) } : null),
+};
 
 /** The command behind "New diagram…" (optional argument: the file or folder it goes next to / into). */
 const NEW_DIAGRAM = 'diagrams.newDiagram';

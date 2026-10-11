@@ -5,7 +5,7 @@ import { EditorState, NodeSelection, TextSelection, type Plugin, type Transactio
 import type { Decoration } from '@tiptap/pm/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
-import type { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
+import type { SourceOffset, SourceRange, TextChange, TypstDocument } from '../../core/typst-document/typst-document';
 import { attachGrammar, onDidChangeGrammar, posToSource, serializeToTypst, parseTypst, sourceToPos, applyTypstChanges, type DocumentNodeSpec, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
 import { clipboard } from './clipboard';
 import { hasHighlights, highlights, setHighlights } from './highlights';
@@ -169,21 +169,34 @@ export const VISUAL_EDITOR = 'visualEditor';
  * image is a figure, what no spec models a raw box), at the selection or at document position `at` (where something was
  * dropped). One paragraph's inline content (`*bold*`, `$x$`) goes into the text there, in place of the selection;
  * blocks go next to it: after the selected block, or after the paragraph or heading holding the position, an empty
- * paragraph taken over. Blocks never split or replace anything. The editor gets the focus, the cursor after what was
- * inserted. For an entry whose result is easier written as Typst than built as nodes.
+ * paragraph taken over. Blocks never split or replace anything. `changes` of the editor's Typst (in its coordinates
+ * before the insert, e.g. the import `source` needs) go into the same transaction, so one undo takes back both. The
+ * editor gets the focus, the cursor after what was inserted. For an entry whose result is easier written as Typst than
+ * built as nodes.
  */
-export function insertTypst(editor: Editor, source: string, at?: number): void {
-  const { state } = editor;
-  const content = parseTypst(source, state.schema).content;
-  const $at = at === undefined ? state.selection.$to : state.doc.resolve(Math.min(at, state.doc.content.size));
-  const paragraph = content.childCount === 1 && content.firstChild!.type === state.schema.nodes.paragraph ? content.firstChild! : null;
-  if (paragraph && $at.parent.inlineContent) {
-    const range = at === undefined ? { from: state.selection.from, to: state.selection.to } : { from: $at.pos, to: $at.pos };
-    editor.chain().focus().insertContentAt(range, paragraph.content).run();
-    return;
-  }
-  const blockSelected = at === undefined && state.selection instanceof NodeSelection && state.selection.node.isBlock;
-  editor.chain().focus().insertContentAt(blockSelected ? { from: $at.pos, to: $at.pos } : besideTextblock($at), content).run();
+export function insertTypst(editor: Editor, source: string, at?: number, changes: readonly TextChange[] = []): void {
+  const { schema } = editor.state;
+  const content = parseTypst(source, schema).content;
+  const paragraph = content.childCount === 1 && content.firstChild!.type === schema.nodes.paragraph ? content.firstChild! : null;
+  editor
+    .chain()
+    .focus()
+    .command(({ tr, commands }) => {
+      if (changes.length > 0) applyTypstChanges(tr, parseTypst(applyChanges(serializeToTypst(tr.doc), changes), schema));
+      const { selection, doc } = tr;
+      const $at = at === undefined ? selection.$to : doc.resolve(Math.min(tr.mapping.map(at), doc.content.size));
+      if (paragraph && $at.parent.inlineContent) {
+        return commands.insertContentAt(at === undefined ? { from: selection.from, to: selection.to } : { from: $at.pos, to: $at.pos }, paragraph.content);
+      }
+      const blockSelected = at === undefined && selection instanceof NodeSelection && selection.node.isBlock;
+      return commands.insertContentAt(blockSelected ? { from: $at.pos, to: $at.pos } : besideTextblock($at), content);
+    })
+    .run();
+}
+
+/** `text` with `changes` (in its coordinates, not overlapping) applied. */
+function applyChanges(text: string, changes: readonly TextChange[]): string {
+  return [...changes].sort((a, b) => b.from - a.from).reduce((current, { from, to, insert }) => current.slice(0, from) + insert + current.slice(to), text);
 }
 
 /** Where blocks go for `$pos`: after its textblock (instead of an empty one), else right there. */

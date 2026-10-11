@@ -1,7 +1,9 @@
-import type { FileChange } from '../../core/project/project';
+import type { FileChange, Project } from '../../core/project/project';
 import { ProjectPath } from '../../core/paths/paths';
+import type { DocumentDropEditProvider } from '../../hosts/languages/languages';
 import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
 import css from './spreadsheets.css?inline';
+import { calculateSheetFigure, droppedSpreadsheet, firstSheet } from './model/sheet-figure';
 import { typstPath } from './model/typst-file';
 import { insertSpreadsheet } from './visual-editor/insert-spreadsheet';
 import { SpreadsheetEditor } from './workbench/spreadsheet-editor';
@@ -15,8 +17,9 @@ import type { WorkbookEdit } from './workbench/workbook';
  * writes `name.ic.gen.typ`, the Typst file documents import (model/typst-file.ts). So Typst never needs a spreadsheet
  * engine, and the editor only reports edits: what the project gets is decided here. "New spreadsheet…" (menu
  * `file/newFile`) creates an empty one; "Insert spreadsheet" (Insert menu) creates one with a starter table and puts
- * its table into the text as a figure. `.ic` files are the language `ironcalc`, with the help sheet "Spreadsheet
- * formulas".
+ * its table into the text as a figure; so does a spreadsheet (or its Typst file) dragged from the file panel into the text
+ * (a drop edit provider, priority 110: over the Typst files' `#include`). `.ic` files are the language `ironcalc`, with
+ * the help sheet "Spreadsheet formulas".
  *
  * IronCalc (React, its UI and a 2 MB engine) is loaded only when a spreadsheet is first shown or inserted
  * (workbench/workbook.ts). See docs/10_guide/02_features.typ, "Spreadsheets".
@@ -29,7 +32,7 @@ export function spreadsheets(): TypstExtension {
       languages: [{ id: 'ironcalc', extensions: ['.ic'] }],
     },
     activate(context) {
-      const { commands, window, workbench, visualEditor, languages, subscriptions } = context;
+      const { project, commands, window, workbench, visualEditor, languages, subscriptions } = context;
       subscriptions.push(
         workbench.registerStyleSheet(css),
         window.registerCustomEditorProvider(
@@ -46,6 +49,7 @@ export function spreadsheets(): TypstExtension {
         commands.registerCommand(NEW_SPREADSHEET, (resource?: ProjectPath) => newSpreadsheet(context, resource)),
         workbench.registerMenuItem('file/newFile', { command: NEW_SPREADSHEET, title: 'New spreadsheet…', group: 'navigation', order: 15 }),
         languages.registerHelpProvider({ language: 'ironcalc' }, { provideHelp: () => SPREADSHEET_HELP }),
+        languages.registerDocumentDropEditProvider({ language: 'typst' }, sheetDrops(project), { priority: 110 }),
         visualEditor.registerToolbarItem(insertSpreadsheet(context, async (fileName) => (await import('./workbench/workbook')).newWorkbook(fileName))),
       );
     },
@@ -63,6 +67,23 @@ function save({ project, window, workspace }: ExtensionContext, path: ProjectPat
   const target = typstPath(path);
   if (project.content(target) === content) return;
   store(project.has(target) ? { kind: 'update', path: target, content } : { kind: 'create', path: target, content });
+}
+
+/**
+ * A spreadsheet (`budget.ic`) or its Typst file dropped into a Typst file: the figure of its first sheet (as its Typst
+ * file has it; none before that file exists) with the import it needs (`calculateSheetFigure`).
+ */
+function sheetDrops(project: Pick<Project, 'content'>): DocumentDropEditProvider {
+  return {
+    provideDocumentDropEdits({ path, text }, use, file) {
+      const spreadsheet = droppedSpreadsheet(file);
+      const typst = spreadsheet && project.content(typstPath(spreadsheet));
+      const sheet = typeof typst === 'string' ? firstSheet(typst) : null;
+      if (!spreadsheet || sheet === null) return null;
+      const { source, importChange } = calculateSheetFigure(text, { file: path, spreadsheet, sheet, use });
+      return { insertText: source, additionalEdit: importChange ? [importChange] : [] };
+    },
+  };
 }
 
 /** The icon of spreadsheet files (where side panels list files). */

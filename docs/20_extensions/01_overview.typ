@@ -82,7 +82,7 @@ What `activate` gets (`ExtensionContext`):
   [`workspace`], [`applyEdit`, settings], [@extensions-workbench-api-settings],
   [`workbench`], [The frame: `open`, side panels, menus, style sheets, dropped files, `user`], [@extensions-workbench-api],
   [`scm`], [Source controls], [@extensions-workbench-api-scm],
-  [`languages`], [Document links in texts, the language of a file, help sheets; by language], [@extensions-source-editor-and-preview-links, @extensions-workbench-api-help],
+  [`languages`], [Document links in texts, what a dropped file becomes, the language of a file, help sheets; by language], [@extensions-source-editor-and-preview-links, @extensions-workbench-api-drop-edits, @extensions-workbench-api-help],
   [`visualEditor`], [Nodes, marks, toolbar, boxes, gutters, highlights (experimental)], [@extensions-visual-editor-constructs],
   [`sourceEditor`], [CodeMirror extensions: for the Source editors, and shared ones for every CodeMirror], [@extensions-source-editor-and-preview],
   [`preview`], [Toolbar items, PDF export options, reveal, clicks, diagnostics], [@extensions-source-editor-and-preview-preview],

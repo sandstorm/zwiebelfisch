@@ -2,8 +2,7 @@
 // ../images.ts.
 import type { Editor } from '@tiptap/core';
 import type { ResolvedPos } from '@tiptap/pm/model';
-import { type PathReference, ProjectPath } from '../../../core/paths/paths';
-import { PROJECT_PATH_TYPE } from '../../../hosts/workbench/workbench';
+import type { PathReference } from '../../../core/paths/paths';
 import { NodeSelection, Plugin, PluginKey } from '@tiptap/pm/state';
 import { imageSource } from './image-syntax';
 
@@ -33,41 +32,20 @@ export function insertImages(editor: Editor, paths: PathReference[], near?: numb
  * with them (and, for a drop, the document position under the mouse). The
  * event goes no further, so the browser does not open a dropped file in
  * place of the page and the file panel does not add it once more. Events
- * without image files are left to others (e.g. the file panel).
- *
- * A project file dragged from the file panel (`PROJECT_PATH_TYPE`) goes to
- * `onProjectFile` with its path and the drop position instead; it returns
- * whether it took the file (only images).
+ * without image files are left to others (e.g. the file panel; a project
+ * file dragged from it is the workbench's drop, see images in ../images.ts).
  */
-export function imageFileDrops(
-  onImages: (files: File[], near?: number) => void,
-  onProjectFile?: (path: ProjectPath, near?: number) => boolean,
-): Plugin {
-  const carriesProjectFile = (event: DragEvent) => !!onProjectFile && !!event.dataTransfer?.types.includes(PROJECT_PATH_TYPE);
+export function imageFileDrops(onImages: (files: File[], near?: number) => void): Plugin {
   return new Plugin({
     key: new PluginKey('typstImageFiles'),
     props: {
       handleDOMEvents: {
-        dragover: (_view, event) => {
-          // the browser only drops what a dragover accepted (the data itself is readable on drop only)
-          if (!carriesProjectFile(event)) return false;
-          event.preventDefault();
-          event.dataTransfer!.dropEffect = 'copy';
-          return true;
-        },
         drop: (view, event) => {
-          const near = () => view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos;
-          if (carriesProjectFile(event)) {
-            event.preventDefault();
-            event.stopPropagation();
-            const path = ProjectPath.parse(event.dataTransfer!.getData(PROJECT_PATH_TYPE));
-            return path !== null && onProjectFile!(path, near());
-          }
           const files = imageFiles(event.dataTransfer);
           if (files.length === 0) return false;
           event.preventDefault();
           event.stopPropagation();
-          onImages(files, near());
+          onImages(files, view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos);
           return true;
         },
         paste: (_view, event) => {

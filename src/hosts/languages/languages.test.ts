@@ -1,5 +1,6 @@
 // Tests for languages.ts (LanguagesHost): merging the links of the providers for a document's language, resolving them
-// through their provider; a document's primary link and the link at an offset; the declared languages by ending; the help sheets by language.
+// through their provider; a document's primary link and the link at an offset; the declared languages by ending; the help sheets by language;
+// the drop edit of a dropped file.
 import { describe, expect, it, vi } from 'vitest';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
@@ -133,5 +134,22 @@ describe('LanguagesHost', () => {
     expect(titles(undefined)).toEqual(['Everywhere']);
     mermaid.dispose();
     expect(titles('mermaid')).toEqual(['Everywhere']);
+  });
+
+  it('makes a dropped file into the edit of the first provider by priority that gives one (equal: registered first), for the document\'s language', () => {
+    const languages = new LanguagesHost(targets);
+    const drops = (name: string, ending: string) => ({
+      provideDocumentDropEdits: (_document: unknown, _position: unknown, file: ProjectPath) => (file.endsWith(ending) ? { insertText: name } : null),
+    });
+    languages.registerDocumentDropEditProvider({ language: 'typst' }, drops('image', '.png'));
+    languages.registerDocumentDropEditProvider({ language: 'typst' }, drops('any png', '.png'));
+    const diagram = languages.registerDocumentDropEditProvider({ language: 'typst' }, drops('diagram', '.drawio.png'), { priority: 110 });
+    languages.registerDocumentDropEditProvider({ language: 'json' }, drops('json', '.png'), { priority: 200 });
+    const edit = (file: string) => languages.provideDocumentDropEdit(document, SourceOffset.of(0), ProjectPath.of(file))?.insertText;
+    expect(edit('/flow.drawio.png')).toBe('diagram');
+    expect(edit('/logo.png')).toBe('image');
+    expect(edit('/notes.txt')).toBeUndefined();
+    diagram.dispose();
+    expect(edit('/flow.drawio.png')).toBe('image');
   });
 });

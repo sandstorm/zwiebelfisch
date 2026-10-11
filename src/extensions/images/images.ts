@@ -3,10 +3,12 @@ import { type PathReference, ProjectPath } from '../../core/paths/paths';
 import type { FileChange, FileContent, Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import { uploadChanges } from '../../core/uploads/uploads';
+import type { DocumentDropEditProvider } from '../../hosts/languages/languages';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './images.css?inline';
 import { IMAGE_FILES, imageBlob, isImage } from './model/image-files';
 import { uploadTarget } from './model/upload';
+import { imageSource } from './visual-editor/image-syntax';
 import { imagesVisualEditor, type ImageAssets, type ImageUrls } from './visual-editor/visual-editor';
 import { imageEditor } from './workbench/image-editor';
 
@@ -14,7 +16,8 @@ import { imageEditor } from './workbench/image-editor';
  * Images, from the file in the project to the box in the text. In the Visual editor an `#image("path", ..)` block
  * (also a figure's body) is a box that shows the project's image file in place of its code, with tools to resize it,
  * set its alt text and add a caption (ImageTools in visual-editor/image-tools.ts). "Insert image" offers the project's
- * images and uploads; image files dropped on or pasted into the text are uploaded and inserted too. Uploads go through
+ * images and uploads; image files dropped on or pasted into the text are uploaded and inserted too, and an image
+ * dragged from the file panel becomes `#image("path")` where it is dropped (a drop edit provider). Uploads go through
  * `workspace.applyEdit`. Image files open read-only in the editing area (the custom editor `images.editor`).
  *
  * An image is one concept, so it is one extension: the Visual editor knows only raw boxes, their renderers and tools,
@@ -32,6 +35,7 @@ export function images(): TypstExtension {
         workbench.registerStyleSheet(css),
         projectImages,
         window.registerCustomEditorProvider('images.editor', imageEditor, { filenamePattern: IMAGE_FILES, displayName: 'Image', icon: IMAGE_ICON }),
+        languages.registerDocumentDropEditProvider({ language: 'typst' }, imageDrops),
       );
       imagesVisualEditor({
         assets: (document) => projectImages.forDocument(document).assets,
@@ -51,6 +55,11 @@ export function images(): TypstExtension {
     },
   };
 }
+
+/** An image file dropped into a Typst file: `#image("path")`, the path written from that file. */
+const imageDrops: DocumentDropEditProvider = {
+  provideDocumentDropEdits: (document, _position, file) => (isImage(file) ? { insertText: imageSource(ProjectPath.referenceTo(document.path, file)) } : null),
+};
 
 export interface ProjectImagesOptions {
   project: Project;
@@ -90,10 +99,6 @@ export class ProjectImages {
           return file ? project.paths().filter((p) => isImage(p)).map((p) => ProjectPath.referenceTo(file, p)) : [];
         },
         upload: (upload) => this.upload(upload, path()),
-        reference: (image) => {
-          const file = path();
-          return file && isImage(image) && project.has(image) ? ProjectPath.referenceTo(file, image) : null;
-        },
       },
     };
   }

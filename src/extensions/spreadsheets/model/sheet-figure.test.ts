@@ -1,12 +1,12 @@
 // Tests for sheet-figure.ts: the starter table (against IronCalc's real engine and, compiled, the Typst engine) and
-// the figure with its import.
+// the figure with its import; the spreadsheet a dropped file stands for, and its first sheet.
 import { readFileSync } from 'node:fs';
 import init, { Model } from '@ironcalc/wasm';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
 import { SourceOffset, type TextChange } from '../../../core/typst-document/typst-document';
 import { createEngine } from '../../../core/typst-engine/typst-engine';
-import { calculateSheetFigure, typeStarterTable } from './sheet-figure';
+import { calculateSheetFigure, droppedSpreadsheet, firstSheet, typeStarterTable } from './sheet-figure';
 import { spreadsheetTypst } from './typst-file';
 
 beforeAll(async () => {
@@ -70,5 +70,23 @@ describe('calculateSheetFigure', () => {
   it('reaches a sheet whose name is no identifier with `at`', () => {
     const { source } = calculateSheetFigure('', { file: path('/main.typ'), spreadsheet: path('/t.ic'), sheet: 'Q1 2026', use: SourceOffset.of(0) });
     expect(source).toBe('#figure(sheets.at("Q1 2026"), caption: [ ])');
+  });
+});
+
+describe('a spreadsheet dropped into a document', () => {
+  it('stands for the spreadsheet itself or for that of its Typst file; other files for none', () => {
+    expect(droppedSpreadsheet(path('/data/budget.ic'))).toBe('/data/budget.ic');
+    expect(droppedSpreadsheet(path('/data/budget.ic.gen.typ'))).toBe('/data/budget.ic');
+    expect(droppedSpreadsheet(path('/data/Budget.IC'))).toBe('/data/Budget.IC');
+    expect(droppedSpreadsheet(path('/chapter.typ'))).toBeNull();
+    expect(droppedSpreadsheet(path('/topic'))).toBeNull();
+  });
+
+  it('shows the first sheet of its Typst file, its name as written there; none without sheets', () => {
+    const model = new Model('table', 'en', 'UTC', 'en');
+    model.newSheet();
+    model.renameSheet(0, 'Q1 "2026"');
+    expect(firstSheet(spreadsheetTypst(model, 'table.ic'))).toBe('Q1 "2026"');
+    expect(firstSheet('#let values = (:)\n\n#let sheets = (:)\n')).toBeNull();
   });
 });

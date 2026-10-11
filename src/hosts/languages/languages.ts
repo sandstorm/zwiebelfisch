@@ -1,20 +1,23 @@
 import type { Extension } from '@codemirror/state';
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
-import type { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
+import type { SourceOffset, SourceRange, TextChange } from '../../core/typst-document/typst-document';
 import type { Command } from '../commands/commands';
 import css from './languages.css?inline';
 import { followableLink, linkExtension, primaryLink, type LinkActions } from './link-extension';
 
 /**
  * What the widget knows about the languages of texts (VS Code's `languages` namespace, the parts we use): document
- * links, the language of a file, help sheets, and the modules names come from.
+ * links, what a project file dropped into a text becomes, the language of a file, help sheets, and the modules names
+ * come from.
  *
  * Finding links is a feature's policy: which paths count, what a missing file offers. Showing and following links is
  * the same in every editor. So extensions register link providers, and every CodeMirror editor (the Source editor,
  * a raw box's code, an extension's own editor) shows the merged links of all providers for its language, knowing none
  * of them. Help works the same way: a language's sheet comes from its extension, the help panel shows it; so do known
- * imports: an extension says where the names of its constructs come from, whoever adds imports reads them.
+ * imports: an extension says where the names of its constructs come from, whoever adds imports reads them. And drops:
+ * a file dragged from the file panel into a Typst editor becomes what an extension makes of it (a spreadsheet: its
+ * figure and import), the editors only insert it.
  *
  * The host knows no language itself. Whoever hands a text over says its language (`languageId`), and the extensions
  * declare which file endings are which language (`contributes.languages`). See docs/30_architecture/07_workbench.typ.
@@ -39,6 +42,12 @@ export interface Languages {
    * in `languageId`; `path` is the file it is in, now (null: none, no links).
    */
   createDocumentLinksCodeMirrorExtension(languageId: string, path: () => ProjectPath | null): Extension;
+  /**
+   * Says what a project file dropped into the documents `selector` matches becomes, until disposed: the Visual and the
+   * Source editor insert the edit of the provider of the highest `priority` (default 100, higher first; equal:
+   * registration order) that gives one for the file (an image: `#image(..)`; a diagram, priority 110: its figure).
+   */
+  registerDocumentDropEditProvider(selector: DocumentSelector, provider: DocumentDropEditProvider, options?: { priority?: number }): Disposable;
   /**
    * The language of the file `path` by its ending, as the extensions declare them (`contributes.languages`; the
    * workbench's own: `typst` for `.typ`): the longest declared ending the name has, in any case. undefined: none.
@@ -160,6 +169,26 @@ export interface DocumentLinkProvider {
   resolveDocumentLink?(link: DocumentLink): DocumentLink;
 }
 
+/** Makes a dropped project file into text (VS Code's DocumentDropEditProvider). */
+export interface DocumentDropEditProvider {
+  /**
+   * What the project file `file`, dropped at `position` of `document`, puts there; null: no file of this provider's
+   * (the next provider is asked).
+   */
+  provideDocumentDropEdits(document: TextDocument, position: SourceOffset, file: ProjectPath): DocumentDropEdit | null;
+}
+
+/** What a drop puts into a document (VS Code's DocumentDropEdit), in one undo step. */
+export interface DocumentDropEdit {
+  /**
+   * The text inserted where the file was dropped. The Visual editor reads it as Typst: inline content goes into the
+   * text there, blocks after the block there.
+   */
+  readonly insertText: string;
+  /** Other changes of the same document, in the coordinates of its text before the drop and before `position` (an import). */
+  readonly additionalEdit?: readonly TextChange[];
+}
+
 /** What following a link does, in the editor that shows it: the workbench's side of links. */
 export interface LinkTargets {
   /** Shows a link's target: a project file (at `selection`, if given), or an external URL in a new tab. */
@@ -189,6 +218,7 @@ export class LanguagesHost implements Languages {
   /** The document `linkAt` was asked about last, and its links. */
   #lastLinks: (TextDocument & { links: readonly DocumentLink[] }) | null = null;
   readonly #knownImports: { selector: DocumentSelector; known: KnownImport }[] = [];
+  readonly #dropEditProviders: { selector: DocumentSelector; provider: DocumentDropEditProvider; priority: number }[] = [];
   /** The declared endings (lower case, with the dot) and their language. */
   readonly #endings = new Map<string, string>();
 
@@ -257,6 +287,21 @@ export class LanguagesHost implements Languages {
     const resolved = provider?.resolveDocumentLink?.(link) ?? link;
     if (provider) this.#providerOf.set(resolved, provider);
     return resolved;
+  }
+
+  registerDocumentDropEditProvider(selector: DocumentSelector, provider: DocumentDropEditProvider, options: { priority?: number } = {}): Disposable {
+    return add(this.#dropEditProviders, { selector, provider, priority: options.priority ?? DEFAULT_PRIORITY });
+  }
+
+  /** What the project file `file` dropped at `position` of `document` becomes: the edit of the first provider by priority that gives one; null: none. */
+  provideDocumentDropEdit(document: TextDocument, position: SourceOffset, file: ProjectPath): DocumentDropEdit | null {
+    const matching = this.#dropEditProviders.filter(({ selector }) => matches(selector, document.languageId));
+    // the sort is stable: equal priorities in registration order
+    for (const { provider } of matching.sort((a, b) => b.priority - a.priority)) {
+      const edit = provider.provideDocumentDropEdits(document, position, file);
+      if (edit) return edit;
+    }
+    return null;
   }
 
   createDocumentLinksCodeMirrorExtension(languageId: string, path: () => ProjectPath | null): Extension {

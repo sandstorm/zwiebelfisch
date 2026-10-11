@@ -219,6 +219,27 @@ languages.registerKnownImport({ language: 'typst' }, { name: 'mermaid', module: 
 - A pasted `mermaid(..)` in a file that neither defines nor imports `mermaid` adds `#import "@preview/merman:0.4.0": mermaid` at the top, or `mermaid` to an import of merman (any version) already there.
 - `languages.provideKnownImports(languageId)`: every matching declaration, in registration order.
 
+== Drop edits <extensions-workbench-api-drop-edits>
+
+A project file dragged from the file panel into a Typst file (the Visual or the Source editor) becomes what an extension makes of it (VS Code's `DocumentDropEditProvider`):
+
+```ts
+languages.registerDocumentDropEditProvider({ language: 'typst' }, {
+  provideDocumentDropEdits({ path, text }, position, file) {
+    if (!file.endsWith('.mmd')) return null; // not ours: the next provider is asked
+    return {
+      insertText: `#figure(mermaid(read("${ProjectPath.referenceTo(path, file)}")), caption: [ ])`,
+      additionalEdit: [/* the import, a TextChange of `text` before `position` */],
+    };
+  },
+}, { priority: 110 });
+```
+
+- `document` is the text dropped into (`path`, `languageId`, `text`); `position` the source offset of the drop; `file` the dropped `ProjectPath`.
+- The providers are asked by `priority` (default 100, higher first; equal: registration order); the first edit wins. Diagrams (110) win over images for `.drawio.png`, spreadsheets (110) over the Typst files' `#include` for `.ic.gen.typ`.
+- `insertText` goes in at the drop position: the Source editor inserts it there, the Visual editor reads it as Typst (inline content into the text, blocks after the block there, as `insertTypst`). `additionalEdit` (changes of `text` before the drop, in its coordinates) goes into the same transaction: one undo step.
+- Files from the desktop are not drops of project files: images upload them themselves, the rest goes to `workbench.onDidDropFiles`.
+
 == File decorations <extensions-workbench-api-decorations>
 
 `window.registerFileDecorationProvider({ provideFileDecoration(path), onDidChangeFileDecorations })` puts badges on file rows: `FileDecoration { badge?, tooltip?, color?, propagate? }` (`propagate`: also on the closed folders around the file). Several providers may decorate one file. Side panels that list files read `window.getFileDecorations(path)` and `window.getFileIcon(path)`.

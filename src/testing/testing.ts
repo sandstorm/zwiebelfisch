@@ -144,7 +144,7 @@ function contributions(options: TestEditorOptions): VisualEditorHost {
  * `options`: a project of `TEST_DOCUMENT_PATH` and `options.files`, a preview with `options.preview`'s snippets,
  * `options.links`, the window's `options.prompts` (default: every question cancelled) and `options.applyEdit`.
  * Registrations other than the Visual editor's (style sheets, commands, custom editors, search providers, link
- * providers) are accepted and ignored.
+ * providers, drop edit providers) are accepted and ignored.
  */
 function activate(contributions: readonly VisualEditorContribution[], options: TestEditorOptions = {}): VisualEditorHost {
   const visualEditor = new VisualEditorHost();
@@ -175,9 +175,10 @@ function testContext(options: TestEditorOptions) {
   };
 }
 
-function testLanguages(options: TestEditorOptions): Pick<Languages, 'registerDocumentLinkProvider' | 'provideDocumentLinks' | 'resolveDocumentLink'> {
+function testLanguages(options: TestEditorOptions): Pick<Languages, 'registerDocumentLinkProvider' | 'registerDocumentDropEditProvider' | 'provideDocumentLinks' | 'resolveDocumentLink'> {
   return {
     registerDocumentLinkProvider: ignored,
+    registerDocumentDropEditProvider: ignored,
     provideDocumentLinks: options.links?.provideDocumentLinks ?? (() => []),
     resolveDocumentLink: options.links?.resolveDocumentLink ?? ((link) => link),
   };
