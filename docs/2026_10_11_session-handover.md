@@ -12,7 +12,6 @@ E2E has not been run for most of the day's work: `mise run test:e2e-all chromium
 | Task | Workflow | Notes |
 |---|---|---|
 | "Go to Section" does nothing in the Visual editor (bug) | `w48qwv7ni` (wf_150926b9-c38) | Reproduce through the widget, fix root cause, all reference kinds |
-| Comment styling into the comments extension | `wtmngmrk7` (wf_06853c7c-040) | Style via `comments.show` prelude + `comments.include` entry; first note imports only `margin-note`; demo/docs cleaned; page-margin workaround evaluated (report) |
 | Desktop-dropped `.ic`/`.drawio`/`.mmd` not inserted (bug) | `wsuc7v8yg` (wf_08de6abd-c39) | Root cause in the drop mechanism, both editors |
 
 Merge routine: `git merge --no-edit <worktree branch>`; resolve conflicts by combining both sides; stage only the
@@ -21,6 +20,9 @@ often lack preview-mock members (`registerViewOption`, `viewOptions`, `setViewOp
 `onDidChangeViewOptions`) — add them.
 
 Done: Getting started is Docker + the demo; the mise setup is "Setup" in `11_development.typ` (`aa5b2bb8`).
+Done: comment styling lives in the comments extension (`note-defaults.ts`; preview prelude + `/.with-comments.typ`);
+the page-margin workaround stays (drafting reads the document's own `set page`; no prelude can fix it).
+E2E to run: `margin-notes.spec.ts`, `visual-toolbar.spec.ts`.
 
 ## Open questions / approvals the user has not answered yet
 
