@@ -1,3 +1,3 @@
-/* The Source editor host's styles: the briefly highlighted range of a reveal. Added by the workbench
-   (SourceEditorHost.styleSheet). See source-editor.ts. */
+/* The briefly highlighted range of a reveal. See SourceEditorHost in source-editor.ts, whose styleSheet the workbench
+   adds. */
 .typst-source__jump { background: var(--te-jump); border-radius: 2px; }

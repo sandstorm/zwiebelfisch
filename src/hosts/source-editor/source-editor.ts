@@ -1,4 +1,3 @@
-// SourceEditorHost. Entry of hosts/source-editor/. See docs/30_architecture/05_source-editor.typ.
 import { basicSetup } from 'codemirror';
 import {
   Annotation, Compartment, EditorSelection, StateEffect, StateField, type ChangeSet, type Extension,
@@ -10,13 +9,15 @@ import { SourceRange, type TextChange, type TypstDocument } from '../../core/typ
 import css from './source-editor.css?inline';
 
 /**
- * Makes Source editors and keeps the registered contributions applied to all of them.
+ * Makes the Source editors (CodeMirror 6 bound to a `TypstDocument`) and applies what extensions contribute to them.
  *
- * Makes the Source editors (CodeMirror bound to a TypstDocument) and applies what is contributed to them.
- *
- * Why a host: the Source editor itself only keeps text and selection in sync with its document (plus reveal).
- * Everything else — the Typst language, colors, lint, document links, other users' carets — is a contribution,
- * registered once and applied to every editor made before or after, so a feature never tracks editors.
+ * The Source editor shows a Typst file as plain text. It is one of the two built-in custom editors for `*.typ`, next
+ * to the Visual editor; the workbench registers both (`TypstEditors`) and calls `createEditor`. The editor itself
+ * keeps only the mechanism: text and selection in sync with the document both ways, reveal, selection reporting.
+ * Everything else is a CodeMirror extension someone contributes: the Typst language and its colors, the diagnostics,
+ * other users' carets, the document links (the workbench's). A contribution is registered once and applies to every
+ * editor, open or made later, so no feature tracks editors. Undo is CodeMirror's history; a contribution decides what
+ * stays out of it (`fromDocument`). See docs/30_architecture/05_source-editor.typ.
  */
 export class SourceEditorHost implements SourceEditorContributions {
   private readonly extensions: (Extension | ((editor: SourceEditorContext) => Extension))[] = [];
@@ -81,10 +82,7 @@ export interface SourceEditorOptions {
  */
 export const SOURCE_EDITOR = 'sourceEditor';
 
-/**
- * The plain-Typst editor (CodeMirror 6), kept in sync with a
- * TypstDocument in both directions. Made by `SourceEditorHost.createEditor`.
- */
+/** The plain-Typst editor of one document. Made by `SourceEditorHost.createEditor`. */
 export class SourceEditor {
   private readonly view: EditorView;
   private readonly contributed = new Compartment();
