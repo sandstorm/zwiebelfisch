@@ -1,6 +1,6 @@
 // The text-files extension: the project's text files Typst reads (data: CSV, JSON, YAML, TOML, XML; bibliographies;
 // plain text and Markdown) open editable in plain CodeMirror, saved as they change. Entry of extensions/text-files/.
-// See ARCHITECTURE.md, "Text files".
+// See docs/guide/features.typ.
 // Why an extension: the editor is a custom editor (the window's contribution point), its saves file updates through
 // `workspace.applyEdit`; what a text file is, is decided here, by name.
 import { ProjectPath } from '../../core/paths/paths';

@@ -1,5 +1,5 @@
 // The typed TypeScript side of the typst-engine wasm (crates/typst-engine): createEngine and the engine's
-// data types. Entry of core/typst-engine/. See ARCHITECTURE.md, "typst-engine".
+// data types. Entry of core/typst-engine/. See docs/architecture/core.typ.
 import init, { Engine as WasmEngine, type InitInput } from './wasm/typst_engine';
 
 // Asset URLs (wasm, default fonts) are core/engine-assets, not here: the worker imports this file. Packages

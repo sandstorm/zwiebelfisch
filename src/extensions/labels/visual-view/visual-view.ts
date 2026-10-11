@@ -1,5 +1,5 @@
 // References and labels in the Visual view: `@key` chips, label tags on blocks, the `@` suggestion list, "Add
-// label". See ARCHITECTURE.md, "Labels and references".
+// label". See docs/guide/features.typ.
 import { Extension } from '@tiptap/core';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { guardAfterReference, referenceSyntax } from '../model/reference-syntax';

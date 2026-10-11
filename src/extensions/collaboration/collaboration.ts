@@ -1,5 +1,5 @@
 // The collaboration extension: real-time editing of the project with others (Yjs). Entry of
-// extensions/collaboration/. See ARCHITECTURE.md, "Collaboration".
+// extensions/collaboration/. See docs/guide/collaboration.typ.
 // Why this entry is small and eager: the widget loads it with every other extension, but most widgets never
 // collaborate, so the Yjs side (model/model.ts: Collaboration, SharedProject, RemoteCursors, GitLabSourceControl, …) is a
 // chunk of its own that CollaborationLink loads on demand. Nothing here may import that chunk other than as a type.

@@ -1,6 +1,6 @@
 // What the comments extension contributes to the preview: the PDF export option "Include comments". The PDF itself
 // is the pdf-export extension's; comments only decide what it compiles.
-// See ARCHITECTURE.md, "Comments = margin notes".
+// See docs/guide/features.typ.
 import type { Disposable } from '../../../core/disposable/disposable';
 import type { Project } from '../../../core/project/project';
 import type { PdfEntry } from '../../../core/typst-engine/typst-engine';

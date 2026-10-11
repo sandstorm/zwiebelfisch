@@ -1,6 +1,6 @@
 // The scm namespace of the extension API (VS Code's `scm`): the source controls extensions register, somewhere the
 // project can be committed (the GitLab branch behind a collaboration room), for whichever extension shows them.
-// Entry of hosts/scm/. See ARCHITECTURE.md, "GitLab-backed rooms".
+// Entry of hosts/scm/. See docs/architecture/workbench.typ.
 // Why a contribution point: what commits (collaboration) and what shows committing (source-control) are two
 // extensions that never know each other; both know only this registry.
 import { Disposable } from '../../core/disposable/disposable';

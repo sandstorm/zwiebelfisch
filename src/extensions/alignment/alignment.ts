@@ -1,5 +1,5 @@
 // The alignment extension: text alignment as Typst writes it — `#align(..)[..]` blocks and `#par(justify: ..)[..]`
-// paragraphs — in the Visual view, with the Align menu and Mod-Shift-L/E/R/J. See ARCHITECTURE.md, "VisualView".
+// paragraphs — in the Visual view, with the Align menu and Mod-Shift-L/E/R/J. See docs/architecture/built-in-extensions.typ.
 // Why an extension: the Visual view's host models only paragraphs, text and raw Typst; this one also teaches the
 // host's paragraphs their `justify` (a second paragraph spec extends the host's).
 import type { TypstExtension } from '../../hosts/workbench/workbench';

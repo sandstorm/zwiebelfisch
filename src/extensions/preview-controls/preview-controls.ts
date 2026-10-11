@@ -1,5 +1,5 @@
 // The preview-controls extension: zoom and the page number in the preview's toolbar.
-// Entry of extensions/preview-controls/. See ARCHITECTURE.md, "Preview".
+// Entry of extensions/preview-controls/. See docs/architecture/preview.typ.
 // Why an extension: the preview host keeps the mechanism (zoom, which page is shown) and offers it to toolbar items;
 // which controls a widget shows is decided here.
 import { pageNumber } from './preview/page-number';

@@ -3,8 +3,8 @@
 // change that imports a name (calculateImportChange), and reading syntax nodes, calls, string literals and
 // embeddable code as the Visual view's specs do (children, calleeName, callArguments, namedArgument,
 // trailingContent, hasOnlyArguments, withHash, isClosedContent, decodeString, quote, isEmbeddable, markupSource:
-// plain functions over Lezer nodes, public for every extension). Entry of core/typst-syntax/. See ARCHITECTURE.md,
-// "File links".
+// plain functions over Lezer nodes, public for every extension). Entry of core/typst-syntax/.
+// See docs/architecture/core.typ.
 // Why here: extensions never import each other, and this knowledge is about Typst, not about one feature. Only
 // syntax: where a path leads (the project, the file's current path) and what following it does (open, create) is the
 // document-links extension's, and showing links is the hosts' (`languages.registerDocumentLinkProvider`); applying

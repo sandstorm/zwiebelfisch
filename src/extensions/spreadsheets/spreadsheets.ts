@@ -1,7 +1,6 @@
 // The spreadsheets extension: a spreadsheet file (`.ic`) shown and edited in IronCalc's workbook UI
 // (SpreadsheetView, the custom editor `spreadsheets.editor`); every edit saves the file and the Typst file documents
-// import. "New spreadsheet…" in the file panel's "New". Entry of extensions/spreadsheets/. See ARCHITECTURE.md,
-// "Spreadsheets".
+// import. "New spreadsheet…" in the file panel's "New". Entry of extensions/spreadsheets/. See docs/guide/features.typ.
 // Why the extension stores the Typst file: documents import `name.ic.gen.typ`, never the workbook, so the Typst
 // side needs no spreadsheet engine; the view only reports edits, the extension decides what the project gets.
 import type { FileChange } from '../../core/project/project';

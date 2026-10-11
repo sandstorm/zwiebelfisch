@@ -1,7 +1,7 @@
 /* The widget's styles, scoped under .typst-editor and injected by createTypstEditor (with
    hosts/visual-view/visual-view.css and hosts/workbench/layout/layout.css): the color tokens, the hosts' frame,
    views, toolbar and popovers. Each extension adds its own (extensions/<name>/<name>.css, through
-   Workbench.registerStyleSheet). See docs/embedding.md. */
+   Workbench.registerStyleSheet). See docs/guide/embedding.typ. */
 /* Colors: tokens as light-dark(light, dark). The widget follows the page's color-scheme (a page that
    declares `color-scheme: light dark` gets it dark when the OS is); the setting `workbench.theme` sets its own
    (data-theme). What light-dark() cannot express selects on data-scheme (hosts/workbench/color-scheme/). */

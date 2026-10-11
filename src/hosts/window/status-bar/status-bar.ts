@@ -1,5 +1,5 @@
 // StatusBar: the items extensions put into the status bar (`window.registerStatusBarItem`), placed as VS Code
-// places its StatusBarItems. See window.ts and ARCHITECTURE.md, "Layout".
+// places its StatusBarItems. See window.ts and docs/architecture/workbench.typ.
 import { Disposable } from '../../../core/disposable/disposable';
 import type { StatusBarPlacement } from '../window';
 

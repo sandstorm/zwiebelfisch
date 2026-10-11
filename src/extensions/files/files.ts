@@ -1,6 +1,6 @@
 // The files extension: the file panel (the project's files as a tree in the left side panel: new file / folder,
 // upload, rename, delete as commands in its menus, drag & drop, file decorations), and the read-only view of files
-// no other editor opens. Entry of extensions/files/. See ARCHITECTURE.md, "File panel".
+// no other editor opens. Entry of extensions/files/. See docs/guide/features.typ.
 // Why a controller and views: the extension is a controller over the workbench's contribution points (a side panel,
 // commands, menus) and the project; the views (workbench/) and the pure tree model (model/) get what they need of the
 // workbench as options, so the panel is tested without one.

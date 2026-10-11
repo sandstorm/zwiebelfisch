@@ -1,5 +1,5 @@
 // Custom styles in the Visual view: declared paragraph styles as styled blocks (`#note[..]`), text styles as a
-// mark (`#key[..]`), and the text style menu. See ARCHITECTURE.md, "Custom styles".
+// mark (`#key[..]`), and the text style menu. See docs/guide/features.typ.
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node } from '@tiptap/pm/model';
 import { calleeName, children, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';

@@ -1,5 +1,5 @@
 // The lists extension: bulleted, numbered and task lists in the Visual view, with their toolbar buttons. See
-// ARCHITECTURE.md, "VisualView". Why one extension: a task list is a bullet list in Typst (`- [ ] todo`), so the two
+// docs/architecture/built-in-extensions.typ. Why one extension: a task list is a bullet list in Typst (`- [ ] todo`), so the two
 // share their syntax and their toolbar group; task lists' Tiptap priority puts their parse rule first.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './lists.css?inline';

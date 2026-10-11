@@ -1,6 +1,6 @@
 // The Visual view's editor extensions over the projection's schema: what the view adds to every node type whose spec
 // asks for it in `view` (kept DOM, raw box node views, the own-pseudo-elements mark) and the raw boxes' keyboard
-// navigation. See ARCHITECTURE.md, "VisualView".
+// navigation. See docs/architecture/visual-view.typ.
 import { Extension, type AnyExtension } from '@tiptap/core';
 import { DOMSerializer, type Node as PMNode } from '@tiptap/pm/model';
 import { Plugin } from '@tiptap/pm/state';

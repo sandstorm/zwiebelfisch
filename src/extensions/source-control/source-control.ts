@@ -1,6 +1,6 @@
 // The source-control extension: the UI over the registered source controls (`scm`): "Save to <label>…" in the tab bar
 // (menu `editor/title`), which asks for a commit message and commits; a source control tells its outcomes itself.
-// Entry of extensions/source-control/. See ARCHITECTURE.md, "GitLab-backed rooms".
+// Entry of extensions/source-control/. See docs/architecture/built-in-extensions.typ.
 // Why apart from what commits: a source control (the GitLab branch behind a collaboration room) registers itself
 // (`scm.registerSourceControl`), and this extension only shows what is registered; neither knows the other.
 import { Disposable } from '../../core/disposable/disposable';

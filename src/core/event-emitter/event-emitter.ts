@@ -1,5 +1,5 @@
 // EventEmitter: an event others subscribe to (`event`) and its owner fires (`fire`), VS Code's shape. Entry of
-// core/event-emitter/. See ARCHITECTURE.md, "Extensions".
+// core/event-emitter/. See docs/architecture/conventions.typ.
 import { Disposable } from '../disposable/disposable';
 
 /** Subscribes `listener`; disposing the result unsubscribes it. */

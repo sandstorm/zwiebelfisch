@@ -7,7 +7,7 @@
 // `scm`, `languages`, `workspace`); `workbench` is only the frame. Adding a feature is adding it to a list, not
 // editing the frame. Extensions never depend on each other: what one offers another goes through a generic
 // contribution point of a host.
-// See ARCHITECTURE.md, "Extensions" and "Layout".
+// See docs/architecture/workbench.typ.
 // WorkbenchHost (below the API) is what createTypstEditor creates; extensions see it as `Workbench`.
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';

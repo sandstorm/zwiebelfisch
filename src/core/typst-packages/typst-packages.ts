@@ -1,5 +1,5 @@
 // withPackages: Typst packages (@preview/…) downloaded on first use and added to the engine. Entry of
-// core/typst-packages/. See ARCHITECTURE.md, "typst-engine".
+// core/typst-packages/. See docs/architecture/core.typ.
 import type { CompileResult, Diagnostic, Engine, PdfResult } from '../typst-engine/typst-engine';
 import { untarGz } from './tar';
 

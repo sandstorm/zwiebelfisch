@@ -1,6 +1,6 @@
 // The outline extension: the table of contents, a standalone `#outline(..)`, as a box headed "Table of contents" in
 // the Visual view (showing the compiled outline where a box renderer draws it), and "Insert" → "Table of contents".
-// See ARCHITECTURE.md, "VisualView". Why an extension: the Visual view's host models only paragraphs, text and raw
+// See docs/architecture/built-in-extensions.typ. Why an extension: the Visual view's host models only paragraphs, text and raw
 // Typst.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import { INSERT_OUTLINE, OUTLINE } from './visual-view/visual-view';

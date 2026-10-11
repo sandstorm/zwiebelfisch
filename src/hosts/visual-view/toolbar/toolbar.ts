@@ -1,4 +1,4 @@
-// Toolbar: the Visual view's formatting toolbar, laid out from the contributed groups and items. See ARCHITECTURE.md, "VisualView".
+// Toolbar: the Visual view's formatting toolbar, laid out from the contributed groups and items. See docs/architecture/visual-view.typ.
 import { TextSelection } from '@tiptap/pm/state';
 import type { Editor } from '@tiptap/core';
 import { FloatingBar } from './floating-bar';

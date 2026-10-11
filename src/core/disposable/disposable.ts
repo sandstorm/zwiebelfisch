@@ -1,7 +1,8 @@
 // Disposable: something that holds a resource (a listener, a registration, a DOM element) until disposed. Entry of
 // core/disposable/. Why VS Code's shape: extensions push everything they register into `subscriptions`, and the
 // host disposes the list when the widget is disposed, so no extension needs a cleanup method of its own. Everything with a
-// lifetime (hosts, views, widgets, contributed parts, the widget itself) ends with `dispose()`. See ARCHITECTURE.md, "Extensions".
+// lifetime (hosts, views, widgets, contributed parts, the widget itself) ends with `dispose()`.
+// See docs/architecture/conventions.typ.
 
 /**
  * Releases a resource once, on `dispose()` (later calls do nothing). `new Disposable(stop)` wraps a cleanup

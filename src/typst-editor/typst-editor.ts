@@ -1,5 +1,5 @@
 // createTypstEditor: the widget. A Project in the workbench host (hosts/workbench), with the built-in extensions
-// (or the list the host makes from them) and the host's settings. See ARCHITECTURE.md, "createTypstEditor".
+// (or the list the host makes from them) and the host's settings. See docs/guide/embedding.typ.
 // Why the API looks like this: a Typst document is a project of files, and the main file is one of them. So the
 // host gives and gets every file through one map (`files`, `onFilesChange`); `source` is only a shortcut for the
 // main file's text, for hosts that edit a single file. Everything a feature offers to configure is a setting the
@@ -70,7 +70,7 @@ export interface TypstEditorOptions {
   user?: User;
   /**
    * The settings by full id, as the extensions declare them, e.g. `{ 'pdfExport.download': false, 'files.panel':
-   * 'show', 'workbench.theme': 'dark' }` (see docs/embedding.md for the built-in ones). Unset ones have their
+   * 'show', 'workbench.theme': 'dark' }` (see docs/guide/embedding.typ for the built-in ones). Unset ones have their
    * default; unknown ids and values of the wrong type are ignored (with a console warning). Changeable later through
    * `TypstEditor.settings`.
    */

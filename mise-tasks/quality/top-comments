@@ -1,12 +1,14 @@
 #!/usr/bin/env node
-//MISE description="Fail on a source file that does not start with a top comment (context, or See <entry file / ARCHITECTURE.md section>)"
+//MISE description="Fail on a source file without a top comment (context, or See <entry file / docs chapter>) or naming a docs file that does not exist"
 // Every TypeScript and CSS source file starts with a comment that says what it is for, or where
-// to read about it ("See typst-editor.ts", "Tests for …"). A shebang line may come first. The
-// JSDoc of the first declaration (directly followed by `export …`) does not count.
+// to read about it ("See typst-editor.ts", "See docs/architecture/workbench.typ", "Tests for …").
+// A shebang line may come first. The JSDoc of the first declaration (directly followed by
+// `export …`) does not count. A file naming a docs file (`docs/….typ`, `docs/….md`) that does
+// not exist fails too, so chapters can move without leaving stale pointers.
 // Checks the tracked files in src/, demo/, tests/, server/src/ and eslint-rules/; prints each
-// file without one and exits 1.
+// failing file and exits 1.
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 
 const SOURCES = ['src/**/*.ts', 'src/**/*.css', 'demo/**/*.ts', 'tests/**/*.ts', 'server/src/**/*.ts', 'eslint-rules/**/*.js'].map((glob) => `:(glob)${glob}`);
 
@@ -49,10 +51,28 @@ function hasTopComment(text) {
   return comment !== undefined && !(comment.jsdoc && DECLARATION.test(comment.rest));
 }
 
-const missing = files.filter((file) => !hasTopComment(readFileSync(file, 'utf8')));
-for (const file of missing) console.log(`${file}: no top comment (context, or "See <entry file>"; a declaration's doc comment does not count)`);
-if (missing.length > 0) {
-  console.log(`\n${missing.length} of ${files.length} files have no top comment.`);
+/** Docs files a source names: `docs/<path>.typ` or `docs/<path>.md`. */
+const DOCS_FILE = /\bdocs\/[\w./-]+\.(?:typ|md)\b/g;
+
+/** The docs files `text` names that do not exist. */
+function missingDocs(text) {
+  return [...new Set(text.match(DOCS_FILE) ?? [])].filter((path) => !existsSync(path));
+}
+
+let failures = 0;
+for (const file of files) {
+  const text = readFileSync(file, 'utf8');
+  if (!hasTopComment(text)) {
+    failures++;
+    console.log(`${file}: no top comment (context, or "See <entry file>"; a declaration's doc comment does not count)`);
+  }
+  for (const path of missingDocs(text)) {
+    failures++;
+    console.log(`${file}: names ${path}, which does not exist`);
+  }
+}
+if (failures > 0) {
+  console.log(`\n${failures} problems in ${files.length} files.`);
   process.exit(1);
 }
-console.log(`top comments: all ${files.length} source files have one`);
+console.log(`top comments: all ${files.length} source files have one, every docs file they name exists`);

@@ -1,5 +1,5 @@
 // TypstDocument: the single source of truth of one Typst file's text. Entry of core/typst-document/. See
-// ARCHITECTURE.md, "TypstDocument".
+// docs/architecture/core.typ.
 // Why no collaboration here: sharing the text (Yjs) is the collaboration extension's. It binds a Y.Text to a
 // document from outside, like y-codemirror binds one to an editor: local changes go into the Y.Text, and edits
 // arriving through it come back through `change`, with an origin of its own.

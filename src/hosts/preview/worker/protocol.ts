@@ -1,4 +1,4 @@
-// The messages between the preview and the engine worker. See worker.ts and ARCHITECTURE.md, "Worker protocol".
+// The messages between the preview and the engine worker. See worker.ts and docs/architecture/preview.typ.
 import type { Box, CompileResult, Jump, PdfResult, Position } from '../../../core/typst-engine/typst-engine';
 import type { EncodedFiles } from './project-files';
 

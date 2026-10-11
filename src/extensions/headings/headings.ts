@@ -1,6 +1,6 @@
 // The headings extension: `= Title` headings in the Visual view (Heading 1–3 in the text style menu), and their
 // numbers as the document's `#set heading(numbering: ..)` rules make Typst number them (with the command
-// `headings.toggleNumbering`). See ARCHITECTURE.md, "VisualView". Why one extension: the numbers are a view of the headings, nothing without them.
+// `headings.toggleNumbering`). See docs/architecture/built-in-extensions.typ. Why one extension: the numbers are a view of the headings, nothing without them.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './headings.css?inline';
 import { calculateNumberingToggle } from './model/heading-numbering';

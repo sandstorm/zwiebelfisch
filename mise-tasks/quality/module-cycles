@@ -3,7 +3,7 @@
 // The modules depend on each other in one direction only: a module importing another (type imports included) must
 // not be imported back, directly or through others. Cycles inside a module are its own business. Test files are
 // left out: their imports are no part of the modules' structure (an extension's tests use testing/, which composes
-// the extensions). Prints every cycle with one import per step and exits 1. See ARCHITECTURE.md, "Folder rules".
+// the extensions). Prints every cycle with one import per step and exits 1. See docs/architecture/conventions.typ.
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';

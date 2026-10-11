@@ -1,6 +1,6 @@
 // The typst-language extension: Typst syntax highlighting and indentation, and code colors following the widget's
 // color scheme, in every Source view and in the code of the Visual view's raw boxes.
-// Entry of extensions/typst-language/. See ARCHITECTURE.md, "SourceView".
+// Entry of extensions/typst-language/. See docs/architecture/built-in-extensions.typ.
 // Why an extension: the editors are hosts for any CodeMirror language; that it is Typst, and how it is colored,
 // is contributed here, once for both views.
 import type { TypstExtension } from '../../hosts/workbench/workbench';

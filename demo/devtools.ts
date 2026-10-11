@@ -1,6 +1,7 @@
-// The demo's ProseMirror dev tools (docs/todo/devtools.md, step 1): with `?devtools`, prosemirror-dev-tools on the
-// Visual view (document tree with the projection's `src` / `sep` anchors, selection, transactions, plugin states,
-// the schema in Tiptap's order). A demo-only extension built on the public API alone; not part of the library.
+// The demo's ProseMirror dev tools: with `?devtools`, prosemirror-dev-tools on the Visual view (document tree with
+// the projection's `src` / `sep` anchors, selection, transactions, plugin states, the schema in Tiptap's order). A
+// demo-only extension built on the public API alone; not part of the library. Our own devtools extension is open
+// work (docs/architecture/development.typ).
 import { Extension } from '@tiptap/core';
 import type { TypstExtension } from '../src';
 

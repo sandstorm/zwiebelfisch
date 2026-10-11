@@ -1,6 +1,6 @@
 // The preview-sync extension: the editor and the preview in step, both ways. The preview follows the cursor (with a
 // "Follow cursor" switch in its toolbar, remembered per viewer), and a click in the preview selects its source.
-// Entry of extensions/preview-sync/. See ARCHITECTURE.md, "Preview".
+// Entry of extensions/preview-sync/. See docs/architecture/preview.typ.
 // Why an extension: the preview host only offers the mechanism (`reveal`, hit-testing and `onDidClickPage`), the
 // workbench the selection (`onDidChangeTextEditorSelection`) and `open`; when to follow and where a click leads is
 // policy. Without this extension the preview neither follows nor jumps.

@@ -1,5 +1,5 @@
 // EditorTitleMenu: the `editor/title` menu (VS Code's id) as a toolbar at the end of the Visual / Source tab bar.
-// See workbench.ts (`registerMenuItem`) and ARCHITECTURE.md, "Menus".
+// See workbench.ts (`registerMenuItem`) and docs/architecture/workbench.typ.
 import type { Disposable } from '../../../core/disposable/disposable';
 import type { MenuContext } from '../workbench';
 import type { Menus } from './menus';

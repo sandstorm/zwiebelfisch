@@ -1,6 +1,6 @@
 // User: who works in the widget, as the host names them (`createTypstEditor({ user })`) and as collaborators see
 // them. Entry of core/user/. In core because both the workbench host and extension models (collaboration's remote
-// cursors) speak of it, and models may not import hosts. See ARCHITECTURE.md, "Repository layout".
+// cursors) speak of it, and models may not import hosts. See docs/architecture/overview.typ.
 
 /** Who works in the widget. */
 export interface User {

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-// Tests for the public Visual-view contribution API (index.ts): the example construct of docs/embedding.md ("Writing
-// a Visual-view construct"), a `#callout(title: "…")[…]` box with a title field, written as if outside the package —
-// it imports only the package entry (and Tiptap, Lezer's types) — and run in a Visual view with the built-ins.
+// Tests for the public Visual-view contribution API (index.ts): the example construct of
+// docs/extensions/visual-view-constructs.typ, a `#callout(title: "…")[…]` box with a title field, written as if
+// outside the package — it imports only the package entry (and Tiptap, Lezer's types) — and run in a Visual view with the built-ins.
 import type { SyntaxNode } from '@lezer/common';
 import { Node } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
@@ -13,7 +13,7 @@ import {
 } from './index';
 import { createVisualView } from './testing/testing';
 
-// ----- the example, as in docs/embedding.md (there it imports from 'typst-editor') -----
+// ----- the example, as in docs/extensions/visual-view-constructs.typ (there it imports from 'typst-editor') -----
 
 /** How a callout's source lies around its blocks (`#callout(title: "Tip")[` and `]`), and the title written there. */
 interface CalloutLayout {

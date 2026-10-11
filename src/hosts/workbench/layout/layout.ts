@@ -1,5 +1,5 @@
 // Layout: the widget's regions — side panels (rail buttons, resizable, collapsible, an overlay when narrow),
-// editing area, preview, status bar; their sizes and open panels kept for the session. See workbench.ts and ARCHITECTURE.md, "Layout".
+// editing area, preview, status bar; their sizes and open panels kept for the session. See workbench.ts and docs/architecture/workbench.typ.
 
 import type { Memento, SidePanel, SidePanelOptions } from '../workbench';
 

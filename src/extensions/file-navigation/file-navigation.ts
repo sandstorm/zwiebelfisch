@@ -1,5 +1,5 @@
 // The file-navigation extension: "← previous file" / "next file →" above and below a file the main file includes, in
-// its reading order. Entry of extensions/file-navigation/. See ARCHITECTURE.md, "File panel".
+// its reading order. Entry of extensions/file-navigation/. See docs/guide/features.typ.
 // Why an extension of its own: it shares nothing with the file panel but the project; a host may keep one without
 // the other.
 import { neighbours } from '../../core/typst-syntax/typst-syntax';

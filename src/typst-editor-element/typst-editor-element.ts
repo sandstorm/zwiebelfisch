@@ -2,7 +2,7 @@
 // Why a thin adapter: the element must offer everything createTypstEditor has without listing (and forgetting) it
 // option by option. So it passes one `options` property through, maps one `settings` attribute (JSON) onto the
 // settings the extensions declare, and forwards the editor's callbacks as DOM events from one table; the content
-// (`value`, `files`) is all it knows by name, as with `<input>`. See docs/embedding.md.
+// (`value`, `files`) is all it knows by name, as with `<input>`. See docs/guide/embedding.typ.
 import { createTypstEditor, type TypstEditor, type TypstEditorOptions } from '../typst-editor/typst-editor';
 import type { FileChange, FileContent, ProjectFiles } from '../core/project/project';
 import type { ProjectPath } from '../core/paths/paths';

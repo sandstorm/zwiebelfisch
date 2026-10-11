@@ -5,7 +5,7 @@
 // plain functions that read Typst calls from Lezer's syntax nodes included, so an outside extension can add a Typst
 // construct as the built-ins do —, Disposable and EventEmitter, ProjectPath (paths are
 // parsed, e.g. to `open` one), and the collaboration extension, which a host adds with its connection. The only file
-// that re-exports. See ARCHITECTURE.md and docs/embedding.md.
+// that re-exports. See docs/guide/embedding.typ and docs/extensions/overview.typ.
 import { defineTypstEditorElement } from './typst-editor-element/typst-editor-element';
 
 export { createTypstEditor, type TypstEditor, type TypstEditorOptions } from './typst-editor/typst-editor';

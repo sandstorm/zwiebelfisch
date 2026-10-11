@@ -1,5 +1,5 @@
 // The markup extension: the Typst markup most text is made of — strong and emphasis, links, raw text (inline code,
-// code blocks) and block quotes — in the Visual view, with their toolbar entries. See ARCHITECTURE.md, "VisualView".
+// code blocks) and block quotes — in the Visual view, with their toolbar entries. See docs/architecture/built-in-extensions.typ.
 // Why an extension: the Visual view's host models only paragraphs, text and raw Typst; every construct beyond that
 // is contributed, so the host stays small and a construct can be left out or replaced on its own.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
