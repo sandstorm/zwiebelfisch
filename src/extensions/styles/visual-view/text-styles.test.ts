@@ -7,7 +7,7 @@ import { calculateImportChange } from '../../../core/typst-syntax/typst-syntax';
 import type { ProjectStyles } from '../model/style-index';
 import type { Style } from '../model/discover';
 import { createVisualView } from '../../../testing/testing';
-import { VisualView, VisualViewContributions } from '../../../hosts/visual-view/visual-view';
+import { VisualView, VisualViewHost } from '../../../hosts/visual-view/visual-view';
 import { ProjectPath } from '../../../core/paths/paths';
 import { customStyles } from './visual-view';
 
@@ -107,7 +107,7 @@ describe('custom styles in the text style menu', () => {
 describe('the text style menu without headings', () => {
   it('offers normal text and the styles, but no heading levels, when no extension contributes headings', () => {
     const styles: ProjectStyles = { styles: () => [NOTE], onDidChange: new EventEmitter<void>().event, calculateImportChange: () => null };
-    const contributions = VisualViewContributions.from([customStyles({ styles, create: () => {} })]);
+    const contributions = VisualViewHost.from([customStyles({ styles, create: () => {} })]);
     const parent = document.body.appendChild(document.createElement('div'));
     new VisualView(parent, new TypstDocument('Text\n'), contributions);
     const menu = parent.querySelector<HTMLSelectElement>('select[aria-label="Text style"]')!;

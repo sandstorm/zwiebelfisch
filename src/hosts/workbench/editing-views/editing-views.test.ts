@@ -2,7 +2,7 @@
 // Tests for editing-views.ts.
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { VisualViewContributions } from '../../visual-view/visual-view';
+import { VisualViewHost } from '../../visual-view/visual-view';
 import { EditingViews } from './editing-views';
 
 // jsdom lacks layout; ProseMirror and CodeMirror only need these to exist.
@@ -13,7 +13,7 @@ Element.prototype.scrollIntoView = () => {};
 function setup(mode?: 'visual' | 'source') {
   const parent = document.createElement('div');
   document.body.append(parent);
-  const views = new EditingViews(parent, { mode, visualView: VisualViewContributions.from([]) });
+  const views = new EditingViews(parent, { mode, visualView: VisualViewHost.from([]) });
   const a = new TypstDocument('Alpha\n');
   const b = new TypstDocument('Beta\n');
   const visible = () => [...parent.querySelectorAll<HTMLElement>('.typst-editor__pane')].filter((p) => !p.hidden);
@@ -67,7 +67,7 @@ describe('EditingViews', () => {
     const parent = document.createElement('div');
     document.body.append(parent);
     const modes: string[] = [];
-    const views = new EditingViews(parent, { visualView: VisualViewContributions.from([]), onMode: (mode) => modes.push(mode) });
+    const views = new EditingViews(parent, { visualView: VisualViewHost.from([]), onMode: (mode) => modes.push(mode) });
     views.show(new TypstDocument('Alpha\n'));
     const actions = document.createElement('div');
     views.addTabActions(actions);

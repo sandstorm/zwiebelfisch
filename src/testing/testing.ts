@@ -24,7 +24,7 @@ import { tables } from '../extensions/tables/tables';
 import { images } from '../extensions/images/images';
 import { renderedBoxes } from '../extensions/rendered-boxes/rendered-boxes';
 import type { PreviewContributions } from '../hosts/preview/preview';
-import { VisualView, VisualViewContributions, type ContributionContext, type VisualViewContribution } from '../hosts/visual-view/visual-view';
+import { VisualView, VisualViewHost, type ContributionContext, type VisualViewContribution } from '../hosts/visual-view/visual-view';
 import type { InputBoxOptions, MessageItem, QuickPickItem, QuickPickOptions, Workbench } from '../hosts/workbench/workbench';
 import { attachGrammar, createSchema, documentExtensions, posToSource, print, project as projectWith, sourceToPos } from '../hosts/projection/projection';
 
@@ -38,7 +38,7 @@ export function schemaOf(list: readonly VisualViewContribution[]): Schema {
   return schemaFrom(activate(list));
 }
 
-function schemaFrom(registry: VisualViewContributions): Schema {
+function schemaFrom(registry: VisualViewHost): Schema {
   const { nodes, marks } = registry.contributed();
   return createSchema(nodes, marks);
 }
@@ -126,7 +126,7 @@ export function createEditor(source: string, options: TestViewOptions = {}): Edi
 }
 
 /** The built-ins and `options.contributions`, activated. */
-function contributions(options: TestViewOptions): VisualViewContributions {
+function contributions(options: TestViewOptions): VisualViewHost {
   return activate([...builtins(), ...(options.contributions ?? [])], options);
 }
 
@@ -136,8 +136,8 @@ function contributions(options: TestViewOptions): VisualViewContributions {
  * workbench with `options.links`, `options.prompts` (default: every question cancelled) and `options.applyChange`.
  * Registrations other than the Visual view's (style sheets, commands, custom editors) are accepted and ignored.
  */
-function activate(contributions: readonly VisualViewContribution[], options: TestViewOptions = {}): VisualViewContributions {
-  const visualView = new VisualViewContributions();
+function activate(contributions: readonly VisualViewContribution[], options: TestViewOptions = {}): VisualViewHost {
+  const visualView = new VisualViewHost();
   const project = testProject(options);
   const context = { visualView, subscriptions: [], project, workbench: testWorkbench(options, project), preview: testPreview(options) };
   for (const contribution of contributions) contribution.activate(context as unknown as ContributionContext);

@@ -1,5 +1,6 @@
 // VisualView: the WYSIWYG editing view, a Tiptap editor over the source-anchored projection of a TypstDocument;
-// everything it shows beyond paragraphs and raw Typst is contributed through VisualViewContributions.
+// everything it shows beyond paragraphs and raw Typst is contributed through VisualViewContributions (kept by
+// VisualViewHost).
 // Entry of hosts/visual-view/. See ARCHITECTURE.md, "VisualView".
 import { Editor, type AnyExtension, type ChainedCommands } from '@tiptap/core';
 import { StateEffect, type Extension as CodeExtension } from '@codemirror/state';
@@ -40,7 +41,7 @@ export class VisualView {
   readonly onDidChangeSelection: Event<void> = this.selectionChanged.event;
   private readonly subscriptions: Disposable[];
 
-  constructor(parent: HTMLElement, private readonly document: TypstDocument, contributions: VisualViewContributions) {
+  constructor(parent: HTMLElement, private readonly document: TypstDocument, contributions: VisualViewHost) {
     const contributed = contributions.contributed();
     const view: VisualViewContext = { document, selection: () => this.selection(), sourceToPos, posToSource, isBox };
     // the text and, right of it, the gutters
@@ -253,14 +254,65 @@ export interface Contributed {
 }
 
 /**
- * The Visual view's contribution points. Contributions register once, at
- * activation; the host applies what is registered to every view it creates
- * from then on (views are created lazily, per document), so a contribution
- * never tracks views. Everything a contribution needs per view (its document,
- * a popover) it gets through the `…Provider` functions. Disposing a
- * registration takes it out of views created later.
+ * The Visual view's contribution points (what `ExtensionContext.visualView` is). Contributions register once, at
+ * activation; the host applies what is registered to every view it creates from then on (views are created lazily,
+ * per document), so a contribution never tracks views. Everything a contribution needs per view (its document, a
+ * popover) it gets through the `…Provider` functions. Disposing a registration takes it out of views created later.
+ * Experimental: the shapes may still change.
  */
-export class VisualViewContributions {
+export interface VisualViewContributions {
+  /**
+   * A node type and its Typst: schema, projection, printing, box. `priority` (default 100, higher first; equal:
+   * registration order) orders the schema (a group's first node type is its default) and the projectors: of specs
+   * claiming the same syntax or call, the higher one is asked first (task lists, 110, before bullet lists, both
+   * `- ..`). Of two specs of the same name, the later one in that order extends the earlier.
+   */
+  registerNode(spec: TypstNodeSpec, options?: PriorityOptions): Disposable;
+  /**
+   * A mark type and its Typst. `priority` (default 100, higher first; equal: registration order) orders the schema,
+   * which is how marks nest: a higher one is outside a lower one (a comment's range outside a link, a link outside
+   * bold); it also orders the projectors, as for nodes. It is the mark's only priority: the host gives it to the
+   * mark's Tiptap extension, replacing the extension's own (Tiptap's link mark comes with 1000).
+   */
+  registerMark(spec: TypstMarkSpec, options?: PriorityOptions): Disposable;
+  /** Tiptap extensions made for each view (they may use its document). */
+  registerEditorExtension(provider: EditorExtensionProvider): Disposable;
+  /** A place for toolbar items: a group, a menu or a floating bar. */
+  registerToolbarGroup(group: ToolbarGroup): Disposable;
+  /** A button or control in a toolbar group (one the host or a contribution registered). */
+  registerToolbarItem(item: ToolbarItem): Disposable;
+  /**
+   * Entries of the toolbar's text style menu (headings' levels, a project's custom styles), after the host's own
+   * "Normal text". The menu shows once any provider is registered.
+   */
+  registerTextStyleProvider(provider: TextStyleProvider): Disposable;
+  /** A column beside the text, made for each view. */
+  registerGutter(provider: GutterProvider): Disposable;
+  /**
+   * Highlights from `provider` in every view, as layer `layer` (one per provider): set when the view is created and
+   * again whenever the provider reports a change of its document; they follow edits in between.
+   */
+  registerHighlights(layer: string, provider: HighlightProvider): Disposable;
+  /**
+   * What raw boxes of each view show instead of their code while not edited. The renderers are asked by `priority`
+   * (default 100, higher first; equal: registration order), and the first that `renders` a box draws it: the image
+   * renderer (110) draws image boxes, compiled snippets (100) the rest.
+   */
+  registerBoxRenderer(provider: BoxRendererProvider, options?: PriorityOptions): Disposable;
+  /** CodeMirror extensions for the code of every raw box of each view. */
+  registerBoxCodeExtension(provider: BoxCodeExtensionProvider): Disposable;
+  /**
+   * A button on every raw box `action.when` holds for (any box: a contribution need not own the box's node type),
+   * in registration order: with the box's tools (an image box's toolbar), else above its code.
+   */
+  registerBoxAction(action: BoxAction): Disposable;
+}
+
+/**
+ * Keeps what is registered through `VisualViewContributions` and hands it to each view it creates (`contributed`).
+ * The workbench host has one; tests make their own (`from`).
+ */
+export class VisualViewHost implements VisualViewContributions {
   private readonly ranked = {
     nodes: [] as Ranked<TypstNodeSpec>[],
     marks: [] as Ranked<TypstMarkSpec>[],
@@ -278,89 +330,55 @@ export class VisualViewContributions {
   };
 
   /** A registry with `contributions` activated, for as long as it lives (for a view without the workbench, as in tests). */
-  static from(contributions: readonly VisualViewContribution[]): VisualViewContributions {
-    const visualView = new VisualViewContributions();
+  static from(contributions: readonly VisualViewContribution[]): VisualViewHost {
+    const visualView = new VisualViewHost();
     const subscriptions: { dispose(): unknown }[] = [];
     for (const contribution of contributions) contribution.activate({ visualView, subscriptions });
     return visualView;
   }
 
-  /**
-   * A node type and its Typst: schema, projection, printing, box. `priority` (default 100, higher first; equal:
-   * registration order) orders the schema (a group's first node type is its default) and the projectors: of specs
-   * claiming the same syntax or call, the higher one is asked first (task lists, 110, before bullet lists, both
-   * `- ..`). Of two specs of the same name, the later one in that order extends the earlier.
-   */
   registerNode(spec: TypstNodeSpec, options: PriorityOptions = {}): Disposable {
     return this.add(this.ranked.nodes, rank(spec, options));
   }
 
-  /**
-   * A mark type and its Typst. `priority` (default 100, higher first; equal: registration order) orders the schema,
-   * which is how marks nest: a higher one is outside a lower one (a comment's range outside a link, a link outside
-   * bold); it also orders the projectors, as for nodes. It is the mark's only priority: the host gives it to the
-   * mark's Tiptap extension, replacing the extension's own (Tiptap's link mark comes with 1000).
-   */
   registerMark(spec: TypstMarkSpec, options: PriorityOptions = {}): Disposable {
     const ranked = rank(spec, options);
     const extension = spec.extension && withPriority(spec.extension, spec.name, ranked.priority);
     return this.add(this.ranked.marks, { ...ranked, value: { ...spec, extension } });
   }
 
-  /** Tiptap extensions made for each view (they may use its document). */
   registerEditorExtension(provider: EditorExtensionProvider): Disposable {
     return this.add(this.lists.editorExtensions, provider);
   }
 
-  /** A place for toolbar items: a group, a menu or a floating bar. */
   registerToolbarGroup(group: ToolbarGroup): Disposable {
     return this.add(this.lists.toolbarGroups, group);
   }
 
-  /** A button or control in a toolbar group (one the host or a contribution registered). */
   registerToolbarItem(item: ToolbarItem): Disposable {
     return this.add(this.lists.toolbarItems, item);
   }
 
-  /** A column beside the text, made for each view. */
   registerGutter(provider: GutterProvider): Disposable {
     return this.add(this.lists.gutters, provider);
   }
 
-  /**
-   * Highlights from `provider` in every view, as layer `layer` (one per provider): set when the view is created and
-   * again whenever the provider reports a change of its document; they follow edits in between.
-   */
   registerHighlights(layer: string, provider: HighlightProvider): Disposable {
     return this.add(this.lists.highlights, { layer, provider });
   }
 
-  /**
-   * What raw boxes of each view show instead of their code while not edited. The renderers are asked by `priority`
-   * (default 100, higher first; equal: registration order), and the first that `renders` a box draws it: the image
-   * renderer (110) draws image boxes, compiled snippets (100) the rest.
-   */
   registerBoxRenderer(provider: BoxRendererProvider, options: PriorityOptions = {}): Disposable {
     return this.add(this.ranked.boxRenderers, rank(provider, options));
   }
 
-  /** CodeMirror extensions for the code of every raw box of each view. */
   registerBoxCodeExtension(provider: BoxCodeExtensionProvider): Disposable {
     return this.add(this.lists.boxCodeExtensions, provider);
   }
 
-  /**
-   * A button on every raw box `action.when` holds for (any box: a contribution need not own the box's node type),
-   * in registration order: with the box's tools (an image box's toolbar), else above its code.
-   */
   registerBoxAction(action: BoxAction): Disposable {
     return this.add(this.lists.boxActions, action);
   }
 
-  /**
-   * Entries of the toolbar's text style menu (headings' levels, a project's custom styles), after the host's own
-   * "Normal text". The menu shows once any provider is registered.
-   */
   registerTextStyleProvider(provider: TextStyleProvider): Disposable {
     return this.add(this.lists.textStyles, provider);
   }

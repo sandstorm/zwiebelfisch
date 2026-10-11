@@ -15,7 +15,7 @@ import type { FileChange, FileContent, Project } from '../../core/project/projec
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import { Preview, type PreviewContributions } from '../preview/preview';
 import { SourceViewHost, type SourceViewContributions } from '../source-view/source-view';
-import { VisualViewContributions } from '../visual-view/visual-view';
+import { VisualViewHost, type VisualViewContributions } from '../visual-view/visual-view';
 import { ColorScheme } from './color-scheme/color-scheme';
 import { Commands } from './commands/commands';
 import { Configuration } from './configuration/configuration';
@@ -622,7 +622,7 @@ export class WorkbenchHost implements Workbench {
   readonly #extensions: ExtensionHost;
   readonly #styleSheets: StyleSheets;
   readonly #ownStyles: Disposable;
-  readonly #visualView = new VisualViewContributions();
+  readonly #visualView = new VisualViewHost();
   readonly #sourceViews = new SourceViewHost();
   readonly #preview: Preview;
   #hasFrame = false;

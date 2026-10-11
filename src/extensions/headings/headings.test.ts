@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { Disposable } from '../../core/disposable/disposable';
 import { TypstDocument } from '../../core/typst-document/typst-document';
-import { VisualViewContributions } from '../../hosts/visual-view/visual-view';
+import { VisualViewHost } from '../../hosts/visual-view/visual-view';
 import type { ExtensionContext } from '../../hosts/workbench/workbench';
 import { headings, TOGGLE_NUMBERING } from './headings';
 
@@ -14,7 +14,7 @@ function activate(document: TypstDocument | null): (id: string) => void {
     registerCommand: (id: string, handler: () => void) => (commands.set(id, handler), new Disposable(() => commands.delete(id))),
     activeTextEditor: document && { document },
   };
-  headings.activate({ workbench, visualView: new VisualViewContributions(), subscriptions: [] } as unknown as ExtensionContext);
+  headings.activate({ workbench, visualView: new VisualViewHost(), subscriptions: [] } as unknown as ExtensionContext);
   return (id) => commands.get(id)!();
 }
 

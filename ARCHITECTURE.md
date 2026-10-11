@@ -8,8 +8,9 @@ code changes, update this file in the same commit.
 
 ```
 src/                        the widget (TypeScript); the most important API on top
-  index.ts                  public API of the package (createTypstEditor, <typst-editor>, the extension API's types,
-                            Disposable, EventEmitter, collaboration); registers <typst-editor>; the only re-exporting file
+  index.ts                  public API of the package (createTypstEditor, <typst-editor>, the extension API's types —
+                            the Visual view's contribution and projection grammar types included —, Disposable,
+                            EventEmitter, collaboration); registers <typst-editor>; the only re-exporting file
   typst-editor/             typst-editor.ts: createTypstEditor() — a Project in the workbench host with the built-in
                             extension list (or the host's list made from it) and the host's settings, scoped CSS of the hosts (typst-editor.css:
                             tokens, frame, views, toolbar; the extensions bring their own)
@@ -40,8 +41,11 @@ src/                        the widget (TypeScript); the most important API on t
                             notifications/ (Notifications: the messages), quick-input/ (QuickInput: input box and quick pick),
                             memory/ (SessionMemory: `remember`, the values kept for the browser session)
     visual-view/            VisualView (Tiptap over the projection) and its contribution points, all in visual-view.ts:
-                            VisualViewContributions, TypstNodeSpec / TypstMarkSpec, toolbar items and groups, box
-                            renderers / tools / actions, gutters, highlights, VisualViewContext, svg; nodes/
+                            VisualViewContributions (the interface of register… methods: ExtensionContext.visualView)
+                            and VisualViewHost (keeps them: contributed(), from()), TypstNodeSpec / TypstMarkSpec,
+                            toolbar items and groups, text styles, box renderers / tools / actions, gutters,
+                            highlights, VisualViewContext, svg; public (src/index.ts exports the types,
+                            experimental: docs/embedding.md, "Writing a Visual-view construct"); nodes/
                             (node-views.ts: kept DOM and raw box node views over the projection's schema; the raw
                             box), toolbar/ (Toolbar; ToolbarMenu: a menu button of toolbar buttons; FloatingBar: a
                             bar above an anchor in the text), highlights.ts
@@ -350,7 +354,8 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
   or `update` per file, so subscribers never need to be refreshed by hand). The main file cannot be renamed or
   deleted, and is always text (bytes for it throw, in the constructor as in `replace`); `.typ` files keep their ending.
   `FileChange = {kind:'create', path, content} | {kind:'update', path, content} | {kind:'delete', path} | {kind:'rename', from, path}`.
-- **Visual view contributions**: the workbench host has one `VisualViewContributions` (`ExtensionContext.visualView`)
+- **Visual view contributions**: the workbench host has one `VisualViewHost` (`ExtensionContext.visualView`, typed as
+  the `VisualViewContributions` interface: only the `register…` methods)
   and makes every document's Visual view from it. The Typst constructs (`markup`, `headings`, `tables`,
   `figures`, `outline`, `pageLayout`, `lists`, `alignment`) are extensions in `extensions/<name>/`; the features activate
   theirs with what they own:
@@ -489,7 +494,7 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   `onDid…` (`Event<T>` from `EventEmitter`, `core/event-emitter`), everywhere: core's models (`Project.onDidChangeFile`,
   `TypstDocument.onDidChange`), the hosts and the extensions; subscribing returns a `Disposable`, never an
   unsubscribe function.
-- **Lifecycle.** The workbench host makes its view hosts first: `VisualViewContributions` and a `SourceViewHost`
+- **Lifecycle.** The workbench host makes its view hosts first: a `VisualViewHost` and a `SourceViewHost`
   (both handed to `EditingViews`) and the `Preview`; they are the context's `visualView`, `sourceView` and
   `preview`. `WorkbenchHost.activate(list)`: first every extension's declared settings
   (`contributes.configuration`, so an extension may read any declared setting during activation; values for
@@ -735,14 +740,15 @@ Inside the crate:
 ### `VisualView` (`src/hosts/visual-view`)
 
 ```ts
-new VisualView(parent, document, contributions: VisualViewContributions)
+new VisualView(parent, document, contributions: VisualViewHost)
 .reveal(from, to)    // select exactly what shows source range from..to (caret if empty)
 .selection() → {from, to}           // posToSource; the end with bias -1
 .onDidChangeSelection: Event<void>  // after the selection moved or the text changed
 .destroy()
 
 // the contribution points (registered once; applied to every view created afterwards)
-const visualView = new VisualViewContributions()            // or VisualViewContributions.from(contributions)
+const visualView = new VisualViewHost()                     // or VisualViewHost.from(contributions); extensions see the
+                                                             // interface VisualViewContributions (register… only)
 visualView.registerNode(spec: TypstNodeSpec) → Disposable    // schema node + projection + printing + flags
 visualView.registerMark(spec: TypstMarkSpec) → Disposable
 visualView.registerEditorExtension((view) => tiptapExtensions) → Disposable   // decorations, plugins, commands
@@ -760,6 +766,8 @@ visualView.registerBoxCodeExtension((view) => codeMirrorExtension) → Disposabl
                                      // a box's code gets its node decorations as the effect setBoxDecorations
 visualView.registerBoxAction({ title, when?(node, view) → boolean, run(node, view) }) → Disposable
                                      // a button on every raw box `when` holds for (diagrams: "Edit diagram")
+visualView.registerTextStyleProvider({ provideTextStyles(view) → TextStyle[], onDidChangeTextStyles? }) → Disposable
+                                     // entries of the text style menu (headings, custom styles)
 
 // the constructs are extensions (extensions/: markup, headings, tables, figures, outline, pageLayout, lists, alignment); the
 // features' contributions, each a VisualViewContribution = { id, activate({ visualView, subscriptions }) } shaped

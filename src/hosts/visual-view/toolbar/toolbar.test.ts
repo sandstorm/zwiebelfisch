@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import { starterKitPart } from '../../projection/projection';
-import { svg, VisualView, VisualViewContributions, type TypstMarkSpec, type VisualViewContribution } from '../visual-view';
+import { svg, VisualView, VisualViewHost, type TypstMarkSpec, type VisualViewContribution } from '../visual-view';
 
 /** `*x*` as a bold mark, and a "Bold" button for it in a group of its own. */
 const STRONG: TypstMarkSpec = {
@@ -32,7 +32,7 @@ function setup(text: string) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = new VisualView(parent, doc, VisualViewContributions.from([strong]));
+  const view = new VisualView(parent, doc, VisualViewHost.from([strong]));
   const toolbar = parent.querySelector<HTMLElement>('[role="toolbar"]')!;
   const button = (label: string) => parent.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
   return { doc, view, toolbar, button, parent };

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../../core/disposable/disposable';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import type { TextEditor } from '../../../hosts/workbench/workbench';
-import { VisualView, VisualViewContributions } from '../../../hosts/visual-view/visual-view';
+import { VisualView, VisualViewHost } from '../../../hosts/visual-view/visual-view';
 import { localDate } from '../model/note-thread';
 import { NOTE_STYLE } from '../model/add-margin-note';
 import { marginNotes } from '../visual-view/margin-notes';
@@ -48,7 +48,7 @@ describe('comments.addComment', () => {
     const doc = new TypstDocument('Hello world\n');
     let comment = () => {};
     const notes = notesGutter({ user: { name: 'Anna' } });
-    const contributions = VisualViewContributions.from([marginNotes({ comment: () => comment() }), notes]);
+    const contributions = VisualViewHost.from([marginNotes({ comment: () => comment() }), notes]);
     const view = new VisualView(root.appendChild(document.createElement('div')), doc, contributions);
     view.reveal(6, 11);
     const editor: TextEditor = {

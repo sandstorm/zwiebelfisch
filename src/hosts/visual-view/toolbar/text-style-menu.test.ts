@@ -5,7 +5,7 @@ import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import { starterKitPart } from '../../projection/projection';
-import { VisualView, VisualViewContributions, type TextStyle, type TextStyleProvider, type TypstMarkSpec } from '../visual-view';
+import { VisualView, VisualViewHost, type TextStyle, type TextStyleProvider, type TypstMarkSpec } from '../visual-view';
 
 // jsdom lacks layout; ProseMirror only needs these to exist.
 Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
@@ -31,7 +31,7 @@ function setup(text: string, providers: readonly TextStyleProvider[]) {
   const view = new VisualView(
     parent,
     doc,
-    VisualViewContributions.from([
+    VisualViewHost.from([
       {
         id: 'test',
         activate: ({ visualView, subscriptions }) => subscriptions.push(visualView.registerMark(STRONG), ...providers.map((p) => visualView.registerTextStyleProvider(p))),

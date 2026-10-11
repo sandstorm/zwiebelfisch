@@ -7,7 +7,7 @@ import { TypstDocument } from '../../core/typst-document/typst-document';
 import { Node as TiptapNode, type Editor } from '@tiptap/core';
 import { children } from '../../core/typst-syntax/typst-syntax';
 import { starterKitPart } from '../projection/projection';
-import { setBoxDecorations, VisualView, VisualViewContributions, type Highlight, type TypstMarkSpec, type TypstNodeSpec, type VisualViewContext, type VisualViewContribution } from './visual-view';
+import { setBoxDecorations, VisualView, VisualViewHost, type Highlight, type TypstMarkSpec, type TypstNodeSpec, type VisualViewContext, type VisualViewContribution } from './visual-view';
 
 /** A test-local construct beyond the host's minimum: `*strong*` as a bold mark (hidden syntax around visible text). */
 const STRONG: TypstMarkSpec = {
@@ -22,7 +22,7 @@ function setup(text: string) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = new VisualView(parent, doc, VisualViewContributions.from([strong]));
+  const view = new VisualView(parent, doc, VisualViewHost.from([strong]));
   const editable = parent.querySelector<HTMLElement>('[contenteditable]')!;
   return { doc, view, editable, parent };
 }
@@ -64,17 +64,17 @@ describe('VisualView', () => {
       blockCalls: { divider: (p, call) => p.schema.nodes.divider.create({ src: p.text(call) }) },
     };
     const parent = document.body.appendChild(document.createElement('div'));
-    new VisualView(parent, new TypstDocument('#divider()\n\nText\n'), VisualViewContributions.from([{ id: 'divider', activate: ({ visualView }) => visualView.registerNode(divider) }]));
+    new VisualView(parent, new TypstDocument('#divider()\n\nText\n'), VisualViewHost.from([{ id: 'divider', activate: ({ visualView }) => visualView.registerNode(divider) }]));
     expect(parent.querySelector('hr')?.getAttribute('data-typst-pseudo')).toBe('own');
     expect(parent.querySelector('p')?.hasAttribute('data-typst-pseudo')).toBe(false);
   });
 });
 
-describe('VisualViewContributions.registerHighlights', () => {
+describe('VisualViewHost.registerHighlights', () => {
   it('sets a provider\'s highlights when a view is made and again when they change for its document only', () => {
     const changed = new EventEmitter<TypstDocument>();
     const ranges = new Map<TypstDocument, Highlight[]>();
-    const contributions = new VisualViewContributions();
+    const contributions = new VisualViewHost();
     contributions.registerHighlights('test', { provideHighlights: (document) => ranges.get(document) ?? [], onDidChangeHighlights: changed.event });
     const doc = new TypstDocument('Hello world\n');
     const other = new TypstDocument('Other\n');
@@ -112,7 +112,7 @@ describe('VisualViewContributions.registerHighlights', () => {
 function withHighlights(text: string, initial: Highlight[]) {
   let current = initial;
   const changed = new EventEmitter<TypstDocument>();
-  const contributions = VisualViewContributions.from([strong]);
+  const contributions = VisualViewHost.from([strong]);
   contributions.registerHighlights('test', { provideHighlights: () => current, onDidChangeHighlights: changed.event });
   const doc = new TypstDocument(text);
   const parent = document.body.appendChild(document.createElement('div'));
@@ -126,7 +126,7 @@ function withHighlights(text: string, initial: Highlight[]) {
 
 describe('VisualView contexts', () => {
   it('give contributions the source ↔ position mapping and which nodes are boxes', () => {
-    const contributions = new VisualViewContributions();
+    const contributions = new VisualViewHost();
     const seen: { pos: number; offset: number; boxes: string[] }[] = [];
     const seenBy: VisualViewContext[] = [];
     contributions.registerEditorExtension((view) => {
@@ -147,7 +147,7 @@ describe('VisualView contexts', () => {
   });
 
   it("gives a raw box's code its decorations (setBoxDecorations), when made and on every update", () => {
-    const contributions = new VisualViewContributions();
+    const contributions = new VisualViewHost();
     const given: number[] = [];
     contributions.registerBoxCodeExtension(() =>
       EditorState.transactionExtender.of((tr) => {
