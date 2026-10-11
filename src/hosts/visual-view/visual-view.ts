@@ -72,7 +72,7 @@ export class VisualView {
         plugins: [...this.editor.state.plugins, ...this.gutters.flatMap((gutter) => (gutter.plugin ? [gutter.plugin] : []))],
       }),
     );
-    this.toolbar = new Toolbar(parent, this.editor, view, { groups: contributed.toolbarGroups, items: contributed.toolbarItems });
+    this.toolbar = new Toolbar(parent, this.editor, view, { groups: contributed.toolbarGroups, items: contributed.toolbarItems, textStyles: contributed.textStyles });
     this.subscriptions = [
       document.onDidChange(({ origin }) => {
         if (origin !== this) this.syncFromDocument();
@@ -244,6 +244,7 @@ export interface Contributed {
   readonly boxRenderers: readonly BoxRendererProvider[];
   readonly boxCodeExtensions: readonly BoxCodeExtensionProvider[];
   readonly boxActions: readonly BoxAction[];
+  readonly textStyles: readonly TextStyleProvider[];
 }
 
 /**
@@ -268,6 +269,7 @@ export class VisualViewContributions {
     highlights: [] as { layer: string; provider: HighlightProvider }[],
     boxCodeExtensions: [] as BoxCodeExtensionProvider[],
     boxActions: [] as BoxAction[],
+    textStyles: [] as TextStyleProvider[],
   };
 
   /** A registry with `contributions` activated, for as long as it lives (for a view without the workbench, as in tests). */
@@ -350,6 +352,14 @@ export class VisualViewContributions {
     return this.add(this.lists.boxActions, action);
   }
 
+  /**
+   * Entries of the toolbar's text style menu (headings' levels, a project's custom styles), after the host's own
+   * "Normal text". The menu shows once any provider is registered.
+   */
+  registerTextStyleProvider(provider: TextStyleProvider): Disposable {
+    return this.add(this.lists.textStyles, provider);
+  }
+
   /** Everything registered now (for the host, when it creates a view). */
   contributed(): Contributed {
     const lists = this.lists;
@@ -364,6 +374,7 @@ export class VisualViewContributions {
       boxRenderers: byPriority(this.ranked.boxRenderers),
       boxCodeExtensions: [...lists.boxCodeExtensions],
       boxActions: [...lists.boxActions],
+      textStyles: [...lists.textStyles],
     };
   }
 
@@ -549,8 +560,9 @@ export interface ToolbarControl {
  * button there ("Insert ▾", its icon following the selection), or a bar
  * floating in the text above its anchor. The row is sorted by `order`; of the
  * floating bars, only the first (by `order`) with an anchor shows. The host's
- * own: `history` (undo/redo, order 10), the `insert` menu ("Insert", 50) and
- * the `selection` bar (above a text selection, 10).
+ * own: `history` (undo/redo, order 10), `text-style` (the text style menu, 20;
+ * see `TextStyle`), the `insert` menu ("Insert", 50) and the `selection` bar
+ * (above a text selection, 10).
  */
 export type ToolbarGroup =
   | { readonly kind: 'group'; readonly id: string; readonly order: number }
@@ -563,6 +575,40 @@ export type ToolbarGroup =
       /** Where the bar floats (null: hidden); `held` when an item asks to show it (see `Action.showsBar`). */
       anchor(editor: Editor, held: boolean): Anchor;
     };
+
+/**
+ * An entry of the toolbar's text style menu: a block style (a heading level, a paragraph style) the menu shows as
+ * its value where the selection has it, or a `toggle` on the selection's text (a text style). The menu lists its
+ * entries by `order`, those of one `section` together under its title. The host's own first entry, "Normal text",
+ * takes off the selection's style (the first active entry's `remove`) and makes its blocks paragraphs.
+ */
+export interface TextStyle {
+  /** The entry's id, unique in the menu (`heading-1`, `paragraph:note`). */
+  readonly id: string;
+  readonly label: string;
+  /** The title of the menu section it is listed in (`Paragraph styles`); none: in the menu itself. */
+  readonly section?: string;
+  /** Where it is listed (default 0; then as provided). */
+  readonly order?: number;
+  /** The command; also decides, dry-run, whether the entry is enabled. An entry that only asks (New style…) applies nothing. */
+  apply(chain: ChainedCommands, editor: Editor): ChainedCommands;
+  /** Whether the entry is enabled, instead of the dry run of `apply`. */
+  enabled?(editor: Editor): boolean;
+  /** Whether the selection has it: the menu's value (the first active entry), or for a toggle a ✓. */
+  isActive?(editor: Editor): boolean;
+  /** Applied on top of the block's style (a text style): marked ✓ where on, never the menu's value. */
+  readonly toggle?: boolean;
+  /** Takes it off the selection, where it is active (a paragraph style: its blocks lifted out); for Normal text. */
+  remove?(chain: ChainedCommands): ChainedCommands;
+  /** After it was applied (importing a style where it is now used; New style…: asking for one). */
+  applied?(): void;
+}
+
+/** The text style menu's entries of one view; the menu asks again whenever `onDidChangeTextStyles` fires. */
+export interface TextStyleProvider {
+  provideTextStyles(view: VisualViewContext): readonly TextStyle[];
+  readonly onDidChangeTextStyles?: Event<void>;
+}
 
 /** Where a floating bar points: a viewport rectangle (e.g. a selection's or a table's), or nothing (hidden). */
 export type Anchor = { top: number; left: number; right: number } | null;

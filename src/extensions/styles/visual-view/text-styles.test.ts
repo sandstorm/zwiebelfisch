@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests for style-menu.ts: custom styles in the text style menu, through the Visual view.
+// Tests for the custom styles' entries of the text style menu (visual-view.ts), through the Visual view.
 import { describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
@@ -47,21 +47,6 @@ function setup(text: string, initial: Style[] = [NOTE, KEY], create = () => {}) 
 }
 
 describe('custom styles in the text style menu', () => {
-  it('sets headings and back to normal text', () => {
-    const { doc, view, menu, choose } = setup('Hello world\n', []);
-    view.reveal(0, 'Hello world'.length);
-    expect(menu.value).toBe('paragraph');
-    choose('heading-2');
-    expect(doc.text).toBe('== Hello world\n');
-    expect(menu.value).toBe('heading-2');
-    choose('heading-1');
-    expect(doc.text).toBe('= Hello world\n');
-    choose('heading-3');
-    expect(doc.text).toBe('=== Hello world\n');
-    choose('paragraph');
-    expect(doc.text).toBe('Hello world\n');
-  });
-
   it('lists the paragraph and the text styles after the headings, and New style…', () => {
     const { menu, labels } = setup('Text\n', [NOTE, KEY]);
     expect(labels()).toEqual([['Paragraph styles', 'Note'], ['Text styles', 'Keyword']]);

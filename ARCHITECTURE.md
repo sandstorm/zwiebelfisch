@@ -167,7 +167,7 @@ src/                        the widget (TypeScript); the most important API on t
                             diagnostics-summary.ts); source-view/ (lint); visual-view/ (diagnosticHighlight); workbench/
                             (DiagnosticsStatus: the status bar item)
     markup/                 strong, emphasis, links, raw text (inline code, code blocks; model: raw-code), quotes
-    headings/               headings and their numbers (model: numbering patterns, HeadingCounter, the rules' code)
+    headings/               headings (Heading 1–3 in the text style menu) and their numbers (model: numbering patterns, HeadingCounter, the rules' code)
     lists/                  bulleted, numbered and task lists (model: cheq's preamble, calculateChecklistPreambleChange; cheq.test.ts compiles task lists with the cheq fixture)
     tables/                 `#table(..)` as a table, Insert table, the table bar (model: TableLayout)
     page-layout/            page breaks and horizontal rules
@@ -177,7 +177,7 @@ src/                        the widget (TypeScript); the most important API on t
                             visual-view/ (reference chips + hints, label tags, the @ list, "Add label")
     styles/                 styles(): model/ (StyleIndex: the custom styles the project declares (`/// @style …`),
                             how a document imports one; discover.ts, new-style.ts);
-                            visual-view/ (styled block + style mark, the text style menu); "New style…"
+                            visual-view/ (styled block + style mark, their text style menu entries); "New style…"
 crates/typst-engine/        Rust → wasm: Typst compiler, SVG and PDF export, click/cursor jumps
   src/world.rs              in-memory Typst World (files and fonts pushed from JS)
   src/lib.rs                wasm-bindgen interface (JSON in/out, UTF-16 offsets)
@@ -972,9 +972,13 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
   contributed groups (`registerToolbarGroup`: a group of buttons or a menu in the row, sorted by
   `order`, or a bar floating in the text) and items (`registerToolbarItem`: an `Action`, or
   `create(toolbar)` for an item with per-view state or a control of its own); groups without
-  items are left out. The host's own: undo/redo (`history`, 10), the **Insert** menu (`insert`,
-  50) and the **Selection** bar. With the built-ins, kept short: undo/redo, a text style menu
-  (`text-style`, 20: normal text, heading 1–3, custom styles; the `styles` extension's), bulleted/numbered/task list
+  items are left out. The host's own: undo/redo (`history`, 10), the text style menu (`text-style`, 20;
+  `toolbar/text-style-menu.ts`), the **Insert** menu (`insert`, 50) and the **Selection** bar. The text style menu
+  is a contribution point of its own (`registerTextStyleProvider`: `TextStyle` entries by `order`, a `section`'s
+  under its title, the menu's value the first active entry that is no `toggle`); it shows once a provider is
+  registered, with the host's *Normal text* first (it runs the first active entry's `remove`, then makes the blocks
+  paragraphs). With the built-ins, kept short: undo/redo, the text style menu (normal text; heading 1–3 from
+  `headings`; paragraph and text styles and "New style…" from `styles`), bulleted/numbered/task list
   (`lists`, 30), an **Align** menu (`align`, 40: left, center, right, justify; its icon is the
   current alignment), the **Insert** menu (image, table, table of contents — an `#outline()`
   block —, code block, quote, page break, horizontal rule, add label (`labels`)), and "Comment" (`comments`,
@@ -1333,7 +1337,7 @@ calculateImportChange(text, { name, matches(module), create(), use? }) → TextC
 calculateNewStyleChange(text, label = 'New style') → { change, definition: { from, to } }   // "New style…"'s stub:
                                // named after the label (`Side box` → `side-box`, `style-2-columns`), numbered if taken
 // visual-view/
-customStyles({ styles, create }): VisualViewContribution   // styledBlock + style mark specs, the text style menu
+customStyles({ styles, create }): VisualViewContribution   // styledBlock + style mark specs, their text style menu entries
 ```
 
 - **Projection:** the specs project the declared styles (`blockCalls['*']`, `inlineCalls`, from
@@ -1344,9 +1348,10 @@ customStyles({ styles, create }): VisualViewContribution   // styledBlock + styl
   `#name(..)[`, printed again as written). Undeclared calls, paragraph styles inside a sentence, an
   empty text style and calls with two content blocks stay raw. New ones print `#name[..]`.
 - **Visual view:** re-projects when the style list changes (a call turns from a raw box into
-  styled text). The style menu (`StyleMenu`) lists *Paragraph styles* and *Text styles* after the
-  headings and "New style…"; it shows the selection's paragraph style. Paragraph styles wrap the
-  selected blocks (`wrapIn`, or rename the style around them); *Normal text* lifts them out;
+  styled text). The text style menu (the host's, through a `TextStyleProvider`) lists *Paragraph styles*
+  and *Text styles* after what other extensions contribute (the headings), then "New style…"; it shows the
+  selection's paragraph style. Paragraph styles wrap the
+  selected blocks (`wrapIn`, or rename the style around them); *Normal text* lifts them out (their `remove`);
   text styles toggle the mark (inclusive, like bold; one at a time). After applying one, the view
   adds the import (`ProjectStyles.calculateImportChange` at the selection; relative to the file, never
   into the file declaring it, a new import followed by a blank line so it stays its own block).

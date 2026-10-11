@@ -274,6 +274,21 @@
 .typst-toolbar__button[aria-pressed='true'] { background: var(--te-selected); color: var(--te-accent); }
 .typst-toolbar__button:disabled { color: var(--te-faint-2); cursor: default; }
 .typst-toolbar__button:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 1px; }
+/* The text style menu (a <select>) */
+.typst-toolbar__style {
+  height: 32px;
+  min-width: 132px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: var(--te-text-2);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.typst-toolbar__style:hover { background: var(--te-hover); }
+.typst-toolbar__style:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 1px; }
 /* Toolbar menus (Insert ▾, Align ▾): a trigger with a caret, a list of labelled items below it */
 .typst-toolbar__menu { position: relative; }
 .typst-toolbar__menu-button { width: auto; gap: 2px; padding: 0 4px 0 7px; }

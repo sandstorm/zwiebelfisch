@@ -2,13 +2,15 @@
 import { TextSelection } from '@tiptap/pm/state';
 import type { Editor } from '@tiptap/core';
 import { FloatingBar } from './floating-bar';
+import { TextStyleMenu } from './text-style-menu';
 import { ToolbarMenu } from './toolbar-menu';
 import type { Disposable } from '../../../core/disposable/disposable';
-import { svg, type Action, type Anchor, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem, type VisualViewContext } from '../visual-view';
+import { svg, type Action, type Anchor, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem, type TextStyleProvider, type VisualViewContext } from '../visual-view';
 
 /**
  * The Visual view's formatting toolbar: a row of groups and menus sorted by
- * their `order` (the host's own: undo/redo first, the "Insert" menu), and
+ * their `order` (the host's own: undo/redo first, the text style menu once
+ * any provider contributes to it, the "Insert" menu), and
  * bars floating in the text column (they scroll with the text) above their
  * anchor while the text or the bar has focus — the host's "Selection" bar
  * above a text selection; of the floating bars, only the first with an anchor
@@ -27,7 +29,7 @@ export class Toolbar {
     parent: HTMLElement,
     private readonly editor: Editor,
     view: VisualViewContext,
-    { groups, items }: { groups: readonly ToolbarGroup[]; items: readonly ToolbarItem[] },
+    { groups, items, textStyles }: { groups: readonly ToolbarGroup[]; items: readonly ToolbarItem[]; textStyles: readonly TextStyleProvider[] },
   ) {
     const doc = parent.ownerDocument;
     this.root = doc.createElement('div');
@@ -40,7 +42,8 @@ export class Toolbar {
     });
     const context = this.context(view);
     const all = [...HOST_GROUPS, ...groups];
-    const entries = this.entries([...HOST_ITEMS, ...items], context);
+    const textStyleMenu: ToolbarItem[] = textStyles.length > 0 ? [{ group: 'text-style', create: (toolbar) => new TextStyleMenu(doc, editor, toolbar, textStyles) }] : [];
+    const entries = this.entries([...HOST_ITEMS, ...textStyleMenu, ...items], context);
     const sorted = (kinds: ToolbarGroup['kind'][]) => [...all].filter((group) => kinds.includes(group.kind)).sort((a, b) => a.order - b.order);
     for (const group of sorted(['group', 'menu'])) this.rowGroup(group, entries.get(group.id) ?? []);
     parent.prepend(this.root);
@@ -156,9 +159,10 @@ const ICONS = {
   insert: svg('<path d="M12 5v14M5 12h14"/>'),
 };
 
-/** The host's own places: undo/redo first, the "Insert" menu, the bar above a text selection. */
+/** The host's own places: undo/redo first, the text style menu, the "Insert" menu, the bar above a text selection. */
 const HOST_GROUPS: ToolbarGroup[] = [
   { kind: 'group', id: 'history', order: 10 },
+  { kind: 'group', id: 'text-style', order: 20 },
   { kind: 'menu', id: 'insert', order: 50, label: 'Insert', icon: () => ICONS.insert },
   { kind: 'floating', id: 'selection', order: 10, label: 'Selection', anchor: (editor, held) => (held || hasTextSelection(editor) ? selectionCoords(editor) : null) },
 ];

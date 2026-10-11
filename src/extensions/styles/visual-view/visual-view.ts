@@ -4,10 +4,9 @@ import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node } from '@tiptap/pm/model';
 import { children, isClosedContent, parenthesized } from '../../../core/typst-syntax/typst-syntax';
 import type { Call, Placed, Printer, ProjectionContext } from '../../../hosts/projection/projection';
-import type { ToolbarContext, ToolbarControl, TypstMarkSpec, TypstNodeSpec, VisualViewContribution } from '../../../hosts/visual-view/visual-view';
+import type { TextStyle, TextStyleProvider, TypstMarkSpec, TypstNodeSpec, VisualViewContext, VisualViewContribution } from '../../../hosts/visual-view/visual-view';
 import type { ProjectStyles } from '../model/style-index';
 import type { Style } from '../model/discover';
-import { StyleMenu } from './style-menu';
 import { StyledBlock, StyleMark } from './style-nodes';
 
 export interface StylesOptions {
@@ -28,9 +27,10 @@ const STYLE_PRIORITY = 110;
  * style that is a block of its own (`#note[..]`, `#callout(..)[..]`) is a
  * `styledBlock` holding blocks; a text style call in running text
  * (`#key[..]`) is text with a `style` mark. Undeclared calls stay raw; a style
- * declared or removed re-projects every view. The text style menu (normal
- * text, headings 1–3, the project's styles, "New style…") applies them,
- * importing a style where it is now used.
+ * declared or removed re-projects every view. The text style menu lists the
+ * project's styles and "New style…" (after normal text and what other
+ * extensions contribute) and applies them, importing a style where it is now
+ * used.
  */
 export function customStyles(options: StylesOptions): VisualViewContribution {
   const declared = declaredStyles(options.styles);
@@ -45,8 +45,7 @@ export function customStyles(options: StylesOptions): VisualViewContribution {
           ...STYLE,
           inlineCalls: [{ matches: (_p, call) => declared().get(call.name)?.kind === 'text', project: (p, call, marks) => styleCall(p, call, marks, declared()) }],
         }, { priority: STYLE_PRIORITY }),
-        visualView.registerToolbarGroup({ kind: 'group', id: 'text-style', order: 20 }),
-        visualView.registerToolbarItem({ group: 'text-style', create: (toolbar) => styleMenu(toolbar, options) }),
+        visualView.registerTextStyleProvider(textStyles(options)),
       );
     },
   };
@@ -120,17 +119,47 @@ function styleCall(p: ProjectionContext, { node, name, args }: Call, marks: read
   return p.inline(inside, p.schema.marks.style.create({ name, title: style.label, head }).addToSet(marks));
 }
 
-/** The text style menu of one view: applying a style imports it into the view's document where needed. */
-function styleMenu(toolbar: ToolbarContext, { styles: source, create }: StylesOptions): ToolbarControl {
-  const { document } = toolbar;
-  const menuStyles = {
-    styles: () => source.styles(),
-    onDidChange: source.onDidChange,
-    applied: (style: Style) => {
-      const change = source.calculateImportChange(document, style, toolbar.selection().from);
-      if (change) document.change([change], STYLE_IMPORT);
-    },
-    create,
+/**
+ * The text style menu's entries: the paragraph styles (wrap the selected blocks, `#note[..]`; Normal text takes them
+ * off), the text styles (toggle on a selection, `#key[..]`), and "New style…". Applying a style imports it into the
+ * view's document where needed.
+ */
+function textStyles({ styles: source, create }: StylesOptions): TextStyleProvider {
+  return {
+    provideTextStyles: (view) => [...source.styles().map((style) => textStyle(style, view, source)), { id: 'new-style', label: 'New style…', order: 1000, apply: (chain) => chain, applied: create }],
+    onDidChangeTextStyles: source.onDidChange,
   };
-  return new StyleMenu(toolbar.root.ownerDocument, toolbar.editor, menuStyles);
+}
+
+/** The menu entry of `style`, in `view`. */
+function textStyle(style: Style, view: VisualViewContext, source: ProjectStyles): TextStyle {
+  const applied = { name: style.name, label: style.label };
+  const entry = {
+    label: style.label,
+    applied: () => {
+      const change = source.calculateImportChange(view.document, style, view.selection().from);
+      if (change) view.document.change([change], STYLE_IMPORT);
+    },
+  };
+  if (style.kind === 'paragraph') {
+    return {
+      ...entry,
+      id: `paragraph:${style.name}`,
+      section: 'Paragraph styles',
+      order: 100,
+      apply: (chain) => chain.setParagraphStyle(applied),
+      isActive: (editor) => editor.isActive('styledBlock', { name: style.name }),
+      remove: (chain) => chain.unsetParagraphStyle(),
+    };
+  }
+  return {
+    ...entry,
+    id: `text:${style.name}`,
+    section: 'Text styles',
+    order: 200,
+    toggle: true,
+    apply: (chain) => chain.toggleTextStyle(applied),
+    enabled: (editor) => !editor.state.selection.empty && editor.can().toggleTextStyle(applied),
+    isActive: (editor) => editor.isActive('style', { name: style.name }),
+  };
 }
