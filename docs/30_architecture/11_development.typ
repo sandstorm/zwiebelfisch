@@ -73,7 +73,10 @@ mise run server:test   # when server/ or core/room-protocol changed
 
 - *sync*: what the keystroke itself blocks (the transaction, the write-back and every listener of the document);
 - *main thread*: all the work on the main thread in that time (the keystroke, timers, compile answers, raw boxes' pictures, the preview's pages), by module and by function (inclusive, from a CPU profile);
-- *engine*: what the worker's thread does in a browser (`tests/perf/in-process-worker.ts` runs the engine in-process and counts it apart).
+- *engine*: what the worker's thread does in a browser (`tests/perf/in-process-worker.ts` runs the engine in-process and counts it apart);
+- *layout reads* by caller (`getBoundingClientRect`, `offsetHeight`, …), counted over a few more keystrokes: free in jsdom, a forced layout in a browser when the DOM changed before.
+
+What is near the view is modelled, as jsdom has no layout: the preview's page typed in and the pages around it, and the Visual editor's blocks within 30 of the cursor's.
 
 The profiles land in `.cache/perf/` (`*.cpuprofile`: Chrome DevTools' Performance panel opens them). jsdom has no layout and parses SVG slowly: the preview's pages cost more here than in a browser, and style, layout and paint are not measured at all. What only a browser shows: record typing in DevTools' Performance panel and look at the long tasks after a keystroke and after a compile (`Preview.compile` → `PageList.render`: the page's SVG swapped in, then Recalculate Style, Layout, Paint).
 

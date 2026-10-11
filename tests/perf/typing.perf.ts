@@ -12,6 +12,7 @@ import { createTypstEditor } from '../../src/typst-editor/typst-editor';
 import type { ProjectFiles } from '../../src/core/project/project';
 import { Profiler, summarize } from './cpu-profile';
 import { InProcessWorker } from './in-process-worker';
+import { LayoutReads } from './layout-reads';
 
 // the preview's engine worker (jsdom has no Worker)
 globalThis.Worker = InProcessWorker as unknown as typeof Worker;
@@ -21,6 +22,8 @@ const root = `${process.cwd()}/`;
 const out = join(root, '.cache/perf');
 /** The text typed, one character per keystroke. */
 const TYPED = ' and quickly typed words';
+/** Typed after `TYPED`, counting the layout reads. */
+const COUNTED = ' again';
 /** The pause between two keystrokes (a fast typist): timers and compile answers run in it. */
 const KEYSTROKE_INTERVAL_MS = 80;
 
@@ -47,24 +50,30 @@ const scenarios: Scenario[] = [
   { name: 'docs, table cell', folder: DOCS, path: FEATURES, after: 'jumps to the heading', inside: 'tableCell' },
 ];
 const only = process.env.TYPST_PERF_SCENARIO;
+const layoutReads = new LayoutReads(root);
 
 /**
- * The preview's IntersectionObserver, which jsdom lacks (without one, every page would get its SVG): the pages `show`
- * names are the ones near the view, reported in a later microtask as a browser reports them.
+ * The IntersectionObserver jsdom lacks, which says what is near the view (without one, every page would get its SVG
+ * and every raw box would be drawn after every compile): the preview's pages `show` names, and the Visual editor's
+ * blocks around the cursor's. Reported in a later microtask, as a browser reports them.
  */
-class PagesNearView {
-  private static readonly observers = new Set<PagesNearView>();
-  private static near = new Set<number>();
+class NearView {
+  private static readonly observers = new Set<NearView>();
+  private static near: (element: HTMLElement) => boolean = () => false;
   private readonly elements = new Set<HTMLElement>();
 
   constructor(private readonly callback: (changes: Partial<IntersectionObserverEntry>[]) => void) {
-    PagesNearView.observers.add(this);
+    NearView.observers.add(this);
   }
 
-  /** Makes pages `pages` (0-based) the ones near the view. */
-  static show(pages: readonly number[]): void {
-    PagesNearView.near = new Set(pages);
-    for (const observer of PagesNearView.observers) observer.report([...observer.elements]);
+  /** Makes pages `pages` (0-based) and the top-level blocks `blocks` (indexes) of the Visual editor `text` the ones near the view. */
+  static show(pages: readonly number[], text: HTMLElement, blocks: { from: number; to: number }): void {
+    NearView.near = (element) => {
+      if (element.dataset.number) return pages.includes(Number(element.dataset.number) - 1);
+      const block = [...text.children].findIndex((child) => child.contains(element));
+      return block >= blocks.from && block <= blocks.to;
+    };
+    for (const observer of NearView.observers) observer.report([...observer.elements]);
   }
 
   observe(element: HTMLElement): void {
@@ -78,14 +87,16 @@ class PagesNearView {
 
   disconnect(): void {
     this.elements.clear();
-    PagesNearView.observers.delete(this);
+    NearView.observers.delete(this);
   }
 
   private report(elements: HTMLElement[]): void {
-    queueMicrotask(() => this.callback(elements.map((target) => ({ target, isIntersecting: PagesNearView.near.has(Number(target.dataset.number) - 1) }))));
+    queueMicrotask(() => this.callback(elements.map((target) => ({ target, isIntersecting: NearView.near(target) }))));
   }
 }
-globalThis.IntersectionObserver = PagesNearView as unknown as typeof IntersectionObserver;
+globalThis.IntersectionObserver = NearView as unknown as typeof IntersectionObserver;
+/** How many top-level blocks before and after the cursor's are near the view: a screen of text, and one above and below. */
+const NEAR_BLOCKS = 30;
 
 it.each(scenarios.filter((scenario) => !only || scenario.name.includes(only)))('typing: $name', async (scenario) => {
   const host = document.body.appendChild(document.createElement('div'));
@@ -93,10 +104,10 @@ it.each(scenarios.filter((scenario) => !only || scenario.name.includes(only)))('
   await settled();
   widget.open(scenario.path);
   const tiptap = visualEditor(host);
-  placeCursor(tiptap, scenario);
+  const block = placeCursor(tiptap, scenario);
   // the preview shows the page typed in (as "Follow cursor" does) and the pages around it
   const page = await InProcessWorker.pageOf(scenario.path, widget.files[scenario.path]!.toString().indexOf(scenario.after));
-  PagesNearView.show([page - 1, page, page + 1]);
+  NearView.show([page - 1, page, page + 1], tiptap.view.dom, { from: block - NEAR_BLOCKS, to: block + NEAR_BLOCKS });
   await typeText(tiptap, ' warm', 20); // warms the code paths up (JIT), then the measured run
   await settled();
 
@@ -109,8 +120,15 @@ it.each(scenarios.filter((scenario) => !only || scenario.name.includes(only)))('
   await settled();
   const wall = performance.now() - started;
   const profile = await profiler.stop();
+  const engine = InProcessWorker.time - engineBefore;
+  const compiles = InProcessWorker.compiles - compilesBefore;
   const summary = summarize(profile, root, 'keystroke');
-  expect(widget.files[scenario.path]).toContain(TYPED);
+  // apart from the profile: finding the caller of each read takes time
+  layoutReads.start();
+  await typeText(tiptap, COUNTED, KEYSTROKE_INTERVAL_MS);
+  await settled();
+  const reads = layoutReads.stop();
+  expect(widget.files[scenario.path]).toContain(TYPED + COUNTED);
   widget.dispose();
   host.remove();
 
@@ -120,12 +138,13 @@ it.each(scenarios.filter((scenario) => !only || scenario.name.includes(only)))('
     keystrokes: keys,
     syncMs: { median: quantile(sync, 0.5), p95: quantile(sync, 0.95), max: Math.max(...sync) },
     mainThreadMsPerKey: summary.mainThread / keys,
-    engineMsPerKey: (InProcessWorker.time - engineBefore) / keys,
-    compiles: InProcessWorker.compiles - compilesBefore,
+    engineMsPerKey: engine / keys,
+    compiles,
     wallMs: wall,
     byModuleMsPerKey: perKey(summary.byModule.slice(0, 25), keys),
     byFunctionMsPerKey: perKey(summary.byFunction.slice(0, 50), keys),
     keystrokeByFunctionMsPerKey: perKey(summary.keystroke.byFunction.slice(0, 50), keys),
+    layoutReadsPerKey: perKey(reads.slice(0, 20), COUNTED.length),
   };
   mkdirSync(out, { recursive: true });
   const slug = scenario.name.replace(/\W+/g, '-');
@@ -165,8 +184,8 @@ function visualEditor(host: HTMLElement): Editor {
   return editor;
 }
 
-/** Puts the cursor right after `scenario.after`, checking it is in the node the scenario types in. */
-function placeCursor(editor: Editor, scenario: Scenario): void {
+/** Puts the cursor right after `scenario.after`, checking it is in the node the scenario types in; the index of its top-level block. */
+function placeCursor(editor: Editor, scenario: Scenario): number {
   const { doc } = editor.state;
   let at = -1;
   doc.descendants((node, pos) => {
@@ -178,6 +197,7 @@ function placeCursor(editor: Editor, scenario: Scenario): void {
   const path = Array.from({ length: $at.depth + 1 }, (_, depth) => $at.node(depth).type.name);
   if (!path.includes(scenario.inside)) throw new Error(`"${scenario.after}" is in ${path.join(' > ')}, not in a ${scenario.inside}`);
   editor.view.dispatch(editor.state.tr.setSelection(TextSelection.create(doc, at)));
+  return $at.index(0);
 }
 
 /** Types `text` one character per keystroke, `interval` ms apart; the synchronous time of each keystroke in ms. */
@@ -217,7 +237,7 @@ function round(ms: number): number {
   return Math.round(ms * 100) / 100;
 }
 
-function report(result: { scenario: string; compiles: number; syncMs: Record<string, number>; mainThreadMsPerKey: number; engineMsPerKey: number; byModuleMsPerKey: [string, number][]; byFunctionMsPerKey: [string, number][]; keystrokeByFunctionMsPerKey: [string, number][] }): string {
+function report(result: { scenario: string; compiles: number; syncMs: Record<string, number>; mainThreadMsPerKey: number; engineMsPerKey: number; byModuleMsPerKey: [string, number][]; byFunctionMsPerKey: [string, number][]; keystrokeByFunctionMsPerKey: [string, number][]; layoutReadsPerKey: [string, number][] }): string {
   const lines = [
     `── ${result.scenario}`,
     `sync per keystroke: median ${round(result.syncMs.median)} ms, p95 ${round(result.syncMs.p95)} ms, max ${round(result.syncMs.max)} ms`,
@@ -228,6 +248,8 @@ function report(result: { scenario: string; compiles: number; syncMs: Record<str
     ...result.byFunctionMsPerKey.slice(0, 30).map(([name, ms]) => `  ${ms.toFixed(2).padStart(7)}  ${name}`),
     'the keystroke itself, by function, inclusive (ms per keystroke):',
     ...result.keystrokeByFunctionMsPerKey.slice(0, 30).map(([name, ms]) => `  ${ms.toFixed(2).padStart(7)}  ${name}`),
+    'layout reads (forced layouts in a browser after a DOM change), per keystroke:',
+    ...result.layoutReadsPerKey.map(([name, count]) => `  ${count.toFixed(2).padStart(7)}  ${name}`),
   ];
   return lines.join('\n');
 }

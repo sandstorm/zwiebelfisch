@@ -30,9 +30,9 @@ export class Profiler {
 
 /** Where a profile's time went, in milliseconds. */
 export interface ProfileSummary {
-  /** Time this thread ran JavaScript, the engine stand-in (`engineThread`) left out. */
+  /** Time this thread ran JavaScript, the engine left out (see `isEngine`). */
   mainThread: number;
-  /** Time in `engineThread`: a browser spends it on the worker's thread. */
+  /** Time in the engine: a browser spends it on the worker's thread. */
   engine: number;
   /** `mainThread` by the innermost frame of ours on the stack (library code counts for the code of ours calling it). */
   byModule: [string, number][];
@@ -56,7 +56,7 @@ export function summarize(profile: CpuProfile, root: string, within: string): Pr
     const ms = (profile.timeDeltas[index + 1] ?? 0) / 1000;
     const stack = stackOf(id, nodes, parents);
     if (stack.length === 0 || IDLE.has(stack[0].functionName)) return;
-    if (stack.some((frame) => frame.functionName === 'engineThread')) {
+    if (stack.some(isEngine)) {
       engine += ms;
       return;
     }
@@ -74,6 +74,11 @@ export function summarize(profile: CpuProfile, root: string, within: string): Pr
 }
 
 const IDLE = new Set(['(idle)', '(program)', '(garbage collector)', '(root)']);
+
+/** A frame of what runs on the worker's thread in a browser: the stand-in, the engine (wasm) and its packages. */
+function isEngine(frame: CpuProfile['nodes'][number]['callFrame']): boolean {
+  return frame.functionName === 'engineThread' || frame.url.startsWith('wasm') || /src\/core\/typst-(engine|packages)\//.test(frame.url);
+}
 
 /** The frames of node `id`, innermost first. */
 function stackOf(id: number, nodes: Map<number, CpuProfile['nodes'][number]>, parents: Map<number, number>): CpuProfile['nodes'][number]['callFrame'][] {
