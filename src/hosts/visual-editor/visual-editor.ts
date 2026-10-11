@@ -7,6 +7,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import { attachGrammar, onDidChangeGrammar, posToSource, serializeToTypst, parseTypst, sourceToPos, applyTypstChanges, type DocumentNodeSpec, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
+import { clipboard } from './clipboard';
 import { highlights, setHighlights } from './highlights';
 import { editorExtensions, nodeViewSpecs } from './nodes/node-views';
 import type { RawBoxes } from './nodes/raw-box';
@@ -24,8 +25,8 @@ import css from './visual-editor.css?inline';
  * replacement, so the cursor stays where it was. Typst nothing models shows as a raw box: edited as code, never
  * rewritten, or shown as a picture.
  *
- * The editor keeps only the mechanism: paragraphs, text, raw boxes, the toolbar's frame, highlights and completion
- * lists. Every other construct (headings, tables, labels, comments, …) and feature is contributed through
+ * The editor keeps only the mechanism: paragraphs, text, raw boxes, the clipboard (in Typst), the toolbar's frame,
+ * highlights and completion lists. Every other construct (headings, tables, labels, comments, …) and feature is contributed through
  * `VisualEditorHost`, which hands what is registered to each editor it creates. It is one of the two built-in custom
  * editors for `*.typ`, next to the Source editor; the workbench's `TypstEditors` makes it.
  * See docs/30_architecture/04_visual-editor.typ.
@@ -56,6 +57,7 @@ export class VisualEditor {
       extensions: [
         ...editorExtensions(contributed.nodes, contributed.marks, boxes(editor, contributed, views, contributions.links)),
         highlights,
+        clipboard,
         suggestions(contributed.completionItemProviders, (tiptap, query) => ({
           ...editor,
           editor: tiptap,
