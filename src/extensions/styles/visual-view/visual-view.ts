@@ -3,11 +3,11 @@
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node } from '@tiptap/pm/model';
 import { calleeName, children, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
-import type { Placed, TypstMarkSpec, TypstSerializeState, TypstParseContext } from '../../../hosts/projection/projection';
+import type { PlacedNode, TypstMarkSpec, TypstSerializeState, TypstParseContext } from '../../../hosts/projection/projection';
 import type { TextStyle, TextStyleProvider, TypstNodeSpec, VisualViewContext, VisualViewContribution } from '../../../hosts/visual-view/visual-view';
-import type { ProjectStyles } from '../model/style-index';
-import type { Style } from '../model/discover';
-import { StyledBlock, StyleMark } from './style-nodes';
+import type { ProjectStyles } from '../model/typst-style-index';
+import type { TypstStyle } from '../model/discover';
+import { StyledBlock, TypstStyleMark } from './style-nodes';
 
 export interface StylesOptions {
   /** The project's styles: their calls show as styled, editable text. */
@@ -66,7 +66,7 @@ type Declared = ReadonlyMap<string, { kind: 'paragraph' | 'text'; label: string 
 
 /** The declared styles by function name, as of now (made anew when the list changes). */
 function declaredStyles(source: ProjectStyles): () => Declared {
-  let list: readonly Style[] | null = null;
+  let list: readonly TypstStyle[] | null = null;
   let map: Declared = new Map();
   return () => {
     const current = source.styles();
@@ -92,7 +92,7 @@ const STYLED_BLOCK: TypstNodeSpec = {
 
 const STYLE: TypstMarkSpec = {
   name: 'style',
-  tiptap: StyleMark,
+  tiptap: TypstStyleMark,
   typst: { toTypst: (mark) => ({ open: mark.attrs.head ?? `#${mark.attrs.name}[`, close: ']' }) },
 };
 
@@ -117,7 +117,7 @@ function styledBlockToTypst(state: TypstSerializeState, block: Node, pos: number
 }
 
 /** `#key[text]` (or `#key(..)[text]`) of a declared text style, with non-empty, single-paragraph text; null otherwise. */
-function parseStyleCall(p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[], declared: Declared): Placed[] | null {
+function parseStyleCall(p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[], declared: Declared): PlacedNode[] | null {
   const name = calleeName(call, p.source);
   const style = declared.get(name);
   const blocks = trailingContent(call);
@@ -142,7 +142,7 @@ function textStyles({ styles: source, create }: StylesOptions): TextStyleProvide
 }
 
 /** The menu entry of `style`, in `view`. */
-function textStyle(style: Style, view: VisualViewContext, source: ProjectStyles): TextStyle {
+function textStyle(style: TypstStyle, view: VisualViewContext, source: ProjectStyles): TextStyle {
   const applied = { name: style.name, label: style.label };
   const entry = {
     label: style.label,

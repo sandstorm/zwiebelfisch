@@ -1,6 +1,6 @@
 // Snippets: a page SVG cut down to the boxes of a source range (shown in the Visual view). See ../preview.ts.
-import { Pt, type Box, type Page } from '../../../core/typst-engine/typst-engine';
-import type { Snippet } from '../preview';
+import { Pt, type PageRect, type Page } from '../../../core/typst-engine/typst-engine';
+import type { RenderedSnippet } from '../preview';
 
 /** Space kept around what is drawn, so strokes and descenders are not clipped. */
 const PADDING = Pt.of(2);
@@ -10,7 +10,7 @@ const PADDING = Pt.of(2);
  * union on the page of the first box, padded and kept inside the page, or
  * null when nothing is drawn. Content on later pages is left out.
  */
-export function snippet(pages: readonly Page[], boxes: readonly Box[]): Snippet | null {
+export function snippet(pages: readonly Page[], boxes: readonly PageRect[]): RenderedSnippet | null {
   const page = boxes.length > 0 ? pages[boxes[0].page] : undefined;
   if (!page) return null;
   const onPage = boxes.filter((box) => box.page === boxes[0].page);

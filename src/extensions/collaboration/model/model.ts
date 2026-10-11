@@ -19,7 +19,7 @@ import { SharedAssets } from './shared-assets';
 import { SharedProject } from './shared-project';
 
 /** What gets shared: the project's Typst files (margin notes are part of their text). */
-export interface Shared {
+export interface SharedRoom {
   project: Project;
   user?: User;
 }
@@ -45,7 +45,7 @@ export class Collaboration {
   private constructor(
     ydoc: Y.Doc,
     awareness: Awareness | null,
-    shared: Shared,
+    shared: SharedRoom,
     private readonly server: { provider: HocuspocusProvider; files: (path: ProjectPath) => Promise<Uint8Array>; tell: Tell } | null,
   ) {
     const { project, user } = shared;
@@ -64,7 +64,7 @@ export class Collaboration {
    * first sync, so a room's existing text wins over the local one; the room's source control tells its outcomes
    * and news with `tell` (default: not at all).
    */
-  static async start(options: CollaborationOptions, shared: Shared, tell: Tell = () => {}): Promise<Collaboration> {
+  static async start(options: CollaborationOptions, shared: SharedRoom, tell: Tell = () => {}): Promise<Collaboration> {
     if ('doc' in options) return new Collaboration(options.doc, options.awareness ?? null, shared, null);
     const ydoc = new Y.Doc();
     const provider = new HocuspocusProvider({ url: options.url, name: options.room, token: options.token ?? null, document: ydoc });

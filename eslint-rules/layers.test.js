@@ -19,7 +19,7 @@ describe('layers', () => {
   it('keeps extensions apart, also through a relative path', async () => {
     expect(await broken('src/extensions/styles/styles.ts', "import { labels } from '../labels/labels';")).toEqual(['local/dependencies']);
     expect(await broken('src/extensions/styles/styles.test.ts', "import { labels } from '../labels/labels';")).toEqual(['local/dependencies']);
-    expect(await broken('src/extensions/styles/styles.ts', "import { StyleIndex } from './model/style-index';")).toEqual([]);
+    expect(await broken('src/extensions/styles/styles.ts', "import { TypstStyleIndex } from './model/typst-style-index';")).toEqual([]);
   });
 
   it('keeps hosts free of extensions, typst-editor/ and testing/', async () => {

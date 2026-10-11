@@ -3,11 +3,11 @@
 import { Mark, Node } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { withHash } from '../../core/typst-syntax/typst-syntax';
-import { createSchema, print, project, starterKitPart, type TypstMarkSpec } from '../projection/projection';
-import { type BoxRendererProvider, type TypstNodeSpec, VisualViewHost } from './visual-view';
+import { createSchema, serializeToTypst, parseTypst, starterKitPart, type TypstMarkSpec } from '../projection/projection';
+import { type RawBoxRendererProvider, type TypstNodeSpec, VisualViewHost } from './visual-view';
 
 const mark = (name: string, tiptap: TypstMarkSpec['tiptap']): TypstMarkSpec => ({ name, tiptap, typst: { toTypst: () => ({ open: '', close: '' }) } });
-const renderer = (): BoxRendererProvider => () => null;
+const renderer = (): RawBoxRendererProvider => () => null;
 
 describe('VisualViewHost priority', () => {
   it('asks box renderers by priority: one registered later with a higher priority comes first', () => {
@@ -59,8 +59,8 @@ describe("the Tiptap extensions' priority", () => {
     });
     const low = spec('low', atom('low'));
     const high = spec('high', atom('high').extend({ priority: 110 }));
-    const doc = project('#rule()\n', createSchema([low, high], []));
+    const doc = parseTypst('#rule()\n', createSchema([low, high], []));
     expect(doc.firstChild?.type.name).toBe('high');
-    expect(print(doc)).toBe('#rule()\n');
+    expect(serializeToTypst(doc)).toBe('#rule()\n');
   });
 });

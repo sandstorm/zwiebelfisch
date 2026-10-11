@@ -28,7 +28,7 @@ export interface Row {
 }
 
 /** What a key does in the tree: move the focus, expand or collapse a folder, or open a file. */
-export interface Move {
+export interface TreeKeyMove {
   kind: 'focus' | 'expand' | 'collapse' | 'open';
   path: ProjectPath;
 }
@@ -102,7 +102,7 @@ export function relocate(paths: readonly ProjectPath[], source: ProjectPath, tar
 }
 
 /** What `key` does with the focus on `current` (null: nothing focused yet); null when nothing. */
-export function navigate(rows: readonly Row[], current: ProjectPath | null, key: string): Move | null {
+export function navigate(rows: readonly Row[], current: ProjectPath | null, key: string): TreeKeyMove | null {
   const index = rows.findIndex((row) => row.path === current);
   if (index < 0) return FOCUS_KEYS.has(key) && rows.length > 0 ? { kind: 'focus', path: rows[0].path } : null;
   return Object.hasOwn(KEYS, key) ? KEYS[key](rows, index) : null;
@@ -111,11 +111,11 @@ export function navigate(rows: readonly Row[], current: ProjectPath | null, key:
 const FOCUS_KEYS = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End']);
 
 /** Focus on `target`, unless it is missing or already focused. */
-function focusOn(rows: readonly Row[], index: number, target: number): Move | null {
+function focusOn(rows: readonly Row[], index: number, target: number): TreeKeyMove | null {
   return target !== index && rows[target] ? { kind: 'focus', path: rows[target].path } : null;
 }
 
-const KEYS: Record<string, (rows: readonly Row[], index: number) => Move | null> = {
+const KEYS: Record<string, (rows: readonly Row[], index: number) => TreeKeyMove | null> = {
   ArrowDown: (rows, i) => focusOn(rows, i, i + 1),
   ArrowUp: (rows, i) => focusOn(rows, i, i - 1),
   Home: (rows, i) => focusOn(rows, i, 0),

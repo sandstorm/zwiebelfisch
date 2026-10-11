@@ -1,7 +1,7 @@
 // CollaborationLink: the widget's side of a Collaboration, which it loads on demand (so this file must stay outside
 // the lazily loaded chunk, model/). See collaboration.ts.
 import type { CollaborationOptions } from './collaboration';
-import type { Collaboration, Shared } from './model/model';
+import type { Collaboration, SharedRoom } from './model/model';
 import type { GitLabSourceControl, Tell } from './model/gitlab-source-control';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { SourceRange } from '../../core/typst-document/typst-document';
@@ -40,7 +40,7 @@ export class CollaborationLink {
 
   constructor(
     options: CollaborationOptions,
-    shared: Shared,
+    shared: SharedRoom,
     private readonly widget: LinkedWidget,
   ) {
     void this.start(options, shared);
@@ -51,7 +51,7 @@ export class CollaborationLink {
     this.collaboration?.dispose();
   }
 
-  private async start(options: CollaborationOptions, shared: Shared): Promise<void> {
+  private async start(options: CollaborationOptions, shared: SharedRoom): Promise<void> {
     const { Collaboration } = await import('./model/model');
     const collaboration = await Collaboration.start(options, shared, this.widget.tell);
     if (this.disposed) {

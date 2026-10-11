@@ -9,7 +9,7 @@ import { Disposable } from '../../core/disposable/disposable';
 import { type Event, EventEmitter } from '../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../core/paths/paths';
 import type { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
-import type { Diagnostic, Page, PageIndex, PdfEntry, PdfResult, Position, Pt } from '../../core/typst-engine/typst-engine';
+import type { TypstDiagnostic, Page, PageIndex, PdfEntry, PdfResult, Position, Pt } from '../../core/typst-engine/typst-engine';
 import { isInside, measure, mostVisible, pointOnPage, Px } from './pages/geometry';
 import { overlay, OverlayLayer } from './pages/overlays';
 import { PageList } from './pages/page-list';
@@ -17,7 +17,7 @@ import { snippet } from './pages/snippet';
 import { DEFAULT_FONT_URLS, ENGINE_WASM_URL } from '../../core/engine-assets/engine-assets';
 import type { FileContent } from '../../core/project/project';
 import { FileSender } from './worker/project-files';
-import type { Init, Request, Response } from './worker/protocol';
+import type { Init, EngineRequest, EngineResponse } from './worker/protocol';
 import { startEngineWorker } from './worker/worker';
 import { LatestOnly } from './latest-only';
 import css from './preview.css?inline';
@@ -45,7 +45,7 @@ export interface PreviewContributions {
    * The errors and warnings of each compilation of the newest files given to the preview (results of outdated
    * files are not reported, so the offsets match the text last given).
    */
-  readonly onDidChangeDiagnostics: Event<readonly Diagnostic[]>;
+  readonly onDidChangeDiagnostics: Event<readonly TypstDiagnostic[]>;
   /** After every successful compilation (snippets may have changed). */
   readonly onDidRender: Event<void>;
   /**
@@ -64,7 +64,7 @@ export interface PreviewContributions {
    * How source range `range` of `path`, which holds `text`, is drawn: its page cut down to it. Null when it draws
    * nothing or `text` is not what was compiled last.
    */
-  snippet(path: ProjectPath, range: SourceRange, text: string): Promise<Snippet | null>;
+  snippet(path: ProjectPath, range: SourceRange, text: string): Promise<RenderedSnippet | null>;
   /** A PDF of `entry.main` from the files last compiled, `entry.sources` replacing or adding text files for it. */
   exportPdf(entry: PdfEntry): Promise<PdfResult>;
 }
@@ -134,7 +134,7 @@ export interface PdfExportOption {
 export type Zoom = 'fit' | number;
 
 /** A cut-out of a compiled page: standalone SVG markup and its size. */
-export interface Snippet {
+export interface RenderedSnippet {
   readonly svg: string;
   readonly width: Pt;
   readonly height: Pt;
@@ -144,7 +144,7 @@ export interface Snippet {
   readonly padding: Pt;
 }
 
-type RequestBody = Request extends infer R ? (R extends Request ? Omit<R, 'id'> : never) : never;
+type RequestBody = EngineRequest extends infer R ? (R extends EngineRequest ? Omit<R, 'id'> : never) : never;
 type Compile = { files: Record<string, FileContent>; main: string };
 type Reveal = { path: ProjectPath; from: SourceOffset };
 
@@ -161,7 +161,7 @@ const REVEAL_INTERVAL_MS = 80;
  */
 export class Preview implements PreviewContributions {
   private readonly worker = startEngineWorker();
-  private readonly pending = new Map<number, (response: Response) => void>();
+  private readonly pending = new Map<number, (response: EngineResponse) => void>();
   private readonly pane: HTMLElement;
   private readonly toolbar: HTMLElement;
   private readonly scroller: HTMLElement;
@@ -185,7 +185,7 @@ export class Preview implements PreviewContributions {
   /** The files and pages of the last successful compilation. */
   private compiled: { files: Record<string, FileContent>; pages: Page[] } = { files: {}, pages: [] };
   private readonly rendered = new EventEmitter<void>();
-  private readonly diagnosed = new EventEmitter<readonly Diagnostic[]>();
+  private readonly diagnosed = new EventEmitter<readonly TypstDiagnostic[]>();
   private readonly clicked = new EventEmitter<PageClick>();
   readonly onDidRender = this.rendered.event;
   readonly onDidChangeDiagnostics = this.diagnosed.event;
@@ -218,7 +218,7 @@ export class Preview implements PreviewContributions {
     });
 
     this.worker.postMessage({ type: 'init', wasm: ENGINE_WASM_URL, fonts: DEFAULT_FONT_URLS } satisfies Init);
-    this.worker.onmessage = (event: MessageEvent<Response>) => {
+    this.worker.onmessage = (event: MessageEvent<EngineResponse>) => {
       this.pending.get(event.data.id)?.(event.data);
       this.pending.delete(event.data.id);
     };
@@ -252,7 +252,7 @@ export class Preview implements PreviewContributions {
    * errors). Waits for running compilations, so it answers for the newest
    * text passed to `update()`.
    */
-  async snippet(path: ProjectPath, range: SourceRange, text: string): Promise<Snippet | null> {
+  async snippet(path: ProjectPath, range: SourceRange, text: string): Promise<RenderedSnippet | null> {
     await this.compiles.idle();
     const { files, pages } = this.compiled;
     const compiled = files[path];
@@ -416,7 +416,7 @@ export class Preview implements PreviewContributions {
     });
   }
 
-  private request(body: RequestBody): Promise<Response> {
+  private request(body: RequestBody): Promise<EngineResponse> {
     const id = this.nextId++;
     return new Promise((resolve) => {
       this.pending.set(id, resolve);

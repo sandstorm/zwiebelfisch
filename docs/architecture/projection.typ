@@ -3,14 +3,14 @@
 Turns Typst text into the Visual view's ProseMirror document and back, so that an edit changes only the source of what it touched. Plain ProseMirror: no view, no Tiptap editor, tested without a DOM. Module `src/hosts/projection/`.
 
 ```
- text ──Lezer──► syntax tree ──project(text, schema)──► doc     nodes keep their source
-                                                         │ user edit
- text ◄── document.setText() ◄── print(doc) ◄────────────┘     untouched nodes: source verbatim
+ text ──Lezer──► syntax tree ──parseTypst(text, schema)──► doc     nodes keep their source
+                                                            │ user edit
+ text ◄── document.setText() ◄── serializeToTypst(doc) ◄────┘     untouched nodes: source verbatim
 
- text changed elsewhere ──► project() ──► syncDoc(tr, target) ──► smallest replacement
+ text changed elsewhere ──► parseTypst() ──► applyTypstChanges(tr, target) ──► smallest replacement
 ```
 
-Invariant: `print(project(text, schema)) === text` for any input.
+Invariant: `serializeToTypst(parseTypst(text, schema)) === text` for any input.
 
 == Specs and grammar <architecture-projection-specs>
 
@@ -26,7 +26,7 @@ The framework knows only paragraphs, text, line breaks, escapes, shorthands and 
   [`typst.labelled`, `anchors`, `container`], [Takes a trailing label; attributes kept like `src`; the container of consecutive items (list items → their list).],
 )
 
-- `createSchema(nodes, marks)` (tests) or `documentExtensions` + `attachGrammar` (the Visual view) put the specs on the schema. `project` and `print` find them there.
+- `createSchema(nodes, marks)` (tests) or `documentExtensions` + `attachGrammar` (the Visual view) put the specs on the schema. `parseTypst` and `serializeToTypst` find them there.
 - Order: the priority of each spec's Tiptap extension (default 100, higher first). Of rules for the same syntax, the higher one is asked first.
 - A second spec of the same name extends the first.
 - Writing a spec: @extensions-visual-view-constructs.
@@ -41,7 +41,7 @@ The framework knows only paragraphs, text, line breaks, escapes, shorthands and 
 == Source anchors and pristine nodes <architecture-projection-anchors>
 
 - *Anchors:* attributes that are never rendered and remember the source: `src` (the node's Typst), `sep` (whitespace to the next sibling), the document's `lead` and `trail`, `label`, and each spec's `anchors`.
-- *Pristine:* a private `WeakMap` holds the nodes `project` made. ProseMirror keeps the identity of unchanged nodes, so membership means "still equal to `src`".
+- *Pristine:* a private `WeakMap` holds the nodes `parseTypst` made. ProseMirror keeps the identity of unchanged nodes, so membership means "still equal to `src`".
 - Pristine nodes print `src`. Edited nodes print through their spec's `toTypst` (textblocks by default: their inline content, escaped). Block atoms print `src`.
 - Editor-made nodes have `sep: null` and get the default separator.
 
@@ -55,7 +55,7 @@ The framework knows only paragraphs, text, line breaks, escapes, shorthands and 
 
 == Sync <architecture-projection-sync>
 
-`syncDoc(tr, target)` turns the current document into a fresh projection:
+`applyTypstChanges(tr, target)` turns the current document into a fresh projection:
 
 1. Diff both with the anchor attributes stripped, so a changed `src` does not replace a whole block.
 2. Replace only the innermost changed range: a cursor elsewhere in the paragraph stays put.

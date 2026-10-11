@@ -5,7 +5,7 @@ import { Extension } from '@tiptap/core';
 import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
 import { children } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type Action, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 import type { TypstParseContext, TypstSerializeState } from '../../../hosts/projection/projection';
 
 /** Source anchors: `src`, the Typst a node was read from; `sep`, the whitespace to its next sibling. */
@@ -96,7 +96,7 @@ const ICONS = {
 };
 
 /** "Bulleted list" and "Numbered list", in the toolbar's `lists` group. */
-export const LIST_ACTIONS: Action[] = [
+export const LIST_ACTIONS: ToolbarAction[] = [
   { label: 'Bulleted list', icon: ICONS.bulletList, run: (c) => c.toggleBulletList(), active: (e) => e.isActive('bulletList') },
   { label: 'Numbered list', icon: ICONS.orderedList, run: (c) => c.toggleOrderedList(), active: (e) => e.isActive('orderedList') },
 ];

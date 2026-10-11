@@ -27,10 +27,10 @@ import type { Commands } from '../hosts/commands/commands';
 import type { Languages } from '../hosts/languages/languages';
 import type { PreviewContributions } from '../hosts/preview/preview';
 import { VisualView, VisualViewHost, type ContributionContext, type VisualViewContribution } from '../hosts/visual-view/visual-view';
-import type { InputBoxOptions, MessageItem, QuickPickItem, QuickPickOptions, Window } from '../hosts/window/window';
+import type { InputBoxOptions, MessageItem, QuickPickItem, QuickPickOptions, WindowApi } from '../hosts/window/window';
 import type { Workbench } from '../hosts/workbench/workbench';
 import type { Workspace } from '../hosts/workspace/workspace';
-import { attachGrammar, createSchema, documentExtensions, posToSource, print, project as projectWith, sourceToPos } from '../hosts/projection/projection';
+import { attachGrammar, createSchema, documentExtensions, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos } from '../hosts/projection/projection';
 
 /** The schema of a view with the built-ins configured from `options`. */
 export function schemaWith(options: TestViewOptions = {}): Schema {
@@ -74,7 +74,7 @@ export interface TestViewOptions {
  * box the text, a quick pick the label of the item or its index; undefined cancels), and `asked` / `told` keep what
  * was asked and said.
  */
-export class TestPrompts implements Pick<Window, 'showInputBox' | 'showQuickPick' | 'showErrorMessage'> {
+export class TestPrompts implements Pick<WindowApi, 'showInputBox' | 'showQuickPick' | 'showErrorMessage'> {
   readonly answers: (string | number | undefined)[] = [];
   readonly asked: { options?: InputBoxOptions | QuickPickOptions; items?: readonly (string | QuickPickItem)[] }[] = [];
   readonly told: string[] = [];
@@ -97,7 +97,7 @@ export class TestPrompts implements Pick<Window, 'showInputBox' | 'showQuickPick
     const answer = this.answers.shift();
     if (typeof answer === 'number') return list[answer];
     return list.find((item) => (typeof item === 'string' ? item : item.label) === answer);
-  }) as Window['showQuickPick'];
+  }) as WindowApi['showQuickPick'];
 
   showErrorMessage = async <T extends string | MessageItem>(message: string): Promise<T | undefined> => {
     this.told.push(message);
@@ -110,7 +110,7 @@ export class TestPrompts implements Pick<Window, 'showInputBox' | 'showQuickPick
 export const schema: Schema = schemaWith();
 
 /** `source` projected with `withSchema` (default: the built-ins' `schema`). */
-export const project = (source: string, withSchema: Schema = schema): Node => projectWith(source, withSchema);
+export const parseTypst = (source: string, withSchema: Schema = schema): Node => parseTypstWith(source, withSchema);
 
 /** A Visual view of `document` with the built-ins configured from `options`. */
 export function createVisualView(parent: HTMLElement, document: TypstDocument, options: TestViewOptions = {}): VisualView {
@@ -125,7 +125,7 @@ export function createEditor(source: string, options: TestViewOptions = {}): Edi
   const { nodes, marks } = contributions(options).contributed();
   const editor = new Editor({ extensions: documentExtensions(nodes, marks), injectCSS: false });
   attachGrammar(editor.schema, nodes, marks);
-  editor.view.updateState(EditorState.create({ schema: editor.schema, doc: projectWith(source, editor.schema), plugins: editor.state.plugins }));
+  editor.view.updateState(EditorState.create({ schema: editor.schema, doc: parseTypstWith(source, editor.schema), plugins: editor.state.plugins }));
   return editor;
 }
 
@@ -161,7 +161,7 @@ function testContext(options: TestViewOptions) {
       showInputBox: prompts.showInputBox,
       showQuickPick: prompts.showQuickPick,
       showErrorMessage: prompts.showErrorMessage,
-    } satisfies Partial<Window>,
+    } satisfies Partial<WindowApi>,
     workspace: { applyEdit: options.applyEdit ?? added } satisfies Partial<Workspace>,
     languages: testLanguages(options),
     preview: testPreview(options),
@@ -247,7 +247,7 @@ function visibleChars(doc: Node): { pos: number; char: string }[] {
 
 /** Checks the position map of `doc` exhaustively against its printed source (see typst-editor/typst-editor.projection.test.ts). */
 export function expectPreciseMap(doc: Node): void {
-  const source = print(doc);
+  const source = serializeToTypst(doc);
   for (const { pos, char } of visibleChars(doc)) {
     const offset = posToSource(doc, pos);
     expect(source[offset], `char at position ${pos}`).toBe(char);

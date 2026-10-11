@@ -4,17 +4,17 @@ import { typstParser } from 'codemirror-lang-typst/lezer';
 import type { ProjectPath } from '../../../core/paths/paths';
 
 /** Wraps blocks (`#note[..]` around paragraphs) or inline text (`#key[..]` in a sentence). */
-export type StyleKind = 'paragraph' | 'text';
+export type TypstStyleKind = 'paragraph' | 'text';
 
 /** A style declared in a file: the function's name, its kind and the name people see. */
 export interface FoundStyle {
   name: string;
-  kind: StyleKind;
+  kind: TypstStyleKind;
   label: string;
 }
 
 /** A style of the project: where it is declared, too. */
-export interface Style extends FoundStyle {
+export interface TypstStyle extends FoundStyle {
   path: ProjectPath;
 }
 
@@ -38,13 +38,13 @@ export function scanStyles(text: string): FoundStyle[] {
   return styles;
 }
 
-type Declaration = { kind: StyleKind; label: string };
+type Declaration = { kind: TypstStyleKind; label: string };
 
 /** The `@style` declaration in force after `node`: set by its comment line, kept across other `///` lines, the `#` and line breaks. */
 function nextDeclaration(text: string, node: SyntaxNode, declared: Declaration | null): Declaration | null {
   if (node.name === 'LineComment') {
     const match = DECLARATION.exec(text.slice(node.from, node.to).trim());
-    return match ? { kind: match[1] as StyleKind, label: match[2].trim() } : declared;
+    return match ? { kind: match[1] as TypstStyleKind, label: match[2].trim() } : declared;
   }
   return node.name === 'Hash' || node.name === 'Space' ? declared : null;
 }

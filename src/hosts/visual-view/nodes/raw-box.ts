@@ -8,7 +8,7 @@ import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { Decoration, EditorView, NodeView, NodeViewConstructor } from '@tiptap/pm/view';
 import { minimalChange, type SourceOffset } from '../../../core/typst-document/typst-document';
-import { setBoxDecorations, type BoxAction, type BoxRenderer, type BoxTools, type BoxToolsHost, type TypstNodeSpec, type VisualViewContext } from '../visual-view';
+import { setBoxDecorations, type RawBoxAction, type RawBoxRenderer, type RawBoxTools, type RawBoxToolsHost, type TypstNodeSpec, type VisualViewContext } from '../visual-view';
 import { posToSource } from '../../projection/projection';
 import { BoxActionBar } from './box-actions';
 import { RenderedBox } from './rendered-box';
@@ -19,14 +19,14 @@ type Side = -1 | 1;
 const boxes = new WeakMap<globalThis.Node, RawBox>();
 
 /** What the raw boxes of one view get from the contributions. */
-export interface Boxes {
+export interface RawBoxes {
   readonly view: VisualViewContext;
   /** Draw boxes instead of their code; the first that `renders` a box draws it. */
-  readonly renderers: readonly BoxRenderer[];
+  readonly renderers: readonly RawBoxRenderer[];
   /** Extensions of every box's code editor. */
   readonly codeExtensions: readonly CodeExtension[];
   /** Buttons on the boxes they apply to. */
-  readonly actions: readonly BoxAction[];
+  readonly actions: readonly RawBoxAction[];
   /** What the specs ask the view for, by node type name (a box's title and tools). */
   readonly views: ReadonlyMap<string, NonNullable<TypstNodeSpec['view']>>;
 }
@@ -72,7 +72,7 @@ class RawBox implements NodeView {
   private readonly label: HTMLElement | null;
   private readonly code: CodeView;
   private readonly rendered: RenderedBox | null;
-  private readonly tools: BoxTools | null;
+  private readonly tools: RawBoxTools | null;
   /** The contributed action buttons that apply to the box (with its tools, else above the code). */
   private readonly actionBar: BoxActionBar | null;
   /** Set while mirroring `src` into the box, so that change is not sent back. */
@@ -83,7 +83,7 @@ class RawBox implements NodeView {
     private node: Node,
     private readonly getPos: () => number | undefined,
     decorations: readonly Decoration[],
-    { editor, boxes: { view, renderers, codeExtensions, actions, views } }: { editor: Editor; boxes: Boxes },
+    { editor, boxes: { view, renderers, codeExtensions, actions, views } }: { editor: Editor; boxes: RawBoxes },
   ) {
     this.editor = editor;
     const inline = node.isInline;
@@ -176,13 +176,13 @@ class RawBox implements NodeView {
   }
 
   /** The picture `renderer` draws in place of the code; clicking it selects a box with tools, else edits the code. */
-  private createRendered(code: HTMLElement, renderer: BoxRenderer): RenderedBox {
+  private createRendered(code: HTMLElement, renderer: RawBoxRenderer): RenderedBox {
     const activate = () => (this.spec?.tools ? this.select() : this.focus(-1));
     return new RenderedBox({ dom: this.dom, code, source: () => this.source(), activate }, renderer);
   }
 
   /** What the box's tools get: the box, its picture (if rendered), the editor and view, how to edit the code. */
-  private toolsHost(code: HTMLElement, view: VisualViewContext): BoxToolsHost {
+  private toolsHost(code: HTMLElement, view: VisualViewContext): RawBoxToolsHost {
     const picture = this.rendered?.picture ?? null;
     const actions = this.actionBar?.element ?? this.dom.ownerDocument.createElement('span');
     return { dom: this.dom, code, picture, editor: this.editor, view, getPos: this.getPos, editCode: () => this.focus(-1), actions };
@@ -272,7 +272,7 @@ class RawBox implements NodeView {
 }
 
 /** The node views of raw boxes in `editor`, with what `boxes` contribute to them. */
-export function rawBoxViews(editor: Editor, boxes: Boxes): NodeViewConstructor {
+export function rawBoxViews(editor: Editor, boxes: RawBoxes): NodeViewConstructor {
   return (node, _view, getPos, decorations) => new RawBox(node, getPos, decorations, { editor, boxes });
 }
 

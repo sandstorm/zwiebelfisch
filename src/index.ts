@@ -36,7 +36,7 @@ export type {
   StatusBarPlacement,
   TextEditor,
   TextEditorSelectionChangeEvent,
-  Window,
+  WindowApi,
 } from './hosts/window/window';
 export type { Scm, SourceControl, SourceControlState } from './hosts/scm/scm';
 export type { DocumentLink, DocumentLinkProvider, Languages, TextDocument } from './hosts/languages/languages';
@@ -44,18 +44,18 @@ export type { ConfigurationChangeEvent, ConfigurationProperty, Settings, Workspa
 export type { PdfExportOption, PreviewContributions, PreviewToolbarItem, ToolbarPlacement } from './hosts/preview/preview';
 export type { SourceViewContext, SourceViewContributions } from './hosts/source-view/source-view';
 export type {
-  Action,
+  ToolbarAction,
   Anchor,
-  BoxAction,
+  RawBoxAction,
   BoxPicture,
-  BoxRenderer,
-  BoxRendererProvider,
-  BoxTools,
-  BoxToolsHost,
+  RawBoxRenderer,
+  RawBoxRendererProvider,
+  RawBoxTools,
+  RawBoxToolsHost,
   Gutter,
   GutterProvider,
-  Highlight,
-  HighlightProvider,
+  SourceHighlight,
+  SourceHighlightProvider,
   PriorityOptions,
   TextStyle,
   TextStyleProvider,
@@ -71,7 +71,7 @@ export { setBoxDecorations } from './hosts/visual-view/visual-view';
 export type {
   Around,
   BlockLabel,
-  Placed,
+  PlacedNode,
   TypstMarkConversion,
   TypstMarkSpec,
   TypstNodeConversion,

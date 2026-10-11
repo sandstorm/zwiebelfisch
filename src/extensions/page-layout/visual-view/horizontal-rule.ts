@@ -4,7 +4,7 @@ import type { SyntaxNode } from '@lezer/common';
 import { InputRule, Node } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
 import { callArguments, hasOnlyArguments, namedArgument, withHash } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type Action, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 import type { TypstParseContext } from '../../../hosts/projection/projection';
 
 declare module '@tiptap/core' {
@@ -97,4 +97,4 @@ function isFullWidthLine(p: TypstParseContext, call: SyntaxNode): boolean {
 const ICON = svg('<path d="M3 12h18"/>');
 
 /** "Horizontal rule" in the Insert menu. */
-export const INSERT_HORIZONTAL_RULE: Action = { label: 'Horizontal rule', icon: ICON, run: (c) => c.setHorizontalRule() };
+export const INSERT_HORIZONTAL_RULE: ToolbarAction = { label: 'Horizontal rule', icon: ICON, run: (c) => c.setHorizontalRule() };

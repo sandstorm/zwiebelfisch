@@ -1,12 +1,12 @@
 // What the source-control extension does in the workbench: commit to a source control, asking for the message.
 // See ../source-control.ts.
 import type { Scm, SourceControl } from '../../../hosts/scm/scm';
-import type { Window } from '../../../hosts/window/window';
+import type { WindowApi } from '../../../hosts/window/window';
 
 /** What committing needs of the extension API: the source controls, and the window to ask (and say it is busy). */
 export interface SourceControlUi {
   readonly scm: Pick<Scm, 'sourceControls'>;
-  readonly window: Pick<Window, 'showInputBox' | 'showQuickPick' | 'showInformationMessage'>;
+  readonly window: Pick<WindowApi, 'showInputBox' | 'showQuickPick' | 'showInformationMessage'>;
 }
 
 /** The tab bar's entry for the registered source controls: "Save to GitLab…" ("Saving to GitLab…" meanwhile). */

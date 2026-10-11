@@ -21,13 +21,13 @@ import { Preview, type PreviewContributions } from '../preview/preview';
 import { type Scm, ScmHost } from '../scm/scm';
 import { SourceViewHost, type SourceViewContributions } from '../source-view/source-view';
 import { VisualViewHost, type VisualViewContributions } from '../visual-view/visual-view';
-import { type EditorMode, type TextEditorSelectionChangeEvent, type Window, WindowHost } from '../window/window';
+import { type EditorMode, type TextEditorSelectionChangeEvent, type WindowApi, WindowHost } from '../window/window';
 import { type ConfigurationProperty, type Settings, type Workspace, WorkspaceHost } from '../workspace/workspace';
 import { ColorScheme } from './color-scheme/color-scheme';
 import { EditingViews } from './editing-views/editing-views';
 import { ExtensionHost } from './extension-host/extension-host';
 import { FileDrops } from './file-drops/file-drops';
-import { Layout } from './layout/layout';
+import { WorkbenchLayout } from './layout/workbench-layout';
 import { EditorTitleMenu } from './menus/editor-title-menu';
 import { Menus } from './menus/menus';
 import { StorageMemento } from './memento/memento';
@@ -80,7 +80,7 @@ export interface ExtensionContext {
   /** Commands by id and their key bindings (VS Code's `commands` namespace). */
   readonly commands: Commands;
   /** Messages, input box, quick pick, status bar items, custom editors, file decorations, the active editor (VS Code's `window`). */
-  readonly window: Window;
+  readonly window: WindowApi;
   /** The source controls (VS Code's `scm`). */
   readonly scm: Scm;
   /** The document links of Typst text (VS Code's `languages`). */
@@ -97,12 +97,10 @@ export interface ExtensionContext {
   readonly preview: PreviewContributions;
 }
 
-/** The widget's frame as extensions see it: which file is shown, and the places of the frame they can put things. */
+/** The widget's frame as extensions see it: showing files, and the places of the frame they can put things. */
 export interface Workbench {
   /** The document the widget lives in, to create elements for it. */
   readonly ownerDocument: Document;
-  /** The file shown in the editing area. */
-  readonly activeFile: ProjectPath;
   /** Who works in the widget, as the host said (`createTypstEditor({ user })`); undefined: anonymous. */
   readonly user: User | undefined;
   /**
@@ -112,8 +110,6 @@ export interface Workbench {
    * panel). `selection` reveals a range of a Typst file, in the Source tab with `mode`.
    */
   open(path: ProjectPath, options?: OpenOptions): void;
-  /** After a file was shown in the editing area (also when the same file is shown again). */
-  readonly onDidShowFile: Event<ProjectPath>;
 
   /**
    * Adds `css` where the widget renders (the page's `<head>`, or the shadow root of a `<typst-editor>`), after the
@@ -256,9 +252,10 @@ export class WorkbenchHost implements Workbench {
   #active: ProjectPath;
   /** The commands, for the widget's `executeCommand`. */
   readonly commands: CommandsHost;
-  readonly #layout: Layout;
+  readonly #layout: WorkbenchLayout;
   readonly #views: EditingViews;
-  readonly #window: WindowHost;
+  /** The window, for the widget's `activeFile`. */
+  readonly window: WindowHost;
   readonly #languages = new LanguagesHost();
   readonly #scm = new ScmHost();
   readonly #menus = new Menus();
@@ -277,7 +274,6 @@ export class WorkbenchHost implements Workbench {
   readonly #selectionChanged = new EventEmitter<TextEditorSelectionChangeEvent>();
   readonly #subscription: Disposable;
 
-  readonly onDidShowFile = this.#shown.event;
   readonly onDidDropFiles: Event<File[]>;
   readonly onDidChangeMenu = this.#menus.onDidChange;
 
@@ -295,7 +291,7 @@ export class WorkbenchHost implements Workbench {
     this.#scheme = new ColorScheme(host);
     this.#applyTheme();
     const doc = host.ownerDocument;
-    this.#layout = new Layout(host, StorageMemento.of(doc, 'sessionStorage', `typst-editor:${project.main}:workbench:`));
+    this.#layout = new WorkbenchLayout(host, StorageMemento.of(doc, 'sessionStorage', `typst-editor:${project.main}:workbench:`));
     this.commands = new CommandsHost(host);
     this.#drops = new FileDrops(host);
     this.onDidDropFiles = this.#drops.onDidDrop;
@@ -305,17 +301,18 @@ export class WorkbenchHost implements Workbench {
       executeCommand: (command) => this.commands.executeCommand(command),
     });
     this.#views.addTabActions(this.#editorTitle.element);
-    this.#window = new WindowHost({
+    this.window = new WindowHost({
       exists: (path) => project.has(path),
       host,
-      statusBar: this.#layout.statusBar,
-      editingArea: this.#layout.editor,
+      statusBar: this.#layout.statusBar, editingArea: this.#layout.editor,
+      activeFile: () => this.#active,
+      onDidChangeActiveFile: this.#shown.event,
       activeTextEditor: () => this.#views.activeTextEditor,
       onDidChangeTextEditorSelection: this.#selectionChanged.event,
     });
     this.#preview = new Preview(this.#layout.preview);
     // the hosts' CSS after the tokens and the frame, before the extensions'
-    const hosts = [this.#window, this.#languages, this.#preview, this.#sourceViews, this.#visualView];
+    const hosts = [this.window, this.#languages, this.#preview, this.#sourceViews, this.#visualView];
     this.#ownStyles = Disposable.from(frameStyles, ...hosts.map((part) => this.#styleSheets.add(part.styleSheet)));
     this.#subscription = project.onDidChangeFile((change) => this.#changed(change));
     this.#showDocumentLinks();
@@ -326,7 +323,7 @@ export class WorkbenchHost implements Workbench {
       {
         project,
         commands: this.commands,
-        window: this.#window,
+        window: this.window,
         scm: this.#scm,
         languages: this.#languages,
         workspace: this.#workspace,
@@ -358,10 +355,6 @@ export class WorkbenchHost implements Workbench {
     return this.host.ownerDocument;
   }
 
-  get activeFile(): ProjectPath {
-    return this.#active;
-  }
-
   get user(): User | undefined {
     return this.options.user;
   }
@@ -380,7 +373,7 @@ export class WorkbenchHost implements Workbench {
     const changed = path !== this.#active;
     this.#active = path;
     const document = this.project.document(path);
-    this.#window.showCustomEditor(document ? null : { path, content: this.project.content(path)! }, options.viewType);
+    this.window.showCustomEditor(document ? null : { path, content: this.project.content(path)! }, options.viewType);
     this.#views.show(document ?? null);
     if (document && options.selection) this.#views.reveal(options.selection, options.mode);
     this.#shown.fire(path);
@@ -424,7 +417,7 @@ export class WorkbenchHost implements Workbench {
     this.#subscription.dispose();
     this.#extensions.dispose();
     this.#views.dispose();
-    this.#window.dispose();
+    this.window.dispose();
     this.#scm.dispose();
     this.#editorTitle.dispose();
     this.#menus.dispose();

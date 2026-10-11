@@ -1,6 +1,6 @@
 = Built-in extensions <architecture-built-in-extensions>
 
-`src/extensions/<name>/`. No host has built-in contributions. `createTypstEditor` activates the list below in this order (`builtinExtensions()` in `src/typst-editor/typst-editor.ts`). A host changes the list with `extensions: (builtins) => […]`.
+`src/extensions/<name>/`. No host has built-in contributions. `createTypstEditor` activates the list below in this order (`builtinExtensions()` in `src/typst-editor/typst-editor.ts`). A host changes the list with `extensions: (builtinExtensions) => […]`.
 
 == Shape of an extension <architecture-built-in-extensions-shape>
 
@@ -40,7 +40,7 @@ extensions/<name>/
   [`alignment`], [`#align(..)[..]`, `#par(justify: ..)[..]`, the Align menu], [nodes, toolbar],
   [`comments`], [margin notes in the text and a notes gutter; `comments.addComment` (Ctrl+Alt+M, ⌘⌥M on Mac); PDF option `comments.include`], [node, mark, gutter, command, PDF option],
   [`labels`], [`LabelIndex`; reference chips, label tags, the `@` list, "Add label"], [nodes, toolbar],
-  [`styles`], [`StyleIndex` of the project's `/// @style` declarations; styled text; "New style…"], [node, mark, text style provider],
+  [`styles`], [`TypstStyleIndex` of the project's `/// @style` declarations; styled text; "New style…"], [node, mark, text style provider],
   [`previewSync`], [preview follows the cursor; a click selects the source, its outline goes with the next edit or selection move; setting `previewSync.followCursor`], [preview toolbar, `reveal`, `onDidClickPage`, `clearClickHighlight`],
   [`previewControls`], [zoom, page number], [preview toolbar],
   [`pdfExport`], [`pdfExport.export` → Blob; "Download PDF" with the options popover; setting `pdfExport.download`], [command, preview toolbar],

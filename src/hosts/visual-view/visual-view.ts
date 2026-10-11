@@ -10,10 +10,10 @@ import type { Decoration } from '@tiptap/pm/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
-import { attachGrammar, onDidChangeGrammar, posToSource, print, project, sourceToPos, syncDoc, type DocumentNodeSpec, type TypstMarkSpec } from '../projection/projection';
+import { attachGrammar, onDidChangeGrammar, posToSource, serializeToTypst, parseTypst, sourceToPos, applyTypstChanges, type DocumentNodeSpec, type TypstMarkSpec } from '../projection/projection';
 import { highlights, setHighlights } from './highlights';
 import { editorExtensions, nodeViewSpecs } from './nodes/node-views';
-import type { Boxes } from './nodes/raw-box';
+import type { RawBoxes } from './nodes/raw-box';
 import { Toolbar } from './toolbar/toolbar';
 import proseMirrorCss from './prosemirror.css?inline';
 import css from './visual-view.css?inline';
@@ -74,7 +74,7 @@ export class VisualView {
     this.editor.view.updateState(
       EditorState.create({
         schema,
-        doc: project(document.text, schema),
+        doc: parseTypst(document.text, schema),
         plugins: [...this.editor.state.plugins, ...this.gutters.flatMap((gutter) => (gutter.plugin ? [gutter.plugin] : []))],
       }),
     );
@@ -124,24 +124,24 @@ export class VisualView {
   }
 
   /** Replaces the highlights of `layer` (source ranges); they follow edits until set again. */
-  private setHighlights(layer: string, ranges: readonly Highlight[]): void {
+  private setHighlights(layer: string, ranges: readonly SourceHighlight[]): void {
     this.editor.view.dispatch(setHighlights(this.editor.state.tr, layer, ranges));
   }
 
   private afterTransaction(tr: Transaction): void {
     if (!tr.docChanged || tr.getMeta(FROM_DOCUMENT)) return;
-    this.document.setText(print(this.editor.state.doc), this);
+    this.document.setText(serializeToTypst(this.editor.state.doc), this);
   }
 
   private syncFromDocument(): void {
     const { state } = this.editor;
-    const tr = syncDoc(state.tr, project(this.document.text, state.schema));
+    const tr = applyTypstChanges(state.tr, parseTypst(this.document.text, state.schema));
     if (tr.docChanged) this.editor.view.dispatch(tr.setMeta(FROM_DOCUMENT, true).setMeta('addToHistory', false));
   }
 }
 
 /** What the raw boxes of `view` get from the contributions. */
-function boxes(view: VisualViewContext, contributed: Contributed, views: Boxes['views']): Boxes {
+function boxes(view: VisualViewContext, contributed: Contributed, views: RawBoxes['views']): RawBoxes {
   return {
     view,
     renderers: contributed.boxRenderers.map((provider) => provider(view)).filter((renderer) => renderer !== null),
@@ -166,7 +166,7 @@ export interface TypstNodeSpec extends DocumentNodeSpec {
     /** For `box: 'code'`: a heading above the code saying what the box shows (an outline: "Table of contents"); `className` goes on the box. */
     readonly title?: { readonly className: string; text(src: string): string };
     /** For `box: 'code'`: tools on every box of this type (an image's resize handles and toolbar). */
-    tools?(host: BoxToolsHost, node: Node): BoxTools;
+    tools?(host: RawBoxToolsHost, node: Node): RawBoxTools;
     /** Keeps its DOM (and what is inside) while a new version renders the same, as after every outside edit its `src` changes. */
     readonly keepsDom?: boolean;
     /**
@@ -193,15 +193,15 @@ export type GutterProvider = (view: VisualViewContext, body: HTMLElement) => Gut
  * are set on the marked DOM (e.g. a style with the user's color). Views follow
  * edits with their highlights until the owner sets them again.
  */
-export interface Highlight extends SourceRange {
+export interface SourceHighlight extends SourceRange {
   className: string;
   attributes?: Record<string, string>;
 }
 
 /** Styled source ranges of each document (diagnostics), kept up to date in its Visual views. */
-export interface HighlightProvider {
+export interface SourceHighlightProvider {
   /** The highlights of `document` now (source offsets in its current text). */
-  provideHighlights(document: TypstDocument): readonly Highlight[];
+  provideHighlights(document: TypstDocument): readonly SourceHighlight[];
   /** Fires with a document whose highlights changed. */
   readonly onDidChangeHighlights: Event<TypstDocument>;
 }
@@ -248,10 +248,10 @@ export interface Contributed {
   readonly toolbarGroups: readonly ToolbarGroup[];
   readonly toolbarItems: readonly ToolbarItem[];
   readonly gutters: readonly GutterProvider[];
-  readonly highlights: readonly { readonly layer: string; readonly provider: HighlightProvider }[];
-  readonly boxRenderers: readonly BoxRendererProvider[];
+  readonly highlights: readonly { readonly layer: string; readonly provider: SourceHighlightProvider }[];
+  readonly boxRenderers: readonly RawBoxRendererProvider[];
   readonly rawBoxCodeMirrorExtensions: readonly ((view: VisualViewContext) => Extension)[];
-  readonly boxActions: readonly BoxAction[];
+  readonly boxActions: readonly RawBoxAction[];
   readonly textStyles: readonly TextStyleProvider[];
 }
 
@@ -297,20 +297,20 @@ export interface VisualViewContributions {
    * Highlights from `provider` in every view, as layer `layer` (one per provider): set when the view is created and
    * again whenever the provider reports a change of its document; they follow edits in between.
    */
-  registerHighlights(layer: string, provider: HighlightProvider): Disposable;
+  registerHighlights(layer: string, provider: SourceHighlightProvider): Disposable;
   /**
    * What raw boxes of each view show instead of their code while not edited. The renderers are asked by `priority`
    * (default 100, higher first; equal: registration order), and the first that `renders` a box draws it: the image
    * renderer (110) draws image boxes, compiled snippets (100) the rest.
    */
-  registerBoxRenderer(provider: BoxRendererProvider, options?: PriorityOptions): Disposable;
+  registerBoxRenderer(provider: RawBoxRendererProvider, options?: PriorityOptions): Disposable;
   /** CodeMirror extensions for the code of every raw box of each view (e.g. links on file paths). */
   registerRawBoxCodeMirrorExtension(provider: (view: VisualViewContext) => Extension): Disposable;
   /**
    * A button on every raw box `action.when` holds for (any box: a contribution need not own the box's node type),
    * in registration order: with the box's tools (an image box's toolbar), else above its code.
    */
-  registerBoxAction(action: BoxAction): Disposable;
+  registerBoxAction(action: RawBoxAction): Disposable;
 }
 
 /**
@@ -318,7 +318,7 @@ export interface VisualViewContributions {
  * The workbench host has one; tests make their own (`from`).
  */
 export class VisualViewHost implements VisualViewContributions {
-  private readonly boxRenderers: Ranked<BoxRendererProvider>[] = [];
+  private readonly boxRenderers: Ranked<RawBoxRendererProvider>[] = [];
   private readonly lists = {
     nodes: [] as TypstNodeSpec[],
     marks: [] as TypstMarkSpec[],
@@ -326,9 +326,9 @@ export class VisualViewHost implements VisualViewContributions {
     toolbarGroups: [] as ToolbarGroup[],
     toolbarItems: [] as ToolbarItem[],
     gutters: [] as GutterProvider[],
-    highlights: [] as { layer: string; provider: HighlightProvider }[],
+    highlights: [] as { layer: string; provider: SourceHighlightProvider }[],
     rawBoxCodeMirrorExtensions: [] as ((view: VisualViewContext) => Extension)[],
-    boxActions: [] as BoxAction[],
+    boxActions: [] as RawBoxAction[],
     textStyles: [] as TextStyleProvider[],
   };
   /** The CSS of the views (ProseMirror's own first), for the workbench to put where the widget renders. */
@@ -366,11 +366,11 @@ export class VisualViewHost implements VisualViewContributions {
     return this.add(this.lists.gutters, provider);
   }
 
-  registerHighlights(layer: string, provider: HighlightProvider): Disposable {
+  registerHighlights(layer: string, provider: SourceHighlightProvider): Disposable {
     return this.add(this.lists.highlights, { layer, provider });
   }
 
-  registerBoxRenderer(provider: BoxRendererProvider, options: PriorityOptions = {}): Disposable {
+  registerBoxRenderer(provider: RawBoxRendererProvider, options: PriorityOptions = {}): Disposable {
     return this.add(this.boxRenderers, { value: provider, priority: options.priority ?? DEFAULT_PRIORITY });
   }
 
@@ -378,7 +378,7 @@ export class VisualViewHost implements VisualViewContributions {
     return this.add(this.lists.rawBoxCodeMirrorExtensions, provider);
   }
 
-  registerBoxAction(action: BoxAction): Disposable {
+  registerBoxAction(action: RawBoxAction): Disposable {
     return this.add(this.lists.boxActions, action);
   }
 
@@ -451,7 +451,7 @@ export interface BoxPicture {
  * What raw boxes show instead of their code while they are not being edited.
  * The first renderer that `renders` a box draws it; without one, it shows code.
  */
-export interface BoxRenderer {
+export interface RawBoxRenderer {
   /** Whether it draws boxes of `node`'s kind. */
   renders(node: Node): boolean;
   /** The picture of the box `node` whose source starts at `from`; null: show the code. */
@@ -465,7 +465,7 @@ export interface BoxRenderer {
 }
 
 /** The renderer of one view's boxes (null: none for this view). */
-export type BoxRendererProvider = (view: VisualViewContext) => BoxRenderer | null;
+export type RawBoxRendererProvider = (view: VisualViewContext) => RawBoxRenderer | null;
 
 /**
  * The decorations the Visual view gives a raw box's node (e.g. one marking another user's caret inside the box),
@@ -475,7 +475,7 @@ export type BoxRendererProvider = (view: VisualViewContext) => BoxRenderer | nul
 export const setBoxDecorations = StateEffect.define<readonly Decoration[]>();
 
 /** The box tools of a code box belong to. */
-export interface BoxToolsHost {
+export interface RawBoxToolsHost {
   /** The box's element. */
   readonly dom: HTMLElement;
   /** The element holding the code editor; tools go in before it. */
@@ -497,7 +497,7 @@ export interface BoxToolsHost {
 }
 
 /** Tools on a code box (an image's resize handles and toolbar); a click on the picture then selects the box. */
-export interface BoxTools {
+export interface RawBoxTools {
   /** The box's node changed. */
   update(node: Node): void;
   /** The box was selected. */
@@ -509,7 +509,7 @@ export interface BoxTools {
  * A button any contribution adds to the raw boxes it applies to (an image box of a diagram: "Edit diagram"), shown
  * with the box's tools (an image box's toolbar), or above the code of a box without tools.
  */
-export interface BoxAction {
+export interface RawBoxAction {
   /** The button's text. */
   readonly title: string;
   /** Whether the box of `node` (its Typst: `node.attrs.src`) in `view` offers it; asked whenever the node changes. Default: every box. */
@@ -521,7 +521,7 @@ export interface BoxAction {
 // The toolbar: buttons (actions), controls, groups, menus and floating bars.
 
 /** A toolbar button: how it looks, what it does, and when it shows as on. */
-export interface Action {
+export interface ToolbarAction {
   label: string;
   /** Shortcut shown in the tooltip; `Mod` becomes ⌘ or Ctrl. */
   shortcut?: string;
@@ -568,7 +568,7 @@ export type ToolbarGroup =
       readonly id: string;
       readonly order: number;
       readonly label: string;
-      /** Where the bar floats (null: hidden); `held` when an item asks to show it (see `Action.showsBar`). */
+      /** Where the bar floats (null: hidden); `held` when an item asks to show it (see `ToolbarAction.showsBar`). */
       anchor(editor: Editor, held: boolean): Anchor;
     };
 
@@ -620,10 +620,10 @@ export interface ToolbarContext extends VisualViewContext {
 
 /** A button (or control) in toolbar group `group`, sorted by `order` (then registration order). */
 export type ToolbarItem =
-  | { readonly group: string; readonly order?: number; readonly action: Action }
+  | { readonly group: string; readonly order?: number; readonly action: ToolbarAction }
   | {
       readonly group: string;
       readonly order?: number;
       /** The item for one view, when it keeps state there (a popover) or is a control of its own. */
-      create(toolbar: ToolbarContext): Action | ToolbarControl;
+      create(toolbar: ToolbarContext): ToolbarAction | ToolbarControl;
     };

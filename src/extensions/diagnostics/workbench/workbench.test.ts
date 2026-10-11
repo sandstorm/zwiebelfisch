@@ -2,14 +2,14 @@
 // Tests for workbench.ts.
 import { describe, expect, it, vi } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
-import type { Diagnostic } from '../../../core/typst-engine/typst-engine';
+import type { TypstDiagnostic } from '../../../core/typst-engine/typst-engine';
 import { summarizeDiagnostics } from '../model/diagnostics-summary';
 import { DiagnosticsStatus } from './workbench';
 import { SourceOffset } from '../../../core/typst-document/typst-document';
 
 const MAIN = ProjectPath.of('/main.typ');
 
-function diag(overrides: Partial<Diagnostic>): Diagnostic {
+function diag(overrides: Partial<TypstDiagnostic>): TypstDiagnostic {
   return { severity: 'error', message: 'boom', hints: [], path: MAIN, from: SourceOffset.of(0), to: SourceOffset.of(1), ...overrides };
 }
 

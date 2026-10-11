@@ -7,7 +7,7 @@ import { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-docum
 import { Node as TiptapNode, type Editor } from '@tiptap/core';
 import { children, withHash } from '../../core/typst-syntax/typst-syntax';
 import { starterKitPart, type TypstMarkSpec } from '../projection/projection';
-import { setBoxDecorations, VisualView, VisualViewHost, type Highlight, type TypstNodeSpec, type VisualViewContext, type VisualViewContribution } from './visual-view';
+import { setBoxDecorations, VisualView, VisualViewHost, type SourceHighlight, type TypstNodeSpec, type VisualViewContext, type VisualViewContribution } from './visual-view';
 
 /** A test-local construct beyond the host's minimum: `*strong*` as a bold mark (hidden syntax around visible text). */
 const STRONG: TypstMarkSpec = {
@@ -75,7 +75,7 @@ describe('VisualView', () => {
 describe('VisualViewHost.registerHighlights', () => {
   it('sets a provider\'s highlights when a view is made and again when they change for its document only', () => {
     const changed = new EventEmitter<TypstDocument>();
-    const ranges = new Map<TypstDocument, Highlight[]>();
+    const ranges = new Map<TypstDocument, SourceHighlight[]>();
     const contributions = new VisualViewHost();
     contributions.registerHighlights('test', { provideHighlights: (document) => ranges.get(document) ?? [], onDidChangeHighlights: changed.event });
     const doc = new TypstDocument('Hello world\n');
@@ -111,7 +111,7 @@ describe('VisualViewHost.registerHighlights', () => {
 });
 
 /** A view of `text` (with `strong`) and a highlight provider whose highlights start as `initial`; `highlights` sets new ones. */
-function withHighlights(text: string, initial: Highlight[]) {
+function withHighlights(text: string, initial: SourceHighlight[]) {
   let current = initial;
   const changed = new EventEmitter<TypstDocument>();
   const contributions = VisualViewHost.from([strong]);
@@ -119,7 +119,7 @@ function withHighlights(text: string, initial: Highlight[]) {
   const doc = new TypstDocument(text);
   const parent = document.body.appendChild(document.createElement('div'));
   const view = new VisualView(parent, doc, contributions);
-  const highlights = (next: Highlight[]) => {
+  const highlights = (next: SourceHighlight[]) => {
     current = next;
     changed.fire(doc);
   };

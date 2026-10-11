@@ -3,7 +3,7 @@
 // stub that answers what `engine.answer` returns).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Preview, type PageClick, type PdfExportOption } from './preview';
-import type { Request } from './worker/protocol';
+import type { EngineRequest } from './worker/protocol';
 
 const engine = vi.hoisted(() => ({ answer: (_request: { type: string }): object | null => null }));
 
@@ -12,7 +12,7 @@ vi.mock('./worker/worker', async (importOriginal) => ({
   startEngineWorker: () => {
     const worker = {
       onmessage: null as ((event: { data: unknown }) => void) | null,
-      postMessage(request: Request) {
+      postMessage(request: EngineRequest) {
         const body = engine.answer(request);
         if (body) queueMicrotask(() => worker.onmessage?.({ data: { ...body, id: request.id } }));
       },

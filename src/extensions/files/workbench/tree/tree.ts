@@ -4,7 +4,7 @@ import { type Memento, PROJECT_PATH_TYPE } from '../../../../hosts/workbench/wor
 import type { FileDecoration } from '../../../../hosts/window/window';
 import { textColorOn } from '../../../../core/color-scheme/color-scheme';
 import { icon, markupIcon } from '../icons/icons';
-import { ancestorsOf, buildTree, filesUnder, type Folder, folderOf, type Move, navigate, type Row, visibleRows } from '../../model/tree-model';
+import { ancestorsOf, buildTree, filesUnder, type Folder, folderOf, type TreeKeyMove, navigate, type Row, visibleRows } from '../../model/tree-model';
 
 export interface FileTreeOptions {
   /** A file was chosen (click, Enter). */
@@ -174,7 +174,7 @@ export class FileTree {
     this.options.onContextMenu(path, { x: event.clientX, y: event.clientY });
   }
 
-  private move(move: Move | null): boolean {
+  private move(move: TreeKeyMove | null): boolean {
     if (!move) return false;
     if (move.kind === 'focus') this.focus(move.path);
     else if (move.kind === 'open') this.options.onOpen(move.path);

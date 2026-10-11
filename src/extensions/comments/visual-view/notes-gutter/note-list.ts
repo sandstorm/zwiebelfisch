@@ -4,7 +4,7 @@ import { NodeSelection, type Selection, type Transaction } from '@tiptap/pm/stat
 import type { Mappable } from '@tiptap/pm/transform';
 import type { SourceOffset } from '../../../../core/typst-document/typst-document';
 import { rangeNoteSyntax } from '../../model/margin-note-syntax';
-import { posToSource, print, sourceToPos } from '../../../../hosts/projection/projection';
+import { posToSource, serializeToTypst, sourceToPos } from '../../../../hosts/projection/projection';
 
 /**
  * The margin notes of a Visual-view document as a list, followed across
@@ -107,7 +107,7 @@ function noteAt(doc: PMNode, offset: SourceOffset): { pos: number; id?: unknown 
   const $pos = doc.resolve(pos);
   // notes ending at the same place are nested; the inner one, numbered later, closes first
   const ending = noteSpans($pos.parent, $pos.start()).filter((span) => span.to === pos).sort((a, b) => b.mark.attrs.id - a.mark.attrs.id);
-  const source = print(doc);
+  const source = serializeToTypst(doc);
   let cursor: number = posToSource(doc, pos, -1);
   for (const { mark } of ending) {
     const { close } = rangeNoteSyntax(mark.attrs.head, mark.attrs.note);

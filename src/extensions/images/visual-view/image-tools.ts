@@ -2,19 +2,19 @@
 import type { PathReference } from '../../../core/paths/paths';
 import type { Node } from '@tiptap/pm/model';
 import type { EditorState, Transaction } from '@tiptap/pm/state';
-import type { BoxTools, BoxToolsHost } from '../../../hosts/visual-view/visual-view';
-import type { Window } from '../../../hosts/window/window';
+import type { RawBoxTools, RawBoxToolsHost } from '../../../hosts/visual-view/visual-view';
+import type { WindowApi } from '../../../hosts/window/window';
 import { imageWidthCss } from '../model/image-call';
 import { type DragStart, resizedPercent } from '../model/resize';
 import { imageInfo, resizeImage, setImageAlt } from './image-edits';
 import { imagePath } from './image-syntax';
 
 /** The image box the tools belong to (its picture moves into the resize frame). */
-export interface ImageToolsHost extends BoxToolsHost {
+export interface ImageToolsHost extends RawBoxToolsHost {
   /** The image's path (in the call `src`) in the heading, e.g. as a link to the file (default: the text). */
   pathLabel?: ((path: PathReference, src: string) => globalThis.Node) | null;
   /** Where "Alt text" asks for the text (the window's input box; default: no "Alt text"). */
-  prompts?: Pick<Window, 'showInputBox'>;
+  prompts?: Pick<WindowApi, 'showInputBox'>;
 }
 
 /** Width presets offered as buttons (keyboard-friendly resizing). */
@@ -33,7 +33,7 @@ const HANDLES = ['nw', 'ne', 'sw', 'se', 'w', 'e'];
  * rewrites only the argument concerned. A drag changes the width live in the
  * view and writes `width: NN%` once, on release.
  */
-export class ImageTools implements BoxTools {
+export class ImageTools implements RawBoxTools {
   private readonly label: HTMLElement;
   private readonly frame: HTMLElement | null = null;
   private readonly badge: HTMLElement | null = null;
@@ -129,7 +129,7 @@ export class ImageTools implements BoxTools {
   }
 
   /** Asks for the alt text (an empty one removes it) and sets it. */
-  private async askAlt(prompts: Pick<Window, 'showInputBox'>): Promise<void> {
+  private async askAlt(prompts: Pick<WindowApi, 'showInputBox'>): Promise<void> {
     const pos = this.host.getPos();
     const alt = (pos === undefined ? null : imageInfo(this.host.editor.state, pos)?.alt) ?? '';
     const text = await prompts.showInputBox({

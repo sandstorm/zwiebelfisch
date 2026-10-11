@@ -1,6 +1,6 @@
 // Tests for project-files.ts.
 import { describe, expect, it, vi } from 'vitest';
-import type { Engine } from '../../../core/typst-engine/typst-engine';
+import type { TypstEngine } from '../../../core/typst-engine/typst-engine';
 import { FileSender, FileReceiver } from './project-files';
 
 const logo = new Uint8Array([1, 2, 3]);
@@ -25,7 +25,7 @@ describe('FileSender', () => {
 describe('FileReceiver', () => {
   const nothing = async () => {};
   const fakeEngine = () =>
-    ({ setSource: vi.fn(), setBinary: vi.fn(), remove: vi.fn() }) as unknown as Engine & {
+    ({ setSource: vi.fn(), setBinary: vi.fn(), remove: vi.fn() }) as unknown as TypstEngine & {
       setSource: ReturnType<typeof vi.fn>;
       setBinary: ReturnType<typeof vi.fn>;
       remove: ReturnType<typeof vi.fn>;

@@ -9,7 +9,7 @@ import { DIAGRAM_EXTENSION } from '../model/model';
  * shown file's), ending in `.drawio.png` (`window.showSaveDialog`); creates the empty diagram through
  * `workspace.applyEdit` and opens it. A refusal is an error message.
  */
-export async function newDiagram({ window, workspace, workbench }: ExtensionContext, resource = workbench.activeFile): Promise<void> {
+export async function newDiagram({ window, workspace, workbench }: ExtensionContext, resource = window.activeFile): Promise<void> {
   const target = await window.showSaveDialog({ title: 'New diagram', defaultUri: resource, filters: { Diagrams: [DIAGRAM_EXTENSION.slice(1)] } });
   if (!target) return;
   const problem = await workspace.applyEdit({ kind: 'create', path: target, content: emptyDiagram() });

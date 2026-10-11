@@ -6,11 +6,11 @@ import { Node } from '@tiptap/core';
 import { Disposable } from '../../../core/disposable/disposable';
 import { PathReference, type ProjectPath } from '../../../core/paths/paths';
 import type { DocumentLink } from '../../../hosts/languages/languages';
-import type { QuickPickItem, Window } from '../../../hosts/window/window';
+import type { QuickPickItem, WindowApi } from '../../../hosts/window/window';
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type Action, type BoxRenderer, type ToolbarContext, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
+import { svg, type ToolbarAction, type RawBoxRenderer, type ToolbarContext, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
 import { imageFileDrops, insertImages } from './image-insertion';
 import { imagePathLink } from './image-path-link';
 import { imagePath } from './image-syntax';
@@ -39,7 +39,7 @@ export function imagesVisualView(options: ImagesOptions): VisualViewContribution
 }
 
 /** Where images ask (an image, a path, alt text) and tell why an upload was refused: the window's. */
-export type ImagePrompts = Pick<Window, 'showQuickPick' | 'showInputBox' | 'showErrorMessage'>;
+export type ImagePrompts = Pick<WindowApi, 'showQuickPick' | 'showInputBox' | 'showErrorMessage'>;
 
 /** Where image files are shown from: the host's project files, as URLs. */
 export interface ImageUrls {
@@ -127,7 +127,7 @@ function imageSpec(options: ImagesOptions): TypstNodeSpec {
 }
 
 /** Image boxes show their file (following path edits at once). */
-function imageRenderer(urls: ImageUrls): BoxRenderer {
+function imageRenderer(urls: ImageUrls): RawBoxRenderer {
   return {
     renders: (node) => node.type.name === 'image',
     render: async (node) => {
@@ -154,7 +154,7 @@ const ENTER_PATH: ImageChoice = { label: 'Enter a path…' };
  * files dropped on or pasted into the text are uploaded and inserted too, and an image dragged from the file panel is
  * inserted where it is dropped; refused uploads are error messages.
  */
-function insertImage(toolbar: ToolbarContext, assets: ImageAssets, prompts: ImagePrompts): Action {
+function insertImage(toolbar: ToolbarContext, assets: ImageAssets, prompts: ImagePrompts): ToolbarAction {
   const { editor, root } = toolbar;
   const upload = async (files: File[], near?: number) => {
     const { paths, errors } = await uploadImages(assets, files);

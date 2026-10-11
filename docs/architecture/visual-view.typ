@@ -12,8 +12,8 @@ new VisualView(parent, document, contributions: VisualViewHost)
 .dispose()
 ```
 
-- *Write-back:* after every transaction that changed the document, `document.setText(print(doc), this)`: one minimal change.
-- *Read-back:* a change with another origin is projected again and applied with `syncDoc`, outside the undo history.
+- *Write-back:* after every transaction that changed the document, `document.setText(serializeToTypst(doc), this)`: one minimal change.
+- *Read-back:* a change with another origin is projected again and applied with `applyTypstChanges`, outside the undo history.
 - *Mechanism kept:* paragraphs, text, raw boxes, the toolbar's frame (undo/redo, *Insert* menu, *Selection* bar), highlights. Every other construct and feature is a contribution.
 
 == VisualViewHost <architecture-visual-view-host>
@@ -43,6 +43,6 @@ Typst no spec models, and nodes whose spec sets `view.box: 'code'` (images, outl
 
 - Laid out from contributed groups (a button group, a menu, a bar floating in the text) sorted by `order`, and items by `group` + `order`. Groups without items are left out.
 - The host's own: `history` (undo/redo, 10), `text-style` (20, once a provider exists), the `insert` menu (50), the floating `selection` bar.
-- Buttons are `Action`s: a Tiptap chain command, dry-run after every transaction to disable the button. They never take the focus from the text.
+- Buttons are `ToolbarAction`s: a Tiptap chain command, dry-run after every transaction to disable the button. They never take the focus from the text.
 
 Writing a construct: @extensions-visual-view-constructs.

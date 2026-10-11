@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
-// Tests for layout.ts.
+// Tests for workbench-layout.ts (WorkbenchLayout).
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { StorageMemento } from '../memento/memento';
-import { Layout } from './layout';
+import { WorkbenchLayout } from './workbench-layout';
 
 let resize: (() => void) | null = null;
 
@@ -19,7 +19,7 @@ function setup({ observe = false, key = `test-${Math.random()}` } = {}) {
   }
   const host = document.createElement('div');
   document.body.append(host);
-  const layout = new Layout(host, StorageMemento.of(document, 'sessionStorage', `${key}:`));
+  const layout = new WorkbenchLayout(host, StorageMemento.of(document, 'sessionStorage', `${key}:`));
   const sidePanel = layout.addPanel('files', { label: 'Files', icon: document.createElement('span') });
   const body = sidePanel.body;
   body.textContent = 'tree';
@@ -40,7 +40,7 @@ afterEach(() => {
   sessionStorage.clear();
 });
 
-describe('Layout', () => {
+describe('WorkbenchLayout', () => {
   it('puts the side, the editing area, the preview and the status bar into the host', () => {
     const { host, layout } = setup();
     expect([...host.children].map((c) => c.className)).toEqual(['typst-editor__side', 'typst-editor__left', 'typst-editor__right', 'typst-editor__status-bar']);

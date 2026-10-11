@@ -3,7 +3,7 @@
 import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
 import { callArguments, children, namedArgument, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type Action, type ToolbarGroup, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import { svg, type ToolbarAction, type ToolbarGroup, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 import type { TypstSerializeState, TypstParseContext } from '../../../hosts/projection/projection';
 import { alignArgs, type TextAlignment } from '../model/alignment-syntax';
 import { TextAlign, textAlignAt } from './text-align';
@@ -90,7 +90,7 @@ const ICONS = {
 };
 
 /** Radio-like: the button of the selection's (effective) alignment is pressed. */
-const alignAction = (label: string, alignment: TextAlignment, shortcut: string, icon: string): Action => ({
+const alignAction = (label: string, alignment: TextAlignment, shortcut: string, icon: string): ToolbarAction => ({
   label,
   shortcut,
   icon,
@@ -99,7 +99,7 @@ const alignAction = (label: string, alignment: TextAlignment, shortcut: string, 
 });
 
 /** The Align menu's buttons: left, center, right, justify. */
-export const ALIGNMENTS: Action[] = [
+export const ALIGNMENTS: ToolbarAction[] = [
   alignAction('Align left', 'left', 'Mod+Shift+L', ICONS.alignLeft),
   alignAction('Center', 'center', 'Mod+Shift+E', ICONS.alignCenter),
   alignAction('Align right', 'right', 'Mod+Shift+R', ICONS.alignRight),

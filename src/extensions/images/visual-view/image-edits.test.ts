@@ -4,9 +4,9 @@ import { EditorState, type Transaction } from '@tiptap/pm/state';
 import { minimalChange } from '../../../core/typst-document/typst-document';
 import { schema } from '../../../testing/testing';
 import { imageInfo, resizeImage, setImageAlt } from './image-edits';
-import { print, project } from '../../../hosts/projection/projection';
+import { serializeToTypst, parseTypst } from '../../../hosts/projection/projection';
 
-const state = (source: string) => EditorState.create({ doc: project(source, schema) });
+const state = (source: string) => EditorState.create({ doc: parseTypst(source, schema) });
 
 /** The position of the first image block. */
 function imagePos(s: EditorState): number {
@@ -23,7 +23,7 @@ function apply(source: string, edit: (s: EditorState, pos: number) => Transactio
   const tr = edit(before, imagePos(before));
   if (!tr) throw new Error('no edit');
   const after = before.apply(tr);
-  return { text: print(after.doc), after };
+  return { text: serializeToTypst(after.doc), after };
 }
 
 describe('image edits', () => {

@@ -3,7 +3,7 @@
 import type { Pt } from '../../../core/typst-engine/typst-engine';
 
 /** A picture of compiled Typst: standalone SVG markup and its size. */
-export interface Snippet {
+export interface RenderedSnippet {
   svg: string;
   width: Pt;
   height: Pt;
@@ -22,7 +22,7 @@ export function rendersInPlace(src: string): boolean {
 }
 
 /** A snippet at its own size (pt), or inline in the line of text around it (em, see `inlinePictureSize`), as CSS lengths. */
-export function snippetSize(snippet: Snippet, inline: boolean): { width: string; height: string; margin: string } {
+export function snippetSize(snippet: RenderedSnippet, inline: boolean): { width: string; height: string; margin: string } {
   const em = inline ? inlinePictureSize(snippet) : null;
   if (!em) return { width: `${snippet.width}pt`, height: '', margin: '' };
   return { width: '', height: `${em.height}em`, margin: `${em.margin}em` };
@@ -37,7 +37,7 @@ const TEXT_LINE_EM = 1.15;
  * vertical margins taking back the padding, so a one-line snippet takes one
  * line (1.15em) and does not make its line taller. Null without a text height.
  */
-export function inlinePictureSize({ height, textHeight, padding }: Pick<Snippet, 'height' | 'textHeight' | 'padding'>): { height: number; margin: number } | null {
+export function inlinePictureSize({ height, textHeight, padding }: Pick<RenderedSnippet, 'height' | 'textHeight' | 'padding'>): { height: number; margin: number } | null {
   if (!textHeight) return null;
   const emPerPt = TEXT_LINE_EM / textHeight;
   return { height: height * emPerPt, margin: -(padding ?? 0) * emPerPt };

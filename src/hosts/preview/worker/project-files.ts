@@ -1,6 +1,6 @@
 // FileSender / FileReceiver: the project's file map across the worker boundary, bytes sent only once. See worker.ts.
 import type { FileContent } from '../../../core/project/project';
-import type { Engine } from '../../../core/typst-engine/typst-engine';
+import type { TypstEngine } from '../../../core/typst-engine/typst-engine';
 
 /**
  * The file map of a compile request. `null` stands for the same bytes as in
@@ -39,7 +39,7 @@ export class FileReceiver {
   private texts = new Map<string, string>();
   private queue: Promise<unknown> = Promise.resolve();
 
-  constructor(private readonly engine: Engine) {}
+  constructor(private readonly engine: TypstEngine) {}
 
   /** Adds and updates the given files, removes those not given any more, then runs `task`. */
   update<T>(files: EncodedFiles, task: () => Promise<T>): Promise<T> {

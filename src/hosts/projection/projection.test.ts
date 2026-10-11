@@ -5,7 +5,7 @@ import type { Node } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 import { children, hasOnlyArguments, withHash } from '../../core/typst-syntax/typst-syntax';
-import { createSchema, posToSource, print, project as projectWith, sourceToPos, starterKitPart, type DocumentNodeSpec, type TypstMarkSpec } from './projection';
+import { createSchema, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos, starterKitPart, type DocumentNodeSpec, type TypstMarkSpec } from './projection';
 import { SourceOffset } from '../../core/typst-document/typst-document';
 
 /** `*x*` as a bold mark: hidden syntax around visible text. */
@@ -64,13 +64,13 @@ const SOURCES: Record<string, string> = {
 describe('projection framework', () => {
   describe('round-trips byte for byte', () => {
     for (const [name, source] of Object.entries(SOURCES)) {
-      it(`${name}, with the minimum schema only`, () => expect(print(projectWith(source, minimum))).toBe(source));
-      it(`${name}, with specs`, () => expect(print(projectWith(source, withSpecs))).toBe(source));
+      it(`${name}, with the minimum schema only`, () => expect(serializeToTypst(parseTypstWith(source, minimum))).toBe(source));
+      it(`${name}, with specs`, () => expect(serializeToTypst(parseTypstWith(source, withSpecs))).toBe(source));
     }
   });
 
   it("keeps what no spec models as raw blocks and raw inlines (the fallback)", () => {
-    const doc = projectWith('= Title\n\nSome *bold* text\n', minimum);
+    const doc = parseTypstWith('= Title\n\nSome *bold* text\n', minimum);
     expect(doc.child(0).type.name).toBe('rawBlock');
     expect(doc.child(1).type.name).toBe('paragraph');
     expect(doc.child(1).textContent).toBe('Some  text');
@@ -79,7 +79,7 @@ describe('projection framework', () => {
   });
 
   it("projects a spec's syntax and calls into its node and mark, with the label after the block", () => {
-    const doc = projectWith('Some *bold* text\n\n#divider() <d>\n', withSpecs);
+    const doc = parseTypstWith('Some *bold* text\n\n#divider() <d>\n', withSpecs);
     expect(doc.child(0).textContent).toBe('Some bold text');
     expect(doc.child(0).child(1).marks.map((m) => m.type.name)).toEqual(['bold']);
     expect(doc.child(1).type.name).toBe('divider');
@@ -88,16 +88,16 @@ describe('projection framework', () => {
 
   it("prints a mark added in the editor with its spec's syntax, changing only that block", () => {
     const source = '#set text(lang: "en")\n\nSales  were\n_good_.\n\nOther -- text\n';
-    const doc = edit(projectWith(source, withSpecs), (s) => {
+    const doc = edit(parseTypstWith(source, withSpecs), (s) => {
       const to = after(s.doc, 'Other');
       return s.tr.addMark(to - 'Other'.length, to, withSpecs.marks.bold.create());
     });
-    expect(print(doc)).toBe(source.replace('Other', '*Other*'));
+    expect(serializeToTypst(doc)).toBe(source.replace('Other', '*Other*'));
   });
 
   it('snaps hidden syntax to the next visible position', () => {
     const source = 'An *important* point';
-    const doc = projectWith(source, withSpecs);
+    const doc = parseTypstWith(source, withSpecs);
     const bold = after(doc, 'important') - 'important'.length;
     expect(sourceToPos(doc, SourceOffset.of(source.indexOf('*')))).toBe(bold);
     expect(posToSource(doc, bold)).toBe(source.indexOf('important'));

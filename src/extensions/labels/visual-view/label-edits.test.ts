@@ -6,7 +6,7 @@ import { find, schemaWith, TestPrompts } from '../../../testing/testing';
 import { Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import { LabelIndex } from '../model/label-index';
-import { print, project } from '../../../hosts/projection/projection';
+import { serializeToTypst, parseTypst } from '../../../hosts/projection/projection';
 import { insertReference, renameLabel, setLabel } from './label-edits';
 import { labelName } from '../model/reference-syntax';
 import { references } from './visual-view';
@@ -17,21 +17,21 @@ const results = readFileSync(new URL('../../../../demo/examples/advanced/chapter
 /** The labels of a project with one empty file. */
 const noLabels = () => new LabelIndex(new Project(ProjectPath.of('/main.typ'), { '/main.typ': '' }));
 const schema = schemaWith({ contributions: [references({ labels: noLabels(), prompts: new TestPrompts() })] });
-const stateOf = (source: string) => EditorState.create({ doc: project(source, schema) });
+const stateOf = (source: string) => EditorState.create({ doc: parseTypst(source, schema) });
 
 describe('label edits', () => {
   it('inserts a reference in place of the typed @query', () => {
     const state = stateOf('See \\@me now\n'); // typed text: `@me`
     const from = 1 + 'See '.length;
     const tr = insertReference(state, { from, to: from + 3 }, 'method');
-    expect(print(tr.doc)).toBe('See @method now\n');
+    expect(serializeToTypst(tr.doc)).toBe('See @method now\n');
     expect(tr.selection.from).toBe(from + 1);
   });
 
   it('renames the label of the advanced example\'s introduction, and only the label', () => {
     const state = stateOf(introduction);
     const heading = find(state.doc, 'heading').pos;
-    expect(print(renameLabel(state, heading, 'start', false).doc)).toBe(introduction.replace('<intro>', '<start>'));
+    expect(serializeToTypst(renameLabel(state, heading, 'start', false).doc)).toBe(introduction.replace('<intro>', '<start>'));
   });
 
   it('renames a figure label together with its references in the same file', () => {
@@ -40,22 +40,22 @@ describe('label edits', () => {
     state.doc.descendants((node, pos) => {
       if (node.type.name === 'figure' && node.attrs.label?.name === 'fig:compile-times') figure = pos;
     });
-    const renamed = print(renameLabel(state, figure, 'fig:times', true).doc);
+    const renamed = serializeToTypst(renameLabel(state, figure, 'fig:times', true).doc);
     expect(renamed).toBe(results.replaceAll('fig:compile-times', 'fig:times'));
-    expect(print(renameLabel(state, figure, 'fig:times', false).doc)).toBe(results.replace('<fig:compile-times>', '<fig:times>'));
+    expect(serializeToTypst(renameLabel(state, figure, 'fig:times', false).doc)).toBe(results.replace('<fig:compile-times>', '<fig:times>'));
   });
 
   it('removes a label with the whitespace before it', () => {
     const state = stateOf(introduction);
     const heading = find(state.doc, 'heading').pos;
-    expect(print(setLabel(state, heading, null).doc)).toBe(introduction.replace(' <intro>', ''));
+    expect(serializeToTypst(setLabel(state, heading, null).doc)).toBe(introduction.replace(' <intro>', ''));
   });
 
   it('adds a label after a space; keeps the gap when changing one', () => {
     const state = stateOf('= Goals\n\nText<t>\n');
-    expect(print(setLabel(state, 0, 'goals').doc)).toBe('= Goals <goals>\n\nText<t>\n');
+    expect(serializeToTypst(setLabel(state, 0, 'goals').doc)).toBe('= Goals <goals>\n\nText<t>\n');
     const paragraph = find(state.doc, 'paragraph').pos;
-    expect(print(setLabel(state, paragraph, 'u').doc)).toBe('= Goals\n\nText<u>\n');
+    expect(serializeToTypst(setLabel(state, paragraph, 'u').doc)).toBe('= Goals\n\nText<u>\n');
   });
 
   it('turns typed text into a label name, or null', () => {

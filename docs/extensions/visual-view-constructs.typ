@@ -53,7 +53,7 @@ A spec groups its fields by owner:
 - Each parse function gets the `TypstParseContext` and the Lezer node (for a call: its `FuncCall`), and returns the node, or `null` to let the next spec try. With no taker the source stays raw.
 - *Return `null` for anything you cannot write back exactly.*
 - Of specs reading the same syntax or call, the one with the higher Tiptap priority is asked first (task lists, 110, before bullet lists).
-- `block(p, node, sep)`: the block a run of markup that is exactly this node becomes. `inline(p, node, marks)`: a node, or placed content (`Placed[]`), in running text.
+- `block(p, node, sep)`: the block a run of markup that is exactly this node becomes. `inline(p, node, marks)`: a node, or placed content (`PlacedNode[]`), in running text.
 - `standsAlone`: a block even without paragraph breaks around it (`Heading`, `ListItem`). `takesLabel`: a label right after it is its label.
 - `inRunningText(p, call)`: the call belongs in running text even where `inline` leaves it raw.
 
@@ -207,7 +207,7 @@ export function callout(): TypstExtension {
   };
 }
 
-createTypstEditor(host, { extensions: (builtins) => [...builtins, callout()] });
+createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensions, callout()] });
 ```
 
 == Around the constructs <extensions-visual-view-constructs-more>

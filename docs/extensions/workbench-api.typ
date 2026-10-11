@@ -80,7 +80,7 @@ if (choice === 'Open') workbench.open(path);
 - *Read* through `project`: `files()`, `paths()`, `has(path)`, `document(path)` (a Typst file's `TypstDocument`, `.text`), `content(path)`, `onDidChangeFile` (an `Event<FileChange>`).
 - *Change* through `workspace.applyEdit(change)`, never `project.apply`. It checks the project's rules, then the host's `allowFileChange`, and resolves to the reason it was refused, or `null`.
 - `FileChange`: `{ kind: 'create' | 'update', path, content }`, `{ kind: 'delete', path }`, `{ kind: 'rename', path, from }`.
-- *Show* with `workbench.open(path, { selection?, mode?, viewType? })` (`selection`: a `SourceRange`); `workbench.activeFile` and `onDidShowFile` say what is shown.
+- *Show* with `workbench.open(path, { selection?, mode?, viewType? })` (`selection`: a `SourceRange`); `window.activeFile` and `window.onDidChangeActiveFile` say what is shown.
 - *The Typst editor*: `window.activeTextEditor` (`document`, `mode`, `selection` as a `SourceRange`, `revealRange(range)`; `null` while another kind of file is shown) and `window.onDidChangeTextEditorSelection`.
 - *Dropped files*: `workbench.onDidDropFiles` gets the `File[]` dropped on the widget that no view took.
 

@@ -1,8 +1,8 @@
 // Tests for the projection of table header rows (visual-view.ts, through the projection).
 import type { Node } from '@tiptap/pm/model';
 import { describe, expect, it } from 'vitest';
-import { print } from '../../../hosts/projection/projection';
-import { after, edit, expectPreciseMap, find, project, schema } from '../../../testing/testing';
+import { serializeToTypst } from '../../../hosts/projection/projection';
+import { after, edit, expectPreciseMap, find, parseTypst, schema } from '../../../testing/testing';
 
 const FIXTURES: Record<string, string> = {
   parens: '#table(\n  columns: 2,\n  table.header([Name], [*Qty*]),\n  [a], [1],\n  [b], [2],\n)\n',
@@ -36,14 +36,14 @@ describe('table headers', () => {
   describe('round-trip byte for byte, with a precise position map', () => {
     for (const [name, source] of Object.entries(FIXTURES)) {
       it(name, () => {
-        expect(print(project(source))).toBe(source);
-        expectPreciseMap(project(source));
+        expect(serializeToTypst(parseTypst(source))).toBe(source);
+        expectPreciseMap(parseTypst(source));
       });
     }
   });
 
   it('projects table.header(..) as a first row of header cells', () => {
-    const table = project(FIXTURES.parens).child(0);
+    const table = parseTypst(FIXTURES.parens).child(0);
     expect(table.type.name).toBe('table');
     expect(cellTypes(table)).toEqual([
       ['tableHeader', 'tableHeader'],
@@ -51,29 +51,29 @@ describe('table headers', () => {
       ['tableCell', 'tableCell'],
     ]);
     expect(table.child(0).child(1).textContent).toBe('Qty');
-    expect(cellTypes(project(FIXTURES.brackets).child(0))[0]).toEqual(['tableHeader', 'tableHeader']);
+    expect(cellTypes(parseTypst(FIXTURES.brackets).child(0))[0]).toEqual(['tableHeader', 'tableHeader']);
   });
 
   it('keeps headers it cannot model raw: partial rows, arguments, after cells, twice', () => {
-    const doc = project(FIXTURES.notModelled);
+    const doc = parseTypst(FIXTURES.notModelled);
     doc.forEach((block) => expect(block.type.name).toBe('rawBlock'));
   });
 
   it('editing a header cell changes only that cell', () => {
-    const doc = edit(project(FIXTURES.parens), (s) => s.tr.insertText('s', after(s.doc, 'Name')));
-    expect(print(doc)).toBe(FIXTURES.parens.replace('[Name]', '[Names]'));
+    const doc = edit(parseTypst(FIXTURES.parens), (s) => s.tr.insertText('s', after(s.doc, 'Name')));
+    expect(serializeToTypst(doc)).toBe(FIXTURES.parens.replace('[Name]', '[Names]'));
     expectPreciseMap(doc);
   });
 
   it('turning the header row into a normal row re-prints the table without table.header', () => {
-    const doc = setFirstRow(project(FIXTURES.parens), 'tableCell');
-    expect(print(doc)).toBe('#table(\n  columns: 2,\n  [Name], [*Qty*],\n  [a], [1],\n  [b], [2],\n)\n');
+    const doc = setFirstRow(parseTypst(FIXTURES.parens), 'tableCell');
+    expect(serializeToTypst(doc)).toBe('#table(\n  columns: 2,\n  [Name], [*Qty*],\n  [a], [1],\n  [b], [2],\n)\n');
     expectPreciseMap(doc);
   });
 
   it('turning the first row into a header row wraps it in table.header, in the style of the table', () => {
-    const doc = setFirstRow(project('#table(columns: 2, stroke: none, [a], [b], [c], [d])\n'), 'tableHeader');
-    expect(print(doc)).toBe('#table(columns: 2, stroke: none, table.header([a], [b]), [c], [d])\n');
+    const doc = setFirstRow(parseTypst('#table(columns: 2, stroke: none, [a], [b], [c], [d])\n'), 'tableHeader');
+    expect(serializeToTypst(doc)).toBe('#table(columns: 2, stroke: none, table.header([a], [b]), [c], [d])\n');
     expectPreciseMap(doc);
   });
 });

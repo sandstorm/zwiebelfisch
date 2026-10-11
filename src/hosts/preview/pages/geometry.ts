@@ -23,7 +23,7 @@ export interface Rect {
 }
 
 /** A box in percent of its page, so it stays in place at any zoom. */
-export interface PercentBox {
+export interface PageRectPercent {
   left: number;
   top: number;
   width: number;
@@ -37,7 +37,7 @@ export function measure(element: Element): Rect {
 }
 
 /** A box on a page of the given size, as percent of the page — stays in place at any zoom. */
-export function percentOfPage(box: { x: Pt; y: Pt; w: Pt; h: Pt }, page: { width: Pt; height: Pt }): PercentBox {
+export function percentOfPage(box: { x: Pt; y: Pt; w: Pt; h: Pt }, page: { width: Pt; height: Pt }): PageRectPercent {
   return {
     left: (box.x / page.width) * 100,
     top: (box.y / page.height) * 100,

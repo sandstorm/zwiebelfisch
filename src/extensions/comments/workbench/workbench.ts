@@ -3,7 +3,7 @@
 import { Disposable } from '../../../core/disposable/disposable';
 import type { SourceOffset, TypstDocument } from '../../../core/typst-document/typst-document';
 import type { Commands } from '../../../hosts/commands/commands';
-import type { TextEditor, Window } from '../../../hosts/window/window';
+import type { TextEditor, WindowApi } from '../../../hosts/window/window';
 import type { Workbench } from '../../../hosts/workbench/workbench';
 import { calculateMarginNoteChanges } from '../model/add-margin-note';
 
@@ -19,7 +19,7 @@ export interface NoteCards {
 /** What "Comment" uses of the extension API: where to register, and the editor the user works in. */
 export interface CommentContext {
   readonly commands: Pick<Commands, 'registerCommand' | 'registerKeybinding'>;
-  readonly window: Pick<Window, 'activeTextEditor'>;
+  readonly window: Pick<WindowApi, 'activeTextEditor'>;
   readonly workbench: Pick<Workbench, 'registerMenuItem'>;
 }
 

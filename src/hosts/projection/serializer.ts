@@ -2,7 +2,7 @@
 // source, edited ones through their specs' toTypst; every stretch of output remembers the document range showing it
 // (the position map). See projection.ts.
 import type { Mark, Node } from '@tiptap/pm/model';
-import { Grammar } from './grammar';
+import { TypstConversions } from './typst-conversions';
 import type { Around, TypstSerializeState } from './projection';
 import { labelSyntax } from './labels';
 import { type InlineLayout, pristine } from './pristine';
@@ -34,7 +34,7 @@ const printedDocs = new WeakMap<Node, Printed>();
 export function printed(doc: Node): Printed {
   let result = printedDocs.get(doc);
   if (!result) {
-    const serializer = new ProseMirrorToTypstSerializer(Grammar.of(doc.type.schema));
+    const serializer = new ProseMirrorToTypstSerializer(TypstConversions.of(doc.type.schema));
     serializer.hidden(doc.attrs.lead);
     serializer.blocks(doc, 0, '\n\n');
     serializer.hidden(doc.attrs.trail);
@@ -61,7 +61,7 @@ class ProseMirrorToTypstSerializer implements TypstSerializeState {
   private end = 0;
   private indent = '';
 
-  constructor(private readonly grammar: Grammar) {}
+  constructor(private readonly grammar: TypstConversions) {}
 
   hidden(src: string): void {
     const span = this.write(src, 'syntax', 0, 0);
@@ -220,7 +220,7 @@ interface Piece {
  * (inline code) holds no markup: it is always innermost, closed and reopened
  * around any other formatting change.
  */
-function printInline(out: TypstSerializeState, grammar: Grammar, block: Node, start: number): void {
+function printInline(out: TypstSerializeState, grammar: TypstConversions, block: Node, start: number): void {
   const pieces = inlinePieces(grammar, block, start);
   const isRaw = (mark: Mark) => grammar.mark(mark.type.name)?.typst.raw === true;
   const open: { mark: Mark; close: string }[] = [];
@@ -292,7 +292,7 @@ function spanEnd(pieces: Piece[], start: number, mark: Mark): number {
 }
 
 /** `text` as the node printed before it needs it escaped (its spec's `escapeAfter`), if any. */
-function escapeAfter(grammar: Grammar, previous: Node | undefined, text: string): string {
+function escapeAfter(grammar: TypstConversions, previous: Node | undefined, text: string): string {
   if (!previous) return text;
   return grammar.node(previous.type)?.typst?.escapeAfter?.(previous, text) ?? text;
 }
@@ -302,7 +302,7 @@ function guardCall(printedSoFar: string, text: string, escaped: boolean): string
   return escaped && printedSoFar.endsWith(']') && /^(\(|\.\w)/.test(text) ? `\\${text}` : text;
 }
 
-function inlinePieces(grammar: Grammar, block: Node, start: number): Piece[] {
+function inlinePieces(grammar: TypstConversions, block: Node, start: number): Piece[] {
   const pieces: Piece[] = [];
   let lineStart = true;
   block.forEach((child, offset) => {
@@ -336,7 +336,7 @@ function printPiece(out: TypstSerializeState, { escaped, code, node, pos }: Piec
 }
 
 /** The source an inline atom prints: its spec's, else its `src` (code without `#` in markup form). */
-function atomSource(grammar: Grammar, atom: Node): string {
+function atomSource(grammar: TypstConversions, atom: Node): string {
   const own = grammar.node(atom.type)?.typst?.atomToTypst;
   if (own) return own(atom);
   return atom.attrs.code ? markupSource(atom.attrs.src) : atom.attrs.src;

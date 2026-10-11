@@ -5,10 +5,10 @@ import { Extension, type AnyExtension, type Editor } from '@tiptap/core';
 import Code from '@tiptap/extension-code';
 import CodeBlock from '@tiptap/extension-code-block';
 import type { Mark, Node } from '@tiptap/pm/model';
-import type { Window } from '../../../hosts/window/window';
+import type { WindowApi } from '../../../hosts/window/window';
 import { callArguments, children, decodeString, namedArgument, quote, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type Action, type ToolbarContext, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
-import { starterKitPart, type Around, type Placed, type TypstMarkSpec, type TypstSerializeState, type TypstParseContext } from '../../../hosts/projection/projection';
+import { svg, type ToolbarAction, type ToolbarContext, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import { starterKitPart, type Around, type PlacedNode, type TypstMarkSpec, type TypstSerializeState, type TypstParseContext } from '../../../hosts/projection/projection';
 import { codeBlockView } from './code-block-view';
 import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from '../model/raw-code';
 
@@ -70,7 +70,7 @@ function delimitedSyntax(delimiter: string, func: string, { before, after, first
 
 /** `*…*` / `_…_` with both delimiters present: its content with the mark; null (raw) for unclosed ones. */
 function delimited(markName: string) {
-  return (p: TypstParseContext, node: SyntaxNode, marks: readonly Mark[]): Placed[] | null => {
+  return (p: TypstParseContext, node: SyntaxNode, marks: readonly Mark[]): PlacedNode[] | null => {
     const parts = children(node);
     const markup = node.getChild('Markup');
     if (parts.length !== 3 || !markup || parts[2].name !== parts[0].name) return null;
@@ -117,7 +117,7 @@ export const LINK: TypstMarkSpec = {
 };
 
 /** `#link("url")[text]` with a plain string and non-empty, single-paragraph text; null otherwise. */
-function parseLinkCall(p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[]): Placed[] | null {
+function parseLinkCall(p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[]): PlacedNode[] | null {
   const [url, ...others] = callArguments(call);
   const blocks = trailingContent(call);
   if (url?.name !== 'Str' || others.length > 0 || blocks?.length !== 1) return null;
@@ -249,23 +249,23 @@ const ICONS = {
 };
 
 /** Bold, italic, inline code: in the bar above the selection, their only place. */
-export const MARK_ACTIONS: Record<'bold' | 'italic' | 'code', Action> = {
+export const MARK_ACTIONS: Record<'bold' | 'italic' | 'code', ToolbarAction> = {
   bold: { label: 'Bold', shortcut: 'Mod+B', icon: ICONS.bold, run: (c) => c.toggleBold(), active: (e) => e.isActive('bold') },
   italic: { label: 'Italic', shortcut: 'Mod+I', icon: ICONS.italic, run: (c) => c.toggleItalic(), active: (e) => e.isActive('italic') },
   code: { label: 'Code', shortcut: 'Mod+E', icon: ICONS.code, run: (c) => c.toggleCode(), active: (e) => e.isActive('code') },
 };
 
-export const INSERT_CODE_BLOCK: Action = { label: 'Code block', icon: ICONS.codeBlock, run: (c) => c.toggleCodeBlock(), active: (e) => e.isActive('codeBlock') };
-export const INSERT_QUOTE: Action = { label: 'Quote', shortcut: 'Mod+Shift+B', icon: ICONS.quote, run: (c) => c.toggleBlockquote(), active: (e) => e.isActive('blockquote') };
+export const INSERT_CODE_BLOCK: ToolbarAction = { label: 'Code block', icon: ICONS.codeBlock, run: (c) => c.toggleCodeBlock(), active: (e) => e.isActive('codeBlock') };
+export const INSERT_QUOTE: ToolbarAction = { label: 'Quote', shortcut: 'Mod+Shift+B', icon: ICONS.quote, run: (c) => c.toggleBlockquote(), active: (e) => e.isActive('blockquote') };
 
 /** Where "Link" asks for the URL: the window's input box. */
-export type LinkPrompt = Pick<Window, 'showInputBox'>;
+export type LinkPrompt = Pick<WindowApi, 'showInputBox'>;
 
 /**
  * "Link" in the selection's bar (also Mod+K: `linkShortcut`): asks for the URL in an input box at the selection.
  * Enabled where a link may go (not in code).
  */
-export function linkAction(toolbar: ToolbarContext, prompt: LinkPrompt): Action {
+export function linkAction(toolbar: ToolbarContext, prompt: LinkPrompt): ToolbarAction {
   const { editor } = toolbar;
   return {
     label: 'Link',

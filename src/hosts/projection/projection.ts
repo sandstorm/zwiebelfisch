@@ -9,16 +9,16 @@
  * the specs attached; an editor built from `documentExtensions` gets them with
  * `attachGrammar`.
  *
- *   project(text, schema) → doc    every node remembers the source it came from
- *   print(doc)            → text   untouched nodes print their original source
- *                                  byte for byte; only edited ones are re-printed
+ *   parseTypst(text, schema) → doc        every node remembers the source it came from
+ *   serializeToTypst(doc)    → text       untouched nodes print their original source
+ *                                         byte for byte; only edited ones are re-printed
  *   sourceToPos(doc, offset) / posToSource(doc, pos)
- *                                  map between source offsets and document
- *                                  positions, down to the character
- *   syncDoc(tr, target)   → tr     turns the current doc into a fresh projection
- *                                  with the smallest possible replacement
+ *                                         map between source offsets and document
+ *                                         positions, down to the character
+ *   applyTypstChanges(tr, target) → tr    turns the current doc into a fresh projection
+ *                                         with the smallest possible replacement
  *
- * Hence `print(project(text)) === text` for any input, and an edit in the
+ * Hence `serializeToTypst(parseTypst(text)) === text` for any input, and an edit in the
  * Visual view changes only the source of what it touched. Syntax no spec
  * models becomes `rawBlock` / `rawInline` atoms holding their verbatim source.
  * Labels (`<key>`) after a heading, or ending a block's run, are that block's
@@ -39,7 +39,7 @@ import StarterKit, { type StarterKitOptions } from '@tiptap/starter-kit';
 import { Disposable } from '../../core/disposable/disposable';
 import { SourceOffset, type SourceRange } from '../../core/typst-document/typst-document';
 import type { Event } from '../../core/event-emitter/event-emitter';
-import { Grammar } from './grammar';
+import { TypstConversions } from './typst-conversions';
 import { parseDocument } from './parser';
 import { forgetPrinted, printed, type Span } from './serializer';
 import { pristine } from './pristine';
@@ -52,7 +52,7 @@ export interface BlockLabel {
 }
 
 /** An inline node and the source range it shows; source between placed nodes is hidden syntax. */
-export interface Placed {
+export interface PlacedNode {
   node: Node;
   from: number;
   to: number;
@@ -72,14 +72,14 @@ export interface TypstParseContext {
   /** The blocks of a closed content block `[..]` (an empty paragraph if there are none), and the source they cover. */
   blocks(content: SyntaxNode): { content: Node[]; from: SourceOffset; to: SourceOffset };
   /** Parses inline syntax (a textblock's content), each node carrying `marks`. */
-  inline(nodes: readonly SyntaxNode[], marks?: readonly Mark[]): Placed[];
+  inline(nodes: readonly SyntaxNode[], marks?: readonly Mark[]): PlacedNode[];
   /** Whether markup `nodes` are one paragraph: no paragraph break, no block of its own (heading, list item). */
   isOneParagraph(nodes: readonly SyntaxNode[]): boolean;
   /**
    * A textblock whose `attrs.src` starts at source offset `from`; while untouched it prints `src` verbatim. Its
    * content ends at `contentTo` (default: the end of `src`); syntax after that closes the block (a code fence).
    */
-  textblock(block: { type: string; attrs: { src: string } & Record<string, unknown>; contentTo?: number }, from: number, content: Placed[]): Node;
+  textblock(block: { type: string; attrs: { src: string } & Record<string, unknown>; contentTo?: number }, from: number, content: PlacedNode[]): Node;
   /** A node that prints `attrs.src` while untouched (a list item: its marker, then its only child). */
   pristine(type: string, attrs: Record<string, unknown>, content?: Node[]): Node;
   /** Verbatim inline Typst: a raw inline box. */
@@ -108,7 +108,7 @@ export interface TypstParseRules {
     /** A label right after it (same line or the next, then a paragraph break or a block) is its label: headings. */
     readonly takesLabel?: boolean;
     /** The node in running text: a node showing all of its source, or placed content (its text with marks). Such syntax makes its run a paragraph. */
-    inline?(p: TypstParseContext, node: SyntaxNode, marks: readonly Mark[]): Node | Placed[] | null;
+    inline?(p: TypstParseContext, node: SyntaxNode, marks: readonly Mark[]): Node | PlacedNode[] | null;
   }>>;
   /** By the called function's name (`calleeName`); `*` takes the calls no spec names. */
   readonly calls?: Readonly<Record<string, {
@@ -118,7 +118,7 @@ export interface TypstParseRules {
      */
     block?(p: TypstParseContext, call: SyntaxNode, sep: string | null): Node | null;
     /** The call after `#` in running text (`#link("url")[text]`): a node, or placed content. */
-    inline?(p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[]): Node | Placed[] | null;
+    inline?(p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[]): Node | PlacedNode[] | null;
     /** Whether `call` belongs in running text (makes its run a paragraph), even where `inline` leaves it raw. Default with `inline`: yes. */
     inRunningText?(p: TypstParseContext, call: SyntaxNode): boolean;
   }>>;
@@ -281,18 +281,18 @@ const STARTER_KIT_PARTS: readonly (keyof StarterKitOptions)[] = [
 ];
 
 /** The document `source` projects to, through the specs attached to `schema` (see `attachGrammar`). */
-export function project(source: string, schema: Schema): Node {
-  return parseDocument(source, schema, Grammar.of(schema));
+export function parseTypst(source: string, schema: Schema): Node {
+  return parseDocument(source, schema, TypstConversions.of(schema));
 }
 
 /** The Typst source of `doc`: untouched nodes as they were written, edited ones printed anew. */
-export function print(doc: Node): string {
+export function serializeToTypst(doc: Node): string {
   return printed(doc).text;
 }
 
 /**
- * Makes `nodes` and `marks` (after the minimum schema's own) the specs `project`
- * and `print` use for documents of `schema` (a schema made from
+ * Makes `nodes` and `marks` (after the minimum schema's own) the specs `parseTypst`
+ * and `serializeToTypst` use for documents of `schema` (a schema made from
  * `documentExtensions` of them), in Tiptap's order: by the priority of the
  * Tiptap extension defining each one's type (`priority`, default 100, higher
  * first; equal ones as given). Their parse rules are asked in that order; of
@@ -303,17 +303,17 @@ export function attachGrammar(schema: Schema, nodes: readonly DocumentNodeSpec[]
   const priorities = new Map(defining.map((extension) => [extension.name, getExtensionField<number>(extension, 'priority') || 100]));
   const inTiptapOrder = <T extends { name: string }>(specs: readonly T[]) =>
     [...specs].sort((a, b) => (priorities.get(b.name) ?? 100) - (priorities.get(a.name) ?? 100));
-  Grammar.attach(schema, new Grammar([...BASE_NODES, ...inTiptapOrder(nodes)], inTiptapOrder(marks)));
+  TypstConversions.attach(schema, new TypstConversions([...BASE_NODES, ...inTiptapOrder(nodes)], inTiptapOrder(marks)));
 }
 
 /** The spec of `node`'s type in the grammar attached to its schema (specs of one name merged), if there is one. */
 export function documentNodeSpec(node: Node): DocumentNodeSpec | undefined {
-  return Grammar.of(node.type.schema).node(node.type);
+  return TypstConversions.of(node.type.schema).node(node.type);
 }
 
 /** Subscribes `listener` to every spec of `schema` whose parsing can change (see `TypstNodeConversion.onDidChange`). */
 export function onDidChangeGrammar(schema: Schema, listener: () => void): Disposable {
-  return Disposable.from(...Grammar.of(schema).changing().map((onDidChange) => onDidChange(listener)));
+  return Disposable.from(...TypstConversions.of(schema).changing().map((onDidChange) => onDidChange(listener)));
 }
 
 /**
@@ -362,14 +362,14 @@ export function posToSource(doc: Node, pos: number, bias: 1 | -1 = 1): SourceOff
  * cursor elsewhere in the paragraph stays put. Attributes (`src`, `sep`) are
  * then updated in place and the result is marked pristine again.
  */
-export function syncDoc(tr: Transaction, target: Node): Transaction {
+export function applyTypstChanges(tr: Transaction, target: Node): Transaction {
   for (const attr of ['lead', 'trail']) {
     if (tr.doc.attrs[attr] !== target.attrs[attr]) tr.setDocAttribute(attr, target.attrs[attr]);
   }
   // Diff without the anchoring attributes: a block whose `src` changed must
   // still be descended into, not replaced wholesale. Sizes are unaffected.
   // `label` is not printed from `src` but compared like an anchor: a renamed label updates the attribute in place.
-  const anchors = Grammar.of(target.type.schema).anchors;
+  const anchors = TypstConversions.of(target.type.schema).anchors;
   const current = withoutAnchors(tr.doc, anchors).content;
   const wanted = withoutAnchors(target, anchors).content;
   const start = current.findDiffStart(wanted);

@@ -1,16 +1,16 @@
 // Tests for image-syntax.ts: an image call's path and a new call.
 import { describe, expect, it } from 'vitest';
 import { PathReference } from '../../../core/paths/paths';
-import { print } from '../../../hosts/projection/projection';
-import { edit, expectPreciseMap, project, schema } from '../../../testing/testing';
+import { serializeToTypst } from '../../../hosts/projection/projection';
+import { edit, expectPreciseMap, parseTypst, schema } from '../../../testing/testing';
 import { imagePath, imageSource } from './image-syntax';
 
 describe('image calls', () => {
   it('prints an image created in the editor', () => {
-    const doc = edit(project('Text\n'), (s) =>
+    const doc = edit(parseTypst('Text\n'), (s) =>
       s.tr.insert(s.doc.content.size, schema.nodes.image.create({ src: imageSource(PathReference.of('a "b".png')) })),
     );
-    expect(print(doc)).toBe('Text\n\n#image("a \\"b\\".png")\n');
+    expect(serializeToTypst(doc)).toBe('Text\n\n#image("a \\"b\\".png")\n');
     expectPreciseMap(doc);
   });
 

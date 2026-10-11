@@ -4,7 +4,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import { ProjectPath } from '../core/paths/paths';
-import { type Diagnostic, PageIndex } from '../core/typst-engine/typst-engine';
+import { type TypstDiagnostic, PageIndex } from '../core/typst-engine/typst-engine';
 import type { PageClick, PdfExportOption, PreviewContext, PreviewToolbarItem } from '../hosts/preview/preview';
 import type { Disposable } from '../core/disposable/disposable';
 import { EventEmitter } from '../core/event-emitter/event-emitter';
@@ -20,7 +20,7 @@ interface FakePreview {
   revealed: [string, SourceRange][];
   /** How often the click outline was removed. */
   cleared: number;
-  compiled(diagnostics: Diagnostic[]): void;
+  compiled(diagnostics: TypstDiagnostic[]): void;
   click(click: PageClick): void;
 }
 const previews: FakePreview[] = [];
@@ -39,14 +39,14 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
       readonly pdfOptions: unknown[] = [];
       readonly revealed: unknown[] = [];
       cleared = 0;
-      readonly #diagnostics = new EventEmitter<readonly Diagnostic[]>();
+      readonly #diagnostics = new EventEmitter<readonly TypstDiagnostic[]>();
       readonly onDidChangeDiagnostics = this.#diagnostics.event;
       readonly #clicks = new EventEmitter<PageClick>();
       readonly onDidClickPage = this.#clicks.event;
       constructor() {
         previews.push(this as never);
       }
-      compiled(diagnostics: Diagnostic[]) {
+      compiled(diagnostics: TypstDiagnostic[]) {
         this.#diagnostics.fire(diagnostics);
       }
       click(click: PageClick) {
@@ -284,7 +284,7 @@ describe('the built-in extensions', () => {
       id: 'room',
       activate: ({ scm, subscriptions }) => subscriptions.push((registration = scm.registerSourceControl(gitlab))),
     };
-    const { host } = setup({ source: '= Hi', extensions: (builtins) => [...builtins, room] });
+    const { host } = setup({ source: '= Hi', extensions: (builtinExtensions) => [...builtinExtensions, room] });
     const action = () => host.querySelector<HTMLButtonElement>('.typst-editor__tab-action[data-command="sourceControl.commit"]');
     const notifications = () => [...host.querySelectorAll('.typst-notification__message')].map((message) => message.textContent);
     expect(action()!.textContent).toBe('Save to GitLab…');
@@ -385,13 +385,13 @@ describe('the built-in extensions', () => {
     const { editor, preview } = setup({
       source: '= Hi',
       settings: { 'wordCount.label': 'Wörter', 'pdfExport.download': false },
-      extensions: (builtins) => [...builtins.filter((extension) => extension.id !== 'preview-sync'), counter],
+      extensions: (builtinExtensions) => [...builtinExtensions.filter((extension) => extension.id !== 'preview-sync'), counter],
     });
     expect(seen).toEqual(['Wörter']);
     await expect(editor.executeCommand('wordCount.count')).resolves.toBe(2);
     expect(toolbarControls(preview.toolbarItems)).toEqual(['typst-preview-zoom', 'typst-preview-page-number']);
     // pdfExport.download is declared, but previewSync.followCursor is not without preview-sync
-    setup({ source: '= Hi', settings: { 'previewSync.followCursor': false }, extensions: (builtins) => builtins.filter((e) => e.id !== 'preview-sync') });
+    setup({ source: '= Hi', settings: { 'previewSync.followCursor': false }, extensions: (builtinExtensions) => builtinExtensions.filter((e) => e.id !== 'preview-sync') });
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown setting previewSync.followCursor'));
     warn.mockRestore();
   });

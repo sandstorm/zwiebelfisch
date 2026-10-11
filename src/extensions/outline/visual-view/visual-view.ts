@@ -2,7 +2,7 @@
 // and "Insert" → "Table of contents". See outline.ts.
 import { Node } from '@tiptap/core';
 import { hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type Action, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 
 const Outline = Node.create({
   name: 'outline',
@@ -36,4 +36,4 @@ export const OUTLINE: TypstNodeSpec = {
 const ICON = svg('<path d="M4 6h10M7 10h13M7 14h13M4 18h10"/>');
 
 /** "Table of contents" in the Insert menu: an `#outline()` block. */
-export const INSERT_OUTLINE: Action = { label: 'Table of contents', icon: ICON, run: (c) => c.insertContent({ type: 'outline', attrs: { src: '#outline()' } }) };
+export const INSERT_OUTLINE: ToolbarAction = { label: 'Table of contents', icon: ICON, run: (c) => c.insertContent({ type: 'outline', attrs: { src: '#outline()' } }) };

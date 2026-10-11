@@ -5,7 +5,7 @@ import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
 import { Plugin } from '@tiptap/pm/state';
 import { children } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type Action, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 import type { TypstParseContext } from '../../../hosts/projection/projection';
 import { countTaskItems, ensureChecklistPreamble } from './checklist-preamble';
 
@@ -103,7 +103,7 @@ function parseTaskItem(p: TypstParseContext, node: SyntaxNode, sep: string | nul
 const ICON = svg('<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m4.5 8 1 1 2-2"/><rect x="3" y="14" width="6" height="6" rx="1"/><path d="M13 8h8M13 17h8"/>');
 
 /** "Task list", after the other lists in the toolbar's `lists` group. */
-export const TASK_LIST_ACTION: Action = {
+export const TASK_LIST_ACTION: ToolbarAction = {
   label: 'Task list',
   shortcut: 'Mod+Shift+9',
   icon: ICON,

@@ -5,7 +5,7 @@ import { FloatingBar } from './floating-bar';
 import { TextStyleMenu } from './text-style-menu';
 import { ToolbarMenu } from './toolbar-menu';
 import type { Disposable } from '../../../core/disposable/disposable';
-import { svg, type Action, type Anchor, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem, type TextStyleProvider, type VisualViewContext } from '../visual-view';
+import { svg, type ToolbarAction, type Anchor, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem, type TextStyleProvider, type VisualViewContext } from '../visual-view';
 
 /**
  * The Visual view's formatting toolbar: a row of groups and menus sorted by
@@ -69,9 +69,9 @@ export class Toolbar {
   }
 
   /** The items' buttons and controls by group, each group's sorted by `order` (then as registered). */
-  private entries(items: readonly ToolbarItem[], context: ToolbarContext): Map<string, (Action | ToolbarControl)[]> {
+  private entries(items: readonly ToolbarItem[], context: ToolbarContext): Map<string, (ToolbarAction | ToolbarControl)[]> {
     const sorted = items.map((item, index) => ({ item, index })).sort((a, b) => (a.item.order ?? 0) - (b.item.order ?? 0) || a.index - b.index);
-    const byGroup = new Map<string, (Action | ToolbarControl)[]>();
+    const byGroup = new Map<string, (ToolbarAction | ToolbarControl)[]>();
     for (const { item } of sorted) {
       const entry = 'action' in item ? item.action : item.create(context);
       byGroup.set(item.group, [...(byGroup.get(item.group) ?? []), entry]);
@@ -80,7 +80,7 @@ export class Toolbar {
   }
 
   /** A group (or menu) in the toolbar row; nothing for a group without entries. */
-  private rowGroup(group: ToolbarGroup, entries: (Action | ToolbarControl)[]): void {
+  private rowGroup(group: ToolbarGroup, entries: (ToolbarAction | ToolbarControl)[]): void {
     if (entries.length === 0) return;
     const wrapper = this.root.ownerDocument.createElement('div');
     wrapper.className = 'typst-toolbar__group';
@@ -107,7 +107,7 @@ export class Toolbar {
    * transaction: shown above its anchor while the text or something in the
    * bar has the focus; only the first with an anchor shows.
    */
-  private floatingBars(groups: readonly ToolbarGroup[], entries: Map<string, (Action | ToolbarControl)[]>): void {
+  private floatingBars(groups: readonly ToolbarGroup[], entries: Map<string, (ToolbarAction | ToolbarControl)[]>): void {
     const container = this.editor.view.dom.parentElement!;
     const bars: (() => boolean)[] = [];
     for (const group of groups) {
@@ -128,7 +128,7 @@ export class Toolbar {
     }
   }
 
-  private button(action: Action): HTMLButtonElement {
+  private button(action: ToolbarAction): HTMLButtonElement {
     const button = this.root.ownerDocument.createElement('button');
     button.type = 'button';
     button.className = 'typst-toolbar__button';
@@ -144,7 +144,7 @@ export class Toolbar {
   }
 }
 
-function isAction(entry: Action | ToolbarControl): entry is Action {
+function isAction(entry: ToolbarAction | ToolbarControl): entry is ToolbarAction {
   return !('element' in entry);
 }
 

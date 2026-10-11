@@ -7,8 +7,8 @@ import { TextSelection } from '@tiptap/pm/state';
 import type { NodeView } from '@tiptap/pm/view';
 import { MARGIN_NOTE, NOTE_HEAD, noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../model/margin-note-syntax';
 import { children } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type Action, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
-import type { Placed, TypstMarkSpec, TypstParseContext } from '../../../hosts/projection/projection';
+import { svg, type ToolbarAction, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
+import type { PlacedNode, TypstMarkSpec, TypstParseContext } from '../../../hosts/projection/projection';
 
 export interface MarginNotesOptions {
   /** Adds a comment (margin note) at the selection: the "Comment" button in the toolbar and the selection's bar. */
@@ -105,7 +105,7 @@ const NOTE_RANGE: TypstMarkSpec = {
  * and note; `#margin-note(..named)[text][note]` → `text` with a `noteRange`
  * mark holding them. Null for calls that are not margin notes.
  */
-function parseMarginNote(p: TypstParseContext, call: SyntaxNode, marks: readonly PMMark[]): PMNode | Placed[] | null {
+function parseMarginNote(p: TypstParseContext, call: SyntaxNode, marks: readonly PMMark[]): PMNode | PlacedNode[] | null {
   const syntax = noteCallSyntax(p.source, call);
   if (!syntax) return null;
   const { head, text, note } = syntax;
@@ -151,7 +151,7 @@ const NOTE_ICON =
 const COMMENT_ICON = svg('<path d="M4 5h16v11h-9l-5 4v-4H4z"/>');
 
 /** "Comment": enabled with a caret or selection in text (not in a code block or on a selected box). */
-function commentAction(comment: () => void): Action {
+function commentAction(comment: () => void): ToolbarAction {
   return {
     label: 'Comment',
     shortcut: 'Mod+Alt+M',

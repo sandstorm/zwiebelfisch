@@ -6,7 +6,7 @@ import { EditorView } from '@codemirror/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import { Project, type FileChange } from '../../core/project/project';
-import type { Window } from '../../hosts/window/window';
+import type { WindowApi } from '../../hosts/window/window';
 import { WorkbenchHost } from '../../hosts/workbench/workbench';
 import { textFiles } from './text-files';
 import { SAVE_DELAY } from './workbench/text-file-editor';
@@ -32,7 +32,7 @@ function setup(allowFileChange?: (change: FileChange) => boolean) {
   const host = document.body.appendChild(document.createElement('div'));
   const project = new Project(path('/main.typ'), { '/main.typ': '#bibliography("refs.bib")\n', '/refs.bib': '@book{a}\n' });
   const workbench = new WorkbenchHost(host, project, { allowFileChange });
-  let window!: Window;
+  let window!: WindowApi;
   workbench.activate([textFiles(), { id: 'probe', activate: (context) => void (window = context.window) }]);
   const view = () => EditorView.findFromDOM(host.querySelector<HTMLElement>('[data-view-type="textFiles.editor"] .cm-editor')!)!;
   return { host, project, workbench, window, view };
