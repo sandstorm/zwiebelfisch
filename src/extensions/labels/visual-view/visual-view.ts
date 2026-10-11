@@ -1,5 +1,5 @@
 // References and labels in the Visual view: `@key` chips, label tags on blocks, the `@` list of labels, "Add
-// label". See docs/guide/features.typ.
+// label" (Insert menu, selection bar). See docs/guide/features.typ.
 import { Extension } from '@tiptap/core';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { guardAfterReference, referenceSyntax } from '../model/reference-syntax';
@@ -25,7 +25,8 @@ export interface ReferencesOptions {
  * References (`@key`, `@key[supplement]`) as `reference` chips with hints
  * (what they point to, or that the label is missing); a block's label shown
  * as a tag (rename, with the references in every file, or remove); the `@`
- * list of labels to insert references from; "Add label" in the Insert menu.
+ * list of labels to insert references from; "Add label" in the Insert menu
+ * and, where the selection's block can take a new label, in the selection's bar.
  */
 export function references(options: ReferencesOptions): VisualViewContribution {
   const { labels, prompts } = options;
@@ -37,6 +38,8 @@ export function references(options: ReferencesOptions): VisualViewContribution {
         visualView.registerTiptapExtension((view) => referencesExtension(labels, view.document, prompts)),
         visualView.registerCompletionItemProvider(labelCompletions(labels), { char: '@', allowedPrefixes: [' ', '\u00a0', '(', '[', '{'] }),
         visualView.registerToolbarItem({ group: 'insert', order: 80, create: addLabel }),
+        // after the marks and the link, before the comment (50)
+        visualView.registerToolbarItem({ group: 'selection', order: 45, create: (toolbar) => onlyWhereEnabled(addLabel(toolbar)) }),
       );
     },
   };
@@ -117,4 +120,12 @@ function addLabel(toolbar: ToolbarContext): ToolbarAction {
     enabled: (editor) => canStartNewLabel(editor.state) !== null,
     click: () => startNewLabel(toolbar.editor.view),
   };
+}
+
+/**
+ * The selection bar's "Add label": shown only where it applies, so the bar stays small; a block's existing
+ * label is renamed or removed through its tag, right next to the selection.
+ */
+function onlyWhereEnabled(action: ToolbarAction): ToolbarAction {
+  return { ...action, visible: action.enabled };
 }

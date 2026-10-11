@@ -216,7 +216,7 @@ createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensio
   columns: 2,
   [Contribution point], [What],
   [`registerToolbarGroup(group)`], [A place for items: a `group` in the row, a `menu` button, or a `floating` bar at an anchor. The host's: `history` (order 10), `text-style` (20), the `insert` menu (50), the floating `selection` bar],
-  [`registerToolbarItem(item)`], [A button in a group by `group` + `order`: an `action` (`run(chain)`: a Tiptap command chain, also dry-run for enabled; or `click()`, asking first) or `create(toolbar)` for an item with state per view. `keywords`: other words the slash commands find it by],
+  [`registerToolbarItem(item)`], [A button in a group by `group` + `order`: an `action` (`run(chain)`: a Tiptap command chain, also dry-run for enabled; or `click()`, asking first) or `create(toolbar)` for an item with state per view. `keywords`: other words the slash commands find it by; `visible`: left out where it does not apply (a floating bar with no visible button stays hidden)],
   [`registerTextStyleProvider(provider)`], [Entries of the text style menu (heading levels, custom styles), with `keywords` as toolbar actions],
   [`registerCompletionItemProvider(provider, trigger)`], [A list that pops up while a trigger character and a query are typed (@extensions-visual-view-constructs-completion)],
   [`registerRawBoxRenderer(provider, { priority })`], [What raw boxes show instead of their code; the first by `priority` that `renders` a box draws it (images 110, compiled snippets 100); its `className` goes on the picture, for its CSS],

@@ -14,8 +14,8 @@ import { svg, type ToolbarAction, type Anchor, type ToolbarContext, type Toolbar
  * bars floating in the text column (they scroll with the text) above their
  * anchor while the text or the bar has focus — the host's "Selection" bar
  * above a text selection; of the floating bars, only the first with an anchor
- * shows. Contributions fill them with items. Buttons reflect the selection
- * (pressed, disabled) after every transaction, focus and blur, and never take
+ * shows (a bar without a visible button does not). Contributions fill them with items. Buttons reflect the
+ * selection (pressed, disabled, hidden) after every transaction, focus and blur, and never take
  * the focus away from the text. Groups without items are left out.
  */
 export class Toolbar {
@@ -133,7 +133,7 @@ export class Toolbar {
       const earlier = [...bars];
       const focused = () => this.editor.isFocused || bar.element.contains(bar.element.ownerDocument.activeElement);
       const anchor = (): Anchor => {
-        if (!focused() || earlier.some((shown) => shown())) return null;
+        if (!focused() || earlier.some((shown) => shown()) || !actions.some((action) => action.visible?.(this.editor) ?? true)) return null;
         return group.anchor(this.editor, actions.some((action) => action.showsBar?.(this.editor)));
       };
       this.refreshers.push(() => bar.show(anchor()));
@@ -153,6 +153,7 @@ export class Toolbar {
     this.refreshers.push(() => {
       button.disabled = action.enabled ? !action.enabled(this.editor) : action.run !== undefined && !action.run(this.editor.can().chain()).run();
       if (action.active) button.setAttribute('aria-pressed', String(action.active(this.editor)));
+      if (action.visible) button.hidden = !action.visible(this.editor);
     });
     return button;
   }

@@ -575,6 +575,8 @@ export interface ToolbarAction {
   enabled?(editor: Editor): boolean;
   /** Toggles show their state (`aria-pressed`); plain actions (undo) do not. */
   active?(editor: Editor): boolean;
+  /** Whether the button shows (default: always): one that does not apply here is left out rather than disabled. */
+  visible?(editor: Editor): boolean;
   /** In a floating bar: shows the bar at its anchor also without a selection (a link at the cursor). */
   showsBar?(editor: Editor): boolean;
 }

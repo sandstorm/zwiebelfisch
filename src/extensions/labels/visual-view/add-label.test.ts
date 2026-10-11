@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-// Tests for add-label.ts and the draft tag (label-tags.ts), through the toolbar's Insert ▾ → "Add label".
+// Tests for add-label.ts and the draft tag (label-tags.ts), through the toolbar's Insert ▾ → "Add label" and the
+// selection bar's.
 import { describe, expect, it } from 'vitest';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { createVisualView, TestPrompts } from '../../../testing/testing';
@@ -18,7 +19,8 @@ function setup(text: string) {
   const doc = new TypstDocument(text);
   const project = new Project(ProjectPath.of('/main.typ'), { '/main.typ': text });
   const view = createVisualView(parent, doc, { contributions: [references({ labels: new LabelIndex(project), prompts: new TestPrompts() })] });
-  const item = parent.querySelector<HTMLButtonElement>('button[aria-label="Add label"]')!;
+  const item = parent.querySelector<HTMLButtonElement>('[aria-label="Formatting"] button[aria-label="Add label"]')!;
+  const barItem = parent.querySelector<HTMLButtonElement>('[aria-label="Selection"] button[aria-label="Add label"]')!;
   const draft = () => parent.querySelector<HTMLInputElement>('.ProseMirror input[aria-label="New label"]');
   const key = (input: HTMLInputElement, name: string) => input.dispatchEvent(new KeyboardEvent('keydown', { key: name, bubbles: true }));
   /** Starts a new label, types `name` into the draft tag and presses Enter; returns what the field started with. */
@@ -30,7 +32,7 @@ function setup(text: string) {
     key(input, 'Enter');
     return prefilled;
   };
-  return { parent, doc, view, item, draft, key, add };
+  return { parent, doc, view, item, barItem, draft, key, add };
 }
 
 const TABLE_FIGURE = '#figure(table(columns: 1, [a]), caption: [Timings])\n\nText\n';
@@ -77,5 +79,22 @@ describe('Add label', () => {
     key(input, 'Escape');
     expect(draft()).toBeNull();
     expect(doc.text).toBe(TABLE_FIGURE);
+  });
+
+  it('the selection bar has it where the selection\'s block can take a new label, and nothing where it has one', () => {
+    const { doc, view, barItem, draft, key } = setup('= Intro\n\n= Method <sec:method>\n');
+    view.reveal(SourceRange.of({ from: 2, to: 5 }));
+    expect(barItem.hidden).toBe(false);
+    barItem.click();
+    const input = draft()!;
+    expect(input.value).toBe('sec:');
+    input.value = 'sec:intro';
+    key(input, 'Enter');
+    expect(doc.text).toBe('= Intro <sec:intro>\n\n= Method <sec:method>\n');
+    view.reveal(SourceRange.of({ from: 2, to: 5 }));
+    expect(barItem.hidden).toBe(true);
+    const method = doc.text.indexOf('Method');
+    view.reveal(SourceRange.of({ from: method, to: method + 3 }));
+    expect(barItem.hidden).toBe(true);
   });
 });

@@ -88,7 +88,7 @@ export class ToolbarMenu {
   }
 
   private navigate(event: KeyboardEvent): void {
-    const enabled = this.items.filter((item) => !item.disabled);
+    const enabled = this.items.filter((item) => !item.disabled && !item.hidden);
     const at = enabled.indexOf(event.target as HTMLButtonElement);
     if (event.key === 'Escape') {
       event.preventDefault();

@@ -1,7 +1,7 @@
 // End-to-end tests (Playwright, against the plain-HTML example): references as chips, labels as tags, the @ list.
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
-import { caretAtEnd } from './visual-helpers';
+import { caretAtEnd, selectText } from './visual-helpers';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
@@ -76,4 +76,25 @@ test('removing a label from its tag', async ({ page }) => {
   await tagChoice(page, 'Remove label');
   await expect.poll(value(page)).toContain('= Introduction\n\n');
   await expect(visual(page).locator('h1').getByTestId('typst-label-tag')).toHaveCount(0);
+});
+
+test("a text selection's bar offers Add label where the block has none: the heading gets a tag", async ({ page }) => {
+  await page.locator('typst-editor').evaluate((el: Editor) => {
+    el.value = '= Results\n\nText\n';
+  });
+  const heading = visual(page).locator('h1');
+  await selectText(heading, 'Results');
+  const bar = page.locator('typst-editor [role="toolbar"][aria-label="Selection"]:visible');
+  await bar.getByRole('button', { name: 'Add label' }).click();
+  const draft = visual(page).getByRole('textbox', { name: 'New label' });
+  await expect(draft).toBeFocused();
+  await expect(draft).toHaveValue('sec:');
+  await page.keyboard.type('results');
+  await page.keyboard.press('Enter');
+  await expect.poll(value(page)).toBe('= Results <sec:results>\n\nText\n');
+  await expect(heading.getByTestId('typst-label-tag')).toHaveText('sec:results');
+  // labelled now: the bar has no Add label (the tag renames or removes it)
+  await selectText(heading, 'Results');
+  await expect(bar).toBeVisible();
+  await expect(bar.getByRole('button', { name: 'Add label' })).toBeHidden();
 });
