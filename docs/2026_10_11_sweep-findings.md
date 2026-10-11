@@ -1,5 +1,16 @@
 # Conventions sweep: findings that need a decision
 
+**Decided by the user (2026-10-11): all recommendations accepted**, with these precisions:
+- A1: one interface, `Disposable { dispose() }`, for everything with a lifetime (ProseMirror NodeViews
+  keep `destroy`, the library calls it).
+- A4: the Visual view contribution API is **public** — the built-in constructs already are extensions
+  using it; outside extensions must be able to do the same (export the spec / grammar / toolbar types,
+  an example construct in docs/embedding.md written as if outside the package).
+- B: cross-extension schema names can't vanish entirely (ProseMirror's schema is one global object);
+  they stay only as data — groups (`figureBody`), configured type lists / spec flags (Tiptap's
+  `addGlobalAttributes({ types })`), always guarded (`schema.nodes.x`, `editor.can()`) — and
+  contribution points where one extension drives another's UI (text-style menu).
+
 Eight agents reviewed every area against [the code conventions](2026_10_11_code-conventions.md) on
 2026-10-11 and fixed what was clear (about 70 small commits, merged at `c103841`). These are the
 findings that change an API across areas or need a decision. Each has a recommendation; the number
