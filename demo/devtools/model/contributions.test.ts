@@ -41,16 +41,16 @@ describe('ContributionLog', () => {
 
     for (const extension of [files, outline]) log.instrument(extension).activate(context(commands));
 
-    expect([...log.byExtension()]).toEqual([
-      [
-        'files',
-        [
-          { extension: 'files', point: 'contributes.configuration', label: 'files.panel' },
-          { extension: 'files', point: 'commands.registerCommand', label: 'files.newFile' },
-        ],
-      ],
-      ['outline', [{ extension: 'outline', point: 'commands.registerCommand', label: 'outline.show' }]],
+    const summary = [...log.byExtension()].map(([extension, entries]) => [extension, entries.map((entry) => `${entry.point}: ${entry.title} ${entry.details.join(', ')}`.trim())]);
+    expect(summary).toEqual([
+      ['files', ['contributes.configuration: files.panel string, default "auto"', 'commands.registerCommand: files.newFile']],
+      ['outline', ['commands.registerCommand: outline.show']],
     ]);
+    const [setting, command] = log.byExtension().get('files')!;
+    expect(setting.arguments).toContain('default: "auto"');
+    expect(command.arguments).toBe('["files.newFile", ƒ]');
+    // the extension's line that registered it
+    expect(command.location).toMatch(/contributions\.test\.ts:\d+:\d+$/);
   });
 
   it('passes everything through: results, other methods and getters of class instances, other context members', () => {
@@ -77,6 +77,49 @@ describe('ContributionLog', () => {
     expect(given.subscriptions).toHaveLength(1);
     // finding the namespaces calls no getter
     expect(commands.getterCalls).toBe(1);
+  });
+
+  it('marks registrations made after activation and those disposed since, and tells of both', () => {
+    const log = new ContributionLog();
+    const commands = new Commands();
+    let changes = 0;
+    log.onDidChange(() => changes++);
+    let later = () => {};
+    log
+      .instrument({
+        id: 'late',
+        activate(context) {
+          const early = context.commands.registerCommand('late.early', () => {});
+          later = () => {
+            context.commands.registerCommand('late.later', () => {});
+            early.dispose();
+            early.dispose();
+          };
+        },
+      })
+      .activate(context(commands));
+    expect(changes).toBe(0);
+
+    later();
+
+    expect(log.byExtension().get('late')!.map(({ title, late, disposed }) => ({ title, late, disposed }))).toEqual([
+      { title: 'late.early', late: false, disposed: true },
+      { title: 'late.later', late: true, disposed: false },
+    ]);
+    expect(changes).toBe(2);
+    // the registration still went away
+    expect(commands.executeCommand('late.early')).toBeUndefined();
+  });
+
+  it('groups by contribution point, each in the order its host resolves them: by priority, else registration order', () => {
+    const log = new ContributionLog();
+    const visualView = { registerBoxRenderer: (_provider: unknown, _options?: { priority?: number }) => ({ dispose() {} }) };
+    const renderers = (id: string, priority?: number) =>
+      log.instrument({ id, activate: (context) => void (context as unknown as { visualView: typeof visualView }).visualView.registerBoxRenderer(function render() {}, { priority }) });
+    for (const extension of [renderers('snippets'), renderers('images', 110), renderers('diagrams')]) {
+      extension.activate({ subscriptions: [], visualView } as unknown as ExtensionContext);
+    }
+    expect([...log.byPoint()].map(([point, entries]) => [point, entries.map((entry) => entry.extension)])).toEqual([['visualView.registerBoxRenderer', ['images', 'snippets', 'diagrams']]]);
   });
 
   it('records nothing for a registration that throws', () => {

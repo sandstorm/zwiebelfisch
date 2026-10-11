@@ -1,6 +1,6 @@
 // The devtools: a side panel showing what the widget is made of while it runs: the Typst ↔ ProseMirror conversion
-// of the shown file (each node with its source range), every contribution by extension, and the events as they
-// fire. Built on the package's public API alone (src/index.ts), so it sees what any outside extension sees; the
+// of the shown file (each node with its source range), every contribution in its point's terms (by extension or by
+// point), and the events as they fire, their values in full. Built on the package's public API alone (src/index.ts), so it sees what any outside extension sees; the
 // demo adds it with `?devtools`. Not part of the library. See docs/architecture/development.typ.
 // Why it wraps the list: an extension sees only its own context, so the contributions of the others are recorded by
 // wrapping their `activate` (model/contributions.ts), not by a listing in the hosts.
@@ -10,7 +10,8 @@ import { ContributionLog } from './model/contributions';
 import { describeValue } from './model/describe';
 import { EventLog, subscribeToEvents } from './model/event-log';
 import { DocumentViews } from './visual-view/document-views';
-import { DevtoolsPanel, type ShownDocument } from './workbench/devtools-panel';
+import { DevtoolsPanel } from './workbench/devtools-panel';
+import type { ShownDocument } from './workbench/document-tab';
 
 /**
  * `extensions` with their contributions recorded, followed by the devtools extension (`devtools`), whose side panel
@@ -52,9 +53,9 @@ function devtoolsExtension(contributions: ContributionLog): TypstExtension {
         panel,
         visualView.registerTiptapExtension(views.tiptapExtension),
         window.onDidChangeActiveFile(() => panel.changed('document')),
+        contributions.onDidChange(() => panel.changed('contributions')),
         subscribeToEvents(context, (event, value) => {
-          events.add(event, value);
-          panel.changed('events');
+          if (events.add(event, value)) panel.changed('events');
         }),
       );
     },

@@ -78,12 +78,13 @@ mise run server:test   # when server/ or core/room-protocol changed
   columns: (auto, 1fr),
   table.header[Tab][Shows],
   [Document], [The shown file's ProseMirror document as a tree (@architecture-prosemirror-typst): each node with its source range, `box` for raw boxes and other atoms, marks, its text or kept `src`; the tooltip has positions, attributes and the source. The path to the selection is highlighted; a click selects the node's source.],
-  [Contributions], [By extension, in activation order: every `register…` call (`visualView.registerNode · heading`, `commands.registerCommand · files.newFile`) and the declared settings (`contributes.configuration`).],
-  [Events], [Every `onDid…` event of the extension context as it fires, with its value in one line; the latest 300.],
+  [Contributions], [Every `register…` call and declared setting (`contributes.configuration`), said in its contribution point's terms: a node or mark by its name, Tiptap priority and the Typst it parses (`heading · priority 100 · parses Heading`), a keybinding as `Mod+Alt+KeyM → comments.addComment`, a toolbar or menu item by its group, order and command, a custom editor by its file pattern and priority, a provider by its priority or trigger, a setting by its type and default; unknown points by their arguments' names. Grouped by extension (activation order) or by contribution point: who competes there, in the order the host resolves them (priority, order). Made after activation: `late`; disposed since: struck through. The tooltip: the arguments in full and the line that registered it.],
+  [Events], [Every `onDid…` event of the extension context as it fires, the latest 300, its value pretty-printed as it was then: objects several levels deep, class instances by their public fields and getters (a selection event's editor with its `selection`); long values folded, the tooltip has all. A filter by event name, Pause (logs nothing meanwhile) and Clear.],
 )
 
 - *Public API only* (`src/index.ts`): it sees what any outside extension sees.
-- *Contributions* are recorded by wrapping the list: `devtools(extensions)` returns each extension with its `activate` getting a context whose namespaces are recording proxies, plus the devtools extension itself. No listing in the hosts.
+- *Contributions* are recorded by wrapping the list: `devtools(extensions)` returns each extension with its `activate` getting a context whose namespaces are recording proxies (a registration's result reports its `dispose`), plus the devtools extension itself. No listing in the hosts.
+- *Model and views*: `model/` describes (no DOM): values as text (`describe.ts`), each contribution point's arguments (`contribution-points.ts`, by shape: a new point shows its arguments' names until it is described there); `workbench/` draws one view per tab.
 - *Document*: a Tiptap extension in every Visual view (`registerTiptapExtension`) keeps the view's editor; ranges come from the view's `posToSource`.
 
 ```ts
