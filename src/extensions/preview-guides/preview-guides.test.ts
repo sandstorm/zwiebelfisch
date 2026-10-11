@@ -1,10 +1,9 @@
 // Tests for preview-guides.ts: the view options' Typst, compiled as the preview compiles it (a prelude, then the main
-// file included), with scaffolder as `mise run build:packages` caches it (skipped without it).
-import { existsSync, readFileSync } from 'node:fs';
+// file included).
+import { readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { Disposable } from '../../core/disposable/disposable';
 import { type FontInfo, type TypstEngine, createEngine } from '../../core/typst-engine/typst-engine';
-import { type PackageEngine, withPackages } from '../../core/typst-packages/typst-packages';
 import { SourceOffset } from '../../core/typst-document/typst-document';
 import type { PreviewViewOption } from '../../hosts/preview/preview';
 import type { ExtensionContext } from '../../hosts/workbench/workbench';
@@ -12,7 +11,6 @@ import { previewGuides } from './preview-guides';
 
 const engineFiles = new URL('../../core/typst-engine/', import.meta.url);
 const fontIndex: Record<string, FontInfo[]> = JSON.parse(readFileSync(new URL('fonts/index.json', engineFiles), 'utf8'));
-const packages = new URL('../../../.cache/typst-packages/', import.meta.url);
 
 /** The options the extension registers, by id. */
 function registered(): Record<string, PreviewViewOption> {
@@ -32,32 +30,29 @@ function entry(on: readonly PreviewViewOption[]): string {
   return `${prelude.join('\n')}\n#include "/main.typ"\n`;
 }
 
-const scaffolder = new URL("scaffolder-0.2.1.tar.gz", packages);
-
 describe('previewGuides', () => {
   it('registers "Page guides" and "Box outlines", both off by default', () => {
     expect(Object.values(options).map(({ id, label, default: on }) => [id, label, on])).toEqual([
       ['previewGuides.pageGuides', 'Page guides', false],
       ['previewGuides.boxOutlines', 'Box outlines', false],
     ]);
-    expect(entry([GUIDES])).toContain('@preview/scaffolder:0.2.1');
+    // drawn by the prelude itself: no package to download
+    expect(entry([GUIDES])).not.toContain('#import');
   });
 });
 
-describe.skipIf(!existsSync(scaffolder))('the view options compiled', () => {
+describe('the view options compiled', () => {
   let engine: TypstEngine;
-  let compiler: PackageEngine;
   beforeAll(async () => {
     engine = await createEngine(readFileSync(new URL('wasm/typst_engine_bg.wasm', engineFiles)));
     for (const [name, faces] of Object.entries(fontIndex)) engine.addLazyFont({ name, faces, load: () => new Uint8Array(readFileSync(new URL(`fonts/${name}`, engineFiles))) });
-    compiler = withPackages(engine, async (spec) => new Uint8Array(readFileSync(new URL(`${spec.slice('@preview/'.length).replace(':', '-')}.tar.gz`, packages))));
   });
 
   /** Compiles `main` as `/main.typ` with the options `on`; none: the main file itself, as an export does. */
   async function compile(main: string, on: readonly PreviewViewOption[]) {
     engine.setSource('/main.typ', main);
     engine.setSource('/view.typ', entry(on));
-    return compiler.compile(on.length === 0 ? '/main.typ' : '/view.typ');
+    return engine.compile(on.length === 0 ? '/main.typ' : '/view.typ');
   }
 
   const DOCUMENT = '#set page(paper: "a6", header: [Head], footer: [Foot])\n= Title\n#lorem(150)\n#block(inset: 4pt, stroke: red)[Red]\n#box(inset: 2pt)[Box]\n';
@@ -87,6 +82,59 @@ describe.skipIf(!existsSync(scaffolder))('the view options compiled', () => {
     expect(pages[0].svg).toContain('#3b82f6');
     // the background first, the guides drawn after (over) the text
     expect(pages[0].svg.indexOf('#fff8dc')).toBeLessThan(pages[0].svg.indexOf('#3b82f6'));
+  });
+
+  /** The guides of a page's SVG: the x of the vertical lines and the y of the horizontal ones, in points, sorted. */
+  function guidesOf(svg: string): { x: number[]; y: number[] } {
+    const lines = [...svg.matchAll(/<path [^>]*stroke="#3b82f6"[^>]*transform="translate\(([-\d.]+)(?: ([-\d.]+))?\)" d="M 0 0(l 0|h)/g)];
+    const sorted = (values: number[]) => values.map((value) => Math.round(value * 10) / 10).sort((a, b) => a - b);
+    return {
+      x: sorted(lines.filter((line) => line[3] === 'l 0').map((line) => Number(line[1]))),
+      y: sorted(lines.filter((line) => line[3] === 'h').map((line) => Number(line[2] ?? 0))),
+    };
+  }
+
+  // a 200pt × 400pt page: the text area, then the header's bottom and the footer's top (30 % of the margin)
+  it.each([
+    ['no margin set: 2.5/21 of the shorter side', '#set page(width: 210pt, height: 420pt)', [[25, 185], [17.5, 25, 395, 402.5]]],
+    ['a margin', '#set page(width: 200pt, height: 400pt, margin: 10pt)', [[10, 190], [7, 10, 390, 393]]],
+    ['x and y', '#set page(width: 200pt, height: 400pt, margin: (x: 10pt, y: 20pt))', [[10, 190], [14, 20, 380, 386]]],
+    ['a ratio of the page, the rest', '#set page(width: 200pt, height: 400pt, margin: (left: 10%, top: 5%, rest: 30pt))', [[20, 170], [14, 20, 370, 379]]],
+    ['a side left auto', '#set page(width: 210pt, height: 420pt, margin: (top: auto, rest: 10pt))', [[10, 200], [17.5, 25, 410, 413]]],
+    ['header ascent and footer descent', '#set page(width: 200pt, height: 400pt, margin: 20pt, header-ascent: 5pt, footer-descent: 50% + 1pt)', [[20, 180], [15, 20, 380, 391]]],
+    ['em', '#set text(size: 10pt)\n#set page(width: 200pt, height: 400pt, margin: 2em)', [[20, 180], [14, 20, 380, 386]]],
+    ['two columns: the gutter, 4 % of the text width', '#set page(width: 200pt, height: 400pt, margin: 10pt, columns: 2)', [[10, 96.4, 103.6, 190], [7, 10, 390, 393]]],
+    ['flipped', '#set page(width: 400pt, height: 200pt, margin: (left: 10pt, rest: 20pt), flipped: true)', [[10, 180], [14, 20, 380, 386]]],
+  ] as const)('draws the guides where Typst lays the page out: %s', async (_, setup, [x, y]) => {
+    const { pages, diagnostics } = await compile(`${setup}\nText\n`, [GUIDES]);
+    expect(diagnostics).toEqual([]);
+    expect(guidesOf(pages[0].svg)).toEqual({ x, y });
+  });
+
+  it('draws two-sided margins on the side the binding puts them, by page', async () => {
+    const pages = async (setup: string) =>
+      (await compile(`#set page(width: 200pt, height: 400pt, margin: (inside: 10pt, outside: 30pt))\n${setup}\nOne\n#pagebreak()\nTwo\n`, [GUIDES])).pages.map((page) => guidesOf(page.svg).x);
+    expect(await pages('')).toEqual([[10, 170], [30, 190]]);
+    expect(await pages('#set page(binding: right)')).toEqual([[30, 190], [10, 170]]);
+    // right-to-left text binds on the right
+    expect(await pages('#set text(lang: "he")')).toEqual([[30, 190], [10, 170]]);
+    expect(await pages('#set text(dir: rtl)')).toEqual([[30, 190], [10, 170]]);
+  });
+
+  it.each([
+    ['no page set', '= Title\n#lorem(900)\n'],
+    ['a page of auto height', '#set page(height: auto)\n#lorem(900)\n'],
+    ['a page of auto width', '#set page(width: auto)\n#lorem(30)\n'],
+    ['a page of auto width and height', '#set page(width: auto, height: auto)\n#lorem(30)\n'],
+    ['a flipped page of auto height', '#set page(flipped: true, height: auto)\n#lorem(30)\n'],
+    ['a two-sided margin with x', '#set page(margin: (x: 1cm, inside: 2cm))\n#lorem(900)\n'],
+    ['a template', '#let template(doc) = { set page(paper: "us-letter", margin: (x: auto, y: 1in), header: [H], columns: 2); doc }\n#show: template\n#lorem(900)\n'],
+    ['pages of their own', '#page(margin: (inside: 3cm))[A]\n#page(height: auto, margin: 5%)[B]\n#lorem(900)\n'],
+  ])('compiles %s without diagnostics, drawing the guides on every page', async (_, main) => {
+    const { pages, diagnostics } = await compile(main, [GUIDES]);
+    expect(diagnostics).toEqual([]);
+    expect(pages.length).toBeGreaterThan(0);
+    for (const page of pages) expect(guidesOf(page.svg).x.length).toBeGreaterThanOrEqual(2);
   });
 
   it('outlines blocks and boxes, keeping the strokes a document gives', async () => {

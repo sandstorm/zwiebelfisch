@@ -1,20 +1,12 @@
 // End-to-end tests (Playwright, against the demo build): the preview toolbar's View menu ("Page guides", "Box
 // outlines") changes the preview's pages, is remembered, and leaves the PDF alone.
-import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { test } from './fixtures';
 import { expect, type Page } from '@playwright/test';
 
-/** scaffolder as `mise run build:packages` caches it (no network in the tests); skipped without it. */
-const SCAFFOLDER = resolve(import.meta.dirname, '../../.cache/typst-packages/scaffolder-0.2.1.tar.gz');
 /** The guides' stroke color, as the SVG of a page has it. */
 const GUIDES = '#3b82f6';
 
-test.skip(!existsSync(SCAFFOLDER), 'needs scaffolder: mise run build:packages');
-
 test.beforeEach(async ({ page }) => {
-  await page.route('https://packages.typst.org/preview/scaffolder-0.2.1.tar.gz', (route) =>
-    route.fulfill({ body: readFileSync(SCAFFOLDER), contentType: 'application/gzip' }));
   await page.goto('/');
   await expect(firstPage(page).locator('svg')).toBeVisible();
 });
