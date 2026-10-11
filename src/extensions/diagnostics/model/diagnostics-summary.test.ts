@@ -5,6 +5,7 @@ import type { Diagnostic } from '../../../core/typst-engine/typst-engine';
 import { summarizeDiagnostics } from './diagnostics-summary';
 
 const MAIN = ProjectPath.of('/main.typ');
+const LIB = ProjectPath.of('/lib.typ');
 
 function diag(overrides: Partial<Diagnostic>): Diagnostic {
   return { severity: 'error', message: 'boom', hints: [], path: MAIN, from: 0, to: 1, ...overrides };
@@ -31,7 +32,7 @@ describe('summarizeDiagnostics', () => {
 
   it('separates diagnostics of the shown file from those of other files or without location', () => {
     const own = diag({ from: 3, to: 5 });
-    const other = diag({ path: '/lib.typ' });
+    const other = diag({ path: LIB });
     const nowhere = diag({ path: null });
     const summary = summarizeDiagnostics([other, own, nowhere], MAIN);
     expect(summary.inFile).toEqual([own]);
@@ -43,7 +44,7 @@ describe('summarizeDiagnostics', () => {
       diag({ severity: 'warning', from: 1, to: 2 }),
       diag({ from: 20, to: 25 }),
       diag({ from: 10, to: 12 }),
-      diag({ path: '/lib.typ', from: 0, to: 1 }),
+      diag({ path: LIB, from: 0, to: 1 }),
     ], MAIN);
     expect(summary.target).toEqual({ path: MAIN, from: 10, to: 12 });
   });
@@ -56,19 +57,19 @@ describe('summarizeDiagnostics', () => {
   it('targets an error in another project file before a warning in the shown one', () => {
     const summary = summarizeDiagnostics([
       diag({ severity: 'warning', from: 1, to: 2 }),
-      diag({ path: '/lib.typ', from: 9, to: 11 }),
-      diag({ path: '/lib.typ', from: 3, to: 4 }),
+      diag({ path: LIB, from: 9, to: 11 }),
+      diag({ path: LIB, from: 3, to: 4 }),
     ], MAIN);
-    expect(summary.target).toEqual({ path: '/lib.typ', from: 3, to: 4 });
+    expect(summary.target).toEqual({ path: LIB, from: 3, to: 4 });
   });
 
   it('summarizes for the file that is shown', () => {
-    const summary = summarizeDiagnostics([diag({}), diag({ path: '/lib.typ', from: 5, to: 6 })], ProjectPath.of('/lib.typ'));
-    expect(summary.inFile).toEqual([diag({ path: '/lib.typ', from: 5, to: 6 })]);
-    expect(summary.target).toEqual({ path: '/lib.typ', from: 5, to: 6 });
+    const summary = summarizeDiagnostics([diag({}), diag({ path: LIB, from: 5, to: 6 })], LIB);
+    expect(summary.inFile).toEqual([diag({ path: LIB, from: 5, to: 6 })]);
+    expect(summary.target).toEqual({ path: LIB, from: 5, to: 6 });
   });
 
-  it('has no target when all diagnostics are in packages or without location', () => {
-    expect(summarizeDiagnostics([diag({ path: '@preview/x:1.0.0/lib.typ' }), diag({ path: null })], MAIN).target).toBeNull();
+  it('has no target when no diagnostic is in a project file', () => {
+    expect(summarizeDiagnostics([diag({ path: null })], MAIN).target).toBeNull();
   });
 });

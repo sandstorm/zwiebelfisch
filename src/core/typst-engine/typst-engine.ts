@@ -1,5 +1,6 @@
 // The typed TypeScript side of the typst-engine wasm (crates/typst-engine): createEngine and the engine's
 // data types. Entry of core/typst-engine/. See docs/architecture/core.typ.
+import { ProjectPath } from '../paths/paths';
 import init, { Engine as WasmEngine, type InitInput } from './wasm/typst_engine';
 
 // Asset URLs (wasm, default fonts) are core/engine-assets, not here: the worker imports this file. Packages
@@ -81,8 +82,8 @@ export interface Diagnostic {
   severity: 'error' | 'warning';
   message: string;
   hints: string[];
-  /** null when the diagnostic has no location in a file. */
-  path: string | null;
+  /** The project file it is in; null when it has no location, or is in a package file. */
+  path: ProjectPath | null;
   from: number;
   to: number;
 }
@@ -138,11 +139,11 @@ export async function createEngine(
     setSource: (path, text) => assertValidPath(engine.setSource(path, text), path),
     setBinary: (path, data) => assertValidPath(engine.setBinary(path, data), path),
     remove: (path) => engine.remove(path),
-    compile: (main) => JSON.parse(engine.compile(main)),
+    compile: (main) => parseReport<CompileResult>(engine.compile(main)),
     exportPdf: (main) => {
       const exported = engine.exportPdf(main);
       try {
-        return { pdf: exported.pdf() ?? null, ...JSON.parse(exported.report()) };
+        return { pdf: exported.pdf() ?? null, ...parseReport<Omit<PdfResult, 'pdf'>>(exported.report()) };
       } finally {
         exported.free();
       }
@@ -155,6 +156,13 @@ export async function createEngine(
     boxesForRanges: (path, ranges) =>
       JSON.parse(engine.boxesForRanges(path, new Uint32Array(ranges.flatMap(({ from, to }) => [from, to])))),
   };
+}
+
+/** A report of the wasm (JSON) with its diagnostics' paths parsed: a package file has no project path. */
+function parseReport<R extends { diagnostics: Diagnostic[] }>(json: string): R {
+  const report = JSON.parse(json) as R;
+  for (const d of report.diagnostics) d.path = d.path === null ? null : ProjectPath.parse(d.path);
+  return report;
 }
 
 function assertValidPath(ok: boolean, path: string): void {

@@ -3,6 +3,7 @@
 // points (preview mocked: no worker in jsdom).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
+import { ProjectPath } from '../core/paths/paths';
 import type { Diagnostic } from '../core/typst-engine/typst-engine';
 import type { PageClick, PdfExportOption, PreviewContext, PreviewToolbarItem } from '../hosts/preview/preview';
 import type { Disposable } from '../core/disposable/disposable';
@@ -213,7 +214,7 @@ describe('the built-in extensions', () => {
 
   it('counts the diagnostics in the status bar and underlines them in the Source view', async () => {
     const { host, preview } = setup({ source: '= Hi' });
-    preview.compiled([{ severity: 'error', message: 'oops', hints: [], path: '/main.typ', from: 0, to: 1 }]);
+    preview.compiled([{ severity: 'error', message: 'oops', hints: [], path: ProjectPath.of('/main.typ'), from: 0, to: 1 }]);
     const status = host.querySelector('.typst-editor__status-bar [data-testid=typst-status]')!;
     expect(status.textContent).toContain('1 error');
     await vi.waitFor(() => expect(host.querySelector('.cm-lintRange-error')).not.toBeNull());
@@ -222,9 +223,9 @@ describe('the built-in extensions', () => {
   it('marks the diagnostics in the Visual view, message and hints as tooltip, also in views made later', () => {
     const { host, editor, preview } = setup({ mode: 'visual', source: 'Hello world.\n', files: { '/a.typ': '#foo\n\nText.\n' } });
     preview.compiled([
-      { severity: 'error', message: 'unknown variable: foo', hints: ['did you mean bar?'], path: '/main.typ', from: 6, to: 11 },
+      { severity: 'error', message: 'unknown variable: foo', hints: ['did you mean bar?'], path: ProjectPath.of('/main.typ'), from: 6, to: 11 },
       // in raw code (a block atom), of a file whose views do not exist yet
-      { severity: 'warning', message: 'unused', hints: [], path: '/a.typ', from: 1, to: 4 },
+      { severity: 'warning', message: 'unused', hints: [], path: ProjectPath.of('/a.typ'), from: 1, to: 4 },
     ]);
     const mark = host.querySelector<HTMLElement>('.ProseMirror .typst-diagnostic')!;
     expect(mark.textContent).toBe('world');

@@ -77,7 +77,7 @@ export class DiagnosticsStatus {
     const doc = this.element.ownerDocument;
     const item = doc.createElement('li');
     item.dataset.severity = diagnostic.severity;
-    const text = `${diagnostic.path ?? '(no file)'}: ${diagnostic.message}`;
+    const text = `${diagnostic.path ?? '(no project file)'}: ${diagnostic.message}`;
     const target = targetOf(diagnostic);
     if (!target) {
       item.textContent = text;

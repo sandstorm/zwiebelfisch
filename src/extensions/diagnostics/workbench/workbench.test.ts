@@ -26,14 +26,14 @@ describe('DiagnosticsStatus', () => {
     expect(onJump).toHaveBeenCalledWith({ path: MAIN, from: 3, to: 6 });
   });
 
-  it('lists the diagnostics of other files; those in project files jump there', () => {
+  it('lists the diagnostics of other files or of none (packages); those in project files jump there', () => {
     const parent = document.createElement('div');
     const onJump = vi.fn();
     const status = new DiagnosticsStatus(document, onJump);
     parent.append(status.element);
-    status.show(summarizeDiagnostics([diag({ path: '/lib.typ', from: 2, to: 4 }), diag({ path: '@preview/x:1.0.0/lib.typ' })], MAIN));
+    status.show(summarizeDiagnostics([diag({ path: ProjectPath.of('/lib.typ'), from: 2, to: 4 }), diag({ path: null })], MAIN));
     const items = [...parent.querySelectorAll('.typst-status__elsewhere li')];
-    expect(items.map((item) => item.textContent)).toEqual(['/lib.typ: boom', '@preview/x:1.0.0/lib.typ: boom']);
+    expect(items.map((item) => item.textContent)).toEqual(['/lib.typ: boom', '(no project file): boom']);
     expect(items[1].querySelector('button')).toBeNull();
     items[0].querySelector('button')!.click();
     expect(onJump).toHaveBeenCalledWith({ path: '/lib.typ', from: 2, to: 4 });

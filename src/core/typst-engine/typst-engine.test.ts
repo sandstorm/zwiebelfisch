@@ -204,7 +204,8 @@ describe('Engine', () => {
     engine.setSource('/main.typ', '#import "@preview/tiny:1.0.0": shout\n#shout("hi")');
     const result = engine.compile('/main.typ');
     expect(result.missingPackages).toEqual([]);
-    expect(result.diagnostics[0].path).toBe('@preview/tiny:1.0.0/src/lib.typ');
+    // the error is in the package file, which has no project path
+    expect(result.diagnostics[0]).toMatchObject({ path: null, message: expect.stringContaining('oops') });
     engine.setSource('@preview/tiny:1.0.0/src/lib.typ', '#let shout(x) = upper(x)');
     expect(engine.compile('/main.typ').diagnostics).toEqual([]);
   });

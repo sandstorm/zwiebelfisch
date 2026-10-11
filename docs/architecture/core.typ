@@ -63,6 +63,7 @@ The Typst compiler, SVG and PDF export and hit-testing: Rust (`crates/typst-engi
 - `engine-assets`: the wasm and font URLs for the main thread, apart so the worker bundle does not copy them.
 - `typst-packages`: `withPackages(engine)` compiles, downloads the missing `@preview` packages, compiles again.
 - Conventions: UTF-16 offsets, 0-based pages, pt from the page's top-left, project or package paths (`@preview/name:0.1.0/lib.typ`).
+- A diagnostic's path is parsed where the wasm's report is read: a `ProjectPath`, or `null` without location or in a package file.
 
 == Typst syntax <architecture-core-syntax>
 
