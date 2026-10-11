@@ -1,4 +1,5 @@
-// Heading numbers in the Visual editor: each heading's number in a gutter right of the text. See visual-editor.ts.
+// Heading numbers in the Visual editor: each heading's number in a gutter right of the text. See headings in
+// ../headings.ts.
 import { Extension } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';

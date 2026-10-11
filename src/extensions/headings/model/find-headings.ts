@@ -1,4 +1,5 @@
-// The headings of Typst source with their level, words and place (search everywhere lists them). See ../headings.ts.
+// The headings of Typst source with their level, words and place (search everywhere lists them). See headings in
+// ../headings.ts.
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { SourceRange } from '../../../core/typst-document/typst-document';
 

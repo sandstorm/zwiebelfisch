@@ -1,12 +1,13 @@
-// See ../headings.ts.
+// Heading numbers as Typst computes them, and the change that switches numbering on or off. Pure: works on Typst
+// code, not on an editor's document. See headings in ../headings.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { SourceOffset, SourceRange, type TextChange } from '../../../core/typst-document/typst-document';
 import { numberingFormatter } from './numbering';
 
 /**
- * Heading numbers as Typst computes them, from the `#set heading(numbering:
- * ..)` rules of the code blocks before a heading.
+ * Numbers headings in document order as Typst's heading counter does, following the `#set heading(numbering: ..)`
+ * rules of the code met on the way.
  *
  * Approximations (the preview shows the real numbers):
  * - only rules at the start of a line in top-level raw blocks count; rules in
@@ -15,14 +16,6 @@ import { numberingFormatter } from './numbering';
  * - a rule applies from its place in the document to the next rule;
  * - numbering functions and patterns with numeral systems `numbering.ts`
  *   does not implement count, but show no number.
- */
-
-/**
- * Numbers headings in document order as Typst's heading counter does,
- * following the heading set rules of the code met on the way.
- *
- * Heading numbers as Typst computes them from `#set heading(numbering: ..)` rules, and the change that switches
- * numbering on or off. Pure: works on Typst code, not on an editor's document.
  */
 export class HeadingCounter {
   private readonly counter: number[] = [];

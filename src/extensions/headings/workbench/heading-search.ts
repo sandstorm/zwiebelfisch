@@ -1,4 +1,4 @@
-// The headings of every Typst file in search everywhere. See ../headings.ts and docs/10_guide/02_features.typ.
+// The headings of every Typst file in search everywhere. See headings in ../headings.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 import type { Project } from '../../../core/project/project';
 import type { SearchProvider } from '../../../hosts/window/window';
