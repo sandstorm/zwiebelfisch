@@ -1,4 +1,4 @@
-// pageNumber: "page n / total" at the end of the preview toolbar. See ../preview-controls.ts.
+// pageNumber: "page n / total" at the end of the preview toolbar. See previewControls in ../preview-controls.ts.
 import type { PreviewToolbarItem } from '../../../hosts/preview/preview';
 
 /** The page covering most of the viewport and the page count, "3 / 12"; empty without pages. */

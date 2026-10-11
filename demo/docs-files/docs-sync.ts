@@ -1,5 +1,4 @@
-// The demo page's half of writing the docs in the demo. See docs/30_architecture/11_development.typ ("Writing the docs
-// in the demo").
+// DocsSync: the demo page's half of writing the docs in the demo. See docsFiles in plugin.ts.
 import { type FileChange, FileContent, type ProjectFiles } from '../../src';
 import {
   DOCS_FILES_CHANGE,
@@ -19,9 +18,6 @@ import {
  *
  * It remembers what is on disk (as far as it knows: the files it started from, wrote, or heard of), which is how it
  * tells unsaved edits apart, and why its own writes coming back cause nothing.
- *
- * The Documentation example's edits go to docs/ through the docs-files plugin (plugin.ts; dev server or `vite
- * preview`), and changes made on disk come back into the editor.
  */
 export class DocsSync {
   readonly #disk = new Map<string, FileContent>();

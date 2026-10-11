@@ -1,4 +1,4 @@
-// The demo's example projects: demo/examples/<name>/ and docs/ as file maps (import.meta.glob).
+// The demo's example projects: demo/examples/<name>/ and docs/ as file maps (import.meta.glob). See main.ts.
 import type { ProjectFiles } from '../src';
 
 /**

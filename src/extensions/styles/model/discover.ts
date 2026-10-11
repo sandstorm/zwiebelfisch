@@ -1,4 +1,4 @@
-// Style discovery: the functions a Typst file declares as block or inline styles (`/// @style …`). See ../styles.ts.
+// Style discovery: the functions a Typst file declares as block or inline styles (`/// @style …`). See styles in ../styles.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import type { ProjectPath } from '../../../core/paths/paths';

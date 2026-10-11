@@ -1,5 +1,5 @@
 // What the pdf-export extension adds to the preview: "Download PDF" and its options popover (downloadPdf).
-// See ../pdf-export.ts.
+// See pdfExport in ../pdf-export.ts.
 import type { PdfExportOption, PreviewToolbarItem } from '../../../hosts/preview/preview';
 import type { WindowApi } from '../../../hosts/window/window';
 import type { Memento } from '../../../hosts/workbench/workbench';
@@ -7,8 +7,8 @@ import type { Memento } from '../../../hosts/workbench/workbench';
 /**
  * "Download PDF". With export options registered it opens a popover with a checkbox per option (as this viewer left
  * them last time, kept in `state` under `options`, else their defaults) and "Download"; without any it downloads at
- * once. While a PDF is being made
- * the buttons are disabled ("Making PDF…"); a failure is an error message, and nothing is downloaded.
+ * once. While a PDF is being made the buttons are disabled ("Making PDF…"); a failure is an error message, and nothing
+ * is downloaded.
  */
 export function downloadPdf(pdfs: PdfDownloads, state: Memento, messages: PdfMessages): PreviewToolbarItem {
   return (preview) => {

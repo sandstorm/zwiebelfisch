@@ -1,4 +1,3 @@
-// The spreadsheets extension. Entry of extensions/spreadsheets/. See docs/10_guide/02_features.typ.
 import type { FileChange } from '../../core/project/project';
 import { ProjectPath } from '../../core/paths/paths';
 import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
@@ -10,17 +9,17 @@ import { SPREADSHEET_HELP } from './workbench/spreadsheet-help';
 import type { WorkbookEdit } from './workbench/workbook';
 
 /**
- * Spreadsheet files (`*.ic`) in the editing area: IronCalc's workbook UI; every edit is stored with its Typst file.
- * "New spreadsheet…" (`spreadsheets.newSpreadsheet`) in the menu `file/newFile` asks for a name and opens the new one;
- * "Insert spreadsheet" in the Visual editor's Insert menu also puts its table into the text as a figure. `.ic` files are
- * the language `ironcalc`, with the help sheet "Spreadsheet formulas".
+ * Spreadsheets (`.ic` files), edited in IronCalc's workbook UI and used in documents as Typst tables.
  *
- * A spreadsheet file (`.ic`) shown and edited in IronCalc's workbook UI (SpreadsheetEditor, the custom editor
- * `spreadsheets.editor`); every edit saves the file and the Typst file documents import. "New spreadsheet…" in the file
- * panel's "New"; "Insert spreadsheet" in the Visual editor's Insert menu.
+ * The custom editor `spreadsheets.editor` (SpreadsheetEditor) shows a spreadsheet. Every edit saves the file and also
+ * writes `name.ic.gen.typ`, the Typst file documents import (model/typst-file.ts). So Typst never needs a spreadsheet
+ * engine, and the editor only reports edits: what the project gets is decided here. "New spreadsheet…" (menu
+ * `file/newFile`) creates an empty one; "Insert spreadsheet" (Insert menu) creates one with a starter table and puts
+ * its table into the text as a figure. `.ic` files are the language `ironcalc`, with the help sheet "Spreadsheet
+ * formulas".
  *
- * Why the extension stores the Typst file: documents import `name.ic.gen.typ`, never the workbook, so the Typst side
- * needs no spreadsheet engine; the editor only reports edits, the extension decides what the project gets.
+ * IronCalc (React, its UI and a 2 MB engine) is loaded only when a spreadsheet is first shown or inserted
+ * (workbench/workbook.ts). See docs/10_guide/02_features.typ, "Spreadsheets".
  */
 export function spreadsheets(): TypstExtension {
   return {

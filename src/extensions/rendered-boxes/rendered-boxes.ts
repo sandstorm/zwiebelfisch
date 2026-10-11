@@ -1,19 +1,16 @@
-// The rendered-boxes extension. Entry of extensions/rendered-boxes/. See
-// docs/30_architecture/08_built-in-extensions.typ.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './rendered-boxes.css?inline';
 import { snippetRenderer } from './visual-editor/visual-editor';
 
 /**
- * Raw boxes drawn as compiled snippets from the preview (`Preview.snippet` under the document's current path,
- * refreshed on `onDidRender`; see `snippetRenderer`). Image boxes are drawn by the images' renderer (priority 110
- * over this one's 100).
+ * Raw boxes that show how they look compiled.
  *
- * A raw box in the Visual editor (Typst it does not model) shows how it looks compiled — its snippet cut from the
- * preview's pages — until someone edits its code.
+ * A raw box holds Typst the Visual editor has no construct for. With this extension it shows its snippet, cut from the
+ * preview's pages, until its code gets focus. The picture is refreshed after every compile (`onDidRender`).
  *
- * Why an extension: the Visual editor only knows that a box may be drawn by a renderer; where pictures come from (the
- * preview, under the document's current path) is this extension's knowledge.
+ * The Visual editor only knows that a box may be drawn by a renderer. Where the pictures come from (the preview, under
+ * the document's current path) is decided here. Image boxes are drawn by the images extension's renderer (priority 110,
+ * over this one's 100). See docs/30_architecture/04_visual-editor.typ, "Raw boxes".
  */
 export function renderedBoxes(): TypstExtension {
   return {

@@ -1,4 +1,4 @@
-// What the markup extension contributes to the Visual editor. See ../markup.ts.
+// What the markup extension contributes to the Visual editor. See markup in ../markup.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { Extension, type AnyExtension, type Editor } from '@tiptap/core';
 import Code from '@tiptap/extension-code';

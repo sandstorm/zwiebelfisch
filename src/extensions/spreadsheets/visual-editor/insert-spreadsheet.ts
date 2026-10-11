@@ -1,4 +1,4 @@
-// "Insert spreadsheet" in the Visual editor's Insert menu (and so among the slash commands). See ../spreadsheets.ts.
+// "Insert spreadsheet" in the Visual editor's Insert menu (and so among the slash commands). See spreadsheets in ../spreadsheets.ts.
 import type { FileChange } from '../../../core/project/project';
 import { PathReference, ProjectPath } from '../../../core/paths/paths';
 import { insertTypst, svg, type ToolbarContext, type ToolbarItem } from '../../../hosts/visual-editor/visual-editor';
@@ -13,8 +13,6 @@ import type { NewWorkbook } from '../workbench/workbook';
  * `workspace.applyEdit`, so the document compiles at once), inserts `#figure(sheets.Sheet1, caption: [ ])` after the
  * cursor's block with the import it needs (`calculateSheetFigure`), and opens the spreadsheet: the starter values
  * are placeholders, so filling them in is next. `newWorkbook` makes the spreadsheet (IronCalc, loaded on demand).
- *
- * A new spreadsheet with a starter table, its table as a figure in the text, then the spreadsheet opened.
  */
 export function insertSpreadsheet(context: InsertContext, newWorkbook: (fileName: string) => Promise<NewWorkbook>): ToolbarItem {
   return {

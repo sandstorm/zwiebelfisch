@@ -1,12 +1,9 @@
-// See docs/30_architecture/11_development.typ ("Writing the docs in the demo").
+// What the docs-files plugin (node) and the demo page agree on: the endpoint, the session token's meta tag and
+// header, the event stream of what is on disk, and how a file travels in it. See docsFiles in plugin.ts.
 
 /**
  * The endpoint: `PUT ?path=` writes the body, `DELETE ?path=` deletes, `POST ?path=&to=` renames; `GET ?token=` is the
  * event stream (Server-Sent Events: `DOCS_FILES_SNAPSHOT` once per connection, then `DOCS_FILES_CHANGE`s).
- *
- * What the docs-files plugin (plugin.ts, node; dev server and `vite preview`) and the demo page (docs-sync.ts) agree
- * on: the endpoint, the session token's meta tag and header, the event stream of what is on disk, and how a file
- * travels in it.
  */
 export const DOCS_FILES_ENDPOINT = '/__docs-files';
 

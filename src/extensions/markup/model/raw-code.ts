@@ -1,14 +1,8 @@
-// See ../markup.ts.
+// Raw text (`code`, ```lang … ```): reading a parsed `Raw` node, and writing delimiters around edited code so that
+// Typst reads the text back unchanged. See markup in ../markup.ts.
 import type { SyntaxNode } from '@lezer/common';
 
-/**
- * Reads a `Raw` syntax node; null when it is not closed by a matching delimiter.
- *
- * Typst raw text (`code`, ```lang … ```) as the Visual editor models it: code
- * blocks and inline code. Reads the parts of a parsed `Raw` node and writes
- * the delimiters around edited code, so that Typst reads the text back
- * unchanged.
- */
+/** Reads a `Raw` syntax node into its parts; null when it is not closed by a matching delimiter. */
 export function rawCode(node: SyntaxNode, source: string): RawCode | null {
   const parts: SyntaxNode[] = [];
   for (let child = node.firstChild; child; child = child.nextSibling) parts.push(child);

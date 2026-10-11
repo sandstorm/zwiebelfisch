@@ -1,5 +1,5 @@
 // Reading `#table(..)` calls: which ones the Visual editor models as tables, their cells and how they are written.
-// See visual-editor.ts.
+// See tables in ../tables.ts.
 import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
 import { callArguments, children, hasOnlyArguments, isClosedContent, isEmbeddable, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';

@@ -1,4 +1,4 @@
-// Text in every Typst and text file, in search everywhere. See ../text-files.ts and docs/10_guide/02_features.typ.
+// Text in every Typst and text file, in search everywhere. See textFiles in ../text-files.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 import type { FileContent, Project } from '../../../core/project/project';
 import { SourceRange } from '../../../core/typst-document/typst-document';

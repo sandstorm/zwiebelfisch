@@ -1,5 +1,5 @@
-/* The page-layout extension's styles: Page breaks and horizontal rules in the Visual editor.
-   See page-layout.ts, which registers it (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
+/* The page-layout extension's styles: page breaks and horizontal rules in the Visual editor.
+   See page-layout.ts, which registers it; colors from the widget's --te-* tokens. */
 .typst-page-layout__page-break {
   display: flex;
   align-items: center;

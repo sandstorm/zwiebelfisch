@@ -1,4 +1,6 @@
-// A spreadsheet in a document as a figure. See ../spreadsheets.ts.
+// A spreadsheet in a document as a figure: the starter table, the name its sheets go by in the document (a second
+// spreadsheet's get one of their own), the import that binds it and the figure's Typst. See spreadsheets in
+// ../spreadsheets.ts.
 import { PathReference, ProjectPath } from '../../../core/paths/paths';
 import type { SourceOffset, TextChange } from '../../../core/typst-document/typst-document';
 import { calculateImportChange, importedNames, quote } from '../../../core/typst-syntax/typst-syntax';
@@ -6,9 +8,6 @@ import { typstPath } from './typst-file';
 
 /**
  * The figure of a sheet in a document, and the change that imports what it names (null: imported already).
- *
- * The starter table a spreadsheet inserted into a document begins with, the name its sheets go by in the document (a
- * second spreadsheet's sheets get one of their own) with the import that binds it, and the figure's Typst.
  */
 export interface SheetFigure {
   /** `#figure(sheets.Sheet1, caption: [ ])`. */

@@ -1,4 +1,4 @@
-// The zoom presets and how a zoom is named. Pure. See ../preview-controls.ts.
+// The zoom presets and how a zoom is named. Pure. See previewControls in ../preview-controls.ts.
 
 /** The next preset scale above (`direction` 1) or below (-1) `scale`, clamped to the range. */
 export function stepZoom(scale: number, direction: 1 | -1): number {

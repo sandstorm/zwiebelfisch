@@ -1,11 +1,9 @@
-// The help sheet of Mermaid files. See ../mermaid.ts.
+// The help sheet of Mermaid files. See mermaid in ../mermaid.ts.
 import type { HelpSheet } from '../../../hosts/languages/languages';
 
 /**
  * "Mermaid basics": flowcharts and sequence diagrams as merman draws them (Mermaid 12), each row ready to insert into
  * a `.mmd` file.
- *
- * Why here: the help panel renders any language's sheet; what Mermaid looks like is this extension's knowledge.
  */
 export const MERMAID_HELP: HelpSheet = {
   title: 'Mermaid basics',

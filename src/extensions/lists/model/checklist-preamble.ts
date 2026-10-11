@@ -1,5 +1,5 @@
 // What a document with task lists needs so that Typst draws them as checkboxes: cheq's import and show rule. See
-// ../lists.ts.
+// lists in ../lists.ts.
 
 /**
  * Task lists are Typst bullet items starting with `[ ]` / `[x]`, which only

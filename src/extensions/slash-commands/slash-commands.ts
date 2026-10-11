@@ -1,4 +1,3 @@
-// The slash-commands extension. Entry of extensions/slash-commands/. See docs/10_guide/02_features.typ.
 import { Extension, type Editor } from '@tiptap/core';
 import { Plugin, type EditorState } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
@@ -7,12 +6,13 @@ import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './slash-commands.css?inline';
 
 /**
- * Typing `/` offers the Insert menu's entries and the text styles that can apply here; "Type / for commands" in the
- * empty line holding the cursor makes that discoverable.
+ * Typing `/` in the Visual editor lists the Insert menu's entries and the text styles that can apply here, found by
+ * label and keywords. The hint "Type / for commands" in the empty paragraph holding the cursor makes that easy to find
+ * (not in table cells, which are too narrow for it).
  *
- * `/` at a line start or after a space lists what the Visual editor's Insert menu and text style menu offer; the empty
- * line holding the cursor says so. Why an extension: it only reads what other extensions register (through the host's
- * completion context), so the list grows with them and it can be left out, hint included.
+ * It adds no commands of its own. It reads what other extensions put into the Insert menu and the text style menu
+ * (through the completion context), so the list grows with them, and the whole feature can be left out.
+ * See docs/20_extensions/03_visual-editor-constructs.typ, "Completion lists".
  */
 export function slashCommands(): TypstExtension {
   return {

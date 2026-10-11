@@ -1,4 +1,4 @@
-// zoomControls: the preview toolbar's zoom buttons and the current zoom. See ../preview-controls.ts.
+// zoomControls: the preview toolbar's zoom buttons and the current zoom. See previewControls in ../preview-controls.ts.
 import type { PreviewToolbarItem } from '../../../hosts/preview/preview';
 import { stepZoom, zoomText } from '../model/zoom';
 

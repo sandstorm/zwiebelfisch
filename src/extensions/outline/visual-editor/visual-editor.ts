@@ -1,4 +1,4 @@
-// What the outline extension contributes to the Visual editor. See ../outline.ts.
+// What the outline extension contributes to the Visual editor. See outline in ../outline.ts.
 import { Node } from '@tiptap/core';
 import { hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
@@ -21,8 +21,6 @@ const Outline = Node.create({
  * A standalone `#outline(..)` call: the table of contents. Its source is kept
  * and edited like a raw block's; the box is headed "Table of contents" and
  * shows the compiled outline where a box renderer draws it.
- *
- * `#outline(..)` as a box headed "Table of contents", and "Insert" → "Table of contents".
  */
 export const OUTLINE: TypstNodeSpec = {
   name: 'outline',

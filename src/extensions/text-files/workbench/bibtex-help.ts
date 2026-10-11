@@ -1,10 +1,8 @@
-// The help sheet of BibTeX files. See ../text-files.ts.
+// The help sheet of BibTeX files. See textFiles in ../text-files.ts.
 import type { HelpSheet } from '../../../hosts/languages/languages';
 
 /**
  * "BibTeX": the entries of a bibliography file (`.bib`) and how a Typst document cites them, each row ready to insert.
- *
- * Why here: the help panel renders any language's sheet; `.bib` files are text files, opened by this extension.
  */
 export const BIBTEX_HELP: HelpSheet = {
   title: 'BibTeX',

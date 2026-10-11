@@ -1,4 +1,4 @@
-// What the tables extension contributes to the Visual editor. See ../tables.ts.
+// What the tables extension contributes to the Visual editor. See tables in ../tables.ts.
 import { Extension, findParentNode, type Editor } from '@tiptap/core';
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
 import { svg, type ToolbarAction, type Anchor, type ToolbarGroup, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
@@ -35,8 +35,6 @@ const Tables = Extension.create({
  * elements, other expressions and comments keep the table raw. `layout` is the
  * source around the cells and how its rows are written (see the model's
  * `TableLayout`).
- *
- * The table spec (`#table(columns: n, ..)` as Tiptap's table nodes), "Insert table" and the bar over a table.
  */
 export const TABLE: TypstNodeSpec = {
   name: 'table',

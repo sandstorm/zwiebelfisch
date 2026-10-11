@@ -1,4 +1,4 @@
-// Label tags. See visual-editor.ts.
+// Label tags: a block's label drawn as a tag on the block. See labels in ../labels.ts.
 import type { Node } from '@tiptap/pm/model';
 import { type EditorState, NodeSelection, Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
@@ -9,15 +9,10 @@ import { labelName } from '../model/reference-syntax';
 import type { ProjectLabels } from '../model/label-index';
 
 /**
- * Draws every labelled block's label as a tag: at the end of a heading's or
- * paragraph's text, or below other blocks (figures, equations, tables). A
- * click on the tag offers to rename the label (with every reference to it in
- * the project, or alone) or remove it; each is one undo step here.
+ * Draws every labelled block's label as a tag: at the end of a heading's or paragraph's text, or below other blocks
+ * (figures, equations, tables). A click on the tag asks, through the window's quick pick and input box, to rename the
+ * label (with every reference to it in the project, or alone) or remove it; each is one undo step here.
  * `startNewLabel` draws a draft tag with a field at the same place instead.
- *
- * A block's label (`= Intro <intro>`) drawn as a small tag on the block, renamed or removed through the window's quick
- * pick and input box; a new label typed into a draft tag right where it will show, on the block the selection would
- * label.
  */
 export function labelTags(options: LabelTagsOptions): Plugin {
   return new Plugin<TagsState>({

@@ -1,14 +1,15 @@
-// The tables extension. See docs/30_architecture/08_built-in-extensions.typ.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './tables.css?inline';
 import { INSERT_TABLE, TABLE, TABLE_BAR, TABLE_EDITS } from './visual-editor/visual-editor';
 
 /**
- * Tables, "Insert table" and the table bar.
+ * Tables in the Visual editor: `#table(columns: n, ..)` as an editable table, "Insert table" and a bar over the table
+ * holding the cursor (rows, columns, header row).
  *
- * `#table(columns: n, ..)` in the Visual editor as an editable table, with "Insert table" and a bar over the table
- * holding the cursor (rows, columns, header row). Why an extension: the Visual editor's host models only paragraphs,
- * text and raw Typst; a table the Visual editor cannot model stays a raw box.
+ * Editing a cell changes only that cell's source; a table whose shape changed is printed again in the style it was
+ * written in. A table the Visual editor cannot edit as a grid (merged cells, lines, a footer, a computed `columns`)
+ * stays a raw box. A table as a figure's body gets its caption from the figures extension (node group
+ * `figureBody`). See docs/10_guide/02_features.typ, "Tables".
  */
 export function tables(): TypstExtension {
   return {

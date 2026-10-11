@@ -1,4 +1,3 @@
-// The preview-sync extension. Entry of extensions/preview-sync/. See docs/30_architecture/06_preview.typ.
 import { Disposable } from '../../core/disposable/disposable';
 import type { SourceRange } from '../../core/typst-document/typst-document';
 import type { ProjectPath } from '../../core/paths/paths';
@@ -9,23 +8,20 @@ import { followCursor } from './preview/preview';
 import css from './preview-sync.css?inline';
 
 /**
- * While "Follow cursor" is on, the preview scrolls to the selection the user moves in the shown file (when it is
- * off-screen); switching it on goes there at once. It starts as the setting `previewSync.followCursor` says if the
- * host set it, else as this viewer chose last, else on; the host setting it later switches it. A click on text in
- * the preview opens its file with the clicked range selected (package files are no project files: ignored); the
- * preview's outline of the click goes with the next edit or once the selection moves away from that range.
- * While the setting `previewSync.highlightSelection` is on (default), whatever is selected in the shown file (Visual or
- * Source editor, independent of "Follow cursor") is shaded in the preview, a moment after the selection settles; a caret
- * shades nothing. A click's own selection is not shaded: its outline marks it already.
+ * Keeps the editor and the preview in step, both ways.
  *
- * The editor and the preview in step, both ways. The preview follows the cursor (with a "Follow cursor" switch in its
- * toolbar, remembered per viewer) and shades the text selected in the shown file, and a click in the preview selects
- * its source.
+ * - *Follow cursor:* the preview scrolls to the selection when it moves off-screen. A switch in the preview's toolbar
+ *   turns it on and off. It starts as the setting `previewSync.followCursor` says, else as this viewer chose last,
+ *   else on.
+ * - *Shading:* while `previewSync.highlightSelection` is on (the default), the text selected in the shown file (in
+ *   either editor) is shaded in the preview, a moment after the selection settles.
+ * - *Click:* a click on text in the preview opens its file with that range selected (package files are ignored). The
+ *   preview outlines the click until the next edit or until the selection moves away.
  *
- * Why an extension: the preview host only offers the mechanism (`reveal`, `setSelectionHighlight`, hit-testing,
- * `onDidClickPage` and `clearClickHighlight`), the workbench the selection (`onDidChangeTextEditorSelection`) and
- * `open`; when to follow, what to shade, where a click leads and how long its outline stays is policy. Without this
- * extension the preview neither follows, shades nor jumps.
+ * The preview host only offers the mechanism (`reveal`, `setSelectionHighlight`, `onDidClickPage`,
+ * `clearClickHighlight`); the window tells the selection, the workbench opens files. When to follow, what to shade and
+ * where a click leads is decided here. Without this extension the preview neither follows, shades nor jumps.
+ * See docs/30_architecture/06_preview.typ.
  */
 export function previewSync(): TypstExtension {
   return {

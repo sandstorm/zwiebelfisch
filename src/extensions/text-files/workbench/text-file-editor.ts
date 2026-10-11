@@ -1,4 +1,4 @@
-// TextFileEditor. See ../text-files.ts.
+// TextFileEditor: a text file in plain CodeMirror. See textFiles in ../text-files.ts.
 import { basicSetup } from 'codemirror';
 import { Transaction, type ChangeSpec, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
@@ -9,9 +9,6 @@ import { ProjectPath } from '../../../core/paths/paths';
  * last edit, and at once by `dispose`. `reload` shows the file as changed elsewhere (another user, the host): while
  * an edit of this editor waits to be saved it is ignored, since that save replaces the whole file anyway (the last
  * save wins); otherwise the text changes in place, cursor and the user's undo history kept.
- *
- * A text file (data, bibliography, notes) in the editing area, edited in plain CodeMirror; edits are saved debounced,
- * changes made elsewhere are shown unless local typing is pending.
  */
 export class TextFileEditor {
   readonly #root: HTMLElement;

@@ -1,4 +1,5 @@
-// The Typst file of a spreadsheet. See ../spreadsheets.ts.
+// The Typst file of a spreadsheet (`name.ic.gen.typ`): what documents import of `name.ic`. See spreadsheets in
+// ../spreadsheets.ts.
 import type { CellStyle, Color } from '@ironcalc/wasm';
 
 /**
@@ -13,9 +14,6 @@ import type { CellStyle, Color } from '@ironcalc/wasm';
  *   (bold, italic, underline, strike, colour, relative size) and borders;
  *   hidden columns and rows are left out. The grid lines are Typst's table
  *   stroke (`#set table(stroke: …)` changes them).
- *
- * What Typst documents import of `name.ic` — every sheet as a table (displayed values, alignment, fills, fonts,
- * borders, column widths, row heights) and as values — in `name.ic.gen.typ`.
  */
 export function spreadsheetTypst(model: SheetSource, name: string): string {
   const sheets = model

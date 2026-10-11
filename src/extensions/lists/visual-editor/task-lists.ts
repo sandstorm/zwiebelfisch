@@ -1,4 +1,4 @@
-// Task lists (checklists, rendered by the cheq package). See visual-editor.ts.
+// Task lists (checklists, rendered by the cheq package). See lists in ../lists.ts.
 import { Extension } from '@tiptap/core';
 import { TaskItem, TaskList } from '@tiptap/extension-list';
 import type { SyntaxNode } from '@lezer/common';
@@ -19,10 +19,8 @@ const TaskLists = Extension.create({
  * task item, the box hidden syntax; consecutive ones form a task list.
  * Tiptap's TaskList / TaskItem (one paragraph, no nesting; the `[ ] ` input
  * rule and clickable checkboxes are Tiptap's). Their Tiptap priority is higher
- * than bullet lists' (`TASK_LISTS_PRIORITY`), so their parse rule gets bullet items first.
- *
- * `- [ ] todo` / `- [x] done`, and cheq's import and show rule that a Visual-editor edit adding a task item brings
- * along.
+ * than bullet lists' (`TASK_LISTS_PRIORITY`), so their parse rule gets bullet items first. An edit adding a task
+ * item brings cheq's import and show rule along.
  */
 export const TASK_LIST: TypstNodeSpec = {
   name: 'taskList',

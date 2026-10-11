@@ -1,4 +1,4 @@
-// The page break: `#pagebreak()` as a labelled divider, "Insert page break" and Mod+Enter. See ../page-layout.ts.
+// The page break: `#pagebreak()` as a labelled divider, "Insert page break" and Mod+Enter. See pageLayout in ../page-layout.ts.
 import { Node } from '@tiptap/core';
 import { hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';

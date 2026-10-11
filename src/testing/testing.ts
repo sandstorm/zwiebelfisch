@@ -1,4 +1,3 @@
-// Test helpers that compose the widget's built-in extensions. Entry of testing/.
 import { Editor } from '@tiptap/core';
 import type { Node, Schema } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
@@ -30,11 +29,14 @@ import { attachGrammar, createSchema, documentExtensions, posToSource, serialize
 /**
  * The schema of a Visual editor with the built-ins configured from `options`.
  *
- * The Visual editor's schema with the built-ins, project with it, a Visual editor with the built-ins activated with a test's
- * extension context (project files, preview snippets, document links, prompts); and the helpers such tests use on a
- * parsed document (apply an edit, find text, check the position map exhaustively). Test-only, so it may import any
- * module (an extension's tests compose it with the others here, never by importing another extension); only
- * `*.test.ts` files may import it (eslint.config.js). Hosts' own tests use the host minimum and their own specs.
+ * testing/ puts the widget's built-in extensions together for tests. An extension's tests often need the others (a
+ * figure holds a table or an image), but an extension never imports another one; its tests get them from here. It
+ * offers this schema, a Visual editor with the built-ins activated in a test's extension context (project files,
+ * preview snippets, document links, prompts), and helpers for a parsed document (apply an edit, find text, check the
+ * position map exhaustively).
+ *
+ * Only `*.test.ts` files may import it (eslint.config.js). A host's own tests use the host's minimum and their own
+ * specs instead. See docs/30_architecture/10_conventions.typ, "Comments and tests".
  */
 export function schemaWith(options: TestEditorOptions = {}): Schema {
   return schemaFrom(contributions(options));

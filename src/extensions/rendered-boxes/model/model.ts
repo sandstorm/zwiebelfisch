@@ -1,5 +1,5 @@
 // The rendered-boxes model: which raw boxes a snippet is meaningful for, and how big a snippet is drawn. No DOM.
-// See ../rendered-boxes.ts.
+// See renderedBoxes in ../rendered-boxes.ts.
 import type { Pt } from '../../../core/typst-engine/typst-engine';
 
 /** Whether `src` (a raw box's Typst) draws its own output where it stands, so a snippet of it is meaningful. */
