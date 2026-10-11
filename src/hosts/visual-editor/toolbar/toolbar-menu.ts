@@ -1,5 +1,5 @@
 // ToolbarMenu: a toolbar button that opens a menu of further buttons (Insert ▾, Align ▾), the toolbar's `menu`
-// groups. See toolbar.ts and docs/30_architecture/04_visual-editor.typ.
+// groups. See Toolbar in toolbar.ts.
 
 /**
  * A menu button of the toolbar: the trigger (icon, a small caret,

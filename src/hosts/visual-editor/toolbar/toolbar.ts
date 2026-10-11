@@ -1,4 +1,4 @@
-// Toolbar: the Visual editor's formatting toolbar, laid out from the contributed groups and items. See docs/30_architecture/04_visual-editor.typ.
+// See VisualEditor in ../visual-editor.ts and docs/30_architecture/04_visual-editor.typ, "Toolbar".
 import { TextSelection } from '@tiptap/pm/state';
 import type { Editor } from '@tiptap/core';
 import { FloatingBar } from './floating-bar';

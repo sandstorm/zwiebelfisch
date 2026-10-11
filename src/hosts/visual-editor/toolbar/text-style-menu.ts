@@ -1,4 +1,4 @@
-// TextStyleMenu. See toolbar.ts and docs/30_architecture/04_visual-editor.typ.
+// See Toolbar in toolbar.ts.
 import type { ChainedCommands, Editor } from '@tiptap/core';
 import type { EditorState } from '@tiptap/pm/state';
 import type { Disposable } from '../../../core/disposable/disposable';
@@ -9,9 +9,7 @@ import type { TextStyle, TextStyleProvider, ToolbarControl, VisualEditorContext 
  * `order`, a section's under its title (`<optgroup>`). It shows the
  * selection's style (the first active entry that is no toggle, else normal
  * text in a paragraph), marks toggles ✓ where they are on, and disables what
- * cannot apply. The entries follow the providers as they change.
- *
- * The toolbar's text style menu — "Normal text" and what the text style providers contribute (headings, custom styles).
+ * cannot apply. The entries follow the providers as they change (headings, custom styles).
  */
 export class TextStyleMenu implements ToolbarControl {
   readonly element: HTMLSelectElement;

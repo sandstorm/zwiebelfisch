@@ -1,4 +1,5 @@
-// Highlights (other users' selections, diagnostics) as ProseMirror decorations over source ranges. See visual-editor.ts.
+// Highlights (other users' selections, diagnostics) as ProseMirror decorations over source ranges. See VisualEditor in
+// visual-editor.ts.
 import { Extension } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey, type Transaction } from '@tiptap/pm/state';

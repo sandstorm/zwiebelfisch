@@ -1,6 +1,6 @@
-/* The Visual editor host's styles: the text, raw boxes (code, or the picture a box renderer draws), box labels and
-   actions, the gutters' body, the toolbar with its menus and the floating bars, the suggestion lists. Added by the workbench
-   (VisualEditorHost.styleSheet, after the vendored ProseMirror styles of prosemirror.css). See visual-editor.ts. */
+/* The Visual editor's text, raw boxes (code, or the picture a box renderer draws) and their titles, the gutters'
+   body, the toolbar with its menus and the floating bars, the suggestion lists. See VisualEditorHost in
+   visual-editor.ts, whose styleSheet the workbench adds (after the vendored prosemirror.css). */
 .typst-visual {
   flex: 1;
   padding: 24px 32px;

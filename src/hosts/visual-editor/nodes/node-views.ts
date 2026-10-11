@@ -1,5 +1,4 @@
-// The Visual editor's editor extensions over the Typst ↔ ProseMirror schema. See
-// docs/30_architecture/04_visual-editor.typ.
+// See VisualEditor in ../visual-editor.ts.
 import { Extension, type AnyExtension } from '@tiptap/core';
 import { DOMSerializer, type Node as PMNode } from '@tiptap/pm/model';
 import { Plugin } from '@tiptap/pm/state';
@@ -20,8 +19,7 @@ import { RawBoxNavigation, rawBoxViews, type RawBoxes } from './raw-box';
  * - with `box: 'code'`, the raw box node view (`raw-box.ts`) with what `boxes` contribute;
  * - with `ownsPseudoElements`, `data-typst-pseudo="own"` on its DOM.
  *
- * What the view adds to every node type whose spec asks for it in `view` (kept DOM, raw box node views, the
- * own-pseudo-elements mark) and the raw boxes' keyboard navigation.
+ * Then the raw boxes' keyboard navigation (`RawBoxNavigation`).
  */
 export function editorExtensions(nodes: readonly TypstNodeSpec[], marks: readonly TypstMarkSpec[], boxes: RawBoxes): AnyExtension[] {
   return [...documentExtensions(nodes, marks), RawBoxNavigation, nodeViews(boxes)];

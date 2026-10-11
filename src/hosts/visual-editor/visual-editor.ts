@@ -1,4 +1,3 @@
-// VisualEditor. Entry of hosts/visual-editor/. See docs/30_architecture/04_visual-editor.typ.
 import { Editor, type AnyExtension, type ChainedCommands, type Range } from '@tiptap/core';
 import { StateEffect, type Extension } from '@codemirror/state';
 import type { Node, ResolvedPos } from '@tiptap/pm/model';
@@ -17,19 +16,19 @@ import proseMirrorCss from './prosemirror.css?inline';
 import css from './visual-editor.css?inline';
 
 /**
- * The Word-like editor (Tiptap/ProseMirror) with its formatting
- * toolbar, the parsed ProseMirror document of a TypstDocument.
+ * The Visual editor: a word-processor view of one Typst file, a Tiptap editor with a formatting toolbar.
  *
- * Visual edits become one minimal text change on the document; document
- * changes from elsewhere are parsed again and applied as the smallest
- * replacement, so the cursor stays where it was. Unmodelled Typst shows as
- * raw boxes and is never rewritten. What the editor models, shows and offers
- * beyond that (headings, tables, labels, comments, …) comes from
- * `contributions`, as registered when the editor is created.
+ * People who do not want to write markup still edit the same text as everyone else. The editor shows its
+ * `TypstDocument` through the Typst ↔ ProseMirror conversion (`../prosemirror-typst`). A visual edit becomes one
+ * minimal text change on the document. A change from elsewhere is parsed again and applied as the smallest
+ * replacement, so the cursor stays where it was. Typst nothing models shows as a raw box: edited as code, never
+ * rewritten, or shown as a picture.
  *
- * The WYSIWYG editor, a Tiptap editor over the source-anchored ProseMirror document of a TypstDocument;
- * everything it shows beyond paragraphs and raw Typst is contributed through VisualEditorContributions (kept by
- * VisualEditorHost).
+ * The editor keeps only the mechanism: paragraphs, text, raw boxes, the toolbar's frame, highlights and completion
+ * lists. Every other construct (headings, tables, labels, comments, …) and feature is contributed through
+ * `VisualEditorHost`, which hands what is registered to each editor it creates. It is one of the two built-in custom
+ * editors for `*.typ`, next to the Source editor; the workbench's `TypstEditors` makes it.
+ * See docs/30_architecture/04_visual-editor.typ.
  */
 export class VisualEditor {
   /** The text and the gutters beside it, below the toolbar: what scrolls as the document's content. */
@@ -348,8 +347,7 @@ export interface VisualEditorContributions {
 
 /**
  * Keeps what is registered through `VisualEditorContributions` and hands it to each editor it creates (`contributed`),
- * with where raw boxes' pictures lead (`links`; null: nowhere). The workbench host has one; tests make their own
- * (`from`).
+ * with where raw boxes' pictures lead (`links`; null: nowhere). The workbench has one; tests make their own (`from`).
  */
 export class VisualEditorHost implements VisualEditorContributions {
   private readonly rawBoxRenderers: Ranked<RawBoxRendererProvider>[] = [];

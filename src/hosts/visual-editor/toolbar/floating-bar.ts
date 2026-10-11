@@ -1,14 +1,14 @@
-// FloatingBar. See toolbar.ts and docs/30_architecture/04_visual-editor.typ.
+// See Toolbar in toolbar.ts.
 import type { Anchor } from '../visual-editor';
 
 /**
+ * A small toolbar floating above something in the text (the selection, a table): the toolbar's `floating` groups.
+ *
  * A `role="toolbar"` bar positioned just above an anchor in the Visual
  * editor's text: placed in `container` (the scrolling text column, which is
  * `position: relative`), so it scrolls with the text. `show(anchor)` places it
  * centred over the anchor and kept inside the container; null hides it.
  * Mouse presses on it keep the focus (and selection) in the text.
- *
- * A small toolbar floating above something in the text (the selection, the table), the toolbar's `floating` groups.
  */
 export class FloatingBar {
   readonly element: HTMLElement;
