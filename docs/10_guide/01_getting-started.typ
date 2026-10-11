@@ -18,6 +18,43 @@ mise run demo           # builds the engine and fonts, then
 
 `mise run demo` starts the demo on `http://127.0.0.1:5199/` and a collaboration server with a fake GitLab on `ws://127.0.0.1:1234`. Ctrl-C stops both.
 
+The screen (layout figure: @guide-features-editors):
+
+#table(
+  columns: 2,
+  [Part], [What it holds],
+  [Playground bar (top)], [Example; mode Local, Collaborate or GitLab (fake); your name; the devtools switch; in Collaborate and GitLab mode a link that opens a second window as another user.],
+  [Left rail and side panel], [Files, Help; the magnifier opens search everywhere.],
+  [Editing area], [The shown file. A Typst file has the tabs Visual and Source; other files open in their own editor (spreadsheet, diagram, text).],
+  [Right side and rail], [The preview; the devtools when switched on.],
+  [Status bar], [Errors and warnings; in GitLab mode what is not saved yet.],
+)
+
+The examples:
+
+#table(
+  columns: 2,
+  [Example], [Shows],
+  [Hello], [One page: emphasis, a list, an equation.],
+  [Simple], [Typst in five minutes: lists, math, a link, a table.],
+  [Advanced], [A report in several files: template, chapters, a helper module with custom styles, an outline, an SVG logo and chart, an IronCalc spreadsheet as a table, a Mermaid diagram, equations, figures with labels and references. GitLab mode always uses it.],
+  [Documentation], [This documentation. With `mise run demo` edits are saved to `docs/`.],
+)
+
+Main features:
+
+- Visual editing like a word processor; what it does not model shows as a raw box (@guide-features-visual).
+- Source editing with highlighting; both editors edit the same text (@guide-features-editors).
+- Live preview; a click in it jumps to the text (@guide-features-editors).
+- Images, figures and tables (@guide-features-images, @guide-features-tables).
+- Spreadsheets in IronCalc, shown in the document as tables (@guide-features-spreadsheets).
+- Diagrams: draw.io (@guide-features-diagrams) and Mermaid (@guide-features-mermaid).
+- Custom styles from the template (@guide-features-styles).
+- Labels and cross-references (@guide-features-labels).
+- Comments as margin notes (@guide-features-comments).
+- Slash commands (`/table`) and search everywhere: press Shift twice (@guide-features-search).
+- Help panel: a cheat sheet for the shown file (@guide-features-help).
+- Collaboration and saving to GitLab (@guide-features-collaboration); PDF download (@guide-features-pdf).
 
 The page's state is its URL:
 
@@ -31,8 +68,6 @@ The page's state is its URL:
   [`&devtools`], [The devtools side panel on the right: document, contributions, events (@guide-embedding-devtools).],
   [`#/chapters/intro.typ`], [The file shown.],
 )
-
-The playground bar at the top switches example and mode, turns the devtools on and off, and opens a second window as another user.
 
 == A first editor <guide-getting-started-first-editor>
 
