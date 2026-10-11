@@ -84,6 +84,28 @@ Typst's font book needs every face's `FontInfo` (family, variant, coverage) befo
   [lazy], [4 + the index], [2.4 MB (1.7 MB)],
 )
 
+=== Engine size <architecture-core-engine-size>
+
+`typst_engine_bg.wasm`: 23 MB, 8.9 MB gzip, 6.6 MB brotli. About 13.5 MB code, 9.5 MB data.
+
+#table(
+  columns: (auto, auto, 1fr),
+  table.header[Where the bytes go][Raw][Note],
+  [Typst itself (code)], [~30% of code], [`typst_library` alone ~3 MB],
+  [bibliography: hayagriva, citationberg, ICU collator], [~9% of code, 3.9 MB data], [CSL styles and locales 2.8 MB, but ~0.15 MB brotli],
+  [text shaping, fonts, Unicode], [~10% of code], [rustybuzz, skrifa, read_fonts],
+  [PDF export], [~1.9 MB], [typst-pdf, krilla, subsetter],
+  [wasm plugins (wasmi)], [~1.1 MB], [Typst's `plugin()`],
+  [raster images, PDF as image (hayro), SVG], [~17% of code], [hayro also draws the SVG preview's PDF images],
+  [hyphenation (hypher, 48 languages)], [1.2 MB data], [0.8 MB brotli],
+  [raw-block highlighting (two-face, syntect)], [0.9 MB data + code], [hardly compresses],
+)
+
+- Typst's crates have no feature flags for any of these. Leaving one out takes a patched copy of a dependency (hypher, two-face, hayagriva) or a fork of Typst.
+- *Not done*: patched dependencies, a fork, `opt-level = "z"` (−0.4 MB brotli, slower compiles unmeasured), a second engine for PDF export (Typst's document can't cross wasm modules: it would compile again).
+- *Delivery*: `dist/lib` names the wasm and the fonts with a content hash, so a host can cache them as `immutable`. Compression and `Content-Type: application/wasm` (streaming compile) are the host's server's job; there is no pre-compression step.
+- Fonts load on demand only, no prefetch (@architecture-core-engine-fonts).
+
 == Typst syntax <architecture-core-syntax>
 
 Typst knowledge several extensions need, from the Lezer tree of `codemirror-lang-typst`: the paths a text names (`findFilePaths`), the files' reading order (`neighbours`), the change that imports a name (`calculateImportChange`), the names imports bind (`importedNames`), and helpers specs read calls with (`calleeName`, `namedArgument`, …).

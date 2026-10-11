@@ -12,6 +12,7 @@ How code is written here. `mise run quality` enforces what it can (@architecture
 - *No pass-through layers*: a host does not take data from one extension only to hand it back to it.
 - *The most important API at the top* of a file, with a _why_ comment at the top of the entry.
 - *Remove what does not work* rather than polish it.
+- *Editing stays inline*: popovers, tags and bars at the content (image tools, label tags, the Align menu, the table bar). No inspector panel.
 
 == Modules and folders <architecture-conventions-modules>
 
@@ -42,6 +43,7 @@ How code is written here. `mise run quality` enforces what it can (@architecture
 == Extension API <architecture-conventions-api>
 
 - *VS Code's names and shapes* where a concept matches: `activate`, `subscriptions`, `register…Provider`, `provide…` / `resolve…`, `onDid<Verb>`, `executeCommand`, `getConfiguration`, `showInputBox`, `showQuickPick`, `show…Message`. Rename ours to them; never "ours, in VS Code terms" comments.
+- *Extensions are factories* (`markup()`, `collaboration(options)`), so options can come later without a break.
 - *Contributions register once, at activation*; hosts apply them to every view made later. Each returns a `Disposable` pushed to `context.subscriptions`.
 - *One disposal verb*: `dispose()` for everything with a lifetime (hosts, views, `Project`, the widget). Only what a library calls keeps its name (ProseMirror node views, CodeMirror view plugins: `destroy`).
 - *Competing contributions* have an explicit tie-breaker. Registration order counts only within one extension, never between extensions.
@@ -62,6 +64,7 @@ How code is written here. `mise run quality` enforces what it can (@architecture
 - *Settings*: declared in `contributes.configuration` (`<extension>.<key>`, type, default, description), read with `getConfiguration`, followed with `onDidChangeConfiguration`. `createTypstEditor` takes content and host wiring only, no per-feature options.
 - *CSS*: every host brings its own `<name>.css`, which the workbench adds (`styleSheet`). `typst-editor.css` keeps only the `--te-*` tokens and the frame. An extension brings `<name>.css` and registers it (`registerStyleSheet`), with class names of its own (`typst-<extension>`, `typst-<extension>__…`, `typst-<extension>--…`; on a host's element too, e.g. through Tiptap's `HTMLAttributes` or a renderer's `className`) and colors from the `--te-*` tokens. It never styles a host's classes; the widget's `data-scheme` is the one shared hook. Order: tokens and frame, hosts, extensions.
 - *Talking to the user* goes through `window` (`show…Message`, `showInputBox`, `showQuickPick`, `showSaveDialog`, `showContextMenu` for a contributed menu), never hand-made popovers or menus.
+- *What an extension keeps* goes into `globalState` (per viewer) or `workspaceState` (per project, per session), never straight into `localStorage`.
 
 == Naming and types <architecture-conventions-naming>
 
