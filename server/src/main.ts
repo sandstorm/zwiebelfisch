@@ -7,11 +7,13 @@
 //   TYPST_GITLAB_TOKEN          a token with `api` scope (secret: keep it in mise.local.toml or .env, never commit it)
 //   TYPST_GITLAB_WEBHOOK_SECRET (optional) enables POST /gitlab/webhook for push events
 //   TYPST_GITLAB_AUTHOR_EMAIL   (optional) commit author email when the user's is unknown
+//   TYPST_GITLAB_AUTO_COMMIT    (default 10) minutes without edits before a room commits by itself
+//                               (also 20 s after the last user left); `off`: only "Save to GitLab…"
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { sharedToken } from './auth.ts';
 import { createCollabServer } from './collab-server.ts';
-import type { GitLabOptions } from './gitlab/gitlab-extension.ts';
+import { parseAutoCommit, type GitLabOptions } from './gitlab/gitlab-extension.ts';
 
 const database = process.env.TYPST_COLLAB_DB ?? 'server/.data/collab.sqlite';
 mkdirSync(dirname(database), { recursive: true });
@@ -23,6 +25,7 @@ function gitlab(env: NodeJS.ProcessEnv): GitLabOptions | undefined {
     token: env.TYPST_GITLAB_TOKEN,
     webhookSecret: env.TYPST_GITLAB_WEBHOOK_SECRET || undefined,
     authorEmail: env.TYPST_GITLAB_AUTHOR_EMAIL || undefined,
+    autoCommit: parseAutoCommit(env.TYPST_GITLAB_AUTO_COMMIT),
   };
 }
 

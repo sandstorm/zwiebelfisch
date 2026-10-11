@@ -1,6 +1,14 @@
 // GitLabExtension: the Hocuspocus extension behind `gitlab:<project>@<branch>` rooms (load, save version, webhooks).
 // See docs/architecture/server.typ.
-import type { Document, Extension, onAwarenessUpdatePayload, onLoadDocumentPayload, onRequestPayload, onStatelessPayload } from '@hocuspocus/server';
+import type {
+  beforeUnloadDocumentPayload,
+  Document,
+  Extension,
+  onAwarenessUpdatePayload,
+  onLoadDocumentPayload,
+  onRequestPayload,
+  onStatelessPayload,
+} from '@hocuspocus/server';
 import {
   DEFAULT_COMMIT_MESSAGE,
   GITLAB_ROOM_PREFIX,
@@ -19,9 +27,28 @@ export interface GitLabOptions extends GitLabConfig {
   webhookSecret?: string;
   /** The commit author's email when the saving user's is not known (default `typst-editor@localhost`). */
   authorEmail?: string;
+  /**
+   * Minutes without edits after which a room commits its changes by itself (also 20 s after the last user left);
+   * `false`: never, only "Save to GitLab…". Default 10.
+   */
+  autoCommit?: number | false;
 }
 
 const DEFAULT_AUTHOR_EMAIL = 'typst-editor@localhost';
+const DEFAULT_AUTO_COMMIT = 10;
+
+/**
+ * The `autoCommit` option from its environment variable (`TYPST_GITLAB_AUTO_COMMIT`): `off` (or `false`, `0`), or
+ * minutes (fractions allowed); unset or empty: the default. Throws on anything else.
+ */
+export function parseAutoCommit(value: string | undefined): number | false | undefined {
+  const text = value?.trim().toLowerCase();
+  if (!text) return undefined;
+  if (text === 'off' || text === 'false' || text === '0') return false;
+  const minutes = Number(text);
+  if (!Number.isFinite(minutes) || minutes <= 0) throw new Error(`TYPST_GITLAB_AUTO_COMMIT: "off" or minutes, not "${value}"`);
+  return minutes;
+}
 
 /** The project and branch of a GitLab room name (`gitlab:<project id or path>@<branch>`), or null. */
 export function parseRoomName(name: string): { project: string; branch: string } | null {
@@ -71,9 +98,16 @@ export class GitLabExtension implements Extension {
       blobs: this.blobs,
       editorOf: (origin) => this.editorOf(origin),
       authorEmail: this.authorEmail(),
+      autoCommit: this.options.autoCommit === false ? null : (this.options.autoCommit ?? DEFAULT_AUTO_COMMIT),
+      broadcast: (message) => document.broadcastStateless(JSON.stringify(message)),
     });
     await room.open();
     this.rooms.set(documentName, { room, document, ...name });
+  }
+
+  /** The last user left: the room commits by itself first (after a while, unless someone is back). */
+  async beforeUnloadDocument({ documentName, document }: beforeUnloadDocumentPayload): Promise<void> {
+    await this.rooms.get(documentName)?.room.left(() => document.getConnectionsCount() === 0);
   }
 
   async afterUnloadDocument({ documentName }: { documentName: string }): Promise<void> {
@@ -143,15 +177,14 @@ export class GitLabExtension implements Extension {
 
   /**
    * Who made a change, by its Hocuspocus transaction origin: a client's connection, or a server-side direct
-   * connection. The name the connection authenticated with, else the one its client publishes in the awareness.
+   * connection. The name the connection authenticated with, else the one its client publishes in the awareness;
+   * null when neither is known.
    */
-  private editorOf(origin: unknown): Author {
+  private editorOf(origin: unknown): Author | null {
     const context = contextOf(origin);
     const user = context?.user as AuthenticatedUser | undefined;
-    return {
-      name: user?.name ?? (context && this.awarenessNames.get(context)) ?? 'Anonymous',
-      email: user?.email ?? this.authorEmail(),
-    };
+    const name = user?.name ?? (context && this.awarenessNames.get(context));
+    return name ? { name, email: user?.email ?? this.authorEmail() } : null;
   }
 
   private authorEmail(): string {

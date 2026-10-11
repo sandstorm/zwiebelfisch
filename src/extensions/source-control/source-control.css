@@ -18,3 +18,9 @@
   cursor: pointer;
 }
 .typst-source-control__entry:hover { background: var(--te-hover); }
+.typst-source-control__entry--warning,
+.typst-source-control__entry--warning:hover {
+  background: var(--te-warning);
+  color: var(--te-bg);
+  font-weight: 600;
+}

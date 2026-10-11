@@ -40,12 +40,14 @@ describe('GitLabSourceControl', () => {
     receive('{"type":"other"}');
     receive('not json');
     receive('{"type":"gitlab:saved","sha":"0123456789abcdef","author":"Ann"}');
+    receive('{"type":"gitlab:saved","sha":"fedcba9876543210","author":"Bob","automatic":true}');
     expect(sourceControl.state).toEqual({ busy: false });
     expect(told).toEqual([
       { message: 'Merged new changes from GitLab', severity: 'info' },
       { message: 'Saved version 01234567 (Ann)', severity: 'info' },
+      { message: 'Saved version fedcba98 automatically (Bob)', severity: 'info' },
     ]);
-    expect(changes()).toBe(2);
+    expect(changes()).toBe(3);
   });
 });
 
@@ -71,9 +73,16 @@ describe('GitLabSourceControl: what is not in GitLab', () => {
       ['/new.typ', 'A'],
       ['/old.typ', 'D'],
     ]);
+    meta.set('autoCommit', 10);
     expect(sourceControl.statusBarCommands).toEqual([
-      { title: 'Not in GitLab: 3 files · < 1 min (Ann, Bob)', tooltip: 'Not in GitLab yet:\nM chapters/intro.typ\nA new.typ\nD old.typ\nClick to save.' },
+      {
+        title: 'Not in GitLab: 3 files · < 1 min (Ann, Bob)',
+        tooltip:
+          'Not in GitLab yet:\nM chapters/intro.typ\nA new.typ\nD old.typ\nSaved by itself after 10 min without edits, and when the last person leaves.\nClick to save.',
+      },
     ]);
+    meta.set('autoCommit', null);
+    expect(sourceControl.statusBarCommands[0].tooltip).toContain('Not saved by itself: save before you leave.');
     const before = changes();
     vi.advanceTimersByTime(14 * 60_000);
     expect(changes()).toBe(before + 14);
@@ -87,6 +96,25 @@ describe('GitLabSourceControl: what is not in GitLab', () => {
     vi.advanceTimersByTime(10 * 60_000);
     expect(changes()).toBe(clean);
     sourceControl.dispose();
+  });
+
+  it('shows a conflict with upstream as long as the room has it: "!" on its files, a warning entry first', () => {
+    const { meta, sourceControl } = setup();
+    meta.set('baseSha', '0123456789abcdef');
+    meta.set('changes', { files: [{ path: '/main.typ', kind: 'modified' }, { path: '/a.typ', kind: 'added' }], since: Date.now(), editors: ['Ann'] });
+    meta.set('conflict', { sha: 'fedcba9876543210', paths: ['/main.typ'] });
+    expect(sourceControl.resourceStates.map((state) => [state.path, state.decorations.badge])).toEqual([
+      ['/main.typ', '!'],
+      ['/a.typ', 'A'],
+    ]);
+    const [warning, changes] = sourceControl.statusBarCommands;
+    expect(warning).toEqual({ title: 'Conflict with GitLab: main.typ', tooltip: expect.stringContaining('commit fedcba98'), backgroundColor: 'warning' });
+    expect(changes.title).toBe('Not in GitLab: 2 files · < 1 min (Ann)');
+    meta.set('conflict', { sha: 's', paths: ['/a.typ', '/b.typ', '/c.typ'] });
+    expect(sourceControl.statusBarCommands[0].title).toBe('Conflict with GitLab: a.typ, b.typ and 1 more');
+    meta.set('conflict', null);
+    expect(sourceControl.statusBarCommands.map((command) => command.title)).toEqual(['Not in GitLab: 2 files · < 1 min (Ann)']);
+    expect(sourceControl.resourceStates.map((state) => state.decorations.badge)).toEqual(['M', 'A']);
   });
 
   it('ignores changes it cannot read', () => {

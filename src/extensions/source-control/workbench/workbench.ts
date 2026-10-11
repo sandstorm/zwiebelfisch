@@ -67,6 +67,7 @@ export class SourceControlStatus {
       const button = buttons[index] ?? this.element.appendChild(this.#button());
       button.textContent = command.title;
       button.title = command.tooltip ?? '';
+      button.classList.toggle('typst-source-control__entry--warning', command.backgroundColor === 'warning');
       button.onclick = () => this.onCommit(control);
     });
   }

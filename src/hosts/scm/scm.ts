@@ -58,6 +58,8 @@ export interface SourceControlResourceState {
 export interface SourceControlStatusBarCommand {
   readonly title: string;
   readonly tooltip?: string;
+  /** `'warning'`: drawn to stand out, for what needs the user (VS Code: `statusBarItem.warningBackground`). */
+  readonly backgroundColor?: 'warning';
 }
 
 export interface SourceControlState {

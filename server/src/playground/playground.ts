@@ -25,12 +25,12 @@ type Deliver = (request: HttpRequest) => Promise<HttpResponse | null>;
  * The collaboration server's options for the playground: GitLab rooms backed
  * by `gitlab` (with a webhook, so simulated pushes merge right away) and the
  * playground endpoints. Plain rooms work as on every server. `appendTo` is the
- * file simulated upstream commits change.
+ * file simulated upstream commits change; `autoCommit` as for GitLab rooms.
  */
-export function playgroundOptions(gitlab: FakeGitLab, options: { appendTo: string }): CollabOptions {
+export function playgroundOptions(gitlab: FakeGitLab, options: { appendTo: string; autoCommit?: number | false }): CollabOptions {
   const webhookSecret = randomUUID();
   return {
-    gitlab: { url: gitlab.url, token: gitlab.token, fetch: gitlab.fetch, webhookSecret },
+    gitlab: { url: gitlab.url, token: gitlab.token, fetch: gitlab.fetch, webhookSecret, autoCommit: options.autoCommit },
     extensions: [new PlaygroundEndpoints(gitlab, { appendTo: options.appendTo, webhookSecret })],
   };
 }

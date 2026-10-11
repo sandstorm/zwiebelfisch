@@ -158,6 +158,12 @@ describe('sourceControl extension', () => {
     show({ resourceStates: [], statusBarCommands: [{ title: 'Saved · 01234567' }] });
     expect(button()).toBe(first);
     expect(button().textContent).toBe('Saved · 01234567');
+    expect(button().classList.contains('typst-source-control__entry--warning')).toBe(false);
+    show({ resourceStates: [], statusBarCommands: [{ title: 'Conflict with GitLab: main.typ', backgroundColor: 'warning' }, { title: 'Saved · 01234567' }] });
+    expect([...statusBar[0].children].map((entry) => [entry.textContent, entry.classList.contains('typst-source-control__entry--warning')])).toEqual([
+      ['Conflict with GitLab: main.typ', true],
+      ['Saved · 01234567', false],
+    ]);
     button().click();
     await vi.waitFor(() => expect(committed).toEqual(['From the status bar']));
     show({ resourceStates: [], statusBarCommands: [] });

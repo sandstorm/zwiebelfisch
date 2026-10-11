@@ -26,9 +26,10 @@ export class Editors {
     return [...this.#editors.keys()];
   }
 
-  /** `author` made an edit at `at` (milliseconds since the epoch). */
-  edited(author: Author, at: number): void {
+  /** `author` made an edit at `at` (milliseconds since the epoch); null: someone unknown (counted in `since` only). */
+  edited(author: Author | null, at: number): void {
     this.#since ??= at;
+    if (!author) return;
     const editor = this.#editors.get(author.name);
     if (editor) editor.edits++;
     else this.#editors.set(author.name, { author, edits: 1 });
@@ -53,4 +54,32 @@ export class Editors {
       else this.#editors.set(name, { author, edits });
     }
   }
+}
+
+/** How many paths a generated commit message names; it counts the others. */
+const NAMED_PATHS = 3;
+
+/**
+ * The author and message of a commit the server makes by itself: by whoever made the most edits (the first of them
+ * on a tie; `fallback` when nobody is known), "Edits by Ann, Bob: chapters/intro.typ, results.typ" (at most three
+ * paths named), the other editors as co-authors.
+ */
+export function automaticCommit(edits: EditTally, paths: readonly string[], fallback: Author): { author: Author; message: string } {
+  let author = fallback;
+  let most = -1;
+  for (const editor of edits.editors.values()) {
+    if (editor.edits > most) [author, most] = [editor.author, editor.edits];
+  }
+  const names = [...edits.editors.keys()];
+  const shown = paths.slice(0, NAMED_PATHS).map((path) => path.replace(/^\//, ''));
+  const more = paths.length > NAMED_PATHS ? ` and ${paths.length - NAMED_PATHS} more` : '';
+  const subject = `${names.length ? `Edits by ${names.join(', ')}` : 'Edits'}: ${shown.join(', ')}${more}`;
+  return { author, message: withCoAuthors(subject, edits, author) };
+}
+
+/** `message` with a `Co-authored-by:` trailer for every editor of `edits` but `author` (the convention GitLab shows). */
+export function withCoAuthors(message: string, edits: EditTally, author: Author): string {
+  const others = [...edits.editors.values()].filter((editor) => editor.author.name !== author.name);
+  if (!others.length) return message;
+  return `${message}\n\n${others.map(({ author: { name, email } }) => `Co-authored-by: ${name} <${email}>`).join('\n')}`;
 }

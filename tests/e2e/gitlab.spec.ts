@@ -95,6 +95,26 @@ test('a simulated upstream commit (playground endpoint) is merged into the room'
   }
 });
 
+test('a conflict with upstream is shown to everyone, also to who joins later, until it is resolved', async ({ browser, baseURL, request }, info) => {
+  const { room, ann, bob } = await users(browser, baseURL!, info.project.name);
+  await openFile(ann, 'chapters/introduction.typ');
+  await ann.getByRole('tab', { name: 'Source' }).click();
+  await ann.getByTestId('typst-source').locator('.cm-line', { hasText: '= Introduction' }).click();
+  await ann.keyboard.press('End');
+  await ann.keyboard.type(' mine');
+  await expect(scmStatus(ann)).toHaveText('Not in GitLab: 1 file · < 1 min (Ann)');
+  // a colleague revises the same heading on GitLab
+  const response = await request.post(`${SERVER}/playground/upstream?room=${encodeURIComponent(room)}&change=heading`);
+  expect(response.ok()).toBe(true);
+  const cleo = await join(browser, baseURL!, room, 'Cleo');
+  for (const page of [ann, bob, cleo]) {
+    await expect(scmStatus(page).first()).toHaveText('Conflict with GitLab: chapters/introduction.typ');
+    await expect(scmStatus(page).first()).toHaveClass(/typst-source-control__entry--warning/);
+  }
+  // Ann has the file open (its folder, too)
+  await expect(ann.getByTestId('typst-files').locator('[data-path="/chapters/introduction.typ"] .typst-files__decoration[title^="Conflicts"]')).toHaveText('!');
+});
+
 test('saving without changes says so', async ({ browser, baseURL }, info) => {
   const { ann } = await users(browser, baseURL!, info.project.name);
   await saveToGitLab(ann, 'Nothing');

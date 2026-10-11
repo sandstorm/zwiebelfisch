@@ -1,12 +1,20 @@
 // GitLabSourceControl: the GitLab branch behind a room as a source control (`scm.registerSourceControl`):
 // commit asks the server to commit over stateless messages; the server's answers and news are told as messages; what
-// the room has that the branch has not (the server's `meta.changes`) are its resource states and status bar entry.
-// See model.ts.
+// the room has that the branch has not (the server's `meta.changes`) and a conflict with upstream (`meta.conflict`) are
+// its resource states and status bar entries. See model.ts.
 import type * as Y from 'yjs';
 import type { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../../core/paths/paths';
-import { DEFAULT_COMMIT_MESSAGE, META_MAP, type ChangedFile, type ClientMessage, type RoomChanges, type ServerMessage } from '../../../core/room-protocol/room-protocol';
+import {
+  DEFAULT_COMMIT_MESSAGE,
+  META_MAP,
+  type ChangedFile,
+  type ClientMessage,
+  type RoomChanges,
+  type RoomConflict,
+  type ServerMessage,
+} from '../../../core/room-protocol/room-protocol';
 
 /** Stateless messages to and from the server (the Hocuspocus provider's). */
 export interface StatelessChannel {
@@ -24,10 +32,11 @@ export interface ResourceState {
   readonly decorations: { readonly badge: string; readonly tooltip: string; readonly color: string };
 }
 
-/** The status bar entry (the scm host's `SourceControlStatusBarCommand`). */
+/** A status bar entry (the scm host's `SourceControlStatusBarCommand`). */
 export interface StatusBarCommand {
   readonly title: string;
   readonly tooltip: string;
+  readonly backgroundColor?: 'warning';
 }
 
 /** How often the status bar entry's age ("14 min") is brought up to date. */
@@ -38,7 +47,8 @@ const MINUTE = 60_000;
  * room's changes as `author` (`state.busy` until it answers); the server's answers (saved, nothing to save, a
  * conflict, a failure) and its news (upstream changes merged) are told with `tell`. What the room has that the branch
  * has not (written by the server into the room's meta map) is shown as resource states (M / A / D) and in the status
- * bar ("Not in GitLab: 3 files · 14 min (Ann, Bob)", or "Saved · 01234567"). Shaped as the scm host's `SourceControl`.
+ * bar ("Not in GitLab: 3 files · 14 min (Ann, Bob)", or "Saved · 01234567"); a conflict with upstream, as long as it
+ * lasts, as "!" on its files and a warning entry before that. Shaped as the scm host's `SourceControl`.
  */
 export class GitLabSourceControl {
   readonly id = 'gitlab';
@@ -77,18 +87,23 @@ export class GitLabSourceControl {
     return this.#state;
   }
 
-  /** The files with changes not in GitLab, badged M (modified), A (added) or D (deleted). */
+  /** The files with changes not in GitLab, badged M (modified), A (added) or D (deleted); conflicting files "!". */
   get resourceStates(): readonly ResourceState[] {
     return this.#resourceStates;
   }
 
-  /** "Not in GitLab: 3 files · 14 min (Ann, Bob)" while the room has changes, else "Saved · <commit>". */
+  /**
+   * "Not in GitLab: 3 files · 14 min (Ann, Bob)" while the room has changes, else "Saved · <commit>"; while upstream
+   * conflicts, "Conflict with GitLab: main.typ" (a warning) before it.
+   */
   get statusBarCommands(): readonly StatusBarCommand[] {
+    const conflict = this.#conflict();
+    const warning: StatusBarCommand[] = conflict ? [{ title: conflictTitle(conflict), tooltip: conflictTooltip(conflict), backgroundColor: 'warning' }] : [];
     const changes = this.#changes();
-    if (changes) return [{ title: notInGitLab(changes, Date.now()), tooltip: changesTooltip(changes) }];
+    if (changes) return [...warning, { title: notInGitLab(changes, Date.now()), tooltip: changesTooltip(changes, this.#meta.get('autoCommit')) }];
     const sha = this.#meta.get('baseSha');
-    if (typeof sha !== 'string') return [];
-    return [{ title: `Saved · ${sha.slice(0, 8)}`, tooltip: `Everything is in GitLab (commit ${sha.slice(0, 8)}). Click to save.` }];
+    if (typeof sha !== 'string') return warning;
+    return [...warning, { title: `Saved · ${sha.slice(0, 8)}`, tooltip: `Everything is in GitLab (commit ${sha.slice(0, 8)}). Click to save.` }];
   }
 
   commit(message: string): void {
@@ -109,12 +124,15 @@ export class GitLabSourceControl {
     this.#changed.fire();
   };
 
-  /** Takes in the room's changes: the resource states, and the ticker while there are any. */
+  /** Takes in the room's changes and conflict: the resource states, and the ticker while there are changes. */
   #follow(): void {
     const changes = this.#changes();
-    this.#resourceStates = (changes?.files ?? []).flatMap((file) => {
-      const path = ProjectPath.parse(file.path);
-      return path ? [{ path, decorations: DECORATIONS[file.kind] }] : [];
+    const conflicting = new Set(this.#conflict()?.paths);
+    const kinds = new Map<string, ChangedFile['kind'] | 'conflict'>((changes?.files ?? []).map((file) => [file.path, file.kind]));
+    for (const path of conflicting) kinds.set(path, 'conflict');
+    this.#resourceStates = [...kinds].flatMap(([written, kind]) => {
+      const path = ProjectPath.parse(written);
+      return path ? [{ path, decorations: DECORATIONS[kind] }] : [];
     });
     if (changes && this.#ticker === undefined) this.#ticker = setInterval(() => this.#changed.fire(), MINUTE);
     if (!changes && this.#ticker !== undefined) {
@@ -131,6 +149,14 @@ export class GitLabSourceControl {
     return files.length ? { files, since: changes.since, editors: changes.editors.filter((name) => typeof name === 'string') } : null;
   }
 
+  /** `meta.conflict`, as the server wrote it (checked). */
+  #conflict(): RoomConflict | null {
+    const conflict = this.#meta.get('conflict') as Partial<RoomConflict> | null | undefined;
+    if (!conflict || typeof conflict.sha !== 'string' || !Array.isArray(conflict.paths)) return null;
+    const paths = conflict.paths.filter((path) => typeof path === 'string');
+    return paths.length ? { sha: conflict.sha, paths } : null;
+  }
+
   #receive(message: ServerMessage): void {
     const { text, severity } = said(message);
     this.tell(text, severity);
@@ -144,12 +170,27 @@ export class GitLabSourceControl {
   }
 }
 
-/** The badges of changed files, as VS Code's explorer shows them. */
-const DECORATIONS: Record<ChangedFile['kind'], ResourceState['decorations']> = {
+/** The badges of changed and conflicting files, as VS Code's explorer shows them. */
+const DECORATIONS: Record<ChangedFile['kind'] | 'conflict', ResourceState['decorations']> = {
   modified: { badge: 'M', tooltip: 'Changed, not in GitLab yet', color: '#b58900' },
   added: { badge: 'A', tooltip: 'New, not in GitLab yet', color: '#859900' },
   deleted: { badge: 'D', tooltip: 'Deleted, not in GitLab yet', color: '#dc322f' },
+  conflict: { badge: '!', tooltip: 'Conflicts with changes on GitLab: not saved until the lines match', color: '#dc322f' },
 };
+
+/** "Conflict with GitLab: main.typ" (at most two files named). */
+function conflictTitle(conflict: RoomConflict): string {
+  const names = conflict.paths.map((path) => path.slice(1));
+  return `Conflict with GitLab: ${names.slice(0, 2).join(', ')}${names.length > 2 ? ` and ${names.length - 2} more` : ''}`;
+}
+
+function conflictTooltip(conflict: RoomConflict): string {
+  return [
+    `Changes on GitLab (commit ${conflict.sha.slice(0, 8)}) conflict with edits here in:`,
+    ...conflict.paths.map((path) => `! ${path.slice(1)}`),
+    'Nothing is saved to GitLab until the lines match: change them here or on GitLab.',
+  ].join('\n');
+}
 
 /** "Not in GitLab: 3 files · 14 min (Ann, Bob)": how many files, for how long (at `now`), by whom. */
 function notInGitLab(changes: RoomChanges, now: number): string {
@@ -166,10 +207,14 @@ function age(ms: number): string {
   return minutes % 60 ? `${Math.floor(minutes / 60)} h ${minutes % 60} min` : `${minutes / 60} h`;
 }
 
-/** The changed files, one per line with its badge, and what a click does. */
-function changesTooltip(changes: RoomChanges): string {
+/** The changed files, one per line with its badge, when they are saved by themselves (`autoCommit` minutes), and what a click does. */
+function changesTooltip(changes: RoomChanges, autoCommit: unknown): string {
   const lines = changes.files.map((file) => `${DECORATIONS[file.kind].badge} ${file.path.slice(1)}`);
-  return ['Not in GitLab yet:', ...lines, 'Click to save.'].join('\n');
+  const automatic =
+    typeof autoCommit === 'number'
+      ? `Saved by itself after ${autoCommit} min without edits, and when the last person leaves.`
+      : 'Not saved by itself: save before you leave.';
+  return ['Not in GitLab yet:', ...lines, automatic, 'Click to save.'].join('\n');
 }
 
 /** Whether a commit is under way (the scm host's `SourceControlState`). */
@@ -181,7 +226,7 @@ export interface CommitState {
 function said(message: ServerMessage): { text: string; severity: Parameters<Tell>[1] } {
   switch (message.type) {
     case 'gitlab:saved':
-      return { text: `Saved version ${message.sha.slice(0, 8)} (${message.author})`, severity: 'info' };
+      return { text: `Saved version ${message.sha.slice(0, 8)}${message.automatic ? ' automatically' : ''} (${message.author})`, severity: 'info' };
     case 'gitlab:unchanged':
       return { text: 'No changes to save', severity: 'info' };
     case 'gitlab:merged':
