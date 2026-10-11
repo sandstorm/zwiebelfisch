@@ -25,7 +25,7 @@
   `FuncCall` node only; (b) a deep `TypstCall` — `positional(i)` / `named(name)` → `TypstArgument`
   (`string()`, `length()`, `boolean()`, `content()`, `source()`), `body`, and `hasOnly(positional, named)`
   as the one "can every argument be modelled, else stay a raw box" check — keeping `node` as the Lezer
-  escape hatch. Recommendation: (b). Five
+  escape hatch. Recommendation (under "overall complexity as low as possible"): (b), minimal — only the readers the 11 extensions use today, and kept only if the total code (TypstCall + migrated projectors) shrinks; otherwise (a). Five
   vocabularies: ours (VS Code-shaped, unprefixed), Tiptap (ProseMirror only through Tiptap, e.g.
   `addProseMirrorPlugins`), CodeMirror, Lezer + the Typst grammar of `codemirror-lang-typst`, the Typst
   language. Rules: (1) our API unprefixed; (2) a member taking / returning a framework object names it
