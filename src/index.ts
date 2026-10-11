@@ -87,6 +87,19 @@ export type {
   ProjectionSpec,
   RunProjector,
 } from './hosts/projection/projection';
+// Reading Typst syntax (Lezer nodes of codemirror-lang-typst's grammar) in parse functions: plain functions.
+export {
+  callArguments,
+  calleeName,
+  children,
+  decodeString,
+  hasOnlyArguments,
+  isClosedContent,
+  namedArgument,
+  quote,
+  trailingContent,
+  withHash,
+} from './core/typst-syntax/typst-syntax';
 export { collaboration, type CollaborationOptions } from './extensions/collaboration/collaboration';
 
 // Importing the package makes <typst-editor> available (no-op without a DOM).
