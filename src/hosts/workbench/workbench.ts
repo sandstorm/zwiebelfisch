@@ -313,17 +313,30 @@ export class WorkbenchHost implements Workbench {
   readonly #styleSheets: StyleSheets;
   readonly #ownStyles: Disposable;
   /** Raw boxes' pictures follow the primary link of the box's Typst, the text the link under the pointer. */
-  readonly #visualEditor = new VisualEditorHost({
-    linkOf: (src, document) => {
-      const path = this.project.pathOf(document);
-      // the providers read Typst markup; a figure's body is written in code (`image(..)`, no `#`)
-      return path ? this.#languages.primaryLink({ path, languageId: 'typst', text: src.startsWith('#') ? src : `#${src}` }) : null;
+  readonly #visualEditor = new VisualEditorHost(
+    {
+      linkOf: (src, document) => {
+        const path = this.project.pathOf(document);
+        // the providers read Typst markup; a figure's body is written in code (`image(..)`, no `#`)
+        return path ? this.#languages.primaryLink({ path, languageId: 'typst', text: src.startsWith('#') ? src : `#${src}` }) : null;
+      },
+      linkAt: (document, offset) => {
+        const path = this.project.pathOf(document);
+        return path ? this.#languages.linkAt({ path, languageId: 'typst', text: document.text }, offset) : null;
+      },
     },
-    linkAt: (document, offset) => {
-      const path = this.project.pathOf(document);
-      return path ? this.#languages.linkAt({ path, languageId: 'typst', text: document.text }, offset) : null;
+    // copy and paste run the paste edit providers of Typst
+    {
+      prepareDocumentPaste: (document, copied, data) => {
+        const path = this.project.pathOf(document);
+        if (path) this.#languages.prepareDocumentPaste({ path, languageId: 'typst', text: document.text }, copied, data);
+      },
+      provideDocumentPasteEdits: (document, ranges, text, data) => {
+        const path = this.project.pathOf(document);
+        return path ? this.#languages.provideDocumentPasteEdits({ path, languageId: 'typst', text: document.text }, ranges, text, data) : { insertText: text, additionalEdits: [] };
+      },
     },
-  });
+  );
   readonly #sourceEditors = new SourceEditorHost();
   readonly #preview: Preview;
   #previewFailed = false;
@@ -612,12 +625,16 @@ export class WorkbenchHost implements Workbench {
   /**
    * The Typst files' language, `typst` (`.typ`), and its registered document links in every Source editor and in the
    * code of every raw box (in its file); a raw box's picture follows the primary one, the Visual editor's text the one
-   * under the pointer (`#visualEditor`). The raw boxes' code takes the shared CodeMirror extensions, too.
+   * under the pointer (`#visualEditor`). The raw boxes' code takes the shared CodeMirror extensions, too. Copy and
+   * paste in every Source editor run the paste edit providers of Typst (in the Visual editor: `#visualEditor`).
    */
   #extendCodeMirrors(): void {
     this.#languages.declare([{ id: 'typst', extensions: ['.typ'] }]);
     const links = (document: TypstDocument) => this.#languages.createDocumentLinksCodeMirrorExtension('typst', () => this.project.pathOf(document) ?? null);
     this.#sourceEditors.registerCodeMirrorExtension((editor) => links(editor.document));
+    this.#sourceEditors.registerCodeMirrorExtension(({ document }) =>
+      this.#languages.createDocumentPasteCodeMirrorExtension('typst', () => this.project.pathOf(document) ?? null),
+    );
     this.#visualEditor.registerRawBoxCodeMirrorExtension((editor) => links(editor.document));
     this.#visualEditor.registerRawBoxCodeMirrorExtension(() => this.#sourceEditors.createSharedCodeMirrorExtension());
   }

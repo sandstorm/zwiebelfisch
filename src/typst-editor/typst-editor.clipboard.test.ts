@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-// Tests for typst-editor.ts: copy and paste of Typst between files in the composed widget, the imports following
-// (preview mocked: no worker in jsdom).
+// Tests for typst-editor.ts: copy and paste of Typst between files in the composed widget, the imports following,
+// labels the project has already renamed (preview mocked: no worker in jsdom).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import type { Editor } from '@tiptap/core';
@@ -49,7 +49,7 @@ function setup(b = 'Intro\n', viewType?: string) {
 }
 
 /** Fires a clipboard event of `type` on `target` with `items` (type → text) as its data; returns the data after it. */
-function clipboard(target: HTMLElement, type: 'copy' | 'paste', items: Record<string, string> = {}): Record<string, string> {
+function clipboard(target: HTMLElement, type: 'copy' | 'cut' | 'paste', items: Record<string, string> = {}): Record<string, string> {
   const data = new Map(Object.entries(items));
   const clipboardData = { getData: (t: string) => data.get(t) ?? '', setData: (t: string, v: string) => void data.set(t, v), clearData: () => data.clear(), files: [], types: [] };
   const event = new Event(type, { bubbles: true, cancelable: true });
@@ -117,5 +117,61 @@ describe('copy and paste between files', () => {
     expect(text('/book/two/b.typ')).toBe(`#import "/book/template.typ": mermaid\n\nIntro\n\n${FIGURE}\n`);
     undo(b.contentDOM);
     expect(text('/book/two/b.typ')).toBe('Intro\n');
+  });
+});
+
+const LABELLED = '#figure(rect(), caption: [B]) <fig:b>';
+const B = `${LABELLED}\n\nSee @fig:b.\n`;
+
+describe('pasted labels', () => {
+  it('a label the project has gets -1, then -2, and the references in the paste with it, in the paste\'s undo step (Visual editor)', () => {
+    const { editor, visual, text } = setup(B);
+    editor.open('/book/two/b.typ');
+    const b = visual();
+    const pasted = `${LABELLED}\n\nAgain @fig:b, not @other.`;
+    const once = `${B}\n#figure(rect(), caption: [B]) <fig:b-1>\n\nAgain @fig:b-1, not @other.\n`;
+    b.commands.setTextSelection(b.state.doc.content.size - 1);
+    clipboard(b.view.dom, 'paste', { 'text/plain': pasted });
+    expect(text('/book/two/b.typ')).toBe(once);
+    undo(b.view.dom);
+    expect(text('/book/two/b.typ')).toBe(B);
+    for (const _ of [1, 2]) {
+      b.commands.setTextSelection(b.state.doc.content.size - 1);
+      clipboard(b.view.dom, 'paste', { 'text/plain': pasted });
+    }
+    expect(text('/book/two/b.typ')).toBe(`${once}\n#figure(rect(), caption: [B]) <fig:b-2>\n\nAgain @fig:b-2, not @other.\n`);
+  });
+
+  it('a label cut and pasted keeps its name (Visual editor)', () => {
+    const { editor, visual, text } = setup(B);
+    editor.open('/book/two/b.typ');
+    const b = visual();
+    let figure = -1;
+    b.state.doc.forEach((node, offset) => {
+      if (node.attrs.label?.name === 'fig:b') figure = offset;
+    });
+    b.view.dispatch(b.state.tr.setSelection(NodeSelection.create(b.state.doc, figure)));
+    const cut = clipboard(b.view.dom, 'cut');
+    expect(text('/book/two/b.typ')).not.toContain('<fig:b>');
+    b.commands.setTextSelection(b.state.doc.content.size - 1);
+    clipboard(b.view.dom, 'paste', cut);
+    expect(text('/book/two/b.typ')).toMatch(/See @fig:b\.\n\n#figure\(rect\(\), caption: \[B\]\) <fig:b>\n$/);
+  });
+
+  it('the Source editor renames pasted labels too, in one undo step; a cut one keeps its name', () => {
+    const { editor, source, text } = setup(B, SOURCE_EDITOR);
+    editor.open('/book/two/b.typ');
+    const b = source();
+    b.dispatch({ selection: { anchor: b.state.doc.length } });
+    clipboard(b.contentDOM, 'paste', { 'text/plain': `\n${LABELLED} @fig:b\n` });
+    expect(text('/book/two/b.typ')).toBe(`${B}\n#figure(rect(), caption: [B]) <fig:b-1> @fig:b-1\n`);
+    undo(b.contentDOM);
+    expect(text('/book/two/b.typ')).toBe(B);
+
+    // cut (jsdom runs no CodeMirror cut handler)
+    b.dispatch({ changes: { from: 0, to: LABELLED.length }, userEvent: 'delete.cut' });
+    b.dispatch({ selection: { anchor: b.state.doc.length } });
+    clipboard(b.contentDOM, 'paste', { 'text/plain': LABELLED });
+    expect(text('/book/two/b.typ')).toBe(`\n\nSee @fig:b.\n${LABELLED}`);
   });
 });

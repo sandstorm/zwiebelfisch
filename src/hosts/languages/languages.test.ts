@@ -1,5 +1,6 @@
 // Tests for languages.ts (LanguagesHost): merging the links of the providers for a document's language, resolving them
-// through their provider; a document's primary link and the link at an offset; the declared languages by ending; the help sheets by language.
+// through their provider; a document's primary link and the link at an offset; the declared languages by ending; the
+// help sheets by language; the paste edit providers.
 import { describe, expect, it, vi } from 'vitest';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
@@ -133,5 +134,25 @@ describe('LanguagesHost', () => {
     expect(titles(undefined)).toEqual(['Everywhere']);
     mermaid.dispose();
     expect(titles('mermaid')).toEqual(['Everywhere']);
+  });
+
+  it('runs the paste edit providers of the language in order, each on the text the one before left; drops edits that collide', () => {
+    const languages = new LanguagesHost(targets);
+    const change = (from: number, to: number, insert: string) => ({ from: SourceOffset.of(from), to: SourceOffset.of(to), insert });
+    const prepared: string[] = [];
+    languages.registerDocumentPasteEditProvider({ language: 'typst' }, {
+      prepareDocumentPaste: (_document, copied) => void prepared.push(copied),
+      provideDocumentPasteEdits: (_document, _ranges, text) => ({ insertText: text.toUpperCase(), additionalEdits: [change(0, 0, 'top '), change(6, 7, 'x'), change(10, 12, 'cc')] }),
+    });
+    languages.registerDocumentPasteEditProvider({ language: 'typst' }, {
+      provideDocumentPasteEdits: (_document, _ranges, text) => ({ insertText: `${text}!`, additionalEdits: [change(11, 13, 'CC'), change(14, 14, 'end')] }),
+    });
+    languages.registerDocumentPasteEditProvider({ language: 'json' }, { provideDocumentPasteEdits: () => ({ insertText: 'json' }) });
+    const data = {} as DataTransfer;
+    languages.prepareDocumentPaste(document, 'bb', data);
+    expect(prepared).toEqual(['bb']);
+    // pasted over `bbbb` (5..9): an edit inside it (6..7) and one overlapping an earlier one (11..13) are dropped
+    const ranges = [SourceRange.of({ from: 5, to: 9 })];
+    expect(languages.provideDocumentPasteEdits(document, ranges, 'pasted', data)).toEqual({ insertText: 'PASTED!', additionalEdits: [change(0, 0, 'top '), change(10, 12, 'cc'), change(14, 14, 'end')] });
   });
 });

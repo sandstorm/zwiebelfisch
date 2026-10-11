@@ -1,10 +1,11 @@
 import type { Extension } from '@codemirror/state';
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
-import type { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
+import type { SourceOffset, SourceRange, TextChange } from '../../core/typst-document/typst-document';
 import type { Command } from '../commands/commands';
 import css from './languages.css?inline';
 import { followableLink, linkExtension, primaryLink, type LinkActions } from './link-extension';
+import { pasteExtension } from './paste-extension';
 
 /**
  * What the widget knows about the languages of texts (VS Code's `languages` namespace, the parts we use): document
@@ -14,7 +15,9 @@ import { followableLink, linkExtension, primaryLink, type LinkActions } from './
  * the same in every editor. So extensions register link providers, and every CodeMirror editor (the Source editor,
  * a raw box's code, an extension's own editor) shows the merged links of all providers for its language, knowing none
  * of them. Help works the same way: a language's sheet comes from its extension, the help panel shows it; so do known
- * imports: an extension says where the names of its constructs come from, whoever adds imports reads them.
+ * imports: an extension says where the names of its constructs come from, whoever adds imports reads them. And so
+ * does copy and paste: an extension changes what a paste of Typst puts in (a label already taken gets a new name) or
+ * what else it changes (the imports the text needs), the editors do the paste, in one undo step.
  *
  * The host knows no language itself. Whoever hands a text over says its language (`languageId`), and the extensions
  * declare which file endings are which language (`contributes.languages`). See docs/30_architecture/07_workbench.typ.
@@ -59,6 +62,34 @@ export interface Languages {
   registerKnownImport(selector: DocumentSelector, known: KnownImport): Disposable;
   /** The known imports of `languageId`, in registration order. */
   provideKnownImports(languageId: string): readonly KnownImport[];
+  /**
+   * Takes part in every copy from and paste into the documents `selector` matches until disposed, in the Visual editor
+   * (Typst it reads as Typst) and the Source editors. The providers of a paste are asked in registration order, each
+   * given the text the ones before left; additional edits that overlap the pasted ranges or an earlier edit are dropped.
+   */
+  registerDocumentPasteEditProvider(selector: DocumentSelector, provider: DocumentPasteEditProvider): Disposable;
+}
+
+/** Changes what a paste puts into a text and what else it changes (VS Code's DocumentPasteEditProvider). */
+export interface DocumentPasteEditProvider {
+  /** On a copy or cut of `copied` from `document`: adds what a paste will need to the clipboard (`dataTransfer`). */
+  prepareDocumentPaste?(document: TextDocument, copied: string, dataTransfer: DataTransfer): void;
+  /**
+   * The edit of a paste of `text` into `document` (its text before the paste) in place of `ranges`, with the
+   * clipboard `dataTransfer`; undefined: none, `text` goes in as it is.
+   */
+  provideDocumentPasteEdits(document: TextDocument, ranges: readonly SourceRange[], text: string, dataTransfer: DataTransfer): DocumentPasteEdit | undefined;
+}
+
+/** What a paste does (VS Code's DocumentPasteEdit). */
+export interface DocumentPasteEdit {
+  /** The text that goes in place of each pasted range. */
+  readonly insertText: string;
+  /**
+   * Other changes of the text before the paste, overlapping neither the pasted ranges nor each other; one at the same
+   * place as a pasted range goes before the pasted text.
+   */
+  readonly additionalEdits?: readonly TextChange[];
 }
 
 /** A name and the module it is imported from (`mermaid`, `@preview/merman:0.4.0`). */
@@ -189,6 +220,7 @@ export class LanguagesHost implements Languages {
   /** The document `linkAt` was asked about last, and its links. */
   #lastLinks: (TextDocument & { links: readonly DocumentLink[] }) | null = null;
   readonly #knownImports: { selector: DocumentSelector; known: KnownImport }[] = [];
+  readonly #pasteEditProviders: { selector: DocumentSelector; provider: DocumentPasteEditProvider }[] = [];
   /** The declared endings (lower case, with the dot) and their language. */
   readonly #endings = new Map<string, string>();
 
@@ -232,6 +264,44 @@ export class LanguagesHost implements Languages {
 
   provideKnownImports(languageId: string): KnownImport[] {
     return this.#knownImports.filter(({ selector }) => matches(selector, languageId)).map(({ known }) => known);
+  }
+
+  registerDocumentPasteEditProvider(selector: DocumentSelector, provider: DocumentPasteEditProvider): Disposable {
+    return add(this.#pasteEditProviders, { selector, provider });
+  }
+
+  /** On a copy or cut of `copied` from `document`: every matching paste edit provider adds to the clipboard `dataTransfer`. */
+  prepareDocumentPaste(document: TextDocument, copied: string, dataTransfer: DataTransfer): void {
+    for (const provider of this.#pasteEditProvidersOf(document)) provider.prepareDocumentPaste?.(document, copied, dataTransfer);
+  }
+
+  /**
+   * The edit of a paste of `text` into `document` in place of `ranges`: the providers' in registration order, each
+   * given the text the ones before left; additional edits that overlap the ranges or an earlier edit are left out.
+   */
+  provideDocumentPasteEdits(document: TextDocument, ranges: readonly SourceRange[], text: string, dataTransfer: DataTransfer): Required<DocumentPasteEdit> {
+    let insertText = text;
+    const additionalEdits: TextChange[] = [];
+    const taken: SourceRange[] = [...ranges];
+    for (const provider of this.#pasteEditProvidersOf(document)) {
+      const edit = provider.provideDocumentPasteEdits(document, ranges, insertText, dataTransfer);
+      if (!edit) continue;
+      insertText = edit.insertText;
+      for (const change of edit.additionalEdits ?? []) {
+        if (taken.some((range) => conflicts(range, change))) continue;
+        additionalEdits.push(change);
+        taken.push(change);
+      }
+    }
+    return { insertText, additionalEdits };
+  }
+
+  /**
+   * Runs the paste edit providers of the text's language around a copy, cut or paste in a CodeMirror editor, as in the
+   * Source editors: `languageId` is the text's language, `path` the file it is in, now (null: none, no providers).
+   */
+  createDocumentPasteCodeMirrorExtension(languageId: string, path: () => ProjectPath | null): Extension {
+    return pasteExtension(this, languageId, path);
   }
 
   registerDocumentLinkProvider(selector: DocumentSelector, provider: DocumentLinkProvider, options: { priority?: number } = {}): Disposable {
@@ -291,6 +361,10 @@ export class LanguagesHost implements Languages {
     return link ? followableLink(link, this.#actions) : null;
   }
 
+  #pasteEditProvidersOf(document: TextDocument): DocumentPasteEditProvider[] {
+    return this.#pasteEditProviders.filter(({ selector }) => matches(selector, document.languageId)).map(({ provider }) => provider);
+  }
+
   /** What a followed link needs from this host: resolving it, and where it leads (`targets`). */
   get #actions(): Pick<LinkActions, 'resolveDocumentLink' | 'open'> {
     return { resolveDocumentLink: (link) => this.resolveDocumentLink(link), open: (target, selection) => this.targets.open(target, selection) };
@@ -315,4 +389,9 @@ function matches(selector: DocumentSelector, languageId: string | undefined): bo
 
 function overlap(a: DocumentLink, b: DocumentLink): boolean {
   return a.range.from < b.range.to && b.range.from < a.range.to;
+}
+
+/** Whether changes of ranges `a` and `b` conflict: they share text, or an empty one lies inside the other (not at its ends). */
+function conflicts(a: SourceRange, b: SourceRange): boolean {
+  return (a.from < b.to && b.from < a.to) || (a.from === a.to && b.from < a.from && a.from < b.to) || (b.from === b.to && a.from < b.from && b.from < a.to);
 }

@@ -1,8 +1,10 @@
 // Copy and paste as Typst text. See VisualEditor in visual-editor.ts.
-import { Extension } from '@tiptap/core';
+import { Extension, type AnyExtension } from '@tiptap/core';
 import { Fragment, Node, Slice, type Schema } from '@tiptap/pm/model';
 import { Plugin, type EditorState } from '@tiptap/pm/state';
-import { parseTypst, posToSource, serializeToTypst } from '../prosemirror-typst/prosemirror-typst';
+import { SourceRange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
+import { applyTypstChanges, parseTypst, posToSource, serializeToTypst } from '../prosemirror-typst/prosemirror-typst';
+import type { VisualEditorPasteEdits } from './visual-editor';
 
 /**
  * The clipboard in Typst. Copy and cut put the selection's Typst source on the clipboard as text (`text/plain`, and
@@ -13,62 +15,93 @@ import { parseTypst, posToSource, serializeToTypst } from '../prosemirror-typst/
  *
  * Pasted Typst, plain text, and code from a code editor (HTML that is one preformatted block, as VS Code copies) are
  * read with the editor's specs and go in place of the selection, as one step: a paragraph's inline content into the
- * text there, blocks as blocks (what no spec models: raw boxes). Mod+Shift+V pastes the text as plain characters,
- * written escaped. Other HTML (a web page, a word processor) goes through ProseMirror's paste and the schema's HTML
- * rules. Its priority puts its text serializer before Tiptap's. See docs/30_architecture/04_visual-editor.typ.
+ * text there, blocks as blocks (what no spec models: raw boxes). The paste edit providers (`pasteEdits`) may change
+ * the text before and make other changes of the document's text in the same step (a copy gave them the clipboard).
+ * Mod+Shift+V pastes the text as plain characters, written escaped. Other HTML (a web page, a word processor) goes
+ * through ProseMirror's paste and the schema's HTML rules. Its priority puts its text serializer before Tiptap's.
+ * See docs/30_architecture/04_visual-editor.typ.
  */
-export const clipboard = Extension.create({
-  name: 'typstClipboard',
-  priority: 1000,
-  addProseMirrorPlugins() {
-    // Mod+Shift+V was the last key pressed: the paste it starts is literal
-    let literal = false;
-    return [
-      new Plugin({
-        // after ProseMirror's own copy (and a raw box's): its text is Typst
-        view: (view) => {
-          const markTypst = (event: ClipboardEvent) => event.clipboardData?.setData(TYPST, event.clipboardData.getData('text/plain'));
-          view.dom.addEventListener('copy', markTypst);
-          view.dom.addEventListener('cut', markTypst);
-          return {
-            destroy: () => {
-              view.dom.removeEventListener('copy', markTypst);
-              view.dom.removeEventListener('cut', markTypst);
+export function clipboard(document: TypstDocument, pasteEdits: VisualEditorPasteEdits | null): AnyExtension {
+  return Extension.create({
+    name: 'typstClipboard',
+    priority: 1000,
+    addProseMirrorPlugins() {
+      // Mod+Shift+V was the last key pressed: the paste it starts is literal
+      let literal = false;
+      return [
+        new Plugin({
+          // after ProseMirror's own copy (and a raw box's): its text is Typst
+          view: (view) => {
+            const markTypst = (event: ClipboardEvent) => {
+              const data = event.clipboardData;
+              const copied = data?.getData('text/plain') ?? '';
+              data?.setData(TYPST, copied);
+              if (data && copied !== '') pasteEdits?.prepareDocumentPaste(document, copied, data);
+            };
+            view.dom.addEventListener('copy', markTypst);
+            view.dom.addEventListener('cut', markTypst);
+            return {
+              destroy: () => {
+                view.dom.removeEventListener('copy', markTypst);
+                view.dom.removeEventListener('cut', markTypst);
+              },
+            };
+          },
+          props: {
+            clipboardTextSerializer: (slice, view) => typstOfSelection(view.state, slice),
+            handleKeyDown: (_view, event) => {
+              literal = (event.metaKey || event.ctrlKey) && event.shiftKey && (event.code === 'KeyV' || event.key.toLowerCase() === 'v');
+              return false;
             },
-          };
-        },
-        props: {
-          clipboardTextSerializer: (slice, view) => typstOfSelection(view.state, slice),
-          handleKeyDown: (_view, event) => {
-            literal = (event.metaKey || event.ctrlKey) && event.shiftKey && (event.code === 'KeyV' || event.key.toLowerCase() === 'v');
-            return false;
+            handlePaste: (view, event) => {
+              const data = event.clipboardData;
+              const text = literal ? null : typstText(data);
+              literal = false;
+              if (text === null || !data || view.state.selection.$from.parent.type.spec.code) return false;
+              const { state } = view;
+              const { parent } = state.selection.$from;
+              const edit = pasteEdits?.provideDocumentPasteEdits(document, [selectionSource(state)], text, data) ?? { insertText: text, additionalEdits: [] };
+              const tr = edit.additionalEdits.length === 0
+                ? state.tr
+                : applyTypstChanges(state.tr, parseTypst(applyChanges(document.text, edit.additionalEdits), state.schema));
+              tr.replaceSelection(typstSlice(edit.insertText, state.schema, parent.isTextblock && parent.content.size > 0));
+              view.dispatch(tr.scrollIntoView().setMeta('paste', true).setMeta('uiEvent', 'paste'));
+              return true;
+            },
           },
-          handlePaste: (view, event) => {
-            const text = literal ? null : typstText(event.clipboardData);
-            literal = false;
-            if (text === null || view.state.selection.$from.parent.type.spec.code) return false;
-            const { parent } = view.state.selection.$from;
-            const tr = view.state.tr.replaceSelection(typstSlice(text, view.state.schema, parent.isTextblock && parent.content.size > 0));
-            view.dispatch(tr.scrollIntoView().setMeta('paste', true).setMeta('uiEvent', 'paste'));
-            return true;
-          },
-        },
-      }),
-    ];
-  },
-});
+        }),
+      ];
+    },
+  });
+}
 
 /**
  * The Typst source of the selection, whose content is `slice`: the source range it shows, if that reads as the same
  * document as the slice printed (`*bold* text`); else the slice printed (`*bo*` for the start of a bold word).
  */
 function typstOfSelection(state: EditorState, slice: Slice): string {
-  const { doc, selection, schema } = state;
-  const from = posToSource(doc, selection.from);
-  const to = Math.max(from, posToSource(doc, selection.to, -1));
+  const { doc, schema } = state;
+  const { from, to } = selectionSource(state);
   const source = serializeToTypst(doc).slice(from, to);
   const printed = serializeToTypst(schema.topNodeType.create({ trail: '' }, unwrapped(slice).content));
   return source !== '' && reprinted(source, schema) === reprinted(printed, schema) ? source : printed;
+}
+
+/** The source range the selection shows. */
+function selectionSource({ doc, selection }: EditorState): SourceRange {
+  const from = posToSource(doc, selection.from);
+  return SourceRange.of({ from, to: Math.max(from, posToSource(doc, selection.to, -1)) });
+}
+
+/** Typst `text` with `changes` made (all of the text as it is, none overlapping; at one place in their order). */
+function applyChanges(text: string, changes: readonly TextChange[]): string {
+  let result = '';
+  let at = 0;
+  for (const { from, to, insert } of [...changes].sort((a, b) => a.from - b.from)) {
+    result += text.slice(at, from) + insert;
+    at = to;
+  }
+  return result + text.slice(at);
 }
 
 /** `slice` without the containers open on both ends around one child (a table cell's text: the paragraph, not the table). */

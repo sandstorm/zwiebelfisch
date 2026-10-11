@@ -1,22 +1,20 @@
 // Tests for pasted-imports.ts: the imports copied Typst needs, and the imports a paste adds.
 import { describe, expect, it } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
-import type { TextChange } from '../../../core/typst-document/typst-document';
+import { SourceOffset } from '../../../core/typst-document/typst-document';
 import { calculatePastedImports, copiedImports, parseCopiedImports } from './pasted-imports';
 
 const path = ProjectPath.of;
 const FIGURE = '#figure(\n  mermaid(read("../diagrams/workbench-layout.mmd"), width: 75%),\n  caption: [The editor: …],\n)';
 const MERMAN = { name: 'mermaid', module: '@preview/merman:0.4.0' };
 
-/** `text` with `changes` applied in order. */
-function applied(text: string, changes: readonly TextChange[]): string {
-  return changes.reduce((current, { from, to, insert }) => current.slice(0, from) + insert + current.slice(to), text);
-}
-
-/** The text of `/book/two/b.typ` after `pasted` is appended to `before` and the imports are added. */
+/** The text of `/book/two/b.typ` after `pasted` is appended to `before` and the imports are added (before the end). */
 function paste(before: string, pasted: string, copied = parseCopiedImports('[]'), known = [MERMAN]): string {
-  const after = before + pasted;
-  return applied(after, calculatePastedImports({ file: path('/book/two/b.typ'), before, after }, copied, known));
+  const end = SourceOffset.of(before.length);
+  const changes = calculatePastedImports({ path: path('/book/two/b.typ'), text: before }, { ranges: [{ from: end, to: end }], text: pasted }, copied, known);
+  expect(changes.length).toBeLessThanOrEqual(1);
+  const [change] = changes;
+  return (change ? before.slice(0, change.from) + change.insert + before.slice(change.to) : before) + pasted;
 }
 
 describe('copiedImports', () => {
@@ -77,6 +75,11 @@ describe('calculatePastedImports', () => {
     expect(paste('#import "@preview/merman:0.4.0": *\n', FIGURE)).toBe(`#import "@preview/merman:0.4.0": *\n${FIGURE}`);
     expect(paste('#mermaid("a")\n', FIGURE)).toBe(`#mermaid("a")\n${FIGURE}`);
     expect(paste('Text ', '*bold* and #undeclared()')).toBe('Text *bold* and #undeclared()');
+  });
+
+  it('imports nothing the pasted text imports itself', () => {
+    const changes = calculatePastedImports({ path: path('/b.typ'), text: 'Text\n' }, { ranges: [{ from: SourceOffset.of(5), to: SourceOffset.of(5) }], text: `#import "x.typ": mermaid\n${FIGURE}` }, [], [MERMAN]);
+    expect(changes).toEqual([]);
   });
 
   it('imports several names of one file in one import, renamed ones as they were', () => {

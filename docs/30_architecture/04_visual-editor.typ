@@ -26,7 +26,7 @@ The clipboard holds Typst (`clipboard.ts`), so text moves between the Visual edi
 - Our own HTML is not read back: it leaves out what is never rendered (a raw box's `src`). Other HTML (a web page, a word processor) goes through ProseMirror's paste and the schema's HTML rules.
 - *Mod+Shift+V* pastes plain characters (escaped when written): the key down before the paste says so, as ProseMirror's own Shift.
 - Raw boxes paste into their code, as CodeMirror does; in code blocks the text goes in as it is.
-- The imports a paste needs are not the host's: the `imports` extension appends them to the paste's transaction (@architecture-built-in-extensions).
+- What a paste changes besides is not the host's: the paste edit providers (`languages.registerDocumentPasteEditProvider`, @extensions-workbench-api-paste), which the workbench hands to the host (`VisualEditorPasteEdits`), change the pasted Typst before it is read (a label already taken gets a new name) and the rest of the text (the imports it needs); a copy or cut lets them add to the clipboard. Their edits go into the paste's transaction, before the slice replaces the selection.
 
 == VisualEditorHost <architecture-visual-editor-host>
 
