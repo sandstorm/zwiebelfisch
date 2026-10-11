@@ -94,9 +94,9 @@ describe('references in the Visual view', () => {
     const { parent, editor, text } = setup();
     cursorAfter(editor, 'sums them up');
     type(editor, ' See @');
-    const list = parent.querySelector<HTMLElement>('[data-testid="typst-ref-suggestions"]')!;
+    const list = parent.querySelector<HTMLElement>('[data-testid="typst-suggest"]')!;
     expect(list.hidden).toBe(false);
-    const options = () => [...list.querySelectorAll('[role="option"]')].map((o) => o.querySelector('.typst-labels__suggestions-name')!.textContent);
+    const options = () => [...list.querySelectorAll('[role="option"]')].map((o) => o.querySelector('.typst-visual__suggest-label')!.textContent);
     expect(options()).toEqual(['intro', 'method', 'eq:speedup', 'fig:measurement', 'results', 'tab:timings', 'fig:compile-times', 'tab:runs']);
     type(editor, 'fig');
     expect(options()).toEqual(['fig:measurement', 'fig:compile-times']);
@@ -112,7 +112,7 @@ describe('references in the Visual view', () => {
     cursorAfter(editor, 'sums them up');
     type(editor, ' @');
     press(editor, 'ArrowDown');
-    const list = parent.querySelector<HTMLElement>('[data-testid="typst-ref-suggestions"]')!;
+    const list = parent.querySelector<HTMLElement>('[data-testid="typst-suggest"]')!;
     expect(list.querySelector('[aria-selected="true"]')?.textContent).toContain('method');
     expect(press(editor, 'Escape')).toBe(true);
     expect(list.hidden).toBe(true);
@@ -199,6 +199,6 @@ describe('references without the other constructs', () => {
     const editor = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
     cursorAfter(editor, 'Text');
     type(editor, ' @');
-    expect(parent.querySelector<HTMLElement>('[data-testid="typst-ref-suggestions"]')!.hidden).toBe(false);
+    expect(parent.querySelector<HTMLElement>('[data-testid="typst-suggest"]')!.hidden).toBe(false);
   });
 });

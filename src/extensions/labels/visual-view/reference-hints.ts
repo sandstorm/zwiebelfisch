@@ -4,7 +4,7 @@ import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { ProjectPath } from '../../../core/paths/paths';
-import { describeLabel } from '../model/label-choices';
+import { describeLabel } from '../model/label-description';
 import type { LabelInfo, ProjectLabels } from '../model/label-index';
 
 const key = new PluginKey<DecorationSet>('typstReferenceHints');

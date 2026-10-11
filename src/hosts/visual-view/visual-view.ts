@@ -2,7 +2,7 @@
 // everything it shows beyond paragraphs and raw Typst is contributed through VisualViewContributions (kept by
 // VisualViewHost).
 // Entry of hosts/visual-view/. See docs/architecture/visual-view.typ.
-import { Editor, type AnyExtension, type ChainedCommands } from '@tiptap/core';
+import { Editor, type AnyExtension, type ChainedCommands, type Range } from '@tiptap/core';
 import { StateEffect, type Extension } from '@codemirror/state';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState, TextSelection, type Plugin, type Transaction } from '@tiptap/pm/state';
@@ -14,6 +14,7 @@ import { attachGrammar, onDidChangeGrammar, posToSource, serializeToTypst, parse
 import { highlights, setHighlights } from './highlights';
 import { editorExtensions, nodeViewSpecs } from './nodes/node-views';
 import type { RawBoxes } from './nodes/raw-box';
+import { suggestions } from './suggestions/suggestions';
 import { Toolbar } from './toolbar/toolbar';
 import proseMirrorCss from './prosemirror.css?inline';
 import css from './visual-view.css?inline';
@@ -58,6 +59,13 @@ export class VisualView {
       extensions: [
         ...editorExtensions(contributed.nodes, contributed.marks, boxes(view, contributed, views)),
         highlights,
+        suggestions(contributed.completionItemProviders, (editor, query) => ({
+          ...view,
+          editor,
+          query,
+          toolbarActions: (group) => this.toolbar.actions(group),
+          textStyles: () => this.toolbar.textStyles(),
+        })),
         ...contributed.tiptapExtensions.flatMap((provider) => provider(view)),
       ],
       injectCSS: false,
@@ -253,6 +261,7 @@ export interface Contributed {
   readonly rawBoxCodeMirrorExtensions: readonly ((view: VisualViewContext) => Extension)[];
   readonly boxActions: readonly RawBoxAction[];
   readonly textStyles: readonly TextStyleProvider[];
+  readonly completionItemProviders: readonly { readonly provider: CompletionItemProvider; readonly trigger: CompletionTrigger }[];
 }
 
 /**
@@ -291,6 +300,12 @@ export interface VisualViewContributions {
    * "Normal text". The menu shows once any provider is registered.
    */
   registerTextStyleProvider(provider: TextStyleProvider): Disposable;
+  /**
+   * A list that pops up while `trigger.char` and a query are typed in the text (the labels after `@`, the slash
+   * commands after `/`): the provider's items, filtered by the query (see `CompletionItem`). Not in code (code
+   * blocks, inline code) nor raw boxes. Of two providers with the same character, each opens its own list.
+   */
+  registerCompletionItemProvider(provider: CompletionItemProvider, trigger: CompletionTrigger): Disposable;
   /** A column beside the text, made for each view. */
   registerGutter(provider: GutterProvider): Disposable;
   /**
@@ -330,6 +345,7 @@ export class VisualViewHost implements VisualViewContributions {
     rawBoxCodeMirrorExtensions: [] as ((view: VisualViewContext) => Extension)[],
     boxActions: [] as RawBoxAction[],
     textStyles: [] as TextStyleProvider[],
+    completionItemProviders: [] as { provider: CompletionItemProvider; trigger: CompletionTrigger }[],
   };
   /** The CSS of the views (ProseMirror's own first), for the workbench to put where the widget renders. */
   readonly styleSheet: string = proseMirrorCss + css;
@@ -360,6 +376,10 @@ export class VisualViewHost implements VisualViewContributions {
 
   registerToolbarItem(item: ToolbarItem): Disposable {
     return this.add(this.lists.toolbarItems, item);
+  }
+
+  registerCompletionItemProvider(provider: CompletionItemProvider, trigger: CompletionTrigger): Disposable {
+    return this.add(this.lists.completionItemProviders, { provider, trigger });
   }
 
   registerGutter(provider: GutterProvider): Disposable {
@@ -401,6 +421,7 @@ export class VisualViewHost implements VisualViewContributions {
       rawBoxCodeMirrorExtensions: [...lists.rawBoxCodeMirrorExtensions],
       boxActions: [...lists.boxActions],
       textStyles: [...lists.textStyles],
+      completionItemProviders: [...lists.completionItemProviders],
     };
   }
 
@@ -529,7 +550,9 @@ export interface ToolbarAction {
   /** The command; also decides, dry-run, whether the button is enabled. An action with `click` has none. */
   run?(chain: ChainedCommands): ChainedCommands;
   /** Instead of running a command, e.g. to ask for a value first. */
-  click?(button: HTMLButtonElement): void;
+  click?(): void;
+  /** Other words it is found by where entries are searched (the slash commands): `['grid']` for a table. */
+  readonly keywords?: readonly string[];
   /** Whether the button is enabled, instead of the dry run of `run` (default for an action without `run`: enabled). */
   enabled?(editor: Editor): boolean;
   /** Toggles show their state (`aria-pressed`); plain actions (undo) do not. */
@@ -598,12 +621,60 @@ export interface TextStyle {
   remove?(chain: ChainedCommands): ChainedCommands;
   /** After it was applied (importing a style where it is now used; New style…: asking for one). */
   applied?(): void;
+  /** Other words it is found by where entries are searched (the slash commands): `['h1']` for Heading 1. */
+  readonly keywords?: readonly string[];
 }
 
 /** The text style menu's entries of one view; the menu asks again whenever `onDidChangeTextStyles` fires. */
 export interface TextStyleProvider {
   provideTextStyles(view: VisualViewContext): readonly TextStyle[];
   readonly onDidChangeTextStyles?: Event<void>;
+}
+
+// Suggestions: lists that pop up while a trigger character and a query are typed.
+
+/**
+ * Where a completion list opens: right after `char` is typed at the start of a text block or after one of
+ * `allowedPrefixes` (default: a space). Named as Tiptap's suggestion options.
+ */
+export interface CompletionTrigger {
+  readonly char: string;
+  readonly allowedPrefixes?: readonly string[];
+}
+
+/** What a completion item provider is asked with: the view, its editor and what its toolbar offers. */
+export interface CompletionContext extends VisualViewContext {
+  readonly editor: Editor;
+  /** What is typed after the trigger character (the list filters the items by it). */
+  readonly query: string;
+  /** The entries of toolbar group or menu `group` of this view (the Insert menu: `insert`), sorted as shown. */
+  toolbarActions(group: string): readonly ToolbarAction[];
+  /** The text style menu's entries of this view, sorted as shown (without the host's "Normal text"). */
+  textStyles(): readonly TextStyle[];
+}
+
+/**
+ * An entry of a completion list. The list shows the items whose label or keywords contain the query (what is
+ * typed after the trigger character; case ignored): a label equal to it first, then labels starting with it, then
+ * labels containing it, then keywords containing it, each in the provider's order.
+ */
+export interface CompletionItem {
+  readonly label: string;
+  /** Shown after the label, dimmed (what a label labels, the menu an entry is from). */
+  readonly detail?: string;
+  /** A toolbar icon (`svg(..)`), shown before the label. */
+  readonly icon?: string;
+  /** Other words it is found by. */
+  readonly keywords?: readonly string[];
+  /** Typed while the item is the chosen one, these choose it first and are then typed (`@intro` + `.`). */
+  readonly commitCharacters?: readonly string[];
+  /** Chooses it: replaces `range`, the trigger character and the query, with what the item stands for. */
+  command(props: { editor: Editor; range: Range }): void;
+}
+
+/** The items of one completion list; asked again on every keystroke while the list is open. */
+export interface CompletionItemProvider {
+  provideCompletionItems(context: CompletionContext): readonly CompletionItem[];
 }
 
 /** Where a floating bar points: a viewport rectangle (e.g. a selection's or a table's), or nothing (hidden). */

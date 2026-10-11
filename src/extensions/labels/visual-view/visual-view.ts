@@ -1,14 +1,15 @@
-// References and labels in the Visual view: `@key` chips, label tags on blocks, the `@` suggestion list, "Add
+// References and labels in the Visual view: `@key` chips, label tags on blocks, the `@` list of labels, "Add
 // label". See docs/guide/features.typ.
 import { Extension } from '@tiptap/core';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { guardAfterReference, referenceSyntax } from '../model/reference-syntax';
 import type { ProjectLabels } from '../model/label-index';
-import { svg, type ToolbarAction, type ToolbarContext, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
+import { svg, type CompletionItem, type CompletionItemProvider, type ToolbarAction, type ToolbarContext, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
+import { describeLabel } from '../model/label-description';
+import { insertReference } from './label-edits';
 import { canStartNewLabel, labelTags, startNewLabel, type LabelPrompts } from './label-tags';
 import { referenceHints } from './reference-hints';
 import { Reference } from './reference-node';
-import { referenceSuggestion } from './reference-suggestion';
 
 export interface ReferencesOptions {
   /**
@@ -34,6 +35,7 @@ export function references(options: ReferencesOptions): VisualViewContribution {
       subscriptions.push(
         visualView.registerNode(REFERENCE),
         visualView.registerTiptapExtension((view) => referencesExtension(labels, view.document, prompts)),
+        visualView.registerCompletionItemProvider(labelCompletions(labels), { char: '@', allowedPrefixes: [' ', '\u00a0', '(', '[', '{'] }),
         visualView.registerToolbarItem({ group: 'insert', order: 80, create: addLabel }),
       );
     },
@@ -62,16 +64,41 @@ const REFERENCE: TypstNodeSpec = {
   },
 };
 
-/** The plugins of one view: the `@` list, reference hints, label tags. */
+/** The plugins of one view: reference hints, label tags. */
 function referencesExtension(labels: ProjectLabels, document: TypstDocument, prompts: LabelPrompts): Extension {
   return Extension.create({
     name: 'typstReferences',
-    // before the keymaps: Enter, Tab and Escape go to an open @ list first
-    priority: 1000,
     addProseMirrorPlugins() {
-      return [referenceSuggestion(labels), referenceHints(labels), labelTags({ labels, document, prompts })];
+      return [referenceHints(labels), labelTags({ labels, document, prompts })];
     },
   });
+}
+
+/** Typed right after `@name`, the whole name of a label, these make it a reference, too: `@intro ` like choosing `intro`. */
+const ENDS_REFERENCE = [' ', '\u00a0', ',', ';', '!', '?', ')', ']', '.', ':'];
+
+/**
+ * The `@` list: the project's labels (each name once), found by name or by what they label; choosing one inserts a
+ * reference chip in place of `@query`.
+ */
+function labelCompletions(labels: ProjectLabels): CompletionItemProvider {
+  return {
+    provideCompletionItems({ query }) {
+      const seen = new Set<string>();
+      const unique = labels.labels().filter((label) => !seen.has(label.name) && seen.add(label.name));
+      return unique.map((label): CompletionItem => ({
+        label: label.name,
+        detail: describeLabel(label) ?? undefined,
+        keywords: label.title ? [label.title] : undefined,
+        // `.` and `:` may go on with a longer name (`@fig` + `:` → `@fig:x`)
+        commitCharacters: label.name === query ? ENDS_REFERENCE.filter((c) => ![...seen].some((name) => name.startsWith(label.name + c))) : undefined,
+        command: ({ editor, range }) => {
+          editor.view.dispatch(insertReference(editor.state, range, label.name));
+          editor.view.focus();
+        },
+      }));
+    },
+  };
 }
 
 const ICON = svg('<path d="M3 12V4h8l9 8-8 8z"/><circle cx="7.5" cy="8.5" r="1.2"/>');
@@ -85,6 +112,7 @@ function addLabel(toolbar: ToolbarContext): ToolbarAction {
   return {
     label: 'Add label',
     icon: ICON,
+    keywords: ['anchor', 'reference'],
     run: (c) => c,
     enabled: (editor) => canStartNewLabel(editor.state) !== null,
     click: () => startNewLabel(toolbar.editor.view),

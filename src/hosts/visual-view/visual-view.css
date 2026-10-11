@@ -1,5 +1,5 @@
 /* The Visual view host's styles: the text, raw boxes (code, or the picture a box renderer draws), box labels and
-   actions, the gutters' body, the toolbar with its menus and the floating bars. Added by the workbench
+   actions, the gutters' body, the toolbar with its menus and the floating bars, the suggestion lists. Added by the workbench
    (VisualViewHost.styleSheet, after the vendored ProseMirror styles of prosemirror.css). See visual-view.ts. */
 .typst-visual {
   flex: 1;
@@ -152,3 +152,27 @@
 }
 .typst-floating-bar[hidden] { display: none; }
 .typst-floating-bar > .typst-toolbar__button { width: 28px; height: 28px; }
+/* A completion list (registerCompletionItemProvider) below the typed trigger; placed by Tiptap's suggestion (Floating UI) */
+.typst-visual__suggest {
+  position: absolute;
+  z-index: 3;
+  min-width: 220px;
+  max-width: 380px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--te-border);
+  border-radius: 8px;
+  background: var(--te-surface);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.16);
+  color: var(--te-text);
+  font: 13px system-ui, sans-serif;
+}
+.typst-visual__suggest[hidden] { display: none; }
+.typst-visual__suggest-option { display: flex; gap: 8px; align-items: center; padding: 4px 8px; border-radius: 6px; cursor: pointer; }
+.typst-visual__suggest-option[aria-selected='true'] { background: var(--te-hover); }
+.typst-visual__suggest-icon { display: inline-flex; flex: none; color: var(--te-text-2); }
+.typst-visual__suggest-label { white-space: nowrap; }
+.typst-visual__suggest-detail { overflow: hidden; margin-left: auto; padding-left: 8px; color: var(--te-muted-2); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+/* The typed trigger and query while its list is open */
+.typst-visual__suggestion { border-radius: 3px; background: var(--te-selected); }

@@ -2,10 +2,10 @@
 import { TextSelection } from '@tiptap/pm/state';
 import type { Editor } from '@tiptap/core';
 import { FloatingBar } from './floating-bar';
-import { TextStyleMenu } from './text-style-menu';
+import { TextStyleMenu, textStyleEntries } from './text-style-menu';
 import { ToolbarMenu } from './toolbar-menu';
 import type { Disposable } from '../../../core/disposable/disposable';
-import { svg, type ToolbarAction, type Anchor, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem, type TextStyleProvider, type VisualViewContext } from '../visual-view';
+import { svg, type ToolbarAction, type Anchor, type ToolbarContext, type ToolbarControl, type ToolbarGroup, type ToolbarItem, type TextStyle, type TextStyleProvider, type VisualViewContext } from '../visual-view';
 
 /**
  * The Visual view's formatting toolbar: a row of groups and menus sorted by
@@ -24,13 +24,16 @@ export class Toolbar {
   private readonly refresh = () => this.refreshers.forEach((fn) => fn());
   private readonly subscriptions: Disposable[] = [];
   private readonly disposers: (() => void)[] = [];
+  /** The entries of every group, as shown. */
+  private readonly entriesByGroup: Map<string, (ToolbarAction | ToolbarControl)[]>;
 
   constructor(
     parent: HTMLElement,
     private readonly editor: Editor,
-    view: VisualViewContext,
-    { groups, items, textStyles }: { groups: readonly ToolbarGroup[]; items: readonly ToolbarItem[]; textStyles: readonly TextStyleProvider[] },
+    private readonly view: VisualViewContext,
+    private readonly options: { groups: readonly ToolbarGroup[]; items: readonly ToolbarItem[]; textStyles: readonly TextStyleProvider[] },
   ) {
+    const { groups, items, textStyles } = options;
     const doc = parent.ownerDocument;
     this.root = doc.createElement('div');
     this.root.className = 'typst-toolbar';
@@ -44,6 +47,7 @@ export class Toolbar {
     const all = [...HOST_GROUPS, ...groups];
     const textStyleMenu: ToolbarItem[] = textStyles.length > 0 ? [{ group: 'text-style', create: (toolbar) => new TextStyleMenu(doc, editor, toolbar, textStyles) }] : [];
     const entries = this.entries([...HOST_ITEMS, ...textStyleMenu, ...items], context);
+    this.entriesByGroup = entries;
     const sorted = (kinds: ToolbarGroup['kind'][]) => [...all].filter((group) => kinds.includes(group.kind)).sort((a, b) => a.order - b.order);
     for (const group of sorted(['group', 'menu'])) this.rowGroup(group, entries.get(group.id) ?? []);
     parent.prepend(this.root);
@@ -52,6 +56,16 @@ export class Toolbar {
     editor.on('focus', this.refresh);
     editor.on('blur', this.refresh);
     this.refresh();
+  }
+
+  /** The buttons of group or menu `group`, sorted as shown. */
+  actions(group: string): readonly ToolbarAction[] {
+    return (this.entriesByGroup.get(group) ?? []).filter(isAction);
+  }
+
+  /** The text style menu's entries, sorted as shown (without "Normal text"). */
+  textStyles(): readonly TextStyle[] {
+    return textStyleEntries(this.options.textStyles, this.view);
   }
 
   dispose(): void {
@@ -135,7 +149,7 @@ export class Toolbar {
     button.innerHTML = action.icon;
     button.setAttribute('aria-label', action.label);
     button.title = action.shortcut ? `${action.label} (${shortcutText(action.shortcut)})` : action.label;
-    button.addEventListener('click', () => (action.click ? action.click(button) : action.run?.(this.editor.chain().focus()).run()));
+    button.addEventListener('click', () => (action.click ? action.click() : action.run?.(this.editor.chain().focus()).run()));
     this.refreshers.push(() => {
       button.disabled = action.enabled ? !action.enabled(this.editor) : action.run !== undefined && !action.run(this.editor.can().chain()).run();
       if (action.active) button.setAttribute('aria-pressed', String(action.active(this.editor)));

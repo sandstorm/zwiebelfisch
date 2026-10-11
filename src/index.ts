@@ -46,6 +46,10 @@ export type { SourceViewContext, SourceViewContributions } from './hosts/source-
 export type {
   ToolbarAction,
   Anchor,
+  CompletionContext,
+  CompletionItem,
+  CompletionItemProvider,
+  CompletionTrigger,
   RawBoxAction,
   BoxPicture,
   RawBoxRenderer,
