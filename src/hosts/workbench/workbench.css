@@ -102,6 +102,7 @@
   background: var(--te-subtle);
 }
 .typst-editor__tab-list { display: flex; gap: 4px; }
+.typst-editor__tab-list[hidden] { display: none; }
 .typst-editor__tab {
   border: 1px solid transparent;
   border-radius: 6px;
@@ -115,7 +116,7 @@
 .typst-editor__pane { overflow: auto; }
 .typst-editor__tabs[hidden] { display: none; }
 .typst-editor.typst-editor--dropping { outline: 2px dashed var(--te-accent); outline-offset: -4px; }
-/* The editor/title menu: actions at the end of the tab bar (e.g. Comment, Save to GitLab…). */
+/* The editor/title menu and "View": at the end of the tab bar (e.g. Comment, Save to GitLab…, View ▾). */
 .typst-editor__tab-actions { display: flex; gap: 4px; margin-left: auto; }
 .typst-editor__tab-actions:empty { display: none; }
 .typst-editor__tab-action {
@@ -135,3 +136,4 @@
 .typst-editor__tab-action:focus-visible { outline: 2px solid var(--te-accent); outline-offset: 1px; }
 .typst-editor__tab-action-icon { display: inline-flex; }
 .typst-editor__tab-action-icon svg { width: 16px; height: 16px; }
+.typst-editor__view-menu { gap: 2px; padding-right: 6px; }

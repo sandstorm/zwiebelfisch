@@ -38,19 +38,31 @@ workbench.registerMenuItem('explorer/context', {
 });
 ```
 
-`MenuItem`: `command`, `title?` (default: the command id), `icon?` (SVG markup in `currentColor`), `when?(context)`, `group?`, `order?`.
+`MenuItem`: `command`, `title?` (default: the command id), `icon?` (SVG markup in `currentColor`), `when?(context)`, `toggled?(context)`, `group?`, `order?`.
+
+An entry that turns something on or off says whether it is on with `toggled` (VS Code's): the menu shows it as a checkbox entry (`menuitemcheckbox`) with a check mark while `toggled` holds.
+
+```ts
+workbench.registerMenuItem('view', {
+  command: 'invisibles.toggle',
+  title: 'Invisible characters',
+  group: 'editor',
+  toggled: () => shown,
+});
+```
 
 #table(
   columns: 4,
   [Menu], [Where], [Context], [Command gets],
-  [`editor/title`], [The editing area's tab bar, shown while the file has several editors], [`activeCustomEditorId` (the shown editor's view type, any editor), `resource`], [nothing],
+  [`editor/title`], [Buttons at the right end of the editing area's tab bar (shown for every file while it has tabs or buttons)], [`activeCustomEditorId` (the shown editor's view type, any editor), `resource`], [nothing],
+  [`view`], [The View menu: "View ▾" after them, a popup; groups `editor` (how the editors show the text: "Invisible characters") and `preview` (the preview's view options, @extensions-source-editor-and-preview-view)], [as `editor/title`], [nothing],
   [`file/newFile`], ["New" in the file panel's header], [`view: 'files'`, `resource`, `resourceKind` (`'file'` | `'folder'`), `resourceIsMain`], [the row's path],
   [`explorer/context`], [A file panel row's context menu], [as `file/newFile`], [the row's path],
   [`help/row`], [A help row's context menu], [none], [the text the row inserts],
 )
 
 - Entries sort by `group` (`navigation` first, the others by name, a separator between groups), then `order`.
-- `when` is asked each time the menu is shown.
+- `when` and `toggled` are asked each time the menu is shown.
 - An editor or side panel shows a menu with `window.showContextMenu(menuId, { anchor, title, context, args })`: at a point (`{ x, y }`, a right click's) or below an element (a button), named `title`, with the entries whose `when` holds in `context`; the chosen entry's command gets `args`. Nothing shows while no entry applies. The file panel does this for `explorer/context` (right click, Shift+F10) and `file/newFile` ("New"), the help panel for `help/row`.
 - `getMenuItems(menuId, context)` and `onDidChangeMenu` tell whether a menu has entries (the file panel hides "New" while `file/newFile` has none).
 

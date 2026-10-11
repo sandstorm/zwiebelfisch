@@ -21,16 +21,18 @@ Each side has a rail (`▣`): a button per panel. The left side holds the files 
 - "Follow cursor" (preview toolbar): the preview scrolls to the text being edited.
 - Selected text (either editor) is shaded in the preview, too; a caret shades nothing.
 - Zoom (fit width by default, 25–400 %) and "page n / total" in the preview toolbar.
-- "View" (preview toolbar), for the preview only, never the PDF; your choices are remembered in this browser:
+- *View menu:* "View ▾" at the top right of the editing area (the end of the tab bar, for every file) gathers how things are shown, a check mark at what is on, your choices remembered in this browser. First what the editors show ("Invisible characters", @guide-features-invisibles), then, after a separator, what the preview shows, for the preview only, never the PDF:
+  - "Comments" (on by default): the margin notes. Off, the preview draws the document as if it had none (a range note's text stays); the Visual editor keeps its notes, and the PDF has its own choice ("Include comments", @guide-features-comments).
   - "Page guides": dashed blue borders of the text area, the header and the footer (and column gutters), as LaTeX's `showframe`, for any page size and margins the document sets (`auto` ones too). A page background of the document's own stays; the guides are then drawn over the text.
   - "Box outlines": a thin magenta outline around every block and box (headings, figures, lists, equations, `#block`, `#box`), around the inset and widened by the outset. A stroke the document gives stays as it is. The inset and the spacing between blocks are not drawn on their own.
   - The pictures of raw boxes in the Visual editor are cut from the preview, so they show guides and outlines too.
+  - What other extensions offer for the preview is listed there, too.
 - Drag a side's separator (or use the arrow keys on it): the left side sets the file panel's width, the right side gets 20–80 % of the width.
 - *Errors and warnings:* underlined in both editors, the message as tooltip. The status bar counts them and jumps to them.
 
 === Invisible characters <guide-features-invisibles>
 
-"Show invisibles" (¶, in the tab bar next to Visual | Source), or the command "Show invisible characters on / off" in search everywhere, shows what is normally blank, as a word processor's formatting marks; "Hide invisibles" hides them again. Your choice is remembered in this browser.
+"Invisible characters" in the View menu (checked while shown), or the command "Show invisible characters on / off" in search everywhere, shows what is normally blank, as a word processor's formatting marks; choosing it again hides them. Your choice is remembered in this browser.
 
 - Visual editor: `·` for a space (each one, also several in a row), `°` for a non-breaking space (Typst `~`), `→` for a tab, `↵` for a line break (`\`), `¶` at the end of each paragraph and heading.
 - Source editor, the code of raw boxes and text files: CodeMirror's marks for spaces and tabs.
@@ -348,7 +350,7 @@ What Grace sees in the Visual editor: "grows linearly" highlighted, and beside i
 - Add: "Comment" (Visual editor toolbar or selection bar, Source editor tab bar) or Ctrl+Alt+M (⌘⌥M on Mac). Without a selection: a point note at the cursor.
 - A note is a thread: one list item per message, signed with your name and the date.
 - On the card: reply (Ctrl+Enter sends, ⌘↩ on Mac), edit your own and unsigned messages, delete your last one, Resolve (deletes the note).
-- The preview shows the notes in the page margin.
+- The preview shows the notes in the page margin; "Comments" in the View menu hides them there (@guide-features-editors).
 - A page margin given as one length (`#set page(margin: 1.5cm)`) becomes `margin: (right: 4cm, rest: 1.5cm)` with the first note: drafting needs room on the right.
 
 == PDF <guide-features-pdf>

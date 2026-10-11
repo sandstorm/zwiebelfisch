@@ -1,32 +1,4 @@
-/* The preview-controls extension's styles: the preview toolbar's zoom, View menu and page number.
+/* The preview-controls extension's styles: the preview toolbar's zoom and page number.
    See preview-controls.ts, which registers it; colors from the widget's --te-* tokens. */
 .typst-preview-controls__zoom { margin-left: 4px; color: var(--te-muted); font-variant-numeric: tabular-nums; }
 .typst-preview-controls__page-number { margin-left: auto; color: var(--te-muted); font-variant-numeric: tabular-nums; }
-.typst-preview-controls__view { position: relative; display: inline-flex; align-items: center; margin-left: 8px; }
-.typst-preview-controls__view[hidden] { display: none; }
-.typst-preview-controls__view > button {
-  border: 1px solid var(--te-border);
-  border-radius: 4px;
-  padding: 2px 8px;
-  background: var(--te-surface);
-  font: inherit;
-  cursor: pointer;
-}
-.typst-preview-controls__view > button:hover, .typst-preview-controls__view > button:focus-visible { background: var(--te-hover); }
-.typst-preview-controls__view-options {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 160px;
-  padding: 8px;
-  border: 1px solid var(--te-border);
-  border-radius: 6px;
-  background: var(--te-surface);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-}
-.typst-preview-controls__view-options[hidden] { display: none; }
-.typst-preview-controls__view-options label { display: flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; }

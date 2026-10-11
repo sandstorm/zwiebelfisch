@@ -22,6 +22,7 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => ({
     registerPdfExportOption = () => ({ dispose() {} });
     registerViewOption = () => ({ dispose() {} });
     viewOptions = () => [];
+    onDidChangeViewOptions = () => ({ dispose() {} });
     setViewOptionValues() {}
     pdfExportOptions = () => [];
     dispose() {}

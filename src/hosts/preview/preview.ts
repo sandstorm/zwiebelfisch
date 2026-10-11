@@ -73,6 +73,8 @@ export class Preview implements PreviewContributions {
   private readonly rendered = new EventEmitter<void>();
   private readonly diagnosed = new EventEmitter<readonly TypstDiagnostic[]>();
   private readonly clicked = new EventEmitter<PageClick>();
+  private readonly viewOptionsChanged = new EventEmitter<void>();
+  readonly onDidChangeViewOptions = this.viewOptionsChanged.event;
   readonly onDidRender = this.rendered.event;
   readonly onDidChangeDiagnostics = this.diagnosed.event;
   readonly onDidClickPage = this.clicked.event;
@@ -211,11 +213,13 @@ export class Preview implements PreviewContributions {
     const entry = { option, priority: options.priority ?? 100 };
     this.registeredViewOptions.push(entry);
     this.viewChanged();
+    this.viewOptionsChanged.fire();
     return new Disposable(() => {
       const index = this.registeredViewOptions.indexOf(entry);
       if (index < 0) return;
       this.registeredViewOptions.splice(index, 1);
       this.viewChanged();
+      this.viewOptionsChanged.fire();
     });
   }
 
@@ -233,6 +237,7 @@ export class Preview implements PreviewContributions {
     this.rendered.dispose();
     this.diagnosed.dispose();
     this.clicked.dispose();
+    this.viewOptionsChanged.dispose();
     for (const { made } of [...this.items]) this.removeItem(made);
     this.worker.terminate();
     this.resizeObserver?.disconnect();
@@ -267,7 +272,7 @@ export class Preview implements PreviewContributions {
 
   private async compile({ files, main }: Compile, superseded: () => boolean): Promise<void> {
     const entry = viewEntry(this.viewOptions(), this.viewOptionValues);
-    // with no view option on, the main file itself, as an export compiles it
+    // with no prelude, the main file itself, as an export compiles it
     const compiled = entry.prelude.length === 0 ? { files, main } : { files: { ...files, [VIEW_ENTRY]: entryText(entry, main) }, main: VIEW_ENTRY };
     const response = await this.request({ type: 'compile', files: this.sender.encode(compiled.files), main: compiled.main });
     if (response.type !== 'compile') return;
@@ -440,14 +445,16 @@ export interface PreviewContributions {
   /** A PDF of `entry.main` from the files last compiled, `entry.sources` replacing or adding text files for it. */
   exportPdf(entry: PdfEntry): Promise<PdfResult>;
   /**
-   * Offers a way to look at the document in the preview (a toggle in the toolbar's View menu), until disposed. The
-   * preview applies the options that are on (as `setViewOptionValues` says, else their `default`) by `priority`
-   * (default 100, higher first; equal: registration order), each to what the ones before made. PDF exports never see
-   * them. Throws when an option with the same `id` is registered.
+   * Offers a way to look at the document in the preview (a toggle in the View menu), until disposed. The preview
+   * applies every option with its value (as `setViewOptionValues` says, else its `default`) by `priority` (default
+   * 100, higher first; equal: registration order), each to what the ones before made. PDF exports never see them.
+   * Throws when an option with the same `id` is registered.
    */
   registerViewOption(option: PreviewViewOption, options?: { priority?: number }): Disposable;
   /** The registered view options, in the order the preview applies them. */
   viewOptions(): readonly PreviewViewOption[];
+  /** A view option was registered or disposed. */
+  readonly onDidChangeViewOptions: Event<void>;
   /**
    * Which view options are on, by id (also of options registered later); the others are at their `default`. Replaces
    * the values set before and compiles again.
@@ -517,8 +524,8 @@ export interface PdfExportOption {
 }
 
 /**
- * A way to look at the document in the preview only (page guides, box outlines): Typst the preview runs before the
- * main file while it is on. The documents and their PDF exports stay as they are.
+ * A way to look at the document in the preview only (page guides, box outlines, comments): Typst the preview runs
+ * before the main file, by the option's value. The documents and their PDF exports stay as they are.
  */
 export interface PreviewViewOption {
   /** `<extension>.<name>`, e.g. `previewGuides.pageGuides`: the key in `setViewOptionValues`. */
@@ -529,8 +536,11 @@ export interface PreviewViewOption {
   readonly description?: string;
   /** Whether it is on until someone chooses otherwise. */
   readonly default: boolean;
-  /** What to compile with this option on, from what the options before it made. Called only while it is on. */
-  apply(entry: PreviewEntry): PreviewEntry;
+  /**
+   * What to compile with this option set to `value`, from what the options before it made. Called for every option,
+   * also when it is off; an option that changes nothing returns `entry` as it is.
+   */
+  apply(entry: PreviewEntry, value: boolean): PreviewEntry;
 }
 
 /**
@@ -587,7 +597,7 @@ const VIEW_ENTRY = '/.typst-preview-view.typ';
 /** What the view options that are on make, applied in order. */
 function viewEntry(options: readonly PreviewViewOption[], values: Readonly<Record<string, boolean>>): PreviewEntry {
   let entry: PreviewEntry = { prelude: [] };
-  for (const option of options) if (values[option.id] ?? option.default) entry = option.apply(entry);
+  for (const option of options) entry = option.apply(entry, values[option.id] ?? option.default);
   return entry;
 }
 

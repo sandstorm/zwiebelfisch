@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import { ProjectPath } from '../core/paths/paths';
 import { type TypstDiagnostic, PageIndex } from '../core/typst-engine/typst-engine';
-import type { PageClick, PdfExportOption, PreviewContext, PreviewToolbarItem } from '../hosts/preview/preview';
+import type { PageClick, PdfExportOption, PreviewContext, PreviewToolbarItem, PreviewViewOption } from '../hosts/preview/preview';
 import type { Disposable } from '../core/disposable/disposable';
 import { EventEmitter } from '../core/event-emitter/event-emitter';
 import type { TypstExtension } from '../hosts/workbench/workbench';
@@ -27,6 +27,8 @@ interface FakePreview {
   cleared: number;
   /** Every `setSelectionHighlight(path, ranges)` (the text left out). */
   shaded: [string, readonly SourceRange[]][];
+  /** What `setViewOptionValues` got last. */
+  viewValues: Readonly<Record<string, boolean>>;
   compiled(diagnostics: TypstDiagnostic[]): void;
   click(click: PageClick): void;
 }
@@ -83,9 +85,22 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
       };
       registerPdfExportOption = registry(this.pdfOptions);
       pdfExportOptions = () => this.pdfOptions;
-      registerViewOption = () => new Disposable(() => {});
-      viewOptions = () => [];
-      setViewOptionValues() {}
+      readonly #viewOptions: PreviewViewOption[] = [];
+      readonly #viewOptionsChanged = new EventEmitter<void>();
+      readonly onDidChangeViewOptions = this.#viewOptionsChanged.event;
+      viewValues: Readonly<Record<string, boolean>> = {};
+      registerViewOption = (option: PreviewViewOption) => {
+        const registration = registry(this.#viewOptions)(option);
+        this.#viewOptionsChanged.fire();
+        return new Disposable(() => {
+          registration.dispose();
+          this.#viewOptionsChanged.fire();
+        });
+      };
+      viewOptions = () => this.#viewOptions;
+      setViewOptionValues(values: Readonly<Record<string, boolean>>) {
+        this.viewValues = values;
+      }
       dispose() {}
     },
   };
@@ -128,6 +143,7 @@ function drop(target: HTMLElement, files: File[]) {
 afterEach(() => {
   document.body.replaceChildren();
   sessionStorage.clear();
+  localStorage.clear();
   previews.length = 0;
 });
 
@@ -139,10 +155,12 @@ describe('custom editors', () => {
     editor.open('/logo.png');
     const asset = host.querySelector<HTMLElement>('[data-testid=typst-asset]')!;
     expect(asset.hidden).toBe(false);
-    expect(host.querySelector<HTMLElement>('.typst-editor__tabs')!.hidden).toBe(true);
+    // one editor: no tabs; the bar stays for the View menu
+    expect(host.querySelector<HTMLElement>('.typst-editor__tabs')!.hidden).toBe(false);
+    expect(host.querySelector<HTMLElement>('[role=tablist]')!.hidden).toBe(true);
     editor.open('/main.typ');
     expect(asset.isConnected).toBe(false);
-    expect(host.querySelector<HTMLElement>('.typst-editor__tabs')!.hidden).toBe(false);
+    expect(host.querySelector<HTMLElement>('[role=tablist]')!.hidden).toBe(false);
   });
 
   it('shows a spreadsheet in the spreadsheet editor, a text file in the text editor, any other file read-only', () => {
@@ -251,6 +269,20 @@ describe('the built-in extensions', () => {
     expect(Object.keys(hidden.editor.files)).toEqual(['/main.typ']);
   });
 
+  it('gathers the View menu at the end of the tab bar: invisible characters, then the preview\'s view options; choosing one sets it', async () => {
+    const { host, preview } = setup({ source: '= Hi' });
+    const open = () => {
+      host.querySelector<HTMLButtonElement>('.typst-editor__view-menu')!.click();
+      return host.querySelector<HTMLElement>('[role=menu][aria-label="View"]')!;
+    };
+    const entries = (menu: HTMLElement) => [...menu.children].map((child) => (child.getAttribute('role') === 'separator' ? '---' : `${child.textContent} ${child.getAttribute('aria-checked')}`));
+    expect(entries(open())).toEqual(['Invisible characters false', '---', '✓Comments true', 'Page guides false', 'Box outlines false']);
+    [...open().children].find((child) => child.textContent === 'Page guides')!.dispatchEvent(new MouseEvent('click'));
+    await Promise.resolve();
+    expect(preview.viewValues).toEqual({ 'previewGuides.pageGuides': true });
+    expect(entries(open())).toContain('✓Page guides true');
+  });
+
   it('adds a comment on Ctrl/Cmd+Alt+M in the Source editor, before the editor sees the key', () => {
     const { editor, source } = setup({ source: 'Hi\n' });
     const view = source();
@@ -283,13 +315,13 @@ describe('the built-in extensions', () => {
     expect(shown.querySelector<HTMLElement>('.typst-diagnostics__highlight')?.dataset.severity).toBe('warning');
   });
 
-  it('fills the preview toolbar: "Follow cursor", zoom, View, page number, then "Download PDF" while pdfExport.download is on', () => {
+  it('fills the preview toolbar: "Follow cursor", zoom, page number, then "Download PDF" while pdfExport.download is on', () => {
     const { editor, preview } = setup({ source: '= Hi' });
-    const all = ['typst-preview-sync__follow', 'typst-preview-zoom', 'typst-preview-view', 'typst-preview-page-number', 'typst-pdf'];
+    const all = ['typst-preview-sync__follow', 'typst-preview-zoom', 'typst-preview-page-number', 'typst-pdf'];
     expect(toolbarControls(preview.toolbarItems)).toEqual(all);
-    expect(toolbarControls(setup({ source: '= Hi', settings: { 'pdfExport.download': false } }).preview.toolbarItems)).toEqual(all.slice(0, 4));
+    expect(toolbarControls(setup({ source: '= Hi', settings: { 'pdfExport.download': false } }).preview.toolbarItems)).toEqual(all.slice(0, 3));
     editor.settings = { 'pdfExport.download': false };
-    expect(toolbarControls(preview.toolbarItems)).toEqual(all.slice(0, 4));
+    expect(toolbarControls(preview.toolbarItems)).toEqual(all.slice(0, 3));
     // back in its place, by its group and order
     editor.settings = {};
     expect(toolbarControls(preview.toolbarItems)).toEqual(all);
@@ -477,7 +509,7 @@ describe('the built-in extensions', () => {
     });
     expect(seen).toEqual(['Wörter']);
     await expect(editor.executeCommand('wordCount.count')).resolves.toBe(2);
-    expect(toolbarControls(preview.toolbarItems)).toEqual(['typst-preview-zoom', 'typst-preview-view', 'typst-preview-page-number']);
+    expect(toolbarControls(preview.toolbarItems)).toEqual(['typst-preview-zoom', 'typst-preview-page-number']);
     // pdfExport.download is declared, but previewSync.followCursor is not without preview-sync
     setup({ source: '= Hi', settings: { 'previewSync.followCursor': false }, extensions: (builtinExtensions) => builtinExtensions.filter((e) => e.id !== 'preview-sync') });
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown setting previewSync.followCursor'));

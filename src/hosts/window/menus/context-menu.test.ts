@@ -27,7 +27,7 @@ function setup() {
     executeCommand: async (command, ...args) => void ran.push([command, document.activeElement === trigger, ...args]),
   });
   const show = (resourceKind = 'folder') => menus.show('explorer/context', { anchor: { x: 10, y: 20 }, title: 'chapters', context: { resourceKind }, args: ['/chapters'] });
-  const items = () => [...host.querySelectorAll<HTMLElement>('[role=menuitem]')];
+  const items = () => [...host.querySelectorAll<HTMLElement>('.typst-context-menu__item')];
   const key = (key: string) => (document.activeElement as HTMLElement).dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
   const isOpen = () => host.querySelector('[role=menu]') !== null;
   return { host, trigger, menus, show, ran, asked, items, key, isOpen };
@@ -43,6 +43,26 @@ describe('ContextMenu', () => {
     expect([...menu.children].map((child) => child.getAttribute('role'))).toEqual(['menuitem', 'menuitem', 'separator', 'menuitem']);
     expect(items().map((item) => item.textContent)).toEqual(['Rename…', 'Delete', 'files.newFile']);
     expect(document.activeElement).toBe(items()[0]);
+  });
+
+  it('shows an entry with `toggled` as a checkbox, checked as it says in the context, the others aligned with it', () => {
+    const host = document.body.appendChild(document.createElement('div'));
+    const shown: Readonly<Record<string, unknown>>[] = [];
+    const items: ContributedMenuItem[] = [
+      { command: 'x.wrap', title: 'Wrap', toggled: (context) => (shown.push(context), context.wrap === true) },
+      { command: 'x.guides', title: 'Guides', toggled: () => false },
+      { command: 'x.reset', title: 'Reset', group: 'z' },
+    ];
+    const menus = new ContextMenu(host, { items: () => items, executeCommand: async () => {} });
+    menus.show('view', { anchor: host, title: 'View', context: { wrap: true } });
+    const entries = [...host.querySelectorAll<HTMLElement>('.typst-context-menu__item')];
+    expect(entries.map((entry) => [entry.getAttribute('role'), entry.getAttribute('aria-checked'), entry.textContent])).toEqual([
+      ['menuitemcheckbox', 'true', '✓Wrap'],
+      ['menuitemcheckbox', 'false', 'Guides'],
+      ['menuitem', null, 'Reset'],
+    ]);
+    expect(shown).toEqual([{ wrap: true }]);
+    expect(host.querySelector('[role=menu]')!.classList.contains('typst-context-menu--checks')).toBe(true);
   });
 
   it('moves with the arrow keys, Home and End', () => {

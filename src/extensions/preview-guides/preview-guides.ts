@@ -2,7 +2,7 @@ import type { PreviewEntry, PreviewViewOption } from '../../hosts/preview/previe
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 
 /**
- * Page guides and box outlines in the preview: two view options (the preview toolbar's View menu), off by default.
+ * Page guides and box outlines in the preview: two view options (in the View menu), off by default.
  *
  * "Page guides" draws the borders of the text area, the header and the footer (and the column gutters), as
  * LaTeX's showframe does. The guides go into the page background; a document that sets
@@ -74,11 +74,12 @@ const PAGE_GUIDES: PreviewViewOption = {
   label: 'Page guides',
   description: 'Borders of the text area, header and footer (in the preview only)',
   default: false,
-  apply: (entry) => withLines(entry, [
-    ...GUIDES,
-    // in the background; in the foreground once the document replaced the background with its own
-    '#set page(background: preview-guides-page, foreground: context if page.background != preview-guides-page { preview-guides-page })',
-  ]),
+  apply: (entry, on) =>
+    withLines(entry, on, [
+      ...GUIDES,
+      // in the background; in the foreground once the document replaced the background with its own
+      '#set page(background: preview-guides-page, foreground: context if page.background != preview-guides-page { preview-guides-page })',
+    ]),
 };
 
 const BOX_OUTLINES: PreviewViewOption = {
@@ -87,9 +88,10 @@ const BOX_OUTLINES: PreviewViewOption = {
   description: 'An outline around every block and box (in the preview only)',
   default: false,
   // 1pt is Typst's own default: a document's stroke that names no thickness folds with this one and keeps it
-  apply: (entry) => withLines(entry, ['#set block(stroke: 1pt + rgb(217, 70, 239, 50%))', '#set box(stroke: 1pt + rgb(217, 70, 239, 50%))']),
+  apply: (entry, on) => withLines(entry, on, ['#set block(stroke: 1pt + rgb(217, 70, 239, 50%))', '#set box(stroke: 1pt + rgb(217, 70, 239, 50%))']),
 };
 
-function withLines(entry: PreviewEntry, lines: readonly string[]): PreviewEntry {
-  return { ...entry, prelude: [...entry.prelude, ...lines] };
+/** `entry` with `lines` added to its prelude while the option is `on`. */
+function withLines(entry: PreviewEntry, on: boolean, lines: readonly string[]): PreviewEntry {
+  return on ? { ...entry, prelude: [...entry.prelude, ...lines] } : entry;
 }
