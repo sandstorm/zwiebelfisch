@@ -1,6 +1,6 @@
 = Built-in extensions <architecture-built-in-extensions>
 
-`src/extensions/<name>/`. No host has built-in contributions. `createTypstEditor` activates the list below in this order (`builtinExtensions()` in `src/typst-editor/typst-editor.ts`). A host changes the list with `extensions: (builtins) => […]`.
+`src/extensions/<name>/`. No host has built-in contributions. `createTypstEditor` activates the list below in this order (`builtinExtensions()` in `src/typst-editor/typst-editor.ts`). A host changes the list with `extensions: (builtinExtensions) => […]`.
 
 == Shape of an extension <architecture-built-in-extensions-shape>
 

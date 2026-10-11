@@ -34,7 +34,7 @@ async function start(): Promise<void> {
   const { files, collaboration: room } = editorOptions(state, server);
   const editor = createTypstEditor(document.getElementById('editor')!, {
     files,
-    extensions: (builtins) => [...builtins, ...(room ? [collaboration(room)] : []), ...(params.has('devtools') ? [devtools()] : [])],
+    extensions: (builtinExtensions) => [...builtinExtensions, ...(room ? [collaboration(room)] : []), ...(params.has('devtools') ? [devtools()] : [])],
     user: { name: state.user },
     onOpen: (path) => hash.opened(path),
     onFilesChange: () => hash.filesChanged(),

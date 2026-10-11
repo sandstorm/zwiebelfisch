@@ -2,7 +2,7 @@
 // they import from .cache/typst-packages (mise run build:packages).
 import { readFileSync, readdirSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createEngine, type Engine } from '../src/core/typst-engine/typst-engine';
+import { createEngine, type TypstEngine } from '../src/core/typst-engine/typst-engine';
 import { withPackages } from '../src/core/typst-packages/typst-packages';
 import type { ProjectFiles } from '../src';
 import { EXAMPLES, exampleFiles, exampleFromQuery, exampleQuery } from './examples';
@@ -20,7 +20,7 @@ async function cachedPackage(spec: string): Promise<Uint8Array> {
 }
 
 describe('demo examples', () => {
-  let engine: Engine;
+  let engine: TypstEngine;
   let loaded: string[] = [];
   beforeAll(async () => {
     engine = await createEngine(wasm, fonts);

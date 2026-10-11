@@ -1,15 +1,15 @@
 // Tests for createEngine (typst-engine.ts), against the built wasm.
 import { readFileSync, readdirSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { type Engine, PageIndex, Pt, createEngine } from './typst-engine';
+import { type TypstEngine, PageIndex, Pt, createEngine } from './typst-engine';
 import { SourceOffset, SourceRange } from '../typst-document/typst-document';
 
 const wasm = readFileSync(new URL('./wasm/typst_engine_bg.wasm', import.meta.url));
 const fontDir = new URL('./fonts/', import.meta.url);
 const fonts = readdirSync(fontDir).map((name) => new Uint8Array(readFileSync(new URL(name, fontDir))));
 
-describe('Engine', () => {
-  let engine: Engine;
+describe('TypstEngine', () => {
+  let engine: TypstEngine;
   beforeAll(async () => {
     engine = await createEngine(wasm, fonts);
   });
@@ -216,8 +216,8 @@ describe('Engine', () => {
   });
 });
 
-describe('Engine.exportPdf', () => {
-  let engine: Engine;
+describe('TypstEngine.exportPdf', () => {
+  let engine: TypstEngine;
   beforeAll(async () => {
     engine = await createEngine(wasm, fonts);
   });

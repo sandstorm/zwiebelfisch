@@ -1,4 +1,4 @@
-// Layout: the widget's regions — side panels (rail buttons, resizable, collapsible, an overlay when narrow),
+// WorkbenchLayout: the widget's regions — side panels (rail buttons, resizable, collapsible, an overlay when narrow),
 // editing area, preview, status bar; their sizes and open panels kept for the session. See workbench.ts and docs/architecture/workbench.typ.
 
 import type { Memento, SidePanel, SidePanelOptions } from '../workbench';
@@ -29,7 +29,7 @@ interface Saved {
  * narrower than 720px an open panel lies over the editing area and closes on
  * Escape, a click outside, or `dismiss()` (e.g. after a file was chosen in it).
  */
-export class Layout {
+export class WorkbenchLayout {
   readonly editor: HTMLElement;
   readonly preview: HTMLElement;
   readonly statusBar: HTMLElement;

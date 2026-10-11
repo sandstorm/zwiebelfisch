@@ -1,7 +1,7 @@
 // Tests that the engine compiles checklists with the cheq package (./fixtures/cheq-0.4.0), as task lists need it.
 import { readFileSync, readdirSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createEngine, type Engine } from '../../../core/typst-engine/typst-engine';
+import { createEngine, type TypstEngine } from '../../../core/typst-engine/typst-engine';
 import { withPackages } from '../../../core/typst-packages/typst-packages';
 import { SourceRange } from '../../../core/typst-document/typst-document';
 
@@ -20,7 +20,7 @@ const PREAMBLE = '#import "@preview/cheq:0.4.0": checklist\n#show: checklist\n\n
 const LIST = '- [ ] todo\n- [x] done\n';
 
 describe('cheq checklists', () => {
-  let engine: Engine;
+  let engine: TypstEngine;
   beforeAll(async () => {
     engine = await createEngine(wasm, fonts);
   });

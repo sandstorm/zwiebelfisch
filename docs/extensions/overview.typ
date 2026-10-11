@@ -17,7 +17,7 @@ interface TypstExtension {
 
 == Adding, leaving out, replacing <extensions-overview-list>
 
-The host makes the list from the built-ins with `extensions: (builtins) => […]` (@guide-embedding-extensions). The built-in ids: @architecture-built-in-extensions.
+The host makes the list from the built-ins with `extensions: (builtinExtensions) => […]` (@guide-embedding-extensions). The built-in ids: @architecture-built-in-extensions.
 
 == Example: word count <extensions-overview-example>
 
@@ -62,7 +62,7 @@ export function wordCount(): TypstExtension {
 const editor = createTypstEditor(host, {
   source: '= Hello\n\nSome words here.',
   settings: { 'wordCount.label': 'Wörter' },
-  extensions: (builtins) => [...builtins, wordCount()],
+  extensions: (builtinExtensions) => [...builtinExtensions, wordCount()],
 });
 await editor.executeCommand<number>('wordCount.count'); // 5
 ```

@@ -117,7 +117,7 @@ Options (`TypstEditorOptions`), all optional:
   [`onOpen(path)`], [Another file is shown, e.g. to keep it in the URL.],
   [`user`], [`{ name, color? }`: who signs comments, commits to GitLab, and is shown to collaborators. Without it: "Anonymous".],
   [`settings`], [Settings by id (@guide-embedding-settings).],
-  [`extensions(builtins)`], [The extensions to run, made from the built-in ones (@guide-embedding-extensions).],
+  [`extensions(builtinExtensions)`], [The extensions to run, made from the built-in ones (@guide-embedding-extensions).],
 )
 
 The returned `TypstEditor`:
@@ -185,9 +185,9 @@ const draft = await editor.exportPdf({ 'comments.include': true });  // margin n
 Every feature is an extension, the built-in ones too. `extensions` makes the list from the built-ins:
 
 ```ts
-createTypstEditor(host, { extensions: (builtins) => [...builtins, wordCount()] });                     // add
-createTypstEditor(host, { extensions: (builtins) => builtins.filter((e) => e.id !== 'pdf-export') });  // leave out
-createTypstEditor(host, { extensions: (builtins) => [...builtins.filter((e) => e.id !== 'files'), myFiles] }); // replace
+createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensions, wordCount()] });                             // add
+createTypstEditor(host, { extensions: (builtinExtensions) => builtinExtensions.filter((e) => e.id !== 'pdf-export') });          // leave out
+createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensions.filter((e) => e.id !== 'files'), myFiles] }); // replace
 ```
 
 - Collaboration is not built in: add `collaboration(…)` with its connection (@guide-collaboration).

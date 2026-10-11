@@ -4,7 +4,7 @@
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
 import { typstParser } from 'codemirror-lang-typst/lezer';
-import type { Placed, TypstParseContext, BlockLabel } from './projection';
+import type { PlacedNode, TypstParseContext, BlockLabel } from './projection';
 import type { Grammar } from './grammar';
 import { labelAfterBlock, splitTrailingLabel } from './labels';
 import { layout, pristine } from './pristine';
@@ -94,8 +94,8 @@ class TypstToProseMirrorParser implements TypstParseContext {
     return { content: blocks, ...SourceRange.of({ from, to }) };
   }
 
-  inline(nodes: readonly SyntaxNode[], marks: readonly Mark[] = []): Placed[] {
-    const result: Placed[] = [];
+  inline(nodes: readonly SyntaxNode[], marks: readonly Mark[] = []): PlacedNode[] {
+    const result: PlacedNode[] = [];
     let pos = nodes[0]?.from ?? 0;
     for (let i = 0; i < nodes.length; i++) {
       if (nodes[i].from > pos) result.push({ node: this.raw(this.source.slice(pos, nodes[i].from), marks), from: pos, to: nodes[i].from });
@@ -111,7 +111,7 @@ class TypstToProseMirrorParser implements TypstParseContext {
     return nodes.every((n) => n.name !== 'Parbreak' && !this.isStandalone(n));
   }
 
-  textblock({ type, attrs, contentTo }: { type: string; attrs: { src: string } & Record<string, unknown>; contentTo?: number }, from: number, content: Placed[]): Node {
+  textblock({ type, attrs, contentTo }: { type: string; attrs: { src: string } & Record<string, unknown>; contentTo?: number }, from: number, content: PlacedNode[]): Node {
     const node = this.schema.nodes[type].create(attrs, content.map((p) => p.node));
     const to = from + attrs.src.length;
     pristine.set(node, layout(content, from, contentTo ?? to, to));
@@ -271,7 +271,7 @@ class TypstToProseMirrorParser implements TypstParseContext {
   // ------------------------------------------------------------- inline
 
   /** Projects `nodes[index]`, or a `#` together with the expression after it as one piece of code. */
-  private parseAt(nodes: readonly SyntaxNode[], index: number, marks: readonly Mark[]): { placed: Placed[]; to: number; last: number } {
+  private parseAt(nodes: readonly SyntaxNode[], index: number, marks: readonly Mark[]): { placed: PlacedNode[]; to: number; last: number } {
     const node = nodes[index];
     const code = node.name === 'Hash' && nodes[index + 1]?.from === node.to ? nodes[index + 1] : null;
     const to = code ? code.to : node.to;
@@ -281,7 +281,7 @@ class TypstToProseMirrorParser implements TypstParseContext {
   }
 
   /** One piece of inline syntax: the framework's text, else what a spec makes of it (null: raw). */
-  private inlineNode(node: SyntaxNode, src: string, marks: readonly Mark[]): Node | Placed[] | null {
+  private inlineNode(node: SyntaxNode, src: string, marks: readonly Mark[]): Node | PlacedNode[] | null {
     const own = INLINE[node.name];
     if (own) return own(this, src, marks);
     for (const rule of this.grammar.syntaxNode(node.name)) {
@@ -292,7 +292,7 @@ class TypstToProseMirrorParser implements TypstParseContext {
   }
 
   /** The expression after a `#`: a call some spec models in running text (a link, a margin note), else raw. */
-  private codeNode(node: SyntaxNode, marks: readonly Mark[]): Node | Placed[] | null {
+  private codeNode(node: SyntaxNode, marks: readonly Mark[]): Node | PlacedNode[] | null {
     if (node.name !== 'FuncCall') return null;
     for (const rule of this.grammar.call(calleeName(node, this.source), 'inline')) {
       const parsed = rule.inline!(this, node, marks);

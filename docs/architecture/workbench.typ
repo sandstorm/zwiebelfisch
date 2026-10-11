@@ -6,7 +6,7 @@
 createTypstEditor ─► WorkbenchHost(host, project, options).activate(extensions)
                      ├─ namespaces: CommandsHost  WindowHost  ScmHost  LanguagesHost  WorkspaceHost
                      ├─ view hosts: VisualViewHost  SourceViewHost  Preview
-                     ├─ frame:      Layout  EditingViews  Menus  StyleSheets  FileDrops  ColorScheme
+                     ├─ frame:      WorkbenchLayout  EditingViews  Menus  StyleSheets  FileDrops  ColorScheme
                      └─ ExtensionHost: activate(context) per extension, in list order
 ```
 
@@ -16,7 +16,7 @@ createTypstEditor ─► WorkbenchHost(host, project, options).activate(extensio
 - *`ExtensionContext`*: `project`, `subscriptions`, `globalState` / `workspaceState`, the five namespaces, `workbench` (the frame), and the view hosts `visualView`, `sourceView`, `preview`.
 - *Namespaces as hosts* (table below): each is its own module, an interface plus a host class implementing it directly. No forwarding facade.
 - *Generic contribution points*: extensions never depend on each other, not even through a service registry. A host offers a point any extension may use; the consumer reads every contribution. Competing contributions are ordered by an explicit tie-breaker, never by registration order alone.
-- *The frame*: `Layout` (side panels with rail buttons, editing column, preview, status bar); `EditingViews` (Visual / Source tabs, one `VisualView` + `SourceView` per document, made lazily); custom editors for every other file.
+- *The frame*: `WorkbenchLayout` (side panels with rail buttons, editing column, preview, status bar); `EditingViews` (Visual / Source tabs, one `VisualView` + `SourceView` per document, made lazily); custom editors for every other file.
 - *State*: `StorageMemento` behind `globalState` and `workspaceState` (@extensions-workbench-api-state). Keys: `typst-editor:global:<id>:<key>`, `typst-editor:<main file>:<id>:<key>`.
 
 #table(

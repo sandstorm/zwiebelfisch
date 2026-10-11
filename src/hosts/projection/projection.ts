@@ -52,7 +52,7 @@ export interface BlockLabel {
 }
 
 /** An inline node and the source range it shows; source between placed nodes is hidden syntax. */
-export interface Placed {
+export interface PlacedNode {
   node: Node;
   from: number;
   to: number;
@@ -72,14 +72,14 @@ export interface TypstParseContext {
   /** The blocks of a closed content block `[..]` (an empty paragraph if there are none), and the source they cover. */
   blocks(content: SyntaxNode): { content: Node[]; from: SourceOffset; to: SourceOffset };
   /** Parses inline syntax (a textblock's content), each node carrying `marks`. */
-  inline(nodes: readonly SyntaxNode[], marks?: readonly Mark[]): Placed[];
+  inline(nodes: readonly SyntaxNode[], marks?: readonly Mark[]): PlacedNode[];
   /** Whether markup `nodes` are one paragraph: no paragraph break, no block of its own (heading, list item). */
   isOneParagraph(nodes: readonly SyntaxNode[]): boolean;
   /**
    * A textblock whose `attrs.src` starts at source offset `from`; while untouched it prints `src` verbatim. Its
    * content ends at `contentTo` (default: the end of `src`); syntax after that closes the block (a code fence).
    */
-  textblock(block: { type: string; attrs: { src: string } & Record<string, unknown>; contentTo?: number }, from: number, content: Placed[]): Node;
+  textblock(block: { type: string; attrs: { src: string } & Record<string, unknown>; contentTo?: number }, from: number, content: PlacedNode[]): Node;
   /** A node that prints `attrs.src` while untouched (a list item: its marker, then its only child). */
   pristine(type: string, attrs: Record<string, unknown>, content?: Node[]): Node;
   /** Verbatim inline Typst: a raw inline box. */
@@ -108,7 +108,7 @@ export interface TypstParseRules {
     /** A label right after it (same line or the next, then a paragraph break or a block) is its label: headings. */
     readonly takesLabel?: boolean;
     /** The node in running text: a node showing all of its source, or placed content (its text with marks). Such syntax makes its run a paragraph. */
-    inline?(p: TypstParseContext, node: SyntaxNode, marks: readonly Mark[]): Node | Placed[] | null;
+    inline?(p: TypstParseContext, node: SyntaxNode, marks: readonly Mark[]): Node | PlacedNode[] | null;
   }>>;
   /** By the called function's name (`calleeName`); `*` takes the calls no spec names. */
   readonly calls?: Readonly<Record<string, {
@@ -118,7 +118,7 @@ export interface TypstParseRules {
      */
     block?(p: TypstParseContext, call: SyntaxNode, sep: string | null): Node | null;
     /** The call after `#` in running text (`#link("url")[text]`): a node, or placed content. */
-    inline?(p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[]): Node | Placed[] | null;
+    inline?(p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[]): Node | PlacedNode[] | null;
     /** Whether `call` belongs in running text (makes its run a paragraph), even where `inline` leaves it raw. Default with `inline`: yes. */
     inRunningText?(p: TypstParseContext, call: SyntaxNode): boolean;
   }>>;

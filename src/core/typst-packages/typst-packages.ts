@@ -1,7 +1,7 @@
 // withPackages: Typst packages (@preview/…) downloaded on first use and added to the engine. Entry of
 // core/typst-packages/. See docs/architecture/core.typ.
 import { SourceRange } from '../typst-document/typst-document';
-import type { CompileResult, TypstDiagnostic, Engine, PdfResult } from '../typst-engine/typst-engine';
+import type { CompileResult, TypstDiagnostic, TypstEngine, PdfResult } from '../typst-engine/typst-engine';
 import { untarGz } from './tar';
 
 /** Returns the `.tar.gz` archive of a package spec like `@preview/name:0.1.0`. */
@@ -15,7 +15,7 @@ export interface PackageEngine {
    * that fails to download is reported as a diagnostic and not tried again.
    */
   compile(main: string): Promise<CompileResult>;
-  /** `Engine.exportPdf`, with packages downloaded like `compile`. */
+  /** `TypstEngine.exportPdf`, with packages downloaded like `compile`. */
   exportPdf(main: string): Promise<PdfResult>;
 }
 
@@ -23,7 +23,7 @@ export interface PackageEngine {
  * Lets documents compiled by `engine` import packages, fetched on first use
  * with `fetchPackage` (default: from packages.typst.org, cached).
  */
-export function withPackages(engine: Engine, fetchPackage: PackageFetcher = fetchPreviewPackage): PackageEngine {
+export function withPackages(engine: TypstEngine, fetchPackage: PackageFetcher = fetchPreviewPackage): PackageEngine {
   const failed = new Map<string, string>();
   const load = async (spec: string) => {
     try {
@@ -50,7 +50,7 @@ export function withPackages(engine: Engine, fetchPackage: PackageFetcher = fetc
 }
 
 /** Package files live under `@namespace/name:version/` paths in the engine. */
-function addPackage(engine: Engine, spec: string, files: Map<string, Uint8Array>): void {
+function addPackage(engine: TypstEngine, spec: string, files: Map<string, Uint8Array>): void {
   const decoder = new TextDecoder();
   for (const [path, data] of files) {
     const full = `${spec}/${path}`;

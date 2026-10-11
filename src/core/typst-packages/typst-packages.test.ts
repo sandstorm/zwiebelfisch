@@ -1,7 +1,7 @@
 // Tests for typst-packages.ts.
 import { readFileSync, readdirSync } from 'node:fs';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { createEngine, type Engine } from '../typst-engine/typst-engine';
+import { createEngine, type TypstEngine } from '../typst-engine/typst-engine';
 import { withPackages } from './typst-packages';
 
 const wasm = readFileSync(new URL('../typst-engine/wasm/typst_engine_bg.wasm', import.meta.url));
@@ -12,7 +12,7 @@ const greet = new Uint8Array(readFileSync(new URL('./fixtures/greet-0.1.0.tar.gz
 const doc = '#import "@preview/greet:0.1.0": greet\n#greet("World")';
 
 describe('withPackages', () => {
-  let engine: Engine;
+  let engine: TypstEngine;
   beforeAll(async () => {
     engine = await createEngine(wasm, fonts);
   });

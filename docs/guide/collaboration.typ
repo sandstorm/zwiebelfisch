@@ -8,8 +8,8 @@ import { collaboration, createTypstEditor } from 'typst-editor';
 createTypstEditor(host, {
   source,                                    // seeds a new room; a room's text wins
   user: { name: 'Ada', color: '#6c71c4' },   // color optional
-  extensions: (builtins) => [
-    ...builtins,
+  extensions: (builtinExtensions) => [
+    ...builtinExtensions,
     collaboration({ url: 'wss://collab.example.org', room: 'project-42', token }),
   ],
 });
@@ -62,8 +62,8 @@ With the server configured for GitLab, the room `gitlab:<project id or path>@<br
 createTypstEditor(host, {
   main: '/thesis.typ',      // the repository's main file; no source or files needed
   user: { name: 'Ada' },    // the commit author
-  extensions: (builtins) => [
-    ...builtins,
+  extensions: (builtinExtensions) => [
+    ...builtinExtensions,
     collaboration({ url: 'wss://collab.example.org', room: 'gitlab:group/thesis@main', token }),
   ],
 });

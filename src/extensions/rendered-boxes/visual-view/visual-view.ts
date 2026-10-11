@@ -3,7 +3,7 @@
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import { SourceRange } from '../../../core/typst-document/typst-document';
 import type { RawBoxRenderer } from '../../../hosts/visual-view/visual-view';
-import { rendersInPlace, snippetSize, type Snippet } from '../model/model';
+import { rendersInPlace, snippetSize, type RenderedSnippet } from '../model/model';
 
 /** Where a document's snippets come from: the compiled pages. */
 export interface SnippetSource {
@@ -11,7 +11,7 @@ export interface SnippetSource {
    * How source range `range` of the document, which holds `text`, looks
    * compiled; null when it draws nothing or cannot be shown right now.
    */
-  snippet(range: SourceRange, text: string): Promise<Snippet | null>;
+  snippet(range: SourceRange, text: string): Promise<RenderedSnippet | null>;
   /** Fires whenever snippets may have changed. */
   readonly onDidChange: Event<void>;
 }

@@ -27,7 +27,7 @@ import { ColorScheme } from './color-scheme/color-scheme';
 import { EditingViews } from './editing-views/editing-views';
 import { ExtensionHost } from './extension-host/extension-host';
 import { FileDrops } from './file-drops/file-drops';
-import { Layout } from './layout/layout';
+import { WorkbenchLayout } from './layout/workbench-layout';
 import { EditorTitleMenu } from './menus/editor-title-menu';
 import { Menus } from './menus/menus';
 import { StorageMemento } from './memento/memento';
@@ -256,7 +256,7 @@ export class WorkbenchHost implements Workbench {
   #active: ProjectPath;
   /** The commands, for the widget's `executeCommand`. */
   readonly commands: CommandsHost;
-  readonly #layout: Layout;
+  readonly #layout: WorkbenchLayout;
   readonly #views: EditingViews;
   readonly #window: WindowHost;
   readonly #languages = new LanguagesHost();
@@ -295,7 +295,7 @@ export class WorkbenchHost implements Workbench {
     this.#scheme = new ColorScheme(host);
     this.#applyTheme();
     const doc = host.ownerDocument;
-    this.#layout = new Layout(host, StorageMemento.of(doc, 'sessionStorage', `typst-editor:${project.main}:workbench:`));
+    this.#layout = new WorkbenchLayout(host, StorageMemento.of(doc, 'sessionStorage', `typst-editor:${project.main}:workbench:`));
     this.commands = new CommandsHost(host);
     this.#drops = new FileDrops(host);
     this.onDidDropFiles = this.#drops.onDidDrop;

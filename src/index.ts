@@ -44,7 +44,7 @@ export type { ConfigurationChangeEvent, ConfigurationProperty, Settings, Workspa
 export type { PdfExportOption, PreviewContributions, PreviewToolbarItem, ToolbarPlacement } from './hosts/preview/preview';
 export type { SourceViewContext, SourceViewContributions } from './hosts/source-view/source-view';
 export type {
-  Action,
+  ToolbarAction,
   Anchor,
   RawBoxAction,
   BoxPicture,
@@ -71,7 +71,7 @@ export { setBoxDecorations } from './hosts/visual-view/visual-view';
 export type {
   Around,
   BlockLabel,
-  Placed,
+  PlacedNode,
   TypstMarkConversion,
   TypstMarkSpec,
   TypstNodeConversion,

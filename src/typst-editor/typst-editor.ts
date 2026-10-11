@@ -75,10 +75,10 @@ export interface TypstEditorOptions {
    */
   settings?: Settings;
   /**
-   * The extensions to run, made from the built-in ones (in their order): add yours (`(builtins) => [...builtins,
-   * mine]`), leave one out or replace it (`builtins.filter((e) => e.id !== 'pdf-export')`). Default: the built-ins.
+   * The extensions to run, made from the built-in ones (in their order): add yours (`(builtinExtensions) => [...builtinExtensions,
+   * mine]`), leave one out or replace it (`builtinExtensions.filter((e) => e.id !== 'pdf-export')`). Default: the built-ins.
    */
-  extensions?(builtins: readonly TypstExtension[]): readonly TypstExtension[];
+  extensions?(builtinExtensions: readonly TypstExtension[]): readonly TypstExtension[];
 }
 
 export interface TypstEditor {

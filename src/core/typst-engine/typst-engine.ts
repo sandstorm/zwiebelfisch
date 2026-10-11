@@ -35,7 +35,7 @@ export const Pt = {
  * pages are 0-based, and coordinates are points from the page's top-left.
  * The engine keeps the last successfully compiled document for hit-testing.
  */
-export interface Engine {
+export interface TypstEngine {
   /** Adds all faces of an OpenType/TrueType font (or collection). Throws if `data` is no font. */
   addFont(data: Uint8Array): void;
   setSource(path: string, text: string): void;
@@ -49,7 +49,7 @@ export interface Engine {
    */
   exportPdf(main: string): PdfResult;
   /** What is at a point of the last compiled document, or null for empty space. */
-  jumpFromClick(page: PageIndex, x: Pt, y: Pt): Jump | null;
+  jumpFromClick(page: PageIndex, x: Pt, y: Pt): SourceJump | null;
   /** Where the text at `offset` appears in the last compiled document. */
   jumpFromCursor(path: string, offset: SourceOffset): Position[];
   /**
@@ -123,7 +123,7 @@ export interface PageRect {
   h: Pt;
 }
 
-export type Jump =
+export type SourceJump =
   /** `from..to` is the syntax leaf containing `offset`, e.g. a text run. */
   | {
       kind: 'source';
@@ -147,7 +147,7 @@ export type FontSource = Uint8Array | Promise<Uint8Array>;
 export async function createEngine(
   wasm: InitInput | Promise<InitInput>,
   fonts: Iterable<FontSource> = [],
-): Promise<Engine> {
+): Promise<TypstEngine> {
   const [, ...fontData] = await Promise.all([init({ module_or_path: wasm }), ...fonts]);
   const engine = new WasmEngine();
   const addFont = (data: Uint8Array) => {

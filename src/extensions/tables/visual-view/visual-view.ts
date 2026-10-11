@@ -2,7 +2,7 @@
 // table nodes), "Insert table" and the bar over a table. See tables.ts.
 import { Extension, findParentNode, type Editor } from '@tiptap/core';
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
-import { svg, type Action, type Anchor, type ToolbarGroup, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import { svg, type ToolbarAction, type Anchor, type ToolbarGroup, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 import { tableToTypst } from './table-printing';
 import { parseTable } from './table-projection';
 
@@ -53,13 +53,13 @@ const ICONS = {
 };
 
 /** "Insert table" in the Insert menu: a 2 × 2 table without header row. */
-export const INSERT_TABLE: Action = { label: 'Insert table', icon: ICONS.table, run: (c) => c.insertTable({ rows: 2, cols: 2, withHeaderRow: false }) };
+export const INSERT_TABLE: ToolbarAction = { label: 'Insert table', icon: ICONS.table, run: (c) => c.insertTable({ rows: 2, cols: 2, withHeaderRow: false }) };
 
 /** The bar floating above the table that holds the cursor. */
 export const TABLE_BAR: ToolbarGroup = { kind: 'floating', id: 'table', order: 20, label: 'Table', anchor: (editor) => tableAnchor(editor) };
 
 /** The table bar's buttons: rows, columns, header row. */
-export const TABLE_EDITS: Action[] = [
+export const TABLE_EDITS: ToolbarAction[] = [
   { label: 'Add row', icon: ICONS.addRow, run: (c) => c.addRowAfter() },
   { label: 'Add column', icon: ICONS.addColumn, run: (c) => c.addColumnAfter() },
   { label: 'Delete row', icon: ICONS.deleteRow, run: (c) => c.deleteRow() },

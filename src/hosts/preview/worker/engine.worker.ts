@@ -1,12 +1,12 @@
 // The engine worker: hosts the Typst engine off the main thread and answers the preview's requests.
 // See worker.ts and docs/architecture/preview.typ.
-import { createEngine, type Engine, fetchFonts } from '../../../core/typst-engine/typst-engine';
+import { createEngine, type TypstEngine, fetchFonts } from '../../../core/typst-engine/typst-engine';
 import { type PackageEngine, withPackages } from '../../../core/typst-packages/typst-packages';
 import { FileReceiver } from './project-files';
-import type { Init, Request, Response } from './protocol';
+import type { Init, EngineRequest, EngineResponse } from './protocol';
 
 interface Session {
-  engine: Engine;
+  engine: TypstEngine;
   files: FileReceiver;
   packages: PackageEngine;
 }
@@ -14,7 +14,7 @@ interface Session {
 let session: Promise<Session> = Promise.reject(new Error('engine worker used before init'));
 session.catch(() => {});
 
-self.onmessage = async (event: MessageEvent<Init | Request>) => {
+self.onmessage = async (event: MessageEvent<Init | EngineRequest>) => {
   const request = event.data;
   if (request.type === 'init') {
     session = createEngine(request.wasm, fetchFonts(request.fonts)).then((engine) => ({
@@ -29,11 +29,11 @@ self.onmessage = async (event: MessageEvent<Init | Request>) => {
     const transfer = response.type === 'pdf' && response.result.pdf ? [response.result.pdf.buffer] : [];
     self.postMessage(response, { transfer });
   } catch (error) {
-    self.postMessage({ id: request.id, type: 'error', message: String(error) } satisfies Response);
+    self.postMessage({ id: request.id, type: 'error', message: String(error) } satisfies EngineResponse);
   }
 };
 
-async function handle({ engine, files, packages }: Session, request: Request): Promise<Response> {
+async function handle({ engine, files, packages }: Session, request: EngineRequest): Promise<EngineResponse> {
   switch (request.type) {
     case 'compile':
       return { id: request.id, type: 'compile', result: await files.update(request.files, () => packages.compile(request.main)) };

@@ -4,7 +4,7 @@ import { Extension } from '@tiptap/core';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { guardAfterReference, referenceSyntax } from '../model/reference-syntax';
 import type { ProjectLabels } from '../model/label-index';
-import { svg, type Action, type ToolbarContext, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
+import { svg, type ToolbarAction, type ToolbarContext, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
 import { canStartNewLabel, labelTags, startNewLabel, type LabelPrompts } from './label-tags';
 import { referenceHints } from './reference-hints';
 import { Reference } from './reference-node';
@@ -81,7 +81,7 @@ const ICON = svg('<path d="M3 12V4h8l9 8-8 8z"/><circle cx="7.5" cy="8.5" r="1.2
  * right where it will show (starting with `fig:`, `tab:` or `sec:` as is customary). Enabled where that
  * block has none yet; an existing label is renamed or removed through its tag.
  */
-function addLabel(toolbar: ToolbarContext): Action {
+function addLabel(toolbar: ToolbarContext): ToolbarAction {
   return {
     label: 'Add label',
     icon: ICON,

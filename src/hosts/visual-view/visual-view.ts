@@ -521,7 +521,7 @@ export interface RawBoxAction {
 // The toolbar: buttons (actions), controls, groups, menus and floating bars.
 
 /** A toolbar button: how it looks, what it does, and when it shows as on. */
-export interface Action {
+export interface ToolbarAction {
   label: string;
   /** Shortcut shown in the tooltip; `Mod` becomes ⌘ or Ctrl. */
   shortcut?: string;
@@ -568,7 +568,7 @@ export type ToolbarGroup =
       readonly id: string;
       readonly order: number;
       readonly label: string;
-      /** Where the bar floats (null: hidden); `held` when an item asks to show it (see `Action.showsBar`). */
+      /** Where the bar floats (null: hidden); `held` when an item asks to show it (see `ToolbarAction.showsBar`). */
       anchor(editor: Editor, held: boolean): Anchor;
     };
 
@@ -620,10 +620,10 @@ export interface ToolbarContext extends VisualViewContext {
 
 /** A button (or control) in toolbar group `group`, sorted by `order` (then registration order). */
 export type ToolbarItem =
-  | { readonly group: string; readonly order?: number; readonly action: Action }
+  | { readonly group: string; readonly order?: number; readonly action: ToolbarAction }
   | {
       readonly group: string;
       readonly order?: number;
       /** The item for one view, when it keeps state there (a popover) or is a control of its own. */
-      create(toolbar: ToolbarContext): Action | ToolbarControl;
+      create(toolbar: ToolbarContext): ToolbarAction | ToolbarControl;
     };

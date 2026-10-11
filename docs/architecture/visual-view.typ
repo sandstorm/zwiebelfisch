@@ -43,6 +43,6 @@ Typst no spec models, and nodes whose spec sets `view.box: 'code'` (images, outl
 
 - Laid out from contributed groups (a button group, a menu, a bar floating in the text) sorted by `order`, and items by `group` + `order`. Groups without items are left out.
 - The host's own: `history` (undo/redo, 10), `text-style` (20, once a provider exists), the `insert` menu (50), the floating `selection` bar.
-- Buttons are `Action`s: a Tiptap chain command, dry-run after every transaction to disable the button. They never take the focus from the text.
+- Buttons are `ToolbarAction`s: a Tiptap chain command, dry-run after every transaction to disable the button. They never take the focus from the text.
 
 Writing a construct: @extensions-visual-view-constructs.
