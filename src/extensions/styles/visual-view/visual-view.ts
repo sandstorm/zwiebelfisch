@@ -1,7 +1,10 @@
 // Custom styles in the Visual view: declared block styles as styled blocks (`#note[..]`), inline styles as a
 // mark (`#key[..]`), and the text style menu. See docs/guide/features.typ.
 import type { SyntaxNode } from '@lezer/common';
+import { Extension, type Editor } from '@tiptap/core';
 import type { Mark, Node } from '@tiptap/pm/model';
+import { Plugin } from '@tiptap/pm/state';
+import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { calleeName, children, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
 import type { PlacedNode, TypstMarkSpec, TypstSerializeState, TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import type { TextStyle, TextStyleProvider, TypstNodeSpec, VisualViewContext, VisualViewContribution } from '../../../hosts/visual-view/visual-view';
@@ -58,6 +61,51 @@ export function customStyles(options: StylesOptions): VisualViewContribution {
         }),
         visualView.registerTextStyleProvider(textStyles(options)),
       );
+    },
+  };
+}
+
+/** The Visual views by document, so a style can be applied from outside the text style menu (search everywhere). */
+export interface StyleApplier extends VisualViewContribution {
+  /**
+   * Applies `style` to the selection of `document`'s Visual view as the text style menu does (with the import);
+   * false if the document has no Visual view or the style does not apply there (an inline style without a selection).
+   */
+  apply(document: TypstDocument, style: TypstStyle): boolean;
+}
+
+/** A `StyleApplier` over the views of every document (each followed from its creation to its end). */
+export function styleApplier(source: ProjectStyles): StyleApplier {
+  const views = new Map<TypstDocument, { view: VisualViewContext; editor: Editor }>();
+  return {
+    id: 'styles-applier',
+    activate({ visualView, subscriptions }) {
+      subscriptions.push(
+        visualView.registerTiptapExtension((view) =>
+          Extension.create({
+            name: 'typstStyleApplier',
+            addProseMirrorPlugins() {
+              const editor = this.editor;
+              // a plugin view lives exactly as long as the editor's view (Tiptap's onCreate comes a tick later)
+              const follow = () => {
+                views.set(view.document, { view, editor });
+                return { destroy: () => views.get(view.document)?.editor === editor && views.delete(view.document) };
+              };
+              return [new Plugin({ view: follow })];
+            },
+          }),
+        ),
+      );
+    },
+    apply(document, style) {
+      const shown = views.get(document);
+      if (!shown) return false;
+      const { view, editor } = shown;
+      const entry = textStyle(style, view, source);
+      if (entry.enabled && !entry.enabled(editor)) return false;
+      const applied = entry.apply(editor.chain().focus(), editor).run();
+      if (applied) entry.applied?.();
+      return applied;
     },
   };
 }

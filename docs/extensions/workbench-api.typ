@@ -102,8 +102,15 @@ The built-in providers:
 #table(
   columns: 4,
   [Group], [Prefix], [Order], [From],
+  [Files], [`/`], [10], [`files`: name and path; opens],
+  [Headings], [`#`], [20], [`headings`: every Typst file's; opens at the heading],
+  [Labels], [`@`], [30], [`labels`: labels of headings, equations and the rest, not of figures or bibliography keys; opens at the label],
+  [Figures], [`@`], [31], [`figures`: figures, tables and listings by caption (and label); opens at the figure],
   [Commands], [`>`], [40], [the workbench: `contributes.commands`; runs],
+  [Styles], [`*`], [50], [`styles`: applies to the selection (Visual view: as its menu; Source view: `#name[selection]`), with the import],
+  [Comments], [`!`], [60], [`comments`: notes by first message and authors; opens at the note, in the Visual view its card],
   [Settings], [`:`], [70], [the workbench: booleans switch, `enum` settings ask for the value (for this widget, until the host sets the settings again)],
+  [Text], [`%`], [90], [`textFiles`: lines of every Typst and text file holding the query (from 2 characters, at most 200); opens with the match selected],
 )
 
 == The frame <extensions-workbench-api-frame>

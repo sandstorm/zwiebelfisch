@@ -37,6 +37,7 @@ export function diagrams(): TypstExtension {
   return {
     id: 'diagrams',
     contributes: {
+      commands: [{ command: NEW_DIAGRAM, title: 'New diagram…', category: 'Diagrams' }],
       configuration: {
         properties: {
           'diagrams.editorUrl': {

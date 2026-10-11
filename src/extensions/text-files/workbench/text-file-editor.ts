@@ -65,6 +65,14 @@ export class TextFileEditor {
     });
   }
 
+  /** Selects `from..to` (offsets into the text, clamped), scrolls it into view and focuses the editor. */
+  reveal(from: number, to: number): void {
+    const length = this.#view.state.doc.length;
+    const anchor = Math.min(from, length);
+    this.#view.dispatch({ selection: { anchor, head: Math.min(Math.max(to, anchor), length) }, scrollIntoView: true });
+    this.#view.focus();
+  }
+
   /** Saves what is pending and takes the editor away. */
   dispose(): void {
     this.#save();

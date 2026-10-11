@@ -6,13 +6,22 @@
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './figures.css?inline';
 import { FIGURE, FIGURE_CAPTION } from './visual-view/visual-view';
+import { figureSearch } from './workbench/figure-search';
 
-/** Figures of the bodies the other constructs offer (`figureBody`; at least one must, as images and tables do). */
+/**
+ * Figures of the bodies the other constructs offer (`figureBody`; at least one must, as images and tables do), and
+ * every figure (table, listing) in search everywhere, by caption.
+ */
 export function figures(): TypstExtension {
   return {
     id: 'figures',
-    activate({ workbench, visualView, subscriptions }) {
-      subscriptions.push(workbench.registerStyleSheet(css), visualView.registerNode(FIGURE), visualView.registerNode(FIGURE_CAPTION));
+    activate({ project, window, workbench, visualView, subscriptions }) {
+      subscriptions.push(
+        workbench.registerStyleSheet(css),
+        visualView.registerNode(FIGURE),
+        visualView.registerNode(FIGURE_CAPTION),
+        window.registerSearchProvider(figureSearch(project, workbench)),
+      );
     },
   };
 }

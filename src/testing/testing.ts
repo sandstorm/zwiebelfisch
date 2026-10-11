@@ -138,7 +138,8 @@ function contributions(options: TestViewOptions): VisualViewHost {
  * `contributions` activated in order, for their Visual-view contributions, with an extension context made from
  * `options`: a project of `TEST_DOCUMENT_PATH` and `options.files`, a preview with `options.preview`'s snippets,
  * `options.links`, the window's `options.prompts` (default: every question cancelled) and `options.applyEdit`.
- * Registrations other than the Visual view's (style sheets, commands, custom editors) are accepted and ignored.
+ * Registrations other than the Visual view's (style sheets, commands, custom editors, search providers) are accepted
+ * and ignored.
  */
 function activate(contributions: readonly VisualViewContribution[], options: TestViewOptions = {}): VisualViewHost {
   const visualView = new VisualViewHost();
@@ -158,6 +159,7 @@ function testContext(options: TestViewOptions) {
     commands: { registerCommand: ignored } satisfies Partial<Commands>,
     window: {
       registerCustomEditorProvider: ignored,
+      registerSearchProvider: ignored,
       showInputBox: prompts.showInputBox,
       showQuickPick: prompts.showQuickPick,
       showErrorMessage: prompts.showErrorMessage,

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests for the custom styles' entries of the text style menu (visual-view.ts), through the Visual view.
+// Tests for the custom styles' entries of the text style menu and the style applier (visual-view.ts), through the Visual view.
 import { describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
@@ -9,7 +9,7 @@ import type { TypstStyle } from '../model/discover';
 import { createVisualView } from '../../../testing/testing';
 import { VisualView, VisualViewHost } from '../../../hosts/visual-view/visual-view';
 import { ProjectPath } from '../../../core/paths/paths';
-import { customStyles } from './visual-view';
+import { customStyles, styleApplier } from './visual-view';
 
 const path = ProjectPath.of;
 
@@ -113,5 +113,25 @@ describe('the text style menu without headings', () => {
     new VisualView(parent, new TypstDocument('Text\n'), contributions);
     const menu = parent.querySelector<HTMLSelectElement>('select[aria-label="Text style"]')!;
     expect([...menu.options].map((o) => o.value)).toEqual(['paragraph', 'block:note', 'new-style']);
+  });
+});
+
+describe('styleApplier', () => {
+  it("applies a style to the selection of a document's Visual view as the menu does; false where it cannot", () => {
+    const styles: ProjectStyles = {
+      styles: () => [NOTE, KEY],
+      onDidChange: new EventEmitter<void>().event,
+      calculateImportChange: (document, style, use) =>
+        calculateImportChange(document.text, { name: style.name, matches: (m) => m === 'styles.typ', create: () => `#import "styles.typ": ${style.name}\n\n`, use }),
+    };
+    const applier = styleApplier(styles);
+    const doc = new TypstDocument('One\n');
+    const parent = document.body.appendChild(document.createElement('div'));
+    const view = createVisualView(parent, doc, { contributions: [customStyles({ styles, create: () => {} }), applier] });
+    view.reveal(SourceRange.of({ from: 1, to: 1 }));
+    expect(applier.apply(doc, KEY)).toBe(false);
+    expect(applier.apply(doc, NOTE)).toBe(true);
+    expect(doc.text).toBe('#import "styles.typ": note\n\n#note[One]\n');
+    expect(applier.apply(new TypstDocument('Other\n'), NOTE)).toBe(false);
   });
 });

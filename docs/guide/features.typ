@@ -24,6 +24,28 @@ Each side has a rail (`▣`): a button per panel. The left side holds the files,
 - Drag a side's separator (or use the arrow keys on it): the left side sets the file panel's width, the right side gets 20–80 % of the width.
 - *Errors and warnings:* underlined in both views, the message as tooltip. The status bar counts them and jumps to them.
 
+== Search everywhere <guide-features-search>
+
+Press Shift twice, anywhere (also while typing in a view), or click the magnifier at the bottom of the left rail. One list finds everything, grouped; type a few letters of a word, in order (`cmptim` finds "Compile times"). Arrows and Enter pick, Escape closes.
+
+#table(
+  columns: 3,
+  [Group], [Prefix], [Picking],
+  [Files], [`/`], [opens the file (the query may name folders: `/chap/intro`)],
+  [Headings], [`#`], [jumps to the heading],
+  [Labels], [`@`], [jumps to the label],
+  [Figures], [`@`], [jumps to the figure, table or listing, found by caption or label],
+  [Commands], [`>`], [runs it: Add comment, New file…, Number headings on / off, …],
+  [Styles], [`*`], [applies the custom style to the selection],
+  [Comments], [`!`], [opens the note, found by its text or an author],
+  [Settings], [`:`], [switches it on / off, or asks for the value],
+  [Text], [`%`], [lines of every Typst and text file holding the text; jumps there, the text selected],
+)
+
+- Without a prefix each group shows its best 5 ("12 more · type #" says how to see all); a prefix shows only its groups, up to 100 each.
+- Examples: `#method` jumps to the "Method" chapter; `@runs` finds the table captioned "Runs"; `%linearly` finds the sentence in any chapter; `!grace` lists the notes Grace wrote in; `:theme` asks for light, dark or automatic colors.
+- A setting changed here holds for this editor until the page sets the settings again.
+
 == Writing <guide-features-visual>
 
 ```typ
