@@ -1,4 +1,5 @@
-// DocsFolder. See docs/30_architecture/11_development.typ.
+// DocsFolder: the docs/ folder on disk, as the docs-files plugin writes and watches it. Node only. See docsFiles in
+// plugin.ts.
 import { randomBytes } from 'node:crypto';
 import { watch } from 'node:fs';
 import { lstat, mkdir, readdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
@@ -11,8 +12,8 @@ import { type DiskChange, isTextPath } from './protocol.ts';
  * write (no echo to the page that made it). It notes that before the file changes on disk, since the watcher's event
  * may arrive before the write's last step has finished.
  *
- * The docs/ folder as the docs-files plugin (plugin.ts) writes and watches it. Node only. Every path comes from the
- * page, so each one goes through the guard here: relative to docs/, no "..", no hidden files, no symlink leading out.
+ * Every path comes from the page, so each one goes through the guard here: relative to docs/, no "..", no hidden
+ * files, no symlink leading out.
  */
 export class DocsFolder {
   readonly #written = new Map<string, Buffer | null>();

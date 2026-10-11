@@ -1,4 +1,4 @@
-// Probes the playground server (ws://127.0.0.1:1234) and simulates an upstream commit. See playground.ts.
+// Probes the playground server (ws://127.0.0.1:1234) and simulates an upstream commit. See main.ts.
 import { SERVER, type Mode, type ServerKind } from './playground';
 
 export interface ServerStatus {

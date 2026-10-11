@@ -1,4 +1,4 @@
-// The playground bar above the demo editor: mode, example, room, user, devtools, server status. See playground.ts.
+// The playground bar above the demo editor: mode, example, room, user, devtools, server status. See main.ts.
 import { EXAMPLES } from './examples';
 import { MODES, devtoolsQuery, exampleLink, modeQuery, otherUser, playgroundFromQuery, userQuery, type PlaygroundState } from './playground';
 import { describeServer, type ServerState, type UpstreamChange } from './server-status';

@@ -1,10 +1,14 @@
-// The demo playground (docs/30_architecture/11_development.typ). Its state is the URL:
-// `?example=hello|simple|advanced|docs`, `?room=<name>` (Collaborate mode) or
-// `?room=gitlab:demo/report@<branch>` (GitLab mode) on the local playground
-// server (`mise run demo`), `&user=<name>`. Without `room` (Local mode, the
-// default and what the static e2e build uses) it never talks to a server.
-// `&devtools` adds the devtools side panel (the library's optional `devtools`). The Documentation example in Local
-// mode saves to docs/ when the page comes from the dev server or vite preview (docs-files/).
+// The demo playground: the widget on one page, to try it out, for the e2e tests, and to write these docs in.
+//
+// Its whole state is the URL (playground.ts), so a reload, a second window or a shared link shows the same:
+// `?example=hello|simple|advanced|docs`, `?room=<name>` (Collaborate mode) or `?room=gitlab:demo/report@<branch>`
+// (GitLab mode, a fake GitLab) on the local playground server (`mise run demo`), `&user=<name>`, and `&devtools` for
+// the library's optional devtools. Without `room` (Local mode, the default and what the static e2e build uses) it
+// never talks to a server. The shown file is the URL's fragment (open-file-hash.ts). The playground bar above the
+// editor switches all of this (playground-bar.ts).
+//
+// The Documentation example in Local mode saves to docs/ when the page comes from the dev server or vite preview
+// (docs-files/plugin.ts). See docs/10_guide/01_getting-started.typ, "The demo".
 import { collaboration, createTypstEditor, devtools, type ProjectFiles } from '../src';
 import { connectDocsSync, type DocsSync } from './docs-files/docs-sync';
 import { OpenFileHash } from './open-file-hash';

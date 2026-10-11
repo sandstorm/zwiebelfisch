@@ -1,4 +1,5 @@
-// See main.ts.
+// OpenFileHash: the shown file in the URL fragment (`#/chapters/introduction.typ`), so reloading or sharing the
+// link opens the same file. See main.ts.
 import type { TypstEditor } from '../src';
 
 /**
@@ -6,9 +7,6 @@ import type { TypstEditor } from '../src';
  * collaboration room the files arrive after connecting), follows fragment
  * edits, and writes the shown file back into the fragment without adding
  * history entries. Use as the editor's `onOpen` and `onFilesChange`.
- *
- * The file shown in the demo's editor lives in the URL fragment (`#/chapters/introduction.typ`), so reloading or
- * sharing the link opens the same file.
  */
 export class OpenFileHash {
   private editor: TypstEditor | null = null;

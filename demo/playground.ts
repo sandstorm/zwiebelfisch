@@ -1,4 +1,4 @@
-// See docs/30_architecture/11_development.typ.
+// The playground's state, all of it in the URL, and the editor options it means. See main.ts.
 import type { CollaborationOptions, TypstEditorOptions } from '../src';
 import { exampleFiles, exampleFromQuery, exampleQuery, type ExampleName } from './examples';
 
