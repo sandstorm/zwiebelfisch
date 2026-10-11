@@ -78,17 +78,17 @@ test('Undo and Redo buttons revert and reapply an edit', async ({ page }) => {
 test('raw blocks are editable in place and change only their source', async ({ page }) => {
   const box = visual(page).locator('.typst-visual__raw-block').first();
   await box.locator('.cm-content').click();
+  // not End on the first line: the box wraps long lines, and End stops at the wrap point
   await page.keyboard.press('ControlOrMeta+Home');
-  await page.keyboard.press('End');
-  await page.keyboard.type('\n#set par(justify: true)');
-  await expect.poll(sourceText(page)).toContain('margin: 1.5cm)\n#set par(justify: true)\n#set text');
+  await page.keyboard.type('#set par(justify: true)\n');
+  await expect.poll(sourceText(page)).toMatch(/^#set par\(justify: true\)\n#import "@preview\/drafting:0\.2\.2"/);
 });
 
 test('arrow down on the last line of a raw block moves into the next block', async ({ page }) => {
-  await visual(page).locator('.typst-visual__raw-block').first().locator('.cm-content').click();
-  await page.keyboard.press('ControlOrMeta+Home');
-  // the demo's first raw block has three lines: #set page, #set text, #show link
-  for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowDown');
+  // the demo's first raw block (imports, set and show rules) ends in the `)` of #set-margin-note-defaults
+  await visual(page).locator('.typst-visual__raw-block').first().locator('.cm-line').last().click();
+  await page.keyboard.press('Home');
+  await page.keyboard.press('ArrowDown');
   await page.keyboard.type('X');
   await expect(visual(page).locator('h1')).toHaveText('XTypst in five minutes');
 });

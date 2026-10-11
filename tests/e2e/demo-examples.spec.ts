@@ -5,12 +5,24 @@ import { test, fileRow } from './fixtures';
 const examples = (page: Page) => page.getByRole('navigation', { name: 'Examples' });
 const preview = (page: Page) => page.getByTestId('typst-preview');
 
-test('without ?example the demo opens the simple example, one file', async ({ page }) => {
+test('without ?example the demo opens the simple example: a page with a spreadsheet, diagrams and custom styles', async ({ page }) => {
   await page.goto('/');
   await expect(examples(page).getByRole('link', { name: 'Simple' })).toHaveAttribute('aria-current', 'page');
   await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Typst in five minutes');
-  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
-  await expect(page.getByTestId('typst-files')).toBeHidden();
+  // it imports three packages: drafting, cheq and merman
+  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/, { timeout: 30_000 });
+  await expect(preview(page).locator('.typst-preview__page')).toHaveCount(1);
+  await expect(fileRow(page, 'styles.typ')).toBeVisible();
+  await fileRow(page, 'data').click();
+  await expect(fileRow(page, 'data/budget.ic')).toBeVisible();
+  await fileRow(page, 'diagrams').click();
+  await expect(fileRow(page, 'diagrams/editor.drawio.png')).toBeVisible();
+  await expect(fileRow(page, 'diagrams/workflow.mmd')).toBeVisible();
+  // the comment's card, and the custom styles in the text style menu
+  await expect(page.getByTestId('typst-note-card').locator('.typst-comments__card-author')).toHaveText(['Ada', 'Grace']);
+  const menu = page.locator('[role=toolbar][aria-label=Formatting]:visible').getByRole('combobox', { name: 'Text style' });
+  await expect(menu.locator('optgroup[label="Block styles"] option')).toHaveText(['Tip']);
+  await expect(menu.locator('optgroup[label="Inline styles"] option')).toHaveText(['Key']);
 });
 
 test('the advanced example is a multi-page project with chapters, an image and a Mermaid diagram', async ({ page }) => {

@@ -62,16 +62,41 @@ describe('demo examples', () => {
 
   it('keeps the default document the e2e specs expect', () => {
     const files = exampleFiles('simple');
-    expect(Object.keys(files)).toEqual(['/main.typ']);
-    expect(files['/main.typ']).toMatch(/^#set page\(width: 16cm, height: auto, margin: 1\.5cm\)\n/);
-    expect(files['/main.typ']).toContain('\n= Typst in five minutes\n');
+    expect(Object.keys(files).sort()).toEqual([
+      '/data/budget.ic',
+      '/data/budget.ic.gen.typ',
+      '/diagrams/editor.drawio.png',
+      '/diagrams/workflow.mmd',
+      '/main.typ',
+      '/styles.typ',
+    ]);
+    const main = files['/main.typ'] as string;
+    // the drafting import on top (a comment's import is not repeated), room for notes on the right, one long page
+    expect(main).toMatch(/^#import "@preview\/drafting:0\.2\.2": margin-note, set-margin-note-defaults\n#set page\(width: 16cm, height: auto, margin: \(right: 4cm, rest: 1\.5cm\)\)\n/);
+    expect(main.match(/^= .*$/gm)).toEqual(['= Typst in five minutes']);
+    expect(main).not.toContain('#pagebreak');
+    expect(main.match(/#margin-note\[/g)).toHaveLength(1);
+  });
+
+  it('the simple example shows a spreadsheet, a Mermaid and a draw.io diagram and custom styles', () => {
+    const files = exampleFiles('simple');
+    // the diagram's XML in the PNG's tEXt chunk `mxfile`, URI-encoded, as diagrams.net writes it
+    const png = Buffer.from(files['/diagrams/editor.drawio.png'] as Uint8Array).toString('latin1');
+    expect(png).toContain(`tEXtmxfile\0${encodeURIComponent('<mxfile>')}`);
+    expect(png).toContain(encodeURIComponent('value="Typst source"'));
+    expect(files['/data/budget.ic.gen.typ']).toMatch(/^\/\/ Generated from budget\.ic/);
+    expect(files['/styles.typ']).toMatch(/\/\/\/ @style block Tip\n/);
+    expect(files['/styles.typ']).toMatch(/\/\/\/ @style inline Key\n/);
   });
 
   it('the default document loads only the fonts it uses: the first render downloads 5 of 17 font files', async () => {
     const loaded: string[] = [];
     const fresh = await engineWithFonts(loaded);
-    fresh.setSource('/main.typ', exampleFiles('simple')['/main.typ'] as string);
-    expect(fresh.compile('/main.typ').diagnostics).toEqual([]);
+    for (const [path, content] of Object.entries(exampleFiles('simple'))) {
+      if (typeof content === 'string') fresh.setSource(path, content);
+      else fresh.setBinary(path, content);
+    }
+    expect((await withPackages(fresh, cachedPackage).compile('/main.typ')).diagnostics).toEqual([]);
     // 2.7 MB (1.9 MB gzipped) instead of all 9.7 MB (6.4 MB gzipped)
     expect(loaded.sort()).toEqual([
       'DejaVuSansMono.ttf',

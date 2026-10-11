@@ -101,7 +101,16 @@ Alpha #margin-note[Beta][Gamma note] Delta#margin-note[Point note] #todo[Helper 
   });
 
   describe('page margins (drafting 0.2.2 needs a margin that differs by side)', () => {
-    const demo = readFileSync(new URL('../../../../demo/examples/simple/main.typ', import.meta.url), 'utf8');
+    /** A page as the demo's simple example had it before its first note: one margin for all sides. */
+    const demo = [
+      '#set page(width: 16cm, height: auto, margin: 1.5cm)',
+      '#set text(font: "Libertinus Serif", size: 12pt)',
+      '',
+      '= Typst in five minutes',
+      '',
+      'Typst is a markup language for documents.',
+      '',
+    ].join('\n');
     const compile = async (text: string) => {
       const bare = await engineWithFonts();
       const project = withPackages(bare, async () => drafting);

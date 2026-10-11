@@ -30,7 +30,8 @@ Every operation is a mise task (`mise-tasks/`, `mise tasks ls`). Tools are pinne
   [`server:dev-fake-gitlab`], [the playground server alone],
   [`check:examples`], [every demo example compiled with the Typst CLI],
   [`fixtures:packages`], [test packages `src/**/fixtures/<name>-<version>/` packed as `.tar.gz` (committed)],
-  [`fixtures:demo-spreadsheet`], [the advanced example's `data/compile-times.ic`],
+  [`fixtures:demo-spreadsheets`], [the examples' spreadsheets: simple `data/budget.ic`, advanced `data/compile-times.ic`, with their `.ic.gen.typ`],
+  [`fixtures:demo-diagram`], [the simple example's `diagrams/editor.drawio.png`: the picture drawn by the Typst CLI, the same boxes as diagrams.net XML inside],
   [`docs:pdf`], [this book → `dist/docs/typst-editor.pdf`],
   [`docs:html`], [these pages (Typst's bundle export) → `dist/docs/html/`],
 )

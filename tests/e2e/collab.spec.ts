@@ -16,6 +16,14 @@ async function join(browser: Browser, baseURL: string, room: string, user: strin
   return page;
 }
 
+/** How many glyphs the first preview page draws in its right margin (the last 4cm of 16cm: the notes). */
+const marginGlyphs = (page: Page) => () =>
+  page.getByTestId('typst-preview').locator('.typst-preview__page svg').first().evaluate((svg) => {
+    const box = svg.getBoundingClientRect();
+    const margin = box.left + box.width * (1 - 4 / 16);
+    return [...svg.querySelectorAll('use')].filter((glyph) => glyph.getBoundingClientRect().left >= margin).length;
+  });
+
 async function users(browser: Browser, baseURL: string, project: string) {
   const room = `e2e-${project}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
   const ann = await join(browser, baseURL, room, 'Ann');
@@ -103,8 +111,9 @@ test('a margin note reaches the other user', async ({ browser, baseURL }, info) 
   const field = ann.getByTestId('typst-note-card').getByRole('textbox', { name: 'Comment' });
   await field.fill('Shared note');
   await field.press('ControlOrMeta+Enter');
-  await expect(bob.getByTestId('typst-note-card').locator('.typst-comments__card-text')).toHaveText(['Shared note']);
-  await expect(bob.getByTestId('typst-visual').locator('mark.typst-comments__range')).toHaveText('stars');
+  // the new note's card comes first: the demo's own note is further down
+  await expect(bob.getByTestId('typst-note-card').first().locator('.typst-comments__card-text')).toHaveText(['Shared note']);
+  await expect(bob.getByTestId('typst-visual').locator('mark.typst-comments__range').first()).toHaveText('stars');
 });
 
 test('a reply from the other user: both see the thread in the card and in the PDF margin', async ({ browser, baseURL }, info) => {
@@ -114,13 +123,16 @@ test('a reply from the other user: both see the thread in the card and in the PD
   for (const page of [ann, bob]) {
     await page.route('https://packages.typst.org/preview/drafting-0.2.2.tar.gz', (route) => route.fulfill({ body: drafting, contentType: 'application/gzip' }));
   }
+  await expect.poll(marginGlyphs(ann)).toBeGreaterThan(0);
+  const demoNote = await marginGlyphs(ann)();
   await ann.getByTestId('typst-visual').locator('strong', { hasText: 'stars' }).dblclick();
   await ann.keyboard.press('ControlOrMeta+Alt+KeyM');
   const annField = ann.getByTestId('typst-note-card').getByRole('textbox', { name: 'Comment' });
   await annField.fill('Is this right?');
   await annField.press('ControlOrMeta+Enter');
 
-  const bobCard = bob.getByTestId('typst-note-card');
+  // the new note's card comes first: the demo's own note is further down
+  const bobCard = bob.getByTestId('typst-note-card').first();
   await expect(bobCard.locator('.typst-comments__card-text')).toHaveText(['Is this right?']);
   // Ann's message is not Bob's to edit
   await expect(bobCard.getByRole('button', { name: 'Edit message' })).toHaveCount(0);
@@ -130,14 +142,10 @@ test('a reply from the other user: both see the thread in the card and in the PD
   await bobField.press('ControlOrMeta+Enter');
 
   for (const page of [ann, bob]) {
-    const card = page.getByTestId('typst-note-card');
+    const card = page.getByTestId('typst-note-card').first();
     await expect(card.locator('.typst-comments__card-author')).toHaveText(['Ann', 'Bob']);
     await expect(card.locator('.typst-comments__card-text')).toHaveText(['Is this right?', 'Yes, checked.']);
-    // drafting draws the note (both messages) in the page's right margin: the last 4cm of 16cm
-    await expect.poll(() => page.getByTestId('typst-preview').locator('.typst-preview__page svg').first().evaluate((svg) => {
-      const box = svg.getBoundingClientRect();
-      const margin = box.left + box.width * (1 - 4 / 16);
-      return [...svg.querySelectorAll('use')].filter((glyph) => glyph.getBoundingClientRect().left >= margin).length;
-    })).toBeGreaterThan(20);
+    // drafting draws the note (both messages) in the page's right margin, beside the demo's own note
+    await expect.poll(marginGlyphs(page)).toBeGreaterThan(demoNote + 20);
   }
 });

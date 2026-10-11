@@ -1,0 +1,63 @@
+#!/usr/bin/env node
+//MISE description="Write the demo examples' spreadsheets (simple: data/budget.ic, advanced: data/compile-times.ic) and their Typst files (.ic.gen.typ)"
+//MISE sources=["mise-tasks/fixtures/demo-spreadsheets", "src/extensions/spreadsheets/model/typst-file.ts"]
+//MISE outputs=["demo/examples/simple/data/budget.ic", "demo/examples/simple/data/budget.ic.gen.typ", "demo/examples/advanced/data/compile-times.ic", "demo/examples/advanced/data/compile-times.ic.gen.typ"]
+// The demo opens .ic files in IronCalc's workbook UI; this builds them with IronCalc's engine, so the example
+// files are reproducible instead of binaries nobody can regenerate. Their Typst files are what the widget writes on
+// every edit (spreadsheetTypst), so the examples compile before anyone opened a spreadsheet.
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import init, { Model } from '@ironcalc/wasm';
+import { spreadsheetTypst, typstPath } from '../../src/extensions/spreadsheets/model/typst-file.ts';
+
+await init({ module_or_path: readFileSync(new URL('../../node_modules/@ironcalc/wasm/wasm_bg.wasm', import.meta.url)) });
+
+/** The simple example's trip budget: three costs and their sum (bold), the sum quoted in the text. */
+writeSpreadsheet('simple/data/budget.ic', 'Budget', (model) => {
+  const costs = [
+    ['Train tickets', 120],
+    ['Hotel, two nights', 180],
+    ['Museum pass', 35],
+  ];
+  table(model, ['Item', 'Cost (€)'], costs);
+  const total = costs.length + 2;
+  model.setUserInput(0, total, 1, 'Total');
+  model.setUserInput(0, total, 2, `=SUM(B2:B${total - 1})`);
+  model.updateRangeStyle({ sheet: 0, row: total, column: 1, width: 2, height: 1 }, 'font.b', 'true');
+  model.setColumnsWidth(0, 1, 1, 130);
+});
+
+/** The advanced example's cold compile times (ms) of three runs per document size, with their median; made up. */
+writeSpreadsheet('advanced/data/compile-times.ic', 'Runs', (model) => {
+  const runs = [
+    [1, 17, 18, 19],
+    [10, 92, 95, 99],
+    [50, 401, 410, 423],
+    [100, 806, 820, 851],
+  ];
+  table(model, ['Pages', 'Run 1', 'Run 2', 'Run 3', 'Median'], runs);
+  runs.forEach((_, index) => model.setUserInput(0, index + 2, 5, `=MEDIAN(B${index + 2}:D${index + 2})`));
+  model.updateRangeStyle({ sheet: 0, row: 1, column: 5, width: 1, height: runs.length + 1 }, 'font.b', 'true');
+});
+
+/** Builds the one-sheet spreadsheet `path` (under demo/examples/) with `fill`, then writes it and its Typst file. */
+function writeSpreadsheet(path, sheet, fill) {
+  const name = path.slice(path.lastIndexOf('/') + 1);
+  const model = new Model(name.replace(/\.ic$/, ''), 'en', 'UTC', 'en');
+  model.renameSheet(0, sheet);
+  fill(model);
+  model.evaluate();
+  const file = new URL(`../../demo/examples/${path}`, import.meta.url);
+  mkdirSync(new URL('.', file), { recursive: true });
+  writeFileSync(file, model.toBytes());
+  writeFileSync(new URL(typstPath(name), file), spreadsheetTypst(model, name));
+}
+
+/** `header` (bold, tinted) in row 1 and `rows` below it, from column A; every column 80 px wide. */
+function table(model, header, rows) {
+  header.forEach((title, index) => model.setUserInput(0, 1, index + 1, title));
+  rows.forEach((values, index) => values.forEach((value, column) => model.setUserInput(0, index + 2, column + 1, String(value))));
+  const headerRow = { sheet: 0, row: 1, column: 1, width: header.length, height: 1 };
+  model.updateRangeStyle(headerRow, 'font.b', 'true');
+  model.updateRangeStyle(headerRow, 'fill.fg_color', '#E8EEF7');
+  model.setColumnsWidth(0, 1, header.length, 80);
+}
