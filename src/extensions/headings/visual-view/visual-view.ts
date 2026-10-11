@@ -1,7 +1,8 @@
 // What the headings extension contributes to the Visual view: the heading spec (`= Title` as Tiptap's heading node,
 // with the label right after it) and the heading numbers. See headings.ts.
 import { children } from '../../../core/typst-syntax/typst-syntax';
-import { starterKitPart, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import type { TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import { starterKitPart } from '../../../hosts/projection/projection';
 
 /**
  * `= Title` .. `====== Title` (deeper levels count as 6): a heading of its own

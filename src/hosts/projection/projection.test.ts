@@ -1,12 +1,11 @@
-// Tests for hosts/projection: the framework with the Visual view host's own nodes (paragraphs, text, raw Typst) and
-// specs defined here. The built-in extensions' specs are tested together in typst-editor/typst-editor.projection.test.ts.
+// Tests for hosts/projection: the framework with the minimum schema (paragraphs, text, raw Typst) and specs defined
+// here. The built-in extensions' specs are tested together in typst-editor/typst-editor.projection.test.ts.
 import { Node as TiptapNode } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
-import { createSchema, starterKitPart } from './visual-view';
 import { children, parenthesized } from '../../core/typst-syntax/typst-syntax';
-import { posToSource, print, project as projectWith, sourceToPos, type MarkGrammar, type NodeGrammar } from '../projection/projection';
+import { createSchema, posToSource, print, project as projectWith, sourceToPos, starterKitPart, type MarkGrammar, type NodeGrammar } from './projection';
 
 /** `*x*` as a bold mark: hidden syntax around visible text. */
 const STRONG: MarkGrammar = {
@@ -30,7 +29,7 @@ const DIVIDER: NodeGrammar = {
   blockCalls: { divider: (p, call, sep) => (parenthesized(call.args) ? p.schema.nodes.divider.create({ src: p.text(call), sep }) : null) },
 };
 
-const hostOnly = createSchema([], []);
+const minimum = createSchema([], []);
 const withSpecs = createSchema([DIVIDER], [STRONG]);
 
 function edit(doc: Node, change: (state: EditorState) => EditorState['tr']): Node {
@@ -60,13 +59,13 @@ const SOURCES: Record<string, string> = {
 describe('projection framework', () => {
   describe('round-trips byte for byte', () => {
     for (const [name, source] of Object.entries(SOURCES)) {
-      it(`${name}, with the host's nodes only`, () => expect(print(projectWith(source, hostOnly))).toBe(source));
+      it(`${name}, with the minimum schema only`, () => expect(print(projectWith(source, minimum))).toBe(source));
       it(`${name}, with specs`, () => expect(print(projectWith(source, withSpecs))).toBe(source));
     }
   });
 
-  it("keeps what no spec models as raw blocks and raw inlines (the host's fallback)", () => {
-    const doc = projectWith('= Title\n\nSome *bold* text\n', hostOnly);
+  it("keeps what no spec models as raw blocks and raw inlines (the fallback)", () => {
+    const doc = projectWith('= Title\n\nSome *bold* text\n', minimum);
     expect(doc.child(0).type.name).toBe('rawBlock');
     expect(doc.child(1).type.name).toBe('paragraph');
     expect(doc.child(1).textContent).toBe('Some  text');

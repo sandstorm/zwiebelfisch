@@ -1,19 +1,18 @@
 // VisualView: the WYSIWYG editing view, a Tiptap editor over the source-anchored projection of a TypstDocument;
 // everything it shows beyond paragraphs and raw Typst is contributed through VisualViewContributions.
 // Entry of hosts/visual-view/. See ARCHITECTURE.md, "VisualView".
-import { Editor, getSchema, type AnyExtension, type ChainedCommands } from '@tiptap/core';
-import StarterKit, { type StarterKitOptions } from '@tiptap/starter-kit';
+import { Editor, type AnyExtension, type ChainedCommands } from '@tiptap/core';
 import { StateEffect, type Extension as CodeExtension } from '@codemirror/state';
-import type { Node, Schema } from '@tiptap/pm/model';
+import type { Node } from '@tiptap/pm/model';
 import { EditorState, TextSelection, type Plugin, type Transaction } from '@tiptap/pm/state';
 import type { Decoration } from '@tiptap/pm/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
-import { nodeGrammar, onDidChangeGrammar, posToSource, print, project, sourceToPos, syncDoc, type MarkGrammar, type NodeGrammar } from '../projection/projection';
+import { attachGrammar, nodeGrammar, onDidChangeGrammar, posToSource, print, project, sourceToPos, syncDoc, type MarkGrammar, type NodeGrammar } from '../projection/projection';
 import type { Anchor } from '../../ui/floating-bar/floating-bar';
 import { highlights, setHighlights } from './highlights';
-import { attachSpecs, editorExtensions } from './nodes/nodes';
+import { editorExtensions } from './nodes/node-views';
 import type { Boxes } from './nodes/raw-box';
 import { Toolbar } from './toolbar/toolbar';
 
@@ -64,7 +63,7 @@ export class VisualView {
       },
     });
     const { schema } = this.editor;
-    attachSpecs(schema, contributed.nodes, contributed.marks);
+    attachGrammar(schema, contributed.nodes, contributed.marks);
     this.gutters = contributed.gutters.map((provider) => provider(view, body));
     // Load the projection itself (not a JSON copy): its node identities are what marks blocks as untouched.
     this.editor.view.updateState(
@@ -568,25 +567,3 @@ export type ToolbarItem =
       /** The item for one view, when it keeps state there (a popover) or is a control of its own. */
       create(toolbar: ToolbarContext): Action | ToolbarControl;
     };
-
-// The schema: the host's own nodes and the specs'.
-
-/** A schema of `nodes` and `marks` with its grammar attached (an `Editor` builds an equal but distinct instance). */
-export function createSchema(nodes: readonly NodeGrammar[], marks: readonly MarkGrammar[]): Schema {
-  const schema = getSchema(editorExtensions(nodes, marks, null));
-  attachSpecs(schema, nodes, marks);
-  return schema;
-}
-
-/**
- * Some of Tiptap's StarterKit as one extension named `name`: the parts in
- * `parts` (with their options), no others. (The parts' own packages are not
- * dependencies of this package; StarterKit is.)
- */
-export function starterKitPart(name: string, parts: Partial<StarterKitOptions>): AnyExtension {
-  // every part off but those in `parts` (a list in the function: nodes/nodes.ts calls it while this module loads)
-  const all: readonly (keyof StarterKitOptions)[] = ['blockquote', 'bold', 'bulletList', 'code', 'codeBlock', 'document', 'dropcursor', 'gapcursor', 'hardBreak', 'heading', 'undoRedo',
-  'horizontalRule', 'italic', 'listItem', 'listKeymap', 'link', 'orderedList', 'paragraph', 'strike', 'text', 'underline', 'trailingNode',];
-  const options = Object.fromEntries(all.map((part) => [part, part in parts ? parts[part] : false]));
-  return StarterKit.extend({ name }).configure(options);
-}

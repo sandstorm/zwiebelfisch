@@ -40,13 +40,17 @@ src/                        the widget (TypeScript); the most important API on t
                             memory/ (SessionMemory: `remember`, the values kept for the browser session)
     visual-view/            VisualView (Tiptap over the projection) and its contribution points, all in visual-view.ts:
                             VisualViewContributions, TypstNodeSpec / TypstMarkSpec, toolbar items and groups, box
-                            renderers / tools / actions, gutters, highlights, VisualViewContext, svg, starterKitPart,
-                            createSchema; nodes/ (the host's own nodes, the raw box), toolbar/, highlights.ts
+                            renderers / tools / actions, gutters, highlights, VisualViewContext, svg; nodes/
+                            (node-views.ts: kept DOM and raw box node views over the projection's schema; the raw
+                            box), toolbar/, highlights.ts
     projection/             the source-anchored projection between Typst text and the Visual view's ProseMirror
-                            document (projection.ts: project, print, syncDoc, the position maps, the spec contract
-                            NodeGrammar / MarkGrammar / ProjectionContext / Printer); grammar.ts, projecting.ts,
-                            printing.ts, labels.ts, pristine.ts. Not a view: the Visual view host's mechanism, a
-                            module of its own so specs and tests reach it through its entry
+                            document, and the minimum schema it needs (projection.ts: project, print, syncDoc, the
+                            position maps, the spec contract NodeGrammar / MarkGrammar / ProjectionContext / Printer,
+                            createSchema / documentExtensions / attachGrammar, starterKitPart, BASE_NODES);
+                            schema.ts (document, raw block / inline, soft break, the typstSource mark, source
+                            anchors), grammar.ts, projecting.ts, printing.ts, labels.ts, pristine.ts. Not a view:
+                            the Visual view host's document model, a module of its own so specs and tests reach it
+                            through its entry, tested without a view
     source-view/            source-view.ts, all of it: SourceViewHost (registerExtension, createView: what
                             `ExtensionContext.sourceView` is), the contribution types, `fromDocument`, and SourceView
                             (CodeMirror 6 bound to a TypstDocument)
@@ -782,9 +786,9 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
   collaboration extension's, drawn through the generic points (highlights, an editor extension, a box code
   extension, the context's position map). Every other
   construct (headings, lists, tables, …) is an extension (`extensions/<name>/visual-view/`) and every
-  feature shown in the view (labels, comments, styles, …) a contribution of its extension, using only the entries: the Visual view's (the contribution types, `starterKitPart`, `createSchema`), the
-  projection's (the spec contract: `ProjectionContext`, `Call`, `Placed`, `Printer`, …; and for tests `project` /
-  `print` / `syncDoc` / `posToSource` / `sourceToPos`), core's `typst-syntax` (reading syntax nodes), and
+  feature shown in the view (labels, comments, styles, …) a contribution of its extension, using only the entries: the Visual view's (the contribution types), the
+  projection's (the spec contract: `ProjectionContext`, `Call`, `Placed`, `Printer`, …; `starterKitPart`; and for
+  tests `createSchema`, `project` / `print` / `syncDoc` / `posToSource` / `sourceToPos`), core's `typst-syntax` (reading syntax nodes), and
   `testing/` for the built-ins together). The widget's built-in extension list activates them (see
   "createTypstEditor").
 - **Specs** (`TypstNodeSpec` / `TypstMarkSpec`; their `NodeGrammar` / `MarkGrammar` in `projection/projection.ts`): one per construct —
@@ -808,15 +812,15 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
   higher mark nests outside a lower one), which of the projectors of the same syntax or call is asked first
   (task lists, 110, before bullet lists: a task item is a bullet item `- [ ]`), and which box renderer draws a
   raw box (images' renderer, 110, before compiled snippets). Toolbar items keep `group` + `order`. `attachGrammar` puts the specs on the schema (`schema.cached`), so `project(text,
-  schema)` and `print(doc)` find them; `VisualView` attaches them to its editor's schema, tests use
-  `createSchema` (the host's tests with their own specs; the built-ins' `schema` of `testing/testing.ts`).
+  schema)` and `print(doc)` find them; `VisualView` builds its editor from `documentExtensions` and attaches them to the editor's schema, tests use
+  `createSchema` (the projection's tests with their own specs; the built-ins' `schema` of `testing/testing.ts`).
 - **Per view**: providers get a `VisualViewContext` (`document`, `selection()`, `sourceToPos(doc, offset, bias?)` /
   `posToSource(doc, pos, bias?)`: the position map over a document node of the view, e.g. a transaction's;
   `isBox(node)`: shown as a box of its own); a toolbar item's
   `create(toolbar)` gets the `ToolbarContext` (the view's context, the editor, the toolbar's root, `subscriptions`
   disposed with it). Contributions are registered once and applied
   to every view created afterwards.
-- **Schema** (the host's `nodes/nodes.ts` and the built-ins' specs):
+- **Schema** (the projection's minimum schema, `projection/schema.ts` and `BASE_NODES`, and the built-ins' specs):
   - **Blocks:** `paragraph`, `heading`, and `bulletList` / `orderedList` > `listItem` (a `marker`
     attribute; content `(paragraph | rawBlock) block*`, so nested lists made with Tab print
     indented), plus `rawBlock`.

@@ -17,9 +17,9 @@ import { pageLayout } from '../extensions/page-layout/page-layout';
 import { tables } from '../extensions/tables/tables';
 import { imagesVisualView, type ImageAssets, type ImageLinks, type ImageUrls } from '../extensions/images/images';
 import { renderedBoxesVisualView, type SnippetSource } from '../extensions/rendered-boxes/rendered-boxes';
-import { createSchema, VisualView, VisualViewContributions, type ContributionContext, type VisualViewContribution } from '../hosts/visual-view/visual-view';
+import { VisualView, VisualViewContributions, type ContributionContext, type VisualViewContribution } from '../hosts/visual-view/visual-view';
 import type { InputBoxOptions, MessageItem, QuickPickItem, QuickPickOptions, Workbench } from '../hosts/workbench/workbench';
-import { posToSource, print, project as projectWith, sourceToPos } from '../hosts/projection/projection';
+import { createSchema, posToSource, print, project as projectWith, sourceToPos } from '../hosts/projection/projection';
 
 /** The schema of a view with the built-ins configured from `options`. */
 export function schemaWith(options: TestViewOptions = {}): Schema {
