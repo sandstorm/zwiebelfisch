@@ -62,6 +62,17 @@ describe('demo examples', () => {
     expect(files['/data/compile-times.ic']).toEqual(new Uint8Array(onDisk));
     expect(files['/data/compile-times.ic.gen.typ']).toMatch(/^\/\/ Generated from compile-times\.ic/);
   });
+
+  it('the documentation example is docs/: book, template, HTML entry and chapters, as text', () => {
+    const files = exampleFiles('docs');
+    expect(Object.keys(files)).toEqual(
+      expect.arrayContaining(['/main.typ', '/template.typ', '/site.typ', '/architecture/workbench.typ']),
+    );
+    for (const [path, content] of Object.entries(files)) {
+      expect(path).toMatch(/\.typ$/);
+      expect(typeof content).toBe('string');
+    }
+  });
 });
 
 describe('exampleFromQuery', () => {
@@ -69,6 +80,7 @@ describe('exampleFromQuery', () => {
     ['', 'hello'],
     ['?example=simple', 'simple'],
     ['?example=advanced&room=r&user=u', 'advanced'],
+    ['?example=docs', 'docs'],
     ['?example=nope', 'hello'],
   ])('"%s" → %s', (query, name) => {
     expect(exampleFromQuery(new URLSearchParams(query))).toBe(name);

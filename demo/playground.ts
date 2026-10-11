@@ -27,7 +27,7 @@ const USERS = ['Ann', 'Bob', 'Cleo', 'Dan'];
  *
  * | parameter  | |
  * |------------|---|
- * | `example`  | hello / simple / advanced (see examples.ts) |
+ * | `example`  | hello / simple / advanced / docs (see examples.ts) |
  * | `room`     | none: Local mode; `gitlab:…`: GitLab mode; else Collaborate mode in that room |
  * | `user`     | the name others see (default Ann in a room, so the second window can be Bob) |
  *

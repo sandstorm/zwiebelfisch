@@ -1,0 +1,14 @@
+/* The HTML site's look (site.typ copies it next to the pages); the book's look is in template.typ. */
+body {
+  max-width: 46rem;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  font: 16px/1.55 system-ui, sans-serif;
+  color: #1d1d1f;
+}
+pre, code { font: 0.9em ui-monospace, monospace; }
+pre { background: #f4f4f5; padding: 0.75rem; border-radius: 4px; overflow-x: auto; }
+table { border-collapse: collapse; }
+th, td { border: 1px solid #c8c8cc; padding: 0.3rem 0.6rem; text-align: left; }
+nav[role="doc-toc"] ol { padding-left: 1.2rem; }
+a { color: #0b5cad; }

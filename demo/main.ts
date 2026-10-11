@@ -1,5 +1,5 @@
 // The demo playground (docs/demo-playground.md). Its state is the URL:
-// `?example=hello|simple|advanced`, `?room=<name>` (Collaborate mode) or
+// `?example=hello|simple|advanced|docs`, `?room=<name>` (Collaborate mode) or
 // `?room=gitlab:demo/report@<branch>` (GitLab mode) on the local playground
 // server (`mise run demo`), `&user=<name>`. Without `room` (Local mode, the
 // default and what the static e2e build uses) it never talks to a server.

@@ -26,7 +26,7 @@ needs nothing else. `mise run server:dev-fake-gitlab` starts the playground serv
 
 | Control | What it does |
 |---|---|
-| **Examples**: Hello / Simple / Advanced | Picks the project (`?example=`). Hello is one short file. Simple is one file with lists, math, a link and a table. Advanced has several files: template, chapters, helpers and SVG images. In GitLab mode the repository sets the files, so these links are disabled. |
+| **Examples**: Hello / Simple / Advanced / Documentation | Picks the project (`?example=`). Hello is one short file. Simple is one file with lists, math, a link and a table. Advanced has several files: template, chapters, helpers and SVG images. Documentation is this project's own docs (`docs/**/*.typ`, bundled at build time): edit live, nothing is saved. In GitLab mode the repository sets the files, so these links are disabled. |
 | **Mode**: Local | Default. Everything runs in the tab and no server is contacted. The static e2e build uses this mode. |
 | **Mode**: Collaborate | Joins the room `playground-<example>` on the local server (`?room=`). The first person to join seeds the room with the example. After that, the room's text wins. |
 | **Mode**: GitLab (fake) | Joins `gitlab:demo/report@main`: the fake repository's `main` branch. |

@@ -32,6 +32,16 @@ test('the advanced example is a multi-page project with chapters and an image', 
   await expect(preview(page).locator('.typst-preview__page')).toHaveCount(3);
 });
 
+test('the documentation example is docs/ as a book with parts and chapters', async ({ page }) => {
+  await page.goto('/?example=docs');
+  await expect(examples(page).getByRole('link', { name: 'Documentation' })).toHaveAttribute('aria-current', 'page');
+  await expect(fileRow(page, 'template.typ')).toBeVisible();
+  await fileRow(page, 'architecture').click();
+  await expect(fileRow(page, 'architecture/workbench.typ')).toBeVisible();
+  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
+  await expect(preview(page).locator('.typst-preview__page').first()).toBeVisible();
+});
+
 test('switching examples keeps the other URL parameters', async ({ page }) => {
   await page.goto('/?example=simple&user=Ada');
   await examples(page).getByRole('link', { name: 'Advanced' }).click();

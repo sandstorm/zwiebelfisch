@@ -1,16 +1,18 @@
-// The demo's example projects: demo/examples/<name>/ as file maps (import.meta.glob).
+// The demo's example projects: demo/examples/<name>/ and docs/ as file maps (import.meta.glob).
 import type { ProjectFiles } from '../src';
 
 /**
- * The demo's example projects. Each one is a folder under `examples/` whose
- * files become the project's files: `examples/<name>/main.typ` → `/main.typ`,
+ * The demo's example projects. Each one is a folder whose files become the
+ * project's files: `examples/<name>/main.typ` → `/main.typ`,
  * `examples/<name>/chapters/a.typ` → `/chapters/a.typ`. Typst files are text,
- * everything else (images, spreadsheets) is passed as bytes.
+ * everything else (images, spreadsheets) is passed as bytes. "Documentation"
+ * is this project's own docs/ (its Typst files), editable but never saved.
  */
 export const EXAMPLES = [
-  { name: 'hello', label: 'Hello' },
-  { name: 'simple', label: 'Simple' },
-  { name: 'advanced', label: 'Advanced' },
+  { name: 'hello', label: 'Hello', folder: './examples/hello' },
+  { name: 'simple', label: 'Simple', folder: './examples/simple' },
+  { name: 'advanced', label: 'Advanced', folder: './examples/advanced' },
+  { name: 'docs', label: 'Documentation', folder: '../docs' },
 ] as const;
 
 export type ExampleName = (typeof EXAMPLES)[number]['name'];
@@ -18,7 +20,7 @@ export type ExampleName = (typeof EXAMPLES)[number]['name'];
 /** The example shown without `?example`; the e2e specs rely on its content. */
 export const DEFAULT_EXAMPLE: ExampleName = 'hello';
 
-const sources = import.meta.glob<string>('./examples/**/*.{typ,svg}', {
+const sources = import.meta.glob<string>(['./examples/**/*.{typ,svg}', '../docs/**/*.typ'], {
   query: '?raw',
   import: 'default',
   eager: true,
@@ -33,7 +35,7 @@ const binaries = import.meta.glob<string>('./examples/**/*.ic', {
 
 /** The files of an example project, keyed by absolute project path. */
 export function exampleFiles(name: ExampleName): ProjectFiles {
-  const prefix = `./examples/${name}`;
+  const prefix = EXAMPLES.find((example) => example.name === name)!.folder;
   const files: ProjectFiles = {};
   for (const [key, text] of Object.entries(sources)) {
     if (!key.startsWith(`${prefix}/`)) continue;
