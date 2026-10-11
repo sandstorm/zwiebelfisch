@@ -229,6 +229,15 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    warning; deleted files keep no D mark; `pristine` → WeakMap `unchangedNodes` + method
    `unchangedNode(type, attrs, content)`; `registerBoxRenderer` / `registerBoxAction` /
    `setBoxDecorations` → `…RawBox…`; then distill the working notes into the Typst docs.
+   **Right side: a secondary side bar** (user, 2026-10-11): like VS Code's primary / secondary side
+   bar. A right rail (as the left one) switches what the right side shows: the preview, the devtools,
+   later others; clicking the active one hides the right side (editor full width). Side panels
+   choose their side (`registerSidePanel(id, { …, side: 'primary' | 'secondary' })`); the preview
+   becomes the built-in secondary panel (it keeps compiling while hidden: diagnostics, raw box
+   snippets). Last choice remembered per viewer. **Devtools in the normal build**: an exported,
+   optional extension `devtools()` in `src/extensions/devtools/` (not in the built-in list; the demo
+   toggle adds it), on the secondary side bar. Runs after the devtools-readable and
+   selection-highlight merges.
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Rules wave also does:** core `onChange` → `onDidChange: Event` + `Disposable` everywhere
    (`Project`, `TypstDocument`, …) (user: yes).
