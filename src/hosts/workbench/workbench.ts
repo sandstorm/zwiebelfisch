@@ -22,7 +22,7 @@ import { Preview, type PreviewContributions, type PreviewProgress } from '../pre
 import { type Scm, ScmHost } from '../scm/scm';
 import { SourceViewHost, type SourceViewContributions } from '../source-view/source-view';
 import { VisualViewHost, type VisualViewContributions } from '../visual-view/visual-view';
-import { type EditorMode, type TextEditorSelectionChangeEvent, type WindowApi, WindowHost } from '../window/window';
+import { type TextEditorSelectionChangeEvent, type WindowApi, WindowHost } from '../window/window';
 import { type ConfigurationProperty, type Settings, type Workspace, WorkspaceHost } from '../workspace/workspace';
 import { ColorScheme } from './color-scheme/color-scheme';
 import { EditorTabs } from './editor-tabs/editor-tabs';
@@ -35,7 +35,7 @@ import { StorageMemento } from './memento/memento';
 import { StyleSheets } from './style-sheets/style-sheets';
 import { commandSearch } from './search/command-search';
 import { settingSearch } from './search/setting-search';
-import { TypstEditors, VIEW_TYPES } from './typst-editors/typst-editors';
+import { TypstEditors } from './typst-editors/typst-editors';
 import css from './workbench.css?inline';
 
 /**
@@ -157,7 +157,7 @@ export interface Workbench {
    * Adds `item` to the menu `menuId` until disposed (VS Code's `contributes.menus`). Whoever shows a menu renders
    * the items whose `when` holds there, sorted by `group` and `order`, and runs an item's command with the menu's
    * arguments. The workbench shows `editor/title`: the editing area's tab bar, while the shown file has several
-   * editors (context: `editorMode` (the Typst view shown, else undefined), `resource` (the shown file); no
+   * editors (context: `activeCustomEditorId` (the view type of the editor shown), `resource` (the shown file); no
    * arguments). Other ids are menus that extensions show (`window.showContextMenu`), documented there (the file
    * panel: `file/newFile`, `explorer/context`).
    */
@@ -190,7 +190,7 @@ export interface MenuItem {
   readonly order?: number;
 }
 
-/** What a menu is shown for (VS Code's context keys), by key, e.g. `{ editorMode: 'source', resource: '/main.typ' }`. */
+/** What a menu is shown for (VS Code's context keys), by key, e.g. `{ activeCustomEditorId: 'sourceView.editor', resource: '/main.typ' }`. */
 export type MenuContext = Readonly<Record<string, unknown>>;
 
 export interface OpenOptions {
@@ -250,8 +250,11 @@ export interface Memento {
 export const PROJECT_PATH_TYPE = 'application/x-typst-project-path';
 
 export interface WorkbenchOptions {
-  /** The view Typst files open in until the user chooses the other one (default: visual). */
-  mode?: EditorMode;
+  /**
+   * The custom editor the main file opens in (its view type), the user's choice until they pick another tab; default:
+   * the one its name picks (for Typst files the Visual view).
+   */
+  viewType?: string;
   /** Who works here (`Workbench.user`). */
   user?: User;
   /**
@@ -280,6 +283,8 @@ export interface WorkbenchOptions {
  */
 export class WorkbenchHost implements Workbench {
   #active: ProjectPath;
+  /** The view type of the custom editor shown; undefined while none is. */
+  #activeCustomEditorId: string | undefined;
   /** The commands, for the widget's `executeCommand`. */
   readonly commands: CommandsHost;
   readonly #layout: WorkbenchLayout;
@@ -331,7 +336,7 @@ export class WorkbenchHost implements Workbench {
     this.#drops = new FileDrops(host);
     this.onDidDropFiles = this.#drops.onDidDrop;
     this.#editorTitle = new EditorTitleMenu(host.ownerDocument, this.#menus, {
-      context: () => ({ editorMode: this.#typstEditors.activeTextEditor?.mode, resource: this.#active }),
+      context: () => ({ activeCustomEditorId: this.#activeCustomEditorId, resource: this.#active }),
       executeCommand: (command) => this.commands.executeCommand(command),
     });
     this.#tabs = new EditorTabs(doc, this.#editorTitle.element, (viewType) => this.open(this.#active, { viewType }));
@@ -385,7 +390,7 @@ export class WorkbenchHost implements Workbench {
     this.#declaredCommands = extensions.flatMap((extension) => extension.contributes?.commands ?? []);
     this.#workspace.check();
     this.#extensions.activate(extensions);
-    this.open(this.project.main, { viewType: this.options.mode && VIEW_TYPES[this.options.mode] });
+    this.open(this.project.main, { viewType: this.options.viewType });
     this.#compile();
   }
 
@@ -410,9 +415,9 @@ export class WorkbenchHost implements Workbench {
     if (!this.project.has(path)) return;
     const changed = path !== this.#active;
     this.#active = path;
-    const viewType = this.window.showCustomEditor({ path, content: this.project.content(path)! }, options.viewType);
+    this.#activeCustomEditorId = this.window.showCustomEditor({ path, content: this.project.content(path)! }, options.viewType);
     if (options.selection) this.#typstEditors.activeTextEditor?.revealRange(options.selection);
-    this.#tabs.update(this.window.customEditorChoices(path), viewType);
+    this.#tabs.update(this.window.customEditorChoices(path), this.#activeCustomEditorId);
     this.#placeFrame();
     this.#shown.fire(path);
     this.#editorTitle.update();

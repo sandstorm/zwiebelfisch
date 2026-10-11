@@ -78,6 +78,12 @@ interface Contributions {
 }
 
 /**
+ * The view type of the Source view's custom editor, for `workbench.open(path, { viewType })`,
+ * `TextEditor.viewType` and the menu context key `activeCustomEditorId`.
+ */
+export const SOURCE_VIEW_TYPE = 'sourceView.editor';
+
+/**
  * The plain-Typst editing view (CodeMirror 6), kept in sync with a
  * TypstDocument in both directions. Made by `SourceViewHost.createView`.
  */

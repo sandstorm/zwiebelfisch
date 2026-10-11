@@ -3,6 +3,7 @@
 // never a registry of the editor's own, so one read model (TypstStyleIndex) follows the whole
 // project, and every document's Visual view shows the styles' calls as styled text and applies them from the text
 // style menu, importing a style where it is used. See docs/10_guide/02_features.typ.
+import { SOURCE_VIEW_TYPE } from '../../hosts/source-view/source-view';
 import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
 import css from './styles.css?inline';
 import { calculateNewStyleChange } from './model/new-style';
@@ -50,5 +51,5 @@ async function addNewStyle(index: TypstStyleIndex, { project, window, workspace,
     const problem = await workspace.applyEdit({ kind: 'create', path, content: change.insert });
     if (problem !== null) return void window.showErrorMessage(`The style was not added: ${problem}`);
   }
-  workbench.open(path, { selection: definition, viewType: 'sourceView.editor' });
+  workbench.open(path, { selection: definition, viewType: SOURCE_VIEW_TYPE });
 }

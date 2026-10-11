@@ -43,7 +43,7 @@ workbench.registerMenuItem('explorer/context', {
 #table(
   columns: 4,
   [Menu], [Where], [Context], [Command gets],
-  [`editor/title`], [The editing area's tab bar, shown while the file has several editors], [`editorMode` (`'visual'` | `'source'`; undefined for other editors), `resource`], [nothing],
+  [`editor/title`], [The editing area's tab bar, shown while the file has several editors], [`activeCustomEditorId` (the shown editor's view type, any editor), `resource`], [nothing],
   [`file/newFile`], ["New" in the file panel's header], [`view: 'files'`, `resource`, `resourceKind` (`'file'` | `'folder'`), `resourceIsMain`], [the row's path],
   [`explorer/context`], [A file panel row's context menu], [as `file/newFile`], [the row's path],
 )
@@ -136,8 +136,8 @@ The built-in providers:
 - *Read* through `project`: `files()`, `paths()`, `has(path)`, `document(path)` (a Typst file's `TypstDocument`, `.text`), `content(path)`, `onDidChangeFile` (an `Event<FileChange>`).
 - *Change* through `workspace.applyEdit(change)`, never `project.apply`. It checks the project's rules, then the host's `allowFileChange`, and resolves to the reason it was refused, or `null`.
 - `FileChange`: `{ kind: 'create' | 'update', path, content }`, `{ kind: 'delete', path }`, `{ kind: 'rename', path, from }`.
-- *Show* with `workbench.open(path, { selection?, viewType? })` (`selection`: a `SourceRange` of a Typst file; `viewType`: the editor, e.g. `'sourceView.editor'`); `window.activeFile` and `window.onDidChangeActiveFile` say what is shown.
-- *The Typst editor*: `window.activeTextEditor` (`document`, `mode`, `selection` as a `SourceRange`, `revealRange(range)`; `null` while another kind of file is shown) and `window.onDidChangeTextEditorSelection`.
+- *Show* with `workbench.open(path, { selection?, viewType? })` (`selection`: a `SourceRange` of a Typst file; `viewType`: the editor, e.g. `SOURCE_VIEW_TYPE`, `'sourceView.editor'`); `window.activeFile` and `window.onDidChangeActiveFile` say what is shown.
+- *The Typst editor*: `window.activeTextEditor` (`document`, `viewType`: the view it was shown in last, `VISUAL_VIEW_TYPE` or `SOURCE_VIEW_TYPE`, `selection` as a `SourceRange`, `revealRange(range)`; `null` while another kind of file is shown) and `window.onDidChangeTextEditorSelection`.
 - *Dropped files*: `workbench.onDidDropFiles` gets the `File[]` dropped on the widget that no view took.
 
 == Custom editors <extensions-workbench-api-custom-editors>
@@ -167,8 +167,8 @@ The built-in ones, to beat or to leave alone:
 #table(
   columns: 3,
   [View type], [Pattern], [Priority],
-  [`visualView.editor`], [`*.typ`: the Visual view, retained], [default (registered first)],
-  [`sourceView.editor`], [`*.typ`: the Source view, retained], [default],
+  [`visualView.editor` (`VISUAL_VIEW_TYPE`)], [`*.typ`: the Visual view, retained], [default (registered first)],
+  [`sourceView.editor` (`SOURCE_VIEW_TYPE`)], [`*.typ`: the Source view, retained], [default],
   [`diagrams.editor`], [`*.drawio.png`], [110],
   [`spreadsheets.editor`], [`*.ic`], [default],
   [`images.preview`], [`*.{png,jpg,jpeg,gif,svg,webp}`], [default],

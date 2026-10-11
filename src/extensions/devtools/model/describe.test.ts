@@ -7,7 +7,7 @@ class TypstDocument {}
 /** As the hosts make them: private state, public fields, a getter, methods. */
 class DocumentEditor {
   readonly #views = { visual: 1 };
-  mode = 'visual';
+  viewType = 'visualView.editor';
   readonly _internal = 1;
 
   constructor(readonly document: TypstDocument) {}
@@ -33,8 +33,8 @@ describe('formatValue', () => {
 
   it('shows class instances by their class, public fields and getters, without methods or private state', () => {
     const { text, line } = formatValue({ textEditor: new DocumentEditor(new TypstDocument()) });
-    expect(text).toBe(['{', '  textEditor: DocumentEditor {', '    document: TypstDocument {},', '    mode: "visual",', '    selection: { from: 1, to: 3 }', '  }', '}'].join('\n'));
-    expect(line).toBe('{ textEditor: DocumentEditor { document: TypstDocument {}, mode: "visual", selection: { from: 1, to: 3 } } }');
+    expect(text).toBe(['{', '  textEditor: DocumentEditor {', '    document: TypstDocument {},', '    viewType: "visualView.editor",', '    selection: { from: 1, to: 3 }', '  }', '}'].join('\n'));
+    expect(line).toBe('{ textEditor: DocumentEditor { document: TypstDocument {}, viewType: "visualView.editor", selection: { from: 1, to: 3 } } }');
   });
 
   it('names elements, functions, bytes, maps and sets; marks cycles', () => {

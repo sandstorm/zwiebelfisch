@@ -2,6 +2,7 @@
 // docs/10_guide/02_features.typ.
 import { ProjectPath } from '../../../core/paths/paths';
 import type { TextChange } from '../../../core/typst-document/typst-document';
+import { VISUAL_VIEW_TYPE } from '../../../hosts/visual-view/visual-view';
 import type { SearchProvider, TextEditor, WindowApi } from '../../../hosts/window/window';
 import type { TypstStyle } from '../model/discover';
 import { calculateStyleWrap } from '../model/style-wrap';
@@ -20,7 +21,7 @@ const STYLE_APPLY = 'style-apply';
 export function styleSearch(styles: ProjectStyles, applier: Pick<StyleApplier, 'apply'>, window: Pick<WindowApi, 'activeTextEditor' | 'showInformationMessage'>): SearchProvider {
   const apply = (style: TypstStyle) => {
     const editor = window.activeTextEditor;
-    const applied = editor && (editor.mode === 'visual' ? applier.apply(editor.document, style) : wrapInSource(editor, style, styles));
+    const applied = editor && (editor.viewType === VISUAL_VIEW_TYPE ? applier.apply(editor.document, style) : wrapInSource(editor, style, styles));
     if (!applied) void window.showInformationMessage(`${style.label} cannot be applied here: select text in a Typst file.`);
   };
   return {

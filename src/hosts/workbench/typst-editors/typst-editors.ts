@@ -4,12 +4,9 @@
 import { Disposable } from '../../../core/disposable/disposable';
 import type { Project } from '../../../core/project/project';
 import type { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
-import { type SourceView, SourceViewHost } from '../../source-view/source-view';
-import { VisualView, VisualViewHost } from '../../visual-view/visual-view';
-import type { CustomEditorPanel, EditorMode, TextEditor, WindowApi } from '../../window/window';
-
-/** The view type of each mode's custom editor. */
-export const VIEW_TYPES: Readonly<Record<EditorMode, string>> = { visual: 'visualView.editor', source: 'sourceView.editor' };
+import { SOURCE_VIEW_TYPE, type SourceView, SourceViewHost } from '../../source-view/source-view';
+import { VISUAL_VIEW_TYPE, VisualView, VisualViewHost } from '../../visual-view/visual-view';
+import type { CustomEditorPanel, TextEditor, WindowApi } from '../../window/window';
 
 export interface TypstEditorsOptions {
   /** What every document's Visual view shows and offers (default: paragraphs and raw Typst only). */
@@ -27,17 +24,18 @@ interface ShownView {
 
 /** A document's editor: the views it has (made when first shown), used through the one shown last. */
 export class DocumentEditor implements TextEditor {
-  readonly views: Partial<Record<EditorMode, ShownView>> = {};
-  mode: EditorMode = 'visual';
+  /** By view type. */
+  readonly views = new Map<string, ShownView>();
+  viewType: string = VISUAL_VIEW_TYPE;
 
   constructor(readonly document: TypstDocument) {}
 
   get selection(): SourceRange {
-    return this.views[this.mode]!.view.selection();
+    return this.views.get(this.viewType)!.view.selection();
   }
 
   revealRange(range: SourceRange): void {
-    this.views[this.mode]!.view.reveal(range);
+    this.views.get(this.viewType)!.view.reveal(range);
   }
 }
 
@@ -65,11 +63,14 @@ export class TypstEditors {
   /** Registers the Visual and the Source view as the custom editors of `*.typ`, Visual first: the default. */
   register(window: Pick<WindowApi, 'registerCustomEditorProvider'>): Disposable {
     return Disposable.from(
-      ...(['visual', 'source'] as const).map((mode) =>
+      ...[
+        { viewType: VISUAL_VIEW_TYPE, displayName: 'Visual' },
+        { viewType: SOURCE_VIEW_TYPE, displayName: 'Source' },
+      ].map(({ viewType, displayName }) =>
         window.registerCustomEditorProvider(
-          VIEW_TYPES[mode],
-          { resolveCustomEditor: (file, panel) => this.#resolve(mode, this.project.document(file.path)!, panel) },
-          { filenamePattern: '*.typ', displayName: mode === 'visual' ? 'Visual' : 'Source', retainContextWhenHidden: true },
+          viewType,
+          { resolveCustomEditor: (file, panel) => this.#resolve(viewType, this.project.document(file.path)!, panel) },
+          { filenamePattern: '*.typ', displayName, retainContextWhenHidden: true },
         ),
       ),
     );
@@ -91,7 +92,7 @@ export class TypstEditors {
     this.#placeFrame();
   }
 
-  #resolve(mode: EditorMode, document: TypstDocument, panel: CustomEditorPanel): void {
+  #resolve(viewType: string, document: TypstDocument, panel: CustomEditorPanel): void {
     let editor = this.#editors.get(document);
     if (!editor) this.#editors.set(document, (editor = new DocumentEditor(document)));
     const owner = editor;
@@ -99,35 +100,35 @@ export class TypstEditors {
     element.classList.add('typst-editor__pane');
     const selected = () => this.options.onSelection?.(owner);
     const view =
-      mode === 'visual'
+      viewType === VISUAL_VIEW_TYPE
         ? new VisualView(element, document, this.#visualView)
         : this.#sourceViews.createView(element, document, { onSelection: selected });
     // disposed with the view
     if (view instanceof VisualView) view.onDidChangeSelection(selected);
-    editor.views[mode] = { view, panel };
+    editor.views.set(viewType, { view, panel });
     const followVisibility = () => {
-      if (panel.visible) this.#shown(owner, mode);
-      else if (this.#active === owner && owner.mode === mode) this.#shown(null, mode);
+      if (panel.visible) this.#shown(owner, viewType);
+      else if (this.#active === owner && owner.viewType === viewType) this.#shown(null, viewType);
     };
     followVisibility();
     panel.onDidChangeViewState(followVisibility);
     panel.onDidDispose(() => {
-      if (this.#active === owner && owner.mode === mode) this.#shown(null, mode);
+      if (this.#active === owner && owner.viewType === viewType) this.#shown(null, viewType);
       view.dispose();
-      delete owner.views[mode];
-      if (!owner.views.visual && !owner.views.source) this.#editors.delete(document);
+      owner.views.delete(viewType);
+      if (owner.views.size === 0) this.#editors.delete(document);
     });
   }
 
-  #shown(editor: DocumentEditor | null, mode: EditorMode): void {
+  #shown(editor: DocumentEditor | null, viewType: string): void {
     this.#removeFrame();
-    if (editor) editor.mode = mode;
+    if (editor) editor.viewType = viewType;
     this.#active = editor;
     this.#placeFrame();
   }
 
   #placeFrame(): void {
-    const shown = this.#active?.views[this.#active.mode];
+    const shown = this.#active?.views.get(this.#active.viewType);
     if (!this.#frame || !shown) return;
     const pane = shown.panel.element;
     // the Visual view's toolbar stays on top; the Source view is all content

@@ -7,6 +7,8 @@ import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
 import { SourceRange, type TypstDocument } from '../../core/typst-document/typst-document';
 import type { PreviewOptions, PreviewProgress } from '../preview/preview';
+import { SOURCE_VIEW_TYPE } from '../source-view/source-view';
+import { VISUAL_VIEW_TYPE } from '../visual-view/visual-view';
 import { type ExtensionContext, WorkbenchHost, type WorkbenchOptions } from './workbench';
 
 /** The options the workbench gave the (mocked) preview made last: how it hears the preview's progress. */
@@ -38,7 +40,7 @@ const path = ProjectPath.of;
 function setup(activate: (context: ExtensionContext) => void = () => {}, options: WorkbenchOptions = {}) {
   const host = document.body.appendChild(document.createElement('div'));
   const project = new Project(path('/main.typ'), { '/main.typ': '= Main\n', '/a.typ': 'A\n', '/logo.png': new Uint8Array([1]) });
-  const workbench = new WorkbenchHost(host, project, { mode: 'source', ...options });
+  const workbench = new WorkbenchHost(host, project, { viewType: SOURCE_VIEW_TYPE, ...options });
   let context: ExtensionContext | null = null;
   workbench.activate([{ id: 'test', activate: (given) => activate((context = given)) }]);
   return { host, project, workbench, context: context! };
@@ -133,7 +135,7 @@ describe('WorkbenchHost', () => {
         register('test.always'),
         register('test.visual'),
         register('test.other'),
-        workbench.registerMenuItem('editor/title', { command: 'test.visual', title: 'Visual only', when: (context) => context.editorMode === 'visual' }),
+        workbench.registerMenuItem('editor/title', { command: 'test.visual', title: 'Visual only', when: (context) => context.activeCustomEditorId === VISUAL_VIEW_TYPE }),
         workbench.registerMenuItem('editor/title', { command: 'test.always', title: 'Always', group: 'navigation', icon: '<svg></svg>' }),
         workbench.registerMenuItem('editor/title', { command: 'test.other', title: 'In a.typ', when: (context) => context.resource === '/a.typ' }),
       );
@@ -152,6 +154,23 @@ describe('WorkbenchHost', () => {
     const press = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
     actions()[0].dispatchEvent(press);
     expect(press.defaultPrevented).toBe(true); // the editor keeps its selection
+  });
+
+  it('names the shown editor in the editor/title context (`activeCustomEditorId`) for any file, not only Typst files', () => {
+    const { host, workbench } = setup(({ commands, window, workbench, subscriptions }) => {
+      for (const [viewType, displayName] of [['test.image', 'Image'], ['test.pixels', 'Pixels']]) {
+        subscriptions.push(window.registerCustomEditorProvider(viewType, { resolveCustomEditor: () => {} }, { filenamePattern: '*.png', displayName }));
+      }
+      subscriptions.push(
+        commands.registerCommand('test.zoom', () => {}),
+        workbench.registerMenuItem('editor/title', { command: 'test.zoom', title: 'Zoom', when: (context) => context.activeCustomEditorId === 'test.pixels' }),
+      );
+    });
+    const actions = () => [...host.querySelectorAll('[role=toolbar][aria-label="Editor actions"] button')].map((button) => button.textContent);
+    workbench.open(path('/logo.png'));
+    expect(actions()).toEqual([]);
+    workbench.open(path('/logo.png'), { viewType: 'test.pixels' });
+    expect(actions()).toEqual(['Zoom']);
   });
 
   it('gives extensions the menus registered for any id, sorted (navigation first, then groups by name, then order)', () => {
@@ -243,24 +262,24 @@ describe('WorkbenchHost', () => {
   });
 
   it('opens a file at a range, in the Source view when asked, which then stays the choice for Typst files', () => {
-    const { host, workbench, context } = setup(undefined, { mode: 'visual' });
+    const { host, workbench, context } = setup(undefined, { viewType: VISUAL_VIEW_TYPE });
     workbench.open(path('/a.typ'), { selection: SourceRange.of({ from: 0, to: 1 }), viewType: 'sourceView.editor' });
     const editor = context.window.activeTextEditor!;
     expect(editor.document.text).toBe('A\n');
-    expect(editor.mode).toBe('source');
+    expect(editor.viewType).toBe(SOURCE_VIEW_TYPE);
     expect(editor.selection).toEqual({ from: 0, to: 1 });
     expect(host.querySelector('[role=tab][aria-selected=true]')!.textContent).toBe('Source');
     workbench.open(path('/main.typ'));
-    expect(context.window.activeTextEditor!.mode).toBe('source');
+    expect(context.window.activeTextEditor!.viewType).toBe(SOURCE_VIEW_TYPE);
   });
 
   it('shows Typst files in the Visual and the Source view, custom editors with tabs, kept while hidden', () => {
-    const { host, workbench, context } = setup(undefined, { mode: 'visual' });
+    const { host, workbench, context } = setup(undefined, { viewType: VISUAL_VIEW_TYPE });
     const tabs = () => [...host.querySelectorAll<HTMLElement>('[role=tab]')];
     expect(tabs().map((tab) => [tab.textContent, tab.getAttribute('aria-selected')])).toEqual([['Visual', 'true'], ['Source', 'false']]);
     const visual = host.querySelector('.typst-editor__custom-editor[data-view-type="visualView.editor"]')!;
     tabs()[1].click();
-    expect(context.window.activeTextEditor!.mode).toBe('source');
+    expect(context.window.activeTextEditor!.viewType).toBe(SOURCE_VIEW_TYPE);
     expect(host.querySelector<HTMLElement>('.typst-editor__tabs')!.hidden).toBe(false);
     workbench.open(path('/logo.png'));
     expect(host.querySelector<HTMLElement>('.typst-editor__tabs')!.hidden).toBe(true);
@@ -285,7 +304,7 @@ describe('WorkbenchHost', () => {
 
   it('applies the Visual view contributions to the Visual view of each document', () => {
     const provider = vi.fn((_view: { document: TypstDocument }) => []);
-    const { workbench } = setup(({ visualView, subscriptions }) => subscriptions.push(visualView.registerTiptapExtension(provider)), { mode: 'visual' });
+    const { workbench } = setup(({ visualView, subscriptions }) => subscriptions.push(visualView.registerTiptapExtension(provider)), { viewType: VISUAL_VIEW_TYPE });
     workbench.open(path('/a.typ'));
     expect(provider.mock.calls.map(([view]) => view.document.text)).toEqual(['= Main\n', 'A\n']);
   });
@@ -383,7 +402,7 @@ describe('WorkbenchHost: search everywhere', () => {
   function setupSearch() {
     const host = document.body.appendChild(document.createElement('div'));
     const project = new Project(path('/main.typ'), { '/main.typ': '= Main\n' });
-    const workbench = new WorkbenchHost(host, project, { mode: 'source', settings: { 'test.color': 'blue' } });
+    const workbench = new WorkbenchHost(host, project, { viewType: SOURCE_VIEW_TYPE, settings: { 'test.color': 'blue' } });
     const ran: string[] = [];
     workbench.activate([
       {

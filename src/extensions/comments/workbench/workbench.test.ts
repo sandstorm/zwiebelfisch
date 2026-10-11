@@ -3,8 +3,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../../core/disposable/disposable';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
+import { SOURCE_VIEW_TYPE } from '../../../hosts/source-view/source-view';
 import type { TextEditor } from '../../../hosts/window/window';
-import { VisualView, VisualViewHost } from '../../../hosts/visual-view/visual-view';
+import { VISUAL_VIEW_TYPE, VisualView, VisualViewHost } from '../../../hosts/visual-view/visual-view';
 import { localDate } from '../model/note-thread';
 import { NOTE_STYLE } from '../model/add-margin-note';
 import { marginNotes } from '../visual-view/margin-notes';
@@ -32,7 +33,7 @@ function setup(editor: TextEditor | null, cards: NoteCards = { editNote: () => f
 }
 
 function sourceEditor(document: TypstDocument, selection: { from: number; to: number }): TextEditor {
-  return { document, mode: 'source', selection: SourceRange.of(selection), revealRange: vi.fn() };
+  return { document, viewType: SOURCE_VIEW_TYPE, selection: SourceRange.of(selection), revealRange: vi.fn() };
 }
 
 describe('comments.addComment', () => {
@@ -55,7 +56,7 @@ describe('comments.addComment', () => {
     view.reveal(SourceRange.of({ from: 6, to: 11 }));
     const editor: TextEditor = {
       document: doc,
-      mode: 'visual',
+      viewType: VISUAL_VIEW_TYPE,
       get selection() {
         return view.selection();
       },
