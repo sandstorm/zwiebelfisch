@@ -1,15 +1,16 @@
-/* The workbench host's styles: side panels (rail, resizable panel, narrow overlay), the editing area (tab bar, the
-   views' panes, the editor/title menu), the split to the preview and the status bar. Put in first by the workbench,
+/* The workbench host's styles: the two sides (rail, resizable panel; the left one an overlay when narrow), the
+   editing area (tab bar, the views' panes, the editor/title menu) and the status bar. Put in first by the workbench,
    after the tokens and the frame of typst-editor.css. See workbench.ts. */
 .typst-editor__side {
-  grid-column: 1;
   grid-row: 1;
   position: relative;
   display: flex;
+  min-width: 0;
   min-height: 0;
-  border-right: 1px solid var(--te-border);
   background: var(--te-subtle);
 }
+.typst-editor__side--left { grid-column: 1; border-right: 1px solid var(--te-border); }
+.typst-editor__side--right { grid-column: 3; border-left: 1px solid var(--te-border); }
 .typst-editor__side[hidden] { display: none; }
 .typst-editor__rail {
   display: flex;
@@ -39,41 +40,33 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  min-width: 0;
   min-height: 0;
-  max-width: 50vw;
-  border-left: 1px solid var(--te-border);
   background: var(--te-subtle);
 }
+/* left: as wide as its separator says; right: fills the column (a share of the widget, --te-right-side) */
+.typst-editor__side--left .typst-editor__panel { max-width: 50vw; border-left: 1px solid var(--te-border); }
+.typst-editor__side--right .typst-editor__panel { flex: 1; border-right: 1px solid var(--te-border); }
 .typst-editor__panel[hidden],
 .typst-editor__panel-body[hidden] { display: none; }
 .typst-editor__panel-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+/* the separator on the panel's inner edge */
 .typst-editor__resizer {
   position: absolute;
   top: 0;
-  right: -3px;
   bottom: 0;
-  width: 6px;
-  z-index: 3;
-  cursor: col-resize;
-}
-.typst-editor__resizer:hover,
-.typst-editor__resizer:focus-visible,
-.typst-editor--resizing .typst-editor__resizer { background: var(--te-jump); outline: none; }
-.typst-editor--resizing { cursor: col-resize; user-select: none; }
-/* Between editing area and preview: on the preview's left edge (inside it: it clips its overflow) */
-.typst-editor__split {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
   width: 6px;
   z-index: 5;
   cursor: col-resize;
 }
-.typst-editor__split:hover,
-.typst-editor__split:focus-visible { background: var(--te-jump); outline: none; }
-/* Narrow widget: an open panel lies over the editing area. */
-.typst-editor--narrow .typst-editor__panel {
+.typst-editor__side--left .typst-editor__resizer { right: -3px; }
+.typst-editor__side--right .typst-editor__resizer { left: -3px; }
+.typst-editor__resizer:hover,
+.typst-editor__resizer:focus-visible,
+.typst-editor--resizing .typst-editor__resizer { background: var(--te-jump); outline: none; }
+.typst-editor--resizing { cursor: col-resize; user-select: none; }
+/* Narrow widget: the left side's open panel lies over the editing area. */
+.typst-editor--narrow .typst-editor__side--left .typst-editor__panel {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -97,8 +90,8 @@
 /* The workbench's overlays (notifications, input boxes, quick picks, menus) are placed in the widget. */
 .typst-editor { position: relative; }
 /* The editing area: the tab bar (the shown file's editors), the Visual / Source views' panels, a dragged file over the widget. */
-.typst-editor__left .cm-editor { flex: 1; min-height: 0; }
-.typst-editor__left .cm-scroller { overflow: auto; }
+.typst-editor__editor-area .cm-editor { flex: 1; min-height: 0; }
+.typst-editor__editor-area .cm-scroller { overflow: auto; }
 .typst-editor__tabs {
   display: flex;
   gap: 4px;

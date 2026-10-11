@@ -55,8 +55,8 @@ const value = (page: Page) => () => page.locator('typst-editor').evaluate((el: E
 async function layout(page: Page) {
   const editor = page.locator('typst-editor');
   const box = async (locator: Locator) => (await locator.boundingBox())!;
-  const left = await box(editor.locator('.typst-editor__left'));
-  const right = await box(editor.locator('.typst-editor__right'));
+  const left = await box(editor.locator('.typst-editor__editor-area'));
+  const right = await box(editor.locator('.typst-editor__side--right'));
   const overflow = await editor
     .locator('.typst-editor__pane:visible')
     .evaluate((pane) => pane.scrollWidth - pane.clientWidth);

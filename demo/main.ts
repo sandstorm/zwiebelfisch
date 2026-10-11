@@ -3,9 +3,8 @@
 // `?room=gitlab:demo/report@<branch>` (GitLab mode) on the local playground
 // server (`mise run demo`), `&user=<name>`. Without `room` (Local mode, the
 // default and what the static e2e build uses) it never talks to a server.
-// `&devtools` adds the devtools side panel (devtools/devtools.ts).
-import { collaboration, createTypstEditor } from '../src';
-import { devtools } from './devtools/devtools';
+// `&devtools` adds the devtools side panel (the library's optional `devtools`).
+import { collaboration, createTypstEditor, devtools } from '../src';
 import { OpenFileHash } from './open-file-hash';
 import { editorOptions, playgroundFromQuery, userQuery } from './playground';
 import { renderPlaygroundBar } from './playground-bar';

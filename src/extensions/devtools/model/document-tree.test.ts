@@ -1,6 +1,6 @@
 // Tests for document-tree.ts.
 import { describe, expect, it } from 'vitest';
-import type { SourceOffset } from '../../../src';
+import type { SourceOffset } from '../../../core/typst-document/typst-document';
 import { documentRows, type DocumentNode } from './document-tree';
 
 /** A ProseMirror-shaped node: sizes as ProseMirror counts them (text: its length; others: content + 2, leaves 1). */

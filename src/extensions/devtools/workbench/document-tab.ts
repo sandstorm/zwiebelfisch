@@ -1,6 +1,6 @@
 // The devtools' Document tab: the shown file's ProseMirror document as a tree, each node with its source range; a
 // click selects a node's source. See devtools-panel.ts.
-import type { SourceRange } from '../../../src';
+import type { SourceRange } from '../../../core/typst-document/typst-document';
 import type { DocumentRow } from '../model/document-tree';
 import { element, type TabView } from './dom';
 

@@ -1,4 +1,5 @@
-// End-to-end tests (Playwright, against the demo build): the demo's devtools panel (`?devtools`, demo/devtools/).
+// End-to-end tests (Playwright, against the demo build): the devtools panel on the right side (`?devtools`,
+// src/extensions/devtools/).
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
 
@@ -6,6 +7,17 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/?devtools');
   await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Hello Typst');
   await page.getByTestId('typst-panel-toggle-devtools').click();
+});
+
+test('the devtools are on the right side in place of the preview, which keeps compiling', async ({ page }) => {
+  await expect(page.locator('.typst-editor__side--right').getByTestId('typst-devtools')).toBeVisible();
+  await expect(page.getByTestId('typst-preview')).toBeHidden();
+  await page.getByTestId('typst-visual').locator('h1').click();
+  await page.keyboard.type(' again');
+  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
+  await page.getByTestId('typst-panel-toggle-preview').click();
+  await expect(page.getByTestId('typst-devtools')).toBeHidden();
+  await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg').first()).toBeVisible();
 });
 
 test('the document tab shows the Visual view as nodes with their source ranges; a click selects one', async ({ page }) => {

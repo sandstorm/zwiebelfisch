@@ -43,7 +43,8 @@ describe('describeContribution', () => {
       details: ['menu files/context', 'group navigation', 'order 2', '→ files.rename'],
       rank: ['files/context', 0, 'navigation', 2],
     });
-    expect(describeAt('workbench.registerSidePanel', 'outline', { label: 'Outline', icon: {}, order: 20 })).toEqual({ title: 'outline', details: ['"Outline"', 'order 20'], rank: [20] });
+    expect(describeAt('workbench.registerSidePanel', 'outline', { label: 'Outline', icon: {}, order: 20 })).toEqual({ title: 'outline', details: ['"Outline"', 'left', 'order 20'], rank: ['left', 20] });
+    expect(describeAt('workbench.registerSidePanel', 'devtools', { label: 'Devtools', icon: {}, side: 'right' })).toEqual({ title: 'devtools', details: ['"Devtools"', 'right', 'order 0'], rank: ['right', 0] });
     expect(describeAt('window.registerStatusBarItem', { textContent: ' 12 words ', nodeName: 'SPAN' }, { alignment: 'right', priority: 5 })).toEqual({
       title: '12 words',
       details: ['right', 'priority 5'],

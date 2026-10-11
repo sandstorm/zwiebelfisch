@@ -1,4 +1,4 @@
-/* The widget's color tokens (--te-*) and its frame (the grid of side panels, editing area and preview), scoped under
+/* The widget's color tokens (--te-*) and its frame (the grid of the two sides and the editing area), scoped under
    .typst-editor and put in first by createTypstEditor. Each host brings its own stylesheet (hosts/<name>/<name>.css,
    added by the workbench), each extension its own (registerStyleSheet). See docs/guide/embedding.typ. */
 /* Colors: tokens as light-dark(light, dark). The widget follows the page's color-scheme (a page that
@@ -63,30 +63,21 @@
   background: var(--te-bg);
   color: var(--te-text);
   display: grid;
-  /* side panels (hosts/workbench/workbench.css) | editing view | preview. The preview is a share of the
-     widget (half; the separator sets --te-preview-share), so opening or resizing a side panel narrows
-     only the editing view (it keeps min(20rem, 25%), then the preview gives way too). */
-  grid-template-columns: auto minmax(min(20rem, 25%), 1fr) minmax(0, var(--te-preview-share, 50%));
+  /* left side | editing area | right side (hosts/workbench/workbench.css). An open right side is a share of the
+     widget (half; its separator sets --te-right-side), so opening or resizing the left side narrows only the editing
+     area (it keeps min(20rem, 25%), then the right side gives way too); a closed side is only its rail. */
+  grid-template-columns: auto minmax(min(20rem, 25%), 1fr) var(--te-right-side, auto);
   grid-template-rows: minmax(0, 1fr) auto;
   height: 100%;
   min-height: 0;
   border: 1px solid var(--te-border);
   font-family: system-ui, sans-serif;
 }
-.typst-editor__left {
+.typst-editor__editor-area {
   grid-column: 2;
   grid-row: 1;
   min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--te-border);
-}
-.typst-editor__right {
-  position: relative;
-  grid-column: 3;
-  grid-row: 1;
-  min-height: 0;
-  overflow: hidden;
-  background: var(--te-preview-bg);
 }

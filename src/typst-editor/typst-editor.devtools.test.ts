@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-// Tests for devtools.ts: the panel in a widget with every built-in extension instrumented (preview mocked: no worker
-// in jsdom).
+// Tests for the devtools extension (extensions/devtools/devtools.ts) in the widget, every built-in extension
+// instrumented (preview mocked: no worker in jsdom).
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createTypstEditor } from '../../src';
-import { devtools } from './devtools';
+import { devtools } from '../extensions/devtools/devtools';
+import { createTypstEditor } from './typst-editor';
 
-vi.mock('../../src/hosts/preview/preview', async (importOriginal) => ({
+vi.mock('../hosts/preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   Preview: class {
     update() {}
@@ -38,6 +38,16 @@ describe('devtools', () => {
   it('leaves the widget working: the built-ins activate through the recording context', () => {
     const { host } = mount();
     expect(host.querySelector('[data-testid=typst-visual] h1')?.textContent).toBe('Hello');
+  });
+
+  it('is a panel on the right rail, after the preview, shown on a click instead of the preview', () => {
+    const { host } = mount();
+    const right = host.querySelector<HTMLElement>('.typst-editor__side--right')!;
+    expect([...right.querySelectorAll<HTMLElement>('.typst-editor__rail-button')].map((button) => button.title)).toEqual(['Preview', 'Devtools']);
+    expect(right.querySelector<HTMLElement>('[data-panel=devtools]')!.hidden).toBe(true);
+    right.querySelector<HTMLElement>('[data-testid=typst-panel-toggle-devtools]')!.click();
+    expect(right.querySelector<HTMLElement>('[data-panel=devtools]')!.hidden).toBe(false);
+    expect(right.querySelector<HTMLElement>('[data-panel=preview]')!.hidden).toBe(true);
   });
 
   it('lists the contributions by extension in their points\' terms, settings included, each with its details as tooltip', () => {

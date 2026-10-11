@@ -1,6 +1,6 @@
 // The devtools' Events tab: the event log, latest first, each value pretty-printed (long ones folded), filtered by
 // event name, paused and cleared. See devtools-panel.ts.
-import type { EventLog, LoggedEvent } from '../model/event-log';
+import type { EventLog, LoggedEvent } from '../recording/event-log';
 import { element, type TabView } from './dom';
 
 /** Values of more lines than this are folded (`<details>`), their first line shown. */

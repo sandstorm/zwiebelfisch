@@ -5,22 +5,24 @@ The examples are from a report measuring compile times, as in the demo's advance
 == Views and preview <guide-features-views>
 
 ```
-┌───────┬─ Visual | Source ─────────┬─ Preview ──────────────┐
-│ Files │ the shown file           ┃ the compiled main file │
-├───────┴──────────────────────────┸────────────────────────┤
-│ status bar: errors and warnings                           │
-└───────────────────────────────────────────────────────────┘
+┌──┬───────┬─ Visual | Source ─────────┬─ Preview ──────────────┬──┐
+│▣ │ Files │ the shown file           ┃ the compiled main file │▣ │
+├──┴───────┴──────────────────────────┸────────────────────────┴──┤
+│ status bar: errors and warnings                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
+
+Each side has a rail (`▣`): a button per panel. The left side holds the files, the right side the preview (and, where a host adds them, panels such as the devtools). One panel per side shows; clicking the shown one's button hides that side and the editing view takes its room. What you picked is remembered for the browser session.
 
 - *Visual view:* edits the Typst like a word processor. What it does not model (math, function calls) shows as a raw box: its code while focused, its compiled look otherwise.
 - *Source view:* the Typst text: highlighting, line numbers, search.
 - Both views edit the same text; cursor and undo history survive a tab switch. Untouched source stays byte for byte.
-- *Preview:* updates while typing. On errors it dims and keeps the last good pages.
+- *Preview:* updates while typing. On errors it dims and keeps the last good pages. Hidden, it keeps compiling: errors, raw boxes' pictures and shading stay current.
 - Click in the preview: the editing view selects that text, opening its file if needed.
 - "Follow cursor" (preview toolbar): the preview scrolls to the text being edited.
 - Selected text (either view) is shaded in the preview, too; a caret shades nothing.
 - Zoom (fit width by default, 25–400 %) and "page n / total" in the preview toolbar.
-- Drag the separator `┃` (or use the arrow keys on it): the preview gets 20–80 % of the width.
+- Drag the separator `┃` (or use the arrow keys on it): the right side gets 20–80 % of the width; the left side's separator sets the file panel's width.
 - *Errors and warnings:* underlined in both views, the message as tooltip. The status bar counts them and jumps to them.
 
 == Writing <guide-features-visual>

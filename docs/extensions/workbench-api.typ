@@ -68,7 +68,7 @@ if (choice === 'Open') workbench.open(path);
   columns: 2,
   [Member], [What],
   [`window.registerStatusBarItem(element, { alignment, priority })`], [`'left'` or `'right'`; within a side the higher `priority` further left],
-  [`workbench.registerSidePanel(id, { label, icon, order })`], [A side panel and its rail button; returns `SidePanel` (`body`, `setDefault(open)`, `setAvailable`, `dismiss`)],
+  [`workbench.registerSidePanel(id, { label, icon, side, order })`], [A side panel and its rail button on `side` (`'left'`, the default, or `'right'`, after the built-in `preview`); returns `SidePanel` (`body`, `setDefault(open)`, `setAvailable`, `dismiss`). One panel per side shows; ids are unique across both sides],
   [`workbench.registerEditorFrame({ top, bottom })`], [Elements before and after the shown Typst file's content, scrolling with it; one frame at a time],
   [`workbench.registerStyleSheet(css)`], [Your CSS where the widget renders (inside a `<typst-editor>`'s shadow root too); use the `--te-*` color tokens],
   [`workbench.ownerDocument`], [The document to create elements in],

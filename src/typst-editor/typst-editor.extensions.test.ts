@@ -318,7 +318,7 @@ describe('the built-in extensions', () => {
 
   it('removes the file panel while files.panel is hide', () => {
     const { host, editor } = setup({ source: '= Hi', files: { '/a.typ': 'A' } });
-    const side = () => host.querySelector<HTMLElement>('.typst-editor__side')!;
+    const side = () => host.querySelector<HTMLElement>('.typst-editor__side--left')!;
     expect(side().hidden).toBe(false);
     editor.settings = { 'files.panel': 'hide' };
     expect(side().hidden).toBe(true);

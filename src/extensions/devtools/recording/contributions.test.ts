@@ -1,6 +1,6 @@
 // Tests for contributions.ts.
 import { describe, expect, it } from 'vitest';
-import type { ExtensionContext, TypstExtension } from '../../../src';
+import type { ExtensionContext, TypstExtension } from '../../../hosts/workbench/workbench';
 import { ContributionLog } from './contributions';
 
 /** A namespace as the hosts make them: a class with private state and a getter. */

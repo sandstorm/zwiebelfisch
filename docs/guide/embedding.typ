@@ -162,3 +162,23 @@ createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensio
 - Collaboration is not built in: add `collaboration(…)` with its connection (@guide-collaboration).
 - The built-ins and their ids: @architecture-built-in-extensions. Writing one: @extensions-overview.
 - On `<typst-editor>`, put `extensions` into `options` before the element connects.
+
+=== Devtools <guide-embedding-devtools>
+
+A right side panel ("Devtools" on the right rail) showing what the widget is made of while it runs. Optional: `devtools` wraps the whole list, so give it the list last.
+
+```ts
+import { createTypstEditor, devtools } from 'typst-editor';
+createTypstEditor(host, { extensions: (builtinExtensions) => devtools([...builtinExtensions, wordCount()]) });
+```
+
+#table(
+  columns: (auto, 1fr),
+  table.header[Tab][Shows],
+  [Document], [The shown file's ProseMirror document as a tree (@architecture-prosemirror-typst): each node with its source range, `box` for raw boxes and other atoms, marks, its text or kept `src`; the tooltip has positions, attributes and the source. The path to the selection is highlighted; a click selects the node's source.],
+  [Contributions], [Every `register…` call and declared setting, in its contribution point's terms (`heading · priority 100 · parses Heading`, `Mod+Alt+KeyM → comments.addComment`, a panel by its side and order); by extension (activation order) or by contribution point, competitors in the order the host resolves them. `late`: made after activation; struck through: disposed. The tooltip: the arguments in full and the line that registered it.],
+  [Events], [Every `onDid…` event of the extension context as it fires (the latest 300), its value pretty-printed as it was then; filter by name, Pause, Clear.],
+)
+
+- It sees only what any extension sees: `devtools(extensions)` returns each extension with its `activate` getting a context whose namespaces record every registration (and its `dispose`), plus the devtools extension itself. The hosts keep no listing for it.
+- In the demo: `&devtools` (the playground bar's Devtools toggle).

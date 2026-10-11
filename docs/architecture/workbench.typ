@@ -16,7 +16,9 @@ createTypstEditor ─► WorkbenchHost(host, project, options).activate(extensio
 - *`ExtensionContext`*: `project`, `subscriptions`, `globalState` / `workspaceState`, the five namespaces, `workbench` (the frame), and the view hosts `visualView`, `sourceView`, `preview`.
 - *Namespaces as hosts* (table below): each is its own module, an interface plus a host class implementing it directly. No forwarding facade.
 - *Generic contribution points*: extensions never depend on each other, not even through a service registry. A host offers a point any extension may use; the consumer reads every contribution. Competing contributions are ordered by an explicit tie-breaker, never by registration order alone.
-- *The frame*: `WorkbenchLayout` (side panels with rail buttons, editing column, preview, status bar); `EditorTabs` (a tab per editor of the shown file, the `editor/title` menu at the end).
+- *The frame*: `WorkbenchLayout` (a `SideBar` on the left and on the right, the editing area between them, the status bar); `EditorTabs` (a tab per editor of the shown file, the `editor/title` menu at the end).
+- *Two sides* (`SideBar`, VS Code's primary and secondary side bar, named by place): a rail on the widget's outer edge with a button per side panel (`registerSidePanel(id, { side })`, default left), one panel shown per side, a separator on its inner edge (drag or arrow keys; the left side in pixels, the right side as 20–80 % of the widget). Which panel shows: the viewer's pick (clicking the shown one hides the side, the editing area takes the room), else the side's default panel (the right side's: the setting `workbench.rightSidePanel`, default `preview`), else the first panel whose owner asked (`setDefault`, e.g. `files.panel`). Picks and sizes are kept in the session memento (`layout`). Narrower than 720 px, the left panel lies over the editing area.
+- *The preview is the right side's built-in panel* (`preview`), registered by the workbench before any extension, so it comes first on the right rail. It compiles whether shown or not (diagnostics, raw box snippets, selection shading).
 - *Every file opens in a custom editor* (`window`'s `CustomEditors`). The Visual and the Source view are the two built-in ones for `*.typ` (`visualView.editor`, `sourceView.editor`), registered by the workbench (`TypstEditors`) before any extension, so they win ties. They stay hosts with contribution points, like VS Code's built-in text editor.
 - *Tabs = "open with"*: a file several editors match gets a tab each; the one picked (a tab, `open(path, { viewType })`) is the user's choice for every later file it matches. Visual / Source is this switch for Typst files.
 - *`TypstEditors`*: a document's view is made when the document is first shown in it, in a retained panel (`retainContextWhenHidden`): hidden, with cursor, scroll and undo history, while other files show; disposed when the file is deleted. Per document one `TextEditor` over both views (`activeTextEditor`); the editor frame goes into the visible view.
@@ -30,7 +32,7 @@ createTypstEditor ─► WorkbenchHost(host, project, options).activate(extensio
   [`scm`], [source controls], [— (all listed; a duplicate id throws)],
   [`languages`], [document link providers], [`priority` (default 100)],
   [`workspace`], [`applyEdit`, settings (`getConfiguration`, `onDidChangeConfiguration`)], [—],
-  [`workbench`], [`open`, side panels, editor frame, menus, style sheets, dropped files, `user`], [menus: `group` + `order`; side panels: `order`],
+  [`workbench`], [`open`, side panels (left and right), editor frame, menus, style sheets, dropped files, `user`], [menus: `group` + `order`; side panels: `order` within their side],
 )
 
 == Lifecycle <architecture-workbench-lifecycle>
@@ -44,6 +46,6 @@ createTypstEditor ─► WorkbenchHost(host, project, options).activate(extensio
 == Changes and settings <architecture-workbench-changes>
 
 - `workspace.applyEdit(change)`: the project's check, the host's `allowFileChange` (may be async), the project's check again, then apply. Resolves to the refusal in words, or null.
-- Settings: declared by extensions and by the workbench (`workbench.theme`); values come from the host and replace each other as a whole. A value of the wrong type falls back to the default, with a warning. `inspect(key)` tells whether the host set one.
+- Settings: declared by extensions and by the workbench (`workbench.theme`, `workbench.rightSidePanel`); values come from the host and replace each other as a whole. A value of the wrong type falls back to the default, with a warning. `inspect(key)` tells whether the host set one.
 
 API reference: @extensions-workbench-api.
