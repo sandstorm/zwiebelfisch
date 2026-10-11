@@ -188,4 +188,8 @@ Proposed 2026-10-11; one agent alone (touches many files), after the current wav
    `serializeToTypst`, `syncDoc` → `applyTypstChanges`, `pristine` → `isUnchangedSource`,
    `NodeGrammar` / `MarkGrammar` / `Grammar` → `TypstNodeConversion` / `TypstMarkConversion` /
    `TypstConversions`.
+4. **The `window` namespace's type** (user): `Window` → `WindowApi` (it shadows the DOM's `Window`);
+   the property stays `context.window`; `Commands`, `Scm`, `Languages`, `Workspace` keep their names.
+5. **Active file next to the active editor:** `workbench.activeFile` / `onDidShowFile` →
+   `window.activeFile` / `onDidChangeActiveFile` (VS Code's window owns "what is shown").
 Left alone: extension factories (`files()`, `labels()`), VS Code names, short file-internal helpers.
