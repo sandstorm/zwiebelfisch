@@ -177,6 +177,16 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    **No inspector side panel** (user, 2026-10-11): editing stays inline with popovers (image tools,
    label tags, Align menu, table bar, caption buttons). Remove the inspector from the docs' open
    work in the next docs-touching step.
+   **Text diagrams (Mermaid / D2), design decided by the user (2026-10-11):** no Typst package, no
+   special editor. Two plain files, both in git: the source `name.d2` / `name.mmd` (edited in the
+   text-files editor, which gets these patterns) and the generated `name.d2.gen.svg` /
+   `name.mmd.gen.svg` (convention as `.ic.gen.typ`); Typst uses `#image("name.d2.gen.svg")`; the
+   normal Typst preview shows the result. The extension only generates: on a source change it
+   renders in the browser (Mermaid / D2 library loaded on demand) and writes the `.gen.svg` via
+   `workspace.applyEdit`; a hash of the source inside the SVG lets it regenerate stale files on
+   open; deterministic output so collaborators don't churn. "Edit diagram" on an image box opens the
+   source. Pending: the research agent's bundle sizes / licenses / headless Mermaid, one extension
+   or two — then the user's go.
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Rules wave also does:** core `onChange` → `onDidChange: Event` + `Disposable` everywhere
    (`Project`, `TypstDocument`, …) (user: yes).
