@@ -166,6 +166,7 @@ The 100-page document took #values.Runs.at(4).at(4) ms (median, @tab:runs).
 ```
 
 - File panel → New → "New spreadsheet…" creates an `.ic` file and opens it in #link("https://www.ironcalc.com")[IronCalc]: formulas, formats, several sheets.
+- Insert → Insert spreadsheet (or `/spreadsheet`): names a new `.ic` (proposed: `data/table.ic` next to the file), fills in a starter table, inserts `#figure(sheets.Sheet1, caption: [ ])` with its import and opens the spreadsheet. If `sheets` already names another spreadsheet's tables, the new one is imported as `table-sheets`.
 - Every edit also writes `<name>.ic.gen.typ` (generated; don't edit). It holds, by sheet name:
   - `sheets`: each sheet as a `table` that looks like the spreadsheet (column widths, fills, fonts, borders).
   - `values`: the displayed cells as strings, row by row: `values.Runs.at(1).at(0)` is A2.
@@ -183,6 +184,7 @@ The 100-page document took #values.Runs.at(4).at(4) ms (median, @tab:runs).
 
 - A `.drawio.png` is a PNG with a diagrams.net diagram inside: Typst shows it as an image, the editor opens it in diagrams.net.
 - File panel → New → "New diagram…" creates one and opens it.
+- Insert → Insert diagram (or `/diagram`): creates one (proposed: `diagrams/diagram.drawio.png` next to the file), inserts `#figure(image("…"), caption: [ ])` and opens it.
 - A selected image showing a diagram has "Edit diagram".
 - Every change is saved into the file as you draw; there is no Save button.
 
@@ -214,6 +216,8 @@ flowchart LR
 ```
 ````
 
+- Insert → Insert Mermaid diagram (or `/mermaid`): creates a `.mmd` with a starter flowchart (proposed: `diagrams/diagram.mmd` next to the file), inserts its figure with the import and opens it in the text editor.
+- A box reading a `.mmd` file has "Edit diagram": it opens the file.
 - In the Visual view an inline diagram is a code block (language `mermaid`); the preview shows the diagram.
 - The first use downloads 3.3 MB (then cached by the browser) and adds about a second to the compile; a diagram edit takes about 0.3 s.
 

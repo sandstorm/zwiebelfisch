@@ -71,7 +71,7 @@ export type {
   VisualViewContext,
   VisualViewContributions,
 } from './hosts/visual-view/visual-view';
-export { setRawBoxDecorations } from './hosts/visual-view/visual-view';
+export { insertTypstBlocks, setRawBoxDecorations } from './hosts/visual-view/visual-view';
 export type {
   Around,
   BlockLabel,

@@ -1,9 +1,11 @@
-// mountWorkbook: IronCalc's workbook UI (React) over a spreadsheet's bytes. Loaded on demand by spreadsheet-view.ts:
-// it brings React, the UI and the 2 MB engine, which nothing else needs.
+// mountWorkbook: IronCalc's workbook UI (React) over a spreadsheet's bytes; newWorkbook: a new spreadsheet with the
+// starter table. Loaded on demand (spreadsheet-view.ts, "Insert spreadsheet"): it brings React, the UI and the 2 MB
+// engine, which nothing else needs.
 import { IronCalc, init, Model } from '@ironcalc/workbook';
 import styles from '@ironcalc/workbook/style.css?inline';
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
+import { typeStarterTable } from '../model/sheet-figure';
 import { spreadsheetTypst } from '../model/typst-file';
 import { followColorScheme } from './color-scheme';
 
@@ -16,6 +18,11 @@ export interface MountedWorkbook {
 export interface WorkbookEdit {
   bytes: Uint8Array;
   typst: string;
+}
+
+/** A new spreadsheet: its bytes, its Typst file and the name of its (first) sheet. */
+export interface NewWorkbook extends WorkbookEdit {
+  sheet: string;
 }
 
 const STYLE_ID = 'typst-ironcalc-styles';
@@ -67,6 +74,19 @@ export async function mountWorkbook(
       model.free();
     },
   };
+}
+
+/** A new workbook for the file `fileName` (e.g. `table.ic`) with the starter table typed in (`typeStarterTable`). */
+export async function newWorkbook(fileName: string): Promise<NewWorkbook> {
+  engine ??= init();
+  await engine;
+  const model = new Model(fileName.replace(/\.ic$/, ''), 'en', 'UTC', 'en');
+  try {
+    typeStarterTable(model);
+    return { bytes: model.toBytes(), typst: spreadsheetTypst(model, fileName), sheet: model.getWorksheetsProperties()[0].name };
+  } finally {
+    model.free();
+  }
 }
 
 /**

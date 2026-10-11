@@ -47,7 +47,7 @@ export interface WindowApi {
   showQuickPick<T extends string | QuickPickItem>(items: readonly T[] | Promise<readonly T[]>, options?: QuickPickOptions): Promise<T | undefined>;
   /**
    * Asks where a new file goes (VS Code's `window.showSaveDialog`, as an input box placed as `showInputBox`): a name,
-   * starting in the folder of `defaultUri`, with the first `filters` ending added to a name without one. A name
+   * starting in the folder of `defaultUri` (or proposing it, see `SaveDialogOptions`), with the first `filters` ending added to a name without one. A name
    * without one of the endings, or of a file the project has, is refused. Resolves to the path, or undefined when
    * cancelled; creating the file is the caller's (`workspace.applyEdit`).
    */
@@ -150,7 +150,11 @@ export interface QuickPickOptions {
 export interface SaveDialogOptions {
   /** Above the field: what is being made ("New diagram"). The box's accessible name; default "Save". */
   title?: string;
-  /** Where the name starts: the folder of this file, or this folder (default: the top of the project). */
+  /**
+   * Where the name starts: the folder of this file, or this folder (default: the top of the project). A path the
+   * project has no file at, ending in one of `filters`' endings, is proposed as the name (the part before the ending
+   * selected), as VS Code's dialog proposes a file name.
+   */
   defaultUri?: ProjectPath;
   /**
    * The endings a name may have, by what they are (without the dot, e.g. `{ Diagrams: ['drawio.png'] }`); `'*'`

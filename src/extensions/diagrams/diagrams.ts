@@ -1,9 +1,9 @@
 // The diagrams extension: `.drawio.png` files — PNGs with a diagrams.net diagram in them, so Typst shows them as
 // images (`#image("flow.drawio.png")`) and diagrams.net edits them again — opened in diagrams.net's editor embedded
-// in an iframe, saved as they change; "New diagram…"; "Edit diagram" on a box showing one. Entry of
-// extensions/diagrams/. See docs/guide/features.typ.
+// in an iframe, saved as they change; "New diagram…"; "Insert diagram" (a new one as a figure in the text); "Edit
+// diagram" on a box showing one. Entry of extensions/diagrams/. See docs/guide/features.typ.
 // Why an extension: the editor is a custom editor (higher priority than the images' view of PNGs), the new-file
-// entry a menu item, "Edit diagram" a box action, its document links come from whichever provider: the hosts' generic
+// entry a menu item, "Insert diagram" a toolbar item, "Edit diagram" a box action, its document links come from whichever provider: the hosts' generic
 // contribution points; the protocol (model/) is pure state, so it is tested without an iframe.
 import { ProjectPath } from '../../core/paths/paths';
 import { FileContent, type Project } from '../../core/project/project';
@@ -13,6 +13,7 @@ import type { CustomEditorProvider } from '../../hosts/window/window';
 import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
 import css from './diagrams.css?inline';
 import { DIAGRAM_EDITOR, DIAGRAM_FILES, isDiagram } from './model/model';
+import { insertDiagram } from './visual-view/insert-diagram';
 import { editDiagramAction } from './visual-view/visual-view';
 import { DiagramEditor } from './workbench/diagram-editor';
 import { newDiagram } from './workbench/new-diagram';
@@ -29,8 +30,8 @@ const DIAGRAM_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
  * Diagrams (`*.drawio.png`) in the editing area: the custom editor `diagrams.editor` (priority 110, over the images'
  * `*.png`), diagrams.net from the setting `diagrams.editorUrl`, light or dark as the widget; every change is saved
  * (`workspace.applyEdit`, debounced; pending changes when the file is closed). Without the editor (offline) an
- * error message offers the picture. "New diagram…" (`diagrams.newDiagram`) in the menu `file/newFile`; "Edit diagram"
- * on Visual view boxes that show a diagram of the project.
+ * error message offers the picture. "New diagram…" (`diagrams.newDiagram`) in the menu `file/newFile`; "Insert
+ * diagram" in the Visual view's Insert menu; "Edit diagram" on Visual view boxes that show a diagram of the project.
  */
 export function diagrams(): TypstExtension {
   return {
@@ -55,6 +56,7 @@ export function diagrams(): TypstExtension {
         window.registerCustomEditorProvider(DIAGRAM_EDITOR, diagramEditor(context, editorUrl), { filenamePattern: DIAGRAM_FILES, displayName: 'Diagram', priority: 110, icon: DIAGRAM_ICON }),
         commands.registerCommand(NEW_DIAGRAM, (resource?: ProjectPath) => newDiagram(context, resource)),
         workbench.registerMenuItem('file/newFile', { command: NEW_DIAGRAM, title: 'New diagram…', group: 'navigation', order: 16 }),
+        visualView.registerToolbarItem(insertDiagram(context)),
         visualView.registerRawBoxAction(editDiagramAction(diagramIn(project, languages), (path) => workbench.open(path, { viewType: DIAGRAM_EDITOR }))),
       );
     },

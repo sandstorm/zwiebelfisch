@@ -85,6 +85,6 @@ Typst's font book needs every face's `FontInfo` (family, variant, coverage) befo
 
 == Typst syntax <architecture-core-syntax>
 
-Typst knowledge several extensions need, from the Lezer tree of `codemirror-lang-typst`: the paths a text names (`findFilePaths`), the files' reading order (`neighbours`), the change that imports a name (`calculateImportChange`), and helpers specs read calls with (`calleeName`, `namedArgument`, …).
+Typst knowledge several extensions need, from the Lezer tree of `codemirror-lang-typst`: the paths a text names (`findFilePaths`), the files' reading order (`neighbours`), the change that imports a name (`calculateImportChange`), the names imports bind (`importedNames`), and helpers specs read calls with (`calleeName`, `namedArgument`, …).
 
 Also in core: `Disposable`, `EventEmitter`, `User`, `uploads` (files from the computer as `create` changes), `room-protocol` (the rooms' Y.Doc layout, shared with @architecture-server), `color-scheme`.

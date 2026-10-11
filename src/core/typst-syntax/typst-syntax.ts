@@ -1,10 +1,10 @@
 // Typst syntax several extensions need, read from the Lezer syntax tree (codemirror-lang-typst): the file paths a
 // text names (`#import`, `#include`, `image(…)`, `read(…)`, …), the reading order they give the project's files, the
-// change that imports a name (calculateImportChange), and reading syntax nodes, calls, string literals and
-// embeddable code as the Visual view's specs do (children, calleeName, callArguments, namedArgument,
-// trailingContent, hasOnlyArguments, withHash, isClosedContent, decodeString, quote, isEmbeddable, markupSource:
-// plain functions over Lezer nodes, public for every extension). Entry of core/typst-syntax/.
-// See docs/architecture/core.typ.
+// change that imports a name (calculateImportChange), the names imports bind (importedNames), and reading syntax
+// nodes, calls, string literals and embeddable code as the Visual view's specs do (children, calleeName,
+// callArguments, namedArgument, trailingContent, hasOnlyArguments, withHash, isClosedContent, decodeString, quote,
+// isEmbeddable, markupSource: plain functions over Lezer nodes, public for every extension). Entry of
+// core/typst-syntax/. See docs/architecture/core.typ.
 // Why here: extensions never import each other, and this knowledge is about Typst, not about one feature. Only
 // syntax: where a path leads (the project, the file's current path) and what following it does (open, create) is the
 // document-links extension's, and showing links is the hosts' (`languages.registerDocumentLinkProvider`); applying
@@ -88,6 +88,45 @@ export function calculateImportChange(text: string, request: ImportRequest): Tex
     if (change !== undefined) return change;
   }
   return insert(0, request.create());
+}
+
+/** A name an import binds: `sheets` of `#import "m": sheets`; `sheets as t` binds `t`; `*` binds every name of the module. */
+export interface ImportedName {
+  /** The module string's value (`data/runs.ic.gen.typ`, `@preview/merman:0.4.0`). */
+  readonly module: string;
+  /** The module's name imported, or `*`. */
+  readonly name: string;
+  /** The name it is bound to in the file (`t` of `sheets as t`), or `*`. */
+  readonly binding: string;
+}
+
+/** The names the item lists of the imports in Typst `text` that end before `use` (default: the end) bind, in order. */
+export function importedNames(text: string, use: SourceOffset = SourceOffset.of(text.length)): ImportedName[] {
+  const names: ImportedName[] = [];
+  for (let node = typstParser.parse(text).topNode.firstChild; node && node.to <= use; node = node.nextSibling) {
+    const str = node.name === 'ModuleImport' ? node.getChild('Str') : null;
+    if (str) names.push(...namesOf(text, node, text.slice(str.from + 1, str.to - 1)));
+  }
+  return names;
+}
+
+/** The names one `ModuleImport` of `module` binds. */
+function namesOf(text: string, node: SyntaxNode, module: string): ImportedName[] {
+  const items = node.getChild('ImportItems');
+  const star: ImportedName[] = node.getChild('Star') ? [{ module, name: '*', binding: '*' }] : [];
+  const named = (items ? children(items) : []).flatMap((item) => {
+    const parts = itemParts(item);
+    return parts ? [{ module, name: text.slice(parts.path.from, parts.path.to), binding: text.slice(parts.binding.from, parts.binding.to) }] : [];
+  });
+  return [...star, ...named];
+}
+
+/** The name an import item takes from the module and the one it binds (`a as b`: `a`, `b`); null for separators. */
+function itemParts(item: SyntaxNode): { path: SyntaxNode; binding: SyntaxNode } | null {
+  if (item.name === 'ImportItemPath') return { path: item, binding: item };
+  const path = item.name === 'RenamedImportItem' ? item.getChild('ImportItemPath') : null;
+  const binding = item.getChildren('Ident').at(-1);
+  return path && binding ? { path, binding } : null;
 }
 
 // Reading Typst syntax (Lezer nodes of codemirror-lang-typst's grammar) as the Visual view's parse functions and

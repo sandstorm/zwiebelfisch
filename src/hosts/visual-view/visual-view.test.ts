@@ -7,7 +7,7 @@ import { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-docum
 import { Node as TiptapNode, type Editor } from '@tiptap/core';
 import { children, withHash } from '../../core/typst-syntax/typst-syntax';
 import { starterKitPart, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
-import { setRawBoxDecorations, VisualView, VisualViewHost, type SourceHighlight, type TypstNodeSpec, type VisualViewContext, type VisualViewContribution } from './visual-view';
+import { insertTypstBlocks, setRawBoxDecorations, VisualView, VisualViewHost, type SourceHighlight, type TypstNodeSpec, type VisualViewContext, type VisualViewContribution } from './visual-view';
 
 /** A test-local construct beyond the host's minimum: `*strong*` as a bold mark (hidden syntax around visible text). */
 const STRONG: TypstMarkSpec = {
@@ -164,5 +164,30 @@ describe('VisualView contexts', () => {
     doc.setText('Intro\n\n#set page(width: 12cm)\n', 'test');
     expect(given).toEqual([0, 0]);
     view.dispose();
+  });
+});
+
+describe('insertTypstBlocks', () => {
+  /** A view of `text` with the cursor after `cursorAfter`, and its editor. */
+  function at(text: string, cursorAfter: number) {
+    const { doc, view, parent } = setup(text);
+    view.reveal(SourceRange.of({ from: cursorAfter, to: cursorAfter }));
+    const editor = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
+    return { doc, editor };
+  }
+
+  it('inserts the blocks the Typst is read as after the paragraph holding the cursor', () => {
+    const { doc, editor } = at('Title\n\nSome text\n', 9);
+    insertTypstBlocks(editor, '#figure(sheets.Sheet1, caption: [ ])');
+    expect(doc.text).toBe('Title\n\nSome text\n\n#figure(sheets.Sheet1, caption: [ ])\n');
+    expect(editor.state.doc.child(2).type.name).toBe('rawBlock');
+  });
+
+  it('takes over an empty paragraph', () => {
+    const { doc, editor } = at('Title\n', 5);
+    editor.commands.splitBlock();
+    insertTypstBlocks(editor, '#box[x]');
+    expect(doc.text).toBe('Title\n\n#box[x]\n');
+    expect(editor.state.doc.childCount).toBe(2);
   });
 });

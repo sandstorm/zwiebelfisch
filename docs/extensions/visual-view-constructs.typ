@@ -220,13 +220,14 @@ createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensio
   [`registerTextStyleProvider(provider)`], [Entries of the text style menu (heading levels, custom styles), with `keywords` as toolbar actions],
   [`registerCompletionItemProvider(provider, trigger)`], [A list that pops up while a trigger character and a query are typed (@extensions-visual-view-constructs-completion)],
   [`registerRawBoxRenderer(provider, { priority })`], [What raw boxes show instead of their code; the first by `priority` that `renders` a box draws it (images 110, compiled snippets 100); its `className` goes on the picture, for its CSS],
-  [`registerRawBoxAction({ title, when?, run })`], [A button on every raw box `when` holds for (its Typst: `node.attrs.src`), in the box's tools or above its code; "Edit diagram" is one],
+  [`registerRawBoxAction({ title, when?, run })`], [A button on every raw box `when` holds for (its Typst: `node.attrs.src`), in the box's tools or above its code; "Edit diagram" (diagrams, Mermaid) is one],
   [`registerGutter(provider)`], [A column beside the text, per view (the notes gutter)],
   [`registerHighlights(layer, provider)`], [Styled source ranges drawn over the text (diagnostics, others' selections)],
   [`registerTiptapExtension(view => extension)`], [Per-view plugins, decorations, commands; hooks see `this.editor`],
   [`registerRawBoxCodeMirrorExtension(view => extension)`], [CodeMirror extensions for the code of every raw box],
 )
 
+- `insertTypstBlocks(editor, source)` (a plain function): inserts what Typst `source` is read as after the cursor's block, as the view reads any Typst (a figure of an image becomes a figure, the rest raw boxes). For Insert entries whose result is easier written as Typst ("Insert spreadsheet", "Insert diagram", "Insert Mermaid diagram").
 - Contributions register once; the host applies them to every view it creates (views are made lazily, per document). Disposing a registration takes it out of views created later.
 - Per-view things (the document, a popover) come through the `…Provider` functions, which get the `VisualViewContext`: `document`, `selection()` (a `SourceRange`), `sourceToPos`, `posToSource` (the only way between `SourceOffset`s and ProseMirror positions), `isBox(node)`.
 - `setRawBoxDecorations`: the effect through which a raw box's CodeMirror extension learns what the Visual view draws on its box.

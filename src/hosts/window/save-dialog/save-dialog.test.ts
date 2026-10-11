@@ -23,6 +23,15 @@ describe('showSaveDialog', () => {
     expect((await save(undefined, {})).asked).toMatchObject({ title: 'Save', value: '' });
   });
 
+  it('proposes defaultUri as the name when the project has no such file and it has an ending of the filters, its name selected', async () => {
+    const diagrams = { filters: { Diagrams: ['drawio.png'] } };
+    const { asked } = await save(undefined, { ...diagrams, defaultUri: path('/img/arch.drawio.png') });
+    expect(asked).toMatchObject({ value: 'img/arch.drawio.png', valueSelection: [4, 8] });
+    // an existing file, or a path without such an ending: its folder
+    expect((await save(undefined, { ...diagrams, defaultUri: path('/img/flow.drawio.png') })).asked.value).toBe('img/');
+    expect((await save(undefined, { ...diagrams, defaultUri: path('/img/arch') })).asked.value).toBe('img/arch/');
+  });
+
   it('adds the first ending to a name without one, completes a compound ending, and resolves to the path', async () => {
     const diagrams = { filters: { Diagrams: ['drawio.png'] } };
     expect((await save('img/arch', diagrams)).result).toBe('/img/arch.drawio.png');

@@ -24,12 +24,12 @@ export async function showSaveDialog(
     }
     return exists(target.path) ? `${ProjectPath.displayName(target.path)} already exists.` : null;
   };
-  const value = startIn(options.defaultUri, exists);
+  const { value, selection } = startWith(options.defaultUri, exists, anyEnding ? [] : endings);
   const typed = await ask({
     title: options.title ?? 'Save',
     prompt: 'File name',
     value,
-    valueSelection: [value.length, value.length],
+    valueSelection: selection,
     validateInput: problemWith,
   });
   if (typed === undefined || problemWith(typed) !== null) return undefined;
@@ -37,11 +37,21 @@ export async function showSaveDialog(
   return target.kind === 'valid' ? target.path : undefined;
 }
 
-/** The name an input starts with: the folder of `defaultUri` (a file's folder, or the folder itself) and a `/`; '' at the top. */
-function startIn(defaultUri: ProjectPath | undefined, exists: (path: ProjectPath) => boolean): string {
-  if (defaultUri === undefined) return '';
+/**
+ * What the input starts with: a new file's name proposed by `defaultUri` (one the project does not have, ending in
+ * one of `endings`), the part before the ending selected; else the folder of `defaultUri` (a file's folder, or the
+ * folder itself) and a `/`, the caret after it ('' at the top).
+ */
+function startWith(defaultUri: ProjectPath | undefined, exists: (path: ProjectPath) => boolean, endings: readonly string[]): { value: string; selection: [number, number] } {
+  if (defaultUri === undefined) return { value: '', selection: [0, 0] };
+  const ending = exists(defaultUri) ? undefined : endings.find((candidate) => defaultUri.toLowerCase().endsWith(`.${candidate.toLowerCase()}`));
+  if (ending !== undefined) {
+    const value = defaultUri.slice(1);
+    return { value, selection: [value.lastIndexOf('/') + 1, value.length - ending.length - 1] };
+  }
   const folder = exists(defaultUri) ? defaultUri.slice(0, defaultUri.lastIndexOf('/')) : defaultUri;
-  return folder === '' ? '' : `${folder.slice(1)}/`;
+  const value = folder === '' ? '' : `${folder.slice(1)}/`;
+  return { value, selection: [value.length, value.length] };
 }
 
 /** `typed` with the rest of a compound `extension` added when it ends in its start ("flow.drawio" → "flow.drawio.png"). */
