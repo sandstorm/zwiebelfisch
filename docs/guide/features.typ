@@ -109,6 +109,23 @@ Rent: #values.Sheet1.at(1).at(1)
 #figure(image("diagrams/architecture.drawio.png", width: 80%), caption: [Architecture])
 ```
 
+Mermaid diagrams are text, rendered by the #link("https://typst.app/universe/package/merman/")[merman] package (Mermaid in Rust, as a wasm plugin) while Typst compiles:
+
+- A separate `.mmd` file (opens in the text editor), drawn with `mermaid(read(..))`.
+- Inline code blocks with the language `mermaid`, drawn by a show rule.
+- The first use downloads 3.3 MB (then cached by the browser) and adds about a second to the compile; a diagram edit takes about 0.3 s.
+
+````typ
+#import "@preview/merman:0.4.0": mermaid, show-mermaid-blocks
+#figure(mermaid(read("diagrams/flow.mmd"), width: 100%), caption: [Flow])
+
+#show raw.where(lang: "mermaid"): show-mermaid-blocks(width: 100%)
+```mermaid
+flowchart LR
+  Source --> Typst --> PDF
+```
+````
+
 == Comments <guide-features-comments>
 
 Comments are #link("https://typst.app/universe/package/drafting/")[drafting] margin notes in the Typst source: they travel through `onFilesChange`, git, diffs and collaboration like any other text.
