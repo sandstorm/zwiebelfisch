@@ -11,13 +11,23 @@ import { FilenamePattern } from './filename-pattern';
 /** The priority of a `'default'` editor (and of one registered without a priority). */
 const DEFAULT_PRIORITY = 100;
 
+/**
+ * How an editor takes part in opening files: `ranked` ones by default (in `priority` order), `fallback` ones only files
+ * no ranked one matches, `option` ones only when chosen.
+ */
+type Role = 'ranked' | 'fallback' | 'option';
+
+/** The roles, the one opening files first. */
+const ROLES: readonly Role[] = ['ranked', 'fallback', 'option'];
+
 interface Registration {
   readonly viewType: string;
   readonly displayName: string;
   readonly provider: CustomEditorProvider;
   readonly pattern: FilenamePattern;
-  /** null: `'option'`, never chosen by default. */
-  readonly priority: number | null;
+  readonly role: Role;
+  /** Orders the ranked editors (higher first). */
+  readonly priority: number;
   readonly icon: string | undefined;
   readonly retainContextWhenHidden: boolean;
 }
@@ -31,8 +41,8 @@ export interface CustomEditorChoice {
 /**
  * The custom editors of the editing area. Opening a file picks the editor asked for (`viewType`), else the one the
  * user chose last among those offered for the file, else the one that matches its name with the highest priority
- * (`'default'`: 100; `'option'` editors only when asked for), then the most specific pattern (`*.drawio.png` over
- * `*.png`), then the one registered first. That editor gets a fresh panel for the file; showing anything else
+ * (`'default'`: 100), then the most specific pattern (`*.drawio.png` over `*.png`), then the one registered first;
+ * `'fallback'` editors only open files no other editor matches, `'option'` editors only when asked for. That editor gets a fresh panel for the file; showing anything else
  * disposes it, or only hides it for an editor with `retainContextWhenHidden` (shown again when that file opens in
  * it again, disposed when the file is deleted).
  */
@@ -54,7 +64,8 @@ export class CustomEditors {
       displayName: options.displayName,
       provider,
       pattern: new FilenamePattern(options.filenamePattern),
-      priority: priority === 'option' ? null : priority === 'default' ? DEFAULT_PRIORITY : priority,
+      role: priority === 'option' || priority === 'fallback' ? priority : 'ranked',
+      priority: typeof priority === 'number' ? priority : DEFAULT_PRIORITY,
       icon: options.icon,
       retainContextWhenHidden: options.retainContextWhenHidden ?? false,
     };
@@ -90,18 +101,18 @@ export class CustomEditors {
   }
 
   /**
-   * The editors `path` can be shown in, best first: those matching it, apart from fallbacks (a priority below
-   * `'default'`), which only open files nothing else does.
+   * The editors `path` can be shown in, best first: those matching it, apart from fallbacks, which only open files
+   * nothing else does.
    */
   choicesFor(path: ProjectPath): readonly CustomEditorChoice[] {
     return this.#ranked(path)
-      .filter((r) => r.priority === null || r.priority >= DEFAULT_PRIORITY)
+      .filter((r) => r.role !== 'fallback')
       .map(({ viewType, displayName }) => ({ viewType, displayName }));
   }
 
   /** The icon of the editor that opens `path` by default; undefined without one. */
   iconOf(path: ProjectPath): string | undefined {
-    return this.#ranked(path).find((r) => r.priority !== null)?.icon;
+    return this.#ranked(path).find((r) => r.role !== 'option')?.icon;
   }
 
   /** Keeps the retained panels with their file: disposed when it is deleted, kept when it is renamed. */
@@ -125,10 +136,13 @@ export class CustomEditors {
     if (asked) return asked;
     const offered = this.choicesFor(path).map((choice) => choice.viewType);
     const chosen = this.#chosen.find((type) => offered.includes(type));
-    return ranked.find((r) => r.viewType === chosen) ?? ranked.find((r) => r.priority !== null);
+    return ranked.find((r) => r.viewType === chosen) ?? ranked.find((r) => r.role !== 'option');
   }
 
-  /** The editors matching `path`, best first: the higher priority (`'option'` last), the more specific pattern, the one registered first. */
+  /**
+   * The editors matching `path`, best first: ranked, fallback, option editors; the higher priority, the more specific
+   * pattern, the one registered first.
+   */
   #ranked(path: ProjectPath): Registration[] {
     return this.#registrations.filter((r) => r.pattern.matches(path)).sort((a, b) => ranksAbove(b, a) - ranksAbove(a, b));
   }
@@ -154,9 +168,13 @@ export class CustomEditors {
   }
 }
 
-/** 1 if `a` comes before `b` regardless of registration order (a higher priority, else a more specific pattern), else 0. */
+/**
+ * 1 if `a` comes before `b` regardless of registration order (an earlier role, a higher priority, a more specific
+ * pattern), else 0.
+ */
 function ranksAbove(a: Registration, b: Registration): number {
-  if (a.priority !== b.priority) return Number(b.priority === null || (a.priority !== null && a.priority > b.priority));
+  if (a.role !== b.role) return Number(ROLES.indexOf(a.role) < ROLES.indexOf(b.role));
+  if (a.priority !== b.priority) return Number(a.priority > b.priority);
   return Number(a.pattern.specificity > b.pattern.specificity);
 }
 

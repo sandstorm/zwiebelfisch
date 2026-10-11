@@ -100,7 +100,7 @@ window.registerCustomEditorProvider('csv.table', {
 - `viewType`: `<extension>.<name>`, unique.
 - `displayName`: its tab. A file several editors match gets a tab per editor, best first (the editing area's "open with").
 - `filenamePattern`: a case-insensitive glob over the file name (`*.csv`, `*.{png,jpg}`), over the path from the root if it has a `/`.
-- `priority`: a number, `'default'` (100) or `'option'` (only when chosen). Below 100: a fallback for files nothing else opens, without a tab.
+- `priority`: a number (only orders editors), `'default'` (100), `'fallback'` (only files no other editor opens, without a tab) or `'option'` (only when chosen).
 - Of the editors matching a file: the one the user chose last (a tab, or `workbench.open(path, { viewType })`), else the highest `priority`, then the most specific pattern (more literal characters: `*.drawio.png` over `*.png` over `*`; `*.csv` over `*.{csv,json,…}`), then the first registered.
 - `icon`: SVG markup, 16×16 view box, strokes in `currentColor`; the file panel shows it on the rows of the files it opens.
 - Every open gets a new panel. Fill `panel.element`; store edits with `workspace.applyEdit({ kind: 'update', path, content })`; store what is pending in `panel.onDidDispose`.
@@ -117,7 +117,7 @@ The built-in ones, to beat or to leave alone:
   [`spreadsheets.editor`], [`*.ic`], [default],
   [`images.preview`], [`*.{png,jpg,jpeg,gif,svg,webp}`], [default],
   [`textFiles.editor`], [`*.{csv,json,yaml,yml,toml,xml,bib,txt,md,mmd}`], [default],
-  [`files.file`], [`*`: any other file, read-only (name, size, type)], [0 (fallback)],
+  [`files.file`], [`*`: any other file, read-only (name, size, type)], [`'fallback'`],
 )
 
 == File decorations <extensions-workbench-api-decorations>

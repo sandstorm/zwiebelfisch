@@ -26,7 +26,7 @@ createTypstEditor ─► WorkbenchHost(host, project, options).activate(extensio
   columns: (auto, 3fr, 2fr),
   table.header[Namespace][Offers][Tie-breaker],
   [`commands`], [commands by id (`<extension>.<verb>`), key bindings], [—],
-  [`window`], [messages, input box, quick pick, save dialog, status bar items, custom editors, file decorations, `activeFile`, `activeTextEditor`], [status bar: `alignment` + `priority`; custom editors: the user's choice, then `priority`, then pattern specificity],
+  [`window`], [messages, input box, quick pick, save dialog, status bar items, custom editors, file decorations, `activeFile`, `activeTextEditor`], [status bar: `alignment` + `priority`; custom editors: the user's choice, then `priority` (`'fallback'`: only files no other editor matches), then pattern specificity],
   [`scm`], [source controls], [— (all listed; a duplicate id throws)],
   [`languages`], [document link providers], [`priority` (default 100)],
   [`workspace`], [`applyEdit`, settings (`getConfiguration`, `onDidChangeConfiguration`)], [—],

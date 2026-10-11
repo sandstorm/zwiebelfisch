@@ -64,8 +64,8 @@ export interface WindowApi {
    * `visualView.editor` and `sourceView.editor`). `viewType` names the editor (`<extension>.<name>`, unique), e.g. for
    * `workbench.open(path, { viewType })`. When several match a file, the editing area's tabs switch between them
    * (`displayName`), and the one the user chose last opens it; before any choice, the one of the highest `priority`
-   * (`'default'`: 100; `'option'`: only when chosen), then the most specific pattern (`*.drawio.png` over `*.png`),
-   * then the one registered first.
+   * (`'default'`: 100), then the most specific pattern (`*.drawio.png` over `*.png`), then the one registered first;
+   * a `'fallback'` editor only when no other matches, an `'option'` editor only when chosen.
    */
   registerCustomEditorProvider(viewType: string, provider: CustomEditorProvider, options: CustomEditorOptions): Disposable;
 
@@ -201,11 +201,11 @@ export interface CustomEditorOptions {
    */
   readonly filenamePattern: string;
   /**
-   * Who opens a file several editors match: a number (higher first), `'default'` (100, the default) or `'option'`
-   * (never by default, only when chosen: a tab, `workbench.open(path, { viewType })`). Below 100: a fallback, which
-   * opens only files nothing else matches and gets no tab.
+   * Who opens a file several editors match: a number (higher first), `'default'` (100, the default), `'fallback'`
+   * (opens only files no other editor matches, and gets no tab) or `'option'` (never by default, only when chosen: a
+   * tab, `workbench.open(path, { viewType })`).
    */
-  readonly priority?: 'default' | 'option' | number;
+  readonly priority?: 'default' | 'fallback' | 'option' | number;
   /**
    * The icon of the files it opens by default, where views list files (the file panel): SVG markup with a 16×16 view
    * box, drawn in strokes of `currentColor`.

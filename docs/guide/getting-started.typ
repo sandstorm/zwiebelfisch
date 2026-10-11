@@ -28,11 +28,11 @@ The page's state is its URL:
   [`?room=<name>`], [Collaborate mode: joins a room on the local server.],
   [`?room=gitlab:demo/report@main`], [GitLab mode: a branch of the fake repository.],
   [`&user=<name>`], [The name others see; signs comments and commits.],
-  [`&devtools`], [The devtools side panel: projection, contributions, events (@architecture-development-devtools).],
+  [`&devtools`], [The devtools side panel: document, contributions, events (@architecture-development-devtools).],
   [`#/chapters/intro.typ`], [The file shown.],
 )
 
-The playground bar at the top switches example and mode, and opens a second window as another user.
+The playground bar at the top switches example and mode, turns the devtools on and off, and opens a second window as another user.
 
 == A first editor <guide-getting-started-first-editor>
 
