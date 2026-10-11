@@ -12,7 +12,7 @@ import type { Languages } from '../../hosts/languages/languages';
 import type { CustomEditorProvider } from '../../hosts/window/window';
 import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
 import css from './diagrams.css?inline';
-import { DIAGRAM_FILES, isDiagram } from './model/model';
+import { DIAGRAM_EDITOR, DIAGRAM_FILES, isDiagram } from './model/model';
 import { editDiagramAction } from './visual-view/visual-view';
 import { DiagramEditor } from './workbench/diagram-editor';
 import { newDiagram } from './workbench/new-diagram';
@@ -52,10 +52,10 @@ export function diagrams(): TypstExtension {
       const editorUrl = () => workspace.getConfiguration('diagrams').get<string>('editorUrl', DIAGRAMS_NET);
       subscriptions.push(
         workbench.registerStyleSheet(css),
-        window.registerCustomEditorProvider('diagrams.editor', diagramEditor(context, editorUrl), { filenamePattern: DIAGRAM_FILES, priority: 110, icon: DIAGRAM_ICON }),
+        window.registerCustomEditorProvider(DIAGRAM_EDITOR, diagramEditor(context, editorUrl), { filenamePattern: DIAGRAM_FILES, displayName: 'Diagram', priority: 110, icon: DIAGRAM_ICON }),
         commands.registerCommand(NEW_DIAGRAM, (resource?: ProjectPath) => newDiagram(context, resource)),
         workbench.registerMenuItem('file/newFile', { command: NEW_DIAGRAM, title: 'New diagram…', group: 'navigation', order: 16 }),
-        visualView.registerBoxAction(editDiagramAction(diagramIn(project, languages), (path) => workbench.open(path))),
+        visualView.registerBoxAction(editDiagramAction(diagramIn(project, languages), (path) => workbench.open(path, { viewType: DIAGRAM_EDITOR }))),
       );
     },
   };

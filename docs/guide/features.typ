@@ -73,7 +73,7 @@ The file panel shows the project as a tree. Setting `files.panel`: open with mor
 - *File links:* paths in `#import`, `#include`, `image`, `read`, `bibliography`, `json` / `csv` / `yaml` / `toml` / `xml` / `cbor` open their file: Ctrl+click or Alt+Enter (⌘-click or ⌥↩ on Mac) in the Source view, "Open …" above a raw box in the Visual view. A missing `.typ` file can be created from there.
 - A file the main file includes gets "previous file" / "next file" links in reading order.
 
-How each file opens:
+How each file opens (a file with several editors gets a tab each, like Visual / Source; the one picked last is used for the next such file):
 
 #table(
   columns: 2,
@@ -82,7 +82,7 @@ How each file opens:
   [Images], [A preview; drag into the Visual view to insert.],
   [`.csv`, `.json`, `.yaml`, `.yml`, `.toml`, `.xml`, `.bib`, `.txt`, `.md`, `.mmd`], [A plain text editor, saved 800 ms after the last keystroke.],
   [`.ic`], [A spreadsheet (@guide-features-spreadsheets).],
-  [`.drawio.png`], [The diagram editor (@guide-features-diagrams).],
+  [`.drawio.png`], [The diagram editor (@guide-features-diagrams); its "Image" tab shows the picture.],
   [Anything else], [Name, size and type.],
 )
 

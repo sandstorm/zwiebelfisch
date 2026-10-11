@@ -2,6 +2,7 @@
    the workbench (WindowHost.styleSheet). See window.ts. */
 /* A custom editor's panel (registerCustomEditorProvider): fills the editing area, a flex column for the editor. */
 .typst-editor__custom-editor { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.typst-editor__custom-editor[hidden] { display: none; }
 /* Messages (showInformationMessage, …): stacked at the bottom right, above the status bar. */
 .typst-editor__notifications {
   position: absolute;

@@ -29,7 +29,7 @@ export function images(): TypstExtension {
       subscriptions.push(
         workbench.registerStyleSheet(css),
         projectImages,
-        window.registerCustomEditorProvider('images.preview', assetEditor, { filenamePattern: IMAGE_FILES, icon: IMAGE_ICON }),
+        window.registerCustomEditorProvider('images.preview', assetEditor, { filenamePattern: IMAGE_FILES, displayName: 'Image', icon: IMAGE_ICON }),
       );
       imagesVisualView({
         assets: (document) => projectImages.forDocument(document).assets,

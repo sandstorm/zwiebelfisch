@@ -37,7 +37,7 @@ export function spreadsheets(): TypstExtension {
               panel.onDidDispose(() => view.dispose());
             },
           },
-          { filenamePattern: '*.ic', icon: SPREADSHEET_ICON },
+          { filenamePattern: '*.ic', displayName: 'Spreadsheet', icon: SPREADSHEET_ICON },
         ),
         commands.registerCommand(NEW_SPREADSHEET, (resource?: ProjectPath) => newSpreadsheet(context, resource)),
         workbench.registerMenuItem('file/newFile', { command: NEW_SPREADSHEET, title: 'New spreadsheet…', group: 'navigation', order: 15 }),

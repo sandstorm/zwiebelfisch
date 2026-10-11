@@ -21,7 +21,7 @@ extensions/<name>/
   table.header[Extension][What it adds][Through],
   [`typstLanguage`], [Typst highlighting and code colors in Source views and raw boxes], [source view, raw-box CodeMirror],
   [`documentLinks`], [file paths in Typst text as links; command `documentLinks.createFile`], [link provider],
-  [`files`], [file panel; `files.newFile` / `newFolder` / `upload` / `rename` / `delete`; read-only editor `files.file` for any other file; setting `files.panel`], [side panel, menus, custom editor],
+  [`files`], [file panel; `files.newFile` / `newFolder` / `upload` / `rename` / `delete`; read-only fallback editor `files.file` (priority 0) for any other file; setting `files.panel`], [side panel, menus, custom editor],
   [`fileNavigation`], ["← previous file" / "next file →" in reading order], [editor frame],
   [`spreadsheets`], [`.ic` in IronCalc (`spreadsheets.editor`); every edit also writes `name.ic.gen.typ`; "New spreadsheet…"], [custom editor, `file/newFile`],
   [`textFiles`], [csv, json, yaml, toml, xml, bib, txt, md in CodeMirror (`textFiles.editor`)], [custom editor],

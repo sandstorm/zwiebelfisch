@@ -1,7 +1,7 @@
 // End-to-end tests (Playwright, against the plain-HTML example, so inside <typst-editor>'s shadow root): a
 // `.drawio.png` made with "New diagram…", edited in the embedded editor, saved without pressing Save, shown by Typst.
 // diagrams.net itself is not loaded: a stub page at its URL speaks the embed protocol (init, load, autosave,
-// export as xmlpng), drawing a bigger rectangle on every "Draw".
+// export as xmlpng), drawing a bigger rectangle on every "Draw". A diagram is an image, too: the tabs switch editors.
 import { expect, type Page } from '@playwright/test';
 import { test, fileRow } from './fixtures';
 
@@ -98,5 +98,24 @@ test('"Edit diagram" on the image box opens the diagram; a change is saved when 
   const box = editor(page).getByTestId('typst-visual').locator('.typst-images__box');
   await box.locator('img.typst-visual__rendering').click();
   await box.getByRole('toolbar', { name: 'Image' }).getByRole('button', { name: 'Edit diagram' }).click();
+  await expect(editor(page).getByTestId('typst-diagram').frameLocator('iframe').locator('#status')).toHaveText(/^loaded/);
+});
+
+test('a diagram has two editors: the tabs switch to its image preview and back, and the choice is remembered', async ({ page }) => {
+  await newDiagram(page);
+  const tabs = editor(page).getByRole('tablist');
+  await expect(tabs.getByRole('tab')).toHaveText(['Diagram', 'Image']);
+  await expect(tabs.getByRole('tab', { name: 'Diagram' })).toHaveAttribute('aria-selected', 'true');
+  await tabs.getByRole('tab', { name: 'Image' }).click();
+  await expect(editor(page).getByTestId('typst-asset')).toBeVisible();
+  await expect(editor(page).getByTestId('typst-diagram')).toHaveCount(0);
+
+  // a Typst file keeps its own choice (Visual); the diagram opens in the image preview again
+  await fileRow(editor(page), 'main.typ').click();
+  await expect(tabs.getByRole('tab')).toHaveText(['Visual', 'Source']);
+  await expect(tabs.getByRole('tab', { name: 'Visual' })).toHaveAttribute('aria-selected', 'true');
+  await fileRow(editor(page), 'flow.drawio.png').click();
+  await expect(editor(page).getByTestId('typst-asset')).toBeVisible();
+  await tabs.getByRole('tab', { name: 'Diagram' }).click();
   await expect(editor(page).getByTestId('typst-diagram').frameLocator('iframe').locator('#status')).toHaveText(/^loaded/);
 });

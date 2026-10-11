@@ -96,7 +96,7 @@
 .typst-editor__status-bar-right { display: flex; }
 /* The workbench's overlays (notifications, input boxes, quick picks, menus) are placed in the widget. */
 .typst-editor { position: relative; }
-/* The editing area: the Visual / Source tab bar, the views' panes, a dragged file over the widget. */
+/* The editing area: the tab bar (the shown file's editors), the Visual / Source views' panels, a dragged file over the widget. */
 .typst-editor__left .cm-editor { flex: 1; min-height: 0; }
 .typst-editor__left .cm-scroller { overflow: auto; }
 .typst-editor__tabs {
@@ -106,6 +106,7 @@
   border-bottom: 1px solid var(--te-border);
   background: var(--te-subtle);
 }
+.typst-editor__tab-list { display: flex; gap: 4px; }
 .typst-editor__tab {
   border: 1px solid transparent;
   border-radius: 6px;
@@ -116,11 +117,10 @@
   cursor: pointer;
 }
 .typst-editor__tab[aria-selected='true'] { background: var(--te-surface); border-color: var(--te-border); }
-.typst-editor__pane { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: auto; }
-.typst-editor__pane[hidden] { display: none; }
+.typst-editor__pane { overflow: auto; }
 .typst-editor__tabs[hidden] { display: none; }
 .typst-editor.typst-editor--dropping { outline: 2px dashed var(--te-accent); outline-offset: -4px; }
-/* The editor/title menu: actions at the end of the Visual / Source tab bar (e.g. Comment, Save to GitLab…). */
+/* The editor/title menu: actions at the end of the tab bar (e.g. Comment, Save to GitLab…). */
 .typst-editor__tab-actions { display: flex; gap: 4px; margin-left: auto; }
 .typst-editor__tab-actions:empty { display: none; }
 .typst-editor__tab-action {

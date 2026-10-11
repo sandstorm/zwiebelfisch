@@ -46,5 +46,5 @@ async function addNewStyle(index: TypstStyleIndex, { project, window, workspace,
     const problem = await workspace.applyEdit({ kind: 'create', path, content: change.insert });
     if (problem !== null) return void window.showErrorMessage(`The style was not added: ${problem}`);
   }
-  workbench.open(path, { selection: definition, mode: 'source' });
+  workbench.open(path, { selection: definition, viewType: 'sourceView.editor' });
 }

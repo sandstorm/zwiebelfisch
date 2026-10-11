@@ -2,7 +2,7 @@
 import { ProjectPath } from '../../../core/paths/paths';
 import type { ExtensionContext } from '../../../hosts/workbench/workbench';
 import { emptyDiagram } from '../model/empty-diagram';
-import { DIAGRAM_EXTENSION } from '../model/model';
+import { DIAGRAM_EDITOR, DIAGRAM_EXTENSION } from '../model/model';
 
 /**
  * Asks for the new diagram's name in the folder of `resource` (a file's folder, or the folder itself; default: the
@@ -14,5 +14,5 @@ export async function newDiagram({ window, workspace, workbench }: ExtensionCont
   if (!target) return;
   const problem = await workspace.applyEdit({ kind: 'create', path: target, content: emptyDiagram() });
   if (problem) void window.showErrorMessage(`${ProjectPath.displayName(target)} not created: ${problem}`);
-  else workbench.open(target);
+  else workbench.open(target, { viewType: DIAGRAM_EDITOR });
 }

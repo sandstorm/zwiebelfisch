@@ -51,7 +51,7 @@ export interface TypstEditorOptions {
    * the main file starts empty.
    */
   source?: string;
-  /** The editing view shown first (default: visual). */
+  /** The view Typst files open in until the user chooses the other one (default: visual). */
   mode?: EditorMode;
   /**
    * Decides whether a create / rename / delete / upload someone asked for in
