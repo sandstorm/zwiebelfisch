@@ -329,3 +329,67 @@ describe('WorkbenchHost', () => {
     expect(marked(host.querySelector('.typst-visual__raw-block')!)).toBe('Mai');
   });
 });
+
+describe('WorkbenchHost: search everywhere', () => {
+  function setupSearch() {
+    const host = document.body.appendChild(document.createElement('div'));
+    const project = new Project(path('/main.typ'), { '/main.typ': '= Main\n' });
+    const workbench = new WorkbenchHost(host, project, { mode: 'source', settings: { 'test.color': 'blue' } });
+    const ran: string[] = [];
+    workbench.activate([
+      {
+        id: 'test',
+        contributes: {
+          commands: [
+            { command: 'test.count', title: 'Count words', category: 'Test' },
+            { command: 'test.unregistered', title: 'Never registered' },
+          ],
+          configuration: {
+            properties: {
+              'test.wrap': { type: 'boolean', default: false, description: 'Wrap lines.' },
+              'test.color': { type: 'string', enum: ['red', 'blue'], default: 'red', description: 'The color.' },
+              'test.name': { type: 'string', default: '', description: 'Free text: not offered.' },
+            },
+          },
+        },
+        activate: ({ commands, subscriptions }) => subscriptions.push(commands.registerCommand('test.count', () => ran.push('count'))),
+      },
+    ]);
+    const field = () => host.querySelector<HTMLInputElement>('.typst-quick-pick input')!;
+    const options = () => [...host.querySelectorAll<HTMLElement>('[role=option]')];
+    const enter = () => field().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    return { host, workbench, ran, field, options, enter };
+  }
+
+  it('opens with the command (its argument the text to start with) and with the rail button', async () => {
+    const { host, workbench, field } = setupSearch();
+    await workbench.commands.executeCommand('workbench.action.searchEverywhere', '>');
+    expect(field().value).toBe('>');
+    host.querySelector<HTMLElement>('[data-testid=typst-search-everywhere]')!.click();
+    expect(field().value).toBe('');
+  });
+
+  it('lists the declared commands that are registered, by category and title, and runs the one picked', async () => {
+    const { workbench, ran, options, enter } = setupSearch();
+    await workbench.commands.executeCommand('workbench.action.searchEverywhere', '>');
+    expect(options().map((option) => option.textContent)).toEqual(['Test: Count words']);
+    enter();
+    expect(ran).toEqual(['count']);
+  });
+
+  it('switches a boolean setting, and sets an enum setting through a second quick pick', async () => {
+    const { workbench, options, enter } = setupSearch();
+    await workbench.commands.executeCommand('workbench.action.searchEverywhere', ':');
+    // free text settings (workbench.rightSidePanel, test.name) are not offered
+    expect(options().map((option) => option.querySelector('.typst-quick-pick__label')!.textContent)).toEqual(['Workbench: Theme', 'Test: Wrap', 'Test: Color']);
+    await workbench.commands.executeCommand('workbench.action.searchEverywhere', ':wrap');
+    enter();
+    expect(workbench.settings['test.wrap']).toBe(true);
+    await workbench.commands.executeCommand('workbench.action.searchEverywhere', ':color');
+    enter();
+    expect(options().map((option) => option.textContent)).toEqual(['red', 'blue current']);
+    enter();
+    await Promise.resolve();
+    expect(workbench.settings['test.color']).toBe('red');
+  });
+});

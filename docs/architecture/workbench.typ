@@ -21,13 +21,14 @@
 - *Every file opens in a custom editor* (`window`'s `CustomEditors`). The Visual and the Source view are the two built-in ones for `*.typ` (`visualView.editor`, `sourceView.editor`), registered by the workbench (`TypstEditors`) before any extension, so they win ties. They stay hosts with contribution points, like VS Code's built-in text editor.
 - *Tabs = "open with"*: a file several editors match gets a tab each; the one picked (a tab, `open(path, { viewType })`) is the user's choice for every later file it matches. Visual / Source is this switch for Typst files.
 - *`TypstEditors`*: a document's view is made when the document is first shown in it, in a retained panel (`retainContextWhenHidden`): hidden, with cursor, scroll and undo history, while other files show; disposed when the file is deleted. Per document one `TextEditor` over both views (`activeTextEditor`); the editor frame goes into the visible view.
+- *Search everywhere* (`window`'s `search/`): one quick pick (`QuickInput.createQuickPick`, rows set as the user types) over every registered `SearchProvider`, a group each. Each change of the text cancels the previous round (`CancellationTokenSource`, `core/cancellation`) and asks the providers of the typed prefix, or all; synchronous results show at once, async ones as they come. Items are matched fuzzily (label, else description) unless the provider matched them. Opened by double Shift (the window listens on the widget in the capture phase, so inside the editors too: a second Shift within 300 ms of releasing the first, nothing else pressed; it fires on the second release), by the command `workbench.action.searchEverywhere` and by a button at the bottom of the left rail. The workbench adds two groups of its own: the commands extensions declare (`contributes.commands`) and the settings.
 - *State*: `StorageMemento` behind `globalState` and `workspaceState` (@extensions-workbench-api-state). Keys: `typst-editor:global:<id>:<key>`, `typst-editor:<main file>:<id>:<key>`.
 
 #table(
   columns: (auto, 3fr, 2fr),
   table.header[Namespace][Offers][Tie-breaker],
   [`commands`], [commands by id (`<extension>.<verb>`), key bindings], [—],
-  [`window`], [messages, input box, quick pick, save dialog, status bar items, custom editors, file decorations, `activeFile`, `activeTextEditor`], [status bar: `alignment` + `priority`; custom editors: the user's choice, then `priority` (`'fallback'`: only files no other editor matches), then pattern specificity],
+  [`window`], [messages, input box, quick pick, save dialog, search everywhere's providers, status bar items, custom editors, file decorations, `activeFile`, `activeTextEditor`], [status bar: `alignment` + `priority`; custom editors: the user's choice, then `priority` (`'fallback'`: only files no other editor matches), then pattern specificity; search providers: `order`, then `id`],
   [`scm`], [source controls], [— (all listed; a duplicate id throws)],
   [`languages`], [document link providers], [`priority` (default 100)],
   [`workspace`], [`applyEdit`, settings (`getConfiguration`, `onDidChangeConfiguration`)], [—],
@@ -37,7 +38,7 @@
 == Lifecycle <architecture-workbench-lifecycle>
 
 + The constructor makes every host and the frame, and puts the CSS in: first the tokens and the frame (`typst-editor.css`) with the workbench's own (`<style id="typst-editor-styles">`), then each host's `<name>.css` (its `styleSheet`; the Visual view's after ProseMirror's vendored `prosemirror.css`). The extensions' follow at activation.
-+ `activate(list)` declares every extension's settings (`contributes.configuration`), so any declared setting is readable during activation. Values for undeclared ids: console warning, ignored.
++ `activate(list)` declares every extension's settings (`contributes.configuration`) and collects its commands for people (`contributes.commands`), so any declared setting is readable during activation. Values for undeclared ids: console warning, ignored.
 + Extensions activate in list order (`ExtensionHost`; a duplicate id throws).
 + The main file is shown (in the view `mode` names) and compiled. Views are created later, on demand, with what was registered.
 + `dispose()` disposes the extensions in reverse list order, each one's subscriptions in reverse, then the frame.

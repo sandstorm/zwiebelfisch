@@ -116,6 +116,11 @@ export class WorkspaceHost implements Workspace {
     for (const [id, value] of Object.entries(this.#values)) this.#warnIfInvalid(id, value);
   }
 
+  /** The declared settings by full id, in the order they were declared. */
+  get properties(): ReadonlyMap<string, ConfigurationProperty> {
+    return this.#properties;
+  }
+
   /** The values the host set, by full id. */
   get values(): Settings {
     return { ...this.#values };

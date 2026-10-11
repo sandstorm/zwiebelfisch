@@ -38,6 +38,8 @@ interface PanelEntry {
 export class SideBar {
   readonly element: HTMLElement;
   readonly #rail: HTMLElement;
+  /** Buttons that run something rather than show a panel, at the rail's far end. */
+  readonly #actions: HTMLElement;
   readonly #panel: HTMLElement;
   readonly #resizer: HTMLElement;
   readonly #panels = new Map<string, PanelEntry>();
@@ -62,6 +64,8 @@ export class SideBar {
     this.#rail.setAttribute('role', 'toolbar');
     this.#rail.setAttribute('aria-label', side === 'left' ? 'Left panels' : 'Right panels');
     this.#rail.setAttribute('aria-orientation', 'vertical');
+    this.#actions = div(doc, 'typst-editor__rail-actions');
+    this.#rail.append(this.#actions);
     this.#panel = div(doc, 'typst-editor__panel');
     this.#resizer = this.#createResizer();
     this.#panel.append(this.#resizer);
@@ -98,7 +102,7 @@ export class SideBar {
     button.addEventListener('click', () => this.#choose(this.#shown === id ? null : id));
     const order = options.order ?? 0;
     const next = [...this.#panels.values()].find((panel) => panel.order > order);
-    this.#rail.insertBefore(button, next?.button ?? null);
+    this.#rail.insertBefore(button, next?.button ?? this.#actions);
     this.#panel.insertBefore(body, this.#resizer);
     this.#panels.set(id, { body, button, order, fallback: false, available: true });
     this.layout();
@@ -109,6 +113,12 @@ export class SideBar {
       dismiss: () => this.#dismiss(),
       dispose: () => this.#remove(id),
     };
+  }
+
+  /** Puts `button` (one that runs something, not a panel's) at the rail's far end, until it is removed. */
+  addAction(button: HTMLElement): void {
+    button.classList.add('typst-editor__rail-button');
+    this.#actions.append(button);
   }
 
   /** The panel the side shows until the viewer picks one (null: none), before any panel's `setDefault`; undefined: no such panel. */

@@ -112,6 +112,7 @@ What `activate` gets (`ExtensionContext`):
   [Status bar items], [`alignment`, then `priority` (higher further left)],
   [Box renderers, document links, PDF export options], [`priority`, default 100, higher first],
   [Custom editors], [the user's choice (a tab), then `priority`, then the most specific pattern],
+  [Search providers' groups], [`order` (default 100, lower first), then `id`],
   [Visual view nodes and marks], [their Tiptap extension's `priority` (Tiptap's: default 100, higher first)],
 )
 
