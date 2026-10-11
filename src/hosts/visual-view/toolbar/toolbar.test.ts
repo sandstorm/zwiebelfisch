@@ -26,6 +26,8 @@ const strong: VisualViewContribution = {
         group: 'test',
         action: { label: 'Bold', icon: svg(''), run: (c) => c.toggleBold(), active: (e) => e.isActive('bold') },
       }),
+      // shown only over a selection that is all bold (to test `visible`)
+      visualView.registerToolbarItem({ group: 'test', action: { label: 'Unbold', icon: svg(''), run: (c) => c.unsetBold(), visible: (e) => e.isActive('bold') } }),
     );
   },
 };
@@ -73,5 +75,13 @@ describe('Visual view toolbar', () => {
     const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
     button('Bold').dispatchEvent(event);
     expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('leaves out a button whose action is not visible here', () => {
+    const { view, button } = setup('Hello *world*\n');
+    view.reveal(SourceRange.of({ from: 0, to: 2 }));
+    expect(button('Unbold').hidden).toBe(true);
+    view.reveal(SourceRange.of({ from: 8, to: 10 }));
+    expect(button('Unbold').hidden).toBe(false);
   });
 });
