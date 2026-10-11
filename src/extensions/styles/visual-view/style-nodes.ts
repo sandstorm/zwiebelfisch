@@ -11,18 +11,18 @@ export interface AppliedStyle {
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     customStyles: {
-      /** Puts the selected blocks into paragraph style `style` (`#name[..]`), or switches the style around them. */
-      setParagraphStyle: (style: AppliedStyle) => ReturnType;
-      /** Takes the selected blocks out of their paragraph style. */
-      unsetParagraphStyle: () => ReturnType;
-      /** Applies text style `style` (`#name[..]`) to the selection, or removes it where it is on. */
-      toggleTextStyle: (style: AppliedStyle) => ReturnType;
+      /** Puts the selected blocks into block style `style` (`#name[..]`), or switches the style around them. */
+      setBlockStyle: (style: AppliedStyle) => ReturnType;
+      /** Takes the selected blocks out of their block style. */
+      unsetBlockStyle: () => ReturnType;
+      /** Applies inline style `style` (`#name[..]`) to the selection, or removes it where it is on. */
+      toggleInlineStyle: (style: AppliedStyle) => ReturnType;
     };
   }
 }
 
 /**
- * Blocks in a paragraph style: `#note[..]` (or `#callout(kind: ..)[..]`)
+ * Blocks in a block style: `#note[..]` (or `#callout(kind: ..)[..]`)
  * around them. Their content is edited as usual; the call around it is kept
  * as written (`layout`, owned by the serializer), a new one is `#name[..]`.
  * Drawn as a frame with the style's name and the class `typst-styles--<name>`.
@@ -49,13 +49,13 @@ export const StyledBlock = Node.create({
   },
   addCommands() {
     return {
-      setParagraphStyle:
+      setBlockStyle:
         ({ name, label }) =>
         ({ editor, commands }) => {
           if (editor.isActive('styledBlock')) return commands.updateAttributes('styledBlock', { name, title: label, layout: null });
           return commands.wrapIn('styledBlock', { name, title: label });
         },
-      unsetParagraphStyle:
+      unsetBlockStyle:
         () =>
         ({ commands }) =>
           commands.lift('styledBlock'),
@@ -64,9 +64,9 @@ export const StyledBlock = Node.create({
 });
 
 /**
- * Text in a text style: `#key[..]` around it (`head` keeps a call written
+ * Text in an inline style: `#key[..]` around it (`head` keeps a call written
  * with arguments, `#key(..)[`). Drawn with a dotted underline, the style's
- * name as tooltip and the class `typst-styles--<name>`. One text style at a time.
+ * name as tooltip and the class `typst-styles--<name>`. One inline style at a time.
  */
 export const TypstStyleMark = Mark.create({
   name: 'style',
@@ -85,11 +85,11 @@ export const TypstStyleMark = Mark.create({
   },
   renderHTML({ mark }) {
     const title = mark.attrs.title || mark.attrs.name;
-    return ['span', { class: `typst-styles__text typst-styles--${mark.attrs.name}`, 'data-typst-style': mark.attrs.name, title }, 0];
+    return ['span', { class: `typst-styles__inline typst-styles--${mark.attrs.name}`, 'data-typst-style': mark.attrs.name, title }, 0];
   },
   addCommands() {
     return {
-      toggleTextStyle:
+      toggleInlineStyle:
         ({ name, label }) =>
         ({ editor, commands }) =>
           editor.isActive('style', { name }) ? commands.unsetMark('style') : commands.setMark('style', { name, title: label, head: null }),

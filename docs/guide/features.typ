@@ -45,19 +45,20 @@ Undo and redo: Ctrl+Z, Ctrl+Shift+Z (⌘Z, ⌘⇧Z on Mac).
 
 === Custom styles <guide-features-styles>
 
-Authors declare paragraph and text styles as Typst functions with a doc comment, in any `.typ` file (usually `styles.typ`):
+Authors declare block and inline styles as Typst functions with a doc comment, in any `.typ` file (usually `styles.typ`):
 
 ```typ
-/// @style paragraph Note
+/// @style block Note
 #let note(body) = block(fill: luma(240), inset: 8pt, radius: 4pt, body)
 
-/// @style text Keyword
+/// @style inline Keyword
 #let key(body) = text(fill: rgb("#1f4fa0"), weight: "bold", body)
 ```
 
-- The text style menu offers *Note* (wraps the paragraphs in `#note[…]`) and *Keyword* (wraps the selection in `#key[…]`), and adds the import where needed.
-- *Normal text* removes a paragraph style. "New style…" adds a style to `styles.typ`.
-- The Visual view shows a paragraph style as a named frame, a text style as dotted underlined text, each with the class `typst-styles--<name>` for host CSS. The preview shows the real look.
+- *block* wraps whole blocks (paragraphs, lists, headings): `#note[…]` around them, shown as a named frame.
+- *inline* wraps a run of text inside a paragraph: `#key[…]` around it, shown underlined.
+- The text style menu offers *Note* and *Keyword* (on the selected blocks or words) and adds the import where needed. *Normal text* removes a block style. "New style…" adds a block style to `styles.typ`.
+- Both carry the class `typst-styles--<name>` for host CSS. The preview shows the real look.
 
 == Files <guide-features-files>
 

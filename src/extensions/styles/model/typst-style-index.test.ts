@@ -9,7 +9,7 @@ import { SourceOffset } from '../../../core/typst-document/typst-document';
 
 const path = ProjectPath.of;
 
-const STYLES = '/// @style paragraph Note\n#let note(body) = block(body)\n';
+const STYLES = '/// @style block Note\n#let note(body) = block(body)\n';
 
 function setup(files: Record<string, string> = {}) {
   const project = new Project(path('/main.typ'), { '/main.typ': '= Doc\n', '/styles.typ': STYLES, ...files });
@@ -22,7 +22,7 @@ describe('TypstStyleIndex', () => {
     const project = new Project(path('/main.typ'), {
       '/main.typ': '= Doc\n',
       '/styles.typ': STYLES,
-      '/more/terms.typ': '/// @style text Term\n#let term(body) = emph(body)\n',
+      '/more/terms.typ': '/// @style inline Term\n#let term(body) = emph(body)\n',
       '/logo.png': new Uint8Array([1]),
     });
     expect(new TypstStyleIndex(project).styles().map((s) => [s.name, s.path])).toEqual([
@@ -33,12 +33,12 @@ describe('TypstStyleIndex', () => {
 
   it('lists the project styles and tells listeners when the list changes, not on every edit', () => {
     const { project, index } = setup();
-    expect(index.styles()).toEqual([{ name: 'note', kind: 'paragraph', label: 'Note', path: path('/styles.typ') }]);
+    expect(index.styles()).toEqual([{ name: 'note', kind: 'block', label: 'Note', path: path('/styles.typ') }]);
     const listener = vi.fn();
     index.onDidChange(listener);
     project.document(path('/main.typ'))!.setText('= Doc\n\nText\n', 'test');
     expect(listener).not.toHaveBeenCalled();
-    project.document(path('/styles.typ'))!.setText(`${STYLES}/// @style text Key\n#let key(body) = strong(body)\n`, 'test');
+    project.document(path('/styles.typ'))!.setText(`${STYLES}/// @style inline Key\n#let key(body) = strong(body)\n`, 'test');
     expect(listener).toHaveBeenCalledTimes(1);
     expect(index.styles().map((s) => s.name)).toEqual(['note', 'key']);
     project.apply({ kind: 'delete', path: path('/styles.typ') });
@@ -63,7 +63,7 @@ describe('TypstStyleIndex', () => {
 
 describe('TypstStyleIndex.homeFile (where New style… adds one)', () => {
   it('is the file declaring the most styles, else /styles.typ', () => {
-    const helpers = '/// @style paragraph A\n#let a(body) = body\n/// @style text B\n#let b(body) = body\n';
+    const helpers = '/// @style block A\n#let a(body) = body\n/// @style inline B\n#let b(body) = body\n';
     const { index } = setup({ '/helpers.typ': helpers });
     expect(index.homeFile()).toBe(path('/helpers.typ'));
     const none = new TypstStyleIndex(new Project(path('/main.typ'), { '/main.typ': '' }));
@@ -78,10 +78,10 @@ function newStyle(text: string, label?: string): { text: string; from: number; t
 }
 
 describe('calculateNewStyleChange', () => {
-  it('appends a declared paragraph style with a free name, and says where it is', () => {
+  it('appends a declared block style with a free name, and says where it is', () => {
     const first = newStyle('');
-    expect(scanStyles(first.text)).toEqual([{ name: 'new-style', kind: 'paragraph', label: 'New style' }]);
-    expect(first.text.slice(first.from, first.to)).toMatch(/^\/\/\/ @style paragraph New style\n#let new-style\(body\) = /);
+    expect(scanStyles(first.text)).toEqual([{ name: 'new-style', kind: 'block', label: 'New style' }]);
+    expect(first.text.slice(first.from, first.to)).toMatch(/^\/\/\/ @style block New style\n#let new-style\(body\) = /);
     const second = newStyle(first.text);
     expect(scanStyles(second.text).map((s) => [s.name, s.label])).toEqual([['new-style', 'New style'], ['new-style-2', 'New style 2']]);
     expect(second.text.startsWith(`${first.text}\n`)).toBe(true);
@@ -89,8 +89,8 @@ describe('calculateNewStyleChange', () => {
 
   it('names the function after the label the user gave', () => {
     const added = newStyle('#let note(body) = body\n', 'Note');
-    expect(scanStyles(added.text)).toEqual([{ name: 'note-2', kind: 'paragraph', label: 'Note 2' }]);
-    expect(scanStyles(newStyle('', ' Side box! ').text)).toEqual([{ name: 'side-box', kind: 'paragraph', label: 'Side box!' }]);
+    expect(scanStyles(added.text)).toEqual([{ name: 'note-2', kind: 'block', label: 'Note 2' }]);
+    expect(scanStyles(newStyle('', ' Side box! ').text)).toEqual([{ name: 'side-box', kind: 'block', label: 'Side box!' }]);
     expect(scanStyles(newStyle('', '2 columns').text).map((style) => style.name)).toEqual(['style-2-columns']);
   });
 });
