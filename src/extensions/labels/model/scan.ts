@@ -52,6 +52,15 @@ export function calculateReferenceRenames(text: string, from: string, to: string
   return edits;
 }
 
+/** Where label `name` (`<name>`) is in Typst source; null if it is not there. */
+export function findLabel(text: string, name: string): SourceOffset | null {
+  const cursor = typstParser.parse(text).cursor();
+  do {
+    if (cursor.name === 'Label' && text.slice(cursor.from + 1, cursor.to - 1) === name) return SourceOffset.of(cursor.from);
+  } while (cursor.next());
+  return null;
+}
+
 /** A label and the element before it (spaces skipped), which it labels. */
 function labelAt(label: SyntaxNode, text: string): FoundLabel {
   const name = text.slice(label.from + 1, label.to - 1);

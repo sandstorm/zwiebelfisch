@@ -14,6 +14,17 @@ commands.registerKeybinding('Mod+Alt+KeyW', 'wordCount.count');
 - `executeCommand<T>(id, ...args)` calls the handler synchronously (the user's gesture, selection and focus are as now) and resolves to its result. It rejects for an unknown id and when the handler throws or rejects.
 - `registerKeybinding(key, command)`: modifiers and a `KeyboardEvent.code`, joined by `+` (`Mod` is Ctrl or Cmd). The command runs without arguments, before any editor sees the key.
 - The host runs commands too: `editor.executeCommand(id, ...args)`.
+- Commands for people get a name in `contributes.commands` (VS Code's): search everywhere lists them while they are registered, as "Category: Title", and runs them without arguments. Declare only commands that work without any.
+
+```ts
+export const wordCount = (): TypstExtension => ({
+  id: 'word-count',
+  contributes: { commands: [{ command: 'wordCount.count', title: 'Count words', category: 'Word count' }] },
+  activate({ commands, subscriptions }) { subscriptions.push(commands.registerCommand('wordCount.count', () => { … })); },
+});
+```
+
+- The workbench's own: `workbench.action.searchEverywhere(text?)` opens search everywhere with `text` in its field (a prefix narrows it: `'>'`).
 
 == Menus <extensions-workbench-api-menus>
 
@@ -56,7 +67,7 @@ workbench.registerMenuItem('explorer/context', {
 )
 
 - Messages are not modal. An information message without items closes by itself; warnings and errors stay.
-- One input box or quick pick at a time: a new one cancels the open one.
+- One input box or quick pick (search everywhere included) at a time: a new one cancels the open one.
 - `showSaveDialog` refuses names of existing files and names without one of the `filters` endings (`{ Diagrams: ['drawio.png'] }`; `'*'`: any). Creating the file is the caller's job (`workspace.applyEdit`).
 - `withProgress`: `ProgressLocation.Window` puts a spinner with "title: message" into the status bar; `ProgressLocation.EditingArea` lays a note over the editing area, which takes no input until the task settles. `progress.report({ message, increment })`: `increment` is percent done since the last report.
 - `defaultUri`: a file or folder starts the name in that folder; a path the project has no file at, with one of the `filters` endings, is proposed as the name (`ProjectPath.unique(path, exists)` makes it free: `table-2.ic`).
@@ -65,6 +76,46 @@ workbench.registerMenuItem('explorer/context', {
 const choice = await window.showInformationMessage(`${path}: ${words} words`, 'Open');
 if (choice === 'Open') workbench.open(path);
 ```
+
+== Search everywhere <extensions-workbench-api-search>
+
+Double Shift anywhere in the widget, the magnifier at the bottom of the left rail, or `workbench.action.searchEverywhere` open one quick pick over what every search provider finds, a group each: `window.registerSearchProvider(provider)`.
+
+```ts
+window.registerSearchProvider({
+  id: 'wordCount.counts',
+  label: 'Word counts',
+  prefix: '$',
+  order: 80,
+  provideItems: (query, token) => project.paths().map((path) => ({
+    label: ProjectPath.name(path),
+    description: `${count(path)} words`,
+    accept: () => workbench.open(path),
+  })),
+});
+```
+
+- `provideItems(query, token)`: asked again whenever the text changes; `query` is the text after the prefix, trimmed. May return a Promise: check `token.isCancellationRequested` (VS Code's `CancellationToken`) between steps; a cancelled round's results are dropped.
+- Items without `highlights` (most providers): return every candidate; the search matches them fuzzily against `label`, else `description`, and marks the match. Items with `highlights` were matched by the provider (text search) and show as given, in its order.
+- `SearchItem`: a `QuickPickItem` (`label`, `description`, `detail`) plus `accept()`, called once the search is closed and the focus is back where it was, still within the key press or click.
+- `prefix` typed first narrows the search to the providers with that prefix; they then show up to 100 results, otherwise 5 per group (the heading says how many more). The line below the list names every prefix.
+- Groups by `order` (lower first, default 100), then `id`.
+
+The built-in providers:
+
+#table(
+  columns: 4,
+  [Group], [Prefix], [Order], [From],
+  [Files], [`/`], [10], [`files`: name and path; opens],
+  [Headings], [`#`], [20], [`headings`: every Typst file's; opens at the heading],
+  [Labels], [`@`], [30], [`labels`: labels of headings, equations and the rest, not of figures or bibliography keys; opens at the label],
+  [Figures], [`@`], [31], [`figures`: figures, tables and listings by caption (and label); opens at the figure],
+  [Commands], [`>`], [40], [the workbench: `contributes.commands`; runs],
+  [Styles], [`*`], [50], [`styles`: applies to the selection (Visual view: as its menu; Source view: `#name[selection]`), with the import],
+  [Comments], [`!`], [60], [`comments`: notes by first message and authors; opens at the note, in the Visual view its card],
+  [Settings], [`:`], [70], [the workbench: booleans switch, `enum` settings ask for the value (for this widget, until the host sets the settings again)],
+  [Text], [`%`], [90], [`textFiles`: lines of every Typst and text file holding the query (from 2 characters, at most 200); opens with the match selected],
+)
 
 == The frame <extensions-workbench-api-frame>
 

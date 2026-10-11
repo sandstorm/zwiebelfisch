@@ -68,6 +68,11 @@ export class CommandsHost implements Commands {
     }
   }
 
+  /** Whether command `id` is registered now. */
+  has(id: string): boolean {
+    return this.#handlers.has(id);
+  }
+
   registerKeybinding(key: string, command: string): Disposable {
     const binding = { matches: parseKey(key), command };
     this.#keybindings.add(binding);

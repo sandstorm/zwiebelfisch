@@ -1,6 +1,6 @@
 // QuickInput: what `showInputBox` and `showQuickPick` show: a small box over the widget, below what the user just
-// used. See window.ts.
-import type { InputBoxOptions, QuickPickItem, QuickPickOptions } from '../window';
+// used; and the quick pick whose rows its owner sets while the user types (search everywhere). See window.ts.
+import type { InputBoxOptions, QuickPickHighlights, QuickPickItem, QuickPickOptions } from '../window';
 
 /** Elements taller than this (an editor's whole text) are no anchor: the box goes to their top instead. */
 const MAX_ANCHOR_HEIGHT = 120;
@@ -11,6 +11,52 @@ const GAP = 4;
 interface Open {
   readonly box: HTMLElement;
   cancel(): void;
+}
+
+/** A heading starting a group of items (VS Code's separator item), with a note after it. */
+export interface QuickPickSeparator {
+  readonly kind: 'separator';
+  readonly label: string;
+  readonly description?: string;
+}
+
+/** An item of a quick pick, with the characters to highlight. */
+export interface QuickPickItemEntry<T> {
+  readonly kind: 'item';
+  readonly item: T;
+  readonly highlights?: QuickPickHighlights;
+}
+
+/** A row of a quick pick: an item, or a heading starting a group. */
+export type QuickPickEntry<T> = QuickPickItemEntry<T> | QuickPickSeparator;
+
+/** What a dynamic quick pick shows and whom it tells (see `QuickInput.createQuickPick`). */
+export interface DynamicQuickPickOptions<T> {
+  /** The box's accessible name and the field's label. */
+  readonly title: string;
+  readonly placeHolder?: string;
+  /** The text the field starts with (the caret after it). */
+  readonly value?: string;
+  /** A line below the list, read as the field's description (e.g. how to narrow the search). */
+  readonly hint?: string;
+  /** The text in the field changed (typed, or `setValue`; not for the starting `value`). */
+  onDidChangeValue(value: string): void;
+  /** An item was picked (Enter or a click); the box is gone and the focus back where it was. */
+  onDidAccept(item: T): void;
+  /** The box is gone (after `onDidAccept`, on Escape, a press outside, another box, or `hide`). */
+  onDidHide(): void;
+}
+
+/** A quick pick whose rows its owner sets while the user types (VS Code's `window.createQuickPick`, as far as needed). */
+export interface DynamicQuickPick<T> {
+  /** Shows these rows, the first item active; without any item, "No results" (unless busy). */
+  setEntries(entries: readonly QuickPickEntry<T>[]): void;
+  /** Rows are still coming (a progress line). */
+  setBusy(busy: boolean): void;
+  /** Sets the field's text (as if typed). */
+  setValue(value: string): void;
+  /** Closes it (as Escape). */
+  hide(): void;
 }
 
 let ids = 0;
@@ -28,6 +74,11 @@ export class QuickInput {
   constructor(private readonly host: HTMLElement) {
     host.addEventListener('pointerdown', this.#remember, true);
     host.addEventListener('keydown', this.#remember, true);
+  }
+
+  /** Whether a box is open. */
+  get isOpen(): boolean {
+    return this.#open !== null;
   }
 
   showInputBox(options: InputBoxOptions = {}): Promise<string | undefined> {
@@ -83,6 +134,56 @@ export class QuickInput {
     return isArray(items) ? this.#pick(items, options) : items.then((list) => this.#pick(list, options));
   }
 
+  /**
+   * Opens a quick pick at the top in the middle of the widget, wider than `showQuickPick`'s, whose rows the owner
+   * sets as the text changes (`onDidChangeValue` → `setEntries`). Cancels the open box.
+   */
+  createQuickPick<T extends string | QuickPickItem>(options: DynamicQuickPickOptions<T>): DynamicQuickPick<T> {
+    const doc = this.host.ownerDocument;
+    const box = element(doc, 'div', 'typst-quick-input typst-quick-pick typst-quick-pick--wide');
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-label', options.title);
+    const filter = element(doc, 'input', 'typst-quick-input__field');
+    filter.type = 'text';
+    filter.value = options.value ?? '';
+    filter.placeholder = options.placeHolder ?? '';
+    filter.setAttribute('aria-label', options.title);
+    const progress = element(doc, 'div', 'typst-quick-pick__progress');
+    progress.hidden = true;
+    const listbox = element(doc, 'div', 'typst-quick-pick__list');
+    const empty = element(doc, 'div', 'typst-quick-pick__empty');
+    empty.textContent = 'No results';
+    empty.hidden = true;
+    box.append(filter, progress, listbox, empty, ...hint(doc, filter, options.hint));
+    const picker = new OnePicker<T>(doc, { listbox, input: filter }, (item) => close(item));
+    let busy = false;
+    const showEmpty = () => (empty.hidden = busy || picker.size > 0 || filter.value.trim() === '');
+    const changed = () => options.onDidChangeValue(filter.value);
+    filter.addEventListener('input', changed);
+    filter.addEventListener('keydown', (event) => picker.key(event));
+    const close = this.#present<T>(box, filter, (item) => {
+      if (item !== undefined) options.onDidAccept(item);
+      options.onDidHide();
+    }, false);
+    filter.setSelectionRange(filter.value.length, filter.value.length);
+    return {
+      setEntries: (entries) => {
+        picker.show(entries);
+        showEmpty();
+      },
+      setBusy: (now) => {
+        busy = now;
+        progress.hidden = !now;
+        showEmpty();
+      },
+      setValue: (value) => {
+        filter.value = value;
+        changed();
+      },
+      hide: () => this.#open?.box === box && this.#open.cancel(),
+    };
+  }
+
   #pick<T extends string | QuickPickItem>(list: readonly T[], options: QuickPickOptions): Promise<T | T[] | undefined> {
     return new Promise((resolve) => {
       const doc = this.host.ownerDocument;
@@ -104,7 +205,11 @@ export class QuickInput {
         ok.addEventListener('click', () => close(many.picked()));
         box.append(ok);
         picker = many;
-      } else picker = new OnePicker(doc, list, { listbox, input: filter }, (item) => close(item));
+      } else {
+        const one = new OnePicker(doc, { listbox, input: filter }, (item: T) => close(item));
+        picker = { filter: (text) => one.show(list.filter((item) => matches(item, text)).map((item) => ({ kind: 'item', item }))), key: (event) => one.key(event) };
+        picker.filter('');
+      }
       filter.addEventListener('input', () => picker.filter(filter.value));
       filter.addEventListener('keydown', (event) => picker.key(event));
       const close = this.#present<T | T[]>(box, filter, resolve);
@@ -124,14 +229,14 @@ export class QuickInput {
   };
 
   /**
-   * Shows `box` (cancelling an open one) at its anchor and focuses `focus`; Escape or a press outside resolves
-   * undefined. Returns the close function that resolves with a value.
+   * Shows `box` (cancelling an open one) at its anchor (`anchored`; else at the top in the middle) and focuses
+   * `focus`; Escape or a press outside resolves undefined. Returns the close function that resolves with a value.
    */
-  #present<R>(box: HTMLElement, focus: HTMLElement, resolve: (value: R | undefined) => void): (value: R) => void {
+  #present<R>(box: HTMLElement, focus: HTMLElement, resolve: (value: R | undefined) => void, anchored = true): (value: R) => void {
     this.#open?.cancel();
     const root = this.host.getRootNode() as Document | ShadowRoot;
     const previous = root.activeElement;
-    const anchor = this.#anchor(root);
+    const anchor = anchored ? this.#anchor(root) : null;
     const doc = this.host.ownerDocument;
     const outside = (event: MouseEvent) => {
       if (!event.composedPath().includes(box)) finish(undefined);
@@ -197,70 +302,95 @@ export class QuickInput {
   }
 }
 
-/** Picks one item: a listbox the filter field steers (arrows, Enter) with the active item marked. */
+/** Picks one item: a listbox the filter field steers (arrows, Enter) with the active item marked; groups under headings. */
 class OnePicker<T extends string | QuickPickItem> {
-  readonly #options: { item: T; element: HTMLElement }[];
+  #options: { item: T; element: HTMLElement }[] = [];
   #active = 0;
-
-  private readonly input: HTMLInputElement;
+  #rows = 0;
 
   constructor(
-    doc: Document,
-    items: readonly T[],
-    { listbox, input }: { listbox: HTMLElement; input: HTMLInputElement },
+    private readonly doc: Document,
+    private readonly parts: { listbox: HTMLElement; input: HTMLInputElement },
     private readonly pick: (item: T) => void,
   ) {
-    this.input = input;
+    const { listbox, input } = parts;
     listbox.setAttribute('role', 'listbox');
     listbox.id = `typst-quick-pick-${++ids}`;
     input.setAttribute('role', 'combobox');
     input.setAttribute('aria-autocomplete', 'list');
     input.setAttribute('aria-expanded', 'true');
     input.setAttribute('aria-controls', listbox.id);
-    this.#options = items.map((item, index) => {
-      const option = itemElement(doc, item);
-      option.setAttribute('role', 'option');
-      option.id = `${listbox.id}-${index}`;
-      // keeps the focus in the filter field
-      option.addEventListener('mousedown', (event) => event.preventDefault());
-      option.addEventListener('click', () => pick(item));
-      return { item, element: option };
-    });
-    listbox.append(...this.#options.map(({ element }) => element));
-    this.filter('');
   }
 
-  filter(text: string): void {
-    for (const { item, element } of this.#options) element.hidden = !matches(item, text);
+  /** How many items are shown. */
+  get size(): number {
+    return this.#options.length;
+  }
+
+  /** Shows `entries` (items, and headings starting groups), the first item active. */
+  show(entries: readonly QuickPickEntry<T>[]): void {
+    this.#options = [];
+    const rows: HTMLElement[] = [];
+    let group: HTMLElement | null = null;
+    for (const entry of entries) {
+      if (entry.kind === 'separator') rows.push((group = this.#group(entry)));
+      else if (group) group.append(this.#option(entry));
+      else rows.push(this.#option(entry));
+    }
+    this.parts.listbox.replaceChildren(...rows);
     this.#activate(0);
   }
 
   key(event: KeyboardEvent): void {
-    const visible = this.#visible();
+    const count = this.#options.length;
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
-      if (visible.length > 0) this.#activate((this.#active + (event.key === 'ArrowDown' ? 1 : -1) + visible.length) % visible.length);
+      if (count > 0) this.#activate((this.#active + (event.key === 'ArrowDown' ? 1 : -1) + count) % count);
     } else if (event.key === 'Enter') {
       event.preventDefault();
-      const active = visible[this.#active];
+      const active = this.#options[this.#active];
       if (active) this.pick(active.item);
     }
   }
 
-  #visible() {
-    return this.#options.filter(({ element }) => !element.hidden);
+  /** A group under a heading, which names it. */
+  #group(separator: QuickPickSeparator): HTMLElement {
+    const group = element(this.doc, 'div', 'typst-quick-pick__group');
+    group.setAttribute('role', 'group');
+    const heading = element(this.doc, 'div', 'typst-quick-pick__heading');
+    heading.id = `${this.parts.listbox.id}-${++this.#rows}`;
+    heading.setAttribute('role', 'presentation');
+    heading.textContent = separator.label;
+    if (separator.description) {
+      const description = element(this.doc, 'span', 'typst-quick-pick__heading-description');
+      description.textContent = separator.description;
+      heading.append(' ', description);
+    }
+    group.setAttribute('aria-labelledby', heading.id);
+    group.append(heading);
+    return group;
+  }
+
+  #option({ item, highlights }: QuickPickItemEntry<T>): HTMLElement {
+    const option = itemElement(this.doc, item, highlights);
+    option.setAttribute('role', 'option');
+    option.id = `${this.parts.listbox.id}-${++this.#rows}`;
+    // keeps the focus in the filter field
+    option.addEventListener('mousedown', (event) => event.preventDefault());
+    option.addEventListener('click', () => this.pick(item));
+    this.#options.push({ item, element: option });
+    return option;
   }
 
   #activate(index: number): void {
     this.#active = index;
-    const visible = this.#visible();
     for (const { element } of this.#options) element.setAttribute('aria-selected', 'false');
-    const active = visible[index];
+    const active = this.#options[index];
     if (active) {
       active.element.setAttribute('aria-selected', 'true');
       active.element.scrollIntoView?.({ block: 'nearest' });
-      this.input.setAttribute('aria-activedescendant', active.element.id);
-    } else this.input.removeAttribute('aria-activedescendant');
+      this.parts.input.setAttribute('aria-activedescendant', active.element.id);
+    } else this.parts.input.removeAttribute('aria-activedescendant');
   }
 }
 
@@ -313,25 +443,30 @@ function matches(item: string | QuickPickItem, text: string): boolean {
   return labelOf(item).toLowerCase().includes(text.trim().toLowerCase());
 }
 
-/** An item's label, description and detail. */
-function itemElement(doc: Document, item: string | QuickPickItem): HTMLElement {
+/** An item's label, description and detail, the `highlights` marked. */
+function itemElement(doc: Document, item: string | QuickPickItem, highlights: QuickPickHighlights = {}): HTMLElement {
   const option = element(doc, 'div', 'typst-quick-pick__item');
-  const label = element(doc, 'span', 'typst-quick-pick__label');
-  label.textContent = labelOf(item);
-  option.append(label);
+  option.append(highlighted(doc, 'typst-quick-pick__label', labelOf(item), highlights.label));
   if (typeof item === 'string') return option;
   // a space before each further part: the option's accessible name reads as words
-  if (item.description) {
-    const description = element(doc, 'span', 'typst-quick-pick__description');
-    description.textContent = item.description;
-    option.append(' ', description);
-  }
-  if (item.detail) {
-    const detail = element(doc, 'span', 'typst-quick-pick__detail');
-    detail.textContent = item.detail;
-    option.append(' ', detail);
-  }
+  if (item.description) option.append(' ', highlighted(doc, 'typst-quick-pick__description', item.description, highlights.description));
+  if (item.detail) option.append(' ', highlighted(doc, 'typst-quick-pick__detail', item.detail, highlights.detail));
   return option;
+}
+
+/** A span of `text` with the characters in `ranges` in `<mark>`s. */
+function highlighted(doc: Document, className: string, text: string, ranges: QuickPickHighlights['label'] = []): HTMLElement {
+  const span = element(doc, 'span', className);
+  let last = 0;
+  for (const [start, end] of ranges) {
+    if (start < last || end > text.length) continue;
+    const mark = element(doc, 'mark', 'typst-quick-pick__match');
+    mark.textContent = text.slice(start, end);
+    span.append(text.slice(last, start), mark);
+    last = end;
+  }
+  span.append(text.slice(last));
+  return span;
 }
 
 function title(doc: Document, text: string | undefined): HTMLElement[] {
@@ -340,6 +475,16 @@ function title(doc: Document, text: string | undefined): HTMLElement[] {
   heading.textContent = text;
   heading.setAttribute('aria-hidden', 'true'); // the box's name already
   return [heading];
+}
+
+/** The line below the list, describing `field`. */
+function hint(doc: Document, field: HTMLElement, text: string | undefined): HTMLElement[] {
+  if (!text) return [];
+  const line = element(doc, 'div', 'typst-quick-pick__hint');
+  line.id = `typst-quick-pick-hint-${++ids}`;
+  line.textContent = text;
+  field.setAttribute('aria-describedby', line.id);
+  return [line];
 }
 
 /** The selection in `root`: a shadow root's own where the browser has one (Chromium), else the document's. */

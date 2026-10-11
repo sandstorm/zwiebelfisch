@@ -1,10 +1,12 @@
 // The window namespace of the extension API (VS Code's `window`): what every feature needs to talk to the user
 // (messages, input box, quick pick, contributed menus), and the places of the widget's window a feature puts things into (status bar
-// items, custom editors, file decorations), and the file and editor the user works in. Entry of
-// hosts/window/. See docs/30_architecture/07_workbench.typ.
+// items, custom editors, file decorations, search everywhere's providers), and the file and editor the user works in.
+// Entry of hosts/window/. See docs/30_architecture/07_workbench.typ.
 // Why one namespace in VS Code's shapes: features look and behave alike when they ask and tell the same way, and
-// they never make popovers of their own. The parts (notifications/, quick-input/, menus/, status-bar/, progress/,
-// custom-editors/, file-decorations/) are deep modules of their own; WindowHost puts them where the workbench's frame says.
+// they never make popovers of their own. The parts (notifications/, quick-input/, search/, menus/, status-bar/,
+// progress/, custom-editors/, file-decorations/) are deep modules of their own; WindowHost puts them where the
+// workbench's frame says.
+import type { CancellationToken } from '../../core/cancellation/cancellation';
 import { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../core/paths/paths';
@@ -17,6 +19,8 @@ import { Notifications } from './notifications/notifications';
 import { ProgressIndicators } from './progress/progress';
 import { QuickInput } from './quick-input/quick-input';
 import { showSaveDialog } from './save-dialog/save-dialog';
+import { listenForDoubleShift } from './search/double-shift';
+import { SearchEverywhere } from './search/search';
 import { StatusBar } from './status-bar/status-bar';
 import css from './window.css?inline';
 
@@ -68,6 +72,12 @@ export interface WindowApi {
    * increment })` (`increment`: percent done since the last report; none: no bar of known length).
    */
   withProgress<R>(options: ProgressOptions, task: (progress: Progress<ProgressReport>) => Promise<R>): Promise<R>;
+  /**
+   * Adds what `provider` finds to search everywhere (double Shift anywhere in the widget, or the command
+   * `workbench.action.searchEverywhere`) until disposed: a group of results under `provider.label`. `provider.id` is
+   * unique.
+   */
+  registerSearchProvider(provider: SearchProvider): Disposable;
 
   /**
    * Puts `element` into the status bar below everything, until disposed: on the side `placement.alignment` says, the
@@ -160,6 +170,50 @@ export interface QuickPickOptions {
   placeHolder?: string;
   /** Checkboxes and OK instead of picking one; resolves to the checked items. */
   canPickMany?: boolean;
+}
+
+/** The [start, end) offsets of the characters to highlight in an item's texts (where a query matched). */
+export interface QuickPickHighlights {
+  readonly label?: readonly (readonly [number, number])[];
+  readonly description?: readonly (readonly [number, number])[];
+  readonly detail?: readonly (readonly [number, number])[];
+}
+
+/**
+ * One kind of thing search everywhere finds (files, headings, commands, …), shown as a group of its own (VS Code's
+ * quick access providers, in one list as JetBrains' "Search Everywhere").
+ */
+export interface SearchProvider {
+  /** `<extension>.<name>`, unique. */
+  readonly id: string;
+  /** The group's heading ("Headings"), and its name in the prefix hint. */
+  readonly label: string;
+  /**
+   * Typed first, narrows the search to the providers with this prefix (`#`), and they show more results. Without:
+   * only in the search over everything.
+   */
+  readonly prefix?: string;
+  /** The group's place (lower first; default 100; equal: by `id`). */
+  readonly order?: number;
+  /**
+   * The items for `query` (the text after the prefix, trimmed; '' at first), asked again whenever it changes. Items
+   * without `highlights` are matched by the search (fuzzily, against the label, else the description): return every
+   * candidate. Items with `highlights` were matched by the provider and are shown as they are, in its order (text
+   * search). May be async: check `token` between steps and stop once it is cancelled (the user typed on, or closed
+   * the search).
+   */
+  provideItems(query: string, token: CancellationToken): readonly SearchItem[] | Promise<readonly SearchItem[]>;
+}
+
+/** A result of search everywhere: what it shows (as a quick pick item) and what picking it does. */
+export interface SearchItem extends QuickPickItem {
+  /** Where the provider matched the query: the item is shown as given, not matched again. */
+  readonly highlights?: QuickPickHighlights;
+  /**
+   * Opens, runs or applies what the item stands for. Called once the search is closed and the focus is back where it
+   * was, still within the user's key press or click (a file picker may open).
+   */
+  accept(): void | Promise<unknown>;
 }
 
 /** What `showSaveDialog` asks (VS Code's SaveDialogOptions). */
@@ -377,6 +431,8 @@ export class WindowHost implements WindowApi {
   readonly #progress: ProgressIndicators;
   readonly #customEditors: CustomEditors;
   readonly #fileDecorations = new FileDecorations();
+  readonly #search: SearchEverywhere;
+  readonly #doubleShift: Disposable;
   readonly #fileChanges: Disposable;
   readonly onDidChangeFileDecorations = this.#fileDecorations.onDidChange;
   readonly onDidChangeTextEditorSelection: Event<TextEditorSelectionChangeEvent>;
@@ -388,6 +444,11 @@ export class WindowHost implements WindowApi {
     this.#notifications = new Notifications(options.host);
     this.#quickInput = new QuickInput(options.host);
     this.#contextMenu = new ContextMenu(options.host, { items: options.menuItems, executeCommand: options.executeCommand });
+    this.#search = new SearchEverywhere(this.#quickInput);
+    // never over an open input box or quick pick (search everywhere included): what is typed there stays
+    this.#doubleShift = listenForDoubleShift(options.host, () => {
+      if (!this.#quickInput.isOpen) this.showSearchEverywhere();
+    });
     this.#statusBar = new StatusBar(options.statusBar);
     this.#progress = new ProgressIndicators({ statusBar: this.#statusBar, editingArea: options.editingArea });
     this.#customEditors = new CustomEditors(options.editingArea);
@@ -428,6 +489,18 @@ export class WindowHost implements WindowApi {
 
   withProgress<R>(options: ProgressOptions, task: (progress: Progress<ProgressReport>) => Promise<R>): Promise<R> {
     return this.#progress.run(options, task);
+  }
+
+  registerSearchProvider(provider: SearchProvider): Disposable {
+    return this.#search.register(provider);
+  }
+
+  /**
+   * Opens search everywhere (cancelling an open input box or quick pick) with `value` in its field, e.g. a prefix
+   * (`>`). Double Shift opens it too, unless an input box or quick pick is open.
+   */
+  showSearchEverywhere(value = ''): void {
+    this.#search.show(value);
   }
 
   registerStatusBarItem(element: HTMLElement, placement: StatusBarPlacement): Disposable {
@@ -477,6 +550,6 @@ export class WindowHost implements WindowApi {
   }
 
   dispose(): void {
-    Disposable.from(this.#fileChanges, this.#notifications, this.#quickInput, this.#contextMenu, this.#progress, this.#customEditors, this.#fileDecorations).dispose();
+    Disposable.from(this.#fileChanges, this.#notifications, this.#quickInput, this.#search, this.#doubleShift, this.#contextMenu, this.#progress, this.#customEditors, this.#fileDecorations).dispose();
   }
 }

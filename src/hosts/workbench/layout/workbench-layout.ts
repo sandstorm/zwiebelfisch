@@ -51,6 +51,11 @@ export class WorkbenchLayout {
     return this.#sides[options.side ?? 'left'].addPanel(id, options);
   }
 
+  /** Puts `button` at the far end of `side`'s rail (shown while the side has a panel). */
+  addRailAction(side: Side, button: HTMLElement): void {
+    this.#sides[side].addAction(button);
+  }
+
   /**
    * The panel `side` shows until the viewer picks one (null: the side starts hidden), before the panels' own
    * `setDefault`; undefined: none named.

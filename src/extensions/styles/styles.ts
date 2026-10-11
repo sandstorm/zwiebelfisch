@@ -7,11 +7,12 @@ import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/wor
 import css from './styles.css?inline';
 import { calculateNewStyleChange } from './model/new-style';
 import { TypstStyleIndex } from './model/typst-style-index';
-import { customStyles } from './visual-view/visual-view';
+import { customStyles, styleApplier } from './visual-view/visual-view';
+import { styleSearch } from './workbench/style-search';
 
 /**
  * Keeps the project's custom styles indexed; every document's Visual view shows and applies
- * them and offers "New style…".
+ * them and offers "New style…"; search everywhere applies them too (in either view).
  */
 export function styles(): TypstExtension {
   return {
@@ -21,6 +22,9 @@ export function styles(): TypstExtension {
       const index = new TypstStyleIndex(context.project);
       context.subscriptions.push(index);
       customStyles({ styles: index, create: () => void addNewStyle(index, context) }).activate(context);
+      const applier = styleApplier(index);
+      applier.activate(context);
+      context.subscriptions.push(context.window.registerSearchProvider(styleSearch(index, applier, context.window)));
     },
   };
 }

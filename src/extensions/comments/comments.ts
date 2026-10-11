@@ -8,6 +8,7 @@ import css from './comments.css?inline';
 import { registerIncludeComments } from './preview/preview';
 import { marginNotes } from './visual-view/margin-notes';
 import { notesGutter } from './visual-view/notes-gutter/notes-gutter';
+import { commentSearch } from './workbench/comment-search';
 import { ADD_COMMENT, registerAddComment } from './workbench/workbench';
 
 /**
@@ -15,16 +16,21 @@ import { ADD_COMMENT, registerAddComment } from './workbench/workbench';
  * the Visual view the notes in the text and a card per note in the notes gutter; "Comment" in the Visual view's
  * toolbar and, for the Source view, in the tab bar; Ctrl/Cmd+Alt+M in both (the command `comments.addComment`). A note
  * added in the Visual view opens its card. PDF exports get the option `comments.include` (default off: the notes are
- * left out).
+ * left out). Search everywhere finds the notes by text and author.
  */
 export function comments(): TypstExtension {
   return {
     id: 'comments',
+    contributes: { commands: [{ command: ADD_COMMENT, title: 'Add comment', category: 'Comments' }] },
     activate(context) {
       context.subscriptions.push(context.workbench.registerStyleSheet(css));
-      const { project, commands, workbench, preview, subscriptions } = context;
+      const { project, commands, window, workbench, preview, subscriptions } = context;
       const notes = notesGutter({ user: workbench.user });
-      subscriptions.push(registerAddComment(context, notes), registerIncludeComments(preview, project));
+      subscriptions.push(
+        registerAddComment(context, notes),
+        registerIncludeComments(preview, project),
+        window.registerSearchProvider(commentSearch(context, notes)),
+      );
       marginNotes({ comment: () => commands.executeCommand(ADD_COMMENT).catch((error: unknown) => console.error(error)) }).activate(context);
       notes.activate(context);
     },

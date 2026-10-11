@@ -27,6 +27,7 @@ const NEW_SPREADSHEET = 'spreadsheets.newSpreadsheet';
 export function spreadsheets(): TypstExtension {
   return {
     id: 'spreadsheets',
+    contributes: { commands: [{ command: NEW_SPREADSHEET, title: 'New spreadsheet…', category: 'Spreadsheets' }] },
     activate(context) {
       const { commands, window, workbench, visualView, subscriptions } = context;
       subscriptions.push(

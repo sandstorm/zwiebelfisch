@@ -452,6 +452,18 @@ describe('the built-in extensions', () => {
     warn.mockRestore();
   });
 
+  it('finds with search everywhere what the built-ins offer, a group each, in their order', async () => {
+    const source = '#import "styles.typ": note\n= Results <results>\n#figure(table(columns: 1)[a], caption: [Runs])\nCold #margin-note[- *Ada* (2026-10-10): Results?]\n';
+    const { host, editor } = setup({ source, files: { '/styles.typ': '/// @style block Note\n#let note(body) = block(body)\n', '/data.csv': 'results,1\n' } });
+    await editor.executeCommand('workbench.action.searchEverywhere', 'results');
+    await vi.waitFor(() => expect(host.querySelector('.typst-quick-pick__progress')!.hasAttribute('hidden')).toBe(true));
+    const headings = [...host.querySelectorAll('.typst-quick-pick__heading')].map((heading) => heading.firstChild!.textContent);
+    expect(headings).toEqual(['Headings', 'Labels', 'Comments', 'Text']);
+    await editor.executeCommand('workbench.action.searchEverywhere', '');
+    const all = [...host.querySelectorAll('.typst-quick-pick__heading')].map((heading) => heading.firstChild!.textContent);
+    expect(all).toEqual(['Files', 'Headings', 'Labels', 'Figures', 'Commands', 'Styles', 'Comments', 'Settings']);
+  });
+
   it('removes everything it added on dispose', () => {
     const { host, editor } = setup({ source: '= Hi', files: { '/a.typ': 'A' } });
     editor.dispose();

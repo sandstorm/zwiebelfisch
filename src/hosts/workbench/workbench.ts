@@ -33,6 +33,8 @@ import { EditorTitleMenu } from './menus/editor-title-menu';
 import { Menus } from './menus/menus';
 import { StorageMemento } from './memento/memento';
 import { StyleSheets } from './style-sheets/style-sheets';
+import { commandSearch } from './search/command-search';
+import { settingSearch } from './search/setting-search';
 import { TypstEditors, VIEW_TYPES } from './typst-editors/typst-editors';
 import css from './workbench.css?inline';
 
@@ -59,6 +61,21 @@ export interface ExtensionContributions {
    * values with `createTypstEditor({ settings })`; the extension reads them with `workspace.getConfiguration`.
    */
   readonly configuration?: { readonly properties: Readonly<Record<string, ConfigurationProperty>> };
+  /**
+   * Its commands for people: what they are called. Search everywhere lists them (while registered) and runs them
+   * without arguments, so declare only commands that work without any.
+   */
+  readonly commands?: readonly CommandContribution[];
+}
+
+/** A command as people see it (VS Code's `contributes.commands` entry). */
+export interface CommandContribution {
+  /** The command's id (`commands.registerCommand`). */
+  readonly command: string;
+  /** What it does, as a menu would say it ("Add comment", "New diagram…"). */
+  readonly title: string;
+  /** What it belongs to, shown before the title ("Comments: Add comment"). */
+  readonly category?: string;
 }
 
 /**
@@ -285,6 +302,9 @@ export class WorkbenchHost implements Workbench {
   readonly #preview: Preview;
   #previewFailed = false;
   #frame: { top: HTMLElement; bottom: HTMLElement } | null = null;
+  /** The commands the extensions declare (`contributes.commands`), for search everywhere. */
+  #declaredCommands: readonly CommandContribution[] = [];
+  readonly #search: Disposable;
   readonly #shown = new EventEmitter<ProjectPath>();
   readonly #selectionChanged = new EventEmitter<TextEditorSelectionChangeEvent>();
   readonly #subscription: Disposable;
@@ -330,6 +350,7 @@ export class WorkbenchHost implements Workbench {
     this.#ownStyles = Disposable.from(frameStyles, ...hosts.map((part) => this.#styleSheets.add(part.styleSheet)));
     this.#subscription = project.onDidChangeFile((change) => this.#changed(change));
     this.#showDocumentLinks();
+    this.#search = this.#registerSearch();
     this.#applyRightSidePanel();
     this.#workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('workbench.theme')) this.#applyTheme();
@@ -361,6 +382,7 @@ export class WorkbenchHost implements Workbench {
    */
   activate(extensions: readonly TypstExtension[]): void {
     for (const extension of extensions) this.#workspace.declare(extension.contributes?.configuration?.properties ?? {});
+    this.#declaredCommands = extensions.flatMap((extension) => extension.contributes?.commands ?? []);
     this.#workspace.check();
     this.#extensions.activate(extensions);
     this.open(this.project.main, { viewType: this.options.mode && VIEW_TYPES[this.options.mode] });
@@ -435,6 +457,7 @@ export class WorkbenchHost implements Workbench {
   dispose(): void {
     this.#subscription.dispose();
     this.#extensions.dispose();
+    this.#search.dispose();
     this.window.dispose();
     this.#tabs.dispose();
     this.#scm.dispose();
@@ -511,6 +534,42 @@ export class WorkbenchHost implements Workbench {
     }
   }
 
+  /**
+   * Search everywhere's ways in besides double Shift: the command `workbench.action.searchEverywhere` (its argument:
+   * the text to start with, e.g. a prefix) and a button at the bottom of the left rail; and its built-in groups, the
+   * declared commands and the settings.
+   */
+  #registerSearch(): Disposable {
+    const command = 'workbench.action.searchEverywhere';
+    const button = this.host.ownerDocument.createElement('button');
+    button.type = 'button';
+    button.title = 'Search everywhere (Shift Shift)';
+    button.setAttribute('aria-label', 'Search everywhere');
+    button.dataset.testid = 'typst-search-everywhere';
+    button.innerHTML = SEARCH_ICON;
+    button.addEventListener('click', () => void this.commands.executeCommand(command));
+    this.#layout.addRailAction('left', button);
+    return Disposable.from(
+      new Disposable(() => button.remove()),
+      this.commands.registerCommand(command, (value?: string) => this.window.showSearchEverywhere(typeof value === 'string' ? value : '')),
+      this.window.registerSearchProvider(
+        commandSearch({
+          declared: () => this.#declaredCommands,
+          isRegistered: (id) => this.commands.has(id),
+          executeCommand: (id) => this.commands.executeCommand(id),
+        }),
+      ),
+      this.window.registerSearchProvider(
+        settingSearch({
+          properties: () => this.#workspace.properties,
+          value: (id) => this.#workspace.getConfiguration().get(id),
+          update: (id, value) => (this.settings = { ...this.settings, [id]: value }),
+          window: this.window,
+        }),
+      ),
+    );
+  }
+
   /** The right side's default panel from the setting `workbench.rightSidePanel`. */
   #applyRightSidePanel(): void {
     this.#layout.setDefaultPanel('right', this.#workspace.getConfiguration('workbench').get<string | null>('rightSidePanel'));
@@ -560,6 +619,10 @@ function previewIcon(doc: Document): SVGSVGElement {
   svg.innerHTML = '<path d="M4 1.5h5.5L12.5 4.5v10h-8.5z"/><path d="M9.5 1.5v3h3M6.5 8h4M6.5 10.5h4"/>';
   return svg;
 }
+
+/** Search everywhere's rail button: a magnifier. */
+const SEARCH_ICON =
+  '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5l3.5 3.5"/></svg>';
 
 /** The workbench's own settings. */
 const WORKBENCH_SETTINGS = {

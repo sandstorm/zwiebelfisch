@@ -13,7 +13,7 @@ function activate(document: TypstDocument | null): (id: string) => void {
   const commands = {
     registerCommand: (id: string, handler: () => void) => (registered.set(id, handler), new Disposable(() => registered.delete(id))),
   };
-  const window = { activeTextEditor: document && { document } };
+  const window = { activeTextEditor: document && { document }, registerSearchProvider: () => new Disposable(() => {}) };
   headings().activate({ workbench, commands, window, visualView: new VisualViewHost(), subscriptions: [] } as unknown as ExtensionContext);
   return (id) => registered.get(id)!();
 }
