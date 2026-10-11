@@ -458,6 +458,8 @@ export interface BoxRenderer {
   render(node: Node, from: number): Promise<BoxPicture | null>;
   /** Draws a box again as soon as its node changes (an image follows its path), not only on `onDidChange`. */
   readonly followsEdits?: boolean;
+  /** A class of the renderer's own on the picture (`<img>`), for its CSS (compiled snippets inverted in the dark). */
+  readonly className?: string;
   /** Fires whenever pictures may have changed (a new compile). */
   readonly onDidChange: Event<void>;
 }

@@ -23,6 +23,7 @@ export interface SnippetSource {
  */
 export function snippetRenderer(source: SnippetSource): BoxRenderer {
   return {
+    className: 'typst-rendered-boxes__snippet',
     renders: () => true,
     render: async (node, from) => {
       const src: string = node.attrs.src;

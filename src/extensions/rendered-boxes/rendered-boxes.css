@@ -1,0 +1,3 @@
+/* The rendered-boxes extension's styles: compiled snippets inverted in the dark, as the preview's pages are.
+   Registered by rendered-boxes.ts (Workbench.registerStyleSheet). */
+.typst-editor[data-scheme='dark'] .typst-rendered-boxes__snippet { filter: invert(1) hue-rotate(180deg); }

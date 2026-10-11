@@ -136,6 +136,7 @@ function imageRenderer(urls: ImageUrls): BoxRenderer {
       return url === null ? null : { url };
     },
     followsEdits: true,
+    className: 'typst-images__picture',
     onDidChange: urls.onDidChange,
   };
 }

@@ -15,7 +15,8 @@ describe('renderedBoxes', () => {
     const project = new Project(path('/main.typ'), { '/main.typ': '= Hi\n', '/chapters/one.typ': '$x$\n' });
     const preview = { snippet: vi.fn(async () => ({ svg: '<svg/>', width: 1, height: 1, textHeight: 1, padding: 0 })), onDidRender: vi.fn(() => new Disposable(() => {})) };
     const visualView = new VisualViewHost();
-    renderedBoxes().activate({ project, preview, visualView, subscriptions: [] } as unknown as ExtensionContext);
+    const workbench = { registerStyleSheet: () => new Disposable(() => {}) };
+    renderedBoxes().activate({ project, preview, visualView, workbench, subscriptions: [] } as unknown as ExtensionContext);
     const document = project.document(path('/chapters/one.typ'))!;
     const renderer = visualView.contributed().boxRenderers[0]({ document, selection: () => ({ from: 0, to: 0 }), sourceToPos: () => 0, posToSource: () => 0, isBox: () => false })!;
     const box = { attrs: { src: '$x$' }, isInline: false } as unknown as Node;

@@ -12,13 +12,12 @@
 }
 .typst-images__path:hover { text-decoration: underline; }
 .typst-images__path--missing { color: var(--te-faint); cursor: default; text-decoration: line-through dotted; }
-/* Image files show at their own size: keep a big photo from filling the whole view (aspect kept;
-   the picture sits in the image frame, so not a direct child) */
-.typst-images__box .typst-visual__rendering { max-height: min(24em, 40vh); object-fit: contain; }
+/* Image files show at their own size: keep a big photo from filling the whole view (aspect kept) */
+.typst-images__picture { max-height: min(24em, 40vh); object-fit: contain; }
 /* Images: a frame showing the width, resize handles and the image toolbar while selected */
 .typst-images__frame { position: relative; width: fit-content; max-width: 100%; }
-.typst-images__frame--sized > .typst-visual__rendering { width: 100%; }
-.typst-images__frame:has(> .typst-visual__rendering[hidden]) { display: none; }
+.typst-images__frame--sized > .typst-images__picture { width: 100%; }
+.typst-images__frame:has(> .typst-images__picture[hidden]) { display: none; }
 .typst-images__resize-handle {
   position: absolute;
   display: none;
@@ -58,9 +57,9 @@
   margin-top: 4px;
   font: 12px system-ui, sans-serif;
 }
-.typst-images__box.ProseMirror-selectednode.typst-visual__raw--rendered > .typst-images__tools,
+.typst-images__box.ProseMirror-selectednode:has(.typst-images__picture:not([hidden])) > .typst-images__tools,
 .typst-images__tools:focus-within { display: flex; }
-.typst-images__tools > .typst-visual__box-actions { display: contents; }
+.typst-images__actions { display: contents; }
 .typst-images__tools button {
   padding: 2px 8px;
   border: 1px solid var(--te-border);
@@ -74,7 +73,7 @@
 figure > .typst-images__box { margin-bottom: 0.2em; }
 figure .typst-images__frame { margin: 0 auto; }
 figure .typst-images__tools { justify-content: center; }
-.typst-images__frame > .typst-visual__rendering { cursor: default; }
+.typst-images__frame > .typst-images__picture { cursor: default; }
 /* Read-only view of image files */
 .typst-asset {
   flex: 1;

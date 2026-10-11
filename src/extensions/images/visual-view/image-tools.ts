@@ -75,7 +75,8 @@ export class ImageTools implements BoxTools {
     const prompts = host.prompts;
     const altButtons = prompts ? [this.button('Alt text', () => void this.askAlt(prompts))] : [];
     const codeButton = this.button('Edit code', () => host.editCode());
-    // the box actions of other contributions ("Edit diagram") go before "Edit code"
+    // the box actions of other contributions ("Edit diagram") go before "Edit code", as buttons of the toolbar
+    host.actions.classList.add('typst-images__actions');
     this.tools.append(this.captionButton, ...this.presetButtons, ...altButtons, host.actions, codeButton);
     host.dom.insertBefore(this.tools, host.code);
     this.update(node);

@@ -1,7 +1,7 @@
 /* The headings extension's styles: Headings in the Visual view, and their numbers in a gutter right of the text.
    Registered by headings.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
-.typst-visual h1 { font-size: 1.6em; margin: 0.6em 0 0.3em; }
-.typst-visual h2 { font-size: 1.3em; margin: 0.6em 0 0.3em; }
+h1.typst-headings__heading { font-size: 1.6em; margin: 0.6em 0 0.3em; }
+h2.typst-headings__heading { font-size: 1.3em; margin: 0.6em 0 0.3em; }
 /* Heading numbers (from #set heading(numbering: ..)) in a gutter right of the text; not editable */
 .typst-headings--numbered { padding-right: 6em; }
 .typst-headings__numbered { position: relative; }

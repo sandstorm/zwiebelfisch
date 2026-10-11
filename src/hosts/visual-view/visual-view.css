@@ -39,8 +39,6 @@
 .typst-visual__raw--rendered { background: transparent; }
 .typst-visual__rendering { display: block; max-width: 100%; height: auto; cursor: text; }
 .typst-visual__raw-block > .typst-visual__rendering { margin: 0 auto; }
-/* Dark mode: compiled snippets inverted as the preview's pages are (image files not) */
-.typst-editor[data-scheme='dark'] .typst-visual__raw--rendered:not(.typst-images__box) > .typst-visual__rendering { filter: invert(1) hue-rotate(180deg); }
 /* An inline snippet is sized in em of the text around it (see inlinePictureSize), so its box takes
    that text's size, not the code chip's; a squeezed one keeps its aspect */
 .typst-visual__raw-inline.typst-visual__raw--rendered { font-size: inherit; }
