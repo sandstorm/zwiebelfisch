@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests for style-menu.ts: custom styles in the text style menu, through the Visual view.
+// Tests for the custom styles' entries of the text style menu (visual-view.ts), through the Visual view.
 import { describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
@@ -7,7 +7,7 @@ import { calculateImportChange } from '../../../core/typst-syntax/typst-syntax';
 import type { ProjectStyles } from '../model/style-index';
 import type { Style } from '../model/discover';
 import { createVisualView } from '../../../testing/testing';
-import { VisualView, VisualViewContributions } from '../../../hosts/visual-view/visual-view';
+import { VisualView, VisualViewHost } from '../../../hosts/visual-view/visual-view';
 import { ProjectPath } from '../../../core/paths/paths';
 import { customStyles } from './visual-view';
 
@@ -47,21 +47,6 @@ function setup(text: string, initial: Style[] = [NOTE, KEY], create = () => {}) 
 }
 
 describe('custom styles in the text style menu', () => {
-  it('sets headings and back to normal text', () => {
-    const { doc, view, menu, choose } = setup('Hello world\n', []);
-    view.reveal(0, 'Hello world'.length);
-    expect(menu.value).toBe('paragraph');
-    choose('heading-2');
-    expect(doc.text).toBe('== Hello world\n');
-    expect(menu.value).toBe('heading-2');
-    choose('heading-1');
-    expect(doc.text).toBe('= Hello world\n');
-    choose('heading-3');
-    expect(doc.text).toBe('=== Hello world\n');
-    choose('paragraph');
-    expect(doc.text).toBe('Hello world\n');
-  });
-
   it('lists the paragraph and the text styles after the headings, and New style…', () => {
     const { menu, labels } = setup('Text\n', [NOTE, KEY]);
     expect(labels()).toEqual([['Paragraph styles', 'Note'], ['Text styles', 'Keyword']]);
@@ -122,7 +107,7 @@ describe('custom styles in the text style menu', () => {
 describe('the text style menu without headings', () => {
   it('offers normal text and the styles, but no heading levels, when no extension contributes headings', () => {
     const styles: ProjectStyles = { styles: () => [NOTE], onDidChange: new EventEmitter<void>().event, calculateImportChange: () => null };
-    const contributions = VisualViewContributions.from([customStyles({ styles, create: () => {} })]);
+    const contributions = VisualViewHost.from([customStyles({ styles, create: () => {} })]);
     const parent = document.body.appendChild(document.createElement('div'));
     new VisualView(parent, new TypstDocument('Text\n'), contributions);
     const menu = parent.querySelector<HTMLSelectElement>('select[aria-label="Text style"]')!;

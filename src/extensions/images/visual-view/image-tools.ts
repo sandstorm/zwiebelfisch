@@ -6,7 +6,7 @@ import type { BoxTools, BoxToolsHost } from '../../../hosts/visual-view/visual-v
 import type { Window } from '../../../hosts/window/window';
 import { imageWidthCss } from '../model/image-call';
 import { type DragStart, resizedPercent } from '../model/resize';
-import { addCaption, imageInfo, removeCaption, resizeImage, setImageAlt } from './image-edits';
+import { imageInfo, resizeImage, setImageAlt } from './image-edits';
 import { imagePath } from './image-syntax';
 
 /** The image box the tools belong to (its picture moves into the resize frame). */
@@ -26,8 +26,8 @@ const HANDLES = ['nw', 'ne', 'sw', 'se', 'w', 'e'];
  * What an image box offers besides its code: the "Image: path" heading, a
  * frame around the rendered picture showing the image's width with drag
  * handles to change it, and, while the image is selected, a small toolbar
- * (add/remove caption, preset widths, alt text, the box actions others
- * contribute, edit the code).
+ * (add/remove caption where the figures extension's commands are there,
+ * preset widths, alt text, the box actions others contribute, edit the code).
  *
  * Every change is one transaction from `image-edits`, so one undo step that
  * rewrites only the argument concerned. A drag changes the width live in the
@@ -99,7 +99,9 @@ export class ImageTools implements BoxTools {
   private refresh(): void {
     const pos = this.host.getPos();
     const info = pos === undefined ? null : imageInfo(this.host.editor.state, pos);
-    this.captionButton.textContent = info?.caption ? 'Remove caption' : 'Add caption';
+    const caption = this.captionCommand();
+    this.captionButton.hidden = caption === null;
+    this.captionButton.textContent = caption === 'removeFigureCaption' ? 'Remove caption' : 'Add caption';
     for (const [i, button] of this.presetButtons.entries()) button.setAttribute('aria-pressed', String(info?.width === `${PRESETS[i]}%`));
   }
 
@@ -109,8 +111,20 @@ export class ImageTools implements BoxTools {
 
   private toggleCaption(): void {
     const pos = this.host.getPos();
-    const caption = pos !== undefined && imageInfo(this.host.editor.state, pos)?.caption;
-    this.run(caption ? removeCaption : addCaption);
+    const command = this.captionCommand();
+    if (pos !== undefined && command) this.host.editor.commands[command](pos);
+    this.host.editor.view.focus();
+    this.refresh();
+  }
+
+  /** What the caption button does now: the figures extension's command that applies, if that extension is there. */
+  private captionCommand(): 'addFigureCaption' | 'removeFigureCaption' | null {
+    const pos = this.host.getPos();
+    const { editor } = this.host;
+    // another extension's commands: guarded, the figures may be left out
+    if (pos === undefined || !('addFigureCaption' in editor.commands)) return null;
+    if (editor.can().removeFigureCaption(pos)) return 'removeFigureCaption';
+    return editor.can().addFigureCaption(pos) ? 'addFigureCaption' : null;
   }
 
   /** Asks for the alt text (an empty one removes it) and sets it. */

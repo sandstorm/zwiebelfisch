@@ -515,7 +515,7 @@ What `activate` gets (`ExtensionContext`; every type is exported from the packag
 | `workspace` | `applyEdit(change)` (through the host's `allowFileChange`; resolves to the reason it was refused, or null), the settings: `getConfiguration('<section>').get('<key>')`, `onDidChangeConfiguration`. |
 | `workbench` | The frame: `open(path, { viewType? })`, `activeFile`, `onDidShowFile`, `registerSidePanel(id, { label, icon, order? })`, `registerEditorFrame`, `registerMenuItem` / `getMenuItems`, `registerStyleSheet` (your CSS, inside the shadow root too), `onDidDropFiles`, `user`. |
 | `preview` | `registerToolbarItem(item, { group, order })`, `registerPdfExportOption`, `reveal`, `onDidClickPage`, `onDidChangeDiagnostics`. |
-| `visualView`, `sourceView` | Node and mark specs, toolbar items, decorations of the Visual view; CodeMirror extensions of the Source view. |
+| `visualView`, `sourceView` | Node and mark specs, toolbar items, box renderers and actions, gutters, highlights and text styles of the Visual view (see "Writing a Visual-view construct"; experimental); CodeMirror extensions of the Source view (`registerExtension`). |
 
 Rules the built-ins follow, and yours should too:
 
@@ -577,6 +577,152 @@ commands.registerCommand('wordCount.countFile', async (path: ProjectPath) => {
 workbench.registerMenuItem('explorer/context', {
   command: 'wordCount.countFile', title: 'Count words', when: (context) => context.resourceKind === 'file',
 });
+```
+
+### Writing a Visual-view construct (experimental)
+
+The Visual view models a Typst construct only when an extension contributes it; everything else shows as raw Typst
+in a box. The built-in constructs — headings, lists, tables, images, figures, … — are extensions using exactly
+this API, and yours can add one the same way: `context.visualView.registerNode(spec)` (or `registerMark(spec)`
+for inline formatting). **Experimental:** the shapes may still change between versions.
+
+A spec (`TypstNodeSpec`) is three things:
+
+- **the node**: its Tiptap `extension` (`Node.create`: schema, node view, commands, keymap). Build it with
+  `@tiptap/core` of the version the package uses (3.31); take ProseMirror objects (schema, state, transactions)
+  from the editor, never from a copy of your own.
+- **reading Typst** (`blockCalls`, `blockSyntax`, `runSyntax`, `inlineSyntax`, `inlineCalls`): projectors get a
+  `ProjectionContext` (`p.text(range)`, `p.blocks(contentBlock)`, `p.inline(nodes)`, `p.schema`, …) and the call or
+  syntax node (Lezer, `codemirror-lang-typst`'s grammar), and return the node, or `null` to leave the source raw.
+  Return `null` for anything you cannot print back exactly.
+- **writing Typst** (`print`): an *edited* node is printed through the `Printer` (`hidden(src)` for syntax the view
+  does not show, `blocks(node, pos, sep)` for its children, `closing(src)`, …); untouched source stays byte for
+  byte. Remember how the source was written in an attribute (here `layout`), list it in `anchors` so a fresh
+  projection updates it in place, and add `sep` (the whitespace to the next block) in `attributes`; `labelled`
+  lets a label (`<tip>`) follow the block.
+
+Around it: `registerToolbarItem({ group, order, action | create })` (the host's groups: `history`, `text-style`,
+`insert` (the Insert menu), the floating `selection` bar; `registerToolbarGroup` adds your own),
+`registerTextStyleProvider` (entries of the text style menu), `registerBoxRenderer` / `registerBoxAction` (what raw
+boxes show and offer), `registerGutter`, `registerHighlights`, `registerEditorExtension` (per-view Tiptap
+extensions). Where contributions compete, `priority` decides (default 100, higher first: projectors of the same
+syntax are asked in that order, and marks nest by it, a higher one outside). Node groups are how constructs meet
+without naming each other: a node type in the group `figureBody` can be a figure's body, one in `blockContainer`
+holds blocks an alignment may wrap.
+
+A complete example: `#callout(title: "Tip")[…]` as a box with its title in a field and its content as editable text,
+and "Callout" in the Insert menu. Editing the title rewrites only the call's head (`#callout(title: "…")[`); a call it does not model
+(`#callout(kind: "x")[…]`) stays raw Typst. (This code is tested in `src/index.visual-view-construct.test.ts`.)
+
+```ts
+import { Node } from '@tiptap/core';
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
+import { createTypstEditor, type Call, type Printer, type ProjectionContext, type ToolbarItem, type TypstExtension, type TypstNodeSpec } from 'typst-editor';
+
+/** How a callout's source lies around its blocks (`#callout(title: "Tip")[` and `]`), and the title written there. */
+interface CalloutLayout {
+  open: string;
+  close: string;
+  title: string;
+}
+
+/** The node: blocks in a box whose title is a field of its own. */
+const Callout = Node.create({
+  name: 'callout',
+  group: 'block',
+  content: 'block+',
+  defining: true,
+  addAttributes: () => ({ title: { default: 'Note', rendered: false } }),
+  renderHTML: () => ['aside', { class: 'callout' }, ['div', 0]],
+  addNodeView: () => ({ node, getPos, editor }) => {
+    const doc = editor.view.dom.ownerDocument;
+    const dom = doc.createElement('aside');
+    dom.className = 'callout';
+    const header = dom.appendChild(doc.createElement('div'));
+    header.contentEditable = 'false';
+    const title = header.appendChild(doc.createElement('input'));
+    title.setAttribute('aria-label', 'Callout title');
+    title.value = node.attrs.title;
+    title.addEventListener('change', () => {
+      const pos = getPos();
+      if (pos !== undefined) editor.view.dispatch(editor.state.tr.setNodeAttribute(pos, 'title', title.value));
+    });
+    const contentDOM = dom.appendChild(doc.createElement('div'));
+    return {
+      dom,
+      contentDOM,
+      update: (next: ProseMirrorNode) => {
+        if (next.type !== node.type) return false;
+        if (title.value !== next.attrs.title) title.value = next.attrs.title;
+        return true;
+      },
+      // the field is the box's, not the text's
+      stopEvent: (event: Event) => header.contains(event.target as globalThis.Node),
+      ignoreMutation: (mutation: { target: globalThis.Node }) => header.contains(mutation.target),
+    };
+  },
+});
+
+/** `#callout[..]` or `#callout(title: "plain string")[..]`, whose content is blocks; anything else stays raw Typst. */
+function projectCallout(p: ProjectionContext, call: Call, sep: string | null): ProseMirrorNode | null {
+  const content = call.args.at(-1);
+  if (content?.name !== 'ContentBlock' || content.lastChild?.name !== 'RightBracket') return null;
+  const title = calloutTitle(p, call.args.slice(0, -1));
+  if (title === null) return null;
+  const { content: blocks, from, to } = p.blocks(content);
+  const layout: CalloutLayout = { open: p.text({ from: call.from, to: from }), close: p.text({ from: to, to: call.to }), title };
+  return p.schema.nodes.callout.create({ title, sep, layout }, blocks);
+}
+
+/** The title of `(title: "…")` (none: "Note"); null for other arguments. */
+function calloutTitle(p: ProjectionContext, parens: Call['args']): string | null {
+  const args = parens.filter((arg) => arg.name === 'Named');
+  if (parens.length === 0) return 'Note';
+  const value = args[0]?.getChild('Str');
+  const named = args.length === 1 && p.text(args[0].getChild('Ident') ?? args[0]) === 'title';
+  const plain = value ? /^"([^"\\]*)"$/.exec(p.text(value)) : null;
+  return named && plain ? plain[1] : null;
+}
+
+/** As written while the title is; a new callout, or one with a changed title, gets the call printed anew. */
+function printCallout(out: Printer, callout: ProseMirrorNode, pos: number): void {
+  const layout: CalloutLayout | null = callout.attrs.layout;
+  const title: string = callout.attrs.title;
+  out.hidden(layout?.title === title ? layout.open : `#callout(title: "${title.replace(/["\\]/g, '\\$&')}")[`);
+  out.blocks(callout, pos + 1, '\n\n');
+  out.closing(layout?.close ?? ']');
+}
+
+const CALLOUT: TypstNodeSpec = {
+  name: 'callout',
+  extension: Callout,
+  // never rendered: where the callout's source is (`sep`: the whitespace after it), how it was written (`layout`)
+  attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } },
+  anchors: ['layout'],
+  labelled: true,
+  blockCalls: { callout: projectCallout },
+  print: printCallout,
+};
+
+/** "Callout" in the Insert menu: the selected blocks into a callout. */
+const INSERT_CALLOUT: ToolbarItem = {
+  group: 'insert',
+  order: 80,
+  action: { label: 'Callout', icon: '<svg viewBox="0 0 24 24" width="18" height="18"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor"/></svg>', run: (c) => c.wrapIn('callout') },
+};
+
+const CSS = '.callout { border-left: 3px solid var(--te-accent); padding: 4px 12px; } .callout input { font-weight: 600; border: none; }';
+
+export function callout(): TypstExtension {
+  return {
+    id: 'callout',
+    activate({ workbench, visualView, subscriptions }) {
+      subscriptions.push(workbench.registerStyleSheet(CSS), visualView.registerNode(CALLOUT), visualView.registerToolbarItem(INSERT_CALLOUT));
+    },
+  };
+}
+
+createTypstEditor(host, { extensions: (builtins) => [...builtins, callout()] });
 ```
 
 ## Migrating from the earlier API

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import { Project } from '../../core/project/project';
-import { VisualViewContributions } from '../../hosts/visual-view/visual-view';
+import { VisualViewHost } from '../../hosts/visual-view/visual-view';
 import type { ExtensionContext } from '../../hosts/workbench/workbench';
 import { renderedBoxes } from './rendered-boxes';
 
@@ -14,7 +14,7 @@ describe('renderedBoxes', () => {
   it('asks the preview for snippets of the document under its current path', async () => {
     const project = new Project(path('/main.typ'), { '/main.typ': '= Hi\n', '/chapters/one.typ': '$x$\n' });
     const preview = { snippet: vi.fn(async () => ({ svg: '<svg/>', width: 1, height: 1, textHeight: 1, padding: 0 })), onDidRender: vi.fn(() => new Disposable(() => {})) };
-    const visualView = new VisualViewContributions();
+    const visualView = new VisualViewHost();
     renderedBoxes().activate({ project, preview, visualView, subscriptions: [] } as unknown as ExtensionContext);
     const document = project.document(path('/chapters/one.typ'))!;
     const renderer = visualView.contributed().boxRenderers[0]({ document, selection: () => ({ from: 0, to: 0 }), sourceToPos: () => 0, posToSource: () => 0, isBox: () => false })!;

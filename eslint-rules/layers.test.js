@@ -28,12 +28,11 @@ describe('layers', () => {
     expect(await broken('src/hosts/workbench/workbench.ts', "import { Preview } from '../preview/preview';")).toEqual([]);
   });
 
-  it('keeps ui/ to core/: no host, extension, other widget or testing/', async () => {
+  it('keeps ui/ to core/: no host, extension or testing/ (popup-menu is the only widget)', async () => {
     const file = 'src/ui/popup-menu/popup-menu.ts';
     expect(await broken(file, "import { Preview } from '../../hosts/preview/preview';")).toEqual(['local/dependencies']);
     expect(await broken(file, "import { files } from '../../extensions/files/files';")).toEqual(['local/dependencies']);
     expect(await broken('src/ui/popup-menu/popup-menu.test.ts', "import { schema } from '../../testing/testing';")).toEqual(['local/dependencies']);
-    expect(await broken(file, "import { ToolbarMenu } from '../toolbar-menu/toolbar-menu';")).toEqual(['local/dependencies']);
     expect(await broken(file, "import { Disposable } from '../../core/disposable/disposable';")).toEqual([]);
     expect(await broken('src/ui/popup-menu/popup-menu.test.ts', "import { PopupMenu } from './popup-menu';")).toEqual([]);
   });

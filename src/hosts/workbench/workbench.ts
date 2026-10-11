@@ -20,7 +20,7 @@ import { type Languages, LanguagesHost } from '../languages/languages';
 import { Preview, type PreviewContributions } from '../preview/preview';
 import { type Scm, ScmHost } from '../scm/scm';
 import { SourceViewHost, type SourceViewContributions } from '../source-view/source-view';
-import { VisualViewContributions } from '../visual-view/visual-view';
+import { VisualViewHost, type VisualViewContributions } from '../visual-view/visual-view';
 import { type EditorMode, type TextEditorSelectionChangeEvent, type Window, WindowHost } from '../window/window';
 import { type ConfigurationProperty, type Settings, type Workspace, WorkspaceHost } from '../workspace/workspace';
 import { ColorScheme } from './color-scheme/color-scheme';
@@ -269,7 +269,7 @@ export class WorkbenchHost implements Workbench {
   readonly #extensions: ExtensionHost;
   readonly #styleSheets: StyleSheets;
   readonly #ownStyles: Disposable;
-  readonly #visualView = new VisualViewContributions();
+  readonly #visualView = new VisualViewHost();
   readonly #sourceViews = new SourceViewHost();
   readonly #preview: Preview;
   #hasFrame = false;

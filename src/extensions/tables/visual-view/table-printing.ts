@@ -76,10 +76,21 @@ function printCell(out: Printer, { cell, pos }: PlacedCell, bracketed: boolean):
 function bareCode(cell: Node): Node | null {
   const only = (node: Node | null) => (node?.childCount === 1 ? node.firstChild : null);
   const paragraph = only(cell);
-  const atom = paragraph?.type.name === 'paragraph' && paragraph.attrs.justify == null ? only(paragraph) : null;
+  const atom = paragraph?.type.name === 'paragraph' && isPlain(paragraph) ? only(paragraph) : null;
   const isCode = atom?.type.name === 'rawInline' && atom.attrs.code && atom.marks.length === 0;
   return isCode && isEmbeddable(atom.attrs.src) ? atom : null;
 }
+
+/**
+ * Whether `paragraph` prints just its content: no attribute another construct prints around it (alignment's
+ * `justify`) differs from its default; source anchors and the label do not count.
+ */
+function isPlain(paragraph: Node): boolean {
+  const defaults = paragraph.type.create().attrs;
+  return Object.entries(paragraph.attrs).every(([key, value]) => SOURCE_ATTRS.has(key) || value === defaults[key]);
+}
+
+const SOURCE_ATTRS = new Set(['src', 'sep', 'label']);
 
 /** `table.header(..)` around a header row, as written; the bracket form `table.header[a][b]` only if it holds no bare cells. */
 function headerSyntax({ header }: TableStyle, row: PlacedCell[]): TableStyle['header'] {

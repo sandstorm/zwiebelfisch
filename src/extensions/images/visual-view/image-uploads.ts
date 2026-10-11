@@ -1,7 +1,7 @@
 // Image uploads: image files from the computer, picked for "Insert image" or dropped, added to the project one by one.
 // See visual-view.ts.
 import type { PathReference } from '../../../core/paths/paths';
-import type { ImageAssets } from '../images';
+import type { ImageAssets } from './visual-view';
 import { IMAGE_ACCEPT } from '../model/image-files';
 
 /** Uploads `files` one by one: the paths of those added, and why the others were not. */

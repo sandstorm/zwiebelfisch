@@ -1,4 +1,4 @@
-/* The images extension's styles: image boxes (frame, resize handles, tools), figures and captions,
+/* The images extension's styles: image boxes (frame, resize handles, tools), also as a figure's body,
    an image's path link, and the read-only view of image and data files.
    Registered by images.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 /* An image box's path: a button opening the file, or struck through when the file is missing */
@@ -70,19 +70,10 @@
   cursor: pointer;
 }
 .typst-visual__image-tools button[aria-pressed='true'] { border-color: var(--te-accent); background: var(--te-selected); }
-.typst-visual__figure { margin: 0 0 0.7em; }
-.typst-visual__figure > .typst-visual__image { margin-bottom: 0.2em; }
-.typst-visual__figure .typst-visual__image-frame { margin: 0 auto; }
-.typst-visual__figure .typst-visual__image-tools { justify-content: center; }
-.typst-visual__figure .typst-visual__table { margin: 0 auto 0.2em; } /* a table figure: centred above its caption, as Typst sets it */
-.typst-visual__caption { position: relative; text-align: center; font-size: 0.95em; }
-.typst-visual__caption:has(> br.ProseMirror-trailingBreak:only-child)::before {
-  content: 'Caption';
-  position: absolute;
-  inset: 0;
-  color: var(--te-faint);
-  pointer-events: none;
-}
+/* An image as a figure's body (the figures extension's <figure>): centred above the caption */
+figure > .typst-visual__image { margin-bottom: 0.2em; }
+figure .typst-visual__image-frame { margin: 0 auto; }
+figure .typst-visual__image-tools { justify-content: center; }
 .typst-visual__image-frame > .typst-visual__rendering { cursor: default; }
 /* Read-only view of images and data files */
 .typst-asset {

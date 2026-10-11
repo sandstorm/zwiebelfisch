@@ -5,13 +5,16 @@
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './markup.css?inline';
 import {
-  BLOCKQUOTE, BOLD, CODE, CODE_BLOCK, INSERT_CODE_BLOCK, INSERT_QUOTE, ITALIC, LINK, linkAction, MARK_ACTIONS,
+  BLOCKQUOTE, BOLD, CODE, CODE_BLOCK, INSERT_CODE_BLOCK, INSERT_QUOTE, ITALIC, LINK, linkAction, linkShortcut, MARK_ACTIONS,
 } from './visual-view/visual-view';
+
+/** Links' mark priority: outside bold and italic (100) where they cover the same text. */
+const LINK_PRIORITY = 120;
 
 /**
  * Strong, emphasis, links, inline code, code blocks and block quotes: their nodes, marks and buttons. Where marks
- * cover the same text, a link is outermost (Tiptap's link mark has priority 1000), then bold, italic; inline code
- * prints innermost whatever the schema's order (`raw`).
+ * cover the same text, a link is outermost (`LINK_PRIORITY`), then bold, italic; inline code prints innermost
+ * whatever the schema's order (`raw`).
  */
 export function markup(): TypstExtension {
   return {
@@ -21,7 +24,7 @@ export function markup(): TypstExtension {
       subscriptions.push(
         visualView.registerMark(BOLD),
         visualView.registerMark(ITALIC),
-        visualView.registerMark(LINK),
+        visualView.registerMark(LINK, { priority: LINK_PRIORITY }),
         visualView.registerMark(CODE),
         visualView.registerNode(CODE_BLOCK),
         visualView.registerNode(BLOCKQUOTE),
@@ -30,6 +33,7 @@ export function markup(): TypstExtension {
           visualView.registerToolbarItem({ group: 'selection', order: 10 * (i + 1), action }),
         ),
         visualView.registerToolbarItem({ group: 'selection', order: 40, create: (toolbar) => linkAction(toolbar, window) }),
+        visualView.registerEditorExtension(linkShortcut(window)),
         visualView.registerToolbarItem({ group: 'insert', order: 40, action: INSERT_CODE_BLOCK }),
         visualView.registerToolbarItem({ group: 'insert', order: 50, action: INSERT_QUOTE }),
       );

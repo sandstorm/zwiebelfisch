@@ -1,8 +1,6 @@
-// FloatingBar: a small toolbar floating above something in the text (the selection, the table). Entry of
-// ui/floating-bar/, a feature-neutral widget. See ARCHITECTURE.md, "VisualView".
-
-/** Where a floating bar points: a viewport rectangle (e.g. a selection's or a table's), or nothing (hidden). */
-export type Anchor = { top: number; left: number; right: number } | null;
+// FloatingBar: a small toolbar floating above something in the text (the selection, the table), the toolbar's
+// `floating` groups. See toolbar.ts and ARCHITECTURE.md, "VisualView".
+import type { Anchor } from '../visual-view';
 
 /**
  * A `role="toolbar"` bar positioned just above an anchor in the Visual

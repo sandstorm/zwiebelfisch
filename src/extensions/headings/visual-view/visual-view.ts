@@ -1,7 +1,8 @@
 // What the headings extension contributes to the Visual view: the heading spec (`= Title` as Tiptap's heading node,
-// with the label right after it) and the heading numbers. See headings.ts.
+// with the label right after it) and its levels in the text style menu. See headings.ts.
 import { children } from '../../../core/typst-syntax/typst-syntax';
-import { starterKitPart, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import type { TextStyleProvider, TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import { starterKitPart } from '../../../hosts/projection/projection';
 
 /**
  * `= Title` .. `====== Title` (deeper levels count as 6): a heading of its own
@@ -33,4 +34,16 @@ export const HEADING: TypstNodeSpec = {
     out.hidden(`${'='.repeat(heading.attrs.level)} `);
     out.textblock(heading, pos);
   },
+};
+
+/** "Heading 1" to "Heading 3" in the text style menu, right after Normal text. */
+export const HEADING_STYLES: TextStyleProvider = {
+  provideTextStyles: () =>
+    ([1, 2, 3] as const).map((level) => ({
+      id: `heading-${level}`,
+      label: `Heading ${level}`,
+      order: 10 * level,
+      apply: (chain) => chain.setHeading({ level }),
+      isActive: (editor) => editor.isActive('heading', { level }),
+    })),
 };

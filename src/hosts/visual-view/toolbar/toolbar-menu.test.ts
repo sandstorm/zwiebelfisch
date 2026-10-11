@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Tests for toolbar-menu.ts.
+// Tests for ToolbarMenu (toolbar-menu.ts).
 import { describe, expect, it, vi } from 'vitest';
 import { ToolbarMenu } from './toolbar-menu';
 

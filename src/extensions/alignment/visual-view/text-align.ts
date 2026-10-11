@@ -4,8 +4,14 @@ import type { Node as PMNode, NodeRange, ResolvedPos } from '@tiptap/pm/model';
 import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state';
 import { liftTarget } from '@tiptap/pm/transform';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
+import { nodeGrammar } from '../../../hosts/projection/projection';
 import { alignArgs, setRules, withHorizontal, type Horizontal, type TextAlignment } from '../model/alignment-syntax';
 
+/**
+ * The node group whose members' content is any blocks, which an alignment block may wrap (a table cell); a spec
+ * joins it with its node type's `group`.
+ */
+const BLOCK_CONTAINER = 'blockContainer';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -29,6 +35,11 @@ declare module '@tiptap/core' {
  * - `#set align(..)` and `#set par(justify: ..)` in raw blocks set the
  *   default for the blocks after them (in the same container).
  *
+ * Blocks are wrapped where they stand in the document, an alignment block or
+ * a node type of the group `blockContainer` (whose content is any blocks: a
+ * table cell); paragraphs of an item (whose spec makes a `container` of
+ * them: a list item) are not justified on their own.
+ *
  * The view shows every textblock's effective alignment (CSS `text-align`), and
  * `textAlignAt` tells the toolbar which one the selection has. The commands
  * change the source as little as possible, in one transaction: an alignment
@@ -38,7 +49,7 @@ declare module '@tiptap/core' {
  */
 export const TextAlign = Node.create({
   name: 'alignment',
-  group: 'block',
+  group: `block ${BLOCK_CONTAINER}`,
   content: 'block+',
   defining: true,
   addAttributes() {
@@ -155,12 +166,14 @@ function decorate(doc: PMNode): DecorationSet {
 
 // ------------------------------------------------------------------ commands
 
-/** Nodes whose children can be wrapped in an alignment block. */
-const CONTAINERS = new Set(['doc', 'alignment', 'tableCell', 'tableHeader']);
+/** Whether `node`'s children can be wrapped in an alignment block: the document's, and a block container's. */
+function isContainer(node: PMNode): boolean {
+  return node.type === node.type.schema.topNodeType || node.type.isInGroup(BLOCK_CONTAINER);
+}
 
 function selectedBlocks(tr: Transaction): NodeRange | null {
   const { $from, $to } = tr.selection;
-  return $from.blockRange($to, (node) => CONTAINERS.has(node.type.name));
+  return $from.blockRange($to, isContainer);
 }
 
 /** Aligns the selected blocks as `target` says; null: as their surroundings. */
@@ -222,12 +235,12 @@ function lift(tr: Transaction, range: NodeRange): void {
   tr.lift(range, target);
 }
 
-/** Sets `justify` on the selected paragraphs (not in list items) where it differs from what their scope gives them. */
+/** Sets `justify` on the selected paragraphs (not in items) where it differs from what their scope gives them. */
 function justifyParagraphs(tr: Transaction, target: TextAlignment | null): void {
   const { from, to } = tr.selection;
   tr.doc.nodesBetween(from, to, (node, pos, parent) => {
     if (node.type.name !== 'paragraph') return true;
-    if (parent?.type.name === 'listItem') return false;
+    if (parent && nodeGrammar(parent)?.container) return false;
     const scope = scopeAt(tr.doc.resolve(pos));
     const justify = target === null || (target === 'justify') === scope.justify ? null : target === 'justify';
     if (node.attrs.justify !== justify) tr.setNodeMarkup(pos, undefined, { ...node.attrs, justify });

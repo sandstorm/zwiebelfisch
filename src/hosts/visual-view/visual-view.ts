@@ -1,19 +1,18 @@
 // VisualView: the WYSIWYG editing view, a Tiptap editor over the source-anchored projection of a TypstDocument;
-// everything it shows beyond paragraphs and raw Typst is contributed through VisualViewContributions.
+// everything it shows beyond paragraphs and raw Typst is contributed through VisualViewContributions (kept by
+// VisualViewHost).
 // Entry of hosts/visual-view/. See ARCHITECTURE.md, "VisualView".
-import { Editor, getSchema, type AnyExtension, type ChainedCommands } from '@tiptap/core';
-import StarterKit, { type StarterKitOptions } from '@tiptap/starter-kit';
+import { Editor, type AnyExtension, type ChainedCommands } from '@tiptap/core';
 import { StateEffect, type Extension as CodeExtension } from '@codemirror/state';
-import type { Node, Schema } from '@tiptap/pm/model';
+import type { Node } from '@tiptap/pm/model';
 import { EditorState, TextSelection, type Plugin, type Transaction } from '@tiptap/pm/state';
 import type { Decoration } from '@tiptap/pm/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
-import { nodeGrammar, onDidChangeGrammar, posToSource, print, project, sourceToPos, syncDoc, type MarkGrammar, type NodeGrammar } from '../projection/projection';
-import type { Anchor } from '../../ui/floating-bar/floating-bar';
+import { attachGrammar, nodeGrammar, onDidChangeGrammar, posToSource, print, project, sourceToPos, syncDoc, type MarkGrammar, type NodeGrammar } from '../projection/projection';
 import { highlights, setHighlights } from './highlights';
-import { attachSpecs, editorExtensions } from './nodes/nodes';
+import { editorExtensions } from './nodes/node-views';
 import type { Boxes } from './nodes/raw-box';
 import { Toolbar } from './toolbar/toolbar';
 
@@ -42,7 +41,7 @@ export class VisualView {
   readonly onDidChangeSelection: Event<void> = this.selectionChanged.event;
   private readonly subscriptions: Disposable[];
 
-  constructor(parent: HTMLElement, private readonly document: TypstDocument, contributions: VisualViewContributions) {
+  constructor(parent: HTMLElement, private readonly document: TypstDocument, contributions: VisualViewHost) {
     const contributed = contributions.contributed();
     const view: VisualViewContext = { document, selection: () => this.selection(), sourceToPos, posToSource, isBox };
     // the text and, right of it, the gutters
@@ -64,7 +63,7 @@ export class VisualView {
       },
     });
     const { schema } = this.editor;
-    attachSpecs(schema, contributed.nodes, contributed.marks);
+    attachGrammar(schema, contributed.nodes, contributed.marks);
     this.gutters = contributed.gutters.map((provider) => provider(view, body));
     // Load the projection itself (not a JSON copy): its node identities are what marks blocks as untouched.
     this.editor.view.updateState(
@@ -74,7 +73,7 @@ export class VisualView {
         plugins: [...this.editor.state.plugins, ...this.gutters.flatMap((gutter) => (gutter.plugin ? [gutter.plugin] : []))],
       }),
     );
-    this.toolbar = new Toolbar(parent, this.editor, view, { groups: contributed.toolbarGroups, items: contributed.toolbarItems });
+    this.toolbar = new Toolbar(parent, this.editor, view, { groups: contributed.toolbarGroups, items: contributed.toolbarItems, textStyles: contributed.textStyles });
     this.subscriptions = [
       document.onDidChange(({ origin }) => {
         if (origin !== this) this.syncFromDocument();
@@ -162,6 +161,11 @@ function boxes(view: VisualViewContext, contributed: Contributed): Boxes {
 export interface TypstNodeSpec extends NodeGrammar {
   /** For `box: 'code'`: a heading or tools around the code (an image's resize handles). */
   readonly codeBox?: CodeBoxSpec;
+  /**
+   * Its DOM draws with `::before` / `::after` of its own (a page break's dashed lines). The host marks such nodes'
+   * DOM `data-typst-pseudo="own"`, so what others draw on boxes (another user's name flag) leaves them alone.
+   */
+  readonly ownsPseudoElements?: boolean;
 }
 
 /** A Typst construct the Visual view models as a mark (bold, a link, a margin note's range); see `MarkGrammar`. */
@@ -246,17 +250,69 @@ export interface Contributed {
   readonly boxRenderers: readonly BoxRendererProvider[];
   readonly boxCodeExtensions: readonly BoxCodeExtensionProvider[];
   readonly boxActions: readonly BoxAction[];
+  readonly textStyles: readonly TextStyleProvider[];
 }
 
 /**
- * The Visual view's contribution points. Contributions register once, at
- * activation; the host applies what is registered to every view it creates
- * from then on (views are created lazily, per document), so a contribution
- * never tracks views. Everything a contribution needs per view (its document,
- * a popover) it gets through the `…Provider` functions. Disposing a
- * registration takes it out of views created later.
+ * The Visual view's contribution points (what `ExtensionContext.visualView` is). Contributions register once, at
+ * activation; the host applies what is registered to every view it creates from then on (views are created lazily,
+ * per document), so a contribution never tracks views. Everything a contribution needs per view (its document, a
+ * popover) it gets through the `…Provider` functions. Disposing a registration takes it out of views created later.
+ * Experimental: the shapes may still change.
  */
-export class VisualViewContributions {
+export interface VisualViewContributions {
+  /**
+   * A node type and its Typst: schema, projection, printing, box. `priority` (default 100, higher first; equal:
+   * registration order) orders the schema (a group's first node type is its default) and the projectors: of specs
+   * claiming the same syntax or call, the higher one is asked first (task lists, 110, before bullet lists, both
+   * `- ..`). Of two specs of the same name, the later one in that order extends the earlier.
+   */
+  registerNode(spec: TypstNodeSpec, options?: PriorityOptions): Disposable;
+  /**
+   * A mark type and its Typst. `priority` (default 100, higher first; equal: registration order) orders the schema,
+   * which is how marks nest: a higher one is outside a lower one (a comment's range outside a link, a link outside
+   * bold); it also orders the projectors, as for nodes. It is the mark's only priority: the host gives it to the
+   * mark's Tiptap extension, replacing the extension's own (Tiptap's link mark comes with 1000).
+   */
+  registerMark(spec: TypstMarkSpec, options?: PriorityOptions): Disposable;
+  /** Tiptap extensions made for each view (they may use its document). */
+  registerEditorExtension(provider: EditorExtensionProvider): Disposable;
+  /** A place for toolbar items: a group, a menu or a floating bar. */
+  registerToolbarGroup(group: ToolbarGroup): Disposable;
+  /** A button or control in a toolbar group (one the host or a contribution registered). */
+  registerToolbarItem(item: ToolbarItem): Disposable;
+  /**
+   * Entries of the toolbar's text style menu (headings' levels, a project's custom styles), after the host's own
+   * "Normal text". The menu shows once any provider is registered.
+   */
+  registerTextStyleProvider(provider: TextStyleProvider): Disposable;
+  /** A column beside the text, made for each view. */
+  registerGutter(provider: GutterProvider): Disposable;
+  /**
+   * Highlights from `provider` in every view, as layer `layer` (one per provider): set when the view is created and
+   * again whenever the provider reports a change of its document; they follow edits in between.
+   */
+  registerHighlights(layer: string, provider: HighlightProvider): Disposable;
+  /**
+   * What raw boxes of each view show instead of their code while not edited. The renderers are asked by `priority`
+   * (default 100, higher first; equal: registration order), and the first that `renders` a box draws it: the image
+   * renderer (110) draws image boxes, compiled snippets (100) the rest.
+   */
+  registerBoxRenderer(provider: BoxRendererProvider, options?: PriorityOptions): Disposable;
+  /** CodeMirror extensions for the code of every raw box of each view. */
+  registerBoxCodeExtension(provider: BoxCodeExtensionProvider): Disposable;
+  /**
+   * A button on every raw box `action.when` holds for (any box: a contribution need not own the box's node type),
+   * in registration order: with the box's tools (an image box's toolbar), else above its code.
+   */
+  registerBoxAction(action: BoxAction): Disposable;
+}
+
+/**
+ * Keeps what is registered through `VisualViewContributions` and hands it to each view it creates (`contributed`).
+ * The workbench host has one; tests make their own (`from`).
+ */
+export class VisualViewHost implements VisualViewContributions {
   private readonly ranked = {
     nodes: [] as Ranked<TypstNodeSpec>[],
     marks: [] as Ranked<TypstMarkSpec>[],
@@ -270,83 +326,61 @@ export class VisualViewContributions {
     highlights: [] as { layer: string; provider: HighlightProvider }[],
     boxCodeExtensions: [] as BoxCodeExtensionProvider[],
     boxActions: [] as BoxAction[],
+    textStyles: [] as TextStyleProvider[],
   };
 
   /** A registry with `contributions` activated, for as long as it lives (for a view without the workbench, as in tests). */
-  static from(contributions: readonly VisualViewContribution[]): VisualViewContributions {
-    const visualView = new VisualViewContributions();
+  static from(contributions: readonly VisualViewContribution[]): VisualViewHost {
+    const visualView = new VisualViewHost();
     const subscriptions: { dispose(): unknown }[] = [];
     for (const contribution of contributions) contribution.activate({ visualView, subscriptions });
     return visualView;
   }
 
-  /**
-   * A node type and its Typst: schema, projection, printing, box. `priority` (default 100, higher first; equal:
-   * registration order) orders the schema (a group's first node type is its default) and the projectors: of specs
-   * claiming the same syntax or call, the higher one is asked first (task lists, 110, before bullet lists, both
-   * `- ..`). Of two specs of the same name, the later one in that order extends the earlier.
-   */
   registerNode(spec: TypstNodeSpec, options: PriorityOptions = {}): Disposable {
     return this.add(this.ranked.nodes, rank(spec, options));
   }
 
-  /**
-   * A mark type and its Typst. `priority` (default 100, higher first; equal: registration order) orders the schema,
-   * which is how marks nest: a higher one is outside a lower one (bold outside a comment's range); it also orders
-   * the projectors, as for nodes.
-   */
   registerMark(spec: TypstMarkSpec, options: PriorityOptions = {}): Disposable {
-    return this.add(this.ranked.marks, rank(spec, options));
+    const ranked = rank(spec, options);
+    const extension = spec.extension && withPriority(spec.extension, spec.name, ranked.priority);
+    return this.add(this.ranked.marks, { ...ranked, value: { ...spec, extension } });
   }
 
-  /** Tiptap extensions made for each view (they may use its document). */
   registerEditorExtension(provider: EditorExtensionProvider): Disposable {
     return this.add(this.lists.editorExtensions, provider);
   }
 
-  /** A place for toolbar items: a group, a menu or a floating bar. */
   registerToolbarGroup(group: ToolbarGroup): Disposable {
     return this.add(this.lists.toolbarGroups, group);
   }
 
-  /** A button or control in a toolbar group (one the host or a contribution registered). */
   registerToolbarItem(item: ToolbarItem): Disposable {
     return this.add(this.lists.toolbarItems, item);
   }
 
-  /** A column beside the text, made for each view. */
   registerGutter(provider: GutterProvider): Disposable {
     return this.add(this.lists.gutters, provider);
   }
 
-  /**
-   * Highlights from `provider` in every view, as layer `layer` (one per provider): set when the view is created and
-   * again whenever the provider reports a change of its document; they follow edits in between.
-   */
   registerHighlights(layer: string, provider: HighlightProvider): Disposable {
     return this.add(this.lists.highlights, { layer, provider });
   }
 
-  /**
-   * What raw boxes of each view show instead of their code while not edited. The renderers are asked by `priority`
-   * (default 100, higher first; equal: registration order), and the first that `renders` a box draws it: the image
-   * renderer (110) draws image boxes, compiled snippets (100) the rest.
-   */
   registerBoxRenderer(provider: BoxRendererProvider, options: PriorityOptions = {}): Disposable {
     return this.add(this.ranked.boxRenderers, rank(provider, options));
   }
 
-  /** CodeMirror extensions for the code of every raw box of each view. */
   registerBoxCodeExtension(provider: BoxCodeExtensionProvider): Disposable {
     return this.add(this.lists.boxCodeExtensions, provider);
   }
 
-  /**
-   * A button on every raw box `action.when` holds for (any box: a contribution need not own the box's node type),
-   * in registration order: with the box's tools (an image box's toolbar), else above its code.
-   */
   registerBoxAction(action: BoxAction): Disposable {
     return this.add(this.lists.boxActions, action);
+  }
+
+  registerTextStyleProvider(provider: TextStyleProvider): Disposable {
+    return this.add(this.lists.textStyles, provider);
   }
 
   /** Everything registered now (for the host, when it creates a view). */
@@ -363,6 +397,7 @@ export class VisualViewContributions {
       boxRenderers: byPriority(this.ranked.boxRenderers),
       boxCodeExtensions: [...lists.boxCodeExtensions],
       boxActions: [...lists.boxActions],
+      textStyles: [...lists.textStyles],
     };
   }
 
@@ -383,6 +418,19 @@ interface Ranked<T> {
 
 function rank<T>(value: T, options: PriorityOptions): Ranked<T> {
   return { value, priority: options.priority ?? DEFAULT_PRIORITY };
+}
+
+/**
+ * `extension` with `priority` on its mark type `name`, wherever it is defined: the extension itself, or one it adds
+ * (a StarterKit part). Tiptap orders a schema's marks by their extensions' priorities.
+ */
+function withPriority(extension: AnyExtension, name: string, priority: number): AnyExtension {
+  if (extension.type === 'mark' && extension.name === name) return extension.extend({ priority });
+  return extension.extend({
+    addExtensions() {
+      return (this.parent?.() ?? []).map((child: AnyExtension) => withPriority(child, name, priority));
+    },
+  });
 }
 
 /** The values, higher priority first; equal priorities in registration order (the sort is stable). */
@@ -505,11 +553,11 @@ export interface Action {
   /** Shortcut shown in the tooltip; `Mod` becomes ⌘ or Ctrl. */
   shortcut?: string;
   icon: string;
-  /** The command; also decides, dry-run, whether the button is enabled. */
-  run(chain: ChainedCommands): ChainedCommands;
-  /** Instead of running the command, e.g. to ask for a value first. */
+  /** The command; also decides, dry-run, whether the button is enabled. An action with `click` has none. */
+  run?(chain: ChainedCommands): ChainedCommands;
+  /** Instead of running a command, e.g. to ask for a value first. */
   click?(button: HTMLButtonElement): void;
-  /** Whether the button is enabled, instead of the dry run of `run`. */
+  /** Whether the button is enabled, instead of the dry run of `run` (default for an action without `run`: enabled). */
   enabled?(editor: Editor): boolean;
   /** Toggles show their state (`aria-pressed`); plain actions (undo) do not. */
   active?(editor: Editor): boolean;
@@ -535,8 +583,9 @@ export interface ToolbarControl {
  * button there ("Insert ▾", its icon following the selection), or a bar
  * floating in the text above its anchor. The row is sorted by `order`; of the
  * floating bars, only the first (by `order`) with an anchor shows. The host's
- * own: `history` (undo/redo, order 10), the `insert` menu ("Insert", 50) and
- * the `selection` bar (above a text selection, 10).
+ * own: `history` (undo/redo, order 10), `text-style` (the text style menu, 20;
+ * see `TextStyle`), the `insert` menu ("Insert", 50) and the `selection` bar
+ * (above a text selection, 10).
  */
 export type ToolbarGroup =
   | { readonly kind: 'group'; readonly id: string; readonly order: number }
@@ -549,6 +598,43 @@ export type ToolbarGroup =
       /** Where the bar floats (null: hidden); `held` when an item asks to show it (see `Action.showsBar`). */
       anchor(editor: Editor, held: boolean): Anchor;
     };
+
+/**
+ * An entry of the toolbar's text style menu: a block style (a heading level, a paragraph style) the menu shows as
+ * its value where the selection has it, or a `toggle` on the selection's text (a text style). The menu lists its
+ * entries by `order`, those of one `section` together under its title. The host's own first entry, "Normal text",
+ * takes off the selection's style (the first active entry's `remove`) and makes its blocks paragraphs.
+ */
+export interface TextStyle {
+  /** The entry's id, unique in the menu (`heading-1`, `paragraph:note`). */
+  readonly id: string;
+  readonly label: string;
+  /** The title of the menu section it is listed in (`Paragraph styles`); none: in the menu itself. */
+  readonly section?: string;
+  /** Where it is listed (default 0; then as provided). */
+  readonly order?: number;
+  /** The command; also decides, dry-run, whether the entry is enabled. An entry that only asks (New style…) applies nothing. */
+  apply(chain: ChainedCommands, editor: Editor): ChainedCommands;
+  /** Whether the entry is enabled, instead of the dry run of `apply`. */
+  enabled?(editor: Editor): boolean;
+  /** Whether the selection has it: the menu's value (the first active entry), or for a toggle a ✓. */
+  isActive?(editor: Editor): boolean;
+  /** Applied on top of the block's style (a text style): marked ✓ where on, never the menu's value. */
+  readonly toggle?: boolean;
+  /** Takes it off the selection, where it is active (a paragraph style: its blocks lifted out); for Normal text. */
+  remove?(chain: ChainedCommands): ChainedCommands;
+  /** After it was applied (importing a style where it is now used; New style…: asking for one). */
+  applied?(): void;
+}
+
+/** The text style menu's entries of one view; the menu asks again whenever `onDidChangeTextStyles` fires. */
+export interface TextStyleProvider {
+  provideTextStyles(view: VisualViewContext): readonly TextStyle[];
+  readonly onDidChangeTextStyles?: Event<void>;
+}
+
+/** Where a floating bar points: a viewport rectangle (e.g. a selection's or a table's), or nothing (hidden). */
+export type Anchor = { top: number; left: number; right: number } | null;
 
 /** What an item created per view gets: the view, its editor, the toolbar. */
 export interface ToolbarContext extends VisualViewContext {
@@ -568,25 +654,3 @@ export type ToolbarItem =
       /** The item for one view, when it keeps state there (a popover) or is a control of its own. */
       create(toolbar: ToolbarContext): Action | ToolbarControl;
     };
-
-// The schema: the host's own nodes and the specs'.
-
-/** A schema of `nodes` and `marks` with its grammar attached (an `Editor` builds an equal but distinct instance). */
-export function createSchema(nodes: readonly NodeGrammar[], marks: readonly MarkGrammar[]): Schema {
-  const schema = getSchema(editorExtensions(nodes, marks, null));
-  attachSpecs(schema, nodes, marks);
-  return schema;
-}
-
-/**
- * Some of Tiptap's StarterKit as one extension named `name`: the parts in
- * `parts` (with their options), no others. (The parts' own packages are not
- * dependencies of this package; StarterKit is.)
- */
-export function starterKitPart(name: string, parts: Partial<StarterKitOptions>): AnyExtension {
-  // every part off but those in `parts` (a list in the function: nodes/nodes.ts calls it while this module loads)
-  const all: readonly (keyof StarterKitOptions)[] = ['blockquote', 'bold', 'bulletList', 'code', 'codeBlock', 'document', 'dropcursor', 'gapcursor', 'hardBreak', 'heading', 'undoRedo',
-  'horizontalRule', 'italic', 'listItem', 'listKeymap', 'link', 'orderedList', 'paragraph', 'strike', 'text', 'underline', 'trailingNode',];
-  const options = Object.fromEntries(all.map((part) => [part, part in parts ? parts[part] : false]));
-  return StarterKit.extend({ name }).configure(options);
-}

@@ -14,6 +14,9 @@ export interface MarginNotesOptions {
   comment(): void;
 }
 
+/** A note range's mark priority: outermost where it covers the same text as another mark (links: 120). */
+const NOTE_RANGE_PRIORITY = 130;
+
 /**
  * `drafting` margin notes in the Visual view. A margin note call (as
  * `noteCallSyntax` defines it) belongs in running text:
@@ -37,7 +40,7 @@ export function marginNotes(options: MarginNotesOptions): VisualViewContribution
       const action = commentAction(options.comment);
       subscriptions.push(
         visualView.registerNode(MARGIN_NOTE),
-        visualView.registerMark(NOTE_RANGE),
+        visualView.registerMark(NOTE_RANGE, { priority: NOTE_RANGE_PRIORITY }),
         visualView.registerToolbarGroup({ kind: 'group', id: 'comments', order: 60 }),
         visualView.registerToolbarItem({ group: 'comments', action }),
         visualView.registerToolbarItem({ group: 'selection', order: 50, action }),
@@ -65,8 +68,6 @@ const MarginNote = Node.create({
 
 const NoteRange = Mark.create({
   name: 'noteRange',
-  // outermost when it covers the same text as another mark
-  priority: 1001,
   inclusive: false,
   excludes: '',
   addAttributes() {

@@ -8,7 +8,7 @@ import { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';
 import { Project } from '../../core/project/project';
 import { SourceViewHost } from '../../hosts/source-view/source-view';
-import { VisualView, VisualViewContributions } from '../../hosts/visual-view/visual-view';
+import { VisualView, VisualViewHost } from '../../hosts/visual-view/visual-view';
 import { Collaboration } from './model/model';
 import { connect, connectAwareness } from './model/in-process';
 import { Presences } from './presence/presence';
@@ -44,7 +44,7 @@ async function user(name: string, files: Record<string, string>, peer?: { ydoc: 
   const visualParent = window.document.createElement('div');
   const sourceParent = window.document.createElement('div');
   window.document.body.append(visualParent, sourceParent);
-  const visual = new VisualView(visualParent, document, VisualViewContributions.from([visualPresence(presences, () => [document])]));
+  const visual = new VisualView(visualParent, document, VisualViewHost.from([visualPresence(presences, () => [document])]));
   const sourceViews = new SourceViewHost();
   sourceViews.registerExtension(sourcePresence(presences));
   sourceViews.registerExtension(perUserUndo);

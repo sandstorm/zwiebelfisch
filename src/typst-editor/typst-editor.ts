@@ -18,6 +18,7 @@ import { styles } from '../extensions/styles/styles';
 import { sourceControl } from '../extensions/source-control/source-control';
 import { documentLinks } from '../extensions/document-links/document-links';
 import { images } from '../extensions/images/images';
+import { figures } from '../extensions/figures/figures';
 import { renderedBoxes } from '../extensions/rendered-boxes/rendered-boxes';
 import { typstLanguage } from '../extensions/typst-language/typst-language';
 import { alignment } from '../extensions/alignment/alignment';
@@ -203,6 +204,7 @@ function builtinExtensions(): TypstExtension[] {
     headings(),
     tables(),
     images(),
+    figures(),
     renderedBoxes(),
     outline(),
     pageLayout(),

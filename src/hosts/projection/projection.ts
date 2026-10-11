@@ -3,7 +3,10 @@
  * ProseMirror document: the framework, which knows no Typst construct beyond
  * paragraphs, text and raw Typst. Every other construct comes in as a spec
  * (`NodeGrammar` / `MarkGrammar`, below): which syntax and calls it
- * projects, how an edited one prints. `attachGrammar` gives a schema its specs.
+ * projects, how an edited one prints. `createSchema` makes the schema of a set
+ * of specs (the minimum schema below, plus the specs' Tiptap extensions) with
+ * the specs attached; an editor built from `documentExtensions` gets them with
+ * `attachGrammar`.
  *
  *   project(text, schema) → doc    every node remembers the source it came from
  *   print(doc)            → text   untouched nodes print their original source
@@ -20,20 +23,25 @@
  * Labels (`<key>`) after a heading, or ending a block's run, are that block's
  * `label` attribute (see `labels.ts`).
  *
- * The Visual view host's mechanism, a module of its own: the host builds on it,
- * and the specs contributed to the Visual view are written against its types.
+ * The minimum schema is the projection's own: document, paragraph, text, hard
+ * and soft breaks, raw Typst (block and inline), the `typstSource` mark, history
+ * and drop / gap cursors. The Visual view host's document model, a module of its
+ * own: the host builds on it, the specs contributed to the Visual view are
+ * written against its types, and it is tested without a view.
  * Entry of hosts/projection/. See ARCHITECTURE.md, "VisualView".
  */
 import type { SyntaxNode } from '@lezer/common';
-import type { AnyExtension, Attribute } from '@tiptap/core';
+import { getSchema, type AnyExtension, type Attribute } from '@tiptap/core';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
+import StarterKit, { type StarterKitOptions } from '@tiptap/starter-kit';
 import { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
 import { Grammar } from './grammar';
 import { projectDocument } from './projecting';
 import { forgetPrinted, printed, type Span } from './printing';
 import { pristine } from './pristine';
+import { ANCHORS, RawBlock, RawInline, SoftBreak, sourceAnchors, TypstDocument, TypstSource } from './schema';
 
 /** A block's label: its name, and the source between the block and `<name>` (`' '`, `''`, `'\n'`). */
 export interface BlockLabel {
@@ -215,6 +223,60 @@ export interface Printer {
   item(item: Node, pos: number, prefix: string): void;
 }
 
+/** A schema of the minimum schema, `nodes` and `marks`, with their grammar attached. */
+export function createSchema(nodes: readonly NodeGrammar[], marks: readonly MarkGrammar[]): Schema {
+  const schema = getSchema(documentExtensions(nodes, marks));
+  attachGrammar(schema, nodes, marks);
+  return schema;
+}
+
+/**
+ * The Tiptap extensions of a schema holding `nodes` and `marks` besides the
+ * minimum schema: the specs' extensions in their order, between the base
+ * (paragraph, text, history) and the raw Typst nodes. Each spec's node type
+ * also gets what the spec asks for (see `NodeGrammar`): its source-anchoring
+ * `attributes` (never rendered; part of node equality, so re-projections
+ * compare exactly; `src`: the node's original Typst; `sep`: the whitespace to
+ * its next sibling, `null` on last children and on nodes made in the editor (a
+ * default separator is printed)), and `label` (`{ name, gap }` or null) if
+ * `labelled`: the label after the block (`= Intro <intro>`), printed after it.
+ * An editor made of them (an equal but distinct schema) gets the grammar with
+ * `attachGrammar`.
+ */
+export function documentExtensions(nodes: readonly NodeGrammar[], marks: readonly MarkGrammar[]): AnyExtension[] {
+  const contributed = [...nodes, ...marks].map((spec) => spec.extension).filter((extension) => extension !== undefined);
+  return [baseExtension(), ...new Set(contributed), TypstDocument, RawBlock, RawInline, SoftBreak, TypstSource, sourceAnchors([...BASE_NODES, ...nodes])];
+}
+
+/** The minimum schema's own nodes, as the grammar sees them (a view gives raw boxes and kept DOM to them as to specs). */
+export const BASE_NODES: readonly NodeGrammar[] = [
+  { name: 'paragraph', attributes: ANCHORS, keepsDom: true, labelled: true },
+  { name: 'hardBreak', attributes: { src: { default: '\\\n', rendered: false, keepOnSplit: false } } },
+  { name: 'rawBlock', labelled: true, box: 'code' },
+  { name: 'rawInline', box: 'code' },
+];
+
+/** The base: paragraphs, text, line breaks (`\`), history, drop and gap cursors. */
+function baseExtension(): AnyExtension {
+  return starterKitPart('typstBase', { paragraph: {}, text: undefined, hardBreak: {}, undoRedo: {}, dropcursor: {}, gapcursor: undefined });
+}
+
+/**
+ * Some of Tiptap's StarterKit as one extension named `name`: the parts in
+ * `parts` (with their options), no others. (The parts' own packages are not
+ * dependencies of this package; StarterKit is.)
+ */
+export function starterKitPart(name: string, parts: Partial<StarterKitOptions>): AnyExtension {
+  const options = Object.fromEntries(STARTER_KIT_PARTS.map((part) => [part, part in parts ? parts[part] : false]));
+  return StarterKit.extend({ name }).configure(options);
+}
+
+/** Every part of StarterKit: each one not asked for is turned off. */
+const STARTER_KIT_PARTS: readonly (keyof StarterKitOptions)[] = [
+  'blockquote', 'bold', 'bulletList', 'code', 'codeBlock', 'document', 'dropcursor', 'gapcursor', 'hardBreak', 'heading', 'undoRedo',
+  'horizontalRule', 'italic', 'listItem', 'listKeymap', 'link', 'orderedList', 'paragraph', 'strike', 'text', 'underline', 'trailingNode',
+];
+
 /** The document `source` projects to, through the specs attached to `schema` (see `attachGrammar`). */
 export function project(source: string, schema: Schema): Node {
   return projectDocument(source, schema, Grammar.of(schema));
@@ -226,12 +288,13 @@ export function print(doc: Node): string {
 }
 
 /**
- * Makes `nodes` and `marks` the specs `project` and `print` use for documents
- * of `schema` (a schema made from their extensions). Specs of the same name
- * merge, the later one winning.
+ * Makes `nodes` and `marks` (after the minimum schema's own) the specs `project`
+ * and `print` use for documents of `schema` (a schema made from
+ * `documentExtensions` of them). Specs of the same name merge, the later one
+ * winning.
  */
 export function attachGrammar(schema: Schema, nodes: readonly NodeGrammar[], marks: readonly MarkGrammar[]): void {
-  Grammar.attach(schema, new Grammar(nodes, marks));
+  Grammar.attach(schema, new Grammar([...BASE_NODES, ...nodes], marks));
 }
 
 /** The spec of node `node`'s type in the grammar attached to its schema, if there is one. */

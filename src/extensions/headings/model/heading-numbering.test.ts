@@ -1,6 +1,6 @@
 // Tests for heading-numbering.ts.
 import { describe, expect, it } from 'vitest';
-import { HeadingCounter, numbersHeadings, withoutHeadingNumbering } from './heading-numbering';
+import { calculateNumberingToggle, HeadingCounter, numbersHeadings, withoutHeadingNumbering } from './heading-numbering';
 
 describe('HeadingCounter', () => {
   it('counts nothing before a rule numbers headings, then counts by level', () => {
@@ -44,5 +44,33 @@ describe('withoutHeadingNumbering', () => {
   it('keeps the other arguments of a rule', () => {
     expect(withoutHeadingNumbering('#set heading(numbering: "1.", supplement: [Part])')).toBe('#set heading(supplement: [Part])');
     expect(withoutHeadingNumbering('#set heading(outlined: false, numbering: (..n) => f(n, 1))')).toBe('#set heading(outlined: false)');
+  });
+});
+
+describe('calculateNumberingToggle', () => {
+  const toggle = (text: string) => {
+    let result = text;
+    for (const { from, to, insert } of [...calculateNumberingToggle(text)].reverse()) result = result.slice(0, from) + insert + result.slice(to);
+    return result;
+  };
+
+  it('adds the set rule after the leading code', () => {
+    expect(toggle('= A\n')).toBe('#set heading(numbering: "1.")\n\n= A\n');
+    expect(toggle('#set page(width: 10cm)\n\n// setup\n#import "x.typ": y\n\n= A\n')).toBe(
+      '#set page(width: 10cm)\n\n// setup\n#import "x.typ": y\n\n#set heading(numbering: "1.")\n\n= A\n',
+    );
+  });
+
+  it('removes the numbering rules again: a block of its own, a line of a block, an argument', () => {
+    expect(toggle('#set heading(numbering: "1.")\n\n= A\n')).toBe('= A\n');
+    expect(toggle('#set page(width: 10cm)\n#set heading(numbering: "1.")\n\n= A\n')).toBe('#set page(width: 10cm)\n\n= A\n');
+    expect(toggle('#set heading(numbering: "1.")\n#set page(width: 10cm)\n\n= A\n')).toBe('#set page(width: 10cm)\n\n= A\n');
+    expect(toggle('= A\n\n#set heading(numbering: "1.")\n')).toBe('= A\n');
+    expect(toggle('#set heading(numbering: "1.", supplement: [Part])\n\n= A\n')).toBe('#set heading(supplement: [Part])\n\n= A\n');
+  });
+
+  it('sees only top-level rules', () => {
+    expect(toggle('#[#set heading(numbering: "1.")]\n\n= A\n')).toBe('#[#set heading(numbering: "1.")]\n\n#set heading(numbering: "1.")\n\n= A\n');
+    expect(toggle('#set heading(numbering: none)\n\n= A\n')).toBe('#set heading(numbering: none)\n\n#set heading(numbering: "1.")\n\n= A\n');
   });
 });

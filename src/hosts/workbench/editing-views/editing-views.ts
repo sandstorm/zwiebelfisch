@@ -2,7 +2,7 @@
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import type { EditorMode, TextEditor } from '../../window/window';
 import { type SourceView, SourceViewHost } from '../../source-view/source-view';
-import { VisualView, VisualViewContributions } from '../../visual-view/visual-view';
+import { VisualView, VisualViewHost } from '../../visual-view/visual-view';
 
 export interface EditingViewsOptions {
   /** The editing view shown first (default: visual). */
@@ -12,7 +12,7 @@ export interface EditingViewsOptions {
   /** The user switched to another tab. */
   onMode?(mode: EditorMode): void;
   /** What every document's Visual view shows and offers (default: paragraphs and raw Typst only). */
-  visualView?: VisualViewContributions;
+  visualView?: VisualViewHost;
   /** Makes the Source views, with what is registered there (language, lint, file links, …); default: plain ones. */
   sourceViews?: SourceViewHost;
 }
@@ -160,7 +160,7 @@ export class EditingViews {
     // After the tabs (and any earlier panes): only one pair is ever visible.
     this.parent.insertBefore(panes.visual, this.tabs.nextSibling);
     panes.visual.after(panes.source);
-    const visual = new VisualView(panes.visual, document, this.options.visualView ?? new VisualViewContributions());
+    const visual = new VisualView(panes.visual, document, this.options.visualView ?? new VisualViewHost());
     const source = this.sourceViews.createView(panes.source, document, { onSelection: () => this.options.onSelection?.(editor) });
     const editor = new DocumentEditor(document, { visual, source }, this);
     const views: Views = { panes, visual, source, editor };
