@@ -198,6 +198,9 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    **No generic diagnostics for now** (user, 2026-10-11): diagnostics stay Typst-only (the preview's
    compile results). VS Code's `languages.createDiagnosticCollection` model is the path if other
    file kinds need error display later.
+   **Block / inline styles** (user, 2026-10-11; after the longer-names merge): custom styles are
+   `/// @style block Note` and `/// @style inline Keyword` (not `paragraph` / `text`), in the code
+   (kind values, Visual view wording, menu) and the docs; the guide says what each wraps.
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Rules wave also does:** core `onChange` → `onDidChange: Event` + `Disposable` everywhere
    (`Project`, `TypstDocument`, …) (user: yes).
