@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+#MISE description="Run every end-to-end suite: all browsers, collaboration, GitLab (with and without auto-commit), docs editing; goes on after a failure, then lists the failed suites"
+#MISE depends=["build", "build:lib"]
+#USAGE arg "[browser]" help="Only this browser for the main suite (default: all)" default="all" {
+#USAGE   choices "all" "chromium" "firefox" "webkit"
+#USAGE }
+set -uo pipefail
+failed=()
+run() {
+  local name="$1"
+  shift
+  echo "=== $name"
+  "$@" || failed+=("$name")
+}
+run "test:e2e ($usage_browser)" mise run test:e2e "$usage_browser"
+run "test:e2e-collab" mise run test:e2e-collab
+run "test:e2e-gitlab" mise run test:e2e-gitlab
+run "test:e2e-gitlab (auto-commit off)" env TYPST_GITLAB_AUTO_COMMIT=off mise run test:e2e-gitlab --grep "leave"
+run "test:e2e-docs" mise run test:e2e-docs
+if ((${#failed[@]})); then
+  printf 'Failed: %s\n' "${failed[@]}"
+  exit 1
+fi
+echo "All end-to-end suites passed."
