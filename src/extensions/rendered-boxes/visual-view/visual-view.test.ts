@@ -81,6 +81,31 @@ describe('rendered raw boxes', () => {
     expect(renderer.snippet).not.toHaveBeenCalled();
   });
 
+  it('show their code until the snippet exists and its picture is decoded, then the picture', async () => {
+    let decode!: () => void;
+    const decoding = new Promise<void>((resolve) => (decode = resolve));
+    HTMLImageElement.prototype.decode = vi.fn(() => decoding);
+    let compiled!: () => void;
+    const firstCompile = new Promise<void>((resolve) => (compiled = resolve));
+    const { renderer } = fakeRenderer();
+    const snippet = renderer.snippet;
+    try {
+      const { parent } = await setup(MATH_DOC, { ...renderer, snippet: async (...args) => (await firstCompile, snippet(...args)) });
+      const { picture, code } = parts(parent.querySelector('.typst-visual__raw-block')!);
+      expect(code.hidden).toBe(false);
+      expect(code.textContent).toContain('$ x^2 $');
+      compiled();
+      await settle();
+      expect(code.hidden).toBe(false);
+      decode();
+      await settle();
+      expect(code.hidden).toBe(true);
+      expect(picture!.hidden).toBe(false);
+    } finally {
+      delete (HTMLImageElement.prototype as Partial<HTMLImageElement>).decode;
+    }
+  });
+
   it('refresh when the renderer reports a change', async () => {
     let svg = SVG;
     const { renderer, changed } = fakeRenderer({ snippet: async () => ({ svg, width: Pt.of(10), height: Pt.of(5), textHeight: Pt.of(5), padding: Pt.of(0) }) });

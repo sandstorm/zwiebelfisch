@@ -38,6 +38,11 @@
 .typst-visual__rendering[hidden] { display: none; }
 .typst-visual__raw--rendered { background: transparent; }
 .typst-visual__rendering { display: block; max-width: 100%; height: auto; cursor: text; }
+/* A picture fades in where the code was (the first snippets after the first compile, or leaving the code), so boxes
+   swapping their code for pictures at once do not flash. */
+.typst-visual__raw--rendered .typst-visual__rendering { animation: typst-visual-fade-in 0.15s ease-out; }
+@keyframes typst-visual-fade-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .typst-visual__raw--rendered .typst-visual__rendering { animation: none; } }
 .typst-visual__raw-block > .typst-visual__rendering { margin: 0 auto; }
 /* An inline snippet is sized in em of the text around it (see inlinePictureSize), so its box takes
    that text's size, not the code chip's; a squeezed one keeps its aspect */

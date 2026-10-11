@@ -53,7 +53,7 @@ What the widget shows depends on what has arrived. Nothing in the editing area w
   [the JS (main chunk, CSS inlined)], [the frame and the shown file's text, editable: `createTypstEditor` is synchronous, the views read only `TypstDocument`s],
   [the engine worker's chunk, then the wasm (22 MB, streamed)], [the preview's loader: "Loading the Typst compiler… 3.1 / 6.6 MB", also in the status bar],
   [the engine, compiling], [the loader: "Compiling…" (the status bar: the compile status); font files and packages as they download ("Downloading \@preview/merman 0.4.0…")],
-  [the first pages], [the pages; raw boxes show their pictures instead of their code],
+  [the first pages], [the pages; raw boxes swap their code for their pictures (each decoded first, faded in)],
 )
 
 - *`window.withProgress(options, task)`* (VS Code's): shows a task until its promise settles. `ProgressLocation.Window`: a spinner and "title: message" on the status bar's right. `ProgressLocation.EditingArea` (ours): a note over the editing area in its grid cell, the editing area `inert` and `aria-busy` meanwhile; for what the views must wait for (collaboration: "Connecting to the room…" until the room's text is there).
