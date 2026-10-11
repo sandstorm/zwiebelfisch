@@ -4,10 +4,12 @@ The plain Typst editor: CodeMirror 6 bound to a `TypstDocument`. Module `src/hos
 
 == SourceEditorHost <architecture-source-editor-host>
 
-What `ExtensionContext.sourceEditor` is. One contribution point:
+What `ExtensionContext.sourceEditor` is. Two contribution points, for the Source editors and for every CodeMirror of the widget:
 
 ```ts
 registerCodeMirrorExtension(extension: Extension | ((editor: SourceEditorContext) => Extension)): Disposable
+registerSharedCodeMirrorExtension(extension: Extension): Disposable
+createSharedCodeMirrorExtension() → Extension    // for a CodeMirror made elsewhere: the shared ones, live
 createEditor(parent, document, { onSelection? }) → SourceEditor    // the workbench calls it
 ```
 
@@ -15,6 +17,7 @@ createEditor(parent, document, { onSelection? }) → SourceEditor    // the work
 - A function is called once per editor with its `SourceEditorContext` (`document`).
 - Disposing the registration removes it from all editors.
 - Precedence is CodeMirror's own (`Prec.highest` … `Prec.lowest`).
+- *Shared* contributions are for any text, never a language (shown whitespace): the Source editors take them with their own; the raw boxes (the workbench registers `createSharedCodeMirrorExtension()` as a raw-box extension) and the text files' editor include `createSharedCodeMirrorExtension()`, a `Compartment` reconfigured whenever the shared ones change, until that CodeMirror is destroyed. The Source editor host owns them as it owns `codeColors`, the other thing every CodeMirror of the widget shares.
 
 == SourceEditor <architecture-source-editor-class>
 
@@ -50,6 +53,7 @@ createEditor(parent, document, { onSelection? }) → SourceEditor    // the work
   [`typstLanguage`], [Typst syntax highlighting and indentation (`codemirror-lang-typst`, without its linter).],
   [`diagnostics`], [`lint`: the compiler's diagnostics underlined.],
   [`collaboration`], [Other users' carets and selections; `perUserUndo`.],
+  [`invisibles`], [Shared: `highlightWhitespace()` while invisible characters are shown.],
   [workbench], [Document links of every provider for `typst` (@architecture-workbench).],
 )
 

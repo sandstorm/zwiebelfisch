@@ -127,3 +127,25 @@ describe('SourceEditorHost contributions', () => {
     expect(made).toEqual(['text\n']);
   });
 });
+
+describe('shared CodeMirror extensions', () => {
+  const shared = EditorView.editorAttributes.of({ class: 'shared' });
+  const isShared = (dom: Element) => dom.classList.contains('shared');
+
+  it('apply to the Source editors and to other CodeMirrors that take them, before and after, until disposed', () => {
+    const host = new SourceEditorHost();
+    const { editor } = setup('text\n', host);
+    const other = new EditorView({ parent: document.body, doc: 'plain', extensions: host.createSharedCodeMirrorExtension() });
+    const registration = host.registerSharedCodeMirrorExtension(shared);
+    const later = new EditorView({ parent: document.body, doc: 'later', extensions: host.createSharedCodeMirrorExtension() });
+    expect([editor(), other, later].map((view) => isShared(view.dom))).toEqual([true, true, true]);
+    registration.dispose();
+    expect([editor(), other, later].map((view) => isShared(view.dom))).toEqual([false, false, false]);
+  });
+
+  it('stop following the host once the other CodeMirror is destroyed', () => {
+    const host = new SourceEditorHost();
+    new EditorView({ parent: document.body, doc: 'plain', extensions: host.createSharedCodeMirrorExtension() }).destroy();
+    expect(() => host.registerSharedCodeMirrorExtension(shared)).not.toThrow();
+  });
+});

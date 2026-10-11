@@ -375,7 +375,7 @@ export class WorkbenchHost implements Workbench {
     const hosts = [this.window, this.#languages, this.#preview, this.#sourceEditors, this.#visualEditor];
     this.#ownStyles = Disposable.from(frameStyles, ...hosts.map((part) => this.#styleSheets.add(part.styleSheet)));
     this.#subscription = project.onDidChangeFile((change) => this.#changed(change));
-    this.#showDocumentLinks();
+    this.#extendCodeMirrors();
     this.#search = this.#registerSearch();
     this.#applyRightSidePanel();
     this.#workspace.onDidChangeConfiguration((event) => {
@@ -612,13 +612,14 @@ export class WorkbenchHost implements Workbench {
   /**
    * The Typst files' language, `typst` (`.typ`), and its registered document links in every Source editor and in the
    * code of every raw box (in its file); a raw box's picture follows the primary one, the Visual editor's text the one
-   * under the pointer (`#visualEditor`).
+   * under the pointer (`#visualEditor`). The raw boxes' code takes the shared CodeMirror extensions, too.
    */
-  #showDocumentLinks(): void {
+  #extendCodeMirrors(): void {
     this.#languages.declare([{ id: 'typst', extensions: ['.typ'] }]);
     const links = (document: TypstDocument) => this.#languages.createDocumentLinksCodeMirrorExtension('typst', () => this.project.pathOf(document) ?? null);
     this.#sourceEditors.registerCodeMirrorExtension((editor) => links(editor.document));
     this.#visualEditor.registerRawBoxCodeMirrorExtension((editor) => links(editor.document));
+    this.#visualEditor.registerRawBoxCodeMirrorExtension(() => this.#sourceEditors.createSharedCodeMirrorExtension());
   }
 
   /** `data-theme` from the setting `workbench.theme` (none: as the page), and the scheme the colors resolve to now. */
