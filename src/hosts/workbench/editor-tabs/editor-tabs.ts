@@ -1,11 +1,9 @@
-// EditorTabs. See ../workbench.ts and docs/30_architecture/07_workbench.typ.
+// See WorkbenchHost in ../workbench.ts.
 
 /**
- * A tab per editor of the shown file ("open with"), the shown one selected; hidden unless there are several. Choosing
- * another tab asks for the file in that editor (`onDidChoose`).
- *
- * The tab bar of the editing area: a tab per editor the shown file can be shown in (Visual / Source for a Typst file),
- * and the editor/title menu at its end.
+ * The tab bar of the editing area: a tab per editor the shown file can be shown in ("open with"; Visual / Source for
+ * a Typst file), the shown one selected, and the editor/title menu at its end. Hidden unless the file has several.
+ * Choosing another tab asks for the file in that editor (`onDidChoose`).
  */
 export class EditorTabs {
   readonly element: HTMLElement;

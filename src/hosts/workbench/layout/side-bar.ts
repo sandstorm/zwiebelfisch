@@ -1,16 +1,13 @@
-// SideBar. See workbench-layout.ts and docs/30_architecture/07_workbench.typ.
+// See WorkbenchLayout in workbench-layout.ts.
 
 import type { SidePanel, SidePanelOptions } from '../workbench';
 
 /**
- * One side of the widget: its rail (a button per panel, by `order`) and at most one panel shown, sized by a separator
- * on the panel's inner edge (drag or arrow keys; remembered). Which panel shows: the viewer's pick (a rail button;
- * clicking the shown panel's button hides the side), else the side's default panel, else the first panel whose owner
- * asked for it (`setDefault`). As an overlay (`setOverlay`, the narrow widget's left side) a pick lasts for the moment
- * only, and Escape, a click outside or `dismiss()` close the panel.
- *
- * One side of the widget (left or right): a rail with a button per side panel, the shown panel and the separator that
- * sizes it.
+ * One side of the widget (left or right): its rail (a button per panel, by `order`) and at most one panel shown, sized
+ * by a separator on the panel's inner edge (drag or arrow keys; remembered). Which panel shows: the viewer's pick (a
+ * rail button; clicking the shown panel's button hides the side), else the side's default panel, else the first panel
+ * whose owner asked for it (`setDefault`). As an overlay (`setOverlay`, the narrow widget's left side) a pick lasts for
+ * the moment only, and Escape, a click outside or `dismiss()` close the panel.
  */
 export class SideBar {
   readonly element: HTMLElement;

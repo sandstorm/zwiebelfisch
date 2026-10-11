@@ -1,4 +1,4 @@
-// WorkbenchLayout. See ../workbench.ts and docs/30_architecture/07_workbench.typ.
+// See WorkbenchHost in ../workbench.ts and docs/30_architecture/07_workbench.typ, "Concepts".
 
 import type { Memento, SidePanel, SidePanelOptions } from '../workbench';
 import { div, restoreSideBarState, SideBar, type Side } from './side-bar';
@@ -12,9 +12,6 @@ import { div, restoreSideBarState, SideBar, type Side } from './side-bar';
  *
  * While the widget is narrower than 720px the left side's panel lies over the editing area and closes on Escape, a
  * click outside, or `dismiss()` (e.g. after a file was chosen in it).
- *
- * The widget's regions — a side on the left and on the right (rails, resizable panels, the left one an overlay when
- * narrow), the editing area between them, the status bar below; what the viewer chose kept for the session.
  */
 export class WorkbenchLayout {
   readonly editor: HTMLElement;

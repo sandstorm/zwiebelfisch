@@ -1,4 +1,4 @@
-// TypstEditors. See ../workbench.ts and docs/30_architecture/07_workbench.typ.
+// See WorkbenchHost in ../workbench.ts and docs/30_architecture/07_workbench.typ, "Concepts".
 import { Disposable } from '../../../core/disposable/disposable';
 import type { Project } from '../../../core/project/project';
 import type { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
@@ -7,11 +7,10 @@ import { VISUAL_EDITOR, VisualEditor, VisualEditorHost } from '../../visual-edit
 import type { CustomEditorPanel, TextEditor, WindowApi } from '../../window/window';
 
 /**
- * Per document, a Visual and a Source editor, each made the first time the document is shown in it, in its custom
- * editor's panel; kept (with cursor, scroll and undo history) while hidden, disposed with the panel (the file deleted).
- *
  * The Visual and Source editors as the two built-in custom editors of `*.typ` (`visualEditor`, `sourceEditor`), the
- * TextEditor of each document over them, and the editor frame.
+ * `TextEditor` of each document over them, and the editor frame. Per document, each editor is made the first time
+ * the document is shown in it, in its custom editor's panel; kept (with cursor, scroll and undo history) while hidden,
+ * disposed with the panel (the file deleted).
  */
 export class TypstEditors {
   readonly #editors = new Map<TypstDocument, DocumentEditor>();

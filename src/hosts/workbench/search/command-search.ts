@@ -1,5 +1,5 @@
 // The commands in search everywhere: those the extensions declare (`contributes.commands`), by their titles. See
-// ../workbench.ts and docs/20_extensions/02_workbench-api.typ.
+// WorkbenchHost in ../workbench.ts.
 import type { SearchProvider } from '../../window/window';
 import type { CommandContribution } from '../workbench';
 

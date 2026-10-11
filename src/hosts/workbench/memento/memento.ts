@@ -1,13 +1,10 @@
-// StorageMemento. See ../workbench.ts.
+// See ExtensionContext in ../workbench.ts.
 import type { Memento } from '../workbench';
 
 /**
- * Values as JSON in `storage` under `prefix` + key. Without storage (blocked, full, no window) `get` gives the default
- * and `update` keeps nothing; neither fails.
- *
- * Values kept in the browser's storage under a key prefix (VS Code's Memento): the extensions' `globalState`
- * (localStorage) and `workspaceState` (sessionStorage), each scoped by the extension's id, and the layout's sizes and
- * panels.
+ * Values as JSON in `storage` under `prefix` + key (VS Code's Memento): the extensions' `globalState` (localStorage)
+ * and `workspaceState` (sessionStorage), each scoped by the extension's id, and the layout's sizes and panels. Without
+ * storage (blocked, full, no window) `get` gives the default and `update` keeps nothing; neither fails.
  */
 export class StorageMemento implements Memento {
   constructor(

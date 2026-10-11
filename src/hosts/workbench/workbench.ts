@@ -1,5 +1,3 @@
-// The workbench host: the widget's frame, the extension API, and the composition of the other hosts. Entry of
-// hosts/workbench/. See docs/30_architecture/07_workbench.typ.
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../core/paths/paths';
@@ -32,13 +30,17 @@ import css from './workbench.css?inline';
  * A feature of the widget: activated once, in list order; what it registers goes into `context.subscriptions`.
  * Hosts write their own the same way and give them to `createTypstEditor({ extensions })`.
  *
- * Why extensions: the frame knows no feature by name. A feature registers what it adds (a side panel, a custom
- * editor, a command, a menu item, a link provider, a source control) once, at activation, and the host disposes all
- * of it on dispose. Even the Typst files' Visual and Source editors are custom editors (registered by the workbench,
- * before the extensions), so the editing area treats every file alike. The API is VS Code's namespaces, each a host of
- * its own (`commands`, `window`, `scm`, `languages`, `workspace`); `workbench` is only the frame. Adding a feature is
- * adding it to a list, not editing the frame. Extensions never depend on each other: what one offers another goes
- * through a generic contribution point of a host.
+ * The workbench is the widget's frame, and it knows no feature by name. Every feature is an extension: it registers
+ * what it adds (a side panel, a custom editor, a command, a menu item, a link provider, a source control) once, at
+ * activation, and all of it is disposed with the widget. So adding a feature means adding it to a list, not editing
+ * the frame. Extensions never depend on each other; what one offers another goes through a generic contribution point
+ * of a host.
+ *
+ * The API follows VS Code. Its namespaces (`commands`, `window`, `scm`, `languages`, `workspace`) are hosts of their
+ * own; `workbench` is only the frame; the editors and the preview are hosts with contribution points (`visualEditor`,
+ * `sourceEditor`, `preview`). Even the Visual and Source editors are custom editors, registered by the workbench
+ * before any extension, so the editing area treats every file alike. See docs/30_architecture/07_workbench.typ and
+ * docs/30_architecture/08_built-in-extensions.typ.
  */
 export interface TypstExtension {
   /** Unique in the list (e.g. `files`); a host replaces a built-in by leaving out the one with this id. */
@@ -82,8 +84,8 @@ export interface CommandContribution {
 }
 
 /**
- * What an extension gets to work with: VS Code's namespaces, the frame, and the hosts of the editors and the preview. Contributions are
- * registered once, at activation; the hosts apply them to every editor they create later.
+ * What an extension gets to work with: VS Code's namespaces, the frame, and the hosts of the editors and the preview.
+ * Contributions are registered once, at activation; the hosts apply them to every editor they create later.
  */
 export interface ExtensionContext {
   /** Disposed when the widget is disposed, in reverse order (the extensions in reverse list order, too). */
@@ -280,10 +282,10 @@ export interface WorkbenchOptions {
 /**
  * The frame of the widget on `host`: shows the project's files in custom editors (Typst files in the Visual and the
  * Source editor, others in those extensions register, tabs between them; side panels on the left and the right, the
- * preview being the right side's built-in one; the status bar), keeps the preview compiling the main file, and runs
- * the extensions. It makes the other hosts: VS Code's namespaces (`commands`, `window`, `scm`, `languages`,
- * `workspace`) and the editors' and the preview's (`visualEditor`, `sourceEditor`, `preview`). `activate` starts it: extensions first
- * (their contributions are in place before any editor exists), then the main file is shown and compiled.
+ * preview being the right side's built-in one; the status bar), keeps the preview compiling the main file, and runs the
+ * extensions. It makes the other hosts: VS Code's namespaces (`commands`, `window`, `scm`, `languages`, `workspace`)
+ * and the editors' and the preview's (`visualEditor`, `sourceEditor`, `preview`). `activate` starts it: extensions
+ * first (their contributions are in place before any editor exists), then the main file is shown and compiled.
  * createTypstEditor creates it; extensions see it as `Workbench`.
  */
 export class WorkbenchHost implements Workbench {

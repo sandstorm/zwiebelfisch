@@ -1,15 +1,12 @@
-// Menus. See ../workbench.ts.
+// See registerMenuItem in ../workbench.ts.
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { MenuContext, MenuItem } from '../workbench';
 
 /**
- * Every menu's registered entries. A menu is only an id: whoever shows it (the tab bar here, an extension's side panel or editor)
- * asks for the entries that apply in its context, in VS Code's order: group `navigation` first, the other groups by
- * name, within a group by `order`, then registration order.
- *
- * The entries extensions register into menus by id (`registerMenuItem`), as whoever shows a menu reads them
- * (`getMenuItems`).
+ * Every menu's registered entries (`registerMenuItem`). A menu is only an id: whoever shows it (the tab bar here,
+ * `window.showContextMenu`) asks for the entries that apply in its context (`items`), in VS Code's order: group
+ * `navigation` first, the other groups by name, within a group by `order`, then registration order.
  */
 export class Menus {
   readonly #items = new Map<string, MenuItem[]>();

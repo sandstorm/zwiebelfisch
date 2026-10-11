@@ -1,4 +1,5 @@
-// ColorScheme: which scheme the widget is shown in, as `data-scheme` for CSS. See docs/10_guide/05_embedding.typ.
+// ColorScheme: which scheme the widget is shown in, as `data-scheme` for CSS. See WorkbenchHost in ../workbench.ts
+// and docs/10_guide/05_embedding.typ.
 import { isLightText } from '../../../core/color-scheme/color-scheme';
 
 /**
