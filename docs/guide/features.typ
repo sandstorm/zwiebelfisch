@@ -1,16 +1,15 @@
+#import "../template.typ": mermaid
+
 = Features <guide-features>
 
 The examples are from a report measuring compile times, as in the demo's advanced example (`?example=advanced`). Settings: @guide-configuration.
 
 == Views and preview <guide-features-views>
 
-```
-┌───────┬─ Visual | Source ─────────┬─ Preview ──────────────┐
-│ Files │ the shown file           ┃ the compiled main file │
-├───────┴──────────────────────────┸────────────────────────┤
-│ status bar: errors and warnings                           │
-└───────────────────────────────────────────────────────────┘
-```
+#figure(
+  mermaid(read("../diagrams/views-layout.mmd"), width: 75%),
+  caption: [The editor: file panel, editing views, preview, status bar.],
+)
 
 - *Visual view:* edits the Typst like a word processor. What it does not model (math, function calls) shows as a raw box: its code while focused, its compiled look otherwise.
 - *Source view:* the Typst text: highlighting, line numbers, search.
@@ -20,7 +19,7 @@ The examples are from a report measuring compile times, as in the demo's advance
 - "Follow cursor" (preview toolbar): the preview scrolls to the text being edited.
 - Selected text (either view) is shaded in the preview, too; a caret shades nothing.
 - Zoom (fit width by default, 25–400 %) and "page n / total" in the preview toolbar.
-- Drag the separator `┃` (or use the arrow keys on it): the preview gets 20–80 % of the width.
+- Drag the separator between editing view and preview (or use the arrow keys on it): the preview gets 20–80 % of the width.
 - *Errors and warnings:* underlined in both views, the message as tooltip. The status bar counts them and jumps to them.
 
 == Writing <guide-features-visual>
@@ -273,19 +272,12 @@ Cold compile time #margin-note[grows linearly][- *Ada* (2026-10-10): Linear up t
 - *Grace* (2026-10-11): Running it tonight.] with the page count.
 ```
 
-What Grace sees in the Visual view: "grows linearly" highlighted, and beside it a card in the notes gutter (buttons drawn as words):
+What Grace sees in the Visual view: "grows linearly" highlighted, and beside it a card in the notes gutter:
 
-```
-┌────────────────────────────────────────────┐
-│ grows linearly                 [Resolve ✓] │
-│ Ada  2026-10-10                            │
-│ Linear up to 100 pages only? Add the       │
-│ 500-page run.                              │
-│ Grace  2026-10-11          [Edit] [Delete] │
-│ Running it tonight.                        │
-│ [ Reply…                        ] [Send]   │
-└────────────────────────────────────────────┘
-```
+#figure(
+  mermaid(read("../diagrams/comment-card.mmd"), width: 65%),
+  caption: [A comment card.],
+)
 
 - Add: "Comment" (Visual view toolbar or selection bar, Source view tab bar) or Ctrl+Alt+M (⌘⌥M on Mac). Without a selection: a point note at the cursor.
 - A note is a thread: one list item per message, signed with your name and the date.

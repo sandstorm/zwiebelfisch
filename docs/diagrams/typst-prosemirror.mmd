@@ -1,0 +1,9 @@
+flowchart TD
+  text["text"] -- Lezer --> tree["syntax tree"]
+  tree -- "parseTypst(text, schema)" --> doc["`doc
+  nodes keep their source`"]
+  doc -- "`user edit:
+  serializeToTypst(doc)
+  untouched nodes: source verbatim`" --> set["document.setText()"]
+  set --> text
+  elsewhere["text changed elsewhere"] --> parse["parseTypst()"] --> apply["applyTypstChanges(tr, target)"] --> smallest["smallest replacement"]

@@ -1,15 +1,14 @@
+#import "../template.typ": mermaid
+
 = Typst ↔ ProseMirror <architecture-prosemirror-typst>
 
 Turns Typst text into the Visual view's ProseMirror document and back, so that an edit changes only the source of what it touched. Plain ProseMirror: no view, no Tiptap editor, tested without a DOM. Module `src/hosts/prosemirror-typst/`.
 Shaped like prosemirror-markdown: a schema plus a parser (`TypstToProseMirrorParser`) and a serializer (`ProseMirrorToTypstSerializer`).
 
-```
- text ──Lezer──► syntax tree ──parseTypst(text, schema)──► doc     nodes keep their source
-                                                            │ user edit
- text ◄── document.setText() ◄── serializeToTypst(doc) ◄────┘     untouched nodes: source verbatim
-
- text changed elsewhere ──► parseTypst() ──► applyTypstChanges(tr, target) ──► smallest replacement
-```
+#figure(
+  mermaid(read("../diagrams/typst-prosemirror.mmd"), width: 60%),
+  caption: [Typst text to the ProseMirror document and back.],
+)
 
 Invariant: `serializeToTypst(parseTypst(text, schema)) === text` for any input.
 

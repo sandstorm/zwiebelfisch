@@ -1,10 +1,12 @@
 // The look of the documentation, for the book (main.typ, PDF) and the HTML site (site.typ):
-// Sandstorm's, after sandstorm.de. Use: `#show: book`. Writers need nothing from here: plain
-// headings, `@label` references, raw blocks and tables.
+// Sandstorm's, after sandstorm.de. Use: `#show: book`. Writers need nothing from here but
+// `mermaid` for a diagram: plain headings, `@label` references, raw blocks and tables.
 //
 // Labels: a chapter's label is its path without `.typ`, `/` → `-`
 // (`architecture/workbench.typ` → `<architecture-workbench>`); a section inside appends a word
 // (`<architecture-workbench-menus>`).
+
+#import "@preview/merman:0.4.0"
 
 /// sandstorm.de's colors; style.css has the same.
 #let colors = (
@@ -23,6 +25,26 @@
 #let brand-fonts = sys.inputs.at("brand-fonts", default: "false") == "true"
 
 #let company = "Sandstorm Media GmbH"
+
+/// merman's `mermaid` in the docs' colors and font. A diagram is a file in `diagrams/`:
+/// `#figure(mermaid(read("../diagrams/x.mmd"), width: 80%), caption: […]) <fig:x>`.
+#let mermaid = merman.mermaid.with(
+  site-config: (flowchart: (wrappingWidth: 320)),
+  theme-name: "base",
+  theme: (
+    primaryColor: colors.line.to-hex(),
+    primaryBorderColor: colors.primary.to-hex(),
+    primaryTextColor: colors.dark.to-hex(),
+    secondaryColor: colors.tint.to-hex(),
+    tertiaryColor: colors.tint.to-hex(),
+    lineColor: colors.primary.to-hex(),
+    textColor: colors.dark.to-hex(),
+    noteBkgColor: colors.sand.to-hex(),
+    noteBorderColor: colors.sand.to-hex(),
+    noteTextColor: colors.ink.to-hex(),
+  ),
+  typography: if brand-fonts { (font: "Gabarito") },
+)
 
 /// The first page: logo, book title, company.
 #let title-page(it) = page(header: none, footer: none, margin: (x: 2.6cm, y: 2.4cm), {

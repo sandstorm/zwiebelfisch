@@ -1,0 +1,25 @@
+flowchart TD
+  visual["`VisualView (Tiptap)
+  keystroke → ProseMirror transaction`"]
+  document["`TypstDocument.setText(text, visualView)
+  one minimal TextChange
+  onDidChange({ contentChanges, origin }):
+  listeners in subscription order`"]
+  project["Project"]
+  workbench["Workbench"]
+  worker["`worker
+  compile (newest only) → changed pages swapped`"]
+  host["host"]
+  source["SourceView"]
+  binding["`TextBinding
+  (collaboration)`"]
+  visual -- "`serializeToTypst(doc)
+  untouched nodes print their source verbatim`" --> document
+  document -- 1 --> project
+  document -. "`2: origin is itself, ignored`" .-> visual
+  document -- "`3: dispatched with
+  fromDocument({ origin })`" --> source
+  document -- "`4: into the shared Y.Text`" --> binding
+  project -- "`onDidChangeFile({ kind: 'update', … })`" --> workbench
+  project -- onFilesChange --> host
+  workbench -- "`preview.update(project.files(), main)`" --> worker

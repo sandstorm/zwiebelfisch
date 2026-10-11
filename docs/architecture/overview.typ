@@ -1,3 +1,5 @@
+#import "../template.typ": mermaid
+
 = Overview <architecture-overview>
 
 == Layers <architecture-overview-layers>
@@ -31,20 +33,10 @@ Import rules (checked by `mise run quality`, details in @architecture-convention
 
 Typing one letter in the Visual view:
 
-```
- VisualView (Tiptap)            keystroke → ProseMirror transaction
-   │ serializeToTypst(doc)      untouched nodes print their source verbatim
-   ▼
- TypstDocument.setText(text, visualView)   one minimal TextChange
-   │ onDidChange({ contentChanges, origin })     listeners in subscription order
-   ├──► Project                  onDidChangeFile({ kind: 'update', … })
-   │      ├──► Workbench         preview.update(project.files(), main)
-   │      │      └──► worker     compile (newest only) → changed pages swapped
-   │      └──► host              onFilesChange
-   ├──► VisualView               origin is itself: ignored
-   ├──► SourceView               dispatched with fromDocument({ origin })
-   └──► TextBinding              (collaboration) into the shared Y.Text
-```
+#figure(
+  mermaid(read("../diagrams/keystroke.mmd"), width: 75%),
+  caption: [A keystroke in the Visual view; the numbers are the listeners' subscription order.],
+)
 
 The way back is the same with the roles swapped: a Source view edit reaches the Visual view through `onDidChange`, which parses the text again and applies the smallest replacement (`applyTypstChanges`, see @architecture-prosemirror-typst-sync).
 

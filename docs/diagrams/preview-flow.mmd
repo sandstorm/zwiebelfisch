@@ -1,0 +1,25 @@
+sequenceDiagram
+  participant E as project, views
+  participant S as previewSync
+  participant P as Preview
+  participant W as worker
+  E->>P: project change: update(files)
+  Note over P: LatestOnly
+  P->>W: compile
+  W-->>P: pages + diagnostics
+  Note over P: page list: swap pages whose hash changed
+  P-->>E: onDidRender, onDidChangeDiagnostics (only if no newer update)
+  Note over P: click: px → pt
+  P->>W: click
+  P->>S: onDidClickPage
+  S->>E: select the source
+  E->>S: edit, selection moved away
+  S->>P: clearClickHighlight
+  E->>S: cursor
+  S->>P: reveal
+  P->>W: cursor
+  Note over P: scroll if off-screen
+  E->>S: selection (60 ms at rest)
+  S->>P: setSelectionHighlight
+  P->>W: boxes
+  Note over P: shading

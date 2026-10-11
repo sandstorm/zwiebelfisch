@@ -1,0 +1,25 @@
+flowchart TD
+  create["createTypstEditor"] --> host["`WorkbenchHost(host, project, options)
+  .activate(extensions)`"]
+  host --> namespaces["`namespaces
+  CommandsHost
+  WindowHost
+  ScmHost
+  LanguagesHost
+  WorkspaceHost`"]
+  host --> views["`view hosts
+  VisualViewHost
+  SourceViewHost
+  Preview`"]
+  host --> frame["`frame
+  WorkbenchLayout
+  EditorTabs
+  TypstEditors
+  Menus
+  StyleSheets
+  FileDrops
+  ColorScheme`"]
+  host --> extensions["`ExtensionHost
+  activate(context)
+  per extension,
+  in list order`"]

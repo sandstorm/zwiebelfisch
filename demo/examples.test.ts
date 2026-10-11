@@ -47,11 +47,16 @@ describe('demo examples', () => {
     return withPackages(engine, cachedPackage).compile('/main.typ');
   }
 
-  it.each(EXAMPLES.map(({ name }) => name))('%s compiles without errors or warnings', async (name) => {
-    const { pages, diagnostics } = await compile(exampleFiles(name));
-    expect(diagnostics).toEqual([]);
-    expect(pages.length).toBeGreaterThan(0);
-  });
+  // the docs draw seven Mermaid diagrams (merman's wasm): seconds, more under a parallel test run
+  it.each(EXAMPLES.map(({ name }) => name))(
+    '%s compiles without errors or warnings',
+    async (name) => {
+      const { pages, diagnostics } = await compile(exampleFiles(name));
+      expect(diagnostics).toEqual([]);
+      expect(pages.length).toBeGreaterThan(0);
+    },
+    30_000,
+  );
 
   it('keeps the default document the e2e specs expect', () => {
     const files = exampleFiles('hello');
@@ -96,15 +101,16 @@ describe('demo examples', () => {
     expect(files['/data/compile-times.ic.gen.typ']).toMatch(/^\/\/ Generated from compile-times\.ic/);
   });
 
-  it('the documentation example is docs/: book, template, HTML entry and chapters as text, the logo as bytes', () => {
+  it('the documentation example is docs/: book, template, HTML entry and chapters as text, the logo and the diagrams as bytes', () => {
     const files = exampleFiles('docs');
     expect(Object.keys(files)).toEqual(
       expect.arrayContaining(['/main.typ', '/template.typ', '/site.typ', '/architecture/workbench.typ']),
     );
     expect(files['/assets/sandstorm-logo.svg']).toBeInstanceOf(Uint8Array);
+    expect(files['/diagrams/keystroke.mmd']).toBeInstanceOf(Uint8Array);
     for (const [path, content] of Object.entries(files)) {
       if (path.endsWith('.typ')) expect(typeof content).toBe('string');
-      else expect(path).toMatch(/\.svg$/);
+      else expect(path).toMatch(/\.(svg|mmd)$/);
     }
   });
 });
