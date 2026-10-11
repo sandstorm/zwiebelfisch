@@ -1,11 +1,14 @@
 // @vitest-environment jsdom
 // The Visual view's toolbar with the built-in extensions' items (integration: src/testing composes the built-ins).
+// Files to upload are Node's (jsdom's have no `arrayBuffer`).
+import { File } from 'node:buffer';
 import { describe, expect, it, vi } from 'vitest';
 import { TypstDocument } from '../core/typst-document/typst-document';
+import type { FileChange } from '../core/project/project';
 import { createVisualView, TestPrompts, type TestViewOptions } from '../testing/testing';
-import { PathReference } from '../core/paths/paths';
 
-const ref = PathReference.of;
+/** An image file's content (what it holds does not matter here). */
+const IMAGE = new Uint8Array([1]);
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 function setup(text: string, options: TestViewOptions = {}) {
@@ -101,40 +104,31 @@ describe('Visual view toolbar', () => {
     });
   });
 
-  it('without the project, "Insert image" asks for a path and inserts an image block', async () => {
-    const prompts = new TestPrompts().answer('img/logo.png');
-    const { doc, view, button } = setup('Text\n', { prompts });
-    view.reveal(4, 4);
-    button('Insert image').click();
-    await settle();
-    expect(prompts.asked[0].options).toMatchObject({ prompt: 'Image path' });
-    expect(doc.text).toBe('Text\n\n#image("img/logo.png")\n');
-  });
-
   it("offers the project's images, an upload and a path, and inserts the one picked", async () => {
-    const assets = { list: () => [ref('img/logo.png'), ref('/shared/photo.jpg')], upload: async () => ({ error: 'unused' }), reference: () => null };
-    const prompts = new TestPrompts().answer('/shared/photo.jpg', 'Enter a path…', 'cat.png');
-    const { doc, view, button } = setup('Text\n', { assets, prompts });
+    const files = { '/img/logo.png': IMAGE, '/shared/photo.jpg': IMAGE, '/notes.txt': 'not an image' };
+    const prompts = new TestPrompts().answer('shared/photo.jpg', 'Enter a path…', 'cat.png');
+    const { doc, view, button } = setup('Text\n', { files, prompts });
     view.reveal(4, 4);
     button('Insert image').click();
     await settle();
     expect(prompts.asked[0].items!.map((item) => (typeof item === 'string' ? item : item.label))).toEqual([
       'img/logo.png',
-      '/shared/photo.jpg',
+      'shared/photo.jpg',
       'Upload image…',
       'Enter a path…',
     ]);
-    expect(doc.text).toBe('Text\n\n#image("/shared/photo.jpg")\n');
+    expect(doc.text).toBe('Text\n\n#image("shared/photo.jpg")\n');
     button('Insert image').click();
     await settle();
+    expect(prompts.asked[2].options).toMatchObject({ prompt: 'Image path' });
     expect(doc.text).toContain('#image("cat.png")');
   });
 
   it('"Upload image…" opens the file picker; the image goes into the project and is inserted', async () => {
-    const uploaded: File[] = [];
-    const assets = { list: () => [], upload: async (file: File) => (uploaded.push(file), { path: ref(`img/${file.name}`) }), reference: () => null };
+    const applied: FileChange[] = [];
+    const applyChange = async (change: FileChange) => (applied.push(change), null);
     const prompts = new TestPrompts().answer('Upload image…');
-    const { doc, view, parent, button } = setup('Text\n', { assets, prompts });
+    const { doc, view, parent, button } = setup('Text\n', { applyChange, prompts });
     view.reveal(4, 4);
     const input = parent.querySelector<HTMLInputElement>('input[type="file"]')!;
     const opened = vi.spyOn(input, 'click').mockImplementation(() => {});
@@ -145,14 +139,14 @@ describe('Visual view toolbar', () => {
     Object.defineProperty(input, 'files', { value: [file] });
     input.dispatchEvent(new Event('change'));
     await settle();
-    expect(uploaded).toEqual([file]);
-    expect(doc.text).toBe('Text\n\n#image("img/cat.png")\n');
+    expect(applied).toMatchObject([{ kind: 'create', path: '/cat.png' }]);
+    expect(doc.text).toBe('Text\n\n#image("cat.png")\n');
   });
 
   it('tells why an upload was refused (an error message), and leaves the text unchanged', async () => {
-    const assets = { list: () => [], upload: async () => ({ error: 'This change is not allowed here.' }), reference: () => null };
+    const applyChange = async () => 'This change is not allowed here.';
     const prompts = new TestPrompts();
-    const { doc, view, parent } = setup('Text\n', { assets, prompts });
+    const { doc, view, parent } = setup('Text\n', { applyChange, prompts });
     view.reveal(4, 4);
     const input = parent.querySelector<HTMLInputElement>('input[type="file"]')!;
     Object.defineProperty(input, 'files', { value: [new File([new Uint8Array([1])], 'cat.png')], configurable: true });
@@ -167,7 +161,7 @@ describe('Visual view toolbar', () => {
 
     /** "Insert image" with `path` entered, in a view set up with `prompts`. */
     async function insertPath(button: (label: string) => HTMLButtonElement, prompts: TestPrompts, path: string) {
-      prompts.answer(path);
+      prompts.answer('Enter a path…', path);
       button('Insert image').click();
       await settle();
     }
@@ -216,20 +210,18 @@ describe('Visual view toolbar', () => {
       return event;
     }
 
+    /** A project with an image and a data file, where uploads are added (or refused with `error`); what was uploaded. */
     function withUploads(error?: string) {
       const uploaded: string[] = [];
-      const assets = {
-        list: () => [],
-        upload: async (file: File) => (error ? { error } : (uploaded.push(file.name), { path: ref(file.name) })),
-        reference: (path: string) => (path.endsWith('.png') ? ref(path.slice(1)) : null),
-      };
-      return { assets, uploaded };
+      const applyChange = async (change: FileChange) => (error ?? (uploaded.push(change.path.slice(1)), null));
+      const options: TestViewOptions = { files: { '/img/logo.png': IMAGE, '/data.csv': 'a,b' }, applyChange };
+      return { options, uploaded };
     }
 
 
     it('a pasted image is uploaded and inserted after the paragraph with the cursor', async () => {
-      const { assets, uploaded } = withUploads();
-      const { doc, view, parent } = setup('One\n\nTwo\n', { assets });
+      const { options, uploaded } = withUploads();
+      const { doc, view, parent } = setup('One\n\nTwo\n', options);
       view.reveal(1, 1);
       const event = fileEvent('paste', [png('shot.png')]);
       parent.querySelector('[contenteditable]')!.dispatchEvent(event);
@@ -240,8 +232,8 @@ describe('Visual view toolbar', () => {
     });
 
     it('dropped images are uploaded and inserted in order, instead of the browser opening the file', async () => {
-      const { assets, uploaded } = withUploads();
-      const { doc, view, parent } = setup('One\n', { assets });
+      const { options, uploaded } = withUploads();
+      const { doc, view, parent } = setup('One\n', options);
       view.reveal(3, 3);
       const outside: Event[] = [];
       parent.addEventListener('drop', (e) => outside.push(e));
@@ -255,8 +247,8 @@ describe('Visual view toolbar', () => {
     });
 
     it('leaves drops without images alone (the file panel may take them)', () => {
-      const { assets } = withUploads();
-      const { doc, parent } = setup('One\n', { assets });
+      const { options } = withUploads();
+      const { doc, parent } = setup('One\n', options);
       const event = fileEvent('drop', [pdf]);
       parent.querySelector('[contenteditable]')!.dispatchEvent(event);
       expect(event.defaultPrevented).toBe(false);
@@ -264,9 +256,9 @@ describe('Visual view toolbar', () => {
     });
 
     it('tells why a dropped image was not added (an error message)', async () => {
-      const { assets } = withUploads('This change is not allowed here.');
+      const { options } = withUploads('This change is not allowed here.');
       const prompts = new TestPrompts();
-      const { doc, parent } = setup('One\n', { assets, prompts });
+      const { doc, parent } = setup('One\n', { ...options, prompts });
       parent.querySelector('[contenteditable]')!.dispatchEvent(fileEvent('drop', [png('a.png')]));
       await settle();
       expect(prompts.told).toEqual(['This change is not allowed here.']);
@@ -282,8 +274,8 @@ describe('Visual view toolbar', () => {
     }
 
     it('an image dragged from the file panel is inserted where it is dropped, without an upload', () => {
-      const { assets, uploaded } = withUploads();
-      const { doc, view, parent } = setup('One\n\nTwo\n', { assets });
+      const { options, uploaded } = withUploads();
+      const { doc, view, parent } = setup('One\n\nTwo\n', options);
       view.reveal(1, 1);
       const editable = parent.querySelector('[contenteditable]')!;
       const over = rowEvent('dragover', '/img/logo.png');
@@ -297,17 +289,10 @@ describe('Visual view toolbar', () => {
     });
 
     it('a dragged file that is no image is not inserted', () => {
-      const { assets } = withUploads();
-      const { doc, parent } = setup('One\n', { assets });
+      const { options } = withUploads();
+      const { doc, parent } = setup('One\n', options);
       parent.querySelector('[contenteditable]')!.dispatchEvent(rowEvent('drop', '/data.csv'));
       expect(doc.text).toBe('One\n');
-    });
-
-    it('without assets, dropped files are left to the browser as before', () => {
-      const { parent } = setup('One\n');
-      const event = fileEvent('drop', [png('a.png')]);
-      parent.querySelector('[contenteditable]')!.dispatchEvent(event);
-      expect(event.defaultPrevented).toBe(false);
     });
   });
 

@@ -1,19 +1,82 @@
 // Images in the Visual view: `#image(..)` blocks (also as a figure's body), what "Insert image" offers (the host's project
 // files, uploads), inserting image blocks (toolbar, file drops), the image file in place of the code, and the tools
-// on an image box (resize, alt text, the figures' caption), which edit the call's source minimally; `imagesVisualView` in
-// images.ts registers them. See ARCHITECTURE.md, "VisualView".
+// on an image box (resize, alt text, the figures' caption), which edit the call's source minimally; `imagesVisualView`
+// registers them for images.ts. See ARCHITECTURE.md, "VisualView".
 import { Node } from '@tiptap/core';
 import { Disposable } from '../../../core/disposable/disposable';
-import { PathReference } from '../../../core/paths/paths';
-import type { QuickPickItem } from '../../../hosts/workbench/workbench';
+import { PathReference, type ProjectPath } from '../../../core/paths/paths';
+import type { DocumentLink, QuickPickItem, Workbench } from '../../../hosts/workbench/workbench';
+import type { Event } from '../../../core/event-emitter/event-emitter';
+import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { parenthesized } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type Action, type BoxRenderer, type ToolbarContext, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
-import type { ImageAssets, ImagePrompts, ImagesOptions, ImageUrls } from '../images';
+import { svg, type Action, type BoxRenderer, type ToolbarContext, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
 import { imageFileDrops, insertImages } from './image-insertion';
 import { imagePathLink } from './image-path-link';
 import { imagePath } from './image-syntax';
 import { ImageTools } from './image-tools';
 import { imagePicker, uploadImages } from './image-uploads';
+
+/**
+ * `#image("literal path", ..)` blocks, edited as code in a box headed "Image:
+ * path", with tools (resize handles, width, alt text; a caption where the
+ * figures extension offers one) and the image file in place of the code, also
+ * as a figure's body; "Insert image" (a path, or the project's images and
+ * uploads), and image files dropped on or pasted into the text.
+ */
+export function imagesVisualView(options: ImagesOptions): VisualViewContribution {
+  return {
+    id: 'images',
+    activate({ visualView, subscriptions }) {
+      subscriptions.push(
+        visualView.registerNode(imageSpec(options)),
+        visualView.registerToolbarItem({ group: 'insert', order: 10, create: (toolbar) => insertImage(toolbar, options.assets(toolbar.document), options.prompts) }),
+        // image boxes are raw boxes, too: drawn as their image file rather than as a compiled snippet (priority 100)
+        visualView.registerBoxRenderer((view) => imageRenderer(options.imageUrls(view.document)), { priority: 110 }),
+      );
+    },
+  };
+}
+
+/** Where images ask (an image, a path, alt text) and tell why an upload was refused: the workbench's. */
+export type ImagePrompts = Pick<Workbench, 'showQuickPick' | 'showInputBox' | 'showErrorMessage'>;
+
+/** Where image files are shown from: the host's project files, as URLs. */
+export interface ImageUrls {
+  /** A URL of the image file `path` (as written in `#image(..)`), or null if there is none. */
+  imageUrl(path: PathReference): string | null;
+  /** Fires whenever images may have changed. */
+  readonly onDidChange: Event<void>;
+}
+
+/** What the images in a document's Visual view come from: the project and the workbench (see images.ts). */
+export interface ImagesOptions {
+  /** What "Insert image" offers in a document: the project's images and uploads. */
+  assets(document: TypstDocument): ImageAssets;
+  /** Image files shown in place of the call while it is not edited. */
+  imageUrls(document: TypstDocument): ImageUrls;
+  /** The links on image paths in a document: an image box's path opens its file, or shows it is missing. */
+  imageLinks(document: TypstDocument): ImageLinks;
+  /** Where "Insert image" and "Alt text" ask, and refused uploads are told. */
+  prompts: ImagePrompts;
+}
+
+/** The document links on the paths of a document's image calls. */
+export interface ImageLinks {
+  /** The (resolved) link on the path of the image call `src`, or null. */
+  linkOf(src: string): DocumentLink | null;
+  /** Shows a link's target. */
+  open(target: ProjectPath): void;
+}
+
+/** Where the Visual view gets images to insert from: the host's project files. */
+export interface ImageAssets {
+  /** The project's images, as paths to write in `#image(..)` in this document. */
+  list(): PathReference[];
+  /** Adds `file` to the project; resolves to the path to write in `#image(..)`, or why it was not added (in words for people). */
+  upload(file: File): Promise<{ path: PathReference } | { error: string }>;
+  /** The path to write in `#image(..)` in this document for the project file `path` (e.g. dragged from the file panel); null if it is no image. */
+  reference(path: ProjectPath): PathReference | null;
+}
 
 /**
  * A standalone `#image("path", ..)` call. Its source is kept and edited like a
@@ -34,7 +97,7 @@ const Image = Node.create({
   },
 });
 
-export function imageSpec(options: ImagesOptions): TypstNodeSpec {
+function imageSpec(options: ImagesOptions): TypstNodeSpec {
   return {
     name: 'image',
     extension: Image,
@@ -42,8 +105,8 @@ export function imageSpec(options: ImagesOptions): TypstNodeSpec {
     box: 'code',
     codeBox: {
       tools: (host, node) => {
-        const links = options.imageLinks?.(host.view.document);
-        const pathLabel = links && ((path: PathReference, src: string) => imagePathLink(links.linkOf(src), path, host.dom.ownerDocument, (target) => links.open(target)));
+        const links = options.imageLinks(host.view.document);
+        const pathLabel = (path: PathReference, src: string) => imagePathLink(links.linkOf(src), path, host.dom.ownerDocument, (target) => links.open(target));
         return new ImageTools({ ...host, pathLabel, prompts: options.prompts }, node);
       },
     },
@@ -57,8 +120,7 @@ export function imageSpec(options: ImagesOptions): TypstNodeSpec {
 }
 
 /** Image boxes show their file (following path edits at once). */
-export function imageRenderer(urls: ImageUrls | undefined): BoxRenderer | null {
-  if (!urls) return null;
+function imageRenderer(urls: ImageUrls): BoxRenderer {
   return {
     renders: (node) => node.type.name === 'image',
     render: async (node) => {
@@ -80,43 +142,39 @@ const UPLOAD: ImageChoice = { label: 'Upload image…' };
 const ENTER_PATH: ImageChoice = { label: 'Enter a path…' };
 
 /**
- * "Insert image": with `assets`, a quick pick of the project's images, "Upload image…" and "Enter a path…"; without,
- * an input box for the path. With `assets`, image files dropped on or pasted into the text are uploaded and inserted
- * too, and an image dragged from the file panel is inserted where it is dropped; refused uploads are error messages.
+ * "Insert image": a quick pick of the project's images, "Upload image…" and "Enter a path…" (an input box). Image
+ * files dropped on or pasted into the text are uploaded and inserted too, and an image dragged from the file panel is
+ * inserted where it is dropped; refused uploads are error messages.
  */
-export function insertImage(toolbar: ToolbarContext, assets: ImageAssets | undefined, prompts: ImagePrompts | undefined): Action {
+function insertImage(toolbar: ToolbarContext, assets: ImageAssets, prompts: ImagePrompts): Action {
   const { editor, root } = toolbar;
   const upload = async (files: File[], near?: number) => {
-    const { paths, errors } = await uploadImages(assets!, files);
+    const { paths, errors } = await uploadImages(assets, files);
     if (paths.length > 0) insertImages(editor, paths, near);
-    for (const error of errors) void prompts?.showErrorMessage(error);
+    for (const error of errors) void prompts.showErrorMessage(error);
   };
-  const picker = imagePicker(root.ownerDocument, (files) => void upload(files));
-  if (assets) {
-    root.append(picker);
-    const drops = imageFileDrops(
-      (files, near) => upload(files, near),
-      (path, near) => {
-        const reference = assets.reference(path);
-        if (reference !== null) insertImages(editor, [reference], near);
-        return reference !== null;
-      },
-    );
-    editor.registerPlugin(drops);
-    toolbar.subscriptions.push(new Disposable(() => (editor.unregisterPlugin(drops.spec.key!), picker.remove())));
-  }
-  const enterPath = async (ui: ImagePrompts) => {
-    const path = await ui.showInputBox({ title: 'Insert image', prompt: 'Image path', placeHolder: 'images/figure.png' });
+  const picker = root.appendChild(imagePicker(root.ownerDocument, (files) => void upload(files)));
+  const drops = imageFileDrops(
+    (files, near) => upload(files, near),
+    (path, near) => {
+      const reference = assets.reference(path);
+      if (reference !== null) insertImages(editor, [reference], near);
+      return reference !== null;
+    },
+  );
+  editor.registerPlugin(drops);
+  toolbar.subscriptions.push(new Disposable(() => (editor.unregisterPlugin(drops.spec.key!), picker.remove())));
+  const enterPath = async () => {
+    const path = await prompts.showInputBox({ title: 'Insert image', prompt: 'Image path', placeHolder: 'images/figure.png' });
     if (path?.trim()) insertImages(editor, [PathReference.of(path.trim())]);
     else editor.commands.focus();
   };
-  const choose = async (ui: ImagePrompts) => {
-    if (!assets) return enterPath(ui);
+  const choose = async () => {
     const images: ImageChoice[] = assets.list().map((path) => ({ label: path, path }));
-    const choice = await ui.showQuickPick([...images, UPLOAD, ENTER_PATH], { title: 'Insert image', placeHolder: 'Choose an image, upload one or enter a path' });
+    const choice = await prompts.showQuickPick([...images, UPLOAD, ENTER_PATH], { title: 'Insert image', placeHolder: 'Choose an image, upload one or enter a path' });
     // the picker opens within the user's gesture (choosing the entry), as browsers require
     if (choice === UPLOAD) picker.click();
-    else if (choice === ENTER_PATH) await enterPath(ui);
+    else if (choice === ENTER_PATH) await enterPath();
     else if (choice?.path) insertImages(editor, [choice.path]);
     else editor.commands.focus();
   };
@@ -124,6 +182,6 @@ export function insertImage(toolbar: ToolbarContext, assets: ImageAssets | undef
     label: 'Insert image',
     icon: ICON,
     run: (c) => c.insertContent({ type: 'image' }),
-    click: () => void (prompts && choose(prompts)),
+    click: () => void choose(),
   };
 }

@@ -3,20 +3,21 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
+import type { DocumentLink, TextDocument } from '../../../hosts/workbench/workbench';
 import { createVisualView } from '../../../testing/testing';
-import type { ImageLinks } from '../images';
 
 const path = ProjectPath.of;
 
 /** An image box of `text`, whose path links to /logo.png when the call names it, else to a missing file. */
 function setup(text: string) {
-  const links: ImageLinks = {
-    linkOf: (src) =>
+  const links = {
+    provideDocumentLinks: ({ text: src }: TextDocument): DocumentLink[] => [
       src.includes('logo.png') ? { range: { from: 8, to: 16 }, target: path('/logo.png') } : { range: { from: 8, to: 16 }, tooltip: 'gone.png is not in the project' },
+    ],
     open: vi.fn(),
   };
   const parent = document.body.appendChild(document.createElement('div'));
-  createVisualView(parent, new TypstDocument(text), { imageLinks: links });
+  createVisualView(parent, new TypstDocument(text), { links });
   return { parent, links };
 }
 

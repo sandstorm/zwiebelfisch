@@ -1,30 +1,34 @@
 // @vitest-environment jsdom
-// Tests for visual-view.ts (rendered boxes) and the host's RenderedBox (nodes/rendered-box.ts).
+// Tests for visual-view.ts (rendered boxes) and the host's RenderedBox (nodes/rendered-box.ts), with the images'
+// renderer drawing image boxes.
 import { describe, expect, it, vi } from 'vitest';
-import { Disposable } from '../../../core/disposable/disposable';
+import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
+import type { PreviewContributions } from '../../../hosts/preview/preview';
 import { inlinePictureSize } from '../model/model';
-import { createVisualView, type Renderings as BoxRenderer } from '../../../testing/testing';
+import { createVisualView } from '../../../testing/testing';
 
 const MATH_DOC = 'Intro\n\n$ x^2 $\n\nOutro\n';
 const SVG = '<svg viewBox="0 0 10 5"></svg>';
 
-function fakeRenderer(overrides: Partial<BoxRenderer> = {}) {
-  const listeners = new Set<() => void>();
-  const renderer: BoxRenderer = {
-    snippet: vi.fn(async (_from: number, _to: number, text: string) => (text.startsWith('$') ? { svg: SVG, width: 30, height: 12 } : null)),
-    imageUrl: vi.fn((path: string) => (path === 'logo.png' ? 'blob:logo' : null)),
-    onDidChange: (listener) => (listeners.add(listener), new Disposable(() => listeners.delete(listener))),
+type Preview = Pick<PreviewContributions, 'snippet' | 'onDidRender'>;
+
+/** A preview whose snippets are an equation's (`snippet` replaces them); `changed` fires its `onDidRender`. */
+function fakeRenderer(overrides: Partial<Preview> = {}) {
+  const rendered = new EventEmitter<void>();
+  const renderer = {
+    snippet: vi.fn(async (_path: string, _from: number, _to: number, text: string) => (text.startsWith('$') ? { svg: SVG, width: 30, height: 12, textHeight: 12, padding: 0 } : null)),
+    onDidRender: rendered.event,
     ...overrides,
   };
-  return { renderer, changed: () => listeners.forEach((l) => l()) };
+  return { renderer, changed: () => rendered.fire() };
 }
 
-async function setup(text: string, renderer: BoxRenderer) {
+async function setup(text: string, preview: Preview) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = createVisualView(parent, doc, { renderer });
+  const view = createVisualView(parent, doc, { preview, files: { '/logo.png': new Uint8Array([1]) } });
   await settle();
   return { doc, view, parent };
 }
@@ -41,7 +45,7 @@ describe('rendered raw boxes', () => {
     const { parent } = await setup(MATH_DOC, renderer);
     const box = parent.querySelector('.typst-visual__raw-block')!;
     const { picture, code } = parts(box);
-    expect(renderer.snippet).toHaveBeenCalledWith(MATH_DOC.indexOf('$'), MATH_DOC.indexOf('$') + 7, '$ x^2 $');
+    expect(renderer.snippet).toHaveBeenCalledWith('/main.typ', MATH_DOC.indexOf('$'), MATH_DOC.indexOf('$') + 7, '$ x^2 $');
     expect(picture?.hidden).toBe(false);
     expect(decodeURIComponent(picture!.src)).toContain(SVG);
     expect(picture!.style.width).toBe('30pt');
@@ -77,7 +81,7 @@ describe('rendered raw boxes', () => {
 
   it('refresh when the renderer reports a change', async () => {
     let svg = SVG;
-    const { renderer, changed } = fakeRenderer({ snippet: async () => ({ svg, width: 10, height: 5 }) });
+    const { renderer, changed } = fakeRenderer({ snippet: async () => ({ svg, width: 10, height: 5, textHeight: 5, padding: 0 }) });
     const { parent } = await setup(MATH_DOC, renderer);
     svg = '<svg viewBox="0 0 1 1"></svg>';
     changed();
@@ -104,7 +108,7 @@ describe('rendered raw boxes', () => {
     const { renderer } = fakeRenderer();
     const { parent, doc } = await setup('#image("logo.png")\n\nHello\n', renderer);
     const box = parent.querySelector('.typst-visual__image')!;
-    expect(parts(box).picture?.src).toBe('blob:logo');
+    expect(parts(box).picture?.src).toMatch(/^blob:/);
     expect(parts(box).code.hidden).toBe(true);
     doc.setText('#image("missing.png")\n\nHello\n', 'source');
     await settle();

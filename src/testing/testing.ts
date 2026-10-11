@@ -1,6 +1,7 @@
 // Test helpers that compose the widget's built-in extensions: the Visual view's schema with the built-ins, project
-// with it, a view with the built-ins configured from options; and the helpers such tests use on a projected document
-// (apply an edit, find text, check the position map exhaustively). Entry of testing/: test-only, so it may import any
+// with it, a view with the built-ins activated with a test's extension context (project files, preview snippets,
+// document links, prompts); and the helpers such tests use on a projected document (apply an edit, find text, check
+// the position map exhaustively). Entry of testing/: test-only, so it may import any
 // module (an extension's tests compose it with the others here, never by importing another extension); only
 // `*.test.ts` files may import it (eslint.config.js). Hosts' own tests use the host minimum and their own specs.
 import { Editor } from '@tiptap/core';
@@ -8,6 +9,9 @@ import type { Node, Schema } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
 import { expect } from 'vitest';
 import { Disposable } from '../core/disposable/disposable';
+import { EventEmitter } from '../core/event-emitter/event-emitter';
+import { ProjectPath } from '../core/paths/paths';
+import type { FileChange, FileContent, Project } from '../core/project/project';
 import type { TypstDocument } from '../core/typst-document/typst-document';
 import { alignment } from '../extensions/alignment/alignment';
 import { figures } from '../extensions/figures/figures';
@@ -17,8 +21,9 @@ import { markup } from '../extensions/markup/markup';
 import { outline } from '../extensions/outline/outline';
 import { pageLayout } from '../extensions/page-layout/page-layout';
 import { tables } from '../extensions/tables/tables';
-import { imagesVisualView, type ImageAssets, type ImageLinks, type ImageUrls } from '../extensions/images/images';
-import { renderedBoxesVisualView, type SnippetSource } from '../extensions/rendered-boxes/rendered-boxes';
+import { images } from '../extensions/images/images';
+import { renderedBoxes } from '../extensions/rendered-boxes/rendered-boxes';
+import type { PreviewContributions } from '../hosts/preview/preview';
 import { VisualView, VisualViewContributions, type ContributionContext, type VisualViewContribution } from '../hosts/visual-view/visual-view';
 import type { InputBoxOptions, MessageItem, QuickPickItem, QuickPickOptions, Workbench } from '../hosts/workbench/workbench';
 import { attachGrammar, createSchema, documentExtensions, posToSource, print, project as projectWith, sourceToPos } from '../hosts/projection/projection';
@@ -38,14 +43,22 @@ function schemaFrom(registry: VisualViewContributions): Schema {
   return createSchema(nodes, marks);
 }
 
-/** What a document's raw boxes show while not edited, in tests: compiled snippets and image files. */
-export type Renderings = SnippetSource & ImageUrls;
+/** The path of the document a test view shows, in the test's project. */
+export const TEST_DOCUMENT_PATH = ProjectPath.of('/main.typ');
 
-/** What a test gives a view: what the built-ins would get from the workbench, and the contributions under test. */
+/**
+ * What a test gives a view: the parts of the extension context the built-ins use (the project's files, the preview's
+ * snippets, the workbench's document links and prompts), and the contributions under test.
+ */
 export interface TestViewOptions {
-  renderer?: Renderings;
-  assets?: ImageAssets;
-  imageLinks?: ImageLinks;
+  /** The project's other files (images as bytes), by path; the view's document is `TEST_DOCUMENT_PATH`. Default: none. */
+  files?: Readonly<Record<string, FileContent>>;
+  /** Applies a change (an uploaded image): resolves to why it was refused, or null. Default: the file is added. */
+  applyChange?(change: FileChange): Promise<string | null>;
+  /** The preview's compiled snippets of the document (raw boxes show them; default: none) and when they change. */
+  preview?: Partial<Pick<PreviewContributions, 'snippet' | 'onDidRender'>>;
+  /** The workbench's document links (an image box's path; default: none) and where following one goes. */
+  links?: Partial<Pick<Workbench, 'provideDocumentLinks' | 'resolveDocumentLink' | 'open'>>;
   /** What the user answers when the view asks (link URL, image, alt text, …); default: every question cancelled. */
   prompts?: TestPrompts;
   /** The contributions of the extension under test, activated after the built-ins (as the widget's features are). */
@@ -114,50 +127,70 @@ export function createEditor(source: string, options: TestViewOptions = {}): Edi
 
 /** The built-ins and `options.contributions`, activated. */
 function contributions(options: TestViewOptions): VisualViewContributions {
-  return activate([...builtins(options), ...(options.contributions ?? [])], options.prompts);
+  return activate([...builtins(), ...(options.contributions ?? [])], options);
 }
 
 /**
- * `contributions` activated in order, for their Visual-view contributions. The built-in constructs are extensions:
- * of the rest of the extension context they use only the workbench's stylesheets, commands (registered, never run
- * here) and its prompts (`prompts`; default: every question cancelled).
+ * `contributions` activated in order, for their Visual-view contributions, with an extension context made from
+ * `options`: a project of `TEST_DOCUMENT_PATH` and `options.files`, a preview with `options.preview`'s snippets, a
+ * workbench with `options.links`, `options.prompts` (default: every question cancelled) and `options.applyChange`.
+ * Registrations other than the Visual view's (style sheets, commands, custom editors) are accepted and ignored.
  */
-function activate(contributions: readonly VisualViewContribution[], prompts: TestPrompts = new TestPrompts()): VisualViewContributions {
+function activate(contributions: readonly VisualViewContribution[], options: TestViewOptions = {}): VisualViewContributions {
   const visualView = new VisualViewContributions();
-  const subscriptions: { dispose(): unknown }[] = [];
-  const workbench = {
-    registerStyleSheet: () => new Disposable(() => {}),
-    registerCommand: () => new Disposable(() => {}),
-    showInputBox: prompts.showInputBox,
-    showQuickPick: prompts.showQuickPick,
-    showErrorMessage: prompts.showErrorMessage,
-  };
-  for (const contribution of contributions) contribution.activate({ visualView, subscriptions, workbench } as ContributionContext);
+  const project = testProject(options);
+  const context = { visualView, subscriptions: [], project, workbench: testWorkbench(options, project), preview: testPreview(options) };
+  for (const contribution of contributions) contribution.activate(context as unknown as ContributionContext);
   return visualView;
 }
 
-/**
- * The built-ins' Visual-view contributions configured from `options`, in the order the widget's built-in
- * extensions activate them (without `options.contributions`).
- */
-export function builtins(options: Omit<TestViewOptions, 'contributions'> = {}): VisualViewContribution[] {
-  return [
-    markup,
-    headings,
-    tables,
-    imagesVisualView({
-      assets: options.assets && (() => options.assets),
-      imageUrls: options.renderer && (() => options.renderer),
-      imageLinks: options.imageLinks && (() => options.imageLinks),
-      prompts: options.prompts ?? new TestPrompts(),
-    }),
-    figures(),
-    renderedBoxesVisualView({ snippets: options.renderer && (() => options.renderer) }),
-    outline,
-    pageLayout,
-    lists,
-    alignment,
-  ];
+/** A project holding the view's document (whatever document it is) and `options.files`. */
+function testProject(options: TestViewOptions): Pick<Project, 'pathOf' | 'paths' | 'has' | 'content'> & { add(path: ProjectPath, content: FileContent): void } {
+  const files = new Map(Object.entries(options.files ?? {}).map(([path, content]) => [ProjectPath.of(path), content]));
+  return {
+    pathOf: () => TEST_DOCUMENT_PATH,
+    paths: () => [TEST_DOCUMENT_PATH, ...files.keys()],
+    has: (path) => path === TEST_DOCUMENT_PATH || files.has(path),
+    content: (path) => files.get(path),
+    add: (path, content) => void files.set(path, content),
+  };
+}
+
+/** A registration the test context accepts and ignores. */
+function ignored(): Disposable {
+  return new Disposable(() => {});
+}
+
+function testWorkbench(options: TestViewOptions, project: ReturnType<typeof testProject>) {
+  const prompts = options.prompts ?? new TestPrompts();
+  const added = async (change: FileChange) => (change.kind === 'create' && project.add(change.path, change.content), null);
+  return {
+    registerStyleSheet: ignored,
+    registerCommand: ignored,
+    registerCustomEditorProvider: ignored,
+    applyChange: options.applyChange ?? added,
+    provideDocumentLinks: options.links?.provideDocumentLinks ?? (() => []),
+    resolveDocumentLink: options.links?.resolveDocumentLink ?? ((link) => link),
+    open: options.links?.open ?? (() => {}),
+    showInputBox: prompts.showInputBox,
+    showQuickPick: prompts.showQuickPick,
+    showErrorMessage: prompts.showErrorMessage,
+  } satisfies Partial<Workbench>;
+}
+
+function testPreview(options: TestViewOptions): Pick<PreviewContributions, 'snippet' | 'onDidRender'> {
+  return { snippet: options.preview?.snippet ?? (async () => null), onDidRender: options.preview?.onDidRender ?? new EventEmitter<void>().event };
+}
+
+// jsdom has no object URLs: the images' renderer shows the files a test gives as `blob:test/<n>`
+if (typeof URL.createObjectURL !== 'function') {
+  let next = 0;
+  Object.assign(URL, { createObjectURL: () => `blob:test/${next++}`, revokeObjectURL: () => {} });
+}
+
+/** The built-ins' Visual-view contributions, in the order the widget's built-in extensions activate them. */
+export function builtins(): VisualViewContribution[] {
+  return [markup, headings, tables, images(), figures(), renderedBoxes(), outline, pageLayout, lists, alignment];
 }
 
 /** `doc` after the transaction `change` builds on a fresh state of it. */

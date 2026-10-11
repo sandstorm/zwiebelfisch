@@ -1,15 +1,11 @@
 // @vitest-environment jsdom
 // Tests for image-tools.ts.
 import { describe, expect, it } from 'vitest';
-import { Disposable } from '../../../core/disposable/disposable';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
-import { createVisualView, TestPrompts, type Renderings as BoxRenderer } from '../../../testing/testing';
+import { createVisualView, TestPrompts } from '../../../testing/testing';
 
-const renderer: BoxRenderer = {
-  snippet: async () => null,
-  imageUrl: (path) => (path === 'cat.png' ? 'blob:cat' : null),
-  onDidChange: () => new Disposable(() => {}),
-};
+/** The project's image file the boxes show. */
+const files = { '/cat.png': new Uint8Array([1]) };
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -17,7 +13,7 @@ async function setup(text: string, prompts?: TestPrompts) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const doc = new TypstDocument(text);
-  const view = createVisualView(parent, doc, { renderer, prompts });
+  const view = createVisualView(parent, doc, { files, prompts });
   await settle();
   const box = () => parent.querySelector<HTMLElement>('.typst-visual__image')!;
   const tools = () => box().querySelector<HTMLElement>('[role="toolbar"][aria-label="Image"]')!;

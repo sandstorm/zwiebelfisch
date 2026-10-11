@@ -13,8 +13,9 @@ src/                        the widget (TypeScript); the most important API on t
   typst-editor/             typst-editor.ts: createTypstEditor() — a Project in the workbench host with the built-in
                             extension list (or the host's list made from it) and the host's settings, scoped CSS of the hosts (typst-editor.css:
                             tokens, frame, views, toolbar; the extensions bring their own)
-  testing/                  testing.ts: test helpers composing the built-in extensions (the Visual view's schema and
-                            a view with the built-ins, configured from test options; edit / after / find /
+  testing/                  testing.ts: test helpers composing the built-in extensions (the Visual view's schema, a
+                            view and a Tiptap editor with the built-ins, activated with a test extension context:
+                            project files, preview snippets, document links, prompts; edit / after / find /
                             expectPreciseMap); test-only: only `*.test.ts` files may import it, and it may import
                             anything
   typst-editor-element/     typst-editor-element.ts: <typst-editor> custom element (shadow DOM) around
@@ -134,19 +135,19 @@ src/                        the widget (TypeScript); the most important API on t
       preview/              zoom-controls.ts (zoomControls), page-number.ts (pageNumber)
     preview-sync/           previewSync: the preview follows the cursor ("Follow cursor", remembered in localStorage),
                             a click in it selects the source; preview/ (followCursor: the switch)
-    images/                 images(): image boxes (group `block figureBody`), "Insert image", ProjectImages (object URLs, uploads);
-                            imagesVisualView (its options, ImageAssets / ImageUrls / ImageLinks: the test seam
-                            testing/ uses), all in images.ts;
+    images/                 images(): image boxes (group `block figureBody`), "Insert image", ProjectImages (object URLs,
+                            uploads), all in images.ts;
                             model/ (image-call.ts: arguments edited in place; upload.ts: uploadTarget; resize.ts: resizedPercent),
-                            visual-view/ (specs, tools, insertion, image-path-link: the path's document link),
+                            visual-view/ (imagesVisualView and its options ImageAssets / ImageUrls / ImageLinks, specs,
+                            tools, insertion, image-path-link: the path's document link),
                             model/image-files.ts (isImage, imageBlob: the media types), workbench/ (AssetView: images and other
                             files read-only, the custom editors `images.preview` and `images.file`)
     figures/                figures(): `#figure(body, caption: [..])` of any `figureBody` node (images, tables), the
                             caption as rich text, the commands addFigureCaption / removeFigureCaption; visual-view/
                             (Figure, FigureCaption, projecting, printing, the caption edits); figures.css
-    rendered-boxes/         renderedBoxes() and renderedBoxesVisualView({ snippets }): raw boxes drawn as snippets
-                            from the preview; model/ (Snippet, rendersInPlace, inlinePictureSize, snippetSize),
-                            visual-view/ (the box renderer)
+    rendered-boxes/         renderedBoxes(): raw boxes drawn as snippets from the preview; model/ (Snippet,
+                            rendersInPlace, inlinePictureSize, snippetSize), visual-view/ (snippetRenderer over a
+                            SnippetSource)
     document-links/         documentLinks(): a DocumentLinkProvider: file paths as links (open, or create a missing .typ)
     typst-language/         typstLanguage(): Typst syntax + code colors in the Source views and raw boxes;
                             source-view/ (typst-syntax.ts, code-colors.ts)
@@ -353,7 +354,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
   and makes every document's Visual view from it. The Typst constructs (`markup`, `headings`, `tables`,
   `figures`, `outline`, `pageLayout`, `lists`, `alignment`) are extensions in `extensions/<name>/`; the features activate
   theirs with what they own:
-  `images` → `imagesVisualView`, `renderedBoxes` → `renderedBoxesVisualView`,
+  `images` → `imagesVisualView`, `renderedBoxes` → its `snippetRenderer`,
   `typstLanguage` → the raw boxes' syntax and colors (`registerBoxCodeExtension`), `comments` → `marginNotes` +
   `notesGutter`, `labels` → `references`, `styles` → `customStyles`. The list's order is the schema's.
 - **`EditingViews`** (`hosts/workbench/editing-views/`): one Visual/Source tab bar; a document's views are
@@ -591,7 +592,7 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   highlights, an editor extension and a box code extension; Workbench: `presenceDecorations`, the GitLab room's
   source control), `diagnostics` (`lint(collection)`;
   Visual: highlights); `images` (Visual: `imagesVisualView`; Workbench: the custom editors `images.preview` / `images.file`),
-  `renderedBoxes` (Visual: `renderedBoxesVisualView`), `comments` (Visual: `marginNotes`, `notesGutter`; Preview:
+  `renderedBoxes` (Visual: `snippetRenderer`), `comments` (Visual: `marginNotes`, `notesGutter`; Preview:
   the PDF export option `comments.include`), `labels` (Visual: `references`), `styles` (Visual: `customStyles`); `sourceControl`
   ("Save to <label>…" in the tab bar's menu, its outcomes as messages); `previewSync` (`followCursor`; reveal, clicks), `previewControls`
   (`zoomControls`, `pageNumber`), `pdfExport` (`downloadPdf`), `diagrams` (Workbench: the custom editor
@@ -604,8 +605,8 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   publishes its selection, `previewSync` has the preview follow it.
 - Every extension lives in `extensions/<name>/` (the entry exports the extension factory, e.g. `images()`, and only
   what other code needs). An extension imports no other extension.
-  The extensions' Visual-view contributions are also exported for `testing/testing.ts` (a view with
-  the built-ins, configured from test options). Extensions configure nothing through their factory any more
+  `testing/testing.ts` activates the built-ins themselves (`images()`, `renderedBoxes()`, …) with a test extension
+  context, so no entry exports anything for tests. Extensions configure nothing through their factory any more
   (`comments()`, `files()`, `pdfExport()`, …): settings and `Workbench.user` instead; only `collaboration(options)`
   takes the host's connection.
 
@@ -763,7 +764,7 @@ visualView.registerBoxAction({ title, when?(node, view) → boolean, run(node, v
 // the constructs are extensions (extensions/: markup, headings, tables, figures, outline, pageLayout, lists, alignment); the
 // features' contributions, each a VisualViewContribution = { id, activate({ visualView, subscriptions }) } shaped
 // like a TypstExtension, configured by their feature's extension, in extensions/<name>/visual-view/:
-// imagesVisualView({ assets, imageUrls, imageLinks }), renderedBoxesVisualView({ snippets }),
+// imagesVisualView({ assets, imageUrls, imageLinks, prompts }), snippetRenderer(source) (a box renderer),
 // marginNotes({ comment }), notesGutter({ user }), visualPresence(presences, documents), references({ labels }),
 // customStyles({ styles, create })
 ```
@@ -1013,10 +1014,9 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
     (`Workbench.showInputBox`, placed at the selection; `markup` passes the workbench to `linkAction`).
     Link with nothing selected inserts the URL as linked text; inside a link it edits the whole link,
     and an empty URL removes it.
-  - Insert image: without `assets` an input box for the path; with `assets` (`ImageAssets`: `list()`,
-    `upload(file)` → `{ path } | { error }`) a quick pick (`showQuickPick`) of the project's images,
-    "Upload image…" (a hidden file input, `image-uploads.ts`, opened within the user's gesture) and
-    "Enter a path…"; either inserts an `#image("path")` block. With `assets`, image files dropped on
+  - Insert image (`ImageAssets`: `list()`, `upload(file)` → `{ path } | { error }`): a quick pick (`showQuickPick`)
+    of the project's images, "Upload image…" (a hidden file input, `image-uploads.ts`, opened within the user's
+    gesture) and "Enter a path…" (an input box); either inserts an `#image("path")` block. Image files dropped on
     or pasted into the text are uploaded and inserted as well (`imageFileDrops`; the drop stops
     there). Refusals are error messages (`ImagesOptions.prompts`: the workbench).
   - Image blocks (`image-insertion.ts`) go after the selected block, or after the paragraph /

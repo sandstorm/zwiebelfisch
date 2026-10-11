@@ -9,12 +9,11 @@ import { type PathReference, ProjectPath } from '../../core/paths/paths';
 import type { FileChange, FileContent, Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
 import { uploadChanges } from '../../core/uploads/uploads';
-import type { VisualViewContribution } from '../../hosts/visual-view/visual-view';
-import type { DocumentLink, TypstExtension, Workbench } from '../../hosts/workbench/workbench';
+import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './images.css?inline';
 import { IMAGE_FILES, imageBlob, isImage } from './model/image-files';
 import { uploadTarget } from './model/upload';
-import { imageRenderer, imageSpec, insertImage } from './visual-view/visual-view';
+import { imagesVisualView, type ImageAssets, type ImageUrls } from './visual-view/visual-view';
 import { assetEditor } from './workbench/workbench';
 
 /**
@@ -51,67 +50,6 @@ export function images(): TypstExtension {
       }).activate(context);
     },
   };
-}
-
-/**
- * `#image("literal path", ..)` blocks, edited as code in a box headed "Image:
- * path", with tools (resize handles, width, alt text; a caption where the
- * figures extension offers one) and the image file in place of the code, also
- * as a figure's body; "Insert image" (a path, or the project's images and
- * uploads), and image files dropped on or pasted into the text.
- */
-export function imagesVisualView(options: ImagesOptions = {}): VisualViewContribution {
-  return {
-    id: 'images',
-    activate({ visualView, subscriptions }) {
-      subscriptions.push(
-        visualView.registerNode(imageSpec(options)),
-        visualView.registerToolbarItem({ group: 'insert', order: 10, create: (toolbar) => insertImage(toolbar, options.assets?.(toolbar.document), options.prompts) }),
-        // image boxes are raw boxes, too: drawn as their image file rather than as a compiled snippet (priority 100)
-        visualView.registerBoxRenderer((view) => imageRenderer(options.imageUrls?.(view.document)), { priority: 110 }),
-      );
-    },
-  };
-}
-
-/** Where images ask (an image, a path, alt text) and tell why an upload was refused: the workbench's. */
-export type ImagePrompts = Pick<Workbench, 'showQuickPick' | 'showInputBox' | 'showErrorMessage'>;
-
-/** Where image files are shown from: the host's project files, as URLs. */
-export interface ImageUrls {
-  /** A URL of the image file `path` (as written in `#image(..)`), or null if there is none. */
-  imageUrl(path: PathReference): string | null;
-  /** Fires whenever images may have changed. */
-  readonly onDidChange: Event<void>;
-}
-
-export interface ImagesOptions {
-  /** What "Insert image" offers in a document: the project's images and uploads (default: it only asks for a path). */
-  assets?(document: TypstDocument): ImageAssets | undefined;
-  /** Image files shown in place of the call while it is not edited (default: the code). */
-  imageUrls?(document: TypstDocument): ImageUrls | undefined;
-  /** The links on image paths in a document: an image box's path opens its file, or shows it is missing (default: the text). */
-  imageLinks?(document: TypstDocument): ImageLinks | undefined;
-  /** Where "Insert image" and "Alt text" ask, and refused uploads are told (default: they do nothing). */
-  prompts?: ImagePrompts;
-}
-
-/** The document links on the paths of a document's image calls. */
-export interface ImageLinks {
-  /** The (resolved) link on the path of the image call `src`, or null. */
-  linkOf(src: string): DocumentLink | null;
-  /** Shows a link's target. */
-  open(target: ProjectPath): void;
-}
-
-/** Where the Visual view gets images to insert from: the host's project files. */
-export interface ImageAssets {
-  /** The project's images, as paths to write in `#image(..)` in this document. */
-  list(): PathReference[];
-  /** Adds `file` to the project; resolves to the path to write in `#image(..)`, or why it was not added (in words for people). */
-  upload(file: File): Promise<{ path: PathReference } | { error: string }>;
-  /** The path to write in `#image(..)` in this document for the project file `path` (e.g. dragged from the file panel); null if it is no image. */
-  reference(path: ProjectPath): PathReference | null;
 }
 
 export interface ProjectImagesOptions {
