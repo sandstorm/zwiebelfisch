@@ -1,2 +1,62 @@
 = Projection <architecture-projection>
-// TODO: job, 3-6 concepts (Typst <-> ProseMirror grammar, serializer, position map), how they connect.
+
+Turns Typst text into the Visual view's ProseMirror document and back, so that an edit changes only the source of what it touched. Plain ProseMirror: no view, no Tiptap editor, tested without a DOM. Module `src/hosts/projection/`.
+
+```
+ text ──Lezer──► syntax tree ──project(text, schema)──► doc     nodes keep their source
+                                                         │ user edit
+ text ◄── document.setText() ◄── print(doc) ◄────────────┘     untouched nodes: source verbatim
+
+ text changed elsewhere ──► project() ──► syncDoc(tr, target) ──► smallest replacement
+```
+
+Invariant: `print(project(text, schema)) === text` for any input.
+
+== Specs and grammar <architecture-projection-specs>
+
+The framework knows only paragraphs, text, line breaks, escapes, shorthands and raw Typst. Every other construct is a spec:
+
+#table(
+  columns: (auto, 1fr),
+  table.header[Field][Meaning],
+  [`name`], [The node or mark type.],
+  [`tiptap`], [The Tiptap extension defining the type (schema, attributes, priority).],
+  [`typst.parseTypst`], [Which syntax it reads: `syntaxNodes` by Lezer node name (`Heading`, `Strong`), `calls` by function name (`*`: any other call).],
+  [`typst.toTypst`], [How an edited node is written back.],
+  [`typst.labelled`, `anchors`, `container`], [Takes a trailing label; attributes kept like `src`; the container of consecutive items (list items → their list).],
+)
+
+- `createSchema(nodes, marks)` (tests) or `documentExtensions` + `attachGrammar` (the Visual view) put the specs on the schema. `project` and `print` find them there.
+- Order: the priority of each spec's Tiptap extension (default 100, higher first). Of rules for the same syntax, the higher one is asked first.
+- A second spec of the same name extends the first.
+- Writing a spec: @extensions-visual-view-constructs.
+
+== Parsing <architecture-projection-parse>
+
+- Markup is cut into segments: syntax whose rule `standsAlone` (headings, list items) is a block of its own; everything else runs up to a paragraph break.
+- A run with prose (text or inline syntax a spec models) becomes a paragraph. A run that is exactly one call goes to the `calls` rules. What no rule takes becomes `rawBlock` / `rawInline` holding its source verbatim.
+- A label right after a heading, or ending a run, becomes the block's `label` attribute.
+- Rules get a `TypstParseContext`: the source, the schema, and the framework's steps (`inline`, `blocks`, `textblock`, `raw`).
+
+== Source anchors and pristine nodes <architecture-projection-anchors>
+
+- *Anchors:* attributes that are never rendered and remember the source: `src` (the node's Typst), `sep` (whitespace to the next sibling), the document's `lead` and `trail`, `label`, and each spec's `anchors`.
+- *Pristine:* a private `WeakMap` holds the nodes `project` made. ProseMirror keeps the identity of unchanged nodes, so membership means "still equal to `src`".
+- Pristine nodes print `src`. Edited nodes print through their spec's `toTypst` (textblocks by default: their inline content, escaped). Block atoms print `src`.
+- Editor-made nodes have `sep: null` and get the default separator.
+
+== Position map <architecture-projection-position-map>
+
+`sourceToPos(doc, offset, bias?)` and `posToSource(doc, pos, bias?)` map between source offsets and document positions, character-exact, for any document.
+
+- Printing records, for each stretch of output, the document range showing it: text one to one, atoms as a whole, hidden syntax to the next visible position in its block.
+- Cached per document (documents are immutable).
+- `bias: -1` maps a range end to just after the visible character before it.
+
+== Sync <architecture-projection-sync>
+
+`syncDoc(tr, target)` turns the current document into a fresh projection:
+
+1. Diff both with the anchor attributes stripped, so a changed `src` does not replace a whole block.
+2. Replace only the innermost changed range: a cursor elsewhere in the paragraph stays put.
+3. Copy the attributes over and mark nodes pristine again where the target's were.

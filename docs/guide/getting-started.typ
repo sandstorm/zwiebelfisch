@@ -1,2 +1,67 @@
 = Getting started <guide-getting-started>
-// TODO: install, run the demo (mise run demo), a first embedded editor in a few lines.
+
+A Typst editor for the browser: a Visual view (WYSIWYG), a Source view and a live preview. The Typst compiler runs as WebAssembly in a worker; no server is needed except for collaboration.
+
+== Setup <guide-getting-started-setup>
+
+Requires #link("https://mise.jdx.dev")[mise]. It pins every tool: Node, pnpm, the Typst CLI, Rust (with the `wasm32` target), wasm-bindgen and binaryen.
+
+```sh
+mise install            # the pinned tools
+mise run install        # JS dependencies and Playwright browsers
+mise run build:fonts    # Typst's default fonts, once
+mise run demo           # builds the engine, then starts the demo and a local server
+```
+
+- The first engine build compiles the Typst compiler to wasm. Later runs skip it until `crates/typst-engine` changes.
+- Other tasks (tests, checks, builds): @architecture-development.
+
+== The demo <guide-getting-started-demo>
+
+`mise run demo` starts the demo on `http://127.0.0.1:5199/` and a collaboration server with a fake GitLab on `ws://127.0.0.1:1234`. Ctrl-C stops both. `mise run dev` starts the demo alone (Local mode only).
+
+The page's state is its URL:
+
+#table(
+  columns: 2,
+  [Query], [Effect],
+  [`?example=hello|simple|advanced|docs`], [The project. `docs` is this documentation: edit live, nothing is saved.],
+  [`?room=<name>`], [Collaborate mode: joins a room on the local server.],
+  [`?room=gitlab:demo/report@main`], [GitLab mode: a branch of the fake repository.],
+  [`&user=<name>`], [The name others see; signs comments and commits.],
+  [`&devtools`], [ProseMirror's dev tools on the Visual view.],
+  [`#/chapters/intro.typ`], [The file shown.],
+)
+
+The playground bar at the top switches example and mode, and opens a second window as another user.
+
+== A first editor <guide-getting-started-first-editor>
+
+`mise run build:lib` builds the library into `dist/lib` (@guide-embedding-library). It is not on npm yet: copy `dist/lib`, or depend on the repository folder, whose `package.json` exports it as `typst-editor`.
+
+Without a bundler:
+
+```html
+<script type="module" src="/vendor/typst-editor/typst-editor.js"></script>
+
+<typst-editor style="height: 600px">
+  = Hello
+
+  Some *Typst*.
+</typst-editor>
+```
+
+From JavaScript:
+
+```ts
+import { createTypstEditor } from 'typst-editor';
+
+const editor = createTypstEditor(document.getElementById('editor')!, {
+  source: '= Hello\n',
+  onFilesChange: (change) => save(change),
+});
+```
+
+A complete page: `examples/plain-html/index.html`. After `mise run build:lib`, serve the repository root and open `/examples/plain-html/`.
+
+Next: the options and events (@guide-embedding), what users get (@guide-features), editing with others (@guide-collaboration), adding features (@extensions-overview).

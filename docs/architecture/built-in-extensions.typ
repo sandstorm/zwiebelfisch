@@ -1,2 +1,65 @@
 = Built-in extensions <architecture-built-in-extensions>
-// TODO: job, the extensions shipped with the widget, one line each and what they contribute.
+
+`src/extensions/<name>/`. No host has built-in contributions. `createTypstEditor` activates the list below in this order (`builtinExtensions()` in `src/typst-editor/typst-editor.ts`). A host changes the list with `extensions: (builtins) => […]`.
+
+== Shape of an extension <architecture-built-in-extensions-shape>
+
+```
+extensions/<name>/
+  <name>.ts       entry: the factory (images()) and the controller; activate() registers everything
+  <name>.css      its own styles, registered with workbench.registerStyleSheet
+  model/          pure: no DOM, no editor libraries
+  workbench/ visual-view/ source-view/ preview/    one folder per host it contributes to
+```
+
+- Factories without options (`markup()`, `images()`): settings and `workbench.user` configure them. Only `collaboration(options)` takes the host's connection.
+
+== The list <architecture-built-in-extensions-list>
+
+#table(
+  columns: (auto, 2fr, 1fr),
+  table.header[Extension][What it adds][Through],
+  [`typstLanguage`], [Typst highlighting and code colors in Source views and raw boxes], [source view, raw-box CodeMirror],
+  [`documentLinks`], [file paths in Typst text as links; command `documentLinks.createFile`], [link provider],
+  [`files`], [file panel; `files.newFile` / `newFolder` / `upload` / `rename` / `delete`; read-only editor `files.file` for any other file; setting `files.panel`], [side panel, menus, custom editor],
+  [`fileNavigation`], ["← previous file" / "next file →" in reading order], [editor frame],
+  [`spreadsheets`], [`.ic` in IronCalc (`spreadsheets.editor`); every edit also writes `name.ic.gen.typ`; "New spreadsheet…"], [custom editor, `file/newFile`],
+  [`textFiles`], [csv, json, yaml, toml, xml, bib, txt, md in CodeMirror (`textFiles.editor`)], [custom editor],
+  [`diagrams`], [`.drawio.png` in diagrams.net's embedded editor (`diagrams.editor`, priority 110); "New diagram…"; "Edit diagram"; setting `diagrams.editorUrl`], [custom editor, box action],
+  [`diagnostics`], [errors underlined (Source), highlighted (Visual), counted in the status bar], [source view, highlights, status bar],
+  [`sourceControl`], ["Save to _label_…" over the registered source controls (`sourceControl.commit`)], [`editor/title`],
+  [`markup`], [strong, emphasis, links, inline code, code blocks, quotes], [nodes, marks, toolbar],
+  [`headings`], [headings, their numbers, `headings.toggleNumbering`], [node, text style provider],
+  [`tables`], [`#table(..)`, "Insert table", the table bar], [node, toolbar],
+  [`images`], [image boxes, "Insert image", image files read-only (`images.preview`)], [node, toolbar, custom editor],
+  [`figures`], [`#figure(..)` around any `figureBody` node, caption as rich text], [nodes],
+  [`renderedBoxes`], [raw boxes drawn as snippets from the preview], [box renderer],
+  [`outline`], [`#outline(..)` as a box, "Table of contents"], [node, toolbar],
+  [`pageLayout`], [page breaks, horizontal rules], [nodes, toolbar],
+  [`lists`], [bulleted, numbered and task lists], [nodes, toolbar],
+  [`alignment`], [`#align(..)[..]`, `#par(justify: ..)[..]`, the Align menu], [nodes, toolbar],
+  [`comments`], [margin notes in the text and a notes gutter; `comments.addComment` (Mod+Alt+M); PDF option `comments.include`], [node, mark, gutter, command, PDF option],
+  [`labels`], [`LabelIndex`; reference chips, label tags, the `@` list, "Add label"], [nodes, toolbar],
+  [`styles`], [`StyleIndex` of the project's `/// @style` declarations; styled text; "New style…"], [node, mark, text style provider],
+  [`previewSync`], [preview follows the cursor; a click selects the source; setting `previewSync.followCursor`], [preview toolbar, `reveal`, `onDidClickPage`],
+  [`previewControls`], [zoom, page number], [preview toolbar],
+  [`pdfExport`], [`pdfExport.export` → Blob; "Download PDF" with the options popover; setting `pdfExport.download`], [command, preview toolbar],
+)
+
+Not built in: `collaboration(options)`. The host adds it with its connection. It shares the project over Yjs, draws other users' places in every view (CodeMirror extensions, highlights, file decorations) and registers a GitLab room's source control (see @architecture-server).
+
+== How they meet <architecture-built-in-extensions-meeting>
+
+#table(
+  columns: (auto, auto, auto),
+  table.header[Contribution point][Provided by][Read by],
+  [document links], [`documentLinks`], [the views, `images`, `diagrams` ("Edit diagram")],
+  [file decorations], [`collaboration`], [`files`],
+  [source controls], [`collaboration` (GitLab rooms)], [`sourceControl`],
+  [PDF export options], [`comments`], [`pdfExport`],
+  [text style menu], [`headings`, `styles`], [the Visual view toolbar],
+  [node group `figureBody`], [`images`, `tables`], [`figures`],
+  [menu `file/newFile`], [`files`, `spreadsheets`, `diagrams`], [`files`],
+)
+
+Schema names of other extensions are read only as data and always guarded (`schema.nodes.x`, `editor.can()`). Writing a construct: @extensions-visual-view-constructs.

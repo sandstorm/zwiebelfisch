@@ -18,6 +18,7 @@
     if target() != "paged" { return body }
     set page(paper: "a4", margin: 2.2cm, numbering: "1")
     set par(justify: true)
+    show table: set par(justify: false)
     // a new page for every part (level 1) and chapter (level 2, see main.typ)
     show heading.where(level: 1, outlined: true): it => pagebreak(weak: true) + it
     show heading.where(level: 2): it => pagebreak(weak: true) + it
