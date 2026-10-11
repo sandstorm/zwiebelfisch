@@ -161,7 +161,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
       return document.text;
     },
     set source(text: string) {
-      document.setText(text, 'api');
+      project.apply({ kind: 'update', path: main, content: text });
     },
     get settings() {
       return workbench.settings;

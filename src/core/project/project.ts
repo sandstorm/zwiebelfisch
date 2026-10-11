@@ -25,6 +25,9 @@ export type FileChange =
   | { kind: 'delete'; path: ProjectPath }
   | { kind: 'rename'; path: ProjectPath; from: ProjectPath };
 
+/** The origin of the text edits `apply` and `replace` make: no view's, so every view shows them. */
+const PROJECT_ORIGIN = Symbol('project');
+
 /** A file: a Typst file's document (with the subscription that reports its edits), or any other file's content. */
 type Entry = { kind: 'document'; document: TypstDocument; subscription: Disposable } | { kind: 'content'; content: FileContent };
 
@@ -102,7 +105,7 @@ export class Project {
     if (problem) throw new Error(problem);
     if (change.kind === 'update') {
       const document = this.document(change.path);
-      if (document) return document.setText(change.content as string, 'api');
+      if (document) return document.setText(change.content as string, PROJECT_ORIGIN);
       this.entries.set(change.path, { kind: 'content', content: change.content });
     }
     if (change.kind === 'create') this.add(change.path, change.content);
@@ -158,7 +161,7 @@ export class Project {
   /** Sets the content of `path` for `replace`: an edit where the kind of entry stays, else a new file. */
   private put(path: ProjectPath, content: FileContent): void {
     const entry = this.entries.get(path);
-    if (entry?.kind === 'document' && typeof content === 'string') return entry.document.setText(content, 'api');
+    if (entry?.kind === 'document' && typeof content === 'string') return entry.document.setText(content, PROJECT_ORIGIN);
     if (entry?.kind === 'content' && !ProjectPath.isTypst(path)) {
       if (entry.content === content) return;
       this.entries.set(path, { kind: 'content', content });
