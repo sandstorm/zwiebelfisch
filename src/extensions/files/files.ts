@@ -52,7 +52,7 @@ export function files(): TypstExtension {
     activate({ project, workspace, workbench, subscriptions }) {
       subscriptions.push(workbench.registerStyleSheet(css));
       const mode = () => workspace.getConfiguration('files').get<PanelMode>('panel', 'auto');
-      const side = workbench.registerSidePanel('files', { label: 'Files', icon: icon(workbench.ownerDocument, 'files') });
+      const side = workbench.registerSidePanel('files', { label: 'Files', icon: icon(workbench.ownerDocument, 'files'), order: 10 });
       const state = () => ({ paths: project.paths(), main: project.main, active: workbench.activeFile });
       const panel = new FilePanel(side.body, {
         onOpen: (path) => {

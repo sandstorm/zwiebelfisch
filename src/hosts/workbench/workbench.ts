@@ -393,6 +393,8 @@ export interface SidePanelOptions {
   label: string;
   /** The rail button's icon. */
   icon: Element;
+  /** The rail button's place among the others (lower first; equal: registration order); default 0. */
+  order?: number;
 }
 
 /** A registered side panel: the element its content goes into, and how it opens. */

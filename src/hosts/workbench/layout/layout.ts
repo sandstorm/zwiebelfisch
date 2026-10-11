@@ -39,7 +39,7 @@ export class Layout {
   private readonly panel: HTMLElement;
   private readonly resizer: HTMLElement;
   private readonly split: HTMLElement;
-  private readonly panels = new Map<string, { body: HTMLElement; button: HTMLButtonElement; fallback: boolean; available: boolean }>();
+  private readonly panels = new Map<string, { body: HTMLElement; button: HTMLButtonElement; order: number; fallback: boolean; available: boolean }>();
   private readonly saved: Memory<Saved>;
   private state: Saved;
   private openId: string | null = null;
@@ -80,7 +80,10 @@ export class Layout {
     this.layout();
   }
 
-  /** Adds side panel `id` with its rail button: the element its content goes into, and how it opens. */
+  /**
+   * Adds side panel `id` with its rail button (among the others by `options.order`, lower first; equal: registration
+   * order): the element its content goes into, and how it opens.
+   */
   addPanel(id: string, options: SidePanelOptions): SidePanel {
     if (this.panels.has(id)) throw new Error(`There is a side panel ${id} already`);
     const doc = this.host.ownerDocument;
@@ -96,9 +99,11 @@ export class Layout {
     button.dataset.testid = `typst-panel-toggle-${id}`;
     button.append(options.icon);
     button.addEventListener('click', () => this.choose(id, this.openId !== id));
-    this.rail.append(button);
+    const order = options.order ?? 0;
+    const next = [...this.panels.values()].find((panel) => panel.order > order);
+    this.rail.insertBefore(button, next?.button ?? null);
     this.panel.insertBefore(body, this.resizer);
-    this.panels.set(id, { body, button, fallback: false, available: true });
+    this.panels.set(id, { body, button, order, fallback: false, available: true });
     this.layout();
     return {
       body,

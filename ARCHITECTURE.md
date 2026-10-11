@@ -440,7 +440,7 @@ interface ExtensionContext {
 interface Workbench {
   ownerDocument; activeFile; user?: { name, color? }; open(path, { selection?, mode?, viewType? }); onDidShowFile
   applyChange(change) → reason | null
-  registerSidePanel(id, { label, icon }) → SidePanel { body, setDefault, setAvailable, dismiss, dispose }
+  registerSidePanel(id, { label, icon, order? }) → SidePanel { body, setDefault, setAvailable, dismiss, dispose }
   registerStatusBarItem(element, { alignment: 'left' | 'right', priority? })   // VS Code's StatusBarItem: higher priority
                                     // further left within its side (default 0), equal: registration order
   registerEditorFrame({ top, bottom })

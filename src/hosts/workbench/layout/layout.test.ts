@@ -48,6 +48,16 @@ describe('Layout', () => {
     expect(layout.statusBar.className).toBe('typst-editor__status-bar');
   });
 
+  it('places rail buttons by order, equal orders in registration order', () => {
+    const { host, layout } = setup();
+    const icon = () => document.createElement('span');
+    layout.addPanel('outline', { label: 'Outline', icon: icon(), order: -10 });
+    layout.addPanel('search', { label: 'Search', icon: icon(), order: 20 });
+    layout.addPanel('comments', { label: 'Comments', icon: icon() });
+    const rail = [...host.querySelectorAll<HTMLElement>('.typst-editor__rail-button')].map((button) => button.title);
+    expect(rail).toEqual(['Outline', 'Files', 'Comments', 'Search']);
+  });
+
   it('removes a panel and its rail button', () => {
     const { host, sidePanel } = setup();
     sidePanel.setDefault(true);
