@@ -42,7 +42,7 @@ extensions/<name>/
   [`comments`], [margin notes in the text and a notes gutter; `comments.addComment` (Ctrl+Alt+M, ⌘⌥M on Mac); PDF option `comments.include`], [node, mark, gutter, command, PDF option],
   [`labels`], [`LabelIndex`; reference chips, label tags, the `@` list, "Add label"], [nodes, toolbar, completion items],
   [`styles`], [`TypstStyleIndex` of the project's `/// @style` declarations; styled text; "New style…"], [node, mark, text style provider],
-  [`slashCommands`], [`/` lists the Insert menu's entries and the text styles, found by label and `keywords`], [completion items (reads toolbar and text styles)],
+  [`slashCommands`], [`/` lists the Insert menu's entries and the text styles, found by label and `keywords`; the hint "Type / for commands" in the empty paragraph holding the cursor (not in table cells)], [completion items (reads toolbar and text styles), Tiptap extension (a decoration)],
   [`previewSync`], [preview follows the cursor; shades the selection; a click selects the source, its outline goes with the next edit or selection move; settings `previewSync.followCursor`, `previewSync.highlightSelection`], [preview toolbar, `reveal`, `setSelectionHighlight`, `onDidClickPage`, `clearClickHighlight`],
   [`previewControls`], [zoom, page number], [preview toolbar],
   [`pdfExport`], [`pdfExport.export` → Blob; "Download PDF" with the options popover; setting `pdfExport.download`], [command, preview toolbar],

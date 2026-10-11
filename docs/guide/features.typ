@@ -48,7 +48,7 @@ with the #link("https://typst.app")[Typst] compiler (`typst compile`).
   [Code block], [Insert → Code block. Its language is a field.],
   [Alignment], [Align menu, or Ctrl+Shift+L / E / R / J (⌘⇧L / E / R / J on Mac): `#align(center)[..]`, `#par(justify: true)[..]`.],
   [Undo, redo], [Ctrl+Z, Ctrl+Shift+Z (⌘Z, ⌘⇧Z on Mac).],
-  [Anything from the Insert or text style menu], [Type `/` at a line start or after a space, then part of its name: `/table`, `/h2`, `/quote`. Other words find entries, too (`/spreadsheet` → Insert table). ↑ / ↓ choose, Enter or Tab inserts (the `/…` goes), Escape closes.],
+  [Anything from the Insert or text style menu], [Type `/` at a line start or after a space, then part of its name: `/table`, `/h2`, `/quote`. Other words find entries, too (`/spreadsheet` → Insert table). ↑ / ↓ choose, Enter or Tab inserts (the `/…` goes), Escape closes. An empty line holding the cursor hints "Type / for commands".],
 )
 
 == Custom styles <guide-features-styles>
