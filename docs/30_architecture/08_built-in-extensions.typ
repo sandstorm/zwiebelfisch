@@ -32,6 +32,7 @@ extensions/<name>/
   [`diagnostics`], [errors underlined (Source), highlighted (Visual), counted in the status bar], [source editor, highlights, status bar],
   [`sourceControl`], ["Save to _label_…" over the registered source controls (`sourceControl.commit`); their status bar entries and resource states (file decorations)], [`editor/title`, status bar, file decorations],
   [`markup`], [strong, emphasis, underline, strike, highlight, links, inline code, code blocks, quotes; web and mail addresses as document links], [nodes, marks, toolbar, document link provider],
+  [`math`], [typing math: the closing `$` of `$…$` makes the raw box the parser makes for it (inline; display math `$ … $` alone in a paragraph: a block); Insert → "Inline math" (`$$`) and "Display math" (`$  $`), the cursor inside the new box's code (`editRawBox`)], [Tiptap extension (an input rule), toolbar],
   [`headings`], [headings, their numbers, `headings.toggleNumbering`; search group "Headings"], [node, text style provider, search provider],
   [`tables`], [`#table(..)`, "Insert table", the table bar], [node, toolbar],
   [`images`], [image boxes, "Insert image", image files read-only (`images.editor`)], [node, toolbar, custom editor],

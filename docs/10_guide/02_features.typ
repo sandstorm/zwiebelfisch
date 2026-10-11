@@ -78,6 +78,7 @@ with the #link("https://typst.app")[Typst] compiler (`typst compile`).
   [Link], [Ctrl+K (⌘K on Mac), or "Link" in the bar over a selection. Ctrl+click (⌘-click on Mac) on a link, or Alt+Enter in it, opens its address in a new tab; a plain click edits it.],
   [Lists], [List buttons: bulleted, numbered, task list (`- [ ] todo`). Or type at a line start, as in Typst: `- ` bulleted, `+ ` numbered (also `1. `). Tab nests.],
   [Quote], [Ctrl+Shift+B (⌘⇧B on Mac), Insert → Quote, or `> ` at a line start (Typst has no quote markup: it writes `#quote(block: true)[..]`).],
+  [Math], [Type it as in Typst: `$a^1$` becomes inline math when the closing `$` is typed (Backspace right after gives the text back); `$ x^2 $` (spaces inside both dollars) alone on an empty line becomes display math, a block. Or Insert → Inline math / Display math (`/math`), which puts the cursor into the new formula. A formula is a raw box: its code while the cursor is in it, its compiled look otherwise. `\$` or a dollar with a space on one side only (`$5 and $10`) stays a dollar sign.],
   [Code block], [Insert → Code block. Its language is a field. Tab / Shift+Tab indent / outdent by two spaces.],
   [Alignment], [Align menu, or Ctrl+Shift+L / E / R / J (⌘⇧L / E / R / J on Mac): `#align(center)[..]`, `#par(justify: true)[..]`.],
   [Undo, redo], [Ctrl+Z, Ctrl+Shift+Z (⌘Z, ⌘⇧Z on Mac).],

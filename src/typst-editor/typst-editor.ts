@@ -27,6 +27,7 @@ import { alignment } from '../extensions/alignment/alignment';
 import { headings } from '../extensions/headings/headings';
 import { lists } from '../extensions/lists/lists';
 import { markup } from '../extensions/markup/markup';
+import { math } from '../extensions/math/math';
 import { outline } from '../extensions/outline/outline';
 import { pageLayout } from '../extensions/page-layout/page-layout';
 import { tables } from '../extensions/tables/tables';
@@ -213,6 +214,7 @@ function builtinExtensions(): TypstExtension[] {
     diagnostics(),
     sourceControl(),
     markup(),
+    math(),
     headings(),
     tables(),
     images(),

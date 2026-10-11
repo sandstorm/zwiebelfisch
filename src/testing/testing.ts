@@ -12,6 +12,7 @@ import { figures } from '../extensions/figures/figures';
 import { headings } from '../extensions/headings/headings';
 import { lists } from '../extensions/lists/lists';
 import { markup } from '../extensions/markup/markup';
+import { math } from '../extensions/math/math';
 import { outline } from '../extensions/outline/outline';
 import { pageLayout } from '../extensions/page-layout/page-layout';
 import { tables } from '../extensions/tables/tables';
@@ -212,7 +213,7 @@ if (typeof URL.createObjectURL !== 'function') {
 
 /** The built-ins' Visual-editor contributions, in the order the widget's built-in extensions activate them. */
 export function builtins(): VisualEditorContribution[] {
-  return [markup(), headings(), tables(), images(), figures(), renderedBoxes(), outline(), pageLayout(), lists(), alignment()];
+  return [markup(), math(), headings(), tables(), images(), figures(), renderedBoxes(), outline(), pageLayout(), lists(), alignment()];
 }
 
 /** Types `text` character by character at the selection, as the browser would (text input handlers and input rules run). */

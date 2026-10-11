@@ -54,8 +54,8 @@ export const TYPST_HELP: HelpSheet = {
     {
       title: 'Math',
       rows: [
-        { snippet: '$x^2 + y_1$', description: 'Inline math: no spaces inside the dollars' },
-        { snippet: '$ sum_(i=1)^n i = (n(n+1)) / 2 $', description: 'Display math: spaces inside the dollars' },
+        { snippet: '$x^2 + y_1$', description: 'Inline math: no spaces inside the dollars. Typed in the Visual editor, the closing $ makes it math' },
+        { snippet: '$ sum_(i=1)^n i = (n(n+1)) / 2 $', description: 'Display math: spaces inside the dollars (alone on an empty line in the Visual editor: a block)' },
         { snippet: '$ a = b $ <eq:ab>', description: 'A display equation with a label' },
       ],
     },

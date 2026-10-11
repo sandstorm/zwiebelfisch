@@ -47,7 +47,8 @@ export const clipboard = Extension.create({
             const text = literal ? null : typstText(event.clipboardData);
             literal = false;
             if (text === null || view.state.selection.$from.parent.type.spec.code) return false;
-            const tr = view.state.tr.replaceSelection(typstSlice(text, view.state.schema));
+            const { parent } = view.state.selection.$from;
+            const tr = view.state.tr.replaceSelection(typstSlice(text, view.state.schema, parent.isTextblock && parent.content.size > 0));
             view.dispatch(tr.scrollIntoView().setMeta('paste', true).setMeta('uiEvent', 'paste'));
             return true;
           },
@@ -112,12 +113,17 @@ function isCode(html: string): boolean {
 
 /**
  * `text` read as Typst, a paragraph at either end open (its inline content joins the text there). Text of one
- * paragraph keeps the spaces around it (` and more`), which Typst would read as the document's lead and trail.
+ * paragraph keeps the spaces around it (` and more`), which Typst would read as the document's lead and trail. One
+ * line no spec models (`$x^2$`, read alone as a raw block) pasted `inText` (a paragraph with text) joins the text as
+ * an inline raw box, as it would in the source.
  */
-function typstSlice(text: string, schema: Schema): Slice {
+function typstSlice(text: string, schema: Schema, inText: boolean): Slice {
   const doc = parseTypst(text, schema);
   let { content } = doc;
-  const only = content.childCount === 1 ? content.firstChild! : null;
+  let only = content.childCount === 1 ? content.firstChild! : null;
+  if (inText && only?.type === schema.nodes.rawBlock && only.attrs.label === null && !only.attrs.src.includes('\n')) {
+    only = schema.nodes.paragraph.create(null, schema.nodes.rawInline.create({ src: only.attrs.src }));
+  }
   if (only?.type === schema.nodes.paragraph) {
     const spaces = (s: string) => (s === '' ? [] : [schema.text(s)]);
     const lead = /^[ \t]*$/.test(doc.attrs.lead) ? doc.attrs.lead : '';

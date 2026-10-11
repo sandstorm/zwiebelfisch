@@ -22,7 +22,7 @@ new VisualEditor(parent, document, contributions: VisualEditorHost)
 The clipboard holds Typst (`clipboard.ts`), so text moves between the Visual editor, the Source editor and other editors as it is written.
 
 - *Copy, cut:* `text/plain` is the selection's Typst: the source range it shows (`posToSource`), byte for byte, if that reads as what is selected; else the selection printed anew (part of a bold word: `*bo*`). `text/x-typst` holds the same text and says it is Typst. ProseMirror's `text/html` goes along for rich targets.
-- *Paste:* Typst (`text/x-typst`), plain text, and HTML that is one code block (VS Code copies `white-space: pre`) are read with the editor's specs (`parseTypst`) and replace the selection in one transaction: a paragraph at either end joins the text there, blocks stay blocks, what no spec models becomes raw boxes. One undo step.
+- *Paste:* Typst (`text/x-typst`), plain text, and HTML that is one code block (VS Code copies `white-space: pre`) are read with the editor's specs (`parseTypst`) and replace the selection in one transaction: a paragraph at either end joins the text there, blocks stay blocks, what no spec models becomes raw boxes. One line no spec models (`$x^2$`, alone read as a raw block) pasted into a paragraph with text joins it as an inline raw box, as in the source. One undo step.
 - Our own HTML is not read back: it leaves out what is never rendered (a raw box's `src`). Other HTML (a web page, a word processor) goes through ProseMirror's paste and the schema's HTML rules.
 - *Mod+Shift+V* pastes plain characters (escaped when written): the key down before the paste says so, as ProseMirror's own Shift.
 - Raw boxes paste into their code, as CodeMirror does; in code blocks the text goes in as it is.
@@ -52,6 +52,7 @@ Typst no spec models, and nodes whose spec sets `view.box: 'code'` (images, outl
 - When the renderer changes (after every compile), only boxes near the view (an `IntersectionObserver`, one viewport above and below) are drawn again; one further away, or in a hidden editor, is drawn again once it comes near.
 - The spec's `view.title` heads the box; `view.tools` add tools (an image's resize handles and toolbar).
 - The picture is a link to where the box's Typst leads (`VisualEditorLinks`): its tooltip says where; with Mod held it shows as one; Mod+click on it, or Alt+Enter on the selected box, follows it. Other clicks still select the box or edit its code.
+- `editRawBox(pos, offset)` (a Tiptap command): focuses the code of the box at `pos`, the cursor at `offset`; for a box just inserted to be written in (Insert → "Inline math").
 - `setRawBoxDecorations`: the box's node decorations, handed to its code (another user's caret inside the box).
 
 == Toolbar <architecture-visual-editor-toolbar>
