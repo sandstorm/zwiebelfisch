@@ -56,8 +56,10 @@
 .typst-visual__code[hidden],
 .typst-visual__rendering[hidden] { display: none; }
 
-/* The Visual editor's text column: the text and what floats in it, placed relative to it (bars, a note's card) */
-.typst-visual__body { flex: 1 0 auto; display: flex; position: relative; }
+/* The Visual editor's text column: the text and what floats in it, placed relative to it (bars, a note's card).
+   Isolated, so what floats in it (collaborators' name flags, bars, cards, completions) scrolls under the sticky
+   toolbar whatever its own z-index. */
+.typst-visual__body { flex: 1 0 auto; display: flex; position: relative; isolation: isolate; }
 .typst-visual__body > .typst-visual { min-width: 0; }
 .typst-visual__box-label {
   margin-bottom: 2px;
