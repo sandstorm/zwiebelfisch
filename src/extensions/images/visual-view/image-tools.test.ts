@@ -52,10 +52,17 @@ describe('image tools', () => {
   });
 
   it('sets a preset width as one edit of the width argument', async () => {
-    const { doc, button } = await setup('#figure(image("cat.png", width: 8cm), caption: [A]) <cat>\n');
+    const { doc, button } = await setup('#figure(image("cat.png", width: 8cm, height: 2cm), caption: [A]) <cat>\n');
+    expect(button('Width 75%').getAttribute('aria-pressed')).toBe('false');
     button('Width 75%').click();
-    expect(doc.text).toBe('#figure(image("cat.png", width: 75%), caption: [A]) <cat>\n');
+    expect(doc.text).toBe('#figure(image("cat.png", width: 75%, height: 2cm), caption: [A]) <cat>\n');
     expect(button('Width 75%').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('adds the width argument to an image without one', async () => {
+    const { doc, button } = await setup('#image("cat.png", alt: "A cat")\n');
+    button('Width 50%').click();
+    expect(doc.text).toBe('#image("cat.png", alt: "A cat", width: 50%)\n');
   });
 
   it('asks for the alt text and sets it; an empty one removes it', async () => {

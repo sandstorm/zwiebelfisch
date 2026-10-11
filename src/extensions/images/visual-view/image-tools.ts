@@ -4,9 +4,8 @@ import type { Node } from '@tiptap/pm/model';
 import type { EditorState, Transaction } from '@tiptap/pm/state';
 import type { RawBoxTools, RawBoxToolsHost } from '../../../hosts/visual-view/visual-view';
 import type { WindowApi } from '../../../hosts/window/window';
-import { imageWidthCss } from '../model/image-call';
+import { imageAlt, imageArg, imageWidthCss, withImageAlt, withImageWidth } from '../model/image-call';
 import { type DragStart, resizedPercent } from '../model/resize';
-import { imageInfo, resizeImage, setImageAlt } from './image-edits';
 import { imagePath } from './image-syntax';
 
 /** The image box the tools belong to (its picture moves into the resize frame). */
@@ -29,8 +28,8 @@ const HANDLES = ['nw', 'ne', 'sw', 'se', 'w', 'e'];
  * (add/remove caption where the figures extension's commands are there,
  * preset widths, alt text, the box actions others contribute, edit the code).
  *
- * Every change is one transaction from `image-edits`, so one undo step that
- * rewrites only the argument concerned. A drag changes the width live in the
+ * Every change is one transaction (see "Image edits" below), so one undo step
+ * that rewrites only the argument concerned. A drag changes the width live in the
  * view and writes `width: NN%` once, on release.
  */
 export class ImageTools implements RawBoxTools {
@@ -209,4 +208,48 @@ export class ImageTools implements RawBoxTools {
     frame.classList.add('typst-images__frame--resizing');
     this.badge!.textContent = `${percent}%`;
   }
+}
+
+// --- Image edits ---------------------------------------------------------
+// What the tools read from and change in an image block (bare, or the body of
+// a figure), each change one transaction: width and alt text. The image call
+// changes only in the argument concerned; the serializer prints everything
+// else of the block as it was.
+
+/** What the image tools show for an image block. */
+interface ImageInfo {
+  alt: string | null;
+  /** The `width` argument as written. */
+  width: string | null;
+}
+
+/** The image block at `pos`, if there is one. */
+function imageAt(state: EditorState, pos: number): Node | null {
+  const image = state.doc.nodeAt(pos);
+  return image?.type.name === 'image' ? image : null;
+}
+
+/** What the image block at `pos` has; null if there is none. */
+function imageInfo(state: EditorState, pos: number): ImageInfo | null {
+  const image = imageAt(state, pos);
+  if (!image) return null;
+  const src: string = image.attrs.src;
+  return { alt: imageAlt(src), width: imageArg(src, 'width') };
+}
+
+/** Sets the image's `width` to `percent` of the text width (whole percent). */
+function resizeImage(state: EditorState, pos: number, percent: number): Transaction | null {
+  return editCall(state, pos, (src) => withImageWidth(src, percent));
+}
+
+/** Sets the image's alt text; an empty one removes it. */
+function setImageAlt(state: EditorState, pos: number, alt: string): Transaction | null {
+  return editCall(state, pos, (src) => withImageAlt(src, alt));
+}
+
+function editCall(state: EditorState, pos: number, change: (src: string) => string): Transaction | null {
+  const image = imageAt(state, pos);
+  if (!image) return null;
+  const src = change(image.attrs.src);
+  return src === image.attrs.src ? null : state.tr.setNodeAttribute(pos, 'src', src);
 }
