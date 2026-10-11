@@ -28,6 +28,7 @@ export type {
   MessageSeverity,
   QuickPickItem,
   QuickPickOptions,
+  SaveDialogOptions,
   StatusBarPlacement,
   TextEditor,
   TextEditorSelectionChangeEvent,

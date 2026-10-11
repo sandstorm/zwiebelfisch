@@ -14,8 +14,11 @@ import { FileTree } from './tree/tree';
 export const NEW_FILE_MENU = 'file/newFile';
 export const CONTEXT_MENU = 'explorer/context';
 
-/** What the panel asks the user with, and tells them: the window's input box and messages. */
-export type FilePanelPrompts = Pick<Window, 'showInputBox' | 'showWarningMessage' | 'showErrorMessage'>;
+/** "New file": a Typst file unless the name has another ending. */
+const NEW_FILE_ENDINGS = { Typst: ['typ'], 'All files': ['*'] };
+
+/** What the panel asks the user with, and tells them: the window's input box, save dialog and messages. */
+export type FilePanelPrompts = Pick<Window, 'showInputBox' | 'showSaveDialog' | 'showWarningMessage' | 'showErrorMessage'>;
 
 export interface FilePanelOptions {
   /** Someone picked a file. */
@@ -105,17 +108,14 @@ export class FilePanel {
     this.newButton.hidden = this.options.menus.items(NEW_FILE_MENU, this.context(this.current())).length === 0;
   }
 
-  /** Asks for a name and creates that (empty) `.typ` file in the folder of `at` (default: the focused row), then opens it. */
+  /**
+   * Asks for a name (`showSaveDialog`: `.typ` added to a name without an ending) and creates that empty file in the
+   * folder of `at` (default: the focused row), then opens it.
+   */
   async newFile(at: ProjectPath = this.current()): Promise<void> {
-    const name = await this.options.prompts.showInputBox({
-      title: 'New file',
-      prompt: 'Name of the new file',
-      ...this.startIn(this.folderOf(at)),
-      placeHolder: 'e.g. chapter-2',
-      validateInput: (value) => this.problemWith(ProjectPath.fromName(value, '.typ')),
-    });
-    const target = name === undefined ? null : ProjectPath.fromName(name, '.typ');
-    if (target?.kind === 'valid') await this.request([{ kind: 'create', path: target.path, content: '' }], target.path);
+    const folder = this.folderOf(at);
+    const target = await this.options.prompts.showSaveDialog({ title: 'New file', defaultUri: folder ?? undefined, filters: NEW_FILE_ENDINGS });
+    if (target) await this.request([{ kind: 'create', path: target, content: '' }], target);
   }
 
   /** Asks for a name and makes that (empty) folder in the folder of `at`; it lives in the panel until a file goes in. */

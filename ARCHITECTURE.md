@@ -460,6 +460,8 @@ interface Window {                      // hosts/window
   showInputBox({ title?, value?, valueSelection?, prompt?, placeHolder?, validateInput?(value) → message }) → Promise<string | undefined>
   showQuickPick(items: (string | { label, description?, detail?, picked? })[] | Promise<…>, { title?, placeHolder?, canPickMany? })
                                     // → Promise<item | undefined>, with canPickMany Promise<item[] | undefined>
+  showSaveDialog({ title?, defaultUri?: ProjectPath, filters?: { [name]: endings[] } }) → Promise<ProjectPath | undefined>
+                                    // a name in an input box: the first ending added, '*' any; existing files refused
   registerStatusBarItem(element, { alignment: 'left' | 'right', priority? })   // VS Code's StatusBarItem: higher priority
                                     // further left within its side (default 0), equal: registration order
   registerCustomEditorProvider(viewType, { resolveCustomEditor(document: { path, content }, panel: { element, onDidDispose }) },
@@ -588,6 +590,12 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   with `canPickMany` a checkbox per item and OK. Escape or a press outside cancels (undefined); closing gives the
   focus back to where it was. This replaced `FieldPopover` and the file panel's inline prompts: every feature
   asks the same way (decided 2026-10-10).
+- **Save dialog** (`hosts/window/save-dialog/`; VS Code's `window.showSaveDialog`, without a file system dialog):
+  where a new file goes, asked in the input box (title, "File name", starting with the folder of `defaultUri` and a
+  `/`): the first ending of `filters` is added to a name without one, a partly typed compound ending is completed
+  (`flow.drawio` → `flow.drawio.png`), a name with none of the endings (unless one is `*`) or of an existing file is
+  refused while typing. Creating the file is the caller's. "New file…", "New spreadsheet…" and "New diagram…" use it
+  (decided 2026-10-11: one dialog instead of three copies).
 - **Menus** (`Menus`, `menus/`; VS Code's `contributes.menus`): `registerMenuItem(menuId, item)` adds an entry
   that runs `item.command` (a command id, any extension's); whoever shows the menu asks `getMenuItems(menuId,
   context)` for the entries whose `when(context)` holds, sorted (group `navigation` first, the other groups by
@@ -1423,8 +1431,8 @@ followColorScheme(container, onDidChange) → Disposable   // sets / takes away 
 - A spreadsheet is a project file `name.ic` (the custom editor's pattern `*.ic`), in IronCalc's own format
   (`Model.from_bytes` / `toBytes`): the browser package has no `.xlsx`. An empty file opens as a
   new workbook, which is saved at once: "New spreadsheet…" (the file panel's "New", menu `file/newFile`, command
-  `spreadsheets.newSpreadsheet` with the row as argument) asks for a name (`.ic` added; in the row's folder),
-  creates the empty file and opens it.
+  `spreadsheets.newSpreadsheet` with the row as argument) asks for a name (`window.showSaveDialog`: `.ic` added;
+  in the row's folder), creates the empty file and opens it.
 - `workbench/workbook.ts` is a separate chunk (`import()` from `spreadsheet-view.ts` on the first show; everything
   else imports only its types): `@ironcalc/workbook` (React,
   i18next, lucide icons) and the engine's wasm. Its CSS (scoped `.ic-root`) goes into the
@@ -1502,8 +1510,9 @@ newDiagram(project, workbench, resource?)
 - **PNG round trip** (`png.ts`): the diagram is a `tEXt` chunk `mxfile` holding the URI-encoded XML, as diagrams.net
   writes it (it also reads `mxGraphModel`); writing replaces it, right after `IHDR`, with a fresh CRC; the picture is
   untouched. The empty diagram is a 1×1 transparent PNG with an empty one-page diagram.
-- **"New diagram…"** asks for a name in the row's folder (the file's, or the folder itself), `.drawio.png` added
-  (`flow`, `flow.drawio`), refuses existing names, creates the empty diagram and opens it.
+- **"New diagram…"** asks for a name in the row's folder (the file's, or the folder itself) with
+  `window.showSaveDialog` (`.drawio.png` added: `flow`, `flow.drawio`; existing names refused), creates the empty
+  diagram and opens it.
 - **"Edit diagram"** (`visualView.registerBoxAction`): on every box whose Typst links (the workbench's document links:
   the extension parses no Typst) to a diagram of the project, e.g. an image box's toolbar; it opens the diagram.
 

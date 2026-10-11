@@ -309,6 +309,7 @@ export class WorkbenchHost implements Workbench {
     });
     this.#views.addTabActions(this.#editorTitle.element);
     this.#window = new WindowHost({
+      exists: (path) => project.has(path),
       host,
       statusBar: this.#layout.statusBar,
       editingArea: this.#layout.editor,

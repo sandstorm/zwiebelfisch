@@ -55,29 +55,14 @@ function save({ project, window, workspace }: ExtensionContext, path: ProjectPat
 }
 
 /**
- * Asks for a name (in the folder of `resource`: a file's, or the folder itself) and creates that empty spreadsheet
- * (an empty workbook, saved by the editor on opening), then opens it.
+ * Asks for a name (in the folder of `resource`: a file's, or the folder itself) ending in `.ic`
+ * (`window.showSaveDialog`) and creates that empty spreadsheet (an empty workbook, saved by the editor on opening),
+ * then opens it.
  */
-async function newSpreadsheet({ project, window, workspace, workbench }: ExtensionContext, resource = workbench.activeFile): Promise<void> {
-  const folder = project.has(resource) ? resource.slice(0, resource.lastIndexOf('/')) : resource;
-  const value = folder === '' ? '' : `${folder.slice(1)}/`;
-  const pathOf = (name: string) => ProjectPath.fromName(name, '.ic');
-  const name = await window.showInputBox({
-    title: 'New spreadsheet',
-    prompt: 'Name of the new spreadsheet',
-    value,
-    valueSelection: [value.length, value.length],
-    placeHolder: 'e.g. budget',
-    validateInput: (typed) => {
-      const target = pathOf(typed);
-      if (target.kind === 'invalid') return target.error;
-      if (!target.path.endsWith('.ic')) return 'A spreadsheet’s name ends in .ic.';
-      return project.has(target.path) ? `${ProjectPath.displayName(target.path)} already exists.` : null;
-    },
-  });
-  const target = name === undefined ? null : pathOf(name);
-  if (!target || target.kind === 'invalid') return;
-  const problem = await workspace.applyEdit({ kind: 'create', path: target.path, content: new Uint8Array() });
-  if (problem) void window.showErrorMessage(`${ProjectPath.displayName(target.path)} not created: ${problem}`);
-  else workbench.open(target.path);
+async function newSpreadsheet({ window, workspace, workbench }: ExtensionContext, resource = workbench.activeFile): Promise<void> {
+  const target = await window.showSaveDialog({ title: 'New spreadsheet', defaultUri: resource, filters: { Spreadsheets: ['ic'] } });
+  if (!target) return;
+  const problem = await workspace.applyEdit({ kind: 'create', path: target, content: new Uint8Array() });
+  if (problem) void window.showErrorMessage(`${ProjectPath.displayName(target)} not created: ${problem}`);
+  else workbench.open(target);
 }

@@ -14,6 +14,7 @@ import { CustomEditors } from './custom-editors/custom-editors';
 import { FileDecorations } from './file-decorations/file-decorations';
 import { Notifications } from './notifications/notifications';
 import { QuickInput } from './quick-input/quick-input';
+import { showSaveDialog } from './save-dialog/save-dialog';
 import { StatusBar } from './status-bar/status-bar';
 
 /** The widget's window as extensions use it (VS Code's `window` namespace). */
@@ -43,6 +44,13 @@ export interface Window {
     options: QuickPickOptions & { canPickMany: true },
   ): Promise<T[] | undefined>;
   showQuickPick<T extends string | QuickPickItem>(items: readonly T[] | Promise<readonly T[]>, options?: QuickPickOptions): Promise<T | undefined>;
+  /**
+   * Asks where a new file goes (VS Code's `window.showSaveDialog`, as an input box placed as `showInputBox`): a name,
+   * starting in the folder of `defaultUri`, with the first `filters` ending added to a name without one. A name
+   * without one of the endings, or of a file the project has, is refused. Resolves to the path, or undefined when
+   * cancelled; creating the file is the caller's (`workspace.applyEdit`).
+   */
+  showSaveDialog(options?: SaveDialogOptions): Promise<ProjectPath | undefined>;
 
   /**
    * Puts `element` into the status bar below everything, until disposed: on the side `placement.alignment` says, the
@@ -124,6 +132,19 @@ export interface QuickPickOptions {
   placeHolder?: string;
   /** Checkboxes and OK instead of picking one; resolves to the checked items. */
   canPickMany?: boolean;
+}
+
+/** What `showSaveDialog` asks (VS Code's SaveDialogOptions). */
+export interface SaveDialogOptions {
+  /** Above the field: what is being made ("New diagram"). The box's accessible name; default "Save". */
+  title?: string;
+  /** Where the name starts: the folder of this file, or this folder (default: the top of the project). */
+  defaultUri?: ProjectPath;
+  /**
+   * The endings a name may have, by what they are (without the dot, e.g. `{ Diagrams: ['drawio.png'] }`); `'*'`
+   * allows any (`{ 'All files': ['*'] }`). The first one is added to a name without an ending. Default: any, none added.
+   */
+  filters?: Readonly<Record<string, readonly string[]>>;
 }
 
 /**
@@ -216,8 +237,10 @@ export interface TextEditorSelectionChangeEvent {
 /** The editing views of a Typst file: the Visual view or the Source view. */
 export type EditorMode = 'visual' | 'source';
 
-/** Where the window's parts go in the workbench's frame, and the editors it reports on. */
+/** Where the window's parts go in the workbench's frame, the editors it reports on, and the files there are. */
 export interface WindowOptions {
+  /** Whether the project has a file at `path` (`showSaveDialog` refuses those). */
+  exists(path: ProjectPath): boolean;
   /** The widget's element: messages and input boxes are shown over it. */
   readonly host: HTMLElement;
   /** The status bar's region. */
@@ -271,6 +294,10 @@ export class WindowHost implements Window {
   showQuickPick<T extends string | QuickPickItem>(items: readonly T[] | Promise<readonly T[]>, options?: QuickPickOptions): Promise<T | undefined>;
   showQuickPick<T extends string | QuickPickItem>(items: readonly T[] | Promise<readonly T[]>, options?: QuickPickOptions): Promise<T | T[] | undefined> {
     return this.#quickInput.showQuickPick(items, options);
+  }
+
+  showSaveDialog(options?: SaveDialogOptions): Promise<ProjectPath | undefined> {
+    return showSaveDialog((input) => this.showInputBox(input), (path) => this.options.exists(path), options);
   }
 
   registerStatusBarItem(element: HTMLElement, placement: StatusBarPlacement): Disposable {
