@@ -126,6 +126,9 @@ src/                        the widget (TypeScript); the most important API on t
                             file-info.ts (fileInfoEditor: a file no other editor opens, read-only), tree/
                             (FileTree: rows, keyboard, drag & drop, file decorations as badges), icons/ (leaf)
     file-navigation/        fileNavigation (editor frame): workbench/file-navigation.ts ("← previous file" / "next file →")
+    text-files/             textFiles(): text files Typst reads (csv, json, yaml, toml, xml, bib, txt, md) in plain
+                            CodeMirror (the custom editor textFiles.editor), saved debounced; text-files.css
+      workbench/            text-file-editor.ts (TextFileEditor: the CodeMirror view, debounced saves, reload)
     spreadsheets/           spreadsheets: the `.ic` custom editor; every edit also stores `name.ic.gen.typ`; "New spreadsheet…"
       model/                typst-file.ts (spreadsheetTypst → name.ic.gen.typ for Typst, typstPath), dark-theme.ts
                             (darkThemeVariables: IronCalc's palette from the widget's tokens)
@@ -330,7 +333,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
   FileContent | null }`, null: gone; a rename is two), `files-change` with every `FileChange`.
 - **Composition**: a `Project` in a `WorkbenchHost` (`hosts/workbench`, see "Extensions" below) that runs the
   built-in extension list (`builtinExtensions`, none configured: what a feature lets hosts configure is a setting
-  it declares): `typstLanguage`, `documentLinks`, `files`, `fileNavigation`, `spreadsheets`, `diagrams`, `diagnostics`,
+  it declares): `typstLanguage`, `documentLinks`, `files`, `fileNavigation`, `spreadsheets`, `textFiles`, `diagrams`, `diagnostics`,
   `sourceControl`; the Visual view's constructs and features: `markup`, `headings` (with their numbers),
   `tables`, `images`, `figures`, `renderedBoxes`, `outline`, `pageLayout`, `lists`, `alignment`, `comments`, `labels`,
   `styles`; then `previewSync`, `previewControls` and `pdfExport`. Extensions never depend on each other, so the
@@ -633,7 +636,8 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   first. Nothing shows for a file no editor matches. Every open (also of the shown file: a replaced file shows its
   new content) gets a new panel (`element`: a flex column `.typst-editor__custom-editor` in the editing area);
   showing anything else disposes it: `onDidDispose` fires while the element is still in place (the editor stores what
-  is pending), then the element goes. The editors: `images` (`images.preview` for `*.{png,jpg,jpeg,gif,svg,webp}`), `files`
+  is pending), then the element goes. The editors: `images` (`images.preview` for `*.{png,jpg,jpeg,gif,svg,webp}`), `textFiles`
+  (`textFiles.editor` for `*.{csv,json,yaml,yml,toml,xml,bib,txt,md}`), `files`
   (`files.file` for `*`: any other file, read-only: name, size, type), `spreadsheets` (`spreadsheets.editor`, `*.ic`), `diagrams`
   (`diagrams.editor`, `*.drawio.png`, priority 110); they store edits with `workspace.applyEdit`. Core knows no kinds of
   files besides Typst source (`ProjectPath.isTypst`): what a file is, is the editors' business, by name. An editor
@@ -662,7 +666,8 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   `renderedBoxes` (Visual: `snippetRenderer`), `comments` (Visual: `marginNotes`, `notesGutter`; Preview:
   the PDF export option `comments.include`), `labels` (Visual: `references`), `styles` (Visual: `customStyles`); `sourceControl`
   ("Save to <label>…" in the tab bar's menu, its outcomes as messages); `previewSync` (`followCursor`; reveal, clicks), `previewControls`
-  (`zoomControls`, `pageNumber`), `pdfExport` (`downloadPdf`), `diagrams` (Workbench: the custom editor
+  (`zoomControls`, `pageNumber`), `pdfExport` (`downloadPdf`), `textFiles` (Workbench: the custom editor
+  `textFiles.editor`), `diagrams` (Workbench: the custom editor
   `diagrams.editor`; Visual: the box action "Edit diagram"). The Visual view's constructs
   (`markup`, `headings`, `tables`, `figures`, `outline`, `pageLayout`, `lists`, `alignment`) are extensions in
   `extensions/<name>/`: the entry's `activate` registers specs, toolbar groups and items from its `visual-view/`
@@ -1521,6 +1526,34 @@ followColorScheme(container, onDidChange) → Disposable   // sets / takes away 
   - `spreadsheets.css` recolors, under `[data-scheme='dark']`, the few places IronCalc's CSS colors without its
     variables (the cell editor's white background, the sheet tab hover, the fill handle's border).
 - Not yet: `.xlsx`, sharing spreadsheet edits in collaboration rooms (binary: the last save wins).
+
+### Text files (`src/extensions/text-files`)
+
+The files Typst reads as text (`csv`, `json`, `yaml`, `toml`, `xml`, `read`, `bibliography`) open editable.
+
+```ts
+textFiles(): TypstExtension   // custom editor textFiles.editor (*.{csv,json,yaml,yml,toml,xml,bib,txt,md}, an icon)
+// workbench/:
+new TextFileEditor(panel.element, { path, text, save(text) })  .reload(text)  .dispose()   // SAVE_DELAY = 800 ms
+```
+
+- **The view** is CodeMirror's own API used directly: `basicSetup` (line numbers, history, search, brackets), line
+  wrapping, no language and no highlighting yet; colors from the `--te-*` tokens in `text-files.css`, over
+  CodeMirror's light base theme (its gutters, active line, cursor, selection), so it follows dark mode without a
+  CodeMirror theme of its own. Bytes (uploads, collaboration rooms) are read as UTF-8.
+- **Saving**: every edit (re)starts an 800 ms timer (as the diagram editor's exports); then the whole text goes out
+  as `workspace.applyEdit({ kind: 'update', path, content: text })` (a refusal is an error message "refs.bib not
+  saved: …"). The panel's `onDidDispose` (another file shown, the widget disposed) saves what is pending at once.
+- **Changes from elsewhere**: the extension listens to `project.onDidChangeFile` for its file's `update`s while
+  the panel lives and calls `reload(text)`. With an edit waiting to be saved it is ignored: that save replaces the
+  whole file anyway. Otherwise the text is replaced in place by the one change between old and new (common start
+  and end kept, so the cursor around them stays), annotated `Transaction.remote` (not saved back) and
+  `addToHistory: false` (Undo keeps to the user's own edits). The editor's own save coming back is equal to its text:
+  nothing happens.
+- **Collaboration**: whole files, the last save wins. GitLab rooms share files other than `.typ` as whole values
+  (`ASSETS_MAP`, see "Collaboration"), so a text file is not merged text: of two people typing in it at once, the
+  later save replaces the earlier one (the other editor reloads it once its own pending save is out). Other rooms
+  do not share these files at all.
 
 ### Diagrams (`src/extensions/diagrams`)
 

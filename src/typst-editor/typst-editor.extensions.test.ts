@@ -123,7 +123,7 @@ describe('custom editors', () => {
     expect(host.querySelector<HTMLElement>('.typst-editor__tabs')!.hidden).toBe(false);
   });
 
-  it('shows a spreadsheet in the spreadsheet editor, any other file read-only', () => {
+  it('shows a spreadsheet in the spreadsheet editor, a text file in the text editor, any other file read-only', () => {
     const { host, editor } = setup({ source: '= Hi', files: { '/data.ic': new Uint8Array() } });
     editor.open('/data.ic');
     expect(host.querySelector<HTMLElement>('[data-testid=typst-spreadsheet]')!.hidden).toBe(false);
@@ -133,6 +133,10 @@ describe('custom editors', () => {
     editor.open('/font.otf');
     expect(host.querySelector('[data-testid=typst-spreadsheet]')).toBeNull();
     expect(host.querySelector('[data-testid=typst-file-info]')?.textContent).toContain('OTF file');
+    editor.files = { ...editor.files, '/data.csv': 'a,b' };
+    editor.open('/data.csv');
+    expect(host.querySelector('[data-testid=typst-file-info]')).toBeNull();
+    expect(host.querySelector('[data-testid=typst-text-file] .cm-content')?.textContent).toBe('a,b');
   });
 });
 

@@ -14,6 +14,7 @@ import { pdfExport } from '../extensions/pdf-export/pdf-export';
 import { previewControls } from '../extensions/preview-controls/preview-controls';
 import { previewSync } from '../extensions/preview-sync/preview-sync';
 import { spreadsheets } from '../extensions/spreadsheets/spreadsheets';
+import { textFiles } from '../extensions/text-files/text-files';
 import { styles } from '../extensions/styles/styles';
 import { sourceControl } from '../extensions/source-control/source-control';
 import { documentLinks } from '../extensions/document-links/document-links';
@@ -197,6 +198,7 @@ function builtinExtensions(): TypstExtension[] {
     files(),
     fileNavigation(),
     spreadsheets(),
+    textFiles(),
     diagrams(),
     diagnostics(),
     sourceControl(),

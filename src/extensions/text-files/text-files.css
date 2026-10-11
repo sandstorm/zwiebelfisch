@@ -1,0 +1,15 @@
+/* The text-files extension's styles: a text file in plain CodeMirror, its title above. Registered by text-files.ts
+   (Workbench.registerStyleSheet); colors from the widget's --te-* tokens, over CodeMirror's light base theme (the
+   rules are more specific than its `.ͼ2 .cm-…`), so light and dark both work. */
+.typst-text-file { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.typst-text-file__title { margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--te-border); font-size: 13px; font-weight: 600; color: var(--te-text); }
+.typst-text-file .cm-editor { flex: 1; min-height: 0; background: var(--te-bg); color: var(--te-text); }
+.typst-text-file .cm-editor .cm-scroller { overflow: auto; font: 13px/1.5 ui-monospace, monospace; }
+.typst-text-file .cm-editor .cm-content { caret-color: var(--te-text); }
+.typst-text-file .cm-editor .cm-cursor { border-left-color: var(--te-text); }
+.typst-text-file .cm-editor .cm-gutters { background: var(--te-subtle); color: var(--te-faint); border-right-color: var(--te-border); }
+.typst-text-file .cm-editor .cm-activeLine { background: var(--te-hover); }
+.typst-text-file .cm-editor .cm-activeLineGutter { background: var(--te-hover); color: var(--te-text); }
+.typst-text-file .cm-editor .cm-scroller .cm-selectionLayer .cm-selectionBackground { background: var(--te-selected); }
+.typst-text-file .cm-editor.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground { background: var(--te-selected-strong); }
+.typst-text-file .cm-editor .cm-panels { background: var(--te-surface); color: var(--te-text); border-color: var(--te-border); }
