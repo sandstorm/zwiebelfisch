@@ -80,7 +80,6 @@ mise run server:test   # when server/ or core/room-protocol changed
 - *Visual view*: tables with merged cells, `table.cell`, header arguments or `columns: (..)` stay raw boxes; the toolbar acts on the last main-text selection while the cursor is in a raw box; text typed into a raw box that is modelled Typst stays raw until re-read; a change before the first block re-renders the whole editor; margin-note cards edit raw markup.
 - *Preview*: a call whose glyphs come from its definition (`ms(18)`) shows code, not a picture; snippets show only the first page a range is drawn on; raw boxes ask for boxes after every compile, also while the Visual view is hidden.
 - *Size*: lazy font loading (a font index up front, data on first use); a smaller wasm needs a Typst fork with feature flags.
-- *Inspector*: a right-hand side panel (Notes | Inspector) editing what the Visual view does not show for the selection; contributed sections, a generic fallback for any call's named arguments. Built by hand behind `Layout`; dockview (MIT, +88 KB gzip) can replace its inside once users need to rearrange panels.
 - *Custom styles*: swatches in the style menu; a style panel for a `template` function's set and show rules, so the Visual view looks like the document; templates from Typst Universe.
 - *Server*: a Rust (`yrs`) or Go server is an open question; the widget depends only on the room protocol.
 - *Devtools extension*: a dev-only side panel showing the projection, every contribution by extension and events as they fire, built only on the public API.
