@@ -354,6 +354,61 @@ describe('TypstEngine lazy fonts', () => {
   });
 });
 
+describe('TypstEngine project fonts', () => {
+  const unknownFamily = expect.objectContaining({ severity: 'warning', message: expect.stringContaining('unknown font family') });
+  /** An engine with only Libertinus Serif (Typst's default text font), so other families are unknown. */
+  async function engineWithText(): Promise<TypstEngine> {
+    const engine = await createEngine(wasm);
+    engine.addFont(fontFile('LibertinusSerif-Regular.otf'));
+    return engine;
+  }
+
+  it('uses a font file among the project files, in any folder, as typst.app does', async () => {
+    const engine = await engineWithText();
+    engine.setSource('/main.typ', '#text(font: "DejaVu Sans Mono")[Hi]');
+    expect(engine.compile('/main.typ').diagnostics).toEqual([unknownFamily]);
+    engine.setBinary('/assets/fonts/DejaVuSansMono.ttf', fontFile('DejaVuSansMono.ttf'));
+    const { pages, diagnostics } = engine.compile('/main.typ');
+    expect(diagnostics).toEqual([]);
+    expect(pages[0].svg).toContain('<path');
+    expect(new TextDecoder('latin1').decode(engine.exportPdf('/main.typ').pdf!)).toContain('DejaVuSansMono');
+  });
+
+  it('drops a font file\'s faces when it is removed, replaced by another font or by text', async () => {
+    const engine = await engineWithText();
+    engine.setSource('/main.typ', '#text(font: "DejaVu Sans Mono")[Hi]');
+    engine.setBinary('/mono.ttf', fontFile('DejaVuSansMono.ttf'));
+    expect(engine.compile('/main.typ').diagnostics).toEqual([]);
+    engine.remove('/mono.ttf');
+    expect(engine.compile('/main.typ').diagnostics).toEqual([unknownFamily]);
+
+    engine.setBinary('/mono.ttf', fontFile('DejaVuSansMono.ttf'));
+    engine.setBinary('/mono.ttf', fontFile('NewCM10-Regular.otf'));
+    expect(engine.compile('/main.typ').diagnostics).toEqual([unknownFamily]);
+    engine.setSource('/main.typ', '#text(font: "New Computer Modern")[Hi]');
+    expect(engine.compile('/main.typ').diagnostics).toEqual([]);
+    engine.setSource('/mono.ttf', 'not a font');
+    expect(engine.compile('/main.typ').diagnostics).toEqual([unknownFamily]);
+  });
+
+  it('keeps the other font files when one changes, and the file readable as data', async () => {
+    const engine = await engineWithText();
+    engine.setBinary('/fonts/a.TTF', fontFile('DejaVuSansMono.ttf'));
+    engine.setBinary('/fonts/b.otf', fontFile('NewCM10-Regular.otf'));
+    engine.setBinary('/fonts/b.otf', fontFile('NewCM10-Bold.otf'));
+    engine.setSource('/main.typ', '#text(font: "DejaVu Sans Mono")[a] #text(font: "New Computer Modern", weight: "bold")[b] #read("/fonts/a.TTF", encoding: none).len()');
+    expect(engine.compile('/main.typ').diagnostics).toEqual([]);
+  });
+
+  it('ignores a font ending on a file that is no font, and font files of packages', async () => {
+    const engine = await engineWithText();
+    engine.setBinary('/broken.ttf', new Uint8Array([1, 2, 3]));
+    engine.setBinary('@preview/fonty:0.1.0/mono.ttf', fontFile('DejaVuSansMono.ttf'));
+    engine.setSource('/main.typ', '#text(font: "DejaVu Sans Mono")[Hi]');
+    expect(engine.compile('/main.typ').diagnostics).toEqual([unknownFamily]);
+  });
+});
+
 describe('TypstEngine.exportPdf', () => {
   let engine: TypstEngine;
   beforeAll(async () => {

@@ -169,7 +169,9 @@ impl Engine {
         file_id(path).map(|id| self.world.set_source(id, text)).is_some()
     }
 
-    /// Adds or replaces a binary file (image, data, ...).
+    /// Adds or replaces a binary file (image, data, ...). A project file
+    /// ending in `.ttf`, `.otf`, `.ttc` or `.otc` is a font as well, until
+    /// it is removed.
     #[wasm_bindgen(js_name = setBinary)]
     pub fn set_binary(&mut self, path: &str, data: Vec<u8>) -> bool {
         file_id(path).map(|id| self.world.set_binary(id, data)).is_some()
