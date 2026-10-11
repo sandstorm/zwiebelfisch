@@ -12,24 +12,15 @@ E2E has not been run for most of the day's work: `mise run test:e2e-all chromium
 | Task | Workflow | Notes |
 |---|---|---|
 | "Go to Section" does nothing in the Visual editor (bug) | `w48qwv7ni` (wf_150926b9-c38) | Reproduce through the widget, fix root cause, all reference kinds |
+| Comment styling into the comments extension | `wtmngmrk7` (wf_06853c7c-040) | Style via `comments.show` prelude + `comments.include` entry; first note imports only `margin-note`; demo/docs cleaned; page-margin workaround evaluated (report) |
+| Desktop-dropped `.ic`/`.drawio`/`.mmd` not inserted (bug) | `wsuc7v8yg` (wf_08de6abd-c39) | Root cause in the drop mechanism, both editors |
 
 Merge routine: `git merge --no-edit <worktree branch>`; resolve conflicts by combining both sides; stage only the
 resolved paths by name; run typecheck, quality, test:unit (and server:test) BEFORE committing; new test files
 often lack preview-mock members (`registerViewOption`, `viewOptions`, `setViewOptionValues`,
 `onDidChangeViewOptions`) — add them.
 
-## Queued next (user asked; not started)
-
-1. (Go to Section: running, see above; the one-tooltip-look work is merged.)
-2. **Comment styling into the comments extension** (user): the `#set-margin-note-defaults(stroke:…, fill:…,
-   rect: …)` block must not live in documents (`demo/examples/simple/main.typ`, check advanced and docs);
-   the comments extension's preview view option (`comments.show`, prelude) and the PDF option
-   `comments.include` add it when comments are shown. Adding the first comment must not write it.
-   Look at the drafting page-margin workaround too.
-3. **Getting started**: the user's TODO in `docs/10_guide/01_getting-started.typ`: "Custom compilation
-   should be advanced Dev Topic" — move the mise setup section into `docs/30_architecture/11_development.typ`
-   (Getting started: Docker + the demo).
-4. **Desktop-dropped `.ic` etc.**: dropped from the desktop they are uploaded but not inserted (Open work).
+Done: Getting started is Docker + the demo; the mise setup is "Setup" in `11_development.typ` (`aa5b2bb8`).
 
 ## Open questions / approvals the user has not answered yet
 
