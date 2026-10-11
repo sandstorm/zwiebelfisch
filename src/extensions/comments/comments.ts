@@ -2,7 +2,7 @@ import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './comments.css?inline';
 import { registerIncludeComments } from './preview/preview';
 import { marginNotes } from './visual-editor/margin-notes';
-import { notesGutter } from './visual-editor/notes-gutter/notes-gutter';
+import { noteCards } from './visual-editor/note-cards/note-cards';
 import { commentSearch } from './workbench/comment-search';
 import { ADD_COMMENT, registerAddComment } from './workbench/workbench';
 
@@ -10,11 +10,12 @@ import { ADD_COMMENT, registerAddComment } from './workbench/workbench';
  * Comments as `drafting` margin notes in the Typst source itself, not in a store beside it. So the preview, git, undo
  * and collaboration carry them as ordinary text, and a margin note written by hand is a comment too.
  *
- * In the Visual editor a note shows in the text (a marker, or a highlighted range: visual-editor/margin-notes.ts) and
- * as a card in the notes gutter, with its thread of replies (NotesGutter). Replies are signed as the workbench's
- * `user`; only own messages can be edited. "Comment" (the command `comments.addComment`, Ctrl/Cmd+Alt+M) adds a note:
- * in the Visual editor's toolbar, and in the tab bar for the Source editor. A note added in the Visual editor opens
- * its card. Search everywhere finds the notes by text and author ("Comments", prefix `!`).
+ * In the Visual editor a note shows in the text as a speech-bubble marker, a range note's text highlighted
+ * (visual-editor/margin-notes.ts); its thread of replies opens in a card floating at the marker (NoteCardPopover), not
+ * in a column beside the text. Replies are signed as the workbench's `user`; only own messages can be edited.
+ * "Comment" (the command `comments.addComment`, Ctrl/Cmd+Alt+M) adds a note: in the Visual editor's toolbar, and in
+ * the tab bar for the Source editor. A note added in the Visual editor opens its card. Search everywhere finds the
+ * notes by text and author ("Comments", prefix `!`). The preview draws the notes in the page margin (drafting's own).
  *
  * PDF exports get the option `comments.include` (default off). The PDF itself is the pdfExport extension's; this one
  * only decides what it compiles. `model/` knows the note syntax (margin-note-syntax.ts) and the thread format
@@ -27,7 +28,7 @@ export function comments(): TypstExtension {
     activate(context) {
       context.subscriptions.push(context.workbench.registerStyleSheet(css));
       const { project, commands, window, workbench, preview, subscriptions } = context;
-      const notes = notesGutter({ user: workbench.user });
+      const notes = noteCards({ user: workbench.user });
       subscriptions.push(
         registerAddComment(context, notes),
         registerIncludeComments(preview, project),

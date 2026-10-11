@@ -111,9 +111,12 @@ test('a margin note reaches the other user', async ({ browser, baseURL }, info) 
   const field = ann.getByTestId('typst-note-card').getByRole('textbox', { name: 'Comment' });
   await field.fill('Shared note');
   await field.press('ControlOrMeta+Enter');
-  // the new note's card comes first: the demo's own note is further down
-  await expect(bob.getByTestId('typst-note-card').first().locator('.typst-comments__card-text')).toHaveText(['Shared note']);
+  // Bob sees the marker (its tooltip: author and words) and opens the card from it
+  const marker = bob.getByTestId('typst-visual').locator('[data-testid="typst-note-marker"][title^="Ann:"]');
+  await expect(marker).toHaveAttribute('title', 'Ann: Shared note');
   await expect(bob.getByTestId('typst-visual').locator('mark.typst-comments__range').first()).toHaveText('stars');
+  await marker.click();
+  await expect(bob.getByTestId('typst-note-card').locator('.typst-comments__card-text')).toHaveText(['Shared note']);
 });
 
 test('a reply from the other user: both see the thread in the card and in the PDF margin', async ({ browser, baseURL }, info) => {
@@ -131,18 +134,20 @@ test('a reply from the other user: both see the thread in the card and in the PD
   await annField.fill('Is this right?');
   await annField.press('ControlOrMeta+Enter');
 
-  // the new note's card comes first: the demo's own note is further down
-  const bobCard = bob.getByTestId('typst-note-card').first();
+  // Ann's card stays open; Bob opens his from the note's marker
+  await bob.getByTestId('typst-visual').locator('[data-testid="typst-note-marker"][title^="Ann:"]').click();
+  const bobCard = bob.getByTestId('typst-note-card');
   await expect(bobCard.locator('.typst-comments__card-text')).toHaveText(['Is this right?']);
   // Ann's message is not Bob's to edit
   await expect(bobCard.getByRole('button', { name: 'Edit message' })).toHaveCount(0);
-  await bobCard.locator('.typst-comments__card-head').click();
   const bobField = bobCard.getByRole('textbox', { name: 'Reply' });
+  await expect(bobField).toBeFocused();
   await bobField.fill('Yes, checked.');
   await bobField.press('ControlOrMeta+Enter');
 
+  // Bob's reply shows on Ann's open card at once
   for (const page of [ann, bob]) {
-    const card = page.getByTestId('typst-note-card').first();
+    const card = page.getByTestId('typst-note-card');
     await expect(card.locator('.typst-comments__card-author')).toHaveText(['Ann', 'Bob']);
     await expect(card.locator('.typst-comments__card-text')).toHaveText(['Is this right?', 'Yes, checked.']);
     // drafting draws the note (both messages) in the page's right margin, beside the demo's own note

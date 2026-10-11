@@ -23,8 +23,8 @@ import type { PlacedNode, TypstMarkSpec, TypstParseContext } from '../../../host
  * (the note's markup), printed by `margin-note-syntax`; `noteRange` also has
  * an unprinted `id`, the note's number in its textblock, so equal neighbouring
  * notes stay two marks (`excludes: ''`, so notes nest). Other `margin-note`
- * calls stay raw. The notes themselves are shown and edited in the notes
- * gutter (`notes-gutter/`).
+ * calls stay raw. A note's thread is shown and edited in its floating card
+ * (`note-cards/`), which also adds the marker after a range note's text.
  */
 export function marginNotes(options: MarginNotesOptions): VisualEditorContribution {
   return {
@@ -92,7 +92,7 @@ const POINT_NOTE: TypstNodeSpec = {
   view: { box: 'widget' },
 };
 
-/** A point note in the text: a speech-bubble icon with the note as its tooltip. */
+/** A point note in the text: a speech-bubble icon (dashed while the note is empty). */
 class PointNoteMarker implements NodeView {
   readonly dom: HTMLElement;
 
@@ -118,12 +118,12 @@ class PointNoteMarker implements NodeView {
 
   private show(): void {
     const note: string = this.node.attrs.note;
-    this.dom.title = note.trim() === '' ? 'Empty note' : note;
     this.dom.classList.toggle('typst-comments__note--empty', note.trim() === '');
   }
 }
 
-const NOTE_ICON =
+/** The speech bubble of a note's marker. */
+export const NOTE_ICON =
   '<svg class="typst-comments__note-icon" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z"/></svg>';
 
 /**

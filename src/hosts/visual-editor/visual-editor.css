@@ -1,5 +1,5 @@
-/* The Visual editor's text, raw boxes (code, or the picture a box renderer draws) and their titles, the gutters'
-   body, the toolbar with its menus and the floating bars, the suggestion lists. See VisualEditorHost in
+/* The Visual editor's text, raw boxes (code, or the picture a box renderer draws) and their titles, the text
+   column, the toolbar with its menus and the floating bars, the suggestion lists. See VisualEditorHost in
    visual-editor.ts, whose styleSheet the workbench adds (after the vendored prosemirror.css). */
 .typst-visual {
   flex: 1;
@@ -58,7 +58,7 @@
 .typst-visual__code[hidden],
 .typst-visual__rendering[hidden] { display: none; }
 
-/* The Visual editor's body: the text and, right of it, the gutters contributions add (comments: the notes) */
+/* The Visual editor's text column: the text and what floats in it, placed relative to it (bars, a note's card) */
 .typst-visual__body { flex: 1 0 auto; display: flex; position: relative; }
 .typst-visual__body > .typst-visual { min-width: 0; }
 .typst-visual__box-label {

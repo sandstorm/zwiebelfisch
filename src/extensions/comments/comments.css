@@ -1,9 +1,7 @@
-/* The comments extension's styles: margin notes in the text, the notes gutter with its cards, and the Comment button.
+/* The comments extension's styles: margin notes in the text, their floating cards, and the Comment button.
    See comments in comments.ts, which registers it; colors from the widget's --te-* tokens. */
-/* drafting margin notes in the text: highlighted text of a range note, a point note's marker */
+/* drafting margin notes in the text: highlighted text of a range note, a marker (speech bubble) per note */
 .typst-comments__range { background: var(--te-note); border-bottom: 2px solid var(--te-note-line); color: inherit; }
-.typst-comments__anchor--hover .typst-comments__range,
-.typst-comments__range .typst-comments__anchor--hover,
 .typst-comments__anchor--active .typst-comments__range,
 .typst-comments__range .typst-comments__anchor--active { background: var(--te-note-strong); }
 .typst-comments__note {
@@ -19,42 +17,33 @@
   cursor: pointer;
 }
 .typst-comments__note--empty { border-style: dashed; }
-.typst-comments__note.typst-comments__anchor--hover,
+.typst-comments__note:hover,
 .typst-comments__note.typst-comments__anchor--active { background: var(--te-note-strong); box-shadow: 0 0 0 2px var(--te-note-line); }
 .typst-comments__note-icon { flex: none; }
-.typst-comments__gutter { display: none; }
-.typst-comments--notes > .typst-comments__gutter {
-  display: block;
-  position: relative;
-  flex: none;
-  width: 260px;
-  border-left: 1px solid var(--te-border);
-  background: var(--te-subtle);
-}
+/* a note's card: floats below its marker in the text column (placed by NoteCardPopover) */
 .typst-comments__card {
   position: absolute;
-  top: 0;
-  left: 8px;
-  right: 8px;
+  z-index: 2;
+  box-sizing: border-box;
+  width: min(300px, calc(100% - 16px));
   padding: 6px 8px;
-  border: 1px solid var(--te-border);
+  border: 1px solid var(--te-note-line);
   border-radius: 8px;
   background: var(--te-surface);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
   font: 13px/1.4 system-ui, sans-serif;
   color: var(--te-text);
   cursor: text;
-  transition: top 0.15s ease-out, box-shadow 0.15s, border-color 0.15s;
 }
-.typst-comments__card--hover { border-color: var(--te-note-line); }
-.typst-comments__card--active { border-color: var(--te-note-line); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); }
-.typst-comments__card:focus-within { border-color: var(--te-accent); box-shadow: 0 0 0 2px var(--te-jump); }
+.typst-comments__card:focus-within { border-color: var(--te-accent); }
 .typst-comments__card-head { display: flex; align-items: center; gap: 5px; color: var(--te-note-text); }
 .typst-comments__card-icon { flex: none; }
 .typst-comments__card-quote { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
 .typst-comments__card--range .typst-comments__card-quote { font-style: italic; }
 .typst-comments__card--range .typst-comments__card-quote::before { content: "\201C"; }
 .typst-comments__card--range .typst-comments__card-quote::after { content: "\201D"; }
-.typst-comments__card-resolve {
+.typst-comments__card-resolve,
+.typst-comments__card-close {
   flex: none;
   display: inline-flex;
   padding: 2px;
@@ -65,6 +54,7 @@
   cursor: pointer;
 }
 .typst-comments__card-resolve:hover { border-color: var(--te-border); color: var(--te-success); background: var(--te-success-soft); }
+.typst-comments__card-close:hover { border-color: var(--te-border); background: var(--te-subtle); }
 /* the thread: one message per list item (name, date, text), oldest first */
 .typst-comments__card-thread { margin: 4px 0 0; padding: 0; list-style: none; }
 .typst-comments__card-thread[hidden] { display: none; }
@@ -114,15 +104,3 @@
 }
 .typst-comments__card-field { min-height: 2.8em; }
 .typst-comments__card-send { flex: none; }
-/* Narrow panes: no gutter column; the active note's card pops up below its anchor */
-.typst-comments--narrow.typst-comments--notes > .typst-comments__gutter {
-  position: absolute;
-  top: 0;
-  right: 8px;
-  width: min(280px, calc(100% - 16px));
-  border: none;
-  background: none;
-  pointer-events: none;
-}
-.typst-comments--narrow .typst-comments__card { display: none; left: 0; right: 0; pointer-events: auto; transition: none; z-index: 2; }
-.typst-comments--narrow .typst-comments__card--active { display: block; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18); }

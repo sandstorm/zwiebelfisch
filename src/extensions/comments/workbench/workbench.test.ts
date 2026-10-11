@@ -9,7 +9,7 @@ import { VISUAL_EDITOR, VisualEditor, VisualEditorHost } from '../../../hosts/vi
 import { localDate } from '../model/note-thread';
 import { NOTE_STYLE } from '../model/add-margin-note';
 import { marginNotes } from '../visual-editor/margin-notes';
-import { notesGutter } from '../visual-editor/notes-gutter/notes-gutter';
+import { noteCards } from '../visual-editor/note-cards/note-cards';
 import { ADD_COMMENT, registerAddComment, type CommentContext, type NoteCards } from './workbench';
 
 const IMPORT = `#import "@preview/drafting:0.2.2": margin-note, set-margin-note-defaults\n${NOTE_STYLE}`;
@@ -50,7 +50,7 @@ describe('comments.addComment', () => {
     const root = document.body.appendChild(document.createElement('div'));
     const doc = new TypstDocument('Hello world\n');
     let comment = () => {};
-    const notes = notesGutter({ user: { name: 'Anna' } });
+    const notes = noteCards({ user: { name: 'Anna' } });
     const contributions = VisualEditorHost.from([marginNotes({ comment: () => comment() }), notes]);
     const view = new VisualEditor(root.appendChild(document.createElement('div')), doc, contributions);
     view.reveal(SourceRange.of({ from: 6, to: 11 }));
@@ -63,7 +63,7 @@ describe('comments.addComment', () => {
       revealRange: (range) => view.reveal(range),
       insertSnippet: (snippet) => view.insert(snippet),
     };
-    // as the widget wires it: the notes gutter opens the new note's card
+    // as the widget wires it: the new note's card opens
     comment = setup(editor, notes).comment;
     // the Visual editor's toolbar button
     root.querySelector<HTMLButtonElement>('[role="toolbar"] button[aria-label="Comment"]')!.click();

@@ -5,6 +5,7 @@ import { VISUAL_EDITOR } from '../../../hosts/visual-editor/visual-editor';
 import type { SearchProvider, WindowApi } from '../../../hosts/window/window';
 import type { Workbench } from '../../../hosts/workbench/workbench';
 import { findNotes, type FoundNote } from '../model/find-notes';
+import { firstWords } from '../model/note-thread';
 import type { NoteCards } from './workbench';
 
 /**
@@ -35,7 +36,7 @@ export function commentSearch({ project, workbench, window }: CommentSearchConte
       scans = next;
       return [...next].flatMap(([path, { notes }]) =>
         notes.map((note) => ({
-          label: shorten(note.messages[0].text),
+          label: firstWords(note.messages[0].text, MAX_LABEL),
           description: [authors(note), ProjectPath.displayName(path)].filter(Boolean).join(' · '),
           accept: () => open(path, note),
         })),
@@ -48,13 +49,6 @@ export interface CommentSearchContext {
   readonly project: Pick<Project, 'paths' | 'document'>;
   readonly workbench: Pick<Workbench, 'open'>;
   readonly window: Pick<WindowApi, 'activeTextEditor'>;
-}
-
-function shorten(text: string): string {
-  const line = text.replace(/\s+/g, ' ').trim();
-  if (line.length <= MAX_LABEL) return line;
-  const cut = line.slice(0, MAX_LABEL);
-  return `${cut.slice(0, Math.max(cut.lastIndexOf(' '), MAX_LABEL / 2)).trimEnd()}…`;
 }
 
 /** Longer first messages are cut (at a word) in the list. */

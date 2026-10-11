@@ -76,8 +76,6 @@ export type {
   RawBoxRendererProvider,
   RawBoxTools,
   RawBoxToolsHost,
-  Gutter,
-  GutterProvider,
   SourceHighlight,
   SourceHighlightProvider,
   PriorityOptions,
