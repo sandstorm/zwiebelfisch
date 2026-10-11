@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
-// Tests for file-panel.ts (the file panel, its tree and its menus), with the window's prompts and the workbench's menus faked.
+// Tests for file-panel.ts (the file panel, its tree and its menus), with the window's prompts and menus faked.
 import { describe, expect, it, vi } from 'vitest';
 import { FilePanel, type FilePanelPrompts } from './file-panel';
 import type { FileChange } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
-import type { MenuContext, MenuItem } from '../../../hosts/workbench/workbench';
-import type { FileDecoration, InputBoxOptions, SaveDialogOptions } from '../../../hosts/window/window';
+import type { ContextMenuOptions, FileDecoration, InputBoxOptions, SaveDialogOptions } from '../../../hosts/window/window';
 
 const path = ProjectPath.of;
 
@@ -16,21 +15,7 @@ const nested = {
   active: path('/main.typ'),
 };
 
-const changeable = (context: MenuContext) => !context.resourceIsMain;
-/** The menus as the files extension fills them (and as another extension might add to them). */
-const MENUS: Record<string, MenuItem[]> = {
-  'file/newFile': [
-    { command: 'files.newFile', title: 'New file…', group: 'navigation' },
-    { command: 'files.newFolder', title: 'New folder…', group: 'navigation' },
-  ],
-  'explorer/context': [
-    { command: 'files.newFile', title: 'New file…', group: 'navigation', when: (context) => context.resourceKind === 'folder' },
-    { command: 'files.rename', title: 'Rename…', group: 'modification', when: changeable },
-    { command: 'files.delete', title: 'Delete', group: 'modification', when: changeable },
-  ],
-};
-
-function setup(onChange: (change: FileChange) => Promise<string | null> = async () => null, initial = state, decorations: Record<string, FileDecoration[]> = {}, menus = MENUS) {
+function setup(onChange: (change: FileChange) => Promise<string | null> = async () => null, initial = state, decorations: Record<string, FileDecoration[]> = {}, hasNewEntries = true) {
   const parent = document.createElement('div');
   document.body.append(parent);
   const onOpen = vi.fn();
@@ -51,15 +36,16 @@ function setup(onChange: (change: FileChange) => Promise<string | null> = async 
     },
     showWarningMessage: async (message: string) => (warned.push(message), answers.shift()),
     showErrorMessage: async (message: string) => (errors.push(message), undefined),
+    showContextMenu: (menuId: string, options: ContextMenuOptions) => void menus.push({ menuId, ...options }),
   } as unknown as FilePanelPrompts;
-  const ran: [string, ProjectPath][] = [];
+  const menus: (ContextMenuOptions & { menuId: string })[] = [];
   const panel = new FilePanel(
     parent,
     {
       onOpen,
       onChange: change,
       prompts,
-      menus: { items: (menuId, context) => (menus[menuId] ?? []).filter((item) => item.when?.(context) ?? true), run: (command, resource) => void ran.push([command, resource]) },
+      hasMenuItems: (menuId) => hasNewEntries && menuId === 'file/newFile',
       state: memory,
       decorations: (file) => decorations[file] ?? [],
       icon: (file) => (file.endsWith('.png') ? '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="4"/></svg>' : undefined),
@@ -68,8 +54,7 @@ function setup(onChange: (change: FileChange) => Promise<string | null> = async 
   );
   const items = () => [...parent.querySelectorAll<HTMLElement>('[role=treeitem]')];
   const item = (name: string) => items().find((t) => t.title === name)!;
-  const menuItems = () => [...parent.querySelectorAll<HTMLElement>('[role=menu] [role=menuitem]')].map((entry) => entry.textContent);
-  return { parent, panel, onOpen, change, items, item, memory, answers, asked, saves, warned, errors, ran, menuItems };
+  return { parent, panel, onOpen, change, items, item, memory, answers, asked, saves, warned, errors, menus };
 }
 
 function press(target: HTMLElement, key: string, init: KeyboardEventInit = {}) {
@@ -147,51 +132,46 @@ describe('FilePanel', () => {
   });
 
   describe('menus', () => {
-    it('"New" opens the file/newFile menu; an entry runs its command on the focused row', () => {
-      const { parent, item, ran, menuItems } = setup(undefined, nested);
+    const row = (resource: string, resourceKind = 'file', resourceIsMain = false) => ({ view: 'files', resource, resourceKind, resourceIsMain });
+
+    it('"New" shows the window\'s file/newFile menu below it, for the focused row (its commands get the row)', () => {
+      const { parent, item, menus } = setup(undefined, nested);
       item('chapters').click();
       const button = parent.querySelector<HTMLButtonElement>('button[aria-label=New]')!;
       expect(button.getAttribute('aria-haspopup')).toBe('menu');
       button.click();
-      expect(menuItems()).toEqual(['New file…', 'New folder…']);
-      parent.querySelector<HTMLElement>('[role=menuitem]')!.click();
-      expect(ran).toEqual([['files.newFile', '/chapters']]);
-      expect(menuItems()).toEqual([]);
+      expect(menus).toEqual([{ menuId: 'file/newFile', anchor: button, title: 'New', context: row('/chapters', 'folder'), args: ['/chapters'] }]);
     });
 
     it('"New" is hidden while its menu has no entries', () => {
-      const { parent } = setup(undefined, state, {}, {});
+      const { parent } = setup(undefined, state, {}, false);
       expect(parent.querySelector<HTMLButtonElement>('button[aria-label=New]')!.hidden).toBe(true);
     });
 
-    it("a right click opens the row's context menu with the entries whose `when` holds for it", () => {
-      const { item, ran, menuItems } = setup(undefined, nested);
+    it("a right click shows the row's explorer/context menu at the pointer", () => {
+      const { item, menus } = setup(undefined, nested);
       const contextMenu = (name: string) => {
         const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 5, clientY: 6 });
         item(name).dispatchEvent(event);
         return event;
       };
       expect(contextMenu('chapters').defaultPrevented).toBe(true);
-      expect(menuItems()).toEqual(['New file…', 'Rename…', 'Delete']);
-      expect(document.activeElement?.textContent).toBe('New file…');
       contextMenu('main.typ');
-      expect(menuItems()).toEqual([]); // nothing applies to the main file: no menu
-      contextMenu('data.csv');
-      expect(menuItems()).toEqual(['Rename…', 'Delete']);
-      ([...document.querySelectorAll<HTMLElement>('[role=menuitem]')].find((entry) => entry.textContent === 'Delete'))!.click();
-      expect(ran).toEqual([['files.delete', '/data.csv']]);
-      expect(document.activeElement).toBe(item('data.csv'));
+      expect(menus).toEqual([
+        { menuId: 'explorer/context', anchor: { x: 5, y: 6 }, title: 'chapters', context: row('/chapters', 'folder'), args: ['/chapters'] },
+        { menuId: 'explorer/context', anchor: { x: 5, y: 6 }, title: 'main.typ', context: row('/main.typ', 'file', true), args: ['/main.typ'] },
+      ]);
     });
 
-    it('Shift+F10 and the context menu key open the context menu of the focused row', () => {
-      const { item, menuItems } = setup();
+    it('Shift+F10 and the context menu key show the context menu of the focused row, below it', () => {
+      const { item, menus } = setup();
       press(item('main.typ'), 'Home'); // chapter.typ
       press(item('chapter.typ'), 'F10', { shiftKey: true });
-      expect(menuItems()).toEqual(['Rename…', 'Delete']);
-      press(document.activeElement as HTMLElement, 'Escape');
-      expect(menuItems()).toEqual([]);
       press(item('chapter.typ'), 'ContextMenu');
-      expect(menuItems()).toEqual(['Rename…', 'Delete']);
+      expect(menus.map(({ anchor, args }) => [anchor, args])).toEqual([
+        [item('chapter.typ'), ['/chapter.typ']],
+        [item('chapter.typ'), ['/chapter.typ']],
+      ]);
     });
   });
 

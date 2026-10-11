@@ -3,9 +3,8 @@
 import type { FileChange } from '../../../core/project/project';
 import { type NamedPath, ProjectPath } from '../../../core/paths/paths';
 import { uploadChanges } from '../../../core/uploads/uploads';
-import type { FileDecoration, WindowApi } from '../../../hosts/window/window';
-import type { Memento, MenuContext, MenuItem } from '../../../hosts/workbench/workbench';
-import { PopupMenu, type PopupMenuAnchor } from '../../../ui/popup-menu/popup-menu';
+import type { FileDecoration, MenuAnchor, WindowApi } from '../../../hosts/window/window';
+import type { Memento, MenuContext } from '../../../hosts/workbench/workbench';
 import { filesUnder, type Folder, folderOf, relocate } from '../model/tree-model';
 import { icon } from './icons/icons';
 import { FileTree } from './tree/tree';
@@ -17,8 +16,8 @@ export const CONTEXT_MENU = 'explorer/context';
 /** "New file": a Typst file unless the name has another ending. */
 const NEW_FILE_ENDINGS = { Typst: ['typ'], 'All files': ['*'] };
 
-/** What the panel asks the user with, and tells them: the window's input box, save dialog and messages. */
-export type FilePanelPrompts = Pick<WindowApi, 'showInputBox' | 'showSaveDialog' | 'showWarningMessage' | 'showErrorMessage'>;
+/** What the panel asks the user with, and tells them: the window's input box, save dialog, menus and messages. */
+export type FilePanelPrompts = Pick<WindowApi, 'showInputBox' | 'showSaveDialog' | 'showContextMenu' | 'showWarningMessage' | 'showErrorMessage'>;
 
 export interface FilePanelOptions {
   /** Someone picked a file. */
@@ -26,11 +25,8 @@ export interface FilePanelOptions {
   /** Someone asked for `change`. Resolves to why it was refused (an error message then), or null once applied. */
   onChange(change: FileChange): Promise<string | null>;
   prompts: FilePanelPrompts;
-  /**
-   * The entries of a menu the panel shows (`file/newFile`, `explorer/context`) in `context`, and how one runs: its
-   * command with the row (or the focused row) as argument.
-   */
-  menus: { items(menuId: string, context: MenuContext): readonly MenuItem[]; run(command: string, resource: ProjectPath): void };
+  /** Whether a menu the panel shows (`file/newFile`) has entries in `context` ("New" is hidden while it has none). */
+  hasMenuItems(menuId: string, context: MenuContext): boolean;
   /** Where the open folders are kept (key `openFolders`; default: only while the panel lives). */
   state?: Memento;
   /** The decorations of a file (badges, e.g. who else is in it), as they are at each `render` (default: none). */
@@ -58,7 +54,6 @@ export class FilePanel {
   private readonly tree: FileTree;
   private readonly newButton: HTMLButtonElement;
   private readonly picker: HTMLInputElement;
-  private menu: PopupMenu | null = null;
   /** Folders made with "New folder" that hold no file yet. */
   private emptyFolders = new Set<ProjectPath>();
   /** Where the next upload goes. */
@@ -112,7 +107,7 @@ export class FilePanel {
       decorations: (path) => this.options.decorations?.(path) ?? [],
       icon: (path) => this.options.icon?.(path),
     });
-    this.newButton.hidden = this.options.menus.items(NEW_FILE_MENU, this.context(this.current())).length === 0;
+    this.newButton.hidden = !this.options.hasMenuItems(NEW_FILE_MENU, this.context(this.current()));
   }
 
   /**
@@ -186,7 +181,6 @@ export class FilePanel {
   }
 
   dispose(): void {
-    this.menu?.close();
     this.element.remove();
   }
 
@@ -200,14 +194,10 @@ export class FilePanel {
     return { view: 'files', resource: path, resourceKind: this.tree.isFolder(path) ? 'folder' : 'file', resourceIsMain: this.holdsMain(path) };
   }
 
-  /** The entries of `menuId` for the row `path`, as a popup menu at `anchor` (nothing while it has none). */
-  private showMenu(menuId: string, path: ProjectPath, anchor: PopupMenuAnchor): void {
-    this.menu?.close();
-    const items = this.options.menus.items(menuId, this.context(path));
-    if (items.length === 0) return;
-    const label = menuId === NEW_FILE_MENU ? 'New' : ProjectPath.displayName(path);
-    const entries = items.map((item) => ({ label: item.title ?? item.command, group: item.group, run: () => this.options.menus.run(item.command, path) }));
-    this.menu = new PopupMenu(this.element, label, entries, anchor);
+  /** The menu `menuId` for the row `path` at `anchor` (the window's); its entries' commands get the row. */
+  private showMenu(menuId: string, path: ProjectPath, anchor: MenuAnchor): void {
+    const title = menuId === NEW_FILE_MENU ? 'New' : ProjectPath.displayName(path);
+    this.options.prompts.showContextMenu(menuId, { anchor, title, context: this.context(path), args: [path] });
   }
 
   private holdsMain(path: ProjectPath): boolean {

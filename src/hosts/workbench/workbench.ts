@@ -141,8 +141,8 @@ export interface Workbench {
    * the items whose `when` holds there, sorted by `group` and `order`, and runs an item's command with the menu's
    * arguments. The workbench shows `editor/title`: the editing area's tab bar, while the shown file has several
    * editors (context: `editorMode` (the Typst view shown, else undefined), `resource` (the shown file); no
-   * arguments). Other ids are menus of views that extensions show, documented there (the file panel: `file/newFile`,
-   * `explorer/context`).
+   * arguments). Other ids are menus that extensions show (`window.showContextMenu`), documented there (the file
+   * panel: `file/newFile`, `explorer/context`).
    */
   registerMenuItem(menuId: string, item: MenuItem): Disposable;
   /** The items of `menuId` to show in `context` (those whose `when` holds), sorted, for a view that shows that menu. */
@@ -470,6 +470,8 @@ export class WorkbenchHost implements Workbench {
       onDidChangeActiveFile: this.#shown.event,
       activeTextEditor: () => this.#typstEditors.activeTextEditor,
       onDidChangeTextEditorSelection: this.#selectionChanged.event,
+      menuItems: (menuId, context) => this.#menus.items(menuId, context),
+      executeCommand: (command, ...args) => this.commands.executeCommand(command, ...args),
     });
     this.#typstEditors.register(window);
     return window;

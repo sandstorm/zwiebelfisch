@@ -1,6 +1,5 @@
-/* The window host's styles: messages (show…Message), input boxes and quick picks, a custom editor's panel, progress
-   (withProgress). Added by
-   the workbench (WindowHost.styleSheet). See window.ts. */
+/* The window host's styles: messages (show…Message), input boxes and quick picks, menus (showContextMenu), a custom
+   editor's panel, progress (withProgress). Added by the workbench (WindowHost.styleSheet). See window.ts. */
 /* A custom editor's panel (registerCustomEditorProvider): fills the editing area, a flex column for the editor. */
 .typst-editor__custom-editor { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .typst-editor__custom-editor[hidden] { display: none; }
@@ -58,6 +57,34 @@
   cursor: pointer;
 }
 .typst-notification__close:hover { background: var(--te-hover); color: var(--te-text); }
+/* Menus (showContextMenu): at a right click's point or below a button, kept inside the viewport. */
+.typst-context-menu {
+  position: fixed;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: 4px;
+  border: 1px solid var(--te-border);
+  border-radius: 8px;
+  background: var(--te-surface);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16);
+  font: 13px system-ui, sans-serif;
+}
+.typst-context-menu__item {
+  border: 0;
+  border-radius: 6px;
+  padding: 4px 10px;
+  background: none;
+  color: var(--te-text);
+  font: inherit;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.typst-context-menu__item:hover,
+.typst-context-menu__item:focus { background: var(--te-hover); outline: none; }
+.typst-context-menu__separator { height: 1px; margin: 4px 2px; background: var(--te-divider); }
 /* Input boxes and quick picks (showInputBox, showQuickPick): below what the user just used. */
 .typst-quick-input {
   position: absolute;
