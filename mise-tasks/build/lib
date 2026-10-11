@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Build the embeddable library (ESM + worker + wasm + d.ts) into dist/lib"
-#MISE depends=["typecheck", "build:engine"]
+#MISE depends=["typecheck", "build:engine", "build:fonts"]
 set -euo pipefail
 pnpm exec vite build --config vite.lib.config.ts "$@"
 pnpm exec tsc --project tsconfig.lib.json

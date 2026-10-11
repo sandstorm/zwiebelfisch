@@ -1,12 +1,21 @@
 // Tests for typst-packages.ts.
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { createEngine, type TypstEngine } from '../typst-engine/typst-engine';
+import { type FontInfo, type TypstEngine, createEngine } from '../typst-engine/typst-engine';
 import { withPackages } from './typst-packages';
 
 const wasm = readFileSync(new URL('../typst-engine/wasm/typst_engine_bg.wasm', import.meta.url));
 const fontDir = new URL('../typst-engine/fonts/', import.meta.url);
-const fonts = readdirSync(fontDir).map((name) => new Uint8Array(readFileSync(new URL(name, fontDir))));
+const fontIndex: Record<string, FontInfo[]> = JSON.parse(readFileSync(new URL('index.json', fontDir), 'utf8'));
+
+/** An engine with the default fonts, each loaded when a compile first uses it. */
+async function engineWithFonts(): Promise<TypstEngine> {
+  const engine = await createEngine(wasm);
+  for (const [name, faces] of Object.entries(fontIndex)) {
+    engine.addLazyFont({ faces, load: () => new Uint8Array(readFileSync(new URL(name, fontDir))) });
+  }
+  return engine;
+}
 const greet = new Uint8Array(readFileSync(new URL('./fixtures/greet-0.1.0.tar.gz', import.meta.url)));
 
 const doc = '#import "@preview/greet:0.1.0": greet\n#greet("World")';
@@ -14,7 +23,7 @@ const doc = '#import "@preview/greet:0.1.0": greet\n#greet("World")';
 describe('withPackages', () => {
   let engine: TypstEngine;
   beforeAll(async () => {
-    engine = await createEngine(wasm, fonts);
+    engine = await engineWithFonts();
   });
 
   it('downloads an imported package once, then compiles', async () => {
@@ -34,7 +43,7 @@ describe('withPackages', () => {
   });
 
   it('reports a package that cannot be downloaded, and does not retry it', async () => {
-    const bare = await createEngine(wasm, fonts);
+    const bare = await engineWithFonts();
     const fetchPackage = vi.fn(async () => {
       throw new Error('offline');
     });
@@ -54,7 +63,7 @@ describe('withPackages', () => {
   });
 
   it('downloads the packages of a PDF export too, and reports failed downloads there', async () => {
-    const bare = await createEngine(wasm, fonts);
+    const bare = await engineWithFonts();
     const fetchPackage = vi.fn(async (spec: string) => {
       if (spec === '@preview/greet:0.1.0') return greet;
       throw new Error('offline');
@@ -72,7 +81,7 @@ describe('withPackages', () => {
   });
 
   it('gives up on an archive without files instead of looping', async () => {
-    const bare = await createEngine(wasm, fonts);
+    const bare = await engineWithFonts();
     const empty = new Uint8Array(new Uint8Array(await new Response(
       new Blob([new Uint8Array(1024)]).stream().pipeThrough(new CompressionStream('gzip')),
     ).arrayBuffer()));
@@ -89,7 +98,7 @@ describe('withPackages without a fetcher', () => {
   it('downloads @preview packages from packages.typst.org', async () => {
     const fetch = vi.fn(async (_url: string) => new Response(greet));
     vi.stubGlobal('fetch', fetch);
-    const bare = await createEngine(wasm, fonts);
+    const bare = await engineWithFonts();
     bare.setSource('/main.typ', doc);
     expect((await withPackages(bare).compile('/main.typ')).diagnostics).toEqual([]);
     expect(fetch.mock.calls.map(([url]) => url)).toEqual(['https://packages.typst.org/preview/greet-0.1.0.tar.gz']);
@@ -97,7 +106,7 @@ describe('withPackages without a fetcher', () => {
 
   it('reports HTTP errors, and packages of other namespaces as not downloadable', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 404 })));
-    const bare = await createEngine(wasm, fonts);
+    const bare = await engineWithFonts();
     const packages = withPackages(bare);
     bare.setSource('/main.typ', '#import "@preview/nope:1.0.0": x');
     expect((await packages.compile('/main.typ')).diagnostics).toContainEqual(

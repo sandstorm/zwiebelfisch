@@ -12,7 +12,7 @@ mise run install        # JS dependencies and Playwright browsers
 mise run demo           # builds the engine and fonts, then starts the demo and a local server
 ```
 
-- The first engine build compiles the Typst compiler to wasm, and Typst's default fonts are copied next to it. Later runs skip both until `crates/typst-engine` changes.
+- The first engine build compiles the Typst compiler to wasm, and Typst's default fonts are copied next to it, with their index. Later runs skip both until `crates/typst-engine` changes.
 - Other tasks (tests, checks, builds): @architecture-development.
 
 == The demo <guide-getting-started-demo>

@@ -29,7 +29,7 @@ use typst::{World, WorldExt};
 use typst_ide::Jump;
 use wasm_bindgen::prelude::*;
 
-use world::{file_id, file_path, MemoryWorld};
+use world::{describe_font, file_id, file_path, FaceInfo, FontLoader, MemoryWorld};
 
 #[wasm_bindgen]
 pub struct Engine {
@@ -38,6 +38,13 @@ pub struct Engine {
     /// SVGs of the pages of the last compilation, keyed by frame hash, so
     /// unchanged pages are not re-exported.
     svg_cache: HashMap<u128, String>,
+}
+
+/// The faces of a font file as `FaceInfo[]` JSON (empty if `data` is not a
+/// font): what `Engine::addLazyFont` needs before the data.
+#[wasm_bindgen(js_name = describeFont)]
+pub fn describe_font_json(data: &[u8]) -> String {
+    to_json(&describe_font(data))
 }
 
 #[derive(Serialize)]
@@ -142,6 +149,18 @@ impl Engine {
     #[wasm_bindgen(js_name = addFont)]
     pub fn add_font(&mut self, data: Vec<u8>) -> usize {
         self.world.add_font(data)
+    }
+
+    /// Adds the faces of a font file without its data: `faces` is the
+    /// `FaceInfo[]` JSON `describeFont` returned for the file, and `loader`'s
+    /// `load()` is called when a compilation first uses one of them. Returns
+    /// how many faces were added (0 for JSON that does not describe faces).
+    #[wasm_bindgen(js_name = addLazyFont)]
+    pub fn add_lazy_font(&mut self, faces: &str, loader: FontLoader) -> usize {
+        let Ok(faces) = serde_json::from_str::<Vec<FaceInfo>>(faces) else { return 0 };
+        let added = faces.len();
+        self.world.add_lazy_font(faces, loader);
+        added
     }
 
     /// Adds or replaces a source file. Returns false for an invalid path.

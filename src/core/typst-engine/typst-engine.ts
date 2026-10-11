@@ -4,8 +4,8 @@ import { ProjectPath } from '../paths/paths';
 import type { SourceOffset, SourceRange } from '../typst-document/typst-document';
 import init, { Engine as WasmEngine, type InitInput } from './wasm/typst_engine';
 
-// Asset URLs (wasm, default fonts) are core/engine-assets, not here: the worker imports this file. Packages
-// (@preview/…) are core/typst-packages.
+// Asset URLs (wasm, default fonts and their index) are core/engine-assets, not here: the worker imports this file.
+// Packages (@preview/…) are core/typst-packages.
 
 /** A page of a compiled document, counted from 0 as the engine does; people see page numbers (`index + 1`). */
 export type PageIndex = number & { readonly __type: 'PageIndex' };
@@ -38,6 +38,11 @@ export const Pt = {
 export interface TypstEngine {
   /** Adds all faces of an OpenType/TrueType font (or collection). Throws if `data` is no font. */
   addFont(data: Uint8Array): void;
+  /**
+   * Adds the faces of a font file whose data is loaded only when a compile first uses one of them (Typst's font
+   * book needs every face's `FontInfo` up front, the data only for faces it lays out). Throws if `faces` is empty.
+   */
+  addLazyFont(font: LazyFont): void;
   setSource(path: string, text: string): void;
   setBinary(path: string, data: Uint8Array): void;
   remove(path: string): void;
@@ -137,25 +142,40 @@ export type SourceJump =
   | { kind: 'url'; url: string }
   | ({ kind: 'position' } & Position);
 
-/** Font file contents; a promise lets fonts download in parallel with the wasm. */
-export type FontSource = Uint8Array | Promise<Uint8Array>;
+/**
+ * One face of a font file as Typst's font book sees it: Typst's `FontInfo` (family, variant, flags, coverage), passed
+ * through as the engine wrote it, plus the face's index in its file (a collection has several).
+ */
+export interface FontInfo {
+  readonly index: number;
+  readonly family: string;
+}
+
+/** A font file the engine knows the faces of, with its data loaded on first use. */
+export interface LazyFont {
+  /** The file's faces, as the font index lists them (`mise run build:fonts`). */
+  readonly faces: readonly FontInfo[];
+  /**
+   * The file's data, or null if it cannot be loaded (its faces then count as absent, and Typst falls back to other
+   * fonts). Called at most once, synchronously in the middle of a compile.
+   */
+  load(): Uint8Array | null;
+}
 
 /**
- * Instantiates the engine from the wasm module (URL, bytes or response). The
- * engine embeds no fonts: pass them here (`fetchFonts(DEFAULT_FONT_URLS)`, see core/engine-assets) or add them later.
+ * Instantiates the engine from the wasm module (URL, bytes or response). The engine embeds no fonts: add them
+ * with `addLazyFont` (the default fonts: `DEFAULT_FONTS`, see core/engine-assets) or `addFont`.
  */
-export async function createEngine(
-  wasm: InitInput | Promise<InitInput>,
-  fonts: Iterable<FontSource> = [],
-): Promise<TypstEngine> {
-  const [, ...fontData] = await Promise.all([init({ module_or_path: wasm }), ...fonts]);
+export async function createEngine(wasm: InitInput | Promise<InitInput>): Promise<TypstEngine> {
+  await init({ module_or_path: wasm });
   const engine = new WasmEngine();
-  const addFont = (data: Uint8Array) => {
-    if (engine.addFont(data) === 0) throw new Error('no font found in the given data');
-  };
-  fontData.forEach(addFont);
   return {
-    addFont,
+    addFont: (data) => {
+      if (engine.addFont(data) === 0) throw new Error('no font found in the given data');
+    },
+    addLazyFont: (font) => {
+      if (engine.addLazyFont(JSON.stringify(font.faces), font) === 0) throw new Error('a lazy font needs faces');
+    },
     setSource: (path, text) => assertValidPath(engine.setSource(path, text), path),
     setBinary: (path, data) => assertValidPath(engine.setBinary(path, data), path),
     remove: (path) => engine.remove(path),
@@ -187,15 +207,4 @@ function parseReport<R extends { diagnostics: TypstDiagnostic[] }>(json: string)
 
 function assertValidPath(ok: boolean, path: string): void {
   if (!ok) throw new Error(`invalid project path: ${path}`);
-}
-
-/** Starts downloading every font at once; pass the result to `createEngine`. */
-export function fetchFonts(urls: readonly string[]): Promise<Uint8Array>[] {
-  return urls.map(fetchFont);
-}
-
-async function fetchFont(url: string): Promise<Uint8Array> {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`font ${url}: HTTP ${response.status}`);
-  return new Uint8Array(await response.arrayBuffer());
 }

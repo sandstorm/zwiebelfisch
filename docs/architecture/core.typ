@@ -60,11 +60,27 @@ Two branded strings: free at runtime, usable as keys, unchanged through `postMes
 
 The Typst compiler, SVG and PDF export and hit-testing: Rust (`crates/typst-engine`) compiled to wasm. The preview runs it in a worker (@architecture-preview).
 
-- `typst-engine`: `createEngine(wasm, fonts)`; `setSource`, `setBinary`, `remove`; `compile`, `exportPdf`; `jumpFromClick`, `jumpFromCursor`, `boxesForRanges`.
-- `engine-assets`: the wasm and font URLs for the main thread, apart so the worker bundle does not copy them.
+- `typst-engine`: `createEngine(wasm)`; `addFont`, `addLazyFont`; `setSource`, `setBinary`, `remove`; `compile`, `exportPdf`; `jumpFromClick`, `jumpFromCursor`, `boxesForRanges`.
+- `engine-assets`: the wasm URL and `DEFAULT_FONTS` (URL and faces per file) for the main thread, apart so the worker bundle does not copy them.
 - `typst-packages`: `withPackages(engine)` compiles, downloads the missing `@preview` packages, compiles again.
 - Conventions: UTF-16 offsets (`SourceOffset`), 0-based pages (`PageIndex`; people see `index + 1`), points from the page's top-left (`Pt`), project or package paths (`@preview/name:0.1.0/lib.typ`).
 - A diagnostic's path is parsed where the wasm's report is read: a `ProjectPath`, or `null` without location or in a package file.
+
+=== Fonts <architecture-core-engine-fonts>
+
+Typst's font book needs every face's `FontInfo` (family, variant, coverage) before a compile; a face's data only when the layout uses it (`World::font(index)`).
+
+- *Font index*: `mise run build:fonts` copies the 17 default font files and writes `fonts/index.json` (file name → `FontInfo[]`, 16 KB), computed by the engine's own wasm, so it matches the pinned Typst.
+- `addLazyFont({ faces, load })`: the faces go into the book; the first `World::font` call for one of them calls `load()` and keeps the result (null: the faces stay absent, Typst falls back). Synchronous, inside the compile: no second compile, and only the faces used are fetched.
+- `addFont(data)`: all faces of a file, data at once (a host's own fonts).
+- The preview's worker loads a file with a synchronous `XMLHttpRequest` (allowed in workers only); a compile waits for it.
+
+#table(
+  columns: (auto, auto, auto),
+  table.header[First render of the hello example][Font files][Font bytes (gzip)],
+  [all fonts up front], [17], [9.7 MB (6.4 MB)],
+  [lazy], [4 + the index], [2.4 MB (1.7 MB)],
+)
 
 == Typst syntax <architecture-core-syntax>
 

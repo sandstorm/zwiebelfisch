@@ -1,25 +1,15 @@
-// Tests for engine-assets.ts: the default fonts, fetched with typst-engine's fetchFonts.
+// Tests for engine-assets.ts: the default fonts, by URL with their faces from the index.
 import { readdirSync } from 'node:fs';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DEFAULT_FONT_URLS } from './engine-assets';
-import { fetchFonts } from '../typst-engine/typst-engine';
+import { describe, expect, it } from 'vitest';
+import { DEFAULT_FONTS } from './engine-assets';
 
-describe('fetchFonts(DEFAULT_FONT_URLS)', () => {
-  afterEach(() => vi.unstubAllGlobals());
-
-  it('fetches every bundled font file in parallel', async () => {
-    const fetch = vi.fn(async (_url: string) => new Response(new Uint8Array([1, 2, 3])));
-    vi.stubGlobal('fetch', fetch);
-    const fonts = fetchFonts(DEFAULT_FONT_URLS);
-    expect(fetch).toHaveBeenCalledTimes(readdirSync(new URL('../typst-engine/fonts/', import.meta.url)).length);
-    expect(fetch.mock.calls.map(([url]) => url)).toContainEqual(
-      expect.stringMatching(/LibertinusSerif-Regular\.otf/),
-    );
-    expect(await Promise.all(fonts)).toContainEqual(new Uint8Array([1, 2, 3]));
-  });
-
-  it('rejects when a font cannot be loaded', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 404 })));
-    await expect(Promise.all(fetchFonts(DEFAULT_FONT_URLS))).rejects.toThrow(/404/);
+describe('DEFAULT_FONTS', () => {
+  it('has every bundled font file, by URL, with its faces', () => {
+    const files = readdirSync(new URL('../typst-engine/fonts/', import.meta.url)).filter((name) => /\.(otf|ttf)$/.test(name));
+    expect(DEFAULT_FONTS.map(({ url }) => url.split('/').pop()?.replace(/\?.*$/, '')).sort()).toEqual(files.sort());
+    const regular = DEFAULT_FONTS.find(({ url }) => url.includes('LibertinusSerif-Regular.otf'));
+    expect(regular?.faces).toEqual([
+      expect.objectContaining({ index: 0, family: 'Libertinus Serif', variant: { style: 'normal', weight: 400, stretch: 1000 } }),
+    ]);
   });
 });

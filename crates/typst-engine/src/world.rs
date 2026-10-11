@@ -1,18 +1,74 @@
 //! An in-memory Typst [`World`]: files and fonts are pushed in from JS. No
 //! fonts are embedded, which keeps the wasm small; the JS side loads them as
-//! separate assets. Packages are pushed in as files too; the world only
-//! remembers which ones a compilation asked for but did not have.
+//! separate assets, either right away or lazily: Typst's font book needs every
+//! face's [`FontInfo`] up front, but a face's data only when a document uses
+//! it, so a lazy font's file is loaded by [`World::font`] on first use.
+//! Packages are pushed in as files; the world only remembers which ones a
+//! compilation asked for but did not have.
 
 use std::collections::{HashMap, HashSet};
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 
 use typst::diag::{FileError, FileResult, PackageError};
 use typst::syntax::package::PackageSpec;
 use typst::foundations::{Bytes, Datetime, Duration};
 use typst::syntax::{FileId, RootedPath, Source, VirtualPath, VirtualRoot};
-use typst::text::{Font, FontBook};
+use typst::text::{Font, FontBook, FontInfo};
 use typst::utils::LazyHash;
 use typst::{Library, LibraryExt, World};
+use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen]
+extern "C" {
+    /// A JS object (`LazyFont` in typst-engine.ts) that loads a font file's
+    /// data, synchronously: [`World::font`] cannot wait.
+    pub type FontLoader;
+
+    /// The file's bytes; `null` if it cannot be loaded.
+    #[wasm_bindgen(method)]
+    fn load(this: &FontLoader) -> Option<Vec<u8>>;
+}
+
+/// A face as the font index describes it: Typst's [`FontInfo`] plus the face's
+/// index in its file (a collection has several).
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct FaceInfo {
+    pub index: u32,
+    #[serde(flatten)]
+    pub info: FontInfo,
+}
+
+/// The faces of a font file, for an index of lazy fonts.
+pub fn describe_font(data: &[u8]) -> Vec<FaceInfo> {
+    Font::iter(Bytes::new(data.to_vec()))
+        .map(|font| FaceInfo { index: font.index(), info: font.info().clone() })
+        .collect()
+}
+
+/// A face of the font book. Its font is set when added with data, or made on
+/// first use from its lazy file.
+struct FontSlot {
+    font: OnceLock<Option<Font>>,
+    /// For a lazy face: its file in `lazy_files` and its index in that file.
+    lazy: Option<(usize, u32)>,
+}
+
+/// A font file whose data is loaded on first use of one of its faces.
+struct LazyFile {
+    loader: FontLoader,
+    data: OnceLock<Option<Bytes>>,
+}
+
+// SAFETY: the engine runs in wasm32 without threads, so the JS loader is never
+// touched from another thread. `World` requires `Send + Sync` all the same.
+unsafe impl Send for LazyFile {}
+unsafe impl Sync for LazyFile {}
+
+impl LazyFile {
+    fn data(&self) -> Option<Bytes> {
+        self.data.get_or_init(|| self.loader.load().map(Bytes::new)).clone()
+    }
+}
 
 enum File {
     Source(Source),
@@ -22,7 +78,9 @@ enum File {
 pub struct MemoryWorld {
     library: LazyHash<Library>,
     book: LazyHash<FontBook>,
-    fonts: Vec<Font>,
+    /// One per face of the book, in the same order.
+    fonts: Vec<FontSlot>,
+    lazy_files: Vec<LazyFile>,
     files: HashMap<FileId, File>,
     /// Packages with at least one file present.
     packages: HashSet<PackageSpec>,
@@ -38,6 +96,7 @@ impl MemoryWorld {
             library: LazyHash::new(Library::default()),
             book: LazyHash::new(FontBook::new()),
             fonts: Vec::new(),
+            lazy_files: Vec::new(),
             files: HashMap::new(),
             packages: HashSet::new(),
             missing: Mutex::new(HashSet::new()),
@@ -49,12 +108,22 @@ impl MemoryWorld {
     /// Returns the number of faces added; 0 if `data` is not a font.
     pub fn add_font(&mut self, data: Vec<u8>) -> usize {
         let faces: Vec<Font> = Font::iter(Bytes::new(data)).collect();
-        for font in &faces {
-            self.book.push(font.info().clone());
-        }
         let added = faces.len();
-        self.fonts.extend(faces);
+        for font in faces {
+            self.book.push(font.info().clone());
+            self.fonts.push(FontSlot { font: OnceLock::from(Some(font)), lazy: None });
+        }
         added
+    }
+
+    /// Adds the `faces` of a font file whose data `loader` gives on first use.
+    pub fn add_lazy_font(&mut self, faces: Vec<FaceInfo>, loader: FontLoader) {
+        let file = self.lazy_files.len();
+        self.lazy_files.push(LazyFile { loader, data: OnceLock::new() });
+        for face in faces {
+            self.book.push(face.info);
+            self.fonts.push(FontSlot { font: OnceLock::new(), lazy: Some((file, face.index)) });
+        }
     }
 
     /// Sets the text of a source file. Reuses the existing [`Source`] so that
@@ -177,7 +246,13 @@ impl World for MemoryWorld {
     }
 
     fn font(&self, index: usize) -> Option<Font> {
-        self.fonts.get(index).cloned()
+        let slot = self.fonts.get(index)?;
+        slot.font
+            .get_or_init(|| {
+                let (file, face) = slot.lazy?;
+                Font::new(self.lazy_files[file].data()?, face)
+            })
+            .clone()
     }
 
     fn today(&self, _offset: Option<Duration>) -> Option<Datetime> {

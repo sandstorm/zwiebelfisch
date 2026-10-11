@@ -2,6 +2,7 @@
 import type { PageRect, CompileResult, SourceJump, PageIndex, PdfResult, Position, Pt } from '../../../core/typst-engine/typst-engine';
 import type { SourceOffset, SourceRange } from '../../../core/typst-document/typst-document';
 import type { EncodedFiles } from './project-files';
+import type { FontFile } from '../../../core/engine-assets/engine-assets';
 
 /**
  * First message to the worker: where the engine wasm and fonts are. The main thread
@@ -11,8 +12,8 @@ import type { EncodedFiles } from './project-files';
 export interface Init {
   type: 'init';
   wasm: string;
-  /** Font files to load before the first compile. */
-  fonts: readonly string[];
+  /** Font files the engine knows the faces of; each is downloaded when a compile first uses one. */
+  fonts: readonly FontFile[];
 }
 
 /** Messages between Preview (main thread) and the engine worker. */

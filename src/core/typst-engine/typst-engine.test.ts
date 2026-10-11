@@ -1,17 +1,28 @@
 // Tests for createEngine (typst-engine.ts), against the built wasm.
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { type TypstEngine, PageIndex, Pt, createEngine } from './typst-engine';
+import { type FontInfo, type TypstEngine, PageIndex, Pt, createEngine } from './typst-engine';
 import { SourceOffset, SourceRange } from '../typst-document/typst-document';
 
 const wasm = readFileSync(new URL('./wasm/typst_engine_bg.wasm', import.meta.url));
 const fontDir = new URL('./fonts/', import.meta.url);
-const fonts = readdirSync(fontDir).map((name) => new Uint8Array(readFileSync(new URL(name, fontDir))));
+/** The default fonts' index (`mise run build:fonts`): file name → faces. */
+const fontIndex: Record<string, FontInfo[]> = JSON.parse(readFileSync(new URL('index.json', fontDir), 'utf8'));
+const fontFile = (name: string) => new Uint8Array(readFileSync(new URL(name, fontDir)));
+
+/** An engine with the default fonts, loaded lazily; `loaded` lists the files in the order they were loaded. */
+async function engineWithFonts(loaded: string[] = []): Promise<TypstEngine> {
+  const engine = await createEngine(wasm);
+  for (const [name, faces] of Object.entries(fontIndex)) {
+    engine.addLazyFont({ faces, load: () => (loaded.push(name), fontFile(name)) });
+  }
+  return engine;
+}
 
 describe('TypstEngine', () => {
   let engine: TypstEngine;
   beforeAll(async () => {
-    engine = await createEngine(wasm, fonts);
+    engine = await engineWithFonts();
   });
 
   it.each(['Libertinus Serif', 'New Computer Modern', 'New Computer Modern Math', 'DejaVu Sans Mono'])(
@@ -37,7 +48,7 @@ describe('TypstEngine', () => {
     expect(bare.compile('/main.typ').diagnostics).toContainEqual(
       expect.objectContaining({ severity: 'warning', message: expect.stringContaining('unknown font family') }),
     );
-    bare.addFont(fonts[readdirSync(fontDir).indexOf('DejaVuSansMono.ttf')]);
+    bare.addFont(fontFile('DejaVuSansMono.ttf'));
     expect(bare.compile('/main.typ').diagnostics).toEqual([]);
   });
 
@@ -216,10 +227,49 @@ describe('TypstEngine', () => {
   });
 });
 
+describe('TypstEngine lazy fonts', () => {
+  it('knows every face up front but loads a file only when a compile uses one of its faces, once', async () => {
+    const loaded: string[] = [];
+    const engine = await engineWithFonts(loaded);
+    engine.setSource('/main.typ', 'Hello');
+    expect(engine.compile('/main.typ').diagnostics).toEqual([]);
+    expect(loaded).toEqual(['LibertinusSerif-Regular.otf']);
+    engine.setSource('/main.typ', 'Hello *bold* `mono`');
+    expect(engine.compile('/main.typ').diagnostics).toEqual([]);
+    expect(loaded).toEqual(['LibertinusSerif-Regular.otf', 'LibertinusSerif-Bold.otf', 'DejaVuSansMono.ttf']);
+  });
+
+  it('embeds lazily loaded fonts in a PDF', async () => {
+    const loaded: string[] = [];
+    const engine = await engineWithFonts(loaded);
+    engine.setSource('/main.typ', '$ x^2 $');
+    const { pdf } = engine.exportPdf('/main.typ');
+    expect(loaded).toEqual(['NewCMMath-Book.otf']);
+    expect(new TextDecoder('latin1').decode(pdf!)).toContain('NewCMMath');
+  });
+
+  it('falls back to other fonts when a file cannot be loaded, and does not ask again', async () => {
+    const engine = await createEngine(wasm);
+    let asked = 0;
+    const regular = 'LibertinusSerif-Regular.otf';
+    engine.addLazyFont({ faces: fontIndex[regular], load: () => (asked++, null) });
+    engine.addFont(fontFile('DejaVuSansMono.ttf'));
+    engine.setSource('/main.typ', 'Hello');
+    expect(engine.compile('/main.typ').pages[0].svg).toContain('<path');
+    engine.compile('/main.typ');
+    expect(asked).toBe(1);
+  });
+
+  it('rejects a lazy font without faces', async () => {
+    const engine = await createEngine(wasm);
+    expect(() => engine.addLazyFont({ faces: [], load: () => null })).toThrow(/faces/);
+  });
+});
+
 describe('TypstEngine.exportPdf', () => {
   let engine: TypstEngine;
   beforeAll(async () => {
-    engine = await createEngine(wasm, fonts);
+    engine = await engineWithFonts();
   });
   const text = (pdf: Uint8Array) => new TextDecoder('latin1').decode(pdf);
 
