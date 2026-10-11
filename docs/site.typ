@@ -9,7 +9,7 @@
 #document("index.html", title: "Typst editor")[
   #html.link(rel: "stylesheet", href: "style.css")
   #title[Typst editor]
-  #outline(depth: 2)
+  #outline(depth: 3)
 ]
 
 #for part in parts {

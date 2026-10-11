@@ -6,6 +6,7 @@
   (title: "Guide", chapters: (
     "guide/getting-started.typ": "Getting started",
     "guide/features.typ": "Features",
+    "guide/configuration.typ": "Configuration",
     "guide/collaboration.typ": "Collaboration",
     "guide/embedding.typ": "Embedding",
   )),
@@ -34,7 +35,7 @@
 #show: book
 
 #title()
-#outline(depth: 2)
+#outline(depth: 3)
 
 #for part in parts {
   heading(part.title)

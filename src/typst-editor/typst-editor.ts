@@ -69,7 +69,7 @@ export interface TypstEditorOptions {
   user?: User;
   /**
    * The settings by full id, as the extensions declare them, e.g. `{ 'pdfExport.download': false, 'files.panel':
-   * 'show', 'workbench.theme': 'dark' }` (see docs/guide/embedding.typ for the built-in ones). Unset ones have their
+   * 'show', 'workbench.theme': 'dark' }` (see docs/guide/configuration.typ for the built-in ones). Unset ones have their
    * default; unknown ids and values of the wrong type are ignored (with a console warning). Changeable later through
    * `TypstEditor.settings`.
    */

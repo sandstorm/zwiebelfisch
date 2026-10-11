@@ -1,6 +1,6 @@
 = Embedding <guide-embedding>
 
-Two ways in, same options:
+Two ways in, same options (@guide-configuration):
 
 - `<typst-editor>`: a custom element in a shadow root (@guide-embedding-element).
 - `createTypstEditor(host, options)`: a function that fills a host element (@guide-embedding-api).
@@ -23,7 +23,7 @@ Two ways in, same options:
 - Keep the folder together; serve it from any path. The module finds its files through `new URL(…, import.meta.url)`.
 - Serve the wasm as `application/wasm`, so it compiles while it streams.
 - Importing without a DOM (SSR) is safe: nothing is registered.
-- Content-Security-Policy: `connect-src https://packages.typst.org` for `@preview` packages; the diagram editor is an iframe from `https://embed.diagrams.net` (setting `diagrams.editorUrl`).
+- Content-Security-Policy: `connect-src https://packages.typst.org` for `@preview` packages; the diagram editor is an iframe from `https://embed.diagrams.net` (setting `diagrams.editorUrl`, @guide-configuration-diagrams).
 
 Bundlers:
 
@@ -52,9 +52,8 @@ Bundlers:
 #table(
   columns: 2,
   [Member], [Behaviour],
-  [`options` property], [`Partial<TypstEditorOptions>` (@guide-embedding-api), read when the element connects. Set it before appending the element. Its `onFilesChange` / `onOpen` run as well as the events.],
-  [`settings` attribute], [JSON object of settings by id (@guide-embedding-settings), over `options.settings` id by id. Read on connect and on every change. Not a JSON object: ignored, with a console warning.],
-  [`settings` property], [The current settings. Setting it replaces them.],
+  [`options` property], [`Partial<TypstEditorOptions>` (@guide-configuration-options), read when the element connects. Set it before appending the element. Its `onFilesChange` / `onOpen` run as well as the events.],
+  [`settings` attribute, property], [The settings (@guide-configuration-setting).],
   [`value` property, attribute], [The main file's text. Setting it is one minimal edit: cursor and undo history survive. The property is not reflected to the attribute.],
   [`files` property], [Every file, the main file included. Setting it replaces them all.],
   [`executeCommand(id, ...args)`], [Runs an extension's command; rejects while not connected.],
@@ -103,22 +102,7 @@ const editor = createTypstEditor(host, {   // attach host to the document first,
 });
 ```
 
-Options (`TypstEditorOptions`), all optional:
-
-#table(
-  columns: 2,
-  [Option], [Meaning],
-  [`files`], [Every file by absolute path: Typst text as `string`, anything else (images, CSV, …) as `Uint8Array`. `@preview` packages need no entry.],
-  [`main`], [The compiled file (default `/main.typ`). Cannot be renamed or deleted.],
-  [`source`], [The main file's text; wins over `files[main]`. For single-file hosts.],
-  [`mode`], [`'visual'` (default) or `'source'`: the view shown first.],
-  [`allowFileChange(change)`], [Veto for every create, rename, delete and upload the user asks for; may be async. `false`: refused, the user sees a message.],
-  [`onFilesChange(change)`], [Every change to any file (@guide-embedding-files).],
-  [`onOpen(path)`], [Another file is shown, e.g. to keep it in the URL.],
-  [`user`], [`{ name, color? }`: who signs comments, commits to GitLab, and is shown to collaborators. Without it: "Anonymous".],
-  [`settings`], [Settings by id (@guide-embedding-settings).],
-  [`extensions(builtins)`], [The extensions to run, made from the built-in ones (@guide-embedding-extensions).],
-)
+The options: @guide-configuration-options.
 
 The returned `TypstEditor`:
 
@@ -127,7 +111,7 @@ The returned `TypstEditor`:
   [Member], [Meaning],
   [`files`], [Every file with its current content. Assigning replaces them all and recompiles.],
   [`source`], [The main file's text. Assigning is one minimal edit, reported as an `update`.],
-  [`settings`], [The host's settings. Assigning replaces them; ids left out go back to their default.],
+  [`settings`], [The settings (@guide-configuration-setting).],
   [`activeFile`], [The path of the file shown.],
   [`open(path)`], [Shows `path`, if the project has it.],
   [`executeCommand(id, ...args)`], [Runs a command; resolves to its result, rejects for an unknown id or a failure.],
@@ -148,27 +132,6 @@ editor.files = { ...editor.files, '/chapters/outro.typ': '= Outro' };
 editor.open('/chapters/outro.typ');
 ```
 
-=== Settings <guide-embedding-settings>
-
-Each feature's extension declares its settings by id `<section>.<key>` (VS Code's settings). Unknown ids and values of the wrong type are ignored, with a console warning. The widget follows changes at once.
-
-```ts
-const editor = createTypstEditor(host, { settings: { 'pdfExport.download': false, 'files.panel': 'show' } });
-editor.settings = { ...editor.settings, 'workbench.theme': 'dark' };
-```
-
-#table(
-  columns: 3,
-  [Setting], [Values (default)], [Effect],
-  [`workbench.theme`], [`'light'`, `'dark'`, `'auto'` (`null`)], [Light or dark colors; `auto`: the OS's; `null`: the page's `color-scheme`.],
-  [`files.panel`], [`'auto'`, `'show'`, `'hide'` (`'auto'`)], [File panel open with more than one file / always / never (dropped files are then ignored).],
-  [`previewSync.followCursor`], [`true`, `false` (unset)], [Whether the preview follows the cursor. Unset: the viewer's last choice, else `true`.],
-  [`pdfExport.download`], [`true`, `false` (`true`)], [The preview's "Download PDF" button. `exportPdf` works either way.],
-  [`diagrams.editorUrl`], [URL (`'https://embed.diagrams.net/'`)], [Where the diagram editor comes from, e.g. your own drawio installation for offline use.],
-)
-
-Extensions declare their own settings the same way (@extensions-overview-settings).
-
 === PDF export <guide-embedding-pdf>
 
 ```ts
@@ -176,7 +139,7 @@ const final = await editor.exportPdf();                              // margin n
 const draft = await editor.exportPdf({ 'comments.include': true });  // margin notes kept
 ```
 
-- Options are export options by id; the others keep their default (not the viewer's choice). An unknown id rejects.
+- Options are export options by id (@guide-configuration-pdf); the others keep their default (not the viewer's choice). An unknown id rejects.
 - Rejects with the compiler's error when the document has errors.
 - The same as `executeCommand('pdfExport.export', options)`.
 

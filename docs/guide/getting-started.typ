@@ -63,4 +63,4 @@ const editor = createTypstEditor(document.getElementById('editor')!, {
 
 A complete page: `examples/plain-html/index.html`. After `mise run build:lib`, serve the repository root and open `/examples/plain-html/`.
 
-Next: what users get (@guide-features), editing with others (@guide-collaboration), the options and events (@guide-embedding), adding features (@extensions-overview).
+Next: what users get (@guide-features), every setting and option (@guide-configuration), editing with others (@guide-collaboration), embedding and events (@guide-embedding), adding features (@extensions-overview).
