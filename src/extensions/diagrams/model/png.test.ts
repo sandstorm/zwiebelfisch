@@ -1,7 +1,6 @@
-// Tests for png.ts and empty-diagram.ts: the diagram survives the round trip through a PNG.
+// Tests for png.ts: the diagram survives the round trip through a PNG.
 import { describe, expect, it } from 'vitest';
-import { EMPTY_DIAGRAM_XML, emptyDiagram } from './empty-diagram';
-import { fromDataUri, isPng, readDiagramXml, toDataUri, writeDiagramXml } from './png';
+import { EMPTY_DIAGRAM_XML, emptyDiagram, fromDataUri, isPng, readDiagramXml, toDataUri, writeDiagramXml } from './png';
 
 const XML = '<mxfile><diagram name="Seite 1">äöü → <mxGraphModel/></diagram></mxfile>';
 

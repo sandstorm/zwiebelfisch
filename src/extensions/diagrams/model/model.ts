@@ -1,5 +1,5 @@
 // The diagrams extension's model: the embed protocol as pure state (embed-session.ts), the diagram inside a PNG
-// (png.ts), the empty diagram (empty-diagram.ts). No DOM, no editor library.
+// (png.ts, also the empty diagram). No DOM, no editor library.
 // See ../diagrams.ts.
 import type { ProjectPath } from '../../../core/paths/paths';
 

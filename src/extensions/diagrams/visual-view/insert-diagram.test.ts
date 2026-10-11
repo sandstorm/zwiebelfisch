@@ -9,7 +9,7 @@ import { SourceRange } from '../../../core/typst-document/typst-document';
 import type { SaveDialogOptions } from '../../../hosts/window/window';
 import type { OpenOptions } from '../../../hosts/workbench/workbench';
 import { createVisualView } from '../../../testing/testing';
-import { emptyDiagram } from '../model/empty-diagram';
+import { emptyDiagram } from '../model/png';
 import { insertDiagram, type InsertContext } from './insert-diagram';
 
 const path = ProjectPath.of;

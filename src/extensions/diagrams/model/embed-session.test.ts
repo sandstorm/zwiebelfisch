@@ -1,8 +1,7 @@
 // Tests for embed-session.ts: the embed protocol (init → load, autosave → export → save, debounce, flush).
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { emptyDiagram } from './empty-diagram';
 import { EmbedSession, embedUrl, type EmbedAction } from './embed-session';
-import { readDiagramXml, toDataUri, writeDiagramXml } from './png';
+import { emptyDiagram, readDiagramXml, toDataUri, writeDiagramXml } from './png';
 
 const xml = (label: string) => `<mxfile><diagram>${label}</diagram></mxfile>`;
 /** What diagrams.net exports: a PNG with the diagram in it, as a data URI. */
