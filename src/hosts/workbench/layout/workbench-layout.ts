@@ -38,17 +38,18 @@ export class WorkbenchLayout {
   }
 
   /**
-   * Adds side panel `id` with its rail button on `options.side` (default left; among the others by `options.order`,
-   * lower first; equal: registration order): the element its content goes into, and how it opens.
+   * Adds side panel `id` with its rail button on `options.side` (default left), in the rail's top or bottom group
+   * (`options.alignment`, default top), among the others there by `options.order` (lower first; equal: registration
+   * order): the element its content goes into, and how it opens.
    */
   addPanel(id: string, options: SidePanelOptions): SidePanel {
     if (this.#sides.left.has(id) || this.#sides.right.has(id)) throw new Error(`There is a side panel ${id} already`);
     return this.#sides[options.side ?? 'left'].addPanel(id, options);
   }
 
-  /** Puts `button` at the far end of `side`'s rail (shown while the side has a panel). */
-  addRailAction(side: Side, button: HTMLElement): void {
-    this.#sides[side].addAction(button);
+  /** Puts `button` among the top buttons of `side`'s rail by `order`, as a panel's (shown while the side has a panel). */
+  addRailAction(side: Side, button: HTMLElement, order: number): void {
+    this.#sides[side].addAction(button, order);
   }
 
   /**

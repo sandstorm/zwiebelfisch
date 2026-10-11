@@ -65,6 +65,23 @@ describe('WorkbenchLayout', () => {
     expect(rail).toEqual(['Outline', 'Files', 'Comments', 'Search']);
   });
 
+  it("places a rail action among the panels' buttons by order, and bottom-aligned panels in the rail's far-end group", () => {
+    const { host, layout } = setup();
+    const icon = () => document.createElement('span');
+    layout.addPanel('help', { label: 'Help', icon: icon(), order: 20 });
+    layout.addPanel('settings', { label: 'Settings', icon: icon(), alignment: 'bottom', order: 5 });
+    layout.addPanel('account', { label: 'Account', icon: icon(), alignment: 'bottom' });
+    const action = document.createElement('button');
+    action.title = 'Run';
+    layout.addRailAction('left', action, 15);
+    layout.addPanel('outline', { label: 'Outline', icon: icon(), order: 15 });
+    const titles = (selector: string) => [...host.querySelectorAll<HTMLElement>(selector)].map((button) => button.title);
+    expect(titles('.typst-editor__rail > .typst-editor__rail-button')).toEqual(['Files', 'Run', 'Outline', 'Help']);
+    expect(titles('.typst-editor__rail-bottom > .typst-editor__rail-button')).toEqual(['Account', 'Settings']);
+    // the bottom group comes after every top button
+    expect(host.querySelector('.typst-editor__rail')!.lastElementChild!.className).toBe('typst-editor__rail-bottom');
+  });
+
   it('removes a panel and its rail button', () => {
     const { host, sidePanel } = setup();
     sidePanel.setDefault(true);

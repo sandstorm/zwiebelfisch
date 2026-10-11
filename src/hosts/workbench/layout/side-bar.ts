@@ -3,7 +3,7 @@
 import type { SidePanel, SidePanelOptions } from '../workbench';
 
 /**
- * One side of the widget (left or right): its rail (a button per panel, by `order`) and at most one panel shown, sized
+ * One side of the widget (left or right): its rail (a button per panel, by `order`, in its top or bottom group) and at most one panel shown, sized
  * by a separator on the panel's inner edge (drag or arrow keys; remembered). Which panel shows: the viewer's pick (a
  * rail button; clicking the shown panel's button hides the side), else the side's default panel, else the first panel
  * whose owner asked for it (`setDefault`). As an overlay (`setOverlay`, the narrow widget's left side) a pick lasts for
@@ -12,8 +12,10 @@ import type { SidePanel, SidePanelOptions } from '../workbench';
 export class SideBar {
   readonly element: HTMLElement;
   readonly #rail: HTMLElement;
-  /** Buttons that run something rather than show a panel, at the rail's far end. */
-  readonly #actions: HTMLElement;
+  /** The rail's buttons at its far end (`alignment: 'bottom'`); the others go before it. */
+  readonly #bottom: HTMLElement;
+  /** Each rail button's `order`. */
+  readonly #orders = new WeakMap<Element, number>();
   readonly #panel: HTMLElement;
   readonly #resizer: HTMLElement;
   readonly #panels = new Map<string, PanelEntry>();
@@ -38,8 +40,8 @@ export class SideBar {
     this.#rail.setAttribute('role', 'toolbar');
     this.#rail.setAttribute('aria-label', side === 'left' ? 'Left panels' : 'Right panels');
     this.#rail.setAttribute('aria-orientation', 'vertical');
-    this.#actions = div(doc, 'typst-editor__rail-actions');
-    this.#rail.append(this.#actions);
+    this.#bottom = div(doc, 'typst-editor__rail-bottom');
+    this.#rail.append(this.#bottom);
     this.#panel = div(doc, 'typst-editor__panel');
     this.#resizer = this.#createResizer();
     this.#panel.append(this.#resizer);
@@ -74,11 +76,9 @@ export class SideBar {
     button.dataset.testid = `typst-panel-toggle-${id}`;
     button.append(options.icon);
     button.addEventListener('click', () => this.#choose(this.#shown === id ? null : id));
-    const order = options.order ?? 0;
-    const next = [...this.#panels.values()].find((panel) => panel.order > order);
-    this.#rail.insertBefore(button, next?.button ?? this.#actions);
+    this.#place(button, options.order ?? 0, options.alignment === 'bottom');
     this.#panel.insertBefore(body, this.#resizer);
-    this.#panels.set(id, { body, button, order, fallback: false, available: true });
+    this.#panels.set(id, { body, button, fallback: false, available: true });
     this.layout();
     return {
       body,
@@ -89,10 +89,10 @@ export class SideBar {
     };
   }
 
-  /** Puts `button` (one that runs something, not a panel's) at the rail's far end, until it is removed. */
-  addAction(button: HTMLElement): void {
+  /** Puts `button` (one that runs something, not a panel's) among the rail's top buttons by `order`, until it is removed. */
+  addAction(button: HTMLElement, order: number): void {
     button.classList.add('typst-editor__rail-button');
-    this.#actions.append(button);
+    this.#place(button, order, false);
   }
 
   /** The panel the side shows until the viewer picks one (null: none), before any panel's `setDefault`; undefined: no such panel. */
@@ -130,6 +130,14 @@ export class SideBar {
     for (const stop of this.#cleanup) stop();
     this.element.remove();
     this.host.style.removeProperty('--te-right-side');
+  }
+
+  /** Inserts `button` into the rail's top or bottom group, before the first of its buttons with a higher order. */
+  #place(button: HTMLElement, order: number, bottom: boolean): void {
+    this.#orders.set(button, order);
+    const group = bottom ? this.#bottom : this.#rail;
+    const next = [...group.children].find((other) => (this.#orders.get(other) ?? -Infinity) > order);
+    group.insertBefore(button, next ?? (bottom ? null : this.#bottom));
   }
 
   #resolve(): string | null {
@@ -269,7 +277,6 @@ export function div(doc: Document, className: string): HTMLElement {
 interface PanelEntry {
   body: HTMLElement;
   button: HTMLButtonElement;
-  order: number;
   fallback: boolean;
   available: boolean;
 }

@@ -42,7 +42,7 @@ This project is both an *authoring environment* and *embeddable WYSIWYG Editor* 
   caption: [The editor: left rail and side panel, editing area, the right side (preview or devtools) and its rail, status bar.],
 )
 
-Each side has a rail (`▣`): a button per panel. The left side holds the files and the help (@guide-features-help), the right side the preview (and, where a host adds them, panels such as the devtools). One panel per side shows; clicking the shown one's button hides that side and the editing area takes its room. What you picked is remembered for the browser session.
+Each side has a rail (`▣`): a button per panel. The left side holds the files and the help (@guide-features-help), the right side the preview (and, where a host adds them, panels such as the devtools, at the bottom of its rail). One panel per side shows; clicking the shown one's button hides that side and the editing area takes its room. What you picked is remembered for the browser session.
 
 - *Visual editor:* edits the Typst like a word processor. What it does not model (math, function calls) shows as a raw box: its code while focused, its compiled look otherwise.
 - *Source editor:* the Typst text: highlighting, line numbers, search.
@@ -71,7 +71,7 @@ Each side has a rail (`▣`): a button per panel. The left side holds the files 
 
 == Search everywhere <guide-features-search>
 
-Press Shift twice, anywhere (also while typing in an editor), or click the magnifier at the bottom of the left rail. One list finds everything, grouped; type a few letters of a word, in order (`cmptim` finds "Compile times"). Arrows and Enter pick, Escape closes.
+Press Shift twice, anywhere (also while typing in an editor), or click the magnifier on the left rail, below the files. One list finds everything, grouped; type a few letters of a word, in order (`cmptim` finds "Compile times"). Arrows and Enter pick, Escape closes.
 
 #table(
   columns: 3,

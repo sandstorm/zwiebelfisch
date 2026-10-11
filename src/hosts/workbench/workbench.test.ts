@@ -482,6 +482,20 @@ describe('WorkbenchHost: search everywhere', () => {
     expect(field().value).toBe('');
   });
 
+  it("puts its rail button among the left rail's panels by order 15: after Files (10), before Help (20)", () => {
+    const { host } = setup(({ workbench }) => {
+      const icon = () => workbench.ownerDocument.createElement('span');
+      workbench.registerSidePanel('help', { label: 'Help', icon: icon(), order: 20 });
+      workbench.registerSidePanel('files', { label: 'Files', icon: icon(), order: 10 });
+    });
+    const left = host.querySelector<HTMLElement>('.typst-editor__side--left .typst-editor__rail')!;
+    expect([...left.querySelectorAll<HTMLElement>('.typst-editor__rail-button')].map((button) => button.dataset.testid)).toEqual([
+      'typst-panel-toggle-files',
+      'typst-search-everywhere',
+      'typst-panel-toggle-help',
+    ]);
+  });
+
   it('opens on double Shift in an editor, but not over an open input box', async () => {
     const { host, workbench, field } = setupSearch();
     const shiftTwice = (target: Element) => {

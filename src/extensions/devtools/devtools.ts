@@ -43,7 +43,7 @@ function devtoolsExtension(contributions: ContributionLog): TypstExtension {
         if (!shown) return { kind: 'none', path, reason: 'No Visual editor of this file yet: open the Visual tab.' };
         return { kind: 'rows', path, ...shown, source: (range) => describeValue(document.text.slice(range.from, range.to)) };
       };
-      const side = workbench.registerSidePanel('devtools', { label: 'Devtools', icon: icon(workbench.ownerDocument), side: 'right' });
+      const side = workbench.registerSidePanel('devtools', { label: 'Devtools', icon: icon(workbench.ownerDocument), side: 'right', alignment: 'bottom' });
       const panel = new DevtoolsPanel(side.body, {
         contributions,
         events,
