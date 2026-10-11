@@ -1,9 +1,10 @@
-// The workbench host: the widget's frame (side panels, editing area with the Visual / Source tabs and custom editors,
-// preview, status bar), the extension API every feature uses to put itself into it, and the composition of the
+// The workbench host: the widget's frame (side panels, editing area with its custom editors and the tabs between
+// them, preview, status bar), the extension API every feature uses to put itself into it, and the composition of the
 // other hosts. Entry of hosts/workbench/.
 // Why extensions: the frame knows no feature by name. A feature is a `TypstExtension` that registers what it adds
 // (a side panel, a custom editor, a command, a menu item, a link provider, a source control) once, at activation, and the
-// host disposes all of it on dispose. The API is VS Code's namespaces, each a host of its own (`commands`, `window`,
+// host disposes all of it on dispose. Even the Typst files' Visual and Source views are custom editors (registered
+// here, before the extensions), so the editing area treats every file alike. The API is VS Code's namespaces, each a host of its own (`commands`, `window`,
 // `scm`, `languages`, `workspace`); `workbench` is only the frame. Adding a feature is adding it to a list, not
 // editing the frame. Extensions never depend on each other: what one offers another goes through a generic
 // contribution point of a host.
@@ -24,7 +25,7 @@ import { VisualViewHost, type VisualViewContributions } from '../visual-view/vis
 import { type EditorMode, type TextEditorSelectionChangeEvent, type WindowApi, WindowHost } from '../window/window';
 import { type ConfigurationProperty, type Settings, type Workspace, WorkspaceHost } from '../workspace/workspace';
 import { ColorScheme } from './color-scheme/color-scheme';
-import { EditingViews } from './editing-views/editing-views';
+import { EditorTabs } from './editor-tabs/editor-tabs';
 import { ExtensionHost } from './extension-host/extension-host';
 import { FileDrops } from './file-drops/file-drops';
 import { WorkbenchLayout } from './layout/workbench-layout';
@@ -32,6 +33,7 @@ import { EditorTitleMenu } from './menus/editor-title-menu';
 import { Menus } from './menus/menus';
 import { StorageMemento } from './memento/memento';
 import { StyleSheets } from './style-sheets/style-sheets';
+import { TypstEditors, VIEW_TYPES } from './typst-editors/typst-editors';
 import css from './workbench.css?inline';
 
 /**
@@ -104,10 +106,10 @@ export interface Workbench {
   /** Who works in the widget, as the host said (`createTypstEditor({ user })`); undefined: anonymous. */
   readonly user: User | undefined;
   /**
-   * Shows `path` in the editing area (if the project has it): a Typst file in the Visual / Source tabs, any other
-   * file in its custom editor (`window.registerCustomEditorProvider`; `viewType` picks one, else the default one;
-   * nothing without one). Opening the shown file again shows it again (its editor gets the current content in a new
-   * panel). `selection` reveals a range of a Typst file, in the Source tab with `mode`.
+   * Shows `path` in the editing area (if the project has it), in a custom editor (`window.registerCustomEditorProvider`;
+   * a Typst file's are the Visual and the Source view): the one `viewType` names, else the one the user chose last,
+   * else the default one; nothing without one. Opening the shown file again shows it again (an editor without
+   * `retainContextWhenHidden` gets the current content in a new panel). `selection` reveals a range of a Typst file.
    */
   open(path: ProjectPath, options?: OpenOptions): void;
 
@@ -133,9 +135,10 @@ export interface Workbench {
   /**
    * Adds `item` to the menu `menuId` until disposed (VS Code's `contributes.menus`). Whoever shows a menu renders
    * the items whose `when` holds there, sorted by `group` and `order`, and runs an item's command with the menu's
-   * arguments. The workbench shows `editor/title`: the Visual / Source tab bar (context: `editorMode`, `resource`
-   * (the shown file); no arguments). Other ids are menus of views that extensions show, documented there (the file
-   * panel: `file/newFile`, `explorer/context`).
+   * arguments. The workbench shows `editor/title`: the editing area's tab bar, while the shown file has several
+   * editors (context: `editorMode` (the Typst view shown, else undefined), `resource` (the shown file); no
+   * arguments). Other ids are menus of views that extensions show, documented there (the file panel: `file/newFile`,
+   * `explorer/context`).
    */
   registerMenuItem(menuId: string, item: MenuItem): Disposable;
   /** The items of `menuId` to show in `context` (those whose `when` holds), sorted, for a view that shows that menu. */
@@ -172,9 +175,10 @@ export type MenuContext = Readonly<Record<string, unknown>>;
 export interface OpenOptions {
   /** A range of the Typst file to reveal. */
   selection?: SourceRange;
-  /** Reveals in that tab (switching to it); default: the current one. */
-  mode?: EditorMode;
-  /** The custom editor to open a file that is not Typst source in (its view type); default: the one its name picks. */
+  /**
+   * The custom editor to open the file in, if it matches the file (its view type, e.g. `sourceView.editor`); it is
+   * then the user's choice for later opens, too. Default: the one chosen last, else the one its name picks.
+   */
   viewType?: string;
 }
 
@@ -220,7 +224,7 @@ export interface Memento {
 export const PROJECT_PATH_TYPE = 'application/x-typst-project-path';
 
 export interface WorkbenchOptions {
-  /** The editing view shown first (default: visual). */
+  /** The view Typst files open in until the user chooses the other one (default: visual). */
   mode?: EditorMode;
   /** Who works here (`Workbench.user`). */
   user?: User;
@@ -242,8 +246,8 @@ export interface WorkbenchOptions {
 }
 
 /**
- * The frame of the widget on `host`: shows the project's files (Typst files in the Visual / Source tabs, others in
- * the custom editors extensions register), keeps the preview compiling the main file, and runs the extensions. It
+ * The frame of the widget on `host`: shows the project's files in custom editors (Typst files in the Visual and the
+ * Source view, others in those extensions register, tabs between them), keeps the preview compiling the main file, and runs the extensions. It
  * makes the other hosts: VS Code's namespaces (`commands`, `window`, `scm`, `languages`, `workspace`) and the views'
  * (`visualView`, `sourceView`, `preview`). `activate` starts it: extensions first (their contributions are in place
  * before any view exists), then the main file is shown and compiled.
@@ -253,7 +257,8 @@ export class WorkbenchHost implements Workbench {
   /** The commands, for the widget's `executeCommand`. */
   readonly commands: CommandsHost;
   readonly #layout: WorkbenchLayout;
-  readonly #views: EditingViews;
+  readonly #typstEditors: TypstEditors;
+  readonly #tabs: EditorTabs;
   /** The window, for the widget's `activeFile`. */
   readonly window: WindowHost;
   readonly #languages = new LanguagesHost();
@@ -295,21 +300,20 @@ export class WorkbenchHost implements Workbench {
     this.commands = new CommandsHost(host);
     this.#drops = new FileDrops(host);
     this.onDidDropFiles = this.#drops.onDidDrop;
-    this.#views = this.#createViews();
     this.#editorTitle = new EditorTitleMenu(host.ownerDocument, this.#menus, {
-      context: () => ({ editorMode: this.#views.mode, resource: this.#active }),
+      context: () => ({ editorMode: this.#typstEditors.activeTextEditor?.mode, resource: this.#active }),
       executeCommand: (command) => this.commands.executeCommand(command),
     });
-    this.#views.addTabActions(this.#editorTitle.element);
-    this.window = new WindowHost({
-      exists: (path) => project.has(path),
-      host,
-      statusBar: this.#layout.statusBar, editingArea: this.#layout.editor,
-      activeFile: () => this.#active,
-      onDidChangeActiveFile: this.#shown.event,
-      activeTextEditor: () => this.#views.activeTextEditor,
-      onDidChangeTextEditorSelection: this.#selectionChanged.event,
+    this.#tabs = new EditorTabs(doc, this.#editorTitle.element, (viewType) => this.open(this.#active, { viewType }));
+    this.#layout.editor.append(this.#tabs.element);
+    this.#typstEditors = new TypstEditors(project, {
+      visualView: this.#visualView,
+      sourceViews: this.#sourceViews,
+      // Fired from the editors' own updates: the DOM's selectionchange fires before
+      // CodeMirror/ProseMirror read the new selection, so a listener would see the previous one.
+      onSelection: (textEditor) => this.#selectionChanged.fire({ textEditor }),
     });
+    this.window = this.#createWindow();
     this.#preview = new Preview(this.#layout.preview);
     // the hosts' CSS after the tokens and the frame, before the extensions'
     const hosts = [this.window, this.#languages, this.#preview, this.#sourceViews, this.#visualView];
@@ -347,7 +351,7 @@ export class WorkbenchHost implements Workbench {
     for (const extension of extensions) this.#workspace.declare(extension.contributes?.configuration?.properties ?? {});
     this.#workspace.check();
     this.#extensions.activate(extensions);
-    this.open(this.project.main);
+    this.open(this.project.main, { viewType: this.options.mode && VIEW_TYPES[this.options.mode] });
     this.#compile();
   }
 
@@ -372,10 +376,9 @@ export class WorkbenchHost implements Workbench {
     if (!this.project.has(path)) return;
     const changed = path !== this.#active;
     this.#active = path;
-    const document = this.project.document(path);
-    this.window.showCustomEditor(document ? null : { path, content: this.project.content(path)! }, options.viewType);
-    this.#views.show(document ?? null);
-    if (document && options.selection) this.#views.reveal(options.selection, options.mode);
+    const viewType = this.window.showCustomEditor({ path, content: this.project.content(path)! }, options.viewType);
+    if (options.selection) this.#typstEditors.activeTextEditor?.revealRange(options.selection);
+    this.#tabs.update(this.window.customEditorChoices(path), viewType);
     this.#shown.fire(path);
     this.#editorTitle.update();
     if (changed) this.options.onOpen?.(path);
@@ -392,10 +395,10 @@ export class WorkbenchHost implements Workbench {
   registerEditorFrame(frame: { top: HTMLElement; bottom: HTMLElement }): Disposable {
     if (this.#hasFrame) throw new Error('There is an editor frame already');
     this.#hasFrame = true;
-    this.#views.setFrame(frame);
+    this.#typstEditors.setFrame(frame);
     return new Disposable(() => {
       this.#hasFrame = false;
-      this.#views.setFrame(null);
+      this.#typstEditors.setFrame(null);
     });
   }
 
@@ -416,8 +419,8 @@ export class WorkbenchHost implements Workbench {
   dispose(): void {
     this.#subscription.dispose();
     this.#extensions.dispose();
-    this.#views.dispose();
     this.window.dispose();
+    this.#tabs.dispose();
     this.#scm.dispose();
     this.#editorTitle.dispose();
     this.#menus.dispose();
@@ -433,17 +436,25 @@ export class WorkbenchHost implements Workbench {
     this.#ownStyles.dispose();
   }
 
-  /** The Visual/Source views of every document, with the extensions' contributions. */
-  #createViews(): EditingViews {
-    return new EditingViews(this.#layout.editor, {
-      mode: this.options.mode,
-      visualView: this.#visualView,
-      sourceViews: this.#sourceViews,
-      // Fired from the editors' own updates: the DOM's selectionchange fires before
-      // CodeMirror/ProseMirror read the new selection, so a listener would see the previous one.
-      onSelection: (textEditor) => this.#selectionChanged.fire({ textEditor }),
-      onMode: () => this.#editorTitle.update(),
+  /**
+   * The window, its editing area showing Typst files in the Visual and Source views: registered first, they win ties
+   * for `*.typ`. It follows file changes before the workbench does, so a retained panel follows a rename before the
+   * renamed file is shown again. Its custom editors (these included) go with it.
+   */
+  #createWindow(): WindowHost {
+    const window = new WindowHost({
+      exists: (path) => this.project.has(path),
+      host: this.host,
+      statusBar: this.#layout.statusBar,
+      editingArea: this.#layout.editor,
+      onDidChangeFile: this.project.onDidChangeFile,
+      activeFile: () => this.#active,
+      onDidChangeActiveFile: this.#shown.event,
+      activeTextEditor: () => this.#typstEditors.activeTextEditor,
+      onDidChangeTextEditorSelection: this.#selectionChanged.event,
     });
+    this.#typstEditors.register(window);
+    return window;
   }
 
   /** The registered document links in every Source view and in the code of every raw box (paths from its file's). */
@@ -473,14 +484,9 @@ export class WorkbenchHost implements Workbench {
 
   /** Keeps the editing area on an existing file after a create / rename / delete (a renamed file stays shown). */
   #restructured(change: FileChange): void {
-    this.#views.retain(this.#documents());
     const active = this.#active;
     if (change.kind === 'rename' && change.from === active) this.open(change.path);
     else this.open(this.project.has(active) ? active : this.project.main);
-  }
-
-  #documents(): TypstDocument[] {
-    return this.project.paths().flatMap((path) => this.project.document(path) ?? []);
   }
 }
 

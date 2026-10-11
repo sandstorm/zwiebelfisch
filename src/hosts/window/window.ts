@@ -1,6 +1,6 @@
 // The window namespace of the extension API (VS Code's `window`): what every feature needs to talk to the user
 // (messages, input box, quick pick), and the places of the widget's window a feature puts things into (status bar
-// items, custom editors of non-Typst files, file decorations), and the file and editor the user works in. Entry of
+// items, custom editors, file decorations), and the file and editor the user works in. Entry of
 // hosts/window/. See docs/architecture/workbench.typ.
 // Why one namespace in VS Code's shapes: features look and behave alike when they ask and tell the same way, and
 // they never make popovers of their own. The parts (notifications/, quick-input/, status-bar/, custom-editors/,
@@ -8,9 +8,9 @@
 import { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../core/paths/paths';
-import type { FileContent } from '../../core/project/project';
+import type { FileChange, FileContent } from '../../core/project/project';
 import type { SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
-import { CustomEditors } from './custom-editors/custom-editors';
+import { type CustomEditorChoice, CustomEditors } from './custom-editors/custom-editors';
 import { FileDecorations } from './file-decorations/file-decorations';
 import { Notifications } from './notifications/notifications';
 import { QuickInput } from './quick-input/quick-input';
@@ -59,11 +59,13 @@ export interface WindowApi {
    */
   registerStatusBarItem(element: HTMLElement, placement: StatusBarPlacement): Disposable;
   /**
-   * Opens files whose name matches `options.filenamePattern` (not Typst files: they open in the Visual / Source tabs)
-   * in the editor `provider` puts into a panel of the editing area, until disposed (VS Code's custom editors).
-   * `viewType` names the editor (`<extension>.<name>`, unique), e.g. for `workbench.open(path, { viewType })`. When
-   * several match a file, the one of the highest `priority` opens it (`'default'`: 100; `'option'`: only when asked
-   * for by `viewType`), then the most specific pattern (`*.drawio.png` over `*.png`), then the one registered first.
+   * Opens files whose name matches `options.filenamePattern` in the editor `provider` puts into a panel of the editing
+   * area, until disposed (VS Code's custom editors; the Typst files' Visual and Source views are two of them,
+   * `visualView.editor` and `sourceView.editor`). `viewType` names the editor (`<extension>.<name>`, unique), e.g. for
+   * `workbench.open(path, { viewType })`. When several match a file, the editing area's tabs switch between them
+   * (`displayName`), and the one the user chose last opens it; before any choice, the one of the highest `priority`
+   * (`'default'`: 100; `'option'`: only when chosen), then the most specific pattern (`*.drawio.png` over `*.png`),
+   * then the one registered first.
    */
   registerCustomEditorProvider(viewType: string, provider: CustomEditorProvider, options: CustomEditorOptions): Disposable;
 
@@ -186,8 +188,13 @@ export interface FileDecorationProvider {
   readonly onDidChangeFileDecorations: Event<readonly ProjectPath[] | undefined>;
 }
 
-/** Where a custom editor opens files (VS Code: the `selector` and `priority` of `contributes.customEditors`). */
+/**
+ * Where a custom editor opens files (VS Code: the `selector`, `priority` and `displayName` of
+ * `contributes.customEditors`) and how its panels live.
+ */
 export interface CustomEditorOptions {
+  /** What the editor is called: its tab, when a file can be shown in several editors ("Visual", "Diagram"). */
+  readonly displayName: string;
   /**
    * The files it opens, as a glob over the file name: `*` (any characters but `/`), `**`, `?`, `{a,b}`, e.g.
    * `*.drawio.png`, `*.{png,jpg}`; with a `/` over the path from the project root (`diagrams/*.png`). Case-insensitive.
@@ -195,7 +202,8 @@ export interface CustomEditorOptions {
   readonly filenamePattern: string;
   /**
    * Who opens a file several editors match: a number (higher first), `'default'` (100, the default) or `'option'`
-   * (never by default, only when asked for with `workbench.open(path, { viewType })`).
+   * (never by default, only when chosen: a tab, `workbench.open(path, { viewType })`). Below 100: a fallback, which
+   * opens only files nothing else matches and gets no tab.
    */
   readonly priority?: 'default' | 'option' | number;
   /**
@@ -203,6 +211,12 @@ export interface CustomEditorOptions {
    * box, drawn in strokes of `currentColor`.
    */
   readonly icon?: string;
+  /**
+   * Keeps a file's panel while another file (or editor) is shown, hidden, and shows it again when the file opens in
+   * this editor again (VS Code's `retainContextWhenHidden`); disposed when the file is deleted. Default: every open
+   * gets a new panel.
+   */
+  readonly retainContextWhenHidden?: boolean;
 }
 
 /** Shows (and edits) files in the editing area (VS Code's CustomReadonlyEditorProvider, without documents of its own). */
@@ -224,20 +238,24 @@ export interface CustomDocument {
 export interface CustomEditorPanel {
   /** The editor's place in the editing area (a flex column filling it); removed once the panel is disposed. */
   readonly element: HTMLElement;
+  /** Whether the panel is shown (false while hidden; only with `retainContextWhenHidden`). */
+  readonly visible: boolean;
+  /** `visible` changed. */
+  readonly onDidChangeViewState: Event<void>;
   /**
-   * Fires once, right before the panel goes: another file (or this one again) is shown, the provider is disposed, or
-   * the widget is disposed. The editor stores what is pending (the element is still in place) and lets go of what it holds.
+   * Fires once, right before the panel goes: another file (or this one again) is shown (unless retained), the file is
+   * deleted (retained), the provider is disposed, or the widget is disposed. The editor stores what is pending (the element is still in place) and lets go of what it holds.
    */
   readonly onDidDispose: Event<void>;
 }
 
 /**
- * A Typst file's editor: its Visual and Source views, behind the Visual / Source tabs. One per document, for as
- * long as its views live.
+ * A Typst file's editor: its Visual and Source views (the custom editors `visualView.editor` and `sourceView.editor`).
+ * One per document, for as long as one of its views lives.
  */
 export interface TextEditor {
   readonly document: TypstDocument;
-  /** The tab the user works in: the view `selection` and `revealRange` use. */
+  /** The view the document was shown in last: the one `selection` and `revealRange` use. */
   readonly mode: EditorMode;
   /** The selection in that view, in the source (`from === to` for a caret). */
   readonly selection: SourceRange;
@@ -262,6 +280,8 @@ export interface WindowOptions {
   readonly statusBar: HTMLElement;
   /** The editing area: a custom editor's panel goes into it. */
   readonly editingArea: HTMLElement;
+  /** Every change of a project file (retained panels follow renames and go with deleted files). */
+  readonly onDidChangeFile: Event<FileChange>;
   /** The file shown in the editing area (the workbench decides). */
   activeFile(): ProjectPath;
   /** A file was shown in the editing area (fired by the workbench). */
@@ -282,6 +302,7 @@ export class WindowHost implements WindowApi {
   readonly #statusBar: StatusBar;
   readonly #customEditors: CustomEditors;
   readonly #fileDecorations = new FileDecorations();
+  readonly #fileChanges: Disposable;
   readonly onDidChangeFileDecorations = this.#fileDecorations.onDidChange;
   readonly onDidChangeTextEditorSelection: Event<TextEditorSelectionChangeEvent>;
   readonly onDidChangeActiveFile: Event<ProjectPath>;
@@ -293,6 +314,7 @@ export class WindowHost implements WindowApi {
     this.#quickInput = new QuickInput(options.host);
     this.#statusBar = new StatusBar(options.statusBar);
     this.#customEditors = new CustomEditors(options.editingArea);
+    this.#fileChanges = options.onDidChangeFile((change) => this.#customEditors.followFileChange(change));
     this.onDidChangeTextEditorSelection = options.onDidChangeTextEditorSelection;
     this.onDidChangeActiveFile = options.onDidChangeActiveFile;
   }
@@ -332,11 +354,16 @@ export class WindowHost implements WindowApi {
   }
 
   /**
-   * Shows `file` in its custom editor (`viewType`, or the one its name picks) in a new panel of the editing area;
-   * null (a Typst file is shown) only closes the shown panel.
+   * Shows `file` in its custom editor (`viewType` if it matches, else the one chosen last or the one its name picks)
+   * in the editing area; returns that editor's view type, undefined when none matches (nothing is shown).
    */
-  showCustomEditor(file: CustomDocument | null, viewType?: string): void {
-    this.#customEditors.show(file, viewType);
+  showCustomEditor(file: CustomDocument, viewType?: string): string | undefined {
+    return this.#customEditors.show(file, viewType);
+  }
+
+  /** The editors `path` can be switched between (the tabs), best first. */
+  customEditorChoices(path: ProjectPath): readonly CustomEditorChoice[] {
+    return this.#customEditors.choicesFor(path);
   }
 
   registerFileDecorationProvider(provider: FileDecorationProvider): Disposable {
@@ -360,6 +387,6 @@ export class WindowHost implements WindowApi {
   }
 
   dispose(): void {
-    Disposable.from(this.#notifications, this.#quickInput, this.#customEditors, this.#fileDecorations).dispose();
+    Disposable.from(this.#fileChanges, this.#notifications, this.#quickInput, this.#customEditors, this.#fileDecorations).dispose();
   }
 }

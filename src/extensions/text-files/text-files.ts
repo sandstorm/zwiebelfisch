@@ -29,7 +29,7 @@ export function textFiles(): TypstExtension {
       const { window, workbench, subscriptions } = context;
       subscriptions.push(
         workbench.registerStyleSheet(css),
-        window.registerCustomEditorProvider('textFiles.editor', textFileEditor(context), { filenamePattern: TEXT_FILES, icon: TEXT_ICON }),
+        window.registerCustomEditorProvider('textFiles.editor', textFileEditor(context), { filenamePattern: TEXT_FILES, displayName: 'Text', icon: TEXT_ICON }),
       );
     },
   };

@@ -25,7 +25,7 @@ export function diagnostics(): TypstExtension {
       subscriptions.push(workbench.registerStyleSheet(css));
       const collection = new DiagnosticCollection();
       const status = new DiagnosticsStatus(workbench.ownerDocument, (target) => {
-        if (project.document(target.path)) workbench.open(target.path, { selection: target, mode: 'source' });
+        if (project.document(target.path)) workbench.open(target.path, { selection: target, viewType: 'sourceView.editor' });
       });
       /** The Typst file shown last: whose diagnostics the status counts. */
       let lastSource = project.main;

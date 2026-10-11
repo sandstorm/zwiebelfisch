@@ -32,7 +32,7 @@ workbench.registerMenuItem('explorer/context', {
 #table(
   columns: 4,
   [Menu], [Where], [Context], [Command gets],
-  [`editor/title`], [The Visual / Source tab bar], [`editorMode` (`'visual'` | `'source'`), `resource`], [nothing],
+  [`editor/title`], [The editing area's tab bar, shown while the file has several editors], [`editorMode` (`'visual'` | `'source'`; undefined for other editors), `resource`], [nothing],
   [`file/newFile`], ["New" in the file panel's header], [`view: 'files'`, `resource`, `resourceKind` (`'file'` | `'folder'`), `resourceIsMain`], [the row's path],
   [`explorer/context`], [A file panel row's context menu], [as `file/newFile`], [the row's path],
 )
@@ -80,13 +80,13 @@ if (choice === 'Open') workbench.open(path);
 - *Read* through `project`: `files()`, `paths()`, `has(path)`, `document(path)` (a Typst file's `TypstDocument`, `.text`), `content(path)`, `onDidChangeFile` (an `Event<FileChange>`).
 - *Change* through `workspace.applyEdit(change)`, never `project.apply`. It checks the project's rules, then the host's `allowFileChange`, and resolves to the reason it was refused, or `null`.
 - `FileChange`: `{ kind: 'create' | 'update', path, content }`, `{ kind: 'delete', path }`, `{ kind: 'rename', path, from }`.
-- *Show* with `workbench.open(path, { selection?, mode?, viewType? })` (`selection`: a `SourceRange`); `window.activeFile` and `window.onDidChangeActiveFile` say what is shown.
+- *Show* with `workbench.open(path, { selection?, viewType? })` (`selection`: a `SourceRange` of a Typst file; `viewType`: the editor, e.g. `'sourceView.editor'`); `window.activeFile` and `window.onDidChangeActiveFile` say what is shown.
 - *The Typst editor*: `window.activeTextEditor` (`document`, `mode`, `selection` as a `SourceRange`, `revealRange(range)`; `null` while another kind of file is shown) and `window.onDidChangeTextEditorSelection`.
 - *Dropped files*: `workbench.onDidDropFiles` gets the `File[]` dropped on the widget that no view took.
 
 == Custom editors <extensions-workbench-api-custom-editors>
 
-Files that are not Typst open in a custom editor (VS Code's): `window.registerCustomEditorProvider(viewType, provider, options)`.
+Every file opens in a custom editor (VS Code's), Typst files too: `window.registerCustomEditorProvider(viewType, provider, options)`.
 
 ```ts
 window.registerCustomEditorProvider('csv.table', {
@@ -94,26 +94,30 @@ window.registerCustomEditorProvider('csv.table', {
     const text = typeof document.content === 'string' ? document.content : new TextDecoder().decode(document.content);
     panel.element.append(renderTable(text)); // yours
   },
-}, { filenamePattern: '*.csv', icon: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor"><path d="M2 3h12v10H2zM2 7h12M6 3v10"/></svg>' });
+}, { filenamePattern: '*.csv', displayName: 'Table', icon: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor"><path d="M2 3h12v10H2zM2 7h12M6 3v10"/></svg>' });
 ```
 
 - `viewType`: `<extension>.<name>`, unique.
+- `displayName`: its tab. A file several editors match gets a tab per editor, best first (the editing area's "open with").
 - `filenamePattern`: a case-insensitive glob over the file name (`*.csv`, `*.{png,jpg}`), over the path from the root if it has a `/`.
-- `priority`: a number, `'default'` (100) or `'option'` (only through `workbench.open(path, { viewType })`).
-- Of the editors matching a file: highest `priority`, then the most specific pattern (more literal characters: `*.drawio.png` over `*.png` over `*`; `*.csv` over `*.{csv,json,…}`), then the first registered.
+- `priority`: a number, `'default'` (100) or `'option'` (only when chosen). Below 100: a fallback for files nothing else opens, without a tab.
+- Of the editors matching a file: the one the user chose last (a tab, or `workbench.open(path, { viewType })`), else the highest `priority`, then the most specific pattern (more literal characters: `*.drawio.png` over `*.png` over `*`; `*.csv` over `*.{csv,json,…}`), then the first registered.
 - `icon`: SVG markup, 16×16 view box, strokes in `currentColor`; the file panel shows it on the rows of the files it opens.
 - Every open gets a new panel. Fill `panel.element`; store edits with `workspace.applyEdit({ kind: 'update', path, content })`; store what is pending in `panel.onDidDispose`.
+- `retainContextWhenHidden: true` keeps a file's panel, hidden, while something else is shown (`panel.visible`, `panel.onDidChangeViewState`), and shows it again when the file opens in this editor again; it follows a rename and is disposed when the file is deleted.
 
 The built-in ones, to beat or to leave alone:
 
 #table(
   columns: 3,
   [View type], [Pattern], [Priority],
+  [`visualView.editor`], [`*.typ`: the Visual view, retained], [default (registered first)],
+  [`sourceView.editor`], [`*.typ`: the Source view, retained], [default],
   [`diagrams.editor`], [`*.drawio.png`], [110],
   [`spreadsheets.editor`], [`*.ic`], [default],
   [`images.preview`], [`*.{png,jpg,jpeg,gif,svg,webp}`], [default],
   [`textFiles.editor`], [`*.{csv,json,yaml,yml,toml,xml,bib,txt,md,mmd}`], [default],
-  [`files.file`], [`*`: any other file, read-only (name, size, type)], [default],
+  [`files.file`], [`*`: any other file, read-only (name, size, type)], [0 (fallback)],
 )
 
 == File decorations <extensions-workbench-api-decorations>

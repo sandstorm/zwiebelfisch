@@ -111,7 +111,7 @@ What `activate` gets (`ExtensionContext`):
   [Visual view toolbar items], [their group's `order`, then the item's `order`],
   [Status bar items], [`alignment`, then `priority` (higher further left)],
   [Box renderers, document links, PDF export options], [`priority`, default 100, higher first],
-  [Custom editors], [`priority`, then the most specific pattern],
+  [Custom editors], [the user's choice (a tab), then `priority`, then the most specific pattern],
   [Visual view nodes and marks], [their Tiptap extension's `priority` (Tiptap's: default 100, higher first)],
 )
 

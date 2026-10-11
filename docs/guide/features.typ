@@ -227,7 +227,7 @@ The file panel shows the project as a tree: folders first, the main file marked,
 - The main file and its folder cannot be renamed, moved or deleted.
 - Below 720 px the panel lies over the editor.
 
-How each file opens:
+How each file opens (a file with several editors gets a tab each, like Visual / Source; the one picked last is used for the next such file):
 
 #table(
   columns: 2,
@@ -236,7 +236,7 @@ How each file opens:
   [Images], [A preview; drag into the Visual view to insert.],
   [`.csv`, `.json`, `.yaml`, `.yml`, `.toml`, `.xml`, `.bib`, `.txt`, `.md`, `.mmd`], [A plain text editor, saved as you type.],
   [`.ic`], [A spreadsheet (@guide-features-spreadsheets).],
-  [`.drawio.png`], [The diagram editor (@guide-features-diagrams).],
+  [`.drawio.png`], [The diagram editor (@guide-features-diagrams); its "Image" tab shows the picture.],
   [Anything else], [Name, size and type.],
 )
 

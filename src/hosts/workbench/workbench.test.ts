@@ -167,13 +167,31 @@ describe('WorkbenchHost', () => {
     });
   });
 
-  it('opens a file at a range, in the Source tab when asked', () => {
-    const { workbench, context } = setup(undefined, { mode: 'visual' });
-    workbench.open(path('/a.typ'), { selection: SourceRange.of({ from: 0, to: 1 }), mode: 'source' });
+  it('opens a file at a range, in the Source view when asked, which then stays the choice for Typst files', () => {
+    const { host, workbench, context } = setup(undefined, { mode: 'visual' });
+    workbench.open(path('/a.typ'), { selection: SourceRange.of({ from: 0, to: 1 }), viewType: 'sourceView.editor' });
     const editor = context.window.activeTextEditor!;
     expect(editor.document.text).toBe('A\n');
     expect(editor.mode).toBe('source');
     expect(editor.selection).toEqual({ from: 0, to: 1 });
+    expect(host.querySelector('[role=tab][aria-selected=true]')!.textContent).toBe('Source');
+    workbench.open(path('/main.typ'));
+    expect(context.window.activeTextEditor!.mode).toBe('source');
+  });
+
+  it('shows Typst files in the Visual and the Source view, custom editors with tabs, kept while hidden', () => {
+    const { host, workbench, context } = setup(undefined, { mode: 'visual' });
+    const tabs = () => [...host.querySelectorAll<HTMLElement>('[role=tab]')];
+    expect(tabs().map((tab) => [tab.textContent, tab.getAttribute('aria-selected')])).toEqual([['Visual', 'true'], ['Source', 'false']]);
+    const visual = host.querySelector('.typst-editor__custom-editor[data-view-type="visualView.editor"]')!;
+    tabs()[1].click();
+    expect(context.window.activeTextEditor!.mode).toBe('source');
+    expect(host.querySelector<HTMLElement>('.typst-editor__tabs')!.hidden).toBe(false);
+    workbench.open(path('/logo.png'));
+    expect(host.querySelector<HTMLElement>('.typst-editor__tabs')!.hidden).toBe(true);
+    workbench.open(path('/main.typ'), { viewType: 'visualView.editor' });
+    expect(host.querySelector('.typst-editor__custom-editor[data-view-type="visualView.editor"]')).toBe(visual);
+    expect(host.querySelectorAll('.typst-editor__custom-editor[data-view-type$="View.editor"]')).toHaveLength(2);
   });
 
   it('tells about a moved selection in an editor, after it has the new one', () => {
@@ -192,7 +210,7 @@ describe('WorkbenchHost', () => {
 
   it('applies the Visual view contributions to the Visual view of each document', () => {
     const provider = vi.fn((_view: { document: TypstDocument }) => []);
-    const { workbench } = setup(({ visualView, subscriptions }) => subscriptions.push(visualView.registerTiptapExtension(provider)));
+    const { workbench } = setup(({ visualView, subscriptions }) => subscriptions.push(visualView.registerTiptapExtension(provider)), { mode: 'visual' });
     workbench.open(path('/a.typ'));
     expect(provider.mock.calls.map(([view]) => view.document.text)).toEqual(['= Main\n', 'A\n']);
   });
@@ -270,7 +288,7 @@ describe('WorkbenchHost', () => {
 
   it("shows the links of the registered providers in the Source views and raw boxes' code, with the path of their file", () => {
     const seen: string[] = [];
-    const { host } = setup(({ languages, subscriptions }) =>
+    const { host, workbench } = setup(({ languages, subscriptions }) =>
       subscriptions.push(
         languages.registerDocumentLinkProvider({
           provideDocumentLinks: ({ path, text }) => (seen.push(path), [{ range: SourceRange.of({ from: 2, to: text.length - 1 }) }]),
@@ -280,6 +298,7 @@ describe('WorkbenchHost', () => {
     expect(seen).toContain('/main.typ');
     const marked = (root: Element) => [...root.querySelectorAll('.typst-source__path')].map((mark) => mark.textContent).join('');
     expect(marked(host.querySelector('[data-testid=typst-source]')!)).toBe('Main');
+    workbench.open(path('/main.typ'), { viewType: 'visualView.editor' });
     // the box holds "= Main" without the line break
     expect(marked(host.querySelector('.typst-visual__raw-block')!)).toBe('Mai');
   });
