@@ -1,6 +1,6 @@
 // What the markup extension contributes to the Visual editor. See markup in ../markup.ts.
 import type { SyntaxNode } from '@lezer/common';
-import { Extension, markInputRule, markPasteRule, type AnyExtension, type Editor, type Mark as MarkExtension } from '@tiptap/core';
+import { Extension, Mark as TiptapMark, markInputRule, markPasteRule, mergeAttributes, type AnyExtension, type Editor, type Mark as MarkExtension } from '@tiptap/core';
 import Code from '@tiptap/extension-code';
 import CodeBlock from '@tiptap/extension-code-block';
 import type { Mark, Node } from '@tiptap/pm/model';
@@ -11,7 +11,7 @@ import { starterKitPart, type Around, type PlacedNode, type TypstMarkSpec, type 
 import { codeBlockView } from './code-block-view';
 import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from '../model/raw-code';
 
-// --------------------------------------------------- strong, emph, underline
+// ------------------------------ strong, emph, underline, strike, highlight
 
 /*
  * Typing (or pasting) Typst's markup puts the mark on the text between the delimiters, as Typst reads it: `*strong*`
@@ -23,17 +23,17 @@ const STRONG_PASTE = /(?:^|\s)(\*(?!\s+\*)([^*]+)\*(?!\s+\*))/g;
 const EMPH_INPUT = /(?:^|\s)(_(?!\s+_)([^_]+)_(?!\s+_))$/;
 const EMPH_PASTE = /(?:^|\s)(_(?!\s+_)([^_]+)_(?!\s+_))/g;
 
-/** `part` (a StarterKit part bringing one mark) whose mark is typed as `input` and pasted as `paste`, nothing else. */
-function typedAs(part: AnyExtension, input: RegExp, paste: RegExp): AnyExtension {
+/** `part` (a StarterKit part bringing one mark) whose mark is typed as `input` and pasted as `paste` (null: not), nothing else. */
+function typedAs(part: AnyExtension, input: RegExp | null, paste: RegExp | null): AnyExtension {
   return part.extend({
     addExtensions() {
       return (this.parent?.() ?? []).map((mark: AnyExtension) =>
         (mark as MarkExtension).extend({
           addInputRules() {
-            return [markInputRule({ find: input, type: this.type })];
+            return input ? [markInputRule({ find: input, type: this.type })] : [];
           },
           addPasteRules() {
-            return [markPasteRule({ find: paste, type: this.type })];
+            return paste ? [markPasteRule({ find: paste, type: this.type })] : [];
           },
         }),
       );
@@ -41,12 +41,12 @@ function typedAs(part: AnyExtension, input: RegExp, paste: RegExp): AnyExtension
   });
 }
 
-/** Tiptap's bold, italic, underline, link and blockquote (StarterKit's), configured for Typst: each spec brings its own. */
+/** Tiptap's bold, italic, underline, strike, link and blockquote (StarterKit's), configured for Typst: each spec brings its own. */
 const Bold = typedAs(starterKitPart('typstBold', { bold: {} }), STRONG_INPUT, STRONG_PASTE);
 
 /**
- * The specs of strong, emphasis and underline, links, raw text (inline code, code blocks) and block quotes, and their toolbar
- * entries.
+ * The specs of strong, emphasis, underline, strike and highlight, links, raw text (inline code, code blocks) and block
+ * quotes, and their toolbar entries.
  */
 export const BOLD: TypstMarkSpec = {
   name: 'bold',
@@ -83,21 +83,38 @@ const WORD = /[\p{L}\p{N}_]/u;
 const Underline = starterKitPart('typstUnderline', { underline: {} });
 
 /**
- * `#underline[x]` (no other arguments, one paragraph): its content with the mark; other `underline` calls (`stroke:`,
- * `offset:`, parentheses) stay raw, so an edited one prints back as it was written.
+ * `#underline[x]`, `#strike[x]`, `#highlight[x]` (no other arguments, one paragraph): their content with the mark;
+ * other calls (`stroke:`, `fill:`, parentheses) stay raw, so an edited one prints back as it was written.
  */
-export const UNDERLINE: TypstMarkSpec = {
-  name: 'underline',
-  tiptap: Underline,
-  typst: { parseTypst: { calls: { underline: { inline: parseUnderlineCall } } }, toTypst: () => ({ open: '#underline[', close: ']' }) },
-};
+export const UNDERLINE: TypstMarkSpec = plainCallMark('underline', Underline);
 
-function parseUnderlineCall(p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[]): PlacedNode[] | null {
-  const blocks = trailingContent(call);
-  if (blocks?.length !== 1 || p.source.slice(call.from, blocks[0].from) !== 'underline') return null;
-  const content = children(blocks[0].getChild('Markup')!);
-  if (content.length === 0 || !p.isOneParagraph(content)) return null;
-  return p.inline(content, p.schema.marks.underline.create().addToSet(marks));
+/** StarterKit's Strike, with its shortcut Mod-Shift-S; not typed as `~~x~~` (in Typst `~` is a non-breaking space). */
+const Strike = typedAs(starterKitPart('typstStrike', { strike: {} }), null, null);
+
+export const STRIKE: TypstMarkSpec = plainCallMark('strike', Strike);
+
+/** Tiptap's Highlight is a package of its own; this is its plain form (no colour), with its shortcut Mod-Shift-H. */
+const Highlight = TiptapMark.create({
+  name: 'highlight',
+  parseHTML: () => [{ tag: 'mark' }],
+  renderHTML: ({ HTMLAttributes }) => ['mark', mergeAttributes({ class: 'typst-markup__highlight' }, HTMLAttributes), 0],
+  addKeyboardShortcuts() {
+    return { 'Mod-Shift-h': () => this.editor.commands.toggleMark(this.name) };
+  },
+});
+
+export const HIGHLIGHT: TypstMarkSpec = plainCallMark('highlight', Highlight);
+
+/** The mark `name`, read from and written as `#name[..]` with only a content block. */
+function plainCallMark(name: string, tiptap: AnyExtension): TypstMarkSpec {
+  const parse = (p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[]): PlacedNode[] | null => {
+    const blocks = trailingContent(call);
+    if (blocks?.length !== 1 || p.source.slice(call.from, blocks[0].from) !== name) return null;
+    const content = children(blocks[0].getChild('Markup')!);
+    if (content.length === 0 || !p.isOneParagraph(content)) return null;
+    return p.inline(content, p.schema.marks[name].create().addToSet(marks));
+  };
+  return { name, tiptap, typst: { parseTypst: { calls: { [name]: { inline: parse } } }, toTypst: () => ({ open: `#${name}[`, close: ']' }) } };
 }
 
 // -------------------------------------------------------------------- links
@@ -297,17 +314,21 @@ const ICONS = {
   bold: svg('<path d="M7 5h6a3.5 3.5 0 0 1 0 7H7z"/><path d="M7 12h7a3.5 3.5 0 0 1 0 7H7z"/>'),
   italic: svg('<path d="M10 5h8"/><path d="M6 19h8"/><path d="M14 5 10 19"/>'),
   underline: svg('<path d="M7 4v7a5 5 0 0 0 10 0V4"/><path d="M5 20h14"/>'),
+  strike: svg('<path d="M4 12h16"/><path d="M16 6.5A4 3 0 0 0 12 5c-2.5 0-4 1.3-4 3 0 1.5 1 2.4 3 3"/><path d="M8 17.5a4 3 0 0 0 4 1.5c2.5 0 4-1.3 4-3 0-.9-.3-1.5-.9-2"/>'),
+  highlight: svg('<path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>'),
   code: svg('<path d="m8 7-5 5 5 5"/><path d="m16 7 5 5-5 5"/>'),
   link: svg('<path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/>'),
   codeBlock: svg('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="m10 9-3 3 3 3"/><path d="m14 9 3 3-3 3"/>'),
   quote: svg('<path d="M4 6v12"/><path d="M9 7h11M9 12h11M9 17h7"/>'),
 };
 
-/** Bold, italic, underline, inline code: in the bar above the selection, their only place. */
-export const MARK_ACTIONS: Record<'bold' | 'italic' | 'underline' | 'code', ToolbarAction> = {
+/** Bold, italic, underline, strike, highlight, inline code: in the bar above the selection, their only place. */
+export const MARK_ACTIONS: Record<'bold' | 'italic' | 'underline' | 'strike' | 'highlight' | 'code', ToolbarAction> = {
   bold: { label: 'Bold', shortcut: 'Mod+B', icon: ICONS.bold, run: (c) => c.toggleBold(), active: (e) => e.isActive('bold') },
   italic: { label: 'Italic', shortcut: 'Mod+I', icon: ICONS.italic, run: (c) => c.toggleItalic(), active: (e) => e.isActive('italic') },
   underline: { label: 'Underline', shortcut: 'Mod+U', icon: ICONS.underline, run: (c) => c.toggleUnderline(), active: (e) => e.isActive('underline') },
+  strike: { label: 'Strikethrough', shortcut: 'Mod+Shift+S', icon: ICONS.strike, run: (c) => c.toggleStrike(), active: (e) => e.isActive('strike') },
+  highlight: { label: 'Highlight', shortcut: 'Mod+Shift+H', icon: ICONS.highlight, run: (c) => c.toggleMark('highlight'), active: (e) => e.isActive('highlight') },
   code: { label: 'Code', shortcut: 'Mod+E', icon: ICONS.code, run: (c) => c.toggleCode(), active: (e) => e.isActive('code') },
 };
 

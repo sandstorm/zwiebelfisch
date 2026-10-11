@@ -25,6 +25,8 @@ const FIXTURES: Record<string, string> = {
   unicode: 'Größe 😀 naïve\n',
   broken: '#set page(\n\n*unclosed\n',
   underline: 'An #underline[under *lined*] word, *#underline[x]*, #underline(stroke: red)[kept] #underline()[y] #underline[]\n',
+  strike: 'A #strike[struck *out*] word, _#strike[x]_, #strike(stroke: 2pt)[kept] #strike()[y] #strike[]\n',
+  highlight: 'A #highlight[marked _up_] word, #highlight(fill: blue)[kept] #highlight[#strike[both]] #highlight[a\n\nb]\n',
   links: 'See #link("https://typst.app")[the *site*] or https://typst.app/docs.\n#link("x")[] #link(url)[a]\n',
   images: '#image("img/logo.png", width: 50%)\n\nText #image("i.png") inline\n',
   tables: '#table(\n  columns: 2,\n  stroke: none,\n  [a], [*b* c],\n  [], [- x\n  - y],\n)\n\n#table(columns: 1, [one\n\ntwo])\n',
@@ -621,6 +623,46 @@ describe('underline', () => {
   it('removing the underline leaves plain text', () => {
     const doc = edit(parseTypst('A #underline[*b*] c\n'), (s) => s.tr.removeMark(0, s.doc.content.size, schema.marks.underline));
     expect(serializeToTypst(doc)).toBe('A *b* c\n');
+  });
+});
+
+describe('strike and highlight', () => {
+  const marksOf = (node: Node) => node.marks.map((m) => m.type.name);
+
+  it('parse #strike[..] and #highlight[..] as marks, nested inside bold, italic and underline', () => {
+    const paragraph = parseTypst('A #strike[b] #highlight[c] *#underline[#highlight[#strike[d]]]*').child(0);
+    expect(paragraph.textContent).toBe('A b c d');
+    expect(marksOf(paragraph.child(1))).toEqual(['strike']);
+    expect(marksOf(paragraph.child(3))).toEqual(['highlight']);
+    expect(marksOf(paragraph.child(5))).toEqual(['bold', 'underline', 'strike', 'highlight']);
+  });
+
+  it('keep calls with arguments, parentheses or no text as raw inlines', () => {
+    for (const src of ['#strike(stroke: red)[a]', '#strike(offset: 2pt)[a]', '#strike()[a]', '#strike([a])', '#strike[]', '#strike[a][b]',
+      '#highlight(fill: red)[a]', '#highlight(radius: 2pt)[a]', '#highlight()[a]', '#highlight([a])', '#highlight[]', '#highlight[a][b]']) {
+      expect(parseTypst(`A ${src} b`).child(0).child(1).type.name, src).toBe('rawInline');
+    }
+  });
+
+  it('typing inside keeps the calls as written', () => {
+    expect(editInline('A #strike[ab] #highlight[cd] c\n', (s) => s.tr.insertText('X', after(s.doc, 'a')).insertText('Y', after(s.doc, 'c') + 1)))
+      .toBe('A #strike[aXb] #highlight[cYd] c\n');
+  });
+
+  it('formatting text prints them in the nesting order bold, italic, underline, strike, highlight', () => {
+    const { bold, italic, underline, strike, highlight } = schema.marks;
+    expect(editInline('Hello world\n', (s) => s.tr.addMark(7, 12, strike.create()))).toBe('Hello #strike[world]\n');
+    expect(editInline('Hello world\n', (s) => s.tr.addMark(7, 12, highlight.create()))).toBe('Hello #highlight[world]\n');
+    expect(editInline('Hello world\n', (s) => [highlight, strike, underline, italic, bold].reduce((tr, mark) => tr.addMark(7, 12, mark.create()), s.tr)))
+      .toBe('Hello *_#underline[#strike[#highlight[world]]]_*\n');
+    expect(editInline('Hello world\n', (s) => s.tr.addMark(1, 12, highlight.create()).addMark(7, 12, strike.create())))
+      .toBe('#highlight[Hello #strike[world]]\n');
+  });
+
+  it('removing the mark leaves plain text', () => {
+    const doc = edit(parseTypst('A #strike[*b*] #highlight[c] d\n'), (s) =>
+      s.tr.removeMark(0, s.doc.content.size, schema.marks.strike).removeMark(0, s.doc.content.size, schema.marks.highlight));
+    expect(serializeToTypst(doc)).toBe('A *b* c d\n');
   });
 });
 

@@ -52,6 +52,32 @@ test('Ctrl+U (⌘U on Mac) underlines the selection, inside bold', async ({ page
   await expect(await source(page)).toContainText('*#underline[Fresh line]*');
 });
 
+test('Strikethrough button wraps the selection in #strike[…], shown struck through', async ({ page }) => {
+  await freshSelectedLine(page);
+  await selectionBar(page).getByRole('button', { name: 'Strikethrough' }).click();
+  await expect(selectionBar(page).getByRole('button', { name: 'Strikethrough' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(visual(page).locator('s', { hasText: 'Fresh line' })).toBeVisible();
+  await expect(await source(page)).toContainText('#strike[Fresh line]');
+});
+
+test('Highlight button wraps the selection in #highlight[…], shown with a background', async ({ page }) => {
+  await freshSelectedLine(page);
+  await selectionBar(page).getByRole('button', { name: 'Highlight' }).click();
+  await expect(selectionBar(page).getByRole('button', { name: 'Highlight' })).toHaveAttribute('aria-pressed', 'true');
+  const mark = visual(page).locator('mark', { hasText: 'Fresh line' });
+  await expect(mark).toBeVisible();
+  expect(await mark.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
+  await expect(await source(page)).toContainText('#highlight[Fresh line]');
+});
+
+test('Ctrl+Shift+S and Ctrl+Shift+H (⌘⇧S, ⌘⇧H on Mac) strike and highlight the selection, inside underline', async ({ page }) => {
+  await freshSelectedLine(page);
+  await page.keyboard.press('ControlOrMeta+U');
+  await page.keyboard.press('ControlOrMeta+Shift+S');
+  await page.keyboard.press('ControlOrMeta+Shift+H');
+  await expect(await source(page)).toContainText('#underline[#strike[#highlight[Fresh line]]]');
+});
+
 for (const [label, prefix] of [['Heading 1', '= '], ['Heading 2', '== '], ['Heading 3', '=== ']] as const) {
   test(`text style "${label}" makes the line a ${prefix.trim()} heading`, async ({ page }) => {
     await freshSelectedLine(page);
