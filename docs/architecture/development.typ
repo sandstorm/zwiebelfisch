@@ -15,7 +15,7 @@ Every operation is a mise task (`mise-tasks/`, `mise tasks ls`). Tools are pinne
   [`build:fonts`], [the default fonts of the pinned typst-assets crate into `src/core/typst-engine/fonts/`, and their index `index.json` (@architecture-core-engine-fonts)],
   [`build:packages`], [the `@preview/…` packages the demo examples import, downloaded once into `.cache/typst-packages/` (not committed); `test:unit` runs it],
   [`build`], [typecheck, engine, fonts, library, then the static demo → `dist/demo`],
-  [`build:lib`], [the library → `dist/lib`: ESM, worker, wasm, d.ts],
+  [`build:lib`], [the library → `dist/lib`: ESM, worker, wasm, fonts (content-hashed names), d.ts],
   [`typecheck`], [`tsc` over the widget, demo, tests and server],
   [`quality`], [ESLint (complexity, module boundaries, layers), `quality:top-comments`, `quality:module-cycles`],
   [`quality:report`], [every function ranked by complexity (hot spots)],

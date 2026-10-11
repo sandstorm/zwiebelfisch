@@ -13,15 +13,21 @@ Two ways in, same options (@guide-configuration):
   columns: 2,
   [File], [Content],
   [`typst-editor.js`], [ES module, all dependencies bundled. Importing it registers `<typst-editor>`.],
-  [`typst_engine_bg.wasm`], [The Typst compiler and PDF export (about 22 MB, 9 MB gzipped).],
-  [`*.otf`, `*.ttf`], [Typst's default fonts, each downloaded when a document first uses it.],
-  [other `*.js`], [Chunks loaded on demand (e.g. collaboration).],
-  [`assets/engine.worker-*.js`], [The compile worker.],
+  [`typst_engine_bg.<hash>.wasm`], [The Typst compiler and PDF export (about 22 MB, 9 MB gzipped).],
+  [`fonts/<name>.<hash>.otf`, `.ttf`], [Typst's default fonts, each downloaded when a document first uses it.],
+  [other `*-<hash>.js`], [Chunks loaded on demand (e.g. collaboration).],
+  [`assets/engine.worker-<hash>.js`], [The compile worker.],
   [`types/index.d.ts`], [TypeScript declarations.],
 )
 
 - Keep the folder together; serve it from any path. The module finds its files through `new URL(…, import.meta.url)`.
-- Serve the wasm as `application/wasm`, so it compiles while it streams.
+- Every file but `typst-editor.js` and `types/` has its content's hash in the name, and the code refers to it by that name.
+
+What the host server should send:
+
+- The wasm as `Content-Type: application/wasm`, so the browser compiles it while it streams.
+- For the hashed files, `Cache-Control: public, max-age=31536000, immutable`: a new build has new names, so a long-lived cache never serves a stale file. `typst-editor.js` has a fixed name: cache it briefly or revalidate it (`no-cache` with an `ETag`).
+- Compression is up to the server (gzip or brotli on the fly or pre-compressed by the host); the build writes no compressed copies. The wasm shrinks most (22 MB → 9 MB gzipped), the fonts by about a third.
 - Importing without a DOM (SSR) is safe: nothing is registered.
 - Content-Security-Policy: `connect-src https://packages.typst.org` for `@preview` packages; the diagram editor is an iframe from `https://embed.diagrams.net` (setting `diagrams.editorUrl`, @guide-configuration-diagrams).
 
