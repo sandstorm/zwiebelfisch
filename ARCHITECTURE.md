@@ -22,15 +22,15 @@ src/                        the widget (TypeScript); the most important API on t
   hosts/                    view hosts: mechanism + contribution points, no feature knowledge
     workbench/              the widget's frame, the extension API's entry and the composition of the hosts (workbench.ts:
                             TypstExtension, ExtensionContext, Workbench (the frame: open, side panels, editor frame,
-                            menus, style sheets, drops, user), MenuItem, Memory; and WorkbenchHost, what createTypstEditor
+                            menus, style sheets, drops, user), MenuItem, Memento; and WorkbenchHost, what createTypstEditor
                             creates, which makes the other hosts and adds its own layout CSS); layout/ (layout.ts +
                             layout.css: side panels with rail buttons, editing area, preview, status bar), editing-views/
                             (Visual/Source tabs, lazily one VisualView + SourceView per document), color-scheme/
                             (`data-scheme`), extension-host/ (activation), file-drops/ (files dropped on the widget),
                             style-sheets/ (StyleSheets: the widget's and the extensions' CSS in its shadow root or head,
                             shared and reference-counted), menus/ (Menus: menu entries by menu id; EditorTitleMenu:
-                            `editor/title` in the tab bar), memory/ (SessionMemory: `remember`, the values kept for the
-                            browser session)
+                            `editor/title` in the tab bar), memento/ (StorageMemento: `globalState` / `workspaceState` and
+                            the layout's state in the browser's storage)
     commands/               VS Code's `commands` namespace: Commands, Command (as data), CommandsHost (commands by id,
                             key bindings on the widget)
     window/                 VS Code's `window` namespace: Window and its types (messages, input box, quick pick, status
@@ -136,7 +136,7 @@ src/                        the widget (TypeScript); the most important API on t
     preview-controls/       previewControls: the preview toolbar's zoom and page number
       model/                zoom.ts (stepZoom over the presets, zoomText)
       preview/              zoom-controls.ts (zoomControls), page-number.ts (pageNumber)
-    preview-sync/           previewSync: the preview follows the cursor ("Follow cursor", remembered in localStorage),
+    preview-sync/           previewSync: the preview follows the cursor ("Follow cursor", kept in its `globalState`),
                             a click in it selects the source; preview/ (followCursor: the switch)
     images/                 images(): image boxes + figures, "Insert image", ProjectImages (object URLs, uploads);
                             imagesVisualView (its options, ImageAssets / ImageUrls / ImageLinks: the test seam
@@ -408,7 +408,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
   `{ main, sources: {} }` and lets every registered option change it in turn (by `priority`, default 100, higher
   first; equal: registration order), each with its value (given, else its default; an unknown id rejects), then
   compiles that entry; the toolbar item (`downloadPdf`, while the setting `pdfExport.download` is on) opens a popover with a
-  checkbox per option, set as this viewer left them (`workbench.remember('pdf-export.options')`) else their
+  checkbox per option, set as this viewer left them (its `workspaceState`, key `options`) else their
   default, and "Download"; without any option the button downloads at once. `exportPdf(options)` on the
   widget runs the command (defaults, not the viewer's choices). The `comments` extension registers only
   `comments.include` (default off; `extensions/comments/preview/`): off, `withoutNotes` of the project's files
@@ -436,6 +436,8 @@ interface TypstExtension {
 interface ExtensionContext {
   subscriptions: { dispose() }[]        // disposed with the widget: extensions in reverse list order, each in reverse
   project: Project
+  globalState: Memento                  // VS Code's: keys(), get(key, default?), update(key, value) → Promise; by extension id:
+  workspaceState: Memento               // localStorage (this viewer, every widget) / sessionStorage (this project, the session)
   commands: Commands                    // VS Code's namespaces, each a host of its own (below)
   window: Window
   scm: Scm
@@ -489,7 +491,7 @@ interface Workbench {                   // hosts/workbench: the frame
   registerSidePanel(id, { label, icon, order? }) → SidePanel { body, setDefault, setAvailable, dismiss, dispose }
   registerEditorFrame({ top, bottom })
   registerStyleSheet(css)           // the extension's CSS where the widget renders (head or shadow root)
-  onDidDropFiles  remember(name) → Memory
+  onDidDropFiles
   registerMenuItem(menuId, { command, title?, icon?, when?(context) → boolean, group?, order? })
   getMenuItems(menuId, context?) → MenuItem[]   onDidChangeMenu: Event<menuId>
   isEditorFocused()
@@ -531,6 +533,13 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   (`registerDocumentLinkProvider`: the `documentLinks` extension's paths, read by the views and by `images`),
   file decorations (`registerFileDecorationProvider`: `collaboration`'s presence, shown by `files`), source
   controls (`registerSourceControl`: `collaboration`'s GitLab room, shown by `sourceControl`). VS Code's shapes.
+- **State** (`StorageMemento`, `memento/`, VS Code's Memento, decided 2026-10-11): `globalState` in localStorage
+  (`typst-editor:global:<extension id>:<key>`: a viewer's preference across widgets and visits, e.g. "Follow
+  cursor"), `workspaceState` in sessionStorage (`typst-editor:<main file>:<extension id>:<key>`: this project for the
+  browser session, e.g. the open folders and the PDF options; the widget knows no lasting identity of a project,
+  so the main file's path and the session stand for it). Values are JSON; what `get` gives is read as data (shape
+  checked by the reader); without storage nothing is kept and nothing fails. The layout keeps its sizes and
+  panels the same way (`…:workbench:layout`). `remember` and raw `localStorage` are gone.
 - **Commands** (`CommandsHost`, `hosts/commands`, VS Code's shape, decided 2026-10-10): plain string ids `<extension>.<name>` (no
   registry type, no declaration merging: the caller knows a command by its id and the arguments it documents).
   `executeCommand<T>(id, ...args)` calls the handler synchronously (`Promise.resolve(handler(...))`, so the user's
@@ -658,7 +667,7 @@ ProjectPath.isTypst / displayName / extension                    PathReference.o
   `postMessage`, Yjs maps and the server. The compiler refuses a `PathReference` where a `ProjectPath`
   is meant (`project.has(reference)`), and a plain string for either.
 - **Parsed once, at the edges**: the public API (`main`, `files`, `open`), Yjs keys and awareness
-  states of other clients, drag data, localStorage (open folders), uploads' file names and the
+  states of other clients, drag data, storage (open folders), uploads' file names and the
   engine's paths (the workbench's preview jumps, the diagnostics status: package files are no project paths) go through `parse`; what is not
   a path is dropped there (a host's invalid `files` key throws). Inside, every path is typed.
 - `ProjectFiles` stays string-keyed: the plain data the host and the engine exchange.
@@ -1217,7 +1226,7 @@ new Preview(container)                       // implements PreviewContributions;
   their `update()` runs at most once per frame after a scroll, resize, zoom or new pages.
 - **Toolbar items** come from extensions (the host has none of its own): `preview-sync`
   (`extensions/preview-sync/preview/`) registers `followCursor({ on, onChange })` in group `1_sync` (a `role=switch`; the choice is
-  remembered in localStorage; switching it on reveals the selection at once; made anew when the host changes
+  kept in its `globalState`; switching it on reveals the selection at once; made anew when the host changes
   `previewSync.followCursor`); `preview-controls`
   (`extensions/preview-controls/preview/`) registers in group `2_view` `zoomControls` (− / + to the neighbouring preset of
   25 %–400 %, Fit, 100 %, and "Fit · 83%" / "125%"; presets and labels in its `model/zoom.ts`)
@@ -1501,10 +1510,9 @@ newDiagram(project, workbench, resource?)
 ### Layout (`src/hosts/workbench/layout/layout.ts`)
 
 ```ts
-new Layout(host, storageKey)   .editor  .preview  .statusBar   // the editing column, the preview column, the status bar
+new Layout(host, memento)      .editor  .preview  .statusBar   // the editing column, the preview column, the status bar
 .addPanel(id, { label, icon }) → body element  .removePanel(id) // a side panel + its rail button
 .setDefault(id, open)  .setAvailable(id, available)  .choose(id, open)  .isOpen(id)  .dismiss()
-.remember<T>(name) → { load(), save(value) }               // sessionStorage `${storageKey}:${name}`, failures ignored
 ```
 
 - One grid on the host: side (rail + open panel) | editing column | preview; the status bar
@@ -1581,7 +1589,7 @@ new FilePanel(parent, { onOpen(path), onChange(change) → Promise<reason | null
   `modification`, `when: !resourceIsMain`).
 - **Tree**: folders first, then files, both by name (`Intl.Collator`, numeric). `role=tree`, one
   `treeitem` per visible row (`aria-level`, `aria-expanded`, `aria-selected` on the shown file;
-  roving tabindex). Open folders are remembered (`memory`, the Layout's session store); the
+  roving tabindex). Open folders are kept in the files extension's `workspaceState` (key `openFolders`); the
   folders around the shown file open when it changes. The files' decorations (`window.getFileDecorations`, from
   every `FileDecorationProvider`, e.g. who else is in a file) as badges in their color, and on a closed folder the
   propagating ones of the files inside (each once); drawn again on `onDidChangeFileDecorations`.

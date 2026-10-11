@@ -2,7 +2,7 @@
 // Tests for preview.ts: "Download PDF" and its options popover.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PdfExportOption, PreviewContext } from '../../../hosts/preview/preview';
-import type { Memory } from '../../../hosts/workbench/workbench';
+import type { Memento } from '../../../hosts/workbench/workbench';
 import { downloadPdf, type PdfDownloads, type PdfMessages } from './preview';
 
 const preview = { ownerDocument: document } as Partial<PreviewContext> as PreviewContext;
@@ -10,10 +10,15 @@ const preview = { ownerDocument: document } as Partial<PreviewContext> as Previe
 const include: PdfExportOption = { id: 'comments.include', label: 'Include comments', description: 'The notes', default: false, apply: (e) => e };
 const toc: PdfExportOption = { id: 'outline.toc', label: 'Table of contents', default: true, apply: (e) => e };
 
-/** A Memory in a variable (`null`: nothing saved). */
-function memory(initial: Record<string, boolean> | null = null): Memory<Record<string, boolean>> & { value: Record<string, boolean> | null } {
-  const store = { value: initial, load: () => store.value, save: (value: Record<string, boolean>) => void (store.value = value) };
-  return store;
+/** A Memento holding the value of `options` in a variable (`undefined`: nothing saved). */
+function memory(initial?: Record<string, boolean>): Memento & { value: unknown } {
+  const store = {
+    value: initial as unknown,
+    keys: () => (store.value === undefined ? [] : ['options']),
+    get: (key: string, fallback?: unknown) => (key === 'options' && store.value !== undefined ? store.value : fallback),
+    update: async (_key: string, value: unknown) => void (store.value = value),
+  };
+  return store as Memento & { value: unknown };
 }
 
 describe('downloadPdf', () => {

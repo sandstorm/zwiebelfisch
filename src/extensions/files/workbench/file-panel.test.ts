@@ -35,7 +35,7 @@ function setup(onChange: (change: FileChange) => Promise<string | null> = async 
   document.body.append(parent);
   const onOpen = vi.fn();
   const change = vi.fn(onChange);
-  const memory = { load: vi.fn(() => null), save: vi.fn() };
+  const memory = { keys: () => [], get: vi.fn((_key: string, fallback?: unknown) => fallback), update: vi.fn(async () => {}) };
   /** What the user answers, in order: input boxes and warnings ('Delete' confirms). */
   const answers: (string | undefined)[] = [];
   const asked: InputBoxOptions[] = [];
@@ -54,7 +54,7 @@ function setup(onChange: (change: FileChange) => Promise<string | null> = async 
       onChange: change,
       prompts,
       menus: { items: (menuId, context) => (menus[menuId] ?? []).filter((item) => item.when?.(context) ?? true), run: (command, resource) => void ran.push([command, resource]) },
-      memory,
+      state: memory,
       decorations: (file) => decorations[file] ?? [],
     },
     initial,
@@ -97,7 +97,7 @@ describe('FilePanel', () => {
       ['data.csv', '1'],
       ['main.typ', '1'],
     ]);
-    expect(memory.save).toHaveBeenLastCalledWith([path('/chapters')]);
+    expect(memory.update).toHaveBeenLastCalledWith('openFolders', [path('/chapters')]);
   });
 
   it('opens the folders around the shown file', () => {

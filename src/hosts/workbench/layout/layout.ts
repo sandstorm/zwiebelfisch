@@ -1,8 +1,7 @@
 // Layout: the widget's regions — side panels (rail buttons, resizable, collapsible, an overlay when narrow),
 // editing area, preview, status bar; their sizes and open panels kept for the session. See workbench.ts and ARCHITECTURE.md, "Layout".
 
-import type { Memory, SidePanel, SidePanelOptions } from '../workbench';
-import type { SessionMemory } from '../memory/session-memory';
+import type { Memento, SidePanel, SidePanelOptions } from '../workbench';
 
 /** Below this widget width an open side panel lies over the editing area instead of beside it. */
 const NARROW = 720;
@@ -40,7 +39,6 @@ export class Layout {
   private readonly resizer: HTMLElement;
   private readonly split: HTMLElement;
   private readonly panels = new Map<string, { body: HTMLElement; button: HTMLButtonElement; order: number; fallback: boolean; available: boolean }>();
-  private readonly saved: Memory<Saved>;
   private state: Saved;
   private openId: string | null = null;
   private narrow = false;
@@ -48,7 +46,8 @@ export class Layout {
 
   constructor(
     private readonly host: HTMLElement,
-    memory: SessionMemory,
+    /** Where the layout keeps its state for the browser session (key `layout`). */
+    private readonly memento: Memento,
   ) {
     const doc = host.ownerDocument;
     this.side = div(doc, 'typst-editor__side');
@@ -66,8 +65,7 @@ export class Layout {
     this.preview.append(this.split);
     this.statusBar = div(doc, 'typst-editor__status-bar');
     host.append(this.side, this.editor, this.preview, this.statusBar);
-    this.saved = memory.remember<Saved>('layout');
-    this.state = { width: WIDTH.initial, preview: SHARE.initial, chosen: {}, ...this.saved.load() };
+    this.state = { width: WIDTH.initial, preview: SHARE.initial, chosen: {}, ...memento.get<Partial<Saved>>('layout') };
     this.showSplit();
     this.watchWidth();
     this.listen(doc, 'pointerdown', (event) => {
@@ -147,7 +145,7 @@ export class Layout {
     if (this.narrow) return this.show(open ? id : null);
     this.state.chosen = { ...this.state.chosen, [id]: open };
     if (open) for (const other of this.panels.keys()) if (other !== id) this.state.chosen[other] = false;
-    this.saved.save(this.state);
+    void this.memento.update('layout', this.state);
     this.layout();
   }
 
@@ -258,7 +256,7 @@ export class Layout {
 
   private setShare(percent: number): void {
     this.state.preview = Math.round(Math.min(SHARE.max, Math.max(SHARE.min, percent)));
-    this.saved.save(this.state);
+    void this.memento.update('layout', this.state);
     this.showSplit();
   }
 
@@ -288,7 +286,7 @@ export class Layout {
 
   private resize(width: number): void {
     this.state.width = Math.round(Math.min(WIDTH.max, Math.max(WIDTH.min, width)));
-    this.saved.save(this.state);
+    void this.memento.update('layout', this.state);
     this.show(this.openId);
   }
 

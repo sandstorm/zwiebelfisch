@@ -6,7 +6,7 @@
 // policy. Without this extension the preview neither follows nor jumps.
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
-import type { TypstExtension } from '../../hosts/workbench/workbench';
+import type { Memento, TypstExtension } from '../../hosts/workbench/workbench';
 import type { Workspace } from '../../hosts/workspace/workspace';
 import { followCursor } from './preview/preview';
 import css from './preview-sync.css?inline';
@@ -27,14 +27,14 @@ export function previewSync(): TypstExtension {
             type: 'boolean',
             default: true,
             description:
-              'Whether the preview follows the cursor ("Follow cursor": it scrolls to the text being edited or selected). Unset: what this viewer chose last (localStorage), else on.',
+              'Whether the preview follows the cursor ("Follow cursor": it scrolls to the text being edited or selected). Unset: what this viewer chose last (kept across visits), else on.',
           },
         },
       },
     },
-    activate({ project, window, workspace, workbench, preview, subscriptions }) {
+    activate({ project, globalState, window, workspace, workbench, preview, subscriptions }) {
       subscriptions.push(workbench.registerStyleSheet(css));
-      let following = configuredFollow(workspace);
+      let following = configuredFollow(workspace, globalState);
       const revealSelection = () => {
         const editor = window.activeTextEditor;
         const path = editor && project.pathOf(editor.document);
@@ -42,7 +42,7 @@ export function previewSync(): TypstExtension {
       };
       const onChange = (on: boolean) => {
         following = on;
-        rememberFollow(on);
+        void globalState.update(FOLLOW_KEY, on);
         if (on) revealSelection();
       };
       // made anew to show a new state; its place stays (group + order)
@@ -51,7 +51,7 @@ export function previewSync(): TypstExtension {
         new Disposable(() => toggle.dispose()),
         workspace.onDidChangeConfiguration((event) => {
           if (!event.affectsConfiguration('previewSync.followCursor')) return;
-          following = configuredFollow(workspace);
+          following = configuredFollow(workspace, globalState);
           toggle.dispose();
           toggle = preview.registerToolbarItem(followCursor({ on: following, onChange }), { group: '1_sync', order: 10 });
         }),
@@ -68,28 +68,12 @@ export function previewSync(): TypstExtension {
   };
 }
 
-const FOLLOW_KEY = 'typst-editor:follow-cursor';
+/** Where the viewer's last "Follow cursor" choice is kept (`globalState`). */
+const FOLLOW_KEY = 'followCursor';
 
 /** The host's value of `previewSync.followCursor`, else the viewer's last choice, else the default (on). */
-function configuredFollow(workspace: Workspace): boolean {
+function configuredFollow(workspace: Workspace, globalState: Memento): boolean {
   const setting = workspace.getConfiguration('previewSync').inspect<boolean>('followCursor');
-  return setting?.globalValue ?? rememberedFollow() ?? setting?.defaultValue ?? true;
-}
-
-/** The viewer's last "Follow cursor" choice, if storage has one (storage may be unavailable). */
-function rememberedFollow(): boolean | null {
-  try {
-    const stored = localStorage.getItem(FOLLOW_KEY);
-    return stored === null ? null : stored === 'true';
-  } catch {
-    return null;
-  }
-}
-
-function rememberFollow(on: boolean): void {
-  try {
-    localStorage.setItem(FOLLOW_KEY, String(on));
-  } catch {
-    // private window, blocked storage: the choice lasts for this page only
-  }
+  const chosen = globalState.get<unknown>(FOLLOW_KEY);
+  return setting?.globalValue ?? (typeof chosen === 'boolean' ? chosen : undefined) ?? setting?.defaultValue ?? true;
 }

@@ -4,7 +4,7 @@ import type { FileChange } from '../../../core/project/project';
 import { type NamedPath, ProjectPath } from '../../../core/paths/paths';
 import { uploadChanges } from '../../../core/uploads/uploads';
 import type { FileDecoration, Window } from '../../../hosts/window/window';
-import type { Memory, MenuContext, MenuItem } from '../../../hosts/workbench/workbench';
+import type { Memento, MenuContext, MenuItem } from '../../../hosts/workbench/workbench';
 import { PopupMenu, type PopupMenuAnchor } from '../../../ui/popup-menu/popup-menu';
 import { filesUnder, type Folder, folderOf, relocate } from '../model/tree-model';
 import { icon } from './icons/icons';
@@ -28,8 +28,8 @@ export interface FilePanelOptions {
    * command with the row (or the focused row) as argument.
    */
   menus: { items(menuId: string, context: MenuContext): readonly MenuItem[]; run(command: string, resource: ProjectPath): void };
-  /** Where the open folders are remembered (default: only while the panel lives). */
-  memory?: Memory<string[]>;
+  /** Where the open folders are kept (key `openFolders`; default: only while the panel lives). */
+  state?: Memento;
   /** The decorations of a file (badges, e.g. who else is in it), as they are at each `render` (default: none). */
   decorations?(path: ProjectPath): readonly FileDecoration[];
 }
@@ -92,7 +92,7 @@ export class FilePanel {
       onMove: (source, folder) => void this.move(source, folder),
       onUpload: (files, folder) => void this.uploadInto(files, folder),
       onContextMenu: (path, anchor) => this.showMenu(CONTEXT_MENU, path, anchor),
-      memory: options.memory,
+      state: options.state,
     });
     parent.append(this.element);
     this.render(state);

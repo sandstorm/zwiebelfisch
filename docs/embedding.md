@@ -182,8 +182,8 @@ editor.open('/logo.png');
 `onOpen(path)` (on `<typst-editor>`: the `open` event, `detail.path`) reports when another file is
 shown, e.g. to keep it in the page URL. The demo stores it in the fragment (`#/chapters/intro.typ`,
 `demo/open-file-hash.ts`). The setting `previewSync.followCursor: false` has the preview not follow the cursor.
-The viewer can switch "Follow cursor" in the preview toolbar; without the setting, that choice is remembered in
-localStorage and wins over the default.
+The viewer can switch "Follow cursor" in the preview toolbar; without the setting, that choice is kept for this
+viewer (localStorage) and wins over the default.
 
 `onFilesChange` reports every change to any file, the main file included: every edit of a `.typ`
 file (`kind: 'update'`, with the full text), create / rename / delete, collaborators' changes,
@@ -506,6 +506,7 @@ What `activate` gets (`ExtensionContext`; every type is exported from the packag
 | | |
 |---|---|
 | `subscriptions` | Push every registration here; disposed on `dispose`, in reverse order. |
+| `globalState`, `workspaceState` | Values your extension keeps (VS Code's `Memento`: `get(key, default)`, `update(key, value)`), apart from other extensions': `globalState` for this viewer across widgets and visits (localStorage), `workspaceState` for this project during the browser session (sessionStorage). |
 | `project` | The files: `files()`, `document(path)` (a Typst file's text), `onDidChangeFile` (an `Event<FileChange>`: subscribing returns a `Disposable`). |
 | `commands` | `registerCommand(id, handler)`, `executeCommand(id, ...args)`, `registerKeybinding('Mod+Alt+KeyM', id)`. |
 | `window` | `showInformationMessage` / `showWarningMessage` / `showErrorMessage`, `showInputBox`, `showQuickPick`, `registerStatusBarItem(element, { alignment, priority })` (VS Code's: `'left'` or `'right'`, a higher priority further left within its side), `registerCustomEditorProvider` (an editor for files by name pattern and priority, VS Code's custom editors), `registerFileDecorationProvider` / `getFileDecorations`, `activeTextEditor`, `onDidChangeTextEditorSelection`. |

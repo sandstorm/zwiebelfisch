@@ -1,6 +1,6 @@
 // FileTree: the project's files as an expandable tree (keyboard, drag & drop, decorations). See ../file-panel.ts and ARCHITECTURE.md, "File panel".
 import { ProjectPath } from '../../../../core/paths/paths';
-import { type Memory, PROJECT_PATH_TYPE } from '../../../../hosts/workbench/workbench';
+import { type Memento, PROJECT_PATH_TYPE } from '../../../../hosts/workbench/workbench';
 import type { FileDecoration } from '../../../../hosts/window/window';
 import { textColorOn } from '../../../../core/color-scheme/color-scheme';
 import { fileIcon, icon } from '../icons/icons';
@@ -19,8 +19,8 @@ export interface FileTreeOptions {
   onUpload(files: File[], folder: Folder): void;
   /** The context menu of a row was asked for: a right click (at its point), Shift+F10 or the context menu key (below the row). */
   onContextMenu(path: ProjectPath, anchor: { x: number; y: number } | HTMLElement): void;
-  /** Where the open folders are remembered (e.g. for the browser session). */
-  memory?: Memory<string[]>;
+  /** Where the open folders are kept (key `openFolders`), e.g. the workspace state. */
+  state?: Memento;
 }
 
 export interface TreeState {
@@ -54,7 +54,7 @@ export class FileTree {
     this.element.className = 'typst-files__tree';
     this.element.setAttribute('role', 'tree');
     this.element.setAttribute('aria-label', 'Files');
-    this.expanded = new Set((options.memory?.load() ?? []).flatMap((folder) => ProjectPath.parse(folder) ?? []));
+    this.expanded = new Set(openFolders(options.state?.get<unknown>(OPEN_FOLDERS)));
     this.element.addEventListener('click', (event) => this.click(event));
     this.element.addEventListener('keydown', (event) => this.key(event));
     this.element.addEventListener('contextmenu', (event) => this.contextMenu(event));
@@ -95,7 +95,7 @@ export class FileTree {
   private setExpanded(folder: ProjectPath, open: boolean): void {
     if (open) this.expanded.add(folder);
     else this.expanded.delete(folder);
-    this.options.memory?.save([...this.expanded]);
+    void this.options.state?.update(OPEN_FOLDERS, [...this.expanded]);
     this.draw();
   }
 
@@ -271,4 +271,12 @@ function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, c
   const node = doc.createElement(tag);
   node.className = className;
   return node;
+}
+
+/** Where the tree keeps its open folders. */
+const OPEN_FOLDERS = 'openFolders';
+
+/** The open folders kept, read as data from storage: only project paths count. */
+function openFolders(kept: unknown): ProjectPath[] {
+  return Array.isArray(kept) ? kept.flatMap((folder) => (typeof folder === 'string' ? (ProjectPath.parse(folder) ?? []) : [])) : [];
 }

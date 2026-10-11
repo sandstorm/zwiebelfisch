@@ -31,7 +31,7 @@ import { Layout } from './layout/layout';
 import layoutStyles from './layout/layout.css?inline';
 import { EditorTitleMenu } from './menus/editor-title-menu';
 import { Menus } from './menus/menus';
-import { SessionMemory } from './memory/session-memory';
+import { StorageMemento } from './memento/memento';
 import { StyleSheets } from './style-sheets/style-sheets';
 
 /**
@@ -67,6 +67,16 @@ export interface ExtensionContext {
   /** Disposed when the widget is disposed, in reverse order (the extensions in reverse list order, too). */
   readonly subscriptions: { dispose(): unknown }[];
   readonly project: Project;
+  /**
+   * Values the extension keeps for this viewer across widgets and visits (VS Code's `globalState`: the browser's
+   * local storage), apart from other extensions' (by `id`). E.g. a viewer's preference.
+   */
+  readonly globalState: Memento;
+  /**
+   * Values the extension keeps for this widget's project during the browser session (VS Code's `workspaceState`:
+   * the session storage, under the main file's path), apart from other extensions'. E.g. which folders are open.
+   */
+  readonly workspaceState: Memento;
   /** Commands by id and their key bindings (VS Code's `commands` namespace). */
   readonly commands: Commands;
   /** Messages, input box, quick pick, status bar items, custom editors, file decorations, the active editor (VS Code's `window`). */
@@ -123,8 +133,6 @@ export interface Workbench {
    * taking images). The widget never lets the browser open a dropped file; it shows the drop hint while anyone listens.
    */
   readonly onDidDropFiles: Event<File[]>;
-  /** A value remembered for the browser session under this widget's key (`name` tells values apart). */
-  remember<T>(name: string): Memory<T>;
 
   /**
    * Adds `item` to the menu `menuId` until disposed (VS Code's `contributes.menus`). Whoever shows a menu renders
@@ -195,10 +203,18 @@ export interface SidePanel {
   dispose(): void;
 }
 
-/** Remembers one value for the browser session (when storage is available). */
-export interface Memory<T> {
-  load(): T | null;
-  save(value: T): void;
+/**
+ * Values kept by key (VS Code's Memento), as JSON: what `get` gives is what was stored, so read it as data from
+ * outside (check its shape). Without storage (blocked, private window) nothing is kept and nothing fails.
+ */
+export interface Memento {
+  /** The keys that have a value. */
+  keys(): readonly string[];
+  /** The value stored under `key`, else `defaultValue`. */
+  get<T>(key: string): T | undefined;
+  get<T>(key: string, defaultValue: T): T;
+  /** Stores `value` (JSON-like) under `key`; `undefined` removes it. */
+  update(key: string, value: unknown): Promise<void>;
 }
 
 /**
@@ -241,7 +257,6 @@ export class WorkbenchHost implements Workbench {
   /** The commands, for the widget's `executeCommand`. */
   readonly commands: CommandsHost;
   readonly #layout: Layout;
-  readonly #memory: SessionMemory;
   readonly #views: EditingViews;
   readonly #window: WindowHost;
   readonly #languages = new LanguagesHost();
@@ -282,8 +297,8 @@ export class WorkbenchHost implements Workbench {
     this.#workspace.declare(WORKBENCH_SETTINGS);
     this.#scheme = new ColorScheme(host);
     this.#applyTheme();
-    this.#memory = new SessionMemory(host.ownerDocument, `typst-editor:${project.main}`);
-    this.#layout = new Layout(host, this.#memory);
+    const doc = host.ownerDocument;
+    this.#layout = new Layout(host, StorageMemento.of(doc, 'sessionStorage', `typst-editor:${project.main}:workbench:`));
     this.commands = new CommandsHost(host);
     this.#drops = new FileDrops(host);
     this.onDidDropFiles = this.#drops.onDidDrop;
@@ -306,18 +321,24 @@ export class WorkbenchHost implements Workbench {
     this.#workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('workbench.theme')) this.#applyTheme();
     });
-    this.#extensions = new ExtensionHost({
-      project,
-      commands: this.commands,
-      window: this.#window,
-      scm: this.#scm,
-      languages: this.#languages,
-      workspace: this.#workspace,
-      workbench: this,
-      visualView: this.#visualView,
-      sourceView: this.#sourceViews,
-      preview: this.#preview,
-    });
+    this.#extensions = new ExtensionHost(
+      {
+        project,
+        commands: this.commands,
+        window: this.#window,
+        scm: this.#scm,
+        languages: this.#languages,
+        workspace: this.#workspace,
+        workbench: this,
+        visualView: this.#visualView,
+        sourceView: this.#sourceViews,
+        preview: this.#preview,
+      },
+      (id) => ({
+        globalState: StorageMemento.of(doc, 'localStorage', `typst-editor:global:${id}:`),
+        workspaceState: StorageMemento.of(doc, 'sessionStorage', `typst-editor:${project.main}:${id}:`),
+      }),
+    );
   }
 
   /**
@@ -382,10 +403,6 @@ export class WorkbenchHost implements Workbench {
       this.#hasFrame = false;
       this.#views.setFrame(null);
     });
-  }
-
-  remember<T>(name: string): Memory<T> {
-    return this.#memory.remember<T>(name);
   }
 
   registerMenuItem(menuId: string, item: MenuItem): Disposable {

@@ -13,7 +13,7 @@ export type { User } from './core/user/user';
 export type { PdfEntry } from './core/typst-engine/typst-engine';
 export { Disposable } from './core/disposable/disposable';
 export { EventEmitter, type Event } from './core/event-emitter/event-emitter';
-export type { ExtensionContext, ExtensionContributions, MenuContext, MenuItem, OpenOptions, SidePanel, SidePanelOptions, TypstExtension, Workbench } from './hosts/workbench/workbench';
+export type { ExtensionContext, ExtensionContributions, Memento, MenuContext, MenuItem, OpenOptions, SidePanel, SidePanelOptions, TypstExtension, Workbench } from './hosts/workbench/workbench';
 export type { Command, Commands } from './hosts/commands/commands';
 export type {
   CustomDocument,

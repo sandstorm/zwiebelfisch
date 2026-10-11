@@ -2,7 +2,7 @@
 // Tests for layout.ts.
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { SessionMemory } from '../memory/session-memory';
+import { StorageMemento } from '../memento/memento';
 import { Layout } from './layout';
 
 let resize: (() => void) | null = null;
@@ -19,7 +19,7 @@ function setup({ observe = false, key = `test-${Math.random()}` } = {}) {
   }
   const host = document.createElement('div');
   document.body.append(host);
-  const layout = new Layout(host, new SessionMemory(document, key));
+  const layout = new Layout(host, StorageMemento.of(document, 'sessionStorage', `${key}:`));
   const sidePanel = layout.addPanel('files', { label: 'Files', icon: document.createElement('span') });
   const body = sidePanel.body;
   body.textContent = 'tree';

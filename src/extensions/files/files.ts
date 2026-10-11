@@ -63,7 +63,7 @@ export function files(): TypstExtension {
         onChange: (change) => workspace.applyEdit(change),
         prompts: window,
         menus: panelMenus(context),
-        memory: workbench.remember('folders'),
+        state: context.workspaceState,
         decorations: (path) => window.getFileDecorations(path),
       }, state());
       // shown on every open, which also follows every create / rename / delete
