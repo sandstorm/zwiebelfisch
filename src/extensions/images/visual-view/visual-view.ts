@@ -1,6 +1,6 @@
-// Images in the Visual view: `#image(..)` blocks and figures, what "Insert image" offers (the host's project
+// Images in the Visual view: `#image(..)` blocks (also as a figure's body), what "Insert image" offers (the host's project
 // files, uploads), inserting image blocks (toolbar, file drops), the image file in place of the code, and the tools
-// on an image box (resize, alt text, caption), which edit the call's source minimally; `imagesVisualView` in
+// on an image box (resize, alt text, the figures' caption), which edit the call's source minimally; `imagesVisualView` in
 // images.ts registers them. See ARCHITECTURE.md, "VisualView".
 import { Node } from '@tiptap/core';
 import { Disposable } from '../../../core/disposable/disposable';
@@ -9,7 +9,6 @@ import type { QuickPickItem } from '../../../hosts/workbench/workbench';
 import { parenthesized } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type Action, type BoxRenderer, type ToolbarContext, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 import type { ImageAssets, ImagePrompts, ImagesOptions, ImageUrls } from '../images';
-import { Figure, FigureCaption, printFigure, projectFigure } from './figures';
 import { imageFileDrops, insertImages } from './image-insertion';
 import { imagePathLink } from './image-path-link';
 import { imagePath } from './image-syntax';
@@ -18,11 +17,12 @@ import { imagePicker, uploadImages } from './image-uploads';
 
 /**
  * A standalone `#image("path", ..)` call. Its source is kept and edited like a
- * raw block's; the box shows which image it is.
+ * raw block's; the box shows which image it is. A figure may hold it as its
+ * body (`figureBody`), the call then written without `#`.
  */
 const Image = Node.create({
   name: 'image',
-  group: 'block',
+  group: 'block figureBody',
   atom: true,
   selectable: true,
   draggable: true,
@@ -55,17 +55,6 @@ export function imageSpec(options: ImagesOptions): TypstNodeSpec {
     },
   };
 }
-
-export const FIGURE: TypstNodeSpec = {
-  name: 'figure',
-  extension: Figure,
-  anchors: ['layout'],
-  labelled: true,
-  blockCalls: { figure: projectFigure },
-  print: printFigure,
-};
-
-export const FIGURE_CAPTION: TypstNodeSpec = { name: 'figureCaption', extension: FigureCaption };
 
 /** Image boxes show their file (following path edits at once). */
 export function imageRenderer(urls: ImageUrls | undefined): BoxRenderer | null {

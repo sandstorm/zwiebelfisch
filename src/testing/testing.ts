@@ -3,12 +3,14 @@
 // (apply an edit, find text, check the position map exhaustively). Entry of testing/: test-only, so it may import any
 // module (an extension's tests compose it with the others here, never by importing another extension); only
 // `*.test.ts` files may import it (eslint.config.js). Hosts' own tests use the host minimum and their own specs.
+import { Editor } from '@tiptap/core';
 import type { Node, Schema } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
 import { expect } from 'vitest';
 import { Disposable } from '../core/disposable/disposable';
 import type { TypstDocument } from '../core/typst-document/typst-document';
 import { alignment } from '../extensions/alignment/alignment';
+import { figures } from '../extensions/figures/figures';
 import { headings } from '../extensions/headings/headings';
 import { lists } from '../extensions/lists/lists';
 import { markup } from '../extensions/markup/markup';
@@ -19,7 +21,7 @@ import { imagesVisualView, type ImageAssets, type ImageLinks, type ImageUrls } f
 import { renderedBoxesVisualView, type SnippetSource } from '../extensions/rendered-boxes/rendered-boxes';
 import { VisualView, VisualViewContributions, type ContributionContext, type VisualViewContribution } from '../hosts/visual-view/visual-view';
 import type { InputBoxOptions, MessageItem, QuickPickItem, QuickPickOptions, Workbench } from '../hosts/workbench/workbench';
-import { createSchema, posToSource, print, project as projectWith, sourceToPos } from '../hosts/projection/projection';
+import { attachGrammar, createSchema, documentExtensions, posToSource, print, project as projectWith, sourceToPos } from '../hosts/projection/projection';
 
 /** The schema of a view with the built-ins configured from `options`. */
 export function schemaWith(options: TestViewOptions = {}): Schema {
@@ -98,6 +100,18 @@ export function createVisualView(parent: HTMLElement, document: TypstDocument, o
   return new VisualView(parent, document, contributions(options));
 }
 
+/**
+ * A Tiptap editor of `source` with the built-ins configured from `options` (their schema and commands, without the
+ * Visual view's node views and toolbar): for tests of a construct's commands. Needs a DOM (jsdom).
+ */
+export function createEditor(source: string, options: TestViewOptions = {}): Editor {
+  const { nodes, marks } = contributions(options).contributed();
+  const editor = new Editor({ extensions: documentExtensions(nodes, marks), injectCSS: false });
+  attachGrammar(editor.schema, nodes, marks);
+  editor.view.updateState(EditorState.create({ schema: editor.schema, doc: projectWith(source, editor.schema), plugins: editor.state.plugins }));
+  return editor;
+}
+
 /** The built-ins and `options.contributions`, activated. */
 function contributions(options: TestViewOptions): VisualViewContributions {
   return activate([...builtins(options), ...(options.contributions ?? [])], options.prompts);
@@ -136,6 +150,7 @@ export function builtins(options: Omit<TestViewOptions, 'contributions'> = {}): 
       imageLinks: options.imageLinks && (() => options.imageLinks),
       prompts: options.prompts ?? new TestPrompts(),
     }),
+    figures(),
     renderedBoxesVisualView({ snippets: options.renderer && (() => options.renderer) }),
     outline,
     pageLayout,

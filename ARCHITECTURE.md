@@ -134,13 +134,16 @@ src/                        the widget (TypeScript); the most important API on t
       preview/              zoom-controls.ts (zoomControls), page-number.ts (pageNumber)
     preview-sync/           previewSync: the preview follows the cursor ("Follow cursor", remembered in localStorage),
                             a click in it selects the source; preview/ (followCursor: the switch)
-    images/                 images(): image boxes + figures, "Insert image", ProjectImages (object URLs, uploads);
+    images/                 images(): image boxes (group `block figureBody`), "Insert image", ProjectImages (object URLs, uploads);
                             imagesVisualView (its options, ImageAssets / ImageUrls / ImageLinks: the test seam
                             testing/ uses), all in images.ts;
                             model/ (image-call.ts: arguments edited in place; upload.ts: uploadTarget; resize.ts: resizedPercent),
                             visual-view/ (specs, tools, insertion, image-path-link: the path's document link),
                             model/image-files.ts (isImage, imageBlob: the media types), workbench/ (AssetView: images and other
                             files read-only, the custom editors `images.preview` and `images.file`)
+    figures/                figures(): `#figure(body, caption: [..])` of any `figureBody` node (images, tables), the
+                            caption as rich text, the commands addFigureCaption / removeFigureCaption; visual-view/
+                            (Figure, FigureCaption, projecting, printing, the caption edits); figures.css
     rendered-boxes/         renderedBoxes() and renderedBoxesVisualView({ snippets }): raw boxes drawn as snippets
                             from the preview; model/ (Snippet, rendersInPlace, inlinePictureSize, snippetSize),
                             visual-view/ (the box renderer)
@@ -313,7 +316,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
   built-in extension list (`builtinExtensions`, none configured: what a feature lets hosts configure is a setting
   it declares): `typstLanguage`, `documentLinks`, `files`, `fileNavigation`, `spreadsheets`, `diagrams`, `diagnostics`,
   `sourceControl`; the Visual view's constructs and features: `markup`, `headings` (with their numbers),
-  `tables`, `images`, `renderedBoxes`, `outline`, `pageLayout`, `lists`, `alignment`, `comments`, `labels`,
+  `tables`, `images`, `figures`, `renderedBoxes`, `outline`, `pageLayout`, `lists`, `alignment`, `comments`, `labels`,
   `styles`; then `previewSync`, `previewControls` and `pdfExport`. Extensions never depend on each other, so the
   order carries no meaning: where the Visual view's contributions compete, or document links overlap, `priority`
   decides (see "VisualView"; tested by projecting every fixture with the built-ins in reverse order); toolbar items
@@ -348,7 +351,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
   `FileChange = {kind:'create', path, content} | {kind:'update', path, content} | {kind:'delete', path} | {kind:'rename', from, path}`.
 - **Visual view contributions**: the workbench host has one `VisualViewContributions` (`ExtensionContext.visualView`)
   and makes every document's Visual view from it. The Typst constructs (`markup`, `headings`, `tables`,
-  `outline`, `pageLayout`, `lists`, `alignment`) are extensions in `extensions/<name>/`; the features activate
+  `figures`, `outline`, `pageLayout`, `lists`, `alignment`) are extensions in `extensions/<name>/`; the features activate
   theirs with what they own:
   `images` → `imagesVisualView`, `renderedBoxes` → `renderedBoxesVisualView`,
   `typstLanguage` → the raw boxes' syntax and colors (`registerBoxCodeExtension`), `comments` → `marginNotes` +
@@ -593,7 +596,7 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   ("Save to <label>…" in the tab bar's menu, its outcomes as messages); `previewSync` (`followCursor`; reveal, clicks), `previewControls`
   (`zoomControls`, `pageNumber`), `pdfExport` (`downloadPdf`), `diagrams` (Workbench: the custom editor
   `diagrams.editor`; Visual: the box action "Edit diagram"). The Visual view's constructs
-  (`markup`, `headings`, `tables`, `outline`, `pageLayout`, `lists`, `alignment`) are extensions in
+  (`markup`, `headings`, `tables`, `figures`, `outline`, `pageLayout`, `lists`, `alignment`) are extensions in
   `extensions/<name>/`: the entry's `activate` registers specs, toolbar groups and items from its `visual-view/`
   folder through `context.visualView`. No host has built-in contributions any more.
 - **The active editor** (`activeTextEditor`, `onDidChangeTextEditorSelection`, VS Code's names): `comments`
@@ -757,7 +760,7 @@ visualView.registerBoxCodeExtension((view) => codeMirrorExtension) → Disposabl
 visualView.registerBoxAction({ title, when?(node, view) → boolean, run(node, view) }) → Disposable
                                      // a button on every raw box `when` holds for (diagrams: "Edit diagram")
 
-// the constructs are extensions (extensions/: markup, headings, tables, outline, pageLayout, lists, alignment); the
+// the constructs are extensions (extensions/: markup, headings, tables, figures, outline, pageLayout, lists, alignment); the
 // features' contributions, each a VisualViewContribution = { id, activate({ visualView, subscriptions }) } shaped
 // like a TypstExtension, configured by their feature's extension, in extensions/<name>/visual-view/:
 // imagesVisualView({ assets, imageUrls, imageLinks }), renderedBoxesVisualView({ snippets }),
@@ -828,7 +831,8 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
     indented), plus `rawBlock`.
   - `image` (atom block; `src` is the whole `#image("path", ..)` call, edited like a raw block);
     `outline` likewise for `#outline(..)` (the table of contents).
-  - `figure` > (`image` (the call without `#`) | `table`) + optional `figureCaption` (a
+  - `figure` (`extensions/figures/`) > a `figureBody` node (`image`: the call without `#`; `table`: both specs
+    join the group, so figures name neither) + optional `figureCaption` (a
     textblock). `figure.layout` (an anchor attribute) is the source around the two: `open`,
     caption `before`/`open`/`close`, and `rest` (other arguments, `)`, a label).
   - `codeBlock` (Tiptap's, `language` + anchor `fence`): plain text (no marks), edited in place.
@@ -1069,13 +1073,14 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
   frame around the rendered picture sized from the call's `width` (`imageWidthCss`), and,
   while the image is selected (a click on the picture selects it; double-click, Enter or
   "Edit code" open the code): resize handles (corners, sides) and an "Image" toolbar
-  (Add/Remove caption, Width 25/50/75/100 %, Alt text: an input box, empty removes it; the box actions of other
+  (Add/Remove caption: the figures' commands, guarded (`'addFigureCaption' in editor.commands`, `editor.can()`), hidden
+  without the figures extension; Width 25/50/75/100 %, Alt text: an input box, empty removes it; the box actions of other
   extensions, e.g. "Edit diagram"; Edit code). A drag resizes live and writes
   `width: NN%` (whole percent of the text width, any other unit replaced) on release.
-  - Every action is one transaction from `image-edits.ts` (one undo step): `addCaption`
-    (image → figure with an empty caption, cursor in it), `removeCaption` (a figure without
-    label/other arguments → `#image(..)` again, else only the caption goes), `resizeImage`,
-    `setImageAlt`. `model/image-call.ts` edits one argument of the call in place (replace the value,
+  - Every action is one transaction (one undo step): the figures' `addFigureCaption(pos)` (a bare body → a figure
+    with an empty caption, the call without `#`, its label on the figure, cursor in the caption) and
+    `removeFigureCaption(pos)` (a figure without label/other arguments → the bare body again, else only the
+    caption goes); from `image-edits.ts` `resizeImage`, `setImageAlt`. `model/image-call.ts` edits one argument of the call in place (replace the value,
     append after the last argument, or remove with the preceding comma).
 - **Input rules** (Tiptap's, plus ours): `> ` quote, `[ ] ` / `[x] ` task item; `---` (`—-`,
   `___ `, `*** `) becomes a rule only when it is the whole paragraph, since `---` is an em dash in

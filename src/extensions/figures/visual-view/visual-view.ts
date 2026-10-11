@@ -1,10 +1,32 @@
-// Figures: `#figure(image(..) | table(..), caption: [..])`, read with the caption as rich text and printed back
-// around their parts. See ../images.ts.
+// What the figures extension contributes to the Visual view: `#figure(body, caption: [..])` of a body any spec
+// offers (`figureBody`: an image, a table), read with the caption as rich text and printed back around their parts,
+// and the commands that add and remove a caption. See ../figures.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { Node } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
+import { NodeSelection, TextSelection, type Transaction } from '@tiptap/pm/state';
 import { children, isClosedContent, parenthesized } from '../../../core/typst-syntax/typst-syntax';
 import type { Call, Printer, ProjectionContext } from '../../../hosts/projection/projection';
+import type { TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    figures: {
+      /**
+       * Gives the figure body at `pos` (an image block, bare or in a figure) an empty caption, with the cursor in it:
+       * a bare block becomes `#figure(body, caption: [])`, a figure without a caption gets the argument right after
+       * its body.
+       */
+      addFigureCaption: (pos: number) => ReturnType;
+      /**
+       * Removes the caption of the figure around the body at `pos`. A figure that has nothing else (no label, no
+       * other arguments) becomes the bare block again; otherwise it stays a figure, so references to it keep
+       * working. The body ends up selected.
+       */
+      removeFigureCaption: (pos: number) => ReturnType;
+    };
+  }
+}
 
 /** How a figure's source lies around its body (image or table call) and caption content, for printing it back. */
 interface FigureLayout {
@@ -20,17 +42,20 @@ interface FigureLayout {
 const NEW_FIGURE: FigureLayout = { open: '#figure(', caption: null, rest: ')' };
 const NEW_CAPTION = { before: ', ', open: 'caption: [', close: ']' };
 
+/** The node group of what a figure may hold as its body; a spec joins it with its node type's `group` (`block figureBody`). */
+const FIGURE_BODY = 'figureBody';
+
 /**
- * `#figure(image(..), caption: [..])`: the image (an `image` node holding
- * the call without its `#`) or a table (`table(..)`) and, optionally, the
- * caption as rich text. `layout` is how the figure's source lies around the
- * two (owned by the projection); other arguments and a label after the call
- * live there.
+ * `#figure(image(..), caption: [..])`: the body (a node of group
+ * `figureBody`: an image, its call without the `#`; a table, `table(..)`)
+ * and, optionally, the caption as rich text. `layout` is how the figure's
+ * source lies around the two (owned by the projection); other arguments and
+ * a label after the call live there.
  */
-export const Figure = Node.create({
+const Figure = Node.create({
   name: 'figure',
   group: 'block',
-  content: '(image | table) figureCaption?',
+  content: `${FIGURE_BODY} figureCaption?`,
   isolating: true,
   addAttributes() {
     return { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } };
@@ -38,10 +63,22 @@ export const Figure = Node.create({
   renderHTML() {
     return ['figure', { class: 'typst-visual__figure' }, 0];
   },
+  addCommands() {
+    return {
+      addFigureCaption:
+        (pos) =>
+        ({ tr, dispatch }) =>
+          addCaption(tr, pos, dispatch !== undefined),
+      removeFigureCaption:
+        (pos) =>
+        ({ tr, dispatch }) =>
+          removeCaption(tr, pos, dispatch !== undefined),
+    };
+  },
 });
 
 /** A figure's caption: one paragraph of rich text. Enter leaves the figure. */
-export const FigureCaption = Node.create({
+const FigureCaption = Node.create({
   name: 'figureCaption',
   content: 'inline*',
   addAttributes() {
@@ -62,13 +99,25 @@ export const FigureCaption = Node.create({
   },
 });
 
+/** Figures: projected from `#figure(..)` calls, printed around their body and caption. */
+export const FIGURE: TypstNodeSpec = {
+  name: 'figure',
+  extension: Figure,
+  anchors: ['layout'],
+  labelled: true,
+  blockCalls: { figure: projectFigure },
+  print: printFigure,
+};
+
+export const FIGURE_CAPTION: TypstNodeSpec = { name: 'figureCaption', extension: FigureCaption };
+
 /**
  * `#figure(image("path", ..), ..named) <label>?` or `#figure(table(..), ..)`
  * (whatever the figure's schema accepts of what the call projects to) whose
  * `caption`, if any, is one paragraph of markup; other named arguments stay as
  * written.
  */
-export function projectFigure(p: ProjectionContext, call: Call, sep: string | null): PMNode | null {
+function projectFigure(p: ProjectionContext, call: Call, sep: string | null): PMNode | null {
   const parsed = figureArgs(p, call.args);
   if (!parsed) return null;
   const { schema, source } = p;
@@ -127,8 +176,8 @@ function captionContent(block: SyntaxNode): { from: number; to: number; nodes: S
   return { from, to: nodes.at(-1)?.to ?? from, nodes };
 }
 
-/** Whether a figure's source has more than its image and caption: other arguments, a label, comments. */
-export function hasFigureExtras(figure: PMNode): boolean {
+/** Whether a figure's source has more than its body and caption: other arguments, a label, comments. */
+function hasFigureExtras(figure: PMNode): boolean {
   const layout: FigureLayout = figure.attrs.layout ?? NEW_FIGURE;
   return figure.attrs.label !== null || (layout.open + (layout.caption?.before ?? '') + layout.rest).replace(/[\s,]/g, '') !== '#figure()';
 }
@@ -138,7 +187,7 @@ export function hasFigureExtras(figure: PMNode): boolean {
  * each prints (and changes) on its own. An added caption goes right after the
  * body; a removed one takes its argument and the comma before it along.
  */
-export function printFigure(out: Printer, figure: PMNode, pos: number): void {
+function printFigure(out: Printer, figure: PMNode, pos: number): void {
   const layout: FigureLayout = figure.attrs.layout ?? NEW_FIGURE;
   const body = figure.child(0);
   out.hidden(layout.open);
@@ -152,4 +201,61 @@ export function printFigure(out: Printer, figure: PMNode, pos: number): void {
     out.hidden(layout.caption.before.replace(/,\s*$/, ''));
   }
   out.hidden(layout.rest);
+}
+
+/** The figure body at `pos` and the figure around it (null: a bare block), if `pos` holds a figure body. */
+function locate(tr: Transaction, pos: number): { body: PMNode; figure: { node: PMNode; pos: number } | null } | null {
+  const body = tr.doc.nodeAt(pos);
+  if (!body?.type.isInGroup(FIGURE_BODY)) return null;
+  const $pos = tr.doc.resolve(pos);
+  return { body, figure: $pos.parent.type.name === 'figure' ? { node: $pos.parent, pos: $pos.before() } : null };
+}
+
+/** `addFigureCaption` on `tr`, if it applies (`apply`: else only whether it would). */
+function addCaption(tr: Transaction, pos: number, apply: boolean): boolean {
+  const located = locate(tr, pos);
+  if (!located || (located.figure && located.figure.node.childCount > 1)) return false;
+  if (!apply) return true;
+  const { schema } = tr.doc.type;
+  const { body, figure } = located;
+  if (figure) {
+    tr.insert(pos + body.nodeSize, schema.nodes.figureCaption.create());
+    tr.setSelection(TextSelection.create(tr.doc, pos + body.nodeSize + 1));
+  } else {
+    // the body's label labels the figure now
+    const inside = body.type.create({ ...body.attrs, src: asArgument(body.attrs.src), sep: null, label: null }, body.content, body.marks);
+    const figureNode = schema.nodes.figure.create({ sep: body.attrs.sep, label: body.attrs.label ?? null }, [inside, schema.nodes.figureCaption.create()]);
+    tr.replaceWith(pos, pos + body.nodeSize, figureNode);
+    tr.setSelection(TextSelection.create(tr.doc, pos + 1 + inside.nodeSize + 1));
+  }
+  tr.scrollIntoView();
+  return true;
+}
+
+/** `removeFigureCaption` on `tr`, if it applies (`apply`: else only whether it would). */
+function removeCaption(tr: Transaction, pos: number, apply: boolean): boolean {
+  const figure = locate(tr, pos)?.figure;
+  if (!figure || figure.node.childCount < 2) return false;
+  if (!apply) return true;
+  const body = figure.node.child(0);
+  if (hasFigureExtras(figure.node)) {
+    tr.delete(pos + body.nodeSize, figure.pos + figure.node.nodeSize - 1);
+    tr.setSelection(NodeSelection.create(tr.doc, pos));
+  } else {
+    const bare = body.type.create({ ...body.attrs, src: asMarkup(body.attrs.src), sep: figure.node.attrs.sep }, body.content, body.marks);
+    tr.replaceWith(figure.pos, figure.pos + figure.node.nodeSize, bare);
+    tr.setSelection(NodeSelection.create(tr.doc, figure.pos));
+  }
+  tr.scrollIntoView();
+  return true;
+}
+
+/** A body's call (`src`, kept as source) as a figure's argument: without the `#` it has in markup. */
+function asArgument(src: unknown): unknown {
+  return typeof src === 'string' && src.startsWith('#') ? src.slice(1) : src;
+}
+
+/** A figure's body back in markup: its call (`src`) with a `#`. */
+function asMarkup(src: unknown): unknown {
+  return typeof src === 'string' && !src.startsWith('#') ? `#${src}` : src;
 }

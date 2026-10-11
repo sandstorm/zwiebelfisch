@@ -1,9 +1,9 @@
 // Tests for image-edits.ts.
 import { describe, expect, it } from 'vitest';
-import { EditorState, NodeSelection, type Transaction } from '@tiptap/pm/state';
+import { EditorState, type Transaction } from '@tiptap/pm/state';
 import { minimalChange } from '../../../core/typst-document/typst-document';
 import { schema } from '../../../testing/testing';
-import { addCaption, imageInfo, removeCaption, resizeImage, setImageAlt } from './image-edits';
+import { imageInfo, resizeImage, setImageAlt } from './image-edits';
 import { print, project } from '../../../hosts/projection/projection';
 
 const state = (source: string) => EditorState.create({ doc: project(source, schema) });
@@ -27,38 +27,13 @@ function apply(source: string, edit: (s: EditorState, pos: number) => Transactio
 }
 
 describe('image edits', () => {
-  it('add a caption to an image block by turning it into a figure, cursor in the caption', () => {
-    const { text, after } = apply('Intro\n\n#image("a.png", width: 50%)\n\nOutro\n', addCaption);
-    expect(text).toBe('Intro\n\n#figure(image("a.png", width: 50%), caption: [])\n\nOutro\n');
-    expect(after.selection.$from.parent.type.name).toBe('figureCaption');
-    const typed = after.apply(after.tr.insertText('A *cat*'));
-    expect(print(typed.doc)).toBe('Intro\n\n#figure(image("a.png", width: 50%), caption: [A \\*cat\\*])\n\nOutro\n');
-  });
-
-  it('add a caption to a figure without one', () => {
-    const { text } = apply('#figure(image("a.png"), placement: top) <a>\n', addCaption);
-    expect(text).toBe('#figure(image("a.png"), caption: [], placement: top) <a>\n');
-  });
-
-  it('remove the caption of a plain figure by turning it back into an image block', () => {
-    const { text, after } = apply('Intro\n\n#figure(image("a.png"), caption: [A *cat*])\n\nOutro\n', removeCaption);
-    expect(text).toBe('Intro\n\n#image("a.png")\n\nOutro\n');
-    expect((after.selection as NodeSelection).node.type.name).toBe('image');
-  });
-
-  it('remove only the caption of a figure with a label or other arguments', () => {
-    const { text } = apply('#figure(\n  image("a.png"),\n  caption: [A],\n  kind: image,\n)\n<fig:a>\n', removeCaption);
-    expect(text).toBe('#figure(\n  image("a.png"),\n  kind: image,\n)\n<fig:a>\n');
-  });
-
   it('report what the image tools can do', () => {
     const info = (source: string) => {
       const s = state(source);
       return imageInfo(s, imagePos(s));
     };
-    expect(info('#image("a.png", alt: "A")')).toEqual({ caption: false, alt: 'A', width: null });
-    expect(info('#figure(image("a.png", width: 40%), caption: [x])')).toEqual({ caption: true, alt: null, width: '40%' });
-    expect(info('#figure(image("a.png"))')?.caption).toBe(false);
+    expect(info('#image("a.png", alt: "A")')).toEqual({ alt: 'A', width: null });
+    expect(info('#figure(image("a.png", width: 40%), caption: [x])')).toEqual({ alt: null, width: '40%' });
   });
 
   it('resize as one minimal change of the width argument', () => {

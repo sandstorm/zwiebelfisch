@@ -6,9 +6,15 @@ import { svg, type Action, type Anchor, type ToolbarGroup, type TypstNodeSpec } 
 import { printTable } from './table-printing';
 import { projectTable } from './table-projection';
 
+/** Tiptap's tables; a table may be a figure's body (`table(..)` in `#figure(..)`), so it joins `figureBody`. */
 const Tables = Extension.create({
   name: 'typstTables',
-  addExtensions: () => [Table.configure({ resizable: false, HTMLAttributes: { class: 'typst-visual__table' } }), TableRow, TableCell, TableHeader],
+  addExtensions: () => [
+    Table.extend({ group: 'block figureBody' }).configure({ resizable: false, HTMLAttributes: { class: 'typst-visual__table' } }),
+    TableRow,
+    TableCell,
+    TableHeader,
+  ],
 });
 
 /**

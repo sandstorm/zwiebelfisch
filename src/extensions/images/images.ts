@@ -1,4 +1,4 @@
-// The images extension: `#image(..)` blocks and figures in the Visual view showing the project's image files,
+// The images extension: `#image(..)` blocks (also as figures' bodies) in the Visual view showing the project's image files,
 // "Insert image" with the project's images and uploads, and images / data files opened read-only in the editing
 // area. Entry of extensions/images/. See ARCHITECTURE.md, "createTypstEditor".
 // Why one extension: an image is one concept from the file in the project to the box in the text; the Visual
@@ -14,7 +14,7 @@ import type { DocumentLink, TypstExtension, Workbench } from '../../hosts/workbe
 import css from './images.css?inline';
 import { IMAGE_FILES, imageBlob, isImage } from './model/image-files';
 import { uploadTarget } from './model/upload';
-import { FIGURE, FIGURE_CAPTION, imageRenderer, imageSpec, insertImage } from './visual-view/visual-view';
+import { imageRenderer, imageSpec, insertImage } from './visual-view/visual-view';
 import { assetEditor } from './workbench/workbench';
 
 /**
@@ -55,10 +55,10 @@ export function images(): TypstExtension {
 
 /**
  * `#image("literal path", ..)` blocks, edited as code in a box headed "Image:
- * path", with tools (resize handles, caption, width, alt text) and the image
- * file in place of the code; figures of an image or a table, their caption
- * as rich text; "Insert image" (a path, or the project's images and uploads),
- * and image files dropped on or pasted into the text.
+ * path", with tools (resize handles, width, alt text; a caption where the
+ * figures extension offers one) and the image file in place of the code, also
+ * as a figure's body; "Insert image" (a path, or the project's images and
+ * uploads), and image files dropped on or pasted into the text.
  */
 export function imagesVisualView(options: ImagesOptions = {}): VisualViewContribution {
   return {
@@ -66,8 +66,6 @@ export function imagesVisualView(options: ImagesOptions = {}): VisualViewContrib
     activate({ visualView, subscriptions }) {
       subscriptions.push(
         visualView.registerNode(imageSpec(options)),
-        visualView.registerNode(FIGURE),
-        visualView.registerNode(FIGURE_CAPTION),
         visualView.registerToolbarItem({ group: 'insert', order: 10, create: (toolbar) => insertImage(toolbar, options.assets?.(toolbar.document), options.prompts) }),
         // image boxes are raw boxes, too: drawn as their image file rather than as a compiled snippet (priority 100)
         visualView.registerBoxRenderer((view) => imageRenderer(options.imageUrls?.(view.document)), { priority: 110 }),
