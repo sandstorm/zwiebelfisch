@@ -7,15 +7,7 @@ import type { TypstSerializeState, TypstParseContext } from '../../../hosts/pros
 import { alignArgs, type TextAlignment } from '../model/alignment-syntax';
 import { TextAlign, textAlignAt } from './text-align';
 
-/**
- * `#align(<literal alignment>)[..]` (`left|center|right|start|end`, optionally
- * `+` one vertical alignment) is an `alignment` block whose content is
- * segmented like the document; `#par(justify: <bool>)[one paragraph]` is that
- * paragraph with its `justify` flag. The Align menu (left, center, right,
- * justify; its icon is the current alignment) and Mod-Shift-L/E/R/J set them.
- *
- * `#align(..)[..]` blocks, justified paragraphs (`#par(justify: ..)[..]`) and the Align menu.
- */
+/** `#align(<literal alignment>)[..]`: an `alignment` block whose content is read like the document's. */
 export const ALIGNMENT: TypstNodeSpec = {
   name: 'alignment',
   tiptap: TextAlign,
