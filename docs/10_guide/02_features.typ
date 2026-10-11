@@ -234,6 +234,7 @@ The file panel shows the project as a tree: folders first, the main file marked,
 - Drag rows onto folders to move them; drop files from the desktop to upload them.
 - Keyboard: arrows, Home / End, Enter, F2 (rename), Delete, Shift+F10 (menu).
 - The main file and its folder cannot be renamed, moved or deleted.
+- Fonts: as on typst.app, every `.ttf`, `.otf`, `.ttc` or `.otc` file in the project, in any folder, is a font the document can use (`#set text(font: "Gabarito")`), besides Typst's default fonts. Upload it like any other file (collaborators and GitLab get it like an image); a change or a deletion applies at the next compile.
 - Below 720 px the panel lies over the editor.
 
 How each file opens (a file with several editors gets a tab each, like Visual / Source; the one picked last is used for the next such file):

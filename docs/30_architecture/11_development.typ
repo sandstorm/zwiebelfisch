@@ -69,6 +69,7 @@ mise run server:test   # when server/ or core/room-protocol changed
 
 - One Typst project in `docs/`: `main.typ` (the book: each part's `=` heading, then one `#include` per chapter, in reading order), `site.typ` (one HTML page per chapter, read from `main.typ`'s includes), `template.typ`. Parts and chapters are numbered so the files sort in reading order: `10_guide/02_features.typ`.
 - A chapter's label is its path without the numbers, `/` → `-` (`<architecture-workbench>`); a section appends a word. Cross-references are `@label`.
+- The font, Gabarito (SIL Open Font License, `fonts/OFL.txt`), is in `fonts/`: a project font for the editor (@architecture-core-engine-fonts), `--font-path docs/fonts` for `docs:pdf` / `docs:html`.
 - Diagrams are Mermaid files in `diagrams/`, drawn by merman in the docs' colors: `#figure(mermaid(read("../diagrams/x.mmd"), width: 80%), caption: […])` with `mermaid` from `template.typ`.
 - Live while writing: `mise run demo` (or `mise run dev`), then `?example=docs` (@architecture-development-writing-docs).
 
@@ -78,7 +79,7 @@ On the dev server the Documentation example edits the files in `docs/` of the ch
 
 - *Saving*: an edit is written once the typing pauses (300 ms per file; at once when the page is hidden). A create, rename, delete or image upload in the file panel happens on disk first, and the editor refuses it if the disk did. The end of the playground bar says what happened: "Saving…", "Saved to docs/10_guide/02_features.typ", or why not.
 - *Changes on disk* (a checkout, another editor) show up in the editor without a reload. A file with unsaved edits in the editor keeps them; the bar says so, and the next edit saves over the disk's version.
-- *What it may touch*: files under `docs/`, by relative path: no `..`, no hidden files, no symlinks, nothing in `docs/fonts/` (generated). Only the dev server's own page may write: its origin, with a token the server puts into the page at each start.
+- *What it may touch*: files under `docs/`, by relative path: no `..`, no hidden files, no symlinks. Only the dev server's own page may write: its origin, with a token the server puts into the page at each start.
 - *A static build* (`mise run build`, the e2e build) has no file API: edits stay in the page, and the bar says so.
 - The code, in `demo/docs-files/`: `plugin.ts` (the Vite plugin, dev server only: the endpoint `/__docs-files`, and the watcher's events for `docs/` as an HMR event instead of a reload), `docs-folder.ts` (the path guard, atomic writes), `docs-sync.ts` (the page: debounced writes, changes from disk, the conflict rule). A file travels as text or bytes by its extension.
 
