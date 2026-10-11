@@ -1,4 +1,3 @@
-// The diagrams extension. Entry of extensions/diagrams/. See docs/10_guide/02_features.typ.
 import { ProjectPath } from '../../core/paths/paths';
 import { FileContent, type Project } from '../../core/project/project';
 import { findFilePaths } from '../../core/typst-syntax/typst-syntax';
@@ -12,22 +11,19 @@ import { DiagramEditor } from './workbench/diagram-editor';
 import { newDiagram } from './workbench/new-diagram';
 
 /**
- * Diagrams (`*.drawio.png`) in the editing area: the custom editor `diagrams.editor` (priority 110, over the images'
- * `*.png`), diagrams.net from the setting `diagrams.editorUrl`, light or dark as the widget; every change is saved
- * (`workspace.applyEdit`, debounced; pending changes when the file is closed). Without the editor (offline) an
- * error message offers the picture. "New diagram…" (`diagrams.newDiagram`) in the menu `file/newFile`; "Insert
- * diagram" in the Visual editor's Insert menu; the paths of the project's diagrams in Typst as links "Edit diagram"
- * (priority 110, over the plain file links), so ⌘/Ctrl+click on a box showing one (or on its path) opens it.
+ * Diagrams in Typst documents, drawn in diagrams.net. A diagram is a `.drawio.png`: a PNG with the diagram's XML
+ * inside, so Typst shows it as an image (`#image("flow.drawio.png")`) and diagrams.net edits it again.
  *
- * `.drawio.png` files — PNGs with a diagrams.net diagram in them, so Typst shows them as images
- * (`#image("flow.drawio.png")`) and diagrams.net edits them again — opened in diagrams.net's editor embedded in an
- * iframe, saved as they change; "New diagram…"; "Insert diagram" (a new one as a figure in the text); "Edit diagram"
- * (⌘/Ctrl+click) on a box showing one.
+ * All of it goes through the hosts' generic contribution points. The custom editor `diagrams.editor` (priority 110,
+ * over the images' editor of PNGs) embeds diagrams.net from the setting `diagrams.editorUrl` in an iframe, light or
+ * dark as the widget, and saves every change (debounced; what is pending when the file is closed). Offline, an error
+ * message offers the picture instead. "New diagram…" is in the menu `file/newFile`, "Insert diagram" in the Visual
+ * editor's Insert menu (a new diagram as a figure). The paths of the project's diagrams in Typst are document links
+ * "Edit diagram" (priority 110, over the plain file links), so ⌘/Ctrl+click on a box's picture or on the path opens
+ * the diagram.
  *
- * Why an extension: the editor is a custom editor (higher priority than the images' editor of PNGs), the new-file entry a
- * menu item, "Insert diagram" a toolbar item, "Edit diagram" a document link (which the Visual editor's boxes follow
- * from their picture): the hosts' generic contribution points; the protocol (model/) is pure state, so it is tested
- * without an iframe.
+ * The embed protocol (EmbedSession in model/) is pure state, so it is tested without an iframe; DiagramEditor in
+ * workbench/ only carries messages. See docs/10_guide/02_features.typ.
  */
 export function diagrams(): TypstExtension {
   return {

@@ -1,4 +1,4 @@
-// DiagramEditor. See ../diagrams.ts.
+// A diagram in diagrams.net's editor, embedded in an iframe. See diagrams in ../diagrams.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 import { EmbedSession, embedUrl, type EmbedAction } from '../model/embed-session';
 
@@ -7,10 +7,6 @@ import { EmbedSession, embedUrl, type EmbedAction } from '../model/embed-session
  * as PNG and saved as they happen (`EmbedSession`). Light or dark as the widget (`data-scheme`); a change of scheme
  * saves what is pending and loads the editor again. Without an answer from the editor in time (or offline) it
  * says so (`failed`) and, if asked to, shows the picture instead. `dispose` saves what is pending.
- *
- * A `.drawio.png` in the editing area, edited in diagrams.net's editor embedded in an iframe. It only carries messages
- * between the iframe and the EmbedSession (model/), follows the widget's color scheme, and shows the picture when the
- * editor cannot be loaded.
  */
 export class DiagramEditor {
   readonly #root: HTMLElement;
