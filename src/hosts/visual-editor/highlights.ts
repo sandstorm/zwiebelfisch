@@ -6,10 +6,6 @@ import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { SourceHighlight } from './visual-editor';
 import { sourceToPos } from '../prosemirror-typst/prosemirror-typst';
 
-type Layers = Record<string, DecorationSet>;
-
-const key = new PluginKey<Layers>('typst-highlights');
-
 /**
  * Highlights by layer (one per provider, e.g. other users' selections) over the Visual editor,
  * given in source offsets. Each layer is replaced as a whole and follows
@@ -41,6 +37,10 @@ export const highlights = Extension.create({
 export function setHighlights(tr: Transaction, layer: string, highlights: readonly SourceHighlight[]): Transaction {
   return tr.setMeta(key, { layer, highlights });
 }
+
+type Layers = Record<string, DecorationSet>;
+
+const key = new PluginKey<Layers>('typst-highlights');
 
 function mapLayers(layers: Layers, tr: Transaction): Layers {
   return Object.fromEntries(Object.entries(layers).map(([layer, set]) => [layer, set.map(tr.mapping, tr.doc)]));

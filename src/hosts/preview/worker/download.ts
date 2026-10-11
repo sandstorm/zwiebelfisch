@@ -1,12 +1,4 @@
-// downloadWasm: the engine's wasm as a streamed response that reports how much has arrived, so the preview can show
-// the download while the browser compiles the module as it comes in. See engine.worker.ts and
-// docs/30_architecture/06_preview.typ.
-
-/** How much of a download has arrived: bytes so far, and of how many (null: unknown). */
-export type DownloadListener = (loaded: number, total: number | null) => void;
-
-/** Minimum time between two reports while bytes arrive (the last one always comes). */
-const REPORT_INTERVAL_MS = 100;
+// downloadWasm. See engine.worker.ts and docs/30_architecture/06_preview.typ.
 
 /**
  * Fetches the wasm at `url` and returns a response whose body is the download as it arrives, counted for `onProgress`,
@@ -15,6 +7,9 @@ const REPORT_INTERVAL_MS = 100;
  *
  * `total` is the `Content-Length` when the body comes as sent; a compressed body (`Content-Encoding`) arrives
  * decompressed, larger than its length, so then `total` is null, as it is when more arrives than announced.
+ *
+ * The engine's wasm as a streamed response that reports how much has arrived, so the preview can show the download
+ * while the browser compiles the module as it comes in.
  */
 export async function downloadWasm(url: string, onProgress: DownloadListener, fetcher: typeof fetch = fetch): Promise<Response> {
   const response = await fetcher(url);
@@ -42,3 +37,9 @@ export async function downloadWasm(url: string, onProgress: DownloadListener, fe
   );
   return new Response(counted, { status: response.status, headers: { 'Content-Type': 'application/wasm' } });
 }
+
+/** How much of a download has arrived: bytes so far, and of how many (null: unknown). */
+export type DownloadListener = (loaded: number, total: number | null) => void;
+
+/** Minimum time between two reports while bytes arrive (the last one always comes). */
+const REPORT_INTERVAL_MS = 100;

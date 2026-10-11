@@ -159,21 +159,6 @@ export class Toolbar {
   }
 }
 
-function isAction(entry: ToolbarAction | ToolbarControl): entry is ToolbarAction {
-  return !('element' in entry);
-}
-
-function shortcutText(shortcut: string): string {
-  const mac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
-  return shortcut.replace('Mod', mac ? '⌘' : 'Ctrl').replace('Shift', mac ? '⇧' : 'Shift').replace('Alt', mac ? '⌥' : 'Alt').replace(/\+/g, mac ? '' : '+');
-}
-
-const ICONS = {
-  undo: svg('<path d="M9 15 4 10l5-5"/><path d="M4 10h11a5 5 0 0 1 0 10h-3"/>'),
-  redo: svg('<path d="m15 15 5-5-5-5"/><path d="M20 10H9a5 5 0 0 0 0 10h3"/>'),
-  insert: svg('<path d="M12 5v14M5 12h14"/>'),
-};
-
 /** The host's own places: undo/redo first, the text style menu, the "Insert" menu, the bar above a text selection. */
 const HOST_GROUPS: ToolbarGroup[] = [
   { kind: 'group', id: 'history', order: 10 },
@@ -182,10 +167,11 @@ const HOST_GROUPS: ToolbarGroup[] = [
   { kind: 'floating', id: 'selection', order: 10, label: 'Selection', anchor: (editor, held) => (held || hasTextSelection(editor) ? selectionCoords(editor) : null) },
 ];
 
-const HOST_ITEMS: ToolbarItem[] = [
-  { group: 'history', action: { label: 'Undo', shortcut: 'Mod+Z', icon: ICONS.undo, run: (c) => c.undo() } },
-  { group: 'history', action: { label: 'Redo', shortcut: 'Mod+Shift+Z', icon: ICONS.redo, run: (c) => c.redo() } },
-];
+const ICONS = {
+  undo: svg('<path d="M9 15 4 10l5-5"/><path d="M4 10h11a5 5 0 0 1 0 10h-3"/>'),
+  redo: svg('<path d="m15 15 5-5-5-5"/><path d="M20 10H9a5 5 0 0 0 0 10h3"/>'),
+  insert: svg('<path d="M12 5v14M5 12h14"/>'),
+};
 
 /** Whether the selection is non-empty text. */
 function hasTextSelection(editor: Editor): boolean {
@@ -203,4 +189,18 @@ function selectionCoords(editor: Editor): Anchor {
   } catch {
     return null; // no layout (e.g. not attached)
   }
+}
+
+const HOST_ITEMS: ToolbarItem[] = [
+  { group: 'history', action: { label: 'Undo', shortcut: 'Mod+Z', icon: ICONS.undo, run: (c) => c.undo() } },
+  { group: 'history', action: { label: 'Redo', shortcut: 'Mod+Shift+Z', icon: ICONS.redo, run: (c) => c.redo() } },
+];
+
+function isAction(entry: ToolbarAction | ToolbarControl): entry is ToolbarAction {
+  return !('element' in entry);
+}
+
+function shortcutText(shortcut: string): string {
+  const mac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
+  return shortcut.replace('Mod', mac ? '⌘' : 'Ctrl').replace('Shift', mac ? '⇧' : 'Shift').replace('Alt', mac ? '⌥' : 'Alt').replace(/\+/g, mac ? '' : '+');
 }

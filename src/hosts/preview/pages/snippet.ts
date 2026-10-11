@@ -2,9 +2,6 @@
 import { Pt, type PageRect, type Page } from '../../../core/typst-engine/typst-engine';
 import type { RenderedSnippet } from '../preview';
 
-/** Space kept around what is drawn, so strokes and descenders are not clipped. */
-const PADDING = Pt.of(2);
-
 /**
  * The cut-out of `pages` showing `boxes` (where some source is drawn): their
  * union on the page of the first box, padded and kept inside the page, or
@@ -23,6 +20,9 @@ export function snippet(pages: readonly Page[], boxes: readonly PageRect[]): Ren
   const textHeight = Pt.of(Math.max(...onPage.map((b) => b.h)));
   return { svg: cropSvg(page.svg, crop), width: crop.w, height: crop.h, textHeight, padding: PADDING };
 }
+
+/** Space kept around what is drawn, so strokes and descenders are not clipped. */
+const PADDING = Pt.of(2);
 
 /** `svg` (a page as Typst exports it) showing only the rectangle `crop`, sized to it in pt. */
 function cropSvg(svg: string, crop: { x: Pt; y: Pt; w: Pt; h: Pt }): string {

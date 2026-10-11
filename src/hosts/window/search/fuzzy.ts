@@ -1,18 +1,6 @@
 // Fuzzy matching for search everywhere: whether a query matches a label, how well, and which characters to highlight.
 // See search.ts.
 
-/** A match: higher `score` is better; `ranges` are the matched characters as [start, end) offsets, in order. */
-export interface FuzzyMatch {
-  readonly score: number;
-  readonly ranges: readonly (readonly [number, number])[];
-}
-
-/** Bonus of a match at the start of the target, of a whole substring, of each character right after the previous one, at a word start. */
-const START = 8;
-const SUBSTRING = 10;
-const CONSECUTIVE = 5;
-const WORD_START = 3;
-
 /**
  * Whether `query` matches `target` (case-insensitive): as one piece (best, earlier is better), else its characters
  * (spaces left out) in order, characters right after each other and at word starts counting more. Null: no match.
@@ -29,6 +17,28 @@ export function fuzzyMatch(query: string, target: string): FuzzyMatch | null {
   }
   return scattered(wanted.replace(/\s+/g, ''), text, target);
 }
+
+/** A match: higher `score` is better; `ranges` are the matched characters as [start, end) offsets, in order. */
+export interface FuzzyMatch {
+  readonly score: number;
+  readonly ranges: readonly (readonly [number, number])[];
+}
+
+const SUBSTRING = 10;
+const CONSECUTIVE = 5;
+
+/** Bonus of a match at the start of the target, of a whole substring, of each character right after the previous one, at a word start. */
+const START = 8;
+
+/** At the start, after a non-letter-or-digit, or an upper-case letter after a lower-case one. */
+function isWordStart(target: string, index: number): boolean {
+  if (index === 0) return true;
+  const before = target[index - 1];
+  const char = target[index];
+  return !/[\p{L}\p{N}]/u.test(before) || (/\p{Lu}/u.test(char) && /\p{Ll}/u.test(before));
+}
+
+const WORD_START = 3;
 
 /** The characters of `wanted` in order in `text` (the target lowercased), preferring word starts; null if they are not all there. */
 function scattered(wanted: string, text: string, target: string): FuzzyMatch | null {
@@ -55,14 +65,6 @@ function scattered(wanted: string, text: string, target: string): FuzzyMatch | n
 function wordStartOr(first: number, char: string, text: string, target: string): number {
   for (let i = first; i >= 0; i = text.indexOf(char, i + 1)) if (isWordStart(target, i)) return i;
   return first;
-}
-
-/** At the start, after a non-letter-or-digit, or an upper-case letter after a lower-case one. */
-function isWordStart(target: string, index: number): boolean {
-  if (index === 0) return true;
-  const before = target[index - 1];
-  const char = target[index];
-  return !/[\p{L}\p{N}]/u.test(before) || (/\p{Lu}/u.test(char) && /\p{Ll}/u.test(before));
 }
 
 function toRanges(positions: readonly number[]): [number, number][] {

@@ -1,14 +1,15 @@
-// TypstConversions: what the framework knows about Typst constructs: the registered node and mark specs (their types are in
-// prosemirror-typst.ts), and the tables derived from their parse rules (which syntax and calls become what) and from their
-// Typst (how edited nodes are written). See prosemirror-typst.ts.
+// TypstConversions. See prosemirror-typst.ts.
 import type { NodeType, Schema } from '@tiptap/pm/model';
 import type { Event } from '../../core/event-emitter/event-emitter';
 import type { DocumentNodeSpec, TypstMarkSpec, TypstParseRules } from './prosemirror-typst';
 
-type SyntaxNodeRule = NonNullable<TypstParseRules['syntaxNodes']>[string];
-type CallRule = NonNullable<TypstParseRules['calls']>[string];
-
-/** The specs of a schema, merged by name, and the lookups the framework derives from them. */
+/**
+ * The specs of a schema, merged by name, and the lookups the framework derives from them.
+ *
+ * What the framework knows about Typst constructs: the registered node and mark specs (their types are in
+ * prosemirror-typst.ts), and the tables derived from their parse rules (which syntax and calls become what) and from
+ * their Typst (how edited nodes are written).
+ */
 export class TypstConversions {
   private readonly nodes = new Map<string, DocumentNodeSpec>();
   private readonly marks = new Map<string, TypstMarkSpec>();
@@ -77,3 +78,6 @@ export class TypstConversions {
     return this.onDidChanges;
   }
 }
+
+type SyntaxNodeRule = NonNullable<TypstParseRules['syntaxNodes']>[string];
+type CallRule = NonNullable<TypstParseRules['calls']>[string];

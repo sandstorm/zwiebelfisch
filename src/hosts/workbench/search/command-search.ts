@@ -3,13 +3,6 @@
 import type { SearchProvider } from '../../window/window';
 import type { CommandContribution } from '../workbench';
 
-/** What the command search needs: the declared commands, which are registered now, and how one runs. */
-export interface CommandSearchOptions {
-  declared(): readonly CommandContribution[];
-  isRegistered(command: string): boolean;
-  executeCommand(command: string): Promise<unknown>;
-}
-
 /**
  * "Commands" (prefix `>`): every declared command that is registered, as "Category: Title"; picking one runs it
  * without arguments.
@@ -29,4 +22,11 @@ export function commandSearch(options: CommandSearchOptions): SearchProvider {
           accept: () => options.executeCommand(command),
         })),
   };
+}
+
+/** What the command search needs: the declared commands, which are registered now, and how one runs. */
+export interface CommandSearchOptions {
+  declared(): readonly CommandContribution[];
+  isRegistered(command: string): boolean;
+  executeCommand(command: string): Promise<unknown>;
 }

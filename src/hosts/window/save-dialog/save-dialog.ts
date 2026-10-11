@@ -1,11 +1,13 @@
-// showSaveDialog: where a new file goes, asked in the window's input box (VS Code's `window.showSaveDialog`, without
-// a file system dialog): a name in a folder, its ending checked, an existing file refused. See ../window.ts.
+// showSaveDialog. See ../window.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 import type { InputBoxOptions, SaveDialogOptions } from '../window';
 
 /**
  * Asks for the path of a new file with `ask` (an input box), as `options` say, refusing paths `exists` has. Resolves
  * to the path, or undefined when cancelled.
+ *
+ * Where a new file goes, asked in the window's input box (VS Code's `window.showSaveDialog`, without a file system
+ * dialog): a name in a folder, its ending checked, an existing file refused.
  */
 export async function showSaveDialog(
   ask: (options: InputBoxOptions) => Promise<string | undefined>,
@@ -37,6 +39,16 @@ export async function showSaveDialog(
   return target.kind === 'valid' ? target.path : undefined;
 }
 
+/** `typed` with the rest of a compound `extension` added when it ends in its start ("flow.drawio" → "flow.drawio.png"). */
+function completed(typed: string, extension: string | undefined): string {
+  const name = typed.trimEnd();
+  const parts = extension?.split('.') ?? [];
+  for (let start = parts.length - 1; start > 0; start--) {
+    if (name.toLowerCase().endsWith(`.${parts.slice(0, start).join('.')}`.toLowerCase())) return `${name}.${parts.slice(start).join('.')}`;
+  }
+  return typed;
+}
+
 /**
  * What the input starts with: a new file's name proposed by `defaultUri` (one the project does not have, ending in
  * one of `endings`), the part before the ending selected; else the folder of `defaultUri` (a file's folder, or the
@@ -52,14 +64,4 @@ function startWith(defaultUri: ProjectPath | undefined, exists: (path: ProjectPa
   const folder = exists(defaultUri) ? defaultUri.slice(0, defaultUri.lastIndexOf('/')) : defaultUri;
   const value = folder === '' ? '' : `${folder.slice(1)}/`;
   return { value, selection: [value.length, value.length] };
-}
-
-/** `typed` with the rest of a compound `extension` added when it ends in its start ("flow.drawio" → "flow.drawio.png"). */
-function completed(typed: string, extension: string | undefined): string {
-  const name = typed.trimEnd();
-  const parts = extension?.split('.') ?? [];
-  for (let start = parts.length - 1; start > 0; start--) {
-    if (name.toLowerCase().endsWith(`.${parts.slice(0, start).join('.')}`.toLowerCase())) return `${name}.${parts.slice(start).join('.')}`;
-  }
-  return typed;
 }

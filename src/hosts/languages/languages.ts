@@ -1,10 +1,5 @@
-// The languages namespace of the extension API (VS Code's `languages`, as far as it is used): the document links of
-// every registered DocumentLinkProvider whose selector matches a document, merged, and how CodeMirror editors show
-// them (the Source editors, the code of the Visual editor's raw boxes, an extension's own editor). Entry of
+// The languages namespace of the extension API (VS Code's `languages`, as far as it is used). Entry of
 // hosts/languages/. See docs/30_architecture/07_workbench.typ.
-// Why providers: finding links is a feature's policy (which paths, what a missing file offers); showing and following
-// them is the same in every view, so the views read every provider's links and know none of them. Why `languageId`:
-// the host knows no language; whoever hands a text over says which language it is in.
 import type { Extension } from '@codemirror/state';
 import { Disposable } from '../../core/disposable/disposable';
 import type { ProjectPath } from '../../core/paths/paths';
@@ -13,7 +8,17 @@ import type { Command } from '../commands/commands';
 import css from './languages.css?inline';
 import { linkExtension } from './link-extension';
 
-/** The language features of texts as extensions use them (VS Code's `languages` namespace: document links). */
+/**
+ * The language features of texts as extensions use them (VS Code's `languages` namespace: document links).
+ *
+ * The document links of every registered DocumentLinkProvider whose selector matches a document, merged, and how
+ * CodeMirror editors show them (the Source editors, the code of the Visual editor's raw boxes, an extension's own
+ * editor).
+ *
+ * Why providers: finding links is a feature's policy (which paths, what a missing file offers); showing and following
+ * them is the same in every view, so the views read every provider's links and know none of them. Why `languageId`: the
+ * host knows no language; whoever hands a text over says which language it is in.
+ */
 export interface Languages {
   /**
    * Adds links to the documents `selector` matches until disposed: the Source editors, the code of the Visual editor's
@@ -87,9 +92,6 @@ export interface LinkTargets {
   executeCommand(command: string, ...args: unknown[]): Promise<unknown>;
 }
 
-/** The default `priority` of a provider (as for the Visual editor's contributions). */
-const DEFAULT_PRIORITY = 100;
-
 /**
  * The registered link providers. A text's links are those of every provider whose selector matches it; where links
  * of two providers overlap, the one of the higher `priority` wins (equal: the one registered first). Each link
@@ -144,6 +146,9 @@ export class LanguagesHost implements Languages {
     return linkExtension(actions, languageId, path);
   }
 }
+
+/** The default `priority` of a provider (as for the Visual editor's contributions). */
+const DEFAULT_PRIORITY = 100;
 
 function matches(selector: DocumentSelector, document: TextDocument): boolean {
   const filters: readonly DocumentFilter[] = Array.isArray(selector) ? selector : [selector];

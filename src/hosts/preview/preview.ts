@@ -1,10 +1,4 @@
-// Preview: the live preview of a Typst project, compiled in a worker, with hit-testing. Entry of hosts/preview/.
-// See docs/30_architecture/06_preview.typ.
-// Why a host: the preview keeps the mechanism — the engine worker and its protocol, coalesced compiles, the
-// lazily rendered page list, hit-testing (`onDidClickPage`), scrolling and reveal. What sits on top of it is
-// contributed: toolbar items (zoom, "Follow cursor", page number, "Download PDF"), the options a PDF export offers,
-// and the policy of when to reveal what (the preview-sync extension follows the cursor and
-// jumps to the source of a click). So a feature adds to the preview without the preview knowing it.
+// Preview. Entry of hosts/preview/. See docs/30_architecture/06_preview.typ.
 import { Disposable } from '../../core/disposable/disposable';
 import { type Event, EventEmitter } from '../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../core/paths/paths';
@@ -25,169 +19,20 @@ import { Loader } from './progress/loader';
 import css from './preview.css?inline';
 
 /**
- * The preview as extensions see it (`ExtensionContext.preview`): its contribution points, and what its engine
- * answers about the project it compiles.
- */
-export interface PreviewContributions {
-  /**
-   * Adds a control to the toolbar until disposed, at `placement`: VS Code's menu `group` + `order` (groups by name,
-   * `navigation` first; the built-ins: `1_sync` "Follow cursor", `2_view` zoom and page number, `3_export` "Download
-   * PDF"), never by registration order alone.
-   */
-  registerToolbarItem(item: PreviewToolbarItem, placement: ToolbarPlacement): Disposable;
-  /**
-   * Offers a choice for PDF exports (a checkbox), until disposed. An export applies every option, by `priority`
-   * (default 100, higher first; equal: registration order), each to what the ones before it made. Throws when an
-   * option with the same `id` is registered.
-   */
-  registerPdfExportOption(option: PdfExportOption, options?: { priority?: number }): Disposable;
-  /** The registered PDF export options, in the order an export applies them. */
-  pdfExportOptions(): readonly PdfExportOption[];
-  /**
-   * The errors and warnings of each compilation of the newest files given to the preview (results of outdated
-   * files are not reported, so the offsets match the text last given).
-   */
-  readonly onDidChangeDiagnostics: Event<readonly TypstDiagnostic[]>;
-  /** After every successful compilation (snippets may have changed). */
-  readonly onDidRender: Event<void>;
-  /**
-   * Scrolls the preview to where source range `range` of `path` is drawn (its start), only if that is off-screen;
-   * nothing is marked there. Cheap to call on every cursor move: calls are throttled and only the newest is looked up.
-   */
-  reveal(path: ProjectPath, range: SourceRange): void;
-  /**
-   * Someone clicked something in the preview that has a source location in a project file (outlined in the preview
-   * until the next click, a compile or `clearClickHighlight`; package files are outlined but not reported).
-   */
-  readonly onDidClickPage: Event<PageClick>;
-  /** Removes the outline of the last click now (e.g. once the user moved on from what was clicked). */
-  clearClickHighlight(): void;
-  /**
-   * Shades where source ranges `ranges` of `path`, which holds `text`, are drawn (glyph runs, shapes, images), in the
-   * selection color; replaces the ranges set before, an empty list clears them. Drawn once a compile of `text` is
-   * shown, nothing while the pages show other text; after every later compile the boxes are looked up anew. Cheap to
-   * call on every selection change: only the newest ranges are looked up.
-   */
-  setSelectionHighlight(path: ProjectPath, ranges: readonly SourceRange[], text: string): void;
-  /**
-   * How source range `range` of `path`, which holds `text`, is drawn: its page cut down to it. Null when it draws
-   * nothing or `text` is not what was compiled last.
-   */
-  snippet(path: ProjectPath, range: SourceRange, text: string): Promise<RenderedSnippet | null>;
-  /** A PDF of `entry.main` from the files last compiled, `entry.sources` replacing or adding text files for it. */
-  exportPdf(entry: PdfEntry): Promise<PdfResult>;
-}
-
-/** A control in the preview's toolbar: made once, for the preview it is registered with. */
-export type PreviewToolbarItem = (preview: PreviewContext) => ToolbarItemView;
-
-/**
- * Where a toolbar item goes, as in VS Code's menus: the groups in the order of their names (the group `navigation`
- * first), so groups are named like `1_sync`, `2_view`; within a group by `order` (default 0), then registration order.
- */
-export interface ToolbarPlacement {
-  readonly group: string;
-  readonly order?: number;
-}
-
-/** A toolbar item as made for one preview. */
-export interface ToolbarItemView {
-  /** Its elements, placed in the toolbar in this order, where its `ToolbarPlacement` puts it. */
-  readonly elements: readonly HTMLElement[];
-  /** Called (at most once per frame) after the view changed: scrolled, resized, zoomed, new pages. */
-  update?(): void;
-  /** Called when the item is unregistered or the preview disposed; the toolbar removes `elements`. */
-  dispose?(): void;
-}
-
-/** What a toolbar item may read and change of the preview it is in. */
-export interface PreviewContext {
-  /** The DOM document the preview lives in (to make elements). */
-  readonly ownerDocument: Document;
-  zoom(): Zoom;
-  /** Zooms, keeping the part of the document shown (relatively) where it was. */
-  setZoom(zoom: Zoom): void;
-  /** The scale of the first page (1 = 100 %), also when fitting the width. */
-  scale(): number;
-  /** The page covering most of the viewport and the number of pages. */
-  visiblePage(): { index: PageIndex; count: number };
-}
-
-/** A click in the preview on something with a source location: the source range of what was clicked (e.g. a text run). */
-export interface PageClick extends SourceRange {
-  readonly path: ProjectPath;
-}
-
-/**
- * A choice offered when exporting a PDF (a checkbox next to "Download"; `exportPdf(options)` for hosts), e.g.
- * whether the PDF includes the comments. Each option changes what is compiled, never the documents. Options are
- * checkboxes for now; a later `choices?: { value, label }[]` would make `default` and `value` one of them.
- */
-export interface PdfExportOption {
-  /** `<extension>.<name>`, e.g. `comments.include`: the key in `exportPdf(options)` and in what is remembered. */
-  readonly id: string;
-  /** The checkbox's label ("Include comments"). */
-  readonly label: string;
-  /** A longer explanation, shown as the checkbox's tooltip. */
-  readonly description?: string;
-  /** Its value until someone chooses otherwise. */
-  readonly default: boolean;
-  /**
-   * What to compile with this option set to `value`, from what the options before it made (see
-   * `PreviewContributions.registerPdfExportOption` for the order). Called for every option, also when it is off.
-   */
-  apply(entry: PdfEntry, value: boolean): PdfEntry;
-}
-
-/** Preview zoom: fit the pane width, or a fixed scale where 1 = 100 % (1 pt = 1/72 in). */
-export type Zoom = 'fit' | number;
-
-/** A cut-out of a compiled page: standalone SVG markup and its size. */
-export interface RenderedSnippet {
-  readonly svg: string;
-  readonly width: Pt;
-  readonly height: Pt;
-  /** Height of its tallest box: one line of its biggest text, what an inline view scales by. */
-  readonly textHeight: Pt;
-  /** Space kept around what is drawn (less where the page ends). */
-  readonly padding: Pt;
-}
-
-/**
- * What the preview waits for: the engine's wasm downloading (`engine`, with the bytes), the first compile
- * (`compiling`), packages or fonts downloading during a compile, or the engine that could not be loaded (`failed`).
- * The pane shows it while it has no pages; the workbench shows it in the status bar.
- */
-export interface PreviewProgress {
-  readonly kind: 'engine' | 'compiling' | 'packages' | 'fonts' | 'failed';
-  /** What is going on, as people read it: "Loading the Typst compiler…", "Downloading @preview/merman 0.4.0…". */
-  readonly title: string;
-  /** How far, or why it failed: "3.1 / 6.6 MB"; null: nothing to add. */
-  readonly detail: string | null;
-  /** Done so far, from 0 to 1; null: unknown. */
-  readonly fraction: number | null;
-}
-
-export interface PreviewOptions {
-  /** Called whenever what the preview waits for changes (null: nothing any more). */
-  onDidChangeProgress?(progress: PreviewProgress | null): void;
-}
-
-type RequestBody = EngineRequest extends infer R ? (R extends EngineRequest ? Omit<R, 'id'> : never) : never;
-type Compile = { files: Record<string, FileContent>; main: string };
-type Reveal = { path: ProjectPath; from: SourceOffset };
-type Highlight = { path: ProjectPath; ranges: readonly SourceRange[]; text: string };
-
-/** Minimum time between two cursor → preview lookups while the cursor moves. */
-const REVEAL_INTERVAL_MS = 80;
-
-/**
  * The live preview: compiles Typst in a worker and shows the pages as SVG,
  * under a toolbar of contributed items.
  *
  * Hides the worker, request coalescing (only the newest pending update or
  * reveal is processed), lazy and incremental page rendering, and the px ↔ pt
  * mapping for click-to-source and source-to-preview reveal.
+ *
+ * The live preview of a Typst project, compiled in a worker, with hit-testing.
+ *
+ * Why a host: the preview keeps the mechanism — the engine worker and its protocol, coalesced compiles, the lazily
+ * rendered page list, hit-testing (`onDidClickPage`), scrolling and reveal. What sits on top of it is contributed:
+ * toolbar items (zoom, "Follow cursor", page number, "Download PDF"), the options a PDF export offers, and the policy
+ * of when to reveal what (the preview-sync extension follows the cursor and jumps to the source of a click). So a
+ * feature adds to the preview without the preview knowing it.
  */
 export class Preview implements PreviewContributions {
   private readonly worker = startEngineWorker();
@@ -501,6 +346,168 @@ export class Preview implements PreviewContributions {
   }
 }
 
+/**
+ * The preview as extensions see it (`ExtensionContext.preview`): its contribution points, and what its engine
+ * answers about the project it compiles.
+ */
+export interface PreviewContributions {
+  /**
+   * Adds a control to the toolbar until disposed, at `placement`: VS Code's menu `group` + `order` (groups by name,
+   * `navigation` first; the built-ins: `1_sync` "Follow cursor", `2_view` zoom and page number, `3_export` "Download
+   * PDF"), never by registration order alone.
+   */
+  registerToolbarItem(item: PreviewToolbarItem, placement: ToolbarPlacement): Disposable;
+  /**
+   * Offers a choice for PDF exports (a checkbox), until disposed. An export applies every option, by `priority`
+   * (default 100, higher first; equal: registration order), each to what the ones before it made. Throws when an
+   * option with the same `id` is registered.
+   */
+  registerPdfExportOption(option: PdfExportOption, options?: { priority?: number }): Disposable;
+  /** The registered PDF export options, in the order an export applies them. */
+  pdfExportOptions(): readonly PdfExportOption[];
+  /**
+   * The errors and warnings of each compilation of the newest files given to the preview (results of outdated
+   * files are not reported, so the offsets match the text last given).
+   */
+  readonly onDidChangeDiagnostics: Event<readonly TypstDiagnostic[]>;
+  /** After every successful compilation (snippets may have changed). */
+  readonly onDidRender: Event<void>;
+  /**
+   * Scrolls the preview to where source range `range` of `path` is drawn (its start), only if that is off-screen;
+   * nothing is marked there. Cheap to call on every cursor move: calls are throttled and only the newest is looked up.
+   */
+  reveal(path: ProjectPath, range: SourceRange): void;
+  /**
+   * Someone clicked something in the preview that has a source location in a project file (outlined in the preview
+   * until the next click, a compile or `clearClickHighlight`; package files are outlined but not reported).
+   */
+  readonly onDidClickPage: Event<PageClick>;
+  /** Removes the outline of the last click now (e.g. once the user moved on from what was clicked). */
+  clearClickHighlight(): void;
+  /**
+   * Shades where source ranges `ranges` of `path`, which holds `text`, are drawn (glyph runs, shapes, images), in the
+   * selection color; replaces the ranges set before, an empty list clears them. Drawn once a compile of `text` is
+   * shown, nothing while the pages show other text; after every later compile the boxes are looked up anew. Cheap to
+   * call on every selection change: only the newest ranges are looked up.
+   */
+  setSelectionHighlight(path: ProjectPath, ranges: readonly SourceRange[], text: string): void;
+  /**
+   * How source range `range` of `path`, which holds `text`, is drawn: its page cut down to it. Null when it draws
+   * nothing or `text` is not what was compiled last.
+   */
+  snippet(path: ProjectPath, range: SourceRange, text: string): Promise<RenderedSnippet | null>;
+  /** A PDF of `entry.main` from the files last compiled, `entry.sources` replacing or adding text files for it. */
+  exportPdf(entry: PdfEntry): Promise<PdfResult>;
+}
+
+/** A control in the preview's toolbar: made once, for the preview it is registered with. */
+export type PreviewToolbarItem = (preview: PreviewContext) => ToolbarItemView;
+
+/**
+ * Where a toolbar item goes, as in VS Code's menus: the groups in the order of their names (the group `navigation`
+ * first), so groups are named like `1_sync`, `2_view`; within a group by `order` (default 0), then registration order.
+ */
+export interface ToolbarPlacement {
+  readonly group: string;
+  readonly order?: number;
+}
+
+/** A toolbar item as made for one preview. */
+export interface ToolbarItemView {
+  /** Its elements, placed in the toolbar in this order, where its `ToolbarPlacement` puts it. */
+  readonly elements: readonly HTMLElement[];
+  /** Called (at most once per frame) after the view changed: scrolled, resized, zoomed, new pages. */
+  update?(): void;
+  /** Called when the item is unregistered or the preview disposed; the toolbar removes `elements`. */
+  dispose?(): void;
+}
+
+/** What a toolbar item may read and change of the preview it is in. */
+export interface PreviewContext {
+  /** The DOM document the preview lives in (to make elements). */
+  readonly ownerDocument: Document;
+  zoom(): Zoom;
+  /** Zooms, keeping the part of the document shown (relatively) where it was. */
+  setZoom(zoom: Zoom): void;
+  /** The scale of the first page (1 = 100 %), also when fitting the width. */
+  scale(): number;
+  /** The page covering most of the viewport and the number of pages. */
+  visiblePage(): { index: PageIndex; count: number };
+}
+
+/** A click in the preview on something with a source location: the source range of what was clicked (e.g. a text run). */
+export interface PageClick extends SourceRange {
+  readonly path: ProjectPath;
+}
+
+/**
+ * A choice offered when exporting a PDF (a checkbox next to "Download"; `exportPdf(options)` for hosts), e.g.
+ * whether the PDF includes the comments. Each option changes what is compiled, never the documents. Options are
+ * checkboxes for now; a later `choices?: { value, label }[]` would make `default` and `value` one of them.
+ */
+export interface PdfExportOption {
+  /** `<extension>.<name>`, e.g. `comments.include`: the key in `exportPdf(options)` and in what is remembered. */
+  readonly id: string;
+  /** The checkbox's label ("Include comments"). */
+  readonly label: string;
+  /** A longer explanation, shown as the checkbox's tooltip. */
+  readonly description?: string;
+  /** Its value until someone chooses otherwise. */
+  readonly default: boolean;
+  /**
+   * What to compile with this option set to `value`, from what the options before it made (see
+   * `PreviewContributions.registerPdfExportOption` for the order). Called for every option, also when it is off.
+   */
+  apply(entry: PdfEntry, value: boolean): PdfEntry;
+}
+
+/** Preview zoom: fit the pane width, or a fixed scale where 1 = 100 % (1 pt = 1/72 in). */
+export type Zoom = 'fit' | number;
+
+/** A cut-out of a compiled page: standalone SVG markup and its size. */
+export interface RenderedSnippet {
+  readonly svg: string;
+  readonly width: Pt;
+  readonly height: Pt;
+  /** Height of its tallest box: one line of its biggest text, what an inline view scales by. */
+  readonly textHeight: Pt;
+  /** Space kept around what is drawn (less where the page ends). */
+  readonly padding: Pt;
+}
+
+/**
+ * What the preview waits for: the engine's wasm downloading (`engine`, with the bytes), the first compile
+ * (`compiling`), packages or fonts downloading during a compile, or the engine that could not be loaded (`failed`).
+ * The pane shows it while it has no pages; the workbench shows it in the status bar.
+ */
+export interface PreviewProgress {
+  readonly kind: 'engine' | 'compiling' | 'packages' | 'fonts' | 'failed';
+  /** What is going on, as people read it: "Loading the Typst compiler…", "Downloading @preview/merman 0.4.0…". */
+  readonly title: string;
+  /** How far, or why it failed: "3.1 / 6.6 MB"; null: nothing to add. */
+  readonly detail: string | null;
+  /** Done so far, from 0 to 1; null: unknown. */
+  readonly fraction: number | null;
+}
+
+export interface PreviewOptions {
+  /** Called whenever what the preview waits for changes (null: nothing any more). */
+  onDidChangeProgress?(progress: PreviewProgress | null): void;
+}
+
+type Compile = { files: Record<string, FileContent>; main: string };
+type Reveal = { path: ProjectPath; from: SourceOffset };
+type Highlight = { path: ProjectPath; ranges: readonly SourceRange[]; text: string };
+
+function div(doc: Document, className: string): HTMLElement {
+  const element = doc.createElement('div');
+  element.className = className;
+  return element;
+}
+
+/** Minimum time between two cursor → preview lookups while the cursor moves. */
+const REVEAL_INTERVAL_MS = 80;
+
 /** Toolbar order (see `ToolbarPlacement`): the group `navigation` first, the other groups by name, then `order`. */
 function byPlacement(a: { group: string; order: number }, b: { group: string; order: number }): number {
   if (a.group !== b.group) {
@@ -510,8 +517,4 @@ function byPlacement(a: { group: string; order: number }, b: { group: string; or
   return a.order - b.order;
 }
 
-function div(doc: Document, className: string): HTMLElement {
-  const element = doc.createElement('div');
-  element.className = className;
-  return element;
-}
+type RequestBody = EngineRequest extends infer R ? (R extends EngineRequest ? Omit<R, 'id'> : never) : never;

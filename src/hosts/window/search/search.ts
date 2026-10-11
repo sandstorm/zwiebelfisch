@@ -1,20 +1,9 @@
-// SearchEverywhere: one quick pick over everything the extensions' search providers find (files, headings, commands,
-// …), grouped by provider, fuzzy-matched, narrowed by a prefix. See window.ts and docs/20_extensions/02_workbench-api.typ.
+// SearchEverywhere. See window.ts and docs/20_extensions/02_workbench-api.typ.
 import { CancellationTokenSource } from '../../../core/cancellation/cancellation';
 import { Disposable } from '../../../core/disposable/disposable';
 import type { DynamicQuickPick, QuickInput, QuickPickEntry, QuickPickItemEntry } from '../quick-input/quick-input';
 import type { SearchItem, SearchProvider } from '../window';
 import { fuzzyMatch } from './fuzzy';
-
-/** Without a prefix, each group shows its best this many. */
-const PER_GROUP = 5;
-/** Narrowed to one prefix, a group shows up to this many. */
-const NARROWED = 100;
-/** The order of a provider that names none. */
-const DEFAULT_ORDER = 100;
-
-/** A provider's results for the current text: ranked, with what to highlight. */
-type Ranked = readonly QuickPickItemEntry<SearchItem>[];
 
 /**
  * Search everywhere: `show` opens a quick pick at the top of the widget. As the text changes every provider is asked
@@ -22,6 +11,9 @@ type Ranked = readonly QuickPickItemEntry<SearchItem>[];
  * async ones as they come (a progress line meanwhile). Items a provider did not match itself are matched fuzzily
  * against their label, else their description. Groups follow the providers' `order`. Picking an item closes the
  * search, gives the focus back and runs the item's `accept` right then (still in the user's gesture).
+ *
+ * One quick pick over everything the extensions' search providers find (files, headings, commands, …), grouped by
+ * provider, fuzzy-matched, narrowed by a prefix.
  */
 export class SearchEverywhere {
   readonly #providers = new Set<SearchProvider>();
@@ -107,6 +99,38 @@ export class SearchEverywhere {
   }
 }
 
+/** Runs the item's `accept` now; a failure is logged. */
+function accept(item: SearchItem): void {
+  const failed = (error: unknown) => console.error(`Search item ${item.label} failed:`, error);
+  try {
+    const result = item.accept();
+    if (result instanceof Promise) result.catch(failed);
+  } catch (error) {
+    failed(error);
+  }
+}
+
+/** A provider's results for the current text: ranked, with what to highlight. */
+type Ranked = readonly QuickPickItemEntry<SearchItem>[];
+
+/** A heading per provider with results (those not there yet are left out), then its best items. */
+function entries(providers: readonly SearchProvider[], results: ReadonlyMap<SearchProvider, Ranked>, narrowed: boolean): QuickPickEntry<SearchItem>[] {
+  const limit = narrowed ? NARROWED : PER_GROUP;
+  return providers.flatMap((provider) => {
+    const ranked = results.get(provider) ?? [];
+    if (ranked.length === 0) return [];
+    const more = ranked.length - limit;
+    const description = more <= 0 ? undefined : `${more} more${!narrowed && provider.prefix ? ` · type ${provider.prefix}` : ''}`;
+    return [{ kind: 'separator' as const, label: provider.label, description }, ...ranked.slice(0, limit)];
+  });
+}
+
+/** Narrowed to one prefix, a group shows up to this many. */
+const NARROWED = 100;
+
+/** Without a prefix, each group shows its best this many. */
+const PER_GROUP = 5;
+
 /** The provider's items for `query`: a list, or a Promise that resolves to [] once the round is cancelled or fails. */
 function provided(provider: SearchProvider, query: string, round: CancellationTokenSource): readonly SearchItem[] | Promise<readonly SearchItem[]> {
   const failed = (error: unknown) => {
@@ -142,29 +166,9 @@ function rank(items: readonly SearchItem[], query: string): Ranked {
   return scored.sort((a, b) => (a.score === b.score ? 0 : b.score - a.score)).map(({ entry }) => entry);
 }
 
-/** A heading per provider with results (those not there yet are left out), then its best items. */
-function entries(providers: readonly SearchProvider[], results: ReadonlyMap<SearchProvider, Ranked>, narrowed: boolean): QuickPickEntry<SearchItem>[] {
-  const limit = narrowed ? NARROWED : PER_GROUP;
-  return providers.flatMap((provider) => {
-    const ranked = results.get(provider) ?? [];
-    if (ranked.length === 0) return [];
-    const more = ranked.length - limit;
-    const description = more <= 0 ? undefined : `${more} more${!narrowed && provider.prefix ? ` · type ${provider.prefix}` : ''}`;
-    return [{ kind: 'separator' as const, label: provider.label, description }, ...ranked.slice(0, limit)];
-  });
-}
-
 function byOrder(a: SearchProvider, b: SearchProvider): number {
   return (a.order ?? DEFAULT_ORDER) - (b.order ?? DEFAULT_ORDER) || a.id.localeCompare(b.id);
 }
 
-/** Runs the item's `accept` now; a failure is logged. */
-function accept(item: SearchItem): void {
-  const failed = (error: unknown) => console.error(`Search item ${item.label} failed:`, error);
-  try {
-    const result = item.accept();
-    if (result instanceof Promise) result.catch(failed);
-  } catch (error) {
-    failed(error);
-  }
-}
+/** The order of a provider that names none. */
+const DEFAULT_ORDER = 100;

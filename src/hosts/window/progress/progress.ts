@@ -1,22 +1,14 @@
-// Progress: what `window.withProgress` shows while a task runs — a status bar entry (`ProgressLocation.Window`), or a
-// note over the editing area that holds input back (`ProgressLocation.EditingArea`). See window.ts and
-// docs/30_architecture/07_workbench.typ.
+// Progress. See window.ts and docs/30_architecture/07_workbench.typ.
 import { Disposable } from '../../../core/disposable/disposable';
 import { type ProgressOptions, type ProgressReport, ProgressLocation } from '../window';
 import type { StatusBar } from '../status-bar/status-bar';
 
-/** Where progress is shown: the status bar, and the editing area with the grid cell it sits in. */
-export interface ProgressPlaces {
-  readonly statusBar: StatusBar;
-  readonly editingArea: HTMLElement;
-}
-
-interface Indicator {
-  report(value: ProgressReport): void;
-  dispose(): void;
-}
-
-/** Shows each running task where its `location` says, until it settles. */
+/**
+ * Shows each running task where its `location` says, until it settles.
+ *
+ * What `window.withProgress` shows while a task runs — a status bar entry (`ProgressLocation.Window`), or a note over
+ * the editing area that holds input back (`ProgressLocation.EditingArea`).
+ */
 export class ProgressIndicators {
   /** The notes of the tasks running over the editing area, oldest first: it is inert while there is one. */
   readonly #notes: HTMLElement[] = [];
@@ -97,6 +89,17 @@ export class ProgressIndicators {
     this.places.editingArea.toggleAttribute('inert', holding);
     this.places.editingArea.setAttribute('aria-busy', String(holding));
   }
+}
+
+/** Where progress is shown: the status bar, and the editing area with the grid cell it sits in. */
+export interface ProgressPlaces {
+  readonly statusBar: StatusBar;
+  readonly editingArea: HTMLElement;
+}
+
+interface Indicator {
+  report(value: ProgressReport): void;
+  dispose(): void;
 }
 
 /**

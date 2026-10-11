@@ -1,16 +1,21 @@
-// The workspace namespace of the extension API (VS Code's `workspace`): changes to the project's files
-// (`applyEdit`, through the host's veto) and the widget's settings. Extensions declare their settings
-// (`TypstExtension.contributes`), the host gives the values (`createTypstEditor({ settings })`, changeable later),
-// extensions read them through `workspace.getConfiguration('<section>')` and hear about changes through
-// `onDidChangeConfiguration`. Entry of hosts/workspace/. See docs/30_architecture/07_workbench.typ.
-// Why settings: an option of one feature is that feature's business. The widget passes every value through one
-// generic map instead of knowing each option by name, and the `<typst-editor>` element maps it onto an attribute the
-// same way. Why `applyEdit` here: every change an extension asks for goes through the project's rules and then the
-// host's veto (`allowFileChange`), in one place.
+// The workspace namespace of the extension API (VS Code's `workspace`). Entry of hosts/workspace/. See
+// docs/30_architecture/07_workbench.typ.
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { FileChange, Project } from '../../core/project/project';
 
-/** The project's changes and the settings as extensions use them (VS Code's `workspace` namespace). */
+/**
+ * The project's changes and the settings as extensions use them (VS Code's `workspace` namespace).
+ *
+ * Changes to the project's files (`applyEdit`, through the host's veto) and the widget's settings. Extensions declare
+ * their settings (`TypstExtension.contributes`), the host gives the values (`createTypstEditor({ settings })`,
+ * changeable later), extensions read them through `workspace.getConfiguration('<section>')` and hear about changes
+ * through `onDidChangeConfiguration`.
+ *
+ * Why settings: an option of one feature is that feature's business. The widget passes every value through one generic
+ * map instead of knowing each option by name, and the `<typst-editor>` element maps it onto an attribute the same way.
+ * Why `applyEdit` here: every change an extension asks for goes through the project's rules and then the host's veto
+ * (`allowFileChange`), in one place.
+ */
 export interface Workspace {
   /**
    * Applies `change` if the project allows it and then the host (`allowFileChange`, may be async; the project is

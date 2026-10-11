@@ -1,12 +1,29 @@
-// Serializing the Visual editor's document back to Typst (ProseMirrorToTypstSerializer): untouched nodes print their
-// source, edited ones through their specs' toTypst; every stretch of output remembers the document range showing it
-// (the position map). See prosemirror-typst.ts.
+// Serializing the Visual editor's document back to Typst (ProseMirrorToTypstSerializer). See prosemirror-typst.ts.
 import type { Mark, Node } from '@tiptap/pm/model';
 import { TypstConversions } from './typst-conversions';
 import type { Around, TypstSerializeState } from './prosemirror-typst';
 import { labelSyntax } from './labels';
 import { type InlineLayout, unchangedNodes } from './unchanged-nodes';
 import { markupSource } from '../../core/typst-syntax/typst-syntax';
+
+/**
+ * `doc` printed, with its position map (cached).
+ *
+ * Untouched nodes print their source, edited ones through their specs' toTypst; every stretch of output remembers the
+ * document range showing it (the position map).
+ */
+export function printed(doc: Node): Printed {
+  let result = printedDocs.get(doc);
+  if (!result) {
+    const serializer = new ProseMirrorToTypstSerializer(TypstConversions.of(doc.type.schema));
+    serializer.hidden(doc.attrs.lead);
+    serializer.blocks(doc, 0, '\n\n');
+    serializer.hidden(doc.attrs.trail);
+    result = serializer.finish();
+    printedDocs.set(doc, result);
+  }
+  return result;
+}
 
 /** A stretch of printed source and the document range showing it (empty for hidden syntax). */
 export interface Span {
@@ -27,27 +44,13 @@ export interface Printed {
   end: number;
 }
 
-/** Docs are immutable, so their printed form is cached. */
-const printedDocs = new WeakMap<Node, Printed>();
-
-/** `doc` printed, with its position map (cached). */
-export function printed(doc: Node): Printed {
-  let result = printedDocs.get(doc);
-  if (!result) {
-    const serializer = new ProseMirrorToTypstSerializer(TypstConversions.of(doc.type.schema));
-    serializer.hidden(doc.attrs.lead);
-    serializer.blocks(doc, 0, '\n\n');
-    serializer.hidden(doc.attrs.trail);
-    result = serializer.finish();
-    printedDocs.set(doc, result);
-  }
-  return result;
-}
-
 /** Forgets the printed form of `doc` (nodes in it changed since parsed). */
 export function forgetPrinted(doc: Node): void {
   printedDocs.delete(doc);
 }
+
+/** Docs are immutable, so their printed form is cached. */
+const printedDocs = new WeakMap<Node, Printed>();
 
 /**
  * Serializes a document: the `TypstSerializeState` the specs' toTypst functions write edited blocks through (its
@@ -203,18 +206,6 @@ function isSourceAtom(node: Node): boolean {
 
 // ------------------------------------------------------------ inline content
 
-interface Piece {
-  /** Formatting marks, in schema order. */
-  marks: readonly Mark[];
-  text: string;
-  /** The printed text is `node`'s text, escaped. */
-  escaped: boolean;
-  /** The printed text is `node`'s text as is, inside raw text (inline code). */
-  code: boolean;
-  node: Node;
-  pos: number;
-}
-
 /**
  * Prints inline content: each formatted span opens with its syntax (longer
  * spans outside), as its mark's spec prints it (`*x*` or `#strong[x]`, so the
@@ -264,6 +255,63 @@ function printInline(out: TypstSerializeState, grammar: TypstConversions, block:
   while (open.length > 0) hidden(open.pop()!.close);
 }
 
+function inlinePieces(grammar: TypstConversions, block: Node, start: number): Piece[] {
+  const pieces: Piece[] = [];
+  let lineStart = true;
+  block.forEach((child, offset) => {
+    // only text can be raw text; atoms keep their own source
+    const marks = child.marks.filter((m) => {
+      const spec = grammar.mark(m.type.name);
+      return spec !== undefined && (child.isText || !spec.typst.raw);
+    });
+    const code = marks.some((m) => grammar.mark(m.type.name)!.typst.raw);
+    const original = code ? null : child.isText ? originalSource(child) : atomSource(grammar, child);
+    const plain = child.text?.replace(/\n/g, ' ') ?? '';
+    const text = original ?? (code ? plain : escapeMarkup(plain, lineStart));
+    pieces.push({ marks, text, escaped: original === null && !code, code, node: child, pos: start + offset });
+    lineStart = /\n\s*$/.test(text);
+  });
+  return pieces;
+}
+
+interface Piece {
+  /** Formatting marks, in schema order. */
+  marks: readonly Mark[];
+  text: string;
+  /** The printed text is `node`'s text, escaped. */
+  escaped: boolean;
+  /** The printed text is `node`'s text as is, inside raw text (inline code). */
+  code: boolean;
+  node: Node;
+  pos: number;
+}
+
+/** How a decoded escape or shorthand was written, if its text is unchanged. */
+function originalSource(node: Node): string | null {
+  const original = node.marks.find((m) => m.type.name === 'typstSource');
+  return original && original.attrs.text === node.text ? original.attrs.src : null;
+}
+
+/** The source an inline atom prints: its spec's, else its `src` (code without `#` in markup form). */
+function atomSource(grammar: TypstConversions, atom: Node): string {
+  const own = grammar.node(atom.type)?.typst?.atomToTypst;
+  if (own) return own(atom);
+  return atom.attrs.code ? markupSource(atom.attrs.src) : atom.attrs.src;
+}
+
+/** Escapes text so Typst reads it back as exactly this text. */
+function escapeMarkup(text: string, lineStart: boolean): string {
+  const escaped = text.replace(INLINE_HAZARD, (c) => `\\${c}`);
+  if (!lineStart) return escaped;
+  return escaped.replace(LINE_START_MARKER, '\\$1').replace(ENUM_NUMBER, '$1\\.');
+}
+
+/** Characters that would start markup anywhere: `*`, `#`, shorthands (`--`, `...`), comments (`//`), … */
+const INLINE_HAZARD = /[\\*_#$@<[\]`~]|-(?=[-?\d])|\.(?=\.\.)|\/(?=[/*])/g;
+/** Heading, list, enum and term markers, which only count at the start of a line. */
+const LINE_START_MARKER = /^(=+|[-+/])(?=\s|$)/;
+const ENUM_NUMBER = /^(\d+)\.(?=\s|$)/;
+
 /**
  * The marks of `pieces[index]` not open yet, with the last piece they span;
  * longer spans first, raw text last (it spans only pieces formatted alike).
@@ -293,34 +341,15 @@ function spanEnd(pieces: Piece[], start: number, mark: Mark): number {
   return end;
 }
 
-/** `text` as the node printed before it needs it escaped (its spec's `escapeAfter`), if any. */
-function escapeAfter(grammar: TypstConversions, previous: Node | undefined, text: string): string {
-  if (!previous) return text;
-  return grammar.node(previous.type)?.typst?.escapeAfter?.(previous, text) ?? text;
-}
-
 /** Text right after `]` would continue a function call if it starts with `(` or `.field`; escapes that. */
 function guardCall(printedSoFar: string, text: string, escaped: boolean): string {
   return escaped && printedSoFar.endsWith(']') && /^(\(|\.\w)/.test(text) ? `\\${text}` : text;
 }
 
-function inlinePieces(grammar: TypstConversions, block: Node, start: number): Piece[] {
-  const pieces: Piece[] = [];
-  let lineStart = true;
-  block.forEach((child, offset) => {
-    // only text can be raw text; atoms keep their own source
-    const marks = child.marks.filter((m) => {
-      const spec = grammar.mark(m.type.name);
-      return spec !== undefined && (child.isText || !spec.typst.raw);
-    });
-    const code = marks.some((m) => grammar.mark(m.type.name)!.typst.raw);
-    const original = code ? null : child.isText ? originalSource(child) : atomSource(grammar, child);
-    const plain = child.text?.replace(/\n/g, ' ') ?? '';
-    const text = original ?? (code ? plain : escapeMarkup(plain, lineStart));
-    pieces.push({ marks, text, escaped: original === null && !code, code, node: child, pos: start + offset });
-    lineStart = /\n\s*$/.test(text);
-  });
-  return pieces;
+/** `text` as the node printed before it needs it escaped (its spec's `escapeAfter`), if any. */
+function escapeAfter(grammar: TypstConversions, previous: Node | undefined, text: string): string {
+  if (!previous) return text;
+  return grammar.node(previous.type)?.typst?.escapeAfter?.(previous, text) ?? text;
 }
 
 /**
@@ -335,30 +364,4 @@ function printPiece(out: TypstSerializeState, { escaped, code, node, pos }: Piec
     if (text[i] === '\\' && i + 1 < text.length) out.hidden(text[i++]);
     out.shown(text[i], 'text', at, ++at);
   }
-}
-
-/** The source an inline atom prints: its spec's, else its `src` (code without `#` in markup form). */
-function atomSource(grammar: TypstConversions, atom: Node): string {
-  const own = grammar.node(atom.type)?.typst?.atomToTypst;
-  if (own) return own(atom);
-  return atom.attrs.code ? markupSource(atom.attrs.src) : atom.attrs.src;
-}
-
-/** How a decoded escape or shorthand was written, if its text is unchanged. */
-function originalSource(node: Node): string | null {
-  const original = node.marks.find((m) => m.type.name === 'typstSource');
-  return original && original.attrs.text === node.text ? original.attrs.src : null;
-}
-
-/** Characters that would start markup anywhere: `*`, `#`, shorthands (`--`, `...`), comments (`//`), … */
-const INLINE_HAZARD = /[\\*_#$@<[\]`~]|-(?=[-?\d])|\.(?=\.\.)|\/(?=[/*])/g;
-/** Heading, list, enum and term markers, which only count at the start of a line. */
-const LINE_START_MARKER = /^(=+|[-+/])(?=\s|$)/;
-const ENUM_NUMBER = /^(\d+)\.(?=\s|$)/;
-
-/** Escapes text so Typst reads it back as exactly this text. */
-function escapeMarkup(text: string, lineStart: boolean): string {
-  const escaped = text.replace(INLINE_HAZARD, (c) => `\\${c}`);
-  if (!lineStart) return escaped;
-  return escaped.replace(LINE_START_MARKER, '\\$1').replace(ENUM_NUMBER, '$1\\.');
 }

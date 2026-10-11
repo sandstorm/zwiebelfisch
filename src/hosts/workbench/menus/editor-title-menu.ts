@@ -4,15 +4,6 @@ import type { Disposable } from '../../../core/disposable/disposable';
 import type { MenuContext } from '../workbench';
 import type { Menus } from './menus';
 
-const EDITOR_TITLE = 'editor/title';
-
-export interface EditorTitleMenuOptions {
-  /** What the menu is shown for now (`activeCustomEditorId`, `resource`), asked on every `update`. */
-  context(): MenuContext;
-  /** Runs an entry's command (without arguments). */
-  executeCommand(command: string): Promise<unknown>;
-}
-
 /**
  * A button per entry of `editor/title` whose `when` holds, in the menus' order, with its icon and title. Shown again on
  * `update` (the tab or the file changed) and whenever the menu's entries change. Pressing a button keeps the focus
@@ -70,3 +61,12 @@ export class EditorTitleMenu {
     return button;
   }
 }
+
+export interface EditorTitleMenuOptions {
+  /** What the menu is shown for now (`activeCustomEditorId`, `resource`), asked on every `update`. */
+  context(): MenuContext;
+  /** Runs an entry's command (without arguments). */
+  executeCommand(command: string): Promise<unknown>;
+}
+
+const EDITOR_TITLE = 'editor/title';

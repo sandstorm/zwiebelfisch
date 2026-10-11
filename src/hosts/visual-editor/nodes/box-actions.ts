@@ -1,5 +1,4 @@
-// BoxActionBar: the buttons of the contributed box actions (`registerRawBoxAction`) that apply to one raw box,
-// kept up to date with its node. See raw-box.ts.
+// BoxActionBar. See raw-box.ts.
 import type { Node } from '@tiptap/pm/model';
 import type { RawBoxAction, VisualEditorContext } from '../visual-editor';
 
@@ -7,6 +6,9 @@ import type { RawBoxAction, VisualEditorContext } from '../visual-editor';
  * A raw box's action buttons (`.typst-visual__box-actions`): one per contributed action whose `when` holds for the
  * box's node, in registration order, asked again on every `update`. Pressing one keeps the editor's selection and
  * runs the action with the box's current node.
+ *
+ * The buttons of the contributed box actions (`registerRawBoxAction`) that apply to one raw box, kept up to date with
+ * its node.
  */
 export class BoxActionBar {
   readonly element: HTMLElement;

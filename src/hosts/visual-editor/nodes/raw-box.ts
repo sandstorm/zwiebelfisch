@@ -1,5 +1,4 @@
-// Raw boxes: Typst the Visual editor does not model, edited as code in a nested CodeMirror; contributions add
-// pictures (box renderers), headings, tools and code extensions. See nodes.ts.
+// Raw boxes. See nodes.ts.
 import { defaultKeymap } from '@codemirror/commands';
 import type { Extension as CodeExtension, Transaction as CodeTransaction } from '@codemirror/state';
 import { EditorView as CodeView, keymap, type KeyBinding } from '@codemirror/view';
@@ -13,10 +12,15 @@ import { posToSource } from '../../prosemirror-typst/prosemirror-typst';
 import { BoxActionBar } from './box-actions';
 import { RenderedBox } from './rendered-box';
 
-type Side = -1 | 1;
-
-/** The open raw boxes by their DOM, so arrow keys in the outer editor can move into them. */
-const boxes = new WeakMap<globalThis.Node, RawBox>();
+/**
+ * The node views of raw boxes in `editor`, with what `boxes` contribute to them.
+ *
+ * Typst the Visual editor does not model, edited as code in a nested CodeMirror; contributions add pictures (box
+ * renderers), headings, tools and code extensions.
+ */
+export function rawBoxViews(editor: Editor, boxes: RawBoxes): NodeViewConstructor {
+  return (node, _view, getPos, decorations) => new RawBox(node, getPos, decorations, { editor, boxes });
+}
 
 /** What the raw boxes of one view get from the contributions. */
 export interface RawBoxes {
@@ -31,21 +35,21 @@ export interface RawBoxes {
   readonly views: ReadonlyMap<string, NonNullable<TypstNodeSpec['view']>>;
 }
 
-const sharedTheme = {
-  '.cm-scroller': { fontFamily: 'inherit', lineHeight: 'inherit' },
-  '.cm-content': { padding: '0' },
-  '.cm-line': { padding: '0' },
-  '&.cm-focused': { outline: 'none' },
-};
-const blockTheme = CodeView.theme(sharedTheme);
-/**
- * Inline boxes must stay inline-level: CodeMirror's base theme makes the editor `display: flex !important`,
- * and a block inside the box's <span> splits it into three lines (before, the editor, after).
- */
-const inlineTheme = CodeView.theme({
-  ...sharedTheme,
-  '&': { display: 'inline-flex !important', verticalAlign: 'baseline' },
-  '.cm-scroller': { ...sharedTheme['.cm-scroller'], overflow: 'visible' },
+/** Keyboard entry into raw boxes: arrow keys at their edges, Enter on a selected box. */
+export const RawBoxNavigation = Extension.create({
+  name: 'typstRawBoxNavigation',
+  addKeyboardShortcuts() {
+    return {
+      ArrowLeft: () => enterBox(this.editor, 'left'),
+      ArrowRight: () => enterBox(this.editor, 'right'),
+      ArrowUp: () => enterBox(this.editor, 'up'),
+      ArrowDown: () => enterBox(this.editor, 'down'),
+      Enter: () => {
+        const { selection } = this.editor.state;
+        return selection instanceof NodeSelection && focusBox(this.editor.view, selection.from, 1);
+      },
+    };
+  },
 });
 
 /**
@@ -271,18 +275,29 @@ class RawBox implements NodeView {
   }
 }
 
-/** The node views of raw boxes in `editor`, with what `boxes` contribute to them. */
-export function rawBoxViews(editor: Editor, boxes: RawBoxes): NodeViewConstructor {
-  return (node, _view, getPos, decorations) => new RawBox(node, getPos, decorations, { editor, boxes });
-}
+/** The open raw boxes by their DOM, so arrow keys in the outer editor can move into them. */
+const boxes = new WeakMap<globalThis.Node, RawBox>();
 
-/** The raw box at `pos` in the outer editor, if one is shown there. */
-function boxAt(view: EditorView, pos: number): RawBox | undefined {
-  const dom = view.nodeDOM(pos);
-  return dom ? boxes.get(dom) : undefined;
-}
+type Side = -1 | 1;
 
-type Direction = 'up' | 'down' | 'left' | 'right';
+const sharedTheme = {
+  '.cm-scroller': { fontFamily: 'inherit', lineHeight: 'inherit' },
+  '.cm-content': { padding: '0' },
+  '.cm-line': { padding: '0' },
+  '&.cm-focused': { outline: 'none' },
+};
+
+/**
+ * Inline boxes must stay inline-level: CodeMirror's base theme makes the editor `display: flex !important`,
+ * and a block inside the box's <span> splits it into three lines (before, the editor, after).
+ */
+const inlineTheme = CodeView.theme({
+  ...sharedTheme,
+  '&': { display: 'inline-flex !important', verticalAlign: 'baseline' },
+  '.cm-scroller': { ...sharedTheme['.cm-scroller'], overflow: 'visible' },
+});
+
+const blockTheme = CodeView.theme(sharedTheme);
 
 /** Arrow key handling in the outer editor: moving onto a raw box puts the cursor inside it. */
 function enterBox(editor: Editor, dir: Direction): boolean {
@@ -292,12 +307,26 @@ function enterBox(editor: Editor, dir: Direction): boolean {
   return (horizontal && enterInlineBox(editor, side)) || enterBlockBox(editor, dir, side);
 }
 
+type Direction = 'up' | 'down' | 'left' | 'right';
+
 /** Left/right next to a raw inline box. */
 function enterInlineBox({ state, view }: Editor, side: Side): boolean {
   const { $head } = state.selection;
   const neighbour = side > 0 ? $head.nodeAfter : $head.nodeBefore;
   if (neighbour?.type.name !== 'rawInline') return false;
   return focusBox(view, side > 0 ? $head.pos : $head.pos - neighbour.nodeSize, side);
+}
+
+function focusBox(view: EditorView, pos: number, side: Side): boolean {
+  const box = boxAt(view, pos);
+  box?.focus(side);
+  return box !== undefined;
+}
+
+/** The raw box at `pos` in the outer editor, if one is shown there. */
+function boxAt(view: EditorView, pos: number): RawBox | undefined {
+  const dom = view.nodeDOM(pos);
+  return dom ? boxes.get(dom) : undefined;
 }
 
 /** Leaving a textblock towards a raw block (the PM "embedded code editor" arrow handler). */
@@ -307,26 +336,3 @@ function enterBlockBox({ state, view }: Editor, dir: Direction, side: Side): boo
   const next = Selection.near(state.doc.resolve(side > 0 ? $head.after() : $head.before()), side);
   return next instanceof NodeSelection && focusBox(view, next.from, side);
 }
-
-function focusBox(view: EditorView, pos: number, side: Side): boolean {
-  const box = boxAt(view, pos);
-  box?.focus(side);
-  return box !== undefined;
-}
-
-/** Keyboard entry into raw boxes: arrow keys at their edges, Enter on a selected box. */
-export const RawBoxNavigation = Extension.create({
-  name: 'typstRawBoxNavigation',
-  addKeyboardShortcuts() {
-    return {
-      ArrowLeft: () => enterBox(this.editor, 'left'),
-      ArrowRight: () => enterBox(this.editor, 'right'),
-      ArrowUp: () => enterBox(this.editor, 'up'),
-      ArrowDown: () => enterBox(this.editor, 'down'),
-      Enter: () => {
-        const { selection } = this.editor.state;
-        return selection instanceof NodeSelection && focusBox(this.editor.view, selection.from, 1);
-      },
-    };
-  },
-});

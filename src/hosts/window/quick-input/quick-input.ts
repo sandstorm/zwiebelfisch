@@ -1,71 +1,14 @@
-// QuickInput: what `showInputBox` and `showQuickPick` show: a small box over the widget, below what the user just
-// used; and the quick pick whose rows its owner sets while the user types (search everywhere). See window.ts.
+// QuickInput. See window.ts.
 import type { InputBoxOptions, QuickPickHighlights, QuickPickItem, QuickPickOptions } from '../window';
-
-/** Elements taller than this (an editor's whole text) are no anchor: the box goes to their top instead. */
-const MAX_ANCHOR_HEIGHT = 120;
-/** Between the anchor and the box. */
-const GAP = 4;
-
-/** A box on screen: closing it removes it and gives the focus back. */
-interface Open {
-  readonly box: HTMLElement;
-  cancel(): void;
-}
-
-/** A heading starting a group of items (VS Code's separator item), with a note after it. */
-export interface QuickPickSeparator {
-  readonly kind: 'separator';
-  readonly label: string;
-  readonly description?: string;
-}
-
-/** An item of a quick pick, with the characters to highlight. */
-export interface QuickPickItemEntry<T> {
-  readonly kind: 'item';
-  readonly item: T;
-  readonly highlights?: QuickPickHighlights;
-}
-
-/** A row of a quick pick: an item, or a heading starting a group. */
-export type QuickPickEntry<T> = QuickPickItemEntry<T> | QuickPickSeparator;
-
-/** What a dynamic quick pick shows and whom it tells (see `QuickInput.createQuickPick`). */
-export interface DynamicQuickPickOptions<T> {
-  /** The box's accessible name and the field's label. */
-  readonly title: string;
-  readonly placeHolder?: string;
-  /** The text the field starts with (the caret after it). */
-  readonly value?: string;
-  /** A line below the list, read as the field's description (e.g. how to narrow the search). */
-  readonly hint?: string;
-  /** The text in the field changed (typed, or `setValue`; not for the starting `value`). */
-  onDidChangeValue(value: string): void;
-  /** An item was picked (Enter or a click); the box is gone and the focus back where it was. */
-  onDidAccept(item: T): void;
-  /** The box is gone (after `onDidAccept`, on Escape, a press outside, another box, or `hide`). */
-  onDidHide(): void;
-}
-
-/** A quick pick whose rows its owner sets while the user types (VS Code's `window.createQuickPick`, as far as needed). */
-export interface DynamicQuickPick<T> {
-  /** Shows these rows, the first item active; without any item, "No results" (unless busy). */
-  setEntries(entries: readonly QuickPickEntry<T>[]): void;
-  /** Rows are still coming (a progress line). */
-  setBusy(busy: boolean): void;
-  /** Sets the field's text (as if typed). */
-  setValue(value: string): void;
-  /** Closes it (as Escape). */
-  hide(): void;
-}
-
-let ids = 0;
 
 /**
  * One box at a time over the widget `host` (a new one cancels the open one), placed below its anchor and kept inside
  * the widget (above the anchor where there is no room below): the anchor is what the user last pressed or typed in
  * (a button, a row), or, in an editor, the selection; without one, at the top in the middle (as VS Code's). Escape
  * or a mouse press elsewhere cancels; closing gives the focus back to where it was.
+ *
+ * What `showInputBox` and `showQuickPick` show: a small box over the widget, below what the user just used; and the
+ * quick pick whose rows its owner sets while the user types (search everywhere).
  */
 export class QuickInput {
   #trigger: Element | null = null;
@@ -302,6 +245,88 @@ export class QuickInput {
   }
 }
 
+/** A heading starting a group of items (VS Code's separator item), with a note after it. */
+export interface QuickPickSeparator {
+  readonly kind: 'separator';
+  readonly label: string;
+  readonly description?: string;
+}
+
+/** An item of a quick pick, with the characters to highlight. */
+export interface QuickPickItemEntry<T> {
+  readonly kind: 'item';
+  readonly item: T;
+  readonly highlights?: QuickPickHighlights;
+}
+
+/** A row of a quick pick: an item, or a heading starting a group. */
+export type QuickPickEntry<T> = QuickPickItemEntry<T> | QuickPickSeparator;
+
+/** What a dynamic quick pick shows and whom it tells (see `QuickInput.createQuickPick`). */
+export interface DynamicQuickPickOptions<T> {
+  /** The box's accessible name and the field's label. */
+  readonly title: string;
+  readonly placeHolder?: string;
+  /** The text the field starts with (the caret after it). */
+  readonly value?: string;
+  /** A line below the list, read as the field's description (e.g. how to narrow the search). */
+  readonly hint?: string;
+  /** The text in the field changed (typed, or `setValue`; not for the starting `value`). */
+  onDidChangeValue(value: string): void;
+  /** An item was picked (Enter or a click); the box is gone and the focus back where it was. */
+  onDidAccept(item: T): void;
+  /** The box is gone (after `onDidAccept`, on Escape, a press outside, another box, or `hide`). */
+  onDidHide(): void;
+}
+
+/** A quick pick whose rows its owner sets while the user types (VS Code's `window.createQuickPick`, as far as needed). */
+export interface DynamicQuickPick<T> {
+  /** Shows these rows, the first item active; without any item, "No results" (unless busy). */
+  setEntries(entries: readonly QuickPickEntry<T>[]): void;
+  /** Rows are still coming (a progress line). */
+  setBusy(busy: boolean): void;
+  /** Sets the field's text (as if typed). */
+  setValue(value: string): void;
+  /** Closes it (as Escape). */
+  hide(): void;
+}
+
+/** A box on screen: closing it removes it and gives the focus back. */
+interface Open {
+  readonly box: HTMLElement;
+  cancel(): void;
+}
+
+function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, className: string): HTMLElementTagNameMap[K] {
+  const node = doc.createElement(tag);
+  node.className = className;
+  return node;
+}
+
+function title(doc: Document, text: string | undefined): HTMLElement[] {
+  if (!text) return [];
+  const heading = element(doc, 'div', 'typst-quick-input__title');
+  heading.textContent = text;
+  heading.setAttribute('aria-hidden', 'true'); // the box's name already
+  return [heading];
+}
+
+function isArray<T>(items: readonly T[] | Promise<readonly T[]>): items is readonly T[] {
+  return Array.isArray(items);
+}
+
+/** The line below the list, describing `field`. */
+function hint(doc: Document, field: HTMLElement, text: string | undefined): HTMLElement[] {
+  if (!text) return [];
+  const line = element(doc, 'div', 'typst-quick-pick__hint');
+  line.id = `typst-quick-pick-hint-${++ids}`;
+  line.textContent = text;
+  field.setAttribute('aria-describedby', line.id);
+  return [line];
+}
+
+let ids = 0;
+
 /** Picks one item: a listbox the filter field steers (arrows, Enter) with the active item marked; groups under headings. */
 class OnePicker<T extends string | QuickPickItem> {
   #options: { item: T; element: HTMLElement }[] = [];
@@ -394,6 +419,36 @@ class OnePicker<T extends string | QuickPickItem> {
   }
 }
 
+/** An item's label, description and detail, the `highlights` marked. */
+function itemElement(doc: Document, item: string | QuickPickItem, highlights: QuickPickHighlights = {}): HTMLElement {
+  const option = element(doc, 'div', 'typst-quick-pick__item');
+  option.append(highlighted(doc, 'typst-quick-pick__label', labelOf(item), highlights.label));
+  if (typeof item === 'string') return option;
+  // a space before each further part: the option's accessible name reads as words
+  if (item.description) option.append(' ', highlighted(doc, 'typst-quick-pick__description', item.description, highlights.description));
+  if (item.detail) option.append(' ', highlighted(doc, 'typst-quick-pick__detail', item.detail, highlights.detail));
+  return option;
+}
+
+/** A span of `text` with the characters in `ranges` in `<mark>`s. */
+function highlighted(doc: Document, className: string, text: string, ranges: QuickPickHighlights['label'] = []): HTMLElement {
+  const span = element(doc, 'span', className);
+  let last = 0;
+  for (const [start, end] of ranges) {
+    if (start < last || end > text.length) continue;
+    const mark = element(doc, 'mark', 'typst-quick-pick__match');
+    mark.textContent = text.slice(start, end);
+    span.append(text.slice(last, start), mark);
+    last = end;
+  }
+  span.append(text.slice(last));
+  return span;
+}
+
+function labelOf(item: string | QuickPickItem): string {
+  return typeof item === 'string' ? item : item.label;
+}
+
 /** Picks several: a checkbox per item; Enter in the filter field accepts the checked ones. */
 class ManyPicker<T extends string | QuickPickItem> {
   readonly #options: { item: T; element: HTMLElement; checkbox: HTMLInputElement }[];
@@ -431,66 +486,8 @@ class ManyPicker<T extends string | QuickPickItem> {
   }
 }
 
-function isArray<T>(items: readonly T[] | Promise<readonly T[]>): items is readonly T[] {
-  return Array.isArray(items);
-}
-
-function labelOf(item: string | QuickPickItem): string {
-  return typeof item === 'string' ? item : item.label;
-}
-
 function matches(item: string | QuickPickItem, text: string): boolean {
   return labelOf(item).toLowerCase().includes(text.trim().toLowerCase());
-}
-
-/** An item's label, description and detail, the `highlights` marked. */
-function itemElement(doc: Document, item: string | QuickPickItem, highlights: QuickPickHighlights = {}): HTMLElement {
-  const option = element(doc, 'div', 'typst-quick-pick__item');
-  option.append(highlighted(doc, 'typst-quick-pick__label', labelOf(item), highlights.label));
-  if (typeof item === 'string') return option;
-  // a space before each further part: the option's accessible name reads as words
-  if (item.description) option.append(' ', highlighted(doc, 'typst-quick-pick__description', item.description, highlights.description));
-  if (item.detail) option.append(' ', highlighted(doc, 'typst-quick-pick__detail', item.detail, highlights.detail));
-  return option;
-}
-
-/** A span of `text` with the characters in `ranges` in `<mark>`s. */
-function highlighted(doc: Document, className: string, text: string, ranges: QuickPickHighlights['label'] = []): HTMLElement {
-  const span = element(doc, 'span', className);
-  let last = 0;
-  for (const [start, end] of ranges) {
-    if (start < last || end > text.length) continue;
-    const mark = element(doc, 'mark', 'typst-quick-pick__match');
-    mark.textContent = text.slice(start, end);
-    span.append(text.slice(last, start), mark);
-    last = end;
-  }
-  span.append(text.slice(last));
-  return span;
-}
-
-function title(doc: Document, text: string | undefined): HTMLElement[] {
-  if (!text) return [];
-  const heading = element(doc, 'div', 'typst-quick-input__title');
-  heading.textContent = text;
-  heading.setAttribute('aria-hidden', 'true'); // the box's name already
-  return [heading];
-}
-
-/** The line below the list, describing `field`. */
-function hint(doc: Document, field: HTMLElement, text: string | undefined): HTMLElement[] {
-  if (!text) return [];
-  const line = element(doc, 'div', 'typst-quick-pick__hint');
-  line.id = `typst-quick-pick-hint-${++ids}`;
-  line.textContent = text;
-  field.setAttribute('aria-describedby', line.id);
-  return [line];
-}
-
-/** The selection in `root`: a shadow root's own where the browser has one (Chromium), else the document's. */
-function selectionIn(root: Document | ShadowRoot): Selection | null {
-  const own = (root as ShadowRoot & { getSelection?(): Selection | null }).getSelection;
-  return typeof own === 'function' ? own.call(root) : (root.ownerDocument ?? (root as Document)).getSelection();
 }
 
 /** The selection's place on screen, if there is one with a size (a caret has a height). */
@@ -502,12 +499,18 @@ function selectionRect(root: Document | ShadowRoot): { top: number; bottom: numb
   return rect && rect.height > 0 ? { top: rect.top, bottom: rect.bottom, left: rect.left } : null;
 }
 
+/** The selection in `root`: a shadow root's own where the browser has one (Chromium), else the document's. */
+function selectionIn(root: Document | ShadowRoot): Selection | null {
+  const own = (root as ShadowRoot & { getSelection?(): Selection | null }).getSelection;
+  return typeof own === 'function' ? own.call(root) : (root.ownerDocument ?? (root as Document)).getSelection();
+}
+
+/** Elements taller than this (an editor's whole text) are no anchor: the box goes to their top instead. */
+const MAX_ANCHOR_HEIGHT = 120;
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, className: string): HTMLElementTagNameMap[K] {
-  const node = doc.createElement(tag);
-  node.className = className;
-  return node;
-}
+/** Between the anchor and the box. */
+const GAP = 4;

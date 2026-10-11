@@ -3,25 +3,6 @@ import { PageIndex, type Page } from '../../../core/typst-engine/typst-engine';
 import type { Zoom } from '../preview';
 import { measure, Px } from './geometry';
 
-/** CSS pixels per Typst point (96 dpi / 72 pt per inch): the size of a page at 100 %. */
-const PX_PER_PT = 96 / 72;
-
-export interface PageListOptions {
-  /** The scrolling element whose viewport decides which pages are near. */
-  root: HTMLElement;
-  /** How far outside the viewport pages still get their SVG (IntersectionObserver rootMargin). */
-  margin?: string;
-}
-
-interface Entry {
-  element: HTMLElement;
-  content: HTMLElement;
-  page: Page;
-  near: boolean;
-  /** Hash of the SVG currently in the DOM, or null when it is a placeholder. */
-  shown: string | null;
-}
-
 /**
  * The page elements of the preview. Every page is a placeholder sized from the
  * page's width and height; only pages near the viewport carry their SVG, so
@@ -133,3 +114,22 @@ export class PageList {
     entry.shown = wanted;
   }
 }
+
+export interface PageListOptions {
+  /** The scrolling element whose viewport decides which pages are near. */
+  root: HTMLElement;
+  /** How far outside the viewport pages still get their SVG (IntersectionObserver rootMargin). */
+  margin?: string;
+}
+
+interface Entry {
+  element: HTMLElement;
+  content: HTMLElement;
+  page: Page;
+  near: boolean;
+  /** Hash of the SVG currently in the DOM, or null when it is a placeholder. */
+  shown: string | null;
+}
+
+/** CSS pixels per Typst point (96 dpi / 72 pt per inch): the size of a page at 100 %. */
+const PX_PER_PT = 96 / 72;

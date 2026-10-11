@@ -1,11 +1,15 @@
-// FileDecorations: the decorations every registered provider gives a file (`window.registerFileDecorationProvider`),
-// for the views that list files. See window.ts.
+// FileDecorations. See window.ts.
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { FileDecoration, FileDecorationProvider } from '../window';
 
-/** The registered file decoration providers, asked in registration order, and one event for all their changes. */
+/**
+ * The registered file decoration providers, asked in registration order, and one event for all their changes.
+ *
+ * The decorations every registered provider gives a file (`window.registerFileDecorationProvider`), for the views that
+ * list files.
+ */
 export class FileDecorations {
   readonly #providers: { provider: FileDecorationProvider; subscription: Disposable }[] = [];
   readonly #changed = new EventEmitter<readonly ProjectPath[] | undefined>();

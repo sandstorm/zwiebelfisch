@@ -1,42 +1,10 @@
-// CustomEditors: which editor shows a file, by file name pattern, priority and the user's choice
-// (`window.registerCustomEditorProvider`, VS Code's custom editors), the editors a file can be switched between, and
-// the panels in the editing area. See window.ts.
+// CustomEditors. See window.ts.
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { FileChange, FileContent } from '../../../core/project/project';
 import type { CustomEditorOptions, CustomEditorPanel, CustomEditorProvider } from '../window';
 import { FilenamePattern } from './filename-pattern';
-
-/** The priority of a `'default'` editor (and of one registered without a priority). */
-const DEFAULT_PRIORITY = 100;
-
-/**
- * How an editor takes part in opening files: `ranked` ones by default (in `priority` order), `fallback` ones only files
- * no ranked one matches, `option` ones only when chosen.
- */
-type Role = 'ranked' | 'fallback' | 'option';
-
-/** The roles, the one opening files first. */
-const ROLES: readonly Role[] = ['ranked', 'fallback', 'option'];
-
-interface Registration {
-  readonly viewType: string;
-  readonly displayName: string;
-  readonly provider: CustomEditorProvider;
-  readonly pattern: FilenamePattern;
-  readonly role: Role;
-  /** Orders the ranked editors (higher first). */
-  readonly priority: number;
-  readonly icon: string | undefined;
-  readonly retainContextWhenHidden: boolean;
-}
-
-/** An editor the user can switch the shown file to (the editing area's tabs). */
-export interface CustomEditorChoice {
-  readonly viewType: string;
-  readonly displayName: string;
-}
 
 /**
  * The custom editors of the editing area. Opening a file picks the editor asked for (`viewType`), else the one the
@@ -45,6 +13,10 @@ export interface CustomEditorChoice {
  * `'fallback'` editors only open files no other editor matches, `'option'` editors only when asked for. That editor gets a fresh panel for the file; showing anything else
  * disposes it, or only hides it for an editor with `retainContextWhenHidden` (shown again when that file opens in
  * it again, disposed when the file is deleted).
+ *
+ * Which editor shows a file, by file name pattern, priority and the user's choice
+ * (`window.registerCustomEditorProvider`, VS Code's custom editors), the editors a file can be switched between, and
+ * the panels in the editing area.
  */
 export class CustomEditors {
   readonly #registrations: Registration[] = [];
@@ -173,15 +145,29 @@ export class CustomEditors {
   }
 }
 
-/**
- * 1 if `a` comes before `b` regardless of registration order (an earlier role, a higher priority, a more specific
- * pattern), else 0.
- */
-function ranksAbove(a: Registration, b: Registration): number {
-  if (a.role !== b.role) return Number(ROLES.indexOf(a.role) < ROLES.indexOf(b.role));
-  if (a.priority !== b.priority) return Number(a.priority > b.priority);
-  return Number(a.pattern.specificity > b.pattern.specificity);
+/** An editor the user can switch the shown file to (the editing area's tabs). */
+export interface CustomEditorChoice {
+  readonly viewType: string;
+  readonly displayName: string;
 }
+
+interface Registration {
+  readonly viewType: string;
+  readonly displayName: string;
+  readonly provider: CustomEditorProvider;
+  readonly pattern: FilenamePattern;
+  readonly role: Role;
+  /** Orders the ranked editors (higher first). */
+  readonly priority: number;
+  readonly icon: string | undefined;
+  readonly retainContextWhenHidden: boolean;
+}
+
+/**
+ * How an editor takes part in opening files: `ranked` ones by default (in `priority` order), `fallback` ones only files
+ * no ranked one matches, `option` ones only when chosen.
+ */
+type Role = 'ranked' | 'fallback' | 'option';
 
 /** A panel of the editing area; hidden rather than disposed for an editor that retains its context. */
 class Panel implements CustomEditorPanel {
@@ -220,3 +206,19 @@ class Panel implements CustomEditorPanel {
     this.element.remove();
   }
 }
+
+/** The priority of a `'default'` editor (and of one registered without a priority). */
+const DEFAULT_PRIORITY = 100;
+
+/**
+ * 1 if `a` comes before `b` regardless of registration order (an earlier role, a higher priority, a more specific
+ * pattern), else 0.
+ */
+function ranksAbove(a: Registration, b: Registration): number {
+  if (a.role !== b.role) return Number(ROLES.indexOf(a.role) < ROLES.indexOf(b.role));
+  if (a.priority !== b.priority) return Number(a.priority > b.priority);
+  return Number(a.pattern.specificity > b.pattern.specificity);
+}
+
+/** The roles, the one opening files first. */
+const ROLES: readonly Role[] = ['ranked', 'fallback', 'option'];

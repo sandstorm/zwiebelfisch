@@ -1,12 +1,8 @@
-// TextStyleMenu: the toolbar's text style menu — "Normal text" and what the text style providers contribute
-// (headings, custom styles). See toolbar.ts and docs/30_architecture/04_visual-editor.typ.
+// TextStyleMenu. See toolbar.ts and docs/30_architecture/04_visual-editor.typ.
 import type { ChainedCommands, Editor } from '@tiptap/core';
 import type { EditorState } from '@tiptap/pm/state';
 import type { Disposable } from '../../../core/disposable/disposable';
 import type { TextStyle, TextStyleProvider, ToolbarControl, VisualEditorContext } from '../visual-editor';
-
-/** The host's own entry: paragraphs, after taking off the selection's style. */
-const NORMAL_TEXT = 'paragraph';
 
 /**
  * The text style `<select>`: *Normal text*, then the providers' entries by
@@ -14,6 +10,8 @@ const NORMAL_TEXT = 'paragraph';
  * selection's style (the first active entry that is no toggle, else normal
  * text in a paragraph), marks toggles ✓ where they are on, and disables what
  * cannot apply. The entries follow the providers as they change.
+ *
+ * The toolbar's text style menu — "Normal text" and what the text style providers contribute (headings, custom styles).
  */
 export class TextStyleMenu implements ToolbarControl {
   readonly element: HTMLSelectElement;
@@ -104,6 +102,15 @@ export class TextStyleMenu implements ToolbarControl {
   }
 }
 
+/** The providers' entries for `view`, by `order` (equal: as provided): the menu's entries after "Normal text". */
+export function textStyleEntries(providers: readonly TextStyleProvider[], view: VisualEditorContext): TextStyle[] {
+  const provided = providers.flatMap((provider) => provider.provideTextStyles(view));
+  return provided.map((entry, index) => ({ entry, index })).sort((a, b) => (a.entry.order ?? 0) - (b.entry.order ?? 0) || a.index - b.index).map(({ entry }) => entry);
+}
+
+/** The host's own entry: paragraphs, after taking off the selection's style. */
+const NORMAL_TEXT = 'paragraph';
+
 /** Whether every text block the selection touches is a paragraph (Normal text has nothing to change there). */
 function onlyParagraphs({ doc, selection }: EditorState): boolean {
   let only = true;
@@ -112,10 +119,4 @@ function onlyParagraphs({ doc, selection }: EditorState): boolean {
     return only;
   });
   return only;
-}
-
-/** The providers' entries for `view`, by `order` (equal: as provided): the menu's entries after "Normal text". */
-export function textStyleEntries(providers: readonly TextStyleProvider[], view: VisualEditorContext): TextStyle[] {
-  const provided = providers.flatMap((provider) => provider.provideTextStyles(view));
-  return provided.map((entry, index) => ({ entry, index })).sort((a, b) => (a.entry.order ?? 0) - (b.entry.order ?? 0) || a.index - b.index).map(({ entry }) => entry);
 }

@@ -2,12 +2,6 @@
 import type { FileContent } from '../../../core/project/project';
 import type { TypstEngine } from '../../../core/typst-engine/typst-engine';
 
-/**
- * The file map of a compile request. `null` stands for the same bytes as in
- * the previous request, so images are not copied to the worker per keystroke.
- */
-export type EncodedFiles = Record<string, FileContent | null>;
-
 /** Main-thread side: remembers which bytes the worker already has. */
 export class FileSender {
   private sent = new Map<string, Uint8Array>();
@@ -27,6 +21,12 @@ export class FileSender {
     return encoded;
   }
 }
+
+/**
+ * The file map of a compile request. `null` stands for the same bytes as in
+ * the previous request, so images are not copied to the worker per keystroke.
+ */
+export type EncodedFiles = Record<string, FileContent | null>;
 
 /**
  * Worker side: keeps the engine's files in step with the requests. Tasks run

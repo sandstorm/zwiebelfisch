@@ -1,13 +1,5 @@
-// ContextMenu: what `showContextMenu` shows: a contributed menu (its `registerMenuItem` entries) popped up at a point
-// or below a button (a row's context menu, a "New ▾" menu), closed once an entry is chosen. See window.ts.
+// ContextMenu. See window.ts.
 import type { ContextMenuOptions, ContributedMenuItem, MenuAnchor } from '../window';
-
-export interface ContextMenuSources {
-  /** The entries of a menu whose `when` holds in `context`, sorted (the workbench's menus). */
-  items(menuId: string, context: Readonly<Record<string, unknown>>): readonly ContributedMenuItem[];
-  /** Runs an entry's command with the menu's arguments. */
-  executeCommand(command: string, ...args: unknown[]): Promise<unknown>;
-}
 
 /**
  * One menu at a time over the widget `host` (a new one closes the open one): a `role="menu"` list of the menu's
@@ -15,6 +7,9 @@ export interface ContextMenuSources {
  * focus; arrow keys, Home and End move it. Choosing an entry, Escape, Tab or a press elsewhere closes the menu and
  * gives the focus back to the element that had it; a chosen entry's command runs after that (a failing one is logged:
  * it tells the user itself). A menu without entries is not shown.
+ *
+ * What `showContextMenu` shows: a contributed menu (its `registerMenuItem` entries) popped up at a point or below a
+ * button (a row's context menu, a "New ▾" menu), closed once an entry is chosen.
  */
 export class ContextMenu {
   #open: MenuList | null = null;
@@ -44,10 +39,11 @@ export class ContextMenu {
   }
 }
 
-interface Entry {
-  readonly label: string;
-  readonly group?: string;
-  run(): void;
+export interface ContextMenuSources {
+  /** The entries of a menu whose `when` holds in `context`, sorted (the workbench's menus). */
+  items(menuId: string, context: Readonly<Record<string, unknown>>): readonly ContributedMenuItem[];
+  /** Runs an entry's command with the menu's arguments. */
+  executeCommand(command: string, ...args: unknown[]): Promise<unknown>;
 }
 
 /** The menu's element in `container` while it is open. */
@@ -124,14 +120,20 @@ class MenuList {
   }
 }
 
-function separator(doc: Document): HTMLElement {
-  const node = element(doc, 'div', 'typst-context-menu__separator');
-  node.setAttribute('role', 'separator');
-  return node;
+interface Entry {
+  readonly label: string;
+  readonly group?: string;
+  run(): void;
 }
 
 function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, className: string): HTMLElementTagNameMap[K] {
   const node = doc.createElement(tag);
   node.className = className;
+  return node;
+}
+
+function separator(doc: Document): HTMLElement {
+  const node = element(doc, 'div', 'typst-context-menu__separator');
+  node.setAttribute('role', 'separator');
   return node;
 }

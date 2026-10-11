@@ -1,22 +1,14 @@
-// Notifications: the messages extensions show (`showInformationMessage`, `showWarningMessage`, `showErrorMessage`),
-// in a small area at the bottom right of the widget. See window.ts.
+// Notifications. See window.ts.
 import type { MessageItem, MessageSeverity } from '../window';
-
-/** How long an information message without items stays. */
-const INFO_TIMEOUT_MS = 8000;
-/** At most this many messages show at once; a new one closes the oldest. */
-const MAX_SHOWN = 3;
-
-interface Shown {
-  element: HTMLElement;
-  close(): void;
-}
 
 /**
  * The widget's notification area: each message is a small box with its text, a button per item and a close button,
  * stacked at the bottom right, newest last. Not modal; nothing takes the focus. Information is `role=status` (read
  * out politely) and closes by itself after a while unless it has items or the pointer or focus is on it; warnings
  * and errors are `role=alert` and stay until closed.
+ *
+ * The messages extensions show (`showInformationMessage`, `showWarningMessage`, `showErrorMessage`), in a small area at
+ * the bottom right of the widget.
  */
 export class Notifications {
   readonly #area: HTMLElement;
@@ -77,6 +69,11 @@ export class Notifications {
   }
 }
 
+interface Shown {
+  element: HTMLElement;
+  close(): void;
+}
+
 function button(doc: Document, text: string, className: string, onClick: () => void): HTMLButtonElement {
   const element = doc.createElement('button');
   element.type = 'button';
@@ -85,3 +82,8 @@ function button(doc: Document, text: string, className: string, onClick: () => v
   element.addEventListener('click', onClick);
   return element;
 }
+
+/** How long an information message without items stays. */
+const INFO_TIMEOUT_MS = 8000;
+/** At most this many messages show at once; a new one closes the oldest. */
+const MAX_SHOWN = 3;

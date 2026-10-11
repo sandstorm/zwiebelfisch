@@ -1,13 +1,13 @@
-// LoadState: what the preview still waits for — the engine's wasm, the first compile, packages, fonts — from the
-// worker's load events, as one `PreviewProgress`. No DOM. See ../preview.ts and docs/30_architecture/06_preview.typ.
+// LoadState. See ../preview.ts and docs/30_architecture/06_preview.typ.
 import type { PreviewProgress } from '../preview';
 import type { LoadEvent } from '../worker/protocol';
-
-type Engine = { kind: 'loading'; loaded: number; total: number | null } | { kind: 'ready' } | { kind: 'failed'; message: string };
 
 /**
  * The preview's loading, most important first: a failed engine, the engine's download, packages and fonts downloading
  * during a compile, then "Compiling…" until the first compile answered. Null once nothing is pending.
+ *
+ * What the preview still waits for — the engine's wasm, the first compile, packages, fonts — from the worker's load
+ * events, as one `PreviewProgress`. No DOM.
  */
 export class LoadState {
   #engine: Engine = { kind: 'loading', loaded: 0, total: null };
@@ -53,6 +53,8 @@ export class LoadState {
     return null;
   }
 }
+
+type Engine = { kind: 'loading'; loaded: number; total: number | null } | { kind: 'ready' } | { kind: 'failed'; message: string };
 
 function engineProgress(loaded: number, total: number | null): PreviewProgress {
   const title = 'Loading the Typst compiler…';

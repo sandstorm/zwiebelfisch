@@ -4,18 +4,6 @@ import type { Disposable } from '../../../core/disposable/disposable';
 import type { SourceOffset } from '../../../core/typst-document/typst-document';
 import type { RawBoxPicture, RawBoxRenderer } from '../visual-editor';
 
-/** The raw box a `RenderedBox` belongs to. */
-export interface BoxHost {
-  /** The box's element; the picture goes in before `code`. */
-  dom: HTMLElement;
-  /** The element holding the code editor. */
-  code: HTMLElement;
-  /** The box's node and where its source starts, or null while it is not in the document. */
-  source(): { node: Node; from: SourceOffset } | null;
-  /** The picture was clicked (focus the code, or select the box). */
-  activate(): void;
-}
-
 /**
  * The rendered face of a raw box: its renderer's picture, shown instead of
  * the code while the box does not have focus. Clicking the picture activates
@@ -107,6 +95,18 @@ export class RenderedBox {
     this.host.code.hidden = rendered;
     this.host.dom.classList.toggle('typst-visual__raw--rendered', rendered);
   }
+}
+
+/** The raw box a `RenderedBox` belongs to. */
+export interface BoxHost {
+  /** The box's element; the picture goes in before `code`. */
+  dom: HTMLElement;
+  /** The element holding the code editor. */
+  code: HTMLElement;
+  /** The box's node and where its source starts, or null while it is not in the document. */
+  source(): { node: Node; from: SourceOffset } | null;
+  /** The picture was clicked (focus the code, or select the box). */
+  activate(): void;
 }
 
 /** Once the image at `url` is decoded (or failed to; then the box shows it as the browser does), where the browser can tell. */

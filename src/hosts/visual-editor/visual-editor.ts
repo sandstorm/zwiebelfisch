@@ -1,7 +1,4 @@
-// VisualEditor: the WYSIWYG editing view, a Tiptap editor over the source-anchored ProseMirror document of a TypstDocument;
-// everything it shows beyond paragraphs and raw Typst is contributed through VisualEditorContributions (kept by
-// VisualEditorHost).
-// Entry of hosts/visual-editor/. See docs/30_architecture/04_visual-editor.typ.
+// VisualEditor. Entry of hosts/visual-editor/. See docs/30_architecture/04_visual-editor.typ.
 import { Editor, type AnyExtension, type ChainedCommands, type Range } from '@tiptap/core';
 import { StateEffect, type Extension } from '@codemirror/state';
 import type { Node } from '@tiptap/pm/model';
@@ -19,15 +16,6 @@ import { Toolbar } from './toolbar/toolbar';
 import proseMirrorCss from './prosemirror.css?inline';
 import css from './visual-editor.css?inline';
 
-/** Marks transactions that mirror a document change, so they are not written back. */
-const FROM_DOCUMENT = 'typst-from-document';
-
-/**
- * The view type of the Visual editor's custom editor, for `workbench.open(path, { viewType })`,
- * `TextEditor.viewType` and the menu context key `activeCustomEditorId`.
- */
-export const VISUAL_EDITOR = 'visualEditor';
-
 /**
  * The Word-like editing view (Tiptap/ProseMirror) with its formatting
  * toolbar, the parsed ProseMirror document of a TypstDocument.
@@ -38,6 +26,10 @@ export const VISUAL_EDITOR = 'visualEditor';
  * raw boxes and is never rewritten. What the view models, shows and offers
  * beyond that (headings, tables, labels, comments, …) comes from
  * `contributions`, as registered when the view is created.
+ *
+ * The WYSIWYG editing view, a Tiptap editor over the source-anchored ProseMirror document of a TypstDocument;
+ * everything it shows beyond paragraphs and raw Typst is contributed through VisualEditorContributions (kept by
+ * VisualEditorHost).
  */
 export class VisualEditor {
   /** The text and the gutters beside it, below the toolbar: what scrolls as the document's content. */
@@ -155,6 +147,12 @@ export class VisualEditor {
 }
 
 /**
+ * The view type of the Visual editor's custom editor, for `workbench.open(path, { viewType })`,
+ * `TextEditor.viewType` and the menu context key `activeCustomEditorId`.
+ */
+export const VISUAL_EDITOR = 'visualEditor';
+
+/**
  * Inserts the blocks Typst `source` is read as in a view's `editor` (as the view reads any Typst: a figure of an
  * image is a figure, what no spec models a raw box) next to the selection: after the selected block, or after the
  * paragraph or heading holding the cursor; an empty paragraph is taken over. Nothing is split or replaced; the
@@ -170,17 +168,6 @@ export function insertTypstBlocks(editor: Editor, source: string): void {
     target = $to.parent.content.size === 0 ? { from: $to.before(), to: after } : { from: after, to: after };
   }
   editor.chain().focus().insertContentAt(target, blocks).run();
-}
-
-/** What the raw boxes of `view` get from the contributions. */
-function boxes(view: VisualEditorContext, contributed: Contributed, views: RawBoxes['views']): RawBoxes {
-  return {
-    view,
-    renderers: contributed.rawBoxRenderers.map((provider) => provider(view)).filter((renderer) => renderer !== null),
-    codeExtensions: contributed.rawBoxCodeMirrorExtensions.map((provider) => provider(view)),
-    actions: contributed.rawBoxActions,
-    views,
-  };
 }
 
 // The contribution points: what extensions register, and what they are given.
@@ -265,9 +252,6 @@ export interface VisualEditorContribution {
 export interface PriorityOptions {
   readonly priority?: number;
 }
-
-/** The default `priority` (Tiptap's). */
-const DEFAULT_PRIORITY = 100;
 
 /**
  * Everything registered: box renderers by priority (see `PriorityOptions`), the rest in registration order. What the
@@ -456,12 +440,6 @@ export class VisualEditorHost implements VisualEditorContributions {
       if (index >= 0) list.splice(index, 1);
     });
   }
-}
-
-/** A registered value and its priority (the sort by it is stable: equal priorities stay in registration order). */
-interface Ranked<T> {
-  readonly value: T;
-  readonly priority: number;
 }
 
 /** One Visual editor, as contributions made for it see it (see the `…Provider` types). */
@@ -724,3 +702,26 @@ export type ToolbarItem =
       /** The item for one view, when it keeps state there (a popover) or is a control of its own. */
       create(toolbar: ToolbarContext): ToolbarAction | ToolbarControl;
     };
+
+/** What the raw boxes of `view` get from the contributions. */
+function boxes(view: VisualEditorContext, contributed: Contributed, views: RawBoxes['views']): RawBoxes {
+  return {
+    view,
+    renderers: contributed.rawBoxRenderers.map((provider) => provider(view)).filter((renderer) => renderer !== null),
+    codeExtensions: contributed.rawBoxCodeMirrorExtensions.map((provider) => provider(view)),
+    actions: contributed.rawBoxActions,
+    views,
+  };
+}
+
+/** Marks transactions that mirror a document change, so they are not written back. */
+const FROM_DOCUMENT = 'typst-from-document';
+
+/** A registered value and its priority (the sort by it is stable: equal priorities stay in registration order). */
+interface Ranked<T> {
+  readonly value: T;
+  readonly priority: number;
+}
+
+/** The default `priority` (Tiptap's). */
+const DEFAULT_PRIORITY = 100;

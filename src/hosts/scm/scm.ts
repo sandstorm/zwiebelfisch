@@ -1,13 +1,18 @@
-// The scm namespace of the extension API (VS Code's `scm`): the source controls extensions register, somewhere the
-// project can be committed (the GitLab branch behind a collaboration room), for whichever extension shows them.
-// Entry of hosts/scm/. See docs/30_architecture/07_workbench.typ.
-// Why a contribution point: what commits (collaboration) and what shows committing (source-control) are two
-// extensions that never know each other; both know only this registry.
+// The scm namespace of the extension API (VS Code's `scm`). Entry of hosts/scm/. See
+// docs/30_architecture/07_workbench.typ.
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../core/paths/paths';
 
-/** The source controls as extensions use them (VS Code's `scm` namespace). */
+/**
+ * The source controls as extensions use them (VS Code's `scm` namespace).
+ *
+ * The source controls extensions register, somewhere the project can be committed (the GitLab branch behind a
+ * collaboration room), for whichever extension shows them.
+ *
+ * Why a contribution point: what commits (collaboration) and what shows committing (source-control) are two extensions
+ * that never know each other; both know only this registry.
+ */
 export interface Scm {
   /**
    * Offers `sourceControl` (VS Code's `scm.createSourceControl`) until disposed: somewhere the project can be

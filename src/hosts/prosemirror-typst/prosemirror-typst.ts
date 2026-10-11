@@ -1,4 +1,22 @@
+// The Visual editor host's document model. Entry of hosts/prosemirror-typst/. See
+// docs/30_architecture/03_prosemirror-typst.typ.
+import type { SyntaxNode } from '@lezer/common';
+import { flattenExtensions, getExtensionField, getSchema, type AnyExtension } from '@tiptap/core';
+import type { Mark, Node, Schema } from '@tiptap/pm/model';
+import type { Transaction } from '@tiptap/pm/state';
+import StarterKit, { type StarterKitOptions } from '@tiptap/starter-kit';
+import { Disposable } from '../../core/disposable/disposable';
+import { SourceOffset, type SourceRange } from '../../core/typst-document/typst-document';
+import type { Event } from '../../core/event-emitter/event-emitter';
+import { TypstConversions } from './typst-conversions';
+import { parseDocument } from './parser';
+import { forgetPrinted, printed, type Span } from './serializer';
+import { unchangedNodes } from './unchanged-nodes';
+import { RawBlock, RawInline, SoftBreak, sourceAnchors, TypstDocument, TypstSource } from './schema';
+
 /**
+ * A schema of the minimum schema, `nodes` and `marks`, with their grammar attached.
+ *
  * The source-anchored conversion between Typst text and the Visual editor's
  * ProseMirror document: the framework, which knows no Typst construct beyond
  * paragraphs, text and raw Typst. Every other construct comes in as a spec
@@ -26,24 +44,14 @@
  *
  * The minimum schema is the conversion's own: document, paragraph, text, hard
  * and soft breaks, raw Typst (block and inline), the `typstSource` mark, history
- * and drop / gap cursors. The Visual editor host's document model, a module of its
- * own: the host builds on it, the specs contributed to the Visual editor are
- * written against its types, and it is tested without a view.
- * Entry of hosts/prosemirror-typst/. See docs/30_architecture/03_prosemirror-typst.typ.
+ * and drop / gap cursors. A module of its own: the host builds on it, the specs contributed to the Visual editor
+ * are written against its types, and it is tested without a view.
  */
-import type { SyntaxNode } from '@lezer/common';
-import { flattenExtensions, getExtensionField, getSchema, type AnyExtension } from '@tiptap/core';
-import type { Mark, Node, Schema } from '@tiptap/pm/model';
-import type { Transaction } from '@tiptap/pm/state';
-import StarterKit, { type StarterKitOptions } from '@tiptap/starter-kit';
-import { Disposable } from '../../core/disposable/disposable';
-import { SourceOffset, type SourceRange } from '../../core/typst-document/typst-document';
-import type { Event } from '../../core/event-emitter/event-emitter';
-import { TypstConversions } from './typst-conversions';
-import { parseDocument } from './parser';
-import { forgetPrinted, printed, type Span } from './serializer';
-import { unchangedNodes } from './unchanged-nodes';
-import { RawBlock, RawInline, SoftBreak, sourceAnchors, TypstDocument, TypstSource } from './schema';
+export function createSchema(nodes: readonly DocumentNodeSpec[], marks: readonly TypstMarkSpec[]): Schema {
+  const schema = getSchema(documentExtensions(nodes, marks));
+  attachGrammar(schema, nodes, marks);
+  return schema;
+}
 
 /** A block's label: its name, and the source between the block and `<name>` (`' '`, `''`, `'\n'`). */
 export interface BlockLabel {
@@ -236,13 +244,6 @@ export interface TypstSerializeState {
   item(item: Node, pos: number, prefix: string, indent?: string): void;
 }
 
-/** A schema of the minimum schema, `nodes` and `marks`, with their grammar attached. */
-export function createSchema(nodes: readonly DocumentNodeSpec[], marks: readonly TypstMarkSpec[]): Schema {
-  const schema = getSchema(documentExtensions(nodes, marks));
-  attachGrammar(schema, nodes, marks);
-  return schema;
-}
-
 /**
  * The Tiptap extensions of a schema holding `nodes` and `marks` besides the
  * minimum schema: the specs' extensions, between the base (paragraph, text,
@@ -260,19 +261,6 @@ export function documentExtensions(nodes: readonly DocumentNodeSpec[], marks: re
   return [baseExtension(), ...new Set(contributed), TypstDocument, RawBlock, RawInline, SoftBreak, TypstSource, sourceAnchors([...BASE_NODES, ...nodes])];
 }
 
-/** The minimum schema's own nodes, as the grammar sees them. */
-const BASE_NODES: readonly DocumentNodeSpec[] = [
-  { name: 'paragraph', typst: { labelled: true } },
-  { name: 'hardBreak' },
-  { name: 'rawBlock', typst: { labelled: true } },
-  { name: 'rawInline' },
-];
-
-/** The base: paragraphs, text, line breaks (`\`), history, drop and gap cursors. */
-function baseExtension(): AnyExtension {
-  return starterKitPart('typstBase', { paragraph: {}, text: undefined, hardBreak: {}, undoRedo: {}, dropcursor: {}, gapcursor: undefined });
-}
-
 /**
  * Some of Tiptap's StarterKit as one extension named `name`: the parts in
  * `parts` (with their options), no others. (The parts' own packages are not
@@ -282,12 +270,6 @@ export function starterKitPart(name: string, parts: Partial<StarterKitOptions>):
   const options = Object.fromEntries(STARTER_KIT_PARTS.map((part) => [part, part in parts ? parts[part] : false]));
   return StarterKit.extend({ name }).configure(options);
 }
-
-/** Every part of StarterKit: each one not asked for is turned off. */
-const STARTER_KIT_PARTS: readonly (keyof StarterKitOptions)[] = [
-  'blockquote', 'bold', 'bulletList', 'code', 'codeBlock', 'document', 'dropcursor', 'gapcursor', 'hardBreak', 'heading', 'undoRedo',
-  'horizontalRule', 'italic', 'listItem', 'listKeymap', 'link', 'orderedList', 'paragraph', 'strike', 'text', 'underline', 'trailingNode',
-];
 
 /** The document `source` parses to, through the specs attached to `schema` (see `attachGrammar`). */
 export function parseTypst(source: string, schema: Schema): Node {
@@ -397,6 +379,37 @@ export function applyTypstChanges(tr: Transaction, target: Node): Transaction {
   return tr;
 }
 
+/** The base: paragraphs, text, line breaks (`\`), history, drop and gap cursors. */
+function baseExtension(): AnyExtension {
+  return starterKitPart('typstBase', { paragraph: {}, text: undefined, hardBreak: {}, undoRedo: {}, dropcursor: {}, gapcursor: undefined });
+}
+
+/** The minimum schema's own nodes, as the grammar sees them. */
+const BASE_NODES: readonly DocumentNodeSpec[] = [
+  { name: 'paragraph', typst: { labelled: true } },
+  { name: 'hardBreak' },
+  { name: 'rawBlock', typst: { labelled: true } },
+  { name: 'rawInline' },
+];
+
+/** Every part of StarterKit: each one not asked for is turned off. */
+const STARTER_KIT_PARTS: readonly (keyof StarterKitOptions)[] = [
+  'blockquote', 'bold', 'bulletList', 'code', 'codeBlock', 'document', 'dropcursor', 'gapcursor', 'hardBreak', 'heading', 'undoRedo',
+  'horizontalRule', 'italic', 'listItem', 'listKeymap', 'link', 'orderedList', 'paragraph', 'strike', 'text', 'underline', 'trailingNode',
+];
+
+/** The first index whose span satisfies `test`, which is monotonic over the spans; `spans.length` if none. */
+function firstIndex(spans: Span[], test: (span: Span) => boolean): number {
+  let low = 0;
+  let high = spans.length;
+  while (low < high) {
+    const mid = (low + high) >> 1;
+    if (test(spans[mid])) high = mid;
+    else low = mid + 1;
+  }
+  return low;
+}
+
 /** The source end of the visible character or atom ending at `pos`, if there is one. */
 function endSource(spans: Span[], pos: number): number | null {
   const span = spans[firstIndex(spans, (s) => s.pmTo >= pos)];
@@ -410,18 +423,6 @@ function gapSource(spans: Span[], index: number, pos: number): number {
   while (before >= 0 && spans[before].kind === 'syntax' && spans[before].pmTo === pos) before--;
   if (before >= 0 && spans[before].pmTo === pos) return spans[before].to;
   return index > 0 ? spans[index - 1].to : 0;
-}
-
-/** The first index whose span satisfies `test`, which is monotonic over the spans; `spans.length` if none. */
-function firstIndex(spans: Span[], test: (span: Span) => boolean): number {
-  let low = 0;
-  let high = spans.length;
-  while (low < high) {
-    const mid = (low + high) >> 1;
-    if (test(spans[mid])) high = mid;
-    else low = mid + 1;
-  }
-  return low;
 }
 
 function withoutAnchors(node: Node, anchors: ReadonlySet<string>): Node {

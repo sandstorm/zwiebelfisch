@@ -3,15 +3,6 @@
 import type { QuickPickItem, SearchItem, SearchProvider, WindowApi } from '../../window/window';
 import type { ConfigurationProperty } from '../../workspace/workspace';
 
-/** What the setting search needs: the declared settings, their values now, how to change one, and a quick pick. */
-export interface SettingSearchOptions {
-  properties(): ReadonlyMap<string, ConfigurationProperty>;
-  value(id: string): unknown;
-  /** Sets setting `id` for this widget (as if the host had set it). */
-  update(id: string, value: unknown): void;
-  readonly window: Pick<WindowApi, 'showQuickPick'>;
-}
-
 /**
  * "Settings" (prefix `:`): every boolean setting (picking switches it) and every setting with an `enum` (picking
  * offers its values in a second quick pick), as "Section: Key" with the value now and the description.
@@ -26,20 +17,21 @@ export function settingSearch(options: SettingSearchOptions): SearchProvider {
   };
 }
 
+/** What the setting search needs: the declared settings, their values now, how to change one, and a quick pick. */
+export interface SettingSearchOptions {
+  properties(): ReadonlyMap<string, ConfigurationProperty>;
+  value(id: string): unknown;
+  /** Sets setting `id` for this widget (as if the host had set it). */
+  update(id: string, value: unknown): void;
+  readonly window: Pick<WindowApi, 'showQuickPick'>;
+}
+
 function settingItem(id: string, property: ConfigurationProperty, options: SettingSearchOptions): SearchItem | null {
   const value = options.value(id);
   const item = { label: title(id), description: describe(value), detail: property.description };
   if (property.type === 'boolean') return { ...item, accept: () => options.update(id, !value) };
   if (!property.enum) return null;
   return { ...item, accept: () => pickValue(id, property.enum!, options) };
-}
-
-/** Offers `values` (the one now marked), and sets the one picked. */
-async function pickValue(id: string, values: readonly unknown[], { value, update, window }: SettingSearchOptions): Promise<void> {
-  const now = value(id);
-  const items: (QuickPickItem & { value: unknown })[] = values.map((choice) => ({ label: describe(choice), description: choice === now ? 'current' : undefined, value: choice }));
-  const picked = await window.showQuickPick(items, { title: title(id), placeHolder: 'Pick a value' });
-  if (picked && picked.value !== now) update(id, picked.value);
 }
 
 /** `workbench.rightSidePanel` → "Workbench: Right Side Panel" (as VS Code titles settings). */
@@ -52,4 +44,12 @@ function title(id: string): string {
 function describe(value: unknown): string {
   if (value === null || value === undefined) return 'none';
   return typeof value === 'string' ? value : JSON.stringify(value);
+}
+
+/** Offers `values` (the one now marked), and sets the one picked. */
+async function pickValue(id: string, values: readonly unknown[], { value, update, window }: SettingSearchOptions): Promise<void> {
+  const now = value(id);
+  const items: (QuickPickItem & { value: unknown })[] = values.map((choice) => ({ label: describe(choice), description: choice === now ? 'current' : undefined, value: choice }));
+  const picked = await window.showQuickPick(items, { title: title(id), placeHolder: 'Pick a value' });
+  if (picked && picked.value !== now) update(id, picked.value);
 }

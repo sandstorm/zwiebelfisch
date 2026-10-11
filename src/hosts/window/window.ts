@@ -1,11 +1,5 @@
-// The window namespace of the extension API (VS Code's `window`): what every feature needs to talk to the user
-// (messages, input box, quick pick, contributed menus), and the places of the widget's window a feature puts things into (status bar
-// items, custom editors, file decorations, search everywhere's providers), and the file and editor the user works in.
-// Entry of hosts/window/. See docs/30_architecture/07_workbench.typ.
-// Why one namespace in VS Code's shapes: features look and behave alike when they ask and tell the same way, and
-// they never make popovers of their own. The parts (notifications/, quick-input/, search/, menus/, status-bar/,
-// progress/, custom-editors/, file-decorations/) are deep modules of their own; WindowHost puts them where the
-// workbench's frame says.
+// The window namespace of the extension API (VS Code's `window`). Entry of hosts/window/. See
+// docs/30_architecture/07_workbench.typ.
 import type { CancellationToken } from '../../core/cancellation/cancellation';
 import { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
@@ -24,7 +18,18 @@ import { SearchEverywhere } from './search/search';
 import { StatusBar } from './status-bar/status-bar';
 import css from './window.css?inline';
 
-/** The widget's window as extensions use it (VS Code's `window` namespace). */
+/**
+ * The widget's window as extensions use it (VS Code's `window` namespace).
+ *
+ * What every feature needs to talk to the user (messages, input box, quick pick, contributed menus), and the places of
+ * the widget's window a feature puts things into (status bar items, custom editors, file decorations, search
+ * everywhere's providers), and the file and editor the user works in.
+ *
+ * Why one namespace in VS Code's shapes: features look and behave alike when they ask and tell the same way, and they
+ * never make popovers of their own. The parts (notifications/, quick-input/, search/, menus/, status-bar/, progress/,
+ * custom-editors/, file-decorations/) are deep modules of their own; WindowHost puts them where the workbench's frame
+ * says.
+ */
 export interface WindowApi {
   /**
    * Shows `message` in the widget's notification area (VS Code's `window.showInformationMessage`), with a button per

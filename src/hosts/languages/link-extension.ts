@@ -1,27 +1,17 @@
-// linkExtension: the document links of a CodeMirror editor's text (a Source editor, a raw box's code, a text file), like IntelliJ:
-// marked, Mod+click / Alt+Enter follow them, the hover offers "Open …" or what the link's command does. See
-// languages.ts.
+// linkExtension. See languages.ts.
 import type { EditorState, Extension, Range } from '@codemirror/state';
 import { Decoration, type DecorationSet, EditorView, hoverTooltip, keymap, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import { ProjectPath } from '../../core/paths/paths';
 import type { DocumentLink, LinkTargets, TextDocument } from './languages';
-
-/** What the links come from, and where following one goes. */
-export interface LinkActions extends LinkTargets {
-  provideDocumentLinks(document: TextDocument): readonly DocumentLink[];
-  resolveDocumentLink(link: DocumentLink): DocumentLink;
-}
-
-const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
-/** The modifier that turns a click on a link into "follow", as people read it. */
-const MOD_CLICK = MAC ? '⌘+click' : 'Ctrl+click';
-const linkMark = Decoration.mark({ class: 'typst-source__path' });
 
 /**
  * Makes the links of the editor's text navigable: while the modifier is held, a hovered link shows as one; Mod+click
  * or Alt+Enter on it opens its target, and the hover tooltip offers "Open …", or says what the link's tooltip says
  * and offers its command (e.g. "Create chapter.typ"). `languageId`: the text's language; `path`: the file the text
  * is in, now (a file can be renamed); null: none, the text has no links.
+ *
+ * The document links of a CodeMirror editor's text (a Source editor, a raw box's code, a text file), like IntelliJ:
+ * marked, Mod+click / Alt+Enter follow them, the hover offers "Open …" or what the link's command does.
  */
 export function linkExtension(actions: LinkActions, languageId: string, path: () => ProjectPath | null): Extension {
   const links = ViewPlugin.fromClass(
@@ -71,6 +61,12 @@ export function linkExtension(actions: LinkActions, languageId: string, path: ()
   ];
 }
 
+/** What the links come from, and where following one goes. */
+export interface LinkActions extends LinkTargets {
+  provideDocumentLinks(document: TextDocument): readonly DocumentLink[];
+  resolveDocumentLink(link: DocumentLink): DocumentLink;
+}
+
 /**
  * What a (resolved) link offers, as a small piece of DOM: "Open …" for its target (with the Mod+click hint), its
  * tooltip, and a button for its command that shows the error's message when the command rejects. Null when it offers
@@ -111,9 +107,13 @@ function decorate(links: readonly DocumentLink[]): DecorationSet {
   return Decoration.set(ranges, true);
 }
 
+const linkMark = Decoration.mark({ class: 'typst-source__path' });
+
 function isMod(event: MouseEvent | KeyboardEvent): boolean {
   return MAC ? event.metaKey : event.ctrlKey;
 }
+
+const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
 /** `typst-source--mod` on the editor while the modifier is held: links show the pointer. */
 function trackMod(view: EditorView, event: MouseEvent | KeyboardEvent | null): boolean {
@@ -141,3 +141,6 @@ function note(doc: Document, text: string): HTMLElement {
   element.textContent = text;
   return element;
 }
+
+/** The modifier that turns a click on a link into "follow", as people read it. */
+const MOD_CLICK = MAC ? '⌘+click' : 'Ctrl+click';

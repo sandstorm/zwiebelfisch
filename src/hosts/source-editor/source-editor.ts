@@ -1,8 +1,4 @@
-// SourceEditorHost: makes the Source editors (CodeMirror bound to a TypstDocument) and applies what is contributed to
-// them. Entry of hosts/source-editor/. See docs/30_architecture/05_source-editor.typ.
-// Why a host: the Source editor itself only keeps text and selection in sync with its document (plus reveal).
-// Everything else — the Typst language, colors, lint, document links, other users' carets — is a
-// contribution, registered once and applied to every editor made before or after, so a feature never tracks editors.
+// SourceEditorHost. Entry of hosts/source-editor/. See docs/30_architecture/05_source-editor.typ.
 import { basicSetup } from 'codemirror';
 import {
   Annotation, Compartment, EditorSelection, StateEffect, StateField, type ChangeSet, type Extension,
@@ -13,16 +9,15 @@ import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter
 import { SourceRange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
 import css from './source-editor.css?inline';
 
-/** The Source editor's contribution points (what `ExtensionContext.sourceEditor` offers). */
-export interface SourceEditorContributions {
-  /**
-   * Adds CodeMirror extensions to every Source editor, the existing ones included, until disposed: the same value for
-   * all of them, or made per view from what the view shows (`SourceEditorContext`).
-   */
-  registerCodeMirrorExtension(extension: Extension | ((view: SourceEditorContext) => Extension)): Disposable;
-}
-
-/** Makes Source editors and keeps the registered contributions applied to all of them. */
+/**
+ * Makes Source editors and keeps the registered contributions applied to all of them.
+ *
+ * Makes the Source editors (CodeMirror bound to a TypstDocument) and applies what is contributed to them.
+ *
+ * Why a host: the Source editor itself only keeps text and selection in sync with its document (plus reveal).
+ * Everything else — the Typst language, colors, lint, document links, other users' carets — is a contribution,
+ * registered once and applied to every editor made before or after, so a feature never tracks editors.
+ */
 export class SourceEditorHost implements SourceEditorContributions {
   private readonly extensions: (Extension | ((view: SourceEditorContext) => Extension))[] = [];
   private readonly changed = new EventEmitter<void>();
@@ -53,6 +48,15 @@ export class SourceEditorHost implements SourceEditorContributions {
   }
 }
 
+/** The Source editor's contribution points (what `ExtensionContext.sourceEditor` offers). */
+export interface SourceEditorContributions {
+  /**
+   * Adds CodeMirror extensions to every Source editor, the existing ones included, until disposed: the same value for
+   * all of them, or made per view from what the view shows (`SourceEditorContext`).
+   */
+  registerCodeMirrorExtension(extension: Extension | ((view: SourceEditorContext) => Extension)): Disposable;
+}
+
 /** What a contribution knows about the one Source editor it is applied to. */
 export interface SourceEditorContext {
   /** The document the view edits. */
@@ -69,12 +73,6 @@ export const fromDocument = Annotation.define<{ readonly origin: unknown }>();
 export interface SourceEditorOptions {
   /** Called after the selection moved or the text changed; `selection()` already returns the new selection. */
   onSelection?(): void;
-}
-
-/** What a view needs from its host: the contributed extensions for it, and word when they change. */
-interface Contributions {
-  extensionsFor(view: SourceEditorContext): Extension;
-  readonly onDidChange: Event<void>;
 }
 
 /**
@@ -141,11 +139,12 @@ export class SourceEditor {
   }
 }
 
-/**
- * The range `reveal` highlights, while it is what the user looks at: it goes when the text changes (here or in
- * another view) or the selection moves away from it, so it never stays behind as a second selection.
- */
-const setHighlight = StateEffect.define<{ from: number; to: number }>();
+/** What a view needs from its host: the contributed extensions for it, and word when they change. */
+interface Contributions {
+  extensionsFor(view: SourceEditorContext): Extension;
+  readonly onDidChange: Event<void>;
+}
+
 const highlightField = StateField.define<{ from: number; to: number } | null>({
   create: () => null,
   update(range, tr) {
@@ -162,14 +161,20 @@ const highlightField = StateField.define<{ from: number; to: number } | null>({
     ),
 });
 
-/** Tells `options` about a moved selection or changed text (after the view has it). */
-function reportSelection(update: ViewUpdate, options: SourceEditorOptions): void {
-  if (update.selectionSet || update.docChanged) options.onSelection?.();
-}
+/**
+ * The range `reveal` highlights, while it is what the user looks at: it goes when the text changes (here or in
+ * another view) or the selection moves away from it, so it never stays behind as a second selection.
+ */
+const setHighlight = StateEffect.define<{ from: number; to: number }>();
 
 function toTextChanges(changes: ChangeSet): TextChange[] {
   const result: TextChange[] = [];
   // eslint-disable-next-line max-params -- callback signature is fixed by CodeMirror
   changes.iterChanges((from, to, _fromB, _toB, inserted) => result.push({ ...SourceRange.of({ from, to }), insert: inserted.toString() }));
   return result;
+}
+
+/** Tells `options` about a moved selection or changed text (after the view has it). */
+function reportSelection(update: ViewUpdate, options: SourceEditorOptions): void {
+  if (update.selectionSet || update.docChanged) options.onSelection?.();
 }

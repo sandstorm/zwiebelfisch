@@ -1,15 +1,11 @@
-// EditorTabs: the tab bar of the editing area: a tab per editor the shown file can be shown in (Visual / Source for a
-// Typst file), and the editor/title menu at its end. See workbench.ts and docs/30_architecture/07_workbench.typ.
-
-/** An editor the shown file can be switched to. */
-export interface EditorTab {
-  readonly viewType: string;
-  readonly displayName: string;
-}
+// EditorTabs. See workbench.ts and docs/30_architecture/07_workbench.typ.
 
 /**
  * A tab per editor of the shown file ("open with"), the shown one selected; hidden unless there are several. Choosing
  * another tab asks for the file in that editor (`onDidChoose`).
+ *
+ * The tab bar of the editing area: a tab per editor the shown file can be shown in (Visual / Source for a Typst file),
+ * and the editor/title menu at its end.
  */
 export class EditorTabs {
   readonly element: HTMLElement;
@@ -54,4 +50,10 @@ export class EditorTabs {
   dispose(): void {
     this.element.remove();
   }
+}
+
+/** An editor the shown file can be switched to. */
+export interface EditorTab {
+  readonly viewType: string;
+  readonly displayName: string;
 }

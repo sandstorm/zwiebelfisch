@@ -2,8 +2,6 @@
 // suggestions.ts and docs/20_extensions/03_visual-editor-constructs.typ.
 import type { CompletionItem } from '../visual-editor';
 
-let widgets = 0;
-
 /**
  * A `role="listbox"` of completion items in `container` (positioned by the caller). One option is the chosen one:
  * arrow keys move it, Enter or Tab accept it, a click accepts the clicked one, the mouse pointer chooses what it
@@ -94,6 +92,8 @@ export class SuggestWidget {
     return option ? Number(option.dataset.index) : null;
   }
 }
+
+let widgets = 0;
 
 function option(doc: Document, item: CompletionItem, id: string, index: number): HTMLElement {
   const element = doc.createElement('div');

@@ -1,32 +1,6 @@
-// SideBar: one side of the widget (left or right): a rail with a button per side panel, the shown panel and the
-// separator that sizes it. See workbench-layout.ts and docs/30_architecture/07_workbench.typ.
+// SideBar. See workbench-layout.ts and docs/30_architecture/07_workbench.typ.
 
 import type { SidePanel, SidePanelOptions } from '../workbench';
-
-export type Side = 'left' | 'right';
-
-/** What a side keeps for the viewer: its size, and the panel the viewer picked (null: hid the side; undefined: none yet). */
-export interface SideBarState {
-  size: number;
-  chosen?: string | null;
-}
-
-/**
- * How a side is sized: the left one in pixels (the panel's width), the right one as a share of the widget in percent
- * (the grid column `--te-right-side`), so opening the left side narrows only the editing area.
- */
-const SIZES = {
-  left: { unit: 'px', min: 160, max: 480, initial: 240, step: 16, label: 'Left panel width' },
-  right: { unit: '%', min: 20, max: 80, initial: 50, step: 5, label: 'Right panel width' },
-} as const;
-
-interface PanelEntry {
-  body: HTMLElement;
-  button: HTMLButtonElement;
-  order: number;
-  fallback: boolean;
-  available: boolean;
-}
 
 /**
  * One side of the widget: its rail (a button per panel, by `order`) and at most one panel shown, sized by a separator
@@ -34,6 +8,9 @@ interface PanelEntry {
  * clicking the shown panel's button hides the side), else the side's default panel, else the first panel whose owner
  * asked for it (`setDefault`). As an overlay (`setOverlay`, the narrow widget's left side) a pick lasts for the moment
  * only, and Escape, a click outside or `dismiss()` close the panel.
+ *
+ * One side of the widget (left or right): a rail with a button per side panel, the shown panel and the separator that
+ * sizes it.
  */
 export class SideBar {
   readonly element: HTMLElement;
@@ -271,6 +248,14 @@ export class SideBar {
   }
 }
 
+export type Side = 'left' | 'right';
+
+/** What a side keeps for the viewer: its size, and the panel the viewer picked (null: hid the side; undefined: none yet). */
+export interface SideBarState {
+  size: number;
+  chosen?: string | null;
+}
+
 /** A side's state as stored (`value` comes from storage: any shape), with what is missing or malformed left out. */
 export function restoreSideBarState(value: unknown, side: Side): SideBarState {
   const saved = isRecord(value) && isRecord(value[side]) ? value[side] : {};
@@ -278,12 +263,29 @@ export function restoreSideBarState(value: unknown, side: Side): SideBarState {
   return { size: typeof saved.size === 'number' ? saved.size : SIZES[side].initial, chosen };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
 export function div(doc: Document, className: string): HTMLElement {
   const element = doc.createElement('div');
   element.className = className;
   return element;
+}
+
+interface PanelEntry {
+  body: HTMLElement;
+  button: HTMLButtonElement;
+  order: number;
+  fallback: boolean;
+  available: boolean;
+}
+
+/**
+ * How a side is sized: the left one in pixels (the panel's width), the right one as a share of the widget in percent
+ * (the grid column `--te-right-side`), so opening the left side narrows only the editing area.
+ */
+const SIZES = {
+  left: { unit: 'px', min: 160, max: 480, initial: 240, step: 16, label: 'Left panel width' },
+  right: { unit: '%', min: 20, max: 80, initial: 50, step: 5, label: 'Right panel width' },
+} as const;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }

@@ -1,6 +1,4 @@
-// Parsing Typst text into the Visual editor's document (TypstToProseMirrorParser): markup is segmented into blocks,
-// and every block and piece of inline syntax goes to the specs' parse rules for it; what none models stays raw.
-// See prosemirror-typst.ts.
+// Parsing Typst text into the Visual editor's document (TypstToProseMirrorParser). See prosemirror-typst.ts.
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
 import { typstParser } from 'codemirror-lang-typst/lezer';
@@ -11,59 +9,14 @@ import { layout, unchangedNodes } from './unchanged-nodes';
 import { calleeName, children } from '../../core/typst-syntax/typst-syntax';
 import { type SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
 
-/** Parses `source` into a document of `schema`, through the grammar attached to it. */
+/**
+ * Parses `source` into a document of `schema`, through the grammar attached to it.
+ *
+ * Markup is segmented into blocks, and every block and piece of inline syntax goes to the specs' parse rules for it;
+ * what none models stays raw.
+ */
 export function parseDocument(source: string, schema: Schema, grammar: TypstConversions): Node {
   return new TypstToProseMirrorParser(schema, source, grammar).document();
-}
-
-/** A top-level stretch of source that becomes one block (or one list item), and the label after it. */
-interface Segment {
-  /** Block syntax standing alone (a heading, a list item), or a run of inline syntax up to a paragraph break. */
-  kind: 'block' | 'run';
-  nodes: SyntaxNode[];
-  from: number;
-  /** The end of the block's own source, before its label. */
-  to: number;
-  label: SyntaxNode | null;
-}
-
-/** Where a segment's source ends, its label included. */
-function end(segment: Segment): number {
-  return segment.label?.to ?? segment.to;
-}
-
-/** Syntax the framework itself shows as text; any inline syntax a spec models counts as prose too. */
-const TEXT = new Set(['Text', 'Escape', 'Shorthand', 'SmartQuote', 'Linebreak']);
-const SHORTHANDS: Record<string, string> = {
-  '~': ' ',
-  '--': '–',
-  '---': '—',
-  '-?': '­',
-  '...': '…',
-};
-
-/** The framework's own inline syntax: text, line breaks, escapes and shorthands. */
-const INLINE: Record<string, (p: TypstToProseMirrorParser, src: string, marks: readonly Mark[]) => Node> = {
-  Text: (p, src, marks) => p.schema.text(src, marks),
-  SmartQuote: (p, src, marks) => p.schema.text(src, marks),
-  Space: (p, src, marks) => (src.includes('\n') ? p.schema.nodes.softBreak.create({ src }) : p.schema.text(src, marks)),
-  Linebreak: (p, src) => p.schema.nodes.hardBreak.create({ src }),
-  Escape: (p, src, marks) => p.sourceText(src, decodeEscape(src), marks),
-  Shorthand: (p, src, marks) => (src in SHORTHANDS ? p.sourceText(src, SHORTHANDS[src], marks) : p.raw(src, marks)),
-};
-
-/** The leading whitespace all of `lines` share. */
-function commonIndent(lines: readonly string[]): string {
-  return lines.reduce((indent, line) => {
-    let n = 0;
-    while (n < indent.length && line[n] === indent[n]) n++;
-    return indent.slice(0, n);
-  }, /^[ \t]*/.exec(lines[0] ?? '')![0]);
-}
-
-function decodeEscape(src: string): string {
-  const unicode = /^\\u\{([0-9a-fA-F]+)\}$/.exec(src);
-  return unicode ? String.fromCodePoint(parseInt(unicode[1], 16)) : src.slice(1);
 }
 
 /** Parses one source text into a document: what the specs' parse functions get as their `TypstParseContext`. */
@@ -323,3 +276,54 @@ class TypstToProseMirrorParser implements TypstParseContext {
     return null;
   }
 }
+
+/** Where a segment's source ends, its label included. */
+function end(segment: Segment): number {
+  return segment.label?.to ?? segment.to;
+}
+
+/** A top-level stretch of source that becomes one block (or one list item), and the label after it. */
+interface Segment {
+  /** Block syntax standing alone (a heading, a list item), or a run of inline syntax up to a paragraph break. */
+  kind: 'block' | 'run';
+  nodes: SyntaxNode[];
+  from: number;
+  /** The end of the block's own source, before its label. */
+  to: number;
+  label: SyntaxNode | null;
+}
+
+/** The leading whitespace all of `lines` share. */
+function commonIndent(lines: readonly string[]): string {
+  return lines.reduce((indent, line) => {
+    let n = 0;
+    while (n < indent.length && line[n] === indent[n]) n++;
+    return indent.slice(0, n);
+  }, /^[ \t]*/.exec(lines[0] ?? '')![0]);
+}
+
+/** Syntax the framework itself shows as text; any inline syntax a spec models counts as prose too. */
+const TEXT = new Set(['Text', 'Escape', 'Shorthand', 'SmartQuote', 'Linebreak']);
+
+/** The framework's own inline syntax: text, line breaks, escapes and shorthands. */
+const INLINE: Record<string, (p: TypstToProseMirrorParser, src: string, marks: readonly Mark[]) => Node> = {
+  Text: (p, src, marks) => p.schema.text(src, marks),
+  SmartQuote: (p, src, marks) => p.schema.text(src, marks),
+  Space: (p, src, marks) => (src.includes('\n') ? p.schema.nodes.softBreak.create({ src }) : p.schema.text(src, marks)),
+  Linebreak: (p, src) => p.schema.nodes.hardBreak.create({ src }),
+  Escape: (p, src, marks) => p.sourceText(src, decodeEscape(src), marks),
+  Shorthand: (p, src, marks) => (src in SHORTHANDS ? p.sourceText(src, SHORTHANDS[src], marks) : p.raw(src, marks)),
+};
+
+function decodeEscape(src: string): string {
+  const unicode = /^\\u\{([0-9a-fA-F]+)\}$/.exec(src);
+  return unicode ? String.fromCodePoint(parseInt(unicode[1], 16)) : src.slice(1);
+}
+
+const SHORTHANDS: Record<string, string> = {
+  '~': ' ',
+  '--': '–',
+  '---': '—',
+  '-?': '­',
+  '...': '…',
+};

@@ -1,6 +1,4 @@
-// TypstEditors: the Visual and Source editors as the two built-in custom editors of `*.typ` (`visualEditor`,
-// `sourceEditor`), the TextEditor of each document over them, and the editor frame. See workbench.ts and
-// docs/30_architecture/07_workbench.typ.
+// TypstEditors. See workbench.ts and docs/30_architecture/07_workbench.typ.
 import { Disposable } from '../../../core/disposable/disposable';
 import type { Project } from '../../../core/project/project';
 import type { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
@@ -8,40 +6,12 @@ import { SOURCE_EDITOR, type SourceEditor, SourceEditorHost } from '../../source
 import { VISUAL_EDITOR, VisualEditor, VisualEditorHost } from '../../visual-editor/visual-editor';
 import type { CustomEditorPanel, TextEditor, WindowApi } from '../../window/window';
 
-export interface TypstEditorsOptions {
-  /** What every document's Visual editor shows and offers (default: paragraphs and raw Typst only). */
-  visualEditor?: VisualEditorHost;
-  /** Makes the Source editors, with what is registered there (language, lint, file links, …); default: plain ones. */
-  sourceEditors?: SourceEditorHost;
-  /** The selection in a view of `editor`'s document moved, or its text changed (the view already has the new selection). */
-  onSelection?(editor: DocumentEditor): void;
-}
-
-interface ShownView {
-  readonly view: VisualEditor | SourceEditor;
-  readonly panel: CustomEditorPanel;
-}
-
-/** A document's editor: the views it has (made when first shown), used through the one shown last. */
-export class DocumentEditor implements TextEditor {
-  /** By view type. */
-  readonly views = new Map<string, ShownView>();
-  viewType: string = VISUAL_EDITOR;
-
-  constructor(readonly document: TypstDocument) {}
-
-  get selection(): SourceRange {
-    return this.views.get(this.viewType)!.view.selection();
-  }
-
-  revealRange(range: SourceRange): void {
-    this.views.get(this.viewType)!.view.reveal(range);
-  }
-}
-
 /**
  * Per document, a Visual and a Source editor, each made the first time the document is shown in it, in its custom
  * editor's panel; kept (with cursor, scroll and undo history) while hidden, disposed with the panel (the file deleted).
+ *
+ * The Visual and Source editors as the two built-in custom editors of `*.typ` (`visualEditor`, `sourceEditor`), the
+ * TextEditor of each document over them, and the editor frame.
  */
 export class TypstEditors {
   readonly #editors = new Map<TypstDocument, DocumentEditor>();
@@ -141,4 +111,35 @@ export class TypstEditors {
     this.#frame?.top.remove();
     this.#frame?.bottom.remove();
   }
+}
+
+export interface TypstEditorsOptions {
+  /** What every document's Visual editor shows and offers (default: paragraphs and raw Typst only). */
+  visualEditor?: VisualEditorHost;
+  /** Makes the Source editors, with what is registered there (language, lint, file links, …); default: plain ones. */
+  sourceEditors?: SourceEditorHost;
+  /** The selection in a view of `editor`'s document moved, or its text changed (the view already has the new selection). */
+  onSelection?(editor: DocumentEditor): void;
+}
+
+/** A document's editor: the views it has (made when first shown), used through the one shown last. */
+export class DocumentEditor implements TextEditor {
+  /** By view type. */
+  readonly views = new Map<string, ShownView>();
+  viewType: string = VISUAL_EDITOR;
+
+  constructor(readonly document: TypstDocument) {}
+
+  get selection(): SourceRange {
+    return this.views.get(this.viewType)!.view.selection();
+  }
+
+  revealRange(range: SourceRange): void {
+    this.views.get(this.viewType)!.view.reveal(range);
+  }
+}
+
+interface ShownView {
+  readonly view: VisualEditor | SourceEditor;
+  readonly panel: CustomEditorPanel;
 }

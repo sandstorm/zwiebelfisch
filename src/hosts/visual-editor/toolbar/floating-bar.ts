@@ -1,5 +1,4 @@
-// FloatingBar: a small toolbar floating above something in the text (the selection, the table), the toolbar's
-// `floating` groups. See toolbar.ts and docs/30_architecture/04_visual-editor.typ.
+// FloatingBar. See toolbar.ts and docs/30_architecture/04_visual-editor.typ.
 import type { Anchor } from '../visual-editor';
 
 /**
@@ -8,6 +7,8 @@ import type { Anchor } from '../visual-editor';
  * `position: relative`), so it scrolls with the text. `show(anchor)` places it
  * centred over the anchor and kept inside the container; null hides it.
  * Mouse presses on it keep the focus (and selection) in the text.
+ *
+ * A small toolbar floating above something in the text (the selection, the table), the toolbar's `floating` groups.
  */
 export class FloatingBar {
   readonly element: HTMLElement;

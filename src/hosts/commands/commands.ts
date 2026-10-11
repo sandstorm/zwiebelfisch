@@ -1,12 +1,17 @@
-// The commands namespace of the extension API (VS Code's `commands`): what extensions register by id
-// (`registerCommand`), run by id (`executeCommand`) and bind to keys (`registerKeybinding`). Entry of
-// hosts/commands/. See docs/30_architecture/07_workbench.typ.
-// Why plain string ids and a Promise (VS Code's shape): extensions never depend on each other, so a caller knows a
-// command only by its id, and the handler may be sync or async. The handler is called synchronously all the same,
-// so user activation, the selection and the focus are as they were when the command was asked for.
+// The commands namespace of the extension API (VS Code's `commands`). Entry of hosts/commands/. See
+// docs/30_architecture/07_workbench.typ.
 import { Disposable } from '../../core/disposable/disposable';
 
-/** The widget's commands as extensions use them (VS Code's `commands` namespace, with key bindings). */
+/**
+ * The widget's commands as extensions use them (VS Code's `commands` namespace, with key bindings).
+ *
+ * What extensions register by id (`registerCommand`), run by id (`executeCommand`) and bind to keys
+ * (`registerKeybinding`).
+ *
+ * Why plain string ids and a Promise (VS Code's shape): extensions never depend on each other, so a caller knows a
+ * command only by its id, and the handler may be sync or async. The handler is called synchronously all the same, so
+ * user activation, the selection and the focus are as they were when the command was asked for.
+ */
 export interface Commands {
   /**
    * Registers `handler` as command `id` (`<extension>.<name>`, e.g. `pdfExport.export`) until disposed; an id
@@ -36,9 +41,6 @@ export interface Command {
   /** The arguments it is run with. */
   readonly arguments?: readonly unknown[];
 }
-
-/** A command's handler (VS Code's shape): the arguments the command documents, any result (a Promise is awaited). */
-type CommandHandler = (...args: any[]) => unknown;
 
 /**
  * The widget's commands and key bindings. Keys are handled on `root` in the capture phase, so a bound key is
@@ -97,13 +99,8 @@ export class CommandsHost implements Commands {
   };
 }
 
-const MODIFIERS: Record<string, (event: KeyboardEvent) => boolean> = {
-  Mod: (event) => event.metaKey || event.ctrlKey,
-  Ctrl: (event) => event.ctrlKey,
-  Meta: (event) => event.metaKey,
-  Alt: (event) => event.altKey,
-  Shift: (event) => event.shiftKey,
-};
+/** A command's handler (VS Code's shape): the arguments the command documents, any result (a Promise is awaited). */
+type CommandHandler = (...args: any[]) => unknown;
 
 /** `Mod+Alt+KeyM` → a test for the event: the named modifiers pressed and that `code`. */
 function parseKey(key: string): (event: KeyboardEvent) => boolean {
@@ -116,3 +113,11 @@ function parseKey(key: string): (event: KeyboardEvent) => boolean {
   });
   return (event) => event.code === code && modifiers.every((pressed) => pressed(event));
 }
+
+const MODIFIERS: Record<string, (event: KeyboardEvent) => boolean> = {
+  Mod: (event) => event.metaKey || event.ctrlKey,
+  Ctrl: (event) => event.ctrlKey,
+  Meta: (event) => event.metaKey,
+  Alt: (event) => event.altKey,
+  Shift: (event) => event.shiftKey,
+};

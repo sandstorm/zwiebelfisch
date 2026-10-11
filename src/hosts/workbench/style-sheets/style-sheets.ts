@@ -2,15 +2,6 @@
 // <typst-editor>). See docs/30_architecture/07_workbench.typ.
 import { Disposable } from '../../../core/disposable/disposable';
 
-/** A `<style>` in a root and how many registrations hold it. */
-interface Held {
-  readonly element: HTMLStyleElement;
-  users: number;
-}
-
-/** Per root node: the `<style>` elements by their text, shared by every widget (and extension) in that root. */
-const ROOTS = new WeakMap<Node, Map<string, Held>>();
-
 /**
  * Puts stylesheets where the widget on `host` renders: into its shadow root when `host` lives in one, else into the
  * document's `<head>`. Widgets in the same root share each distinct stylesheet (one `<style>`, in the order first
@@ -42,4 +33,13 @@ export class StyleSheets {
       sheets.delete(css);
     });
   }
+}
+
+/** Per root node: the `<style>` elements by their text, shared by every widget (and extension) in that root. */
+const ROOTS = new WeakMap<Node, Map<string, Held>>();
+
+/** A `<style>` in a root and how many registrations hold it. */
+interface Held {
+  readonly element: HTMLStyleElement;
+  users: number;
 }

@@ -1,15 +1,14 @@
-// Double Shift: the key that opens search everywhere, anywhere in the widget (also inside the editors, which see the
-// keys after the widget). See search.ts.
+// Double Shift. See search.ts.
 import { Disposable } from '../../../core/disposable/disposable';
-
-/** The longest pause between releasing Shift the first time and pressing it again. */
-export const DOUBLE_SHIFT_INTERVAL = 300;
 
 /**
  * Calls `onDoubleShift` when Shift is pressed twice on `target` (in the capture phase, so before any editor inside):
  * the second press starting at most 300 ms after the first was released, neither together with another key or a mouse
  * button, nothing pressed in between; it fires when the second Shift is released (Shift held for a capital letter
  * never counts). `now` is the clock in milliseconds.
+ *
+ * The key that opens search everywhere, anywhere in the widget (also inside the editors, which see the keys after the
+ * widget).
  */
 export function listenForDoubleShift(target: HTMLElement, onDoubleShift: () => void, now: () => number = Date.now): Disposable {
   /** `down`: Shift pressed alone; `up`: released after such a press (at `releasedAt`); `again`: pressed a second time. */
@@ -36,6 +35,9 @@ export function listenForDoubleShift(target: HTMLElement, onDoubleShift: () => v
     target.removeEventListener('pointerdown', reset, true);
   });
 }
+
+/** The longest pause between releasing Shift the first time and pressing it again. */
+export const DOUBLE_SHIFT_INTERVAL = 300;
 
 /** A Shift press without Ctrl, Alt or Meta, not while composing text (an IME). */
 function isShiftAlone(event: KeyboardEvent): boolean {
