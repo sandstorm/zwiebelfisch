@@ -160,6 +160,11 @@ function boxes(view: VisualViewContext, contributed: Contributed): Boxes {
 export interface TypstNodeSpec extends NodeGrammar {
   /** For `box: 'code'`: a heading or tools around the code (an image's resize handles). */
   readonly codeBox?: CodeBoxSpec;
+  /**
+   * Its DOM draws with `::before` / `::after` of its own (a page break's dashed lines). The host marks such nodes'
+   * DOM `data-typst-pseudo="own"`, so what others draw on boxes (another user's name flag) leaves them alone.
+   */
+  readonly ownsPseudoElements?: boolean;
 }
 
 /** A Typst construct the Visual view models as a mark (bold, a link, a margin note's range); see `MarkGrammar`. */

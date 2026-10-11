@@ -4,10 +4,10 @@ import { EditorState } from '@codemirror/state';
 import { describe, expect, it } from 'vitest';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
 import { TypstDocument } from '../../core/typst-document/typst-document';
-import type { Editor } from '@tiptap/core';
+import { Node as TiptapNode, type Editor } from '@tiptap/core';
 import { children } from '../../core/typst-syntax/typst-syntax';
 import { starterKitPart } from '../projection/projection';
-import { setBoxDecorations, VisualView, VisualViewContributions, type Highlight, type TypstMarkSpec, type VisualViewContext, type VisualViewContribution } from './visual-view';
+import { setBoxDecorations, VisualView, VisualViewContributions, type Highlight, type TypstMarkSpec, type TypstNodeSpec, type VisualViewContext, type VisualViewContribution } from './visual-view';
 
 /** A test-local construct beyond the host's minimum: `*strong*` as a bold mark (hidden syntax around visible text). */
 const STRONG: TypstMarkSpec = {
@@ -54,6 +54,19 @@ describe('VisualView', () => {
     const { doc, parent } = setup('Title\n\nText\n');
     doc.setText('Title\n\nText changed\n', 'source');
     expect(parent.querySelectorAll('p')[1]?.textContent).toBe('Text changed');
+  });
+
+  it('marks the DOM of a node whose spec owns its pseudo-elements', () => {
+    const divider: TypstNodeSpec = {
+      name: 'divider',
+      extension: TiptapNode.create({ name: 'divider', group: 'block', atom: true, addAttributes: () => ({ src: { default: '', rendered: false } }), renderHTML: () => ['hr'] }),
+      ownsPseudoElements: true,
+      blockCalls: { divider: (p, call) => p.schema.nodes.divider.create({ src: p.text(call) }) },
+    };
+    const parent = document.body.appendChild(document.createElement('div'));
+    new VisualView(parent, new TypstDocument('#divider()\n\nText\n'), VisualViewContributions.from([{ id: 'divider', activate: ({ visualView }) => visualView.registerNode(divider) }]));
+    expect(parent.querySelector('hr')?.getAttribute('data-typst-pseudo')).toBe('own');
+    expect(parent.querySelector('p')?.hasAttribute('data-typst-pseudo')).toBe(false);
   });
 });
 

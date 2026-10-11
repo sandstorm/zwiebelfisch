@@ -45,6 +45,8 @@ export const PAGE_BREAK: TypstNodeSpec = {
   name: 'pageBreak',
   extension: PageBreak,
   labelled: true,
+  // the dashed lines
+  ownsPseudoElements: true,
   blockCalls: { pagebreak: (p, call, sep) => (parenthesized(call.args) ? p.schema.nodes.pageBreak.create({ src: p.text(call), sep }) : null) },
 };
 

@@ -819,6 +819,17 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
   raw box (images' renderer, 110, before compiled snippets). Toolbar items keep `group` + `order`. `attachGrammar` puts the specs on the schema (`schema.cached`), so `project(text,
   schema)` and `print(doc)` find them; `VisualView` builds its editor from `documentExtensions` and attaches them to the editor's schema, tests use
   `createSchema` (the projection's tests with their own specs; the built-ins' `schema` of `testing/testing.ts`).
+- **Schema names across extensions.** ProseMirror's schema is one object, so one extension's node and mark names
+  can't vanish from another's code entirely; they stay only as data and always guarded. Groups a spec joins with
+  its node type's `group`: `figureBody` (what a figure may hold: images, tables; figures name neither),
+  `blockContainer` (a node whose content is any blocks, which an alignment block may wrap: tables' cells). Spec
+  flags the host reads for anyone: `container` (items: alignment does not justify their paragraphs),
+  `ownsPseudoElements` (the host marks the DOM `data-typst-pseudo="own"`: collaboration's name flag leaves a page
+  break's `::after` alone). Guarded reads: `schema.marks.code &&` (labels' `@` suggestions), `editor.can()` and
+  `'addFigureCaption' in editor.commands` (the image tools' caption button, hidden without figures), plain type name
+  comparisons (labels' `fig:` / `tab:` / `sec:` prefixes), a paragraph's attributes compared with their defaults
+  instead of reading alignment's `justify` (tables' bare cells). Where one extension drives another's UI, the host
+  offers a contribution point (the text style menu).
 - **Per view**: providers get a `VisualViewContext` (`document`, `selection()`, `sourceToPos(doc, offset, bias?)` /
   `posToSource(doc, pos, bias?)`: the position map over a document node of the view, e.g. a transaction's;
   `isBox(node)`: shown as a box of its own); a toolbar item's
@@ -1015,11 +1026,12 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
 - **Text alignment** (`extensions/alignment/`: `visual-view/text-align.ts`, `model/alignment-syntax.ts` for the Typst syntax):
   - Commands `setTextAlign(left|center|right|justify)` and `unsetTextAlign`; shortcuts
     Mod-Shift-L/E/R/J; four items of the toolbar's Align menu, pressed by `textAlignAt(state)`.
-  - Horizontal alignment wraps the selected blocks (in the doc, an alignment block or a table
-    cell) in one alignment block. A value equal to the surrounding alignment removes the wrapper
+  - Horizontal alignment wraps the selected blocks (in the doc, an alignment block or a node of the group
+    `blockContainer`, which tables' cells join) in one alignment block. A value equal to the surrounding alignment removes the wrapper
     instead, a partly selected wrapper is split (lifted blocks get default separators), and a
     wrapper with a vertical part keeps it.
-  - Justify is per paragraph (not headings or list items) and removes horizontal wrappers.
+  - Justify is per paragraph (not headings, nor the paragraphs of items: of a node whose spec has a `container`,
+    a list or task item) and removes horizontal wrappers.
   - The scope (default alignment) comes from enclosing alignment blocks and from
     `#set align(..)` / `#set par(justify: ..)` in earlier raw-block siblings of each ancestor.
     Commands only write what differs from it. A plugin decorates every textblock with its
@@ -1105,7 +1117,8 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
   caret inside a box (block atoms — raw blocks, images, outlines, page breaks, rules — from
   their first character to their line end; inline atoms whose spec has a `box`, `rawInline` /
   `marginNote`, strictly inside) outlines
-  the box instead (node decoration `typst-remote-box`, the names as flag, first user's color);
+  the box instead (node decoration `typst-remote-box`, the names as flag, first user's color; no flag on a box
+  marked `data-typst-pseudo="own"`, whose `::after` is its own);
   the decoration carries the carets' offsets in the box's source (`box-carets.ts`), and its box code extension
   (`boxPresence`) draws them in a raw box's nested CodeMirror (from `setBoxDecorations`). Mapped through edits until
   set again.

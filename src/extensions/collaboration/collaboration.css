@@ -14,7 +14,7 @@
   pointer-events: none;
 }
 .typst-remote-caret__flag,
-.typst-remote-box:not(.typst-visual__page-break)::after {
+.typst-remote-box:not([data-typst-pseudo='own'])::after {
   position: absolute;
   padding: 0 4px;
   background: var(--typst-remote-color, #268bd2);
@@ -55,13 +55,14 @@
   0%, 70% { opacity: 1; }
   100% { opacity: 0; }
 }
-/* Visual view: a box (raw code, image, page break, note) someone's caret is in. */
+/* Visual view: a box (raw code, image, page break, note) someone's caret is in; its name flag only on boxes whose
+   own ::after is free (the host marks the others data-typst-pseudo="own"). */
 .typst-remote-box {
   position: relative;
   outline: 2px solid var(--typst-remote-color, #268bd2);
   outline-offset: 1px;
 }
-.typst-remote-box:not(.typst-visual__page-break)::after {
+.typst-remote-box:not([data-typst-pseudo='own'])::after {
   content: attr(data-user);
   right: -3px;
   bottom: calc(100% + 3px);
