@@ -210,6 +210,10 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    configurable per server; a conflict blocks it and shows prominently for everyone; manual "Save to
    GitLab…" stays for a meaningful message; (3) leaving as the last user with auto-commit off →
    beforeunload warning.
+   **Engine wasm size** (user, 2026-10-11; research: docs/2026_10_11_engine-wasm-size.md): **no
+   patched dependencies**, no fork, no opt-level "z", no second PDF engine. Left: delivery (brotli
+   pre-compression, content-hashed wasm / font names in dist/lib, immutable caching,
+   application/wasm) — and lazy fonts (done).
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Rules wave also does:** core `onChange` → `onDidChange: Event` + `Disposable` everywhere
    (`Project`, `TypstDocument`, …) (user: yes).
