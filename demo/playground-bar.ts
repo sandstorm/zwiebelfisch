@@ -3,18 +3,18 @@ import { EXAMPLES } from './examples';
 import { MODES, devtoolsQuery, exampleLink, modeQuery, otherUser, playgroundFromQuery, userQuery, type PlaygroundState } from './playground';
 import { describeServer, type ServerState, type UpstreamChange } from './server-status';
 
-export interface BarActions {
-  /** Goes to another playground query, the open file staying open (a reload: the widget is set up once per page). */
-  navigate(query: string): void;
-  /** Has the fake GitLab commit a change; resolves with a line to show, rejects with why not. */
-  simulateUpstream(change: UpstreamChange): Promise<string>;
-}
-
 export interface PlaygroundBar {
   /** Shows what is known about the server now. */
   setServer(state: ServerState): void;
   /** Shows, at the end of the bar, what became of the last edit (the Documentation example: saved to docs/ or not). */
   setSaveStatus(text: string, level: 'muted' | 'ok' | 'warn'): void;
+}
+
+export interface BarActions {
+  /** Goes to another playground query, the open file staying open (a reload: the widget is set up once per page). */
+  navigate(query: string): void;
+  /** Has the fake GitLab commit a change; resolves with a line to show, rejects with why not. */
+  simulateUpstream(change: UpstreamChange): Promise<string>;
 }
 
 /**
@@ -45,6 +45,49 @@ export function renderPlaygroundBar(root: HTMLElement, params: URLSearchParams, 
   };
 }
 
+/** The status at the end of the bar: the server's state, the command to start it, the last action's result. */
+class StatusLine {
+  readonly element = el('span', { role: 'status', class: 'demo-bar__status' });
+  private readonly state: PlaygroundState;
+
+  constructor(state: PlaygroundState) {
+    this.state = state;
+    this.server(state.mode === 'local' ? null : 'checking');
+  }
+
+  server(server: ServerState | null): void {
+    const { text, hint, level } = describeServer(this.state.mode, server);
+    this.element.replaceChildren(text, ...(hint ? [' ', el('code', {}, hint)] : []));
+    this.element.dataset.level = level;
+  }
+
+  note(text: string, level: 'ok' | 'warn'): void {
+    this.element.querySelector('.demo-bar__note')?.remove();
+    this.element.append(el('span', { class: 'demo-bar__note' }, ` ${text}`));
+    this.element.dataset.level = level;
+  }
+}
+
+function el<K extends keyof HTMLElementTagNameMap>(tag: K, attributes: Record<string, string>, ...children: (Node | string)[]): HTMLElementTagNameMap[K] {
+  const element = document.createElement(tag);
+  for (const [name, value] of Object.entries(attributes)) element.setAttribute(name, value);
+  element.append(...children);
+  return element;
+}
+
+function examplesNav(state: PlaygroundState, params: URLSearchParams): HTMLElement {
+  const fixed = state.mode === 'gitlab';
+  return nav(
+    'Examples',
+    EXAMPLES.map(({ name, label }) => ({
+      text: label,
+      href: fixed ? null : exampleLink(name, params),
+      current: !fixed && name === state.example,
+      title: fixed ? 'In GitLab mode the repository decides the files' : undefined,
+    })),
+  );
+}
+
 function nav(label: string, links: { text: string; href: string | null; current: boolean; title?: string }[]): HTMLElement {
   const element = el('nav', { 'aria-label': label, class: 'demo-bar__group' }, el('span', { class: 'demo-bar__label' }, `${label}:`));
   for (const { text, href, current, title } of links) {
@@ -60,19 +103,6 @@ function nav(label: string, links: { text: string; href: string | null; current:
     element.append(link);
   }
   return element;
-}
-
-function examplesNav(state: PlaygroundState, params: URLSearchParams): HTMLElement {
-  const fixed = state.mode === 'gitlab';
-  return nav(
-    'Examples',
-    EXAMPLES.map(({ name, label }) => ({
-      text: label,
-      href: fixed ? null : exampleLink(name, params),
-      current: !fixed && name === state.example,
-      title: fixed ? 'In GitLab mode the repository decides the files' : undefined,
-    })),
-  );
 }
 
 function modesNav(state: PlaygroundState, params: URLSearchParams): HTMLElement {
@@ -128,34 +158,4 @@ function upstreamControls(actions: BarActions, status: StatusLine) {
       .finally(() => (button.disabled = false));
   });
   return { element: el('span', { class: 'demo-bar__group' }, select, button), button };
-}
-
-/** The status at the end of the bar: the server's state, the command to start it, the last action's result. */
-class StatusLine {
-  readonly element = el('span', { role: 'status', class: 'demo-bar__status' });
-  private readonly state: PlaygroundState;
-
-  constructor(state: PlaygroundState) {
-    this.state = state;
-    this.server(state.mode === 'local' ? null : 'checking');
-  }
-
-  server(server: ServerState | null): void {
-    const { text, hint, level } = describeServer(this.state.mode, server);
-    this.element.replaceChildren(text, ...(hint ? [' ', el('code', {}, hint)] : []));
-    this.element.dataset.level = level;
-  }
-
-  note(text: string, level: 'ok' | 'warn'): void {
-    this.element.querySelector('.demo-bar__note')?.remove();
-    this.element.append(el('span', { class: 'demo-bar__note' }, ` ${text}`));
-    this.element.dataset.level = level;
-  }
-}
-
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, attributes: Record<string, string>, ...children: (Node | string)[]): HTMLElementTagNameMap[K] {
-  const element = document.createElement(tag);
-  for (const [name, value] of Object.entries(attributes)) element.setAttribute(name, value);
-  element.append(...children);
-  return element;
 }

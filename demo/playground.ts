@@ -1,7 +1,21 @@
-// The playground's state as the URL (example, room → Local / Collaborate / GitLab mode, user, devtools) and the
-// editor options it means. See docs/30_architecture/11_development.typ.
+// See docs/30_architecture/11_development.typ.
 import type { CollaborationOptions, TypstEditorOptions } from '../src';
 import { exampleFiles, exampleFromQuery, exampleQuery, type ExampleName } from './examples';
+
+/**
+ * The playground's state as the URL (example, room → Local / Collaborate / GitLab mode, user, devtools) and the editor
+ * options it means.
+ */
+export function playgroundFromQuery(params: URLSearchParams): PlaygroundState {
+  const room = params.get('room') || null;
+  return {
+    example: exampleFromQuery(params),
+    mode: room === null ? 'local' : room.startsWith(GITLAB_PREFIX) ? 'gitlab' : 'collab',
+    room,
+    user: params.get('user') || (room === null ? 'Demo user' : USERS[0]),
+    devtools: params.has('devtools'),
+  };
+}
 
 export type Mode = 'local' | 'collab' | 'gitlab';
 
@@ -16,10 +30,6 @@ export const SERVER = { ws: 'ws://127.0.0.1:1234', http: 'http://127.0.0.1:1234'
 
 /** The fake GitLab's repository (server/src/playground/playground.ts: PLAYGROUND_ROOM). */
 export const GITLAB_ROOM = 'gitlab:demo/report@main';
-
-const GITLAB_PREFIX = 'gitlab:';
-const ROOM_PREFIX = 'playground-';
-const USERS = ['Ann', 'Bob', 'Cleo', 'Dan'];
 
 /**
  * The demo playground's state, all of it in the URL (so a second window, a
@@ -44,17 +54,6 @@ export interface PlaygroundState {
 
 /** Whether the playground server answered: with its fake GitLab, without it (`mise run server:dev`), or not at all. */
 export type ServerKind = 'gitlab' | 'plain' | 'offline';
-
-export function playgroundFromQuery(params: URLSearchParams): PlaygroundState {
-  const room = params.get('room') || null;
-  return {
-    example: exampleFromQuery(params),
-    mode: room === null ? 'local' : room.startsWith(GITLAB_PREFIX) ? 'gitlab' : 'collab',
-    room,
-    user: params.get('user') || (room === null ? 'Demo user' : USERS[0]),
-    devtools: params.has('devtools'),
-  };
-}
 
 /** The query that switches to `mode`, keeping example and user. */
 export function modeQuery(mode: Mode, params: URLSearchParams): string {
@@ -105,6 +104,12 @@ export function editorOptions(state: PlaygroundState, server: ServerKind | null)
   // A GitLab room is loaded from the repository (local files would only shadow its images).
   return state.mode === 'gitlab' ? { files: {}, collaboration } : { ...local, collaboration };
 }
+
+const GITLAB_PREFIX = 'gitlab:';
+
+const USERS = ['Ann', 'Bob', 'Cleo', 'Dan'];
+
+const ROOM_PREFIX = 'playground-';
 
 /** The files to start from, and the room to join (main.ts adds the collaboration extension for it). */
 type EditorOptions = Pick<TypstEditorOptions, 'files'> & { collaboration?: CollaborationOptions };

@@ -21,19 +21,6 @@ export type ExampleName = (typeof EXAMPLES)[number]['name'];
 /** The example shown without `?example`; the e2e specs rely on its content. */
 export const DEFAULT_EXAMPLE: ExampleName = 'hello';
 
-const sources = import.meta.glob<string>(['./examples/**/*.{typ,svg,mmd}', '../docs/**/*.{typ,svg,mmd}'], {
-  query: '?raw',
-  import: 'default',
-  eager: true,
-});
-
-/** Binary files (IronCalc spreadsheets, images, fonts) as `data:` URLs: `?raw` would decode them as UTF-8. */
-const binaries = import.meta.glob<string>(['./examples/**/*.ic', '../docs/**/*.{png,jpg,jpeg,gif,webp,ttf}'], {
-  query: '?inline',
-  import: 'default',
-  eager: true,
-});
-
 /** The files of an example project, keyed by absolute project path. */
 export function exampleFiles(name: ExampleName): ProjectFiles {
   const prefix = EXAMPLES.find((example) => example.name === name)!.folder;
@@ -49,10 +36,6 @@ export function exampleFiles(name: ExampleName): ProjectFiles {
   return files;
 }
 
-function dataUrlBytes(url: string): Uint8Array {
-  return Uint8Array.from(atob(url.slice(url.indexOf(',') + 1)), (char) => char.charCodeAt(0));
-}
-
 /** The example a URL asks for: `?example=<name>`; anything else the default. */
 export function exampleFromQuery(params: URLSearchParams): ExampleName {
   return EXAMPLES.find(({ name }) => name === params.get('example'))?.name ?? DEFAULT_EXAMPLE;
@@ -63,4 +46,21 @@ export function exampleQuery(name: ExampleName, params: URLSearchParams): string
   const next = new URLSearchParams(params);
   next.set('example', name);
   return `?${next}`;
+}
+
+const sources = import.meta.glob<string>(['./examples/**/*.{typ,svg,mmd}', '../docs/**/*.{typ,svg,mmd}'], {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+});
+
+/** Binary files (IronCalc spreadsheets, images, fonts) as `data:` URLs: `?raw` would decode them as UTF-8. */
+const binaries = import.meta.glob<string>(['./examples/**/*.ic', '../docs/**/*.{png,jpg,jpeg,gif,webp,ttf}'], {
+  query: '?inline',
+  import: 'default',
+  eager: true,
+});
+
+function dataUrlBytes(url: string): Uint8Array {
+  return Uint8Array.from(atob(url.slice(url.indexOf(',') + 1)), (char) => char.charCodeAt(0));
 }

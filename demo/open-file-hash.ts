@@ -1,23 +1,14 @@
-// The file shown in the demo's editor lives in the URL fragment (`#/chapters/introduction.typ`),
-// so reloading or sharing the link opens the same file. See main.ts.
+// See main.ts.
 import type { TypstEditor } from '../src';
-
-/** The project path in a URL fragment, or null (`#/a/b.typ` → `/a/b.typ`). */
-export function pathFromHash(hash: string): string | null {
-  const path = decodeURIComponent(hash.replace(/^#/, ''));
-  return path.startsWith('/') && path.length > 1 ? path : null;
-}
-
-/** The URL fragment for a project path (`/a/b.typ` → `#/a/b.typ`). */
-export function hashForPath(path: string): string {
-  return `#${encodeURI(path)}`;
-}
 
 /**
  * Opens the file named in the fragment (now, or once it exists: in a
  * collaboration room the files arrive after connecting), follows fragment
  * edits, and writes the shown file back into the fragment without adding
  * history entries. Use as the editor's `onOpen` and `onFilesChange`.
+ *
+ * The file shown in the demo's editor lives in the URL fragment (`#/chapters/introduction.typ`), so reloading or
+ * sharing the link opens the same file.
  */
 export class OpenFileHash {
   private editor: TypstEditor | null = null;
@@ -56,4 +47,15 @@ export class OpenFileHash {
     this.editor.open(wanted);
     if (this.editor.activeFile === wanted) this.opened(wanted);
   }
+}
+
+/** The project path in a URL fragment, or null (`#/a/b.typ` → `/a/b.typ`). */
+export function pathFromHash(hash: string): string | null {
+  const path = decodeURIComponent(hash.replace(/^#/, ''));
+  return path.startsWith('/') && path.length > 1 ? path : null;
+}
+
+/** The URL fragment for a project path (`/a/b.typ` → `#/a/b.typ`). */
+export function hashForPath(path: string): string {
+  return `#${encodeURI(path)}`;
 }

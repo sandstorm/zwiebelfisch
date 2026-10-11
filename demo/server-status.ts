@@ -1,6 +1,13 @@
 // Probes the playground server (ws://127.0.0.1:1234) and simulates an upstream commit. See playground.ts.
 import { SERVER, type Mode, type ServerKind } from './playground';
 
+export interface ServerStatus {
+  text: string;
+  /** A command to run, shown as code. */
+  hint?: string;
+  level: 'info' | 'ok' | 'warn';
+}
+
 /** What a simulated upstream commit changes (see server/src/playground/playground.ts). */
 export type UpstreamChange = 'append' | 'heading';
 
@@ -10,13 +17,6 @@ export type UpstreamChange = 'append' | 'heading';
  * when it went away after the page joined its room.
  */
 export type ServerState = ServerKind | 'checking' | 'reload' | 'lost';
-
-export interface ServerStatus {
-  text: string;
-  /** A command to run, shown as code. */
-  hint?: string;
-  level: 'info' | 'ok' | 'warn';
-}
 
 /**
  * Asks the playground server whether it is there, and whether it has the fake
@@ -48,14 +48,11 @@ export async function simulateUpstream(room: string, change: UpstreamChange, fet
   return `GitLab: ${commit.sha.slice(0, 8)} “${commit.message}” changed ${commit.path}`;
 }
 
-const START = 'mise run demo';
-
-const CONNECTED: ServerStatus = { level: 'ok', text: `Connected to ${SERVER.ws}.` };
-const MISSING_GITLAB: ServerStatus = {
-  level: 'warn',
-  text: `${SERVER.ws} has no fake GitLab (mise run server:dev?). Start the playground server instead:`,
-  hint: START,
-};
+/** What the bar says about the server in `mode` (`null`: Local mode, which does not ask). */
+export function describeServer(mode: Mode, state: ServerState | null): ServerStatus {
+  if (mode === 'local' || state === null) return { level: 'info', text: 'Local: everything runs in this tab, no server needed.' };
+  return STATUS[state](mode);
+}
 
 const STATUS: Record<ServerState, (mode: Mode) => ServerStatus> = {
   checking: () => ({ level: 'info', text: `Connecting to ${SERVER.ws}…` }),
@@ -66,8 +63,12 @@ const STATUS: Record<ServerState, (mode: Mode) => ServerStatus> = {
   gitlab: (mode) => (mode === 'gitlab' ? { level: 'ok', text: 'Connected to the fake GitLab (project demo/report).' } : CONNECTED),
 };
 
-/** What the bar says about the server in `mode` (`null`: Local mode, which does not ask). */
-export function describeServer(mode: Mode, state: ServerState | null): ServerStatus {
-  if (mode === 'local' || state === null) return { level: 'info', text: 'Local: everything runs in this tab, no server needed.' };
-  return STATUS[state](mode);
-}
+const START = 'mise run demo';
+
+const MISSING_GITLAB: ServerStatus = {
+  level: 'warn',
+  text: `${SERVER.ws} has no fake GitLab (mise run server:dev?). Start the playground server instead:`,
+  hint: START,
+};
+
+const CONNECTED: ServerStatus = { level: 'ok', text: `Connected to ${SERVER.ws}.` };

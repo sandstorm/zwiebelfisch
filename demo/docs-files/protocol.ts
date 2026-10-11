@@ -1,10 +1,12 @@
-// What the docs-files plugin (plugin.ts, node; dev server and `vite preview`) and the demo page (docs-sync.ts) agree on:
-// the endpoint, the session token's meta tag and header, the event stream of what is on disk, and how a file travels
-// in it. See docs/30_architecture/11_development.typ ("Writing the docs in the demo").
+// See docs/30_architecture/11_development.typ ("Writing the docs in the demo").
 
 /**
  * The endpoint: `PUT ?path=` writes the body, `DELETE ?path=` deletes, `POST ?path=&to=` renames; `GET ?token=` is the
  * event stream (Server-Sent Events: `DOCS_FILES_SNAPSHOT` once per connection, then `DOCS_FILES_CHANGE`s).
+ *
+ * What the docs-files plugin (plugin.ts, node; dev server and `vite preview`) and the demo page (docs-sync.ts) agree
+ * on: the endpoint, the session token's meta tag and header, the event stream of what is on disk, and how a file
+ * travels in it.
  */
 export const DOCS_FILES_ENDPOINT = '/__docs-files';
 
@@ -29,9 +31,9 @@ export const DOCS_FILES_CHANGE = 'change';
  */
 export type DiskChange = { path: string } & ({ text: string } | { base64: string } | { deleted: true });
 
-const TEXT_EXTENSIONS = new Set(['typ', 'mmd', 'svg', 'md', 'txt', 'csv', 'json', 'yaml', 'yml', 'toml', 'bib', 'css', 'html', 'xml']);
-
 /** Whether the file at `path` travels as text: by its extension. */
 export function isTextPath(path: string): boolean {
   return TEXT_EXTENSIONS.has(path.slice(path.lastIndexOf('.') + 1).toLowerCase());
 }
+
+const TEXT_EXTENSIONS = new Set(['typ', 'mmd', 'svg', 'md', 'txt', 'csv', 'json', 'yaml', 'yml', 'toml', 'bib', 'css', 'html', 'xml']);

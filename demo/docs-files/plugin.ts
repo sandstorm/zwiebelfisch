@@ -1,6 +1,4 @@
-// The docs-files Vite plugin: while the dev server (`mise run demo` / `dev`) or `vite preview` (`mise run demo:build`)
-// runs, never in a build, the demo's Documentation example saves to docs/ and hears about changes made there by others
-// (a checkout, another editor). Node only. See docs/30_architecture/11_development.typ ("Writing the docs in the demo").
+// The docs-files Vite plugin. See docs/30_architecture/11_development.typ ("Writing the docs in the demo").
 import { randomBytes } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -9,23 +7,15 @@ import type { Connect, Plugin } from 'vite';
 import { DocsFilesError, DocsFolder } from './docs-folder.ts';
 import { DOCS_FILES_CHANGE, DOCS_FILES_ENDPOINT, DOCS_FILES_HEADER, DOCS_FILES_META, DOCS_FILES_SNAPSHOT, DOCS_FILES_TOKEN_PARAM } from './protocol.ts';
 
-/** The largest file the page may write (an image). */
-const MAX_BYTES = 20 * 1024 * 1024;
-
-/** A request to the endpoint, as `handleDocsFilesRequest` needs it (`url` relative to the endpoint). */
-export interface DocsFilesRequest {
-  method: string;
-  url: string;
-  headers: Readonly<Record<string, string | string[] | undefined>>;
-  /** Read only once the sender is known. */
-  body(): Promise<Uint8Array>;
-}
-
 /**
  * The plugin for the docs folder `root`. It serves the
  * file API and the event stream of changes on disk at `DOCS_FILES_ENDPOINT` to the server's own page (its origin, and
  * the session token it puts into the page), the same on the dev server and in `vite preview`. On the dev server, a
  * change in `root` is no reload: the page keeps its editor and applies the change itself.
+ *
+ * While the dev server (`mise run demo` / `dev`) or `vite preview` (`mise run demo:build`) runs, never in a build, the
+ * demo's Documentation example saves to docs/ and hears about changes made there by others (a checkout, another
+ * editor). Node only.
  */
 export function docsFiles(options: { root: string }): Plugin {
   const folder = new DocsFolder(options.root);
@@ -66,6 +56,15 @@ export function docsFiles(options: { root: string }): Plugin {
   };
 }
 
+/** A request to the endpoint, as `handleDocsFilesRequest` needs it (`url` relative to the endpoint). */
+export interface DocsFilesRequest {
+  method: string;
+  url: string;
+  headers: Readonly<Record<string, string | string[] | undefined>>;
+  /** Read only once the sender is known. */
+  body(): Promise<Uint8Array>;
+}
+
 /** Answers one file API request: 204, or an error status with the reason as text. */
 export async function handleDocsFilesRequest(folder: DocsFolder, token: string, request: DocsFilesRequest): Promise<{ status: number; text: string }> {
   try {
@@ -91,14 +90,6 @@ export function mayStream(token: string, request: Pick<DocsFilesRequest, 'url' |
   const { origin, host } = request.headers;
   if (origin !== undefined && (typeof origin !== 'string' || URL.parse(origin)?.host !== host)) return false;
   return new URL(request.url, 'http://docs-files').searchParams.get(DOCS_FILES_TOKEN_PARAM) === token;
-}
-
-/** Only the server's own page: from its own origin, with the token it was given. */
-function checkSender(token: string, headers: DocsFilesRequest['headers']): void {
-  const origin = typeof headers.origin === 'string' ? headers.origin : '';
-  const host = typeof headers.host === 'string' ? headers.host : '';
-  if (!origin || !host || URL.parse(origin)?.host !== host) throw new DocsFilesError('Only from the server’s own page', 403);
-  if (headers[DOCS_FILES_HEADER] !== token) throw new DocsFilesError('Missing or wrong docs-files token', 403);
 }
 
 /** The endpoint on one server: the file API, and the event stream with the watcher behind it. */
@@ -163,4 +154,15 @@ async function readBody(req: IncomingMessage): Promise<Uint8Array> {
     chunks.push(chunk);
   }
   return Buffer.concat(chunks);
+}
+
+/** The largest file the page may write (an image). */
+const MAX_BYTES = 20 * 1024 * 1024;
+
+/** Only the server's own page: from its own origin, with the token it was given. */
+function checkSender(token: string, headers: DocsFilesRequest['headers']): void {
+  const origin = typeof headers.origin === 'string' ? headers.origin : '';
+  const host = typeof headers.host === 'string' ? headers.host : '';
+  if (!origin || !host || URL.parse(origin)?.host !== host) throw new DocsFilesError('Only from the server’s own page', 403);
+  if (headers[DOCS_FILES_HEADER] !== token) throw new DocsFilesError('Missing or wrong docs-files token', 403);
 }

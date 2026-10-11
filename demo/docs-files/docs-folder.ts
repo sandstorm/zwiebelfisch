@@ -1,26 +1,17 @@
-// DocsFolder: the docs/ folder as the docs-files plugin (plugin.ts) writes and watches it. Node only.
-// Every path comes from the page, so each one goes through the guard here: relative to docs/, no "..", no hidden
-// files, no symlink leading out. See docs/30_architecture/11_development.typ.
+// DocsFolder. See docs/30_architecture/11_development.typ.
 import { randomBytes } from 'node:crypto';
 import { watch } from 'node:fs';
 import { lstat, mkdir, readdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { type DiskChange, isTextPath } from './protocol.ts';
 
-/** A request the folder refuses, with the HTTP status that says why. */
-export class DocsFilesError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-  ) {
-    super(message);
-  }
-}
-
 /**
  * The files under `root`, by paths relative to it (`10_guide/02_features.typ`). Writes are atomic (a hidden temporary file
  * renamed over the target). It remembers what it wrote last per path, so `watch` skips the event for the folder's own
  * write (no echo to the page that made it).
+ *
+ * The docs/ folder as the docs-files plugin (plugin.ts) writes and watches it. Node only. Every path comes from the
+ * page, so each one goes through the guard here: relative to docs/, no "..", no hidden files, no symlink leading out.
  */
 export class DocsFolder {
   readonly #written = new Map<string, Buffer | null>();
@@ -134,13 +125,18 @@ export class DocsFolder {
   }
 }
 
-async function exists(file: string): Promise<boolean> {
-  return (await lstat(file).catch(() => null)) !== null;
+/** A request the folder refuses, with the HTTP status that says why. */
+export class DocsFilesError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
 }
 
-async function nearestExisting(folder: string): Promise<string> {
-  while (!(await exists(folder))) folder = dirname(folder);
-  return folder;
+async function exists(file: string): Promise<boolean> {
+  return (await lstat(file).catch(() => null)) !== null;
 }
 
 /** A file's content (or its absence) as it travels to the page. */
@@ -152,4 +148,9 @@ function diskChange(path: string, bytes: Buffer | null): DiskChange {
 function sameBytes(written: Buffer | null | undefined, now: Buffer | null): boolean {
   if (written === undefined) return false;
   return written === null || now === null ? written === now : written.equals(now);
+}
+
+async function nearestExisting(folder: string): Promise<string> {
+  while (!(await exists(folder))) folder = dirname(folder);
+  return folder;
 }

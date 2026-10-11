@@ -1,6 +1,5 @@
-// The demo page's half of writing the docs in the demo: the Documentation example's edits go to docs/ through the
-// docs-files plugin (plugin.ts; dev server or `vite preview`), and changes made on disk come back into the editor. See
-// docs/30_architecture/11_development.typ ("Writing the docs in the demo").
+// The demo page's half of writing the docs in the demo. See docs/30_architecture/11_development.typ ("Writing the docs
+// in the demo").
 import { type FileChange, FileContent, type ProjectFiles } from '../../src';
 import {
   DOCS_FILES_CHANGE,
@@ -12,26 +11,6 @@ import {
   type DiskChange,
 } from './protocol';
 
-/** The plugin's file API, by paths relative to docs/ (`10_guide/02_features.typ`). */
-export interface DocsFilesApi {
-  write(path: string, bytes: Uint8Array): Promise<void>;
-  delete(path: string): Promise<void>;
-  rename(from: string, to: string): Promise<void>;
-}
-
-export type SaveLevel = 'muted' | 'ok' | 'warn';
-
-/** Where the sync tells what it did: a line for the playground bar. */
-export type SaveReport = (text: string, level: SaveLevel) => void;
-
-/** The editor as far as the sync needs it: its files, to read and to replace (the widget's `files`). */
-export interface SyncedEditor {
-  files: ProjectFiles;
-}
-
-/** How long an edited file waits for more edits before it is written. */
-const SAVE_DELAY = 300;
-
 /**
  * Keeps docs/ and the editor's files the same. Edits are written per file once the typing pauses (`flush` writes
  * what waits, e.g. when the page is hidden); a create, rename or delete in the file panel happens on disk first and
@@ -40,6 +19,9 @@ const SAVE_DELAY = 300;
  *
  * It remembers what is on disk (as far as it knows: the files it started from, wrote, or heard of), which is how it
  * tells unsaved edits apart, and why its own writes coming back cause nothing.
+ *
+ * The Documentation example's edits go to docs/ through the docs-files plugin (plugin.ts; dev server or `vite
+ * preview`), and changes made on disk come back into the editor.
  */
 export class DocsSync {
   readonly #disk = new Map<string, FileContent>();
@@ -201,6 +183,23 @@ export class DocsSync {
   }
 }
 
+/** The plugin's file API, by paths relative to docs/ (`10_guide/02_features.typ`). */
+export interface DocsFilesApi {
+  write(path: string, bytes: Uint8Array): Promise<void>;
+  delete(path: string): Promise<void>;
+  rename(from: string, to: string): Promise<void>;
+}
+
+export type SaveLevel = 'muted' | 'ok' | 'warn';
+
+/** Where the sync tells what it did: a line for the playground bar. */
+export type SaveReport = (text: string, level: SaveLevel) => void;
+
+/** The editor as far as the sync needs it: its files, to read and to replace (the widget's `files`). */
+export interface SyncedEditor {
+  files: ProjectFiles;
+}
+
 /**
  * The sync for the page the plugin served, wired to the plugin (its token in the page, its event stream) and to the
  * page going away; null in a static build, which has no plugin.
@@ -241,11 +240,8 @@ export function httpDocsFilesApi(token: string, send: typeof fetch = fetch): Doc
   };
 }
 
-/** The content of a project file from disk: a Typst file's text, any other file's bytes; null when deleted. */
-function diskContent(change: DiskChange): FileContent | null {
-  if ('deleted' in change) return null;
-  if ('base64' in change) return Uint8Array.from(atob(change.base64), (char) => char.charCodeAt(0));
-  return change.path.endsWith('.typ') ? change.text : new TextEncoder().encode(change.text);
+function extension(path: string): string {
+  return path.slice(path.lastIndexOf('.') + 1).toLowerCase();
 }
 
 function same(a: FileContent | null | undefined, b: FileContent | null | undefined): boolean {
@@ -255,11 +251,17 @@ function same(a: FileContent | null | undefined, b: FileContent | null | undefin
   return x.length === y.length && x.every((byte, at) => byte === y[at]);
 }
 
+/** The content of a project file from disk: a Typst file's text, any other file's bytes; null when deleted. */
+function diskContent(change: DiskChange): FileContent | null {
+  if ('deleted' in change) return null;
+  if ('base64' in change) return Uint8Array.from(atob(change.base64), (char) => char.charCodeAt(0));
+  return change.path.endsWith('.typ') ? change.text : new TextEncoder().encode(change.text);
+}
+
 /** `/10_guide/02_features.typ` → `10_guide/02_features.typ`. */
 function relative(path: string): string {
   return path.slice(1);
 }
 
-function extension(path: string): string {
-  return path.slice(path.lastIndexOf('.') + 1).toLowerCase();
-}
+/** How long an edited file waits for more edits before it is written. */
+const SAVE_DELAY = 300;
