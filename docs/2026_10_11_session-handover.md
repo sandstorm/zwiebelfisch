@@ -11,7 +11,6 @@ E2E has not been run for most of the day's work: `mise run test:e2e-all chromium
 
 | Task | Workflow | Notes |
 |---|---|---|
-| Paste: existing labels get `-1`, `-2`; references inside the paste follow | `w4mtx2ua4` (wf_929667e5-c18) | May introduce a paste-edit provider (VS Code `DocumentPasteEditProvider`); may move the `imports` extension onto it |
 | One hover tooltip look for every link (references, URLs, files, diagrams) in both editors | `wya9gdmez` (wf_c7027712-272) | User: "Go to Section" tooltip looks different from link tooltips |
 
 Merge routine: `git merge --no-edit <worktree branch>`; resolve conflicts by combining both sides; stage only the
@@ -44,7 +43,8 @@ often lack preview-mock members (`registerViewOption`, `viewOptions`, `setViewOp
   `languages.registerKnownImport` + `imports` extension + clipboard types `text/x-typst`,
   `application/x-typst-imports`; `editRawBox(pos, offset)` command; toolbar menus in floating bars
   (`bar` on menu groups, `provideActions`); `languages.registerDocumentDropEditProvider`; menu items
-  `toggled`.
+  `toggled`; `languages.registerDocumentPasteEditProvider` (labels and imports use it; providers run in
+  registration order, against the conventions' "order only within one extension" — user to decide).
 - Why-comment pass leftovers (my suggestions in brackets): own short why for `TextBinding`, `LabelIndex`,
   table conversion, server `merge.ts` [yes]; `prosemirror-typst.ts` says "later spec wins" vs docs
   "later extends" — check and fix; cut "later docking layout" from `workbench-layout.ts`; fix NotesGutter
