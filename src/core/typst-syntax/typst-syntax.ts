@@ -1,4 +1,4 @@
-import type { SyntaxNode } from '@lezer/common';
+import type { SyntaxNode, Tree } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { PathReference, ProjectPath } from '../paths/paths';
 import { SourceOffset, SourceRange, type TextChange } from '../typst-document/typst-document';
@@ -9,10 +9,11 @@ import { SourceOffset, SourceRange, type TextChange } from '../typst-document/ty
  * bibliography array). Package imports, empty strings, computed paths and methods (`image.decode`) are left out.
  * `from` / `to` look at a part only.
  *
- * Knowledge of Typst syntax that several extensions need, read from the Lezer syntax tree of codemirror-lang-typst:
- * which files a text names, the order Typst reads the project's files in (`neighbours`), the change that imports a
- * name (`calculateImportChange`), the names imports bind (`importedNames`), and small helpers to read calls and
- * strings (`calleeName`, `namedArgument`, …), as the Typst ↔ ProseMirror specs do.
+ * Knowledge of Typst syntax that several extensions need, read from the Lezer syntax tree of codemirror-lang-typst
+ * (`syntaxTree`, parsed once for all who read the same text): which files a text names, the order Typst reads the
+ * project's files in (`neighbours`), the change that imports a name (`calculateImportChange`), the names imports bind
+ * (`importedNames`), and small helpers to read calls and strings (`calleeName`, `namedArgument`, …), as the
+ * Typst ↔ ProseMirror specs do.
  *
  * It lives in core because extensions never import each other, and this is about Typst, not about one feature. It
  * stops at syntax: where a path leads and what following it does is the document-links extension's, showing links is
@@ -21,7 +22,7 @@ import { SourceOffset, SourceRange, type TextChange } from '../typst-document/ty
  */
 export function findFilePaths(text: string, options: { from?: number; to?: number } = {}): PathInSource[] {
   const found: PathInSource[] = [];
-  typstParser.parse(text).iterate({
+  syntaxTree(text).iterate({
     from: options.from,
     to: options.to,
     enter: (node) => {
@@ -30,6 +31,17 @@ export function findFilePaths(text: string, options: { from?: number; to?: numbe
   });
   return found;
 }
+
+/**
+ * The Lezer syntax tree of `text`. The last one is kept: the link providers of an editor read the same text one after
+ * the other, so it is parsed once.
+ */
+export function syntaxTree(text: string): Tree {
+  if (lastTree?.text !== text) lastTree = { text, tree: typstParser.parse(text) };
+  return lastTree.tree;
+}
+
+let lastTree: { text: string; tree: Tree } | null = null;
 
 /** What names the path: `#import`, `#include`, or the function whose first argument it is. */
 export type PathCall = 'import' | 'include' | 'image' | 'read' | 'json' | 'csv' | 'yaml' | 'toml' | 'xml' | 'cbor' | 'bibliography';

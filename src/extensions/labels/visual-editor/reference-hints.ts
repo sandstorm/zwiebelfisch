@@ -3,16 +3,13 @@
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import { ProjectPath } from '../../../core/paths/paths';
 import { describeLabel } from '../model/label-description';
 import type { LabelInfo, ProjectLabels } from '../model/label-index';
 
 /**
- * Decorates every reference chip with what its label labels (`data-hint`, and
- * a hover tooltip with it and the file; nothing extra is drawn inline) or, when the project
- * has no such label, marks it unknown (wavy underline, a tooltip saying why;
- * Typst reports the same error). Follows edits and changes of the project's
- * labels.
+ * Decorates every reference chip with what its label labels (`data-hint`; nothing extra is drawn inline, the hover is
+ * the reference's document link: "Go to …") or, when the project has no such label, marks it unknown (wavy
+ * underline, a tooltip saying why; Typst reports the same error). Follows edits and changes of the project's labels.
  */
 export function referenceHints(labels: ProjectLabels): Plugin {
   return new Plugin({
@@ -54,8 +51,7 @@ function hints(doc: Node, labels: readonly LabelInfo[]): DecorationSet {
 
 function known(label: LabelInfo): Record<string, string> {
   const hint = describeLabel(label);
-  const where = `in ${ProjectPath.displayName(label.path)}`;
-  return hint ? { 'data-hint': hint, title: `${hint} (${where})` } : { title: `<${label.name}> ${where}` };
+  return hint ? { 'data-hint': hint } : {};
 }
 
 function unknown(target: string): Record<string, string> {

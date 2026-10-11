@@ -225,7 +225,8 @@ function imagePicker(doc: Document, choose: (files: File[]) => void): HTMLInputE
 
 /** An image box's path as a button that opens the link's target, or the path marked as leading nowhere (with the link's tooltip). */
 function imagePathLink(link: DocumentLink | null, path: PathReference, doc: Document, open: (target: ProjectPath) => void): HTMLElement {
-  const target = link?.target;
+  // an image's path leads to a file, if anywhere
+  const target = link?.target instanceof URL ? undefined : link?.target;
   if (!target) {
     const missing = doc.createElement('span');
     missing.className = 'typst-images__path typst-images__path--missing';
@@ -237,7 +238,7 @@ function imagePathLink(link: DocumentLink | null, path: PathReference, doc: Docu
   button.type = 'button';
   button.className = 'typst-images__path';
   button.textContent = path;
-  button.title = link.tooltip ?? `Open ${ProjectPath.displayName(target)}`;
+  button.title = link?.tooltip ?? `Open ${ProjectPath.displayName(target)}`;
   button.addEventListener('mousedown', (event) => event.preventDefault());
   button.addEventListener('click', () => open(target));
   return button;

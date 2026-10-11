@@ -3,6 +3,7 @@ import css from './markup.css?inline';
 import {
   BLOCKQUOTE, BOLD, CODE, CODE_BLOCK, INSERT_CODE_BLOCK, INSERT_QUOTE, ITALIC, LINK, linkAction, linkShortcut, MARK_ACTIONS,
 } from './visual-editor/visual-editor';
+import { urlLinks } from './workbench/url-links';
 
 /**
  * The Typst markup most text is made of, in the Visual editor: strong and emphasis, links, raw text (inline code, code
@@ -10,14 +11,15 @@ import {
  *
  * The Visual editor itself knows only paragraphs, text and raw boxes. Every other construct is contributed, so it can be
  * left out or replaced on its own; this is the most basic set. Where marks cover the same text, a link is outermost
- * (its Tiptap priority, 120), then bold, then italic; inline code is always written innermost (`raw`).
+ * (its Tiptap priority, 120), then bold, then italic; inline code is always written innermost (`raw`). Web and mail
+ * addresses are document links in every editor: ⌘/Ctrl+click or Alt+Enter opens them in a new tab.
  * See docs/20_extensions/03_visual-editor-constructs.typ.
  */
 export function markup(): TypstExtension {
   return {
     id: 'markup',
-    activate({ window, workbench, visualEditor, subscriptions }) {
-      subscriptions.push(workbench.registerStyleSheet(css));
+    activate({ window, workbench, languages, visualEditor, subscriptions }) {
+      subscriptions.push(workbench.registerStyleSheet(css), languages.registerDocumentLinkProvider({ language: 'typst' }, urlLinks));
       subscriptions.push(
         visualEditor.registerMark(BOLD),
         visualEditor.registerMark(ITALIC),

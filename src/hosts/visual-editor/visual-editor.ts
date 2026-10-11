@@ -11,6 +11,7 @@ import { highlights, setHighlights } from './highlights';
 import { editorExtensions, nodeViewSpecs } from './nodes/node-views';
 import type { RawBoxes } from './nodes/raw-box';
 import { suggestions } from './suggestions/suggestions';
+import { textLinks } from './text-links';
 import { Toolbar } from './toolbar/toolbar';
 import proseMirrorCss from './prosemirror.css?inline';
 import css from './visual-editor.css?inline';
@@ -56,6 +57,7 @@ export class VisualEditor {
       extensions: [
         ...editorExtensions(contributed.nodes, contributed.marks, boxes(editor, contributed, views, contributions.links)),
         highlights,
+        ...(contributions.links ? [textLinks(document, contributions.links, isBox)] : []),
         suggestions(contributed.completionItemProviders, (tiptap, query) => ({
           ...editor,
           editor: tiptap,
@@ -347,7 +349,7 @@ export interface VisualEditorContributions {
 
 /**
  * Keeps what is registered through `VisualEditorContributions` and hands it to each editor it creates (`contributed`),
- * with where raw boxes' pictures lead (`links`; null: nowhere). The workbench has one; tests make their own (`from`).
+ * with where its links lead (`links`; null: nowhere). The workbench has one; tests make their own (`from`).
  */
 export class VisualEditorHost implements VisualEditorContributions {
   private readonly rawBoxRenderers: Ranked<RawBoxRendererProvider>[] = [];
@@ -366,7 +368,7 @@ export class VisualEditorHost implements VisualEditorContributions {
   /** The CSS of the editors (ProseMirror's own first), for the workbench to put where the widget renders. */
   readonly styleSheet: string = proseMirrorCss + css;
 
-  constructor(readonly links: RawBoxLinks | null = null) {}
+  constructor(readonly links: VisualEditorLinks | null = null) {}
 
   /** A registry with `contributions` activated, for as long as it lives (for an editor without the workbench, as in tests). */
   static from(contributions: readonly VisualEditorContribution[]): VisualEditorHost {
@@ -529,17 +531,20 @@ export interface RawBoxTools {
 }
 
 /**
- * Where the pictures of raw boxes lead, from the document links of their Typst (the workbench's `languages`): a box's
- * picture follows its primary link as a link in the Source editor does. The workbench gives it to the host.
+ * Where the Visual editor's links lead, from the document links of its Typst (the workbench's `languages`): a box's
+ * picture follows its primary link, the text (a reference chip, a link mark) the link under the pointer or at the
+ * cursor, as a link in the Source editor does. The workbench gives it to the host.
  */
-export interface RawBoxLinks {
+export interface VisualEditorLinks {
   /** The primary link of the box whose Typst is `src` (code: a figure's body, without `#`), in `document`; null: none. */
-  linkOf(src: string, document: TypstDocument): RawBoxLink | null;
+  linkOf(src: string, document: TypstDocument): FollowableLink | null;
+  /** The link at `offset` of `document`'s text that leads somewhere; null: none. Asked as the pointer moves. */
+  linkAt(document: TypstDocument, offset: SourceOffset): FollowableLink | null;
 }
 
-/** Where a box's picture leads. */
-export interface RawBoxLink {
-  /** The picture's tooltip: what following it does and how ("Edit diagram (⌘+click or Alt+Enter)"). */
+/** Where a link of the Visual editor leads. */
+export interface FollowableLink {
+  /** Its tooltip: what following it does and how ("Go to Figure · Setup in ch2.typ (⌘+click or Alt+Enter)"). */
   readonly title: string;
   /** Whether a click with `event`'s modifiers follows it (⌘ on Mac, else Ctrl). */
   isFollowEvent(event: MouseEvent | KeyboardEvent): boolean;
@@ -709,7 +714,7 @@ export type ToolbarItem =
     };
 
 /** What the raw boxes of `editor` get from the contributions. */
-function boxes(editor: VisualEditorContext, contributed: Contributed, nodeViews: RawBoxes['nodeViews'], links: RawBoxLinks | null): RawBoxes {
+function boxes(editor: VisualEditorContext, contributed: Contributed, nodeViews: RawBoxes['nodeViews'], links: VisualEditorLinks | null): RawBoxes {
   return {
     editor,
     renderers: contributed.rawBoxRenderers.map((provider) => provider(editor)).filter((renderer) => renderer !== null),

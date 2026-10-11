@@ -1,10 +1,10 @@
 import type { Extension } from '@codemirror/state';
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
-import type { SourceRange } from '../../core/typst-document/typst-document';
+import type { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
 import type { Command } from '../commands/commands';
 import css from './languages.css?inline';
-import { linkExtension, primaryLink } from './link-extension';
+import { followableLink, linkExtension, primaryLink, type LinkActions } from './link-extension';
 
 /**
  * What the widget knows about the languages of texts (VS Code's `languages` namespace, the parts we use): document
@@ -20,10 +20,10 @@ import { linkExtension, primaryLink } from './link-extension';
  */
 export interface Languages {
   /**
-   * Adds links to the documents `selector` matches until disposed: the Source editors, the code of the Visual editor's
-   * raw boxes and the text files' editor show them (Mod+click, Alt+Enter, hover). The links of every matching
-   * provider are merged; where links overlap, the provider of the higher `priority` wins (default 100, higher first;
-   * equal: registration order).
+   * Adds links to the documents `selector` matches until disposed: the Source editors, the Visual editor (its text,
+   * raw boxes' code and pictures) and the text files' editor show them (Mod+click, Alt+Enter, hover). The links of
+   * every matching provider are merged; where links overlap, the provider of the higher `priority` wins (default 100,
+   * higher first; equal: registration order).
    */
   registerDocumentLinkProvider(selector: DocumentSelector, provider: DocumentLinkProvider, options?: { priority?: number }): Disposable;
   /**
@@ -120,8 +120,13 @@ export interface DocumentFilter {
 export interface DocumentLink {
   /** Where the link is, as offsets in the text given to the provider. */
   readonly range: SourceRange;
-  /** The project file following the link opens; absent until resolved, or when it leads to no file. */
-  readonly target?: ProjectPath;
+  /**
+   * Where following the link leads: a project file, or an external URL (`https:`, `mailto:`), which opens in a new tab;
+   * absent until resolved, or when it leads nowhere.
+   */
+  readonly target?: ProjectPath | URL;
+  /** With a target file: the range of it that following the link selects and scrolls to (a label: its place). */
+  readonly selection?: SourceRange;
   /** What the hover says about the link (e.g. that its file is missing). */
   readonly tooltip?: string;
   /**
@@ -141,19 +146,19 @@ export interface DocumentLinkProvider {
 
 /** What following a link does, in the editor that shows it: the workbench's side of links. */
 export interface LinkTargets {
-  /** Shows a link's target. */
-  open(target: ProjectPath): void;
+  /** Shows a link's target: a project file (at `selection`, if given), or an external URL in a new tab. */
+  open(target: ProjectPath | URL, selection?: SourceRange): void;
   /** Runs a link's command (`commands.executeCommand`). */
   executeCommand(command: string, ...args: unknown[]): Promise<unknown>;
 }
 
-/** A link as something other than its text follows it (a raw box's picture). */
+/** A link as something other than a CodeMirror editor follows it (a raw box's picture, the Visual editor's text). */
 export interface FollowableLink {
   /** What following it does and how, as the hover says it: "Edit diagram (⌘+click or Alt+Enter)". */
   readonly title: string;
   /** Whether a click with `event`'s modifiers follows it, as on links in text (⌘ on Mac, else Ctrl). */
   isFollowEvent(event: MouseEvent | KeyboardEvent): boolean;
-  /** Opens its target. */
+  /** Opens its target (resolved again: a label may have moved since). */
   follow(): void;
 }
 
@@ -165,6 +170,8 @@ export class LanguagesHost implements Languages {
   readonly #providers: { selector: DocumentSelector; provider: DocumentLinkProvider; priority: number }[] = [];
   readonly #providerOf = new WeakMap<DocumentLink, DocumentLinkProvider>();
   readonly #helpProviders: { selector: DocumentSelector; provider: HelpProvider }[] = [];
+  /** The document `linkAt` was asked about last, and its links. */
+  #lastLinks: (TextDocument & { links: readonly DocumentLink[] }) | null = null;
   /** The declared endings (lower case, with the dot) and their language. */
   readonly #endings = new Map<string, string>();
 
@@ -237,12 +244,31 @@ export class LanguagesHost implements Languages {
   }
 
   /**
-   * The primary link of `document`: the first, in text order, that leads to a file. A provider makes its link the
+   * The primary link of `document`: the first, in text order, that leads somewhere. A provider makes its link the
    * primary one on a range by its `priority` (overlapping links: the higher wins), so no link needs a mark. For what
    * shows a text other than as text (a raw box's picture), to follow it as the editors follow links.
    */
   primaryLink(document: TextDocument): FollowableLink | null {
-    return primaryLink(this.provideDocumentLinks(document), { resolveDocumentLink: (link) => this.resolveDocumentLink(link), open: (target) => this.targets.open(target) });
+    return primaryLink(this.provideDocumentLinks(document), this.#actions);
+  }
+
+  /**
+   * The link at `offset` of `document` (its range including both ends) that leads somewhere, or null: for an editor
+   * that shows the text other than as text (the Visual editor), asked as the pointer moves. The links of the last
+   * document asked about are kept until its text changes; each is resolved anew (a label may have come or gone).
+   */
+  linkAt(document: TextDocument, offset: SourceOffset): FollowableLink | null {
+    const last = this.#lastLinks;
+    const same = last && last.path === document.path && last.languageId === document.languageId && last.text === document.text;
+    const links = same ? last.links : this.provideDocumentLinks(document);
+    this.#lastLinks = { ...document, links };
+    const link = links.find(({ range }) => range.from <= offset && offset <= range.to);
+    return link ? followableLink(link, this.#actions) : null;
+  }
+
+  /** What a followed link needs from this host: resolving it, and where it leads (`targets`). */
+  get #actions(): Pick<LinkActions, 'resolveDocumentLink' | 'open'> {
+    return { resolveDocumentLink: (link) => this.resolveDocumentLink(link), open: (target, selection) => this.targets.open(target, selection) };
   }
 }
 

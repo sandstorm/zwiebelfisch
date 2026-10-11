@@ -2,6 +2,7 @@ import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './labels.css?inline';
 import { LabelIndex } from './model/label-index';
 import { references } from './visual-editor/visual-editor';
+import { LabelLinks } from './workbench/label-links';
 import { labelSearch } from './workbench/label-search';
 
 /**
@@ -10,7 +11,8 @@ import { labelSearch } from './workbench/label-search';
  * A label (`<intro>`) and the references to it (`@intro`) are often in different files. So one LabelIndex reads every
  * `.typ` and `.bib` file of the project and follows each change. Every Visual editor uses it: references show as chips
  * that say what they point to (or that the label is missing), labels as tags on their blocks (rename with every
- * reference, or remove), and `@` lists the labels. Search everywhere lists them as "Labels".
+ * reference, or remove), and `@` lists the labels. Search everywhere lists them as "Labels". References and
+ * `#link(<label>)` are document links to their label, in every editor (⌘/Ctrl+click or Alt+Enter).
  *
  * The text stays plain Typst; chips and tags are only how the Visual editor draws it. Figures' labels are searched
  * through the figures extension, by caption. See docs/10_guide/02_features.typ, "Labels and cross-references".
@@ -21,7 +23,11 @@ export function labels(): TypstExtension {
     activate(context) {
       context.subscriptions.push(context.workbench.registerStyleSheet(css));
       const index = new LabelIndex(context.project);
-      context.subscriptions.push(index, context.window.registerSearchProvider(labelSearch(index, context.project, context.workbench)));
+      context.subscriptions.push(
+        index,
+        context.window.registerSearchProvider(labelSearch(index, context.project, context.workbench)),
+        context.languages.registerDocumentLinkProvider({ language: 'typst' }, new LabelLinks(index, context.project)),
+      );
       references({ labels: index, prompts: context.window }).activate(context);
     },
   };

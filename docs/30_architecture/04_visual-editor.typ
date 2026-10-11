@@ -23,7 +23,7 @@ What `ExtensionContext.visualEditor` is. Contributions register once, at activat
 - Constructs: `registerNode`, `registerMark` (@extensions-visual-editor-constructs).
 - Around them: Tiptap extensions per editor, toolbar groups and items, text style providers, completion item providers, gutters, highlights, box renderers, raw-box CodeMirror extensions (@extensions-visual-editor-constructs-more).
 - Who wins where they compete: @architecture-conventions-api.
-- Where raw boxes' pictures lead (`RawBoxLinks`, given by the workbench, not contributed): the primary document link of a box's Typst (`languages`), so the host knows no links.
+- Where its links lead (`VisualEditorLinks`, given by the workbench, not contributed): a raw box's picture the primary document link of the box's Typst, the text (a reference chip, a link mark) the link at the source offset under the pointer or at the cursor (`languages`), so the host knows no links. Hovering one sets the editor's title to where it leads, with Mod held the pointer shows (`typst-visual--link`), Mod+click or Alt+Enter follows it, a plain click edits.
 
 == VisualEditorContext <architecture-visual-editor-context>
 
@@ -38,7 +38,7 @@ Typst no spec models, and nodes whose spec sets `view.box: 'code'` (images, outl
 - Undo and redo run the Visual editor's history. Arrow keys, Escape and Enter move between box and text.
 - With a box renderer, the box shows a picture until its code gets focus (the preview's boxes of its range, @architecture-preview-concepts). Until the renderer has one (before the first compile) it shows its code; a picture is decoded before it replaces the code or the one before (no blank in between) and fades in.
 - The spec's `view.title` heads the box; `view.tools` add tools (an image's resize handles and toolbar).
-- The picture is a link to where the box's Typst leads (`RawBoxLinks`): its tooltip says where; with Mod held it shows as one; Mod+click on it, or Alt+Enter on the selected box, follows it. Other clicks still select the box or edit its code.
+- The picture is a link to where the box's Typst leads (`VisualEditorLinks`): its tooltip says where; with Mod held it shows as one; Mod+click on it, or Alt+Enter on the selected box, follows it. Other clicks still select the box or edit its code.
 - `setRawBoxDecorations`: the box's node decorations, handed to its code (another user's caret inside the box).
 
 == Toolbar <architecture-visual-editor-toolbar>

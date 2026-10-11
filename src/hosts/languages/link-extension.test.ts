@@ -51,8 +51,16 @@ describe('linkExtension', () => {
   it('Mod+click on a link opens its target', () => {
     const { linked, view } = setup();
     const event = modClick(view, TEXT.indexOf('template') + 2);
-    expect(linked.open).toHaveBeenCalledWith(path('/template.typ'));
+    expect(linked.open).toHaveBeenCalledWith(path('/template.typ'), undefined);
     expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('Mod+click on a link to a place goes there', () => {
+    const { linked, view } = setup();
+    const selection = SourceRange.of({ from: 3, to: 3 });
+    linked.resolveDocumentLink = (link) => ({ ...link, target: path('/ch2.typ'), selection });
+    modClick(view, TEXT.indexOf('missing'));
+    expect(linked.open).toHaveBeenCalledWith(path('/ch2.typ'), selection);
   });
 
   it('leaves plain clicks, clicks elsewhere and links without a target to the editor', () => {
@@ -67,7 +75,7 @@ describe('linkExtension', () => {
     const { linked, view } = setup();
     view.dispatch({ selection: { anchor: TEXT.indexOf('template') + 4 } });
     expect(runScopeHandlers(view, new KeyboardEvent('keydown', { key: 'Enter', altKey: true }), 'editor')).toBe(true);
-    expect(linked.open).toHaveBeenCalledWith(path('/template.typ'));
+    expect(linked.open).toHaveBeenCalledWith(path('/template.typ'), undefined);
     view.dispatch({ selection: { anchor: TEXT.indexOf('Text') } });
     expect(runScopeHandlers(view, new KeyboardEvent('keydown', { key: 'Enter', altKey: true }), 'editor')).toBe(false);
   });
@@ -91,7 +99,19 @@ describe('linkInfo (the hover)', () => {
     expect(dom.textContent).toMatch(/Open template\.typ/);
     expect(dom.textContent).toMatch(/Ctrl\+click/);
     dom.querySelector('button')!.click();
-    expect(open).toHaveBeenCalledWith(path('/template.typ'));
+    expect(open).toHaveBeenCalledWith(path('/template.typ'), undefined);
+  });
+
+  it('offers to go to a place in the target file, or to open a URL', () => {
+    const { open, executeCommand } = actions();
+    const selection = SourceRange.of({ from: 40, to: 40 });
+    const dom = linkInfo(document, { ...link, target: path('/ch2.typ'), selection, tooltip: 'Go to Figure · Setup in ch2.typ' }, { open, executeCommand })!;
+    expect(dom.querySelector('button')!.textContent).toBe('Go to Figure · Setup in ch2.typ');
+    dom.querySelector('button')!.click();
+    expect(open).toHaveBeenCalledWith(path('/ch2.typ'), selection);
+    const url = new URL('https://typst.app/');
+    linkInfo(document, { ...link, target: url }, { open, executeCommand })!.querySelector('button')!.click();
+    expect(open).toHaveBeenLastCalledWith(url, undefined);
   });
 
   it('offers to open the target as its tooltip says, if it has one', () => {
