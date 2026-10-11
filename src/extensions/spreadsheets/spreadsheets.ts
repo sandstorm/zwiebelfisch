@@ -6,12 +6,14 @@ import css from './spreadsheets.css?inline';
 import { typstPath } from './model/typst-file';
 import { insertSpreadsheet } from './visual-editor/insert-spreadsheet';
 import { SpreadsheetView } from './workbench/spreadsheet-view';
+import { SPREADSHEET_HELP } from './workbench/spreadsheet-help';
 import type { WorkbookEdit } from './workbench/workbook';
 
 /**
  * Spreadsheet files (`*.ic`) in the editing area: IronCalc's workbook UI; every edit is stored with its Typst file.
  * "New spreadsheet…" (`spreadsheets.newSpreadsheet`) in the menu `file/newFile` asks for a name and opens the new one;
- * "Insert spreadsheet" in the Visual editor's Insert menu also puts its table into the text as a figure.
+ * "Insert spreadsheet" in the Visual editor's Insert menu also puts its table into the text as a figure. `.ic` files are
+ * the language `ironcalc`, with the help sheet "Spreadsheet formulas".
  *
  * A spreadsheet file (`.ic`) shown and edited in IronCalc's workbook UI (SpreadsheetView, the custom editor
  * `spreadsheets.editor`); every edit saves the file and the Typst file documents import. "New spreadsheet…" in the file
@@ -23,9 +25,12 @@ import type { WorkbookEdit } from './workbench/workbook';
 export function spreadsheets(): TypstExtension {
   return {
     id: 'spreadsheets',
-    contributes: { commands: [{ command: NEW_SPREADSHEET, title: 'New spreadsheet…', category: 'Spreadsheets' }] },
+    contributes: {
+      commands: [{ command: NEW_SPREADSHEET, title: 'New spreadsheet…', category: 'Spreadsheets' }],
+      languages: [{ id: 'ironcalc', extensions: ['.ic'] }],
+    },
     activate(context) {
-      const { commands, window, workbench, visualEditor, subscriptions } = context;
+      const { commands, window, workbench, visualEditor, languages, subscriptions } = context;
       subscriptions.push(
         workbench.registerStyleSheet(css),
         window.registerCustomEditorProvider(
@@ -41,6 +46,7 @@ export function spreadsheets(): TypstExtension {
         ),
         commands.registerCommand(NEW_SPREADSHEET, (resource?: ProjectPath) => newSpreadsheet(context, resource)),
         workbench.registerMenuItem('file/newFile', { command: NEW_SPREADSHEET, title: 'New spreadsheet…', group: 'navigation', order: 15 }),
+        languages.registerHelpProvider({ language: 'ironcalc' }, { provideHelp: () => SPREADSHEET_HELP }),
         visualEditor.registerToolbarItem(insertSpreadsheet(context, async (fileName) => (await import('./workbench/workbook')).newWorkbook(fileName))),
       );
     },

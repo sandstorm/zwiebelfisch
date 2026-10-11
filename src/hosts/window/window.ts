@@ -392,6 +392,12 @@ export interface TextEditor {
   readonly selection: SourceRange;
   /** Selects `range` in that editor, scrolls it into view and focuses the editor. */
   revealRange(range: SourceRange): void;
+  /**
+   * Puts the Typst `snippet` (as it is: no tab stops) in place of the selection in that editor, the cursor after it,
+   * and focuses the editor (VS Code's `insertSnippet`). The Visual editor reads it as Typst: inline content into the
+   * text, blocks after the block holding the cursor.
+   */
+  insertSnippet(snippet: string): void;
 }
 
 export interface TextEditorSelectionChangeEvent {

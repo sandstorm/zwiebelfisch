@@ -1,7 +1,7 @@
 // "Insert diagram" in the Visual editor's Insert menu (and so among the slash commands). See ../diagrams.ts.
 import { PathReference, ProjectPath } from '../../../core/paths/paths';
 import { quote } from '../../../core/typst-syntax/typst-syntax';
-import { insertTypstBlocks, svg, type ToolbarContext, type ToolbarItem } from '../../../hosts/visual-editor/visual-editor';
+import { insertTypst, svg, type ToolbarContext, type ToolbarItem } from '../../../hosts/visual-editor/visual-editor';
 import type { ExtensionContext } from '../../../hosts/workbench/workbench';
 import { DIAGRAM_EDITOR } from '../model/model';
 import { createDiagram } from '../workbench/new-diagram';
@@ -43,7 +43,7 @@ async function insert(context: InsertContext, { editor, document }: ToolbarConte
     editor.commands.focus();
     return;
   }
-  insertTypstBlocks(editor, `#figure(image(${quote(ProjectPath.referenceTo(at, target))}), caption: [ ])`);
+  insertTypst(editor, `#figure(image(${quote(ProjectPath.referenceTo(at, target))}), caption: [ ])`);
   workbench.open(target, { viewType: DIAGRAM_EDITOR });
 }
 

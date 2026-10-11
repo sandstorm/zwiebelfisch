@@ -11,7 +11,7 @@ The examples are from a report measuring compile times, as in the demo's advance
   caption: [The editor: left rail and side panel, editing views, the right side (preview or devtools) and its rail, status bar.],
 )
 
-Each side has a rail (`▣`): a button per panel. The left side holds the files, the right side the preview (and, where a host adds them, panels such as the devtools). One panel per side shows; clicking the shown one's button hides that side and the editing view takes its room. What you picked is remembered for the browser session.
+Each side has a rail (`▣`): a button per panel. The left side holds the files and the help (@guide-features-help), the right side the preview (and, where a host adds them, panels such as the devtools). One panel per side shows; clicking the shown one's button hides that side and the editing view takes its room. What you picked is remembered for the browser session.
 
 - *Visual editor:* edits the Typst like a word processor. What it does not model (math, function calls) shows as a raw box: its code while focused, its compiled look otherwise.
 - *Source editor:* the Typst text: highlighting, line numbers, search.
@@ -284,6 +284,25 @@ File links:
 - A missing `.typ` file can be created from there.
 - A file the main file includes gets "← previous file" / "next file →" links in reading order.
 - Back and forward, as in VS Code: after any change of the shown file (a link, "Edit diagram", a click in the preview, the file panel, …), "← Back to _file_" above a supplementary file (a Mermaid diagram, a spreadsheet, a text file, …) returns to it, in the view it was shown in, with its selection (Typst files). After going back, "Forward to _file_ →" returns. Typst files show the reading order instead; the keys work everywhere. Keys: Ctrl+Alt+- back, Ctrl+Shift+- forward (⌃- / ⌃⇧- on Mac). The last 50 files; renamed files keep their place, deleted ones drop out.
+
+== Help <guide-features-help>
+
+The question mark on the left rail opens the help, in the file panel's place: a cheat sheet for the kind of file shown, changing as you open another file.
+
+#table(
+  columns: 2,
+  [File], [Sheet],
+  [`.typ`], [Typst basics: headings, emphasis, lists, links and references, images and figures, math, tables, code, set and show rules, imports, comments],
+  [`.mmd`], [Mermaid basics: flowcharts (direction, node shapes, arrows with labels, subgraphs), sequence diagrams (participants, messages, notes)],
+  [`.ic`], [Spreadsheet formulas: cell references, ranges, `SUM` / `AVERAGE` / `IF`, absolute references, other sheets; how a spreadsheet reaches the document (`sheets`, `values`)],
+  [`.bib`], [BibTeX: `@article`, `@book`, citing with `@key`],
+)
+
+- A click selects a row and shows its whole snippet. ↑ / ↓ move, Home / End jump.
+- Drag a row into the text: it lands where you drop it. In the Visual editor a Typst row becomes what it stands for (a heading, a table); inline ones (`*strong*`) go into the paragraph.
+- Enter puts the selected row at the cursor of the shown Typst file, in either view. For other files it is copied: paste it, or drag it.
+- A row's context menu (right click, Shift+F10): Insert at cursor, Copy.
+- Each sheet links to its documentation. Files of other kinds say "No help for this file type".
 
 == Comments <guide-features-comments>
 

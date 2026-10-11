@@ -1,0 +1,57 @@
+/* The help extension's styles: the help panel (sheets, sections, rows, links). Registered by help.ts
+   (Workbench.registerStyleSheet). */
+.typst-help {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 6px 0 24px;
+  color: var(--te-text-2);
+  font-size: 13px;
+  scrollbar-width: thin;
+}
+.typst-help__title {
+  margin: 0;
+  padding: 6px 10px;
+  color: var(--te-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.typst-help__heading {
+  margin: 10px 10px 2px;
+  color: var(--te-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+.typst-help__rows,
+.typst-help__links {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.typst-help__row {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 10px;
+  cursor: grab;
+  user-select: none;
+}
+.typst-help__row:hover { background: var(--te-hover); }
+.typst-help__row:focus { outline: none; }
+.typst-help__row:focus-visible { box-shadow: inset 0 0 0 2px var(--te-accent); }
+.typst-help__row[aria-selected='true'] { background: var(--te-selected); }
+.typst-help__snippet {
+  overflow: hidden;
+  color: var(--te-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.typst-help__row[aria-selected='true'] .typst-help__snippet { white-space: pre-wrap; overflow-wrap: anywhere; }
+.typst-help__description { color: var(--te-muted); font-size: 12px; }
+.typst-help__links { margin-top: 12px; padding: 0 10px; }
+.typst-help__link { color: var(--te-accent); font-size: 12px; }
+.typst-help__empty { margin: 0; padding: 10px; color: var(--te-muted); }

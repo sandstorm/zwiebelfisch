@@ -137,6 +137,10 @@ export class DocumentEditor implements TextEditor {
   revealRange(range: SourceRange): void {
     this.views.get(this.viewType)!.view.reveal(range);
   }
+
+  insertSnippet(snippet: string): void {
+    this.views.get(this.viewType)!.view.insert(snippet);
+  }
 }
 
 interface ShownView {

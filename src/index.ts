@@ -43,7 +43,20 @@ export type {
 } from './hosts/window/window';
 export { ProgressLocation } from './hosts/window/window';
 export type { Scm, SourceControl, SourceControlState } from './hosts/scm/scm';
-export type { DocumentFilter, DocumentLink, DocumentLinkProvider, DocumentSelector, Languages, TextDocument } from './hosts/languages/languages';
+export type {
+  DocumentFilter,
+  DocumentLink,
+  DocumentLinkProvider,
+  DocumentSelector,
+  HelpLink,
+  HelpProvider,
+  HelpRow,
+  HelpSection,
+  HelpSheet,
+  LanguageContribution,
+  Languages,
+  TextDocument,
+} from './hosts/languages/languages';
 export type { ConfigurationChangeEvent, ConfigurationProperty, Settings, Workspace, WorkspaceConfiguration } from './hosts/workspace/workspace';
 export type { PdfExportOption, PreviewContributions, PreviewToolbarItem, ToolbarPlacement } from './hosts/preview/preview';
 export { SOURCE_EDITOR, type SourceEditorContext, type SourceEditorContributions } from './hosts/source-editor/source-editor';
@@ -75,7 +88,7 @@ export type {
   VisualEditorContext,
   VisualEditorContributions,
 } from './hosts/visual-editor/visual-editor';
-export { VISUAL_EDITOR, insertTypstBlocks, setRawBoxDecorations } from './hosts/visual-editor/visual-editor';
+export { VISUAL_EDITOR, insertTypst, setRawBoxDecorations } from './hosts/visual-editor/visual-editor';
 export type {
   Around,
   BlockLabel,

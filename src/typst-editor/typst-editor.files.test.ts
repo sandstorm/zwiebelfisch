@@ -82,7 +82,8 @@ describe('the file panel in the widget', () => {
 
   it('`hide` shows no panel and no rail button; `show` opens it for one file', () => {
     const hidden = setup({ source: '= Hello', files: { '/a.typ': 'A' }, settings: { 'files.panel': 'hide' } });
-    expect(hidden.host.querySelector<HTMLElement>('.typst-editor__side--left')!.hidden).toBe(true);
+    expect(hidden.host.querySelector<HTMLElement>('[data-testid=typst-panel-toggle-files]')!.hidden).toBe(true);
+    expect(hidden.filesOpen()).toBe(false);
     expect(setup({ source: '= Hello', settings: { 'files.panel': 'show' } }).filesOpen()).toBe(true);
   });
 

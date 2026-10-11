@@ -46,11 +46,12 @@ workbench.registerMenuItem('explorer/context', {
   [`editor/title`], [The editing area's tab bar, shown while the file has several editors], [`activeCustomEditorId` (the shown editor's view type, any editor), `resource`], [nothing],
   [`file/newFile`], ["New" in the file panel's header], [`view: 'files'`, `resource`, `resourceKind` (`'file'` | `'folder'`), `resourceIsMain`], [the row's path],
   [`explorer/context`], [A file panel row's context menu], [as `file/newFile`], [the row's path],
+  [`help/row`], [A help row's context menu], [none], [the text the row inserts],
 )
 
 - Entries sort by `group` (`navigation` first, the others by name, a separator between groups), then `order`.
 - `when` is asked each time the menu is shown.
-- A view shows a menu with `window.showContextMenu(menuId, { anchor, title, context, args })`: at a point (`{ x, y }`, a right click's) or below an element (a button), named `title`, with the entries whose `when` holds in `context`; the chosen entry's command gets `args`. Nothing shows while no entry applies. The file panel does this for `explorer/context` (right click, Shift+F10) and `file/newFile` ("New").
+- A view shows a menu with `window.showContextMenu(menuId, { anchor, title, context, args })`: at a point (`{ x, y }`, a right click's) or below an element (a button), named `title`, with the entries whose `when` holds in `context`; the chosen entry's command gets `args`. Nothing shows while no entry applies. The file panel does this for `explorer/context` (right click, Shift+F10) and `file/newFile` ("New"), the help panel for `help/row`.
 - `getMenuItems(menuId, context)` and `onDidChangeMenu` tell whether a menu has entries (the file panel hides "New" while `file/newFile` has none).
 
 == Messages and quick input <extensions-workbench-api-messages>
@@ -137,7 +138,8 @@ The built-in providers:
 - *Change* through `workspace.applyEdit(change)`, never `project.apply`. It checks the project's rules, then the host's `allowFileChange`, and resolves to the reason it was refused, or `null`.
 - `FileChange`: `{ kind: 'create' | 'update', path, content }`, `{ kind: 'delete', path }`, `{ kind: 'rename', path, from }`.
 - *Show* with `workbench.open(path, { selection?, viewType? })` (`selection`: a `SourceRange` of a Typst file; `viewType`: the editor, e.g. `SOURCE_EDITOR`, `'sourceEditor'`); `window.activeFile` and `window.onDidChangeActiveFile` say what is shown.
-- *The Typst editor*: `window.activeTextEditor` (`document`, `viewType`: the view it was shown in last, `VISUAL_EDITOR` or `SOURCE_EDITOR`, `selection` as a `SourceRange`, `revealRange(range)`; `null` while another kind of file is shown) and `window.onDidChangeTextEditorSelection`.
+- *The Typst editor*: `window.activeTextEditor` (`document`, `viewType`: the view it was shown in last, `VISUAL_EDITOR` or `SOURCE_EDITOR`, `selection` as a `SourceRange`, `revealRange(range)`, `insertSnippet(snippet)`: the Typst in place of the selection, as it is (no tab stops), the Visual editor reading it as Typst; `null` while another kind of file is shown) and `window.onDidChangeTextEditorSelection`.
+- *Languages of files*: `languages.getLanguageId(path)` names the language of a file by the longest ending declared for it (`contributes.languages: [{ id: 'bibtex', extensions: ['.bib'] }]`, VS Code's; the workbench declares `typst` for `.typ`), undefined for none. An ending declared for two languages throws.
 - *Dropped files*: `workbench.onDidDropFiles` gets the `File[]` dropped on the widget that no view took.
 
 == Custom editors <extensions-workbench-api-custom-editors>
@@ -174,6 +176,36 @@ The built-in ones, to beat or to leave alone:
   [`images.preview`], [`*.{png,jpg,jpeg,gif,svg,webp}`], [default],
   [`textFiles.editor`], [`*.{csv,json,yaml,yml,toml,xml,bib,txt,md,mmd}`], [default],
   [`files.file`], [`*`: any other file, read-only (name, size, type)], [`'fallback'`],
+)
+
+== Help <extensions-workbench-api-help>
+
+The help panel (the built-in `help`) shows cheat sheets for the language of the shown file. A language's extension contributes its sheet: `languages.registerHelpProvider(selector, provider)`, with the `DocumentSelector` of document links (`{ language }`; none: every file).
+
+```ts
+languages.registerHelpProvider({ language: 'csv' }, {
+  provideHelp: () => ({
+    title: 'CSV',
+    sections: [{ title: 'Rows', rows: [{ snippet: 'name,value', description: 'A header row', insert: 'name,value\n' }] }],
+    links: [{ label: 'RFC 4180', href: 'https://www.rfc-editor.org/rfc/rfc4180' }],
+  }),
+});
+```
+
+- `HelpSheet`: `title`, `sections` (`title`, `rows`), `links?` (`label`, `href`: `http(s)` only, opened in a new tab). Plain data: the panel renders it, a list per section; no markup from providers.
+- `HelpRow`: `snippet` (shown), `description`, `insert?` (what the row puts into the text; default: `snippet`).
+- A row dragged into an editor carries its text as `text/plain` (the Source and text editors insert it where it is dropped); a row of a `typst` sheet also as `application/x-typst-snippet`, which the Visual editor reads as Typst (`insertTypst`). Enter inserts the selected row at the cursor of the shown Typst editor (`TextEditor.insertSnippet`); with another kind of file shown it is copied. A row's context menu is `help/row` (its commands get the row's text): "Insert at cursor" (`help.insertAtCursor`), "Copy" (`help.copy`); add entries with `workbench.registerMenuItem('help/row', …)`.
+- `languages.provideHelp(languageId)`: every matching provider's sheet, for a view of its own.
+
+The built-in sheets:
+
+#table(
+  columns: 3,
+  [Language], [Sheet], [From],
+  [`typst` (`.typ`)], [Typst basics], [`typst-language`],
+  [`mermaid` (`.mmd`)], [Mermaid basics], [`mermaid` (the language: `text-files`)],
+  [`ironcalc` (`.ic`)], [Spreadsheet formulas], [`spreadsheets`],
+  [`bibtex` (`.bib`)], [BibTeX], [`text-files`],
 )
 
 == File decorations <extensions-workbench-api-decorations>

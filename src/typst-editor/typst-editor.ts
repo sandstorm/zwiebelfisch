@@ -5,6 +5,7 @@ import { diagrams } from '../extensions/diagrams/diagrams';
 import { mermaid } from '../extensions/mermaid/mermaid';
 import { fileNavigation } from '../extensions/file-navigation/file-navigation';
 import { files } from '../extensions/files/files';
+import { help } from '../extensions/help/help';
 import { labels } from '../extensions/labels/labels';
 import { pdfExport } from '../extensions/pdf-export/pdf-export';
 import { previewControls } from '../extensions/preview-controls/preview-controls';
@@ -203,6 +204,7 @@ function builtinExtensions(): TypstExtension[] {
     documentLinks(),
     files(),
     fileNavigation(),
+    help(),
     spreadsheets(),
     textFiles(),
     diagrams(),

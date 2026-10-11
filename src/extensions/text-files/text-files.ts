@@ -1,9 +1,11 @@
 // The text-files extension. Entry of extensions/text-files/. See docs/10_guide/02_features.typ.
 import { ProjectPath } from '../../core/paths/paths';
 import type { FileContent } from '../../core/project/project';
+import type { LanguageContribution } from '../../hosts/languages/languages';
 import type { CustomEditorProvider } from '../../hosts/window/window';
 import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
 import css from './text-files.css?inline';
+import { BIBTEX_HELP } from './workbench/bibtex-help';
 import { TextFileEditor } from './workbench/text-file-editor';
 import { textSearch } from './workbench/text-search';
 
@@ -13,7 +15,9 @@ import { textSearch } from './workbench/text-search';
  * as an `update` (`workspace.applyEdit`) 800 ms after the last edit, and when the file is closed; a refusal is an
  * error message. Changes made elsewhere (another user, the
  * host) show up in the open editor unless an edit of its own waits to be saved. Collaboration: whole files, the last
- * save wins (no merge of concurrent typing). Search everywhere's "Text" finds lines in these and the Typst files.
+ * save wins (no merge of concurrent typing). Search everywhere's "Text" finds lines in these and the Typst files. It
+ * declares their languages (`contributes.languages`: `.bib` is `bibtex`, `.mmd` `mermaid`, …) and the help sheet of
+ * BibTeX.
  *
  * The project's text files Typst reads (data: CSV, JSON, YAML, TOML, XML; bibliographies; plain text, Markdown and
  * Mermaid) open editable in plain CodeMirror, saved as they change; and search everywhere's text search over them and
@@ -25,17 +29,19 @@ import { textSearch } from './workbench/text-search';
 export function textFiles(): TypstExtension {
   return {
     id: 'text-files',
+    contributes: { languages: TEXT_LANGUAGES },
     activate(context) {
-      const { project, window, workbench, subscriptions } = context;
+      const { project, window, workbench, languages, subscriptions } = context;
       const editors = new Map<ProjectPath, TextFileEditor>();
       subscriptions.push(
         workbench.registerStyleSheet(css),
         window.registerCustomEditorProvider('textFiles.editor', textFileEditor(context, editors), { filenamePattern: TEXT_FILES, displayName: 'Text', icon: TEXT_ICON }),
+        languages.registerHelpProvider({ language: 'bibtex' }, { provideHelp: () => BIBTEX_HELP }),
         window.registerSearchProvider(
           textSearch({
             project,
             workbench,
-            isTextFile: (path) => languageOf(path) !== undefined,
+            isTextFile: (path) => isTextFile(path),
             reveal: (path, from, to) => editors.get(path)?.reveal(from, to),
           }),
         ),
@@ -51,7 +57,7 @@ function textFileEditor({ project, window, workspace, languages }: ExtensionCont
       const editor = new TextFileEditor(panel.element, {
         path,
         text: text(content),
-        extensions: languages.createDocumentLinksCodeMirrorExtension(languageOf(path) ?? 'plaintext', () => path),
+        extensions: languages.createDocumentLinksCodeMirrorExtension(languages.getLanguageId(path) ?? 'plaintext', () => path),
         save: (saved) =>
           void workspace.applyEdit({ kind: 'update', path, content: saved }).then((problem) => problem && window.showErrorMessage(`${ProjectPath.displayName(path)} not saved: ${problem}`)),
       });
@@ -73,27 +79,27 @@ function text(content: FileContent): string {
   return typeof content === 'string' ? content : new TextDecoder().decode(content);
 }
 
-/** The language of a text file by its ending (undefined: not a text file). */
-function languageOf(path: ProjectPath): string | undefined {
-  return LANGUAGES[ProjectPath.extension(path).slice(1).toLowerCase()];
+/** Whether `path` is a file it opens (by ending). */
+function isTextFile(path: ProjectPath): boolean {
+  const ending = ProjectPath.extension(path).toLowerCase();
+  return TEXT_LANGUAGES.some((language) => language.extensions.includes(ending));
 }
 
 /**
- * The endings of the files it opens, and their language (VS Code's language ids): those Typst reads as text (`csv`,
- * `json`, `yaml`, `toml`, `xml`, `read`, `bibliography`; `.mmd` Mermaid).
+ * The files it opens, by language (VS Code's language ids) and ending, declared for `languages.getLanguageId`: those
+ * Typst reads as text (`csv`, `json`, `yaml`, `toml`, `xml`, `read`, `bibliography`; `.mmd` Mermaid).
  */
-const LANGUAGES: Readonly<Record<string, string>> = {
-  csv: 'csv',
-  json: 'json',
-  yaml: 'yaml',
-  yml: 'yaml',
-  toml: 'toml',
-  xml: 'xml',
-  bib: 'bibtex',
-  txt: 'plaintext',
-  md: 'markdown',
-  mmd: 'mermaid',
-};
-const TEXT_FILES = `*.{${Object.keys(LANGUAGES).join(',')}}`;
+const TEXT_LANGUAGES: readonly LanguageContribution[] = [
+  { id: 'csv', extensions: ['.csv'] },
+  { id: 'json', extensions: ['.json'] },
+  { id: 'yaml', extensions: ['.yaml', '.yml'] },
+  { id: 'toml', extensions: ['.toml'] },
+  { id: 'xml', extensions: ['.xml'] },
+  { id: 'bibtex', extensions: ['.bib'] },
+  { id: 'plaintext', extensions: ['.txt'] },
+  { id: 'markdown', extensions: ['.md'] },
+  { id: 'mermaid', extensions: ['.mmd'] },
+];
+const TEXT_FILES = `*.{${TEXT_LANGUAGES.flatMap((language) => language.extensions.map((ending) => ending.slice(1))).join(',')}}`;
 /** The icon of text files (where views list files). */
 const TEXT_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 1.5h5.5L13 5v9.5H4z"/><path d="M9.5 1.5V5H13M6 8h5M6 10.5h5M6 13h3"/></svg>';

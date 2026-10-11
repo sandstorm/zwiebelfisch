@@ -7,7 +7,7 @@ import { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-docum
 import { Node as TiptapNode, type Editor } from '@tiptap/core';
 import { children, withHash } from '../../core/typst-syntax/typst-syntax';
 import { starterKitPart, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
-import { insertTypstBlocks, setRawBoxDecorations, VisualEditor, VisualEditorHost, type SourceHighlight, type TypstNodeSpec, type VisualEditorContext, type VisualEditorContribution } from './visual-editor';
+import { insertTypst, setRawBoxDecorations, VisualEditor, VisualEditorHost, type SourceHighlight, type TypstNodeSpec, type VisualEditorContext, type VisualEditorContribution } from './visual-editor';
 
 /** A test-local construct beyond the host's minimum: `*strong*` as a bold mark (hidden syntax around visible text). */
 const STRONG: TypstMarkSpec = {
@@ -167,7 +167,7 @@ describe('VisualEditor contexts', () => {
   });
 });
 
-describe('insertTypstBlocks', () => {
+describe('insertTypst', () => {
   /** A view of `text` with the cursor after `cursorAfter`, and its editor. */
   function at(text: string, cursorAfter: number) {
     const { doc, view, parent } = setup(text);
@@ -178,7 +178,7 @@ describe('insertTypstBlocks', () => {
 
   it('inserts the blocks the Typst is read as after the paragraph holding the cursor', () => {
     const { doc, editor } = at('Title\n\nSome text\n', 9);
-    insertTypstBlocks(editor, '#figure(sheets.Sheet1, caption: [ ])');
+    insertTypst(editor, '#figure(sheets.Sheet1, caption: [ ])');
     expect(doc.text).toBe('Title\n\nSome text\n\n#figure(sheets.Sheet1, caption: [ ])\n');
     expect(editor.state.doc.child(2).type.name).toBe('rawBlock');
   });
@@ -186,8 +186,26 @@ describe('insertTypstBlocks', () => {
   it('takes over an empty paragraph', () => {
     const { doc, editor } = at('Title\n', 5);
     editor.commands.splitBlock();
-    insertTypstBlocks(editor, '#box[x]');
+    insertTypst(editor, '#box[x]');
     expect(doc.text).toBe('Title\n\n#box[x]\n');
     expect(editor.state.doc.childCount).toBe(2);
+  });
+
+  it("puts one paragraph's inline content into the text, in place of the selection", () => {
+    const { doc, editor } = at('Some text\n', 4);
+    insertTypst(editor, '*bold*');
+    expect(doc.text).toBe('Some*bold* text\n');
+    editor.commands.setTextSelection({ from: 1, to: 5 });
+    insertTypst(editor, 'Any');
+    expect(doc.text).toBe('Any*bold* text\n');
+  });
+
+  it('inserts at a position given (a drop) instead of the selection', () => {
+    const { doc, editor } = at('Title\n\nSome text\n', 0);
+    // position 3: after "Ti"
+    insertTypst(editor, '*b*', 3);
+    expect(doc.text).toBe('Ti*b*tle\n\nSome text\n');
+    insertTypst(editor, '#figure(sheets.Sheet1, caption: [ ])', 3);
+    expect(doc.text).toBe('Ti*b*tle\n\n#figure(sheets.Sheet1, caption: [ ])\n\nSome text\n');
   });
 });

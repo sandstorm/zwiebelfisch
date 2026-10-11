@@ -2,22 +2,25 @@
 // hosts/languages/. See docs/30_architecture/07_workbench.typ.
 import type { Extension } from '@codemirror/state';
 import { Disposable } from '../../core/disposable/disposable';
-import type { ProjectPath } from '../../core/paths/paths';
+import { ProjectPath } from '../../core/paths/paths';
 import type { SourceRange } from '../../core/typst-document/typst-document';
 import type { Command } from '../commands/commands';
 import css from './languages.css?inline';
 import { linkExtension } from './link-extension';
 
 /**
- * The language features of texts as extensions use them (VS Code's `languages` namespace: document links).
+ * The language features of texts as extensions use them (VS Code's `languages` namespace: document links, the
+ * languages files are in, and help on them).
  *
  * The document links of every registered DocumentLinkProvider whose selector matches a document, merged, and how
  * CodeMirror editors show them (the Source editors, the code of the Visual editor's raw boxes, an extension's own
- * editor).
+ * editor); the language of a file by its ending, as the extensions declare them (`contributes.languages`); the help
+ * sheets of every HelpProvider for a language.
  *
  * Why providers: finding links is a feature's policy (which paths, what a missing file offers); showing and following
- * them is the same in every view, so the views read every provider's links and know none of them. Why `languageId`: the
- * host knows no language; whoever hands a text over says which language it is in.
+ * them is the same in every view, so the views read every provider's links and know none of them. The same for help:
+ * a language's sheet is its extension's, showing it is the help panel's. Why `languageId`: the host knows no language;
+ * whoever hands a text over says which language it is in, and the extensions declare which endings are which.
  */
 export interface Languages {
   /**
@@ -39,6 +42,62 @@ export interface Languages {
    * in `languageId`; `path` is the file it is in, now (null: none, no links).
    */
   createDocumentLinksCodeMirrorExtension(languageId: string, path: () => ProjectPath | null): Extension;
+  /**
+   * The language of the file `path` by its ending, as the extensions declare them (`contributes.languages`; the
+   * workbench's own: `typst` for `.typ`): the longest declared ending the name has, in any case. undefined: none.
+   */
+  getLanguageId(path: ProjectPath): string | undefined;
+  /**
+   * Adds a help sheet for the languages `selector` matches until disposed: the help panel shows it while a file in
+   * such a language is shown (no `language`: for every file).
+   */
+  registerHelpProvider(selector: DocumentSelector, provider: HelpProvider): Disposable;
+  /** The help sheets for `languageId` (undefined: a file in no declared language), in registration order. */
+  provideHelp(languageId: string | undefined): readonly HelpSheet[];
+}
+
+/** A language as an extension declares it (VS Code's `contributes.languages` entry). */
+export interface LanguageContribution {
+  /** The language id (VS Code's where there is one: `json`, `markdown`, `bibtex`). */
+  readonly id: string;
+  /** The endings of its files, with the dot (`.bib`, `.ic.gen.typ`). */
+  readonly extensions: readonly string[];
+}
+
+/** Gives the help sheet of a language: what to write in it, ready to insert. */
+export interface HelpProvider {
+  provideHelp(): HelpSheet;
+}
+
+/** A cheat sheet: plain data, which the help panel renders (no markup). */
+export interface HelpSheet {
+  /** "Typst basics". */
+  readonly title: string;
+  readonly sections: readonly HelpSection[];
+  /** Where to read more. */
+  readonly links?: readonly HelpLink[];
+}
+
+export interface HelpSection {
+  /** "Headings". */
+  readonly title: string;
+  readonly rows: readonly HelpRow[];
+}
+
+/** One thing to write: what it looks like, what it does, and what inserting it puts into the text. */
+export interface HelpRow {
+  /** The text as shown (`= Heading`). */
+  readonly snippet: string;
+  /** What it does ("A heading; more `=`, a deeper level"). */
+  readonly description: string;
+  /** What inserting the row (drag, Enter) puts into the text; default: `snippet`. */
+  readonly insert?: string;
+}
+
+export interface HelpLink {
+  readonly label: string;
+  /** An absolute URL; opens in a new tab. */
+  readonly href: string;
 }
 
 /**
@@ -96,29 +155,56 @@ export interface LinkTargets {
  * The registered link providers. A text's links are those of every provider whose selector matches it; where links
  * of two providers overlap, the one of the higher `priority` wins (equal: the one registered first). Each link
  * remembers its provider, which resolves it on demand (`resolveDocumentLink`). `targets` is what following a link
- * does, in every editor that shows links.
+ * does, in every editor that shows links. Also the declared languages by ending, and the help providers.
  */
 export class LanguagesHost implements Languages {
   readonly #providers: { selector: DocumentSelector; provider: DocumentLinkProvider; priority: number }[] = [];
   readonly #providerOf = new WeakMap<DocumentLink, DocumentLinkProvider>();
+  readonly #helpProviders: { selector: DocumentSelector; provider: HelpProvider }[] = [];
+  /** The declared endings (lower case, with the dot) and their language. */
+  readonly #endings = new Map<string, string>();
 
   /** The CSS of the links' hover (`.typst-file-link`), for the workbench to put where the widget renders. */
   readonly styleSheet: string = css;
 
   constructor(private readonly targets: LinkTargets) {}
 
+  /**
+   * Declares `languages` (the extensions' `contributes.languages`, the workbench's own). An ending is one language's:
+   * declaring it for another throws.
+   */
+  declare(languages: readonly LanguageContribution[]): void {
+    for (const { id, extensions } of languages) {
+      for (const ending of extensions.map((extension) => extension.toLowerCase())) {
+        const declared = this.#endings.get(ending);
+        if (declared !== undefined && declared !== id) throw new Error(`Files ending in ${ending} are ${declared} already, not ${id}`);
+        this.#endings.set(ending, id);
+      }
+    }
+  }
+
+  getLanguageId(path: ProjectPath): string | undefined {
+    const name = ProjectPath.name(path).toLowerCase();
+    let longest = '';
+    for (const ending of this.#endings.keys()) if (ending.length > longest.length && name.endsWith(ending)) longest = ending;
+    return this.#endings.get(longest);
+  }
+
+  registerHelpProvider(selector: DocumentSelector, provider: HelpProvider): Disposable {
+    return add(this.#helpProviders, { selector, provider });
+  }
+
+  provideHelp(languageId: string | undefined): readonly HelpSheet[] {
+    return this.#helpProviders.filter(({ selector }) => matches(selector, languageId)).map(({ provider }) => provider.provideHelp());
+  }
+
   registerDocumentLinkProvider(selector: DocumentSelector, provider: DocumentLinkProvider, options: { priority?: number } = {}): Disposable {
-    const entry = { selector, provider, priority: options.priority ?? DEFAULT_PRIORITY };
-    this.#providers.push(entry);
-    return new Disposable(() => {
-      const index = this.#providers.indexOf(entry);
-      if (index >= 0) this.#providers.splice(index, 1);
-    });
+    return add(this.#providers, { selector, provider, priority: options.priority ?? DEFAULT_PRIORITY });
   }
 
   provideDocumentLinks(document: TextDocument): DocumentLink[] {
     const accepted: DocumentLink[] = [];
-    const matching = this.#providers.filter(({ selector }) => matches(selector, document));
+    const matching = this.#providers.filter(({ selector }) => matches(selector, document.languageId));
     // the sort is stable: equal priorities in registration order
     for (const { provider } of matching.sort((a, b) => b.priority - a.priority)) {
       for (const link of provider.provideDocumentLinks(document)) {
@@ -150,9 +236,17 @@ export class LanguagesHost implements Languages {
 /** The default `priority` of a provider (as for the Visual editor's contributions). */
 const DEFAULT_PRIORITY = 100;
 
-function matches(selector: DocumentSelector, document: TextDocument): boolean {
+function add<T>(list: T[], entry: T): Disposable {
+  list.push(entry);
+  return new Disposable(() => {
+    const index = list.indexOf(entry);
+    if (index >= 0) list.splice(index, 1);
+  });
+}
+
+function matches(selector: DocumentSelector, languageId: string | undefined): boolean {
   const filters: readonly DocumentFilter[] = Array.isArray(selector) ? selector : [selector];
-  return filters.some((filter) => filter.language === undefined || filter.language === document.languageId);
+  return filters.some((filter) => filter.language === undefined || filter.language === languageId);
 }
 
 function overlap(a: DocumentLink, b: DocumentLink): boolean {

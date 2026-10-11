@@ -1,7 +1,7 @@
 // VisualEditor. Entry of hosts/visual-editor/. See docs/30_architecture/04_visual-editor.typ.
 import { Editor, type AnyExtension, type ChainedCommands, type Range } from '@tiptap/core';
 import { StateEffect, type Extension } from '@codemirror/state';
-import type { Node } from '@tiptap/pm/model';
+import type { Node, ResolvedPos } from '@tiptap/pm/model';
 import { EditorState, NodeSelection, TextSelection, type Plugin, type Transaction } from '@tiptap/pm/state';
 import type { Decoration } from '@tiptap/pm/view';
 import { Disposable } from '../../core/disposable/disposable';
@@ -110,6 +110,11 @@ export class VisualEditor {
     this.editor.view.focus();
   }
 
+  /** Inserts what Typst `source` is read as at the selection (`insertTypst`); focuses the editor. */
+  insert(source: string): void {
+    insertTypst(this.editor, source);
+  }
+
   /**
    * The source range the selection shows: where it starts, and where the
    * last character (or box) it covers ends; `from === to` for a caret.
@@ -153,21 +158,32 @@ export class VisualEditor {
 export const VISUAL_EDITOR = 'visualEditor';
 
 /**
- * Inserts the blocks Typst `source` is read as in a view's `editor` (as the view reads any Typst: a figure of an
- * image is a figure, what no spec models a raw box) next to the selection: after the selected block, or after the
- * paragraph or heading holding the cursor; an empty paragraph is taken over. Nothing is split or replaced; the
- * editor keeps the focus. For an Insert entry whose result is easier written as Typst than built as nodes.
+ * Inserts what Typst `source` is read as in a view's `editor` (as the view reads any Typst: a figure of an image is a
+ * figure, what no spec models a raw box), at the selection or at document position `at` (where something was
+ * dropped). One paragraph's inline content (`*bold*`, `$x$`) goes into the text there, in place of the selection;
+ * blocks go next to it: after the selected block, or after the paragraph or heading holding the position, an empty
+ * paragraph taken over. Blocks never split or replace anything. The editor gets the focus, the cursor after what was
+ * inserted. For an entry whose result is easier written as Typst than built as nodes.
  */
-export function insertTypstBlocks(editor: Editor, source: string): void {
-  const { selection, schema } = editor.state;
-  const blocks = parseTypst(source, schema).content;
-  const $to = selection.$to;
-  let target = { from: selection.to, to: selection.to };
-  if (!(selection instanceof NodeSelection && selection.node.isBlock) && $to.parent.isTextblock && $to.depth > 0) {
-    const after = $to.after();
-    target = $to.parent.content.size === 0 ? { from: $to.before(), to: after } : { from: after, to: after };
+export function insertTypst(editor: Editor, source: string, at?: number): void {
+  const { state } = editor;
+  const content = parseTypst(source, state.schema).content;
+  const $at = at === undefined ? state.selection.$to : state.doc.resolve(Math.min(at, state.doc.content.size));
+  const paragraph = content.childCount === 1 && content.firstChild!.type === state.schema.nodes.paragraph ? content.firstChild! : null;
+  if (paragraph && $at.parent.inlineContent) {
+    const range = at === undefined ? { from: state.selection.from, to: state.selection.to } : { from: $at.pos, to: $at.pos };
+    editor.chain().focus().insertContentAt(range, paragraph.content).run();
+    return;
   }
-  editor.chain().focus().insertContentAt(target, blocks).run();
+  const blockSelected = at === undefined && state.selection instanceof NodeSelection && state.selection.node.isBlock;
+  editor.chain().focus().insertContentAt(blockSelected ? { from: $at.pos, to: $at.pos } : besideTextblock($at), content).run();
+}
+
+/** Where blocks go for `$pos`: after its textblock (instead of an empty one), else right there. */
+function besideTextblock($pos: ResolvedPos): { from: number; to: number } {
+  if (!$pos.parent.isTextblock || $pos.depth === 0) return { from: $pos.pos, to: $pos.pos };
+  const after = $pos.after();
+  return $pos.parent.content.size === 0 ? { from: $pos.before(), to: after } : { from: after, to: after };
 }
 
 // The contribution points: what extensions register, and what they are given.

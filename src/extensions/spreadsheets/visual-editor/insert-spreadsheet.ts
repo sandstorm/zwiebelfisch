@@ -1,7 +1,7 @@
 // "Insert spreadsheet" in the Visual editor's Insert menu (and so among the slash commands). See ../spreadsheets.ts.
 import type { FileChange } from '../../../core/project/project';
 import { PathReference, ProjectPath } from '../../../core/paths/paths';
-import { insertTypstBlocks, svg, type ToolbarContext, type ToolbarItem } from '../../../hosts/visual-editor/visual-editor';
+import { insertTypst, svg, type ToolbarContext, type ToolbarItem } from '../../../hosts/visual-editor/visual-editor';
 import type { ExtensionContext } from '../../../hosts/workbench/workbench';
 import { calculateSheetFigure } from '../model/sheet-figure';
 import { typstPath } from '../model/typst-file';
@@ -62,7 +62,7 @@ async function insert({ project, window, workspace, workbench }: InsertContext, 
   if (!at) return;
   const { source, importChange } = calculateSheetFigure(document.text, { file: at, spreadsheet: target, sheet: workbook.sheet, use: toolbar.selection().from });
   if (importChange) document.change([importChange], INSERT_SPREADSHEET);
-  insertTypstBlocks(editor, source);
+  insertTypst(editor, source);
   workbench.open(target);
 }
 

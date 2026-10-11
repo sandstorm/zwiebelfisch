@@ -5,7 +5,7 @@ Every feature of the editor is an extension, the built-in ones too. An extension
 ```ts
 interface TypstExtension {
   readonly id: string;                           // unique in the list, e.g. 'word-count'
-  readonly contributes?: ExtensionContributions; // its settings, declared before any extension activates
+  readonly contributes?: ExtensionContributions; // its settings, commands and languages, declared before any extension activates
   activate(context: ExtensionContext): void;     // registers what it adds, once
 }
 ```
@@ -82,7 +82,7 @@ What `activate` gets (`ExtensionContext`):
   [`workspace`], [`applyEdit`, settings], [@extensions-workbench-api-settings],
   [`workbench`], [The frame: `open`, side panels, menus, style sheets, dropped files, `user`], [@extensions-workbench-api],
   [`scm`], [Source controls], [@extensions-workbench-api-scm],
-  [`languages`], [Document links in texts, by language], [@extensions-source-editor-and-preview-links],
+  [`languages`], [Document links in texts, the language of a file, help sheets; by language], [@extensions-source-editor-and-preview-links, @extensions-workbench-api-help],
   [`visualEditor`], [Nodes, marks, toolbar, boxes, gutters, highlights (experimental)], [@extensions-visual-editor-constructs],
   [`sourceEditor`], [CodeMirror extensions], [@extensions-source-editor-and-preview],
   [`preview`], [Toolbar items, PDF export options, reveal, clicks, diagnostics], [@extensions-source-editor-and-preview-preview],

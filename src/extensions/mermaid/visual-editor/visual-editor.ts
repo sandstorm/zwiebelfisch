@@ -1,7 +1,7 @@
 // The mermaid extension in the Visual editor. See ../mermaid.ts.
 import { PathReference, ProjectPath } from '../../../core/paths/paths';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
-import { insertTypstBlocks, svg, type RawBoxAction, type ToolbarContext, type ToolbarItem } from '../../../hosts/visual-editor/visual-editor';
+import { insertTypst, svg, type RawBoxAction, type ToolbarContext, type ToolbarItem } from '../../../hosts/visual-editor/visual-editor';
 import type { ExtensionContext } from '../../../hosts/workbench/workbench';
 import { calculateMermaidFigure, MERMAID_EXTENSION, STARTER_FLOWCHART } from '../model/mermaid-figure';
 
@@ -67,7 +67,7 @@ async function insert({ project, window, workspace, workbench }: InsertContext, 
   if (!at) return;
   const { source, importChange } = calculateMermaidFigure(document.text, at, target, toolbar.selection().from);
   if (importChange) document.change([importChange], INSERT_MERMAID);
-  insertTypstBlocks(editor, source);
+  insertTypst(editor, source);
   workbench.open(target);
 }
 
