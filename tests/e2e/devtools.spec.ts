@@ -18,23 +18,45 @@ test('the document tab shows the Visual view as nodes with their source ranges; 
   await expect(devtools.locator('.typst-devtools__row--selected').first()).toContainText('heading');
 });
 
-test('the contributions tab lists what each extension registered', async ({ page }) => {
+test('the contributions tab says what each extension contributed, by extension or by contribution point', async ({ page }) => {
   const devtools = page.getByTestId('typst-devtools');
   await devtools.getByRole('tab', { name: 'Contributions' }).click();
-  const files = devtools.locator('details').filter({ has: page.locator('summary', { hasText: /^files/ }) });
+  const group = (name: RegExp) => devtools.locator('details').filter({ has: page.locator('summary', { hasText: name }) });
+  const files = group(/^files/);
   await expect(files).toContainText('commands.registerCommand');
   await expect(files).toContainText('files.newFile');
   await expect(files).toContainText('files.panel');
-  await expect(devtools.locator('details').filter({ has: page.locator('summary', { hasText: /^headings/ }) })).toContainText('visualView.registerNode');
+  const heading = group(/^headings/).locator('.typst-devtools__contribution').filter({ hasText: 'visualView.registerNode' });
+  await expect(heading).toContainText('parses Heading');
+  await expect(heading).toHaveAttribute('title', /^visualView\.registerNode: heading\nby headings/);
+  await expect(group(/^comments/)).toContainText('→ comments.addComment');
+
+  await devtools.getByRole('button', { name: 'By contribution point' }).click();
+  // the box renderers in the order they are asked: images (110) before compiled snippets (100)
+  const renderers = group(/^visualView\.registerBoxRenderer/).locator('.typst-devtools__contribution');
+  await expect(renderers.first()).toContainText('priority 110');
+  await expect(renderers.nth(1)).toContainText('priority 100');
 });
 
-test('the events tab logs events as they fire', async ({ page }) => {
+test('the events tab logs events as they fire, their values in full; filter, pause, clear', async ({ page }) => {
   const devtools = page.getByTestId('typst-devtools');
   await devtools.getByRole('tab', { name: 'Events' }).click();
   await page.getByTestId('typst-visual').locator('p').first().click();
   await page.keyboard.type('x');
   await expect(devtools).toContainText('project.onDidChangeFile');
   await expect(devtools).toContainText('window.onDidChangeTextEditorSelection');
-  await devtools.getByRole('button', { name: 'Clear' }).click();
+  await expect(devtools.locator('.typst-devtools__event').filter({ hasText: 'project.onDidChangeFile' }).first()).toContainText('kind: "update"');
+
+  await devtools.getByRole('searchbox').fill('selection');
   await expect(devtools).not.toContainText('project.onDidChangeFile');
+  await devtools.getByRole('searchbox').fill('');
+
+  await devtools.getByRole('button', { name: 'Pause' }).click();
+  await devtools.getByRole('button', { name: 'Clear' }).click();
+  await page.getByTestId('typst-visual').locator('p').first().click();
+  await page.keyboard.type('y');
+  await expect(devtools).not.toContainText('project.onDidChangeFile');
+  await devtools.getByRole('button', { name: 'Pause' }).click();
+  await page.keyboard.type('z');
+  await expect(devtools).toContainText('project.onDidChangeFile');
 });

@@ -57,7 +57,7 @@ describe('documentRows', () => {
 
   it('lists the nodes depth first, with positions, source ranges and what they keep', () => {
     expect(documentRows(doc, mapping)).toEqual([
-      { depth: 0, name: 'heading', pos: 0, end: 8, range: { from: 0, to: 9 }, box: false, detail: '"= Hi *you*"', marks: [], attributes: '{ level: 1, sep: "⏎⏎" }' },
+      { depth: 0, name: 'heading', pos: 0, end: 8, range: { from: 0, to: 9 }, box: false, detail: '"= Hi *you*"', marks: [], attributes: '{ level: 1, sep: "\\n\\n" }' },
       { depth: 1, name: 'text', pos: 1, end: 4, range: { from: 2, to: 5 }, box: false, detail: '"Hi "', marks: [], attributes: '' },
       { depth: 1, name: 'text', pos: 4, end: 7, range: { from: 6, to: 9 }, box: false, detail: '"you"', marks: ['bold'], attributes: '' },
       { depth: 0, name: 'rawBlock', pos: 8, end: 9, range: { from: 12, to: 18 }, box: true, detail: '"#foo()"', marks: [], attributes: '' },

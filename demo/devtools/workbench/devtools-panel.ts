@@ -1,14 +1,12 @@
-// The devtools' side panel: three tabs over the models (the document of the shown file, the contributions by
-// extension, the events). It draws what it is given; ../devtools.ts wires it to the extension context.
+// The devtools' side panel: three tabs over the models (the document of the shown file, the contributions, the
+// events), each drawn by its own view. It draws what it is given; ../devtools.ts wires it to the extension context.
 import type { SourceRange } from '../../../src';
 import type { ContributionLog } from '../model/contributions';
-import type { EventLog, LoggedEvent } from '../model/event-log';
-import type { DocumentRow } from '../model/document-tree';
-
-/** The document of the shown file: its rows and the selection (positions), or why there are none. */
-export type ShownDocument =
-  | { readonly kind: 'rows'; readonly path: string; readonly rows: readonly DocumentRow[]; readonly selection: { from: number; to: number }; source(range: SourceRange): string }
-  | { readonly kind: 'none'; readonly path: string; readonly reason: string };
+import type { EventLog } from '../model/event-log';
+import { ContributionsTab } from './contributions-tab';
+import { DocumentTab, type ShownDocument } from './document-tab';
+import { element, type TabView } from './dom';
+import { EventsTab } from './events-tab';
 
 export interface DevtoolsPanelOptions {
   readonly contributions: ContributionLog;
@@ -33,22 +31,28 @@ export class DevtoolsPanel {
   readonly #doc: Document;
   readonly #tabs: HTMLElement;
   readonly #content: HTMLElement;
+  readonly #views: Record<DevtoolsTab, TabView>;
 
   constructor(
     private readonly body: HTMLElement,
-    private readonly options: DevtoolsPanelOptions,
+    options: DevtoolsPanelOptions,
   ) {
-    this.#doc = body.ownerDocument;
-    const root = element(this.#doc, 'div', 'typst-devtools');
+    const doc = (this.#doc = body.ownerDocument);
+    this.#views = {
+      document: new DocumentTab(doc, options.document, options.reveal),
+      contributions: new ContributionsTab(doc, options.contributions),
+      events: new EventsTab(doc, options.events),
+    };
+    const root = element(doc, 'div', 'typst-devtools');
     root.dataset.testid = 'typst-devtools';
-    this.#tabs = root.appendChild(element(this.#doc, 'div', 'typst-devtools__tabs'));
+    this.#tabs = root.appendChild(element(doc, 'div', 'typst-devtools__tabs'));
     this.#tabs.setAttribute('role', 'tablist');
     for (const tab of TABS) {
-      const button = this.#tabs.appendChild(element(this.#doc, 'button', 'typst-devtools__tab', tab.label));
+      const button = this.#tabs.appendChild(element(doc, 'button', 'typst-devtools__tab', tab.label));
       button.setAttribute('role', 'tab');
       button.addEventListener('click', () => this.show(tab.id));
     }
-    this.#content = root.appendChild(element(this.#doc, 'div', 'typst-devtools__content'));
+    this.#content = root.appendChild(element(doc, 'div', 'typst-devtools__content'));
     this.#content.setAttribute('role', 'tabpanel');
     body.append(root);
     this.show('document');
@@ -57,16 +61,17 @@ export class DevtoolsPanel {
   show(tab: DevtoolsTab): void {
     this.#tab = tab;
     TABS.forEach(({ id }, index) => this.#tabs.children[index].setAttribute('aria-selected', String(id === tab)));
-    this.#render();
+    this.#content.replaceChildren(this.#views[tab].element);
+    this.#views[tab].update();
   }
 
   changed(tab: DevtoolsTab): void {
     if (tab !== this.#tab || this.#frame) return;
     const view = this.#doc.defaultView;
-    if (!view) return this.#render();
+    if (!view) return this.#views[tab].update();
     this.#frame = view.requestAnimationFrame(() => {
       this.#frame = 0;
-      this.#render();
+      this.#views[this.#tab].update();
     });
   }
 
@@ -74,84 +79,4 @@ export class DevtoolsPanel {
     if (this.#frame) this.#doc.defaultView?.cancelAnimationFrame(this.#frame);
     this.body.replaceChildren();
   }
-
-  #render(): void {
-    const draw = { document: () => this.#document(), contributions: () => this.#contributions(), events: () => this.#events() }[this.#tab];
-    this.#content.replaceChildren(...draw());
-  }
-
-  #document(): Node[] {
-    const shown = this.options.document();
-    const header = element(this.#doc, 'p', 'typst-devtools__note', shown.path);
-    if (shown.kind === 'none') return [header, element(this.#doc, 'p', 'typst-devtools__note', shown.reason)];
-    const list = element(this.#doc, 'ol', 'typst-devtools__tree');
-    for (const row of shown.rows) list.append(this.#documentRow(row, shown));
-    header.append(` · selection ${shown.selection.from}–${shown.selection.to} · ${shown.rows.length} nodes`);
-    return [header, list];
-  }
-
-  #documentRow(row: DocumentRow, shown: Extract<ShownDocument, { kind: 'rows' }>): HTMLElement {
-    const item = element(this.#doc, 'li', 'typst-devtools__row');
-    const { from, to } = shown.selection;
-    if (row.pos <= from && to <= row.end) item.classList.add('typst-devtools__row--selected');
-    const button = item.appendChild(element(this.#doc, 'button', 'typst-devtools__node'));
-    button.style.paddingInlineStart = `${4 + row.depth * 12}px`;
-    button.append(
-      element(this.#doc, 'span', 'typst-devtools__name', row.name),
-      element(this.#doc, 'span', 'typst-devtools__range', `${row.range.from}–${row.range.to}`),
-      ...(row.box ? [element(this.#doc, 'span', 'typst-devtools__badge', 'box')] : []),
-      ...row.marks.map((mark) => element(this.#doc, 'span', 'typst-devtools__mark', mark)),
-      element(this.#doc, 'span', 'typst-devtools__detail', row.detail),
-    );
-    button.title = [`pos ${row.pos}–${row.end}`, row.attributes, `source: ${shown.source(row.range)}`].filter(Boolean).join('\n');
-    button.addEventListener('click', () => this.options.reveal(row.range));
-    return item;
-  }
-
-  #contributions(): Node[] {
-    return [...this.options.contributions.byExtension()].map(([extension, entries]) => {
-      const details = element(this.#doc, 'details', 'typst-devtools__extension');
-      details.open = true;
-      const summary = details.appendChild(element(this.#doc, 'summary', '', extension));
-      summary.append(element(this.#doc, 'span', 'typst-devtools__count', ` ${entries.length}`));
-      const list = details.appendChild(element(this.#doc, 'ul', 'typst-devtools__list'));
-      for (const entry of entries) {
-        const item = list.appendChild(element(this.#doc, 'li', 'typst-devtools__entry'));
-        item.append(element(this.#doc, 'span', 'typst-devtools__point', entry.point), element(this.#doc, 'span', 'typst-devtools__detail', entry.label));
-      }
-      return details;
-    });
-  }
-
-  #events(): Node[] {
-    const { events } = this.options;
-    const bar = element(this.#doc, 'p', 'typst-devtools__note', `${events.entries.length} events, latest first `);
-    const clear = bar.appendChild(element(this.#doc, 'button', 'typst-devtools__button', 'Clear'));
-    clear.addEventListener('click', () => {
-      events.clear();
-      this.#render();
-    });
-    const list = element(this.#doc, 'ol', 'typst-devtools__list');
-    for (const entry of [...events.entries].reverse()) list.append(this.#event(entry));
-    return [bar, list];
-  }
-
-  #event(entry: LoggedEvent): HTMLElement {
-    const item = element(this.#doc, 'li', 'typst-devtools__entry');
-    const time = new Date(entry.time);
-    const clock = `${time.toTimeString().slice(0, 8)}.${String(time.getMilliseconds()).padStart(3, '0')}`;
-    item.append(
-      element(this.#doc, 'span', 'typst-devtools__time', clock),
-      element(this.#doc, 'span', 'typst-devtools__point', entry.event),
-      element(this.#doc, 'span', 'typst-devtools__detail', entry.value),
-    );
-    return item;
-  }
-}
-
-function element<K extends keyof HTMLElementTagNameMap>(doc: Document, tag: K, className: string, text?: string): HTMLElementTagNameMap[K] {
-  const created = doc.createElement(tag);
-  if (className) created.className = className;
-  if (text !== undefined) created.textContent = text;
-  return created;
 }

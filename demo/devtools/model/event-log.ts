@@ -1,27 +1,43 @@
-// The events of an extension context as they fire, the latest few hundred. See ../devtools.ts.
+// The events of an extension context as they fire, the latest few hundred, with their values pretty-printed. See
+// ../devtools.ts.
 import type { Event, ExtensionContext } from '../../../src';
-import { describeValue } from './describe';
+import { formatValue, type FormattedValue } from './describe';
 
-/** One event that fired: when (ms since the epoch), which (`window.onDidChangeActiveFile`), and its value in one line. */
+/** One event that fired: when (ms since the epoch), which (`window.onDidChangeActiveFile`), and its value as it was then. */
 export interface LoggedEvent {
+  /** Unique in the log, in firing order. */
+  readonly id: number;
   readonly time: number;
   readonly event: string;
-  readonly value: string;
+  readonly value: FormattedValue;
 }
 
-/** The last `capacity` events, oldest first. */
+/** The last `capacity` events, oldest first; while `paused`, none are added. */
 export class EventLog {
   #entries: LoggedEvent[] = [];
+  #next = 0;
+  /** While true, `add` keeps nothing: the log stays as it is, to read. */
+  paused = false;
 
   constructor(private readonly capacity = 300) {}
 
-  add(event: string, value: unknown, time = Date.now()): void {
-    this.#entries.push({ time, event, value: describeValue(value) });
+  /** Logs `event` with `value` (formatted now: a value changing later is shown as it was); false while paused. */
+  add(event: string, value: unknown, time = Date.now()): boolean {
+    if (this.paused) return false;
+    this.#entries.push({ id: this.#next++, time, event, value: formatValue(value) });
     if (this.#entries.length > this.capacity) this.#entries = this.#entries.slice(-this.capacity);
+    return true;
   }
 
   get entries(): readonly LoggedEvent[] {
     return this.#entries;
+  }
+
+  /** The entries whose event name contains `query` (case ignored; words separated by spaces must all occur). */
+  filtered(query: string): readonly LoggedEvent[] {
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+    if (words.length === 0) return this.#entries;
+    return this.#entries.filter((entry) => words.every((word) => entry.event.toLowerCase().includes(word)));
   }
 
   clear(): void {

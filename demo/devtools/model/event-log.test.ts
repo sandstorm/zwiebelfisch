@@ -30,17 +30,33 @@ class Window {
 }
 
 describe('EventLog', () => {
-  it('keeps the latest `capacity` events, oldest first, with their values in one line', () => {
+  it('keeps the latest `capacity` events, oldest first, with their values as they were then', () => {
     const log = new EventLog(2);
+    const change = { kind: 'update', path: '/x.typ' };
     log.add('a', 1, 10);
-    log.add('b', { path: '/x.typ' }, 20);
+    log.add('b', change, 20);
     log.add('c', 'text', 30);
-    expect(log.entries).toEqual([
-      { time: 20, event: 'b', value: '{ path: "/x.typ" }' },
-      { time: 30, event: 'c', value: '"text"' },
+    change.path = '/y.typ';
+    expect(log.entries.map(({ id, time, event, value }) => [id, time, event, value.text])).toEqual([
+      [1, 20, 'b', '{ kind: "update", path: "/x.typ" }'],
+      [2, 30, 'c', '"text"'],
     ]);
     log.clear();
     expect(log.entries).toEqual([]);
+  });
+
+  it('filters by event name (words, case ignored); keeps nothing while paused', () => {
+    const log = new EventLog();
+    log.add('project.onDidChangeFile', {});
+    log.add('window.onDidChangeTextEditorSelection', {});
+    log.add('window.onDidChangeActiveFile', '/a.typ');
+    expect(log.filtered('window file').map((entry) => entry.event)).toEqual(['window.onDidChangeActiveFile']);
+    expect(log.filtered('CHANGEFILE').map((entry) => entry.event)).toEqual(['project.onDidChangeFile']);
+    expect(log.filtered(' ')).toHaveLength(3);
+
+    log.paused = true;
+    expect(log.add('preview.onDidRender', undefined)).toBe(false);
+    expect(log.entries).toHaveLength(3);
   });
 });
 
