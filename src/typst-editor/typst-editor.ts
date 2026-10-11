@@ -15,6 +15,7 @@ import { spreadsheets } from '../extensions/spreadsheets/spreadsheets';
 import { textFiles } from '../extensions/text-files/text-files';
 import { styles } from '../extensions/styles/styles';
 import { slashCommands } from '../extensions/slash-commands/slash-commands';
+import { spellcheck } from '../extensions/spellcheck/spellcheck';
 import { sourceControl } from '../extensions/source-control/source-control';
 import { documentLinks } from '../extensions/document-links/document-links';
 import { images } from '../extensions/images/images';
@@ -224,6 +225,7 @@ function builtinExtensions(): TypstExtension[] {
     labels(),
     styles(),
     slashCommands(),
+    spellcheck(),
     previewSync(),
     previewControls(),
     previewGuides(),

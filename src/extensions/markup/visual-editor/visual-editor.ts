@@ -158,7 +158,7 @@ const TypstCode = Code.extend({
   addAttributes() {
     return { fence: { default: 1, rendered: false }, lang: { default: null, rendered: false } };
   },
-}).configure({ HTMLAttributes: { class: 'typst-markup__code-inline' } });
+}).configure({ HTMLAttributes: { class: 'typst-markup__code-inline', spellcheck: 'false' } });
 
 /** Inline raw text on one line: its text with a `code` mark remembering the delimiters (empty and multi-line raw stays raw). */
 export const CODE: TypstMarkSpec = {

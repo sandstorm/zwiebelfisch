@@ -77,6 +77,10 @@ with the #link("https://typst.app")[Typst] compiler (`typst compile`).
   [Anything from the Insert or text style menu], [Type `/` at a line start or after a space, then part of its name: `/table`, `/h2`, `/quote`. Other words find entries, too (`/spreadsheet` → Insert table). ↑ / ↓ choose, Enter or Tab inserts (the `/…` goes), Escape closes. An empty line holding the cursor hints "Type / for commands".],
 )
 
+=== Spelling <guide-features-spelling>
+
+The browser checks the spelling of the Visual editor's text with its own checker and dictionaries; its context menu offers the corrections. The language is the document's: the first `#set text(lang: "de")` in the shown file, else in the main file, with its `region` (`region: "AT"` → Austrian German). Without one, the browser's default language. Code is not checked: inline code, code blocks and raw boxes (math, labels, other Typst). Neither is the Source editor. The setting `spellcheck.enabled` turns it off (@guide-configuration-writing). The browser knows no project words: what it flags wrongly, it flags in every document.
+
 == Custom styles <guide-features-styles>
 
 A block or inline style is a Typst function with a `/// @style` doc comment, in any `.typ` file of the project (usually `styles.typ`):
