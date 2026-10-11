@@ -1,4 +1,4 @@
-// Values as text for the devtools. See ../devtools.ts.
+// Values as text for the devtools. See devtools in ../devtools.ts.
 
 /**
  * `value` as text, JSON-like: strings quoted, plain objects, arrays, maps and sets opened `limits.depth` levels deep;

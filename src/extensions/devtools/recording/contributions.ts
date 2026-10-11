@@ -1,16 +1,17 @@
-// What each extension contributes, recorded as it activates (and later). See ../devtools.ts.
+// What each extension contributes, recorded as it activates (and later). See devtools in ../devtools.ts.
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
 import type { ExtensionContext, TypstExtension } from '../../../hosts/workbench/workbench';
 import { describeContribution, describeSetting, type Description } from './contribution-points';
 import { formatValue } from '../model/describe';
 
 /**
- * The contributions of the extensions it `instrument`s, in the order they were made. Instrumenting wraps an
- * extension's `activate`: its context's namespaces become proxies that pass every call through and record each
- * `register…` call, and the registration's result tells when it is disposed. Nothing else changes for the extension.
+ * The contributions of the extensions it `instrument`s, in the order they were made: every `register…` call on their
+ * contexts' namespaces and the settings they declare, each described in its point's terms (contribution-points.ts),
+ * with where it was made and whether it was disposed since.
  *
- * Every `register…` call on its context's namespaces and the settings it declares, each described in its contribution
- * point's terms (contribution-points.ts), with where it was made and whether it was disposed since.
+ * Instrumenting wraps an extension's `activate`: its context's namespaces become proxies that pass every call through
+ * and record each `register…` call, and the registration's result tells when it is disposed. Nothing else changes for
+ * the extension.
  */
 export class ContributionLog {
   readonly #entries: (Contribution & { disposed: boolean })[] = [];

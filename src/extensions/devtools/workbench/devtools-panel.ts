@@ -1,4 +1,4 @@
-// The devtools' side panel.
+// The devtools' side panel. See devtools in ../devtools.ts.
 import type { SourceRange } from '../../../core/typst-document/typst-document';
 import type { ContributionLog } from '../recording/contributions';
 import type { EventLog } from '../recording/event-log';
@@ -10,8 +10,8 @@ import { EventsTab } from './events-tab';
 /**
  * The panel in `body`; `changed(tab)` redraws that tab (once per frame) if it is the one shown.
  *
- * Three tabs over the models (the document of the shown file, the contributions, the events), each drawn by its own
- * `Tab`. It draws what it is given; ../devtools.ts wires it to the extension context.
+ * Three tabs (the document of the shown file, the contributions, the events), each drawn by its own `Tab`. It draws
+ * what it is given; the extension wires it to its context.
  */
 export class DevtoolsPanel {
   #tab: DevtoolsTab = 'document';
