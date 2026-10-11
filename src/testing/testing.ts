@@ -214,6 +214,16 @@ export function builtins(): VisualEditorContribution[] {
   return [markup(), headings(), tables(), images(), figures(), renderedBoxes(), outline(), pageLayout(), lists(), alignment()];
 }
 
+/** Types `text` character by character at the selection, as the browser would (text input handlers and input rules run). */
+export function type(editor: Editor, text: string): void {
+  const { view } = editor;
+  for (const char of text) {
+    const { from, to } = view.state.selection;
+    const insert = () => view.state.tr.insertText(char, from, to);
+    if (!view.someProp('handleTextInput', (f) => f(view, from, to, char, insert))) view.dispatch(insert());
+  }
+}
+
 /** `doc` after the transaction `change` builds on a fresh state of it. */
 export function edit(doc: Node, change: (state: EditorState) => EditorState['tr']): Node {
   const state = EditorState.create({ doc });

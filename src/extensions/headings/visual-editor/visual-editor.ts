@@ -1,4 +1,5 @@
 // The heading node and its levels in the text style menu. See headings in ../headings.ts.
+import { textblockTypeInputRule, type AnyExtension, type Node as NodeExtension } from '@tiptap/core';
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import type { TextStyleProvider, TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
 import { starterKitPart } from '../../../hosts/prosemirror-typst/prosemirror-typst';
@@ -12,12 +13,24 @@ import { starterKitPart } from '../../../hosts/prosemirror-typst/prosemirror-typ
  */
 export const HEADING: TypstNodeSpec = {
   name: 'heading',
-  // Tiptap's heading (StarterKit's), with the source anchors
-  tiptap: starterKitPart('typstHeading', { heading: { HTMLAttributes: { class: 'typst-headings__heading' } } }).extend({
-    addGlobalAttributes: () => [
-      { types: ['heading'], attributes: { src: { default: null, rendered: false, keepOnSplit: false }, sep: { default: null, rendered: false } } },
-    ],
-  }),
+  // Tiptap's heading (StarterKit's), typed as in Typst, with the source anchors
+  tiptap: starterKitPart('typstHeading', { heading: { HTMLAttributes: { class: 'typst-headings__heading' } } })
+    .extend({
+      addExtensions() {
+        return (this.parent?.() ?? []).map((heading: AnyExtension) =>
+          (heading as NodeExtension).extend({
+            addInputRules() {
+              return [textblockTypeInputRule({ find: HEADING_INPUT, type: this.type, getAttributes: (match) => ({ level: match[1].length }) })];
+            },
+          }),
+        );
+      },
+    })
+    .extend({
+      addGlobalAttributes: () => [
+        { types: ['heading'], attributes: { src: { default: null, rendered: false, keepOnSplit: false }, sep: { default: null, rendered: false } } },
+      ],
+    }),
   typst: {
     parseTypst: {
       syntaxNodes: {
@@ -40,6 +53,9 @@ export const HEADING: TypstNodeSpec = {
   },
   view: { keepsDom: true },
 };
+
+/** Typed at a line start: `= ` .. `====== ` (Typst), or Markdown's `# ` .. `###### `, makes the line a heading of that level. */
+const HEADING_INPUT = /^(={1,6}|#{1,6})\s$/;
 
 /** "Heading 1" to "Heading 3" in the text style menu, right after Normal text. */
 export const HEADING_STYLES: TextStyleProvider = {

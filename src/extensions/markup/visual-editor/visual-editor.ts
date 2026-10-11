@@ -1,6 +1,6 @@
 // What the markup extension contributes to the Visual editor. See markup in ../markup.ts.
 import type { SyntaxNode } from '@lezer/common';
-import { Extension, type AnyExtension, type Editor } from '@tiptap/core';
+import { Extension, markInputRule, markPasteRule, type AnyExtension, type Editor, type Mark as MarkExtension } from '@tiptap/core';
 import Code from '@tiptap/extension-code';
 import CodeBlock from '@tiptap/extension-code-block';
 import type { Mark, Node } from '@tiptap/pm/model';
@@ -13,8 +13,36 @@ import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from '../model/raw
 
 // ------------------------------------------------------------- strong, emph
 
+/*
+ * Typing (or pasting) Typst's markup puts the mark on the text between the delimiters, as Typst reads it: `*strong*`
+ * bold, `_emph_` italic. Tiptap's Markdown rules (`**bold**`, `__bold__`, `*italic*`) are not: `*x*` is strong in
+ * Typst. A delimiter opens after a space or at the start, as in Tiptap's own rules.
+ */
+const STRONG_INPUT = /(?:^|\s)(\*(?!\s+\*)([^*]+)\*(?!\s+\*))$/;
+const STRONG_PASTE = /(?:^|\s)(\*(?!\s+\*)([^*]+)\*(?!\s+\*))/g;
+const EMPH_INPUT = /(?:^|\s)(_(?!\s+_)([^_]+)_(?!\s+_))$/;
+const EMPH_PASTE = /(?:^|\s)(_(?!\s+_)([^_]+)_(?!\s+_))/g;
+
+/** `part` (a StarterKit part bringing one mark) whose mark is typed as `input` and pasted as `paste`, nothing else. */
+function typedAs(part: AnyExtension, input: RegExp, paste: RegExp): AnyExtension {
+  return part.extend({
+    addExtensions() {
+      return (this.parent?.() ?? []).map((mark: AnyExtension) =>
+        (mark as MarkExtension).extend({
+          addInputRules() {
+            return [markInputRule({ find: input, type: this.type })];
+          },
+          addPasteRules() {
+            return [markPasteRule({ find: paste, type: this.type })];
+          },
+        }),
+      );
+    },
+  });
+}
+
 /** Tiptap's bold, italic, link and blockquote (StarterKit's), configured for Typst: each spec brings its own. */
-const Bold = starterKitPart('typstBold', { bold: {} });
+const Bold = typedAs(starterKitPart('typstBold', { bold: {} }), STRONG_INPUT, STRONG_PASTE);
 
 /**
  * The specs of strong and emphasis, links, raw text (inline code, code blocks) and block quotes, and their toolbar
@@ -26,7 +54,7 @@ export const BOLD: TypstMarkSpec = {
   typst: { parseTypst: { syntaxNodes: { Strong: { inline: delimited('bold') } } }, toTypst: (_mark, around) => delimitedSyntax('*', 'strong', around) },
 };
 
-const Italic = starterKitPart('typstItalic', { italic: {} });
+const Italic = typedAs(starterKitPart('typstItalic', { italic: {} }), EMPH_INPUT, EMPH_PASTE);
 
 export const ITALIC: TypstMarkSpec = {
   name: 'italic',

@@ -5,7 +5,7 @@ import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { Project } from '../../../core/project/project';
 import { LabelIndex } from '../model/label-index';
-import { createVisualEditor, TestPrompts } from '../../../testing/testing';
+import { createVisualEditor, TestPrompts, type } from '../../../testing/testing';
 import { VisualEditor, VisualEditorHost } from '../../../hosts/visual-editor/visual-editor';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { ProjectPath } from '../../../core/paths/paths';
@@ -31,16 +31,6 @@ function setup(file = path('/chapters/introduction.typ'), edit?: (files: Record<
   const editor = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
   const text = (p: string) => project.document(path(p))!.text;
   return { project, labels, parent, editor, document: document_, text };
-}
-
-/** Types `text` at the selection as the browser would (text input handlers run). */
-function type(editor: Editor, text: string): void {
-  const { view } = editor;
-  for (const char of text) {
-    const { from, to } = view.state.selection;
-    const insert = () => view.state.tr.insertText(char, from, to);
-    if (!view.someProp('handleTextInput', (f) => f(view, from, to, char, insert))) view.dispatch(insert());
-  }
 }
 
 function press(editor: Editor, key: string): boolean {

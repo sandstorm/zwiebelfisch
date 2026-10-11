@@ -4,7 +4,7 @@
 import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { SourceRange, TypstDocument } from '../core/typst-document/typst-document';
-import { createVisualEditor } from '../testing/testing';
+import { createVisualEditor, type } from '../testing/testing';
 
 /** A Visual editor over `text`, its toolbar, and its Tiptap editor (for typing). */
 function setup(text: string) {
@@ -20,17 +20,6 @@ function setup(text: string) {
   };
   const editor = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
   return { doc, view, button, editor, parent };
-}
-
-/** Types `text` character by character at the selection, as the browser would (input rules run). */
-function type(editor: Editor, text: string): void {
-  const { view } = editor;
-  for (const char of text) {
-    const { from, to } = view.state.selection;
-    const insert = () => view.state.tr.insertText(char, from, to);
-    const handled = view.someProp('handleTextInput', (f) => f(view, from, to, char, insert));
-    if (!handled) view.dispatch(insert());
-  }
 }
 
 describe('page breaks and horizontal rules', () => {

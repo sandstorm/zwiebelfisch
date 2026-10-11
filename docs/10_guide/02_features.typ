@@ -62,10 +62,10 @@ with the #link("https://typst.app")[Typst] compiler (`typst compile`).
 #table(
   columns: 2,
   [Construct], [How],
-  [Bold, italic, inline code], [Ctrl+B, Ctrl+I, Ctrl+E (⌘B, ⌘I, ⌘E on Mac), or the bar over a selection.],
+  [Bold, italic, inline code], [Ctrl+B, Ctrl+I, Ctrl+E (⌘B, ⌘I, ⌘E on Mac), or the bar over a selection. Or type them as in Typst: `*bold*`, `_italic_`, code between backticks.],
   [Link], [Ctrl+K (⌘K on Mac), or "Link" in the bar over a selection.],
-  [Lists], [List buttons: bulleted, numbered, task list (`- [ ] todo`). Tab nests.],
-  [Quote], [Ctrl+Shift+B (⌘⇧B on Mac), or Insert → Quote.],
+  [Lists], [List buttons: bulleted, numbered, task list (`- [ ] todo`). Or type at a line start, as in Typst: `- ` bulleted, `+ ` numbered (also `1. `). Tab nests.],
+  [Quote], [Ctrl+Shift+B (⌘⇧B on Mac), Insert → Quote, or `> ` at a line start (Typst has no quote markup: it writes `#quote(block: true)[..]`).],
   [Code block], [Insert → Code block. Its language is a field.],
   [Alignment], [Align menu, or Ctrl+Shift+L / E / R / J (⌘⇧L / E / R / J on Mac): `#align(center)[..]`, `#par(justify: true)[..]`.],
   [Undo, redo], [Ctrl+Z, Ctrl+Shift+Z (⌘Z, ⌘⇧Z on Mac).],
@@ -108,7 +108,7 @@ Typst compiles #term[incrementally]: it redoes only what an edit touches.
 == Goals
 ```
 
-- Text style menu: Heading 1–3. Or type `# `, `## `, `### ` at a line start.
+- Text style menu: Heading 1–3. Or type `= `, `== `, `=== ` at a line start, as in Typst (also `# `, `## `, `### `).
 - Numbers appear in the Visual editor as `#set heading(numbering: ..)` makes Typst number them.
 - Insert → Table of contents: `#outline()`, shown compiled.
 
