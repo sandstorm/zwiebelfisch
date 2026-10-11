@@ -4,7 +4,7 @@ import { Node as TiptapNode } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
-import { children, parenthesized } from '../../core/typst-syntax/typst-syntax';
+import { children, hasOnlyArguments, withHash } from '../../core/typst-syntax/typst-syntax';
 import { createSchema, posToSource, print, project as projectWith, sourceToPos, starterKitPart, type MarkGrammar, type NodeGrammar } from './projection';
 
 /** `*x*` as a bold mark: hidden syntax around visible text. */
@@ -26,7 +26,7 @@ const DIVIDER: NodeGrammar = {
     renderHTML: () => ['hr'],
   }),
   labelled: true,
-  blockCalls: { divider: (p, call, sep) => (parenthesized(call.args) ? p.schema.nodes.divider.create({ src: p.text(call), sep }) : null) },
+  blockCalls: { divider: (p, call, sep) => (hasOnlyArguments(call) ? p.schema.nodes.divider.create({ src: p.text(withHash(call)), sep }) : null) },
 };
 
 const minimum = createSchema([], []);

@@ -1,5 +1,6 @@
 // Margin notes (drafting) in the text: point notes and range notes, and the "Comment" toolbar action. See
 // visual-view.ts.
+import type { SyntaxNode } from '@lezer/common';
 import { Mark, Node } from '@tiptap/core';
 import type { Mark as PMMark, Node as PMNode } from '@tiptap/pm/model';
 import { TextSelection } from '@tiptap/pm/state';
@@ -7,7 +8,7 @@ import type { NodeView } from '@tiptap/pm/view';
 import { NOTE_HEAD, noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../model/margin-note-syntax';
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type Action, type TypstMarkSpec, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
-import type { Call, Placed, ProjectionContext } from '../../../hosts/projection/projection';
+import type { Placed, ProjectionContext } from '../../../hosts/projection/projection';
 
 export interface MarginNotesOptions {
   /** Adds a comment (margin note) at the selection: the "Comment" button in the toolbar and the selection's bar. */
@@ -87,7 +88,7 @@ const MARGIN_NOTE: TypstNodeSpec = {
   name: 'marginNote',
   extension: MarginNote,
   box: 'widget',
-  inlineCalls: [{ matches: (p, call) => noteCallSyntax(p.source, call.node) !== null, project: marginNoteCall }],
+  inlineCalls: [{ matches: (p, call) => noteCallSyntax(p.source, call) !== null, project: marginNoteCall }],
   printAtom: (node) => printNoteCall(node.attrs as { head: string; note: string }),
 };
 
@@ -102,8 +103,8 @@ const NOTE_RANGE: TypstMarkSpec = {
  * and note; `#margin-note(..named)[text][note]` → `text` with a `noteRange`
  * mark holding them. Null for calls that are not margin notes.
  */
-function marginNoteCall(p: ProjectionContext, call: Call, marks: readonly PMMark[]): PMNode | Placed[] | null {
-  const syntax = noteCallSyntax(p.source, call.node);
+function marginNoteCall(p: ProjectionContext, call: SyntaxNode, marks: readonly PMMark[]): PMNode | Placed[] | null {
+  const syntax = noteCallSyntax(p.source, call);
   if (!syntax) return null;
   const { head, text, note } = syntax;
   if (!text) return p.schema.nodes.marginNote.create({ head, note }, null, marks);

@@ -2,8 +2,8 @@
 // See visual-view.ts.
 import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
-import { children, isClosedContent, isEmbeddable, parenthesized } from '../../../core/typst-syntax/typst-syntax';
-import type { Call, ProjectionContext } from '../../../hosts/projection/projection';
+import { callArguments, hasOnlyArguments, isClosedContent, isEmbeddable, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
+import type { ProjectionContext } from '../../../hosts/projection/projection';
 import { NEW_TABLE, type TableLayout, type TableStyle } from '../model/table-layout';
 
 /**
@@ -12,22 +12,23 @@ import { NEW_TABLE, type TableLayout, type TableStyle } from '../model/table-lay
  * `table.header(..)`. A cell is a content block `[..]` or an expression
  * (`ms(18)`, `$x^2$`), which becomes a raw box in a cell of its own.
  */
-export function projectTable(p: ProjectionContext, call: Call, sep: string | null): Node | null {
-  const parsed = tableArgs(p, call.args);
+export function projectTable(p: ProjectionContext, call: SyntaxNode, sep: string | null): Node | null {
+  const parsed = tableArgs(p, call);
   if (!parsed || parsed.cells.length === 0 || parsed.cells.length % parsed.columns !== 0) return null;
   if (parsed.headerCells !== 0 && parsed.headerCells !== parsed.columns) return null;
-  const style = tableStyle(p, call, parsed);
+  const range = withHash(call);
+  const style = tableStyle(p, range, parsed);
   if (!style) return null;
   const { schema, source } = p;
   const gaps: string[] = [];
-  let pos = call.from;
+  let pos = range.from;
   const cells = parsed.cells.map(({ node, bare }, index) => {
     const { content, from, to } = bare ? bareCell(p, node) : p.blocks(node);
     gaps.push(source.slice(pos, from));
     pos = to;
     return (index < parsed.headerCells ? schema.nodes.tableHeader : schema.nodes.tableCell).create(null, content);
   });
-  gaps.push(source.slice(pos, call.to));
+  gaps.push(source.slice(pos, range.to));
   const rows: Node[] = [];
   for (let i = 0; i < cells.length; i += parsed.columns) rows.push(schema.nodes.tableRow.create(null, cells.slice(i, i + parsed.columns)));
   const bare = parsed.cells.map((c) => c.bare);
@@ -52,7 +53,7 @@ const ARG_SEP = /^\s*,\s*$/;
  * call's syntax and what follows the last row. Null if `columns` comes after
  * the first row.
  */
-function tableStyle(p: ProjectionContext, call: Call, parsed: TableArgs): TableStyle | null {
+function tableStyle(p: ProjectionContext, call: { from: number; to: number }, parsed: TableArgs): TableStyle | null {
   const text = (from: number, to: number) => p.source.slice(from, to);
   const between = (a: SyntaxNode | undefined, b: SyntaxNode | undefined) => (a && b ? text(a.to, b.from) : null);
   const cells = parsed.cells.map((c) => c.node);
@@ -106,11 +107,10 @@ interface TableArgs {
  * and cells only (see `tableCell`), the first of them optionally in a
  * `table.header(..)`.
  */
-function tableArgs(p: ProjectionContext, args: SyntaxNode[]): TableArgs | null {
-  if (!parenthesized(args)) return null;
+function tableArgs(p: ProjectionContext, call: SyntaxNode): TableArgs | null {
+  if (!hasOnlyArguments(call)) return null;
   const result: TableArgs = { columns: 0, columnsCount: null, named: [], cells: [], header: null, headerCells: 0 };
-  for (const arg of args.slice(1, -1)) {
-    if (arg.name === 'Space' || arg.name === 'Comma') continue;
+  for (const arg of callArguments(call)) {
     if (arg.name === 'Named') namedArg(p, arg, result);
     else if (!headerArg(p, arg, result)) {
       const cell = tableCell(p, arg);
@@ -125,8 +125,9 @@ function tableArgs(p: ProjectionContext, args: SyntaxNode[]): TableArgs | null {
 function headerArg(p: ProjectionContext, arg: SyntaxNode, into: TableArgs): boolean {
   const target = arg.name === 'FuncCall' ? arg.firstChild : null;
   if (!target || p.text(target) !== 'table.header' || into.cells.length > 0) return false;
-  const parts = children(arg.getChild('Args')!).filter((a) => !['LeftParen', 'RightParen', 'Space', 'Comma'].includes(a.name));
-  const cells = parts.map((part) => tableCell(p, part));
+  // `table.header([a], [b])` or `table.header[a][b]`
+  const trailing = trailingContent(arg);
+  const cells = trailing ? [...callArguments(arg), ...trailing].map((part) => tableCell(p, part)) : [];
   if (cells.length === 0 || cells.some((c) => c === null)) return false;
   into.cells.push(...(cells as { node: SyntaxNode; bare: boolean }[]));
   into.header = arg;

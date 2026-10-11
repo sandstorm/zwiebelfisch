@@ -6,7 +6,8 @@ import { Node } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { describe, expect, it } from 'vitest';
 import { TypstDocument } from './core/typst-document/typst-document';
-import type { Call, Printer, ProjectionContext, ToolbarItem, TypstExtension, TypstNodeSpec } from './index';
+import type { SyntaxNode } from '@lezer/common';
+import { callArguments, decodeString, namedArgument, quote, trailingContent, withHash, type Printer, type ProjectionContext, type ToolbarItem, type TypstExtension, type TypstNodeSpec } from './index';
 import { createVisualView } from './testing/testing';
 
 // ----- the example, as in docs/embedding.md (there it imports from 'typst-editor') -----
@@ -56,31 +57,29 @@ const Callout = Node.create({
 });
 
 /** `#callout[..]` or `#callout(title: "plain string")[..]`, whose content is blocks; anything else stays raw Typst. */
-function projectCallout(p: ProjectionContext, call: Call, sep: string | null): ProseMirrorNode | null {
-  const content = call.args.at(-1);
-  if (content?.name !== 'ContentBlock' || content.lastChild?.name !== 'RightBracket') return null;
-  const title = calloutTitle(p, call.args.slice(0, -1));
-  if (title === null) return null;
-  const { content: blocks, from, to } = p.blocks(content);
-  const layout: CalloutLayout = { open: p.text({ from: call.from, to: from }), close: p.text({ from: to, to: call.to }), title };
+function projectCallout(p: ProjectionContext, call: SyntaxNode, sep: string | null): ProseMirrorNode | null {
+  const content = trailingContent(call);
+  const title = calloutTitle(p, call);
+  if (content?.length !== 1 || title === null) return null;
+  const { content: blocks, from, to } = p.blocks(content[0]);
+  const source = withHash(call);
+  const layout: CalloutLayout = { open: p.text({ from: source.from, to: from }), close: p.text({ from: to, to: source.to }), title };
   return p.schema.nodes.callout.create({ title, sep, layout }, blocks);
 }
 
-/** The title of `(title: "…")` (none: "Note"); null for other arguments. */
-function calloutTitle(p: ProjectionContext, parens: Call['args']): string | null {
-  const args = parens.filter((arg) => arg.name === 'Named');
-  if (parens.length === 0) return 'Note';
-  const value = args[0]?.getChild('Str');
-  const named = args.length === 1 && p.text(args[0].getChild('Ident') ?? args[0]) === 'title';
-  const plain = value ? /^"([^"\\]*)"$/.exec(p.text(value)) : null;
-  return named && plain ? plain[1] : null;
+/** The title of `(title: "…")` (no arguments: "Note"); null for other arguments. */
+function calloutTitle(p: ProjectionContext, call: SyntaxNode): string | null {
+  const args = callArguments(call);
+  const title = namedArgument(call, 'title', p.source);
+  if (args.length === 0) return 'Note';
+  return args.length === 1 && title?.name === 'Str' ? decodeString(p.text(title)) : null;
 }
 
 /** As written while the title is; a new callout, or one with a changed title, gets the call printed anew. */
 function printCallout(out: Printer, callout: ProseMirrorNode, pos: number): void {
   const layout: CalloutLayout | null = callout.attrs.layout;
   const title: string = callout.attrs.title;
-  out.hidden(layout?.title === title ? layout.open : `#callout(title: "${title.replace(/["\\]/g, '\\$&')}")[`);
+  out.hidden(layout?.title === title ? layout.open : `#callout(title: ${quote(title)})[`);
   out.blocks(callout, pos + 1, '\n\n');
   out.closing(layout?.close ?? ']');
 }

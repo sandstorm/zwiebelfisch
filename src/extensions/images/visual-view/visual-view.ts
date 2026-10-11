@@ -9,7 +9,7 @@ import type { DocumentLink } from '../../../hosts/languages/languages';
 import type { QuickPickItem, Window } from '../../../hosts/window/window';
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
-import { parenthesized } from '../../../core/typst-syntax/typst-syntax';
+import { hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type Action, type BoxRenderer, type ToolbarContext, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
 import { imageFileDrops, insertImages } from './image-insertion';
 import { imagePathLink } from './image-path-link';
@@ -113,8 +113,8 @@ function imageSpec(options: ImagesOptions): TypstNodeSpec {
     },
     blockCalls: {
       image: (p, call, sep) => {
-        const src = p.text(call);
-        return parenthesized(call.args) && imagePath(src) !== null ? p.schema.nodes.image.create({ src, sep }) : null;
+        const src = p.text(withHash(call));
+        return hasOnlyArguments(call) && imagePath(src) !== null ? p.schema.nodes.image.create({ src, sep }) : null;
       },
     },
   };

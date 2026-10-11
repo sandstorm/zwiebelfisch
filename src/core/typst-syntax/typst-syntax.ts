@@ -105,11 +105,6 @@ export function children(node: SyntaxNode): SyntaxNode[] {
   return result;
 }
 
-/** Whether an argument list is `(..)` alone: closed, and no trailing content block. */
-export function parenthesized(args: readonly SyntaxNode[]): boolean {
-  return args[0]?.name === 'LeftParen' && args.at(-1)?.name === 'RightParen';
-}
-
 /** The name of the function `call` (a `FuncCall`) calls: `table` of `table(..)`; '' if it is no plain name (`table.header(..)`). */
 export function calleeName(call: SyntaxNode, source: string): string {
   const callee = call.firstChild;

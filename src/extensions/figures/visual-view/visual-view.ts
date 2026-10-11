@@ -5,8 +5,8 @@ import type { SyntaxNode } from '@lezer/common';
 import { Node } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import { NodeSelection, TextSelection, type Transaction } from '@tiptap/pm/state';
-import { children, isClosedContent, parenthesized } from '../../../core/typst-syntax/typst-syntax';
-import type { Call, Printer, ProjectionContext } from '../../../hosts/projection/projection';
+import { callArguments, children, hasOnlyArguments, isClosedContent, withHash } from '../../../core/typst-syntax/typst-syntax';
+import type { Printer, ProjectionContext } from '../../../hosts/projection/projection';
 import type { TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 
 declare module '@tiptap/core' {
@@ -117,27 +117,28 @@ export const FIGURE_CAPTION: TypstNodeSpec = { name: 'figureCaption', extension:
  * `caption`, if any, is one paragraph of markup; other named arguments stay as
  * written.
  */
-function projectFigure(p: ProjectionContext, call: Call, sep: string | null): PMNode | null {
-  const parsed = figureArgs(p, call.args);
+function projectFigure(p: ProjectionContext, call: SyntaxNode, sep: string | null): PMNode | null {
+  const parsed = figureArgs(p, call);
   if (!parsed) return null;
   const { schema, source } = p;
   const { body, bodyNode, caption } = parsed;
-  const layout: FigureLayout = { open: source.slice(call.from, body.from), caption: null, rest: '' };
+  const { from: start, to: end } = withHash(call);
+  const layout: FigureLayout = { open: source.slice(start, body.from), caption: null, rest: '' };
   if (!caption) {
-    layout.rest = source.slice(body.to, call.to);
+    layout.rest = source.slice(body.to, end);
     return schema.nodes.figure.create({ sep, layout }, [bodyNode]);
   }
   const { from, to, nodes } = captionContent(caption.content);
   layout.caption = { before: source.slice(body.to, caption.arg.from), open: source.slice(caption.arg.from, from), close: source.slice(to, caption.arg.to) };
-  layout.rest = source.slice(caption.arg.to, call.to);
+  layout.rest = source.slice(caption.arg.to, end);
   const captionNode = p.textblock({ type: 'figureCaption', attrs: { src: source.slice(from, to) } }, from, p.inline(nodes));
   return schema.nodes.figure.create({ sep, layout }, [bodyNode, captionNode]);
 }
 
 /** The body (call and node) and the caption argument of a figure, if it is an image or table with an optional one-paragraph caption. */
-function figureArgs(p: ProjectionContext, args: SyntaxNode[]): { body: SyntaxNode; bodyNode: PMNode; caption: CaptionArg | null } | null {
-  if (!parenthesized(args)) return null;
-  const [body, ...others] = args.slice(1, -1).filter((a) => a.name !== 'Space' && a.name !== 'Comma');
+function figureArgs(p: ProjectionContext, call: SyntaxNode): { body: SyntaxNode; bodyNode: PMNode; caption: CaptionArg | null } | null {
+  if (!hasOnlyArguments(call)) return null;
+  const [body, ...others] = callArguments(call);
   const bodyNode = body ? figureBody(p, body) : null;
   const caption = bodyNode ? captionArg(p, others) : undefined;
   return caption === undefined ? null : { body, bodyNode: bodyNode!, caption };

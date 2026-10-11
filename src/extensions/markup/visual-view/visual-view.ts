@@ -6,9 +6,9 @@ import Code from '@tiptap/extension-code';
 import CodeBlock from '@tiptap/extension-code-block';
 import type { Mark, Node } from '@tiptap/pm/model';
 import type { Window } from '../../../hosts/window/window';
-import { children, decodeString, isClosedContent, parenthesized, quote } from '../../../core/typst-syntax/typst-syntax';
+import { callArguments, calleeName, children, decodeString, namedArgument, quote, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type Action, type EditorExtensionProvider, type ToolbarContext, type TypstMarkSpec, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
-import { starterKitPart, type Around, type Call, type Placed, type Printer, type ProjectionContext } from '../../../hosts/projection/projection';
+import { starterKitPart, type Around, type Placed, type Printer, type ProjectionContext } from '../../../hosts/projection/projection';
 import { codeBlockView } from './code-block-view';
 import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from '../model/raw-code';
 
@@ -92,20 +92,20 @@ export const LINK: TypstMarkSpec = {
   name: 'link',
   extension: Link,
   inlineSyntax: { Link: (p, node, marks) => p.schema.text(p.text(node), p.schema.marks.link.create({ href: p.text(node) }).addToSet(marks)) },
-  inlineCalls: [{ matches: (_p, call) => call.name === 'link', project: linkCall }],
+  inlineCalls: [{ matches: (p, call) => calleeName(call, p.source) === 'link', project: linkCall }],
   print: (mark) => ({ open: `#link(${quote(mark.attrs.href)})[`, close: ']' }),
   printsBare: (mark, text, { before, after }) =>
     text === mark.attrs.href && BARE_URL.test(text) && (before === undefined || /\s/.test(before)) && (after === undefined || /\s/.test(after)),
 };
 
 /** `#link("url")[text]` with a plain string and non-empty, single-paragraph text; null otherwise. */
-function linkCall(p: ProjectionContext, { name, args }: Call, marks: readonly Mark[]): Placed[] | null {
-  if (name !== 'link' || args.map((a) => a.name).join() !== 'LeftParen,Str,RightParen,ContentBlock') return null;
-  const href = decodeString(p.text(args[1]));
-  const markup = args[3].getChild('Markup');
-  const content = markup ? children(markup) : [];
-  if (href === null || !isClosedContent(args[3]) || content.length === 0) return null;
-  if (content.some((n) => n.name === 'Parbreak')) return null;
+function linkCall(p: ProjectionContext, call: SyntaxNode, marks: readonly Mark[]): Placed[] | null {
+  const [url, ...others] = callArguments(call);
+  const blocks = trailingContent(call);
+  if (calleeName(call, p.source) !== 'link' || url?.name !== 'Str' || others.length > 0 || blocks?.length !== 1) return null;
+  const href = decodeString(p.text(url));
+  const content = children(blocks[0].getChild('Markup')!);
+  if (href === null || content.length === 0 || content.some((n) => n.name === 'Parbreak')) return null;
   return p.inline(content, p.schema.marks.link.create({ href }).addToSet(marks));
 }
 
@@ -189,20 +189,19 @@ export const BLOCKQUOTE: TypstNodeSpec = {
   print: (out, quote, pos) => printAround(out, quote, pos, quote.attrs.layout ?? NEW_QUOTE),
 };
 
-function blockquote(p: ProjectionContext, call: Call, sep: string | null): Node | null {
-  const { args } = call;
-  const content = args.at(-1)!;
-  const parens = args.slice(0, -1);
-  if (!parenthesized(parens) || !isClosedContent(content) || !isBlockQuoteArgs(p, parens.slice(1, -1))) return null;
-  const { content: blocks, from, to } = p.blocks(content);
-  const layout: QuoteLayout = { open: p.source.slice(call.from, from), close: p.source.slice(to, call.to) };
-  return p.schema.nodes.blockquote.create({ sep, layout }, blocks);
+function blockquote(p: ProjectionContext, call: SyntaxNode, sep: string | null): Node | null {
+  const blocks = trailingContent(call);
+  if (blocks?.length !== 1 || !isBlockQuoteArgs(p, call)) return null;
+  const { content, from, to } = p.blocks(blocks[0]);
+  const { from: start, to: end } = withHash(call);
+  const layout: QuoteLayout = { open: p.source.slice(start, from), close: p.source.slice(to, end) };
+  return p.schema.nodes.blockquote.create({ sep, layout }, content);
 }
 
 /** Named arguments only, `block: true` among them. */
-function isBlockQuoteArgs(p: ProjectionContext, args: SyntaxNode[]): boolean {
-  const named = args.filter((a) => a.name !== 'Space' && a.name !== 'Comma');
-  return named.every((a) => a.name === 'Named') && named.some((a) => /^block\s*:\s*true$/.test(p.text(a)));
+function isBlockQuoteArgs(p: ProjectionContext, call: SyntaxNode): boolean {
+  const block = namedArgument(call, 'block', p.source);
+  return callArguments(call).every((a) => a.name === 'Named') && block !== null && p.text(block) === 'true';
 }
 
 /** `open`, the container's blocks, `close`. */

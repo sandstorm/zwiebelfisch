@@ -1,7 +1,7 @@
 // What the outline extension contributes to the Visual view: `#outline(..)` as a box headed "Table of contents",
 // and "Insert" → "Table of contents". See outline.ts.
 import { Node } from '@tiptap/core';
-import { parenthesized } from '../../../core/typst-syntax/typst-syntax';
+import { hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type Action, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 
 const Outline = Node.create({
@@ -29,7 +29,7 @@ export const OUTLINE: TypstNodeSpec = {
   labelled: true,
   box: 'code',
   codeBox: { label: { className: 'typst-visual__outline', text: () => 'Table of contents' } },
-  blockCalls: { outline: (p, call, sep) => (parenthesized(call.args) ? p.schema.nodes.outline.create({ src: p.text(call), sep }) : null) },
+  blockCalls: { outline: (p, call, sep) => (hasOnlyArguments(call) ? p.schema.nodes.outline.create({ src: p.text(withHash(call)), sep }) : null) },
 };
 
 const ICON = svg('<path d="M4 6h10M7 10h13M7 14h13M4 18h10"/>');

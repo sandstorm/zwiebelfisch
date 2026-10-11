@@ -3,11 +3,11 @@
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
 import { typstParser } from 'codemirror-lang-typst/lezer';
-import type { Call, Placed, ProjectionContext, BlockLabel } from './projection';
+import type { Placed, ProjectionContext, BlockLabel } from './projection';
 import type { Grammar } from './grammar';
 import { labelAfterBlock, splitTrailingLabel } from './labels';
 import { layout, pristine } from './pristine';
-import { children } from '../../core/typst-syntax/typst-syntax';
+import { calleeName, children } from '../../core/typst-syntax/typst-syntax';
 
 /** Projects `source` into a document of `schema`, through the grammar attached to it. */
 export function projectDocument(source: string, schema: Schema, grammar: Grammar): Node {
@@ -79,14 +79,8 @@ class Projection implements ProjectionContext {
     return this.source.slice(from, to);
   }
 
-  call(call: SyntaxNode): Call {
-    const ident = call.getChild('Ident');
-    const args = call.getChild('Args');
-    return { node: call, name: ident ? this.text(ident) : '', args: args ? children(args) : [], from: call.from, to: call.to };
-  }
-
   blockCall(call: SyntaxNode): Node | null {
-    return call.name === 'FuncCall' ? this.projectCall(this.call(call), null) : null;
+    return call.name === 'FuncCall' ? this.projectCall(call, null) : null;
   }
 
   blocks(content: SyntaxNode): { content: Node[]; from: number; to: number } {
@@ -231,20 +225,18 @@ class Projection implements ProjectionContext {
   /** Syntax that makes a run a paragraph: text, inline syntax a spec models, calls that belong in running text. */
   private isProse(node: SyntaxNode): boolean {
     if (TEXT.has(node.name) || this.grammar.inlineSyntax(node.name)) return true;
-    if (node.name !== 'FuncCall') return false;
-    const call = this.call(node);
-    return this.grammar.inlineCalls().some((projector) => projector.matches(this, call));
+    return node.name === 'FuncCall' && this.grammar.inlineCalls().some((projector) => projector.matches(this, node));
   }
 
   /** A run that is exactly one `#func(..)` call: the block its projectors make of it. */
   private runCall(segment: Segment, sep: string | null): Node | null {
     const [hash, call, ...rest] = segment.nodes;
     if (hash.name !== 'Hash' || call?.name !== 'FuncCall' || call.from !== hash.to || rest.length > 0) return null;
-    return this.projectCall({ ...this.call(call), from: segment.from, to: segment.to }, sep);
+    return this.projectCall(call, sep);
   }
 
-  private projectCall(call: Call, sep: string | null): Node | null {
-    for (const projector of this.grammar.blockCalls(call.name)) {
+  private projectCall(call: SyntaxNode, sep: string | null): Node | null {
+    for (const projector of this.grammar.blockCalls(calleeName(call, this.source))) {
       const block = projector(this, call, sep);
       if (block) return block;
     }
@@ -295,9 +287,8 @@ class Projection implements ProjectionContext {
   /** The expression after a `#`: a call some spec models in running text (a link, a margin note), else raw. */
   private codeNode(node: SyntaxNode, marks: readonly Mark[]): Node | Placed[] | null {
     if (node.name !== 'FuncCall') return null;
-    const call = this.call(node);
     for (const projector of this.grammar.inlineCalls()) {
-      const projected = projector.project(this, call, marks);
+      const projected = projector.project(this, node, marks);
       if (projected) return projected;
     }
     return null;

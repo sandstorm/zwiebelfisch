@@ -1,6 +1,6 @@
 // The page break: `#pagebreak()` as a labelled divider, "Insert page break" and Mod+Enter. See ../page-layout.ts.
 import { Node } from '@tiptap/core';
-import { parenthesized } from '../../../core/typst-syntax/typst-syntax';
+import { hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type Action, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 
 declare module '@tiptap/core' {
@@ -47,7 +47,7 @@ export const PAGE_BREAK: TypstNodeSpec = {
   labelled: true,
   // the dashed lines
   ownsPseudoElements: true,
-  blockCalls: { pagebreak: (p, call, sep) => (parenthesized(call.args) ? p.schema.nodes.pageBreak.create({ src: p.text(call), sep }) : null) },
+  blockCalls: { pagebreak: (p, call, sep) => (hasOnlyArguments(call) ? p.schema.nodes.pageBreak.create({ src: p.text(withHash(call)), sep }) : null) },
 };
 
 const ICON = svg('<path d="M6 3v5h12V3"/><path d="M6 21v-5h12v5"/><path d="M3 12h2M8 12h2M14 12h2M19 12h2"/>');

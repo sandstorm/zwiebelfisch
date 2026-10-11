@@ -11,6 +11,7 @@
  */
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
+import { callArguments, calleeName, children, trailingContent } from '../../../core/typst-syntax/typst-syntax';
 
 /** The package margin notes come from; its import is added with the first note. */
 export const DRAFTING = '@preview/drafting:0.2.2';
@@ -63,10 +64,9 @@ export function parseNoteCall(src: string): NoteCall | null {
  * it is a margin note; null for any other call.
  */
 export function noteCallSyntax(source: string, call: SyntaxNode): NoteCallSyntax | null {
-  const args = callsMarginNote(source, call) ? call.getChild('Args') : null;
-  if (!args) return null;
-  const blocks = trailingContent(children(args));
-  if (!blocks || hasError(call)) return null;
+  const blocks = callsMarginNote(source, call) ? trailingContent(call) : null;
+  const namedOnly = callArguments(call).every((arg) => arg.name === 'Named');
+  if (!blocks || blocks.length < 1 || blocks.length > 2 || !namedOnly || hasError(call)) return null;
   const text = blocks.length === 2 ? blocks[0] : null;
   if (text && !isOneParagraph(text)) return null;
   const note = blocks.at(-1)!;
@@ -75,10 +75,8 @@ export function noteCallSyntax(source: string, call: SyntaxNode): NoteCallSyntax
 
 /** A call of `margin-note` right after its `#`. */
 function callsMarginNote(source: string, call: SyntaxNode): boolean {
-  const ident = call.firstChild;
   const hash = call.prevSibling;
-  return call.name === 'FuncCall' && hash?.name === 'Hash' && hash.to === call.from
-    && ident?.name === 'Ident' && source.slice(ident.from, ident.to) === MARGIN_NOTE;
+  return call.name === 'FuncCall' && hash?.name === 'Hash' && hash.to === call.from && calleeName(call, source) === MARGIN_NOTE;
 }
 
 /**
@@ -124,16 +122,6 @@ export function escapeText(text: string): string {
   return text.replace(/[\\`$#*_<@[\]]|\/(?=[/*])/g, (c) => `\\${c}`);
 }
 
-/** The one or two closed content blocks ending an argument list whose `(..)` part, if any, holds named arguments only. */
-function trailingContent(args: SyntaxNode[]): SyntaxNode[] | null {
-  const close = args.findIndex((a) => a.name === 'RightParen');
-  const named = close < 0 ? [] : args.slice(1, close);
-  if (close >= 0 && (args[0].name !== 'LeftParen' || !named.every((a) => ['Named', 'Comma', 'Space'].includes(a.name)))) return null;
-  const blocks = args.slice(close + 1);
-  const closed = blocks.every((b) => b.name === 'ContentBlock' && b.firstChild?.name === 'LeftBracket' && b.lastChild?.name === 'RightBracket');
-  return closed && (blocks.length === 1 || blocks.length === 2) ? blocks : null;
-}
-
 /** A content block with markup that is not empty and has no paragraph break. */
 function isOneParagraph(block: SyntaxNode): boolean {
   const markup = block.getChild('Markup');
@@ -153,10 +141,4 @@ function hasError(node: SyntaxNode): boolean {
 
 function isMarkup(node: SyntaxNode | null): boolean {
   return node?.name === 'Markup' || node?.name === 'Typst';
-}
-
-function children(node: SyntaxNode): SyntaxNode[] {
-  const result: SyntaxNode[] = [];
-  for (let child = node.firstChild; child; child = child.nextSibling) result.push(child);
-  return result;
 }

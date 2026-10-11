@@ -56,16 +56,6 @@ export interface Placed {
   to: number;
 }
 
-/** A function call: its `FuncCall` node, the function's name and arguments, and the source it spans (with a `#`). */
-export interface Call {
-  node: SyntaxNode;
-  name: string;
-  /** The children of its `Args` node: `(`, arguments, separators, `)` and trailing content blocks. */
-  args: SyntaxNode[];
-  from: number;
-  to: number;
-}
-
 /**
  * What projectors get to build nodes from Typst syntax: the source, the schema, and the framework's own
  * steps (blocks of a content block, inline content, textblocks that print their source while untouched).
@@ -75,8 +65,6 @@ export interface ProjectionContext {
   readonly source: string;
   /** The source of `range`. */
   text(range: { from: number; to: number }): string;
-  /** `call` (a `FuncCall`) read as a call; `from`..`to` is the call's own source. */
-  call(call: SyntaxNode): Call;
   /** A call (a `FuncCall` without `#`, e.g. a figure's body) as the block its projectors make of it, or null. */
   blockCall(call: SyntaxNode): Node | null;
   /** The blocks of a closed content block `[..]` (an empty paragraph if there are none), and the source they cover. */
@@ -108,8 +96,11 @@ export interface BlockSyntaxProjector {
 /** A run of markup that is exactly `node` (e.g. raw text over several lines): a block, or null. */
 export type RunProjector = (p: ProjectionContext, node: SyntaxNode, sep: string | null) => Node | null;
 
-/** A run that is exactly one `#name(..)` call: the block (checking the arguments first), or null. */
-export type BlockCallProjector = (p: ProjectionContext, call: Call, sep: string | null) => Node | null;
+/**
+ * A run that is exactly one `#name(..)` call (`call`: its `FuncCall`; the run's source is `withHash(call)`), or a call
+ * a spec reads as a block (a figure's body, without `#`): the block (checking the arguments first), or null.
+ */
+export type BlockCallProjector = (p: ProjectionContext, call: SyntaxNode, sep: string | null) => Node | null;
 
 /** One piece of inline syntax: a node showing all of its source, the placed content (marks), or null (raw). */
 export type InlineProjector = (p: ProjectionContext, node: SyntaxNode, marks: readonly Mark[]) => Node | Placed[] | null;
@@ -117,9 +108,9 @@ export type InlineProjector = (p: ProjectionContext, node: SyntaxNode, marks: re
 /** A call after `#` in running text (`#link("url")[text]`). */
 export interface InlineCallProjector {
   /** Whether `call` is this construct's: it then belongs in running text (makes its run a paragraph), even if left raw. */
-  matches(p: ProjectionContext, call: Call): boolean;
+  matches(p: ProjectionContext, call: SyntaxNode): boolean;
   /** The node or placed content, or null to leave the call raw (or to the next projector). */
-  project(p: ProjectionContext, call: Call, marks: readonly Mark[]): Node | Placed[] | null;
+  project(p: ProjectionContext, call: SyntaxNode, marks: readonly Mark[]): Node | Placed[] | null;
 }
 
 /** How a spec reads Typst: by syntax, by call, by the inline syntax it models. */

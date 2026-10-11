@@ -76,7 +76,6 @@ export type {
   BlockLabel,
   BlockPrinter,
   BlockSyntaxProjector,
-  Call,
   InlineCallProjector,
   InlineProjector,
   MarkGrammar,
