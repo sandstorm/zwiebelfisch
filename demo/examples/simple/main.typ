@@ -1,16 +1,7 @@
-#import "@preview/drafting:0.2.2": margin-note, set-margin-note-defaults
+#import "@preview/drafting:0.2.2": margin-note
 #set page(width: 16cm, height: auto, margin: (right: 4cm, rest: 1.5cm))
 #set text(font: "Libertinus Serif", size: 12pt)
 #show link: underline
-#set-margin-note-defaults(
-  stroke: rgb("#e0a800") + 0.5pt,
-  fill: rgb("#fabe1447"),
-  rect: (body, ..args) => rect(radius: 2pt, inset: 3pt, ..args, {
-    set text(size: 8pt)
-    set list(indent: 0pt, body-indent: 0.3em)
-    body
-  }),
-)
 
 = Typst in five minutes
 

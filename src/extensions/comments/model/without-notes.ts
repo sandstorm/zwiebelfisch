@@ -2,7 +2,8 @@
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import type { FileContent } from '../../../core/project/project';
 import type { PdfEntry } from '../../../core/typst-engine/typst-engine';
-import { DRAFTING, noteCallSyntax, SET_DEFAULTS } from './margin-note-syntax';
+import { noteCallSyntax } from './margin-note-syntax';
+import { includingMain, noteDefaultsPrelude } from './note-defaults';
 
 /**
  * The project as compiled for a PDF without comments; the documents
@@ -19,29 +20,15 @@ import { DRAFTING, noteCallSyntax, SET_DEFAULTS } from './margin-note-syntax';
  */
 export function withoutNotes(files: Record<string, FileContent>, main: string): PdfEntry {
   const sources: Record<string, string> = {};
-  let drafting: string | null = null;
   for (const [path, content] of Object.entries(files)) {
     if (typeof content !== 'string' || !path.endsWith('.typ')) continue;
-    drafting ??= draftingImport(content);
     const text = stripNotes(content);
     if (text !== content) sources[path] = text;
   }
-  if (!drafting) return { main, sources };
-  const entry = freePath(files, '/.without-comments.typ');
-  sources[entry] = [
-    `#import "${drafting}": ${SET_DEFAULTS}`,
-    `#${SET_DEFAULTS}(hidden: true)`,
-    `#include "${main.replace(/[\\"]/g, (c) => `\\${c}`)}"`,
-    '',
-  ].join('\n');
-  return { main: entry, sources };
-}
-
-/** The drafting package spec `text` imports, if any. */
-function draftingImport(text: string): string | null {
-  const name = DRAFTING.slice(0, DRAFTING.lastIndexOf(':') + 1);
-  const at = text.indexOf(`"${name}`);
-  return at < 0 ? null : text.slice(at + 1, text.indexOf('"', at + 1));
+  const hide = noteDefaultsPrelude(files, 'hidden: true');
+  if (hide.length === 0) return { main, sources };
+  const entry = includingMain(files, main, '/.without-comments.typ', hide);
+  return { main: entry.main, sources: { ...sources, ...entry.sources } };
 }
 
 /** `text` with every margin note call removed, keeping the text of range notes. */
@@ -73,10 +60,4 @@ function aloneOnItsLine(text: string, from: number, to: number): [number, number
   const end = text.indexOf('\n', to);
   const alone = end >= 0 && !text.slice(start, from).trim() && !text.slice(to, end).trim();
   return alone ? [start, end + 1] : [from, to];
-}
-
-function freePath(files: Record<string, unknown>, path: string): string {
-  let free = path;
-  for (let n = 2; free in files; n++) free = path.replace(/\.typ$/, `-${n}.typ`);
-  return free;
 }

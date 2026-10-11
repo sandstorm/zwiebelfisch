@@ -7,12 +7,11 @@ import { SOURCE_EDITOR } from '../../../hosts/source-editor/source-editor';
 import type { TextEditor } from '../../../hosts/window/window';
 import { VISUAL_EDITOR, VisualEditor, VisualEditorHost } from '../../../hosts/visual-editor/visual-editor';
 import { localDate } from '../model/note-thread';
-import { NOTE_STYLE } from '../model/add-margin-note';
 import { marginNotes } from '../visual-editor/margin-notes';
 import { noteCards } from '../visual-editor/note-cards/note-cards';
 import { ADD_COMMENT, registerAddComment, type CommentContext, type NoteCards } from './workbench';
 
-const IMPORT = `#import "@preview/drafting:0.2.2": margin-note, set-margin-note-defaults\n${NOTE_STYLE}`;
+const IMPORT = '#import "@preview/drafting:0.2.2": margin-note\n';
 
 /** A workbench showing `editor`, with comments.addComment registered: `comment()` runs the command. */
 function setup(editor: TextEditor | null, cards: NoteCards = { editNote: () => false }) {

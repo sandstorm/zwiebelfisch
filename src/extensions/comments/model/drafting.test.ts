@@ -132,7 +132,7 @@ Alpha #margin-note[Beta][Gamma note] Delta#margin-note[Point note] #todo[Helper 
         const at = where(text);
         text = apply(text, calculateMarginNoteChanges(text, SourceRange.of({ from: at, to: at }))!.changes);
       }
-      expect(text.split('set-margin-note-defaults(')).toHaveLength(2);
+      expect(text).not.toContain('set-margin-note-defaults');
       const word = text.indexOf('Typst', text.indexOf('= Typst'));
       text = apply(text, calculateMarginNoteChanges(text, SourceRange.of({ from: word, to: word + 5 }))!.changes);
       expect(text).toMatch(/margin: \(right: 4cm, rest: 1\.5cm\)/);

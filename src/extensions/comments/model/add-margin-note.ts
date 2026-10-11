@@ -1,7 +1,7 @@
 // The source edits for a new margin note (and its import). See comments in ../comments.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
-import { DRAFTING, isNoteCallAt, MARGIN_NOTE, NOTE_HEAD, printNoteCall, rangeNoteSyntax, SET_DEFAULTS } from './margin-note-syntax';
+import { DRAFTING, isNoteCallAt, MARGIN_NOTE, NOTE_HEAD, printNoteCall, rangeNoteSyntax } from './margin-note-syntax';
 import { SourceOffset, type SourceRange, type TextChange } from '../../../core/typst-document/typst-document';
 import { calculateImportChange } from '../../../core/typst-syntax/typst-syntax';
 import { calculatePageMarginChanges } from './page-margin';
@@ -15,9 +15,10 @@ import { calculatePageMarginChanges } from './page-margin';
  * self-contained markup, e.g. half of `*bold*` or two paragraphs) gets a point
  * note `#margin-note[]` at its end. The file imports `margin-note` from
  * `drafting` exactly once afterwards: an existing drafting import is extended,
- * else one is added at the top, together with `NOTE_STYLE` unless the file
- * calls `set-margin-note-defaults` already. Page margins drafting 0.2.2 cannot handle (a
- * single length) get room for notes on the right (see `calculatePageMarginChanges`).
+ * else one is added at the top. The notes' look is not written into the
+ * document: the preview and the PDF set it (NOTE_STYLE in ../preview/preview.ts).
+ * Page margins drafting 0.2.2 cannot handle (a single length) get room for
+ * notes on the right (see `calculatePageMarginChanges`).
  *
  * Null where no note fits (the position is inside code).
  */
@@ -34,22 +35,6 @@ export interface MarginNoteChanges {
   changes: TextChange[];
   note: SourceOffset;
 }
-
-/**
- * drafting's look of notes in the PDF, set right after an import the editor
- * adds: small text in a box tinted like the Visual editor's notes (which is also
- * the range highlight), a thin amber border and connector.
- */
-export const NOTE_STYLE = `#${SET_DEFAULTS}(
-  stroke: rgb("#e0a800") + 0.5pt,
-  fill: rgb("#fabe1447"),
-  rect: (body, ..args) => rect(radius: 2pt, inset: 3pt, ..args, {
-    set text(size: 8pt)
-    set list(indent: 0pt, body-indent: 0.3em)
-    body
-  }),
-)
-`;
 
 /** The note itself: around the formatting the selection starts or ends with, else around the selection as is. */
 function noteEdit(text: string, range: { from: number; to: number }): TextChange[] | null {
@@ -129,13 +114,7 @@ function withImport(text: string, changes: TextChange[]): TextChange[] {
 /** Null when `margin-note` is imported from drafting before `use` already; else the edit that imports it (see `calculateImportChange`). */
 function marginNoteImport(text: string, use: SourceOffset): TextChange | null {
   const version = DRAFTING.slice(0, DRAFTING.lastIndexOf(':') + 1);
-  return calculateImportChange(text, { name: MARGIN_NOTE, matches: (module) => module.startsWith(version), create: () => newImport(text), use });
-}
-
-/** The import added at the top, with `NOTE_STYLE` unless `text` sets note defaults itself. */
-function newImport(text: string): string {
-  if (text.includes(SET_DEFAULTS)) return `#import "${DRAFTING}": ${MARGIN_NOTE}\n`;
-  return `#import "${DRAFTING}": ${MARGIN_NOTE}, ${SET_DEFAULTS}\n${NOTE_STYLE}`;
+  return calculateImportChange(text, { name: MARGIN_NOTE, matches: (module) => module.startsWith(version), create: () => `#import "${DRAFTING}": ${MARGIN_NOTE}\n`, use });
 }
 
 /** Where pre-change `offset` ends up; inserts at `offset` itself go before it. */

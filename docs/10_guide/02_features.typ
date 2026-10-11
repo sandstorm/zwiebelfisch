@@ -358,8 +358,7 @@ Comments are #link("https://typst.app/universe/package/drafting/")[drafting] mar
 Select "grows linearly", press Ctrl+Alt+M (⌘⌥M on Mac), type the note; a co-author replies on the card. The file then holds:
 
 ```typ
-#import "@preview/drafting:0.2.2": margin-note, set-margin-note-defaults
-#set-margin-note-defaults(…)   // the notes' look, added with the first note
+#import "@preview/drafting:0.2.2": margin-note
 
 Cold compile time #margin-note[grows linearly][- *Ada* (2026-10-10): Linear up to 100 pages only? Add the 500-page run.
 - *Grace* (2026-10-11): Running it tonight.] with the page count.
@@ -377,6 +376,7 @@ What Grace sees in the Visual editor: "grows linearly" highlighted with a speech
 - In the text: a note's speech bubble shows its first author and words on hover. The card opens with a click on the bubble or into the highlighted text, or with Alt+Enter (⌥↩ on Mac) at the note. Escape, Close or a click elsewhere closes it; the text gets the focus back. There is no column of cards beside the text: one card at a time floats at its note.
 - On the card: reply (Ctrl+Enter sends, ⌘↩ on Mac), edit your own and unsigned messages, delete your last one, Resolve (deletes the note). A new note's card opens with the focus in its reply box; closing it sends what was typed there. A co-author's reply shows on an open card at once.
 - The preview shows the notes in the page margin; "Comments" in the View menu hides them there (@guide-features-editors).
+- The editor gives the notes their look (small text in an amber box) in the preview and in a PDF with comments; the file holds only the import and the notes. A document's own `#set-margin-note-defaults(…)` wins over it.
 - A page margin given as one length (`#set page(margin: 1.5cm)`) becomes `margin: (right: 4cm, rest: 1.5cm)` with the first note: drafting needs room on the right.
 
 == PDF <guide-features-pdf>

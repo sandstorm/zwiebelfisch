@@ -5,7 +5,7 @@ import { test } from './fixtures';
 import { expect, type Page } from '@playwright/test';
 
 const DRAFTING = readFileSync(resolve(import.meta.dirname, '../../src/extensions/comments/model/fixtures/drafting-0.2.2.tar.gz'));
-const IMPORT = '#import "@preview/drafting:0.2.2": margin-note, set-margin-note-defaults';
+const IMPORT = '#import "@preview/drafting:0.2.2": margin-note';
 
 test.beforeEach(async ({ page }) => {
   // the package comes from the test fixture, not from packages.typst.org
@@ -79,8 +79,8 @@ test('a comment on selected text becomes a range note: highlighted, a marker, a 
 
   await expect.poll(sourceText(page)).toContain(`#margin-note[*stars*][${signed('Check this')}]`);
   expect((await sourceText(page)()).split(IMPORT).length).toBe(2);
-  // drafting's look in the PDF comes with the import, once
-  expect((await sourceText(page)()).split('#set-margin-note-defaults(').length).toBe(2);
+  // the notes' look is the editor's (preview and PDF), not written into the document
+  expect(await sourceText(page)()).not.toContain('set-margin-note-defaults');
   expect(await sourceText(page)()).toContain('margin: (right: 4cm, rest: 1.5cm)');
   // the text ends 4cm before the page edge: whatever is drawn beyond is a note
   await expect.poll(marginGlyphs(page)).toBeGreaterThan(demoNote);

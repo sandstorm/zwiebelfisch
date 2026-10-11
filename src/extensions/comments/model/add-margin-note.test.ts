@@ -1,11 +1,10 @@
 // Tests for add-margin-note.ts.
 import { describe, expect, it } from 'vitest';
 import { SourceRange, type TextChange } from '../../../core/typst-document/typst-document';
-import { calculateMarginNoteChanges, NOTE_STYLE } from './add-margin-note';
+import { calculateMarginNoteChanges } from './add-margin-note';
 
 /** What a file without drafting gets at the top with its first note. */
-const IMPORT = `#import "@preview/drafting:0.2.2": margin-note, set-margin-note-defaults\n${NOTE_STYLE}`;
-const PLAIN_IMPORT = '#import "@preview/drafting:0.2.2": margin-note\n';
+const IMPORT = '#import "@preview/drafting:0.2.2": margin-note\n';
 
 /** Applies `changes` (pre-change coordinates) like TypstDocument.change. */
 function apply(text: string, changes: readonly TextChange[]): string {
@@ -65,15 +64,11 @@ describe('calculateMarginNoteChanges', () => {
     expect(noted(once, once.length - 1)).toBe(`${IMPORT}Hello#margin-note[hi] world#margin-note[|]\n`);
   });
 
-  it('sets the notes\' look once, right after the import it adds', () => {
-    expect(NOTE_STYLE).toMatch(/^#set-margin-note-defaults\(\n[^]*\n\)\n$/);
+  it('imports only margin-note: the notes\' look is not written into the document', () => {
     const once = noted('Hello world\n', 5).replace('|', 'hi');
-    expect(noted(once, once.length - 1).split('set-margin-note-defaults(')).toHaveLength(2);
-  });
-
-  it('leaves a file that sets note defaults itself alone', () => {
+    expect(once).toBe(`${IMPORT}Hello#margin-note[hi] world\n`);
     const own = '#let style = 1\n#set-margin-note-defaults(stroke: blue)\nText\n';
-    expect(noted(own, own.length - 1)).toBe(`${PLAIN_IMPORT}${own.slice(0, -1)}#margin-note[|]\n`);
+    expect(noted(own, own.length - 1)).toBe(`${IMPORT}${own.slice(0, -1)}#margin-note[|]\n`);
     const imported = '#import "@preview/drafting:0.2.2": set-margin-note-defaults\nText\n';
     expect(noted(imported, imported.length - 1)).toBe(
       '#import "@preview/drafting:0.2.2": set-margin-note-defaults, margin-note\nText#margin-note[|]\n',
