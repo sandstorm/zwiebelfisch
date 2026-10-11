@@ -56,6 +56,24 @@ test('a click on an entry runs it', async ({ page }) => {
   await expect.poll(sourceText(page)).not.toContain('/rule');
 });
 
+test('an empty line holding the caret hints "Type / for commands" without taking room; typing removes it', async ({ page }) => {
+  const hint = visual(page).locator('.typst-slash-commands__hint');
+  await expect(hint).toHaveCount(0);
+  const line = visual(page).locator('p').first();
+  const { height } = (await line.boundingBox())!;
+  await newLine(page);
+  await expect(hint).toHaveCount(1);
+  expect(await hint.evaluate((p) => getComputedStyle(p, '::before').content)).toContain('Type / for commands');
+  expect((await hint.boundingBox())!.height).toBeLessThanOrEqual(height + 1); // one line, as an empty one
+  await expect.poll(sourceText(page)).not.toContain('Type /');
+  await page.keyboard.type('x');
+  await expect(hint).toHaveCount(0);
+  await page.keyboard.press('Backspace');
+  await expect(hint).toHaveCount(1);
+  await page.keyboard.press('ArrowUp');
+  await expect(hint).toHaveCount(0);
+});
+
 test('/ in a word or a URL lists nothing', async ({ page }) => {
   await newLine(page);
   await page.keyboard.type('and/or https://typst.app');

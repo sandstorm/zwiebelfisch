@@ -1,19 +1,55 @@
 // The slash-commands extension: `/` at a line start or after a space lists what the Visual view's Insert menu and
-// text style menu offer. Entry of extensions/slash-commands/. Why an extension: it only reads what other extensions
-// register (through the host's completion context), so the list grows with them and it can be left out. See
-// docs/guide/features.typ.
-import type { Editor } from '@tiptap/core';
+// text style menu offer; the empty line holding the cursor says so. Entry of extensions/slash-commands/. Why an
+// extension: it only reads what other extensions register (through the host's completion context), so the list grows
+// with them and it can be left out, hint included. See docs/guide/features.typ.
+import { Extension, type Editor } from '@tiptap/core';
+import { Plugin, type EditorState } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { CompletionItem, CompletionItemProvider, TextStyle, ToolbarAction } from '../../hosts/visual-view/visual-view';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
+import css from './slash-commands.css?inline';
 
-/** Typing `/` offers the Insert menu's entries and the text styles that can apply here. */
+/**
+ * Typing `/` offers the Insert menu's entries and the text styles that can apply here; "Type / for commands" in the
+ * empty line holding the cursor makes that discoverable.
+ */
 export function slashCommands(): TypstExtension {
   return {
     id: 'slash-commands',
-    activate({ visualView, subscriptions }) {
-      subscriptions.push(visualView.registerCompletionItemProvider(SLASH_COMMANDS, { char: '/' }));
+    activate({ workbench, visualView, subscriptions }) {
+      subscriptions.push(
+        workbench.registerStyleSheet(css),
+        visualView.registerCompletionItemProvider(SLASH_COMMANDS, { char: '/' }),
+        visualView.registerTiptapExtension(() => SlashCommandsHint),
+      );
     },
   };
+}
+
+/**
+ * A muted "Type / for commands" in the empty paragraph holding the cursor while the view has focus (as Tiptap's
+ * Placeholder with `showOnlyCurrent`): a node decoration whose `data-hint` CSS draws, so it is never document text.
+ * Decorations are asked for with every state, including the focus and blur transactions Tiptap dispatches.
+ */
+const SlashCommandsHint = Extension.create({
+  name: 'typstSlashCommandsHint',
+  addProseMirrorPlugins() {
+    const editor = this.editor;
+    return [new Plugin({ props: { decorations: (state) => (editor.isFocused && editor.isEditable ? hint(state) : null) } })];
+  },
+});
+
+/** The hint on the selection's paragraph if it is empty; not in table cells, which are too narrow for it. */
+function hint(state: EditorState): DecorationSet | null {
+  const { selection } = state;
+  const { $from } = selection;
+  const paragraph = $from.parent;
+  if (!selection.empty || paragraph.type.name !== 'paragraph' || paragraph.content.size > 0) return null;
+  for (let depth = $from.depth - 1; depth > 0; depth--) if ($from.node(depth).type.spec.tableRole) return null;
+  const pos = $from.before();
+  return DecorationSet.create(state.doc, [
+    Decoration.node(pos, pos + paragraph.nodeSize, { class: 'typst-slash-commands__hint', 'data-hint': 'Type / for commands' }),
+  ]);
 }
 
 /**

@@ -103,3 +103,57 @@ describe('slash commands', () => {
     expect(list.hidden).toBe(true);
   });
 });
+
+describe('the hint "Type / for commands"', () => {
+  /** A focused view of `text` with the cursor after `cursorAfter`, and the paragraphs showing the hint. */
+  function focused(text: string, cursorAfter: string) {
+    const view = setup(text, cursorAfter);
+    view.editor.view.dom.focus();
+    const hints = () => [...view.editor.view.dom.querySelectorAll<HTMLElement>('.typst-slash-commands__hint')];
+    return { ...view, hints };
+  }
+
+  it('shows in the empty paragraph holding the cursor only, never in the document', () => {
+    const { doc, editor, hints } = focused('First\n\nSecond\n', 'First');
+    editor.commands.splitBlock();
+    editor.commands.splitBlock();
+    expect(hints()).toHaveLength(1);
+    expect(hints()[0].tagName).toBe('P');
+    expect(hints()[0].dataset.hint).toBe('Type / for commands');
+    expect(hints()[0].contains(editor.view.domAtPos(editor.state.selection.from).node)).toBe(true);
+    expect(doc.text).not.toContain('Type /');
+  });
+
+  it('goes when something is typed, the cursor leaves the line or the view loses focus', () => {
+    const { editor, hints } = focused('First\n', 'First');
+    editor.commands.splitBlock();
+    expect(hints()).toHaveLength(1);
+    type(editor, 'a');
+    expect(hints()).toHaveLength(0);
+    editor.commands.deleteRange({ from: editor.state.selection.from - 1, to: editor.state.selection.from });
+    expect(hints()).toHaveLength(1);
+    editor.commands.setTextSelection(after(editor.state.doc, 'First'));
+    expect(hints()).toHaveLength(0);
+    editor.commands.setTextSelection(editor.state.doc.content.size - 1);
+    expect(hints()).toHaveLength(1);
+    editor.view.dom.blur();
+    expect(hints()).toHaveLength(0);
+  });
+
+  it('shows in an empty list item', () => {
+    const { editor, hints } = focused('- item\n', 'item');
+    editor.commands.splitListItem('listItem');
+    expect(editor.state.selection.$from.node(-1).type.name).toBe('listItem');
+    expect(hints()).toHaveLength(1);
+  });
+
+  it('does not show in an empty heading, code block or table cell', () => {
+    const { editor, hints } = focused('= Title\n\n```\ncode\n```\n\n#table(columns: 2, [a], [b])\n', 'Title');
+    for (const text of ['Title', 'code', 'a']) {
+      const end = after(editor.state.doc, text);
+      editor.chain().setTextSelection({ from: end - text.length, to: end }).deleteSelection().run();
+      expect(editor.state.selection.$from.parent.content.size).toBe(0);
+      expect(hints()).toHaveLength(0);
+    }
+  });
+});
