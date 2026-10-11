@@ -60,3 +60,27 @@ test('copy puts the Typst of the selection on the clipboard; pasting it reads it
   await paste(page, data);
   await expect(visual(page).locator('p').first().locator('strong', { hasText: 'bold' })).toHaveCount(2);
 });
+
+const MERMAID = '#figure(mermaid("flowchart LR\\n  A --> B"), caption: [Flow])';
+
+test('pasted Typst gets the imports its names need, in the same undo step', async ({ page }) => {
+  await caretAtEnd(visual(page).locator('p').first());
+  const before = await sourceText(page)();
+  await paste(page, { 'text/plain': MERMAID });
+  await expect.poll(sourceText(page)).toMatch(/^#import "@preview\/merman:0\.4\.0": mermaid\n/);
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect.poll(sourceText(page)).toBe(before);
+});
+
+test('the Source editor adds the imports of a paste too', async ({ page }) => {
+  await page.getByRole('tab', { name: 'Source' }).click();
+  const content = page.getByTestId('typst-source').locator('.cm-content');
+  await content.click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await content.evaluate((element, text) => {
+    const data = new DataTransfer();
+    data.setData('text/plain', text);
+    element.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+  }, `\n${MERMAID}\n`);
+  await expect.poll(sourceText(page)).toMatch(/^#import "@preview\/merman:0\.4\.0": mermaid\n[^]*#figure\(mermaid/);
+});

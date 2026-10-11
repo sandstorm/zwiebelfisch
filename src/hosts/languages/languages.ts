@@ -8,12 +8,13 @@ import { linkExtension, primaryLink } from './link-extension';
 
 /**
  * What the widget knows about the languages of texts (VS Code's `languages` namespace, the parts we use): document
- * links, the language of a file, and help sheets.
+ * links, the language of a file, help sheets, and the modules names come from.
  *
  * Finding links is a feature's policy: which paths count, what a missing file offers. Showing and following links is
  * the same in every editor. So extensions register link providers, and every CodeMirror editor (the Source editor,
  * a raw box's code, an extension's own editor) shows the merged links of all providers for its language, knowing none
- * of them. Help works the same way: a language's sheet comes from its extension, the help panel shows it.
+ * of them. Help works the same way: a language's sheet comes from its extension, the help panel shows it; so do known
+ * imports: an extension says where the names of its constructs come from, whoever adds imports reads them.
  *
  * The host knows no language itself. Whoever hands a text over says its language (`languageId`), and the extensions
  * declare which file endings are which language (`contributes.languages`). See docs/30_architecture/07_workbench.typ.
@@ -50,6 +51,21 @@ export interface Languages {
   registerHelpProvider(selector: DocumentSelector, provider: HelpProvider): Disposable;
   /** The help sheets for `languageId` (undefined: a file in no declared language), in registration order. */
   provideHelp(languageId: string | undefined): readonly HelpSheet[];
+  /**
+   * Says where a name that texts of the languages `selector` matches use comes from, until disposed: `mermaid` from
+   * `@preview/merman:0.4.0`. An extension declares the names of its own constructs, so that whoever adds imports
+   * (pasted text that uses the name) knows them without knowing the extension.
+   */
+  registerKnownImport(selector: DocumentSelector, known: KnownImport): Disposable;
+  /** The known imports of `languageId`, in registration order. */
+  provideKnownImports(languageId: string): readonly KnownImport[];
+}
+
+/** A name and the module it is imported from (`mermaid`, `@preview/merman:0.4.0`). */
+export interface KnownImport {
+  readonly name: string;
+  /** The module as an import writes it: a package (`@preview/merman:0.4.0`). */
+  readonly module: string;
 }
 
 /** A language as an extension declares it (VS Code's `contributes.languages` entry). */
@@ -165,6 +181,7 @@ export class LanguagesHost implements Languages {
   readonly #providers: { selector: DocumentSelector; provider: DocumentLinkProvider; priority: number }[] = [];
   readonly #providerOf = new WeakMap<DocumentLink, DocumentLinkProvider>();
   readonly #helpProviders: { selector: DocumentSelector; provider: HelpProvider }[] = [];
+  readonly #knownImports: { selector: DocumentSelector; known: KnownImport }[] = [];
   /** The declared endings (lower case, with the dot) and their language. */
   readonly #endings = new Map<string, string>();
 
@@ -200,6 +217,14 @@ export class LanguagesHost implements Languages {
 
   provideHelp(languageId: string | undefined): readonly HelpSheet[] {
     return this.#helpProviders.filter(({ selector }) => matches(selector, languageId)).map(({ provider }) => provider.provideHelp());
+  }
+
+  registerKnownImport(selector: DocumentSelector, known: KnownImport): Disposable {
+    return add(this.#knownImports, { selector, known });
+  }
+
+  provideKnownImports(languageId: string): KnownImport[] {
+    return this.#knownImports.filter(({ selector }) => matches(selector, languageId)).map(({ known }) => known);
   }
 
   registerDocumentLinkProvider(selector: DocumentSelector, provider: DocumentLinkProvider, options: { priority?: number } = {}): Disposable {

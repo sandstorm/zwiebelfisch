@@ -208,6 +208,17 @@ The built-in sheets:
   [`bibtex` (`.bib`)], [BibTeX], [`text-files`],
 )
 
+== Known imports <extensions-workbench-api-known-imports>
+
+Typst pasted into a file gets the imports it needs (the built-in `imports`). For text copied in the widget, the source file's imports travel along. For text from elsewhere, an extension says where the names of its constructs come from:
+
+```ts
+languages.registerKnownImport({ language: 'typst' }, { name: 'mermaid', module: '@preview/merman:0.4.0' });
+```
+
+- A pasted `mermaid(..)` in a file that neither defines nor imports `mermaid` adds `#import "@preview/merman:0.4.0": mermaid` at the top, or `mermaid` to an import of merman (any version) already there.
+- `languages.provideKnownImports(languageId)`: every matching declaration, in registration order.
+
 == File decorations <extensions-workbench-api-decorations>
 
 `window.registerFileDecorationProvider({ provideFileDecoration(path), onDidChangeFileDecorations })` puts badges on file rows: `FileDecoration { badge?, tooltip?, color?, propagate? }` (`propagate`: also on the closed folders around the file). Several providers may decorate one file. Side panels that list files read `window.getFileDecorations(path)` and `window.getFileIcon(path)`.
