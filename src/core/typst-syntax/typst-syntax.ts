@@ -1,34 +1,26 @@
-// Typst syntax several extensions need, read from the Lezer syntax tree (codemirror-lang-typst): the file paths a
-// text names (`#import`, `#include`, `image(…)`, `read(…)`, …), the reading order they give the project's files, the
-// change that imports a name (calculateImportChange), the names imports bind (importedNames), and reading syntax
-// nodes, calls, string literals and embeddable code as the Visual editor's specs do (children, calleeName,
-// callArguments, namedArgument, trailingContent, hasOnlyArguments, withHash, isClosedContent, decodeString, quote,
-// isEmbeddable, markupSource: plain functions over Lezer nodes, public for every extension). Entry of
-// core/typst-syntax/. See docs/30_architecture/02_core.typ.
-// Why here: extensions never import each other, and this knowledge is about Typst, not about one feature. Only
-// syntax: where a path leads (the project, the file's current path) and what following it does (open, create) is the
-// document-links extension's, and showing links is the hosts' (`languages.registerDocumentLinkProvider` for `typst`); applying
-// a change is the caller's.
+// Entry of core/typst-syntax/. See docs/30_architecture/02_core.typ.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { PathReference, ProjectPath } from '../paths/paths';
 import { SourceOffset, SourceRange, type TextChange } from '../typst-document/typst-document';
-
-/** What names the path: `#import`, `#include`, or the function whose first argument it is. */
-export type PathCall = 'import' | 'include' | 'image' | 'read' | 'json' | 'csv' | 'yaml' | 'toml' | 'xml' | 'cbor' | 'bibliography';
-
-/** A file path written in Typst source, as written (relative to that file, or `/` from the project root); `from..to` is its text (inside the quotes). */
-export interface PathInSource extends SourceRange {
-  /** The path as Typst reads it (escapes decoded). */
-  path: PathReference;
-  call: PathCall;
-}
 
 /**
  * The file paths `text` names, in order: the string of `#import "…"` / `#include "…"` and the first positional
  * argument of `image`, `read`, `json`, `csv`, `yaml`, `toml`, `xml`, `cbor` and `bibliography` (each string of a
  * bibliography array). Package imports, empty strings, computed paths and methods (`image.decode`) are left out.
  * `from` / `to` look at a part only.
+ *
+ * Typst syntax several extensions need, read from the Lezer syntax tree (codemirror-lang-typst): the file paths a text
+ * names (`#import`, `#include`, `image(…)`, `read(…)`, …), the reading order they give the project's files, the change
+ * that imports a name (calculateImportChange), the names imports bind (importedNames), and reading syntax nodes, calls,
+ * string literals and embeddable code as the Visual editor's specs do (children, calleeName, callArguments,
+ * namedArgument, trailingContent, hasOnlyArguments, withHash, isClosedContent, decodeString, quote, isEmbeddable,
+ * markupSource: plain functions over Lezer nodes, public for every extension).
+ *
+ * Why here: extensions never import each other, and this knowledge is about Typst, not about one feature. Only syntax:
+ * where a path leads (the project, the file's current path) and what following it does (open, create) is the
+ * document-links extension's, and showing links is the hosts' (`languages.registerDocumentLinkProvider` for `typst`);
+ * applying a change is the caller's.
  */
 export function findFilePaths(text: string, options: { from?: number; to?: number } = {}): PathInSource[] {
   const found: PathInSource[] = [];
@@ -40,6 +32,16 @@ export function findFilePaths(text: string, options: { from?: number; to?: numbe
     },
   });
   return found;
+}
+
+/** What names the path: `#import`, `#include`, or the function whose first argument it is. */
+export type PathCall = 'import' | 'include' | 'image' | 'read' | 'json' | 'csv' | 'yaml' | 'toml' | 'xml' | 'cbor' | 'bibliography';
+
+/** A file path written in Typst source, as written (relative to that file, or `/` from the project root); `from..to` is its text (inside the quotes). */
+export interface PathInSource extends SourceRange {
+  /** The path as Typst reads it (escapes decoded). */
+  path: PathReference;
+  call: PathCall;
 }
 
 /** The text of the Typst file `path`; undefined when there is none (missing, or not a Typst file). */
@@ -108,25 +110,6 @@ export function importedNames(text: string, use: SourceOffset = SourceOffset.of(
     if (str) names.push(...namesOf(text, node, text.slice(str.from + 1, str.to - 1)));
   }
   return names;
-}
-
-/** The names one `ModuleImport` of `module` binds. */
-function namesOf(text: string, node: SyntaxNode, module: string): ImportedName[] {
-  const items = node.getChild('ImportItems');
-  const star: ImportedName[] = node.getChild('Star') ? [{ module, name: '*', binding: '*' }] : [];
-  const named = (items ? children(items) : []).flatMap((item) => {
-    const parts = itemParts(item);
-    return parts ? [{ module, name: text.slice(parts.path.from, parts.path.to), binding: text.slice(parts.binding.from, parts.binding.to) }] : [];
-  });
-  return [...star, ...named];
-}
-
-/** The name an import item takes from the module and the one it binds (`a as b`: `a`, `b`); null for separators. */
-function itemParts(item: SyntaxNode): { path: SyntaxNode; binding: SyntaxNode } | null {
-  if (item.name === 'ImportItemPath') return { path: item, binding: item };
-  const path = item.name === 'RenamedImportItem' ? item.getChild('ImportItemPath') : null;
-  const binding = item.getChildren('Ident').at(-1);
-  return path && binding ? { path, binding } : null;
 }
 
 // Reading Typst syntax (Lezer nodes of codemirror-lang-typst's grammar) as the Visual editor's parse functions and
@@ -234,6 +217,62 @@ export function markupSource(code: string): string {
   return code.startsWith('$') ? code : `#${code}`;
 }
 
+function pathsOf(node: SyntaxNode, text: string): PathInSource[] {
+  if (node.name === 'ModuleImport' || node.name === 'ModuleInclude') return importPaths(node, text);
+  return node.name === 'FuncCall' ? callPaths(node, text) : [];
+}
+
+/** `import "…"` / `include "…"`. */
+function importPaths(node: SyntaxNode, text: string): PathInSource[] {
+  const string = node.getChild('Str');
+  return string ? onlyFiles([pathIn(string, text, node.name === 'ModuleImport' ? 'import' : 'include')]) : [];
+}
+
+/** Not packages, not empty. */
+function onlyFiles(paths: PathInSource[]): PathInSource[] {
+  return paths.filter((found) => found.path !== '' && !found.path.startsWith('@'));
+}
+
+function pathIn(string: SyntaxNode, text: string, call: PathCall): PathInSource {
+  const from = string.from + 1;
+  const to = Math.max(from, text[string.to - 1] === '"' && string.to - 1 > string.from ? string.to - 1 : string.to);
+  return { path: PathReference.of(unescape(text.slice(from, to))), ...SourceRange.of({ from, to }), call };
+}
+
+function unescape(raw: string): string {
+  return raw.replace(/\\(u\{([0-9a-fA-F]+)\}|.)/g, (all, escape: string, hex?: string) =>
+    hex ? String.fromCodePoint(parseInt(hex, 16)) : (ESCAPES[escape] ?? all),
+  );
+}
+
+const ESCAPES: Record<string, string> = { n: '\n', r: '\r', t: '\t', '"': '"', '\\': '\\' };
+
+/** `image("…")`, `bibliography(("…", "…"))`, …: the first positional argument. */
+function callPaths(node: SyntaxNode, text: string): PathInSource[] {
+  const callee = node.firstChild;
+  const name = callee?.name === 'Ident' ? pathCall(text.slice(callee.from, callee.to)) : null;
+  const first = name ? firstPositional(node.getChild('Args')) : null;
+  if (!name || !first) return [];
+  const strings = first.name === 'Array' && name === 'bibliography' ? first.getChildren('Str') : first.name === 'Str' ? [first] : [];
+  return onlyFiles(strings.map((string) => pathIn(string, text, name)));
+}
+
+function pathCall(callee: string): PathCall | null {
+  return CALLS.has(callee) ? (callee as PathCall) : null;
+}
+
+/** Functions whose first positional argument is a file path. */
+const CALLS: ReadonlySet<string> = new Set<PathCall>(['image', 'read', 'json', 'csv', 'yaml', 'toml', 'xml', 'cbor', 'bibliography']);
+
+function firstPositional(args: SyntaxNode | null): SyntaxNode | null {
+  for (let child = args?.firstChild ?? null; child; child = child.nextSibling) {
+    if (!SYNTAX.has(child.name)) return child.name === 'Named' || child.name === 'Spread' ? null : child;
+  }
+  return null;
+}
+
+const SYNTAX = new Set(['LeftParen', 'RightParen', 'Comma', 'Space', 'LineComment', 'BlockComment']);
+
 /** The main file, then every file it `#include`s, as `neighbours` describes; empty without a main file. */
 function readingOrder(read: ReadText, main: ProjectPath): ProjectPath[] {
   const order: ProjectPath[] = [];
@@ -251,60 +290,9 @@ function readingOrder(read: ReadText, main: ProjectPath): ProjectPath[] {
   return order;
 }
 
-/** Functions whose first positional argument is a file path. */
-const CALLS: ReadonlySet<string> = new Set<PathCall>(['image', 'read', 'json', 'csv', 'yaml', 'toml', 'xml', 'cbor', 'bibliography']);
-
-function pathCall(callee: string): PathCall | null {
-  return CALLS.has(callee) ? (callee as PathCall) : null;
-}
-
-function pathsOf(node: SyntaxNode, text: string): PathInSource[] {
-  if (node.name === 'ModuleImport' || node.name === 'ModuleInclude') return importPaths(node, text);
-  return node.name === 'FuncCall' ? callPaths(node, text) : [];
-}
-
-/** `import "…"` / `include "…"`. */
-function importPaths(node: SyntaxNode, text: string): PathInSource[] {
-  const string = node.getChild('Str');
-  return string ? onlyFiles([pathIn(string, text, node.name === 'ModuleImport' ? 'import' : 'include')]) : [];
-}
-
-/** `image("…")`, `bibliography(("…", "…"))`, …: the first positional argument. */
-function callPaths(node: SyntaxNode, text: string): PathInSource[] {
-  const callee = node.firstChild;
-  const name = callee?.name === 'Ident' ? pathCall(text.slice(callee.from, callee.to)) : null;
-  const first = name ? firstPositional(node.getChild('Args')) : null;
-  if (!name || !first) return [];
-  const strings = first.name === 'Array' && name === 'bibliography' ? first.getChildren('Str') : first.name === 'Str' ? [first] : [];
-  return onlyFiles(strings.map((string) => pathIn(string, text, name)));
-}
-
-const SYNTAX = new Set(['LeftParen', 'RightParen', 'Comma', 'Space', 'LineComment', 'BlockComment']);
-
-function firstPositional(args: SyntaxNode | null): SyntaxNode | null {
-  for (let child = args?.firstChild ?? null; child; child = child.nextSibling) {
-    if (!SYNTAX.has(child.name)) return child.name === 'Named' || child.name === 'Spread' ? null : child;
-  }
-  return null;
-}
-
-function pathIn(string: SyntaxNode, text: string, call: PathCall): PathInSource {
-  const from = string.from + 1;
-  const to = Math.max(from, text[string.to - 1] === '"' && string.to - 1 > string.from ? string.to - 1 : string.to);
-  return { path: PathReference.of(unescape(text.slice(from, to))), ...SourceRange.of({ from, to }), call };
-}
-
-/** Not packages, not empty. */
-function onlyFiles(paths: PathInSource[]): PathInSource[] {
-  return paths.filter((found) => found.path !== '' && !found.path.startsWith('@'));
-}
-
-const ESCAPES: Record<string, string> = { n: '\n', r: '\r', t: '\t', '"': '"', '\\': '\\' };
-
-function unescape(raw: string): string {
-  return raw.replace(/\\(u\{([0-9a-fA-F]+)\}|.)/g, (all, escape: string, hex?: string) =>
-    hex ? String.fromCodePoint(parseInt(hex, 16)) : (ESCAPES[escape] ?? all),
-  );
+function importsModule(text: string, node: SyntaxNode, request: ImportRequest): boolean {
+  const str = node.getChild('Str');
+  return str !== null && request.matches(text.slice(str.from + 1, str.to - 1));
 }
 
 /** For an import of the module: null if it brings `name` already, the edit adding it, or undefined if it cannot take it (`as`). */
@@ -314,11 +302,6 @@ function extend(text: string, node: SyntaxNode, name: string): TextChange | null
   if (items) return addItem(items, name);
   const str = node.getChild('Str')!;
   return str.to === node.to ? insert(str.to, `: ${name}`) : undefined;
-}
-
-function importsModule(text: string, node: SyntaxNode, request: ImportRequest): boolean {
-  const str = node.getChild('Str');
-  return str !== null && request.matches(text.slice(str.from + 1, str.to - 1));
 }
 
 function imports(text: string, items: SyntaxNode, name: string): boolean {
@@ -333,4 +316,23 @@ function addItem(items: SyntaxNode, name: string): TextChange {
 
 function insert(at: number, text: string): TextChange {
   return { from: SourceOffset.of(at), to: SourceOffset.of(at), insert: text };
+}
+
+/** The names one `ModuleImport` of `module` binds. */
+function namesOf(text: string, node: SyntaxNode, module: string): ImportedName[] {
+  const items = node.getChild('ImportItems');
+  const star: ImportedName[] = node.getChild('Star') ? [{ module, name: '*', binding: '*' }] : [];
+  const named = (items ? children(items) : []).flatMap((item) => {
+    const parts = itemParts(item);
+    return parts ? [{ module, name: text.slice(parts.path.from, parts.path.to), binding: text.slice(parts.binding.from, parts.binding.to) }] : [];
+  });
+  return [...star, ...named];
+}
+
+/** The name an import item takes from the module and the one it binds (`a as b`: `a`, `b`); null for separators. */
+function itemParts(item: SyntaxNode): { path: SyntaxNode; binding: SyntaxNode } | null {
+  if (item.name === 'ImportItemPath') return { path: item, binding: item };
+  const path = item.name === 'RenamedImportItem' ? item.getChild('ImportItemPath') : null;
+  const binding = item.getChildren('Ident').at(-1);
+  return path && binding ? { path, binding } : null;
 }

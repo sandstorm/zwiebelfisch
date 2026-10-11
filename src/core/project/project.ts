@@ -1,42 +1,8 @@
-// Project: the one place that knows which files a project has and which changes to them are allowed. One
-// TypstDocument per .typ file (views edit it directly), the other files as bytes, the protected main file.
-// Everyone who derives something from the files (views, indexes, collaboration, the preview) subscribes to
-// `onDidChangeFile` and is never told by hand: `apply`, `replace` and every text edit are reported there.
-// Entry of core/project/. See docs/30_architecture/02_core.typ.
+// Project. Entry of core/project/. See docs/30_architecture/02_core.typ.
 import type { Disposable } from '../disposable/disposable';
 import { EventEmitter, type Event } from '../event-emitter/event-emitter';
 import { TypstDocument } from '../typst-document/typst-document';
 import { ProjectPath } from '../paths/paths';
-
-/** A project file: Typst source text, or bytes (images, data files, …). */
-export type FileContent = string | Uint8Array;
-
-export const FileContent = {
-  /** `content` as bytes: text UTF-8 encoded. */
-  bytes(content: FileContent): Uint8Array {
-    return typeof content === 'string' ? new TextEncoder().encode(content) : content;
-  },
-};
-
-/**
- * Project files by absolute path (`/chapter.typ`, `/img/logo.png`): source text or bytes. The plain data the
- * host and the engine exchange; `Project` parses its keys (see `ProjectPath`).
- */
-export type ProjectFiles = Record<string, FileContent>;
-
-/** One change to the project's files, as the host sees (and may veto) it. */
-export type FileChange =
-  | { kind: 'create'; path: ProjectPath; content: FileContent }
-  /** Text of a Typst file (its document), or the new content of any other file. */
-  | { kind: 'update'; path: ProjectPath; content: FileContent }
-  | { kind: 'delete'; path: ProjectPath }
-  | { kind: 'rename'; path: ProjectPath; from: ProjectPath };
-
-/** The origin of the text edits `apply` and `replace` make: no view's, so every view shows them. */
-const PROJECT_ORIGIN = Symbol('project');
-
-/** A file: a Typst file's document (with the subscription that reports its edits), or any other file's content. */
-type Entry = { kind: 'document'; document: TypstDocument; subscription: Disposable } | { kind: 'content'; content: FileContent };
 
 /**
  * The files of a Typst project. Every `.typ` file is a `TypstDocument` that
@@ -45,6 +11,11 @@ type Entry = { kind: 'document'; document: TypstDocument; subscription: Disposab
  *
  * Listeners hear about every change: structural ones made through `apply`
  * and the text edits of every document.
+ *
+ * The one place that knows which files a project has and which changes to them are allowed. One TypstDocument per .typ
+ * file (views edit it directly), the other files as bytes, the protected main file. Everyone who derives something from
+ * the files (views, indexes, collaboration, the preview) subscribes to `onDidChangeFile` and is never told by hand:
+ * `apply`, `replace` and every text edit are reported there.
  */
 export class Project {
   private readonly entries = new Map<ProjectPath, Entry>();
@@ -211,13 +182,43 @@ export class Project {
   }
 }
 
+/** A project file: Typst source text, or bytes (images, data files, …). */
+export type FileContent = string | Uint8Array;
+
+export const FileContent = {
+  /** `content` as bytes: text UTF-8 encoded. */
+  bytes(content: FileContent): Uint8Array {
+    return typeof content === 'string' ? new TextEncoder().encode(content) : content;
+  },
+};
+
+/**
+ * Project files by absolute path (`/chapter.typ`, `/img/logo.png`): source text or bytes. The plain data the
+ * host and the engine exchange; `Project` parses its keys (see `ProjectPath`).
+ */
+export type ProjectFiles = Record<string, FileContent>;
+
+/** One change to the project's files, as the host sees (and may veto) it. */
+export type FileChange =
+  | { kind: 'create'; path: ProjectPath; content: FileContent }
+  /** Text of a Typst file (its document), or the new content of any other file. */
+  | { kind: 'update'; path: ProjectPath; content: FileContent }
+  | { kind: 'delete'; path: ProjectPath }
+  | { kind: 'rename'; path: ProjectPath; from: ProjectPath };
+
+/** A file: a Typst file's document (with the subscription that reports its edits), or any other file's content. */
+type Entry = { kind: 'document'; document: TypstDocument; subscription: Disposable } | { kind: 'content'; content: FileContent };
+
+function checkContent(path: ProjectPath, content: FileContent): string | null {
+  return ProjectPath.isTypst(path) && typeof content !== 'string' ? 'A .typ file must contain text.' : null;
+}
+
+/** The origin of the text edits `apply` and `replace` make: no view's, so every view shows them. */
+const PROJECT_ORIGIN = Symbol('project');
+
 /** A key of host-given `ProjectFiles` as a path; a key that is none is the host's mistake, so it throws. */
 function parseKey(key: string): ProjectPath {
   const path = ProjectPath.parse(key);
   if (path === null) throw new Error(`Not a project path: "${key}" (paths start with "/", without "." or ".." segments)`);
   return path;
-}
-
-function checkContent(path: ProjectPath, content: FileContent): string | null {
-  return ProjectPath.isTypst(path) && typeof content !== 'string' ? 'A .typ file must contain text.' : null;
 }

@@ -1,19 +1,14 @@
-// Uploads: files from the computer (picked or dropped) become project changes, parsed at the edge: a name becomes a
-// ProjectPath at the top of the project, the kind decides text or bytes. Entry of core/uploads/. Used by the file
-// panel (extensions/files) and image uploads (extensions/images). See docs/30_architecture/02_core.typ.
+// Uploads. Entry of core/uploads/. See docs/30_architecture/02_core.typ.
 import { type FileChange } from '../project/project';
 import { ProjectPath } from '../paths/paths';
-
-/** A file from the computer, as far as uploads read it (a DOM `File` is one; core names no DOM type). */
-export interface UploadedFile {
-  readonly name: string;
-  text(): Promise<string>;
-  arrayBuffer(): Promise<ArrayBuffer>;
-}
 
 /**
  * The create changes for uploaded files: each at the top of the project under its name (`/` and `\` replaced by
  * `_`; a name like `..` is left out), `.typ` files as text, everything else as bytes.
+ *
+ * Files from the computer (picked or dropped) become project changes, parsed at the edge: a name becomes a ProjectPath
+ * at the top of the project, the kind decides text or bytes. Used by the file panel (extensions/files) and image
+ * uploads (extensions/images).
  */
 export async function uploadChanges(files: readonly UploadedFile[]): Promise<FileChange[]> {
   const changes = await Promise.all(
@@ -25,4 +20,11 @@ export async function uploadChanges(files: readonly UploadedFile[]): Promise<Fil
     }),
   );
   return changes.filter((change) => change !== null);
+}
+
+/** A file from the computer, as far as uploads read it (a DOM `File` is one; core names no DOM type). */
+export interface UploadedFile {
+  readonly name: string;
+  text(): Promise<string>;
+  arrayBuffer(): Promise<ArrayBuffer>;
 }

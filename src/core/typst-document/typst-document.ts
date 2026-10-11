@@ -1,46 +1,5 @@
-// TypstDocument: the single source of truth of one Typst file's text. Entry of core/typst-document/. See
-// docs/30_architecture/02_core.typ.
-// Why no collaboration here: sharing the text (Yjs) is the collaboration extension's. It binds a Y.Text to a
-// document from outside, like y-codemirror binds one to an editor: local changes go into the Y.Text, and edits
-// arriving through it come back through `change`, with an origin of its own.
+// TypstDocument. Entry of core/typst-document/. See docs/30_architecture/02_core.typ.
 import { EventEmitter, type Event } from '../event-emitter/event-emitter';
-
-/**
- * An offset into a Typst document's text, in UTF-16 code units (as Lezer, CodeMirror and string indices count). Not a
- * position in the Visual editor's ProseMirror document: the Typst ↔ ProseMirror conversion's `sourceToPos` / `posToSource` convert.
- */
-export type SourceOffset = number & { readonly __type: 'SourceOffset' };
-
-/** A stretch `from..to` of a Typst document's text. */
-export interface SourceRange {
-  readonly from: SourceOffset;
-  readonly to: SourceOffset;
-}
-
-export const SourceOffset = {
-  /** `value`, counted in the text itself (a string index, a Lezer node's or a CodeMirror position), as an offset. */
-  of(value: number): SourceOffset {
-    return value as SourceOffset;
-  },
-};
-
-export const SourceRange = {
-  /** `range` (a Lezer node, a CodeMirror selection, two string indices) as a source range. */
-  of(range: { readonly from: number; readonly to: number }): SourceRange {
-    return { from: range.from as SourceOffset, to: range.to as SourceOffset };
-  },
-};
-
-/** A replacement of `from..to` by `insert`: the one edit format of the widget (CodeMirror's ChangeSpec shape). */
-export interface TextChange extends SourceRange {
-  readonly insert: string;
-}
-
-/** What `TypstDocument.onDidChange` tells: the changes (coordinates of the text before them) and who made them. */
-export interface TypstDocumentChangeEvent {
-  readonly contentChanges: readonly TextChange[];
-  readonly origin: unknown;
-}
 
 /**
  * The Typst source text: the single source of truth every view derives from.
@@ -51,6 +10,12 @@ export interface TypstDocumentChangeEvent {
  * Every listener hears every change in the order the changes were made, also
  * when a listener changes the document while it is told about a change (that
  * change is told once everyone has heard the first one).
+ *
+ * The single source of truth of one Typst file's text.
+ *
+ * Why no collaboration here: sharing the text (Yjs) is the collaboration extension's. It binds a Y.Text to a document
+ * from outside, like y-codemirror binds one to an editor: local changes go into the Y.Text, and edits arriving through
+ * it come back through `change`, with an origin of its own.
  */
 export class TypstDocument {
   private current: string;
@@ -103,6 +68,43 @@ export class TypstDocument {
       this.queued.length = 0;
     }
   }
+}
+
+/**
+ * An offset into a Typst document's text, in UTF-16 code units (as Lezer, CodeMirror and string indices count). Not a
+ * position in the Visual editor's ProseMirror document: the Typst ↔ ProseMirror conversion's `sourceToPos` / `posToSource` convert.
+ */
+export type SourceOffset = number & { readonly __type: 'SourceOffset' };
+
+export const SourceOffset = {
+  /** `value`, counted in the text itself (a string index, a Lezer node's or a CodeMirror position), as an offset. */
+  of(value: number): SourceOffset {
+    return value as SourceOffset;
+  },
+};
+
+/** A stretch `from..to` of a Typst document's text. */
+export interface SourceRange {
+  readonly from: SourceOffset;
+  readonly to: SourceOffset;
+}
+
+export const SourceRange = {
+  /** `range` (a Lezer node, a CodeMirror selection, two string indices) as a source range. */
+  of(range: { readonly from: number; readonly to: number }): SourceRange {
+    return { from: range.from as SourceOffset, to: range.to as SourceOffset };
+  },
+};
+
+/** A replacement of `from..to` by `insert`: the one edit format of the widget (CodeMirror's ChangeSpec shape). */
+export interface TextChange extends SourceRange {
+  readonly insert: string;
+}
+
+/** What `TypstDocument.onDidChange` tells: the changes (coordinates of the text before them) and who made them. */
+export interface TypstDocumentChangeEvent {
+  readonly contentChanges: readonly TextChange[];
+  readonly origin: unknown;
 }
 
 /**

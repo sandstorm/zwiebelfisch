@@ -1,17 +1,14 @@
-// Paths: how project files are named and what they are. Two types keep apart what plain strings mixed up: a
-// ProjectPath (where a file is in the project) and a PathReference (a path as written in Typst source, which means
-// something only relative to its file). Branded strings: free at runtime, usable as keys, unchanged across
-// postMessage, Yjs and the server; the compiler refuses one where the other is meant.
-// Entry of core/paths/. See docs/30_architecture/02_core.typ.
+// Paths. Entry of core/paths/. See docs/30_architecture/02_core.typ.
 
-/** An absolute path in the project: `/` and then segments (`/chapters/intro.typ`), never `.`, `..` or empty ones. */
+/**
+ * An absolute path in the project: `/` and then segments (`/chapters/intro.typ`), never `.`, `..` or empty ones.
+ *
+ * How project files are named and what they are. Two types keep apart what plain strings mixed up: a ProjectPath (where
+ * a file is in the project) and a PathReference (a path as written in Typst source, which means something only relative
+ * to its file). Branded strings: free at runtime, usable as keys, unchanged across postMessage, Yjs and the server; the
+ * compiler refuses one where the other is meant.
+ */
 export type ProjectPath = string & { readonly __type: 'ProjectPath' };
-
-/** A path as written in Typst source (`img/logo.png`, `../template.typ`, `/data.csv`): relative to the file it is in. */
-export type PathReference = string & { readonly __type: 'PathReference' };
-
-/** A typed name as a path (`ProjectPath.fromName`), or what is wrong with it, for the user. */
-export type NamedPath = { readonly kind: 'valid'; readonly path: ProjectPath } | { readonly kind: 'invalid'; readonly error: string };
 
 export const ProjectPath = {
   /** `value` as a project path; null when it is none (relative, `..`, empty segments, a backslash). */
@@ -105,9 +102,15 @@ export const ProjectPath = {
   },
 };
 
+/** A path as written in Typst source (`img/logo.png`, `../template.typ`, `/data.csv`): relative to the file it is in. */
+export type PathReference = string & { readonly __type: 'PathReference' };
+
 export const PathReference = {
   /** `written`, a path as it stands in Typst source (any string is one; it is resolved against its file). */
   of(written: string): PathReference {
     return written as PathReference;
   },
 };
+
+/** A typed name as a path (`ProjectPath.fromName`), or what is wrong with it, for the user. */
+export type NamedPath = { readonly kind: 'valid'; readonly path: ProjectPath } | { readonly kind: 'invalid'; readonly error: string };

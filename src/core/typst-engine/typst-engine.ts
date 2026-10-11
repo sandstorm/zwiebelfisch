@@ -4,29 +4,6 @@ import { ProjectPath } from '../paths/paths';
 import { type SourceOffset, SourceRange } from '../typst-document/typst-document';
 import init, { Engine as WasmEngine, type InitInput } from './wasm/typst_engine';
 
-// Asset URLs (wasm, default fonts and their index) are core/engine-assets, not here: the worker imports this file.
-// Packages (@preview/…) are core/typst-packages.
-
-/** A page of a compiled document, counted from 0 as the engine does; people see page numbers (`index + 1`). */
-export type PageIndex = number & { readonly __type: 'PageIndex' };
-
-/** A length in Typst points (1/72 inch), as the engine measures pages, from a page's top-left corner. */
-export type Pt = number & { readonly __type: 'Pt' };
-
-export const PageIndex = {
-  /** `value`, counted from 0, as a page index. */
-  of(value: number): PageIndex {
-    return value as PageIndex;
-  },
-};
-
-export const Pt = {
-  /** `value`, in points, as a length. */
-  of(value: number): Pt {
-    return value as Pt;
-  },
-};
-
 /**
  * The Typst compiler, SVG renderer and preview hit-testing (Rust → wasm).
  *
@@ -34,6 +11,9 @@ export const Pt = {
  * `@preview/name:0.1.0/lib.typ` (see `withPackages`). Offsets are UTF-16 code units,
  * pages are 0-based, and coordinates are points from the page's top-left.
  * The engine keeps the last successfully compiled document for hit-testing.
+ *
+ * Asset URLs (wasm, default fonts and their index) are core/engine-assets, not here: the worker imports this file.
+ * Packages (@preview/…) are core/typst-packages.
  */
 export interface TypstEngine {
   /** Adds all faces of an OpenType/TrueType font (or collection). Throws if `data` is no font. */
@@ -71,6 +51,26 @@ export interface TypstEngine {
    */
   boxesForRanges(path: string, ranges: readonly SourceRange[]): PageRect[];
 }
+
+/** A page of a compiled document, counted from 0 as the engine does; people see page numbers (`index + 1`). */
+export type PageIndex = number & { readonly __type: 'PageIndex' };
+
+export const PageIndex = {
+  /** `value`, counted from 0, as a page index. */
+  of(value: number): PageIndex {
+    return value as PageIndex;
+  },
+};
+
+/** A length in Typst points (1/72 inch), as the engine measures pages, from a page's top-left corner. */
+export type Pt = number & { readonly __type: 'Pt' };
+
+export const Pt = {
+  /** `value`, in points, as a length. */
+  of(value: number): Pt {
+    return value as Pt;
+  },
+};
 
 export interface CompileResult {
   /** Empty when compilation failed. */

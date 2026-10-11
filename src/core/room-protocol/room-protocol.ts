@@ -1,10 +1,13 @@
-// The protocol of the rooms (the Y.Doc's maps) and of GitLab-backed rooms (stateless messages, file URLs), shared
-// by the widget (the collaboration extension) and the collaboration server (server/src). Entry of
-// core/room-protocol/. In core, not in the collaboration extension, because the server's code imports it (and
-// nothing else of the widget). No imports: the server's Node runtime loads this file directly.
-// See docs/30_architecture/09_server.typ.
+// Entry of core/room-protocol/. See docs/30_architecture/09_server.typ.
 
-/** The Y.Doc map of the shared Typst files: path → Y.Text (see SharedProject; the server reads and merges them). */
+/**
+ * The Y.Doc map of the shared Typst files: path → Y.Text (see SharedProject; the server reads and merges them).
+ *
+ * The protocol of the rooms (the Y.Doc's maps) and of GitLab-backed rooms (stateless messages, file URLs), shared by
+ * the widget (the collaboration extension) and the collaboration server (server/src). In core, not in the collaboration
+ * extension, because the server's code imports it (and nothing else of the widget). No imports: the server's Node
+ * runtime loads this file directly.
+ */
 export const FILES_MAP = 'files';
 
 /** Room names of GitLab-backed rooms: `gitlab:<project id or path>@<branch>`. */
