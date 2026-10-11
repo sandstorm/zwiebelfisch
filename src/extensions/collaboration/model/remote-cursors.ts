@@ -62,7 +62,7 @@ export class RemoteCursors {
     this.awareness.setLocalStateField('cursor', cursor);
   }
 
-  destroy(): void {
+  dispose(): void {
     this.destroyed = true;
     this.awareness.off('change', this.schedule);
     this.awareness.doc.off('update', this.schedule);

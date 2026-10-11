@@ -95,7 +95,7 @@ describe('EditingViews', () => {
     expect(parent.querySelector<HTMLElement>('.typst-editor__tabs')!.hidden).toBe(true);
   });
 
-  it('destroys the views of documents that are gone', () => {
+  it('disposes the views of documents that are gone', () => {
     const { parent, views, a, b } = setup('source');
     views.show(a);
     views.show(b);

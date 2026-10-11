@@ -51,9 +51,9 @@ async function user(name: string, files: Record<string, string>, peer?: { ydoc: 
   const source = sourceViews.createView(sourceParent, document);
   cleanup.push(() => {
     disconnect();
-    collaboration.destroy();
-    visual.destroy();
-    source.destroy();
+    collaboration.dispose();
+    visual.dispose();
+    source.dispose();
     awareness.destroy();
   });
   const tiptap = (visualParent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;

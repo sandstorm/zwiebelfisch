@@ -177,7 +177,7 @@ export class FilePanel {
     await this.request(files.map((file) => ({ kind: 'delete', path: file })), this.state.main);
   }
 
-  destroy(): void {
+  dispose(): void {
     this.menu?.close();
     this.element.remove();
   }

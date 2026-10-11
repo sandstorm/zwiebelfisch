@@ -22,7 +22,7 @@ vi.mock('../preview/preview', async (importOriginal) => ({
       this.toolbarItems.push(item);
       return new Disposable(() => this.toolbarItems.splice(this.toolbarItems.indexOf(item), 1));
     }
-    destroy() {}
+    dispose() {}
   },
 }));
 
@@ -80,7 +80,7 @@ describe('WorkbenchHost', () => {
     expect(workbench.activeFile).toBe('/main.typ');
   });
 
-  it('puts side panels and status bar items into the frame, and takes them out on destroy', () => {
+  it('puts side panels and status bar items into the frame, and takes them out on dispose', () => {
     const { host, workbench } = setup(({ workbench, subscriptions }) => {
       const doc = workbench.ownerDocument;
       const panel = workbench.registerSidePanel('outline', { label: 'Outline', icon: doc.createElement('span') });
@@ -92,7 +92,7 @@ describe('WorkbenchHost', () => {
     });
     expect(host.querySelector('[data-panel=outline]')!.textContent).toBe('outline');
     expect(host.querySelector('.typst-editor__status-bar')!.textContent).toBe('status');
-    workbench.destroy();
+    workbench.dispose();
     expect(host.children).toHaveLength(0);
   });
 
@@ -213,7 +213,7 @@ describe('WorkbenchHost', () => {
     workbench.open(path('/a.typ'));
     expect(host.querySelectorAll('.cm-editor.contributed')).toHaveLength(2);
     expect((preview as unknown as { toolbarItems: unknown[] }).toolbarItems).toEqual([item]);
-    workbench.destroy();
+    workbench.dispose();
     expect((preview as unknown as { toolbarItems: unknown[] }).toolbarItems).toEqual([]);
   });
 

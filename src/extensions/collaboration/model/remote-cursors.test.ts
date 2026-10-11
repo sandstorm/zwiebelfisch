@@ -19,7 +19,7 @@ function client(name: string, ydoc = new Y.Doc()) {
   const text = (path: string) => ydoc.getMap<Y.Text>('files').get(path);
   const everywhere: (readonly PlacedPresence[])[] = [];
   const cursors = new RemoteCursors(awareness, { user: { name, color: '#c00' }, text, onPresence: (all) => everywhere.push(all) });
-  cleanup.push(() => cursors.destroy(), () => awareness.destroy());
+  cleanup.push(() => cursors.dispose(), () => awareness.destroy());
   return { ydoc, awareness, cursors, everywhere };
 }
 

@@ -43,7 +43,7 @@ interface Saved {
  * The embed protocol of one opened diagram, with auto-save: `init` → `load` (the file as `xmlpng`, `autosave: 1`);
  * every `autosave` (and `save`) → `export` as `xmlpng` (one at a time: changes during an export ask for one more
  * afterwards); every exported PNG is saved `delay` ms after the last one (the last export wins). `flush` (the file
- * is closed, the widget destroyed) saves the pending export at once, and a diagram changed since the last export
+ * is closed, the widget disposed) saves the pending export at once, and a diagram changed since the last export
  * into the last PNG (its picture follows with the next export).
  */
 export class EmbedSession {

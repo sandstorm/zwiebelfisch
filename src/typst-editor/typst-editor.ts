@@ -120,7 +120,7 @@ export interface TypstEditor {
    * problem when the document has errors.
    */
   exportPdf(options?: PdfExportOptions): Promise<Blob>;
-  destroy(): void;
+  dispose(): void;
 }
 
 /**
@@ -180,10 +180,10 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
     },
     executeCommand: (id, ...args) => workbench.executeCommand(id, ...args),
     exportPdf: (pdf = {}) => workbench.executeCommand('pdfExport.export', pdf.options),
-    destroy: () => {
+    dispose: () => {
       subscription.dispose();
-      workbench.destroy();
-      project.destroy();
+      workbench.dispose();
+      project.dispose();
     },
   };
 }

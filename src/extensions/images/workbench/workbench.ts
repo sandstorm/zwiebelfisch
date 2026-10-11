@@ -8,6 +8,6 @@ export const assetEditor: CustomEditorProvider = {
   resolveCustomEditor(document, panel) {
     const view = new AssetView(panel.element);
     view.show(document.path, document.content);
-    panel.onDidDispose(() => view.destroy());
+    panel.onDidDispose(() => view.dispose());
   },
 };

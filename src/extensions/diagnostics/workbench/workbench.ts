@@ -55,7 +55,7 @@ export class DiagnosticsStatus {
     this.details.hidden = summary.inFile.length === 0;
   }
 
-  destroy(): void {
+  dispose(): void {
     this.element.remove();
   }
 

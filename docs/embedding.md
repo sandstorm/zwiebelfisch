@@ -105,7 +105,7 @@ const editor = createTypstEditor(host, {
 
 editor.source;               // the main file's current text
 editor.source = '= New\n';   // replace (minimal edit, reported to onFilesChange as an update)
-editor.destroy();
+editor.dispose();
 ```
 
 `source` is a shortcut for the main file's text, for hosts with a single file. Everything else
@@ -442,7 +442,7 @@ Your own extensions declare settings the same way (section 7).
 Everything the editor does beyond its frame is an **extension**, the built-in features too: an object with an
 `id` and an `activate(context)` that registers what it adds (a status bar item, a preview toolbar item, a PDF
 export option, a command, …) and pushes each registration into `context.subscriptions`, which the editor disposes
-on `destroy`. The names and shapes are VS Code's (`registerCommand`, `onDidChange…`, `Disposable`,
+on `dispose`. The names and shapes are VS Code's (`registerCommand`, `onDidChange…`, `Disposable`,
 `getConfiguration`). Give the editor your extensions through `extensions`, a function that makes the list from the
 built-in ones:
 
@@ -501,7 +501,7 @@ What `activate` gets (`ExtensionContext`; every type is exported from the packag
 
 | | |
 |---|---|
-| `subscriptions` | Push every registration here; disposed on `destroy`, in reverse order. |
+| `subscriptions` | Push every registration here; disposed on `dispose`, in reverse order. |
 | `project` | The files: `files()`, `document(path)` (a Typst file's text), `onDidChangeFile` (an `Event<FileChange>`: subscribing returns a `Disposable`). |
 | `workspace` | The settings: `getConfiguration('<section>').get('<key>')`, `onDidChangeConfiguration`. |
 | `workbench` | The frame: `registerStatusBarItem(element, { alignment, priority })` (VS Code's: `'left'` or `'right'`, a higher priority further left within its side), `registerSidePanel`, `registerMenuItem`, `registerStyleSheet` (your CSS, inside the shadow root too), `registerCommand` / `executeCommand` / `registerKeybinding`, `showInformationMessage` / `showWarningMessage` / `showErrorMessage`, `showInputBox`, `showQuickPick`, `registerDocumentLinkProvider`, `registerFileDecorationProvider`, `registerSourceControl`, `registerCustomEditorProvider` (an editor for files by name pattern and priority, VS Code's custom editors), `open(path, { viewType? })`, `applyChange(change)`, `activeTextEditor`, `onDidChangeTextEditorSelection`, `user`. |

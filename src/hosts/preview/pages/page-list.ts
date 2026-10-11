@@ -91,7 +91,7 @@ export class PageList {
     return this.entries.map((entry) => entry.element);
   }
 
-  destroy(): void {
+  dispose(): void {
     this.observer?.disconnect();
     for (const entry of this.entries.splice(0)) entry.element.remove();
   }

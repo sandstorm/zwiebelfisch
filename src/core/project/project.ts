@@ -127,7 +127,7 @@ export class Project {
     for (const [path, content] of next) this.put(path, content);
   }
 
-  destroy(): void {
+  dispose(): void {
     for (const path of [...this.entries.keys()]) this.remove(path);
     this.changed.dispose();
   }

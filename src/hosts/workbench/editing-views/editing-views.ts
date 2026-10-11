@@ -171,8 +171,8 @@ export class EditingViews {
 
   private drop(document: TypstDocument): void {
     const views = this.views.get(document)!;
-    views.visual.destroy();
-    views.source.destroy();
+    views.visual.dispose();
+    views.source.dispose();
     views.panes.visual.remove();
     views.panes.source.remove();
     this.views.delete(document);

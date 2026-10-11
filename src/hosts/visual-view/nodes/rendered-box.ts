@@ -66,7 +66,7 @@ export class RenderedBox {
     if (this.renderer.followsEdits) void this.refresh();
   }
 
-  destroy(): void {
+  dispose(): void {
     this.subscription.dispose();
     this.requests++;
   }

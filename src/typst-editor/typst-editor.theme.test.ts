@@ -16,7 +16,7 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => ({
     registerToolbarItem = () => ({ dispose() {} });
     registerPdfExportOption = () => ({ dispose() {} });
     pdfExportOptions = () => [];
-    destroy() {}
+    dispose() {}
   },
 }));
 
@@ -41,7 +41,7 @@ describe('the setting workbench.theme', () => {
 
   it('is removed with the widget', () => {
     const { host, editor } = mount('auto');
-    editor.destroy();
+    editor.dispose();
     expect(host.dataset.theme).toBeUndefined();
   });
 });

@@ -33,7 +33,7 @@ export class AssetView {
     this.root.replaceChildren(title, this.body(path, content));
   }
 
-  destroy(): void {
+  dispose(): void {
     this.release();
     this.root.remove();
   }

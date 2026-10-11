@@ -9,7 +9,7 @@ import { followColorScheme } from './color-scheme';
 
 /** A mounted workbook; edits are reported through the `onEdit` given to `mountWorkbook`. */
 export interface MountedWorkbook {
-  destroy(): void;
+  dispose(): void;
 }
 
 /** What an edit produced: the file's new bytes and its Typst file (see `spreadsheetTypst`). */
@@ -59,7 +59,7 @@ export async function mountWorkbook(
   const events = ['keyup', 'pointerup', 'paste', 'cut', 'drop', 'change', 'focusout'];
   for (const type of events) container.addEventListener(type, check, true);
   return {
-    destroy: () => {
+    dispose: () => {
       clearTimeout(timer);
       for (const type of events) container.removeEventListener(type, check, true);
       root.unmount();

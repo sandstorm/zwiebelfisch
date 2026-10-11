@@ -73,7 +73,7 @@ describe('VisualViewContributions.registerHighlights', () => {
     expect(parent.querySelector('.marked')?.textContent).toBe('Hello');
     changed.fire(doc);
     expect(parent.querySelector('.marked')?.textContent).toBe('world');
-    view.destroy();
+    view.dispose();
     expect(changed.hasListeners).toBe(false);
   });
 
@@ -129,7 +129,7 @@ describe('VisualView contexts', () => {
     doc.descendants((node) => void (context.isBox(node) && boxes.push(node.type.name)));
     seen.push({ pos: context.sourceToPos(doc, source.indexOf('llo')), offset: context.posToSource(doc, 3), boxes });
     expect(seen).toEqual([{ pos: 3, offset: 2, boxes: ['rawBlock'] }]);
-    view.destroy();
+    view.dispose();
   });
 
   it("gives a raw box's code its decorations (setBoxDecorations), when made and on every update", () => {
@@ -147,6 +147,6 @@ describe('VisualView contexts', () => {
     expect(given).toEqual([0]);
     doc.setText('Intro\n\n#set page(width: 12cm)\n', 'test');
     expect(given).toEqual([0, 0]);
-    view.destroy();
+    view.dispose();
   });
 });

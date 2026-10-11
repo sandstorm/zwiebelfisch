@@ -103,7 +103,7 @@ export class ImageTools implements BoxTools {
     for (const [i, button] of this.presetButtons.entries()) button.setAttribute('aria-pressed', String(info?.width === `${PRESETS[i]}%`));
   }
 
-  destroy(): void {
+  dispose(): void {
     this.stopDrag?.();
   }
 

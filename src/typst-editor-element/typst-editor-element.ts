@@ -141,7 +141,7 @@ export class TypstEditorElement extends Base() {
       this.#files = this.#editor.files;
       this.#settings = this.#editor.settings;
     }
-    this.#editor?.destroy();
+    this.#editor?.dispose();
     this.#editor = null;
     this.shadowRoot?.replaceChildren();
   }

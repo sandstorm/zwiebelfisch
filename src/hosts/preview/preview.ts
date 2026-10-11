@@ -82,7 +82,7 @@ export interface ToolbarItemView {
   readonly elements: readonly HTMLElement[];
   /** Called (at most once per frame) after the view changed: scrolled, resized, zoomed, new pages. */
   update?(): void;
-  /** Called when the item is unregistered or the preview destroyed; the toolbar removes `elements`. */
+  /** Called when the item is unregistered or the preview disposed; the toolbar removes `elements`. */
   dispose?(): void;
 }
 
@@ -316,7 +316,7 @@ export class Preview implements PreviewContributions {
     };
   }
 
-  destroy(): void {
+  dispose(): void {
     this.rendered.dispose();
     this.diagnosed.dispose();
     this.clicked.dispose();
@@ -324,7 +324,7 @@ export class Preview implements PreviewContributions {
     this.worker.terminate();
     this.resizeObserver?.disconnect();
     cancelAnimationFrame(this.frame);
-    this.list.destroy();
+    this.list.dispose();
     this.pane.remove();
   }
 

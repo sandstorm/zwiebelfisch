@@ -31,7 +31,7 @@ export function spreadsheets(): TypstExtension {
             resolveCustomEditor(document, panel) {
               const view = new SpreadsheetView(panel.element, (path, edit) => save(project, workbench, path, edit));
               void view.show(document.path, document.content);
-              panel.onDidDispose(() => view.destroy());
+              panel.onDidDispose(() => view.dispose());
             },
           },
           { filenamePattern: '*.ic' },

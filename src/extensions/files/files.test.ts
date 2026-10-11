@@ -12,7 +12,7 @@ vi.mock('../../hosts/preview/preview', async (importOriginal) => ({
   Preview: class {
     update() {}
     onDidRender = () => new Disposable(() => {});
-    destroy() {}
+    dispose() {}
   },
 }));
 

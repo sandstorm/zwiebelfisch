@@ -69,7 +69,7 @@ export class SharedProject {
   }
 
   /** Stops sharing; the documents keep their text. */
-  destroy(): void {
+  dispose(): void {
     this.subscription.dispose();
     this.files.unobserve(this.onRemote);
     for (const document of [...this.bindings.keys()]) this.unbind(document);

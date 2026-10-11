@@ -46,7 +46,7 @@ beforeEach(() => {
   list = new PageList(parent, { root: parent });
 });
 afterEach(() => {
-  list.destroy();
+  list.dispose();
   parent.remove();
   delete (globalThis as { IntersectionObserver?: unknown }).IntersectionObserver;
 });
@@ -116,7 +116,7 @@ describe('PageList', () => {
   });
 
   it('renders everything when IntersectionObserver is unavailable', () => {
-    list.destroy();
+    list.dispose();
     delete (globalThis as { IntersectionObserver?: unknown }).IntersectionObserver;
     list = new PageList(parent, { root: parent });
     list.render([page(1), page(2)]);

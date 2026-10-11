@@ -63,7 +63,7 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
       };
       registerPdfExportOption = registry(this.pdfOptions);
       pdfExportOptions = () => this.pdfOptions;
-      destroy() {}
+      dispose() {}
     },
   };
 });
@@ -363,9 +363,9 @@ describe('the built-in extensions', () => {
     warn.mockRestore();
   });
 
-  it('removes everything it added on destroy', () => {
+  it('removes everything it added on dispose', () => {
     const { host, editor } = setup({ source: '= Hi', files: { '/a.typ': 'A' } });
-    editor.destroy();
+    editor.dispose();
     expect(host.children).toHaveLength(0);
     expect(host.classList.contains('typst-editor')).toBe(false);
   });

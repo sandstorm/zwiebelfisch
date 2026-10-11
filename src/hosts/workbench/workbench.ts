@@ -2,7 +2,7 @@
 // preview, status bar) and the extension API every feature uses to put itself into it. Entry of hosts/workbench/.
 // Why extensions: the frame knows no feature by name. A feature is a `TypstExtension` that registers what it adds
 // (a side panel, a custom editor, a command, a menu item, a link provider, a source control) once, at activation, and the
-// host disposes all of it on destroy. What every feature needs to talk to the user (messages, input boxes, quick
+// host disposes all of it on dispose. What every feature needs to talk to the user (messages, input boxes, quick
 // picks) is the workbench's, in VS Code's shapes, so features look and behave alike. Adding a feature is adding it to
 // a list, not editing the frame. Extensions never depend on each other: what one offers another goes through a
 // generic contribution point of a host.
@@ -51,7 +51,7 @@ export interface TypstExtension {
    * manifest): its settings.
    */
   readonly contributes?: ExtensionContributions;
-  /** Registers the extension's contributions; everything it pushes into `context.subscriptions` is disposed on destroy. */
+  /** Registers the extension's contributions; everything it pushes into `context.subscriptions` is disposed with the widget. */
   activate(context: ExtensionContext): void;
 }
 
@@ -66,7 +66,7 @@ export interface ExtensionContributions {
 
 /** What an extension gets to work with. Contributions are registered once, at activation; the hosts apply them to every view they create later. */
 export interface ExtensionContext {
-  /** Disposed when the widget is destroyed, in reverse order (the extensions in reverse list order, too). */
+  /** Disposed when the widget is disposed, in reverse order (the extensions in reverse list order, too). */
   readonly subscriptions: { dispose(): unknown }[];
   readonly project: Project;
   /** The settings (VS Code's `workspace.getConfiguration` / `onDidChangeConfiguration`). */
@@ -527,7 +527,7 @@ export interface CustomEditorPanel {
   readonly element: HTMLElement;
   /**
    * Fires once, right before the panel goes: another file (or this one again) is shown, the provider is disposed, or
-   * the widget is destroyed. The editor stores what is pending (the element is still in place) and lets go of what it holds.
+   * the widget is disposed. The editor stores what is pending (the element is still in place) and lets go of what it holds.
    */
   readonly onDidDispose: Event<void>;
 }
@@ -845,7 +845,7 @@ export class WorkbenchHost implements Workbench {
     return root.activeElement !== null && area.contains(root.activeElement);
   }
 
-  destroy(): void {
+  dispose(): void {
     this.#subscription.dispose();
     this.#extensions.dispose();
     this.#views.dispose();
@@ -856,7 +856,7 @@ export class WorkbenchHost implements Workbench {
     this.#notifications.dispose();
     this.#editorTitle.dispose();
     this.#menus.dispose();
-    this.#preview.destroy();
+    this.#preview.dispose();
     this.#commands.dispose();
     this.#configuration.dispose();
     this.#drops.dispose();

@@ -25,7 +25,7 @@ function setup(onPresence?: (presences: readonly PlacedPresence[]) => void) {
   document.body.append(area);
   const focused = () => area.contains(document.activeElement);
   const link = new CollaborationLink({ doc: ydoc, awareness }, { project, user: { name: 'Ann' } }, { current: () => ({ path: MAIN, selection: { from: 6, to: 11 } }), focused, onPresence });
-  cleanup.push(() => link.destroy(), () => awareness.destroy(), () => area.remove());
+  cleanup.push(() => link.dispose(), () => awareness.destroy(), () => area.remove());
   return { ydoc, awareness, link, input, project };
 }
 
@@ -65,9 +65,9 @@ describe('CollaborationLink', () => {
     );
   });
 
-  it('stops sharing when destroyed before loading finished', async () => {
+  it('stops sharing when disposed before loading finished', async () => {
     const { ydoc, link, project } = setup();
-    link.destroy();
+    link.dispose();
     await new Promise((resolve) => setTimeout(resolve, 50));
     const files = ydoc.getMap<Y.Text>('files');
     if (!files.has(MAIN)) files.set(MAIN, new Y.Text('Hello world'));

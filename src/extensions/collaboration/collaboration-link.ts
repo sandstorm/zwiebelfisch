@@ -43,16 +43,16 @@ export class CollaborationLink {
     void this.start(options, shared);
   }
 
-  destroy(): void {
+  dispose(): void {
     this.destroyed = true;
-    this.collaboration?.destroy();
+    this.collaboration?.dispose();
   }
 
   private async start(options: CollaborationOptions, shared: Shared): Promise<void> {
     const { Collaboration } = await import('./model/model');
     const collaboration = await Collaboration.start(options, shared);
     if (this.destroyed) {
-      collaboration.destroy();
+      collaboration.dispose();
       return;
     }
     this.collaboration = collaboration;

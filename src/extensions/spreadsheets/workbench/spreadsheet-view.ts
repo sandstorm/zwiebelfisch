@@ -16,7 +16,7 @@ export class SpreadsheetView {
   private readonly title: HTMLElement;
   private readonly body: HTMLElement;
   private mounted: MountedWorkbook | null = null;
-  /** Bumped by every show and by destroy: a slow load that was overtaken is dropped. */
+  /** Bumped by every show and by dispose: a slow load that was overtaken is dropped. */
   private generation = 0;
 
   constructor(
@@ -48,19 +48,19 @@ export class SpreadsheetView {
       const fileName = path.slice(path.lastIndexOf('/') + 1);
       const mounted = await mountWorkbook(this.body, bytes, fileName, (edit) => this.onEdit(path, edit));
       if (generation === this.generation) this.mounted = mounted;
-      else mounted.destroy();
+      else mounted.dispose();
     } catch (error) {
       if (generation === this.generation) this.body.textContent = `This spreadsheet cannot be opened: ${String(error)}`;
     }
   }
 
-  destroy(): void {
+  dispose(): void {
     this.unmount();
     this.root.remove();
   }
 
   private unmount(): number {
-    this.mounted?.destroy();
+    this.mounted?.dispose();
     this.mounted = null;
     return ++this.generation;
   }

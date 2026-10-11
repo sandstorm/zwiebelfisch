@@ -36,9 +36,9 @@ export function notesGutter(options: NotesGutterOptions = {}): NotesGutterContri
           gutters.set(view.document, gutter);
           return {
             plugin: gutter.plugin,
-            destroy: () => {
+            dispose: () => {
               if (gutters.get(view.document) === gutter) gutters.delete(view.document);
-              gutter.destroy();
+              gutter.dispose();
             },
           };
         }),
@@ -111,7 +111,7 @@ class NotesGutter {
     return note !== undefined;
   }
 
-  destroy(): void {
+  dispose(): void {
     this.resize?.disconnect();
     this.body.removeEventListener('load', this.schedule, true);
     if (this.frame) this.body.ownerDocument.defaultView?.cancelAnimationFrame(this.frame);

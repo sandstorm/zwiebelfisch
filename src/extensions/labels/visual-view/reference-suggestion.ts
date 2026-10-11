@@ -67,7 +67,7 @@ export function referenceSuggestion(labels: ProjectLabels): Plugin {
     },
     view: (view) => {
       session.mount(view);
-      return { update: (v) => session.update(v), destroy: () => session.destroy() };
+      return { update: (v) => session.update(v), destroy: () => session.dispose() };
     },
   });
 }
@@ -133,7 +133,7 @@ class Session {
     return true;
   }
 
-  destroy(): void {
+  dispose(): void {
     this.popup?.remove();
   }
 

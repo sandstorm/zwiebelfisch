@@ -283,7 +283,7 @@ shrink, not grow.
 createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFilesChange?, onOpen?, user?,
                            settings?: { [id]: value }, extensions?(builtins) → TypstExtension[] })
   → { files (get/set), source (get/set), settings (get/set), activeFile, open(path),
-      executeCommand<T>(id, ...args) → Promise<T>, exportPdf({options?}) → Promise<Blob>, destroy() }
+      executeCommand<T>(id, ...args) → Promise<T>, exportPdf({options?}) → Promise<Blob>, dispose() }
 <typst-editor value="…" settings='{"pdfExport.download": false}'>
   .options (Partial<TypstEditorOptions>), .value, .files, .settings, executeCommand(id, ...args), exportPdf({options?});
   'change' {detail:{path, content}}, 'files-change' {detail: FileChange}, 'open' {detail:{path}}
@@ -426,7 +426,7 @@ interface TypstExtension {
   contributes?: { configuration?: { properties: { [id: '<section>.<key>']: ConfigurationProperty } } }
 }                                       // ConfigurationProperty { type (or types), default, description, enum? }
 interface ExtensionContext {
-  subscriptions: { dispose() }[]        // disposed on destroy: extensions in reverse list order, each in reverse
+  subscriptions: { dispose() }[]        // disposed with the widget: extensions in reverse list order, each in reverse
   project: Project
   workspace: Workspace                  // getConfiguration(section?) → { get(key, default?), has(key), inspect(key) },
                                         // onDidChangeConfiguration: Event<{ affectsConfiguration(section) }>
@@ -476,7 +476,7 @@ interface TextEditor {   // a Typst file's Visual + Source views (one per docume
   revealRange(from, to)
 }
 new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, onOpen?, styleSheet? })
-  .activate(extensions)  .settings (get/set)  .destroy()      // + everything of Workbench
+  .activate(extensions)  .settings (get/set)  .dispose()      // + everything of Workbench
 ```
 
 - **Why.** The frame knows no feature by name (review finding `typst-editor.ts:170`): a feature is a
@@ -484,13 +484,16 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   `subscriptions`. VS Code's vocabulary: `register…` returns a `Disposable` (`core/disposable`), events are
   `onDid…` (`Event<T>` from `EventEmitter`, `core/event-emitter`), everywhere: core's models (`Project.onDidChangeFile`,
   `TypstDocument.onDidChange`), the hosts and the extensions; subscribing returns a `Disposable`, never an
-  unsubscribe function.
+  unsubscribe function. Everything with a lifetime ends with `dispose()` (decided 2026-10-11): the hosts, the
+  views (`VisualView`, `SourceView`, `Preview`), `ui/` widgets, contributed parts (`Gutter`, `BoxTools`,
+  `ToolbarControl`), `Project` and the widget (`TypstEditor.dispose`); only what a library calls keeps its name
+  (ProseMirror NodeViews and plugin views, CodeMirror view plugins: `destroy`).
 - **Lifecycle.** The workbench host makes its view hosts first: `VisualViewContributions` and a `SourceViewHost`
   (both handed to `EditingViews`) and the `Preview`; they are the context's `visualView`, `sourceView` and
   `preview`. `WorkbenchHost.activate(list)`: first every extension's declared settings
   (`contributes.configuration`, so an extension may read any declared setting during activation; values for
   undeclared settings are reported with a console warning and ignored), then the
-  extensions in list order (`ExtensionHost`, ids unique), then the main file is shown and compiled. Views are created later, lazily, with what was registered. `destroy` disposes the
+  extensions in list order (`ExtensionHost`, ids unique), then the main file is shown and compiled. Views are created later, lazily, with what was registered. `dispose` disposes the
   extensions in reverse list order, each one's subscriptions in reverse (also ones pushed after activation,
   e.g. once a room connected), then the frame.
 - **No services: generic contribution points.** Extensions never depend on each other, also not through a
@@ -574,7 +577,7 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   extension adds its own `extensions/<name>/<name>.css` (imported `?inline`) with `registerStyleSheet` on
   activation, after it. Both go where the widget renders: its shadow root, else `document.head`. Widgets in one
   root share each distinct stylesheet (one `<style>`, reference-counted); disposing the last registration
-  removes it, so `destroy` leaves no CSS behind. Class names stay the extensions' own; colors come from the
+  removes it, so `dispose` leaves no CSS behind. Class names stay the extensions' own; colors come from the
   `--te-*` tokens on `.typst-editor` (base stylesheet), so extension sheets follow light and dark.
 - **Keys** (`Commands`): `registerKeybinding(key, command)` handles `key` on the widget in the capture phase,
   so the command runs before an editor sees the key, which then never does (`preventDefault` is decided at once;
@@ -735,7 +738,7 @@ new VisualView(parent, document, contributions: VisualViewContributions)
 .reveal(from, to)    // select exactly what shows source range from..to (caret if empty)
 .selection() → {from, to}           // posToSource; the end with bias -1
 .onDidChangeSelection: Event<void>  // after the selection moved or the text changed
-.destroy()
+.dispose()
 
 // the contribution points (registered once; applied to every view created afterwards)
 const visualView = new VisualViewContributions()            // or VisualViewContributions.from(contributions)
@@ -744,7 +747,7 @@ visualView.registerMark(spec: TypstMarkSpec) → Disposable
 visualView.registerEditorExtension((view) => tiptapExtensions) → Disposable   // decorations, plugins, commands
 visualView.registerToolbarGroup({ kind: 'group' | 'menu' | 'floating', id, order, … }) → Disposable
 visualView.registerToolbarItem({ group, order?, action } | { group, order?, create(toolbar) }) → Disposable
-visualView.registerGutter((view, body) => { plugin?, destroy() }) → Disposable
+visualView.registerGutter((view, body) => { plugin?, dispose() }) → Disposable
 visualView.registerHighlights(layer, { provideHighlights(document), onDidChangeHighlights }) → Disposable
                                      // set on a view's creation and on every change of its document (diagnostics);
                                      // source ranges → inline decorations (sourceToPos, end with bias -1)
@@ -1120,7 +1123,7 @@ new SourceViewHost()                         // implements SourceViewContributio
 SourceView
 .reveal(from, to)    // select, scroll to center, highlight (the one highlight the host draws itself)
 .selection() → {from, to}
-.destroy()
+.dispose()
 ```
 
 - **The host keeps the mechanism**: CodeMirror bound to a `TypstDocument` in both directions (`basicSetup`,
@@ -1171,7 +1174,7 @@ interface PreviewContext { ownerDocument, zoom(), setZoom(zoom), scale(), visibl
 new Preview(container)                       // implements PreviewContributions; renders a toolbar +
                                              // scrolling page area into container
 .update(files: Record<path, text | Uint8Array>, main)    // cheap per keystroke
-.destroy()
+.dispose()
 ```
 
 - **The host keeps the mechanism**: the engine worker and its protocol, coalesced compiles, the page list,
@@ -1364,7 +1367,7 @@ IronCalc; Typst shows the results.
 ```ts
 spreadsheets(): TypstExtension   // custom editor spreadsheets.editor (*.ic): a SpreadsheetView per panel; edits → applyChange
                                  // (file + typstPath); command spreadsheets.newSpreadsheet ("New spreadsheet…" in file/newFile)
-// workbench/: new SpreadsheetView(panel.element, onEdit(path, { bytes, typst }))   .show(path, content)   .destroy()
+// workbench/: new SpreadsheetView(panel.element, onEdit(path, { bytes, typst }))   .show(path, content)   .dispose()
 // model/ (pure):
 spreadsheetTypst(model, 'budget.ic') → Typst source   // `values` and `sheets` of the visible sheets
 typstPath('/budget.ic') → '/budget.ic.gen.typ'
@@ -1448,7 +1451,7 @@ newDiagram(project, workbench, resource?)
   exported PNG is saved `SAVE_DELAY` (800 ms) after the last one, through `Workbench.applyChange({ kind: 'update',
   content })` (the last export wins; a refusal is an error message). An export with the diagram the file holds
   already is not saved (the editor reports its loaded state). `flush` (the panel's `onDidDispose`: another file
-  shown, destroy; a scheme change) saves the pending export at once and, if the diagram changed after the last
+  shown, dispose; a scheme change) saves the pending export at once and, if the diagram changed after the last
   export (the export did not come back in time), writes the newer XML into the last PNG: the diagram is never
   lost, its picture follows with the next export. Collaboration: binary files are not merged; the last save wins.
 - **The view** only carries messages: those from its own iframe (`event.source`) to the session, the session's to
@@ -1525,7 +1528,7 @@ files()  fileNavigation(): TypstExtension   // the side panel, the frame links (
 new FilePanel(parent, { onOpen(path), onChange(change) → Promise<reason | null>, prompts (the workbench's input box,
   warning and error messages), menus: { items(menuId, context), run(command, resource) }, memory?, decorations?(path) }, state)
 .render({ paths, main, active })  .newFile(at?)  .newFolder(at?)  .upload(at?)  .rename(path?)  .delete(path?)
-.uploadFiles(files)  .destroy()
+.uploadFiles(files)  .dispose()
 // workbench/tree/: new FileTree(parent, { onOpen, onRename, onDelete, onMove(source, folder), onUpload(files, folder),
 //                  onContextMenu(path, anchor), memory? })
 // workbench/icons/: icon(doc, name) — a leaf folder, so the tree and the panel both take it from below
@@ -1818,7 +1821,7 @@ createTypstEditor(host, { …, user?: {name, color?},
   extensions: (builtins) => [...builtins, collaboration({ doc: Y.Doc, awareness?: Awareness } | { url, room, token? })] })
 
 Collaboration.start(options, { project, user }) → Promise<Collaboration>   // url: waits for the first sync
-.setCursor(path | null, range?)   .destroy()
+.setCursor(path | null, range?)   .dispose()
 .onDidChangePresence: Event<PlacedPresence[]>      // everyone else, in every file, once per change
 .sourceControl → GitLabSourceControl | null   // GitLab rooms: a workbench SourceControl (commit(message), state)
 

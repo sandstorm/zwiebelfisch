@@ -157,8 +157,8 @@ class RawBox implements NodeView {
   }
 
   destroy(): void {
-    this.tools?.destroy();
-    this.rendered?.destroy();
+    this.tools?.dispose();
+    this.rendered?.dispose();
     this.code.destroy();
   }
 

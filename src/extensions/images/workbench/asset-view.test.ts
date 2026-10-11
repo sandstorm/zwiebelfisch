@@ -24,7 +24,7 @@ describe('AssetView', () => {
     expect(root.textContent).toContain('img/logo.png');
     expect(root.textContent).toContain('2.0 KB');
     expect(root.querySelector('button')).toBeNull();
-    view.destroy();
+    view.dispose();
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:logo');
     expect(parent.contains(root)).toBe(false);
   });

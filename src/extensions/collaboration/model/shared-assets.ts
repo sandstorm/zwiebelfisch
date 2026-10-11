@@ -40,7 +40,7 @@ export class SharedAssets {
     });
   }
 
-  destroy(): void {
+  dispose(): void {
     this.destroyed = true;
     this.subscription.dispose();
     this.assets.unobserve(this.onRemote);

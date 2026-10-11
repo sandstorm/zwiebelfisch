@@ -22,7 +22,7 @@ export type PdfMessages = Pick<Workbench, 'showErrorMessage'>;
 export function downloadPdf(pdfs: PdfDownloads, memory: Memory<Record<string, boolean>>, messages: PdfMessages): PreviewToolbarItem {
   return (preview) => {
     const button = new DownloadPdfButton(preview.ownerDocument, pdfs, memory, messages);
-    return { elements: [button.element], update: () => button.describe(), dispose: () => button.destroy() };
+    return { elements: [button.element], update: () => button.describe(), dispose: () => button.dispose() };
   };
 }
 
@@ -73,7 +73,7 @@ class DownloadPdfButton {
     }
   }
 
-  destroy(): void {
+  dispose(): void {
     this.doc.removeEventListener('mousedown', this.closeOutside, true);
     this.element.remove();
   }

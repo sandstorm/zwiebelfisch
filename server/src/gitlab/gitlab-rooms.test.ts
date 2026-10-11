@@ -92,7 +92,7 @@ function widgetClient(doc: Y.Doc) {
   const project = new Project(MAIN, {});
   const shared = new SharedProject(project, ydoc);
   cleanup.push(() => {
-    shared.destroy();
+    shared.dispose();
     disconnect();
   });
   return project;

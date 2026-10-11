@@ -36,10 +36,10 @@ describe('ProjectImages', () => {
     expect(chapter.urls.imageUrl(ref('/main.typ'))).toBeNull();
   });
 
-  it('revokes its object URLs when destroyed', () => {
+  it('revokes its object URLs when disposed', () => {
     const { chapter, images, revokeObjectURL } = setup();
     chapter.urls.imageUrl(ref('/img/logo.png'));
-    images.destroy();
+    images.dispose();
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:0');
   });
 

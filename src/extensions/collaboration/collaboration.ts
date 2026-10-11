@@ -10,7 +10,6 @@
 // branch as a workbench source control.
 import type { Awareness } from 'y-protocols/awareness';
 import type * as Y from 'yjs';
-import { Disposable } from '../../core/disposable/disposable';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './collaboration.css?inline';
 import { CollaborationLink } from './collaboration-link';
@@ -58,7 +57,7 @@ export function collaboration(options: CollaborationOptions): TypstExtension {
         sourceView.registerExtension(sourcePresence(presences)),
         sourceView.registerExtension(perUserUndo),
         workbench.registerFileDecorationProvider(presenceDecorations(presences)),
-        new Disposable(() => link.destroy()),
+        link,
         // fired from the editors' own updates, after their state has the new selection
         workbench.onDidChangeTextEditorSelection(() => link.selectionChanged()),
       );

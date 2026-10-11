@@ -80,7 +80,7 @@ export function files(): TypstExtension {
       render();
       subscriptions.push(
         side,
-        new Disposable(() => panel.destroy()),
+        panel,
         new Disposable(() => drops?.dispose()),
         registerOperations(workbench, panel),
         workbench.onDidShowFile(render),

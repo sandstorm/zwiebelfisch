@@ -76,9 +76,9 @@ describe('SharedProject', () => {
     expect(b.project.document(path('/new.typ'))!.text).toBe('new');
   });
 
-  it('destroy() stops sharing and keeps the local text', () => {
+  it('dispose() stops sharing and keeps the local text', () => {
     const a = client({ [MAIN]: 'abc' });
-    a.shared.destroy();
+    a.shared.dispose();
     a.project.document(MAIN)!.setText('abcd', 'test');
     expect(a.ydoc.getMap<Y.Text>('files').get(MAIN)!.toString()).toBe('abc');
   });

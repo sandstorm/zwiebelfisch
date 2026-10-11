@@ -78,12 +78,12 @@ export class Collaboration {
     this.cursors?.setLocal(path, range);
   }
 
-  destroy(): void {
+  dispose(): void {
     this.presenceChanged.dispose();
     this.sourceControl?.dispose();
-    this.cursors?.destroy();
-    this.assets?.destroy();
-    this.sharedProject.destroy();
+    this.cursors?.dispose();
+    this.assets?.dispose();
+    this.sharedProject.dispose();
     this.server?.provider.destroy();
     this.server?.provider.document.destroy();
   }

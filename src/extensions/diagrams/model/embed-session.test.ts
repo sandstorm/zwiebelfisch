@@ -69,7 +69,7 @@ describe('EmbedSession', () => {
     expect(savedXml()).toEqual([xml('c')]);
   });
 
-  it('saves the pending export at once on flush (closed, destroyed)', () => {
+  it('saves the pending export at once on flush (closed, disposed)', () => {
     const { session, send, savedXml } = setup();
     send({ event: 'init' });
     send({ event: 'save', xml: xml('a') });

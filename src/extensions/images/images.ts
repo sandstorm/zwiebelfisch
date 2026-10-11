@@ -3,7 +3,6 @@
 // area. Entry of extensions/images/. See ARCHITECTURE.md, "createTypstEditor".
 // Why one extension: an image is one concept from the file in the project to the box in the text; the Visual
 // view's host only knows boxes, renderers and custom editors, and the file panel only knows files.
-import { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
 import { type PathReference, ProjectPath } from '../../core/paths/paths';
 import type { FileChange, FileContent, Project } from '../../core/project/project';
@@ -31,7 +30,7 @@ export function images(): TypstExtension {
       const projectImages = new ProjectImages({ project, onDidChange: preview.onDidRender, applyChange: (change) => workbench.applyChange(change) });
       subscriptions.push(
         workbench.registerStyleSheet(css),
-        new Disposable(() => projectImages.destroy()),
+        projectImages,
         workbench.registerCustomEditorProvider('images.preview', assetEditor, { filenamePattern: IMAGE_FILES }),
         // any other file (`*` is the least specific pattern: every other editor's wins)
         workbench.registerCustomEditorProvider('images.file', assetEditor, { filenamePattern: '*' }),
@@ -127,7 +126,7 @@ export interface ProjectImagesOptions {
 /**
  * The project's image files as a document's Visual view shows and inserts
  * them: as object URLs (made once per file content and revoked when replaced
- * or on destroy), and as the images "Insert image" offers or uploads, with
+ * or on dispose), and as the images "Insert image" offers or uploads, with
  * paths as written in that document.
  */
 export class ProjectImages {
@@ -162,7 +161,7 @@ export class ProjectImages {
     };
   }
 
-  destroy(): void {
+  dispose(): void {
     for (const { url } of this.urls.values()) URL.revokeObjectURL(url);
     this.urls.clear();
   }
