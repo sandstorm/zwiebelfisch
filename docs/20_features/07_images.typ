@@ -3,6 +3,9 @@
 
 == What it does
 
+#import "../template.typ": screenshot
+#screenshot("images")
+
 An image in the text, usually as a figure with a caption and a label:
 
 ```typ

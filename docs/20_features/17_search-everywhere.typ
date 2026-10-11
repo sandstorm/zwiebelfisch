@@ -3,6 +3,9 @@
 
 == What it does
 
+#import "../template.typ": screenshot
+#screenshot("search-everywhere")
+
 Press Shift twice, anywhere (also while typing in an editor), or click the magnifier on the left rail, below the files. One list finds everything, grouped; type a few letters of a word, in order (`cmptim` finds "Compile times"). Arrows and Enter pick, Escape closes.
 
 - `#method` jumps to the "Method" chapter; `@runs` finds the table captioned "Runs"; `%linearly` finds the sentence in any chapter; `!grace` lists the notes Grace wrote in; `:theme` asks for light, dark or automatic colors.

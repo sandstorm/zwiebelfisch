@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Build the documentation book (docs/main.typ) as dist/docs/typst-editor.pdf"
-#MISE sources=["docs/**/*.typ", "docs/diagrams/*.mmd", "docs/assets/*", "docs/fonts/*.ttf"]
+#MISE sources=["docs/**/*.typ", "docs/diagrams/*.mmd", "docs/assets/**/*", "docs/fonts/*.ttf"]
 #MISE outputs=["dist/docs/typst-editor.pdf"]
 # One Typst project in docs/: main.typ is the book, site.typ the HTML pages (mise run docs:html).
 set -euo pipefail

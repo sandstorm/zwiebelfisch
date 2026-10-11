@@ -3,6 +3,9 @@
 
 == What it does
 
+#import "../template.typ": screenshot
+#screenshot("table-of-contents")
+
 ```typ
 #set heading(numbering: "1.1")
 #outline(depth: 2)

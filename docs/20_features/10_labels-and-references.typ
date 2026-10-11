@@ -3,6 +3,9 @@
 
 == What it does
 
+#import "../template.typ": screenshot
+#screenshot("labels-and-references", width: 60%)
+
 A label names a heading, figure or table; a reference to it shows its number in the preview and leads there in the editors.
 
 ```typ

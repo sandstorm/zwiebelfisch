@@ -3,6 +3,9 @@
 
 == What it does
 
+#import "../template.typ": screenshot
+#screenshot("code-blocks")
+
 Code in the text is Typst's raw text: inline between backticks, as a block between three backticks with a language.
 
 ````typ

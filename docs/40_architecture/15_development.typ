@@ -50,6 +50,7 @@ mise run demo           # builds the engine and fonts, then starts the demo
   [`fixtures:demo-diagram`], [the simple example's `diagrams/editor.drawio.png`: the picture drawn by the Typst CLI, the same boxes as diagrams.net XML inside],
   [`docs:pdf`], [this book → `dist/docs/typst-editor.pdf`],
   [`docs:html`], [these pages (Typst's bundle export) → `dist/docs/html/`],
+  [`docs:screenshots`], [the feature chapters' pictures (@architecture-development-docs): `build:demo`, then `tests/screenshots/features.spec.ts` in Chromium with the playground server; arguments go to Playwright (`docs:screenshots -- --grep tables`)],
 )
 
 == Checks before a commit <architecture-development-checks>
@@ -101,6 +102,7 @@ The profiles land in `.cache/perf/` (`*.cpuprofile`: Chrome DevTools' Performanc
 - Every feature chapter has the same sections: "What it does" (an example, and how the Visual editor and the preview show it), "Why" (left out when obvious), "How to configure" (settings, view options, host options, or "Nothing to configure."). They are left out of the outline (`#set heading(outlined: false)` below the chapter's heading).
 - A chapter's label is its path without the numbers, `/` → `-` (`<architecture-workbench>`); a section appends a word. Cross-references are `@label`.
 - The font, Gabarito (SIL Open Font License, `fonts/OFL.txt`), is in `fonts/`: a project font for the editor (@architecture-core-engine-fonts), `--font-path docs/fonts` for `docs:pdf` / `docs:html`.
+- *Screenshots*: every feature chapter shows the editor under "What it does": `#screenshot("tables")` (from `template.typ`), the picture `assets/screenshots/tables.png`, named after the chapter's label without `features-`. `mise run docs:screenshots` takes them all: one Playwright test per chapter in `tests/screenshots/features.spec.ts` (its own config, so `test:e2e` leaves it out), against the demo build, in a fixed 1280 × 800 window, light, without motion, with fixed users; collaboration and GitLab against the playground server it starts. Each test sets up what the chapter describes and saves the part of the window that shows it. The task then lists the pictures in `assets/screenshots/index.typ`, as Typst cannot ask whether a file exists: a name not listed shows "Screenshot pending", so the book compiles before the first run. A changed feature: adjust its test, run the task with `-- --grep <name>`, look at the picture, commit it. Spelling has none (the browser's underlines are not drawn in headless Chromium).
 - Diagrams are Mermaid files in `diagrams/`, drawn by merman in the docs' colors: `#figure(mermaid(read("../diagrams/x.mmd"), width: 80%), caption: […])` with `mermaid` from `template.typ`.
 - Live while writing: `mise run demo` (or `demo:build`), then `?example=docs` (@architecture-development-writing-docs).
 

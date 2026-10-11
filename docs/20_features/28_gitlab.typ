@@ -3,6 +3,9 @@
 
 == What it does
 
+#import "../template.typ": screenshot
+#screenshot("gitlab")
+
 A room can be a branch of a GitLab repository: everyone in it edits the branch's files together (@features-collaborative-editing), and the changes go back to GitLab as commits.
 
 - *What is not in GitLab yet* is always visible: the status bar says "Not in GitLab: 3 files · 14 min (Ann, Bob)" (how many files, since the first edit, who edited), or "Saved · 01234567" (the branch's commit). The file panel marks changed files M, new ones A (a deleted file has no row; it counts). A click on the status saves.

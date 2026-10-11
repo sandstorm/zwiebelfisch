@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Build the documentation as HTML pages (docs/site.typ, Typst's bundle export) into dist/docs/html/"
-#MISE sources=["docs/**/*.typ", "docs/diagrams/*.mmd", "docs/style.css", "docs/assets/*", "docs/fonts/*"]
+#MISE sources=["docs/**/*.typ", "docs/diagrams/*.mmd", "docs/style.css", "docs/assets/**/*", "docs/fonts/*"]
 #MISE outputs=["dist/docs/html/index.html"]
 # One page per chapter plus index.html. Bundle and HTML export are experimental in Typst 0.15,
 # hence --features; Typst warns about that on every run.

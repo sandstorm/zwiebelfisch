@@ -1,12 +1,14 @@
 // The look of the documentation, for the book (main.typ, PDF) and the HTML site (site.typ):
 // Sandstorm's, after sandstorm.de. Use: `#show: book`. Writers need nothing from here but
-// `mermaid` for a diagram: plain headings, `@label` references, raw blocks and tables.
+// `mermaid` for a diagram and `screenshot` for a picture of the editor: plain headings, `@label`
+// references, raw blocks and tables.
 //
 // Labels: a chapter's label is its path without `.typ` and the numbers that order the files, `/` → `-`
 // (`40_architecture/07_workbench.typ` → `<architecture-workbench>`); a section inside appends a word
 // (`<architecture-workbench-menus>`).
 
 #import "@preview/merman:0.4.0"
+#import "assets/screenshots/index.typ": screenshots
 
 /// sandstorm.de's colors; style.css has the same.
 #let colors = (
@@ -45,6 +47,30 @@
   ),
   typography: (font: font),
 )
+
+/// A picture of the editor showing a feature, `assets/screenshots/<name>.png`: one per feature chapter, named after
+/// its label without `features-` (`#screenshot("tables")`), taken by `mise run docs:screenshots`
+/// (`tests/screenshots/features.spec.ts`). Typst cannot ask whether a file exists, so that task lists the pictures
+/// taken in `assets/screenshots/index.typ`; for a name not listed a box says the picture is pending, and the book
+/// compiles either way.
+#let screenshot(name, caption: none, width: 100%) = {
+  if name in screenshots {
+    return figure(image("assets/screenshots/" + name + ".png", width: width, alt: "Screenshot: " + name), caption: caption)
+  }
+  let pending = [Screenshot pending: `mise run docs:screenshots` (#name)]
+  context if target() == "html" {
+    html.div(class: "screenshot-pending", pending)
+  } else {
+    block(
+      width: width,
+      inset: 10pt,
+      radius: 3pt,
+      fill: colors.tint,
+      stroke: (paint: colors.line, dash: "dashed"),
+      text(size: 9pt, fill: colors.muted, pending),
+    )
+  }
+}
 
 /// The first page: logo, book title, company.
 #let title-page(it) = page(header: none, footer: none, margin: (x: 2.6cm, y: 2.4cm), {
