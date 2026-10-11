@@ -391,7 +391,7 @@ describe('tables', () => {
 
   it('keeps tables it cannot model raw', () => {
     for (const src of [
-      '#table(columns: (1fr, 1fr), [a], [b])',
+      '#table(columns: cols, [a], [b])',
       '#table(columns: 2, [a], [b], [c])',
       '#table([a], [b])',
       '#table(columns: 1, [a]',

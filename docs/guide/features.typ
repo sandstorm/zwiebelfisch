@@ -123,7 +123,8 @@ All runs used the machine in @fig:setup.
 
 - Insert → Insert table: a 2 × 2 `#table`.
 - The bar over a table: Add row, Add column, Delete row, Delete column, Header row.
-- A table the Visual view cannot edit as one (e.g. `columns` not a number) stays a raw box.
+- `columns` is a number or an array of column sizes (`(auto, 2fr, 1fr)`, any size per entry). Add column adds an entry: `1fr` if every column is a fraction, else `auto`; Delete column removes its entry.
+- A table the Visual view cannot edit as one stays a raw box: `columns` as a variable or computed (`cols`, `(..xs, 1fr)`), merged cells (`table.cell`), lines, a footer, comments between cells.
 - Tables computed in a spreadsheet: @guide-features-spreadsheets.
 
 == Labels and cross-references <guide-features-labels>

@@ -21,13 +21,18 @@ const Tables = Extension.create({
       },
     }).configure({ resizable: false, HTMLAttributes: { class: 'typst-tables__table' } }),
     TableRow,
-    TableCell.extend({ group: 'blockContainer' }),
-    TableHeader.extend({ group: 'blockContainer' }),
+    TableCell.extend({ group: 'blockContainer', addAttributes: cellAttributes }),
+    TableHeader.extend({ group: 'blockContainer', addAttributes: cellAttributes }),
   ],
 });
 
+/** A cell's attributes: Tiptap's, and `track`: its column's entry of `columns: (..)` (`2fr`), as written. */
+function cellAttributes(this: { parent?: () => Record<string, unknown> }) {
+  return { ...this.parent?.(), track: { default: null, rendered: false } };
+}
+
 /**
- * `#table(columns: <int>, ..named, cells)` whose `columns` comes before the
+ * `#table(columns: <int or array>, ..named, cells)` whose `columns` comes before the
  * cells and whose positional arguments are cells filling whole rows (the
  * first row may be a `table.header(..)` of header cells), as Tiptap's MIT
  * table extensions (not resizable); cells hold blocks, segmented like the
@@ -40,7 +45,7 @@ const Tables = Extension.create({
 export const TABLE: TypstNodeSpec = {
   name: 'table',
   tiptap: Tables,
-  typst: { parseTypst: { calls: { table: { block: parseTable } } }, toTypst: tableToTypst, anchors: ['layout'], labelled: true },
+  typst: { parseTypst: { calls: { table: { block: parseTable } } }, toTypst: tableToTypst, anchors: ['layout', 'track'], labelled: true },
 };
 
 const ICONS = {

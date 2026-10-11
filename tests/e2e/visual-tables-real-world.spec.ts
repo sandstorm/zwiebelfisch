@@ -45,6 +45,30 @@ test.describe('a table with expression cells (plain page, boxes rendered)', () =
   });
 });
 
+test.describe('a table with track-size columns (plain page)', () => {
+  const SOURCE = '#table(\n  columns: (auto, 2fr, 1fr),\n  table.header[Extension][What it adds][Through],\n  [`files`], [file panel], [side panel],\n)\n';
+  const value = (page: Page) => () => page.locator('typst-editor').evaluate((el: Editor) => el.value);
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/examples/plain-html/');
+    await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg')).toBeVisible();
+    await page.locator('typst-editor').evaluate((el: Editor, source) => (el.value = source), SOURCE);
+  });
+
+  test('is a Visual table; typing in a cell changes only it; columns change the array', async ({ page }) => {
+    const table = page.getByTestId('typst-visual').locator('table');
+    await expect(table.locator('th')).toHaveText(['Extension', 'What it adds', 'Through']);
+    await caretAtEnd(table.locator('td', { hasText: 'file panel' }).locator('p'));
+    await page.keyboard.type('!');
+    await expect.poll(value(page)).toBe(SOURCE.replace('[file panel]', '[file panel!]'));
+    await tableBar(page).getByRole('button', { name: 'Add column' }).click();
+    await expect.poll(value(page)).toContain('columns: (auto, 2fr, auto, 1fr),');
+    // the cursor stays in the "What it adds" column
+    await tableBar(page).getByRole('button', { name: 'Delete column' }).click();
+    await expect.poll(value(page)).toBe('#table(\n  columns: (auto, auto, 1fr),\n  table.header[Extension][][Through],\n  [`files`], [], [side panel],\n)\n');
+  });
+});
+
 test.describe('the advanced example', () => {
   const RESULTS = '/chapters/results.typ';
 
