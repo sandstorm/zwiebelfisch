@@ -149,7 +149,10 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    0.15.1, CLI and engine): one HTML page per chapter via `document("<part>/<chapter>.html")[…]`, an
    index page with the outline, images / diagrams copied with `asset(…)`; the same chapters drive the
    PDF, the bundle and the demo (`target()` or a small `site.typ` entry, whichever is more obvious);
-   paged-only styling behind `target()`. The skeleton agent first verifies the exact 0.15.1 CLI flags
+   paged-only styling behind `target()`. **Style (user):** concise and easy to digest — short
+   sentences, bullet lists, tables, a code example instead of a paragraph; no filler, no
+   introductions that restate the heading, no "this chapter explains…", no summaries at the end, no
+   marketing adjectives. If a sentence can go without losing information, it goes. The skeleton agent first verifies the exact 0.15.1 CLI flags
    and whether cross-page `@label` references link (else plain links between pages). Diagrams: draw.io
    (`.drawio.png`, edited with our own diagrams extension) or mermaid / d2 later; ASCII in raw
    blocks until then. Working notes (dated plans, research, code review, findings, `docs/todo/`)
