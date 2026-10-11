@@ -10,6 +10,7 @@ import { snippet } from './pages/snippet';
 import { DEFAULT_FONTS, ENGINE_WASM_URL } from '../../core/engine-assets/engine-assets';
 import type { FileContent } from '../../core/project/project';
 import { FileSender } from './worker/project-files';
+import { PageReceiver } from './worker/page-svgs';
 import type { Init, EngineRequest, EngineResponse, WorkerProgress } from './worker/protocol';
 import { startEngineWorker } from './worker/worker';
 import { LatestOnly } from './latest-only';
@@ -58,6 +59,7 @@ export class Preview implements PreviewContributions {
   private zoom: Zoom = 'fit';
   private nextId = 0;
   private readonly sender = new FileSender();
+  private readonly receiver = new PageReceiver();
   private frame = 0;
   /** The files and pages of the last successful compilation. */
   private compiled: { files: Record<string, FileContent>; pages: Page[] } = { files: {}, pages: [] };
@@ -230,15 +232,16 @@ export class Preview implements PreviewContributions {
     const response = await this.request({ type: 'compile', files: this.sender.encode(files), main });
     if (response.type !== 'compile') return;
     this.loading.compiled();
+    const pages = this.receiver.decode(response.result.pages);
     // Keep showing the last good pages while the document has errors, dimmed as stale.
-    const failed = response.result.pages.length === 0;
+    const failed = pages.length === 0;
     if (!failed) {
       this.clickHighlight.set([]);
-      this.list.render(response.result.pages);
+      this.list.render(pages);
       // the boxes of the text before until those of the new text are known (no flicker while typing)
       this.selectionHighlight.redraw();
       this.scheduleStatus();
-      this.compiled = { files, pages: response.result.pages };
+      this.compiled = { files, pages };
       if (this.selection) this.highlights.push(this.selection);
       this.rendered.fire();
     }
@@ -503,6 +506,7 @@ function div(doc: Document, className: string): HTMLElement {
 
 /** Minimum time between two cursor → preview lookups while the cursor moves. */
 const REVEAL_INTERVAL_MS = 80;
+
 
 /** Toolbar order (see `ToolbarPlacement`): the group `navigation` first, the other groups by name, then `order`. */
 function byPlacement(a: { group: string; order: number }, b: { group: string; order: number }): number {

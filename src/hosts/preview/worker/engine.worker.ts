@@ -3,11 +3,13 @@ import { createEngine, type TypstEngine } from '../../../core/typst-engine/typst
 import { type PackageEngine, withPackages } from '../../../core/typst-packages/typst-packages';
 import { downloadWasm } from './download';
 import { FileReceiver } from './project-files';
+import { PageSender } from './page-svgs';
 import type { Init, EngineRequest, EngineResponse, LoadEvent, WorkerProgress } from './protocol';
 
 interface Session {
   engine: TypstEngine;
   files: FileReceiver;
+  pages: PageSender;
   packages: PackageEngine;
 }
 
@@ -21,7 +23,7 @@ self.onmessage = async (event: MessageEvent<Init | EngineRequest>) => {
     session = createEngine(wasm).then((engine) => {
       for (const { name, url, faces } of request.fonts) engine.addLazyFont({ name, faces, load: () => loadFont(name, url) });
       tell({ kind: 'ready' });
-      return { engine, files: new FileReceiver(engine), packages: withPackages(engine, undefined, (specs) => tell({ kind: 'packages', specs })) };
+      return { engine, files: new FileReceiver(engine), pages: new PageSender(), packages: withPackages(engine, undefined, (specs) => tell({ kind: 'packages', specs })) };
     });
     session.catch((error: unknown) => tell({ kind: 'failed', message: error instanceof Error ? error.message : String(error) }));
     return;
@@ -35,10 +37,12 @@ self.onmessage = async (event: MessageEvent<Init | EngineRequest>) => {
   }
 };
 
-async function handle({ engine, files, packages }: Session, request: EngineRequest): Promise<EngineResponse> {
+async function handle({ engine, files, pages, packages }: Session, request: EngineRequest): Promise<EngineResponse> {
   switch (request.type) {
-    case 'compile':
-      return { id: request.id, type: 'compile', result: await files.update(request.files, () => packages.compile(request.main)) };
+    case 'compile': {
+      const result = await files.update(request.files, () => packages.compile(request.main));
+      return { id: request.id, type: 'compile', result: { ...result, pages: pages.encode(result.pages) } };
+    }
     case 'pdf':
       return { id: request.id, type: 'pdf', result: await files.withSources(request.sources, () => packages.exportPdf(request.main)) };
     case 'click':

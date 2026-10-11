@@ -71,6 +71,8 @@ interface Session {
   engine: TypstEngine;
   packages: PackageEngine;
   known: Set<string>;
+  /** The hashes of the pages last answered: their SVG is left out next time (PageSender). */
+  sent: Set<string>;
 }
 
 async function start(): Promise<Session> {
@@ -97,21 +99,15 @@ async function start(): Promise<Session> {
     const [name, version] = spec.replace('@preview/', '').split(':');
     return new Uint8Array(readFileSync(join(packageCache, `${name}-${version}.tar.gz`)));
   });
-  return { engine, packages, known: new Set() };
+  return { engine, packages, known: new Set(), sent: new Set() };
 }
 
 /** What the worker's thread does for `request` (as engine.worker.ts, files kept as FileReceiver does). */
-async function engineThread({ engine, packages, known }: Session, request: Exclude<Request, { type: 'init' }>): Promise<unknown> {
+async function engineThread(session: Session, request: Exclude<Request, { type: 'init' }>): Promise<unknown> {
+  const { engine } = session;
   switch (request.type) {
     case 'compile':
-      for (const path of known) if (!(path in request.files)) engine.remove(path);
-      known.clear();
-      for (const [path, content] of Object.entries(request.files)) {
-        known.add(path);
-        if (typeof content === 'string') engine.setSource(path, content);
-        else if (content) engine.setBinary(path, content);
-      }
-      return { id: request.id, type: 'compile', result: await packages.compile(request.main) };
+      return { id: request.id, type: 'compile', result: await compile(session, request.files, request.main) };
     case 'boxes':
       return { id: request.id, type: 'boxes', boxes: engine.boxesForRanges(request.path, request.ranges as never) };
     case 'cursor':
@@ -119,4 +115,21 @@ async function engineThread({ engine, packages, known }: Session, request: Exclu
     default:
       return { id: request.id, type: 'error', message: `not measured: ${request.type}` };
   }
+}
+
+/** A compile of `files`, the pages the preview has without their SVG (as engine.worker.ts answers). */
+async function compile({ engine, packages, known, sent }: Session, files: Record<string, string | Uint8Array | null>, main: string): Promise<unknown> {
+  for (const path of known) if (!(path in files)) engine.remove(path);
+  known.clear();
+  for (const [path, content] of Object.entries(files)) {
+    known.add(path);
+    if (typeof content === 'string') engine.setSource(path, content);
+    else if (content) engine.setBinary(path, content);
+  }
+  const result = await packages.compile(main);
+  if (result.pages.length === 0) return result;
+  const pages = result.pages.map((page) => (sent.has(page.hash) ? { ...page, svg: null } : page));
+  sent.clear();
+  for (const page of result.pages) sent.add(page.hash);
+  return { ...result, pages };
 }
