@@ -75,6 +75,7 @@ describe('custom styles in the text style menu', () => {
     view.reveal(SourceRange.of({ from: from, to: from + 4 }));
     choose('inline:key');
     expect(doc.text).toBe('#import "styles.typ": note, key\n\nA #key[term] here\n');
+    menu.dispatchEvent(new MouseEvent('mousedown'));
     const option = [...menu.options].find((o) => o.value === 'inline:key')!;
     expect(option.text).toBe('✓ Keyword');
     choose('inline:key');
@@ -84,6 +85,7 @@ describe('custom styles in the text style menu', () => {
   it('an inline style needs a selection', () => {
     const { view, menu } = setup('A term\n');
     view.reveal(SourceRange.of({ from: 2, to: 2 }));
+    menu.dispatchEvent(new MouseEvent('mousedown'));
     expect([...menu.options].find((o) => o.value === 'inline:key')!.disabled).toBe(true);
   });
 
