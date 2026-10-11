@@ -32,6 +32,8 @@ describe('slash commands', () => {
       'Insert table',
       'Table of contents',
       'Code block',
+      'Inline math',
+      'Display math',
       'Quote',
       'Insert page break',
       'Horizontal rule',
@@ -57,6 +59,14 @@ describe('slash commands', () => {
     const second = setup('Some text\n', 'text');
     type(second.editor, ' /checklist');
     expect(second.options()).toEqual(['Task list']);
+  });
+
+  it('find math by what people call it', () => {
+    for (const query of ['math', 'equation', 'formula']) {
+      const { editor, options } = setup('Some text\n', 'text');
+      type(editor, ` /${query}`);
+      expect(options()).toEqual(['Inline math', 'Display math']);
+    }
   });
 
   it('are found by label and keywords', () => {

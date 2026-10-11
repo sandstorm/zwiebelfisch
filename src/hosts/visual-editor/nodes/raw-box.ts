@@ -38,9 +38,23 @@ export interface RawBoxes {
   readonly nodeViews: ReadonlyMap<string, NonNullable<TypstNodeSpec['view']>>;
 }
 
-/** Keyboard entry into raw boxes: arrow keys at their edges, Enter on a selected box; Alt+Enter follows its link. */
+/**
+ * Keyboard entry into raw boxes: arrow keys at their edges, Enter on a selected box; Alt+Enter follows its link. The
+ * command `editRawBox` enters a box from code (a box just inserted, the caret inside its code).
+ */
 export const RawBoxNavigation = Extension.create({
   name: 'typstRawBoxNavigation',
+  addCommands() {
+    return {
+      editRawBox:
+        (pos, offset) =>
+        ({ view, dispatch }) => {
+          const box = boxAt(view, pos);
+          if (box && dispatch) box.edit(offset);
+          return box !== undefined;
+        },
+    };
+  },
   addKeyboardShortcuts() {
     return {
       ArrowLeft: () => enterBox(this.editor, 'left'),
@@ -116,9 +130,14 @@ class RawBox implements NodeView {
 
   /** Focuses the box with the cursor at its start (entered moving forward) or its end. */
   focus(side: Side): void {
+    this.edit(side > 0 ? 0 : this.code.state.doc.length);
+  }
+
+  /** Shows and focuses the code, the cursor at `offset` in it (kept within the code). */
+  edit(offset: number): void {
     this.rendered?.edit();
     this.code.focus();
-    this.code.dispatch({ selection: { anchor: side > 0 ? 0 : this.code.state.doc.length } });
+    this.code.dispatch({ selection: { anchor: Math.min(Math.max(offset, 0), this.code.state.doc.length) } });
   }
 
   /** Follows the box's link, if it has one (Alt+Enter on the selected box). */
@@ -347,4 +366,16 @@ function enterBlockBox({ state, view }: Editor, dir: Direction, side: Side): boo
   if ($head.depth === 0 || !view.endOfTextblock(dir)) return false;
   const next = Selection.near(state.doc.resolve(side > 0 ? $head.after() : $head.before()), side);
   return next instanceof NodeSelection && focusBox(view, next.from, side);
+}
+
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    typstRawBoxNavigation: {
+      /**
+       * Shows and focuses the code of the raw box at `pos`, the cursor at `offset` in its `src` (e.g. inside the `$$` of
+       * a math box just inserted). Run it after the transaction that made the box: the box must be shown.
+       */
+      editRawBox: (pos: number, offset: number) => ReturnType;
+    };
+  }
 }

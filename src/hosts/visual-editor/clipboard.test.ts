@@ -83,6 +83,14 @@ describe('paste', () => {
     expect(parent.querySelector('strong')?.textContent).toBe('bold');
   });
 
+  it('reads pasted inline math as a raw box in the text', () => {
+    const { doc, parent, select, paste } = setup('With more\n');
+    select(5);
+    paste({ 'text/plain': '$x^2$ ' });
+    expect(doc.text).toBe('With $x^2$ more\n');
+    expect(parent.querySelector('p .typst-visual__raw-inline')).not.toBeNull();
+  });
+
   it('is undone in one step', () => {
     const { doc, select, paste, undo } = setup('Some old text.\n');
     select(5, 8);
