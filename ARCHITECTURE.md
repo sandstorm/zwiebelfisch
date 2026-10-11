@@ -91,6 +91,7 @@ src/                        the widget (TypeScript); the most important API on t
     disposable/             Disposable (VS Code's shape: `new Disposable(fn)` disposes once; `Disposable.from(...)` in
                             reverse order)
     event-emitter/          EventEmitter<T> (`event` to subscribe, `fire`), Event<T>
+    user/                   User (`{ name, color? }`): who works in the widget, for the workbench and collaboration's model
   ui/                       feature-neutral DOM widgets, one folder each: popup-menu/ (PopupMenu: a role=menu at a
                             point or below a button, e.g. the file panel's menus), toolbar-menu/ (ToolbarMenu: a menu
                             button of toolbar buttons), floating-bar/ (FloatingBar: a bar above an anchor in the text)

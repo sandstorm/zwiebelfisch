@@ -9,6 +9,7 @@ export { createTypstEditor, type PdfExportOptions, type TypstEditor, type TypstE
 export { TypstEditorElement, defineTypstEditorElement, type TypstEditorChangeDetail } from './typst-editor-element/typst-editor-element';
 export type { FileChange, FileContent, ProjectFiles } from './core/project/project';
 export { ProjectPath } from './core/paths/paths';
+export type { User } from './core/user/user';
 export type { PdfEntry } from './core/typst-engine/typst-engine';
 export { Disposable } from './core/disposable/disposable';
 export { EventEmitter, type Event } from './core/event-emitter/event-emitter';
@@ -42,7 +43,6 @@ export type {
   StatusBarPlacement,
   TextDocument,
   TypstExtension,
-  User,
   Workbench,
   Workspace,
   WorkspaceConfiguration,

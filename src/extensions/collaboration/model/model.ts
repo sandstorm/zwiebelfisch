@@ -11,7 +11,8 @@ import type { CollaborationOptions } from '../collaboration';
 import type { PlacedPresence } from '../presence/presence';
 import type { Project } from '../../../core/project/project';
 import { roomFilePath } from '../../../core/room-protocol/room-protocol';
-import { RemoteCursors, type CollaborationUser } from './remote-cursors';
+import type { User } from '../../../core/user/user';
+import { RemoteCursors } from './remote-cursors';
 import { GitLabSourceControl, type StatelessChannel } from './gitlab-source-control';
 import { SharedAssets } from './shared-assets';
 import { SharedProject } from './shared-project';
@@ -19,7 +20,7 @@ import { SharedProject } from './shared-project';
 /** What gets shared: the project's Typst files (margin notes are part of their text). */
 export interface Shared {
   project: Project;
-  user?: CollaborationUser;
+  user?: User;
 }
 
 /**

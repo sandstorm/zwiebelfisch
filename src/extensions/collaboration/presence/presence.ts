@@ -4,13 +4,10 @@
 import { EventEmitter, type Event } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
+import type { User } from '../../../core/user/user';
 
-/** Who another user is, as the views show them. */
-export interface PresenceUser {
-  name: string;
-  /** A CSS color for their caret, selection and markers. */
-  color: string;
-}
+/** Who another user is, as the views show them: with the CSS color of their caret, selection and markers. */
+export type PresenceUser = Required<User>;
 
 /**
  * Another user's place in a text: their caret (`head`) and selection (`anchor`..`head`, empty for a plain caret),

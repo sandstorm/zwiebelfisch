@@ -10,7 +10,6 @@
 // branch as a workbench source control.
 import type { Awareness } from 'y-protocols/awareness';
 import type * as Y from 'yjs';
-import type { CollaborationUser } from './model/remote-cursors';
 import { Disposable } from '../../core/disposable/disposable';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './collaboration.css?inline';
@@ -41,7 +40,7 @@ export function collaboration(options: CollaborationOptions): TypstExtension {
     activate({ project, workbench, sourceView, visualView, subscriptions }) {
       subscriptions.push(workbench.registerStyleSheet(css));
       const presences = new Presences((document) => project.pathOf(document));
-      const user: CollaborationUser | undefined = workbench.user;
+      const user = workbench.user;
       const link = new CollaborationLink(options, { project, user }, {
         current: () => {
           const editor = workbench.activeTextEditor;

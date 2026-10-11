@@ -13,6 +13,7 @@ import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter
 import type { ProjectPath } from '../../core/paths/paths';
 import type { FileChange, FileContent, Project } from '../../core/project/project';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
+import type { User } from '../../core/user/user';
 import { Preview, type PreviewContributions } from '../preview/preview';
 import { SourceViewHost, type SourceViewContributions } from '../source-view/source-view';
 import { VisualViewContributions } from '../visual-view/visual-view';
@@ -138,14 +139,6 @@ export interface Command {
   readonly command: string;
   /** The arguments it is run with. */
   readonly arguments?: readonly unknown[];
-}
-
-/** Who works in the widget (`createTypstEditor({ user })`). */
-export interface User {
-  /** The name others see (collaborating), that signs comments and commits. */
-  readonly name: string;
-  /** The color others see the user's cursor in (default: one made from the name). */
-  readonly color?: string;
 }
 
 /** The widget's frame as extensions see it: which file is shown, and the places they can put things. */
