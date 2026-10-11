@@ -22,6 +22,8 @@ const NEW_DIAGRAM = 'diagrams.newDiagram';
 /** The setting `diagrams.editorUrl`'s default. */
 const DIAGRAMS_NET = 'https://embed.diagrams.net/';
 const SHOW_AS_IMAGE = 'Show as image';
+/** The icon of diagram files (where views list files). */
+const DIAGRAM_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2" width="5" height="4" rx="1"/><rect x="9.5" y="10" width="5" height="4" rx="1"/><path d="M4 6v6h5.5"/></svg>';
 
 /**
  * Diagrams (`*.drawio.png`) in the editing area: the custom editor `diagrams.editor` (priority 110, over the images'
@@ -50,7 +52,7 @@ export function diagrams(): TypstExtension {
       const editorUrl = () => workspace.getConfiguration('diagrams').get<string>('editorUrl', DIAGRAMS_NET);
       subscriptions.push(
         workbench.registerStyleSheet(css),
-        window.registerCustomEditorProvider('diagrams.editor', diagramEditor(context, editorUrl), { filenamePattern: DIAGRAM_FILES, priority: 110 }),
+        window.registerCustomEditorProvider('diagrams.editor', diagramEditor(context, editorUrl), { filenamePattern: DIAGRAM_FILES, priority: 110, icon: DIAGRAM_ICON }),
         commands.registerCommand(NEW_DIAGRAM, (resource?: ProjectPath) => newDiagram(context, resource)),
         workbench.registerMenuItem('file/newFile', { command: NEW_DIAGRAM, title: 'New diagram…', group: 'navigation', order: 16 }),
         visualView.registerBoxAction(editDiagramAction(diagramIn(project, languages), (path) => workbench.open(path))),

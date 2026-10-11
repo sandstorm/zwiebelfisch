@@ -465,7 +465,8 @@ interface Window {                      // hosts/window
   registerStatusBarItem(element, { alignment: 'left' | 'right', priority? })   // VS Code's StatusBarItem: higher priority
                                     // further left within its side (default 0), equal: registration order
   registerCustomEditorProvider(viewType, { resolveCustomEditor(document: { path, content }, panel: { element, onDidDispose }) },
-                               { filenamePattern: '*.drawio.png', priority?: 'default' | 'option' | number })
+                               { filenamePattern: '*.drawio.png', priority?: 'default' | 'option' | number, icon?: svg })
+  getFileIcon(path) → svg | undefined   // the icon of the editor opening it by default (the file panel's rows)
   registerFileDecorationProvider({ provideFileDecoration(path) → FileDecoration | FileDecoration[] | undefined,
                                    onDidChangeFileDecorations })   getFileDecorations(path)   onDidChangeFileDecorations
                                     // FileDecoration { badge?, tooltip?, color?, propagate? }
@@ -620,7 +621,9 @@ new WorkbenchHost(host, project, { mode?, user?, settings?, allowFileChange?, on
   is pending), then the element goes. The editors: `images` (`images.preview` for `*.{png,jpg,jpeg,gif,svg,webp}`,
   `images.file` for `*`: any other file), `spreadsheets` (`spreadsheets.editor`, `*.ic`), `diagrams`
   (`diagrams.editor`, `*.drawio.png`, priority 110); they store edits with `workspace.applyEdit`. Core knows no kinds of
-  files besides Typst source (`ProjectPath.isTypst`): what a file is, is the editors' business, by name.
+  files besides Typst source (`ProjectPath.isTypst`): what a file is, is the editors' business, by name. An editor
+  may give the files it opens by default an `icon` (SVG markup, 16×16 strokes); views that list files ask for it
+  (`getFileIcon(path)`), so the file panel knows no kinds of files either (decided 2026-10-11).
 - **Stylesheets** (`StyleSheets`, `style-sheets/`): the widget's own CSS (`styleSheet`: the Visual view's
   `visual-view.css`, `typst-editor.css`, the layout's `layout.css`) goes in first, as `<style
   id="typst-editor-styles">`, before the frame is built (the color scheme reads the resolved colors); each

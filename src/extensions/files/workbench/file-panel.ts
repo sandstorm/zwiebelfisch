@@ -35,6 +35,8 @@ export interface FilePanelOptions {
   state?: Memento;
   /** The decorations of a file (badges, e.g. who else is in it), as they are at each `render` (default: none). */
   decorations?(path: ProjectPath): readonly FileDecoration[];
+  /** The icon of a file that is no Typst file, SVG markup (`window.getFileIcon`; default: the same for every file). */
+  icon?(path: ProjectPath): string | undefined;
 }
 
 export interface FilePanelState {
@@ -104,7 +106,12 @@ export class FilePanel {
   render(state: FilePanelState): void {
     this.state = state;
     for (const folder of this.emptyFolders) if (filesUnder(state.paths, folder).length > 0) this.emptyFolders.delete(folder);
-    this.tree.render({ ...state, folders: [...this.emptyFolders], decorations: (path) => this.options.decorations?.(path) ?? [] });
+    this.tree.render({
+      ...state,
+      folders: [...this.emptyFolders],
+      decorations: (path) => this.options.decorations?.(path) ?? [],
+      icon: (path) => this.options.icon?.(path),
+    });
     this.newButton.hidden = this.options.menus.items(NEW_FILE_MENU, this.context(this.current())).length === 0;
   }
 

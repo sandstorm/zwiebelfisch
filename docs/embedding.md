@@ -548,7 +548,8 @@ Rules the built-ins follow, and yours should too:
   string) or `undefined`.
 
 - **Files other than Typst open in custom editors** (VS Code's): `window.registerCustomEditorProvider(viewType, provider,
-  { filenamePattern, priority? })`. The pattern is a glob over the file name (`*.csv`, `*.{png,jpg}`; with a `/`
+  { filenamePattern, priority?, icon? })` (`icon`: SVG markup, 16×16 strokes in `currentColor`, shown on the file
+  panel's rows of the files it opens). The pattern is a glob over the file name (`*.csv`, `*.{png,jpg}`; with a `/`
   over the path). Of the editors matching a file, the highest `priority` opens it (`'default'`: 100, or a number;
   `'option'` only through `workbench.open(path, { viewType })`), then the most specific pattern (`*.drawio.png` beats
   the images' `*.{png,…}`, which beats `*`). Every open gets a new panel: fill `panel.element`, store edits with
@@ -564,7 +565,7 @@ Rules the built-ins follow, and yours should too:
       const text = typeof document.content === 'string' ? document.content : new TextDecoder().decode(document.content);
       panel.element.append(renderTable(text));            // yours
     },
-  }, { filenamePattern: '*.csv' });
+  }, { filenamePattern: '*.csv', icon: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor"><path d="M2 3h12v10H2zM2 7h12M6 3v10"/></svg>' });
   ```
 
 ```ts

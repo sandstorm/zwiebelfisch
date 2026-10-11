@@ -62,6 +62,7 @@ function setup(onChange: (change: FileChange) => Promise<string | null> = async 
       menus: { items: (menuId, context) => (menus[menuId] ?? []).filter((item) => item.when?.(context) ?? true), run: (command, resource) => void ran.push([command, resource]) },
       state: memory,
       decorations: (file) => decorations[file] ?? [],
+      icon: (file) => (file.endsWith('.png') ? '<svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="4"/></svg>' : undefined),
     },
     initial,
   );
@@ -117,6 +118,14 @@ describe('FilePanel', () => {
     const { item } = setup(undefined, nested);
     expect(item('data.csv').classList.contains('typst-files__row--file')).toBe(true);
     expect(item('chapters').classList.contains('typst-files__row--folder')).toBe(true);
+  });
+
+  it('shows a Typst icon for Typst files, the icon a custom editor gives other files, else the icon for any file', () => {
+    const { item } = setup(undefined, { ...state, paths: [path('/main.typ'), path('/logo.png'), path('/data.csv')] });
+    const iconOf = (name: string) => item(name).querySelector('svg.typst-files__icon')!;
+    expect(iconOf('logo.png').querySelector('circle')).not.toBeNull();
+    expect(iconOf('main.typ').innerHTML).not.toBe(iconOf('data.csv').innerHTML);
+    expect(iconOf('data.csv').querySelector('circle')).toBeNull();
   });
 
   it("shows the files' decorations as badges in their colors, propagated ones on closed folders too", () => {

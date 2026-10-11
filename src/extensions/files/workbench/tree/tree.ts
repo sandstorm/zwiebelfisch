@@ -3,7 +3,7 @@ import { ProjectPath } from '../../../../core/paths/paths';
 import { type Memento, PROJECT_PATH_TYPE } from '../../../../hosts/workbench/workbench';
 import type { FileDecoration } from '../../../../hosts/window/window';
 import { textColorOn } from '../../../../core/color-scheme/color-scheme';
-import { fileIcon, icon } from '../icons/icons';
+import { icon, markupIcon } from '../icons/icons';
 import { ancestorsOf, buildTree, filesUnder, type Folder, folderOf, type Move, navigate, type Row, visibleRows } from '../../model/tree-model';
 
 export interface FileTreeOptions {
@@ -31,6 +31,8 @@ export interface TreeState {
   active: ProjectPath;
   /** The decorations of a file (badges such as who else is in it). */
   decorations(path: ProjectPath): readonly FileDecoration[];
+  /** The icon of a file that is no Typst file (SVG markup; undefined: the panel's icon for any file). */
+  icon(path: ProjectPath): string | undefined;
 }
 
 /**
@@ -127,7 +129,7 @@ export class FileTree {
       item.append(chevron(doc), icon(doc, row.expanded ? 'folder-open' : 'folder'), name);
     } else {
       item.setAttribute('aria-selected', String(row.path === state.active));
-      item.append(icon(doc, fileIcon(row.path)), name);
+      item.append(fileIcon(doc, state, row.path), name);
     }
     if (row.path === state.main) item.append(badge(doc));
     const decorations = decorationsOf(state, row);
@@ -228,6 +230,13 @@ export class FileTree {
       else this.options.onUpload([...(event.dataTransfer?.files ?? [])], folder);
     });
   }
+}
+
+/** The icon of the file `path`: the Typst icon, the one its custom editor gives, else the panel's icon for any file. */
+function fileIcon(doc: Document, state: TreeState, path: ProjectPath): Element {
+  if (ProjectPath.isTypst(path)) return icon(doc, 'typst');
+  const markup = state.icon(path);
+  return markup ? markupIcon(doc, markup) : icon(doc, 'data');
 }
 
 /** The decorations of a file, or those of the files in a closed folder that propagate (each once). */

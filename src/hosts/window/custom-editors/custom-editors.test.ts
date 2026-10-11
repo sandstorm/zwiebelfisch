@@ -92,6 +92,15 @@ describe('CustomEditors', () => {
     expect(() => editors.register('a.first', provider().provider, { filenamePattern: '*' })).toThrow(/registered already/);
   });
 
+  it("gives a file the icon of the editor that opens it by default, not an option editor's", () => {
+    const editors = new CustomEditors(document.createElement('div'));
+    editors.register('a.any', provider().provider, { filenamePattern: '*', icon: '<svg id="any"/>' });
+    editors.register('a.csv', provider().provider, { filenamePattern: '*.csv' });
+    editors.register('a.table', provider().provider, { filenamePattern: '*.csv', priority: 'option', icon: '<svg id="table"/>' });
+    expect(editors.iconOf(path('/notes.txt'))).toBe('<svg id="any"/>');
+    expect(editors.iconOf(path('/data.csv'))).toBeUndefined();
+  });
+
   it('gives every open a new panel in the editing area and disposes the shown one first', () => {
     const parent = document.createElement('div');
     const { editors, images } = builtins(parent);

@@ -33,9 +33,9 @@ export function images(): TypstExtension {
       subscriptions.push(
         workbench.registerStyleSheet(css),
         projectImages,
-        window.registerCustomEditorProvider('images.preview', assetEditor, { filenamePattern: IMAGE_FILES }),
+        window.registerCustomEditorProvider('images.preview', assetEditor, { filenamePattern: IMAGE_FILES, icon: IMAGE_ICON }),
         // any other file (`*` is the least specific pattern: every other editor's wins)
-        window.registerCustomEditorProvider('images.file', assetEditor, { filenamePattern: '*' }),
+        window.registerCustomEditorProvider('images.file', assetEditor, { filenamePattern: '*', icon: FILE_ICON }),
       );
       imagesVisualView({
         assets: (document) => projectImages.forDocument(document).assets,
@@ -53,6 +53,11 @@ export function images(): TypstExtension {
     },
   };
 }
+
+/** The icon of image files (where views list files). */
+const IMAGE_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"/><circle cx="6" cy="6.5" r="1.2"/><path d="m2.5 12 3.5-3.5 2.5 2.5 2-2 3 3"/></svg>';
+/** The icon of any other file the project stores (data). */
+const FILE_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 1.5h5.5L13 5v9.5H4z"/><path d="M9.5 1.5V5H13M6 9h1M6 11.5h1M8.5 9H10M8.5 11.5H10"/></svg>';
 
 /**
  * `#image("literal path", ..)` blocks, edited as code in a box headed "Image:

@@ -75,6 +75,11 @@ export interface Window {
   getFileDecorations(path: ProjectPath): readonly FileDecoration[];
   /** Decorations changed: of these files, or of any (undefined). */
   readonly onDidChangeFileDecorations: Event<readonly ProjectPath[] | undefined>;
+  /**
+   * The icon of `path` for a view that lists files: that of the custom editor opening it by default (its `icon`);
+   * undefined when it has none, or no custom editor opens it (a Typst file).
+   */
+  getFileIcon(path: ProjectPath): string | undefined;
 
   /** The editor of the Typst file shown in the editing area; null while another kind of file is shown. */
   readonly activeTextEditor: TextEditor | null;
@@ -188,6 +193,11 @@ export interface CustomEditorOptions {
    * (never by default, only when asked for with `workbench.open(path, { viewType })`).
    */
   readonly priority?: 'default' | 'option' | number;
+  /**
+   * The icon of the files it opens by default, where views list files (the file panel): SVG markup with a 16×16 view
+   * box, drawn in strokes of `currentColor`.
+   */
+  readonly icon?: string;
 }
 
 /** Shows (and edits) files in the editing area (VS Code's CustomReadonlyEditorProvider, without documents of its own). */
@@ -322,6 +332,10 @@ export class WindowHost implements Window {
 
   getFileDecorations(path: ProjectPath): readonly FileDecoration[] {
     return this.#fileDecorations.decorationsOf(path);
+  }
+
+  getFileIcon(path: ProjectPath): string | undefined {
+    return this.#customEditors.iconOf(path);
   }
 
   get activeTextEditor(): TextEditor | null {

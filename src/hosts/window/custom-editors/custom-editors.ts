@@ -16,6 +16,7 @@ interface Registration {
   readonly pattern: FilenamePattern;
   /** null: `'option'`, never chosen by default. */
   readonly priority: number | null;
+  readonly icon: string | undefined;
 }
 
 /**
@@ -38,6 +39,7 @@ export class CustomEditors {
       provider,
       pattern: new FilenamePattern(options.filenamePattern),
       priority: priority === 'option' ? null : priority === 'default' ? DEFAULT_PRIORITY : priority,
+      icon: options.icon,
     };
     this.#registrations.push(registration);
     return new Disposable(() => {
@@ -70,6 +72,11 @@ export class CustomEditors {
       },
     };
     registration.provider.resolveCustomEditor({ path: file.path, content: file.content }, panel);
+  }
+
+  /** The icon of the editor that opens `path` by default; undefined without one. */
+  iconOf(path: ProjectPath): string | undefined {
+    return this.#choose(path, undefined)?.icon;
   }
 
   dispose(): void {

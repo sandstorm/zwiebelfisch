@@ -65,6 +65,7 @@ export function files(): TypstExtension {
         menus: panelMenus(context),
         state: context.workspaceState,
         decorations: (path) => window.getFileDecorations(path),
+        icon: (path) => window.getFileIcon(path),
       }, state());
       // shown on every open, which also follows every create / rename / delete
       // listening only while there is a panel: the widget shows its drop hint while anyone listens

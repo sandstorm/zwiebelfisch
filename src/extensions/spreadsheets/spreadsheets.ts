@@ -12,6 +12,9 @@ import { typstPath } from './model/typst-file';
 import { SpreadsheetView } from './workbench/spreadsheet-view';
 import type { WorkbookEdit } from './workbench/workbook';
 
+/** The icon of spreadsheet files (where views list files). */
+const SPREADSHEET_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2.5" width="12" height="11" rx="1.5"/><path d="M2 6h12M2 9.5h12M6 6v7.5M10 6v7.5"/></svg>';
+
 /** The command behind "New spreadsheet…" (optional argument: the file or folder it goes next to / into). */
 const NEW_SPREADSHEET = 'spreadsheets.newSpreadsheet';
 
@@ -35,7 +38,7 @@ export function spreadsheets(): TypstExtension {
               panel.onDidDispose(() => view.dispose());
             },
           },
-          { filenamePattern: '*.ic' },
+          { filenamePattern: '*.ic', icon: SPREADSHEET_ICON },
         ),
         commands.registerCommand(NEW_SPREADSHEET, (resource?: ProjectPath) => newSpreadsheet(context, resource)),
         workbench.registerMenuItem('file/newFile', { command: NEW_SPREADSHEET, title: 'New spreadsheet…', group: 'navigation', order: 15 }),
