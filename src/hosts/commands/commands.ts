@@ -1,16 +1,16 @@
-// The commands namespace of the extension API (VS Code's `commands`). Entry of hosts/commands/. See
-// docs/30_architecture/07_workbench.typ.
 import { Disposable } from '../../core/disposable/disposable';
 
 /**
- * The widget's commands as extensions use them (VS Code's `commands` namespace, with key bindings).
+ * The widget's commands and key bindings (VS Code's `commands` namespace).
  *
- * What extensions register by id (`registerCommand`), run by id (`executeCommand`) and bind to keys
- * (`registerKeybinding`).
+ * Extensions never import each other. A command is how one offers an action to the others: it registers a handler
+ * under an id, and anyone who knows the id runs it, be it another extension, a menu entry or a key binding. The
+ * handler may be sync or async. It is still called synchronously, so the user's gesture, the selection and the focus
+ * are as they were when the command was asked for. Key bindings live here too: a bound key is handled on the widget's
+ * root before any editor sees it.
  *
- * Why plain string ids and a Promise (VS Code's shape): extensions never depend on each other, so a caller knows a
- * command only by its id, and the handler may be sync or async. The handler is called synchronously all the same, so
- * user activation, the selection and the focus are as they were when the command was asked for.
+ * Showing commands to people is left to others: menus are the workbench's and the window's, and search everywhere
+ * lists the commands extensions declare (`contributes.commands`). See docs/30_architecture/07_workbench.typ.
  */
 export interface Commands {
   /**
@@ -42,10 +42,7 @@ export interface Command {
   readonly arguments?: readonly unknown[];
 }
 
-/**
- * The widget's commands and key bindings. Keys are handled on `root` in the capture phase, so a bound key is
- * the widget's before an editor inside sees it (and the editor never does).
- */
+/** The `Commands` of one widget. Keys are handled on `root` in the capture phase: no editor sees a bound key. */
 export class CommandsHost implements Commands {
   readonly #handlers = new Map<string, CommandHandler>();
   readonly #keybindings = new Set<{ matches(event: KeyboardEvent): boolean; command: string }>();

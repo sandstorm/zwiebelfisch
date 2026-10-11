@@ -1,20 +1,17 @@
-// The workspace namespace of the extension API (VS Code's `workspace`). Entry of hosts/workspace/. See
-// docs/30_architecture/07_workbench.typ.
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { FileChange, Project } from '../../core/project/project';
 
 /**
- * The project's changes and the settings as extensions use them (VS Code's `workspace` namespace).
+ * Changes to the project's files and the widget's settings (VS Code's `workspace` namespace).
  *
- * Changes to the project's files (`applyEdit`, through the host's veto) and the widget's settings. Extensions declare
- * their settings (`TypstExtension.contributes`), the host gives the values (`createTypstEditor({ settings })`,
- * changeable later), extensions read them through `workspace.getConfiguration('<section>')` and hear about changes
- * through `onDidChangeConfiguration`.
+ * `applyEdit` is the one way an extension changes files. The change must pass the project's rules and then the
+ * host's veto (`allowFileChange`), so a page embedding the widget decides in one place what may happen.
  *
- * Why settings: an option of one feature is that feature's business. The widget passes every value through one generic
- * map instead of knowing each option by name, and the `<typst-editor>` element maps it onto an attribute the same way.
- * Why `applyEdit` here: every change an extension asks for goes through the project's rules and then the host's veto
- * (`allowFileChange`), in one place.
+ * Settings keep the widget free of feature options. Each extension declares its own settings
+ * (`contributes.configuration`). The host passes all values as one map by full id (`createTypstEditor({ settings })`,
+ * or the `<typst-editor>` element's `settings` attribute) and may replace it later. Extensions read their section
+ * (`getConfiguration('pdfExport')`) and hear about changes (`onDidChangeConfiguration`). A value that is undeclared
+ * or of the wrong type is ignored with a warning. See docs/30_architecture/07_workbench.typ, "Changes and settings".
  */
 export interface Workspace {
   /**
@@ -79,9 +76,8 @@ export interface WorkspaceOptions {
 }
 
 /**
- * The workspace of one widget: its project's changes, asked for by extensions, and the settings. A setting's value
- * counts only if the setting is declared and the value has the declared type (and is one of the `enum`, if any);
- * otherwise the setting has its default, and a warning says why.
+ * The `Workspace` of one widget. A setting's value counts only if the setting is declared and the value has the
+ * declared type (and is one of the `enum`, if any); otherwise the setting has its default, and a warning says why.
  */
 export class WorkspaceHost implements Workspace {
   readonly #properties = new Map<string, ConfigurationProperty>();
