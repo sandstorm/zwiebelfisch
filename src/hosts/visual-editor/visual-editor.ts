@@ -157,8 +157,8 @@ export class VisualEditor {
 export const VISUAL_EDITOR = 'visualEditor';
 
 /**
- * Inserts what Typst `source` is read as in a view's `editor` (as the Visual editor reads any Typst: a figure of an image is a
- * figure, what no spec models a raw box), at the selection or at document position `at` (where something was
+ * Inserts what Typst `source` is read as in the Tiptap `editor` (as the Visual editor reads any Typst: a figure of an
+ * image is a figure, what no spec models a raw box), at the selection or at document position `at` (where something was
  * dropped). One paragraph's inline content (`*bold*`, `$x$`) goes into the text there, in place of the selection;
  * blocks go next to it: after the selected block, or after the paragraph or heading holding the position, an empty
  * paragraph taken over. Blocks never split or replace anything. The editor gets the focus, the cursor after what was
