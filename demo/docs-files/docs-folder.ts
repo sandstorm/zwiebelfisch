@@ -1,8 +1,9 @@
-// DocsFolder: the docs/ folder as the docs-files dev-server plugin (plugin.ts) writes and watches it. Node only.
+// DocsFolder: the docs/ folder as the docs-files plugin (plugin.ts) writes and watches it. Node only.
 // Every path comes from the page, so each one goes through the guard here: relative to docs/, no "..", no hidden
 // files, nothing in the build outputs (docs/fonts/), no symlink leading out. See docs/30_architecture/11_development.typ.
 import { randomBytes } from 'node:crypto';
-import { lstat, mkdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
+import { watch } from 'node:fs';
+import { lstat, mkdir, readdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { type DiskChange, isTextPath } from './protocol.ts';
 
@@ -18,8 +19,8 @@ export class DocsFilesError extends Error {
 
 /**
  * The files under `root`, by paths relative to it (`10_guide/02_features.typ`). Writes are atomic (a hidden temporary file
- * renamed over the target). It remembers what it wrote last per path, so `changeFor` skips the watcher's event for
- * the folder's own write (no echo to the page that made it).
+ * renamed over the target). It remembers what it wrote last per path, so `watch` skips the event for the folder's own
+ * write (no echo to the page that made it).
  */
 export class DocsFolder {
   readonly #written = new Map<string, Buffer | null>();
@@ -74,9 +75,31 @@ export class DocsFolder {
   }
 
   /**
-   * What to tell the page about the watcher's event for the absolute `file`: its content now, or that it is gone;
-   * null when the page must not hear of it (outside the folder, refused by the guard, a folder, or the folder's own
-   * last write).
+   * Calls `listener` with each change on disk (another editor, a checkout), not with the folder's own writes; returns
+   * the stop. The same change may come more than once (the page ignores what it knows already).
+   */
+  watch(listener: (change: DiskChange) => void): () => void {
+    const watcher = watch(this.root, { recursive: true }, (_, name) => {
+      if (name) void this.changeFor(join(this.root, name.toString())).then((change) => change && listener(change));
+    });
+    return () => watcher.close();
+  }
+
+  /** Every file the page may hear of, as it is now (none deleted), sorted by path. */
+  async snapshot(): Promise<DiskChange[]> {
+    const entries = await readdir(this.root, { recursive: true, withFileTypes: true });
+    const paths = entries
+      .filter((entry) => entry.isFile())
+      .map((entry) => relative(this.root, join(entry.parentPath, entry.name)).split(sep).join('/'))
+      .filter((path) => !this.#problem(path))
+      .sort();
+    return Promise.all(paths.map(async (path) => diskChange(path, await readFile(join(this.root, ...path.split('/'))))));
+  }
+
+  /**
+   * What to tell the page about a watcher's event for the absolute `file`: its content now, or that it is gone; null
+   * when the page must not hear of it (outside the folder, refused by the guard, a folder, or the folder's own last
+   * write).
    */
   async changeFor(file: string): Promise<DiskChange | null> {
     if (!this.contains(file)) return null;
@@ -84,8 +107,7 @@ export class DocsFolder {
     if (this.#problem(path)) return null;
     const bytes = await readFile(file).catch((error: NodeJS.ErrnoException) => (error.code === 'ENOENT' ? null : undefined));
     if (bytes === undefined || sameBytes(this.#written.get(path), bytes)) return null;
-    if (bytes === null) return { path, deleted: true };
-    return isTextPath(path) ? { path, text: bytes.toString('utf8') } : { path, base64: bytes.toString('base64') };
+    return diskChange(path, bytes);
   }
 
   /** The absolute file for `path`, if the guard lets it through; else throws a `DocsFilesError`. */
@@ -124,6 +146,12 @@ async function exists(file: string): Promise<boolean> {
 async function nearestExisting(folder: string): Promise<string> {
   while (!(await exists(folder))) folder = dirname(folder);
   return folder;
+}
+
+/** A file's content (or its absence) as it travels to the page. */
+function diskChange(path: string, bytes: Buffer | null): DiskChange {
+  if (bytes === null) return { path, deleted: true };
+  return isTextPath(path) ? { path, text: bytes.toString('utf8') } : { path, base64: bytes.toString('base64') };
 }
 
 function sameBytes(written: Buffer | null | undefined, now: Buffer | null): boolean {

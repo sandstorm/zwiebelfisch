@@ -2,7 +2,8 @@
 #MISE description="Playground: the demo (Vite, :5199) and the collaboration server with an in-memory fake GitLab (:1234); Ctrl-C stops both"
 #MISE depends=["build:engine", "build:fonts"]
 # Everything local: no real GitLab, no secrets, nothing stored. Usage: README.md (Demo).
-# The demo page expects the server on 127.0.0.1:1234 and Vite on 127.0.0.1:5199 (vite.config.ts).
+# The demo page expects the server on 127.0.0.1:1234 and Vite on 127.0.0.1:5199 (vite.config.ts). The arguments go to
+# Vite: `mise run demo preview` serves the last build (dist/demo) instead, which is what demo:build does.
 set -euo pipefail
 
 node server/src/fake-gitlab-main.ts &

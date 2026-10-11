@@ -1,8 +1,8 @@
-// Tests for docs-folder.ts: the path guard, atomic writes, and which watcher events reach the page.
+// Tests for docs-folder.ts: the path guard, atomic writes, the snapshot, and which changes on disk reach the page.
 import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DocsFolder } from './docs-folder';
 
 let base: string;
@@ -116,5 +116,28 @@ describe('changes on disk for the page', () => {
     expect(await folder.changeFor(join(root, '10_guide'))).toBeNull();
     expect(await folder.changeFor(join(base, 'elsewhere.typ'))).toBeNull();
     expect(folder.contains(join(base, 'docs-other/x.typ'))).toBe(false);
+  });
+
+  it('takes a snapshot of every file the page may hear of: no hidden files, build outputs or folders', async () => {
+    await writeFile(join(root, '.abc.docs-files.tmp'), 'x');
+    await writeFile(join(root, 'fonts/a.ttf'), 'x');
+    await writeFile(join(root, 'logo.png'), new Uint8Array([1, 2, 3]));
+    expect(await folder.snapshot()).toEqual([
+      { path: '10_guide/02_features.typ', text: '= Features\n' },
+      { path: 'logo.png', base64: 'AQID' },
+    ]);
+  });
+
+  it('watches the folder: a change by someone else reaches the listener, its own write does not', async () => {
+    const heard: unknown[] = [];
+    const stop = folder.watch((change) => heard.push(change));
+    try {
+      await folder.write('10_guide/02_features.typ', bytes('= Mine\n'));
+      await writeFile(join(root, '10_guide/other.typ'), '= Theirs\n');
+      await vi.waitFor(() => expect(heard).toContainEqual({ path: '10_guide/other.typ', text: '= Theirs\n' }));
+      expect(heard).not.toContainEqual(expect.objectContaining({ path: '10_guide/02_features.typ' }));
+    } finally {
+      stop();
+    }
   });
 });

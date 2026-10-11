@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
-// Tests for docs-sync.ts: per-file debounced writes, structural changes on disk first, no echo, the conflict rule.
+// Tests for docs-sync.ts: per-file debounced writes, structural changes on disk first, no echo, the conflict rule,
+// the snapshot.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProjectPath, type FileChange, type ProjectFiles } from '../../src';
-import { DocsSync, httpDocsFilesApi, type DocsFilesApi } from './docs-sync';
+import { DocsSync, docsFilesToken, httpDocsFilesApi, type DocsFilesApi } from './docs-sync';
 
 const path = (p: string) => ProjectPath.of(p);
 const text = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
@@ -191,16 +192,36 @@ describe('changes on disk', () => {
     sync.external({ path: 'notes.md', text: '# Notes' });
     expect(editor.files['/notes.md']).toBeUndefined();
   });
+
+  it('a snapshot brings in what differs from what the page started with (a build’s older files): changed, new, deleted', async () => {
+    const { api, sync, editor, report } = setup();
+    sync.snapshot([
+      { path: 'main.typ', text: '= Docs\n' },
+      { path: '10_guide/02_features.typ', text: '= Features, newer\n' },
+      { path: '10_guide/03_new.typ', text: '= New\n' },
+      { path: 'notes.md', text: '# Notes' },
+    ]);
+    expect(editor.files).toEqual({ '/main.typ': '= Docs\n', '/10_guide/02_features.typ': '= Features, newer\n', '/10_guide/03_new.typ': '= New\n' });
+    expect(report).not.toHaveBeenCalledWith(expect.stringMatching(/main\.typ/), expect.anything());
+    // the same snapshot again (a reconnect) changes nothing
+    report.mockClear();
+    sync.snapshot([{ path: 'main.typ', text: '= Docs\n' }, { path: '10_guide/02_features.typ', text: '= Features, newer\n' }, { path: '10_guide/03_new.typ', text: '= New\n' }]);
+    expect(report).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(api.write).not.toHaveBeenCalled();
+    expect(api.delete).not.toHaveBeenCalled();
+  });
 });
 
 describe('the HTTP API', () => {
-  it('exists only with the dev server’s token in the page, and sends it with every request', async () => {
+  it('exists only with the plugin’s token in the page, and sends it with every request', async () => {
     document.head.replaceChildren();
-    expect(httpDocsFilesApi(document)).toBeNull();
+    expect(docsFilesToken(document)).toBeNull();
     const meta = Object.assign(document.createElement('meta'), { name: 'docs-files-token', content: 'abc' });
     document.head.append(meta);
+    expect(docsFilesToken(document)).toBe('abc');
     const send = vi.fn(async () => new Response(null, { status: 204 }));
-    const api = httpDocsFilesApi(document, send)!;
+    const api = httpDocsFilesApi('abc', send);
     await api.rename('a b.typ', 'c.typ');
     expect(send).toHaveBeenCalledWith('/__docs-files?path=a+b.typ&to=c.typ', expect.objectContaining({ method: 'POST', headers: expect.objectContaining({ 'x-docs-files-token': 'abc' }) }));
     send.mockResolvedValueOnce(new Response('Outside docs/', { status: 403 }));
