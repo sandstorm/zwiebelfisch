@@ -46,8 +46,8 @@ async function user(name: string, files: Record<string, string>, peer?: { ydoc: 
   window.document.body.append(visualParent, sourceParent);
   const visual = new VisualView(visualParent, document, VisualViewHost.from([visualPresence(presences, () => [document])]));
   const sourceViews = new SourceViewHost();
-  sourceViews.registerExtension(sourcePresence(presences));
-  sourceViews.registerExtension(perUserUndo);
+  sourceViews.registerCodeMirrorExtension(sourcePresence(presences));
+  sourceViews.registerCodeMirrorExtension(perUserUndo);
   const source = sourceViews.createView(sourceParent, document);
   cleanup.push(() => {
     disconnect();

@@ -14,13 +14,16 @@ import type { TextChange, TypstDocument } from '../../core/typst-document/typst-
 
 /** The Source view's contribution points (what `ExtensionContext.sourceView` offers). */
 export interface SourceViewContributions {
-  /** Adds CodeMirror extensions to every Source view, the existing ones included, until disposed. */
-  registerExtension(extension: SourceViewExtension): Disposable;
+  /**
+   * Adds CodeMirror extensions to every Source view, the existing ones included, until disposed: the same value for
+   * all of them, or made per view from what the view shows (`SourceViewContext`).
+   */
+  registerCodeMirrorExtension(extension: Extension | ((view: SourceViewContext) => Extension)): Disposable;
 }
 
 /** Makes Source views and keeps the registered contributions applied to all of them. */
 export class SourceViewHost implements SourceViewContributions {
-  private readonly extensions: SourceViewExtension[] = [];
+  private readonly extensions: (Extension | ((view: SourceViewContext) => Extension))[] = [];
   private readonly changed = new EventEmitter<void>();
   /** How a view gets its contributions: it asks for them now and again on every change. */
   private readonly contributions: Contributions = {
@@ -28,7 +31,7 @@ export class SourceViewHost implements SourceViewContributions {
     onDidChange: this.changed.event,
   };
 
-  registerExtension(extension: SourceViewExtension): Disposable {
+  registerCodeMirrorExtension(extension: Extension | ((view: SourceViewContext) => Extension)): Disposable {
     this.extensions.push(extension);
     this.changed.fire();
     return new Disposable(() => {
@@ -46,12 +49,6 @@ export class SourceViewHost implements SourceViewContributions {
     return this.extensions.map((extension) => (typeof extension === 'function' ? extension(view) : extension));
   }
 }
-
-/**
- * CodeMirror extensions for every Source view: the same value for all of them, or made per view from
- * what the view shows (`SourceViewContext`).
- */
-export type SourceViewExtension = Extension | ((view: SourceViewContext) => Extension);
 
 /** What a contribution knows about the one Source view it is applied to. */
 export interface SourceViewContext {

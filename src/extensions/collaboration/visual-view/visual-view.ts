@@ -23,8 +23,8 @@ export function visualPresence(presences: PresenceSource, documents: () => reado
     activate({ visualView, subscriptions }) {
       subscriptions.push(
         visualView.registerHighlights('collaboration.selections', selections(presences, documents)),
-        visualView.registerEditorExtension((view) => remoteCarets(view, presences)),
-        visualView.registerBoxCodeExtension(() => boxPresence),
+        visualView.registerTiptapExtension((view) => remoteCarets(view, presences)),
+        visualView.registerRawBoxCodeMirrorExtension(() => boxPresence),
       );
     },
   };

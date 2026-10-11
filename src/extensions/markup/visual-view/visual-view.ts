@@ -7,7 +7,7 @@ import CodeBlock from '@tiptap/extension-code-block';
 import type { Mark, Node } from '@tiptap/pm/model';
 import type { Window } from '../../../hosts/window/window';
 import { callArguments, children, decodeString, namedArgument, quote, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type Action, type EditorExtensionProvider, type ToolbarContext, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import { svg, type Action, type ToolbarContext, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 import { starterKitPart, type Around, type Placed, type TypstMarkSpec, type TypstSerializeState, type TypstParseContext } from '../../../hosts/projection/projection';
 import { codeBlockView } from './code-block-view';
 import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from '../model/raw-code';
@@ -279,20 +279,19 @@ export function linkAction(toolbar: ToolbarContext, prompt: LinkPrompt): Action 
 }
 
 /** Mod+K in the text (a raw box's code keeps its own keys): "Link", as in the selection's bar. */
-export function linkShortcut(prompt: LinkPrompt): EditorExtensionProvider {
-  return () =>
-    Extension.create({
-      name: 'typstLinkShortcut',
-      addKeyboardShortcuts() {
-        return {
-          'Mod-k': ({ editor }) => {
-            if (!editor.can().setMark('link')) return false;
-            void askLink(editor, prompt);
-            return true;
-          },
-        };
-      },
-    });
+export function linkShortcut(prompt: LinkPrompt): AnyExtension {
+  return Extension.create({
+    name: 'typstLinkShortcut',
+    addKeyboardShortcuts() {
+      return {
+        'Mod-k': ({ editor }) => {
+          if (!editor.can().setMark('link')) return false;
+          void askLink(editor, prompt);
+          return true;
+        },
+      };
+    },
+  });
 }
 
 /**

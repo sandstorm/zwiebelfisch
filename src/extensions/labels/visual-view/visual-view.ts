@@ -33,7 +33,7 @@ export function references(options: ReferencesOptions): VisualViewContribution {
     activate({ visualView, subscriptions }) {
       subscriptions.push(
         visualView.registerNode(REFERENCE),
-        visualView.registerEditorExtension((view) => referencesExtension(labels, view.document, prompts)),
+        visualView.registerTiptapExtension((view) => referencesExtension(labels, view.document, prompts)),
         visualView.registerToolbarItem({ group: 'insert', order: 80, create: addLabel }),
       );
     },

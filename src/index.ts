@@ -40,18 +40,16 @@ export type { Scm, SourceControl, SourceControlState } from './hosts/scm/scm';
 export type { DocumentLink, DocumentLinkProvider, Languages, TextDocument } from './hosts/languages/languages';
 export type { ConfigurationChangeEvent, ConfigurationProperty, Settings, Workspace, WorkspaceConfiguration } from './hosts/workspace/workspace';
 export type { PdfExportOption, PreviewContributions, PreviewToolbarItem, ToolbarPlacement } from './hosts/preview/preview';
-export type { SourceViewContext, SourceViewContributions, SourceViewExtension } from './hosts/source-view/source-view';
+export type { SourceViewContext, SourceViewContributions } from './hosts/source-view/source-view';
 export type {
   Action,
   Anchor,
   BoxAction,
-  BoxCodeExtensionProvider,
   BoxPicture,
   BoxRenderer,
   BoxRendererProvider,
   BoxTools,
   BoxToolsHost,
-  EditorExtensionProvider,
   Gutter,
   GutterProvider,
   Highlight,

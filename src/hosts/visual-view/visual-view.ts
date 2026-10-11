@@ -3,7 +3,7 @@
 // VisualViewHost).
 // Entry of hosts/visual-view/. See ARCHITECTURE.md, "VisualView".
 import { Editor, type AnyExtension, type ChainedCommands } from '@tiptap/core';
-import { StateEffect, type Extension as CodeExtension } from '@codemirror/state';
+import { StateEffect, type Extension } from '@codemirror/state';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState, TextSelection, type Plugin, type Transaction } from '@tiptap/pm/state';
 import type { Decoration } from '@tiptap/pm/view';
@@ -56,7 +56,7 @@ export class VisualView {
       extensions: [
         ...editorExtensions(contributed.nodes, contributed.marks, boxes(view, contributed, views)),
         highlights,
-        ...contributed.editorExtensions.flatMap((provider) => provider(view)),
+        ...contributed.tiptapExtensions.flatMap((provider) => provider(view)),
       ],
       injectCSS: false,
       editorProps: { attributes: { class: 'typst-visual', 'data-testid': 'typst-visual' } },
@@ -142,7 +142,7 @@ function boxes(view: VisualViewContext, contributed: Contributed, views: Boxes['
   return {
     view,
     renderers: contributed.boxRenderers.map((provider) => provider(view)).filter((renderer) => renderer !== null),
-    codeExtensions: contributed.boxCodeExtensions.map((provider) => provider(view)),
+    codeExtensions: contributed.rawBoxCodeMirrorExtensions.map((provider) => provider(view)),
     actions: contributed.boxActions,
     views,
   };
@@ -173,9 +173,6 @@ export interface TypstNodeSpec extends DocumentNodeSpec {
     readonly ownsPseudoElements?: boolean;
   };
 }
-
-/** Tiptap extensions for one view: decorations, plugins (drops, appended transactions), commands not tied to a node. */
-export type EditorExtensionProvider = (view: VisualViewContext) => AnyExtension | readonly AnyExtension[];
 
 /** A column beside the text (the notes gutter), made for one view. */
 export interface Gutter {
@@ -246,13 +243,13 @@ const DEFAULT_PRIORITY = 100;
 export interface Contributed {
   readonly nodes: readonly TypstNodeSpec[];
   readonly marks: readonly TypstMarkSpec[];
-  readonly editorExtensions: readonly EditorExtensionProvider[];
+  readonly tiptapExtensions: readonly ((view: VisualViewContext) => AnyExtension | readonly AnyExtension[])[];
   readonly toolbarGroups: readonly ToolbarGroup[];
   readonly toolbarItems: readonly ToolbarItem[];
   readonly gutters: readonly GutterProvider[];
   readonly highlights: readonly { readonly layer: string; readonly provider: HighlightProvider }[];
   readonly boxRenderers: readonly BoxRendererProvider[];
-  readonly boxCodeExtensions: readonly BoxCodeExtensionProvider[];
+  readonly rawBoxCodeMirrorExtensions: readonly ((view: VisualViewContext) => Extension)[];
   readonly boxActions: readonly BoxAction[];
   readonly textStyles: readonly TextStyleProvider[];
 }
@@ -279,8 +276,11 @@ export interface VisualViewContributions {
    * 100); it also orders the parse rules, as for nodes.
    */
   registerMark(spec: TypstMarkSpec): Disposable;
-  /** Tiptap extensions made for each view (they may use its document). */
-  registerEditorExtension(provider: EditorExtensionProvider): Disposable;
+  /**
+   * Tiptap extensions made for each view (they may use its document): decorations, plugins (drops, appended
+   * transactions), commands not tied to a node. Their hooks see the view's editor (`this.editor`).
+   */
+  registerTiptapExtension(provider: (view: VisualViewContext) => AnyExtension | readonly AnyExtension[]): Disposable;
   /** A place for toolbar items: a group, a menu or a floating bar. */
   registerToolbarGroup(group: ToolbarGroup): Disposable;
   /** A button or control in a toolbar group (one the host or a contribution registered). */
@@ -303,8 +303,8 @@ export interface VisualViewContributions {
    * renderer (110) draws image boxes, compiled snippets (100) the rest.
    */
   registerBoxRenderer(provider: BoxRendererProvider, options?: PriorityOptions): Disposable;
-  /** CodeMirror extensions for the code of every raw box of each view. */
-  registerBoxCodeExtension(provider: BoxCodeExtensionProvider): Disposable;
+  /** CodeMirror extensions for the code of every raw box of each view (e.g. links on file paths). */
+  registerRawBoxCodeMirrorExtension(provider: (view: VisualViewContext) => Extension): Disposable;
   /**
    * A button on every raw box `action.when` holds for (any box: a contribution need not own the box's node type),
    * in registration order: with the box's tools (an image box's toolbar), else above its code.
@@ -321,12 +321,12 @@ export class VisualViewHost implements VisualViewContributions {
   private readonly lists = {
     nodes: [] as TypstNodeSpec[],
     marks: [] as TypstMarkSpec[],
-    editorExtensions: [] as EditorExtensionProvider[],
+    tiptapExtensions: [] as ((view: VisualViewContext) => AnyExtension | readonly AnyExtension[])[],
     toolbarGroups: [] as ToolbarGroup[],
     toolbarItems: [] as ToolbarItem[],
     gutters: [] as GutterProvider[],
     highlights: [] as { layer: string; provider: HighlightProvider }[],
-    boxCodeExtensions: [] as BoxCodeExtensionProvider[],
+    rawBoxCodeMirrorExtensions: [] as ((view: VisualViewContext) => Extension)[],
     boxActions: [] as BoxAction[],
     textStyles: [] as TextStyleProvider[],
   };
@@ -347,8 +347,8 @@ export class VisualViewHost implements VisualViewContributions {
     return this.add(this.lists.marks, spec);
   }
 
-  registerEditorExtension(provider: EditorExtensionProvider): Disposable {
-    return this.add(this.lists.editorExtensions, provider);
+  registerTiptapExtension(provider: (view: VisualViewContext) => AnyExtension | readonly AnyExtension[]): Disposable {
+    return this.add(this.lists.tiptapExtensions, provider);
   }
 
   registerToolbarGroup(group: ToolbarGroup): Disposable {
@@ -371,8 +371,8 @@ export class VisualViewHost implements VisualViewContributions {
     return this.add(this.boxRenderers, { value: provider, priority: options.priority ?? DEFAULT_PRIORITY });
   }
 
-  registerBoxCodeExtension(provider: BoxCodeExtensionProvider): Disposable {
-    return this.add(this.lists.boxCodeExtensions, provider);
+  registerRawBoxCodeMirrorExtension(provider: (view: VisualViewContext) => Extension): Disposable {
+    return this.add(this.lists.rawBoxCodeMirrorExtensions, provider);
   }
 
   registerBoxAction(action: BoxAction): Disposable {
@@ -389,13 +389,13 @@ export class VisualViewHost implements VisualViewContributions {
     return {
       nodes: [...lists.nodes],
       marks: [...lists.marks],
-      editorExtensions: [...lists.editorExtensions],
+      tiptapExtensions: [...lists.tiptapExtensions],
       toolbarGroups: [...lists.toolbarGroups],
       toolbarItems: [...lists.toolbarItems],
       gutters: [...lists.gutters],
       highlights: [...lists.highlights],
       boxRenderers: [...this.boxRenderers].sort((a, b) => b.priority - a.priority).map((entry) => entry.value),
-      boxCodeExtensions: [...lists.boxCodeExtensions],
+      rawBoxCodeMirrorExtensions: [...lists.rawBoxCodeMirrorExtensions],
       boxActions: [...lists.boxActions],
       textStyles: [...lists.textStyles],
     };
@@ -460,9 +460,6 @@ export interface BoxRenderer {
 
 /** The renderer of one view's boxes (null: none for this view). */
 export type BoxRendererProvider = (view: VisualViewContext) => BoxRenderer | null;
-
-/** CodeMirror extensions of every raw box's code in one view (e.g. links on file paths). */
-export type BoxCodeExtensionProvider = (view: VisualViewContext) => CodeExtension;
 
 /**
  * The decorations the Visual view gives a raw box's node (e.g. one marking another user's caret inside the box),

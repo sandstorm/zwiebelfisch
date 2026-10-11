@@ -30,7 +30,7 @@ export function markup(): TypstExtension {
           visualView.registerToolbarItem({ group: 'selection', order: 10 * (i + 1), action }),
         ),
         visualView.registerToolbarItem({ group: 'selection', order: 40, create: (toolbar) => linkAction(toolbar, window) }),
-        visualView.registerEditorExtension(linkShortcut(window)),
+        visualView.registerTiptapExtension(() => linkShortcut(window)),
         visualView.registerToolbarItem({ group: 'insert', order: 40, action: INSERT_CODE_BLOCK }),
         visualView.registerToolbarItem({ group: 'insert', order: 50, action: INSERT_QUOTE }),
       );

@@ -14,9 +14,9 @@ export function typstLanguage(): TypstExtension {
     activate({ sourceView, visualView, subscriptions }) {
       const syntax = typstSyntax();
       subscriptions.push(
-        sourceView.registerExtension(codeColors),
-        sourceView.registerExtension(syntax),
-        visualView.registerBoxCodeExtension(() => [syntax, codeColors]),
+        sourceView.registerCodeMirrorExtension(codeColors),
+        sourceView.registerCodeMirrorExtension(syntax),
+        visualView.registerRawBoxCodeMirrorExtension(() => [syntax, codeColors]),
       );
     },
   };

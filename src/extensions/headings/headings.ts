@@ -28,7 +28,7 @@ export function headings(): TypstExtension {
       subscriptions.push(
         visualView.registerNode(HEADING),
         visualView.registerTextStyleProvider(HEADING_STYLES),
-        visualView.registerEditorExtension(() => HeadingNumbers),
+        visualView.registerTiptapExtension(() => HeadingNumbers),
       );
     },
   };

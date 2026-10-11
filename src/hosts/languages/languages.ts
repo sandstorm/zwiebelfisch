@@ -1,6 +1,6 @@
 // The languages namespace of the extension API (VS Code's `languages`, as far as Typst text needs it): the document
 // links of every registered DocumentLinkProvider, merged, and how CodeMirror editors show them (the Source views and
-// the code of the Visual view's raw boxes get `editorExtension`). Entry of hosts/languages/. See ARCHITECTURE.md,
+// the code of the Visual view's raw boxes get `codeMirrorExtension`). Entry of hosts/languages/. See ARCHITECTURE.md,
 // "File links".
 // Why providers: finding links is a feature's policy (which paths, what a missing file offers); showing and following
 // them is the same in every view, so the views read every provider's links and know none of them.
@@ -117,7 +117,7 @@ export class LanguagesHost implements Languages {
    * Makes the links of a CodeMirror editor's text navigable (see `linkExtension`): `path` is the file the text is in,
    * now (null: none, no links); `targets` does what following one does.
    */
-  editorExtension(targets: LinkTargets, path: () => ProjectPath | null): Extension {
+  codeMirrorExtension(targets: LinkTargets, path: () => ProjectPath | null): Extension {
     return linkExtension({ ...targets, provideDocumentLinks: (document) => this.provideDocumentLinks(document), resolveDocumentLink: (link) => this.resolveDocumentLink(link) }, path);
   }
 }

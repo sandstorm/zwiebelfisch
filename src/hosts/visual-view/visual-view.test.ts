@@ -131,7 +131,7 @@ describe('VisualView contexts', () => {
     const contributions = new VisualViewHost();
     const seen: { pos: number; offset: number; boxes: string[] }[] = [];
     const seenBy: VisualViewContext[] = [];
-    contributions.registerEditorExtension((view) => {
+    contributions.registerTiptapExtension((view) => {
       seenBy.push(view);
       return [];
     });
@@ -151,7 +151,7 @@ describe('VisualView contexts', () => {
   it("gives a raw box's code its decorations (setBoxDecorations), when made and on every update", () => {
     const contributions = new VisualViewHost();
     const given: number[] = [];
-    contributions.registerBoxCodeExtension(() =>
+    contributions.registerRawBoxCodeMirrorExtension(() =>
       EditorState.transactionExtender.of((tr) => {
         for (const effect of tr.effects) if (effect.is(setBoxDecorations)) given.push(effect.value.length);
         return null;

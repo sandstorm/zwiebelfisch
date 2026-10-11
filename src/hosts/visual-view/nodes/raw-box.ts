@@ -51,7 +51,7 @@ const inlineTheme = CodeView.theme({
 /**
  * A raw box (a node whose spec has `view.box: 'code'`: `rawBlock`, `rawInline`, an image call, an outline):
  * Typst the Visual view does not model, edited in place in a nested CodeMirror (the language and its colors
- * are contributed: `registerBoxCodeExtension`).
+ * are contributed: `registerRawBoxCodeMirrorExtension`).
  *
  * The box's text is the node's `src` attribute, which the projection prints
  * verbatim: every edit sets `src` (an attribute step, so positions and the

@@ -1,16 +1,17 @@
 // lint: the diagnostics' part of the Source views: compile diagnostics underlined (CodeMirror lint). See ../diagnostics.ts.
 import { type Diagnostic as LintDiagnostic, setDiagnostics } from '@codemirror/lint';
+import type { Extension } from '@codemirror/state';
 import { type EditorView, ViewPlugin } from '@codemirror/view';
 import type { Disposable } from '../../../core/disposable/disposable';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
-import type { SourceViewExtension } from '../../../hosts/source-view/source-view';
+import type { SourceViewContext } from '../../../hosts/source-view/source-view';
 import { describeDiagnostic, type DiagnosticCollection, type SourceDiagnostic } from '../model/model';
 
 /**
  * Underlines the diagnostics `diagnostics` holds for a view's document, with the message and hints on
  * hover; they follow later edits until the document's diagnostics are set again.
  */
-export function lint(diagnostics: DiagnosticCollection): SourceViewExtension {
+export function lint(diagnostics: DiagnosticCollection): (view: SourceViewContext) => Extension {
   return ({ document }) => ViewPlugin.define((view) => new LintShown(view, document, diagnostics));
 }
 

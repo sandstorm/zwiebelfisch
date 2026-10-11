@@ -43,7 +43,7 @@ export function diagnostics(): TypstExtension {
         show();
       };
       subscriptions.push(
-        sourceView.registerExtension(lint(collection)),
+        sourceView.registerCodeMirrorExtension(lint(collection)),
         visualView.registerHighlights('diagnostics', {
           provideHighlights: (document) => collection.get(document).map(diagnosticHighlight),
           onDidChangeHighlights: collection.onDidChange,

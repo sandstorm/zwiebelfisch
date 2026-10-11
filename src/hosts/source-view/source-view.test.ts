@@ -2,11 +2,11 @@
 // Tests for source-view.ts: the host's contribution points, and the Source views it makes.
 import { describe, expect, it } from 'vitest';
 import { undo } from '@codemirror/commands';
-import { EditorState, StateEffect, StateField, Transaction } from '@codemirror/state';
+import { EditorState, StateEffect, StateField, Transaction, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, type DecorationSet } from '@codemirror/view';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
 import { TypstDocument } from '../../core/typst-document/typst-document';
-import { fromDocument, SourceViewHost, type SourceViewExtension } from './source-view';
+import { fromDocument, SourceViewHost, type SourceViewContext } from './source-view';
 
 function setup(text: string, host = new SourceViewHost()) {
   const parent = document.createElement('div');
@@ -30,7 +30,7 @@ describe('SourceView history', () => {
 
   it('a contribution keeps changes of some origin out of the history (as collaboration does with other users\' edits)', () => {
     const host = new SourceViewHost();
-    host.registerExtension(
+    host.registerCodeMirrorExtension(
       EditorState.transactionExtender.of((tr) => (tr.annotation(fromDocument)?.origin === 'other user' ? { annotations: Transaction.addToHistory.of(false) } : null)),
     );
     const { doc, editor } = setup('one two\n', host);
@@ -57,7 +57,7 @@ describe('SourceView reveal', () => {
 
 describe('SourceViewHost contributions', () => {
   /** Marks the first word of the view's document (as it was when the extension was made). */
-  const firstWord: SourceViewExtension = ({ document }) =>
+  const firstWord = ({ document }: SourceViewContext) =>
     EditorView.decorations.of(Decoration.set(Decoration.mark({ class: 'first' }).range(0, document.text.search(/\s/))));
   /** Marks the ranges `ranges` fires (as an extension drawing something of its own would), in a state field (one for all views). */
   const drawn = StateEffect.define<readonly { anchor: number; head: number }[]>();
@@ -71,7 +71,7 @@ describe('SourceViewHost contributions', () => {
     },
     provide: (field) => EditorView.decorations.from(field),
   });
-  const drawRanges: SourceViewExtension = [
+  const drawRanges: Extension = [
     drawing,
     ViewPlugin.define((editor) => {
       const subscription = ranges.event((given) => editor.dispatch({ effects: drawn.of(given) }));
@@ -82,7 +82,7 @@ describe('SourceViewHost contributions', () => {
   it('applies a registered extension to the views made before and after, until disposed', () => {
     const host = new SourceViewHost();
     const before = setup('alpha beta\n', host);
-    const registration = host.registerExtension(firstWord);
+    const registration = host.registerCodeMirrorExtension(firstWord);
     const after = setup('gamma delta\n', host);
     expect(marked(before.parent, '.first')).toEqual(['alpha']);
     expect(marked(after.parent, '.first')).toEqual(['gamma']);
@@ -93,23 +93,23 @@ describe('SourceViewHost contributions', () => {
 
   it('keeps what an extension drew when another one is registered', () => {
     const host = new SourceViewHost();
-    host.registerExtension(drawRanges);
+    host.registerCodeMirrorExtension(drawRanges);
     const { parent } = setup('Some bold text\n', host);
     ranges.fire([{ anchor: 5, head: 9 }]);
-    host.registerExtension(firstWord);
+    host.registerCodeMirrorExtension(firstWord);
     expect(marked(parent, '.drawn')).toEqual(['bold']);
   });
 
   it('stops applying contributions to a disposed view', () => {
     const host = new SourceViewHost();
     const made: string[] = [];
-    host.registerExtension(({ document }) => {
+    host.registerCodeMirrorExtension(({ document }) => {
       made.push(document.text);
       return [];
     });
     const { view } = setup('text\n', host);
     view.dispose();
-    host.registerExtension(firstWord);
+    host.registerCodeMirrorExtension(firstWord);
     expect(made).toEqual(['text\n']);
   });
 });

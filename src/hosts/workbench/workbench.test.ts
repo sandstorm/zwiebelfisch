@@ -192,7 +192,7 @@ describe('WorkbenchHost', () => {
 
   it('applies the Visual view contributions to the Visual view of each document', () => {
     const provider = vi.fn((_view: { document: TypstDocument }) => []);
-    const { workbench } = setup(({ visualView, subscriptions }) => subscriptions.push(visualView.registerEditorExtension(provider)));
+    const { workbench } = setup(({ visualView, subscriptions }) => subscriptions.push(visualView.registerTiptapExtension(provider)));
     workbench.open(path('/a.typ'));
     expect(provider.mock.calls.map(([view]) => view.document.text)).toEqual(['= Main\n', 'A\n']);
   });
@@ -203,7 +203,7 @@ describe('WorkbenchHost', () => {
     const { host, workbench } = setup((context) => {
       preview = context.preview;
       context.subscriptions.push(
-        context.sourceView.registerExtension(EditorView.editorAttributes.of({ class: 'contributed' })),
+        context.sourceView.registerCodeMirrorExtension(EditorView.editorAttributes.of({ class: 'contributed' })),
         context.preview.registerToolbarItem(item, { group: 'test' }),
       );
     });
