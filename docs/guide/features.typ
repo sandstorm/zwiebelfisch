@@ -29,19 +29,19 @@ Drag the separator `┃` (or use the arrow keys on it) to give the preview 20–
   columns: 2,
   [Construct], [How],
   [Headings 1–3], [Text style menu, or type `# `, `## `, `### ` at a line start (as in Markdown). Numbers shown as `set heading(numbering: ..)` makes them.],
-  [Bold, italic, inline code], [Mod+B, Mod+I, Mod+E.],
-  [Links], [Mod+K, or "Link" in the selection bar.],
+  [Bold, italic, inline code], [Ctrl+B, Ctrl+I, Ctrl+E (⌘B, ⌘I, ⌘E on Mac).],
+  [Links], [Ctrl+K (⌘K on Mac), or "Link" in the selection bar.],
   [Lists], [Bulleted, numbered and task lists (`- [ ] todo`); Tab nests.],
-  [Quotes, code blocks], [Mod+Shift+B; Insert menu. A code block's language is a field.],
-  [Alignment], [Align menu or Mod+Shift+L / E / R / J: `#align(..)[..]`, `#par(justify: true)[..]`.],
+  [Quotes, code blocks], [Ctrl+Shift+B (⌘⇧B on Mac); Insert menu. A code block's language is a field.],
+  [Alignment], [Align menu or Ctrl+Shift+L / E / R / J (⌘⇧L / E / R / J on Mac): `#align(..)[..]`, `#par(justify: true)[..]`.],
   [Tables], [Insert table; a bar over the table adds and deletes rows and columns, toggles the header row.],
   [Images, figures], [Insert image (a project file, an upload, a path); drop or paste images. Figures: caption, width (or drag a corner), alt text.],
   [Table of contents], [Insert menu: `#outline()`, rendered.],
-  [Page break, rule], [Mod+Enter; Insert menu: `#pagebreak()`, `#line(length: 100%)`.],
+  [Page break, rule], [Ctrl+Enter (⌘↩ on Mac); Insert menu: `#pagebreak()`, `#line(length: 100%)`.],
   [Labels, references], [A label is a tag on its block; "Add label" (Insert menu) adds one. References are chips naming their target. `@` offers every label of the project. Renaming a label updates its references in every file.],
 )
 
-Mod is Ctrl, or ⌘ on macOS. Undo and redo: Mod+Z, Mod+Shift+Z.
+Undo and redo: Ctrl+Z, Ctrl+Shift+Z (⌘Z, ⌘⇧Z on Mac).
 
 === Custom styles <guide-features-styles>
 
@@ -70,7 +70,7 @@ The file panel shows the project as a tree. Setting `files.panel`: open with mor
 - Keyboard: arrows, Home/End, Enter, F2 (rename), Delete, Shift+F10 (menu).
 - The main file and its folder cannot be renamed, moved or deleted. Every change passes the host's `allowFileChange`.
 - Open state, width and open folders are kept for the browser session. Below 720 px the panel lies over the editor.
-- *File links:* paths in `#import`, `#include`, `image`, `read`, `bibliography`, `json` / `csv` / `yaml` / `toml` / `xml` / `cbor` open their file: Mod+click or Alt+Enter in the Source view, "Open …" above a raw box in the Visual view. A missing `.typ` file can be created from there.
+- *File links:* paths in `#import`, `#include`, `image`, `read`, `bibliography`, `json` / `csv` / `yaml` / `toml` / `xml` / `cbor` open their file: Ctrl+click or Alt+Enter (⌘-click or ⌥↩ on Mac) in the Source view, "Open …" above a raw box in the Visual view. A missing `.typ` file can be created from there.
 - A file the main file includes gets "previous file" / "next file" links in reading order.
 
 How each file opens:
@@ -130,9 +130,9 @@ flowchart LR
 
 Comments are #link("https://typst.app/universe/package/drafting/")[drafting] margin notes in the Typst source: they travel through `onFilesChange`, git, diffs and collaboration like any other text.
 
-- Add: "Comment" (Visual view toolbar, Source view tab bar) or Mod+Alt+M, on a selection or at the cursor.
+- Add: "Comment" (Visual view toolbar, Source view tab bar) or Ctrl+Alt+M (⌘⌥M on Mac), on a selection or at the cursor.
 - A note is a thread: one list item per message, signed with `user.name` and the date.
-- The Visual view shows each note as a card beside its text: reply (Mod+Enter sends), edit your own and unsigned messages, delete your last one, "Resolve" (deletes the note).
+- The Visual view shows each note as a card beside its text: reply (Ctrl+Enter sends, ⌘↩ on Mac), edit your own and unsigned messages, delete your last one, "Resolve" (deletes the note).
 - The preview shows the notes in the page margin.
 
 ```typ

@@ -18,7 +18,7 @@ subscriptions.push(
 
 == Document links <extensions-source-view-and-preview-links>
 
-`languages.registerDocumentLinkProvider(provider, { priority? })` adds links to Typst text. The Source views and the code of raw boxes show them: Mod+click or Alt+Enter follows a link, hovering shows it.
+`languages.registerDocumentLinkProvider(provider, { priority? })` adds links to Typst text. The Source views and the code of raw boxes show them: Ctrl+click or Alt+Enter (⌘-click or ⌥↩ on Mac) follows a link, hovering shows it.
 
 ```ts
 languages.registerDocumentLinkProvider({
