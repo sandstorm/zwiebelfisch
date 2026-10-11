@@ -18,7 +18,7 @@ const visual = (page: Page) => page.getByTestId('typst-visual');
 const cards = (page: Page) => page.getByTestId('typst-note-card');
 /** The reply box of card `i` ("Comment" while the note is empty). */
 const noteField = (page: Page, i = 0) => cards(page).nth(i).getByRole('textbox', { name: /^(Comment|Reply)$/ });
-const messageTexts = (page: Page, i = 0) => cards(page).nth(i).locator('.typst-note-card__text');
+const messageTexts = (page: Page, i = 0) => cards(page).nth(i).locator('.typst-comments__card-text');
 const highlight = (page: Page) => visual(page).locator('mark.typst-comments__range');
 /** "Comment" in the Visual view's formatting toolbar. */
 const commentButton = (page: Page) => page.getByRole('toolbar', { name: 'Formatting' }).getByRole('button', { name: 'Comment' });
@@ -65,8 +65,8 @@ test('a comment on selected text becomes a range note with a card in the gutter,
   await expect(highlight(page)).toHaveText('bold');
   await expect(cards(page)).toHaveCount(1);
   await expect(messageTexts(page)).toHaveText(['Check this']);
-  await expect(cards(page).first().locator('.typst-note-card__author')).toHaveText('Demo user');
-  await expect(cards(page).first().locator('.typst-note-card__quote')).toHaveText('bold');
+  await expect(cards(page).first().locator('.typst-comments__card-author')).toHaveText('Demo user');
+  await expect(cards(page).first().locator('.typst-comments__card-quote')).toHaveText('bold');
   // the card sits at the height of its highlighted text
   await expect.poll(() => offset(cards(page).first(), highlight(page))).toBeLessThan(4);
 
@@ -141,7 +141,7 @@ test('editing an own message updates the source and the preview', async ({ page 
 
 test('a reply appends a message to the thread, in the card and in the source', async ({ page }) => {
   await commentOnBold(page, 'Is this right?');
-  await cards(page).first().locator('.typst-note-card__head').click();
+  await cards(page).first().locator('.typst-comments__card-head').click();
   await expect(noteField(page)).toBeFocused();
   await noteField(page).fill('Yes: #1 [checked]');
   await noteField(page).press('ControlOrMeta+Enter');
@@ -175,10 +175,10 @@ test('resolving a range note keeps its text; resolving a point note removes it',
 test('a highlight and its card highlight each other', async ({ page }) => {
   await commentOnBold(page, 'Linked');
   await visual(page).locator('h1').click();
-  await expect(cards(page).first()).not.toHaveClass(/typst-note-card--active/);
+  await expect(cards(page).first()).not.toHaveClass(/typst-comments__card--active/);
 
   await highlight(page).click();
-  await expect(cards(page).first()).toHaveClass(/typst-note-card--active/);
+  await expect(cards(page).first()).toHaveClass(/typst-comments__card--active/);
 
   await visual(page).locator('h1').click();
   await cards(page).first().hover();

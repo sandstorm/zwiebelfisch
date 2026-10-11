@@ -42,7 +42,7 @@ function selections(presences: PresenceSource, documents: () => readonly TypstDo
 function selection({ user, anchor, head }: Presence): Highlight[] {
   if (anchor === head) return [];
   const attributes = { 'data-user': user.name, style: `--typst-remote-color: ${user.color}` };
-  return [{ from: Math.min(anchor, head), to: Math.max(anchor, head), className: 'typst-remote-selection', attributes }];
+  return [{ from: Math.min(anchor, head), to: Math.max(anchor, head), className: 'typst-collaboration__selection', attributes }];
 }
 
 const key = new PluginKey<DecorationSet>('typst-presence');
@@ -111,7 +111,7 @@ function caret(pos: number, id: string, user: PresenceUser): Decoration {
 function boxOutline(pos: number, node: Node, carets: BoxCaret[]): Decoration {
   const { color } = carets[0].user;
   const attrs = {
-    class: 'typst-remote-box',
+    class: 'typst-collaboration__box',
     'data-user': carets.map((c) => c.user.name).join(', '),
     style: `--typst-remote-color: ${color}; --typst-remote-text: ${textColorOn(color)}`,
   };

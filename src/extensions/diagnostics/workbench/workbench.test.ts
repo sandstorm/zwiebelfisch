@@ -19,7 +19,7 @@ describe('DiagnosticsStatus', () => {
     const status = new DiagnosticsStatus(document, onJump);
     parent.append(status.element);
     status.show(summarizeDiagnostics([diag({ message: 'unknown variable: foo', hints: ['try bar'], from: 3, to: 6 })], MAIN));
-    const details = parent.querySelector<HTMLElement>('.typst-status__details')!;
+    const details = parent.querySelector<HTMLElement>('.typst-diagnostics__status-details')!;
     expect(details.textContent).toContain('unknown variable: foo');
     expect(details.textContent).toContain('hint: try bar');
     details.querySelector('button')!.click();
@@ -32,7 +32,7 @@ describe('DiagnosticsStatus', () => {
     const status = new DiagnosticsStatus(document, onJump);
     parent.append(status.element);
     status.show(summarizeDiagnostics([diag({ path: '/lib.typ', from: 2, to: 4 }), diag({ path: '@preview/x:1.0.0/lib.typ' })], MAIN));
-    const items = [...parent.querySelectorAll('.typst-status__elsewhere li')];
+    const items = [...parent.querySelectorAll('.typst-diagnostics__status-elsewhere li')];
     expect(items.map((item) => item.textContent)).toEqual(['/lib.typ: boom', '@preview/x:1.0.0/lib.typ: boom']);
     expect(items[1].querySelector('button')).toBeNull();
     items[0].querySelector('button')!.click();
@@ -44,6 +44,6 @@ describe('DiagnosticsStatus', () => {
     const status = new DiagnosticsStatus(document, () => {});
     parent.append(status.element);
     status.show(summarizeDiagnostics([], MAIN));
-    expect(parent.querySelector<HTMLElement>('.typst-status__details')!.hidden).toBe(true);
+    expect(parent.querySelector<HTMLElement>('.typst-diagnostics__status-details')!.hidden).toBe(true);
   });
 });

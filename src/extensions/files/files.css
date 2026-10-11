@@ -96,7 +96,7 @@
   stroke-linejoin: round;
 }
 /* A file no other editor opens (files.file): name, size, type */
-.typst-file-info {
+.typst-files__info {
   flex: 1;
   min-height: 0;
   overflow: auto;
@@ -106,8 +106,8 @@
   gap: 16px;
   padding: 24px;
 }
-.typst-file-info__title { margin: 0; font-size: 15px; font-weight: 600; color: var(--te-text); }
-.typst-file-info__facts { display: grid; grid-template-columns: auto auto; gap: 4px 16px; margin: 0; font-size: 13px; }
-.typst-file-info__facts dt { color: var(--te-muted); }
-.typst-file-info__facts dd { margin: 0; color: var(--te-text); }
-.typst-file-info__note { margin: 0; color: var(--te-muted); }
+.typst-files__info-title { margin: 0; font-size: 15px; font-weight: 600; color: var(--te-text); }
+.typst-files__info-facts { display: grid; grid-template-columns: auto auto; gap: 4px 16px; margin: 0; font-size: 13px; }
+.typst-files__info-facts dt { color: var(--te-muted); }
+.typst-files__info-facts dd { margin: 0; color: var(--te-text); }
+.typst-files__info-note { margin: 0; color: var(--te-muted); }

@@ -10,7 +10,7 @@ export function diagnosticHighlight(diagnostic: SourceDiagnostic): Highlight {
   return {
     from: diagnostic.from,
     to: Math.max(diagnostic.to, diagnostic.from + 1),
-    className: 'typst-diagnostic',
+    className: 'typst-diagnostics__highlight',
     attributes: { 'data-severity': diagnostic.severity, title: describeDiagnostic(diagnostic) },
   };
 }

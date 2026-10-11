@@ -226,13 +226,13 @@ describe('the built-in extensions', () => {
       // in raw code (a block atom), of a file whose views do not exist yet
       { severity: 'warning', message: 'unused', hints: [], path: '/a.typ', from: 1, to: 4 },
     ]);
-    const mark = host.querySelector<HTMLElement>('.ProseMirror .typst-diagnostic')!;
+    const mark = host.querySelector<HTMLElement>('.ProseMirror .typst-diagnostics__highlight')!;
     expect(mark.textContent).toBe('world');
     expect(mark.dataset.severity).toBe('error');
     expect(mark.title).toBe('unknown variable: foo\nhint: did you mean bar?');
     editor.open('/a.typ');
     const shown = [...host.querySelectorAll<HTMLElement>('.typst-editor__pane')].find((pane) => !pane.hidden)!;
-    expect(shown.querySelector<HTMLElement>('.typst-diagnostic')?.dataset.severity).toBe('warning');
+    expect(shown.querySelector<HTMLElement>('.typst-diagnostics__highlight')?.dataset.severity).toBe('warning');
   });
 
   it('fills the preview toolbar: "Follow cursor", zoom, page number, then "Download PDF" while pdfExport.download is on', () => {

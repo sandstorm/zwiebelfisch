@@ -75,7 +75,7 @@ figure .typst-images__frame { margin: 0 auto; }
 figure .typst-images__tools { justify-content: center; }
 .typst-images__frame > .typst-images__picture { cursor: default; }
 /* Read-only view of image files */
-.typst-asset {
+.typst-images__file {
   flex: 1;
   min-height: 0;
   overflow: auto;
@@ -85,9 +85,9 @@ figure .typst-images__tools { justify-content: center; }
   gap: 16px;
   padding: 24px;
 }
-.typst-asset__title { margin: 0; font-size: 15px; font-weight: 600; color: var(--te-text); }
-.typst-asset__size { margin-left: 8px; font-weight: 400; color: var(--te-faint); font-size: 12px; }
-.typst-asset__image {
+.typst-images__file-title { margin: 0; font-size: 15px; font-weight: 600; color: var(--te-text); }
+.typst-images__file-size { margin-left: 8px; font-weight: 400; color: var(--te-faint); font-size: 12px; }
+.typst-images__file-image {
   max-width: 100%;
   max-height: 60vh;
   object-fit: contain;

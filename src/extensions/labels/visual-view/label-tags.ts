@@ -97,10 +97,10 @@ function tags(doc: Node, draft: number | null, options: LabelTagsOptions): Decor
 function draftElement(view: EditorView, pos: number, prefix: string, inline: boolean): HTMLElement {
   const doc = view.dom.ownerDocument;
   const wrap = doc.createElement('span');
-  wrap.className = `typst-label-tag typst-label-tag--draft${inline ? '' : ' typst-label-tag--block'}`;
+  wrap.className = `typst-labels__tag typst-labels__tag--draft${inline ? '' : ' typst-labels__tag--block'}`;
   wrap.contentEditable = 'false';
   const input = wrap.appendChild(doc.createElement('input'));
-  input.className = 'typst-label-tag__input';
+  input.className = 'typst-labels__tag-input';
   input.setAttribute('aria-label', 'New label');
   input.placeholder = 'label';
   input.value = prefix;
@@ -156,11 +156,11 @@ function tagElement(tag: Tag): HTMLElement {
   const { view, name, inline } = tag;
   const doc = view.dom.ownerDocument;
   const wrap = doc.createElement('span');
-  wrap.className = `typst-label-tag${inline ? '' : ' typst-label-tag--block'}`;
+  wrap.className = `typst-labels__tag${inline ? '' : ' typst-labels__tag--block'}`;
   wrap.contentEditable = 'false';
   const button = wrap.appendChild(doc.createElement('button'));
   button.type = 'button';
-  button.className = 'typst-label-tag__name';
+  button.className = 'typst-labels__tag-name';
   button.dataset.testid = 'typst-label-tag';
   button.textContent = name;
   button.title = `Label <${name}>: click to rename or remove it`;

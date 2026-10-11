@@ -25,12 +25,12 @@ export class SpreadsheetView {
   ) {
     const doc = parent.ownerDocument;
     this.root = doc.createElement('div');
-    this.root.className = 'typst-sheet';
+    this.root.className = 'typst-spreadsheets';
     this.root.dataset.testid = 'typst-spreadsheet';
     this.title = doc.createElement('h2');
-    this.title.className = 'typst-sheet__title';
+    this.title.className = 'typst-spreadsheets__title';
     this.body = doc.createElement('div');
-    this.body.className = 'typst-sheet__body';
+    this.body.className = 'typst-spreadsheets__body';
     this.root.append(this.title, this.body);
     parent.append(this.root);
   }

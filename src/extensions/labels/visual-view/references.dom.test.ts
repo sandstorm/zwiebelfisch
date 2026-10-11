@@ -96,7 +96,7 @@ describe('references in the Visual view', () => {
     type(editor, ' See @');
     const list = parent.querySelector<HTMLElement>('[data-testid="typst-ref-suggestions"]')!;
     expect(list.hidden).toBe(false);
-    const options = () => [...list.querySelectorAll('[role="option"]')].map((o) => o.querySelector('.typst-ref-suggestions__name')!.textContent);
+    const options = () => [...list.querySelectorAll('[role="option"]')].map((o) => o.querySelector('.typst-labels__suggestions-name')!.textContent);
     expect(options()).toEqual(['intro', 'method', 'eq:speedup', 'results', 'tab:timings', 'fig:compile-times', 'tab:runs']);
     type(editor, 'fig');
     expect(options()).toEqual(['fig:compile-times']);

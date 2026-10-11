@@ -14,7 +14,7 @@ export class AssetView {
 
   constructor(parent: HTMLElement) {
     this.root = parent.ownerDocument.createElement('div');
-    this.root.className = 'typst-asset';
+    this.root.className = 'typst-images__file';
     this.root.dataset.testid = 'typst-asset';
     parent.append(this.root);
   }
@@ -24,14 +24,14 @@ export class AssetView {
     this.release();
     const doc = this.root.ownerDocument;
     const title = doc.createElement('h2');
-    title.className = 'typst-asset__title';
+    title.className = 'typst-images__file-title';
     title.textContent = ProjectPath.displayName(path);
     const size = doc.createElement('span');
-    size.className = 'typst-asset__size';
+    size.className = 'typst-images__file-size';
     size.textContent = formatSize(typeof content === 'string' ? new TextEncoder().encode(content).length : content.length);
     title.append(size);
     const image = doc.createElement('img');
-    image.className = 'typst-asset__image';
+    image.className = 'typst-images__file-image';
     image.alt = ProjectPath.displayName(path);
     this.objectUrl = URL.createObjectURL(imageBlob(path, content));
     image.src = this.objectUrl;

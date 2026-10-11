@@ -85,7 +85,7 @@ class Session {
     const container = view.dom.parentElement;
     if (!container) return;
     this.popup = container.appendChild(view.dom.ownerDocument.createElement('div'));
-    this.popup.className = 'typst-ref-suggestions';
+    this.popup.className = 'typst-labels__suggestions';
     this.popup.dataset.testid = 'typst-ref-suggestions';
     this.popup.setAttribute('role', 'listbox');
     this.popup.hidden = true;
@@ -166,15 +166,15 @@ function sameQuery(a: ReferenceQuery | null, b: ReferenceQuery | null): boolean 
 
 function option(doc: Document, label: LabelInfo, index: number, chosen: boolean): HTMLElement {
   const item = doc.createElement('div');
-  item.className = 'typst-ref-suggestions__option';
+  item.className = 'typst-labels__suggestions-option';
   item.setAttribute('role', 'option');
   item.setAttribute('aria-selected', String(chosen));
   item.dataset.index = String(index);
   const name = item.appendChild(doc.createElement('span'));
-  name.className = 'typst-ref-suggestions__name';
+  name.className = 'typst-labels__suggestions-name';
   name.textContent = label.name;
   const hint = describeLabel(label);
-  if (hint) item.append(Object.assign(doc.createElement('span'), { className: 'typst-ref-suggestions__hint', textContent: hint }));
+  if (hint) item.append(Object.assign(doc.createElement('span'), { className: 'typst-labels__suggestions-hint', textContent: hint }));
   return item;
 }
 

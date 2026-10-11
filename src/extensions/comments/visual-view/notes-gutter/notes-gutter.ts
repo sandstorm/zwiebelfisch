@@ -86,7 +86,7 @@ class NotesGutter {
     const doc = body.ownerDocument;
     this.me = options.user?.name.trim() || 'Anonymous';
     this.root = body.appendChild(doc.createElement('aside'));
-    this.root.className = 'typst-notes-gutter';
+    this.root.className = 'typst-comments__gutter';
     this.root.setAttribute('aria-label', 'Notes');
     this.plugin = gutterPlugin({
       attach: (view) => this.attach(view),
@@ -283,7 +283,7 @@ interface GutterState {
 
 type GutterMeta = { active?: string | null; hover?: string | null };
 
-const gutterKey = new PluginKey<GutterState>('typst-notes-gutter');
+const gutterKey = new PluginKey<GutterState>('typst-comments__gutter');
 
 interface GutterHooks {
   attach(view: EditorView): void;

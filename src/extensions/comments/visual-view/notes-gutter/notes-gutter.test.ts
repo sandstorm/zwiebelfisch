@@ -19,9 +19,9 @@ function setup(source: string, options: NotesGutterOptions = {}) {
   });
   const cards = () => [...parent.querySelectorAll<HTMLElement>('[data-testid="typst-note-card"]')];
   /** The reply box of card `i`. */
-  const field = (i: number) => cards()[i].querySelector<HTMLTextAreaElement>('.typst-note-card__reply')!;
+  const field = (i: number) => cards()[i].querySelector<HTMLTextAreaElement>('.typst-comments__card-reply')!;
   const messages = (i: number) => [...cards()[i].querySelectorAll<HTMLElement>('[data-testid="typst-note-message"]')];
-  const texts = (i: number) => messages(i).map((m) => m.querySelector('.typst-note-card__text')?.textContent);
+  const texts = (i: number) => messages(i).map((m) => m.querySelector('.typst-comments__card-text')?.textContent);
   /** Opens message `m` of card `i` for editing; returns its text area. */
   const edit = (i: number, m: number) => {
     messages(i)[m].querySelector<HTMLButtonElement>('button[aria-label="Edit message"]')!.click();
@@ -60,7 +60,7 @@ describe('the notes gutter', () => {
     const { parent, cards, texts } = setup('Text#margin-note[first] and #margin-note[key][second].\n');
     expect(cards()).toHaveLength(2);
     expect([texts(0), texts(1)]).toEqual([['first'], ['second']]);
-    expect(cards()[1].querySelector('.typst-note-card__quote')?.textContent).toBe('key');
+    expect(cards()[1].querySelector('.typst-comments__card-quote')?.textContent).toBe('key');
     expect(parent.querySelector('mark.typst-comments__range')?.textContent).toBe('key');
     expect(parent.querySelectorAll('[data-testid="typst-note-marker"]')).toHaveLength(1);
   });
@@ -69,7 +69,7 @@ describe('the notes gutter', () => {
     const { parent, text } = setup('Text#margin-note[n].\n');
     const body = parent.querySelector('.typst-visual__body')!;
     // then the toolbar's floating bars (selection, table), placed in the text column too
-    expect([...body.children].map((c) => c.className.split(' ')[0])).toEqual([text.className.split(' ')[0], 'typst-notes-gutter', 'typst-floating-bar', 'typst-floating-bar']);
+    expect([...body.children].map((c) => c.className.split(' ')[0])).toEqual([text.className.split(' ')[0], 'typst-comments__gutter', 'typst-floating-bar', 'typst-floating-bar']);
   });
 
   describe('threads', () => {
@@ -77,7 +77,7 @@ describe('the notes gutter', () => {
 
     it('shows each message with name, date and text, oldest first', () => {
       const { messages, texts } = setup(`A #margin-note[key][${THREAD}] b.\n`);
-      expect(messages(0).map((m) => [m.querySelector('.typst-note-card__author')?.textContent, m.querySelector('.typst-note-card__date')?.textContent]))
+      expect(messages(0).map((m) => [m.querySelector('.typst-comments__card-author')?.textContent, m.querySelector('.typst-comments__card-date')?.textContent]))
         .toEqual([['Anna', '2026-10-10'], ['Bob', '2026-10-11']]);
       expect(texts(0)).toEqual(['Is this *right*?', 'Yes, #1.']);
     });
@@ -170,7 +170,7 @@ describe('the notes gutter', () => {
       const note = [1, 2, 3, 4, 5, 6].map((n) => `- *A* (2026-10-0${n}): m${n}`).join('\n');
       const { cards, texts } = setup(`A #margin-note[${note}] b.\n`);
       expect(texts(0)).toEqual(['m1', 'm5', 'm6']);
-      const more = cards()[0].querySelector<HTMLButtonElement>('.typst-note-card__more')!;
+      const more = cards()[0].querySelector<HTMLButtonElement>('.typst-comments__card-more')!;
       expect(more.textContent).toBe('3 more');
       more.click();
       expect(texts(0)).toEqual(['m1', 'm2', 'm3', 'm4', 'm5', 'm6']);
@@ -346,9 +346,9 @@ describe('the notes gutter', () => {
       const source = 'A #margin-note[key][n] and more.\n';
       const { view, cards } = setup(source);
       view.reveal(source.indexOf('key') + 1, source.indexOf('key') + 1);
-      expect(cards()[0].classList.contains('typst-note-card--active')).toBe(true);
+      expect(cards()[0].classList.contains('typst-comments__card--active')).toBe(true);
       view.reveal(source.indexOf('more'), source.indexOf('more'));
-      expect(cards()[0].classList.contains('typst-note-card--active')).toBe(false);
+      expect(cards()[0].classList.contains('typst-comments__card--active')).toBe(false);
     });
 
     it('clicking a point note\'s marker focuses its card', () => {
@@ -365,7 +365,7 @@ describe('the notes gutter', () => {
       cards()[1].dispatchEvent(new MouseEvent('mouseleave'));
       expect(anchors()[1].classList.contains('typst-comments__anchor--hover')).toBe(false);
       anchors()[0].dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-      expect(cards()[0].classList.contains('typst-note-card--hover')).toBe(true);
+      expect(cards()[0].classList.contains('typst-comments__card--hover')).toBe(true);
     });
   });
 
@@ -406,7 +406,7 @@ describe('the notes gutter', () => {
 
   describe('editNote', () => {
     /** The messages of the card whose reply box has the focus. */
-    const focusedThread = () => [...(document.activeElement?.closest('[data-testid="typst-note-card"]')?.querySelectorAll('.typst-note-card__text') ?? [])]
+    const focusedThread = () => [...(document.activeElement?.closest('[data-testid="typst-note-card"]')?.querySelectorAll('.typst-comments__card-text') ?? [])]
       .map((t) => t.textContent);
 
     it('focuses the reply box of the note whose source holds the offset', () => {
