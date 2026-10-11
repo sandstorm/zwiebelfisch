@@ -88,6 +88,21 @@ export const ProjectPath = {
     const dot = name.lastIndexOf('.');
     return dot > 0 ? name.slice(dot) : '';
   },
+
+  /**
+   * `path`, or the first of `name-2.ext`, `name-3.ext`, … that `exists` says is free; the extension is everything from
+   * the name's first dot (`flow-2.drawio.png`).
+   */
+  unique(path: ProjectPath, exists: (path: ProjectPath) => boolean): ProjectPath {
+    const name = ProjectPath.name(path);
+    const dot = name.indexOf('.', 1);
+    const extension = dot > 0 ? name.slice(dot) : '';
+    const stem = path.slice(0, path.length - extension.length);
+    for (let n = 1; ; n++) {
+      const candidate = n === 1 ? path : (`${stem}-${n}${extension}` as ProjectPath);
+      if (!exists(candidate)) return candidate;
+    }
+  },
 };
 
 export const PathReference = {

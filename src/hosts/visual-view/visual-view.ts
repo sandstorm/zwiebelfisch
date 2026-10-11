@@ -5,7 +5,7 @@
 import { Editor, type AnyExtension, type ChainedCommands, type Range } from '@tiptap/core';
 import { StateEffect, type Extension } from '@codemirror/state';
 import type { Node } from '@tiptap/pm/model';
-import { EditorState, TextSelection, type Plugin, type Transaction } from '@tiptap/pm/state';
+import { EditorState, NodeSelection, TextSelection, type Plugin, type Transaction } from '@tiptap/pm/state';
 import type { Decoration } from '@tiptap/pm/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
@@ -146,6 +146,24 @@ export class VisualView {
     const tr = applyTypstChanges(state.tr, parseTypst(this.document.text, state.schema));
     if (tr.docChanged) this.editor.view.dispatch(tr.setMeta(FROM_DOCUMENT, true).setMeta('addToHistory', false));
   }
+}
+
+/**
+ * Inserts the blocks Typst `source` is read as in a view's `editor` (as the view reads any Typst: a figure of an
+ * image is a figure, what no spec models a raw box) next to the selection: after the selected block, or after the
+ * paragraph or heading holding the cursor; an empty paragraph is taken over. Nothing is split or replaced; the
+ * editor keeps the focus. For an Insert entry whose result is easier written as Typst than built as nodes.
+ */
+export function insertTypstBlocks(editor: Editor, source: string): void {
+  const { selection, schema } = editor.state;
+  const blocks = parseTypst(source, schema).content;
+  const $to = selection.$to;
+  let target = { from: selection.to, to: selection.to };
+  if (!(selection instanceof NodeSelection && selection.node.isBlock) && $to.parent.isTextblock && $to.depth > 0) {
+    const after = $to.after();
+    target = $to.parent.content.size === 0 ? { from: $to.before(), to: after } : { from: after, to: after };
+  }
+  editor.chain().focus().insertContentAt(target, blocks).run();
 }
 
 /** What the raw boxes of `view` get from the contributions. */

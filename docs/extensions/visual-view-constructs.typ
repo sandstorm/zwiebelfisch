@@ -227,6 +227,7 @@ createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensio
   [`registerRawBoxCodeMirrorExtension(view => extension)`], [CodeMirror extensions for the code of every raw box],
 )
 
+- `insertTypstBlocks(editor, source)` (a plain function): inserts what Typst `source` is read as after the cursor's block, as the view reads any Typst (a figure of an image becomes a figure, the rest raw boxes). For Insert entries whose result is easier written as Typst ("Insert spreadsheet").
 - Contributions register once; the host applies them to every view it creates (views are made lazily, per document). Disposing a registration takes it out of views created later.
 - Per-view things (the document, a popover) come through the `…Provider` functions, which get the `VisualViewContext`: `document`, `selection()` (a `SourceRange`), `sourceToPos`, `posToSource` (the only way between `SourceOffset`s and ProseMirror positions), `isBox(node)`.
 - `setBoxDecorations`: the effect through which a raw box's CodeMirror extension learns what the Visual view draws on its box.

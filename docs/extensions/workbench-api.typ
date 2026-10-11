@@ -55,6 +55,7 @@ workbench.registerMenuItem('explorer/context', {
 - Messages are not modal. An information message without items closes by itself; warnings and errors stay.
 - One input box or quick pick at a time: a new one cancels the open one.
 - `showSaveDialog` refuses names of existing files and names without one of the `filters` endings (`{ Diagrams: ['drawio.png'] }`; `'*'`: any). Creating the file is the caller's job (`workspace.applyEdit`).
+- `defaultUri`: a file or folder starts the name in that folder; a path the project has no file at, with one of the `filters` endings, is proposed as the name (`ProjectPath.unique(path, exists)` makes it free: `table-2.ic`).
 
 ```ts
 const choice = await window.showInformationMessage(`${path}: ${words} words`, 'Open');

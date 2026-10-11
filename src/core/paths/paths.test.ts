@@ -51,6 +51,16 @@ describe('ProjectPath.displayName', () => {
   });
 });
 
+describe('ProjectPath.unique', () => {
+  it('numbers a taken name before its whole extension', () => {
+    const taken = new Set(['/data/table.ic', '/data/table-2.ic', '/flow.drawio.png']);
+    const exists = (path: ProjectPath) => taken.has(path);
+    expect(ProjectPath.unique(ProjectPath.of('/data/table.ic'), exists)).toBe('/data/table-3.ic');
+    expect(ProjectPath.unique(ProjectPath.of('/flow.drawio.png'), exists)).toBe('/flow-2.drawio.png');
+    expect(ProjectPath.unique(ProjectPath.of('/notes'), exists)).toBe('/notes');
+  });
+});
+
 describe('ProjectPath.name', () => {
   it('is the last segment', () => {
     expect(ProjectPath.name(path('/parts/intro.typ'))).toBe('intro.typ');

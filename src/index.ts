@@ -71,7 +71,7 @@ export type {
   VisualViewContext,
   VisualViewContributions,
 } from './hosts/visual-view/visual-view';
-export { setBoxDecorations } from './hosts/visual-view/visual-view';
+export { insertTypstBlocks, setBoxDecorations } from './hosts/visual-view/visual-view';
 export type {
   Around,
   BlockLabel,
