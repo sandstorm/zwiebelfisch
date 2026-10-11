@@ -86,14 +86,14 @@ src/                        the widget (TypeScript); the most important API on t
                             `UploadedFile` (`name`, `text()`, `arrayBuffer()`: a DOM File is one, core names no DOM type)
     room-protocol/          the rooms' Y.Doc map names (FILES_MAP, ASSETS_MAP, META_MAP) and GitLab rooms' messages
                             and file URLs: import-free, shared by collaboration and server/
+    color-scheme/           isLightText (light or dark, from a resolved text color), textColorOn (black or white text
+                            on a color): plain color arithmetic, no DOM
     disposable/             Disposable (VS Code's shape: `new Disposable(fn)` disposes once; `Disposable.from(...)` in
                             reverse order)
     event-emitter/          EventEmitter<T> (`event` to subscribe, `fire`), Event<T>
   ui/                       feature-neutral DOM widgets, one folder each: popup-menu/ (PopupMenu: a role=menu at a
                             point or below a button, e.g. the file panel's menus), toolbar-menu/ (ToolbarMenu: a menu
-                            button of toolbar buttons), floating-bar/ (FloatingBar: a bar above an anchor in the text),
-                            color-scheme/ (isLightText: light or dark, from a resolved text color; textColorOn: black
-                            or white text on a color)
+                            button of toolbar buttons), floating-bar/ (FloatingBar: a bar above an anchor in the text)
   extensions/               one vertical slice per concept (docs/2026_10_10_extensions-architecture.md): <name>.ts
                             (the entry: the TypstExtension factory, the controller), model/ (pure, no DOM), and one
                             folder per host it contributes to (workbench/, preview/, visual-view/, …), which have no
@@ -1486,7 +1486,7 @@ new Layout(host, storageKey)   .editor  .preview  .statusBar   // the editing co
   closed, opens only on the rail button and closes on Escape, a click outside, or `dismiss()`
   (the file panel calls `SidePanel.dismiss()` after a file was chosen in it).
 
-### Dark mode (`src/typst-editor/typst-editor.css`, `src/extensions/typst-language/source-view/code-colors.ts`, `src/ui/color-scheme/`)
+### Dark mode (`src/typst-editor/typst-editor.css`, `src/extensions/typst-language/source-view/code-colors.ts`, `src/core/color-scheme/`)
 
 - **Tokens.** Every color of the widget's stylesheets is a custom property on `.typst-editor`
   defined as `light-dark(light, dark)` (`--te-bg`, `--te-surface`, `--te-subtle`, `--te-text`,
@@ -1499,7 +1499,7 @@ new Layout(host, storageKey)   .editor  .preview  .statusBar   // the editing co
   `auto`, default null: as the page) sets `data-theme` on the host, which the stylesheet turns
   into its own `color-scheme`; a change of the setting applies at once (`ColorScheme.update`).
 - **`data-scheme`** (`ColorScheme`, `src/hosts/workbench/color-scheme/color-scheme.ts`): the scheme the widget's
-  colors resolved to (`light` | `dark`, from its computed text color: `isLightText`, `ui/color-scheme/`), for what light-dark() cannot
+  colors resolved to (`light` | `dark`, from its computed text color: `isLightText`, `core/color-scheme/`), for what light-dark() cannot
   express. With it dark, the preview shows the pages inverted like dark-mode PDF readers do
   (`filter: invert(1) hue-rotate(180deg)` on `.typst-preview__content`, pictures inside turned
   back; the overlays beside it keep their colors), and so are compiled snippets in the Visual view
@@ -1844,7 +1844,7 @@ following their `TypstDocument`. One Y.Doc per project (= Hocuspocus room):
   and resolves the others' into `PlacedPresence`s (`{id: clientID, user: {name, color}, anchor, head, path}`,
   source offsets) once per microtask after any change of the shared texts (Y.Doc `update`) or of presence;
   `Collaboration.onDidChangePresence` gets everyone in every file, only when that changed. Colors: the user's, else a palette entry by
-  name; flag text black or white by WCAG contrast (`textColorOn`, `ui/color-scheme`). CSS: `--typst-remote-color`,
+  name; flag text black or white by WCAG contrast (`textColorOn`, `core/color-scheme`). CSS: `--typst-remote-color`,
   `--typst-remote-text`.
 - **Presence out of the hosts** (decided 2026-10-10): the hosts know no presence. The extension keeps everyone's
   places in its own `Presences` and draws them itself through generic contribution points, in every view of every

@@ -6,7 +6,7 @@ import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet } fr
 import { fromDocument, type SourceViewExtension } from '../../../hosts/source-view/source-view';
 import { REMOTE_ORIGIN } from '../remote-origin';
 import type { Presence, PresenceSource, PresenceUser } from '../presence/presence';
-import { textColorOn } from '../../../ui/color-scheme/color-scheme';
+import { textColorOn } from '../../../core/color-scheme/color-scheme';
 
 /**
  * Undo is per user: other users' edits (changes with `REMOTE_ORIGIN`) never enter a Source view's history; it maps
