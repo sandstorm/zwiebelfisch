@@ -80,7 +80,7 @@ async function expectLayoutIntact(page: Page, before: Awaited<ReturnType<typeof 
   for (const side of ['left', 'right'] as const) expect(Math.abs(after[side].height - before[side].height)).toBeLessThanOrEqual(1);
   expect(after.overflow).toBeLessThanOrEqual(0);
   // A big photo shows scaled down, not filling the editing view.
-  const picture = editor.getByTestId('typst-visual').locator('.typst-visual__image img.typst-visual__rendering').first();
+  const picture = editor.getByTestId('typst-visual').locator('.typst-images__box img.typst-visual__rendering').first();
   await expect(picture).toBeVisible();
   expect((await picture.boundingBox())!.height).toBeLessThan(after.left.height * 0.7);
   expect(page.url()).toContain('/examples/plain-html/');

@@ -1,7 +1,7 @@
 /* The labels extension's styles: References (@key) as chips, labels (<key>) as tags, the @ list.
    Registered by labels.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 /* References (@key) as chips showing the label; what it labels is only in the hover tooltip (title); a missing label underlined wavy */
-.typst-visual__ref {
+.typst-labels__ref {
   display: inline-flex;
   align-items: baseline;
   gap: 0.4em;
@@ -14,8 +14,8 @@
   white-space: nowrap;
   cursor: default;
 }
-.typst-visual__ref-supplement { color: var(--te-text); }
-.typst-visual__ref--unknown { background: var(--te-danger-soft); color: var(--te-danger); text-decoration: underline wavy var(--te-danger); text-underline-offset: 3px; }
+.typst-labels__ref-supplement { color: var(--te-text); }
+.typst-labels__ref--unknown { background: var(--te-danger-soft); color: var(--te-danger); text-decoration: underline wavy var(--te-danger); text-underline-offset: 3px; }
 /* Labels (<key>) as a tag on the block they label: in the text of headings and paragraphs, below other blocks */
 .typst-label-tag { position: relative; display: inline-block; margin-left: 0.5em; font: normal 12px/1.4 system-ui, sans-serif; vertical-align: middle; }
 .typst-label-tag--block { display: flex; justify-content: flex-end; margin: -0.5em 0 0.5em; }

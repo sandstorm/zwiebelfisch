@@ -61,7 +61,7 @@ describe('the notes gutter', () => {
     expect(cards()).toHaveLength(2);
     expect([texts(0), texts(1)]).toEqual([['first'], ['second']]);
     expect(cards()[1].querySelector('.typst-note-card__quote')?.textContent).toBe('key');
-    expect(parent.querySelector('mark.typst-visual__note-range')?.textContent).toBe('key');
+    expect(parent.querySelector('mark.typst-comments__range')?.textContent).toBe('key');
     expect(parent.querySelectorAll('[data-testid="typst-note-marker"]')).toHaveLength(1);
   });
 
@@ -337,9 +337,9 @@ describe('the notes gutter', () => {
     it('a focused card makes its anchor active', () => {
       const { field, anchors } = setup('A #margin-note[key][n] and b#margin-note[p].\n');
       field(1).focus();
-      expect(anchors().map((a) => a.classList.contains('typst-visual__note-anchor--active'))).toEqual([false, true]);
+      expect(anchors().map((a) => a.classList.contains('typst-comments__anchor--active'))).toEqual([false, true]);
       field(0).focus();
-      expect(anchors().map((a) => a.classList.contains('typst-visual__note-anchor--active'))).toEqual([true, false]);
+      expect(anchors().map((a) => a.classList.contains('typst-comments__anchor--active'))).toEqual([true, false]);
     });
 
     it('the cursor in highlighted text makes its card active', () => {
@@ -361,9 +361,9 @@ describe('the notes gutter', () => {
     it('hovering a card highlights its anchor, and hovering an anchor its card', () => {
       const { cards, anchors } = setup('A #margin-note[key][n] and b#margin-note[p].\n');
       cards()[1].dispatchEvent(new MouseEvent('mouseenter'));
-      expect(anchors()[1].classList.contains('typst-visual__note-anchor--hover')).toBe(true);
+      expect(anchors()[1].classList.contains('typst-comments__anchor--hover')).toBe(true);
       cards()[1].dispatchEvent(new MouseEvent('mouseleave'));
-      expect(anchors()[1].classList.contains('typst-visual__note-anchor--hover')).toBe(false);
+      expect(anchors()[1].classList.contains('typst-comments__anchor--hover')).toBe(false);
       anchors()[0].dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
       expect(cards()[0].classList.contains('typst-note-card--hover')).toBe(true);
     });
@@ -392,7 +392,7 @@ describe('the notes gutter', () => {
     const width = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(600);
     try {
       const { doc, parent } = setup('A #margin-note[a][1] b\n');
-      const narrow = () => parent.querySelector('.typst-visual__body')!.classList.contains('typst-visual__body--narrow');
+      const narrow = () => parent.querySelector('.typst-visual__body')!.classList.contains('typst-comments--narrow');
       await new Promise((resolve) => requestAnimationFrame(resolve));
       expect(narrow()).toBe(false);
       width.mockReturnValue(500);

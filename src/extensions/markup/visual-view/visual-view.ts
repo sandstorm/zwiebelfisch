@@ -16,14 +16,14 @@ import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from '../model/raw
 const Bold = starterKitPart('typstBold', { bold: {} });
 const Italic = starterKitPart('typstItalic', { italic: {} });
 const Link = starterKitPart('typstLink', {
-  link: { openOnClick: false, autolink: false, HTMLAttributes: { class: 'typst-visual__link', target: null, rel: null } },
+  link: { openOnClick: false, autolink: false, HTMLAttributes: { class: 'typst-markup__link', target: null, rel: null } },
 }).extend({
   // the link mark StarterKit adds comes with priority 1000 (outside everything): outside bold and italic (100) only
   addExtensions() {
     return (this.parent?.() ?? []).map((link: AnyExtension) => link.extend({ priority: 120 }));
   },
 });
-const Blockquote = starterKitPart('typstBlockquote', { blockquote: { HTMLAttributes: { class: 'typst-visual__quote' } } }).extend({
+const Blockquote = starterKitPart('typstBlockquote', { blockquote: { HTMLAttributes: { class: 'typst-markup__quote' } } }).extend({
   // `sep`: the whitespace to the next block; `layout`: how the call around its blocks is written
   addGlobalAttributes: () => [{ types: ['blockquote'], attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } } }],
 });
@@ -38,7 +38,7 @@ const TypstCode = Code.extend({
   addAttributes() {
     return { fence: { default: 1, rendered: false }, lang: { default: null, rendered: false } };
   },
-}).configure({ HTMLAttributes: { class: 'typst-visual__code-inline' } });
+}).configure({ HTMLAttributes: { class: 'typst-markup__code-inline' } });
 
 /**
  * Raw text in a block (```lang …```): plain text edited in place, under a
@@ -56,7 +56,7 @@ const TypstCodeBlock = CodeBlock.extend({
   addNodeView() {
     return codeBlockView;
   },
-}).configure({ HTMLAttributes: { class: 'typst-visual__code-block' } });
+}).configure({ HTMLAttributes: { class: 'typst-markup__code-block' } });
 
 // ------------------------------------------------------------- strong, emph
 

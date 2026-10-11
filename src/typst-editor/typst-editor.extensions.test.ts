@@ -178,8 +178,8 @@ describe('diagrams', () => {
       source: '#image("img/flow.drawio.png")\n\n#image("img/logo.png")\n',
       files: { '/img/flow.drawio.png': diagram(), '/img/logo.png': new Uint8Array([1]) },
     });
-    const [flow, logo] = [...host.querySelectorAll<HTMLElement>('.typst-visual__image')];
-    const actions = (box: HTMLElement) => [...box.querySelectorAll('.typst-visual__image-tools .typst-visual__box-actions button')].map((b) => b.textContent);
+    const [flow, logo] = [...host.querySelectorAll<HTMLElement>('.typst-images__box')];
+    const actions = (box: HTMLElement) => [...box.querySelectorAll('.typst-images__tools .typst-visual__box-actions button')].map((b) => b.textContent);
     expect(actions(flow)).toEqual(['Edit diagram']);
     expect(actions(logo)).toEqual([]);
     flow.querySelector<HTMLButtonElement>('.typst-visual__box-actions button')!.click();

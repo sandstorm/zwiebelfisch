@@ -19,7 +19,7 @@ const cards = (page: Page) => page.getByTestId('typst-note-card');
 /** The reply box of card `i` ("Comment" while the note is empty). */
 const noteField = (page: Page, i = 0) => cards(page).nth(i).getByRole('textbox', { name: /^(Comment|Reply)$/ });
 const messageTexts = (page: Page, i = 0) => cards(page).nth(i).locator('.typst-note-card__text');
-const highlight = (page: Page) => visual(page).locator('mark.typst-visual__note-range');
+const highlight = (page: Page) => visual(page).locator('mark.typst-comments__range');
 /** "Comment" in the Visual view's formatting toolbar. */
 const commentButton = (page: Page) => page.getByRole('toolbar', { name: 'Formatting' }).getByRole('button', { name: 'Comment' });
 /** "Comment" in the tab bar (its menu `editor/title`), shown with the Source view. */
@@ -182,7 +182,7 @@ test('a highlight and its card highlight each other', async ({ page }) => {
 
   await visual(page).locator('h1').click();
   await cards(page).first().hover();
-  await expect(visual(page).locator('.typst-visual__note-anchor--hover')).toHaveCount(1);
+  await expect(visual(page).locator('.typst-comments__anchor--hover')).toHaveCount(1);
 });
 
 test('on a narrow pane, a card pops up below its highlight', async ({ page }) => {

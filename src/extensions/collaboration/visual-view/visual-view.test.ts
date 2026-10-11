@@ -115,7 +115,7 @@ describe('VisualView presence', () => {
     const source = 'Text #box[x] more\n\n#image("a.png")\n';
     const { view, parent } = setup(source);
     view.setPresence([{ ...ann, ...at(source.indexOf('image') + 3) }, { ...bob, ...at(source.indexOf('#box')) }]);
-    expect(parent.querySelector('.typst-visual__image.typst-remote-box')?.getAttribute('data-user')).toBe('Ann');
+    expect(parent.querySelector('.typst-images__box.typst-remote-box')?.getAttribute('data-user')).toBe('Ann');
     expect(parent.querySelector('.typst-visual__raw-inline.typst-remote-box')).toBeNull();
     expect(parent.querySelector('p .typst-remote-caret[data-user="Bob"]')).not.toBeNull();
   });

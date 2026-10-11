@@ -67,7 +67,7 @@ test('a set rule keeps showing its code', async ({ page }) => {
 
 test('an image block shows the image file from the project; a click selects it, a double-click shows its code', async ({ page }) => {
   await load(page, '#image("logo.svg")\n\nText\n', { '/logo.svg': SVG });
-  const box = visual(page).locator('.typst-visual__image');
+  const box = visual(page).locator('.typst-images__box');
   await expect(picture(box)).toBeVisible();
   await expect(picture(box)).toHaveAttribute('src', /^blob:/);
   expect(await picture(box).evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
@@ -84,7 +84,7 @@ test('Insert image offers the project images', async ({ page }) => {
   await chooseFrom(page.getByRole('toolbar', { name: 'Formatting' }), 'Insert', 'Insert image');
   await page.getByRole('dialog', { name: 'Insert image' }).getByRole('option', { name: 'logo.svg' }).click();
   await expect.poll(value(page)).toContain('#image("logo.svg")');
-  await expect(picture(visual(page).locator('.typst-visual__image'))).toBeVisible();
+  await expect(picture(visual(page).locator('.typst-images__box'))).toBeVisible();
 });
 
 test('Insert image uploads a file into the project and inserts it', async ({ page }) => {
@@ -96,5 +96,5 @@ test('Insert image uploads a file into the project and inserts it', async ({ pag
   await (await chooser).setFiles({ name: 'cat.png', mimeType: 'image/png', buffer: PNG });
   await expect.poll(value(page)).toContain('#image("cat.png")');
   expect(await page.locator('typst-editor').evaluate((el: Editor) => Object.keys(el.files))).toContain('/cat.png');
-  await expect(picture(visual(page).locator('.typst-visual__image'))).toBeVisible();
+  await expect(picture(visual(page).locator('.typst-images__box'))).toBeVisible();
 });

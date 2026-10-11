@@ -1,12 +1,12 @@
 /* The comments extension's styles: Margin notes in the text, the notes gutter with its cards, and the Comment button.
    Registered by comments.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 /* drafting margin notes in the text: highlighted text of a range note, a point note's marker */
-.typst-visual__note-range { background: var(--te-note); border-bottom: 2px solid var(--te-note-line); color: inherit; }
-.typst-visual__note-anchor--hover .typst-visual__note-range,
-.typst-visual__note-range .typst-visual__note-anchor--hover,
-.typst-visual__note-anchor--active .typst-visual__note-range,
-.typst-visual__note-range .typst-visual__note-anchor--active { background: var(--te-note-strong); }
-.typst-visual__note {
+.typst-comments__range { background: var(--te-note); border-bottom: 2px solid var(--te-note-line); color: inherit; }
+.typst-comments__anchor--hover .typst-comments__range,
+.typst-comments__range .typst-comments__anchor--hover,
+.typst-comments__anchor--active .typst-comments__range,
+.typst-comments__range .typst-comments__anchor--active { background: var(--te-note-strong); }
+.typst-comments__note {
   display: inline-flex;
   align-items: center;
   margin: 0 2px;
@@ -18,12 +18,12 @@
   vertical-align: baseline;
   cursor: pointer;
 }
-.typst-visual__note--empty { border-style: dashed; }
-.typst-visual__note.typst-visual__note-anchor--hover,
-.typst-visual__note.typst-visual__note-anchor--active { background: var(--te-note-strong); box-shadow: 0 0 0 2px var(--te-note-line); }
-.typst-visual__note-icon { flex: none; }
+.typst-comments__note--empty { border-style: dashed; }
+.typst-comments__note.typst-comments__anchor--hover,
+.typst-comments__note.typst-comments__anchor--active { background: var(--te-note-strong); box-shadow: 0 0 0 2px var(--te-note-line); }
+.typst-comments__note-icon { flex: none; }
 .typst-notes-gutter { display: none; }
-.typst-visual__body--notes > .typst-notes-gutter {
+.typst-comments--notes > .typst-notes-gutter {
   display: block;
   position: relative;
   flex: none;
@@ -115,7 +115,7 @@
 .typst-note-card__field { min-height: 2.8em; }
 .typst-note-card__send { flex: none; }
 /* Narrow panes: no gutter column; the active note's card pops up below its anchor */
-.typst-visual__body--narrow.typst-visual__body--notes > .typst-notes-gutter {
+.typst-comments--narrow.typst-comments--notes > .typst-notes-gutter {
   position: absolute;
   top: 0;
   right: 8px;
@@ -124,5 +124,5 @@
   background: none;
   pointer-events: none;
 }
-.typst-visual__body--narrow .typst-note-card { display: none; left: 0; right: 0; pointer-events: auto; transition: none; z-index: 2; }
-.typst-visual__body--narrow .typst-note-card--active { display: block; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18); }
+.typst-comments--narrow .typst-note-card { display: none; left: 0; right: 0; pointer-events: auto; transition: none; z-index: 2; }
+.typst-comments--narrow .typst-note-card--active { display: block; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18); }

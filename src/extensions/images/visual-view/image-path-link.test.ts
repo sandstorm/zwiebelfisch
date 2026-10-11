@@ -24,9 +24,9 @@ function setup(text: string) {
 describe("an image box's path", () => {
   it('opens the target of its link', () => {
     const { parent, links } = setup('#image("logo.png")\n\nHello\n');
-    const label = parent.querySelector('.typst-visual__image-label')!;
+    const label = parent.querySelector('.typst-images__label')!;
     expect(label.textContent).toBe('Image: logo.png');
-    const button = label.querySelector<HTMLButtonElement>('button.typst-visual__path')!;
+    const button = label.querySelector<HTMLButtonElement>('button.typst-images__path')!;
     expect(button.title).toBe('Open logo.png');
     button.click();
     expect(links.open).toHaveBeenCalledWith(path('/logo.png'));
@@ -34,8 +34,8 @@ describe("an image box's path", () => {
 
   it('is marked, with the tooltip of its link, when the link has no target', () => {
     const { parent } = setup('#image("gone.png")\n\nHello\n');
-    const label = parent.querySelector('.typst-visual__image-label')!;
+    const label = parent.querySelector('.typst-images__label')!;
     expect(label.querySelector('button')).toBeNull();
-    expect(label.querySelector('.typst-visual__path--missing')!.getAttribute('title')).toBe('gone.png is not in the project');
+    expect(label.querySelector('.typst-images__path--missing')!.getAttribute('title')).toBe('gone.png is not in the project');
   });
 });

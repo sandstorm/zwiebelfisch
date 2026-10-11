@@ -7,14 +7,14 @@ export function imagePathLink(link: DocumentLink | null, path: PathReference, do
   const target = link?.target;
   if (!target) {
     const missing = doc.createElement('span');
-    missing.className = 'typst-visual__path typst-visual__path--missing';
+    missing.className = 'typst-images__path typst-images__path--missing';
     missing.textContent = path;
     missing.title = link?.tooltip ?? 'Outside the project';
     return missing;
   }
   const button = doc.createElement('button');
   button.type = 'button';
-  button.className = 'typst-visual__path';
+  button.className = 'typst-images__path';
   button.textContent = path;
   button.title = `Open ${ProjectPath.displayName(target)}`;
   button.addEventListener('mousedown', (event) => event.preventDefault());

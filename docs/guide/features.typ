@@ -57,7 +57,7 @@ Authors declare paragraph and text styles as Typst functions with a doc comment,
 
 - The text style menu offers *Note* (wraps the paragraphs in `#note[…]`) and *Keyword* (wraps the selection in `#key[…]`), and adds the import where needed.
 - *Normal text* removes a paragraph style. "New style…" adds a style to `styles.typ`.
-- The Visual view shows a paragraph style as a named frame, a text style as dotted underlined text, each with the class `typst-style--<name>` for host CSS. The preview shows the real look.
+- The Visual view shows a paragraph style as a named frame, a text style as dotted underlined text, each with the class `typst-styles--<name>` for host CSS. The preview shows the real look.
 
 == Files <guide-features-files>
 

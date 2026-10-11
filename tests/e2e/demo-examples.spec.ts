@@ -53,8 +53,8 @@ test('the advanced example declares custom styles: styled text in the Visual vie
   await page.goto('/?example=advanced#/chapters/introduction.typ');
   await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
   const visual = page.locator('[data-testid=typst-visual]:visible');
-  await expect(visual.locator('.typst-visual__style.typst-style--note')).toHaveAttribute('data-style-title', 'Note');
-  await expect(visual.locator('.typst-visual__style-text.typst-style--term').first()).toHaveText('incrementally');
+  await expect(visual.locator('.typst-styles__block.typst-styles--note')).toHaveAttribute('data-style-title', 'Note');
+  await expect(visual.locator('.typst-styles__text.typst-styles--term').first()).toHaveText('incrementally');
   const menu = page.locator('[role=toolbar][aria-label=Formatting]:visible').getByRole('combobox', { name: 'Text style' });
   await expect(menu.locator('optgroup[label="Paragraph styles"] option')).toHaveText(['Note']);
   await expect(menu.locator('optgroup[label="Text styles"] option')).toHaveText(['Term']);

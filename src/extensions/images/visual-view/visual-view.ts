@@ -94,7 +94,7 @@ const Image = Node.create({
     return { src: { default: '#image("")', rendered: false }, sep: { default: null, rendered: false } };
   },
   renderHTML({ node }) {
-    return ['pre', { class: 'typst-visual__image' }, node.attrs.src];
+    return ['pre', { class: 'typst-images__box' }, node.attrs.src];
   },
 });
 

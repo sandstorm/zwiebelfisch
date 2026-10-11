@@ -39,7 +39,7 @@ describe('page breaks and horizontal rules', () => {
     view.reveal(5, 5);
     button('Insert page break').click();
     expect(doc.text).toBe('Hello\n\n#pagebreak()\n');
-    expect(parent.querySelector('.typst-visual__page-break')?.textContent).toBe('Page break');
+    expect(parent.querySelector('.typst-page-layout__page-break')?.textContent).toBe('Page break');
   });
 
   it('"Horizontal rule" adds #line(length: 100%)', () => {
@@ -47,7 +47,7 @@ describe('page breaks and horizontal rules', () => {
     view.reveal(5, 5);
     button('Horizontal rule').click();
     expect(doc.text).toBe('Hello\n\n#line(length: 100%)\n');
-    expect(parent.querySelector('.typst-visual__rule hr')).not.toBeNull();
+    expect(parent.querySelector('.typst-page-layout__rule hr')).not.toBeNull();
   });
 
   it('"---" in an empty paragraph becomes a rule', () => {
@@ -167,7 +167,7 @@ describe('heading numbers', () => {
   it('shows the numbers the set rule gives, beside the headings, following edits', () => {
     const { doc, parent } = setup('#set heading(numbering: "1.1")\n\n= A\n\n== B\n\n= C\n');
     expect(numbers(parent)).toEqual(['1 A', '1.1 B', '2 C']);
-    expect(parent.querySelector('.typst-visual')!.classList.contains('typst-visual--numbered')).toBe(true);
+    expect(parent.querySelector('.typst-visual')!.classList.contains('typst-headings--numbered')).toBe(true);
     doc.setText('#set heading(numbering: "1.1")\n\n= A\n\n= New\n\n== B\n\n= C\n', 'source');
     expect(numbers(parent)).toEqual(['1 A', '2 New', '2.1 B', '3 C']);
   });

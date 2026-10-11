@@ -3,9 +3,9 @@
 .typst-visual h1 { font-size: 1.6em; margin: 0.6em 0 0.3em; }
 .typst-visual h2 { font-size: 1.3em; margin: 0.6em 0 0.3em; }
 /* Heading numbers (from #set heading(numbering: ..)) in a gutter right of the text; not editable */
-.typst-visual--numbered { padding-right: 6em; }
-.typst-visual__numbered-heading { position: relative; }
-.typst-visual__numbered-heading::after {
+.typst-headings--numbered { padding-right: 6em; }
+.typst-headings__numbered { position: relative; }
+.typst-headings__numbered::after {
   content: attr(data-heading-number);
   position: absolute;
   top: 0;

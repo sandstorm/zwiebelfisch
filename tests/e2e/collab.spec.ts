@@ -104,7 +104,7 @@ test('a margin note reaches the other user', async ({ browser, baseURL }, info) 
   await field.fill('Shared note');
   await field.press('ControlOrMeta+Enter');
   await expect(bob.getByTestId('typst-note-card').locator('.typst-note-card__text')).toHaveText(['Shared note']);
-  await expect(bob.getByTestId('typst-visual').locator('mark.typst-visual__note-range')).toHaveText('bold');
+  await expect(bob.getByTestId('typst-visual').locator('mark.typst-comments__range')).toHaveText('bold');
 });
 
 test('a reply from the other user: both see the thread in the card and in the PDF margin', async ({ browser, baseURL }, info) => {

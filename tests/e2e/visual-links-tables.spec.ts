@@ -41,7 +41,7 @@ test('Insert image adds an #image block with the entered path', async ({ page })
   const input = page.getByRole('form', { name: 'Insert image' });
   await input.getByLabel('Image path').fill('images/logo.png');
   await input.getByLabel('Image path').press('Enter');
-  await expect(visual(page).locator('.typst-visual__image-label')).toHaveText('Image: images/logo.png');
+  await expect(visual(page).locator('.typst-images__label')).toHaveText('Image: images/logo.png');
   await expect.poll(sourceText(page)).toContain('\n\n#image("images/logo.png")\n');
 });
 

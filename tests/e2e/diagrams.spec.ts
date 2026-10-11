@@ -95,7 +95,7 @@ test('"Edit diagram" on the image box opens the diagram; a change is saved when 
   await fileRow(editor(page), 'main.typ').click();
   await expect.poll(diagramBytes(page)).not.toBe(empty);
 
-  const box = editor(page).getByTestId('typst-visual').locator('.typst-visual__image');
+  const box = editor(page).getByTestId('typst-visual').locator('.typst-images__box');
   await box.locator('img.typst-visual__rendering').click();
   await box.getByRole('toolbar', { name: 'Image' }).getByRole('button', { name: 'Edit diagram' }).click();
   await expect(editor(page).getByTestId('typst-diagram').frameLocator('iframe').locator('#status')).toHaveText(/^loaded/);

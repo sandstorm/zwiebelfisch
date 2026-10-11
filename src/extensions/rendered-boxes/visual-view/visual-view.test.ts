@@ -107,7 +107,7 @@ describe('rendered raw boxes', () => {
   it('show the image file of an image block, following path edits', async () => {
     const { renderer } = fakeRenderer();
     const { parent, doc } = await setup('#image("logo.png")\n\nHello\n', renderer);
-    const box = parent.querySelector('.typst-visual__image')!;
+    const box = parent.querySelector('.typst-images__box')!;
     expect(parts(box).picture?.src).toMatch(/^blob:/);
     expect(parts(box).code.hidden).toBe(true);
     doc.setText('#image("missing.png")\n\nHello\n', 'source');

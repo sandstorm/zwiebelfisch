@@ -15,7 +15,7 @@ async function setup(text: string, prompts?: TestPrompts) {
   const doc = new TypstDocument(text);
   const view = createVisualView(parent, doc, { files, prompts });
   await settle();
-  const box = () => parent.querySelector<HTMLElement>('.typst-visual__image')!;
+  const box = () => parent.querySelector<HTMLElement>('.typst-images__box')!;
   const tools = () => box().querySelector<HTMLElement>('[role="toolbar"][aria-label="Image"]')!;
   const button = (name: string) =>
     [...tools().querySelectorAll('button')].find((b) => (b.getAttribute('aria-label') ?? b.textContent) === name)!;
@@ -73,7 +73,7 @@ describe('image tools', () => {
 
   it('dragging a handle shows the width live and writes it as percent on release', async () => {
     const { doc, box } = await setup('#image("cat.png")\n');
-    const frame = box().querySelector<HTMLElement>('.typst-visual__image-frame')!;
+    const frame = box().querySelector<HTMLElement>('.typst-images__frame')!;
     Object.defineProperty(box(), 'clientWidth', { value: 400 });
     frame.getBoundingClientRect = () => new DOMRect(0, 0, 100, 50);
     const handle = frame.querySelector('[data-handle="se"]')!;

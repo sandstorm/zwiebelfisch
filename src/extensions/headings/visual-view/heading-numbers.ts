@@ -11,7 +11,7 @@ const key = new PluginKey<DecorationSet>('typstHeadingNumbers');
  * Shows each heading's number, as the document's `#set heading(numbering:
  * ..)` makes Typst number it, in a gutter right of the text: a node
  * decoration (`data-heading-number`, drawn by CSS), so it is not part of the
- * editable content. The editor gets `typst-visual--numbered` while any
+ * editable content. The editor gets `typst-headings--numbered` while any
  * heading shows a number, to make room for the gutter.
  */
 export const HeadingNumbers = Extension.create({
@@ -27,7 +27,7 @@ export const HeadingNumbers = Extension.create({
         props: {
           decorations: (state) => key.getState(state),
           attributes: (state): Record<string, string> =>
-            key.getState(state)!.find().length > 0 ? { class: 'typst-visual--numbered' } : {},
+            key.getState(state)!.find().length > 0 ? { class: 'typst-headings--numbered' } : {},
         },
       }),
     ];
@@ -36,7 +36,7 @@ export const HeadingNumbers = Extension.create({
 
 function numberDecorations(doc: Node): DecorationSet {
   const decorations = headingNumbers(doc).map(({ pos, number }) =>
-    Decoration.node(pos, pos + doc.nodeAt(pos)!.nodeSize, { class: 'typst-visual__numbered-heading', 'data-heading-number': number }),
+    Decoration.node(pos, pos + doc.nodeAt(pos)!.nodeSize, { class: 'typst-headings__numbered', 'data-heading-number': number }),
   );
   return DecorationSet.create(doc, decorations);
 }
