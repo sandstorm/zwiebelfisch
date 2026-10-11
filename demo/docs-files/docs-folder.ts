@@ -4,13 +4,14 @@ import { randomBytes } from 'node:crypto';
 import { watch } from 'node:fs';
 import { lstat, mkdir, readdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
-import { type DiskChange, isTextPath } from './protocol.ts';
+import { contentTag, type DiskChange, isTextPath } from './protocol.ts';
 
 /**
  * The files under `root`, by paths relative to it (`10_guide/02_features.typ`). Writes are atomic (a hidden temporary file
- * renamed over the target). It remembers what it wrote last per path, so `watch` skips the event for the folder's own
- * write (no echo to the page that made it). It notes that before the file changes on disk, since the watcher's event
- * may arrive before the write's last step has finished.
+ * renamed over the target), and only over the version the writer knows. It remembers what it wrote last per path,
+ * until someone else changes the file, so `watch` skips the event for the folder's own write (no echo to the page that
+ * made it). It notes that before the file changes on disk, since the watcher's event may arrive before the write's last
+ * step has finished.
  *
  * Every path comes from the page, so each one goes through the guard here: relative to docs/, no "..", no hidden
  * files, no symlink leading out.
@@ -25,9 +26,15 @@ export class DocsFolder {
     this.root = resolve(root);
   }
 
-  /** Writes `bytes` to `path`, creating the file and its folders as needed. */
-  async write(path: string, bytes: Uint8Array): Promise<void> {
+  /**
+   * Writes `bytes` to `path`, creating the file and its folders as needed, but only over `base`: the `contentTag` of
+   * the version the writer last read or wrote, null for no file. A file that is another version now is left as it is
+   * (412): the writer has not seen that change.
+   */
+  async write(path: string, bytes: Uint8Array, base: string | null): Promise<void> {
     const file = await this.#resolve(path);
+    const current = await readFile(file).catch((error: NodeJS.ErrnoException) => (error.code === 'ENOENT' ? null : Promise.reject(error)));
+    if ((current === null ? null : contentTag(current)) !== base) throw new DocsFilesError(`${path} changed on disk since this page read it`, 412);
     await mkdir(dirname(file), { recursive: true });
     const temporary = join(dirname(file), `.${randomBytes(6).toString('hex')}.docs-files.tmp`);
     try {
@@ -96,6 +103,8 @@ export class DocsFolder {
     if (this.#problem(path)) return null;
     const bytes = await readFile(file).catch((error: NodeJS.ErrnoException) => (error.code === 'ENOENT' ? null : undefined));
     if (bytes === undefined || sameBytes(this.#written.get(path), bytes)) return null;
+    // someone else's version: a later change back to the folder's own write is news again
+    this.#written.delete(path);
     return diskChange(path, bytes);
   }
 
