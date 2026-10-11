@@ -92,9 +92,12 @@ export class GitLabSourceControl {
     return this.#resourceStates;
   }
 
-  /** Whether the room has changes not in GitLab that the server does not commit by itself (its auto-commit is off). */
+  /**
+   * Whether the room has changes not in GitLab that the server does not commit by itself: its auto-commit is off, or
+   * a conflict with upstream blocks every commit.
+   */
   get changesStayUncommitted(): boolean {
-    return this.#changes() !== null && typeof this.#meta.get('autoCommit') !== 'number';
+    return this.#changes() !== null && (typeof this.#meta.get('autoCommit') !== 'number' || this.#conflict() !== null);
   }
 
   /**

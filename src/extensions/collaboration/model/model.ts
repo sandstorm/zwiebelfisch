@@ -77,7 +77,7 @@ export class Collaboration {
 
   /**
    * Whether leaving now would leave changes behind that nobody commits: the room's source control has changes the
-   * server does not commit by itself, and nobody else is in the room.
+   * server does not commit by itself (auto-commit off, or blocked by a conflict), and nobody else is in the room.
    */
   get leavesChangesUncommitted(): boolean {
     return !!this.sourceControl?.changesStayUncommitted && !this.cursors?.hasOthers;

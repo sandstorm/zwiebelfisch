@@ -125,6 +125,11 @@ describe('GitLabSourceControl: what is not in GitLab', () => {
     expect(sourceControl.changesStayUncommitted).toBe(true);
     meta.set('autoCommit', 10);
     expect(sourceControl.changesStayUncommitted).toBe(false);
+    // a conflict blocks the server's commits
+    meta.set('conflict', { sha: 's', paths: ['/main.typ'] });
+    expect(sourceControl.changesStayUncommitted).toBe(true);
+    meta.set('conflict', null);
+    expect(sourceControl.changesStayUncommitted).toBe(false);
   });
 
   it('ignores changes it cannot read', () => {

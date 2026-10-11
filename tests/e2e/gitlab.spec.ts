@@ -143,6 +143,25 @@ test('leaving as the last user with unsaved changes asks first, when the server 
   await (await dialog).accept();
 });
 
+test('leaving as the last user while a conflict blocks saving asks first, also when the server saves by itself', async ({ browser, baseURL, request }, info) => {
+  const room = `gitlab:demo/report@e2e-${info.project.name}-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+  const ann = await join(browser, baseURL!, room, 'Ann');
+  await openFile(ann, 'chapters/introduction.typ');
+  await ann.getByRole('tab', { name: 'Source' }).click();
+  await ann.getByTestId('typst-source').locator('.cm-line', { hasText: '= Introduction' }).click();
+  await ann.keyboard.press('End');
+  await ann.keyboard.type(' mine');
+  await expect(scmStatus(ann)).toHaveText('Not in GitLab: 1 file · < 1 min (Ann)');
+  const response = await request.post(`${SERVER}/playground/upstream?room=${encodeURIComponent(room)}&change=heading`);
+  expect(response.ok()).toBe(true);
+  await expect(scmStatus(ann).first()).toHaveText('Conflict with GitLab: chapters/introduction.typ');
+
+  const dialog = ann.waitForEvent('dialog');
+  await ann.close({ runBeforeUnload: true });
+  expect((await dialog).type()).toBe('beforeunload');
+  await (await dialog).accept();
+});
+
 test('saving without changes says so', async ({ browser, baseURL }, info) => {
   const { ann } = await users(browser, baseURL!, info.project.name);
   await saveToGitLab(ann, 'Nothing');
