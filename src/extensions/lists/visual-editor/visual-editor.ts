@@ -1,4 +1,4 @@
-// The lists extension's part of the Visual editor. See lists.ts.
+// The lists extension's part of the Visual editor. See ../lists.ts.
 import { BulletList, ListItem, ListKeymap, OrderedList } from '@tiptap/extension-list';
 import { Extension } from '@tiptap/core';
 import type { SyntaxNode } from '@lezer/common';

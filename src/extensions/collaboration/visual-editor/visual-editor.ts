@@ -1,4 +1,4 @@
-// The collaboration's part of the Visual editor. See collaboration.ts.
+// The collaboration's part of the Visual editor. See ../collaboration.ts.
 import { Extension } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey } from '@tiptap/pm/state';

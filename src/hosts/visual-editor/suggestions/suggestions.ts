@@ -1,5 +1,5 @@
 // Suggestions: the completion item providers' lists in one editor, each a Tiptap Suggestion plugin showing a
-// SuggestWidget. See visual-editor.ts (registerCompletionItemProvider) and docs/20_extensions/03_visual-editor-constructs.typ.
+// SuggestWidget. See ../visual-editor.ts (registerCompletionItemProvider) and docs/20_extensions/03_visual-editor-constructs.typ.
 import { Extension, type Editor, type Range } from '@tiptap/core';
 import type { ResolvedPos } from '@tiptap/pm/model';
 import { Plugin, PluginKey, type EditorState } from '@tiptap/pm/state';

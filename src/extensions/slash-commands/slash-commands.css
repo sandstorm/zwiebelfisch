@@ -1,5 +1,5 @@
 /* The slash-commands extension's styles: the hint in the empty line holding the cursor.
-   Registered by slash-commands.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
+   See slash-commands.ts, which registers it (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 /* Floated with no height, so the line keeps its size and the caret its place. The empty alternative text keeps
    screen readers from reading the hint as content; browsers without that syntax take the first declaration. */
 .typst-slash-commands__hint::before {

@@ -1,4 +1,4 @@
-// TypstEditors. See workbench.ts and docs/30_architecture/07_workbench.typ.
+// TypstEditors. See ../workbench.ts and docs/30_architecture/07_workbench.typ.
 import { Disposable } from '../../../core/disposable/disposable';
 import type { Project } from '../../../core/project/project';
 import type { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';

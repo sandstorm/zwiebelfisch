@@ -1,13 +1,15 @@
 #!/usr/bin/env node
-//MISE description="Fail on a source file that names no context (a top comment, or its main element's doc comment) or names a docs file that does not exist"
-// Every TypeScript and CSS source file names its context: a top comment (one short line and where to read more:
-// "See typst-editor.ts", "See docs/30_architecture/07_workbench.typ"; "Tests for …"), or the doc comment of its main
-// element, the first `export` declaration, which carries the file's why (docs/30_architecture/10_conventions.typ).
-// A shebang line may come first. A file naming a docs file (`docs/….typ`, `docs/….md`) that does not exist fails
-// too, so chapters can move without leaving stale pointers.
+//MISE description="Fail on a source file without its why or a pointer to it, or with a pointer to a file or name that does not exist"
+// Every source file carries a why (the doc comment of its main element, the first `export`) or points to the why
+// that explains it: `See <path>` or `See <Name> in <path>` in its top comment or that doc comment. A file without
+// exports (a script like main.ts, a stylesheet) may have its why as its top comment. A test (`*.test.*`, `*.spec.ts`,
+// anything in tests/) needs only a top comment (`Tests for X`). See docs/30_architecture/10_conventions.typ.
+// A pointer's path is relative to the file's folder or to the repository root. It must exist, and a named element must
+// appear in it, so a rename or a move that forgets a pointer fails here. Whether a why is a good one is for reviewers.
 // Checks the tracked files in src/, demo/, tests/, server/src/ and eslint-rules/; prints each failing file and exits 1.
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 
 const SOURCES = ['src/**/*.ts', 'src/**/*.css', 'demo/**/*.ts', 'tests/**/*.ts', 'server/src/**/*.ts', 'eslint-rules/**/*.js'].map((glob) => `:(glob)${glob}`);
 
@@ -18,50 +20,46 @@ const files = execFileSync('git', ['ls-files', '--cached', '--others', '--exclud
 /** Tool directives that may come first but say nothing to a reader (`// @vitest-environment jsdom`, …). */
 const DIRECTIVE = /^\s*(\/\/\s*@\S+.*|\/\/\/\s*<reference.*|\/\/MISE .*)\n/;
 
-/** A line that declares something: a comment right above it documents that declaration, not the file. */
-const DECLARATION = /^(export\s|const\s|let\s|var\s|function[\s*]|async\s|class\s|abstract\s|interface\s|type\s|enum\s|declare\s|@)/;
-
-/**
- * The first comment of `text` (whether it is a JSDoc comment) (after an optional shebang, directives and blank lines) and what
- * follows it, or undefined when the file does not start with a comment.
- */
-function firstComment(text) {
+/** The first comment's text (after an optional shebang, directives and blank lines), or '' when the file starts with code. */
+function topComment(text) {
   let body = text.replace(/^#!.*\n/, '');
   while (DIRECTIVE.test(body)) body = body.replace(DIRECTIVE, '');
   body = body.trimStart();
-  if (body.startsWith('/*')) {
-    const end = body.indexOf('*/');
-    if (end === -1) return undefined;
-    return { jsdoc: body.startsWith('/**'), rest: body.slice(end + 2).replace(/^[^\n]*\n?/, '') };
-  }
-  if (!body.startsWith('//')) return undefined;
+  if (body.startsWith('/*')) return body.slice(0, body.indexOf('*/') + 2);
+  if (!body.startsWith('//')) return '';
   const lines = body.split('\n');
-  let i = 0;
-  while (i < lines.length && lines[i].trimStart().startsWith('//')) i++;
-  return { jsdoc: false, rest: lines.slice(i).join('\n') };
-}
-
-/**
- * Whether `text` starts with a file comment: a line or block comment, or a JSDoc comment that is not
- * just the doc of the first declaration (directly followed by `export …`, `interface …`, …).
- */
-function hasTopComment(text) {
-  const comment = firstComment(text);
-  return comment !== undefined && !(comment.jsdoc && DECLARATION.test(comment.rest));
+  const end = lines.findIndex((line) => !line.trimStart().startsWith('//'));
+  return lines.slice(0, end === -1 ? lines.length : end).join('\n');
 }
 
 /** The first exported declaration: the file's main element (not `export { … }` or `export … from`). */
 const MAIN_ELEMENT = /^export\s+(?!\{|\*|type\s*\{)/m;
 
-/** Whether the main element of `text` (its first export) has a doc comment, directly above it or its decorators. */
-function hasMainDoc(text) {
+/** The doc comment of the main element of `text` (its first export), directly above it or its decorators, or ''. */
+function mainDoc(text) {
   const main = MAIN_ELEMENT.exec(text);
-  if (!main) return false;
+  if (!main) return '';
   const above = text.slice(0, main.index).replace(/(^@.*\n)+$/m, '').trimEnd();
-  return above.endsWith('*/') && above.lastIndexOf('/**') > above.lastIndexOf('*/', above.length - 3);
+  const start = above.lastIndexOf('/**');
+  if (!above.endsWith('*/') || start === -1 || start < above.lastIndexOf('*/', above.length - 3)) return '';
+  return above.slice(start);
 }
 
-/** Docs files a source names: `docs/<path>.typ` or `docs/<path>.md`. */
+/** `See <path>` or `See <Name> in <path>`, the name and path optionally in backticks, across comment line breaks. */
+const POINTER = /\bSee(?:\s|\/\/|\*(?!\/))+(?:`?([\w$.]+)`?\s+in(?:\s|\/\/|\*(?!\/))+)?`?([\w./@-]+\.(?:ts|js|css|typ|md|json))\b/g;
+
+/** What is wrong with each pointer in `comment` of `file`: a path that exists neither from its folder nor from the root, or a missing name. */
+function brokenPointers(file, comment) {
+  const problems = [];
+  for (const [, name, path] of comment.matchAll(POINTER)) {
+    const target = [join(dirname(file), path), path].find((candidate) => existsSync(candidate) && statSync(candidate).isFile());
+    if (!target) problems.push(`points to ${path}, which does not exist`);
+    else if (name && !readFileSync(target, 'utf8').includes(name)) problems.push(`points to ${name} in ${path}, which is not there`);
+  }
+  return problems;
+}
+
+/** Docs files a source names anywhere: `docs/<path>.typ` or `docs/<path>.md`. */
 const DOCS_FILE = /\bdocs\/[\w./-]+\.(?:typ|md)\b/g;
 
 /** The docs files `text` names that do not exist. */
@@ -70,19 +68,25 @@ function missingDocs(text) {
 }
 
 let failures = 0;
+const fail = (file, problem) => {
+  failures++;
+  console.log(`${file}: ${problem}`);
+};
 for (const file of files) {
   const text = readFileSync(file, 'utf8');
-  if (!hasTopComment(text) && !hasMainDoc(text)) {
-    failures++;
-    console.log(`${file}: names no context (a top comment, or a doc comment on its main element, the first export)`);
+  const top = topComment(text);
+  const doc = mainDoc(text);
+  const pointers = `${top}\n${doc}`;
+  const isTest = /\.(test|spec)\.[jt]s$|^tests\//.test(file) && top !== '';
+  const isScript = !MAIN_ELEMENT.test(text) && top !== '';
+  if (!doc && !isTest && !isScript && !new RegExp(POINTER.source).test(pointers)) {
+    fail(file, 'has no why (a doc comment on its main element, the first export) and no `See <path>` pointing to one');
   }
-  for (const path of missingDocs(text)) {
-    failures++;
-    console.log(`${file}: names ${path}, which does not exist`);
-  }
+  for (const problem of brokenPointers(file, pointers)) fail(file, problem);
+  for (const path of missingDocs(text)) fail(file, `names ${path}, which does not exist`);
 }
 if (failures > 0) {
   console.log(`\n${failures} problems in ${files.length} files.`);
   process.exit(1);
 }
-console.log(`top comments: all ${files.length} source files name their context, every docs file they name exists`);
+console.log(`top comments: all ${files.length} source files carry their why or point to it, every pointer resolves`);

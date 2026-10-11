@@ -1,5 +1,5 @@
 /* The labels extension's styles: References (@key) as chips, labels (<key>) as tags.
-   Registered by labels.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
+   See labels.ts, which registers it (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 /* References (@key) as chips showing the label; what it labels is only in the hover tooltip (title); a missing label underlined wavy */
 .typst-labels__ref {
   display: inline-flex;

@@ -1,4 +1,3 @@
-// Entry of core/typst-syntax/. See docs/30_architecture/02_core.typ.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import { PathReference, ProjectPath } from '../paths/paths';
@@ -10,17 +9,15 @@ import { SourceOffset, SourceRange, type TextChange } from '../typst-document/ty
  * bibliography array). Package imports, empty strings, computed paths and methods (`image.decode`) are left out.
  * `from` / `to` look at a part only.
  *
- * Typst syntax several extensions need, read from the Lezer syntax tree (codemirror-lang-typst): the file paths a text
- * names (`#import`, `#include`, `image(…)`, `read(…)`, …), the reading order they give the project's files, the change
- * that imports a name (calculateImportChange), the names imports bind (importedNames), and reading syntax nodes, calls,
- * string literals and embeddable code as the Visual editor's specs do (children, calleeName, callArguments,
- * namedArgument, trailingContent, hasOnlyArguments, withHash, isClosedContent, decodeString, quote, isEmbeddable,
- * markupSource: plain functions over Lezer nodes, public for every extension).
+ * Knowledge of Typst syntax that several extensions need, read from the Lezer syntax tree of codemirror-lang-typst:
+ * which files a text names, the order Typst reads the project's files in (`neighbours`), the change that imports a
+ * name (`calculateImportChange`), the names imports bind (`importedNames`), and small helpers to read calls and
+ * strings (`calleeName`, `namedArgument`, …), as the Typst ↔ ProseMirror specs do.
  *
- * Why here: extensions never import each other, and this knowledge is about Typst, not about one feature. Only syntax:
- * where a path leads (the project, the file's current path) and what following it does (open, create) is the
- * document-links extension's, and showing links is the hosts' (`languages.registerDocumentLinkProvider` for `typst`);
- * applying a change is the caller's.
+ * It lives in core because extensions never import each other, and this is about Typst, not about one feature. It
+ * stops at syntax: where a path leads and what following it does is the document-links extension's, showing links is
+ * the languages host's (`registerDocumentLinkProvider`), and applying a change is the caller's.
+ * See docs/30_architecture/02_core.typ, "Typst syntax".
  */
 export function findFilePaths(text: string, options: { from?: number; to?: number } = {}): PathInSource[] {
   const found: PathInSource[] = [];

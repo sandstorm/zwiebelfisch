@@ -1,4 +1,4 @@
-// Progress. See window.ts and docs/30_architecture/07_workbench.typ.
+// Progress. See ../window.ts and docs/30_architecture/07_workbench.typ.
 import { Disposable } from '../../../core/disposable/disposable';
 import { type ProgressOptions, type ProgressReport, ProgressLocation } from '../window';
 import type { StatusBar } from '../status-bar/status-bar';

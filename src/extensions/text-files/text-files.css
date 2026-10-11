@@ -1,4 +1,4 @@
-/* The text-files extension's styles: a text file in plain CodeMirror, its title above. Registered by text-files.ts
+/* The text-files extension's styles: a text file in plain CodeMirror, its title above. See text-files.ts, which registers it
    (Workbench.registerStyleSheet); colors from the widget's --te-* tokens, over CodeMirror's light base theme (the
    rules are more specific than its `.ͼ2 .cm-…`), so light and dark both work. */
 .typst-text-files { flex: 1; min-height: 0; display: flex; flex-direction: column; }

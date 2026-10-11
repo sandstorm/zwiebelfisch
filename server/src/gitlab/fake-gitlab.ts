@@ -1,12 +1,15 @@
-// FakeGitLab: an in-memory GitLab REST API (repository files, commits, branches) for tests and the playground.
 import { createHash } from 'node:crypto';
 import { blobSha } from './blob-sha.ts';
 import type { Fetch } from './gitlab-api.ts';
 
-// An in-process GitLab for tests: one project, branches, commits with full
-// snapshots, and the REST endpoints GitLabProject calls (API v4), answered
-// through an injected `fetch`. No network, no ports.
-
+/**
+ * An in-memory GitLab for tests and the demo playground: one project, its branches, and commits with full snapshots.
+ *
+ * GitLab rooms are tested without network, ports or secrets. FakeGitLab answers the REST endpoints GitLabProject
+ * calls (API v4) through `fetch`, which a test passes as the GitLab config's `fetch`. A test can also act as
+ * GitLab's other users and failures: `push` as a colleague, `failNextCommit`, `unreachable` branches.
+ * See docs/30_architecture/09_server.typ.
+ */
 export class FakeGitLab {
   readonly url = 'https://gitlab.test';
   readonly token = 'server-token';

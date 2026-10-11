@@ -1,4 +1,4 @@
-// What the tables extension contributes to the Visual editor. See tables.ts.
+// What the tables extension contributes to the Visual editor. See ../tables.ts.
 import { Extension, findParentNode, type Editor } from '@tiptap/core';
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
 import { svg, type ToolbarAction, type Anchor, type ToolbarGroup, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';

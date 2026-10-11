@@ -11,7 +11,7 @@ How code is written here. `mise run quality` enforces what it can (@architecture
 - *Information hiding*: expose what callers need. No member exists only for tests or for one caller's convenience.
 - *No pass-through layers*: a host does not take data from one extension only to hand it back to it.
 - *Files read general to specific*: the file's main element (the class, function or spec it is named after, usually its first export) comes first, then the other exports, then private helpers in the order they are used (function declarations are hoisted). A constant or class needed while the module loads (spread into an export, passed to `Extension.create(…)`) sits directly above its user, as small as possible; ESLint's `no-use-before-define` checks that.
-- *The _why_ is the main element's doc comment*, so it is read above the fold together with the code it explains. The file's top keeps at most one short line of context and its `See …` pointer.
+- *The _why_ is the main element's doc comment*, so it is read above the fold together with the code it explains (@architecture-conventions-comments).
 - *Remove what does not work* rather than polish it.
 - *Editing stays inline*: popovers, tags and bars at the content (image tools, label tags, the Align menu, the table bar). No inspector panel.
 
@@ -78,8 +78,12 @@ How code is written here. `mise run quality` enforces what it can (@architecture
 
 == Comments and tests <architecture-conventions-comments>
 
-- Every source file names its context: a top comment (one short line and where to read more: `See <entry file>`, `See docs/30_architecture/07_workbench.typ`; `Tests for X`), or the doc comment of its main element. `quality:top-comments` checks that a file has one of them and that every `docs/…` file named exists.
-- Comments say _why_, or what a name cannot. No history ("was …", "moved from …"), no restating the code.
+- *One why comment per concept*: the doc comment of the main element of a module's entry (each extension, host, core module, the widget, the element, the server's main parts). A file inside a module gets one only when it is a concept of its own: a value type, the worker, the Typst ↔ ProseMirror conversion, a deep class with its own lifecycle.
+- *A why comment gives context*: what problem the thing solves, how it fits with its neighbours, what it leaves to others, where to read more (`docs/…`). Usually under 20 lines. Short sentences, plain words; no jargon chains, filler or marketing. It must be true for the code as it is now.
+- *Every other file points to its why* instead: a top line or doc comment with `See <path>` or `See <Name> in <path>` (relative to the file, e.g. `See LabelIndex in ../labels.ts`; `docs/…` from the root). An entry file needs no top comment, a file without exports (a script, a stylesheet) has its why or its pointer as its top comment, a test starts with `Tests for X` or says what it tests.
+- *API doc comments* say what a parameter, a result or a member means, where a caller needs it. Never restate the code.
+- `quality:top-comments` checks that every file has a why or a pointer, that every pointer's path exists (and the name is in it), and that every `docs/…` file named exists. Whether a comment is a good why is for reviewers.
+- No history ("was …", "moved from …").
 - *No migration notes, no backwards compatibility*: no "renamed from", no shims. Code and docs describe only what is.
 - Tests go through the exported interface of the unit under test (an entry, or a file inside the module). Model tests run without jsdom.
 - A host's tests use the host's own minimum plus specs defined in the test. Tests needing the whole widget live in `typst-editor/` or use `testing/`, never another extension.

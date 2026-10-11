@@ -1,4 +1,4 @@
-// ContextMenu. See window.ts.
+// ContextMenu. See ../window.ts.
 import type { ContextMenuOptions, ContributedMenuItem, MenuAnchor } from '../window';
 
 /**

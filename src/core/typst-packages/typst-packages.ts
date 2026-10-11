@@ -1,5 +1,3 @@
-// withPackages: Typst packages (@preview/…) downloaded on first use and added to the engine. Entry of
-// core/typst-packages/. See docs/30_architecture/02_core.typ.
 import { SourceRange } from '../typst-document/typst-document';
 import type { CompileResult, TypstDiagnostic, TypstEngine, PdfResult } from '../typst-engine/typst-engine';
 import { untarGz } from './tar';
@@ -7,6 +5,10 @@ import { untarGz } from './tar';
 /**
  * Lets documents compiled by `engine` import packages, fetched on first use
  * with `fetchPackage` (default: from packages.typst.org, cached); `onDidChangeDownloads` hears which are on the way.
+ *
+ * The engine compiles synchronously and cannot wait for a download. So it reports the packages it misses; this
+ * wrapper downloads them, adds their files and compiles again. A package that fails is reported as a diagnostic and
+ * not tried again. The preview's worker wraps its engine with it. See docs/30_architecture/02_core.typ.
  */
 export function withPackages(engine: TypstEngine, fetchPackage: PackageFetcher = fetchPreviewPackage, onDidChangeDownloads?: DownloadsListener): PackageEngine {
   const failed = new Map<string, string>();

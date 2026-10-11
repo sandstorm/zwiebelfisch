@@ -1,14 +1,13 @@
-// CancellationToken. Entry of core/cancellation/. See docs/30_architecture/10_conventions.typ.
 import { Disposable } from '../disposable/disposable';
 import { EventEmitter, type Event } from '../event-emitter/event-emitter';
 
 /**
  * Whether the result of some work is still wanted (VS Code's CancellationToken).
  *
- * Tells work that may take a while (a search provider going through every file) that its result is not wanted any more.
- *
- * Why VS Code's shape: providers are VS Code-like (`provideItems(query, token)`), and the token is what they check
- * between steps; whoever asked keeps the source and cancels when the user typed on.
+ * Some work takes a while, such as a search provider going through every file. When the user types on, its result
+ * is no longer wanted. Whoever asks keeps a `CancellationTokenSource` and cancels it; the provider gets only the token
+ * (`provideItems(query, token)`) and checks it between steps. We use VS Code's shape because our providers follow
+ * VS Code's API (docs/30_architecture/10_conventions.typ).
  */
 export interface CancellationToken {
   /** True once cancelled: stop and return what is there (or nothing). */

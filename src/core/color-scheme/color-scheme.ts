@@ -1,13 +1,11 @@
-// Entry of core/color-scheme/. See docs/30_architecture/02_core.typ.
-
 /**
  * Whether a computed CSS color (`rgb(..)` / `rgba(..)`) is light: text in it sits on a dark background.
  * null when it is not a resolved color.
  *
- * Which color scheme an element is shown in, read from its resolved text color (the page's color-scheme, the widget's
- * `theme` or the OS decide it; CSS does not tell scripts directly). Used by the workbench's `data-scheme` and by
- * CodeMirror's dark theme in the code editors; and which text color reads on a given background (a user's color in
- * carets and file badges).
+ * Light or dark is decided by CSS (the page's color-scheme, the widget's `theme`, the OS), and CSS does not tell
+ * scripts which one won. So scripts read an element's resolved text color instead: the workbench for its
+ * `data-scheme`, the code colors of the Source editor for CodeMirror's dark theme. `textColorOn` answers the reverse
+ * question: which text color reads on a given background (a user's color on carets and file badges).
  */
 export function isLightText(color: string): boolean | null {
   const match = /^rgba?\((\d+(?:\.\d+)?)[ ,]+(\d+(?:\.\d+)?)[ ,]+(\d+(?:\.\d+)?)/.exec(color);

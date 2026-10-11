@@ -1,4 +1,3 @@
-// GitLabRoom. See docs/30_architecture/09_server.typ.
 import * as Y from 'yjs';
 import {
   ASSETS_MAP,
@@ -18,25 +17,19 @@ import { GitLabError, type GitLabProject } from './gitlab-api.ts';
 import { mergeFiles, textEdits } from './merge.ts';
 
 /**
- * One room backed by a GitLab branch: the room's Y.Doc holds the `.typ` files
- * (`files`), the other files (`assets`: blob sha or uploaded bytes) and the
- * repository state they are based on (`meta`, see room-protocol.ts).
+ * One room backed by a GitLab branch: loads the branch into the room's Y.Doc, commits the room's changes (on a save,
+ * or by itself when nobody edited for a while or the last user left) and merges upstream pushes into it.
  *
- * Every change of the Y.Doc but the room's own is an edit by someone
- * (`options.editorOf`); what the edits changed against the base, since when and
- * by whom is kept in `meta.changes`, shortly after each edit and right after
- * each commit or merge. Every commit names the other editors as co-authors.
- * With `options.autoCommit` the room commits by itself when nobody edited for
- * that long, and when the last user left. Upstream changes that conflict with
- * the room's stay in `meta.conflict` until a merge succeeds; a failed commit
- * stays in `meta.commitFailure` until the next commit or merge.
+ * The Y.Doc holds the `.typ` files (`files`), the other files (`assets`: blob sha, or uploaded bytes) and the
+ * repository state they are based on (`meta`, see src/core/room-protocol). Everyone in the room sees that state:
+ * what is not committed yet and by whom (`meta.changes`), a conflict with upstream (`meta.conflict`, until a merge
+ * succeeds) and a failed commit (`meta.commitFailure`, until the next commit or merge).
  *
- * Operations on a room run one after another. Everything the room knows lives
- * in the Y.Doc, so a room stored and loaded again (any storage) continues
- * where it was; only the number of edits per editor starts over.
- *
- * One GitLab-backed room: loads the branch into the Y.Doc, commits versions (on a save, or by itself when the room is
- * idle or left), merges upstream pushes, and keeps the room's uncommitted changes and conflicts in its meta map.
+ * Every change of the Y.Doc but the room's own is an edit by someone (`options.editorOf`); a commit names the other
+ * editors as co-authors. Operations run one after another. Everything the room knows lives in the Y.Doc, so a room
+ * stored and loaded again continues where it was; only the count of edits per editor starts over.
+ * Left to others: the commit actions (commit-actions.ts), merging texts (merge.ts), the REST calls (GitLabProject).
+ * See docs/30_architecture/09_server.typ, "GitLab rooms".
  */
 export class GitLabRoom {
   private queue: Promise<unknown> = Promise.resolve();

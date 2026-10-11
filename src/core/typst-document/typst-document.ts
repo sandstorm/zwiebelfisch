@@ -1,21 +1,15 @@
-// TypstDocument. Entry of core/typst-document/. See docs/30_architecture/02_core.typ.
 import { EventEmitter, type Event } from '../event-emitter/event-emitter';
 
 /**
- * The Typst source text: the single source of truth every editor derives from.
+ * The text of one `.typ` file: the single source of truth every editor derives from.
  *
- * Editors apply their edits with an `origin` (usually the editor itself) and skip
- * notifications carrying their own origin, so edits never echo back.
+ * The Visual and Source editors, the preview and the indexes all show or read the same text. Each editor applies its
+ * edits with an `origin` (usually itself) and skips events with its own origin, so edits never echo back. Every
+ * listener hears every change in the order the changes were made, also when a listener changes the document while it
+ * is told (that change is told once everyone has heard the first one).
  *
- * Every listener hears every change in the order the changes were made, also
- * when a listener changes the document while it is told about a change (that
- * change is told once everyone has heard the first one).
- *
- * The single source of truth of one Typst file's text.
- *
- * Why no collaboration here: sharing the text (Yjs) is the collaboration extension's. It binds a Y.Text to a document
- * from outside, like y-codemirror binds one to an editor: local changes go into the Y.Text, and edits arriving through
- * it come back through `change`, with an origin of its own.
+ * Sharing the text with others is not done here: the collaboration extension binds a Y.Text to a document from
+ * outside, like y-codemirror binds one to an editor. See docs/30_architecture/02_core.typ, "TypstDocument".
  */
 export class TypstDocument {
   private current: string;

@@ -1,5 +1,5 @@
 /* The pdf-export extension's styles: "Download PDF" in the preview toolbar and its popover of export options.
-   Registered by pdf-export.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
+   See pdf-export.ts, which registers it (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 .typst-pdf-export { position: relative; display: inline-flex; align-items: center; margin-left: 8px; }
 .typst-pdf-export button {
   border: 1px solid var(--te-border);

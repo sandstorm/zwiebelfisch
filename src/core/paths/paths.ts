@@ -1,12 +1,11 @@
-// Paths. Entry of core/paths/. See docs/30_architecture/02_core.typ.
-
 /**
  * An absolute path in the project: `/` and then segments (`/chapters/intro.typ`), never `.`, `..` or empty ones.
  *
- * How project files are named and what they are. Two types keep apart what plain strings mixed up: a ProjectPath (where
- * a file is in the project) and a PathReference (a path as written in Typst source, which means something only relative
- * to its file). Branded strings: free at runtime, usable as keys, unchanged across postMessage, Yjs and the server; the
- * compiler refuses one where the other is meant.
+ * Two kinds of path are easy to mix up as plain strings: where a file is in the project (a ProjectPath), and a path
+ * as written in Typst source, which means something only relative to its file (a PathReference). Two branded types
+ * keep them apart: the compiler refuses one where the other is meant, yet at runtime they are plain strings, usable
+ * as keys and unchanged through postMessage, Yjs and the server. Parse at the edges, typed inside.
+ * See docs/30_architecture/02_core.typ, "Paths".
  */
 export type ProjectPath = string & { readonly __type: 'ProjectPath' };
 

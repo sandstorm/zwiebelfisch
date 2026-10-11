@@ -1,4 +1,4 @@
-// Editors: who edited a GitLab room since its last commit, how often, and since when. See gitlab-room.ts.
+// Editors: who edited a GitLab room since its last commit, how often, and since when. See GitLabRoom in gitlab-room.ts.
 import type { Author } from './gitlab-room.ts';
 
 /**

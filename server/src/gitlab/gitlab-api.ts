@@ -1,4 +1,4 @@
-// GitLabProject: the GitLab REST calls a room needs (tree, blobs, commits). See gitlab-extension.ts.
+// GitLabProject: the GitLab REST calls a room needs (tree, blobs, commits). See GitLabRoom in gitlab-room.ts.
 
 /**
  * The few GitLab REST calls (API v4) a room needs, for one project. Hidden:

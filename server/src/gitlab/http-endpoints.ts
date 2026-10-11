@@ -1,4 +1,4 @@
-// The GitLab rooms' HTTP endpoints next to the WebSocket: room files and push webhooks. See gitlab-extension.ts.
+// The GitLab rooms' HTTP endpoints next to the WebSocket: room files and push webhooks. See GitLabExtension in gitlab-extension.ts.
 import { respond, type HttpRequest, type HttpResponse } from '../http.ts';
 
 export interface HttpEndpoints {

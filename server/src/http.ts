@@ -1,11 +1,11 @@
-// The server's small HTTP layer. See docs/30_architecture/09_server.typ.
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
 /**
  * An HTTP request, as much of it as the endpoints need.
  *
- * Requests and responses as plain values, and Node's as them. Used by the GitLab endpoints (gitlab/http-endpoints.ts)
- * and the playground.
+ * The server answers a few HTTP requests next to the WebSocket (room files, GitLab's webhook, the playground). Their
+ * handlers take and return plain values, so tests call them without a running server; `nodeRequest` and
+ * `sendResponse` convert from and to Node's objects in the Hocuspocus `onRequest` hooks.
  */
 export interface HttpRequest {
   method: string;

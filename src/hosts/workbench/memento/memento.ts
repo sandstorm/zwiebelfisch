@@ -1,4 +1,4 @@
-// StorageMemento. See workbench.ts.
+// StorageMemento. See ../workbench.ts.
 import type { Memento } from '../workbench';
 
 /**

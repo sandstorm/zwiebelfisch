@@ -1,4 +1,4 @@
-// Development collaboration server: `mise run server:dev`.
+// Development collaboration server: `mise run server:dev`. See docs/30_architecture/09_server.typ.
 //   PORT                (default 1234)       the demo connects to ws://127.0.0.1:1234 with ?room=<name>
 //   TYPST_COLLAB_DB     (default server/.data/collab.sqlite)
 //   TYPST_COLLAB_TOKEN  (default unset: no check) the token clients must send

@@ -1,7 +1,7 @@
 // ESLint rule `local/no-re-exports`: a file exports only what it defines.
 //
-// A module's entry defines its API; its internal files hold the implementation and are not forwarded
-// (docs/30_architecture/10_conventions.typ, "Modules and folders"). Flagged: `export * from`,
+// A module's entry defines its API; its internal files hold the implementation and are not forwarded.
+// See docs/30_architecture/10_conventions.typ ("Modules and folders"). Flagged: `export * from`,
 // `export { x } from` (also `export type`), and `export { x }` / `export default x` of an imported name.
 // Only the package entry (src/index.ts) re-exports; it is left out of the rule in eslint.config.js,
 // together with the few reasoned exceptions.

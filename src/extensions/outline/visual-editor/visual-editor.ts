@@ -1,4 +1,4 @@
-// What the outline extension contributes to the Visual editor. See outline.ts.
+// What the outline extension contributes to the Visual editor. See ../outline.ts.
 import { Node } from '@tiptap/core';
 import { hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';

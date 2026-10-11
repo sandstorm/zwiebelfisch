@@ -1,11 +1,17 @@
-// createCollabServer: the Hocuspocus server (rooms in SQLite or a given store, auth, GitLab rooms).
-// See docs/30_architecture/09_server.typ.
 import { SQLite } from '@hocuspocus/extension-sqlite';
 import { Server, type Configuration, type Extension } from '@hocuspocus/server';
 import { sharedToken, type Authenticate } from './auth.ts';
 import { GitLabExtension, type GitLabOptions } from './gitlab/gitlab-extension.ts';
 
-/** The WebSocket server (not listening yet: call `listen()`). */
+/**
+ * The collaboration server as a WebSocket server on `port` (not listening yet: call `listen()`).
+ *
+ * People who edit one project together need its Y.Doc in one place. The server keeps one Y.Doc per room (= project):
+ * it relays changes between the clients, asks `authenticate` who may open a room, and stores every room (SQLite by
+ * default, or any Hocuspocus storage extension). It does not look inside a room, except when the room is backed by a
+ * GitLab branch (`gitlab`, see GitLabExtension). The widget's side is the collaboration extension; both agree on
+ * src/core/room-protocol. See docs/30_architecture/09_server.typ.
+ */
 export function createCollabServer(options: CollabOptions & { port: number; address?: string }): Server {
   return new Server({ ...collabConfiguration(options), port: options.port, address: options.address ?? '127.0.0.1' });
 }
@@ -33,11 +39,8 @@ export interface CollabOptions {
 }
 
 /**
- * The Hocuspocus configuration of the collaboration server: one Y.Doc per
- * room (= project), as the widget's `collaboration` option shares it
- * (`files`: path → Y.Text). The server does
- * not look inside, except in GitLab-backed rooms (`gitlab`); it relays,
- * authenticates and persists.
+ * The Hocuspocus configuration of the collaboration server: `createCollabServer` without the WebSocket, as tests
+ * run it in-process. Extensions in order: storage, GitLab rooms, `extensions`.
  */
 export function collabConfiguration(options: CollabOptions = {}): Partial<Configuration> {
   const authenticate = options.authenticate ?? sharedToken(undefined);

@@ -1,4 +1,4 @@
-// WorkbenchLayout. See workbench.ts and docs/30_architecture/07_workbench.typ.
+// WorkbenchLayout. See ../workbench.ts and docs/30_architecture/07_workbench.typ.
 
 import type { Memento, SidePanel, SidePanelOptions } from '../workbench';
 import { div, restoreSideBarState, SideBar, type Side } from './side-bar';

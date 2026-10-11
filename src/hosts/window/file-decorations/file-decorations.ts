@@ -1,4 +1,4 @@
-// FileDecorations. See window.ts.
+// FileDecorations. See ../window.ts.
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';

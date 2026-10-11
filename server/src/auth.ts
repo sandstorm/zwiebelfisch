@@ -1,5 +1,4 @@
-// Who may open a room: the Authenticate check the collaboration server runs per connection, and a
-// shared-token one. See collab-server.ts.
+// The check the collaboration server runs per connection. See createCollabServer in collab-server.ts.
 /**
  * Decides whether a client may open a room. Resolves with what the server
  * should know about the user (it becomes the connection's `context.user`),

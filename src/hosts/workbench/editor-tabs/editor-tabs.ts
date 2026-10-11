@@ -1,4 +1,4 @@
-// EditorTabs. See workbench.ts and docs/30_architecture/07_workbench.typ.
+// EditorTabs. See ../workbench.ts and docs/30_architecture/07_workbench.typ.
 
 /**
  * A tab per editor of the shown file ("open with"), the shown one selected; hidden unless there are several. Choosing

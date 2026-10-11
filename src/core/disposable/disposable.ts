@@ -1,14 +1,11 @@
-// Disposable. Entry of core/disposable/. See docs/30_architecture/10_conventions.typ.
-
 /**
  * Releases a resource once, on `dispose()` (later calls do nothing). `new Disposable(stop)` wraps a cleanup
- * function, such as a listener's removal; `Disposable.from(a, b)` disposes several
- * in reverse order.
+ * function, such as a listener's removal; `Disposable.from(a, b)` disposes several in reverse order.
  *
- * Something that holds a resource (a listener, a registration, a DOM element) until disposed. Why VS Code's shape:
- * extensions push everything they register into `subscriptions`, and the host disposes the list when the widget is
- * disposed, so no extension needs a cleanup method of its own. Everything with a lifetime (hosts, editors, widgets,
- * contributed parts, the widget itself) ends with `dispose()`.
+ * Every registration, listener or DOM element someone adds must be removed again. VS Code's answer: each one returns
+ * a Disposable, and an extension pushes it into `context.subscriptions`. When the widget is disposed, the host disposes
+ * that list, so no extension needs a cleanup method of its own. Everything with a lifetime (hosts, editors, `Project`,
+ * the widget) ends with `dispose()` (docs/30_architecture/10_conventions.typ, "Extension API").
  */
 export class Disposable {
   /** One disposable for several: disposes them in reverse order (the last registered goes first). */

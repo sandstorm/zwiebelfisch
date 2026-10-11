@@ -1,4 +1,4 @@
-// SearchEverywhere. See window.ts and docs/20_extensions/02_workbench-api.typ.
+// SearchEverywhere. See ../window.ts and docs/20_extensions/02_workbench-api.typ.
 import { CancellationTokenSource } from '../../../core/cancellation/cancellation';
 import { Disposable } from '../../../core/disposable/disposable';
 import type { DynamicQuickPick, QuickInput, QuickPickEntry, QuickPickItemEntry } from '../quick-input/quick-input';

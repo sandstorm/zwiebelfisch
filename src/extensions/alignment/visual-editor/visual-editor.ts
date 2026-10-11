@@ -1,4 +1,4 @@
-// What the alignment extension contributes to the Visual editor. See alignment.ts.
+// What the alignment extension contributes to the Visual editor. See ../alignment.ts.
 import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
 import { callArguments, children, namedArgument, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';

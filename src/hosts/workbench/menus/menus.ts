@@ -1,4 +1,4 @@
-// Menus. See workbench.ts.
+// Menus. See ../workbench.ts.
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { MenuContext, MenuItem } from '../workbench';

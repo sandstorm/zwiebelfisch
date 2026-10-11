@@ -1,21 +1,17 @@
-// Project. Entry of core/project/. See docs/30_architecture/02_core.typ.
 import type { Disposable } from '../disposable/disposable';
 import { EventEmitter, type Event } from '../event-emitter/event-emitter';
 import { TypstDocument } from '../typst-document/typst-document';
 import { ProjectPath } from '../paths/paths';
 
 /**
- * The files of a Typst project. Every `.typ` file is a `TypstDocument` that
- * editors edit directly; other files (images, data) are kept as given. The main
- * file always exists and cannot be renamed or deleted.
+ * The files of a Typst project. Every `.typ` file is a `TypstDocument` that editors edit directly; other files
+ * (images, data) are kept as given. The main file always exists and cannot be renamed or deleted.
  *
- * Listeners hear about every change: structural ones made through `apply`
- * and the text edits of every document.
- *
- * The one place that knows which files a project has and which changes to them are allowed. One TypstDocument per .typ
- * file (editors edit it directly), the other files as bytes, the protected main file. Everyone who derives something from
- * the files (editors, indexes, collaboration, the preview) subscribes to `onDidChangeFile` and is never told by hand:
- * `apply`, `replace` and every text edit are reported there.
+ * The one place that knows which files a project has and which changes to them are allowed (`check`, `apply`). Many
+ * parts derive something from the files: editors, indexes, collaboration, the preview. They all subscribe to
+ * `onDidChangeFile`, which reports `apply`, `replace` and every text edit, so nobody has to be told by hand. Sharing
+ * the files with others is the collaboration extension's; what another file is (an image, a font) is decided by
+ * whoever reads it. See docs/30_architecture/02_core.typ, "Project".
  */
 export class Project {
   private readonly entries = new Map<ProjectPath, Entry>();

@@ -1,5 +1,5 @@
 /* The comments extension's styles: Margin notes in the text, the notes gutter with its cards, and the Comment button.
-   Registered by comments.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
+   See comments.ts, which registers it (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 /* drafting margin notes in the text: highlighted text of a range note, a point note's marker */
 .typst-comments__range { background: var(--te-note); border-bottom: 2px solid var(--te-note-line); color: inherit; }
 .typst-comments__anchor--hover .typst-comments__range,

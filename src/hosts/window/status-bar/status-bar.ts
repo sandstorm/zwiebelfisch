@@ -1,4 +1,4 @@
-// StatusBar. See window.ts and docs/30_architecture/07_workbench.typ.
+// StatusBar. See ../window.ts and docs/30_architecture/07_workbench.typ.
 import { Disposable } from '../../../core/disposable/disposable';
 import type { StatusBarPlacement } from '../window';
 

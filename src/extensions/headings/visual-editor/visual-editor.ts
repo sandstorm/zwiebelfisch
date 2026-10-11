@@ -1,4 +1,4 @@
-// What the headings extension contributes to the Visual editor. See headings.ts.
+// What the headings extension contributes to the Visual editor. See ../headings.ts.
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import type { TextStyleProvider, TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
 import { starterKitPart } from '../../../hosts/prosemirror-typst/prosemirror-typst';

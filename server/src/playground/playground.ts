@@ -1,4 +1,3 @@
-// The playground's server side (mise run demo). See docs/30_architecture/11_development.typ.
 import { randomUUID } from 'node:crypto';
 import type { Extension, onRequestPayload } from '@hocuspocus/server';
 import type { CollabOptions } from '../collab-server.ts';
@@ -6,17 +5,14 @@ import type { FakeGitLab } from '../gitlab/fake-gitlab.ts';
 import { parseRoomName, type GitLabExtension } from '../gitlab/gitlab-extension.ts';
 import { nodeRequest, respond, sendResponse, type HttpRequest, type HttpResponse } from '../http.ts';
 
-// The demo playground (`mise run demo`): GitLab rooms against an in-memory
-// fake GitLab, plus dev-only HTTP endpoints the playground bar calls. Never
-// part of a real deployment (server/src/main.ts does not load this file).
-
 /**
- * The collaboration server's options for the playground: GitLab rooms backed
- * by `gitlab` (with a webhook, so simulated pushes merge right away) and the
- * playground endpoints. Plain rooms work as on every server. `appendTo` is the
- * file simulated upstream commits change; `autoCommit` as for GitLab rooms.
+ * The collaboration server's options for the playground: GitLab rooms backed by `gitlab` (with a webhook, so
+ * simulated pushes merge right away) and the playground endpoints. Plain rooms work as on every server. `appendTo` is
+ * the file simulated upstream commits change; `autoCommit` as for GitLab rooms.
  *
- * A fake GitLab holding the advanced example, and the endpoints that simulate an upstream push or a GitLab outage.
+ * The demo playground (`mise run demo`) shows GitLab rooms without a real GitLab: a FakeGitLab holds the project,
+ * and dev-only HTTP endpoints let the demo's playground bar simulate a colleague's push or a GitLab outage. Never part
+ * of a real deployment: server/src/main.ts does not load this file. See docs/30_architecture/11_development.typ.
  */
 export function playgroundOptions(gitlab: FakeGitLab, options: { appendTo: string; autoCommit?: number | false }): CollabOptions {
   const webhookSecret = randomUUID();

@@ -1,4 +1,4 @@
-// The collaboration's part of the Source editors. See collaboration.ts.
+// The collaboration's part of the Source editors. See ../collaboration.ts.
 import { EditorState, Facet, StateEffect, StateField, Transaction, type Extension, type Range } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet } from '@codemirror/view';
 import { fromDocument, type SourceEditorContext } from '../../../hosts/source-editor/source-editor';

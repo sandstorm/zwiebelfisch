@@ -1,5 +1,5 @@
 /* The source-control extension's styles: the source controls' status bar entries ("Not in GitLab: 3 files · 14 min").
-   Registered by source-control.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
+   See source-control.ts, which registers it (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 .typst-source-control__status {
   display: flex;
   align-items: baseline;

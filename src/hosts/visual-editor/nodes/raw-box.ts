@@ -1,4 +1,3 @@
-// Raw boxes. See nodes.ts.
 import { defaultKeymap } from '@codemirror/commands';
 import type { Extension as CodeExtension, Transaction as CodeTransaction } from '@codemirror/state';
 import { EditorView as CodeView, keymap, type KeyBinding } from '@codemirror/view';

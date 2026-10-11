@@ -1,4 +1,4 @@
-// Card layout: where the notes gutter puts its cards, near their anchors without overlap. See notes-gutter.ts.
+// Card layout: where the notes gutter puts its cards, near their anchors without overlap. See ../visual-editor/notes-gutter/notes-gutter.ts.
 
 /**
  * The top of each card (in input order) so that cards follow their anchors

@@ -1,5 +1,5 @@
 /* The lists extension's styles: Task lists in the Visual editor.
-   Registered by lists.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
+   See lists.ts, which registers it (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 .typst-lists__tasks { list-style: none; padding-left: 0.3em; }
 .typst-lists__tasks > li { display: flex; gap: 0.5em; align-items: baseline; }
 .typst-lists__tasks > li > label { flex: none; }

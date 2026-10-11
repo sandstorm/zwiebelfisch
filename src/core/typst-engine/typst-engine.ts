@@ -1,19 +1,17 @@
-// The typed TypeScript side of the typst-engine wasm (crates/typst-engine): createEngine and the engine's
-// data types. Entry of core/typst-engine/. See docs/30_architecture/02_core.typ.
 import { ProjectPath } from '../paths/paths';
 import { type SourceOffset, SourceRange } from '../typst-document/typst-document';
 import init, { Engine as WasmEngine, type InitInput } from './wasm/typst_engine';
 
 /**
- * The Typst compiler, SVG renderer and preview hit-testing (Rust → wasm).
+ * The Typst compiler, SVG renderer, PDF export and preview hit-testing (Rust → wasm).
  *
- * Paths are project paths like `/main.typ`, or package paths like
- * `@preview/name:0.1.0/lib.typ` (see `withPackages`). Offsets are UTF-16 code units,
- * pages are 0-based, and coordinates are points from the page's top-left.
- * The engine keeps the last successfully compiled document for hit-testing.
+ * The typed TypeScript side of the wasm built from crates/typst-engine. The preview runs it in a worker and hands it
+ * the project's files; it keeps the last compiled document, so clicks and cursors can be mapped between source and
+ * pages. Paths are project paths like `/main.typ`, or package paths like `@preview/name:0.1.0/lib.typ`. Offsets are
+ * UTF-16 code units, pages are 0-based, and coordinates are points from the page's top-left.
  *
- * Asset URLs (wasm, default fonts and their index) are core/engine-assets, not here: the worker imports this file.
- * Packages (@preview/…) are core/typst-packages.
+ * Left to others: the URLs of the wasm and the default fonts (core/engine-assets, so the worker bundle does not copy
+ * them) and downloading packages (core/typst-packages). See docs/30_architecture/02_core.typ, "The Typst engine".
  */
 export interface TypstEngine {
   /** Adds all faces of an OpenType/TrueType font (or collection). Throws if `data` is no font. */

@@ -1,4 +1,4 @@
 /* The preview-controls extension's styles: the preview toolbar's zoom and page number.
-   Registered by preview-controls.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
+   See preview-controls.ts, which registers it (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 .typst-preview-controls__zoom { margin-left: 4px; color: var(--te-muted); font-variant-numeric: tabular-nums; }
 .typst-preview-controls__page-number { margin-left: auto; color: var(--te-muted); font-variant-numeric: tabular-nums; }

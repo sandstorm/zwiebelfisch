@@ -1,5 +1,3 @@
-// GitLabExtension: the Hocuspocus extension behind `gitlab:<project>@<branch>` rooms (load, save version, webhooks).
-// See docs/30_architecture/09_server.typ.
 import type {
   beforeUnloadDocumentPayload,
   Document,
@@ -22,14 +20,17 @@ import { nodeRequest, sendResponse, type HttpRequest, type HttpResponse } from '
 import { handleHttp } from './http-endpoints.ts';
 
 /**
- * GitLab-backed rooms (`gitlab:<project>@<branch>`) for the collaboration
- * server, as a Hocuspocus extension: loads a branch into a new room, merges
- * upstream changes into a stored one, commits on a client's 'Save version'
- * (stateless `gitlab:save`), serves the rooms' other files over HTTP and
- * merges pushes reported by a GitLab webhook. Other rooms are left alone.
+ * GitLab-backed rooms (`gitlab:<project id or path>@<branch>`) for the collaboration server, as a Hocuspocus
+ * extension. Other rooms are left alone.
  *
- * Runs after the storage extension (lower priority), so a stored room is
- * loaded before it looks at it.
+ * Such a room is a branch that people edit together in the browser and commit back to GitLab. This class is the glue
+ * between Hocuspocus and the rooms: it opens a `GitLabRoom` per loaded Y.Doc, passes on a client's save (stateless
+ * `gitlab:save`), tells a room when its last user left, answers the HTTP endpoints (room files, GitLab's push
+ * webhook) and finds out who made an edit. The room itself does the repository work (load, commit, merge). The
+ * server config holds the only GitLab token; clients never see it.
+ *
+ * Runs after the storage extension (lower priority), so a stored room is loaded before it looks at it.
+ * See docs/30_architecture/09_server.typ, "GitLab rooms".
  */
 export class GitLabExtension implements Extension {
   readonly extensionName = 'gitlab';

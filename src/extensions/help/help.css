@@ -1,4 +1,4 @@
-/* The help extension's styles: the help panel (sheets, sections, rows, links). Registered by help.ts
+/* The help extension's styles: the help panel (sheets, sections, rows, links). See help.ts, which registers it
    (Workbench.registerStyleSheet). */
 .typst-help {
   flex: 1;

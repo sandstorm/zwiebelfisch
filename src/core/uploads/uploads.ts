@@ -1,4 +1,3 @@
-// Uploads. Entry of core/uploads/. See docs/30_architecture/02_core.typ.
 import { type FileChange } from '../project/project';
 import { ProjectPath } from '../paths/paths';
 
@@ -6,9 +5,10 @@ import { ProjectPath } from '../paths/paths';
  * The create changes for uploaded files: each at the top of the project under its name (`/` and `\` replaced by
  * `_`; a name like `..` is left out), `.typ` files as text, everything else as bytes.
  *
- * Files from the computer (picked or dropped) become project changes, parsed at the edge: a name becomes a ProjectPath
- * at the top of the project, the kind decides text or bytes. Used by the file panel (extensions/files) and image
- * uploads (extensions/images).
+ * Files from the computer (picked or dropped) enter the project here, so every feature names and reads them the same
+ * way: a file name becomes a ProjectPath at the top of the project, and the kind decides text or bytes. Used by the
+ * file panel (extensions/files) and image uploads (extensions/images); applying the changes is theirs.
+ * See docs/30_architecture/02_core.typ.
  */
 export async function uploadChanges(files: readonly UploadedFile[]): Promise<FileChange[]> {
   const changes = await Promise.all(

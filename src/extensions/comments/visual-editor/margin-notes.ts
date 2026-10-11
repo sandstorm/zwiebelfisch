@@ -1,5 +1,5 @@
 // Margin notes (drafting) in the text: point notes and range notes, and the "Comment" toolbar action. See
-// visual-editor.ts.
+// ../comments.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { Mark, Node } from '@tiptap/core';
 import type { Mark as PMMark, Node as PMNode } from '@tiptap/pm/model';

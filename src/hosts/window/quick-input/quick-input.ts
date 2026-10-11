@@ -1,4 +1,4 @@
-// QuickInput. See window.ts.
+// QuickInput. See ../window.ts.
 import type { InputBoxOptions, QuickPickHighlights, QuickPickItem, QuickPickOptions } from '../window';
 
 /**

@@ -1,4 +1,4 @@
-/* The files extension's styles: the file panel (header with "New", the file tree), the view of other files. Registered by files.ts
+/* The files extension's styles: the file panel (header with "New", the file tree), the view of other files. See files.ts, which registers it
    (Workbench.registerStyleSheet). */
 .typst-files {
   display: flex;

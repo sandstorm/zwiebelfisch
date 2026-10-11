@@ -1,5 +1,5 @@
 /* The preview-sync extension's styles: the "Follow cursor" switch in the preview toolbar.
-   Registered by preview-sync.ts (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
+   See preview-sync.ts, which registers it (Workbench.registerStyleSheet); colors from the widget's --te-* tokens. */
 /* "Follow cursor": an on/off switch (track and thumb), not a plain button (as specific as the toolbar's button rule) */
 button.typst-preview-sync__follow {
   display: inline-flex;

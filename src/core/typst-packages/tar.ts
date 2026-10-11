@@ -1,4 +1,4 @@
-// A minimal .tar.gz reader for package archives. See typst-packages.ts.
+// A minimal .tar.gz reader for package archives. See withPackages in typst-packages.ts.
 
 /**
  * Unpacks a gzipped tar archive (ustar, pax or GNU long names) into

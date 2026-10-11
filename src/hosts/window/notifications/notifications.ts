@@ -1,4 +1,4 @@
-// Notifications. See window.ts.
+// Notifications. See ../window.ts.
 import type { MessageItem, MessageSeverity } from '../window';
 
 /**

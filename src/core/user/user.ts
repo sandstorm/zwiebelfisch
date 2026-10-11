@@ -1,11 +1,8 @@
-// User. Entry of core/user/. See docs/30_architecture/01_overview.typ.
-
 /**
- * Who works in the widget.
+ * Who works in the widget, as the host page names them (`createTypstEditor({ user })`) and as collaborators see them.
  *
- * Who works in the widget, as the host names them (`createTypstEditor({ user })`) and as collaborators see them. In
- * core because both the workbench host and extension models (collaboration's remote cursors) speak of it, and models
- * may not import hosts.
+ * In core because both the workbench host and extension models (the collaboration's remote cursors) speak of it, and
+ * models may not import hosts. See docs/30_architecture/02_core.typ.
  */
 export interface User {
   /** The name others see (collaborating), that signs comments and commits. */
