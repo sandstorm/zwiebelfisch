@@ -7,7 +7,7 @@
 #table(
   columns: (auto, 1fr),
   table.header[Folder][Job],
-  [`src/core/`], [Models: files, text, paths, the Typst engine, Typst syntax. No DOM, no editor library, no Yjs. See @architecture-core.],
+  [`src/core/`], [Models: files, text, paths, the Typst engine, Typst syntax. See @architecture-core.],
   [`src/hosts/`], [View hosts: the mechanism of a view plus its contribution points. No feature knowledge. @architecture-prosemirror-typst, @architecture-visual-editor, @architecture-source-editor, @architecture-preview, @architecture-workbench.],
   [`src/extensions/`], [One folder per concept (headings, comments, files, …). Every feature and every Typst construct beyond paragraphs and raw Typst. See @architecture-built-in-extensions.],
   [`src/typst-editor/`], [`createTypstEditor`: a `Project` in the workbench host with the built-in extension list.],

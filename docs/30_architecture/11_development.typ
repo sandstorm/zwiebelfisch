@@ -9,7 +9,6 @@ Every operation is a mise task (`mise-tasks/`, `mise tasks ls`). Tools are pinne
   table.header[Task][What it does],
   [`install`], [JS dependencies (frozen lockfile) and Playwright's browsers],
   [`deps:lock`], [after a `package.json` change: install and update `pnpm-lock.yaml`],
-  [`dev`], [Vite dev server for `demo/` on 127.0.0.1:5199 (Local mode needs nothing else); builds engine and fonts first],
   [`demo`], [the playground: Vite + the collaboration server with a fake GitLab on `ws://127.0.0.1:1234` (@guide-getting-started-demo); builds engine and fonts first. Its arguments go to Vite (`demo preview`: the last build)],
   [`demo:build`], [the playground on the built demo: builds engine, fonts and the demo (`vite build` → `dist/demo`, as the e2e build), then `demo preview` (`vite preview` on 127.0.0.1:5199, same server): loading as in production, few bundled files],
   [`build:engine`], [Rust → wasm (`cargo`, `wasm-bindgen`, `wasm-opt -Oz`) into `src/core/typst-engine/wasm/`; skipped when the Rust sources are unchanged],
@@ -72,11 +71,11 @@ mise run server:test   # when server/ or core/room-protocol changed
 - A chapter's label is its path without the numbers, `/` → `-` (`<architecture-workbench>`); a section appends a word. Cross-references are `@label`.
 - The font, Gabarito (SIL Open Font License, `fonts/OFL.txt`), is in `fonts/`: a project font for the editor (@architecture-core-engine-fonts), `--font-path docs/fonts` for `docs:pdf` / `docs:html`.
 - Diagrams are Mermaid files in `diagrams/`, drawn by merman in the docs' colors: `#figure(mermaid(read("../diagrams/x.mmd"), width: 80%), caption: […])` with `mermaid` from `template.typ`.
-- Live while writing: `mise run demo` (or `dev`, or `demo:build`), then `?example=docs` (@architecture-development-writing-docs).
+- Live while writing: `mise run demo` (or `demo:build`), then `?example=docs` (@architecture-development-writing-docs).
 
 == Writing the docs in the demo <architecture-development-writing-docs>
 
-On the dev server (`mise run demo`, `dev`) and in the built demo (`mise run demo:build`, `vite preview`) the Documentation example edits the files in `docs/` of the checkout, so the demo is the editor for this book: write, watch the preview, commit.
+On the dev server (`mise run demo`) and in the built demo (`mise run demo:build`, `vite preview`) the Documentation example edits the files in `docs/` of the checkout, so the demo is the editor for this book: write, watch the preview, commit.
 
 - *Saving*: an edit is written once the typing pauses (300 ms per file; at once when the page is hidden). A create, rename, delete or image upload in the file panel happens on disk first, and the editor refuses it if the disk did. The end of the playground bar says what happened: "Saving…", "Saved to docs/10_guide/02_features.typ", or why not.
 - *Changes on disk* (a checkout, another editor) show up in the editor without a reload. A file with unsaved edits in the editor keeps them; the bar says so, and the next edit saves over the disk's version.

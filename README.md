@@ -26,8 +26,7 @@ mise run demo           # builds engine and fonts, then the demo on http://127.0
 ## Demo
 
 `mise run demo` serves http://127.0.0.1:5199/ plus a local collaboration server with a fake GitLab
-(`mise run dev`: the page alone, Local mode only). `mise run demo:build` builds the demo first and serves the build
-(`vite preview`) the same way, so it loads as in production: a few bundled files instead of many modules.
+(`mise run demo:build`: the same on the production build, so it loads as in production).
 
 - `?example=hello|simple|advanced|docs`: the project to open (`docs` edits this documentation live).
 - `?room=<name>` collaborates in a room; `?room=gitlab:demo/report@main` opens a fake GitLab branch.

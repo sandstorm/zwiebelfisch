@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-#MISE description="Start the demo dev server"
-#MISE depends=["build:engine", "build:fonts"]
-set -euo pipefail
-exec pnpm exec vite "$@"
