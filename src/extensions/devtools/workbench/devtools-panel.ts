@@ -8,7 +8,7 @@ import { element, type Tab } from './dom';
 import { EventsTab } from './events-tab';
 
 /**
- * The panel in `body`; `changed(tab)` redraws that tab (once per frame) if it is the one shown.
+ * The panel in `body`; `changed(tab)` redraws that tab (once per frame) if it is the one shown, `changed()` the one shown.
  *
  * Three tabs (the document of the shown file, the contributions, the events), each drawn by its own `Tab`. It draws
  * what it is given; the extension wires it to its context.
@@ -53,7 +53,7 @@ export class DevtoolsPanel {
     this.#tabs[tab].update();
   }
 
-  changed(tab: DevtoolsTab): void {
+  changed(tab: DevtoolsTab = this.#tab): void {
     if (tab !== this.#tab || this.#frame) return;
     const view = this.#doc.defaultView;
     if (!view) return this.#tabs[tab].update();

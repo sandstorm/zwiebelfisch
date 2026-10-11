@@ -1,14 +1,14 @@
 // Tests for playground.ts.
 import { describe, expect, it } from 'vitest';
 import { exampleFiles } from './examples';
-import { GITLAB_ROOM, SERVER, devtoolsQuery, editorOptions, exampleLink, modeQuery, otherUser, playgroundFromQuery, userQuery } from './playground';
+import { GITLAB_ROOM, SERVER, editorOptions, exampleLink, modeQuery, otherUser, playgroundFromQuery, userQuery } from './playground';
 
 const query = (search: string) => new URLSearchParams(search);
 const parsed = (search: string) => Object.fromEntries(new URLSearchParams(search));
 
 describe('playgroundFromQuery', () => {
   it('is local without a room: the static e2e build needs no server', () => {
-    expect(playgroundFromQuery(query(''))).toEqual({ example: 'simple', mode: 'local', room: null, user: 'Demo user', devtools: false });
+    expect(playgroundFromQuery(query(''))).toEqual({ example: 'simple', mode: 'local', room: null, user: 'Demo user' });
   });
 
   it('a plain room collaborates, a gitlab: room is GitLab mode', () => {
@@ -22,22 +22,6 @@ describe('playgroundFromQuery', () => {
 
   it('keeps the example', () => {
     expect(playgroundFromQuery(query('?example=advanced&room=r1')).example).toBe('advanced');
-  });
-
-  it('has the devtools with &devtools', () => {
-    expect(playgroundFromQuery(query('?example=simple&devtools')).devtools).toBe(true);
-  });
-});
-
-describe('devtoolsQuery', () => {
-  it('adds &devtools without a value, keeping the rest', () => {
-    expect(devtoolsQuery(true, query('?example=simple&room=r1'))).toBe('?example=simple&room=r1&devtools');
-    expect(devtoolsQuery(true, query(''))).toBe('?devtools');
-  });
-
-  it('removes it, keeping the rest', () => {
-    expect(devtoolsQuery(false, query('?example=simple&devtools&user=Ann'))).toBe('?example=simple&user=Ann');
-    expect(devtoolsQuery(false, query('?devtools'))).toBe('?');
   });
 });
 

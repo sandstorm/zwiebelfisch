@@ -2,14 +2,13 @@
 //
 // Its whole state is the URL (playground.ts), so a reload, a second window or a shared link shows the same:
 // `?example=simple|advanced|docs`, `?room=<name>` (Collaborate mode) or `?room=gitlab:demo/report@<branch>`
-// (GitLab mode, a fake GitLab) on the local playground server (`mise run demo`), `&user=<name>`, and `&devtools` for
-// the library's optional devtools. Without `room` (Local mode, the default and what the static e2e build uses) it
-// never talks to a server. The shown file and the cursor's line are the URL's fragment (open-file-hash.ts, an
+// (GitLab mode, a fake GitLab) on the local playground server (`mise run demo`), and `&user=<name>`. Without `room`
+// (Local mode, the default and what the static e2e build uses) it never talks to a server. The shown file and the cursor's line are the URL's fragment (open-file-hash.ts, an
 // extension of the demo's own). The playground bar above the editor switches all of this (playground-bar.ts).
 //
 // The Documentation example in Local mode saves to docs/ when the page comes from the dev server or vite preview
 // (docs-files/plugin.ts). See docs/10_guide/01_getting-started.typ, "The demo".
-import { collaboration, createTypstEditor, devtools, type ProjectFiles } from '../src';
+import { collaboration, createTypstEditor, type ProjectFiles } from '../src';
 import { connectDocsSync, type DocsSync } from './docs-files/docs-sync';
 import { openFileHash } from './open-file-hash';
 import { editorOptions, playgroundFromQuery, userQuery } from './playground';
@@ -40,10 +39,7 @@ async function start(): Promise<void> {
   const docs = state.example === 'docs' && state.mode === 'local' ? docsSync(files ?? {}) : null;
   const editor = createTypstEditor(document.getElementById('editor')!, {
     files,
-    extensions: (builtinExtensions) => {
-      const extensions = [...builtinExtensions, openFileHash(), ...(room ? [collaboration(room)] : [])];
-      return state.devtools ? devtools(extensions) : extensions;
-    },
+    extensions: (builtinExtensions) => [...builtinExtensions, openFileHash(), ...(room ? [collaboration(room)] : [])],
     user: { name: state.user },
     allowFileChange: (change) => docs?.allowFileChange(change) ?? true,
     onFilesChange: (change) => docs?.filesChanged(change),

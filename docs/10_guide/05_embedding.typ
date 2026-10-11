@@ -169,11 +169,10 @@ createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensio
 
 === Devtools <guide-embedding-devtools>
 
-A right side panel ("Devtools" on the right rail) showing what the widget is made of while it runs. Optional: `devtools` wraps the whole list, so give it the list last.
+A right side panel ("Devtools" on the right rail) showing what the widget is made of while it runs. Always there; the setting `devtools.enabled: false` removes it (@guide-configuration-devtools).
 
 ```ts
-import { createTypstEditor, devtools } from 'typst-editor';
-createTypstEditor(host, { extensions: (builtinExtensions) => devtools([...builtinExtensions, wordCount()]) });
+createTypstEditor(host, { settings: { 'devtools.enabled': false } });
 ```
 
 #table(
@@ -184,5 +183,5 @@ createTypstEditor(host, { extensions: (builtinExtensions) => devtools([...builti
   [Events], [Every `onDid…` event of the extension context as it fires (the latest 300), its value pretty-printed as it was then; filter by name, Pause, Clear.],
 )
 
-- It sees only what any extension sees: `devtools(extensions)` returns each extension with its `activate` getting a context whose namespaces record every registration (and its `dispose`), plus the devtools extension itself. The hosts keep no listing for it.
-- In the demo: `&devtools` (the playground bar's Devtools toggle).
+- It sees only what any extension sees: `createTypstEditor` gives it the final list (the host's extensions included), and each extension's `activate` gets a context whose namespaces record every registration (and its `dispose`). The hosts keep no listing for it.
+- It records while switched off too, so switched on later it shows everything since the start.

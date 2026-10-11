@@ -12,6 +12,7 @@ function emitter<T>() {
       return { dispose: () => listeners.delete(listener) };
     },
     fire: (value: T) => listeners.forEach((listener) => listener(value)),
+    listened: () => listeners.size > 0,
   };
 }
 
@@ -77,5 +78,12 @@ describe('subscribeToEvents', () => {
       ['window.onDidChangeActiveFile', '/a.typ'],
       ['project.onDidChangeFile', { kind: 'update' }],
     ]);
+  });
+
+  it("leaves out the workbench's dropped files: listening would turn on the drop hint", () => {
+    const drops = emitter<File[]>();
+    const context = { subscriptions: [], workbench: { onDidDropFiles: drops.event } } as unknown as ExtensionContext;
+    subscribeToEvents(context, () => {});
+    expect(drops.listened()).toBe(false);
   });
 });

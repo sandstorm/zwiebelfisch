@@ -1,9 +1,8 @@
 // @vitest-environment jsdom
-// Tests for the devtools extension (extensions/devtools/devtools.ts) in the widget, every built-in extension
-// instrumented (preview mocked: no worker in jsdom).
+// Tests for the devtools extension (extensions/devtools/devtools.ts) in the widget, every extension instrumented
+// (preview mocked: no worker in jsdom).
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { devtools } from '../extensions/devtools/devtools';
-import { createTypstEditor } from './typst-editor';
+import { createTypstEditor, type TypstEditorOptions } from './typst-editor';
 
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -25,9 +24,9 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => ({
   },
 }));
 
-function mount() {
+function mount(options: Partial<TypstEditorOptions> = {}) {
   const host = document.body.appendChild(document.createElement('div'));
-  const editor = createTypstEditor(host, { source: '= Hello\n\n#foo()', extensions: (builtins) => devtools(builtins) });
+  const editor = createTypstEditor(host, { source: '= Hello\n\n#foo()', ...options });
   const panel = host.querySelector<HTMLElement>('[data-testid=typst-devtools]')!;
   const tab = (name: string) => {
     [...panel.querySelectorAll<HTMLButtonElement>('[role=tab]')].find((button) => button.textContent === name)!.click();
@@ -52,6 +51,26 @@ describe('devtools', () => {
     right.querySelector<HTMLElement>('[data-testid=typst-panel-toggle-devtools]')!.click();
     expect(right.querySelector<HTMLElement>('[data-panel=devtools]')!.hidden).toBe(false);
     expect(right.querySelector<HTMLElement>('[data-panel=preview]')!.hidden).toBe(true);
+  });
+
+  it('is switched off and on with the setting devtools.enabled, showing what was recorded meanwhile', () => {
+    const { host, editor } = mount({ settings: { 'devtools.enabled': false } });
+    const toggle = host.querySelector<HTMLElement>('[data-testid=typst-panel-toggle-devtools]')!;
+    expect(toggle.hidden).toBe(true);
+    editor.source = '= Meanwhile';
+    editor.settings = {};
+    expect(toggle.hidden).toBe(false);
+    toggle.click();
+    const panel = host.querySelector<HTMLElement>('[data-testid=typst-devtools]')!;
+    [...panel.querySelectorAll<HTMLButtonElement>('[role=tab]')].find((button) => button.textContent === 'Events')!.click();
+    expect(panel.textContent).toContain('content: "= Meanwhile"');
+  });
+
+  it("records the host's extensions too", () => {
+    const contributions = mount({
+      extensions: (builtins) => [...builtins, { id: 'mine', activate: ({ commands, subscriptions }) => subscriptions.push(commands.registerCommand('mine.run', () => {})) }],
+    }).tab('Contributions');
+    expect(contributions.textContent).toContain('mine.run');
   });
 
   it('lists the contributions by extension in their points\' terms, settings included, each with its details as tooltip', () => {

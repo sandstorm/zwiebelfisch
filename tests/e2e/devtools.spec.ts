@@ -1,10 +1,10 @@
-// End-to-end tests (Playwright, against the demo build): the devtools panel on the right side (`?devtools`,
-// src/extensions/devtools/).
+// End-to-end tests (Playwright, against the demo build): the devtools panel on the right side, there by default
+// (src/extensions/devtools/).
 import { expect } from '@playwright/test';
 import { test } from './fixtures';
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/?devtools');
+  await page.goto('/');
   await expect(page.getByTestId('typst-visual').locator('h1')).toHaveText('Typst in five minutes');
   await page.getByTestId('typst-panel-toggle-devtools').click();
 });
@@ -18,6 +18,16 @@ test('the devtools are on the right side in place of the preview, which keeps co
   await page.getByTestId('typst-panel-toggle-preview').click();
   await expect(page.getByTestId('typst-devtools')).toBeHidden();
   await expect(page.getByTestId('typst-preview').locator('.typst-preview__page svg').first()).toBeVisible();
+});
+
+test('the setting devtools.enabled removes the panel and its rail button, and brings them back', async ({ page }) => {
+  const setEnabled = (enabled: boolean) =>
+    page.evaluate((value) => ((window as unknown as { editor: { settings: object } }).editor.settings = { 'devtools.enabled': value }), enabled);
+  await setEnabled(false);
+  await expect(page.getByTestId('typst-panel-toggle-devtools')).toBeHidden();
+  await expect(page.getByTestId('typst-devtools')).toBeHidden();
+  await setEnabled(true);
+  await expect(page.getByTestId('typst-panel-toggle-devtools')).toBeVisible();
 });
 
 test('the document tab shows the Visual editor as nodes with their source ranges; a click selects one', async ({ page }) => {
