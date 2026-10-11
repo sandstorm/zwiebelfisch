@@ -13,8 +13,9 @@ test.describe('with the OS in dark mode', () => {
     await expect(page.locator('.typst-preview__content').first()).toHaveCSS('filter', 'invert(1) hue-rotate(180deg)');
 
     await page.getByRole('tab', { name: 'Source' }).click();
-    // light-dark() resolves the text light, so the Source view switches CodeMirror to its dark theme (a white caret)
-    await expect(page.getByTestId('typst-source').locator('.cm-content')).toHaveCSS('caret-color', 'rgb(255, 255, 255)');
+    // light-dark() resolves the text light, so the Source view switches CodeMirror to its dark theme: a light cursor
+    // (CodeMirror draws the cursor itself, `.cm-cursor`; the native caret of `.cm-content` is always transparent)
+    await expect(page.getByTestId('typst-source').locator('.cm-cursor-primary')).toHaveCSS('border-left-color', 'rgb(221, 221, 221)');
   });
 });
 
