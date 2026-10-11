@@ -129,6 +129,12 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    parameters (`noSaveBtn`, `saveAndExit=0`, `dark=1`) and export reply; e2e specs changed in waves
    1–3 (pdf-download, gitlab, web-component, multi-file-ui, image-upload, margin-notes, visual-*,
    collab, spreadsheets, diagrams).
+   **Text files + fallback** (user, 2026-10-11; right after the API-shape wave, parallel to its
+   follow-up): a `text-files` extension — `.csv`, `.json`, `.yaml` / `.yml`, `.toml`, `.xml`, `.bib`,
+   `.txt`, `.md` open editable in plain CodeMirror (no new language packages; highlighting later),
+   saved as file updates (collaboration: whole file, last save wins, as images). The read-only
+   fallback for every other file (`*`: name, size, type) moves from `images` to the `files`
+   extension; `images` keeps only `images.preview`.
    **READMEs instead of ARCHITECTURE.md** (user, 2026-10-11): one-page README per main area
    (`src/README.md` big picture: layers, dependency rules, a keystroke's flow, links;
    `src/core/`, `src/extensions/` (what an extension is, the five vocabularies), and one per host:
