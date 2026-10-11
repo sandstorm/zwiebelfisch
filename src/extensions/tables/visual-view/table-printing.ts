@@ -3,7 +3,7 @@
 import type { Node } from '@tiptap/pm/model';
 import { isEmbeddable } from '../../../core/typst-syntax/typst-syntax';
 import type { TypstSerializeState } from '../../../hosts/prosemirror-typst/prosemirror-typst';
-import { NEW_TABLE, type TableLayout, type TableStyle } from '../model/table-layout';
+import { columnsSource, NEW_TABLE, sameEntries, type TableLayout, type TableStyle } from '../model/table-layout';
 
 /** A table cell and the document position it starts at. */
 interface PlacedCell {
@@ -15,8 +15,9 @@ interface PlacedCell {
  * A table: its source around unchanged cell content while it still has the
  * parsed shape, so editing a cell changes just that cell; otherwise
  * re-printed in the style it was written in (see `TableStyle`; editor-made:
- * `#table(columns: n, [..], ..)`, one row per line), the first row in
- * `table.header(..)` if its cells are header cells.
+ * `#table(columns: n, [..], ..)`, one row per line), `columns` a count or
+ * the track sizes its cells carry, the first row in `table.header(..)` if
+ * its cells are header cells.
  */
 export function tableToTypst(out: TypstSerializeState, table: Node, pos: number): void {
   const rows: PlacedCell[][] = [];
@@ -28,7 +29,7 @@ export function tableToTypst(out: TypstSerializeState, table: Node, pos: number)
   const layout: TableLayout | null = table.attrs.layout;
   if (layout && hasShape(rows, layout)) return printInLayout(out, rows.flat(), layout);
   const style = layout?.style ?? NEW_TABLE;
-  out.hidden(style.head[0] + rows[0].length + style.head[1]);
+  out.hidden(style.head[0] + columnsSource(style.tracks, columnTracks(rows)) + style.head[1]);
   const indent = /\s*$/.exec(style.head[1])![0] || ' ';
   for (const arg of style.named) out.hidden(`${arg},${indent}`);
   rows.forEach((row, r) => {
@@ -98,8 +99,14 @@ function headerSyntax({ header }: TableStyle, row: PlacedCell[]): TableStyle['he
 }
 
 /** Whether the table still has the rows, columns and header its source `layout` was made for. */
-function hasShape(rows: PlacedCell[][], { columns, gaps, header }: TableLayout): boolean {
-  return rows.every((row) => row.length === columns) && rows.length * columns === gaps.length - 1 && isHeaderRow(rows[0]) === header;
+function hasShape(rows: PlacedCell[][], { columns, gaps, header, style }: TableLayout): boolean {
+  const shape = rows.every((row) => row.length === columns) && rows.length * columns === gaps.length - 1 && isHeaderRow(rows[0]) === header;
+  return shape && sameEntries(columnTracks(rows), style.tracks);
+}
+
+/** Per column, the `columns` entry its cells carry (`2fr`); null for a column made in the editor or a count. */
+function columnTracks(rows: PlacedCell[][]): (string | null)[] {
+  return rows[0].map((_, i) => rows.map((row) => row[i]?.cell.attrs.track ?? null).find((track) => track !== null) ?? null);
 }
 
 /** A row of header cells only (Tiptap's header row). */
