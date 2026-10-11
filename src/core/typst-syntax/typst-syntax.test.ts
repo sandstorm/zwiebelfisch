@@ -1,6 +1,7 @@
-// Tests for typst-syntax.ts: findFilePaths.
+// Tests for typst-syntax.ts: findFilePaths and reading calls.
+import { typstParser } from 'codemirror-lang-typst/lezer';
 import { describe, expect, it } from 'vitest';
-import { findFilePaths } from './typst-syntax';
+import { callArguments, calleeName, findFilePaths, hasOnlyArguments, namedArgument, trailingContent, withHash } from './typst-syntax';
 
 const SOURCE = `#import "template.typ": template
 #include "chapters/intro.typ"
@@ -57,5 +58,54 @@ describe('findFilePaths', () => {
   it('looks at a part of the text only', () => {
     const found = findFilePaths(SOURCE, { from: SOURCE.indexOf('#include'), to: SOURCE.indexOf('#let') });
     expect(found.map((r) => r.path)).toEqual(['chapters/intro.typ', 'img/logo.png']);
+  });
+});
+
+describe('reading calls', () => {
+  /** The first `FuncCall` of `source`. */
+  const callIn = (source: string) => {
+    const cursor = typstParser.parse(source).cursor();
+    while (cursor.name !== 'FuncCall' && cursor.next());
+    return cursor.node;
+  };
+  const texts = (source: string, nodes: readonly { from: number; to: number }[] | null) => nodes?.map((n) => source.slice(n.from, n.to)) ?? null;
+
+  it('names the callee, if it is a plain name', () => {
+    expect(calleeName(callIn('#table(a)'), '#table(a)')).toBe('table');
+    expect(calleeName(callIn('#table.header(a)'), '#table.header(a)')).toBe('');
+  });
+
+  it('lists the arguments in the parentheses, comments kept and separators left out', () => {
+    const source = '#f(a, b: 1 /* c */)[x]';
+    expect(texts(source, callArguments(callIn(source)))).toEqual(['a', 'b: 1', '/* c */']);
+    expect(callArguments(callIn('#f[x]'))).toEqual([]);
+    expect(callArguments(callIn('#f(a'))).toEqual([]);
+  });
+
+  it('reads a named argument\'s value', () => {
+    const source = '#figure(image("a.png"), caption: [Hi])';
+    expect(texts(source, [namedArgument(callIn(source), 'caption', source)!])).toEqual(['[Hi]']);
+    expect(namedArgument(callIn(source), 'kind', source)).toBeNull();
+  });
+
+  it('gives the closed content blocks after the parentheses, or null', () => {
+    const source = '#f(a)[x][y]';
+    expect(texts(source, trailingContent(callIn(source)))).toEqual(['[x]', '[y]']);
+    expect(texts('#f[x]', trailingContent(callIn('#f[x]')))).toEqual(['[x]']);
+    expect(trailingContent(callIn('#f(a)'))).toEqual([]);
+    expect(trailingContent(callIn('#f(a)[x'))).toBeNull();
+    expect(trailingContent(callIn('#f(a [x]'))).toBeNull();
+  });
+
+  it('tells a call with only parenthesized arguments', () => {
+    expect(hasOnlyArguments(callIn('#pagebreak()'))).toBe(true);
+    expect(hasOnlyArguments(callIn('#f(a)[x]'))).toBe(false);
+    expect(hasOnlyArguments(callIn('#f[x]'))).toBe(false);
+    expect(hasOnlyArguments(callIn('#f(a'))).toBe(false);
+  });
+
+  it('takes the `#` before a call in markup along', () => {
+    expect(withHash(callIn('A #f(a) b'))).toEqual({ from: 2, to: 7 });
+    expect(withHash(callIn('#figure(table(a))').getChild('Args')!.getChild('FuncCall')!)).toEqual({ from: 8, to: 16 });
   });
 });

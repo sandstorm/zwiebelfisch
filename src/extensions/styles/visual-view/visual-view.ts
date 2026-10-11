@@ -2,9 +2,9 @@
 // mark (`#key[..]`), and the text style menu. See ARCHITECTURE.md, "Custom styles".
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node } from '@tiptap/pm/model';
-import { children, isClosedContent, parenthesized } from '../../../core/typst-syntax/typst-syntax';
-import type { Call, Placed, Printer, ProjectionContext } from '../../../hosts/projection/projection';
-import type { TextStyle, TextStyleProvider, TypstMarkSpec, TypstNodeSpec, VisualViewContext, VisualViewContribution } from '../../../hosts/visual-view/visual-view';
+import { calleeName, children, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
+import type { Placed, TypstMarkSpec, TypstSerializeState, TypstParseContext } from '../../../hosts/projection/projection';
+import type { TextStyle, TextStyleProvider, TypstNodeSpec, VisualViewContext, VisualViewContribution } from '../../../hosts/visual-view/visual-view';
 import type { ProjectStyles } from '../model/style-index';
 import type { Style } from '../model/discover';
 import { StyledBlock, StyleMark } from './style-nodes';
@@ -18,9 +18,6 @@ export interface StylesOptions {
 
 /** The origin of the import a newly applied style adds to the document. */
 const STYLE_IMPORT = 'style-import';
-
-/** A text style's mark priority: outside bold and italic (100) where it covers the same text (`#key[*x*]`), inside links (120) and notes. */
-const STYLE_PRIORITY = 110;
 
 /**
  * Custom styles (see `model/`): a call of a declared paragraph
@@ -40,11 +37,25 @@ export function customStyles(options: StylesOptions): VisualViewContribution {
     id: 'styles',
     activate({ visualView, subscriptions }) {
       subscriptions.push(
-        visualView.registerNode({ ...STYLED_BLOCK, blockCalls: { '*': (p, call, sep) => styledBlock(p, call, sep, declared()) }, onDidChange }),
+        visualView.registerNode({
+          ...STYLED_BLOCK,
+          typst: { ...STYLED_BLOCK.typst, parseTypst: { calls: { '*': { block: (p, call, sep) => parseStyledBlock(p, call, sep, declared()) } } }, onDidChange },
+        }),
         visualView.registerMark({
           ...STYLE,
-          inlineCalls: [{ matches: (_p, call) => declared().get(call.name)?.kind === 'text', project: (p, call, marks) => styleCall(p, call, marks, declared()) }],
-        }, { priority: STYLE_PRIORITY }),
+          typst: {
+            ...STYLE.typst,
+            parseTypst: {
+              calls: {
+                '*': {
+                  inline: (p, call, marks) => parseStyleCall(p, call, marks, declared()),
+                  inRunningText: (p, call) => declared().get(calleeName(call, p.source))?.kind === 'text',
+                },
+              },
+            },
+            onDidChange,
+          },
+        }),
         visualView.registerTextStyleProvider(textStyles(options)),
       );
     },
@@ -75,47 +86,46 @@ interface StyleLayout {
 
 const STYLED_BLOCK: TypstNodeSpec = {
   name: 'styledBlock',
-  extension: StyledBlock,
-  anchors: ['layout'],
-  labelled: true,
-  print: printStyledBlock,
+  tiptap: StyledBlock,
+  typst: { toTypst: styledBlockToTypst, anchors: ['layout'], labelled: true },
 };
 
 const STYLE: TypstMarkSpec = {
   name: 'style',
-  extension: StyleMark,
-  print: (mark) => ({ open: mark.attrs.head ?? `#${mark.attrs.name}[`, close: ']' }),
+  tiptap: StyleMark,
+  typst: { toTypst: (mark) => ({ open: mark.attrs.head ?? `#${mark.attrs.name}[`, close: ']' }) },
 };
 
 /** `#name(..)?[content]` of a declared paragraph style: a `styledBlock` whose content is segmented like the document. */
-function styledBlock(p: ProjectionContext, call: Call, sep: string | null, declared: Declared): Node | null {
-  const style = declared.get(call.name);
-  const content = call.args.at(-1);
-  const parens = call.args.slice(0, -1);
-  if (style?.kind !== 'paragraph' || !content || !isClosedContent(content) || (parens.length > 0 && !parenthesized(parens))) return null;
-  const { content: inside, from, to } = p.blocks(content);
-  const layout: StyleLayout = { open: p.source.slice(call.from, from), close: p.source.slice(to, call.to) };
-  return p.schema.nodes.styledBlock.create({ name: call.name, title: style.label, sep, layout }, inside);
+function parseStyledBlock(p: TypstParseContext, call: SyntaxNode, sep: string | null, declared: Declared): Node | null {
+  const name = calleeName(call, p.source);
+  const style = declared.get(name);
+  const blocks = trailingContent(call);
+  if (style?.kind !== 'paragraph' || blocks?.length !== 1) return null;
+  const { content: inside, from, to } = p.blocks(blocks[0]);
+  const { from: start, to: end } = withHash(call);
+  const layout: StyleLayout = { open: p.source.slice(start, from), close: p.source.slice(to, end) };
+  return p.schema.nodes.styledBlock.create({ name, title: style.label, sep, layout }, inside);
 }
 
-/** `#name[..]` around a styled block's blocks, or the call around them as projected. */
-function printStyledBlock(out: Printer, block: Node, pos: number): void {
+/** `#name[..]` around a styled block's blocks, or the call around them as parsed. */
+function styledBlockToTypst(state: TypstSerializeState, block: Node, pos: number): void {
   const { open, close }: StyleLayout = block.attrs.layout ?? { open: `#${block.attrs.name}[`, close: ']' };
-  out.hidden(open);
-  out.blocks(block, pos + 1, '\n\n');
-  out.closing(close);
+  state.hidden(open);
+  state.blocks(block, pos + 1, '\n\n');
+  state.closing(close);
 }
 
 /** `#key[text]` (or `#key(..)[text]`) of a declared text style, with non-empty, single-paragraph text; null otherwise. */
-function styleCall(p: ProjectionContext, { node, name, args }: Call, marks: readonly Mark[], declared: Declared): Placed[] | null {
+function parseStyleCall(p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[], declared: Declared): Placed[] | null {
+  const name = calleeName(call, p.source);
   const style = declared.get(name);
-  const content = args.at(-1);
-  const parens = args.slice(0, -1);
-  if (style?.kind !== 'text' || !content || !isClosedContent(content) || (parens.length > 0 && !parenthesized(parens))) return null;
-  const inside: SyntaxNode[] = children(content.getChild('Markup')!);
+  const blocks = trailingContent(call);
+  if (style?.kind !== 'text' || blocks?.length !== 1) return null;
+  const inside = children(blocks[0].getChild('Markup')!);
   if (inside.length === 0 || inside.some((n) => n.name === 'Parbreak')) return null;
   // the `#` before the call up to and with the `[`: printed again as is
-  const head = p.source.slice(node.from - 1, content.from + 1);
+  const head = p.source.slice(withHash(call).from, blocks[0].from + 1);
   return p.inline(inside, p.schema.marks.style.create({ name, title: style.label, head }).addToSet(marks));
 }
 

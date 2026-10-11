@@ -5,16 +5,18 @@ import { describe, expect, it } from 'vitest';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
 import { TypstDocument } from '../../core/typst-document/typst-document';
 import { Node as TiptapNode, type Editor } from '@tiptap/core';
-import { children } from '../../core/typst-syntax/typst-syntax';
-import { starterKitPart } from '../projection/projection';
-import { setBoxDecorations, VisualView, VisualViewHost, type Highlight, type TypstMarkSpec, type TypstNodeSpec, type VisualViewContext, type VisualViewContribution } from './visual-view';
+import { children, withHash } from '../../core/typst-syntax/typst-syntax';
+import { starterKitPart, type TypstMarkSpec } from '../projection/projection';
+import { setBoxDecorations, VisualView, VisualViewHost, type Highlight, type TypstNodeSpec, type VisualViewContext, type VisualViewContribution } from './visual-view';
 
 /** A test-local construct beyond the host's minimum: `*strong*` as a bold mark (hidden syntax around visible text). */
 const STRONG: TypstMarkSpec = {
   name: 'bold',
-  extension: starterKitPart('testBold', { bold: {} }),
-  inlineSyntax: { Strong: (p, node, marks) => p.inline(children(node.getChild('Markup')!), p.schema.marks.bold.create().addToSet(marks)) },
-  print: () => ({ open: '*', close: '*' }),
+  tiptap: starterKitPart('testBold', { bold: {} }),
+  typst: {
+    parseTypst: { syntaxNodes: { Strong: { inline: (p, node, marks) => p.inline(children(node.getChild('Markup')!), p.schema.marks.bold.create().addToSet(marks)) } } },
+    toTypst: () => ({ open: '*', close: '*' }),
+  },
 };
 const strong = { id: 'strong', activate: ({ visualView, subscriptions }) => subscriptions.push(visualView.registerMark(STRONG)) } satisfies VisualViewContribution;
 
@@ -59,9 +61,9 @@ describe('VisualView', () => {
   it('marks the DOM of a node whose spec owns its pseudo-elements', () => {
     const divider: TypstNodeSpec = {
       name: 'divider',
-      extension: TiptapNode.create({ name: 'divider', group: 'block', atom: true, addAttributes: () => ({ src: { default: '', rendered: false } }), renderHTML: () => ['hr'] }),
-      ownsPseudoElements: true,
-      blockCalls: { divider: (p, call) => p.schema.nodes.divider.create({ src: p.text(call) }) },
+      tiptap: TiptapNode.create({ name: 'divider', group: 'block', atom: true, addAttributes: () => ({ src: { default: '', rendered: false } }), renderHTML: () => ['hr'] }),
+      typst: { parseTypst: { calls: { divider: { block: (p, call) => p.schema.nodes.divider.create({ src: p.text(withHash(call)) }) } } } },
+      view: { ownsPseudoElements: true },
     };
     const parent = document.body.appendChild(document.createElement('div'));
     new VisualView(parent, new TypstDocument('#divider()\n\nText\n'), VisualViewHost.from([{ id: 'divider', activate: ({ visualView }) => visualView.registerNode(divider) }]));
@@ -129,7 +131,7 @@ describe('VisualView contexts', () => {
     const contributions = new VisualViewHost();
     const seen: { pos: number; offset: number; boxes: string[] }[] = [];
     const seenBy: VisualViewContext[] = [];
-    contributions.registerEditorExtension((view) => {
+    contributions.registerTiptapExtension((view) => {
       seenBy.push(view);
       return [];
     });
@@ -149,7 +151,7 @@ describe('VisualView contexts', () => {
   it("gives a raw box's code its decorations (setBoxDecorations), when made and on every update", () => {
     const contributions = new VisualViewHost();
     const given: number[] = [];
-    contributions.registerBoxCodeExtension(() =>
+    contributions.registerRawBoxCodeMirrorExtension(() =>
       EditorState.transactionExtender.of((tr) => {
         for (const effect of tr.effects) if (effect.is(setBoxDecorations)) given.push(effect.value.length);
         return null;

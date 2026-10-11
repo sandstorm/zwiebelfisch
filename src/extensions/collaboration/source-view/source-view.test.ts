@@ -14,7 +14,7 @@ function withPresence(text: string) {
   const doc = new TypstDocument(text);
   const presences = new Presences((document) => (document === doc ? MAIN : undefined));
   const host = new SourceViewHost();
-  host.registerExtension(sourcePresence(presences));
+  host.registerCodeMirrorExtension(sourcePresence(presences));
   const parent = document.createElement('div');
   document.body.append(parent);
   host.createView(parent, doc);
@@ -62,7 +62,7 @@ describe('presence in the Source view', () => {
     const presences = new Presences((document) => (document === doc ? MAIN : undefined));
     presences.set([{ ...ann, anchor: 5, head: 9, path: MAIN }, { ...ann, id: '2', anchor: 0, head: 4, path: ProjectPath.of('/a.typ') }]);
     const host = new SourceViewHost();
-    host.registerExtension(sourcePresence(presences));
+    host.registerCodeMirrorExtension(sourcePresence(presences));
     const parent = document.body.appendChild(document.createElement('div'));
     host.createView(parent, doc);
     expect(marked(parent, '.typst-remote-selection')).toEqual(['bold']);

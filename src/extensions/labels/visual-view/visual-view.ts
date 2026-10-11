@@ -33,7 +33,7 @@ export function references(options: ReferencesOptions): VisualViewContribution {
     activate({ visualView, subscriptions }) {
       subscriptions.push(
         visualView.registerNode(REFERENCE),
-        visualView.registerEditorExtension((view) => referencesExtension(labels, view.document, prompts)),
+        visualView.registerTiptapExtension((view) => referencesExtension(labels, view.document, prompts)),
         visualView.registerToolbarItem({ group: 'insert', order: 80, create: addLabel }),
       );
     },
@@ -43,17 +43,23 @@ export function references(options: ReferencesOptions): VisualViewContribution {
 /** `@key` / `@key[supplement]`: a `reference` atom; the supplement is kept as written. */
 const REFERENCE: TypstNodeSpec = {
   name: 'reference',
-  extension: Reference,
-  inlineSyntax: {
-    Ref: (p, node, marks) => {
-      const marker = node.getChild('RefMarker')!;
-      const supplement = node.getChild('ContentBlock');
-      const attrs = { target: p.source.slice(marker.from + 1, marker.to), supplement: supplement ? p.text(supplement) : null };
-      return p.schema.nodes.reference.create(attrs, null, marks);
+  tiptap: Reference,
+  typst: {
+    parseTypst: {
+      syntaxNodes: {
+        Ref: {
+          inline: (p, node, marks) => {
+            const marker = node.getChild('RefMarker')!;
+            const supplement = node.getChild('ContentBlock');
+            const attrs = { target: p.source.slice(marker.from + 1, marker.to), supplement: supplement ? p.text(supplement) : null };
+            return p.schema.nodes.reference.create(attrs, null, marks);
+          },
+        },
+      },
     },
+    atomToTypst: (node) => referenceSyntax(node.attrs.target, node.attrs.supplement),
+    escapeAfter: (reference, text) => guardAfterReference(reference.attrs.supplement, text),
   },
-  printAtom: (node) => referenceSyntax(node.attrs.target, node.attrs.supplement),
-  escapeAfter: (reference, text) => guardAfterReference(reference.attrs.supplement, text),
 };
 
 /** The plugins of one view: the `@` list, reference hints, label tags. */

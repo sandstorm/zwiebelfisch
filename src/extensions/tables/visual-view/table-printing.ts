@@ -2,7 +2,7 @@
 // See visual-view.ts.
 import type { Node } from '@tiptap/pm/model';
 import { isEmbeddable } from '../../../core/typst-syntax/typst-syntax';
-import type { Printer } from '../../../hosts/projection/projection';
+import type { TypstSerializeState } from '../../../hosts/projection/projection';
 import { NEW_TABLE, type TableLayout, type TableStyle } from '../model/table-layout';
 
 /** A table cell and the document position it starts at. */
@@ -18,7 +18,7 @@ interface PlacedCell {
  * `#table(columns: n, [..], ..)`, one row per line), the first row in
  * `table.header(..)` if its cells are header cells.
  */
-export function printTable(out: Printer, table: Node, pos: number): void {
+export function tableToTypst(out: TypstSerializeState, table: Node, pos: number): void {
   const rows: PlacedCell[][] = [];
   table.forEach((row, rowOffset) => {
     const cells: PlacedCell[] = [];
@@ -45,7 +45,7 @@ export function printTable(out: Printer, table: Node, pos: number): void {
 }
 
 /** The table's source around its cells, as projected; only edited cells print anew. */
-function printInLayout(out: Printer, cells: PlacedCell[], { gaps, bare }: TableLayout): void {
+function printInLayout(out: TypstSerializeState, cells: PlacedCell[], { gaps, bare }: TableLayout): void {
   gaps.forEach((gap, i) => {
     // the part up to `]` closes the previous cell (bare cells have none), the rest opens the next one
     const close = i === 0 || bare[i - 1] ? 0 : gap.indexOf(']') + 1;
@@ -61,7 +61,7 @@ function printInLayout(out: Printer, cells: PlacedCell[], { gaps, bare }: TableL
  * still one expression; other cells print their blocks, in brackets if
  * `bracketed` (`[#ms(18) more]`).
  */
-function printCell(out: Printer, { cell, pos }: PlacedCell, bracketed: boolean): void {
+function printCell(out: TypstSerializeState, { cell, pos }: PlacedCell, bracketed: boolean): void {
   const code = bracketed ? bareCode(cell) : null;
   if (code) {
     out.shown(code.attrs.src, 'atom', pos + 2, pos + 3);

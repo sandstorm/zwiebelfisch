@@ -1,8 +1,9 @@
 // The package's public API: createTypstEditor, <typst-editor> (registered on import), and what writing an extension
 // takes: the types an extension implements or declares (everything else it reaches through its ExtensionContext is
-// typed without importing) — the Visual view's contribution types (node and mark specs, their projection grammar,
-// toolbar items, box renderers and actions, gutters, highlights, text styles; experimental) included, so an outside
-// extension can add a Typst construct as the built-ins do —, Disposable and EventEmitter, ProjectPath (paths are
+// typed without importing) — the Visual view's contribution types (node and mark specs with their Typst parse rules
+// and toTypst, toolbar items, box renderers and actions, gutters, highlights, text styles; experimental) and the
+// plain functions that read Typst calls from Lezer's syntax nodes included, so an outside extension can add a Typst
+// construct as the built-ins do —, Disposable and EventEmitter, ProjectPath (paths are
 // parsed, e.g. to `open` one), and the collaboration extension, which a host adds with its connection. The only file
 // that re-exports. See ARCHITECTURE.md and docs/embedding.md.
 import { defineTypstEditorElement } from './typst-editor-element/typst-editor-element';
@@ -40,19 +41,16 @@ export type { Scm, SourceControl, SourceControlState } from './hosts/scm/scm';
 export type { DocumentLink, DocumentLinkProvider, Languages, TextDocument } from './hosts/languages/languages';
 export type { ConfigurationChangeEvent, ConfigurationProperty, Settings, Workspace, WorkspaceConfiguration } from './hosts/workspace/workspace';
 export type { PdfExportOption, PreviewContributions, PreviewToolbarItem, ToolbarPlacement } from './hosts/preview/preview';
-export type { SourceViewContext, SourceViewContributions, SourceViewExtension } from './hosts/source-view/source-view';
+export type { SourceViewContext, SourceViewContributions } from './hosts/source-view/source-view';
 export type {
   Action,
   Anchor,
   BoxAction,
-  BoxCodeExtensionProvider,
   BoxPicture,
   BoxRenderer,
   BoxRendererProvider,
   BoxTools,
   BoxToolsHost,
-  CodeBoxSpec,
-  EditorExtensionProvider,
   Gutter,
   GutterProvider,
   Highlight,
@@ -64,7 +62,6 @@ export type {
   ToolbarControl,
   ToolbarGroup,
   ToolbarItem,
-  TypstMarkSpec,
   TypstNodeSpec,
   VisualViewContext,
   VisualViewContributions,
@@ -72,21 +69,28 @@ export type {
 export { setBoxDecorations } from './hosts/visual-view/visual-view';
 export type {
   Around,
-  BlockCallProjector,
   BlockLabel,
-  BlockPrinter,
-  BlockSyntaxProjector,
-  Call,
-  InlineCallProjector,
-  InlineProjector,
-  MarkGrammar,
-  NodeGrammar,
   Placed,
-  Printer,
-  ProjectionContext,
-  ProjectionSpec,
-  RunProjector,
+  TypstMarkConversion,
+  TypstMarkSpec,
+  TypstNodeConversion,
+  TypstParseContext,
+  TypstParseRules,
+  TypstSerializeState,
 } from './hosts/projection/projection';
+// Reading Typst syntax (Lezer nodes of codemirror-lang-typst's grammar) in parse functions: plain functions.
+export {
+  callArguments,
+  calleeName,
+  children,
+  decodeString,
+  hasOnlyArguments,
+  isClosedContent,
+  namedArgument,
+  quote,
+  trailingContent,
+  withHash,
+} from './core/typst-syntax/typst-syntax';
 export { collaboration, type CollaborationOptions } from './extensions/collaboration/collaboration';
 
 // Importing the package makes <typst-editor> available (no-op without a DOM).

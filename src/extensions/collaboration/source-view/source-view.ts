@@ -3,7 +3,7 @@
 // See collaboration.ts.
 import { EditorState, Facet, StateEffect, StateField, Transaction, type Extension, type Range } from '@codemirror/state';
 import { Decoration, EditorView, ViewPlugin, WidgetType, type DecorationSet } from '@codemirror/view';
-import { fromDocument, type SourceViewExtension } from '../../../hosts/source-view/source-view';
+import { fromDocument, type SourceViewContext } from '../../../hosts/source-view/source-view';
 import { REMOTE_ORIGIN } from '../remote-origin';
 import type { Presence, PresenceSource, PresenceUser } from '../presence/presence';
 import { textColorOn } from '../../../core/color-scheme/color-scheme';
@@ -17,7 +17,7 @@ export const perUserUndo: Extension = EditorState.transactionExtender.of((tr) =>
 );
 
 /** Draws the other users' carets and selections in every Source view, as `presences` has them; they follow edits. */
-export function sourcePresence(presences: PresenceSource): SourceViewExtension {
+export function sourcePresence(presences: PresenceSource): (view: SourceViewContext) => Extension {
   return (view) => [
     remotePresence,
     initialPresences.of(presences.presencesIn(view.document)),

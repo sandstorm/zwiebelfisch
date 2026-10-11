@@ -1,8 +1,10 @@
 // Typst syntax several extensions need, read from the Lezer syntax tree (codemirror-lang-typst): the file paths a
 // text names (`#import`, `#include`, `image(…)`, `read(…)`, …), the reading order they give the project's files, the
-// change that imports a name (calculateImportChange), and reading syntax nodes, string literals and embeddable code
-// as the Visual view's projectors and printers do (children, parenthesized, isClosedContent, decodeString, quote,
-// isEmbeddable, markupSource). Entry of core/typst-syntax/. See ARCHITECTURE.md, "File links".
+// change that imports a name (calculateImportChange), and reading syntax nodes, calls, string literals and
+// embeddable code as the Visual view's specs do (children, calleeName, callArguments, namedArgument,
+// trailingContent, hasOnlyArguments, withHash, isClosedContent, decodeString, quote, isEmbeddable, markupSource:
+// plain functions over Lezer nodes, public for every extension). Entry of core/typst-syntax/. See ARCHITECTURE.md,
+// "File links".
 // Why here: extensions never import each other, and this knowledge is about Typst, not about one feature. Only
 // syntax: where a path leads (the project, the file's current path) and what following it does (open, create) is the
 // document-links extension's, and showing links is the hosts' (`languages.registerDocumentLinkProvider`); applying
@@ -91,7 +93,10 @@ export function calculateImportChange(text: string, request: ImportRequest): Tex
   return insert(0, request.create());
 }
 
-// Reading Typst syntax (Lezer nodes) as the Visual view's projectors and printers need it.
+// Reading Typst syntax (Lezer nodes of codemirror-lang-typst's grammar) as the Visual view's parse functions and
+// toTypst functions need it. A call is the grammar's `FuncCall`: its callee (`Ident`, or `FieldAccess` for
+// `table.header`) and its `Args`, which hold `(`, the arguments (`Named` for `key: value`), separators, `)` and the
+// trailing content blocks `[..]`.
 
 /** The children of `node`, in order. */
 export function children(node: SyntaxNode): SyntaxNode[] {
@@ -100,9 +105,54 @@ export function children(node: SyntaxNode): SyntaxNode[] {
   return result;
 }
 
-/** Whether an argument list is `(..)` alone: closed, and no trailing content block. */
-export function parenthesized(args: readonly SyntaxNode[]): boolean {
-  return args[0]?.name === 'LeftParen' && args.at(-1)?.name === 'RightParen';
+/** The name of the function `call` (a `FuncCall`) calls: `table` of `table(..)`; '' if it is no plain name (`table.header(..)`). */
+export function calleeName(call: SyntaxNode, source: string): string {
+  const callee = call.firstChild;
+  return callee?.name === 'Ident' ? source.slice(callee.from, callee.to) : '';
+}
+
+/**
+ * The arguments in the parentheses of `call` (a `FuncCall`), in order: expressions and `Named` nodes (`key: value`),
+ * comments too; separators and spaces left out. Empty without (closed) parentheses.
+ */
+export function callArguments(call: SyntaxNode): SyntaxNode[] {
+  const args = call.getChild('Args');
+  if (args?.firstChild?.name !== 'LeftParen' || !args.getChild('RightParen')) return [];
+  const result: SyntaxNode[] = [];
+  for (let arg = args.firstChild.nextSibling; arg && arg.name !== 'RightParen'; arg = arg.nextSibling) {
+    if (arg.name !== 'Comma' && arg.name !== 'Space') result.push(arg);
+  }
+  return result;
+}
+
+/** The value of the named argument `name` of `call` (`[..]` of `caption: [..]`), or null if it has none. */
+export function namedArgument(call: SyntaxNode, name: string, source: string): SyntaxNode | null {
+  const named = callArguments(call).find((arg) => arg.name === 'Named' && arg.firstChild && source.slice(arg.firstChild.from, arg.firstChild.to) === name);
+  return named?.lastChild ?? null;
+}
+
+/**
+ * The content blocks after the parentheses of `call`, or all of its arguments without parentheses: `[a]`, `[b]` of
+ * `#f(..)[a][b]`, none of `#f(..)`. Null if they, or the parentheses, are not closed.
+ */
+export function trailingContent(call: SyntaxNode): SyntaxNode[] | null {
+  const args = call.getChild('Args');
+  const close = args?.firstChild?.name === 'LeftParen' ? args.getChild('RightParen') : null;
+  if (!args || (args.firstChild?.name === 'LeftParen' && !close)) return null;
+  const blocks = children(args).filter((node) => !close || node.from >= close.to);
+  return blocks.every(isClosedContent) ? blocks : null;
+}
+
+/** Whether `call` is `name(..)` alone: closed parentheses, no content block after them. */
+export function hasOnlyArguments(call: SyntaxNode): boolean {
+  const args = call.getChild('Args');
+  return args?.firstChild?.name === 'LeftParen' && args.lastChild?.name === 'RightParen';
+}
+
+/** The source range of `node` with the `#` right before it, if it has one (`#table(..)` in markup; not `table(..)` as an argument). */
+export function withHash(node: SyntaxNode): { from: number; to: number } {
+  const hash = node.prevSibling;
+  return { from: hash?.name === 'Hash' && hash.to === node.from ? hash.from : node.from, to: node.to };
 }
 
 /** Whether `node` is a content block `[..]` with its closing bracket. */

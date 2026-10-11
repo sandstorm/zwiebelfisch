@@ -1,14 +1,14 @@
 // What the markup extension contributes to the Visual view: the specs of strong and emphasis, links, raw text
 // (inline code, code blocks) and block quotes, and their toolbar entries. See markup.ts.
 import type { SyntaxNode } from '@lezer/common';
-import { Extension, type Editor } from '@tiptap/core';
+import { Extension, type AnyExtension, type Editor } from '@tiptap/core';
 import Code from '@tiptap/extension-code';
 import CodeBlock from '@tiptap/extension-code-block';
 import type { Mark, Node } from '@tiptap/pm/model';
 import type { Window } from '../../../hosts/window/window';
-import { children, decodeString, isClosedContent, parenthesized, quote } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type Action, type EditorExtensionProvider, type ToolbarContext, type TypstMarkSpec, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
-import { starterKitPart, type Around, type Call, type Placed, type Printer, type ProjectionContext } from '../../../hosts/projection/projection';
+import { callArguments, children, decodeString, namedArgument, quote, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
+import { svg, type Action, type ToolbarContext, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import { starterKitPart, type Around, type Placed, type TypstMarkSpec, type TypstSerializeState, type TypstParseContext } from '../../../hosts/projection/projection';
 import { codeBlockView } from './code-block-view';
 import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from '../model/raw-code';
 
@@ -17,8 +17,16 @@ const Bold = starterKitPart('typstBold', { bold: {} });
 const Italic = starterKitPart('typstItalic', { italic: {} });
 const Link = starterKitPart('typstLink', {
   link: { openOnClick: false, autolink: false, HTMLAttributes: { class: 'typst-visual__link', target: null, rel: null } },
+}).extend({
+  // the link mark StarterKit adds comes with priority 1000 (outside everything): outside bold and italic (100) only
+  addExtensions() {
+    return (this.parent?.() ?? []).map((link: AnyExtension) => link.extend({ priority: 120 }));
+  },
 });
-const Blockquote = starterKitPart('typstBlockquote', { blockquote: { HTMLAttributes: { class: 'typst-visual__quote' } } });
+const Blockquote = starterKitPart('typstBlockquote', { blockquote: { HTMLAttributes: { class: 'typst-visual__quote' } } }).extend({
+  // `sep`: the whitespace to the next block; `layout`: how the call around its blocks is written
+  addGlobalAttributes: () => [{ types: ['blockquote'], attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } } }],
+});
 
 /**
  * Inline raw text (`code`). Unlike Tiptap's code mark it combines with other
@@ -37,6 +45,14 @@ const TypstCode = Code.extend({
  * field for its language.
  */
 const TypstCodeBlock = CodeBlock.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      src: { default: null, rendered: false, keepOnSplit: false },
+      sep: { default: null, rendered: false },
+      fence: { default: 3, rendered: false },
+    };
+  },
   addNodeView() {
     return codeBlockView;
   },
@@ -54,7 +70,7 @@ function delimitedSyntax(delimiter: string, func: string, { before, after, first
 
 /** `*…*` / `_…_` with both delimiters present: its content with the mark; null (raw) for unclosed ones. */
 function delimited(markName: string) {
-  return (p: ProjectionContext, node: SyntaxNode, marks: readonly Mark[]): Placed[] | null => {
+  return (p: TypstParseContext, node: SyntaxNode, marks: readonly Mark[]): Placed[] | null => {
     const parts = children(node);
     const markup = node.getChild('Markup');
     if (parts.length !== 3 || !markup || parts[2].name !== parts[0].name) return null;
@@ -64,16 +80,14 @@ function delimited(markName: string) {
 
 export const BOLD: TypstMarkSpec = {
   name: 'bold',
-  extension: Bold,
-  inlineSyntax: { Strong: delimited('bold') },
-  print: (_mark, around) => delimitedSyntax('*', 'strong', around),
+  tiptap: Bold,
+  typst: { parseTypst: { syntaxNodes: { Strong: { inline: delimited('bold') } } }, toTypst: (_mark, around) => delimitedSyntax('*', 'strong', around) },
 };
 
 export const ITALIC: TypstMarkSpec = {
   name: 'italic',
-  extension: Italic,
-  inlineSyntax: { Emph: delimited('italic') },
-  print: (_mark, around) => delimitedSyntax('_', 'emph', around),
+  tiptap: Italic,
+  typst: { parseTypst: { syntaxNodes: { Emph: { inline: delimited('italic') } } }, toTypst: (_mark, around) => delimitedSyntax('_', 'emph', around) },
 };
 
 // -------------------------------------------------------------------- links
@@ -90,22 +104,26 @@ const BARE_URL = /^https?:\/\/[\w\-.~:/?#@!$&'*+,;=%]*[\w\-~/#@$&+=%]$/;
  */
 export const LINK: TypstMarkSpec = {
   name: 'link',
-  extension: Link,
-  inlineSyntax: { Link: (p, node, marks) => p.schema.text(p.text(node), p.schema.marks.link.create({ href: p.text(node) }).addToSet(marks)) },
-  inlineCalls: [{ matches: (_p, call) => call.name === 'link', project: linkCall }],
-  print: (mark) => ({ open: `#link(${quote(mark.attrs.href)})[`, close: ']' }),
-  printsBare: (mark, text, { before, after }) =>
-    text === mark.attrs.href && BARE_URL.test(text) && (before === undefined || /\s/.test(before)) && (after === undefined || /\s/.test(after)),
+  tiptap: Link,
+  typst: {
+    parseTypst: {
+      syntaxNodes: { Link: { inline: (p, node, marks) => p.schema.text(p.text(node), p.schema.marks.link.create({ href: p.text(node) }).addToSet(marks)) } },
+      calls: { link: { inline: parseLinkCall } },
+    },
+    toTypst: (mark) => ({ open: `#link(${quote(mark.attrs.href)})[`, close: ']' }),
+    isBare: (mark, text, { before, after }) =>
+      text === mark.attrs.href && BARE_URL.test(text) && (before === undefined || /\s/.test(before)) && (after === undefined || /\s/.test(after)),
+  },
 };
 
 /** `#link("url")[text]` with a plain string and non-empty, single-paragraph text; null otherwise. */
-function linkCall(p: ProjectionContext, { name, args }: Call, marks: readonly Mark[]): Placed[] | null {
-  if (name !== 'link' || args.map((a) => a.name).join() !== 'LeftParen,Str,RightParen,ContentBlock') return null;
-  const href = decodeString(p.text(args[1]));
-  const markup = args[3].getChild('Markup');
-  const content = markup ? children(markup) : [];
-  if (href === null || !isClosedContent(args[3]) || content.length === 0) return null;
-  if (content.some((n) => n.name === 'Parbreak')) return null;
+function parseLinkCall(p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[]): Placed[] | null {
+  const [url, ...others] = callArguments(call);
+  const blocks = trailingContent(call);
+  if (url?.name !== 'Str' || others.length > 0 || blocks?.length !== 1) return null;
+  const href = decodeString(p.text(url));
+  const content = children(blocks[0].getChild('Markup')!);
+  if (href === null || content.length === 0 || content.some((n) => n.name === 'Parbreak')) return null;
   return p.inline(content, p.schema.marks.link.create({ href }).addToSet(marks));
 }
 
@@ -114,18 +132,24 @@ function linkCall(p: ProjectionContext, { name, args }: Call, marks: readonly Ma
 /** Inline raw text on one line: its text with a `code` mark remembering the delimiters (empty and multi-line raw stays raw). */
 export const CODE: TypstMarkSpec = {
   name: 'code',
-  extension: TypstCode,
-  inlineSyntax: {
-    Raw: (p, node, marks) => {
-      const code = rawCode(node, p.source);
-      const text = code ? p.source.slice(code.from, code.to) : '';
-      if (!code || code.block || !text || text.includes('\n')) return null;
-      const mark = p.schema.marks.code.create({ fence: code.fence, lang: code.lang });
-      return [{ node: p.schema.text(text, mark.addToSet(marks)), from: code.from, to: code.to }];
+  tiptap: TypstCode,
+  typst: {
+    parseTypst: {
+      syntaxNodes: {
+        Raw: {
+          inline: (p, node, marks) => {
+            const code = rawCode(node, p.source);
+            const text = code ? p.source.slice(code.from, code.to) : '';
+            if (!code || code.block || !text || text.includes('\n')) return null;
+            const mark = p.schema.marks.code.create({ fence: code.fence, lang: code.lang });
+            return [{ node: p.schema.text(text, mark.addToSet(marks)), from: code.from, to: code.to }];
+          },
+        },
+      },
     },
+    raw: true,
+    toTypst: (mark, { text }) => inlineCodeDelimiters(text, mark.attrs.lang, mark.attrs.fence),
   },
-  raw: true,
-  print: (mark, { text }) => inlineCodeDelimiters(text, mark.attrs.lang, mark.attrs.fence),
 };
 
 /**
@@ -137,30 +161,31 @@ export const CODE: TypstMarkSpec = {
  */
 export const CODE_BLOCK: TypstNodeSpec = {
   name: 'codeBlock',
-  extension: TypstCodeBlock,
-  attributes: {
-    src: { default: null, rendered: false, keepOnSplit: false },
-    sep: { default: null, rendered: false },
-    fence: { default: 3, rendered: false },
-  },
-  labelled: true,
-  runSyntax: {
-    Raw: (p, node, sep) => {
-      const code = rawCode(node, p.source);
-      if (!code?.block) return null;
-      const text = p.source.slice(code.from, code.to);
-      const attrs = { language: code.lang, fence: code.fence, src: p.text(node), sep };
-      const content = text ? [{ node: p.schema.text(text), from: code.from, to: code.to }] : [];
-      return p.textblock({ type: 'codeBlock', attrs, contentTo: code.to }, node.from, content);
+  tiptap: TypstCodeBlock,
+  typst: {
+    parseTypst: {
+      syntaxNodes: {
+        Raw: {
+          block: (p, node, sep) => {
+            const code = rawCode(node, p.source);
+            if (!code?.block) return null;
+            const text = p.source.slice(code.from, code.to);
+            const attrs = { language: code.lang, fence: code.fence, src: p.text(node), sep };
+            const content = text ? [{ node: p.schema.text(text), from: code.from, to: code.to }] : [];
+            return p.textblock({ type: 'codeBlock', attrs, contentTo: code.to }, node.from, content);
+          },
+        },
+      },
     },
-  },
-  print: (out, block, pos) => {
-    const text = block.textContent;
-    const { open, close } = codeBlockDelimiters(text, block.attrs.language, block.attrs.fence);
-    out.hidden(open);
-    out.shown(text, 'text', pos + 1, pos + 1 + text.length);
-    out.endBlock(pos + block.nodeSize - 1, text.length === 0);
-    out.closing(close);
+    toTypst: (state, block, pos) => {
+      const text = block.textContent;
+      const { open, close } = codeBlockDelimiters(text, block.attrs.language, block.attrs.fence);
+      state.hidden(open);
+      state.shown(text, 'text', pos + 1, pos + 1 + text.length);
+      state.endBlock(pos + block.nodeSize - 1, text.length === 0);
+      state.closing(close);
+    },
+    labelled: true,
   },
 };
 
@@ -181,35 +206,35 @@ const NEW_QUOTE: QuoteLayout = { open: '#quote(block: true)[', close: ']' };
  */
 export const BLOCKQUOTE: TypstNodeSpec = {
   name: 'blockquote',
-  extension: Blockquote,
-  attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } },
-  anchors: ['layout'],
-  labelled: true,
-  blockCalls: { quote: blockquote },
-  print: (out, quote, pos) => printAround(out, quote, pos, quote.attrs.layout ?? NEW_QUOTE),
+  tiptap: Blockquote,
+  typst: {
+    parseTypst: { calls: { quote: { block: parseBlockquote } } },
+    toTypst: (state, quote, pos) => writeAround(state, quote, pos, quote.attrs.layout ?? NEW_QUOTE),
+    anchors: ['layout'],
+    labelled: true,
+  },
 };
 
-function blockquote(p: ProjectionContext, call: Call, sep: string | null): Node | null {
-  const { args } = call;
-  const content = args.at(-1)!;
-  const parens = args.slice(0, -1);
-  if (!parenthesized(parens) || !isClosedContent(content) || !isBlockQuoteArgs(p, parens.slice(1, -1))) return null;
-  const { content: blocks, from, to } = p.blocks(content);
-  const layout: QuoteLayout = { open: p.source.slice(call.from, from), close: p.source.slice(to, call.to) };
-  return p.schema.nodes.blockquote.create({ sep, layout }, blocks);
+function parseBlockquote(p: TypstParseContext, call: SyntaxNode, sep: string | null): Node | null {
+  const blocks = trailingContent(call);
+  if (blocks?.length !== 1 || !isBlockQuoteArgs(p, call)) return null;
+  const { content, from, to } = p.blocks(blocks[0]);
+  const { from: start, to: end } = withHash(call);
+  const layout: QuoteLayout = { open: p.source.slice(start, from), close: p.source.slice(to, end) };
+  return p.schema.nodes.blockquote.create({ sep, layout }, content);
 }
 
 /** Named arguments only, `block: true` among them. */
-function isBlockQuoteArgs(p: ProjectionContext, args: SyntaxNode[]): boolean {
-  const named = args.filter((a) => a.name !== 'Space' && a.name !== 'Comma');
-  return named.every((a) => a.name === 'Named') && named.some((a) => /^block\s*:\s*true$/.test(p.text(a)));
+function isBlockQuoteArgs(p: TypstParseContext, call: SyntaxNode): boolean {
+  const block = namedArgument(call, 'block', p.source);
+  return callArguments(call).every((a) => a.name === 'Named') && block !== null && p.text(block) === 'true';
 }
 
 /** `open`, the container's blocks, `close`. */
-function printAround(out: Printer, block: Node, pos: number, { open, close }: QuoteLayout): void {
-  out.hidden(open);
-  out.blocks(block, pos + 1, '\n\n');
-  out.closing(close);
+function writeAround(state: TypstSerializeState, block: Node, pos: number, { open, close }: QuoteLayout): void {
+  state.hidden(open);
+  state.blocks(block, pos + 1, '\n\n');
+  state.closing(close);
 }
 
 // ------------------------------------------------------------------ toolbar
@@ -254,20 +279,19 @@ export function linkAction(toolbar: ToolbarContext, prompt: LinkPrompt): Action 
 }
 
 /** Mod+K in the text (a raw box's code keeps its own keys): "Link", as in the selection's bar. */
-export function linkShortcut(prompt: LinkPrompt): EditorExtensionProvider {
-  return () =>
-    Extension.create({
-      name: 'typstLinkShortcut',
-      addKeyboardShortcuts() {
-        return {
-          'Mod-k': ({ editor }) => {
-            if (!editor.can().setMark('link')) return false;
-            void askLink(editor, prompt);
-            return true;
-          },
-        };
-      },
-    });
+export function linkShortcut(prompt: LinkPrompt): AnyExtension {
+  return Extension.create({
+    name: 'typstLinkShortcut',
+    addKeyboardShortcuts() {
+      return {
+        'Mod-k': ({ editor }) => {
+          if (!editor.can().setMark('link')) return false;
+          void askLink(editor, prompt);
+          return true;
+        },
+      };
+    },
+  });
 }
 
 /**

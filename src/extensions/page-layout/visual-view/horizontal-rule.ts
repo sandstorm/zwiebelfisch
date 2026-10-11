@@ -3,9 +3,9 @@
 import type { SyntaxNode } from '@lezer/common';
 import { InputRule, Node } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
-import { parenthesized } from '../../../core/typst-syntax/typst-syntax';
+import { callArguments, hasOnlyArguments, namedArgument, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type Action, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
-import type { ProjectionContext } from '../../../hosts/projection/projection';
+import type { TypstParseContext } from '../../../hosts/projection/projection';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -71,25 +71,27 @@ const HorizontalRule = Node.create({
  */
 export const HORIZONTAL_RULE: TypstNodeSpec = {
   name: 'horizontalRule',
-  extension: HorizontalRule,
-  labelled: true,
-  blockCalls: {
-    line: (p, call, sep) =>
-      parenthesized(call.args) && isFullWidthLine(p, call.args.slice(1, -1)) ? p.schema.nodes.horizontalRule.create({ src: p.text(call), sep }) : null,
+  tiptap: HorizontalRule,
+  typst: {
+    parseTypst: {
+      calls: {
+        line: {
+          block: (p, call, sep) =>
+            hasOnlyArguments(call) && isFullWidthLine(p, call) ? p.schema.nodes.horizontalRule.create({ src: p.text(withHash(call)), sep }) : null,
+        },
+      },
+    },
+    labelled: true,
   },
 };
 
 const POSITIONING = new Set(['start', 'end', 'angle']);
 
-function isFullWidthLine(p: ProjectionContext, args: SyntaxNode[]): boolean {
-  let fullWidth = false;
-  for (const arg of args) {
-    if (arg.name === 'Space' || arg.name === 'Comma') continue;
-    const name = arg.name === 'Named' ? arg.getChild('Ident') : null;
-    if (!name || POSITIONING.has(p.text(name))) return false;
-    if (p.text(name) === 'length') fullWidth = p.text(arg.lastChild!) === '100%';
-  }
-  return fullWidth;
+/** Named arguments only, `length: 100%` among them and none of `POSITIONING`. */
+function isFullWidthLine(p: TypstParseContext, call: SyntaxNode): boolean {
+  const named = callArguments(call).every((arg) => arg.name === 'Named' && !POSITIONING.has(p.text(arg.firstChild!)));
+  const length = namedArgument(call, 'length', p.source);
+  return named && length !== null && p.text(length) === '100%';
 }
 
 const ICON = svg('<path d="M3 12h18"/>');

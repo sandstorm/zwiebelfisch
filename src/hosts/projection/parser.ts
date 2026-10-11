@@ -1,17 +1,18 @@
-// Projecting Typst text into the Visual view's document: markup is segmented into blocks, and every block and
-// piece of inline syntax goes to the projectors the grammar has for it; what none models stays raw. See projection.ts.
+// Parsing Typst text into the Visual view's document (TypstToProseMirrorParser): markup is segmented into blocks,
+// and every block and piece of inline syntax goes to the specs' parse rules for it; what none models stays raw.
+// See projection.ts.
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
 import { typstParser } from 'codemirror-lang-typst/lezer';
-import type { Call, Placed, ProjectionContext, BlockLabel } from './projection';
+import type { Placed, TypstParseContext, BlockLabel } from './projection';
 import type { Grammar } from './grammar';
 import { labelAfterBlock, splitTrailingLabel } from './labels';
 import { layout, pristine } from './pristine';
-import { children } from '../../core/typst-syntax/typst-syntax';
+import { calleeName, children } from '../../core/typst-syntax/typst-syntax';
 
 /** Projects `source` into a document of `schema`, through the grammar attached to it. */
-export function projectDocument(source: string, schema: Schema, grammar: Grammar): Node {
-  return new Projection(schema, source, grammar).document();
+export function parseDocument(source: string, schema: Schema, grammar: Grammar): Node {
+  return new TypstToProseMirrorParser(schema, source, grammar).document();
 }
 
 /** A top-level stretch of source that becomes one block (or one list item), and the label after it. */
@@ -41,7 +42,7 @@ const SHORTHANDS: Record<string, string> = {
 };
 
 /** The framework's own inline syntax: text, line breaks, escapes and shorthands. */
-const INLINE: Record<string, (p: Projection, src: string, marks: readonly Mark[]) => Node> = {
+const INLINE: Record<string, (p: TypstToProseMirrorParser, src: string, marks: readonly Mark[]) => Node> = {
   Text: (p, src, marks) => p.schema.text(src, marks),
   SmartQuote: (p, src, marks) => p.schema.text(src, marks),
   Space: (p, src, marks) => (src.includes('\n') ? p.schema.nodes.softBreak.create({ src }) : p.schema.text(src, marks)),
@@ -55,8 +56,8 @@ function decodeEscape(src: string): string {
   return unicode ? String.fromCodePoint(parseInt(unicode[1], 16)) : src.slice(1);
 }
 
-/** One projection of one source text: what projectors get as their `ProjectionContext`. */
-class Projection implements ProjectionContext {
+/** Parses one source text into a document: what the specs' parse functions get as their `TypstParseContext`. */
+class TypstToProseMirrorParser implements TypstParseContext {
   /** See `serial`. */
   private serials = 0;
 
@@ -79,14 +80,8 @@ class Projection implements ProjectionContext {
     return this.source.slice(from, to);
   }
 
-  call(call: SyntaxNode): Call {
-    const ident = call.getChild('Ident');
-    const args = call.getChild('Args');
-    return { node: call, name: ident ? this.text(ident) : '', args: args ? children(args) : [], from: call.from, to: call.to };
-  }
-
   blockCall(call: SyntaxNode): Node | null {
-    return call.name === 'FuncCall' ? this.projectCall(this.call(call), null) : null;
+    return call.name === 'FuncCall' ? this.callBlock(call, null) : null;
   }
 
   blocks(content: SyntaxNode): { content: Node[]; from: number; to: number } {
@@ -103,7 +98,7 @@ class Projection implements ProjectionContext {
     let pos = nodes[0]?.from ?? 0;
     for (let i = 0; i < nodes.length; i++) {
       if (nodes[i].from > pos) result.push({ node: this.raw(this.source.slice(pos, nodes[i].from), marks), from: pos, to: nodes[i].from });
-      const piece = this.projectAt(nodes, i, marks);
+      const piece = this.parseAt(nodes, i, marks);
       result.push(...piece.placed);
       pos = piece.to;
       i = piece.last;
@@ -112,7 +107,7 @@ class Projection implements ProjectionContext {
   }
 
   isOneParagraph(nodes: readonly SyntaxNode[]): boolean {
-    return nodes.every((n) => n.name !== 'Parbreak' && !this.isBlockSyntax(n));
+    return nodes.every((n) => n.name !== 'Parbreak' && !this.isStandalone(n));
   }
 
   textblock({ type, attrs, contentTo }: { type: string; attrs: { src: string } & Record<string, unknown>; contentTo?: number }, from: number, content: Placed[]): Node {
@@ -144,8 +139,8 @@ class Projection implements ProjectionContext {
 
   // ------------------------------------------------------------- blocks
 
-  private isBlockSyntax(node: SyntaxNode): boolean {
-    return this.grammar.blockSyntax(node.name).length > 0;
+  private isStandalone(node: SyntaxNode): boolean {
+    return this.grammar.syntaxNode(node.name).some((rule) => rule.standsAlone);
   }
 
   /**
@@ -165,7 +160,7 @@ class Projection implements ProjectionContext {
       run = [];
     };
     nodes.forEach((node, index) => {
-      if (this.isBlockSyntax(node)) {
+      if (this.isStandalone(node)) {
         flushRun();
         segments.push({ kind: 'block', nodes: [node], from: node.from, to: node.to, label: null });
       } else if (node.name === 'Parbreak') {
@@ -183,8 +178,8 @@ class Projection implements ProjectionContext {
   /** Whether `nodes[index]` is the label of `last`, a block that takes the label after it (a heading). */
   private labelsLastBlock(last: Segment | undefined, nodes: SyntaxNode[], index: number): boolean {
     if (last?.kind !== 'block' || last.label) return false;
-    const takesLabel = this.grammar.blockSyntax(last.nodes[0].name).some((projector) => projector.takesLabel);
-    return takesLabel && labelAfterBlock(nodes, index, last.nodes[0], (node) => this.isBlockSyntax(node));
+    const takesLabel = this.grammar.syntaxNode(last.nodes[0].name).some((rule) => rule.takesLabel);
+    return takesLabel && labelAfterBlock(nodes, index, last.nodes[0], (node) => this.isStandalone(node));
   }
 
   /** Projects the blocks of a markup range (`doc` content, a content block's); list items form lists. */
@@ -203,10 +198,10 @@ class Projection implements ProjectionContext {
     return labelled;
   }
 
-  /** Block syntax standing alone: the first projector's block, else a raw block. */
+  /** Block syntax standing alone: the first rule's block, else a raw block. */
   private standalone(node: SyntaxNode, sep: string | null): Node {
-    for (const projector of this.grammar.blockSyntax(node.name)) {
-      const block = projector.project(this, node, sep);
+    for (const rule of this.grammar.syntaxNode(node.name)) {
+      const block = rule.standsAlone ? rule.block?.(this, node, sep) : null;
       if (block) return block;
     }
     return this.schema.nodes.rawBlock.create({ src: this.text(node), sep });
@@ -217,8 +212,8 @@ class Projection implements ProjectionContext {
     const src = this.source.slice(segment.from, segment.to);
     const [only] = segment.nodes;
     if (segment.nodes.length === 1) {
-      for (const projector of this.grammar.runSyntax(only.name)) {
-        const block = projector(this, only, sep);
+      for (const rule of this.grammar.syntaxNode(only.name)) {
+        const block = rule.standsAlone ? null : rule.block?.(this, only, sep);
         if (block) return block;
       }
     }
@@ -230,22 +225,21 @@ class Projection implements ProjectionContext {
 
   /** Syntax that makes a run a paragraph: text, inline syntax a spec models, calls that belong in running text. */
   private isProse(node: SyntaxNode): boolean {
-    if (TEXT.has(node.name) || this.grammar.inlineSyntax(node.name)) return true;
-    if (node.name !== 'FuncCall') return false;
-    const call = this.call(node);
-    return this.grammar.inlineCalls().some((projector) => projector.matches(this, call));
+    if (TEXT.has(node.name) || this.grammar.syntaxNode(node.name).some((rule) => rule.inline)) return true;
+    const rules = node.name === 'FuncCall' ? this.grammar.call(calleeName(node, this.source), 'inline') : [];
+    return rules.some((rule) => rule.inRunningText?.(this, node) ?? true);
   }
 
-  /** A run that is exactly one `#func(..)` call: the block its projectors make of it. */
+  /** A run that is exactly one `#func(..)` call: the block the calls' rules make of it. */
   private runCall(segment: Segment, sep: string | null): Node | null {
     const [hash, call, ...rest] = segment.nodes;
     if (hash.name !== 'Hash' || call?.name !== 'FuncCall' || call.from !== hash.to || rest.length > 0) return null;
-    return this.projectCall({ ...this.call(call), from: segment.from, to: segment.to }, sep);
+    return this.callBlock(call, sep);
   }
 
-  private projectCall(call: Call, sep: string | null): Node | null {
-    for (const projector of this.grammar.blockCalls(call.name)) {
-      const block = projector(this, call, sep);
+  private callBlock(call: SyntaxNode, sep: string | null): Node | null {
+    for (const rule of this.grammar.call(calleeName(call, this.source), 'block')) {
+      const block = rule.block!(this, call, sep);
       if (block) return block;
     }
     return null;
@@ -255,7 +249,7 @@ class Projection implements ProjectionContext {
   private groupContainers(blocks: Node[]): Node[] {
     const result: Node[] = [];
     let items: Node[] = [];
-    const containerOf = (block: Node) => this.grammar.node(block.type)?.container?.(block) ?? null;
+    const containerOf = (block: Node) => this.grammar.node(block.type)?.typst?.container?.(block) ?? null;
     const flush = () => {
       if (items.length === 0) return;
       const last = items.at(-1)!;
@@ -276,29 +270,32 @@ class Projection implements ProjectionContext {
   // ------------------------------------------------------------- inline
 
   /** Projects `nodes[index]`, or a `#` together with the expression after it as one piece of code. */
-  private projectAt(nodes: readonly SyntaxNode[], index: number, marks: readonly Mark[]): { placed: Placed[]; to: number; last: number } {
+  private parseAt(nodes: readonly SyntaxNode[], index: number, marks: readonly Mark[]): { placed: Placed[]; to: number; last: number } {
     const node = nodes[index];
     const code = node.name === 'Hash' && nodes[index + 1]?.from === node.to ? nodes[index + 1] : null;
     const to = code ? code.to : node.to;
     const src = this.source.slice(node.from, to);
-    const projected = (code ? this.codeNode(code, marks) : this.inlineNode(node, src, marks)) ?? this.raw(src, marks);
-    return { placed: Array.isArray(projected) ? projected : [{ node: projected, from: node.from, to }], to, last: code ? index + 1 : index };
+    const parsed = (code ? this.codeNode(code, marks) : this.inlineNode(node, src, marks)) ?? this.raw(src, marks);
+    return { placed: Array.isArray(parsed) ? parsed : [{ node: parsed, from: node.from, to }], to, last: code ? index + 1 : index };
   }
 
   /** One piece of inline syntax: the framework's text, else what a spec makes of it (null: raw). */
   private inlineNode(node: SyntaxNode, src: string, marks: readonly Mark[]): Node | Placed[] | null {
     const own = INLINE[node.name];
     if (own) return own(this, src, marks);
-    return this.grammar.inlineSyntax(node.name)?.(this, node, marks) ?? null;
+    for (const rule of this.grammar.syntaxNode(node.name)) {
+      const parsed = rule.inline?.(this, node, marks);
+      if (parsed) return parsed;
+    }
+    return null;
   }
 
   /** The expression after a `#`: a call some spec models in running text (a link, a margin note), else raw. */
   private codeNode(node: SyntaxNode, marks: readonly Mark[]): Node | Placed[] | null {
     if (node.name !== 'FuncCall') return null;
-    const call = this.call(node);
-    for (const projector of this.grammar.inlineCalls()) {
-      const projected = projector.project(this, call, marks);
-      if (projected) return projected;
+    for (const rule of this.grammar.call(calleeName(node, this.source), 'inline')) {
+      const parsed = rule.inline!(this, node, marks);
+      if (parsed) return parsed;
     }
     return null;
   }

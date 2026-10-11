@@ -5,8 +5,8 @@ import type { SyntaxNode } from '@lezer/common';
 import { Node } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import { NodeSelection, TextSelection, type Transaction } from '@tiptap/pm/state';
-import { children, isClosedContent, parenthesized } from '../../../core/typst-syntax/typst-syntax';
-import type { Call, Printer, ProjectionContext } from '../../../hosts/projection/projection';
+import { callArguments, children, hasOnlyArguments, isClosedContent, withHash } from '../../../core/typst-syntax/typst-syntax';
+import type { TypstSerializeState, TypstParseContext } from '../../../hosts/projection/projection';
 import type { TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 
 declare module '@tiptap/core' {
@@ -99,52 +99,50 @@ const FigureCaption = Node.create({
   },
 });
 
-/** Figures: projected from `#figure(..)` calls, printed around their body and caption. */
+/** Figures: read from `#figure(..)` calls, written around their body and caption. */
 export const FIGURE: TypstNodeSpec = {
   name: 'figure',
-  extension: Figure,
-  anchors: ['layout'],
-  labelled: true,
-  blockCalls: { figure: projectFigure },
-  print: printFigure,
+  tiptap: Figure,
+  typst: { parseTypst: { calls: { figure: { block: parseFigure } } }, toTypst: figureToTypst, anchors: ['layout'], labelled: true },
 };
 
-export const FIGURE_CAPTION: TypstNodeSpec = { name: 'figureCaption', extension: FigureCaption };
+export const FIGURE_CAPTION: TypstNodeSpec = { name: 'figureCaption', tiptap: FigureCaption };
 
 /**
  * `#figure(image("path", ..), ..named) <label>?` or `#figure(table(..), ..)`
- * (whatever the figure's schema accepts of what the call projects to) whose
+ * (whatever the figure's schema accepts of what the call is read as) whose
  * `caption`, if any, is one paragraph of markup; other named arguments stay as
  * written.
  */
-function projectFigure(p: ProjectionContext, call: Call, sep: string | null): PMNode | null {
-  const parsed = figureArgs(p, call.args);
+function parseFigure(p: TypstParseContext, call: SyntaxNode, sep: string | null): PMNode | null {
+  const parsed = figureArgs(p, call);
   if (!parsed) return null;
   const { schema, source } = p;
   const { body, bodyNode, caption } = parsed;
-  const layout: FigureLayout = { open: source.slice(call.from, body.from), caption: null, rest: '' };
+  const { from: start, to: end } = withHash(call);
+  const layout: FigureLayout = { open: source.slice(start, body.from), caption: null, rest: '' };
   if (!caption) {
-    layout.rest = source.slice(body.to, call.to);
+    layout.rest = source.slice(body.to, end);
     return schema.nodes.figure.create({ sep, layout }, [bodyNode]);
   }
   const { from, to, nodes } = captionContent(caption.content);
   layout.caption = { before: source.slice(body.to, caption.arg.from), open: source.slice(caption.arg.from, from), close: source.slice(to, caption.arg.to) };
-  layout.rest = source.slice(caption.arg.to, call.to);
+  layout.rest = source.slice(caption.arg.to, end);
   const captionNode = p.textblock({ type: 'figureCaption', attrs: { src: source.slice(from, to) } }, from, p.inline(nodes));
   return schema.nodes.figure.create({ sep, layout }, [bodyNode, captionNode]);
 }
 
 /** The body (call and node) and the caption argument of a figure, if it is an image or table with an optional one-paragraph caption. */
-function figureArgs(p: ProjectionContext, args: SyntaxNode[]): { body: SyntaxNode; bodyNode: PMNode; caption: CaptionArg | null } | null {
-  if (!parenthesized(args)) return null;
-  const [body, ...others] = args.slice(1, -1).filter((a) => a.name !== 'Space' && a.name !== 'Comma');
+function figureArgs(p: TypstParseContext, call: SyntaxNode): { body: SyntaxNode; bodyNode: PMNode; caption: CaptionArg | null } | null {
+  if (!hasOnlyArguments(call)) return null;
+  const [body, ...others] = callArguments(call);
   const bodyNode = body ? figureBody(p, body) : null;
   const caption = bodyNode ? captionArg(p, others) : undefined;
   return caption === undefined ? null : { body, bodyNode: bodyNode!, caption };
 }
 
-/** A figure's body: a call projected to a block the figure holds (`image(..)`, `table(..)`). */
-function figureBody(p: ProjectionContext, node: SyntaxNode): PMNode | null {
+/** A figure's body: a call read as a block the figure holds (`image(..)`, `table(..)`). */
+function figureBody(p: TypstParseContext, node: SyntaxNode): PMNode | null {
   const block = p.blockCall(node);
   return block && p.schema.nodes.figure.contentMatch.matchType(block.type) ? block : null;
 }
@@ -156,7 +154,7 @@ interface CaptionArg {
 }
 
 /** Among named arguments, the caption: null if there is none, undefined if the arguments cannot be modelled. */
-function captionArg(p: ProjectionContext, args: SyntaxNode[]): CaptionArg | null | undefined {
+function captionArg(p: TypstParseContext, args: SyntaxNode[]): CaptionArg | null | undefined {
   const names = args.map((a) => (a.name === 'Named' ? a.getChild('Ident') : null));
   if (names.some((n) => n === null)) return undefined;
   const captions = args.filter((_, i) => p.text(names[i]!) === 'caption');
@@ -187,7 +185,7 @@ function hasFigureExtras(figure: PMNode): boolean {
  * each prints (and changes) on its own. An added caption goes right after the
  * body; a removed one takes its argument and the comma before it along.
  */
-function printFigure(out: Printer, figure: PMNode, pos: number): void {
+function figureToTypst(out: TypstSerializeState, figure: PMNode, pos: number): void {
   const layout: FigureLayout = figure.attrs.layout ?? NEW_FIGURE;
   const body = figure.child(0);
   out.hidden(layout.open);

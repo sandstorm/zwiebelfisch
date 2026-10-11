@@ -1,9 +1,10 @@
 // What the alignment extension contributes to the Visual view: `#align(..)[..]` blocks, justified paragraphs
 // (`#par(justify: ..)[..]`) and the Align menu. See alignment.ts.
+import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
-import { children, isClosedContent } from '../../../core/typst-syntax/typst-syntax';
+import { callArguments, children, namedArgument, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type Action, type ToolbarGroup, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
-import type { Call, Printer, ProjectionContext } from '../../../hosts/projection/projection';
+import type { TypstSerializeState, TypstParseContext } from '../../../hosts/projection/projection';
 import { alignArgs, type TextAlignment } from '../model/alignment-syntax';
 import { TextAlign, textAlignAt } from './text-align';
 
@@ -25,46 +26,45 @@ interface AlignLayout {
  */
 export const ALIGNMENT: TypstNodeSpec = {
   name: 'alignment',
-  extension: TextAlign,
-  anchors: ['layout'],
-  labelled: true,
-  blockCalls: { align: projectAlignment },
-  print: printAlignment,
+  tiptap: TextAlign,
+  typst: { parseTypst: { calls: { align: { block: parseAlignment } } }, toTypst: alignmentToTypst, anchors: ['layout'], labelled: true },
 };
 
 /** Paragraphs that are justified (or not) on their own: `#par(justify: ..)[..]` around their text. */
 export const JUSTIFIED_PARAGRAPH: TypstNodeSpec = {
   name: 'paragraph',
-  blockCalls: { par: projectJustified },
-  print: printParagraph,
+  typst: { parseTypst: { calls: { par: { block: parseJustified } } }, toTypst: paragraphToTypst },
 };
 
-/** `#align(<literal alignment>)[..]`: an alignment block whose content is projected like the document's. */
-function projectAlignment(p: ProjectionContext, call: Call, sep: string | null): Node | null {
-  const { args } = call;
-  const body = args.at(-1);
-  const close = args.at(-2);
-  if (args[0]?.name !== 'LeftParen' || close?.name !== 'RightParen' || !body || !isClosedContent(body)) return null;
-  const argText = p.source.slice(args[0].to, close.from);
+/** `#align(<literal alignment>)[..]`: an alignment block whose content is parsed like the document's. */
+function parseAlignment(p: TypstParseContext, call: SyntaxNode, sep: string | null): Node | null {
+  const blocks = trailingContent(call);
+  const open = call.getChild('Args')?.getChild('LeftParen');
+  const close = call.getChild('Args')?.getChild('RightParen');
+  if (blocks?.length !== 1 || !open || !close) return null;
+  const argText = p.source.slice(open.to, close.from);
   if (!alignArgs(argText)) return null;
-  const { content, from, to } = p.blocks(body);
-  const layout: AlignLayout = { args: argText, open: p.source.slice(call.from, from), close: p.source.slice(to, call.to) };
+  const { content, from, to } = p.blocks(blocks[0]);
+  const { from: start, to: end } = withHash(call);
+  const layout: AlignLayout = { args: argText, open: p.source.slice(start, from), close: p.source.slice(to, end) };
   return p.schema.nodes.alignment.create({ args: argText, sep, layout }, content);
 }
 
 /** `#par(justify: <bool>)[..]` around one paragraph's inline content: that paragraph, with its `justify` flag. */
-function projectJustified(p: ProjectionContext, call: Call, sep: string | null): Node | null {
-  const { args } = call;
-  if (args.map((a) => a.name).join() !== 'LeftParen,Named,RightParen,ContentBlock' || !isClosedContent(args[3])) return null;
-  const justify = /^justify\s*:\s*(true|false)$/.exec(p.text(args[1]));
-  const content = children(args[3].getChild('Markup')!);
-  if (!justify || content.length === 0 || !p.isOneParagraph(content)) return null;
-  const attrs = { src: p.text(call), sep, justify: justify[1] === 'true' };
-  return p.textblock({ type: 'paragraph', attrs }, call.from, p.inline(content));
+function parseJustified(p: TypstParseContext, call: SyntaxNode, sep: string | null): Node | null {
+  const blocks = trailingContent(call);
+  const justify = namedArgument(call, 'justify', p.source);
+  const value = justify && p.text(justify);
+  if (blocks?.length !== 1 || callArguments(call).length !== 1 || (value !== 'true' && value !== 'false')) return null;
+  const content = children(blocks[0].getChild('Markup')!);
+  if (content.length === 0 || !p.isOneParagraph(content)) return null;
+  const range = withHash(call);
+  const attrs = { src: p.text(range), sep, justify: value === 'true' };
+  return p.textblock({ type: 'paragraph', attrs }, range.from, p.inline(content));
 }
 
-/** `#align(args)[blocks]`, keeping the source around the blocks as projected; only a changed `args` is re-printed. New: `#align(x)[A\n\nB]`. */
-function printAlignment(out: Printer, block: Node, pos: number): void {
+/** `#align(args)[blocks]`, keeping the source around the blocks as parsed; only a changed `args` is written anew. New: `#align(x)[A\n\nB]`. */
+function alignmentToTypst(out: TypstSerializeState, block: Node, pos: number): void {
   const args: string = block.attrs.args;
   const layout: AlignLayout = block.attrs.layout ?? { args, open: `#align(${args})[`, close: ']' };
   const head = '#align(';
@@ -74,7 +74,7 @@ function printAlignment(out: Printer, block: Node, pos: number): void {
 }
 
 /** An edited paragraph: its text, in `#par(justify: x)[..]` if it has `justify`. */
-function printParagraph(out: Printer, block: Node, pos: number): void {
+function paragraphToTypst(out: TypstSerializeState, block: Node, pos: number): void {
   const justify: boolean | null = block.attrs.justify ?? null;
   if (justify !== null) out.hidden(`#par(justify: ${justify})[`);
   out.inline(block, pos + 1);

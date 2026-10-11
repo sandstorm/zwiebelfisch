@@ -524,7 +524,7 @@ What `activate` gets (`ExtensionContext`; every type is exported from the packag
 | `workspace` | `applyEdit(change)` (through the host's `allowFileChange`; resolves to the reason it was refused, or null), the settings: `getConfiguration('<section>').get('<key>')`, `onDidChangeConfiguration`. |
 | `workbench` | The frame: `open(path, { viewType? })`, `activeFile`, `onDidShowFile`, `registerSidePanel(id, { label, icon, order? })`, `registerEditorFrame`, `registerMenuItem` / `getMenuItems`, `registerStyleSheet` (your CSS, inside the shadow root too), `onDidDropFiles`, `user`. |
 | `preview` | `registerToolbarItem(item, { group, order })`, `registerPdfExportOption`, `reveal`, `onDidClickPage`, `onDidChangeDiagnostics`. |
-| `visualView`, `sourceView` | Node and mark specs, toolbar items, box renderers and actions, gutters, highlights and text styles of the Visual view (see "Writing a Visual-view construct"; experimental); CodeMirror extensions of the Source view (`registerExtension`). |
+| `visualView`, `sourceView` | Node and mark specs, Tiptap extensions, toolbar items, box renderers and actions, gutters, highlights and text styles of the Visual view (see "Writing a Visual-view construct"; experimental); CodeMirror extensions of the Source view (`registerCodeMirrorExtension`). |
 
 Rules the built-ins follow, and yours should too:
 
@@ -533,8 +533,9 @@ Rules the built-ins follow, and yours should too:
 - **Commands** are plain string ids `<extension>.<name>`. `commands.executeCommand<T>(id, ...args)` calls the
   handler at once and resolves to its result; it rejects for an unknown id or a failing handler.
 - **Order never decides who wins**: toolbar items have a `group` and an `order` (the preview toolbar's groups are
-  sorted by name: the built-ins use `1_sync`, `2_view`, `3_export`); Visual view nodes, marks and box renderers a
-  `priority` (default 100, higher first).
+  sorted by name: the built-ins use `1_sync`, `2_view`, `3_export`); Visual view box renderers a `priority` (default
+  100, higher first); Visual view nodes and marks compete by their Tiptap extension's own `priority` (Tiptap's: the
+  same default and direction).
 - **Settings** are declared under the extension's own section and read with `getConfiguration`; follow
   `onDidChangeConfiguration`, since the host may change them at any time.
 - **Buttons on Visual view boxes**: `visualView.registerBoxAction({ title, when?(node, view), run(node, view) })` adds
@@ -596,38 +597,85 @@ in a box. The built-in constructs — headings, lists, tables, images, figures, 
 this API, and yours can add one the same way: `context.visualView.registerNode(spec)` (or `registerMark(spec)`
 for inline formatting). **Experimental:** the shapes may still change between versions.
 
-A spec (`TypstNodeSpec`) is three things:
+A construct meets five vocabularies, and every name says whose it is: **ours** (VS Code-shaped, unprefixed:
+`registerNode`, `TypstParseContext`), **Tiptap** (ProseMirror only through Tiptap: `Node.create`, `priority`,
+`addProseMirrorPlugins`), **CodeMirror** (`Extension`), **Lezer and the Typst grammar of
+[codemirror-lang-typst](https://github.com/kxxt/codemirror-lang-typst)** (`SyntaxNode`; node names such as `FuncCall`,
+`Heading`, `Strong`) and the **Typst language** (`#callout(title: "Tip")[…]`). A member that takes or returns a
+framework object names the framework (`registerTiptapExtension`); framework types are used as they are, never
+renamed. Extensions are written against **codemirror-lang-typst 0.6.0** (pinned: the names of its syntax nodes, which
+are those of Typst's own [`typst-syntax`](https://docs.rs/typst-syntax/latest/typst_syntax/enum.SyntaxKind.html)
+crate, are part of this API) and **Tiptap 3.31** (`@tiptap/core`; take ProseMirror objects — schema, state,
+transactions — from the editor, never from a copy of your own).
 
-- **the node**: its Tiptap `extension` (`Node.create`: schema, node view, commands, keymap). Build it with
-  `@tiptap/core` of the version the package uses (3.31); take ProseMirror objects (schema, state, transactions)
-  from the editor, never from a copy of your own.
-- **reading Typst** (`blockCalls`, `blockSyntax`, `runSyntax`, `inlineSyntax`, `inlineCalls`): projectors get a
-  `ProjectionContext` (`p.text(range)`, `p.blocks(contentBlock)`, `p.inline(nodes)`, `p.schema`, …) and the call or
-  syntax node (Lezer, `codemirror-lang-typst`'s grammar), and return the node, or `null` to leave the source raw.
-  Return `null` for anything you cannot print back exactly.
-- **writing Typst** (`print`): an *edited* node is printed through the `Printer` (`hidden(src)` for syntax the view
-  does not show, `blocks(node, pos, sep)` for its children, `closing(src)`, …); untouched source stays byte for
-  byte. Remember how the source was written in an attribute (here `layout`), list it in `anchors` so a fresh
-  projection updates it in place, and add `sep` (the whitespace to the next block) in `attributes`; `labelled`
-  lets a label (`<tip>`) follow the block.
+A spec (`TypstNodeSpec`, `TypstMarkSpec`) groups its fields by owner:
+
+```ts
+{
+  name: 'callout',
+  tiptap: Callout,                  // Node.create(..): schema, attributes, node view, commands, keymap, priority — given to Tiptap untouched
+  typst: {
+    parseTypst: {                   // which Typst it reads (ProseMirror's parseDOM, for Typst)
+      syntaxNodes: { Heading: { block, standsAlone, takesLabel }, Strong: { inline } },   // by Lezer node name
+      calls: { callout: { block }, link: { inline, inRunningText } },                     // by function name ('*': any other)
+    },
+    toTypst,                        // how an edited node is written back (ProseMirror's toDOM, for Typst)
+    labelled, anchors, container, atomToTypst, escapeAfter, onDidChange,
+  },
+  view: { box, title, tools, keepsDom, ownsPseudoElements },   // what the Visual view does for its nodes (nodes only)
+}
+```
+
+- **the node** (`tiptap`): its Tiptap extension, with every attribute it needs, including the ones that keep its
+  source: `sep` (the whitespace to the next block), `src` (an atom's Typst) and whatever remembers how the source
+  was written (here `layout`), all `rendered: false`. Its `priority` (Tiptap's: default 100, higher first) orders
+  the schema, mark nesting (a higher mark outside a lower one), keymaps, and the parse rules: of specs reading the
+  same syntax or call, the higher one is asked first.
+- **reading Typst** (`typst.parseTypst`): each function gets the `TypstParseContext` (`p.text(range)`,
+  `p.blocks(contentBlock)`, `p.inline(nodes)`, `p.schema`, …) and Lezer's node — for a call its `FuncCall` — and
+  returns the node, or `null` to leave the source raw. Return `null` for anything you cannot write back exactly.
+  Read calls with the package's plain functions over Lezer nodes: `calleeName`, `callArguments`, `namedArgument`,
+  `trailingContent`, `hasOnlyArguments`, `withHash` (the call's source with its `#`), `children`,
+  `isClosedContent`, `decodeString`, `quote`.
+- **writing Typst** (`typst.toTypst`): an *edited* node is written through the `TypstSerializeState`
+  (`hidden(src)` for syntax the view does not show, `blocks(node, pos, sep)` for its children, `closing(src)`, …);
+  untouched source stays byte for byte. List the attributes that remember how the source was written in `anchors`,
+  so a fresh parse updates them in place; `labelled` lets a label (`<tip>`) follow the block.
+
+Where each contribution point and spec field comes from:
+
+| What | Whose concept | Framework docs |
+|---|---|---|
+| `registerNode(spec)`, `registerMark(spec)`: `name`, `typst`, `view` | ours | — |
+| `spec.tiptap`, its `priority` and attributes | Tiptap | [Nodes](https://tiptap.dev/docs/editor/extensions/custom-extensions/create-new/node), [Marks](https://tiptap.dev/docs/editor/extensions/custom-extensions/create-new/mark), [Priority](https://tiptap.dev/docs/editor/extensions/custom-extensions/extend-existing#priority) |
+| `typst.parseTypst.syntaxNodes` keys, the nodes parse functions get | Lezer + the grammar of codemirror-lang-typst 0.6.0 | [SyntaxNode](https://lezer.codemirror.net/docs/ref/#common.SyntaxNode), [node names](https://docs.rs/typst-syntax/latest/typst_syntax/enum.SyntaxKind.html) |
+| `typst.parseTypst.calls` keys, what `toTypst` writes | the Typst language | [Syntax](https://typst.app/docs/reference/syntax/), [Function calls](https://typst.app/docs/reference/scripting/#function-calls) |
+| `parseTypst` / `toTypst` as a pair | ProseMirror's `parseDOM` / `toDOM`, for Typst (ours) | [NodeSpec.toDOM](https://prosemirror.net/docs/ref/#model.NodeSpec.toDOM) |
+| `registerTiptapExtension(view => extension)`: per-view plugins, decorations, commands; hooks see the editor (`this.editor`) | Tiptap | [Extensions](https://tiptap.dev/docs/editor/extensions/custom-extensions/create-new/extension) |
+| `registerRawBoxCodeMirrorExtension(view => extension)`: the code of every raw box | CodeMirror | [Extension](https://codemirror.net/docs/ref/#state.Extension) |
+| `sourceView.registerCodeMirrorExtension(extension \| view => extension)` | CodeMirror | [Extension](https://codemirror.net/docs/ref/#state.Extension) |
+| `registerToolbarGroup` / `registerToolbarItem` (`run(chain)`: a Tiptap command chain), `registerTextStyleProvider` | ours (commands: Tiptap) | [Commands](https://tiptap.dev/docs/editor/api/commands) |
+| `registerBoxRenderer(provider, { priority })`, `registerBoxAction`, `registerGutter`, `registerHighlights` | ours | — |
 
 Around it: `registerToolbarItem({ group, order, action | create })` (the host's groups: `history`, `text-style`,
 `insert` (the Insert menu), the floating `selection` bar; `registerToolbarGroup` adds your own),
 `registerTextStyleProvider` (entries of the text style menu), `registerBoxRenderer` / `registerBoxAction` (what raw
-boxes show and offer), `registerGutter`, `registerHighlights`, `registerEditorExtension` (per-view Tiptap
-extensions). Where contributions compete, `priority` decides (default 100, higher first: projectors of the same
-syntax are asked in that order, and marks nest by it, a higher one outside). Node groups are how constructs meet
-without naming each other: a node type in the group `figureBody` can be a figure's body, one in `blockContainer`
-holds blocks an alignment may wrap.
+boxes show and offer; renderers compete by their registered `priority`), `registerGutter`, `registerHighlights`,
+`registerTiptapExtension`. Node groups are how constructs meet without naming each other: a node type in the group
+`figureBody` can be a figure's body, one in `blockContainer` holds blocks an alignment may wrap.
 
 A complete example: `#callout(title: "Tip")[…]` as a box with its title in a field and its content as editable text,
 and "Callout" in the Insert menu. Editing the title rewrites only the call's head (`#callout(title: "…")[`); a call it does not model
 (`#callout(kind: "x")[…]`) stays raw Typst. (This code is tested in `src/index.visual-view-construct.test.ts`.)
 
 ```ts
+import type { SyntaxNode } from '@lezer/common';
 import { Node } from '@tiptap/core';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
-import { createTypstEditor, type Call, type Printer, type ProjectionContext, type ToolbarItem, type TypstExtension, type TypstNodeSpec } from 'typst-editor';
+import {
+  callArguments, createTypstEditor, decodeString, namedArgument, quote, trailingContent, withHash,
+  type ToolbarItem, type TypstExtension, type TypstNodeSpec, type TypstParseContext, type TypstSerializeState,
+} from 'typst-editor';
 
 /** How a callout's source lies around its blocks (`#callout(title: "Tip")[` and `]`), and the title written there. */
 interface CalloutLayout {
@@ -642,7 +690,8 @@ const Callout = Node.create({
   group: 'block',
   content: 'block+',
   defining: true,
-  addAttributes: () => ({ title: { default: 'Note', rendered: false } }),
+  // `sep` (the whitespace after the callout's source) and `layout` (how it was written) keep its source: never rendered
+  addAttributes: () => ({ title: { default: 'Note', rendered: false }, sep: { default: null, rendered: false }, layout: { default: null, rendered: false } }),
   renderHTML: () => ['aside', { class: 'callout' }, ['div', 0]],
   addNodeView: () => ({ node, getPos, editor }) => {
     const doc = editor.view.dom.ownerDocument;
@@ -674,44 +723,37 @@ const Callout = Node.create({
 });
 
 /** `#callout[..]` or `#callout(title: "plain string")[..]`, whose content is blocks; anything else stays raw Typst. */
-function projectCallout(p: ProjectionContext, call: Call, sep: string | null): ProseMirrorNode | null {
-  const content = call.args.at(-1);
-  if (content?.name !== 'ContentBlock' || content.lastChild?.name !== 'RightBracket') return null;
-  const title = calloutTitle(p, call.args.slice(0, -1));
-  if (title === null) return null;
-  const { content: blocks, from, to } = p.blocks(content);
-  const layout: CalloutLayout = { open: p.text({ from: call.from, to: from }), close: p.text({ from: to, to: call.to }), title };
+function parseCallout(p: TypstParseContext, call: SyntaxNode, sep: string | null): ProseMirrorNode | null {
+  const content = trailingContent(call);
+  const title = calloutTitle(p, call);
+  if (content?.length !== 1 || title === null) return null;
+  const { content: blocks, from, to } = p.blocks(content[0]);
+  const source = withHash(call);
+  const layout: CalloutLayout = { open: p.text({ from: source.from, to: from }), close: p.text({ from: to, to: source.to }), title };
   return p.schema.nodes.callout.create({ title, sep, layout }, blocks);
 }
 
-/** The title of `(title: "…")` (none: "Note"); null for other arguments. */
-function calloutTitle(p: ProjectionContext, parens: Call['args']): string | null {
-  const args = parens.filter((arg) => arg.name === 'Named');
-  if (parens.length === 0) return 'Note';
-  const value = args[0]?.getChild('Str');
-  const named = args.length === 1 && p.text(args[0].getChild('Ident') ?? args[0]) === 'title';
-  const plain = value ? /^"([^"\\]*)"$/.exec(p.text(value)) : null;
-  return named && plain ? plain[1] : null;
+/** The title of `(title: "…")` (no arguments: "Note"); null for other arguments. */
+function calloutTitle(p: TypstParseContext, call: SyntaxNode): string | null {
+  const args = callArguments(call);
+  const title = namedArgument(call, 'title', p.source);
+  if (args.length === 0) return 'Note';
+  return args.length === 1 && title?.name === 'Str' ? decodeString(p.text(title)) : null;
 }
 
-/** As written while the title is; a new callout, or one with a changed title, gets the call printed anew. */
-function printCallout(out: Printer, callout: ProseMirrorNode, pos: number): void {
+/** As written while the title is; a new callout, or one with a changed title, gets the call written anew. */
+function calloutToTypst(state: TypstSerializeState, callout: ProseMirrorNode, pos: number): void {
   const layout: CalloutLayout | null = callout.attrs.layout;
   const title: string = callout.attrs.title;
-  out.hidden(layout?.title === title ? layout.open : `#callout(title: "${title.replace(/["\\]/g, '\\$&')}")[`);
-  out.blocks(callout, pos + 1, '\n\n');
-  out.closing(layout?.close ?? ']');
+  state.hidden(layout?.title === title ? layout.open : `#callout(title: ${quote(title)})[`);
+  state.blocks(callout, pos + 1, '\n\n');
+  state.closing(layout?.close ?? ']');
 }
 
 const CALLOUT: TypstNodeSpec = {
   name: 'callout',
-  extension: Callout,
-  // never rendered: where the callout's source is (`sep`: the whitespace after it), how it was written (`layout`)
-  attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } },
-  anchors: ['layout'],
-  labelled: true,
-  blockCalls: { callout: projectCallout },
-  print: printCallout,
+  tiptap: Callout,
+  typst: { parseTypst: { calls: { callout: { block: parseCallout } } }, toTypst: calloutToTypst, anchors: ['layout'], labelled: true },
 };
 
 /** "Callout" in the Insert menu: the selected blocks into a callout. */

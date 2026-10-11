@@ -3,16 +3,16 @@
 // VisualViewHost).
 // Entry of hosts/visual-view/. See ARCHITECTURE.md, "VisualView".
 import { Editor, type AnyExtension, type ChainedCommands } from '@tiptap/core';
-import { StateEffect, type Extension as CodeExtension } from '@codemirror/state';
+import { StateEffect, type Extension } from '@codemirror/state';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState, TextSelection, type Plugin, type Transaction } from '@tiptap/pm/state';
 import type { Decoration } from '@tiptap/pm/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../core/typst-document/typst-document';
-import { attachGrammar, nodeGrammar, onDidChangeGrammar, posToSource, print, project, sourceToPos, syncDoc, type MarkGrammar, type NodeGrammar } from '../projection/projection';
+import { attachGrammar, onDidChangeGrammar, posToSource, print, project, sourceToPos, syncDoc, type DocumentNodeSpec, type TypstMarkSpec } from '../projection/projection';
 import { highlights, setHighlights } from './highlights';
-import { editorExtensions } from './nodes/node-views';
+import { editorExtensions, nodeViewSpecs } from './nodes/node-views';
 import type { Boxes } from './nodes/raw-box';
 import { Toolbar } from './toolbar/toolbar';
 
@@ -43,6 +43,9 @@ export class VisualView {
 
   constructor(parent: HTMLElement, private readonly document: TypstDocument, contributions: VisualViewHost) {
     const contributed = contributions.contributed();
+    const views = nodeViewSpecs(contributed.nodes);
+    // block atoms, and inline atoms shown as a box of their own (raw inline Typst, a margin note)
+    const isBox = (node: Node) => node.isAtom && (node.isBlock || views.get(node.type.name)?.box !== undefined);
     const view: VisualViewContext = { document, selection: () => this.selection(), sourceToPos, posToSource, isBox };
     // the text and, right of it, the gutters
     const body = parent.appendChild(parent.ownerDocument.createElement('div'));
@@ -51,9 +54,9 @@ export class VisualView {
     this.editor = new Editor({
       element: body,
       extensions: [
-        ...editorExtensions(contributed.nodes, contributed.marks, boxes(view, contributed)),
+        ...editorExtensions(contributed.nodes, contributed.marks, boxes(view, contributed, views)),
         highlights,
-        ...contributed.editorExtensions.flatMap((provider) => provider(view)),
+        ...contributed.tiptapExtensions.flatMap((provider) => provider(view)),
       ],
       injectCSS: false,
       editorProps: { attributes: { class: 'typst-visual', 'data-testid': 'typst-visual' } },
@@ -134,45 +137,42 @@ export class VisualView {
   }
 }
 
-/** Block atoms, and inline atoms whose spec shows them as a box of their own (raw inline Typst, a margin note). */
-function isBox(node: Node): boolean {
-  return node.isBlock ? node.isAtom : node.isAtom && nodeGrammar(node)?.box !== undefined;
-}
-
 /** What the raw boxes of `view` get from the contributions. */
-function boxes(view: VisualViewContext, contributed: Contributed): Boxes {
+function boxes(view: VisualViewContext, contributed: Contributed, views: Boxes['views']): Boxes {
   return {
     view,
     renderers: contributed.boxRenderers.map((provider) => provider(view)).filter((renderer) => renderer !== null),
-    codeExtensions: contributed.boxCodeExtensions.map((provider) => provider(view)),
+    codeExtensions: contributed.rawBoxCodeMirrorExtensions.map((provider) => provider(view)),
     actions: contributed.boxActions,
-    specs: new Map(contributed.nodes.flatMap((spec) => (spec.codeBox ? [[spec.name, spec.codeBox] as const] : []))),
+    views,
   };
 }
 
 // The contribution points: what extensions register, and what they are given.
 
 /**
- * A Typst construct the Visual view models as a node: its Tiptap extension
- * (schema, node view, commands, keymap, input rules), which syntax and calls
- * project to it, how an edited one prints, its label and box flags (see
- * `NodeGrammar`), and for a code box what it shows besides the code.
+ * A Typst construct the Visual view models as a node, its fields grouped by whose concept they are: `tiptap`, the
+ * Tiptap extension defining the node type (`Node.create(..)`: schema, attributes, node view, commands, keymap,
+ * priority; given to Tiptap untouched); `typst`, how it is read from Typst and written back (`TypstNodeConversion`);
+ * `view`, what the Visual view host does for its nodes.
  */
-export interface TypstNodeSpec extends NodeGrammar {
-  /** For `box: 'code'`: a heading or tools around the code (an image's resize handles). */
-  readonly codeBox?: CodeBoxSpec;
-  /**
-   * Its DOM draws with `::before` / `::after` of its own (a page break's dashed lines). The host marks such nodes'
-   * DOM `data-typst-pseudo="own"`, so what others draw on boxes (another user's name flag) leaves them alone.
-   */
-  readonly ownsPseudoElements?: boolean;
+export interface TypstNodeSpec extends DocumentNodeSpec {
+  readonly view?: {
+    /** Shown as a box a remote caret inside outlines: `code` edits its `src` in a nested code editor (the host's raw box). */
+    readonly box?: 'code' | 'widget';
+    /** For `box: 'code'`: a heading above the code saying what the box shows (an outline: "Table of contents"); `className` goes on the box. */
+    readonly title?: { readonly className: string; text(src: string): string };
+    /** For `box: 'code'`: tools on every box of this type (an image's resize handles and toolbar). */
+    tools?(host: BoxToolsHost, node: Node): BoxTools;
+    /** Keeps its DOM (and what is inside) while a new version renders the same, as after every outside edit its `src` changes. */
+    readonly keepsDom?: boolean;
+    /**
+     * Its DOM draws with `::before` / `::after` of its own (a page break's dashed lines). The host marks such nodes'
+     * DOM `data-typst-pseudo="own"`, so what others draw on boxes (another user's name flag) leaves them alone.
+     */
+    readonly ownsPseudoElements?: boolean;
+  };
 }
-
-/** A Typst construct the Visual view models as a mark (bold, a link, a margin note's range); see `MarkGrammar`. */
-export type TypstMarkSpec = MarkGrammar;
-
-/** Tiptap extensions for one view: decorations, plugins (drops, appended transactions), commands not tied to a node. */
-export type EditorExtensionProvider = (view: VisualViewContext) => AnyExtension | readonly AnyExtension[];
 
 /** A column beside the text (the notes gutter), made for one view. */
 export interface Gutter {
@@ -225,8 +225,9 @@ export interface VisualViewContribution {
 }
 
 /**
- * Who wins where contributions compete: higher `priority` first (default 100, as Tiptap's extension priority), and
- * equal priorities in registration order. Registration order alone never carries meaning between extensions.
+ * Who wins where box renderers compete: higher `priority` first (default 100, as Tiptap's extension priority), and
+ * equal priorities in registration order. Registration order alone never carries meaning between extensions. (Nodes
+ * and marks compete by their Tiptap extensions' own priority.)
  */
 export interface PriorityOptions {
   readonly priority?: number;
@@ -236,19 +237,19 @@ export interface PriorityOptions {
 const DEFAULT_PRIORITY = 100;
 
 /**
- * Everything registered: nodes, marks and box renderers by priority (see `PriorityOptions`), the rest in
- * registration order. What the host applies to each view it creates.
+ * Everything registered: box renderers by priority (see `PriorityOptions`), the rest in registration order. What the
+ * host applies to each view it creates.
  */
 export interface Contributed {
   readonly nodes: readonly TypstNodeSpec[];
   readonly marks: readonly TypstMarkSpec[];
-  readonly editorExtensions: readonly EditorExtensionProvider[];
+  readonly tiptapExtensions: readonly ((view: VisualViewContext) => AnyExtension | readonly AnyExtension[])[];
   readonly toolbarGroups: readonly ToolbarGroup[];
   readonly toolbarItems: readonly ToolbarItem[];
   readonly gutters: readonly GutterProvider[];
   readonly highlights: readonly { readonly layer: string; readonly provider: HighlightProvider }[];
   readonly boxRenderers: readonly BoxRendererProvider[];
-  readonly boxCodeExtensions: readonly BoxCodeExtensionProvider[];
+  readonly rawBoxCodeMirrorExtensions: readonly ((view: VisualViewContext) => Extension)[];
   readonly boxActions: readonly BoxAction[];
   readonly textStyles: readonly TextStyleProvider[];
 }
@@ -262,21 +263,24 @@ export interface Contributed {
  */
 export interface VisualViewContributions {
   /**
-   * A node type and its Typst: schema, projection, printing, box. `priority` (default 100, higher first; equal:
-   * registration order) orders the schema (a group's first node type is its default) and the projectors: of specs
-   * claiming the same syntax or call, the higher one is asked first (task lists, 110, before bullet lists, both
-   * `- ..`). Of two specs of the same name, the later one in that order extends the earlier.
+   * A node type: its Tiptap extension, its Typst, what the view does for it (see `TypstNodeSpec`). The priority of
+   * its Tiptap extension (Tiptap's: default 100, higher first) orders the schema (a group's first node type is its
+   * default), keymaps and plugins, and the specs' parse rules: of specs reading the same syntax or call, the higher
+   * one is asked first (task lists, 110, before bullet lists, both `- ..`). Of two specs of the same name, the later
+   * one in that order extends the earlier.
    */
-  registerNode(spec: TypstNodeSpec, options?: PriorityOptions): Disposable;
+  registerNode(spec: TypstNodeSpec): Disposable;
   /**
-   * A mark type and its Typst. `priority` (default 100, higher first; equal: registration order) orders the schema,
-   * which is how marks nest: a higher one is outside a lower one (a comment's range outside a link, a link outside
-   * bold); it also orders the projectors, as for nodes. It is the mark's only priority: the host gives it to the
-   * mark's Tiptap extension, replacing the extension's own (Tiptap's link mark comes with 1000).
+   * A mark type and its Typst (see `TypstMarkSpec`). The priority of its Tiptap extension orders the schema, which is
+   * how marks nest: a higher one is outside a lower one (a comment's range, 130, outside a link, 120, outside bold,
+   * 100); it also orders the parse rules, as for nodes.
    */
-  registerMark(spec: TypstMarkSpec, options?: PriorityOptions): Disposable;
-  /** Tiptap extensions made for each view (they may use its document). */
-  registerEditorExtension(provider: EditorExtensionProvider): Disposable;
+  registerMark(spec: TypstMarkSpec): Disposable;
+  /**
+   * Tiptap extensions made for each view (they may use its document): decorations, plugins (drops, appended
+   * transactions), commands not tied to a node. Their hooks see the view's editor (`this.editor`).
+   */
+  registerTiptapExtension(provider: (view: VisualViewContext) => AnyExtension | readonly AnyExtension[]): Disposable;
   /** A place for toolbar items: a group, a menu or a floating bar. */
   registerToolbarGroup(group: ToolbarGroup): Disposable;
   /** A button or control in a toolbar group (one the host or a contribution registered). */
@@ -299,8 +303,8 @@ export interface VisualViewContributions {
    * renderer (110) draws image boxes, compiled snippets (100) the rest.
    */
   registerBoxRenderer(provider: BoxRendererProvider, options?: PriorityOptions): Disposable;
-  /** CodeMirror extensions for the code of every raw box of each view. */
-  registerBoxCodeExtension(provider: BoxCodeExtensionProvider): Disposable;
+  /** CodeMirror extensions for the code of every raw box of each view (e.g. links on file paths). */
+  registerRawBoxCodeMirrorExtension(provider: (view: VisualViewContext) => Extension): Disposable;
   /**
    * A button on every raw box `action.when` holds for (any box: a contribution need not own the box's node type),
    * in registration order: with the box's tools (an image box's toolbar), else above its code.
@@ -313,18 +317,16 @@ export interface VisualViewContributions {
  * The workbench host has one; tests make their own (`from`).
  */
 export class VisualViewHost implements VisualViewContributions {
-  private readonly ranked = {
-    nodes: [] as Ranked<TypstNodeSpec>[],
-    marks: [] as Ranked<TypstMarkSpec>[],
-    boxRenderers: [] as Ranked<BoxRendererProvider>[],
-  };
+  private readonly boxRenderers: Ranked<BoxRendererProvider>[] = [];
   private readonly lists = {
-    editorExtensions: [] as EditorExtensionProvider[],
+    nodes: [] as TypstNodeSpec[],
+    marks: [] as TypstMarkSpec[],
+    tiptapExtensions: [] as ((view: VisualViewContext) => AnyExtension | readonly AnyExtension[])[],
     toolbarGroups: [] as ToolbarGroup[],
     toolbarItems: [] as ToolbarItem[],
     gutters: [] as GutterProvider[],
     highlights: [] as { layer: string; provider: HighlightProvider }[],
-    boxCodeExtensions: [] as BoxCodeExtensionProvider[],
+    rawBoxCodeMirrorExtensions: [] as ((view: VisualViewContext) => Extension)[],
     boxActions: [] as BoxAction[],
     textStyles: [] as TextStyleProvider[],
   };
@@ -337,18 +339,16 @@ export class VisualViewHost implements VisualViewContributions {
     return visualView;
   }
 
-  registerNode(spec: TypstNodeSpec, options: PriorityOptions = {}): Disposable {
-    return this.add(this.ranked.nodes, rank(spec, options));
+  registerNode(spec: TypstNodeSpec): Disposable {
+    return this.add(this.lists.nodes, spec);
   }
 
-  registerMark(spec: TypstMarkSpec, options: PriorityOptions = {}): Disposable {
-    const ranked = rank(spec, options);
-    const extension = spec.extension && withPriority(spec.extension, spec.name, ranked.priority);
-    return this.add(this.ranked.marks, { ...ranked, value: { ...spec, extension } });
+  registerMark(spec: TypstMarkSpec): Disposable {
+    return this.add(this.lists.marks, spec);
   }
 
-  registerEditorExtension(provider: EditorExtensionProvider): Disposable {
-    return this.add(this.lists.editorExtensions, provider);
+  registerTiptapExtension(provider: (view: VisualViewContext) => AnyExtension | readonly AnyExtension[]): Disposable {
+    return this.add(this.lists.tiptapExtensions, provider);
   }
 
   registerToolbarGroup(group: ToolbarGroup): Disposable {
@@ -368,11 +368,11 @@ export class VisualViewHost implements VisualViewContributions {
   }
 
   registerBoxRenderer(provider: BoxRendererProvider, options: PriorityOptions = {}): Disposable {
-    return this.add(this.ranked.boxRenderers, rank(provider, options));
+    return this.add(this.boxRenderers, { value: provider, priority: options.priority ?? DEFAULT_PRIORITY });
   }
 
-  registerBoxCodeExtension(provider: BoxCodeExtensionProvider): Disposable {
-    return this.add(this.lists.boxCodeExtensions, provider);
+  registerRawBoxCodeMirrorExtension(provider: (view: VisualViewContext) => Extension): Disposable {
+    return this.add(this.lists.rawBoxCodeMirrorExtensions, provider);
   }
 
   registerBoxAction(action: BoxAction): Disposable {
@@ -387,15 +387,15 @@ export class VisualViewHost implements VisualViewContributions {
   contributed(): Contributed {
     const lists = this.lists;
     return {
-      nodes: byPriority(this.ranked.nodes),
-      marks: byPriority(this.ranked.marks),
-      editorExtensions: [...lists.editorExtensions],
+      nodes: [...lists.nodes],
+      marks: [...lists.marks],
+      tiptapExtensions: [...lists.tiptapExtensions],
       toolbarGroups: [...lists.toolbarGroups],
       toolbarItems: [...lists.toolbarItems],
       gutters: [...lists.gutters],
       highlights: [...lists.highlights],
-      boxRenderers: byPriority(this.ranked.boxRenderers),
-      boxCodeExtensions: [...lists.boxCodeExtensions],
+      boxRenderers: [...this.boxRenderers].sort((a, b) => b.priority - a.priority).map((entry) => entry.value),
+      rawBoxCodeMirrorExtensions: [...lists.rawBoxCodeMirrorExtensions],
       boxActions: [...lists.boxActions],
       textStyles: [...lists.textStyles],
     };
@@ -410,32 +410,10 @@ export class VisualViewHost implements VisualViewContributions {
   }
 }
 
-/** A registered value and its priority. */
+/** A registered value and its priority (the sort by it is stable: equal priorities stay in registration order). */
 interface Ranked<T> {
   readonly value: T;
   readonly priority: number;
-}
-
-function rank<T>(value: T, options: PriorityOptions): Ranked<T> {
-  return { value, priority: options.priority ?? DEFAULT_PRIORITY };
-}
-
-/**
- * `extension` with `priority` on its mark type `name`, wherever it is defined: the extension itself, or one it adds
- * (a StarterKit part). Tiptap orders a schema's marks by their extensions' priorities.
- */
-function withPriority(extension: AnyExtension, name: string, priority: number): AnyExtension {
-  if (extension.type === 'mark' && extension.name === name) return extension.extend({ priority });
-  return extension.extend({
-    addExtensions() {
-      return (this.parent?.() ?? []).map((child: AnyExtension) => withPriority(child, name, priority));
-    },
-  });
-}
-
-/** The values, higher priority first; equal priorities in registration order (the sort is stable). */
-function byPriority<T>(ranked: readonly Ranked<T>[]): T[] {
-  return [...ranked].sort((a, b) => b.priority - a.priority).map((entry) => entry.value);
 }
 
 /** One Visual view, as contributions made for it see it (see the `…Provider` types). */
@@ -482,9 +460,6 @@ export interface BoxRenderer {
 
 /** The renderer of one view's boxes (null: none for this view). */
 export type BoxRendererProvider = (view: VisualViewContext) => BoxRenderer | null;
-
-/** CodeMirror extensions of every raw box's code in one view (e.g. links on file paths). */
-export type BoxCodeExtensionProvider = (view: VisualViewContext) => CodeExtension;
 
 /**
  * The decorations the Visual view gives a raw box's node (e.g. one marking another user's caret inside the box),
@@ -535,14 +510,6 @@ export interface BoxAction {
   when?(node: Node, view: VisualViewContext): boolean;
   /** Runs it for the box of `node` (the box's node now). */
   run(node: Node, view: VisualViewContext): void;
-}
-
-/** What a code box of a node type shows besides its code (see `TypstNodeSpec.codeBox`). */
-export interface CodeBoxSpec {
-  /** A heading above the code saying what the box shows (an outline: "Table of contents"); `className` goes on the box. */
-  readonly label?: { readonly className: string; text(src: string): string };
-  /** Tools for every box of this type. */
-  tools?(host: BoxToolsHost, node: Node): BoxTools;
 }
 
 // The toolbar: buttons (actions), controls, groups, menus and floating bars.

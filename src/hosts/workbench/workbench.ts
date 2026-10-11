@@ -456,9 +456,9 @@ export class WorkbenchHost implements Workbench {
   /** The registered document links in every Source view and in the code of every raw box (paths from its file's). */
   #showDocumentLinks(): void {
     const targets = { open: (path: ProjectPath) => this.open(path), executeCommand: (id: string, ...args: unknown[]) => this.commands.executeCommand(id, ...args) };
-    const links = (document: TypstDocument) => this.#languages.editorExtension(targets, () => this.project.pathOf(document) ?? null);
-    this.#sourceViews.registerExtension((view) => links(view.document));
-    this.#visualView.registerBoxCodeExtension((view) => links(view.document));
+    const links = (document: TypstDocument) => this.#languages.codeMirrorExtension(targets, () => this.project.pathOf(document) ?? null);
+    this.#sourceViews.registerCodeMirrorExtension((view) => links(view.document));
+    this.#visualView.registerRawBoxCodeMirrorExtension((view) => links(view.document));
   }
 
   /** `data-theme` from the setting `workbench.theme` (none: as the page), and the scheme the colors resolve to now. */

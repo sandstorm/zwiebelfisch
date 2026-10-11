@@ -55,8 +55,8 @@ export function collaboration(options: CollaborationOptions): TypstExtension {
       visualPresence(presences, documents).activate({ visualView, subscriptions });
       subscriptions.push(
         presences,
-        sourceView.registerExtension(sourcePresence(presences)),
-        sourceView.registerExtension(perUserUndo),
+        sourceView.registerCodeMirrorExtension(sourcePresence(presences)),
+        sourceView.registerCodeMirrorExtension(perUserUndo),
         window.registerFileDecorationProvider(presenceDecorations(presences)),
         link,
         // fired from the editors' own updates, after their state has the new selection

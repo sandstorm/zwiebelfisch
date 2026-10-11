@@ -3,8 +3,8 @@
 import { Extension, findParentNode, type Editor } from '@tiptap/core';
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
 import { svg, type Action, type Anchor, type ToolbarGroup, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
-import { printTable } from './table-printing';
-import { projectTable } from './table-projection';
+import { tableToTypst } from './table-printing';
+import { parseTable } from './table-projection';
 
 /**
  * Tiptap's tables. A table may be a figure's body (`table(..)` in `#figure(..)`), so it joins `figureBody`; a cell
@@ -13,7 +13,13 @@ import { projectTable } from './table-projection';
 const Tables = Extension.create({
   name: 'typstTables',
   addExtensions: () => [
-    Table.extend({ group: 'block figureBody' }).configure({ resizable: false, HTMLAttributes: { class: 'typst-visual__table' } }),
+    Table.extend({
+      group: 'block figureBody',
+      // `sep`: the whitespace to the next block; `layout`: how the call around its cells is written
+      addAttributes() {
+        return { ...this.parent?.(), sep: { default: null, rendered: false }, layout: { default: null, rendered: false } };
+      },
+    }).configure({ resizable: false, HTMLAttributes: { class: 'typst-visual__table' } }),
     TableRow,
     TableCell.extend({ group: 'blockContainer' }),
     TableHeader.extend({ group: 'blockContainer' }),
@@ -33,12 +39,8 @@ const Tables = Extension.create({
  */
 export const TABLE: TypstNodeSpec = {
   name: 'table',
-  extension: Tables,
-  attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } },
-  anchors: ['layout'],
-  labelled: true,
-  blockCalls: { table: projectTable },
-  print: printTable,
+  tiptap: Tables,
+  typst: { parseTypst: { calls: { table: { block: parseTable } } }, toTypst: tableToTypst, anchors: ['layout'], labelled: true },
 };
 
 const ICONS = {

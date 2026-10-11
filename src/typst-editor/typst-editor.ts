@@ -186,10 +186,10 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
 
 /**
  * The features of the widget and the Typst constructs of the Visual view. Extensions never depend on each other, and
- * the order carries no meaning: where contributions compete (projectors of the same syntax, box renderers, mark
- * nesting, overlapping document links, custom editors) their `priority` decides; toolbar and menu items (the tab
- * bar's too) have a `group` + `order`, status bar items an `alignment` + `priority`. Collaboration is not among them:
- * the host adds it with its connection.
+ * the order carries no meaning: where contributions compete their `priority` decides (box renderers, overlapping
+ * document links, custom editors; for parse rules of the same syntax and mark nesting, that of the specs' Tiptap
+ * extensions); toolbar and menu items (the tab bar's too) have a `group` + `order`, status bar items an `alignment` +
+ * `priority`. Collaboration is not among them: the host adds it with its connection.
  */
 function builtinExtensions(): TypstExtension[] {
   return [
