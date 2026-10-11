@@ -1,7 +1,7 @@
 // VisualView: the WYSIWYG editing view, a Tiptap editor over the source-anchored ProseMirror document of a TypstDocument;
 // everything it shows beyond paragraphs and raw Typst is contributed through VisualViewContributions (kept by
 // VisualViewHost).
-// Entry of hosts/visual-view/. See docs/architecture/visual-view.typ.
+// Entry of hosts/visual-view/. See docs/30_architecture/04_visual-view.typ.
 import { Editor, type AnyExtension, type ChainedCommands, type Range } from '@tiptap/core';
 import { StateEffect, type Extension } from '@codemirror/state';
 import type { Node } from '@tiptap/pm/model';

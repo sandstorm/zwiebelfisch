@@ -1,6 +1,6 @@
 // The page-layout extension: what divides a document's pages and parts — `#pagebreak()` and a full-width
 // `#line(length: 100%)` — as block atoms in the Visual view (a labelled divider, a rule), with their entries in the
-// Insert menu. See docs/architecture/built-in-extensions.typ. Why an extension: the Visual view's host models only paragraphs,
+// Insert menu. See docs/30_architecture/08_built-in-extensions.typ. Why an extension: the Visual view's host models only paragraphs,
 // text and raw Typst; without it these calls stay raw boxes.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './page-layout.css?inline';

@@ -1,7 +1,7 @@
 // The slash-commands extension: `/` at a line start or after a space lists what the Visual view's Insert menu and
 // text style menu offer; the empty line holding the cursor says so. Entry of extensions/slash-commands/. Why an
 // extension: it only reads what other extensions register (through the host's completion context), so the list grows
-// with them and it can be left out, hint included. See docs/guide/features.typ.
+// with them and it can be left out, hint included. See docs/10_guide/02_features.typ.
 import { Extension, type Editor } from '@tiptap/core';
 import { Plugin, type EditorState } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';

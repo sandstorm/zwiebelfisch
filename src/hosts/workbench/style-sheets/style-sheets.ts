@@ -1,5 +1,5 @@
 // StyleSheets: the widget's CSS in the root node it renders into (the page's <head>, or the shadow root of a
-// <typst-editor>). See docs/architecture/workbench.typ.
+// <typst-editor>). See docs/30_architecture/07_workbench.typ.
 import { Disposable } from '../../../core/disposable/disposable';
 
 /** A `<style>` in a root and how many registrations hold it. */

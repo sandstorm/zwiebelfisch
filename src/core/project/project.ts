@@ -2,7 +2,7 @@
 // TypstDocument per .typ file (views edit it directly), the other files as bytes, the protected main file.
 // Everyone who derives something from the files (views, indexes, collaboration, the preview) subscribes to
 // `onDidChangeFile` and is never told by hand: `apply`, `replace` and every text edit are reported there.
-// Entry of core/project/. See docs/architecture/core.typ.
+// Entry of core/project/. See docs/30_architecture/02_core.typ.
 import type { Disposable } from '../disposable/disposable';
 import { EventEmitter, type Event } from '../event-emitter/event-emitter';
 import { TypstDocument } from '../typst-document/typst-document';

@@ -4,6 +4,8 @@ import { readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { type FontInfo, type TypstEngine, createEngine } from '../src/core/typst-engine/typst-engine';
 import { withPackages } from '../src/core/typst-packages/typst-packages';
+import { neighbours } from '../src/core/typst-syntax/typst-syntax';
+import { ProjectPath } from '../src/core/paths/paths';
 import type { ProjectFiles } from '../src';
 import { EXAMPLES, exampleFiles, exampleFromQuery, exampleQuery } from './examples';
 
@@ -104,7 +106,7 @@ describe('demo examples', () => {
   it('the documentation example is docs/: book, template, HTML entry and chapters as text, the logo and the diagrams as bytes', () => {
     const files = exampleFiles('docs');
     expect(Object.keys(files)).toEqual(
-      expect.arrayContaining(['/main.typ', '/template.typ', '/site.typ', '/architecture/workbench.typ']),
+      expect.arrayContaining(['/main.typ', '/template.typ', '/site.typ', '/30_architecture/07_workbench.typ']),
     );
     expect(files['/assets/sandstorm-logo.svg']).toBeInstanceOf(Uint8Array);
     expect(files['/diagrams/keystroke.mmd']).toBeInstanceOf(Uint8Array);
@@ -112,6 +114,20 @@ describe('demo examples', () => {
       if (path.endsWith('.typ')) expect(typeof content).toBe('string');
       else expect(path).toMatch(/\.(svg|mmd)$/);
     }
+  });
+
+  it('the documentation reads in the order of its numbered files: main.typ includes every chapter, previous / next follow', () => {
+    const files = exampleFiles('docs');
+    const chapters = Object.keys(files)
+      .filter((path) => /^\/\d+_[\w-]+\/\d+_[\w-]+\.typ$/.test(path))
+      .sort()
+      .map(ProjectPath.of);
+    expect(chapters.length).toBeGreaterThan(10);
+    const read = (path: string) => (typeof files[path] === 'string' ? (files[path] as string) : undefined);
+    const main = ProjectPath.of('/main.typ');
+    chapters.forEach((chapter, i) => {
+      expect(neighbours(read, main, chapter)).toEqual({ previous: chapters[i - 1] ?? main, next: chapters[i + 1] ?? null });
+    });
   });
 });
 

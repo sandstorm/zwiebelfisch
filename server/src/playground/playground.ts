@@ -1,5 +1,5 @@
 // The playground's server side (mise run demo): a fake GitLab holding the advanced example, and the endpoints that
-// simulate an upstream push or a GitLab outage. See docs/architecture/development.typ.
+// simulate an upstream push or a GitLab outage. See docs/30_architecture/11_development.typ.
 import { randomUUID } from 'node:crypto';
 import type { Extension, onRequestPayload } from '@hocuspocus/server';
 import type { CollabOptions } from '../collab-server.ts';

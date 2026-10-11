@@ -1,5 +1,5 @@
 // What the comments extension contributes to the frame: the command that adds a note, its key binding and the
-// Source view's "Comment" (a tab bar menu entry). See docs/guide/features.typ.
+// Source view's "Comment" (a tab bar menu entry). See docs/10_guide/02_features.typ.
 import { Disposable } from '../../../core/disposable/disposable';
 import type { SourceOffset, TypstDocument } from '../../../core/typst-document/typst-document';
 import type { Commands } from '../../../hosts/commands/commands';

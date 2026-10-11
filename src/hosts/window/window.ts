@@ -1,7 +1,7 @@
 // The window namespace of the extension API (VS Code's `window`): what every feature needs to talk to the user
 // (messages, input box, quick pick), and the places of the widget's window a feature puts things into (status bar
 // items, custom editors, file decorations), and the file and editor the user works in. Entry of
-// hosts/window/. See docs/architecture/workbench.typ.
+// hosts/window/. See docs/30_architecture/07_workbench.typ.
 // Why one namespace in VS Code's shapes: features look and behave alike when they ask and tell the same way, and
 // they never make popovers of their own. The parts (notifications/, quick-input/, status-bar/, progress/,
 // custom-editors/, file-decorations/) are deep modules of their own; WindowHost puts them where the workbench's frame says.

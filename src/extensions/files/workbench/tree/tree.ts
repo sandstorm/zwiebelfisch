@@ -1,4 +1,4 @@
-// FileTree: the project's files as an expandable tree (keyboard, drag & drop, decorations). See ../file-panel.ts and docs/guide/features.typ.
+// FileTree: the project's files as an expandable tree (keyboard, drag & drop, decorations). See ../file-panel.ts and docs/10_guide/02_features.typ.
 import { ProjectPath } from '../../../../core/paths/paths';
 import { type Memento, PROJECT_PATH_TYPE } from '../../../../hosts/workbench/workbench';
 import type { FileDecoration } from '../../../../hosts/window/window';

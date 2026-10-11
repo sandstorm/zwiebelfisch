@@ -1,5 +1,5 @@
 // ExtensionHost: activates the widget's extensions in list order and disposes what they registered in reverse.
-// See workbench.ts and docs/architecture/workbench.typ.
+// See workbench.ts and docs/30_architecture/07_workbench.typ.
 import { Disposable } from '../../../core/disposable/disposable';
 import type { ExtensionContext, TypstExtension } from '../workbench';
 

@@ -1,5 +1,5 @@
 // The tables extension: `#table(columns: n, ..)` in the Visual view as an editable table, with "Insert table" and a
-// bar over the table holding the cursor (rows, columns, header row). See docs/architecture/built-in-extensions.typ. Why an
+// bar over the table holding the cursor (rows, columns, header row). See docs/30_architecture/08_built-in-extensions.typ. Why an
 // extension: the Visual view's host models only paragraphs, text and raw Typst; a table the view cannot model stays a
 // raw box.
 import type { TypstExtension } from '../../hosts/workbench/workbench';

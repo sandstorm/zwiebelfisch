@@ -2,7 +2,7 @@
 // ProjectPath (where a file is in the project) and a PathReference (a path as written in Typst source, which means
 // something only relative to its file). Branded strings: free at runtime, usable as keys, unchanged across
 // postMessage, Yjs and the server; the compiler refuses one where the other is meant.
-// Entry of core/paths/. See docs/architecture/core.typ.
+// Entry of core/paths/. See docs/30_architecture/02_core.typ.
 
 /** An absolute path in the project: `/` and then segments (`/chapters/intro.typ`), never `.`, `..` or empty ones. */
 export type ProjectPath = string & { readonly __type: 'ProjectPath' };

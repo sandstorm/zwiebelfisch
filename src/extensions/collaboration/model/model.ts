@@ -1,6 +1,6 @@
 // Collaboration: real-time editing over Yjs (a Hocuspocus server, or a Y.Doc the host connects): the lazily loaded
 // chunk of the collaboration extension (no DOM, no editor library). See
-// ../collaboration.ts and docs/guide/collaboration.typ.
+// ../collaboration.ts and docs/10_guide/04_collaboration.typ.
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import type { Awareness } from 'y-protocols/awareness';
 import * as Y from 'yjs';

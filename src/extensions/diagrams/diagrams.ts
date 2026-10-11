@@ -1,7 +1,7 @@
 // The diagrams extension: `.drawio.png` files — PNGs with a diagrams.net diagram in them, so Typst shows them as
 // images (`#image("flow.drawio.png")`) and diagrams.net edits them again — opened in diagrams.net's editor embedded
 // in an iframe, saved as they change; "New diagram…"; "Insert diagram" (a new one as a figure in the text); "Edit
-// diagram" on a box showing one. Entry of extensions/diagrams/. See docs/guide/features.typ.
+// diagram" on a box showing one. Entry of extensions/diagrams/. See docs/10_guide/02_features.typ.
 // Why an extension: the editor is a custom editor (higher priority than the images' view of PNGs), the new-file
 // entry a menu item, "Insert diagram" a toolbar item, "Edit diagram" a box action, its document links come from whichever provider: the hosts' generic
 // contribution points; the protocol (model/) is pure state, so it is tested without an iframe.

@@ -1,6 +1,6 @@
 // GitLabRoom: one GitLab-backed room: loads the branch into the Y.Doc, commits versions (on a save, or by itself when
 // the room is idle or left), merges upstream pushes, and keeps the room's uncommitted changes and conflicts in its
-// meta map. See docs/architecture/server.typ.
+// meta map. See docs/30_architecture/09_server.typ.
 import * as Y from 'yjs';
 import {
   ASSETS_MAP,

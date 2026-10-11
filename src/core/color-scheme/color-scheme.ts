@@ -1,7 +1,7 @@
 // Which color scheme an element is shown in, read from its resolved text color (the page's color-scheme, the
 // widget's `theme` or the OS decide it; CSS does not tell scripts directly). Used by the workbench's `data-scheme`
 // and by CodeMirror's dark theme in the code editors; and which text color reads on a given background (a user's
-// color in carets and file badges). Entry of core/color-scheme/. See docs/architecture/core.typ.
+// color in carets and file badges). Entry of core/color-scheme/. See docs/30_architecture/02_core.typ.
 
 /**
  * Whether a computed CSS color (`rgb(..)` / `rgba(..)`) is light: text in it sits on a dark background.

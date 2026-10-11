@@ -2,7 +2,7 @@
 // extensions/labels/. Why an extension: Typst labels (`<intro>`) and references (`@intro`) span files, so one
 // read model (LabelIndex) follows the whole project, and every document's Visual view shows
 // references as chips with what they point to, labels as tags, and offers the labels after `@`.
-// See docs/guide/features.typ.
+// See docs/10_guide/02_features.typ.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './labels.css?inline';
 import { LabelIndex } from './model/label-index';

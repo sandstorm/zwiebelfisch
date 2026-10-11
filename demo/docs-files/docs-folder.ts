@@ -1,6 +1,6 @@
 // DocsFolder: the docs/ folder as the docs-files dev-server plugin (plugin.ts) writes and watches it. Node only.
 // Every path comes from the page, so each one goes through the guard here: relative to docs/, no "..", no hidden
-// files, nothing in the build outputs (docs/fonts/), no symlink leading out. See docs/architecture/development.typ.
+// files, nothing in the build outputs (docs/fonts/), no symlink leading out. See docs/30_architecture/11_development.typ.
 import { randomBytes } from 'node:crypto';
 import { lstat, mkdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
@@ -17,7 +17,7 @@ export class DocsFilesError extends Error {
 }
 
 /**
- * The files under `root`, by paths relative to it (`guide/features.typ`). Writes are atomic (a hidden temporary file
+ * The files under `root`, by paths relative to it (`10_guide/02_features.typ`). Writes are atomic (a hidden temporary file
  * renamed over the target). It remembers what it wrote last per path, so `changeFor` skips the watcher's event for
  * the folder's own write (no echo to the page that made it).
  */

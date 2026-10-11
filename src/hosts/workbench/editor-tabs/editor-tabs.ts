@@ -1,5 +1,5 @@
 // EditorTabs: the tab bar of the editing area: a tab per editor the shown file can be shown in (Visual / Source for a
-// Typst file), and the editor/title menu at its end. See workbench.ts and docs/architecture/workbench.typ.
+// Typst file), and the editor/title menu at its end. See workbench.ts and docs/30_architecture/07_workbench.typ.
 
 /** An editor the shown file can be switched to. */
 export interface EditorTab {

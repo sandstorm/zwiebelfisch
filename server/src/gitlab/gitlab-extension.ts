@@ -1,5 +1,5 @@
 // GitLabExtension: the Hocuspocus extension behind `gitlab:<project>@<branch>` rooms (load, save version, webhooks).
-// See docs/architecture/server.typ.
+// See docs/30_architecture/09_server.typ.
 import type {
   beforeUnloadDocumentPayload,
   Document,

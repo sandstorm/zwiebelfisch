@@ -1,5 +1,5 @@
 // The playground's state as the URL (example, room → Local / Collaborate / GitLab mode, user, devtools) and the
-// editor options it means. See docs/architecture/development.typ.
+// editor options it means. See docs/30_architecture/11_development.typ.
 import type { CollaborationOptions, TypstEditorOptions } from '../src';
 import { exampleFiles, exampleFromQuery, exampleQuery, type ExampleName } from './examples';
 

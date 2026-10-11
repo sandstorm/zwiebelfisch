@@ -29,7 +29,7 @@
  * and drop / gap cursors. The Visual view host's document model, a module of its
  * own: the host builds on it, the specs contributed to the Visual view are
  * written against its types, and it is tested without a view.
- * Entry of hosts/prosemirror-typst/. See docs/architecture/prosemirror-typst.typ.
+ * Entry of hosts/prosemirror-typst/. See docs/30_architecture/03_prosemirror-typst.typ.
  */
 import type { SyntaxNode } from '@lezer/common';
 import { flattenExtensions, getExtensionField, getSchema, type AnyExtension } from '@tiptap/core';

@@ -1,4 +1,4 @@
-// The demo playground (docs/architecture/development.typ). Its state is the URL:
+// The demo playground (docs/30_architecture/11_development.typ). Its state is the URL:
 // `?example=hello|simple|advanced|docs`, `?room=<name>` (Collaborate mode) or
 // `?room=gitlab:demo/report@<branch>` (GitLab mode) on the local playground
 // server (`mise run demo`), `&user=<name>`. Without `room` (Local mode, the

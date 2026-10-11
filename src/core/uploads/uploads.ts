@@ -1,6 +1,6 @@
 // Uploads: files from the computer (picked or dropped) become project changes, parsed at the edge: a name becomes a
 // ProjectPath at the top of the project, the kind decides text or bytes. Entry of core/uploads/. Used by the file
-// panel (extensions/files) and image uploads (extensions/images). See docs/architecture/core.typ.
+// panel (extensions/files) and image uploads (extensions/images). See docs/30_architecture/02_core.typ.
 import { type FileChange } from '../project/project';
 import { ProjectPath } from '../paths/paths';
 

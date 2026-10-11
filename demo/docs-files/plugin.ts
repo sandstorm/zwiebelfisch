@@ -1,6 +1,6 @@
 // The docs-files Vite plugin: while the dev server runs (`mise run demo` / `dev`, never in a build), the demo's
 // Documentation example saves to docs/ and hears about changes made there by others (git, another editor). Node only.
-// See docs/architecture/development.typ ("Writing the docs in the demo").
+// See docs/30_architecture/11_development.typ ("Writing the docs in the demo").
 import { randomBytes } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { Plugin } from 'vite';

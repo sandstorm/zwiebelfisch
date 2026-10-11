@@ -75,7 +75,7 @@ How code is written here. `mise run quality` enforces what it can (@architecture
 
 == Comments and tests <architecture-conventions-comments>
 
-- Every source file starts with a comment: its context and where to read more (`See <entry file>`, `See docs/architecture/workbench.typ`), or `Tests for X`. `quality:top-comments` checks that every `docs/…` file named exists.
+- Every source file starts with a comment: its context and where to read more (`See <entry file>`, `See docs/30_architecture/07_workbench.typ`), or `Tests for X`. `quality:top-comments` checks that every `docs/…` file named exists.
 - Comments say _why_, or what a name cannot. No history ("was …", "moved from …"), no restating the code.
 - *No migration notes, no backwards compatibility*: no "renamed from", no shims. Code and docs describe only what is.
 - Tests go through the exported interface of the unit under test (an entry, or a file inside the module). Model tests run without jsdom.

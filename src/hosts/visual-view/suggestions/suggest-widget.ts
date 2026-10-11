@@ -1,5 +1,5 @@
 // SuggestWidget: the list a completion item provider's items pop up in while its trigger is typed. See
-// suggestions.ts and docs/extensions/visual-view-constructs.typ.
+// suggestions.ts and docs/20_extensions/03_visual-view-constructs.typ.
 import type { CompletionItem } from '../visual-view';
 
 let widgets = 0;

@@ -1,10 +1,10 @@
 // The demo page's half of writing the docs in the demo: the Documentation example's edits go to docs/ through the
 // docs-files dev-server plugin (plugin.ts), and changes made on disk come back into the editor. See
-// docs/architecture/development.typ ("Writing the docs in the demo").
+// docs/30_architecture/11_development.typ ("Writing the docs in the demo").
 import { type FileChange, FileContent, type ProjectFiles } from '../../src';
 import { DOCS_FILES_ENDPOINT, DOCS_FILES_EVENT, DOCS_FILES_HEADER, DOCS_FILES_META, type DiskChange } from './protocol';
 
-/** The plugin's file API, by paths relative to docs/ (`guide/features.typ`). */
+/** The plugin's file API, by paths relative to docs/ (`10_guide/02_features.typ`). */
 export interface DocsFilesApi {
   write(path: string, bytes: Uint8Array): Promise<void>;
   delete(path: string): Promise<void>;
@@ -231,7 +231,7 @@ function same(a: FileContent | null | undefined, b: FileContent | null | undefin
   return x.length === y.length && x.every((byte, at) => byte === y[at]);
 }
 
-/** `/guide/features.typ` → `guide/features.typ`. */
+/** `/10_guide/02_features.typ` → `10_guide/02_features.typ`. */
 function relative(path: string): string {
   return path.slice(1);
 }

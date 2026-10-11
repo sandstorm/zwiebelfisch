@@ -2,7 +2,7 @@
 // ProseMirror conversion of the shown file (each node with its source range), every contribution in its point's terms
 // (by extension or by point), and the events as they fire, their values in full. Optional, not a built-in: a host adds
 // it (the demo with `?devtools`). It uses only what any extension gets (its context), so it sees what any outside
-// extension sees. Entry of extensions/devtools/. See docs/guide/embedding.typ ("Devtools").
+// extension sees. Entry of extensions/devtools/. See docs/10_guide/05_embedding.typ ("Devtools").
 // Why it wraps the list: an extension sees only its own context, so the contributions of the others are recorded by
 // wrapping their `activate` (recording/contributions.ts), not by a listing in the hosts.
 import type { TypstExtension } from '../../hosts/workbench/workbench';

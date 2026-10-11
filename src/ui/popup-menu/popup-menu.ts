@@ -1,5 +1,5 @@
 // PopupMenu: a menu that pops up at a point or below a button (a context menu, a "New ▾" menu) and closes once an
-// entry is chosen. Entry of ui/popup-menu/, a feature-neutral widget. See docs/architecture/overview.typ.
+// entry is chosen. Entry of ui/popup-menu/, a feature-neutral widget. See docs/30_architecture/01_overview.typ.
 import css from './popup-menu.css?inline';
 
 /** An entry of a popup menu. */

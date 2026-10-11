@@ -1,4 +1,4 @@
-// NotesGutter: the comment column of the Visual view, a card per margin note. See docs/guide/features.typ.
+// NotesGutter: the comment column of the Visual view, a card per margin note. See docs/10_guide/02_features.typ.
 import { Plugin, PluginKey, TextSelection, type EditorState, type Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 import type { SourceOffset, TypstDocument } from '../../../../core/typst-document/typst-document';

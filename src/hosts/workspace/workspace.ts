@@ -2,7 +2,7 @@
 // (`applyEdit`, through the host's veto) and the widget's settings. Extensions declare their settings
 // (`TypstExtension.contributes`), the host gives the values (`createTypstEditor({ settings })`, changeable later),
 // extensions read them through `workspace.getConfiguration('<section>')` and hear about changes through
-// `onDidChangeConfiguration`. Entry of hosts/workspace/. See docs/architecture/workbench.typ.
+// `onDidChangeConfiguration`. Entry of hosts/workspace/. See docs/30_architecture/07_workbench.typ.
 // Why settings: an option of one feature is that feature's business. The widget passes every value through one
 // generic map instead of knowing each option by name, and the `<typst-editor>` element maps it onto an attribute the
 // same way. Why `applyEdit` here: every change an extension asks for goes through the project's rules and then the

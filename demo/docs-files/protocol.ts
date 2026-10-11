@@ -1,6 +1,6 @@
 // What the docs-files dev-server plugin (plugin.ts, node) and the demo page (docs-sync.ts) agree on: the endpoint, the
 // session token's meta tag and header, the HMR event for changes on disk, and how a file travels in it. See
-// docs/architecture/development.typ ("Writing the docs in the demo").
+// docs/30_architecture/11_development.typ ("Writing the docs in the demo").
 
 /** The endpoint: `PUT ?path=` writes the body, `DELETE ?path=` deletes, `POST ?path=&to=` renames. */
 export const DOCS_FILES_ENDPOINT = '/__docs-files';
@@ -15,7 +15,7 @@ export const DOCS_FILES_HEADER = 'x-docs-files-token';
 export const DOCS_FILES_EVENT = 'docs-files:change';
 
 /**
- * A file in docs/ that changed on disk, by its path relative to docs/ (`guide/features.typ`): its content as text
+ * A file in docs/ that changed on disk, by its path relative to docs/ (`10_guide/02_features.typ`): its content as text
  * (text files, see `isTextPath`) or base64 (the rest), or deleted.
  */
 export type DiskChange = { path: string } & ({ text: string } | { base64: string } | { deleted: true });

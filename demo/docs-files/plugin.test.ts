@@ -34,9 +34,9 @@ const handle = (r: { request: DocsFilesRequest }) => handleDocsFilesRequest(fold
 
 describe('docs-files requests', () => {
   it('PUT writes the body, POST renames, DELETE deletes', async () => {
-    expect(await handle(request('PUT', '/?path=guide/b.typ', {}, '= B\n'))).toEqual({ status: 204, text: '' });
-    expect(await readFile(join(root, 'guide/b.typ'), 'utf8')).toBe('= B\n');
-    expect((await handle(request('POST', '/?path=guide/b.typ&to=c.typ'))).status).toBe(204);
+    expect(await handle(request('PUT', '/?path=10_guide/b.typ', {}, '= B\n'))).toEqual({ status: 204, text: '' });
+    expect(await readFile(join(root, '10_guide/b.typ'), 'utf8')).toBe('= B\n');
+    expect((await handle(request('POST', '/?path=10_guide/b.typ&to=c.typ'))).status).toBe(204);
     expect(await readFile(join(root, 'c.typ'), 'utf8')).toBe('= B\n');
     expect((await handle(request('DELETE', '/?path=c.typ'))).status).toBe(204);
     await expect(readFile(join(root, 'c.typ'))).rejects.toThrow();

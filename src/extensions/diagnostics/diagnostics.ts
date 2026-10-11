@@ -1,7 +1,7 @@
 // The diagnostics extension: the compile errors and warnings underlined in the Source views (source-view/: lint),
 // marked in the Visual views (visual-view/: highlights with the message as tooltip) and counted in the status bar (workbench/:
 // DiagnosticsStatus, with the list behind it). Entry of extensions/diagnostics/.
-// See docs/architecture/built-in-extensions.typ.
+// See docs/30_architecture/08_built-in-extensions.typ.
 // Why one DiagnosticCollection (model/): the preview reports a compilation's diagnostics once, for every file; the
 // collection splits them by document, and each view of a document reads its own from there, whenever it is made.
 import type { TypstDiagnostic } from '../../core/typst-engine/typst-engine';

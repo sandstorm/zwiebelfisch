@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 //MISE description="Fail on a source file without a top comment (context, or See <entry file / docs chapter>) or naming a docs file that does not exist"
 // Every TypeScript and CSS source file starts with a comment that says what it is for, or where
-// to read about it ("See typst-editor.ts", "See docs/architecture/workbench.typ", "Tests for …").
+// to read about it ("See typst-editor.ts", "See docs/30_architecture/07_workbench.typ", "Tests for …").
 // A shebang line may come first. The JSDoc of the first declaration (directly followed by
 // `export …`) does not count. A file naming a docs file (`docs/….typ`, `docs/….md`) that does
 // not exist fails too, so chapters can move without leaving stale pointers.

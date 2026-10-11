@@ -1,6 +1,6 @@
 // TypstEditors: the Visual and Source views as the two built-in custom editors of `*.typ` (`visualView.editor`,
 // `sourceView.editor`), the TextEditor of each document over them, and the editor frame. See workbench.ts and
-// docs/architecture/workbench.typ.
+// docs/30_architecture/07_workbench.typ.
 import { Disposable } from '../../../core/disposable/disposable';
 import type { Project } from '../../../core/project/project';
 import type { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';

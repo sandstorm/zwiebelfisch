@@ -1,7 +1,7 @@
 // The languages namespace of the extension API (VS Code's `languages`, as far as Typst text needs it): the document
 // links of every registered DocumentLinkProvider, merged, and how CodeMirror editors show them (the Source views and
 // the code of the Visual view's raw boxes get `codeMirrorExtension`). Entry of hosts/languages/.
-// See docs/architecture/workbench.typ.
+// See docs/30_architecture/07_workbench.typ.
 // Why providers: finding links is a feature's policy (which paths, what a missing file offers); showing and following
 // them is the same in every view, so the views read every provider's links and know none of them.
 import type { Extension } from '@codemirror/state';
