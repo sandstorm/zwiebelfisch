@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Playground: the demo (Vite, :5199) and the collaboration server with an in-memory fake GitLab (:1234); Ctrl-C stops both"
 #MISE depends=["build:engine"]
-# Everything local: no real GitLab, no secrets, nothing stored. See docs/demo-playground.md.
+# Everything local: no real GitLab, no secrets, nothing stored. Checklist: docs/architecture/development.typ.
 # The demo page expects the server on 127.0.0.1:1234 and Vite on 127.0.0.1:5199 (vite.config.ts).
 set -euo pipefail
 
@@ -29,7 +29,7 @@ Typst editor playground
   Collaborate    $demo/?room=playground-hello&user=Ann   (second window: &user=Bob)
   GitLab (fake)  $demo/?room=gitlab%3Ademo%2Freport%40main&user=Ann
   Server         ws://127.0.0.1:1234  (plain rooms, and gitlab:demo/report@<any branch>)
-  Checklist      docs/demo-playground.md
+  Checklist      docs/architecture/development.typ (Manual demo checklist)
 Ctrl-C stops both.
 
 EOF

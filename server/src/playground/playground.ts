@@ -1,5 +1,5 @@
 // The playground's server side (mise run demo): a fake GitLab holding the advanced example, and the endpoints that
-// simulate an upstream push. See docs/demo-playground.md.
+// simulate an upstream push. See docs/architecture/development.typ.
 import { randomUUID } from 'node:crypto';
 import type { Extension, onRequestPayload } from '@hocuspocus/server';
 import type { CollabOptions } from '../collab-server.ts';
