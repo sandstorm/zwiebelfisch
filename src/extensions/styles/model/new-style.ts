@@ -3,9 +3,6 @@ import { ProjectPath } from '../../../core/paths/paths';
 import { SourceOffset, SourceRange, type TextChange } from '../../../core/typst-document/typst-document';
 import { scanStyles } from './discover';
 
-/** Where "New style…" puts new styles while the project declares none. */
-export const STYLES_FILE = ProjectPath.of('/styles.typ');
-
 /**
  * The change that appends a new block style called `label` to the styles file (`text` is the file's current
  * text, '' for a new file: then `insert` is the whole file), and where its definition lies afterwards, for showing
@@ -25,6 +22,9 @@ export function calculateNewStyleChange(text: string, label = 'New style'): { ch
   const end = SourceOffset.of(text.length);
   return { change: { from: end, to: end, insert: lead + stub }, definition: SourceRange.of({ from, to: from + stub.length - 1 }) };
 }
+
+/** Where "New style…" puts new styles while the project declares none. */
+export const STYLES_FILE = ProjectPath.of('/styles.typ');
 
 /** A Typst function name for a style called `label`: its words in lower case joined by `-`, starting with a letter. */
 function styleName(label: string): string {

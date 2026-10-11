@@ -1,20 +1,4 @@
-// darkThemeVariables: IronCalc's workbook UI in the dark, made from the widget's color tokens. Pure: no DOM.
-// Used by workbench/color-scheme.ts while the widget is dark. See docs/10_guide/02_features.typ.
-
-/** The widget's color tokens (`--te-<name>`, typst-editor.css) the dark workbook is made of. */
-export type ColorToken =
-  | 'bg'
-  | 'subtle'
-  | 'hover'
-  | 'chip'
-  | 'divider'
-  | 'control'
-  | 'border'
-  | 'text'
-  | 'text-2'
-  | 'muted'
-  | 'muted-2'
-  | 'faint';
+// darkThemeVariables. See docs/10_guide/02_features.typ.
 
 /**
  * IronCalc's theme variables (the custom properties `--palette-*` its CSS and its grid canvas read) for a dark
@@ -24,6 +8,9 @@ export type ColorToken =
  * Only the neutrals change: backgrounds, borders, text, the grid and its headers. IronCalc's own accent (the
  * orange selection), its status colors and the colors a file sets on cells stay as they are in light mode;
  * the light tint around a cell being edited is mixed into the background.
+ *
+ * IronCalc's workbook UI in the dark, made from the widget's color tokens. Pure: no DOM. Used by
+ * workbench/color-scheme.ts while the widget is dark.
  */
 export function darkThemeVariables(color: (token: ColorToken) => string): Record<`--palette-${string}`, string> {
   return {
@@ -58,3 +45,18 @@ export function darkThemeVariables(color: (token: ColorToken) => string): Record
     '--palette-sheet-outline-editing-color': `color-mix(in srgb, var(--palette-sheet-outline-color) 35%, ${color('bg')})`,
   };
 }
+
+/** The widget's color tokens (`--te-<name>`, typst-editor.css) the dark workbook is made of. */
+export type ColorToken =
+  | 'bg'
+  | 'subtle'
+  | 'hover'
+  | 'chip'
+  | 'divider'
+  | 'control'
+  | 'border'
+  | 'text'
+  | 'text-2'
+  | 'muted'
+  | 'muted-2'
+  | 'faint';

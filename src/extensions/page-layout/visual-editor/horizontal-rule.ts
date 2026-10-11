@@ -7,18 +7,6 @@ import { callArguments, hasOnlyArguments, namedArgument, withHash } from '../../
 import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
 import type { TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 
-declare module '@tiptap/core' {
-  interface Commands<ReturnType> {
-    horizontalRule: {
-      /** Inserts `#line(length: 100%)` as a block of its own at the selection. */
-      setHorizontalRule: () => ReturnType;
-    };
-  }
-}
-
-/** `---` (or `—-`, as some systems autocorrect it), `___ ` or `*** `: Markdown's rules, as in Tiptap. */
-const RULE_INPUT = /^(?:---|—-|___\s|\*\*\*\s)$/;
-
 /**
  * The rule node. Its input rule only fires when the typed characters are all
  * of an empty paragraph: in Typst markup `---` is an em dash, so typing it
@@ -85,7 +73,13 @@ export const HORIZONTAL_RULE: TypstNodeSpec = {
   },
 };
 
-const POSITIONING = new Set(['start', 'end', 'angle']);
+const ICON = svg('<path d="M3 12h18"/>');
+
+/** "Horizontal rule" in the Insert menu. */
+export const INSERT_HORIZONTAL_RULE: ToolbarAction = { label: 'Horizontal rule', icon: ICON, keywords: ['line', 'divider', 'separator'], run: (c) => c.setHorizontalRule() };
+
+/** `---` (or `—-`, as some systems autocorrect it), `___ ` or `*** `: Markdown's rules, as in Tiptap. */
+const RULE_INPUT = /^(?:---|—-|___\s|\*\*\*\s)$/;
 
 /** Named arguments only, `length: 100%` among them and none of `POSITIONING`. */
 function isFullWidthLine(p: TypstParseContext, call: SyntaxNode): boolean {
@@ -94,7 +88,13 @@ function isFullWidthLine(p: TypstParseContext, call: SyntaxNode): boolean {
   return named && length !== null && p.text(length) === '100%';
 }
 
-const ICON = svg('<path d="M3 12h18"/>');
+const POSITIONING = new Set(['start', 'end', 'angle']);
 
-/** "Horizontal rule" in the Insert menu. */
-export const INSERT_HORIZONTAL_RULE: ToolbarAction = { label: 'Horizontal rule', icon: ICON, keywords: ['line', 'divider', 'separator'], run: (c) => c.setHorizontalRule() };
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    horizontalRule: {
+      /** Inserts `#line(length: 100%)` as a block of its own at the selection. */
+      setHorizontalRule: () => ReturnType;
+    };
+  }
+}

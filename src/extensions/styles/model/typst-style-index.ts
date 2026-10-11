@@ -9,19 +9,6 @@ import { calculateImportChange } from '../../../core/typst-syntax/typst-syntax';
 import { scanStyles, type FoundStyle, type TypstStyle } from './discover';
 import { STYLES_FILE } from './new-style';
 
-/** What the Visual editor needs to know about the project's styles (see `TypstStyleIndex`). */
-export interface ProjectStyles {
-  /** The project's styles, by file (in the project's order) and then in source order. */
-  styles(): readonly TypstStyle[];
-  /** Whenever `styles()` changed. */
-  readonly onDidChange: Event<void>;
-  /**
-   * The change to `document` that imports `style` for a use at offset `use`; null when nothing is needed (declared
-   * in that file, imported already).
-   */
-  calculateImportChange(document: TypstDocument, style: TypstStyle, use: SourceOffset): TextChange | null;
-}
-
 /**
  * The styles of a project's Typst files. Every file is scanned once and again
  * whenever it changes; listeners hear about changes of the style list only,
@@ -98,4 +85,17 @@ export class TypstStyleIndex implements ProjectStyles {
   private collect(): TypstStyle[] {
     return this.project.paths().flatMap((path) => this.scans.get(path)?.map((style) => ({ ...style, path })) ?? []);
   }
+}
+
+/** What the Visual editor needs to know about the project's styles (see `TypstStyleIndex`). */
+export interface ProjectStyles {
+  /** The project's styles, by file (in the project's order) and then in source order. */
+  styles(): readonly TypstStyle[];
+  /** Whenever `styles()` changed. */
+  readonly onDidChange: Event<void>;
+  /**
+   * The change to `document` that imports `style` for a use at offset `use`; null when nothing is needed (declared
+   * in that file, imported already).
+   */
+  calculateImportChange(document: TypstDocument, style: TypstStyle, use: SourceOffset): TextChange | null;
 }

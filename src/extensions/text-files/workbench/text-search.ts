@@ -6,22 +6,6 @@ import type { SearchItem, SearchProvider } from '../../../hosts/window/window';
 import type { Workbench } from '../../../hosts/workbench/workbench';
 import { findText, type TextMatch } from '../model/find-text';
 
-/** Shorter queries find too much to be useful. */
-const MIN_QUERY = 2;
-/** Lines listed at most. */
-const LIMIT = 200;
-/** Work this long (ms) before letting the browser handle input again. */
-const SLICE = 10;
-
-export interface TextSearchOptions {
-  readonly project: Pick<Project, 'paths' | 'content'>;
-  readonly workbench: Pick<Workbench, 'open'>;
-  /** Whether `path` is a text file (searched besides the Typst files). */
-  isTextFile(path: ProjectPath): boolean;
-  /** Selects `from..to` in the open editor of text file `path` (after `workbench.open`). */
-  reveal(path: ProjectPath, from: number, to: number): void;
-}
-
 /**
  * "Text" (prefix `%`, as VS Code's quick search): the lines of every Typst and text file holding the query
  * (case-insensitive, from 2 characters, at most 200), with file and line; picking one opens the file with the match
@@ -52,6 +36,29 @@ export function textSearch(options: TextSearchOptions): SearchProvider {
   };
 }
 
+export interface TextSearchOptions {
+  readonly project: Pick<Project, 'paths' | 'content'>;
+  readonly workbench: Pick<Workbench, 'open'>;
+  /** Whether `path` is a text file (searched besides the Typst files). */
+  isTextFile(path: ProjectPath): boolean;
+  /** Selects `from..to` in the open editor of text file `path` (after `workbench.open`). */
+  reveal(path: ProjectPath, from: number, to: number): void;
+}
+
+/** Shorter queries find too much to be useful. */
+const MIN_QUERY = 2;
+
+/** Work this long (ms) before letting the browser handle input again. */
+const SLICE = 10;
+
+function textOf(content: FileContent | undefined): string {
+  if (content === undefined) return '';
+  return typeof content === 'string' ? content : new TextDecoder().decode(content);
+}
+
+/** Lines listed at most. */
+const LIMIT = 200;
+
 function textItem(path: ProjectPath, match: TextMatch, { workbench, reveal }: TextSearchOptions): SearchItem {
   return {
     label: match.preview,
@@ -63,9 +70,4 @@ function textItem(path: ProjectPath, match: TextMatch, { workbench, reveal }: Te
       reveal(path, match.from, match.to);
     },
   };
-}
-
-function textOf(content: FileContent | undefined): string {
-  if (content === undefined) return '';
-  return typeof content === 'string' ? content : new TextDecoder().decode(content);
 }

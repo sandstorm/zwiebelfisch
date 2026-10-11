@@ -1,10 +1,4 @@
-// The preview-sync extension: the editor and the preview in step, both ways. The preview follows the cursor (with a
-// "Follow cursor" switch in its toolbar, remembered per viewer) and shades the text selected in the shown file, and a
-// click in the preview selects its source. Entry of extensions/preview-sync/. See docs/30_architecture/06_preview.typ.
-// Why an extension: the preview host only offers the mechanism (`reveal`, `setSelectionHighlight`, hit-testing,
-// `onDidClickPage` and `clearClickHighlight`), the workbench the selection (`onDidChangeTextEditorSelection`) and
-// `open`; when to follow, what to shade, where a click leads and how long its outline stays is policy. Without this
-// extension the preview neither follows, shades nor jumps.
+// The preview-sync extension. Entry of extensions/preview-sync/. See docs/30_architecture/06_preview.typ.
 import { Disposable } from '../../core/disposable/disposable';
 import type { SourceRange } from '../../core/typst-document/typst-document';
 import type { ProjectPath } from '../../core/paths/paths';
@@ -23,6 +17,15 @@ import css from './preview-sync.css?inline';
  * While the setting `previewSync.highlightSelection` is on (default), whatever is selected in the shown file (Visual or
  * Source editor, independent of "Follow cursor") is shaded in the preview, a moment after the selection settles; a caret
  * shades nothing. A click's own selection is not shaded: its outline marks it already.
+ *
+ * The editor and the preview in step, both ways. The preview follows the cursor (with a "Follow cursor" switch in its
+ * toolbar, remembered per viewer) and shades the text selected in the shown file, and a click in the preview selects
+ * its source.
+ *
+ * Why an extension: the preview host only offers the mechanism (`reveal`, `setSelectionHighlight`, hit-testing,
+ * `onDidClickPage` and `clearClickHighlight`), the workbench the selection (`onDidChangeTextEditorSelection`) and
+ * `open`; when to follow, what to shade, where a click leads and how long its outline stays is policy. Without this
+ * extension the preview neither follows, shades nor jumps.
  */
 export function previewSync(): TypstExtension {
   return {
@@ -110,15 +113,15 @@ const contributes: TypstExtension['contributes'] = {
   },
 };
 
-/** How long the selection has to rest before the preview shades it (a drag selects anew on every mouse move). */
-const HIGHLIGHT_DELAY_MS = 60;
-
-/** What to shade in the preview: non-empty ranges of `path`, in `text`. */
-interface Shading {
-  readonly path: ProjectPath;
-  readonly ranges: readonly SourceRange[];
-  readonly text: string;
+/** The host's value of `previewSync.followCursor`, else the viewer's last choice, else the default (on). */
+function configuredFollow(workspace: Workspace, globalState: Memento): boolean {
+  const setting = workspace.getConfiguration('previewSync').inspect<boolean>('followCursor');
+  const chosen = globalState.get<unknown>(FOLLOW_KEY);
+  return setting?.globalValue ?? (typeof chosen === 'boolean' ? chosen : undefined) ?? setting?.defaultValue ?? true;
 }
+
+/** Where the viewer's last "Follow cursor" choice is kept (`globalState`). */
+const FOLLOW_KEY = 'followCursor';
 
 /**
  * The selection shaded in the preview: `update()` shades `shading()` `HIGHLIGHT_DELAY_MS` later (asked again then);
@@ -158,20 +161,20 @@ class SelectionShading {
   }
 }
 
+/** What to shade in the preview: non-empty ranges of `path`, in `text`. */
+interface Shading {
+  readonly path: ProjectPath;
+  readonly ranges: readonly SourceRange[];
+  readonly text: string;
+}
+
+/** How long the selection has to rest before the preview shades it (a drag selects anew on every mouse move). */
+const HIGHLIGHT_DELAY_MS = 60;
+
 function isEmpty(range: SourceRange): boolean {
   return range.from === range.to;
 }
 
-/** Where the viewer's last "Follow cursor" choice is kept (`globalState`). */
-const FOLLOW_KEY = 'followCursor';
-
 function sameRange(a: SourceRange, b: SourceRange): boolean {
   return a.from === b.from && a.to === b.to;
-}
-
-/** The host's value of `previewSync.followCursor`, else the viewer's last choice, else the default (on). */
-function configuredFollow(workspace: Workspace, globalState: Memento): boolean {
-  const setting = workspace.getConfiguration('previewSync').inspect<boolean>('followCursor');
-  const chosen = globalState.get<unknown>(FOLLOW_KEY);
-  return setting?.globalValue ?? (typeof chosen === 'boolean' ? chosen : undefined) ?? setting?.defaultValue ?? true;
 }

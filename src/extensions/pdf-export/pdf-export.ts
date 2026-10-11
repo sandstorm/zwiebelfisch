@@ -1,9 +1,4 @@
-// The pdf-export extension: the project's PDF, made by PdfExport (the command `pdfExport.export`), and the preview's
-// "Download PDF" with a popover of the export options other extensions register (comments: include them or not).
-// Entry of extensions/pdf-export/. See docs/30_architecture/08_built-in-extensions.typ.
-// Why an extension: the preview's engine can make a PDF and keeps the options registered with it, but how they are
-// offered (one button, a checkbox each, remembered per viewer) and whether a widget has a download button at all is
-// this extension's policy.
+// The pdf-export extension. Entry of extensions/pdf-export/. See docs/30_architecture/08_built-in-extensions.typ.
 import { Disposable } from '../../core/disposable/disposable';
 import { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
@@ -19,6 +14,13 @@ import { downloadPdf } from './preview/preview';
  * unknown option. And, while the setting `pdfExport.download` is on (default), "Download PDF" in the preview's
  * toolbar: a popover with a checkbox per registered export option (remembered for this viewer) and "Download", or,
  * without options, the download at once.
+ *
+ * The project's PDF, made by PdfExport (the command `pdfExport.export`), and the preview's "Download PDF" with a
+ * popover of the export options other extensions register (comments: include them or not).
+ *
+ * Why an extension: the preview's engine can make a PDF and keeps the options registered with it, but how they are
+ * offered (one button, a checkbox each, remembered per viewer) and whether a widget has a download button at all is
+ * this extension's policy.
  */
 export function pdfExport(): TypstExtension {
   return {

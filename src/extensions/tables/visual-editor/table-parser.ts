@@ -38,16 +38,85 @@ export function parseTable(p: TypstParseContext, call: SyntaxNode, sep: string |
   return schema.nodes.table.create({ sep, layout }, rows);
 }
 
-/** A cell written as an expression: a paragraph holding it as a raw box (code, without `#`). */
-function bareCell(p: TypstParseContext, node: SyntaxNode): { content: Node[]; from: number; to: number } {
-  const src = p.text(node);
-  const atom = p.schema.nodes.rawInline.create({ src, code: true });
-  const paragraph = p.textblock({ type: 'paragraph', attrs: { src } }, node.from, [{ node: atom, from: node.from, to: node.to }]);
-  return { content: [paragraph], from: node.from, to: node.to };
+/**
+ * The arguments of a table call: `columns` (an integer or an array), other named arguments
+ * and cells only (see `tableCell`), the first of them optionally in a
+ * `table.header(..)`.
+ */
+function tableArgs(p: TypstParseContext, call: SyntaxNode): TableArgs | null {
+  if (!hasOnlyArguments(call)) return null;
+  const result: TableArgs = { columns: 0, columnsValue: null, named: [], cells: [], header: null, headerCells: 0 };
+  for (const arg of callArguments(call)) {
+    if (arg.name === 'Named') namedArg(p, arg, result);
+    else if (!headerArg(p, arg, result)) {
+      const cell = tableCell(p, arg);
+      if (!cell) return null;
+      result.cells.push(cell);
+    }
+  }
+  return result.columns > 0 ? result : null;
 }
 
-/** Separators between table arguments: a comma and whitespace, nothing else (no comments). */
-const ARG_SEP = /^\s*,\s*$/;
+interface TableArgs {
+  columns: number;
+  /** The `columns` integer or array. */
+  columnsValue: SyntaxNode | null;
+  /** Named arguments other than `columns`. */
+  named: SyntaxNode[];
+  /** The cells, the header's first: content blocks, or bare expressions. */
+  cells: { node: SyntaxNode; bare: boolean }[];
+  /** The `table.header(..)` call, if any, and how many of the cells are in it. */
+  header: SyntaxNode | null;
+  headerCells: number;
+}
+
+function namedArg(p: TypstParseContext, arg: SyntaxNode, into: TableArgs): void {
+  const name = arg.getChild('Ident');
+  const value = arg.lastChild;
+  if (!name || p.text(name) !== 'columns') {
+    into.named.push(arg);
+  } else if (value?.name === 'Int' || value?.name === 'Array') {
+    into.columns = value.name === 'Int' ? Number(p.text(value)) : (trackEntries(value)?.length ?? NaN);
+    into.columnsValue = value;
+  } else {
+    into.columns = NaN;
+  }
+}
+
+/** The entries of `(a, b, ..)`, at least one: no spread (`..xs`), no comments; null otherwise. */
+function trackEntries(array: SyntaxNode): SyntaxNode[] | null {
+  const parts = children(array).slice(1, -1);
+  const entries = parts.filter((part) => part.name !== 'Comma' && part.name !== 'Space');
+  const plain = entries.every((entry) => entry.name !== 'Spread' && !/Comment/.test(entry.name) && !entry.type.isError);
+  return array.lastChild?.name === 'RightParen' && entries.length > 0 && plain ? entries : null;
+}
+
+/** Takes a `table.header(..)` of cells before any other cell as the header cells. */
+function headerArg(p: TypstParseContext, arg: SyntaxNode, into: TableArgs): boolean {
+  const target = arg.name === 'FuncCall' ? arg.firstChild : null;
+  if (!target || p.text(target) !== 'table.header' || into.cells.length > 0) return false;
+  // `table.header([a], [b])` or `table.header[a][b]`
+  const trailing = trailingContent(arg);
+  const cells = trailing ? [...callArguments(arg), ...trailing].map((part) => tableCell(p, part)) : [];
+  if (cells.length === 0 || cells.some((c) => c === null)) return false;
+  into.cells.push(...(cells as { node: SyntaxNode; bare: boolean }[]));
+  into.header = arg;
+  into.headerCells = cells.length;
+  return true;
+}
+
+/**
+ * A cell argument: a closed content block, or an expression Typst would read
+ * the same after a `#` in markup (`ms(18)`, `$x^2$`, `"text"`), which is
+ * `bare`. Other `table.*` elements (cells with spans, lines, a footer) and
+ * comments are not cells: the table stays raw.
+ */
+function tableCell(p: TypstParseContext, arg: SyntaxNode): { node: SyntaxNode; bare: boolean } | null {
+  if (isClosedContent(arg)) return { node: arg, bare: false };
+  const src = p.text(arg);
+  if (arg.name === 'ContentBlock' || /Comment/.test(arg.name) || /^table\s*\./.test(src)) return null;
+  return isEmbeddable(src) ? { node: arg, bare: true } : null;
+}
 
 /**
  * How the table's rows are written: the source before the first row (with
@@ -81,16 +150,8 @@ function tableStyle(p: TypstParseContext, call: { from: number; to: number }, pa
   };
 }
 
-/** How a `table.header(..)` call is written around and between its `cells`. */
-function headerStyle(text: (from: number, to: number) => string, call: SyntaxNode, cells: SyntaxNode[], cellSep: string): TableStyle['header'] {
-  const sep = cells.length > 1 ? text(cells[0].to, cells[1].from) : cellSep;
-  return {
-    open: text(call.from, cells[0].from),
-    // `table.header[a][b]` has no separators at all
-    sep: sep === '' || ARG_SEP.test(sep) ? sep : cellSep,
-    close: text(cells.at(-1)!.to, call.to),
-  };
-}
+/** Separators between table arguments: a comma and whitespace, nothing else (no comments). */
+const ARG_SEP = /^\s*,\s*$/;
 
 /**
  * How `columns: (..)` (an `Array` of plain entries, see `trackEntries`) is written. Between entries the array's first
@@ -111,82 +172,21 @@ function trackSizes(text: (from: number, to: number) => string, array: SyntaxNod
   };
 }
 
-/** The entries of `(a, b, ..)`, at least one: no spread (`..xs`), no comments; null otherwise. */
-function trackEntries(array: SyntaxNode): SyntaxNode[] | null {
-  const parts = children(array).slice(1, -1);
-  const entries = parts.filter((part) => part.name !== 'Comma' && part.name !== 'Space');
-  const plain = entries.every((entry) => entry.name !== 'Spread' && !/Comment/.test(entry.name) && !entry.type.isError);
-  return array.lastChild?.name === 'RightParen' && entries.length > 0 && plain ? entries : null;
+/** How a `table.header(..)` call is written around and between its `cells`. */
+function headerStyle(text: (from: number, to: number) => string, call: SyntaxNode, cells: SyntaxNode[], cellSep: string): TableStyle['header'] {
+  const sep = cells.length > 1 ? text(cells[0].to, cells[1].from) : cellSep;
+  return {
+    open: text(call.from, cells[0].from),
+    // `table.header[a][b]` has no separators at all
+    sep: sep === '' || ARG_SEP.test(sep) ? sep : cellSep,
+    close: text(cells.at(-1)!.to, call.to),
+  };
 }
 
-interface TableArgs {
-  columns: number;
-  /** The `columns` integer or array. */
-  columnsValue: SyntaxNode | null;
-  /** Named arguments other than `columns`. */
-  named: SyntaxNode[];
-  /** The cells, the header's first: content blocks, or bare expressions. */
-  cells: { node: SyntaxNode; bare: boolean }[];
-  /** The `table.header(..)` call, if any, and how many of the cells are in it. */
-  header: SyntaxNode | null;
-  headerCells: number;
-}
-
-/**
- * The arguments of a table call: `columns` (an integer or an array), other named arguments
- * and cells only (see `tableCell`), the first of them optionally in a
- * `table.header(..)`.
- */
-function tableArgs(p: TypstParseContext, call: SyntaxNode): TableArgs | null {
-  if (!hasOnlyArguments(call)) return null;
-  const result: TableArgs = { columns: 0, columnsValue: null, named: [], cells: [], header: null, headerCells: 0 };
-  for (const arg of callArguments(call)) {
-    if (arg.name === 'Named') namedArg(p, arg, result);
-    else if (!headerArg(p, arg, result)) {
-      const cell = tableCell(p, arg);
-      if (!cell) return null;
-      result.cells.push(cell);
-    }
-  }
-  return result.columns > 0 ? result : null;
-}
-
-/** Takes a `table.header(..)` of cells before any other cell as the header cells. */
-function headerArg(p: TypstParseContext, arg: SyntaxNode, into: TableArgs): boolean {
-  const target = arg.name === 'FuncCall' ? arg.firstChild : null;
-  if (!target || p.text(target) !== 'table.header' || into.cells.length > 0) return false;
-  // `table.header([a], [b])` or `table.header[a][b]`
-  const trailing = trailingContent(arg);
-  const cells = trailing ? [...callArguments(arg), ...trailing].map((part) => tableCell(p, part)) : [];
-  if (cells.length === 0 || cells.some((c) => c === null)) return false;
-  into.cells.push(...(cells as { node: SyntaxNode; bare: boolean }[]));
-  into.header = arg;
-  into.headerCells = cells.length;
-  return true;
-}
-
-/**
- * A cell argument: a closed content block, or an expression Typst would read
- * the same after a `#` in markup (`ms(18)`, `$x^2$`, `"text"`), which is
- * `bare`. Other `table.*` elements (cells with spans, lines, a footer) and
- * comments are not cells: the table stays raw.
- */
-function tableCell(p: TypstParseContext, arg: SyntaxNode): { node: SyntaxNode; bare: boolean } | null {
-  if (isClosedContent(arg)) return { node: arg, bare: false };
-  const src = p.text(arg);
-  if (arg.name === 'ContentBlock' || /Comment/.test(arg.name) || /^table\s*\./.test(src)) return null;
-  return isEmbeddable(src) ? { node: arg, bare: true } : null;
-}
-
-function namedArg(p: TypstParseContext, arg: SyntaxNode, into: TableArgs): void {
-  const name = arg.getChild('Ident');
-  const value = arg.lastChild;
-  if (!name || p.text(name) !== 'columns') {
-    into.named.push(arg);
-  } else if (value?.name === 'Int' || value?.name === 'Array') {
-    into.columns = value.name === 'Int' ? Number(p.text(value)) : (trackEntries(value)?.length ?? NaN);
-    into.columnsValue = value;
-  } else {
-    into.columns = NaN;
-  }
+/** A cell written as an expression: a paragraph holding it as a raw box (code, without `#`). */
+function bareCell(p: TypstParseContext, node: SyntaxNode): { content: Node[]; from: number; to: number } {
+  const src = p.text(node);
+  const atom = p.schema.nodes.rawInline.create({ src, code: true });
+  const paragraph = p.textblock({ type: 'paragraph', attrs: { src } }, node.from, [{ node: atom, from: node.from, to: node.to }]);
+  return { content: [paragraph], from: node.from, to: node.to };
 }

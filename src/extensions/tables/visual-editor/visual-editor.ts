@@ -1,5 +1,4 @@
-// What the tables extension contributes to the Visual editor: the table spec (`#table(columns: n, ..)` as Tiptap's
-// table nodes), "Insert table" and the bar over a table. See tables.ts.
+// What the tables extension contributes to the Visual editor. See tables.ts.
 import { Extension, findParentNode, type Editor } from '@tiptap/core';
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
 import { svg, type ToolbarAction, type Anchor, type ToolbarGroup, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
@@ -26,11 +25,6 @@ const Tables = Extension.create({
   ],
 });
 
-/** A cell's attributes: Tiptap's, and `track`: its column's entry of `columns: (..)` (`2fr`), as written. */
-function cellAttributes(this: { parent?: () => Record<string, unknown> }) {
-  return { ...this.parent?.(), track: { default: null, rendered: false } };
-}
-
 /**
  * `#table(columns: <int or array>, ..named, cells)` whose `columns` comes before the
  * cells and whose positional arguments are cells filling whole rows (the
@@ -41,6 +35,8 @@ function cellAttributes(this: { parent?: () => Record<string, unknown> }) {
  * elements, other expressions and comments keep the table raw. `layout` is the
  * source around the cells and how its rows are written (see the model's
  * `TableLayout`).
+ *
+ * The table spec (`#table(columns: n, ..)` as Tiptap's table nodes), "Insert table" and the bar over a table.
  */
 export const TABLE: TypstNodeSpec = {
   name: 'table',
@@ -73,11 +69,9 @@ export const TABLE_EDITS: ToolbarAction[] = [
   { label: 'Header row', icon: ICONS.headerRow, run: (c) => c.toggleHeaderRow(), active: inHeaderTable },
 ];
 
-/** Whether the selection is in a table whose first row is a header row. */
-function inHeaderTable(editor: Editor): boolean {
-  const table = findParentNode((node) => node.type.name === 'table')(editor.state.selection);
-  const first = table?.node.firstChild;
-  return !!first && first.childCount > 0 && first.content.content.every((cell) => cell.type.name === 'tableHeader');
+/** A cell's attributes: Tiptap's, and `track`: its column's entry of `columns: (..)` (`2fr`), as written. */
+function cellAttributes(this: { parent?: () => Record<string, unknown> }) {
+  return { ...this.parent?.(), track: { default: null, rendered: false } };
 }
 
 /** Above the table holding the cursor, or null. */
@@ -87,4 +81,11 @@ function tableAnchor(editor: Editor): Anchor {
   if (!dom?.getBoundingClientRect) return null;
   const box = dom.getBoundingClientRect();
   return { top: box.top, left: box.left, right: box.left + Math.min(box.width, 320) };
+}
+
+/** Whether the selection is in a table whose first row is a header row. */
+function inHeaderTable(editor: Editor): boolean {
+  const table = findParentNode((node) => node.type.name === 'table')(editor.state.selection);
+  const first = table?.node.firstChild;
+  return !!first && first.childCount > 0 && first.content.content.every((cell) => cell.type.name === 'tableHeader');
 }

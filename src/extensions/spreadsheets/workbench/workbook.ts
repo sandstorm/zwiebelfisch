@@ -1,6 +1,3 @@
-// mountWorkbook: IronCalc's workbook UI (React) over a spreadsheet's bytes; newWorkbook: a new spreadsheet with the
-// starter table. Loaded on demand (spreadsheet-view.ts, "Insert spreadsheet"): it brings React, the UI and the 2 MB
-// engine, which nothing else needs.
 import { IronCalc, init, Model } from '@ironcalc/workbook';
 import styles from '@ironcalc/workbook/style.css?inline';
 import { createElement } from 'react';
@@ -9,28 +6,6 @@ import { typeStarterTable } from '../model/sheet-figure';
 import { spreadsheetTypst } from '../model/typst-file';
 import { followColorScheme } from './color-scheme';
 
-/** A mounted workbook; edits are reported through the `onEdit` given to `mountWorkbook`. */
-export interface MountedWorkbook {
-  dispose(): void;
-}
-
-/** What an edit produced: the file's new bytes and its Typst file (see `spreadsheetTypst`). */
-export interface WorkbookEdit {
-  bytes: Uint8Array;
-  typst: string;
-}
-
-/** A new spreadsheet: its bytes, its Typst file and the name of its (first) sheet. */
-export interface NewWorkbook extends WorkbookEdit {
-  sheet: string;
-}
-
-const STYLE_ID = 'typst-ironcalc-styles';
-/** Quiet time after the last edit before it is reported (typing in a cell is many events). */
-const SAVE_DELAY = 300;
-
-let engine: Promise<unknown> | null = null;
-
 /**
  * Shows IronCalc's workbook UI in `container` for the spreadsheet `bytes`
  * (IronCalc's own format; empty: a new workbook named `name`). Its styles go
@@ -38,6 +13,10 @@ let engine: Promise<unknown> | null = null;
  * root); its menus open inside the container. After every edit (cells,
  * sheets, formats, sizes) `onEdit` gets the new bytes and the Typst file;
  * `fileName` (e.g. `budget.ic`) is named in that file's header.
+ *
+ * mountWorkbook: IronCalc's workbook UI (React) over a spreadsheet's bytes; newWorkbook: a new spreadsheet with the
+ * starter table. Loaded on demand (spreadsheet-view.ts, "Insert spreadsheet"): it brings React, the UI and the 2 MB
+ * engine, which nothing else needs.
  */
 export async function mountWorkbook(
   container: HTMLElement,
@@ -76,6 +55,22 @@ export async function mountWorkbook(
   };
 }
 
+/** A mounted workbook; edits are reported through the `onEdit` given to `mountWorkbook`. */
+export interface MountedWorkbook {
+  dispose(): void;
+}
+
+/** What an edit produced: the file's new bytes and its Typst file (see `spreadsheetTypst`). */
+export interface WorkbookEdit {
+  bytes: Uint8Array;
+  typst: string;
+}
+
+/** A new spreadsheet: its bytes, its Typst file and the name of its (first) sheet. */
+export interface NewWorkbook extends WorkbookEdit {
+  sheet: string;
+}
+
 /** A new workbook for the file `fileName` (e.g. `table.ic`) with the starter table typed in (`typeStarterTable`). */
 export async function newWorkbook(fileName: string): Promise<NewWorkbook> {
   engine ??= init();
@@ -89,14 +84,7 @@ export async function newWorkbook(fileName: string): Promise<NewWorkbook> {
   }
 }
 
-/**
- * Makes IronCalc's grid take up changed theme variables. The grid canvas reads them only when it is built, and the
- * worksheet builds it anew on every render; a window resize is what makes it render from outside (its own
- * listener), without losing a cell being edited (re-rendering the workbook would).
- */
-function redrawGrid(container: HTMLElement): void {
-  container.ownerDocument.defaultView?.dispatchEvent(new Event('resize'));
-}
+let engine: Promise<unknown> | null = null;
 
 function injectStyles(container: HTMLElement): void {
   const root = container.getRootNode();
@@ -107,3 +95,17 @@ function injectStyles(container: HTMLElement): void {
   style.textContent = styles;
   target.append(style);
 }
+
+const STYLE_ID = 'typst-ironcalc-styles';
+
+/**
+ * Makes IronCalc's grid take up changed theme variables. The grid canvas reads them only when it is built, and the
+ * worksheet builds it anew on every render; a window resize is what makes it render from outside (its own
+ * listener), without losing a cell being edited (re-rendering the workbook would).
+ */
+function redrawGrid(container: HTMLElement): void {
+  container.ownerDocument.defaultView?.dispatchEvent(new Event('resize'));
+}
+
+/** Quiet time after the last edit before it is reported (typing in a cell is many events). */
+const SAVE_DELAY = 300;

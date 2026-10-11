@@ -18,13 +18,6 @@ export function typstSyntax(): LanguageSupport {
   return new LanguageSupport(lezer.language, support);
 }
 
-type IndentFn = (context: IndentContext, pos: number) => number | null | undefined;
-
-/** The package's indentation function (only exported as a facet value). */
-const packageIndent: IndentFn = EditorState.create({ extensions: typstLezerIndentService }).facet(indentService)[0];
-
-const CLOSING: Record<string, string> = { '(': ')', '[': ']', '{': '}' };
-
 /**
  * codemirror-lang-typst 0.6.0 treats a delimited construct that ends exactly
  * at the cursor as unfinished, so Enter after `#set page(width: 16cm)` indents
@@ -47,3 +40,10 @@ function closesAt(state: EditorState, pos: number): boolean {
   }
   return false;
 }
+
+const CLOSING: Record<string, string> = { '(': ')', '[': ']', '{': '}' };
+
+/** The package's indentation function (only exported as a facet value). */
+const packageIndent: IndentFn = EditorState.create({ extensions: typstLezerIndentService }).facet(indentService)[0];
+
+type IndentFn = (context: IndentContext, pos: number) => number | null | undefined;

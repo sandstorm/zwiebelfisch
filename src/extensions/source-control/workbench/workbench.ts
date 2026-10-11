@@ -1,25 +1,14 @@
-// What the source-control extension does in the workbench: commit to a source control (asking for the message), its
-// status bar entries, and its resource states as file decorations. See ../source-control.ts.
+// What the source-control extension does in the workbench. See ../source-control.ts.
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { Scm, SourceControl } from '../../../hosts/scm/scm';
 import type { FileDecoration, FileDecorationProvider, WindowApi } from '../../../hosts/window/window';
 
-/** What committing needs of the extension API: the source controls, and the window to ask (and say it is busy). */
-export interface SourceControlUi {
-  readonly scm: Pick<Scm, 'sourceControls'>;
-  readonly window: Pick<WindowApi, 'showInputBox' | 'showQuickPick' | 'showInformationMessage'>;
-}
-
-/** The tab bar's entry for the registered source controls: "Save to GitLab…" ("Saving to GitLab…" meanwhile). */
-export function commitTitle(controls: readonly SourceControl[]): string {
-  if (controls.length !== 1) return 'Save…';
-  const [control] = controls;
-  return control.state.busy ? `Saving to ${control.label}…` : `Save to ${control.label}…`;
-}
-
 /**
  * Commits the project with the message the user enters (its default offered): to `control`, else to the one
  * registered source control or the one picked. While a commit is under way it only says so.
+ *
+ * Commit to a source control (asking for the message), its status bar entries, and its resource states as file
+ * decorations.
  */
 export async function commit({ scm, window }: SourceControlUi, control?: SourceControl): Promise<void> {
   const controls = scm.sourceControls;
@@ -40,6 +29,19 @@ export async function commit({ scm, window }: SourceControlUi, control?: SourceC
     validateInput: (value) => (value.trim() === '' ? 'Enter a commit message.' : null),
   });
   if (message !== undefined) control.commit(message.trim());
+}
+
+/** What committing needs of the extension API: the source controls, and the window to ask (and say it is busy). */
+export interface SourceControlUi {
+  readonly scm: Pick<Scm, 'sourceControls'>;
+  readonly window: Pick<WindowApi, 'showInputBox' | 'showQuickPick' | 'showInformationMessage'>;
+}
+
+/** The tab bar's entry for the registered source controls: "Save to GitLab…" ("Saving to GitLab…" meanwhile). */
+export function commitTitle(controls: readonly SourceControl[]): string {
+  if (controls.length !== 1) return 'Save…';
+  const [control] = controls;
+  return control.state.busy ? `Saving to ${control.label}…` : `Save to ${control.label}…`;
 }
 
 /**

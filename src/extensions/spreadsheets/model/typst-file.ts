@@ -1,31 +1,5 @@
-// The Typst file of a spreadsheet: what Typst documents import of `name.ic` — every sheet as a table (displayed values,
-// alignment, fills, fonts, borders, column widths, row heights) and as values — in `name.ic.gen.typ`. See ../spreadsheets.ts.
+// The Typst file of a spreadsheet. See ../spreadsheets.ts.
 import type { CellStyle, Color } from '@ironcalc/wasm';
-
-/** The part of IronCalc's `Model` the file needs. */
-export interface SheetSource {
-  getWorksheetsProperties(): { name: string; state: string }[];
-  getColumnsWithData(sheet: number, row: number): Int32Array | number[];
-  getFormattedCellValue(sheet: number, row: number, column: number): string;
-  getCellType(sheet: number, row: number, column: number): number;
-  getCellStyle(sheet: number, row: number, column: number): { style: CellStyle };
-  getColumnWidth(sheet: number, column: number): number;
-  getRowHeight(sheet: number, row: number): number;
-  resolveColor(color: Color): string;
-}
-
-/** Rows looked at per sheet at most, and how many empty ones in a row end the search. */
-const MAX_ROWS = 10_000;
-const EMPTY_ROWS_TO_STOP = 1_000;
-/** IronCalc's sizes are CSS pixels (96 per inch); Typst's points are 72 per inch. */
-const PT_PER_PX = 0.75;
-/** IronCalc's default row height (px) and font size: rows of that height stay `auto`, sizes are relative to it. */
-const DEFAULT_ROW_HEIGHT = 25;
-const DEFAULT_FONT_SIZE = 12;
-/** `getCellType`: numbers align right, truth values and errors centered when the alignment is "general". */
-const NUMBER = 1;
-const BOOLEAN = 4;
-const ERROR = 16;
 
 /**
  * The Typst source for the spreadsheet `name` (shown in its header): two
@@ -39,6 +13,9 @@ const ERROR = 16;
  *   (bold, italic, underline, strike, colour, relative size) and borders;
  *   hidden columns and rows are left out. The grid lines are Typst's table
  *   stroke (`#set table(stroke: …)` changes them).
+ *
+ * What Typst documents import of `name.ic` — every sheet as a table (displayed values, alignment, fills, fonts,
+ * borders, column widths, row heights) and as values — in `name.ic.gen.typ`.
  */
 export function spreadsheetTypst(model: SheetSource, name: string): string {
   const sheets = model
@@ -61,16 +38,23 @@ export function spreadsheetTypst(model: SheetSource, name: string): string {
   ].join('\n');
 }
 
+/** The part of IronCalc's `Model` the file needs. */
+export interface SheetSource {
+  getWorksheetsProperties(): { name: string; state: string }[];
+  getColumnsWithData(sheet: number, row: number): Int32Array | number[];
+  getFormattedCellValue(sheet: number, row: number, column: number): string;
+  getCellType(sheet: number, row: number, column: number): number;
+  getCellStyle(sheet: number, row: number, column: number): { style: CellStyle };
+  getColumnWidth(sheet: number, column: number): number;
+  getRowHeight(sheet: number, row: number): number;
+  resolveColor(color: Color): string;
+}
+
 /** Where the Typst file of spreadsheet `path` goes: `budget.ic` → `budget.ic.gen.typ`, next to it. */
 // generic, so a ProjectPath stays one (a suffix keeps a path valid) without this file importing it: the demo's
 // spreadsheet task runs it in Node, which resolves no extensionless imports
 export function typstPath<Path extends string>(path: Path): Path {
   return `${path}.gen.typ` as Path;
-}
-
-interface Size {
-  rows: number;
-  columns: number;
 }
 
 function usedSize(model: SheetSource, sheet: number): Size {
@@ -86,16 +70,35 @@ function usedSize(model: SheetSource, sheet: number): Size {
   return { rows, columns };
 }
 
-const range = (count: number) => Array.from({ length: count }, (_, i) => i + 1);
+interface Size {
+  rows: number;
+  columns: number;
+}
 
-function dictionary(variable: string, entries: string[]): string {
-  return entries.length === 0 ? `#let ${variable} = (:)` : `#let ${variable} = (\n${entries.join('\n')}\n)`;
+/** Rows looked at per sheet at most, and how many empty ones in a row end the search. */
+const MAX_ROWS = 10_000;
+const EMPTY_ROWS_TO_STOP = 1_000;
+
+/** A Typst string literal. */
+function str(value: string): string {
+  const escaped = value.replace(/[\\"\u0000-\u001f\u007f]/g, (char) => {
+    const named: Record<string, string> = { '\\': '\\\\', '"': '\\"', '\n': '\\n', '\r': '\\r', '\t': '\\t' };
+    return named[char] ?? `\\u{${char.charCodeAt(0).toString(16)}}`;
+  });
+  return `"${escaped}"`;
 }
 
 function valueRows(model: SheetSource, sheet: number, { rows, columns }: Size): string {
   if (rows === 0) return '()';
   const lines = range(rows).map((row) => `    ${array(range(columns).map((column) => str(model.getFormattedCellValue(sheet, row, column))))},`);
   return `(\n${lines.join('\n')}\n  )`;
+}
+
+const range = (count: number) => Array.from({ length: count }, (_, i) => i + 1);
+
+/** A Typst array literal (one element needs the trailing comma). */
+function array(items: string[]): string {
+  return items.length === 1 ? `(${items[0]},)` : `(${items.join(', ')})`;
 }
 
 function table(model: SheetSource, sheet: number, { rows, columns }: Size): string {
@@ -113,6 +116,19 @@ function table(model: SheetSource, sheet: number, { rows, columns }: Size): stri
   return `table(\n${lines.map((line) => `    ${line}`).join('\n')}\n  )`;
 }
 
+function pt(px: number): string {
+  return `${round(px * PT_PER_PX)}pt`;
+}
+
+function round(value: number): number {
+  return Math.round(value * 1000) / 1000;
+}
+
+/** IronCalc's sizes are CSS pixels (96 per inch); Typst's points are 72 per inch. */
+const PT_PER_PX = 0.75;
+/** IronCalc's default row height (px) and font size: rows of that height stay `auto`, sizes are relative to it. */
+const DEFAULT_ROW_HEIGHT = 25;
+
 function cell(model: SheetSource, sheet: number, row: number, column: number): string {
   const { style } = model.getCellStyle(sheet, row, column);
   const options: string[] = [];
@@ -126,9 +142,6 @@ function cell(model: SheetSource, sheet: number, row: number, column: number): s
   return options.length === 0 ? body : `table.cell(${[...options, body].join(', ')})`;
 }
 
-const HORIZONTAL: Record<string, string> = { left: 'left', right: 'right', center: 'center', centerContinuous: 'center' };
-const VERTICAL: Record<string, string> = { top: 'top', center: 'horizon', bottom: 'bottom' };
-
 /** The Typst alignment of a cell: as formatted, else as spreadsheets show "general" (by type), bottom. */
 function alignment(style: CellStyle, type: number): string {
   const general = type === NUMBER ? 'right' : type === BOOLEAN || type === ERROR ? 'center' : 'left';
@@ -136,6 +149,43 @@ function alignment(style: CellStyle, type: number): string {
   const vertical = VERTICAL[style.alignment?.vertical ?? 'bottom'] ?? 'top';
   return `${horizontal} + ${vertical}`;
 }
+
+/** `getCellType`: numbers align right, truth values and errors centered when the alignment is "general". */
+const NUMBER = 1;
+const BOOLEAN = 4;
+const ERROR = 16;
+
+const HORIZONTAL: Record<string, string> = { left: 'left', right: 'right', center: 'center', centerContinuous: 'center' };
+const VERTICAL: Record<string, string> = { top: 'top', center: 'horizon', bottom: 'bottom' };
+
+/** A spreadsheet colour as Typst `rgb(..)`; null when there is none. */
+function color(model: SheetSource, value: Color): string | null {
+  if (value === undefined) return null;
+  const hex = model.resolveColor(value);
+  return /^#[0-9a-f]{6}$/i.test(hex) ? `rgb("${hex.toLowerCase()}")` : null;
+}
+
+/** The cell's borders as a Typst stroke dictionary (empty: none). */
+function borders(model: SheetSource, { border }: CellStyle): string {
+  const sides = (['left', 'right', 'top', 'bottom'] as const).flatMap((side) => {
+    const item = border[side];
+    if (!item) return [];
+    const thickness = `${BORDER_WIDTH[item.style] ?? 1.5}pt`;
+    const paint = color(model, item.color) ?? 'black';
+    const dash = BORDER_DASH[item.style];
+    return [`${side}: ${dash ? `(thickness: ${thickness}, paint: ${paint}, dash: "${dash}")` : `${thickness} + ${paint}`}`];
+  });
+  return sides.length === 0 ? '' : `(${sides.join(', ')})`;
+}
+
+const BORDER_WIDTH: Record<string, number> = { thin: 0.75, dotted: 0.75, medium: 1.5, thick: 2.25, double: 2.25 };
+const BORDER_DASH: Record<string, string> = {
+  dotted: 'dotted',
+  mediumdashed: 'dashed',
+  mediumdashdot: 'dash-dotted',
+  mediumdashdotdot: 'dash-dotted',
+  slantdashdot: 'dash-dotted',
+};
 
 function text(model: SheetSource, style: CellStyle, body: string): string {
   const { font } = style;
@@ -151,53 +201,8 @@ function text(model: SheetSource, style: CellStyle, body: string): string {
   return result;
 }
 
-const BORDER_WIDTH: Record<string, number> = { thin: 0.75, dotted: 0.75, medium: 1.5, thick: 2.25, double: 2.25 };
-const BORDER_DASH: Record<string, string> = {
-  dotted: 'dotted',
-  mediumdashed: 'dashed',
-  mediumdashdot: 'dash-dotted',
-  mediumdashdotdot: 'dash-dotted',
-  slantdashdot: 'dash-dotted',
-};
+const DEFAULT_FONT_SIZE = 12;
 
-/** The cell's borders as a Typst stroke dictionary (empty: none). */
-function borders(model: SheetSource, { border }: CellStyle): string {
-  const sides = (['left', 'right', 'top', 'bottom'] as const).flatMap((side) => {
-    const item = border[side];
-    if (!item) return [];
-    const thickness = `${BORDER_WIDTH[item.style] ?? 1.5}pt`;
-    const paint = color(model, item.color) ?? 'black';
-    const dash = BORDER_DASH[item.style];
-    return [`${side}: ${dash ? `(thickness: ${thickness}, paint: ${paint}, dash: "${dash}")` : `${thickness} + ${paint}`}`];
-  });
-  return sides.length === 0 ? '' : `(${sides.join(', ')})`;
-}
-
-/** A spreadsheet colour as Typst `rgb(..)`; null when there is none. */
-function color(model: SheetSource, value: Color): string | null {
-  if (value === undefined) return null;
-  const hex = model.resolveColor(value);
-  return /^#[0-9a-f]{6}$/i.test(hex) ? `rgb("${hex.toLowerCase()}")` : null;
-}
-
-function pt(px: number): string {
-  return `${round(px * PT_PER_PX)}pt`;
-}
-
-function round(value: number): number {
-  return Math.round(value * 1000) / 1000;
-}
-
-/** A Typst array literal (one element needs the trailing comma). */
-function array(items: string[]): string {
-  return items.length === 1 ? `(${items[0]},)` : `(${items.join(', ')})`;
-}
-
-/** A Typst string literal. */
-function str(value: string): string {
-  const escaped = value.replace(/[\\"\u0000-\u001f\u007f]/g, (char) => {
-    const named: Record<string, string> = { '\\': '\\\\', '"': '\\"', '\n': '\\n', '\r': '\\r', '\t': '\\t' };
-    return named[char] ?? `\\u{${char.charCodeAt(0).toString(16)}}`;
-  });
-  return `"${escaped}"`;
+function dictionary(variable: string, entries: string[]): string {
+  return entries.length === 0 ? `#let ${variable} = (:)` : `#let ${variable} = (\n${entries.join('\n')}\n)`;
 }

@@ -1,8 +1,4 @@
-// The styles extension: the block and inline styles a project declares (`/// @style …`), in the Visual editor.
-// Entry of extensions/styles/. Why an extension: a style is a Typst function declared in some file of the project,
-// never a registry of the editor's own, so one read model (TypstStyleIndex) follows the whole
-// project, and every document's Visual editor shows the styles' calls as styled text and applies them from the text
-// style menu, importing a style where it is used. See docs/10_guide/02_features.typ.
+// The styles extension. Entry of extensions/styles/. See docs/10_guide/02_features.typ.
 import { SOURCE_EDITOR } from '../../hosts/source-editor/source-editor';
 import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
 import css from './styles.css?inline';
@@ -14,6 +10,11 @@ import { styleSearch } from './workbench/style-search';
 /**
  * Keeps the project's custom styles indexed; every document's Visual editor shows and applies
  * them and offers "New style…"; search everywhere applies them too (in either editor).
+ *
+ * The block and inline styles a project declares (`/// @style …`), in the Visual editor. Why an extension: a style is a
+ * Typst function declared in some file of the project, never a registry of the editor's own, so one read model
+ * (TypstStyleIndex) follows the whole project, and every document's Visual editor shows the styles' calls as styled
+ * text and applies them from the text style menu, importing a style where it is used.
  */
 export function styles(): TypstExtension {
   return {

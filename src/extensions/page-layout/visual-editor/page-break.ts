@@ -3,15 +3,6 @@ import { Node } from '@tiptap/core';
 import { hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-editor/visual-editor';
 
-declare module '@tiptap/core' {
-  interface Commands<ReturnType> {
-    pageBreak: {
-      /** Inserts `#pagebreak()` as a block of its own at the selection. */
-      setPageBreak: () => ReturnType;
-    };
-  }
-}
-
 const PageBreak = Node.create({
   name: 'pageBreak',
   group: 'block',
@@ -56,3 +47,12 @@ const ICON = svg('<path d="M6 3v5h12V3"/><path d="M6 21v-5h12v5"/><path d="M3 12
 
 /** "Insert page break" in the Insert menu (also Mod+Enter in the text). */
 export const INSERT_PAGE_BREAK: ToolbarAction = { label: 'Insert page break', shortcut: 'Mod+Enter', icon: ICON, keywords: ['new page'], run: (c) => c.setPageBreak() };
+
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    pageBreak: {
+      /** Inserts `#pagebreak()` as a block of its own at the selection. */
+      setPageBreak: () => ReturnType;
+    };
+  }
+}

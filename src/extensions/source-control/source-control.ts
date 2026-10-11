@@ -1,9 +1,5 @@
-// The source-control extension: the UI over the registered source controls (`scm`): "Save to <label>…" in the tab bar
-// (menu `editor/title`), which asks for a commit message and commits; their status bar entries (a click commits, too);
-// their resource states as file decorations. A source control tells its outcomes itself.
-// Entry of extensions/source-control/. See docs/30_architecture/08_built-in-extensions.typ.
-// Why apart from what commits: a source control (the GitLab branch behind a collaboration room) registers itself
-// (`scm.registerSourceControl`), and this extension only shows what is registered; neither knows the other.
+// The source-control extension. Entry of extensions/source-control/. See
+// docs/30_architecture/08_built-in-extensions.typ.
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
@@ -15,6 +11,13 @@ import { commit, commitTitle, resourceDecorations, SourceControlStatus } from '.
  * While a source control is registered: the command `sourceControl.commit` as "Save to <label>…" in the tab bar
  * ("Saving to <label>…" while it is busy), the source controls' `statusBarCommands` at the start of the status bar,
  * and their `resourceStates` as file decorations.
+ *
+ * The UI over the registered source controls (`scm`): "Save to <label>…" in the tab bar (menu `editor/title`), which
+ * asks for a commit message and commits; their status bar entries (a click commits, too); their resource states as file
+ * decorations. A source control tells its outcomes itself.
+ *
+ * Why apart from what commits: a source control (the GitLab branch behind a collaboration room) registers itself
+ * (`scm.registerSourceControl`), and this extension only shows what is registered; neither knows the other.
  */
 export function sourceControl(): TypstExtension {
   return {

@@ -1,5 +1,4 @@
-// Custom styles in the Visual editor: declared block styles as styled blocks (`#note[..]`), inline styles as a
-// mark (`#key[..]`), and the text style menu. See docs/10_guide/02_features.typ.
+// Custom styles in the Visual editor. See docs/10_guide/02_features.typ.
 import type { SyntaxNode } from '@lezer/common';
 import { Extension, type Editor } from '@tiptap/core';
 import type { Mark, Node } from '@tiptap/pm/model';
@@ -12,16 +11,6 @@ import type { ProjectStyles } from '../model/typst-style-index';
 import type { TypstStyle, TypstStyleKind } from '../model/discover';
 import { StyledBlock, TypstStyleMark } from './style-nodes';
 
-export interface StylesOptions {
-  /** The project's styles: their calls show as styled, editable text. */
-  styles: ProjectStyles;
-  /** "New style…" in the text style menu. */
-  create(): void;
-}
-
-/** The origin of the import a newly applied style adds to the document. */
-const STYLE_IMPORT = 'style-import';
-
 /**
  * Custom styles (see `model/`): a call of a declared paragraph
  * style that is a block of its own (`#note[..]`, `#callout(..)[..]`) is a
@@ -31,6 +20,8 @@ const STYLE_IMPORT = 'style-import';
  * project's styles and "New style…" (after normal text and what other
  * extensions contribute) and applies them, importing a style where it is now
  * used.
+ *
+ * Declared block styles as styled blocks (`#note[..]`), inline styles as a mark (`#key[..]`), and the text style menu.
  */
 export function customStyles(options: StylesOptions): VisualEditorContribution {
   const declared = declaredStyles(options.styles);
@@ -63,6 +54,13 @@ export function customStyles(options: StylesOptions): VisualEditorContribution {
       );
     },
   };
+}
+
+export interface StylesOptions {
+  /** The project's styles: their calls show as styled, editable text. */
+  styles: ProjectStyles;
+  /** "New style…" in the text style menu. */
+  create(): void;
 }
 
 /** The Visual editors by document, so a style can be applied from outside the text style menu (search everywhere). */
@@ -110,8 +108,6 @@ export function styleApplier(source: ProjectStyles): StyleApplier {
   };
 }
 
-type Declared = ReadonlyMap<string, { kind: TypstStyleKind; label: string }>;
-
 /** The declared styles by function name, as of now (made anew when the list changes). */
 function declaredStyles(source: ProjectStyles): () => Declared {
   let list: readonly TypstStyle[] | null = null;
@@ -126,11 +122,7 @@ function declaredStyles(source: ProjectStyles): () => Declared {
   };
 }
 
-/** How a styled block's source lies around its content: `#note[` (or `#callout(..)[`) and `]`. Null: a new one. */
-interface StyleLayout {
-  open: string;
-  close: string;
-}
+type Declared = ReadonlyMap<string, { kind: TypstStyleKind; label: string }>;
 
 const STYLED_BLOCK: TypstNodeSpec = {
   name: 'styledBlock',
@@ -138,11 +130,19 @@ const STYLED_BLOCK: TypstNodeSpec = {
   typst: { toTypst: styledBlockToTypst, anchors: ['layout'], labelled: true },
 };
 
-const STYLE: TypstMarkSpec = {
-  name: 'style',
-  tiptap: TypstStyleMark,
-  typst: { toTypst: (mark) => ({ open: mark.attrs.head ?? `#${mark.attrs.name}[`, close: ']' }) },
-};
+/** `#name[..]` around a styled block's blocks, or the call around them as parsed. */
+function styledBlockToTypst(state: TypstSerializeState, block: Node, pos: number): void {
+  const { open, close }: StyleLayout = block.attrs.layout ?? { open: `#${block.attrs.name}[`, close: ']' };
+  state.hidden(open);
+  state.blocks(block, pos + 1, '\n\n');
+  state.closing(close);
+}
+
+/** How a styled block's source lies around its content: `#note[` (or `#callout(..)[`) and `]`. Null: a new one. */
+interface StyleLayout {
+  open: string;
+  close: string;
+}
 
 /** `#name(..)?[content]` of a declared block style: a `styledBlock` whose content is segmented like the document. */
 function parseStyledBlock(p: TypstParseContext, call: SyntaxNode, sep: string | null, declared: Declared): Node | null {
@@ -156,13 +156,11 @@ function parseStyledBlock(p: TypstParseContext, call: SyntaxNode, sep: string | 
   return p.schema.nodes.styledBlock.create({ name, title: style.label, sep, layout }, inside);
 }
 
-/** `#name[..]` around a styled block's blocks, or the call around them as parsed. */
-function styledBlockToTypst(state: TypstSerializeState, block: Node, pos: number): void {
-  const { open, close }: StyleLayout = block.attrs.layout ?? { open: `#${block.attrs.name}[`, close: ']' };
-  state.hidden(open);
-  state.blocks(block, pos + 1, '\n\n');
-  state.closing(close);
-}
+const STYLE: TypstMarkSpec = {
+  name: 'style',
+  tiptap: TypstStyleMark,
+  typst: { toTypst: (mark) => ({ open: mark.attrs.head ?? `#${mark.attrs.name}[`, close: ']' }) },
+};
 
 /** `#key[text]` (or `#key(..)[text]`) of a declared inline style, with non-empty, single-paragraph text; null otherwise. */
 function parseStyleCall(p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[], declared: Declared): PlacedNode[] | null {
@@ -221,3 +219,6 @@ function textStyle(style: TypstStyle, view: VisualEditorContext, source: Project
     isActive: (editor) => editor.isActive('style', { name: style.name }),
   };
 }
+
+/** The origin of the import a newly applied style adds to the document. */
+const STYLE_IMPORT = 'style-import';

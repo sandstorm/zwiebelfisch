@@ -5,17 +5,6 @@ import { SourceRange } from '../../../core/typst-document/typst-document';
 import type { RawBoxRenderer } from '../../../hosts/visual-editor/visual-editor';
 import { rendersInPlace, snippetSize, type RenderedSnippet } from '../model/model';
 
-/** Where a document's snippets come from: the compiled pages. */
-export interface SnippetSource {
-  /**
-   * How source range `range` of the document, which holds `text`, looks
-   * compiled; null when it draws nothing or cannot be shown right now.
-   */
-  snippet(range: SourceRange, text: string): Promise<RenderedSnippet | null>;
-  /** Fires whenever snippets may have changed. */
-  readonly onDidChange: Event<void>;
-}
-
 /**
  * The box renderer drawing raw boxes as `source`'s snippets: while not focused, a raw box shows the compiled snippet
  * of its source range as an SVG picture, refreshed whenever the source reports a change. Block boxes size it in pt;
@@ -34,4 +23,15 @@ export function snippetRenderer(source: SnippetSource): RawBoxRenderer {
     },
     onDidChange: source.onDidChange,
   };
+}
+
+/** Where a document's snippets come from: the compiled pages. */
+export interface SnippetSource {
+  /**
+   * How source range `range` of the document, which holds `text`, looks
+   * compiled; null when it draws nothing or cannot be shown right now.
+   */
+  snippet(range: SourceRange, text: string): Promise<RenderedSnippet | null>;
+  /** Fires whenever snippets may have changed. */
+  readonly onDidChange: Event<void>;
 }

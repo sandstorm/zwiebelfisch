@@ -1,28 +1,17 @@
-// TextFileEditor: a text file (data, bibliography, notes) in the editing area, edited in plain CodeMirror; edits are
-// saved debounced, changes made elsewhere are shown unless local typing is pending. See ../text-files.ts.
+// TextFileEditor. See ../text-files.ts.
 import { basicSetup } from 'codemirror';
 import { Transaction, type ChangeSpec, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { ProjectPath } from '../../../core/paths/paths';
-
-/** How long after the last keystroke the text is saved (as the diagram editor's exports). */
-export const SAVE_DELAY = 800;
-
-export interface TextFileEditorOptions {
-  readonly path: ProjectPath;
-  /** The file's text when opened. */
-  readonly text: string;
-  /** Stores the whole text (the file's new content). */
-  save(text: string): void;
-  /** More of CodeMirror (the document links). */
-  readonly extensions?: Extension;
-}
 
 /**
  * The text file `path` in CodeMirror (its basic setup, no language): the text is saved `SAVE_DELAY` ms after the
  * last edit, and at once by `dispose`. `reload` shows the file as changed elsewhere (another user, the host): while
  * an edit of this editor waits to be saved it is ignored, since that save replaces the whole file anyway (the last
  * save wins); otherwise the text changes in place, cursor and the user's undo history kept.
+ *
+ * A text file (data, bibliography, notes) in the editing area, edited in plain CodeMirror; edits are saved debounced,
+ * changes made elsewhere are shown unless local typing is pending.
  */
 export class TextFileEditor {
   readonly #root: HTMLElement;
@@ -95,6 +84,19 @@ export class TextFileEditor {
     this.#timer = null;
     this.options.save(this.#view.state.doc.toString());
   }
+}
+
+/** How long after the last keystroke the text is saved (as the diagram editor's exports). */
+export const SAVE_DELAY = 800;
+
+export interface TextFileEditorOptions {
+  readonly path: ProjectPath;
+  /** The file's text when opened. */
+  readonly text: string;
+  /** Stores the whole text (the file's new content). */
+  save(text: string): void;
+  /** More of CodeMirror (the document links). */
+  readonly extensions?: Extension;
 }
 
 /** The one replacement that turns `from` into `to` (the common start and end stay, so the cursor around them does). */

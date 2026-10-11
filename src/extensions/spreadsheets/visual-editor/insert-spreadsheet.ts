@@ -1,5 +1,4 @@
-// "Insert spreadsheet" in the Visual editor's Insert menu (and so among the slash commands): a new spreadsheet with a
-// starter table, its table as a figure in the text, then the spreadsheet opened. See ../spreadsheets.ts.
+// "Insert spreadsheet" in the Visual editor's Insert menu (and so among the slash commands). See ../spreadsheets.ts.
 import type { FileChange } from '../../../core/project/project';
 import { PathReference, ProjectPath } from '../../../core/paths/paths';
 import { insertTypstBlocks, svg, type ToolbarContext, type ToolbarItem } from '../../../hosts/visual-editor/visual-editor';
@@ -8,21 +7,14 @@ import { calculateSheetFigure } from '../model/sheet-figure';
 import { typstPath } from '../model/typst-file';
 import type { NewWorkbook } from '../workbench/workbook';
 
-/** What inserting a spreadsheet uses of the extension context. */
-export type InsertContext = Pick<ExtensionContext, 'project' | 'window' | 'workspace' | 'workbench'>;
-
-/** Where a new spreadsheet is proposed, relative to the document. */
-const PROPOSED = PathReference.of('data/table.ic');
-/** The origin of the import change (the document's listeners see who changed it). */
-const INSERT_SPREADSHEET = 'spreadsheets.insertSpreadsheet';
-const ICON = svg('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14.5h18M9 9v11M15 9v11"/>');
-
 /**
  * "Insert spreadsheet": asks for the new spreadsheet's name (`window.showSaveDialog`, proposing a free
  * `data/table.ic` next to the document), creates it with the starter table and its Typst file (both through
  * `workspace.applyEdit`, so the document compiles at once), inserts `#figure(sheets.Sheet1, caption: [ ])` after the
  * cursor's block with the import it needs (`calculateSheetFigure`), and opens the spreadsheet: the starter values
  * are placeholders, so filling them in is next. `newWorkbook` makes the spreadsheet (IronCalc, loaded on demand).
+ *
+ * A new spreadsheet with a starter table, its table as a figure in the text, then the spreadsheet opened.
  */
 export function insertSpreadsheet(context: InsertContext, newWorkbook: (fileName: string) => Promise<NewWorkbook>): ToolbarItem {
   return {
@@ -36,6 +28,11 @@ export function insertSpreadsheet(context: InsertContext, newWorkbook: (fileName
     }),
   };
 }
+
+/** What inserting a spreadsheet uses of the extension context. */
+export type InsertContext = Pick<ExtensionContext, 'project' | 'window' | 'workspace' | 'workbench'>;
+
+const ICON = svg('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14.5h18M9 9v11M15 9v11"/>');
 
 async function insert({ project, window, workspace, workbench }: InsertContext, toolbar: ToolbarContext, newWorkbook: (fileName: string) => Promise<NewWorkbook>): Promise<void> {
   const { editor, document } = toolbar;
@@ -68,3 +65,8 @@ async function insert({ project, window, workspace, workbench }: InsertContext, 
   insertTypstBlocks(editor, source);
   workbench.open(target);
 }
+
+/** Where a new spreadsheet is proposed, relative to the document. */
+const PROPOSED = PathReference.of('data/table.ic');
+/** The origin of the import change (the document's listeners see who changed it). */
+const INSERT_SPREADSHEET = 'spreadsheets.insertSpreadsheet';

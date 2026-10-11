@@ -1,10 +1,20 @@
-// A spreadsheet in a document as a figure: the starter table a spreadsheet inserted into a document begins with, the
-// name its sheets go by in the document (a second spreadsheet's sheets get one of their own) with the import that
-// binds it, and the figure's Typst. See ../spreadsheets.ts.
+// A spreadsheet in a document as a figure. See ../spreadsheets.ts.
 import { PathReference, ProjectPath } from '../../../core/paths/paths';
 import type { SourceOffset, TextChange } from '../../../core/typst-document/typst-document';
 import { calculateImportChange, importedNames, quote } from '../../../core/typst-syntax/typst-syntax';
 import { typstPath } from './typst-file';
+
+/**
+ * The figure of a sheet in a document, and the change that imports what it names (null: imported already).
+ *
+ * The starter table a spreadsheet inserted into a document begins with, the name its sheets go by in the document (a
+ * second spreadsheet's sheets get one of their own) with the import that binds it, and the figure's Typst.
+ */
+export interface SheetFigure {
+  /** `#figure(sheets.Sheet1, caption: [ ])`. */
+  readonly source: string;
+  readonly importChange: TextChange | null;
+}
 
 /** What "Insert spreadsheet" types into the new spreadsheet's first sheet: a bold header row and two rows. */
 export const STARTER_TABLE: readonly (readonly string[])[] = [
@@ -26,16 +36,6 @@ export function typeStarterTable(model: CellInput): void {
   model.updateRangeStyle({ sheet: 0, row: 1, column: 1, width: STARTER_TABLE[0].length, height: 1 }, 'font.b', 'true');
   model.evaluate();
 }
-
-/** The figure of a sheet in a document, and the change that imports what it names (null: imported already). */
-export interface SheetFigure {
-  /** `#figure(sheets.Sheet1, caption: [ ])`. */
-  readonly source: string;
-  readonly importChange: TextChange | null;
-}
-
-/** The name the generated file's tables are imported by (`sheets`, see `spreadsheetTypst`). */
-const SHEETS = 'sheets';
 
 /** Which sheet goes where: sheet `sheet` of `spreadsheet`, at `use` in the document `file`. */
 export interface SheetPlace {
@@ -68,6 +68,9 @@ export function calculateSheetFigure(text: string, { file, spreadsheet, sheet, u
       });
   return { source: `#figure(${binding}${field(sheet)}, caption: [ ])`, importChange };
 }
+
+/** The name the generated file's tables are imported by (`sheets`, see `spreadsheetTypst`). */
+const SHEETS = 'sheets';
 
 /** `sheets` if nothing else is bound to it (another spreadsheet's file imported with `*` binds it too), else `<name>-sheets`. */
 function freeBinding(imported: readonly { module: string; binding: string }[], spreadsheet: ProjectPath): string {

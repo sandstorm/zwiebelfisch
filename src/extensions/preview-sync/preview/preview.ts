@@ -1,13 +1,6 @@
 // What the preview-sync extension adds to the preview's toolbar: the "Follow cursor" on/off switch. See ../preview-sync.ts.
 import type { PreviewToolbarItem } from '../../../hosts/preview/preview';
 
-export interface FollowCursorOptions {
-  /** Whether it starts on. */
-  on: boolean;
-  /** Called when the user switches it on or off. */
-  onChange(on: boolean): void;
-}
-
 /** The "Follow cursor" switch (role=switch): whether the preview scrolls to the text being edited or selected. */
 export function followCursor({ on, onChange }: FollowCursorOptions): PreviewToolbarItem {
   return (preview) => {
@@ -31,4 +24,11 @@ export function followCursor({ on, onChange }: FollowCursorOptions): PreviewTool
     show();
     return { elements: [button] };
   };
+}
+
+export interface FollowCursorOptions {
+  /** Whether it starts on. */
+  on: boolean;
+  /** Called when the user switches it on or off. */
+  onChange(on: boolean): void;
 }

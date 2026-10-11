@@ -9,9 +9,6 @@ import { calculateStyleWrap } from '../model/style-wrap';
 import type { ProjectStyles } from '../model/typst-style-index';
 import type { StyleApplier } from '../visual-editor/visual-editor';
 
-/** The origin of a style applied in the Source editor. */
-const STYLE_APPLY = 'style-apply';
-
 /**
  * "Styles" (prefix `*`): the project's block and inline styles; picking one applies it to the selection of the Typst
  * editor in use: in the Visual editor as its text style menu does, in the Source editor as text (`#name[selection]`, an
@@ -53,3 +50,6 @@ function wrapInSource(editor: TextEditor, style: TypstStyle, styles: ProjectStyl
 function added(change: TextChange): number {
   return change.insert.length - (change.to - change.from);
 }
+
+/** The origin of a style applied in the Source editor. */
+const STYLE_APPLY = 'style-apply';

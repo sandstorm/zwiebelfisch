@@ -4,17 +4,6 @@ import type { PdfExportOption, PreviewToolbarItem } from '../../../hosts/preview
 import type { WindowApi } from '../../../hosts/window/window';
 import type { Memento } from '../../../hosts/workbench/workbench';
 
-/** What the button downloads: the PDF made with the given option values, and the name to save it under. */
-export interface PdfDownloads {
-  /** The options an export offers now (registered by other extensions). */
-  options(): readonly PdfExportOption[];
-  /** Rejects with an error whose message is shown to the user. */
-  file(values: Record<string, boolean>): Promise<{ blob: Blob; name: string }>;
-}
-
-/** Where the button tells why there is no PDF. */
-export type PdfMessages = Pick<WindowApi, 'showErrorMessage'>;
-
 /**
  * "Download PDF". With export options registered it opens a popover with a checkbox per option (as this viewer left
  * them last time, kept in `state` under `options`, else their defaults) and "Download"; without any it downloads at
@@ -28,9 +17,16 @@ export function downloadPdf(pdfs: PdfDownloads, state: Memento, messages: PdfMes
   };
 }
 
-const LABEL = 'Download PDF';
-/** Where the viewer's choices are kept. */
-const OPTIONS_KEY = 'options';
+/** What the button downloads: the PDF made with the given option values, and the name to save it under. */
+export interface PdfDownloads {
+  /** The options an export offers now (registered by other extensions). */
+  options(): readonly PdfExportOption[];
+  /** Rejects with an error whose message is shown to the user. */
+  file(values: Record<string, boolean>): Promise<{ blob: Blob; name: string }>;
+}
+
+/** Where the button tells why there is no PDF. */
+export type PdfMessages = Pick<WindowApi, 'showErrorMessage'>;
 
 class DownloadPdfButton {
   readonly element: HTMLElement;
@@ -159,6 +155,10 @@ class DownloadPdfButton {
     this.download.setAttribute('aria-busy', String(busy));
   }
 }
+
+const LABEL = 'Download PDF';
+/** Where the viewer's choices are kept. */
+const OPTIONS_KEY = 'options';
 
 /** Hands `blob` to the browser as a download named `name`. */
 function save(doc: Document, blob: Blob, name: string): void {
