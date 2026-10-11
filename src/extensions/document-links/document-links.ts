@@ -1,5 +1,3 @@
-// The document-links extension. Entry of extensions/document-links/. See
-// docs/20_extensions/04_source-editor-and-preview.typ.
 import { findFilePaths } from '../../core/typst-syntax/typst-syntax';
 import { ProjectPath } from '../../core/paths/paths';
 import type { Project } from '../../core/project/project';
@@ -7,16 +5,17 @@ import type { TypstExtension } from '../../hosts/workbench/workbench';
 import type { DocumentLink, DocumentLinkProvider, TextDocument } from '../../hosts/languages/languages';
 
 /**
- * Links the file paths of all Typst text (the Source editors, raw boxes, an image box's path): they resolve from the
- * file's path, open an existing file, and offer to create a missing Typst file: the command
- * `documentLinks.createFile(path)` creates it through `workspace.applyEdit` and opens it, or rejects saying why not.
+ * The file paths in Typst text (`#include "ch1.typ"`, `image("logo.png")`) as document links. A path resolves from the
+ * file it is in. Its link opens an existing file, or says the file is missing and, for a Typst file, offers to create
+ * it: the command `documentLinks.createFile(path)` creates it through `workspace.applyEdit` and opens it, or rejects
+ * saying why not.
  *
- * The file paths in Typst text (`#include "ch1.typ"`, `image("logo.png")`) as document links, which open the file or
- * offer to create a missing Typst file.
- *
- * Why an extension: finding paths is Typst syntax (core/typst-syntax), showing and following links is the hosts' (every
- * editor shows the links of every `DocumentLinkProvider` for its language); where a path leads in this project, and that
- * a missing Typst file may be created, is this extension's policy.
+ * The work is split three ways. Finding paths is Typst syntax (core/typst-syntax). Showing and following links is the
+ * hosts': every editor shows the links of every DocumentLinkProvider for its language (the Source editors, raw boxes'
+ * code and pictures; the images extension asks for the link on an image box's path). Where a path leads in this
+ * project, and that a missing Typst file may be created, is this extension's policy. Other extensions put their own
+ * links on some paths with a higher priority (the diagrams' "Edit diagram").
+ * See docs/20_extensions/04_source-editor-and-preview.typ.
  */
 export function documentLinks(): TypstExtension {
   return {
