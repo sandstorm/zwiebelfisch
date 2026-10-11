@@ -3,7 +3,7 @@
 // toolbar's Insert ▾ → "Add label" and the selection bar's.
 import { describe, expect, it } from 'vitest';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
-import { createVisualEditor, TestPrompts } from '../../../testing/testing';
+import { createVisualEditor, opened, TestPrompts } from '../../../testing/testing';
 import { Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import { LabelIndex } from '../model/label-index';
@@ -52,10 +52,10 @@ describe('Add label', () => {
     expect(add('sec:intro')).toBe('sec:');
     expect(doc.text).toBe('= Intro <sec:intro>\n\nText\n');
     view.reveal(SourceRange.of({ from: 3, to: 3 }));
-    expect(item.disabled).toBe(true);
+    expect(opened(item).disabled).toBe(true);
     const text = doc.text.indexOf('Text');
     view.reveal(SourceRange.of({ from: text, to: text }));
-    expect(item.disabled).toBe(false);
+    expect(opened(item).disabled).toBe(false);
     expect(add('plain')).toBe('');
     expect(doc.text).toBe('= Intro <sec:intro>\n\nText <plain>\n');
   });

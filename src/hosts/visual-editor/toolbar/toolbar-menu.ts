@@ -7,7 +7,9 @@
  * item, Escape, or a click elsewhere closes it; arrow keys move between the
  * items. The items are ordinary toolbar buttons (their enabled/pressed state
  * is the toolbar's business); the trigger shows `icon()` as of the last
- * `refresh()`, e.g. the current alignment.
+ * `refresh()`, e.g. the current alignment. The items' state is invisible while
+ * the menu is closed: `refreshItems()` runs when it opens and on `refresh()`
+ * while it is open, not after every transaction.
  */
 export class ToolbarMenu {
   readonly element: HTMLElement;
@@ -24,7 +26,7 @@ export class ToolbarMenu {
   constructor(
     doc: Document,
     label: string,
-    private readonly icon: () => string,
+    private readonly look: { icon(): string; refreshItems?(): void },
     private readonly items: HTMLButtonElement[],
   ) {
     this.element = doc.createElement('div');
@@ -63,11 +65,12 @@ export class ToolbarMenu {
     this.refresh();
   }
 
-  /** Shows `icon()` on the trigger as it is now. */
+  /** Shows `icon()` on the trigger as it is now, and the items' state while the menu is open. */
   refresh(): void {
     // after every transaction: parse the icon only when it changed
-    const icon = this.icon();
+    const icon = this.look.icon();
     if (icon !== this.shown) this.glyph.innerHTML = this.shown = icon;
+    if (this.isOpen) this.look.refreshItems?.();
   }
 
   dispose(): void {
@@ -80,6 +83,7 @@ export class ToolbarMenu {
   }
 
   private open(): void {
+    this.look.refreshItems?.();
     this.list.hidden = false;
     this.trigger.setAttribute('aria-expanded', 'true');
     this.element.ownerDocument.addEventListener('mousedown', this.outside, true);

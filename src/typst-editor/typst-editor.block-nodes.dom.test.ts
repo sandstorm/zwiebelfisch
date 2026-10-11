@@ -4,7 +4,7 @@
 import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { SourceRange, TypstDocument } from '../core/typst-document/typst-document';
-import { createVisualEditor } from '../testing/testing';
+import { createVisualEditor, opened } from '../testing/testing';
 
 /** A Visual editor over `text`, its toolbar, and its Tiptap editor (for typing). */
 function setup(text: string) {
@@ -16,7 +16,7 @@ function setup(text: string) {
     // the toolbar, its menus and the floating bars (the table edits float above the table)
     const found = parent.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`);
     if (!found) throw new Error(`no button "${label}"`);
-    return found;
+    return opened(found);
   };
   const editor = (parent.querySelector('.ProseMirror') as HTMLElement & { editor: Editor }).editor;
   return { doc, view, button, editor, parent };
@@ -95,7 +95,7 @@ describe('table header row', () => {
     const source = 'Hi\n\n#table(columns: 2, [a], [b], [c], [d])\n';
     const { doc, view, button, parent } = setup(source);
     view.reveal(SourceRange.of({ from: 1, to: 1 }));
-    expect(button('Header row').disabled).toBe(true);
+    expect(button('Header row').closest<HTMLElement>('.typst-floating-bar')!.hidden).toBe(true);
     view.reveal(SourceRange.of({ from: source.indexOf('c'), to: source.indexOf('c') }));
     expect(button('Header row').getAttribute('aria-pressed')).toBe('false');
     button('Header row').click();

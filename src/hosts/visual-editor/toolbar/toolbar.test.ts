@@ -43,6 +43,29 @@ function setup(text: string) {
 }
 
 describe('Visual editor toolbar', () => {
+  it("asks a menu's and a floating bar's items for their state only while they show, not after every transaction", () => {
+    const asked = { menu: 0, bar: 0 };
+    const counted: VisualEditorContribution = {
+      id: 'counted',
+      activate: ({ visualEditor }) => {
+        visualEditor.registerToolbarItem({ group: 'insert', action: { label: 'Counted', icon: svg(''), enabled: () => (asked.menu++, true) } });
+        visualEditor.registerToolbarItem({ group: 'selection', action: { label: 'Counted in bar', icon: svg(''), enabled: () => (asked.bar++, true) } });
+      },
+    };
+    const parent = document.body.appendChild(document.createElement('div'));
+    const doc = new TypstDocument('Hello world\n');
+    const view = new VisualEditor(parent, doc, VisualEditorHost.from([counted]));
+    view.reveal(SourceRange.of({ from: 3, to: 3 }));
+    doc.setText('Hello there\n', 'elsewhere');
+    expect(asked).toEqual({ menu: 0, bar: 0 });
+    parent.querySelector<HTMLButtonElement>('button[aria-label="Insert"]')!.click();
+    expect(asked.menu).toBe(1);
+    view.reveal(SourceRange.of({ from: 3, to: 3 }));
+    expect(asked.menu).toBe(2);
+    view.reveal(SourceRange.of({ from: 0, to: 5 }));
+    expect(asked.bar).toBeGreaterThan(0);
+  });
+
   it('is a labelled toolbar above the editor', () => {
     const { toolbar } = setup('Hello\n');
     expect(toolbar.getAttribute('aria-label')).toBe('Formatting');

@@ -17,7 +17,7 @@ function setup() {
   const chosen = vi.fn();
   let icon = '<svg>left</svg>';
   const items = [item('Align left', () => chosen('left')), item('Center', () => chosen('center'))];
-  const menu = new ToolbarMenu(document, 'Align', () => icon, items);
+  const menu = new ToolbarMenu(document, 'Align', { icon: () => icon }, items);
   document.body.append(menu.element);
   const list = menu.element.querySelector<HTMLElement>('[role="menu"]')!;
   return { menu, trigger: trigger(menu), list, items, chosen, setIcon: (next: string) => (icon = next) };
@@ -71,7 +71,7 @@ describe('ToolbarMenu in a shadow root (as in <typst-editor>)', () => {
     const root = host.attachShadow({ mode: 'open' });
     const chosen = vi.fn();
     const choice = item('Insert image', chosen);
-    const menu = new ToolbarMenu(document, 'Insert', () => '', [choice]);
+    const menu = new ToolbarMenu(document, 'Insert', { icon: () => '' }, [choice]);
     root.append(menu.element);
     trigger(menu).click();
     // the document sees the shadow host as the target; the composed path still holds the item

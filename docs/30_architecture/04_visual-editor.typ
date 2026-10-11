@@ -46,7 +46,7 @@ Typst no spec models, and nodes whose spec sets `view.box: 'code'` (images, outl
 
 - Laid out from contributed groups (a button group, a menu, a bar floating in the text) sorted by `order`, and items by `group` + `order`. Groups without items are left out.
 - The host's own: `history` (undo/redo, 10), `text-style` (20, once a provider exists), the `insert` menu (50), the floating `selection` bar.
-- Buttons are `ToolbarAction`s: a Tiptap chain command, dry-run after every transaction to disable the button. They never take the focus from the text.
+- Buttons are `ToolbarAction`s: a Tiptap chain command, dry-run to disable the button: in the row after every transaction, in a menu when it opens and while it is open, in a floating bar while it shows (what is not shown is not asked). They never take the focus from the text.
 
 == Completion lists <architecture-visual-editor-completion>
 

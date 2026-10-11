@@ -105,6 +105,7 @@ it.each(scenarios.filter((scenario) => !only || scenario.name.includes(only)))('
   widget.open(scenario.path);
   const tiptap = visualEditor(host);
   const block = placeCursor(tiptap, scenario);
+  tiptap.view.focus(); // as when typing: the floating bars follow a focused editor
   // the preview shows the page typed in (as "Follow cursor" does) and the pages around it
   const page = await InProcessWorker.pageOf(scenario.path, widget.files[scenario.path]!.toString().indexOf(scenario.after));
   NearView.show([page - 1, page, page + 1], tiptap.view.dom, { from: block - NEAR_BLOCKS, to: block + NEAR_BLOCKS });
