@@ -38,6 +38,9 @@ needs nothing else. `mise run server:dev-fake-gitlab` starts the playground serv
 Every state has a URL, so links can be shared between windows. For example:
 `/?example=advanced&room=playground-advanced&user=Bob`,
 `/?room=gitlab%3Ademo%2Freport%40my-branch&user=Ann` (a fresh branch, which starts at `main`).
+Add `&devtools` (or `?devtools`) for ProseMirror's dev tools on the Visual view: the document tree with the
+projection's `src` / `sep` anchors, the selection, transactions, plugin states and the schema in Tiptap's order
+(`demo/devtools.ts`; demo only, not in the library).
 
 Tip: the fake repository lives in memory. Restart `mise run demo` to reset it, or use a fresh
 branch name.

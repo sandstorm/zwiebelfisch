@@ -59,13 +59,15 @@ src/                        the widget (TypeScript); the most important API on t
                             bar above an anchor in the text), highlights.ts
     projection/             the source-anchored projection between Typst text and the Visual view's ProseMirror
                             document, and the minimum schema it needs (projection.ts: project, print, syncDoc, the
-                            position maps, the spec contract NodeGrammar / MarkGrammar / ProjectionContext / Printer,
-                            createSchema / documentExtensions / attachGrammar, starterKitPart, BASE_NODES);
-                            schema.ts (document, raw block / inline, soft break, the typstSource mark, source
-                            anchors), grammar.ts, projecting.ts, printing.ts, labels.ts, pristine.ts. Not a view:
+                            position maps, the spec contract DocumentNodeSpec / TypstMarkSpec (TypstNodeConversion /
+                            TypstMarkConversion / TypstParseRules) / TypstParseContext / TypstSerializeState,
+                            createSchema / documentExtensions / attachGrammar, starterKitPart); schema.ts (document,
+                            raw block / inline, soft break, the typstSource mark, base source anchors), grammar.ts,
+                            parser.ts (TypstToProseMirrorParser), serializer.ts (ProseMirrorToTypstSerializer),
+                            labels.ts, pristine.ts. Not a view:
                             the Visual view host's document model, a module of its own so specs and tests reach it
                             through its entry, tested without a view
-    source-view/            source-view.ts, all of it: SourceViewHost (registerExtension, createView: what
+    source-view/            source-view.ts, all of it: SourceViewHost (registerCodeMirrorExtension, createView: what
                             `ExtensionContext.sourceView` is), the contribution types, `fromDocument`, and SourceView
                             (CodeMirror 6 bound to a TypstDocument)
     preview/                Preview — worker-backed live preview + hit-testing, scroll / reveal; what
@@ -97,8 +99,10 @@ src/                        the widget (TypeScript); the most important API on t
                             names), neighbours (the files read before and after one: main file, then its #includes
                             depth first),
                             calculateImportChange (the change that imports a name from a module, once; applies
-                            nothing: margin notes merge it into their own edit); what projectors and printers read
-                            (children, parenthesized, isClosedContent, decodeString, quote, isEmbeddable)
+                            nothing: margin notes merge it into their own edit); what specs read and write: plain,
+                            public functions over Lezer nodes (children, calleeName, callArguments, namedArgument,
+                            trailingContent, hasOnlyArguments, withHash, isClosedContent, decodeString, quote,
+                            isEmbeddable, markupSource)
     uploads/                uploadChanges: files from the computer (picked, dropped) as `create` changes at the top
                             of the project (`.typ` as text, the rest as bytes); used by files and images; takes any
                             `UploadedFile` (`name`, `text()`, `arrayBuffer()`: a DOM File is one, core names no DOM type)
@@ -161,7 +165,7 @@ src/                        the widget (TypeScript); the most important API on t
                             read-only, the custom editor `images.preview`)
     figures/                figures(): `#figure(body, caption: [..])` of any `figureBody` node (images, tables), the
                             caption as rich text, the commands addFigureCaption / removeFigureCaption; visual-view/
-                            (Figure, FigureCaption, projecting, printing, the caption edits); figures.css
+                            (Figure, FigureCaption, parsing, toTypst, the caption edits); figures.css
     rendered-boxes/         renderedBoxes(): raw boxes drawn as snippets from the preview; model/ (Snippet,
                             rendersInPlace, inlinePictureSize, snippetSize), visual-view/ (snippetRenderer over a
                             SnippetSource)
@@ -338,7 +342,8 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
   `tables`, `images`, `figures`, `renderedBoxes`, `outline`, `pageLayout`, `lists`, `alignment`, `comments`, `labels`,
   `styles`; then `previewSync`, `previewControls` and `pdfExport`. Extensions never depend on each other, so the
   order carries no meaning: where the Visual view's contributions compete, or document links overlap, `priority`
-  decides (see "VisualView"; tested by projecting every fixture with the built-ins in reverse order); toolbar items
+  decides (for nodes and marks their Tiptap extension's; see "VisualView"; tested by parsing every fixture with the
+  built-ins in reverse order); toolbar items
   and menu entries (also the tab bar's) have `group` + `order`, status bar items `alignment` + `priority`. `typst-editor.ts` names
   no feature: no per-feature option, only `exportPdf` (a documented shortcut for the command `pdfExport.export`).
   Every extension is made by a factory (`markup()`, `images()`, `collaboration(options)`), never a constant, so
@@ -377,7 +382,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
   `figures`, `outline`, `pageLayout`, `lists`, `alignment`) are extensions in `extensions/<name>/`; the features activate
   theirs with what they own:
   `images` → `imagesVisualView`, `renderedBoxes` → its `snippetRenderer`,
-  `typstLanguage` → the raw boxes' syntax and colors (`registerBoxCodeExtension`), `comments` → `marginNotes` +
+  `typstLanguage` → the raw boxes' syntax and colors (`registerRawBoxCodeMirrorExtension`), `comments` → `marginNotes` +
   `notesGutter`, `labels` → `references`, `styles` → `customStyles`. The list's order is the schema's.
 - **`EditingViews`** (`hosts/workbench/editing-views/`): one Visual/Source tab bar; a document's views are
   created the first time it is shown and then only hidden, so cursor and undo history survive switching. The
@@ -463,8 +468,8 @@ interface ExtensionContext {
   workspace: Workspace
   workbench: Workbench                  // the frame (below)
   visualView: VisualViewContributions   // registerNode, registerMark, registerToolbarGroup / Item, registerGutter,
-                                        // registerBoxRenderer, registerEditorExtension, … (see "VisualView")
-  sourceView: SourceViewContributions   // registerExtension(cm | context → cm) (see "SourceView")
+                                        // registerBoxRenderer, registerTiptapExtension, … (see "VisualView")
+  sourceView: SourceViewContributions   // registerCodeMirrorExtension(cm | context → cm) (see "SourceView")
   preview: PreviewContributions         // registerToolbarItem, registerPdfExportOption, reveal, onDidClickPage,
                                         // onDidChangeDiagnostics, onDidRender, snippet, exportPdf (see "Preview")
 }
@@ -730,7 +735,7 @@ new TypstDocument(text)
   it, and the histories map over them. The VisualView never adds an outside change to its history; the
   SourceView adds changes from elsewhere (the same user's Visual edits) and marks their transactions with
   `fromDocument` (`{ origin }`, exported by the Source view host); the collaboration's `perUserUndo`
-  (a `transactionExtender` it registers with `sourceView.registerExtension`) sets `addToHistory: false` on
+  (a `transactionExtender` it registers with `sourceView.registerCodeMirrorExtension`) sets `addToHistory: false` on
   those with `REMOTE_ORIGIN`. A user's Undo reverts the last edit of that view's history, never a
   collaborator's. No `Y.UndoManager`.
 
@@ -816,9 +821,9 @@ new VisualView(parent, document, contributions: VisualViewHost)
 // the contribution points (registered once; applied to every view created afterwards)
 const visualView = new VisualViewHost()                     // or VisualViewHost.from(contributions); extensions see the
                                                              // interface VisualViewContributions (register… only)
-visualView.registerNode(spec: TypstNodeSpec) → Disposable    // schema node + projection + printing + flags
-visualView.registerMark(spec: TypstMarkSpec) → Disposable
-visualView.registerEditorExtension((view) => tiptapExtensions) → Disposable   // decorations, plugins, commands
+visualView.registerNode(spec: TypstNodeSpec) → Disposable    // { name, tiptap, typst, view }
+visualView.registerMark(spec: TypstMarkSpec) → Disposable    // { name, tiptap, typst }
+visualView.registerTiptapExtension((view) => tiptapExtensions) → Disposable   // decorations, plugins, commands
 visualView.registerToolbarGroup({ kind: 'group' | 'menu' | 'floating', id, order, … }) → Disposable
 visualView.registerToolbarItem({ group, order?, action } | { group, order?, create(toolbar) }) → Disposable
 visualView.registerGutter((view, body) => { plugin?, dispose() }) → Disposable
@@ -829,7 +834,7 @@ visualView.registerHighlights(layer, { provideHighlights(document), onDidChangeH
                                      // Visual view draws highlights; the Source view's contributions use CodeMirror
                                      // decorations), exported from hosts/visual-view
 visualView.registerBoxRenderer((view) => BoxRenderer | null) → Disposable
-visualView.registerBoxCodeExtension((view) => codeMirrorExtension) → Disposable
+visualView.registerRawBoxCodeMirrorExtension((view) => codeMirrorExtension) → Disposable
                                      // a box's code gets its node decorations as the effect setBoxDecorations
 visualView.registerBoxAction({ title, when?(node, view) → boolean, run(node, view) }) → Disposable
                                      // a button on every raw box `when` holds for (diagrams: "Edit diagram")
@@ -866,33 +871,39 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
   extension, the context's position map). Every other
   construct (headings, lists, tables, …) is an extension (`extensions/<name>/visual-view/`) and every
   feature shown in the view (labels, comments, styles, …) a contribution of its extension, using only the entries: the Visual view's (the contribution types), the
-  projection's (the spec contract: `ProjectionContext`, `Call`, `Placed`, `Printer`, …; `starterKitPart`; and for
-  tests `createSchema`, `project` / `print` / `syncDoc` / `posToSource` / `sourceToPos`), core's `typst-syntax` (reading syntax nodes), and
+  projection's (the spec contract: `TypstParseContext`, `Placed`, `TypstSerializeState`, …; `starterKitPart`; and for
+  tests `createSchema`, `project` / `print` / `syncDoc` / `posToSource` / `sourceToPos`), core's `typst-syntax` (reading
+  Lezer's syntax nodes and calls: parse functions get Lezer's `SyntaxNode`, for a call its `FuncCall`, and nothing of
+  ours), and
   `testing/` for the built-ins together). The widget's built-in extension list activates them (see
   "createTypstEditor").
-- **Specs** (`TypstNodeSpec` / `TypstMarkSpec`; their `NodeGrammar` / `MarkGrammar` in `projection/projection.ts`): one per construct —
-  `name`, its Tiptap `extension` (schema, node view, commands, keymap, input rules), `attributes`
-  the host adds (source anchors like `src`, `sep`, `marker`, `layout`), `anchors` (compared like
-  `src` / `sep` by `syncDoc`), `keepsDom`, `labelled`, `box` (`'code'`: the host's raw box node
-  view, with `codeBox` for a heading and tools; `'widget'`: a remote caret inside outlines it),
-  `container` (list items: their list). Projectors: `blockSyntax` (`Heading`, `ListItem`,
-  `EnumItem`; `takesLabel`), `runSyntax` (`Raw` as a code block), `blockCalls` by function name
-  (`*`: any other call — declared paragraph styles), `inlineSyntax` (`Strong`, `Emph`, `Link`,
-  `Raw`, `Ref`: such syntax makes a run prose), `inlineCalls` (`#link(..)[..]`, margin notes, text
-  styles; `matches` makes the run prose). Printing: `print` (an edited block, through the
-  `Printer`), `printAtom` (an inline atom's source), `escapeAfter` (`@intro\s`); a mark's `print`
-  (`*x*` or `#strong[x]`), `raw` (inline code: innermost, unescaped) and `printsBare` (a bare URL).
-  `onDidChange` makes every view project its document again (styles declared or removed). Which
-  syntax and calls project to what, how edited blocks print, which blocks take labels, which nodes are
-  boxes and which attributes are anchors are all derived from the specs; the projection imports no feature. A second spec of the same name extends the first (alignment adds
-  `#par(justify: ..)` and the paragraph printer); **priority**, not registration order,
-  decides where contributions compete (`registerNode` / `registerMark` / `registerBoxRenderer(…, { priority })`:
-  default 100, higher first, Tiptap's semantics; equal ones in registration order): the schema's order (a
-  higher mark nests outside a lower one: comments' note ranges 130, links 120, text styles 110, bold / italic 100;
-  the host gives a mark's registered priority to its Tiptap extension, so Tiptap's own (its link mark's 1000) never
-  counts), which of the projectors of the same syntax or call is asked first
-  (task lists, 110, before bullet lists: a task item is a bullet item `- [ ]`), and which box renderer draws a
-  raw box (images' renderer, 110, before compiled snippets). Toolbar items keep `group` + `order`. `attachGrammar` puts the specs on the schema (`schema.cached`), so `project(text,
+- **Specs** (`TypstNodeSpec` in `visual-view.ts`, extending the projection's `DocumentNodeSpec`; `TypstMarkSpec` in
+  `projection/projection.ts`): one per construct, its fields grouped by whose concept they are — `name`; `tiptap`,
+  the Tiptap extension defining the type (schema, attributes — the source anchors like `src`, `sep`, `marker`,
+  `layout` included —, node view, commands, keymap, input rules, priority), given to Tiptap untouched; `typst`
+  (`TypstNodeConversion` / `TypstMarkConversion`): `parseTypst` (`TypstParseRules`, ProseMirror's `parseDOM` for
+  Typst: `syntaxNodes` by Lezer node name — `block` (with `standsAlone`: `Heading`, `ListItem`, `EnumItem`, and
+  `takesLabel`; without: a run that is exactly the node, `Raw` as a code block) and `inline` (`Strong`, `Emph`,
+  `Link`, `Raw`, `Ref`: such syntax makes a run prose); `calls` by function name (`*`: any other call) — `block`
+  (`#figure(..)`, declared paragraph styles), `inline` (`#link(..)[..]`, margin notes, text styles) and
+  `inRunningText` (whether the call makes its run prose; default yes)), `toTypst` (an edited block, through the
+  `TypstSerializeState`; for a mark: `*x*` or `#strong[x]`), `atomToTypst` (an inline atom's source),
+  `escapeAfter` (`@intro\s`), `labelled`, `anchors` (compared like `src` / `sep` by `syncDoc`), `container`
+  (list items: their list), a mark's `raw` (inline code: innermost, unescaped) and `isBare` (a bare URL),
+  `onDidChange` (every view parses its document again: styles declared or removed); `view` (nodes only):
+  `box` (`'code'`: the host's raw box node view, with `title` for a heading and `tools`; `'widget'`: a remote caret
+  inside outlines it), `keepsDom`, `ownsPseudoElements`. Which syntax and calls become what, how edited blocks are
+  written, which blocks take labels, which nodes are boxes and which attributes are anchors are all derived from
+  the specs; the projection imports no feature. A second spec of the same name extends the first (alignment adds
+  `#par(justify: ..)` and the paragraph's `toTypst`). **Priority is Tiptap's own** (decided 2026-10-11): the
+  priority of a spec's Tiptap extension (default 100, higher first; equal ones in registration order) orders the
+  schema (a higher mark nests outside a lower one: comments' note ranges 130, links 120, text styles 110, bold /
+  italic 100 — markup moves the link mark StarterKit adds from its own 1000 to 120), keymaps and plugins, and which
+  of the parse rules of the same syntax or call is asked first (`attachGrammar` sorts the specs by the priority of
+  the Tiptap extension defining each type; task lists, 110, before bullet lists: a task item is a bullet item
+  `- [ ]`). Our own `priority` is only where Tiptap has none: which box renderer draws a raw box
+  (`registerBoxRenderer(…, { priority })`: images' renderer, 110, before compiled snippets). Toolbar items keep
+  `group` + `order`. `attachGrammar` puts the specs on the schema (`schema.cached`), so `project(text,
   schema)` and `print(doc)` find them; `VisualView` builds its editor from `documentExtensions` and attaches them to the editor's schema, tests use
   `createSchema` (the projection's tests with their own specs; the built-ins' `schema` of `testing/testing.ts`).
 - **Schema names across extensions.** ProseMirror's schema is one object, so one extension's node and mark names
@@ -912,7 +923,7 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
   `create(toolbar)` gets the `ToolbarContext` (the view's context, the editor, the toolbar's root, `subscriptions`
   disposed with it). Contributions are registered once and applied
   to every view created afterwards.
-- **Schema** (the projection's minimum schema, `projection/schema.ts` and `BASE_NODES`, and the built-ins' specs):
+- **Schema** (the projection's minimum schema, `projection/schema.ts`, and the built-ins' specs):
   - **Blocks:** `paragraph`, `heading`, and `bulletList` / `orderedList` > `listItem` (a `marker`
     attribute; content `(paragraph | rawBlock) block*`, so nested lists made with Tab print
     indented), plus `rawBlock`.
@@ -962,7 +973,7 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
   - Every other run up to a `Parbreak` becomes a paragraph if it contains prose (Text, Strong,
     Emph, inline raw, bare URLs, `#link` calls, …) — unless it is exactly one raw element Typst
     shows as a block (3+ backticks around a line break), which is a `codeBlock`. Otherwise, if it
-    is exactly one call (the specs' `blockCalls`): an `image` for
+    is exactly one call (the specs' `parseTypst.calls` with a `block`): an `image` for
     `#image("literal path", ..)`, an `outline` for `#outline(..)`, a `figure` for
     `#figure(image("literal path", ..) | table(..), ..named)` (optionally followed by a label;
     the table modelled as below) whose `caption: [..]`, if any, is one paragraph, a `table` for
@@ -1117,12 +1128,12 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
 - **Code blocks** (`extensions/markup/visual-view/code-block-view.ts`): a NodeView with a header holding a "Language" field
   (accepts only a valid tag, sets `language` as one types; Enter/Escape/ArrowDown go to the
   code) above a `<pre><code>` content DOM.
-- **Raw boxes** (`nodes/raw-box.ts`): the nodes whose spec has `box: 'code'` (`rawBlock` /
+- **Raw boxes** (`nodes/raw-box.ts`): the nodes whose spec has `view.box: 'code'` (`rawBlock` /
   `rawInline`, and with the built-ins `image` / `outline`) render through a NodeView that hosts a
   nested CodeMirror (no own history), plus what contributions add: the spec's
-  `codeBox` (a heading, e.g. an outline box's "Table of contents"; tools, e.g. an image box's,
+  `view.title` (a heading, e.g. an outline box's "Table of contents") and `view.tools` (e.g. an image box's,
   whose picture click then selects the box), the CodeMirror extensions of
-  `registerBoxCodeExtension` (`typstLanguage`: Typst syntax and code colors, as in the Source view; the
+  `registerRawBoxCodeMirrorExtension` (`typstLanguage`: Typst syntax and code colors, as in the Source view; the
   workbench's document links, as in the Source view: link tooltip on a path, Mod+click opens; no separate
   "Open …" row: it took too much space; the collaboration extension's carets in the box) and the first `BoxRenderer`
   (`registerBoxRenderer`) that `renders` the box, and the box actions (`registerBoxAction`, any contribution's, for
@@ -1157,7 +1168,7 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
     nested CodeMirror gets the outer editor's root (the shadow root inside `<typst-editor>`):
     it is created before its box is attached, so it could not find that root itself and would
     read focus and selection from the document.
-- **Image tools** (`extensions/images/visual-view/image-tools.ts`, the image spec's `codeBox.tools`): the "Image: path"
+- **Image tools** (`extensions/images/visual-view/image-tools.ts`, the image spec's `view.tools`): the "Image: path"
   heading (the path is the document link on it, from `languages.provideDocumentLinks`: it opens the file, or says
   the file is missing: `imagePathLink`), a
   frame around the rendered picture sized from the call's `width` (`imageWidthCss`), and,
@@ -1212,9 +1223,9 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
 
 ```ts
 interface SourceViewContributions {                          // what ExtensionContext.sourceView offers
-  registerExtension(extension: SourceViewExtension): Disposable     // CodeMirror extensions for every view
+  registerCodeMirrorExtension(extension: Extension | ((view: SourceViewContext) => Extension)): Disposable
+                                                             // CodeMirror extensions for every view
 }
-type SourceViewExtension = Extension | ((view: SourceViewContext) => Extension)
 interface SourceViewContext { document }
 fromDocument: Annotation<{ origin }>         // on transactions mirroring a document change made elsewhere
 
@@ -1436,8 +1447,8 @@ calculateNewStyleChange(text, label = 'New style') → { change, definition: { f
 customStyles({ styles, create }): VisualViewContribution   // styledBlock + style mark specs, their text style menu entries
 ```
 
-- **Projection:** the specs project the declared styles (`blockCalls['*']`, `inlineCalls`, from
-  `ProjectStyles.styles()`; `onDidChange` makes every view project again). A run that is exactly
+- **Projection:** the specs read the declared styles (`parseTypst.calls['*']`: `block` and `inline` /
+  `inRunningText`, from `ProjectStyles.styles()`; `onDidChange` makes every view parse again). A run that is exactly
   `#name(..)?[content]` of a paragraph style is a `styledBlock` (attrs `name`, `title`, `sep`,
   `layout` = the call around the content, like a block quote) holding blocks; inline
   `#name(..)?[text]` of a text style is text with a `style` mark (attrs `name`, `title`, `head` =
@@ -1723,7 +1734,7 @@ documentLinks(): TypstExtension                       // one provider: the file 
   `workspace.applyEdit`, then `open`; rejects with the host's refusal); a
   path leaving the project resolves to nothing (marked, but no hover).
 - **Source view and raw boxes** (`linkExtension`, registered by the workbench host with every Source view and, through
-  `registerBoxCodeExtension`, every raw box's code; the text's path is its file's, a box's text is its code): links
+  `registerRawBoxCodeMirrorExtension`, every raw box's code; the text's path is its file's, a box's text is its code): links
   are marked (`typst-source__path`, underlined on hover, a pointer while Ctrl/⌘ is held: `typst-source--mod`);
   Mod+mousedown on one opens its target (else CodeMirror's own Mod+click); Alt+Enter opens the target of the link
   holding the cursor (F12 was avoided: browsers take it for the developer tools); the hover (`linkInfo`) offers
