@@ -38,18 +38,6 @@ describe('playground bar', () => {
     expect(new URLSearchParams(navigate.mock.calls[0][0]).get('user')).toBe('Ada');
   });
 
-  it('the devtools toggle reloads with &devtools added or removed, keeping the rest', () => {
-    const toggle = (search: string) => {
-      const { root, navigate } = render(search);
-      const checkbox = root.querySelector<HTMLInputElement>('input[name="devtools"]')!;
-      const before = checkbox.checked;
-      checkbox.click();
-      return { before, query: navigate.mock.calls[0][0] };
-    };
-    expect(toggle('?example=simple&user=Ann')).toEqual({ before: false, query: '?example=simple&user=Ann&devtools' });
-    expect(toggle('?example=simple&devtools&user=Ann')).toEqual({ before: true, query: '?example=simple&user=Ann' });
-  });
-
   it('in a room: a second window joins as another user, and the status follows the server', () => {
     const { root, bar, status } = render('?room=r1&user=Ann');
     const second = root.querySelector<HTMLAnchorElement>('[data-testid="second-window"]')!;

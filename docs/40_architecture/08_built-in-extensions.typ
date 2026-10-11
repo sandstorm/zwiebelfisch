@@ -1,6 +1,6 @@
 = Built-in extensions <architecture-built-in-extensions>
 
-`src/extensions/<name>/`. No host has built-in contributions. `createTypstEditor` activates the list below in this order (`builtinExtensions()` in `src/typst-editor/typst-editor.ts`). A host changes the list with `extensions: (builtinExtensions) => […]`.
+`src/extensions/<name>/`. No host has built-in contributions. `createTypstEditor` activates the list below in this order (`builtinExtensions()` in `src/typst-editor/typst-editor.ts`). A host changes the list with `extensions: (builtinExtensions) => […]`; `devtools` then wraps the final list, last.
 
 == Shape of an extension <architecture-built-in-extensions-shape>
 
@@ -52,17 +52,17 @@ extensions/<name>/
   [`previewControls`], [zoom, page number; an entry per view option in the View menu (group `preview`, its own command `previewControls.toggleViewOption.<id>`, `toggled` while on), following registrations; this viewer's choices kept in `globalState`], [preview toolbar, menu `view`, commands, `setViewOptionValues`, `onDidChangeViewOptions`],
   [`previewGuides`], [view options "Page guides" and "Box outlines" (set rules for `block` and `box`, a `show v` rule), off by default (@architecture-built-in-extensions-guides)], [view options],
   [`pdfExport`], [`pdfExport.export` → Blob; "Download PDF" with the options popover; setting `pdfExport.download`], [command, preview toolbar],
+  [`devtools`], [Not in `builtinExtensions()`: `devtools(extensions)` wraps the final list, the host's extensions included, and appends itself, so it records every extension's contributions from activation on (proxies around each context's namespaces) and the latest 300 events. Shows them with the shown document in a right side panel (@reference-embedding-devtools); setting `devtools.enabled` (default `true`) removes the panel, the recording goes on. `model/` describes values and the document as text; `recording/` wraps the contexts and describes each contribution point's arguments (by shape: a new point shows its arguments' names until it is described there); `workbench/` draws the tabs; `visual-editor/` keeps the loaded Visual editors (`registerTiptapExtension`)], [right side panel, Tiptap extension, every contribution point (recorded)],
 )
 
-=== Optional extensions <architecture-built-in-extensions-optional>
+=== Optional extension <architecture-built-in-extensions-optional>
 
-Exported from the package, not in the list; a host adds them.
+Exported from the package, not in the list; a host adds it.
 
 #table(
   columns: (auto, 2fr, 1fr),
   table.header[Extension][What it adds][Through],
   [`collaboration(options)`], [The host's connection: shares the project over Yjs, draws other users' places in every editor (CodeMirror extensions, highlights, file decorations), registers a GitLab room's source control (see @architecture-server)], [CodeMirror extensions, highlights, file decorations, source control],
-  [`devtools(extensions)`], [Wraps the whole list: records every extension's contributions (proxies around its context's namespaces) and shows them with the shown document and the events in a right side panel (@reference-embedding-devtools). `model/` describes values and the document as text; `recording/` wraps the contexts and describes each contribution point's arguments (by shape: a new point shows its arguments' names until it is described there); `workbench/` draws the tabs; `visual-editor/` keeps the loaded Visual editors (`registerTiptapExtension`)], [right side panel, Tiptap extension, every contribution point (recorded)],
 )
 
 == How they meet <architecture-built-in-extensions-meeting>

@@ -127,7 +127,7 @@ The modules with the most complexity. Lines: TypeScript without blank and commen
   [host `prosemirror-typst`], [920 / 90], [198], [9], [the densest code (Typst ↔ ProseMirror parser, serializer, position map), tested almost only through extensions],
   [ext `collaboration`], [1070 / 970], [188], [6], [every editor, plus a server and GitLab rooms; its e2e specs need the server],
   [host `visual-editor`], [1460 / 760], [183], [5], [raw boxes, toolbar, suggestions, node views: the largest contribution surface],
-  [ext `devtools`], [870 / 390], [174], [7], [document, contributions and events tabs; not built in],
+  [ext `devtools`], [870 / 390], [174], [7], [document, contributions and events tabs; wraps every extension's context],
   [host `workbench`], [1140 / 960], [135], [1], [layout, the namespaces, the editors of `*.typ`],
   [ext `files`], [710 / 535], [128], [6], [its own tree widget and panel],
   [host `preview`], [870 / 650], [120], [2], [worker, pages, overlays, snippets; carries the engine (@architecture-core-engine-size)],

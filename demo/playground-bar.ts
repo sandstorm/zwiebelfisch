@@ -1,6 +1,6 @@
-// The playground bar above the demo editor: mode, example, room, user, devtools, server status. See main.ts.
+// The playground bar above the demo editor: mode, example, room, user, server status. See main.ts.
 import { EXAMPLES } from './examples';
-import { MODES, devtoolsQuery, exampleLink, modeQuery, otherUser, playgroundFromQuery, userQuery, type PlaygroundState } from './playground';
+import { MODES, exampleLink, modeQuery, otherUser, playgroundFromQuery, userQuery, type PlaygroundState } from './playground';
 import { describeServer, type ServerState, type UpstreamChange } from './server-status';
 
 export interface PlaygroundBar {
@@ -19,14 +19,14 @@ export interface BarActions {
 
 /**
  * The demo's playground bar in `root`: example and mode switchers (links, so
- * every state has a URL), the user's name, the devtools toggle, a link that
- * opens a second window as another user in the same room, the server status
- * with the command to start it, and in GitLab mode "Simulate upstream commit".
+ * every state has a URL), the user's name, a link that opens a second window
+ * as another user in the same room, the server status with the command to
+ * start it, and in GitLab mode "Simulate upstream commit".
  */
 export function renderPlaygroundBar(root: HTMLElement, params: URLSearchParams, actions: BarActions): PlaygroundBar {
   const state = playgroundFromQuery(params);
   const status = new StatusLine(state);
-  root.append(examplesNav(state, params), modesNav(state, params), userForm(state, params, actions), devtoolsToggle(state, params, actions));
+  root.append(examplesNav(state, params), modesNav(state, params), userForm(state, params, actions));
   if (state.mode !== 'local') root.append(secondWindow(state, params));
   const upstream = state.mode === 'gitlab' ? upstreamControls(actions, status) : null;
   if (upstream) root.append(upstream.element);
@@ -122,15 +122,6 @@ function userForm(state: PlaygroundState, params: URLSearchParams, actions: BarA
     if (user && user !== state.user) actions.navigate(userQuery(user, params));
   });
   return form;
-}
-
-function devtoolsToggle(state: PlaygroundState, params: URLSearchParams, actions: BarActions): HTMLElement {
-  const checkbox = el('input', { type: 'checkbox', name: 'devtools' });
-  checkbox.checked = state.devtools;
-  checkbox.addEventListener('change', () => actions.navigate(devtoolsQuery(checkbox.checked, params)));
-  const label = el('label', { class: 'demo-bar__group' }, checkbox, 'Devtools');
-  label.title = 'The devtools side panel: the document, what each extension contributed, events';
-  return label;
 }
 
 function secondWindow(state: PlaygroundState, params: URLSearchParams): HTMLElement {

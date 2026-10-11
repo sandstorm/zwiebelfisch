@@ -9,7 +9,7 @@
 // - Disposable, EventEmitter and the value types (ProjectPath, FileContent, SourceOffset, SourceRange, PageIndex, Pt),
 //   made where values come in, e.g. to `open` a file at a range.
 // - VISUAL_EDITOR and SOURCE_EDITOR, to open a file in one of the Typst editors or tell which one is shown.
-// - The optional extensions: collaboration, which a host adds with its connection, and devtools, which wraps the list.
+// - The optional extension collaboration, which a host adds with its connection.
 // See docs/30_reference/02_embedding.typ and docs/40_architecture/09_extensions-overview.typ.
 import { defineTypstEditorElement } from './typst-editor-element/typst-editor-element';
 
@@ -115,7 +115,6 @@ export {
   withHash,
 } from './core/typst-syntax/typst-syntax';
 export { collaboration, type CollaborationOptions } from './extensions/collaboration/collaboration';
-export { devtools } from './extensions/devtools/devtools';
 
 // Importing the package makes <typst-editor> available (no-op without a DOM).
 defineTypstEditorElement();

@@ -1,4 +1,5 @@
 import { comments } from '../extensions/comments/comments';
+import { devtools } from '../extensions/devtools/devtools';
 import { diagnostics } from '../extensions/diagnostics/diagnostics';
 import { diagrams } from '../extensions/diagrams/diagrams';
 import { mermaid } from '../extensions/mermaid/mermaid';
@@ -43,7 +44,8 @@ import widgetStyles from './typst-editor.css?inline';
  *
  * The widget is a Project in the workbench (hosts/workbench) with the built-in extensions (`builtinExtensions()`, or
  * the list `extensions` makes from them) and the host's settings. The workbench and the hosts are only mechanism; every
- * feature (the file panel, the preview following the cursor, errors, PDF export, …) is one of those extensions.
+ * feature (the file panel, the preview following the cursor, errors, PDF export, …) is one of those extensions. The
+ * devtools wrap the final list, so they record every extension's contributions, the host's too.
  *
  * A Typst document is a project of files, and the main file is one of them. So the host gives and gets every file
  * through one map (`files`, `onFilesChange`); `source` is only a shortcut for the main file's text. What a feature lets
@@ -66,7 +68,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
     styleSheet: widgetStyles,
   });
   const builtins = builtinExtensions();
-  workbench.activate(options.extensions?.(builtins) ?? builtins);
+  workbench.activate(devtools(options.extensions?.(builtins) ?? builtins));
   // after the workbench's and the extensions' listeners: the host hears about a change once the widget shows it
   const subscription = project.onDidChangeFile((change) => options.onFilesChange?.(change));
   const document = project.document(main)!;
@@ -151,6 +153,7 @@ export interface TypstEditorOptions {
   /**
    * The extensions to run, made from the built-in ones (in their order): add yours (`(builtinExtensions) => [...builtinExtensions,
    * mine]`), leave one out or replace it (`builtinExtensions.filter((e) => e.id !== 'pdf-export')`). Default: the built-ins.
+   * The devtools come after them in any case; the setting `devtools.enabled` removes their panel.
    */
   extensions?(builtinExtensions: readonly TypstExtension[]): readonly TypstExtension[];
 }
@@ -197,7 +200,8 @@ export interface TypstEditor {
  * the order carries no meaning: where contributions compete their `priority` decides (box renderers, overlapping
  * document links, custom editors; for parse rules of the same syntax and mark nesting, that of the specs' Tiptap
  * extensions); toolbar and menu items (the tab bar's too) have a `group` + `order`, status bar items an `alignment` +
- * `priority`. Collaboration is not among them: the host adds it with its connection.
+ * `priority`. Collaboration is not among them: the host adds it with its connection. Nor are the devtools: they wrap
+ * the final list (createTypstEditor).
  */
 function builtinExtensions(): TypstExtension[] {
   return [

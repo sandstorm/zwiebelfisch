@@ -84,6 +84,14 @@ Export options, by id, for `editor.exportPdf(options)` and the command `pdfExpor
   [`diagrams.editorUrl`], [URL (`'https://embed.diagrams.net/'`)], [Where the draw.io editor comes from: diagrams.net, or your own installation of the drawio web app (Apache-2.0), e.g. for use without internet access. Embed mode and its parameters are added (@features-drawio-diagrams).],
 )
 
+=== Devtools <reference-configuration-devtools>
+
+#table(
+  columns: 3,
+  [Setting], [Values (default)], [Effect],
+  [`devtools.enabled`], [`true`, `false` (`true`)], [Whether the devtools panel is on the right rail: the shown document, every contribution, the events (@reference-embedding-devtools). They are recorded either way.],
+)
+
 == Options <reference-configuration-options>
 
 `createTypstEditor(host, options)` (`TypstEditorOptions`), all optional. On `<typst-editor>`: the `options` property, set before the element connects (@reference-embedding-element).

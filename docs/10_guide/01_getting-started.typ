@@ -31,10 +31,10 @@ The screen:
 #table(
   columns: 2,
   [Part], [What it holds],
-  [Playground bar (top)], [Example; mode Local, Collaborate or GitLab (fake); your name; the devtools switch; in Collaborate and GitLab mode a link that opens a second window as another user.],
+  [Playground bar (top)], [Example; mode Local, Collaborate or GitLab (fake); your name; in Collaborate and GitLab mode a link that opens a second window as another user.],
   [Left rail and side panel], [Files, Help; the magnifier opens search everywhere.],
   [Editing area], [The shown file. A Typst file has the tabs Visual and Source; other files open in their own editor (spreadsheet, diagram, text).],
-  [Right side and rail], [The preview; the devtools when switched on.],
+  [Right side and rail], [The preview; the devtools (@reference-embedding-devtools).],
   [Status bar], [Errors and warnings; in GitLab mode what is not saved yet.],
 )
 
@@ -74,7 +74,6 @@ The page's state is its URL:
   [`?room=<name>`], [Collaborate mode: joins a room on the local server.],
   [`?room=gitlab:demo/report@main`], [GitLab mode: a branch of the fake repository.],
   [`&user=<name>`], [The name others see; signs comments and commits.],
-  [`&devtools`], [The devtools side panel on the right: document, contributions, events (@reference-embedding-devtools).],
   [`#/chapters/intro.typ:12`], [The file shown and the cursor's line (1-based): a reload or a shared link opens the file with the cursor at the start of that line. It follows while you work.],
 )
 
