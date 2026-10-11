@@ -10,7 +10,7 @@ Every operation is a mise task (`mise-tasks/`, `mise tasks ls`). Tools are pinne
   [`install`], [JS dependencies (frozen lockfile) and Playwright's browsers],
   [`deps:lock`], [after a `package.json` change: install and update `pnpm-lock.yaml`],
   [`dev`], [Vite dev server for `demo/` on 127.0.0.1:5199 (Local mode needs nothing else); builds engine and fonts first],
-  [`demo`], [the playground: Vite + the collaboration server with a fake GitLab on `ws://127.0.0.1:1234` (@architecture-development-demo); builds engine and fonts first],
+  [`demo`], [the playground: Vite + the collaboration server with a fake GitLab on `ws://127.0.0.1:1234` (@guide-getting-started-demo); builds engine and fonts first],
   [`build:engine`], [Rust → wasm (`cargo`, `wasm-bindgen`, `wasm-opt -Oz`) into `src/core/typst-engine/wasm/`; skipped when the Rust sources are unchanged],
   [`build:fonts`], [the default fonts of the pinned typst-assets crate into `src/core/typst-engine/fonts/`],
   [`build`], [typecheck, engine, fonts, library, then the static demo → `dist/demo`],
@@ -61,82 +61,6 @@ mise run server:test   # when server/ or core/room-protocol changed
 - *End-to-end* (Playwright, `tests/e2e/*.spec.ts`): against the static build `dist/demo` and `examples/` (+ `dist/lib`), served through request interception, so no port is opened.
 - Test packages (`greet`, `drafting`, `cheq`) sit next to the tests using them.
 - Agents in the sandbox cannot launch a browser or bind ports: they write Playwright specs, and the user runs `mise run test:e2e`.
-
-== Manual demo checklist <architecture-development-demo>
-
-Every user-visible feature, tried by hand in `mise run demo` on one machine: no real GitLab, no secrets, only localhost. The server (`server/src/fake-gitlab-main.ts`, in memory) serves plain rooms and `gitlab:demo/report@<any branch>` from a fake GitLab holding the advanced example. Restart `mise run demo` to reset it, or use a fresh branch. URLs: @guide-getting-started-demo.
-
-#table(
-  columns: (auto, 1fr),
-  table.header[Playground bar][What it does],
-  [Examples], [Hello (one file), Simple (lists, math, link, table), Advanced (template, chapters, helpers, SVG images, a spreadsheet), Documentation (`docs/**/*.typ`, nothing saved); disabled in GitLab mode],
-  [Mode: Local], [the default; no server contacted (the static e2e build)],
-  [Mode: Collaborate], [room `playground-<example>`; the first to join seeds it, then the room's text wins],
-  [Mode: GitLab (fake)], [`gitlab:demo/report@main`],
-  [Name], [the name next to your cursor, the author of comments and commits (Enter applies it)],
-  [Open a second window as Bob], [the same room as the next user (Ann → Bob → Cleo → Dan)],
-  [Simulate upstream commit], [GitLab mode: the fake GitLab commits to the branch and sends the push webhook. "add a paragraph" appends to `chapters/introduction.typ`; "revise a heading" changes its first heading (a conflict)],
-  [status], [whether the server is reachable; if not, the command to start it, and the page edits a local copy],
-)
-
-Each row: mode / example, steps, what you should see, and the spec that also covers it (`test:e2e`; `collab.spec` in `test:e2e-collab`, `gitlab.spec` in `test:e2e-gitlab`).
-
-#table(
-  columns: (auto, 1.3fr, 1.3fr, 1fr),
-  table.header[Feature][Try][Expect][Covered by],
-  table.cell(colspan: 4)[*Editing views and preview* (Local)],
-  [Visual / Source], [Hello: switch tabs, edit in each], [the other view and the preview follow; cursor and undo survive a switch], [visual, preview],
-  [Live preview], [type in either view], [updates while typing; earlier pages untouched], [preview],
-  [Preview → source], [click a word in the preview], [the view selects it; the run is outlined], [preview],
-  [Follow cursor], [move the cursor ("Follow cursor" on, then off)], [the preview scrolls only when the spot is off-screen; off: stays], [preview-ux],
-  [Zoom, page number], [Advanced: zoom buttons, scroll], [fit width by default, 25–400 %, "page n / total"], [preview-ux],
-  [Errors], [type `#foo(` in Source], [last good pages kept, dimmed; status bar "1 error"], [preview-ux],
-  table.cell(colspan: 4)[*Visual view* (Local)],
-  [Headings, marks], [Simple: `## ` at a line start; Mod+B / Mod+I], [a heading; source gets `==`, `*x*`, `_x_`], [visual, visual-toolbar],
-  [Lists], [Enter, then Tab in an item], [a new item, then a nested one], [visual],
-  [Links], [Mod+K with a URL; remove it again], [`#link("…")[…]` appears and goes], [visual-links-tables],
-  [Tables], [Simple: edit a cell; Insert table, Add row, Delete column], [only that cell's `[…]` changes], [visual-links-tables],
-  [Real-world tables], [Advanced `chapters/results.typ`: change a `ms(..)` box, type after it, edit the caption, Add row, Header row off / on], [a table with caption, not a raw box; edits touch only their argument], [visual-tables-real-world],
-  [Raw boxes], [Hello: click the equation, edit, Escape], [code while focused, the compiled snippet otherwise (inverted in the dark)], [visual-compiled-boxes, dark-mode],
-  [Code], [Advanced `chapters/method.typ`: edit the `ts` block and its Language; Mod+E], [fence and language update; Mod+E toggles inline code], [visual-toc-and-code],
-  [Table of contents], [Hello: toolbar Table of contents], [an `#outline()` box rendering the headings], [visual-toc-and-code],
-  [Alignment], [Align left / Center / Align right / Justify (Mod+Shift+L/E/R/J)], [`#align(center)[…]`, `#par(justify: true)[…]`; the current one pressed], [visual-text-align],
-  [Labels, references], [Advanced `chapters/introduction.typ`: type ` @fi`, Enter; rename the heading's `intro` tag], [`<intro>` tag, chips with hints, `@` lists the project's labels; renaming updates every file], [visual-references],
-  [Diagnostics], [type `#nope` in a paragraph], [wavy underline with tooltip (boxes outlined), lint in Source, status bar jumps to it], [preview-ux],
-  table.cell(colspan: 4)[*Images and figures* (Local / Advanced)],
-  [Insert image], [Insert image → `assets/logo.svg`], [an `#image("…")` block after the paragraph], [image-upload],
-  [Upload, drop, paste], [Upload image…, drop a PNG, paste a screenshot], [added as `image.png`, `image-2.png`, … and inserted], [image-upload],
-  [Figures], [`chapters/results.typ` bar chart: Add / Remove caption, Width 50%, drag a corner, Alt text], [one undo step each, editing only its argument], [visual-figures],
-  table.cell(colspan: 4)[*Files* (Local / Advanced)],
-  [Tree], [expand `chapters`, open `method.typ`], [folders first, `main.typ` marked; expansion kept after reload; images open as a preview], [files-tree, multi-file-ui],
-  [Keyboard], [arrows, Home / End, Enter, F2, Delete on a row], [focus moves, folders toggle, open, rename, delete (confirmed)], [files-tree],
-  [Changes], [New, New folder `drafts` and a file in it, rename `chapters`, rename `main.typ`], [done (a folder with all its files); the main file protected], [multi-file-ui],
-  [Drag & drop], [drag `helpers.typ` onto `chapters`; drop a desktop image on `assets`], [moved; uploaded into the folder], [files-tree],
-  [Panel], [Files rail button; drag its edge; window < ~720px], [hides / shows (kept), resizes; narrow: over the editor, closes after a pick], [files-tree],
-  [File links], [Source: Mod+click `"template.typ"` (or Alt+Enter); Visual: Open template.typ; write `#include "appendix.typ"`, Create appendix.typ], [opens and selects it in the panel; a missing `.typ` is created], [files-tree],
-  [Cross-file jumps], [click chapter text in the preview], [that chapter opens, its folder expands], [multi-file],
-  [Previous / next file], [open `chapters/method.typ`], [links to the neighbours in reading order above and below the text], [files-tree],
-  [Packages], [`#import "@preview/…"` (needs internet)], [downloaded on first use], [engine unit tests],
-  table.cell(colspan: 4)[*Comments*],
-  [Margin notes], [select text, Comment (Mod+Alt+M); reply, Resolve], [a card beside the text, in the preview margin; Resolve deletes it], [margin-notes],
-  [While collaborating], [Collaborate: comment in one window], [the thread appears in the other], [collab],
-  table.cell(colspan: 4)[*Collaboration* (Collaborate / Hello)],
-  [Joining], [open Collaborate], [status `Connected to ws://127.0.0.1:1234`], [collab],
-  [Two users], [Open a second window as Bob; type in both], [edits converge; each Undo reverts only its own], [collab],
-  [Remote cursors], [move the cursor], [a colored caret with the name in the other window], [collab],
-  [Files in a room], [Advanced: create or rename a `.typ` file], [the other window follows (images shared only in GitLab rooms)], [collab unit tests],
-  [Server missing], [stop the server, reload a Collaborate URL], [status names `mise run demo`, local copy; after a restart it asks for a reload], [demo-playground],
-  table.cell(colspan: 4)[*GitLab rooms* (GitLab, fake)],
-  [Loading a branch], [open GitLab mode], [`main.typ`, `template.typ`, `helpers.typ`, `chapters`, `assets`; images from the server], [gitlab],
-  [Save], [Save to GitLab…, a message, Enter], [both windows: `Saved version <sha> (Ann)`; again: "No changes to save"], [gitlab],
-  [Upstream merge], [add `Again.` after `#pagebreak()` in `main.typ`; "add a paragraph", Simulate upstream commit], [both windows: "Merged new changes from GitLab"; your edit kept], [gitlab, `playground.test.ts`],
-  [Upstream conflict], [edit the "Introduction" heading; "revise a heading", Simulate], ["Changes on GitLab conflict with edits in …; not saved"; your text kept, no markers], [`gitlab-rooms.test.ts`],
-  [Uploads], [upload an image, Save to GitLab…], [part of the commit, shown in the other window], [`gitlab-rooms.test.ts`],
-  [Fresh branch], [`?room=gitlab%3Ademo%2Freport%40try-1`], [starts at `main`; saves leave `main` alone], [gitlab],
-  table.cell(colspan: 4)[*Embedding*],
-  [`<typst-editor>`], [`mise run build:lib`, serve the repository root, open `/examples/plain-html/`], [works, emits `change` events], [web-component],
-)
-
 - The playground's logic is unit-tested without a browser or port: `demo/playground*.test.ts`, `demo/server-status.test.ts`, `server/src/playground/playground.test.ts`.
 
 == The docs <architecture-development-docs>

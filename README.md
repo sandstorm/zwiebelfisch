@@ -22,6 +22,15 @@ mise run demo           # builds engine and fonts, then the demo on http://127.0
 | `mise run docs:html` | the documentation as HTML pages → `dist/docs/html/` |
 | `mise tasks ls` | every task |
 
+## Demo
+
+`mise run demo` serves http://127.0.0.1:5199/ plus a local collaboration server with a fake GitLab
+(`mise run dev`: the page alone, Local mode only).
+
+- `?example=hello|simple|advanced|docs`: the project to open (`docs` edits this documentation live).
+- `?room=<name>` collaborates in a room; `?room=gitlab:demo/report@main` opens a fake GitLab branch.
+- `&devtools`: ProseMirror's dev tools on the Visual view.
+
 ## Documentation
 
 One Typst project in [`docs/`](docs/), starting at [`docs/main.typ`](docs/main.typ):
