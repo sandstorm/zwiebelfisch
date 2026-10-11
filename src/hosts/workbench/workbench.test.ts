@@ -369,6 +369,21 @@ describe('WorkbenchHost: search everywhere', () => {
     expect(field().value).toBe('');
   });
 
+  it('opens on double Shift in an editor, but not over an open input box', async () => {
+    const { host, workbench, field } = setupSearch();
+    const shiftTwice = (target: Element) => {
+      for (const type of ['keydown', 'keyup', 'keydown', 'keyup']) target.dispatchEvent(new KeyboardEvent(type, { key: 'Shift', shiftKey: type === 'keydown', bubbles: true }));
+    };
+    const rename = workbench.window.showInputBox({ title: 'Rename' });
+    const input = host.querySelector('.typst-quick-input input')!;
+    shiftTwice(input);
+    expect(host.querySelector('[aria-label=Rename]')).not.toBeNull();
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(await rename).toBeUndefined();
+    shiftTwice(host.querySelector('.cm-content')!);
+    expect(field()).not.toBeNull();
+  });
+
   it('lists the declared commands that are registered, by category and title, and runs the one picked', async () => {
     const { workbench, ran, options, enter } = setupSearch();
     await workbench.commands.executeCommand('workbench.action.searchEverywhere', '>');

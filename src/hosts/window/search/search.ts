@@ -36,11 +36,6 @@ export class SearchEverywhere {
     return new Disposable(() => this.#providers.delete(provider));
   }
 
-  /** Whether the search is open. */
-  get isOpen(): boolean {
-    return this.#pick !== null;
-  }
-
   /** Opens the search with `value` in its field (e.g. a prefix: `#`). */
   show(value = ''): void {
     const pick = this.quickInput.createQuickPick<SearchItem>({

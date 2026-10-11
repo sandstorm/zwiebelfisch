@@ -373,8 +373,9 @@ export class WindowHost implements WindowApi {
     this.#notifications = new Notifications(options.host);
     this.#quickInput = new QuickInput(options.host);
     this.#search = new SearchEverywhere(this.#quickInput);
+    // never over an open input box or quick pick (search everywhere included): what is typed there stays
     this.#doubleShift = listenForDoubleShift(options.host, () => {
-      if (!this.#search.isOpen) this.showSearchEverywhere();
+      if (!this.#quickInput.isOpen) this.showSearchEverywhere();
     });
     this.#statusBar = new StatusBar(options.statusBar);
     this.#customEditors = new CustomEditors(options.editingArea);
@@ -415,7 +416,7 @@ export class WindowHost implements WindowApi {
 
   /**
    * Opens search everywhere (cancelling an open input box or quick pick) with `value` in its field, e.g. a prefix
-   * (`>`). Double Shift opens it too, unless it is open.
+   * (`>`). Double Shift opens it too, unless an input box or quick pick is open.
    */
   showSearchEverywhere(value = ''): void {
     this.#search.show(value);

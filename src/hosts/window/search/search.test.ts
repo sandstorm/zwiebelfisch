@@ -122,7 +122,6 @@ describe('SearchEverywhere', () => {
     search.show('again');
     field().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     expect(picked).toHaveBeenCalledTimes(1);
-    expect(search.isOpen).toBe(false);
   });
 
   it('logs a failing provider and shows the others', () => {
