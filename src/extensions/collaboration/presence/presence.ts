@@ -8,7 +8,7 @@ import type { User } from '../../../core/user/user';
  * Another user's place in a text: their caret (`head`) and selection (`anchor`..`head`, empty for a plain caret),
  * as offsets in the text an editor shows (a file's, or a raw box's code). `id` tells users apart (two may share a name).
  *
- * Other users' carets and selections as source ranges, and where the views read them (`Presences`). Pure (no Yjs, no
+ * Other users' carets and selections as source ranges, and where the editors read them (`Presences`). Pure (no Yjs, no
  * DOM): the eager part of the extension uses it, so it is not in the lazily loaded chunk (model/).
  */
 export interface Presence {
@@ -18,7 +18,7 @@ export interface Presence {
   head: number;
 }
 
-/** Who another user is, as the views show them: with the CSS color of their caret, selection and markers. */
+/** Who another user is, as the editors show them: with the CSS color of their caret, selection and markers. */
 export type PresenceUser = Required<User>;
 
 /** A presence in a file: its offsets are in the file's text. */
@@ -38,7 +38,7 @@ export interface PresenceSource {
   readonly onDidChange: Event<void>;
 }
 
-/** Everyone's places as last reported (`set`), for the views of every document and the file panel. */
+/** Everyone's places as last reported (`set`), for the editors of every document and the file panel. */
 export class Presences implements PresenceSource {
   #all: readonly PlacedPresence[] = [];
   readonly #changed = new EventEmitter<void>();

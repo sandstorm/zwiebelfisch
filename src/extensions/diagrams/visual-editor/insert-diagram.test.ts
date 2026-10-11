@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // Tests for insert-diagram.ts in a Visual editor with the built-in constructs (testing/): the name asked, the empty
-// diagram created, the figure inserted (a figure of an image, as the view reads it), the diagram editor opened.
+// diagram created, the figure inserted (a figure of an image, as the Visual editor reads it), the diagram editor opened.
 import type { Editor } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
 import { ProjectPath } from '../../../core/paths/paths';
@@ -15,7 +15,7 @@ import { insertDiagram, type InsertContext } from './insert-diagram';
 const path = ProjectPath.of;
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-/** `file` holding `text` in a view, the cursor at its end; the save dialog answers `answer`. */
+/** `file` holding `text` in a Visual editor, the cursor at its end; the save dialog answers `answer`. */
 function setup(file: string, text: string, answer: string | undefined) {
   const project = new Project(path('/main.typ'), { '/main.typ': '= Main\n', [file]: text, '/chapters/diagrams/diagram.drawio.png': emptyDiagram() });
   const document = project.document(path(file))!;

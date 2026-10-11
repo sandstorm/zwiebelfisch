@@ -55,8 +55,8 @@ Exported from the package, not in the list; a host adds them.
 #table(
   columns: (auto, 2fr, 1fr),
   table.header[Extension][What it adds][Through],
-  [`collaboration(options)`], [The host's connection: shares the project over Yjs, draws other users' places in every view (CodeMirror extensions, highlights, file decorations), registers a GitLab room's source control (see @architecture-server)], [CodeMirror extensions, highlights, file decorations, source control],
-  [`devtools(extensions)`], [Wraps the whole list: records every extension's contributions (proxies around its context's namespaces) and shows them with the shown document and the events in a right side panel (@guide-embedding-devtools). `model/` describes values and the document as text; `recording/` wraps the contexts and describes each contribution point's arguments (by shape: a new point shows its arguments' names until it is described there); `workbench/` draws a view per tab; `visual-editor/` keeps each Visual editor's editor (`registerTiptapExtension`)], [right side panel, Tiptap extension, every contribution point (recorded)],
+  [`collaboration(options)`], [The host's connection: shares the project over Yjs, draws other users' places in every editor (CodeMirror extensions, highlights, file decorations), registers a GitLab room's source control (see @architecture-server)], [CodeMirror extensions, highlights, file decorations, source control],
+  [`devtools(extensions)`], [Wraps the whole list: records every extension's contributions (proxies around its context's namespaces) and shows them with the shown document and the events in a right side panel (@guide-embedding-devtools). `model/` describes values and the document as text; `recording/` wraps the contexts and describes each contribution point's arguments (by shape: a new point shows its arguments' names until it is described there); `workbench/` draws the tabs; `visual-editor/` keeps the loaded Visual editors (`registerTiptapExtension`)], [right side panel, Tiptap extension, every contribution point (recorded)],
 )
 
 == How they meet <architecture-built-in-extensions-meeting>
@@ -64,7 +64,7 @@ Exported from the package, not in the list; a host adds them.
 #table(
   columns: (auto, auto, auto),
   table.header[Contribution point][Provided by][Read by],
-  [document links], [`documentLinks` (`typst`)], [the views, `textFiles`' editor, `images`, `diagrams` and `mermaid` ("Edit diagram")],
+  [document links], [`documentLinks` (`typst`)], [the Visual and Source editors, `textFiles`' editor, `images`, `diagrams` and `mermaid` ("Edit diagram")],
   [file decorations], [`collaboration`, `sourceControl`], [`files`],
   [source controls], [`collaboration` (GitLab rooms)], [`sourceControl`],
   [PDF export options], [`comments`], [`pdfExport`],

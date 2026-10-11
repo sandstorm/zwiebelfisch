@@ -37,7 +37,7 @@ test('a heading label is a tag in the heading; a reference is a chip saying what
 test('typing @ lists the labels; Enter inserts the chosen one as a reference', async ({ page }) => {
   await caretAtEnd(visual(page).locator('p').first());
   await page.keyboard.type(' See @');
-  // the shown view's @ list (every view has one per completion item provider)
+  // the shown editor's @ list (every editor has one per completion item provider)
   const list = page.locator('typst-editor [data-testid="typst-suggest"][data-trigger="@"]:visible');
   await expect(list.getByRole('option')).toHaveText([/^intro/, /^method/]);
   await page.keyboard.type('int');

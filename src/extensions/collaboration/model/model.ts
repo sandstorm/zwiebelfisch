@@ -19,7 +19,7 @@ import { SharedProject } from './shared-project';
 /**
  * Real-time collaboration for one widget: the Typst files' text through a
  * Y.Doc (one per project), the users' cursors
- * through awareness. Only text is shared — the editing views never sync
+ * through awareness. Only text is shared — the editors never sync
  * directly; they keep following their TypstDocument. In a room backed by a
  * GitLab branch (the server put a base into its `meta` map) the other files
  * are shared too, and `sourceControl` commits to the branch.

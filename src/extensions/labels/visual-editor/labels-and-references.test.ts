@@ -79,7 +79,7 @@ describe('references and labels in the Typst ↔ ProseMirror conversion', () => 
       { type: 'heading', name: 'results', gap: ' ' },
       { type: 'figure', name: 'tab:timings', gap: ' ' }, // a figure with a table (tables-real-world)
       { type: 'figure', name: 'fig:compile-times', gap: ' ' },
-      { type: 'rawBlock', name: 'tab:runs', gap: ' ' }, // a figure of the spreadsheet's table: code the view does not model
+      { type: 'rawBlock', name: 'tab:runs', gap: ' ' }, // a figure of the spreadsheet's table: code the Visual editor does not model
     ]);
     expect(labels(parseTypst(FIXTURES.method))).toContainEqual({ type: 'rawBlock', name: 'eq:speedup', gap: ' ' });
   });

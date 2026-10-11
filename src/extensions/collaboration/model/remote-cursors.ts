@@ -13,7 +13,7 @@ import type { PlacedPresence } from '../presence/presence';
  * `onPresence` (only when they changed). Positions travel as Y relative
  * positions, so they stay on their characters while anyone edits; they are
  * resolved again after every change of the shared texts and every presence
- * update (once per microtask, after the views have taken the change).
+ * update (once per microtask, after the editors have taken the change).
  */
 export class RemoteCursors {
   private scheduled = false;
@@ -115,7 +115,7 @@ export interface RemoteCursorsOptions {
   user: User;
   /** The shared text of `path` (where cursors are anchored). */
   text(path: ProjectPath): Y.Text | undefined;
-  /** Called with every other user's place, in any file, whenever one changes (the views, the file panel). */
+  /** Called with every other user's place, in any file, whenever one changes (the editors, the file panel). */
   onPresence?(presences: readonly PlacedPresence[]): void;
 }
 

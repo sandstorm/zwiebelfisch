@@ -56,7 +56,7 @@ const POINTS: Readonly<Record<string, Describer>> = {
     const { group, order, action } = record(item);
     const { label, shortcut } = record(action);
     return {
-      title: typeof label === 'string' ? label : '(made per view)',
+      title: typeof label === 'string' ? label : '(made per editor)',
       details: [`in ${String(group)}`, `order ${num(order, 0)}`, ...optional(shortcut, String)],
       rank: [String(group), num(order, 0)],
     };

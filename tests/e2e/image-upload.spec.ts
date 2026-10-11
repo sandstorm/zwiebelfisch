@@ -63,7 +63,7 @@ async function layout(page: Page) {
   return { left, right, overflow };
 }
 
-/** The editing view still shows main.typ: Visual editor and toolbar visible, no asset view, preview beside it. */
+/** The editing area still shows main.typ: Visual editor and toolbar visible, no image editor, preview beside it. */
 async function expectLayoutIntact(page: Page, before: Awaited<ReturnType<typeof layout>>) {
   const editor = page.locator('typst-editor');
   await expect(editor.getByTestId('typst-visual')).toBeVisible();
@@ -79,7 +79,7 @@ async function expectLayoutIntact(page: Page, before: Awaited<ReturnType<typeof 
   expect(before.left.width - after.left.width).toBeLessThanOrEqual(481);
   for (const side of ['left', 'right'] as const) expect(Math.abs(after[side].height - before[side].height)).toBeLessThanOrEqual(1);
   expect(after.overflow).toBeLessThanOrEqual(0);
-  // A big photo shows scaled down, not filling the editing view.
+  // A big photo shows scaled down, not filling the editing area.
   const picture = editor.getByTestId('typst-visual').locator('.typst-images__box img.typst-visual__rendering').first();
   await expect(picture).toBeVisible();
   expect((await picture.boundingBox())!.height).toBeLessThan(after.left.height * 0.7);

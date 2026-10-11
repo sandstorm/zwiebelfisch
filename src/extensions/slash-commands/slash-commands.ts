@@ -80,7 +80,7 @@ function textStyleItem(style: TextStyle): CompletionItem {
 }
 
 /**
- * A muted "Type / for commands" in the empty paragraph holding the cursor while the view has focus (as Tiptap's
+ * A muted "Type / for commands" in the empty paragraph holding the cursor while the editor has focus (as Tiptap's
  * Placeholder with `showOnlyCurrent`): a node decoration whose `data-hint` CSS draws, so it is never document text.
  * Decorations are asked for with every state, including the focus and blur transactions Tiptap dispatches.
  */

@@ -35,7 +35,7 @@ export function previewSync(): TypstExtension {
       subscriptions.push(workbench.registerStyleSheet(css));
       let following = configuredFollow(workspace, globalState);
       // The outline of a click in the preview marks what the click selected, while that is what the user looks at:
-      // it goes with the first edit (in any view) or once the selection moves elsewhere, as the Source editor's own
+      // it goes with the first edit (in any editor) or once the selection moves elsewhere, as the Source editor's own
       // reveal highlight does; otherwise it would stay behind on outdated text.
       let clicked: SourceRange | null = null;
       const clearClick = () => {
@@ -73,7 +73,7 @@ export function previewSync(): TypstExtension {
           toggle.dispose();
           toggle = preview.registerToolbarItem(followCursor({ on: following, onChange }), { group: '1_sync', order: 10 });
         }),
-        // where the user works: the shown file's editor, focused (not a collaborator's edit in a hidden view)
+        // where the user works: the shown file's editor, focused (not a collaborator's edit in a hidden editor)
         window.onDidChangeTextEditorSelection(({ textEditor }) => {
           if (clicked && !sameRange(textEditor.selection, clicked)) clearClick();
           if (textEditor === window.activeTextEditor) highlight.update();

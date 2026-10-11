@@ -77,7 +77,7 @@ export interface CommandContribution {
 }
 
 /**
- * What an extension gets to work with: VS Code's namespaces, the frame, and the hosts of the views. Contributions are
+ * What an extension gets to work with: VS Code's namespaces, the frame, and the hosts of the editors and the preview. Contributions are
  * registered once, at activation; the hosts apply them to every editor they create later.
  */
 export interface ExtensionContext {
@@ -141,12 +141,12 @@ export interface Workbench {
   registerSidePanel(id: string, options: SidePanelOptions): SidePanel;
   /**
    * Shows `top` right before and `bottom` right after the shown file's editor, across tab and file switches: in a
-   * Typst file's view inside its content (in the Visual editor below its toolbar), scrolling with it; around any other
+   * Typst file's editor inside its content (in the Visual editor below its toolbar), scrolling with it; around any other
    * editor's panel, not scrolling. Detached while no editor is shown. One frame at a time.
    */
   registerEditorFrame(frame: { top: HTMLElement; bottom: HTMLElement }): Disposable;
   /**
-   * Files from the computer dropped anywhere on the widget (and not taken by a view inside, such as the Visual editor
+   * Files from the computer dropped anywhere on the widget (and not taken by an editor inside, such as the Visual editor
    * taking images). The widget never lets the browser open a dropped file; it shows the drop hint while anyone listens.
    */
   readonly onDidDropFiles: Event<File[]>;
@@ -160,7 +160,7 @@ export interface Workbench {
    * panel: `file/newFile`, `explorer/context`).
    */
   registerMenuItem(menuId: string, item: MenuItem): Disposable;
-  /** The items of `menuId` to show in `context` (those whose `when` holds), sorted, for a view that shows that menu. */
+  /** The items of `menuId` to show in `context` (those whose `when` holds), sorted, for a side panel or editor that shows that menu. */
   getMenuItems(menuId: string, context?: MenuContext): readonly MenuItem[];
   /** Items of a menu (its id) were registered or disposed. */
   readonly onDidChangeMenu: Event<string>;
@@ -243,7 +243,7 @@ export interface Memento {
 
 /**
  * The drag data type (`DataTransfer`) of a project file dragged inside the widget, e.g. a row of the file panel; the
- * data is its path. Any view may take such a drop (the Visual editor inserts a dragged image).
+ * data is its path. Any editor may take such a drop (the Visual editor inserts a dragged image).
  */
 export const PROJECT_PATH_TYPE = 'application/x-typst-project-path';
 
@@ -277,8 +277,8 @@ export interface WorkbenchOptions {
  * Source editor, others in those extensions register, tabs between them; side panels on the left and the right, the
  * preview being the right side's built-in one; the status bar), keeps the preview compiling the main file, and runs
  * the extensions. It makes the other hosts: VS Code's namespaces (`commands`, `window`, `scm`, `languages`,
- * `workspace`) and the views' (`visualEditor`, `sourceEditor`, `preview`). `activate` starts it: extensions first
- * (their contributions are in place before any view exists), then the main file is shown and compiled.
+ * `workspace`) and the editors' and the preview's (`visualEditor`, `sourceEditor`, `preview`). `activate` starts it: extensions first
+ * (their contributions are in place before any editor exists), then the main file is shown and compiled.
  * createTypstEditor creates it; extensions see it as `Workbench`.
  */
 export class WorkbenchHost implements Workbench {
@@ -528,7 +528,7 @@ export class WorkbenchHost implements Workbench {
 
   /**
    * The editor frame around the shown custom editor's panel, unless a Typst editor is shown (TypstEditors puts it into
-   * the view's scrolling content then).
+   * the editor's scrolling content then).
    */
   #placeFrame(): void {
     if (!this.#frame || this.#typstEditors.activeTextEditor) return;

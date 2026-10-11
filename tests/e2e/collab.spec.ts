@@ -56,7 +56,7 @@ test('the other user’s selection is shown with their name', async ({ browser, 
   await expect(selection.first()).toHaveAttribute('data-user', 'Ann');
 });
 
-test('the other user’s caret shows with their name in both views, where they moved it last, and their file is marked in the tree', async ({ browser, baseURL }, info) => {
+test('the other user’s caret shows with their name in both editors, where they moved it last, and their file is marked in the tree', async ({ browser, baseURL }, info) => {
   const { ann, bob } = await users(browser, baseURL!, info.project.name);
   await ann.getByTestId('typst-visual').locator('h1').click();
   await ann.keyboard.press('End');

@@ -16,7 +16,7 @@ import { linkExtension } from './link-extension';
  * editor).
  *
  * Why providers: finding links is a feature's policy (which paths, what a missing file offers); showing and following
- * them is the same in every view, so the views read every provider's links and know none of them. Why `languageId`: the
+ * them is the same in every editor, so the editors read every provider's links and know none of them. Why `languageId`: the
  * host knows no language; whoever hands a text over says which language it is in.
  */
 export interface Languages {

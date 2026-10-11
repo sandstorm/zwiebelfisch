@@ -29,7 +29,7 @@ const BLOCK_CONTAINER = 'blockContainer';
  * table cell); paragraphs of an item (whose spec makes a `container` of
  * them: a list item) are not justified on their own.
  *
- * The view shows every textblock's effective alignment (CSS `text-align`), and
+ * The Visual editor shows every textblock's effective alignment (CSS `text-align`), and
  * `textAlignAt` tells the toolbar which one the selection has. The commands
  * change the source as little as possible, in one transaction: an alignment
  * equal to the surrounding one removes the wrapper instead of adding one; a

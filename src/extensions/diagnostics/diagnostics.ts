@@ -19,7 +19,7 @@ import { DiagnosticsStatus } from './workbench/workbench';
  * DiagnosticsStatus, with the list behind it).
  *
  * Why one DiagnosticCollection (model/): the preview reports a compilation's diagnostics once, for every file; the
- * collection splits them by document, and each view of a document reads its own from there, whenever it is made.
+ * collection splits them by document, and each editor of a document reads its own from there, whenever it is made.
  */
 export function diagnostics(): TypstExtension {
   return {

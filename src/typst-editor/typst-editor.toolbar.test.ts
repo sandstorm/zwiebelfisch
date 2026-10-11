@@ -172,7 +172,7 @@ describe('Visual editor toolbar', () => {
   describe('image insertion never replaces or splits content', () => {
     const SOURCE = '#set page(width: 16cm)\n#set text(size: 12pt)\n\n= Hello\n\nSome text here.\n';
 
-    /** "Insert image" with `path` entered, in a view set up with `prompts`. */
+    /** "Insert image" with `path` entered, in an editor set up with `prompts`. */
     async function insertPath(button: (label: string) => HTMLButtonElement, prompts: TestPrompts, path: string) {
       prompts.answer('Enter a path…', path);
       button('Insert image').click();

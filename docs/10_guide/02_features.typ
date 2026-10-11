@@ -4,20 +4,20 @@
 
 The examples are from a report measuring compile times, as in the demo's advanced example (`?example=advanced`). Settings: @guide-configuration.
 
-== Views and preview <guide-features-views>
+== Editors and preview <guide-features-editors>
 
 #figure(
-  mermaid(read("../diagrams/views-layout.mmd"), width: 75%),
-  caption: [The editor: left rail and side panel, editing views, the right side (preview or devtools) and its rail, status bar.],
+  mermaid(read("../diagrams/workbench-layout.mmd"), width: 75%),
+  caption: [The editor: left rail and side panel, editing area, the right side (preview or devtools) and its rail, status bar.],
 )
 
-Each side has a rail (`▣`): a button per panel. The left side holds the files, the right side the preview (and, where a host adds them, panels such as the devtools). One panel per side shows; clicking the shown one's button hides that side and the editing view takes its room. What you picked is remembered for the browser session.
+Each side has a rail (`▣`): a button per panel. The left side holds the files, the right side the preview (and, where a host adds them, panels such as the devtools). One panel per side shows; clicking the shown one's button hides that side and the editing area takes its room. What you picked is remembered for the browser session.
 
 - *Visual editor:* edits the Typst like a word processor. What it does not model (math, function calls) shows as a raw box: its code while focused, its compiled look otherwise.
 - *Source editor:* the Typst text: highlighting, line numbers, search.
-- Both views edit the same text; cursor and undo history survive a tab switch. Untouched source stays byte for byte.
+- Both editors edit the same text; cursor and undo history survive a tab switch. Untouched source stays byte for byte.
 - *Preview:* updates while typing. On errors it dims and keeps the last good pages. Hidden, it keeps compiling: errors, raw boxes' pictures and shading stay current.
-- Click in the preview: the editing view selects that text, opening its file if needed.
+- Click in the preview: the editor selects that text, opening its file if needed.
 - "Follow cursor" (preview toolbar): the preview scrolls to the text being edited.
 - Selected text (either editor) is shaded in the preview, too; a caret shades nothing.
 - Zoom (fit width by default, 25–400 %) and "page n / total" in the preview toolbar.
@@ -26,7 +26,7 @@ Each side has a rail (`▣`): a button per panel. The left side holds the files,
 
 == Search everywhere <guide-features-search>
 
-Press Shift twice, anywhere (also while typing in a view), or click the magnifier at the bottom of the left rail. One list finds everything, grouped; type a few letters of a word, in order (`cmptim` finds "Compile times"). Arrows and Enter pick, Escape closes.
+Press Shift twice, anywhere (also while typing in an editor), or click the magnifier at the bottom of the left rail. One list finds everything, grouped; type a few letters of a word, in order (`cmptim` finds "Compile times"). Arrows and Enter pick, Escape closes.
 
 #table(
   columns: 3,
@@ -283,7 +283,7 @@ File links:
 - Paths in `#import`, `#include`, `image`, `read`, `bibliography`, `json` / `csv` / `yaml` / `toml` / `xml` / `cbor` open their file: Ctrl+click or Alt+Enter (⌘-click or ⌥↩ on Mac) in the Source editor, "Open …" above a raw box in the Visual editor.
 - A missing `.typ` file can be created from there.
 - A file the main file includes gets "← previous file" / "next file →" links in reading order.
-- Back and forward, as in VS Code: after any change of the shown file (a link, "Edit diagram", a click in the preview, the file panel, …), "← Back to _file_" above a supplementary file (a Mermaid diagram, a spreadsheet, a text file, …) returns to it, in the view it was shown in, with its selection (Typst files). After going back, "Forward to _file_ →" returns. Typst files show the reading order instead; the keys work everywhere. Keys: Ctrl+Alt+- back, Ctrl+Shift+- forward (⌃- / ⌃⇧- on Mac). The last 50 files; renamed files keep their place, deleted ones drop out.
+- Back and forward, as in VS Code: after any change of the shown file (a link, "Edit diagram", a click in the preview, the file panel, …), "← Back to _file_" above a supplementary file (a Mermaid diagram, a spreadsheet, a text file, …) returns to it, in the editor it was shown in, with its selection (Typst files). After going back, "Forward to _file_ →" returns. Typst files show the reading order instead; the keys work everywhere. Keys: Ctrl+Alt+- back, Ctrl+Shift+- forward (⌃- / ⌃⇧- on Mac). The last 50 files; renamed files keep their place, deleted ones drop out.
 
 == Comments <guide-features-comments>
 

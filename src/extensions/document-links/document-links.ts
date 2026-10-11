@@ -15,7 +15,7 @@ import type { DocumentLink, DocumentLinkProvider, TextDocument } from '../../hos
  * offer to create a missing Typst file.
  *
  * Why an extension: finding paths is Typst syntax (core/typst-syntax), showing and following links is the hosts' (every
- * view shows the links of every `DocumentLinkProvider` for its language); where a path leads in this project, and that
+ * editor shows the links of every `DocumentLinkProvider` for its language); where a path leads in this project, and that
  * a missing Typst file may be created, is this extension's policy.
  */
 export function documentLinks(): TypstExtension {

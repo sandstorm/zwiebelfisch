@@ -38,10 +38,10 @@ export function labelTags(options: LabelTagsOptions): Plugin {
 /** Where a tag asks what to do with its label, and for the new name. */
 export type LabelPrompts = Pick<WindowApi, 'showQuickPick' | 'showInputBox'>;
 
-/** What the tags need: the project's labels (renaming updates their references by default), the view's document. */
+/** What the tags need: the project's labels (renaming updates their references by default), the editor's document. */
 export interface LabelTagsOptions {
   labels: ProjectLabels;
-  /** The document this view shows: its references are renamed in the view, the other files' by `labels`. */
+  /** The document this editor shows: its references are renamed in the editor, the other files' by `labels`. */
   document: TypstDocument;
   prompts: LabelPrompts;
 }
@@ -151,7 +151,7 @@ function tagElement(tag: Tag): HTMLElement {
   return wrap;
 }
 
-/** One drawn tag: the label's name, where it is drawn, how to find its block now, and the view's options. */
+/** One drawn tag: the label's name, where it is drawn, how to find its block now, and the editor's options. */
 interface Tag {
   view: EditorView;
   name: string;

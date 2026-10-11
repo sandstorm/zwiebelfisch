@@ -80,7 +80,7 @@ describe('file navigation: back and forward', () => {
     expect(links()).toEqual(['← Back to chapter.typ']);
   });
 
-  it('restores the view the file was shown in', async () => {
+  it('restores the editor the file was shown in', async () => {
     const { workbench, context } = setup();
     workbench.open(path('/chapter.typ'), { viewType: 'visualEditor' });
     workbench.open(path('/main.typ'), { viewType: 'sourceEditor' });

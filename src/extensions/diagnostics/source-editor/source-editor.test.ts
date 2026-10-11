@@ -19,7 +19,7 @@ describe('lint in the Source editors', () => {
     return () => [...parent.querySelectorAll('.cm-lintRange-error')].map((range) => range.textContent);
   }
 
-  /** The lint diagnostics of the view in `parent`. */
+  /** The lint diagnostics of the editor in `parent`. */
   function shown(parent: HTMLElement): LintDiagnostic[] {
     const view = EditorView.findFromDOM(parent.querySelector<HTMLElement>('.cm-editor')!)!;
     const found: LintDiagnostic[] = [];
@@ -39,7 +39,7 @@ describe('lint in the Source editors', () => {
     expect(errors()).toEqual([]);
   });
 
-  it('shows diagnostics set before the view was made', async () => {
+  it('shows diagnostics set before the editor was made', async () => {
     const diagnostics = new DiagnosticCollection();
     const document = new TypstDocument('#unknown + 1\n');
     diagnostics.set(document, [base]);

@@ -101,16 +101,16 @@ export interface WindowApi {
   registerCustomEditorProvider(viewType: string, provider: CustomEditorProvider, options: CustomEditorOptions): Disposable;
 
   /**
-   * Adds decorations to files (badges on their rows in the views that list files, such as other users' initials)
+   * Adds decorations to files (badges on their rows in the side panels that list files, such as other users' initials)
    * until disposed. Several providers may decorate the same file; their decorations are shown in registration order.
    */
   registerFileDecorationProvider(provider: FileDecorationProvider): Disposable;
-  /** The decorations of `path` from every provider, for a view that lists files. */
+  /** The decorations of `path` from every provider, for a side panel that lists files. */
   getFileDecorations(path: ProjectPath): readonly FileDecoration[];
   /** Decorations changed: of these files, or of any (undefined). */
   readonly onDidChangeFileDecorations: Event<readonly ProjectPath[] | undefined>;
   /**
-   * The icon of `path` for a view that lists files: that of the custom editor opening it by default (its `icon`);
+   * The icon of `path` for a side panel that lists files: that of the custom editor opening it by default (its `icon`);
    * undefined when it has none, or no custom editor opens it (a Typst file).
    */
   getFileIcon(path: ProjectPath): string | undefined;
@@ -122,8 +122,8 @@ export interface WindowApi {
   /** The editor of the Typst file shown in the editing area; null while another kind of file is shown. */
   readonly activeTextEditor: TextEditor | null;
   /**
-   * The selection in an editor moved, or its text changed (fired from the views' own updates, so `selection` is
-   * the new one already). Any document's editor, not only the active one: a hidden view follows the text, too.
+   * The selection in an editor moved, or its text changed (fired from the editors' own updates, so `selection` is
+   * the new one already). Any document's editor, not only the active one: a hidden editor follows the text, too.
    */
   readonly onDidChangeTextEditorSelection: Event<TextEditorSelectionChangeEvent>;
 }
@@ -262,7 +262,7 @@ export interface ContributedMenuItem {
 /**
  * Where `withProgress` shows a task (VS Code's ProgressLocation): `Window`, a spinner with "title: message" in the
  * status bar; `EditingArea` (not VS Code's), a note over the editing area with the title, the message and a bar, the
- * editing area taking no input meanwhile, for a task the views must wait for (the room's text before it is shown).
+ * editing area taking no input meanwhile, for a task the editors must wait for (the room's text before it is shown).
  */
 export const ProgressLocation = { Window: 10, EditingArea: 20 } as const;
 export type ProgressLocation = (typeof ProgressLocation)[keyof typeof ProgressLocation];
@@ -296,7 +296,7 @@ export interface StatusBarPlacement {
   readonly priority?: number;
 }
 
-/** How a view that lists files marks one (VS Code's FileDecoration): a small badge with a tooltip. */
+/** How a side panel that lists files marks one (VS Code's FileDecoration): a small badge with a tooltip. */
 export interface FileDecoration {
   /** A short text drawn as a badge (one or two characters, e.g. initials). */
   readonly badge?: string;
@@ -335,7 +335,7 @@ export interface CustomEditorOptions {
    */
   readonly priority?: 'default' | 'fallback' | 'option' | number;
   /**
-   * The icon of the files it opens by default, where views list files (the file panel): SVG markup with a 16×16 view
+   * The icon of the files it opens by default, where side panels list files (the file panel): SVG markup with a 16×16 view
    * box, drawn in strokes of `currentColor`.
    */
   readonly icon?: string;
@@ -414,9 +414,9 @@ export interface WindowOptions {
   activeFile(): ProjectPath;
   /** A file was shown in the editing area (fired by the workbench). */
   readonly onDidChangeActiveFile: Event<ProjectPath>;
-  /** The editor of the Typst file shown now (the workbench's editing views). */
+  /** The editor of the Typst file shown now (the workbench's editors). */
   activeTextEditor(): TextEditor | null;
-  /** The selection in any editor changed (fired by the workbench's editing views). */
+  /** The selection in any editor changed (fired by the workbench's editors). */
   readonly onDidChangeTextEditorSelection: Event<TextEditorSelectionChangeEvent>;
   /** The entries of a menu whose `when` holds in `context`, sorted (the workbench's menus, for `showContextMenu`). */
   menuItems(menuId: string, context: Readonly<Record<string, unknown>>): readonly ContributedMenuItem[];

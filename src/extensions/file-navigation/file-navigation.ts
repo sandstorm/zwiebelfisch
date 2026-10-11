@@ -31,7 +31,7 @@ export function fileNavigation(): TypstExtension {
       const doc = workbench.ownerDocument;
       const readingOrder = new FileNavigation(doc, (path) => workbench.open(path));
       const history = new NavigationHistory(window.activeFile);
-      // the file shown, and its Typst editor (read when the user leaves it: the view keeps its selection while hidden)
+      // the file shown, and its Typst editor (read when the user leaves it: the editor keeps its selection while hidden)
       let shown: { path: ProjectPath; editor: TextEditor | null } = { path: window.activeFile, editor: window.activeTextEditor };
       let going = false;
       const here = (): NavigationLocation => {

@@ -2,9 +2,9 @@
 import { EventEmitter, type Event } from '../event-emitter/event-emitter';
 
 /**
- * The Typst source text: the single source of truth every view derives from.
+ * The Typst source text: the single source of truth every editor derives from.
  *
- * Views apply their edits with an `origin` (usually the view itself) and skip
+ * Editors apply their edits with an `origin` (usually the editor itself) and skip
  * notifications carrying their own origin, so edits never echo back.
  *
  * Every listener hears every change in the order the changes were made, also

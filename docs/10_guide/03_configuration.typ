@@ -29,7 +29,7 @@ editor.settings = { ...editor.settings, 'workbench.theme': 'dark' };   // replac
   columns: 3,
   [Setting], [Values (default)], [Effect],
   [`workbench.theme`], [`'light'`, `'dark'`, `'auto'`, `null` (`null`)], [Light or dark colors. `auto`: as the OS. `null`: as the page's CSS `color-scheme`. In dark mode the preview shows the pages inverted; the PDF stays as it is.],
-  [`workbench.rightSidePanel`], [a side panel's id, `null` (`'preview'`)], [The panel the right side shows until the viewer picks one on its rail: `'preview'`, or an extension's right panel (e.g. `'devtools'`). `null`: the right side starts hidden, the editing view takes its room. An id no panel has: the right panel that asks to be shown, if any.],
+  [`workbench.rightSidePanel`], [a side panel's id, `null` (`'preview'`)], [The panel the right side shows until the viewer picks one on its rail: `'preview'`, or an extension's right panel (e.g. `'devtools'`). `null`: the right side starts hidden, the editing area takes its room. An id no panel has: the right panel that asks to be shown, if any.],
 )
 
 Colors and dark mode in detail: @guide-embedding-theming.

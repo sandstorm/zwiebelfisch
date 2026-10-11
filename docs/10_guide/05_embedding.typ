@@ -133,7 +133,7 @@ The returned `TypstEditor`:
 
 - Paths are absolute: they start with `/`, no `.` or `..` segments. Another key, or bytes for a `.typ` file, throws.
 - `onFilesChange` is the one place to hear about changes: `{ kind: 'create' | 'update' | 'delete' | 'rename', path, content?, from? }`. It reports every `.typ` edit (`update` with the full text), the file panel's changes, the collaborators' changes and assignments to `files` or `source`.
-- Assigning `files`: missing paths are deleted, new ones created, changed ones updated (open views keep their cursor); each is reported. A map without the main file leaves its text as it is.
+- Assigning `files`: missing paths are deleted, new ones created, changed ones updated (open editors keep their cursor); each is reported. A map without the main file leaves its text as it is.
 - Bytes reach the compile worker only when the `Uint8Array` changes: reuse the array for unchanged files.
 - `#import "@preview/name:version"` works without configuration: the worker downloads the package from `packages.typst.org` on first use and keeps it in the Cache API.
 

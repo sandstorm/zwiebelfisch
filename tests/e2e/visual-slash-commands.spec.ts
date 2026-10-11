@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
   await compiled(page);
 });
 
-/** The slash commands' list of the shown view. */
+/** The slash commands' list of the shown editor. */
 const list = (page: Page) => page.locator('[data-testid="typst-suggest"][data-trigger="/"]:visible');
 
 /** A new empty line after the first paragraph, with the caret in it. */

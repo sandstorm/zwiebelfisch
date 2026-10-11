@@ -25,8 +25,8 @@ afterEach(() => cleanup.splice(0).forEach((fn) => fn()));
 
 /**
  * One user's widget, reduced to what collaboration touches: the project, both
- * editing views of the main file (with nothing contributed but this extension's
- * drawing of the others' places and its per-user undo: what the views do not model shows as raw Typst), and the Collaboration
+ * editors of the main file (with nothing contributed but this extension's
+ * drawing of the others' places and its per-user undo: what the editors do not model shows as raw Typst), and the Collaboration
  * joining the room `peer` is in (already synced, as with a server).
  */
 async function user(name: string, files: Record<string, string>, peer?: { ydoc: Y.Doc; awareness: Awareness }) {

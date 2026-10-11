@@ -77,7 +77,7 @@ export class Toolbar {
     this.root.remove();
   }
 
-  /** What items made for this view get. */
+  /** What items made for this editor get. */
   private context(editor: VisualEditorContext): ToolbarContext {
     return { ...editor, editor: this.tiptap, root: this.root, subscriptions: this.subscriptions };
   }

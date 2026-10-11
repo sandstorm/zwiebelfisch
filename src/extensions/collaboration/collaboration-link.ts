@@ -9,7 +9,7 @@ import type { PlacedPresence } from './presence/presence';
 /**
  * The widget's side of collaboration. Loads the collaboration code (Yjs,
  * Hocuspocus) on demand, so widgets without collaboration never download it;
- * publishes the local selection when the views report a change (`selectionChanged`), and tells
+ * publishes the local selection when the editors report a change (`selectionChanged`), and tells
  * the widget where everyone else is.
  *
  * The widget's side of a Collaboration, which it loads on demand (so this file must stay outside the lazily loaded
@@ -21,7 +21,7 @@ export class CollaborationLink {
   private scheduled = false;
   /**
    * Settles once the project is shared: the collaboration code loaded and, with a server, the room synced (its text
-   * is in the project), or once that failed (logged). Until then, what the views show may still be replaced.
+   * is in the project), or once that failed (logged). Until then, what the editors show may still be replaced.
    */
   readonly ready: Promise<void>;
 
@@ -56,7 +56,7 @@ export class CollaborationLink {
   }
 
   /**
-   * The local selection moved (called by the editing views after their state
+   * The local selection moved (called by the editors after their state
    * has the new selection). Publishes it once per burst, when the user works
    * in this widget.
    */

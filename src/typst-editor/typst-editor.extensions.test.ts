@@ -129,7 +129,7 @@ afterEach(() => {
 });
 
 describe('custom editors', () => {
-  it('shows an image in the asset view, and a Typst file in the tabs again', () => {
+  it('shows an image in the image editor, and a Typst file in the tabs again', () => {
     const { host, editor } = setup({ source: '= Hi', files: { '/logo.png': new Uint8Array([1]) } });
     URL.createObjectURL = vi.fn(() => 'blob:1');
     URL.revokeObjectURL = vi.fn();
@@ -238,11 +238,11 @@ describe('the built-in extensions', () => {
     await vi.waitFor(() => expect(host.querySelector('.cm-lintRange-error')).not.toBeNull());
   });
 
-  it('marks the diagnostics in the Visual editor, message and hints as tooltip, also in views made later', () => {
+  it('marks the diagnostics in the Visual editor, message and hints as tooltip, also in editors made later', () => {
     const { host, editor, preview } = setup({ viewType: VISUAL_EDITOR, source: 'Hello world.\n', files: { '/a.typ': '#foo\n\nText.\n' } });
     preview.compiled([
       { severity: 'error', message: 'unknown variable: foo', hints: ['did you mean bar?'], path: ProjectPath.of('/main.typ'), from: SourceOffset.of(6), to: SourceOffset.of(11) },
-      // in raw code (a block atom), of a file whose views do not exist yet
+      // in raw code (a block atom), of a file whose editors do not exist yet
       { severity: 'warning', message: 'unused', hints: [], path: ProjectPath.of('/a.typ'), from: SourceOffset.of(1), to: SourceOffset.of(4) },
     ]);
     const mark = host.querySelector<HTMLElement>('.ProseMirror .typst-diagnostics__highlight')!;
@@ -360,7 +360,7 @@ describe('the built-in extensions', () => {
     source().dispatch({ changes: { from: 0, to: 0, insert: '!' }, selection: { anchor: 7, head: 11 } });
     expect(preview.cleared).toBe(2);
 
-    // an edit from elsewhere (another view, the API) too
+    // an edit from elsewhere (another editor, the API) too
     preview.click(click);
     editor.files = { '/main.typ': '= Hi\n\nOther\n' };
     expect(preview.cleared).toBe(3);

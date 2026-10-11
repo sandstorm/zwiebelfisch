@@ -1,8 +1,8 @@
 = Visual editor <architecture-visual-editor>
 
-The word-processor view: a Tiptap 3 editor over the Typst ↔ ProseMirror conversion (@architecture-prosemirror-typst). Module `src/hosts/visual-editor/`.
+The word-processor editor: a Tiptap 3 editor over the Typst ↔ ProseMirror conversion (@architecture-prosemirror-typst). Module `src/hosts/visual-editor/`.
 
-== VisualEditor <architecture-visual-editor-view>
+== VisualEditor <architecture-visual-editor-class>
 
 ```ts
 new VisualEditor(parent, document, contributions: VisualEditorHost)
@@ -21,12 +21,12 @@ new VisualEditor(parent, document, contributions: VisualEditorHost)
 What `ExtensionContext.visualEditor` is. Contributions register once, at activation; the host applies them to every editor it creates later. No contribution tracks editors.
 
 - Constructs: `registerNode`, `registerMark` (@extensions-visual-editor-constructs).
-- Around them: Tiptap extensions per view, toolbar groups and items, text style providers, completion item providers, gutters, highlights, box renderers, box actions, raw-box CodeMirror extensions (@extensions-visual-editor-constructs-more).
+- Around them: Tiptap extensions per editor, toolbar groups and items, text style providers, completion item providers, gutters, highlights, box renderers, box actions, raw-box CodeMirror extensions (@extensions-visual-editor-constructs-more).
 - Who wins where they compete: @architecture-conventions-api.
 
 == VisualEditorContext <architecture-visual-editor-context>
 
-What every `…Provider` gets for one view: `document`, `selection()`, `isBox(node)`, and the position map (`sourceToPos`, `posToSource`) over any document of the view, e.g. a transaction's. Toolbar items made per view also get the `editor`.
+What every `…Provider` gets for one editor: `document`, `selection()`, `isBox(node)`, and the position map (`sourceToPos`, `posToSource`) over any document of the editor, e.g. a transaction's. Toolbar items made per editor also get Tiptap's `editor`.
 
 == Raw boxes <architecture-visual-editor-raw-boxes>
 
@@ -47,8 +47,8 @@ Typst no spec models, and nodes whose spec sets `view.box: 'code'` (images, outl
 
 == Completion lists <architecture-visual-editor-completion>
 
-- One Tiptap `Suggestion` plugin per registered provider and view (`suggestions/suggestions.ts`), with the host's own match (trigger at a block start or after an allowed prefix; never in code) and a `SuggestWidget` (`listbox`) in the text column, placed by the plugin's Floating UI `mount`.
+- One Tiptap `Suggestion` plugin per registered provider and editor (`suggestions/suggestions.ts`), with the host's own match (trigger at a block start or after an allowed prefix; never in code) and a `SuggestWidget` (`listbox`) in the text column, placed by the plugin's Floating UI `mount`.
 - The items are asked for synchronously on every keystroke and filtered by the host; a list without matches is not open, so its keys go on to the editor.
-- Providers get the view's toolbar entries and text styles (`toolbarActions(group)`, `textStyles()`): the slash commands offer what other extensions registered without knowing them.
+- Providers get the editor's toolbar entries and text styles (`toolbarActions(group)`, `textStyles()`): the slash commands offer what other extensions registered without knowing them.
 
 Writing a construct: @extensions-visual-editor-constructs.

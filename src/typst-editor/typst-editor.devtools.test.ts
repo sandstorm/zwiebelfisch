@@ -71,7 +71,7 @@ describe('devtools', () => {
 
   it("shows the shown file's document: each node with its source range, boxes marked", async () => {
     const { tab } = mount();
-    // Tiptap tells a view's extensions it was created after a timeout
+    // Tiptap tells an editor's extensions it was created after a timeout
     await new Promise((resolve) => setTimeout(resolve));
     const document = tab('Document');
     const rows = [...document.querySelectorAll('.typst-devtools__node')].map((row) => row.textContent);

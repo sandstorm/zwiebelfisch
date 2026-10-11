@@ -37,7 +37,7 @@ describe('describeContribution', () => {
       details: ['in insert', 'order 20', 'Mod-Alt-t'],
       rank: ['insert', 20],
     });
-    expect(describeAt('visualEditor.registerToolbarItem', { group: 'text-style', create: () => ({}) }).title).toBe('(made per view)');
+    expect(describeAt('visualEditor.registerToolbarItem', { group: 'text-style', create: () => ({}) }).title).toBe('(made per editor)');
     expect(describeAt('workbench.registerMenuItem', 'files/context', { command: 'files.rename', title: 'Rename…', group: 'navigation', order: 2 })).toEqual({
       title: 'Rename…',
       details: ['menu files/context', 'group navigation', 'order 2', '→ files.rename'],

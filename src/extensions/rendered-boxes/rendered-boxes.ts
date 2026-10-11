@@ -9,7 +9,7 @@ import { snippetRenderer } from './visual-editor/visual-editor';
  * refreshed on `onDidRender`; see `snippetRenderer`). Image boxes are drawn by the images' renderer (priority 110
  * over this one's 100).
  *
- * A raw box in the Visual editor (Typst the view does not model) shows how it looks compiled — its snippet cut from the
+ * A raw box in the Visual editor (Typst it does not model) shows how it looks compiled — its snippet cut from the
  * preview's pages — until someone edits its code.
  *
  * Why an extension: the Visual editor only knows that a box may be drawn by a renderer; where pictures come from (the

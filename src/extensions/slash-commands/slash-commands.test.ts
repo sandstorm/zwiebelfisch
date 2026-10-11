@@ -105,7 +105,7 @@ describe('slash commands', () => {
 });
 
 describe('the hint "Type / for commands"', () => {
-  /** A focused view of `text` with the cursor after `cursorAfter`, and the paragraphs showing the hint. */
+  /** A focused Visual editor of `text` with the cursor after `cursorAfter`, and the paragraphs showing the hint. */
   function focused(text: string, cursorAfter: string) {
     const view = setup(text, cursorAfter);
     view.editor.view.dom.focus();
@@ -124,7 +124,7 @@ describe('the hint "Type / for commands"', () => {
     expect(doc.text).not.toContain('Type /');
   });
 
-  it('goes when something is typed, the cursor leaves the line or the view loses focus', () => {
+  it('goes when something is typed, the cursor leaves the line or the editor loses focus', () => {
     const { editor, hints } = focused('First\n', 'First');
     editor.commands.splitBlock();
     expect(hints()).toHaveLength(1);

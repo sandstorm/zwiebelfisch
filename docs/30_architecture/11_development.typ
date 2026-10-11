@@ -95,9 +95,9 @@ The modules with the most complexity. Lines: TypeScript without blank and commen
   [ext `comments`], [1380 / 1330], [300], [19], [its own Typst text format for note threads; page-margin rewriting (a workaround for drafting 0.2.2); the notes gutter's card layout],
   [host `window`], [1480 / 860], [228], [11], [its own quick input, search everywhere, custom editors with a filename-pattern compiler, messages, save dialog, status bar, file decorations],
   [host `prosemirror-typst`], [920 / 90], [198], [9], [the densest code (Typst ↔ ProseMirror parser, serializer, position map), tested almost only through extensions],
-  [ext `collaboration`], [1070 / 970], [188], [6], [every view, plus a server and GitLab rooms; its e2e specs need the server],
+  [ext `collaboration`], [1070 / 970], [188], [6], [every editor, plus a server and GitLab rooms; its e2e specs need the server],
   [host `visual-editor`], [1460 / 760], [183], [5], [raw boxes, toolbar, suggestions, node views: the largest contribution surface],
-  [ext `devtools`], [870 / 390], [174], [7], [projection view, contributions, events; not built in],
+  [ext `devtools`], [870 / 390], [174], [7], [document, contributions and events tabs; not built in],
   [host `workbench`], [1140 / 960], [135], [1], [layout, the namespaces, the editors of `*.typ`],
   [ext `files`], [710 / 535], [128], [6], [its own tree widget and panel],
   [host `preview`], [870 / 650], [120], [2], [worker, pages, overlays, snippets; carries the engine (@architecture-core-engine-size)],
@@ -111,7 +111,7 @@ The modules with the most complexity. Lines: TypeScript without blank and commen
 
 - *Verification*: run every Playwright spec in all three browsers, plus `test:e2e-collab` and `test:e2e-gitlab`; many have never run in a browser. Try a real GitLab. By eye: IronCalc's dark palette; the diagrams.net embed parameters (`noSaveBtn`, `saveAndExit=0`, `dark=1`) and its export reply.
 - *Auth*: GitLab sign-in, a real token check in `onAuthenticate`, the commit author from the verified identity.
-- *GitLab rooms*: highlight conflict ranges in the views (the data is sent); report an asset changed on both sides (the room's version wins today); don't commit an empty main file when the repository lacks it.
+- *GitLab rooms*: highlight conflict ranges in the editors (the data is sent); report an asset changed on both sides (the room's version wins today); don't commit an empty main file when the repository lacks it.
 - *Collaboration*: tell the user when the server is unreachable (the editing area stays at "Connecting to the room…"; a host that probes first, as the demo, falls back to local); share non-`.typ` files outside GitLab rooms; `{ doc }` mode needs the host's Yjs instance, which `dist/lib` does not share.
 - *Files*: empty folders live only in the panel; a folder rename, move or delete is one change per file and may stop half-way at a refusal; dragging an image into the Source editor does nothing; file links don't follow paths built at run time.
 - *Packages*: only `@preview` from packages.typst.org (no `@local`, no other registry); a failed download is retried only after the worker restarts.

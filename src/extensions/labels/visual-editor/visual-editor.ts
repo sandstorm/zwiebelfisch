@@ -68,7 +68,7 @@ const REFERENCE: TypstNodeSpec = {
   },
 };
 
-/** The plugins of one view: reference hints, label tags. */
+/** The plugins of one editor: reference hints, label tags. */
 function referencesExtension(labels: ProjectLabels, document: TypstDocument, prompts: LabelPrompts): Extension {
   return Extension.create({
     name: 'typstReferences',

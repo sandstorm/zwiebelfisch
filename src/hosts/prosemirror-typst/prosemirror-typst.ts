@@ -162,7 +162,7 @@ export interface TypstNodeConversion {
   readonly anchors?: readonly string[];
   /** Consecutive nodes of this type form a container, of the type this returns (list items: their list). */
   container?(item: Node): string;
-  /** Fires when what it reads changed (styles declared or removed): views parse their document again. */
+  /** Fires when what it reads changed (styles declared or removed): editors parse their document again. */
   readonly onDidChange?: Event<void>;
 }
 
@@ -196,7 +196,7 @@ export interface TypstMarkConversion {
   readonly raw?: boolean;
   /** Whether `text` needs nothing around it, Typst reading it back as this mark all the same (a bare URL). */
   isBare?(mark: Mark, text: string, around: Around): boolean;
-  /** Fires when what it reads changed (styles declared or removed): views parse their document again. */
+  /** Fires when what it reads changed (styles declared or removed): editors parse their document again. */
   readonly onDidChange?: Event<void>;
 }
 

@@ -22,7 +22,7 @@ export function rawBoxViews(tiptap: Editor, boxes: RawBoxes): NodeViewConstructo
   return (node, _view, getPos, decorations) => new RawBox(node, getPos, decorations, { tiptap, boxes });
 }
 
-/** What the raw boxes of one view get from the contributions. */
+/** What the raw boxes of one editor get from the contributions. */
 export interface RawBoxes {
   readonly editor: VisualEditorContext;
   /** Draw boxes instead of their code; the first that `renders` a box draws it. */
@@ -31,7 +31,7 @@ export interface RawBoxes {
   readonly codeExtensions: readonly CodeExtension[];
   /** Buttons on the boxes they apply to. */
   readonly actions: readonly RawBoxAction[];
-  /** What the specs ask the view for, by node type name (a box's title and tools). */
+  /** What the specs ask the editor for, by node type name (a box's title and tools). */
   readonly nodeViews: ReadonlyMap<string, NonNullable<TypstNodeSpec['view']>>;
 }
 
@@ -185,7 +185,7 @@ class RawBox implements NodeView {
     return new RenderedBox({ dom: this.dom, code, source: () => this.source(), activate }, renderer);
   }
 
-  /** What the box's tools get: the box, its picture (if rendered), the editor and view, how to edit the code. */
+  /** What the box's tools get: the box, its picture (if rendered), the Tiptap editor and ours, how to edit the code. */
   private toolsHost(code: HTMLElement, editor: VisualEditorContext): RawBoxToolsHost {
     const picture = this.rendered?.picture ?? null;
     const actions = this.actionBar?.element ?? this.dom.ownerDocument.createElement('span');

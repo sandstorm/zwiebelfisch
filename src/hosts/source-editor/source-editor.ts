@@ -21,12 +21,12 @@ import css from './source-editor.css?inline';
 export class SourceEditorHost implements SourceEditorContributions {
   private readonly extensions: (Extension | ((editor: SourceEditorContext) => Extension))[] = [];
   private readonly changed = new EventEmitter<void>();
-  /** How a view gets its contributions: it asks for them now and again on every change. */
+  /** How an editor gets its contributions: it asks for them now and again on every change. */
   private readonly contributions: Contributions = {
     extensionsFor: (editor) => this.extensionsFor(editor),
     onDidChange: this.changed.event,
   };
-  /** The CSS of the views (a revealed range), for the workbench to put where the widget renders. */
+  /** The CSS of the editors (a revealed range), for the workbench to put where the widget renders. */
   readonly styleSheet: string = css;
 
   registerCodeMirrorExtension(extension: Extension | ((editor: SourceEditorContext) => Extension)): Disposable {
@@ -59,13 +59,13 @@ export interface SourceEditorContributions {
 
 /** What a contribution knows about the one Source editor it is applied to. */
 export interface SourceEditorContext {
-  /** The document the view edits. */
+  /** The document the editor edits. */
   readonly document: TypstDocument;
 }
 
 /**
- * Marks a Source editor's transactions that mirror a change of its document made elsewhere (another view, the API,
- * another user), with that change's origin. The view does not send them back; a contribution may look at the origin,
+ * Marks a Source editor's transactions that mirror a change of its document made elsewhere (another editor, the API,
+ * another user), with that change's origin. The editor does not send them back; a contribution may look at the origin,
  * e.g. to keep some changes out of the undo history (`EditorState.transactionExtender`).
  */
 export const fromDocument = Annotation.define<{ readonly origin: unknown }>();
@@ -82,7 +82,7 @@ export interface SourceEditorOptions {
 export const SOURCE_EDITOR = 'sourceEditor';
 
 /**
- * The plain-Typst editing view (CodeMirror 6), kept in sync with a
+ * The plain-Typst editor (CodeMirror 6), kept in sync with a
  * TypstDocument in both directions. Made by `SourceEditorHost.createEditor`.
  */
 export class SourceEditor {
@@ -139,7 +139,7 @@ export class SourceEditor {
   }
 }
 
-/** What a view needs from its host: the contributed extensions for it, and word when they change. */
+/** What an editor needs from its host: the contributed extensions for it, and word when they change. */
 interface Contributions {
   extensionsFor(editor: SourceEditorContext): Extension;
   readonly onDidChange: Event<void>;
@@ -163,7 +163,7 @@ const highlightField = StateField.define<{ from: number; to: number } | null>({
 
 /**
  * The range `reveal` highlights, while it is what the user looks at: it goes when the text changes (here or in
- * another view) or the selection moves away from it, so it never stays behind as a second selection.
+ * another editor) or the selection moves away from it, so it never stays behind as a second selection.
  */
 const setHighlight = StateEffect.define<{ from: number; to: number }>();
 
@@ -174,7 +174,7 @@ function toTextChanges(changes: ChangeSet): TextChange[] {
   return result;
 }
 
-/** Tells `options` about a moved selection or changed text (after the view has it). */
+/** Tells `options` about a moved selection or changed text (after the editor has it). */
 function reportSelection(update: ViewUpdate, options: SourceEditorOptions): void {
   if (update.selectionSet || update.docChanged) options.onSelection?.();
 }

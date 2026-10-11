@@ -24,7 +24,7 @@ export function referenceHints(labels: ProjectLabels): Plugin {
     props: { decorations: (state) => key.getState(state) },
     view: (view) => {
       let live = true;
-      // the labels change while another view (or this one) handles a transaction: redraw afterwards
+      // the labels change while another editor (or this one) handles a transaction: redraw afterwards
       const subscription = labels.onDidChange(() => queueMicrotask(() => live && view.dispatch(view.state.tr.setMeta(key, true))));
       return {
         destroy: () => {

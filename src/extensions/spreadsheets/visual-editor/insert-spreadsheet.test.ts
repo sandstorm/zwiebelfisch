@@ -13,7 +13,7 @@ const path = ProjectPath.of;
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 const WORKBOOK = { bytes: new Uint8Array([1, 2]), typst: '#let sheets = (Sheet1: [])\n', sheet: 'Sheet1' };
 
-/** `/main.typ` holding `text` in a view, the cursor at its end; the save dialog answers `answer`. */
+/** `/main.typ` holding `text` in a Visual editor, the cursor at its end; the save dialog answers `answer`. */
 function setup(text: string, answer: string | undefined, files: Record<string, string> = {}) {
   const project = new Project(path('/main.typ'), { '/main.typ': text, ...files });
   const document = project.document(path('/main.typ'))!;

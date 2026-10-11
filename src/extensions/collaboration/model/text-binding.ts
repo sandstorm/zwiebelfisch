@@ -6,7 +6,7 @@ import { REMOTE_ORIGIN } from '../remote-origin';
 
 /**
  * Keeps `document` and `text` (an integrated Y.Text, part of a Y.Doc) equal: the document first adopts the
- * Y.Text's content (one minimal change, so open views and anchors survive); from then on its local changes go
+ * Y.Text's content (one minimal change, so open editors and anchors survive); from then on its local changes go
  * into the Y.Text, one Y transaction each, and every other transaction on the Y.Text (another user's edit) becomes
  * a `change` of the document with `REMOTE_ORIGIN`. `dispose` unbinds; the document keeps its text.
  */

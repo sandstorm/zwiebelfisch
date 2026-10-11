@@ -50,7 +50,7 @@ workbench.registerMenuItem('explorer/context', {
 
 - Entries sort by `group` (`navigation` first, the others by name, a separator between groups), then `order`.
 - `when` is asked each time the menu is shown.
-- A view shows a menu with `window.showContextMenu(menuId, { anchor, title, context, args })`: at a point (`{ x, y }`, a right click's) or below an element (a button), named `title`, with the entries whose `when` holds in `context`; the chosen entry's command gets `args`. Nothing shows while no entry applies. The file panel does this for `explorer/context` (right click, Shift+F10) and `file/newFile` ("New").
+- An editor or side panel shows a menu with `window.showContextMenu(menuId, { anchor, title, context, args })`: at a point (`{ x, y }`, a right click's) or below an element (a button), named `title`, with the entries whose `when` holds in `context`; the chosen entry's command gets `args`. Nothing shows while no entry applies. The file panel does this for `explorer/context` (right click, Shift+F10) and `file/newFile` ("New").
 - `getMenuItems(menuId, context)` and `onDidChangeMenu` tell whether a menu has entries (the file panel hides "New" while `file/newFile` has none).
 
 == Messages and quick input <extensions-workbench-api-messages>
@@ -138,7 +138,7 @@ The built-in providers:
 - `FileChange`: `{ kind: 'create' | 'update', path, content }`, `{ kind: 'delete', path }`, `{ kind: 'rename', path, from }`.
 - *Show* with `workbench.open(path, { selection?, viewType? })` (`selection`: a `SourceRange` of a Typst file; `viewType`: the editor, e.g. `SOURCE_EDITOR`, `'sourceEditor'`); `window.activeFile` and `window.onDidChangeActiveFile` say what is shown.
 - *The Typst editor*: `window.activeTextEditor` (`document`, `viewType`: the view it was shown in last, `VISUAL_EDITOR` or `SOURCE_EDITOR`, `selection` as a `SourceRange`, `revealRange(range)`; `null` while another kind of file is shown) and `window.onDidChangeTextEditorSelection`.
-- *Dropped files*: `workbench.onDidDropFiles` gets the `File[]` dropped on the widget that no view took.
+- *Dropped files*: `workbench.onDidDropFiles` gets the `File[]` dropped on the widget that no editor took.
 
 == Custom editors <extensions-workbench-api-custom-editors>
 
@@ -178,7 +178,7 @@ The built-in ones, to beat or to leave alone:
 
 == File decorations <extensions-workbench-api-decorations>
 
-`window.registerFileDecorationProvider({ provideFileDecoration(path), onDidChangeFileDecorations })` puts badges on file rows: `FileDecoration { badge?, tooltip?, color?, propagate? }` (`propagate`: also on the closed folders around the file). Several providers may decorate one file. Views that list files read `window.getFileDecorations(path)` and `window.getFileIcon(path)`.
+`window.registerFileDecorationProvider({ provideFileDecoration(path), onDidChangeFileDecorations })` puts badges on file rows: `FileDecoration { badge?, tooltip?, color?, propagate? }` (`propagate`: also on the closed folders around the file). Several providers may decorate one file. Side panels that list files read `window.getFileDecorations(path)` and `window.getFileIcon(path)`.
 
 == Settings and state <extensions-workbench-api-settings>
 

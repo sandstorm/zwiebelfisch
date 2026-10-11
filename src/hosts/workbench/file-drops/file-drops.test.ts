@@ -36,7 +36,7 @@ describe('FileDrops', () => {
     expect(target.classList.contains('typst-editor--dropping')).toBe(false);
   });
 
-  it('leaves drops to a view inside that takes them (e.g. images dropped into the text); the hint goes away', () => {
+  it('leaves drops to an editor inside that takes them (e.g. images dropped into the text); the hint goes away', () => {
     const { target, drops } = setup();
     const dropped = vi.fn();
     drops.onDidDrop(dropped);

@@ -12,7 +12,7 @@ import { leaveWarning, presenceDecorations } from './workbench/workbench';
 
 /**
  * Real-time collaboration (`options`: see `CollaborationOptions`) as the workbench's `user`: shares the project,
- * publishes the local selection, draws the others' places in every file's views and marks the files they are in; in
+ * publishes the local selection, draws the others' places in every file's editors and marks the files they are in; in
  * a GitLab-backed room, the user commits through the room's source control, and the browser asks before the last user
  * leaves changes the server does not commit by itself. Not a built-in: the host adds it with its
  * connection (`createTypstEditor({ extensions: (builtinExtensions) => [...builtinExtensions, collaboration({ url, room })] })`).

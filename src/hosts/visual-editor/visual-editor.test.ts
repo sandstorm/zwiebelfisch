@@ -110,7 +110,7 @@ describe('VisualEditorHost.registerHighlights', () => {
   });
 });
 
-/** A view of `text` (with `strong`) and a highlight provider whose highlights start as `initial`; `highlights` sets new ones. */
+/** A Visual editor of `text` (with `strong`) and a highlight provider whose highlights start as `initial`; `highlights` sets new ones. */
 function withHighlights(text: string, initial: SourceHighlight[]) {
   let current = initial;
   const changed = new EventEmitter<TypstDocument>();
@@ -168,7 +168,7 @@ describe('VisualEditor contexts', () => {
 });
 
 describe('insertTypstBlocks', () => {
-  /** A view of `text` with the cursor after `cursorAfter`, and its editor. */
+  /** A Visual editor of `text` with the cursor after `cursorAfter`, and its editor. */
   function at(text: string, cursorAfter: number) {
     const { doc, view, parent } = setup(text);
     view.reveal(SourceRange.of({ from: cursorAfter, to: cursorAfter }));

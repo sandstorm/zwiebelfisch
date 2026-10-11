@@ -78,7 +78,7 @@ describe('VisualEditor presence', () => {
     expect(caret!.closest('td')).toBe(parent.querySelectorAll('td')[1]);
   });
 
-  it('draws a caret in an empty paragraph made in this view (Enter: the text only has a blank line more)', () => {
+  it('draws a caret in an empty paragraph made in this editor (Enter: the text only has a blank line more)', () => {
     const { doc, view, parent } = setup('One\n\nTwo\n');
     view.reveal(5, 5);
     parent.querySelector('[contenteditable]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));

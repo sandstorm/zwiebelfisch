@@ -1,4 +1,4 @@
-// Tests for model.ts: the diagnostics of each document, and how the views word one.
+// Tests for model.ts: the diagnostics of each document, and how the editors word one.
 import { describe, expect, it } from 'vitest';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { DiagnosticCollection, describeDiagnostic } from './model';

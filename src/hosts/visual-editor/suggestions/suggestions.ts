@@ -1,4 +1,4 @@
-// Suggestions: the completion item providers' lists in one view, each a Tiptap Suggestion plugin showing a
+// Suggestions: the completion item providers' lists in one editor, each a Tiptap Suggestion plugin showing a
 // SuggestWidget. See visual-editor.ts (registerCompletionItemProvider) and docs/20_extensions/03_visual-editor-constructs.typ.
 import { Extension, type Editor, type Range } from '@tiptap/core';
 import type { ResolvedPos } from '@tiptap/pm/model';
@@ -8,7 +8,7 @@ import type { CompletionContext, CompletionItem, CompletionItemProvider, Complet
 import { SuggestWidget } from './suggest-widget';
 
 /**
- * The lists of `providers` in a view: each opens while its trigger and a query are typed in text (not in code), as
+ * The lists of `providers` in an editor: each opens while its trigger and a query are typed in text (not in code), as
  * long as any of its items match the query (`filterCompletionItems`), and closes on Escape until another trigger is
  * typed. `context` is what the providers are asked with.
  */

@@ -7,7 +7,7 @@ import type { FileDecoration, FileDecorationProvider } from '../window';
 /**
  * The registered file decoration providers, asked in registration order, and one event for all their changes.
  *
- * The decorations every registered provider gives a file (`window.registerFileDecorationProvider`), for the views that
+ * The decorations every registered provider gives a file (`window.registerFileDecorationProvider`), for the side panels that
  * list files.
  */
 export class FileDecorations {

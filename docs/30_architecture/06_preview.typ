@@ -31,7 +31,7 @@
 
 #figure(
   mermaid(read("../diagrams/preview-flow.mmd"), width: 100%),
-  caption: [Compile, click, cursor and selection between the views, previewSync, the preview and its worker.],
+  caption: [Compile, click, cursor and selection between the editors, previewSync, the preview and its worker.],
 )
 
 == Rules <architecture-preview-rules>

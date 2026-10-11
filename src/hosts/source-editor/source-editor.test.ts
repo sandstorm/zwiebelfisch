@@ -18,7 +18,7 @@ function setup(text: string, host = new SourceEditorHost()) {
 }
 
 describe('SourceEditor history', () => {
-  it("changes from elsewhere enter the view's history, marked with their origin", () => {
+  it("changes from elsewhere enter the editor's history, marked with their origin", () => {
     const { doc, editor } = setup('one two\n');
     const origins: unknown[] = [];
     editor().dispatch({ effects: StateEffect.appendConfig.of(EditorState.transactionExtender.of((tr) => (origins.push(tr.annotation(fromDocument)?.origin), null))) });
@@ -45,7 +45,7 @@ const marked = (parent: HTMLElement, selector: string) =>
   [...parent.querySelectorAll(selector)].map((element) => element.textContent);
 
 describe('SourceEditor reveal', () => {
-  it('selects and highlights the range, until the text changes (also from another view)', () => {
+  it('selects and highlights the range, until the text changes (also from another editor)', () => {
     const { doc, view, parent, editor } = setup('Some bold text\n');
     view.reveal(SourceRange.of({ from: 5, to: 9 }));
     expect(view.selection()).toEqual({ from: 5, to: 9 });
@@ -70,10 +70,10 @@ describe('SourceEditor reveal', () => {
 });
 
 describe('SourceEditorHost contributions', () => {
-  /** Marks the first word of the view's document (as it was when the extension was made). */
+  /** Marks the first word of the editor's document (as it was when the extension was made). */
   const firstWord = ({ document }: SourceEditorContext) =>
     EditorView.decorations.of(Decoration.set(Decoration.mark({ class: 'first' }).range(0, document.text.search(/\s/))));
-  /** Marks the ranges `ranges` fires (as an extension drawing something of its own would), in a state field (one for all views). */
+  /** Marks the ranges `ranges` fires (as an extension drawing something of its own would), in a state field (one for all editors). */
   const drawn = StateEffect.define<readonly { anchor: number; head: number }[]>();
   const ranges = new EventEmitter<readonly { anchor: number; head: number }[]>();
   const drawing = StateField.define<DecorationSet>({
@@ -114,7 +114,7 @@ describe('SourceEditorHost contributions', () => {
     expect(marked(parent, '.drawn')).toEqual(['bold']);
   });
 
-  it('stops applying contributions to a disposed view', () => {
+  it('stops applying contributions to a disposed editor', () => {
     const host = new SourceEditorHost();
     const made: string[] = [];
     host.registerCodeMirrorExtension(({ document }) => {

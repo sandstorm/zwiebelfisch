@@ -8,7 +8,7 @@ import { INSERT_TABLE, TABLE, TABLE_BAR, TABLE_EDITS } from './visual-editor/vis
  *
  * `#table(columns: n, ..)` in the Visual editor as an editable table, with "Insert table" and a bar over the table
  * holding the cursor (rows, columns, header row). Why an extension: the Visual editor's host models only paragraphs,
- * text and raw Typst; a table the view cannot model stays a raw box.
+ * text and raw Typst; a table the Visual editor cannot model stays a raw box.
  */
 export function tables(): TypstExtension {
   return {

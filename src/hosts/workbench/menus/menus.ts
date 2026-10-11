@@ -4,11 +4,11 @@ import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { MenuContext, MenuItem } from '../workbench';
 
 /**
- * Every menu's registered entries. A menu is only an id: whoever shows it (the tab bar here, a view of an extension)
+ * Every menu's registered entries. A menu is only an id: whoever shows it (the tab bar here, an extension's side panel or editor)
  * asks for the entries that apply in its context, in VS Code's order: group `navigation` first, the other groups by
  * name, within a group by `order`, then registration order.
  *
- * The entries extensions register into menus by id (`registerMenuItem`), as the views showing a menu read them
+ * The entries extensions register into menus by id (`registerMenuItem`), as whoever shows a menu reads them
  * (`getMenuItems`).
  */
 export class Menus {

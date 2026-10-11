@@ -43,7 +43,7 @@ describe('styleSearch', () => {
     expect(document.text.slice(range.from, range.to)).toBe('Enter');
   });
 
-  it("in the Visual editor applies it as the view's text style menu does", async () => {
+  it("in the Visual editor applies it as the editor's text style menu does", async () => {
     const { applier, document, pick } = setup(VISUAL_EDITOR);
     await pick('Note');
     expect(applier.apply).toHaveBeenCalledWith(document, expect.objectContaining({ name: 'note' }));

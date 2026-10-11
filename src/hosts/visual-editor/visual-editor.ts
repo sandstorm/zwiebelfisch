@@ -17,17 +17,17 @@ import proseMirrorCss from './prosemirror.css?inline';
 import css from './visual-editor.css?inline';
 
 /**
- * The Word-like editing view (Tiptap/ProseMirror) with its formatting
+ * The Word-like editor (Tiptap/ProseMirror) with its formatting
  * toolbar, the parsed ProseMirror document of a TypstDocument.
  *
  * Visual edits become one minimal text change on the document; document
  * changes from elsewhere are parsed again and applied as the smallest
  * replacement, so the cursor stays where it was. Unmodelled Typst shows as
- * raw boxes and is never rewritten. What the view models, shows and offers
+ * raw boxes and is never rewritten. What the editor models, shows and offers
  * beyond that (headings, tables, labels, comments, …) comes from
- * `contributions`, as registered when the view is created.
+ * `contributions`, as registered when the editor is created.
  *
- * The WYSIWYG editing view, a Tiptap editor over the source-anchored ProseMirror document of a TypstDocument;
+ * The WYSIWYG editor, a Tiptap editor over the source-anchored ProseMirror document of a TypstDocument;
  * everything it shows beyond paragraphs and raw Typst is contributed through VisualEditorContributions (kept by
  * VisualEditorHost).
  */
@@ -153,7 +153,7 @@ export class VisualEditor {
 export const VISUAL_EDITOR = 'visualEditor';
 
 /**
- * Inserts the blocks Typst `source` is read as in a view's `editor` (as the view reads any Typst: a figure of an
+ * Inserts the blocks Typst `source` is read as in a Visual editor's Tiptap `editor` (as the Visual editor reads any Typst: a figure of an
  * image is a figure, what no spec models a raw box) next to the selection: after the selected block, or after the
  * paragraph or heading holding the cursor; an empty paragraph is taken over. Nothing is split or replaced; the
  * editor keeps the focus. For an Insert entry whose result is easier written as Typst than built as nodes.
@@ -196,20 +196,20 @@ export interface TypstNodeSpec extends DocumentNodeSpec {
   };
 }
 
-/** A column beside the text (the notes gutter), made for one view. */
+/** A column beside the text (the notes gutter), made for one editor. */
 export interface Gutter {
-  /** Added to the view's editor state. */
+  /** Added to the editor's Tiptap state. */
   readonly plugin?: Plugin;
   dispose(): void;
 }
 
-/** Makes a view's gutter in `body`, the element holding the text (`.typst-visual__body`). */
+/** Makes an editor's gutter in `body`, the element holding the text (`.typst-visual__body`). */
 export type GutterProvider = (editor: VisualEditorContext, body: HTMLElement) => Gutter;
 
 /**
  * A styled stretch of the source (UTF-16 offsets) that the Visual editor draws
  * over its text, e.g. another user's selection or a diagnostic. `attributes`
- * are set on the marked DOM (e.g. a style with the user's color). Views follow
+ * are set on the marked DOM (e.g. a style with the user's color). Editors follow
  * edits with their highlights until the owner sets them again.
  */
 export interface SourceHighlight extends SourceRange {
@@ -275,13 +275,13 @@ export interface Contributed {
 /**
  * The Visual editor's contribution points (what `ExtensionContext.visualEditor` is). Contributions register once, at
  * activation; the host applies what is registered to every editor it creates from then on (editors are created lazily,
- * per document), so a contribution never tracks editors. Everything a contribution needs per view (its document, a
+ * per document), so a contribution never tracks editors. Everything a contribution needs per editor (its document, a
  * popover) it gets through the `…Provider` functions. Disposing a registration takes it out of editors created later.
  * Experimental: the shapes may still change.
  */
 export interface VisualEditorContributions {
   /**
-   * A node type: its Tiptap extension, its Typst, what the view does for it (see `TypstNodeSpec`). The priority of
+   * A node type: its Tiptap extension, its Typst, what the editor does for it (see `TypstNodeSpec`). The priority of
    * its Tiptap extension (Tiptap's: default 100, higher first) orders the schema (a group's first node type is its
    * default), keymaps and plugins, and the specs' parse rules: of specs reading the same syntax or call, the higher
    * one is asked first (task lists, 110, before bullet lists, both `- ..`). Of two specs of the same name, the later
@@ -295,8 +295,8 @@ export interface VisualEditorContributions {
    */
   registerMark(spec: TypstMarkSpec): Disposable;
   /**
-   * Tiptap extensions made for each view (they may use its document): decorations, plugins (drops, appended
-   * transactions), commands not tied to a node. Their hooks see the view's editor (`this.editor`).
+   * Tiptap extensions made for each editor (they may use its document): decorations, plugins (drops, appended
+   * transactions), commands not tied to a node. Their hooks see the editor's Tiptap editor (`this.editor`).
    */
   registerTiptapExtension(provider: (editor: VisualEditorContext) => AnyExtension | readonly AnyExtension[]): Disposable;
   /** A place for toolbar items: a group, a menu or a floating bar. */
@@ -314,20 +314,20 @@ export interface VisualEditorContributions {
    * blocks, inline code) nor raw boxes. Of two providers with the same character, each opens its own list.
    */
   registerCompletionItemProvider(provider: CompletionItemProvider, trigger: CompletionTrigger): Disposable;
-  /** A column beside the text, made for each view. */
+  /** A column beside the text, made for each editor. */
   registerGutter(provider: GutterProvider): Disposable;
   /**
-   * Highlights from `provider` in every view, as layer `layer` (one per provider): set when the view is created and
+   * Highlights from `provider` in every editor, as layer `layer` (one per provider): set when the editor is created and
    * again whenever the provider reports a change of its document; they follow edits in between.
    */
   registerHighlights(layer: string, provider: SourceHighlightProvider): Disposable;
   /**
-   * What raw boxes of each view show instead of their code while not edited. The renderers are asked by `priority`
+   * What raw boxes of each editor show instead of their code while not edited. The renderers are asked by `priority`
    * (default 100, higher first; equal: registration order), and the first that `renders` a box draws it: the image
    * renderer (110) draws image boxes, compiled snippets (100) the rest.
    */
   registerRawBoxRenderer(provider: RawBoxRendererProvider, options?: PriorityOptions): Disposable;
-  /** CodeMirror extensions for the code of every raw box of each view (e.g. links on file paths). */
+  /** CodeMirror extensions for the code of every raw box of each editor (e.g. links on file paths). */
   registerRawBoxCodeMirrorExtension(provider: (editor: VisualEditorContext) => Extension): Disposable;
   /**
    * A button on every raw box `action.when` holds for (any box: a contribution need not own the box's node type),
@@ -355,10 +355,10 @@ export class VisualEditorHost implements VisualEditorContributions {
     textStyles: [] as TextStyleProvider[],
     completionItemProviders: [] as { provider: CompletionItemProvider; trigger: CompletionTrigger }[],
   };
-  /** The CSS of the views (ProseMirror's own first), for the workbench to put where the widget renders. */
+  /** The CSS of the editors (ProseMirror's own first), for the workbench to put where the widget renders. */
   readonly styleSheet: string = proseMirrorCss + css;
 
-  /** A registry with `contributions` activated, for as long as it lives (for a view without the workbench, as in tests). */
+  /** A registry with `contributions` activated, for as long as it lives (for an editor without the workbench, as in tests). */
   static from(contributions: readonly VisualEditorContribution[]): VisualEditorHost {
     const visualEditor = new VisualEditorHost();
     const subscriptions: { dispose(): unknown }[] = [];
@@ -414,7 +414,7 @@ export class VisualEditorHost implements VisualEditorContributions {
     return this.add(this.lists.textStyles, provider);
   }
 
-  /** Everything registered now (for the host, when it creates a view). */
+  /** Everything registered now (for the host, when it creates an editor). */
   contributed(): Contributed {
     const lists = this.lists;
     return {
@@ -444,12 +444,12 @@ export class VisualEditorHost implements VisualEditorContributions {
 
 /** One Visual editor, as contributions made for it see it (see the `…Provider` types). */
 export interface VisualEditorContext {
-  /** The document the view shows. */
+  /** The document the editor shows. */
   readonly document: TypstDocument;
-  /** The source range the view's selection shows (see `VisualEditor.selection`). */
+  /** The source range the editor's selection shows (see `VisualEditor.selection`). */
   selection(): SourceRange;
   /**
-   * The position in `doc` (the view's document node, e.g. a transaction's) that shows source offset `offset`: with
+   * The position in `doc` (the editor's document node, e.g. a transaction's) that shows source offset `offset`: with
    * `bias` -1, a position at the end of the text before it (a caret at a line end stays there). The only way from
    * source offsets to ProseMirror positions.
    */
@@ -487,7 +487,7 @@ export interface RawBoxRenderer {
   readonly onDidChange: Event<void>;
 }
 
-/** The renderer of one view's boxes (null: none for this view). */
+/** The renderer of one editor's boxes (null: none for this editor). */
 export type RawBoxRendererProvider = (editor: VisualEditorContext) => RawBoxRenderer | null;
 
 /**
@@ -506,7 +506,7 @@ export interface RawBoxToolsHost {
   /** The rendered picture (the tools may move it, e.g. into a frame), or null without a renderer. */
   readonly picture: HTMLImageElement | null;
   readonly tiptap: Editor;
-  /** The view the box is in. */
+  /** The editor the box is in. */
   readonly editor: VisualEditorContext;
   /** The box's document position, while it is in the document. */
   getPos(): number | undefined;
@@ -535,7 +535,7 @@ export interface RawBoxTools {
 export interface RawBoxAction {
   /** The button's text. */
   readonly title: string;
-  /** Whether the box of `node` (its Typst: `node.attrs.src`) in `view` offers it; asked whenever the node changes. Default: every box. */
+  /** Whether the box of `node` (its Typst: `node.attrs.src`) in `editor` offers it; asked whenever the node changes. Default: every box. */
   when?(node: Node, editor: VisualEditorContext): boolean;
   /** Runs it for the box of `node` (the box's node now). */
   run(node: Node, editor: VisualEditorContext): void;
@@ -629,7 +629,7 @@ export interface TextStyle {
   readonly keywords?: readonly string[];
 }
 
-/** The text style menu's entries of one view; the menu asks again whenever `onDidChangeTextStyles` fires. */
+/** The text style menu's entries of one editor; the menu asks again whenever `onDidChangeTextStyles` fires. */
 export interface TextStyleProvider {
   provideTextStyles(editor: VisualEditorContext): readonly TextStyle[];
   readonly onDidChangeTextStyles?: Event<void>;
@@ -646,14 +646,14 @@ export interface CompletionTrigger {
   readonly allowedPrefixes?: readonly string[];
 }
 
-/** What a completion item provider is asked with: the view, its editor and what its toolbar offers. */
+/** What a completion item provider is asked with: the editor, its Tiptap editor and what its toolbar offers. */
 export interface CompletionContext extends VisualEditorContext {
   readonly editor: Editor;
   /** What is typed after the trigger character (the list filters the items by it). */
   readonly query: string;
-  /** The entries of toolbar group or menu `group` of this view (the Insert menu: `insert`), sorted as shown. */
+  /** The entries of toolbar group or menu `group` of this editor (the Insert menu: `insert`), sorted as shown. */
   toolbarActions(group: string): readonly ToolbarAction[];
-  /** The text style menu's entries of this view, sorted as shown (without the host's "Normal text"). */
+  /** The text style menu's entries of this editor, sorted as shown (without the host's "Normal text"). */
   textStyles(): readonly TextStyle[];
 }
 
@@ -684,7 +684,7 @@ export interface CompletionItemProvider {
 /** Where a floating bar points: a viewport rectangle (e.g. a selection's or a table's), or nothing (hidden). */
 export type Anchor = { top: number; left: number; right: number } | null;
 
-/** What an item created per view gets: the view, its editor, the toolbar. */
+/** What an item created per editor gets: the editor, its Tiptap editor, the toolbar. */
 export interface ToolbarContext extends VisualEditorContext {
   readonly editor: Editor;
   /** The toolbar row's element (popovers of menu items go in here). */
@@ -699,7 +699,7 @@ export type ToolbarItem =
   | {
       readonly group: string;
       readonly order?: number;
-      /** The item for one view, when it keeps state there (a popover) or is a control of its own. */
+      /** The item for one editor, when it keeps state there (a popover) or is a control of its own. */
       create(toolbar: ToolbarContext): ToolbarAction | ToolbarControl;
     };
 

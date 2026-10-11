@@ -13,7 +13,7 @@ import { editMermaidAction, insertMermaid, type InsertContext } from './visual-e
 const path = ProjectPath.of;
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-/** `/main.typ` holding `text` in a view, the cursor at its end; the save dialog answers `answer`. */
+/** `/main.typ` holding `text` in a Visual editor, the cursor at its end; the save dialog answers `answer`. */
 function setup(text: string, answer: string | undefined) {
   const project = new Project(path('/main.typ'), { '/main.typ': text });
   const document = project.document(path('/main.typ'))!;

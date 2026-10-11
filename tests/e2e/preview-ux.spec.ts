@@ -71,7 +71,7 @@ test('highlights the clicked text in the preview', async ({ page }) => {
   expect(box.width).toBeLessThan(pageBox.width * 0.9);
 });
 
-test("a double click's highlights go with the next edit or once the selection moves, in either view", async ({ page }) => {
+test("a double click's highlights go with the next edit or once the selection moves, in either editor", async ({ page }) => {
   const outline = pages(page).first().locator('.typst-preview__highlight');
   const jump = page.getByTestId('typst-source').locator('.typst-source__jump');
   const heading = pages(page).locator('svg use').first();

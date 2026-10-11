@@ -28,9 +28,9 @@ import type { Workspace } from '../hosts/workspace/workspace';
 import { attachGrammar, createSchema, documentExtensions, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos } from '../hosts/prosemirror-typst/prosemirror-typst';
 
 /**
- * The schema of a view with the built-ins configured from `options`.
+ * The schema of a Visual editor with the built-ins configured from `options`.
  *
- * The Visual editor's schema with the built-ins, project with it, a view with the built-ins activated with a test's
+ * The Visual editor's schema with the built-ins, project with it, a Visual editor with the built-ins activated with a test's
  * extension context (project files, preview snippets, document links, prompts); and the helpers such tests use on a
  * parsed document (apply an edit, find text, check the position map exhaustively). Test-only, so it may import any
  * module (an extension's tests compose it with the others here, never by importing another extension); only
@@ -40,7 +40,7 @@ export function schemaWith(options: TestEditorOptions = {}): Schema {
   return schemaFrom(contributions(options));
 }
 
-/** The schema of a view with only `list` (built-in constructs or features), activated in that order. */
+/** The schema of a Visual editor with only `list` (built-in constructs or features), activated in that order. */
 export function schemaOf(list: readonly VisualEditorContribution[]): Schema {
   return schemaFrom(activate(list));
 }
@@ -50,15 +50,15 @@ function schemaFrom(registry: VisualEditorHost): Schema {
   return createSchema(nodes, marks);
 }
 
-/** The path of the document a test view shows, in the test's project. */
+/** The path of the document a test editor shows, in the test's project. */
 export const TEST_DOCUMENT_PATH = ProjectPath.of('/main.typ');
 
 /**
- * What a test gives a view: the parts of the extension context the built-ins use (the project's files, the preview's
+ * What a test gives a Visual editor: the parts of the extension context the built-ins use (the project's files, the preview's
  * snippets, the document links, the window's prompts), and the contributions under test.
  */
 export interface TestEditorOptions {
-  /** The project's other files (images as bytes), by path; the view's document is `TEST_DOCUMENT_PATH`. Default: none. */
+  /** The project's other files (images as bytes), by path; the editor's document is `TEST_DOCUMENT_PATH`. Default: none. */
   files?: Readonly<Record<string, FileContent>>;
   /** Applies a change (an uploaded image): resolves to why it was refused, or null. Default: the file is added. */
   applyEdit?(change: FileChange): Promise<string | null>;
@@ -66,7 +66,7 @@ export interface TestEditorOptions {
   preview?: Partial<Pick<PreviewContributions, 'snippet' | 'onDidRender'>>;
   /** The document links (`languages`; an image box's path; default: none) and where following one goes (`workbench.open`). */
   links?: Partial<Pick<Languages, 'provideDocumentLinks' | 'resolveDocumentLink'> & Pick<Workbench, 'open'>>;
-  /** What the user answers when the view asks (link URL, image, alt text, …); default: every question cancelled. */
+  /** What the user answers when the editor asks (link URL, image, alt text, …); default: every question cancelled. */
   prompts?: TestPrompts;
   /** The contributions of the extension under test, activated after the built-ins (as the widget's features are). */
   contributions?: readonly VisualEditorContribution[];
@@ -109,7 +109,7 @@ export class TestPrompts implements Pick<WindowApi, 'showInputBox' | 'showQuickP
 }
 
 // after TestPrompts: making the schema activates the built-ins, which get prompts
-/** The schema of a view with the built-ins. */
+/** The schema of a Visual editor with the built-ins. */
 export const schema: Schema = schemaWith();
 
 /** `source` parsed with `withSchema` (default: the built-ins' `schema`). */
@@ -180,7 +180,7 @@ function testLanguages(options: TestEditorOptions): Pick<Languages, 'provideDocu
   };
 }
 
-/** A project holding the view's document (whatever document it is) and `options.files`. */
+/** A project holding the editor's document (whatever document it is) and `options.files`. */
 function testProject(options: TestEditorOptions): Pick<Project, 'pathOf' | 'paths' | 'has' | 'content'> & { add(path: ProjectPath, content: FileContent): void } {
   const files = new Map(Object.entries(options.files ?? {}).map(([path, content]) => [ProjectPath.of(path), content]));
   return {

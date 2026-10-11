@@ -41,6 +41,6 @@ The way back is the same with the roles swapped: a Source editor edit reaches th
 
 == One edit format, one source of truth <architecture-overview-truth>
 
-- The text of every `.typ` file is one `TypstDocument`. Views never talk to each other.
+- The text of every `.typ` file is one `TypstDocument`. Editors never talk to each other.
 - Every edit is `TextChange[]` (`from`, `to`: `SourceOffset`s, UTF-16; `insert`) with an `origin`.
-- A view passes itself as `origin` and skips its own notifications (@architecture-core-document).
+- An editor passes itself as `origin` and skips its own notifications (@architecture-core-document).

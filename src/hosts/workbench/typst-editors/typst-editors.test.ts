@@ -66,7 +66,7 @@ describe('TypstEditors', () => {
     expect(editors.activeTextEditor?.viewType).toBe(SOURCE_EDITOR);
   });
 
-  it('has an active editor only while one of its views is shown', () => {
+  it('has an active editor only while one of its editors is shown', () => {
     const { editors, show } = setup();
     show('/main.typ');
     expect(editors.activeTextEditor?.viewType).toBe(VISUAL_EDITOR);
@@ -74,7 +74,7 @@ describe('TypstEditors', () => {
     expect(editors.activeTextEditor).toBeNull();
   });
 
-  it('reveals in the view shown', () => {
+  it('reveals in the editor shown', () => {
     const { editors, show, visible } = setup();
     show('/main.typ', SOURCE_EDITOR);
     editors.activeTextEditor!.revealRange(SourceRange.of({ from: 2, to: 3 }));
@@ -82,7 +82,7 @@ describe('TypstEditors', () => {
     expect(visible()[0].querySelector('[data-testid=typst-source]')).not.toBeNull();
   });
 
-  it('disposes the views of a deleted file, and keeps those of a renamed one', () => {
+  it('disposes the editors of a deleted file, and keeps those of a renamed one', () => {
     const { area, show, change } = setup();
     show('/b.typ');
     show('/main.typ');
@@ -95,7 +95,7 @@ describe('TypstEditors', () => {
     expect(area.textContent).not.toContain('Beta');
   });
 
-  it('reports a moved selection after the view has it (the collaboration cursor is never one step behind)', () => {
+  it('reports a moved selection after the editor has it (the collaboration cursor is never one step behind)', () => {
     const seen: SourceRange[] = [];
     const { editors, show } = setup({ onSelection: (selection) => seen.push(selection) });
     show('/main.typ');
@@ -108,7 +108,7 @@ describe('TypstEditors', () => {
 });
 
 describe('TypstEditors frame', () => {
-  it('puts the frame elements first and last in the visible view, following view and document switches', () => {
+  it('puts the frame elements first and last in the visible editor, following editor and document switches', () => {
     const { area, editors, show, visible } = setup();
     const top = document.createElement('nav');
     const bottom = document.createElement('nav');

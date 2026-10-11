@@ -17,10 +17,10 @@ function declaring(list: TypstStyle[]): ProjectStyles {
 
 const STYLES = [style('note', 'block', 'Note'), style('callout', 'block', 'Callout'), style('key', 'inline', 'Keyword')];
 
-/** The schema of a view whose project declares `STYLES`. */
+/** The schema of a Visual editor whose project declares `STYLES`. */
 const schema = schemaWith({ contributions: [customStyles({ styles: declaring(STYLES), create: () => {} })] });
 
-/** The schema of a view whose project declares no styles. */
+/** The schema of a Visual editor whose project declares no styles. */
 const withoutStyles = schemaWith({ contributions: [customStyles({ styles: declaring([]), create: () => {} })] });
 
 const parseTypst = (source: string): Node => parseTypstWith(source, schema);

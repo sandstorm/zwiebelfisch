@@ -19,7 +19,7 @@ new TypstDocument(text)
 ```
 
 - *Source offsets:* `SourceOffset` (a branded number, UTF-16 code units into the text) and `SourceRange` (`{ from, to }` of them); `TextChange` is a `SourceRange` plus `insert`. Made with `SourceOffset.of(n)` / `SourceRange.of({ from, to })` where offsets come in (string indices, Lezer nodes, CodeMirror, Yjs, the engine). Never a ProseMirror position: only the Typst ↔ ProseMirror conversion's `sourceToPos` / `posToSource` convert (@architecture-prosemirror-typst-position-map).
-- *Echo suppression:* a view passes itself as `origin` and ignores events with its own origin.
+- *Echo suppression:* an editor passes itself as `origin` and ignores events with its own origin.
 - *Ordered delivery:* a change made by a listener while others are being told is queued, so every listener sees changes in the order they were made.
 - `minimalChange(before, after)`: the one change between common prefix and suffix, so cursors and undo history survive a whole new text.
 - *No collaboration here:* the collaboration extension binds a `Y.Text` to a document from outside (@guide-collaboration).
@@ -28,7 +28,7 @@ new TypstDocument(text)
 
 Which files a project has and which changes are allowed.
 
-- Files by `ProjectPath`. Every `.typ` file is a `TypstDocument` (kept across renames, so open views survive); every other file is stored as given (`FileContent`: `string | Uint8Array`; `FileContent.bytes(content)` encodes text as UTF-8).
+- Files by `ProjectPath`. Every `.typ` file is a `TypstDocument` (kept across renames, so open editors survive); every other file is stored as given (`FileContent`: `string | Uint8Array`; `FileContent.bytes(content)` encodes text as UTF-8).
 - The main file always exists; it cannot be renamed or deleted. `.typ` files keep their ending.
 - `check(change)` returns a reason or null; `apply(change)` throws where `check` refuses.
 - `replace(files)` reports a `delete`, `create` or `update` per file and keeps the documents of paths that stay.

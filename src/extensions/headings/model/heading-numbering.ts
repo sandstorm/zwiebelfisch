@@ -22,7 +22,7 @@ import { numberingFormatter } from './numbering';
  * following the heading set rules of the code met on the way.
  *
  * Heading numbers as Typst computes them from `#set heading(numbering: ..)` rules, and the change that switches
- * numbering on or off. Pure: works on Typst code, not on a view's document.
+ * numbering on or off. Pure: works on Typst code, not on an editor's document.
  */
 export class HeadingCounter {
   private readonly counter: number[] = [];

@@ -17,7 +17,7 @@ import { imagePath } from './image-syntax';
  *
  * Every change is one transaction (see "Image edits" below), so one undo step
  * that rewrites only the argument concerned. A drag changes the width live in the
- * view and writes `width: NN%` once, on release.
+ * editor and writes `width: NN%` once, on release.
  */
 export class ImageTools implements RawBoxTools {
   private readonly label: HTMLElement;

@@ -34,7 +34,7 @@ import { ProjectPath } from '../core/paths/paths';
 import widgetStyles from './typst-editor.css?inline';
 
 /**
- * Mounts the editor widget into `host`: an editing view on the left and the
+ * Mounts the editor widget into `host`: an editing area on the left and the
  * live preview on the right. Clicking the preview reveals the source; moving
  * the cursor reveals the spot in the preview. Compiler errors are underlined in
  * the source and counted in a status bar that jumps to the first one. A file
@@ -109,7 +109,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
 export interface TypstEditorOptions {
   /**
    * The project's files by absolute path, the main file included: `.typ` files (editable, each in its own
-   * views), images and data files (shown read-only). `@preview` packages need no entry: they are downloaded
+   * editors), images and data files (shown read-only). `@preview` packages need no entry: they are downloaded
    * on first import.
    */
   files?: ProjectFiles;

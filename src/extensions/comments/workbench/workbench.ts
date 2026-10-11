@@ -32,7 +32,7 @@ export function registerAddComment({ commands, window, workbench }: CommentConte
   );
 }
 
-/** The command that adds a margin note at the selection of the view the user works in. */
+/** The command that adds a margin note at the selection of the editor the user works in. */
 export const ADD_COMMENT = 'comments.addComment';
 
 /** The notes' cards in the Visual editors: the notes gutter. */

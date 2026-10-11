@@ -46,7 +46,7 @@ How code is written here. `mise run quality` enforces what it can (@architecture
 - *VS Code's names and shapes* where a concept matches: `activate`, `subscriptions`, `register…Provider`, `provide…` / `resolve…`, `onDid<Verb>`, `executeCommand`, `getConfiguration`, `showInputBox`, `showQuickPick`, `show…Message`. Rename ours to them; never "ours, in VS Code terms" comments.
 - *Extensions are factories* (`markup()`, `collaboration(options)`), so options can come later without a break.
 - *Contributions register once, at activation*; hosts apply them to every editor made later. Each returns a `Disposable` pushed to `context.subscriptions`.
-- *One disposal verb*: `dispose()` for everything with a lifetime (hosts, views, `Project`, the widget). Only what a library calls keeps its name (ProseMirror node views, CodeMirror view plugins: `destroy`).
+- *One disposal verb*: `dispose()` for everything with a lifetime (hosts, editors, `Project`, the widget). Only what a library calls keeps its name (ProseMirror node views, CodeMirror view plugins: `destroy`).
 - *Competing contributions* have an explicit tie-breaker. Registration order counts only within one extension, never between extensions.
 
 #table(

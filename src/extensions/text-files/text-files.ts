@@ -95,5 +95,5 @@ const LANGUAGES: Readonly<Record<string, string>> = {
   mmd: 'mermaid',
 };
 const TEXT_FILES = `*.{${Object.keys(LANGUAGES).join(',')}}`;
-/** The icon of text files (where views list files). */
+/** The icon of text files (where side panels list files). */
 const TEXT_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 1.5h5.5L13 5v9.5H4z"/><path d="M9.5 1.5V5H13M6 8h5M6 10.5h5M6 13h3"/></svg>';

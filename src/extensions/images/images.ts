@@ -14,7 +14,7 @@ import { imageEditor } from './workbench/image-editor';
 /**
  * Images in every document's Visual editor (`#image(..)` boxes showing the project's image file, "Insert image"
  * offering the project's images and uploads, which go through `workspace.applyEdit`; an image box's path is the
- * document link on it, from the link providers (`languages`)), and the read-only view of image files: the custom
+ * document link on it, from the link providers (`languages`)), and the read-only editor of image files: the custom
  * editor `images.editor` (`*.{png,jpg,jpeg,gif,svg,webp}`).
  *
  * `#image(..)` blocks (also as figures' bodies) in the Visual editor showing the project's image files, "Insert image"
@@ -131,5 +131,5 @@ export class ProjectImages {
   }
 }
 
-/** The icon of image files (where views list files). */
+/** The icon of image files (where side panels list files). */
 const IMAGE_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="10" rx="1.5"/><circle cx="6" cy="6.5" r="1.2"/><path d="m2.5 12 3.5-3.5 2.5 2.5 2-2 3 3"/></svg>';

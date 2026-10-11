@@ -55,7 +55,7 @@ export interface SourceControl {
 export interface SourceControlResourceState {
   /** The file (VS Code: `resourceUri`). A file that is gone has no row where files are listed; it still counts. */
   readonly path: ProjectPath;
-  /** How views that list files mark it, as a file decoration: a badge ("M"), what it means, a CSS color. */
+  /** How side panels that list files mark it, as a file decoration: a badge ("M"), what it means, a CSS color. */
   readonly decorations?: { readonly badge?: string; readonly tooltip?: string; readonly color?: string };
 }
 

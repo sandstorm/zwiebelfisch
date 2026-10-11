@@ -35,7 +35,7 @@ A spec groups its fields by owner:
 #table(
   columns: 3,
   [Field], [Whose], [What],
-  [`name`, `typst`, `view`], [ours], [The Typst side and the view's handling],
+  [`name`, `typst`, `view`], [ours], [The Typst side and the Visual editor's handling],
   [`tiptap`, its `priority` and attributes], [Tiptap], [The node or mark type; omit it when another spec of the same name defines it],
   [`parseTypst.syntaxNodes` keys, the nodes parse functions get], [Lezer + codemirror-lang-typst 0.6.0], [`Heading`, `ListItem`, `Raw`, `Strong`, `Ref`, `FuncCall`],
   [`parseTypst.calls` keys, what `toTypst` writes], [the Typst language], [Function names, Typst source],
@@ -79,11 +79,11 @@ Read calls with the package's plain functions over Lezer nodes:
 === Writing Typst <extensions-visual-editor-constructs-serialize>
 
 - Only an *edited* node is written; untouched source stays byte for byte.
-- `toTypst(state, node, pos, parent)` writes through the `TypstSerializeState`: `hidden(src)` (syntax the view does not show), `shown(src, kind, from, to)`, `blocks(node, start, sep)` (its children), `block`, `textblock`, `inline`, `item`, `closing(src)`, `after(src)`, `indented(print, by?)`, `endBlock`.
+- `toTypst(state, node, pos, parent)` writes through the `TypstSerializeState`: `hidden(src)` (syntax the Visual editor does not show), `shown(src, kind, from, to)`, `blocks(node, start, sep)` (its children), `block`, `textblock`, `inline`, `item`, `closing(src)`, `after(src)`, `indented(print, by?)`, `endBlock`.
 - Default without `toTypst`: textblocks write their inline content, block atoms their `src`. Inline atoms write `atomToTypst(node)`.
 - `anchors`: the attributes that remember how the source was written, so a fresh parse updates them in place, as it does `src` and `sep`.
 - `container(item)`: consecutive nodes of this type form a container of the returned type (list items, their list).
-- `onDidChange`: what the spec reads changed (a style declared); views parse their documents again.
+- `onDidChange`: what the spec reads changed (a style declared); the Visual editors parse their documents again.
 - A mark's `toTypst(mark, around)` returns `{ open, close }` (`*…*`, or `#strong[…]` where delimiters would not work); `raw` marks write their text unescaped, `isBare` says when nothing is needed around a span.
 
 === Node groups <extensions-visual-editor-constructs-groups>
@@ -216,20 +216,20 @@ createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensio
   columns: 2,
   [Contribution point], [What],
   [`registerToolbarGroup(group)`], [A place for items: a `group` in the row, a `menu` button, or a `floating` bar at an anchor. The host's: `history` (order 10), `text-style` (20), the `insert` menu (50), the floating `selection` bar],
-  [`registerToolbarItem(item)`], [A button in a group by `group` + `order`: an `action` (`run(chain)`: a Tiptap command chain, also dry-run for enabled; or `click()`, asking first) or `create(toolbar)` for an item with state per view. `keywords`: other words the slash commands find it by; `visible`: left out where it does not apply (a floating bar with no visible button stays hidden)],
+  [`registerToolbarItem(item)`], [A button in a group by `group` + `order`: an `action` (`run(chain)`: a Tiptap command chain, also dry-run for enabled; or `click()`, asking first) or `create(toolbar)` for an item with state per editor. `keywords`: other words the slash commands find it by; `visible`: left out where it does not apply (a floating bar with no visible button stays hidden)],
   [`registerTextStyleProvider(provider)`], [Entries of the text style menu (heading levels, custom styles), with `keywords` as toolbar actions],
   [`registerCompletionItemProvider(provider, trigger)`], [A list that pops up while a trigger character and a query are typed (@extensions-visual-editor-constructs-completion)],
   [`registerRawBoxRenderer(provider, { priority })`], [What raw boxes show instead of their code; the first by `priority` that `renders` a box draws it (images 110, compiled snippets 100); its `className` goes on the picture, for its CSS],
   [`registerRawBoxAction({ title, when?, run })`], [A button on every raw box `when` holds for (its Typst: `node.attrs.src`), in the box's tools or above its code; "Edit diagram" (diagrams, Mermaid) is one],
-  [`registerGutter(provider)`], [A column beside the text, per view (the notes gutter)],
+  [`registerGutter(provider)`], [A column beside the text, per editor (the notes gutter)],
   [`registerHighlights(layer, provider)`], [Styled source ranges drawn over the text (diagnostics, others' selections)],
   [`registerTiptapExtension(editor => extension)`], [Per-editor plugins, decorations, commands; hooks see `this.editor`],
   [`registerRawBoxCodeMirrorExtension(editor => extension)`], [CodeMirror extensions for the code of every raw box],
 )
 
-- `insertTypstBlocks(editor, source)` (a plain function): inserts what Typst `source` is read as after the cursor's block, as the view reads any Typst (a figure of an image becomes a figure, the rest raw boxes). For Insert entries whose result is easier written as Typst ("Insert spreadsheet", "Insert diagram", "Insert Mermaid diagram").
+- `insertTypstBlocks(editor, source)` (a plain function): inserts what Typst `source` is read as after the cursor's block, as the Visual editor reads any Typst (a figure of an image becomes a figure, the rest raw boxes). For Insert entries whose result is easier written as Typst ("Insert spreadsheet", "Insert diagram", "Insert Mermaid diagram").
 - Contributions register once; the host applies them to every editor it creates (editors are made lazily, per document). Disposing a registration takes it out of editors created later.
-- Per-view things (the document, a popover) come through the `…Provider` functions, which get the `VisualEditorContext`: `document`, `selection()` (a `SourceRange`), `sourceToPos`, `posToSource` (the only way between `SourceOffset`s and ProseMirror positions), `isBox(node)`.
+- Per-editor things (the document, a popover) come through the `…Provider` functions, which get the `VisualEditorContext`: `document`, `selection()` (a `SourceRange`), `sourceToPos`, `posToSource` (the only way between `SourceOffset`s and ProseMirror positions), `isBox(node)`.
 - `setRawBoxDecorations`: the effect through which a raw box's CodeMirror extension learns what the Visual editor draws on its box.
 
 == Completion lists <extensions-visual-editor-constructs-completion>
@@ -237,7 +237,7 @@ createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensio
 `registerCompletionItemProvider(provider, { char, allowedPrefixes? })`: a list that opens while `char` and a query are typed in the text. The labels after `@` and the slash commands after `/` are two.
 
 - *Where:* `char` at the start of a text block or after one of `allowedPrefixes` (default: a space); the query runs to the cursor, without spaces. Never in code (code blocks, inline code) nor raw boxes.
-- *What:* `provideCompletionItems(context)` returns `CompletionItem`s, asked again on every keystroke. `context` is the `VisualEditorContext` plus `editor`, `query`, `toolbarActions(group)` and `textStyles()` (what this view's toolbar shows: how one extension offers what others registered).
+- *What:* `provideCompletionItems(context)` returns `CompletionItem`s, asked again on every keystroke. `context` is the `VisualEditorContext` plus `editor`, `query`, `toolbarActions(group)` and `textStyles()` (what this editor's toolbar shows: how one extension offers what others registered).
 - *Filtering* is the host's: items whose `label` or `keywords` contain the query, case ignored; a label equal to it first, then labels starting with it, labels containing it, keywords containing it. No match: no list.
 - *Keys:* ↑ / ↓ choose (wrapping), Enter or Tab accept, Escape closes until another trigger is typed. The pointer chooses, a click accepts. The editor keeps the focus and names the chosen option (`aria-activedescendant` of the `listbox`).
 - Built on Tiptap's `Suggestion` (`@tiptap/suggestion`, placed with Floating UI); VS Code's names (`CompletionItem`, `commitCharacters`).

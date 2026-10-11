@@ -24,7 +24,7 @@ import { newDiagram } from './workbench/new-diagram';
  * iframe, saved as they change; "New diagram…"; "Insert diagram" (a new one as a figure in the text); "Edit diagram" on
  * a box showing one.
  *
- * Why an extension: the editor is a custom editor (higher priority than the images' view of PNGs), the new-file entry a
+ * Why an extension: the editor is a custom editor (higher priority than the images' editor of PNGs), the new-file entry a
  * menu item, "Insert diagram" a toolbar item, "Edit diagram" a box action, its document links come from whichever
  * provider: the hosts' generic contribution points; the protocol (model/) is pure state, so it is tested without an
  * iframe.
@@ -84,7 +84,7 @@ function diagramEditor({ window, workspace, workbench }: ExtensionContext, edito
 }
 
 const SHOW_AS_IMAGE = 'Show as image';
-/** The icon of diagram files (where views list files). */
+/** The icon of diagram files (where side panels list files). */
 const DIAGRAM_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="2" width="5" height="4" rx="1"/><rect x="9.5" y="10" width="5" height="4" rx="1"/><path d="M4 6v6h5.5"/></svg>';
 
 /** The diagram of the project a box's Typst names: the first document link (any provider's) that leads to one. */

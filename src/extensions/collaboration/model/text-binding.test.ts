@@ -5,7 +5,7 @@ import { SourceOffset, SourceRange, type TextChange, TypstDocument } from '../..
 import { REMOTE_ORIGIN } from '../remote-origin';
 import { TextBinding } from './text-binding';
 
-/** `changes` (pre-change coordinates) applied to `text`, the way a view applies them. */
+/** `changes` (pre-change coordinates) applied to `text`, the way an editor applies them. */
 function applyChanges(text: string, changes: readonly TextChange[]): string {
   const doc = new TypstDocument(text);
   doc.change(changes, 'test');

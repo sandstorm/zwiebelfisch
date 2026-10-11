@@ -4,7 +4,7 @@ import { EventEmitter, type Event } from '../../../core/event-emitter/event-emit
 /**
  * Files dragged from the computer onto `target`: the browser never opens them in place of the page (also while
  * nobody listens); while someone does, `typst-editor--dropping` on `target` shows the drop hint, and the files go
- * to the listeners. A view inside that takes a drop itself (stops it) keeps it; the hint still goes away.
+ * to the listeners. An editor inside that takes a drop itself (stops it) keeps it; the hint still goes away.
  */
 export class FileDrops {
   readonly #dropped = new EventEmitter<File[]>();
@@ -22,7 +22,7 @@ export class FileDrops {
   };
 
   constructor(private readonly target: HTMLElement) {
-    // Captured, so the hint also goes when a view inside takes the drop.
+    // Captured, so the hint also goes when an editor inside takes the drop.
     target.addEventListener('drop', this.#endHint, true);
     for (const [type, handler] of Object.entries(this.#handlers)) target.addEventListener(type, handler as EventListener);
   }

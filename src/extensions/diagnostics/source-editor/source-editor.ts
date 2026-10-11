@@ -8,14 +8,14 @@ import type { SourceEditorContext } from '../../../hosts/source-editor/source-ed
 import { describeDiagnostic, type DiagnosticCollection, type SourceDiagnostic } from '../model/model';
 
 /**
- * Underlines the diagnostics `diagnostics` holds for a view's document, with the message and hints on
+ * Underlines the diagnostics `diagnostics` holds for an editor's document, with the message and hints on
  * hover; they follow later edits until the document's diagnostics are set again.
  */
 export function lint(diagnostics: DiagnosticCollection): (editor: SourceEditorContext) => Extension {
   return ({ document }) => ViewPlugin.define((view) => new LintShown(view, document, diagnostics));
 }
 
-/** Keeps one view's lint diagnostics those of its document. */
+/** Keeps one editor's lint diagnostics those of its document. */
 class LintShown {
   private readonly subscription: Disposable;
   private destroyed = false;

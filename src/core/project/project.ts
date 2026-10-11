@@ -6,15 +6,15 @@ import { ProjectPath } from '../paths/paths';
 
 /**
  * The files of a Typst project. Every `.typ` file is a `TypstDocument` that
- * views edit directly; other files (images, data) are kept as given. The main
+ * editors edit directly; other files (images, data) are kept as given. The main
  * file always exists and cannot be renamed or deleted.
  *
  * Listeners hear about every change: structural ones made through `apply`
  * and the text edits of every document.
  *
  * The one place that knows which files a project has and which changes to them are allowed. One TypstDocument per .typ
- * file (views edit it directly), the other files as bytes, the protected main file. Everyone who derives something from
- * the files (views, indexes, collaboration, the preview) subscribes to `onDidChangeFile` and is never told by hand:
+ * file (editors edit it directly), the other files as bytes, the protected main file. Everyone who derives something from
+ * the files (editors, indexes, collaboration, the preview) subscribes to `onDidChangeFile` and is never told by hand:
  * `apply`, `replace` and every text edit are reported there.
  */
 export class Project {
@@ -213,7 +213,7 @@ function checkContent(path: ProjectPath, content: FileContent): string | null {
   return ProjectPath.isTypst(path) && typeof content !== 'string' ? 'A .typ file must contain text.' : null;
 }
 
-/** The origin of the text edits `apply` and `replace` make: no view's, so every view shows them. */
+/** The origin of the text edits `apply` and `replace` make: no editor's, so every editor shows them. */
 const PROJECT_ORIGIN = Symbol('project');
 
 /** A key of host-given `ProjectFiles` as a path; a key that is none is the host's mistake, so it throws. */

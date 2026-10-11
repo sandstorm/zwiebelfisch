@@ -102,7 +102,7 @@ export class TextStyleMenu implements ToolbarControl {
   }
 }
 
-/** The providers' entries for `view`, by `order` (equal: as provided): the menu's entries after "Normal text". */
+/** The providers' entries for `editor`, by `order` (equal: as provided): the menu's entries after "Normal text". */
 export function textStyleEntries(providers: readonly TextStyleProvider[], editor: VisualEditorContext): TextStyle[] {
   const provided = providers.flatMap((provider) => provider.provideTextStyles(editor));
   return provided.map((entry, index) => ({ entry, index })).sort((a, b) => (a.entry.order ?? 0) - (b.entry.order ?? 0) || a.index - b.index).map(({ entry }) => entry);

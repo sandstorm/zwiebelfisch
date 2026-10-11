@@ -19,7 +19,7 @@ import { icon } from './workbench/icons/icons';
  * least specific pattern, every other editor wins; no icon: the panel draws its own).
  *
  * The file panel (the project's files as a tree in the left side panel: new file / folder, upload, rename, delete as
- * commands in its menus, drag & drop, file decorations), the files in search everywhere, and the read-only view of
+ * commands in its menus, drag & drop, file decorations), the files in search everywhere, and the read-only editor of
  * files no other editor opens.
  *
  * Why a controller and views: the extension is a controller over the workbench's contribution points (a side panel,

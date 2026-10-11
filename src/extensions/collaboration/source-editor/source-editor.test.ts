@@ -57,7 +57,7 @@ describe('presence in the Source editor', () => {
     expect(parent.querySelector('.typst-collaboration__caret, .typst-collaboration__selection')).toBeNull();
   });
 
-  it('draws the places known when the view is made, and only those in its file', () => {
+  it('draws the places known when the editor is made, and only those in its file', () => {
     const doc = new TypstDocument('Some bold text\n');
     const presences = new Presences((document) => (document === doc ? MAIN : undefined));
     presences.set([{ ...ann, anchor: SourceOffset.of(5), head: SourceOffset.of(9), path: MAIN }, { ...ann, id: '2', anchor: SourceOffset.of(0), head: SourceOffset.of(4), path: ProjectPath.of('/a.typ') }]);

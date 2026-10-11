@@ -11,12 +11,12 @@ registerCodeMirrorExtension(extension: Extension | ((editor: SourceEditorContext
 createEditor(parent, document, { onSelection? }) → SourceEditor    // the workbench calls it
 ```
 
-- A contribution applies to every view: those made later and those already open. Open views reconfigure a `Compartment`, so state the new configuration keeps survives.
-- A function is called once per view with its `SourceEditorContext` (`document`).
-- Disposing the registration removes it from all views.
+- A contribution applies to every editor: those made later and those already open. Open editors reconfigure a `Compartment`, so state the new configuration keeps survives.
+- A function is called once per editor with its `SourceEditorContext` (`document`).
+- Disposing the registration removes it from all editors.
 - Precedence is CodeMirror's own (`Prec.highest` … `Prec.lowest`).
 
-== SourceEditor <architecture-source-editor-view>
+== SourceEditor <architecture-source-editor-class>
 
 ```ts
 .reveal(range: SourceRange)    // select, scroll to the center, highlight until an edit or the selection moves
@@ -25,14 +25,14 @@ createEditor(parent, document, { onSelection? }) → SourceEditor    // the work
 ```
 
 - *Mechanism kept:* `basicSetup`, line wrapping, the reveal highlight, selection reporting.
-- *To the document:* a view's own edits become `TextChange[]` with the view as `origin`.
+- *To the document:* an editor's own edits become `TextChange[]` with the editor as `origin`.
 - *From the document:* changes with another origin are dispatched with the annotation `fromDocument.of({ origin })` and are not written back.
 
 == Undo <architecture-source-editor-undo>
 
-- Changes from elsewhere (the same user's Visual edits) enter the view's history.
+- Changes from elsewhere (the same user's Visual edits) enter the editor's history.
 - A contribution decides what stays out: collaboration's `perUserUndo` reads `fromDocument` and keeps other users' edits out of the history.
-- No `Y.UndoManager`: Undo reverts the last edit of this view's history, never a collaborator's.
+- No `Y.UndoManager`: Undo reverts the last edit of this editor's history, never a collaborator's.
 
 == What extensions contribute <architecture-source-editor-contributions>
 

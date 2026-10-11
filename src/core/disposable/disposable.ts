@@ -7,7 +7,7 @@
  *
  * Something that holds a resource (a listener, a registration, a DOM element) until disposed. Why VS Code's shape:
  * extensions push everything they register into `subscriptions`, and the host disposes the list when the widget is
- * disposed, so no extension needs a cleanup method of its own. Everything with a lifetime (hosts, views, widgets,
+ * disposed, so no extension needs a cleanup method of its own. Everything with a lifetime (hosts, editors, widgets,
  * contributed parts, the widget itself) ends with `dispose()`.
  */
 export class Disposable {
