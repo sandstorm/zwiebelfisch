@@ -165,6 +165,12 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    root `README.md` — only how to run the demo (and its examples); the long manual checklist goes,
    not into the Typst docs. The CSS wave was briefed to move it into `architecture/development.typ`;
    correct that after its merge. `mise run demo` depends on the font build (task dependency).
+   **Later: what do features cost?** (user, 2026-10-11; after the current waves) Per extension and
+   per host: lines of code (source vs. tests), complexity (the code-quality metrics: cyclomatic /
+   cognitive hot spots), dependencies (hosts / core modules and contribution points used, runtime
+   couplings such as schema names or commands), tests and e2e specs touching it. One ranked table
+   ("most expensive first") with a note per row on what makes it expensive — the basis for deciding
+   what to simplify or cut. Analysis only, by a subagent; no code changes.
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Rules wave also does:** core `onChange` → `onDidChange: Event` + `Disposable` everywhere
    (`Project`, `TypstDocument`, …) (user: yes).
