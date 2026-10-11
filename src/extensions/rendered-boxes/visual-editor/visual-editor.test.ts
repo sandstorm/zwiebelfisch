@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // Tests for visual-editor.ts (rendered boxes) and the host's RenderedBox (nodes/rendered-box.ts), with the images'
 // renderer drawing image boxes.
+import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
@@ -65,6 +66,32 @@ describe('rendered raw boxes', () => {
     box.querySelector('.cm-content')!.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: null }));
     expect(code.hidden).toBe(true);
     expect(picture!.hidden).toBe(false);
+  });
+
+  // With the Visual editor's CSS: what shows, not only the [hidden] state (a display rule for the picture must not beat
+  // [hidden], or an edited box shows the picture beside its code)
+  it.each([
+    ['block', MATH_DOC, '.typst-visual__raw-block'],
+    ['inline', 'Like $a^2 + b^2 = c^2$ here.\n', '.typst-visual__raw-inline'],
+  ])('%s: show only the code while it is edited, only the picture otherwise', async (_kind, text, selector) => {
+    const style = document.head.appendChild(document.createElement('style'));
+    style.textContent = readFileSync('src/hosts/visual-editor/visual-editor.css', 'utf8');
+    try {
+      const { renderer } = fakeRenderer();
+      const { parent } = await setup(text, renderer);
+      const box = parent.querySelector(selector)!;
+      const { picture, code } = parts(box);
+      const shown = () => ({ picture: getComputedStyle(picture!).display !== 'none', code: getComputedStyle(code).display !== 'none' });
+      expect(shown()).toEqual({ picture: true, code: false });
+      picture!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+      expect(shown()).toEqual({ picture: false, code: true });
+      expect(box.classList.contains('typst-visual__raw--rendered')).toBe(false);
+      box.querySelector('.cm-content')!.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: null }));
+      expect(shown()).toEqual({ picture: true, code: false });
+      expect(box.contains(picture)).toBe(true);
+    } finally {
+      style.remove();
+    }
   });
 
   it('keep showing code when the source draws nothing', async () => {

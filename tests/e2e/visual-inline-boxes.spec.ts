@@ -1,5 +1,5 @@
 // End-to-end tests (Playwright, against the demo build): inline raw boxes sit on their text line,
-// one line high, as code and as compiled snippets, in paragraphs and table cells.
+// one line high, as code and as compiled snippets, in paragraphs and table cells; edited, only their code shows.
 import { expect, type Locator, type Page } from '@playwright/test';
 import { test } from './fixtures';
 
@@ -74,5 +74,38 @@ test.describe('in a paragraph (plain page, boxes rendered)', () => {
     const { box: height, line } = await heights(picture);
     // the snippet is one line of text plus a little padding: not shrunk to a sliver either
     expect(height).toBeGreaterThan(line * 0.7);
+  });
+});
+
+/** The inline box of `src` in the shown Visual editor, edited: only its code shows; Escape: only its picture again. */
+async function expectCodeReplacesPicture(page: Page, src: string): Promise<void> {
+  const picture = visual(page).locator(`p .typst-visual__raw-inline > img.typst-visual__rendering[alt="${src}"]`);
+  const box = visual(page).locator('p .typst-visual__raw-inline').filter({ has: picture });
+  const code = box.locator('.typst-visual__code');
+  await expect(picture).toBeVisible();
+  await expect(code).toBeHidden();
+
+  await picture.click();
+  await expect(box.locator('.cm-editor')).toHaveClass(/cm-focused/);
+  await expect(code).toBeVisible();
+  await expect(picture).toBeHidden();
+  await expectOneLine(box);
+
+  await page.keyboard.press('Escape');
+  await expect(picture).toBeVisible();
+  await expect(code).toBeHidden();
+}
+
+test.describe('an inline equation being edited shows only its code, as a block box does', () => {
+  test('the simple example: $a^2 + b^2 = c^2$', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
+    await expectCodeReplacesPicture(page, '$a^2 + b^2 = c^2$');
+  });
+
+  test('the advanced example: $tilde(t)$', async ({ page }) => {
+    await page.goto('/?example=advanced#/chapters/method.typ');
+    await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/, { timeout: 30_000 });
+    await expectCodeReplacesPicture(page, '$tilde(t)$');
   });
 });

@@ -34,8 +34,6 @@
 .typst-visual__raw-inline:focus-within { background: var(--te-surface); box-shadow: 0 0 0 2px var(--te-accent); color: var(--te-text); }
 .typst-visual .ProseMirror-selectednode { outline: 2px solid var(--te-accent); }
 /* Raw boxes showing their image or compiled snippet (code while focused) */
-.typst-visual__code[hidden],
-.typst-visual__rendering[hidden] { display: none; }
 .typst-visual__raw--rendered { background: transparent; }
 .typst-visual__rendering { display: block; max-width: 100%; height: auto; cursor: text; }
 /* A picture leads where its box links to: while Mod is held over it, it shows as a link, as links in the Source editor
@@ -55,6 +53,10 @@
    that text's size, not the code chip's; a squeezed one keeps its aspect */
 .typst-visual__raw-inline.typst-visual__raw--rendered { font-size: inherit; }
 .typst-visual__raw-inline > .typst-visual__rendering { display: inline-block; vertical-align: middle; object-fit: contain; }
+/* Last, after every display above (same specificity as the inline picture's): a box shows either its picture or its
+   code, never both, inline as block */
+.typst-visual__code[hidden],
+.typst-visual__rendering[hidden] { display: none; }
 
 /* The Visual editor's body: the text and, right of it, the gutters contributions add (comments: the notes) */
 .typst-visual__body { flex: 1 0 auto; display: flex; position: relative; }
