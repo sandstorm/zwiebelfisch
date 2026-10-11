@@ -114,7 +114,85 @@ describe('spreadsheetTypst', () => {
     expect(source).toContain('"say \\"hi\\" \\\\ #x $y$ [z]"');
   });
 
-  it('writes Typst that compiles: tables, fills and values', async () => {
+  describe('defined names', () => {
+    /** The budget: items and costs in A1:B4, their sum in B5 (bold). */
+    function budget(): Model {
+      const model = workbook({ A1: 'Item', B1: 'Cost', A2: 'Train', B2: '120', A3: 'Hotel', B3: '180', A4: 'Museum', B4: '35', B5: '=SUM(B2:B4)' });
+      style(model, 'B5', 'font.b', 'true');
+      return model;
+    }
+
+    it('gives a named cell its displayed value, in `names` and `name-values`', () => {
+      const model = budget();
+      model.newDefinedName('Total', undefined, 'Sheet1!$B$5');
+      const source = spreadsheetTypst(model, 'budget.ic');
+      expect(source).toContain('#let names = (\n  "Total": "335",\n)');
+      expect(source).toContain('#let name-values = (\n  "Total": "335",\n)');
+    });
+
+    it('makes a named range a table of just its cells, styled like the sheet, and its rows of values', () => {
+      const model = budget();
+      model.setColumnsWidth(0, 2, 2, 120);
+      model.newDefinedName('Costs', undefined, 'Sheet1!$B$4:$B$5');
+      const source = spreadsheetTypst(model, 'budget.ic');
+      expect(source).toContain(
+        [
+          '#let names = (',
+          '  "Costs": table(',
+          '    columns: (90pt,),',
+          '    align: left + bottom,',
+          '    table.cell(align: right + bottom, "35"),',
+          '    table.cell(align: right + bottom, text(weight: "bold", "335")),',
+          '  ),',
+          ')',
+        ].join('\n'),
+      );
+      expect(source).toContain('#let name-values = (\n  "Costs": (\n    ("35",),\n    ("335",),\n  ),\n)');
+    });
+
+    it('ends ranges and whole columns or rows at the last cell with data', () => {
+      const model = budget();
+      model.newDefinedName('Items', undefined, 'Sheet1!$A:$A');
+      model.newDefinedName('Header', undefined, 'Sheet1!$1:$1');
+      model.newDefinedName('Wide', undefined, 'Sheet1!$A$4:$Z$100');
+      const source = spreadsheetTypst(model, 'budget.ic');
+      expect(source).toContain('  "Items": (\n    ("Item",),\n    ("Train",),\n    ("Hotel",),\n    ("Museum",),\n    ("",),\n  ),');
+      expect(source).toContain('  "Header": (\n    ("Item", "Cost"),\n  ),');
+      expect(source).toContain('  "Wide": (\n    ("Museum", "35"),\n    ("", "335"),\n  ),');
+    });
+
+    it('keys a name of one sheet `Sheet!name` (after the workbook-wide ones), on any sheet', () => {
+      const model = budget();
+      model.newSheet();
+      model.renameSheet(1, "Q1 '26");
+      model.setUserInput(1, 2, 2, 'q1');
+      model.newDefinedName('Total', 1, 'Sheet1!$B$5');
+      model.newDefinedName('Note', undefined, "'Q1 ''26'!$B$2");
+      const source = spreadsheetTypst(model, 'budget.ic');
+      expect(source).toContain('#let names = (\n  "Note": "q1",\n  "Q1 \'26!Total": "335",\n)');
+    });
+
+    it('leaves out names that are no reference (a constant, an expression, #REF!)', () => {
+      const model = budget();
+      model.newDefinedName('Total', undefined, 'Sheet1!$B$5');
+      const names = [
+        ...model.getDefinedNameList(),
+        { name: 'Rate', formula: '0.19' },
+        { name: 'Twice', formula: 'Sheet1!$B$5*2' },
+        { name: 'Gone', formula: '#REF!' },
+        { name: 'Elsewhere', formula: 'Sheet9!$A$1' },
+      ];
+      const source = spreadsheetTypst(Object.assign(Object.create(model) as Model, { getDefinedNameList: () => names }), 'budget.ic');
+      expect(source).toContain('#let names = (\n  "Total": "335",\n)');
+    });
+
+    it('writes empty dictionaries when there are none', () => {
+      const source = spreadsheetTypst(budget(), 'budget.ic');
+      expect(source).toContain('#let names = (:)\n\n#let name-values = (:)\n');
+    });
+  });
+
+  it('writes Typst that compiles: tables, fills, values and names', async () => {
     const wasm = readFileSync(new URL('../../../core/typst-engine/wasm/typst_engine_bg.wasm', import.meta.url));
     const fontDir = new URL('../../../core/typst-engine/fonts/', import.meta.url);
     const engine = await createEngine(wasm);
@@ -132,10 +210,22 @@ describe('spreadsheetTypst', () => {
       { sheet: 0, row: 1, column: 1, width: 2, height: 2 },
       { item: { style: 'dotted' as never, color: '#0000FF' }, type: 'Outer' as never },
     );
+    model.newDefinedName('Rent', undefined, 'Sheet1!$B$1');
+    model.newDefinedName('Costs', undefined, 'Sheet1!$A$1:$B$2');
+    model.newDefinedName('Note', 1, 'Sheet1!$A$2');
+    model.newDefinedName('_x.y', undefined, 'Sheet1!$A:$A');
     engine.setSource('/budget.ic.gen.typ', spreadsheetTypst(model, 'budget.ic'));
     engine.setSource(
       '/main.typ',
-      '#import "budget.ic.gen.typ": sheets, values\n#sheets.Sheet1\n#sheets.at("My \\"Sheet\\"")\nRent: #values.Sheet1.at(0).at(1)\n',
+      [
+        '#import "budget.ic.gen.typ": sheets, values, names, name-values',
+        '#sheets.Sheet1',
+        '#sheets.at("My \\"Sheet\\"")',
+        'Rent: #values.Sheet1.at(0).at(1) = #names.Rent',
+        '#figure(names.Costs, caption: [Costs])',
+        '#name-values.Costs.at(1).at(0) #names.at("My \\"Sheet\\"!Note") #names.at("_x.y")',
+        '',
+      ].join('\n'),
     );
     const { pages, diagnostics } = engine.compile('/main.typ');
     expect(diagnostics).toEqual([]);

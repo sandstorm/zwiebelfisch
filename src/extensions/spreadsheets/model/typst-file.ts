@@ -4,7 +4,8 @@ import type { CellStyle, Color } from '@ironcalc/wasm';
 
 /**
  * The Typst source for the spreadsheet `name` (shown in its header): two
- * dictionaries by sheet name, of every visible sheet.
+ * dictionaries by sheet name, of every visible sheet, and two by the
+ * workbook's defined names.
  *
  * - `values`: the rows of displayed values (strings, formulas computed and
  *   numbers formatted as in the spreadsheet), from A1 to the last cell with
@@ -14,24 +15,43 @@ import type { CellStyle, Color } from '@ironcalc/wasm';
  *   (bold, italic, underline, strike, colour, relative size) and borders;
  *   hidden columns and rows are left out. The grid lines are Typst's table
  *   stroke (`#set table(stroke: …)` changes them).
+ * - `names`: what a name refers to, as a document shows it: a cell's
+ *   displayed value (a string, as in `values`), a range's cells as a table
+ *   (as in `sheets`).
+ * - `name-values`: the displayed values of a name: a cell's string, a
+ *   range's rows (as in `values`).
+ *
+ * `namedAreas` says which names are there, and by which key.
  */
 export function spreadsheetTypst(model: SheetSource, name: string): string {
-  const sheets = model
-    .getWorksheetsProperties()
-    .map((sheet, index) => ({ name: sheet.name, index, visible: sheet.state === 'visible' }))
-    .filter((sheet) => sheet.visible)
-    .map((sheet) => ({ ...sheet, size: usedSize(model, sheet.index) }));
-  const values = sheets.map(({ name, index, size }) => `  ${str(name)}: ${valueRows(model, index, size)},`);
-  const tables = sheets.map(({ name, index, size }) => `  ${str(name)}: ${table(model, index, size)},`);
+  const all = model.getWorksheetsProperties();
+  const sizes = new Map<number, Size>();
+  const sizeOf = (sheet: number) => sizes.get(sheet) ?? sizes.set(sheet, usedSize(model, sheet)).get(sheet)!;
+  const whole = (sheet: number): Area => ({ sheet, rows: range(sizeOf(sheet).rows), columns: range(sizeOf(sheet).columns) });
+  const sheets = all.map((sheet, index) => ({ name: sheet.name, index, visible: sheet.state === 'visible' })).filter((sheet) => sheet.visible);
+  const values = sheets.map(({ name, index }) => `  ${str(name)}: ${valueRows(model, whole(index))},`);
+  const tables = sheets.map(({ name, index }) => `  ${str(name)}: ${table(model, whole(index))},`);
+  const named = namedAreas(model, all.map((sheet) => sheet.name), sizeOf);
+  const cellValue = ({ sheet, rows, columns }: Area) => str(model.getFormattedCellValue(sheet, rows[0], columns[0]));
+  const names = named.map(({ key, cell, area }) => `  ${str(key)}: ${cell ? cellValue(area) : table(model, area)},`);
+  const nameValues = named.map(({ key, cell, area }) => `  ${str(key)}: ${cell ? cellValue(area) : valueRows(model, area)},`);
   return [
     `// Generated from ${name} on every edit of the spreadsheet: do not edit by hand.`,
-    `// #import "${name}.gen.typ": sheets, values`,
+    `// #import "${name}.gen.typ": sheets, values, names, name-values`,
     '// #sheets.Sheet1                  the sheet as a table',
     '// #values.Sheet1.at(1).at(0)      cell A2 as displayed (a string)',
+    '// #names.Total                    a named cell as displayed (a string)',
+    '// #names.Budget                   a named range as a table',
+    "// #name-values.Budget             a named range's displayed values, row by row",
+    '// #names.at("Sheet1!Total")       a name defined for one sheet only',
     '',
     dictionary('values', values),
     '',
     dictionary('sheets', tables),
+    '',
+    dictionary('names', names),
+    '',
+    dictionary('name-values', nameValues),
     '',
   ].join('\n');
 }
@@ -46,6 +66,7 @@ export interface SheetSource {
   getColumnWidth(sheet: number, column: number): number;
   getRowHeight(sheet: number, row: number): number;
   resolveColor(color: Color): string;
+  getDefinedNameList(): { name: string; scope?: number; formula: string }[];
 }
 
 /** Where the Typst file of spreadsheet `path` goes: `budget.ic` → `budget.ic.gen.typ`, next to it. */
@@ -86,22 +107,101 @@ function str(value: string): string {
   return `"${escaped}"`;
 }
 
-function valueRows(model: SheetSource, sheet: number, { rows, columns }: Size): string {
-  if (rows === 0) return '()';
-  const lines = range(rows).map((row) => `    ${array(range(columns).map((column) => str(model.getFormattedCellValue(sheet, row, column))))},`);
+/**
+ * The defined names that refer to a cell or a range, workbook-wide ones first. A workbook-wide name's key is the
+ * name; a name of one sheet's is `Sheet!name`, as other sheets' formulas write it. A range keeps its part within the
+ * sheet's cells with data (as `sheets` and `values`: whole columns end at the last row with data). Names of other
+ * formulas (a constant, an expression, `#REF!`) are left out: IronCalc computes them only within a cell's formula.
+ */
+function namedAreas(model: SheetSource, sheetNames: string[], sizeOf: (sheet: number) => Size): NamedArea[] {
+  const names = model.getDefinedNameList();
+  const ordered = [...names.filter((name) => name.scope === undefined), ...names.filter((name) => name.scope !== undefined)];
+  return ordered.flatMap(({ name, scope, formula }): NamedArea[] => {
+    const reference = parseReference(formula);
+    const sheet = reference ? sheetNames.indexOf(reference.sheet) : -1;
+    if (!reference || sheet < 0 || (scope !== undefined && sheetNames[scope] === undefined)) return [];
+    const key = scope === undefined ? name : `${sheetNames[scope]}!${name}`;
+    const { top, left, bottom, right } = reference;
+    if (top === bottom && left === right) return [{ key, cell: true, area: { sheet, rows: [top], columns: [left] } }];
+    const { rows, columns } = sizeOf(sheet);
+    return [{ key, cell: false, area: { sheet, rows: range(Math.min(bottom, rows), top), columns: range(Math.min(right, columns), left) } }];
+  });
+}
+
+interface NamedArea {
+  key: string;
+  /** One cell (a string), else a range (a table, rows of values). */
+  cell: boolean;
+  area: Area;
+}
+
+/**
+ * The cells a defined name's formula refers to: `Sheet1!$A$1`, `'Q1 2026'!$A$1:$C$4`, whole columns
+ * (`Sheet1!$A:$B`: rows to Infinity) or rows (`Sheet1!$2:$3`); null for any other formula.
+ */
+function parseReference(formula: string): Reference | null {
+  const [, quoted, plain, cells] = SHEET_AND_CELLS.exec(formula) ?? [];
+  if (!cells || !CELLS.test(cells)) return null;
+  const [from, to = from] = cells.split(':');
+  const start = corner(from, 1);
+  const end = corner(to, Infinity);
+  return {
+    sheet: quoted?.replaceAll("''", "'") ?? plain,
+    top: Math.min(start.row, end.row),
+    bottom: Math.max(start.row, end.row),
+    left: Math.min(start.column, end.column),
+    right: Math.max(start.column, end.column),
+  };
+}
+
+/** A corner of `CELLS` (`$A$1`, `B`, `3`): what it leaves out is `missing` (the first or the last). */
+function corner(text: string, missing: number): { row: number; column: number } {
+  const [, letters, digits] = /^\$?([A-Z]*)\$?(\d*)$/i.exec(text)!;
+  return { column: letters ? columnNumber(letters) : missing, row: digits ? Number(digits) : missing };
+}
+
+interface Reference {
+  sheet: string;
+  top: number;
+  left: number;
+  bottom: number;
+  right: number;
+}
+
+/** A sheet (`'…'` quoted, `''` an apostrophe), `!` and what follows. */
+const SHEET_AND_CELLS = /^(?:'((?:[^']|'')+)'|([^'!]+))!(.+)$/;
+/** A cell or range, whole columns or whole rows; `$` optional. */
+const CELLS = /^(?:\$?[A-Z]+\$?\d+(?::\$?[A-Z]+\$?\d+)?|\$?[A-Z]+:\$?[A-Z]+|\$?\d+:\$?\d+)$/i;
+
+/** `A` → 1, `Z` → 26, `AA` → 27. */
+function columnNumber(letters: string): number {
+  return [...letters.toUpperCase()].reduce((number, letter) => number * 26 + letter.charCodeAt(0) - 64, 0);
+}
+
+/** Cells of a sheet: `rows` × `columns` (numbers from 1, in order). */
+interface Area {
+  sheet: number;
+  rows: number[];
+  columns: number[];
+}
+
+function valueRows(model: SheetSource, { sheet, rows, columns }: Area): string {
+  if (rows.length === 0 || columns.length === 0) return '()';
+  const lines = rows.map((row) => `    ${array(columns.map((column) => str(model.getFormattedCellValue(sheet, row, column))))},`);
   return `(\n${lines.join('\n')}\n  )`;
 }
 
-const range = (count: number) => Array.from({ length: count }, (_, i) => i + 1);
+/** The numbers `from` … `to` (none when `to` is smaller). */
+const range = (to: number, from = 1) => Array.from({ length: Math.max(0, to - from + 1) }, (_, i) => from + i);
 
 /** A Typst array literal (one element needs the trailing comma). */
 function array(items: string[]): string {
   return items.length === 1 ? `(${items[0]},)` : `(${items.join(', ')})`;
 }
 
-function table(model: SheetSource, sheet: number, { rows, columns }: Size): string {
-  const shownColumns = range(columns).filter((column) => model.getColumnWidth(sheet, column) > 0);
-  const shownRows = range(rows).filter((row) => model.getRowHeight(sheet, row) > 0);
+function table(model: SheetSource, { sheet, rows, columns }: Area): string {
+  const shownColumns = columns.filter((column) => model.getColumnWidth(sheet, column) > 0);
+  const shownRows = rows.filter((row) => model.getRowHeight(sheet, row) > 0);
   if (shownColumns.length === 0 || shownRows.length === 0) return '[]';
   const widths = shownColumns.map((column) => pt(model.getColumnWidth(sheet, column)));
   const heights = shownRows.map((row) => model.getRowHeight(sheet, row));

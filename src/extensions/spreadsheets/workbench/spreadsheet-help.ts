@@ -3,7 +3,7 @@ import type { HelpSheet } from '../../../hosts/languages/languages';
 
 /**
  * "Spreadsheet formulas": what to type into IronCalc's cells, and how a spreadsheet reaches a Typst document (its
- * Typst file, `name.ic.gen.typ`: `sheets`, `values`).
+ * Typst file, `name.ic.gen.typ`: `sheets`, `values`, `names`, `name-values`).
  */
 export const SPREADSHEET_HELP: HelpSheet = {
   title: 'Spreadsheet formulas',
@@ -35,6 +35,9 @@ export const SPREADSHEET_HELP: HelpSheet = {
         { snippet: '#figure(sheets.Sheet1, caption: [A table])', description: 'A sheet as a table: values, alignment, fills, fonts, borders' },
         { snippet: '#values.Sheet1.at(1).at(0)', description: 'Cell A2 as displayed (a string): rows, then columns, from 0' },
         { snippet: '#sheets.at("Q1 2026")', description: 'A sheet whose name is no identifier' },
+        { snippet: '#import "table.ic.gen.typ": names, name-values', description: "The spreadsheet's defined names (named cells and ranges)" },
+        { snippet: '#names.Total', description: 'A named cell as displayed (a string); a name of one sheet: names.at("Sheet1!Total")' },
+        { snippet: '#figure(names.Costs, caption: [Costs])', description: 'A named range as a table like the sheet; its values: name-values.Costs' },
       ],
     },
   ],

@@ -215,6 +215,18 @@ The 100-page document took #values.Runs.at(4).at(4) ms (median, @tab:runs).
 - Every edit also writes `<name>.ic.gen.typ` (generated; don't edit). It holds, by sheet name:
   - `sheets`: each sheet as a `table` that looks like the spreadsheet (column widths, fills, fonts, borders).
   - `values`: the displayed cells as strings, row by row: `values.Runs.at(1).at(0)` is A2.
+- Named areas (IronCalc's defined names) are in the same file, by name:
+  - `names`: a named cell as its displayed value (a string, as in `values`); a named range as a table of just its cells, looking like the sheet (as in `sheets`), so `#figure(names.Budget, caption: [ ])` works.
+  - `name-values`: a named cell's string, a named range's displayed values row by row (`name-values.Budget.at(0).at(1)`).
+  - A name defined for one sheet only is `Sheet!name`: `names.at("Runs!Median")`. A name that is no Typst identifier works the same way: `names.at("tax.rate")`.
+  - A range ends at the sheet's last row and column with data (whole columns too). Names of a constant or an expression (not a cell or range) are left out.
+
+  ```typ
+  #import "data/budget.ic.gen.typ": names
+
+  The trip costs #names.Total € in total.
+  #figure(names.Budget, caption: [The trip's costs.])
+  ```
 - The preview follows every edit of the spreadsheet.
 - Not supported: merged cells, `.xlsx` files.
 
@@ -314,7 +326,7 @@ The question mark on the left rail opens the help, in the file panel's place: a 
   [File], [Sheet],
   [`.typ`], [Typst basics: headings, emphasis, lists, links and references, images and figures, math, tables, code, set and show rules, imports, comments],
   [`.mmd`], [Mermaid basics: flowcharts (direction, node shapes, arrows with labels, subgraphs), sequence diagrams (participants, messages, notes)],
-  [`.ic`], [Spreadsheet formulas: cell references, ranges, `SUM` / `AVERAGE` / `IF`, absolute references, other sheets; how a spreadsheet reaches the document (`sheets`, `values`)],
+  [`.ic`], [Spreadsheet formulas: cell references, ranges, `SUM` / `AVERAGE` / `IF`, absolute references, other sheets; how a spreadsheet reaches the document (`sheets`, `values`, named areas: `names`, `name-values`)],
   [`.bib`], [BibTeX: `@article`, `@book`, citing with `@key`],
 )
 

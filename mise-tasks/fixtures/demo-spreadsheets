@@ -11,7 +11,7 @@ import { spreadsheetTypst, typstPath } from '../../src/extensions/spreadsheets/m
 
 await init({ module_or_path: readFileSync(new URL('../../node_modules/@ironcalc/wasm/wasm_bg.wasm', import.meta.url)) });
 
-/** The simple example's trip budget: three costs and their sum (bold), the sum quoted in the text. */
+/** The simple example's trip budget: three costs and their sum (bold, named `Total`: quoted in the text), the table named `Budget`. */
 writeSpreadsheet('simple/data/budget.ic', 'Budget', (model) => {
   const costs = [
     ['Train tickets', 120],
@@ -24,6 +24,8 @@ writeSpreadsheet('simple/data/budget.ic', 'Budget', (model) => {
   model.setUserInput(0, total, 2, `=SUM(B2:B${total - 1})`);
   model.updateRangeStyle({ sheet: 0, row: total, column: 1, width: 2, height: 1 }, 'font.b', 'true');
   model.setColumnsWidth(0, 1, 1, 130);
+  model.newDefinedName('Total', undefined, `Budget!$B$${total}`);
+  model.newDefinedName('Budget', undefined, `Budget!$A$1:$B$${total}`);
 });
 
 /** The advanced example's cold compile times (ms) of three runs per document size, with their median; made up. */

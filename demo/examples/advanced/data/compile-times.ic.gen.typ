@@ -1,7 +1,11 @@
 // Generated from compile-times.ic on every edit of the spreadsheet: do not edit by hand.
-// #import "compile-times.ic.gen.typ": sheets, values
+// #import "compile-times.ic.gen.typ": sheets, values, names, name-values
 // #sheets.Sheet1                  the sheet as a table
 // #values.Sheet1.at(1).at(0)      cell A2 as displayed (a string)
+// #names.Total                    a named cell as displayed (a string)
+// #names.Budget                   a named range as a table
+// #name-values.Budget             a named range's displayed values, row by row
+// #names.at("Sheet1!Total")       a name defined for one sheet only
 
 #let values = (
   "Runs": (
@@ -44,3 +48,7 @@
     table.cell(align: right + bottom, text(weight: "bold", "820")),
   ),
 )
+
+#let names = (:)
+
+#let name-values = (:)
