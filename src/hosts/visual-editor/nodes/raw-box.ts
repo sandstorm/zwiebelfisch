@@ -84,7 +84,7 @@ export const RawBoxNavigation = Extension.create({
  * Backspace in an empty box deletes it; Tab indents a block box's code. With a box renderer that draws it,
  * the box shows its picture instead of the code until the code gets focus;
  * the picture leads where the box's Typst links to, as a link in the Source
- * editor (the tooltip says where; Mod+click on it, or Alt+Enter on the
+ * editor (hovered, the hint of every link; Mod+click on it, or Alt+Enter on the
  * selected box, follows it).
  * Its spec's `view.title` may head it (an outline: "Table of contents"), `view.tools` add
  * tools (an image: resize handles, a toolbar); clicking the picture of a box

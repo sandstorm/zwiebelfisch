@@ -83,7 +83,7 @@ test('/mermaid: a new .mmd with a starter flowchart as a figure with the merman 
   await editor(page).getByTestId('typst-files').locator('[role=treeitem][title="main.typ"]').click();
   const picture = visual(page).locator('.typst-visual__raw-block', { hasText: 'diagram.mmd' }).locator('img.typst-visual__rendering');
   await picture.hover();
-  await expect(picture).toHaveAttribute('title', /^Edit diagram \(/);
+  await expect(page.getByRole('tooltip')).toHaveText(/^Edit diagram\s*\(/);
   await picture.click({ modifiers: ['ControlOrMeta'] });
   await expect(text.locator('.cm-content')).toContainText('flowchart LR');
 });

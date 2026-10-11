@@ -80,6 +80,25 @@ describe('linkExtension', () => {
     expect(runScopeHandlers(view, new KeyboardEvent('keydown', { key: 'Enter', altKey: true }), 'editor')).toBe(false);
   });
 
+  it('hovered, a link shows the hint of every link; with Mod held the editor shows it as one; leaving ends both', () => {
+    vi.useFakeTimers();
+    const { parent, view } = setup();
+    const mark = parent.querySelector('.typst-source__path')!;
+    mark.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, ctrlKey: true, metaKey: true }));
+    expect(view.dom.classList.contains('typst-link--mod')).toBe(true);
+    expect(mark.classList.contains('typst-link--mod')).toBe(false); // CodeMirror owns the mark
+    vi.advanceTimersByTime(300);
+    const hint = document.querySelector('.typst-link-hint[role=tooltip]')!;
+    expect(hint.textContent).toMatch(/^Open template\.typ\(Ctrl\+click or Alt\+Enter\)$/);
+    expect(view.dom.getAttribute('aria-describedby')).toBe(hint.id);
+    expect(parent.querySelector('[title]')).toBeNull();
+    view.contentDOM.dispatchEvent(new MouseEvent('mouseleave'));
+    vi.advanceTimersByTime(300);
+    expect(document.querySelector('.typst-link-hint')).toBeNull();
+    expect(view.dom.classList.contains('typst-link--mod')).toBe(false);
+    vi.useRealTimers();
+  });
+
   it('has no links in a text that is in no file', () => {
     const { linked } = setup();
     const parent = document.body.appendChild(document.createElement('div'));

@@ -141,16 +141,20 @@ describe('raw boxes', () => {
     expect(doc.text).toBe('Hello\n');
   });
 
-  it("pictures follow the box's link: its tooltip on hover, Mod+click; plain clicks still edit the code", async () => {
-    const { parent, linkOf, follow } = setupLinked(RAW);
+  it("pictures follow the box's link: hovered as a link (no title of their own), Mod+click; plain clicks still edit the code", async () => {
+    const { parent, linkOf, follow, hover, leave } = setupLinked(RAW);
     const picture = await shownPicture(parent);
     picture.dispatchEvent(new MouseEvent('mouseenter'));
-    expect(picture.title).toBe('Edit (Ctrl+click or Alt+Enter)');
     expect(linkOf).toHaveBeenLastCalledWith('#set text(size: 12pt)', expect.any(TypstDocument));
     picture.dispatchEvent(new MouseEvent('mousemove', modifier));
-    expect(picture.classList.contains('typst-visual__rendering--link')).toBe(true);
-    document.dispatchEvent(new KeyboardEvent('keyup', {}));
-    expect(picture.classList.contains('typst-visual__rendering--link')).toBe(false);
+    expect(hover.mock.calls.map(([event, element]) => [event.type, element])).toEqual([
+      ['mouseenter', picture],
+      ['mousemove', picture],
+    ]);
+    expect(picture.hasAttribute('title')).toBe(false);
+    picture.dispatchEvent(new MouseEvent('mouseleave'));
+    expect(leave).toHaveBeenCalledTimes(1);
+    expect(linkOf).toHaveBeenCalledTimes(1); // once per visit
     picture.dispatchEvent(new MouseEvent('mousedown', { ...modifier, button: 0, cancelable: true }));
     expect(follow).toHaveBeenCalledTimes(1);
     expect(picture.hidden).toBe(false);
@@ -172,7 +176,8 @@ describe('raw boxes', () => {
     const { parent, follow } = setupLinked(RAW, () => null);
     const picture = await shownPicture(parent);
     picture.dispatchEvent(new MouseEvent('mouseenter'));
-    expect(picture.title).toBe('');
+    picture.dispatchEvent(new MouseEvent('mousemove'));
+    expect(picture.hasAttribute('title')).toBe(false);
     picture.dispatchEvent(new MouseEvent('mousedown', { ...modifier, button: 0, cancelable: true }));
     expect(follow).not.toHaveBeenCalled();
     expect(picture.hidden).toBe(true);
@@ -213,15 +218,17 @@ describe('rendered raw boxes', () => {
 
 const modifier = { ctrlKey: true, metaKey: true };
 
-/** Raw boxes drawn as a picture, each leading where `link` says ("Edit"; Ctrl or ⌘ held follows). */
-function setupLinked(text: string, link: (follow: () => void) => FollowableLink | null = (follow) => ({ title: 'Edit (Ctrl+click or Alt+Enter)', isFollowEvent: (event) => event.ctrlKey, follow })) {
+/** Raw boxes drawn as a picture, each leading where `link` says (Ctrl or ⌘ held follows). */
+function setupLinked(text: string, link: (fake: Pick<FollowableLink, 'follow' | 'hover' | 'leave'>) => FollowableLink | null = (fake) => ({ isFollowEvent: (event) => event.ctrlKey, ...fake })) {
   const follow = vi.fn();
-  const linkOf = vi.fn(() => link(follow));
+  const hover = vi.fn<FollowableLink['hover']>();
+  const leave = vi.fn<FollowableLink['leave']>();
+  const linkOf = vi.fn(() => link({ follow, hover, leave }));
   const visualEditor = new VisualEditorHost({ linkOf, linkAt: () => null });
   visualEditor.registerRawBoxRenderer(() => ({ renders: () => true, render: async () => ({ url: 'data:image/png;base64,' }), onDidChange: () => new Disposable(() => {}) }));
   const parent = document.body.appendChild(document.createElement('div'));
   new VisualEditor(parent, new TypstDocument(text), visualEditor);
-  return { parent, linkOf, follow };
+  return { parent, linkOf, follow, hover, leave };
 }
 
 /** The first box's picture, once it shows. */

@@ -565,11 +565,16 @@ export interface VisualEditorPasteEdits {
 
 /** Where a link of the Visual editor leads. */
 export interface FollowableLink {
-  /** Its tooltip: what following it does and how ("Go to Figure · Setup in ch2.typ (⌘+click or Alt+Enter)"). */
-  readonly title: string;
   /** Whether a click with `event`'s modifiers follows it (⌘ on Mac, else Ctrl). */
   isFollowEvent(event: MouseEvent | KeyboardEvent): boolean;
   follow(): void;
+  /**
+   * The pointer moved (`event`) over it at `element`: it shows as links do in every editor, its hint ("Go to Figure ·
+   * Setup in ch2.typ (⌘+click or Alt+Enter)") and, while the modifier is held, the link look (`typst-link--mod`).
+   */
+  hover(event: MouseEvent, element: Element): void;
+  /** The pointer (`event`) left it. */
+  leave(event: MouseEvent): void;
 }
 
 // The toolbar: buttons (actions), controls, groups, menus and floating bars.

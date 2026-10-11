@@ -9,8 +9,8 @@ import type { FollowableLink, RawBoxPicture, RawBoxRenderer } from '../visual-ed
  * The rendered face of a raw box: its renderer's picture, shown instead of
  * the code while the box does not have focus. Clicking the picture activates
  * the box; it leads where the box links to, as a link in text does: hovered,
- * it says where in its tooltip, shows as a link (`--link`) while the modifier
- * is held, and Mod+click follows it. Until the renderer has a picture (the
+ * it shows the link's hint and, while the modifier is held, the link look
+ * (`FollowableLink.hover`), and Mod+click follows it. Until the renderer has a picture (the
  * preview's first compile), the box shows its code; a picture is decoded
  * before it replaces the code or the picture before it, so the box never shows
  * a blank picture in between.
@@ -34,8 +34,6 @@ export class RenderedBox {
   /** The renderer changed while the box was not near: it is drawn again once it is. */
   private stale = false;
   private readonly observer: IntersectionObserver | null;
-  /** Ends the hover (the mouse left, or the box goes). */
-  private leave = () => {};
 
   constructor(
     private readonly host: BoxHost,
@@ -81,34 +79,22 @@ export class RenderedBox {
   dispose(): void {
     this.subscription.dispose();
     this.observer?.disconnect();
-    this.leave();
     this.requests++;
   }
 
-  /**
-   * While hovered: the link's tooltip, and the link look while the modifier is held (also when it is pressed or let go
-   * without moving the mouse: the keys go to the document).
-   */
+  /** While hovered: shows where the box leads, as links do (asked once per visit: finding the link takes a parse). */
   private followLinkOnHover(): void {
     const picture = this.picture;
-    const doc = picture.ownerDocument;
     let link: FollowableLink | null = null;
-    const track = (event: MouseEvent | KeyboardEvent) => picture.classList.toggle('typst-visual__rendering--link', link?.isFollowEvent(event) ?? false);
     picture.addEventListener('mouseenter', (event) => {
       link = this.host.link();
-      picture.title = link?.title ?? '';
-      track(event);
-      doc.addEventListener('keydown', track);
-      doc.addEventListener('keyup', track);
+      link?.hover(event, picture);
     });
-    picture.addEventListener('mousemove', track);
-    this.leave = () => {
+    picture.addEventListener('mousemove', (event) => link?.hover(event, picture));
+    picture.addEventListener('mouseleave', (event) => {
+      link?.leave(event);
       link = null;
-      picture.classList.remove('typst-visual__rendering--link');
-      doc.removeEventListener('keydown', track);
-      doc.removeEventListener('keyup', track);
-    };
-    picture.addEventListener('mouseleave', () => this.leave());
+    });
   }
 
   private changed(): void {

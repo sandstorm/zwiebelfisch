@@ -1,10 +1,24 @@
-/* Document links in CodeMirror editors and their hover. See LanguagesHost in languages.ts, whose styleSheet the
-   workbench adds. Colors come from the --te-* tokens. */
-/* like IntelliJ: a link shows as one (underline, pointer) only while Mod is held and it is hovered */
-.typst-source--mod .typst-source__path:hover { text-decoration: underline; text-decoration-color: var(--te-accent); color: var(--te-accent); cursor: pointer; }
+/* Links in every editor: their hint and their look. See LanguagesHost in languages.ts, whose styleSheet the workbench
+   adds, and link-hover.ts. Colors come from the --te-* tokens. */
+/* like IntelliJ: a link shows as one (underline, pointer) only while Mod is held and it is hovered; a CodeMirror
+   editor owns its text's DOM, so it carries the class and the hovered mark shows it */
+.typst-link--mod:not(.cm-editor),
+.cm-editor.typst-link--mod .typst-source__path:hover { text-decoration: underline; text-decoration-color: var(--te-accent); color: var(--te-accent); cursor: pointer; }
+/* the hover hint of a link, the same everywhere: fixed above (or below) the link, no layout shift */
+.typst-link-hint {
+  position: fixed;
+  z-index: 1000;
+  max-width: min(480px, calc(100vw - 8px));
+  box-sizing: border-box;
+  padding: 3px 6px;
+  border: 1px solid var(--te-border);
+  border-radius: 4px;
+  background: var(--te-surface);
+  color: var(--te-text);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
 .typst-file-link { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; font: 12px system-ui, sans-serif; }
 .typst-file-link + .typst-file-link { margin-left: 12px; }
-.cm-tooltip .typst-file-link { padding: 3px 6px; }
 .typst-file-link__button {
   border: 0;
   padding: 0;
