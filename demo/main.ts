@@ -20,7 +20,8 @@ if (state.room !== null && !params.has('user')) {
 }
 
 const bar = renderPlaygroundBar(document.getElementById('playground')!, params, {
-  navigate: (query) => location.assign(query),
+  // the open file (the hash) stays open
+  navigate: (query) => location.assign(query + location.hash),
   simulateUpstream: (change) => simulateUpstream(state.room!, change),
 });
 
@@ -36,7 +37,7 @@ async function start(): Promise<void> {
     files,
     extensions: (builtinExtensions) => {
       const extensions = [...builtinExtensions, ...(room ? [collaboration(room)] : [])];
-      return params.has('devtools') ? devtools(extensions) : extensions;
+      return state.devtools ? devtools(extensions) : extensions;
     },
     user: { name: state.user },
     onOpen: (path) => hash.opened(path),

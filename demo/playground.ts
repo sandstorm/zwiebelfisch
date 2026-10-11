@@ -1,4 +1,4 @@
-// The playground's state as the URL (example, room → Local / Collaborate / GitLab mode, user) and the
+// The playground's state as the URL (example, room → Local / Collaborate / GitLab mode, user, devtools) and the
 // editor options it means. See docs/architecture/development.typ.
 import type { CollaborationOptions, TypstEditorOptions } from '../src';
 import { exampleFiles, exampleFromQuery, exampleQuery, type ExampleName } from './examples';
@@ -30,6 +30,7 @@ const USERS = ['Ann', 'Bob', 'Cleo', 'Dan'];
  * | `example`  | hello / simple / advanced / docs (see examples.ts) |
  * | `room`     | none: Local mode; `gitlab:…`: GitLab mode; else Collaborate mode in that room |
  * | `user`     | the name others see (default Ann in a room, so the second window can be Bob) |
+ * | `devtools` | present: the devtools side panel (devtools/devtools.ts) |
  *
  * The rooms live on the local collaboration server (`mise run demo`).
  */
@@ -38,6 +39,7 @@ export interface PlaygroundState {
   mode: Mode;
   room: string | null;
   user: string;
+  devtools: boolean;
 }
 
 /** Whether the playground server answered: with its fake GitLab, without it (`mise run server:dev`), or not at all. */
@@ -50,6 +52,7 @@ export function playgroundFromQuery(params: URLSearchParams): PlaygroundState {
     mode: room === null ? 'local' : room.startsWith(GITLAB_PREFIX) ? 'gitlab' : 'collab',
     room,
     user: params.get('user') || (room === null ? 'Demo user' : USERS[0]),
+    devtools: params.has('devtools'),
   };
 }
 
@@ -72,6 +75,15 @@ export function userQuery(user: string, params: URLSearchParams): string {
   const next = new URLSearchParams(params);
   next.set('user', user);
   return `?${next}`;
+}
+
+/** The query with the devtools on (`&devtools`, without a value) or off, keeping the rest. */
+export function devtoolsQuery(on: boolean, params: URLSearchParams): string {
+  const next = new URLSearchParams(params);
+  next.delete('devtools');
+  const rest = `${next}`;
+  if (!on) return `?${rest}`;
+  return rest ? `?${rest}&devtools` : '?devtools';
 }
 
 /** Someone else to be in the second window. */

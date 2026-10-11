@@ -72,7 +72,7 @@ mise run server:test   # when server/ or core/room-protocol changed
 
 == Devtools <architecture-development-devtools>
 
-`demo/devtools/`: a side panel ("Devtools" on the rail) showing what the widget is made of while it runs. The demo adds it with `?devtools`; not in the library, not a built-in.
+`demo/devtools/`: a side panel ("Devtools" on the rail) showing what the widget is made of while it runs. The demo adds it with `?devtools` (the playground bar's Devtools toggle); not in the library, not a built-in.
 
 #table(
   columns: (auto, 1fr),
