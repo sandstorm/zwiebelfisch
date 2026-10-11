@@ -171,6 +171,9 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    couplings such as schema names or commands), tests and e2e specs touching it. One ranked table
    ("most expensive first") with a note per row on what makes it expensive — the basis for deciding
    what to simplify or cut. Analysis only, by a subagent; no code changes.
+   **When everything else is done (user, 2026-10-11):** our own devtools extension (todo step 2:
+   projection view, contributions by extension, events as they fire; public API only), then lazy
+   font loading and a smaller wasm.
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Rules wave also does:** core `onChange` → `onDidChange: Event` + `Disposable` everywhere
    (`Project`, `TypstDocument`, …) (user: yes).
