@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
 #MISE description="Start the collaboration server with a fake GitLab, then run the GitLab room Playwright spec against the demo build (TYPST_GITLAB_AUTO_COMMIT=off: also the leave-warning test)"
 #MISE depends=["build"]
+#USAGE arg "[browser]" help="Only this browser (default: all)" default="all" {
+#USAGE   choices "all" "chromium" "firefox" "webkit"
+#USAGE }
+#USAGE arg "[playwright_args]..." help="Passed on to Playwright (flags after --)" double_dash="automatic"
 set -euo pipefail
+# the browser choice as Playwright's --project, the rest passed on (as in test:e2e)
+args=("$@")
+[[ ${#args[@]} -gt 0 && "${args[0]}" == "$usage_browser" ]] && args=(${args[@]+"${args[@]:1}"})
+[[ "$usage_browser" != all ]] && args=(--project="$usage_browser" ${args[@]+"${args[@]}"})
 node server/src/fake-gitlab-main.ts &
 server=$!
 trap 'kill "$server"' EXIT
@@ -10,4 +18,4 @@ for _ in $(seq 100); do
   if (exec 3<>/dev/tcp/127.0.0.1/1234) 2>/dev/null; then break; fi
   sleep 0.1
 done
-TYPST_GITLAB_E2E=1 pnpm exec playwright test tests/e2e/gitlab.spec.ts "$@"
+TYPST_GITLAB_E2E=1 pnpm exec playwright test tests/e2e/gitlab.spec.ts ${args[@]+"${args[@]}"}
