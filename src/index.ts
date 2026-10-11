@@ -10,7 +10,7 @@ import { defineTypstEditorElement } from './typst-editor-element/typst-editor-el
 
 export { createTypstEditor, type TypstEditor, type TypstEditorOptions } from './typst-editor/typst-editor';
 export { TypstEditorElement, defineTypstEditorElement, type TypstEditorChangeDetail } from './typst-editor-element/typst-editor-element';
-export type { FileChange, FileContent, ProjectFiles } from './core/project/project';
+export { type FileChange, FileContent, type ProjectFiles } from './core/project/project';
 export { ProjectPath } from './core/paths/paths';
 export type { User } from './core/user/user';
 export type { PdfEntry } from './core/typst-engine/typst-engine';

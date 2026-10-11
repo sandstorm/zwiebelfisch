@@ -2,7 +2,7 @@
 // and type. See ../files.ts.
 import type { CustomEditorProvider } from '../../../hosts/window/window';
 import { ProjectPath } from '../../../core/paths/paths';
-import type { FileContent } from '../../../core/project/project';
+import { FileContent } from '../../../core/project/project';
 
 /** Any other file in the editing area: what it is, without its content (fonts, archives, …). */
 export const fileInfoEditor: CustomEditorProvider = {
@@ -32,7 +32,7 @@ export const fileInfoEditor: CustomEditorProvider = {
 };
 
 function formatSize(content: FileContent): string {
-  const bytes = typeof content === 'string' ? new TextEncoder().encode(content).length : content.length;
+  const bytes = FileContent.bytes(content).length;
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;

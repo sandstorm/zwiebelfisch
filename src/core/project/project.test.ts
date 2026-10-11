@@ -1,6 +1,6 @@
 // Tests for project.ts.
 import { describe, expect, it, vi } from 'vitest';
-import { Project } from './project';
+import { FileContent, Project } from './project';
 import { ProjectPath } from '../paths/paths';
 
 const path = ProjectPath.of;
@@ -152,5 +152,12 @@ describe('Project', () => {
       { kind: 'create', path: path('/extra.typ'), content: 'E' },
       { kind: 'update', path: path('/data.csv'), content: csv },
     ]);
+  });
+});
+
+describe('FileContent.bytes', () => {
+  it('encodes text as UTF-8 and keeps bytes as they are', () => {
+    expect(FileContent.bytes('ä')).toEqual(new Uint8Array([0xc3, 0xa4]));
+    expect(FileContent.bytes(logo)).toBe(logo);
   });
 });

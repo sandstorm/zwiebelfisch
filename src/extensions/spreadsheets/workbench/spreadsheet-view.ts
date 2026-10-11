@@ -1,6 +1,6 @@
 // SpreadsheetView: a spreadsheet file in the editing area — its title and IronCalc's workbook UI, loaded on demand
 // (workbook.ts). See ../spreadsheets.ts.
-import type { FileContent } from '../../../core/project/project';
+import { FileContent } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import type { MountedWorkbook, WorkbookEdit } from './workbook';
 
@@ -40,12 +40,11 @@ export class SpreadsheetView {
     const generation = this.unmount();
     this.title.textContent = ProjectPath.displayName(path);
     this.body.textContent = 'Loading spreadsheet…';
-    const bytes = typeof content === 'string' ? new TextEncoder().encode(content) : content;
     try {
       const { mountWorkbook } = await import('./workbook');
       if (generation !== this.generation) return;
       this.body.textContent = '';
-      const mounted = await mountWorkbook(this.body, bytes, ProjectPath.name(path), (edit) => this.onEdit(path, edit));
+      const mounted = await mountWorkbook(this.body, FileContent.bytes(content), ProjectPath.name(path), (edit) => this.onEdit(path, edit));
       if (generation === this.generation) this.mounted = mounted;
       else mounted.dispose();
     } catch (error) {

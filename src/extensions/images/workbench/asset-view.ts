@@ -1,5 +1,5 @@
 // AssetView: the read-only view of an image file. See workbench.ts.
-import type { FileContent } from '../../../core/project/project';
+import { FileContent } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import { imageBlob } from '../model/image-files';
 
@@ -28,7 +28,7 @@ export class AssetView {
     title.textContent = ProjectPath.displayName(path);
     const size = doc.createElement('span');
     size.className = 'typst-asset__size';
-    size.textContent = formatSize(typeof content === 'string' ? new TextEncoder().encode(content).length : content.length);
+    size.textContent = formatSize(FileContent.bytes(content).length);
     title.append(size);
     const image = doc.createElement('img');
     image.className = 'typst-asset__image';

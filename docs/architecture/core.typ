@@ -27,7 +27,7 @@ new TypstDocument(text)
 
 Which files a project has and which changes are allowed.
 
-- Files by `ProjectPath`. Every `.typ` file is a `TypstDocument` (kept across renames, so open views survive); every other file is stored as given (`string | Uint8Array`).
+- Files by `ProjectPath`. Every `.typ` file is a `TypstDocument` (kept across renames, so open views survive); every other file is stored as given (`FileContent`: `string | Uint8Array`; `FileContent.bytes(content)` encodes text as UTF-8).
 - The main file always exists; it cannot be renamed or deleted. `.typ` files keep their ending.
 - `check(change)` returns a reason or null; `apply(change)` throws where `check` refuses.
 - `replace(files)` reports a `delete`, `create` or `update` per file and keeps the documents of paths that stay.
