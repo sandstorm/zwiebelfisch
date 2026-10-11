@@ -1,6 +1,7 @@
 // The margin notes of every Typst file in search everywhere. See ../comments.ts and docs/10_guide/02_features.typ.
 import { ProjectPath } from '../../../core/paths/paths';
 import type { Project } from '../../../core/project/project';
+import { VISUAL_VIEW_TYPE } from '../../../hosts/visual-view/visual-view';
 import type { SearchProvider, WindowApi } from '../../../hosts/window/window';
 import type { Workbench } from '../../../hosts/workbench/workbench';
 import { findNotes, type FoundNote } from '../model/find-notes';
@@ -25,7 +26,7 @@ export function commentSearch({ project, workbench, window }: CommentSearchConte
   const open = (path: ProjectPath, { at }: FoundNote) => {
     workbench.open(path, { selection: { from: at, to: at } });
     const editor = window.activeTextEditor;
-    if (editor?.mode === 'visual') cards.editNote(editor.document, at);
+    if (editor?.viewType === VISUAL_VIEW_TYPE) cards.editNote(editor.document, at);
   };
   return {
     id: 'comments.notes',

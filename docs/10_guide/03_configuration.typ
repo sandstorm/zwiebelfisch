@@ -85,7 +85,7 @@ Export options, by id, for `editor.exportPdf(options)` and the command `pdfExpor
   [`files`], [`{ [path]: string | Uint8Array }` (`{}`)], [Every file by absolute path (@guide-embedding-files): Typst text as `string`, anything else (images, CSV, …) as `Uint8Array`. `@preview` packages need no entry.],
   [`main`], [path (`'/main.typ'`)], [The compiled file. Cannot be renamed or deleted.],
   [`source`], [`string`], [The main file's text; wins over `files[main]`. For single-file hosts. Without either, the main file starts empty.],
-  [`mode`], [`'visual'`, `'source'` (`'visual'`)], [The editing view shown first.],
+  [`viewType`], [`VISUAL_VIEW_TYPE` (`'visualView.editor'`), `SOURCE_VIEW_TYPE` (`'sourceView.editor'`), or another custom editor's view type (the Visual view)], [The editor the main file opens in. Typst files keep opening in it until the user picks another tab.],
   [`user`], [`{ name, color? }` (name "Anonymous")], [Who signs comments, commits to GitLab and is shown to collaborators. `color`: their cursor color (CSS; default: made from the name).],
   [`settings`], [`{ [id]: value }` (`{}`)], [The settings (@guide-configuration-settings).],
   [`allowFileChange(change)`], [`boolean | Promise<boolean>` (all allowed)], [Veto for every create, rename, delete and upload the user asks for. `false`: refused, the user sees a message.],
@@ -110,7 +110,6 @@ import { createTypstEditor } from 'typst-editor';
 const editor = createTypstEditor(document.getElementById('thesis')!, {
   main: '/thesis.typ',
   files: await loadProject(studentId),            // { '/thesis.typ': '…', '/figures/setup.png': Uint8Array, … }
-  mode: 'visual',
   user: { name: 'Ada Example', color: '#1d5fa8' },
   settings: {
     'workbench.theme': 'auto',

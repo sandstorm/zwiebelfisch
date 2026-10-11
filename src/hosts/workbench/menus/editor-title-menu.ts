@@ -7,7 +7,7 @@ import type { Menus } from './menus';
 const EDITOR_TITLE = 'editor/title';
 
 export interface EditorTitleMenuOptions {
-  /** What the menu is shown for now (`editorMode`, `resource`), asked on every `update`. */
+  /** What the menu is shown for now (`activeCustomEditorId`, `resource`), asked on every `update`. */
   context(): MenuContext;
   /** Runs an entry's command (without arguments). */
   executeCommand(command: string): Promise<unknown>;

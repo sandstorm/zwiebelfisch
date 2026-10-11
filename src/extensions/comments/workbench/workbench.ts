@@ -3,6 +3,8 @@
 import { Disposable } from '../../../core/disposable/disposable';
 import type { SourceOffset, TypstDocument } from '../../../core/typst-document/typst-document';
 import type { Commands } from '../../../hosts/commands/commands';
+import { SOURCE_VIEW_TYPE } from '../../../hosts/source-view/source-view';
+import { VISUAL_VIEW_TYPE } from '../../../hosts/visual-view/visual-view';
 import type { TextEditor, WindowApi } from '../../../hosts/window/window';
 import type { Workbench } from '../../../hosts/workbench/workbench';
 import { calculateMarginNoteChanges } from '../model/add-margin-note';
@@ -43,7 +45,7 @@ export function registerAddComment({ commands, window, workbench }: CommentConte
       title: 'Comment',
       icon: COMMENT_ICON,
       group: 'navigation',
-      when: (context) => context.editorMode === 'source',
+      when: (context) => context.activeCustomEditorId === SOURCE_VIEW_TYPE,
     }),
   );
 }
@@ -58,5 +60,5 @@ function addComment(editor: TextEditor, cards: NoteCards): void {
   const added = calculateMarginNoteChanges(document.text, editor.selection);
   if (!added) return;
   document.change(added.changes, ADD_COMMENT);
-  if (editor.mode !== 'visual' || !cards.editNote(document, added.note)) editor.revealRange({ from: added.note, to: added.note });
+  if (editor.viewType !== VISUAL_VIEW_TYPE || !cards.editNote(document, added.note)) editor.revealRange({ from: added.note, to: added.note });
 }

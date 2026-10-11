@@ -9,6 +9,8 @@ import type { PageClick, PdfExportOption, PreviewContext, PreviewToolbarItem } f
 import type { Disposable } from '../core/disposable/disposable';
 import { EventEmitter } from '../core/event-emitter/event-emitter';
 import type { TypstExtension } from '../hosts/workbench/workbench';
+import { SOURCE_VIEW_TYPE } from '../hosts/source-view/source-view';
+import { VISUAL_VIEW_TYPE } from '../hosts/visual-view/visual-view';
 import type { SourceControl, SourceControlState } from '../hosts/scm/scm';
 import * as Y from 'yjs';
 import { collaboration } from '../extensions/collaboration/collaboration';
@@ -89,7 +91,7 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => {
 function setup(options: TypstEditorOptions) {
   const host = document.createElement('div');
   document.body.append(host);
-  const editor = createTypstEditor(host, { mode: 'source', ...options });
+  const editor = createTypstEditor(host, { viewType: SOURCE_VIEW_TYPE, ...options });
   const source = () => {
     const visible = [...host.querySelectorAll<HTMLElement>('.typst-editor__pane')].find((pane) => !pane.hidden && pane.querySelector('.cm-editor'));
     return EditorView.findFromDOM(visible!.querySelector<HTMLElement>('.cm-editor')!)!;
@@ -191,7 +193,7 @@ describe('diagrams', () => {
     URL.createObjectURL = vi.fn(() => 'blob:1');
     URL.revokeObjectURL = vi.fn();
     const { host, editor } = setup({
-      mode: 'visual',
+      viewType: VISUAL_VIEW_TYPE,
       source: '#image("img/flow.drawio.png")\n\n#image("img/logo.png")\n',
       files: { '/img/flow.drawio.png': diagram(), '/img/logo.png': new Uint8Array([1]) },
     });
@@ -237,7 +239,7 @@ describe('the built-in extensions', () => {
   });
 
   it('marks the diagnostics in the Visual view, message and hints as tooltip, also in views made later', () => {
-    const { host, editor, preview } = setup({ mode: 'visual', source: 'Hello world.\n', files: { '/a.typ': '#foo\n\nText.\n' } });
+    const { host, editor, preview } = setup({ viewType: VISUAL_VIEW_TYPE, source: 'Hello world.\n', files: { '/a.typ': '#foo\n\nText.\n' } });
     preview.compiled([
       { severity: 'error', message: 'unknown variable: foo', hints: ['did you mean bar?'], path: ProjectPath.of('/main.typ'), from: SourceOffset.of(6), to: SourceOffset.of(11) },
       // in raw code (a block atom), of a file whose views do not exist yet
@@ -377,7 +379,7 @@ describe('the built-in extensions', () => {
       source().dispatch({ selection: { anchor: 7 } });
       expect(preview.shaded.at(-1)).toEqual(['/main.typ', []]);
       // the Visual view: its selection in the source
-      const { preview: visual, host } = setup({ mode: 'visual', source: 'Hello world.\n' });
+      const { preview: visual, host } = setup({ viewType: VISUAL_VIEW_TYPE, source: 'Hello world.\n' });
       const tiptap = (host.querySelector('.ProseMirror') as HTMLElement & { editor: { commands: { setTextSelection(range: { from: number; to: number }): void } } }).editor;
       tiptap.commands.setTextSelection({ from: 7, to: 12 });
       vi.advanceTimersByTime(100);

@@ -5,9 +5,10 @@ import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../../core/paths/paths';
 import { type FileChange, Project } from '../../../core/project/project';
 import { SourceRange } from '../../../core/typst-document/typst-document';
-import { VisualViewHost } from '../../visual-view/visual-view';
+import { SOURCE_VIEW_TYPE } from '../../source-view/source-view';
+import { VISUAL_VIEW_TYPE, VisualViewHost } from '../../visual-view/visual-view';
 import { type TextEditorSelectionChangeEvent, WindowHost } from '../../window/window';
-import { TypstEditors, VIEW_TYPES } from './typst-editors';
+import { TypstEditors } from './typst-editors';
 
 // jsdom lacks layout; ProseMirror and CodeMirror only need these to exist.
 Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
@@ -46,36 +47,36 @@ describe('TypstEditors', () => {
   it('registers the Visual view, then the Source view, as the editors of *.typ; the Visual view opens by default', () => {
     const { window, show, visible } = setup();
     expect(window.customEditorChoices(path('/main.typ'))).toEqual([
-      { viewType: VIEW_TYPES.visual, displayName: 'Visual' },
-      { viewType: VIEW_TYPES.source, displayName: 'Source' },
+      { viewType: VISUAL_VIEW_TYPE, displayName: 'Visual' },
+      { viewType: SOURCE_VIEW_TYPE, displayName: 'Source' },
     ]);
-    expect(show('/main.typ')).toBe(VIEW_TYPES.visual);
+    expect(show('/main.typ')).toBe(VISUAL_VIEW_TYPE);
     expect(visible()[0].querySelector('.typst-visual p')?.textContent).toBe('Alpha');
   });
 
   it("makes a document's view the first time it is shown in it, and keeps it while others are shown", () => {
     const { area, editors, show, visible } = setup();
     show('/main.typ');
-    show('/main.typ', VIEW_TYPES.source);
+    show('/main.typ', SOURCE_VIEW_TYPE);
     show('/b.typ');
     expect(area.querySelectorAll('.typst-editor__pane')).toHaveLength(3);
     expect(visible()).toHaveLength(1);
     expect(visible()[0].querySelector('[data-testid=typst-source]')?.textContent).toContain('Beta');
     expect(editors.activeTextEditor?.document.text).toBe('Beta\n');
-    expect(editors.activeTextEditor?.mode).toBe('source');
+    expect(editors.activeTextEditor?.viewType).toBe(SOURCE_VIEW_TYPE);
   });
 
   it('has an active editor only while one of its views is shown', () => {
     const { editors, show } = setup();
     show('/main.typ');
-    expect(editors.activeTextEditor?.mode).toBe('visual');
+    expect(editors.activeTextEditor?.viewType).toBe(VISUAL_VIEW_TYPE);
     show('/logo.png');
     expect(editors.activeTextEditor).toBeNull();
   });
 
   it('reveals in the view shown', () => {
     const { editors, show, visible } = setup();
-    show('/main.typ', VIEW_TYPES.source);
+    show('/main.typ', SOURCE_VIEW_TYPE);
     editors.activeTextEditor!.revealRange(SourceRange.of({ from: 2, to: 3 }));
     expect(editors.activeTextEditor!.selection).toEqual({ from: 2, to: 3 });
     expect(visible()[0].querySelector('[data-testid=typst-source]')).not.toBeNull();
@@ -100,7 +101,7 @@ describe('TypstEditors', () => {
     show('/main.typ');
     editors.activeTextEditor!.revealRange(SourceRange.of({ from: 1, to: 4 }));
     expect(seen.at(-1)).toEqual({ from: 1, to: 4 });
-    show('/main.typ', VIEW_TYPES.source);
+    show('/main.typ', SOURCE_VIEW_TYPE);
     editors.activeTextEditor!.revealRange(SourceRange.of({ from: 0, to: 5 }));
     expect(seen.at(-1)).toEqual({ from: 0, to: 5 });
   });
@@ -118,7 +119,7 @@ describe('TypstEditors frame', () => {
     expect(top.previousElementSibling?.getAttribute('role')).toBe('toolbar');
     expect(top.nextElementSibling?.className).toBe('typst-visual__body');
     expect(pane().lastElementChild).toBe(bottom);
-    show('/main.typ', VIEW_TYPES.source);
+    show('/main.typ', SOURCE_VIEW_TYPE);
     expect(pane().querySelector('.cm-editor')).not.toBeNull();
     expect([pane().firstElementChild, pane().lastElementChild]).toEqual([top, bottom]);
     show('/b.typ');

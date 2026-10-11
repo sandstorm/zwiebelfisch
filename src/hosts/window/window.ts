@@ -378,8 +378,11 @@ export interface CustomEditorPanel {
  */
 export interface TextEditor {
   readonly document: TypstDocument;
-  /** The view the document was shown in last: the one `selection` and `revealRange` use. */
-  readonly mode: EditorMode;
+  /**
+   * The custom editor the document was shown in last (its view type: `VISUAL_VIEW_TYPE` or `SOURCE_VIEW_TYPE`), the
+   * view `selection` and `revealRange` use.
+   */
+  readonly viewType: string;
   /** The selection in that view, in the source (`from === to` for a caret). */
   readonly selection: SourceRange;
   /** Selects `range` in that view, scrolls it into view and focuses the view. */
@@ -389,9 +392,6 @@ export interface TextEditor {
 export interface TextEditorSelectionChangeEvent {
   readonly textEditor: TextEditor;
 }
-
-/** The editing views of a Typst file: the Visual view or the Source view. */
-export type EditorMode = 'visual' | 'source';
 
 /** Where the window's parts go in the workbench's frame, the editors it reports on, and the files there are. */
 export interface WindowOptions {

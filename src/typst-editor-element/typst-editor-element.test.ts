@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import { defineTypstEditorElement, type TypstEditorChangeDetail, type TypstEditorElement } from './typst-editor-element';
 import type { FileChange } from '../core/project/project';
+import { SOURCE_VIEW_TYPE } from '../hosts/source-view/source-view';
 
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -115,7 +116,7 @@ describe('<typst-editor>', () => {
   it('fires `change` per edited file with its path and content, and `files-change` with the change', () => {
     const el = element();
     const onFilesChange = vi.fn();
-    el.options = { mode: 'source', files: { '/main.typ': '= Main', '/a.typ': 'A' }, onFilesChange };
+    el.options = { viewType: SOURCE_VIEW_TYPE, files: { '/main.typ': '= Main', '/a.typ': 'A' }, onFilesChange };
     document.body.append(el);
     const { changes, fileChanges } = events(el);
     const view = EditorView.findFromDOM(el.shadowRoot!.querySelector<HTMLElement>('.cm-editor')!)!;
@@ -139,7 +140,7 @@ describe('<typst-editor>', () => {
 
   it('takes `options`, `value` and `files` set before the element was defined', () => {
     const el = document.createElement('late-editor') as TypstEditorElement;
-    el.options = { mode: 'source', files: { '/a.typ': 'A' } };
+    el.options = { viewType: SOURCE_VIEW_TYPE, files: { '/a.typ': 'A' } };
     el.value = '= Early';
     document.body.append(el);
     defineTypstEditorElement('late-editor');

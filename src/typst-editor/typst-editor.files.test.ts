@@ -2,6 +2,7 @@
 // Tests for typst-editor.ts: the file panel and file links in the composed widget (preview mocked: no worker in jsdom).
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
+import { SOURCE_VIEW_TYPE } from '../hosts/source-view/source-view';
 import { createTypstEditor, type TypstEditorOptions } from './typst-editor';
 
 vi.mock('../hosts/preview/preview', async (importOriginal) => ({
@@ -23,7 +24,7 @@ vi.mock('../hosts/preview/preview', async (importOriginal) => ({
 function setup(options: TypstEditorOptions) {
   const host = document.createElement('div');
   document.body.append(host);
-  const editor = createTypstEditor(host, { mode: 'source', ...options });
+  const editor = createTypstEditor(host, { viewType: SOURCE_VIEW_TYPE, ...options });
   const items = () => [...host.querySelectorAll<HTMLElement>('[role=treeitem]')];
   const item = (title: string) => items().find((t) => t.title === title);
   const source = () => {

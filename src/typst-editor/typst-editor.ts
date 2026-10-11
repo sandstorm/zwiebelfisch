@@ -32,7 +32,6 @@ import { outline } from '../extensions/outline/outline';
 import { pageLayout } from '../extensions/page-layout/page-layout';
 import { tables } from '../extensions/tables/tables';
 import { type TypstExtension, WorkbenchHost } from '../hosts/workbench/workbench';
-import type { EditorMode } from '../hosts/window/window';
 import type { Settings } from '../hosts/workspace/workspace';
 import type { User } from '../core/user/user';
 import { type FileChange, Project, type ProjectFiles } from '../core/project/project';
@@ -53,8 +52,11 @@ export interface TypstEditorOptions {
    * the main file starts empty.
    */
   source?: string;
-  /** The view Typst files open in until the user chooses the other one (default: visual). */
-  mode?: EditorMode;
+  /**
+   * The editor the main file opens in, by view type: `SOURCE_VIEW_TYPE` (`'sourceView.editor'`) or
+   * `VISUAL_VIEW_TYPE` (`'visualView.editor'`, the default). Typst files open in it until the user picks the other tab.
+   */
+  viewType?: string;
   /**
    * Decides whether a create / rename / delete / upload someone asked for in
    * the file panel may happen (default: all may). May be async, e.g. to ask a server.
@@ -134,7 +136,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
   const main = ProjectPath.of(options.main ?? '/main.typ');
   const project = new Project(main, { ...options.files, ...(options.source === undefined ? {} : { [main]: options.source }) });
   const workbench = new WorkbenchHost(host, project, {
-    mode: options.mode,
+    viewType: options.viewType,
     user: options.user,
     settings: options.settings,
     allowFileChange: options.allowFileChange,

@@ -5,6 +5,7 @@
 // Why one DiagnosticCollection (model/): the preview reports a compilation's diagnostics once, for every file; the
 // collection splits them by document, and each view of a document reads its own from there, whenever it is made.
 import type { TypstDiagnostic } from '../../core/typst-engine/typst-engine';
+import { SOURCE_VIEW_TYPE } from '../../hosts/source-view/source-view';
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './diagnostics.css?inline';
 import { DiagnosticCollection } from './model/model';
@@ -25,7 +26,7 @@ export function diagnostics(): TypstExtension {
       subscriptions.push(workbench.registerStyleSheet(css));
       const collection = new DiagnosticCollection();
       const status = new DiagnosticsStatus(workbench.ownerDocument, (target) => {
-        if (project.document(target.path)) workbench.open(target.path, { selection: target, viewType: 'sourceView.editor' });
+        if (project.document(target.path)) workbench.open(target.path, { selection: target, viewType: SOURCE_VIEW_TYPE });
       });
       /** The Typst file shown last: whose diagnostics the status counts. */
       let lastSource = project.main;

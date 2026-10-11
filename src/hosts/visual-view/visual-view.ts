@@ -23,6 +23,12 @@ import css from './visual-view.css?inline';
 const FROM_DOCUMENT = 'typst-from-document';
 
 /**
+ * The view type of the Visual view's custom editor, for `workbench.open(path, { viewType })`,
+ * `TextEditor.viewType` and the menu context key `activeCustomEditorId`.
+ */
+export const VISUAL_VIEW_TYPE = 'visualView.editor';
+
+/**
  * The Word-like editing view (Tiptap/ProseMirror) with its formatting
  * toolbar, the parsed ProseMirror document of a TypstDocument.
  *

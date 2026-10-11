@@ -37,7 +37,7 @@ export function fileNavigation(): TypstExtension {
       const here = (): NavigationLocation => {
         const { path, editor } = shown;
         if (!editor || !project.has(path)) return { path };
-        return { path, viewType: VIEW_TYPES[editor.mode], selection: editor.selection };
+        return { path, viewType: editor.viewType, selection: editor.selection };
       };
       const go = (direction: 'back' | 'forward') => {
         const target = direction === 'back' ? history.goBack(here()) : history.goForward(here());
@@ -83,9 +83,6 @@ export function fileNavigation(): TypstExtension {
     },
   };
 }
-
-/** The Typst editors' view types (`workbench.open`'s `viewType`), by the view a TextEditor shows. */
-const VIEW_TYPES = { visual: 'visualView.editor', source: 'sourceView.editor' } as const;
 
 /** `range` within a text of now (it may have become shorter since). */
 function within(range: SourceRange, text: string | undefined): SourceRange | undefined {
