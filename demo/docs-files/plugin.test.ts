@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DocsFolder } from './docs-folder';
 import { docsFiles, handleDocsFilesRequest, mayStream, type DocsFilesRequest } from './plugin';
-import { DOCS_FILES_HEADER } from './protocol';
+import { contentTag, DOCS_FILES_HEADER } from './protocol';
 
 const TOKEN = 'session-token';
 let base: string;
@@ -24,17 +24,18 @@ afterEach(async () => {
   await rm(base, { recursive: true, force: true });
 });
 
-function request(method: string, url: string, overrides: Partial<DocsFilesRequest> = {}, body = '') {
+/** A request from the page; a `PUT` replaces no file (`If-None-Match: *`) unless `precondition` says otherwise. */
+function request(method: string, url: string, precondition: Record<string, string> = { 'if-none-match': '*' }, body = '') {
   const read = vi.fn(async () => new TextEncoder().encode(body));
-  const headers = { host: '127.0.0.1:5199', origin: 'http://127.0.0.1:5199', [DOCS_FILES_HEADER]: TOKEN };
-  return { request: { method, url, headers, body: read, ...overrides }, read };
+  const headers = { host: '127.0.0.1:5199', origin: 'http://127.0.0.1:5199', [DOCS_FILES_HEADER]: TOKEN, ...precondition };
+  return { request: { method, url, headers, body: read }, read };
 }
 
 const handle = (r: { request: DocsFilesRequest }) => handleDocsFilesRequest(folder, TOKEN, r.request);
 
 describe('docs-files requests', () => {
   it('PUT writes the body, POST renames, DELETE deletes', async () => {
-    expect(await handle(request('PUT', '/?path=10_guide/b.typ', {}, '= B\n'))).toEqual({ status: 204, text: '' });
+    expect(await handle(request('PUT', '/?path=10_guide/b.typ', undefined, '= B\n'))).toEqual({ status: 204, text: '' });
     expect(await readFile(join(root, '10_guide/b.typ'), 'utf8')).toBe('= B\n');
     expect((await handle(request('POST', '/?path=10_guide/b.typ&to=c.typ'))).status).toBe(204);
     expect(await readFile(join(root, 'c.typ'), 'utf8')).toBe('= B\n');
@@ -49,18 +50,29 @@ describe('docs-files requests', () => {
     ['without the token', { [DOCS_FILES_HEADER]: undefined }],
     ['with a wrong token', { [DOCS_FILES_HEADER]: 'guess' }],
   ])('refuses a request %s, before reading its body', async (_, headers) => {
-    const { request: r, read } = request('PUT', '/?path=a.typ', {}, 'x');
+    const { request: r, read } = request('PUT', '/?path=a.typ', undefined, 'x');
     const result = await handleDocsFilesRequest(folder, TOKEN, { ...r, headers: { ...r.headers, ...headers } });
     expect(result.status).toBe(403);
     expect(read).not.toHaveBeenCalled();
     expect(await readFile(join(root, 'a.typ'), 'utf8')).toBe('= A\n');
   });
 
+  it('PUT writes only over the version it names (If-Match), or where there is no file (If-None-Match: *); else 412', async () => {
+    const stale = await handle(request('PUT', '/?path=a.typ', { 'if-match': `"${contentTag(new TextEncoder().encode('= Older\n'))}"` }, '= Stale\n'));
+    expect(stale).toEqual({ status: 412, text: 'a.typ changed on disk since this page read it' });
+    expect((await handle(request('PUT', '/?path=a.typ', undefined, '= Stale\n'))).status).toBe(412);
+    expect(await readFile(join(root, 'a.typ'), 'utf8')).toBe('= A\n');
+    const current = `"${contentTag(new TextEncoder().encode('= A\n'))}"`;
+    expect((await handle(request('PUT', '/?path=a.typ', { 'if-match': current }, '= Mine\n'))).status).toBe(204);
+    expect(await readFile(join(root, 'a.typ'), 'utf8')).toBe('= Mine\n');
+    expect((await handle(request('PUT', '/?path=a.typ', {}, '= Blind\n'))).status).toBe(428);
+  });
+
   it('answers the guard’s refusal with its status and reason, and other methods with 405', async () => {
-    const outside = await handle(request('PUT', '/?path=../x.typ', {}, 'x'));
+    const outside = await handle(request('PUT', '/?path=../x.typ', undefined, 'x'));
     expect(outside.status).toBe(400);
     expect(outside.text).toMatch(/\.\./);
-    expect((await handle(request('PUT', '/', {}, 'x'))).status).toBe(400);
+    expect((await handle(request('PUT', '/', undefined, 'x'))).status).toBe(400);
     expect((await handle(request('GET', '/?path=a.typ'))).status).toBe(405);
     expect((await handle(request('POST', '/?path=a.typ&to=%2Fetc%2Fx'))).status).toBe(400);
   });

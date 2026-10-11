@@ -65,14 +65,16 @@ export interface DocsFilesRequest {
   body(): Promise<Uint8Array>;
 }
 
-/** Answers one file API request: 204, or an error status with the reason as text. */
+/** Answers one file API request: 204, or an error status with the reason as text (412: changed on disk meanwhile). */
 export async function handleDocsFilesRequest(folder: DocsFolder, token: string, request: DocsFilesRequest): Promise<{ status: number; text: string }> {
   try {
     checkSender(token, request.headers);
     const query = new URL(request.url, 'http://docs-files').searchParams;
     const path = query.get('path') ?? '';
-    if (request.method === 'PUT') await folder.write(path, await request.body());
-    else if (request.method === 'DELETE') await folder.delete(path);
+    if (request.method === 'PUT') {
+      const base = writeBase(request.headers);
+      await folder.write(path, await request.body(), base);
+    } else if (request.method === 'DELETE') await folder.delete(path);
     else if (request.method === 'POST') await folder.rename(path, query.get('to') ?? '');
     else throw new DocsFilesError(`${request.method} is not supported`, 405);
     return { status: 204, text: '' };
@@ -165,4 +167,12 @@ function checkSender(token: string, headers: DocsFilesRequest['headers']): void 
   const host = typeof headers.host === 'string' ? headers.host : '';
   if (!origin || !host || URL.parse(origin)?.host !== host) throw new DocsFilesError('Only from the server’s own page', 403);
   if (headers[DOCS_FILES_HEADER] !== token) throw new DocsFilesError('Missing or wrong docs-files token', 403);
+}
+
+/** The version a `PUT` replaces (see `DOCS_FILES_ENDPOINT`): `If-Match`'s tag, or null for `If-None-Match: *`. */
+function writeBase(headers: DocsFilesRequest['headers']): string | null {
+  const match = headers['if-match'];
+  if (typeof match === 'string') return match.replace(/^"|"$/g, '');
+  if (headers['if-none-match'] === '*') return null;
+  throw new DocsFilesError('A write names the version it replaces: If-Match or If-None-Match: *', 428);
 }

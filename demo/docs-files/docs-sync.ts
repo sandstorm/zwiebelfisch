@@ -1,6 +1,7 @@
 // DocsSync: the demo page's half of writing the docs in the demo. See docsFiles in plugin.ts.
 import { type FileChange, FileContent, type ProjectFiles } from '../../src';
 import {
+  contentTag,
   DOCS_FILES_CHANGE,
   DOCS_FILES_ENDPOINT,
   DOCS_FILES_HEADER,
@@ -17,7 +18,10 @@ import {
  * editor has unsaved edits of it: then the editor's text stays, and the report says so.
  *
  * It remembers what is on disk (as far as it knows: the files it started from, wrote, or heard of), which is how it
- * tells unsaved edits apart, and why its own writes coming back cause nothing.
+ * tells unsaved edits apart, and why its own writes coming back cause nothing. Each write names that version as the
+ * one it replaces, so the server refuses a write that would undo a change on disk the page has not heard of yet (one
+ * decided, or under way, before the change arrived). After a change it has heard of, the next edit of that file
+ * saves over it: the report said so.
  */
 export class DocsSync {
   readonly #disk = new Map<string, FileContent>();
@@ -101,15 +105,17 @@ export class DocsSync {
   flush(): void {
     for (const path of [...this.#timers.keys()]) {
       this.#cancel(path);
-      const content = this.#content(path);
-      if (content !== undefined) void this.#write(path, content).catch(() => undefined);
+      const save = this.#unsaved(path);
+      if (save) void save().catch(() => undefined);
     }
   }
 
   async #structural(change: FileChange): Promise<void> {
     switch (change.kind) {
-      case 'create':
-        return this.#run(change.path, 'Saved to', () => this.#write(change.path, change.content));
+      case 'create': {
+        const base = this.#disk.get(change.path);
+        return this.#run(change.path, 'Saved to', () => this.#write(change.path, change.content, base));
+      }
       case 'delete':
         this.#cancel(change.path);
         if (!this.#disk.has(change.path)) return;
@@ -134,17 +140,24 @@ export class DocsSync {
       path,
       setTimeout(() => {
         this.#timers.delete(path);
-        const content = this.#content(path);
-        if (content !== undefined && !same(content, this.#disk.get(path))) {
-          void this.#run(path, 'Saved to', () => this.#write(path, content)).catch(() => undefined);
-        }
+        const save = this.#unsaved(path);
+        if (save) void this.#run(path, 'Saved to', save).catch(() => undefined);
       }, SAVE_DELAY),
     );
   }
 
-  async #write(path: string, content: FileContent): Promise<void> {
-    await this.api.write(relative(path), FileContent.bytes(content));
-    this.#disk.set(path, content);
+  /** The write of the editor's text of `path` over the version on disk as known now; null when they are the same. */
+  #unsaved(path: string): (() => Promise<void>) | null {
+    const content = this.#content(path);
+    const base = this.#disk.get(path);
+    return content === undefined || same(content, base) ? null : () => this.#write(path, content, base);
+  }
+
+  /** Writes `content` over the version `base` (undefined: no file); the server refuses it if the disk has another. */
+  async #write(path: string, content: FileContent, base: FileContent | undefined): Promise<void> {
+    await this.api.write(relative(path), FileContent.bytes(content), base === undefined ? null : FileContent.bytes(base));
+    // a change on disk heard meanwhile came after this write (the disk still had `base` when it took it)
+    if (this.#disk.get(path) === base) this.#disk.set(path, content);
   }
 
   /**
@@ -181,7 +194,8 @@ export class DocsSync {
 
 /** The plugin's file API, by paths relative to docs/ (`10_guide/02_features.typ`). */
 export interface DocsFilesApi {
-  write(path: string, bytes: Uint8Array): Promise<void>;
+  /** Writes `bytes` over `base`, the version the page last read or wrote (null: no file); rejects if the disk has another. */
+  write(path: string, bytes: Uint8Array, base: Uint8Array | null): Promise<void>;
   delete(path: string): Promise<void>;
   rename(from: string, to: string): Promise<void>;
 }
@@ -219,10 +233,10 @@ export function docsFilesToken(document: Document): string | null {
 
 /** The plugin's file API over HTTP, with its session `token`. */
 export function httpDocsFilesApi(token: string, send: typeof fetch = fetch): DocsFilesApi {
-  const call = async (method: string, query: Record<string, string>, body?: Uint8Array) => {
+  const call = async (method: string, query: Record<string, string>, body?: Uint8Array, precondition?: Record<string, string>) => {
     const response = await send(`${DOCS_FILES_ENDPOINT}?${new URLSearchParams(query)}`, {
       method,
-      headers: { [DOCS_FILES_HEADER]: token, 'content-type': 'application/octet-stream' },
+      headers: { [DOCS_FILES_HEADER]: token, 'content-type': 'application/octet-stream', ...precondition },
       body: body as BodyInit | undefined,
       // a write when the page goes away still arrives (keepalive bodies are limited to 64 KiB)
       keepalive: (body?.length ?? 0) < 60_000,
@@ -230,7 +244,7 @@ export function httpDocsFilesApi(token: string, send: typeof fetch = fetch): Doc
     if (!response.ok) throw new Error((await response.text()) || `${response.status}`);
   };
   return {
-    write: (path, bytes) => call('PUT', { path }, bytes),
+    write: (path, bytes, base) => call('PUT', { path }, bytes, base === null ? { 'if-none-match': '*' } : { 'if-match': `"${contentTag(base)}"` }),
     delete: (path) => call('DELETE', { path }),
     rename: (from, to) => call('POST', { path: from, to }),
   };
