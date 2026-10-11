@@ -21,13 +21,14 @@
 - *Every file opens in a custom editor* (`window`'s `CustomEditors`). The Visual and the Source view are the two built-in ones for `*.typ` (`visualView.editor`, `sourceView.editor`), registered by the workbench (`TypstEditors`) before any extension, so they win ties. They stay hosts with contribution points, like VS Code's built-in text editor.
 - *Tabs = "open with"*: a file several editors match gets a tab each; the one picked (a tab, `open(path, { viewType })`) is the user's choice for every later file it matches. Visual / Source is this switch for Typst files.
 - *`TypstEditors`*: a document's view is made when the document is first shown in it, in a retained panel (`retainContextWhenHidden`): hidden, with cursor, scroll and undo history, while other files show; disposed when the file is deleted. Per document one `TextEditor` over both views (`activeTextEditor`); the editor frame goes into the visible view (around any other editor's panel).
+- *Menus*: the workbench keeps the entries (`registerMenuItem`) and shows `editor/title` in the tab bar; every other menu pops up through `window.showContextMenu(menuId, { anchor, title, context, args })`, which reads the entries whose `when` holds and runs the chosen one's command with `args` (the file panel: `explorer/context` on a row, `file/newFile` under "New"). Views never draw menus of their own.
 - *State*: `StorageMemento` behind `globalState` and `workspaceState` (@extensions-workbench-api-state). Keys: `typst-editor:global:<id>:<key>`, `typst-editor:<main file>:<id>:<key>`.
 
 #table(
   columns: (auto, 3fr, 2fr),
   table.header[Namespace][Offers][Tie-breaker],
   [`commands`], [commands by id (`<extension>.<verb>`), key bindings], [—],
-  [`window`], [messages, input box, quick pick, save dialog, progress (`withProgress`), status bar items, custom editors, file decorations, `activeFile`, `activeTextEditor`], [status bar: `alignment` + `priority`; custom editors: the user's choice, then `priority` (`'fallback'`: only files no other editor matches), then pattern specificity],
+  [`window`], [messages, input box, quick pick, save dialog, contributed menus (`showContextMenu`), progress (`withProgress`), status bar items, custom editors, file decorations, `activeFile`, `activeTextEditor`], [status bar: `alignment` + `priority`; custom editors: the user's choice, then `priority` (`'fallback'`: only files no other editor matches), then pattern specificity],
   [`scm`], [source controls], [— (all listed; a duplicate id throws)],
   [`languages`], [document link providers], [`priority` (default 100)],
   [`workspace`], [`applyEdit`, settings (`getConfiguration`, `onDidChangeConfiguration`)], [—],

@@ -1,9 +1,9 @@
 // The window namespace of the extension API (VS Code's `window`): what every feature needs to talk to the user
-// (messages, input box, quick pick), and the places of the widget's window a feature puts things into (status bar
+// (messages, input box, quick pick, contributed menus), and the places of the widget's window a feature puts things into (status bar
 // items, custom editors, file decorations), and the file and editor the user works in. Entry of
 // hosts/window/. See docs/30_architecture/07_workbench.typ.
 // Why one namespace in VS Code's shapes: features look and behave alike when they ask and tell the same way, and
-// they never make popovers of their own. The parts (notifications/, quick-input/, status-bar/, progress/,
+// they never make popovers of their own. The parts (notifications/, quick-input/, menus/, status-bar/, progress/,
 // custom-editors/, file-decorations/) are deep modules of their own; WindowHost puts them where the workbench's frame says.
 import { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
@@ -12,6 +12,7 @@ import type { FileChange, FileContent } from '../../core/project/project';
 import type { SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import { type CustomEditorChoice, CustomEditors } from './custom-editors/custom-editors';
 import { FileDecorations } from './file-decorations/file-decorations';
+import { ContextMenu } from './menus/context-menu';
 import { Notifications } from './notifications/notifications';
 import { ProgressIndicators } from './progress/progress';
 import { QuickInput } from './quick-input/quick-input';
@@ -53,6 +54,14 @@ export interface WindowApi {
    * cancelled; creating the file is the caller's (`workspace.applyEdit`).
    */
   showSaveDialog(options?: SaveDialogOptions): Promise<ProjectPath | undefined>;
+  /**
+   * Pops up the menu `menuId` at `options.anchor` (as VS Code's workbench shows a contributed menu, e.g.
+   * `explorer/context`): the entries registered for it (`workbench.registerMenuItem`) whose `when` holds in
+   * `options.context`, sorted, a separator between groups. Choosing one runs its command with `options.args`, after
+   * the menu closed and gave the focus back. Nothing is shown while no entry applies. One at a time: a new menu closes
+   * the open one; so do Escape and a press elsewhere.
+   */
+  showContextMenu(menuId: string, options: ContextMenuOptions): void;
   /**
    * Shows that `task` runs, where `options.location` says, until the promise it returns settles (VS Code's
    * `window.withProgress`); resolves or rejects as it does. The task tells how it goes with `progress.report({ message,
@@ -168,6 +177,27 @@ export interface SaveDialogOptions {
    * allows any (`{ 'All files': ['*'] }`). The first one is added to a name without an ending. Default: any, none added.
    */
   filters?: Readonly<Record<string, readonly string[]>>;
+}
+
+/** Where `showContextMenu` pops up: at a point (viewport coordinates, e.g. a right click's), or below an element (a button). */
+export type MenuAnchor = { readonly x: number; readonly y: number } | Element;
+
+/** How `showContextMenu` shows a menu (VS Code's context menu delegate: anchor, context keys, arguments). */
+export interface ContextMenuOptions {
+  readonly anchor: MenuAnchor;
+  /** What the menu is for: its accessible name (a row's name, "New"). */
+  readonly title: string;
+  /** What the entries' `when` is asked with (the workbench's `MenuContext`); default: nothing. */
+  readonly context?: Readonly<Record<string, unknown>>;
+  /** The chosen entry's command gets these (e.g. the row's path); default: none. */
+  readonly args?: readonly unknown[];
+}
+
+/** An entry of a menu as `showContextMenu` shows it (of the workbench's `MenuItem`). */
+export interface ContributedMenuItem {
+  readonly command: string;
+  readonly title?: string;
+  readonly group?: string;
 }
 
 /**
@@ -329,6 +359,10 @@ export interface WindowOptions {
   activeTextEditor(): TextEditor | null;
   /** The selection in any editor changed (fired by the workbench's editing views). */
   readonly onDidChangeTextEditorSelection: Event<TextEditorSelectionChangeEvent>;
+  /** The entries of a menu whose `when` holds in `context`, sorted (the workbench's menus, for `showContextMenu`). */
+  menuItems(menuId: string, context: Readonly<Record<string, unknown>>): readonly ContributedMenuItem[];
+  /** Runs a command (a chosen menu entry's). */
+  executeCommand(command: string, ...args: unknown[]): Promise<unknown>;
 }
 
 /**
@@ -338,6 +372,7 @@ export interface WindowOptions {
 export class WindowHost implements WindowApi {
   readonly #notifications: Notifications;
   readonly #quickInput: QuickInput;
+  readonly #contextMenu: ContextMenu;
   readonly #statusBar: StatusBar;
   readonly #progress: ProgressIndicators;
   readonly #customEditors: CustomEditors;
@@ -346,12 +381,13 @@ export class WindowHost implements WindowApi {
   readonly onDidChangeFileDecorations = this.#fileDecorations.onDidChange;
   readonly onDidChangeTextEditorSelection: Event<TextEditorSelectionChangeEvent>;
   readonly onDidChangeActiveFile: Event<ProjectPath>;
-  /** The CSS of messages, input boxes, quick picks and custom editors' panels, for the workbench to put where the widget renders. */
+  /** The CSS of messages, input boxes, quick picks, menus and custom editors' panels, for the workbench to put where the widget renders. */
   readonly styleSheet: string = css;
 
   constructor(private readonly options: WindowOptions) {
     this.#notifications = new Notifications(options.host);
     this.#quickInput = new QuickInput(options.host);
+    this.#contextMenu = new ContextMenu(options.host, { items: options.menuItems, executeCommand: options.executeCommand });
     this.#statusBar = new StatusBar(options.statusBar);
     this.#progress = new ProgressIndicators({ statusBar: this.#statusBar, editingArea: options.editingArea });
     this.#customEditors = new CustomEditors(options.editingArea);
@@ -384,6 +420,10 @@ export class WindowHost implements WindowApi {
 
   showSaveDialog(options?: SaveDialogOptions): Promise<ProjectPath | undefined> {
     return showSaveDialog((input) => this.showInputBox(input), (path) => this.options.exists(path), options);
+  }
+
+  showContextMenu(menuId: string, options: ContextMenuOptions): void {
+    this.#contextMenu.show(menuId, options);
   }
 
   withProgress<R>(options: ProgressOptions, task: (progress: Progress<ProgressReport>) => Promise<R>): Promise<R> {
@@ -437,6 +477,6 @@ export class WindowHost implements WindowApi {
   }
 
   dispose(): void {
-    Disposable.from(this.#fileChanges, this.#notifications, this.#quickInput, this.#progress, this.#customEditors, this.#fileDecorations).dispose();
+    Disposable.from(this.#fileChanges, this.#notifications, this.#quickInput, this.#contextMenu, this.#progress, this.#customEditors, this.#fileDecorations).dispose();
   }
 }

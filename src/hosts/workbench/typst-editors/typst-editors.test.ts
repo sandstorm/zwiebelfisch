@@ -31,6 +31,8 @@ function setup(options: { onSelection?(selection: SourceRange): void } = {}) {
     onDidChangeActiveFile: new EventEmitter<ProjectPath>().event,
     activeTextEditor: () => editors.activeTextEditor,
     onDidChangeTextEditorSelection: new EventEmitter<TextEditorSelectionChangeEvent>().event,
+    menuItems: () => [],
+    executeCommand: async () => undefined,
   });
   editors.register(window);
   window.registerCustomEditorProvider('test.image', { resolveCustomEditor() {} }, { displayName: 'Image', filenamePattern: '*.png' });

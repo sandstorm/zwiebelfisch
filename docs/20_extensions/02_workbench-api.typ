@@ -39,7 +39,8 @@ workbench.registerMenuItem('explorer/context', {
 
 - Entries sort by `group` (`navigation` first, the others by name, a separator between groups), then `order`.
 - `when` is asked each time the menu is shown.
-- A view that shows a menu of its own reads `getMenuItems(menuId, context)` and follows `onDidChangeMenu`. The file panel does this for `file/newFile` and `explorer/context`.
+- A view shows a menu with `window.showContextMenu(menuId, { anchor, title, context, args })`: at a point (`{ x, y }`, a right click's) or below an element (a button), named `title`, with the entries whose `when` holds in `context`; the chosen entry's command gets `args`. Nothing shows while no entry applies. The file panel does this for `explorer/context` (right click, Shift+F10) and `file/newFile` ("New").
+- `getMenuItems(menuId, context)` and `onDidChangeMenu` tell whether a menu has entries (the file panel hides "New" while `file/newFile` has none).
 
 == Messages and quick input <extensions-workbench-api-messages>
 
@@ -50,6 +51,7 @@ workbench.registerMenuItem('explorer/context', {
   [`showInputBox({ title, prompt, value, valueSelection, placeHolder, validateInput })`], [The text, or `undefined` on Escape],
   [`showQuickPick(items, { title, placeHolder, canPickMany })`], [The `QuickPickItem` (or string) picked, the checked items with `canPickMany`, or `undefined`],
   [`showSaveDialog({ title, defaultUri, filters })`], [A new file's `ProjectPath`, or `undefined`],
+  [`showContextMenu(menuId, { anchor, title, context, args })`], [Nothing: shows a contributed menu (@extensions-workbench-api-menus); the chosen entry's command runs],
   [`withProgress({ location, title }, (progress) => task)`], [What the task resolves to; shown until it settles],
 )
 
