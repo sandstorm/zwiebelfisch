@@ -66,7 +66,7 @@ with the #link("https://typst.app")[Typst] compiler (`typst compile`).
 #table(
   columns: 2,
   [Construct], [How],
-  [Bold, italic, underline, inline code], [Ctrl+B, Ctrl+I, Ctrl+U, Ctrl+E (⌘B, ⌘I, ⌘U, ⌘E on Mac), or the bar over a selection. Underline is `#underline[..]`; one with arguments (`stroke:`, `offset:`) stays a raw box.],
+  [Bold, italic, underline, strikethrough, highlight, inline code], [Ctrl+B, Ctrl+I, Ctrl+U, Ctrl+Shift+S, Ctrl+Shift+H, Ctrl+E (⌘B, ⌘I, ⌘U, ⌘⇧S, ⌘⇧H, ⌘E on Mac; the two with Shift are Tiptap's own), or the bar over a selection. Underline, strikethrough and highlight are `#underline[..]`, `#strike[..]` and `#highlight[..]`; one with arguments (`stroke:`, `offset:`, `fill:`) stays a raw box.],
   [Link], [Ctrl+K (⌘K on Mac), or "Link" in the bar over a selection. Ctrl+click (⌘-click on Mac) on a link, or Alt+Enter in it, opens its address in a new tab; a plain click edits it.],
   [Lists], [List buttons: bulleted, numbered, task list (`- [ ] todo`). Tab nests.],
   [Quote], [Ctrl+Shift+B (⌘⇧B on Mac), or Insert → Quote.],

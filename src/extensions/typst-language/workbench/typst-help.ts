@@ -20,6 +20,8 @@ export const TYPST_HELP: HelpSheet = {
         { snippet: '_emphasis_', description: 'Italic' },
         { snippet: '*strong*', description: 'Bold' },
         { snippet: '#underline[underlined]', description: 'Underlined' },
+        { snippet: '#strike[struck]', description: 'Struck through' },
+        { snippet: '#highlight[highlighted]', description: 'Highlighted (yellow background)' },
       ],
     },
     {

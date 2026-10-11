@@ -45,6 +45,24 @@ describe('Visual editor toolbar', () => {
     expect(doc.text).toBe('Hello *world*\n');
   });
 
+  it('strikethrough and highlight wrap the selection, inside underline, in the bar after Underline', () => {
+    const { doc, view, button, parent } = setup('Hello world\n');
+    view.reveal(SourceRange.of({ from: 6, to: 11 }));
+    button('Highlight').click();
+    expect(doc.text).toBe('Hello #highlight[world]\n');
+    expect(button('Highlight').getAttribute('aria-pressed')).toBe('true');
+    button('Strikethrough').click();
+    expect(doc.text).toBe('Hello #strike[#highlight[world]]\n');
+    button('Underline').click();
+    expect(doc.text).toBe('Hello #underline[#strike[#highlight[world]]]\n');
+    button('Strikethrough').click();
+    button('Highlight').click();
+    expect(doc.text).toBe('Hello #underline[world]\n');
+    const labels = [...parent.querySelectorAll('button[aria-label]')].map((b) => b.getAttribute('aria-label'));
+    const at = labels.indexOf('Underline');
+    expect(labels.slice(at, at + 4)).toEqual(['Underline', 'Strikethrough', 'Highlight', 'Code']);
+  });
+
   it('turns a paragraph into a bullet list and a numbered list', () => {
     const { doc, view, button } = setup('Hello world\n');
     view.reveal(SourceRange.of({ from: 0, to: 'Hello world'.length }));
