@@ -178,8 +178,9 @@ crates/typst-engine/        Rust → wasm: Typst compiler, SVG and PDF export, c
   src/world.rs              in-memory Typst World (files and fonts pushed from JS)
   src/lib.rs                wasm-bindgen interface (JSON in/out, UTF-16 offsets)
 server/                     collaboration server (Node package, Hocuspocus; TypeScript run by Node directly)
+  src/http.ts               requests and responses as plain values (HttpRequest, HttpResponse, respond), Node's as them
   src/gitlab/               GitLab-backed rooms: GitLabExtension, GitLabRoom, GitLabProject (REST), merge, commit actions,
-                            HTTP endpoints, FakeGitLab (in-process, for tests and server:dev-fake-gitlab)
+                            HTTP endpoints (http-endpoints.ts), FakeGitLab (in-process, for tests and server:dev-fake-gitlab)
   src/playground/           dev-only: playgroundOptions (fake GitLab with the advanced example + webhook),
                             PlaygroundEndpoints (GET /playground, POST /playground/upstream), readProjectFiles
 demo/                       the playground (vite root; checklist: docs/demo-playground.md); ?example=hello|simple|advanced
@@ -1891,7 +1892,7 @@ HTTP             GET /rooms/<room>/files/<path> (Authorization: Bearer <room tok
 
 - **`GitLabExtension`** (Hocuspocus extension, priority below storage): `onLoadDocument` makes a
   `GitLabRoom` per open GitLab room and `open()`s it; `onStateless` runs saves and routes the
-  outcome; `onRequest` → `handleHttp` (framework-free, `http.ts`): room files and push webhooks
+  outcome; `onRequest` → `handleHttp` (framework-free, `http-endpoints.ts` over `server/src/http.ts`): room files and push webhooks
   (merge into the open rooms of that project + branch, tell their clients).
 - **`GitLabRoom`** (one per open room; operations queued one at a time; all state in the Y.Doc,
   so it survives storage round trips):

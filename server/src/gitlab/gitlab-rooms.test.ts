@@ -12,7 +12,7 @@ import { collabConfiguration } from '../collab-server.ts';
 import { blobSha } from './blob-sha.ts';
 import { FakeGitLab } from './fake-gitlab.ts';
 import type { GitLabExtension } from './gitlab-extension.ts';
-import type { HttpResponse } from './http.ts';
+import type { HttpResponse } from '../http.ts';
 
 const path = ProjectPath.of;
 

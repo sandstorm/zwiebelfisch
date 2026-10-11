@@ -5,7 +5,7 @@ import type { Extension, onRequestPayload } from '@hocuspocus/server';
 import type { CollabOptions } from '../collab-server.ts';
 import type { FakeGitLab } from '../gitlab/fake-gitlab.ts';
 import { parseRoomName, type GitLabExtension } from '../gitlab/gitlab-extension.ts';
-import { nodeRequest, respond, sendResponse, type HttpRequest, type HttpResponse } from '../gitlab/http.ts';
+import { nodeRequest, respond, sendResponse, type HttpRequest, type HttpResponse } from '../http.ts';
 
 // The demo playground (`mise run demo`): GitLab rooms against an in-memory
 // fake GitLab, plus dev-only HTTP endpoints the playground bar calls. Never

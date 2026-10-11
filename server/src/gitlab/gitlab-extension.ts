@@ -11,7 +11,8 @@ import type { Authenticate, AuthenticatedUser } from '../auth.ts';
 import { BlobCache } from './blob-cache.ts';
 import { GitLabProject, type GitLabConfig } from './gitlab-api.ts';
 import { GitLabRoom, type Author } from './gitlab-room.ts';
-import { handleHttp, nodeRequest, sendResponse, type HttpRequest, type HttpResponse } from './http.ts';
+import { nodeRequest, sendResponse, type HttpRequest, type HttpResponse } from '../http.ts';
+import { handleHttp } from './http-endpoints.ts';
 
 export interface GitLabOptions extends GitLabConfig {
   /** The secret GitLab sends as `X-Gitlab-Token` with push webhooks (unset: no webhook endpoint). */
