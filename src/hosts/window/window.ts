@@ -1,5 +1,3 @@
-// The window namespace of the extension API (VS Code's `window`). Entry of hosts/window/. See
-// docs/30_architecture/07_workbench.typ.
 import type { CancellationToken } from '../../core/cancellation/cancellation';
 import { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
@@ -19,16 +17,17 @@ import { StatusBar } from './status-bar/status-bar';
 import css from './window.css?inline';
 
 /**
- * The widget's window as extensions use it (VS Code's `window` namespace).
+ * The widget's window (VS Code's `window` namespace): how features talk to the user, and the places they fill.
  *
- * What every feature needs to talk to the user (messages, input box, quick pick, contributed menus), and the places of
- * the widget's window a feature puts things into (status bar items, custom editors, file decorations, search
- * everywhere's providers), and the file and editor the user works in.
+ * When every feature asks and tells the same way, they all look and behave alike, and none draws popovers of its own.
+ * So the window offers messages, input boxes, quick picks, a save dialog, context menus of contributed entries and
+ * progress. The places a feature fills are the status bar, the editing area (custom editors; the Visual and Source
+ * editors are two of them), file decorations and search everywhere. The window also tells which file and which Typst
+ * editor the user works in.
  *
- * Why one namespace in VS Code's shapes: features look and behave alike when they ask and tell the same way, and they
- * never make popovers of their own. The parts (notifications/, quick-input/, search/, menus/, status-bar/, progress/,
- * custom-editors/, file-decorations/) are deep modules of their own; WindowHost puts them where the workbench's frame
- * says.
+ * Each part is a module in a subfolder (notifications/, quick-input/, save-dialog/, menus/, progress/, search/,
+ * status-bar/, custom-editors/, file-decorations/). WindowHost puts them where the workbench's frame says. Which file
+ * the editing area shows and which entries a menu has stay the workbench's. See docs/30_architecture/07_workbench.typ.
  */
 export interface WindowApi {
   /**
@@ -430,10 +429,7 @@ export interface WindowOptions {
   executeCommand(command: string, ...args: unknown[]): Promise<unknown>;
 }
 
-/**
- * The window of one widget: its notification area, its quick input, its status bar items, the custom editors of the
- * editing area and the file decorations. The workbench decides what is shown in the editing area (`showCustomEditor`).
- */
+/** The `WindowApi` of one widget. The workbench decides what is shown in the editing area (`showCustomEditor`). */
 export class WindowHost implements WindowApi {
   readonly #notifications: Notifications;
   readonly #quickInput: QuickInput;

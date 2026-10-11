@@ -1,14 +1,12 @@
-// FileDecorations. See ../window.ts.
+// See WindowApi in ../window.ts.
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
 import type { FileDecoration, FileDecorationProvider } from '../window';
 
 /**
- * The registered file decoration providers, asked in registration order, and one event for all their changes.
- *
- * The decorations every registered provider gives a file (`window.registerFileDecorationProvider`), for the side panels that
- * list files.
+ * The registered file decoration providers (`window.registerFileDecorationProvider`), asked in registration order,
+ * and one event for all their changes.
  */
 export class FileDecorations {
   readonly #providers: { provider: FileDecorationProvider; subscription: Disposable }[] = [];

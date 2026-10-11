@@ -1,4 +1,4 @@
-// CustomEditors. See ../window.ts.
+// See WindowApi in ../window.ts.
 import { Disposable } from '../../../core/disposable/disposable';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import type { ProjectPath } from '../../../core/paths/paths';
@@ -7,16 +7,14 @@ import type { CustomEditorOptions, CustomEditorPanel, CustomEditorProvider } fro
 import { FilenamePattern } from './filename-pattern';
 
 /**
- * The custom editors of the editing area. Opening a file picks the editor asked for (`viewType`), else the one the
- * user chose last among those offered for the file, else the one that matches its name with the highest priority
- * (`'default'`: 100), then the most specific pattern (`*.drawio.png` over `*.png`), then the one registered first;
- * `'fallback'` editors only open files no other editor matches, `'option'` editors only when asked for. That editor gets a fresh panel for the file; showing anything else
- * disposes it, or only hides it for an editor with `retainContextWhenHidden` (shown again when that file opens in
- * it again, disposed when the file is deleted).
- *
- * Which editor shows a file, by file name pattern, priority and the user's choice
- * (`window.registerCustomEditorProvider`, VS Code's custom editors), the editors a file can be switched between, and
- * the panels in the editing area.
+ * The custom editors of the editing area (`window.registerCustomEditorProvider`, VS Code's custom editors): which
+ * editor shows a file, the editors a file can be switched between, and the panels. Opening a file picks the editor
+ * asked for (`viewType`), else the one the user chose last among those offered for the file, else the one that matches
+ * its name with the highest priority (`'default'`: 100), then the most specific pattern (`*.drawio.png` over `*.png`),
+ * then the one registered first; `'fallback'` editors only open files no other editor matches, `'option'` editors only
+ * when asked for. That editor gets a fresh panel for the file; showing anything else disposes it, or only hides it for
+ * an editor with `retainContextWhenHidden` (shown again when that file opens in it again, disposed when the file is
+ * deleted).
  */
 export class CustomEditors {
   readonly #registrations: Registration[] = [];

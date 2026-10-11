@@ -1,15 +1,12 @@
-// ContextMenu. See ../window.ts.
+// See WindowApi in ../window.ts.
 import type { ContextMenuOptions, ContributedMenuItem, MenuAnchor } from '../window';
 
 /**
- * One menu at a time over the widget `host` (a new one closes the open one): a `role="menu"` list of the menu's
- * entries, a separator between groups, fixed at its anchor and kept inside the viewport. The first entry gets the
- * focus; arrow keys, Home and End move it. Choosing an entry, Escape, Tab or a press elsewhere closes the menu and
- * gives the focus back to the element that had it; a chosen entry's command runs after that (a failing one is logged:
- * it tells the user itself). A menu without entries is not shown.
- *
- * What `showContextMenu` shows: a contributed menu (its `registerMenuItem` entries) popped up at a point or below a
- * button (a row's context menu, a "New ▾" menu), closed once an entry is chosen.
+ * What `showContextMenu` shows. One menu at a time over the widget `host` (a new one closes the open one): a
+ * `role="menu"` list of the menu's entries, a separator between groups, fixed at its anchor and kept inside the
+ * viewport. The first entry gets the focus; arrow keys, Home and End move it. Choosing an entry, Escape, Tab or a press
+ * elsewhere closes the menu and gives the focus back to the element that had it; a chosen entry's command runs after
+ * that (a failing one is logged: it tells the user itself). A menu without entries is not shown.
  */
 export class ContextMenu {
   #open: MenuList | null = null;

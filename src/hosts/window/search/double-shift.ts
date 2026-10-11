@@ -1,4 +1,4 @@
-// Double Shift. See search.ts.
+// The key that opens search everywhere, anywhere in the widget. See SearchEverywhere in search.ts.
 import { Disposable } from '../../../core/disposable/disposable';
 
 /**
@@ -6,9 +6,6 @@ import { Disposable } from '../../../core/disposable/disposable';
  * the second press starting at most 300 ms after the first was released, neither together with another key or a mouse
  * button, nothing pressed in between; it fires when the second Shift is released (Shift held for a capital letter
  * never counts). `now` is the clock in milliseconds.
- *
- * The key that opens search everywhere, anywhere in the widget (also inside the editors, which see the keys after the
- * widget).
  */
 export function listenForDoubleShift(target: HTMLElement, onDoubleShift: () => void, now: () => number = Date.now): Disposable {
   /** `down`: Shift pressed alone; `up`: released after such a press (at `releasedAt`); `again`: pressed a second time. */

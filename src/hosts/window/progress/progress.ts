@@ -1,13 +1,11 @@
-// Progress. See ../window.ts and docs/30_architecture/07_workbench.typ.
+// See WindowApi in ../window.ts.
 import { Disposable } from '../../../core/disposable/disposable';
 import { type ProgressOptions, type ProgressReport, ProgressLocation } from '../window';
 import type { StatusBar } from '../status-bar/status-bar';
 
 /**
- * Shows each running task where its `location` says, until it settles.
- *
- * What `window.withProgress` shows while a task runs — a status bar entry (`ProgressLocation.Window`), or a note over
- * the editing area that holds input back (`ProgressLocation.EditingArea`).
+ * What `window.withProgress` shows: each running task where its `location` says, until it settles. A status bar entry
+ * (`ProgressLocation.Window`), or a note over the editing area that holds input back (`ProgressLocation.EditingArea`).
  */
 export class ProgressIndicators {
   /** The notes of the tasks running over the editing area, oldest first: it is inert while there is one. */

@@ -1,13 +1,10 @@
-// showSaveDialog. See ../window.ts.
+// See WindowApi in ../window.ts.
 import { ProjectPath } from '../../../core/paths/paths';
 import type { InputBoxOptions, SaveDialogOptions } from '../window';
 
 /**
  * Asks for the path of a new file with `ask` (an input box), as `options` say, refusing paths `exists` has. Resolves
- * to the path, or undefined when cancelled.
- *
- * Where a new file goes, asked in the window's input box (VS Code's `window.showSaveDialog`, without a file system
- * dialog): a name in a folder, its ending checked, an existing file refused.
+ * to the path, or undefined when cancelled. VS Code's `window.showSaveDialog`, without a file system dialog.
  */
 export async function showSaveDialog(
   ask: (options: InputBoxOptions) => Promise<string | undefined>,

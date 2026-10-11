@@ -1,5 +1,5 @@
-/* The window host's styles: messages (show…Message), input boxes and quick picks, menus (showContextMenu), a custom
-   editor's panel, progress (withProgress). Added by the workbench (WindowHost.styleSheet). See window.ts. */
+/* Messages (show…Message), input boxes and quick picks, menus (showContextMenu), a custom editor's panel, progress
+   (withProgress). See WindowHost in window.ts, whose styleSheet the workbench adds. */
 /* A custom editor's panel (registerCustomEditorProvider): fills the editing area, a flex column for the editor. */
 .typst-editor__custom-editor { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .typst-editor__custom-editor[hidden] { display: none; }

@@ -1,14 +1,12 @@
-// QuickInput. See ../window.ts.
+// See WindowApi in ../window.ts.
 import type { InputBoxOptions, QuickPickHighlights, QuickPickItem, QuickPickOptions } from '../window';
 
 /**
- * One box at a time over the widget `host` (a new one cancels the open one), placed below its anchor and kept inside
- * the widget (above the anchor where there is no room below): the anchor is what the user last pressed or typed in
- * (a button, a row), or, in an editor, the selection; without one, at the top in the middle (as VS Code's). Escape
- * or a mouse press elsewhere cancels; closing gives the focus back to where it was.
- *
- * What `showInputBox` and `showQuickPick` show: a small box over the widget, below what the user just used; and the
- * quick pick whose rows its owner sets while the user types (search everywhere).
+ * What `showInputBox` and `showQuickPick` show, and the quick pick whose rows its owner sets while the user types
+ * (search everywhere). One box at a time over the widget `host` (a new one cancels the open one), placed below its
+ * anchor and kept inside the widget (above the anchor where there is no room below): the anchor is what the user last
+ * pressed or typed in (a button, a row), or, in an editor, the selection; without one, at the top in the middle (as VS
+ * Code's). Escape or a mouse press elsewhere cancels; closing gives the focus back to where it was.
  */
 export class QuickInput {
   #trigger: Element | null = null;

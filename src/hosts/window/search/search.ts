@@ -1,4 +1,4 @@
-// SearchEverywhere. See ../window.ts and docs/20_extensions/02_workbench-api.typ.
+// See WindowApi in ../window.ts and docs/30_architecture/07_workbench.typ, "Concepts".
 import { CancellationTokenSource } from '../../../core/cancellation/cancellation';
 import { Disposable } from '../../../core/disposable/disposable';
 import type { DynamicQuickPick, QuickInput, QuickPickEntry, QuickPickItemEntry } from '../quick-input/quick-input';
@@ -6,14 +6,12 @@ import type { SearchItem, SearchProvider } from '../window';
 import { fuzzyMatch } from './fuzzy';
 
 /**
- * Search everywhere: `show` opens a quick pick at the top of the widget. As the text changes every provider is asked
- * (only those whose prefix it starts with, if any), the previous round cancelled; synchronous results show at once,
- * async ones as they come (a progress line meanwhile). Items a provider did not match itself are matched fuzzily
- * against their label, else their description. Groups follow the providers' `order`. Picking an item closes the
- * search, gives the focus back and runs the item's `accept` right then (still in the user's gesture).
- *
- * One quick pick over everything the extensions' search providers find (files, headings, commands, …), grouped by
- * provider, fuzzy-matched, narrowed by a prefix.
+ * Search everywhere: one quick pick over everything the search providers find (files, headings, commands, …), a group
+ * per provider. `show` opens it at the top of the widget. As the text changes every provider is asked (only those whose
+ * prefix it starts with, if any), the previous round cancelled; synchronous results show at once, async ones as they
+ * come (a progress line meanwhile). Items a provider did not match itself are matched fuzzily against their label, else
+ * their description. Groups follow the providers' `order`. Picking an item closes the search, gives the focus back and
+ * runs the item's `accept` right then (still in the user's gesture).
  */
 export class SearchEverywhere {
   readonly #providers = new Set<SearchProvider>();

@@ -1,14 +1,11 @@
-// Notifications. See ../window.ts.
+// See WindowApi in ../window.ts.
 import type { MessageItem, MessageSeverity } from '../window';
 
 /**
- * The widget's notification area: each message is a small box with its text, a button per item and a close button,
- * stacked at the bottom right, newest last. Not modal; nothing takes the focus. Information is `role=status` (read
- * out politely) and closes by itself after a while unless it has items or the pointer or focus is on it; warnings
- * and errors are `role=alert` and stay until closed.
- *
- * The messages extensions show (`showInformationMessage`, `showWarningMessage`, `showErrorMessage`), in a small area at
- * the bottom right of the widget.
+ * The widget's notification area (`showInformationMessage`, `showWarningMessage`, `showErrorMessage`): each message
+ * is a small box with its text, a button per item and a close button, stacked at the bottom right, newest last. Not
+ * modal; nothing takes the focus. Information is `role=status` (read out politely) and closes by itself after a while
+ * unless it has items or the pointer or focus is on it; warnings and errors are `role=alert` and stay until closed.
  */
 export class Notifications {
   readonly #area: HTMLElement;

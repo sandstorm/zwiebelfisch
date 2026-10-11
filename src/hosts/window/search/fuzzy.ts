@@ -1,5 +1,5 @@
 // Fuzzy matching for search everywhere: whether a query matches a label, how well, and which characters to highlight.
-// See search.ts.
+// See SearchEverywhere in search.ts.
 
 /**
  * Whether `query` matches `target` (case-insensitive): as one piece (best, earlier is better), else its characters

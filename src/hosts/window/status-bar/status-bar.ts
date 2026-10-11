@@ -1,14 +1,11 @@
-// StatusBar. See ../window.ts and docs/30_architecture/07_workbench.typ.
+// See WindowApi in ../window.ts.
 import { Disposable } from '../../../core/disposable/disposable';
 import type { StatusBarPlacement } from '../window';
 
 /**
- * The status bar's items in two sides, as in VS Code: the `left` ones from its start, the `right` ones at its end;
- * within a side the higher `priority` further left (default 0), equal priorities in registration order. The bar is
- * hidden while it has no item.
- *
- * The items extensions put into the status bar (`window.registerStatusBarItem`), placed as VS Code places its
- * StatusBarItems.
+ * The items extensions put into the status bar (`window.registerStatusBarItem`), in two sides, as in VS Code: the
+ * `left` ones from its start, the `right` ones at its end; within a side the higher `priority` further left (default
+ * 0), equal priorities in registration order. The bar is hidden while it has no item.
  */
 export class StatusBar {
   readonly #bar: HTMLElement;
