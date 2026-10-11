@@ -161,6 +161,10 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    follow-up merge: a skeleton agent (main, template, demo example, docs:pdf), then writers per
    part in parallel, then an integrator (top comments, deletions, README). Later waves update the
    docs in the same commit as the code.
+   **Demo checklist (user, 2026-10-11):** `docs/demo-playground.md` shrinks to a few lines in the
+   root `README.md` — only how to run the demo (and its examples); the long manual checklist goes,
+   not into the Typst docs. The CSS wave was briefed to move it into `architecture/development.typ`;
+   correct that after its merge. `mise run demo` depends on the font build (task dependency).
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Rules wave also does:** core `onChange` → `onDidChange: Event` + `Disposable` everywhere
    (`Project`, `TypstDocument`, …) (user: yes).
