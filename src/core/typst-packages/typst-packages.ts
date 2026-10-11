@@ -19,19 +19,28 @@ export interface PackageEngine {
   exportPdf(main: string): Promise<PdfResult>;
 }
 
+/** Told the packages being downloaded (`@namespace/name:version`) whenever they change; empty: none any more. */
+export type DownloadsListener = (specs: readonly string[]) => void;
+
 /**
  * Lets documents compiled by `engine` import packages, fetched on first use
- * with `fetchPackage` (default: from packages.typst.org, cached).
+ * with `fetchPackage` (default: from packages.typst.org, cached); `onDidChangeDownloads` hears which are on the way.
  */
-export function withPackages(engine: TypstEngine, fetchPackage: PackageFetcher = fetchPreviewPackage): PackageEngine {
+export function withPackages(engine: TypstEngine, fetchPackage: PackageFetcher = fetchPreviewPackage, onDidChangeDownloads?: DownloadsListener): PackageEngine {
   const failed = new Map<string, string>();
+  const downloading = new Set<string>();
   const load = async (spec: string) => {
+    downloading.add(spec);
+    onDidChangeDownloads?.([...downloading]);
     try {
       const files = await untarGz(await fetchPackage(spec));
       if (files.size === 0) throw new Error('the archive has no files');
       addPackage(engine, spec, files);
     } catch (error) {
       failed.set(spec, error instanceof Error ? error.message : String(error));
+    } finally {
+      downloading.delete(spec);
+      onDidChangeDownloads?.([...downloading]);
     }
   };
   /** Runs `task` until it misses no package that could still be downloaded. */

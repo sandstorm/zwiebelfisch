@@ -42,6 +42,18 @@ describe('withPackages', () => {
     expect(fetchPackage).toHaveBeenCalledTimes(1);
   });
 
+  it('tells which packages are on the way while they download', async () => {
+    const bare = await engineWithFonts();
+    const seen: (readonly string[])[] = [];
+    const project = withPackages(bare, async () => {
+      expect(seen.at(-1)).toEqual(['@preview/greet:0.1.0']);
+      return greet;
+    }, (specs) => seen.push(specs));
+    bare.setSource('/main.typ', doc);
+    await project.compile('/main.typ');
+    expect(seen).toEqual([['@preview/greet:0.1.0'], []]);
+  });
+
   it('reports a package that cannot be downloaded, and does not retry it', async () => {
     const bare = await engineWithFonts();
     const fetchPackage = vi.fn(async () => {
