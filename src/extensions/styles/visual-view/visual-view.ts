@@ -20,6 +20,9 @@ export interface StylesOptions {
 /** The origin of the import a newly applied style adds to the document. */
 const STYLE_IMPORT = 'style-import';
 
+/** A text style's mark priority: outside bold and italic (100) where it covers the same text (`#key[*x*]`), inside links (120) and notes. */
+const STYLE_PRIORITY = 110;
+
 /**
  * Custom styles (see `model/`): a call of a declared paragraph
  * style that is a block of its own (`#note[..]`, `#callout(..)[..]`) is a
@@ -41,7 +44,7 @@ export function customStyles(options: StylesOptions): VisualViewContribution {
         visualView.registerMark({
           ...STYLE,
           inlineCalls: [{ matches: (_p, call) => declared().get(call.name)?.kind === 'text', project: (p, call, marks) => styleCall(p, call, marks, declared()) }],
-        }),
+        }, { priority: STYLE_PRIORITY }),
         visualView.registerToolbarGroup({ kind: 'group', id: 'text-style', order: 20 }),
         visualView.registerToolbarItem({ group: 'text-style', create: (toolbar) => styleMenu(toolbar, options) }),
       );

@@ -290,11 +290,14 @@ export class VisualViewContributions {
 
   /**
    * A mark type and its Typst. `priority` (default 100, higher first; equal: registration order) orders the schema,
-   * which is how marks nest: a higher one is outside a lower one (bold outside a comment's range); it also orders
-   * the projectors, as for nodes.
+   * which is how marks nest: a higher one is outside a lower one (a comment's range outside a link, a link outside
+   * bold); it also orders the projectors, as for nodes. It is the mark's only priority: the host gives it to the
+   * mark's Tiptap extension, replacing the extension's own (Tiptap's link mark comes with 1000).
    */
   registerMark(spec: TypstMarkSpec, options: PriorityOptions = {}): Disposable {
-    return this.add(this.ranked.marks, rank(spec, options));
+    const ranked = rank(spec, options);
+    const extension = spec.extension && withPriority(spec.extension, spec.name, ranked.priority);
+    return this.add(this.ranked.marks, { ...ranked, value: { ...spec, extension } });
   }
 
   /** Tiptap extensions made for each view (they may use its document). */
@@ -381,6 +384,19 @@ interface Ranked<T> {
 
 function rank<T>(value: T, options: PriorityOptions): Ranked<T> {
   return { value, priority: options.priority ?? DEFAULT_PRIORITY };
+}
+
+/**
+ * `extension` with `priority` on its mark type `name`, wherever it is defined: the extension itself, or one it adds
+ * (a StarterKit part). Tiptap orders a schema's marks by their extensions' priorities.
+ */
+function withPriority(extension: AnyExtension, name: string, priority: number): AnyExtension {
+  if (extension.type === 'mark' && extension.name === name) return extension.extend({ priority });
+  return extension.extend({
+    addExtensions() {
+      return (this.parent?.() ?? []).map((child: AnyExtension) => withPriority(child, name, priority));
+    },
+  });
 }
 
 /** The values, higher priority first; equal priorities in registration order (the sort is stable). */

@@ -70,8 +70,6 @@ export const StyledBlock = Node.create({
  */
 export const StyleMark = Mark.create({
   name: 'style',
-  // outside bold and italic when it covers the same text (`#key[*x*]`), inside links and notes
-  priority: 900,
   // typing at its end continues the style, as with bold
   addAttributes() {
     return {

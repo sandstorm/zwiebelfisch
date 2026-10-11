@@ -8,10 +8,13 @@ import {
   BLOCKQUOTE, BOLD, CODE, CODE_BLOCK, INSERT_CODE_BLOCK, INSERT_QUOTE, ITALIC, LINK, linkAction, MARK_ACTIONS,
 } from './visual-view/visual-view';
 
+/** Links' mark priority: outside bold and italic (100) where they cover the same text. */
+const LINK_PRIORITY = 120;
+
 /**
  * Strong, emphasis, links, inline code, code blocks and block quotes: their nodes, marks and buttons. Where marks
- * cover the same text, a link is outermost (Tiptap's link mark has priority 1000), then bold, italic; inline code
- * prints innermost whatever the schema's order (`raw`).
+ * cover the same text, a link is outermost (`LINK_PRIORITY`), then bold, italic; inline code prints innermost
+ * whatever the schema's order (`raw`).
  */
 export const markup: TypstExtension = {
   id: 'markup',
@@ -20,7 +23,7 @@ export const markup: TypstExtension = {
     subscriptions.push(
       visualView.registerMark(BOLD),
       visualView.registerMark(ITALIC),
-      visualView.registerMark(LINK),
+      visualView.registerMark(LINK, { priority: LINK_PRIORITY }),
       visualView.registerMark(CODE),
       visualView.registerNode(CODE_BLOCK),
       visualView.registerNode(BLOCKQUOTE),

@@ -1,6 +1,8 @@
 // Tests for VisualViewContributions (visual-view.ts): priority, not registration order, decides where contributions
 // compete.
+import { Mark } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
+import { createSchema, starterKitPart } from '../projection/projection';
 import { type BoxRendererProvider, type TypstMarkSpec, type TypstNodeSpec, VisualViewContributions } from './visual-view';
 
 const node = (name: string): TypstNodeSpec => ({ name });
@@ -36,5 +38,28 @@ describe('VisualViewContributions priority', () => {
     registry.registerNode(node('b'));
     registration.dispose();
     expect(registry.contributed().nodes.map((spec) => spec.name)).toEqual(['b']);
+  });
+});
+
+describe('VisualViewContributions mark priority', () => {
+  const marksOf = (registry: VisualViewContributions) => {
+    const { nodes, marks } = registry.contributed();
+    return Object.keys(createSchema(nodes, marks).marks).filter((name) => name !== 'typstSource');
+  };
+
+  it("nests marks by the registered priority, whatever their Tiptap extensions' own (outer first)", () => {
+    const registry = new VisualViewContributions();
+    // Tiptap's link mark has priority 1000, which would put it outside everything
+    registry.registerMark({ ...mark('link'), extension: starterKitPart('testLink', { link: {} }) }, { priority: 90 });
+    registry.registerMark({ ...mark('bold'), extension: starterKitPart('testBold', { bold: {} }) });
+    registry.registerMark({ ...mark('note'), extension: Mark.create({ name: 'note', priority: 1 }) }, { priority: 120 });
+    expect(marksOf(registry)).toEqual(['note', 'bold', 'link']);
+  });
+
+  it('keeps registration order between marks of equal priority', () => {
+    const registry = new VisualViewContributions();
+    registry.registerMark({ ...mark('a'), extension: Mark.create({ name: 'a', priority: 50 }) });
+    registry.registerMark({ ...mark('b'), extension: Mark.create({ name: 'b', priority: 500 }) });
+    expect(marksOf(registry)).toEqual(['a', 'b']);
   });
 });

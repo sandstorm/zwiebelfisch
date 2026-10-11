@@ -809,7 +809,9 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
   `#par(justify: ..)` and the paragraph printer); **priority**, not registration order,
   decides where contributions compete (`registerNode` / `registerMark` / `registerBoxRenderer(…, { priority })`:
   default 100, higher first, Tiptap's semantics; equal ones in registration order): the schema's order (a
-  higher mark nests outside a lower one), which of the projectors of the same syntax or call is asked first
+  higher mark nests outside a lower one: comments' note ranges 130, links 120, text styles 110, bold / italic 100;
+  the host gives a mark's registered priority to its Tiptap extension, so Tiptap's own (its link mark's 1000) never
+  counts), which of the projectors of the same syntax or call is asked first
   (task lists, 110, before bullet lists: a task item is a bullet item `- [ ]`), and which box renderer draws a
   raw box (images' renderer, 110, before compiled snippets). Toolbar items keep `group` + `order`. `attachGrammar` puts the specs on the schema (`schema.cached`), so `project(text,
   schema)` and `print(doc)` find them; `VisualView` builds its editor from `documentExtensions` and attaches them to the editor's schema, tests use
