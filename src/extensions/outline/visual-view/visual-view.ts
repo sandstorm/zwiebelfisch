@@ -36,4 +36,4 @@ export const OUTLINE: TypstNodeSpec = {
 const ICON = svg('<path d="M4 6h10M7 10h13M7 14h13M4 18h10"/>');
 
 /** "Table of contents" in the Insert menu: an `#outline()` block. */
-export const INSERT_OUTLINE: ToolbarAction = { label: 'Table of contents', icon: ICON, run: (c) => c.insertContent({ type: 'outline', attrs: { src: '#outline()' } }) };
+export const INSERT_OUTLINE: ToolbarAction = { label: 'Table of contents', icon: ICON, keywords: ['outline', 'toc'], run: (c) => c.insertContent({ type: 'outline', attrs: { src: '#outline()' } }) };

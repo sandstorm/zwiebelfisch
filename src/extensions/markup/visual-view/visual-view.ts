@@ -255,8 +255,8 @@ export const MARK_ACTIONS: Record<'bold' | 'italic' | 'code', ToolbarAction> = {
   code: { label: 'Code', shortcut: 'Mod+E', icon: ICONS.code, run: (c) => c.toggleCode(), active: (e) => e.isActive('code') },
 };
 
-export const INSERT_CODE_BLOCK: ToolbarAction = { label: 'Code block', icon: ICONS.codeBlock, run: (c) => c.toggleCodeBlock(), active: (e) => e.isActive('codeBlock') };
-export const INSERT_QUOTE: ToolbarAction = { label: 'Quote', shortcut: 'Mod+Shift+B', icon: ICONS.quote, run: (c) => c.toggleBlockquote(), active: (e) => e.isActive('blockquote') };
+export const INSERT_CODE_BLOCK: ToolbarAction = { label: 'Code block', icon: ICONS.codeBlock, keywords: ['listing', 'raw'], run: (c) => c.toggleCodeBlock(), active: (e) => e.isActive('codeBlock') };
+export const INSERT_QUOTE: ToolbarAction = { label: 'Quote', shortcut: 'Mod+Shift+B', icon: ICONS.quote, keywords: ['blockquote', 'citation'], run: (c) => c.toggleBlockquote(), active: (e) => e.isActive('blockquote') };
 
 /** Where "Link" asks for the URL: the window's input box. */
 export type LinkPrompt = Pick<WindowApi, 'showInputBox'>;

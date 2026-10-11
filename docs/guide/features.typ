@@ -45,6 +45,7 @@ with the #link("https://typst.app")[Typst] compiler (`typst compile`).
   [Code block], [Insert → Code block. Its language is a field.],
   [Alignment], [Align menu, or Ctrl+Shift+L / E / R / J (⌘⇧L / E / R / J on Mac): `#align(center)[..]`, `#par(justify: true)[..]`.],
   [Undo, redo], [Ctrl+Z, Ctrl+Shift+Z (⌘Z, ⌘⇧Z on Mac).],
+  [Anything from the Insert or text style menu], [Type `/` at a line start or after a space, then part of its name: `/table`, `/h2`, `/quote`. Other words find entries, too (`/spreadsheet` → Insert table). ↑ / ↓ choose, Enter or Tab inserts (the `/…` goes), Escape closes.],
 )
 
 == Custom styles <guide-features-styles>
@@ -136,7 +137,7 @@ All runs used the machine in @fig:setup.
 - Insert → Add label: type the name into a new tag (`fig:`, `tab:` or `sec:` to start with).
 - Click a tag: "Rename…" (updates the references in every file), "Rename without updating references…", "Remove label".
 - A reference shows as a chip naming its target ("Figure · The measurement setup."); a reference to a missing label is marked.
-- Type `@` for a list of the project's labels.
+- Type `@` for a list of the project's labels, found by name or by what they label. Enter, Tab or a click inserts the reference; so does a space or punctuation right after a whole name (`@intro.`).
 
 == Page layout <guide-features-page-layout>
 

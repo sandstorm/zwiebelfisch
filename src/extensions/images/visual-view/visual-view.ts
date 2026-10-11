@@ -189,6 +189,7 @@ function insertImage(toolbar: ToolbarContext, assets: ImageAssets, prompts: Imag
   return {
     label: 'Insert image',
     icon: ICON,
+    keywords: ['picture', 'photo', 'figure'],
     run: (c) => c.insertContent({ type: 'image' }),
     click: () => void choose(),
   };

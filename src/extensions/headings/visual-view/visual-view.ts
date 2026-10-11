@@ -48,6 +48,7 @@ export const HEADING_STYLES: TextStyleProvider = {
     ([1, 2, 3] as const).map((level) => ({
       id: `heading-${level}`,
       label: `Heading ${level}`,
+      keywords: [`h${level}`, level === 1 ? 'title' : 'section'],
       order: 10 * level,
       apply: (chain) => chain.setHeading({ level }),
       isActive: (editor) => editor.isActive('heading', { level }),
