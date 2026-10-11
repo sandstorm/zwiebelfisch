@@ -1,8 +1,9 @@
 // The package's public API: createTypstEditor, <typst-editor> (registered on import), and what writing an extension
 // takes: the types an extension implements or declares (everything else it reaches through its ExtensionContext is
-// typed without importing) — the Visual view's contribution types (node and mark specs, their projection grammar,
-// toolbar items, box renderers and actions, gutters, highlights, text styles; experimental) included, so an outside
-// extension can add a Typst construct as the built-ins do —, Disposable and EventEmitter, ProjectPath (paths are
+// typed without importing) — the Visual view's contribution types (node and mark specs with their Typst parse rules
+// and toTypst, toolbar items, box renderers and actions, gutters, highlights, text styles; experimental) and the
+// plain functions that read Typst calls from Lezer's syntax nodes included, so an outside extension can add a Typst
+// construct as the built-ins do —, Disposable and EventEmitter, ProjectPath (paths are
 // parsed, e.g. to `open` one), and the collaboration extension, which a host adds with its connection. The only file
 // that re-exports. See ARCHITECTURE.md and docs/embedding.md.
 import { defineTypstEditorElement } from './typst-editor-element/typst-editor-element';
@@ -69,7 +70,6 @@ export { setBoxDecorations } from './hosts/visual-view/visual-view';
 export type {
   Around,
   BlockLabel,
-  DocumentNodeSpec,
   Placed,
   TypstMarkConversion,
   TypstMarkSpec,
