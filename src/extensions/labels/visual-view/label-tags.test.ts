@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-// Tests for add-label.ts and the draft tag (label-tags.ts), through the toolbar's Insert ▾ → "Add label" and the
-// selection bar's.
+// Tests for label-tags.ts's new labels (the block they go on, the name they start from, the draft tag), through the
+// toolbar's Insert ▾ → "Add label" and the selection bar's.
 import { describe, expect, it } from 'vitest';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
 import { createVisualView, TestPrompts } from '../../../testing/testing';
