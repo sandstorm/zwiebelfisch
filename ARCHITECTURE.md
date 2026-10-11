@@ -51,7 +51,7 @@ src/                        the widget (TypeScript); the most important API on t
                             `ExtensionContext.sourceView` is), the contribution types, `fromDocument`, and SourceView
                             (CodeMirror 6 bound to a TypstDocument)
     preview/                Preview — worker-backed live preview + hit-testing, scroll / reveal; what
-                            `ExtensionContext.preview` is: toolbar items, PDF export options, page overlays (their types,
+                            `ExtensionContext.preview` is: toolbar items, PDF export options (their types,
                             Zoom and Snippet are in preview.ts),
                             reveal / onDidClickPage, onDidChangeDiagnostics / onDidRender, snippet, exportPdf;
                             latest-only.ts ("only the newest value" task runner)
@@ -434,7 +434,7 @@ interface ExtensionContext {
   visualView: VisualViewContributions   // registerNode, registerMark, registerToolbarGroup / Item, registerGutter,
                                         // registerBoxRenderer, registerEditorExtension, … (see "VisualView")
   sourceView: SourceViewContributions   // registerExtension(cm | context → cm) (see "SourceView")
-  preview: PreviewContributions         // registerToolbarItem, registerPdfExportOption, createOverlay, reveal, onDidClickPage,
+  preview: PreviewContributions         // registerToolbarItem, registerPdfExportOption, reveal, onDidClickPage,
                                         // onDidChangeDiagnostics, onDidRender, snippet, exportPdf (see "Preview")
 }
 interface Workbench {
@@ -1161,7 +1161,6 @@ interface PreviewContributions {                             // what ExtensionCo
   registerPdfExportOption({ id, label, description?, default: boolean, apply(entry: PdfEntry, value) → PdfEntry },
                           { priority? }): Disposable                // unique ids; PdfEntry: core typst-engine
   pdfExportOptions() → PdfExportOption[]                       // by priority (default 100, higher first), then registration
-  createOverlay(className) → { set(boxes: Box[]), dispose() }   // boxes in pt on their page
   reveal(path, from, to)                                       // cheap per cursor move: scroll to the range's start, only if off-screen (no marker)
   onDidClickPage: Event<{ path, from, to }>                    // a click on something with a source location
   onDidChangeDiagnostics: Event<Diagnostic[]>                  // of the newest update(), never stale
@@ -1193,9 +1192,9 @@ new Preview(container)                       // implements PreviewContributions;
   and `pageNumber` ("3 / 12"); `pdf-export`
   (`extensions/pdf-export/preview/`) registers `downloadPdf` (below) in group `3_export` while `pdfExport.download`
   is on.
-- **Page overlays** (`createOverlay`, `pages/overlays.ts`): boxes in pt, drawn as children of the page
-  elements in percent of the page, so they survive zoom and lazy unmounting; drawn again after every
-  successful compile. The host's click highlight is one.
+- **The click highlight** (`OverlayLayer`, `pages/overlays.ts`, internal: no extension draws on the pages yet):
+  boxes in pt, drawn as children of the page elements in percent of the page, so they survive zoom and lazy
+  unmounting; drawn again after every successful compile.
 
 - **Snippets** (`snippet.ts`): no extra compilation. After running compiles are done, the range
   goes to `boxesForRanges`; the union of the boxes on the first box's page (+2 pt, clamped to

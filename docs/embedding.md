@@ -505,7 +505,7 @@ What `activate` gets (`ExtensionContext`; every type is exported from the packag
 | `project` | The files: `files()`, `document(path)` (a Typst file's text), `onDidChangeFile` (an `Event<FileChange>`: subscribing returns a `Disposable`). |
 | `workspace` | The settings: `getConfiguration('<section>').get('<key>')`, `onDidChangeConfiguration`. |
 | `workbench` | The frame: `registerStatusBarItem(element, { alignment, priority })` (VS Code's: `'left'` or `'right'`, a higher priority further left within its side), `registerSidePanel`, `registerMenuItem`, `registerStyleSheet` (your CSS, inside the shadow root too), `registerCommand` / `executeCommand` / `registerKeybinding`, `showInformationMessage` / `showWarningMessage` / `showErrorMessage`, `showInputBox`, `showQuickPick`, `registerDocumentLinkProvider`, `registerFileDecorationProvider`, `registerSourceControl`, `registerCustomEditorProvider` (an editor for files by name pattern and priority, VS Code's custom editors), `open(path, { viewType? })`, `applyChange(change)`, `activeTextEditor`, `onDidChangeTextEditorSelection`, `user`. |
-| `preview` | `registerToolbarItem(item, { group, order })`, `registerPdfExportOption`, `createOverlay`, `reveal`, `onDidClickPage`, `onDidChangeDiagnostics`. |
+| `preview` | `registerToolbarItem(item, { group, order })`, `registerPdfExportOption`, `reveal`, `onDidClickPage`, `onDidChangeDiagnostics`. |
 | `visualView`, `sourceView` | Node and mark specs, toolbar items, decorations of the Visual view; CodeMirror extensions of the Source view. |
 
 Rules the built-ins follow, and yours should too:
