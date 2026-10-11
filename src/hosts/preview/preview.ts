@@ -18,6 +18,7 @@ import { FileSender } from './worker/project-files';
 import type { Init, Request, Response } from './worker/protocol';
 import { startEngineWorker } from './worker/worker';
 import { LatestOnly } from './latest-only';
+import css from './preview.css?inline';
 
 /**
  * The preview as extensions see it (`ExtensionContext.preview`): its contribution points, and what its engine
@@ -186,6 +187,8 @@ export class Preview implements PreviewContributions {
   readonly onDidRender = this.rendered.event;
   readonly onDidChangeDiagnostics = this.diagnosed.event;
   readonly onDidClickPage = this.clicked.event;
+  /** The CSS of the pane, toolbar and pages, for the workbench to put where the widget renders. */
+  readonly styleSheet: string = css;
 
   constructor(container: HTMLElement) {
     const doc = container.ownerDocument;

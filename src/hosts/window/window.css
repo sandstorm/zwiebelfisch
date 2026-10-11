@@ -1,0 +1,107 @@
+/* The window host's styles: messages (show…Message), input boxes and quick picks, a custom editor's panel. Added by
+   the workbench (WindowHost.styleSheet). See window.ts. */
+/* A custom editor's panel (registerCustomEditorProvider): fills the editing area, a flex column for the editor. */
+.typst-editor__custom-editor { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+/* Messages (showInformationMessage, …): stacked at the bottom right, above the status bar. */
+.typst-editor__notifications {
+  position: absolute;
+  right: 12px;
+  bottom: 32px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  max-width: min(420px, calc(100% - 24px));
+  pointer-events: none;
+}
+.typst-notification {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 8px 8px 8px 12px;
+  border: 1px solid var(--te-border);
+  border-left: 4px solid var(--te-accent);
+  border-radius: 8px;
+  background: var(--te-surface);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16);
+  color: var(--te-text);
+  font: 13px/1.4 system-ui, sans-serif;
+  pointer-events: auto;
+}
+.typst-notification--warning { border-left-color: var(--te-warning); }
+.typst-notification--error { border-left-color: var(--te-danger); }
+.typst-notification__message { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
+.typst-notification__actions { display: flex; gap: 6px; }
+.typst-notification__actions:empty { display: none; }
+.typst-notification__item,
+.typst-quick-input__ok {
+  border: 1px solid var(--te-accent);
+  border-radius: 6px;
+  padding: 3px 10px;
+  background: var(--te-accent);
+  color: white;
+  font: inherit;
+  cursor: pointer;
+}
+.typst-notification__close {
+  border: 0;
+  border-radius: 6px;
+  padding: 0 6px;
+  background: none;
+  color: var(--te-muted);
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+.typst-notification__close:hover { background: var(--te-hover); color: var(--te-text); }
+/* Input boxes and quick picks (showInputBox, showQuickPick): below what the user just used. */
+.typst-quick-input {
+  position: absolute;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-sizing: border-box;
+  width: min(360px, calc(100% - 16px));
+  padding: 8px;
+  border: 1px solid var(--te-border);
+  border-radius: 8px;
+  background: var(--te-surface);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  color: var(--te-text);
+  font: 13px/1.4 system-ui, sans-serif;
+}
+.typst-quick-input__title { font-weight: 600; color: var(--te-text-2); }
+.typst-quick-input__row { display: flex; gap: 6px; }
+.typst-quick-input__field {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--te-border);
+  border-radius: 6px;
+  background: var(--te-bg);
+  color: var(--te-text);
+  font: inherit;
+}
+.typst-quick-input__field:focus { outline: 2px solid var(--te-jump); border-color: var(--te-accent); }
+.typst-quick-input__prompt { color: var(--te-muted); font-size: 12px; }
+.typst-quick-input__message { color: var(--te-danger); font-size: 12px; }
+.typst-quick-input__message:empty { display: none; }
+.typst-quick-pick .typst-quick-input__ok { align-self: flex-end; }
+.typst-quick-pick__list { display: flex; flex-direction: column; max-height: 240px; overflow: auto; }
+.typst-quick-pick__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 8px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.typst-quick-pick__item[hidden] { display: none; }
+.typst-quick-pick__item:hover { background: var(--te-hover); }
+.typst-quick-pick__item[aria-selected='true'] { background: var(--te-selected); color: var(--te-text); }
+.typst-quick-pick__description { color: var(--te-muted); font-size: 12px; }
+.typst-quick-pick__detail { flex-basis: 100%; color: var(--te-muted); font-size: 12px; }

@@ -7,6 +7,7 @@
 import { Disposable } from '../../core/disposable/disposable';
 import type { ProjectPath } from '../../core/paths/paths';
 import type { ExtensionContext, TypstExtension } from '../../hosts/workbench/workbench';
+import { PopupMenu } from '../../ui/popup-menu/popup-menu';
 import css from './files.css?inline';
 import { fileInfoEditor } from './workbench/file-info';
 import { CONTEXT_MENU, FilePanel, NEW_FILE_MENU, type FilePanelOptions } from './workbench/file-panel';
@@ -82,7 +83,7 @@ export function files(): TypstExtension {
       };
       render();
       subscriptions.push(
-        workbench.registerStyleSheet(css),
+        ...[PopupMenu.styleSheet, css].map((sheet) => workbench.registerStyleSheet(sheet)),
         side,
         panel,
         window.registerCustomEditorProvider('files.file', fileInfoEditor, { filenamePattern: '*' }),

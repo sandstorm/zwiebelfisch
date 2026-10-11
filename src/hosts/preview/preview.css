@@ -1,0 +1,65 @@
+/* The preview host's styles: its pane, toolbar, pages (inverted in the dark), the highlight of a revealed spot and
+   the dimming of a failed compile. Added by the workbench (Preview.styleSheet). See preview.ts. */
+.typst-preview-pane { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.typst-preview__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--te-border);
+  background: var(--te-subtle);
+  font-size: 12px;
+}
+.typst-preview__toolbar > button {
+  min-width: 28px;
+  border: 1px solid var(--te-border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  background: var(--te-surface);
+  font: inherit;
+  cursor: pointer;
+}
+.typst-preview__scroller { flex: 1; min-height: 0; overflow: auto; }
+.typst-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: safe center;
+  gap: 28px;
+  padding: 16px 16px 32px;
+  box-sizing: border-box;
+}
+.typst-preview__page {
+  position: relative;
+  flex: none;
+  background: white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  cursor: text;
+}
+.typst-preview__page::after {
+  content: attr(data-number);
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  padding-top: 6px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--te-faint);
+}
+.typst-preview__content svg { display: block; width: 100%; height: auto; }
+/* Dark mode: the pages inverted, as dark-mode PDF readers do (white text on black, hues kept, pictures
+   turned back); the overlays (highlights) are outside the content and keep their colors. */
+.typst-editor[data-scheme='dark'] .typst-preview__page { background: black; }
+.typst-editor[data-scheme='dark'] .typst-preview__content,
+.typst-editor[data-scheme='dark'] .typst-preview__content image { filter: invert(1) hue-rotate(180deg); }
+.typst-preview__highlight {
+  position: absolute;
+  margin: -2px;
+  padding: 2px;
+  border-radius: 3px;
+  background: var(--te-jump);
+  outline: 1px solid var(--te-accent);
+  pointer-events: none;
+}
+.typst-preview__follow-spot { position: absolute; width: 1px; height: 1.4em; margin-top: -1.2em; pointer-events: none; }
+.typst-preview--stale { opacity: 0.45; filter: grayscale(0.6); transition: opacity 0.2s; }

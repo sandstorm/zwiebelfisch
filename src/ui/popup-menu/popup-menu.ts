@@ -1,5 +1,6 @@
 // PopupMenu: a menu that pops up at a point or below a button (a context menu, a "New ▾" menu) and closes once an
 // entry is chosen. Entry of ui/popup-menu/, a feature-neutral widget. See docs/architecture/overview.typ.
+import css from './popup-menu.css?inline';
 
 /** An entry of a popup menu. */
 export interface PopupMenuEntry {
@@ -19,6 +20,8 @@ export type PopupMenuAnchor = { x: number; y: number } | Element;
  * and gives the focus back to the element that had it; a chosen entry runs after that.
  */
 export class PopupMenu {
+  /** The menus' CSS: whoever shows one registers it (`registerStyleSheet`). */
+  static readonly styleSheet: string = css;
   readonly #element: HTMLElement;
   readonly #items: HTMLButtonElement[];
   readonly #returnFocus: Element | null;

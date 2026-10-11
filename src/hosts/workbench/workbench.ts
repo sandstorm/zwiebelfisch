@@ -28,11 +28,11 @@ import { EditingViews } from './editing-views/editing-views';
 import { ExtensionHost } from './extension-host/extension-host';
 import { FileDrops } from './file-drops/file-drops';
 import { Layout } from './layout/layout';
-import layoutStyles from './layout/layout.css?inline';
 import { EditorTitleMenu } from './menus/editor-title-menu';
 import { Menus } from './menus/menus';
 import { StorageMemento } from './memento/memento';
 import { StyleSheets } from './style-sheets/style-sheets';
+import css from './workbench.css?inline';
 
 /**
  * A feature of the widget: activated once, in list order; what it registers goes into `context.subscriptions`.
@@ -238,9 +238,9 @@ export interface WorkbenchOptions {
   /** Another file is shown in the editing area. */
   onOpen?(path: ProjectPath): void;
   /**
-   * The widget's own CSS (the other hosts' included), put where it renders before the frame is built (the color
-   * scheme reads the resolved colors), as `<style id="typst-editor-styles">` together with the frame's own layout
-   * CSS; the extensions' stylesheets follow it.
+   * The widget's color tokens and frame (CSS), put where it renders before the frame is built (the color scheme reads
+   * the resolved colors), as `<style id="typst-editor-styles">` together with the workbench's own CSS. The other
+   * hosts' stylesheets follow it, then the extensions'.
    */
   styleSheet?: string;
 }
@@ -288,10 +288,7 @@ export class WorkbenchHost implements Workbench {
   ) {
     this.#active = project.main;
     this.#styleSheets = new StyleSheets(host);
-    this.#ownStyles = Disposable.from(
-      this.#styleSheets.add((options.styleSheet ?? '') + layoutStyles, 'typst-editor-styles'),
-      this.#styleSheets.add(this.#languages.styleSheet),
-    );
+    const frameStyles = this.#styleSheets.add((options.styleSheet ?? '') + css, 'typst-editor-styles');
     host.classList.add('typst-editor');
     this.#workspace = new WorkspaceHost(project, { settings: options.settings, allowFileChange: options.allowFileChange });
     this.#workspace.declare(WORKBENCH_SETTINGS);
@@ -317,6 +314,9 @@ export class WorkbenchHost implements Workbench {
       onDidChangeTextEditorSelection: this.#selectionChanged.event,
     });
     this.#preview = new Preview(this.#layout.preview);
+    // the hosts' CSS after the tokens and the frame, before the extensions'
+    const hosts = [this.#window, this.#languages, this.#preview, this.#sourceViews, this.#visualView];
+    this.#ownStyles = Disposable.from(frameStyles, ...hosts.map((part) => this.#styleSheets.add(part.styleSheet)));
     this.#subscription = project.onDidChangeFile((change) => this.#changed(change));
     this.#showDocumentLinks();
     this.#workspace.onDidChangeConfiguration((event) => {
