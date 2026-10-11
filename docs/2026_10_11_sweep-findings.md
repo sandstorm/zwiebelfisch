@@ -149,3 +149,23 @@ snippet, exportPdf).
   `{ kind, … }`, wire messages exempt.
 - §6: decision records ("decided 2026-10-10") in ARCHITECTURE.md are allowed; history in code
   comments is not.
+
+## H. Names that should be longer (user: refactor later, as its own step)
+
+Proposed 2026-10-11; one agent alone (touches many files), after the current waves:
+1. **Words used for two things:** preview `Box` / `PercentBox` / `Rect` → `PageRect` / `PageRectPercent`;
+   Visual view `BoxRenderer` / `BoxAction` / `BoxTools` / `Boxes` → `RawBoxRenderer` / `RawBoxAction` /
+   `RawBoxTools` / `RawBoxes`; custom Typst styles `Style` / `StyleKind` / `StyleMark` / `StyleIndex` /
+   `StyleMenu` → `TypstStyle` / `TypstStyleKind` / `TypstStyleMark` / `TypstStyleIndex` /
+   `TextStyleMenu` (vs CSS style sheets); `TextDocument` goes — link providers get the real
+   `TypstDocument` (with a `path`); `Highlight` → `SourceHighlight`; `Diagnostic` → `TypstDiagnostic`.
+2. **Generic names in cross-module API:** `Call` → `TypstCall`, `Placed` → `PlacedNode`, `Engine` →
+   `TypstEngine`, worker `Request` / `Response` → `EngineRequest` / `EngineResponse`, `Shared` →
+   `SharedRoom`, `Jump` → `SourceJump`, `Move` → `TreeKeyMove`, toolbar `Action` → `ToolbarAction`,
+   `Layout` → `WorkbenchLayout`, `Snippet` → `RenderedSnippet`, `Renderings` → `RawBoxRenderings`,
+   `builtins` → `builtinExtensions` (`Position` / `Span` come with the value-types wave).
+3. **Projection functions** (with the parser / serializer naming): `project` → `parseTypst`, `print` →
+   `serializeToTypst`, `syncDoc` → `applyTypstChanges`, `pristine` → `isUnchangedSource`,
+   `NodeGrammar` / `MarkGrammar` / `Grammar` → `TypstNodeConversion` / `TypstMarkConversion` /
+   `TypstConversions`.
+Left alone: extension factories (`files()`, `labels()`), VS Code names, short file-internal helpers.
