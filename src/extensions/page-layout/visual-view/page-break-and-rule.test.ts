@@ -1,6 +1,6 @@
 // Tests for page-break.ts and horizontal-rule.ts: `#pagebreak()` and full-width `#line(..)` as widgets.
 import { describe, expect, it } from 'vitest';
-import { serializeToTypst } from '../../../hosts/projection/projection';
+import { serializeToTypst } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import { after, edit, expectPreciseMap, parseTypst, schema } from '../../../testing/testing';
 
 const FIXTURES: Record<string, string> = {
@@ -19,7 +19,7 @@ describe('page breaks and horizontal rules', () => {
     }
   });
 
-  it('projects a standalone #pagebreak(..) as a page break, keeping its arguments', () => {
+  it('parses a standalone #pagebreak(..) as a page break, keeping its arguments', () => {
     const doc = parseTypst(FIXTURES.pageBreaks);
     expect(doc.child(1).type.name).toBe('pageBreak');
     expect(doc.child(1).attrs.src).toBe('#pagebreak()');
@@ -27,7 +27,7 @@ describe('page breaks and horizontal rules', () => {
     expect(doc.child(3).attrs.src).toBe('#pagebreak(weak: true)');
   });
 
-  it('projects a full-width #line as a horizontal rule', () => {
+  it('parses a full-width #line as a horizontal rule', () => {
     const doc = parseTypst(FIXTURES.rules);
     expect(doc.child(1).type.name).toBe('horizontalRule');
     expect(doc.child(2).type.name).toBe('horizontalRule');

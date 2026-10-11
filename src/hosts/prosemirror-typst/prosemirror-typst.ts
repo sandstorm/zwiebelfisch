@@ -1,5 +1,5 @@
 /**
- * The source-anchored projection between Typst text and the Visual view's
+ * The source-anchored conversion between Typst text and the Visual view's
  * ProseMirror document: the framework, which knows no Typst construct beyond
  * paragraphs, text and raw Typst. Every other construct comes in as a spec
  * (`DocumentNodeSpec` / `TypstMarkSpec`, below): its Tiptap extension, which
@@ -15,7 +15,7 @@
  *   sourceToPos(doc, offset) / posToSource(doc, pos)
  *                                         map between source offsets and document
  *                                         positions, down to the character
- *   applyTypstChanges(tr, target) → tr    turns the current doc into a fresh projection
+ *   applyTypstChanges(tr, target) → tr    turns the current doc into a fresh parse
  *                                         with the smallest possible replacement
  *
  * Hence `serializeToTypst(parseTypst(text)) === text` for any input, and an edit in the
@@ -24,12 +24,12 @@
  * Labels (`<key>`) after a heading, or ending a block's run, are that block's
  * `label` attribute (see `labels.ts`).
  *
- * The minimum schema is the projection's own: document, paragraph, text, hard
+ * The minimum schema is the conversion's own: document, paragraph, text, hard
  * and soft breaks, raw Typst (block and inline), the `typstSource` mark, history
  * and drop / gap cursors. The Visual view host's document model, a module of its
  * own: the host builds on it, the specs contributed to the Visual view are
  * written against its types, and it is tested without a view.
- * Entry of hosts/projection/. See docs/architecture/projection.typ.
+ * Entry of hosts/prosemirror-typst/. See docs/architecture/prosemirror-typst.typ.
  */
 import type { SyntaxNode } from '@lezer/common';
 import { flattenExtensions, getExtensionField, getSchema, type AnyExtension } from '@tiptap/core';
@@ -280,7 +280,7 @@ const STARTER_KIT_PARTS: readonly (keyof StarterKitOptions)[] = [
   'horizontalRule', 'italic', 'listItem', 'listKeymap', 'link', 'orderedList', 'paragraph', 'strike', 'text', 'underline', 'trailingNode',
 ];
 
-/** The document `source` projects to, through the specs attached to `schema` (see `attachGrammar`). */
+/** The document `source` parses to, through the specs attached to `schema` (see `attachGrammar`). */
 export function parseTypst(source: string, schema: Schema): Node {
   return parseDocument(source, schema, TypstConversions.of(schema));
 }
@@ -356,7 +356,7 @@ export function posToSource(doc: Node, pos: number, bias: 1 | -1 = 1): SourceOff
 }
 
 /**
- * Turns `tr.doc` into `target` (a fresh projection of the current text) with
+ * Turns `tr.doc` into `target` (a fresh parse of the current text) with
  * the smallest replacement: ProseMirror's diff descends into equal-typed
  * nodes, so a changed word inside a paragraph replaces just that text and a
  * cursor elsewhere in the paragraph stays put. Attributes (`src`, `sep`) are

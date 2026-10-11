@@ -5,7 +5,7 @@ How code is written here. `mise run quality` enforces what it can (@architecture
 == Design <architecture-conventions-design>
 
 - *Overall complexity as low as possible*, measured in obviousness, not lines. Every type, helper, wrapper or contribution point of ours is a concept someone must learn. Prefer the frameworks' concepts and plain code. Size helpers by what is used today.
-- *A new concept of ours only where two areas meet*: Typst ↔ ProseMirror (projection), Typst ↔ CodeMirror (raw boxes), our extension API ↔ a framework. Inside one area, use its own concepts and plain functions.
+- *A new concept of ours only where two areas meet*: Typst ↔ ProseMirror (`hosts/prosemirror-typst`), Typst ↔ CodeMirror (raw boxes), our extension API ↔ a framework. Inside one area, use its own concepts and plain functions.
 - *Every new concept is proposed to the user first*, with what it replaces and what it brings. Renames, moves and plain functions are not new concepts.
 - *Deep modules*: a lot hidden behind a small interface. Don't split a deep class into shallow ones (`Project` stays one class).
 - *Information hiding*: expose what callers need. No member exists only for tests or for one caller's convenience.
@@ -18,7 +18,7 @@ How code is written here. `mise run quality` enforces what it can (@architecture
 - A module is `core/<name>/`, `hosts/<name>/`, `extensions/<name>/`, `ui/<name>/`, `typst-editor/`, `typst-editor-element/` or `testing/`. From outside, only its *entry file* may be imported. The entry lives inside its folder.
 - *The entry defines the API*; the most important code lives there. Internal files import the entry's types; they may use its values at runtime, never while modules load.
 - Subfolders (`model/`, `visual-view/`, `worker/`) are layer or concept folders without entries; files import each other directly.
-- *No re-exports* (`export … from`, forwarding an imported name), except `src/index.ts`, the package entry. An outside caller needing an internal name means the code belongs in the entry, or the concept is a module of its own (`core/typst-syntax`, `hosts/projection`). Split a concept out when its types and class form an API of their own, so entries don't grow into type collections.
+- *No re-exports* (`export … from`, forwarding an imported name), except `src/index.ts`, the package entry. An outside caller needing an internal name means the code belongs in the entry, or the concept is a module of its own (`core/typst-syntax`, `hosts/prosemirror-typst`). Split a concept out when its types and class form an API of their own, so entries don't grow into type collections.
 - Folders are named after a concept, never `utils/`, `impl/`, `helpers/`.
 - *No cycles between modules*.
 
@@ -37,7 +37,7 @@ How code is written here. `mise run quality` enforces what it can (@architecture
 )
 
 - *The line between model and view is the DOM.* Pure display logic (card layout, zoom presets, tree rows) is model.
-- *Hosts keep only mechanism.* For every host member ask: mechanism, or one feature's policy? Policy is an extension. A host folder may also be a host's model module without contribution points (`hosts/projection`).
+- *Hosts keep only mechanism.* For every host member ask: mechanism, or one feature's policy? Policy is an extension. A host folder may also be a host's model module without contribution points (`hosts/prosemirror-typst`).
 - *Extensions never depend on each other*: not through imports, a service registry, commands or schema names. When one has something for another, a host offers a generic contribution point and the consumer reads every contribution. Another extension's schema names are read only as data (node groups like `figureBody`, configured type lists) and always guarded (`schema.nodes.x`, `editor.can()`).
 
 == Extension API <architecture-conventions-api>

@@ -6,7 +6,7 @@ import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
-import type { TypstParseContext, TypstSerializeState } from '../../../hosts/projection/projection';
+import type { TypstParseContext, TypstSerializeState } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 
 /** Source anchors: `src`, the Typst a node was read from; `sep`, the whitespace to its next sibling. */
 const ANCHORS = {

@@ -1,9 +1,9 @@
-// Tests for the projection of `#align(..)` and alignment set rules (visual-view.ts, text-align.ts).
+// Tests for `#align(..)` and alignment set rules in the Typst ↔ ProseMirror conversion (visual-view.ts, text-align.ts).
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
 import { schema } from '../../../testing/testing';
-import { posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos } from '../../../hosts/projection/projection';
+import { posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import { SourceOffset } from '../../../core/typst-document/typst-document';
 
 const parseTypst = (source: string) => parseTypstWith(source, schema);
@@ -55,7 +55,7 @@ function expectPreciseMap(doc: Node): void {
   }
 }
 
-describe('alignment in the projection', () => {
+describe('alignment in the Typst ↔ ProseMirror conversion', () => {
   describe('round-trips byte for byte, with a precise position map', () => {
     for (const [name, source] of Object.entries(FIXTURES)) {
       it(name, () => {
@@ -66,7 +66,7 @@ describe('alignment in the projection', () => {
     }
   });
 
-  it('projects #align(..)[..] as an alignment block holding editable blocks', () => {
+  it('parses #align(..)[..] as an alignment block holding editable blocks', () => {
     const doc = parseTypst(FIXTURES.blocks);
     const align = doc.child(1);
     expect(align.type.name).toBe('alignment');
@@ -83,7 +83,7 @@ describe('alignment in the projection', () => {
     expect(nested.child(1).attrs.args).toBe('right');
   });
 
-  it('projects #par(justify: ..)[..] as a paragraph with a justify flag', () => {
+  it('parses #par(justify: ..)[..] as a paragraph with a justify flag', () => {
     const doc = parseTypst(FIXTURES.justified);
     expect(doc.child(0).type.name).toBe('paragraph');
     expect(doc.child(0).attrs.justify).toBe(true);

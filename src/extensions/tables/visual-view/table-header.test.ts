@@ -1,7 +1,7 @@
-// Tests for the projection of table header rows (visual-view.ts, through the projection).
+// Tests for table header rows (visual-view.ts, through the Typst ↔ ProseMirror conversion).
 import type { Node } from '@tiptap/pm/model';
 import { describe, expect, it } from 'vitest';
-import { serializeToTypst } from '../../../hosts/projection/projection';
+import { serializeToTypst } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import { after, edit, expectPreciseMap, find, parseTypst, schema } from '../../../testing/testing';
 
 const FIXTURES: Record<string, string> = {
@@ -42,7 +42,7 @@ describe('table headers', () => {
     }
   });
 
-  it('projects table.header(..) as a first row of header cells', () => {
+  it('parses table.header(..) as a first row of header cells', () => {
     const table = parseTypst(FIXTURES.parens).child(0);
     expect(table.type.name).toBe('table');
     expect(cellTypes(table)).toEqual([

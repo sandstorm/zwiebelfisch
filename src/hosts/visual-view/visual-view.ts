@@ -1,4 +1,4 @@
-// VisualView: the WYSIWYG editing view, a Tiptap editor over the source-anchored projection of a TypstDocument;
+// VisualView: the WYSIWYG editing view, a Tiptap editor over the source-anchored ProseMirror document of a TypstDocument;
 // everything it shows beyond paragraphs and raw Typst is contributed through VisualViewContributions (kept by
 // VisualViewHost).
 // Entry of hosts/visual-view/. See docs/architecture/visual-view.typ.
@@ -10,7 +10,7 @@ import type { Decoration } from '@tiptap/pm/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
-import { attachGrammar, onDidChangeGrammar, posToSource, serializeToTypst, parseTypst, sourceToPos, applyTypstChanges, type DocumentNodeSpec, type TypstMarkSpec } from '../projection/projection';
+import { attachGrammar, onDidChangeGrammar, posToSource, serializeToTypst, parseTypst, sourceToPos, applyTypstChanges, type DocumentNodeSpec, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
 import { highlights, setHighlights } from './highlights';
 import { editorExtensions, nodeViewSpecs } from './nodes/node-views';
 import type { RawBoxes } from './nodes/raw-box';
@@ -23,10 +23,10 @@ const FROM_DOCUMENT = 'typst-from-document';
 
 /**
  * The Word-like editing view (Tiptap/ProseMirror) with its formatting
- * toolbar, a projection of a TypstDocument.
+ * toolbar, the parsed ProseMirror document of a TypstDocument.
  *
  * Visual edits become one minimal text change on the document; document
- * changes from elsewhere are re-projected and applied as the smallest
+ * changes from elsewhere are parsed again and applied as the smallest
  * replacement, so the cursor stays where it was. Unmodelled Typst shows as
  * raw boxes and is never rewritten. What the view models, shows and offers
  * beyond that (headings, tables, labels, comments, …) comes from
@@ -70,7 +70,7 @@ export class VisualView {
     const { schema } = this.editor;
     attachGrammar(schema, contributed.nodes, contributed.marks);
     this.gutters = contributed.gutters.map((provider) => provider(view, body));
-    // Load the projection itself (not a JSON copy): its node identities are what marks blocks as untouched.
+    // Load the parsed document itself (not a JSON copy): its node identities are what marks blocks as untouched.
     this.editor.view.updateState(
       EditorState.create({
         schema,

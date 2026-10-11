@@ -6,7 +6,7 @@ import { find, schemaWith, TestPrompts } from '../../../testing/testing';
 import { Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import { LabelIndex } from '../model/label-index';
-import { serializeToTypst, parseTypst } from '../../../hosts/projection/projection';
+import { serializeToTypst, parseTypst } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import { insertReference, renameLabel, setLabel } from './label-edits';
 import { labelName } from '../model/reference-syntax';
 import { references } from './visual-view';

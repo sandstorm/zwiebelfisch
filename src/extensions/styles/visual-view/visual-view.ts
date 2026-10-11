@@ -3,7 +3,7 @@
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node } from '@tiptap/pm/model';
 import { calleeName, children, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
-import type { PlacedNode, TypstMarkSpec, TypstSerializeState, TypstParseContext } from '../../../hosts/projection/projection';
+import type { PlacedNode, TypstMarkSpec, TypstSerializeState, TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import type { TextStyle, TextStyleProvider, TypstNodeSpec, VisualViewContext, VisualViewContribution } from '../../../hosts/visual-view/visual-view';
 import type { ProjectStyles } from '../model/typst-style-index';
 import type { TypstStyle } from '../model/discover';
@@ -24,14 +24,14 @@ const STYLE_IMPORT = 'style-import';
  * style that is a block of its own (`#note[..]`, `#callout(..)[..]`) is a
  * `styledBlock` holding blocks; a text style call in running text
  * (`#key[..]`) is text with a `style` mark. Undeclared calls stay raw; a style
- * declared or removed re-projects every view. The text style menu lists the
+ * declared or removed parses every view's document again. The text style menu lists the
  * project's styles and "New style…" (after normal text and what other
  * extensions contribute) and applies them, importing a style where it is now
  * used.
  */
 export function customStyles(options: StylesOptions): VisualViewContribution {
   const declared = declaredStyles(options.styles);
-  // a style declared or removed: every view projects its document again
+  // a style declared or removed: every view parses its document again
   const onDidChange = options.styles.onDidChange;
   return {
     id: 'styles',

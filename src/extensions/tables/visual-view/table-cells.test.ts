@@ -1,10 +1,10 @@
-// Tests for real-world tables in the projection (visual-view.ts): expression cells, styles, tables in figures.
+// Tests for real-world tables in the Typst ↔ ProseMirror conversion (visual-view.ts): expression cells, styles, tables in figures.
 import { readFileSync } from 'node:fs';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState, TextSelection, type Command } from '@tiptap/pm/state';
 import { addRowAfter, deleteColumn, deleteRow, toggleHeaderRow } from '@tiptap/pm/tables';
 import { describe, expect, it } from 'vitest';
-import { serializeToTypst, applyTypstChanges } from '../../../hosts/projection/projection';
+import { serializeToTypst, applyTypstChanges } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import { after, edit, expectPreciseMap, find, parseTypst } from '../../../testing/testing';
 
 /** The table of demo/examples/advanced (results.typ), without the figure around it. */
@@ -74,7 +74,7 @@ describe('real-world tables', () => {
     }
   });
 
-  it('projects expression cells as code boxes in cells of their own, header cells too', () => {
+  it('parses expression cells as code boxes in cells of their own, header cells too', () => {
     const table = parseTypst(ADVANCED).child(0);
     expect(table.type.name).toBe('table');
     expect(table.childCount).toBe(3);
@@ -200,7 +200,7 @@ describe('real-world tables', () => {
   });
 
   describe('tables in figures', () => {
-    it('projects the table as the figure body, the caption as rich text', () => {
+    it('parses the table as the figure body, the caption as rich text', () => {
       const figure = parseTypst(FIXTURES.figure).child(0);
       expect(figure.type.name).toBe('figure');
       expect(figure.child(0).type.name).toBe('table');

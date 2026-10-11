@@ -2,7 +2,7 @@
 // with the label right after it) and its levels in the text style menu. See headings.ts.
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import type { TextStyleProvider, TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
-import { starterKitPart } from '../../../hosts/projection/projection';
+import { starterKitPart } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 
 /**
  * `= Title` .. `====== Title` (deeper levels count as 6): a heading of its own

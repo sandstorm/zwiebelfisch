@@ -24,7 +24,7 @@ declare module '@tiptap/core' {
 /**
  * Blocks in a paragraph style: `#note[..]` (or `#callout(kind: ..)[..]`)
  * around them. Their content is edited as usual; the call around it is kept
- * as written (`layout`, owned by the projection), a new one is `#name[..]`.
+ * as written (`layout`, owned by the serializer), a new one is `#name[..]`.
  * Drawn as a frame with the style's name and the class `typst-styles--<name>`.
  */
 export const StyledBlock = Node.create({

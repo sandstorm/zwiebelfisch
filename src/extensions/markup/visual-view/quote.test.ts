@@ -1,6 +1,6 @@
-// Tests for the projection of quotes (visual-view.ts).
+// Tests for quotes in the Typst ↔ ProseMirror conversion (visual-view.ts).
 import { describe, expect, it } from 'vitest';
-import { serializeToTypst } from '../../../hosts/projection/projection';
+import { serializeToTypst } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import { after, edit, expectPreciseMap, find, parseTypst, schema } from '../../../testing/testing';
 
 const FIXTURES: Record<string, string> = {
@@ -20,7 +20,7 @@ describe('block quotes', () => {
     }
   });
 
-  it('projects #quote(block: true)[..] as a blockquote holding blocks', () => {
+  it('parses #quote(block: true)[..] as a blockquote holding blocks', () => {
     const doc = parseTypst(FIXTURES.attributed);
     const quote = doc.child(0);
     expect(quote.type.name).toBe('blockquote');
@@ -30,7 +30,7 @@ describe('block quotes', () => {
     expect(quote.child(1).type.name).toBe('bulletList');
   });
 
-  it('projects an empty quote as one empty paragraph', () => {
+  it('parses an empty quote as one empty paragraph', () => {
     const quote = parseTypst(FIXTURES.empty).child(0);
     expect(quote.type.name).toBe('blockquote');
     expect(quote.child(0).content.size).toBe(0);

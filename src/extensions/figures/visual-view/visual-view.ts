@@ -6,7 +6,7 @@ import { Node } from '@tiptap/core';
 import type { Node as PMNode } from '@tiptap/pm/model';
 import { NodeSelection, TextSelection, type Transaction } from '@tiptap/pm/state';
 import { callArguments, children, hasOnlyArguments, isClosedContent, withHash } from '../../../core/typst-syntax/typst-syntax';
-import type { TypstSerializeState, TypstParseContext } from '../../../hosts/projection/projection';
+import type { TypstSerializeState, TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import type { TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 
 declare module '@tiptap/core' {
@@ -49,7 +49,7 @@ const FIGURE_BODY = 'figureBody';
  * `#figure(image(..), caption: [..])`: the body (a node of group
  * `figureBody`: an image, its call without the `#`; a table, `table(..)`)
  * and, optionally, the caption as rich text. `layout` is how the figure's
- * source lies around the two (owned by the projection); other arguments and
+ * source lies around the two (owned by the serializer); other arguments and
  * a label after the call live there.
  */
 const Figure = Node.create({

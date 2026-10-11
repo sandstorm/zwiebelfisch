@@ -7,7 +7,7 @@
   table.header[Folder][Job],
   [`src/core/`], [Models: files, text, paths, the Typst engine, Typst syntax. No DOM, no editor library, no Yjs. See @architecture-core.],
   [`src/ui/`], [Feature-neutral DOM widgets (`PopupMenu`).],
-  [`src/hosts/`], [View hosts: the mechanism of a view plus its contribution points. No feature knowledge. @architecture-projection, @architecture-visual-view, @architecture-source-view, @architecture-preview, @architecture-workbench.],
+  [`src/hosts/`], [View hosts: the mechanism of a view plus its contribution points. No feature knowledge. @architecture-prosemirror-typst, @architecture-visual-view, @architecture-source-view, @architecture-preview, @architecture-workbench.],
   [`src/extensions/`], [One folder per concept (headings, comments, files, …). Every feature and every Typst construct beyond paragraphs and raw Typst. See @architecture-built-in-extensions.],
   [`src/typst-editor/`], [`createTypstEditor`: a `Project` in the workbench host with the built-in extension list.],
   [`src/typst-editor-element/`], [`<typst-editor>`: a shadow root around `createTypstEditor`.],
@@ -46,7 +46,7 @@ Typing one letter in the Visual view:
    └──► TextBinding              (collaboration) into the shared Y.Text
 ```
 
-The way back is the same with the roles swapped: a Source view edit reaches the Visual view through `onDidChange`, which re-projects the text and applies the smallest replacement (`applyTypstChanges`, see @architecture-projection-sync).
+The way back is the same with the roles swapped: a Source view edit reaches the Visual view through `onDidChange`, which parses the text again and applies the smallest replacement (`applyTypstChanges`, see @architecture-prosemirror-typst-sync).
 
 == One edit format, one source of truth <architecture-overview-truth>
 

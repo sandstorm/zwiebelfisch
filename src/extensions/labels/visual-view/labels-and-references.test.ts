@@ -1,4 +1,4 @@
-// Tests for visual-view.ts and the projection: references (`@key`) as chips, labels (`<key>`) as attributes of the blocks they label.
+// Tests for visual-view.ts and the Typst ↔ ProseMirror conversion: references (`@key`) as chips, labels (`<key>`) as attributes of the blocks they label.
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
@@ -7,7 +7,7 @@ import { after, edit, expectPreciseMap, find, schemaWith, TestPrompts } from '..
 import { Project } from '../../../core/project/project';
 import { ProjectPath } from '../../../core/paths/paths';
 import { LabelIndex } from '../model/label-index';
-import { serializeToTypst, parseTypst as parseTypstWith, applyTypstChanges } from '../../../hosts/projection/projection';
+import { serializeToTypst, parseTypst as parseTypstWith, applyTypstChanges } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import { references as referencesContribution } from './visual-view';
 
 const noLabels = new LabelIndex(new Project(ProjectPath.of('/main.typ'), { '/main.typ': '' }));
@@ -50,7 +50,7 @@ function references(doc: Node): { target: string; supplement: string | null }[] 
   return found;
 }
 
-describe('references and labels in the projection', () => {
+describe('references and labels in the Typst ↔ ProseMirror conversion', () => {
   describe('round-trip byte for byte, with a precise position map', () => {
     for (const [name, source] of Object.entries(FIXTURES)) {
       it(name, () => {
@@ -61,7 +61,7 @@ describe('references and labels in the projection', () => {
     }
   });
 
-  it('projects the advanced example: references are chips, the heading label is an attribute', () => {
+  it('parses the advanced example: references are chips, the heading label is an attribute', () => {
     const doc = parseTypst(FIXTURES.introduction);
     expect(references(doc)).toEqual([
       { target: 'method', supplement: null },

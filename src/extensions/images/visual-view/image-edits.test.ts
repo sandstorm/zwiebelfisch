@@ -4,7 +4,7 @@ import { EditorState, type Transaction } from '@tiptap/pm/state';
 import { minimalChange } from '../../../core/typst-document/typst-document';
 import { schema } from '../../../testing/testing';
 import { imageInfo, resizeImage, setImageAlt } from './image-edits';
-import { serializeToTypst, parseTypst } from '../../../hosts/projection/projection';
+import { serializeToTypst, parseTypst } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 
 const state = (source: string) => EditorState.create({ doc: parseTypst(source, schema) });
 

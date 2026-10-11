@@ -1,10 +1,10 @@
 // The Tiptap nodes and marks of the minimum schema besides StarterKit's parts: the document with its lead and
 // trail, raw Typst (block and inline), soft breaks, the typstSource mark; and the extension giving StarterKit's
-// paragraphs and line breaks their source anchors and labelled specs' node types their `label`. See projection.ts
-// (`documentExtensions`) and docs/architecture/projection.typ.
+// paragraphs and line breaks their source anchors and labelled specs' node types their `label`. See prosemirror-typst.ts
+// (`documentExtensions`) and docs/architecture/prosemirror-typst.typ.
 import { Extension, Mark, Node, type AnyExtension } from '@tiptap/core';
 import Document from '@tiptap/extension-document';
-import type { DocumentNodeSpec } from './projection';
+import type { DocumentNodeSpec } from './prosemirror-typst';
 
 /**
  * Source anchors of the base's paragraphs (`src`, its original Typst; `sep`, the whitespace to its next sibling) and

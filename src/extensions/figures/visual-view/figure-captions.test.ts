@@ -4,7 +4,7 @@
 import type { Editor } from '@tiptap/core';
 import type { NodeSelection } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
-import { serializeToTypst } from '../../../hosts/projection/projection';
+import { serializeToTypst } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import { createEditor, find } from '../../../testing/testing';
 
 /** An editor of `source`, and the position of its first image. */

@@ -1,9 +1,9 @@
 // TypstConversions: what the framework knows about Typst constructs: the registered node and mark specs (their types are in
-// projection.ts), and the tables derived from their parse rules (which syntax and calls become what) and from their
-// Typst (how edited nodes are written). See projection.ts.
+// prosemirror-typst.ts), and the tables derived from their parse rules (which syntax and calls become what) and from their
+// Typst (how edited nodes are written). See prosemirror-typst.ts.
 import type { NodeType, Schema } from '@tiptap/pm/model';
 import type { Event } from '../../core/event-emitter/event-emitter';
-import type { DocumentNodeSpec, TypstMarkSpec, TypstParseRules } from './projection';
+import type { DocumentNodeSpec, TypstMarkSpec, TypstParseRules } from './prosemirror-typst';
 
 type SyntaxNodeRule = NonNullable<TypstParseRules['syntaxNodes']>[string];
 type CallRule = NonNullable<TypstParseRules['calls']>[string];

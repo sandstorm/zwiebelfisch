@@ -6,7 +6,7 @@ import type { Node } from '@tiptap/pm/model';
 import { Plugin } from '@tiptap/pm/state';
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
-import type { TypstParseContext } from '../../../hosts/projection/projection';
+import type { TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import { countTaskItems, ensureChecklistPreamble } from './checklist-preamble';
 
 /**

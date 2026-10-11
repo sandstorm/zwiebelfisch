@@ -1,10 +1,10 @@
-// The Visual view's projection with the built-in extensions' specs: every fixture round-trips, edits stay minimal, the
+// The Typst ↔ ProseMirror conversion with the built-in extensions' specs: every fixture round-trips, edits stay minimal, the
 // position maps are precise (integration: src/testing composes the built-ins; the framework's own tests are in
-// hosts/visual-view/projection.test.ts).
+// hosts/prosemirror-typst/prosemirror-typst.test.ts).
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState, TextSelection } from '@tiptap/pm/state';
-import { posToSource, serializeToTypst, sourceToPos, applyTypstChanges } from '../hosts/projection/projection';
+import { posToSource, serializeToTypst, sourceToPos, applyTypstChanges } from '../hosts/prosemirror-typst/prosemirror-typst';
 import { after, builtins, edit, expectPreciseMap, parseTypst, schema, schemaOf } from '../testing/testing';
 import { SourceOffset } from '../core/typst-document/typst-document';
 
@@ -41,14 +41,14 @@ const FIXTURES: Record<string, string> = {
     '#figure(table(columns: 1, [a], table.hline()))\n\n#figure(image(p), caption: [x])\n\n#figure(image("a.png")) <a> <b>\n',
 };
 
-describe('projection', () => {
+describe('Typst ↔ ProseMirror conversion', () => {
   describe('round-trips every fixture byte for byte', () => {
     for (const [name, source] of Object.entries(FIXTURES)) {
       it(name, () => expect(serializeToTypst(parseTypst(source))).toBe(source));
     }
   });
 
-  it('projects headings, paragraphs and marks into real nodes', () => {
+  it('parses headings, paragraphs and marks into real nodes', () => {
     const doc = parseTypst('= Title\n\nSome *bold* and _it_ text.');
     expect(doc.child(0).type.name).toBe('heading');
     expect(doc.child(0).attrs.level).toBe(1);
@@ -70,7 +70,7 @@ describe('projection', () => {
     expect(inline.attrs.src).toBe('#emph[func]');
   });
 
-  it('projects consecutive list items into one list', () => {
+  it('parses consecutive list items into one list', () => {
     const doc = parseTypst('- one\n- two\n\n+ a\n+ b');
     expect(doc.childCount).toBe(2);
     expect(doc.child(0).type.name).toBe('bulletList');
@@ -285,7 +285,7 @@ const linkMark = (href: string) => schema.marks.link.create({ href });
 const hrefsOf = (node: Node) => node.marks.filter((m) => m.type.name === 'link').map((m) => m.attrs.href as string);
 
 describe('links', () => {
-  it('projects #link("url")[text] and bare URLs as link marks over their text', () => {
+  it('parses #link("url")[text] and bare URLs as link marks over their text', () => {
     const doc = parseTypst('See #link("https://typst.app")[the *site*] or https://typst.app/docs.');
     const paragraph = doc.child(0);
     expect(paragraph.textContent).toBe('See the site or https://typst.app/docs.');
@@ -356,7 +356,7 @@ describe('links', () => {
 });
 
 describe('images', () => {
-  it('projects a standalone #image call as an image block', () => {
+  it('parses a standalone #image call as an image block', () => {
     const doc = parseTypst('#image("img/logo.png", width: 50%)\n\nText #image("i.png")\n');
     expect(doc.child(0).type.name).toBe('image');
     expect(doc.child(0).attrs.src).toBe('#image("img/logo.png", width: 50%)');
@@ -374,7 +374,7 @@ describe('images', () => {
 describe('tables', () => {
   const source = '#table(\n  columns: 2,\n  stroke: none,\n  [a], [*b* c],\n  [], [- x\n  - y],\n)\n';
 
-  it('projects a table of content cells into rows and cells', () => {
+  it('parses a table of content cells into rows and cells', () => {
     const table = parseTypst(source).child(0);
     expect(table.type.name).toBe('table');
     expect(table.childCount).toBe(2);
@@ -384,7 +384,7 @@ describe('tables', () => {
     expect(table.child(1).child(1).child(0).type.name).toBe('bulletList');
   });
 
-  it('projects multi-paragraph cells as several blocks', () => {
+  it('parses multi-paragraph cells as several blocks', () => {
     const cell = parseTypst('#table(columns: 1, [one\n\ntwo])').child(0).child(0).child(0);
     expect(cell.childCount).toBe(2);
   });
@@ -450,7 +450,7 @@ const codeOf = (node: Node) => node.marks.find((m) => m.type.name === 'code')?.a
 
 /**
  * The first block's content as runs of equally formatted text (atoms by type name), to compare a doc with the
- * projection of its print; how text is written in the source (`typstSource`) does not count.
+ * parse of its print; how text is written in the source (`typstSource`) does not count.
  */
 function markedText(doc: Node): [string, string[]][] {
   const result: [string, string[]][] = [];
@@ -472,7 +472,7 @@ function editInline(source: string, change: (state: EditorState) => EditorState[
 }
 
 describe('code blocks', () => {
-  it('projects a fenced raw block as a code block with its language and text', () => {
+  it('parses a fenced raw block as a code block with its language and text', () => {
     const block = parseTypst('```rust\nfn main() {}\n  x\n```\n').child(0);
     expect(block.type.name).toBe('codeBlock');
     expect(block.attrs.language).toBe('rust');
@@ -488,7 +488,7 @@ describe('code blocks', () => {
     expect(block.textContent).toBe('a```b');
   });
 
-  it('projects an empty code block', () => {
+  it('parses an empty code block', () => {
     const block = parseTypst('```py\n```').child(0);
     expect(block.type.name).toBe('codeBlock');
     expect(block.content.size).toBe(0);
@@ -533,7 +533,7 @@ describe('code blocks', () => {
 });
 
 describe('inline code', () => {
-  it('projects inline raw text as text with a code mark', () => {
+  it('parses inline raw text as text with a code mark', () => {
     const paragraph = parseTypst('Use `a*b` or ```js x()``` here').child(0);
     expect(paragraph.textContent).toBe('Use a*b or x() here');
     expect(paragraph.child(1).text).toBe('a*b');
@@ -542,7 +542,7 @@ describe('inline code', () => {
     expect(codeOf(paragraph.child(3))).toEqual({ fence: 3, lang: 'js' });
   });
 
-  it('projects a line of only inline code as a paragraph', () => {
+  it('parses a line of only inline code as a paragraph', () => {
     const paragraph = parseTypst('`x`').child(0);
     expect(paragraph.type.name).toBe('paragraph');
     expect(codeOf(paragraph.child(0))).toEqual({ fence: 1, lang: null });
@@ -587,7 +587,7 @@ describe('inline code', () => {
 });
 
 describe('table of contents', () => {
-  it('projects a standalone #outline call as an outline block', () => {
+  it('parses a standalone #outline call as an outline block', () => {
     const doc = parseTypst('#outline()\n\n#outline(title: [Contents], depth: 2)\n\nText #outline()\n\n#outline\n');
     expect(doc.child(0).type.name).toBe('outline');
     expect(doc.child(0).attrs.src).toBe('#outline()');
@@ -607,7 +607,7 @@ describe('table of contents', () => {
 describe('figures', () => {
   const source = '#figure(image("x.png", width: 50%), caption: [Some *caption*]) <fig:x>\n\nAfter\n';
 
-  it('projects an image figure as the image and its caption as rich text', () => {
+  it('parses an image figure as the image and its caption as rich text', () => {
     const figure = parseTypst(source).child(0);
     expect(figure.type.name).toBe('figure');
     expect(figure.child(0).type.name).toBe('image');
@@ -618,7 +618,7 @@ describe('figures', () => {
     expect(caption.child(1).marks.map((m) => m.type.name)).toEqual(['bold']);
   });
 
-  it('projects figures without a caption, with other arguments and inside table cells', () => {
+  it('parses figures without a caption, with other arguments and inside table cells', () => {
     const doc = parseTypst(FIXTURES.figures);
     expect(doc.child(1).type.name).toBe('figure');
     expect(doc.child(1).child(1).textContent).toBe('With a link and code'); // `code` is code-marked text
@@ -697,7 +697,7 @@ describe('the order of the built-in extensions', () => {
   const reversed = schemaOf([...builtins()].reverse());
 
   for (const [name, source] of Object.entries(FIXTURES)) {
-    it(`does not change how ${name} projects and prints`, () => {
+    it(`does not change how ${name} parses and prints`, () => {
       const doc = parseTypst(source, reversed);
       expect(doc.toJSON()).toEqual(parseTypst(source).toJSON());
       expect(serializeToTypst(doc)).toBe(source);

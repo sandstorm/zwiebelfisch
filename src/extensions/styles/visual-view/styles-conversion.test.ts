@@ -1,11 +1,11 @@
-// Tests for the projection of custom styles (visual-view.ts): declared style calls as styled blocks and text.
+// Tests for custom styles in the Typst ↔ ProseMirror conversion (visual-view.ts): declared style calls as styled blocks and text.
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../../core/paths/paths';
 import type { TypstStyle } from '../model/discover';
 import type { ProjectStyles } from '../model/typst-style-index';
-import { serializeToTypst, parseTypst as parseTypstWith } from '../../../hosts/projection/projection';
+import { serializeToTypst, parseTypst as parseTypstWith } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import { after, edit, expectPreciseMap, find, schemaWith } from '../../../testing/testing';
 import { customStyles } from './visual-view';
 
@@ -46,7 +46,7 @@ describe('custom styles', () => {
     }
   });
 
-  it('projects a paragraph style call as a styled block holding blocks', () => {
+  it('parses a paragraph style call as a styled block holding blocks', () => {
     const block = parseTypst(FIXTURES.blocks).child(0);
     expect(block.type.name).toBe('styledBlock');
     expect(block.attrs).toMatchObject({ name: 'note', title: 'Note' });
@@ -54,7 +54,7 @@ describe('custom styles', () => {
     expect(block.child(1).type.name).toBe('bulletList');
   });
 
-  it('projects a text style call as text with the style mark; formatting inside stays', () => {
+  it('parses a text style call as text with the style mark; formatting inside stays', () => {
     const paragraph = parseTypst(FIXTURES.text).child(0);
     const styled: string[] = [];
     paragraph.forEach((node) => {

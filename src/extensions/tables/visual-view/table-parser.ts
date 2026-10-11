@@ -3,7 +3,7 @@
 import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
 import { callArguments, hasOnlyArguments, isClosedContent, isEmbeddable, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
-import type { TypstParseContext } from '../../../hosts/projection/projection';
+import type { TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import { NEW_TABLE, type TableLayout, type TableStyle } from '../model/table-layout';
 
 /**
