@@ -97,6 +97,19 @@ describe('raw boxes', () => {
     expect(selection.anchorNode?.textContent).toBe('Hello');
   });
 
+  it('Tab indents a raw block\'s code and stays in an inline box; Escape, then Tab goes to the browser', () => {
+    const { doc, box } = setup('#set text(size: 12pt)\n\nSee #highlight[here] now.\n');
+    const block = box('.typst-visual__raw-block');
+    expect(key(block, 'Tab').defaultPrevented).toBe(true);
+    expect(doc.text).toBe('  #set text(size: 12pt)\n\nSee #highlight[here] now.\n');
+    const inline = box('.typst-visual__raw-inline');
+    expect(key(inline, 'Tab').defaultPrevented).toBe(true);
+    expect(doc.text).toBe('  #set text(size: 12pt)\n\nSee #highlight[here] now.\n');
+    key(block, 'Escape');
+    expect(key(block, 'Tab').defaultPrevented).toBe(false);
+    expect(doc.text).toBe('  #set text(size: 12pt)\n\nSee #highlight[here] now.\n');
+  });
+
   it('live in the shadow root of the Visual editor, so focus and selection are read there', () => {
     const host = document.createElement('div');
     document.body.append(host);

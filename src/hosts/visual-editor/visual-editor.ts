@@ -12,6 +12,7 @@ import { highlights, setHighlights } from './highlights';
 import { editorExtensions, nodeViewSpecs } from './nodes/node-views';
 import type { RawBoxes } from './nodes/raw-box';
 import { suggestions } from './suggestions/suggestions';
+import { TabKeys } from './tab-keys';
 import { textLinks } from './text-links';
 import { Toolbar } from './toolbar/toolbar';
 import proseMirrorCss from './prosemirror.css?inline';
@@ -27,7 +28,7 @@ import css from './visual-editor.css?inline';
  * rewritten, or shown as a picture.
  *
  * The editor keeps only the mechanism: paragraphs, text, raw boxes, the clipboard (in Typst), the toolbar's frame,
- * highlights and completion lists. Every other construct (headings, tables, labels, comments, …) and feature is contributed through
+ * highlights, completion lists and Tab staying in the text (`tab-keys.ts`; Escape, then Tab leaves). Every other construct (headings, tables, labels, comments, …) and feature is contributed through
  * `VisualEditorHost`, which hands what is registered to each editor it creates. It is one of the two built-in custom
  * editors for `*.typ`, next to the Source editor; the workbench's `TypstEditors` makes it.
  * See docs/30_architecture/04_visual-editor.typ.
@@ -58,6 +59,7 @@ export class VisualEditor {
       extensions: [
         ...editorExtensions(contributed.nodes, contributed.marks, boxes(editor, contributed, views, contributions.links)),
         highlights,
+        TabKeys,
         ...(contributions.links ? [textLinks(document, contributions.links, isBox)] : []),
         clipboard,
         suggestions(contributed.completionItemProviders, (tiptap, query) => ({

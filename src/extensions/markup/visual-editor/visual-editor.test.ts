@@ -38,4 +38,18 @@ describe('markup in a Visual editor', () => {
     press(parent.querySelector<HTMLElement>('[contenteditable]')!, 'u');
     expect(doc.text).toBe('Hello #underline[world]\n');
   });
+
+  it("Tab and Shift+Tab indent and outdent a code block's line by two spaces", () => {
+    const parent = document.body.appendChild(document.createElement('div'));
+    const source = '```py\nx = 1\n```\n';
+    const doc = new TypstDocument(source);
+    const view = createVisualEditor(parent, doc);
+    view.reveal(SourceRange.of({ from: source.indexOf('x'), to: source.indexOf('x') }));
+    const editable = parent.querySelector<HTMLElement>('[contenteditable]')!;
+    const tab = (shiftKey: boolean) => editable.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true }));
+    tab(false);
+    expect(doc.text).toBe('```py\n  x = 1\n```\n');
+    tab(true);
+    expect(doc.text).toBe(source);
+  });
 });

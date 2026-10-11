@@ -199,7 +199,7 @@ const TypstCodeBlock = CodeBlock.extend({
   addNodeView() {
     return codeBlockView;
   },
-}).configure({ HTMLAttributes: { class: 'typst-markup__code-block' } });
+}).configure({ HTMLAttributes: { class: 'typst-markup__code-block' }, enableTabIndentation: true, tabSize: 2 });
 
 /**
  * Raw text Typst shows as a block (3+ backticks around a line break): a code
