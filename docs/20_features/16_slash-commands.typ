@@ -3,6 +3,9 @@
 
 == What it does
 
+#import "../template.typ": screenshot
+#screenshot("slash-commands", width: 60%)
+
 Type `/` in the Visual editor, at a line start or after a space, then part of a name: a list below the text offers what the Insert menu, the list and alignment buttons and the text style menu can do right there. Writing a report, `/table` on an empty line inserts a table, `/h2` makes the line a second-level heading, `/mermaid` asks for a new diagram file and puts its figure after the line.
 
 - What it finds: entries whose name equals, starts with or contains what you typed, then those found by other words: `/spreadsheet` also finds "Insert table", `/123` finds "Numbered list", `/equation` finds "Inline math" and "Display math". Each row names its menu (Insert, List, Align, Text style, Block styles).

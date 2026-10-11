@@ -48,11 +48,20 @@ test('source-editor', async ({ page }) => {
 test('styling-and-shortcuts', async ({ page }) => {
   await open(page, '/');
   await hideFiles(page);
+  // a selected word: the bar above it offers the marks (bold, italic, …)
+  await visual(page).locator('p').first().dblclick();
+  await expect(page.locator('.typst-floating-bar:visible').first()).toBeVisible();
+  await shoot(page, 'styling-and-shortcuts', [editingArea(page)]);
+});
+
+test('slash-commands', async ({ page }) => {
+  await open(page, '/');
+  await hideFiles(page);
   await caretAtEnd(visual(page).locator('p').first());
   await page.keyboard.press('Enter');
   await page.keyboard.type('/');
   await expect(page.locator('[data-testid="typst-suggest"][data-trigger="/"]:visible')).toBeVisible();
-  await shoot(page, 'styling-and-shortcuts', [editingArea(page)]);
+  await shoot(page, 'slash-commands', [editingArea(page)]);
 });
 
 test('code-blocks', async ({ page }) => {
