@@ -73,6 +73,18 @@ describe('files', () => {
     expect(seen).toEqual(['/main.typ']);
   });
 
+  it('opens a file no other editor opens read-only: its name, size and type', () => {
+    const { host, project, workbench } = setup();
+    project.apply({ kind: 'create', path: path('/fonts/Serif.otf'), content: new Uint8Array(2048) });
+    workbench.open(path('/fonts/Serif.otf'));
+    const info = host.querySelector<HTMLElement>('[data-view-type="files.file"] [data-testid=typst-file-info]')!;
+    expect(info.querySelector('h2')?.textContent).toBe('fonts/Serif.otf');
+    expect([...info.querySelectorAll('dt, dd')].map((cell) => cell.textContent)).toEqual(['Size', '2.0 KB', 'Type', 'OTF file']);
+    project.apply({ kind: 'create', path: path('/LICENSE'), content: 'MIT' });
+    workbench.open(path('/LICENSE'));
+    expect([...host.querySelectorAll('[data-testid=typst-file-info] dd')].map((cell) => cell.textContent)).toEqual(['3 B', 'File']);
+  });
+
   it('a refused change is an error message', async () => {
     const { host, row } = setup();
     row('main.typ').focus();

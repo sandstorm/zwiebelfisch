@@ -149,7 +149,9 @@ widget width of 720px the open panel lies over the editing view and closes after
 - folders first, expandable; the main file marked, the shown file highlighted, icons by kind
   (Typst / image / data), the initials of collaborators in each file (also on closed folders);
   `.typ` files open in their own Visual/Source views, images open as a preview (drag an
-  image from the panel into the Visual view to insert it there), data files as read-only text;
+  image from the panel into the Visual view to insert it there), text files (`.csv`, `.json`, `.yaml`,
+  `.toml`, `.xml`, `.bib`, `.txt`, `.md`) in a plain text editor (see [Text files](#text-files)), any other file
+  as its name, size and type;
 - **New** (`+` in the panel's header) offers **New file…**, **New folder…** and **Upload files…**
   into the focused row's folder (or drop files onto the editor, or onto a folder); a row's context
   menu (right click, Shift+F10 or the context menu key) offers the same for its folder, and
@@ -303,6 +305,22 @@ toolbar. There is no Save button: every change is saved into the file (and the p
 The editor follows the widget into dark mode. It is loaded from `https://embed.diagrams.net/`; set
 `diagrams.editorUrl` to your own installation of the drawio web app to keep diagrams off the internet or to work
 offline. Without it the editor says so and offers to show the picture instead.
+
+## Text files
+
+Files Typst reads as text — data (`.csv`, `.json`, `.yaml` / `.yml`, `.toml`, `.xml`), bibliographies (`.bib`),
+plain text and Markdown (`.txt`, `.md`) — open in a plain text editor ([CodeMirror](https://codemirror.net), line
+numbers, undo, search; no highlighting yet). There is no Save button: the whole file is saved 800 ms after the
+last keystroke and when another file is opened, and the preview updates. A change of the file from elsewhere
+(the host assigning `files`, another user) shows up in the open editor, unless your own typing is still waiting
+to be saved: then your save replaces the file. Collaborating (in [GitLab rooms](#rooms-backed-by-a-gitlab-branch),
+the rooms that share files other than `.typ`), such a file is shared whole, not merged like Typst text: when two
+people type in it at once, the last save wins.
+
+```typst
+As @knuth shows.
+#bibliography("refs.bib")
+```
 
 ## Custom styles
 
@@ -545,7 +563,8 @@ Rules the built-ins follow, and yours should too:
   `'option'` only through `workbench.open(path, { viewType })`), then the most specific pattern (`*.drawio.png` beats
   the images' `*.{png,…}`, which beats `*`). Every open gets a new panel: fill `panel.element`, store edits with
   `workspace.applyEdit({ kind: 'update', path, content })`, and store what is pending in `panel.onDidDispose`. The built-ins:
-  `images.preview` (images), `images.file` (`*`: any other file, read-only), `spreadsheets.editor` (`*.ic`),
+  `images.preview` (images), `textFiles.editor` (`*.{csv,json,yaml,yml,toml,xml,bib,txt,md}`), `files.file` (`*`:
+  any other file, read-only: name, size, type), `spreadsheets.editor` (`*.ic`),
   `diagrams.editor` (`*.drawio.png`, priority 110). The built-in "New …" entries (`file/newFile`): "New file…",
   "New spreadsheet…" (`spreadsheets.newSpreadsheet`), "New diagram…" (`diagrams.newDiagram`), "New folder…",
   "Upload files…".
