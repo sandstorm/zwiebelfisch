@@ -2,8 +2,12 @@
 
 Two ways in, same options (@guide-configuration):
 
-- `<typst-editor>`: a custom element in a shadow root (@guide-embedding-element).
-- `createTypstEditor(host, options)`: a function that fills a host element (@guide-embedding-api).
+#table(
+  columns: 2,
+  [Use], [When],
+  [`<typst-editor>` (@guide-embedding-element)], [Plain HTML or any framework that renders elements, no glue code: text inside the tag, settings as an attribute, changes as DOM events, gone with the element. A shadow root keeps the page's CSS and the editor's apart.],
+  [`createTypstEditor(host, options)` (@guide-embedding-api)], [Your code drives the editor: the returned handle (commands, `exportPdf`, `dispose`) and callbacks. It fills `host` in your page's DOM; its styles go into the page's document (or the shadow root `host` is in).],
+)
 
 == The library build <guide-embedding-library>
 

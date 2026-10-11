@@ -1,4 +1,10 @@
 // <typst-editor>: the editor as a custom element in a shadow root, around createTypstEditor.
+// Why use it rather than createTypstEditor: for pages that would otherwise need glue code. It works from plain HTML
+// and from any framework that renders elements (React, Vue, server templates): the text goes inside the tag, settings
+// in an attribute, changes come back as DOM events, and the editor lives and dies with the element (connect, move,
+// remove). Its shadow root keeps the page's CSS and the editor's apart. Call createTypstEditor yourself when your code
+// wants the editor directly: the returned handle (commands, exportPdf, dispose) and callbacks instead of events, with
+// the editor's styles in your page's document.
 // Why a thin adapter: the element must offer everything createTypstEditor has without listing (and forgetting) it
 // option by option. So it passes one `options` property through, maps one `settings` attribute (JSON) onto the
 // settings the extensions declare, and forwards the editor's callbacks as DOM events from one table; the content
