@@ -214,6 +214,14 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    patched dependencies**, no fork, no opt-level "z", no second PDF engine. Left: delivery (brotli
    pre-compression, content-hashed wasm / font names in dist/lib, immutable caching,
    application/wasm) — and lazy fonts (done).
+   **Slash commands + one suggestion mechanism** (user, 2026-10-11: go): a Visual view contribution
+   point for trigger-character suggestions (built on `@tiptap/suggestion`, one popup UI, keyboard
+   navigation, filtering); `slash-commands` extension: `/` offers the Insert menu entries and text
+   styles every extension already registers (keywords for matching); the labels' `@` references
+   move onto the same mechanism (their own plugin goes).
+   **Custom editor fallback** (user): explicit named value, `priority: 'fallback'` next to
+   `'default'` / `'option'` (VS Code style); numbers only order editors, no special meaning below 100.
+   **Devtools in the demo** (user): reachable from the playground bar (a toggle that sets `&devtools`).
 2. **Value types** and the rules: see steps 3–4 of that doc.
 3. **Rules wave also does:** core `onChange` → `onDidChange: Event` + `Disposable` everywhere
    (`Project`, `TypstDocument`, …) (user: yes).
