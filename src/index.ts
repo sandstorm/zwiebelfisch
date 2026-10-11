@@ -5,7 +5,7 @@
 // and docs/embedding.md.
 import { defineTypstEditorElement } from './typst-editor-element/typst-editor-element';
 
-export { createTypstEditor, type PdfExportOptions, type TypstEditor, type TypstEditorOptions } from './typst-editor/typst-editor';
+export { createTypstEditor, type TypstEditor, type TypstEditorOptions } from './typst-editor/typst-editor';
 export { TypstEditorElement, defineTypstEditorElement, type TypstEditorChangeDetail } from './typst-editor-element/typst-editor-element';
 export type { FileChange, FileContent, ProjectFiles } from './core/project/project';
 export { ProjectPath } from './core/paths/paths';

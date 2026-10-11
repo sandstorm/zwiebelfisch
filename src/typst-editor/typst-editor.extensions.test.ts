@@ -332,10 +332,10 @@ describe('the built-in extensions', () => {
   it('exports the PDF through the pdf-export extension, with the options other extensions register', async () => {
     const { editor, preview } = setup({ source: '= Hi' });
     expect(preview.pdfOptions.map((option) => option.id)).toEqual(['comments.include']);
-    const blob = await editor.exportPdf({ options: { 'comments.include': true } });
+    const blob = await editor.exportPdf({ 'comments.include': true });
     expect(blob.type).toBe('application/pdf');
     expect(exportPdf).toHaveBeenCalledWith({ main: '/main.typ', sources: {} });
-    await expect(editor.exportPdf({ options: { nope: true } })).rejects.toThrow('Unknown PDF export option: nope');
+    await expect(editor.exportPdf({ nope: true })).rejects.toThrow('Unknown PDF export option: nope');
   });
 
   it("runs the host's own extensions with the built-ins, with their settings, and leaves out built-ins by id", async () => {

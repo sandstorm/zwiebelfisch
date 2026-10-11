@@ -78,16 +78,6 @@ export interface TypstEditorOptions {
   extensions?(builtins: readonly TypstExtension[]): readonly TypstExtension[];
 }
 
-/** Which PDF `exportPdf` makes. */
-export interface PdfExportOptions {
-  /**
-   * The export options by id, the others at their default (an id no extension registered rejects). Built in:
-   * `comments.include`, the margin notes as the preview shows them (default false: the final version, notes left
-   * out).
-   */
-  options?: Record<string, boolean>;
-}
-
 export interface TypstEditor {
   /**
    * Every file of the project, the main file included, with its current content. Assigning replaces them all
@@ -115,11 +105,13 @@ export interface TypstEditor {
    */
   executeCommand<T = unknown>(id: string, ...args: unknown[]): Promise<T>;
   /**
-   * The project as a PDF (`application/pdf`), from the current text, with the export options as given
-   * (`{ options: { 'comments.include': true } }`): the command `pdfExport.export`. Rejects with an error naming the
+   * The project as a PDF (`application/pdf`), from the current text, with the export options by id, the others at
+   * their default (`{ 'comments.include': true }`; an id no extension registered rejects). Built in:
+   * `comments.include`, the margin notes as the preview shows them (default false: the final version, notes left
+   * out). The one feature shortcut on the widget: the command `pdfExport.export`. Rejects with an error naming the
    * problem when the document has errors.
    */
-  exportPdf(options?: PdfExportOptions): Promise<Blob>;
+  exportPdf(options?: Record<string, boolean>): Promise<Blob>;
   dispose(): void;
 }
 
@@ -179,7 +171,7 @@ export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions
       if (parsed) workbench.open(parsed);
     },
     executeCommand: (id, ...args) => workbench.executeCommand(id, ...args),
-    exportPdf: (pdf = {}) => workbench.executeCommand('pdfExport.export', pdf.options),
+    exportPdf: (options) => workbench.executeCommand('pdfExport.export', options),
     dispose: () => {
       subscription.dispose();
       workbench.dispose();

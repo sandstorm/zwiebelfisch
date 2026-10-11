@@ -250,13 +250,13 @@ default (not what the viewer chose), and an id no extension registered rejects:
 
 ```ts
 const blob = await editor.exportPdf();                                          // without comments
-const draft = await editor.exportPdf({ options: { 'comments.include': true } }); // with them
+const draft = await editor.exportPdf({ 'comments.include': true });            // with them
 createTypstEditor(host, { settings: { 'pdfExport.download': false } });   // no button (exportPdf still works)
 ```
 
-`exportPdf` is a shortcut for the command `pdfExport.export`
+`exportPdf(options?)` is the one feature shortcut on the widget: the command `pdfExport.export`
 (`editor.executeCommand('pdfExport.export', { 'comments.include': true })`). On `<typst-editor>`:
-`element.exportPdf({ options })`, and `settings='{"pdfExport.download": false}'` removes the button.
+`element.exportPdf(options?)`, and `settings='{"pdfExport.download": false}'` removes the button.
 
 Without comments, the document is not changed: the export compiles copies of the `.typ` files
 with every note call removed (a range note keeps its text, without the highlight), through a

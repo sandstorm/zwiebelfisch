@@ -283,9 +283,9 @@ shrink, not grow.
 createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFilesChange?, onOpen?, user?,
                            settings?: { [id]: value }, extensions?(builtins) → TypstExtension[] })
   → { files (get/set), source (get/set), settings (get/set), activeFile, open(path),
-      executeCommand<T>(id, ...args) → Promise<T>, exportPdf({options?}) → Promise<Blob>, dispose() }
+      executeCommand<T>(id, ...args) → Promise<T>, exportPdf(options?: Record<id, boolean>) → Promise<Blob>, dispose() }
 <typst-editor value="…" settings='{"pdfExport.download": false}'>
-  .options (Partial<TypstEditorOptions>), .value, .files, .settings, executeCommand(id, ...args), exportPdf({options?});
+  .options (Partial<TypstEditorOptions>), .value, .files, .settings, executeCommand(id, ...args), exportPdf(options?);
   'change' {detail:{path, content}}, 'files-change' {detail: FileChange}, 'open' {detail:{path}}
 ```
 
@@ -401,7 +401,7 @@ createTypstEditor(host, { files?, main?, source?, mode?, allowFileChange?, onFil
   first; equal: registration order), each with its value (given, else its default; an unknown id rejects), then
   compiles that entry; the toolbar item (`downloadPdf`, while the setting `pdfExport.download` is on) opens a popover with a
   checkbox per option, set as this viewer left them (`workbench.remember('pdf-export.options')`) else their
-  default, and "Download"; without any option the button downloads at once. `exportPdf({ options })` on the
+  default, and "Download"; without any option the button downloads at once. `exportPdf(options)` on the
   widget runs the command (defaults, not the viewer's choices). The `comments` extension registers only
   `comments.include` (default off; `extensions/comments/preview/`): off, `withoutNotes` of the project's files
   overlaid with the entry's sources gives the new entry (see Comments); on, the entry stays. No PDF (errors) →

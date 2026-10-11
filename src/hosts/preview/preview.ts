@@ -106,12 +106,12 @@ export interface PageClick {
 }
 
 /**
- * A choice offered when exporting a PDF (a checkbox next to "Download"; `exportPdf({ options })` for hosts), e.g.
+ * A choice offered when exporting a PDF (a checkbox next to "Download"; `exportPdf(options)` for hosts), e.g.
  * whether the PDF includes the comments. Each option changes what is compiled, never the documents. Options are
  * checkboxes for now; a later `choices?: { value, label }[]` would make `default` and `value` one of them.
  */
 export interface PdfExportOption {
-  /** `<extension>.<name>`, e.g. `comments.include`: the key in `exportPdf({ options })` and in what is remembered. */
+  /** `<extension>.<name>`, e.g. `comments.include`: the key in `exportPdf(options)` and in what is remembered. */
   readonly id: string;
   /** The checkbox's label ("Include comments"). */
   readonly label: string;
