@@ -52,6 +52,15 @@ const INLINE: Record<string, (p: TypstToProseMirrorParser, src: string, marks: r
   Shorthand: (p, src, marks) => (src in SHORTHANDS ? p.sourceText(src, SHORTHANDS[src], marks) : p.raw(src, marks)),
 };
 
+/** The leading whitespace all of `lines` share. */
+function commonIndent(lines: readonly string[]): string {
+  return lines.reduce((indent, line) => {
+    let n = 0;
+    while (n < indent.length && line[n] === indent[n]) n++;
+    return indent.slice(0, n);
+  }, /^[ \t]*/.exec(lines[0] ?? '')![0]);
+}
+
 function decodeEscape(src: string): string {
   const unicode = /^\\u\{([0-9a-fA-F]+)\}$/.exec(src);
   return unicode ? String.fromCodePoint(parseInt(unicode[1], 16)) : src.slice(1);
@@ -92,6 +101,18 @@ class TypstToProseMirrorParser implements TypstParseContext {
     const to = segments.length > 0 ? end(segments.at(-1)!) : markup.from;
     const blocks = segments.length > 0 ? this.blocksOf(segments) : [this.textblock({ type: 'paragraph', attrs: { src: '' } }, from, [])];
     return { content: blocks, ...SourceRange.of({ from, to }) };
+  }
+
+  itemBlocks(body: SyntaxNode): { content: Node[]; src: string; indent: string | null } {
+    const [first, ...further] = this.text(body).split('\n');
+    const indent = further.length > 0 ? commonIndent(further.filter((line) => line !== '')) : null;
+    const src = [first, ...further.map((line) => line.slice(indent!.length))].join('\n');
+    // a parser of its own: the body's blocks print `src`, which the serializer indents again
+    const parser = new TypstToProseMirrorParser(this.schema, src, this.grammar);
+    if (src === '') return { content: [parser.textblock({ type: 'paragraph', attrs: { src } }, 0, [])], src, indent };
+    const segments = parser.segment(children(typstParser.parse(src).topNode));
+    const covers = segments.length > 0 && segments[0].from === 0 && end(segments.at(-1)!) === src.length;
+    return { content: covers ? parser.blocksOf(segments) : [this.schema.nodes.rawBlock.create({ src })], src, indent };
   }
 
   inline(nodes: readonly SyntaxNode[], marks: readonly Mark[] = []): PlacedNode[] {
@@ -254,7 +275,8 @@ class TypstToProseMirrorParser implements TypstParseContext {
     const flush = () => {
       if (items.length === 0) return;
       const last = items.at(-1)!;
-      items[items.length - 1] = this.unchangedNode(last.type.name, { ...last.attrs, sep: null }, last.content);
+      items[items.length - 1] = last.type.create({ ...last.attrs, sep: null }, last.content);
+      if (unchangedNodes.has(last)) unchangedNodes.set(items.at(-1)!, unchangedNodes.get(last)!);
       result.push(this.schema.nodes[containerOf(items[0])!].create({ sep: last.attrs.sep }, items));
       items = [];
     };

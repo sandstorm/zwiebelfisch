@@ -71,6 +71,12 @@ export interface TypstParseContext {
   blockCall(call: SyntaxNode): Node | null;
   /** The blocks of a closed content block `[..]` (an empty paragraph if there are none), and the source they cover. */
   blocks(content: SyntaxNode): { content: Node[]; from: SourceOffset; to: SourceOffset };
+  /**
+   * The blocks of an item's body (a list item's `Markup`: its first line, then lines indented deeper than its
+   * marker), parsed from `src`, the body with the `indent` common to its further lines removed (null: one line).
+   * An empty body is an empty paragraph; one whose source the blocks would not print back is a raw block.
+   */
+  itemBlocks(body: SyntaxNode): { content: Node[]; src: string; indent: string | null };
   /** Parses inline syntax (a textblock's content), each node carrying `marks`. */
   inline(nodes: readonly SyntaxNode[], marks?: readonly Mark[]): PlacedNode[];
   /** Whether markup `nodes` are one paragraph: no paragraph break, no block of its own (heading, list item). */
@@ -80,7 +86,7 @@ export interface TypstParseContext {
    * content ends at `contentTo` (default: the end of `src`); syntax after that closes the block (a code fence).
    */
   textblock(block: { type: string; attrs: { src: string } & Record<string, unknown>; contentTo?: number }, from: number, content: PlacedNode[]): Node;
-  /** A node that prints `attrs.src` while untouched (a list item: its marker, then its only child). */
+  /** A node that prints `attrs.src` while untouched (a task item: its marker, then its only child). */
   unchangedNode(type: string, attrs: Record<string, unknown>, content?: Node[]): Node;
   /** Verbatim inline Typst: a raw inline box. */
   raw(src: string, marks?: readonly Mark[]): Node;
@@ -213,8 +219,8 @@ export interface TypstSerializeState {
   closing(src: string): void;
   /** Source right after the syntax printed last, mapping where that syntax maps (e.g. a block's label). */
   after(src: string): void;
-  /** Prints with every line of the output indented by two more spaces. */
-  indented(print: () => void): void;
+  /** Prints with every line of the output but empty ones indented by `by` (default: two spaces) more. */
+  indented(print: () => void, by?: string): void;
   /** Prints the children of `container`, whose content starts at document position `start`, `defaultSep` between new ones. */
   blocks(container: Node, start: number, defaultSep: string): void;
   /** Prints `node`, which starts at document position `pos`, and its label; the label maps to the block's end. */
@@ -223,8 +229,11 @@ export interface TypstSerializeState {
   textblock(block: Node, pos: number): void;
   /** The inline content of `block`, which starts at document position `start`. */
   inline(block: Node, start: number): void;
-  /** An item at `pos` (a list item): `prefix` (its marker), its first child, further children on following lines, indented. */
-  item(item: Node, pos: number, prefix: string): void;
+  /**
+   * An item at `pos` (a list item): `prefix` (its marker), its first child, further children on following lines;
+   * lines after the first are indented by `indent` (default: two spaces).
+   */
+  item(item: Node, pos: number, prefix: string, indent?: string): void;
 }
 
 /** A schema of the minimum schema, `nodes` and `marks`, with their grammar attached. */
