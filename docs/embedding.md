@@ -275,7 +275,6 @@ drops the highlighted text of range notes as well. A document that sets
 
 `user` stays: it is the name others see when collaborating, the author of commits to GitLab and the
 signature of comments (without it, comments are signed "Anonymous").
-Existing `*.comments.json` sidecar files are not migrated.
 
 ## Spreadsheets
 
@@ -724,30 +723,6 @@ export function callout(): TypstExtension {
 
 createTypstEditor(host, { extensions: (builtins) => [...builtins, callout()] });
 ```
-
-## Migrating from the earlier API
-
-- `editor.destroy()` → `editor.dispose()`; `exportPdf({ options: { … } })` → `exportPdf({ … })`.
-- Extensions: the `Workbench` members moved to VS Code's namespaces on the context: `registerCommand` /
-  `executeCommand` / `registerKeybinding` → `commands`; messages, `showInputBox`, `showQuickPick`,
-  `registerStatusBarItem`, `registerCustomEditorProvider`, file decorations, `activeTextEditor`,
-  `onDidChangeTextEditorSelection` → `window`; `registerSourceControl` → `scm` (its `state` is `{ busy }`: tell
-  outcomes with `window.show…Message`); document links → `languages`; `applyChange` → `workspace.applyEdit`;
-  `remember(name)` → `globalState` / `workspaceState`. Extensions are factories (`markup()`).
-
-- Per-feature options are settings now (section 6): `pdfDownload: false` → `settings: { 'pdfExport.download':
-  false }`, `fileList` → `'files.panel'`, `followCursor` → `'previewSync.followCursor'`, `theme` →
-  `'workbench.theme'`. On `<typst-editor>`, the attributes `file-list`, `pdf-download` and `theme` are one
-  `settings` attribute (JSON).
-- `collaboration: { … }` → `extensions: (builtins) => [...builtins, collaboration({ … })]` (`collaboration` is
-  exported from the package).
-
-- `onChange(source)` is gone: use `onFilesChange` and look for `{ kind: 'update', path: main }`
-  (or read `editor.source` there).
-- `files` (option, getter, setter) now includes the main file. A map without the main file still
-  works: the main file keeps its text.
-- `<typst-editor>`: the `user` and `collaboration` properties are gone (put them into `options`);
-  `change` carries `{ path, content }` for every file instead of `{ value }` for the main file.
 
 ## Using it from a bundler
 
