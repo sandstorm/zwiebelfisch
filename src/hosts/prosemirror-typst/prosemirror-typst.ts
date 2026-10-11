@@ -26,7 +26,7 @@ import { RawBlock, RawInline, SoftBreak, sourceAnchors, TypstDocument, TypstSour
  * The framework knows only paragraphs, text, breaks and raw Typst (the minimum schema). Every other construct is a
  * spec (`DocumentNodeSpec`, `TypstMarkSpec`) that an extension contributes to the Visual editor: which syntax it
  * reads, how an edited node is written. Syntax no spec takes stays raw Typst (`rawBlock`, `rawInline`), kept verbatim.
- * Plain ProseMirror: no view, tested without a DOM. See docs/30_architecture/03_prosemirror-typst.typ.
+ * Plain ProseMirror: no view, tested without a DOM. See docs/40_architecture/03_prosemirror-typst.typ.
  */
 export function createSchema(nodes: readonly DocumentNodeSpec[], marks: readonly TypstMarkSpec[]): Schema {
   const schema = getSchema(documentExtensions(nodes, marks));

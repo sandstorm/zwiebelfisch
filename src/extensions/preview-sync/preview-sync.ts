@@ -21,7 +21,7 @@ import css from './preview-sync.css?inline';
  * The preview host only offers the mechanism (`reveal`, `setSelectionHighlight`, `onDidClickPage`,
  * `clearClickHighlight`); the window tells the selection, the workbench opens files. When to follow, what to shade and
  * where a click leads is decided here. Without this extension the preview neither follows, shades nor jumps.
- * See docs/30_architecture/06_preview.typ.
+ * See docs/40_architecture/06_preview.typ.
  */
 export function previewSync(): TypstExtension {
   return {

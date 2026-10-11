@@ -11,7 +11,7 @@
 
 == Concepts <architecture-workbench-concepts>
 
-- *`TypstExtension`* (@extensions-overview): registers its contributions once, at activation. Hosts apply them to every editor they create later.
+- *`TypstExtension`* (@architecture-extensions-overview): registers its contributions once, at activation. Hosts apply them to every editor they create later.
 - *`ExtensionContext`*: `project`, `subscriptions`, `globalState` / `workspaceState`, the five namespaces, `workbench` (the frame), and the view hosts `visualEditor`, `sourceEditor`, `preview`.
 - *Namespaces as hosts* (table below): each is its own module, an interface plus a host class implementing it directly. No forwarding facade.
 - *Generic contribution points*: extensions never depend on each other, not even through a service registry. A host offers a point any extension may use; the consumer reads every contribution. Competing contributions are ordered by an explicit tie-breaker, never by registration order alone.
@@ -23,7 +23,7 @@
 - *`TypstEditors`*: a document's Visual or Source editor is made when the document is first shown in it, in a retained panel (`retainContextWhenHidden`): hidden, with cursor, scroll and undo history, while other files show; disposed when the file is deleted. Per document one `TextEditor` over both editors (`activeTextEditor`); the editor frame goes into the visible editor (around any other editor's panel).
 - *Menus*: the workbench keeps the entries (`registerMenuItem`) and shows `editor/title` in the tab bar, then "View ▾", which pops up the menu `view` through `showContextMenu` (one View menu for the editors and the preview: group `editor`, the invisibles; group `preview`, the preview's view options, which `previewControls` lists). An entry with `toggled` (VS Code's) is a checkbox entry (`menuitemcheckbox`, a check mark while it holds). Every other menu pops up through `window.showContextMenu(menuId, { anchor, title, context, args })`, which reads the entries whose `when` holds and runs the chosen one's command with `args` (the file panel: `explorer/context` on a row, `file/newFile` under "New"). Editors and side panels never draw menus of their own.
 - *Search everywhere* (`window`'s `search/`): one quick pick (`QuickInput.createQuickPick`, rows set as the user types) over every registered `SearchProvider`, a group each. Each change of the text cancels the previous round (`CancellationTokenSource`, `core/cancellation`) and asks the providers of the typed prefix, or all; synchronous results show at once, async ones as they come. Items are matched fuzzily (label, else description) unless the provider matched them. Opened by double Shift (the window listens on the widget in the capture phase, so inside the editors too: a second Shift within 300 ms of releasing the first, nothing else pressed; it fires on the second release; not while an input box or quick pick is open), by the command `workbench.action.searchEverywhere` and by a button at the bottom of the left rail. The workbench adds two groups of its own: the commands extensions declare (`contributes.commands`) and the settings.
-- *State*: `StorageMemento` behind `globalState` and `workspaceState` (@extensions-workbench-api-state). Keys: `typst-editor:global:<id>:<key>`, `typst-editor:<main file>:<id>:<key>`.
+- *State*: `StorageMemento` behind `globalState` and `workspaceState` (@architecture-workbench-api-state). Keys: `typst-editor:global:<id>:<key>`, `typst-editor:<main file>:<id>:<key>`.
 
 #table(
   columns: (auto, 3fr, 2fr),
@@ -65,4 +65,4 @@ What the widget shows depends on what has arrived. Nothing in the editing area w
 - `workspace.applyEdit(change)`: the project's check, the host's `allowFileChange` (may be async), the project's check again, then apply. Resolves to the refusal in words, or null.
 - Settings: declared by extensions and by the workbench (`workbench.theme`, `workbench.rightSidePanel`); values come from the host and replace each other as a whole. A value of the wrong type falls back to the default, with a warning. `inspect(key)` tells whether the host set one.
 
-API reference: @extensions-workbench-api.
+API reference: @architecture-workbench-api.

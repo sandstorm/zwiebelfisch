@@ -1,15 +1,15 @@
-= Embedding <guide-embedding>
+= Embedding <reference-embedding>
 
-Two ways in, same options (@guide-configuration):
+Two ways in, same options (@reference-configuration):
 
 #table(
   columns: 2,
   [Use], [When],
-  [`<typst-editor>` (@guide-embedding-element)], [Plain HTML or any framework that renders elements, no glue code: text inside the tag, settings as an attribute, changes as DOM events, gone with the element. A shadow root keeps the page's CSS and the editor's apart.],
-  [`createTypstEditor(host, options)` (@guide-embedding-api)], [Your code drives the editor: the returned handle (commands, `exportPdf`, `dispose`) and callbacks. It fills `host` in your page's DOM; its styles go into the page's document (or the shadow root `host` is in).],
+  [`<typst-editor>` (@reference-embedding-element)], [Plain HTML or any framework that renders elements, no glue code: text inside the tag, settings as an attribute, changes as DOM events, gone with the element. A shadow root keeps the page's CSS and the editor's apart.],
+  [`createTypstEditor(host, options)` (@reference-embedding-api)], [Your code drives the editor: the returned handle (commands, `exportPdf`, `dispose`) and callbacks. It fills `host` in your page's DOM; its styles go into the page's document (or the shadow root `host` is in).],
 )
 
-== The library build <guide-embedding-library>
+== The library build <reference-embedding-library>
 
 `mise run build:lib` writes `dist/lib`:
 
@@ -33,7 +33,7 @@ What the host server should send:
 - For the hashed files, `Cache-Control: public, max-age=31536000, immutable`: a new build has new names, so a long-lived cache never serves a stale file. `typst-editor.js` has a fixed name: cache it briefly or revalidate it (`no-cache` with an `ETag`).
 - Compression is up to the server (gzip or brotli on the fly or pre-compressed by the host); the build writes no compressed copies. The wasm shrinks most (22 MB → 9 MB gzipped), the fonts by about a third.
 - Importing without a DOM (SSR) is safe: nothing is registered.
-- Content-Security-Policy: `connect-src https://packages.typst.org` for `@preview` packages; the diagram editor is an iframe from `https://embed.diagrams.net` (setting `diagrams.editorUrl`, @guide-configuration-diagrams).
+- Content-Security-Policy: `connect-src https://packages.typst.org` for `@preview` packages; the diagram editor is an iframe from `https://embed.diagrams.net` (setting `diagrams.editorUrl`, @reference-configuration-diagrams).
 
 Bundlers:
 
@@ -41,7 +41,7 @@ Bundlers:
 - *Webpack 5, Rollup:* pick up the `new URL(…)` assets and copy them.
 - *Anything else:* copy `dist/lib` as it is and import `typst-editor.js` from there.
 
-== Custom element <guide-embedding-element>
+== Custom element <reference-embedding-element>
 
 ```html
 <script type="module" src="/vendor/typst-editor/typst-editor.js"></script>
@@ -62,12 +62,12 @@ Bundlers:
 #table(
   columns: 2,
   [Member], [Behaviour],
-  [`options` property], [`Partial<TypstEditorOptions>` (@guide-configuration-options), read when the element connects. Set it before appending the element. Its `onFilesChange` / `onOpen` run as well as the events.],
-  [`settings` attribute, property], [The settings (@guide-configuration-setting).],
+  [`options` property], [`Partial<TypstEditorOptions>` (@reference-configuration-options), read when the element connects. Set it before appending the element. Its `onFilesChange` / `onOpen` run as well as the events.],
+  [`settings` attribute, property], [The settings (@reference-configuration-setting).],
   [`value` property, attribute], [The main file's text. Setting it is one minimal edit: cursor and undo history survive. The property is not reflected to the attribute.],
   [`files` property], [Every file, the main file included. Setting it replaces them all.],
   [`executeCommand(id, ...args)`], [Runs an extension's command; rejects while not connected.],
-  [`exportPdf(options?)`], [The PDF as a `Blob` (@guide-embedding-pdf).],
+  [`exportPdf(options?)`], [The PDF as a `Blob` (@reference-embedding-pdf).],
   [`change` event], [`detail: { path, content }`: what the file at `path` holds now; `content: null` when it is gone. Fires for every changed file, the collaborators' edits included. A rename fires twice: old path with `null`, new path with the content.],
   [`files-change` event], [`detail`: the `FileChange`, renames as such (`onFilesChange`).],
   [`open` event], [`detail: { path }`: another file is shown (`onOpen`).],
@@ -86,7 +86,7 @@ editor.setAttribute('settings', JSON.stringify({ 'files.panel': 'show' }));
 document.body.append(editor);   // options are read now
 ```
 
-=== Shadow DOM and theming <guide-embedding-theming>
+=== Shadow DOM and theming <reference-embedding-theming>
 
 - The element renders into an open shadow root: page CSS cannot break the editor, the editor's CSS cannot leak out.
 - Colors are CSS custom properties on `.typst-editor` (`--te-accent`, `--te-border`, `--te-bg`, `--te-text`, …). They inherit into the shadow root: `typst-editor { --te-accent: rebeccapurple }`.
@@ -94,7 +94,7 @@ document.body.append(editor);   // options are read now
 - In dark mode the preview shows the pages inverted. The exported PDF is unchanged.
 - `createTypstEditor` puts its styles into `document.head`, or into the shadow root its host lives in.
 
-== createTypstEditor <guide-embedding-api>
+== createTypstEditor <reference-embedding-api>
 
 ```ts
 import { createTypstEditor } from 'typst-editor';
@@ -112,7 +112,7 @@ const editor = createTypstEditor(host, {   // attach host to the document first,
 });
 ```
 
-The options: @guide-configuration-options.
+The options: @reference-configuration-options.
 
 The returned `TypstEditor`:
 
@@ -121,15 +121,15 @@ The returned `TypstEditor`:
   [Member], [Meaning],
   [`files`], [Every file with its current content. Assigning replaces them all and recompiles.],
   [`source`], [The main file's text. Assigning is one minimal edit, reported as an `update`.],
-  [`settings`], [The settings (@guide-configuration-setting).],
+  [`settings`], [The settings (@reference-configuration-setting).],
   [`activeFile`], [The path of the file shown.],
   [`open(path)`], [Shows `path`, if the project has it.],
   [`executeCommand(id, ...args)`], [Runs a command; resolves to its result, rejects for an unknown id or a failure.],
-  [`exportPdf(options?)`], [The PDF (@guide-embedding-pdf).],
+  [`exportPdf(options?)`], [The PDF (@reference-embedding-pdf).],
   [`dispose()`], [Removes the editor.],
 )
 
-=== Files <guide-embedding-files>
+=== Files <reference-embedding-files>
 
 - Paths are absolute: they start with `/`, no `.` or `..` segments. Another key, or bytes for a `.typ` file, throws.
 - `onFilesChange` is the one place to hear about changes: `{ kind: 'create' | 'update' | 'delete' | 'rename', path, content?, from? }`. It reports every `.typ` edit (`update` with the full text), the file panel's changes, the collaborators' changes and assignments to `files` or `source`.
@@ -142,18 +142,18 @@ editor.files = { ...editor.files, '/chapters/outro.typ': '= Outro' };
 editor.open('/chapters/outro.typ');
 ```
 
-=== PDF export <guide-embedding-pdf>
+=== PDF export <reference-embedding-pdf>
 
 ```ts
 const final = await editor.exportPdf();                              // margin notes left out
 const draft = await editor.exportPdf({ 'comments.include': true });  // margin notes kept
 ```
 
-- Options are export options by id (@guide-configuration-pdf); the others keep their default (not the viewer's choice). An unknown id rejects.
+- Options are export options by id (@reference-configuration-pdf); the others keep their default (not the viewer's choice). An unknown id rejects.
 - Rejects with the compiler's error when the document has errors.
 - The same as `executeCommand('pdfExport.export', options)`.
 
-=== Extensions <guide-embedding-extensions>
+=== Extensions <reference-embedding-extensions>
 
 Every feature is an extension, the built-in ones too. `extensions` makes the list from the built-ins:
 
@@ -163,11 +163,11 @@ createTypstEditor(host, { extensions: (builtinExtensions) => builtinExtensions.f
 createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensions.filter((e) => e.id !== 'files'), myFiles] }); // replace
 ```
 
-- Collaboration is not built in: add `collaboration(…)` with its connection (@guide-collaboration).
-- The built-ins and their ids: @architecture-built-in-extensions. Writing one: @extensions-overview.
+- Collaboration is not built in: add `collaboration(…)` with its connection (@reference-collaboration-server).
+- The built-ins and their ids: @architecture-built-in-extensions. Writing one: @architecture-extensions-overview.
 - On `<typst-editor>`, put `extensions` into `options` before the element connects.
 
-=== Devtools <guide-embedding-devtools>
+=== Devtools <reference-embedding-devtools>
 
 A right side panel ("Devtools" on the right rail) showing what the widget is made of while it runs. Optional: `devtools` wraps the whole list, so give it the list last.
 

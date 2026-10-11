@@ -22,7 +22,7 @@ import { imageEditor } from './workbench/image-editor';
  * An image is one concept, so it is one extension: the Visual editor knows only raw boxes, their renderers and tools,
  * the window only custom editors, and the file panel only files. The path on an image box is the document link the
  * link providers (`languages`) put on it, so it opens the file or says it is missing. An edit on an image box rewrites
- * only the argument it touches (model/image-call.ts). See docs/30_architecture/08_built-in-extensions.typ.
+ * only the argument it touches (model/image-call.ts). See docs/40_architecture/08_built-in-extensions.typ.
  */
 export function images(): TypstExtension {
   return {

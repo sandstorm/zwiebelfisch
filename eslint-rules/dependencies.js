@@ -1,4 +1,4 @@
-// ESLint rule `local/dependencies`: which folders may import which (docs/30_architecture/10_conventions.typ,
+// ESLint rule `local/dependencies`: which folders may import which (docs/40_architecture/14_conventions.typ,
 // "Layers").
 //
 // Works on resolved files, not on import strings, so a relative path cannot slip past it (`../labels/labels` from

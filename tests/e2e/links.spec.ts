@@ -49,31 +49,32 @@ test.describe('references to sections in the documentation', () => {
     await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/, { timeout: 30_000 });
   });
 
-  const heading = (page: Page, text: string) => visual(page).locator('h2', { hasText: text });
+  /** A section's heading (`==`), or a chapter's (`=`): a file's top level shows as `h1`. */
+  const heading = (page: Page, level: 'h1' | 'h2', text: string) => visual(page).locator(level, { hasText: text });
 
   test('⌘/Ctrl+click on a reference to a section far down the same file (opened from the file panel) scrolls there', async ({ page }) => {
-    await openFile(page, '10_guide/02_features.typ');
-    const chip = visual(page).locator('.typst-labels__ref[data-target="guide-features-help"]').first();
+    await openFile(page, '30_reference/01_configuration.typ');
+    const chip = visual(page).locator('.typst-labels__ref[data-target="reference-configuration-options"]').first();
     await chip.hover();
-    await expect(hint(page)).toHaveText(/^Go to Section · Help in 10_guide\/02_features\.typ\s*\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
-    await expect(heading(page, 'Help')).not.toBeInViewport();
+    await expect(hint(page)).toHaveText(/^Go to Section · Options in 30_reference\/01_configuration\.typ\s*\((⌘|Ctrl)\+click or Alt\+Enter\)$/);
+    await expect(heading(page, 'h2', 'Options')).not.toBeInViewport();
     await chip.click({ modifiers: ['ControlOrMeta'] });
-    await expect(heading(page, 'Help')).toBeInViewport();
-    await expect(fileRow(page, '10_guide/02_features.typ')).toHaveAttribute('aria-selected', 'true');
+    await expect(heading(page, 'h2', 'Options')).toBeInViewport();
+    await expect(fileRow(page, '30_reference/01_configuration.typ')).toHaveAttribute('aria-selected', 'true');
   });
 
-  test('⌘/Ctrl+click on a reference to a section in another chapter opens it there; so does Alt+Enter', async ({ page }) => {
+  test('⌘/Ctrl+click on a reference to a chapter in another file opens it there; so does Alt+Enter', async ({ page }) => {
     await openFile(page, '10_guide/01_getting-started.typ');
-    const chip = visual(page).locator('.typst-labels__ref[data-target="guide-features-mermaid"]').first();
+    const chip = visual(page).locator('.typst-labels__ref[data-target="features-mermaid-diagrams"]').first();
     await chip.click({ modifiers: ['ControlOrMeta'] });
-    await expect(fileRow(page, '10_guide/02_features.typ')).toHaveAttribute('aria-selected', 'true');
-    await expect(heading(page, 'Mermaid diagrams')).toBeInViewport();
+    await expect(fileRow(page, '20_features/23_mermaid-diagrams.typ')).toHaveAttribute('aria-selected', 'true');
+    await expect(heading(page, 'h1', 'Mermaid diagrams')).toBeInViewport();
 
     await openFile(page, '10_guide/01_getting-started.typ');
-    await visual(page).locator('.typst-labels__ref[data-target="guide-features-spreadsheets"]').first().click();
+    await visual(page).locator('.typst-labels__ref[data-target="features-spreadsheets"]').first().click();
     await page.keyboard.press('Alt+Enter');
-    await expect(fileRow(page, '10_guide/02_features.typ')).toHaveAttribute('aria-selected', 'true');
-    await expect(heading(page, 'Spreadsheets')).toBeInViewport();
+    await expect(fileRow(page, '20_features/22_spreadsheets.typ')).toHaveAttribute('aria-selected', 'true');
+    await expect(heading(page, 'h1', 'Spreadsheets')).toBeInViewport();
   });
 });
 

@@ -11,7 +11,7 @@ import { snippetRenderer } from './visual-editor/visual-editor';
  *
  * The Visual editor only knows that a box may be drawn by a renderer. Where the pictures come from (the preview, under
  * the document's current path) is decided here. Image boxes are drawn by the images extension's renderer (priority 110,
- * over this one's 100). See docs/30_architecture/04_visual-editor.typ, "Raw boxes".
+ * over this one's 100). See docs/40_architecture/04_visual-editor.typ, "Raw boxes".
  */
 export function renderedBoxes(): TypstExtension {
   return {

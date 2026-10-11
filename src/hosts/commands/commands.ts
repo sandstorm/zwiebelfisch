@@ -10,7 +10,7 @@ import { Disposable } from '../../core/disposable/disposable';
  * root before any editor sees it.
  *
  * Showing commands to people is left to others: menus are the workbench's and the window's, and search everywhere
- * lists the commands extensions declare (`contributes.commands`). See docs/30_architecture/07_workbench.typ.
+ * lists the commands extensions declare (`contributes.commands`). See docs/40_architecture/07_workbench.typ.
  */
 export interface Commands {
   /**

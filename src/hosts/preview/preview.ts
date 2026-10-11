@@ -30,7 +30,7 @@ import css from './preview.css?inline';
  * hit-testing, reveal and shading. Extensions add the rest without the preview knowing them: the toolbar items (zoom,
  * page number, "Follow cursor", "Download PDF"), the PDF export options, the view options (Typst run before the main
  * file in the preview only: page guides, box outlines), and when to reveal or shade what (preview-sync). While the
- * engine loads, the pane shows what it waits for. See docs/30_architecture/06_preview.typ.
+ * engine loads, the pane shows what it waits for. See docs/40_architecture/06_preview.typ.
  */
 export class Preview implements PreviewContributions {
   private readonly worker = startEngineWorker();

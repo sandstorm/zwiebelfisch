@@ -1,4 +1,4 @@
-// See WindowApi in ../window.ts and docs/30_architecture/07_workbench.typ, "Concepts".
+// See WindowApi in ../window.ts and docs/40_architecture/07_workbench.typ, "Concepts".
 import { CancellationTokenSource } from '../../../core/cancellation/cancellation';
 import { Disposable } from '../../../core/disposable/disposable';
 import type { DynamicQuickPick, QuickInput, QuickPickEntry, QuickPickItemEntry } from '../quick-input/quick-input';

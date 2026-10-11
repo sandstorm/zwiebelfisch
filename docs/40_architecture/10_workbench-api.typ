@@ -1,8 +1,8 @@
-= Workbench API <extensions-workbench-api>
+= Workbench API <architecture-workbench-api>
 
 VS Code's namespaces and shapes: `commands`, `window`, `workspace`, `scm`, plus `workbench`, the editor's frame. Use `window` to talk to the user, never popups of your own.
 
-== Commands <extensions-workbench-api-commands>
+== Commands <architecture-workbench-api-commands>
 
 ```ts
 commands.registerCommand('wordCount.countFile', async (path: ProjectPath) => { … }); // Disposable
@@ -26,7 +26,7 @@ export const wordCount = (): TypstExtension => ({
 
 - The workbench's own: `workbench.action.searchEverywhere(text?)` opens search everywhere with `text` in its field (a prefix narrows it: `'>'`).
 
-== Menus <extensions-workbench-api-menus>
+== Menus <architecture-workbench-api-menus>
 
 A button is a menu entry: `workbench.registerMenuItem(menuId, item)`.
 
@@ -55,7 +55,7 @@ workbench.registerMenuItem('view', {
   columns: 4,
   [Menu], [Where], [Context], [Command gets],
   [`editor/title`], [Buttons at the right end of the editing area's tab bar (shown for every file while it has tabs or buttons)], [`activeCustomEditorId` (the shown editor's view type, any editor), `resource`], [nothing],
-  [`view`], [The View menu: "View ▾" after them, a popup; groups `editor` (how the editors show the text: "Invisible characters") and `preview` (the preview's view options, @extensions-source-editor-and-preview-view)], [as `editor/title`], [nothing],
+  [`view`], [The View menu: "View ▾" after them, a popup; groups `editor` (how the editors show the text: "Invisible characters") and `preview` (the preview's view options, @architecture-source-editor-and-preview-view)], [as `editor/title`], [nothing],
   [`file/newFile`], ["New" in the file panel's header], [`view: 'files'`, `resource`, `resourceKind` (`'file'` | `'folder'`), `resourceIsMain`], [the row's path],
   [`explorer/context`], [A file panel row's context menu], [as `file/newFile`], [the row's path],
   [`help/row`], [A help row's context menu], [none], [the text the row inserts],
@@ -66,7 +66,7 @@ workbench.registerMenuItem('view', {
 - An editor or side panel shows a menu with `window.showContextMenu(menuId, { anchor, title, context, args })`: at a point (`{ x, y }`, a right click's) or below an element (a button), named `title`, with the entries whose `when` holds in `context`; the chosen entry's command gets `args`. Nothing shows while no entry applies. The file panel does this for `explorer/context` (right click, Shift+F10) and `file/newFile` ("New"), the help panel for `help/row`.
 - `getMenuItems(menuId, context)` and `onDidChangeMenu` tell whether a menu has entries (the file panel hides "New" while `file/newFile` has none).
 
-== Messages and quick input <extensions-workbench-api-messages>
+== Messages and quick input <architecture-workbench-api-messages>
 
 #table(
   columns: 2,
@@ -75,7 +75,7 @@ workbench.registerMenuItem('view', {
   [`showInputBox({ title, prompt, value, valueSelection, placeHolder, validateInput })`], [The text, or `undefined` on Escape],
   [`showQuickPick(items, { title, placeHolder, canPickMany })`], [The `QuickPickItem` (or string) picked, the checked items with `canPickMany`, or `undefined`],
   [`showSaveDialog({ title, defaultUri, filters })`], [A new file's `ProjectPath`, or `undefined`],
-  [`showContextMenu(menuId, { anchor, title, context, args })`], [Nothing: shows a contributed menu (@extensions-workbench-api-menus); the chosen entry's command runs],
+  [`showContextMenu(menuId, { anchor, title, context, args })`], [Nothing: shows a contributed menu (@architecture-workbench-api-menus); the chosen entry's command runs],
   [`withProgress({ location, title }, (progress) => task)`], [What the task resolves to; shown until it settles],
 )
 
@@ -90,7 +90,7 @@ const choice = await window.showInformationMessage(`${path}: ${words} words`, 'O
 if (choice === 'Open') workbench.open(path);
 ```
 
-== Search everywhere <extensions-workbench-api-search>
+== Search everywhere <architecture-workbench-api-search>
 
 Double Shift anywhere in the widget, the magnifier at the bottom of the left rail, or `workbench.action.searchEverywhere` open one quick pick over what every search provider finds, a group each: `window.registerSearchProvider(provider)`.
 
@@ -130,7 +130,7 @@ The built-in providers:
   [Text], [`%`], [90], [`textFiles`: lines of every Typst and text file holding the query (from 2 characters, at most 200); opens with the match selected],
 )
 
-== The frame <extensions-workbench-api-frame>
+== The frame <architecture-workbench-api-frame>
 
 #table(
   columns: 2,
@@ -144,7 +144,7 @@ The built-in providers:
   [`workbench.isEditorFocused()`], [Whether the focus is in the editing area],
 )
 
-== Files and editors <extensions-workbench-api-files>
+== Files and editors <architecture-workbench-api-files>
 
 - *Read* through `project`: `files()`, `paths()`, `has(path)`, `document(path)` (a Typst file's `TypstDocument`, `.text`), `content(path)`, `onDidChangeFile` (an `Event<FileChange>`).
 - *Change* through `workspace.applyEdit(change)`, never `project.apply`. It checks the project's rules, then the host's `allowFileChange`, and resolves to the reason it was refused, or `null`.
@@ -154,7 +154,7 @@ The built-in providers:
 - *Languages of files*: `languages.getLanguageId(path)` names the language of a file by the longest ending declared for it (`contributes.languages: [{ id: 'bibtex', extensions: ['.bib'] }]`, VS Code's; the workbench declares `typst` for `.typ`), undefined for none. An ending declared for two languages throws.
 - *Dropped files*: `workbench.onDidDropFiles` gets the `File[]` dropped on the widget that no editor took.
 
-== Custom editors <extensions-workbench-api-custom-editors>
+== Custom editors <architecture-workbench-api-custom-editors>
 
 Every file opens in a custom editor (VS Code's), Typst files too: `window.registerCustomEditorProvider(viewType, provider, options)`.
 
@@ -190,7 +190,7 @@ The built-in ones, to beat or to leave alone:
   [`files.file`], [`*`: any other file, read-only (name, size, type)], [`'fallback'`],
 )
 
-== Help <extensions-workbench-api-help>
+== Help <architecture-workbench-api-help>
 
 The help panel (the built-in `help`) shows cheat sheets for the language of the shown file. A language's extension contributes its sheet: `languages.registerHelpProvider(selector, provider)`, with the `DocumentSelector` of document links (`{ language }`; none: every file).
 
@@ -220,7 +220,7 @@ The built-in sheets:
   [`bibtex` (`.bib`)], [BibTeX], [`text-files`],
 )
 
-== Known imports <extensions-workbench-api-known-imports>
+== Known imports <architecture-workbench-api-known-imports>
 
 Typst pasted into a file gets the imports it needs (the built-in `imports`). For text copied in the widget, the source file's imports travel along. For text from elsewhere, an extension says where the names of its constructs come from:
 
@@ -231,7 +231,7 @@ languages.registerKnownImport({ language: 'typst' }, { name: 'mermaid', module: 
 - A pasted `mermaid(..)` in a file that neither defines nor imports `mermaid` adds `#import "@preview/merman:0.4.0": mermaid` at the top, or `mermaid` to an import of merman (any version) already there.
 - `languages.provideKnownImports(languageId)`: every matching declaration, in registration order.
 
-== Drop edits <extensions-workbench-api-drop-edits>
+== Drop edits <architecture-workbench-api-drop-edits>
 
 A project file dragged from the file panel, or a file from the desktop once uploaded, dropped into a Typst file (the Visual or the Source editor) becomes what an extension makes of it (VS Code's `DocumentDropEditProvider`):
 
@@ -252,7 +252,7 @@ languages.registerDocumentDropEditProvider({ language: 'typst' }, {
 - `insertText` goes in at the drop position: the Source editor inserts it there, the Visual editor reads it as Typst (inline content into the text, blocks after the block there, as `insertTypst`). `additionalEdit` (changes of `text` before the drop, in its coordinates) goes into the same transaction: one undo step.
 - Files from the desktop dropped into the text are uploaded first (to the top of the project; a file of the same name and content is used as it is, another content gets the next free name, `name-2.ext`, …), then each is a drop of that project file, the first where they were dropped, the others after it. A refused upload is an error message. Files dropped elsewhere on the widget go to `workbench.onDidDropFiles`.
 
-== Copy and paste <extensions-workbench-api-paste>
+== Copy and paste <architecture-workbench-api-paste>
 
 An extension takes part in copy and paste of a language's text with a paste edit provider (VS Code's `DocumentPasteEditProvider`). The editors do the paste: the Visual editor for Typst it reads as Typst, the Source editors for any paste.
 
@@ -272,17 +272,17 @@ languages.registerDocumentPasteEditProvider({ language: 'typst' }, {
 - The providers of a paste run in registration order, each given the text the ones before left. Additional edits that overlap the pasted ranges or an earlier edit are dropped; one at the same place as a pasted range goes before the pasted text.
 - The built-in ones: `imports` (the imports a paste needs), `labels` (new names for pasted labels the project has).
 
-== File decorations <extensions-workbench-api-decorations>
+== File decorations <architecture-workbench-api-decorations>
 
 `window.registerFileDecorationProvider({ provideFileDecoration(path), onDidChangeFileDecorations })` puts badges on file rows: `FileDecoration { badge?, tooltip?, color?, propagate? }` (`propagate`: also on the closed folders around the file). Several providers may decorate one file. Side panels that list files read `window.getFileDecorations(path)` and `window.getFileIcon(path)`.
 
-== Settings and state <extensions-workbench-api-settings>
+== Settings and state <architecture-workbench-api-settings>
 
 - `workspace.getConfiguration('<section>')`: `get(key, default?)`, `has(key)`, `inspect(key)` (`defaultValue`, `globalValue`: the host's).
 - `workspace.onDidChangeConfiguration(event)`: `event.affectsConfiguration('<section>.<key>')` or a whole section.
-- Declaring settings: @extensions-overview-settings.
+- Declaring settings: @architecture-extensions-overview-settings.
 
-=== Memento <extensions-workbench-api-state>
+=== Memento <architecture-workbench-api-state>
 
 `globalState` and `workspaceState` are VS Code's `Memento`: `keys()`, `get(key, default?)`, `update(key, value)` (JSON-like; `undefined` removes). Each extension's values are apart from the others'.
 
@@ -295,7 +295,7 @@ languages.registerDocumentPasteEditProvider({ language: 'typst' }, {
 
 What `get` returns comes from outside: check its shape. Without storage nothing is kept and nothing fails.
 
-== Source controls <extensions-workbench-api-scm>
+== Source controls <architecture-workbench-api-scm>
 
 `scm.registerSourceControl(sourceControl)` offers somewhere the project can be committed; `scm.sourceControls` and `onDidChangeSourceControls` are for whoever shows them. The collaboration extension registers the GitLab branch behind a room; source-control shows it.
 

@@ -3,7 +3,7 @@
 // `mermaid` for a diagram: plain headings, `@label` references, raw blocks and tables.
 //
 // Labels: a chapter's label is its path without `.typ` and the numbers that order the files, `/` → `-`
-// (`30_architecture/07_workbench.typ` → `<architecture-workbench>`); a section inside appends a word
+// (`40_architecture/07_workbench.typ` → `<architecture-workbench>`); a section inside appends a word
 // (`<architecture-workbench-menus>`).
 
 #import "@preview/merman:0.4.0"

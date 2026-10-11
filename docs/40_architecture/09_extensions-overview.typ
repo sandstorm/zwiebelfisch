@@ -1,4 +1,4 @@
-= Extensions overview <extensions-overview>
+= Extensions overview <architecture-extensions-overview>
 
 Every feature of the editor is an extension, the built-in ones too. An extension is an object:
 
@@ -15,11 +15,11 @@ interface TypstExtension {
 - Write an extension as a function that makes it (`wordCount()`), as every built-in is, so it can take options later.
 - Every type an extension implements or declares is exported from the package. What it only reaches through its context (`Project`, `TypstDocument`) is typed without an import.
 
-== Adding, leaving out, replacing <extensions-overview-list>
+== Adding, leaving out, replacing <architecture-extensions-overview-list>
 
-The host makes the list from the built-ins with `extensions: (builtinExtensions) => […]` (@guide-embedding-extensions). The built-in ids: @architecture-built-in-extensions.
+The host makes the list from the built-ins with `extensions: (builtinExtensions) => […]` (@reference-embedding-extensions). The built-in ids: @architecture-built-in-extensions.
 
-== Example: word count <extensions-overview-example>
+== Example: word count <architecture-extensions-overview-example>
 
 The words of the shown file in the status bar, a setting for its label, a command the host can run.
 
@@ -67,7 +67,7 @@ const editor = createTypstEditor(host, {
 await editor.executeCommand<number>('wordCount.count'); // 5
 ```
 
-== The extension context <extensions-overview-context>
+== The extension context <architecture-extensions-overview-context>
 
 What `activate` gets (`ExtensionContext`):
 
@@ -75,20 +75,20 @@ What `activate` gets (`ExtensionContext`):
   columns: 3,
   [Member], [What], [Details],
   [`subscriptions`], [Registrations, disposed with the editor], [],
-  [`globalState`, `workspaceState`], [Values the extension keeps], [@extensions-workbench-api-state],
-  [`project`], [The files: `files()`, `paths()`, `document(path)`, `content(path)`, `onDidChangeFile`], [@extensions-workbench-api-files],
-  [`commands`], [Commands by id, key bindings], [@extensions-workbench-api-commands],
-  [`window`], [Messages, quick input, status bar, custom editors, file decorations, the active file and editor], [@extensions-workbench-api],
-  [`workspace`], [`applyEdit`, settings], [@extensions-workbench-api-settings],
-  [`workbench`], [The frame: `open`, side panels, menus, style sheets, dropped files, `user`], [@extensions-workbench-api],
-  [`scm`], [Source controls], [@extensions-workbench-api-scm],
-  [`languages`], [Document links in texts, what a dropped file becomes, the language of a file, help sheets; by language], [@extensions-source-editor-and-preview-links, @extensions-workbench-api-drop-edits, @extensions-workbench-api-help],
-  [`visualEditor`], [Nodes, marks, toolbar, boxes, highlights (experimental)], [@extensions-visual-editor-constructs],
-  [`sourceEditor`], [CodeMirror extensions: for the Source editors, and shared ones for every CodeMirror], [@extensions-source-editor-and-preview],
-  [`preview`], [Toolbar items, PDF export options, reveal, clicks, diagnostics], [@extensions-source-editor-and-preview-preview],
+  [`globalState`, `workspaceState`], [Values the extension keeps], [@architecture-workbench-api-state],
+  [`project`], [The files: `files()`, `paths()`, `document(path)`, `content(path)`, `onDidChangeFile`], [@architecture-workbench-api-files],
+  [`commands`], [Commands by id, key bindings], [@architecture-workbench-api-commands],
+  [`window`], [Messages, quick input, status bar, custom editors, file decorations, the active file and editor], [@architecture-workbench-api],
+  [`workspace`], [`applyEdit`, settings], [@architecture-workbench-api-settings],
+  [`workbench`], [The frame: `open`, side panels, menus, style sheets, dropped files, `user`], [@architecture-workbench-api],
+  [`scm`], [Source controls], [@architecture-workbench-api-scm],
+  [`languages`], [Document links in texts, what a dropped file becomes, the language of a file, help sheets; by language], [@architecture-source-editor-and-preview-links, @architecture-workbench-api-drop-edits, @architecture-workbench-api-help],
+  [`visualEditor`], [Nodes, marks, toolbar, boxes, highlights (experimental)], [@architecture-visual-editor-constructs],
+  [`sourceEditor`], [CodeMirror extensions: for the Source editors, and shared ones for every CodeMirror], [@architecture-source-editor-and-preview],
+  [`preview`], [Toolbar items, PDF export options, reveal, clicks, diagnostics], [@architecture-source-editor-and-preview-preview],
 )
 
-== Settings <extensions-overview-settings>
+== Settings <architecture-extensions-overview-settings>
 
 - Declare each setting in `contributes.configuration.properties`, by full id `<section>.<key>` under the extension's own section.
 - A `ConfigurationProperty` has `type`, `default`, `description` and an optional `enum`.
@@ -98,7 +98,7 @@ What `activate` gets (`ExtensionContext`):
 - A value of the wrong type, or outside `enum`, counts as unset. A value for an undeclared setting is ignored. Both log a console warning.
 - An id declared twice is an error.
 
-== Rules <extensions-overview-rules>
+== Rules <architecture-extensions-overview-rules>
 
 - *Extensions never depend on each other.* What one offers another goes through a generic contribution point (document links, file decorations, source controls) or a command id, never an import.
 - *Command ids* are `<extension>.<name>` (`pdfExport.export`).
@@ -118,7 +118,7 @@ What `activate` gets (`ExtensionContext`):
 
 Equal ranks fall back to registration order, which counts only within one extension: never rely on it across extensions.
 
-== Five vocabularies <extensions-overview-vocabularies>
+== Five vocabularies <architecture-extensions-overview-vocabularies>
 
 An extension meets up to five vocabularies. Every name says whose it is:
 

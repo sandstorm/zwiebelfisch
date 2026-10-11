@@ -19,7 +19,7 @@ import { RenderedBox } from './rendered-box';
  * show it as text. The box itself knows no language and no pictures: contributions add the code's language and
  * links, a picture instead of the code (box renderers, `rendered-box.ts`), a title and tools. The picture follows
  * the box's primary document link. How a box behaves is told at `RawBox` below. See
- * docs/30_architecture/04_visual-editor.typ, "Raw boxes".
+ * docs/40_architecture/04_visual-editor.typ, "Raw boxes".
  */
 export function rawBoxViews(tiptap: Editor, boxes: RawBoxes): NodeViewConstructor {
   return (node, _view, getPos, decorations) => new RawBox(node, getPos, decorations, { tiptap, boxes });

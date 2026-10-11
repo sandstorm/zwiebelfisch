@@ -5,7 +5,7 @@ import type { Node } from '@tiptap/pm/model';
 import { serializeToTypst } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import { after, edit, expectPreciseMap, parseTypst } from '../../../testing/testing';
 
-/** The list of docs/10_guide/02_features.typ's Spreadsheets section, which showed as a raw box. */
+/** The list of docs/20_features/22_spreadsheets.typ (shortened), which showed as a raw box. */
 const SPREADSHEETS = `- File panel → New → "New spreadsheet…" creates an \`.ic\` file and opens it in #link("https://www.ironcalc.com")[IronCalc]: formulas, formats, several sheets.
 - Insert → Insert spreadsheet (or \`/spreadsheet\`): names a new \`.ic\` (proposed: \`data/table.ic\` next to the file), fills in a starter table, inserts \`#figure(sheets.Sheet1, caption: [ ])\` with its import and opens the spreadsheet. If \`sheets\` already names another spreadsheet's tables, the new one is imported as \`table-sheets\`.
 - Every edit also writes \`<name>.ic.gen.typ\` (generated; don't edit). It holds, by sheet name:

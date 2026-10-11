@@ -5,7 +5,7 @@
  * as written in Typst source, which means something only relative to its file (a PathReference). Two branded types
  * keep them apart: the compiler refuses one where the other is meant, yet at runtime they are plain strings, usable
  * as keys and unchanged through postMessage, Yjs and the server. Parse at the edges, typed inside.
- * See docs/30_architecture/02_core.typ, "Paths".
+ * See docs/40_architecture/02_core.typ, "Paths".
  */
 export type ProjectPath = string & { readonly __type: 'ProjectPath' };
 

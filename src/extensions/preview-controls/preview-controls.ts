@@ -11,7 +11,7 @@ import css from './preview-controls.css?inline';
  * and offers it to toolbar items. Which controls a widget shows is decided here, so a host can leave them out or
  * replace them. Every view option gets an entry in the View menu at the top right of the editing area (menu `view`,
  * group `preview`, below what the editors contribute there); which are on is remembered per viewer. See
- * docs/30_architecture/06_preview.typ.
+ * docs/40_architecture/06_preview.typ.
  */
 export function previewControls(): TypstExtension {
   return {

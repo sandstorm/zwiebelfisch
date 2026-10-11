@@ -11,7 +11,7 @@ import { ProjectPath } from '../paths/paths';
  * parts derive something from the files: editors, indexes, collaboration, the preview. They all subscribe to
  * `onDidChangeFile`, which reports `apply`, `replace` and every text edit, so nobody has to be told by hand. Sharing
  * the files with others is the collaboration extension's; what another file is (an image, a font) is decided by
- * whoever reads it. See docs/30_architecture/02_core.typ, "Project".
+ * whoever reads it. See docs/40_architecture/02_core.typ, "Project".
  */
 export class Project {
   private readonly entries = new Map<ProjectPath, Entry>();

@@ -12,7 +12,7 @@ import { HelpPanel } from './workbench/help-panel';
  *
  * The sheets are not here. A language's sheet belongs to its extension (`languages.registerHelpProvider`: Typst in
  * typst-language, Mermaid in mermaid, …). The panel only renders what `languages.provideHelp` gives for the shown
- * file's language, so a language brings its help without the panel knowing it. See docs/10_guide/02_features.typ.
+ * file's language, so a language brings its help without the panel knowing it. See docs/20_features/16_help.typ.
  */
 export function help(): TypstExtension {
   return {

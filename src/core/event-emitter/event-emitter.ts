@@ -5,7 +5,7 @@ import { Disposable } from '../disposable/disposable';
  * Listeners run in the order they subscribed; one that unsubscribes while the event fires is not called anymore.
  *
  * VS Code's shape, so every event in the widget looks the same: a public `onDid<Verb>` that returns a `Disposable`,
- * and a private emitter only its owner can fire (docs/30_architecture/10_conventions.typ, "Extension API").
+ * and a private emitter only its owner can fire (docs/40_architecture/14_conventions.typ, "Extension API").
  */
 export class EventEmitter<T> {
   readonly #listeners = new Set<(value: T) => void>();

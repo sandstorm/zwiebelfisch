@@ -6,7 +6,7 @@ import { defineConfig } from 'vite';
 // (new URL(..., import.meta.url)), so dist/lib can be served from anywhere.
 // Every emitted file has its content's hash in the name (the wasm
 // typst_engine_bg.<hash>.wasm, the fonts fonts/<name>.<hash>.otf), so a host
-// server may cache them forever (docs/10_guide/05_embedding.typ).
+// server may cache them forever (docs/30_reference/02_embedding.typ).
 export default defineConfig({
   // relative base: asset URLs become new URL('…', import.meta.url), not '/assets/…'
   base: './',

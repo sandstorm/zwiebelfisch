@@ -15,7 +15,7 @@ import { DOCS_FILES_CHANGE, DOCS_FILES_ENDPOINT, DOCS_FILES_HEADER, DOCS_FILES_M
  * own page may use it: its origin, with the session token the plugin puts into the page. On the dev server a change in
  * `root` is no reload: the page keeps its editor and applies the change itself. DocsFolder (docs-folder.ts) does the
  * disk work and guards every path; the page's side is DocsSync (docs-sync.ts). Node only.
- * See docs/30_architecture/11_development.typ, "Writing the docs in the demo".
+ * See docs/40_architecture/15_development.typ, "Writing the docs in the demo".
  */
 export function docsFiles(options: { root: string }): Plugin {
   const folder = new DocsFolder(options.root);

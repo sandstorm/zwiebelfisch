@@ -44,8 +44,8 @@
 #table(
   columns: (auto, 1fr, 2fr),
   table.header[File][Task][Configuration],
-  [`main.ts`], [`server:dev`], [environment variables: @guide-collaboration-server, @guide-collaboration-gitlab],
+  [`main.ts`], [`server:dev`], [environment variables: @reference-collaboration-server-running, @reference-collaboration-server-gitlab],
   [`fake-gitlab-main.ts`], [`demo`, `server:dev-fake-gitlab`, `test:e2e-gitlab`, the Docker image], [`PORT`, `HOST`; `TYPST_DEMO_DIST`: also serves that built demo on `DEMO_PORT` (5199), as the Docker image does; plain rooms + `gitlab:demo/report@<any branch>` holding `demo/examples/advanced`; `GET /playground`, `POST /playground/upstream` (simulates a push), `POST /playground/outage` (GitLab unreachable for a branch)],
 )
 
-The widget's side (`collaboration` extension, `GitLabSourceControl`): @guide-collaboration and @architecture-built-in-extensions.
+The widget's side (`collaboration` extension, `GitLabSourceControl`): @reference-collaboration-server and @architecture-built-in-extensions.

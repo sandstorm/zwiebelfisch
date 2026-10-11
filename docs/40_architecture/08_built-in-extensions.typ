@@ -62,7 +62,7 @@ Exported from the package, not in the list; a host adds them.
   columns: (auto, 2fr, 1fr),
   table.header[Extension][What it adds][Through],
   [`collaboration(options)`], [The host's connection: shares the project over Yjs, draws other users' places in every editor (CodeMirror extensions, highlights, file decorations), registers a GitLab room's source control (see @architecture-server)], [CodeMirror extensions, highlights, file decorations, source control],
-  [`devtools(extensions)`], [Wraps the whole list: records every extension's contributions (proxies around its context's namespaces) and shows them with the shown document and the events in a right side panel (@guide-embedding-devtools). `model/` describes values and the document as text; `recording/` wraps the contexts and describes each contribution point's arguments (by shape: a new point shows its arguments' names until it is described there); `workbench/` draws the tabs; `visual-editor/` keeps the loaded Visual editors (`registerTiptapExtension`)], [right side panel, Tiptap extension, every contribution point (recorded)],
+  [`devtools(extensions)`], [Wraps the whole list: records every extension's contributions (proxies around its context's namespaces) and shows them with the shown document and the events in a right side panel (@reference-embedding-devtools). `model/` describes values and the document as text; `recording/` wraps the contexts and describes each contribution point's arguments (by shape: a new point shows its arguments' names until it is described there); `workbench/` draws the tabs; `visual-editor/` keeps the loaded Visual editors (`registerTiptapExtension`)], [right side panel, Tiptap extension, every contribution point (recorded)],
 )
 
 == How they meet <architecture-built-in-extensions-meeting>
@@ -89,11 +89,11 @@ Exported from the package, not in the list; a host adds them.
   [shared CodeMirror extensions], [`invisibles`], [the Source editors, raw boxes (the workbench), `textFiles`' editor],
 )
 
-Schema names of other extensions are read only as data and always guarded (`schema.nodes.x`, `editor.can()`). Writing a construct: @extensions-visual-editor-constructs.
+Schema names of other extensions are read only as data and always guarded (`schema.nodes.x`, `editor.can()`). Writing a construct: @architecture-visual-editor-constructs.
 
 == Page guides and box outlines <architecture-built-in-extensions-guides>
 
-`previewGuides` adds two view options (@extensions-source-editor-and-preview-view). Their Typst, run before the main file in the preview only:
+`previewGuides` adds two view options (@architecture-source-editor-and-preview-view). Their Typst, run before the main file in the preview only:
 
 - *Page guides*: a few lines of Typst drawing the text area, the header's bottom, the footer's top and the column gutters as the page background, read from the page's own settings as Typst lays the page out: margins left `auto` are 2.5/21 of the shorter fixed page side, ratios are of the page laid out (`layout`, so `width: auto` and `height: auto` pages work), `inside` / `outside` follow the binding (by default the text direction's) and the page number, header ascent and footer descent are relative to the margin. The code is total over the page's settings: an error in it would be the preview's error for every document, and Typst has no `try`. `@preview/scaffolder` draws the same, but reads `page.width` and `page.height` as lengths (`expected relative length, found auto` for a page of `auto` height) and takes no resolved sizes, so the guides are drawn here; no package is downloaded either. A document that sets a background replaces it; the foreground then draws the guides (`context if page.background != guides { guides }`), over the text. A document that sets both has no guides.
 - *Box outlines*: `set block(stroke: …)` and `set box(stroke: …)`. Set rules are defaults: a document's own set rules and arguments win. Typst folds a stroke argument with the stroke set before it, so a document's `stroke: red` would take a set rule's thickness and dash: the outline has no dash and Typst's own thickness (1pt), and only its translucent paint shows where a document's stroke names no paint (`stroke: 2pt`), or on the sides a document leaves out (`stroke: (left: red)`).

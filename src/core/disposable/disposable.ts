@@ -5,7 +5,7 @@
  * Every registration, listener or DOM element someone adds must be removed again. VS Code's answer: each one returns
  * a Disposable, and an extension pushes it into `context.subscriptions`. When the widget is disposed, the host disposes
  * that list, so no extension needs a cleanup method of its own. Everything with a lifetime (hosts, editors, `Project`,
- * the widget) ends with `dispose()` (docs/30_architecture/10_conventions.typ, "Extension API").
+ * the widget) ends with `dispose()` (docs/40_architecture/14_conventions.typ, "Extension API").
  */
 export class Disposable {
   /** One disposable for several: disposes them in reverse order (the last registered goes first). */

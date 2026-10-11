@@ -18,7 +18,7 @@ import { SourceOffset, SourceRange, type TextChange } from '../typst-document/ty
  * It lives in core because extensions never import each other, and this is about Typst, not about one feature. It
  * stops at syntax: where a path leads and what following it does is the document-links extension's, showing links is
  * the languages host's (`registerDocumentLinkProvider`), and applying a change is the caller's.
- * See docs/30_architecture/02_core.typ, "Typst syntax".
+ * See docs/40_architecture/02_core.typ, "Typst syntax".
  */
 export function findFilePaths(text: string, options: { from?: number; to?: number } = {}): PathInSource[] {
   const found: PathInSource[] = [];

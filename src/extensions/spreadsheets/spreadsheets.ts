@@ -25,7 +25,7 @@ import type { WorkbookEdit } from './workbench/workbook';
  * Alt+Enter opens IronCalc rather than the generated file.
  *
  * IronCalc (React, its UI and a 2 MB engine) is loaded only when a spreadsheet is first shown or inserted
- * (workbench/workbook.ts). See docs/10_guide/02_features.typ, "Spreadsheets".
+ * (workbench/workbook.ts). See docs/20_features/22_spreadsheets.typ.
  */
 export function spreadsheets(): TypstExtension {
   return {

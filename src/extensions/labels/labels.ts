@@ -18,7 +18,7 @@ import { labelSearch } from './workbench/label-search';
  * in the pasted text: a copy never makes two labels of one name (a paste edit provider).
  *
  * The text stays plain Typst; chips and tags are only how the Visual editor draws it. Figures' labels are searched
- * through the figures extension, by caption. See docs/10_guide/02_features.typ, "Labels and cross-references".
+ * through the figures extension, by caption. See docs/20_features/10_labels-and-references.typ.
  */
 export function labels(): TypstExtension {
   return {

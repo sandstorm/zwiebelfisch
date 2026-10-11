@@ -8,7 +8,7 @@ import type { ProjectPath } from '../../core/paths/paths';
  * Committing and showing commits are two features. The collaboration extension knows how to commit to GitLab; the
  * source-control extension shows what is not committed and asks for the message. They never know each other, so
  * both meet here: one registers a `SourceControl`, the other lists every registered one. The host only keeps the
- * list and tells when it changes. See docs/30_architecture/07_workbench.typ.
+ * list and tells when it changes. See docs/40_architecture/07_workbench.typ.
  */
 export interface Scm {
   /**

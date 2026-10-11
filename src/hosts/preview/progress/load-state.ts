@@ -1,4 +1,4 @@
-// See Preview in ../preview.ts and docs/30_architecture/06_preview.typ, "Concepts".
+// See Preview in ../preview.ts and docs/40_architecture/06_preview.typ, "Concepts".
 import type { PreviewProgress } from '../preview';
 import type { LoadEvent } from '../worker/protocol';
 

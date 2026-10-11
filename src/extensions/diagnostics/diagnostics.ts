@@ -16,7 +16,7 @@ import { DiagnosticsStatus } from './workbench/workbench';
  *
  * Compiling is the preview's; it reports a compilation's diagnostics once, for every file. A DiagnosticCollection
  * (model/) splits them by document, and each editor of a document reads its own from there, whenever it is made.
- * See docs/30_architecture/08_built-in-extensions.typ.
+ * See docs/40_architecture/08_built-in-extensions.typ.
  */
 export function diagnostics(): TypstExtension {
   return {

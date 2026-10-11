@@ -50,20 +50,20 @@ The examples:
 
 Main features:
 
-- Visual editing like a word processor.
+- Visual editing like a word processor (@features-visual-editor).
 - All Typst features supported.
-- what it does not model shows as a raw box (@guide-features-visual).
-- Source editing with highlighting; both editors edit the same text (@guide-features-editors).
-- Live preview; a click in it jumps to the text (@guide-features-editors).
-- Images, figures and tables (@guide-features-images, @guide-features-tables).
-- Spreadsheets in IronCalc, shown in the document as tables (@guide-features-spreadsheets).
-- Diagrams: draw.io (@guide-features-diagrams) and Mermaid (@guide-features-mermaid).
-- Custom styles from the template (@guide-features-styles).
-- Labels and cross-references (@guide-features-labels).
-- Comments as margin notes (@guide-features-comments).
-- Slash commands (`/table`) and search everywhere: press Shift twice (@guide-features-search).
-- Help panel: a cheat sheet for the shown file (@guide-features-help).
-- Collaboration and saving to GitLab (@guide-features-collaboration); PDF download (@guide-features-pdf).
+- what it does not model shows as a raw box (@features-full-typst-support).
+- Source editing with highlighting; both editors edit the same text (@features-source-editor).
+- Live preview; a click in it jumps to the text (@features-rendering-preview, @features-bidirectional-navigation).
+- Images, figures and tables (@features-images, @features-tables).
+- Spreadsheets in IronCalc, shown in the document as tables (@features-spreadsheets).
+- Diagrams: draw.io (@features-drawio-diagrams) and Mermaid (@features-mermaid-diagrams).
+- Custom styles from the template (@features-custom-styles).
+- Labels and cross-references (@features-labels-and-references).
+- Comments as margin notes (@features-comments).
+- Slash commands (`/table`) and search everywhere: press Shift twice (@features-search-everywhere).
+- Help panel: a cheat sheet for the shown file (@features-help).
+- Collaboration and saving to GitLab (@features-collaborative-editing, @features-gitlab); PDF download (@features-pdf).
 
 The page's state is its URL:
 
@@ -74,13 +74,13 @@ The page's state is its URL:
   [`?room=<name>`], [Collaborate mode: joins a room on the local server.],
   [`?room=gitlab:demo/report@main`], [GitLab mode: a branch of the fake repository.],
   [`&user=<name>`], [The name others see; signs comments and commits.],
-  [`&devtools`], [The devtools side panel on the right: document, contributions, events (@guide-embedding-devtools).],
+  [`&devtools`], [The devtools side panel on the right: document, contributions, events (@reference-embedding-devtools).],
   [`#/chapters/intro.typ:12`], [The file shown and the cursor's line (1-based): a reload or a shared link opens the file with the cursor at the start of that line. It follows while you work.],
 )
 
 == A first editor <guide-getting-started-first-editor>
 
-`mise run build:lib` builds the library into `dist/lib` (@guide-embedding-library). It is not on npm yet: copy `dist/lib`, or depend on the repository folder, whose `package.json` exports it as `typst-editor`.
+`mise run build:lib` builds the library into `dist/lib` (@reference-embedding-library). It is not on npm yet: copy `dist/lib`, or depend on the repository folder, whose `package.json` exports it as `typst-editor`.
 
 Without a bundler:
 
@@ -107,4 +107,4 @@ const editor = createTypstEditor(document.getElementById('editor')!, {
 
 A complete page: `examples/plain-html/index.html`. After `mise run build:lib`, serve the repository root and open `/examples/plain-html/`.
 
-Next: what users get (@guide-features), every setting and option (@guide-configuration), editing with others (@guide-collaboration), embedding and events (@guide-embedding), adding features (@extensions-overview).
+Next: what users get (@features-overview), every setting and option (@reference-configuration), the collaboration server (@reference-collaboration-server), embedding and events (@reference-embedding), how it is built and adding features (@architecture-overview, @architecture-extensions-overview).

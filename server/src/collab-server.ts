@@ -10,7 +10,7 @@ import { GitLabExtension, type GitLabOptions } from './gitlab/gitlab-extension.t
  * it relays changes between the clients, asks `authenticate` who may open a room, and stores every room (SQLite by
  * default, or any Hocuspocus storage extension). It does not look inside a room, except when the room is backed by a
  * GitLab branch (`gitlab`, see GitLabExtension). The widget's side is the collaboration extension; both agree on
- * src/core/room-protocol. See docs/30_architecture/09_server.typ.
+ * src/core/room-protocol. See docs/40_architecture/13_server.typ.
  */
 export function createCollabServer(options: CollabOptions & { port: number; address?: string }): Server {
   return new Server({ ...collabConfiguration(options), port: options.port, address: options.address ?? '127.0.0.1' });

@@ -9,7 +9,7 @@
 //   TYPST_GITLAB_AUTO_COMMIT (default 10) minutes without edits before a room commits by itself; `off`: never
 //   TYPST_DEMO_DIST (default unset) a built demo (dist/demo) to serve on DEMO_PORT (default 5199), where Vite
 //                   would serve it (see playground/static-files.ts)
-// See docs/30_architecture/11_development.typ.
+// See docs/40_architecture/15_development.typ.
 import { createServer } from 'node:http';
 import { createCollabServer } from './collab-server.ts';
 import { parseAutoCommit } from './gitlab/gitlab-extension.ts';

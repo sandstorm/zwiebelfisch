@@ -1,4 +1,4 @@
-= Visual editor constructs <extensions-visual-editor-constructs>
+= Visual editor constructs <architecture-visual-editor-constructs>
 
 The Visual editor models a Typst construct only when an extension contributes it; anything else shows as raw Typst in a box. The built-in constructs (headings, lists, tables, images, figures, …) use this same API.
 
@@ -8,7 +8,7 @@ The Visual editor models a Typst construct only when an extension contributes it
 
 How the Typst ↔ ProseMirror conversion keeps untouched source byte for byte: @architecture-prosemirror-typst.
 
-== The spec <extensions-visual-editor-constructs-spec>
+== The spec <architecture-visual-editor-constructs-spec>
 
 A spec groups its fields by owner:
 
@@ -41,14 +41,14 @@ A spec groups its fields by owner:
   [`parseTypst.calls` keys, what `toTypst` writes], [the Typst language], [Function names, Typst source],
 )
 
-=== The node <extensions-visual-editor-constructs-node>
+=== The node <architecture-visual-editor-constructs-node>
 
 - Its Tiptap extension declares every attribute it needs, including the ones that keep its source, all `rendered: false`: `sep` (the whitespace to the next block), `src` (an atom's Typst) and whatever remembers how the source was written (the callout's `layout`).
 - A `labelled` spec's node gets a `label` attribute from the host: a label (`<tip>`) after the block.
 - Its Tiptap `priority` (default 100, higher first) orders the schema (a group's first node type is its default), mark nesting (a higher mark outside a lower one), keymaps, plugins and parse rules.
 - Two specs of the same name: the later one in that order extends the earlier (another `toTypst`, more parse rules).
 
-=== Reading Typst <extensions-visual-editor-constructs-parse>
+=== Reading Typst <architecture-visual-editor-constructs-parse>
 
 - Each parse function gets the `TypstParseContext` and the Lezer node (for a call: its `FuncCall`), and returns the node, or `null` to let the next spec try. With no taker the source stays raw.
 - *Return `null` for anything you cannot write back exactly.*
@@ -76,7 +76,7 @@ Read calls with the package's plain functions over Lezer nodes:
   [`quote(text)`], [A string literal of `text`],
 )
 
-=== Writing Typst <extensions-visual-editor-constructs-serialize>
+=== Writing Typst <architecture-visual-editor-constructs-serialize>
 
 - Only an *edited* node is written; untouched source stays byte for byte.
 - `toTypst(state, node, pos, parent)` writes through the `TypstSerializeState`: `hidden(src)` (syntax the Visual editor does not show), `shown(src, kind, from, to)`, `blocks(node, start, sep)` (its children), `block`, `textblock`, `inline`, `item`, `closing(src)`, `after(src)`, `indented(print, by?)`, `endBlock`.
@@ -86,14 +86,14 @@ Read calls with the package's plain functions over Lezer nodes:
 - `onDidChange`: what the spec reads changed (a style declared); the Visual editors parse their documents again.
 - A mark's `toTypst(mark, around)` returns `{ open, close }` (`*…*`, or `#strong[…]` where delimiters would not work); `raw` marks write their text unescaped, `isBare` says when nothing is needed around a span.
 
-=== Node groups <extensions-visual-editor-constructs-groups>
+=== Node groups <architecture-visual-editor-constructs-groups>
 
 Constructs meet through Tiptap node groups, without naming each other:
 
 - `figureBody`: what a figure may hold as its body (images and tables join it: `group: 'block figureBody'`).
 - `blockContainer`: holds blocks an alignment may wrap (table cells).
 
-== Example: a callout <extensions-visual-editor-constructs-callout>
+== Example: a callout <architecture-visual-editor-constructs-callout>
 
 `#callout(title: "Tip")[…]` as a box with its title in a field and its content as editable text, plus "Callout" in the Insert menu.
 
@@ -210,7 +210,7 @@ export function callout(): TypstExtension {
 createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensions, callout()] });
 ```
 
-== Around the constructs <extensions-visual-editor-constructs-more>
+== Around the constructs <architecture-visual-editor-constructs-more>
 
 #table(
   columns: 2,
@@ -218,7 +218,7 @@ createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensio
   [`registerToolbarGroup(group)`], [A place for items: a `group` in the row, a `menu` button (in the row, or with `bar` among a floating bar's items by its `order`: the inline styles' "Styles" in the `selection` bar), or a `floating` bar at an anchor. A menu without items is left out. The host's: `history` (order 10), `text-style` (20), the `insert` menu (50), the floating `selection` bar],
   [`registerToolbarItem(item)`], [A button in a group by `group` + `order`: an `action` (`run(chain)`: a Tiptap command chain, also dry-run for enabled; or `click()`, asking first), `create(toolbar)` for an item with state per editor, or, in a menu, `provideActions(toolbar)` for buttons that come and go while the editor lives (asked as the menu shows and opens). `keywords`: other words the slash commands find it by; `visible`: left out where it does not apply (a floating bar with no visible button stays hidden)],
   [`registerTextStyleProvider(provider)`], [Entries of the text style menu (heading levels, custom styles), with `keywords` as toolbar actions],
-  [`registerCompletionItemProvider(provider, trigger)`], [A list that pops up while a trigger character and a query are typed (@extensions-visual-editor-constructs-completion)],
+  [`registerCompletionItemProvider(provider, trigger)`], [A list that pops up while a trigger character and a query are typed (@architecture-visual-editor-constructs-completion)],
   [`registerRawBoxRenderer(provider, { priority })`], [What raw boxes show instead of their code; the first by `priority` that `renders` a box draws it (images 110, compiled snippets 100); its `className` goes on the picture, for its CSS],
   [`registerHighlights(layer, provider)`], [Styled source ranges drawn over the text (diagnostics, others' selections)],
   [`registerTiptapExtension(editor => extension)`], [Per-editor plugins, decorations, commands; hooks see `this.editor`],
@@ -230,9 +230,9 @@ createTypstEditor(host, { extensions: (builtinExtensions) => [...builtinExtensio
 - Per-editor things (the document, a popover) come through the `…Provider` functions, which get the `VisualEditorContext`: `document`, `selection()` (a `SourceRange`), `sourceToPos`, `posToSource` (the only way between `SourceOffset`s and ProseMirror positions), `isBox(node)`.
 - `editRawBox(pos, offset)` (a Tiptap command of the host): shows and focuses the code of the raw box at `pos`, the cursor at `offset` in its `src`. For Insert entries that make an empty box to be written in ("Inline math": `$$`, the cursor between the dollars); run it after the transaction that made the box.
 - `setRawBoxDecorations`: the effect through which a raw box's CodeMirror extension learns what the Visual editor draws on its box.
-- A box's picture leads where its Typst links to: its primary document link (@extensions-source-editor-and-preview-links) — the first, in text order, that leads to a file. The tooltip says what following it does ("Open logo.png", or the link's `tooltip`: "Edit diagram") and how; Ctrl+click (⌘-click on Mac) on the picture, or Alt+Enter on the selected box, follows it. An action on a box is therefore a document link on its Typst: diagrams and Mermaid mark their files' paths "Edit diagram", spreadsheets the paths of their generated Typst files "Edit spreadsheet", with a provider of priority 110.
+- A box's picture leads where its Typst links to: its primary document link (@architecture-source-editor-and-preview-links) — the first, in text order, that leads to a file. The tooltip says what following it does ("Open logo.png", or the link's `tooltip`: "Edit diagram") and how; Ctrl+click (⌘-click on Mac) on the picture, or Alt+Enter on the selected box, follows it. An action on a box is therefore a document link on its Typst: diagrams and Mermaid mark their files' paths "Edit diagram", spreadsheets the paths of their generated Typst files "Edit spreadsheet", with a provider of priority 110.
 
-== Completion lists <extensions-visual-editor-constructs-completion>
+== Completion lists <architecture-visual-editor-constructs-completion>
 
 `registerCompletionItemProvider(provider, { char, allowedPrefixes? })`: a list that opens while `char` and a query are typed in the text. The labels after `@` and the slash commands after `/` are two.
 

@@ -6,7 +6,7 @@
 // The fonts come from the typst-assets crate that Cargo.lock pins, so they are exactly the ones the Typst CLI of the
 // same version embeds. The .pfb files next to them are PDF base-14 substitutes that typst-assets does not expose as
 // fonts. The index lists every face's FontInfo, computed by the engine itself, so the engine knows the fonts before
-// it loads any (see docs/30_architecture/02_core.typ): { "<file name>": FontInfo[] }, files sorted by name.
+// it loads any (see docs/40_architecture/02_core.typ): { "<file name>": FontInfo[] }, files sorted by name.
 import { execFileSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';

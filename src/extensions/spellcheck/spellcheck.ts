@@ -14,7 +14,7 @@ import { editableAttributes } from './visual-editor/editable-attributes';
  * the markup extension's inline code and code blocks set `spellcheck="false"`; reference chips and label tags are not
  * editable text. The Source editor is not checked (it would underline Typst syntax). The browser's checker knows no
  * project words: a checker with a project dictionary would replace this extension.
- * See docs/10_guide/02_features.typ, "Spelling".
+ * See docs/20_features/18_spelling.typ.
  */
 export function spellcheck(): TypstExtension {
   return {

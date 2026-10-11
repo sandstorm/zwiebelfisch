@@ -40,8 +40,8 @@ import css from './workbench.css?inline';
  * The API follows VS Code. Its namespaces (`commands`, `window`, `scm`, `languages`, `workspace`) are hosts of their
  * own; `workbench` is only the frame; the editors and the preview are hosts with contribution points (`visualEditor`,
  * `sourceEditor`, `preview`). Even the Visual and Source editors are custom editors, registered by the workbench
- * before any extension, so the editing area treats every file alike. See docs/30_architecture/07_workbench.typ and
- * docs/30_architecture/08_built-in-extensions.typ.
+ * before any extension, so the editing area treats every file alike. See docs/40_architecture/07_workbench.typ and
+ * docs/40_architecture/08_built-in-extensions.typ.
  */
 export interface TypstExtension {
   /** Unique in the list (e.g. `files`); a host replaces a built-in by leaving out the one with this id. */

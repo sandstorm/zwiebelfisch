@@ -1,5 +1,5 @@
 // Three-way merge of Typst texts (node-diff3): an upstream push merged into the room's edits, with conflict ranges.
-// See GitLabRoom in gitlab-room.ts and docs/30_architecture/09_server.typ ("GitLab rooms").
+// See GitLabRoom in gitlab-room.ts and docs/40_architecture/13_server.typ ("GitLab rooms").
 import { diff3Merge, diffPatch } from 'node-diff3';
 import type { ConflictRange, FileConflict } from '../../../src/core/room-protocol/room-protocol.ts';
 
