@@ -7,11 +7,12 @@ can (`mise run quality`); the rest is for authors and reviewers.
 
 ## 1. Design (APOSD)
 
-- **Overall complexity as low as humanly possible** (the general rule). Complexity is the total a
-  reader must take in: lines of code plus concepts to learn. An abstraction, helper or contribution
-  point earns its place only if the total goes *down* — measure it (lines before / after, concepts
-  removed vs. added). Size conveniences by what is used today, never by what might be. When two
-  designs tie, take the one with fewer concepts.
+- **Overall complexity as low as humanly possible** (the general rule), measured in *obviousness*,
+  not lines: code a reader understands without first learning our concepts. As few abstractions as
+  possible — every type, helper, wrapper or contribution point of ours is a concept someone must
+  learn, and needs a clear reason to exist. Prefer the frameworks' own concepts and plain code; a few
+  more obvious lines beat a clever indirection. Size helpers by what is used today, never by what
+  might be.
 - **Deep modules.** A module hides a lot behind a small interface. Don't split a deep class into
   shallow ones (`Project` stays one class; its change rules stay private methods).
 - **Information hiding.** Expose what callers need, nothing for tests' or one caller's convenience.
