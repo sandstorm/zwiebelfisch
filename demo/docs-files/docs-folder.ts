@@ -8,7 +8,8 @@ import { type DiskChange, isTextPath } from './protocol.ts';
 /**
  * The files under `root`, by paths relative to it (`10_guide/02_features.typ`). Writes are atomic (a hidden temporary file
  * renamed over the target). It remembers what it wrote last per path, so `watch` skips the event for the folder's own
- * write (no echo to the page that made it).
+ * write (no echo to the page that made it). It notes that before the file changes on disk, since the watcher's event
+ * may arrive before the write's last step has finished.
  *
  * The docs/ folder as the docs-files plugin (plugin.ts) writes and watches it. Node only. Every path comes from the
  * page, so each one goes through the guard here: relative to docs/, no "..", no hidden files, no symlink leading out.
@@ -30,18 +31,18 @@ export class DocsFolder {
     const temporary = join(dirname(file), `.${randomBytes(6).toString('hex')}.docs-files.tmp`);
     try {
       await writeFile(temporary, bytes);
+      this.#written.set(path, Buffer.from(bytes));
       await rename(temporary, file);
     } finally {
       await rm(temporary, { force: true });
     }
-    this.#written.set(path, Buffer.from(bytes));
   }
 
   async delete(path: string): Promise<void> {
     const file = await this.#resolve(path);
     await this.#mustExist(file, path);
-    await rm(file);
     this.#written.set(path, null);
+    await rm(file);
   }
 
   /** Moves `from` to `to`; refuses to replace an existing file. */
@@ -51,9 +52,9 @@ export class DocsFolder {
     await this.#mustExist(source, from);
     if (await exists(target)) throw new DocsFilesError(`${to} already exists`, 409);
     await mkdir(dirname(target), { recursive: true });
-    await rename(source, target);
     this.#written.set(from, null);
-    this.#written.set(to, await readFile(target));
+    this.#written.set(to, await readFile(source));
+    await rename(source, target);
   }
 
   /** Whether the absolute `file` (a watcher's path) lies in the folder. */

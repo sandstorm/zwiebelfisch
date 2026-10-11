@@ -123,13 +123,22 @@ describe('changes on disk for the page', () => {
     ]);
   });
 
-  it('watches the folder: a change by someone else reaches the listener, its own write does not', async () => {
+  // macOS starts the watcher asynchronously and delivers events late (seconds in a parallel run), but in order
+  it('watches the folder: a change by someone else reaches the listener, its own write does not', { timeout: 30_000 }, async () => {
     const heard: unknown[] = [];
     const stop = folder.watch((change) => heard.push(change));
+    const patiently = { timeout: 10_000, interval: 100 };
     try {
+      // until a write is heard, the watcher may not be live yet, and the setup's write may still come
+      let attempt = 0;
+      await vi.waitFor(async () => {
+        await writeFile(join(root, 'probe.typ'), `${++attempt}`);
+        expect(heard).toContainEqual(expect.objectContaining({ path: 'probe.typ' }));
+      }, patiently);
+      heard.length = 0;
       await folder.write('10_guide/02_features.typ', bytes('= Mine\n'));
       await writeFile(join(root, '10_guide/other.typ'), '= Theirs\n');
-      await vi.waitFor(() => expect(heard).toContainEqual({ path: '10_guide/other.typ', text: '= Theirs\n' }));
+      await vi.waitFor(() => expect(heard).toContainEqual({ path: '10_guide/other.typ', text: '= Theirs\n' }), patiently);
       expect(heard).not.toContainEqual(expect.objectContaining({ path: '10_guide/02_features.typ' }));
     } finally {
       stop();
