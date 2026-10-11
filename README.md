@@ -4,9 +4,19 @@ A Typst editor for the browser: a Visual editor (WYSIWYG), a Source editor and a
 compiler runs as WebAssembly in a worker. Embed it as `<typst-editor>` or with `createTypstEditor`.
 Every feature is an extension. Real-time collaboration (optional) needs the server in `server/`.
 
+## Try it with Docker
+
+```sh
+docker build -t typst-editor-demo .
+docker run --rm -p 127.0.0.1:5199:5199 -p 127.0.0.1:1234:1234 typst-editor-demo
+```
+
+Open http://127.0.0.1:5199/: the built demo plus a collaboration server with a fake GitLab. Nothing is saved.
+Ctrl-C stops it. (`mise run docker:build` and `mise run docker:run` do the same.)
+
 ## Quick start
 
-Requires [mise](https://mise.jdx.dev); it pins every tool.
+To work on the code: requires [mise](https://mise.jdx.dev); it pins every tool.
 
 ```sh
 mise install            # the pinned tools
