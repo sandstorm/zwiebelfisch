@@ -13,8 +13,8 @@ export class FileNavigation {
   readonly bottom: HTMLElement;
 
   constructor(doc: Document, private readonly open: (path: ProjectPath) => void) {
-    this.top = bar(doc, 'typst-editor__file-nav--top', 'Files before and after (top)');
-    this.bottom = bar(doc, 'typst-editor__file-nav--bottom', 'Files before and after (bottom)');
+    this.top = bar(doc, 'typst-file-navigation--top', 'Files before and after (top)');
+    this.bottom = bar(doc, 'typst-file-navigation--bottom', 'Files before and after (bottom)');
   }
 
   /** Shows the links for the shown file's neighbours; null (main file, not included, no file) hides both bars. */
@@ -31,7 +31,7 @@ export class FileNavigation {
     const name = ProjectPath.displayName(path);
     const button = this.top.ownerDocument.createElement('button');
     button.type = 'button';
-    button.className = `typst-editor__file-nav-link typst-editor__file-nav-link--${which.toLowerCase()}`;
+    button.className = `typst-file-navigation__link typst-file-navigation__link--${which.toLowerCase()}`;
     button.textContent = which === 'Previous' ? `← ${name}` : `${name} →`;
     button.title = `${which} file: ${name}`;
     button.addEventListener('click', () => this.open(path));
@@ -41,7 +41,7 @@ export class FileNavigation {
 
 function bar(doc: Document, modifier: string, label: string): HTMLElement {
   const element = doc.createElement('nav');
-  element.className = `typst-editor__file-nav ${modifier}`;
+  element.className = `typst-file-navigation ${modifier}`;
   element.setAttribute('aria-label', label);
   element.hidden = true;
   return element;
