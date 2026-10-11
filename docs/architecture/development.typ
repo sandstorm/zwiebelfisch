@@ -59,7 +59,7 @@ mise run server:test   # when server/ or core/room-protocol changed
 == Tests <architecture-development-tests>
 
 - *Unit* (vitest, `*.test.ts` next to the code): node by default; DOM tests opt in with `// @vitest-environment jsdom` (setup: `tests/jsdom-setup.ts`). Model tests never need jsdom.
-- *End-to-end* (Playwright, `tests/e2e/*.spec.ts`): against the static build `dist/demo` and `examples/` (+ `dist/lib`), served through request interception, so no port is opened.
+- *End-to-end* (Playwright, `tests/e2e/*.spec.ts`): against the static build `dist/demo` and `examples/` (+ `dist/lib`), served through request interception, so no port is opened. A slow connection is a route that holds requests back until the test releases them (`tests/e2e/slow-connection.spec.ts`: the wasm, fonts, a package).
 - Test packages (`greet`, `drafting`, `cheq`) sit next to the tests using them.
 - Agents in the sandbox cannot launch a browser or bind ports: they write Playwright specs, and the user runs `mise run test:e2e`.
 - The playground's logic is unit-tested without a browser or port: `demo/playground*.test.ts`, `demo/server-status.test.ts`, `server/src/playground/playground.test.ts`.
