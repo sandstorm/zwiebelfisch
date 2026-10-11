@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-// Tests for preview.ts: the PDF export options registry, the click outline, the selection shading and the loader (the
+// Tests for preview.ts: the PDF export options registry, the view options, the click outline, the selection shading and the loader (the
 // engine worker is replaced by a stub that answers what `engine.answer` returns; `engine.tell` sends its load events).
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Preview, type PageClick, type PdfExportOption, type PreviewProgress } from './preview';
+import { Preview, type PageClick, type PdfExportOption, type PreviewProgress, type PreviewViewOption } from './preview';
 import type { EngineRequest, LoadEvent } from './worker/protocol';
 import { ProjectPath } from '../../core/paths/paths';
 import { SourceRange } from '../../core/typst-document/typst-document';
@@ -146,6 +146,118 @@ describe('Preview.setSelectionHighlight', () => {
     expect(shaded()).toHaveLength(1);
     preview.clearClickHighlight();
     expect(shaded()).toHaveLength(1);
+  });
+});
+
+describe('Preview view options', () => {
+  let preview: Preview;
+  afterEach(() => {
+    preview.dispose();
+    engine.answer = () => null;
+  });
+
+  const view = (id: string, line: string, on = false): PreviewViewOption => ({ id, label: id, default: on, apply: (entry) => ({ prelude: [...entry.prelude, line] }) });
+
+  /** A preview whose engine compiles `/main.typ`; `compiled` lists what each compile request asked for. */
+  function setup(diagnostics: object[] = []) {
+    const compiled: { main: string; files: Record<string, unknown> }[] = [];
+    const exported: EngineRequest[] = [];
+    engine.answer = (body) => {
+      const request = body as EngineRequest;
+      if (request.type === 'compile') {
+        compiled.push({ main: request.main, files: request.files });
+        return { type: 'compile', result: { pages: [{ hash: 'a', width: 100, height: 100, svg: '<svg></svg>' }], diagnostics, missingPackages: [] } };
+      }
+      if (request.type === 'pdf') {
+        exported.push(request);
+        return { type: 'pdf', result: { pdf: null, diagnostics: [], missingPackages: [] } };
+      }
+      if (request.type === 'click') return { type: 'click', jump: { kind: 'source', path: compiled.at(-1)!.main, offset: 1, from: 0, to: 2, boxes: [] } };
+      return null;
+    };
+    const container = document.createElement('div');
+    preview = new Preview(container);
+    return { container, compiled, exported, last: () => compiled.at(-1)! };
+  }
+
+  it('compiles the main file itself while no option is on', async () => {
+    const { last } = setup();
+    preview.registerViewOption(view('a.guides', '#set page(fill: red)'));
+    preview.update({ '/main.typ': 'Hi' }, '/main.typ');
+    await vi.waitFor(() => expect(last().main).toBe('/main.typ'));
+    expect(Object.keys(last().files)).toEqual(['/main.typ']);
+  });
+
+  it('compiles a file of its own with the prelude of the options that are on, by priority, then the main file included', async () => {
+    const { compiled, last } = setup();
+    preview.registerViewOption(view('a.first', '#set block(stroke: red)', true));
+    preview.registerViewOption(view('b.urgent', '#import "x.typ": y', true), { priority: 110 });
+    preview.registerViewOption(view('c.off', '#set page(fill: red)'));
+    preview.update({ '/main.typ': 'Hi' }, '/main.typ');
+    await vi.waitFor(() => expect(compiled).not.toHaveLength(0));
+    const { main, files } = last();
+    expect(files['/main.typ']).toBe('Hi');
+    expect(files[main]).toBe('#import "x.typ": y\n#set block(stroke: red)\n#include "/main.typ"\n');
+    expect(preview.viewOptions().map((option) => option.id)).toEqual(['b.urgent', 'a.first', 'c.off']);
+  });
+
+  it('compiles again when values are set (also for options registered later) or an option goes', async () => {
+    const { compiled, last } = setup();
+    preview.setViewOptionValues({ 'a.guides': true });
+    preview.update({ '/main.typ': 'Hi' }, '/main.typ');
+    await vi.waitFor(() => expect(last().main).toBe('/main.typ'));
+    const guides = preview.registerViewOption(view('a.guides', '#set page(fill: red)'));
+    await vi.waitFor(() => expect(last().main).not.toBe('/main.typ'));
+    preview.setViewOptionValues({ 'a.guides': false });
+    await vi.waitFor(() => expect(last().main).toBe('/main.typ'));
+    preview.setViewOptionValues({ 'a.guides': true });
+    await vi.waitFor(() => expect(last().main).not.toBe('/main.typ'));
+    const count = compiled.length;
+    guides.dispose();
+    await vi.waitFor(() => expect(compiled.length).toBe(count + 1));
+    expect(last().main).toBe('/main.typ');
+  });
+
+  it('refuses a second option with the same id', () => {
+    setup();
+    preview.registerViewOption(view('a.guides', ''));
+    expect(() => preview.registerViewOption(view('a.guides', ''))).toThrow(/already registered/);
+  });
+
+  it('leaves PDF exports alone', async () => {
+    const { exported, last } = setup();
+    preview.registerViewOption(view('a.guides', '#set page(fill: red)', true));
+    preview.update({ '/main.typ': 'Hi' }, '/main.typ');
+    await vi.waitFor(() => expect(last().main).not.toBe('/main.typ'));
+    await preview.exportPdf({ main: '/main.typ', sources: {} });
+    expect(exported).toEqual([expect.objectContaining({ type: 'pdf', main: '/main.typ', sources: {} })]);
+  });
+
+  it('reports what goes wrong in the prelude without a file', async () => {
+    const { last } = setup();
+    const diagnostics: (string | null)[][] = [];
+    preview.onDidChangeDiagnostics((each) => diagnostics.push(each.map((d) => d.path)));
+    preview.registerViewOption(view('a.guides', '#import "@preview/gone:0.1.0": x', true));
+    preview.update({ '/main.typ': 'Hi' }, '/main.typ');
+    await vi.waitFor(() => expect(diagnostics).toHaveLength(1));
+    const entry = last().main;
+    const error = (path: string) => ({ severity: 'error', message: 'gone', hints: [], from: 0, to: 5, path });
+    engine.answer = () => ({ type: 'compile', result: { pages: [], diagnostics: [error(entry), error('/main.typ')], missingPackages: [] } });
+    preview.update({ '/main.typ': 'Hi!' }, '/main.typ');
+    await vi.waitFor(() => expect(diagnostics.at(-1)).toEqual([null, '/main.typ']));
+  });
+
+  it('reports no click on what the prelude draws', async () => {
+    const { container, last } = setup();
+    const clicks: PageClick[] = [];
+    preview.onDidClickPage((click) => clicks.push(click));
+    preview.registerViewOption(view('a.outlines', '#set block(stroke: red)', true));
+    preview.update({ '/main.typ': 'Hi' }, '/main.typ');
+    await vi.waitFor(() => expect(container.querySelector('.typst-preview__page')).not.toBeNull());
+    expect(last().main).not.toBe('/main.typ');
+    container.querySelector('.typst-preview__page')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(clicks).toEqual([]);
   });
 });
 

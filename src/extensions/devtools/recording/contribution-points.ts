@@ -119,7 +119,11 @@ const POINTS: Readonly<Record<string, Describer>> = {
     const { id, label, default: value } = record(option);
     return prioritized({ title: String(id), details: [`"${String(label)}"`, `default ${String(value)}`] }, record(options).priority);
   },
-  'scm.registerSourceControl': ([sourceControl]) => {
+  'preview.registerViewOption': ([option, options]) => {
+    const { id, label, default: value } = record(option);
+    return prioritized({ title: String(id), details: [`"${String(label)}"`, `default ${String(value)}`] }, record(options).priority);
+  },
+  'scm.registerSourceControl':([sourceControl]) => {
     const { id, label } = record(sourceControl);
     return { title: String(id), details: [`"${String(label)}"`] };
   },

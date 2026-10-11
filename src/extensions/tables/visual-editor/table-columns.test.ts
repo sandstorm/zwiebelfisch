@@ -137,8 +137,8 @@ describe('track-size columns', () => {
     });
 
     it('editing a cell changes only that cell', () => {
-      const doc = edit(parseTypst(docs), (s) => s.tr.insertText('!', after(s.doc, 'zoom, page number')));
-      expect(serializeToTypst(doc)).toBe(docs.replace('[zoom, page number]', '[zoom, page number!]'));
+      const doc = edit(parseTypst(docs), (s) => s.tr.insertText('!', after(s.doc, 'bulleted, numbered and task lists')));
+      expect(serializeToTypst(doc)).toBe(docs.replace('[bulleted, numbered and task lists]', '[bulleted, numbered and task lists!]'));
     });
   });
 });

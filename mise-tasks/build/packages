@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-#MISE description="Download the Universe packages the demo examples import (@preview/…) into .cache/typst-packages, for the unit tests"
-# The demo downloads packages in the browser on first use (core/typst-packages); the unit test that compiles the
-# examples reads them from here instead, so it runs offline once they are downloaded. Versions are immutable: a
+#MISE description="Download the Universe packages the demo examples and preview-guides import (@preview/…) into .cache/typst-packages, for the unit tests"
+# The demo downloads packages in the browser on first use (core/typst-packages); the unit tests that compile the
+# examples and the page guides read them from here instead, so they run offline once downloaded. Versions are immutable: a
 # downloaded archive is never fetched again.
 set -euo pipefail
 dir=.cache/typst-packages
 mkdir -p "$dir"
-{ grep -rhoE '@preview/[a-z0-9-]+:[0-9]+\.[0-9]+\.[0-9]+' demo/examples || true; } | sort -u | while read -r spec; do
+{ grep -rhoE '@preview/[a-z0-9-]+:[0-9]+\.[0-9]+\.[0-9]+' demo/examples src/extensions/preview-guides || true; } | sort -u | while read -r spec; do
   name=${spec#@preview/}
   file="$dir/${name%%:*}-${name##*:}.tar.gz"
   [ -s "$file" ] && continue

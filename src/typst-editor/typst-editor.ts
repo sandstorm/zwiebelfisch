@@ -8,6 +8,7 @@ import { help } from '../extensions/help/help';
 import { labels } from '../extensions/labels/labels';
 import { pdfExport } from '../extensions/pdf-export/pdf-export';
 import { previewControls } from '../extensions/preview-controls/preview-controls';
+import { previewGuides } from '../extensions/preview-guides/preview-guides';
 import { previewSync } from '../extensions/preview-sync/preview-sync';
 import { spreadsheets } from '../extensions/spreadsheets/spreadsheets';
 import { textFiles } from '../extensions/text-files/text-files';
@@ -223,6 +224,7 @@ function builtinExtensions(): TypstExtension[] {
     slashCommands(),
     previewSync(),
     previewControls(),
+    previewGuides(),
     pdfExport(),
   ];
 }

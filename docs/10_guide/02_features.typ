@@ -21,6 +21,10 @@ Each side has a rail (`▣`): a button per panel. The left side holds the files 
 - "Follow cursor" (preview toolbar): the preview scrolls to the text being edited.
 - Selected text (either editor) is shaded in the preview, too; a caret shades nothing.
 - Zoom (fit width by default, 25–400 %) and "page n / total" in the preview toolbar.
+- "View" (preview toolbar), for the preview only, never the PDF; your choices are remembered in this browser:
+  - "Page guides": dashed blue borders of the text area, the header and the footer (and column gutters), as LaTeX's `showframe` (drawn by `@preview/scaffolder`, downloaded on first use). A page background of the document's own stays; the guides are then drawn over the text.
+  - "Box outlines": a thin magenta outline around every block and box (headings, figures, lists, equations, `#block`, `#box`), around the inset and widened by the outset. A stroke the document gives stays as it is. The inset and the spacing between blocks are not drawn on their own.
+  - The pictures of raw boxes in the Visual editor are cut from the preview, so they show guides and outlines too.
 - Drag a side's separator (or use the arrow keys on it): the left side sets the file panel's width, the right side gets 20–80 % of the width.
 - *Errors and warnings:* underlined in both editors, the message as tooltip. The status bar counts them and jumps to them.
 

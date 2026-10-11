@@ -45,7 +45,8 @@ extensions/<name>/
   [`styles`], [`TypstStyleIndex` of the project's `/// @style` declarations; styled text; "New style…"; search group "Styles" (applies to the selection in either editor; the Visual editors followed by a Tiptap extension)], [node, mark, text style provider, Tiptap extension, search provider],
   [`slashCommands`], [`/` lists the Insert menu's entries and the text styles, found by label and `keywords`; the hint "Type / for commands" in the empty paragraph holding the cursor (not in table cells)], [completion items (reads toolbar and text styles), Tiptap extension (a decoration)],
   [`previewSync`], [preview follows the cursor; shades the selection; a click selects the source, its outline goes with the next edit or selection move; settings `previewSync.followCursor`, `previewSync.highlightSelection`], [preview toolbar, `reveal`, `setSelectionHighlight`, `onDidClickPage`, `clearClickHighlight`],
-  [`previewControls`], [zoom, page number], [preview toolbar],
+  [`previewControls`], [zoom, page number; the View menu: a checkbox per view option, this viewer's choices kept in `globalState`], [preview toolbar, `setViewOptionValues`],
+  [`previewGuides`], [view options "Page guides" (`@preview/scaffolder`) and "Box outlines" (set rules for `block` and `box`), off by default (@architecture-built-in-extensions-guides)], [view options],
   [`pdfExport`], [`pdfExport.export` → Blob; "Download PDF" with the options popover; setting `pdfExport.download`], [command, preview toolbar],
 )
 
@@ -71,6 +72,7 @@ Exported from the package, not in the list; a host adds them.
   [`contributes.languages`], [`textFiles`, `spreadsheets`; the workbench (`typst`)], [`textFiles`' editor (links by language), `help`],
   [source controls], [`collaboration` (GitLab rooms)], [`sourceControl`],
   [PDF export options], [`comments`], [`pdfExport`],
+  [view options], [`previewGuides`], [`previewControls` (the View menu)],
   [text style menu], [`headings`, `styles`], [the Visual editor toolbar, `slashCommands`],
   [Insert menu], [`images`, `diagrams`, `mermaid`, `tables`, `spreadsheets`, `outline`, `markup`, `pageLayout`, `labels`], [the Visual editor toolbar, `slashCommands`],
   [node group `figureBody`], [`images`, `tables`], [`figures`],
@@ -80,3 +82,13 @@ Exported from the package, not in the list; a host adds them.
 )
 
 Schema names of other extensions are read only as data and always guarded (`schema.nodes.x`, `editor.can()`). Writing a construct: @extensions-visual-editor-constructs.
+
+== Page guides and box outlines <architecture-built-in-extensions-guides>
+
+`previewGuides` adds two view options (@extensions-source-editor-and-preview-view). Their Typst, run before the main file in the preview only:
+
+- *Page guides*: `scaffolding()` of `@preview/scaffolder:0.2.1` (the text area, header, footer and column gutters, read from the page's own settings) as the page background. A document that sets a background replaces it; the foreground then draws the guides (`context if page.background != guides { guides }`), over the text. A document that sets both has no guides.
+- *Box outlines*: `set block(stroke: …)` and `set box(stroke: …)`. Set rules are defaults: a document's own set rules and arguments win. Typst folds a stroke argument with the stroke set before it, so a document's `stroke: red` would take a set rule's thickness and dash: the outline has no dash and Typst's own thickness (1pt), and only its translucent paint shows where a document's stroke names no paint (`stroke: 2pt`), or on the sides a document leaves out (`stroke: (left: red)`).
+- *Inset and spacing on their own*: Typst 0.15 lets a `show block` rule read `inset`, `outset`, `above` and `below` (all fields are filled in). Drawing them means returning a new block from the rule, which the rule matches again ("maximum show rule depth exceeded") unless marked by a label, and a label would replace the document's own (its references break); blocks Typst makes for lists or headings cannot be rebuilt from their fields at all. `above` and `below` collapse with the neighbours' (the gap is the larger), so a block's own spacing is not what is laid out. So the outline is the box Typst draws a stroke on: around the inset, widened by the outset.
+- *Colors*: a blue (`#3b82f6`) and a translucent magenta (`#d946ef`, 50 %), mid-tones that read on the inverted pages of the dark mode, too.
+- *Raw boxes*: their pictures are cut from the preview's pages, so they show guides and outlines. Compiling the pictures without the options would need a second compile per edit; the pictures show what the preview shows instead.

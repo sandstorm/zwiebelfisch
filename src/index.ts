@@ -62,7 +62,7 @@ export type {
   TextDocument,
 } from './hosts/languages/languages';
 export type { ConfigurationChangeEvent, ConfigurationProperty, Settings, Workspace, WorkspaceConfiguration } from './hosts/workspace/workspace';
-export type { PdfExportOption, PreviewContributions, PreviewToolbarItem, ToolbarPlacement } from './hosts/preview/preview';
+export type { PdfExportOption, PreviewContributions, PreviewEntry, PreviewToolbarItem, PreviewViewOption, ToolbarPlacement } from './hosts/preview/preview';
 export { SOURCE_EDITOR, type SourceEditorContext, type SourceEditorContributions } from './hosts/source-editor/source-editor';
 export type {
   ToolbarAction,
