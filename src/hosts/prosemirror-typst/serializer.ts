@@ -60,12 +60,15 @@ class ProseMirrorToTypstSerializer implements TypstSerializeState {
   private pending: Span[] = [];
   private end = 0;
   private indent = '';
+  /** The text so far ends a line: the next one gets `indent` (unless it is empty). */
+  private lineStart = false;
 
   constructor(private readonly grammar: TypstConversions) {}
 
   hidden(src: string): void {
-    const span = this.write(src, 'syntax', 0, 0);
-    if (span) this.pending.push(span);
+    const written = this.spans.length;
+    this.write(src, 'syntax', 0, 0);
+    this.pending.push(...this.spans.slice(written)); // syntax spans are never merged: all are new
   }
 
   shown(src: string, kind: 'text' | 'atom', pmFrom: number, pmTo: number): void {
@@ -89,10 +92,9 @@ class ProseMirrorToTypstSerializer implements TypstSerializeState {
     else this.closing(src);
   }
 
-  indented(print: () => void): void {
+  indented(print: () => void, by = '  '): void {
     const outer = this.indent;
-    this.indent += '  ';
-    this.hidden('  ');
+    this.indent += by;
     print();
     this.indent = outer;
   }
@@ -118,13 +120,9 @@ class ProseMirrorToTypstSerializer implements TypstSerializeState {
     printInline(this, this.grammar, block, start);
   }
 
-  item(item: Node, pos: number, prefix: string): void {
+  item(item: Node, pos: number, prefix: string, indent = '  '): void {
     this.hidden(prefix);
-    item.forEach((child, offset, index) => {
-      if (index === 0) return this.block(child, item, pos + 1 + offset);
-      this.hidden('\n');
-      this.indented(() => this.block(child, item, pos + 1 + offset));
-    });
+    this.indented(() => this.blocks(item, pos + 1, '\n'), indent);
   }
 
   finish(): Printed {
@@ -159,7 +157,7 @@ class ProseMirrorToTypstSerializer implements TypstSerializeState {
     this.closing(src.slice(from + tail, from + tail + closing));
   }
 
-  /** A list item unchanged since parsed: its marker, then its only child, which is unchanged, too. */
+  /** An item unchanged since parsed (a task item): its marker, then its only child, which is unchanged, too. */
   private unchangedItem(item: Node, pos: number): void {
     const src: string = item.attrs.src;
     const body: string = item.firstChild?.attrs.src ?? '';
@@ -173,9 +171,15 @@ class ProseMirrorToTypstSerializer implements TypstSerializeState {
     this.pending = [];
   }
 
-  private write(src: string, kind: Span['kind'], pmFrom: number, pmTo: number): Span | null {
-    const text = this.indent ? src.replace(/\n/g, `\n${this.indent}`) : src;
-    if (!text) return null;
+  /** Writes `src` with its lines but empty ones indented by `indent`; the indentation of a line `src` starts is syntax of its own. */
+  private write(src: string, kind: Span['kind'], pmFrom: number, pmTo: number): void {
+    if (!src) return;
+    if (this.indent && this.lineStart && src[0] !== '\n') this.append(this.indent, 'syntax', pmFrom, pmFrom);
+    this.lineStart = src.endsWith('\n');
+    this.append(this.indent ? src.replace(/\n(?=[^\n])/g, `\n${this.indent}`) : src, kind, pmFrom, pmTo);
+  }
+
+  private append(text: string, kind: Span['kind'], pmFrom: number, pmTo: number): void {
     const from = this.text.length;
     this.text += text;
     const last = this.spans.at(-1);
@@ -183,14 +187,12 @@ class ProseMirrorToTypstSerializer implements TypstSerializeState {
       if (last?.kind === 'text' && last.pmTo === pmFrom) {
         last.to = this.text.length;
         last.pmTo = pmTo;
-        return last;
+        return;
       }
     } else if (kind === 'text') {
       kind = 'atom';
     }
-    const span: Span = { from, to: this.text.length, pmFrom, pmTo, kind };
-    this.spans.push(span);
-    return span;
+    this.spans.push({ from, to: this.text.length, pmFrom, pmTo, kind });
   }
 }
 

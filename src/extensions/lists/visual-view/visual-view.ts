@@ -3,22 +3,22 @@
 import { BulletList, ListItem, ListKeymap, OrderedList } from '@tiptap/extension-list';
 import { Extension } from '@tiptap/core';
 import type { SyntaxNode } from '@lezer/common';
-import type { Node } from '@tiptap/pm/model';
-import { children } from '../../../core/typst-syntax/typst-syntax';
+import { Fragment, type Node } from '@tiptap/pm/model';
 import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 import type { TypstParseContext, TypstSerializeState } from '../../../hosts/prosemirror-typst/prosemirror-typst';
+import { TASK_BOX } from './task-lists';
 
-/** Source anchors: `src`, the Typst a node was read from; `sep`, the whitespace to its next sibling. */
-const ANCHORS = {
-  src: { default: null, rendered: false, keepOnSplit: false },
-  sep: { default: null, rendered: false },
-};
+/** The source anchor of lists and items: `sep`, the whitespace to the next sibling. */
+const ANCHORS = { sep: { default: null, rendered: false } };
 
-/** A list item's first child may be verbatim Typst (an item whose body the Visual view cannot model); `marker` as written (`-`, `+`, `1.`). */
+/**
+ * A list item's first child may be verbatim Typst (an item whose body the Visual view cannot model). Its `marker` as
+ * written, with the whitespace after it (`- `, `+ `, `1.  `); `indent`, the whitespace starting its further lines.
+ */
 const TypstListItem = ListItem.extend({
   content: '(paragraph | rawBlock) block*',
   addAttributes() {
-    return { ...this.parent?.(), ...ANCHORS, marker: { default: null, rendered: false } };
+    return { ...this.parent?.(), ...ANCHORS, marker: { default: null, rendered: false }, indent: { default: null, rendered: false } };
   },
 });
 
@@ -47,19 +47,26 @@ const LIST: Omit<TypstNodeSpec, 'name'> = {
 
 /**
  * List items are blocks of their own; consecutive items of the same kind
- * (bulleted: `-`, numbered: `+` or `1.`) form one list. An item holds one
- * paragraph; an item whose source has nested content keeps its body as a raw
- * block. Items keep their `marker`; edited items print it (`-` / `+` in a
- * list of the other kind), further children (nested lists made with Tab) on
- * following lines, indented.
+ * (bulleted: `-`, numbered: `+` or `1.`) form one list. An item holds a
+ * paragraph, then further blocks (nested lists) on its following lines,
+ * indented. Items keep their `marker` (`-` / `+` in a list of the other kind)
+ * and the indentation of their further lines.
  */
 export const BULLET_LIST: TypstNodeSpec = { ...LIST, name: 'bulletList', tiptap: Lists };
 export const ORDERED_LIST: TypstNodeSpec = { ...LIST, name: 'orderedList' };
 
 function listItemToTypst(state: TypstSerializeState, item: Node, pos: number, list: Node): void {
   const ordered = list.type.name === 'orderedList';
-  const keepMarker = item.attrs.marker !== null && ORDERED_MARKER.test(item.attrs.marker) === ordered;
-  state.item(item, pos, `${keepMarker ? item.attrs.marker : ordered ? '+' : '-'} `);
+  const marker: string | null = item.attrs.marker;
+  const keepMarker = marker !== null && ORDERED_MARKER.test(marker) === ordered;
+  const prefix = keepMarker ? marker : ordered ? '+' : '-';
+  // an empty item may stand without the space after its marker (`-` at the end of a line)
+  const spaced = /\s$/.test(prefix) || isEmpty(item) ? prefix : `${prefix} `;
+  state.item(item, pos, spaced, item.attrs.indent ?? undefined);
+}
+
+function isEmpty(item: Node): boolean {
+  return item.childCount === 1 && item.firstChild!.isTextblock && item.firstChild!.content.size === 0;
 }
 
 export const LIST_ITEM: TypstNodeSpec = {
@@ -67,21 +74,24 @@ export const LIST_ITEM: TypstNodeSpec = {
   typst: {
     parseTypst: { syntaxNodes: { ListItem: { block: parseListItem, standsAlone: true }, EnumItem: { block: parseListItem, standsAlone: true } } },
     toTypst: listItemToTypst,
-    anchors: ['marker'],
+    anchors: ['marker', 'indent'],
     container: (item: Node) => (ORDERED_MARKER.test(item.attrs.marker ?? '') ? 'orderedList' : 'bulletList'),
   },
   view: { keepsDom: true },
 };
 
-function parseListItem(p: TypstParseContext, node: SyntaxNode, sep: string | null): Node {
-  const marker = node.firstChild!;
+/**
+ * An item's body is its blocks: a paragraph, then nested lists or other blocks. It is one raw block if it cannot be
+ * (a heading first), or if it is a task with more than a paragraph (whose box an edit would escape).
+ */
+function parseListItem(p: TypstParseContext, node: SyntaxNode, sep: string | null): Node | null {
   const markup = node.getChild('Markup');
-  const body = markup ? children(markup) : [];
-  const bodySrc = markup ? p.text(markup) : '';
-  const content = p.isOneParagraph(body)
-    ? p.textblock({ type: 'paragraph', attrs: { src: bodySrc } }, markup?.from ?? 0, p.inline(body))
-    : p.schema.nodes.rawBlock.create({ src: bodySrc });
-  return p.unchangedNode('listItem', { marker: p.text(marker), src: p.text(node), sep }, [content]);
+  if (!markup) return null;
+  const { content, src, indent } = p.itemBlocks(markup);
+  const type = p.schema.nodes.listItem;
+  const modelled = type.validContent(Fragment.from(content)) && !(content.length > 1 && TASK_BOX.test(src));
+  const blocks = modelled ? content : [p.schema.nodes.rawBlock.create({ src })];
+  return type.create({ marker: p.source.slice(node.from, markup.from), indent, sep }, blocks);
 }
 
 const ICONS = {

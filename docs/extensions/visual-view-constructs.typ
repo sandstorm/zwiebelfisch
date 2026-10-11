@@ -57,7 +57,7 @@ A spec groups its fields by owner:
 - `standsAlone`: a block even without paragraph breaks around it (`Heading`, `ListItem`). `takesLabel`: a label right after it is its label.
 - `inRunningText(p, call)`: the call belongs in running text even where `inline` leaves it raw.
 
-`TypstParseContext`: `schema`, `source`, `text(range)` (a `SourceRange` or a syntax node), `blocks(contentBlock)` (the blocks and their `from`, `to`), `inline(nodes, marks?)`, `blockCall(call)`, `isOneParagraph(nodes)`, `textblock(…)`, `unchangedNode(type, attrs, content?)`, `raw(src, marks?)`, `serial()`.
+`TypstParseContext`: `schema`, `source`, `text(range)` (a `SourceRange` or a syntax node), `blocks(contentBlock)` (the blocks and their `from`, `to`), `itemBlocks(body)` (a list item's blocks, read with the indentation of its further lines removed), `inline(nodes, marks?)`, `blockCall(call)`, `isOneParagraph(nodes)`, `textblock(…)`, `unchangedNode(type, attrs, content?)`, `raw(src, marks?)`, `serial()`.
 
 Read calls with the package's plain functions over Lezer nodes:
 
@@ -79,7 +79,7 @@ Read calls with the package's plain functions over Lezer nodes:
 === Writing Typst <extensions-visual-view-constructs-serialize>
 
 - Only an *edited* node is written; untouched source stays byte for byte.
-- `toTypst(state, node, pos, parent)` writes through the `TypstSerializeState`: `hidden(src)` (syntax the view does not show), `shown(src, kind, from, to)`, `blocks(node, start, sep)` (its children), `block`, `textblock`, `inline`, `item`, `closing(src)`, `after(src)`, `indented(print)`, `endBlock`.
+- `toTypst(state, node, pos, parent)` writes through the `TypstSerializeState`: `hidden(src)` (syntax the view does not show), `shown(src, kind, from, to)`, `blocks(node, start, sep)` (its children), `block`, `textblock`, `inline`, `item`, `closing(src)`, `after(src)`, `indented(print, by?)`, `endBlock`.
 - Default without `toTypst`: textblocks write their inline content, block atoms their `src`. Inline atoms write `atomToTypst(node)`.
 - `anchors`: the attributes that remember how the source was written, so a fresh parse updates them in place, as it does `src` and `sep`.
 - `container(item)`: consecutive nodes of this type form a container of the returned type (list items, their list).

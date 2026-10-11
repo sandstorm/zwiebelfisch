@@ -85,7 +85,7 @@ export const TASK_ITEM: TypstNodeSpec = {
 };
 
 /** cheq's unchecked and checked boxes; others (`[/]`, `[-]`, …) stay text. */
-const TASK_BOX = /^\[([ x])\](?: |$)/;
+export const TASK_BOX = /^\[([ x])\](?: |$)/;
 
 /** `- [ ] text` / `- [x] text` (one paragraph, a space after the box): a task item; null for other bullet items. */
 function parseTaskItem(p: TypstParseContext, node: SyntaxNode, sep: string | null): Node | null {

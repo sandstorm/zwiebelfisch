@@ -37,7 +37,8 @@ The framework knows only paragraphs, text, line breaks, escapes, shorthands and 
 - Markup is cut into segments: syntax whose rule `standsAlone` (headings, list items) is a block of its own; everything else runs up to a paragraph break.
 - A run with prose (text or inline syntax a spec models) becomes a paragraph. A run that is exactly one call goes to the `calls` rules. What no rule takes becomes `rawBlock` / `rawInline` holding its source verbatim.
 - A label right after a heading, or ending a run, becomes the block's `label` attribute.
-- Rules get a `TypstParseContext`: the source, the schema, and the framework's steps (`inline`, `blocks`, `textblock`, `raw`).
+- Rules get a `TypstParseContext`: the source, the schema, and the framework's steps (`inline`, `blocks`, `itemBlocks`, `textblock`, `raw`).
+- A list item's body is read on its own, its further lines without their common indentation: a paragraph, then nested lists and other blocks. Printing indents its lines after the first again (empty lines stay empty), so an item reads back byte for byte and an edited one keeps its indentation.
 
 == Source anchors and nodes unchanged since parsed <architecture-prosemirror-typst-anchors>
 
