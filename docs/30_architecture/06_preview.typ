@@ -7,9 +7,10 @@
 #table(
   columns: (auto, 1fr),
   table.header[Host (mechanism)][Extensions (policy)],
-  [engine worker, coalesced compiles, lazy page list], [toolbar items: zoom, page number (`previewControls`), "Follow cursor" (`previewSync`), "Download PDF" (`pdfExport`)],
+  [engine worker, coalesced compiles, lazy page list], [toolbar items: zoom, View, page number (`previewControls`), "Follow cursor" (`previewSync`), "Download PDF" (`pdfExport`)],
   [hit-testing, `onDidClickPage`, `reveal`, `clearClickHighlight`, `setSelectionHighlight`], [when to reveal, what to shade, where a click leads, how long its outline stays (`previewSync`)],
   [PDF export with every registered option], [the options (`comments.include`) and how they are offered (`pdfExport`)],
+  [view options: the prelude compiled before the main file, in the preview only], [the options (page guides, box outlines: `previewGuides`), which are on and the View menu (`previewControls`)],
   [snippets of a source range], [raw boxes drawn as pictures (`renderedBoxes`)],
 )
 
@@ -24,6 +25,7 @@
 - *Hit-testing*: a click is converted px → pt (`pointOnPage`) and sent as `click`; the clicked source run is outlined until the next click, a successful compile or `clearClickHighlight()` and, in a project file (not a package's), fires `onDidClickPage`. `reveal(path, range)` (a `ProjectPath`, a `SourceRange`) asks `cursor` and scrolls the preview's own scroller (never `scrollIntoView`), only if the spot is off-screen.
 - *Overlays* (`pages/overlays.ts`): boxes in pt, placed on their page in percent, so they survive zoom and lazy rendering. Two layers: the click's outline (`typst-preview__highlight`, fill and outline) and the selection shading (`typst-preview__selection`, a translucent fill in `--te-selection-highlight`, no outline). Both keep their colors in dark mode (outside the inverted content).
 - *Selection shading*: `setSelectionHighlight(path, ranges, text)` keeps the newest ranges (`LatestOnly`); once the compiles given before ran and the compiled text of `path` is `text`, it asks `boxes` and shades them. After every successful compile it asks again (the old boxes stay until then); while other text is compiled it shades nothing. An empty list clears it at once.
+- *View options*: `registerViewOption` adds a way to look at the pages (`PreviewViewOption`). While one is on (`setViewOptionValues`, else its default), the preview compiles `/.typst-preview-view.typ` instead of the main file: the options' prelude lines (imports, set and show rules), then `#include` of the main file. Being included, the main file keeps its positions: diagnostics, clicks, the cursor and snippets stay in the project's files, and the prelude makes no content, so the pages are the same. Diagnostics in the prelude lose their path, clicks on its drawing are not reported. With every option off, the main file is compiled itself. Exports never see them.
 - *Snippets*: `snippet(path, range, text)` cuts the range's boxes out of the last compiled page. No extra compile. Null when `text` is no longer what was compiled.
 - *A range's boxes* (`boxes`, `boxesForRanges`): glyphs, shapes and images whose source lies in the range, plus everything drawn between the start and end tag of a locatable or tagged element whose call lies wholly in it, wherever that drawing's code lives: a `figure` of a package's picture (Mermaid via merman) or of a helper from another file. Paragraphs and lists are not taken whole (Typst gives them the span of their first child). A page's header, footer and background are never part of an element opened in its body, also not of one that breaks across the page (a raw block, a table).
 
@@ -40,6 +42,7 @@
 - A click's own selection is outlined, not shaded too: previewSync shades a selection only when it is not the clicked range; moving on removes the outline and shades the new selection.
 - Diagnostics are never stale: they fire only when no newer `update()` waits.
 - `exportPdf(entry)` and `snippet` wait for running compiles, so they see the newest text. `entry.sources` replace or add text files for that export only.
-- Toolbar items are placed by `group` + `order` (`navigation` first, then groups by name). Their `update()` runs at most once per frame. PDF options apply by `priority` (default 100, higher first).
+- Toolbar items are placed by `group` + `order` (`navigation` first, then groups by name). Their `update()` runs at most once per frame. PDF options and view options apply by `priority` (default 100, higher first).
+- Changing the view options or their values compiles the last files again.
 
 Contribution points in detail: @extensions-source-editor-and-preview.

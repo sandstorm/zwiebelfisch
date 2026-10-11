@@ -27,8 +27,9 @@ import css from './preview.css?inline';
  *
  * The preview keeps the mechanism: the engine worker, the page list that renders only the pages near the view,
  * hit-testing, reveal and shading. Extensions add the rest without the preview knowing them: the toolbar items (zoom,
- * page number, "Follow cursor", "Download PDF"), the PDF export options, and when to reveal or shade what
- * (preview-sync). While the engine loads, the pane shows what it waits for. See docs/30_architecture/06_preview.typ.
+ * page number, "Follow cursor", "Download PDF"), the PDF export options, the view options (Typst run before the main
+ * file in the preview only: page guides, box outlines), and when to reveal or shade what (preview-sync). While the
+ * engine loads, the pane shows what it waits for. See docs/30_architecture/06_preview.typ.
  */
 export class Preview implements PreviewContributions {
   private readonly worker = startEngineWorker();
@@ -50,6 +51,12 @@ export class Preview implements PreviewContributions {
   private readonly items: { made: ToolbarItemElements; group: string; order: number }[] = [];
   /** The PDF export options, with their priority, in registration order. */
   private readonly exportOptions: { option: PdfExportOption; priority: number }[] = [];
+  /** The view options, with their priority, in registration order. */
+  private readonly registeredViewOptions: { option: PreviewViewOption; priority: number }[] = [];
+  /** The view options' values by id as last set (also of ids not registered yet); the others are at their default. */
+  private viewOptionValues: Readonly<Record<string, boolean>> = {};
+  /** What `update()` gave last, compiled again when the view options change; null before the first update. */
+  private latest: Compile | null = null;
   /** Outlines the clicked text, until the next click, successful compile or `clearClickHighlight`. */
   private readonly clickHighlight: OverlayLayer;
   /** Shades the ranges of `setSelectionHighlight`, looked up again after every successful compile. */
@@ -123,7 +130,8 @@ export class Preview implements PreviewContributions {
    * last time are not sent to the worker again.
    */
   update(files: Record<string, FileContent>, main: string): void {
-    this.compiles.push({ files, main });
+    this.latest = { files, main };
+    this.compiles.push(this.latest);
   }
 
   reveal(path: ProjectPath, { from }: SourceRange): void {
@@ -196,6 +204,29 @@ export class Preview implements PreviewContributions {
     return [...this.exportOptions].sort((a, b) => b.priority - a.priority).map((entry) => entry.option);
   }
 
+  registerViewOption(option: PreviewViewOption, options: { priority?: number } = {}): Disposable {
+    if (this.registeredViewOptions.some((entry) => entry.option.id === option.id)) throw new Error(`View option '${option.id}' is already registered`);
+    const entry = { option, priority: options.priority ?? 100 };
+    this.registeredViewOptions.push(entry);
+    this.viewChanged();
+    return new Disposable(() => {
+      const index = this.registeredViewOptions.indexOf(entry);
+      if (index < 0) return;
+      this.registeredViewOptions.splice(index, 1);
+      this.viewChanged();
+    });
+  }
+
+  viewOptions(): readonly PreviewViewOption[] {
+    // the sort is stable: equal priorities stay in registration order
+    return [...this.registeredViewOptions].sort((a, b) => b.priority - a.priority).map((entry) => entry.option);
+  }
+
+  setViewOptionValues(values: Readonly<Record<string, boolean>>): void {
+    this.viewOptionValues = { ...values };
+    this.viewChanged();
+  }
+
   dispose(): void {
     this.rendered.dispose();
     this.diagnosed.dispose();
@@ -226,8 +257,17 @@ export class Preview implements PreviewContributions {
     item.dispose?.();
   }
 
+  /** Compiles the last files again with the view options as they are now; toolbar items show the new options. */
+  private viewChanged(): void {
+    if (this.latest) this.compiles.push(this.latest);
+    this.scheduleStatus();
+  }
+
   private async compile({ files, main }: Compile, superseded: () => boolean): Promise<void> {
-    const response = await this.request({ type: 'compile', files: this.sender.encode(files), main });
+    const entry = viewEntry(this.viewOptions(), this.viewOptionValues);
+    // with no view option on, the main file itself, as an export compiles it
+    const compiled = entry.prelude.length === 0 ? { files, main } : { files: { ...files, [VIEW_ENTRY]: entryText(entry, main) }, main: VIEW_ENTRY };
+    const response = await this.request({ type: 'compile', files: this.sender.encode(compiled.files), main: compiled.main });
     if (response.type !== 'compile') return;
     this.loading.compiled();
     // Keep showing the last good pages while the document has errors, dimmed as stale.
@@ -245,7 +285,8 @@ export class Preview implements PreviewContributions {
     this.pages.classList.toggle('typst-preview--stale', failed);
     this.progressChanged();
     // A newer update is waiting: these diagnostics describe outdated text.
-    if (!superseded()) this.diagnosed.fire(response.result.diagnostics);
+    // what goes wrong in the view options' Typst is in no project file
+    if (!superseded()) this.diagnosed.fire(response.result.diagnostics.map((d) => (d.path === VIEW_ENTRY ? { ...d, path: null } : d)));
   }
 
   /** Shows what the preview waits for: in the pane while it has no pages, and to whoever listens. */
@@ -305,7 +346,8 @@ export class Preview implements PreviewContributions {
     this.clickHighlight.set(response.jump.boxes);
     const { from, to } = response.jump;
     const path = ProjectPath.parse(response.jump.path);
-    if (path) this.clicked.fire({ path, from, to });
+    // a view option's drawing (an outline) is in no project file
+    if (path && path !== VIEW_ENTRY) this.clicked.fire({ path, from, to });
   }
 
   /** Scrolls to where the cursor's text is drawn, if that is off-screen; nothing is drawn there. */
@@ -394,6 +436,20 @@ export interface PreviewContributions {
   snippet(path: ProjectPath, range: SourceRange, text: string): Promise<RenderedSnippet | null>;
   /** A PDF of `entry.main` from the files last compiled, `entry.sources` replacing or adding text files for it. */
   exportPdf(entry: PdfEntry): Promise<PdfResult>;
+  /**
+   * Offers a way to look at the document in the preview (a toggle in the toolbar's View menu), until disposed. The
+   * preview applies the options that are on (as `setViewOptionValues` says, else their `default`) by `priority`
+   * (default 100, higher first; equal: registration order), each to what the ones before made. PDF exports never see
+   * them. Throws when an option with the same `id` is registered.
+   */
+  registerViewOption(option: PreviewViewOption, options?: { priority?: number }): Disposable;
+  /** The registered view options, in the order the preview applies them. */
+  viewOptions(): readonly PreviewViewOption[];
+  /**
+   * Which view options are on, by id (also of options registered later); the others are at their `default`. Replaces
+   * the values set before and compiles again.
+   */
+  setViewOptionValues(values: Readonly<Record<string, boolean>>): void;
 }
 
 /** A control in the preview's toolbar: made once, for the preview it is registered with. */
@@ -457,6 +513,33 @@ export interface PdfExportOption {
   apply(entry: PdfEntry, value: boolean): PdfEntry;
 }
 
+/**
+ * A way to look at the document in the preview only (page guides, box outlines): Typst the preview runs before the
+ * main file while it is on. The documents and their PDF exports stay as they are.
+ */
+export interface PreviewViewOption {
+  /** `<extension>.<name>`, e.g. `previewGuides.pageGuides`: the key in `setViewOptionValues`. */
+  readonly id: string;
+  /** The toggle's label ("Page guides"). */
+  readonly label: string;
+  /** A longer explanation, shown as the toggle's tooltip. */
+  readonly description?: string;
+  /** Whether it is on until someone chooses otherwise. */
+  readonly default: boolean;
+  /** What to compile with this option on, from what the options before it made. Called only while it is on. */
+  apply(entry: PreviewEntry): PreviewEntry;
+}
+
+/**
+ * What the preview compiles around the main file: `prelude`, lines of Typst markup (imports, `let`, `set` and `show`
+ * rules) run before it, so each option adds its own lines. The preview compiles a file of its own holding them, which
+ * then includes the main file: positions, clicks and snippets stay in the project's files. The lines must make no
+ * content (a page break would come before the document).
+ */
+export interface PreviewEntry {
+  readonly prelude: readonly string[];
+}
+
 /** Preview zoom: fit the pane width, or a fixed scale where 1 = 100 % (1 pt = 1/72 in). */
 export type Zoom = 'fit' | number;
 
@@ -494,6 +577,21 @@ export interface PreviewOptions {
 type Compile = { files: Record<string, FileContent>; main: string };
 type Reveal = { path: ProjectPath; from: SourceOffset };
 type Highlight = { path: ProjectPath; ranges: readonly SourceRange[]; text: string };
+
+/** The file the preview compiles while a view option is on: their prelude, then the main file included. */
+const VIEW_ENTRY = '/.typst-preview-view.typ';
+
+/** What the view options that are on make, applied in order. */
+function viewEntry(options: readonly PreviewViewOption[], values: Readonly<Record<string, boolean>>): PreviewEntry {
+  let entry: PreviewEntry = { prelude: [] };
+  for (const option of options) if (values[option.id] ?? option.default) entry = option.apply(entry);
+  return entry;
+}
+
+function entryText({ prelude }: PreviewEntry, main: string): string {
+  const path = main.replace(/["\\]/g, (char) => `\\${char}`);
+  return `${prelude.join('\n')}\n#include "${path}"\n`;
+}
 
 function div(doc: Document, className: string): HTMLElement {
   const element = doc.createElement('div');

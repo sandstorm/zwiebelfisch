@@ -16,6 +16,9 @@ vi.mock('../src/hosts/preview/preview', async (importOriginal) => ({
     registerToolbarItem = () => ({ dispose() {} });
     registerPdfExportOption = () => ({ dispose() {} });
     pdfExportOptions = () => [];
+    registerViewOption = () => ({ dispose() {} });
+    viewOptions = () => [];
+    setViewOptionValues() {}
     dispose() {}
   },
 }));
