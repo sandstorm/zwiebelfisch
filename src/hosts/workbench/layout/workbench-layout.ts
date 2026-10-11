@@ -1,6 +1,6 @@
 // WorkbenchLayout: the widget's regions — a side on the left and on the right (rails, resizable panels, the left one
 // an overlay when narrow), the editing area between them, the status bar below; what the viewer chose kept for the
-// session. See workbench.ts and docs/architecture/workbench.typ.
+// session. See workbench.ts and docs/30_architecture/07_workbench.typ.
 
 import type { Memento, SidePanel, SidePanelOptions } from '../workbench';
 import { div, restoreSideBarState, SideBar, type Side } from './side-bar';

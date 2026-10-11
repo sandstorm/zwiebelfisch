@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Start the demo dev server and run the docs-editing Playwright spec against it (edits docs/guide/getting-started.typ, restores it)"
+#MISE description="Start the demo dev server and run the docs-editing Playwright spec against it (edits docs/10_guide/01_getting-started.typ, restores it)"
 #MISE depends=["build:engine", "build:fonts"]
 set -euo pipefail
 pnpm exec vite &

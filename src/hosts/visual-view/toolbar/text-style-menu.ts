@@ -1,5 +1,5 @@
 // TextStyleMenu: the toolbar's text style menu — "Normal text" and what the text style providers contribute
-// (headings, custom styles). See toolbar.ts and docs/architecture/visual-view.typ.
+// (headings, custom styles). See toolbar.ts and docs/30_architecture/04_visual-view.typ.
 import type { ChainedCommands, Editor } from '@tiptap/core';
 import type { EditorState } from '@tiptap/pm/state';
 import type { Disposable } from '../../../core/disposable/disposable';

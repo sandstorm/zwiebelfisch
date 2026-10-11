@@ -1,6 +1,6 @@
 // The commands namespace of the extension API (VS Code's `commands`): what extensions register by id
 // (`registerCommand`), run by id (`executeCommand`) and bind to keys (`registerKeybinding`). Entry of
-// hosts/commands/. See docs/architecture/workbench.typ.
+// hosts/commands/. See docs/30_architecture/07_workbench.typ.
 // Why plain string ids and a Promise (VS Code's shape): extensions never depend on each other, so a caller knows a
 // command only by its id, and the handler may be sync or async. The handler is called synchronously all the same,
 // so user activation, the selection and the focus are as they were when the command was asked for.

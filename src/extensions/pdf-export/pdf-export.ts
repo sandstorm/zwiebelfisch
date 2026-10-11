@@ -1,6 +1,6 @@
 // The pdf-export extension: the project's PDF, made by PdfExport (the command `pdfExport.export`), and the preview's
 // "Download PDF" with a popover of the export options other extensions register (comments: include them or not).
-// Entry of extensions/pdf-export/. See docs/architecture/built-in-extensions.typ.
+// Entry of extensions/pdf-export/. See docs/30_architecture/08_built-in-extensions.typ.
 // Why an extension: the preview's engine can make a PDF and keeps the options registered with it, but how they are
 // offered (one button, a checkbox each, remembered per viewer) and whether a widget has a download button at all is
 // this extension's policy.

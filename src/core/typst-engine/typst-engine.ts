@@ -1,5 +1,5 @@
 // The typed TypeScript side of the typst-engine wasm (crates/typst-engine): createEngine and the engine's
-// data types. Entry of core/typst-engine/. See docs/architecture/core.typ.
+// data types. Entry of core/typst-engine/. See docs/30_architecture/02_core.typ.
 import { ProjectPath } from '../paths/paths';
 import { type SourceOffset, SourceRange } from '../typst-document/typst-document';
 import init, { Engine as WasmEngine, type InitInput } from './wasm/typst_engine';

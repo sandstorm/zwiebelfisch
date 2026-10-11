@@ -1,5 +1,5 @@
 // SourceViewHost: makes the Source views (CodeMirror bound to a TypstDocument) and applies what is contributed to
-// them. Entry of hosts/source-view/. See docs/architecture/source-view.typ.
+// them. Entry of hosts/source-view/. See docs/30_architecture/05_source-view.typ.
 // Why a host: the Source view itself only keeps text and selection in sync with its document (plus reveal).
 // Everything else — the Typst language, colors, lint, document links, other users' carets — is a
 // contribution, registered once and applied to every view made before or after, so a feature never tracks views.

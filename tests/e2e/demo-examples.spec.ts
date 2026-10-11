@@ -39,8 +39,8 @@ test('the documentation example is docs/ as a book with parts and chapters', asy
   await page.goto('/?example=docs');
   await expect(examples(page).getByRole('link', { name: 'Documentation' })).toHaveAttribute('aria-current', 'page');
   await expect(fileRow(page, 'template.typ')).toBeVisible();
-  await fileRow(page, 'architecture').click();
-  await expect(fileRow(page, 'architecture/workbench.typ')).toBeVisible();
+  await fileRow(page, '30_architecture').click();
+  await expect(fileRow(page, '30_architecture/07_workbench.typ')).toBeVisible();
   await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/);
   await expect(preview(page).locator('.typst-preview__page').first()).toBeVisible();
 });

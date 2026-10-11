@@ -137,13 +137,13 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    extension; `images` keeps only `images.preview`.
    **Documentation as Typst** (user, 2026-10-11; replaces the README-per-area idea): all
    documentation is one Typst project in `docs/`; Markdown only for a rudimentary root `README.md`.
-   `docs/main.typ` + `template.typ` (tiny); Part 1 `guide/` (getting-started, embedding, features,
-   collaboration), Part 2 `extensions/` (overview with the five vocabularies, workbench API,
-   visual-view constructs, source-view and preview), Part 3 `architecture/` (overview with layers +
+   `docs/main.typ` + `template.typ` (tiny); Part 1 `10_guide/` (getting-started, embedding, features,
+   collaboration), Part 2 `20_extensions/` (overview with the five vocabularies, workbench API,
+   visual-view constructs, source-view and preview), Part 3 `30_architecture/` (overview with layers +
    a keystroke's journey, core, projection, visual-view, source-view, preview, workbench,
    built-in-extensions, server, conventions, development). Each Part-3 chapter one page: job, 3–6
    concepts, how they connect. Cross-references as Typst labels; code top comments point to the
-   chapter (`See docs/architecture/workbench.typ`, enforced by the top-comments check). The demo
+   chapter (`See docs/30_architecture/07_workbench.typ`, enforced by the top-comments check). The demo
    gets a "Documentation" example loading `docs/**/*.typ` (edit live, nothing saved);
    `mise run docs:pdf` (the book) and `mise run docs:html` — Typst 0.15's **bundle export** (we pin
    0.15.1, CLI and engine): one HTML page per chapter via `document("<part>/<chapter>.html")[…]`, an
@@ -163,7 +163,7 @@ that a new session can pick it up without the conversation. Branch: `task/api-ex
    docs in the same commit as the code.
    **Demo checklist (user, 2026-10-11):** `docs/demo-playground.md` shrinks to a few lines in the
    root `README.md` — only how to run the demo (and its examples); the long manual checklist goes,
-   not into the Typst docs. The CSS wave was briefed to move it into `architecture/development.typ`;
+   not into the Typst docs. The CSS wave was briefed to move it into `30_architecture/11_development.typ`;
    correct that after its merge. `mise run demo` depends on the font build (task dependency).
    **Later: what do features cost?** (user, 2026-10-11; after the current waves) Per extension and
    per host: lines of code (source vs. tests), complexity (the code-quality metrics: cyclomatic /

@@ -1,5 +1,5 @@
 // withoutNotes: what to compile for a PDF without comments (margin notes removed). See ../comments.ts and
-// docs/guide/features.typ.
+// docs/10_guide/02_features.typ.
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import type { FileContent } from '../../../core/project/project';
 import type { PdfEntry } from '../../../core/typst-engine/typst-engine';

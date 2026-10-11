@@ -1,5 +1,5 @@
 // The Visual view's ProseMirror document as rows, each with the source range it shows: what the Typst ↔ ProseMirror
-// conversion (docs/architecture/prosemirror-typst.typ) made of the shown file. See ../devtools.ts.
+// conversion (docs/30_architecture/03_prosemirror-typst.typ) made of the shown file. See ../devtools.ts.
 import type { SourceOffset, SourceRange } from '../../../core/typst-document/typst-document';
 import { describeValue } from './describe';
 

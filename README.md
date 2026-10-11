@@ -35,9 +35,9 @@ mise run demo           # builds engine and fonts, then the demo on http://127.0
 
 One Typst project in [`docs/`](docs/), starting at [`docs/main.typ`](docs/main.typ):
 
-- **Guide** (`docs/guide/`): getting started, features, configuration, collaboration, embedding.
-- **Extensions** (`docs/extensions/`): writing an extension.
-- **Architecture** (`docs/architecture/`): how the code is built, conventions, development.
+- **Guide** (`docs/10_guide/`): getting started, features, configuration, collaboration, embedding.
+- **Extensions** (`docs/20_extensions/`): writing an extension.
+- **Architecture** (`docs/30_architecture/`): how the code is built, conventions, development.
 
 Read it as a PDF (`mise run docs:pdf`), as HTML (`mise run docs:html`), or edit it live in the demo's
 Documentation example (`mise run demo`, then `?example=docs`).

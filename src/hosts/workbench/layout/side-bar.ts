@@ -1,5 +1,5 @@
 // SideBar: one side of the widget (left or right): a rail with a button per side panel, the shown panel and the
-// separator that sizes it. See workbench-layout.ts and docs/architecture/workbench.typ.
+// separator that sizes it. See workbench-layout.ts and docs/30_architecture/07_workbench.typ.
 
 import type { SidePanel, SidePanelOptions } from '../workbench';
 

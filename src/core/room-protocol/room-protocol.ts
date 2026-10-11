@@ -2,7 +2,7 @@
 // by the widget (the collaboration extension) and the collaboration server (server/src). Entry of
 // core/room-protocol/. In core, not in the collaboration extension, because the server's code imports it (and
 // nothing else of the widget). No imports: the server's Node runtime loads this file directly.
-// See docs/architecture/server.typ.
+// See docs/30_architecture/09_server.typ.
 
 /** The Y.Doc map of the shared Typst files: path → Y.Text (see SharedProject; the server reads and merges them). */
 export const FILES_MAP = 'files';

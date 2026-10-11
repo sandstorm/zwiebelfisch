@@ -1,5 +1,5 @@
 // darkThemeVariables: IronCalc's workbook UI in the dark, made from the widget's color tokens. Pure: no DOM.
-// Used by workbench/color-scheme.ts while the widget is dark. See docs/guide/features.typ.
+// Used by workbench/color-scheme.ts while the widget is dark. See docs/10_guide/02_features.typ.
 
 /** The widget's color tokens (`--te-<name>`, typst-editor.css) the dark workbook is made of. */
 export type ColorToken =

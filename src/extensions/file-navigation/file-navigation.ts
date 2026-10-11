@@ -1,7 +1,7 @@
 // The file-navigation extension: the links around the shown file that lead to other files. "← previous file" /
 // "next file →" above and below a file the main file includes, in its reading order; "← Back to …" / "Forward to … →"
 // above any file, the files the user came from (VS Code's Go Back / Go Forward, also by key). Entry of
-// extensions/file-navigation/. See docs/guide/features.typ.
+// extensions/file-navigation/. See docs/10_guide/02_features.typ.
 // Why one extension for both: they share the editor frame (one per widget) and the bar's look; neither needs the
 // file panel, so a host may keep them without it.
 // Why the history listens to the shown file rather than to the ways of opening one (links, "Edit diagram", the

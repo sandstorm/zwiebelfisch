@@ -1,6 +1,6 @@
 // The preview-sync extension: the editor and the preview in step, both ways. The preview follows the cursor (with a
 // "Follow cursor" switch in its toolbar, remembered per viewer) and shades the text selected in the shown file, and a
-// click in the preview selects its source. Entry of extensions/preview-sync/. See docs/architecture/preview.typ.
+// click in the preview selects its source. Entry of extensions/preview-sync/. See docs/30_architecture/06_preview.typ.
 // Why an extension: the preview host only offers the mechanism (`reveal`, `setSelectionHighlight`, hit-testing,
 // `onDidClickPage` and `clearClickHighlight`), the workbench the selection (`onDidChangeTextEditorSelection`) and
 // `open`; when to follow, what to shade, where a click leads and how long its outline stays is policy. Without this

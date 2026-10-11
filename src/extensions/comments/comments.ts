@@ -2,7 +2,7 @@
 // it, so the preview, git, undo and collaboration carry them as ordinary text. The extension shows them in the
 // Visual view (notes in the text, a card per note in the notes gutter), adds them ("Comment", Ctrl/Cmd+Alt+M) and
 // lets a PDF leave them out (the export option `comments.include`). Entry of extensions/comments/. See
-// docs/guide/features.typ.
+// docs/10_guide/02_features.typ.
 import type { TypstExtension } from '../../hosts/workbench/workbench';
 import css from './comments.css?inline';
 import { registerIncludeComments } from './preview/preview';

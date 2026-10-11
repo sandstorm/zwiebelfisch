@@ -1,5 +1,5 @@
 // createCollabServer: the Hocuspocus server (rooms in SQLite or a given store, auth, GitLab rooms).
-// See docs/architecture/server.typ.
+// See docs/30_architecture/09_server.typ.
 import { SQLite } from '@hocuspocus/extension-sqlite';
 import { Server, type Configuration, type Extension } from '@hocuspocus/server';
 import { sharedToken, type Authenticate } from './auth.ts';

@@ -1,5 +1,5 @@
 // FloatingBar: a small toolbar floating above something in the text (the selection, the table), the toolbar's
-// `floating` groups. See toolbar.ts and docs/architecture/visual-view.typ.
+// `floating` groups. See toolbar.ts and docs/30_architecture/04_visual-view.typ.
 import type { Anchor } from '../visual-view';
 
 /**

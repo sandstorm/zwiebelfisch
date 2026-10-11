@@ -1,5 +1,5 @@
 // Preview: the live preview of a Typst project, compiled in a worker, with hit-testing. Entry of hosts/preview/.
-// See docs/architecture/preview.typ.
+// See docs/30_architecture/06_preview.typ.
 // Why a host: the preview keeps the mechanism — the engine worker and its protocol, coalesced compiles, the
 // lazily rendered page list, hit-testing (`onDidClickPage`), scrolling and reveal. What sits on top of it is
 // contributed: toolbar items (zoom, "Follow cursor", page number, "Download PDF"), the options a PDF export offers,

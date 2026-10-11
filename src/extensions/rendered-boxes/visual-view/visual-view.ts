@@ -1,5 +1,5 @@
 // Rendered boxes in the Visual view: raw boxes show the compiled snippet of their source while they are not
-// edited. See ../rendered-boxes.ts and docs/architecture/built-in-extensions.typ.
+// edited. See ../rendered-boxes.ts and docs/30_architecture/08_built-in-extensions.typ.
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import { SourceRange } from '../../../core/typst-document/typst-document';
 import type { RawBoxRenderer } from '../../../hosts/visual-view/visual-view';

@@ -40,7 +40,7 @@ class FakeEditor {
   }
 }
 
-function setup(files: ProjectFiles = { '/main.typ': '= Docs\n', '/guide/features.typ': '= Features\n', '/assets/logo.svg': new Uint8Array([60]) }) {
+function setup(files: ProjectFiles = { '/main.typ': '= Docs\n', '/10_guide/02_features.typ': '= Features\n', '/assets/logo.svg': new Uint8Array([60]) }) {
   const api = {
     write: vi.fn<DocsFilesApi['write']>(async () => {}),
     delete: vi.fn<DocsFilesApi['delete']>(async () => {}),
@@ -65,15 +65,15 @@ afterEach(() => {
 describe('saving edits', () => {
   it('writes a file once its edits pause (300 ms), each file on its own, and reports it', async () => {
     const { api, editor, lastReport } = setup();
-    editor.edit('/guide/features.typ', '= F');
+    editor.edit('/10_guide/02_features.typ', '= F');
     await vi.advanceTimersByTimeAsync(200);
-    editor.edit('/guide/features.typ', '= Fe');
+    editor.edit('/10_guide/02_features.typ', '= Fe');
     editor.edit('/main.typ', '= D');
     await vi.advanceTimersByTimeAsync(299);
     expect(api.write).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     expect(api.write.mock.calls.map(([p, bytes]) => [p, text(bytes)])).toEqual([
-      ['guide/features.typ', '= Fe'],
+      ['10_guide/02_features.typ', '= Fe'],
       ['main.typ', '= D'],
     ]);
     expect(lastReport()).toBe('Saved to docs/main.typ');
@@ -111,8 +111,8 @@ describe('create, rename, delete in the file panel', () => {
     const png = new Uint8Array([137, 80]);
     expect(await sync.allowFileChange({ kind: 'create', path: path('/assets/shot.png'), content: png })).toBe(true);
     expect(api.write).toHaveBeenCalledWith('assets/shot.png', png);
-    expect(await sync.allowFileChange({ kind: 'rename', path: path('/guide/all.typ'), from: path('/guide/features.typ') })).toBe(true);
-    expect(api.rename).toHaveBeenCalledWith('guide/features.typ', 'guide/all.typ');
+    expect(await sync.allowFileChange({ kind: 'rename', path: path('/10_guide/all.typ'), from: path('/10_guide/02_features.typ') })).toBe(true);
+    expect(api.rename).toHaveBeenCalledWith('10_guide/02_features.typ', '10_guide/all.typ');
     api.delete.mockRejectedValueOnce(new Error('Outside docs/'));
     expect(await sync.allowFileChange({ kind: 'delete', path: path('/main.typ') })).toBe(false);
     expect(report).toHaveBeenLastCalledWith('Not saved: docs/main.typ (Outside docs/)', 'warn');
@@ -134,28 +134,28 @@ describe('create, rename, delete in the file panel', () => {
 
   it('an edit still waiting when its file is renamed is written to the new path, after the rename', async () => {
     const { api, sync, editor } = setup();
-    editor.edit('/guide/features.typ', '= Edited\n');
-    const rename: FileChange = { kind: 'rename', path: path('/guide/renamed.typ'), from: path('/guide/features.typ') };
+    editor.edit('/10_guide/02_features.typ', '= Edited\n');
+    const rename: FileChange = { kind: 'rename', path: path('/10_guide/renamed.typ'), from: path('/10_guide/02_features.typ') };
     expect(await sync.allowFileChange(rename)).toBe(true);
     editor.rename(rename);
     await vi.advanceTimersByTimeAsync(1000);
     expect(api.rename).toHaveBeenCalledBefore(api.write);
-    expect(api.write.mock.calls.map(([p, bytes]) => [p, text(bytes)])).toEqual([['guide/renamed.typ', '= Edited\n']]);
+    expect(api.write.mock.calls.map(([p, bytes]) => [p, text(bytes)])).toEqual([['10_guide/renamed.typ', '= Edited\n']]);
   });
 });
 
 describe('changes on disk', () => {
   it('replace the file in the editor when it has no unsaved edits, and are not written back', async () => {
     const { api, sync, editor, lastReport } = setup();
-    sync.external({ path: 'guide/features.typ', text: '= From git\n' });
-    expect(editor.files['/guide/features.typ']).toBe('= From git\n');
-    expect(lastReport()).toBe('Updated docs/guide/features.typ from disk');
+    sync.external({ path: '10_guide/02_features.typ', text: '= From git\n' });
+    expect(editor.files['/10_guide/02_features.typ']).toBe('= From git\n');
+    expect(lastReport()).toBe('Updated docs/10_guide/02_features.typ from disk');
     sync.external({ path: 'assets/logo.svg', text: '<svg/>' });
     expect(text(editor.files['/assets/logo.svg'] as Uint8Array)).toBe('<svg/>');
-    sync.external({ path: 'guide/new.typ', text: '= New\n' });
-    expect(editor.files['/guide/new.typ']).toBe('= New\n');
-    sync.external({ path: 'guide/new.typ', deleted: true });
-    expect(editor.files['/guide/new.typ']).toBeUndefined();
+    sync.external({ path: '10_guide/new.typ', text: '= New\n' });
+    expect(editor.files['/10_guide/new.typ']).toBe('= New\n');
+    sync.external({ path: '10_guide/new.typ', deleted: true });
+    expect(editor.files['/10_guide/new.typ']).toBeUndefined();
     await vi.advanceTimersByTimeAsync(1000);
     expect(api.write).not.toHaveBeenCalled();
     expect(api.delete).not.toHaveBeenCalled();

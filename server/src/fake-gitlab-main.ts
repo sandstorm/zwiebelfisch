@@ -6,7 +6,7 @@
 // gitlab:demo/report@<branch> starts at main.
 //   PORT (default 1234)
 //   TYPST_GITLAB_AUTO_COMMIT (default 10) minutes without edits before a room commits by itself; `off`: never
-// See docs/architecture/development.typ.
+// See docs/30_architecture/11_development.typ.
 import { createCollabServer } from './collab-server.ts';
 import { parseAutoCommit } from './gitlab/gitlab-extension.ts';
 import { FakeGitLab } from './gitlab/fake-gitlab.ts';

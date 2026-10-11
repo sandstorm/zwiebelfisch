@@ -1,6 +1,6 @@
 // ESLint rule `local/entry-imports`: a module under src/ is entered only through its entry file.
 //
-// The layout (docs/architecture/conventions.typ):
+// The layout (docs/30_architecture/10_conventions.typ):
 // - The modules are the folders `core/<name>/`, `hosts/<name>/`, `extensions/<name>/`, `ui/<name>/` and the
 //   top-level folders `typst-editor/`, `typst-editor-element/`, `testing/`. `core/`, `hosts/`, `extensions/` and
 //   `ui/` only group modules.

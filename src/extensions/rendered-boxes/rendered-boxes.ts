@@ -1,6 +1,6 @@
 // The rendered-boxes extension: a raw box in the Visual view (Typst the view does not model) shows how it looks
 // compiled — its snippet cut from the preview's pages — until someone edits its code. Entry of
-// extensions/rendered-boxes/. See docs/architecture/built-in-extensions.typ.
+// extensions/rendered-boxes/. See docs/30_architecture/08_built-in-extensions.typ.
 // Why an extension: the Visual view only knows that a box may be drawn by a renderer; where pictures come from
 // (the preview, under the document's current path) is this extension's knowledge.
 import type { TypstExtension } from '../../hosts/workbench/workbench';

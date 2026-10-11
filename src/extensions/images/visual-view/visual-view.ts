@@ -1,7 +1,7 @@
 // Images in the Visual view: `#image(..)` blocks (also as a figure's body), what "Insert image" offers (the host's project
 // files, uploads), inserting image blocks (toolbar, file drops), the image file in place of the code, and the tools
 // on an image box (resize, alt text, the figures' caption), which edit the call's source minimally; `imagesVisualView`
-// registers them for images.ts. See docs/architecture/built-in-extensions.typ.
+// registers them for images.ts. See docs/30_architecture/08_built-in-extensions.typ.
 import { Node } from '@tiptap/core';
 import { Disposable } from '../../../core/disposable/disposable';
 import { PathReference, type ProjectPath } from '../../../core/paths/paths';

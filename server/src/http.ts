@@ -1,5 +1,5 @@
 // The server's small HTTP layer: requests and responses as plain values, and Node's as them. Used by the GitLab
-// endpoints (gitlab/http-endpoints.ts) and the playground. See docs/architecture/server.typ.
+// endpoints (gitlab/http-endpoints.ts) and the playground. See docs/30_architecture/09_server.typ.
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
 /** An HTTP request, as much of it as the endpoints need. */
