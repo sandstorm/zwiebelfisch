@@ -17,7 +17,7 @@
 - *Engine worker* (`worker/`): the Typst wasm in a Web Worker. The first message is `init` (wasm and font URLs, resolved on the main thread). Then requests by id: `compile`, `click`, `cursor`, `boxes`, `pdf`. `FileSender` sends text every time and bytes once per `Uint8Array` identity (`null` = unchanged). `@preview` packages download on first use (`core/typst-packages`).
 - *`LatestOnly`*: at most one run in flight; values pushed meanwhile replace each other. Compiles use it; reveals too, throttled to one per 80 ms. Typing never queues a backlog.
 - *`PageList`* (`pages/`): a placeholder per page sized by `aspect-ratio`. An `IntersectionObserver` (one viewport above and below) decides which pages carry SVG. Only near pages whose `hash` changed get new markup.
-- *Hit-testing*: a click is converted px → pt and sent as `click`; a source hit fires `onDidClickPage` and outlines the clicked run until the next click or compile. `reveal(path, from, to)` asks `cursor` and scrolls the preview's own scroller (never `scrollIntoView`), only if the spot is off-screen.
+- *Hit-testing*: a click is converted px → pt and sent as `click`; the clicked source run is outlined until the next click or compile and, in a project file (not a package's), fires `onDidClickPage`. `reveal(path, from, to)` (a `ProjectPath`) asks `cursor` and scrolls the preview's own scroller (never `scrollIntoView`), only if the spot is off-screen.
 - *Snippets*: `snippet(path, from, to, text)` cuts the range's boxes out of the last compiled page. No extra compile. Null when `text` is no longer what was compiled.
 
 == Flow <architecture-preview-flow>

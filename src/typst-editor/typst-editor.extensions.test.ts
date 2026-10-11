@@ -320,9 +320,7 @@ describe('the built-in extensions', () => {
     source().focus();
     source().dispatch({ selection: { anchor: 3 } });
     expect(preview.revealed.at(-1)).toEqual(['/main.typ', 3, 3]);
-    preview.click({ path: '/main.typ', from: 6, to: 10 });
-    expect(source().state.selection.main).toMatchObject({ from: 6, to: 10 });
-    preview.click({ path: '@preview/pkg/lib.typ', from: 0, to: 1 });
+    preview.click({ path: ProjectPath.of('/main.typ'), from: 6, to: 10 });
     expect(source().state.selection.main).toMatchObject({ from: 6, to: 10 });
   });
 

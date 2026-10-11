@@ -5,7 +5,6 @@
 // workbench the selection (`onDidChangeTextEditorSelection`) and `open`; when to follow and where a click leads is
 // policy. Without this extension the preview neither follows nor jumps.
 import { Disposable } from '../../core/disposable/disposable';
-import { ProjectPath } from '../../core/paths/paths';
 import type { Memento, TypstExtension } from '../../hosts/workbench/workbench';
 import type { Workspace } from '../../hosts/workspace/workspace';
 import { followCursor } from './preview/preview';
@@ -60,8 +59,7 @@ export function previewSync(): TypstExtension {
           if (following && textEditor === window.activeTextEditor && workbench.isEditorFocused()) revealSelection();
         }),
         preview.onDidClickPage((click) => {
-          const path = ProjectPath.parse(click.path);
-          if (path && project.document(path)) workbench.open(path, { selection: click });
+          if (project.document(click.path)) workbench.open(click.path, { selection: click });
         }),
       );
     },

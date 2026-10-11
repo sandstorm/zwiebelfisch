@@ -48,7 +48,7 @@ The preview keeps the mechanism: the engine worker, compiles, the page list, hit
   [`registerPdfExportOption(option, { priority })`], [A checkbox offered with PDF exports],
   [`pdfExportOptions()`], [The registered options, in the order an export applies them],
   [`reveal(path, from, to)`], [Scrolls to where a source range is drawn, if off-screen; throttled, cheap on every cursor move],
-  [`onDidClickPage`], [A click on something with a source location: `{ path, from, to }`],
+  [`onDidClickPage`], [A click on something with a source location in a project file: `{ path, from, to }`],
   [`onDidChangeDiagnostics`], [Errors and warnings of each compile of the newest files; `path` is a `ProjectPath`, `null` without location or in a package file],
   [`onDidRender`], [After every successful compile],
   [`snippet(path, from, to, text)`], [How a source range is drawn: its page cut down to it, as SVG; `null` when it draws nothing or `text` is outdated],
