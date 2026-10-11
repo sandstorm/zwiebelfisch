@@ -1,7 +1,7 @@
 // What the pdf-export extension adds to the preview: "Download PDF" and its options popover (downloadPdf).
 // See ../pdf-export.ts.
 import type { PdfExportOption, PreviewToolbarItem } from '../../../hosts/preview/preview';
-import type { Window } from '../../../hosts/window/window';
+import type { WindowApi } from '../../../hosts/window/window';
 import type { Memento } from '../../../hosts/workbench/workbench';
 
 /** What the button downloads: the PDF made with the given option values, and the name to save it under. */
@@ -13,7 +13,7 @@ export interface PdfDownloads {
 }
 
 /** Where the button tells why there is no PDF. */
-export type PdfMessages = Pick<Window, 'showErrorMessage'>;
+export type PdfMessages = Pick<WindowApi, 'showErrorMessage'>;
 
 /**
  * "Download PDF". With export options registered it opens a popover with a checkbox per option (as this viewer left

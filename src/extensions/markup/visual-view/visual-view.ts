@@ -5,7 +5,7 @@ import { Extension, type AnyExtension, type Editor } from '@tiptap/core';
 import Code from '@tiptap/extension-code';
 import CodeBlock from '@tiptap/extension-code-block';
 import type { Mark, Node } from '@tiptap/pm/model';
-import type { Window } from '../../../hosts/window/window';
+import type { WindowApi } from '../../../hosts/window/window';
 import { callArguments, children, decodeString, namedArgument, quote, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type ToolbarAction, type ToolbarContext, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 import { starterKitPart, type Around, type PlacedNode, type TypstMarkSpec, type TypstSerializeState, type TypstParseContext } from '../../../hosts/projection/projection';
@@ -259,7 +259,7 @@ export const INSERT_CODE_BLOCK: ToolbarAction = { label: 'Code block', icon: ICO
 export const INSERT_QUOTE: ToolbarAction = { label: 'Quote', shortcut: 'Mod+Shift+B', icon: ICONS.quote, run: (c) => c.toggleBlockquote(), active: (e) => e.isActive('blockquote') };
 
 /** Where "Link" asks for the URL: the window's input box. */
-export type LinkPrompt = Pick<Window, 'showInputBox'>;
+export type LinkPrompt = Pick<WindowApi, 'showInputBox'>;
 
 /**
  * "Link" in the selection's bar (also Mod+K: `linkShortcut`): asks for the URL in an input box at the selection.

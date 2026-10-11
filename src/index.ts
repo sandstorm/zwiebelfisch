@@ -36,7 +36,7 @@ export type {
   StatusBarPlacement,
   TextEditor,
   TextEditorSelectionChangeEvent,
-  Window,
+  WindowApi,
 } from './hosts/window/window';
 export type { Scm, SourceControl, SourceControlState } from './hosts/scm/scm';
 export type { DocumentLink, DocumentLinkProvider, Languages, TextDocument } from './hosts/languages/languages';

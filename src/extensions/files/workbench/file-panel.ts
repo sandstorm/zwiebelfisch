@@ -3,7 +3,7 @@
 import type { FileChange } from '../../../core/project/project';
 import { type NamedPath, ProjectPath } from '../../../core/paths/paths';
 import { uploadChanges } from '../../../core/uploads/uploads';
-import type { FileDecoration, Window } from '../../../hosts/window/window';
+import type { FileDecoration, WindowApi } from '../../../hosts/window/window';
 import type { Memento, MenuContext, MenuItem } from '../../../hosts/workbench/workbench';
 import { PopupMenu, type PopupMenuAnchor } from '../../../ui/popup-menu/popup-menu';
 import { filesUnder, type Folder, folderOf, relocate } from '../model/tree-model';
@@ -18,7 +18,7 @@ export const CONTEXT_MENU = 'explorer/context';
 const NEW_FILE_ENDINGS = { Typst: ['typ'], 'All files': ['*'] };
 
 /** What the panel asks the user with, and tells them: the window's input box, save dialog and messages. */
-export type FilePanelPrompts = Pick<Window, 'showInputBox' | 'showSaveDialog' | 'showWarningMessage' | 'showErrorMessage'>;
+export type FilePanelPrompts = Pick<WindowApi, 'showInputBox' | 'showSaveDialog' | 'showWarningMessage' | 'showErrorMessage'>;
 
 export interface FilePanelOptions {
   /** Someone picked a file. */

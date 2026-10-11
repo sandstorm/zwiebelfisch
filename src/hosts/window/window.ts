@@ -19,7 +19,7 @@ import { StatusBar } from './status-bar/status-bar';
 import css from './window.css?inline';
 
 /** The widget's window as extensions use it (VS Code's `window` namespace). */
-export interface Window {
+export interface WindowApi {
   /**
    * Shows `message` in the widget's notification area (VS Code's `window.showInformationMessage`), with a button per
    * item. Resolves to the item chosen, or undefined once it is closed (an information message without items closes
@@ -268,7 +268,7 @@ export interface WindowOptions {
  * The window of one widget: its notification area, its quick input, its status bar items, the custom editors of the
  * editing area and the file decorations. The workbench decides what is shown in the editing area (`showCustomEditor`).
  */
-export class WindowHost implements Window {
+export class WindowHost implements WindowApi {
   readonly #notifications: Notifications;
   readonly #quickInput: QuickInput;
   readonly #statusBar: StatusBar;

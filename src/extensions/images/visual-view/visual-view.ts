@@ -6,7 +6,7 @@ import { Node } from '@tiptap/core';
 import { Disposable } from '../../../core/disposable/disposable';
 import { PathReference, type ProjectPath } from '../../../core/paths/paths';
 import type { DocumentLink } from '../../../hosts/languages/languages';
-import type { QuickPickItem, Window } from '../../../hosts/window/window';
+import type { QuickPickItem, WindowApi } from '../../../hosts/window/window';
 import type { Event } from '../../../core/event-emitter/event-emitter';
 import type { TypstDocument } from '../../../core/typst-document/typst-document';
 import { hasOnlyArguments, withHash } from '../../../core/typst-syntax/typst-syntax';
@@ -39,7 +39,7 @@ export function imagesVisualView(options: ImagesOptions): VisualViewContribution
 }
 
 /** Where images ask (an image, a path, alt text) and tell why an upload was refused: the window's. */
-export type ImagePrompts = Pick<Window, 'showQuickPick' | 'showInputBox' | 'showErrorMessage'>;
+export type ImagePrompts = Pick<WindowApi, 'showQuickPick' | 'showInputBox' | 'showErrorMessage'>;
 
 /** Where image files are shown from: the host's project files, as URLs. */
 export interface ImageUrls {

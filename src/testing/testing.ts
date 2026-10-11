@@ -27,7 +27,7 @@ import type { Commands } from '../hosts/commands/commands';
 import type { Languages } from '../hosts/languages/languages';
 import type { PreviewContributions } from '../hosts/preview/preview';
 import { VisualView, VisualViewHost, type ContributionContext, type VisualViewContribution } from '../hosts/visual-view/visual-view';
-import type { InputBoxOptions, MessageItem, QuickPickItem, QuickPickOptions, Window } from '../hosts/window/window';
+import type { InputBoxOptions, MessageItem, QuickPickItem, QuickPickOptions, WindowApi } from '../hosts/window/window';
 import type { Workbench } from '../hosts/workbench/workbench';
 import type { Workspace } from '../hosts/workspace/workspace';
 import { attachGrammar, createSchema, documentExtensions, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos } from '../hosts/projection/projection';
@@ -74,7 +74,7 @@ export interface TestViewOptions {
  * box the text, a quick pick the label of the item or its index; undefined cancels), and `asked` / `told` keep what
  * was asked and said.
  */
-export class TestPrompts implements Pick<Window, 'showInputBox' | 'showQuickPick' | 'showErrorMessage'> {
+export class TestPrompts implements Pick<WindowApi, 'showInputBox' | 'showQuickPick' | 'showErrorMessage'> {
   readonly answers: (string | number | undefined)[] = [];
   readonly asked: { options?: InputBoxOptions | QuickPickOptions; items?: readonly (string | QuickPickItem)[] }[] = [];
   readonly told: string[] = [];
@@ -97,7 +97,7 @@ export class TestPrompts implements Pick<Window, 'showInputBox' | 'showQuickPick
     const answer = this.answers.shift();
     if (typeof answer === 'number') return list[answer];
     return list.find((item) => (typeof item === 'string' ? item : item.label) === answer);
-  }) as Window['showQuickPick'];
+  }) as WindowApi['showQuickPick'];
 
   showErrorMessage = async <T extends string | MessageItem>(message: string): Promise<T | undefined> => {
     this.told.push(message);
@@ -161,7 +161,7 @@ function testContext(options: TestViewOptions) {
       showInputBox: prompts.showInputBox,
       showQuickPick: prompts.showQuickPick,
       showErrorMessage: prompts.showErrorMessage,
-    } satisfies Partial<Window>,
+    } satisfies Partial<WindowApi>,
     workspace: { applyEdit: options.applyEdit ?? added } satisfies Partial<Workspace>,
     languages: testLanguages(options),
     preview: testPreview(options),

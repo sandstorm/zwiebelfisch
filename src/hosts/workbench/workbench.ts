@@ -21,7 +21,7 @@ import { Preview, type PreviewContributions } from '../preview/preview';
 import { type Scm, ScmHost } from '../scm/scm';
 import { SourceViewHost, type SourceViewContributions } from '../source-view/source-view';
 import { VisualViewHost, type VisualViewContributions } from '../visual-view/visual-view';
-import { type EditorMode, type TextEditorSelectionChangeEvent, type Window, WindowHost } from '../window/window';
+import { type EditorMode, type TextEditorSelectionChangeEvent, type WindowApi, WindowHost } from '../window/window';
 import { type ConfigurationProperty, type Settings, type Workspace, WorkspaceHost } from '../workspace/workspace';
 import { ColorScheme } from './color-scheme/color-scheme';
 import { EditingViews } from './editing-views/editing-views';
@@ -80,7 +80,7 @@ export interface ExtensionContext {
   /** Commands by id and their key bindings (VS Code's `commands` namespace). */
   readonly commands: Commands;
   /** Messages, input box, quick pick, status bar items, custom editors, file decorations, the active editor (VS Code's `window`). */
-  readonly window: Window;
+  readonly window: WindowApi;
   /** The source controls (VS Code's `scm`). */
   readonly scm: Scm;
   /** The document links of Typst text (VS Code's `languages`). */

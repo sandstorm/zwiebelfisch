@@ -3,7 +3,7 @@ import type { PathReference } from '../../../core/paths/paths';
 import type { Node } from '@tiptap/pm/model';
 import type { EditorState, Transaction } from '@tiptap/pm/state';
 import type { RawBoxTools, RawBoxToolsHost } from '../../../hosts/visual-view/visual-view';
-import type { Window } from '../../../hosts/window/window';
+import type { WindowApi } from '../../../hosts/window/window';
 import { imageWidthCss } from '../model/image-call';
 import { type DragStart, resizedPercent } from '../model/resize';
 import { imageInfo, resizeImage, setImageAlt } from './image-edits';
@@ -14,7 +14,7 @@ export interface ImageToolsHost extends RawBoxToolsHost {
   /** The image's path (in the call `src`) in the heading, e.g. as a link to the file (default: the text). */
   pathLabel?: ((path: PathReference, src: string) => globalThis.Node) | null;
   /** Where "Alt text" asks for the text (the window's input box; default: no "Alt text"). */
-  prompts?: Pick<Window, 'showInputBox'>;
+  prompts?: Pick<WindowApi, 'showInputBox'>;
 }
 
 /** Width presets offered as buttons (keyboard-friendly resizing). */
@@ -129,7 +129,7 @@ export class ImageTools implements RawBoxTools {
   }
 
   /** Asks for the alt text (an empty one removes it) and sets it. */
-  private async askAlt(prompts: Pick<Window, 'showInputBox'>): Promise<void> {
+  private async askAlt(prompts: Pick<WindowApi, 'showInputBox'>): Promise<void> {
     const pos = this.host.getPos();
     const alt = (pos === undefined ? null : imageInfo(this.host.editor.state, pos)?.alt) ?? '';
     const text = await prompts.showInputBox({
