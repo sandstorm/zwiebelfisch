@@ -1,4 +1,5 @@
 import { basicSetup } from 'codemirror';
+import { syntaxHighlighting } from '@codemirror/language';
 import {
   Annotation, Compartment, EditorSelection, StateEffect, StateField, type ChangeSet, type Extension,
 } from '@codemirror/state';
@@ -6,6 +7,7 @@ import { Decoration, EditorView, type ViewUpdate } from '@codemirror/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import { SourceRange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
+import { followColorScheme, highlightStyle } from './code-colors';
 import css from './source-editor.css?inline';
 
 /**
@@ -14,9 +16,10 @@ import css from './source-editor.css?inline';
  * The Source editor shows a Typst file as plain text. It is one of the two built-in custom editors for `*.typ`, next
  * to the Visual editor; the workbench registers both (`TypstEditors`) and calls `createEditor`. The editor itself
  * keeps only the mechanism: text and selection in sync with the document both ways, reveal, selection reporting.
- * Everything else is a CodeMirror extension someone contributes: the Typst language and its colors, the diagnostics,
- * other users' carets, the document links (the workbench's). A contribution is registered once and applies to every
- * editor, open or made later, so no feature tracks editors. Undo is CodeMirror's history; a contribution decides what
+ * Its look is `codeColors`, CodeMirror's default in the widget's light or dark scheme, which every CodeMirror in the
+ * widget uses (raw boxes, the text files' editor). Everything else is a CodeMirror extension someone contributes: the
+ * Typst language, the diagnostics, other users' carets, the document links (the workbench's). A contribution is
+ * registered once and applies to every editor, open or made later, so no feature tracks editors. Undo is CodeMirror's history; a contribution decides what
  * stays out of it (`fromDocument`). See docs/30_architecture/05_source-editor.typ.
  */
 export class SourceEditorHost implements SourceEditorContributions {
@@ -77,6 +80,13 @@ export interface SourceEditorOptions {
 }
 
 /**
+ * CodeMirror's default look in the widget, for every CodeMirror in it (Source editors, raw boxes, other editors):
+ * CodeMirror's default highlight style with its colors from the widget's `--te-syn-*` tokens, and CodeMirror's light
+ * or dark theme (cursor, selection, gutters, panels, tooltips) following the widget's color scheme around the editor.
+ */
+export const codeColors: Extension = [syntaxHighlighting(highlightStyle), followColorScheme];
+
+/**
  * The view type of the Source editor's custom editor, for `workbench.open(path, { viewType })`,
  * `TextEditor.viewType` and the menu context key `activeCustomEditorId`.
  */
@@ -95,6 +105,7 @@ export class SourceEditor {
       doc: document.text,
       extensions: [
         basicSetup,
+        codeColors,
         this.contributed.of(contributions.extensionsFor(context)),
         EditorView.lineWrapping,
         highlightField,

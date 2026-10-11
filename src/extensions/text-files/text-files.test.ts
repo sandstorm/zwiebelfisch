@@ -66,6 +66,13 @@ describe('text files', () => {
     await vi.waitFor(() => expect(project.content(path('/refs.bib'))).toBe('% refs\n@book{a}\n@book{b}\n'));
   });
 
+  it("looks like the Source editor: CodeMirror's dark theme where the text around it is light", async () => {
+    const { host, workbench, view } = setup();
+    host.style.color = 'rgb(230, 237, 243)';
+    workbench.open(path('/refs.bib'));
+    await vi.waitFor(() => expect(view().state.facet(EditorView.darkTheme)).toBe(true));
+  });
+
   it('shows changes made elsewhere (bytes as UTF-8) in the open editor', () => {
     const { project, workbench, view } = setup();
     workbench.open(path('/refs.bib'));

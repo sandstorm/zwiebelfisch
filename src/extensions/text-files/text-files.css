@@ -1,16 +1,4 @@
-/* The text-files extension's styles: a text file in plain CodeMirror, its title above. See text-files.ts, which registers it;
-   colors from the widget's --te-* tokens, over CodeMirror's light base theme (the
-   rules are more specific than its `.ͼ2 .cm-…`), so light and dark both work. */
+/* The text-files extension's styles: the layout of a text file's editor, its title above. See text-files.ts, which
+   registers it; CodeMirror's look is the Source editor's (`codeColors`), light and dark. */
 .typst-text-files { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .typst-text-files__title { margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--te-border); font-size: 13px; font-weight: 600; color: var(--te-text); }
-.typst-text-files .cm-editor { flex: 1; min-height: 0; background: var(--te-bg); color: var(--te-text); }
-.typst-text-files .cm-editor .cm-scroller { overflow: auto; font: 13px/1.5 ui-monospace, monospace; }
-.typst-text-files .cm-editor .cm-content { caret-color: var(--te-text); }
-.typst-text-files .cm-editor .cm-cursor { border-left-color: var(--te-text); }
-.typst-text-files .cm-editor .cm-gutters { background: var(--te-subtle); color: var(--te-faint); border-right-color: var(--te-border); }
-/* translucent: CodeMirror draws the selection behind the lines, so an opaque line would hide a selection within it */
-.typst-text-files .cm-editor .cm-activeLine { background: color-mix(in srgb, var(--te-hover) 50%, transparent); }
-.typst-text-files .cm-editor .cm-activeLineGutter { background: var(--te-hover); color: var(--te-text); }
-.typst-text-files .cm-editor .cm-scroller .cm-selectionLayer .cm-selectionBackground { background: var(--te-selected); }
-.typst-text-files .cm-editor.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground { background: var(--te-selected-strong); }
-.typst-text-files .cm-editor .cm-panels { background: var(--te-surface); color: var(--te-text); border-color: var(--te-border); }

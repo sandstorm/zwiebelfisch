@@ -14,7 +14,7 @@ subscriptions.push(
 ```
 
 - The Source editor itself only keeps text and selection in sync with its document. The Typst language, colors, lint, links and other users' carets are all contributions.
-- The code in the Visual editor's raw boxes is CodeMirror too: `visualEditor.registerRawBoxCodeMirrorExtension(editor => extension)`. The typst-language extension registers its syntax in both.
+- The code in the Visual editor's raw boxes is CodeMirror too: `visualEditor.registerRawBoxCodeMirrorExtension(editor => extension)`. The typst-language extension registers its syntax in both. Both look like CodeMirror's default in the widget's light or dark scheme (`codeColors`, from the Source editor host), as does any CodeMirror an extension makes with it.
 
 == Document links <extensions-source-editor-and-preview-links>
 
