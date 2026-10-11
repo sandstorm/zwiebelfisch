@@ -1,12 +1,16 @@
-// The package's public API: createTypstEditor, <typst-editor> (registered on import), and what writing an extension
-// takes: the types an extension implements or declares (everything else it reaches through its ExtensionContext is
-// typed without importing) — the Visual editor's contribution types (node and mark specs with their Typst parse rules
-// and toTypst, toolbar items, box renderers and actions, gutters, highlights, text styles; experimental) and the
-// plain functions that read Typst calls from Lezer's syntax nodes included, so an outside extension can add a Typst
-// construct as the built-ins do —, Disposable and EventEmitter, the value types (ProjectPath, FileContent,
-// SourceOffset / SourceRange, PageIndex, Pt: made where values come in, e.g. to `open` a file at a range), the
-// Typst editors' view types (VISUAL_EDITOR, SOURCE_EDITOR: to open a file in one, or tell which one is shown), and the
-// optional extensions: collaboration, which a host adds with its connection, and devtools, which wraps the list. The only file that re-exports. See docs/10_guide/05_embedding.typ and docs/20_extensions/01_overview.typ.
+// The package's public API, and the only file that re-exports.
+//
+// A page uses createTypstEditor or <typst-editor> (registered on import). An outside extension needs only the types it
+// implements or declares: everything else it reaches through its ExtensionContext, typed without importing. So this
+// file exports, beside the two entries:
+// - the types of each host's contribution points (workbench, commands, window, scm, languages, workspace, preview, the
+//   Source and Visual editors). The Visual editor's node and mark specs come with the plain functions that read Typst
+//   calls, so an outside extension can add a Typst construct as the built-ins do (experimental).
+// - Disposable, EventEmitter and the value types (ProjectPath, FileContent, SourceOffset, SourceRange, PageIndex, Pt),
+//   made where values come in, e.g. to `open` a file at a range.
+// - VISUAL_EDITOR and SOURCE_EDITOR, to open a file in one of the Typst editors or tell which one is shown.
+// - The optional extensions: collaboration, which a host adds with its connection, and devtools, which wraps the list.
+// See docs/10_guide/05_embedding.typ and docs/20_extensions/01_overview.typ.
 import { defineTypstEditorElement } from './typst-editor-element/typst-editor-element';
 
 export { createTypstEditor, type TypstEditor, type TypstEditorOptions } from './typst-editor/typst-editor';

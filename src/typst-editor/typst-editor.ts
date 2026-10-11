@@ -1,4 +1,3 @@
-// createTypstEditor: the widget. See docs/10_guide/05_embedding.typ.
 import { comments } from '../extensions/comments/comments';
 import { diagnostics } from '../extensions/diagnostics/diagnostics';
 import { diagrams } from '../extensions/diagrams/diagrams';
@@ -35,22 +34,19 @@ import { ProjectPath } from '../core/paths/paths';
 import widgetStyles from './typst-editor.css?inline';
 
 /**
- * Mounts the editor widget into `host`: an editing area on the left and the
- * live preview on the right. Clicking the preview reveals the source; moving
- * the cursor reveals the spot in the preview. Compiler errors are underlined in
- * the source and counted in a status bar that jumps to the first one. A file
- * panel on the left shows the project as a tree (open with more than one file).
+ * Mounts the editor widget into `host`: the editors and the live preview of a project of Typst files.
  *
- * Styles go into the root node `host` is attached to: `document.head`, or the
- * shadow root when `host` lives in one. Attach `host` before calling this.
+ * The widget is a Project in the workbench (hosts/workbench) with the built-in extensions (`builtinExtensions()`, or
+ * the list `extensions` makes from them) and the host's settings. The workbench and the hosts are only mechanism; every
+ * feature (the file panel, the preview following the cursor, errors, PDF export, …) is one of those extensions.
  *
- * A Project in the workbench host (hosts/workbench), with the built-in extensions (or the list the host makes from
- * them) and the host's settings.
+ * A Typst document is a project of files, and the main file is one of them. So the host gives and gets every file
+ * through one map (`files`, `onFilesChange`); `source` is only a shortcut for the main file's text. What a feature lets
+ * the host configure is a setting its extension declares (`settings: { 'pdfExport.download': false }`), so the
+ * options stay the same when features come and go. `<typst-editor>` wraps this function as a custom element.
  *
- * Why the API looks like this: a Typst document is a project of files, and the main file is one of them. So the host
- * gives and gets every file through one map (`files`, `onFilesChange`); `source` is only a shortcut for the main file's
- * text, for hosts that edit a single file. Everything a feature offers to configure is a setting the feature's
- * extension declares (`settings: { 'pdfExport.download': false }`), so this file knows no feature by name.
+ * Styles go into the root node `host` is attached to: `document.head`, or the shadow root `host` lives in. Attach
+ * `host` before calling this. See docs/10_guide/05_embedding.typ, "createTypstEditor".
  */
 export function createTypstEditor(host: HTMLElement, options: TypstEditorOptions): TypstEditor {
   const main = ProjectPath.of(options.main ?? '/main.typ');
