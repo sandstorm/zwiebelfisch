@@ -1103,12 +1103,14 @@ types), which is plain ProseMirror and knows nothing about Tiptap:
   and show rule in the top-level raw blocks; `ensureChecklistPreamble(tr)` adds it, once; the `ChecklistPreamble` plugin calls it when a Visual edit (not a sync from the
   source) adds a task item, as an appended transaction (same undo step).
 - **Heading numbers** (`extensions/headings/`: `model/numbering.ts`, `model/heading-numbering.ts`,
-  `visual-view/heading-numbers.ts`): `headingNumbers(doc)` follows top-level `#set heading(numbering: ..)` rules
+  `visual-view/heading-numbers.ts`): the view's numbers follow top-level `#set heading(numbering: ..)` rules
   with the model's `HeadingCounter` (Typst's heading counter: `readRules(code)`, `count(level)`); `numberingFormatter(pattern)` applies Typst numbering patterns (`1 a A i I * ①`;
   others → no numbers). A plugin draws them as node decorations (`data-heading-number`, CSS
-  `::after` in a gutter right of the text; the editor gets `typst-visual--numbered`). Command
-  `toggleHeadingNumbering` (no toolbar button; meant for the Inspector's document section) adds `#set heading(numbering: "1.")` after the leading raw blocks or
-  removes the numbering arguments. Rules in content blocks, show rules and numbering functions are
+  `::after` in a gutter right of the text; the editor gets `typst-visual--numbered`). The workbench command
+  `headings.toggleNumbering` (no UI of its own: for hosts, `editor.executeCommand`, and a future menu; the active
+  editor's document, either tab) applies the model's `calculateNumberingToggle(text)`: `#set heading(numbering:
+  "1.")` after the code the document starts with, or the numbering arguments removed from the top-level rules (a
+  rule left empty goes with its line or block). Rules in content blocks, show rules and numbering functions are
   not followed (the preview is exact).
 - **Remote presence** (the collaboration extension's `visual-view/`, Tiptap CollaborationCaret look, but fed from
   our text sync; it reads the places from its own `Presences`, the view host knows nothing of them):

@@ -119,14 +119,15 @@ function contributions(options: TestViewOptions): VisualViewContributions {
 
 /**
  * `contributions` activated in order, for their Visual-view contributions. The built-in constructs are extensions:
- * of the rest of the extension context they use only the workbench's stylesheets and its prompts (`prompts`; default:
- * every question cancelled).
+ * of the rest of the extension context they use only the workbench's stylesheets, commands (registered, never run
+ * here) and its prompts (`prompts`; default: every question cancelled).
  */
 function activate(contributions: readonly VisualViewContribution[], prompts: TestPrompts = new TestPrompts()): VisualViewContributions {
   const visualView = new VisualViewContributions();
   const subscriptions: { dispose(): unknown }[] = [];
   const workbench = {
     registerStyleSheet: () => new Disposable(() => {}),
+    registerCommand: () => new Disposable(() => {}),
     showInputBox: prompts.showInputBox,
     showQuickPick: prompts.showQuickPick,
     showErrorMessage: prompts.showErrorMessage,

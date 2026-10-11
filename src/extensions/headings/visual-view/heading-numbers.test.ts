@@ -1,14 +1,18 @@
-// Tests for heading-numbers.ts.
-import { EditorState } from '@tiptap/pm/state';
+// @vitest-environment jsdom
+// Tests for heading-numbers.ts: the numbers the Visual view shows next to headings.
 import { describe, expect, it } from 'vitest';
-import { print } from '../../../hosts/projection/projection';
-import { hasHeadingNumbering, headingNumbers, toggleHeadingNumbering } from './heading-numbers';
-import { project } from '../../../testing/testing';
+import { TypstDocument } from '../../../core/typst-document/typst-document';
+import { createVisualView } from '../../../testing/testing';
+
+// jsdom lacks layout; ProseMirror only needs these to exist.
+Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
+Range.prototype.getBoundingClientRect = () => new DOMRect();
 
 /** The numbers shown next to the headings of `source`, by heading text. */
 function numbers(source: string): Record<string, string> {
-  const doc = project(source);
-  return Object.fromEntries(headingNumbers(doc).map(({ pos, number }) => [doc.nodeAt(pos)!.textContent, number]));
+  const parent = document.body.appendChild(document.createElement('div'));
+  createVisualView(parent, new TypstDocument(source));
+  return Object.fromEntries([...parent.querySelectorAll('[data-heading-number]')].map((h) => [h.textContent, h.getAttribute('data-heading-number')!]));
 }
 
 describe('heading numbers', () => {
@@ -44,28 +48,14 @@ describe('heading numbers', () => {
   });
 });
 
-describe('toggleHeadingNumbering', () => {
-  const toggle = (source: string) => {
-    const tr = EditorState.create({ doc: project(source) }).tr;
-    toggleHeadingNumbering(tr);
-    return print(tr.doc);
-  };
-
-  it('adds the set rule after the leading code', () => {
-    expect(toggle('= A\n')).toBe('#set heading(numbering: "1.")\n\n= A\n');
-    expect(toggle('#set page(width: 10cm)\n\n#import "x.typ": y\n\n= A\n')).toBe(
-      '#set page(width: 10cm)\n\n#import "x.typ": y\n\n#set heading(numbering: "1.")\n\n= A\n',
-    );
-  });
-
-  it('removes the numbering rules again, deleting blocks they leave empty', () => {
-    expect(toggle('#set heading(numbering: "1.")\n\n= A\n')).toBe('= A\n');
-    expect(toggle('#set page(width: 10cm)\n#set heading(numbering: "1.")\n\n= A\n')).toBe('#set page(width: 10cm)\n\n= A\n');
-  });
-
-  it('tells whether headings are numbered', () => {
-    expect(hasHeadingNumbering(project('#set heading(numbering: "1.")\n\n= A\n'))).toBe(true);
-    expect(hasHeadingNumbering(project('#set heading(numbering: none)\n\n= A\n'))).toBe(false);
-    expect(hasHeadingNumbering(project('= A\n'))).toBe(false);
+describe('the numbered layout', () => {
+  it('gives the editor room for the numbers while any heading shows one', () => {
+    const parent = document.body.appendChild(document.createElement('div'));
+    const doc = new TypstDocument('= A\n');
+    createVisualView(parent, doc);
+    const editor = parent.querySelector('.ProseMirror')!;
+    expect(editor.classList.contains('typst-visual--numbered')).toBe(false);
+    doc.setText('#set heading(numbering: "1.")\n\n= A\n', 'test');
+    expect(editor.classList.contains('typst-visual--numbered')).toBe(true);
   });
 });

@@ -1,5 +1,8 @@
-// Heading numbers as Typst computes them from `#set heading(numbering: ..)` rules, and the code that switches
+// Heading numbers as Typst computes them from `#set heading(numbering: ..)` rules, and the change that switches
 // numbering on or off. Pure: works on Typst code, not on a view's document. See ../headings.ts.
+import type { SyntaxNode } from '@lezer/common';
+import { typstParser } from 'codemirror-lang-typst/lezer';
+import type { TextChange } from '../../../core/typst-document/typst-document';
 import { numberingFormatter } from './numbering';
 
 /**
@@ -46,6 +49,85 @@ export class HeadingCounter {
     return this.numbering.format?.(this.counter) ?? null;
   }
 }
+
+/**
+ * The changes that switch heading numbering in the Typst document `text` off or on: numbered (a top-level rule
+ * numbers headings) → the numbering goes from every top-level heading set rule (a rule left without arguments goes,
+ * a block that held only it with it); otherwise `HEADING_NUMBERING_RULE` as a block after the code the document
+ * starts with. Rules nested in content (`#[#set heading(..)]`) are not seen.
+ */
+export function calculateNumberingToggle(text: string): TextChange[] {
+  const rules = topLevelHeadingRules(text);
+  if (rules.some(({ rule }) => numbersHeadings(text.slice(rule.from, rule.to)))) return rules.flatMap((found) => withoutNumbering(text, found));
+  const end = leadingCodeEnd(text);
+  return [end === null ? { from: 0, to: 0, insert: `${HEADING_NUMBERING_RULE}\n\n` } : { from: end, to: end, insert: `\n\n${HEADING_NUMBERING_RULE}` }];
+}
+
+/** A top-level `#set heading(..)` rule (from its `#`) and the syntax nodes around it. */
+interface FoundRule {
+  rule: { from: number; to: number };
+  before: SyntaxNode | null;
+  after: SyntaxNode | null;
+}
+
+function topLevelHeadingRules(text: string): FoundRule[] {
+  const rules: FoundRule[] = [];
+  for (let node = typstParser.parse(text).topNode.firstChild; node; node = node.nextSibling) {
+    const rule = node.name === 'Hash' ? node.nextSibling : null;
+    if (rule?.name !== 'SetRule' || !/^set\s+heading\b/.test(text.slice(rule.from, rule.to))) continue;
+    rules.push({ rule: { from: node.from, to: rule.to }, before: node.prevSibling, after: rule.nextSibling });
+    node = rule;
+  }
+  return rules;
+}
+
+/** The change taking the numbering out of one rule: the rule without it, or without the rule (and its line or block). */
+function withoutNumbering(text: string, found: FoundRule): TextChange[] {
+  const { rule } = found;
+  const src = text.slice(rule.from, rule.to);
+  const rest = withoutHeadingNumbering(src);
+  if (rest === src) return [];
+  return [rest === '' ? ruleRemoval(text, found) : { from: rule.from, to: rule.to, insert: rest }];
+}
+
+/** Removes a whole rule: a block of its own, or a line of a block. */
+function ruleRemoval(text: string, found: FoundRule): TextChange {
+  return { ...(blockRange(found) ?? lineRange(text, found)), insert: '' };
+}
+
+/** A rule that is a block of its own, with the paragraph break after it (before it, when it is the last block); else null. */
+function blockRange({ rule, before, after }: FoundRule): { from: number; to: number } | null {
+  if (before !== null && before.name !== 'Parbreak') return null;
+  // the last block: nothing after it but the text's final whitespace
+  if (after === null || (after.name === 'Space' && after.nextSibling === null)) return { from: before?.from ?? rule.from, to: rule.to };
+  return after.name === 'Parbreak' ? { from: rule.from, to: after.to } : null;
+}
+
+/** A rule on a line of a block, with its line break. */
+function lineRange(text: string, { rule, before, after }: FoundRule): { from: number; to: number } {
+  if (isLineBreak(text, after)) return { from: rule.from, to: after!.to };
+  return { from: isLineBreak(text, before) ? before!.from : rule.from, to: rule.to };
+}
+
+/** Whether `node` is whitespace with a line break. */
+function isLineBreak(text: string, node: SyntaxNode | null): boolean {
+  return node?.name === 'Space' && text.slice(node.from, node.to).includes('\n');
+}
+
+/** Where the code the document starts with ends (`#set`, `#import`, … with comments between), or null without any. */
+function leadingCodeEnd(text: string): number | null {
+  let end: number | null = null;
+  for (let node = typstParser.parse(text).topNode.firstChild; node; node = node.nextSibling) {
+    if (node.name === 'Hash' && node.nextSibling) {
+      node = node.nextSibling;
+      end = node.to;
+    } else if (!SKIPPED.has(node.name)) break;
+  }
+  return end;
+}
+
+/** What may stand between the leading code: whitespace and comments. */
+const SKIPPED = new Set(['Space', 'Parbreak', 'LineComment', 'BlockComment']);
 
 /** Typst's counter step at `level`: missing levels start at zero, deeper ones are dropped. */
 function step(counter: number[], level: number): void {
