@@ -86,7 +86,7 @@ export function files(): TypstExtension {
         ...[PopupMenu.styleSheet, css].map((sheet) => workbench.registerStyleSheet(sheet)),
         side,
         panel,
-        window.registerCustomEditorProvider('files.file', fileInfoEditor, { filenamePattern: '*', displayName: 'File', priority: 0 }),
+        window.registerCustomEditorProvider('files.file', fileInfoEditor, { filenamePattern: '*', displayName: 'File', priority: 'fallback' }),
         new Disposable(() => drops?.dispose()),
         registerOperations(context, panel),
         window.onDidChangeActiveFile(render),

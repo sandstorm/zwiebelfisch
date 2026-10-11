@@ -32,7 +32,7 @@ function builtins(parent: HTMLElement) {
   const sheets = provider();
   const diagrams = provider();
   editors.register('images.preview', images.provider, { displayName: 'Image', filenamePattern: '*.{png,jpg,jpeg,gif,svg,webp}' });
-  editors.register('files.file', files.provider, { displayName: 'File', filenamePattern: '*', priority: 0 });
+  editors.register('files.file', files.provider, { displayName: 'File', filenamePattern: '*', priority: 'fallback' });
   editors.register('spreadsheets.editor', sheets.provider, { displayName: 'Editor', filenamePattern: '*.ic' });
   editors.register('diagrams.editor', diagrams.provider, { displayName: 'Diagram', filenamePattern: '*.drawio.png', priority: 110 });
   return { editors, images, files, sheets, diagrams };
@@ -90,6 +90,23 @@ describe('CustomEditors', () => {
     show(editors, '/x.drawio.png', 'a.second');
     expect(second.opened).toHaveLength(1);
     expect(() => editors.register('a.first', provider().provider, { displayName: 'Editor', filenamePattern: '*' })).toThrow(/registered already/);
+  });
+
+  it('opens a file in a fallback editor only when no other editor matches; a low number is no fallback', () => {
+    const editors = new CustomEditors(document.createElement('div'));
+    editors.register('a.fallback', provider().provider, { displayName: 'File', filenamePattern: '*.txt', priority: 'fallback' });
+    editors.register('a.low', provider().provider, { displayName: 'Low', filenamePattern: '*.csv', priority: -5 });
+    editors.register('a.table', provider().provider, { displayName: 'Table', filenamePattern: '*.csv', priority: 'option' });
+    editors.register('a.any', provider().provider, { displayName: 'Any', filenamePattern: '*', priority: 'fallback' });
+    expect(show(editors, '/data.csv')).toBe('a.low');
+    expect(editors.choicesFor(path('/data.csv')).map((choice) => choice.viewType)).toEqual(['a.low', 'a.table']);
+    // the more specific of two fallbacks; a fallback gets no tab
+    expect(show(editors, '/notes.txt')).toBe('a.fallback');
+    expect(editors.choicesFor(path('/notes.txt'))).toEqual([]);
+    // an option editor never opens a file by default: the fallback does
+    editors.register('a.markdown', provider().provider, { displayName: 'Markdown', filenamePattern: '*.md', priority: 'option' });
+    expect(show(editors, '/readme.md')).toBe('a.any');
+    expect(show(editors, '/readme.md', 'a.markdown')).toBe('a.markdown');
   });
 
   it("gives a file the icon of the editor that opens it by default, not an option editor's", () => {
