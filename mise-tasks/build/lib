@@ -4,3 +4,8 @@
 set -euo pipefail
 pnpm exec vite build --config vite.lib.config.ts "$@"
 pnpm exec tsc --project tsconfig.lib.json
+# a plain <script type="module"> has no `process`: every process.env.NODE_ENV must be replaced (vite.lib.config.ts)
+if grep -l 'process\.env\.NODE_ENV' dist/lib/*.js; then
+  echo "dist/lib still reads process.env.NODE_ENV (above); it would throw in a browser" >&2
+  exit 1
+fi
