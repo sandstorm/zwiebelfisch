@@ -1,9 +1,9 @@
 // Snippets: a page SVG cut down to the boxes of a source range (shown in the Visual view). See ../preview.ts.
-import type { Box, Page } from '../../../core/typst-engine/typst-engine';
+import { Pt, type Box, type Page } from '../../../core/typst-engine/typst-engine';
 import type { Snippet } from '../preview';
 
-/** Space (pt) kept around what is drawn, so strokes and descenders are not clipped. */
-const PADDING = 2;
+/** Space kept around what is drawn, so strokes and descenders are not clipped. */
+const PADDING = Pt.of(2);
 
 /**
  * The cut-out of `pages` showing `boxes` (where some source is drawn): their
@@ -19,13 +19,13 @@ export function snippet(pages: readonly Page[], boxes: readonly Box[]): Snippet 
   const right = Math.min(page.width, Math.max(...onPage.map((b) => b.x + b.w)) + PADDING);
   const bottom = Math.min(page.height, Math.max(...onPage.map((b) => b.y + b.h)) + PADDING);
   if (right <= x || bottom <= y) return null;
-  const crop = { x, y, w: right - x, h: bottom - y };
-  const textHeight = Math.max(...onPage.map((b) => b.h));
+  const crop = { x: Pt.of(x), y: Pt.of(y), w: Pt.of(right - x), h: Pt.of(bottom - y) };
+  const textHeight = Pt.of(Math.max(...onPage.map((b) => b.h)));
   return { svg: cropSvg(page.svg, crop), width: crop.w, height: crop.h, textHeight, padding: PADDING };
 }
 
 /** `svg` (a page as Typst exports it) showing only the rectangle `crop`, sized to it in pt. */
-function cropSvg(svg: string, crop: { x: number; y: number; w: number; h: number }): string {
+function cropSvg(svg: string, crop: { x: Pt; y: Pt; w: Pt; h: Pt }): string {
   return svg.replace(/<svg\b[^>]*>/, (tag) => {
     const rest = tag.replace(/\s(viewBox|width|height)="[^"]*"/g, '').slice('<svg'.length);
     const n = (value: number) => +value.toFixed(3);

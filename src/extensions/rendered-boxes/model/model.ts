@@ -1,15 +1,16 @@
 // The rendered-boxes model: which raw boxes a snippet is meaningful for, and how big a snippet is drawn. No DOM.
 // See ../rendered-boxes.ts.
+import type { Pt } from '../../../core/typst-engine/typst-engine';
 
-/** A picture of compiled Typst: standalone SVG markup and its size in points. */
+/** A picture of compiled Typst: standalone SVG markup and its size. */
 export interface Snippet {
   svg: string;
-  width: number;
-  height: number;
-  /** Height (pt) of one line of its biggest text; without it, inline boxes show the snippet at its own size. */
-  textHeight?: number;
-  /** Space (pt) around what is drawn. */
-  padding?: number;
+  width: Pt;
+  height: Pt;
+  /** Height of one line of its biggest text; without it, inline boxes show the snippet at its own size. */
+  textHeight?: Pt;
+  /** Space around what is drawn. */
+  padding?: Pt;
 }
 
 /** Code that configures or defines (`#set`, `#let`, …) and draws nothing in place, or only elsewhere. */
@@ -36,8 +37,8 @@ const TEXT_LINE_EM = 1.15;
  * vertical margins taking back the padding, so a one-line snippet takes one
  * line (1.15em) and does not make its line taller. Null without a text height.
  */
-export function inlinePictureSize({ height, textHeight, padding = 0 }: Pick<Snippet, 'height' | 'textHeight' | 'padding'>): { height: number; margin: number } | null {
+export function inlinePictureSize({ height, textHeight, padding }: Pick<Snippet, 'height' | 'textHeight' | 'padding'>): { height: number; margin: number } | null {
   if (!textHeight) return null;
   const emPerPt = TEXT_LINE_EM / textHeight;
-  return { height: height * emPerPt, margin: -padding * emPerPt };
+  return { height: height * emPerPt, margin: -(padding ?? 0) * emPerPt };
 }

@@ -9,8 +9,8 @@ import { Disposable } from '../../core/disposable/disposable';
 import { type Event, EventEmitter } from '../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../core/paths/paths';
 import type { SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
-import type { Diagnostic, Page, PdfEntry, PdfResult, Position } from '../../core/typst-engine/typst-engine';
-import { isInside, mostVisible } from './pages/geometry';
+import type { Diagnostic, Page, PageIndex, PdfEntry, PdfResult, Position, Pt } from '../../core/typst-engine/typst-engine';
+import { isInside, measure, mostVisible, pointOnPage, Px } from './pages/geometry';
 import { overlay, OverlayLayer } from './pages/overlays';
 import { PageList } from './pages/page-list';
 import { snippet } from './pages/snippet';
@@ -97,8 +97,8 @@ export interface PreviewContext {
   setZoom(zoom: Zoom): void;
   /** The scale of the first page (1 = 100 %), also when fitting the width. */
   scale(): number;
-  /** The page covering most of the viewport (0-based) and the number of pages. */
-  visiblePage(): { index: number; count: number };
+  /** The page covering most of the viewport and the number of pages. */
+  visiblePage(): { index: PageIndex; count: number };
 }
 
 /** A click in the preview on something with a source location: the source range of what was clicked (e.g. a text run). */
@@ -130,15 +130,15 @@ export interface PdfExportOption {
 /** Preview zoom: fit the pane width, or a fixed scale where 1 = 100 % (1 pt = 1/72 in). */
 export type Zoom = 'fit' | number;
 
-/** A cut-out of a compiled page: standalone SVG markup and its size in points. */
+/** A cut-out of a compiled page: standalone SVG markup and its size. */
 export interface Snippet {
   readonly svg: string;
-  readonly width: number;
-  readonly height: number;
-  /** Height of its tallest box (pt): one line of its biggest text, what an inline view scales by. */
-  readonly textHeight: number;
-  /** Space (pt) kept around what is drawn (less where the page ends). */
-  readonly padding: number;
+  readonly width: Pt;
+  readonly height: Pt;
+  /** Height of its tallest box: one line of its biggest text, what an inline view scales by. */
+  readonly textHeight: Pt;
+  /** Space kept around what is drawn (less where the page ends). */
+  readonly padding: Pt;
 }
 
 type RequestBody = Request extends infer R ? (R extends Request ? Omit<R, 'id'> : never) : never;
@@ -353,9 +353,9 @@ export class Preview implements PreviewContributions {
     this.updateStatus();
   }
 
-  private visiblePage(): { index: number; count: number } {
-    const rects = this.list.elements().map((element) => element.getBoundingClientRect());
-    return { index: mostVisible(rects, this.scroller.getBoundingClientRect()), count: rects.length };
+  private visiblePage(): { index: PageIndex; count: number } {
+    const rects = this.list.elements().map(measure);
+    return { index: mostVisible(rects, measure(this.scroller)), count: rects.length };
   }
 
   /** Lets the toolbar items show the new view (zoom, page number) at most once per frame. */
@@ -372,10 +372,7 @@ export class Preview implements PreviewContributions {
     const target = event.target as Element;
     const hit = this.list.pageAt(target);
     if (!hit) return;
-    const rect = hit.element.getBoundingClientRect();
-    const scale = hit.page.width / rect.width;
-    const x = (event.clientX - rect.left) * scale;
-    const y = (event.clientY - rect.top) * scale;
+    const { x, y } = pointOnPage(hit.page, measure(hit.element), Px.of(event.clientX), Px.of(event.clientY));
     const response = await this.request({ type: 'click', page: hit.index, x, y });
     if (response.type !== 'click' || response.jump?.kind !== 'source') return;
     // where the clicked source node is drawn (every line/page)
@@ -400,8 +397,8 @@ export class Preview implements PreviewContributions {
 
   /** Scrolls the preview (and nothing around it) so `target` is centred, unless it is already visible. */
   private scrollIntoView(target: HTMLElement): void {
-    const viewport = this.scroller.getBoundingClientRect();
-    const rect = target.getBoundingClientRect();
+    const viewport = measure(this.scroller);
+    const rect = measure(target);
     if (isInside(rect, viewport)) return;
     this.scroller.scrollBy({
       top: rect.top + rect.height / 2 - (viewport.top + viewport.height / 2),

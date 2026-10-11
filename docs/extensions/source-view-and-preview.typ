@@ -57,7 +57,7 @@ The preview keeps the mechanism: the engine worker, compiles, the page list, hit
 
 === Toolbar items <extensions-source-view-and-preview-toolbar>
 
-A `PreviewToolbarItem` is a function: it gets the preview (`ownerDocument`, `zoom()`, `setZoom`, `scale()`, `visiblePage()`) and returns its `elements`, an optional `update()` (at most once per frame after scrolling, resizing, zooming, new pages) and `dispose()`.
+A `PreviewToolbarItem` is a function: it gets the preview (`ownerDocument`, `zoom()`, `setZoom`, `scale()`, `visiblePage()`: a `PageIndex`, counted from 0, and the page count) and returns its `elements`, an optional `update()` (at most once per frame after scrolling, resizing, zooming, new pages) and `dispose()`.
 
 ```ts
 const pageNumber: PreviewToolbarItem = (preview) => {

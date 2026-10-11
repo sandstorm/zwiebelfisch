@@ -7,6 +7,26 @@ import init, { Engine as WasmEngine, type InitInput } from './wasm/typst_engine'
 // Asset URLs (wasm, default fonts) are core/engine-assets, not here: the worker imports this file. Packages
 // (@preview/…) are core/typst-packages.
 
+/** A page of a compiled document, counted from 0 as the engine does; people see page numbers (`index + 1`). */
+export type PageIndex = number & { readonly __type: 'PageIndex' };
+
+/** A length in Typst points (1/72 inch), as the engine measures pages, from a page's top-left corner. */
+export type Pt = number & { readonly __type: 'Pt' };
+
+export const PageIndex = {
+  /** `value`, counted from 0, as a page index. */
+  of(value: number): PageIndex {
+    return value as PageIndex;
+  },
+};
+
+export const Pt = {
+  /** `value`, in points, as a length. */
+  of(value: number): Pt {
+    return value as Pt;
+  },
+};
+
 /**
  * The Typst compiler, SVG renderer and preview hit-testing (Rust → wasm).
  *
@@ -29,7 +49,7 @@ export interface Engine {
    */
   exportPdf(main: string): PdfResult;
   /** What is at a point of the last compiled document, or null for empty space. */
-  jumpFromClick(page: number, x: number, y: number): Jump | null;
+  jumpFromClick(page: PageIndex, x: Pt, y: Pt): Jump | null;
   /** Where the text at `offset` appears in the last compiled document. */
   jumpFromCursor(path: string, offset: SourceOffset): Position[];
   /**
@@ -74,8 +94,8 @@ export interface PdfResult {
 export interface Page {
   /** Changes if and only if the page's content changes. */
   hash: string;
-  width: number;
-  height: number;
+  width: Pt;
+  height: Pt;
   svg: string;
 }
 
@@ -89,18 +109,18 @@ export interface Diagnostic extends SourceRange {
 }
 
 export interface Position {
-  page: number;
-  x: number;
-  y: number;
+  page: PageIndex;
+  x: Pt;
+  y: Pt;
 }
 
-/** A rectangle on a page, in points from its top-left corner. */
+/** A rectangle on a page, from its top-left corner. */
 export interface Box {
-  page: number;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
+  page: PageIndex;
+  x: Pt;
+  y: Pt;
+  w: Pt;
+  h: Pt;
 }
 
 export type Jump =

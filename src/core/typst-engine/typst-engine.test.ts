@@ -1,7 +1,7 @@
 // Tests for createEngine (typst-engine.ts), against the built wasm.
 import { readFileSync, readdirSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { createEngine, type Engine } from './typst-engine';
+import { type Engine, PageIndex, Pt, createEngine } from './typst-engine';
 import { SourceOffset, SourceRange } from '../typst-document/typst-document';
 
 const wasm = readFileSync(new URL('./wasm/typst_engine_bg.wasm', import.meta.url));
@@ -80,7 +80,7 @@ describe('Engine', () => {
     const source = '#set page(width: 200pt, height: 100pt, margin: 0pt)\nHällo world';
     engine.setSource('/main.typ', source);
     engine.compile('/main.typ');
-    const jump = engine.jumpFromClick(0, 5, 5);
+    const jump = engine.jumpFromClick(PageIndex.of(0), Pt.of(5), Pt.of(5));
     expect(jump).toMatchObject({ kind: 'source', path: '/main.typ' });
     if (jump?.kind !== 'source') throw new Error('expected source jump');
     expect(source.slice(jump.from, jump.to)).toBe('Hällo world');
@@ -91,7 +91,7 @@ describe('Engine', () => {
     const words = 'alpha beta gamma delta epsilon zeta eta theta iota kappa lambda';
     engine.setSource('/main.typ', `#set page(width: 120pt, height: 200pt, margin: 0pt)\n= Title\n\n${words}`);
     engine.compile('/main.typ');
-    const title = engine.jumpFromClick(0, 4, 8);
+    const title = engine.jumpFromClick(PageIndex.of(0), Pt.of(4), Pt.of(8));
     if (title?.kind !== 'source') throw new Error('expected source jump');
     expect(title.boxes).toHaveLength(1);
     const [box] = title.boxes;
@@ -104,7 +104,7 @@ describe('Engine', () => {
 
     const source = `#set page(width: 120pt, height: 200pt, margin: 0pt)\n= Title\n\n${words}`;
     const [at] = engine.jumpFromCursor('/main.typ', SourceOffset.of(source.indexOf('alpha') + 1));
-    const paragraph = engine.jumpFromClick(0, at.x, at.y - 2);
+    const paragraph = engine.jumpFromClick(PageIndex.of(0), at.x, Pt.of(at.y - 2));
     if (paragraph?.kind !== 'source') throw new Error('expected source jump');
     expect(paragraph.boxes.length).toBeGreaterThan(1); // the paragraph wraps
     expect(new Set(paragraph.boxes.map((b) => Math.round(b.y))).size).toBe(paragraph.boxes.length);
@@ -149,7 +149,7 @@ describe('Engine', () => {
   it('returns nothing for a click on empty space', () => {
     engine.setSource('/main.typ', '#set page(width: 200pt, height: 100pt, margin: 0pt)\nHi');
     engine.compile('/main.typ');
-    expect(engine.jumpFromClick(0, 150, 90)).toBeNull();
+    expect(engine.jumpFromClick(PageIndex.of(0), Pt.of(150), Pt.of(90))).toBeNull();
   });
 
   it('jumps from a cursor in the source to positions in the preview', () => {

@@ -4,7 +4,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EditorView } from '@codemirror/view';
 import { ProjectPath } from '../core/paths/paths';
-import type { Diagnostic } from '../core/typst-engine/typst-engine';
+import { type Diagnostic, PageIndex } from '../core/typst-engine/typst-engine';
 import type { PageClick, PdfExportOption, PreviewContext, PreviewToolbarItem } from '../hosts/preview/preview';
 import type { Disposable } from '../core/disposable/disposable';
 import { EventEmitter } from '../core/event-emitter/event-emitter';
@@ -89,7 +89,7 @@ function toolbarControls(items: readonly PreviewToolbarItem[]): string[] {
     zoom: () => 'fit',
     setZoom() {},
     scale: () => 1,
-    visiblePage: () => ({ index: 0, count: 0 }),
+    visiblePage: () => ({ index: PageIndex.of(0), count: 0 }),
   } satisfies PreviewContext;
   return items.map((item) => {
     const view = item(context);

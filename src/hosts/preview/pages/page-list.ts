@@ -1,6 +1,7 @@
 // PageList: page placeholders; SVG only for the pages near the viewport. See ../preview.ts.
-import type { Page } from '../../../core/typst-engine/typst-engine';
+import { PageIndex, type Page } from '../../../core/typst-engine/typst-engine';
 import type { Zoom } from '../preview';
+import { measure, Px } from './geometry';
 
 /** CSS pixels per Typst point (96 dpi / 72 pt per inch): the size of a page at 100 %. */
 const PX_PER_PT = 96 / 72;
@@ -73,16 +74,16 @@ export class PageList {
     const entry = this.entries[0];
     if (!entry) return 1;
     if (this.zoom !== 'fit') return this.zoom;
-    return entry.element.getBoundingClientRect().width / (entry.page.width * PX_PER_PT) || 1;
+    return measure(entry.element).width / (entry.page.width * PX_PER_PT) || 1;
   }
 
   /** The page an element belongs to. */
-  pageAt(target: Element): { index: number; element: HTMLElement; page: Page } | null {
+  pageAt(target: Element): { index: PageIndex; element: HTMLElement; page: Page } | null {
     const index = this.entries.findIndex((entry) => entry.element.contains(target));
-    return index < 0 ? null : this.at(index);
+    return index < 0 ? null : this.at(PageIndex.of(index));
   }
 
-  at(index: number): { index: number; element: HTMLElement; page: Page } | null {
+  at(index: PageIndex): { index: PageIndex; element: HTMLElement; page: Page } | null {
     const entry = this.entries[index];
     return entry ? { index, element: entry.element, page: entry.page } : null;
   }
@@ -111,7 +112,8 @@ export class PageList {
   }
 
   private applyWidth(entry: Entry): void {
-    entry.element.style.width = this.zoom === 'fit' ? '100%' : `${Math.round(entry.page.width * PX_PER_PT * this.zoom * 100) / 100}px`;
+    const width = Px.of(Math.round(entry.page.width * PX_PER_PT * (this.zoom === 'fit' ? 1 : this.zoom) * 100) / 100);
+    entry.element.style.width = this.zoom === 'fit' ? '100%' : `${width}px`;
   }
 
   private handleIntersections(changes: IntersectionObserverEntry[]): void {
