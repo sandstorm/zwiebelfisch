@@ -78,7 +78,7 @@ export type {
   TypstParseContext,
   TypstParseRules,
   TypstSerializeState,
-} from './hosts/projection/projection';
+} from './hosts/prosemirror-typst/prosemirror-typst';
 // Reading Typst syntax (Lezer nodes of codemirror-lang-typst's grammar) in parse functions: plain functions.
 export {
   callArguments,

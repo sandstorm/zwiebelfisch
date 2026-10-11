@@ -1,9 +1,9 @@
-// Tests for task lists: their projection and the checklist preamble (task-lists.ts, checklist-preamble.ts).
+// Tests for task lists: their conversion and the checklist preamble (task-lists.ts, checklist-preamble.ts).
 import { EditorState } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 import { CHECKLIST_PREAMBLE } from '../model/checklist-preamble';
 import { ensureChecklistPreamble } from './checklist-preamble';
-import { serializeToTypst } from '../../../hosts/projection/projection';
+import { serializeToTypst } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import { after, edit, expectPreciseMap, find, parseTypst, schema } from '../../../testing/testing';
 
 const PREAMBLE = '#import "@preview/cheq:0.4.0": checklist\n#show: checklist';
@@ -24,7 +24,7 @@ describe('task lists', () => {
     }
   });
 
-  it('projects "- [ ] " and "- [x] " items as task items, the box hidden', () => {
+  it('parses "- [ ] " and "- [x] " items as task items, the box hidden', () => {
     const doc = parseTypst(FIXTURES.tasks);
     const list = doc.child(1);
     expect(list.type.name).toBe('taskList');

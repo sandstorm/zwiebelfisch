@@ -5,7 +5,7 @@ import { InputRule, Node } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
 import { callArguments, hasOnlyArguments, namedArgument, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type ToolbarAction, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
-import type { TypstParseContext } from '../../../hosts/projection/projection';
+import type { TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {

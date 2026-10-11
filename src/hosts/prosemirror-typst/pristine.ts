@@ -1,5 +1,5 @@
 // Which nodes are still exactly what `parseTypst` made of their source, and how a textblock's source lines up with
-// its content. Shared by projecting, printing and syncing. See projection.ts.
+// its content. Shared by parsing, printing and syncing. See prosemirror-typst.ts.
 import type { Node } from '@tiptap/pm/model';
 
 /** How a pristine textblock's `src` lines up with its content: visible runs, with hidden syntax before each. */

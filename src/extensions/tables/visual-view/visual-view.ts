@@ -4,7 +4,7 @@ import { Extension, findParentNode, type Editor } from '@tiptap/core';
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
 import { svg, type ToolbarAction, type Anchor, type ToolbarGroup, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
 import { tableToTypst } from './table-printing';
-import { parseTable } from './table-projection';
+import { parseTable } from './table-parser';
 
 /**
  * Tiptap's tables. A table may be a figure's body (`table(..)` in `#figure(..)`), so it joins `figureBody`; a cell

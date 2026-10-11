@@ -1,4 +1,4 @@
-// VisualView: the WYSIWYG editing view, a Tiptap editor over the source-anchored projection of a TypstDocument;
+// VisualView: the WYSIWYG editing view, a Tiptap editor over the source-anchored ProseMirror document of a TypstDocument;
 // everything it shows beyond paragraphs and raw Typst is contributed through VisualViewContributions (kept by
 // VisualViewHost).
 // Entry of hosts/visual-view/. See docs/architecture/visual-view.typ.
@@ -10,7 +10,7 @@ import type { Decoration } from '@tiptap/pm/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import type { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
-import { attachGrammar, onDidChangeGrammar, posToSource, serializeToTypst, parseTypst, sourceToPos, applyTypstChanges, type DocumentNodeSpec, type TypstMarkSpec } from '../projection/projection';
+import { attachGrammar, onDidChangeGrammar, posToSource, serializeToTypst, parseTypst, sourceToPos, applyTypstChanges, type DocumentNodeSpec, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
 import { highlights, setHighlights } from './highlights';
 import { editorExtensions, nodeViewSpecs } from './nodes/node-views';
 import type { RawBoxes } from './nodes/raw-box';
@@ -23,10 +23,10 @@ const FROM_DOCUMENT = 'typst-from-document';
 
 /**
  * The Word-like editing view (Tiptap/ProseMirror) with its formatting
- * toolbar, a projection of a TypstDocument.
+ * toolbar, the parsed ProseMirror document of a TypstDocument.
  *
  * Visual edits become one minimal text change on the document; document
- * changes from elsewhere are re-projected and applied as the smallest
+ * changes from elsewhere are parsed again and applied as the smallest
  * replacement, so the cursor stays where it was. Unmodelled Typst shows as
  * raw boxes and is never rewritten. What the view models, shows and offers
  * beyond that (headings, tables, labels, comments, …) comes from
@@ -70,7 +70,7 @@ export class VisualView {
     const { schema } = this.editor;
     attachGrammar(schema, contributed.nodes, contributed.marks);
     this.gutters = contributed.gutters.map((provider) => provider(view, body));
-    // Load the projection itself (not a JSON copy): its node identities are what marks blocks as untouched.
+    // Load the parsed document itself (not a JSON copy): its node identities are what marks blocks as untouched.
     this.editor.view.updateState(
       EditorState.create({
         schema,
@@ -573,16 +573,16 @@ export type ToolbarGroup =
     };
 
 /**
- * An entry of the toolbar's text style menu: a block style (a heading level, a paragraph style) the menu shows as
- * its value where the selection has it, or a `toggle` on the selection's text (a text style). The menu lists its
+ * An entry of the toolbar's text style menu: a block style (a heading level, a custom block style) the menu shows as
+ * its value where the selection has it, or a `toggle` on the selection's text (an inline style). The menu lists its
  * entries by `order`, those of one `section` together under its title. The host's own first entry, "Normal text",
  * takes off the selection's style (the first active entry's `remove`) and makes its blocks paragraphs.
  */
 export interface TextStyle {
-  /** The entry's id, unique in the menu (`heading-1`, `paragraph:note`). */
+  /** The entry's id, unique in the menu (`heading-1`, `block:note`). */
   readonly id: string;
   readonly label: string;
-  /** The title of the menu section it is listed in (`Paragraph styles`); none: in the menu itself. */
+  /** The title of the menu section it is listed in (`Block styles`); none: in the menu itself. */
   readonly section?: string;
   /** Where it is listed (default 0; then as provided). */
   readonly order?: number;
@@ -592,9 +592,9 @@ export interface TextStyle {
   enabled?(editor: Editor): boolean;
   /** Whether the selection has it: the menu's value (the first active entry), or for a toggle a ✓. */
   isActive?(editor: Editor): boolean;
-  /** Applied on top of the block's style (a text style): marked ✓ where on, never the menu's value. */
+  /** Applied on top of the block's style (an inline style): marked ✓ where on, never the menu's value. */
   readonly toggle?: boolean;
-  /** Takes it off the selection, where it is active (a paragraph style: its blocks lifted out); for Normal text. */
+  /** Takes it off the selection, where it is active (a block style: its blocks lifted out); for Normal text. */
   remove?(chain: ChainedCommands): ChainedCommands;
   /** After it was applied (importing a style where it is now used; New style…: asking for one). */
   applied?(): void;

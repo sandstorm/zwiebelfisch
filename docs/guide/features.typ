@@ -49,13 +49,13 @@ with the #link("https://typst.app")[Typst] compiler (`typst compile`).
 
 == Custom styles <guide-features-styles>
 
-A paragraph or text style is a Typst function with a `/// @style` doc comment, in any `.typ` file of the project (usually `styles.typ`):
+A block or inline style is a Typst function with a `/// @style` doc comment, in any `.typ` file of the project (usually `styles.typ`):
 
 ```typ
-/// @style paragraph Note
+/// @style block Note
 #let note(body) = block(inset: 8pt, stroke: (left: 2.5pt + blue), body)
 
-/// @style text Term
+/// @style inline Term
 #let term(body) = text(fill: blue, style: "italic", body)
 ```
 
@@ -67,9 +67,11 @@ Typst compiles #term[incrementally]: it redoes only what an edit touches.
 #note[The numbers in this report are illustrative.]
 ```
 
-- The text style menu offers *Note* (wraps the selected paragraphs in `#note[…]`) and *Term* (wraps the selection in `#term[…]`), and adds the import where needed.
-- *Normal text* removes a paragraph style. "New style…" adds a style to `styles.typ`.
-- The Visual view shows a paragraph style as a named frame, a text style as dotted underlined text. The preview shows the real look.
+- *block* wraps whole blocks (paragraphs, lists, headings), shown as a named frame: *Note* wraps the selected paragraphs in `#note[…]`.
+- *inline* wraps a run of text inside a paragraph, shown underlined: *Term* wraps the selection in `#term[…]`.
+- The text style menu offers both and adds the import where needed.
+- *Normal text* removes a block style. "New style…" adds a block style to `styles.typ`.
+- The preview shows the real look.
 
 == Headings and table of contents <guide-features-headings>
 

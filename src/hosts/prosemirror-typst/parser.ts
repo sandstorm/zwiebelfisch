@@ -1,17 +1,17 @@
 // Parsing Typst text into the Visual view's document (TypstToProseMirrorParser): markup is segmented into blocks,
 // and every block and piece of inline syntax goes to the specs' parse rules for it; what none models stays raw.
-// See projection.ts.
+// See prosemirror-typst.ts.
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
 import { typstParser } from 'codemirror-lang-typst/lezer';
-import type { PlacedNode, TypstParseContext, BlockLabel } from './projection';
+import type { PlacedNode, TypstParseContext, BlockLabel } from './prosemirror-typst';
 import type { TypstConversions } from './typst-conversions';
 import { labelAfterBlock, splitTrailingLabel } from './labels';
 import { layout, pristine } from './pristine';
 import { calleeName, children } from '../../core/typst-syntax/typst-syntax';
 import { type SourceOffset, SourceRange } from '../../core/typst-document/typst-document';
 
-/** Projects `source` into a document of `schema`, through the grammar attached to it. */
+/** Parses `source` into a document of `schema`, through the grammar attached to it. */
 export function parseDocument(source: string, schema: Schema, grammar: TypstConversions): Node {
   return new TypstToProseMirrorParser(schema, source, grammar).document();
 }
@@ -183,7 +183,7 @@ class TypstToProseMirrorParser implements TypstParseContext {
     return takesLabel && labelAfterBlock(nodes, index, last.nodes[0], (node) => this.isStandalone(node));
   }
 
-  /** Projects the blocks of a markup range (`doc` content, a content block's); list items form lists. */
+  /** Parses the blocks of a markup range (`doc` content, a content block's); list items form lists. */
   private blocksOf(segments: Segment[]): Node[] {
     const sepAfter = (index: number) => (segments[index + 1] ? this.source.slice(end(segments[index]), segments[index + 1].from) : null);
     return this.groupContainers(segments.map((segment, i) => this.toBlock(segment, sepAfter(i))));
@@ -270,7 +270,7 @@ class TypstToProseMirrorParser implements TypstParseContext {
 
   // ------------------------------------------------------------- inline
 
-  /** Projects `nodes[index]`, or a `#` together with the expression after it as one piece of code. */
+  /** Parses `nodes[index]`, or a `#` together with the expression after it as one piece of code. */
   private parseAt(nodes: readonly SyntaxNode[], index: number, marks: readonly Mark[]): { placed: PlacedNode[]; to: number; last: number } {
     const node = nodes[index];
     const code = node.name === 'Hash' && nodes[index + 1]?.from === node.to ? nodes[index + 1] : null;

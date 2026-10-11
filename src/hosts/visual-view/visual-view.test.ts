@@ -6,7 +6,7 @@ import { EventEmitter } from '../../core/event-emitter/event-emitter';
 import { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import { Node as TiptapNode, type Editor } from '@tiptap/core';
 import { children, withHash } from '../../core/typst-syntax/typst-syntax';
-import { starterKitPart, type TypstMarkSpec } from '../projection/projection';
+import { starterKitPart, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
 import { setBoxDecorations, VisualView, VisualViewHost, type SourceHighlight, type TypstNodeSpec, type VisualViewContext, type VisualViewContribution } from './visual-view';
 
 /** A test-local construct beyond the host's minimum: `*strong*` as a bold mark (hidden syntax around visible text). */
@@ -30,7 +30,7 @@ function setup(text: string) {
 }
 
 describe('VisualView', () => {
-  it('renders the projected document', () => {
+  it('renders the parsed document', () => {
     const { parent } = setup('Title\n\nSome *bold* text.\n');
     expect(parent.querySelector('p')?.textContent).toBe('Title');
     expect(parent.querySelector('strong')?.textContent).toBe('bold');

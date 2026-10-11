@@ -1,4 +1,4 @@
-// End-to-end tests (Playwright, against the plain-HTML example): custom paragraph and text styles in the Visual view.
+// End-to-end tests (Playwright, against the plain-HTML example): custom block and inline styles in the Visual view.
 import { expect, type Page } from '@playwright/test';
 import { test } from './fixtures';
 import { caretAtEnd, selectText } from './visual-helpers';
@@ -6,10 +6,10 @@ import { caretAtEnd, selectText } from './visual-helpers';
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
 const STYLES = [
-  '/// @style paragraph Note',
+  '/// @style block Note',
   '#let note(body) = block(fill: luma(235), inset: 8pt, radius: 4pt, body)',
   '',
-  '/// @style text Keyword',
+  '/// @style inline Keyword',
   '#let key(body) = text(fill: rgb("#1f4fa0"), weight: "bold", body)',
   '',
 ].join('\n');
@@ -30,7 +30,7 @@ const visual = (page: Page) => page.locator('typst-editor [data-testid="typst-vi
 const styleMenu = (page: Page) => page.locator('typst-editor').getByRole('toolbar', { name: 'Formatting' }).getByRole('combobox', { name: 'Text style' });
 const value = (page: Page) => () => page.locator('typst-editor').evaluate((el: Editor) => el.value);
 
-test('a declared paragraph style wraps the paragraph, imports itself, stays editable and unwraps with Normal text', async ({ page }) => {
+test('a declared block style wraps the paragraph, imports itself, stays editable and unwraps with Normal text', async ({ page }) => {
   await caretAtEnd(visual(page).locator('p', { hasText: 'A paragraph' }));
   await styleMenu(page).selectOption({ label: 'Note' });
   await expect.poll(value(page)).toBe('#import "styles.typ": note\n\nIntro\n\n#note[A paragraph to style.]\n');
@@ -53,9 +53,9 @@ test('a declared paragraph style wraps the paragraph, imports itself, stays edit
   await expect(visual(page).locator('.typst-styles__block')).toHaveCount(0);
 });
 
-test('a declared text style goes around the selected words', async ({ page }) => {
+test('a declared inline style goes around the selected words', async ({ page }) => {
   await selectText(visual(page).locator('p', { hasText: 'A paragraph' }), 'paragraph');
   await styleMenu(page).selectOption({ label: 'Keyword' });
   await expect.poll(value(page)).toBe('#import "styles.typ": key\n\nIntro\n\nA #key[paragraph] to style.\n');
-  await expect(visual(page).locator('.typst-styles__text')).toHaveText('paragraph');
+  await expect(visual(page).locator('.typst-styles__inline')).toHaveText('paragraph');
 });

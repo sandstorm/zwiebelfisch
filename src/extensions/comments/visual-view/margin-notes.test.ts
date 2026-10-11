@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
-// Tests for margin-notes.ts: projecting and printing margin notes, and "Comment" in the Visual view's toolbar.
+// Tests for margin-notes.ts: parsing and printing margin notes, and "Comment" in the Visual view's toolbar.
 import type { Editor } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { describe, expect, it, vi } from 'vitest';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
-import { serializeToTypst } from '../../../hosts/projection/projection';
+import { serializeToTypst } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import { after, createVisualView, edit, expectPreciseMap, parseTypst as parseTypstWith, schemaWith } from '../../../testing/testing';
 import { marginNotes, type MarginNotesOptions } from './margin-notes';
 
@@ -29,7 +29,7 @@ describe('margin notes', () => {
     return found;
   };
 
-  it('projects a point note as a marginNote atom holding the head and the note', () => {
+  it('parses a point note as a marginNote atom holding the head and the note', () => {
     const doc = parseTypst('Some text#margin-note[Is this right?] here.\n');
     const paragraph = doc.child(0);
     expect(paragraph.type.name).toBe('paragraph');
@@ -37,7 +37,7 @@ describe('margin notes', () => {
     expect(paragraph.child(1).attrs).toEqual({ head: '#margin-note', note: 'Is this right?' });
   });
 
-  it('projects a range note as editable text with a noteRange mark', () => {
+  it('parses a range note as editable text with a noteRange mark', () => {
     const doc = parseTypst('A #margin-note(side: left)[*key* claim][check this] here.\n');
     expect(notes(doc)).toEqual([
       { text: 'A ', marks: [] },

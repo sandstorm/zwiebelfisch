@@ -19,7 +19,7 @@
   (title: "Architecture", chapters: (
     "architecture/overview.typ": "Architecture overview",
     "architecture/core.typ": "Core",
-    "architecture/projection.typ": "Projection",
+    "architecture/prosemirror-typst.typ": "Typst ↔ ProseMirror",
     "architecture/visual-view.typ": "Visual view",
     "architecture/source-view.typ": "Source view",
     "architecture/preview.typ": "Preview",

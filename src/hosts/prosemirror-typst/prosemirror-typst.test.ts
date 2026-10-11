@@ -1,11 +1,11 @@
-// Tests for hosts/projection: the framework with the minimum schema (paragraphs, text, raw Typst) and specs defined
-// here. The built-in extensions' specs are tested together in typst-editor/typst-editor.projection.test.ts.
+// Tests for hosts/prosemirror-typst: the framework with the minimum schema (paragraphs, text, raw Typst) and specs defined
+// here. The built-in extensions' specs are tested together in typst-editor/typst-editor.prosemirror-typst.test.ts.
 import { Node as TiptapNode } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 import { children, hasOnlyArguments, withHash } from '../../core/typst-syntax/typst-syntax';
-import { createSchema, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos, starterKitPart, type DocumentNodeSpec, type TypstMarkSpec } from './projection';
+import { createSchema, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos, starterKitPart, type DocumentNodeSpec, type TypstMarkSpec } from './prosemirror-typst';
 import { SourceOffset } from '../../core/typst-document/typst-document';
 
 /** `*x*` as a bold mark: hidden syntax around visible text. */
@@ -61,7 +61,7 @@ const SOURCES: Record<string, string> = {
   specs: 'Some *bold* text\n\n#divider() <d>\n\n#divider(weak: true)\n\n#divider\n',
 };
 
-describe('projection framework', () => {
+describe('Typst ↔ ProseMirror conversion framework', () => {
   describe('round-trips byte for byte', () => {
     for (const [name, source] of Object.entries(SOURCES)) {
       it(`${name}, with the minimum schema only`, () => expect(serializeToTypst(parseTypstWith(source, minimum))).toBe(source));
@@ -78,7 +78,7 @@ describe('projection framework', () => {
     expect(doc.child(1).child(1).attrs.src).toBe('*bold*');
   });
 
-  it("projects a spec's syntax and calls into its node and mark, with the label after the block", () => {
+  it("parses a spec's syntax and calls into its node and mark, with the label after the block", () => {
     const doc = parseTypstWith('Some *bold* text\n\n#divider() <d>\n', withSpecs);
     expect(doc.child(0).textContent).toBe('Some bold text');
     expect(doc.child(0).child(1).marks.map((m) => m.type.name)).toEqual(['bold']);

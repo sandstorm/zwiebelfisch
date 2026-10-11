@@ -4,7 +4,7 @@ import type { Node as PMNode, NodeRange, ResolvedPos } from '@tiptap/pm/model';
 import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state';
 import { liftTarget } from '@tiptap/pm/transform';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import { documentNodeSpec } from '../../../hosts/projection/projection';
+import { documentNodeSpec } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import { alignArgs, setRules, withHorizontal, type Horizontal, type TextAlignment } from '../model/alignment-syntax';
 
 /**

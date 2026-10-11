@@ -7,7 +7,7 @@ import { EventEmitter, type Event } from '../event-emitter/event-emitter';
 
 /**
  * An offset into a Typst document's text, in UTF-16 code units (as Lezer, CodeMirror and string indices count). Not a
- * position in the Visual view's ProseMirror document: the projection's `sourceToPos` / `posToSource` convert.
+ * position in the Visual view's ProseMirror document: the Typst ↔ ProseMirror conversion's `sourceToPos` / `posToSource` convert.
  */
 export type SourceOffset = number & { readonly __type: 'SourceOffset' };
 

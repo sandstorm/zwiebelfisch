@@ -8,7 +8,7 @@ import type { NodeView } from '@tiptap/pm/view';
 import { MARGIN_NOTE, NOTE_HEAD, noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../model/margin-note-syntax';
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type ToolbarAction, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
-import type { PlacedNode, TypstMarkSpec, TypstParseContext } from '../../../hosts/projection/projection';
+import type { PlacedNode, TypstMarkSpec, TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 
 export interface MarginNotesOptions {
   /** Adds a comment (margin note) at the selection: the "Comment" button in the toolbar and the selection's bar. */
@@ -23,7 +23,7 @@ export interface MarginNotesOptions {
  * - `marginNote`: a point note, `#margin-note(..)[note]`, an inline atom shown
  *   as a small marker (a box: a remote caret inside outlines it).
  * - `noteRange`: a range note, `#margin-note(..)[text][note]`, a mark over the
- *   (editable) projected text, shown highlighted.
+ *   (editable) text, shown highlighted.
  *
  * Both keep `head` (the source before the first `[`, as written) and `note`
  * (the note's markup), printed by `margin-note-syntax`; `noteRange` also has
@@ -75,7 +75,7 @@ const NoteRange = Mark.create({
     return {
       head: { default: NOTE_HEAD, rendered: false },
       note: { default: '', rendered: false },
-      // tells apart notes in one textblock (numbered by the projection), so equal neighbours do not merge
+      // tells apart notes in one textblock (numbered by the parser), so equal neighbours do not merge
       id: { default: null, rendered: false },
     };
   },

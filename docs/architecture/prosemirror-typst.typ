@@ -1,6 +1,7 @@
-= Projection <architecture-projection>
+= Typst ↔ ProseMirror <architecture-prosemirror-typst>
 
-Turns Typst text into the Visual view's ProseMirror document and back, so that an edit changes only the source of what it touched. Plain ProseMirror: no view, no Tiptap editor, tested without a DOM. Module `src/hosts/projection/`.
+Turns Typst text into the Visual view's ProseMirror document and back, so that an edit changes only the source of what it touched. Plain ProseMirror: no view, no Tiptap editor, tested without a DOM. Module `src/hosts/prosemirror-typst/`.
+Shaped like prosemirror-markdown: a schema plus a parser (`TypstToProseMirrorParser`) and a serializer (`ProseMirrorToTypstSerializer`).
 
 ```
  text ──Lezer──► syntax tree ──parseTypst(text, schema)──► doc     nodes keep their source
@@ -12,7 +13,7 @@ Turns Typst text into the Visual view's ProseMirror document and back, so that a
 
 Invariant: `serializeToTypst(parseTypst(text, schema)) === text` for any input.
 
-== Specs and grammar <architecture-projection-specs>
+== Specs and grammar <architecture-prosemirror-typst-specs>
 
 The framework knows only paragraphs, text, line breaks, escapes, shorthands and raw Typst. Every other construct is a spec:
 
@@ -31,21 +32,21 @@ The framework knows only paragraphs, text, line breaks, escapes, shorthands and 
 - A second spec of the same name extends the first.
 - Writing a spec: @extensions-visual-view-constructs.
 
-== Parsing <architecture-projection-parse>
+== Parsing <architecture-prosemirror-typst-parse>
 
 - Markup is cut into segments: syntax whose rule `standsAlone` (headings, list items) is a block of its own; everything else runs up to a paragraph break.
 - A run with prose (text or inline syntax a spec models) becomes a paragraph. A run that is exactly one call goes to the `calls` rules. What no rule takes becomes `rawBlock` / `rawInline` holding its source verbatim.
 - A label right after a heading, or ending a run, becomes the block's `label` attribute.
 - Rules get a `TypstParseContext`: the source, the schema, and the framework's steps (`inline`, `blocks`, `textblock`, `raw`).
 
-== Source anchors and pristine nodes <architecture-projection-anchors>
+== Source anchors and pristine nodes <architecture-prosemirror-typst-anchors>
 
 - *Anchors:* attributes that are never rendered and remember the source: `src` (the node's Typst), `sep` (whitespace to the next sibling), the document's `lead` and `trail`, `label`, and each spec's `anchors`.
 - *Pristine:* a private `WeakMap` holds the nodes `parseTypst` made. ProseMirror keeps the identity of unchanged nodes, so membership means "still equal to `src`".
 - Pristine nodes print `src`. Edited nodes print through their spec's `toTypst` (textblocks by default: their inline content, escaped). Block atoms print `src`.
 - Editor-made nodes have `sep: null` and get the default separator.
 
-== Position map <architecture-projection-position-map>
+== Position map <architecture-prosemirror-typst-position-map>
 
 `sourceToPos(doc, offset: SourceOffset, bias?)` → ProseMirror position and `posToSource(doc, pos, bias?)` → `SourceOffset` map between source offsets and document positions, character-exact, for any document. The only conversion between the two: positions stay ProseMirror's plain numbers, offsets are typed.
 
@@ -53,9 +54,9 @@ The framework knows only paragraphs, text, line breaks, escapes, shorthands and 
 - Cached per document (documents are immutable).
 - `bias: -1` maps a range end to just after the visible character before it.
 
-== Sync <architecture-projection-sync>
+== Sync <architecture-prosemirror-typst-sync>
 
-`applyTypstChanges(tr, target)` turns the current document into a fresh projection:
+`applyTypstChanges(tr, target)` turns the current document into a fresh parse:
 
 1. Diff both with the anchor attributes stripped, so a changed `src` does not replace a whole block.
 2. Replace only the innermost changed range: a cursor elsewhere in the paragraph stays put.

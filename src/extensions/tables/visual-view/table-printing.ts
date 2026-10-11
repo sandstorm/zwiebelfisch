@@ -2,7 +2,7 @@
 // See visual-view.ts.
 import type { Node } from '@tiptap/pm/model';
 import { isEmbeddable } from '../../../core/typst-syntax/typst-syntax';
-import type { TypstSerializeState } from '../../../hosts/projection/projection';
+import type { TypstSerializeState } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import { NEW_TABLE, type TableLayout, type TableStyle } from '../model/table-layout';
 
 /** A table cell and the document position it starts at. */
@@ -13,7 +13,7 @@ interface PlacedCell {
 
 /**
  * A table: its source around unchanged cell content while it still has the
- * projected shape, so editing a cell changes just that cell; otherwise
+ * parsed shape, so editing a cell changes just that cell; otherwise
  * re-printed in the style it was written in (see `TableStyle`; editor-made:
  * `#table(columns: n, [..], ..)`, one row per line), the first row in
  * `table.header(..)` if its cells are header cells.
@@ -44,7 +44,7 @@ export function tableToTypst(out: TypstSerializeState, table: Node, pos: number)
   out.hidden(style.tail);
 }
 
-/** The table's source around its cells, as projected; only edited cells print anew. */
+/** The table's source around its cells, as parsed; only edited cells print anew. */
 function printInLayout(out: TypstSerializeState, cells: PlacedCell[], { gaps, bare }: TableLayout): void {
   gaps.forEach((gap, i) => {
     // the part up to `]` closes the previous cell (bare cells have none), the rest opens the next one

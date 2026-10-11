@@ -1,6 +1,6 @@
 = Visual view <architecture-visual-view>
 
-The word-processor view: a Tiptap 3 editor over the projection (@architecture-projection). Module `src/hosts/visual-view/`.
+The word-processor view: a Tiptap 3 editor over the Typst ↔ ProseMirror conversion (@architecture-prosemirror-typst). Module `src/hosts/visual-view/`.
 
 == VisualView <architecture-visual-view-view>
 
@@ -13,7 +13,7 @@ new VisualView(parent, document, contributions: VisualViewHost)
 ```
 
 - *Write-back:* after every transaction that changed the document, `document.setText(serializeToTypst(doc), this)`: one minimal change.
-- *Read-back:* a change with another origin is projected again and applied with `applyTypstChanges`, outside the undo history.
+- *Read-back:* a change with another origin is parsed again and applied with `applyTypstChanges`, outside the undo history.
 - *Mechanism kept:* paragraphs, text, raw boxes, the toolbar's frame (undo/redo, *Insert* menu, *Selection* bar), highlights. Every other construct and feature is a contribution.
 
 == VisualViewHost <architecture-visual-view-host>
@@ -32,7 +32,7 @@ What every `…Provider` gets for one view: `document`, `selection()`, `isBox(no
 
 Typst no spec models, and nodes whose spec sets `view.box: 'code'` (images, outlines), show as raw boxes:
 
-- A nested CodeMirror edits the node's `src`. Each edit is an attribute step; the projection prints `src` verbatim, so the source changes exactly there.
+- A nested CodeMirror edits the node's `src`. Each edit is an attribute step; the serializer prints `src` verbatim, so the source changes exactly there.
 - An outside change of `src` reaches the box as one minimal change.
 - Undo and redo run the Visual view's history. Arrow keys, Escape and Enter move between box and text.
 - With a box renderer, the box shows a picture until its code gets focus.

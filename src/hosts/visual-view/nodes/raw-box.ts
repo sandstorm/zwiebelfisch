@@ -9,7 +9,7 @@ import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { Decoration, EditorView, NodeView, NodeViewConstructor } from '@tiptap/pm/view';
 import { minimalChange, type SourceOffset } from '../../../core/typst-document/typst-document';
 import { setBoxDecorations, type RawBoxAction, type RawBoxRenderer, type RawBoxTools, type RawBoxToolsHost, type TypstNodeSpec, type VisualViewContext } from '../visual-view';
-import { posToSource } from '../../projection/projection';
+import { posToSource } from '../../prosemirror-typst/prosemirror-typst';
 import { BoxActionBar } from './box-actions';
 import { RenderedBox } from './rendered-box';
 
@@ -53,7 +53,7 @@ const inlineTheme = CodeView.theme({
  * Typst the Visual view does not model, edited in place in a nested CodeMirror (the language and its colors
  * are contributed: `registerRawBoxCodeMirrorExtension`).
  *
- * The box's text is the node's `src` attribute, which the projection prints
+ * The box's text is the node's `src` attribute, which the serializer prints
  * verbatim: every edit sets `src` (an attribute step, so positions and the
  * outer selection stay put), and outside changes to `src` flow back into the
  * box as one minimal change. Undo/redo go to the Visual view's history;

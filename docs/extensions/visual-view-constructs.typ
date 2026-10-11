@@ -6,7 +6,7 @@ The Visual view models a Typst construct only when an extension contributes it; 
 - `context.visualView.registerMark(spec)`: inline formatting (`TypstMarkSpec`).
 - *Experimental:* the shapes may change between versions.
 
-How the projection keeps untouched source byte for byte: @architecture-projection.
+How the Typst ↔ ProseMirror conversion keeps untouched source byte for byte: @architecture-prosemirror-typst.
 
 == The spec <extensions-visual-view-constructs-spec>
 

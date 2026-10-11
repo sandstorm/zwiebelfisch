@@ -4,7 +4,7 @@ import type { Node } from '@tiptap/pm/model';
 import { Plugin, PluginKey, type Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { SourceHighlight } from './visual-view';
-import { sourceToPos } from '../projection/projection';
+import { sourceToPos } from '../prosemirror-typst/prosemirror-typst';
 
 type Layers = Record<string, DecorationSet>;
 

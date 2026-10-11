@@ -8,7 +8,7 @@ import type { Mark, Node } from '@tiptap/pm/model';
 import type { WindowApi } from '../../../hosts/window/window';
 import { callArguments, children, decodeString, namedArgument, quote, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type ToolbarAction, type ToolbarContext, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
-import { starterKitPart, type Around, type PlacedNode, type TypstMarkSpec, type TypstSerializeState, type TypstParseContext } from '../../../hosts/projection/projection';
+import { starterKitPart, type Around, type PlacedNode, type TypstMarkSpec, type TypstSerializeState, type TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import { codeBlockView } from './code-block-view';
 import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from '../model/raw-code';
 
@@ -97,7 +97,7 @@ const BARE_URL = /^https?:\/\/[\w\-.~:/?#@!$&'*+,;=%]*[\w\-~/#@$&+=%]$/;
 
 /**
  * Links: a bare URL is text with a `link` mark whose `href` is the text;
- * `#link("plain string")[one paragraph]` puts the mark on its projected
+ * `#link("plain string")[one paragraph]` puts the mark on its parsed
  * content (the call is hidden syntax). Other `link` calls stay raw, but in
  * running text. An edited link prints `#link("href")[..]`, or a bare URL when
  * its text is its `href`, a plain `http(s)://` URL between whitespace.

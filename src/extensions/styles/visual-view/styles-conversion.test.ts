@@ -1,11 +1,11 @@
-// Tests for the projection of custom styles (visual-view.ts): declared style calls as styled blocks and text.
+// Tests for custom styles in the Typst ↔ ProseMirror conversion (visual-view.ts): declared style calls as styled blocks and text.
 import { describe, expect, it } from 'vitest';
 import type { Node } from '@tiptap/pm/model';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { ProjectPath } from '../../../core/paths/paths';
 import type { TypstStyle } from '../model/discover';
 import type { ProjectStyles } from '../model/typst-style-index';
-import { serializeToTypst, parseTypst as parseTypstWith } from '../../../hosts/projection/projection';
+import { serializeToTypst, parseTypst as parseTypstWith } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import { after, edit, expectPreciseMap, find, schemaWith } from '../../../testing/testing';
 import { customStyles } from './visual-view';
 
@@ -15,7 +15,7 @@ function declaring(list: TypstStyle[]): ProjectStyles {
   return { styles: () => list, onDidChange: new EventEmitter<void>().event, calculateImportChange: () => null };
 }
 
-const STYLES = [style('note', 'paragraph', 'Note'), style('callout', 'paragraph', 'Callout'), style('key', 'text', 'Keyword')];
+const STYLES = [style('note', 'block', 'Note'), style('callout', 'block', 'Callout'), style('key', 'inline', 'Keyword')];
 
 /** The schema of a view whose project declares `STYLES`. */
 const schema = schemaWith({ contributions: [customStyles({ styles: declaring(STYLES), create: () => {} })] });
@@ -46,7 +46,7 @@ describe('custom styles', () => {
     }
   });
 
-  it('projects a paragraph style call as a styled block holding blocks', () => {
+  it('parses a block style call as a styled block holding blocks', () => {
     const block = parseTypst(FIXTURES.blocks).child(0);
     expect(block.type.name).toBe('styledBlock');
     expect(block.attrs).toMatchObject({ name: 'note', title: 'Note' });
@@ -54,7 +54,7 @@ describe('custom styles', () => {
     expect(block.child(1).type.name).toBe('bulletList');
   });
 
-  it('projects a text style call as text with the style mark; formatting inside stays', () => {
+  it('parses an inline style call as text with the style mark; formatting inside stays', () => {
     const paragraph = parseTypst(FIXTURES.text).child(0);
     const styled: string[] = [];
     paragraph.forEach((node) => {
@@ -64,7 +64,7 @@ describe('custom styles', () => {
     expect(styled).toEqual(['term:key', 'bold:key+bold', ' term:key', 'sized:key']);
   });
 
-  it('keeps undeclared calls, inline paragraph styles, empty text styles and two content blocks as raw code', () => {
+  it('keeps undeclared calls, block styles in running text, empty inline styles and two content blocks as raw code', () => {
     const doc = parseTypst(FIXTURES.undeclared);
     expect(doc.child(0).type.name).toBe('rawBlock');
     const inline: string[] = [];
@@ -89,7 +89,7 @@ describe('custom styles', () => {
     expect(serializeToTypst(doc)).toBe('#note[Hi]\n');
   });
 
-  it('a new styled block prints #name[..] around its blocks; a new text style #name[..] around the text', () => {
+  it('a new styled block prints #name[..] around its blocks; a new inline style #name[..] around the text', () => {
     const doc = edit(parseTypst('One\n\nTwo\n'), (s) => {
       const paragraph = s.doc.child(0);
       return s.tr.replaceWith(0, paragraph.nodeSize, schema.nodes.styledBlock.create({ name: 'note', title: 'Note' }, paragraph));

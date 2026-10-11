@@ -18,7 +18,7 @@ new TypstDocument(text)
 .onDidChange: Event<{ contentChanges, origin }>
 ```
 
-- *Source offsets:* `SourceOffset` (a branded number, UTF-16 code units into the text) and `SourceRange` (`{ from, to }` of them); `TextChange` is a `SourceRange` plus `insert`. Made with `SourceOffset.of(n)` / `SourceRange.of({ from, to })` where offsets come in (string indices, Lezer nodes, CodeMirror, Yjs, the engine). Never a ProseMirror position: only the projection's `sourceToPos` / `posToSource` convert (@architecture-projection-position-map).
+- *Source offsets:* `SourceOffset` (a branded number, UTF-16 code units into the text) and `SourceRange` (`{ from, to }` of them); `TextChange` is a `SourceRange` plus `insert`. Made with `SourceOffset.of(n)` / `SourceRange.of({ from, to })` where offsets come in (string indices, Lezer nodes, CodeMirror, Yjs, the engine). Never a ProseMirror position: only the Typst ↔ ProseMirror conversion's `sourceToPos` / `posToSource` convert (@architecture-prosemirror-typst-position-map).
 - *Echo suppression:* a view passes itself as `origin` and ignores events with its own origin.
 - *Ordered delivery:* a change made by a listener while others are being told is queued, so every listener sees changes in the order they were made.
 - `minimalChange(before, after)`: the one change between common prefix and suffix, so cursors and undo history survive a whole new text.

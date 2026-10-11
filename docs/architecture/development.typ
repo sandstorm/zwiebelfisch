@@ -83,4 +83,4 @@ mise run server:test   # when server/ or core/room-protocol changed
 - *Size*: lazy font loading (a font index up front, data on first use); a smaller wasm needs a Typst fork with feature flags.
 - *Custom styles*: swatches in the style menu; a style panel for a `template` function's set and show rules, so the Visual view looks like the document; templates from Typst Universe.
 - *Server*: a Rust (`yrs`) or Go server is an open question; the widget depends only on the room protocol.
-- *Devtools extension*: a dev-only side panel showing the projection, every contribution by extension and events as they fire, built only on the public API.
+- *Devtools extension*: a dev-only side panel showing the parsed document, every contribution by extension and events as they fire, built only on the public API.

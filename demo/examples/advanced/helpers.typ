@@ -4,7 +4,7 @@
 #import "template.typ": accent
 
 /// A highlighted remark set apart from the running text.
-/// @style paragraph Note
+/// @style block Note
 #let note(body) = block(
   width: 100%,
   inset: (x: 10pt, y: 8pt),
@@ -14,7 +14,7 @@
 )
 
 /// A term the report defines or relies on.
-/// @style text Term
+/// @style inline Term
 #let term(body) = text(fill: accent, style: "italic", body)
 
 /// A duration in milliseconds, e.g. `ms(12.5)` → "12.5 ms".

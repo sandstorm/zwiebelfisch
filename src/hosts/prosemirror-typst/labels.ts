@@ -1,6 +1,6 @@
-// Which label (`<name>`) belongs to which block, and printing it back after the block. See projection.ts.
+// Which label (`<name>`) belongs to which block, and printing it back after the block. See prosemirror-typst.ts.
 import type { SyntaxNode } from '@lezer/common';
-import type { BlockLabel } from './projection';
+import type { BlockLabel } from './prosemirror-typst';
 
 /** `<name>` after its gap. */
 export function labelSyntax({ name, gap }: BlockLabel): string {

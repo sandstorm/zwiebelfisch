@@ -1,12 +1,12 @@
-// Custom styles in the Visual view: declared paragraph styles as styled blocks (`#note[..]`), text styles as a
+// Custom styles in the Visual view: declared block styles as styled blocks (`#note[..]`), inline styles as a
 // mark (`#key[..]`), and the text style menu. See docs/guide/features.typ.
 import type { SyntaxNode } from '@lezer/common';
 import type { Mark, Node } from '@tiptap/pm/model';
 import { calleeName, children, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
-import type { PlacedNode, TypstMarkSpec, TypstSerializeState, TypstParseContext } from '../../../hosts/projection/projection';
+import type { PlacedNode, TypstMarkSpec, TypstSerializeState, TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import type { TextStyle, TextStyleProvider, TypstNodeSpec, VisualViewContext, VisualViewContribution } from '../../../hosts/visual-view/visual-view';
 import type { ProjectStyles } from '../model/typst-style-index';
-import type { TypstStyle } from '../model/discover';
+import type { TypstStyle, TypstStyleKind } from '../model/discover';
 import { StyledBlock, TypstStyleMark } from './style-nodes';
 
 export interface StylesOptions {
@@ -22,16 +22,16 @@ const STYLE_IMPORT = 'style-import';
 /**
  * Custom styles (see `model/`): a call of a declared paragraph
  * style that is a block of its own (`#note[..]`, `#callout(..)[..]`) is a
- * `styledBlock` holding blocks; a text style call in running text
+ * `styledBlock` holding blocks; an inline style call in running text
  * (`#key[..]`) is text with a `style` mark. Undeclared calls stay raw; a style
- * declared or removed re-projects every view. The text style menu lists the
+ * declared or removed parses every view's document again. The text style menu lists the
  * project's styles and "New style…" (after normal text and what other
  * extensions contribute) and applies them, importing a style where it is now
  * used.
  */
 export function customStyles(options: StylesOptions): VisualViewContribution {
   const declared = declaredStyles(options.styles);
-  // a style declared or removed: every view projects its document again
+  // a style declared or removed: every view parses its document again
   const onDidChange = options.styles.onDidChange;
   return {
     id: 'styles',
@@ -49,7 +49,7 @@ export function customStyles(options: StylesOptions): VisualViewContribution {
               calls: {
                 '*': {
                   inline: (p, call, marks) => parseStyleCall(p, call, marks, declared()),
-                  inRunningText: (p, call) => declared().get(calleeName(call, p.source))?.kind === 'text',
+                  inRunningText: (p, call) => declared().get(calleeName(call, p.source))?.kind === 'inline',
                 },
               },
             },
@@ -62,7 +62,7 @@ export function customStyles(options: StylesOptions): VisualViewContribution {
   };
 }
 
-type Declared = ReadonlyMap<string, { kind: 'paragraph' | 'text'; label: string }>;
+type Declared = ReadonlyMap<string, { kind: TypstStyleKind; label: string }>;
 
 /** The declared styles by function name, as of now (made anew when the list changes). */
 function declaredStyles(source: ProjectStyles): () => Declared {
@@ -96,12 +96,12 @@ const STYLE: TypstMarkSpec = {
   typst: { toTypst: (mark) => ({ open: mark.attrs.head ?? `#${mark.attrs.name}[`, close: ']' }) },
 };
 
-/** `#name(..)?[content]` of a declared paragraph style: a `styledBlock` whose content is segmented like the document. */
+/** `#name(..)?[content]` of a declared block style: a `styledBlock` whose content is segmented like the document. */
 function parseStyledBlock(p: TypstParseContext, call: SyntaxNode, sep: string | null, declared: Declared): Node | null {
   const name = calleeName(call, p.source);
   const style = declared.get(name);
   const blocks = trailingContent(call);
-  if (style?.kind !== 'paragraph' || blocks?.length !== 1) return null;
+  if (style?.kind !== 'block' || blocks?.length !== 1) return null;
   const { content: inside, from, to } = p.blocks(blocks[0]);
   const { from: start, to: end } = withHash(call);
   const layout: StyleLayout = { open: p.source.slice(start, from), close: p.source.slice(to, end) };
@@ -116,12 +116,12 @@ function styledBlockToTypst(state: TypstSerializeState, block: Node, pos: number
   state.closing(close);
 }
 
-/** `#key[text]` (or `#key(..)[text]`) of a declared text style, with non-empty, single-paragraph text; null otherwise. */
+/** `#key[text]` (or `#key(..)[text]`) of a declared inline style, with non-empty, single-paragraph text; null otherwise. */
 function parseStyleCall(p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[], declared: Declared): PlacedNode[] | null {
   const name = calleeName(call, p.source);
   const style = declared.get(name);
   const blocks = trailingContent(call);
-  if (style?.kind !== 'text' || blocks?.length !== 1) return null;
+  if (style?.kind !== 'inline' || blocks?.length !== 1) return null;
   const inside = children(blocks[0].getChild('Markup')!);
   if (inside.length === 0 || inside.some((n) => n.name === 'Parbreak')) return null;
   // the `#` before the call up to and with the `[`: printed again as is
@@ -130,8 +130,8 @@ function parseStyleCall(p: TypstParseContext, call: SyntaxNode, marks: readonly 
 }
 
 /**
- * The text style menu's entries: the paragraph styles (wrap the selected blocks, `#note[..]`; Normal text takes them
- * off), the text styles (toggle on a selection, `#key[..]`), and "New style…". Applying a style imports it into the
+ * The text style menu's entries: the block styles (wrap the selected blocks, `#note[..]`; Normal text takes them
+ * off), the inline styles (toggle on a selection, `#key[..]`), and "New style…". Applying a style imports it into the
  * view's document where needed.
  */
 function textStyles({ styles: source, create }: StylesOptions): TextStyleProvider {
@@ -151,25 +151,25 @@ function textStyle(style: TypstStyle, view: VisualViewContext, source: ProjectSt
       if (change) view.document.change([change], STYLE_IMPORT);
     },
   };
-  if (style.kind === 'paragraph') {
+  if (style.kind === 'block') {
     return {
       ...entry,
-      id: `paragraph:${style.name}`,
-      section: 'Paragraph styles',
+      id: `block:${style.name}`,
+      section: 'Block styles',
       order: 100,
-      apply: (chain) => chain.setParagraphStyle(applied),
+      apply: (chain) => chain.setBlockStyle(applied),
       isActive: (editor) => editor.isActive('styledBlock', { name: style.name }),
-      remove: (chain) => chain.unsetParagraphStyle(),
+      remove: (chain) => chain.unsetBlockStyle(),
     };
   }
   return {
     ...entry,
-    id: `text:${style.name}`,
-    section: 'Text styles',
+    id: `inline:${style.name}`,
+    section: 'Inline styles',
     order: 200,
     toggle: true,
-    apply: (chain) => chain.toggleTextStyle(applied),
-    enabled: (editor) => !editor.state.selection.empty && editor.can().toggleTextStyle(applied),
+    apply: (chain) => chain.toggleInlineStyle(applied),
+    enabled: (editor) => !editor.state.selection.empty && editor.can().toggleInlineStyle(applied),
     isActive: (editor) => editor.isActive('style', { name: style.name }),
   };
 }

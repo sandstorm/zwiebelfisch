@@ -87,7 +87,7 @@ export class TextStyleMenu implements ToolbarControl {
   private command(id: string, chain: ChainedCommands): ChainedCommands | undefined {
     if (id === NORMAL_TEXT) {
       const styled = this.entries.find((entry) => entry.remove && entry.isActive?.(this.editor));
-      // setParagraph fails on blocks that are paragraphs already, e.g. those a paragraph style was just taken off
+      // setParagraph fails on blocks that are paragraphs already, e.g. those a block style was just taken off
       return (styled ? styled.remove!(chain) : chain).command(({ state, commands }) => onlyParagraphs(state) || commands.setParagraph());
     }
     return this.entry(id)?.apply(chain, this.editor);

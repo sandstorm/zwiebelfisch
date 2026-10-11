@@ -1,9 +1,9 @@
 // Serializing the Visual view's document back to Typst (ProseMirrorToTypstSerializer): untouched nodes print their
 // source, edited ones through their specs' toTypst; every stretch of output remembers the document range showing it
-// (the position map). See projection.ts.
+// (the position map). See prosemirror-typst.ts.
 import type { Mark, Node } from '@tiptap/pm/model';
 import { TypstConversions } from './typst-conversions';
-import type { Around, TypstSerializeState } from './projection';
+import type { Around, TypstSerializeState } from './prosemirror-typst';
 import { labelSyntax } from './labels';
 import { type InlineLayout, pristine } from './pristine';
 import { markupSource } from '../../core/typst-syntax/typst-syntax';

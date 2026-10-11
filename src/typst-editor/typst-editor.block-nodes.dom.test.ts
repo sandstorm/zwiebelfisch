@@ -104,7 +104,7 @@ describe('table header row', () => {
     expect([...parent.querySelectorAll('th')].map((th) => th.textContent)).toEqual(['a', 'b']);
     expect(button('Header row').getAttribute('aria-pressed')).toBe('true');
     button('Header row').click();
-    // the table has its projected shape again, so it prints its original source
+    // the table has its parsed shape again, so it prints its original source
     expect(doc.text).toBe(source);
   });
 });

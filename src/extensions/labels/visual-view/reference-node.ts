@@ -4,7 +4,7 @@ import { Node } from '@tiptap/core';
 /**
  * A reference to a label (`@method`, `@fig:compile-times`, `@key[Chapter]`):
  * an inline atom shown as a chip with the label's name. `target` is the label,
- * `supplement` the `[..]` after it as written (null if none); the projection
+ * `supplement` the `[..]` after it as written (null if none); the serializer
  * prints both back. What the label is (a hint like "Section · Method", or
  * that there is no such label) is added by `referenceHints`.
  */

@@ -4,7 +4,7 @@ import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
 import { callArguments, children, namedArgument, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type ToolbarAction, type ToolbarGroup, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
-import type { TypstSerializeState, TypstParseContext } from '../../../hosts/projection/projection';
+import type { TypstSerializeState, TypstParseContext } from '../../../hosts/prosemirror-typst/prosemirror-typst';
 import { alignArgs, type TextAlignment } from '../model/alignment-syntax';
 import { TextAlign, textAlignAt } from './text-align';
 

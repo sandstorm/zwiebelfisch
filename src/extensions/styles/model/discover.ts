@@ -1,10 +1,10 @@
-// Style discovery: the functions a Typst file declares as paragraph or text styles (`/// @style …`). See ../styles.ts.
+// Style discovery: the functions a Typst file declares as block or inline styles (`/// @style …`). See ../styles.ts.
 import type { SyntaxNode } from '@lezer/common';
 import { typstParser } from 'codemirror-lang-typst/lezer';
 import type { ProjectPath } from '../../../core/paths/paths';
 
 /** Wraps blocks (`#note[..]` around paragraphs) or inline text (`#key[..]` in a sentence). */
-export type TypstStyleKind = 'paragraph' | 'text';
+export type TypstStyleKind = 'block' | 'inline';
 
 /** A style declared in a file: the function's name, its kind and the name people see. */
 export interface FoundStyle {
@@ -18,12 +18,12 @@ export interface TypstStyle extends FoundStyle {
   path: ProjectPath;
 }
 
-const DECLARATION = /^\/\/\/\s*@style\s+(paragraph|text)\b\s*(.*)$/;
+const DECLARATION = /^\/\/\/\s*@style\s+(block|inline)\b\s*(.*)$/;
 
 /**
  * The styles `text` declares, in source order: a top-level `#let name(body) = …`
  * (one positional parameter, the content; named parameters with defaults are
- * fine) right below a doc comment line `/// @style paragraph|text [Label]`
+ * fine) right below a doc comment line `/// @style block|inline [Label]`
  * (other `///` lines may come before it, as tidy writes them). Without a label
  * a style is called by its name.
  */

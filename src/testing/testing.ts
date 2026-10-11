@@ -1,6 +1,6 @@
 // Test helpers that compose the widget's built-in extensions: the Visual view's schema with the built-ins, project
 // with it, a view with the built-ins activated with a test's extension context (project files, preview snippets,
-// document links, prompts); and the helpers such tests use on a projected document (apply an edit, find text, check
+// document links, prompts); and the helpers such tests use on a parsed document (apply an edit, find text, check
 // the position map exhaustively). Entry of testing/: test-only, so it may import any
 // module (an extension's tests compose it with the others here, never by importing another extension); only
 // `*.test.ts` files may import it (eslint.config.js). Hosts' own tests use the host minimum and their own specs.
@@ -30,7 +30,7 @@ import { VisualView, VisualViewHost, type ContributionContext, type VisualViewCo
 import type { InputBoxOptions, MessageItem, QuickPickItem, QuickPickOptions, WindowApi } from '../hosts/window/window';
 import type { Workbench } from '../hosts/workbench/workbench';
 import type { Workspace } from '../hosts/workspace/workspace';
-import { attachGrammar, createSchema, documentExtensions, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos } from '../hosts/projection/projection';
+import { attachGrammar, createSchema, documentExtensions, posToSource, serializeToTypst, parseTypst as parseTypstWith, sourceToPos } from '../hosts/prosemirror-typst/prosemirror-typst';
 
 /** The schema of a view with the built-ins configured from `options`. */
 export function schemaWith(options: TestViewOptions = {}): Schema {
@@ -109,7 +109,7 @@ export class TestPrompts implements Pick<WindowApi, 'showInputBox' | 'showQuickP
 /** The schema of a view with the built-ins. */
 export const schema: Schema = schemaWith();
 
-/** `source` projected with `withSchema` (default: the built-ins' `schema`). */
+/** `source` parsed with `withSchema` (default: the built-ins' `schema`). */
 export const parseTypst = (source: string, withSchema: Schema = schema): Node => parseTypstWith(source, withSchema);
 
 /** A Visual view of `document` with the built-ins configured from `options`. */
@@ -245,7 +245,7 @@ function visibleChars(doc: Node): { pos: number; char: string }[] {
   return chars;
 }
 
-/** Checks the position map of `doc` exhaustively against its printed source (see typst-editor/typst-editor.projection.test.ts). */
+/** Checks the position map of `doc` exhaustively against its printed source (see typst-editor/typst-editor.prosemirror-typst.test.ts). */
 export function expectPreciseMap(doc: Node): void {
   const source = serializeToTypst(doc);
   for (const { pos, char } of visibleChars(doc)) {
