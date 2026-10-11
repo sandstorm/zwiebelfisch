@@ -46,6 +46,7 @@ const ICON = svg('<rect x="3" y="5" width="6" height="6" rx="1"/><path d="m4.5 8
 /** "Task list", after the other lists in the toolbar's `lists` group. */
 export const TASK_LIST_ACTION: ToolbarAction = {
   label: 'Task list',
+  keywords: ['checklist', 'todo', 'checkbox', 'task'],
   shortcut: 'Mod+Shift+9',
   icon: ICON,
   run: (c) => c.toggleTaskList(),

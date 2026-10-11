@@ -45,8 +45,8 @@ const ICONS = {
 
 /** "Bulleted list" and "Numbered list", in the toolbar's `lists` group. */
 export const LIST_ACTIONS: ToolbarAction[] = [
-  { label: 'Bulleted list', icon: ICONS.bulletList, run: (c) => c.toggleBulletList(), active: (e) => e.isActive('bulletList') },
-  { label: 'Numbered list', icon: ICONS.orderedList, run: (c) => c.toggleOrderedList(), active: (e) => e.isActive('orderedList') },
+  { label: 'Bulleted list', keywords: ['bullet', 'unordered', 'list', '-'], icon: ICONS.bulletList, run: (c) => c.toggleBulletList(), active: (e) => e.isActive('bulletList') },
+  { label: 'Numbered list', keywords: ['numbered', 'ordered', 'enumerate', '123', '+'], icon: ICONS.orderedList, run: (c) => c.toggleOrderedList(), active: (e) => e.isActive('orderedList') },
 ];
 
 /** Tiptap's lists (with the source anchors, typed as in Typst), items and list keymap. */

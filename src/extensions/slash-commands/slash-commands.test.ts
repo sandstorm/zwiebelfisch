@@ -24,7 +24,7 @@ function press(editor: Editor, key: string): void {
 }
 
 describe('slash commands', () => {
-  it("list the Insert menu's entries, then the text styles", () => {
+  it("list the Insert menu's entries, the list and alignment buttons, then the text styles", () => {
     const { editor, options, list } = setup('Some text\n', 'text');
     type(editor, ' /');
     expect(options()).toEqual([
@@ -35,12 +35,28 @@ describe('slash commands', () => {
       'Quote',
       'Insert page break',
       'Horizontal rule',
+      'Bulleted list',
+      'Numbered list',
+      'Task list',
+      'Align left',
+      'Center',
+      'Align right',
+      'Justify',
       'Heading 1',
       'Heading 2',
       'Heading 3',
     ]);
     expect(list.querySelector('.typst-visual__suggest-detail')?.textContent).toBe('Insert');
     expect(list.querySelector('.typst-visual__suggest-icon svg')).not.toBeNull();
+  });
+
+  it('find the lists by what people call them', () => {
+    const { editor, options } = setup('Some text\n', 'text');
+    type(editor, ' /123');
+    expect(options()).toEqual(['Numbered list']);
+    const second = setup('Some text\n', 'text');
+    type(second.editor, ' /checklist');
+    expect(second.options()).toEqual(['Task list']);
   });
 
   it('are found by label and keywords', () => {

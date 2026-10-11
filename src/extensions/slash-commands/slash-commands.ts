@@ -28,14 +28,16 @@ export function slashCommands(): TypstExtension {
 }
 
 /**
- * The Insert menu's entries, then the text style menu's, that are enabled where the cursor is; found by label and
- * keywords. Choosing one removes the `/query` and runs it as its menu would.
+ * The Insert menu's entries, the list and alignment buttons, then the text style menu's, that are enabled where the
+ * cursor is; found by label and keywords. Choosing one removes the `/query` and runs it as its menu would.
  */
 const SLASH_COMMANDS: CompletionItemProvider = {
   provideCompletionItems: ({ editor, toolbarActions, textStyles }) => [
-    ...toolbarActions('insert')
-      .filter((action) => actionEnabled(action, editor))
-      .map(insertItem),
+    ...SLASH_GROUPS.flatMap(([group, detail]) =>
+      toolbarActions(group)
+        .filter((action) => actionEnabled(action, editor))
+        .map((action) => toolbarItem(action, detail)),
+    ),
     ...textStyles()
       .filter((style) => (style.enabled ? style.enabled(editor) : style.apply(editor.can().chain(), editor).run()))
       .map(textStyleItem),
@@ -48,10 +50,17 @@ function actionEnabled(action: ToolbarAction, editor: Editor): boolean {
   return action.run ? action.run(editor.can().chain()).run() : true;
 }
 
-function insertItem(action: ToolbarAction): CompletionItem {
+/** The toolbar groups the slash list offers, and how a row names its group. */
+const SLASH_GROUPS: readonly (readonly [group: string, detail: string])[] = [
+  ['insert', 'Insert'],
+  ['lists', 'List'],
+  ['align', 'Align'],
+];
+
+function toolbarItem(action: ToolbarAction, detail: string): CompletionItem {
   return {
     label: action.label,
-    detail: 'Insert',
+    detail,
     icon: action.icon,
     keywords: action.keywords,
     command: ({ editor, range }) => {
