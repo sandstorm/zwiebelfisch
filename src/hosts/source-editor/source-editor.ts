@@ -3,7 +3,7 @@ import { syntaxHighlighting } from '@codemirror/language';
 import {
   Annotation, Compartment, EditorSelection, StateEffect, StateField, type ChangeSet, type Extension,
 } from '@codemirror/state';
-import { Decoration, EditorView, type ViewUpdate } from '@codemirror/view';
+import { Decoration, EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import { Disposable } from '../../core/disposable/disposable';
 import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter';
 import { SourceRange, type TextChange, type TypstDocument } from '../../core/typst-document/typst-document';
@@ -19,11 +19,14 @@ import css from './source-editor.css?inline';
  * Its look is `codeColors`, CodeMirror's default in the widget's light or dark scheme, which every CodeMirror in the
  * widget uses (raw boxes, the text files' editor). Everything else is a CodeMirror extension someone contributes: the
  * Typst language, the diagnostics, other users' carets, the document links (the workbench's). A contribution is
- * registered once and applies to every editor, open or made later, so no feature tracks editors. Undo is CodeMirror's history; a contribution decides what
- * stays out of it (`fromDocument`). See docs/30_architecture/05_source-editor.typ.
+ * registered once and applies to every editor, open or made later, so no feature tracks editors. What is not about
+ * Typst (shown whitespace) is shared with every CodeMirror in the widget that takes the shared ones
+ * (`createSharedCodeMirrorExtension`: the raw boxes, the text files' editor). Undo is CodeMirror's history; a
+ * contribution decides what stays out of it (`fromDocument`). See docs/30_architecture/05_source-editor.typ.
  */
 export class SourceEditorHost implements SourceEditorContributions {
   private readonly extensions: (Extension | ((editor: SourceEditorContext) => Extension))[] = [];
+  private readonly shared: Extension[] = [];
   private readonly changed = new EventEmitter<void>();
   /** How an editor gets its contributions: it asks for them now and again on every change. */
   private readonly contributions: Contributions = {
@@ -34,12 +37,20 @@ export class SourceEditorHost implements SourceEditorContributions {
   readonly styleSheet: string = css;
 
   registerCodeMirrorExtension(extension: Extension | ((editor: SourceEditorContext) => Extension)): Disposable {
-    this.extensions.push(extension);
-    this.changed.fire();
-    return new Disposable(() => {
-      this.extensions.splice(this.extensions.indexOf(extension), 1);
-      this.changed.fire();
+    return this.add(this.extensions, extension);
+  }
+
+  registerSharedCodeMirrorExtension(extension: Extension): Disposable {
+    return this.add(this.shared, extension);
+  }
+
+  createSharedCodeMirrorExtension(): Extension {
+    const compartment = new Compartment();
+    const follow = ViewPlugin.define((view) => {
+      const subscription = this.changed.event(() => view.dispatch({ effects: compartment.reconfigure([...this.shared]) }));
+      return { destroy: () => subscription.dispose() };
     });
+    return [compartment.of([...this.shared]), follow];
   }
 
   /** A Source editor of `document` in `parent`, with every contribution registered now or later. */
@@ -48,7 +59,16 @@ export class SourceEditorHost implements SourceEditorContributions {
   }
 
   private extensionsFor(editor: SourceEditorContext): Extension {
-    return this.extensions.map((extension) => (typeof extension === 'function' ? extension(editor) : extension));
+    return [...this.shared, ...this.extensions.map((extension) => (typeof extension === 'function' ? extension(editor) : extension))];
+  }
+
+  private add<T>(list: T[], extension: T): Disposable {
+    list.push(extension);
+    this.changed.fire();
+    return new Disposable(() => {
+      list.splice(list.indexOf(extension), 1);
+      this.changed.fire();
+    });
   }
 }
 
@@ -59,6 +79,17 @@ export interface SourceEditorContributions {
    * all of them, or made per editor from what the editor shows (`SourceEditorContext`).
    */
   registerCodeMirrorExtension(extension: Extension | ((editor: SourceEditorContext) => Extension)): Disposable;
+  /**
+   * Adds a CodeMirror extension to every CodeMirror of the widget that shows text, not only Typst, the existing ones
+   * included, until disposed: the Source editors, the raw boxes' code, and the editors that include
+   * `createSharedCodeMirrorExtension()` (the text files'). For what fits any text (shown whitespace), never a language.
+   */
+  registerSharedCodeMirrorExtension(extension: Extension): Disposable;
+  /**
+   * What a CodeMirror made elsewhere (an extension's own editor) includes to get the shared extensions
+   * (`registerSharedCodeMirrorExtension`), those registered now and later, until it is destroyed.
+   */
+  createSharedCodeMirrorExtension(): Extension;
 }
 
 /** What a contribution knows about the one Source editor it is applied to. */

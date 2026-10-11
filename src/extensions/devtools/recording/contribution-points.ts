@@ -71,6 +71,7 @@ const POINTS: Readonly<Record<string, Describer>> = {
   'visualEditor.registerRawBoxRenderer': ([provider, options]) => prioritized(named(provider, 'renderer'), record(options).priority),
   'visualEditor.registerRawBoxCodeMirrorExtension': ([provider]) => named(provider, 'CodeMirror extensions'),
   'sourceEditor.registerCodeMirrorExtension': ([extension]) => named(extension, 'CodeMirror extensions'),
+  'sourceEditor.registerSharedCodeMirrorExtension': ([extension]) => named(extension, 'CodeMirror extensions'),
   'workbench.registerStyleSheet': ([css]) => ({ title: 'style sheet', details: [size(String(css))] }),
   'workbench.registerSidePanel': ([id, options]) => {
     const { label, side, order } = record(options);

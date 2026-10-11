@@ -19,6 +19,7 @@ import { spellcheck } from '../extensions/spellcheck/spellcheck';
 import { sourceControl } from '../extensions/source-control/source-control';
 import { documentLinks } from '../extensions/document-links/document-links';
 import { images } from '../extensions/images/images';
+import { invisibles } from '../extensions/invisibles/invisibles';
 import { figures } from '../extensions/figures/figures';
 import { renderedBoxes } from '../extensions/rendered-boxes/rendered-boxes';
 import { typstLanguage } from '../extensions/typst-language/typst-language';
@@ -224,6 +225,7 @@ function builtinExtensions(): TypstExtension[] {
     comments(),
     labels(),
     styles(),
+    invisibles(),
     slashCommands(),
     spellcheck(),
     previewSync(),

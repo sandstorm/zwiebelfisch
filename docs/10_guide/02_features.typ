@@ -28,6 +28,14 @@ Each side has a rail (`▣`): a button per panel. The left side holds the files 
 - Drag a side's separator (or use the arrow keys on it): the left side sets the file panel's width, the right side gets 20–80 % of the width.
 - *Errors and warnings:* underlined in both editors, the message as tooltip. The status bar counts them and jumps to them.
 
+=== Invisible characters <guide-features-invisibles>
+
+"Show invisibles" (¶, in the tab bar next to Visual | Source), or the command "Show invisible characters on / off" in search everywhere, shows what is normally blank, as a word processor's formatting marks; "Hide invisibles" hides them again. Your choice is remembered in this browser.
+
+- Visual editor: `·` for a space (each one, also several in a row), `°` for a non-breaking space (Typst `~`), `→` for a tab, `↵` for a line break (`\`), `¶` at the end of each paragraph and heading.
+- Source editor, the code of raw boxes and text files: CodeMirror's marks for spaces and tabs.
+- The marks are drawn in a faint color over the text; they are not part of it: they cannot be selected and are not copied, and the document does not change.
+
 == Search everywhere <guide-features-search>
 
 Press Shift twice, anywhere (also while typing in an editor), or click the magnifier at the bottom of the left rail. One list finds everything, grouped; type a few letters of a word, in order (`cmptim` finds "Compile times"). Arrows and Enter pick, Escape closes.

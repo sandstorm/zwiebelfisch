@@ -13,8 +13,9 @@ import { textSearch } from './workbench/text-search';
  * Markdown and Mermaid.
  *
  * The custom editor `textFiles.editor` (TextFileEditor) shows them in plain CodeMirror, with the document links of
- * each file's language, and saves the whole file a moment after the last edit. Where others edit it too (a GitLab
- * room), the last save wins: unlike Typst files, text files are not merged as they are typed. The extension also
+ * each file's language and what is shared with every CodeMirror of the widget (`createSharedCodeMirrorExtension`:
+ * shown whitespace), and saves the whole file a moment after the last edit. Where others edit it too (a GitLab room),
+ * the last save wins: unlike Typst files, text files are not merged as they are typed. The extension also
  * declares their languages (`contributes.languages`: `.bib` is `bibtex`, `.mmd` is `mermaid`, …), adds the help
  * sheet "BibTeX", and gives search everywhere the group "Text": lines in these files and in the Typst files.
  *
@@ -46,13 +47,16 @@ export function textFiles(): TypstExtension {
 }
 
 /** A TextFileEditor per opened file (kept in `editors` while open), saving into the project and following the file's changes from elsewhere. */
-function textFileEditor({ project, window, workspace, languages }: ExtensionContext, editors: Map<ProjectPath, TextFileEditor>): CustomEditorProvider {
+function textFileEditor({ project, window, workspace, languages, sourceEditor }: ExtensionContext, editors: Map<ProjectPath, TextFileEditor>): CustomEditorProvider {
   return {
     resolveCustomEditor({ path, content }, panel) {
       const editor = new TextFileEditor(panel.element, {
         path,
         text: text(content),
-        extensions: languages.createDocumentLinksCodeMirrorExtension(languages.getLanguageId(path) ?? 'plaintext', () => path),
+        extensions: [
+          languages.createDocumentLinksCodeMirrorExtension(languages.getLanguageId(path) ?? 'plaintext', () => path),
+          sourceEditor.createSharedCodeMirrorExtension(),
+        ],
         save: (saved) =>
           void workspace.applyEdit({ kind: 'update', path, content: saved }).then((problem) => problem && window.showErrorMessage(`${ProjectPath.displayName(path)} not saved: ${problem}`)),
       });
