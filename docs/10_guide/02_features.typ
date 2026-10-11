@@ -212,6 +212,7 @@ The 100-page document took #values.Runs.at(4).at(4) ms (median, @tab:runs).
 
 - File panel → New → "New spreadsheet…" creates an `.ic` file and opens it in #link("https://www.ironcalc.com")[IronCalc]: formulas, formats, several sheets.
 - Insert → Insert spreadsheet (or `/spreadsheet`): names a new `.ic` (proposed: `data/table.ic` next to the file), fills in a starter table, inserts `#figure(sheets.Sheet1, caption: [ ])` with its import and opens the spreadsheet. If `sheets` already names another spreadsheet's tables, the new one is imported as `table-sheets`.
+- Ctrl+click (⌘-click on Mac) or Alt+Enter on the path `data/runs.ic.gen.typ` ("Edit spreadsheet") opens the spreadsheet, not the generated file.
 - Every edit also writes `<name>.ic.gen.typ` (generated; don't edit). It holds, by sheet name:
   - `sheets`: each sheet as a `table` that looks like the spreadsheet (column widths, fills, fonts, borders).
   - `values`: the displayed cells as strings, row by row: `values.Runs.at(1).at(0)` is A2.

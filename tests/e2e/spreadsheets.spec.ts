@@ -1,7 +1,7 @@
-// End-to-end tests (Playwright, against the plain-HTML example, so inside <typst-editor>'s shadow root): a
-// spreadsheet (.ic) edited in IronCalc's workbook UI, imported by Typst through its generated Typst file.
+// End-to-end tests (Playwright, against the plain-HTML example, so inside <typst-editor>'s shadow root, and the demo): a
+// spreadsheet (.ic) edited in IronCalc's workbook UI, imported by Typst through its generated Typst file, whose path leads to it.
 import { expect, type Page } from '@playwright/test';
-import { test, fileRow } from './fixtures';
+import { test, fileRow, openFile } from './fixtures';
 
 type Editor = HTMLElement & { value: string; files: Record<string, string | Uint8Array> };
 
@@ -76,4 +76,17 @@ test('the workbook follows the widget into dark mode and back, its grid included
   await switchTo('light');
   await expect.poll(() => workbook.evaluate((root) => root.style.getPropertyValue('--palette-common-white'))).toBe('');
   await expect.poll(gridLightness(page)).toBeGreaterThan(200);
+});
+
+test('⌘/Ctrl+click on the path of a spreadsheet\'s Typst file ("Edit spreadsheet") opens the spreadsheet, not the generated file', async ({ page }) => {
+  await page.goto('/?example=advanced');
+  await expect(page.getByTestId('typst-status')).toHaveText(/✓ compiled/, { timeout: 30_000 });
+  await openFile(page, 'chapters/results.typ');
+  // the import line's raw box in the Visual editor
+  const path = page.locator('[data-testid=typst-visual]:visible .typst-visual__raw-block .typst-source__path', { hasText: 'compile-times.ic.gen.typ' });
+  await path.hover();
+  await expect(page.locator('.cm-tooltip')).toContainText('Edit spreadsheet');
+  await path.click({ modifiers: ['ControlOrMeta'] });
+  await expect(fileRow(page, 'data/compile-times.ic')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByTestId('typst-spreadsheet').locator('.ic-root')).toBeVisible();
 });

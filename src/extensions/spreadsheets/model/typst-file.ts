@@ -24,7 +24,7 @@ export function spreadsheetTypst(model: SheetSource, name: string): string {
   const values = sheets.map(({ name, index, size }) => `  ${str(name)}: ${valueRows(model, index, size)},`);
   const tables = sheets.map(({ name, index, size }) => `  ${str(name)}: ${table(model, index, size)},`);
   return [
-    `// Generated from ${name} on every edit of the spreadsheet: do not edit by hand.`,
+    `// Generated from ${name} (next to this file) on every edit of the spreadsheet: edit ${name}, not this file.`,
     `// #import "${name}.gen.typ": sheets, values`,
     '// #sheets.Sheet1                  the sheet as a table',
     '// #values.Sheet1.at(1).at(0)      cell A2 as displayed (a string)',
@@ -52,8 +52,15 @@ export interface SheetSource {
 // generic, so a ProjectPath stays one (a suffix keeps a path valid) without this file importing it: the demo's
 // spreadsheet task runs it in Node, which resolves no extensionless imports
 export function typstPath<Path extends string>(path: Path): Path {
-  return `${path}.gen.typ` as Path;
+  return `${path}${GENERATED}` as Path;
 }
+
+/** The spreadsheet whose Typst file is `path` (`typstPath`'s inverse): `budget.ic.gen.typ` → `budget.ic`; null for any other file. */
+export function spreadsheetPath<Path extends string>(path: Path): Path | null {
+  return path.endsWith(`.ic${GENERATED}`) ? (path.slice(0, -GENERATED.length) as Path) : null;
+}
+
+const GENERATED = '.gen.typ';
 
 function usedSize(model: SheetSource, sheet: number): Size {
   let rows = 0;

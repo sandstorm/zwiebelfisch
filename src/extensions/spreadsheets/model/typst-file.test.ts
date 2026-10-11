@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import init, { Model } from '@ironcalc/wasm';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createEngine } from '../../../core/typst-engine/typst-engine';
-import { spreadsheetTypst, typstPath } from './typst-file';
+import { spreadsheetPath, spreadsheetTypst, typstPath } from './typst-file';
 
 beforeAll(async () => {
   await init({ module_or_path: readFileSync(new URL('../../../../node_modules/@ironcalc/wasm/wasm_bg.wasm', import.meta.url)) });
@@ -28,7 +28,7 @@ function style(model: Model, address: string, path: string, value: string): void
 describe('spreadsheetTypst', () => {
   it('says where it comes from and how to use it', () => {
     const source = spreadsheetTypst(workbook(), 'budget.ic');
-    expect(source).toMatch(/^\/\/ Generated from budget\.ic/);
+    expect(source).toMatch(/^\/\/ Generated from budget\.ic \(next to this file\) on every edit of the spreadsheet: edit budget\.ic, not this file\.\n/);
     expect(source).toContain('#import "budget.ic.gen.typ": sheets, values');
   });
 
@@ -146,5 +146,15 @@ describe('spreadsheetTypst', () => {
 describe('typstPath', () => {
   it('puts the Typst file next to the spreadsheet', () => {
     expect(typstPath('/data/budget.ic')).toBe('/data/budget.ic.gen.typ');
+  });
+});
+
+describe('spreadsheetPath', () => {
+  it('is the spreadsheet of a generated Typst file, and null for any other file', () => {
+    expect(spreadsheetPath('/data/budget.ic.gen.typ')).toBe('/data/budget.ic');
+    expect(spreadsheetPath(typstPath('/a.b.ic'))).toBe('/a.b.ic');
+    expect(spreadsheetPath('/data/budget.gen.typ')).toBeNull();
+    expect(spreadsheetPath('/data/budget.ic')).toBeNull();
+    expect(spreadsheetPath('/main.typ')).toBeNull();
   });
 });
