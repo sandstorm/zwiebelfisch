@@ -4,7 +4,7 @@ import type { Node as PMNode, NodeRange, ResolvedPos } from '@tiptap/pm/model';
 import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state';
 import { liftTarget } from '@tiptap/pm/transform';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import { nodeGrammar } from '../../../hosts/projection/projection';
+import { documentNodeSpec } from '../../../hosts/projection/projection';
 import { alignArgs, setRules, withHorizontal, type Horizontal, type TextAlignment } from '../model/alignment-syntax';
 
 /**
@@ -240,7 +240,7 @@ function justifyParagraphs(tr: Transaction, target: TextAlignment | null): void 
   const { from, to } = tr.selection;
   tr.doc.nodesBetween(from, to, (node, pos, parent) => {
     if (node.type.name !== 'paragraph') return true;
-    if (parent && nodeGrammar(parent)?.container) return false;
+    if (parent && documentNodeSpec(parent)?.typst?.container) return false;
     const scope = scopeAt(tr.doc.resolve(pos));
     const justify = target === null || (target === 'justify') === scope.justify ? null : target === 'justify';
     if (node.attrs.justify !== justify) tr.setNodeMarkup(pos, undefined, { ...node.attrs, justify });

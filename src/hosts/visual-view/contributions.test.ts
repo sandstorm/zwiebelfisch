@@ -2,11 +2,11 @@
 // compete.
 import { Mark } from '@tiptap/core';
 import { describe, expect, it } from 'vitest';
-import { createSchema, starterKitPart } from '../projection/projection';
-import { type BoxRendererProvider, type TypstMarkSpec, type TypstNodeSpec, VisualViewHost } from './visual-view';
+import { createSchema, starterKitPart, type TypstMarkSpec } from '../projection/projection';
+import { type BoxRendererProvider, type TypstNodeSpec, VisualViewHost } from './visual-view';
 
 const node = (name: string): TypstNodeSpec => ({ name });
-const mark = (name: string): TypstMarkSpec => ({ name, print: () => ({ open: '', close: '' }) });
+const mark = (name: string): TypstMarkSpec => ({ name, typst: { toTypst: () => ({ open: '', close: '' }) } });
 const renderer = (): BoxRendererProvider => () => null;
 
 describe('VisualViewHost priority', () => {
@@ -50,16 +50,16 @@ describe('VisualViewHost mark priority', () => {
   it("nests marks by the registered priority, whatever their Tiptap extensions' own (outer first)", () => {
     const registry = new VisualViewHost();
     // Tiptap's link mark has priority 1000, which would put it outside everything
-    registry.registerMark({ ...mark('link'), extension: starterKitPart('testLink', { link: {} }) }, { priority: 90 });
-    registry.registerMark({ ...mark('bold'), extension: starterKitPart('testBold', { bold: {} }) });
-    registry.registerMark({ ...mark('note'), extension: Mark.create({ name: 'note', priority: 1 }) }, { priority: 120 });
+    registry.registerMark({ ...mark('link'), tiptap: starterKitPart('testLink', { link: {} }) }, { priority: 90 });
+    registry.registerMark({ ...mark('bold'), tiptap: starterKitPart('testBold', { bold: {} }) });
+    registry.registerMark({ ...mark('note'), tiptap: Mark.create({ name: 'note', priority: 1 }) }, { priority: 120 });
     expect(marksOf(registry)).toEqual(['note', 'bold', 'link']);
   });
 
   it('keeps registration order between marks of equal priority', () => {
     const registry = new VisualViewHost();
-    registry.registerMark({ ...mark('a'), extension: Mark.create({ name: 'a', priority: 50 }) });
-    registry.registerMark({ ...mark('b'), extension: Mark.create({ name: 'b', priority: 500 }) });
+    registry.registerMark({ ...mark('a'), tiptap: Mark.create({ name: 'a', priority: 50 }) });
+    registry.registerMark({ ...mark('b'), tiptap: Mark.create({ name: 'b', priority: 500 }) });
     expect(marksOf(registry)).toEqual(['a', 'b']);
   });
 });

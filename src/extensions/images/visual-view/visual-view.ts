@@ -101,20 +101,26 @@ const Image = Node.create({
 function imageSpec(options: ImagesOptions): TypstNodeSpec {
   return {
     name: 'image',
-    extension: Image,
-    labelled: true,
-    box: 'code',
-    codeBox: {
+    tiptap: Image,
+    typst: {
+      parseTypst: {
+        calls: {
+          image: {
+            block: (p, call, sep) => {
+              const src = p.text(withHash(call));
+              return hasOnlyArguments(call) && imagePath(src) !== null ? p.schema.nodes.image.create({ src, sep }) : null;
+            },
+          },
+        },
+      },
+      labelled: true,
+    },
+    view: {
+      box: 'code',
       tools: (host, node) => {
         const links = options.imageLinks(host.view.document);
         const pathLabel = (path: PathReference, src: string) => imagePathLink(links.linkOf(src), path, host.dom.ownerDocument, (target) => links.open(target));
         return new ImageTools({ ...host, pathLabel, prompts: options.prompts }, node);
-      },
-    },
-    blockCalls: {
-      image: (p, call, sep) => {
-        const src = p.text(withHash(call));
-        return hasOnlyArguments(call) && imagePath(src) !== null ? p.schema.nodes.image.create({ src, sep }) : null;
       },
     },
   };

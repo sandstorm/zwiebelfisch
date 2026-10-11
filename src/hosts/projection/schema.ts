@@ -1,25 +1,24 @@
 // The Tiptap nodes and marks of the minimum schema besides StarterKit's parts: the document with its lead and
-// trail, raw Typst (block and inline), soft breaks, the typstSource mark; and the extension giving the specs' node
-// types their source anchors and labels. See projection.ts (`documentExtensions`) and ARCHITECTURE.md, "VisualView".
-import { Extension, Mark, Node, type AnyExtension, type Attribute } from '@tiptap/core';
+// trail, raw Typst (block and inline), soft breaks, the typstSource mark; and the extension giving StarterKit's
+// paragraphs and line breaks their source anchors and labelled specs' node types their `label`. See projection.ts
+// (`documentExtensions`) and ARCHITECTURE.md, "VisualView".
+import { Extension, Mark, Node, type AnyExtension } from '@tiptap/core';
 import Document from '@tiptap/extension-document';
-import type { NodeGrammar } from './projection';
+import type { DocumentNodeSpec } from './projection';
 
-/** Source anchors of a node made from the source: `src`, its original Typst; `sep`, the whitespace to its next sibling. */
-export const ANCHORS: Record<string, Attribute> = {
-  src: { default: null, rendered: false, keepOnSplit: false },
-  sep: { default: null, rendered: false },
-};
-
-/** What the specs ask for in the schema: their `attributes` and, if `labelled`, `label` (global attributes). */
-export function sourceAnchors(specs: readonly NodeGrammar[]): AnyExtension {
+/**
+ * Source anchors of the base's paragraphs (`src`, its original Typst; `sep`, the whitespace to its next sibling) and
+ * line breaks (`src`), and `label` on the node types of `specs` that are `labelled` (global attributes).
+ */
+export function sourceAnchors(specs: readonly DocumentNodeSpec[]): AnyExtension {
   return Extension.create({
     name: 'typstSourceAnchors',
     addGlobalAttributes() {
       const label = { label: { default: null, rendered: false, keepOnSplit: false } };
       return [
-        ...specs.filter((spec) => spec.attributes).map((spec) => ({ types: [spec.name], attributes: { ...spec.attributes } })),
-        { types: specs.filter((spec) => spec.labelled).map((spec) => spec.name), attributes: label },
+        { types: ['paragraph'], attributes: { src: { default: null, rendered: false, keepOnSplit: false }, sep: { default: null, rendered: false } } },
+        { types: ['hardBreak'], attributes: { src: { default: '\\\n', rendered: false, keepOnSplit: false } } },
+        { types: specs.filter((spec) => spec.typst?.labelled).map((spec) => spec.name), attributes: label },
       ];
     },
   });

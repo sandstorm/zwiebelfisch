@@ -6,9 +6,9 @@ import Code from '@tiptap/extension-code';
 import CodeBlock from '@tiptap/extension-code-block';
 import type { Mark, Node } from '@tiptap/pm/model';
 import type { Window } from '../../../hosts/window/window';
-import { callArguments, calleeName, children, decodeString, namedArgument, quote, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type Action, type EditorExtensionProvider, type ToolbarContext, type TypstMarkSpec, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
-import { starterKitPart, type Around, type Placed, type TypstSerializeState, type TypstParseContext } from '../../../hosts/projection/projection';
+import { callArguments, children, decodeString, namedArgument, quote, trailingContent, withHash } from '../../../core/typst-syntax/typst-syntax';
+import { svg, type Action, type EditorExtensionProvider, type ToolbarContext, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
+import { starterKitPart, type Around, type Placed, type TypstMarkSpec, type TypstSerializeState, type TypstParseContext } from '../../../hosts/projection/projection';
 import { codeBlockView } from './code-block-view';
 import { codeBlockDelimiters, inlineCodeDelimiters, rawCode } from '../model/raw-code';
 
@@ -18,7 +18,10 @@ const Italic = starterKitPart('typstItalic', { italic: {} });
 const Link = starterKitPart('typstLink', {
   link: { openOnClick: false, autolink: false, HTMLAttributes: { class: 'typst-visual__link', target: null, rel: null } },
 });
-const Blockquote = starterKitPart('typstBlockquote', { blockquote: { HTMLAttributes: { class: 'typst-visual__quote' } } });
+const Blockquote = starterKitPart('typstBlockquote', { blockquote: { HTMLAttributes: { class: 'typst-visual__quote' } } }).extend({
+  // `sep`: the whitespace to the next block; `layout`: how the call around its blocks is written
+  addGlobalAttributes: () => [{ types: ['blockquote'], attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } } }],
+});
 
 /**
  * Inline raw text (`code`). Unlike Tiptap's code mark it combines with other
@@ -37,6 +40,14 @@ const TypstCode = Code.extend({
  * field for its language.
  */
 const TypstCodeBlock = CodeBlock.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      src: { default: null, rendered: false, keepOnSplit: false },
+      sep: { default: null, rendered: false },
+      fence: { default: 3, rendered: false },
+    };
+  },
   addNodeView() {
     return codeBlockView;
   },
@@ -64,16 +75,14 @@ function delimited(markName: string) {
 
 export const BOLD: TypstMarkSpec = {
   name: 'bold',
-  extension: Bold,
-  inlineSyntax: { Strong: delimited('bold') },
-  print: (_mark, around) => delimitedSyntax('*', 'strong', around),
+  tiptap: Bold,
+  typst: { parseTypst: { syntaxNodes: { Strong: { inline: delimited('bold') } } }, toTypst: (_mark, around) => delimitedSyntax('*', 'strong', around) },
 };
 
 export const ITALIC: TypstMarkSpec = {
   name: 'italic',
-  extension: Italic,
-  inlineSyntax: { Emph: delimited('italic') },
-  print: (_mark, around) => delimitedSyntax('_', 'emph', around),
+  tiptap: Italic,
+  typst: { parseTypst: { syntaxNodes: { Emph: { inline: delimited('italic') } } }, toTypst: (_mark, around) => delimitedSyntax('_', 'emph', around) },
 };
 
 // -------------------------------------------------------------------- links
@@ -90,19 +99,23 @@ const BARE_URL = /^https?:\/\/[\w\-.~:/?#@!$&'*+,;=%]*[\w\-~/#@$&+=%]$/;
  */
 export const LINK: TypstMarkSpec = {
   name: 'link',
-  extension: Link,
-  inlineSyntax: { Link: (p, node, marks) => p.schema.text(p.text(node), p.schema.marks.link.create({ href: p.text(node) }).addToSet(marks)) },
-  inlineCalls: [{ matches: (p, call) => calleeName(call, p.source) === 'link', project: linkCall }],
-  print: (mark) => ({ open: `#link(${quote(mark.attrs.href)})[`, close: ']' }),
-  printsBare: (mark, text, { before, after }) =>
-    text === mark.attrs.href && BARE_URL.test(text) && (before === undefined || /\s/.test(before)) && (after === undefined || /\s/.test(after)),
+  tiptap: Link,
+  typst: {
+    parseTypst: {
+      syntaxNodes: { Link: { inline: (p, node, marks) => p.schema.text(p.text(node), p.schema.marks.link.create({ href: p.text(node) }).addToSet(marks)) } },
+      calls: { link: { inline: parseLinkCall } },
+    },
+    toTypst: (mark) => ({ open: `#link(${quote(mark.attrs.href)})[`, close: ']' }),
+    isBare: (mark, text, { before, after }) =>
+      text === mark.attrs.href && BARE_URL.test(text) && (before === undefined || /\s/.test(before)) && (after === undefined || /\s/.test(after)),
+  },
 };
 
 /** `#link("url")[text]` with a plain string and non-empty, single-paragraph text; null otherwise. */
-function linkCall(p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[]): Placed[] | null {
+function parseLinkCall(p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[]): Placed[] | null {
   const [url, ...others] = callArguments(call);
   const blocks = trailingContent(call);
-  if (calleeName(call, p.source) !== 'link' || url?.name !== 'Str' || others.length > 0 || blocks?.length !== 1) return null;
+  if (url?.name !== 'Str' || others.length > 0 || blocks?.length !== 1) return null;
   const href = decodeString(p.text(url));
   const content = children(blocks[0].getChild('Markup')!);
   if (href === null || content.length === 0 || content.some((n) => n.name === 'Parbreak')) return null;
@@ -114,18 +127,24 @@ function linkCall(p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[]
 /** Inline raw text on one line: its text with a `code` mark remembering the delimiters (empty and multi-line raw stays raw). */
 export const CODE: TypstMarkSpec = {
   name: 'code',
-  extension: TypstCode,
-  inlineSyntax: {
-    Raw: (p, node, marks) => {
-      const code = rawCode(node, p.source);
-      const text = code ? p.source.slice(code.from, code.to) : '';
-      if (!code || code.block || !text || text.includes('\n')) return null;
-      const mark = p.schema.marks.code.create({ fence: code.fence, lang: code.lang });
-      return [{ node: p.schema.text(text, mark.addToSet(marks)), from: code.from, to: code.to }];
+  tiptap: TypstCode,
+  typst: {
+    parseTypst: {
+      syntaxNodes: {
+        Raw: {
+          inline: (p, node, marks) => {
+            const code = rawCode(node, p.source);
+            const text = code ? p.source.slice(code.from, code.to) : '';
+            if (!code || code.block || !text || text.includes('\n')) return null;
+            const mark = p.schema.marks.code.create({ fence: code.fence, lang: code.lang });
+            return [{ node: p.schema.text(text, mark.addToSet(marks)), from: code.from, to: code.to }];
+          },
+        },
+      },
     },
+    raw: true,
+    toTypst: (mark, { text }) => inlineCodeDelimiters(text, mark.attrs.lang, mark.attrs.fence),
   },
-  raw: true,
-  print: (mark, { text }) => inlineCodeDelimiters(text, mark.attrs.lang, mark.attrs.fence),
 };
 
 /**
@@ -137,30 +156,31 @@ export const CODE: TypstMarkSpec = {
  */
 export const CODE_BLOCK: TypstNodeSpec = {
   name: 'codeBlock',
-  extension: TypstCodeBlock,
-  attributes: {
-    src: { default: null, rendered: false, keepOnSplit: false },
-    sep: { default: null, rendered: false },
-    fence: { default: 3, rendered: false },
-  },
-  labelled: true,
-  runSyntax: {
-    Raw: (p, node, sep) => {
-      const code = rawCode(node, p.source);
-      if (!code?.block) return null;
-      const text = p.source.slice(code.from, code.to);
-      const attrs = { language: code.lang, fence: code.fence, src: p.text(node), sep };
-      const content = text ? [{ node: p.schema.text(text), from: code.from, to: code.to }] : [];
-      return p.textblock({ type: 'codeBlock', attrs, contentTo: code.to }, node.from, content);
+  tiptap: TypstCodeBlock,
+  typst: {
+    parseTypst: {
+      syntaxNodes: {
+        Raw: {
+          block: (p, node, sep) => {
+            const code = rawCode(node, p.source);
+            if (!code?.block) return null;
+            const text = p.source.slice(code.from, code.to);
+            const attrs = { language: code.lang, fence: code.fence, src: p.text(node), sep };
+            const content = text ? [{ node: p.schema.text(text), from: code.from, to: code.to }] : [];
+            return p.textblock({ type: 'codeBlock', attrs, contentTo: code.to }, node.from, content);
+          },
+        },
+      },
     },
-  },
-  print: (out, block, pos) => {
-    const text = block.textContent;
-    const { open, close } = codeBlockDelimiters(text, block.attrs.language, block.attrs.fence);
-    out.hidden(open);
-    out.shown(text, 'text', pos + 1, pos + 1 + text.length);
-    out.endBlock(pos + block.nodeSize - 1, text.length === 0);
-    out.closing(close);
+    toTypst: (state, block, pos) => {
+      const text = block.textContent;
+      const { open, close } = codeBlockDelimiters(text, block.attrs.language, block.attrs.fence);
+      state.hidden(open);
+      state.shown(text, 'text', pos + 1, pos + 1 + text.length);
+      state.endBlock(pos + block.nodeSize - 1, text.length === 0);
+      state.closing(close);
+    },
+    labelled: true,
   },
 };
 
@@ -181,15 +201,16 @@ const NEW_QUOTE: QuoteLayout = { open: '#quote(block: true)[', close: ']' };
  */
 export const BLOCKQUOTE: TypstNodeSpec = {
   name: 'blockquote',
-  extension: Blockquote,
-  attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } },
-  anchors: ['layout'],
-  labelled: true,
-  blockCalls: { quote: blockquote },
-  print: (out, quote, pos) => printAround(out, quote, pos, quote.attrs.layout ?? NEW_QUOTE),
+  tiptap: Blockquote,
+  typst: {
+    parseTypst: { calls: { quote: { block: parseBlockquote } } },
+    toTypst: (state, quote, pos) => writeAround(state, quote, pos, quote.attrs.layout ?? NEW_QUOTE),
+    anchors: ['layout'],
+    labelled: true,
+  },
 };
 
-function blockquote(p: TypstParseContext, call: SyntaxNode, sep: string | null): Node | null {
+function parseBlockquote(p: TypstParseContext, call: SyntaxNode, sep: string | null): Node | null {
   const blocks = trailingContent(call);
   if (blocks?.length !== 1 || !isBlockQuoteArgs(p, call)) return null;
   const { content, from, to } = p.blocks(blocks[0]);
@@ -205,10 +226,10 @@ function isBlockQuoteArgs(p: TypstParseContext, call: SyntaxNode): boolean {
 }
 
 /** `open`, the container's blocks, `close`. */
-function printAround(out: TypstSerializeState, block: Node, pos: number, { open, close }: QuoteLayout): void {
-  out.hidden(open);
-  out.blocks(block, pos + 1, '\n\n');
-  out.closing(close);
+function writeAround(state: TypstSerializeState, block: Node, pos: number, { open, close }: QuoteLayout): void {
+  state.hidden(open);
+  state.blocks(block, pos + 1, '\n\n');
+  state.closing(close);
 }
 
 // ------------------------------------------------------------------ toolbar

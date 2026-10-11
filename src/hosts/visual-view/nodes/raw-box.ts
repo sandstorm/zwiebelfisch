@@ -8,8 +8,8 @@ import type { Node } from '@tiptap/pm/model';
 import { NodeSelection, Selection } from '@tiptap/pm/state';
 import type { Decoration, EditorView, NodeView, NodeViewConstructor } from '@tiptap/pm/view';
 import { minimalChange } from '../../../core/typst-document/typst-document';
-import { setBoxDecorations, type BoxAction, type BoxRenderer, type BoxTools, type BoxToolsHost, type CodeBoxSpec, type VisualViewContext } from '../visual-view';
-import { nodeGrammar, posToSource } from '../../projection/projection';
+import { setBoxDecorations, type BoxAction, type BoxRenderer, type BoxTools, type BoxToolsHost, type TypstNodeSpec, type VisualViewContext } from '../visual-view';
+import { posToSource } from '../../projection/projection';
 import { BoxActionBar } from './box-actions';
 import { RenderedBox } from './rendered-box';
 
@@ -27,13 +27,8 @@ export interface Boxes {
   readonly codeExtensions: readonly CodeExtension[];
   /** Buttons on the boxes they apply to. */
   readonly actions: readonly BoxAction[];
-  /** What a box of a node type shows besides its code, by type name. */
-  readonly specs: ReadonlyMap<string, CodeBoxSpec>;
-}
-
-/** Whether `node` shows as a raw box (its spec asks for a code box). */
-function isCodeBox(node: Node): boolean {
-  return nodeGrammar(node)?.box === 'code';
+  /** What the specs ask the view for, by node type name (a box's title and tools). */
+  readonly views: ReadonlyMap<string, NonNullable<TypstNodeSpec['view']>>;
 }
 
 const sharedTheme = {
@@ -54,7 +49,7 @@ const inlineTheme = CodeView.theme({
 });
 
 /**
- * A raw box (a node whose spec has `box: 'code'`: `rawBlock`, `rawInline`, an image call, an outline):
+ * A raw box (a node whose spec has `view.box: 'code'`: `rawBlock`, `rawInline`, an image call, an outline):
  * Typst the Visual view does not model, edited in place in a nested CodeMirror (the language and its colors
  * are contributed: `registerBoxCodeExtension`).
  *
@@ -65,14 +60,14 @@ const inlineTheme = CodeView.theme({
  * arrow keys at the edges, Escape (and Enter in inline boxes) leave the box;
  * Backspace in an empty box deletes it. With a box renderer that draws it,
  * the box shows its picture instead of the code until the code gets focus.
- * Its spec's `codeBox` may head it (an outline: "Table of contents") and add
+ * Its spec's `view.title` may head it (an outline: "Table of contents"), `view.tools` add
  * tools (an image: resize handles, a toolbar); clicking the picture of a box
  * with tools selects the box rather than opening the code (double-click,
  * Enter or the tools' "Edit code" do).
  */
 class RawBox implements NodeView {
   readonly dom: HTMLElement;
-  private readonly spec: CodeBoxSpec | undefined;
+  private readonly spec: TypstNodeSpec['view'];
   /** Above the code: what the box shows. */
   private readonly label: HTMLElement | null;
   private readonly code: CodeView;
@@ -88,11 +83,11 @@ class RawBox implements NodeView {
     private node: Node,
     private readonly getPos: () => number | undefined,
     decorations: readonly Decoration[],
-    { editor, boxes: { view, renderers, codeExtensions, actions, specs } }: { editor: Editor; boxes: Boxes },
+    { editor, boxes: { view, renderers, codeExtensions, actions, views } }: { editor: Editor; boxes: Boxes },
   ) {
     this.editor = editor;
     const inline = node.isInline;
-    const spec = specs.get(node.type.name);
+    const spec = views.get(node.type.name);
     const renderer = renderers.find((candidate) => candidate.renders(node));
     this.spec = spec;
     this.dom = editor.view.dom.ownerDocument.createElement(inline ? 'span' : 'div');
@@ -205,7 +200,7 @@ class RawBox implements NodeView {
   }
 
   private createLabel(node: Node): HTMLElement | null {
-    const label = this.spec?.label;
+    const label = this.spec?.title;
     if (!label) return null;
     this.dom.classList.add(label.className);
     const element = this.dom.appendChild(this.dom.ownerDocument.createElement('div'));
@@ -215,7 +210,7 @@ class RawBox implements NodeView {
   }
 
   private updateLabel(): void {
-    if (this.label) this.label.textContent = this.spec!.label!.text(this.node.attrs.src);
+    if (this.label) this.label.textContent = this.spec!.title!.text(this.node.attrs.src);
   }
 
   /** Selects the box as a whole in the outer editor (a box with tools: shows them). */
@@ -310,7 +305,7 @@ function enterBlockBox({ state, view }: Editor, dir: Direction, side: Side): boo
   const { $head } = state.selection;
   if ($head.depth === 0 || !view.endOfTextblock(dir)) return false;
   const next = Selection.near(state.doc.resolve(side > 0 ? $head.after() : $head.before()), side);
-  return next instanceof NodeSelection && isCodeBox(next.node) && focusBox(view, next.from, side);
+  return next instanceof NodeSelection && focusBox(view, next.from, side);
 }
 
 function focusBox(view: EditorView, pos: number, side: Side): boolean {
@@ -330,7 +325,7 @@ export const RawBoxNavigation = Extension.create({
       ArrowDown: () => enterBox(this.editor, 'down'),
       Enter: () => {
         const { selection } = this.editor.state;
-        return selection instanceof NodeSelection && isCodeBox(selection.node) && focusBox(this.editor.view, selection.from, 1);
+        return selection instanceof NodeSelection && focusBox(this.editor.view, selection.from, 1);
       },
     };
   },

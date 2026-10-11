@@ -4,8 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { children } from '../../../core/typst-syntax/typst-syntax';
-import { starterKitPart } from '../../projection/projection';
-import { VisualView, VisualViewHost, type TextStyle, type TextStyleProvider, type TypstMarkSpec } from '../visual-view';
+import { starterKitPart, type TypstMarkSpec } from '../../projection/projection';
+import { VisualView, VisualViewHost, type TextStyle, type TextStyleProvider } from '../visual-view';
 
 // jsdom lacks layout; ProseMirror only needs these to exist.
 Range.prototype.getClientRects = () => [] as unknown as DOMRectList;
@@ -14,9 +14,11 @@ Range.prototype.getBoundingClientRect = () => new DOMRect();
 /** `*x*` as a bold mark. */
 const STRONG: TypstMarkSpec = {
   name: 'bold',
-  extension: starterKitPart('testBold', { bold: {} }),
-  inlineSyntax: { Strong: (p, node, marks) => p.inline(children(node.getChild('Markup')!), p.schema.marks.bold.create().addToSet(marks)) },
-  print: () => ({ open: '*', close: '*' }),
+  tiptap: starterKitPart('testBold', { bold: {} }),
+  typst: {
+    parseTypst: { syntaxNodes: { Strong: { inline: (p, node, marks) => p.inline(children(node.getChild('Markup')!), p.schema.marks.bold.create().addToSet(marks)) } } },
+    toTypst: () => ({ open: '*', close: '*' }),
+  },
 };
 
 /** A toggle on the selection's text. */

@@ -1,43 +1,58 @@
 // The Visual view's editor extensions over the projection's schema: what the view adds to every node type whose spec
-// asks for it (kept DOM, raw box node views, the own-pseudo-elements mark) and the raw boxes' keyboard navigation.
-// See ARCHITECTURE.md, "VisualView".
+// asks for it in `view` (kept DOM, raw box node views, the own-pseudo-elements mark) and the raw boxes' keyboard
+// navigation. See ARCHITECTURE.md, "VisualView".
 import { Extension, type AnyExtension } from '@tiptap/core';
 import { DOMSerializer, type Node as PMNode } from '@tiptap/pm/model';
 import { Plugin } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView, type NodeView, type NodeViewConstructor } from '@tiptap/pm/view';
-import { BASE_NODES, documentExtensions, type MarkGrammar, type NodeGrammar } from '../../projection/projection';
+import { documentExtensions, type TypstMarkSpec } from '../../projection/projection';
 import type { TypstNodeSpec } from '../visual-view';
 import { RawBoxNavigation, rawBoxViews, type Boxes } from './raw-box';
 
 /**
  * The Tiptap extensions of a Visual view whose schema holds `nodes` and `marks`
  * (see `documentExtensions`), and for each node type (the schema's own and the
- * specs'):
+ * specs') what its `view` asks for (`views`, see `nodeViewSpecs`):
  *
  * - with `keepsDom`, a node view keeping the block's DOM while a new version
- *   renders the same: a block whose anchors change (as every re-projected
- *   block's `src` does after an edit from elsewhere) keeps its DOM, so what is
- *   inside, like an open note editor, survives;
+ *   renders the same: a block whose anchors change (as every block's `src`
+ *   does after an edit from elsewhere) keeps its DOM, so what is inside, like
+ *   an open note editor, survives;
  * - with `box: 'code'`, the raw box node view (`raw-box.ts`) with what `boxes` contribute;
  * - with `ownsPseudoElements`, `data-typst-pseudo="own"` on its DOM.
  */
-export function editorExtensions(nodes: readonly TypstNodeSpec[], marks: readonly MarkGrammar[], boxes: Boxes): AnyExtension[] {
-  return [...documentExtensions(nodes, marks), RawBoxNavigation, nodeViews([...BASE_NODES, ...nodes], boxes)];
+export function editorExtensions(nodes: readonly TypstNodeSpec[], marks: readonly TypstMarkSpec[], boxes: Boxes): AnyExtension[] {
+  return [...documentExtensions(nodes, marks), RawBoxNavigation, nodeViews(boxes)];
 }
 
-/** Kept DOM, raw box node views and the own-pseudo-elements mark, as the specs ask. */
-function nodeViews(specs: readonly (NodeGrammar & Pick<TypstNodeSpec, 'ownsPseudoElements'>)[], boxes: Boxes): AnyExtension {
+/** What the minimum schema's own nodes get: paragraphs keep their DOM, raw Typst shows in raw boxes. */
+const BASE_VIEWS: readonly TypstNodeSpec[] = [
+  { name: 'paragraph', view: { keepsDom: true } },
+  { name: 'rawBlock', view: { box: 'code' } },
+  { name: 'rawInline', view: { box: 'code' } },
+];
+
+/** The `view` of every node type, the base's and `nodes`', merged by name (a later spec's fields win). */
+export function nodeViewSpecs(nodes: readonly TypstNodeSpec[]): Map<string, NonNullable<TypstNodeSpec['view']>> {
+  const views = new Map<string, NonNullable<TypstNodeSpec['view']>>();
+  for (const { name, view } of [...BASE_VIEWS, ...nodes]) views.set(name, { ...views.get(name), ...view });
+  return views;
+}
+
+/** Kept DOM, raw box node views and the own-pseudo-elements mark, as the specs' `view` asks. */
+function nodeViews(boxes: Boxes): AnyExtension {
   return Extension.create({
     name: 'typstNodeViews',
     addProseMirrorPlugins() {
       const rawBox = rawBoxViews(this.editor, boxes);
-      const views: Record<string, NodeViewConstructor> = {};
-      for (const spec of specs) {
-        if (spec.keepsDom) views[spec.name] = keepWhileRenderedSame;
-        if (spec.box === 'code') views[spec.name] = rawBox;
+      const nodeViews: Record<string, NodeViewConstructor> = {};
+      const own = new Set<string>();
+      for (const [name, view] of boxes.views) {
+        if (view.keepsDom) nodeViews[name] = keepWhileRenderedSame;
+        if (view.box === 'code') nodeViews[name] = rawBox;
+        if (view.ownsPseudoElements) own.add(name);
       }
-      const own = new Set(specs.filter((spec) => spec.ownsPseudoElements).map((spec) => spec.name));
-      return [new Plugin({ props: { nodeViews: views } }), ...(own.size > 0 ? [ownPseudoElements(own)] : [])];
+      return [new Plugin({ props: { nodeViews } }), ...(own.size > 0 ? [ownPseudoElements(own)] : [])];
     },
   });
 }

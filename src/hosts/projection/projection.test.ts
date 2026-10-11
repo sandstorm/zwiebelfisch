@@ -5,28 +5,32 @@ import type { Node } from '@tiptap/pm/model';
 import { EditorState } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 import { children, hasOnlyArguments, withHash } from '../../core/typst-syntax/typst-syntax';
-import { createSchema, posToSource, print, project as projectWith, sourceToPos, starterKitPart, type MarkGrammar, type NodeGrammar } from './projection';
+import { createSchema, posToSource, print, project as projectWith, sourceToPos, starterKitPart, type DocumentNodeSpec, type TypstMarkSpec } from './projection';
 
 /** `*x*` as a bold mark: hidden syntax around visible text. */
-const STRONG: MarkGrammar = {
+const STRONG: TypstMarkSpec = {
   name: 'bold',
-  extension: starterKitPart('testBold', { bold: {} }),
-  inlineSyntax: { Strong: (p, node, marks) => p.inline(children(node.getChild('Markup')!), p.schema.marks.bold.create().addToSet(marks)) },
-  print: () => ({ open: '*', close: '*' }),
+  tiptap: starterKitPart('testBold', { bold: {} }),
+  typst: {
+    parseTypst: { syntaxNodes: { Strong: { inline: (p, node, marks) => p.inline(children(node.getChild('Markup')!), p.schema.marks.bold.create().addToSet(marks)) } } },
+    toTypst: () => ({ open: '*', close: '*' }),
+  },
 };
 
 /** `#divider(..)` as a block atom keeping its source, which a label may follow. */
-const DIVIDER: NodeGrammar = {
+const DIVIDER: DocumentNodeSpec = {
   name: 'divider',
-  extension: TiptapNode.create({
+  tiptap: TiptapNode.create({
     name: 'divider',
     group: 'block',
     atom: true,
     addAttributes: () => ({ src: { default: '#divider()', rendered: false }, sep: { default: null, rendered: false } }),
     renderHTML: () => ['hr'],
   }),
-  labelled: true,
-  blockCalls: { divider: (p, call, sep) => (hasOnlyArguments(call) ? p.schema.nodes.divider.create({ src: p.text(withHash(call)), sep }) : null) },
+  typst: {
+    parseTypst: { calls: { divider: { block: (p, call, sep) => (hasOnlyArguments(call) ? p.schema.nodes.divider.create({ src: p.text(withHash(call)), sep }) : null) } } },
+    labelled: true,
+  },
 };
 
 const minimum = createSchema([], []);

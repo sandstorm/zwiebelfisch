@@ -12,7 +12,7 @@ import { NEW_TABLE, type TableLayout, type TableStyle } from '../model/table-lay
  * `table.header(..)`. A cell is a content block `[..]` or an expression
  * (`ms(18)`, `$x^2$`), which becomes a raw box in a cell of its own.
  */
-export function projectTable(p: TypstParseContext, call: SyntaxNode, sep: string | null): Node | null {
+export function parseTable(p: TypstParseContext, call: SyntaxNode, sep: string | null): Node | null {
   const parsed = tableArgs(p, call);
   if (!parsed || parsed.cells.length === 0 || parsed.cells.length % parsed.columns !== 0) return null;
   if (parsed.headerCells !== 0 && parsed.headerCells !== parsed.columns) return null;

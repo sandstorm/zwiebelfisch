@@ -18,7 +18,7 @@ interface PlacedCell {
  * `#table(columns: n, [..], ..)`, one row per line), the first row in
  * `table.header(..)` if its cells are header cells.
  */
-export function printTable(out: TypstSerializeState, table: Node, pos: number): void {
+export function tableToTypst(out: TypstSerializeState, table: Node, pos: number): void {
   const rows: PlacedCell[][] = [];
   table.forEach((row, rowOffset) => {
     const cells: PlacedCell[] = [];

@@ -51,7 +51,6 @@ export type {
   BoxRendererProvider,
   BoxTools,
   BoxToolsHost,
-  CodeBoxSpec,
   EditorExtensionProvider,
   Gutter,
   GutterProvider,
@@ -64,7 +63,6 @@ export type {
   ToolbarControl,
   ToolbarGroup,
   ToolbarItem,
-  TypstMarkSpec,
   TypstNodeSpec,
   VisualViewContext,
   VisualViewContributions,
@@ -72,19 +70,15 @@ export type {
 export { setBoxDecorations } from './hosts/visual-view/visual-view';
 export type {
   Around,
-  BlockCallProjector,
   BlockLabel,
-  BlockPrinter,
-  BlockSyntaxProjector,
-  InlineCallProjector,
-  InlineProjector,
-  MarkGrammar,
-  NodeGrammar,
+  DocumentNodeSpec,
   Placed,
-  TypstSerializeState,
+  TypstMarkConversion,
+  TypstMarkSpec,
+  TypstNodeConversion,
   TypstParseContext,
-  ProjectionSpec,
-  RunProjector,
+  TypstParseRules,
+  TypstSerializeState,
 } from './hosts/projection/projection';
 // Reading Typst syntax (Lezer nodes of codemirror-lang-typst's grammar) in parse functions: plain functions.
 export {

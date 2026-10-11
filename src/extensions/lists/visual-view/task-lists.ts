@@ -58,27 +58,29 @@ const TaskLists = Extension.create({
  * task item, the box hidden syntax; consecutive ones form a task list.
  * Tiptap's TaskList / TaskItem (one paragraph, no nesting; the `[ ] ` input
  * rule and clickable checkboxes are Tiptap's). Registered with a higher
- * priority than bullet lists (lists.ts), so its projector gets bullet items first.
+ * priority than bullet lists (lists.ts), so its parse rule gets bullet items first.
  */
 export const TASK_LIST: TypstNodeSpec = {
   name: 'taskList',
-  extension: TaskLists,
-  print: (out, list, pos) => out.blocks(list, pos + 1, '\n'),
+  tiptap: TaskLists,
+  typst: { toTypst: (state, list, pos) => state.blocks(list, pos + 1, '\n') },
 };
 
 export const TASK_ITEM: TypstNodeSpec = {
   name: 'taskItem',
-  anchors: ['marker'],
-  container: () => 'taskList',
-  blockSyntax: { ListItem: { project: taskItem } },
-  print: (out, item, pos) => out.item(item, pos, `- [${item.attrs.checked ? 'x' : ' '}] `),
+  typst: {
+    parseTypst: { syntaxNodes: { ListItem: { block: parseTaskItem, standsAlone: true } } },
+    toTypst: (state, item, pos) => state.item(item, pos, `- [${item.attrs.checked ? 'x' : ' '}] `),
+    anchors: ['marker'],
+    container: () => 'taskList',
+  },
 };
 
 /** cheq's unchecked and checked boxes; others (`[/]`, `[-]`, …) stay text. */
 const TASK_BOX = /^\[([ x])\](?: |$)/;
 
 /** `- [ ] text` / `- [x] text` (one paragraph, a space after the box): a task item; null for other bullet items. */
-function taskItem(p: TypstParseContext, node: SyntaxNode, sep: string | null): Node | null {
+function parseTaskItem(p: TypstParseContext, node: SyntaxNode, sep: string | null): Node | null {
   const markup = node.getChild('Markup');
   const box = markup ? TASK_BOX.exec(p.text(markup)) : null;
   if (!markup || !box) return null;

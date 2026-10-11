@@ -25,11 +25,12 @@ const Outline = Node.create({
  */
 export const OUTLINE: TypstNodeSpec = {
   name: 'outline',
-  extension: Outline,
-  labelled: true,
-  box: 'code',
-  codeBox: { label: { className: 'typst-visual__outline', text: () => 'Table of contents' } },
-  blockCalls: { outline: (p, call, sep) => (hasOnlyArguments(call) ? p.schema.nodes.outline.create({ src: p.text(withHash(call)), sep }) : null) },
+  tiptap: Outline,
+  typst: {
+    parseTypst: { calls: { outline: { block: (p, call, sep) => (hasOnlyArguments(call) ? p.schema.nodes.outline.create({ src: p.text(withHash(call)), sep }) : null) } } },
+    labelled: true,
+  },
+  view: { box: 'code', title: { className: 'typst-visual__outline', text: () => 'Table of contents' } },
 };
 
 const ICON = svg('<path d="M4 6h10M7 10h13M7 14h13M4 18h10"/>');

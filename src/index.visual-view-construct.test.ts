@@ -25,7 +25,8 @@ const Callout = Node.create({
   group: 'block',
   content: 'block+',
   defining: true,
-  addAttributes: () => ({ title: { default: 'Note', rendered: false } }),
+  // `sep` (the whitespace after the callout's source) and `layout` (how it was written) keep its source: never rendered
+  addAttributes: () => ({ title: { default: 'Note', rendered: false }, sep: { default: null, rendered: false }, layout: { default: null, rendered: false } }),
   renderHTML: () => ['aside', { class: 'callout' }, ['div', 0]],
   addNodeView: () => ({ node, getPos, editor }) => {
     const doc = editor.view.dom.ownerDocument;
@@ -57,7 +58,7 @@ const Callout = Node.create({
 });
 
 /** `#callout[..]` or `#callout(title: "plain string")[..]`, whose content is blocks; anything else stays raw Typst. */
-function projectCallout(p: TypstParseContext, call: SyntaxNode, sep: string | null): ProseMirrorNode | null {
+function parseCallout(p: TypstParseContext, call: SyntaxNode, sep: string | null): ProseMirrorNode | null {
   const content = trailingContent(call);
   const title = calloutTitle(p, call);
   if (content?.length !== 1 || title === null) return null;
@@ -75,24 +76,19 @@ function calloutTitle(p: TypstParseContext, call: SyntaxNode): string | null {
   return args.length === 1 && title?.name === 'Str' ? decodeString(p.text(title)) : null;
 }
 
-/** As written while the title is; a new callout, or one with a changed title, gets the call printed anew. */
-function printCallout(out: TypstSerializeState, callout: ProseMirrorNode, pos: number): void {
+/** As written while the title is; a new callout, or one with a changed title, gets the call written anew. */
+function calloutToTypst(state: TypstSerializeState, callout: ProseMirrorNode, pos: number): void {
   const layout: CalloutLayout | null = callout.attrs.layout;
   const title: string = callout.attrs.title;
-  out.hidden(layout?.title === title ? layout.open : `#callout(title: ${quote(title)})[`);
-  out.blocks(callout, pos + 1, '\n\n');
-  out.closing(layout?.close ?? ']');
+  state.hidden(layout?.title === title ? layout.open : `#callout(title: ${quote(title)})[`);
+  state.blocks(callout, pos + 1, '\n\n');
+  state.closing(layout?.close ?? ']');
 }
 
 const CALLOUT: TypstNodeSpec = {
   name: 'callout',
-  extension: Callout,
-  // never rendered: where the callout's source is (`sep`: the whitespace after it), how it was written (`layout`)
-  attributes: { sep: { default: null, rendered: false }, layout: { default: null, rendered: false } },
-  anchors: ['layout'],
-  labelled: true,
-  blockCalls: { callout: projectCallout },
-  print: printCallout,
+  tiptap: Callout,
+  typst: { parseTypst: { calls: { callout: { block: parseCallout } } }, toTypst: calloutToTypst, anchors: ['layout'], labelled: true },
 };
 
 /** "Callout" in the Insert menu: the selected blocks into a callout. */

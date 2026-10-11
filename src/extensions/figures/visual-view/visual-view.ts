@@ -99,25 +99,22 @@ const FigureCaption = Node.create({
   },
 });
 
-/** Figures: projected from `#figure(..)` calls, printed around their body and caption. */
+/** Figures: read from `#figure(..)` calls, written around their body and caption. */
 export const FIGURE: TypstNodeSpec = {
   name: 'figure',
-  extension: Figure,
-  anchors: ['layout'],
-  labelled: true,
-  blockCalls: { figure: projectFigure },
-  print: printFigure,
+  tiptap: Figure,
+  typst: { parseTypst: { calls: { figure: { block: parseFigure } } }, toTypst: figureToTypst, anchors: ['layout'], labelled: true },
 };
 
-export const FIGURE_CAPTION: TypstNodeSpec = { name: 'figureCaption', extension: FigureCaption };
+export const FIGURE_CAPTION: TypstNodeSpec = { name: 'figureCaption', tiptap: FigureCaption };
 
 /**
  * `#figure(image("path", ..), ..named) <label>?` or `#figure(table(..), ..)`
- * (whatever the figure's schema accepts of what the call projects to) whose
+ * (whatever the figure's schema accepts of what the call is read as) whose
  * `caption`, if any, is one paragraph of markup; other named arguments stay as
  * written.
  */
-function projectFigure(p: TypstParseContext, call: SyntaxNode, sep: string | null): PMNode | null {
+function parseFigure(p: TypstParseContext, call: SyntaxNode, sep: string | null): PMNode | null {
   const parsed = figureArgs(p, call);
   if (!parsed) return null;
   const { schema, source } = p;
@@ -144,7 +141,7 @@ function figureArgs(p: TypstParseContext, call: SyntaxNode): { body: SyntaxNode;
   return caption === undefined ? null : { body, bodyNode: bodyNode!, caption };
 }
 
-/** A figure's body: a call projected to a block the figure holds (`image(..)`, `table(..)`). */
+/** A figure's body: a call read as a block the figure holds (`image(..)`, `table(..)`). */
 function figureBody(p: TypstParseContext, node: SyntaxNode): PMNode | null {
   const block = p.blockCall(node);
   return block && p.schema.nodes.figure.contentMatch.matchType(block.type) ? block : null;
@@ -188,7 +185,7 @@ function hasFigureExtras(figure: PMNode): boolean {
  * each prints (and changes) on its own. An added caption goes right after the
  * body; a removed one takes its argument and the comma before it along.
  */
-function printFigure(out: TypstSerializeState, figure: PMNode, pos: number): void {
+function figureToTypst(out: TypstSerializeState, figure: PMNode, pos: number): void {
   const layout: FigureLayout = figure.attrs.layout ?? NEW_FIGURE;
   const body = figure.child(0);
   out.hidden(layout.open);

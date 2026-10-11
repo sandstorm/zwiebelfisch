@@ -5,10 +5,10 @@ import { Mark, Node } from '@tiptap/core';
 import type { Mark as PMMark, Node as PMNode } from '@tiptap/pm/model';
 import { TextSelection } from '@tiptap/pm/state';
 import type { NodeView } from '@tiptap/pm/view';
-import { NOTE_HEAD, noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../model/margin-note-syntax';
+import { MARGIN_NOTE, NOTE_HEAD, noteCallSyntax, printNoteCall, rangeNoteSyntax } from '../model/margin-note-syntax';
 import { children } from '../../../core/typst-syntax/typst-syntax';
-import { svg, type Action, type TypstMarkSpec, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
-import type { Placed, TypstParseContext } from '../../../hosts/projection/projection';
+import { svg, type Action, type TypstNodeSpec, type VisualViewContribution } from '../../../hosts/visual-view/visual-view';
+import type { Placed, TypstMarkSpec, TypstParseContext } from '../../../hosts/projection/projection';
 
 export interface MarginNotesOptions {
   /** Adds a comment (margin note) at the selection: the "Comment" button in the toolbar and the selection's bar. */
@@ -40,7 +40,7 @@ export function marginNotes(options: MarginNotesOptions): VisualViewContribution
     activate({ visualView, subscriptions }) {
       const action = commentAction(options.comment);
       subscriptions.push(
-        visualView.registerNode(MARGIN_NOTE),
+        visualView.registerNode(POINT_NOTE),
         visualView.registerMark(NOTE_RANGE, { priority: NOTE_RANGE_PRIORITY }),
         visualView.registerToolbarGroup({ kind: 'group', id: 'comments', order: 60 }),
         visualView.registerToolbarItem({ group: 'comments', action }),
@@ -84,18 +84,20 @@ const NoteRange = Mark.create({
   },
 });
 
-const MARGIN_NOTE: TypstNodeSpec = {
+const POINT_NOTE: TypstNodeSpec = {
   name: 'marginNote',
-  extension: MarginNote,
-  box: 'widget',
-  inlineCalls: [{ matches: (p, call) => noteCallSyntax(p.source, call) !== null, project: marginNoteCall }],
-  printAtom: (node) => printNoteCall(node.attrs as { head: string; note: string }),
+  tiptap: MarginNote,
+  typst: {
+    parseTypst: { calls: { [MARGIN_NOTE]: { inline: parseMarginNote, inRunningText: (p, call) => noteCallSyntax(p.source, call) !== null } } },
+    atomToTypst: (node) => printNoteCall(node.attrs as { head: string; note: string }),
+  },
+  view: { box: 'widget' },
 };
 
 const NOTE_RANGE: TypstMarkSpec = {
   name: 'noteRange',
-  extension: NoteRange,
-  print: (mark) => rangeNoteSyntax(mark.attrs.head, mark.attrs.note),
+  tiptap: NoteRange,
+  typst: { toTypst: (mark) => rangeNoteSyntax(mark.attrs.head, mark.attrs.note) },
 };
 
 /**
@@ -103,7 +105,7 @@ const NOTE_RANGE: TypstMarkSpec = {
  * and note; `#margin-note(..named)[text][note]` → `text` with a `noteRange`
  * mark holding them. Null for calls that are not margin notes.
  */
-function marginNoteCall(p: TypstParseContext, call: SyntaxNode, marks: readonly PMMark[]): PMNode | Placed[] | null {
+function parseMarginNote(p: TypstParseContext, call: SyntaxNode, marks: readonly PMMark[]): PMNode | Placed[] | null {
   const syntax = noteCallSyntax(p.source, call);
   if (!syntax) return null;
   const { head, text, note } = syntax;

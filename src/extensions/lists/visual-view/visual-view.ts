@@ -6,28 +6,43 @@ import type { SyntaxNode } from '@lezer/common';
 import type { Node } from '@tiptap/pm/model';
 import { children } from '../../../core/typst-syntax/typst-syntax';
 import { svg, type Action, type TypstNodeSpec } from '../../../hosts/visual-view/visual-view';
-import type { BlockPrinter, TypstParseContext } from '../../../hosts/projection/projection';
+import type { TypstParseContext, TypstSerializeState } from '../../../hosts/projection/projection';
 
-/** A list item's first child may be verbatim Typst (an item whose body the Visual view cannot model). */
-const TypstListItem = ListItem.extend({ content: '(paragraph | rawBlock) block*' });
-
-/** Tiptap's lists, items and list keymap. */
-const Lists = Extension.create({
-  name: 'typstLists',
-  addExtensions: () => [BulletList, OrderedList, TypstListItem, ListKeymap],
-});
-
-const ORDERED_MARKER = /^\d|^\+/;
-
+/** Source anchors: `src`, the Typst a node was read from; `sep`, the whitespace to its next sibling. */
 const ANCHORS = {
   src: { default: null, rendered: false, keepOnSplit: false },
   sep: { default: null, rendered: false },
 };
 
+/** A list item's first child may be verbatim Typst (an item whose body the Visual view cannot model); `marker` as written (`-`, `+`, `1.`). */
+const TypstListItem = ListItem.extend({
+  content: '(paragraph | rawBlock) block*',
+  addAttributes() {
+    return { ...this.parent?.(), ...ANCHORS, marker: { default: null, rendered: false } };
+  },
+});
+
+/** Tiptap's lists (with the source anchors), items and list keymap. */
+const Lists = Extension.create({
+  name: 'typstLists',
+  addExtensions: () => [
+    ...[BulletList, OrderedList].map((list) =>
+      list.extend({
+        addAttributes() {
+          return { ...this.parent?.(), ...ANCHORS };
+        },
+      }),
+    ),
+    TypstListItem,
+    ListKeymap,
+  ],
+});
+
+const ORDERED_MARKER = /^\d|^\+/;
+
 const LIST: Omit<TypstNodeSpec, 'name'> = {
-  attributes: ANCHORS,
-  keepsDom: true,
-  print: (out, list, pos) => out.blocks(list, pos + 1, '\n'),
+  typst: { toTypst: (state, list, pos) => state.blocks(list, pos + 1, '\n') },
+  view: { keepsDom: true },
 };
 
 /**
@@ -38,26 +53,27 @@ const LIST: Omit<TypstNodeSpec, 'name'> = {
  * list of the other kind), further children (nested lists made with Tab) on
  * following lines, indented.
  */
-export const BULLET_LIST: TypstNodeSpec = { ...LIST, name: 'bulletList', extension: Lists };
+export const BULLET_LIST: TypstNodeSpec = { ...LIST, name: 'bulletList', tiptap: Lists };
 export const ORDERED_LIST: TypstNodeSpec = { ...LIST, name: 'orderedList' };
 
-const printListItem: BlockPrinter = (out, item, pos, list) => {
+function listItemToTypst(state: TypstSerializeState, item: Node, pos: number, list: Node): void {
   const ordered = list.type.name === 'orderedList';
   const keepMarker = item.attrs.marker !== null && ORDERED_MARKER.test(item.attrs.marker) === ordered;
-  out.item(item, pos, `${keepMarker ? item.attrs.marker : ordered ? '+' : '-'} `);
-};
+  state.item(item, pos, `${keepMarker ? item.attrs.marker : ordered ? '+' : '-'} `);
+}
 
 export const LIST_ITEM: TypstNodeSpec = {
   name: 'listItem',
-  attributes: { ...ANCHORS, marker: { default: null, rendered: false } },
-  anchors: ['marker'],
-  keepsDom: true,
-  container: (item: Node) => (ORDERED_MARKER.test(item.attrs.marker ?? '') ? 'orderedList' : 'bulletList'),
-  blockSyntax: { ListItem: { project: listItem }, EnumItem: { project: listItem } },
-  print: printListItem,
+  typst: {
+    parseTypst: { syntaxNodes: { ListItem: { block: parseListItem, standsAlone: true }, EnumItem: { block: parseListItem, standsAlone: true } } },
+    toTypst: listItemToTypst,
+    anchors: ['marker'],
+    container: (item: Node) => (ORDERED_MARKER.test(item.attrs.marker ?? '') ? 'orderedList' : 'bulletList'),
+  },
+  view: { keepsDom: true },
 };
 
-function listItem(p: TypstParseContext, node: SyntaxNode, sep: string | null): Node {
+function parseListItem(p: TypstParseContext, node: SyntaxNode, sep: string | null): Node {
   const marker = node.firstChild!;
   const markup = node.getChild('Markup');
   const body = markup ? children(markup) : [];

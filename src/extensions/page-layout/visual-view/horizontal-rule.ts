@@ -71,11 +71,17 @@ const HorizontalRule = Node.create({
  */
 export const HORIZONTAL_RULE: TypstNodeSpec = {
   name: 'horizontalRule',
-  extension: HorizontalRule,
-  labelled: true,
-  blockCalls: {
-    line: (p, call, sep) =>
-      hasOnlyArguments(call) && isFullWidthLine(p, call) ? p.schema.nodes.horizontalRule.create({ src: p.text(withHash(call)), sep }) : null,
+  tiptap: HorizontalRule,
+  typst: {
+    parseTypst: {
+      calls: {
+        line: {
+          block: (p, call, sep) =>
+            hasOnlyArguments(call) && isFullWidthLine(p, call) ? p.schema.nodes.horizontalRule.create({ src: p.text(withHash(call)), sep }) : null,
+        },
+      },
+    },
+    labelled: true,
   },
 };
 

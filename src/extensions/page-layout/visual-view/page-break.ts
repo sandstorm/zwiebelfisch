@@ -43,11 +43,13 @@ const PageBreak = Node.create({
  */
 export const PAGE_BREAK: TypstNodeSpec = {
   name: 'pageBreak',
-  extension: PageBreak,
-  labelled: true,
+  tiptap: PageBreak,
+  typst: {
+    parseTypst: { calls: { pagebreak: { block: (p, call, sep) => (hasOnlyArguments(call) ? p.schema.nodes.pageBreak.create({ src: p.text(withHash(call)), sep }) : null) } } },
+    labelled: true,
+  },
   // the dashed lines
-  ownsPseudoElements: true,
-  blockCalls: { pagebreak: (p, call, sep) => (hasOnlyArguments(call) ? p.schema.nodes.pageBreak.create({ src: p.text(withHash(call)), sep }) : null) },
+  view: { ownsPseudoElements: true },
 };
 
 const ICON = svg('<path d="M6 3v5h12V3"/><path d="M6 21v-5h12v5"/><path d="M3 12h2M8 12h2M14 12h2M19 12h2"/>');

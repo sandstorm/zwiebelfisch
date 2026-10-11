@@ -2,8 +2,9 @@
  * The source-anchored projection between Typst text and the Visual view's
  * ProseMirror document: the framework, which knows no Typst construct beyond
  * paragraphs, text and raw Typst. Every other construct comes in as a spec
- * (`NodeGrammar` / `MarkGrammar`, below): which syntax and calls it
- * projects, how an edited one prints. `createSchema` makes the schema of a set
+ * (`DocumentNodeSpec` / `TypstMarkSpec`, below): its Tiptap extension, which
+ * syntax and calls it reads, how an edited one is written back
+ * (`TypstToProseMirrorParser`, `ProseMirrorToTypstSerializer`). `createSchema` makes the schema of a set
  * of specs (the minimum schema below, plus the specs' Tiptap extensions) with
  * the specs attached; an editor built from `documentExtensions` gets them with
  * `attachGrammar`.
@@ -31,17 +32,17 @@
  * Entry of hosts/projection/. See ARCHITECTURE.md, "VisualView".
  */
 import type { SyntaxNode } from '@lezer/common';
-import { getSchema, type AnyExtension, type Attribute } from '@tiptap/core';
+import { getSchema, type AnyExtension } from '@tiptap/core';
 import type { Mark, Node, Schema } from '@tiptap/pm/model';
 import type { Transaction } from '@tiptap/pm/state';
 import StarterKit, { type StarterKitOptions } from '@tiptap/starter-kit';
 import { Disposable } from '../../core/disposable/disposable';
 import type { Event } from '../../core/event-emitter/event-emitter';
 import { Grammar } from './grammar';
-import { projectDocument } from './parser';
+import { parseDocument } from './parser';
 import { forgetPrinted, printed, type Span } from './serializer';
 import { pristine } from './pristine';
-import { ANCHORS, RawBlock, RawInline, SoftBreak, sourceAnchors, TypstDocument, TypstSource } from './schema';
+import { RawBlock, RawInline, SoftBreak, sourceAnchors, TypstDocument, TypstSource } from './schema';
 
 /** A block's label: its name, and the source between the block and `<name>` (`' '`, `''`, `'\n'`). */
 export interface BlockLabel {
@@ -57,19 +58,19 @@ export interface Placed {
 }
 
 /**
- * What projectors get to build nodes from Typst syntax: the source, the schema, and the framework's own
- * steps (blocks of a content block, inline content, textblocks that print their source while untouched).
+ * What parse functions get to build nodes from Typst syntax: the source, the schema, and the framework's own
+ * steps (blocks of a content block, inline content, textblocks that write their source while untouched).
  */
 export interface TypstParseContext {
   readonly schema: Schema;
   readonly source: string;
   /** The source of `range`. */
   text(range: { from: number; to: number }): string;
-  /** A call (a `FuncCall` without `#`, e.g. a figure's body) as the block its projectors make of it, or null. */
+  /** A call (a `FuncCall` without `#`, e.g. a figure's body) as the block the specs' parse rules make of it, or null. */
   blockCall(call: SyntaxNode): Node | null;
   /** The blocks of a closed content block `[..]` (an empty paragraph if there are none), and the source they cover. */
   blocks(content: SyntaxNode): { content: Node[]; from: number; to: number };
-  /** Projects inline syntax (a textblock's content), each node carrying `marks`. */
+  /** Parses inline syntax (a textblock's content), each node carrying `marks`. */
   inline(nodes: readonly SyntaxNode[], marks?: readonly Mark[]): Placed[];
   /** Whether markup `nodes` are one paragraph: no paragraph break, no block of its own (heading, list item). */
   isOneParagraph(nodes: readonly SyntaxNode[]): boolean;
@@ -82,83 +83,86 @@ export interface TypstParseContext {
   pristine(type: string, attrs: Record<string, unknown>, content?: Node[]): Node;
   /** Verbatim inline Typst: a raw inline box. */
   raw(src: string, marks?: readonly Mark[]): Node;
-  /** Counts up from 0 within the textblock being projected (equal neighbouring marks stay apart by such an `id`). */
+  /** Counts up from 0 within the textblock being parsed (equal neighbouring marks stay apart by such an `id`). */
   serial(): number;
 }
 
-/** Block syntax that always stands alone (`Heading`, `ListItem`): the block, or null to let the next projector try. */
-export interface BlockSyntaxProjector {
-  project(p: TypstParseContext, node: SyntaxNode, sep: string | null): Node | null;
-  /** A label right after it (same line or the next, then a paragraph break or a block) is its label: headings. */
-  takesLabel?: boolean;
+/**
+ * Which Typst a spec reads (ProseMirror's `parseDOM`, for Typst): syntax nodes by their name in the Lezer grammar of
+ * codemirror-lang-typst, calls by the function's name. Each function gets the `TypstParseContext` and the Lezer node
+ * (for a call: its `FuncCall`, read with the typst-syntax functions), and returns what the source becomes, or null
+ * to let the next spec try (none: the source stays raw Typst). Of specs reading the same syntax or call, the one
+ * whose Tiptap extension has the higher priority is asked first.
+ */
+export interface TypstParseRules {
+  /** By syntax node name (`Heading`, `ListItem`, `Raw`, `Strong`, `Ref`). */
+  readonly syntaxNodes?: Readonly<Record<string, {
+    /**
+     * The block a run of markup (up to a paragraph break) that is exactly this node becomes (`Raw` over several
+     * lines: a code block); with `standsAlone`, the block the node always is.
+     */
+    block?(p: TypstParseContext, node: SyntaxNode, sep: string | null): Node | null;
+    /** A block of its own even without paragraph breaks around it (`Heading`, `ListItem`): the markup around it are other blocks. */
+    readonly standsAlone?: boolean;
+    /** A label right after it (same line or the next, then a paragraph break or a block) is its label: headings. */
+    readonly takesLabel?: boolean;
+    /** The node in running text: a node showing all of its source, or placed content (its text with marks). Such syntax makes its run a paragraph. */
+    inline?(p: TypstParseContext, node: SyntaxNode, marks: readonly Mark[]): Node | Placed[] | null;
+  }>>;
+  /** By the called function's name (`calleeName`); `*` takes the calls no spec names. */
+  readonly calls?: Readonly<Record<string, {
+    /**
+     * The block a run that is exactly one `#name(..)` call becomes (its source: `withHash(call)`), or a call read as a
+     * block elsewhere (a figure's body, without `#`). Check the arguments first.
+     */
+    block?(p: TypstParseContext, call: SyntaxNode, sep: string | null): Node | null;
+    /** The call after `#` in running text (`#link("url")[text]`): a node, or placed content. */
+    inline?(p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[]): Node | Placed[] | null;
+    /** Whether `call` belongs in running text (makes its run a paragraph), even where `inline` leaves it raw. Default with `inline`: yes. */
+    inRunningText?(p: TypstParseContext, call: SyntaxNode): boolean;
+  }>>;
 }
-
-/** A run of markup that is exactly `node` (e.g. raw text over several lines): a block, or null. */
-export type RunProjector = (p: TypstParseContext, node: SyntaxNode, sep: string | null) => Node | null;
 
 /**
- * A run that is exactly one `#name(..)` call (`call`: its `FuncCall`; the run's source is `withHash(call)`), or a call
- * a spec reads as a block (a figure's body, without `#`): the block (checking the arguments first), or null.
+ * The Typst of a node type: how it is read (`parseTypst`) and written back when edited (`toTypst`, ProseMirror's
+ * `toDOM` for Typst), and how its source is kept.
  */
-export type BlockCallProjector = (p: TypstParseContext, call: SyntaxNode, sep: string | null) => Node | null;
-
-/** One piece of inline syntax: a node showing all of its source, the placed content (marks), or null (raw). */
-export type InlineProjector = (p: TypstParseContext, node: SyntaxNode, marks: readonly Mark[]) => Node | Placed[] | null;
-
-/** A call after `#` in running text (`#link("url")[text]`). */
-export interface InlineCallProjector {
-  /** Whether `call` is this construct's: it then belongs in running text (makes its run a paragraph), even if left raw. */
-  matches(p: TypstParseContext, call: SyntaxNode): boolean;
-  /** The node or placed content, or null to leave the call raw (or to the next projector). */
-  project(p: TypstParseContext, call: SyntaxNode, marks: readonly Mark[]): Node | Placed[] | null;
-}
-
-/** How a spec reads Typst: by syntax, by call, by the inline syntax it models. */
-export interface ProjectionSpec {
-  /** Block syntax standing alone, by Lezer node name (`Heading`, `ListItem`, `EnumItem`); tried in registration order. */
-  readonly blockSyntax?: Readonly<Record<string, BlockSyntaxProjector>>;
-  /** A run that is exactly one syntax node of this name (`Raw`: a code block); tried before the run becomes prose. */
-  readonly runSyntax?: Readonly<Record<string, RunProjector>>;
-  /** Block calls by function name; `*` takes any call no projector names. */
-  readonly blockCalls?: Readonly<Record<string, BlockCallProjector>>;
-  /** Inline syntax by Lezer node name (`Strong`, `Ref`); such syntax makes a run prose. */
-  readonly inlineSyntax?: Readonly<Record<string, InlineProjector>>;
-  /** Calls in running text, tried in registration order. */
-  readonly inlineCalls?: readonly InlineCallProjector[];
-  /** Fires when what this spec projects changed (styles declared or removed): views project their document again. */
+export interface TypstNodeConversion {
+  readonly parseTypst?: TypstParseRules;
+  /**
+   * Writes an edited (not untouched) block that starts at document position `pos` inside `parent`. Default for
+   * textblocks: their inline content; block atoms write their `src`.
+   */
+  toTypst?(state: TypstSerializeState, node: Node, pos: number, parent: Node): void;
+  /** The source of an inline atom (`@intro`). */
+  atomToTypst?(node: Node): string;
+  /** Text written right after this inline atom, escaped where it would continue the atom's syntax (`@intro\s`). */
+  escapeAfter?(node: Node, text: string): string;
+  /** A label may follow it (`<intro>`): it gets the `label` attribute, written after it. */
+  readonly labelled?: boolean;
+  /**
+   * Those of its attributes (defined by its Tiptap extension, never rendered) that keep how its source was written
+   * and that a fresh parse may change in place (`marker`, `layout`), as `src` and `sep` are.
+   */
+  readonly anchors?: readonly string[];
+  /** Consecutive nodes of this type form a container, of the type this returns (list items: their list). */
+  container?(item: Node): string;
+  /** Fires when what it reads changed (styles declared or removed): views parse their document again. */
   readonly onDidChange?: Event<void>;
 }
 
-/** Prints an edited (not untouched) block that starts at document position `pos` inside `parent`. */
-export type BlockPrinter = (out: TypstSerializeState, node: Node, pos: number, parent: Node) => void;
-
-/** What the framework knows of a node type: its schema part, how it is read from Typst and printed back. */
-export interface NodeGrammar extends ProjectionSpec {
-  /** The node type's name. A second spec of the same name extends the first (another printer, more projectors). */
+/**
+ * A node type of the Visual view's document: its Tiptap extension (`Node.create(..)`: schema, attributes, node view,
+ * commands, keymap, priority; omitted if another spec's extension defines it too) and its Typst. A second spec of
+ * the same name extends the first (another `toTypst`, more parse rules).
+ */
+export interface DocumentNodeSpec {
   readonly name: string;
-  /** The Tiptap extension defining it (schema, node view, commands, keymap, input rules); omitted if another spec's defines it too. */
-  readonly extension?: AnyExtension;
-  /** Attributes the host adds to the node type: source anchors such as `src`, `sep`, `marker`, `layout` (never rendered). */
-  readonly attributes?: Readonly<Record<string, Attribute>>;
-  /** Those of its attributes that a re-projection may change in place (`marker`, `layout`), like `src` and `sep`. */
-  readonly anchors?: readonly string[];
-  /** Keeps its DOM (and what is inside) while a new version renders the same, as after every outside edit its `src` changes. */
-  readonly keepsDom?: boolean;
-  /** A label may follow it (`<intro>`): it gets the `label` attribute, printed after it. */
-  readonly labelled?: boolean;
-  /** Shown as a box a remote caret inside outlines: `code` edits its `src` in a nested code editor (the host's raw box). */
-  readonly box?: 'code' | 'widget';
-  /** Consecutive nodes of this type form a container, of the type this returns (list items: their list). */
-  container?(item: Node): string;
-  /** Prints the node when edited; default for textblocks: their inline content. Block atoms print their `src`. */
-  readonly print?: BlockPrinter;
-  /** The source of an inline atom (`@intro`). */
-  printAtom?(node: Node): string;
-  /** Text printed right after this inline atom, escaped where it would continue the atom's syntax (`@intro\s`). */
-  escapeAfter?(node: Node, text: string): string;
+  readonly tiptap?: AnyExtension;
+  readonly typst?: TypstNodeConversion;
 }
 
-/** What a formatted span starts and ends with, and the printed characters around it. */
+/** What a formatted span starts and ends with, and the written characters around it. */
 export interface Around {
   before: string | undefined;
   after: string | undefined;
@@ -168,23 +172,31 @@ export interface Around {
   text: string;
 }
 
-/** What the framework knows of a mark type (bold, a link, a margin note's range): schema part, reading and printing. */
-export interface MarkGrammar extends ProjectionSpec {
-  readonly name: string;
-  /** The Tiptap extension defining it; omitted if another spec's defines it too. */
-  readonly extension?: AnyExtension;
+/** The Typst of a mark type: how it is read, and the syntax around an edited span. */
+export interface TypstMarkConversion {
+  readonly parseTypst?: TypstParseRules;
   /** The syntax around a formatted span: `*…*`, or `#strong[…]` where delimiters would not work. */
-  print(mark: Mark, around: Around): { open: string; close: string };
-  /** Raw text: its text prints as is (no escapes), innermost, closed and reopened around other formatting (inline code). */
+  toTypst(mark: Mark, around: Around): { open: string; close: string };
+  /** Raw text: its text is written as is (no escapes), innermost, closed and reopened around other formatting (inline code). */
   readonly raw?: boolean;
-  /** Prints nothing around `text`, Typst reading it back as this mark all the same (a bare URL). */
-  printsBare?(mark: Mark, text: string, around: Around): boolean;
+  /** Whether `text` needs nothing around it, Typst reading it back as this mark all the same (a bare URL). */
+  isBare?(mark: Mark, text: string, around: Around): boolean;
+  /** Fires when what it reads changed (styles declared or removed): views parse their document again. */
+  readonly onDidChange?: Event<void>;
+}
+
+/** A mark type of the Visual view's document (bold, a link, a margin note's range): its Tiptap extension and its Typst. */
+export interface TypstMarkSpec {
+  readonly name: string;
+  /** `Mark.create(..)`; omitted if another spec's extension defines it too. */
+  readonly tiptap?: AnyExtension;
+  readonly typst: TypstMarkConversion;
 }
 
 /**
- * Accumulates source text together with the document positions each part of it belongs to. Printers of edited
- * blocks (`NodeGrammar.print`) write through it: syntax hidden in the document, shown text and atoms, and child
- * blocks, which print as the grammar says.
+ * Accumulates source text together with the document positions each part of it belongs to. The `toTypst` of edited
+ * blocks writes through it: syntax hidden in the document, shown text and atoms, and child blocks, which are written
+ * as their specs say.
  */
 export interface TypstSerializeState {
   /** Source not shown in the document; it maps to the next visible position in its block. */
@@ -206,7 +218,7 @@ export interface TypstSerializeState {
   blocks(container: Node, start: number, defaultSep: string): void;
   /** Prints `node`, which starts at document position `pos`, and its label; the label maps to the block's end. */
   block(node: Node, parent: Node, pos: number): void;
-  /** A textblock's inline content and end: the default printer of edited textblocks. */
+  /** A textblock's inline content and end: the default `toTypst` of edited textblocks. */
   textblock(block: Node, pos: number): void;
   /** The inline content of `block`, which starts at document position `start`. */
   inline(block: Node, start: number): void;
@@ -215,7 +227,7 @@ export interface TypstSerializeState {
 }
 
 /** A schema of the minimum schema, `nodes` and `marks`, with their grammar attached. */
-export function createSchema(nodes: readonly NodeGrammar[], marks: readonly MarkGrammar[]): Schema {
+export function createSchema(nodes: readonly DocumentNodeSpec[], marks: readonly TypstMarkSpec[]): Schema {
   const schema = getSchema(documentExtensions(nodes, marks));
   attachGrammar(schema, nodes, marks);
   return schema;
@@ -223,28 +235,27 @@ export function createSchema(nodes: readonly NodeGrammar[], marks: readonly Mark
 
 /**
  * The Tiptap extensions of a schema holding `nodes` and `marks` besides the
- * minimum schema: the specs' extensions in their order, between the base
- * (paragraph, text, history) and the raw Typst nodes. Each spec's node type
- * also gets what the spec asks for (see `NodeGrammar`): its source-anchoring
- * `attributes` (never rendered; part of node equality, so re-projections
- * compare exactly; `src`: the node's original Typst; `sep`: the whitespace to
- * its next sibling, `null` on last children and on nodes made in the editor (a
- * default separator is printed)), and `label` (`{ name, gap }` or null) if
- * `labelled`: the label after the block (`= Intro <intro>`), printed after it.
- * An editor made of them (an equal but distinct schema) gets the grammar with
- * `attachGrammar`.
+ * minimum schema: the specs' extensions, between the base (paragraph, text,
+ * history) and the raw Typst nodes. A spec's Tiptap extension defines its
+ * node type's source anchors with its other attributes (never rendered; part
+ * of node equality, so fresh parses compare exactly): `src`, the node's
+ * original Typst; `sep`, the whitespace to its next sibling (`null` on last
+ * children and on nodes made in the editor: a default separator is written).
+ * A `labelled` spec's node type gets `label` (`{ name, gap }` or null): the
+ * label after the block (`= Intro <intro>`), written after it. An editor made
+ * of them (an equal but distinct schema) gets the grammar with `attachGrammar`.
  */
-export function documentExtensions(nodes: readonly NodeGrammar[], marks: readonly MarkGrammar[]): AnyExtension[] {
-  const contributed = [...nodes, ...marks].map((spec) => spec.extension).filter((extension) => extension !== undefined);
+export function documentExtensions(nodes: readonly DocumentNodeSpec[], marks: readonly TypstMarkSpec[]): AnyExtension[] {
+  const contributed = [...nodes, ...marks].map((spec) => spec.tiptap).filter((extension) => extension !== undefined);
   return [baseExtension(), ...new Set(contributed), TypstDocument, RawBlock, RawInline, SoftBreak, TypstSource, sourceAnchors([...BASE_NODES, ...nodes])];
 }
 
-/** The minimum schema's own nodes, as the grammar sees them (a view gives raw boxes and kept DOM to them as to specs). */
-export const BASE_NODES: readonly NodeGrammar[] = [
-  { name: 'paragraph', attributes: ANCHORS, keepsDom: true, labelled: true },
-  { name: 'hardBreak', attributes: { src: { default: '\\\n', rendered: false, keepOnSplit: false } } },
-  { name: 'rawBlock', labelled: true, box: 'code' },
-  { name: 'rawInline', box: 'code' },
+/** The minimum schema's own nodes, as the grammar sees them. */
+const BASE_NODES: readonly DocumentNodeSpec[] = [
+  { name: 'paragraph', typst: { labelled: true } },
+  { name: 'hardBreak' },
+  { name: 'rawBlock', typst: { labelled: true } },
+  { name: 'rawInline' },
 ];
 
 /** The base: paragraphs, text, line breaks (`\`), history, drop and gap cursors. */
@@ -270,7 +281,7 @@ const STARTER_KIT_PARTS: readonly (keyof StarterKitOptions)[] = [
 
 /** The document `source` projects to, through the specs attached to `schema` (see `attachGrammar`). */
 export function project(source: string, schema: Schema): Node {
-  return projectDocument(source, schema, Grammar.of(schema));
+  return parseDocument(source, schema, Grammar.of(schema));
 }
 
 /** The Typst source of `doc`: untouched nodes as they were written, edited ones printed anew. */
@@ -284,18 +295,18 @@ export function print(doc: Node): string {
  * `documentExtensions` of them). Specs of the same name merge, the later one
  * winning.
  */
-export function attachGrammar(schema: Schema, nodes: readonly NodeGrammar[], marks: readonly MarkGrammar[]): void {
+export function attachGrammar(schema: Schema, nodes: readonly DocumentNodeSpec[], marks: readonly TypstMarkSpec[]): void {
   Grammar.attach(schema, new Grammar([...BASE_NODES, ...nodes], marks));
 }
 
-/** The spec of node `node`'s type in the grammar attached to its schema, if there is one. */
-export function nodeGrammar(node: Node): NodeGrammar | undefined {
+/** The spec of `node`'s type in the grammar attached to its schema (specs of one name merged), if there is one. */
+export function documentNodeSpec(node: Node): DocumentNodeSpec | undefined {
   return Grammar.of(node.type.schema).node(node.type);
 }
 
-/** Subscribes `listener` to every spec of `schema` whose projection can change (see `ProjectionSpec.onDidChange`). */
+/** Subscribes `listener` to every spec of `schema` whose parsing can change (see `TypstNodeConversion.onDidChange`). */
 export function onDidChangeGrammar(schema: Schema, listener: () => void): Disposable {
-  return Disposable.from(...Grammar.of(schema).changing().map((spec) => spec.onDidChange!(listener)));
+  return Disposable.from(...Grammar.of(schema).changing().map((onDidChange) => onDidChange(listener)));
 }
 
 /**
