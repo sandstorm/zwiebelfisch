@@ -193,6 +193,27 @@ describe('WorkbenchHost', () => {
     });
   });
 
+  it('puts the editor frame into a Typst view’s content, around any other editor’s panel, and takes it away', () => {
+    let frame!: { top: HTMLElement; bottom: HTMLElement };
+    let registered!: Disposable;
+    const { host, workbench } = setup(({ workbench, window }) => {
+      frame = { top: workbench.ownerDocument.createElement('nav'), bottom: workbench.ownerDocument.createElement('nav') };
+      registered = workbench.registerEditorFrame(frame);
+      window.registerCustomEditorProvider('test.image', { resolveCustomEditor: () => {} }, { filenamePattern: '*.png', displayName: 'Image' });
+    });
+    const source = host.querySelector('.typst-editor__custom-editor[data-view-type="sourceView.editor"]')!;
+    expect(frame.top.parentElement).toBe(source);
+    expect(source.lastElementChild).toBe(frame.bottom);
+    workbench.open(path('/logo.png'));
+    const image = host.querySelector('.typst-editor__custom-editor[data-view-type="test.image"]')!;
+    expect([frame.top.nextElementSibling, frame.bottom.previousElementSibling]).toEqual([image, image]);
+    workbench.open(path('/a.typ'));
+    expect(frame.top.closest('[data-view-type="sourceView.editor"]:not([hidden])')).not.toBeNull();
+    workbench.open(path('/logo.png'));
+    registered.dispose();
+    expect([frame.top.isConnected, frame.bottom.isConnected]).toEqual([false, false]);
+  });
+
   it('opens a file at a range, in the Source view when asked, which then stays the choice for Typst files', () => {
     const { host, workbench, context } = setup(undefined, { mode: 'visual' });
     workbench.open(path('/a.typ'), { selection: SourceRange.of({ from: 0, to: 1 }), viewType: 'sourceView.editor' });

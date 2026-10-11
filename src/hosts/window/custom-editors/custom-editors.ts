@@ -100,6 +100,11 @@ export class CustomEditors {
     return registration.viewType;
   }
 
+  /** The element of the panel shown; null while none is. */
+  get shownElement(): HTMLElement | null {
+    return this.#shown?.element ?? null;
+  }
+
   /**
    * The editors `path` can be shown in, best first: those matching it, apart from fallbacks, which only open files
    * nothing else does.

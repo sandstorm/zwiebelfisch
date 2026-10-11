@@ -1,7 +1,16 @@
-/* The file-navigation extension's styles: "← previous file" / "next file →" at the start and end of an included file
-   (reading order of the main file). Registered by file-navigation.ts (Workbench.registerStyleSheet). */
+/* The file-navigation extension's styles: "← Back to …" / "Forward to … →" above any file (muted: there, not in the
+   way), "← previous file" / "next file →" at the start and end of an included file (reading order of the main file).
+   Registered by file-navigation.ts (Workbench.registerStyleSheet). */
+.typst-file-navigation__top { flex: none; }
 .typst-file-navigation { flex: none; display: flex; gap: 16px; padding: 6px 32px; font: 12px system-ui, sans-serif; }
 .typst-file-navigation[hidden] { display: none; }
-.typst-file-navigation__link--next { margin-left: auto; }
-.typst-file-navigation__link { border: 0; padding: 0; background: none; color: var(--te-accent); font: inherit; cursor: pointer; }
-.typst-file-navigation__link:hover { text-decoration: underline; }
+.typst-file-navigation__link--next,
+.typst-file-navigation__history--forward { margin-left: auto; }
+.typst-file-navigation__link,
+.typst-file-navigation__history { border: 0; padding: 0; background: none; font: inherit; cursor: pointer; }
+.typst-file-navigation__link { color: var(--te-accent); }
+.typst-file-navigation__history { color: var(--te-muted); }
+.typst-file-navigation__link:hover,
+.typst-file-navigation__history:hover { color: var(--te-accent); text-decoration: underline; }
+/* right above the reading-order links: one group */
+.typst-file-navigation--history:has(+ .typst-file-navigation:not([hidden])) { padding-bottom: 0; }
