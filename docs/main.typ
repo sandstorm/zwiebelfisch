@@ -5,9 +5,9 @@
 #let parts = (
   (title: "Guide", chapters: (
     "guide/getting-started.typ": "Getting started",
-    "guide/embedding.typ": "Embedding",
     "guide/features.typ": "Features",
     "guide/collaboration.typ": "Collaboration",
+    "guide/embedding.typ": "Embedding",
   )),
   (title: "Extensions", chapters: (
     "extensions/overview.typ": "Extensions overview",
