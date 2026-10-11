@@ -55,9 +55,11 @@ export interface PreviewContributions {
   reveal(path: ProjectPath, range: SourceRange): void;
   /**
    * Someone clicked something in the preview that has a source location in a project file (outlined in the preview
-   * until the next click or compile; package files are outlined but not reported).
+   * until the next click, a compile or `clearClickHighlight`; package files are outlined but not reported).
    */
   readonly onDidClickPage: Event<PageClick>;
+  /** Removes the outline of the last click now (e.g. once the user moved on from what was clicked). */
+  clearClickHighlight(): void;
   /**
    * How source range `range` of `path`, which holds `text`, is drawn: its page cut down to it. Null when it draws
    * nothing or `text` is not what was compiled last.
@@ -174,7 +176,7 @@ export class Preview implements PreviewContributions {
   private readonly items: { view: ToolbarItemView; group: string; order: number }[] = [];
   /** The PDF export options, with their priority, in registration order. */
   private readonly exportOptions: { option: PdfExportOption; priority: number }[] = [];
-  /** Outlines the clicked text, until the next click or successful compile. */
+  /** Outlines the clicked text, until the next click, successful compile or `clearClickHighlight`. */
   private readonly clickHighlight: OverlayLayer;
   private zoom: Zoom = 'fit';
   private nextId = 0;
@@ -236,6 +238,10 @@ export class Preview implements PreviewContributions {
 
   reveal(path: ProjectPath, { from }: SourceRange): void {
     this.reveals.push({ path, from });
+  }
+
+  clearClickHighlight(): void {
+    this.clickHighlight.set([]);
   }
 
   /**

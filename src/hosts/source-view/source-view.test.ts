@@ -45,13 +45,27 @@ const marked = (parent: HTMLElement, selector: string) =>
   [...parent.querySelectorAll(selector)].map((element) => element.textContent);
 
 describe('SourceView reveal', () => {
-  it('selects and highlights the range; the highlight follows edits', () => {
-    const { doc, view, parent } = setup('Some bold text\n');
+  it('selects and highlights the range, until the text changes (also from another view)', () => {
+    const { doc, view, parent, editor } = setup('Some bold text\n');
     view.reveal(SourceRange.of({ from: 5, to: 9 }));
     expect(view.selection()).toEqual({ from: 5, to: 9 });
     expect(marked(parent, '.typst-source__jump')).toEqual(['bold']);
-    doc.change([{ from: SourceOffset.of(0), to: SourceOffset.of(0), insert: 'Really. ' }], 'visual');
+    // the same selection again (as a focus re-reading the DOM does) keeps it
+    editor().dispatch({ selection: { anchor: 5, head: 9 } });
     expect(marked(parent, '.typst-source__jump')).toEqual(['bold']);
+    doc.change([{ from: SourceOffset.of(0), to: SourceOffset.of(0), insert: 'Really. ' }], 'visual');
+    expect(marked(parent, '.typst-source__jump')).toEqual([]);
+
+    view.reveal(SourceRange.of({ from: 13, to: 17 }));
+    editor().dispatch({ changes: { from: 0, to: 0, insert: '!' }, userEvent: 'input.type' });
+    expect(marked(parent, '.typst-source__jump')).toEqual([]);
+  });
+
+  it('removes the highlight when the selection moves away', () => {
+    const { view, parent, editor } = setup('Some bold text\n');
+    view.reveal(SourceRange.of({ from: 5, to: 9 }));
+    editor().dispatch({ selection: { anchor: 2 } });
+    expect(marked(parent, '.typst-source__jump')).toEqual([]);
   });
 });
 

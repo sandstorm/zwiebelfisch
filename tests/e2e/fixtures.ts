@@ -39,7 +39,7 @@ export async function serve(page: Page, baseURL: string): Promise<void> {
  * A plain `click()` would also insist that the element hit is the glyph itself,
  * which fails whenever the middle of the box is blank: always for a "C".
  */
-export async function clickGlyph(glyph: Locator): Promise<void> {
+export async function clickGlyph(glyph: Locator, options: { clickCount?: number } = {}): Promise<void> {
   await expect(glyph).toBeVisible();
   const point = await glyph.evaluate((use: SVGUseElement) => {
     const id = (use.getAttribute('href') ?? use.getAttribute('xlink:href') ?? '').slice(1);
@@ -55,7 +55,7 @@ export async function clickGlyph(glyph: Locator): Promise<void> {
     copy.remove();
     return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
   });
-  await glyph.page().mouse.click(point.x, point.y);
+  await glyph.page().mouse.click(point.x, point.y, options);
 }
 
 /** The file panel's tree row of `path` (as shown: `chapters/intro.typ`, a folder `chapters`). */
