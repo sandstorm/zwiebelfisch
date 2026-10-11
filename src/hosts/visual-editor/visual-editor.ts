@@ -8,7 +8,7 @@ import { EventEmitter, type Event } from '../../core/event-emitter/event-emitter
 import type { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
 import { attachGrammar, onDidChangeGrammar, posToSource, serializeToTypst, parseTypst, sourceToPos, applyTypstChanges, type DocumentNodeSpec, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
 import { clipboard } from './clipboard';
-import { highlights, setHighlights } from './highlights';
+import { hasHighlights, highlights, setHighlights } from './highlights';
 import { editorExtensions, nodeViewSpecs } from './nodes/node-views';
 import type { RawBoxes } from './nodes/raw-box';
 import { suggestions } from './suggestions/suggestions';
@@ -141,6 +141,8 @@ export class VisualEditor {
 
   /** Replaces the highlights of `layer` (source ranges); they follow edits until set again. */
   private setHighlights(layer: string, ranges: readonly SourceHighlight[]): void {
+    // nothing drawn and nothing to draw (no errors after a compile, nobody else here): no transaction to react to
+    if (ranges.length === 0 && !hasHighlights(this.tiptap.state, layer)) return;
     this.tiptap.view.dispatch(setHighlights(this.tiptap.state.tr, layer, ranges));
   }
 

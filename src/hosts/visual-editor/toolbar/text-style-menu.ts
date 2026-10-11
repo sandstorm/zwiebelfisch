@@ -10,6 +10,8 @@ import type { TextStyle, TextStyleProvider, ToolbarControl, VisualEditorContext 
  * selection's style (the first active entry that is no toggle, else normal
  * text in a paragraph), marks toggles ✓ where they are on, and disables what
  * cannot apply. The entries follow the providers as they change (headings, custom styles).
+ * Only the value shows while the list is closed: the options are looked at
+ * when it is pressed or focused (each a dry run), not after every transaction.
  */
 export class TextStyleMenu implements ToolbarControl {
   readonly element: HTMLSelectElement;
@@ -27,23 +29,31 @@ export class TextStyleMenu implements ToolbarControl {
     this.element.setAttribute('aria-label', 'Text style');
     this.element.title = 'Text style';
     this.element.addEventListener('change', () => this.choose(this.element.value));
+    // before the list opens (a click, the keyboard after focus)
+    this.element.addEventListener('mousedown', () => this.refreshOptions());
+    this.element.addEventListener('focus', () => this.refreshOptions());
     this.subscriptions = providers.flatMap((provider) => (provider.onDidChangeTextStyles ? [provider.onDidChangeTextStyles(() => this.update())] : []));
     this.update();
   }
 
-  /** Shows the selection's style and what can apply now. */
+  /** Shows the selection's style, and what can apply now while the menu has the focus. */
   refresh(): void {
-    for (const option of this.element.options) {
-      const entry = this.entry(option.value);
-      if (entry?.toggle) option.text = `${entry.isActive?.(this.tiptap) ? '✓ ' : ''}${entry.label}`;
-      option.disabled = !this.can(option.value);
-    }
+    if (this.element.ownerDocument.activeElement === this.element) this.refreshOptions();
     this.element.value = this.current();
   }
 
   dispose(): void {
     for (const subscription of this.subscriptions) subscription.dispose();
     this.element.remove();
+  }
+
+  /** Marks toggles ✓ where they are on and disables what cannot apply. */
+  private refreshOptions(): void {
+    for (const option of this.element.options) {
+      const entry = this.entry(option.value);
+      if (entry?.toggle) option.text = `${entry.isActive?.(this.tiptap) ? '✓ ' : ''}${entry.label}`;
+      option.disabled = !this.can(option.value);
+    }
   }
 
   /** Asks the providers again and rebuilds the options. */

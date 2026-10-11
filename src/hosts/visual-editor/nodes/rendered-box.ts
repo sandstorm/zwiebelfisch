@@ -17,7 +17,10 @@ import type { FollowableLink, RawBoxPicture, RawBoxRenderer } from '../visual-ed
  *
  * Owns the `<img>`, the switching between it and the code, and the refreshes:
  * whenever the renderer reports a change and, for renderers that follow
- * edits, whenever the node changes.
+ * edits, whenever the node changes. A renderer's change reaches only boxes
+ * near the view (an `IntersectionObserver`, one viewport above and below): a
+ * box further away, or in a hidden editor, is drawn again once it comes near.
+ * The renderer changes after every compile, and a long document has many boxes.
  */
 export class RenderedBox {
   /** The `<img>` shown instead of the code (the box's tools may move it, e.g. into a frame). */
@@ -26,6 +29,11 @@ export class RenderedBox {
   private url: string | null = null;
   private editing = false;
   private requests = 0;
+  /** Whether the box is near the view (without an IntersectionObserver, as in jsdom: always). */
+  private near = true;
+  /** The renderer changed while the box was not near: it is drawn again once it is. */
+  private stale = false;
+  private readonly observer: IntersectionObserver | null;
   /** Ends the hover (the mouse left, or the box goes). */
   private leave = () => {};
 
@@ -52,7 +60,10 @@ export class RenderedBox {
       const next = event.relatedTarget as globalThis.Node | null;
       if (!next || !code.contains(next)) this.setEditing(false);
     });
-    this.subscription = renderer.onDidChange(() => void this.refresh());
+    this.subscription = renderer.onDidChange(() => this.changed());
+    const view = dom.ownerDocument.defaultView;
+    this.observer = view?.IntersectionObserver ? new view.IntersectionObserver(([entry]) => this.setNear(entry.isIntersecting), { rootMargin: '100% 0px' }) : null;
+    this.observer?.observe(dom);
     // Positions are only known once the node view is in place.
     queueMicrotask(() => void this.refresh());
   }
@@ -69,6 +80,7 @@ export class RenderedBox {
 
   dispose(): void {
     this.subscription.dispose();
+    this.observer?.disconnect();
     this.leave();
     this.requests++;
   }
@@ -97,6 +109,18 @@ export class RenderedBox {
       doc.removeEventListener('keyup', track);
     };
     picture.addEventListener('mouseleave', () => this.leave());
+  }
+
+  private changed(): void {
+    if (this.near) void this.refresh();
+    else this.stale = true;
+  }
+
+  private setNear(near: boolean): void {
+    this.near = near;
+    if (!near || !this.stale) return;
+    this.stale = false;
+    void this.refresh();
   }
 
   private async refresh(): Promise<void> {

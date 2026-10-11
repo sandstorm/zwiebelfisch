@@ -52,6 +52,39 @@ describe('Preview.registerPdfExportOption', () => {
   });
 });
 
+describe('Preview.update', () => {
+  let preview: Preview;
+  afterEach(() => {
+    preview.dispose();
+    engine.answer = () => null;
+    vi.useRealTimers();
+  });
+
+  it('starts a compile at most every 150 ms while updates come in, with the newest files', async () => {
+    vi.useFakeTimers();
+    const compiled: unknown[] = [];
+    engine.answer = (body) => {
+      const request = body as EngineRequest;
+      if (request.type !== 'compile') return null;
+      compiled.push(request.files['/main.typ']);
+      return { type: 'compile', result: { pages: [], diagnostics: [], missingPackages: [] } };
+    };
+    preview = new Preview(document.createElement('div'));
+    preview.update({ '/main.typ': 'a' }, '/main.typ');
+    expect(compiled).toEqual(['a']);
+    await vi.advanceTimersByTimeAsync(50);
+    preview.update({ '/main.typ': 'ab' }, '/main.typ');
+    preview.update({ '/main.typ': 'abc' }, '/main.typ');
+    await vi.advanceTimersByTimeAsync(80);
+    expect(compiled).toEqual(['a']);
+    await vi.advanceTimersByTimeAsync(20);
+    expect(compiled).toEqual(['a', 'abc']);
+    await vi.advanceTimersByTimeAsync(1000);
+    preview.update({ '/main.typ': 'abcd' }, '/main.typ');
+    expect(compiled).toEqual(['a', 'abc', 'abcd']);
+  });
+});
+
 describe('Preview click outline', () => {
   let preview: Preview;
   afterEach(() => {

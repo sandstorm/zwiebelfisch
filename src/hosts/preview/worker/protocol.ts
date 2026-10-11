@@ -2,6 +2,7 @@
 import type { PageRect, CompileResult, SourceJump, PageIndex, PdfResult, Position, Pt } from '../../../core/typst-engine/typst-engine';
 import type { SourceOffset, SourceRange } from '../../../core/typst-document/typst-document';
 import type { EncodedFiles } from './project-files';
+import type { EncodedPage } from './page-svgs';
 import type { FontFile } from '../../../core/engine-assets/engine-assets';
 
 /**
@@ -47,7 +48,7 @@ export type LoadEvent =
   | { kind: 'font'; name: string | null };
 
 export type EngineResponse =
-  | { id: number; type: 'compile'; result: CompileResult }
+  | { id: number; type: 'compile'; result: Omit<CompileResult, 'pages'> & { pages: EncodedPage[] } }
   | { id: number; type: 'click'; jump: SourceJump | null }
   | { id: number; type: 'cursor'; positions: Position[] }
   | { id: number; type: 'boxes'; boxes: PageRect[] }

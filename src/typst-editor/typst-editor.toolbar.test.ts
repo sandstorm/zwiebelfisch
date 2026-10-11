@@ -5,7 +5,7 @@ import { File } from 'node:buffer';
 import { describe, expect, it, vi } from 'vitest';
 import { SourceRange, TypstDocument } from '../core/typst-document/typst-document';
 import type { FileChange } from '../core/project/project';
-import { createVisualEditor, TestPrompts, type TestEditorOptions } from '../testing/testing';
+import { createVisualEditor, opened, TestPrompts, type TestEditorOptions } from '../testing/testing';
 
 /** An image file's content (what it holds does not matter here). */
 const IMAGE = new Uint8Array([1]);
@@ -18,7 +18,7 @@ function setup(text: string, options: TestEditorOptions = {}) {
   const view = createVisualEditor(parent, doc, options);
   const toolbar = parent.querySelector<HTMLElement>('[role="toolbar"]')!;
   // the formatting toolbar first, then the menus' items and the floating bars (selection, table)
-  const button = (label: string) => parent.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
+  const button = (label: string) => opened(parent.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!);
   return { doc, view, toolbar, button, parent };
 }
 
@@ -341,7 +341,7 @@ describe('Visual editor toolbar', () => {
 
   it('inserts a table and adds and deletes rows and columns', () => {
     const { doc, view, button } = setup('Text\n');
-    expect(button('Add row').disabled).toBe(true);
+    expect(button('Add row').closest<HTMLElement>('.typst-floating-bar')!.hidden).toBe(true);
     view.reveal(SourceRange.of({ from: 4, to: 4 }));
     button('Insert table').click();
     expect(doc.text).toBe('Text\n\n#table(\n  columns: 2,\n  [], [],\n  [], [],\n)\n');

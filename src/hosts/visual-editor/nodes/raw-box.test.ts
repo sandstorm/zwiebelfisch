@@ -4,6 +4,7 @@ import { EditorView } from '@codemirror/view';
 import { describe, expect, it, vi } from 'vitest';
 import type { Editor } from '@tiptap/core';
 import { Disposable } from '../../../core/disposable/disposable';
+import { EventEmitter } from '../../../core/event-emitter/event-emitter';
 import { TypstDocument } from '../../../core/typst-document/typst-document';
 import { VisualEditor, VisualEditorHost, type FollowableLink, type VisualEditorContribution } from '../visual-editor';
 
@@ -175,6 +176,38 @@ describe('raw boxes', () => {
     picture.dispatchEvent(new MouseEvent('mousedown', { ...modifier, button: 0, cancelable: true }));
     expect(follow).not.toHaveBeenCalled();
     expect(picture.hidden).toBe(true);
+  });
+});
+
+describe('rendered raw boxes', () => {
+  it('draw a box again when the renderer changes only while it is near the view, else once it comes near', async () => {
+    let near: (isIntersecting: boolean) => void = () => {};
+    class Observer {
+      constructor(callback: (entries: { isIntersecting: boolean }[]) => void) {
+        near = (isIntersecting) => callback([{ isIntersecting }]);
+      }
+      observe() {}
+      disconnect() {}
+    }
+    vi.stubGlobal('IntersectionObserver', Observer);
+    try {
+      const changed = new EventEmitter<void>();
+      const render = vi.fn(async () => ({ url: 'data:image/png;base64,' }));
+      const visualEditor = new VisualEditorHost();
+      visualEditor.registerRawBoxRenderer(() => ({ renders: () => true, render, onDidChange: changed.event }));
+      new VisualEditor(document.body.appendChild(document.createElement('div')), new TypstDocument(RAW), visualEditor);
+      await vi.waitFor(() => expect(render).toHaveBeenCalledTimes(1));
+      near(false);
+      changed.fire();
+      changed.fire();
+      expect(render).toHaveBeenCalledTimes(1);
+      near(true);
+      expect(render).toHaveBeenCalledTimes(2);
+      changed.fire();
+      expect(render).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

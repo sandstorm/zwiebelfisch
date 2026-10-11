@@ -6,7 +6,8 @@ import { snippetRenderer } from './visual-editor/visual-editor';
  * Raw boxes that show how they look compiled.
  *
  * A raw box holds Typst the Visual editor has no construct for. With this extension it shows its snippet, cut from the
- * preview's pages, until its code gets focus. The picture is refreshed after every compile (`onDidRender`).
+ * preview's pages, until its code gets focus. The picture is refreshed after every compile (`onDidRender`) while the
+ * box is near the view.
  *
  * The Visual editor only knows that a box may be drawn by a renderer. Where the pictures come from (the preview, under
  * the document's current path) is decided here. Image boxes are drawn by the images extension's renderer (priority 110,

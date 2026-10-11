@@ -21,6 +21,7 @@ Every operation is a mise task (`mise-tasks/`, `mise tasks ls`). Tools are pinne
   [`quality:report`], [every function ranked by complexity (hot spots)],
   [`test:unit`], [vitest over `src/`, `demo/`, `eslint-rules/`; the engine runs as real wasm],
   [`server:test`], [the server's vitest suite, Hocuspocus in-process, no port],
+  [`perf:typing`], [typing in the Visual editor of the whole widget, measured per keystroke (@architecture-development-performance); `perf:typing docs` runs only the scenarios naming `docs`],
   [`test:e2e`], [builds demo and library, then Playwright in chromium, firefox, webkit (or one: `test:e2e chromium`)],
   [`test:e2e-collab`], [in-memory server + the two-user spec (`tests/e2e/collab.spec.ts`)],
   [`test:e2e-docs`], [the Vite dev server + the docs-editing spec (`tests/e2e/docs-editing.spec.ts`): edits a heading in the Documentation example, checks the file in `docs/`, restores it],
@@ -65,6 +66,19 @@ mise run server:test   # when server/ or core/room-protocol changed
 - Test packages (`greet`, `drafting`, `cheq`) sit next to the tests using them.
 - Agents in the sandbox cannot launch a browser or bind ports: they write Playwright specs, and the user runs `mise run test:e2e`.
 - The playground's logic is unit-tested without a browser or port: `demo/playground*.test.ts`, `demo/server-status.test.ts`, `server/src/playground/playground.test.ts`.
+
+== Performance <architecture-development-performance>
+
+`mise run perf:typing` (`tests/perf/typing.perf.ts`) types into the Visual editor of the whole widget, built-ins and the real engine, in jsdom: a paragraph, a list item and a table cell of the advanced example and of these docs (86 pages), one character every 80 ms. Per keystroke it prints:
+
+- *sync*: what the keystroke itself blocks (the transaction, the write-back and every listener of the document);
+- *main thread*: all the work on the main thread in that time (the keystroke, timers, compile answers, raw boxes' pictures, the preview's pages), by module and by function (inclusive, from a CPU profile);
+- *engine*: what the worker's thread does in a browser (`tests/perf/in-process-worker.ts` runs the engine in-process and counts it apart);
+- *layout reads* by caller (`getBoundingClientRect`, `offsetHeight`, …), counted over a few more keystrokes: free in jsdom, a forced layout in a browser when the DOM changed before.
+
+What is near the view is modelled, as jsdom has no layout: the preview's page typed in and the pages around it, and the Visual editor's blocks within 30 of the cursor's.
+
+The profiles land in `.cache/perf/` (`*.cpuprofile`: Chrome DevTools' Performance panel opens them). jsdom has no layout and parses SVG slowly: the preview's pages cost more here than in a browser, and style, layout and paint are not measured at all. What only a browser shows: record typing in DevTools' Performance panel and look at the long tasks after a keystroke and after a compile (`Preview.compile` → `PageList.render`: the page's SVG swapped in, then Recalculate Style, Layout, Paint).
 
 == The docs <architecture-development-docs>
 
@@ -116,7 +130,8 @@ The modules with the most complexity. Lines: TypeScript without blank and commen
 - *Files*: empty folders live only in the panel; a folder rename, move or delete is one change per file and may stop half-way at a refusal; dragging an image into the Source editor does nothing; file links don't follow paths built at run time.
 - *Packages*: only `@preview` from packages.typst.org (no `@local`, no other registry); a failed download is retried only after the worker restarts.
 - *Visual editor*: tables with merged cells, `table.cell`, header arguments or a computed `columns` stay raw boxes; the toolbar acts on the last main-text selection while the cursor is in a raw box; text typed into a raw box that is modelled Typst stays raw until re-read; a change before the first block re-renders the whole editor; margin-note cards edit raw markup. Undo after "Insert spreadsheet" / "Insert Mermaid diagram" takes back the figure, not the import it added.
-- *Preview*: a call whose glyphs come from its definition (`ms(18)`, a helper or package function outside an element such as `figure`) shows code, not a picture: the frame holds only the definition's spans and no tag of the call; snippets show only the first page a range is drawn on, in the document's colors (black text, inverted in the dark), not the editor's text color; raw boxes ask for boxes after every compile, also while the Visual editor is hidden.
+- *Preview*: a call whose glyphs come from its definition (`ms(18)`, a helper or package function outside an element such as `figure`) shows code, not a picture: the frame holds only the definition's spans and no tag of the call; snippets show only the first page a range is drawn on, in the document's colors (black text, inverted in the dark), not the editor's text color; raw boxes near the view ask for their boxes after every compile, also when their page did not change.
+- *Typing speed* (`perf:typing`): the label and style indexes parse the edited file on every keystroke (one Lezer parse each, 1.5 and 1.2 ms in a docs chapter; one shared parse per text would do); a raw box's picture is the whole page's SVG with a cropped `viewBox`, built, encoded and decoded per box and compile; a compile swaps the SVG of the page typed in (only a browser shows its style, layout and paint); the engine still renders every page's SVG into its answer before the worker leaves the known ones out (28 MB of JSON per compile for the docs); in the docs the first and last pages change with every compile.
 - *Search everywhere*: a bibliography group (`.bib` keys and titles; opening a text file at a line); recently opened files first; commands always listed while registered (no `enablement`), "Save to GitLab…" and "Download PDF" are no declared commands yet; a setting changed there is gone with the page.
 - *Custom styles*: swatches in the style menu; a style panel for a `template` function's set and show rules, so the Visual editor looks like the document; templates from Typst Universe.
 - *Text diagrams*: Mermaid only (merman). D2 is not supported (`@preview/tiago` is too experimental); if needed, a converter with the official `@terrastruct/d2` writing `name.d2.gen.svg`.

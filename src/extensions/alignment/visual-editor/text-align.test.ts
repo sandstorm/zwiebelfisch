@@ -2,7 +2,7 @@
 // Tests for text-align.ts.
 import { describe, expect, it } from 'vitest';
 import { SourceRange, TypstDocument } from '../../../core/typst-document/typst-document';
-import { createVisualEditor } from '../../../testing/testing';
+import { createVisualEditor, opened } from '../../../testing/testing';
 
 const LABELS = { left: 'Align left', center: 'Center', right: 'Align right', justify: 'Justify' } as const;
 type Alignment = keyof typeof LABELS;
@@ -13,7 +13,7 @@ function setup(text: string) {
   const doc = new TypstDocument(text);
   const view = createVisualEditor(parent, doc);
   const button = (alignment: Alignment) => parent.querySelector<HTMLButtonElement>(`button[aria-label="${LABELS[alignment]}"]`)!;
-  const pressed = () => (Object.keys(LABELS) as Alignment[]).filter((a) => button(a).getAttribute('aria-pressed') === 'true');
+  const pressed = () => (Object.keys(LABELS) as Alignment[]).filter((a) => opened(button(a)).getAttribute('aria-pressed') === 'true');
   /** Puts the cursor into (or selects from..to of) the source text `needle`. */
   const select = (needle: string, length = 0) => {
     const at = doc.text.indexOf(needle);

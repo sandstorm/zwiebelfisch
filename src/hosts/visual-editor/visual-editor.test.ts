@@ -4,7 +4,7 @@ import { EditorState } from '@codemirror/state';
 import { describe, expect, it } from 'vitest';
 import { EventEmitter } from '../../core/event-emitter/event-emitter';
 import { SourceOffset, SourceRange, TypstDocument } from '../../core/typst-document/typst-document';
-import { Node as TiptapNode, type Editor } from '@tiptap/core';
+import { Extension, Node as TiptapNode, type AnyExtension, type Editor } from '@tiptap/core';
 import { children, withHash } from '../../core/typst-syntax/typst-syntax';
 import { starterKitPart, type TypstMarkSpec } from '../prosemirror-typst/prosemirror-typst';
 import { insertTypst, setRawBoxDecorations, VisualEditor, VisualEditorHost, type SourceHighlight, type TypstNodeSpec, type VisualEditorContext, type VisualEditorContribution } from './visual-editor';
@@ -134,6 +134,18 @@ describe('VisualEditorHost.registerHighlights', () => {
     expect(parent.querySelector('.note')).toBeNull();
   });
 
+  it('makes no transaction when there were no highlights and there are none (a compile without errors)', () => {
+    let transactions = 0;
+    const counter = Extension.create({ name: 'counter', onTransaction: () => void transactions++ });
+    const { highlights } = withHighlights('Some text\n', [], [counter]);
+    highlights([]);
+    expect(transactions).toBe(0);
+    highlights([{ from: SourceOffset.of(0), to: SourceOffset.of(4), className: 'note' }]);
+    highlights([]);
+    highlights([]);
+    expect(transactions).toBe(2);
+  });
+
   it('keeps highlights on their text through edits from elsewhere', () => {
     const source = 'Some bold text\n';
     const { doc, parent } = withHighlights(source, [{ from: SourceOffset.of(5), to: SourceOffset.of(9), className: 'note' }]);
@@ -142,11 +154,15 @@ describe('VisualEditorHost.registerHighlights', () => {
   });
 });
 
-/** A Visual editor of `text` (with `strong`) and a highlight provider whose highlights start as `initial`; `highlights` sets new ones. */
-function withHighlights(text: string, initial: SourceHighlight[]) {
+/**
+ * A Visual editor of `text` (with `strong` and the Tiptap extensions `extensions`) and a highlight provider whose
+ * highlights start as `initial`; `highlights` sets new ones.
+ */
+function withHighlights(text: string, initial: SourceHighlight[], extensions: AnyExtension[] = []) {
   let current = initial;
   const changed = new EventEmitter<TypstDocument>();
   const contributions = VisualEditorHost.from([strong]);
+  contributions.registerTiptapExtension(() => extensions);
   contributions.registerHighlights('test', { provideHighlights: () => current, onDidChangeHighlights: changed.event });
   const doc = new TypstDocument(text);
   const parent = document.body.appendChild(document.createElement('div'));

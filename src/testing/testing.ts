@@ -225,6 +225,16 @@ export function type(editor: Editor, text: string): void {
   }
 }
 
+/**
+ * `button` as the user reaches it: the toolbar menu holding it (Insert ▾, Align ▾) opened first. A menu's items show
+ * their state (pressed, disabled) only while it is open.
+ */
+export function opened(button: HTMLButtonElement): HTMLButtonElement {
+  const trigger = button.closest('.typst-toolbar__menu')?.querySelector<HTMLButtonElement>('button[aria-haspopup="menu"]');
+  if (trigger?.getAttribute('aria-expanded') === 'false') trigger.click();
+  return button;
+}
+
 /** `doc` after the transaction `change` builds on a fresh state of it. */
 export function edit(doc: Node, change: (state: EditorState) => EditorState['tr']): Node {
   const state = EditorState.create({ doc });

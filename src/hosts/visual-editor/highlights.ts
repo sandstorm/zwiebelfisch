@@ -2,7 +2,7 @@
 // visual-editor.ts.
 import { Extension } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
-import { Plugin, PluginKey, type Transaction } from '@tiptap/pm/state';
+import { type EditorState, Plugin, PluginKey, type Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { SourceHighlight } from './visual-editor';
 import { sourceToPos } from '../prosemirror-typst/prosemirror-typst';
@@ -37,6 +37,11 @@ export const highlights = Extension.create({
 /** Marks `tr` to replace the highlights of `layer`. */
 export function setHighlights(tr: Transaction, layer: string, highlights: readonly SourceHighlight[]): Transaction {
   return tr.setMeta(key, { layer, highlights });
+}
+
+/** Whether `state` draws highlights of `layer`. */
+export function hasHighlights(state: EditorState, layer: string): boolean {
+  return (key.getState(state)?.[layer]?.find().length ?? 0) > 0;
 }
 
 type Layers = Record<string, DecorationSet>;

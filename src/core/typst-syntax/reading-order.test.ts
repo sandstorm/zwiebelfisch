@@ -42,6 +42,16 @@ describe('neighbours', () => {
     expect(neighbours(from(files), main, path('/missing.typ'))).toBeNull();
   });
 
+  it('follows the includes of a file as its text changes (asked after every change: only the changed file is read again)', () => {
+    const files: Record<string, string> = { '/main.typ': '#include "a.typ"\n', '/a.typ': 'A\n', '/b.typ': 'B\n' };
+    const main = path('/main.typ');
+    expect(neighbours(from(files), main, path('/b.typ'))).toBeNull();
+    files['/main.typ'] = '#include "a.typ"\n#include "b.typ"\n';
+    expect(neighbours(from(files), main, path('/b.typ'))).toEqual({ previous: path('/a.typ'), next: null });
+    files['/main.typ'] = '#include "b.typ"\n';
+    expect(neighbours(from(files), main, path('/b.typ'))).toEqual({ previous: main, next: null });
+  });
+
   it('is null for every file without a main file', () => {
     expect(neighbours(from({ '/a.typ': 'A' }), path('/main.typ'), path('/a.typ'))).toBeNull();
   });

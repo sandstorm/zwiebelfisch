@@ -11,6 +11,8 @@ import type { ProjectPath } from '../../../core/paths/paths';
  * a style is called by its name.
  */
 export function scanStyles(text: string): FoundStyle[] {
+  // no declaration without `@style`: most files, and every keystroke in them, need no parse
+  if (!text.includes('@style')) return [];
   const styles: FoundStyle[] = [];
   let declared: Declaration | null = null;
   for (let node = typstParser.parse(text).topNode.firstChild; node; node = node.nextSibling) {

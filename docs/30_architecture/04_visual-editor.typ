@@ -49,6 +49,7 @@ Typst no spec models, and nodes whose spec sets `view.box: 'code'` (images, outl
 - An outside change of `src` reaches the box as one minimal change.
 - Undo and redo run the Visual editor's history. Arrow keys, Escape and Enter move between box and text. Tab indents a block box's code; an inline box ignores it.
 - With a box renderer, the box shows a picture until its code gets focus (the preview's boxes of its range, @architecture-preview-concepts); while focused it shows only its code, inline boxes as block boxes (the picture stays in the box, hidden, and shows again without a new render). Until the renderer has one (before the first compile) it shows its code; a picture is decoded before it replaces the code or the one before (no blank in between) and fades in.
+- When the renderer changes (after every compile), only boxes near the view (an `IntersectionObserver`, one viewport above and below) are drawn again; one further away, or in a hidden editor, is drawn again once it comes near.
 - The spec's `view.title` heads the box; `view.tools` add tools (an image's resize handles and toolbar).
 - The picture is a link to where the box's Typst leads (`VisualEditorLinks`): its tooltip says where; with Mod held it shows as one; Mod+click on it, or Alt+Enter on the selected box, follows it. Other clicks still select the box or edit its code.
 - `setRawBoxDecorations`: the box's node decorations, handed to its code (another user's caret inside the box).
@@ -57,7 +58,7 @@ Typst no spec models, and nodes whose spec sets `view.box: 'code'` (images, outl
 
 - Laid out from contributed groups (a button group, a menu, a bar floating in the text) sorted by `order`, and items by `group` + `order`. Groups without items are left out.
 - The host's own: `history` (undo/redo, 10), `text-style` (20, once a provider exists), the `insert` menu (50), the floating `selection` bar.
-- Buttons are `ToolbarAction`s: a Tiptap chain command, dry-run after every transaction to disable the button. They never take the focus from the text.
+- Buttons are `ToolbarAction`s: a Tiptap chain command, dry-run to disable the button: in the row after every transaction, in a menu when it opens and while it is open, in a floating bar while it shows; the text style menu's options when it is pressed or focused (what is not shown is not asked). They never take the focus from the text.
 
 == Completion lists <architecture-visual-editor-completion>
 

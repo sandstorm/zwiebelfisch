@@ -99,8 +99,11 @@ export class Toolbar {
     const wrapper = this.root.ownerDocument.createElement('div');
     wrapper.className = 'typst-toolbar__group';
     if (group.kind === 'menu') {
-      const buttons = entries.filter(isAction).map((action) => this.button(action));
-      const menu = new ToolbarMenu(this.root.ownerDocument, group.label, () => group.icon(this.tiptap), buttons);
+      // the items' state shows only while the menu is open: refreshed by the menu, not after every transaction
+      const itemRefreshers: (() => void)[] = [];
+      const buttons = entries.filter(isAction).map((action) => this.button(action, itemRefreshers));
+      const refreshItems = () => itemRefreshers.forEach((fn) => fn());
+      const menu = new ToolbarMenu(this.root.ownerDocument, group.label, { icon: () => group.icon(this.tiptap), refreshItems }, buttons);
       this.refreshers.push(() => menu.refresh());
       this.disposers.push(() => menu.dispose());
       wrapper.append(menu.element);
@@ -119,7 +122,8 @@ export class Toolbar {
   /**
    * The bars floating in the text column, each re-placed after every
    * transaction: shown above its anchor while the text or something in the
-   * bar has the focus; only the first with an anchor shows.
+   * bar has the focus; only the first with an anchor shows. A bar's buttons are
+   * refreshed only while it shows.
    */
   private floatingBars(groups: readonly ToolbarGroup[], entries: Map<string, (ToolbarAction | ToolbarControl)[]>): void {
     const container = this.tiptap.view.dom.parentElement!;
@@ -128,7 +132,9 @@ export class Toolbar {
       if (group.kind !== 'floating') continue;
       const actions = (entries.get(group.id) ?? []).filter(isAction);
       if (actions.length === 0) continue;
-      const bar = new FloatingBar(container, group.label, actions.map((action) => this.button(action)));
+      // the buttons' state shows only while the bar does: refreshed when it shows, not after every transaction
+      const itemRefreshers: (() => void)[] = [];
+      const bar = new FloatingBar(container, group.label, actions.map((action) => this.button(action, itemRefreshers)));
       this.disposers.push(() => bar.dispose());
       const earlier = [...bars];
       const focused = () => this.tiptap.isFocused || bar.element.contains(bar.element.ownerDocument.activeElement);
@@ -136,13 +142,18 @@ export class Toolbar {
         if (!focused() || earlier.some((shown) => shown()) || !actions.some((action) => action.visible?.(this.tiptap) ?? true)) return null;
         return group.anchor(this.tiptap, actions.some((action) => action.showsBar?.(this.tiptap)));
       };
-      this.refreshers.push(() => bar.show(anchor()));
+      this.refreshers.push(() => {
+        const at = anchor();
+        if (at) itemRefreshers.forEach((fn) => fn());
+        bar.show(at);
+      });
       bars.push(() => !bar.element.hidden);
       bar.element.addEventListener('focusout', () => queueMicrotask(this.refresh));
     }
   }
 
-  private button(action: ToolbarAction): HTMLButtonElement {
+  /** A button for `action`, its state refreshed by `refreshers` (default: after every transaction, focus and blur). */
+  private button(action: ToolbarAction, refreshers = this.refreshers): HTMLButtonElement {
     const button = this.root.ownerDocument.createElement('button');
     button.type = 'button';
     button.className = 'typst-toolbar__button';
@@ -150,7 +161,7 @@ export class Toolbar {
     button.setAttribute('aria-label', action.label);
     button.title = action.shortcut ? `${action.label} (${shortcutText(action.shortcut)})` : action.label;
     button.addEventListener('click', () => (action.click ? action.click() : action.run?.(this.tiptap.chain().focus()).run()));
-    this.refreshers.push(() => {
+    refreshers.push(() => {
       button.disabled = action.enabled ? !action.enabled(this.tiptap) : action.run !== undefined && !action.run(this.tiptap.can().chain()).run();
       if (action.active) button.setAttribute('aria-pressed', String(action.active(this.tiptap)));
       if (action.visible) button.hidden = !action.visible(this.tiptap);

@@ -45,11 +45,25 @@ function setup(text: string, providers: readonly TextStyleProvider[]) {
     menu!.value = value;
     menu!.dispatchEvent(new Event('change', { bubbles: true }));
   };
-  const option = (value: string) => [...menu!.options].find((o) => o.value === value)!;
+  /** The option `value` as the opened list shows it (the options are looked at when the menu is pressed). */
+  const option = (value: string) => {
+    menu!.dispatchEvent(new MouseEvent('mousedown'));
+    return [...menu!.options].find((o) => o.value === value)!;
+  };
   return { doc, view, menu, choose, option };
 }
 
 describe('the text style menu', () => {
+  it('looks at its options when pressed, not after every transaction', () => {
+    const enabled = vi.fn(() => true);
+    const { view, menu } = setup('Hello world\n', [{ provideTextStyles: () => [{ ...LOUD, enabled }] }]);
+    enabled.mockClear();
+    view.reveal(SourceRange.of({ from: 0, to: 5 }));
+    expect(enabled).not.toHaveBeenCalled();
+    menu!.dispatchEvent(new MouseEvent('mousedown'));
+    expect(enabled).toHaveBeenCalledTimes(1);
+  });
+
   it('shows only when a provider contributes to it', () => {
     expect(setup('Text\n', []).menu).toBeNull();
     expect(setup('Text\n', [{ provideTextStyles: () => [] }]).menu).not.toBeNull();
